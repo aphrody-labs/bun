@@ -1115,10 +1115,13 @@ impl ParentDirs {
     /// One fd stays open per cached level. Deeper levels are reopened per call.
     const MAX_DEPTH: usize = 128;
 
-    /// `O_PATH` where it exists: the `*at` calls need search permission on
-    /// the directory, as a multi-component path would, not read permission.
-    const DIR_FLAGS: i32 =
-        bun_sys::O::PATH | bun_sys::O::DIRECTORY | bun_sys::O::NOFOLLOW | bun_sys::O::CLOEXEC;
+    /// `O_PATH` or `O_SEARCH` where one exists: the `*at` calls need search
+    /// permission on the directory, as a multi-component path would, not read.
+    const DIR_FLAGS: i32 = bun_sys::O::PATH
+        | bun_sys::O::SEARCH
+        | bun_sys::O::DIRECTORY
+        | bun_sys::O::NOFOLLOW
+        | bun_sys::O::CLOEXEC;
 
     pub const fn new() -> ParentDirs {
         ParentDirs {
@@ -1146,18 +1149,50 @@ impl ParentDirs {
 
     /// The parent of `path`, with the name to pass to `mkdirat`/`openat`/`symlinkat`.
     /// The cache owns the fd and the next call can close it.
-    pub fn open_entry<'p>(&mut self, root: Fd, path: &'p ZStr) -> Option<(Fd, &'p ZStr)> {
-        let (dirname, name_offset) = split_entry_parent(path.as_bytes())?;
-        let parent = self.open(root, dirname)?;
-        Some((parent, entry_name(path, name_offset)))
+    pub fn open_entry<'p>(
+        &mut self,
+        root: Fd,
+        path: &'p ZStr,
+    ) -> bun_sys::Maybe<Option<(Fd, &'p ZStr)>> {
+        let Some((dirname, name_offset)) = split_entry_parent(path.as_bytes()) else {
+            return Ok(None);
+        };
+        Ok(self
+            .open(root, dirname)?
+            .map(|parent| (parent, entry_name(path, name_offset))))
+    }
+
+    /// `Ok(None)` when `name` exists and is not a directory. A symlink is not one.
+    fn open_component(parent: Fd, name: &ZStr) -> bun_sys::Maybe<Option<Fd>> {
+        use bun_sys::E;
+        // What `O_NOFOLLOW | O_DIRECTORY` reports for a symlink differs by platform.
+        let not_a_directory = |e: E| matches!(e, E::ENOTDIR | E::ELOOP | E::EMLINK);
+
+        match bun_sys::openat(parent, name, Self::DIR_FLAGS, 0) {
+            Ok(fd) => return Ok(Some(fd)),
+            Err(err) if err.get_errno() == E::ENOENT => {}
+            Err(err) if not_a_directory(err.get_errno()) => return Ok(None),
+            Err(err) => return Err(err),
+        }
+        // 0o755: what `mkdir_recursive_at` gave these parents before.
+        match bun_sys::mkdirat_z(parent, name, 0o755) {
+            Ok(()) => {}
+            Err(err) if err.get_errno() == E::EEXIST => {}
+            Err(err) => return Err(err),
+        }
+        match bun_sys::openat(parent, name, Self::DIR_FLAGS, 0) {
+            Ok(fd) => Ok(Some(fd)),
+            Err(err) if not_a_directory(err.get_errno()) => Ok(None),
+            Err(err) => Err(err),
+        }
     }
 
     /// Opens `dirname`, a normalized relative path, and creates what is
-    /// missing. `None` when a component is not a real directory.
-    pub fn open(&mut self, root: Fd, dirname: &[u8]) -> Option<Fd> {
+    /// missing. `Ok(None)` when a component is not a real directory.
+    pub fn open(&mut self, root: Fd, dirname: &[u8]) -> bun_sys::Maybe<Option<Fd>> {
         self.close_spill();
         if dirname.is_empty() {
-            return Some(root);
+            return Ok(Some(root));
         }
 
         let mut reused = 0usize;
@@ -1179,7 +1214,7 @@ impl ParentDirs {
         let mut current = self.dirs.last().map_or(root, |&(_, fd)| fd);
         let mut remaining = strings::split(dirname, b"/").skip(reused).peekable();
         if remaining.peek().is_none() {
-            return Some(current);
+            return Ok(Some(current));
         }
 
         let mut name_buf = bun_paths::path_buffer_pool::get();
@@ -1189,20 +1224,14 @@ impl ParentDirs {
                 || strings::eql(component, b"..")
                 || component.len() + 1 > name_buf.len()
             {
-                return None;
+                return Ok(None);
             }
             name_buf[..component.len()].copy_from_slice(component);
             name_buf[component.len()] = 0;
             let name = ZStr::from_slice_with_nul(&name_buf[..component.len() + 1]);
 
-            let fd = match bun_sys::openat(current, name, Self::DIR_FLAGS, 0) {
-                Ok(fd) => fd,
-                Err(err) if err.get_errno() == bun_sys::E::ENOENT => {
-                    // 0o755: what `mkdir_recursive_at` gave these parents before.
-                    let _ = bun_sys::mkdirat_z(current, name, 0o755);
-                    bun_sys::openat(current, name, Self::DIR_FLAGS, 0).ok()?
-                }
-                Err(_) => return None,
+            let Some(fd) = Self::open_component(current, name)? else {
+                return Ok(None);
             };
             if self.dirs.len() < Self::MAX_DEPTH {
                 if !self.path.is_empty() {
@@ -1216,7 +1245,7 @@ impl ParentDirs {
             current = fd;
         }
 
-        Some(current)
+        Ok(Some(current))
     }
 }
 
@@ -1236,10 +1265,10 @@ pub fn create_deferred_symlinks(dir_fd: Fd, symlinks: &[DeferredSymlink], log: b
         let Some((dirname, name_offset)) = split_entry_parent(symlink.path.as_bytes()) else {
             continue;
         };
-        let Some(parent) = parents.open(dir_fd, dirname) else {
+        let Ok(Some(parent)) = parents.open(dir_fd, dirname) else {
             if log {
                 bun_core::warn!(
-                    "Skipping symlink whose parent directory is not a directory inside the extraction directory: {}\n",
+                    "Skipping symlink whose parent could not be resolved inside the extraction directory: {}\n",
                     bstr::BStr::new(symlink.path.as_bytes()),
                 );
             }
@@ -1724,7 +1753,7 @@ impl Archiver {
                         unsafe { ZStr::from_raw(path_slice.as_ptr(), path_slice.len()) };
 
                     #[cfg(not(windows))]
-                    let Some((parent_dir, name_z)) = parent_dirs.open_entry(dir_fd, path_z) else {
+                    let Some((parent_dir, name_z)) = parent_dirs.open_entry(dir_fd, path_z)? else {
                         if options.log {
                             bun_core::warn!(
                                 "Skipping entry whose parent is not a directory inside the extraction directory: {}\n",
@@ -1754,16 +1783,7 @@ impl Archiver {
                                         // next entry. A file or a symlink under that name lands here too.
                                         match err.get_errno() {
                                             bun_sys::E::EEXIST | bun_sys::E::ENOTDIR => continue,
-                                            _ => {}
-                                        }
-                                        if options.log {
-                                            bun_core::warn!(
-                                                "Skipping directory that could not be created: {}\n",
-                                                bun_core::fmt::fmt_os_path(
-                                                    path_slice,
-                                                    Default::default(),
-                                                ),
-                                            );
+                                            _ => return Err(err.into()),
                                         }
                                     }
                                 }

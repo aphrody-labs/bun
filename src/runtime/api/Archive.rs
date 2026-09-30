@@ -1373,7 +1373,7 @@ fn extract_to_disk_filtered(
 
         // Never create an entry through a symlink already in the destination.
         #[cfg(not(windows))]
-        let Some((parent_dir, name_z)) = parent_dirs.open_entry(dir_fd, pathname_z) else {
+        let Ok(Some((parent_dir, name_z))) = parent_dirs.open_entry(dir_fd, pathname_z) else {
             continue;
         };
         #[cfg(windows)]

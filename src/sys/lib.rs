@@ -1204,6 +1204,12 @@ pub mod O {
     pub const NOFOLLOW_ANY: i32 = libc::O_NOFOLLOW_ANY;
     #[cfg(not(target_os = "macos"))]
     pub const NOFOLLOW_ANY: i32 = 0;
+    // Darwin-only: a directory fd for `*at` calls that needs search permission
+    // on the directory, not read. Linux spells this `O.PATH`. 0 elsewhere.
+    #[cfg(target_os = "macos")]
+    pub const SEARCH: i32 = libc::O_SEARCH;
+    #[cfg(not(target_os = "macos"))]
+    pub const SEARCH: i32 = 0;
 }
 // ──────────────────────────────────────────────────────────────────────────
 // `File` / `Dir` — high-level handles. Extracted to file.rs / dir.rs.

@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { bunEnv, bunExe, isLinux, isWindows, tempDir } from "harness";
+import { bunEnv, bunExe, isLinux, isMacOS, isWindows, tempDir } from "harness";
 import { chmodSync, existsSync, lstatSync, mkdirSync, readdirSync, rmSync, symlinkSync } from "node:fs";
 import { join } from "path";
+
+// Root ignores permission bits, so a test that depends on them proves nothing as root.
+const isRoot = process.getuid?.() === 0;
 
 // Minimal ustar tarball builder (pathnames must be <100 bytes). `name` accepts
 // a Buffer so tests can put raw, non-UTF-8 byte sequences into the name field.
@@ -901,22 +904,62 @@ describe("Bun.Archive", () => {
       }
     });
 
-    // Linux resolves parent directories with O_PATH, which asks for no
-    // permission on the directory itself. Elsewhere they are opened for reading.
-    test.skipIf(!isLinux)("extracts under a directory the process can search but not read", async () => {
-      using dir = tempDir("archive-search-only", {});
-      const out = join(String(dir), "out");
-      const wx = join(out, "wx");
-      mkdirSync(wx, { recursive: true });
-      chmodSync(wx, 0o311);
-      try {
-        await new Bun.Archive({ "wx/f.txt": "F", "wx/sub/g.txt": "G" }).extract(out);
-        expect(await Bun.file(join(wx, "f.txt")).text()).toBe("F");
-        expect(await Bun.file(join(wx, "sub", "g.txt")).text()).toBe("G");
-      } finally {
-        // Let the temp dir cleanup list it.
-        chmodSync(wx, 0o755);
-      }
+    // Linux (O_PATH) and macOS (O_SEARCH) resolve parent directories without
+    // read permission on them. Elsewhere they are opened for reading.
+    test.skipIf(!(isLinux || isMacOS) || isRoot)(
+      "extracts under a directory the process can search but not read",
+      async () => {
+        using dir = tempDir("archive-search-only", {});
+        const out = join(String(dir), "out");
+        const wx = join(out, "wx");
+        mkdirSync(wx, { recursive: true });
+        chmodSync(wx, 0o311);
+        try {
+          await new Bun.Archive({ "wx/f.txt": "F", "wx/sub/g.txt": "G" }).extract(out);
+          expect(await Bun.file(join(wx, "f.txt")).text()).toBe("F");
+          expect(await Bun.file(join(wx, "sub", "g.txt")).text()).toBe("G");
+        } finally {
+          // Let the temp dir cleanup list it.
+          chmodSync(wx, 0o755);
+        }
+      },
+    );
+
+    // Only a parent that is not a directory is a skip. Any other failure to
+    // create or open it is an error, as it was when one call took the whole path.
+    describe.skipIf(isWindows)("a parent directory that cannot be created", () => {
+      test("rejects", async () => {
+        using dir = tempDir("archive-parent-error", {});
+        // Longer than NAME_MAX, so the directory cannot exist.
+        const tooLong = Buffer.alloc(300, "x").toString();
+        const archive = new Bun.Archive({ [tooLong + "/f.txt"]: "F", "ok.txt": "OK" });
+
+        await expect(async () => {
+          await archive.extract(join(String(dir), "default"));
+        }).toThrow();
+        // The glob extractor skips every entry it cannot create.
+        expect(await archive.extract(join(String(dir), "glob"), { glob: "**" })).toBe(1);
+      });
+
+      test.skipIf(isRoot)("rejects in a destination that is not writable", async () => {
+        using dir = tempDir("archive-readonly-dest", {});
+        const out = join(String(dir), "out");
+        mkdirSync(out);
+        chmodSync(out, 0o555);
+        try {
+          await expect(async () => {
+            await new Bun.Archive({ "a/f.txt": "F" }).extract(out);
+          }).toThrow();
+          // A directory entry alone, with nothing under it.
+          const onlyDirectory = new Uint8Array(Buffer.concat([ustarHeader("d/", 0, "5"), Buffer.alloc(1024)]));
+          await expect(async () => {
+            await new Bun.Archive(onlyDirectory).extract(out);
+          }).toThrow();
+          expect(readdirSync(out)).toEqual([]);
+        } finally {
+          chmodSync(out, 0o755);
+        }
+      });
     });
 
     test("skips tar entries whose pathname exceeds the platform path limit", async () => {
