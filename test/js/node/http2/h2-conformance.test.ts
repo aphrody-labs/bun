@@ -1742,10 +1742,10 @@ describe("inbound stream lifecycle", () => {
     }
   });
 
-  // A refused stream was still acted on (it got the RST_STREAM), so it is the highest stream the
-  // server "might have taken action on" (§6.8) and a later GOAWAY names it. node does the same:
+  // A stream refused for maxSessionMemory counts as processed, and a later GOAWAY names it:
   // nghttp2 advances last_proc_stream_id before the callback in which node refuses the stream.
-  // (The rest of the last-stream-id coverage is in the §6.8 describe below.)
+  // A stream refused for maxConcurrentStreams does not count (see the §6.8 describe below, which
+  // has the rest of the last-stream-id coverage).
   test("a graceful GOAWAY names a stream that was refused for maxSessionMemory", async () => {
     const { server, session, c, seen } = await exhaustedSession();
     try {
@@ -1979,6 +1979,238 @@ describe("GOAWAY last-stream-id (RFC 9113 §6.8)", () => {
       server.close();
     }
   });
+
+  // nghttp2 checks SETTINGS_MAX_CONCURRENT_STREAMS before it counts a request stream as processed
+  // (last_proc_stream_id), and node's maxSessionMemory check runs after. So a stream over the
+  // stream limit is never named, also when it is over the memory budget too.
+  // The raw client never ACKs the server's SETTINGS. Over a limit that the peer has ACKed node
+  // answers with a connection error; over a limit that is still pending, with REFUSED_STREAM.
+  describe("a request stream refused for maxConcurrentStreams", () => {
+    /** A server that keeps each stream it takes open, and a raw client that has sent its preface
+     *  and SETTINGS. With `queued`, stream 1 answers with 4 MiB against the default 64 KiB
+     *  window, which leaves a maxSessionMemory: 1 session over its budget. */
+    async function limitedServer(options: http2.ServerOptions, queued = false) {
+      const seen: number[] = [];
+      const streams = new Map<number, http2.ServerHttp2Stream>();
+      const server = http2.createServer(options);
+      server.on("session", s => s.on("error", () => {}));
+      server.on("stream", stream => {
+        seen.push(stream.id);
+        streams.set(stream.id, stream);
+        stream.on("error", () => {});
+        stream.respond({ ":status": 200 });
+        if (queued && stream.id === 1) stream.end(Buffer.alloc(1 << 22, "a"));
+        else stream.write("hello");
+      });
+      server.listen(0);
+      await once(server, "listening");
+      const sessionEvent = once(server, "session");
+      const c = await RawH2.connect((server.address() as net.AddressInfo).port);
+      c.sendPreface();
+      c.sendEmptySettings();
+      const [session] = (await sessionEvent) as [http2.ServerHttp2Session];
+      /** Send the request on stream 1 and wait for the server's answer to it. */
+      const openStream1 = async () => {
+        c.sendFrame(FrameType.HEADERS, 0x5, 1, requestHeaderBlock("GET"));
+        await c.waitFor(f => f.type === (queued ? FrameType.DATA : FrameType.HEADERS) && f.streamId === 1);
+      };
+      /** Send a request on `id` and return the error code of the RST_STREAM that answers it. */
+      const refusalOf = async (id: number) => {
+        c.sendFrame(FrameType.HEADERS, 0x5, id, requestHeaderBlock("GET"));
+        const rst = await c.waitFor(f => f.type === FrameType.RST_STREAM && f.streamId === id);
+        return rst.payload.readUInt32BE(0);
+      };
+      /** close() the session, end stream 1 from the client so that the session can finish, and
+       *  return the last-stream-id of every GOAWAY the server wrote before it closed the socket. */
+      const closeAndCollect = async () => {
+        session.close();
+        const cancel = Buffer.alloc(4);
+        cancel.writeUInt32BE(ErrorCode.CANCEL, 0);
+        c.sendFrame(FrameType.RST_STREAM, 0, 1, cancel);
+        await c.waitClosed();
+        return goawayLastStreamIds(c.frames);
+      };
+      return { server, session, c, seen, streams, openStream1, refusalOf, closeAndCollect };
+    }
+
+    test("is not named by a graceful GOAWAY", async () => {
+      const { server, session, c, seen, openStream1, refusalOf } = await limitedServer({
+        settings: { maxConcurrentStreams: 1 },
+      });
+      try {
+        await openStream1();
+        expect(await refusalOf(3)).toBe(ErrorCode.REFUSED_STREAM);
+        expect({ seen, lastProcStreamID: session.state.lastProcStreamID }).toEqual({ seen: [1], lastProcStreamID: 1 });
+        session.close();
+        expect(goawayFields(await c.waitForGoaway())).toEqual({ lastStreamId: 1, errorCode: ErrorCode.NO_ERROR });
+      } finally {
+        c.destroy();
+        server.close();
+      }
+    });
+
+    test("is refused for the stream limit when it is over maxSessionMemory too", async () => {
+      const { server, session, c, seen, openStream1, refusalOf } = await limitedServer(
+        { settings: { maxConcurrentStreams: 1 }, maxSessionMemory: 1 },
+        true,
+      );
+      try {
+        await openStream1();
+        expect(await refusalOf(3)).toBe(ErrorCode.REFUSED_STREAM);
+        expect({ seen, lastProcStreamID: session.state.lastProcStreamID }).toEqual({ seen: [1], lastProcStreamID: 1 });
+        session.close();
+        expect(goawayFields(await c.waitForGoaway())).toEqual({ lastStreamId: 1, errorCode: ErrorCode.NO_ERROR });
+      } finally {
+        c.destroy();
+        server.close();
+      }
+    });
+
+    test("leaves lastProcStreamID at 0 when the limit is 0", async () => {
+      const { server, session, c, seen, refusalOf } = await limitedServer({ settings: { maxConcurrentStreams: 0 } });
+      try {
+        expect(await refusalOf(1)).toBe(ErrorCode.REFUSED_STREAM);
+        expect({ seen, lastProcStreamID: session.state.lastProcStreamID }).toEqual({ seen: [], lastProcStreamID: 0 });
+        session.close();
+        expect(goawayFields(await c.waitForGoaway())).toEqual({ lastStreamId: 0, errorCode: ErrorCode.NO_ERROR });
+      } finally {
+        c.destroy();
+        server.close();
+      }
+    });
+
+    test("is skipped by lastProcStreamID, which names the next stream the server takes", async () => {
+      const { server, session, c, seen, streams, openStream1, refusalOf } = await limitedServer({
+        settings: { maxConcurrentStreams: 1 },
+      });
+      try {
+        await openStream1();
+        expect(await refusalOf(3)).toBe(ErrorCode.REFUSED_STREAM);
+        expect(session.state.lastProcStreamID).toBe(1);
+        // Stream 1 closes, so its slot is free for stream 5.
+        streams.get(1)!.end();
+        await c.waitFor(f => f.type === FrameType.DATA && f.streamId === 1 && (f.flags & 0x1) === 1);
+        c.sendFrame(FrameType.HEADERS, 0x5, 5, requestHeaderBlock("GET"));
+        await c.waitFor(f => f.type === FrameType.HEADERS && f.streamId === 5);
+        expect({ seen, lastProcStreamID: session.state.lastProcStreamID }).toEqual({
+          seen: [1, 5],
+          lastProcStreamID: 5,
+        });
+        session.close();
+        expect(goawayFields(await c.waitForGoaway())).toEqual({ lastStreamId: 5, errorCode: ErrorCode.NO_ERROR });
+      } finally {
+        c.destroy();
+        server.close();
+      }
+    });
+
+    test("is refused by a limit that the 'stream' handler of an earlier request set", async () => {
+      const server = http2.createServer();
+      const seen: number[] = [];
+      server.on("session", s => s.on("error", () => {}));
+      server.on("stream", stream => {
+        seen.push(stream.id);
+        stream.on("error", () => {});
+        stream.session!.settings({ maxConcurrentStreams: 1 });
+        stream.respond({ ":status": 200 });
+        stream.write("hello");
+      });
+      server.listen(0);
+      await once(server, "listening");
+      const sessionEvent = once(server, "session");
+      const c = await RawH2.connect((server.address() as net.AddressInfo).port);
+      try {
+        c.sendPreface();
+        c.sendEmptySettings();
+        const [session] = (await sessionEvent) as [http2.ServerHttp2Session];
+        // One write: the requests on 3 and 5 are behind the request on 1 when its handler runs.
+        c.send(Buffer.concat([1, 3, 5].map(id => encodeFrame(FrameType.HEADERS, 0x5, id, requestHeaderBlock("GET")))));
+        const refused = await Promise.all(
+          [3, 5].map(id => c.waitFor(f => f.type === FrameType.RST_STREAM && f.streamId === id)),
+        );
+        expect(refused.map(f => f.payload.readUInt32BE(0))).toEqual([
+          ErrorCode.REFUSED_STREAM,
+          ErrorCode.REFUSED_STREAM,
+        ]);
+        expect({ seen, lastProcStreamID: session.state.lastProcStreamID }).toEqual({ seen: [1], lastProcStreamID: 1 });
+        session.close();
+        expect(goawayFields(await c.waitForGoaway())).toEqual({ lastStreamId: 1, errorCode: ErrorCode.NO_ERROR });
+      } finally {
+        c.destroy();
+        server.close();
+      }
+    });
+
+    test("is not named by any GOAWAY when the refusal uses up maxSessionRejectedStreams", async () => {
+      const { server, c, seen, openStream1, closeAndCollect } = await limitedServer({
+        settings: { maxConcurrentStreams: 1 },
+        maxSessionRejectedStreams: 1,
+      });
+      try {
+        await openStream1();
+        // bun charges the refusal to maxSessionRejectedStreams and answers with its
+        // ENHANCE_YOUR_CALM GOAWAY. node answers with RST_STREAM and writes its GOAWAY on close().
+        c.sendFrame(FrameType.HEADERS, 0x5, 3, requestHeaderBlock("GET"));
+        await c.waitFor(f => (f.type === FrameType.RST_STREAM && f.streamId === 3) || f.type === FrameType.GOAWAY);
+        const lastStreamIds = await closeAndCollect();
+        expect(seen).toEqual([1]);
+        expect(lastStreamIds.length).toBeGreaterThan(0);
+        expect(lastStreamIds.filter(id => id !== 1)).toEqual([]);
+      } finally {
+        c.destroy();
+        server.close();
+      }
+    });
+  });
+
+  // §6.8: "Endpoints MUST NOT increase the value they send in the last stream identifier". A
+  // request that the server refuses after its own GOAWAY was not processed, whatever the reason
+  // for the refusal. (node does not answer such a request at all. bun answers with RST_STREAM.)
+  test.each([
+    ["maxConcurrentStreams", { settings: { maxConcurrentStreams: 1 } }, false],
+    ["maxSessionMemory", { maxSessionMemory: 1 }, true],
+  ] as const)(
+    "a stream refused for %s after session.goaway() does not raise the last-stream-id",
+    async (_, options, queued) => {
+      const seen: number[] = [];
+      const server = http2.createServer(options);
+      server.on("session", s => s.on("error", () => {}));
+      server.on("stream", stream => {
+        seen.push(stream.id);
+        stream.on("error", () => {});
+        stream.respond({ ":status": 200 });
+        if (queued) stream.end(Buffer.alloc(1 << 22, "a"));
+        else stream.write("hello");
+      });
+      server.listen(0);
+      await once(server, "listening");
+      const sessionEvent = once(server, "session");
+      const c = await RawH2.connect((server.address() as net.AddressInfo).port);
+      try {
+        c.sendPreface();
+        c.sendEmptySettings();
+        const [session] = (await sessionEvent) as [http2.ServerHttp2Session];
+        c.sendFrame(FrameType.HEADERS, 0x5, 1, requestHeaderBlock("GET"));
+        await c.waitFor(f => f.type === (queued ? FrameType.DATA : FrameType.HEADERS) && f.streamId === 1);
+        session.goaway();
+        expect(goawayFields(await c.waitForGoaway())).toEqual({ lastStreamId: 1, errorCode: ErrorCode.NO_ERROR });
+        // The PING ACK is behind the server's handling of the request on 3.
+        c.sendFrame(FrameType.HEADERS, 0x5, 3, requestHeaderBlock("GET"));
+        c.sendFrame(FrameType.PING, 0, 0, Buffer.alloc(8, 0x70));
+        await c.waitFor(f => f.type === FrameType.PING && (f.flags & 0x1) === 1);
+        expect({ seen, lastProcStreamID: session.state.lastProcStreamID }).toEqual({ seen: [1], lastProcStreamID: 1 });
+        session.close();
+        const cancel = Buffer.alloc(4);
+        cancel.writeUInt32BE(ErrorCode.CANCEL, 0);
+        c.sendFrame(FrameType.RST_STREAM, 0, 1, cancel);
+        await c.waitClosed();
+        expect(goawayLastStreamIds(c.frames).filter(id => id !== 1)).toEqual([]);
+      } finally {
+        c.destroy();
+        server.close();
+      }
+    },
+  );
 });
 
 // A DATA frame that cannot be written right away (the peer's flow-control window is used up, the

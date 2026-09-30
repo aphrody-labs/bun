@@ -124,9 +124,24 @@ enum BlockDisposition {
     Deliver,
     /// HEADERS arrived on a closed stream: answered with RST_STREAM(STREAM_CLOSED).
     StreamClosed,
-    /// The embedder refused the stream (can_open_stream = false, node's maxSessionMemory):
-    /// answered with RST_STREAM(ENHANCE_YOUR_CALM).
-    Refused,
+    /// `Admission::OverStreamLimit`: answered with RST_STREAM(REFUSED_STREAM).
+    OverStreamLimit,
+    /// `Admission::OverMemory`: answered with RST_STREAM(ENHANCE_YOUR_CALM).
+    OverMemory,
+}
+
+/// The embedder's answer for a new request stream. The variants are in the order nghttp2 and
+/// node decide them, so a stream that is over both limits is `OverStreamLimit`.
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) enum Admission {
+    #[default]
+    Open,
+    /// Over SETTINGS_MAX_CONCURRENT_STREAMS. nghttp2 refuses before it counts the stream as
+    /// processed (last_proc_stream_id), so no GOAWAY names it.
+    OverStreamLimit,
+    /// Over the session memory budget (node's maxSessionMemory). node refuses in its
+    /// on_begin_headers callback, after nghttp2 counted the stream, so a GOAWAY names it.
+    OverMemory,
 }
 
 pub(crate) struct Feed {
@@ -212,12 +227,10 @@ pub(crate) trait Sink {
 
     /// A new stream was created by an inbound HEADERS (the embedder allocates its JS wrapper).
     fn on_stream_open(&self, _stream_id: u32) {}
-    /// Whether the embedder can afford the state for a new peer-initiated stream (the session
-    /// memory budget, node's maxSessionMemory). `false` refuses the HEADERS with RST_STREAM
-    /// (ENHANCE_YOUR_CALM, node's Http2Session::OnBeginHeadersCallback) before any stream state
-    /// is allocated; the header block is still decoded for HPACK-table sync (§4.3).
-    fn can_open_stream(&self) -> bool {
-        true
+    /// Whether the embedder takes a new request stream. A refusal is decided before any stream
+    /// state is allocated; the header block is still decoded for HPACK-table sync (§4.3).
+    fn admit_stream(&self) -> Admission {
+        Admission::Open
     }
     /// Queried per use: a GOAWAY sent mid-dispatch counts for the rest of that read.
     fn goaway_sent(&self) -> bool {
@@ -236,9 +249,12 @@ pub(crate) trait Sink {
     /// The stream was reset (inbound RST_STREAM or a local stream error). `code` is the raw
     /// u32 from the wire so unknown error codes survive to JS (node parity).
     fn on_stream_reset(&self, _stream_id: u32, _code: u32) {}
-    /// A locally-initiated stream rejection (oversized/malformed header block) - distinct from
-    /// peer-sent resets so the embedder can budget rejections (maxSessionRejectedStreams).
-    fn on_stream_rejected(&self, _stream_id: u32) {}
+    /// A locally-initiated stream rejection (oversized/malformed header block, a refused stream) -
+    /// distinct from peer-sent resets so the embedder can budget rejections
+    /// (maxSessionRejectedStreams). `false`: the budget is spent and the embedder sent its GOAWAY.
+    fn on_stream_rejected(&self, _stream_id: u32) -> bool {
+        true
+    }
     /// A server PUSH_PROMISE reserved `promised_id` on behalf of `parent_id`. Fires before the
     /// promised request's on_header/on_headers_complete (which use `promised_id`).
     fn on_push_promise(&self, _parent_id: u32, _promised_id: u32) {}
@@ -358,7 +374,8 @@ pub(crate) struct Connection {
     preface_received: usize,
     /// Highest stream id in either direction, for the §5.1 idle checks; never sent in a GOAWAY.
     pub last_stream_id: u32,
-    /// Highest peer-initiated id (nghttp2's last_proc_stream_id): what a GOAWAY carries (§6.8).
+    /// Highest peer-initiated id that counts as processed (nghttp2's last_proc_stream_id): what a
+    /// GOAWAY carries (§6.8).
     pub last_peer_stream_id: u32,
     pub going_away: bool,
 }
@@ -461,9 +478,6 @@ impl Connection {
 
     /// Must run before the stream is surfaced to the embedder.
     fn note_peer_stream(&mut self, sink: &impl Sink, stream_id: u32) {
-        if stream_id > self.last_stream_id {
-            self.last_stream_id = stream_id;
-        }
         if stream_id > self.last_peer_stream_id {
             self.last_peer_stream_id = stream_id;
             sink.on_last_peer_stream_id(stream_id);
@@ -1067,13 +1081,17 @@ impl Connection {
             );
             return true;
         }
-        let refused = is_new && self.is_server && !sink.can_open_stream();
-        let mut disposition = if refused {
-            BlockDisposition::Refused
+        let admission = if is_new && self.is_server {
+            sink.admit_stream()
         } else {
-            BlockDisposition::Deliver
+            Admission::Open
         };
-        if !refused {
+        let mut disposition = match admission {
+            Admission::Open => BlockDisposition::Deliver,
+            Admission::OverStreamLimit => BlockDisposition::OverStreamLimit,
+            Admission::OverMemory => BlockDisposition::OverMemory,
+        };
+        if admission == Admission::Open {
             let s = self
                 .streams
                 .entry(hdr.stream_id)
@@ -1127,14 +1145,21 @@ impl Connection {
             // Must advance even for refused streams: §5.1 treats anything at or below the
             // high-water mark as having existed, so frames a client pipelined behind the
             // refused HEADERS (RST_STREAM especially) are tolerated instead of GOAWAY'd.
-            // (nghttp2 counts refused streams in last_proc_stream_id as well.)
-            if self.is_server {
-                self.note_peer_stream(sink, hdr.stream_id);
-            } else if hdr.stream_id > self.last_stream_id {
-                // A client's "new" HEADERS is the response to its own request: not a peer stream.
+            if hdr.stream_id > self.last_stream_id {
                 self.last_stream_id = hdr.stream_id;
             }
-            if !refused {
+            // A stream over the memory budget counts as processed (see `Admission`), but not once
+            // a GOAWAY of ours told the peer that no higher id is (§6.8).
+            let processed = match admission {
+                Admission::Open => true,
+                Admission::OverStreamLimit => false,
+                Admission::OverMemory => !sink.goaway_sent(),
+            };
+            // A client's "new" HEADERS is the response to its own request: not a peer stream.
+            if self.is_server && processed {
+                self.note_peer_stream(sink, hdr.stream_id);
+            }
+            if admission == Admission::Open {
                 sink.on_stream_open(hdr.stream_id);
             }
         }
@@ -1370,7 +1395,14 @@ impl Connection {
             return true;
         }
         match disposition {
-            BlockDisposition::Refused => {
+            BlockDisposition::OverStreamLimit => {
+                // The budget first: once it is spent, the embedder's GOAWAY answers the stream.
+                if sink.on_stream_rejected(target) {
+                    self.send_rst_stream(sink, target, ErrorCode::RefusedStream);
+                }
+                return false;
+            }
+            BlockDisposition::OverMemory => {
                 // node (node_http2.cc, Http2Session::OnBeginHeadersCallback): a stream refused for
                 // the session memory budget is answered with RST_STREAM(ENHANCE_YOUR_CALM), which
                 // is what node's own test-http2-max-session-memory asserts.
@@ -1873,6 +1905,9 @@ impl Connection {
             .entry(promised)
             .or_insert_with(|| Stream::new(send_init, recv_init));
         entry.state = State::ReservedRemote;
+        if promised > self.last_stream_id {
+            self.last_stream_id = promised;
+        }
         self.note_peer_stream(sink, promised);
 
         self.header_block.clear();
@@ -2154,8 +2189,13 @@ mod tests {
         local_error_last_stream_id: Cell<Option<u32>>,
         /// Values received through on_last_peer_stream_id, in order.
         peer_marks: RefCell<Vec<u32>>,
-        /// Makes can_open_stream refuse every new peer stream (maxSessionMemory exhausted).
-        refuse_streams: Cell<bool>,
+        /// What admit_stream answers for every new request stream.
+        admission: Cell<Admission>,
+        /// What goaway_sent reports: the embedder wrote a GOAWAY of its own.
+        embedder_goaway: Cell<bool>,
+        /// Makes on_stream_rejected report that the rejection budget is spent.
+        rejection_budget_spent: Cell<bool>,
+        rejected: RefCell<Vec<u32>>,
         opens: RefCell<Vec<u32>>,
         headers: RefCell<Vec<(u32, Vec<u8>, Vec<u8>)>>,
         headers_done: RefCell<Vec<(u32, bool)>>,
@@ -2179,8 +2219,15 @@ mod tests {
         fn on_last_peer_stream_id(&self, stream_id: u32) {
             self.peer_marks.borrow_mut().push(stream_id);
         }
-        fn can_open_stream(&self) -> bool {
-            !self.refuse_streams.get()
+        fn admit_stream(&self) -> Admission {
+            self.admission.get()
+        }
+        fn goaway_sent(&self) -> bool {
+            self.embedder_goaway.get()
+        }
+        fn on_stream_rejected(&self, id: u32) -> bool {
+            self.rejected.borrow_mut().push(id);
+            !self.rejection_budget_spent.get()
         }
         fn on_local_settings(&self, _s: &Settings) {}
         fn on_remote_settings(&self, _s: &Settings) {
@@ -2272,6 +2319,26 @@ mod tests {
         }
         found
     }
+
+    /// Every RST_STREAM the engine wrote to `sink`, as (stream id, error code).
+    fn rst_streams_sent(sink: &CaptureSink) -> Vec<(u32, u32)> {
+        let out = sink.out.borrow();
+        let mut off = 0usize;
+        let mut found = Vec::new();
+        while out.len() - off >= wire::FRAME_HEADER_SIZE {
+            let hdr = FrameHeader::parse(&out[off..]);
+            let payload = &out[off + wire::FRAME_HEADER_SIZE
+                ..off + wire::FRAME_HEADER_SIZE + hdr.length as usize];
+            if hdr.frame_type == FrameType::RstStream as u8 {
+                let code = u32::from_be_bytes([payload[0], payload[1], payload[2], payload[3]]);
+                found.push((hdr.stream_id, code));
+            }
+            off += wire::FRAME_HEADER_SIZE + hdr.length as usize;
+        }
+        found
+    }
+
+    const END_REQUEST: u8 = wire::flags::END_HEADERS | wire::flags::END_STREAM;
 
     fn request_block() -> Vec<u8> {
         encode_block(&[
@@ -2557,9 +2624,9 @@ mod tests {
     }
 
     #[test]
-    fn server_goaway_counts_a_stream_it_refused() {
+    fn server_goaway_names_a_stream_refused_for_memory() {
         let sink = CaptureSink::default();
-        sink.refuse_streams.set(true);
+        sink.admission.set(Admission::OverMemory);
         let mut c = Connection::new(true, Settings::default());
         c.preface_received = wire::CONNECTION_PREFACE.len();
         let flags = wire::flags::END_HEADERS | wire::flags::END_STREAM;
@@ -2568,6 +2635,87 @@ mod tests {
             &frame(FrameType::Headers, flags, 1, &request_block()),
         );
         assert!(sink.opens.borrow().is_empty());
+
+        let fed = c.receive(&sink, &connection_error_frame());
+        assert!(fed.fatal);
+        assert_eq!(
+            goaway_sent(&sink),
+            Some((1, ErrorCode::ProtocolError.as_u32()))
+        );
+        assert_eq!(*sink.peer_marks.borrow(), vec![1]);
+    }
+
+    /// A server with stream 1 open, about to receive more request HEADERS.
+    fn server_with_stream_1(sink: &CaptureSink) -> Connection {
+        let mut c = Connection::new(true, Settings::default());
+        c.preface_received = wire::CONNECTION_PREFACE.len();
+        c.receive(
+            sink,
+            &frame(FrameType::Headers, END_REQUEST, 1, &request_block()),
+        );
+        assert_eq!(*sink.opens.borrow(), vec![1]);
+        c
+    }
+
+    #[test]
+    fn server_goaway_does_not_name_a_stream_over_the_stream_limit() {
+        let sink = CaptureSink::default();
+        let mut c = server_with_stream_1(&sink);
+        sink.admission.set(Admission::OverStreamLimit);
+        c.receive(
+            &sink,
+            &frame(FrameType::Headers, END_REQUEST, 3, &request_block()),
+        );
+        assert_eq!(*sink.opens.borrow(), vec![1]);
+        assert_eq!(*sink.rejected.borrow(), vec![3]);
+        assert_eq!(
+            rst_streams_sent(&sink),
+            vec![(3, ErrorCode::RefusedStream.as_u32())]
+        );
+        // §5.1: the id has existed, so the RST_STREAM a client pipelined behind it is tolerated.
+        assert_eq!(c.last_stream_id, 3);
+        let cancel = ErrorCode::Cancel.as_u32().to_be_bytes();
+        let fed = c.receive(&sink, &frame(FrameType::RstStream, 0, 3, &cancel));
+        assert!(!fed.fatal);
+
+        let fed = c.receive(&sink, &connection_error_frame());
+        assert!(fed.fatal);
+        assert_eq!(
+            goaway_sent(&sink),
+            Some((1, ErrorCode::ProtocolError.as_u32()))
+        );
+        assert_eq!(*sink.peer_marks.borrow(), vec![1]);
+    }
+
+    #[test]
+    fn stream_over_the_limit_gets_no_rst_once_the_rejection_budget_is_spent() {
+        let sink = CaptureSink::default();
+        let mut c = server_with_stream_1(&sink);
+        sink.admission.set(Admission::OverStreamLimit);
+        sink.rejection_budget_spent.set(true);
+        c.receive(
+            &sink,
+            &frame(FrameType::Headers, END_REQUEST, 3, &request_block()),
+        );
+        assert_eq!(*sink.rejected.borrow(), vec![3]);
+        assert!(rst_streams_sent(&sink).is_empty());
+    }
+
+    #[test]
+    fn stream_refused_for_memory_after_our_goaway_is_not_named() {
+        let sink = CaptureSink::default();
+        let mut c = server_with_stream_1(&sink);
+        sink.embedder_goaway.set(true);
+        sink.admission.set(Admission::OverMemory);
+        c.receive(
+            &sink,
+            &frame(FrameType::Headers, END_REQUEST, 3, &request_block()),
+        );
+        assert_eq!(
+            rst_streams_sent(&sink),
+            vec![(3, ErrorCode::EnhanceYourCalm.as_u32())]
+        );
+        assert_eq!(c.last_stream_id, 3);
 
         let fed = c.receive(&sink, &connection_error_frame());
         assert!(fed.fatal);

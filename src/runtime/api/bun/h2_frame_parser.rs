@@ -1127,6 +1127,9 @@ pub(crate) struct H2FrameParser {
     last_stream_id: Cell<u32>,
     /// Copy of `Connection::last_peer_stream_id` (GOAWAY last-stream-id, state.lastProcStreamID).
     last_peer_stream_id: Cell<u32>,
+    /// A server's request streams that are not CLOSED: what SETTINGS_MAX_CONCURRENT_STREAMS
+    /// limits (§5.1.2).
+    open_peer_streams: Cell<u32>,
     is_server: Cell<bool>,
     /// A frame callback left an exception pending in this batch (`Sink::should_stop`).
     left_exception: Cell<bool>,
@@ -1347,6 +1350,8 @@ pub(crate) struct Stream {
     // The JS readable for this stream is paused (setStreamReading(id, false)): the engine defers
     // replenishing the stream's receive window until reading resumes, backpressuring the peer.
     reading_paused: bool,
+    /// Counted in `H2FrameParser::open_peer_streams` until `close()`.
+    in_open_peer_streams: bool,
 
     // when we have backpressure we queue the data e round robin the Streams
     data_frame_queue: PendingQueue,
@@ -1660,7 +1665,7 @@ impl Stream {
                         let identifier = self.get_identifier();
                         identifier.ensure_still_alive();
                         if self.state == StreamState::HALF_CLOSED_REMOTE {
-                            self.close();
+                            self.close(client);
                             self.free_resources::<false>(client);
                         } else {
                             self.state = StreamState::HALF_CLOSED_LOCAL;
@@ -1848,6 +1853,7 @@ impl Stream {
             remote_used_window_size: 0,
             signal: None,
             reading_paused: false,
+            in_open_peer_streams: false,
             data_frame_queue: PendingQueue::default(),
         }
     }
@@ -1873,8 +1879,13 @@ impl Stream {
     }
 
     /// The only writer of `StreamState::CLOSED`.
-    fn close(&mut self) {
+    fn close(&mut self, client: &H2FrameParser) {
         self.state = StreamState::CLOSED;
+        if core::mem::take(&mut self.in_open_peer_streams) {
+            client
+                .open_peer_streams
+                .set(client.open_peer_streams.get() - 1);
+        }
     }
 
     pub(crate) fn set_context(&mut self, value: JSValue, global_object: &JSGlobalObject) {
@@ -2076,7 +2087,7 @@ impl H2FrameParser {
                 0,
                 ErrorCode::MAX_PENDING_SETTINGS_ACK,
                 b"Maximum number of pending settings acknowledgements",
-                self.last_peer_stream_id.get(),
+                None,
                 true,
             );
             return false;
@@ -2134,7 +2145,7 @@ impl H2FrameParser {
         value = value.swap_bytes();
         let _ = writer_stream.write_all(&value.to_ne_bytes());
         let old_state = stream.state;
-        stream.close();
+        stream.close(self);
         let identifier = stream.get_identifier();
         identifier.ensure_still_alive();
         stream.free_resources::<false>(self);
@@ -2172,7 +2183,7 @@ impl H2FrameParser {
         value = value.swap_bytes();
         let _ = writer_stream.write_all(&value.to_ne_bytes());
 
-        stream.close();
+        stream.close(self);
         let identifier = stream.get_identifier();
         identifier.ensure_still_alive();
         stream.free_resources::<false>(self);
@@ -2193,14 +2204,17 @@ impl H2FrameParser {
         let _ = self.write(&buffer);
     }
 
+    /// `last_stream_id`: `None` names the last peer stream this session processed (§6.8). Only
+    /// `session.goaway(code, lastStreamID)` chooses an id of its own.
     pub(crate) fn send_go_away(
         &self,
         triggering_stream_id: u32,
         rst_code: ErrorCode,
         debug_data: &[u8],
-        last_stream_id: u32,
+        last_stream_id: Option<u32>,
         emit_error: bool,
     ) {
+        let last_stream_id = last_stream_id.unwrap_or_else(|| self.last_peer_stream_id.get());
         bun_output::scoped_log!(
             H2FrameParser,
             "HTTP_FRAME_GOAWAY {} code {} debug_data {} emitError {}",
@@ -3946,10 +3960,19 @@ impl crate::api::h2::connection::Sink for H2FrameParser {
         );
     }
 
-    fn can_open_stream(&self) -> bool {
+    fn admit_stream(&self) -> crate::api::h2::connection::Admission {
+        use crate::api::h2::connection::Admission;
+        // local_settings is the limit as submitted, not as ACKed: like nghttp2's pending limit,
+        // it holds from the moment settings() is called, also inside a dispatch.
+        if self.open_peer_streams.get() >= self.local_settings.get().max_concurrent_streams {
+            return Admission::OverStreamLimit;
+        }
         // node (Http2Session::OnBeginHeadersCallback): a new inbound stream is refused when the
         // session is over its maxSessionMemory budget.
-        !self.is_over_session_memory_limit()
+        if self.is_over_session_memory_limit() {
+            return Admission::OverMemory;
+        }
+        Admission::Open
     }
 
     fn is_local_stream(&self, stream_id: u32) -> bool {
@@ -4036,7 +4059,19 @@ impl crate::api::h2::connection::Sink for H2FrameParser {
         // rstStream/getStreamState — look streams up there) AND dispatch onStreamStart, which the
         // legacy helper already does. The JS streamStart handler then calls setStreamContext,
         // populating both `sctx` and the legacy stream context.
-        let _ = self.handle_received_stream_id(stream_id);
+        let Some(stream) = self.handle_received_stream_id(stream_id) else {
+            return;
+        };
+        if !self.is_server.get() {
+            return;
+        }
+        // SAFETY: stream is *mut Stream from self.streams; valid while the map entry exists
+        let stream = unsafe { &mut *stream };
+        // Not when streamStart refused the stream: that closed it.
+        if stream.state != StreamState::CLOSED && !stream.in_open_peer_streams {
+            stream.in_open_peer_streams = true;
+            self.open_peer_streams.set(self.open_peer_streams.get() + 1);
+        }
     }
 
     fn on_header(&self, _stream_id: u32, name: &[u8], value: &[u8], never_index: bool) {
@@ -4136,7 +4171,7 @@ impl crate::api::h2::connection::Sink for H2FrameParser {
             match effective {
                 5 => stream.state = StreamState::HALF_CLOSED_LOCAL,
                 6 => stream.state = StreamState::HALF_CLOSED_REMOTE,
-                7 => stream.close(),
+                7 => stream.close(self),
                 _ => {}
             }
         }
@@ -4163,7 +4198,7 @@ impl crate::api::h2::connection::Sink for H2FrameParser {
         }
     }
 
-    fn on_stream_rejected(&self, stream_id: u32) {
+    fn on_stream_rejected(&self, stream_id: u32) -> bool {
         // maxSessionRejectedStreams: counts only locally-initiated rejections (oversized or
         // malformed header blocks) - peer-sent RST_STREAM frames must not consume the budget.
         self.rejected_streams.set(self.rejected_streams.get() + 1);
@@ -4172,10 +4207,12 @@ impl crate::api::h2::connection::Sink for H2FrameParser {
                 stream_id,
                 ErrorCode::ENHANCE_YOUR_CALM,
                 b"ENHANCE_YOUR_CALM",
-                self.last_peer_stream_id.get(),
+                None,
                 true,
             );
+            return false;
         }
+        true
     }
 
     fn on_stream_reset(&self, stream_id: u32, code: u32) {
@@ -4195,7 +4232,7 @@ impl crate::api::h2::connection::Sink for H2FrameParser {
             // SAFETY: stream is *mut Stream from self.streams; valid while the map entry exists
             unsafe {
                 old_state = (*stream).state as u8;
-                (*stream).close();
+                (*stream).close(self);
                 (*stream).rst_code = code;
             }
         }
@@ -4710,7 +4747,7 @@ impl H2FrameParser {
         }
         let error_code = error_code_arg.to_int32();
 
-        let mut last_stream_id = this.last_peer_stream_id.get();
+        let mut last_stream_id = None;
         if callframe.arguments_count() >= 2 {
             if !last_stream_arg.is_empty_or_undefined_or_null() {
                 if !last_stream_arg.is_number() {
@@ -4725,7 +4762,7 @@ impl H2FrameParser {
                 // Without this, graceful close puts Last-Stream-ID=0 on the wire, telling the
                 // peer that every in-flight stream is safe to retry.
                 if id > 0 {
-                    last_stream_id = u32::try_from(id).expect("int cast");
+                    last_stream_id = Some(u32::try_from(id).expect("int cast"));
                 }
             }
             if callframe.arguments_count() >= 3 {
@@ -5055,7 +5092,7 @@ impl H2FrameParser {
                     stream_id,
                     ErrorCode::ENHANCE_YOUR_CALM,
                     b"ENHANCE_YOUR_CALM",
-                    this.last_peer_stream_id.get(),
+                    None,
                     true,
                 );
                 return Ok(JSValue::UNDEFINED);
@@ -5351,7 +5388,7 @@ impl H2FrameParser {
                     let identifier = stream.get_identifier();
                     identifier.ensure_still_alive();
                     if stream.state == StreamState::HALF_CLOSED_REMOTE {
-                        stream.close();
+                        stream.close(self);
                         stream.free_resources::<false>(self);
                     } else {
                         stream.state = StreamState::HALF_CLOSED_LOCAL;
@@ -5680,13 +5717,7 @@ impl H2FrameParser {
                         );
                         let triggering_id = stream.id;
                         this.end_stream(&mut stream, ErrorCode::FRAME_SIZE_ERROR);
-                        this.send_go_away(
-                            triggering_id,
-                            ErrorCode::NO_ERROR,
-                            b"",
-                            this.last_peer_stream_id.get(),
-                            true,
-                        );
+                        this.send_go_away(triggering_id, ErrorCode::NO_ERROR, b"", None, true);
                         Ok(Some(JSValue::UNDEFINED))
                     }
                 }
@@ -5852,7 +5883,7 @@ impl H2FrameParser {
         let identifier = stream.get_identifier();
         identifier.ensure_still_alive();
         if stream.state == StreamState::HALF_CLOSED_REMOTE {
-            stream.close();
+            stream.close(this);
             stream.free_resources::<false>(this);
         } else {
             stream.state = StreamState::HALF_CLOSED_LOCAL;
@@ -6401,7 +6432,7 @@ impl H2FrameParser {
             }
             if stream.state != StreamState::CLOSED {
                 let old_state = stream.state;
-                stream.close();
+                stream.close(this);
                 stream.rst_code = ErrorCode::CANCEL.0;
                 let identifier = stream.get_identifier();
                 identifier.ensure_still_alive();
@@ -6443,7 +6474,7 @@ impl H2FrameParser {
             // the lifetime of the entry. Separate heap allocation from `this`, so no aliasing.
             let stream = unsafe { &mut *stream_ptr };
             if stream.state != StreamState::CLOSED {
-                stream.close();
+                stream.close(this);
                 stream.rst_code = rst_code;
                 let identifier = stream.get_identifier();
                 identifier.ensure_still_alive();
@@ -6904,7 +6935,7 @@ impl H2FrameParser {
         if callframe.arguments_count() > 4 && !options_arg.is_empty_or_undefined_or_null() {
             let options = options_arg;
             if !options.is_object() {
-                stream.close();
+                stream.close(this);
                 stream.rst_code = ErrorCode::INTERNAL_ERROR.0;
                 this.dispatch_with_extra(
                     JSH2FrameParser::Gc::onStreamError,
@@ -6981,7 +7012,7 @@ impl H2FrameParser {
                     has_priority = true;
                     parent = parent_js.to_int32();
                     if parent <= 0 || parent as u32 > MAX_STREAM_ID {
-                        stream.close();
+                        stream.close(this);
                         stream.rst_code = ErrorCode::INTERNAL_ERROR.0;
                         this.dispatch_with_extra(
                             JSH2FrameParser::Gc::onStreamError,
@@ -7004,7 +7035,7 @@ impl H2FrameParser {
                     has_priority = true;
                     weight = weight_js.to_int32();
                     if weight < 1 || weight > u8::MAX as i32 {
-                        stream.close();
+                        stream.close(this);
                         stream.rst_code = ErrorCode::INTERNAL_ERROR.0;
                         this.dispatch_with_extra(
                             JSH2FrameParser::Gc::onStreamError,
@@ -7023,7 +7054,7 @@ impl H2FrameParser {
                 }
 
                 if weight < 1 || weight > u8::MAX as i32 {
-                    stream.close();
+                    stream.close(this);
                     stream.rst_code = ErrorCode::INTERNAL_ERROR.0;
                     this.dispatch_with_extra(
                         JSH2FrameParser::Gc::onStreamError,
@@ -7060,7 +7091,7 @@ impl H2FrameParser {
 
         // too much memory being use
         if this.is_over_session_memory_limit() {
-            stream.close();
+            stream.close(this);
             stream.rst_code = ErrorCode::ENHANCE_YOUR_CALM.0;
             this.rejected_streams.set(this.rejected_streams.get() + 1);
             this.dispatch_with_extra(
@@ -7096,7 +7127,7 @@ impl H2FrameParser {
         if this.max_send_header_block_length.get() != 0
             && encoded_size > this.max_send_header_block_length.get() as usize
         {
-            stream.close();
+            stream.close(this);
             stream.rst_code = ErrorCode::REFUSED_STREAM.0;
 
             this.dispatch_with_2_extra(
@@ -7285,7 +7316,7 @@ impl H2FrameParser {
             let identifier = stream.get_identifier();
             identifier.ensure_still_alive();
             if stream.state == StreamState::HALF_CLOSED_REMOTE {
-                stream.close();
+                stream.close(this);
                 stream.free_resources::<false>(this);
             } else {
                 stream.state = StreamState::HALF_CLOSED_LOCAL;
@@ -7481,6 +7512,7 @@ impl H2FrameParser {
             strict_single_value_fields: Cell::new(true),
             last_stream_id: Cell::new(0),
             last_peer_stream_id: Cell::new(0),
+            open_peer_streams: Cell::new(0),
             is_server: Cell::new(false),
             left_exception: Cell::new(false),
             write_buffer: JsCell::new(Vec::<u8>::default()),
