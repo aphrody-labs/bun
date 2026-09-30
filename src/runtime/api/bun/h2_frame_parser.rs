@@ -1660,7 +1660,7 @@ impl Stream {
                         let identifier = self.get_identifier();
                         identifier.ensure_still_alive();
                         if self.state == StreamState::HALF_CLOSED_REMOTE {
-                            self.state = StreamState::CLOSED;
+                            self.close();
                             self.free_resources::<false>(client);
                         } else {
                             self.state = StreamState::HALF_CLOSED_LOCAL;
@@ -1870,6 +1870,11 @@ impl Stream {
             self.state,
             StreamState::IDLE | StreamState::OPEN | StreamState::HALF_CLOSED_REMOTE
         )
+    }
+
+    /// The only writer of `StreamState::CLOSED`.
+    fn close(&mut self) {
+        self.state = StreamState::CLOSED;
     }
 
     pub(crate) fn set_context(&mut self, value: JSValue, global_object: &JSGlobalObject) {
@@ -2129,7 +2134,7 @@ impl H2FrameParser {
         value = value.swap_bytes();
         let _ = writer_stream.write_all(&value.to_ne_bytes());
         let old_state = stream.state;
-        stream.state = StreamState::CLOSED;
+        stream.close();
         let identifier = stream.get_identifier();
         identifier.ensure_still_alive();
         stream.free_resources::<false>(self);
@@ -2167,7 +2172,7 @@ impl H2FrameParser {
         value = value.swap_bytes();
         let _ = writer_stream.write_all(&value.to_ne_bytes());
 
-        stream.state = StreamState::CLOSED;
+        stream.close();
         let identifier = stream.get_identifier();
         identifier.ensure_still_alive();
         stream.free_resources::<false>(self);
@@ -4127,13 +4132,12 @@ impl crate::api::h2::connection::Sink for H2FrameParser {
                 effective = 7;
             }
             // SAFETY: stream is *mut Stream from self.streams; valid while the map entry exists
-            unsafe {
-                (*stream).state = match effective {
-                    5 => StreamState::HALF_CLOSED_LOCAL,
-                    6 => StreamState::HALF_CLOSED_REMOTE,
-                    7 => StreamState::CLOSED,
-                    _ => legacy_state,
-                };
+            let stream = unsafe { &mut *stream };
+            match effective {
+                5 => stream.state = StreamState::HALF_CLOSED_LOCAL,
+                6 => stream.state = StreamState::HALF_CLOSED_REMOTE,
+                7 => stream.close(),
+                _ => {}
             }
         }
         let stream_ctx = self.rewrite_stream_ctx(stream_id);
@@ -4191,7 +4195,7 @@ impl crate::api::h2::connection::Sink for H2FrameParser {
             // SAFETY: stream is *mut Stream from self.streams; valid while the map entry exists
             unsafe {
                 old_state = (*stream).state as u8;
-                (*stream).state = StreamState::CLOSED;
+                (*stream).close();
                 (*stream).rst_code = code;
             }
         }
@@ -5347,7 +5351,7 @@ impl H2FrameParser {
                     let identifier = stream.get_identifier();
                     identifier.ensure_still_alive();
                     if stream.state == StreamState::HALF_CLOSED_REMOTE {
-                        stream.state = StreamState::CLOSED;
+                        stream.close();
                         stream.free_resources::<false>(self);
                     } else {
                         stream.state = StreamState::HALF_CLOSED_LOCAL;
@@ -5848,7 +5852,7 @@ impl H2FrameParser {
         let identifier = stream.get_identifier();
         identifier.ensure_still_alive();
         if stream.state == StreamState::HALF_CLOSED_REMOTE {
-            stream.state = StreamState::CLOSED;
+            stream.close();
             stream.free_resources::<false>(this);
         } else {
             stream.state = StreamState::HALF_CLOSED_LOCAL;
@@ -6397,7 +6401,7 @@ impl H2FrameParser {
             }
             if stream.state != StreamState::CLOSED {
                 let old_state = stream.state;
-                stream.state = StreamState::CLOSED;
+                stream.close();
                 stream.rst_code = ErrorCode::CANCEL.0;
                 let identifier = stream.get_identifier();
                 identifier.ensure_still_alive();
@@ -6439,7 +6443,7 @@ impl H2FrameParser {
             // the lifetime of the entry. Separate heap allocation from `this`, so no aliasing.
             let stream = unsafe { &mut *stream_ptr };
             if stream.state != StreamState::CLOSED {
-                stream.state = StreamState::CLOSED;
+                stream.close();
                 stream.rst_code = rst_code;
                 let identifier = stream.get_identifier();
                 identifier.ensure_still_alive();
@@ -6900,7 +6904,7 @@ impl H2FrameParser {
         if callframe.arguments_count() > 4 && !options_arg.is_empty_or_undefined_or_null() {
             let options = options_arg;
             if !options.is_object() {
-                stream.state = StreamState::CLOSED;
+                stream.close();
                 stream.rst_code = ErrorCode::INTERNAL_ERROR.0;
                 this.dispatch_with_extra(
                     JSH2FrameParser::Gc::onStreamError,
@@ -6977,7 +6981,7 @@ impl H2FrameParser {
                     has_priority = true;
                     parent = parent_js.to_int32();
                     if parent <= 0 || parent as u32 > MAX_STREAM_ID {
-                        stream.state = StreamState::CLOSED;
+                        stream.close();
                         stream.rst_code = ErrorCode::INTERNAL_ERROR.0;
                         this.dispatch_with_extra(
                             JSH2FrameParser::Gc::onStreamError,
@@ -7000,7 +7004,7 @@ impl H2FrameParser {
                     has_priority = true;
                     weight = weight_js.to_int32();
                     if weight < 1 || weight > u8::MAX as i32 {
-                        stream.state = StreamState::CLOSED;
+                        stream.close();
                         stream.rst_code = ErrorCode::INTERNAL_ERROR.0;
                         this.dispatch_with_extra(
                             JSH2FrameParser::Gc::onStreamError,
@@ -7019,7 +7023,7 @@ impl H2FrameParser {
                 }
 
                 if weight < 1 || weight > u8::MAX as i32 {
-                    stream.state = StreamState::CLOSED;
+                    stream.close();
                     stream.rst_code = ErrorCode::INTERNAL_ERROR.0;
                     this.dispatch_with_extra(
                         JSH2FrameParser::Gc::onStreamError,
@@ -7056,7 +7060,7 @@ impl H2FrameParser {
 
         // too much memory being use
         if this.is_over_session_memory_limit() {
-            stream.state = StreamState::CLOSED;
+            stream.close();
             stream.rst_code = ErrorCode::ENHANCE_YOUR_CALM.0;
             this.rejected_streams.set(this.rejected_streams.get() + 1);
             this.dispatch_with_extra(
@@ -7092,7 +7096,7 @@ impl H2FrameParser {
         if this.max_send_header_block_length.get() != 0
             && encoded_size > this.max_send_header_block_length.get() as usize
         {
-            stream.state = StreamState::CLOSED;
+            stream.close();
             stream.rst_code = ErrorCode::REFUSED_STREAM.0;
 
             this.dispatch_with_2_extra(
@@ -7281,7 +7285,7 @@ impl H2FrameParser {
             let identifier = stream.get_identifier();
             identifier.ensure_still_alive();
             if stream.state == StreamState::HALF_CLOSED_REMOTE {
-                stream.state = StreamState::CLOSED;
+                stream.close();
                 stream.free_resources::<false>(this);
             } else {
                 stream.state = StreamState::HALF_CLOSED_LOCAL;
