@@ -93,6 +93,13 @@ bun run <file or script>
   Force <code>Buffer.allocUnsafe(size)</code> to be zero-filled
 </ParamField>
 
+<ParamField path="--experimental-linear-regexp" type="boolean">
+  Match regular expressions with a matcher that does not backtrack, so that the time of a match grows linearly with the
+  length of the input. It is slower than the default engine on ordinary patterns. A pattern with a backreference, or a
+  lookaround that can match text of any length, still backtracks. Same as{" "}
+  <code>BUN_FEATURE_FLAG_EXPERIMENTAL_LINEAR_REGEXP=1</code>
+</ParamField>
+
 <ParamField path="--no-addons" type="boolean">
   Throw an error if <code>process.dlopen</code> or <code>bun:ffi</code> <code>cc()</code> is called, and disable export
   condition <code>node-addons</code>

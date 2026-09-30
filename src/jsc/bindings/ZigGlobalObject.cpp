@@ -284,11 +284,11 @@ extern "C" long Bun__crashHandlerFromJSCFrame(void*, void*, void*, void*);
 // bun_icu_default_locale.cpp
 extern "C" void Bun__ensureICUDefaultLocale();
 
-extern "C" void JSCInitialize(const char* envp[], size_t envc, void (*onCrash)(const char* ptr, size_t length), bool evalMode, bool oneShotStartup, bool shortLivedGlobals)
+extern "C" void JSCInitialize(const char* envp[], size_t envc, void (*onCrash)(const char* ptr, size_t length), bool evalMode, bool oneShotStartup, bool shortLivedGlobals, bool linearRegExp)
 {
     static std::once_flag jsc_init_flag;
     // NOLINTBEGIN
-    std::call_once(jsc_init_flag, [evalMode, oneShotStartup, shortLivedGlobals, envp, envc, onCrash]() {
+    std::call_once(jsc_init_flag, [evalMode, oneShotStartup, shortLivedGlobals, linearRegExp, envp, envc, onCrash]() {
         Bun__ensureICUDefaultLocale();
         JSC::Config::enableRestrictedOptions();
         // JSC options come from BUN_JSC_* (applied in the callback below), not JSC_*.
@@ -364,6 +364,11 @@ extern "C" void JSCInitialize(const char* envp[], size_t envc, void (*onCrash)(c
             // `bun test --isolate`: FTL code dies with each file's global, so only tier up code hot enough to pay that back within one file.
             if (shortLivedGlobals) {
                 JSC::Options::thresholdForFTLOptimizeAfterWarmUp() = 1000000;
+            }
+
+            // --experimental-linear-regexp: no RegExp backtracks, except one the matcher cannot run (yarr/YarrLinear.h).
+            if (linearRegExp) {
+                JSC::Options::useRegExpLinearEngine() = true;
             }
 
             if (envc > 0) [[likely]] {

@@ -4301,6 +4301,13 @@
       "multiple": false
     },
     {
+      "name": "experimental-linear-regexp",
+      "description": "Match regular expressions without backtracking, in time linear in the input. Same as BUN_FEATURE_FLAG_EXPERIMENTAL_LINEAR_REGEXP=1",
+      "hasValue": false,
+      "required": false,
+      "multiple": false
+    },
+    {
       "name": "max-http-header-size",
       "description": "Set the maximum size of HTTP headers in bytes. Default is 16KiB",
       "hasValue": true,
