@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { tls as tlsCert } from "harness";
+import { bunEnv, bunExe, isASAN, isDebug, tls as tlsCert } from "harness";
 import { once } from "node:events";
 import http2 from "node:http2";
 import net from "node:net";
@@ -25,6 +25,9 @@ const END_HEADERS = 0x4;
 const ACK = 0x1;
 const REFUSED_STREAM = http2.constants.NGHTTP2_REFUSED_STREAM;
 const CANCEL = http2.constants.NGHTTP2_CANCEL;
+const NO_ERROR = http2.constants.NGHTTP2_NO_ERROR;
+const PROTOCOL_ERROR = http2.constants.NGHTTP2_PROTOCOL_ERROR;
+const INTERNAL_ERROR = http2.constants.NGHTTP2_INTERNAL_ERROR;
 const ENHANCE_YOUR_CALM = http2.constants.NGHTTP2_ENHANCE_YOUR_CALM;
 
 type Frame = { type: number; flags: number; streamId: number; payload: Buffer };
@@ -329,48 +332,6 @@ describe("maxSessionRejectedStreams and the reset of a delivered stream", () => 
       events.close();
     } finally {
       client.close();
-      server.close();
-    }
-  });
-
-  // Bun-only, kept from 1.4.x: node v26.3.0 answers 3, 5 and 7 with RST_STREAM(REFUSED_STREAM),
-  // charges maxSessionInvalidFrames and keeps the session. Rewrite this test when the refusal
-  // moves to that budget.
-  test("a stream refused over maxConcurrentStreams is counted", async () => {
-    const seen: number[] = [];
-    let sessionErrorCode: string | undefined;
-    const server = http2.createServer({ settings: { maxConcurrentStreams: 1 }, maxSessionRejectedStreams: 3 });
-    server.on("sessionError", (err: NodeJS.ErrnoException) => (sessionErrorCode = err.code));
-    server.on("session", session => session.on("error", () => {}));
-    server.on("stream", stream => {
-      seen.push(stream.id!);
-      stream.on("error", () => {});
-      stream.respond({ ":status": 200 });
-      stream.write("hello");
-    });
-    const client = await RawClient.connect(server);
-    try {
-      client.get(1);
-      await client.waitFor(f => f.type === HEADERS && f.streamId === 1);
-      for (const streamId of [3, 5, 7]) client.get(streamId);
-      const goaway = await client.waitFor(f => f.type === GOAWAY);
-      if (!client.closed) await once(client.socket, "close");
-      expect({
-        seen,
-        resets: client.resets(),
-        goaway: goaway?.payload.readUInt32BE(4),
-        sessionErrorCode,
-      }).toEqual({
-        seen: [1],
-        resets: [
-          [3, REFUSED_STREAM],
-          [5, REFUSED_STREAM],
-        ],
-        goaway: ENHANCE_YOUR_CALM,
-        sessionErrorCode: "ERR_HTTP2_SESSION_ERROR",
-      });
-    } finally {
-      client.socket.destroy();
       server.close();
     }
   });
@@ -953,4 +914,343 @@ describe("the slots of SETTINGS_MAX_CONCURRENT_STREAMS", () => {
       sessionError: undefined,
     });
   });
+});
+
+/** A request whose block is malformed: it carries a `connection` field (RFC 9113 8.2.2). */
+const malformed = (streamId: number) =>
+  frame(
+    HEADERS,
+    END_STREAM | END_HEADERS,
+    streamId,
+    Buffer.concat([requestBlock("GET"), Buffer.from([0x00]), literal("connection"), literal("close")]),
+  );
+
+const withCode = (resets: Array<[number, number]>, code: number) => resets.filter(reset => reset[1] === code);
+
+// A stream over the limit is refused before it exists. nghttp2 reports its HEADERS frame as an
+// invalid frame, so node charges maxSessionInvalidFrames with `count++ > max`, and
+// maxSessionRejectedStreams plays no part:
+// https://github.com/nodejs/node/blob/v26.3.0/deps/nghttp2/lib/nghttp2_session.c#L3905-L3908
+// https://github.com/nodejs/node/blob/v26.3.0/src/node_http2.cc#L1128-L1143
+// Every expectation is what node v26.3.0 does, unless the test says that node differs.
+describe("a stream refused over SETTINGS_MAX_CONCURRENT_STREAMS", () => {
+  const one = { settings: { maxConcurrentStreams: 1 } };
+
+  // A client does not know the limit before the SETTINGS of the server arrive, so it cannot
+  // avoid this.
+  describe.each([
+    ["the default budgets", {}],
+    ["maxSessionRejectedStreams: 3", { maxSessionRejectedStreams: 3 }],
+  ])("a first flight of 150 requests at limit 10, with %s", (_, budgets) => {
+    test.each(entryPoints)("keeps the session of %s", async (_, secure, listen) => {
+      const served: Served = { handlers: [] };
+      const server = listen({ settings: { maxConcurrentStreams: 10 }, ...budgets }, served);
+      expect(await withClient(server, client => inOneWrite(150)(client, served), secure)).toEqual({
+        handlers: odd(10),
+        answered: odd(10),
+        resets: refused(odd(140, 21)),
+        goaways: [],
+        sessionError: undefined,
+      });
+    });
+  });
+
+  test.each([
+    [0, 1],
+    [3, 4],
+  ])("maxSessionInvalidFrames: %d allows %d refused streams", async (maxSessionInvalidFrames, allowed) => {
+    const options = { ...one, maxSessionInvalidFrames, maxSessionRejectedStreams: 1 };
+    await withLimit(options, hold, async (client, served) => {
+      client.send(get(1));
+      await client.waitFor(answered(1));
+      client.send(...odd(allowed, 3).map(get));
+      expect(await outcome(client, served, 1)).toEqual({
+        handlers: [1],
+        answered: [1],
+        resets: refused(odd(allowed, 3)),
+        goaways: [],
+        sessionError: undefined,
+      });
+      // The next refusal uses up the allowance. It still gets its RST_STREAM, and the session
+      // reads no frame after it.
+      client.send(...odd(3, 3 + 2 * allowed).map(get));
+      const result = await outcome(client, served, 2);
+      const goaway = client.frames.find(f => f.type === GOAWAY);
+      expect({ ...result, lastStreamId: goaway?.payload.readUInt32BE(0) }).toEqual({
+        handlers: [1],
+        answered: [1],
+        resets: refused(odd(allowed + 1, 3)),
+        goaways: [INTERNAL_ERROR],
+        sessionError: "ERR_HTTP2_TOO_MANY_INVALID_FRAMES",
+        // No refused stream was processed, so a client can send every one of them again.
+        lastStreamId: 1,
+      });
+    });
+  });
+
+  test("a refused stream and a malformed block use the same allowance", async () => {
+    const options = { settings: { maxConcurrentStreams: 2 }, maxSessionInvalidFrames: 1 };
+    const result = await withLimit(options, hold, async (client, served) => {
+      client.send(get(1), get(3));
+      await client.waitFor(answered(3));
+      // 5 is over the limit. 7 and 9 are admitted and their blocks are malformed.
+      client.send(get(5), cancel(3), malformed(7), malformed(9));
+      return outcome(client, served);
+    });
+    expect(result).toEqual({
+      handlers: [1, 3],
+      answered: [1, 3],
+      resets: [
+        [5, REFUSED_STREAM],
+        [7, PROTOCOL_ERROR],
+      ],
+      goaways: [INTERNAL_ERROR],
+      sessionError: "ERR_HTTP2_TOO_MANY_INVALID_FRAMES",
+    });
+  });
+
+  test("a refused stream with a malformed block gets one RST_STREAM", async () => {
+    const result = await withLimit(one, hold, async (client, served) => {
+      client.send(get(1));
+      await client.waitFor(answered(1));
+      client.send(malformed(3));
+      return outcome(client, served);
+    });
+    expect(result).toEqual({
+      handlers: [1],
+      answered: [1],
+      resets: refused([3]),
+      goaways: [],
+      sessionError: undefined,
+    });
+  });
+
+  test("a refused stream is not the last stream that the session processed", async () => {
+    const served: Served = { handlers: [] };
+    const sessions: http2.ServerHttp2Session[] = [];
+    const server = http2.createServer(one);
+    server.on("session", session => sessions.push(session));
+    record(server, served, hold);
+    const result = await withClient(server, async client => {
+      client.send(get(1));
+      await client.waitFor(answered(1));
+      client.send(get(3), get(5));
+      await client.ping(1);
+      const lastProcStreamID = sessions[0].state.lastProcStreamID;
+      sessions[0].close();
+      const goaway = await client.waitFor(f => f.type === GOAWAY);
+      return {
+        handlers: served.handlers,
+        lastProcStreamID,
+        goaway: [goaway?.payload.readUInt32BE(0), goaway?.payload.readUInt32BE(4)],
+      };
+    });
+    expect(result).toEqual({ handlers: [1], lastProcStreamID: 1, goaway: [1, NO_ERROR] });
+  });
+
+  // With maxSessionInvalidFrames: 0 a second charge for stream 3 would end the session.
+  test("frames on a refused stream in a later write get no answer and no charge", async () => {
+    const result = await withLimit({ ...one, maxSessionInvalidFrames: 0 }, hold, async (client, served) => {
+      client.send(get(1));
+      await client.waitFor(answered(1));
+      client.send(upload(3));
+      await client.ping(1);
+      client.send(frame(DATA, 0, 3, Buffer.from("hello")));
+      await client.ping(2);
+      const field = Buffer.concat([Buffer.from([0x00]), literal("x-checksum"), literal("1")]);
+      client.send(frame(HEADERS, END_STREAM | END_HEADERS, 3, field));
+      return outcome(client, served, 3);
+    });
+    expect(result).toEqual({
+      handlers: [1],
+      answered: [1],
+      resets: refused([3]),
+      goaways: [],
+      sessionError: undefined,
+    });
+  });
+
+  // A respond() that fails gives the slot back. The reset or the end of that stream must not
+  // give a second slot back: 3 holds the one slot when 5 arrives.
+  test.each([
+    ["the peer resets", (client: RawClient) => client.send(upload(1)), (client: RawClient) => client.send(cancel(1))],
+    ["the peer has ended", (client: RawClient) => client.send(get(1)), () => {}],
+  ])("a stream whose respond() failed and that %s gives back one slot", async (_, open, then) => {
+    const failFirst: OnStream = (stream, headers) => {
+      if (stream.id === 1) stream.respond({ ":status": 200 }, { weight: 0 } as http2.ServerStreamResponseOptions);
+      else hold(stream, headers);
+    };
+    const result = await withLimit(one, failFirst, async (client, served) => {
+      open(client);
+      await client.ping(1);
+      then(client);
+      await client.ping(2);
+      client.send(get(3));
+      await client.waitFor(answered(3));
+      client.send(get(5));
+      return outcome(client, served, 3);
+    });
+    expect(result).toEqual({
+      handlers: [1, 3],
+      answered: [3],
+      resets: refused([5]),
+      goaways: [],
+      sessionError: undefined,
+    });
+  });
+
+  // Node refuses 5 on both transports: nghttp2 closes stream 1 when it writes the trailers, after
+  // it has read every frame of the chunk. Bun has closed stream 1 when sendTrailers() returns.
+  test.each([
+    [
+      "a TCP socket",
+      (options: http2.ServerOptions, served: Served, onStream: OnStream) => {
+        const server = http2.createServer(options);
+        record(server, served, onStream);
+        return server;
+      },
+    ],
+    ["a Duplex", duplexFed],
+  ])(
+    "sendTrailers() on another stream frees its slot for the next request of the same write, on %s",
+    async (_, listen) => {
+      const served: Served = { handlers: [] };
+      const wantsTrailers = Promise.withResolvers<void>();
+      let first: http2.ServerHttp2Stream | undefined;
+      const endFirst: OnStream = (stream, headers) => {
+        if (stream.id === 1) {
+          first = stream;
+          stream.respond({ ":status": 200 }, { waitForTrailers: true });
+          stream.on("wantTrailers", () => wantsTrailers.resolve());
+          stream.end("hello");
+          return;
+        }
+        if (stream.id === 3) first!.sendTrailers({ "x-checksum": "1" });
+        hold(stream, headers);
+      };
+      const server = listen({ settings: { maxConcurrentStreams: 2 } }, served, endFirst);
+      const result = await withClient(server, async client => {
+        client.send(get(1));
+        await wantsTrailers.promise;
+        client.send(get(3), get(5));
+        return outcome(client, served);
+      });
+      expect(result).toEqual(allServed([1, 3, 5]));
+    },
+  );
+
+  // Bun reads a top-level maxConcurrentStreams as a setting. Here `settings` overrides it with
+  // no value, so no limit is sent to the peer, and none applies.
+  test("a limit that was not sent to the peer refuses nothing", async () => {
+    const options = { maxConcurrentStreams: 2, settings: { maxConcurrentStreams: undefined } } as http2.ServerOptions;
+    expect(await withLimit(options, hold, inOneWrite(5))).toEqual(allServed(odd(5)));
+  });
+
+  describe("and maxSessionMemory", () => {
+    // Node: a stream refused for memory is open until its RST_STREAM is written after the read,
+    // so it uses a slot, and the requests after it are over the limit.
+    test("a first flight with large responses keeps the session", async () => {
+      const body = Buffer.alloc(200 * 1024, "a");
+      const large: OnStream = stream => {
+        stream.respond({ ":status": 200 });
+        stream.write(body);
+      };
+      const options = { maxSessionMemory: 1, settings: { maxConcurrentStreams: 10 } };
+      const result = await withLimit(options, large, inOneWrite(150));
+      const memory = withCode(result.resets, ENHANCE_YOUR_CALM).length;
+      expect({
+        goaways: result.goaways,
+        sessionError: result.sessionError,
+        refusedForMemory: memory > 0,
+        slots: result.handlers.length + memory,
+        overTheLimit: withCode(result.resets, REFUSED_STREAM).length,
+      }).toEqual({ goaways: [], sessionError: undefined, refusedForMemory: true, slots: 10, overTheLimit: 140 });
+    });
+
+    test("DATA on a stream that was refused for memory gets no second RST_STREAM", async () => {
+      const body = Buffer.alloc(1 << 22, "a");
+      const large: OnStream = stream => {
+        stream.respond({ ":status": 200 });
+        stream.write(body);
+      };
+      const result = await withLimit({ maxSessionMemory: 1 }, large, async (client, served) => {
+        client.send(get(1));
+        await client.waitFor(f => f.type === DATA && f.streamId === 1);
+        client.send(upload(3), frame(DATA, 0, 3, Buffer.from("hello")));
+        await client.ping(1);
+        client.send(frame(DATA, END_STREAM, 3, Buffer.from("world")));
+        return outcome(client, served, 2);
+      });
+      expect(result).toEqual({
+        handlers: [1],
+        answered: [1],
+        resets: [[3, ENHANCE_YOUR_CALM]],
+        goaways: [],
+        sessionError: undefined,
+      });
+    });
+  });
+
+  // The listener throws in the dispatch of the reset, before the session handler has finished.
+  test(
+    "an 'aborted' listener that throws does not keep the slot",
+    async () => {
+      const script = /* js */ `
+      const http2 = require("node:http2");
+      const net = require("node:net");
+      process.on("uncaughtException", () => {});
+      const handlers = [];
+      const server = http2.createServer({ settings: { maxConcurrentStreams: 1 } });
+      server.on("session", session => session.on("error", () => {}));
+      server.on("stream", stream => {
+        handlers.push(stream.id);
+        stream.on("error", () => {});
+        stream.on("aborted", () => {
+          throw new Error("from the 'aborted' listener");
+        });
+        stream.respond({ ":status": 200 });
+        stream.write("hello");
+      });
+      const frame = (type, flags, id, payload = Buffer.alloc(0)) => {
+        const header = Buffer.alloc(9);
+        header.writeUIntBE(payload.length, 0, 3);
+        header[3] = type;
+        header[4] = flags;
+        header.writeUInt32BE(id, 5);
+        return Buffer.concat([header, payload]);
+      };
+      const HEADERS = 1, RST_STREAM = 3, SETTINGS = 4;
+      const upload = id => frame(HEADERS, 4, id, Buffer.from([0x83, 0x86, 0x84, 0x01, 9, ...Buffer.from("localhost")]));
+      server.listen(0, "127.0.0.1", () => {
+        const socket = net.connect(server.address().port, "127.0.0.1");
+        socket.write(Buffer.concat([Buffer.from("PRI * HTTP/2.0\\r\\n\\r\\nSM\\r\\n\\r\\n"), frame(SETTINGS, 0, 0), upload(1)]));
+        let buffered = Buffer.alloc(0);
+        let resetSent = false;
+        socket.on("data", chunk => {
+          buffered = Buffer.concat([buffered, chunk]);
+          while (buffered.length >= 9 && buffered.length >= 9 + buffered.readUIntBE(0, 3)) {
+            const type = buffered[3];
+            const id = buffered.readUInt32BE(5);
+            buffered = buffered.subarray(9 + buffered.readUIntBE(0, 3));
+            if (type === HEADERS && id === 1 && !resetSent) {
+              resetSent = true;
+              socket.write(Buffer.concat([frame(RST_STREAM, 0, 1, Buffer.from([0, 0, 0, 8])), upload(3)]));
+            } else if ((type === HEADERS || type === RST_STREAM) && id === 3) {
+              console.log(JSON.stringify({ handlers, answer: type === HEADERS ? "HEADERS" : "RST_STREAM" }));
+              process.exit(0);
+            }
+          }
+        });
+      });
+    `;
+      await using proc = Bun.spawn({ cmd: [bunExe(), "-e", script], env: bunEnv, stdout: "pipe", stderr: "pipe" });
+      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+      expect({ stdout: stdout.trim(), exitCode }).toEqual({
+        stdout: JSON.stringify({ handlers: [1, 3], answer: "HEADERS" }),
+        exitCode: 0,
+      });
+      expect(stderr).not.toContain("error:");
+    },
+    10_000 * (isDebug ? 10 : isASAN ? 3 : 1),
+  );
 });

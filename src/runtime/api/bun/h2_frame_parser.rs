@@ -1106,6 +1106,8 @@ pub(crate) struct H2FrameParser {
     /// borrow (the normal request path: receive() -> JS handler -> respond -> END_STREAM).
     /// Drained into Connection::close_stream on the next rewrite_read batch.
     pending_engine_stream_closes: JsCell<Vec<u32>>,
+    /// Streams with `holds_peer_slot`: what SETTINGS_MAX_CONCURRENT_STREAMS limits.
+    open_peer_streams: Cell<u32>,
     dispatch_depth: Cell<u32>,
     max_rejected_streams: Cell<u32>,
     max_session_invalid_frames: Cell<u32>,
@@ -1350,6 +1352,8 @@ pub(crate) struct Stream {
     // The JS readable for this stream is paused (setStreamReading(id, false)): the engine defers
     // replenishing the stream's receive window until reading resumes, backpressuring the peer.
     reading_paused: bool,
+    /// Counted in `open_peer_streams`. Not derived from `state`, which can leave CLOSED again.
+    holds_peer_slot: bool,
 
     // when we have backpressure we queue the data e round robin the Streams
     data_frame_queue: PendingQueue,
@@ -1851,6 +1855,7 @@ impl Stream {
             remote_used_window_size: 0,
             signal: None,
             reading_paused: false,
+            holds_peer_slot: false,
             data_frame_queue: PendingQueue::default(),
         }
     }
@@ -1941,8 +1946,18 @@ impl Stream {
         // queue dropped here
     }
 
+    /// Gives the slot of the stream back, once.
+    fn release_peer_slot(&mut self, client: &H2FrameParser) {
+        if core::mem::take(&mut self.holds_peer_slot) {
+            client
+                .open_peer_streams
+                .set(client.open_peer_streams.get() - 1);
+        }
+    }
+
     /// this can be called multiple times
     pub(crate) fn free_resources<const FINALIZING: bool>(&mut self, client: &H2FrameParser) {
+        self.release_peer_slot(client);
         // The rewrite engine only sees inbound traffic, so a completed request would leave
         // its engine entry as HalfClosedRemote and its legacy slot + Box behind forever —
         // one entry per request. Queue the id; the next rewrite_read batch evicts the engine
@@ -2195,6 +2210,7 @@ impl H2FrameParser {
     fn close_unsent(&self, stream: &mut Stream, code: ErrorCode) {
         stream.state = StreamState::CLOSED;
         stream.rst_code = code.0;
+        stream.release_peer_slot(self);
     }
 
     pub(crate) fn send_go_away(
@@ -3397,7 +3413,7 @@ impl H2FrameParser {
         } else {
             self.local_settings.get().initial_window_size
         };
-        let stream = bun_core::heap::into_raw(Box::new(Stream::init(
+        let mut stream = Stream::init(
             stream_identifier,
             local_window_size,
             self.remote_settings
@@ -3405,7 +3421,12 @@ impl H2FrameParser {
                 .map(|s| s.initial_window_size)
                 .unwrap_or(DEFAULT_WINDOW_SIZE as u32),
             self.padding_strategy.get(),
-        )));
+        );
+        if self.is_server.get() && stream_identifier % 2 == peer_parity {
+            stream.holds_peer_slot = true;
+            self.open_peer_streams.set(self.open_peer_streams.get() + 1);
+        }
+        let stream = bun_core::heap::into_raw(Box::new(stream));
         self.streams
             .with_mut(|s| s.insert(stream_identifier, stream));
 
@@ -3458,28 +3479,8 @@ impl H2FrameParser {
             });
             self.enter_stream_dispatch(stream)
                 .set_context(returned, &global);
-        } else if returned.is_number() && self.count_rejected_stream(stream_identifier) {
-            // streamStart refused the stream and returned the RST_STREAM code that answers it.
-            let mut refused = self.enter_stream_dispatch(stream);
-            self.end_stream(&mut refused, ErrorCode(returned.to_u32()));
         }
         Some(stream)
-    }
-
-    /// Returns false when this used up maxSessionRejectedStreams and the session sent its GOAWAY.
-    fn count_rejected_stream(&self, stream_id: u32) -> bool {
-        self.rejected_streams.set(self.rejected_streams.get() + 1);
-        if self.max_rejected_streams.get() <= self.rejected_streams.get() {
-            self.send_go_away(
-                stream_id,
-                ErrorCode::ENHANCE_YOUR_CALM,
-                b"ENHANCE_YOUR_CALM",
-                self.last_stream_id.get(),
-                true,
-            );
-            return false;
-        }
-        true
     }
 
     fn to_writer(&self) -> DirectWriterStruct {
@@ -3578,6 +3579,24 @@ impl H2FrameParser {
         }
     }
 
+    #[cfg(debug_assertions)]
+    fn assert_peer_slots(&self) {
+        let mut held = 0u32;
+        for &stream in self.streams.get().values() {
+            // SAFETY: stream is *mut Stream from self.streams; valid while the map entry exists
+            let stream = unsafe { &*stream };
+            if stream.holds_peer_slot {
+                debug_assert!(
+                    stream.state != StreamState::CLOSED,
+                    "closed stream {} holds a slot",
+                    stream.id
+                );
+                held += 1;
+            }
+        }
+        debug_assert_eq!(held, self.open_peer_streams.get());
+    }
+
     /// Feed inbound bytes through the rewrite engine, buffering the unconsumed tail (design B).
     fn rewrite_read(&self, bytes: &[u8]) {
         bun_output::scoped_log!(H2FrameParser, "rewriteRead {}", bytes.len());
@@ -3664,6 +3683,8 @@ impl H2FrameParser {
                         }
                     }
                 });
+                #[cfg(debug_assertions)]
+                self.assert_peer_slots();
             }
         }
         if self.rewrite_tail.get().is_empty() {
@@ -3978,6 +3999,14 @@ impl crate::api::h2::connection::Sink for H2FrameParser {
         !self.is_over_session_memory_limit()
     }
 
+    fn open_peer_streams(&self) -> u32 {
+        self.open_peer_streams.get()
+    }
+
+    fn max_concurrent_streams(&self) -> u32 {
+        self.local_settings.get().max_concurrent_streams
+    }
+
     fn is_local_stream(&self, stream_id: u32) -> bool {
         // The legacy outbound created an entry in the legacy streams map for every locally
         // initiated stream (request/respond), so membership there means "we sent HEADERS on it".
@@ -4191,7 +4220,18 @@ impl crate::api::h2::connection::Sink for H2FrameParser {
     }
 
     fn on_stream_rejected(&self, stream_id: u32) {
-        self.count_rejected_stream(stream_id);
+        // maxSessionRejectedStreams: counts only locally-initiated rejections (oversized or
+        // malformed header blocks) - peer-sent RST_STREAM frames must not consume the budget.
+        self.rejected_streams.set(self.rejected_streams.get() + 1);
+        if self.max_rejected_streams.get() <= self.rejected_streams.get() {
+            self.send_go_away(
+                stream_id,
+                ErrorCode::ENHANCE_YOUR_CALM,
+                b"ENHANCE_YOUR_CALM",
+                self.last_stream_id.get(),
+                true,
+            );
+        }
     }
 
     fn on_stream_reset(&self, stream_id: u32, code: u32) {
@@ -7454,6 +7494,7 @@ impl H2FrameParser {
             pending_send_window_consumed: Cell::new(0),
             pending_stream_send_consumed: JsCell::new(Vec::new()),
             pending_engine_stream_closes: JsCell::new(Vec::new()),
+            open_peer_streams: Cell::new(0),
             dispatch_depth: Cell::new(0),
             pending_settings_window_submissions: JsCell::new(Vec::new()),
             max_rejected_streams: Cell::new(100),
