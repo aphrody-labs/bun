@@ -109,7 +109,6 @@
 #include "JSEnvironmentVariableMap.h"
 #include "JSErrorEvent.h"
 #include "JSEvent.h"
-#include "JSEventEmitter.h"
 #include "JSEventListener.h"
 #include "JSEventTarget.h"
 #include "JSFetchHeaders.h"
@@ -2736,12 +2735,7 @@ void GlobalObject::finishCreation(VM& vm)
 
     m_processObject.initLater(
         [](const JSC::LazyProperty<JSC::JSGlobalObject, Bun::Process>::Initializer& init) {
-            auto* globalObject = defaultGlobalObject(init.owner);
-
-            auto* process = Bun::Process::create(
-                *globalObject, Bun::Process::createStructure(init.vm, init.owner, WebCore::JSEventEmitter::prototype(init.vm, *globalObject)));
-
-            init.set(process);
+            init.set(Bun::Process::create(defaultGlobalObject(init.owner)));
         });
 
     m_streamsRuntime.initialize(this);
@@ -2920,6 +2914,22 @@ BUN_DECLARE_HOST_FUNCTION(WebCore__confirm);
 JSValue GlobalObject_getGlobalThis(VM& vm, JSObject* globalObject)
 {
     return uncheckedDowncast<Zig::GlobalObject>(globalObject)->globalThis();
+}
+
+void GlobalObject::addBuiltinGlobal(const Identifier& privateName, JSValue value, unsigned attributes)
+{
+    GlobalPropertyInfo global { privateName, value, attributes | PropertyAttribute::DontDelete };
+    addStaticGlobals({ &global, 1 });
+}
+
+JSValue GlobalObject::builtinGlobal(const Identifier& privateName)
+{
+    SymbolTable& table = *symbolTable();
+    ConcurrentJSLocker locker(table.m_lock);
+    auto entry = table.find(locker, privateName.impl());
+    if (entry == table.end(locker))
+        return {};
+    return variableAt(entry->value.scopeOffset()).get();
 }
 
 void GlobalObject::addBuiltinGlobals(JSC::VM& vm)

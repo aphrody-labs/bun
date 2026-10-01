@@ -4,7 +4,7 @@
 
 #include "BunBuiltinNames.h"
 #include "BunClientData.h"
-#include "JSEventEmitter.h"
+#include <JavaScriptCore/JSDestructibleObject.h>
 
 namespace Zig {
 class GlobalObject;
@@ -17,8 +17,10 @@ using namespace JSC;
 extern "C" int getRSS(size_t* rss);
 extern "C" int getPeakRSS(size_t* peak);
 
-class Process : public WebCore::JSEventEmitter {
-    using Base = WebCore::JSEventEmitter;
+// `process` is a node:events EventEmitter: the methods come from EventEmitter.prototype, and the listeners are in
+// its own `_events`, as for any other emitter.
+class Process : public JSC::JSDestructibleObject {
+    using Base = JSC::JSDestructibleObject;
 
     LazyProperty<Process, Structure> m_cpuUsageStructure;
     LazyProperty<Process, Structure> m_resourceUsageStructure;
@@ -37,11 +39,12 @@ class Process : public WebCore::JSEventEmitter {
     // The JS warning printer (ProcessObjectInternals createOnWarning), built on the first warning.
     WriteBarrier<JSObject> m_onWarning;
 
-    void installDefaultWarningListener(JSC::VM&);
+    // What `_events` holds for an event: a function, an array of functions, or nothing.
+    JSValue listenersOf(const JSC::Identifier& eventName);
 
 public:
-    Process(JSC::Structure* structure, WebCore::JSDOMGlobalObject& globalObject, Ref<WebCore::EventEmitter>&& impl)
-        : Base(structure, globalObject, WTF::move(impl))
+    Process(JSC::VM& vm, JSC::Structure* structure)
+        : Base(vm, structure)
     {
     }
 
@@ -84,6 +87,16 @@ public:
 
     JSObject* ensureOnWarning(Zig::GlobalObject*);
 
+    // Calls the listeners of an event that has some, with EventEmitter.prototype.emit as it was created. Returns
+    // true when the event has listeners. What a listener throws is pending on return: for a caller that JavaScript called.
+    bool emit(const JSC::Identifier& eventName, const JSC::MarkedArgumentBuffer& args);
+    // The same for an event that the runtime starts (a signal, an IPC message, the end of the event loop). What a
+    // listener throws is an uncaught exception, and the listeners after it are not called, as in node.
+    bool emitFromRuntime(const JSC::Identifier& eventName, const JSC::MarkedArgumentBuffer& args);
+    // Both read `_events` and run no JavaScript.
+    bool hasListeners(const JSC::Identifier& eventName);
+    unsigned listenerCount(const JSC::Identifier& eventName);
+
     static JSValue emitWarningErrorInstance(JSC::JSGlobalObject* lexicalGlobalObject, JSValue errorInstance);
     static JSValue emitWarning(JSC::JSGlobalObject* lexicalGlobalObject, JSValue warning, JSValue type, JSValue code, JSValue ctor);
 
@@ -100,16 +113,16 @@ public:
     static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject,
         JSC::JSValue prototype)
     {
-        return Bun::createClassStructure(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
+        auto* structure = Bun::createClassStructure(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
+        // The static table has accessors with setters (exitCode, title, argv). Without this flag an assignment
+        // does not look for a setter. JavaScriptCore takes the flag from the generated table, and
+        // src/codegen/create_hash_table does not write the attributes of the properties there.
+        structure->setHasAnyKindOfGetterSetterPropertiesWithProtoCheck(false);
+        return structure;
     }
 
-    static Process* create(WebCore::JSDOMGlobalObject& globalObject, JSC::Structure* structure)
-    {
-        auto emitter = WebCore::EventEmitter::create(*globalObject.scriptExecutionContext());
-        Process* accessor = new (NotNull, JSC::allocateCell<Process>(globalObject.vm())) Process(structure, globalObject, WTF::move(emitter));
-        accessor->finishCreation(globalObject.vm());
-        return accessor;
-    }
+    // With its prototype: an object that has `constructor` and inherits from EventEmitter.prototype.
+    static Process* create(Zig::GlobalObject*);
 
     DECLARE_VISIT_CHILDREN;
 

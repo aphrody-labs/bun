@@ -1159,6 +1159,45 @@ test("postMessageToThread survives a tampered Map prototype", async () => {
   expect(exitCode).toBe(0);
 });
 
+// The hub delivers with process.emit("workerMessage"), which removes a once() listener before it calls it.
+test("postMessageToThread calls a once('workerMessage') listener for one message only", async () => {
+  await using proc = Bun.spawn({
+    cmd: [
+      bunExe(),
+      "-e",
+      `const wt = require("worker_threads");
+       const w = new wt.Worker(
+         \`const wt = require("worker_threads");
+           wt.parentPort.on("message", async () => {
+             const results = [];
+             for (const value of ["first", "second"]) {
+               try {
+                 await wt.postMessageToThread(0, value);
+                 results.push("delivered");
+               } catch (error) {
+                 results.push(error.code);
+               }
+             }
+             wt.parentPort.postMessage(results);
+           });\`,
+         { eval: true },
+       );
+       process.once("workerMessage", value => console.log("once:", value));
+       w.on("message", results => {
+         console.log(results.join(","));
+         w.terminate();
+       });
+       w.postMessage("go");`,
+    ],
+    env: bunEnv,
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(stderr).toBe("");
+  expect(stdout).toBe("once: first\ndelivered,ERR_WORKER_MESSAGING_FAILED\n");
+  expect(exitCode).toBe(0);
+});
+
 // The listener registry must not route through user-overridable Map/Set/WeakMap:
 // not their methods, not the `size` getter, not their iterators. Spawned, because
 // it clobbers prototypes and would poison the whole runner.
