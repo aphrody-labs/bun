@@ -320,6 +320,11 @@ pub(crate) struct ConnectConfig {
     address: BunString,
 }
 
+/// Bits of the private `nodeDgramFlags` option, which only node:dgram can set.
+/// `NodeDgramFlags` in src/js/node/dgram.ts mirrors them.
+const NODE_DGRAM_NO_RECVERR: i32 = 1;
+const NODE_DGRAM_SHARED_FD: i32 = 2;
+
 pub(crate) struct UDPSocketConfig {
     pub(crate) hostname: BunString,
     connect: Option<ConnectConfig>,
@@ -372,8 +377,10 @@ impl UDPSocketConfig {
             }
         };
 
-        let flags: i32 = if let Some(value) = options.get_truthy(global_this, "flags")? {
+        // The opt-out of IP_RECVERR is node:dgram's. User code cannot pass it.
+        let mut flags: i32 = if let Some(value) = options.get_truthy(global_this, "flags")? {
             validators::validate_int32(global_this, value, "flags", None, None)?
+                & !uws::LIBUS_UDP_NO_LINUX_RECVERR
         } else {
             0
         };
@@ -406,9 +413,13 @@ impl UDPSocketConfig {
             }
         };
 
-        let shared_fd = options
-            .fast_get(global_this, bun_jsc::BuiltinName::sharedFd)?
-            .is_some_and(|v| v.to_boolean());
+        let node_dgram_flags = options
+            .fast_get(global_this, bun_jsc::BuiltinName::nodeDgramFlags)?
+            .map_or(0, |v| v.to_int32());
+        let shared_fd = node_dgram_flags & NODE_DGRAM_SHARED_FD != 0;
+        if node_dgram_flags & NODE_DGRAM_NO_RECVERR != 0 {
+            flags |= uws::LIBUS_UDP_NO_LINUX_RECVERR;
+        }
 
         let mut config = Self {
             hostname,

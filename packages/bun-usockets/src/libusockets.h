@@ -166,6 +166,11 @@ enum {
      * for connects, and ignored for TLS sockets: the handshake needs the reads, the owner pauses
      * those sockets itself. */
     LIBUS_SOCKET_OPEN_PAUSED = 256,
+    /* Do not enable IP_RECVERR on a UDP socket that has an on_recv_error
+     * handler. Node never sets the option: the kernel then keeps one errno in
+     * the socket, and only for a connected one, and the next recvmsg reports
+     * it. node:dgram asks for that. */
+    LIBUS_UDP_NO_LINUX_RECVERR = 512,
 };
 
 /* Library types publicly available */
