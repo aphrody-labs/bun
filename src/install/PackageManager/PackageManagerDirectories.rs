@@ -9,7 +9,7 @@ use crate::repository::Repository;
 use bun_core::ZStr;
 use bun_core::{Global, Output, ZBox, env_var, fmt as bun_fmt};
 use bun_dotenv::Loader as DotEnvLoader;
-use bun_install::lockfile::{Format as LockfileFormat, LoadResult, Lockfile};
+use bun_install::lockfile::{Format as LockfileFormat, LoadResult, MetaHashForSave};
 use bun_install::resolution::Tag as ResolutionTag;
 use bun_install::{PackageID, Resolution};
 use bun_paths::{self as path, AbsPath, PathBuffer, SEP};
@@ -1086,10 +1086,7 @@ pub fn save_lockfile(
     load_result: &LoadResult,
     save_format: LockfileFormat,
     had_any_diffs: bool,
-    // NOTE(dylan-conway): this and `packages_len_before_install` can most likely be deleted
-    // now that git dependnecies don't append to lockfile during installation.
-    lockfile_before_install: &Lockfile,
-    packages_len_before_install: usize,
+    meta_hash: MetaHashForSave,
     log_level: LogLevel,
 ) -> Result<bool, AllocError> {
     if this.lockfile.is_empty() {
@@ -1158,35 +1155,13 @@ pub fn save_lockfile(
         this.progress.refresh();
     }
 
-    let wrote = this.lockfile.save_to_disk(load_result, &this.options);
+    let wrote = this
+        .lockfile
+        .save_to_disk(load_result, &this.options, meta_hash);
 
     // delete binary lockfile if saving text lockfile
     if save_format == LockfileFormat::Text && load_result.loaded_from_binary_lockfile() {
         let _ = sys::unlinkat(Fd::cwd(), bun_paths::path_literal!("bun.lockb"));
-    }
-
-    if cfg!(debug_assertions) {
-        if !matches!(load_result, LoadResult::NotFound) {
-            if load_result.loaded_from_text_lockfile() {
-                if !Lockfile::eql(
-                    &this.lockfile,
-                    lockfile_before_install,
-                    packages_len_before_install,
-                )? {
-                    Output::panic(format_args!("Lockfile non-deterministic after saving"));
-                }
-            } else {
-                if this
-                    .lockfile
-                    .has_meta_hash_changed(false, packages_len_before_install)
-                    .unwrap_or(false)
-                {
-                    Output::panic(format_args!(
-                        "Lockfile metahash non-deterministic after saving"
-                    ));
-                }
-            }
-        }
     }
 
     if log_level.show_progress() {
@@ -1203,6 +1178,13 @@ pub fn save_lockfile(
     }
 
     Ok(wrote)
+}
+
+/// Saves the lockfile for `bun pm migrate` and `bun pm trust`, which run no
+/// install pass.
+pub fn save_lockfile_without_install(this: &mut PackageManager, load_result: &LoadResult) {
+    this.lockfile
+        .save_to_disk(load_result, &this.options, MetaHashForSave::default());
 }
 
 pub fn update_lockfile_if_needed(
@@ -1224,7 +1206,7 @@ pub fn update_lockfile_if_needed(
     Ok(())
 }
 
-pub fn write_yarn_lock(this: &mut PackageManager) -> Result<(), Error> {
+pub fn write_yarn_lock(this: &mut PackageManager, meta_hash: MetaHashForSave) -> Result<(), Error> {
     let mut tmpname_buf = [0u8; 512];
     tmpname_buf[0..8].copy_from_slice(b"tmplock-");
     // Windows opens via `get_default_temp_dir`.
@@ -1268,7 +1250,11 @@ pub fn write_yarn_lock(this: &mut PackageManager) -> Result<(), Error> {
         // has no `bun_io::Write` impl (and `bun_sys` ⊥ `bun_io`), so buffer the
         // entire output in a `Vec<u8>` (impls `bun_io::Write`) and flush once.
         let mut buf: Vec<u8> = Vec::with_capacity(4096);
-        crate::lockfile_real::printer::Yarn::print(&mut printer, &mut buf)?;
+        crate::lockfile_real::printer::Yarn::print(
+            &mut printer,
+            &mut buf,
+            this.lockfile.meta_hash_for_save(meta_hash),
+        )?;
         file.write_all(&buf).map_err(Error::from)?;
     }
 

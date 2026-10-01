@@ -15,8 +15,6 @@ use crate::bun_json::{self, Expr};
 // so we take `crate::lockfile_real::StringBuilder` directly (matches Meta.rs).
 use crate::lockfile_real::{Lockfile as RealLockfile, StringBuilder as LockfileStringBuilder};
 
-bun_output::declare_scope!(Lockfile, hidden);
-
 const SCRIPT_NAMES_LEN: usize = LockfileScripts::NAMES.len();
 
 #[repr(C)]
@@ -112,89 +110,75 @@ impl Scripts {
         false
     }
 
+    /// The script each hook runs for a package with this resolution tag, in
+    /// `Lockfile.Scripts.names` order. With `add_node_gyp_rebuild_script`,
+    /// `node-gyp rebuild` stands in for the install and preinstall scripts.
+    pub(crate) fn script_entries<'a>(
+        &'a self,
+        lockfile_buf: &'a [u8],
+        resolution_tag: ResolutionTag,
+        add_node_gyp_rebuild_script: bool,
+    ) -> [Option<&'a [u8]>; SCRIPT_NAMES_LEN] {
+        let entry =
+            |script: &'a SemverString| (!script.is_empty()).then(|| script.slice(lockfile_buf));
+        let mut entries: [Option<&'a [u8]>; SCRIPT_NAMES_LEN] = [None; SCRIPT_NAMES_LEN];
+
+        if add_node_gyp_rebuild_script {
+            entries[1] = Some(b"node-gyp rebuild");
+        } else {
+            entries[0] = entry(&self.preinstall);
+            entries[1] = entry(&self.install);
+        }
+        entries[2] = entry(&self.postinstall);
+
+        match resolution_tag {
+            ResolutionTag::Git | ResolutionTag::Github | ResolutionTag::Root => {
+                entries[3] = entry(&self.preprepare);
+                entries[4] = entry(&self.prepare);
+                entries[5] = entry(&self.postprepare);
+            }
+            ResolutionTag::Workspace => entries[4] = entry(&self.prepare),
+            _ => {}
+        }
+
+        entries
+    }
+
     /// return: (first_index, total, entries)
-    /// Takes only `lockfile_buf` (not the whole `Lockfile`) so callers can
-    /// split-borrow `lockfile.{packages, scripts}`.
     pub(crate) fn get_script_entries(
         &self,
         lockfile_buf: &[u8],
         resolution_tag: ResolutionTag,
         add_node_gyp_rebuild_script: bool,
     ) -> (i8, u8, [Option<Box<[u8]>>; SCRIPT_NAMES_LEN]) {
-        let mut script_index: u8 = 0;
-        let mut first_script_index: i8 = -1;
-        let mut scripts: [Option<Box<[u8]>>; 6] = [const { None }; 6];
-        let mut counter: u8 = 0;
+        let entries =
+            self.script_entries(lockfile_buf, resolution_tag, add_node_gyp_rebuild_script);
+        let first_script_index = entries
+            .iter()
+            .position(Option::is_some)
+            .map_or(-1, |index| index as i8);
+        let counter = entries.iter().flatten().count() as u8;
 
-        if add_node_gyp_rebuild_script {
-            {
-                script_index += 1;
-                if first_script_index == -1 {
-                    first_script_index = i8::try_from(script_index).expect("int cast");
-                }
-                scripts[script_index as usize] =
-                    Some(Box::<[u8]>::from(b"node-gyp rebuild".as_slice()));
-                script_index += 1;
-                counter += 1;
-            }
+        (
+            first_script_index,
+            counter,
+            entries.map(|script| script.map(Box::<[u8]>::from)),
+        )
+    }
 
-            // missing install and preinstall, only need to check postinstall
-            if !self.postinstall.is_empty() {
-                if first_script_index == -1 {
-                    first_script_index = i8::try_from(script_index).expect("int cast");
-                }
-                scripts[script_index as usize] =
-                    Some(Box::<[u8]>::from(self.postinstall.slice(lockfile_buf)));
-                counter += 1;
-            }
-            script_index += 1;
-        } else {
-            let install_scripts = [&self.preinstall, &self.install, &self.postinstall];
-
-            for script in install_scripts {
-                if !script.is_empty() {
-                    if first_script_index == -1 {
-                        first_script_index = i8::try_from(script_index).expect("int cast");
-                    }
-                    scripts[script_index as usize] =
-                        Some(Box::<[u8]>::from(script.slice(lockfile_buf)));
-                    counter += 1;
-                }
-                script_index += 1;
-            }
-        }
-
-        match resolution_tag {
-            ResolutionTag::Git | ResolutionTag::Github | ResolutionTag::Root => {
-                let prepare_scripts = [&self.preprepare, &self.prepare, &self.postprepare];
-
-                for script in prepare_scripts {
-                    if !script.is_empty() {
-                        if first_script_index == -1 {
-                            first_script_index = i8::try_from(script_index).expect("int cast");
-                        }
-                        scripts[script_index as usize] =
-                            Some(Box::<[u8]>::from(script.slice(lockfile_buf)));
-                        counter += 1;
-                    }
-                    script_index += 1;
-                }
-            }
-            ResolutionTag::Workspace => {
-                script_index += 1;
-                if !self.prepare.is_empty() {
-                    if first_script_index == -1 {
-                        first_script_index = i8::try_from(script_index).expect("int cast");
-                    }
-                    scripts[script_index as usize] =
-                        Some(Box::<[u8]>::from(self.prepare.slice(lockfile_buf)));
-                    counter += 1;
-                }
-            }
-            _ => {}
-        }
-
-        (first_script_index, counter, scripts)
+    /// Whether `node-gyp rebuild` stands in for the root package's install
+    /// script: the project has a `binding.gyp` and the root has neither an
+    /// `install` nor a `preinstall` script.
+    pub(crate) fn root_node_gyp_rebuild(&self) -> bool {
+        self.install.is_empty()
+            && self.preinstall.is_empty()
+            && bun_sys::exists(
+                bun_paths::resolve_path::join_abs_string_z::<bun_paths::platform::Auto>(
+                    crate::bun_fs::FileSystem::instance().top_level_dir(),
+                    &[b"binding.gyp"],
+                )
+                .as_bytes(),
+            )
     }
 
     pub(crate) fn create_list(
@@ -464,22 +448,4 @@ impl List {
     }
 
     // No manual deinit: `Box<[u8]>` fields drop automatically.
-
-    pub(crate) fn append_to_lockfile(&self, lockfile: &mut Lockfile) {
-        for (i, maybe_script) in self.items.iter().enumerate() {
-            if let Some(script) = maybe_script {
-                bun_output::scoped_log!(
-                    Lockfile,
-                    "enqueue({}, {}) in {}",
-                    "prepare",
-                    BStr::new(&self.package_name),
-                    BStr::new(self.cwd.as_bytes()),
-                );
-                lockfile
-                    .scripts
-                    .hook_mut(i)
-                    .push(script.to_vec().into_boxed_slice());
-            }
-        }
-    }
 }
