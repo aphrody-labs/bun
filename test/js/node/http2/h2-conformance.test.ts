@@ -1770,10 +1770,11 @@ describe("inbound stream lifecycle", () => {
 // connection with PROTOCOL_ERROR when a GOAWAY names a stream its sender initiated, so a client
 // naming one of its own requests turns a clean shutdown into a protocol error at a node server.
 // Every test below passes on node v26.3.0 as well: the asserted last-stream-id values are what
-// node puts on the wire in the same situations. The two maxSessionRejectedStreams tests are the
-// ones where the two runtimes write a different set of GOAWAYs (node has no GOAWAY for an
-// oversized response header list or a user-refused stream), so they assert the last-stream-id of
-// every GOAWAY the session writes and not the frame count or the error code.
+// node puts on the wire in the same situations. The maxSessionRejectedStreams tests are the ones
+// where the two runtimes write a different set of GOAWAYs (bun charges an oversized header list,
+// a malformed request block and a stream over maxConcurrentStreams to that budget, node does
+// not), so they assert the last-stream-id of every GOAWAY the session writes and not the frame
+// count or the error code.
 describe("GOAWAY last-stream-id (RFC 9113 §6.8)", () => {
   const STATUS_200 = Buffer.from([0x88]); // HPACK static index 8
   const BAD_PING = Buffer.alloc(6); // a PING must be 8 octets: connection FRAME_SIZE_ERROR
@@ -1934,27 +1935,26 @@ describe("GOAWAY last-stream-id (RFC 9113 §6.8)", () => {
     }
   });
 
-  test("no GOAWAY a server sends after a refused request names the stream it pushed", async () => {
+  test("no GOAWAY a server sends after a rejected request names a stream it pushed", async () => {
     const server = http2.createServer({ maxSessionRejectedStreams: 1 });
-    const pushError = Promise.withResolvers<Error | null>();
     let session!: http2.ServerHttp2Session;
     server.on("session", s => {
       session = s;
       s.on("error", () => {});
     });
-    server.on("stream", (stream: any) => {
+    server.on("stream", stream => {
       stream.on("error", () => {});
-      // Reserve stream 2 (numerically above the request on 1), then refuse the request. On bun
-      // the refusal uses up the budget of 1 and the session writes an ENHANCE_YOUR_CALM GOAWAY
-      // of its own (bun counts user refusals against maxSessionRejectedStreams, node does not).
-      stream.pushStream({ ":path": "/pushed" }, (err: Error | null, pushed: any) => {
-        pushError.resolve(err);
-        if (!pushed) return;
-        pushed.on("error", () => {});
-        pushed.respond({ ":status": 200 });
-        pushed.end();
-      });
-      stream.close(http2.constants.NGHTTP2_REFUSED_STREAM);
+      // Streams 2 and 4 are the server's own. 4 is above the request that the client sends next.
+      for (const path of ["/a", "/b"]) {
+        stream.pushStream({ ":path": path }, (err, pushed) => {
+          if (err) return;
+          pushed.on("error", () => {});
+          pushed.respond({ ":status": 200 });
+          pushed.end();
+        });
+      }
+      stream.respond({ ":status": 200 });
+      stream.end();
     });
     server.listen(0);
     await once(server, "listening");
@@ -1963,17 +1963,20 @@ describe("GOAWAY last-stream-id (RFC 9113 §6.8)", () => {
       c.sendPreface();
       c.sendEmptySettings();
       c.sendFrame(FrameType.HEADERS, 0x5, 1, requestHeaderBlock("GET"));
-      const promise = await c.waitFor(f => f.type === FrameType.PUSH_PROMISE);
-      expect(promise.payload.readUInt32BE(0) & 0x7fffffff).toBe(2);
-      expect(await pushError.promise).toBeNull();
-      // close() is the GOAWAY node writes here. On bun the budget GOAWAY is already on the
-      // wire and the session is gone, so close() is a no-op. The run asserts every GOAWAY:
-      // each one names the request on 1, never the even id the server itself pushed.
+      await c.waitFor(f => f.type === FrameType.PUSH_PROMISE && (f.payload.readUInt32BE(0) & 0x7fffffff) === 4);
+      // A request block without :path is malformed (§8.3.1) and the server resets the stream. On
+      // bun that uses up the budget of 1 and the session writes an ENHANCE_YOUR_CALM GOAWAY of its
+      // own. node writes its GOAWAY on close().
+      const noPath = Buffer.concat([Buffer.from([0x82, 0x86, 0x01]), hpackLiteral("localhost")]);
+      c.sendFrame(FrameType.HEADERS, 0x5, 3, noPath);
+      const rst = await c.waitFor(f => f.type === FrameType.RST_STREAM && f.streamId === 3);
+      expect(rst.payload.readUInt32BE(0)).toBe(ErrorCode.PROTOCOL_ERROR);
       session.close();
       await c.waitClosed();
+      // Each GOAWAY names the rejected request on 3, never the even id 4 that the server pushed.
       const lastStreamIds = goawayLastStreamIds(c.frames);
       expect(lastStreamIds.length).toBeGreaterThan(0);
-      expect(lastStreamIds.filter(id => id !== 1)).toEqual([]);
+      expect(lastStreamIds.filter(id => id !== 3)).toEqual([]);
     } finally {
       c.destroy();
       server.close();
