@@ -219,7 +219,8 @@ pub(crate) unsafe fn install(
         // SAFETY: `ssl` is live and pre-handshake; `SSL_set_session` takes
         // its own reference, so release ours after.
         unsafe {
-            SSL_set_session(ssl, session.as_ptr());
+            let offered = SSL_set_session(ssl, session.as_ptr());
+            debug_assert_eq!(offered, 1, "the handshake on `ssl` has begun");
             SSL_SESSION_free(session.as_ptr());
         }
     }
