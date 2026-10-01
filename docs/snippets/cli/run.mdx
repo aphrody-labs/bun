@@ -95,9 +95,10 @@ bun run <file or script>
 
 <ParamField path="--experimental-linear-regexp" type="boolean">
   Match regular expressions with a matcher that does not backtrack, so that the time of a match grows linearly with the
-  length of the input. It is slower than the default engine on ordinary patterns. A pattern with a backreference, or a
-  lookaround that can match text of any length, still backtracks. Same as{" "}
-  <code>BUN_FEATURE_FLAG_EXPERIMENTAL_LINEAR_REGEXP=1</code>
+  length of the input. It is slower than the default engine on ordinary patterns. Some patterns still backtrack: a
+  pattern with a backreference, a lookaround that can match text of any length, and a pattern that is too large for the
+  matcher (nested counted repeats, for example). Same as <code>BUN_FEATURE_FLAG_EXPERIMENTAL_LINEAR_REGEXP=1</code> in
+  the environment of the process. A <code>.env</code> file sets the variable too late
 </ParamField>
 
 <ParamField path="--no-addons" type="boolean">

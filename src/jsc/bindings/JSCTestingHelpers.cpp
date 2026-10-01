@@ -98,8 +98,9 @@ JSC_DEFINE_HOST_FUNCTION(jsFunctionCollectSyncWithoutSweep, (JSGlobalObject * gl
 }
 
 // regExpMatchStatistics(regExp, string, startOffset = 0): one match on the bytecode of the RegExp,
-// which is where JSC's non-backtracking matcher runs, with the engine that ran and what the match
-// cost it. The steps are counted, not timed, so a test can assert how they grow with the subject.
+// which is where JSC's non-backtracking matcher runs, with the engine that ran, what the match
+// cost it, and the most a position of the subject can cost (maximumStepsPerPosition). The steps
+// are counted, not timed, so a test can assert how they grow with the subject.
 JSC_DEFINE_HOST_FUNCTION(jsFunctionRegExpMatchStatistics, (JSGlobalObject * globalObject, CallFrame* callframe))
 {
     auto& vm = JSC::getVM(globalObject);
@@ -124,6 +125,7 @@ JSC_DEFINE_HOST_FUNCTION(jsFunctionRegExpMatchStatistics, (JSGlobalObject * glob
     result->putDirect(vm, JSC::Identifier::fromString(vm, "engine"_s), jsNontrivialString(vm, isLinear ? "linear"_s : "backtracking"_s));
     result->putDirect(vm, JSC::Identifier::fromString(vm, "refusal"_s), jsNontrivialString(vm, Yarr::linearRefusalName(statistics.refusal)));
     result->putDirect(vm, JSC::Identifier::fromString(vm, "programSize"_s), jsNumber(statistics.programSize));
+    result->putDirect(vm, JSC::Identifier::fromString(vm, "maximumStepsPerPosition"_s), jsNumber(static_cast<double>(statistics.maximumStepsPerPosition)));
     result->putDirect(vm, JSC::Identifier::fromString(vm, "steps"_s), jsNumber(static_cast<double>(statistics.linear.steps)));
     result->putDirect(vm, JSC::Identifier::fromString(vm, "scratchBytes"_s), jsNumber(statistics.linear.scratchBytes));
     return JSValue::encode(result);

@@ -4302,7 +4302,7 @@
     },
     {
       "name": "experimental-linear-regexp",
-      "description": "Match regular expressions without backtracking, in time linear in the input. Same as BUN_FEATURE_FLAG_EXPERIMENTAL_LINEAR_REGEXP=1",
+      "description": "Match regular expressions without backtracking, in time linear in the input, when the pattern allows it. Same as BUN_FEATURE_FLAG_EXPERIMENTAL_LINEAR_REGEXP=1",
       "hasValue": false,
       "required": false,
       "multiple": false

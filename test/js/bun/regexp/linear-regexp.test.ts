@@ -77,6 +77,8 @@ describe.concurrent("--experimental-linear-regexp", () => {
       engine: string;
       index: number;
       programSize: number;
+      maximumStepsPerPosition: number;
+      lengths: number[];
       steps: number[];
       scratchBytes: number[];
     }[] = await runJSON(
@@ -88,6 +90,7 @@ describe.concurrent("--experimental-linear-regexp", () => {
         /(x+x+)+y/,
         /^(\\w+\\s?)*$/,
         /(?:(?=a)a|a)*b/,
+        /(?:(?=a{0,4}(?=a{0,4}(?!a{0,4}b)))a)*b/, // lookarounds inside one another
         /a*a*a*a*a*a*a*a*b/,   // polynomial
         /a*b/,                 // quadratic
       ];
@@ -95,9 +98,11 @@ describe.concurrent("--experimental-linear-regexp", () => {
       for (const regExp of patterns) {
         const repeated = regExp.source.includes("x") ? "x" : regExp.source.includes("\\\\s") ? "a " : "a";
         for (const encoding of ["latin1", "utf16"]) {
+          const lengths = [];
           const statistics = [1024, 2048, 3072].map(length => {
             const subject = Buffer.alloc(repeated.length * length, repeated).toString() + "!" + (encoding === "utf16" ? "\\u2603" : "");
             if (jscInternals.isUTF16String(subject) !== (encoding === "utf16")) throw new Error("not a " + encoding + " string");
+            lengths.push(subject.length);
             return jscInternals.regExpMatchStatistics(regExp, subject, 0);
           });
           rows.push({
@@ -106,6 +111,8 @@ describe.concurrent("--experimental-linear-regexp", () => {
             engine: statistics[0].engine,
             index: statistics[0].index,
             programSize: statistics[0].programSize,
+            maximumStepsPerPosition: statistics[0].maximumStepsPerPosition,
+            lengths,
             steps: statistics.map(entry => entry.steps),
             scratchBytes: statistics.map(entry => entry.scratchBytes),
           });
@@ -115,15 +122,21 @@ describe.concurrent("--experimental-linear-regexp", () => {
       { flag: true },
     );
 
-    expect(rows.length).toBe(14);
+    expect(rows.length).toBe(16);
     for (const row of rows) {
       const [one, two, three] = row.steps;
       expect(row).toMatchObject({ engine: "linear", index: -1 });
       // On one line: the same number of steps for every 1024 characters more.
       expect({ ...row, growth: three - two }).toMatchObject({ growth: two - one });
       expect(two - one).toBeGreaterThan(0);
-      // A state is an instruction of the program and one bit, and none is entered twice at a position.
-      expect((two - one) / 1024).toBeLessThanOrEqual(3 * row.programSize);
+      // The compiler of the matcher takes from the program the most steps a position of the subject
+      // can cost, and accepts no program that can cost more than four per instruction of the largest
+      // program (65536 instructions). No match takes more steps than that bound allows.
+      expect(row.maximumStepsPerPosition).toBeLessThanOrEqual(4 * 65536);
+      const allowed = row.lengths.map(length => row.maximumStepsPerPosition * (length + 1));
+      expect({ ...row, underBound: row.steps.map((steps, index) => steps <= allowed[index]) }).toMatchObject({
+        underBound: [true, true, true],
+      });
       // The memory of the matcher does not depend on the subject.
       expect(row.scratchBytes).toEqual([row.scratchBytes[0], row.scratchBytes[0], row.scratchBytes[0]]);
     }
@@ -149,6 +162,10 @@ describe.concurrent("--experimental-linear-regexp", () => {
         [/(?<quote>['"]).*?\\k<quote>/, "say 'hi' now"],
         [/(?=.*\\d)(?=.*[a-z])\\w{6,}/, "passw0rd"],
         [/(?<=\\$\\d*)\\d/, "cost $105"],
+        // The program of the matcher has a copy of the group for each of the 300 x 300 repeats.
+        [/(?:a{1,300}){1,300}b/, "aab"],
+        // Seven lookarounds inside one another, each with four characters to read.
+        [/(?=a{0,4}(?=a{0,4}(?=a{0,4}(?=a{0,4}(?=a{0,4}(?=a{0,4}(?=a{0,4}b)))))))a/, "ab"],
       ];
       console.log(JSON.stringify(cases.map(([regExp, subject]) => {
         const { engine, refusal } = jscInternals.regExpMatchStatistics(regExp, subject, 0);
@@ -161,6 +178,12 @@ describe.concurrent("--experimental-linear-regexp", () => {
       ["/(?<quote>['\"]).*?\\k<quote>/", "backtracking", "backreference"],
       ["/(?=.*\\d)(?=.*[a-z])\\w{6,}/", "backtracking", "lookaround of unbounded length"],
       ["/(?<=\\$\\d*)\\d/", "backtracking", "lookaround of unbounded length"],
+      ["/(?:a{1,300}){1,300}b/", "backtracking", "program too large"],
+      [
+        "/(?=a{0,4}(?=a{0,4}(?=a{0,4}(?=a{0,4}(?=a{0,4}(?=a{0,4}(?=a{0,4}b)))))))a/",
+        "backtracking",
+        "lookaround too costly",
+      ],
     ]);
 
     const results = (entries: any[]) => entries.map(({ pattern, index, match }) => ({ pattern, index, match }));

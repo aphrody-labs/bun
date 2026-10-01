@@ -229,7 +229,7 @@ const RUNTIME_PARAMS_: &[ParamType] = &[
         "--experimental-http3-fetch        Honor Alt-Svc: h3 in fetch() and upgrade to HTTP/3. Same as BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP3_CLIENT=1"
     ),
     parse_param!(
-        "--experimental-linear-regexp      Match regular expressions without backtracking, in time linear in the input. Same as BUN_FEATURE_FLAG_EXPERIMENTAL_LINEAR_REGEXP=1"
+        "--experimental-linear-regexp      Match regular expressions without backtracking, in time linear in the input, when the pattern allows it. Same as BUN_FEATURE_FLAG_EXPERIMENTAL_LINEAR_REGEXP=1"
     ),
     parse_param!(
         "--max-http-header-size <INT>      Set the maximum size of HTTP headers in bytes. Default is 16KiB"
