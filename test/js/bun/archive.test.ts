@@ -948,6 +948,35 @@ describe("Bun.Archive", () => {
       expect(exitCode).toBe(0);
     });
 
+    // The umask of the test run hides the mode the extractor asks for. Under
+    // umask 0 the directory shows it.
+    test.skipIf(isWindows)("makes a directory 0755 when its parent has no entry of its own", async () => {
+      using dir = tempDir("archive-dir-mode-umask", {
+        // What `tar -cf x.tar a/b` writes: an entry for `a/b/`, and none for `a/`.
+        "a.tar": Buffer.concat([ustarHeader("a/b/", 0, "5", { mode: Buffer.from("0000755\0") }), Buffer.alloc(1024)]),
+        "extract.ts": `
+          import { lstatSync } from "node:fs";
+          process.umask(0);
+          const archive = new Bun.Archive(await Bun.file("a.tar").bytes());
+          await archive.extract("default");
+          await archive.extract("glob", { glob: "**" });
+          console.log(["default", "glob"].map(out => (lstatSync(out + "/a/b").mode & 0o777).toString(8)).join(" "));
+        `,
+      });
+
+      await using proc = Bun.spawn({
+        cmd: [bunExe(), "extract.ts"],
+        env: bunEnv,
+        cwd: String(dir),
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+
+      expect({ stdout, stderr }).toEqual({ stdout: "755 755\n", stderr: "" });
+      expect(exitCode).toBe(0);
+    });
+
     // Linux (O_PATH) and macOS (O_SEARCH) resolve parent directories without
     // read permission on them. Elsewhere they are opened for reading.
     test.skipIf(!(isLinux || isMacOS) || isRoot)(

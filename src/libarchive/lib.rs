@@ -1233,15 +1233,25 @@ impl ParentDirs {
         }
     }
 
-    /// The parent of `path`. `Ok(None)` when a component of it is a symlink.
+    fn invalid(errno: bun_sys::E) -> bun_sys::Error {
+        bun_sys::Error::from_code(errno, bun_sys::Tag::open)
+    }
+
+    /// The parent of `path`, the name of a file or a symlink. `Ok(None)` when
+    /// a component of the parent is a symlink.
     pub fn open_entry<'p>(
         &mut self,
         root: Fd,
         path: &'p ZStr,
     ) -> bun_sys::Maybe<Option<EntryParent<'p>>> {
         let Some((dirname, name)) = split_entry_parent(path.as_bytes()) else {
-            return Ok(None);
+            return Err(Self::invalid(bun_sys::E::EINVAL));
         };
+        // Only a directory has a name that ends in `/`. With one, the kernel
+        // refuses to create a file, or resolves the name through a symlink.
+        if name.end != path.len() {
+            return Err(Self::invalid(bun_sys::E::EISDIR));
+        }
         Ok(self.open(root, dirname)?.map(|(dir, made)| EntryParent {
             dir,
             name: entry_name(path, name.start),
@@ -1258,7 +1268,7 @@ impl ParentDirs {
         mode: impl FnOnce(bool) -> bun_sys::Mode,
     ) -> bun_sys::Maybe<Option<()>> {
         let Some((dirname, name)) = split_entry_parent(path.as_bytes()) else {
-            return Ok(None);
+            return Err(Self::invalid(bun_sys::E::EINVAL));
         };
         let Some((dir, made)) = self.open(root, dirname)? else {
             return Ok(None);
@@ -1267,6 +1277,9 @@ impl ParentDirs {
         // under the name.
         let name = &path.as_bytes()[name];
         let mut name_buf = bun_paths::path_buffer_pool::get();
+        if name.len() >= name_buf.len() {
+            return Err(Self::invalid(bun_sys::E::ENAMETOOLONG));
+        }
         name_buf[..name.len()].copy_from_slice(name);
         name_buf[name.len()] = 0;
         let name = ZStr::from_slice_with_nul(&name_buf[..=name.len()]);
@@ -1367,9 +1380,11 @@ impl ParentDirs {
             if component.is_empty()
                 || strings::eql(component, b".")
                 || strings::eql(component, b"..")
-                || component.len() + 1 > name_buf.len()
             {
-                return Ok(None);
+                return Err(Self::invalid(bun_sys::E::EINVAL));
+            }
+            if component.len() >= name_buf.len() {
+                return Err(Self::invalid(bun_sys::E::ENAMETOOLONG));
             }
             name_buf[..component.len()].copy_from_slice(component);
             name_buf[component.len()] = 0;
@@ -1957,9 +1972,15 @@ impl Archiver {
                             {
                                 // SAFETY: entry valid
                                 let mode = directory_mode(lib::Entry::opaque_ref(entry).perm());
-                                // 0o777 is what the directory got when its
-                                // parent was missing.
-                                let mode = |parent_made| if parent_made { 0o777 } else { mode };
+                                // What the directory got when its parent was
+                                // missing: 0o755 from `make_path` for a name
+                                // that ends in `/`, else 0o777.
+                                let fallback = if path_slice.ends_with(b"/") {
+                                    0o755
+                                } else {
+                                    0o777
+                                };
+                                let mode = |parent_made| if parent_made { fallback } else { mode };
                                 let made = match parent_dirs.make_dir(dir_fd, path_z, mode) {
                                     Ok(Some(())) => Ok(()),
                                     Ok(None) => {
@@ -2226,6 +2247,10 @@ impl Archiver {
                 }
             }
         }
+
+        // Its descriptors are free for the directories of the symlinks.
+        #[cfg(not(windows))]
+        drop(parent_dirs);
 
         #[cfg(unix)]
         if create_deferred_symlinks(dir_fd, &deferred_symlinks, options.log).through_symlink > 0 {

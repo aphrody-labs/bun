@@ -1502,6 +1502,8 @@ fn extract_to_disk_filtered(
 
     #[cfg(unix)]
     {
+        // Its descriptors are free for the directories of the symlinks.
+        drop(parent_dirs);
         count += libarchive::create_deferred_symlinks(dir_fd, &deferred_symlinks, false).created;
     }
 
