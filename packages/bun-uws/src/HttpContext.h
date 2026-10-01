@@ -523,13 +523,19 @@ private:
                 ((AsyncSocket<SSL> *) s)->cork();
             }
 
-            /* Route the method and URL */
-            selectedRouter->getUserData() = {(HttpResponse<SSL> *) s, httpRequest};
-            if (!selectedRouter->route(httpRequest->getCaseSensitiveMethod(), httpRequest->getUrlForRouting())) {
-                /* We have to force close this socket as we have no handler for it.
-                 * close() first sends the responses to earlier requests of this read. */
-                ((AsyncSocket<SSL> *) s)->close();
-                return nullptr;
+            const uint8_t methodId = httpRequest->getMethodId();
+            /* node:http's parser answers 400 to a method with no id. Without that check, route() refuses the request. */
+            if (!IsNodeHttp && methodId >= HTTP_METHOD_COUNT) [[unlikely]] {
+                endMethodNotImplemented((HttpResponse<SSL> *) s);
+            } else {
+                /* Route the method and URL */
+                selectedRouter->getUserData() = {(HttpResponse<SSL> *) s, httpRequest};
+                if (!selectedRouter->route(methodId, httpRequest->getCaseSensitiveMethod(), httpRequest->getUrlForRouting())) {
+                    /* We have to force close this socket as we have no handler for it.
+                     * close() first sends the responses to earlier requests of this read. */
+                    ((AsyncSocket<SSL> *) s)->close();
+                    return nullptr;
+                }
             }
 
             /* First of all we need to check if this socket was deleted due to upgrade */

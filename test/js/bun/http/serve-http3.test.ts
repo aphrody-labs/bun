@@ -1697,20 +1697,20 @@ describe("Bun.serve HTTP/3 production", () => {
   // curl --expect100-timeout assertion was flaky enough to drop here.
 });
 
+// What every raw HTTP/3 client in this file connects with.
+const quicClientOptions = {
+  servername: "localhost",
+  verifyPeer: "manual",
+  transportParams: { maxIdleTimeout: 5 },
+} as const;
+
 async function h3Exchange(
   port: number,
   headers: Record<string, string>,
   options: Record<string, unknown> = {},
 ): Promise<string> {
   await using endpoint = new QuicEndpoint();
-  const client = await connect(`127.0.0.1:${port}`, {
-    endpoint,
-    servername: "localhost",
-    verifyPeer: "manual",
-    transportParams: { maxIdleTimeout: 5 },
-    onerror() {},
-    ...options,
-  });
+  const client = await connect(`127.0.0.1:${port}`, { endpoint, ...quicClientOptions, onerror() {}, ...options });
   const outcome = Promise.withResolvers<string>();
   client.closed.then(
     () => outcome.resolve("closed"),
@@ -1889,6 +1889,87 @@ describe("Bun.serve HTTP/3 request validation", () => {
 
     expect({ selfSigned, chained }).toEqual({ selfSigned: "closed", chained: "200 1" });
   });
+
+  // Request.method cannot hold a method that Bun does not know, and a method is
+  // case-sensitive. The any-method routes used to take such a request, on every
+  // server, and the handler saw a GET.
+  test("answers 501 to a method that is not one of Bun's methods, before any handler and before a 100 Continue", async () => {
+    using dir = tempDir("serve-http3-unknown-method", { "file.txt": "file" });
+    const calls: string[] = [];
+    const handler = (name: string) => (req: Request) => {
+      calls.push(`${name} ${req.method}`);
+      return new Response(`${name} ${req.method}`);
+    };
+    await using server = Bun.serve({
+      port: 0,
+      tls,
+      http3: true,
+      routes: {
+        "/any": handler("any"),
+        "/get": { GET: handler("get") },
+        "/static": new Response("static"),
+        "/file": new Response(Bun.file(join(String(dir), "file.txt"))),
+      },
+      fetch: handler("fetch"),
+    });
+
+    // One connection, one request after the other. A result names each
+    // informational response too: "info 100 200 body".
+    await using endpoint = new QuicEndpoint();
+    const client = await connect(`127.0.0.1:${server.port}`, { endpoint, ...quicClientOptions, onerror() {} });
+    const closed = client.closed.then(
+      () => "closed",
+      () => "closed",
+    );
+    await client.opened;
+    async function exchange(method: string, path: string, fields: Record<string, string> = {}) {
+      const seen: string[] = [];
+      const stream = await client.createBidirectionalStream({
+        headers: requestHeaders(path, { ":method": method, ...fields }),
+        oninfo(received: Record<string, string>) {
+          seen.push("info " + received[":status"]);
+        },
+        onheaders(received: Record<string, string>) {
+          seen.push(received[":status"]);
+        },
+      });
+      stream.closed.catch(() => {});
+      let body = "";
+      for await (const batch of stream as AsyncIterable<Uint8Array[]>) {
+        for (const chunk of batch) body += Buffer.from(chunk).toString("latin1");
+      }
+      return [...seen, body].join(" ");
+    }
+
+    const results: Record<string, string> = {};
+    for (const method of ["BREW", "GETX", "get", "Get", "M_SEARCH"]) {
+      for (const path of ["/nope", "/any", "/get", "/static", "/file"]) {
+        results[`${method} ${path}`] = await Promise.race([exchange(method, path), closed]);
+      }
+    }
+    results["BREW /nope, Expect"] = await Promise.race([exchange("BREW", "/nope", { expect: "100-continue" }), closed]);
+    const unknown = Object.keys(results);
+    for (const [method, path] of [
+      ["PROPFIND", "/nope"],
+      ["GET", "/get"],
+      ["GET", "/static"],
+      ["GET", "/file"],
+    ]) {
+      results[`${method} ${path}`] = await Promise.race([exchange(method, path), closed]);
+    }
+    if (!client.destroyed) client.close().catch(() => {});
+
+    expect({ results, calls }).toEqual({
+      results: {
+        ...Object.fromEntries(unknown.map(key => [key, "501 "])),
+        "PROPFIND /nope": "200 fetch PROPFIND",
+        "GET /get": "200 get GET",
+        "GET /static": "200 static",
+        "GET /file": "200 file",
+      },
+      calls: ["fetch PROPFIND", "get GET"],
+    });
+  });
 });
 
 // RFC 9110 section 10.1.1: a client that sent Expect: 100-continue can hold the
@@ -1905,9 +1986,7 @@ describe.concurrent("Bun.serve HTTP/3 sends the automatic 100 Continue ahead of 
     await using endpoint = new QuicEndpoint();
     const client = await connect(`127.0.0.1:${server.port}`, {
       endpoint,
-      servername: "localhost",
-      verifyPeer: "manual",
-      transportParams: { maxIdleTimeout: 5 },
+      ...quicClientOptions,
       onerror: firstResponse.reject,
     });
     client.closed.then(endedEarly("the session"), firstResponse.reject);

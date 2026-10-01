@@ -29,6 +29,7 @@
 #include <span>
 
 #include "MoveOnlyFunction.h"
+#include "HttpMethod.h"
 
 namespace uWS {
 
@@ -274,6 +275,14 @@ public:
             return false;
         }
         return executeHandlers(root.children.back().get(), 0, userData);
+    }
+
+    /* Routes a request whose method has the id methodId (methodIdFromWire). A request without an id matches no route. */
+    bool route(uint8_t methodId, std::string_view method, std::string_view url) {
+        if (methodId >= HTTP_METHOD_COUNT) [[unlikely]] {
+            return false;
+        }
+        return route(method, url);
     }
 
     /* Adds the corresponding entires in matching tree and handler list */
