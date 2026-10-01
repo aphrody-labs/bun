@@ -10,8 +10,9 @@
 // in us_create_loop / WindowsLoop::create / SpawnSyncEventLoop::init; this
 // test exercises the POSIX half where the failure is reproducible with a file
 // descriptor limit.
+import { socketFaultInjection as fault } from "bun:internal-for-testing";
 import { describe, expect, test } from "bun:test";
-import { bunEnv, bunExe, isPosix } from "harness";
+import { bunEnv, bunExe, isLinux, isPosix } from "harness";
 
 // Absolute argv[0] so PATH lookup (which_for_spawn) is skipped; on musl that
 // lookup fails under EMFILE before the event loop is created and turns the
@@ -61,3 +62,54 @@ describe.skipIf(!isPosix)("Bun.spawnSync event-loop creation under EMFILE", () =
     expect(exitCode).toBe(0);
   });
 });
+
+// The loop also needs its wakeup eventfd in the epoll set. epoll_ctl refuses
+// that with ENOSPC at fs.epoll.max_user_watches, or with ENOMEM. A loop that
+// is handed out anyway can never be woken by another thread, so this failure
+// has to reach the caller like the two above: one thrown error that names the
+// call, nothing left open, and a later call that works. epoll only: it is the
+// one backend whose wakeup registration goes through the poll_start hook.
+const refusedRegistrationFixture = /* js */ `
+  const { socketFaultInjection: fault } = require("bun:internal-for-testing");
+  const fs = require("node:fs");
+  const openFds = () => fs.readdirSync("/proc/self/fd").length;
+  const run = () => Bun.spawnSync({ cmd: ["/bin/sh", "-c", ":"], stdio: ["ignore", "ignore", "ignore"] });
+  const refused = () => {
+    fault.set({ syscall: "poll_start", action: "errno", errno: 28 /* ENOSPC */, repeat: 1 });
+    try {
+      run();
+      return "returned";
+    } catch (e) {
+      return e.code + " " + e.errno + " " + e.syscall;
+    } finally {
+      fault.clear();
+    }
+  };
+  const first = refused();
+  const afterFirst = openFds();
+  const second = refused();
+  const leaked = openFds() - afterFirst;
+  console.log(JSON.stringify({ first, second, leaked, retry: run().exitCode }));
+`;
+
+test.skipIf(!fault.available() || !isLinux)(
+  "Bun.spawnSync throws when the wakeup of its event loop cannot be registered",
+  async () => {
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "-e", refusedRegistrationFixture],
+      env: bunEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    const line = stdout.trim().split("\n").pop() ?? "";
+    expect({ stderr, line }).toEqual({ stderr: expect.any(String), line: expect.stringContaining("{") });
+    expect(JSON.parse(line)).toEqual({
+      first: "ENOSPC -28 epoll_ctl",
+      second: "ENOSPC -28 epoll_ctl",
+      leaked: 0,
+      retry: 0,
+    });
+    expect(exitCode).toBe(0);
+  },
+);

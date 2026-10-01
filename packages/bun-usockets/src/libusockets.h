@@ -85,6 +85,9 @@
 #endif
 #endif
 
+/* For a result that is the only report of a failure. */
+#define must_use_fn_decl __attribute__((warn_unused_result))
+
 #define us_loop_r struct us_loop_t *nonnull_arg
 #define us_socket_r struct us_socket_t *nonnull_arg
 #define us_poll_r struct us_poll_t *nonnull_arg
@@ -575,9 +578,15 @@ void *us_socket_session_sink(us_socket_r s);
 
 /* Public interfaces for loops */
 
-/* Returns a new event loop with user data extension */
+/* Returns a new event loop with user data extension, or NULL if the OS refuses a part of it */
 struct us_loop_t *us_create_loop(void *hint, void (*wakeup_cb)(us_loop_r loop),
     void (*pre_cb)(us_loop_r loop), void (*post_cb)(us_loop_r loop), unsigned int ext_size);
+
+#ifndef _WIN32
+/* Why the last us_create_loop on this thread returned NULL: the call that failed in *syscall, and its
+ * errno as the result (0 for a mach_port_* call, which has none). */
+int us_loop_create_error(const char **syscall);
+#endif
 
 /* Frees the loop immediately */
 void us_loop_free(us_loop_r loop) nonnull_fn_decl;
@@ -608,9 +617,8 @@ void us_poll_free(us_poll_r p, struct us_loop_t *loop);
 void us_poll_init(us_poll_r p, LIBUS_SOCKET_DESCRIPTOR fd, int poll_type);
 
 /* Start, change and stop polling for events */
-void us_poll_start(us_poll_r p, us_loop_r loop, int events) nonnull_fn_decl;
 /* Returns 0 if successful */
-int us_poll_start_rc(us_poll_r p, us_loop_r loop, int events) nonnull_fn_decl;
+int us_poll_start_rc(us_poll_r p, us_loop_r loop, int events) nonnull_fn_decl must_use_fn_decl;
 /* Returns 0 unless the fd had to be registered anew (a poll parked by the
  * dispatcher while paused) and that registration failed; errno is set then. */
 int us_poll_change(us_poll_r p, us_loop_r loop, int events) nonnull_fn_decl;

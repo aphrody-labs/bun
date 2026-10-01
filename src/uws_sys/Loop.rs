@@ -1,3 +1,5 @@
+#[cfg(not(windows))]
+use core::ffi::{CStr, c_char};
 use core::ffi::{c_int, c_uint, c_void};
 use core::ptr::NonNull;
 
@@ -230,13 +232,28 @@ impl PosixLoop {
         unsafe { c::us_quic_loop_flush_if_pending(self) };
     }
 
-    /// `None` if epoll/kqueue cannot be created (EMFILE).
+    /// `None` if the OS refuses epoll/kqueue or the wakeup source;
+    /// [`create_error`](Self::create_error) has the cause.
     pub fn create<H: LoopHandler>() -> Option<NonNull<Loop>> {
         // SAFETY: us_create_loop allocates and returns a new loop; null hint is valid
         let p = unsafe {
             c::us_create_loop(core::ptr::null_mut(), Some(H::WAKEUP), H::PRE, H::POST, 0)
         };
         NonNull::new(p)
+    }
+
+    /// Why the last [`create`](Self::create) on this thread returned `None`:
+    /// the call that failed and its errno (0 for a `mach_port_*` call, which
+    /// has none). `None` if no `create` failed on this thread.
+    pub fn create_error() -> Option<(&'static CStr, c_int)> {
+        let mut syscall: *const c_char = core::ptr::null();
+        // SAFETY: `syscall` is a valid out-pointer for the call.
+        let errno = unsafe { c::us_loop_create_error(&raw mut syscall) };
+        if syscall.is_null() {
+            return None;
+        }
+        // SAFETY: non-null, it is a string literal in epoll_kqueue.c.
+        Some((unsafe { CStr::from_ptr(syscall) }, errno))
     }
 
     pub fn wakeup(&mut self) {
@@ -501,6 +518,8 @@ mod c {
             post_cb: Option<LoopCb>,
             ext_size: c_uint,
         ) -> *mut Loop;
+        #[cfg(not(windows))]
+        pub(super) fn us_loop_create_error(syscall: *mut *const c_char) -> c_int;
         pub(super) fn us_loop_free(loop_: *mut Loop);
         pub(super) fn us_quic_loop_flush_if_pending(loop_: *mut Loop);
         pub(super) fn us_nq_loop_drain(loop_: *mut Loop);
