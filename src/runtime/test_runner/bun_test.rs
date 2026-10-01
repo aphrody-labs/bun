@@ -9,9 +9,9 @@ use bun_jsc::{self as jsc, CallFrame, GlobalRef, JSGlobalObject, JSValue, JsResu
 use bun_jsc::virtual_machine::VirtualMachine;
 use bun_jsc::js_promise::Status as PromiseStatus;
 use bun_ptr::RefPtr;
-use super::jest::{Jest, FileId, FileColumns as _};
+use super::jest::{Jest, FileFailure, FileId, FileColumns as _};
 use crate::timer::{EventLoopTimer, EventLoopTimerState, EventLoopTimerTag, ElTimespec};
-use crate::cli::test_command::CommandLineReporter;
+use crate::cli::test_command::{CommandLineReporter, FailureSite};
 use super::execution::TimespecExt as _;
 
 bun_core::declare_scope!(bun_test_group, hidden);
@@ -1310,11 +1310,16 @@ impl BunTest {
             HandleUncaughtExceptionResult::ShowUnhandledErrorBetweenTests
                 | HandleUncaughtExceptionResult::ShowUnhandledErrorInDescribe
         ) {
+            let kind = if handle_status == HandleUncaughtExceptionResult::ShowUnhandledErrorInDescribe {
+                FileFailure::DescribeCallback
+            } else {
+                FileFailure::Unhandled
+            };
             // SAFETY: reporter is Some (asserted by call sites that reach here);
             // `NonNull<CommandLineReporter>` carries write provenance from
             // `enter_file`'s `&mut`; single-threaded, no other borrow live.
             unsafe {
-                (*self.reporter.unwrap().as_ptr()).jest.unhandled_errors_between_tests += 1;
+                (*self.reporter.unwrap().as_ptr()).fail_file(kind, FailureSite::Running, || None);
             }
             bun_core::pretty_errorln!(
                 "<r>\n<b><d>#<r> <red><b>Unhandled error<r><d> between tests<r>\n<d>-------------------------------<r>\n",

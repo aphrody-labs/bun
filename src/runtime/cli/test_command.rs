@@ -2,6 +2,7 @@ use bun_io::Write as _;
 
 use crate::cli::Command;
 use crate::cli::test::changed_files_filter as ChangedFilesFilter;
+use crate::cli::test::parallel::coordinator::FileTestRecords;
 use crate::cli::test::parallel_runner as ParallelRunner;
 use crate::cli::test::scanner::{self, Scanner};
 use crate::cli::test::timings::Timings;
@@ -59,7 +60,7 @@ use coverage::{ByteRangeMapping, CodeCoverageReport, Fraction};
 // `crate::test_runner::*`; the façade below adapts the body's nested-path
 // usage (`bun_test::Execution::Result`, `bun_test::BasicResult`, …) without a
 // 2k-line body rewrite.
-use crate::test_runner::jest::{self, FileColumns as _, Summary, TestRunner};
+use crate::test_runner::jest::{self, FileColumns as _, FileFailure, Summary, TestRunner};
 use crate::test_runner::snapshot::Snapshots;
 use bun_collections::index_sort;
 
@@ -183,6 +184,34 @@ pub(crate) struct TestCaseReport<'a> {
     pub elapsed_ns: u64,
     pub line_number: u32,
     pub failure: Option<TestFailure>,
+}
+
+/// Where a failure that is not a finished test happened, which decides where its record goes.
+pub(crate) enum FailureSite<'a> {
+    /// The file this process runs: a serial run, or a `--parallel` worker.
+    Running,
+    /// A file of the `--parallel` coordinator: the records of its worker, `None` without a structured reporter.
+    Coordinator(Option<&'a mut FileTestRecords>),
+}
+
+/// The testcase a structured reporter gets for a failure that is not a finished test.
+pub(crate) struct FileFailureRecord {
+    pub name: &'static [u8],
+    pub failure: Option<TestFailure>,
+}
+
+impl FileFailure {
+    /// `None`: the failure is counted and gets no testcase.
+    fn testcase_name(self) -> Option<&'static [u8]> {
+        match self {
+            FileFailure::WorkerCrashed => Some(b"(worker crashed)"),
+            FileFailure::Load
+            | FileFailure::DescribeCallback
+            | FileFailure::Unhandled
+            | FileFailure::Aborted
+            | FileFailure::NotDispatched => None,
+        }
+    }
 }
 
 /// Append `input` to `out`, dropping CSI sequences (`ESC '[' ... final`), so a
@@ -1261,6 +1290,36 @@ impl CommandLineReporter {
         &mut self.jest.summary
     }
 
+    /// The name of the testcase `fail_file` records for `kind` at `site`, `None` when it records nothing.
+    pub(crate) fn file_failure_testcase(
+        &self,
+        kind: FileFailure,
+        site: &FailureSite<'_>,
+    ) -> Option<&'static [u8]> {
+        let recorded = match site {
+            FailureSite::Coordinator(records) => records.is_some(),
+            FailureSite::Running => false,
+        };
+        if recorded { kind.testcase_name() } else { None }
+    }
+
+    /// The record half of `fail_file`, which counts the failure first.
+    pub(crate) fn record_file_failure(
+        &mut self,
+        name: &'static [u8],
+        site: FailureSite<'_>,
+        failure: Option<TestFailure>,
+    ) {
+        match site {
+            FailureSite::Coordinator(records) => {
+                if let Some(records) = records {
+                    records.failure = Some(Box::new(FileFailureRecord { name, failure }));
+                }
+            }
+            FailureSite::Running => {}
+        }
+    }
+
     pub(crate) fn handle_test_completed(
         buntest: &mut bun_test::BunTest,
         sequence: &mut bun_test::Execution::ExecutionSequence,
@@ -1401,9 +1460,9 @@ impl CommandLineReporter {
             | R::FailBecauseTimeoutWithDoneCallback
             | R::FailBecauseHookTimeout
             | R::FailBecauseHookTimeoutWithDoneCallback => {
-                this.summary().fail += 1;
+                this.summary().count_failed_test();
 
-                if this.summary().fail == this.jest.bail {
+                if this.summary().fail() == this.jest.bail {
                     this.print_summary();
                     pretty_error!(
                         "\nBailed out after {} failure{}<r>\n",
@@ -1425,7 +1484,7 @@ impl CommandLineReporter {
 
     pub(crate) fn print_summary(&mut self) {
         let summary_ = self.summary();
-        let tests = summary_.fail + summary_.pass + summary_.skip + summary_.todo;
+        let tests = summary_.fail() + summary_.pass + summary_.skip + summary_.todo;
         let files = summary_.files;
 
         pretty_error!(
@@ -1869,7 +1928,6 @@ impl TestCommand {
                 // SAFETY: lifetime-erase to `'static`; `ctx` is the
                 // process-lifetime CLI context and `exec()` never returns.
                 test_options: unsafe { bun_ptr::detach_lifetime_ref(&ctx.test_options) },
-                unhandled_errors_between_tests: 0,
                 summary: Summary::default(),
                 node_test_used: false,
             },
@@ -2413,12 +2471,12 @@ impl TestCommand {
                 let _ = error_writer.write_all(&reporter.todos_to_repeat_buf);
             }
 
-            if reporter.summary().fail > 0 {
+            if reporter.summary().fail() > 0 {
                 if reporter.summary().skip > 0 || reporter.summary().todo > 0 {
                     pretty_error!("\n");
                 }
 
-                pretty_error!("\n<r><d>{} tests failed:<r>\n", reporter.summary().fail);
+                pretty_error!("\n<r><d>{} tests failed:<r>\n", reporter.summary().fail());
                 Output::flush();
 
                 let error_writer = Output::error_writer();
@@ -2510,8 +2568,8 @@ impl TestCommand {
             // `reporter.summary()` doesn't span the whole printing block and
             // conflict with the `reporter.jest.*` reads below.
             let summary: Summary = *reporter.summary();
-            let did_label_filter_out_all_tests = summary.did_label_filter_out_all_tests()
-                && reporter.jest.unhandled_errors_between_tests == 0;
+            let did_label_filter_out_all_tests =
+                summary.did_label_filter_out_all_tests() && summary.unhandled_errors() == 0;
 
             if !did_label_filter_out_all_tests {
                 struct DotIndenter {
@@ -2559,19 +2617,19 @@ impl TestCommand {
                     pretty_error!("{}<r><magenta>{:5>} todo<r>\n", &indenter, summary.todo);
                 }
 
-                if summary.fail > 0 {
+                if summary.fail() > 0 {
                     pretty_error!("<r><red>");
                 } else {
                     pretty_error!("<r><d>");
                 }
 
-                pretty_error!("{}{:5>} fail<r>\n", &indenter, summary.fail);
-                if reporter.jest.unhandled_errors_between_tests > 0 {
+                pretty_error!("{}{:5>} fail<r>\n", &indenter, summary.fail());
+                if summary.unhandled_errors() > 0 {
                     pretty_error!(
                         "{}<r><red>{:5>} error{}<r>\n",
                         &indenter,
-                        reporter.jest.unhandled_errors_between_tests,
-                        if reporter.jest.unhandled_errors_between_tests > 1 {
+                        summary.unhandled_errors(),
+                        if summary.unhandled_errors() > 1 {
                             "s"
                         } else {
                             ""
@@ -2665,12 +2723,12 @@ impl TestCommand {
         let should_fail_on_no_tests = !ctx.test_options.pass_with_no_tests
             && (failed_to_find_any_tests || summary.did_label_filter_out_all_tests());
         if should_fail_on_no_tests
-            || summary.fail > 0
+            || summary.fail() > 0
             || (coverage_options.enabled
                 && coverage_options.fractions.failing
                 && coverage_options.fail_on_low_coverage)
             || !write_snapshots_success
-            || reporter.jest.unhandled_errors_between_tests > 0
+            || summary.unhandled_errors() > 0
         {
             vm.exit_handler.exit_code = 1;
         }
@@ -2935,9 +2993,9 @@ impl TestCommand {
                     let p = jsc::JSInternalPromise::opaque_mut(promise);
                     let (result, promise_js) = (p.result(global.vm()), p.to_js());
                     vm.unhandled_rejection(global, result, promise_js);
-                    reporter.summary().fail += 1;
+                    reporter.fail_file(FileFailure::Load, FailureSite::Running, || None);
 
-                    if reporter.jest.bail == reporter.summary().fail {
+                    if reporter.jest.bail == reporter.summary().fail() {
                         reporter.print_summary();
                         pretty_error!(
                             "\nBailed out after {} failure{}<r>\n",
