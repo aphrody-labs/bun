@@ -8,7 +8,7 @@ import { expect, test } from "bun:test";
 import { bunEnv, bunExe, isASAN, isDebug, isWindows, tempDir } from "harness";
 
 test(
-  "--parallel counts a failure that is not a finished test as a serial run does",
+  "--parallel counts and records a failure that is not a finished test as a serial run does",
   async () => {
     using dir = tempDir("parallel-non-test-failures", {
       "a-good.test.js": `import {test,expect} from "bun:test"; test("good",()=>expect(1).toBe(1));`,
@@ -29,9 +29,9 @@ describe("suite", () => {
   test("two", () => expect(1).toBe(1));
 });`,
     });
-    const run = async (...extra: string[]) => {
+    const run = async (name: string, ...extra: string[]) => {
       await using proc = Bun.spawn({
-        cmd: [bunExe(), "test", ...extra],
+        cmd: [bunExe(), "test", ...extra, "--reporter=junit", `--reporter-outfile=${name}.xml`],
         env: bunEnv,
         cwd: String(dir),
         stderr: "pipe",
@@ -43,18 +43,39 @@ describe("suite", () => {
         counts: stderr.match(/^ *\d+ (pass|fail|errors?)$/gm),
         ran: stderr.match(/^Ran \d+ tests? across \d+ files?\./m)?.[0],
         exitCode,
+        xml: maskJunit(await Bun.file(`${dir}/${name}.xml`).text()),
       };
     };
-    const serial = await run();
-    const parallel = await run("--parallel=2");
+    const serial = await run("serial");
+    const parallel = await run("parallel", "--parallel=2");
 
-    expect(serial).toEqual({
+    const { xml, ...console } = serial;
+    expect(console).toEqual({
       parallel: false,
       counts: [" 4 pass", " 2 fail", " 5 errors"],
       ran: "Ran 6 tests across 5 files.",
       exitCode: 1,
     });
     expect(parallel).toEqual({ ...serial, parallel: true });
+
+    expect(xml).toContain('<testsuites name="bun test" tests="9" assertions="4" failures="5" skipped="0">');
+    expect(xml.match(/<testcase name="\([a-z ]+\)"/g)).toEqual([
+      '<testcase name="(load error)"',
+      '<testcase name="(load error)"',
+      '<testcase name="(describe callback)"',
+      '<testcase name="(unhandled error)"',
+      '<testcase name="(unhandled error)"',
+    ]);
+    // The detail captured in the worker made it across.
+    expect(xml).toContain('<failure type="BuildMessage" message="Unexpected ;">');
+    expect(xml).toContain('<failure type="Error" message="describe-body-throw">');
+    // The root counts are the sums of the file suites.
+    const sum = (attribute: string) =>
+      [...xml.matchAll(new RegExp(`^  <testsuite [^>]*\\b${attribute}="(\\d+)"`, "gm"))].reduce(
+        (total, match) => total + Number(match[1]),
+        0,
+      );
+    expect({ tests: sum("tests"), failures: sum("failures") }).toEqual({ tests: 9, failures: 5 });
   },
   isASAN || isDebug ? 60_000 : 20_000,
 );
@@ -108,12 +129,16 @@ test("fastfail", () => {
     expect(stderr).toContain("Ran 3 tests across 3 files.");
     expect(exitCode).toBe(1);
 
-    // The file in flight keeps the test it finished, the crashed file gets the
-    // synthetic failure, and the file no worker took has no suite.
+    // The file in flight keeps the test it finished and gets `(aborted)`, the
+    // crashed file gets `(worker crashed)`, and the file no worker took has no
+    // suite, so a runner that reads the report runs it again.
     expect(maskJunit(await Bun.file(`${dir}/out.xml`).text())).toBe(`<?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="bun test" tests="2" assertions="1" failures="1" skipped="0">
-  <testsuite name="a-inflight.test.js" file="a-inflight.test.js" tests="1" assertions="1" failures="0" skipped="0">
+<testsuites name="bun test" tests="3" assertions="1" failures="2" skipped="0">
+  <testsuite name="a-inflight.test.js" file="a-inflight.test.js" tests="2" assertions="1" failures="1" skipped="0">
     <testcase name="passes first" classname="" file="a-inflight.test.js" line="4" assertions="1" />
+    <testcase name="(aborted)" classname="" file="a-inflight.test.js" assertions="0">
+      <failure type="Error" message="aborted: sibling worker panicked" />
+    </testcase>
   </testsuite>
   <testsuite name="b-fastfail.test.js" file="b-fastfail.test.js" tests="1" assertions="0" failures="1" skipped="0">
     <testcase name="(worker crashed)" classname="" file="b-fastfail.test.js" assertions="0">

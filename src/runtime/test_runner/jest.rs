@@ -307,8 +307,8 @@ mod failures {
     /// A failure that is not a finished test.
     #[derive(Clone, Copy, PartialEq, Eq)]
     pub(crate) enum FileFailure {
-        /// The module of the file rejected while it loaded.
-        Load,
+        /// The module of the file rejected while it loaded. `reported`: it was printed as an unhandled error, which `N errors` counts.
+        Load { reported: bool },
         /// A `describe` callback threw or rejected.
         DescribeCallback,
         /// An error that no running test owns.
@@ -332,13 +332,16 @@ mod failures {
         ) {
             let summary = &mut self.jest.summary;
             match kind {
+                FileFailure::Load { reported } => {
+                    summary.fail += 1;
+                    summary.unhandled_errors += u32::from(reported);
+                }
                 FileFailure::DescribeCallback | FileFailure::Unhandled => {
                     summary.unhandled_errors += 1;
                 }
-                FileFailure::Load
-                | FileFailure::WorkerCrashed
-                | FileFailure::Aborted
-                | FileFailure::NotDispatched => summary.fail += 1,
+                FileFailure::WorkerCrashed | FileFailure::Aborted | FileFailure::NotDispatched => {
+                    summary.fail += 1;
+                }
             }
             if let Some(name) = self.file_failure_testcase(kind, &site) {
                 self.record_file_failure(name, site, detail());

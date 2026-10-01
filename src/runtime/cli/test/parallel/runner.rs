@@ -587,7 +587,11 @@ impl<'a> WorkerLoop<'a> {
                     last: true,
                 },
             ) {
-                test_command::handle_top_level_test_error_before_javascript_start(&err);
+                test_command::handle_top_level_test_error_before_javascript_start(
+                    self.reporter,
+                    self.cmds.pending_path.as_slice(),
+                    &err,
+                );
             }
             if vm.test_isolation_enabled {
                 crate::jsc_hooks::stop_active_handles_for_test_isolation(vm);
@@ -747,6 +751,7 @@ static WORKER_CMDS: bun_core::RacyCell<Option<*mut WorkerCommands>> = bun_core::
 /// codes), which the coordinator prints verbatim so output matches serial, and,
 /// when the coordinator asked for it (`--reporter`), the structured result it
 /// replays into its own reporters.
+#[inline(always)] // with two callers this and `encode_test_case` would leave the per-test path
 pub(crate) fn worker_emit_test_done(
     file_idx: u32,
     formatted_line: &[u8],
@@ -770,6 +775,7 @@ pub(crate) fn worker_emit_test_done(
     cmds.send(wf.finish());
 }
 
+#[inline(always)]
 fn encode_test_case(wf: &mut Frame, t: &test_command::TestCaseReport<'_>) {
     wf.u32(t.status as u32);
     wf.u32(t.assertions);

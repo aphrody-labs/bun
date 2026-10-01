@@ -729,7 +729,12 @@ impl<'a> Coordinator<'a> {
         self.reporter.fail_file(
             FileFailure::Aborted,
             FailureSite::Coordinator(self.test_records.get_mut(file_idx as usize)),
-            || None,
+            || {
+                Some(TestFailure {
+                    message: reason.to_vec(),
+                    ..Default::default()
+                })
+            },
         );
         self.reporter.summary().files += 1;
         self.files_done += 1;

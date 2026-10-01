@@ -11,7 +11,7 @@ use bun_jsc::js_promise::Status as PromiseStatus;
 use bun_ptr::RefPtr;
 use super::jest::{Jest, FileFailure, FileId, FileColumns as _};
 use crate::timer::{EventLoopTimer, EventLoopTimerState, EventLoopTimerTag, ElTimespec};
-use crate::cli::test_command::{CommandLineReporter, FailureSite};
+use crate::cli::test_command::{CommandLineReporter, FailureSite, TestFailure};
 use super::execution::TimespecExt as _;
 
 bun_core::declare_scope!(bun_test_group, hidden);
@@ -1287,40 +1287,32 @@ impl BunTest {
             return; // the exception should not be visible (eg m_terminationException)
         };
 
+        let unhandled = matches!(
+            handle_status,
+            HandleUncaughtExceptionResult::ShowUnhandledErrorBetweenTests
+                | HandleUncaughtExceptionResult::ShowUnhandledErrorInDescribe
+        )
+        .then(|| self.unhandled_failure());
+        let mut unhandled_detail: Option<TestFailure> = None;
+
         let failure_ctx: *mut core::ffi::c_void = 'ctx: {
-            if handle_status != HandleUncaughtExceptionResult::ShowHandledError {
-                break 'ctx core::ptr::null_mut();
-            }
             let Some(reporter) = self.reporter else {
                 break 'ctx core::ptr::null_mut();
             };
             // SAFETY: `BunTest.reporter` carries write provenance from `enter_file`'s
             // `&mut`; single-threaded test runner, no other borrow live here.
             let reporter = unsafe { &mut *reporter.as_ptr() };
-            if reporter.jest.test_options.reporters.junit {
-                core::ptr::from_mut(&mut reporter.test_failure).cast()
-            } else {
+            if !reporter.jest.test_options.reporters.junit {
                 core::ptr::null_mut()
+            } else if unhandled.is_some() {
+                core::ptr::from_mut(&mut unhandled_detail).cast()
+            } else {
+                core::ptr::from_mut(&mut reporter.test_failure).cast()
             }
         };
 
         self.bun_test_root.on_before_print();
-        if matches!(
-            handle_status,
-            HandleUncaughtExceptionResult::ShowUnhandledErrorBetweenTests
-                | HandleUncaughtExceptionResult::ShowUnhandledErrorInDescribe
-        ) {
-            let kind = if handle_status == HandleUncaughtExceptionResult::ShowUnhandledErrorInDescribe {
-                FileFailure::DescribeCallback
-            } else {
-                FileFailure::Unhandled
-            };
-            // SAFETY: reporter is Some (asserted by call sites that reach here);
-            // `NonNull<CommandLineReporter>` carries write provenance from
-            // `enter_file`'s `&mut`; single-threaded, no other borrow live.
-            unsafe {
-                (*self.reporter.unwrap().as_ptr()).fail_file(kind, FailureSite::Running, || None);
-            }
+        if unhandled.is_some() {
             bun_core::pretty_errorln!(
                 "<r>\n<b><d>#<r> <red><b>Unhandled error<r><d> between tests<r>\n<d>-------------------------------<r>\n",
             );
@@ -1339,15 +1331,84 @@ impl BunTest {
             vm.on_print_error_zig_exception_ctx = core::ptr::null_mut();
         }
 
-        if matches!(
-            handle_status,
-            HandleUncaughtExceptionResult::ShowUnhandledErrorBetweenTests
-                | HandleUncaughtExceptionResult::ShowUnhandledErrorInDescribe
-        ) {
+        if unhandled.is_some() {
             bun_core::pretty_error!("<r><d>-------------------------------<r>\n\n");
         }
 
         Output::flush();
+
+        // Counted after the flush: a `--parallel` worker sends the record behind the text it belongs to.
+        if let Some((kind, scope, line)) = unhandled {
+            // SAFETY: reporter is Some (asserted by call sites that reach here);
+            // `NonNull<CommandLineReporter>` carries write provenance from
+            // `enter_file`'s `&mut`; single-threaded, no other borrow live.
+            let reporter = unsafe { &mut *self.reporter.unwrap().as_ptr() };
+            let site = FailureSite::Running {
+                file: reporter.jest.files.items_source()[self.file_id as usize].path.text,
+                // SAFETY: scopes are owned by the collection tree, which lives as long as `self`.
+                scope: scope.map(|scope| unsafe { &*scope }),
+                line,
+            };
+            reporter.fail_file(kind, site, || unhandled_detail);
+        }
+    }
+
+    /// The kind of an error that no running test owns, the `describe` block its record goes under, and the line.
+    fn unhandled_failure(&self) -> (FileFailure, Option<*const DescribeScope>, u32) {
+        // SAFETY: reporter is Some (asserted by call sites that reach here);
+        // `NonNull<CommandLineReporter>` carries write provenance from
+        // `enter_file`'s `&mut`; single-threaded, no other borrow live.
+        let reporter = unsafe { &mut *self.reporter.unwrap().as_ptr() };
+        if core::mem::take(&mut reporter.load_failure_pending) {
+            return (FileFailure::Load { reported: true }, None, 0);
+        }
+        match self.phase {
+            Phase::Collection => {
+                let scope = self.collection.active_scope();
+                if core::ptr::eq(scope, &*self.collection.root_scope) {
+                    (FileFailure::Unhandled, None, 0)
+                } else {
+                    (FileFailure::DescribeCallback, Some(core::ptr::from_ref(scope)), scope.base.line_no)
+                }
+            }
+            Phase::Execution => (FileFailure::Unhandled, self.running_describe_scope(), 0),
+            Phase::Done => (FileFailure::Unhandled, None, 0),
+        }
+    }
+
+    /// The innermost `describe` block that holds every sequence of the group that runs now.
+    fn running_describe_scope(&self) -> Option<*const DescribeScope> {
+        // SAFETY: entries and scopes are owned by the collection tree, which lives as long as `self`.
+        let parent = |scope: *const DescribeScope| unsafe { (*scope).base.parent }.map(|p| p.cast_const());
+        let depth = |scope: *const DescribeScope| core::iter::successors(Some(scope), |&scope| parent(scope)).count();
+        let group = self.execution.active_group_ref()?;
+        let mut shared: Option<*const DescribeScope> = None;
+        for sequence in group.sequences(&self.execution) {
+            let Some(entry) = sequence.test_entry.or(sequence.first_entry) else {
+                continue;
+            };
+            // SAFETY: see above.
+            let mut scope = unsafe { entry.as_ref() }.base.parent?.cast_const();
+            let Some(mut held) = shared else {
+                shared = Some(scope);
+                continue;
+            };
+            let (mut held_depth, mut scope_depth) = (depth(held), depth(scope));
+            while held_depth > scope_depth {
+                held = parent(held)?;
+                held_depth -= 1;
+            }
+            while scope_depth > held_depth {
+                scope = parent(scope)?;
+                scope_depth -= 1;
+            }
+            while held != scope {
+                held = parent(held)?;
+                scope = parent(scope)?;
+            }
+            shared = Some(held);
+        }
+        shared
     }
 }
 
