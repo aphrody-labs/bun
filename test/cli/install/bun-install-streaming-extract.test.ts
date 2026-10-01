@@ -815,6 +815,41 @@ test("buffered extract: damaged-block retry resets header state (upstream semant
 });
 
 // -------------------------------------------------------------------
+// Buffered extract: a member that cannot be created fails the install.
+// Nothing reads the number of entries the extractor reports, so an
+// entry it left out would go unnoticed. `file:` dependencies always
+// take the buffered path.
+// -------------------------------------------------------------------
+test.concurrent.each([
+  // `package/a` is a file, so `package/a/b` has no directory to go in.
+  ["a file holds the name of its directory", "a", "a/b"],
+  // Longer than NAME_MAX.
+  ["the name of its directory is too long", "ok", Buffer.alloc(300, "d").toString() + "/b"],
+])("buffered extract fails the install when a member cannot be created: %s", async (_label, first, second) => {
+  const tgz = gzipSync(
+    Buffer.concat([
+      ...tarFile("package/package.json", Buffer.from(JSON.stringify({ name: "blocked-pkg", version: "1.0.0" }))),
+      ...tarFile("package/" + first, Buffer.from("first")),
+      ...tarFile("package/" + second, Buffer.from("second")),
+      Buffer.alloc(1024, 0),
+    ]),
+  );
+  using dir = tempDir("member-cannot-be-created", {
+    "package.json": JSON.stringify({
+      name: "app",
+      version: "1.0.0",
+      dependencies: { "blocked-pkg": "file:./blocked-pkg.tgz" },
+    }),
+  });
+  writeFileSync(join(String(dir), "blocked-pkg.tgz"), tgz);
+
+  const { exitCode } = await runInstall(String(dir));
+
+  expect(existsSync(join(String(dir), "node_modules", "blocked-pkg"))).toBe(false);
+  expect(exitCode).toBe(1);
+});
+
+// -------------------------------------------------------------------
 // Buffered extract: the decompressed tar is never materialised in
 // memory. libarchive gunzips on the fly, so a highly compressible .tgz
 // installs without an RSS spike of roughly its decompressed size.

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { bunEnv, bunExe, isLinux, isMacOS, isWindows, tempDir } from "harness";
-import { chmodSync, existsSync, lstatSync, mkdirSync, readdirSync, rmSync, symlinkSync } from "node:fs";
+import { chmodSync, existsSync, lstatSync, mkdirSync, readdirSync, readlinkSync, rmSync, symlinkSync } from "node:fs";
 import { join } from "path";
 
 // Root ignores permission bits, so a test that depends on them proves nothing as root.
@@ -824,23 +824,56 @@ describe("Bun.Archive", () => {
           expect(count).toBe(1);
         });
 
-        test("skips an entry whose parent is a symlink", async () => {
+        test("does not create an entry through a symlink in its parent", async () => {
           using dir = tempDir("archive-symlink-parent", { "victim/keep.txt": "ORIGINAL" });
           const root = String(dir);
           const out = join(root, "out");
           mkdirSync(out);
           symlinkSync("../victim", join(out, "shared"));
 
-          await extract(new Bun.Archive({ "shared/f.txt": "OUTSIDE", "inside.txt": "INSIDE" }), out);
+          // The default extractor rejects. The glob extractor skips the entry,
+          // as it skips every entry it cannot create.
+          await extract(new Bun.Archive({ "inside.txt": "INSIDE", "shared/f.txt": "OUTSIDE" }), out).catch(() => {});
 
-          expect(readdirSync(join(root, "victim")).sort()).toEqual(["keep.txt"]);
-          // The entries that do resolve inside the destination still extract.
+          expect(readdirSync(join(root, "victim"))).toEqual(["keep.txt"]);
           expect(await Bun.file(join(out, "inside.txt")).text()).toBe("INSIDE");
           expect(lstatSync(join(out, "shared")).isSymbolicLink()).toBe(true);
         });
+
+        test("does not make a directory at the target of a dangling symlink", async () => {
+          using dir = tempDir("archive-symlink-dangling", {});
+          const root = String(dir);
+          const out = join(root, "out");
+          mkdirSync(out);
+          symlinkSync("../outside", join(out, "d"));
+          // The name of a directory entry ends in `/`. POSIX lets `mkdir` go
+          // through the link then. Linux does not.
+          const tarball = new Uint8Array(Buffer.concat([ustarHeader("d/", 0, "5"), Buffer.alloc(1024)]));
+
+          await extract(new Bun.Archive(tarball), out);
+
+          expect(existsSync(join(root, "outside"))).toBe(false);
+          expect(lstatSync(join(out, "d")).isSymbolicLink()).toBe(true);
+        });
       });
 
-      test("skips an entry that a symlink from an earlier archive redirects", async () => {
+      test("default extraction rejects when a symlink is in the way of an entry", async () => {
+        using dir = tempDir("archive-symlink-rejects", { "out/real/keep.txt": "KEEP" });
+        const out = join(String(dir), "out");
+        // The link stays inside the destination. It is refused all the same.
+        symlinkSync("real", join(out, "link"));
+        const archive = new Bun.Archive({ "link/new.txt": "NEW" });
+
+        await expect(async () => {
+          await archive.extract(out);
+        }).toThrow();
+        expect(await archive.extract(out, { glob: "**" })).toBe(0);
+
+        expect(readdirSync(join(out, "real"))).toEqual(["keep.txt"]);
+        expect(lstatSync(join(out, "link")).isSymbolicLink()).toBe(true);
+      });
+
+      test("does not write through a symlink that an earlier archive created", async () => {
         using dir = tempDir("archive-symlink-chain", { "victim/file.txt": "ORIGINAL" });
         const root = String(dir);
         const out = join(root, "out");
@@ -851,34 +884,18 @@ describe("Bun.Archive", () => {
         // `d1/d2/up -> ../..` is the extraction root when the name is read
         // lexically. It is not: `d1` is a symlink to the root, so the link
         // would land in `out/d2` and point at the parent of the root.
-        await new Bun.Archive(symlinkTarball("d1/d2/up", "../..")).extract(out);
+        await expect(async () => {
+          await new Bun.Archive(symlinkTarball("d1/d2/up", "../..")).extract(out);
+        }).toThrow();
         expect(existsSync(join(out, "d2"))).toBe(false);
 
         // A plain file member through that link.
-        expect(
-          await new Bun.Archive(buildTarball([{ name: "d1/d2/up/victim/file.txt", data: "OVERWRITTEN" }])).extract(out),
-        ).toBe(0);
+        await expect(async () => {
+          await new Bun.Archive(buildTarball([{ name: "d1/d2/up/victim/file.txt", data: "OVERWRITTEN" }])).extract(out);
+        }).toThrow();
 
         expect(await Bun.file(join(root, "victim", "file.txt")).text()).toBe("ORIGINAL");
         expect(existsSync(join(out, "d2"))).toBe(false);
-      });
-
-      test("creates a symlink whose target stays inside, then skips a write under it", async () => {
-        using dir = tempDir("archive-symlink-inside", {});
-        const out = join(String(dir), "out");
-
-        expect(await new Bun.Archive({ "real/keep.txt": "KEEP" }).extract(out)).toBeGreaterThan(0);
-        expect(await new Bun.Archive(symlinkTarball("link", "real")).extract(out)).toBe(1);
-
-        expect(lstatSync(join(out, "link")).isSymbolicLink()).toBe(true);
-        expect(await Bun.file(join(out, "link", "keep.txt")).text()).toBe("KEEP");
-
-        // A member under the link is skipped, and the rest of the archive still
-        // extracts. The link itself stays.
-        expect(await new Bun.Archive({ "link/new.txt": "NEW", "also.txt": "ALSO" }).extract(out)).toBe(1);
-        expect(existsSync(join(out, "real", "new.txt"))).toBe(false);
-        expect(await Bun.file(join(out, "also.txt")).text()).toBe("ALSO");
-        expect(lstatSync(join(out, "link")).isSymbolicLink()).toBe(true);
       });
     });
 
@@ -905,6 +922,30 @@ describe("Bun.Archive", () => {
         expect(await Bun.file(join(out, deep, "e", "three.txt")).text()).toBe("THREE");
         expect(await Bun.file(join(out, "top.txt")).text()).toBe("TOP");
       }
+    });
+
+    // The extractor keeps directories open. With few descriptors it keeps fewer.
+    test.skipIf(isWindows)("extracts a deep tree when few file descriptors are free", async () => {
+      using dir = tempDir("archive-few-descriptors", {
+        "extract.ts": `
+          const deep = Buffer.alloc(70 * 2, "d/").toString();
+          const archive = new Bun.Archive({ [deep + "f.txt"]: "F", [deep + "g.txt"]: "G", "top.txt": "T" });
+          const count = await archive.extract("out");
+          console.log(count, await Bun.file("out/" + deep + "g.txt").text());
+        `,
+      });
+
+      await using proc = Bun.spawn({
+        cmd: ["sh", "-c", 'ulimit -n 40 && exec "$0" extract.ts', bunExe()],
+        env: bunEnv,
+        cwd: String(dir),
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+
+      expect({ stdout, stderr }).toEqual({ stdout: "3 G\n", stderr: "" });
+      expect(exitCode).toBe(0);
     });
 
     // Linux (O_PATH) and macOS (O_SEARCH) resolve parent directories without
@@ -1020,6 +1061,27 @@ describe("Bun.Archive", () => {
           expect(lstatSync(join(out, "current")).isDirectory()).toBe(true);
           expect(await Bun.file(join(out, "current", "config")).text()).toBe("CONFIG");
           expect(readdirSync(join(out, "releases", "v1"))).toEqual(["keep"]);
+        });
+
+        test("makes the parent of a symlink before it creates any symlink", async () => {
+          // `a -> b`, then `a/c -> d`. `a` becomes a directory for `a/c`, and
+          // `a -> b` finds its name taken.
+          const tarball = new Uint8Array(
+            Buffer.concat([
+              ustarHeader("a", 0, "2", {}, "b"),
+              ustarHeader("a/c", 0, "2", {}, "d"),
+              ustarEntry("b/keep", Buffer.from("KEEP")),
+              Buffer.alloc(1024),
+            ]),
+          );
+          using dir = tempDir("archive-symlink-parents-first", {});
+          const out = join(String(dir), "out");
+
+          await extract(new Bun.Archive(tarball), out);
+
+          expect(lstatSync(join(out, "a")).isDirectory()).toBe(true);
+          expect(readlinkSync(join(out, "a", "c"))).toBe("d");
+          expect(readdirSync(join(out, "b"))).toEqual(["keep"]);
         });
       });
 

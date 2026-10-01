@@ -1375,30 +1375,19 @@ fn extract_to_disk_filtered(
         let filetype = entry_ref.filetype();
         let kind = bun_sys::kind_from_mode(filetype);
 
-        // Where to create the entry. `None` when a parent is a symlink, which
-        // is never written through, or cannot be made.
-        #[cfg(not(windows))]
-        let mut parent = || match parent_dirs.open_entry(dir_fd, pathname_z) {
-            Ok(Some(parent)) => Some((parent.dir, parent.name)),
-            _ => None,
-        };
-        #[cfg(windows)]
-        let parent = || Some((dir_fd, pathname_z));
-
         match kind {
             bun_sys::FileKind::Directory => {
                 #[cfg(windows)]
                 let created = dir_fd.make_path(pathname);
                 // As `make_path`: 0o755, and a name that is taken is not an error.
+                // An entry is never created through a symlink: it is skipped,
+                // like every entry this extractor cannot create.
                 #[cfg(not(windows))]
-                let created = {
-                    let Some((parent_dir, name_z)) = parent() else {
-                        continue;
-                    };
-                    match bun_sys::mkdirat_z(parent_dir, name_z, 0o755) {
-                        Err(e) if e.get_errno() == bun_sys::E::EEXIST => Ok(()),
-                        created => created,
-                    }
+                let created = match parent_dirs.make_dir(dir_fd, pathname_z, |_| 0o755) {
+                    Ok(Some(())) => Ok(()),
+                    Ok(None) => continue,
+                    Err(e) if e.get_errno() == bun_sys::E::EEXIST => Ok(()),
+                    Err(e) => Err(e),
                 };
                 match created {
                     // Directory already exists - don't count as extracted
@@ -1420,8 +1409,8 @@ fn extract_to_disk_filtered(
 
                 // Create parent directories if needed (ignore expected errors)
                 #[cfg(windows)]
-                if let Some(parent) = bun_core::dirname(pathname) {
-                    match dir_fd.make_path(parent) {
+                if let Some(parent_dir) = bun_core::dirname(pathname) {
+                    match dir_fd.make_path(parent_dir) {
                         // Expected: directory already exists
                         Err(e) if e.get_errno() == bun_sys::E::EEXIST => {}
                         // Permission errors: skip this file, will fail at openat
@@ -1432,29 +1421,23 @@ fn extract_to_disk_filtered(
                     }
                 }
 
-                let Some((parent_dir, name_z)) = parent() else {
-                    continue;
-                };
-                let flags = bun_sys::O::WRONLY | bun_sys::O::CREAT | bun_sys::O::TRUNC;
-                #[cfg(not(windows))]
-                let flags = flags | bun_sys::O::NOFOLLOW;
-
                 // Create and write the file using bun.sys
-                let file_fd: Fd = match bun_sys::openat(parent_dir, name_z, flags, mode) {
-                    Ok(fd) => fd,
-                    // A symlink holds the name (FreeBSD says EMLINK). Replace
-                    // it, as GNU tar and node-tar do.
-                    Err(err)
-                        if matches!(err.get_errno(), bun_sys::E::ELOOP | bun_sys::E::EMLINK) =>
-                    {
-                        let _ = bun_sys::unlinkat(parent_dir, name_z);
-                        match bun_sys::openat(parent_dir, name_z, flags, mode) {
-                            Ok(fd) => fd,
-                            Err(_) => continue,
-                        }
-                    }
+                #[cfg(windows)]
+                let (file_fd, parent_dir, name_z) = match bun_sys::openat(
+                    dir_fd,
+                    pathname_z,
+                    bun_sys::O::WRONLY | bun_sys::O::CREAT | bun_sys::O::TRUNC,
+                    mode,
+                ) {
+                    Ok(fd) => (fd, dir_fd, pathname_z),
                     Err(_) => continue,
                 };
+                #[cfg(not(windows))]
+                let (file_fd, parent_dir, name_z) =
+                    match parent_dirs.create_file(dir_fd, pathname_z, mode) {
+                        Ok(Some((fd, parent))) => (fd, parent.dir, parent.name),
+                        _ => continue,
+                    };
 
                 let mut write_success = true;
                 if size > 0 {
@@ -1519,7 +1502,7 @@ fn extract_to_disk_filtered(
 
     #[cfg(unix)]
     {
-        count += libarchive::create_deferred_symlinks(dir_fd, &deferred_symlinks, false);
+        count += libarchive::create_deferred_symlinks(dir_fd, &deferred_symlinks, false).created;
     }
 
     Ok(count)
