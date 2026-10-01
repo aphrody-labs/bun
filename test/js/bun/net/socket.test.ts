@@ -5027,3 +5027,57 @@ it("concurrent end() on two allowHalfOpen TLS peers closes both sockets", async 
 
   await Promise.all([serverClosed.promise, clientClosed.promise]);
 });
+
+// BoringSSL's SSL_set_session may only be called before the handshake starts;
+// upstream aborts the process otherwise. Bun patches it to return 0, so a late
+// offer is ignored. These are the Bun-native doors into that call; each one
+// killed the process with SIGABRT before the patch.
+describe.concurrent("setSession() after the handshake started", () => {
+  const fixture = join(import.meta.dirname, "../../node/tls/node-tls-set-session-after-start.fixture.ts");
+
+  async function runDoor(door: string, expected: Record<string, unknown>) {
+    await using proc = Bun.spawn({ cmd: [bunExe(), fixture, door], env: bunEnv, stdout: "pipe", stderr: "pipe" });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect(stderr).toBe("");
+    expect(JSON.parse(stdout)).toEqual(expected);
+    expect(exitCode).toBe(0);
+  }
+
+  it("Bun.connect ignores the session in handshake()", async () => {
+    await runDoor("bun-connect-handshake", { threw: null });
+  });
+
+  // With no handshake handler, open() runs after the handshake. That is the
+  // default timing of the API, so this door needs no unusual setup to reach.
+  it("Bun.connect ignores the session in open() with no handshake handler", async () => {
+    await runDoor("bun-connect-open-late", { threw: null });
+  });
+
+  it("Bun.listen ignores the session in handshake()", async () => {
+    await runDoor("bun-listen-handshake", { threw: null, side: "server" });
+  });
+
+  // The handshake started and then failed, so it never finished. A guard that
+  // only asks "is the handshake finished?" lets this call through.
+  it("Bun.connect ignores the session after a failed handshake", async () => {
+    await runDoor("bun-connect-failed-handshake", { threw: null, success: false });
+  });
+
+  // A write in open() starts the handshake, so the call after it is late even
+  // though open() with a handshake handler is otherwise the legal window.
+  it("Bun.connect ignores the session in open() after a write", async () => {
+    await runDoor("bun-connect-open-after-write", { threw: null });
+  });
+
+  describe.each([["bun-upgrade-tls-half"], ["bun-upgrade-raw-half"]])("%s", door => {
+    it("ignores the session on a socket from upgradeTLS()", async () => {
+      await runDoor(door, { threw: null });
+    });
+  });
+
+  // The legal window, which the patch must not change: with both handlers,
+  // open() runs before the ClientHello and the session is offered.
+  it("Bun.connect still takes the session in open() with a handshake handler", async () => {
+    await runDoor("bun-connect-open-legal", { threw: null });
+  });
+});
