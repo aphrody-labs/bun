@@ -1103,11 +1103,20 @@ fn entry_name(path: &ZStr, offset: usize) -> &ZStr {
 pub struct ParentDirs {
     /// The innermost cached directory, relative to the root, no trailing `/`.
     path: Vec<u8>,
-    /// One fd per component of `path`, outermost first, with its end offset.
-    dirs: Vec<(usize, Fd)>,
+    /// One level per component of `path`, outermost first.
+    dirs: Vec<ParentDir>,
     /// The result of the last call when it nests deeper than `MAX_DEPTH`.
     /// Not cached: the next call closes it.
     spill: Option<Fd>,
+}
+
+#[cfg(not(windows))]
+struct ParentDir {
+    /// Where this component ends in `ParentDirs::path`.
+    end: usize,
+    fd: Fd,
+    /// This walk made the directory, so a child is created without a lookup first.
+    created: bool,
 }
 
 #[cfg(not(windows))]
@@ -1133,12 +1142,12 @@ impl ParentDirs {
 
     fn truncate(&mut self, len: usize) {
         while self.dirs.len() > len {
-            if let Some((_, fd)) = self.dirs.pop() {
-                fd.close();
+            if let Some(dir) = self.dirs.pop() {
+                dir.fd.close();
             }
         }
         self.path
-            .truncate(self.dirs.last().map_or(0, |&(end, _)| end));
+            .truncate(self.dirs.last().map_or(0, |dir| dir.end));
     }
 
     fn close_spill(&mut self) {
@@ -1162,26 +1171,33 @@ impl ParentDirs {
             .map(|parent| (parent, entry_name(path, name_offset))))
     }
 
-    /// `Ok(None)` when `name` exists and is not a directory. A symlink is not one.
-    fn open_component(parent: Fd, name: &ZStr) -> bun_sys::Maybe<Option<Fd>> {
+    /// The fd of `name` and whether this call made the directory. `Ok(None)`
+    /// when `name` exists and is not a directory. A symlink is not one.
+    fn open_component(
+        parent: Fd,
+        parent_created: bool,
+        name: &ZStr,
+    ) -> bun_sys::Maybe<Option<(Fd, bool)>> {
         use bun_sys::E;
         // What `O_NOFOLLOW | O_DIRECTORY` reports for a symlink differs by platform.
         let not_a_directory = |e: E| matches!(e, E::ENOTDIR | E::ELOOP | E::EMLINK);
 
-        match bun_sys::openat(parent, name, Self::DIR_FLAGS, 0) {
-            Ok(fd) => return Ok(Some(fd)),
-            Err(err) if err.get_errno() == E::ENOENT => {}
-            Err(err) if not_a_directory(err.get_errno()) => return Ok(None),
-            Err(err) => return Err(err),
+        if !parent_created {
+            match bun_sys::openat(parent, name, Self::DIR_FLAGS, 0) {
+                Ok(fd) => return Ok(Some((fd, false))),
+                Err(err) if err.get_errno() == E::ENOENT => {}
+                Err(err) if not_a_directory(err.get_errno()) => return Ok(None),
+                Err(err) => return Err(err),
+            }
         }
         // 0o755: what `mkdir_recursive_at` gave these parents before.
-        match bun_sys::mkdirat_z(parent, name, 0o755) {
-            Ok(()) => {}
-            Err(err) if err.get_errno() == E::EEXIST => {}
+        let created = match bun_sys::mkdirat_z(parent, name, 0o755) {
+            Ok(()) => true,
+            Err(err) if err.get_errno() == E::EEXIST => false,
             Err(err) => return Err(err),
-        }
+        };
         match bun_sys::openat(parent, name, Self::DIR_FLAGS, 0) {
-            Ok(fd) => Ok(Some(fd)),
+            Ok(fd) => Ok(Some((fd, created))),
             Err(err) if not_a_directory(err.get_errno()) => Ok(None),
             Err(err) => Err(err),
         }
@@ -1200,9 +1216,7 @@ impl ParentDirs {
         for component in strings::split(dirname, b"/") {
             let end = offset + component.len();
             match self.dirs.get(reused) {
-                Some(&(cached_end, _))
-                    if cached_end == end && strings::eql(&self.path[offset..end], component) =>
-                {
+                Some(dir) if dir.end == end && strings::eql(&self.path[offset..end], component) => {
                     reused += 1;
                     offset = end + 1;
                 }
@@ -1211,7 +1225,10 @@ impl ParentDirs {
         }
         self.truncate(reused);
 
-        let mut current = self.dirs.last().map_or(root, |&(_, fd)| fd);
+        let (mut current, mut created) = self
+            .dirs
+            .last()
+            .map_or((root, false), |dir| (dir.fd, dir.created));
         let mut remaining = strings::split(dirname, b"/").skip(reused).peekable();
         if remaining.peek().is_none() {
             return Ok(Some(current));
@@ -1230,7 +1247,7 @@ impl ParentDirs {
             name_buf[component.len()] = 0;
             let name = ZStr::from_slice_with_nul(&name_buf[..component.len() + 1]);
 
-            let Some(fd) = Self::open_component(current, name)? else {
+            let Some((fd, made)) = Self::open_component(current, created, name)? else {
                 return Ok(None);
             };
             if self.dirs.len() < Self::MAX_DEPTH {
@@ -1238,11 +1255,15 @@ impl ParentDirs {
                     self.path.push(b'/');
                 }
                 self.path.extend_from_slice(component);
-                self.dirs.push((self.path.len(), fd));
+                self.dirs.push(ParentDir {
+                    end: self.path.len(),
+                    fd,
+                    created: made,
+                });
             } else if let Some(previous) = self.spill.replace(fd) {
                 previous.close();
             }
-            current = fd;
+            (current, created) = (fd, made);
         }
 
         Ok(Some(current))
