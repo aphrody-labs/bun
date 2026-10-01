@@ -39,6 +39,13 @@ async function bunLockOf(dir: string) {
   return await Bun.file(join(dir, "bun.lock")).text();
 }
 
+// bun.lockb starts with a 42-byte header and a u32 format version. The 32-byte meta hash follows.
+async function storedMetaHash(dir: string) {
+  return Buffer.from(await Bun.file(join(dir, "bun.lockb")).arrayBuffer())
+    .subarray(46, 78)
+    .toString("hex");
+}
+
 function workspacesSection(bunLock: string) {
   const start = bunLock.indexOf(`  "workspaces": {`);
   const end = bunLock.indexOf(`  "packages": {`);
@@ -797,6 +804,36 @@ snapshots:
         dependencies: { "no-deps": "^1.0.0" },
         patchedDependencies: { "no-deps@1.0.1": "patches/no-deps.patch" },
       });
+
+      const install = await run(packageDir, "install", "--frozen-lockfile");
+
+      expect(install.stderr).not.toContain("error:");
+      expect(install.exitCode).toBe(0);
+      expect(await Bun.file(join(packageDir, "node_modules/no-deps/index.js")).text()).toStartWith(
+        "globalThis.patchedByMigration = true;\n",
+      );
+    });
+
+    test("bun pm migrate saves a patched dependency to bun.lockb", async () => {
+      const { packageDir } = await verdaccio.createTestDir({
+        bunfigOpts: { linker: "hoisted", saveTextLockfile: false },
+        files: {
+          "package.json": JSON.stringify({
+            name: "patch-to-lockb",
+            dependencies: { "no-deps": "^1.0.0" },
+            pnpm: { patchedDependencies: { "no-deps": "patches/no-deps.patch" } },
+          }),
+          "patches/no-deps.patch": NO_DEPS_INDEX_PATCH,
+          "pnpm-lock.yaml": bareHashNoDepsLockfile("no-deps"),
+        },
+      });
+
+      const { stderr, exitCode } = await migrate(packageDir);
+
+      expect(stderr).toContain("migrated lockfile from pnpm-lock.yaml");
+      expect(exitCode).toBe(0);
+      expect(existsSync(join(packageDir, "bun.lock"))).toBe(false);
+      expect(await storedMetaHash(packageDir)).not.toBe("0".repeat(64));
 
       const install = await run(packageDir, "install", "--frozen-lockfile");
 
@@ -2177,6 +2214,121 @@ snapshots:
       const importers = workspacesSection(await bunLockOf(viaMigrate));
       expect(importers).toContain(`      "peerDependencies": {\n        "a-dep": "1.0.1",\n      },`);
       expect(workspacesSection(await bunLockOf(viaInstall))).toBe(importers);
+    });
+  });
+
+  describe("saved as bun.lockb", () => {
+    const basic = () =>
+      verdaccio.createTestDir({
+        bunfigOpts: { linker: "hoisted", saveTextLockfile: false },
+        files: join(import.meta.dir, "pnpm/basic"),
+      });
+
+    // The frozen check of a bun.lockb compares the meta hash it stores with the one the
+    // install computes. A plain install saves the lockfile again when the two differ.
+    async function expectStoredMetaHashIsCurrent(dir: string) {
+      const hash = await storedMetaHash(dir);
+      expect(hash).not.toBe("0".repeat(64));
+
+      for (const args of [["install", "--frozen-lockfile"], ["ci"]]) {
+        const frozen = await run(dir, ...args);
+        expect(frozen.stderr).not.toContain("lockfile had changes");
+        expect(frozen.exitCode).toBe(0);
+      }
+
+      const install = await run(dir, "install");
+      expect(install.stderr).not.toContain("Saved lockfile");
+      expect(install.exitCode).toBe(0);
+      expect(await storedMetaHash(dir)).toBe(hash);
+    }
+
+    test.concurrent.each([
+      ["bun pm migrate", ["pm", "migrate"]],
+      ["bun install", ["install"]],
+      ["bun add", ["add", "one-dep@1.0.0"]],
+      ["bun remove", ["remove", "no-deps"]],
+      ["bun update", ["update"]],
+    ])("%s stores a meta hash the next frozen install accepts", async (_, command) => {
+      const { packageDir } = await basic();
+
+      const { stderr, exitCode } = await run(packageDir, ...command);
+
+      expect(stderr).toContain("migrated lockfile from pnpm-lock.yaml");
+      expect(exitCode).toBe(0);
+      expect(existsSync(join(packageDir, "bun.lock"))).toBe(false);
+      await expectStoredMetaHashIsCurrent(packageDir);
+    });
+
+    test.concurrent("bun install resolves a dependency the lockfile lacks", async () => {
+      const { packageDir } = await verdaccio.createTestDir({
+        bunfigOpts: { linker: "hoisted", saveTextLockfile: false },
+        files: {
+          "package.json": JSON.stringify({
+            name: "lockfile-lacks-a-dep",
+            dependencies: { "no-deps": "^1.0.0", "a-dep": "1.0.1" },
+          }),
+          "pnpm-lock.yaml": registryLockfileWithTarball(`${verdaccio.registryUrl()}no-deps/-/no-deps-1.0.1.tgz`),
+        },
+      });
+
+      const { stderr, exitCode } = await run(packageDir, "install");
+
+      expect(stderr).toContain("migrated lockfile from pnpm-lock.yaml");
+      expect(exitCode).toBe(0);
+      expect(await installedPackageJson(packageDir, "", "a-dep")).toStrictEqual({ name: "a-dep", version: "1.0.1" });
+      await expectStoredMetaHashIsCurrent(packageDir);
+    });
+
+    test.concurrent("bun pm migrate covers the lifecycle scripts of the root and of a workspace", async () => {
+      const { packageDir } = await verdaccio.createTestDir({
+        bunfigOpts: { linker: "hoisted", saveTextLockfile: false },
+        files: {
+          "package.json": JSON.stringify({
+            name: "scripts-root",
+            version: "1.0.0",
+            scripts: { postinstall: "echo root" },
+            dependencies: { "no-deps": "1.0.1" },
+          }),
+          "pnpm-workspace.yaml": "packages:\n  - 'packages/*'\n",
+          "packages/wa/package.json": JSON.stringify({
+            name: "wa",
+            version: "1.0.0",
+            scripts: { postinstall: "echo wa" },
+            dependencies: { "no-deps": "1.0.1" },
+          }),
+          "pnpm-lock.yaml": `lockfileVersion: '9.0'
+
+importers:
+
+  .:
+    dependencies:
+      no-deps:
+        specifier: 1.0.1
+        version: 1.0.1
+
+  packages/wa:
+    dependencies:
+      no-deps:
+        specifier: 1.0.1
+        version: 1.0.1
+
+packages:
+
+  no-deps@1.0.1:
+    resolution: {integrity: ${NO_DEPS_1_0_1_INTEGRITY}}
+
+snapshots:
+
+  no-deps@1.0.1: {}
+`,
+        },
+      });
+
+      const { stderr, exitCode } = await migrate(packageDir);
+
+      expect(stderr).toContain("migrated lockfile from pnpm-lock.yaml");
+      expect(exitCode).toBe(0);
+      await expectStoredMetaHashIsCurrent(packageDir);
     });
   });
 
