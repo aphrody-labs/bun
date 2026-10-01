@@ -1114,6 +1114,107 @@ it.concurrent("build.module() of a module whose import() is still loading its de
   });
 });
 
+describe.each(["import", "require"])(
+  "a module that build.module() replaced while it was evaluating does not leave its error on the replacement",
+  how => {
+    it.concurrent(how, async () => {
+      const load = how === "import" ? "(await import(import.meta.path))" : "require(import.meta.path)";
+      using dir = tempDir("plugin-module-replaced-then-threw", {
+        "replaces-itself.mjs": `
+          Bun.plugin({
+            name: "replace this module",
+            setup(build) {
+              build.module(import.meta.path, () => ({ exports: { from: "build.module()" }, loader: "object" }));
+            },
+          });
+          console.log("while evaluating:", ${load}.from);
+          throw new Error("the replaced module threw");
+        `,
+        "import.ts": `
+          console.log("first:", await import("./replaces-itself.mjs").then(module => module.from, error => error.message));
+          console.log("next:", await import("./replaces-itself.mjs").then(module => module.from, error => error.message));
+        `,
+        "require.cjs": `
+          try {
+            console.log("first:", require("./replaces-itself.mjs").from);
+          } catch (error) {
+            console.log("first:", error.message);
+          }
+          import("./replaces-itself.mjs").then(module => console.log("next:", module.from), error => console.log("next:", error.message));
+        `,
+      });
+      await using proc = Bun.spawn({
+        cmd: [bunExe(), how === "import" ? "import.ts" : "require.cjs"],
+        cwd: String(dir),
+        env: bunEnv,
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+      expect({ stdout, stderr, exitCode }).toEqual({
+        stdout: "while evaluating: build.module()\nfirst: the replaced module threw\nnext: build.module()\n",
+        stderr: "",
+        exitCode: 0,
+      });
+    });
+  },
+);
+
+// Nothing is removed here. The two import()s overlap, each with its own onLoad call, and the first fails at its fetch
+// after the second has loaded the module.
+it.concurrent(
+  "an import() whose onLoad rejects does not leave its error on the module a concurrent import() loaded",
+  async () => {
+    using dir = tempDir("plugin-concurrent-import-fetch-failed", {
+      "target.ts": `export const from = "file";`,
+      "entry.ts": `
+      import { join } from "node:path";
+      let calls = 0;
+      const firstRequested = Promise.withResolvers<void>();
+      const firstMayFail = Promise.withResolvers<void>();
+      Bun.plugin({
+        name: "the first onLoad fails late, later ones load",
+        setup(build) {
+          build.onLoad({ filter: /target\\.ts$/ }, async () => {
+            const call = ++calls;
+            if (call === 1) {
+              firstRequested.resolve();
+              await firstMayFail.promise;
+              throw new Error("the first onLoad failed");
+            }
+            return { contents: \`export const from = "onLoad call \${call}";\`, loader: "ts" };
+          });
+        },
+      });
+
+      const target = join(import.meta.dir, "target.ts");
+      const settled = (promise: Promise<{ from: string }>) => promise.then(module => module.from, error => "rejected: " + error.message);
+      const first = settled(import(target));
+      await firstRequested.promise;
+      console.log("second:", await settled(import(target)));
+      firstMayFail.resolve();
+      console.log("first:", await first);
+      console.log("third:", await settled(import(target)));
+      console.log("onLoad calls:", calls);
+    `,
+    });
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "entry.ts"],
+      cwd: String(dir),
+      env: bunEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect({ stdout, stderr, exitCode }).toEqual({
+      stdout:
+        "second: onLoad call 2\nfirst: rejected: the first onLoad failed\nthird: onLoad call 2\nonLoad calls: 2\n",
+      stderr: "",
+      exitCode: 0,
+    });
+  },
+);
+
 // The loader resolves a path that import() has resolved twice more, so onResolve is fed its own results: a → b → c → d.
 // That leaves d.mjs registered under a key other than the one it was asked for by, which is what this is about.
 it.concurrent(
