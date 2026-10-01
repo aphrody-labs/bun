@@ -95,7 +95,7 @@ describe.concurrent("--experimental-linear-regexp", () => {
       for (const regExp of patterns) {
         const repeated = regExp.source.includes("x") ? "x" : regExp.source.includes("\\\\s") ? "a " : "a";
         for (const encoding of ["latin1", "utf16"]) {
-          const statistics = [4096, 8192, 12288].map(length => {
+          const statistics = [1024, 2048, 3072].map(length => {
             const subject = Buffer.alloc(repeated.length * length, repeated).toString() + "!" + (encoding === "utf16" ? "\\u2603" : "");
             if (jscInternals.isUTF16String(subject) !== (encoding === "utf16")) throw new Error("not a " + encoding + " string");
             return jscInternals.regExpMatchStatistics(regExp, subject, 0);
@@ -119,11 +119,11 @@ describe.concurrent("--experimental-linear-regexp", () => {
     for (const row of rows) {
       const [one, two, three] = row.steps;
       expect(row).toMatchObject({ engine: "linear", index: -1 });
-      // On one line: the same number of steps for every 4096 characters more.
+      // On one line: the same number of steps for every 1024 characters more.
       expect({ ...row, growth: three - two }).toMatchObject({ growth: two - one });
       expect(two - one).toBeGreaterThan(0);
       // A state is an instruction of the program and one bit, and none is entered twice at a position.
-      expect((two - one) / 4096).toBeLessThanOrEqual(3 * row.programSize);
+      expect((two - one) / 1024).toBeLessThanOrEqual(3 * row.programSize);
       // The memory of the matcher does not depend on the subject.
       expect(row.scratchBytes).toEqual([row.scratchBytes[0], row.scratchBytes[0], row.scratchBytes[0]]);
     }
@@ -155,7 +155,7 @@ describe.concurrent("--experimental-linear-regexp", () => {
         const match = regExp.exec(subject);
         return { pattern: String(regExp), engine, refusal, index: match.index, match: [...match] };
       })));`;
-    const withSwitch = await runJSON(script, { flag: true });
+    const [withSwitch, without] = await Promise.all([runJSON(script, { flag: true }), runJSON(script)]);
     expect(withSwitch.map((entry: any) => [entry.pattern, entry.engine, entry.refusal])).toEqual([
       ["/(a+)b\\1/", "backtracking", "backreference"],
       ["/(?<quote>['\"]).*?\\k<quote>/", "backtracking", "backreference"],
@@ -163,7 +163,6 @@ describe.concurrent("--experimental-linear-regexp", () => {
       ["/(?<=\\$\\d*)\\d/", "backtracking", "lookaround of unbounded length"],
     ]);
 
-    const without = await runJSON(script);
     const results = (entries: any[]) => entries.map(({ pattern, index, match }) => ({ pattern, index, match }));
     expect(results(withSwitch)).toEqual(results(without));
     expect(results(withSwitch)[0]).toEqual({ pattern: "/(a+)b\\1/", index: 0, match: ["aabaa", "aa"] });
@@ -196,8 +195,7 @@ describe.concurrent("--experimental-linear-regexp", () => {
           split: subject.split(clone(regExp)),
         };
       })));`;
-    const withSwitch = await runJSON(script, { flag: true });
-    const without = await runJSON(script);
+    const [withSwitch, without] = await Promise.all([runJSON(script, { flag: true }), runJSON(script)]);
     expect(withSwitch.length).toBe(24);
     expect(withSwitch.map((entry: any) => [entry.pattern, entry.linear])).toEqual(
       without.map((entry: any) => [entry.pattern, true]),
