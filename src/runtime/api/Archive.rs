@@ -1327,6 +1327,10 @@ fn extract_to_disk_filtered(
     let mut entry: *mut lib::Entry = core::ptr::null_mut();
     #[cfg(not(windows))]
     let mut parent_dirs = libarchive::ParentDirs::new();
+    // Created after the last entry, as `extract_to_dir` does, so that no entry
+    // of this archive finds one of its symlinks where it needs a directory.
+    #[cfg(unix)]
+    let mut deferred_symlinks: Vec<libarchive::DeferredSymlink> = Vec::new();
     let mut stack_buf = bun_core::vec::UninitBuf::<{ 64 * 1024 }>::uninit();
     // SAFETY: `archive_read_data` is the only writer of `buf`; each chunk reads back only `buf[..bytes_read]`.
     let buf = unsafe { stack_buf.as_bytes_mut() };
@@ -1504,18 +1508,18 @@ fn extract_to_disk_filtered(
                 // Symlinks are only extracted on POSIX systems (Linux/macOS).
                 // On Windows, symlinks are skipped since they require elevated privileges.
                 #[cfg(unix)]
-                {
-                    let Some((parent_dir, name_z)) = parent() else {
-                        continue;
-                    };
-                    if bun_sys::symlinkat(link_target_z, parent_dir, name_z).is_err() {
-                        continue;
-                    }
-                    count += 1;
-                }
+                deferred_symlinks.push(libarchive::DeferredSymlink::new(
+                    pathname,
+                    link_target_z.as_bytes(),
+                ));
             }
             _ => {}
         }
+    }
+
+    #[cfg(unix)]
+    {
+        count += libarchive::create_deferred_symlinks(dir_fd, &deferred_symlinks, false);
     }
 
     Ok(count)

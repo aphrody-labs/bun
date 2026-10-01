@@ -798,15 +798,17 @@ describe("Bun.Archive", () => {
   });
 
   describe("path safety", () => {
+    // `extract()` has two implementations: the default one, and the one the
+    // `glob` option selects.
+    const extractModes = [
+      ["default", (archive: Bun.Archive, path: string) => archive.extract(path)],
+      ["glob", (archive: Bun.Archive, path: string) => archive.extract(path, { glob: "**" })],
+    ] as const;
+
     // Symlinks need a privilege Windows does not give the test process, and the
     // extractor only creates symlink entries on POSIX.
     describe.skipIf(isWindows)("symlinks already in the destination", () => {
-      // `extract()` has two implementations: the default one, and the one the
-      // `glob` option selects. Both must contain their writes.
-      describe.each([
-        ["default", (archive: Bun.Archive, path: string) => archive.extract(path)],
-        ["glob", (archive: Bun.Archive, path: string) => archive.extract(path, { glob: "**" })],
-      ] as const)("%s extraction", (_mode, extract) => {
+      describe.each(extractModes)("%s extraction", (_mode, extract) => {
         test("replaces a symlink under an entry's own name", async () => {
           using dir = tempDir("archive-symlink-leaf", { "victim/f.txt": "ORIGINAL" });
           const root = String(dir);
@@ -849,7 +851,8 @@ describe("Bun.Archive", () => {
         // `d1/d2/up -> ../..` is the extraction root when the name is read
         // lexically. It is not: `d1` is a symlink to the root, so the link
         // would land in `out/d2` and point at the parent of the root.
-        expect(await new Bun.Archive(symlinkTarball("d1/d2/up", "../..")).extract(out)).toBe(0);
+        await new Bun.Archive(symlinkTarball("d1/d2/up", "../..")).extract(out);
+        expect(existsSync(join(out, "d2"))).toBe(false);
 
         // A plain file member through that link.
         expect(
@@ -925,10 +928,10 @@ describe("Bun.Archive", () => {
       },
     );
 
-    // Only a parent that is not a directory is a skip. Any other failure to
-    // create or open it is an error, as it was when one call took the whole path.
-    describe.skipIf(isWindows)("a parent directory that cannot be created", () => {
-      test("rejects", async () => {
+    // Only a symlink makes the extractor skip an entry. Everything else fails
+    // or succeeds as it did when one call took the whole path.
+    describe.skipIf(isWindows)("destinations without symlinks", () => {
+      test("rejects when a parent directory cannot be made", async () => {
         using dir = tempDir("archive-parent-error", {});
         // Longer than NAME_MAX, so the directory cannot exist.
         const tooLong = Buffer.alloc(300, "x").toString();
@@ -950,15 +953,87 @@ describe("Bun.Archive", () => {
           await expect(async () => {
             await new Bun.Archive({ "a/f.txt": "F" }).extract(out);
           }).toThrow();
-          // A directory entry alone, with nothing under it.
-          const onlyDirectory = new Uint8Array(Buffer.concat([ustarHeader("d/", 0, "5"), Buffer.alloc(1024)]));
-          await expect(async () => {
-            await new Bun.Archive(onlyDirectory).extract(out);
-          }).toThrow();
           expect(readdirSync(out)).toEqual([]);
         } finally {
           chmodSync(out, 0o755);
         }
+      });
+
+      test("rejects when a file holds the name of a parent directory", async () => {
+        using dir = tempDir("archive-file-in-the-way", { "default/a": "FILE", "glob/a": "FILE" });
+        const archive = new Bun.Archive({ "a/b.txt": "B", "ok.txt": "OK" });
+
+        await expect(async () => {
+          await archive.extract(join(String(dir), "default"));
+        }).toThrow();
+        // The glob extractor skips every entry it cannot create.
+        expect(await archive.extract(join(String(dir), "glob"), { glob: "**" })).toBe(1);
+        expect(await Bun.file(join(String(dir), "default", "a")).text()).toBe("FILE");
+        expect(await Bun.file(join(String(dir), "glob", "a")).text()).toBe("FILE");
+      });
+
+      describe.each(extractModes)("%s extraction", (_mode, extract) => {
+        test("makes no directory for a symlink it refuses", async () => {
+          using dir = tempDir("archive-refused-symlink", {});
+          const out = join(String(dir), "out");
+
+          await extract(new Bun.Archive(symlinkTarball("x/y/bad", "/etc")), out);
+
+          expect(readdirSync(out)).toEqual([]);
+        });
+
+        test("keeps a directory writable when its parent has no entry of its own", async () => {
+          // What `tar -cf x.tar a/b` writes for a read-only `a/b`: an entry for
+          // `a/b/`, and none for `a/`.
+          const tarball = new Uint8Array(
+            Buffer.concat([
+              ustarHeader("a/b/", 0, "5", { mode: Buffer.from("0000555\0") }),
+              ustarEntry("a/b/f.txt", Buffer.from("F")),
+              Buffer.alloc(1024),
+            ]),
+          );
+          using dir = tempDir("archive-readonly-subdir", {});
+          const out = join(String(dir), "out");
+
+          await extract(new Bun.Archive(tarball), out);
+
+          expect(await Bun.file(join(out, "a", "b", "f.txt")).text()).toBe("F");
+          expect(lstatSync(join(out, "a", "b")).mode & 0o200).toBe(0o200);
+        });
+
+        test("creates the symlinks of an archive after its other entries", async () => {
+          // `current -> releases/v1`, then a member under `current/`. The member
+          // gets a real directory, and the symlink finds its name taken.
+          const tarball = new Uint8Array(
+            Buffer.concat([
+              ustarHeader("current", 0, "2", {}, "releases/v1"),
+              ustarEntry("current/config", Buffer.from("CONFIG")),
+              ustarEntry("releases/v1/keep", Buffer.from("KEEP")),
+              Buffer.alloc(1024),
+            ]),
+          );
+          using dir = tempDir("archive-symlink-last", {});
+          const out = join(String(dir), "out");
+
+          await extract(new Bun.Archive(tarball), out);
+
+          expect(lstatSync(join(out, "current")).isDirectory()).toBe(true);
+          expect(await Bun.file(join(out, "current", "config")).text()).toBe("CONFIG");
+          expect(readdirSync(join(out, "releases", "v1"))).toEqual(["keep"]);
+        });
+      });
+
+      test("glob extraction counts a directory that is already there", async () => {
+        const archive = new Bun.Archive(
+          new Uint8Array(
+            Buffer.concat([ustarHeader("d/", 0, "5"), ustarEntry("d/f.txt", Buffer.from("F")), Buffer.alloc(1024)]),
+          ),
+        );
+        using dir = tempDir("archive-glob-directory-count", {});
+        const out = join(String(dir), "out");
+
+        expect(await archive.extract(out, { glob: "**" })).toBe(2);
+        expect(await archive.extract(out, { glob: "**" })).toBe(2);
       });
     });
 
