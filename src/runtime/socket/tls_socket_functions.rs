@@ -107,7 +107,8 @@ pub(super) mod ffi {
         pub(crate) safe fn SSL_get_session(ssl: &SSL) -> *mut SSL_SESSION;
         pub(crate) fn SSL_SESSION_up_ref(session: *mut SSL_SESSION) -> c_int;
         // Both handles are opaque-ZST refs (`UnsafeCell` body); BoringSSL bumps
-        // `session`'s refcount internally — no caller-side precondition.
+        // `session`'s refcount internally. Once the handshake has begun it returns 0
+        // and changes nothing (patches/boringssl/set-session-return-0.patch).
         pub(crate) safe fn SSL_set_session(ssl: &SSL, session: &SSL_SESSION) -> c_int;
         // SAFETY (unsafe fn): consumes a +1 reference; `session` must be uniquely owned or null.
         pub(crate) fn SSL_SESSION_free(session: *mut SSL_SESSION);
@@ -1179,13 +1180,14 @@ pub(super) fn set_session(
         // so we must release the one returned by d2i_SSL_SESSION on every path.
         // SAFETY: `s` is the +1 SSL_SESSION reference returned by d2i_SSL_SESSION; we own it.
         let _guard = scopeguard::guard(session, |s| unsafe { ffi::SSL_SESSION_free(s) });
-        if ffi::SSL_set_session(
+        // 0: the handshake has begun, so the session is not offered and the connection
+        // stays as it is. Node returns `undefined` from that call too; OpenSSL accepts
+        // it there, and the connection can then fail.
+        // https://github.com/nodejs/node/blob/v26.3.0/src/crypto/crypto_tls.cc#L1814-L1831
+        ffi::SSL_set_session(
             boringssl::SSL::opaque_ref(ssl_ptr),
             ffi::SSL_SESSION::opaque_ref(session),
-        ) != 1
-        {
-            return Err(global.throw_value(get_ssl_exception(global, b"SSL_set_session error")));
-        }
+        );
         Ok(JSValue::UNDEFINED)
     } else {
         Err(global.throw(format_args!(
