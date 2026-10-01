@@ -1371,21 +1371,31 @@ fn extract_to_disk_filtered(
         let filetype = entry_ref.filetype();
         let kind = bun_sys::kind_from_mode(filetype);
 
-        // Never create an entry through a symlink already in the destination.
+        // Where to create the entry. `None` when a parent is a symlink, which
+        // is never written through, or cannot be made.
         #[cfg(not(windows))]
-        let Ok(Some((parent_dir, name_z))) = parent_dirs.open_entry(dir_fd, pathname_z) else {
-            continue;
+        let mut parent = || match parent_dirs.open_entry(dir_fd, pathname_z) {
+            Ok(Some(parent)) => Some((parent.dir, parent.name)),
+            _ => None,
         };
         #[cfg(windows)]
-        let (parent_dir, name_z) = (dir_fd, pathname_z);
+        let parent = || Some((dir_fd, pathname_z));
 
         match kind {
             bun_sys::FileKind::Directory => {
                 #[cfg(windows)]
                 let created = dir_fd.make_path(pathname);
-                // 0o755 is the mode `make_path` gives the directories it creates.
+                // As `make_path`: 0o755, and a name that is taken is not an error.
                 #[cfg(not(windows))]
-                let created = bun_sys::mkdirat_z(parent_dir, name_z, 0o755);
+                let created = {
+                    let Some((parent_dir, name_z)) = parent() else {
+                        continue;
+                    };
+                    match bun_sys::mkdirat_z(parent_dir, name_z, 0o755) {
+                        Err(e) if e.get_errno() == bun_sys::E::EEXIST => Ok(()),
+                        created => created,
+                    }
+                };
                 match created {
                     // Directory already exists - don't count as extracted
                     Err(e) if e.get_errno() == bun_sys::E::EEXIST => continue,
@@ -1418,6 +1428,9 @@ fn extract_to_disk_filtered(
                     }
                 }
 
+                let Some((parent_dir, name_z)) = parent() else {
+                    continue;
+                };
                 let flags = bun_sys::O::WRONLY | bun_sys::O::CREAT | bun_sys::O::TRUNC;
                 #[cfg(not(windows))]
                 let flags = flags | bun_sys::O::NOFOLLOW;
@@ -1492,6 +1505,9 @@ fn extract_to_disk_filtered(
                 // On Windows, symlinks are skipped since they require elevated privileges.
                 #[cfg(unix)]
                 {
+                    let Some((parent_dir, name_z)) = parent() else {
+                        continue;
+                    };
                     if bun_sys::symlinkat(link_target_z, parent_dir, name_z).is_err() {
                         continue;
                     }
