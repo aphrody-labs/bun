@@ -752,7 +752,7 @@ Learn more about these at <magenta>https://bun.com/docs/cli/pm<r>.\n";
             // reads it only for its scalar `format`/`migrated` fields and never
             // dereferences `ok.lockfile`, so the lockfile it reaches through
             // `pm_raw` is the sole live mutable view of the heap lockfile.
-            save_lockfile_without_install(unsafe { &mut *pm_raw }, &load_lockfile);
+            save_lockfile_without_install(unsafe { &mut *pm_raw }, &load_lockfile)?;
             Global::exit(0);
         } else if strings::eql_comptime(subcommand, b"version") {
             let positionals: &[&[u8]] = pm.options.positionals;

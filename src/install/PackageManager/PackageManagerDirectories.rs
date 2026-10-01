@@ -9,7 +9,10 @@ use crate::repository::Repository;
 use bun_core::ZStr;
 use bun_core::{Global, Output, ZBox, env_var, fmt as bun_fmt};
 use bun_dotenv::Loader as DotEnvLoader;
-use bun_install::lockfile::{Format as LockfileFormat, LoadResult, MetaHashForSave};
+use bun_install::lockfile::package::scripts::Scripts;
+use bun_install::lockfile::{
+    Format as LockfileFormat, LoadResult, Lockfile, MetaHashForSave, Migrated,
+};
 use bun_install::resolution::Tag as ResolutionTag;
 use bun_install::{PackageID, Resolution};
 use bun_paths::{self as path, AbsPath, PathBuffer, SEP};
@@ -1182,9 +1185,81 @@ pub fn save_lockfile(
 
 /// Saves the lockfile for `bun pm migrate` and `bun pm trust`, which run no
 /// install pass.
-pub fn save_lockfile_without_install(this: &mut PackageManager, load_result: &LoadResult) {
-    this.lockfile
-        .save_to_disk(load_result, &this.options, MetaHashForSave::default());
+pub fn save_lockfile_without_install(
+    this: &mut PackageManager,
+    load_result: &LoadResult,
+) -> Result<(), Error> {
+    let migrated_to_binary = matches!(load_result, LoadResult::Ok(ok) if ok.migrated != Migrated::None)
+        && load_result.save_format(&this.options) == LockfileFormat::Binary;
+    if !migrated_to_binary {
+        this.lockfile
+            .save_to_disk(load_result, &this.options, MetaHashForSave::default());
+        return Ok(());
+    }
+
+    // A bun.lockb stores the hash the next install computes for it. That
+    // install takes lifecycle scripts from package.json and drops every
+    // package nothing depends on, and a migrated lockfile has had neither.
+    load_lifecycle_scripts_from_package_json(this);
+    let log_level = this.options.log_level;
+    let mut cleaned = {
+        let mgr: *mut PackageManager = this;
+        // SAFETY: `lockfile` and `*log` are disjoint storage within `*mgr`;
+        // `clean_with_logger` reads `manager` for option flags and its
+        // preinstall state only, as in `install_with_manager`.
+        unsafe {
+            let log = (*mgr).log;
+            Lockfile::clean_with_logger(
+                &mut (*mgr).lockfile,
+                &mut *mgr,
+                &mut [],
+                &mut *log,
+                log_level,
+            )?
+        }
+    };
+    cleaned.save_to_disk(load_result, &this.options, MetaHashForSave::default());
+    Ok(())
+}
+
+/// Copies the lifecycle scripts of the root and of the workspaces from their
+/// package.json into the lockfile, where the install differ expects them.
+fn load_lifecycle_scripts_from_package_json(this: &mut PackageManager) {
+    for package_id in 0..this.lockfile.packages.len() {
+        let resolution = this.lockfile.packages.items_resolution()[package_id];
+        let mut folder = path::AutoAbsPath::init_top_level_dir();
+        match resolution.tag {
+            ResolutionTag::Root => {}
+            ResolutionTag::Workspace => {
+                let _ = folder.append(
+                    resolution
+                        .workspace()
+                        .slice(this.lockfile.buffers.string_bytes.as_slice()),
+                );
+            }
+            _ => continue,
+        }
+
+        let mut scripts = Scripts::default();
+        let mut builder = this.lockfile.string_builder();
+        // A package.json that cannot be read fails the install that needs it.
+        if scripts
+            .fill_from_package_json(&mut builder, &mut bun_ast::Log::init(), &mut folder)
+            .is_err()
+        {
+            continue;
+        }
+        builder.clamp();
+
+        if resolution.tag == ResolutionTag::Workspace {
+            // The differ resolves a workspace again only when its scripts changed.
+            if !scripts.has_any() {
+                continue;
+            }
+            this.lockfile.packages.items_meta_mut()[package_id].set_has_install_script(true);
+        }
+        this.lockfile.packages.items_scripts_mut()[package_id] = scripts;
+    }
 }
 
 pub fn update_lockfile_if_needed(

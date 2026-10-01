@@ -636,7 +636,7 @@ impl TrustCommand {
         // `handle_load_lockfile_errors`). The save reads it only for its
         // scalar `format`/`migrated` fields, so the lockfile it reaches
         // through `pm_raw` is the sole live mutable view of the heap lockfile.
-        save_lockfile_without_install(unsafe { &mut *pm_raw }, &load_lockfile);
+        save_lockfile_without_install(unsafe { &mut *pm_raw }, &load_lockfile)?;
 
         let mut buffer_writer = bun_js_printer::BufferWriter::init();
         buffer_writer.buffer.list.reserve(

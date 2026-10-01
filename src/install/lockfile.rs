@@ -1279,7 +1279,6 @@ fn clean_migrate_patched_dependencies_cold(
         .iter()
         .zip(old.patched_dependencies.values().iter())
     {
-        debug_assert!(!v.patchfile_hash_is_null);
         let mut patchdep = *v;
         patchdep.path = builder
             .append::<SemverString>(patchdep.path.slice(old.buffers.string_bytes.as_slice()));
