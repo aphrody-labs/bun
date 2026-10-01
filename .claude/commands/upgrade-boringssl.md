@@ -90,6 +90,7 @@ Then `bun run ci:watch` and fix anything that turns up.
 - **`EVP_PBE_validate_scrypt_params`** — `crypto/evp/scrypt.cc`, `include/openssl/evp.h`
 - **Electron `SSL_want` / `EVP_CIPHER_do_all_sorted`** — `ssl/ssl_lib.cc` (return `rwstate` directly), `ssl/ssl_test.cc` (drops the corresponding test block), `decrepit/evp/evp_do_all.cc`, `crypto/cipher/get_cipher.cc`, `include/openssl/cipher.h`
 - **MLDSA stack-frame pragma** — `crypto/fipsmodule/mldsa/mldsa.cc.inc`
+- **`SSL_set_session` returns 0 once the handshake has begun (upstream calls `abort()`)** — `ssl/ssl_session.cc`, `include/openssl/ssl.h`. Not in the fork yet: Bun applies `patches/boringssl/set-session-return-0.patch` on top of the pin. Fold that diff into the fork at the next bump, then delete the patch file and the `patches:` entry in `scripts/build/deps/boringssl.ts`.
 
 If upstream upstreams any of these (check `git grep` on `upstream/main` before re-applying), drop the fork's copy.
 
