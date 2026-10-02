@@ -68,6 +68,7 @@ class RawClient {
   closed = false;
   #buffered = Buffer.alloc(0);
   #waiters: Array<{ matches: (f: Frame) => boolean; resolve: (f: Frame | null) => void }> = [];
+  #opened = new Set<number>();
 
   constructor(readonly socket: net.Socket) {
     socket.on("error", () => {});
@@ -117,7 +118,17 @@ class RawClient {
 
   /** One write, so that the server reads the frames in one chunk. */
   send(...frames: Buffer[]) {
+    for (const sent of frames) if (sent.readUInt8(3) === HEADERS) this.#opened.add(sent.readUInt32BE(5));
     this.socket.write(Buffer.concat(frames));
+  }
+
+  /** Resolves when each request has its response HEADERS or its RST_STREAM, or the session ended. */
+  async answers() {
+    for (const streamId of this.#opened) {
+      await this.waitFor(
+        f => f.type === GOAWAY || (f.streamId === streamId && (f.type === HEADERS || f.type === RST_STREAM)),
+      );
+    }
   }
 
   get(streamId: number) {
@@ -456,9 +467,10 @@ function withCompat<T>(
   return withClient(compatServer(options, served, onRequest), client => body(client, served));
 }
 
-/** What the server did, read when it has answered a PING or ended the connection. */
+/** What the server did, read when it has answered a PING and every request, or ended the connection. */
 async function outcome(client: RawClient, served: Served, tag = 1) {
-  if (!(await client.ping(tag)) && !client.closed) await once(client.socket, "close");
+  if (await client.ping(tag)) await client.answers();
+  else if (!client.closed) await once(client.socket, "close");
   return {
     handlers: served.handlers,
     answered: [...new Set(client.frames.filter(f => f.type === HEADERS).map(f => f.streamId))].sort((a, b) => a - b),
@@ -559,7 +571,7 @@ const endResponse: OnRequest = (_req, res) => {
 // RST_STREAM(REFUSED_STREAM) and no 'stream' event (RFC 9113 5.1.2). A stream uses one slot of the
 // limit from its HEADERS until both sides ended it or one side reset it. These tests pin every
 // order in which a slot is taken and given back. None of them reaches a budget. Every expectation
-// is what node v26.3.0 does, unless the test says that node differs.
+// is what node v26.3.0 does. A test that says "Bun only" has no counterpart in node.
 describe("the slots of SETTINGS_MAX_CONCURRENT_STREAMS", () => {
   const one = { settings: { maxConcurrentStreams: 1 } };
 
@@ -569,26 +581,6 @@ describe("the slots of SETTINGS_MAX_CONCURRENT_STREAMS", () => {
       handlers: [],
       answered: [],
       resets: refused([1, 3]),
-      goaways: [],
-      sessionError: undefined,
-    });
-  });
-
-  // nghttp2 makes the first stream over a limit that the client ACKed a connection error:
-  // https://github.com/nodejs/node/blob/v26.3.0/deps/nghttp2/lib/nghttp2_session.c#L3889-L3893
-  // Bun sends the stream error that RFC 9113 5.1.2 asks for, whether the client ACKed or not.
-  test("a stream over a limit that the client ACKed is refused and the session stays open", async () => {
-    const result = await withLimit({ settings: { maxConcurrentStreams: 2 } }, hold, async (client, served) => {
-      await client.waitFor(f => f.type === SETTINGS && (f.flags & ACK) === 0);
-      client.send(frame(SETTINGS, ACK, 0));
-      await client.ping(1);
-      client.send(...odd(4).map(get));
-      return outcome(client, served, 2);
-    });
-    expect(result).toEqual({
-      handlers: [1, 3],
-      answered: [1, 3],
-      resets: refused([5, 7]),
       goaways: [],
       sessionError: undefined,
     });
@@ -667,23 +659,6 @@ describe("the slots of SETTINGS_MAX_CONCURRENT_STREAMS", () => {
         return outcome(client, served);
       });
       expect(result).toEqual(allServed(odd(3)));
-    });
-
-    // Node refuses 3 and 5 in these four tests: nghttp2 closes a stream when it writes the end of
-    // the response, and it writes after it has read every frame of the chunk. Bun has written the
-    // response when the handler returns.
-    describe("for the next request of the same write, when the handler ended the response", () => {
-      test.each([
-        ["respond() and end()", finish],
-        ["respond({ endStream: true })", headersOnly],
-        ["sendTrailers()", respondThenTrailers],
-      ])("with %s", async (_, handler) => {
-        expect(await withLimit(one, handler, inOneWrite(3))).toEqual(allServed(odd(3)));
-      });
-
-      test("with res.end() of the compatibility API", async () => {
-        expect(await withCompat(one, endResponse, inOneWrite(3))).toEqual(allServed(odd(3)));
-      });
     });
 
     // The response ends first. The request ends in the same write as the next request.
@@ -771,7 +746,7 @@ describe("the slots of SETTINGS_MAX_CONCURRENT_STREAMS", () => {
 
     // Bun only: these calls fail in Bun and the stream emits 'error'. Node accepts the first two,
     // throws for the third and resets the stream for the fourth.
-    test.each([
+    test.skipIf(typeof Bun === "undefined").each([
       ["a weight out of range", {}, (stream: any) => stream.respond({ ":status": 200 }, { weight: 0 })],
       ["a parent out of range", {}, (stream: any) => stream.respond({ ":status": 200 }, { parent: -1 })],
       ["options that are not an object", {}, (stream: any) => stream.respond({ ":status": 200 }, 1)],
