@@ -3584,4 +3584,89 @@ describe("process is an EventEmitter of node:events", () => {
       });
     },
   );
+
+  // node emits each event of `process` with `process.emit(...)`. A program that puts its own `emit` in place
+  // gets every one of them, with or without a listener: signal-exit finds 'exit' that way.
+  describe("an `emit` that a program put in place gets the events that the runtime emits", () => {
+    const trace = `function (type, ...args) {
+      if (this === process && wanted.includes(type)) console.log("emit", type, ...args.map(String));
+      return emit.apply(this, arguments);
+    };`;
+
+    it.concurrent.each([
+      ["process", `const emit = process.emit; process.emit = ${trace}`],
+      [
+        "EventEmitter.prototype",
+        `const { EventEmitter } = require("node:events");
+         const emit = EventEmitter.prototype.emit; EventEmitter.prototype.emit = ${trace}`,
+      ],
+      [
+        "the prototype of process",
+        `const emit = process.emit; Object.getPrototypeOf(process).emit = ${trace}`,
+      ],
+    ])("'beforeExit' and 'exit' without a listener, emit on %s", async (_, install) => {
+      expect(await run(`const wanted = ["beforeExit", "exit"]; ${install}`)).toEqual({
+        stdout: "emit beforeExit 0\nemit exit 0\n",
+        stderr: "",
+        exitCode: 0,
+        signalCode: null,
+      });
+    });
+
+    it.concurrent("'exit' of process.exit()", async () => {
+      const script = `const wanted = ["exit"]; const emit = process.emit; process.emit = ${trace}
+        process.exit(3);`;
+      expect(await run(script)).toEqual({ stdout: "emit exit 3\n", stderr: "", exitCode: 3, signalCode: null });
+    });
+
+    it.concurrent.skipIf(isWindows)("a signal", async () => {
+      const script = `const wanted = ["SIGUSR2"]; const emit = process.emit; process.emit = ${trace}
+        const { promise, resolve } = Promise.withResolvers();
+        const keepAlive = setInterval(() => {}, 60_000);
+        process.on("SIGUSR2", signal => {
+          console.log("listener", signal);
+          resolve();
+        });
+        process.kill(process.pid, "SIGUSR2");
+        await promise;
+        clearInterval(keepAlive);`;
+      const { stdout, stderr, exitCode } = await run(script);
+      expect({ stdout: stdout.replace(/ \d+\n/, " <number>\n"), stderr, exitCode }).toEqual({
+        stdout: "emit SIGUSR2 SIGUSR2 <number>\nlistener SIGUSR2\n",
+        stderr: "",
+        exitCode: 0,
+      });
+    });
+
+    it.concurrent("'uncaughtExceptionMonitor' without a listener", async () => {
+      const script = `const wanted = ["uncaughtExceptionMonitor"]; const emit = process.emit; process.emit = ${trace}
+        process.on("uncaughtException", error => console.log("listener", error.message));
+        setImmediate(() => {
+          throw new Error("thrown");
+        });`;
+      expect(await run(script)).toEqual({
+        stdout: "emit uncaughtExceptionMonitor Error: thrown uncaughtException\nlistener thrown\n",
+        stderr: "",
+        exitCode: 0,
+        signalCode: null,
+      });
+    });
+
+    it.concurrent("'warning': an `emit` that returns for a warning hides it", async () => {
+      const script = `const emit = process.emit;
+        process.emit = function (type, warning) {
+          if (type === "warning" && warning.name === "HiddenWarning") return false;
+          return emit.apply(this, arguments);
+        };
+        process.emitWarning("not printed", "HiddenWarning");
+        process.emitWarning("printed", "ShownWarning");`;
+      const { stdout, stderr, exitCode } = await run(script);
+      const warnings = stderr.split("\n").filter(line => line.includes("Warning: "));
+      expect({ stdout, warnings: warnings.map(line => line.replace(/^\(\w+:\d+\) /, "")), exitCode }).toEqual({
+        stdout: "",
+        warnings: ["ShownWarning: printed"],
+        exitCode: 0,
+      });
+    });
+  });
 });

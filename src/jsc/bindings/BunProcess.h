@@ -46,6 +46,9 @@ class Process : public JSC::JSDestructibleObject {
 
     // What `_events` holds for an event: a function, an array of functions, or nothing.
     JSValue listenersOf(const JSC::Identifier& eventName);
+    // Whether `process.emit` is the `emit` that EventEmitter.prototype starts with. Runs no JavaScript, and is
+    // false when it cannot tell.
+    bool hasEmitOfNodeEvents(JSC::VM&, Zig::GlobalObject*, const JSC::Identifier& emitName);
 
 public:
     Process(JSC::VM& vm, JSC::Structure* structure)
@@ -96,9 +99,10 @@ public:
     Symbol* shapeModeSymbol() const { return m_shapeModeSymbol.get(); }
     Symbol* captureSymbol() const { return m_captureSymbol.get(); }
 
-    // `process.emit(eventName, ...args)`, as node emits the events of `process`: a program that assigned
-    // `process.emit` gets every event. Without that, an event with no listener calls nothing. Returns true when
-    // it called `emit`. What that throws is pending on return: for a caller that JavaScript called.
+    // `process.emit(eventName, ...args)`, as node emits the events of `process`: an `emit` that a program put on
+    // `process` or on a prototype of it gets every event. Without one, an event with no listener calls nothing.
+    // Returns true when it called `emit`. What that throws is pending on return: for a caller that JavaScript
+    // called.
     bool emit(const JSC::Identifier& eventName, const JSC::MarkedArgumentBuffer& args);
     // The same for an event that the runtime starts (a signal, an IPC message, the end of the event loop). What a
     // listener throws is an uncaught exception, and the listeners after it are not called, as in node.

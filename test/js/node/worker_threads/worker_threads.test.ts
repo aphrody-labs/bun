@@ -577,6 +577,44 @@ describe("stdio is flushed when the worker exits synchronously", () => {
     expect(stdout).toBe(`error boom\n${JSON.stringify({ code: 42, out: "hello\nexit handler 1 true\n" })}\n`);
     expect(exitCode).toBe(0);
   });
+
+  // What an 'exit' listener throws is the worker's uncaught exception, as in node: it goes to the worker's
+  // 'uncaughtException' listeners, or else to the parent's 'error' listeners. The 'exit' listeners after it
+  // do not run.
+  test.concurrent.each([
+    ["the parent's 'error' event", "", { errors: ["exit listener throws"], out: "first 0\n", code: 1 }],
+    [
+      "the worker's 'uncaughtException' event",
+      `process.on("uncaughtException", error => process.stdout.write("uncaughtException: " + error.message + "\\n"));`,
+      { errors: [], out: "first 0\nuncaughtException: exit listener throws\n", code: 0 },
+    ],
+  ])("a user 'exit' handler that throws: %s gets the error", async (_label, prelude, expected) => {
+    const workerSrc = `${prelude}
+      process.on("exit", code => {
+        process.stdout.write("first " + code + "\\n");
+        throw new Error("exit listener throws");
+      });
+      process.on("exit", code => process.stdout.write("second " + code + "\\n"));`;
+    await using proc = Bun.spawn({
+      cmd: [
+        bunExe(),
+        "-e",
+        `const { Worker } = require("node:worker_threads");
+         const w = new Worker(${JSON.stringify(workerSrc)}, { eval: true, stdout: true });
+         let out = "";
+         const errors = [];
+         w.stdout.setEncoding("utf8").on("data", d => (out += d));
+         w.on("error", e => errors.push(e.message));
+         w.on("exit", code => console.log(JSON.stringify({ errors, out, code })));`,
+      ],
+      env: bunEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect({ stdout, stderr }).toEqual({ stdout: JSON.stringify(expected) + "\n", stderr: "" });
+    expect(exitCode).toBe(0);
+  });
 });
 
 describe("worker event", () => {

@@ -1370,7 +1370,7 @@ extern "C" int Bun__handleUncaughtException(JSC::JSGlobalObject* lexicalGlobalOb
     }
 
     auto uncaughtExceptionMonitor = Identifier::fromString(JSC::getVM(globalObject), "uncaughtExceptionMonitor"_s);
-    if (process->listenerCount(uncaughtExceptionMonitor) > 0) {
+    {
         auto monitorScope = DECLARE_TOP_EXCEPTION_SCOPE(vm);
         process->emitFromRuntime(uncaughtExceptionMonitor, args);
         RETURN_IF_EXCEPTION(monitorScope, true);
@@ -1532,15 +1532,11 @@ extern "C" bool Bun__emitHandledPromiseEvent(JSC::JSGlobalObject* lexicalGlobalO
         if (vm.hasPendingTerminationException()) [[unlikely]]
             return true;
     }
-    if (process->listenerCount(eventType) > 0) {
-        MarkedArgumentBuffer args;
-        args.append(promise);
-        process->emitFromRuntime(eventType, args);
-        RETURN_IF_EXCEPTION(scope, true);
-        return true;
-    }
-
-    return false;
+    MarkedArgumentBuffer args;
+    args.append(promise);
+    bool emitted = process->emitFromRuntime(eventType, args);
+    RETURN_IF_EXCEPTION(scope, true);
+    return emitted;
 }
 
 extern "C" void Bun__refChannelUnlessOverridden(JSC::JSGlobalObject* globalObject);
@@ -1776,6 +1772,22 @@ bool Process::hasListeners(const Identifier& eventName)
     return listenerCount(eventName) > 0;
 }
 
+bool Process::hasEmitOfNodeEvents(VM& vm, Zig::GlobalObject* globalObject, const Identifier& emitName)
+{
+    // `process`, then the object that has its `constructor`, then EventEmitter.prototype. A program can put
+    // another object in the chain: anything other than a plain object there is for the full lookup.
+    if (getDirect(vm, emitName))
+        return false;
+    auto* prototype = getPrototypeDirect().getObject();
+    auto* eventEmitterPrototype = m_eventEmitterPrototype.get();
+    if (!prototype || prototype->type() != FinalObjectType || prototype->getDirect(vm, emitName) || prototype->getPrototypeDirect() != eventEmitterPrototype)
+        return false;
+    JSValue emit = eventEmitterPrototype->getDirect(vm, emitName);
+    if (!emit)
+        return !eventEmitterPrototype->staticPropertiesReified();
+    return emit == nodeEventEmitterEmitIfEvaluated(globalObject);
+}
+
 bool Process::emit(const Identifier& eventName, const MarkedArgumentBuffer& args)
 {
     auto* globalObject = defaultGlobalObject(this->globalObject());
@@ -1783,17 +1795,19 @@ bool Process::emit(const Identifier& eventName, const MarkedArgumentBuffer& args
     auto scope = DECLARE_THROW_SCOPE(vm);
     auto emitName = Identifier::fromString(vm, "emit"_s);
 
-    JSValue emit = getDirect(vm, emitName);
-    if (!emit || !emit.isCallable()) {
-        if (!hasListeners(eventName))
+    // The `emit` of node:events does nothing for an event that has no listener, and most events that the
+    // runtime emits have none. The read of that `emit` evaluates a module the first time: skip both.
+    bool hasListeners = this->hasListeners(eventName);
+    if (!hasListeners && hasEmitOfNodeEvents(vm, globalObject, emitName))
+        return false;
+
+    JSValue emit = get(globalObject, emitName);
+    RETURN_IF_EXCEPTION(scope, true);
+    if (!emit.isCallable()) {
+        if (!hasListeners)
             return false;
-        // What `process` inherits: the `emit` of EventEmitter.prototype, or what a program put in its place.
-        emit = get(globalObject, emitName);
+        emit = nodeEventEmitterEmit(globalObject);
         RETURN_IF_EXCEPTION(scope, true);
-        if (!emit.isCallable()) {
-            emit = nodeEventEmitterEmit(globalObject);
-            RETURN_IF_EXCEPTION(scope, true);
-        }
     }
 
     MarkedArgumentBuffer emitArguments;
@@ -5073,42 +5087,35 @@ extern "C" void Process__emitMessageEvent(Zig::GlobalObject* global, EncodedJSVa
         }
     }
 
-    if (process->hasListeners(ident)) {
-        JSC::MarkedArgumentBuffer args;
-        args.append(message);
-        args.append(JSValue::decode(handle));
-        process->emitFromRuntime(ident, args);
-    }
+    JSC::MarkedArgumentBuffer args;
+    args.append(message);
+    args.append(JSValue::decode(handle));
+    process->emitFromRuntime(ident, args);
 }
 
 extern "C" void Process__emitDisconnectEvent(Zig::GlobalObject* global)
 {
     auto* process = global->processObject();
     auto& vm = JSC::getVM(global);
-    auto ident = Identifier::fromString(vm, "disconnect"_s);
-    if (process->hasListeners(ident)) {
-        JSC::MarkedArgumentBuffer args;
-        process->emitFromRuntime(ident, args);
-    }
+    JSC::MarkedArgumentBuffer args;
+    process->emitFromRuntime(Identifier::fromString(vm, "disconnect"_s), args);
 }
 
 extern "C" void Process__emitMemoryPressureEvent(Zig::GlobalObject* global, int level)
 {
     auto* process = global->processObject();
     auto& vm = JSC::getVM(global);
-    auto ident = Identifier::fromString(vm, "memoryPressure"_s);
-    if (process->hasListeners(ident)) {
-        JSC::MarkedArgumentBuffer args;
-        // Level values match NOTE_MEMORYSTATUS_PRESSURE_WARN (2) / _CRITICAL (4).
-        args.append(jsString(vm, level == 2 ? String("warning"_s) : String("critical"_s)));
-        process->emitFromRuntime(ident, args);
-    }
+    JSC::MarkedArgumentBuffer args;
+    // Level values match NOTE_MEMORYSTATUS_PRESSURE_WARN (2) / _CRITICAL (4).
+    args.append(jsString(vm, level == 2 ? String("warning"_s) : String("critical"_s)));
+    process->emitFromRuntime(Identifier::fromString(vm, "memoryPressure"_s), args);
 }
 
 extern "C" void Process__emitErrorEvent(Zig::GlobalObject* global, EncodedJSValue value)
 {
     auto* process = global->processObject();
     auto& vm = JSC::getVM(global);
+    // Without a listener `emit` throws the error. That is not for a failed send that nothing observes.
     if (process->hasListeners(vm.propertyNames->error)) {
         JSC::MarkedArgumentBuffer args;
         args.append(JSValue::decode(value));

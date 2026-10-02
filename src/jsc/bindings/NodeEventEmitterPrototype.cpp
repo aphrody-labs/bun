@@ -123,6 +123,15 @@ JSValue nodeEventEmitterEmit(Zig::GlobalObject* globalObject)
     return exportedMethod(JSC::getVM(globalObject), globalObject, "emit"_s);
 }
 
+JSValue nodeEventEmitterEmitIfEvaluated(Zig::GlobalObject* globalObject)
+{
+    auto& vm = JSC::getVM(globalObject);
+    JSValue exports = globalObject->internalModuleRegistry()->internalField(InternalModuleRegistry::Field::InternalEventsPrototype).get();
+    if (!exports || !exports.isObject())
+        return {};
+    return asObject(exports)->getDirect(vm, Identifier::fromString(vm, "emit"_s));
+}
+
 JSValue nodeEventEmitterPrototype(Zig::GlobalObject* globalObject)
 {
     return globalObject->processObject()->eventEmitterPrototype();

@@ -16,6 +16,8 @@ JSC::JSObject* createNodeEventEmitterPrototype(JSC::VM&, JSC::JSGlobalObject*, J
 
 // The `emit` that the prototype starts with. Empty when the module that has it threw.
 JSC::JSValue nodeEventEmitterEmit(Zig::GlobalObject*);
+// The same, without the evaluation of the module: empty until a method of the prototype was read.
+JSC::JSValue nodeEventEmitterEmitIfEvaluated(Zig::GlobalObject*);
 
 // For src/js/node/events.ts and src/js/internal/events/prototype.ts: the prototype, and the two symbols that are
 // keys of every emitter. `process` has all three, and these create it.
