@@ -63,6 +63,9 @@ pub struct FileSink {
     stream_js_error: Cell<bool>,
     /// Bytes accepted since `pipe_stream` (`written` counts buffered bytes again when flushed).
     pub(crate) stream_bytes: Cell<Option<u64>>,
+    /// The most bytes `pipe_stream` accepts: the length of a destination that `slice()` moved
+    /// past byte 0.
+    stream_limit: Cell<u64>,
     /// `assign_to_js_stream` holds a ref for the pump promise's reactions, which release it.
     pump_promise_ref: Cell<bool>,
 
@@ -167,6 +170,9 @@ pub struct Options {
     pub(crate) truncate: bool,
     /// `Bun.write(path, stream)`: create missing parent directories.
     pub(crate) mkdirp: bool,
+    /// Where the first byte lands in the file at `input_path`: the start of a destination that
+    /// `slice()` moved past byte 0. Not for an fd, whose position belongs to its owner.
+    pub(crate) position: u64,
 }
 
 impl Default for Options {
@@ -176,6 +182,7 @@ impl Default for Options {
             mode: 0o664,
             truncate: false,
             mkdirp: false,
+            position: 0,
         }
     }
 }
@@ -758,6 +765,16 @@ impl FileSink {
             sys::Result::Ok(fd) => fd,
         };
 
+        if options.position != 0 {
+            if let sys::Result::Err(err) = sys::set_file_offset(fd, options.position) {
+                // A pipe has no position and takes the bytes in order.
+                if err.get_errno() != sys::E::ESPIPE {
+                    fd.close();
+                    return sys::Result::Err(err);
+                }
+            }
+        }
+
         if matches!(options.input_path, PathOrFileDescriptor::Path(_)) {
             self.close_with_graph(context);
         }
@@ -1167,14 +1184,47 @@ impl FileSink {
         if self.done.get() {
             return streams::Writable::Done;
         }
+        if self.counting_stream_bytes() {
+            return self.write_stream_bytes(data.slice());
+        }
         let buffered_before = self.writer.get().buffered_len();
         // SAFETY(JsCell): `IOWriter::write` buffers/writes to fd; does not call JS.
         let rc = self.writer.with_mut(|w| w.write(data.slice()));
-        if self.counting_stream_bytes() {
-            self.count_stream_bytes(&rc, data.slice().len());
-        }
         let accepted = self.bytes_accepted(buffered_before, &rc);
         self.to_result(rc, accepted)
+    }
+
+    /// A chunk of `Bun.write(dest, stream)`: counted, and cut at `stream_limit`. A sink that has
+    /// taken `stream_limit` bytes reports `Done`, which ends a native source early.
+    fn write_stream_bytes(&self, bytes: &[u8]) -> streams::Writable {
+        let left = self
+            .stream_limit
+            .get()
+            .saturating_sub(self.stream_bytes.get().unwrap_or(0));
+        if left == 0 {
+            return streams::Writable::Done;
+        }
+        let bytes = &bytes[..bytes.len().min(usize::try_from(left).unwrap_or(usize::MAX))];
+        self.write_stream_chunk(bytes.len(), |w| w.write(bytes))
+    }
+
+    /// `Bun.write(dest, stream)`: one chunk of `encoded_len` UTF-8 bytes, counted.
+    fn write_stream_chunk(
+        &self,
+        encoded_len: usize,
+        write: impl FnOnce(&mut IOWriter) -> WriteResult,
+    ) -> streams::Writable {
+        let buffered_before = self.writer.get().buffered_len();
+        // SAFETY(JsCell): the `IOWriter` write buffers/writes to fd; does not call JS.
+        let rc = self.writer.with_mut(write);
+        self.count_stream_bytes(&rc, encoded_len);
+        let accepted = self.bytes_accepted(buffered_before, &rc);
+        self.to_result(rc, accepted)
+    }
+
+    /// A window is measured in bytes, so a string chunk is encoded before it is cut.
+    fn has_stream_limit(&self) -> bool {
+        self.stream_limit.get() != u64::MAX
     }
 
     fn count_stream_bytes(&self, rc: &WriteResult, encoded_len: usize) {
@@ -1211,15 +1261,21 @@ impl FileSink {
         if self.done.get() {
             return streams::Writable::Done;
         }
+        if self.counting_stream_bytes() {
+            if self.has_stream_limit() {
+                return match bun_core::strings::allocate_latin1_into_utf8(data.slice()) {
+                    Ok(utf8) => self.write_stream_bytes(&utf8),
+                    Err(_) => streams::Writable::Err(sys::Error::oom()),
+                };
+            }
+            return self.write_stream_chunk(
+                bun_core::strings::element_length_latin1_into_utf8(data.slice()),
+                |w| w.write_latin1(data.slice()),
+            );
+        }
         let buffered_before = self.writer.get().buffered_len();
         // SAFETY(JsCell): `IOWriter::write_latin1` buffers/writes; no JS.
         let rc = self.writer.with_mut(|w| w.write_latin1(data.slice()));
-        if self.counting_stream_bytes() {
-            self.count_stream_bytes(
-                &rc,
-                bun_core::strings::element_length_latin1_into_utf8(data.slice()),
-            );
-        }
         let accepted = self.bytes_accepted(buffered_before, &rc);
         self.to_result(rc, accepted)
     }
@@ -1228,15 +1284,18 @@ impl FileSink {
         if self.done.get() {
             return streams::Writable::Done;
         }
+        if self.counting_stream_bytes() {
+            if self.has_stream_limit() {
+                return self.write_stream_bytes(&bun_core::strings::to_utf8_alloc(data.slice16()));
+            }
+            return self.write_stream_chunk(
+                bun_core::strings::element_length_utf16_into_utf8(data.slice16()),
+                |w| w.write_utf16(data.slice16()),
+            );
+        }
         let buffered_before = self.writer.get().buffered_len();
         // SAFETY(JsCell): `IOWriter::write_utf16` buffers/writes; no JS.
         let rc = self.writer.with_mut(|w| w.write_utf16(data.slice16()));
-        if self.counting_stream_bytes() {
-            self.count_stream_bytes(
-                &rc,
-                bun_core::strings::element_length_utf16_into_utf8(data.slice16()),
-            );
-        }
         let accepted = self.bytes_accepted(buffered_before, &rc);
         self.to_result(rc, accepted)
     }
@@ -1652,6 +1711,7 @@ impl FileSink {
             stream_error: JsCell::new(None),
             stream_js_error: Cell::new(false),
             stream_bytes: Cell::new(None),
+            stream_limit: Cell::new(u64::MAX),
             pump_promise_ref: Cell::new(false),
             js_sink_ref: JsCell::new(bun_jsc::strong::Optional::empty()),
             abort_handle: bun_jsc::AbortHandle::for_owner::<FileSink>(),
@@ -1802,15 +1862,18 @@ fn on_reject_stream(global_this: &JSGlobalObject, callframe: &CallFrame) -> JsRe
 
 impl FileSink {
     /// `Bun.write(file, stream)`: the byte-count promise `on_close` settles, or an `Error` value.
+    /// The sink takes the first `limit` bytes of the stream.
     pub fn pipe_stream(
         &mut self,
         stream: &mut ReadableStream,
+        limit: u64,
         global_this: &JSGlobalObject,
     ) -> JSValue {
         // SAFETY: `&mut self` carries write+dealloc provenance over the allocation.
         let _guard = unsafe { RefPtr::init_ref(std::ptr::from_mut::<FileSink>(self)) };
 
         self.stream_bytes.set(Some(0));
+        self.stream_limit.set(limit);
         let promise = bun_jsc::JSPromise::create(global_this).to_js();
         let controller =
             JSSink::create_controller(global_this, core::ptr::NonNull::from(&mut *self));
