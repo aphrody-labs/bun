@@ -228,7 +228,7 @@ pub(crate) trait Sink {
     fn can_open_stream(&self) -> bool {
         true
     }
-    /// Open peer-initiated streams. The embedder counts them: only it sees the response half.
+    /// Streams of a server session that hold a slot. The embedder counts: only it sees both halves.
     fn open_peer_streams(&self) -> u32 {
         0
     }
@@ -253,6 +253,8 @@ pub(crate) trait Sink {
     /// The stream was reset (inbound RST_STREAM or a local stream error). `code` is the raw
     /// u32 from the wire so unknown error codes survive to JS (node parity).
     fn on_stream_reset(&self, _stream_id: u32, _code: u32) {}
+    /// The peer's RST_STREAM closed the stream. Called before `on_stream_reset`.
+    fn on_peer_reset(&self, _stream_id: u32) {}
     /// A locally-initiated stream rejection (oversized/malformed header block) - distinct from
     /// peer-sent resets so the embedder can budget rejections (maxSessionRejectedStreams).
     fn on_stream_rejected(&self, _stream_id: u32) {}
@@ -1666,6 +1668,11 @@ impl Connection {
             return true;
         }
 
+        // The RST_STREAM of the refusal is the one answer a refused stream gets.
+        if self.was_refused(hdr.stream_id) {
+            return false;
+        }
+
         // An empty DATA frame that does not end the stream carries no information and is only
         // useful for flooding: count it against the session's invalid-frame allowance.
         if payload.is_empty()
@@ -1695,14 +1702,8 @@ impl Connection {
             .acked_local_initial_window
             .max(self.local_settings.initial_window_size) as i64;
         let decision = match self.streams.get_mut(&hdr.stream_id) {
-            None => {
-                // The RST_STREAM of the refusal is the one answer a refused stream gets.
-                if self.was_refused(hdr.stream_id) {
-                    return false;
-                }
-                // §5.1: DATA for an unknown/closed stream is a STREAM_CLOSED error.
-                DataDecision::Rst(ErrorCode::StreamClosed)
-            }
+            // §5.1: DATA for an unknown/closed stream is a STREAM_CLOSED error.
+            None => DataDecision::Rst(ErrorCode::StreamClosed),
             Some(s) => {
                 if !stream::can_receive_data(s.state) {
                     DataDecision::Rst(ErrorCode::StreamClosed)
@@ -1834,6 +1835,7 @@ impl Connection {
             self.send_go_away(sink, ErrorCode::ProtocolError, b"RST_STREAM on idle stream");
             return true;
         }
+        sink.on_peer_reset(hdr.stream_id);
         sink.on_stream_reset(hdr.stream_id, code_raw);
         if charged {
             self.note_reset(ResetBy::Peer);
@@ -2639,6 +2641,7 @@ mod tests {
     #[test]
     fn later_frames_on_a_refused_stream_get_no_second_answer() {
         let (mut c, sink) = limited(0);
+        c.max_invalid_frames = 0;
         c.receive(
             &sink,
             &frame(
@@ -2653,6 +2656,8 @@ mod tests {
 
         let fed = c.receive(&sink, &frame(FrameType::Data, 0, 1, b"hello"));
         assert!(!fed.fatal);
+        let fed = c.receive(&sink, &frame(FrameType::Data, 0, 1, b""));
+        assert!(!fed.fatal);
         // A trailer block: literal `x-checksum: 1` without indexing.
         let mut trailers = vec![0x00, 10];
         trailers.extend_from_slice(b"x-checksum");
@@ -2665,6 +2670,19 @@ mod tests {
         assert!(sink.resets.borrow().is_empty());
         assert!(sink.opens.borrow().is_empty());
         assert!(!sink.too_many_invalid_frames.get());
+    }
+
+    #[test]
+    fn a_client_session_has_no_stream_limit() {
+        let sink = CaptureSink::default();
+        sink.limit.set(Some(0));
+        let mut c = Connection::new(false, Settings::default());
+        let flags = wire::flags::END_HEADERS | wire::flags::END_STREAM;
+        // 0x88 is `:status: 200`.
+        let fed = c.receive(&sink, &frame(FrameType::Headers, flags, 1, &[0x88]));
+        assert!(!fed.fatal);
+        assert_eq!(*sink.headers_done.borrow(), vec![(1, true)]);
+        assert!(sink.out.borrow().is_empty());
     }
 
     #[test]

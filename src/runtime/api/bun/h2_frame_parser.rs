@@ -1108,6 +1108,11 @@ pub(crate) struct H2FrameParser {
     pending_engine_stream_closes: JsCell<Vec<u32>>,
     /// Streams with `holds_peer_slot`: what SETTINGS_MAX_CONCURRENT_STREAMS limits.
     open_peer_streams: Cell<u32>,
+    /// Streams that a local frame closed in this read. nghttp2 sends that frame after the read.
+    closing_in_read: JsCell<Vec<u32>>,
+    in_read: Cell<bool>,
+    /// `last_peer_stream_id` when this read began.
+    read_base_stream_id: Cell<u32>,
     dispatch_depth: Cell<u32>,
     max_rejected_streams: Cell<u32>,
     max_session_invalid_frames: Cell<u32>,
@@ -1946,13 +1951,22 @@ impl Stream {
         // queue dropped here
     }
 
-    /// Gives the slot of the stream back, once.
+    /// Gives the slot back, once. Inside a read it stays held until the read ends, as in nghttp2.
     fn release_peer_slot(&mut self, client: &H2FrameParser) {
-        if core::mem::take(&mut self.holds_peer_slot) {
+        if self.release_peer_slot_now(client) && client.in_read.get() {
+            client.closing_in_read.with_mut(|ids| ids.push(self.id));
+        }
+    }
+
+    /// For a stream that an inbound frame closed: nghttp2 closes it when it reads that frame.
+    fn release_peer_slot_now(&mut self, client: &H2FrameParser) -> bool {
+        let held = core::mem::take(&mut self.holds_peer_slot);
+        if held {
             client
                 .open_peer_streams
                 .set(client.open_peer_streams.get() - 1);
         }
+        held
     }
 
     /// this can be called multiple times
@@ -3386,7 +3400,11 @@ impl H2FrameParser {
     }
 
     /// Returned *Stream is heap-allocated and stable for the lifetime of this H2FrameParser.
-    fn handle_received_stream_id(&self, stream_identifier: u32) -> Option<*mut Stream> {
+    fn handle_received_stream_id(
+        &self,
+        stream_identifier: u32,
+        admitted: bool,
+    ) -> Option<*mut Stream> {
         // connection stream
         if stream_identifier == 0 {
             return None;
@@ -3422,7 +3440,7 @@ impl H2FrameParser {
                 .unwrap_or(DEFAULT_WINDOW_SIZE as u32),
             self.padding_strategy.get(),
         );
-        if self.is_server.get() && stream_identifier % 2 == peer_parity {
+        if admitted && self.is_server.get() {
             stream.holds_peer_slot = true;
             self.open_peer_streams.set(self.open_peer_streams.get() + 1);
         }
@@ -3597,6 +3615,21 @@ impl H2FrameParser {
         debug_assert_eq!(held, self.open_peer_streams.get());
     }
 
+    /// One read, as nghttp2_session_mem_recv sees it. A frame that a handler writes goes out after it.
+    fn feed_engine(&self, bytes: &[u8]) -> crate::api::h2::connection::Feed {
+        self.read_base_stream_id.set(self.last_peer_stream_id.get());
+        self.in_read.set(true);
+        let feed = self
+            .engine
+            .borrow_mut()
+            .as_mut()
+            .unwrap()
+            .receive(self, bytes);
+        self.in_read.set(false);
+        self.closing_in_read.with_mut(|ids| ids.clear());
+        feed
+    }
+
     /// Feed inbound bytes through the rewrite engine, buffering the unconsumed tail (design B).
     fn rewrite_read(&self, bytes: &[u8]) {
         bun_output::scoped_log!(H2FrameParser, "rewriteRead {}", bytes.len());
@@ -3688,10 +3721,7 @@ impl H2FrameParser {
             }
         }
         if self.rewrite_tail.get().is_empty() {
-            let feed = {
-                let mut guard = self.engine.borrow_mut();
-                guard.as_mut().unwrap().receive(self, bytes)
-            };
+            let feed = self.feed_engine(bytes);
             if feed.fatal {
                 // GOAWAY is on the wire and on_error tore the session down; feeding the
                 // remainder would only re-parse frames for a dead connection.
@@ -3710,10 +3740,7 @@ impl H2FrameParser {
         } else {
             let mut combined = self.rewrite_tail.with_mut(std::mem::take);
             combined.extend_from_slice(bytes);
-            let feed = {
-                let mut guard = self.engine.borrow_mut();
-                guard.as_mut().unwrap().receive(self, &combined)
-            };
+            let feed = self.feed_engine(&combined);
             if feed.fatal {
                 self.rewrite_tail.with_mut(|t| t.clear());
                 let _ = self.flush();
@@ -3733,10 +3760,7 @@ impl H2FrameParser {
                 break;
             }
             let pending = self.rewrite_tail.with_mut(std::mem::take);
-            let feed = {
-                let mut guard = self.engine.borrow_mut();
-                guard.as_mut().unwrap().receive(self, &pending)
-            };
+            let feed = self.feed_engine(&pending);
             if feed.fatal {
                 self.rewrite_tail.with_mut(|t| t.clear());
                 let _ = self.flush();
@@ -4000,7 +4024,7 @@ impl crate::api::h2::connection::Sink for H2FrameParser {
     }
 
     fn open_peer_streams(&self) -> u32 {
-        self.open_peer_streams.get()
+        self.open_peer_streams.get() + self.closing_in_read.get().len() as u32
     }
 
     fn max_concurrent_streams(&self) -> u32 {
@@ -4091,7 +4115,7 @@ impl crate::api::h2::connection::Sink for H2FrameParser {
         // rstStream/getStreamState — look streams up there) AND dispatch onStreamStart, which the
         // legacy helper already does. The JS streamStart handler then calls setStreamContext,
         // populating both `sctx` and the legacy stream context.
-        let _ = self.handle_received_stream_id(stream_id);
+        let _ = self.handle_received_stream_id(stream_id, true);
     }
 
     fn on_header(&self, _stream_id: u32, name: &[u8], value: &[u8], never_index: bool) {
@@ -4194,6 +4218,10 @@ impl crate::api::h2::connection::Sink for H2FrameParser {
                     7 => StreamState::CLOSED,
                     _ => legacy_state,
                 };
+                // The END_STREAM of a stream from an earlier read went out before this read.
+                if effective == 7 && stream_id <= self.read_base_stream_id.get() {
+                    (*stream).release_peer_slot_now(self);
+                }
             }
         }
         let stream_ctx = self.rewrite_stream_ctx(stream_id);
@@ -4232,6 +4260,15 @@ impl crate::api::h2::connection::Sink for H2FrameParser {
                 true,
             );
         }
+    }
+
+    fn on_peer_reset(&self, stream_id: u32) {
+        if let Some(stream) = self.streams.get().get(&stream_id).copied() {
+            // SAFETY: stream is *mut Stream from self.streams; valid while the map entry exists
+            unsafe { (*stream).release_peer_slot_now(self) };
+        }
+        self.closing_in_read
+            .with_mut(|ids| ids.retain(|&id| id != stream_id));
     }
 
     fn on_stream_reset(&self, stream_id: u32, code: u32) {
@@ -6054,7 +6091,7 @@ impl H2FrameParser {
         if id > MAX_STREAM_ID {
             return Ok(JSValue::js_number(-1.0));
         }
-        if this.handle_received_stream_id(id).is_none() {
+        if this.handle_received_stream_id(id, false).is_none() {
             return Ok(JSValue::js_number(-1.0));
         }
         Ok(JSValue::js_number(id as f64))
@@ -6664,7 +6701,7 @@ impl H2FrameParser {
                             return Err(global_object
                                 .throw(format_args!("Failed to allocate header buffer")));
                         }
-                        let Some(stream) = this.handle_received_stream_id(stream_id) else {
+                        let Some(stream) = this.handle_received_stream_id(stream_id, false) else {
                             return Ok(JSValue::js_number(-1.0));
                         };
                         // SAFETY: stream is a *mut Stream from self.streams (heap::alloc); valid while the map entry exists
@@ -6834,7 +6871,8 @@ impl H2FrameParser {
                                 return Err(global_object
                                     .throw(format_args!("Failed to allocate header buffer")));
                             }
-                            let Some(stream) = this.handle_received_stream_id(stream_id) else {
+                            let Some(stream) = this.handle_received_stream_id(stream_id, false)
+                            else {
                                 return Ok(JSValue::js_number(-1.0));
                             };
                             // SAFETY: stream is a *mut Stream from self.streams (heap::alloc); valid while the map entry exists
@@ -6904,7 +6942,7 @@ impl H2FrameParser {
                             return Err(global_object
                                 .throw(format_args!("Failed to allocate header buffer")));
                         }
-                        let Some(stream) = this.handle_received_stream_id(stream_id) else {
+                        let Some(stream) = this.handle_received_stream_id(stream_id, false) else {
                             return Ok(JSValue::js_number(-1.0));
                         };
                         // SAFETY: stream is a *mut Stream from self.streams (heap::alloc); valid while the map entry exists
@@ -6922,7 +6960,7 @@ impl H2FrameParser {
         }
         let encoded_size = encoded_headers.len();
 
-        let Some(stream_ptr) = this.handle_received_stream_id(stream_id) else {
+        let Some(stream_ptr) = this.handle_received_stream_id(stream_id, false) else {
             return Ok(JSValue::js_number(-1.0));
         };
         // The `options` getters below can run user JS while `stream` is borrowed.
@@ -7495,6 +7533,9 @@ impl H2FrameParser {
             pending_stream_send_consumed: JsCell::new(Vec::new()),
             pending_engine_stream_closes: JsCell::new(Vec::new()),
             open_peer_streams: Cell::new(0),
+            closing_in_read: JsCell::new(Vec::new()),
+            in_read: Cell::new(false),
+            read_base_stream_id: Cell::new(0),
             dispatch_depth: Cell::new(0),
             pending_settings_window_submissions: JsCell::new(Vec::new()),
             max_rejected_streams: Cell::new(100),
