@@ -247,6 +247,11 @@ pub mod feature_flag {
     // EACCES/EFAULT when the syscall returns; this covers environments where
     // it faults instead.
     new_feature_flag!(pub BUN_FEATURE_FLAG_DISABLE_EPOLL_PWAIT2, "BUN_FEATURE_FLAG_DISABLE_EPOLL_PWAIT2", {});
+    // Never call openat2(2): code that asks it to refuse symlinks resolves the
+    // path one component at a time instead. Escape hatch for seccomp policies
+    // that fault on syscall 437 where others return an errno. The tests use it
+    // to reach that other resolver.
+    new_feature_flag!(pub BUN_FEATURE_FLAG_DISABLE_OPENAT2, "BUN_FEATURE_FLAG_DISABLE_OPENAT2", {});
     new_feature_flag!(pub BUN_FEATURE_FLAG_DISABLE_INSTALL_INDEX, "BUN_FEATURE_FLAG_DISABLE_INSTALL_INDEX", {});
     // Disable streaming tarball extraction in `bun install`. When disabled,
     // the whole .tgz is buffered in memory before being decompressed and

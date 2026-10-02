@@ -824,18 +824,21 @@ describe("Bun.Archive", () => {
           expect(count).toBe(1);
         });
 
-        test("does not create an entry through a symlink in its parent", async () => {
-          using dir = tempDir("archive-symlink-parent", { "victim/keep.txt": "ORIGINAL" });
+        // The link that stays inside is refused all the same.
+        test.each([
+          ["points outside the destination", "../victim"],
+          ["stays inside the destination", "real"],
+        ])("rejects an entry below a symlink that %s, and names the entry", async (_where, target) => {
+          using dir = tempDir("archive-symlink-parent", { "victim/keep.txt": "KEEP", "out/real/keep.txt": "KEEP" });
           const root = String(dir);
           const out = join(root, "out");
-          mkdirSync(out);
-          symlinkSync("../victim", join(out, "shared"));
+          symlinkSync(target, join(out, "shared"));
 
-          // The default extractor rejects. The glob extractor skips the entry,
-          // as it skips every entry it cannot create.
-          await extract(new Bun.Archive({ "inside.txt": "INSIDE", "shared/f.txt": "OUTSIDE" }), out).catch(() => {});
+          const extracted = extract(new Bun.Archive({ "inside.txt": "INSIDE", "shared/f.txt": "F" }), out);
+          await expect(extracted).rejects.toMatchObject({ code: "ELOOP", path: "shared/f.txt" });
 
           expect(readdirSync(join(root, "victim"))).toEqual(["keep.txt"]);
+          expect(readdirSync(join(out, "real"))).toEqual(["keep.txt"]);
           expect(await Bun.file(join(out, "inside.txt")).text()).toBe("INSIDE");
           expect(lstatSync(join(out, "shared")).isSymbolicLink()).toBe(true);
         });
@@ -857,22 +860,8 @@ describe("Bun.Archive", () => {
         });
       });
 
-      test("default extraction rejects when a symlink is in the way of an entry", async () => {
-        using dir = tempDir("archive-symlink-rejects", { "out/real/keep.txt": "KEEP" });
-        const out = join(String(dir), "out");
-        // The link stays inside the destination. It is refused all the same.
-        symlinkSync("real", join(out, "link"));
-        const archive = new Bun.Archive({ "link/new.txt": "NEW" });
-
-        await expect(async () => {
-          await archive.extract(out);
-        }).toThrow();
-        expect(await archive.extract(out, { glob: "**" })).toBe(0);
-
-        expect(readdirSync(join(out, "real"))).toEqual(["keep.txt"]);
-        expect(lstatSync(join(out, "link")).isSymbolicLink()).toBe(true);
-      });
-
+      // The report: three archives into one directory. The glob extractor
+      // refuses the second one earlier, for the `..` in its target.
       test("does not write through a symlink that an earlier archive created", async () => {
         using dir = tempDir("archive-symlink-chain", { "victim/file.txt": "ORIGINAL" });
         const root = String(dir);
@@ -884,15 +873,14 @@ describe("Bun.Archive", () => {
         // `d1/d2/up -> ../..` is the extraction root when the name is read
         // lexically. It is not: `d1` is a symlink to the root, so the link
         // would land in `out/d2` and point at the parent of the root.
-        await expect(async () => {
-          await new Bun.Archive(symlinkTarball("d1/d2/up", "../..")).extract(out);
-        }).toThrow();
+        const link = new Bun.Archive(symlinkTarball("d1/d2/up", "../..")).extract(out);
+        await expect(link).rejects.toMatchObject({ code: "ELOOP", path: "d1/d2/up" });
         expect(existsSync(join(out, "d2"))).toBe(false);
 
         // A plain file member through that link.
-        await expect(async () => {
-          await new Bun.Archive(buildTarball([{ name: "d1/d2/up/victim/file.txt", data: "OVERWRITTEN" }])).extract(out);
-        }).toThrow();
+        const member = "d1/d2/up/victim/file.txt";
+        const file = new Bun.Archive(buildTarball([{ name: member, data: "OVERWRITTEN" }])).extract(out);
+        await expect(file).rejects.toMatchObject({ code: "ELOOP", path: member });
 
         expect(await Bun.file(join(root, "victim", "file.txt")).text()).toBe("ORIGINAL");
         expect(existsSync(join(out, "d2"))).toBe(false);
@@ -900,8 +888,9 @@ describe("Bun.Archive", () => {
     });
 
     test("extracts entries nested deeper than the extractor keeps directories open", async () => {
-      // The POSIX extractor keeps one fd open per directory level, up to a
-      // fixed depth, and reopens the levels below that for each entry.
+      // Where the kernel does not refuse symlinks itself, the extractor keeps
+      // one fd open per directory level, up to a fixed depth, and reopens the
+      // levels below that for each entry.
       const deep = Buffer.alloc(150 * 2, "d/").toString();
       const archive = new Bun.Archive({
         [deep + "one.txt"]: "ONE",
@@ -924,7 +913,7 @@ describe("Bun.Archive", () => {
       }
     });
 
-    // The extractor keeps directories open. With few descriptors it keeps fewer.
+    // The same extractor keeps fewer directories open when descriptors run out.
     test.skipIf(isWindows)("extracts a deep tree when few file descriptors are free", async () => {
       using dir = tempDir("archive-few-descriptors", {
         "extract.ts": `
@@ -1127,6 +1116,28 @@ describe("Bun.Archive", () => {
         expect(await archive.extract(out, { glob: "**" })).toBe(2);
       });
     });
+
+    // On Linux, `openat2` refuses symlinks for the extractor. A kernel or a
+    // sandbox without it gets a walk that opens one directory at a time. The
+    // tests of this block run again here with that walk.
+    const withoutOpenat2 = "BUN_FEATURE_FLAG_DISABLE_OPENAT2";
+    test.skipIf(!isLinux || !!process.env[withoutOpenat2])(
+      "path safety holds without openat2",
+      async () => {
+        await using proc = Bun.spawn({
+          cmd: [bunExe(), "test", import.meta.path, "-t", "path safety"],
+          env: { ...bunEnv, [withoutOpenat2]: "1" },
+          stdout: "pipe",
+          stderr: "pipe",
+        });
+        const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
+
+        expect(stderr).toContain(" 0 fail");
+        expect(exitCode).toBe(0);
+      },
+      // A whole `bun test` run inside one test.
+      120_000,
+    );
 
     test("skips tar entries whose pathname exceeds the platform path limit", async () => {
       // GNU `@LongLink` ('L') records let a tar entry carry a pathname of

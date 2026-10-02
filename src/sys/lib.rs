@@ -1893,7 +1893,16 @@ mod posix_impl {
         }
     }
     #[cfg(any(target_os = "linux", target_os = "android"))]
+    fn openat2_disabled() -> bool {
+        bun_core::env_var::feature_flag::BUN_FEATURE_FLAG_DISABLE_OPENAT2
+            .get()
+            .unwrap_or(false)
+    }
+    #[cfg(any(target_os = "linux", target_os = "android"))]
     pub fn openat2_beneath(dir: impl AsFd, path: &ZStr, flags: i32, mode: Mode) -> Maybe<Fd> {
+        if openat2_disabled() {
+            return Err(Error::from_code_int(libc::ENOSYS, Tag::open).with_path(path.as_bytes()));
+        }
         let dir = dir.as_fd();
         let flags = flags | O::CLOEXEC;
         super::linux_syscall::openat2_beneath(dir, path, flags, mode)
@@ -1909,7 +1918,7 @@ mod posix_impl {
 
         let dir = dir.as_fd();
         let flags = flags | O::CLOEXEC;
-        if !UNAVAILABLE.load(Ordering::Relaxed) {
+        if !UNAVAILABLE.load(Ordering::Relaxed) && !openat2_disabled() {
             match super::linux_syscall::openat2_in_root(dir, path, flags, mode) {
                 Ok(fd) => return Ok(fd),
                 Err(e @ (libc::ENOSYS | libc::EPERM | libc::EINVAL | libc::E2BIG)) => {
@@ -1939,6 +1948,72 @@ mod posix_impl {
             }
         }
         openat(dir, path, flags, mode)
+    }
+    /// `openat` that resolves no symlink: ELOOP when a component of `path`,
+    /// the last one included, is a symlink. Linux `openat2(RESOLVE_NO_SYMLINKS)`,
+    /// macOS `O_NOFOLLOW_ANY`. Do not pass `O_NOFOLLOW`.
+    ///
+    /// `None` where the kernel has no such open, so that the caller resolves
+    /// `path` itself: Linux before 5.6, a seccomp policy that refuses
+    /// `openat2`, `BUN_FEATURE_FLAG_DISABLE_OPENAT2`, and every other platform.
+    /// Android is not tried: its app sandbox answers a syscall it does not
+    /// allow with SIGSYS, not with an errno.
+    pub fn openat_no_symlinks(
+        dir: impl AsFd,
+        path: &ZStr,
+        flags: i32,
+        mode: Mode,
+    ) -> Option<Maybe<Fd>> {
+        #[cfg(target_os = "linux")]
+        {
+            use core::sync::atomic::{AtomicBool, Ordering};
+            static UNAVAILABLE: AtomicBool = AtomicBool::new(false);
+
+            if UNAVAILABLE.load(Ordering::Relaxed) || openat2_disabled() {
+                return None;
+            }
+            let dir = dir.as_fd();
+            let flags = flags | O::CLOEXEC;
+            // `openat2` says EINVAL for a mode that no file gets.
+            let creates = flags & O::CREAT != 0 || flags & O::TMPFILE == O::TMPFILE;
+            let mode = if creates { mode } else { 0 };
+            let error = |e| Error::from_code_int(e, Tag::open).with_path(path.as_bytes());
+            match super::linux_syscall::openat2_no_symlinks(dir, path, flags, mode) {
+                Ok(fd) => Some(Ok(fd)),
+                // What a kernel or a seccomp policy without `openat2` answers.
+                // The same errno can be about `path`, so ask about `.` first.
+                Err(e @ (libc::ENOSYS | libc::EPERM | libc::EINVAL | libc::E2BIG)) => {
+                    let probe = super::linux_syscall::openat2_no_symlinks(
+                        dir,
+                        bun_core::zstr!("."),
+                        O::PATH | O::DIRECTORY | O::CLOEXEC,
+                        0,
+                    );
+                    match probe {
+                        Err(libc::ENOSYS | libc::EPERM | libc::EINVAL | libc::E2BIG) => {
+                            UNAVAILABLE.store(true, Ordering::Relaxed);
+                            None
+                        }
+                        other => {
+                            if let Ok(fd) = other {
+                                let _ = close(fd);
+                            }
+                            Some(Err(error(e)))
+                        }
+                    }
+                }
+                Err(e) => Some(Err(error(e))),
+            }
+        }
+        #[cfg(target_os = "macos")]
+        {
+            Some(openat(dir, path, flags | O::NOFOLLOW_ANY, mode))
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+        {
+            let _ = (dir, path, flags, mode);
+            None
+        }
     }
     pub fn close(fd: Fd) -> Maybe<()> {
         // Call close ONCE; never retry on EINTR (Linux may have already
