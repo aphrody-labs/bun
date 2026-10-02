@@ -656,6 +656,34 @@ it("a bun.lockb without a stored meta hash passes a frozen install until a depen
   expect(await storedMetaHash(packageDir)).toBe(hash);
 });
 
+it("bun pm trust keeps the meta hash of a bun.lockb with a root lifecycle script", async () => {
+  const { packageDir, packageJson } = await registry.createTestDir({ bunfigOpts: { saveTextLockfile: false } });
+  await write(
+    packageJson,
+    JSON.stringify({
+      name: "trust-keeps-hash",
+      version: "1.0.0",
+      scripts: { postinstall: "echo root" },
+      dependencies: { "uses-what-bin": "1.0.0" },
+    }),
+  );
+
+  const install = await bun(packageDir, "install");
+  expect(install.exitCode).toBe(0);
+  const hash = await storedMetaHash(packageDir);
+  expect(hash).toBe(metaHashOf(["uses-what-bin@1.0.0", "what-bin@1.0.0"], ["postinstall: echo root"]));
+
+  // `bun pm trust` saves the lockfile without an install pass.
+  const trust = await bun(packageDir, "pm", "trust", "uses-what-bin");
+  expect(trust.stdout).toContain("1 script ran across 1 package");
+  expect(trust.exitCode).toBe(0);
+  expect(await storedMetaHash(packageDir)).toBe(hash);
+
+  const frozen = await bun(packageDir, "install", "--frozen-lockfile");
+  expect(frozen.stderr).not.toContain("lockfile had changes");
+  expect(frozen.exitCode).toBe(0);
+});
+
 it("bun install --yarn prints the same meta hash with bun.lock and with bun.lockb", async () => {
   const manifest = JSON.stringify({
     name: "yarn-header",

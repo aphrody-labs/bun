@@ -24,6 +24,7 @@ use bun_sys::{self as sys, Dir, Fd, File};
 use crate::bun_progress::Node as ProgressNode;
 
 use super::options::{self, Enable, LogLevel};
+use super::workspace_package_json_cache::GetJSONOptions;
 use super::{Command, Options, PackageManager, ProgressStrings, Subcommand};
 
 // ───────────────────────────── method wrappers ───────────────────────────────
@@ -1200,7 +1201,7 @@ pub fn save_lockfile_without_install(
     // A bun.lockb stores the hash the next install computes for it. That
     // install takes lifecycle scripts from package.json and drops every
     // package nothing depends on, and a migrated lockfile has had neither.
-    load_lifecycle_scripts_from_package_json(this);
+    load_lifecycle_scripts_from_package_json(this)?;
     let log_level = this.options.log_level;
     let mut cleaned = {
         let mgr: *mut PackageManager = this;
@@ -1224,14 +1225,14 @@ pub fn save_lockfile_without_install(
 
 /// Copies the lifecycle scripts of the root and of the workspaces from their
 /// package.json into the lockfile, where the install differ expects them.
-fn load_lifecycle_scripts_from_package_json(this: &mut PackageManager) {
+fn load_lifecycle_scripts_from_package_json(this: &mut PackageManager) -> Result<(), Error> {
     for package_id in 0..this.lockfile.packages.len() {
         let resolution = this.lockfile.packages.items_resolution()[package_id];
-        let mut folder = path::AutoAbsPath::init_top_level_dir();
+        let mut package_json_path = path::AutoAbsPath::init_top_level_dir();
         match resolution.tag {
             ResolutionTag::Root => {}
             ResolutionTag::Workspace => {
-                let _ = folder.append(
+                let _ = package_json_path.append(
                     resolution
                         .workspace()
                         .slice(this.lockfile.buffers.string_bytes.as_slice()),
@@ -1239,16 +1240,35 @@ fn load_lifecycle_scripts_from_package_json(this: &mut PackageManager) {
             }
             _ => continue,
         }
+        let _ = package_json_path.append(b"package.json");
 
-        let mut scripts = Scripts::default();
-        let mut builder = this.lockfile.string_builder();
         // A package.json that cannot be read fails the install that needs it.
-        if scripts
-            .fill_from_package_json(&mut builder, &mut bun_ast::Log::init(), &mut folder)
-            .is_err()
-        {
+        // `bun pm trust` still holds the root package.json it parsed, so the
+        // AST store is not reset.
+        let Ok(package_json) = this
+            .workspace_package_json_cache
+            .get_with_path(
+                &mut bun_ast::Log::init(),
+                package_json_path.slice(),
+                GetJSONOptions {
+                    init_reset_store: false,
+                    guess_indentation: false,
+                },
+            )
+            .unwrap()
+        else {
             continue;
-        }
+        };
+        let json = package_json.root;
+
+        let mut scripts = Scripts {
+            filled: true,
+            ..Scripts::default()
+        };
+        let mut builder = this.lockfile.string_builder();
+        Scripts::parse_count(&mut builder, json);
+        builder.allocate()?;
+        scripts.parse_alloc(&mut builder, json);
         builder.clamp();
 
         if resolution.tag == ResolutionTag::Workspace {
@@ -1260,6 +1280,7 @@ fn load_lifecycle_scripts_from_package_json(this: &mut PackageManager) {
         }
         this.lockfile.packages.items_scripts_mut()[package_id] = scripts;
     }
+    Ok(())
 }
 
 pub fn update_lockfile_if_needed(

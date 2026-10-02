@@ -2279,6 +2279,63 @@ snapshots:
       await expectStoredMetaHashIsCurrent(packageDir);
     });
 
+    test.concurrent("bun pm trust as the first bun command", async () => {
+      const { packageDir } = await verdaccio.createTestDir({
+        bunfigOpts: { linker: "hoisted", saveTextLockfile: false },
+        files: { "package.json": JSON.stringify({ name: "trust-first", dependencies: { "uses-what-bin": "1.0.0" } }) },
+      });
+      const integrity = (name: string) =>
+        require(join(import.meta.dir, "../registry/packages", name, "package.json")).versions["1.0.0"].dist.integrity;
+
+      // Leaves node_modules with a blocked install script, as pnpm does.
+      const install = await run(packageDir, "install");
+      expect(install.stdout).toContain("Blocked 1 postinstall");
+      expect(install.exitCode).toBe(0);
+      rmSync(join(packageDir, "bun.lockb"));
+      await Bun.write(
+        join(packageDir, "pnpm-lock.yaml"),
+        `lockfileVersion: '9.0'
+
+importers:
+
+  .:
+    dependencies:
+      uses-what-bin:
+        specifier: 1.0.0
+        version: 1.0.0
+
+packages:
+
+  uses-what-bin@1.0.0:
+    resolution: {integrity: ${integrity("uses-what-bin")}}
+
+  what-bin@1.0.0:
+    resolution: {integrity: ${integrity("what-bin")}}
+    hasBin: true
+
+snapshots:
+
+  uses-what-bin@1.0.0:
+    dependencies:
+      what-bin: 1.0.0
+
+  what-bin@1.0.0: {}
+`,
+      );
+
+      const trust = await run(packageDir, "pm", "trust", "uses-what-bin");
+
+      expect(trust.stderr).toContain("migrated lockfile from pnpm-lock.yaml");
+      expect(trust.stdout).toContain("1 script ran across 1 package");
+      expect(trust.exitCode).toBe(0);
+      expect(existsSync(join(packageDir, "node_modules/uses-what-bin/what-bin.txt"))).toBe(true);
+      expect(await storedMetaHash(packageDir)).not.toBe("0".repeat(64));
+
+      const frozen = await run(packageDir, "install", "--frozen-lockfile");
+      expect(frozen.stderr).not.toContain("lockfile had changes");
+      expect(frozen.exitCode).toBe(0);
+    });
+
     test.concurrent("bun pm migrate covers the lifecycle scripts of the root and of a workspace", async () => {
       const { packageDir } = await verdaccio.createTestDir({
         bunfigOpts: { linker: "hoisted", saveTextLockfile: false },
