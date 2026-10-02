@@ -1797,14 +1797,14 @@ bool Process::emit(const Identifier& eventName, const MarkedArgumentBuffer& args
 
     // The `emit` of node:events does nothing for an event that has no listener, and most events that the
     // runtime emits have none. The read of that `emit` evaluates a module the first time: skip both.
-    bool hasListeners = this->hasListeners(eventName);
-    if (!hasListeners && hasEmitOfNodeEvents(vm, globalObject, emitName))
+    bool listenedTo = hasListeners(eventName);
+    if (!listenedTo && hasEmitOfNodeEvents(vm, globalObject, emitName))
         return false;
 
     JSValue emit = get(globalObject, emitName);
     RETURN_IF_EXCEPTION(scope, true);
     if (!emit.isCallable()) {
-        if (!hasListeners)
+        if (!listenedTo)
             return false;
         emit = nodeEventEmitterEmit(globalObject);
         RETURN_IF_EXCEPTION(scope, true);
@@ -1822,13 +1822,13 @@ bool Process::emitFromRuntime(const Identifier& eventName, const MarkedArgumentB
 {
     auto* globalObject = defaultGlobalObject(this->globalObject());
     auto scope = DECLARE_TOP_EXCEPTION_SCOPE(JSC::getVM(globalObject));
-    bool hadListeners = emit(eventName, args);
+    bool called = emit(eventName, args);
     if (auto* exception = scope.exception()) [[unlikely]] {
         // A termination stays pending: it is the end of the thread, and the caller has to see it.
         if (scope.tryClearException())
             Bun__reportUnhandledError(globalObject, JSValue::encode(exception));
     }
-    return hadListeners;
+    return called;
 }
 
 extern "C" bool Bun__NODE_NO_WARNINGS();

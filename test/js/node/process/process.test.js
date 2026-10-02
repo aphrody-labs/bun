@@ -3600,10 +3600,7 @@ describe("process is an EventEmitter of node:events", () => {
         `const { EventEmitter } = require("node:events");
          const emit = EventEmitter.prototype.emit; EventEmitter.prototype.emit = ${trace}`,
       ],
-      [
-        "the prototype of process",
-        `const emit = process.emit; Object.getPrototypeOf(process).emit = ${trace}`,
-      ],
+      ["the prototype of process", `const emit = process.emit; Object.getPrototypeOf(process).emit = ${trace}`],
     ])("'beforeExit' and 'exit' without a listener, emit on %s", async (_, install) => {
       expect(await run(`const wanted = ["beforeExit", "exit"]; ${install}`)).toEqual({
         stdout: "emit beforeExit 0\nemit exit 0\n",
