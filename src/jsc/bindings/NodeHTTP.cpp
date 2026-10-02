@@ -814,7 +814,7 @@ JSC_DEFINE_HOST_FUNCTION(jsHTTPSetAppFlags, (JSGlobalObject * globalObject, Call
     return JSValue::encode(jsUndefined());
 }
 
-// Also called on a listening server. 0 means the option is not set.
+// Also called on a listening server. The count is the header field limit that nativeMaxHeadersCount() resolved: UINT32_MAX is no limit.
 JSC_DEFINE_HOST_FUNCTION(jsHTTPSetMaxHeadersCount, (JSGlobalObject * globalObject, CallFrame* callFrame))
 {
     auto& vm = JSC::getVM(globalObject);

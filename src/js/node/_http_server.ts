@@ -8,6 +8,7 @@ const {
   validateHeaderValue,
   HTTPParser,
   calculateLenientFlags,
+  MAX_HEADER_PAIRS,
 } = require("node:_http_common");
 const {
   validateObject,
@@ -1203,18 +1204,19 @@ function defineHttpAllowHalfOpen(server: Server) {
   });
 }
 
-// Node's int32 `maxHeadersCount << 1`, as a field count; 0 is no limit: https://github.com/nodejs/node/blob/v26.5.1/lib/_http_server.js#L795-L797
+// The header field limit of a new connection, from Node's int32 `parser.maxHeaderPairs = maxHeadersCount << 1`: https://github.com/nodejs/node/blob/v26.10.0/lib/_http_server.js#L805-L806
+// A value that is not a number leaves the parser's default. A pair count that is not positive is no limit, 0xffffffff for the native parser.
 function nativeMaxHeadersCount(maxHeadersCount) {
-  if (typeof maxHeadersCount !== "number") return 0;
+  if (typeof maxHeadersCount !== "number") return MAX_HEADER_PAIRS >>> 1;
   const maxHeaderPairs = maxHeadersCount << 1;
-  return maxHeaderPairs > 0 ? maxHeaderPairs >>> 1 : 0;
+  return maxHeaderPairs > 0 ? maxHeaderPairs >>> 1 : 0xffffffff;
 }
 
 function maxHeadersCountGet(this: Server) {
   return this[kMaxHeadersCount];
 }
 
-// Node reads `server.maxHeadersCount` for every new connection, so a value assigned after listen() goes to the native parser.
+// Node reads `server.maxHeadersCount` for every new connection, so a value assigned after listen() goes to the native listener. A connection that is open keeps its limit.
 function maxHeadersCountSet(this: Server, value) {
   this[kMaxHeadersCount] = value;
   const handle = this[serverSymbol];
