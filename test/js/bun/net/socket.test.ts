@@ -5027,3 +5027,40 @@ it("concurrent end() on two allowHalfOpen TLS peers closes both sockets", async 
 
   await Promise.all([serverClosed.promise, clientClosed.promise]);
 });
+
+// BoringSSL's SSL_set_session may only be called before the handshake starts;
+// upstream aborts the process otherwise. Bun patches it to return 0, so a late
+// offer is ignored. These are the Bun-native doors into that call; each late
+// one killed the process with SIGABRT before the patch.
+it("setSession() after the handshake started is ignored on every Bun socket door", async () => {
+  const ignored = { threw: null };
+  const expected = {
+    "bun-connect-handshake": ignored,
+    // No handshake handler: open() runs after the handshake, the default timing.
+    "bun-connect-open-late": ignored,
+    "bun-listen-handshake": { threw: null, side: "server" },
+    // The handshake started and then failed, so "is it finished?" is still no.
+    "bun-connect-failed-handshake": { threw: null, success: false },
+    // A write in open() starts the handshake, so the call after it is late.
+    "bun-connect-open-after-write": ignored,
+    "bun-upgrade-tls-half": ignored,
+    "bun-upgrade-raw-half": ignored,
+    // The legal window, which must keep working: open() with a handshake
+    // handler runs before the ClientHello.
+    "bun-connect-open-legal": ignored,
+  };
+  await using proc = Bun.spawn({
+    cmd: [
+      bunExe(),
+      join(import.meta.dirname, "../../node/tls/node-tls-set-session-after-start.fixture.ts"),
+      ...Object.keys(expected),
+    ],
+    env: bunEnv,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(stderr).toBe("");
+  expect(JSON.parse(stdout)).toEqual(expected);
+  expect(exitCode).toBe(0);
+});
