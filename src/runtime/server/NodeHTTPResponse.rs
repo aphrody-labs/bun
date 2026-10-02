@@ -611,6 +611,33 @@ impl NodeHTTPResponse {
         );
     }
 
+    /// What `upgrade` needs. Ask it before the first byte of a 101 is written.
+    /// The connection is asked before the server: this response can outlive
+    /// its server, an open connection cannot.
+    pub(crate) fn can_upgrade(&self) -> bool {
+        if self
+            .flags
+            .get()
+            .intersects(Flags::ENDED | Flags::SOCKET_CLOSED)
+        {
+            return false;
+        }
+        if self.upgrade_context.get().context.is_null() || self.writer().is_none() {
+            return false;
+        }
+        // `AnyServer` is a `Copy` type-erased pointer; copy it so the
+        // `&mut self`-taking accessor can be called from this `&self` body.
+        let mut server = self.server;
+        !server.terminated()
+            // `handler.server` is gone once the server counted itself drained:
+            // a WebSocket opened from there is never counted.
+            && server
+                .web_socket_handler()
+                .is_some_and(|handler| handler.server.is_some())
+            && !self.get_server_socket_value().is_empty()
+    }
+
+    /// Through the server that dispatched this request. A false result has written nothing.
     /// Empty `sec_websocket_*` slices fall back to the request's headers.
     pub(crate) fn upgrade(
         &self,
@@ -618,12 +645,10 @@ impl NodeHTTPResponse {
         sec_websocket_protocol: &[u8],
         sec_websocket_extensions: &[u8],
     ) -> bool {
-        let upgrade_ctx = self.upgrade_context.get().context;
-        if upgrade_ctx.is_null() || self.writer().is_none() {
+        if !self.can_upgrade() {
             return false;
         }
-        // `AnyServer` is a `Copy` type-erased pointer; copy it so the
-        // `&mut self`-taking accessor can be called from this `&self` body.
+        let upgrade_ctx = self.upgrade_context.get().context;
         // The pointee is the long-lived server, not `*self`.
         let mut server = self.server;
         let Some(ws_handler) = server.web_socket_handler() else {
@@ -633,10 +658,6 @@ impl NodeHTTPResponse {
         // SAFETY: JS-thread only; the server (and its websocket config) outlives this call.
         let ws_handler: &mut crate::server::WebSocketServerHandler =
             unsafe { &mut *std::ptr::from_mut(ws_handler) };
-        let socket_value = self.get_server_socket_value();
-        if socket_value.is_empty() {
-            return false;
-        }
         self.resume_socket();
 
         data_value.ensure_still_alive();
@@ -687,6 +708,10 @@ impl NodeHTTPResponse {
             // S008: `WebSocketUpgradeContext` is an `opaque_ffi!` ZST — safe deref
             // (`upgrade_ctx` checked non-null above).
             let ctx = bun_opaque::opaque_deref_mut(upgrade_ctx);
+            // uWS reports the connection closed before it opens the WebSocket. A stopped server
+            // with no request in flight (a handshake completed in a later task) would count itself
+            // drained in between, and never count the WebSocket.
+            server.on_pending_request();
             let _ = raw_response.upgrade::<ServerWebSocket>(
                 ws,
                 websocket_key,
@@ -694,6 +719,7 @@ impl NodeHTTPResponse {
                 sec_websocket_extensions_value,
                 Some(ctx),
             );
+            server.on_request_complete();
         }
 
         // The request's header views end with its dispatch: this context must not read them later.

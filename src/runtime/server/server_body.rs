@@ -1754,8 +1754,9 @@ where
                             fetch_headers_to_use
                                 .fast_remove(HTTPHeaderName::SecWebSocketExtensions);
                         }
-                        // Option getters and the headers conversion may have ended the response.
-                        if is_ended_or_closed() {
+                        // Option getters and the headers conversion may have ended the response,
+                        // and a response that cannot upgrade gets no 101 status line.
+                        if !node_http_response.can_upgrade() {
                             return Ok(JSValue::FALSE);
                         }
                         if let Some(raw_response) = node_http_response.writer() {
