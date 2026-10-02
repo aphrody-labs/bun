@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { once } from "events";
-import { bunEnv, bunExe, isIPv6, isWindows, tempDir, tls as tlsCert } from "harness";
+import { bunEnv, bunExe, isIPv6, isWindows, nodeExe, tempDir, tls as tlsCert } from "harness";
 import net from "node:net";
 import { join } from "node:path";
 import tls from "node:tls";
@@ -777,4 +777,112 @@ describe("session.fetch", () => {
       server.close();
     }
   });
+});
+
+// A pooled keep-alive socket that the server renegotiates is mid-handshake
+// when fetch picks it up for the next request. fetch set up TLS again there
+// and offered its cached session, and BoringSSL's SSL_set_session aborts the
+// process once the handshake has begun: two plain fetch() calls killed Bun,
+// with no setSession in user code.
+//
+// fetch now sets up TLS once per connection, so a pooled pickup no longer
+// touches the SSL or the session cache.
+//
+// Node drives the peer: only it can send a HelloRequest to a Bun client.
+test.skipIf(!nodeExe())("fetch leaves TLS alone when it reuses a pooled socket that is mid-renegotiation", async () => {
+  const keys = join(import.meta.dirname, "../../node/test/fixtures/keys");
+
+  /** Reads one line at a time from a stream, so the test waits on events and never on a timer. */
+  function lineReader(stream: ReadableStream<Uint8Array>) {
+    const queue: string[] = [];
+    const waiters: (() => void)[] = [];
+    let buffered = "";
+    let done = false;
+    (async () => {
+      const decoder = new TextDecoder();
+      for await (const chunk of stream) {
+        buffered += decoder.decode(chunk, { stream: true });
+        let index: number;
+        while ((index = buffered.indexOf("\n")) >= 0) {
+          const line = buffered.slice(0, index).trim();
+          buffered = buffered.slice(index + 1);
+          if (line) queue.push(line);
+          while (waiters.length) waiters.shift()!();
+        }
+      }
+      done = true;
+      while (waiters.length) waiters.shift()!();
+    })();
+    return async function until(prefix: string) {
+      for (;;) {
+        const index = queue.findIndex(line => line.startsWith(prefix));
+        if (index >= 0) return queue.splice(0, index + 1).pop()!;
+        if (done) return null;
+        await new Promise<void>(resolve => waiters.push(resolve));
+      }
+    };
+  }
+
+  // The client pings this to prove the HTTP thread already ran the pooled
+  // pickup queued before it.
+  using control = Bun.serve({ port: 0, fetch: () => new Response("pong") });
+
+  await using peer = Bun.spawn({
+    cmd: [nodeExe()!, join(import.meta.dirname, "fetch-tls-renegotiation-peer.fixture.mjs"), keys],
+    stdin: "pipe",
+    stdout: "pipe",
+    stderr: "ignore",
+  });
+  const peerLine = lineReader(peer.stdout);
+  const portLine = await peerLine("PORT ");
+  expect(portLine).not.toBeNull();
+  const relayPort = portLine!.split(" ")[1];
+
+  await using client = Bun.spawn({
+    cmd: [
+      bunExe(),
+      join(import.meta.dirname, "fetch-tls-renegotiation-client.fixture.ts"),
+      relayPort,
+      String(control.port),
+      keys,
+    ],
+    env: bunEnv,
+    stdin: "pipe",
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const clientLine = lineReader(client.stdout);
+
+  // The first response parks the socket in the keep-alive pool with a TLS 1.2
+  // session in fetch's cache.
+  expect(await clientLine("first ")).toBe("first 200 ok");
+
+  // Hold before asking for the renegotiation: the client is idle, so no byte
+  // of its can slip past the relay in between.
+  peer.stdin.write("hold\n");
+  expect(await peerLine("armed")).toBe("armed");
+  peer.stdin.write("reneg\n");
+
+  // The first held chunk is the client's renegotiation ClientHello (record
+  // type 22). Its SSL stays mid-handshake for as long as the relay holds it.
+  expect(await peerLine("held ")).toMatch(/^held \d+ type 22$/);
+
+  // The pooled pickup. The client died here.
+  client.stdin.write("go\n");
+  expect(await clientLine("survived-reuse")).toBe("survived-reuse pong");
+  peer.stdin.write("release\n");
+  expect(await peerLine("release")).toBe("release");
+
+  // A third request, on a connection of its own. The pooled pickup must have
+  // left the cached session alone, so this connection resumes it. Setting up
+  // TLS from on_open took that session out of the cache and dropped it.
+  client.stdin.write("go2\n");
+  expect(await clientLine("third ")).toBe("third 200 ok");
+  peer.stdin.write("report\n");
+  const report = await peerLine("resumed ");
+  expect(JSON.parse(report!.slice("resumed ".length))).toEqual([false, true]);
+
+  const [stderr, exitCode] = await Promise.all([client.stderr.text(), client.exited]);
+  expect(stderr).toBe("");
+  expect(exitCode).toBe(0);
 });
