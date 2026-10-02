@@ -1033,8 +1033,10 @@ describe("a stream refused over SETTINGS_MAX_CONCURRENT_STREAMS", () => {
     // The RST_STREAM of the peer closes the stream when the server reads it.
     test("but not when the peer resets it in the same write", async () => {
       const result = await withLimit(one, finish, async (client, served) => {
+        // Node writes no frame for stream 1, so outcome() would not return.
         client.send(get(1), cancel(1), get(3));
-        return outcome(client, served);
+        await client.waitFor(f => f.streamId === 3 && (f.type === HEADERS || f.type === RST_STREAM));
+        return seen(client, served);
       });
       expect({ handlers: result.handlers, refused: withCode(result.resets, REFUSED_STREAM) }).toEqual({
         handlers: [1, 3],
