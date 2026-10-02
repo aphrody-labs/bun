@@ -218,9 +218,8 @@ static int bun_kevent64_wait(int kqfd, struct kevent64_s *eventlist, int nevents
 
 #endif
 
-/* Loop */
-
-/* Every path that makes us_create_loop return NULL writes this first. */
+/* Every path that makes us_create_loop return NULL writes this first. us_create_loop clears it
+ * on entry, so a path that does not write it reads as unknown, not as an earlier failure. */
 static _Thread_local struct {
     const char *syscall;
     int err;
@@ -236,6 +235,7 @@ int us_loop_create_error(const char **syscall) {
     return loop_create_failure.err;
 }
 
+/* Loop */
 struct us_loop_t *us_create_loop(void *hint, void (*wakeup_cb)(struct us_loop_t *loop), void (*pre_cb)(struct us_loop_t *loop), void (*post_cb)(struct us_loop_t *loop), unsigned int ext_size) {
     struct us_loop_t *loop = (struct us_loop_t *) us_calloc(1, sizeof(struct us_loop_t) + ext_size);
     loop->num_polls = 0;
@@ -244,6 +244,7 @@ struct us_loop_t *us_create_loop(void *hint, void (*wakeup_cb)(struct us_loop_t 
     loop->current_ready_poll = 0;
 
     loop->bun_polls = 0;
+    loop_create_failed(NULL, 0);
 
 #ifdef LIBUS_USE_EPOLL
     loop->fd = epoll_create1(EPOLL_CLOEXEC);

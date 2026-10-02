@@ -96,8 +96,9 @@ private:
             static const char msg[] = "failed to create the event loop (out of file descriptors?)";
             Bun__panic(msg, sizeof(msg) - 1);
 #else
-            const char *syscall;
+            const char *syscall = nullptr;
             const int err = us_loop_create_error(&syscall);
+            if (!syscall) syscall = "us_create_loop";
             const char *name = Bun__errnoName(err);
             char msg[192];
             const int len = err

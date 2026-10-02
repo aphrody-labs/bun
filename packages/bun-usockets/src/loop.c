@@ -139,7 +139,7 @@ int us_internal_loop_data_init(struct us_loop_t *loop, void (*wakeup_cb)(struct 
     loop->data.pre_cb = pre_cb;
     loop->data.post_cb = post_cb;
     struct us_internal_async *wakeup_async = us_internal_create_async(loop, 1, 0);
-    /* A loop whose wakeup is not registered parks forever: us_wakeup_loop cannot reach it. */
+    /* Without the registration us_wakeup_loop cannot end this loop's wait. */
     if (!wakeup_async || us_internal_async_set(wakeup_async, (void (*)(struct us_internal_async *)) wakeup_cb) != 0) {
         us_free(loop->data.recv_buf);
         us_free(loop->data.send_buf);
