@@ -430,10 +430,8 @@ function withCompat<T>(
   return withClient(compatServer(options, served, onRequest), client => body(client, served));
 }
 
-/** What the server did, read when it has answered a PING and every request, or ended the connection. */
-async function outcome(client: RawClient, served: Served, tag = 1) {
-  if (await client.ping(tag)) await client.answers();
-  else if (!client.closed) await once(client.socket, "close");
+/** What the server did up to now. */
+function seen(client: RawClient, served: Served) {
   return {
     handlers: served.handlers,
     answered: [...new Set(client.frames.filter(f => f.type === HEADERS).map(f => f.streamId))].sort((a, b) => a - b),
@@ -441,6 +439,13 @@ async function outcome(client: RawClient, served: Served, tag = 1) {
     goaways: client.goawayCodes(),
     sessionError: served.sessionError,
   };
+}
+
+/** What the server did, read when it has answered a PING and every request, or ended the connection. */
+async function outcome(client: RawClient, served: Served, tag = 1) {
+  if (await client.ping(tag)) await client.answers();
+  else if (!client.closed) await once(client.socket, "close");
+  return seen(client, served);
 }
 
 const allServed = (streamIds: number[]) => ({
@@ -1054,29 +1059,29 @@ describe("a stream refused over SETTINGS_MAX_CONCURRENT_STREAMS", () => {
     const client = http2.connect(`http://127.0.0.1:${port}`, { peerMaxConcurrentStreams: 1000 });
     client.on("error", () => {});
     try {
-      const refused = Promise.withResolvers<void>();
+      const allRefused = Promise.withResolvers<void>();
       let closed = 0;
-      const get = () =>
+      const request = () =>
         new Promise<number | undefined>(resolve => {
-          const request = client.request({ ":path": "/" });
+          const stream = client.request({ ":path": "/" });
           let status: number | undefined;
-          request.on("response", headers => (status = headers[":status"]));
-          request.on("error", () => {});
-          request.on("close", () => {
-            if (++closed === 110) refused.resolve();
-            resolve(status ?? -request.rstCode);
+          stream.on("response", headers => (status = headers[":status"]));
+          stream.on("error", () => {});
+          stream.on("close", () => {
+            if (++closed === 110) allRefused.resolve();
+            resolve(status ?? -stream.rstCode);
           });
-          request.resume();
-          request.end();
+          stream.resume();
+          stream.end();
         });
-      const requests = Array.from({ length: 120 }, get);
-      await refused.promise;
+      const requests = Array.from({ length: 120 }, request);
+      await allRefused.promise;
       for (const stream of held.splice(0)) {
         stream.respond({ ":status": 200 });
         stream.end("ok");
       }
       const results = await Promise.all(requests);
-      const next = get();
+      const next = request();
       const [last] = await Promise.all([next, once(server, "stream").then(([stream]) => finish(stream, {}))]);
       expect({
         served: results.filter(status => status === 200).length,
@@ -1098,17 +1103,17 @@ describe("a stream refused over SETTINGS_MAX_CONCURRENT_STREAMS", () => {
     const { port } = server.address() as net.AddressInfo;
     const client = http2.connect(`http://127.0.0.1:${port}`, { settings: { maxConcurrentStreams: 0 } });
     try {
-      const get = () =>
+      const request = () =>
         new Promise<number | undefined>((resolve, reject) => {
-          const request = client.request({ ":path": "/" });
+          const stream = client.request({ ":path": "/" });
           let status: number | undefined;
-          request.on("response", headers => (status = headers[":status"]));
-          request.on("error", reject);
-          request.on("close", () => resolve(status));
-          request.resume();
-          request.end();
+          stream.on("response", headers => (status = headers[":status"]));
+          stream.on("error", reject);
+          stream.on("close", () => resolve(status));
+          stream.resume();
+          stream.end();
         });
-      expect(await Promise.all([get(), get(), get()])).toEqual([200, 200, 200]);
+      expect(await Promise.all([request(), request(), request()])).toEqual([200, 200, 200]);
     } finally {
       client.destroy();
       server.close();
@@ -1216,8 +1221,10 @@ describe("a stream refused over SETTINGS_MAX_CONCURRENT_STREAMS", () => {
       await client.ping(2);
       client.send(get(3));
       await client.waitFor(answered(3));
+      // Stream 1 gets no frame from the server, so outcome() would not return.
       client.send(get(5));
-      return outcome(client, served, 3);
+      await client.waitFor(f => f.streamId === 5 && (f.type === HEADERS || f.type === RST_STREAM));
+      return seen(client, served);
     });
     expect(result).toEqual({
       handlers: [1, 3],
