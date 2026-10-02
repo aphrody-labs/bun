@@ -1385,7 +1385,7 @@ pub(crate) fn print_request(
         "> {} {} {}",
         ver,
         BStr::new(request.method),
-        bun_core::fmt::redacted_npm_url(url),
+        bun_core::fmt::redacted_fetch_url(url, true),
     );
     for header in request.headers {
         bun_core::pretty_errorln!("> {}", header);

@@ -245,14 +245,19 @@ pub struct RedactedNpmUrlFormatter<'a> {
     pub(crate) url: &'a [u8],
     /// A UUID in a registry URL can be a legacy npm token.
     pub(crate) uuids: bool,
+    /// `https://<token>@host/`: with no password, the user name is the credential.
+    pub(crate) lone_username: bool,
 }
 
 impl Display for RedactedNpmUrlFormatter<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut i: usize = 0;
-        let password = strings::find_url_password(self.url);
+        let mut secret = strings::find_url_password(self.url);
+        if secret.is_none() && self.lone_username {
+            secret = strings::find_url_lone_username(self.url);
+        }
         while i < self.url.len() {
-            if let Some((offset, len)) = password
+            if let Some((offset, len)) = secret
                 && i == offset
             {
                 splat_byte_all(f, b'*', len)?;
@@ -282,7 +287,7 @@ impl Display for RedactedNpmUrlFormatter<'_> {
                 if b.is_ascii_hexdigit()
                     || b == b'n'
                     || b == b'N'
-                    || password.is_some_and(|(offset, _)| next == offset)
+                    || secret.is_some_and(|(offset, _)| next == offset)
                 {
                     break;
                 }
@@ -299,14 +304,16 @@ pub fn redacted_npm_url(str: &[u8]) -> RedactedNpmUrlFormatter<'_> {
     RedactedNpmUrlFormatter {
         url: str,
         uuids: true,
+        lone_username: false,
     }
 }
 
-/// Masks the password and npm tokens of a URL. A UUID stays: outside a registry it is usually an id.
-pub fn redacted_url_credentials(str: &[u8]) -> RedactedNpmUrlFormatter<'_> {
+/// A URL in the `BUN_CONFIG_VERBOSE_FETCH` trace. `uuids` is off where the URL has to stay usable.
+pub fn redacted_fetch_url(str: &[u8], uuids: bool) -> RedactedNpmUrlFormatter<'_> {
     RedactedNpmUrlFormatter {
         url: str,
-        uuids: false,
+        uuids,
+        lone_username: true,
     }
 }
 
@@ -3346,6 +3353,80 @@ impl<T: Display> Display for NullableFallback<'_, T> {
         } else {
             write_bytes(f, self.null_fallback)
         }
+    }
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// quotePosixShell
+// ───────────────────────────────────────────────────────────────────────────
+
+/// One word of a POSIX shell command. The shell reads back what `T` prints and expands nothing.
+pub struct QuotePosixShell<T: Display>(pub(crate) T);
+
+pub fn quote_posix_shell<T: Display>(word: T) -> QuotePosixShell<T> {
+    QuotePosixShell(word)
+}
+
+impl<T: Display> Display for QuotePosixShell<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let mut has_control = HasControlChar(false);
+        write!(has_control, "{}", self.0)?;
+        if has_control.0 {
+            // `'...'` would put the control characters on the terminal as they are.
+            f.write_str("$'")?;
+            write!(AnsiCQuoted(f), "{}", self.0)?;
+        } else {
+            f.write_str("'")?;
+            write!(SingleQuoted(f), "{}", self.0)?;
+        }
+        f.write_str("'")
+    }
+}
+
+struct HasControlChar(bool);
+
+impl fmt::Write for HasControlChar {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.0 |= s.chars().any(char::is_control);
+        Ok(())
+    }
+}
+
+struct SingleQuoted<'a, 'b>(&'a mut Formatter<'b>);
+
+impl fmt::Write for SingleQuoted<'_, '_> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        let mut rest = s;
+        while let Some(i) = strings::index_of_char_usize(rest.as_bytes(), b'\'') {
+            self.0.write_str(&rest[..i])?;
+            self.0.write_str("'\\''")?;
+            rest = &rest[i + 1..];
+        }
+        self.0.write_str(rest)
+    }
+}
+
+struct AnsiCQuoted<'a, 'b>(&'a mut Formatter<'b>);
+
+impl fmt::Write for AnsiCQuoted<'_, '_> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        for c in s.chars() {
+            match c {
+                '\\' => self.0.write_str("\\\\")?,
+                '\'' => self.0.write_str("\\'")?,
+                '\n' => self.0.write_str("\\n")?,
+                '\r' => self.0.write_str("\\r")?,
+                '\t' => self.0.write_str("\\t")?,
+                // An interactive bash can take `!` as history expansion after an escaped quote.
+                c if c.is_control() || c == '!' => {
+                    for byte in c.encode_utf8(&mut [0; 4]).bytes() {
+                        write!(self.0, "\\x{byte:02x}")?;
+                    }
+                }
+                c => self.0.write_char(c)?,
+            }
+        }
+        Ok(())
     }
 }
 

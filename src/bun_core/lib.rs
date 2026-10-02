@@ -2135,8 +2135,28 @@ pub(crate) mod strings_impl {
     /// `(offset, len)` of the password segment, or None.
     /// Only matches http:// and https:// schemes and rejects empty pw.
     pub(crate) fn find_url_password(s: &[u8]) -> Option<(usize, usize)> {
-        // Case-sensitive prefix match; the search region is truncated at the
-        // first '\n' and at the end of the authority before scanning for '@'/':'.
+        let (offset, userinfo) = url_userinfo(s)?;
+        let colon = crate::strings::index_of_char_usize(userinfo, b':')?;
+        // Reject empty password (`user:@host`).
+        if colon == userinfo.len() - 1 {
+            return None;
+        }
+        Some((offset + colon + 1, userinfo.len() - colon - 1))
+    }
+
+    /// `(offset, len)` of a user name with no password: `https://<token>@host/`, `https://<key>:@host/`.
+    pub(crate) fn find_url_lone_username(s: &[u8]) -> Option<(usize, usize)> {
+        let (offset, userinfo) = url_userinfo(s)?;
+        let len = match crate::strings::index_of_char_usize(userinfo, b':') {
+            Some(colon) if colon == userinfo.len() - 1 => colon,
+            Some(_) => return None,
+            None => userinfo.len(),
+        };
+        (len > 0).then_some((offset, len))
+    }
+
+    /// `(offset, userinfo)` of an `http://` or `https://` URL (case-sensitive) that has a userinfo part.
+    fn url_userinfo(s: &[u8]) -> Option<(usize, &[u8])> {
         let scheme_end = if s.starts_with(b"http://") {
             7
         } else if s.starts_with(b"https://") {
@@ -2145,6 +2165,7 @@ pub(crate) mod strings_impl {
             return None;
         };
         let mut rest = &s[scheme_end..];
+        // The authority ends at the first '\n', '/', '?' or '#'.
         if let Some(nl) = crate::strings::index_of_char_usize(rest, b'\n') {
             rest = &rest[..nl];
         }
@@ -2152,13 +2173,7 @@ pub(crate) mod strings_impl {
             rest = &rest[..end];
         }
         let at = crate::strings::index_of_char_usize(rest, b'@')?;
-        let userinfo = &rest[..at];
-        let colon = crate::strings::index_of_char_usize(userinfo, b':')?;
-        // Reject empty password (`user:@host`).
-        if colon == at - 1 {
-            return None;
-        }
-        Some((scheme_end + colon + 1, at - colon - 1))
+        Some((scheme_end, &rest[..at]))
     }
 
     /// Returns the UTF-8/WTF-8 sequence length implied by a *leading* byte,

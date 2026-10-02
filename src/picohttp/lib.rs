@@ -168,10 +168,23 @@ pub struct LoggedHeaderValue<'a> {
 }
 
 impl LoggedHeaderValue<'_> {
-    /// `Authorization: <scheme> <credentials>`: the scheme is kept.
+    /// `Authorization: <scheme> <credentials>`: a known scheme is kept.
     const SCHEME_HEADERS: [&[u8]; 2] = [b"authorization", b"proxy-authorization"];
+    /// Any other first word can be the credential itself.
+    const AUTH_SCHEMES: [&[u8]; 8] = [
+        b"basic",
+        b"bearer",
+        b"digest",
+        b"negotiate",
+        b"ntlm",
+        b"dpop",
+        b"aws4-hmac-sha256",
+        b"token",
+    ];
     /// The whole value is a secret.
     const SECRET_HEADERS: [&[u8]; 3] = [b"cookie", b"set-cookie", b"x-amz-security-token"];
+    /// The value is a URL, and a URL can hold a password.
+    const URL_HEADERS: [&[u8]; 3] = [b"location", b"content-location", b"referer"];
 }
 
 impl fmt::Display for LoggedHeaderValue<'_> {
@@ -179,13 +192,19 @@ impl fmt::Display for LoggedHeaderValue<'_> {
         let name = self.header.name();
         let value = self.header.value();
         if strings::eql_any_case_insensitive_ascii(name, &Self::SCHEME_HEADERS) {
-            let scheme_len = strings::index_of_char_usize(value, b' ').map_or(0, |i| i + 1);
-            write!(f, "{}[redacted]", BStr::new(&value[..scheme_len]))
+            let scheme = &value[..strings::index_of_char_usize(value, b' ').unwrap_or(0)];
+            if strings::eql_any_case_insensitive_ascii(scheme, &Self::AUTH_SCHEMES) {
+                write!(f, "{} [redacted]", BStr::new(scheme))
+            } else {
+                f.write_str("[redacted]")
+            }
         } else if self.header.is_multiline()
             || strings::eql_any_case_insensitive_ascii(name, &Self::SECRET_HEADERS)
         {
             // A folded continuation line has no name: the header it continues is unknown here.
             f.write_str("[redacted]")
+        } else if strings::eql_any_case_insensitive_ascii(name, &Self::URL_HEADERS) {
+            write!(f, "{}", bun_core::fmt::redacted_fetch_url(value, false))
         } else {
             write!(f, "{}", BStr::new(value))
         }
@@ -232,15 +251,26 @@ struct HeaderCurlFormatter<'a> {
 impl fmt::Display for HeaderCurlFormatter<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let header = self.header;
+        let name = BStr::new(header.name());
         if header.value_len > 0 {
-            write!(
-                f,
-                "-H \"{}: {}\"",
-                BStr::new(header.name()),
-                header.logged_value()
-            )
+            let line = format_args!("{}: {}", name, header.logged_value());
+            write!(f, "-H {}", CurlArg(line))
         } else {
-            write!(f, "-H \"{}\"", BStr::new(header.name()))
+            write!(f, "-H {}", CurlArg(name))
+        }
+    }
+}
+
+/// One argument of the printed `curl` command.
+struct CurlArg<T: fmt::Display>(T);
+
+impl<T: fmt::Display> fmt::Display for CurlArg<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if cfg!(windows) {
+            // cmd.exe and PowerShell have no quoting rule in common, so Windows keeps the plain form.
+            write!(f, "\"{}\"", self.0)
+        } else {
+            write!(f, "{}", bun_core::fmt::quote_posix_shell(&self.0))
         }
     }
 }
@@ -375,22 +405,27 @@ impl<'a> RequestCurlFormatter<'a> {
 impl fmt::Display for RequestCurlFormatter<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let request = self.request;
-        // Not `redacted_npm_url`: a UUID in the URL is kept so that the command stays runnable.
-        let url = bun_core::fmt::redacted_url_credentials(request.path);
+        // A UUID in the URL is kept so that the command stays runnable.
+        let url = CurlArg(bun_core::fmt::redacted_fetch_url(request.path, false));
         if enable_ansi_colors_stderr() {
             f.write_str(pretty_fmt!("<r><d>[fetch] $<r> ", true))?;
 
             write!(
                 f,
-                pretty_fmt!("<b><cyan>curl<r> <d>--http1.1<r> <b>\"{}\"<r>", true),
+                pretty_fmt!("<b><cyan>curl<r> <d>--http1.1<r> <b>{}<r>", true),
                 url,
             )?;
         } else {
-            write!(f, "curl --http1.1 \"{}\"", url)?;
+            write!(f, "curl --http1.1 {}", url)?;
         }
 
         if request.method != b"GET" {
-            write!(f, " -X {}", BStr::new(request.method))?;
+            let method = BStr::new(request.method);
+            if cfg!(windows) || request.method.iter().all(u8::is_ascii_alphanumeric) {
+                write!(f, " -X {}", method)?;
+            } else {
+                write!(f, " -X {}", CurlArg(method))?;
+            }
         }
 
         if self.ignore_insecure {
@@ -416,11 +451,15 @@ impl fmt::Display for RequestCurlFormatter<'_> {
 
         if !self.body.is_empty() && Self::is_printable_body(content_type) {
             f.write_str(" --data-raw ")?;
-            bun_core::js_printer::write_json_string(
-                self.body,
-                f,
-                bun_core::strings::Encoding::Utf8,
-            )?;
+            if cfg!(windows) {
+                bun_core::js_printer::write_json_string(
+                    self.body,
+                    f,
+                    bun_core::strings::Encoding::Utf8,
+                )?;
+            } else {
+                write!(f, "{}", CurlArg(BStr::new(self.body)))?;
+            }
         }
 
         Ok(())

@@ -4210,8 +4210,34 @@ describe.concurrent("verbose fetch logging redacts credentials", () => {
   };
   // An id, not a credential: the curl command has to keep it to stay usable.
   const orderId = "550e8400-e29b-41d4-a716-446655440000";
+  const modes = ["1", "curl"];
+  const fetchText = `console.log(await (await fetch(process.env.SERVER_URL)).text());`;
 
-  it.each(["1", "curl"])("BUN_CONFIG_VERBOSE_FETCH=%s", async mode => {
+  // One argument of the printed curl command. Windows keeps the "..." form.
+  const arg = (text: string) => (isWindows ? `"${text}"` : `'${text}'`);
+  const stars = (secret: string) => Buffer.alloc(secret.length, "*").toString();
+
+  async function trace(mode: string, url: string, script: string) {
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "-e", script],
+      env: { ...bunEnv, BUN_CONFIG_VERBOSE_FETCH: mode, SERVER_URL: url },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+
+    // One `> name: value` (request) or `< name: value` (response) trace line per
+    // header. Match on the full header name so `Cookie` and `Set-Cookie` are
+    // checked independently.
+    const lines = stderr.split(/\r?\n/);
+    const traceLines = lines.map(line => line.replace(/^(?:\[fetch\])?\s*[<>]?\s*/, ""));
+    const headerLines = (name: string) =>
+      traceLines.filter(line => line.toLowerCase().startsWith(name.toLowerCase() + ":"));
+    const curlLine = lines.find(line => line.includes("curl --http1.1")) ?? "";
+    return { stdout, stderr, exitCode, headerLines, curlLine };
+  }
+
+  it.each(modes)("BUN_CONFIG_VERBOSE_FETCH=%s", async mode => {
     using server = Bun.serve({
       port: 0,
       fetch(req) {
@@ -4226,39 +4252,26 @@ describe.concurrent("verbose fetch logging redacts credentials", () => {
     url.pathname = `/orders/${orderId}`;
     url.searchParams.set("registry_token", secrets.npmToken);
 
-    await using proc = Bun.spawn({
-      cmd: [
-        bunExe(),
-        "-e",
-        `const res = await fetch(process.env.SERVER_URL, {
-             headers: {
-               Authorization: "Bearer ${secrets.authorization}",
-               "Proxy-Authorization": "Basic ${secrets.proxyAuthorization}",
-               Cookie: "sid=${secrets.cookie}",
-               "x-amz-security-token": "${secrets.sessionToken}",
-               "X-Plain": "plain-value",
-             },
-           });
-           console.log(await res.text());`,
-      ],
-      env: { ...bunEnv, BUN_CONFIG_VERBOSE_FETCH: mode, SERVER_URL: url.href },
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    const { stdout, stderr, exitCode, headerLines, curlLine } = await trace(
+      mode,
+      url.href,
+      `const res = await fetch(process.env.SERVER_URL, {
+         headers: {
+           Authorization: "Bearer ${secrets.authorization}",
+           "Proxy-Authorization": "Basic ${secrets.proxyAuthorization}",
+           Cookie: "sid=${secrets.cookie}",
+           "x-amz-security-token": "${secrets.sessionToken}",
+           "X-Plain": "plain-value",
+         },
+       });
+       console.log(await res.text());`,
+    );
 
     expect(stdout).toBe(`Bearer ${secrets.authorization}\n`);
     for (const secret of Object.values(secrets)) {
       expect(stderr).not.toContain(secret);
     }
 
-    // One `> name: value` (request) or `< name: value` (response) trace line per
-    // header. Match on the full header name so `Cookie` and `Set-Cookie` are
-    // checked independently.
-    const traceLines = stderr.split(/\r?\n/).map(line => line.replace(/^(?:\[fetch\])?\s*[<>]?\s*/, ""));
-    const headerLines = (name: string) =>
-      traceLines.filter(line => line.toLowerCase().startsWith(name.toLowerCase() + ":"));
     expect(headerLines("Authorization")).toEqual(["Authorization: Bearer [redacted]"]);
     expect(headerLines("Proxy-Authorization")).toEqual(["Proxy-Authorization: Basic [redacted]"]);
     expect(headerLines("Cookie")).toEqual(["Cookie: [redacted]"]);
@@ -4267,17 +4280,144 @@ describe.concurrent("verbose fetch logging redacts credentials", () => {
     expect(headerLines("Set-Cookie").map(line => line.toLowerCase())).toEqual(["set-cookie: [redacted]"]);
 
     if (mode === "curl") {
-      const curlLine = stderr.split(/\r?\n/).find(line => line.includes("curl --http1.1")) ?? "";
-      const maskedPassword = Buffer.alloc(secrets.password.length, "*").toString();
-      expect(curlLine).toContain(
-        `curl --http1.1 "http://user:${maskedPassword}@${url.host}/orders/${orderId}?registry_token=***"`,
-      );
-      expect(curlLine).toContain(`-H "Authorization: Bearer [redacted]"`);
-      expect(curlLine).toContain(`-H "Proxy-Authorization: Basic [redacted]"`);
-      expect(curlLine).toContain(`-H "Cookie: [redacted]"`);
-      expect(curlLine).toContain(`-H "x-amz-security-token: [redacted]"`);
-      expect(curlLine).toContain(`-H "X-Plain: plain-value"`);
+      const maskedUrl = `http://user:${stars(secrets.password)}@${url.host}/orders/${orderId}?registry_token=***`;
+      expect(curlLine).toContain(`curl --http1.1 ${arg(maskedUrl)} `);
+      expect(curlLine).toContain(`-H ${arg("Authorization: Bearer [redacted]")}`);
+      expect(curlLine).toContain(`-H ${arg("Proxy-Authorization: Basic [redacted]")}`);
+      expect(curlLine).toContain(`-H ${arg("Cookie: [redacted]")}`);
+      expect(curlLine).toContain(`-H ${arg("x-amz-security-token: [redacted]")}`);
+      expect(curlLine).toContain(`-H ${arg("X-Plain: plain-value")}`);
     }
     expect(exitCode).toBe(0);
   });
+
+  it.each(modes)("a user name with no password, BUN_CONFIG_VERBOSE_FETCH=%s", async mode => {
+    using server = Bun.serve({ port: 0, fetch: () => new Response("ok") });
+    const token = "username-token-sekret";
+    const url = new URL(server.url);
+    url.username = token;
+
+    const { stdout, stderr, exitCode, headerLines, curlLine } = await trace(mode, url.href, fetchText);
+
+    expect(stdout).toBe("ok\n");
+    expect(stderr).not.toContain(token);
+    const maskedUrl = `http://${stars(token)}@${url.host}/`;
+    expect(stderr).toContain(`HTTP/1.1 GET ${maskedUrl}`);
+    expect(headerLines("Authorization")).toEqual(["Authorization: Basic [redacted]"]);
+    if (mode === "curl") {
+      expect(curlLine).toContain(`curl --http1.1 ${arg(maskedUrl)} `);
+    }
+    expect(exitCode).toBe(0);
+  });
+
+  it.each(modes)("a password in a redirect Location, BUN_CONFIG_VERBOSE_FETCH=%s", async mode => {
+    const password = "location-pw-sekret";
+    using server = Bun.serve({
+      port: 0,
+      fetch(req) {
+        const to = new URL("/landed", req.url);
+        if (new URL(req.url).pathname === to.pathname) return new Response("ok");
+        to.username = "u";
+        to.password = password;
+        return new Response(null, { status: 302, headers: { Location: to.href } });
+      },
+    });
+
+    const { stdout, stderr, exitCode, headerLines } = await trace(mode, server.url.href, fetchText);
+
+    expect(stdout).toBe("ok\n");
+    expect(stderr).not.toContain(password);
+    expect(headerLines("Location").map(line => line.toLowerCase())).toEqual([
+      `location: http://u:${stars(password)}@${server.url.host}/landed`,
+    ]);
+    expect(exitCode).toBe(0);
+  });
+
+  it.each(modes)("an Authorization value with no known scheme, BUN_CONFIG_VERBOSE_FETCH=%s", async mode => {
+    using server = Bun.serve({ port: 0, fetch: () => new Response("ok") });
+
+    const { stdout, stderr, exitCode, headerLines, curlLine } = await trace(
+      mode,
+      server.url.href,
+      `const headers = { Authorization: "schemeless-sekret second-word" };
+       console.log(await (await fetch(process.env.SERVER_URL, { headers })).text());`,
+    );
+
+    expect(stdout).toBe("ok\n");
+    expect(stderr).not.toContain("schemeless-sekret");
+    expect(headerLines("Authorization")).toEqual(["Authorization: [redacted]"]);
+    if (mode === "curl") {
+      expect(curlLine).toContain(`-H ${arg("Authorization: [redacted]")}`);
+    }
+    expect(exitCode).toBe(0);
+  });
+});
+
+// Windows keeps the `"..."` form: cmd.exe and PowerShell have no quoting rule in common.
+it.skipIf(isWindows)("verbose fetch prints a curl command that a shell reads back unchanged", async () => {
+  using dir = tempDir("verbose-fetch-curl-paste", {});
+  const marker = (name: string) => join(String(dir), name);
+  const note = `$(touch ${marker("header")})`;
+  const quote = `it's "q" \\ back`;
+  const body = `line1\nline2 \`touch ${marker("body")}\` \x1b[31m \u009b31m it's!`;
+  // The server chooses this URL.
+  const query = `a=$(touch\${IFS}${marker("url")})`;
+
+  using server = Bun.serve({
+    port: 0,
+    fetch(req) {
+      if (new URL(req.url).pathname !== "/hop") return new Response("ok");
+      return new Response(null, { status: 302, headers: { Location: `/landed?${query}` } });
+    },
+  });
+
+  await using proc = Bun.spawn({
+    cmd: [
+      bunExe(),
+      "-e",
+      `const { SERVER_URL, NOTE, QUOTE, BODY } = process.env;
+       const headers = { "x-note": NOTE, "x-quote": QUOTE, "content-type": "text/plain" };
+       await (await fetch(SERVER_URL + "post", { method: "POST", headers, body: BODY })).text();
+       await (await fetch(SERVER_URL + "hop")).text();`,
+    ],
+    env: {
+      ...bunEnv,
+      BUN_CONFIG_VERBOSE_FETCH: "curl",
+      SERVER_URL: server.url.href,
+      NOTE: note,
+      QUOTE: quote,
+      BODY: body,
+    },
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
+
+  // A shell function named `curl` prints the arguments that the real curl would get.
+  async function shellArguments(command: string) {
+    await using shell = Bun.spawn({
+      cmd: [Bun.which("bash") ?? "sh", "-c", `curl() { printf '%s\\0' "$@"; }\n${command}`],
+      env: bunEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout] = await Promise.all([shell.stdout.text(), shell.exited]);
+    return stdout.split("\0").slice(0, -1);
+  }
+
+  const commands = stderr.split("\n").filter(line => line.startsWith("curl --http1.1"));
+  expect(commands).toHaveLength(3);
+  const [post, hop, landed] = await Promise.all(commands.map(shellArguments));
+
+  const origin = server.url.origin;
+  expect(post.slice(0, 4)).toEqual(["--http1.1", `${origin}/post`, "-X", "POST"]);
+  expect(post).toContain(`x-note: ${note}`);
+  expect(post).toContain(`x-quote: ${quote}`);
+  expect(post.slice(-2)).toEqual(["--data-raw", body]);
+  expect(hop.slice(0, 2)).toEqual(["--http1.1", `${origin}/hop`]);
+  expect(landed.slice(0, 2)).toEqual(["--http1.1", `${origin}/landed?${query}`]);
+
+  const created = await Promise.all(["header", "body", "url"].map(name => Bun.file(marker(name)).exists()));
+  expect(created).toEqual([false, false, false]);
+  expect(exitCode).toBe(0);
 });
