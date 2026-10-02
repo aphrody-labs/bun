@@ -1336,13 +1336,6 @@ describe("EventEmitter.prototype", () => {
     expect(exitCode).toBe(0);
   });
 
-  test("the source text of a method is hidden", () => {
-    const prototype = EventEmitter.prototype;
-    const methods = Object.keys(prototype).filter(key => key !== "constructor" && typeof prototype[key] === "function");
-    expect(methods).toHaveLength(15);
-    expect(methods.filter(key => !String(prototype[key]).includes("[native code]"))).toEqual([]);
-  });
-
   test("the methods work on an object that the constructor did not initialize", () => {
     const emitter = Object.create(EventEmitter.prototype);
     const calls: unknown[][] = [];

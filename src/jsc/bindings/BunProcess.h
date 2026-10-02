@@ -38,6 +38,11 @@ class Process : public JSC::JSDestructibleObject {
     WriteBarrier<Unknown> m_execArgv;
     // The JS warning printer (ProcessObjectInternals createOnWarning), built on the first warning.
     WriteBarrier<JSObject> m_onWarning;
+    // EventEmitter.prototype of node:events, which is created with `process`, and the two symbols that are keys
+    // of every emitter (src/js/node/events.ts).
+    WriteBarrier<JSObject> m_eventEmitterPrototype;
+    WriteBarrier<Symbol> m_shapeModeSymbol;
+    WriteBarrier<Symbol> m_captureSymbol;
 
     // What `_events` holds for an event: a function, an array of functions, or nothing.
     JSValue listenersOf(const JSC::Identifier& eventName);
@@ -87,8 +92,13 @@ public:
 
     JSObject* ensureOnWarning(Zig::GlobalObject*);
 
-    // Calls the listeners of an event that has some, with EventEmitter.prototype.emit as it was created. Returns
-    // true when the event has listeners. What a listener throws is pending on return: for a caller that JavaScript called.
+    JSObject* eventEmitterPrototype() const { return m_eventEmitterPrototype.get(); }
+    Symbol* shapeModeSymbol() const { return m_shapeModeSymbol.get(); }
+    Symbol* captureSymbol() const { return m_captureSymbol.get(); }
+
+    // `process.emit(eventName, ...args)`, as node emits the events of `process`: a program that assigned
+    // `process.emit` gets every event. Without that, an event with no listener calls nothing. Returns true when
+    // it called `emit`. What that throws is pending on return: for a caller that JavaScript called.
     bool emit(const JSC::Identifier& eventName, const JSC::MarkedArgumentBuffer& args);
     // The same for an event that the runtime starts (a signal, an IPC message, the end of the event loop). What a
     // listener throws is an uncaught exception, and the listeners after it are not called, as in node.
@@ -134,7 +144,7 @@ public:
         return WebCore::subspaceForImpl<Process, WebCore::UseCustomHeapCellType::No>(vm, BUN_SUBSPACE_SLOTS(m_clientSubspaceForProcessObject, m_subspaceForProcessObject));
     }
 
-    void finishCreation(JSC::VM& vm);
+    void finishCreation(JSC::VM&, JSObject* eventEmitterPrototype, Symbol* shapeModeSymbol, Symbol* captureSymbol);
 
     inline void setUncaughtExceptionCaptureCallback(JSC::JSValue callback)
     {

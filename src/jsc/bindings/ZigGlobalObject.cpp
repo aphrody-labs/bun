@@ -2916,22 +2916,6 @@ JSValue GlobalObject_getGlobalThis(VM& vm, JSObject* globalObject)
     return uncheckedDowncast<Zig::GlobalObject>(globalObject)->globalThis();
 }
 
-void GlobalObject::addBuiltinGlobal(const Identifier& privateName, JSValue value, unsigned attributes)
-{
-    GlobalPropertyInfo global { privateName, value, attributes | PropertyAttribute::DontDelete };
-    addStaticGlobals({ &global, 1 });
-}
-
-JSValue GlobalObject::builtinGlobal(const Identifier& privateName)
-{
-    SymbolTable& table = *symbolTable();
-    ConcurrentJSLocker locker(table.m_lock);
-    auto entry = table.find(locker, privateName.impl());
-    if (entry == table.end(locker))
-        return {};
-    return variableAt(entry->value.scopeOffset()).get();
-}
-
 void GlobalObject::addBuiltinGlobals(JSC::VM& vm)
 {
     auto scope = DECLARE_TOP_EXCEPTION_SCOPE(vm);

@@ -36,22 +36,20 @@ const { resistStopPropagation } = require("internal/shared");
 
 const types = require("node:util/types");
 
-// The methods are builtins (src/js/builtins/EventEmitterPrototype.ts) of a prototype that native code creates,
-// for this module or for `process`, whichever needs it first. The call also defines the `$nodeEvents` names.
-const EventEmitterPrototype = $cpp(
-  "NodeEventEmitterPrototype.cpp",
-  "Bun::nodeEventEmitterPrototypeForModule",
-) as EventEmitter;
+// The prototype is a native object: `process` inherits from it too. It takes a method from
+// internal/events/prototype when a program first reads that method.
+const EventEmitterPrototype = $cpp("NodeEventEmitterPrototype.cpp", "Bun::nodeEventEmitterPrototype") as EventEmitter;
+const { emitError, getDefaultMaxListeners, setDefaultMaxListeners } = require("internal/events/prototype");
 
 const SymbolFor = Symbol.for;
 const ArrayPrototypeUnshift = Array.prototype.unshift;
 
-const kCapture = $nodeEventsKCapture;
+const kCapture = $cpp("NodeEventEmitterPrototype.cpp", "Bun::nodeEventEmitterCaptureSymbol") as symbol;
 // Set when `_events` was preallocated (streams do this): removeListener then
 // writes `undefined` instead of `delete`, keeping one shared JSC Structure
 // so the (StructureID, name)-keyed megamorphic cache stays hot.
-const kShapeMode = $nodeEventsKShapeMode;
-const kErrorMonitor = $nodeEventsKErrorMonitor;
+const kShapeMode = $cpp("NodeEventEmitterPrototype.cpp", "Bun::nodeEventEmitterShapeModeSymbol") as symbol;
+const kErrorMonitor = SymbolFor("events.errorMonitor");
 const kMaxEventTargetListeners = Symbol("events.maxEventTargetListeners");
 const kMaxEventTargetListenersWarned = Symbol("events.maxEventTargetListenersWarned");
 const kWatermarkData = SymbolFor("nodejs.watermarkData");
@@ -152,7 +150,7 @@ function emitUnhandledRejectionOrErr(emitter, err, type, args) {
 const emitWithRejectionCapture = function emit(type, ...args) {
   $debug(`${this.constructor?.name || "EventEmitter"}.emit`, type);
   if (type === "error") {
-    return $nodeEventsEmitError(this, args);
+    return emitError(this, args);
   }
   var { _events: events } = this;
   if (events === undefined) return false;
@@ -444,10 +442,10 @@ function getEventListeners(emitter, type) {
 }
 
 // https://github.com/nodejs/node/blob/2eff28fb7a93d3f672f80b582f664a7c701569fb/lib/events.js#L315-L339
-function setMaxListeners(n = $nodeEventsDefaultMaxListeners, ...eventTargets) {
+function setMaxListeners(n = getDefaultMaxListeners(), ...eventTargets) {
   validateNumber(n, "setMaxListeners", 0);
   if (eventTargets.length === 0) {
-    $nodeEventsDefaultMaxListeners = n;
+    setDefaultMaxListeners(n);
   } else {
     for (let i = 0; i < eventTargets.length; i++) {
       const target = eventTargets[i];
@@ -511,9 +509,9 @@ let AsyncResource: typeof import("./async_hooks").default.AsyncResource | null =
 
 function getMaxListeners(emitterOrTarget) {
   if (typeof emitterOrTarget?.getMaxListeners === "function") {
-    return emitterOrTarget?._maxListeners ?? $nodeEventsDefaultMaxListeners;
+    return emitterOrTarget?._maxListeners ?? getDefaultMaxListeners();
   } else if (types.isEventTarget(emitterOrTarget)) {
-    emitterOrTarget[kMaxEventTargetListeners] ??= $nodeEventsDefaultMaxListeners;
+    emitterOrTarget[kMaxEventTargetListeners] ??= getDefaultMaxListeners();
     return emitterOrTarget[kMaxEventTargetListeners];
   }
   throw $ERR_INVALID_ARG_TYPE("emitter", ["EventEmitter", "EventTarget"], emitterOrTarget);
@@ -612,11 +610,11 @@ Object.defineProperties(EventEmitter, {
   defaultMaxListeners: {
     enumerable: true,
     get: () => {
-      return $nodeEventsDefaultMaxListeners;
+      return getDefaultMaxListeners();
     },
     set: arg => {
       validateNumber(arg, "defaultMaxListeners", 0);
-      $nodeEventsDefaultMaxListeners = arg;
+      setDefaultMaxListeners(arg);
     },
   },
   kMaxEventTargetListeners: {

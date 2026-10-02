@@ -1,6 +1,8 @@
-// The methods of node:events' EventEmitter.prototype and the functions that they call. NodeEventEmitterPrototype.cpp
-// defines the methods on the prototype and the other functions under the `$nodeEvents` names. A method evaluates a
-// module only when it throws or warns. `$overriddenName` is the `name` of a function: without it the name is "".
+// The methods of EventEmitter.prototype of node:events, and what they share with that module.
+//
+// `process` inherits from EventEmitter.prototype. NodeEventEmitterPrototype.cpp takes a method from this module
+// when a program first reads it off the prototype, so a program that only adds a listener to `process` does not
+// evaluate node:events. This module requires another one only where it throws or warns.
 
 interface Listener extends Function {
   listener?: Function;
@@ -16,31 +18,44 @@ interface MaxListenersExceededWarning extends Error {
   count?: number;
 }
 
-$overriddenName = "setMaxListeners";
-export function setMaxListeners(this: any, n) {
+// Set when `_events` was preallocated (streams do this): removeListener then
+// writes `undefined` instead of `delete`, keeping one shared JSC Structure
+// so the (StructureID, name)-keyed megamorphic cache stays hot.
+const kShapeMode = $cpp("NodeEventEmitterPrototype.cpp", "Bun::nodeEventEmitterShapeModeSymbol") as symbol;
+const kErrorMonitor = Symbol.for("events.errorMonitor");
+
+let defaultMaxListeners = 10;
+
+function getDefaultMaxListeners() {
+  return defaultMaxListeners;
+}
+
+function setDefaultMaxListeners(n: number) {
+  defaultMaxListeners = n;
+}
+
+function setMaxListeners(this: any, n) {
   if (typeof n !== "number" || !(n >= 0)) require("internal/validators").validateNumber(n, "setMaxListeners", 0);
   this._maxListeners = n;
   return this;
 }
 
-$overriddenName = "getMaxListeners";
-export function getMaxListeners(this: any) {
-  return this?._maxListeners ?? $nodeEventsDefaultMaxListeners;
+function getMaxListeners(this: any) {
+  return this?._maxListeners ?? defaultMaxListeners;
 }
 
-$overriddenName = "emitError";
-export function emitError(emitter, args) {
+function emitError(emitter, args) {
   var { _events: events } = emitter;
 
   if (events !== undefined) {
-    const errorMonitor = events[$nodeEventsKErrorMonitor];
+    const errorMonitor = events[kErrorMonitor];
     if (errorMonitor !== undefined) {
-      $nodeEventsApplyHandlers(errorMonitor, emitter, args);
+      applyHandlers(errorMonitor, emitter, args);
     }
 
     const handlers = events.error;
     if (handlers !== undefined) {
-      $nodeEventsApplyHandlers(handlers, emitter, args);
+      applyHandlers(handlers, emitter, args);
       return true;
     }
   }
@@ -69,8 +84,7 @@ export function emitError(emitter, args) {
 // A listener list is a bare function for a single listener, else an array
 // (like node). Arrays are never mutated in place - mutators install a copy -
 // so a stored list can be iterated with no defensive clone.
-$overriddenName = "applyHandlers";
-export function applyHandlers(handlers, emitter, args) {
+function applyHandlers(handlers, emitter, args) {
   if (typeof handlers === "function") {
     handlers.$apply(emitter, args);
     return;
@@ -80,69 +94,64 @@ export function applyHandlers(handlers, emitter, args) {
   }
 }
 
-// A builtin begins with "use strict", which a function with a rest parameter may not contain. So `emit` is the
-// function that this one returns. NodeEventEmitterPrototype.cpp calls it once for a global object.
-export function createEmit() {
-  return function emit(this: any, type, ...args) {
-    $debug(`${this.constructor?.name || "EventEmitter"}.emit`, type);
+function emit(this: any, type, ...args) {
+  $debug(`${this.constructor?.name || "EventEmitter"}.emit`, type);
 
-    if (type === "error") {
-      return $nodeEventsEmitError(this, args);
-    }
-    var { _events: events } = this;
-    if (events === undefined) return false;
-    var handler = events[type];
-    if (handler === undefined) return false;
-    // For performance reasons Function.call(...) is used whenever possible.
-    if (typeof handler === "function") {
-      switch (args.length) {
-        case 0:
-          handler.$call(this);
-          break;
-        case 1:
-          handler.$call(this, args[0]);
-          break;
-        case 2:
-          handler.$call(this, args[0], args[1]);
-          break;
-        case 3:
-          handler.$call(this, args[0], args[1], args[2]);
-          break;
-        default:
-          handler.$apply(this, args);
-          break;
-      }
-      return true;
-    }
-    // No defensive clone: stored arrays are never mutated in place (mutators
-    // install a copy), so this list stays stable for the whole loop even if a
-    // listener adds/removes listeners.
-    for (let i = 0, { length } = handler; i < length; i++) {
-      const listener = handler[i];
-      switch (args.length) {
-        case 0:
-          listener.$call(this);
-          break;
-        case 1:
-          listener.$call(this, args[0]);
-          break;
-        case 2:
-          listener.$call(this, args[0], args[1]);
-          break;
-        case 3:
-          listener.$call(this, args[0], args[1], args[2]);
-          break;
-        default:
-          listener.$apply(this, args);
-          break;
-      }
+  if (type === "error") {
+    return emitError(this, args);
+  }
+  var { _events: events } = this;
+  if (events === undefined) return false;
+  var handler = events[type];
+  if (handler === undefined) return false;
+  // For performance reasons Function.call(...) is used whenever possible.
+  if (typeof handler === "function") {
+    switch (args.length) {
+      case 0:
+        handler.$call(this);
+        break;
+      case 1:
+        handler.$call(this, args[0]);
+        break;
+      case 2:
+        handler.$call(this, args[0], args[1]);
+        break;
+      case 3:
+        handler.$call(this, args[0], args[1], args[2]);
+        break;
+      default:
+        handler.$apply(this, args);
+        break;
     }
     return true;
-  };
+  }
+  // No defensive clone: stored arrays are never mutated in place (mutators
+  // install a copy), so this list stays stable for the whole loop even if a
+  // listener adds/removes listeners.
+  for (let i = 0, { length } = handler; i < length; i++) {
+    const listener = handler[i];
+    switch (args.length) {
+      case 0:
+        listener.$call(this);
+        break;
+      case 1:
+        listener.$call(this, args[0]);
+        break;
+      case 2:
+        listener.$call(this, args[0], args[1]);
+        break;
+      case 3:
+        listener.$call(this, args[0], args[1], args[2]);
+        break;
+      default:
+        listener.$apply(this, args);
+        break;
+    }
+  }
+  return true;
 }
 
-$overriddenName = "_addListener";
-export function internalAddListener(target, type, fn, prepend) {
+function _addListener(target, type, fn, prepend) {
   if (typeof fn !== "function") require("internal/validators").validateFunction(fn, "listener");
   var events = target._events;
   if (!events) {
@@ -165,31 +174,28 @@ export function internalAddListener(target, type, fn, prepend) {
   if (typeof existing === "function") {
     handlers = events[type] = prepend ? [fn, existing] : [existing, fn];
   } else {
-    handlers = events[type] = $nodeEventsCopyWithInserted(existing, fn, prepend);
+    handlers = events[type] = copyWithInserted(existing, fn, prepend);
   }
-  var m = target?._maxListeners ?? $nodeEventsDefaultMaxListeners;
+  var m = target?._maxListeners ?? defaultMaxListeners;
   if (m > 0 && handlers.length > m && !handlers.warned) {
-    $nodeEventsOverflowWarning(target, type, handlers);
+    overflowWarning(target, type, handlers);
   }
 }
 
-$overriddenName = "addListener";
-export function addListener(this: any, type, fn) {
-  $nodeEventsAddListener(this, type, fn, false);
+function addListener(this: any, type, fn) {
+  _addListener(this, type, fn, false);
   return this;
 }
 
-$overriddenName = "prependListener";
-export function prependListener(this: any, type, fn) {
-  $nodeEventsAddListener(this, type, fn, true);
+function prependListener(this: any, type, fn) {
+  _addListener(this, type, fn, true);
   return this;
 }
 
 // Copy-on-write: emit iterates stored arrays with no clone, so new listeners
 // land in a fresh array; `warned` carries over so the leak warning fires once.
 // An inline loop beats concat/slice here ~10x (host-call boundary).
-$overriddenName = "copyWithInserted";
-export function copyWithInserted(list, fn, prepend) {
+function copyWithInserted(list, fn, prepend) {
   const n = list.length;
   const copy: ListenerList = $newArrayWithSize(n + 1);
   // Two straight copies, not a per-element ternary (measured ~25% slower).
@@ -204,12 +210,11 @@ export function copyWithInserted(list, fn, prepend) {
   return copy;
 }
 
-$overriddenName = "overflowWarning";
-export function overflowWarning(emitter, type, handlers) {
+function overflowWarning(emitter, type, handlers) {
   const inspect: (value: unknown, opts?: object) => string = require("internal/util/inspect").inspect;
   handlers.warned = true;
   const warn: MaxListenersExceededWarning = new Error(
-    `Possible EventEmitter memory leak detected. ${handlers.length} ${String(type)} listeners added to ${inspect(emitter, { depth: -1 })}. MaxListeners is ${emitter?._maxListeners ?? $nodeEventsDefaultMaxListeners}. Use emitter.setMaxListeners() to increase limit`,
+    `Possible EventEmitter memory leak detected. ${handlers.length} ${String(type)} listeners added to ${inspect(emitter, { depth: -1 })}. MaxListeners is ${emitter?._maxListeners ?? defaultMaxListeners}. Use emitter.setMaxListeners() to increase limit`,
   );
   warn.name = "MaxListenersExceededWarning";
   warn.emitter = emitter;
@@ -220,8 +225,7 @@ export function overflowWarning(emitter, type, handlers) {
 
 // A closure over (target, type, listener, fired) rather than a state object
 // plus onceWrapper.bind(state): one allocation instead of two per once().
-$overriddenName = "_onceWrap";
-export function internalOnceWrap(target, type, listener) {
+function _onceWrap(target, type, listener) {
   let fired = false;
   // Named `onceWrapper` so inspect/rawListeners() output tracks node's.
   const wrapped = function onceWrapper() {
@@ -243,22 +247,19 @@ export function internalOnceWrap(target, type, listener) {
   return wrapped;
 }
 
-$overriddenName = "once";
-export function once(this: any, type, fn) {
+function once(this: any, type, fn) {
   if (typeof fn !== "function") require("internal/validators").validateFunction(fn, "listener");
-  this.on(type, $nodeEventsOnceWrap(this, type, fn));
+  this.on(type, _onceWrap(this, type, fn));
   return this;
 }
 
-$overriddenName = "prependOnceListener";
-export function prependOnceListener(this: any, type, fn) {
+function prependOnceListener(this: any, type, fn) {
   if (typeof fn !== "function") require("internal/validators").validateFunction(fn, "listener");
-  this.prependListener(type, $nodeEventsOnceWrap(this, type, fn));
+  this.prependListener(type, _onceWrap(this, type, fn));
   return this;
 }
 
-$overriddenName = "removeListener";
-export function removeListener(this: any, type, listener) {
+function removeListener(this: any, type, listener) {
   if (typeof listener !== "function") require("internal/validators").validateFunction(listener, "listener");
 
   const events = this._events;
@@ -271,7 +272,7 @@ export function removeListener(this: any, type, listener) {
     // Bare single listener.
     if (list !== listener && list.listener !== listener) return this;
     this._eventsCount--;
-    if (this[$nodeEventsKShapeMode]) {
+    if (this[kShapeMode]) {
       // Keep the preallocated slot; just clear it.
       events[type] = undefined;
     } else if (this._eventsCount === 0) {
@@ -309,8 +310,7 @@ export function removeListener(this: any, type, listener) {
   return this;
 }
 
-$overriddenName = "removeAllListeners";
-export function removeAllListeners(this: any, type) {
+function removeAllListeners(this: any, type) {
   const events = this._events;
   if (events === undefined) return this;
 
@@ -323,7 +323,7 @@ export function removeAllListeners(this: any, type) {
       if (--this._eventsCount === 0) this._events = Object.create(null);
       else delete events[type];
     }
-    this[$nodeEventsKShapeMode] = false;
+    this[kShapeMode] = false;
     return this;
   }
 
@@ -336,7 +336,7 @@ export function removeAllListeners(this: any, type) {
     this.removeAllListeners("removeListener");
     this._events = Object.create(null);
     this._eventsCount = 0;
-    this[$nodeEventsKShapeMode] = false;
+    this[kShapeMode] = false;
     return this;
   }
 
@@ -351,8 +351,7 @@ export function removeAllListeners(this: any, type) {
   return this;
 }
 
-$overriddenName = "listeners";
-export function listeners(this: any, type) {
+function listeners(this: any, type) {
   var { _events: events } = this;
   if (!events) return [];
   var handlers = events[type];
@@ -361,8 +360,7 @@ export function listeners(this: any, type) {
   return handlers.map(x => x.listener ?? x);
 }
 
-$overriddenName = "rawListeners";
-export function rawListeners(this: any, type) {
+function rawListeners(this: any, type) {
   var { _events } = this;
   if (!_events) return [];
   var handlers = _events[type];
@@ -371,8 +369,7 @@ export function rawListeners(this: any, type) {
   return handlers.slice();
 }
 
-$overriddenName = "listenerCount";
-export function listenerCount(this: any, type, method) {
+function listenerCount(this: any, type, method) {
   var handlers = this._events?.[type];
   if (handlers === undefined) return 0;
   if (typeof handlers === "function") {
@@ -392,7 +389,27 @@ export function listenerCount(this: any, type, method) {
   return handlers.length;
 }
 
-$overriddenName = "eventNames";
-export function eventNames(this: any) {
-  return this._eventsCount > 0 ? Reflect.ownKeys(this._events) : [];
+function eventNames(this: any) {
+  return this._eventsCount > 0 ? $ownKeys(this._events) : [];
 }
+
+export default {
+  setMaxListeners,
+  getMaxListeners,
+  emit,
+  addListener,
+  prependListener,
+  once,
+  prependOnceListener,
+  removeListener,
+  removeAllListeners,
+  listeners,
+  rawListeners,
+  listenerCount,
+  eventNames,
+
+  // For node:events.
+  emitError,
+  getDefaultMaxListeners,
+  setDefaultMaxListeners,
+};

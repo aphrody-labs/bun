@@ -346,14 +346,9 @@ static void dispatchExitInternal(JSC::JSGlobalObject* globalObject, Process* pro
         return;
 
     putDirectNamed(vm, process, "_exiting"_s, jsBoolean(true));
-    auto event = Identifier::fromString(vm, "exit"_s);
-    if (!process->hasListeners(event)) {
-        return;
-    }
-
     MarkedArgumentBuffer arguments;
     arguments.append(jsNumber(exitCode));
-    process->emit(event, arguments);
+    process->emit(Identifier::fromString(vm, "exit"_s), arguments);
 }
 
 JSC_DEFINE_CUSTOM_SETTER(Process_defaultSetter, (JSC::JSGlobalObject * globalObject, JSC::EncodedJSValue thisValue, JSC::EncodedJSValue value, JSC::PropertyName propertyName))
@@ -1786,11 +1781,21 @@ bool Process::emit(const Identifier& eventName, const MarkedArgumentBuffer& args
     auto* globalObject = defaultGlobalObject(this->globalObject());
     auto& vm = JSC::getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (!hasListeners(eventName))
-        return false;
+    auto emitName = Identifier::fromString(vm, "emit"_s);
 
-    JSValue emit = nodeEventEmitterEmit(globalObject);
-    RETURN_IF_EXCEPTION(scope, true);
+    JSValue emit = getDirect(vm, emitName);
+    if (!emit || !emit.isCallable()) {
+        if (!hasListeners(eventName))
+            return false;
+        // What `process` inherits: the `emit` of EventEmitter.prototype, or what a program put in its place.
+        emit = get(globalObject, emitName);
+        RETURN_IF_EXCEPTION(scope, true);
+        if (!emit.isCallable()) {
+            emit = nodeEventEmitterEmit(globalObject);
+            RETURN_IF_EXCEPTION(scope, true);
+        }
+    }
+
     MarkedArgumentBuffer emitArguments;
     emitArguments.append(JSC::identifierToSafePublicJSValue(vm, eventName));
     for (size_t i = 0; i < args.size(); ++i)
@@ -3876,6 +3881,9 @@ void Process::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     visitor.append(thisObject->m_argv);
     visitor.append(thisObject->m_execArgv);
     visitor.append(thisObject->m_onWarning);
+    visitor.append(thisObject->m_eventEmitterPrototype);
+    visitor.append(thisObject->m_shapeModeSymbol);
+    visitor.append(thisObject->m_captureSymbol);
 
     thisObject->m_cpuUsageStructure.visit(visitor);
     thisObject->m_resourceUsageStructure.visit(visitor);
@@ -5223,30 +5231,36 @@ JSC_DEFINE_HOST_FUNCTION(Process_constructConstructor, (JSC::JSGlobalObject * gl
 Process* Process::create(Zig::GlobalObject* globalObject)
 {
     auto& vm = JSC::getVM(globalObject);
+    auto* shapeModeSymbol = Symbol::createWithDescription(vm, "shapeMode"_s);
+    auto* captureSymbol = Symbol::createWithDescription(vm, "kCapture"_s);
+    auto* eventEmitterPrototype = createNodeEventEmitterPrototype(vm, globalObject, captureSymbol);
+
     // node: lib/internal/bootstrap/node.js setupProcessObject.
-    auto* prototype = constructEmptyObject(globalObject, nodeEventEmitterPrototype(globalObject));
+    auto* prototype = constructEmptyObject(globalObject, eventEmitterPrototype);
     auto* constructor = JSFunction::create(vm, globalObject, 0, "process"_s, Process_callConstructor, ImplementationVisibility::Public, NoIntrinsic, Process_constructConstructor);
     constructor->putDirect(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete);
     prototype->putDirect(vm, vm.propertyNames->constructor, constructor, PropertyAttribute::DontEnum | 0);
 
     auto* structure = createStructure(vm, globalObject, prototype);
     Process* process = new (NotNull, JSC::allocateCell<Process>(vm)) Process(vm, structure);
-    process->finishCreation(vm);
+    process->finishCreation(vm, eventEmitterPrototype, shapeModeSymbol, captureSymbol);
     return process;
 }
 
-void Process::finishCreation(JSC::VM& vm)
+void Process::finishCreation(JSC::VM& vm, JSObject* eventEmitterPrototype, Symbol* shapeModeSymbol, Symbol* captureSymbol)
 {
     Base::finishCreation(vm);
+    m_eventEmitterPrototype.set(vm, this, eventEmitterPrototype);
+    m_shapeModeSymbol.set(vm, this, shapeModeSymbol);
+    m_captureSymbol.set(vm, this, captureSymbol);
 
     // The listeners that node's bootstrap adds: on the main thread the two that follow the listeners of signals,
     // and the printer of warnings (lib/internal/process/pre_execution.js setupWarningHandler). Only a stub of the
     // printer is here: the first warning creates the printer behind it.
-    auto* zigGlobalObject = defaultGlobalObject(globalObject());
-    auto* events = constructEmptyObject(vm, zigGlobalObject->nullPrototypeObjectStructure());
+    auto* events = constructEmptyObject(vm, globalObject()->nullPrototypeObjectStructure());
     unsigned eventsCount = 0;
     auto addListener = [&](const Identifier& eventName, ASCIILiteral name, NativeFunction function) {
-        events->putDirect(vm, eventName, JSFunction::create(vm, zigGlobalObject, 1, name, function, ImplementationVisibility::Public));
+        events->putDirect(vm, eventName, JSFunction::create(vm, globalObject(), 1, name, function, ImplementationVisibility::Public));
         eventsCount++;
     };
     if (Bun__isMainThreadVM()) {
@@ -5255,7 +5269,13 @@ void Process::finishCreation(JSC::VM& vm)
     }
     if (!Bun__NODE_NO_WARNINGS() && !Bun__Node__ProcessNoWarnings)
         addListener(builtinNames(vm).warningPublicName(), "onWarning"_s, Process_functionDefaultOnWarning);
-    initializeNodeEventEmitter(zigGlobalObject, this, events, eventsCount);
+
+    // The own properties of a new emitter, in the order that the EventEmitter constructor defines them.
+    putDirect(vm, builtinNames(vm)._eventsPublicName(), events);
+    putDirect(vm, Identifier::fromString(vm, "_eventsCount"_s), jsNumber(eventsCount));
+    putDirect(vm, Identifier::fromUid(shapeModeSymbol->privateName()), jsBoolean(false));
+    putDirect(vm, Identifier::fromString(vm, "_maxListeners"_s), jsUndefined());
+    putDirect(vm, Identifier::fromUid(captureSymbol->privateName()), jsBoolean(false));
 
     m_cpuUsageStructure.initLater([](const JSC::LazyProperty<Process, JSC::Structure>::Initializer& init) {
         init.set(constructCPUUsageStructure(init.vm, init.owner->globalObject()));

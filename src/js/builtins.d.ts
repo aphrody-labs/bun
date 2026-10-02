@@ -277,17 +277,6 @@ declare function $main(): TODO;
 declare function $makeDOMException(): TODO;
 declare function $makeGetterTypeError(className: string, prop: string): Error;
 declare function $method(): TODO;
-// node:events. NodeEventEmitterPrototype.cpp defines these global variables when it creates EventEmitter.prototype.
-declare const $nodeEventsAddListener: typeof import("./builtins/EventEmitterPrototype").internalAddListener;
-declare const $nodeEventsApplyHandlers: typeof import("./builtins/EventEmitterPrototype").applyHandlers;
-declare const $nodeEventsCopyWithInserted: typeof import("./builtins/EventEmitterPrototype").copyWithInserted;
-declare var $nodeEventsDefaultMaxListeners: number;
-declare const $nodeEventsEmitError: typeof import("./builtins/EventEmitterPrototype").emitError;
-declare const $nodeEventsKCapture: unique symbol;
-declare const $nodeEventsKErrorMonitor: unique symbol;
-declare const $nodeEventsKShapeMode: unique symbol;
-declare const $nodeEventsOnceWrap: typeof import("./builtins/EventEmitterPrototype").internalOnceWrap;
-declare const $nodeEventsOverflowWarning: typeof import("./builtins/EventEmitterPrototype").overflowWarning;
 declare function $normalize(): TODO;
 declare function $parse(): TODO;
 declare function $path(): TODO;

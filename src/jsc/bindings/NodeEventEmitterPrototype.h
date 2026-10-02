@@ -9,19 +9,18 @@ class GlobalObject;
 namespace Bun {
 
 // `EventEmitter.prototype` of node:events. `process` inherits from it, so nearly every program creates it, and
-// most never call a method: a method is a builtin of src/js/builtins/EventEmitterPrototype.ts that is created
-// when it is first read. No module is evaluated until something reads `constructor`.
-JSC::JSObject* nodeEventEmitterPrototype(Zig::GlobalObject*);
+// most never call a method: a method comes from src/js/internal/events/prototype.ts when it is first read. That
+// is the only module that a method evaluates. `kCapture` is the key of the default that
+// EventEmitter.captureRejections assigns.
+JSC::JSObject* createNodeEventEmitterPrototype(JSC::VM&, JSC::JSGlobalObject*, JSC::Symbol* kCapture);
 
-// The same for src/js/node/events.ts, which also reads the `$nodeEvents` names of the methods.
-JSC::JSValue nodeEventEmitterPrototypeForModule(Zig::GlobalObject*);
-
-// The `emit` that EventEmitter.prototype has until a program assigns another one. Native code calls this one.
-// The first call runs a builtin to create it: the result is empty when that threw.
+// The `emit` that the prototype starts with. Empty when the module that has it threw.
 JSC::JSValue nodeEventEmitterEmit(Zig::GlobalObject*);
 
-// What the EventEmitter constructor of src/js/node/events.ts does to a new emitter, for an object that native
-// code creates. `events` becomes its `_events`, and holds `eventsCount` events.
-void initializeNodeEventEmitter(Zig::GlobalObject*, JSC::JSObject* emitter, JSC::JSObject* events, unsigned eventsCount);
+// For src/js/node/events.ts and src/js/internal/events/prototype.ts: the prototype, and the two symbols that are
+// keys of every emitter. `process` has all three, and these create it.
+JSC::JSValue nodeEventEmitterPrototype(Zig::GlobalObject*);
+JSC::JSValue nodeEventEmitterShapeModeSymbol(Zig::GlobalObject*);
+JSC::JSValue nodeEventEmitterCaptureSymbol(Zig::GlobalObject*);
 
 }

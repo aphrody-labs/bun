@@ -680,9 +680,6 @@ public:
     V(public, LazyPropertyOfGlobalObject<JSObject>, m_navigatorObject)                                       \
     V(public, LazyPropertyOfGlobalObject<JSObject>, m_performanceObject)                                     \
     V(public, LazyPropertyOfGlobalObject<Bun::Process>, m_processObject)                                     \
-    /* EventEmitter.prototype of node:events, and the `emit` that it starts with. */                         \
-    V(public, WriteBarrier<JSObject>, m_nodeEventEmitterPrototype)                                           \
-    V(public, WriteBarrier<JSObject>, m_nodeEventEmitterEmit)                                                \
     V(public, LazyPropertyOfGlobalObject<CustomGetterSetter>, m_lazyStackCustomGetterSetter)                 \
     V(public, LazyPropertyOfGlobalObject<Structure>, m_ServerRouteListStructure)                             \
     V(public, LazyPropertyOfGlobalObject<Structure>, m_JSBunRequestStructure)                                \
@@ -788,11 +785,6 @@ public:
 #include "ZigGeneratedClasses+lazyStructureHeader.h"
 
     void finishCreation(JSC::VM&);
-
-    // Defines the global variable that builtins read as `$name`, for a value that its owner creates at first use.
-    void addBuiltinGlobal(const JSC::Identifier& privateName, JSC::JSValue, unsigned attributes);
-    // The value of such a variable. Empty when it is not defined.
-    JSC::JSValue builtinGlobal(const JSC::Identifier& privateName);
 
 private:
     void addBuiltinGlobals(JSC::VM&);
