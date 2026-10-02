@@ -638,13 +638,8 @@ impl NodeHTTPResponse {
     }
 
     /// Through the server that dispatched this request. A false result has written nothing.
-    /// Empty `sec_websocket_*` slices fall back to the request's headers.
-    pub(crate) fn upgrade(
-        &self,
-        data_value: JSValue,
-        sec_websocket_protocol: &[u8],
-        sec_websocket_extensions: &[u8],
-    ) -> bool {
+    /// An empty `sec_websocket_protocol` falls back to the request's header.
+    pub(crate) fn upgrade(&self, data_value: JSValue, sec_websocket_protocol: &[u8]) -> bool {
         if !self.can_upgrade() {
             return false;
         }
@@ -678,9 +673,7 @@ impl NodeHTTPResponse {
             &upgrade_context.sec_websocket_protocol
         };
 
-        let sec_websocket_extensions_value: &[u8] = if !sec_websocket_extensions.is_empty() {
-            sec_websocket_extensions
-        } else if !upgrade_context.request.is_null() {
+        let sec_websocket_extensions_value: &[u8] = if !upgrade_context.request.is_null() {
             // S008: `uws::Request` is an `opaque_ffi!` ZST — safe deref.
             let request = bun_opaque::opaque_deref(upgrade_context.request.cast_const());
             request.header(b"sec-websocket-extensions").unwrap_or(b"")

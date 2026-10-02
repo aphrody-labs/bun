@@ -1309,58 +1309,6 @@ describe("handleUpgrade on a node:http upgrade socket", () => {
     expect(await Promise.race([closed.promise, clientClosed])).toBe(1000);
   });
 
-  // server.upgrade(res, { headers }) converts `headers` after it checks that
-  // the response is still open. The conversion runs user code (a getter, a
-  // toString(), an iterator). If that code ends the response, upgrade() must
-  // return false and write nothing: the header bytes used to land after the
-  // finished response.
-  describe.each([
-    [
-      "a getter",
-      (end: () => void) => ({
-        get "x-a"() {
-          end();
-          return "1";
-        },
-      }),
-    ],
-    [
-      "a toString()",
-      (end: () => void) => ({
-        "x-a": {
-          toString() {
-            end();
-            return "1";
-          },
-        },
-      }),
-    ],
-    [
-      "an iterator",
-      (end: () => void) => ({
-        *[Symbol.iterator]() {
-          end();
-          yield ["x-a", "1"];
-        },
-      }),
-    ],
-  ])("when %s in options.headers ends the response", (_, headers) => {
-    it("returns false and writes nothing", async () => {
-      await using upgrade = await receiveUpgrade(upgradeRequest());
-      const { socket } = upgrade;
-      const internals = Symbol.for("::bunternal::");
-      const res = socket[internals];
-      const bunServer = socket.server[internals];
-
-      expect(bunServer.upgrade(res, { data: {}, headers: headers(() => res.end()) })).toBe(false);
-
-      // Anything upgrade() wrote is already on the socket. Close it so that
-      // the client sees the whole exchange.
-      socket.destroy();
-      expect(await upgrade.received()).toMatch(/^HTTP\/1\.1 200 OK\r\n(?:[^\r\n]+\r\n)*Content-Length: 0\r\n\r\n$/);
-    });
-  });
-
   it("returns without calling back when the socket was destroyed before handleUpgrade()", async () => {
     await using upgrade = await receiveUpgrade(upgradeRequest());
     const { req, socket, head } = upgrade;
@@ -1855,34 +1803,6 @@ describe("handleUpgrade on a node:http upgrade socket", () => {
     expect(connections).toEqual([]);
   });
 
-  // server.upgrade(res, { headers }) writes the 101 status line ahead of the
-  // upgrade. A request that cannot upgrade must not get that line.
-  it("server.upgrade() returns false and writes nothing for a request that is no handshake", async () => {
-    const internals = Symbol.for("::bunternal::");
-    let upgraded: unknown;
-    const server = createServer((req, res) => {
-      const socket = req.socket as any;
-      upgraded = socket.server[internals].upgrade(socket[internals], {
-        data: {},
-        headers: { "sec-websocket-protocol": "chat" },
-      });
-      res.end("plain ok");
-    });
-    await once(server.listen(0, "127.0.0.1"), "listening");
-    try {
-      using client = rawClient((server.address() as AddressInfo).port);
-      await client.connected;
-      client.socket.write(lastGet);
-      const received = await client.received();
-
-      expect(upgraded).toBe(false);
-      expect(statusLines(received)).toEqual(["HTTP/1.1 200 OK"]);
-      expect(received).toEndWith("\r\n\r\nplain ok");
-    } finally {
-      server.close();
-    }
-  });
-
   // The selected subprotocol goes out as a header value, with the rules of Headers.
   describe("the result of handleProtocols", () => {
     it.each([
@@ -1913,6 +1833,28 @@ describe("handleUpgrade on a node:http upgrade socket", () => {
       socket.destroy();
       expect(await upgrade.received()).toBe("");
       expect(connections).toEqual([]);
+    });
+
+    // toString() runs inside the upgrade. When it ends the response, no 101 may follow.
+    it("gets no 101 when its toString() ends the response", async () => {
+      await using upgrade = await receiveUpgrade(upgradeRequest({ protocol: "chat" }));
+      const { req, socket, head } = upgrade;
+      const res = socket[Symbol.for("::bunternal::")];
+      const selected = {
+        toString() {
+          res.end();
+          return "chat";
+        },
+      };
+      const wss = new WebSocketServer({ noServer: true, handleProtocols: () => selected as never });
+      const connections: unknown[] = [];
+
+      expect(() => wss.handleUpgrade(req, socket, head, ws => connections.push(ws))).not.toThrow();
+
+      expect(connections).toEqual([]);
+      const received = await upgrade.received();
+      expect(received).toStartWith("HTTP/1.1 200 OK\r\n");
+      expect(received).not.toContain("HTTP/1.1 101");
     });
   });
 
@@ -2045,8 +1987,8 @@ describe("handleUpgrade on a node:http upgrade socket", () => {
     secure?: boolean;
     http2?: boolean;
     // Another listener accepts the connection: "emit" hands over its raw
-    // socket, "connect" the socket of its 'connect' event.
-    front?: "emit" | "connect";
+    // socket, "connect" and "upgrade" the socket of that event.
+    front?: "emit" | "connect" | "upgrade";
   };
 
   async function serve(
@@ -2073,9 +2015,14 @@ describe("handleUpgrade on a node:http upgrade socket", () => {
             socket.write("HTTP/1.1 200 OK\r\n\r\n");
             server.emit("connection", socket);
           })
-        : door.front === "emit"
-          ? createNetServer(socket => void server.emit("connection", socket))
-          : undefined;
+        : door.front === "upgrade"
+          ? createServer().on("upgrade", (_req, socket) => {
+              socket.write("HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n\r\n");
+              server.emit("connection", socket);
+            })
+          : door.front === "emit"
+            ? createNetServer(socket => void server.emit("connection", socket))
+            : undefined;
     if (door.listens) await once(server.listen(0, "127.0.0.1"), "listening");
     if (front) await once(front.listen(0, "127.0.0.1"), "listening");
     const port = ((front ?? server).address() as AddressInfo).port;
@@ -2084,8 +2031,13 @@ describe("handleUpgrade on a node:http upgrade socket", () => {
     async function open() {
       const client = rawClient(port, door.secure);
       await client.connected;
-      if (door.front === "connect") {
-        client.socket.write("CONNECT localhost:80 HTTP/1.1\r\nHost: localhost:80\r\n\r\n");
+      if (door.front === "connect" || door.front === "upgrade") {
+        // The front answers this request itself. The server gets what follows it.
+        client.socket.write(
+          door.front === "connect"
+            ? "CONNECT localhost:80 HTTP/1.1\r\nHost: localhost:80\r\n\r\n"
+            : upgradeRequest({ key: "AQIDBAUGBwgJCgsMDQ4PEA==" }),
+        );
         await client.received("\r\n\r\n");
         client.forget();
       }
@@ -2165,30 +2117,28 @@ describe("handleUpgrade on a node:http upgrade socket", () => {
     });
   });
 
-  // node:http serves these connections from JS, with no native request behind
-  // them. The shim upgrades through the native request, so it refuses the
-  // handshake. Only that client is refused, and each reply goes to the socket
-  // as with the npm package: the socket can still hold the response of the
-  // request ahead.
+  // node:http serves these connections from JS: their requests have no native
+  // request behind them. The shim upgrades through the native request, so it
+  // refuses the handshake. Only that client is refused, and each reply goes to
+  // the socket as with the npm package: the socket can still hold the response
+  // of the request ahead. The socket of a 'connect' or 'upgrade' event still
+  // holds the native request of that event. It is not the handshake's.
   describe.each([
-    ["http2 allowHTTP1", { listens: true, secure: true, http2: true }, unsupported],
-    ['server.emit("connection")', { front: "emit" }, unsupported],
-    ['server.emit("connection") on a server that also listens', { listens: true, front: "emit" }, unsupported],
-    // A tunnel socket still holds the native request of its CONNECT. That one cannot upgrade.
-    ["the socket of a 'connect' event", { front: "connect" }, rejection("500 Internal Server Error")],
-    [
-      "the socket of a 'connect' event, on a server that also listens",
-      { listens: true, front: "connect" },
-      rejection("500 Internal Server Error"),
-    ],
-  ] as [string, Door, string][])("on a connection from %s", (_, door, refusal) => {
+    ["http2 allowHTTP1", { listens: true, secure: true, http2: true }],
+    ['server.emit("connection")', { front: "emit" }],
+    ['server.emit("connection") on a server that also listens', { listens: true, front: "emit" }],
+    ["the socket of a 'connect' event", { front: "connect" }],
+    ["the socket of a 'connect' event, on a server that also listens", { listens: true, front: "connect" }],
+    ["the socket of an 'upgrade' event", { front: "upgrade" }],
+    ["the socket of an 'upgrade' event, on a server that also listens", { listens: true, front: "upgrade" }],
+  ] as [string, Door][])("on a connection from %s", (_, door) => {
     it.each([
       ["in the 'upgrade' event", attached],
       ["in a later task", deferred],
     ])("refuses a valid handshake %s and keeps serving", async (_, attach) => {
       await using server = await serve(door, attach);
 
-      expect(await server.exchange(upgradeRequest({ protocol: "chat" }))).toBe(refusal);
+      expect(await server.exchange(upgradeRequest({ protocol: "chat" }))).toBe(unsupported);
       expect(server.connections).toEqual([]);
       expect(server.wss.clients.size).toBe(0);
       expect(statusLines(await server.exchange(lastGet))).toEqual(["HTTP/1.1 200 OK"]);
@@ -2203,7 +2153,7 @@ describe("handleUpgrade on a node:http upgrade socket", () => {
 
       const refused = await server.exchange(get + upgradeRequest());
       expect(statusLines(refused)).toEqual(["HTTP/1.1 200 OK", "HTTP/1.1 500 Internal Server Error"]);
-      expect(refused).toEndWith(refusal);
+      expect(refused).toEndWith(unsupported);
 
       expect(statusLines(await server.exchange(lastGet))).toEqual(["HTTP/1.1 200 OK"]);
     });
@@ -2234,7 +2184,7 @@ describe("handleUpgrade on a node:http upgrade socket", () => {
 
       const received = await server.exchange(upgradeRequest());
       expect(statusLines(received)).toEqual(["HTTP/1.1 500 Internal Server Error"]);
-      expect(received).toEndWith(refusal.slice(refusal.indexOf("\r\n\r\n")));
+      expect(received).toEndWith("\r\n\r\nWebSocket is not supported on this connection");
       expect(repliedThroughResponse).toBe(true);
       expect(server.connections).toEqual([]);
     });

@@ -95,7 +95,7 @@ pub(crate) fn upgrade_node_http_response(
 
     let mut sec_websocket_protocol = Utf8Bytes::EMPTY;
     if !protocol.is_undefined_or_null() {
-        // Through `Headers`, like `server.upgrade(req, { headers })`: the same trim, the same TypeError.
+        // Through `Headers`, like `server.upgrade(req, { headers })`: the same trim and TypeError.
         let protocol = protocol.to_bun_string(global)?;
         let headers = scopeguard::guard(FetchHeaders::create_empty(), |headers| {
             // S008: `FetchHeaders` is an `opaque_ffi!` ZST — safe deref.
@@ -110,11 +110,9 @@ pub(crate) fn upgrade_node_http_response(
     }
 
     // `toString()` of the protocol ran user code: `upgrade` asks `can_upgrade` again.
-    Ok(JSValue::from(response.upgrade(
-        data,
-        sec_websocket_protocol.slice(),
-        b"",
-    )))
+    Ok(JSValue::from(
+        response.upgrade(data, sec_websocket_protocol.slice()),
+    ))
 }
 
 pub(crate) fn get_max_http_header_size(
