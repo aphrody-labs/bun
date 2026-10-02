@@ -1,0 +1,22 @@
+# Aphrody Optimized Bun Runtime Configuration
+# Target: High-throughput AI agent loops, Obscura CDP streaming, and native FFI bindings
+
+[telemetry]
+enabled = false
+
+[install]
+registry = "https://registry.npmjs.org"
+exact = true
+frozen-lockfile = false
+
+[install.cache]
+dir = "/home/aphro/.gemini/.bun-cache"
+
+[run]
+# Low-latency garbage collection profile for long-running agent threads
+smol = false
+
+[test]
+root = "tests"
+coverage = true
+coverageThreshold = 0.8
