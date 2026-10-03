@@ -1,5 +1,5 @@
 {
-  "name": "bun-mdx-rs-win32-x64-msvc",
+  "name": "@aphrody/bun-mdx-rs-win32-x64-msvc",
   "version": "0.0.0",
   "os": [
     "win32"

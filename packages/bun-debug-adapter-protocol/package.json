@@ -1,5 +1,5 @@
 {
-  "name": "bun-debug-adapter-protocol",
+  "name": "@aphrody/bun-debug-adapter-protocol",
   "version": "0.0.1",
   "type": "module",
   "dependencies": {
