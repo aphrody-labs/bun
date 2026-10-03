@@ -1,5 +1,5 @@
 {
-  "name": "bun-mdx-rs-linux-arm64-gnu",
+  "name": "@aphrody/bun-mdx-rs-linux-arm64-gnu",
   "version": "0.0.0",
   "os": [
     "linux"
