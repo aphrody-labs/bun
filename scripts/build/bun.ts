@@ -177,7 +177,7 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
   const rustArgon2Dep = resolveDep(n, cfg, rustArgon2, depsByName);
   assert(rustArgon2Dep !== null, "rust-argon2 resolveDep returned null — should never be skipped");
   depsByName.set(rustArgon2.name, rustArgon2Dep);
-  const rustObjects = emitRust(n, cfg, {
+  const rust = emitRust(n, cfg, {
     codegenOrderOnly: codegen.rustInputs,
     rustSources: sources.rust,
     vendorStamps: [...lolhtmlDep.outputs, ...rustArgon2Dep.outputs],
@@ -427,13 +427,14 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
   // export the C++ side touches is reached from those roots.
   const shimInputs = emitShims(n, cfg);
   const depLink = lazyDepObjects(cfg, depObjects);
-  const linkObjects = [...cxxObjects, ...cObjects, ...depLink.eager, ...rustObjects, ...windowsRes];
+  const linkObjects = [...cxxObjects, ...cObjects, ...depLink.eager, ...rust.rlibs, ...windowsRes];
   const ldflags = [...flags.ldflags, ...systemLibs(cfg)];
+  if (rust.nativeLink !== undefined) ldflags.push(quote(`@${rust.nativeLink}`, cfg.host.os === "windows"));
   const exe = link(n, cfg, exeName, linkObjects, {
     libs: depLibs,
     lazyObjects: depLink.lazy,
     flags: ldflags,
-    implicitInputs: [...linkImplicitInputs(cfg), ...shimInputs],
+    implicitInputs: [...linkImplicitInputs(cfg), ...shimInputs, ...(rust.nativeLink ? [rust.nativeLink] : [])],
     // Declare the maps the release link writes as side-products (`perf`
     // symbolication on linux; the order file tracer's symbol table on windows).
     linkerMapOutputs: linkerMapOutputs(cfg),

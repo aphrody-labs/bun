@@ -53,8 +53,9 @@ const ruleVars = {
   pch_msvc: ["cxxflags", "pch_header", "pch_stub_obj"],
   // configure.ts
   regen: [],
-  // rust/emit.ts
+  // rust/emit.ts, rust/native-link.ts
   rust_build_script: ["manifest", "crate"],
+  rust_native_link: ["manifest"],
   rust_plan: ["planinput", "plan"],
   rust_rustc: ["manifest", "crate", "what"],
   // shims.ts
