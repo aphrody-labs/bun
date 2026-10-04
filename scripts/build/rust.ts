@@ -41,6 +41,7 @@ import { computeCpuTargetFlags, rustLtoInLink } from "./flags.ts";
 import type { Ninja } from "./ninja.ts";
 import { envify } from "./rust/cargo-env.ts";
 import { emitRustPlan, emitRustUnits, registerRustUnitRules } from "./rust/emit.ts";
+import { emitRustNativeLink } from "./rust/native-link.ts";
 import { type PlanInput, planEnv, planPath, readPlan } from "./rust/plan.ts";
 import { buildRustGraph, linkedRlibs } from "./rust/units.ts";
 
@@ -675,9 +676,10 @@ function shimCargoInvocation(
 /**
  * Emit the Rust step: for bun_runtime — and on Windows targets the .bin/ shim — a plan edge and, once the plans
  * exist, one edge per unit. Returns what the link takes beside the C/C++ objects: the rlib of `bun_runtime` and of
- * every library it depends on, std's included. No crate is a final Rust artifact; the link is bun's own.
+ * every library it depends on, std's included, and Linux build-script native link inputs. No crate is a final Rust
+ * artifact; the link is bun's own.
  */
-export function emitRust(n: Ninja, cfg: Config, inputs: RustBuildInputs): string[] {
+export function emitRust(n: Ninja, cfg: Config, inputs: RustBuildInputs): { rlibs: string[]; nativeLink?: string } {
   assert(cfg.cargo !== undefined, "building bun's Rust crates requires cargo but no rust toolchain was found", {
     hint: "Install rust: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh",
   });
@@ -743,7 +745,7 @@ export function emitRust(n: Ninja, cfg: Config, inputs: RustBuildInputs): string
   if (runtime.plan === undefined || (shim !== undefined && shim.plan === undefined)) {
     n.phony("bun-rust", planFiles);
     n.blank();
-    return [];
+    return { rlibs: [] };
   }
   const toolchainBin = (tool: string) => join(rustSysroot, "bin", `${tool}${cfg.host.exeSuffix}`);
   const context = {
@@ -796,9 +798,10 @@ export function emitRust(n: Ninja, cfg: Config, inputs: RustBuildInputs): string
     },
   );
   const rlibs = linkedRlibs(graph).map(unit => unit.output);
+  const nativeLink = emitRustNativeLink(n, cfg, graph);
   n.phony("bun-rust", rlibs);
   n.blank();
-  return rlibs;
+  return { rlibs, ...(nativeLink !== undefined ? { nativeLink } : {}) };
 }
 
 /**
