@@ -129,6 +129,16 @@ pub enum HardcodedModule {
     NodeFetch,
     #[strum(serialize = "@vercel/fetch")]
     VercelFetch,
+    #[strum(serialize = "picocolors")]
+    Picocolors,
+    #[strum(serialize = "tiny-invariant")]
+    TinyInvariant,
+    #[strum(serialize = "dotenv")]
+    Dotenv,
+    #[strum(serialize = "dotenv/config")]
+    DotenvConfig,
+    #[strum(serialize = "uuid")]
+    Uuid,
     #[strum(serialize = "utf-8-validate")]
     Utf8Validate,
     #[strum(serialize = "node:v8")]
@@ -300,6 +310,11 @@ bun_core::comptime_string_map! {
         b"undici" => HardcodedModule::Undici,
         b"ws" => HardcodedModule::Ws,
         b"@vercel/fetch" => HardcodedModule::VercelFetch,
+        b"picocolors" => HardcodedModule::Picocolors,
+        b"tiny-invariant" => HardcodedModule::TinyInvariant,
+        b"dotenv" => HardcodedModule::Dotenv,
+        b"dotenv/config" => HardcodedModule::DotenvConfig,
+        b"uuid" => HardcodedModule::Uuid,
         b"utf-8-validate" => HardcodedModule::Utf8Validate,
         b"abort-controller" => HardcodedModule::AbortController,
     };
@@ -750,6 +765,13 @@ const BUN_EXTRA_ALIAS_KVS: &[AliasKv] = &[
     entry!("undici"),
     entry!("utf-8-validate"),
     entry!("ws"),
+    //
+    // aphrody-labs/bun: npm packages absorbed by built-in modules (config/bun-absorb.json)
+    entry!("picocolors"),
+    entry!("tiny-invariant"),
+    entry!("dotenv"),
+    entry!("dotenv/config"),
+    entry!("uuid"),
     (
         b"ws/lib/websocket",
         Alias {
