@@ -829,6 +829,15 @@ pub(crate) mod command {
         }
     }
 
+    /// argv0 names the engine alias: the final path component is `bun` (or `bun.exe`), not `bunx`.
+    fn is_plain_bun(argv0: &[u8]) -> bool {
+        let name = argv0
+            .rsplit(|byte| *byte == b'/' || *byte == b'\\')
+            .next()
+            .unwrap_or(argv0);
+        name == b"bun" || name == b"bun.exe"
+    }
+
     fn is_node(argv0: &[u8]) -> bool {
         #[cfg(windows)]
         {
@@ -1189,8 +1198,11 @@ pub(crate) mod command {
             }
         }
 
-        // bun build --compile entry point
-        if !bun_core::env_var::feature_flag::BUN_BE_BUN::get().unwrap_or(false) {
+        // bun build --compile entry point. A compiled executable linked as `bun` is the engine itself (one `yolo`
+        // file with the aliases `bun` and `vu`, selected by argv0); `BUN_BE_BUN=1` stays the explicit override.
+        if !bun_core::env_var::feature_flag::BUN_BE_BUN::get().unwrap_or(false)
+            && !is_plain_bun(bun::argv().get(0).map(bun_core::ZStr::as_bytes).unwrap_or(b""))
+        {
             if let Some(graph) = bun_standalone_graph::Graph::from_executable()? {
                 // Never taken for a plain `bun` binary; ~2 KB of argv-splice
                 // and ctx-setup code lives behind this cold call.

@@ -5908,6 +5908,16 @@ unsafe impl Sync for DynLib {}
 impl DynLib {
     /// `dlopen(path, RTLD_LAZY)` / `LoadLibraryW(path)`.
     pub fn open(path: &[u8]) -> core::result::Result<Self, bun_errno::SystemErrno> {
+        Self::open_with_flags(path, RTLD::LAZY)
+    }
+
+    /// `dlopen(path, RTLD_NOW | RTLD_GLOBAL)`: the library's symbols join the global scope, so a later
+    /// library (a PyO3 extension against one shared libpython) resolves against it.
+    pub fn open_global(path: &[u8]) -> core::result::Result<Self, bun_errno::SystemErrno> {
+        Self::open_with_flags(path, RTLD::NOW | RTLD::GLOBAL)
+    }
+
+    fn open_with_flags(path: &[u8], flags: i32) -> core::result::Result<Self, bun_errno::SystemErrno> {
         let mut buf = bun_paths::path_buffer_pool::get();
         // `std.DynLib.open` returns `error.NameTooLong`; never truncate (could
         // dlopen a different library whose path is a prefix of the requested one).
@@ -5919,7 +5929,7 @@ impl DynLib {
         buf.0[len] = 0;
         // SAFETY: NUL-terminated above.
         let z = ZStr::from_buf(&buf.0[..], len);
-        match dlopen(z, RTLD::LAZY) {
+        match dlopen(z, flags) {
             Some(h) => Ok(Self { handle: h }),
             None => Err(bun_errno::SystemErrno::ENOENT),
         }
@@ -5955,6 +5965,8 @@ impl DynLib {
 pub mod RTLD {
     pub const LAZY: i32 = libc::RTLD_LAZY;
     pub const LOCAL: i32 = libc::RTLD_LOCAL;
+    pub const NOW: i32 = libc::RTLD_NOW;
+    pub const GLOBAL: i32 = libc::RTLD_GLOBAL;
 }
 #[cfg(windows)]
 pub mod RTLD {
@@ -5962,6 +5974,8 @@ pub mod RTLD {
     // sites compile. Values match POSIX so any bitmask logic stays inert.
     pub const LAZY: i32 = 0x1;
     pub const LOCAL: i32 = 0;
+    pub const NOW: i32 = 0x2;
+    pub const GLOBAL: i32 = 0x100;
 }
 
 /// `dlopen(filename, flags)`. Windows → `LoadLibraryExW` (UTF-8 → UTF-16).

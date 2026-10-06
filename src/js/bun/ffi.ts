@@ -193,10 +193,11 @@ function normalizePath(path: string | URL | Bun.BunFile | undefined) {
   return path;
 }
 
-function dlopen(path, options) {
+function dlopen(path, options, loadOptions?) {
   path = normalizePath(path);
 
-  const result = nativeDLOpen(path, options);
+  // `{ global: true }` opens with RTLD_NOW | RTLD_GLOBAL (one shared libpython for Bun and PyO3 extensions).
+  const result = nativeDLOpen(path, options, !!(loadOptions && loadOptions.global));
   if (Error.isError(result)) throw result;
 
   // Bind it because it's a breaking change to not do so

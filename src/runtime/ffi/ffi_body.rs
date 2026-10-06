@@ -1404,6 +1404,7 @@ impl FFI {
         global: &JSGlobalObject,
         name_str: &bun_core::String,
         object_value: JSValue,
+        global_scope: bool,
     ) -> JsResult<JSValue> {
         jsc::mark_binding();
         let vm = jsc::VirtualMachineRef::get();
@@ -1468,12 +1469,19 @@ impl FFI {
 
         let dylib: bun_sys::DynLib = 'brk: {
             // First try using the name directly
-            match bun_sys::DynLib::open(name) {
+            let open = |path: &[u8]| {
+                if global_scope {
+                    bun_sys::DynLib::open_global(path)
+                } else {
+                    bun_sys::DynLib::open(path)
+                }
+            };
+            match open(name) {
                 Ok(d) => break 'brk d,
                 Err(_) => {
                     let backup_name = Fs::FileSystem::instance().abs(&[name]);
                     // if that fails, try resolving the filepath relative to the current working directory
-                    match bun_sys::DynLib::open(backup_name) {
+                    match open(backup_name) {
                         Ok(d) => break 'brk d,
                         Err(_) => {
                             // Then, if that fails, report an error with the library name and system error
