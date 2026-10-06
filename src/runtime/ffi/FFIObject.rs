@@ -792,7 +792,9 @@ mod fields {
         let mut iter = callframe.arguments().iter();
         let name = eat_string(global, &mut iter)?;
         let object = eat_required(global, &mut iter)?;
-        FfiImpl::open(global, &*name.view(global)?, object)
+        // Third argument: `true` opens the library with RTLD_NOW | RTLD_GLOBAL (see `DynLib::open_global`).
+        let global_scope = next_eat(&mut iter).is_some_and(|value| value.to_boolean());
+        FfiImpl::open(global, &*name.view(global)?, object, global_scope)
     }
 
     // callback → FFI::callback(global, JSValue, JSValue) -> JsResult<JSValue>

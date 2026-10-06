@@ -586,7 +586,14 @@ declare module "bun:ffi" {
   function dlopen<Fns extends Record<string, FFIFunction>>(
     name: string | import("bun").BunFile | URL,
     symbols: Fns,
+    options?: DlopenOptions,
   ): Library<Fns>;
+
+  /** Options of {@link dlopen} (Aphrody fork). */
+  interface DlopenOptions {
+    /** Open with `RTLD_NOW | RTLD_GLOBAL` so later libraries resolve symbols against this one. Default `false`. */
+    global?: boolean;
+  }
 
   /**
    * **Experimental:** Compile ISO C11 source code using TinyCC, and make {@link symbols} available as functions to JavaScript.
