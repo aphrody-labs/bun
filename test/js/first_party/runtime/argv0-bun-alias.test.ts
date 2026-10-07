@@ -28,6 +28,11 @@ describe.skipIf(process.platform === "win32")("compiled executable argv0 aliases
     // The engine still starts the program when asked to: `bun <file>` runs the file, not the payload.
     const asBunFile = Bun.spawnSync([join(String(dir), "bun"), join(String(dir), "main.ts")]);
     expect(asBunFile.stdout.toString().trim()).toBe("embedded program bun");
+
+    // `bunx` is the engine too, so a `bunx -> yolo` link runs packages instead of the payload.
+    symlinkSync("yolo", join(String(dir), "bunx"));
+    const asBunx = Bun.spawnSync([join(String(dir), "bunx"), "--version"]);
+    expect(asBunx.stdout.toString().trim()).toBe(Bun.version);
   });
 
   test("BUN_BE_BUN=1 keeps working under the original name", () => {
