@@ -12,6 +12,7 @@ export function main() {
 
 // This function is bound when constructing instances of CommonJSModule
 $visibility = "Private";
+// oxlint-disable-next-line no-unused-vars -- keeps require.length === 1
 export function require(this: JSCommonJSModule, _: string) {
   // Do not use $tailCallForwardArguments here, it causes https://github.com/oven-sh/bun/issues/9225
   return $overridableRequire.$apply(this, arguments);

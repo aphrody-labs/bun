@@ -436,6 +436,7 @@ function buildConnector(_options = {}) {
    * @param {string} [options.servername]
    * @param {AbortSignal} [options.signal]
    */
+  // oxlint-disable-next-line no-unused-vars -- keeps connect.length === 1
   return function connect(_) {
     notImplemented();
   };
