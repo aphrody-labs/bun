@@ -33,6 +33,11 @@ describe.skipIf(process.platform === "win32")("compiled executable argv0 aliases
     symlinkSync("yolo", join(String(dir), "bunx"));
     const asBunx = Bun.spawnSync([join(String(dir), "bunx"), "--version"]);
     expect(asBunx.stdout.toString().trim()).toBe(Bun.version);
+
+    // A `node -> yolo` link (Bun's Node.js alias) runs scripts with the engine.
+    symlinkSync("yolo", join(String(dir), "node"));
+    const asNode = Bun.spawnSync([join(String(dir), "node"), "-e", 'console.log("engine")']);
+    expect(asNode.stdout.toString().trim()).toBe("engine");
   });
 
   test("BUN_BE_BUN=1 keeps working under the original name", () => {

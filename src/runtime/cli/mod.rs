@@ -833,13 +833,13 @@ pub(crate) mod command {
         }
     }
 
-    /// argv0 names an engine alias: the final path component is `bun` or `bunx` (with or without `.exe`).
+    /// argv0 names an engine alias: the final path component is `bun`, `bunx` or `node` (with or without `.exe`).
     fn is_plain_bun(argv0: &[u8]) -> bool {
         let name = argv0
             .rsplit(|byte| *byte == b'/' || *byte == b'\\')
             .next()
             .unwrap_or(argv0);
-        matches!(&name[..], b"bun" | b"bun.exe" | b"bunx" | b"bunx.exe")
+        matches!(&name[..], b"bun" | b"bun.exe" | b"bunx" | b"bunx.exe" | b"node" | b"node.exe")
     }
 
     fn is_node(argv0: &[u8]) -> bool {
