@@ -83,13 +83,15 @@ function resolveHome(envPath: string | URL): string | URL {
 
 function configDotenv(options?: DotenvOptions) {
   let processEnv: Env = process.env;
-  if (options && options.processEnv != null) processEnv = options.processEnv;
+  const optionsProcessEnv = options?.processEnv;
+  if (optionsProcessEnv != null) processEnv = optionsProcessEnv;
   const debug = parseBoolean(processEnv.DOTENV_CONFIG_DEBUG || (options && options.debug));
   const encoding = (options && options.encoding) || "utf8";
 
   let optionPaths: Array<string | URL> = [path.resolve(process.cwd(), ".env")];
-  if (options && options.path) {
-    optionPaths = Array.isArray(options.path) ? options.path.map(resolveHome) : [resolveHome(options.path)];
+  const optionsPath = options?.path;
+  if (optionsPath) {
+    optionPaths = Array.isArray(optionsPath) ? optionsPath.map(resolveHome) : [resolveHome(optionsPath)];
   }
 
   let lastError: Error | undefined;
