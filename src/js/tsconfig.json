@@ -10,10 +10,13 @@
     "baseUrl": ".",
     // bun-types comes in through `include` below, by path. A `types` entry is looked up from each
     // `node_modules/@types` going up from here; the isolated install has none at the root, so from a git worktree
-    // nested in another checkout it silently resolves to that checkout's copy.
+    // nested in another checkout it silently resolves to that checkout's copy. `typeRoots` and the `bun` path pin the
+    // same way the `node` reference in undici-types and the `import("bun")` in build/types/generated.d.ts.
     "types": [],
+    "typeRoots": ["../../packages/bun-types/node_modules/@types"],
     "paths": {
-      "internal/*": ["./internal/*"] //deprecated
+      "internal/*": ["./internal/*"], //deprecated
+      "bun": ["../../packages/bun-types/bun.d.ts"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "./builtins.d.ts", "./private.d.ts", "../../packages/bun-types/index.d.ts"]
