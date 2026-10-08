@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { isLinux, tempDir } from "harness";
 import { mkdirSync, readFileSync, statSync, utimesSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { link } from "../../scripts/build/compile.ts";
 import type { Config } from "../../scripts/build/config.ts";
 import { Ninja } from "../../scripts/build/ninja.ts";
@@ -33,7 +33,7 @@ test("native directories and dylibs reach the Linux final link in dependency ord
 
 test("relative native search paths belong to their package, not the final link directory", () => {
   expect(nativeLinkArguments([output("cargo:rustc-link-search=native=../lib\n", "/package/sys")])).toEqual([
-    "-L/package/lib",
+    `-L${resolve("/package/lib")}`,
   ]);
 });
 
