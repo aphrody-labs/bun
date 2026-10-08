@@ -1,0 +1,65 @@
+name: Smoke-test with the fork's Bun
+description: >-
+  Runs a script with the aphrody-labs/bun release built for this runner's own
+  OS, architecture and libc (scripts/aphrody/install.{sh,ps1}), so a native
+  addon is loaded by a Bun of the same platform: musl targets run in an Alpine
+  container on the runner's architecture, Windows on Arm uses bun-windows-aarch64.
+inputs:
+  script:
+    description: Script to run, relative to the workspace
+    required: true
+  libc:
+    description: "musl to run in Alpine; anything else runs on the runner"
+    required: false
+    default: ""
+  version:
+    description: "Fork release: latest, X.Y.Z or aphrody-vX.Y.Z-aphrody.N"
+    required: false
+    default: latest
+runs:
+  using: composite
+  steps:
+    - name: Run on Alpine
+      if: inputs.libc == 'musl'
+      shell: bash
+      env:
+        SCRIPT: ${{ inputs.script }}
+        VERSION: ${{ inputs.version }}
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        docker run --rm -e SCRIPT -e VERSION -e GITHUB_TOKEN -e FILE -e KEY -v "$PWD:/w" -w /w alpine:3.24 sh -c '
+          set -e
+          apk add -q --no-cache bash curl unzip libstdc++ libgcc
+          bash scripts/aphrody/install.sh "$VERSION"
+          ~/.bun/bin/bun --version
+          ~/.bun/bin/bun "$SCRIPT"'
+
+    - name: Install (Windows)
+      if: inputs.libc != 'musl' && runner.os == 'Windows'
+      shell: pwsh
+      env:
+        VERSION: ${{ inputs.version }}
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        ./scripts/aphrody/install.ps1 -Version $env:VERSION -NoPathUpdate
+        Add-Content $env:GITHUB_PATH (Join-Path $HOME ".bun\bin")
+
+    - name: Install
+      if: inputs.libc != 'musl' && runner.os != 'Windows'
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        bash scripts/aphrody/install.sh "$VERSION"
+        echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
+
+    - name: Run
+      if: inputs.libc != 'musl'
+      shell: bash
+      env:
+        SCRIPT: ${{ inputs.script }}
+      run: |
+        bun --version
+        bun -e 'console.log(process.platform, process.arch)'
+        bun "$SCRIPT"

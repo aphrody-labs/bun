@@ -124,25 +124,21 @@ jobs:
           cp "$PKG_DIR/target/$TRIPLE/release/$CDYLIB" "dist/$FILE"
           ls -la dist
 
-      - uses: ./.github/actions/setup-bun
-        if: matrix.libc != 'musl'
-        with:
-          bun-version: ${{ env.BUN_HOST_VERSION }}
-
-      - name: Smoke test
-        if: matrix.libc != 'musl'
+      - name: Write the smoke script
         shell: bash
         run: |
           cat > smoke.ts <<'EOF'
-          // A host Bun of another architecture (x64 Bun on Windows on Arm) cannot load the addon.
-          if (!process.env.KEY.startsWith(`${process.platform}-${process.arch}`)) {
-            console.log(`skip: Bun is ${process.platform}-${process.arch}`);
-            process.exit(0);
-          }
+          // The addon must be loaded by a Bun of its own platform, never skipped.
+          if (!process.env.KEY.startsWith(`${process.platform}-${process.arch}`))
+            throw new Error(`${process.env.KEY} smoke-tested by a ${process.platform}-${process.arch} Bun`);
           const addon = require(`${process.cwd()}/dist/${process.env.FILE}`);
           console.log("version", addon.version());
           EOF
-          bun smoke.ts
+
+      - uses: ./.github/actions/smoke-fork-bun
+        with:
+          script: smoke.ts
+          libc: ${{ matrix.libc }}
 
       - uses: actions/upload-artifact@v4
         with:
