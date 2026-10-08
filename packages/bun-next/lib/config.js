@@ -41,10 +41,29 @@ function findPackageDir(name, fromDir) {
 
 const TS_SOURCE = /\.[cm]?tsx?$/;
 
+/** Conditions Next.js bundlers resolve with; `types` and custom ones (`@zod/source`, `bun`…) are not followed. */
+const BUNDLER_CONDITIONS = new Set([
+  "import",
+  "require",
+  "default",
+  "module",
+  "node",
+  "browser",
+  "edge-light",
+  "worker",
+  "react-server",
+  "development",
+  "production",
+]);
+
 function exportTargets(value, out = []) {
   if (typeof value === "string") out.push(value);
   else if (Array.isArray(value)) for (const v of value) exportTargets(v, out);
-  else if (value && typeof value === "object") for (const v of Object.values(value)) exportTargets(v, out);
+  else if (value && typeof value === "object") {
+    for (const [key, v] of Object.entries(value)) {
+      if (key.startsWith(".") || BUNDLER_CONDITIONS.has(key)) exportTargets(v, out);
+    }
+  }
   return out;
 }
 

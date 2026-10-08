@@ -17,7 +17,7 @@ function workspace() {
   return tempDir("next-bun-ws", {
     "package.json": JSON.stringify({ name: "root", workspaces: ["apps/*", "packages/*"] }),
     "apps/site/package.json": pkg("site", {
-      dependencies: { "@ws/ui": "workspace:*", "plain-js": "1.0.0", "server-ts": "1.0.0" },
+      dependencies: { "@ws/ui": "workspace:*", "plain-js": "1.0.0", "custom-cond": "1.0.0", "server-ts": "1.0.0" },
       devDependencies: { "dev-ts": "1.0.0" },
     }),
     "apps/site/src/i18n/request.ts": "export default {};",
@@ -29,6 +29,9 @@ function workspace() {
       exports: { ".": { bun: "./src/index.ts", import: "./src/index.ts", default: "./dist/index.js" } },
     }),
     "node_modules/plain-js/package.json": pkg("plain-js", { main: "index.js", types: "index.d.ts" }),
+    "node_modules/custom-cond/package.json": pkg("custom-cond", {
+      exports: { ".": { "@zod/source": "./src/index.ts", types: "./src/index.ts", import: "./dist/index.js" } },
+    }),
     "node_modules/server-ts/package.json": pkg("server-ts", { exports: "./index.ts" }),
     "node_modules/dev-ts/package.json": pkg("dev-ts", { module: "./src/index.tsx" }),
     "node_modules/dup/package.json": pkg("dup", { main: "index.js" }),
