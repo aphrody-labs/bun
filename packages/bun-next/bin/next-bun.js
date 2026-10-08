@@ -6,6 +6,7 @@ const USAGE = `usage: next-bun <command> [arguments]
 
   dev | build | start | ...   run the app's \`next <command>\` on Bun, Turbopack workers included
   patch [projectDir]          patch the installed next for withBun() (Bun.build as the bundler)
+  standalone <dir>            flatten an output: "standalone" tree from Bun's isolated linker (no symlinks)
   check [projectDir]          exit 0 when the installed next is patched
   codemod <ids|group|all> <dir> [--apply] [--json] | codemod --list
                               Next 14/15 -> 16 and Tailwind 3 -> 4 codemods (report unless --apply)
@@ -32,6 +33,15 @@ async function main(argv) {
     const { version, supported, patched } = checkPatch(dir);
     console.log(`next@${version}: ${patched ? "patched" : "not patched"}${supported ? "" : " (unsupported version)"}`);
     return patched ? 0 : 1;
+  }
+  if (command === "standalone") {
+    if (!rest[0]) {
+      console.error("usage: next-bun standalone <dir>");
+      return 2;
+    }
+    const { packages } = require("../lib/standalone.js").flattenStandalone(rest[0]);
+    console.log(`${rest[0]}: ${packages.length} package(s) hoisted`);
+    return 0;
   }
   if (command === "codemod" || command === "pages-hints") {
     const { runCodemodCli } = await import("../codemods/cli.ts");

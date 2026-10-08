@@ -8,12 +8,20 @@
     "next-bun": "bin/next-bun.js"
   },
   "exports": {
-    ".": "./index.js",
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
     "./run": {
       "types": "./lib/run.d.ts",
       "default": "./lib/run.js"
     },
     "./patch": "./lib/patch.js",
+    "./config": "./lib/config.js",
+    "./standalone": {
+      "types": "./lib/standalone.d.ts",
+      "default": "./lib/standalone.js"
+    },
     "./codemods": "./codemods/index.ts",
     "./codemods/cli": "./codemods/cli.ts",
     "./codemods/lex": "./codemods/lex.ts",
@@ -22,6 +30,7 @@
   },
   "files": [
     "index.js",
+    "index.d.ts",
     "bin",
     "lib",
     "codemods",
@@ -38,5 +47,6 @@
     "next": {
       "optional": true
     }
-  }
+  },
+  "types": "index.d.ts"
 }
