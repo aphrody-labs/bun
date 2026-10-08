@@ -10117,12 +10117,41 @@ declare module "bun" {
   }
 
   /**
-   * Input data for creating an archive. Can be:
-   * - An object mapping paths to file contents (string, Blob, TypedArray, or ArrayBuffer)
-   * - A Blob containing existing archive data
-   * - A TypedArray or ArrayBuffer containing existing archive data
+   * One entry of an archive built from an object, with its own permissions and modification time.
+   *
+   * @example
+   * ```ts
+   * new Bun.Archive({ "bin/run": { data: script, mode: 0o755, mtime: 0 } });
+   * ```
    */
-  type ArchiveInput = Record<string, BlobPart> | Blob | ArrayBufferView | ArrayBufferLike;
+  interface ArchiveEntry {
+    /** The file contents. */
+    data: BlobPart;
+    /**
+     * Permission bits (`0` to `0o7777`).
+     *
+     * @default 0o644
+     */
+    mode?: number;
+    /**
+     * Modification time, in milliseconds since the epoch or as a `Date`.
+     * Defaults to the archive's {@link ArchiveOptions.mtime}, or the current time.
+     */
+    mtime?: number | Date;
+  }
+
+  /**
+   * Input data for creating an archive. Can be:
+   * - An object mapping paths to file contents (string, Blob, TypedArray, or ArrayBuffer) or to an {@link ArchiveEntry}
+   * - A Blob containing existing archive data (tar, tar.gz or zip)
+   * - A TypedArray or ArrayBuffer containing existing archive data (tar, tar.gz or zip)
+   */
+  type ArchiveInput = Record<string, BlobPart | ArchiveEntry> | Blob | ArrayBufferView | ArrayBufferLike;
+
+  /**
+   * Container format of an archive built from an object.
+   */
+  type ArchiveFormat = "tar" | "zip";
 
   /**
    * Compression format for archive output.
@@ -10163,6 +10192,20 @@ declare module "bun" {
      * @default 6
      */
     level?: number;
+    /**
+     * Container format when building from an object. Zip entries are deflated individually,
+     * so `compress` cannot be combined with `"zip"`.
+     *
+     * @default "tar"
+     */
+    format?: ArchiveFormat;
+    /**
+     * Modification time of entries built from an object, in milliseconds since the epoch or
+     * as a `Date`. Set it (for example to `0`) for byte-reproducible archives.
+     *
+     * @default Date.now()
+     */
+    mtime?: number | Date;
   }
 
   /**
@@ -10202,7 +10245,7 @@ declare module "bun" {
   }
 
   /**
-   * Create and extract tar archives, with optional gzip compression.
+   * Create and extract tar archives, with optional gzip compression, and zip archives.
    *
    * `Bun.Archive` builds an archive from in-memory data, or wraps an existing
    * archive so you can extract it to disk or memory.
@@ -10263,7 +10306,7 @@ declare module "bun" {
      *
      * @param data - The input data for the archive:
      *   - **Object**: Creates a new tarball with the object's keys as file paths and values as file contents
-     *   - **Blob/TypedArray/ArrayBuffer**: Wraps existing archive data (tar or tar.gz)
+     *   - **Blob/TypedArray/ArrayBuffer**: Wraps existing archive data (tar, tar.gz or zip)
      * @param options - Archive options, including compression settings
      *
      * @example

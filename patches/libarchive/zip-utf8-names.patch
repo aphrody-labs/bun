@@ -1,0 +1,15 @@
+--- a/libarchive/archive_write_set_format_zip.c
++++ b/libarchive/archive_write_set_format_zip.c
+@@ -951,6 +951,12 @@
+ 			if (strcmp(archive_string_conversion_charset_name(
+ 					zip->opt_sconv), "UTF-8") == 0)
+ 				zip->entry_flags |= ZIP_ENTRY_FLAG_UTF8_NAME;
++		} else if (sconv == NULL) {
++			/*
++			 * BUN PATCH: names written unconverted are the UTF-8
++			 * bytes bun passes in; the process locale is always "C".
++			 */
++			zip->entry_flags |= ZIP_ENTRY_FLAG_UTF8_NAME;
+ #if HAVE_NL_LANGINFO
+ 		} else if (strcmp(nl_langinfo(CODESET), "UTF-8") == 0) {
+ 			zip->entry_flags |= ZIP_ENTRY_FLAG_UTF8_NAME;

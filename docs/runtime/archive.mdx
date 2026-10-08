@@ -1,9 +1,9 @@
 ---
 title: Archive
-description: Create and extract tar archives with Bun's fast native implementation
+description: Create and extract tar and zip archives with Bun's fast native implementation
 ---
 
-`Bun.Archive` is Bun's native API for tar archives. It creates archives from in-memory data, extracts archives to disk, and reads archive contents without extraction.
+`Bun.Archive` is Bun's native API for tar and zip archives. It creates archives from in-memory data, extracts archives to disk, and reads archive contents without extraction.
 
 ## Quickstart
 
@@ -72,6 +72,32 @@ const archive = new Bun.Archive({
   "buffer.bin": arrayBuffer,
 });
 ```
+
+### Permissions and Modification Times
+
+Entries get mode `0o644` and the current time by default. Pass `{ data, mode, mtime }` instead of the contents to set them per entry, and the `mtime` option to set the time of every other entry. `mtime` is in milliseconds since the epoch, or a `Date`:
+
+```ts
+const archive = new Bun.Archive(
+  {
+    "bin/server": { data: await Bun.file("./dist/server").bytes(), mode: 0o755 },
+    "README.md": "# My Project",
+  },
+  { compress: "gzip", mtime: 0 },
+);
+```
+
+With a fixed `mtime`, the same entries always produce the same bytes.
+
+### Zip Archives
+
+Pass `{ format: "zip" }` to build a zip archive. Each entry is deflated on its own, so `compress` does not apply. Modes are stored as Unix permissions:
+
+```ts
+await Bun.Archive.write("app-windows-x64.zip", { "app.exe": exe, "README.md": readme }, { format: "zip" });
+```
+
+`new Bun.Archive(bytes)` reads zip archives as well as tar and tar.gz.
 
 ### Writing Archives to Disk
 
@@ -318,6 +344,8 @@ The `options` argument accepts:
 - No options or `undefined` - Uncompressed tar (default)
 - `{ compress: "gzip" }` - Enable gzip compression at level 6
 - `{ compress: "gzip", level: number }` - Gzip with custom level 1-12 (1 = fastest, 12 = smallest)
+- `{ format: "zip" }` - Zip archive instead of tar (cannot be combined with `compress`)
+- `{ mtime: number | Date }` - Modification time of the entries
 
 ## Examples
 
@@ -397,8 +425,10 @@ await Bun.write("my-project.tar.gz", archive);
 > **Note**: The following type signatures are simplified. See [`packages/bun-types/bun.d.ts`](https://github.com/oven-sh/bun/blob/main/packages/bun-types/bun.d.ts) for the full type definitions.
 
 ```ts
+type ArchiveEntryData = string | Blob | Bun.ArrayBufferView | ArrayBufferLike;
+
 type ArchiveInput =
-  | Record<string, string | Blob | Bun.ArrayBufferView | ArrayBufferLike>
+  | Record<string, ArchiveEntryData | { data: ArchiveEntryData; mode?: number; mtime?: number | Date }>
   | Blob
   | Bun.ArrayBufferView
   | ArrayBufferLike;
@@ -408,6 +438,10 @@ type ArchiveOptions = {
   compress?: "gzip";
   /** Compression level 1-12 (default 6 when gzip is enabled). */
   level?: number;
+  /** Container format when building from an object (default "tar"). */
+  format?: "tar" | "zip";
+  /** Modification time of the entries, in milliseconds or as a Date (default: now). */
+  mtime?: number | Date;
 };
 
 interface ArchiveExtractOptions {

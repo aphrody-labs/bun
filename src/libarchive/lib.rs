@@ -78,6 +78,7 @@ pub mod lib {
         fn archive_read_support_format_tar(a: *mut Archive) -> Result;
         fn archive_read_support_format_gnutar(a: *mut Archive) -> Result;
         fn archive_read_support_filter_gzip(a: *mut Archive) -> Result;
+        fn archive_read_support_format_zip(a: *mut Archive) -> Result;
         fn archive_read_set_options(a: *mut Archive, opts: *const c_char) -> Result;
         fn archive_read_open_memory(a: *mut Archive, buf: *const c_void, size: usize) -> Result;
         fn archive_read_next_header(a: *mut Archive, entry: *mut *mut Entry) -> Result;
@@ -106,6 +107,7 @@ pub mod lib {
         fn archive_write_free(a: *mut Archive) -> Result;
         fn archive_write_close(a: *mut Archive) -> Result;
         fn archive_write_set_format_pax_restricted(a: *mut Archive) -> Result;
+        fn archive_write_set_format_zip(a: *mut Archive) -> Result;
         fn archive_write_add_filter_gzip(a: *mut Archive) -> Result;
         fn archive_write_set_filter_option(
             a: *mut Archive,
@@ -187,6 +189,10 @@ pub mod lib {
         pub fn read_support_filter_gzip(&self) -> Result {
             // SAFETY: self valid.
             unsafe { archive_read_support_filter_gzip(self.as_mut_ptr()) }
+        }
+        pub fn read_support_format_zip(&self) -> Result {
+            // SAFETY: self valid.
+            unsafe { archive_read_support_format_zip(self.as_mut_ptr()) }
         }
         pub fn read_set_options(&self, opts: &core::ffi::CStr) -> Result {
             // SAFETY: self valid; opts is NUL-terminated.
@@ -387,6 +393,10 @@ pub mod lib {
         pub fn write_set_format_pax_restricted(&self) -> Result {
             // SAFETY: self valid.
             unsafe { archive_write_set_format_pax_restricted(self.as_mut_ptr()) }
+        }
+        pub fn write_set_format_zip(&self) -> Result {
+            // SAFETY: self valid.
+            unsafe { archive_write_set_format_zip(self.as_mut_ptr()) }
         }
         pub fn write_add_filter_gzip(&self) -> Result {
             // SAFETY: self valid.

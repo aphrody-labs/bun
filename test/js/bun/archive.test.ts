@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { bunEnv, bunExe, isWindows, tempDir } from "harness";
-import { existsSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, readdirSync, rmSync, statSync } from "node:fs";
 import { join } from "path";
 
 // Minimal ustar tarball builder (pathnames must be <100 bytes). `name` accepts
@@ -2024,6 +2024,132 @@ describe("Bun.Archive", () => {
       const readArchive = new Bun.Archive(await bunFile.bytes());
       const files = await readArchive.files();
       expect(await files.get("test.txt")!.text()).toBe("test content");
+    });
+  });
+
+  describe("entry modes, mtime and zip", () => {
+    // Every ustar header in an uncompressed tarball: name, permission bits and mtime (seconds).
+    function tarHeaders(bytes: Uint8Array) {
+      const buf = Buffer.from(bytes);
+      const octal = (start: number, length: number) =>
+        parseInt(buf.toString("latin1", start, start + length).replace(/[\0 ]/g, ""), 8);
+      const headers: { name: string; mode: number; mtime: number }[] = [];
+      for (let offset = 0; offset + 512 <= buf.length && buf[offset] !== 0; ) {
+        const size = octal(offset + 124, 12);
+        headers.push({
+          name: buf.toString("utf8", offset, offset + 100).replace(/\0.*$/s, ""),
+          mode: octal(offset + 100, 8) & 0o7777,
+          mtime: octal(offset + 136, 12),
+        });
+        offset += 512 + Math.ceil(size / 512) * 512;
+      }
+      return headers;
+    }
+
+    // Every central directory record of a zip: name, UTF-8 flag and Unix permission bits.
+    function zipEntries(bytes: Uint8Array) {
+      const buf = Buffer.from(bytes);
+      const end = buf.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+      let offset = buf.readUInt32LE(end + 16);
+      const entries: { name: string; utf8: boolean; mode: number }[] = [];
+      for (let i = 0; i < buf.readUInt16LE(end + 10); i++) {
+        expect(buf.readUInt32LE(offset)).toBe(0x02014b50);
+        const nameLength = buf.readUInt16LE(offset + 28);
+        entries.push({
+          name: buf.toString("utf8", offset + 46, offset + 46 + nameLength),
+          utf8: (buf.readUInt16LE(offset + 8) & 0x800) !== 0,
+          mode: (buf.readUInt32LE(offset + 38) >>> 16) & 0o7777,
+        });
+        offset += 46 + nameLength + buf.readUInt16LE(offset + 30) + buf.readUInt16LE(offset + 32);
+      }
+      return entries;
+    }
+
+    test("an entry object sets mode and mtime, the mtime option sets the others", async () => {
+      const archive = new Bun.Archive(
+        {
+          "bin/run": { data: "#!/bin/sh\necho hi\n", mode: 0o755, mtime: 1_000_000 },
+          "dated.txt": { data: new Uint8Array([1, 2, 3]), mtime: new Date(5_000_000) },
+          "plain.txt": "plain",
+        },
+        { mtime: 2_000_000 },
+      );
+      expect(tarHeaders(await archive.bytes())).toEqual([
+        { name: "bin/run", mode: 0o755, mtime: 1000 },
+        { name: "dated.txt", mode: 0o644, mtime: 5000 },
+        { name: "plain.txt", mode: 0o644, mtime: 2000 },
+      ]);
+      const files = await archive.files();
+      expect(await files.get("bin/run")!.text()).toBe("#!/bin/sh\necho hi\n");
+      expect(await files.get("dated.txt")!.bytes()).toEqual(new Uint8Array([1, 2, 3]));
+    });
+
+    test("a fixed mtime makes a gzipped archive byte-reproducible", async () => {
+      const entries = () => ({ "a.txt": "a", "b/c.txt": { data: "c", mode: 0o600 } });
+      const first = await new Bun.Archive(entries(), { compress: "gzip", mtime: 0 }).bytes();
+      const second = await new Bun.Archive(entries(), { compress: "gzip", mtime: 0 }).bytes();
+      expect(Buffer.from(first).equals(Buffer.from(second))).toBe(true);
+      expect(tarHeaders(Bun.gunzipSync(first)).map(header => header.mtime)).toEqual([0, 0]);
+    });
+
+    test("format zip writes a zip that Bun.Archive reads back", async () => {
+      const archive = new Bun.Archive(
+        {
+          "app.exe": { data: new Uint8Array([0x4d, 0x5a, 0, 1]), mode: 0o755 },
+          "deploy/config.txt": Buffer.alloc(4096, "x").toString(),
+          "héllo.txt": "unicode",
+        },
+        { format: "zip", mtime: Date.UTC(2024, 0, 2) },
+      );
+      const bytes = await archive.bytes();
+      expect(Buffer.from(bytes).subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+      expect(zipEntries(bytes)).toEqual([
+        { name: "app.exe", utf8: false, mode: 0o755 },
+        { name: "deploy/config.txt", utf8: false, mode: 0o644 },
+        { name: "héllo.txt", utf8: true, mode: 0o644 },
+      ]);
+
+      const files = await new Bun.Archive(bytes).files();
+      expect([...files.keys()].sort()).toEqual(["app.exe", "deploy/config.txt", "héllo.txt"]);
+      expect(await files.get("app.exe")!.bytes()).toEqual(new Uint8Array([0x4d, 0x5a, 0, 1]));
+      expect(await files.get("deploy/config.txt")!.text()).toBe(Buffer.alloc(4096, "x").toString());
+      expect(await files.get("héllo.txt")!.text()).toBe("unicode");
+    });
+
+    test("extract writes the files of a zip with their modes", async () => {
+      using dir = tempDir("archive-zip-extract", {});
+      const zip = join(String(dir), "app.zip");
+      await Bun.Archive.write(
+        zip,
+        { "bin/run": { data: "#!/bin/sh\n", mode: 0o755 }, "README.md": "# app" },
+        { format: "zip" },
+      );
+      const out = join(String(dir), "out");
+      expect(await new Bun.Archive(await Bun.file(zip).bytes()).extract(out)).toBeGreaterThanOrEqual(2);
+      expect(await Bun.file(join(out, "bin", "run")).text()).toBe("#!/bin/sh\n");
+      expect(await Bun.file(join(out, "README.md")).text()).toBe("# app");
+      if (!isWindows) expect(statSync(join(out, "bin", "run")).mode & 0o777).toBe(0o755);
+
+      const filtered = join(String(dir), "filtered");
+      expect(await new Bun.Archive(await Bun.file(zip).bytes()).extract(filtered, { glob: "*.md" })).toBe(1);
+      expect(readdirSync(filtered)).toEqual(["README.md"]);
+    });
+
+    test("invalid format, mode and mtime throw", () => {
+      const files = { "a.txt": "a" };
+      // @ts-expect-error - not a format
+      expect(() => new Bun.Archive(files, { format: "rar" })).toThrow('format option must be "tar" or "zip"');
+      expect(() => new Bun.Archive(files, { format: "zip", compress: "gzip" })).toThrow(
+        'compress cannot be used with format "zip"',
+      );
+      expect(() => new Bun.Archive({ "a.txt": { data: "a", mode: 0o10000 } })).toThrow("mode must be an integer");
+      expect(() => new Bun.Archive({ "a.txt": { data: "a", mode: 1.5 } })).toThrow("mode must be an integer");
+      expect(() => new Bun.Archive(files, { mtime: NaN })).toThrow("mtime must be a finite number");
+      expect(() => new Bun.Archive({ "a.txt": { data: "a", mtime: new Date(NaN) } })).toThrow(
+        "mtime must be a finite number",
+      );
+      // @ts-expect-error - an entry object needs data
+      expect(() => new Bun.Archive({ "a.txt": { mode: 0o644 } })).toThrow("must have a data property");
     });
   });
 

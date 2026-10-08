@@ -1,4 +1,4 @@
-//! `Bun.Archive` — tar/tgz pack + extract over libarchive.
+//! `Bun.Archive` — tar/tgz/zip pack + extract over libarchive.
 
 use std::ffi::CString;
 
@@ -25,6 +25,22 @@ pub(crate) enum Compression {
     #[default]
     None,
     Gzip(GzipOptions),
+}
+
+/// Container format for archives built from an object of entries.
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+enum ArchiveFormat {
+    #[default]
+    Tar,
+    Zip,
+}
+
+/// Options that shape the archive built from an object of entries.
+#[derive(Clone, Copy, Default)]
+struct BuildOptions {
+    format: ArchiveFormat,
+    /// Seconds since the epoch for entries without their own `mtime`; now when unset.
+    mtime: Option<isize>,
 }
 
 #[derive(Clone, Copy)]
@@ -111,10 +127,11 @@ impl Archive {
     }
 }
 
-/// Configure archive for reading tar/tar.gz
+/// Configure archive for reading tar/tar.gz/zip
 fn configure_archive_reader(archive: &libarchive::lib::Archive) {
     let _ = archive.read_support_format_tar();
     let _ = archive.read_support_format_gnutar();
+    let _ = archive.read_support_format_zip();
     let _ = archive.read_support_filter_gzip();
     let _ = archive.read_set_options(c"read_concatenated_archives");
 }
@@ -172,6 +189,7 @@ impl Archive {
 
         // Parse compression options
         let compress = parse_compression_options(global, options_arg)?;
+        let build = parse_build_options(global, options_arg, compress)?;
 
         // For Blob/Archive, ref the existing store (zero-copy)
         if let Some(blob) = blob_from_js(data_arg) {
@@ -189,9 +207,9 @@ impl Archive {
             return Ok(create_archive(data, compress));
         }
 
-        // For plain objects, build a tarball
+        // For plain objects, build a tarball (or a zip)
         if data_arg.is_object() {
-            let data = build_tarball_from_object(global, data_arg)?;
+            let data = build_tarball_from_object(global, data_arg, build)?;
             return Ok(create_archive(data, compress));
         }
 
@@ -259,6 +277,64 @@ fn parse_compression_options(
     Ok(Compression::None)
 }
 
+/// Parse the `format` and `mtime` options used when building from an object.
+fn parse_build_options(
+    global: &JSGlobalObject,
+    options_arg: JSValue,
+    compress: Compression,
+) -> JsResult<BuildOptions> {
+    let mut build = BuildOptions::default();
+    if !options_arg.is_object() {
+        return Ok(build);
+    }
+
+    if let Some(format_val) = options_arg.get_truthy(global, "format")? {
+        let format = if format_val.is_string() {
+            match format_val.to_utf8(global)?.slice() {
+                b"tar" => Some(ArchiveFormat::Tar),
+                b"zip" => Some(ArchiveFormat::Zip),
+                _ => None,
+            }
+        } else {
+            None
+        };
+        let Some(format) = format else {
+            return Err(global.throw_invalid_arguments(format_args!(
+                "Archive: format option must be \"tar\" or \"zip\""
+            )));
+        };
+        build.format = format;
+    }
+    if build.format == ArchiveFormat::Zip && !matches!(compress, Compression::None) {
+        return Err(global.throw_invalid_arguments(format_args!(
+            "Archive: compress cannot be used with format \"zip\""
+        )));
+    }
+
+    if let Some(mtime_val) = options_arg.get(global, "mtime")? {
+        build.mtime = Some(parse_mtime(global, mtime_val)?);
+    }
+    Ok(build)
+}
+
+/// `number` (milliseconds since the epoch, like `Date.now()`) or `Date` → whole seconds.
+fn parse_mtime(global: &JSGlobalObject, value: JSValue) -> JsResult<isize> {
+    let ms = if value.is_date() {
+        value.get_unix_timestamp()
+    } else if value.is_number() {
+        value.as_number()
+    } else {
+        f64::NAN
+    };
+    if !ms.is_finite() {
+        return Err(global.throw_invalid_arguments(format_args!(
+            "Archive: mtime must be a finite number of milliseconds or a valid Date"
+        )));
+    }
+    #[allow(clippy::cast_possible_truncation)]
+    Ok((ms / 1000.0).floor() as isize)
+}
+
 fn create_archive(data: Vec<u8>, compress: Compression) -> Box<Archive> {
     let store = Store::init(data);
     Box::new(Archive { store, compress })
@@ -273,7 +349,11 @@ fn blob_from_js(value: JSValue) -> Option<&'static Blob> {
 }
 
 /// Shared helper that builds tarball bytes from a JS object
-fn build_tarball_from_object(global: &JSGlobalObject, obj: JSValue) -> JsResult<Vec<u8>> {
+fn build_tarball_from_object(
+    global: &JSGlobalObject,
+    obj: JSValue,
+    options: BuildOptions,
+) -> JsResult<Vec<u8>> {
     use libarchive::lib;
 
     let Some(js_obj) = obj.get_object() else {
@@ -287,10 +367,22 @@ fn build_tarball_from_object(global: &JSGlobalObject, obj: JSValue) -> JsResult<
     let archive = lib::WriteArchive::new();
     let archive_ref: &lib::Archive = &archive;
 
-    if archive_ref.write_set_format_pax_restricted() != lib::Result::Ok {
+    let format_rc = match options.format {
+        ArchiveFormat::Tar => archive_ref.write_set_format_pax_restricted(),
+        ArchiveFormat::Zip => archive_ref.write_set_format_zip(),
+    };
+    if format_rc != lib::Result::Ok {
         return Err(global.throw_invalid_arguments(format_args!(
             "Failed to create tarball: ArchiveFormatError"
         )));
+    }
+    // Windows hands libarchive wide names: store them as flagged UTF-8, not
+    // in the ANSI code page.
+    #[cfg(windows)]
+    {
+        if options.format == ArchiveFormat::Zip {
+            let _ = archive_ref.write_set_options(bun_core::zstr!("zip:hdrcharset=UTF-8"));
+        }
     }
 
     // `archive` is a live `archive_write_new()` handle (see `Archive::write_new`
@@ -312,7 +404,9 @@ fn build_tarball_from_object(global: &JSGlobalObject, obj: JSValue) -> JsResult<
     let entry = lib::OwnedEntry::new();
     let entry_ref: &lib::Entry = &entry;
 
-    let now_secs: isize = isize::try_from(bun_core::time::milli_timestamp() / 1000).unwrap_or(0);
+    let default_mtime: isize = options
+        .mtime
+        .unwrap_or_else(|| isize::try_from(bun_core::time::milli_timestamp() / 1000).unwrap_or(0));
 
     // Iterate over object properties and write directly to archive
     let iter = jsc::JSPropertyIterator::init(
@@ -333,9 +427,41 @@ fn build_tarball_from_object(global: &JSGlobalObject, obj: JSValue) -> JsResult<
         let key_slice = key.to_utf8();
         let key_str = ZBox::from_vec_with_nul(key_slice.slice().to_vec());
 
+        // `{ data, mode?, mtime? }` describes one entry; any other value is its data.
+        let mut perm: u32 = 0o644;
+        let mut mtime = default_mtime;
+        let mut data_value = value;
+        if value.js_type() == jsc::JSType::FinalObject {
+            let Some(data) = value.get(global, "data")? else {
+                return Err(global.throw_invalid_arguments(format_args!(
+                    "Archive: an entry object must have a data property"
+                )));
+            };
+            data_value = data;
+            if let Some(mode_val) = value.get(global, "mode")? {
+                let mode = if mode_val.is_number() {
+                    mode_val.as_number()
+                } else {
+                    f64::NAN
+                };
+                if !(mode.fract() == 0.0 && (0.0..=f64::from(0o7777u32)).contains(&mode)) {
+                    return Err(global.throw_invalid_arguments(format_args!(
+                        "Archive: mode must be an integer between 0 and 0o7777"
+                    )));
+                }
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                {
+                    perm = mode as u32;
+                }
+            }
+            if let Some(mtime_val) = value.get(global, "mtime")? {
+                mtime = parse_mtime(global, mtime_val)?;
+            }
+        }
+
         // Get data - use view for Blob/ArrayBuffer, convert for strings
         let mut array_buffer = None;
-        let data_slice = get_entry_data(global, value, &mut array_buffer)?;
+        let data_slice = get_entry_data(global, data_value, &mut array_buffer)?;
 
         // Write entry to archive
         let data = data_slice.slice();
@@ -349,8 +475,8 @@ fn build_tarball_from_object(global: &JSGlobalObject, obj: JSValue) -> JsResult<
         entry_ref.set_pathname(key_str.as_zstr());
         entry_ref.set_size(i64::try_from(data.len()).expect("int cast"));
         entry_ref.set_filetype(FILETYPE_REGULAR);
-        entry_ref.set_perm(0o644);
-        entry_ref.set_mtime(now_secs, 0);
+        entry_ref.set_perm(perm);
+        entry_ref.set_mtime(mtime, 0);
 
         // `Warn` means the header was still written (libarchive fell back to a
         // per-entry binary hdrcharset for a name its locale machinery could not
@@ -432,6 +558,7 @@ pub(crate) fn write(global: &JSGlobalObject, callframe: &CallFrame) -> JsResult<
 
     // Parse options for compression override
     let options_compress = parse_compression_options(global, options_arg)?;
+    let build = parse_build_options(global, options_arg, options_compress)?;
 
     // For Archive instances, use options override or archive's compression settings
     if let Some(archive) = data_arg.as_class_ref::<Archive>() {
@@ -471,9 +598,9 @@ pub(crate) fn write(global: &JSGlobalObject, callframe: &CallFrame) -> JsResult<
         );
     }
 
-    // For plain objects, build a tarball with options compression
+    // For plain objects, build a tarball (or a zip) with options compression
     if data_arg.is_object() {
-        let data = build_tarball_from_object(global, data_arg)?;
+        let data = build_tarball_from_object(global, data_arg, build)?;
         return start_write_task(
             &cx,
             WriteData::Owned(data),
@@ -742,16 +869,16 @@ impl TaskContext for ExtractContext {
 
 impl ExtractContext {
     fn do_run(&mut self) -> ExtractResult {
-        // If we have glob patterns, use filtered extraction
-        if self.glob_patterns.is_some() {
-            let count = match extract_to_disk_filtered(
-                self.store.shared_view(),
-                &self.path,
-                self.glob_patterns.as_deref(),
-            ) {
-                Ok(c) => c,
-                Err(_) => return ExtractResult::Err(ExtractError::ReadError),
-            };
+        // Glob patterns and zip archives go through the Bun.Archive reader;
+        // the fast path is the tar-only extractor `bun install` uses.
+        let data = self.store.shared_view();
+        let is_zip = data.starts_with(b"PK\x03\x04") || data.starts_with(b"PK\x05\x06");
+        if self.glob_patterns.is_some() || is_zip {
+            let count =
+                match extract_to_disk_filtered(data, &self.path, self.glob_patterns.as_deref()) {
+                    Ok(c) => c,
+                    Err(_) => return ExtractResult::Err(ExtractError::ReadError),
+                };
             return ExtractResult::Success(count);
         }
 
