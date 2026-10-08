@@ -163,9 +163,14 @@ Fichiers : `packages/bun-plugin-tailwind/**`, `test/integration/bun-plugin-tailw
 `scripts/aphrody/publish-npm.ts`.
 
 - ✅ Tailwind v4 (`@tailwindcss/node` + oxide) sans Node : Bun.build, serveur HTML (`[serve.static] plugins`),
-  HMR, minify, optimize Lightning CSS, sourcemaps (PostCSS et API `TailwindRoot` ; le printer CSS de Bun n'émet
-  pas de map), toutes les directives, candidats du graphe de modules, `tailwindcss` résolu sans install ; parité
-  avec `bun-plugin-tailwind` d'oven-sh et au-delà (a9910769013).
+  HMR, minify, optimize Lightning CSS, sourcemaps, toutes les directives, candidats du graphe de modules,
+  `tailwindcss` résolu sans install ; parité avec `bun-plugin-tailwind` d'oven-sh et au-delà (a9910769013).
+- ✅ Patch cœur : sourcemaps CSS dans `Bun.build` (external/linked/inline), mapping par règle dans le printer
+  `src/css`, `sourcesContent` CSS, commentaires `/*# … */`, composition avec la map d'entrée du fichier
+  (`sourceMappingURL` data: ou fichier) ; tests `test/bundler/esbuild/css.test.ts` « css source maps »
+  (71f91419311). Le plugin suit l'option `sourcemap` du build, map exacte avec les `@import` à schéma
+  (`m3:theme.css`) (43607890888). À faire après la passe unique : publier
+  `@aphrody/bun-plugin-tailwind@0.1.0-aphrody.2` et monter la dépendance dans aphrody (m3, shenron).
 - ✅ Export `/postcss` (ESM + CJS, build `dist/` pour Node) ; `withBun({ tailwind, plugins })`, CSS globaux et CSS
   modules dans le chemin Bun.build de next-bun (6c44336f2aa, publié dans `@aphrody/next-bun@0.2.0-aphrody.2`).
 - ✅ Préréglage M3 (`theme: "m3"`, `/m3`) sur `@aphrody/m3-tokens` et `m3-tailwind` ; `m3/src/tailwind.ts`
