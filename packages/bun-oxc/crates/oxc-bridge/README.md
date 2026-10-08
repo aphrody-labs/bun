@@ -1,39 +1,51 @@
-<!-- SPDX-License-Identifier: Apache-2.0 -->
-# Aphrody Oxc bridge — Yolo owner
+<!-- SPDX-License-Identifier: MIT -->
+# aphrody-oxc-bridge
 
-This library preserves the Oxc bridge originally imported from
-`oxc/apps/aphrody-oxc` at revision `31d5266e150ff17af52f0c2fc798cc27dc9a5a59`.
-Yolo owns its implementation; the package and C symbol identities stay unchanged.
-The current Oxc dependencies inherit the Yolo workspace pin to upstream revision
-`8c5a04ea0d5ca56e0d2d925f51f6b45669aa5e2a`: parser/minifier 0.152.0,
-formatter 0.71.0 and linter 1.86.0. The original import revision is provenance,
-not the current dependency pin.
+In-process [Oxc](https://oxc.rs) bridge for JavaScript and TypeScript tooling: a safe Rust API and a stable C ABI.
 
-It is an optional internal Rust library, with Rust 1.97 as its minimum version.
-`aphrody-ffi` owns the existing dynamic artifact and reexports the C symbols;
-the bridge adds no second dynamic library and does not enter Yolo's default
-runtime dependency graph. Build its final C ABI artifact with an unwind profile
-to preserve its panic-to-error boundary; `panic=abort` cannot recover a panic.
+Provenance: moved from the Aphrody monorepo (`crates/compat/oxc-bridge`, aphrody@09f1288c) into
+[aphrody-labs/bun](https://github.com/aphrody-labs/bun/tree/main/packages/bun-oxc). It builds on the crates.io Oxc
+crates, currently **0.153.0** (parser, semantic, transformer, minifier, codegen). Minimum Rust: 1.97.
 
-ABI 1 exports `aphrody_oxc_abi_version`, `aphrody_oxc_format`,
-`aphrody_oxc_minify`, `aphrody_oxc_lint`, `aphrody_oxc_analyze`,
-`aphrody_oxc_parse` and `aphrody_oxc_free`. Format and
-minify return JSON `{ "ok": true, "code": "..." }`; lint returns
-`{ "ok": true, "diagnostics": ["..."] }` with Oxc's default rule set.
-Failures return `{ "ok": false, "error": "..." }`. Inputs are NUL-terminated
-UTF-8 source and filename strings. The filename extension selects JS/TS syntax.
-Release every result exactly once with `aphrody_oxc_free`, which accepts null.
+## Rust API
 
-Analyze returns `{ "ok": true, "result": ... }` with static module requests
-and exports in source order, including TypeScript and wildcard exports. Parse
-returns the official Oxc ESTree JSON program. Both use UTF-16 spans and return
-`kind: "syntax"` for parser/semantic failures. JSON preserves BigInt/RegExp
-metadata while their runtime `value` fields remain null.
+| Function | Does | Runs |
+| --- | --- | --- |
+| `transform(src, file, &TransformOptions)` | TypeScript/JSX to JavaScript, ES target lowering, optional source map | in-process |
+| `minify(src, file)` | compress, mangle, whitespace | in-process |
+| `analyze(src, file)` | static imports/exports in source order, UTF-16 spans | in-process |
+| `parse(src, file)` | official ESTree JSON program, UTF-16 spans | in-process |
+| `format(src, file)` | Oxc formatter | `oxfmt` binary (`APHRODY_OXFMT`) |
+| `lint(src, file)` | default Oxc rules, messages | `oxlint` binary (`APHRODY_OXLINT`) |
 
-Bun consumers keep `@aphrody/bun/oxc`, sharing the same lazy native handle as
-other façade bindings. Yolo's `@aphrody/yolo-core/compiler` provides native
-Oxc AST and module analysis; ordinary transpilation and bundling stay with
-`Bun.Transpiler` and `Bun.build`. These synchronous bridge operations do not
-replace Bun's parser, bundler, test runner or CLI commands. Source ownership
-does not prove a rebuilt Bun builtin or an installed artifact. Release packaging
-and platform parity are separate acceptance gates.
+The file extension selects the syntax. Oxc does not publish its formatter and linter as crates, so `format` and
+`lint` call the binaries (PATH or the environment override) and fail with `ErrorKind::Tool` when they are missing.
+
+```rust
+use aphrody_oxc_bridge::{transform, Jsx, TransformOptions};
+
+let out = transform(
+    "export const f = (a: number) => <b>{a}</b>;",
+    "view.tsx",
+    &TransformOptions { jsx: Jsx::Automatic, sourcemap: true, ..Default::default() },
+)?;
+println!("{}", out.code);
+```
+
+Errors are `Error { kind: ErrorKind, message }` with kinds `Input`, `Syntax`, `Tool`, `Transform`, `Panic`.
+
+## C ABI 1
+
+Exports `aphrody_oxc_abi_version` (returns 1), `aphrody_oxc_format`, `aphrody_oxc_minify`, `aphrody_oxc_lint`,
+`aphrody_oxc_analyze`, `aphrody_oxc_parse` and `aphrody_oxc_free`; they wrap the safe API. Inputs are NUL-terminated
+UTF-8 source and filename strings. Format and minify return JSON `{ "ok": true, "code": "..." }`; lint returns
+`{ "ok": true, "diagnostics": ["..."] }`; analyze and parse return `{ "ok": true, "result": ... }`. Failures return
+`{ "ok": false, "error": "..." }`, plus `"kind"` (`input`, `syntax`, `panic`) for analyze and parse. Release every
+result exactly once with `aphrody_oxc_free`, which accepts null.
+
+The crate is an `rlib`: the consumer links it into its own dynamic library. Build that artifact with an unwind
+profile to keep the panic-to-error boundary; `panic=abort` cannot recover a panic.
+
+## Bun plugin
+
+The npm package `@aphrody/bun-plugin-oxc` in the same directory uses this crate through a Node-API addon.

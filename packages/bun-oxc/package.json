@@ -10,7 +10,15 @@
     "directory": "packages/bun-oxc"
   },
   "homepage": "https://github.com/aphrody-labs/bun/tree/main/packages/bun-oxc",
-  "keywords": ["bun", "plugin", "oxc", "typescript", "jsx", "minify", "lint"],
+  "keywords": [
+    "bun",
+    "plugin",
+    "oxc",
+    "typescript",
+    "jsx",
+    "minify",
+    "lint"
+  ],
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
@@ -20,7 +28,11 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["src", "README.md", "*.node"],
+  "files": [
+    "src",
+    "README.md",
+    "*.node"
+  ],
   "napi": {
     "name": "bun-plugin-oxc",
     "crate": "bun-plugin-oxc-napi"

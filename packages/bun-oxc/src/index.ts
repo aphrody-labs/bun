@@ -130,8 +130,7 @@ export function oxcPlugin(options: OxcPluginOptions = {}): BunPlugin {
         if (typeof build.onBeforeParse !== "function") {
           throw new Error("oxcPlugin: native: true requires Bun.build (onBeforeParse)");
         }
-        native();
-        build.onBeforeParse({ filter }, { napiModule: require(nativePath()), symbol: "oxc_transform" });
+        build.onBeforeParse({ filter }, { napiModule: native(), symbol: "oxc_transform" });
         return;
       }
       build.onLoad({ filter }, async ({ path }) => {
