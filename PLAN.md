@@ -8,6 +8,12 @@ chaque lot. Contexte permanent : [APHRODY.md](APHRODY.md) (ce que le fork fourni
 
 ## 1. Cible
 
+- **Objectif du fork : étendre Bun (modules, plugins, intégrations) sans rien perdre en vitesse.** Le temps de
+  démarrage, la mémoire au repos et le débit du binaire final restent au niveau d'upstream ou meilleurs : toute
+  extension est paresseuse (zéro coût tant qu'elle n'est pas importée), pas de travail ajouté au chemin de
+  démarrage, pas de goulot d'étranglement. Une régression mesurée bloque le merge (chantier O).
+- JavaScriptCore/WebKit peuvent être patchés quand c'est utile (perf, musl, fonctionnalités) via le fork
+  `aphrody-labs/WebKit` (fork d'`oven-sh/WebKit`, chantier P).
 - Ce fork est l'unique Bun d'Aphrody : runtime, types, paquets JS, crates, docs. Aphrody ne garde ni file de
   patches Bun, ni copie de Bun, ni paquet qui duplique une API native Bun.
 - Upstream `oven-sh/bun` n'arrive que par fusion (`scripts/aphrody/sync-upstream.ts`, toutes les 6 h en CI). Le
@@ -236,7 +242,7 @@ Côté Aphrody : `crates/ai/code-graph`, `crates/engine/yolo-core`, `crates/infr
 - ✅ Binaire release réinstallé (`aphrody self install-path`, `aphrody 1.0.0-canary`, aphrody-mcp relié) ;
   `graph:bun` reconstruit (19 783 fichiers, 116 085 nœuds) et `claude-memory-bun` (573 nœuds).
 
-### M. Fork Next.js — `aphrody-labs/next.js` (⏳ après la fin de tous les autres chantiers)
+### M. Fork Next.js — `aphrody-labs/next.js` (⏳ après la fin de tous les autres chantiers ; le dépôt existe déjà, branche canary)
 
 Démarre seulement quand B à L sont terminés. Reproduire pour Next.js le workflow appliqué à Bun :
 
@@ -287,6 +293,35 @@ Fichiers : `scripts/build/**` (détection toolchain, deps vendorisées, flags mu
 - ⏳ `alpineRelease` → 3.24 ; les assets `-musl` deviennent l'artefact Linux principal de la release (installeurs,
   `@aphrody/bun-runtime` : musl par défaut sur Alpine, glibc sinon) ; images Aphrody (`aphrody-os`) basées sur Alpine.
 - ⏳ Toute dépendance glibc implicite (`dlopen` de libs glibc, `execinfo`, `getauxval`, locales) traitée pour musl.
+
+### O. Garde de performance (🔄)
+
+Le fork ajoute des modules et plugins sans coût au démarrage ni goulot. Fichiers : `bench/aphrody/**`,
+`scripts/aphrody/perf-gate.ts`, `.github/workflows/aphrody-perf.yml`, `test/internal/aphrody-perf-gate.test.ts`.
+
+- ⏳ Banc comparatif fork vs upstream (même version, même machine) : démarrage (`bun -e ""`, `bun --version`,
+  `bun run` script vide, `bun test` vide), RSS au repos, `require`/`import` des builtins, `Bun.serve` hello
+  (req/s, p99), `bun install` hors-ligne, `Bun.build` d'un projet moyen, `next-bun build` de la fixture. Outils :
+  `hyperfine`/`bun:jsc`/`Bun.nanoseconds`, résultats JSON.
+- ⏳ Seuils (ex. démarrage +2 % max, RSS +1 Mo max) ; CI sur chaque push de `main` et chaque sync upstream ;
+  régression = échec + rapport.
+- ⏳ Audit des ajouts du fork (paquets `@aphrody/*`, modules internes, plugins Tailwind/oxc/n2b, next-bun) : chargés
+  paresseusement, rien d'enregistré au démarrage ; corriger tout coût mesuré.
+- ⏳ Optimisations trouvées en chemin (démarrage, résolution, transpileur) proposées comme commits du fork.
+
+### P. Fork WebKit / JavaScriptCore — `aphrody-labs/WebKit` (🔄)
+
+`aphrody-labs/WebKit` existe déjà (fork d'`oven-sh/WebKit`, 1999 commits de retard au 2026-10-09, aucune release).
+Fichiers : côté fork Bun `scripts/build/deps/webkit.ts` (source des prébuilts, `WEBKIT_VERSION`) ; côté WebKit
+`.github/workflows/**`, scripts de build.
+
+- ⏳ Resynchroniser `aphrody-labs/WebKit` sur `oven-sh/WebKit` au commit `WEBKIT_VERSION` épinglé par le fork ;
+  workflow de sync automatique (comme pour Bun).
+- ⏳ CI de prébuilts identique à celle d'oven-sh (mêmes noms d'archives : linux x64/arm64 glibc **et musl Alpine**,
+  macOS, Windows ; debug/release/LTO/ASAN) publiés en releases `aphrody-labs/WebKit`.
+- ⏳ `scripts/build/deps/webkit.ts` : source configurable (`aphrody-labs` par défaut, repli `oven-sh`) ; test.
+- ⏳ Tout patch JSC/WebKit utile (perf démarrage, musl, fonctionnalités des plugins) = commit sur
+  `aphrody-labs/WebKit`, nouveau prébuilt, bump de `WEBKIT_VERSION`.
 
 ## 4. Vérification commune avant chaque push
 
