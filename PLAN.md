@@ -437,8 +437,8 @@ Décision utilisateur (2026-10-09) : le fork est **pensé d'abord pour la derni�
   `backtrace_symbols_fd` sont tous gardés `__GNU_LIBRARY__`/`target_env = "gnu"` ; `getauxval` existe dans musl.
 - ⏳ Builds natifs debug/release Alpine puis Ubuntu 26.04, via le runner :
   `bun scripts/aphrody/tmux.ts run bd-alpine-N --alpine --sync-head --cpus 8 --memory 10g -- 'bun install && bun run build'`,
-  puis `bash scripts/aphrody/linux-smoke.sh build/debug/bun-debug` et `bun bd test` which/require/fetch : suspendus par la directive « aucun build » du
-  2026-10-09, à lancer dans la passe unique de main.
+  puis `bash scripts/aphrody/linux-smoke.sh build/debug/bun-debug` et `bun bd test` which/require/fetch : suspendus
+  par la directive « aucun build » du 2026-10-09, à lancer dans la passe unique de main.
 
 ### O. Garde de performance (🔄)
 
@@ -514,10 +514,10 @@ côté WebKit `.github/workflows/aphrody-prebuilts.yml`, `aphrody-upstream-sync.
 
 1. Patch JSC → commit sur `main` de `aphrody-labs/WebKit` (clone partiel :
    `git clone --filter=blob:none --sparse`, ou PR sur le fork). Le sync upstream fusionne ensuite oven-sh au-dessus.
-2. CI prébuilt : `bun scripts/aphrody/webkit-prebuilt.ts build --ref <sha> [--lanes 'regex,…'|all]` (= `gh workflow
-   run aphrody-prebuilts.yml -R aphrody-labs/WebKit`) → release `autobuild-<sha>` publiée si tous les lanes passent.
-3. Bump dans le fork Bun : `webkit-prebuilt.ts bump --sha <sha>` (met `WEBKIT_VERSION`), puis `webkit-prebuilt.ts
-   record` (écrit dans `APHRODY_WEBKIT_PREBUILTS` les archives réellement publiées pour ce sha, ce qui bascule le
+2. CI prébuilt : `bun scripts/aphrody/webkit-prebuilt.ts build --ref <sha> [--lanes 'regex,…'|all]`
+   (= `gh workflow run aphrody-prebuilts.yml -R aphrody-labs/WebKit`) → release `autobuild-<sha>` publiée si tous les lanes passent.
+3. Bump dans le fork Bun : `webkit-prebuilt.ts bump --sha <sha>` (met `WEBKIT_VERSION`), puis
+   `webkit-prebuilt.ts record` (écrit dans `APHRODY_WEBKIT_PREBUILTS` les archives réellement publiées pour ce sha, ce qui bascule le
    build dessus), prettier, `bun test test/internal/webkit-prebuilt-source.test.ts`, build, commit.
 4. `webkit-prebuilt.ts status` : écart au upstream et archives publiées.
 
