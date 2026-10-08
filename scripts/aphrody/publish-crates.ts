@@ -8,7 +8,8 @@
 //
 //   bun scripts/aphrody/publish-crates.ts                  stage + cargo package --list + publish --dry-run
 //   bun scripts/aphrody/publish-crates.ts --publish        publish every version not yet on crates.io
-//   options: --out <dir> (staging dir), --toolchain <name> (default stable), --skip-tests
+//   options: --out <dir> (staging dir), --toolchain <name> (default stable), --skip-tests,
+//            --only sdk,packages/bun-n2b,packages/bun-oxc (default: all)
 
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

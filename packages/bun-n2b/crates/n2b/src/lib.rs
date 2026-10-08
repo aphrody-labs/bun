@@ -42,15 +42,44 @@ where
     T: Into<OsString> + Clone,
 {
     install_crypto_provider();
-    match cli::dispatch::try_run_from(args) {
-        Ok(code) if code == ExitCode::SUCCESS => 0,
-        Ok(code) if code == ExitCode::from(2) => 2,
-        Ok(_) => 1,
-        Err(error) => {
+    silence_closed_stdout_panics();
+    let run = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        cli::dispatch::try_run_from(args)
+    }));
+    match run {
+        Ok(Ok(code)) if code == ExitCode::SUCCESS => 0,
+        Ok(Ok(code)) if code == ExitCode::from(2) => 2,
+        Ok(Ok(_)) => 1,
+        Ok(Err(error)) => {
             eprintln!("n2b: {error:#}");
             2
         },
+        Err(payload) if is_closed_stdout(payload.as_ref()) => 0,
+        Err(payload) => std::panic::resume_unwind(payload),
     }
+}
+
+// `println!` panics when the reader of stdout goes away (`n2b rules | head`); inside the
+// Node-API addon that would take the host process down instead of ending the command.
+fn is_closed_stdout(payload: &(dyn std::any::Any + Send)) -> bool {
+    let message = payload
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| payload.downcast_ref::<&str>().copied())
+        .unwrap_or_default();
+    message.starts_with("failed printing to stdout")
+}
+
+fn silence_closed_stdout_panics() {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            if !is_closed_stdout(info.payload()) {
+                previous(info);
+            }
+        }));
+    });
 }
 
 /// Installs rustls' ring provider for the GitHub and HTTP clients unless the host already installed one.

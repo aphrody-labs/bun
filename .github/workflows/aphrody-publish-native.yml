@@ -1,0 +1,176 @@
+name: Aphrody native plugins publish
+
+# Builds the Node-API addons of packages/bun-n2b (@aphrody/bun-plugin-n2b) and
+# packages/bun-oxc (@aphrody/bun-plugin-oxc) on each platform's own runner —
+# Linux in rust:1-bullseye (glibc 2.31) and rust:1-alpine (musl) — smoke-tests
+# each addon, then publishes the per-platform packages and the main packages
+# with scripts/aphrody/publish-native.ts. Versions come from each package.json.
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "n2b, oxc or n2b,oxc"
+        type: string
+        default: "n2b,oxc"
+      dry-run:
+        description: "Stage and pack without publishing"
+        type: boolean
+        default: false
+
+concurrency:
+  group: aphrody-publish-native
+  cancel-in-progress: false
+
+env:
+  BUN_HOST_VERSION: "1.4.2"
+  CARGO_TERM_COLOR: always
+
+jobs:
+  plan:
+    if: github.repository == 'aphrody-labs/bun'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+        with:
+          bun-version: ${{ env.BUN_HOST_VERSION }}
+      - id: m
+        env:
+          ONLY: ${{ inputs.only }}
+        run: |
+          echo "matrix=$(bun scripts/aphrody/publish-native.ts matrix | bun -e '
+            const only = process.env.ONLY.split(",");
+            const m = await Bun.stdin.json();
+            m.include = m.include.filter(x => only.includes(x.id));
+            console.log(JSON.stringify(m));
+          ')" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: plan
+    name: build ${{ matrix.id }} ${{ matrix.key }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    env:
+      TRIPLE: ${{ matrix.triple }}
+      FILE: ${{ matrix.file }}
+      CDYLIB: ${{ matrix.cdylib }}
+      CRATE: ${{ matrix.crate }}
+      PKG_DIR: ${{ matrix.dir }}
+      CONTAINER: ${{ matrix.container }}
+      KEY: ${{ matrix.key }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build in ${{ matrix.container }}
+        if: matrix.container != ''
+        run: |
+          # Only packages/ is mounted: the repository's rust-toolchain.toml (Bun's nightly) stays out of reach.
+          cat > "$RUNNER_TEMP/build.sh" <<'EOF'
+          set -eu
+          if command -v apk >/dev/null; then apk add --no-cache musl-dev gcc g++ make perl >/dev/null; fi
+          cd "/src/$PKG_DIR"
+          rustup toolchain install stable --profile minimal --target "$TRIPLE"
+          rustc --version
+          cargo build --release --locked -p "$CRATE" --target "$TRIPLE"
+          EOF
+          docker run --rm -v "$GITHUB_WORKSPACE/packages:/src/packages" -v "$RUNNER_TEMP:/work" -e TRIPLE -e CRATE -e PKG_DIR \
+            -e CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C target-feature=-crt-static" \
+            -e CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C target-feature=-crt-static" \
+            -e CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=cc \
+            "$CONTAINER" sh /work/build.sh
+          sudo chown -R "$(id -u):$(id -g)" packages
+
+      - name: Rust (Windows on Arm)
+        if: matrix.container == '' && runner.os == 'Windows'
+        shell: bash
+        run: |
+          if ! command -v rustup >/dev/null; then
+            curl -sSfL -o "$RUNNER_TEMP/rustup-init.exe" "https://static.rust-lang.org/rustup/dist/$TRIPLE/rustup-init.exe"
+            "$RUNNER_TEMP/rustup-init.exe" -y --profile minimal --default-toolchain stable
+            echo "$USERPROFILE/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+          # ring builds its aarch64 assembly with clang.
+          if [ -d "/c/Program Files/LLVM/bin" ]; then echo "C:\\Program Files\\LLVM\\bin" >> "$GITHUB_PATH"; fi
+
+      - name: Build natively
+        if: matrix.container == ''
+        shell: bash
+        env:
+          RUSTUP_TOOLCHAIN: stable
+        run: |
+          rustup toolchain install stable --profile minimal --target "$TRIPLE"
+          cd "$PKG_DIR"
+          rustc --version
+          cargo build --release --locked -p "$CRATE" --target "$TRIPLE"
+
+      - name: Collect
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp "$PKG_DIR/target/$TRIPLE/release/$CDYLIB" "dist/$FILE"
+          ls -la dist
+
+      - uses: ./.github/actions/setup-bun
+        if: matrix.libc != 'musl'
+        with:
+          bun-version: ${{ env.BUN_HOST_VERSION }}
+
+      - name: Smoke test
+        if: matrix.libc != 'musl'
+        shell: bash
+        run: |
+          cat > smoke.ts <<'EOF'
+          // A host Bun of another architecture (x64 Bun on Windows on Arm) cannot load the addon.
+          if (!process.env.KEY.startsWith(`${process.platform}-${process.arch}`)) {
+            console.log(`skip: Bun is ${process.platform}-${process.arch}`);
+            process.exit(0);
+          }
+          const addon = require(`${process.cwd()}/dist/${process.env.FILE}`);
+          console.log("version", addon.version());
+          EOF
+          bun smoke.ts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.id }}-${{ matrix.key }}
+          path: dist/${{ matrix.file }}
+          retention-days: 14
+
+  publish:
+    needs: build
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+        with:
+          bun-version: ${{ env.BUN_HOST_VERSION }}
+      - uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/artifacts
+          pattern: native-*
+      - name: Publish
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          ONLY: ${{ inputs.only }}
+          DRY_RUN: ${{ inputs.dry-run && '--dry-run' || '' }}
+        run: |
+          bun scripts/aphrody/publish-native.ts publish --artifacts "$RUNNER_TEMP/artifacts" \
+            --only "$ONLY" --out "$RUNNER_TEMP/npm" $DRY_RUN

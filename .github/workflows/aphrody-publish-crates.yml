@@ -1,8 +1,10 @@
 name: Aphrody publish crates
 
-# Publishes the native plugin SDK to crates.io as aphrody-bun-macro and
-# aphrody-bun-native-plugin (scripts/aphrody/publish-crates.ts). Versions
-# already on crates.io are skipped, so re-running is a no-op.
+# Publishes to crates.io with scripts/aphrody/publish-crates.ts: the native
+# plugin SDK as aphrody-bun-macro and aphrody-bun-native-plugin, and the
+# fork-only workspaces packages/bun-n2b (aphrody-n2b-types, -registry, -core,
+# aphrody-n2b) and packages/bun-oxc (aphrody-oxc-bridge). Versions already on
+# crates.io are skipped, so re-running is a no-op.
 
 permissions:
   contents: read
@@ -14,6 +16,10 @@ on:
         description: "Package and verify only, do not upload"
         type: boolean
         default: false
+      only:
+        description: "Comma-separated subset: sdk, packages/bun-n2b, packages/bun-oxc (empty: all)"
+        type: string
+        default: ""
   push:
     tags:
       - "aphrody-v*"
@@ -26,7 +32,7 @@ jobs:
   publish:
     if: github.repository == 'aphrody-labs/bun'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup Bun
@@ -38,9 +44,9 @@ jobs:
       - name: Publish
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          ONLY: ${{ inputs.only }}
         run: |
-          if [ "${{ inputs.dry-run }}" = "true" ]; then
-            bun scripts/aphrody/publish-crates.ts --out "$RUNNER_TEMP/aphrody-crates"
-          else
-            bun scripts/aphrody/publish-crates.ts --publish --out "$RUNNER_TEMP/aphrody-crates"
-          fi
+          args=(--out "$RUNNER_TEMP/aphrody-crates")
+          if [ -n "$ONLY" ]; then args+=(--only "$ONLY"); fi
+          if [ "${{ inputs.dry-run }}" != "true" ]; then args+=(--publish); fi
+          bun scripts/aphrody/publish-crates.ts "${args[@]}"
