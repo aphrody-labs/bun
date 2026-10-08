@@ -1,0 +1,152 @@
+name: Aphrody perf gate
+
+# Chantier O (PLAN.md): le fork garde le démarrage, la mémoire et le débit d'upstream.
+# scripts/aphrody/perf-gate.ts compare un binaire du fork au bun upstream de même version (release
+# oven-sh/bun, repli sur la dernière) : démarrage, RSS, taille, require/import, Bun.serve, fetch, install,
+# build. Seuils : bench/aphrody/thresholds.json. Le tableau Markdown va dans le résumé du job, le JSON dans
+# l'artefact. Code de sortie 1 = seuil dépassé, 2 = binaire cassé ou mesure impossible.
+#
+# Binaire du fork mesuré :
+#   - workflow_run « Aphrody release » : l'artefact de build bun-<triplet> de ce run (binaire neuf) ;
+#   - workflow_dispatch avec run-id : l'artefact de build bun-<triplet> de ce run ;
+#   - sinon (pull_request, push main) : l'asset de la dernière release aphrody-v* du dépôt.
+# Les tests du banc (test/internal/aphrody-perf-gate.test.ts) tournent à chaque fois.
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "scripts/build/**"
+      - "scripts/aphrody/perf-gate.ts"
+      - "bench/aphrody/**"
+      - "test/internal/aphrody-perf-gate.test.ts"
+      - "vendor/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/aphrody-perf.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "scripts/build/**"
+      - "scripts/aphrody/perf-gate.ts"
+      - "bench/aphrody/**"
+      - "vendor/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/aphrody-perf.yml"
+  workflow_run:
+    workflows: ["Aphrody release"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run-id:
+        description: "Run ID dont l'artefact bun-<triplet> est mesuré (vide : dernière release aphrody-v*)"
+        type: string
+        required: false
+      upstream-version:
+        description: "Version upstream de référence (vide : base du fork, repli dernière release)"
+        type: string
+        required: false
+      runs:
+        description: "Nombre de mesures par cas"
+        type: string
+        default: "40"
+
+concurrency:
+  group: aphrody-perf-${{ github.event.workflow_run.id || github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUN_HOST_VERSION: "1.4.2"
+
+jobs:
+  perf:
+    if: github.repository == 'aphrody-labs/bun' && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    name: perf ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    # Windows : la release aphrody.1 plante (MSVC 14.51, voir PLAN.md E) ; informatif tant qu'aucune
+    # release Windows saine n'existe.
+    continue-on-error: ${{ matrix.informational }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux-x64, runner: ubuntu-24.04, triplet: bun-linux-x64, exe: bun, informational: false }
+          - { name: windows-x64, runner: windows-2025, triplet: bun-windows-x64, exe: bun.exe, informational: true }
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TRIPLET: ${{ matrix.triplet }}
+      EXE: ${{ matrix.exe }}
+      RUN_ID: ${{ github.event.workflow_run.id || inputs.run-id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-bun
+        with:
+          bun-version: ${{ env.BUN_HOST_VERSION }}
+
+      - name: Install hyperfine
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then choco install hyperfine -y --no-progress || true
+          else sudo apt-get install -y -qq hyperfine || true; fi
+          hyperfine --version || echo "hyperfine absent : repli sur la boucle Bun.spawn"
+
+      - name: Fork binary
+        id: fork
+        run: |
+          mkdir -p "$RUNNER_TEMP/fork"
+          cd "$RUNNER_TEMP/fork"
+          if [ -n "$RUN_ID" ]; then
+            gh run download "$RUN_ID" -R "$GITHUB_REPOSITORY" -n "$TRIPLET" -D .
+            src="run $RUN_ID"
+          else
+            tag="$(gh release list -R "$GITHUB_REPOSITORY" --limit 30 --json tagName -q '[.[] | select(.tagName | startswith("aphrody-v"))][0].tagName')"
+            [ -n "$tag" ] || { echo "::error::aucune release aphrody-v*"; exit 2; }
+            gh release download "$tag" -R "$GITHUB_REPOSITORY" -p "$TRIPLET.zip" -D .
+            src="release $tag"
+          fi
+          for z in *.zip; do
+            case "$z" in *-profile.zip) continue ;; esac
+            if [ "$RUNNER_OS" = Windows ]; then powershell -NoProfile -Command "Expand-Archive -Force -Path '$z' -DestinationPath ."
+            else unzip -q -o "$z"; fi
+          done
+          bin="$(find . -name "$EXE" -type f ! -path '*profile*' | head -1)"
+          [ -n "$bin" ] || { echo "::error::$EXE introuvable"; exit 2; }
+          chmod +x "$bin"
+          echo "path=$(cd "$(dirname "$bin")" && pwd)/$EXE" >> "$GITHUB_OUTPUT"
+          echo "source=$src" >> "$GITHUB_OUTPUT"
+
+      - name: Bench unit tests
+        run: bun test test/internal/aphrody-perf-gate.test.ts
+
+      - name: Perf gate
+        env:
+          FORK: ${{ steps.fork.outputs.path }}
+          SOURCE: ${{ steps.fork.outputs.source }}
+          UPSTREAM_VERSION: ${{ inputs.upstream-version }}
+          RUNS: ${{ inputs.runs || '40' }}
+        run: |
+          echo "Binaire du fork : $SOURCE" >> "$GITHUB_STEP_SUMMARY"
+          args=(--fork "$FORK" --runs "$RUNS" --out "$RUNNER_TEMP/perf-report")
+          [ -n "$UPSTREAM_VERSION" ] && args+=(--upstream-version "$UPSTREAM_VERSION")
+          bun scripts/aphrody/perf-gate.ts "${args[@]}"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-report-${{ matrix.name }}
+          path: ${{ runner.temp }}/perf-report
+          if-no-files-found: ignore
+          retention-days: 30
