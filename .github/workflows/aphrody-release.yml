@@ -322,7 +322,11 @@ jobs:
         run: |
           cd dist
           ls *.zip >/dev/null 2>&1 || { echo "::error::no target built"; exit 1; }
-          notes="Aphrody fork of Bun, built from ${GITHUB_SHA} like upstream: cross-compiled on linux arm64 against pinned sysroots (linux-gnu: glibc 2.31; musl: Alpine), release profile, LTO ${{ inputs.lto || 'on' }}.
+          # The musl builds are the fork's primary Linux assets (Alpine first): never release without one that was asked for.
+          for t in $(echo "$MATRIX" | jq -r '.include[] | select(.abi == "musl") | .triplet'); do
+            [ -f "$t.zip" ] || { echo "::error::$t.zip, a primary Linux asset, failed to build or run"; exit 1; }
+          done
+          notes="Aphrody fork of Bun, built from ${GITHUB_SHA} like upstream: cross-compiled on linux arm64 against pinned sysroots (musl: Alpine, the primary Linux assets; linux-gnu: glibc 2.31), release profile, LTO ${{ inputs.lto || 'on' }}.
           \`bun --version\` prints ${VERSION}; \`Bun.version\` stays the base version for semver checks.
           npm: \`bunx @aphrody/bun-runtime@${VERSION} --version\`."
           if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then

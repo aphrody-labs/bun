@@ -766,7 +766,9 @@ function resolveBase(partial: PartialConfig, host: Host, os: OS, arch: Arch, js:
   const buildkite = partial.buildkite ?? false;
 
   // ASAN: default on for debug builds on arm64 macOS or linux
-  const asanDefault = debug && ((darwin && arm64) || linux);
+  const asanDefault = debug && ((darwin && arm64) || (linux && abi !== "musl"));
+  // musl: force off. compiler-rt's ASAN runtime does not support musl, and
+  // oven-sh/WebKit publishes no -musl-*-asan prebuilt.
   // Android: force off. NDK ASAN deployment needs wrap.sh + runtime .so
   // shipping alongside the binary; UBSan likewise. Not worth the matrix.
   // FreeBSD: force off. Cross-compiled — we'd need to ship FreeBSD's
@@ -776,7 +778,7 @@ function resolveBase(partial: PartialConfig, host: Host, os: OS, arch: Arch, js:
   // Windows cross: force off. The host clang doesn't ship the windows
   // clang_rt.asan runtime libs, so the link would fail.
   const asan =
-    abi === "android" || freebsd || darwinCross || (windows && host.os !== "windows")
+    abi === "android" || abi === "musl" || freebsd || darwinCross || (windows && host.os !== "windows")
       ? false
       : (partial.asan ?? asanDefault);
 

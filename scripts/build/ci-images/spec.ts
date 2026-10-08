@@ -41,7 +41,7 @@ const files = {
 /** Every file of the repository that can change what a bake runs, and so an image's name. */
 export const bakeInputs: readonly string[] = ["scripts/build/ci-images/spec.ts", ...Object.values(files)];
 
-const alpineRelease = "3.23";
+const alpineRelease = "3.24";
 
 /** The file name of the image's record, on the machine and in a bake directory once the bake job has copied it out. */
 export const imageRecordName = "bun-image.txt";
@@ -226,7 +226,7 @@ export const images: readonly BakedImage[] = [
     release: alpineRelease,
     abi: "musl",
     role: "test",
-    base: { name: "alpine-3.23.6-aarch64-uefi-cloudinit-r0", owner: alpineOwner },
+    base: { name: "alpine-3.24.2-aarch64-uefi-cloudinit-r0", owner: alpineOwner },
   },
   {
     os: "linux",
@@ -235,7 +235,7 @@ export const images: readonly BakedImage[] = [
     release: alpineRelease,
     abi: "musl",
     role: "test",
-    base: { name: "alpine-3.23.6-x86_64-uefi-cloudinit-r0", owner: alpineOwner },
+    base: { name: "alpine-3.24.2-x86_64-uefi-cloudinit-r0", owner: alpineOwner },
   },
   {
     os: "windows",
