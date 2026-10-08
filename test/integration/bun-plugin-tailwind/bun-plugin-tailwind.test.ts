@@ -1,8 +1,9 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { bunEnv, bunExe, tempDir } from "harness";
-import { existsSync, statSync, utimesSync } from "node:fs";
+import { bunEnv, bunExe, isDebug, tempDir } from "harness";
+import { cpSync, existsSync, readFileSync, statSync, symlinkSync, utimesSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
+import { installFixture, nextBuild, nextEnv, nextStart } from "../next-app/test/next-helpers";
 
 // @aphrody/bun-plugin-tailwind (packages/bun-plugin-tailwind). The fixtures have
 // no node_modules: `@import "tailwindcss"` and the M3 sheets resolve from the
@@ -349,4 +350,82 @@ console.log(server.url.href);`,
     expect(updated).toContain(".tracking-widest");
     proc.kill();
   });
+});
+
+describe("@aphrody/next-bun withBun", () => {
+  // The Pages Router fixture of next-bun-pages pins Next.js; its pages are replaced here.
+  const nextFixture = join(import.meta.dir, "..", "next-bun-pages");
+  const nextBunPackage = join(import.meta.dir, "..", "..", "..", "packages", "bun-next");
+
+  test(
+    "tailwind: true compiles _app's stylesheet into the build manifest, CSS modules keep their names",
+    async () => {
+      using dir = await installFixture(nextFixture, ["bun.lock", "bunfig.toml", "package.json"]);
+      const root = String(dir);
+      const files = {
+        "next.config.js": `module.exports = require("@aphrody/next-bun").withBun(
+  { outputFileTracingRoot: __dirname, generateBuildId: async () => "tw" },
+  { tailwind: true, projectDir: __dirname },
+);`,
+        "styles/globals.css": `@import "tailwindcss";\n@theme { --color-brand: #0b57d0; }`,
+        "components/card.module.css": `.card { border-width: 3px; }`,
+        "pages/_app.js": `import "../styles/globals.css";
+export default function App({ Component, pageProps }) {
+  return <Component {...pageProps} />;
+}`,
+        "pages/index.js": `import styles from "../components/card.module.css";
+export default function Home() {
+  return <main id="home" className={"text-brand underline " + styles.card}>Hello</main>;
+}`,
+        "pages/other.js": `export default function Other() {
+  return <p className="tracking-widest">Other</p>;
+}`,
+      };
+      for (const [file, contents] of Object.entries(files)) await Bun.write(join(root, file), contents);
+      const scope = join(root, "node_modules", "@aphrody");
+      cpSync(nextBunPackage, join(scope, "next-bun"), { recursive: true });
+      symlinkSync(pluginDir, join(scope, "bun-plugin-tailwind"), "junction");
+
+      await using patch = Bun.spawn({
+        cmd: [bunExe(), join(scope, "next-bun", "bin", "next-bun.js"), "patch"],
+        cwd: root,
+        env: nextEnv,
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [patchOut, patchErr, patchExit] = await Promise.all([
+        patch.stdout.text(),
+        patch.stderr.text(),
+        patch.exited,
+      ]);
+      if (patchExit !== 0) throw new Error(`next-bun patch failed (${patchExit}):\n${patchOut}\n${patchErr}`);
+
+      expect(await nextBuild(root, [], {})).toContain("Compiled successfully with Bun");
+      const manifest = JSON.parse(readFileSync(join(root, ".next", "build-manifest.json"), "utf8"));
+      const appCss = manifest.pages["/_app"].filter((f: string) => f.endsWith(".css"));
+      expect(appCss).toHaveLength(1);
+      const indexCss = manifest.pages["/"].filter((f: string) => f.endsWith(".css"));
+      expect(indexCss).toHaveLength(1);
+
+      await using server = await nextStart(root, {});
+      const [home, other] = await Promise.all(
+        ["/", "/other"].map(async path => (await fetch(server.url + path)).text()),
+      );
+      const stylesheets = (html: string) =>
+        [...html.matchAll(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"/g)].map(m => m[1]);
+      expect(stylesheets(other)).toEqual([`/_next/${appCss[0]}`]);
+      expect(stylesheets(home)).toEqual([`/_next/${appCss[0]}`, `/_next/${indexCss[0]}`]);
+
+      const app = await (await fetch(server.url + `/_next/${appCss[0]}`)).text();
+      expect(app).toContain("tailwindcss v4");
+      for (const cls of [".text-brand", ".underline", ".tracking-widest"]) expect(app).toContain(cls);
+      expect(app).not.toContain(".grid{");
+
+      const cardClass = /<main id="home" class="text-brand underline ([^"]+)"/.exec(home)?.[1];
+      expect(cardClass).toMatch(/^card_/);
+      const index = await (await fetch(server.url + `/_next/${indexCss[0]}`)).text();
+      expect(index).toContain(`.${cardClass}`);
+    },
+    isDebug ? Infinity : 300_000,
+  );
 });

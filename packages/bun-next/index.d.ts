@@ -16,6 +16,14 @@ export interface WithBunOptions {
   freezeBuildConfig?: boolean;
   /** The app directory (default `process.cwd()`); pass `__dirname` from next.config. */
   projectDir?: string;
+  /** Bun plugins added to the client and server `Bun.build` passes (`bundler: "bun"` only). */
+  plugins?: import("bun").BunPlugin[];
+  /**
+   * Compiles Tailwind CSS v4 stylesheets with `@aphrody/bun-plugin-tailwind` (installed in the project) in the
+   * `Bun.build` passes; `true` or its options (`BunTailwindOptions`; `base` defaults to `projectDir`). Turbopack and webpack use
+   * `@aphrody/bun-plugin-tailwind/postcss` from `postcss.config.mjs` instead.
+   */
+  tailwind?: boolean | Record<string, unknown>;
 }
 
 type ConfigOrFunction<T> = T | ((phase: string, ctx: any) => T | Promise<T>);

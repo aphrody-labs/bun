@@ -23,6 +23,16 @@ function selectBunBuild(bundler) {
   return true;
 }
 
+/** `options.plugins`, after `@aphrody/bun-plugin-tailwind` (from the project) when `options.tailwind` is set. */
+function bunPlugins(options, projectDir) {
+  const plugins = [...(options.plugins ?? [])];
+  if (options.tailwind) {
+    const { tailwind } = require(require.resolve("@aphrody/bun-plugin-tailwind", { paths: [projectDir] }));
+    plugins.unshift(tailwind({ base: projectDir, ...(options.tailwind === true ? {} : options.tailwind) }));
+  }
+  return plugins;
+}
+
 /**
  * Wraps a Next.js config for Bun.
  *
@@ -35,13 +45,15 @@ function selectBunBuild(bundler) {
  * `bundler: "bun"` (the default) also compiles `next build` with `Bun.build`
  * (Pages Router, experimental; needs `bun --bun next build` and `next-bun patch`)
  * unless the command passes `--turbopack` or `--webpack`. `bundler: "turbopack"`
- * leaves the bundler to Next.
+ * leaves the bundler to Next. With Bun.build, `plugins` are added to the client
+ * and server builds and `tailwind` adds `@aphrody/bun-plugin-tailwind`; with
+ * Turbopack, Tailwind goes through `@aphrody/bun-plugin-tailwind/postcss`.
  *
  * @template T
  * @param {T} nextConfig a config object or a `(phase, ctx) => config` function
  * @param {{ bundler?: "bun" | "turbopack", alias?: Record<string, string>, dedupe?: string[],
  *   root?: string | false, transpileSources?: boolean, freezeBuildConfig?: boolean,
- *   projectDir?: string }} [options]
+ *   projectDir?: string, plugins?: import("bun").BunPlugin[], tailwind?: boolean | Record<string, unknown> }} [options]
  * @returns {(phase: string, ctx: any) => Promise<any>}
  */
 function withBun(nextConfig, options = {}) {
@@ -60,6 +72,7 @@ function withBun(nextConfig, options = {}) {
     }
     delete process.env.TURBOPACK;
     process.env.NEXT_BUN = join(__dirname, "lib", "build.js");
+    require(process.env.NEXT_BUN).configure({ plugins: bunPlugins(options, projectDir) });
     return config;
   };
 }

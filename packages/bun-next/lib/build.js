@@ -9,9 +9,11 @@
 //   build-manifest.json, server/pages-manifest.json, static/<buildId>/_buildManifest.js
 //   and the empty manifests of features this adapter does not implement yet.
 //
-// Scope: Pages Router on the Node.js runtime. App Router, middleware/proxy,
-// instrumentation, the edge runtime, CSS, next/font, next/image static imports
-// and next/dynamic are rejected or produce empty manifests.
+// Scope: Pages Router on the Node.js runtime, global CSS and CSS modules (Bun's
+// CSS bundler, plus the Bun plugins given to `withBun`, e.g. Tailwind CSS).
+// App Router, middleware/proxy, instrumentation, the edge runtime, next/font,
+// next/image static imports and next/dynamic are rejected or produce empty
+// manifests.
 
 const { mkdirSync, readFileSync, rmSync, writeFileSync } = require("node:fs");
 const { parse: parseQuery } = require("node:querystring");
@@ -26,6 +28,14 @@ class UnsupportedError extends Error {
   constructor(feature) {
     super(`@aphrody/next-bun: ${feature} is not supported by the Bun bundler yet.`);
   }
+}
+
+/** Bun plugins added to both builds, set by `withBun({ plugins, tailwind })`. */
+let extraPlugins = [];
+
+/** @param {{ plugins?: import("bun").BunPlugin[] }} options */
+function configure(options) {
+  extraPlugins = options.plugins ?? [];
 }
 
 function posix(p) {
@@ -178,7 +188,7 @@ async function bunBuild(compilerNames, webpackBuildDir) {
     format: "cjs",
     packages: "external",
     define: defines("server"),
-    plugins: [swc("server")],
+    plugins: [swc("server"), ...extraPlugins],
     throw: false,
   });
   if (!server.success) throw new AggregateError(server.logs, "@aphrody/next-bun: server build failed");
@@ -236,12 +246,19 @@ client.initialize({}).then(() => client.hydrate()).catch(console.error);
     splitting: true,
     minify: !ctx.noMangling,
     define: defines("client"),
-    plugins: [swc("client")],
+    plugins: [swc("client"), ...extraPlugins],
+    metafile: true,
     throw: false,
   });
   if (!client.success) throw new AggregateError(client.logs, "@aphrody/next-bun: client build failed");
 
+  // The stylesheet Bun bundled for each entry, keyed by output path relative to chunksDir.
+  const cssBundles = new Map();
+  for (const [output, meta] of Object.entries(client.metafile.outputs)) {
+    if (meta.cssBundle) cssBundles.set(posix(path.normalize(output)), posix(path.normalize(meta.cssBundle)));
+  }
   const clientFiles = new Map();
+  const clientCss = new Map();
   for (const output of client.outputs) {
     if (output.kind !== "entry-point") continue;
     const relative = posix(path.relative(chunksDir, output.path));
@@ -254,6 +271,8 @@ client.initialize({}).then(() => client.hydrate()).catch(console.error);
     const file = `static/chunks/${name}-${contentHash(loader)}.js`;
     write(path.join(distDir, file), loader);
     clientFiles.set(name, file);
+    const css = cssBundles.get(relative);
+    if (css) clientCss.set(name, `static/chunks/${css}`);
   }
 
   const polyfills = readFileSync(path.join(nextDist, "build", "polyfills", "polyfill-nomodule.js"));
@@ -272,7 +291,8 @@ client.initialize({}).then(() => client.hydrate()).catch(console.error);
   };
   for (const [name, file] of clientFiles) {
     if (name === "main") continue;
-    assetMap.pages[getRouteFromEntrypoint(name)] = [mainFile, file];
+    const css = clientCss.get(name);
+    assetMap.pages[getRouteFromEntrypoint(name)] = css ? [mainFile, file, css] : [mainFile, file];
   }
   const buildManifestPath = `static/${buildId}/_buildManifest.js`;
   const ssgManifestPath = `static/${buildId}/_ssgManifest.js`;
@@ -321,9 +341,13 @@ function nextSwcPlugin({ next, ctx, dir, distDir, pagesDir, appDir, projectInfo,
   return {
     name: "next-swc",
     setup(build) {
-      build.onLoad({ filter: /\.css$/ }, args => {
-        throw new UnsupportedError(`Importing CSS (${args.path})`);
-      });
+      // The server only needs the class names of CSS modules; global stylesheets
+      // are bundled by the client build alone.
+      if (isServer) {
+        build.onLoad({ filter: /\.css$/ }, args => {
+          if (!/\.module\.css$/.test(args.path)) return { contents: "", loader: "js" };
+        });
+      }
       build.onLoad({ filter: SOURCE_FILE }, async args => {
         if (args.path.includes(`${path.sep}node_modules${path.sep}`) || args.path.startsWith(generated)) return;
         if (args.path.endsWith(".d.ts")) return;
@@ -362,4 +386,4 @@ function nextSwcPlugin({ next, ctx, dir, distDir, pagesDir, appDir, projectInfo,
   };
 }
 
-module.exports = { bunBuild };
+module.exports = { bunBuild, configure };

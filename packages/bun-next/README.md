@@ -37,6 +37,27 @@ of its build (`<distDir>/required-server-files.json`): Turbopack bakes both into
 server environment that differs from the build's otherwise serves HTML whose chunks never load. Each rewrite
 has an option to turn it off (`root: false`, `transpileSources: false`, `freezeBuildConfig: false`).
 
+### CSS and Tailwind CSS
+
+The Bun.build path bundles global stylesheets (imported from `pages/_app`) and CSS modules, and lists each
+page's stylesheet in `build-manifest.json` so Next renders its `<link rel="stylesheet">`. `plugins` adds Bun
+plugins to both builds; `tailwind` adds [`@aphrody/bun-plugin-tailwind`](../bun-plugin-tailwind) from the
+project (`true` or its options, with `base` defaulting to `projectDir`):
+
+```js
+module.exports = withBun(nextConfig, {
+  projectDir: __dirname,
+  tailwind: { theme: "m3" },
+});
+```
+
+With Turbopack or webpack, the same engine runs as a PostCSS plugin:
+
+```js
+// postcss.config.mjs
+export default { plugins: { "@aphrody/bun-plugin-tailwind/postcss": {} } };
+```
+
 ## The `node` shim
 
 `bunNodeShim()` puts a `node` (a hard link or copy of Bun on Windows, a symlink elsewhere) in a temp directory and `next-bun` prepends it to
