@@ -117,17 +117,24 @@ par `git pull --rebase` et ne réécris pas le travail d'un autre.
 - ✅ Release `aphrody-v1.4.3-aphrody.1` (4 cibles) + `@aphrody/bun-runtime` (`aphrody-release.yml`,
   `scripts/aphrody/publish-runtime.ts`).
 
-### B. Release du binaire — limites (🔄)
+### B. Release du binaire — limites (✅)
 
-Fichiers : `.github/workflows/aphrody-release.yml`, `scripts/aphrody/publish-runtime.ts`, `scripts/build/**`
-(version), `test/internal/aphrody-publish-runtime.test.ts`.
+Fichiers : `.github/workflows/aphrody-release.yml`, `scripts/aphrody/{build-host,publish-runtime,npm-placeholder,publish-mdx-rs,publish-web-inspector}.ts`,
+`scripts/build/**` (version), `test/internal/aphrody-{build-host,publish-mdx-rs,publish-runtime}.test.ts`.
 
-- ⏳ glibc ancienne comme upstream (aujourd'hui ≥ 2.38) ; LTO en release.
-- ⏳ Cibles linux-x64-musl, linux-aarch64-musl, darwin-x64, windows-arm64 (+ baseline si upstream).
-- ⏳ `bun --version` affiche `1.4.3-aphrody.N`.
-- ⏳ Origine et retrait de la version npm `0.0.0-stage` ; `latest` correct.
-- ⏳ Publier `@aphrody/bun-mdx-rs` (+ plateformes) et `@aphrody/web-inspector-bun`.
-- ⏳ Release `aphrody-v1.4.3-aphrody.2` verte, vérifiée sur GitHub et npm.
+- ✅ Build host d'upstream (debian:13 sur ubuntu-24.04-arm, cross-compilation) : linux-gnu contre le sysroot glibc 2.31
+  (symbole max GLIBC_2.17 sur aarch64), musl contre Alpine, Windows via xwin CRT 14.44.17.14, macOS SDK ; LTO on. 6afd1932d3e
+- ✅ 8 cibles : linux-x64/aarch64 (+musl), darwin-aarch64/x64, windows-x64/aarch64 ; alias `-baseline` x64 comme upstream. 6afd1932d3e
+- ✅ `bun --version` = `1.4.3-aphrody.N` (`--version-tag`), `Bun.version` reste `1.4.3`. 04fd2e85af5
+- ✅ `0.0.0-stage` = placeholder du staged publishing npm au 1er publish (unpublish E403) → déprécié par chaque script de
+  publication après visibilité de la version, workflow `aphrody-npm-placeholder.yml` à la demande ; `latest` correct. 806a3c32885
+- ✅ `@aphrody/bun-mdx-rs` 1.4.3-aphrody.1 + 8 paquets plateforme (CI native) et `@aphrody/web-inspector-bun` 1.4.3-aphrody.1
+  (sources WebKit à WEBKIT_VERSION). 2cfc2ef28c6, 4e98faf1742, 7d1b86718c3
+- ✅ Smoke par cible bloquant (marqueur par cible, `node:fs`, `node:path` + `execFileSync`, musl avec libstdc++/libgcc,
+  glibc aussi sur ubuntu:26.04). 5360ad1c11a, f7a7086b602
+- ✅ Release `aphrody-v1.4.3-aphrody.2` verte (run 37856453908) : 24 zips + SHA256SUMS.txt ; npm `@aphrody/bun-runtime`
+  et ses 8 plateformes en 1.4.3-aphrody.2 (`latest`) ; `bunx @aphrody/bun-runtime@1.4.3-aphrody.2 --version` OK sous Windows ;
+  installée dans ~/.bun/bin (secours `bun-upstream-1.4.2.exe`) ; Shenron passé en .2 (ea184935).
 
 ### C. Next sur Bun — `@aphrody/next-bun` (🔄)
 
