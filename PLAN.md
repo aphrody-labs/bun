@@ -340,22 +340,26 @@ routage `app/` compatible Next (`page`/`layout`/`route`, Server Components, Serv
 `@aphrody/bun-plugin-tailwind`, UI Base UI + M3 (R). Réutilise ce qui est bunisé dans M/Q/R (Turbopack/next-swc si plus
 rapide). Aucun coût au démarrage de `bun` (chantier O). Shenron sert d'application de validation.
 
-### L. oxc et n2b dans le fork (🔄)
+### L. oxc et n2b dans le fork (✅ ; n2b 0.7.1 monorepo en cours)
 
 Fichiers : `packages/bun-n2b/**`, `packages/bun-oxc/**`, `test/integration/bun-plugin-n2b/`,
-`test/integration/bun-plugin-oxc/`, `scripts/aphrody/publish-crates.ts`, `scripts/aphrody/publish-native.ts`,
-`.github/workflows/aphrody-publish-native.yml`. Côté Aphrody : `crates/compat/{n2b,n2b-core,n2b-registry,n2b-types,oxc-bridge}`
-(supprimés), `packages/engine/n2b-client` (absorbé), deps `aphrody-n2b*`/`aphrody-oxc-bridge`/`oxc_*` du workspace,
-consommateurs `aphrody-command`, `mcp`, `ffi`, `bun-docs` (Cargo.toml seulement), docs `docs/*/compat/n2b/`.
+`test/integration/bun-plugin-oxc/`, `scripts/aphrody/{build-napi,publish-crates,publish-native}.ts`,
+`.github/workflows/aphrody-publish-{native,crates}.yml`. Côté Aphrody : `crates/compat/{n2b,n2b-core,n2b-registry,n2b-types,oxc-bridge}`
+et `packages/engine/n2b-client` supprimés (2db2b5a973, 132 fichiers, −31 522 lignes).
 
-- ⏳ Code déplacé : `packages/bun-n2b/` (workspace Cargo séparé : `aphrody-n2b`, `-core`, `-registry`, `-types` + addon
-  napi) et `packages/bun-oxc/` (`aphrody-oxc-bridge` + addon napi) ; Oxc à la dernière version publiée.
-- ⏳ `@aphrody/bun-plugin-oxc` (transform/minify/lint/format, plugin natif `onBeforeParse` + API JS) et
-  `@aphrody/bun-plugin-n2b` (codemods au chargement/build, CLI `bunx @aphrody/bun-plugin-n2b` = `aphrody n2b`,
-  absorbe `n2b-client`) ; binaires napi par plateforme sur npm ; crates sur crates.io.
-- ⏳ Aphrody consomme les crates publiées (version exacte) ; sources, deps Oxc inutiles et docs n2b retirées (renvoi).
-- ⏳ Tests : cargo test des workspaces du paquet, `test/integration/bun-plugin-{n2b,oxc}/`, cargo check/test des
-  consommateurs Aphrody, gates docs.
+- ✅ Code déplacé (move from aphrody@09f1288c) : `packages/bun-n2b/` (workspace Cargo séparé, toolchain stable) et
+  `packages/bun-oxc/` (Oxc 0.153.0). Addons napi : `bun scripts/aphrody/build-napi.ts packages/bun-{n2b,oxc}`.
+- ✅ crates.io : `aphrody-n2b-types`, `-registry`, `-core`, `aphrody-n2b` 0.7.0 ; `aphrody-oxc-bridge` 0.2.0.
+- ✅ npm : `@aphrody/bun-plugin-n2b@0.7.0` (plugin, API `scan`/`transform`, CLI `bunx @aphrody/bun-plugin-n2b scan|fix|report|rules…`,
+  shims ; absorbe `n2b-client`) et `@aphrody/bun-plugin-oxc@0.2.0`, chacun avec 8 paquets plateforme
+  (win32 x64/arm64, darwin x64/arm64, linux x64/arm64 gnu/musl) — workflow `aphrody-publish-native.yml`.
+- ✅ Aphrody consomme les crates en version exacte (`aphrody n2b`, MCP `n2b`, ffi `tooling`, bun-docs) ; `oxc_codegen`,
+  `oxc_minifier`, `oxc_semantic` retirés, oxc restant aligné sur 0.153 ; docs n2b dans `packages/bun-n2b/docs`, renvoi
+  `docs/reference/compat/N2B.md`.
+- ✅ Tests : cargo n2b (~97) et oxc (13) ; `bun test test/integration/bun-plugin-{n2b,oxc}` 17 + 16 pass (Windows),
+  29 pass / 4 skip oxfmt-oxlint absents (conteneur Linux 26.04) ; Aphrody cargo test --lib des consommateurs 396 pass.
+- 🔄 n2b pour les chantiers M/Q/R (bunnisation de gros monorepos) : catalogs/overrides pnpm, vitest/jest → bun test,
+  `--since <ref>`, `--migrate --dry-run`, manifeste borné au dépôt ; version 0.7.1.
 
 ### N. Alpine d'abord, Ubuntu 26.04 garanti (🔄)
 
