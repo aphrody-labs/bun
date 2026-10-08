@@ -254,11 +254,14 @@ export function toolIdentityFile(cfg: Config, tool: IdentifiedTool): string {
 /** Called by configure, before ninja runs. An unchanged tool keeps its file's mtime and rebuilds nothing. */
 export function writeToolIdentities(cfg: Config): void {
   const tools: IdentifiedTool[] = ["cc", "cxx", "hostCc", "nasm", "ld"];
+  // A native Windows build compiles against the dev shell's MSVC STL/CRT (INCLUDE/LIB), so switching toolsets
+  // must rebuild what the compilers and the linker produced.
+  const msvc = cfg.host.os === "windows" && process.env.VCToolsVersion ? `msvc ${process.env.VCToolsVersion}\n` : "";
   for (const tool of tools) {
     const path = cfg[tool];
     // Absent on this platform: no nasm, and `ld` is "" on macOS, where clang finds the linker itself.
     if (path === undefined || path === "") continue;
-    writeIfChanged(toolIdentityFile(cfg, tool), toolIdentity(path) + "\n");
+    writeIfChanged(toolIdentityFile(cfg, tool), toolIdentity(path) + "\n" + (tool === "nasm" ? "" : msvc));
   }
 }
 

@@ -49,7 +49,7 @@ import {
   resolveLlvmToolchain,
   writeToolIdentities,
 } from "./tools.ts";
-import { ensureWindowsSysroot } from "./winsysroot.ts";
+import { checkNativeMsvcToolset, ensureWindowsSysroot } from "./winsysroot.ts";
 import { checkWorkarounds } from "./workarounds.ts";
 
 /** The JavaScript tools: what the code generators run with, and all that `mode: "codegen"` looks for. */
@@ -487,6 +487,7 @@ async function generate<N extends string | undefined>(
     await ensureWindowsSysroot(cfg);
     mark("ensureWindowsSysroot");
   }
+  checkNativeMsvcToolset(cfg);
 
   // Generated `.cargo/config.toml` — written at configure time (not a ninja
   // rule), like `bun_dependency_versions.h`. Holds the per-target `linker = `

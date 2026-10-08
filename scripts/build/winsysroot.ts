@@ -44,6 +44,48 @@ export const XWIN_VERSION = pins.windowsSysroot.xwin;
 export const WINDOWS_SDK_VERSION = pins.windowsSysroot.sdk;
 export const MSVC_CRT_VERSION = pins.windowsSysroot.crt;
 
+/** `major.minor` of the pinned MSVC toolset ("14.44"), the one the prebuilt WebKit is compiled against. */
+export const MSVC_TOOLSET_VERSION = MSVC_CRT_VERSION.split(".").slice(0, 2).join(".");
+
+function compareToolsetVersions(a: string, b: string): number {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < 2; i++) {
+    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
+/**
+ * Native Windows builds compile against the STL of the VS dev shell's MSVC
+ * toolset (`INCLUDE`), while the prebuilt WebKit was compiled against
+ * MSVC_TOOLSET_VERSION's. A newer STL is not ABI-compatible with it: the
+ * 14.50 (VS 2026) `<compare>` gives `std::partial_ordering` a deleted
+ * default constructor, so clang-cl returns it in memory instead of in a
+ * register. Bun's copy of WTF's `operator<=>` (GenericTimeMixin.h) then
+ * stores through a garbage sret pointer when JSC's
+ * `JSRunLoopTimer::Manager::scheduleTimer` calls it during VM creation, and
+ * every `bun-debug -e` / `bun-debug test` segfaults.
+ * scripts/vs-shell.ps1 selects the pinned toolset when it is installed.
+ */
+export function checkNativeMsvcToolset(cfg: Config): void {
+  if (!cfg.windows || cfg.host.os !== "windows" || cfg.webkit !== "prebuilt") return;
+  const version = process.env.VCToolsVersion;
+  if (version === undefined || version === "") return;
+  if (compareToolsetVersions(version, MSVC_TOOLSET_VERSION) <= 0) return;
+  const component = `Microsoft.VisualStudio.Component.VC.${MSVC_CRT_VERSION}.${cfg.arch === "aarch64" ? "ARM64" : "x86.x64"}`;
+  throw new BuildError(
+    `MSVC toolset ${version} is newer than ${MSVC_TOOLSET_VERSION}, the toolset the prebuilt WebKit is built with; its STL is not ABI-compatible with it`,
+    {
+      hint:
+        `Install the MSVC v${MSVC_TOOLSET_VERSION} build tools (Visual Studio Installer > Modify > Individual components, or\n` +
+        `  setup.exe modify --installPath "<VS install dir>" --add ${component} --add Microsoft.VisualStudio.Component.VC.${MSVC_CRT_VERSION}.ATL --quiet)\n` +
+        `then open a new terminal: scripts/vs-shell.ps1 selects it. Or build WebKit locally (--webkit=local).`,
+    },
+  );
+}
+
 /**
  * Serviced Universal CRT static libraries, fetched from the official
  * `Microsoft.Windows.SDK.CPP.<arch>` NuGet packages and laid over the xwin
