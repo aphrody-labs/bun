@@ -264,7 +264,21 @@ paquets `packages/**` qui refont une API Bun (`http`, `fuzzy`, `sql`, `paths`…
 
 - ✅ `packages/infra/workspace` : 105 échecs → 0 sous Windows (349 pass, 90 skip Linux-only : procfs/flock/sudo, `supervise`, install.sh). Linux (Docker) : aucune régression vs HEAD. Commits aphrody `3c70e77d3` (lot intégré), `1a9b89a40`.
 - ✅ `aphrody_ffi.dll` construite (`target/runtime`, profil `runtime`) ; web-test 37/37 dont `sites` + `next-instant`. Commit `df6e5502d`.
-- ✅ m3 : scripts 51/0, m3-icons 13/0 (DLL `target/runtime` reconstruite avec polices embarquées), m3-theme 13/0, m3 61/0, m3-config/front/mcp/tailwind/material-design-icons 0 échec (aphrody 099a4fe180). `m3:theme.css` : `@import` à schéma tenu hors du compile Tailwind (fork 4265629bb50) ; m3-bun passe de 21 à 10 échecs avec la source du fork, effectif dans aphrody après publication npm `0.1.0-aphrody.2` (chantier D prévenu). Restent 10 échecs Windows dans m3-bun (zone réservée : compile/package/archive tar, PowerShell, M3_ICONS_ROOT).
+- ✅ m3 : scripts 51/0, m3-icons 13/0 (DLL `target/runtime` reconstruite avec polices embarquées), m3-theme 13/0, m3 61/0, m3-config/front/mcp/tailwind/material-design-icons 0 échec (aphrody 099a4fe180). `m3:theme.css` : `@import` à schéma tenu hors du compile Tailwind (fork 4265629bb50) ; m3-bun passe de 21 à 10 échecs avec la source du fork, effectif dans aphrody après publication npm `0.1.0-aphrody.2` (chantier D prévenu).
+- ✅ m3-bun Windows : 119 pass / 9 skip / 0 échec avec le plugin Tailwind du fork (aphrody `a7a9f745fa`) — defaultOutfile
+  `.exe`, bit exécutable et ldd/`--rootfs` réservés à Linux (erreur explicite), `M3_ICONS_ROOT` résolu, archives écrites
+  par Bun (tar.gz et zip, sans `tar`/`zip` externes), smoke via `bun build --compile`, un seul pwsh pour les 3 .ps1.
+  Linux (Docker `aphrody/build-linux:26.04`) : 119 pass / 8 skip, aucune régression (HEAD avait 1 échec zip sans `zip`) ;
+  `init.c static-linkable` passe à 30 s de délai (link statique ~5 s sous 6 CPU).
+- 🔄 Patch cœur §2.11 `Bun.Archive` (fork `5ffed5d5e53`, non construit ni testé — directive « un seul build final ») :
+  `format: "zip"` (writer + reader libarchive, `archive_read_support_format_zip` + `ppmd8`, noms UTF-8 flaggés via
+  `patches/libarchive/zip-utf8-names.patch`), entrées `{ data, mode, mtime }`, option `mtime` (archives
+  reproductibles), `extract` des zip par le lecteur Bun.Archive (le chemin rapide de `bun install` reste tar seul).
+  Tests : `bun bd test test/js/bun/archive.test.ts -t "entry modes, mtime and zip"` (doit échouer avec
+  `USE_SYSTEM_BUN=1`). Après la release du fork : remplacer l'encodeur tar/zip de `m3/packages/m3-bun/src/package.ts`
+  (`archiveEntries`/`tarHeader`/`tarGz`/`zip`) par `Bun.Archive.write(..., { format, mtime: 0 })` et le supprimer.
+- ⚠️ `tmux.ts run --ubuntu --sync` : l'image `aphrody/build-linux:26.04` n'a pas `rsync` (Dockerfile modifié par un autre
+  agent, image non reconstruite) ; vérification Linux faite par `docker run` direct.
 
 ### J. Shenron sur le fork (✅)
 
