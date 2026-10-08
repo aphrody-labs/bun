@@ -44,6 +44,11 @@ chaque lot. Contexte permanent : [APHRODY.md](APHRODY.md) (ce que le fork fourni
    proche ; tests du fork propres à Aphrody dans `test/internal/`, `test/integration/next-*`,
    `test/integration/bun-plugin-tailwind/`, `test/js/first_party/`.
 10. Rapport final en français, concis : fait (commits, versions, tests chiffrés), puis seulement l'impossible prouvé.
+11. **Limite ou manque de Bun = patch dans le cœur du fork.** Tout bug, toute API manquante ou incompatible, toute
+    lenteur de Bun (runtime, Bun.build, Bake, install, test, Node/Web compat) vue par un agent se corrige directement
+    dans `C:\bun` (`src/**` Rust/C++/JS, WebKit via chantier P), avec un test qui échoue sur `USE_SYSTEM_BUN=1` et
+    passe sur `bun bd test`, sans régression de démarrage (chantier O). Jamais de shim, polyfill ou contournement dans
+    m3, Shenron, Aphrody ou les plugins ; les contournements existants sont supprimés une fois le patch livré.
 
 ## 2 bis. Méthode de travail — gagner du temps
 
