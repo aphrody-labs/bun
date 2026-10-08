@@ -260,6 +260,13 @@ Then, reference TailwindCSS in your HTML with a `<link>` tag, an `@import` in CS
 
 <Info>Only one of these is necessary, not all three.</Info>
 
+The Aphrody fork of Bun publishes [`@aphrody/bun-plugin-tailwind`](https://github.com/aphrody-labs/bun/tree/main/packages/bun-plugin-tailwind), a drop-in replacement with the same `bunfig.toml` setup. It also takes options (`sources`, `optimize`, `minify`, `sourcemap`, a Material 3 `theme`), ships a PostCSS plugin on the same engine (`@aphrody/bun-plugin-tailwind/postcss`), and resolves `tailwindcss` without installing it.
+
+```toml title="bunfig.toml" icon="settings"
+[serve.static]
+plugins = ["@aphrody/bun-plugin-tailwind"]
+```
+
 ## Inline environment variables
 
 Bun can replace `process.env.*` references in your JavaScript and TypeScript with their actual values at build time. Use this to inject configuration like API URLs or feature flags into your frontend code.
