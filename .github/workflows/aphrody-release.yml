@@ -161,10 +161,13 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $installer = "$env:RUNNER_TEMP\llvm.exe"
-          Invoke-WebRequest "https://github.com/llvm/llvm-project/releases/download/llvmorg-$env:LLVM_VERSION/LLVM-$env:LLVM_VERSION-win64.exe" -OutFile $installer
-          Start-Process -FilePath $installer -ArgumentList '/S', '/D=C:\Program Files\LLVM' -Wait
-          & 'C:\Program Files\LLVM\bin\clang-cl.exe' --version
+          # The image's own LLVM in C:\Program Files\LLVM is older: unpack the pinned one beside it.
+          $name = "clang+llvm-$env:LLVM_VERSION-x86_64-pc-windows-msvc"
+          Invoke-WebRequest "https://github.com/llvm/llvm-project/releases/download/llvmorg-$env:LLVM_VERSION/$name.tar.xz" -OutFile "$env:RUNNER_TEMP\llvm.tar.xz"
+          tar -xf "$env:RUNNER_TEMP\llvm.tar.xz" -C C:\
+          "BUN_TOOLCHAIN_LLVM=C:\$name" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "C:\$name\bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          & "C:\$name\bin\clang-cl.exe" --version
           choco install nasm -y --no-progress
           "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
           # Strawberry's MinGW toolchain (gcc, ld, make) must not shadow the MSVC/LLVM tools.
