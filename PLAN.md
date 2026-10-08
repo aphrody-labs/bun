@@ -143,13 +143,12 @@ paquets `packages/**` qui refont une API Bun (`http`, `fuzzy`, `sql`, `paths`…
 
 ### H. Docs Bun d'Aphrody (✅)
 
-- ✅ Purge des copies et plans Bun périmés ; une seule page canonique « Bun = notre fork »
-  (`docs/reference/upstream-bun/APHRODY-FORK.md`) ; seule copie de la doc : `docs/reference/upstream-bun`
-  (`bun run docs:bun:update|check`). `CLAUDE.md`, `AGENTS.md` à jour ; `TOOLS.md` est généré et ne contient rien de
-  périmé. Aphrody `8c13ad714` (une partie des suppressions est partie dans `e3aa1d730` et `9394cb5e8`).
-  `docs:check`, `docs:bun:check` verts ; `docs:check-links` : 0 lien cassé, 3 chemins morts dans des fichiers des
-  chantiers F (`docs/operations/infra/update/BUN.md` → `patches/bun`) et C (`packages/bun-next/docs/PLAN.md` cité
-  par next-fork/PLAN.md et NEXTJS_VERCEL_RUST_CRATES.md).
+- ✅ Purge des copies et plans Bun périmés ; page canonique `docs/reference/upstream-bun/APHRODY-FORK.md` ; seule copie de
+  la doc : `docs/reference/upstream-bun` (`bun run docs:bun:update|check`). `CLAUDE.md`, `AGENTS.md` à jour ; `TOOLS.md`
+  généré, rien de périmé. `yolo docs` lit le miroir (`docs/cli/HELP.md` régénéré) ; `just qualify-bun` qualifie le
+  checkout local du fork (`APHRODY_BUN_CHECKOUT`, défaut `../bun` : `scope.ts --check`, retard sur upstream/main, puis
+  `yolo forge`). Aphrody `8c13ad714`, `1a87c0fad`, `9d5aaad7c`. `docs:gen`/`docs:check`/`docs:bun:check` verts,
+  `docs:check-links` : 0 lien cassé, 0 chemin mort.
 
 ### I. Tests Windows d'Aphrody (🔄)
 
