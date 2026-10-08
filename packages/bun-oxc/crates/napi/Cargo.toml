@@ -1,0 +1,26 @@
+[package]
+name = "bun-plugin-oxc-napi"
+description = "Node-API addon and native onBeforeParse plugin behind @aphrody/bun-plugin-oxc."
+version.workspace = true
+# The #[bun] macro emits a bare #[no_mangle], which edition 2024 rejects.
+edition = "2021"
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+aphrody-oxc-bridge.workspace = true
+bun-native-plugin = { path = "../../../bun-native-plugin-rs" }
+napi = { version = "3", default-features = false, features = ["napi4", "serde-json"] }
+napi-derive = "3"
+serde_json = { workspace = true }
+
+[build-dependencies]
+napi-build = "2"
+
+[lints]
+workspace = true

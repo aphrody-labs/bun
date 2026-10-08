@@ -1,13 +1,52 @@
-import { copyFileSync, mkdirSync, readdirSync, rmSync, statSync } from "fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "fs";
 import { join } from "path";
 
-try {
-  const basePath = join(import.meta.dir, "../../../src/bun.js/WebKit/Source/WebInspectorUI/UserInterface");
-  const htmlPath = join(basePath, "Main.html");
-  const backendCommands = join(
-    import.meta.dir,
-    "../../../src/bun.js/WebKit/WebKitBuild/Release/JavaScriptCore/DerivedSources/inspector/InspectorBackendCommands.js",
+// WebKit generates Models/NativeFunctionParameters.js at build time from WebCore's IDL plus
+// NativeFunctionParameters-overrides.json (Scripts/update-NativeFunctionParameters.py). A source
+// checkout has only the overrides, which cover the JS builtins a Bun inspector shows.
+function writeNativeFunctionParameters(basePath: string) {
+  const output = join(basePath, "Models", "NativeFunctionParameters.js");
+  if (existsSync(output)) return;
+  const overrides = JSON.parse(
+    readFileSync(join(basePath, "Models", "NativeFunctionParameters-overrides.json"), "utf8"),
   );
+  const key = (name: string) => (/^[A-Za-z_$][\w$]*$/.test(name) ? name : JSON.stringify(name));
+  const object = (target: string, kind: "constructor" | "prototype") => {
+    const lines = [`${target} = {`];
+    for (const name of Object.keys(overrides).sort()) {
+      const methods = overrides[name][kind];
+      if (!methods || !Object.keys(methods).length) continue;
+      lines.push(`    ${key(name)}: {`);
+      for (const method of Object.keys(methods).sort())
+        lines.push(`        ${key(method)}: ${JSON.stringify(methods[method])},`);
+      lines.push("        __proto__: null,", "    },");
+    }
+    lines.push("};");
+    return lines.join("\n");
+  };
+  writeFileSync(
+    output,
+    [
+      object("WI.NativeConstructorFunctionParameters", "constructor"),
+      "",
+      object("WI.NativePrototypeFunctionParameters", "prototype"),
+      "",
+    ].join("\n"),
+  );
+}
+
+try {
+  const basePath =
+    process.env.WEB_INSPECTOR_UI_DIR ??
+    join(import.meta.dir, "../../../src/bun.js/WebKit/Source/WebInspectorUI/UserInterface");
+  const htmlPath = join(basePath, "Main.html");
+  const backendCommands =
+    process.env.INSPECTOR_BACKEND_COMMANDS ??
+    join(
+      import.meta.dir,
+      "../../../src/bun.js/WebKit/WebKitBuild/Release/JavaScriptCore/DerivedSources/inspector/InspectorBackendCommands.js",
+    );
+  writeNativeFunctionParameters(basePath);
   const scriptsToBundle = [];
   const stylesToBundle = [];
   const jsReplacementId = crypto.randomUUID() + ".js";
@@ -105,16 +144,16 @@ try {
   rmSync(join(import.meta.dir, "out"), { recursive: true, force: true });
   mkdirSync(join(import.meta.dir, "out", "Protocol"), { recursive: true });
 
-  const javascript = scriptsToBundle.map(a => `import '${join(basePath, a)}';`).join("\n") + "\n";
+  const javascript = scriptsToBundle.map(a => `import ${JSON.stringify(join(basePath, a))};`).join("\n") + "\n";
   // const css = stylesToBundle.map(a => `@import "${join(basePath, a)}";`).join("\n") + "\n";
   await Bun.write(join(import.meta.dir, "out/manifest.js"), javascript);
-  mkdirSync("out/WebKitAdditions/WebInspectorUI/", { recursive: true });
+  mkdirSync(join(import.meta.dir, "out/WebKitAdditions/WebInspectorUI/"), { recursive: true });
   await Bun.write(join(import.meta.dir, "out/WebKitAdditions/WebInspectorUI/WebInspectorUIAdditions.js"), "");
   await Bun.write(join(import.meta.dir, "out/WebKitAdditions/WebInspectorUI/WebInspectorUIAdditions.css"), "");
   // await Bun.write(join(import.meta.dir, "manifest.css"), css);
   const jsBundle = await Bun.build({
     entrypoints: [join(import.meta.dir, "out/manifest.js")],
-    outdir: "out",
+    outdir: join(import.meta.dir, "out"),
     minify: true,
   });
   const jsFilename = "manifest-" + jsBundle.outputs[0].hash + ".js";

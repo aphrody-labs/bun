@@ -1,0 +1,35 @@
+{
+  "name": "bun-plugin-oxc",
+  "version": "0.2.0",
+  "description": "Oxc for Bun: TypeScript/JSX transform, minify, format, lint and analyze, as a Bun plugin and a typed API.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aphrody-labs/bun",
+    "directory": "packages/bun-oxc"
+  },
+  "homepage": "https://github.com/aphrody-labs/bun/tree/main/packages/bun-oxc",
+  "keywords": ["bun", "plugin", "oxc", "typescript", "jsx", "minify", "lint"],
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["src", "README.md", "*.node"],
+  "napi": {
+    "name": "bun-plugin-oxc",
+    "crate": "bun-plugin-oxc-napi"
+  },
+  "scripts": {
+    "build": "bun ../../scripts/aphrody/build-napi.ts .",
+    "test": "cargo test --workspace && bun test ../../test/integration/bun-plugin-oxc/"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  }
+}

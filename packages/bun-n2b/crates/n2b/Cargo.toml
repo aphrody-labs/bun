@@ -1,0 +1,43 @@
+[package]
+name = "aphrody-n2b"
+description = "Node.js to Bun migration analyzer and codemod (the n2b CLI)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme = "README.md"
+keywords = ["bun", "nodejs", "migration", "codemod", "cli"]
+categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "n2b"
+path = "src/main.rs"
+
+[dependencies]
+aphrody-n2b-core.workspace = true
+clap.workspace = true
+colored.workspace = true
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tokio.workspace = true
+octocrab.workspace = true
+rustls.workspace = true
+which.workspace = true
+similar.workspace = true
+fastembed = { workspace = true, optional = true }
+
+[features]
+default = []
+# Enables the ML crosslink in `n2b analyze` (fastembed + AllMiniLML6V2).
+ai = ["dep:fastembed"]
+
+[dev-dependencies]
+assert_cmd.workspace = true
+jsonschema.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,32 @@
+[package]
+name = "aphrody-oxc-bridge"
+description = "In-process Oxc bridge: transform, minify, format, lint and analyze JS/TS, with a stable C ABI."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme = "README.md"
+keywords = ["oxc", "javascript", "typescript", "minifier", "bun"]
+categories = ["development-tools", "parser-implementations", "web-programming"]
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+oxc_allocator = { workspace = true }
+oxc_ast = { workspace = true, features = ["serialize"] }
+oxc_ast_visit = { workspace = true, features = ["serialize"] }
+oxc_codegen = { workspace = true }
+oxc_minifier = { workspace = true }
+oxc_parser = { workspace = true }
+oxc_semantic = { workspace = true }
+oxc_span = { workspace = true }
+oxc_syntax = { workspace = true }
+oxc_transformer = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

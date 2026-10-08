@@ -562,6 +562,10 @@ fn spawn(
             // default about:blank. Saves one tab and the visual-complete wait.
             c"--no-startup-window".as_ptr(),
         ];
+        // An elevated Chrome relaunches itself de-elevated and exits; the relaunched
+        // browser does not inherit fd 3/4, so the pipe closes before the first command.
+        #[cfg(windows)]
+        argv.push(c"--do-not-de-elevate".as_ptr());
         // User extras last so they can override built-in flags (Chrome's
         // CommandLine last-wins for duplicate switches). Memory is the caller's
         // CString Vector — lives until Bun__Chrome__ensure returns, after which

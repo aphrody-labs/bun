@@ -1,0 +1,44 @@
+{
+  "name": "bun-plugin-n2b",
+  "version": "0.7.0",
+  "description": "Node.js to Bun migration for Bun: scan, codemods at load/build time and the n2b CLI (Aphrody fork of Bun)",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "bin": {
+    "bun-plugin-n2b": "./bin/n2b.ts",
+    "n2b": "./bin/n2b.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./plugin": "./src/plugin.ts",
+    "./cli": "./src/cli.ts",
+    "./types": "./src/types.ts",
+    "./shims": "./src/shims/index.ts",
+    "./shims/env": "./src/shims/env.ts",
+    "./shims/fs": "./src/shims/fs.ts",
+    "./shims/path": "./src/shims/path.ts",
+    "./shims/shell": "./src/shims/shell.ts"
+  },
+  "files": [
+    "bin",
+    "src",
+    "docs",
+    "README.md"
+  ],
+  "napi": {
+    "name": "bun-plugin-n2b",
+    "crate": "bun-plugin-n2b-napi"
+  },
+  "keywords": [
+    "bun",
+    "bun-plugin",
+    "nodejs",
+    "migration",
+    "codemod"
+  ],
+  "engines": {
+    "bun": ">=1.3.0"
+  }
+}

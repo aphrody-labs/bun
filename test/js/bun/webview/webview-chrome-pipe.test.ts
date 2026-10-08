@@ -393,6 +393,16 @@ test.concurrent("bun test --isolate retires the transport with the file that spa
 // modes of their own.
 const windowsOnly = isWindows ? test.concurrent : test.skip;
 
+windowsOnly("Chrome is told not to relaunch itself de-elevated", async () => {
+  const result = await runScenario(`
+    const view = newView();
+    await view.navigate("http://fake/");
+    print(await view.evaluate("process.execArgv.includes('--do-not-de-elevate')"));
+    view.close();
+  `);
+  expect(result).toBe(true);
+});
+
 windowsOnly("the reply pipe closing while the process lives rejects", async () => {
   const result = await runScenario(`
     const view = newView();

@@ -1,0 +1,48 @@
+# Its own workspace: not a member of the Bun workspace at the repository root.
+# aphrody-oxc-bridge is published to crates.io; crates/napi is the addon behind
+# @aphrody/bun-plugin-oxc and is not published.
+[workspace]
+resolver = "3"
+members = ["crates/oxc-bridge", "crates/napi"]
+
+[workspace.package]
+version = "0.2.0"
+edition = "2024"
+rust-version = "1.97"
+license = "MIT"
+authors = ["aphrody-code"]
+repository = "https://github.com/aphrody-labs/bun"
+homepage = "https://github.com/aphrody-labs/bun/tree/main/packages/bun-oxc"
+
+[workspace.dependencies]
+aphrody-oxc-bridge = { path = "crates/oxc-bridge", version = "=0.2.0" }
+
+oxc_allocator = "0.153.0"
+oxc_ast = "0.153.0"
+oxc_ast_visit = "0.153.0"
+oxc_codegen = "0.153.0"
+oxc_minifier = "0.153.0"
+oxc_parser = "0.153.0"
+oxc_semantic = "0.153.0"
+oxc_span = "0.153.0"
+oxc_syntax = "0.153.0"
+oxc_transformer = "0.153.0"
+serde_json = "1.0.151"
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+unused_must_use = "deny"
+non_ascii_idents = "deny"
+
+[workspace.lints.clippy]
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+correctness = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -1 }
+
+[profile.release]
+lto = "thin"
+codegen-units = 4
+strip = "symbols"
+panic = "unwind"

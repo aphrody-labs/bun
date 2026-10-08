@@ -58,6 +58,17 @@ export const CRATES: Crate[] = [
   },
 ];
 
+// Fork-only crates, published under their own names straight from the package's
+// own Cargo workspace (no staging: nothing upstream to keep mergeable). Listed in
+// dependency order.
+export const WORKSPACES: { dir: string; crates: string[] }[] = [
+  {
+    dir: "packages/bun-n2b",
+    crates: ["aphrody-n2b-types", "aphrody-n2b-registry", "aphrody-n2b-core", "aphrody-n2b"],
+  },
+  { dir: "packages/bun-oxc", crates: ["aphrody-oxc-bridge"] },
+];
+
 const renamed = new Map(CRATES.map(c => [c.upstream, c]));
 
 type Toml = Record<string, any>;
@@ -183,29 +194,70 @@ async function main() {
   const publish = argv.includes("--publish");
   const toolchain = opt("--toolchain") ?? "stable";
   const out = resolve(opt("--out") ?? join(tmpdir(), "aphrody-crates"));
+  const skipTests = argv.includes("--skip-tests");
+  // --only sdk | packages/bun-n2b | packages/bun-oxc (comma-separated); default everything.
+  const only = opt("--only")?.split(",");
+  const selected = (key: string) => !only || only.includes(key);
 
-  stage(out);
-  console.log(`staged ${CRATES.map(c => `${c.name}@${versionOf(c)}`).join(", ")} in ${out}`);
-
-  const pending: Crate[] = [];
-  for (const c of CRATES) {
-    if (await published(c.name, versionOf(c))) console.log(`skip ${c.name}@${versionOf(c)}: already on crates.io`);
-    else pending.push(c);
+  if (selected("sdk")) {
+    stage(out);
+    console.log(`staged ${CRATES.map(c => `${c.name}@${versionOf(c)}`).join(", ")} in ${out}`);
+    const pending: { name: string; version: string }[] = [];
+    for (const c of CRATES) {
+      if (await published(c.name, versionOf(c))) console.log(`skip ${c.name}@${versionOf(c)}: already on crates.io`);
+      else pending.push({ name: c.name, version: versionOf(c) });
+    }
+    for (const c of CRATES) cargo(out, toolchain, ["package", "--list", "--allow-dirty", "-p", c.name]);
+    cargo(out, toolchain, ["check", "--workspace", "--all-targets"]);
+    if (!skipTests) cargo(out, toolchain, ["test", "--workspace", "--lib"]);
+    publishPending(out, toolchain, pending, publish);
   }
 
-  for (const c of CRATES) cargo(out, toolchain, ["package", "--list", "--allow-dirty", "-p", c.name]);
-  cargo(out, toolchain, ["check", "--workspace", "--all-targets"]);
-  if (!argv.includes("--skip-tests")) cargo(out, toolchain, ["test", "--workspace", "--lib"]);
+  for (const ws of WORKSPACES) {
+    if (!selected(ws.dir)) continue;
+    const dir = join(ROOT, ws.dir);
+    const versions = workspaceVersions(dir, toolchain);
+    const pending: { name: string; version: string }[] = [];
+    for (const name of ws.crates) {
+      const version = versions.get(name);
+      if (!version) throw new Error(`${ws.dir}: no crate ${name} in the workspace`);
+      if (await published(name, version)) console.log(`skip ${name}@${version}: already on crates.io`);
+      else pending.push({ name, version });
+    }
+    for (const name of ws.crates) cargo(dir, toolchain, ["package", "--list", "--allow-dirty", "-p", name]);
+    const sel = ws.crates.flatMap(name => ["-p", name]);
+    cargo(dir, toolchain, ["check", "--all-targets", ...sel]);
+    if (!skipTests) cargo(dir, toolchain, ["test", ...sel]);
+    publishPending(dir, toolchain, pending, publish);
+  }
+}
 
+function workspaceVersions(dir: string, toolchain: string): Map<string, string> {
+  const r = Bun.spawnSync(["cargo", `+${toolchain}`, "metadata", "--no-deps", "--format-version", "1"], {
+    cwd: dir,
+    stdout: "pipe",
+    stderr: "inherit",
+  });
+  if (r.exitCode !== 0) throw new Error(`cargo metadata failed in ${dir}`);
+  const meta = JSON.parse(r.stdout.toString()) as { packages: { name: string; version: string }[] };
+  return new Map(meta.packages.map(p => [p.name, p.version]));
+}
+
+function publishPending(
+  cwd: string,
+  toolchain: string,
+  pending: { name: string; version: string }[],
+  publish: boolean,
+) {
   if (pending.length === 0) {
-    console.log("nothing to publish");
+    console.log(`nothing to publish in ${cwd}`);
     return;
   }
   const sel = pending.flatMap(c => ["-p", c.name]);
-  cargo(out, toolchain, ["publish", "--allow-dirty", "--dry-run", ...sel]);
+  cargo(cwd, toolchain, ["publish", "--allow-dirty", "--dry-run", ...sel]);
   if (!publish) return;
-  cargo(out, toolchain, ["publish", "--allow-dirty", ...sel]);
-  for (const c of pending) console.log(`published https://crates.io/crates/${c.name}/${versionOf(c)}`);
+  cargo(cwd, toolchain, ["publish", "--allow-dirty", ...sel]);
+  for (const c of pending) console.log(`published https://crates.io/crates/${c.name}/${c.version}`);
 }
 
 if (import.meta.main) await main();

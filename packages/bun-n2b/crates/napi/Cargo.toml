@@ -1,0 +1,25 @@
+[package]
+name = "bun-plugin-n2b-napi"
+description = "Node-API addon behind @aphrody/bun-plugin-n2b."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+aphrody-n2b.workspace = true
+aphrody-n2b-core.workspace = true
+napi = { version = "3", default-features = false, features = ["napi4", "serde-json"] }
+napi-derive = "3"
+serde_json = { workspace = true }
+
+[build-dependencies]
+napi-build = "2"
+
+[lints]
+workspace = true
