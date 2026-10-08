@@ -5,12 +5,25 @@
  */
 export const WEBKIT_VERSION = "0c06faadf65bf8e8c8ad3a5a8aca83e1e9ed653f";
 
+/** Upstream prebuilt releases; the default source. */
+export const WEBKIT_UPSTREAM_REPO = "oven-sh/WebKit";
+/** The Aphrody fork (same lanes, archive names and contents; built by its `aphrody-prebuilts.yml`). */
+export const WEBKIT_APHRODY_REPO = "aphrody-labs/WebKit";
+
+/**
+ * Archives published as the release `autobuild-<sha>` on aphrody-labs/WebKit, per WebKit sha. The default source for
+ * an archive is the Aphrody fork once it is listed here, oven-sh otherwise. Add the names after the `aphrody-prebuilts`
+ * run published them (PLAN.md, chantier P). `BUN_WEBKIT_REPO` overrides this (see `webkitPrebuiltRepo`).
+ */
+export const APHRODY_WEBKIT_PREBUILTS: Readonly<Record<string, readonly string[]>> = {};
+
 /**
  * WebKit (JavaScriptCore) — the JS engine.
  *
  * Two modes via `cfg.webkit`:
  *
- * **prebuilt**: Download tarball from oven-sh/WebKit releases. Tarball name
+ * **prebuilt**: Download tarball from oven-sh/WebKit releases (or from
+ *   aphrody-labs/WebKit, see `webkitPrebuiltRepo` / `$BUN_WEBKIT_REPO`). Tarball name
  *   encodes {os, arch, musl, debug|lto, asan} — each is a separate ABI.
  *   ASAN MUST match bun's setting: WTF::Vector layout changes with ASAN
  *   (see WTF/Vector.h:682), so mixing → silent memory corruption.
@@ -65,13 +78,47 @@ function prebuiltSuffix(cfg: Config): string {
   return s;
 }
 
-function prebuiltUrl(cfg: Config): string {
+function prebuiltName(cfg: Config): string {
   const os = cfg.windows ? "windows" : cfg.darwin ? "macos" : cfg.freebsd ? "freebsd" : "linux";
   const arch = cfg.arm64 ? "arm64" : "amd64";
-  const name = `bun-webkit-${os}-${arch}${prebuiltSuffix(cfg)}`;
+  return `bun-webkit-${os}-${arch}${prebuiltSuffix(cfg)}`;
+}
+
+/**
+ * GitHub repo whose releases hold the prebuilt. `$BUN_WEBKIT_REPO` forces it: `aphrody`, `oven` or `owner/repo`.
+ * Without it: the Aphrody fork when it published this archive for this sha (APHRODY_WEBKIT_PREBUILTS), else oven-sh.
+ */
+export function webkitPrebuiltRepo(
+  name: string,
+  version: string,
+  env: string | undefined = process.env.BUN_WEBKIT_REPO,
+): string {
+  const forced = env?.trim();
+  if (forced) {
+    const alias = forced.toLowerCase();
+    if (alias === "aphrody" || alias === "aphrody-labs") return WEBKIT_APHRODY_REPO;
+    if (alias === "oven" || alias === "oven-sh" || alias === "upstream") return WEBKIT_UPSTREAM_REPO;
+    if (/^[\w.-]+\/[\w.-]+$/.test(forced)) return forced;
+    throw new Error(`BUN_WEBKIT_REPO='${forced}': expected 'aphrody', 'oven' or '<owner>/<repo>'`);
+  }
+  const sha = version.startsWith("autobuild-") ? version.slice("autobuild-".length) : version;
+  return APHRODY_WEBKIT_PREBUILTS[sha]?.includes(name) ? WEBKIT_APHRODY_REPO : WEBKIT_UPSTREAM_REPO;
+}
+
+function prebuiltRepo(cfg: Config): string {
+  return webkitPrebuiltRepo(prebuiltName(cfg), cfg.webkitVersion);
+}
+
+/** Key for a non-upstream source: a same-sha prebuilt from another repo must not reuse the extraction. */
+function prebuiltRepoKey(cfg: Config): string {
+  const repo = prebuiltRepo(cfg);
+  return repo === WEBKIT_UPSTREAM_REPO ? "" : `-${repo.replace(/[^\w.]+/g, "_")}`;
+}
+
+export function webkitPrebuiltUrl(cfg: Config): string {
   const version = cfg.webkitVersion;
   const tag = version.startsWith("autobuild-") ? version : `autobuild-${version}`;
-  return `https://github.com/oven-sh/WebKit/releases/download/${tag}/${name}.tar.gz`;
+  return `https://github.com/${prebuiltRepo(cfg)}/releases/download/${tag}/${prebuiltName(cfg)}.tar.gz`;
 }
 
 /**
@@ -99,7 +146,7 @@ function prebuiltDestDir(cfg: Config): string {
             ? "-android"
             : "";
   const archKey = cfg.arm64 ? "-arm64" : "";
-  return resolve(cfg.cacheDir, `webkit-${version16}${osKey}${archKey}${prebuiltSuffix(cfg)}`);
+  return resolve(cfg.cacheDir, `webkit-${version16}${osKey}${archKey}${prebuiltSuffix(cfg)}${prebuiltRepoKey(cfg)}`);
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -193,11 +240,11 @@ export const webkit: Dependency = {
     if (cfg.webkit === "prebuilt") {
       const src: Source = {
         kind: "prebuilt",
-        url: prebuiltUrl(cfg),
+        url: webkitPrebuiltUrl(cfg),
         // Identity = version + suffix. Suffix ensures profile switches
         // (debug ↔ release, asan toggle) trigger re-download. Without it,
         // same version stamp would skip, leaving the wrong ABI on disk.
-        identity: `${cfg.webkitVersion}${prebuiltSuffix(cfg)}`,
+        identity: `${cfg.webkitVersion}${prebuiltSuffix(cfg)}${prebuiltRepoKey(cfg)}`,
         destDir: prebuiltDestDir(cfg),
       };
       // macOS: bundled ICU headers conflict with system ICU.
