@@ -1,0 +1,26 @@
+{
+  "name": "@aphrody/bun-webview-page",
+  "version": "0.1.1",
+  "description": "Playwright-shaped page, locators, routing and events over Bun.WebView (Chrome backend over CDP)",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "check:types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "../bun-types",
+    "happy-dom": "^20.14.5"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  }
+}

@@ -117,6 +117,11 @@ export const PACKAGES: PackageSpec[] = [
     dir: "bun-plugin-yaml",
     fields: { description: "YAML plugin for Bun (Aphrody fork of Bun)" },
   },
+  {
+    // Fork-only: Playwright-shaped page over Bun.WebView (moved from the aphrody monorepo).
+    dir: "bun-webview-page",
+    fields: { description: "Playwright-shaped page, locators and routing over Bun.WebView (Aphrody fork of Bun)" },
+  },
 ];
 
 const FORK_NAMES = new Set(PACKAGES.map(p => p.dir));
