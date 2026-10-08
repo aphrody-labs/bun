@@ -144,6 +144,23 @@ dans `packages/bun-next`.
 
 Côté Aphrody : `crates/ai/code-graph`, remote-desktop, défauts graph/yolo/MCP ; réinstallation du binaire.
 
+### M. Fork Next.js — `aphrody-labs/next.js` (⏳ après la fin de tous les autres chantiers)
+
+Démarre seulement quand B à L sont terminés. Reproduire pour Next.js le workflow appliqué à Bun :
+
+- ⏳ Fork `vercel/next.js` → `aphrody-labs/next.js` (clone local `C:\next.js`, remotes `origin` + `upstream`), branche
+  `main` (canary upstream).
+- ⏳ Scope `@aphrody` : script `scripts/aphrody/scope.ts` (renommage idempotent des paquets publiés, `--check`/`--write`)
+  et `scripts/aphrody/sync-upstream.ts` (fusion à trois voies tenant compte du renommage) + workflow
+  `aphrody-upstream-sync.yml` toutes les 6 h + tests `test/internal/aphrody-*`.
+- ⏳ Publication : npm (`@aphrody/next`, `@aphrody/next-swc-*`, paquets `@next/*` renommés), crates.io pour les crates
+  Rust publiables, release GitHub ; workflows `aphrody-publish-*` / `aphrody-release`.
+- ⏳ Le patch et l'intégration Bun de `@aphrody/next-bun` deviennent des commits du fork Next (support Bun natif :
+  runtime, PostCSS sans Node, Bun.build) ; `@aphrody/next-bun` se réduit à ce qui reste côté Bun.
+- ⏳ Absorber la couche Next restante d'Aphrody/Shenron qui relève de Next ; Aphrody et Shenron consomment
+  `@aphrody/next`.
+- ⏳ `APHRODY.md` et `PLAN.md` propres au fork Next ; graphe `aphrody graph --source graph:next` et mémoire.
+
 ## 4. Vérification commune avant chaque push
 
 ```sh
