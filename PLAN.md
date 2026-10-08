@@ -189,6 +189,10 @@ Fichiers : `src/**`, tests dans les fichiers existants.
   bun (libuv `SEM_NOGPFAULTERRORBOX`, `vendor/libuv/src/win/core.c:181`) : procdump `-e 1`. La stratégie
   `Policies\...\Windows Error Reporting\Disabled=1` désactivait WER sur toute la machine (remise à 0). Exclusions
   Defender étendues à `C:\bun`, `.rustup`, VS/LLVM/SDK.
+- ✅ Patch WER (libuv `patches/libuv/win-allow-wer.patch` + `src/crash_handler/lib.rs`) : `SEM_NOGPFAULTERRORBOX` n'est plus
+  posé quand `BUN_WER=1` ou qu'une clé `LocalDumps/<exe>` existe ; le crash handler termine alors par
+  `RaiseFailFastException` avec l'exception d'origine (WER dumpe la vraie faute). Défaut inchangé (`ExitProcess(3)`).
+  Test : `test/cli/run/run-crash-handler.test.ts`.
 
 ### F. Fork = noyau d'Aphrody (✅)
 
@@ -339,6 +343,27 @@ Framework complet sans Node : Bun.serve + Bake (`src/runtime/bake`) pour dev ser
 routage `app/` compatible Next (`page`/`layout`/`route`, Server Components, Server Actions), Tailwind via
 `@aphrody/bun-plugin-tailwind`, UI Base UI + M3 (R). Réutilise ce qui est bunisé dans M/Q/R (Turbopack/next-swc si plus
 rapide). Aucun coût au démarrage de `bun` (chantier O). Shenron sert d'application de validation.
+
+### T. m3 full Bun — `C:aphrodym3` hors framework (🔄)
+
+Racine : `C:aphrodym3`. Périmètre : m3-tokens, -theme, -front, -react, -tailwind, -icons, -fonts, -motion, -primitives,
+-forms, -ai, -explorer, -design, -codemods, -reader, -mcp, -os-themes, eslint-plugin-m3, material-design-icons, assets,
+canvas, identity, app-ui, rg-ui, web-to-tauri et `scripts/`. Le framework (m3, m3-bun, m3-config, m3-next,
+m3-next-migrate, scaffold, templates, apps) = S ; m3-baseui = R. Dépendances TanStack gardées (décision S).
+
+- ✅ État initial : aucun vite/vitest/jest/pnpm/tsx/ts-node/esbuild/webpack dans l'outillage (seules des chaînes de
+  détection de frameworks restent dans web-to-tauri). Tests = `bun test` + happy-dom, builds = `Bun.build`.
+- ✅ `eslint-plugin-m3` est déjà un plugin oxlint JS (`jsPlugins`, compatible ESLint), testé par oxlint réel : rien à convertir.
+- ✅ `scripts/yolo.ts` lance le CLI Bun de yolo (`bun run $YOLO_ROOT/packages/engine/yolo/src/index.ts`) partout, plus le
+  lanceur bash ; le banc `scripts/bench` en bénéficie (ancien échec de syntaxe corrigé). Les tests du dépôt sont limités à
+  `./packages/*` (avant : `--filter "*"` lançait tout le monorepo Aphrody).
+- ✅ rg-ui intégré au workspace (deps Rosegriffon en peers optionnels typés), typecheck, tests (96 pass, 1 skip sans le site) ;
+  m3-design (typeRoots du typecheck généré + délai du hook), app-ui (`allowImportingTsExtensions`).
+- 🔄 `node:*` → API Bun (n2b agressif en dry-run puis application par paquet) : voir les commits `refactor(<pkg>): node:* to Bun APIs`.
+  Restent en `node:*` par nécessité : `node:path`/`node:os`, `mkdtemp`, `rm` récursif, `mkdir` de dossier vide, `readdir withFileTypes`,
+  `isIP`, et les API publiques synchrones (`readFileSync`/`existsSync`).
+- Note : les tests de m3-next-migrate laissent des `m3/apps/m3-migrate-contract-*` qui cassent `bun install` (nom de workspace
+  dupliqué) : à corriger côté S.
 
 ### L. oxc et n2b dans le fork (✅ ; n2b 0.7.1 monorepo en cours)
 
