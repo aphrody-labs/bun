@@ -1,0 +1,52 @@
+--- a/src/win/core.c
++++ b/src/win/core.c
+@@ -176,10 +176,47 @@
+   uv_mutex_unlock(&uv__loops_lock);
+ }
+ 
++/* Windows Error Reporting (LocalDumps, WerFault) is opted into with
++ * BUN_WER=1 or by a LocalDumps key for this executable. Without either, GP
++ * fault boxes stay suppressed as before. */
++static int uv__wer_enabled(void) {
++  static const WCHAR prefix[] =
++      L"SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps\\";
++  WCHAR env[8];
++  WCHAR path[MAX_PATH + 1];
++  WCHAR subkey[MAX_PATH + 128];
++  WCHAR* name;
++  DWORD n;
++  HKEY key;
++  size_t plen;
++
++  n = GetEnvironmentVariableW(L"BUN_WER", env, ARRAY_SIZE(env));
++  if (n == 1 && env[0] == L'1')
++    return 1;
++
++  n = GetModuleFileNameW(NULL, path, ARRAY_SIZE(path) - 1);
++  if (n == 0 || n >= ARRAY_SIZE(path) - 1)
++    return 0;
++  path[n] = L'\0';
++  name = wcsrchr(path, L'\\');
++  name = name == NULL ? path : name + 1;
++  plen = wcslen(prefix);
++  if (plen + wcslen(name) + 1 > ARRAY_SIZE(subkey))
++    return 0;
++  wcscpy(subkey, prefix);
++  wcscpy(subkey + plen, name);
++  if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, subkey, 0, KEY_READ, &key) ==
++      ERROR_SUCCESS) {
++    RegCloseKey(key);
++    return 1;
++  }
++  return 0;
++}
++
+ static void uv__init(void) {
+   /* Tell Windows that we will handle critical errors. */
+-  SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX |
+-               SEM_NOOPENFILEERRORBOX);
++  SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX |
++               (uv__wer_enabled() ? 0 : SEM_NOGPFAULTERRORBOX));
+ 
+   /* Tell the CRT to not exit the application when an invalid parameter is
+    * passed. The main issue is that invalid FDs will trigger this behavior.

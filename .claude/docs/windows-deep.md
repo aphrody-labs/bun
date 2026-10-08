@@ -78,7 +78,9 @@ Commandes : `winclean binary_parse_pe_header`, `dumpbin /headers /dependents /lo
   Conséquence vérifiée : WER n'écrit **aucun** dump LocalDumps pour un processus bun (testé :
   `RaiseFailFastException` dans bun-profile.exe lancé hors job → pas de dump, alors qu'un `crash.exe` C compilé
   avec cl produit `C:\CrashDumps\bun\crash.exe.2104.dmp` 183 386 o, événements Application 1000 + 1001 APPCRASH).
-  Pour bun on utilise donc **procdump -e** (§7), pas LocalDumps. Le message « panic(main thread): Segmentation
+  Patch fork (PLAN §E) : `patches/libuv/win-allow-wer.patch` ne pose plus `SEM_NOGPFAULTERRORBOX` si `BUN_WER=1` ou si une clé
+  `LocalDumps<exe>` existe, et le crash handler finit par `RaiseFailFastException` (exception d'origine). Non buildé/testé
+  à ce jour (build interdit) : test `run-crash-handler.test.ts` « Windows Error Reporting opt-in ». Jusque-là, **procdump -e** (§7). Le message « panic(main thread): Segmentation
   fault at address 0x… » est écrit par le crash handler de bun, puis `abort` ; code de sortie 3.
 - Le paramètre 1 d'un AV (`Parameter[1]`) est l'adresse lue, mais un déréférencement d'un pointeur non canonique
   s'affiche `0xFFFFFFFFFFFFFFFF` (ancienne repro : `rcx=0x009f3fca13639700`, adresse canonique invalide).
@@ -97,7 +99,7 @@ Commandes : `winclean binary_parse_pe_header`, `dumpbin /headers /dependents /lo
 ## 4. CPU
 
 - Intel Core i7-13700F (Raptor Lake), 16 cœurs / 24 threads, L2 24 Mo, L3 30 Mo, 1 nœud NUMA, ligne de cache 64 o.
-  `winclean get_cpu_info` renvoie `L1/L2/L3CacheBytes: 0` (champs non remplis) ; CIM donne les vrais.
+  `winclean get_cpu_info` (corrigé, `GetLogicalProcessorInformationEx`) renvoie maintenant les caches réels, somme de toutes les instances.
 - `GetLogicalProcessorInformationEx` : 8 cœurs P (EfficiencyClass 1, SMT) + 8 cœurs E (EfficiencyClass 0).
 - `IsProcessorFeaturePresent` : SSE4.2/AVX/AVX2 (PF 10, 17, 36–40) vrais ; **AVX-512 (PF 41) faux**, PF 43–46 faux.
   Le crash handler de bun l'imprime : « CPU: sse42 popcnt avx avx2 ». Les builds `baseline` ne sont pas nécessaires,
@@ -112,9 +114,10 @@ Commandes : `winclean binary_parse_pe_header`, `dumpbin /headers /dependents /lo
 
 - Un seul disque : NVMe Micron 2400 1 To, SSD, **C: NTFS** (`Get-Volume`), 606 Go libres sur 996 Go
   (`get_disk_info`). TRIM actif (`DisableDeleteNotify=0`). Pas de Dev Drive : `fsutil devdrv query C:` →
-  « pas un volume de développeur ». Créer un VHDX Dev Drive n'a pas été fait (déplacer C:\bun pendant que d'autres
-  agents travaillent est dangereux) ; commande prête : `Format-Volume -DevDrive` sur une partition d'un VHDX
-  dynamique (≥ 50 Go).
+  « pas un volume de développeur ». Dev Drive essayé : VHDX extensible 120 Go (diskpart `create vdisk` + `Format-Volume -DevDrive`, Hyper-V
+  absent donc pas de `New-VHD`). Micro-bench (20k fichiers de 4 Ko, machine chargée) : création 4 s contre 11-19 s, suppression 1,7 s contre 4,6-5,9 s,
+  mais écriture séquentielle 2 Go 25-32 s contre 6 s et relecture irrégulière ; Defender est déjà OFF, donc pas de gain de filtre.
+  Gain net non démontré sur un vrai build (builds interdits) : **annulé** (vdisk détaché, VHDX supprimé, plus de D:).
 - `LongPathsEnabled=1` (déjà), manifeste bun `longPathAware` : lecture d'un fichier à 386 caractères réussie avec
   `bun -e` (testé).
 - Symlinks : `AllowDevelopmentWithoutDevLicense=1` et `AllowAllTrustedApps=1` (mode développeur déjà actif) ;
@@ -212,8 +215,11 @@ pile avec fichiers/lignes Rust (`FFIObject.rs @ 304`, `ffi/mod.rs @ 54`) et C++ 
    winclean tourne dans le processus : `doctor` voit 166) :
    `crates/infra/aphrody-command/src/pillars_cmd.rs`, `merge_in_process_winclean` garde le max entre le compte noyau et
    le compte en processus ; champ JSON `winclean_in_process` ajouté.
-4. Observé, non corrigé (hors périmètre) : `get_os_info` renvoie `EditionId`, `Ubr`, `InstallationType` vides, et
-   `get_cpu_info` des caches à 0 (voir §1/§4 pour les vraies valeurs).
+4. Corrigé (commit aphrody 1639d10cec) : `get_os_info` lit `HKLM...CurrentVersion` (EditionID, UBR, InstallationType, DisplayVersion) et
+   `get_cpu_info` somme les caches via `GetLogicalProcessorInformationEx` ; 43 tests winclean verts.
+5. Cache de compilation : le 7 % de sccache vient des cargo de l'espace aphrody, pas du build Bun (rustc direct, `RUSTC_WRAPPER` ignoré,
+   `rust.ts:696`). Le C++ de Bun n'avait aucun cache (ccache absent) : ccache 4.14.1 installé (winget `Ccache.Ccache`), détecté par
+   `tools.ts:693` et `configure.ts ccacheEnv` sans changement de config. Taux sur 2 rebuilds `bun bd` non mesuré (builds interdits).
 
 ## 10. Pièges à retenir
 

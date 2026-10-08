@@ -682,3 +682,30 @@ test.if(isWindows)(
     }
   },
 );
+
+// libuv masks GP fault dialogs with SEM_NOGPFAULTERRORBOX, so WER (and its
+// LocalDumps) never saw a Bun crash. BUN_WER=1 (or a LocalDumps key for the
+// exe) leaves the mask off and the crash handler ends in a fail-fast carrying
+// the original fault, which is what WER dumps.
+describe.if(isWindows)("Windows Error Reporting opt-in", () => {
+  const STATUS_FAIL_FAST_EXCEPTION = 0xc0000409;
+  const run = async (env: Record<string, string | undefined>) => {
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), path.join(import.meta.dir, "fixture-crash.js"), "segfault"],
+      env: mergeWindowEnvs([noReportEnv, env]),
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const [stdout, exitCode] = await Promise.all([proc.stdout.text(), proc.exited]);
+    return { stdout, exitCode: exitCode >>> 0 };
+  };
+
+  test("default keeps ExitProcess(3)", async () => {
+    const { exitCode } = await run({ BUN_WER: undefined });
+    expect(exitCode).toBe(3);
+  });
+
+  test("BUN_WER=1 ends the crash in a fail-fast so WER can dump it", async () => {
+    const { exitCode } = await run({ BUN_WER: "1" });
+    expect(exitCode).toBe(STATUS_FAIL_FAST_EXCEPTION);
+  });
+});

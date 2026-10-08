@@ -395,21 +395,29 @@ et `packages/engine/n2b-client` supprimés (2db2b5a973, 132 fichiers, −31 522 
 
 ### N. Alpine d'abord, Ubuntu 26.04 garanti (🔄)
 
-Décision utilisateur (2026-10-09) : le fork est **pensé d'abord pour la dernière Alpine** (3.24.x, musl, LLVM 22,
-cmake 4.2, mold, rust 1.96 dans apk) et doit **aussi compiler sur Ubuntu 26.04** (glibc 2.43, = vps/dbfr).
-Fichiers : `scripts/build/**` (détection toolchain, deps vendorisées, flags musl), `scripts/build/ci-images/spec.ts`
-(`alpineRelease`), `scripts/aphrody/{alpine,linux}.Dockerfile`, `scripts/aphrody/tmux.ts` (`--alpine`),
-`.github/workflows/aphrody-*.yml`, tests `test/internal/`.
+Décision utilisateur (2026-10-09) : le fork est **pensé d'abord pour la dernière Alpine** (3.24.x, musl) et doit
+**aussi compiler sur Ubuntu 26.04** (glibc 2.43, = vps/dbfr). Commit `fd278401fca`.
 
-- ⏳ Image `aphrody/build-alpine:3.24` (`scripts/aphrody/alpine.Dockerfile`) : toolchain native Alpine (clang/lld/llvm
-  22 apk, cmake, ninja, mold, rust, bun musl) ; mode `--alpine` du runner (défaut Linux = Alpine, `--linux` = Ubuntu).
-- ⏳ `bun run build` (debug puis release) **natif sur Alpine** (pas de cross-compile depuis Debian), toutes deps
-  vendorisées (WebKit musl prébuilt, boringssl, libuv…) ; écarts corrigés à la source dans `scripts/build/**`.
-- ⏳ Même build natif sur Ubuntu 26.04 (`aphrody/build-linux:26.04`) ; les deux en CI (`aphrody-linux-build.yml` :
-  matrice alpine-3.24 + ubuntu-26.04, x64 + arm64), tests de fumée + un échantillon de `bun bd test`.
-- ⏳ `alpineRelease` → 3.24 ; les assets `-musl` deviennent l'artefact Linux principal de la release (installeurs,
-  `@aphrody/bun-runtime` : musl par défaut sur Alpine, glibc sinon) ; images Aphrody (`aphrody-os`) basées sur Alpine.
-- ⏳ Toute dépendance glibc implicite (`dlopen` de libs glibc, `execinfo`, `getauxval`, locales) traitée pour musl.
+- ✅ Image `aphrody/build-alpine:3.24` (`scripts/aphrody/alpine.Dockerfile`) : LLVM 23.1.3 depuis edge/main (le
+  build n'accepte que `pins.llvm` 23.1.x ; apk 3.24 n'a que 22), nightly `rust-toolchain.toml` (rustup hôte musl),
+  cmake 4.2, samurai, mold, go, nasm, perl, python3, nodejs (act), bun 1.4.2. Construite et vérifiée localement.
+- ✅ `aphrody/build-linux:26.04` : + LLVM 23 apt.llvm.org (contournement SHA-1 sqv), nightly épinglée, go, nodejs.
+- ✅ Runner `tmux.ts` : `--linux` = `--alpine`, `--ubuntu` ; `--sync`/`--sync-head` (volume `aphrody-src-<distro>`),
+  `--cpus`/`--memory` (6/6g, plafond 10g), cache `aphrody-build-cache-<distro>` ; test `test/internal/aphrody-tmux.test.ts`.
+- ✅ `scripts/build/config.ts` : ASAN forcé off sur musl (compiler-rt sans ASAN musl, pas de prébuilt WebKit
+  `-musl-*-asan`) ; sans sysroot, `detectLinuxAbi()` (`/etc/alpine-release`) donne un build natif musl.
+- ✅ `alpineRelease` → 3.24 (`ci-images/spec.ts`), conteneurs musl de `build-host.ts` sur `alpine:3.24`.
+- ✅ CI `aphrody-linux-build.yml` : alpine-3.24 + ubuntu-26.04 × x64 + arm64 (`ubuntu-24.04-arm`), build natif,
+  `scripts/aphrody/linux-smoke.sh` (version, `-e`, `node:path`/`node:fs`, `Bun.serve` port 0, `bun install`
+  hors-ligne d'un `file:`), puis which/require/fetch en `bun bd test`. `.actrc` : `-P alpine-3.24`.
+- ✅ Release : les assets `-musl` sont l'artefact Linux principal (`aphrody-release.yml` échoue si un `-musl`
+  demandé manque) ; `@aphrody/bun-runtime` (`isMusl()`) et `install.sh` choisissent déjà musl sur Alpine, glibc sinon.
+- ✅ Audit statique glibc dans `src/**` : `gnu_get_libc_version` (BunProcess.cpp, crash_handler), c-ares, sqlite
+  `backtrace_symbols_fd` sont tous gardés `__GNU_LIBRARY__`/`target_env = "gnu"` ; `getauxval` existe dans musl.
+- ⏳ Builds natifs debug/release Alpine puis Ubuntu 26.04 (`bun scripts/aphrody/tmux.ts run bd-alpine-N --alpine
+  --sync-head --cpus 8 --memory 10g -- 'bun install && bun run build'`), `bash scripts/aphrody/linux-smoke.sh
+  build/debug/bun-debug`, puis `bun bd test` which/require/fetch : suspendus par la directive « aucun build » du
+  2026-10-09, à lancer dans la passe unique de main.
 
 ### O. Garde de performance (🔄)
 

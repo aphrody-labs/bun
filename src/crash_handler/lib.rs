@@ -496,6 +496,7 @@ mod draft {
         {
             #[cfg(debug_assertions)]
             core::intrinsics::breakpoint();
+            wer_fail_fast_if_enabled();
             bun_sys::windows::kernel32::ExitProcess(3)
         }
         #[cfg(not(windows))]
@@ -1938,6 +1939,42 @@ mod draft {
         }
     }
 
+    /// Exception that triggered the crash handler, kept so a WER-enabled
+    /// process can hand it to `RaiseFailFastException` and get a dump that
+    /// points at the original fault.
+    #[cfg(windows)]
+    static WINDOWS_FAULT_INFO: AtomicUsize = AtomicUsize::new(0);
+
+    /// WER is active only when libuv left `SEM_NOGPFAULTERRORBOX` clear
+    /// (`BUN_WER=1` or a LocalDumps key for this exe). Default builds keep
+    /// the plain `ExitProcess(3)`.
+    #[cfg(windows)]
+    fn wer_fail_fast_if_enabled() {
+        #[link(name = "kernel32")]
+        unsafe extern "system" {
+            fn GetErrorMode() -> u32;
+            fn RaiseFailFastException(
+                record: *mut bun_sys::windows::EXCEPTION_RECORD,
+                context: *mut core::ffi::c_void,
+                flags: u32,
+            );
+        }
+        const SEM_NOGPFAULTERRORBOX: u32 = 0x2;
+        // SAFETY: both calls are plain kernel32 queries/raises with no preconditions.
+        unsafe {
+            if GetErrorMode() & SEM_NOGPFAULTERRORBOX != 0 {
+                return;
+            }
+            let info = WINDOWS_FAULT_INFO.load(Ordering::Relaxed)
+                as *mut bun_sys::windows::EXCEPTION_POINTERS;
+            if info.is_null() {
+                RaiseFailFastException(core::ptr::null_mut(), core::ptr::null_mut(), 0);
+            } else {
+                RaiseFailFastException((*info).ExceptionRecord, (*info).ContextRecord.cast(), 0);
+            }
+        }
+    }
+
     #[cfg(windows)]
     static WINDOWS_EXE_IMAGE_BASE: AtomicUsize = AtomicUsize::new(0);
     #[cfg(windows)]
@@ -2008,6 +2045,7 @@ mod draft {
 
         // Windows: capture_from_context walks via RtlVirtualUnwind seeded from
         // the fault CONTEXT, so the handler's own frames are never captured.
+        WINDOWS_FAULT_INFO.store(info as *const _ as usize, Ordering::Relaxed);
         crash_handler(
             reason,
             TraceSeed::Fault {
@@ -2069,6 +2107,7 @@ mod draft {
             return bun_sys::windows::EXCEPTION_CONTINUE_SEARCH;
         };
         let pc = record.ExceptionAddress as usize;
+        WINDOWS_FAULT_INFO.store(info as *const _ as usize, Ordering::Relaxed);
         crash_handler(
             reason,
             TraceSeed::Fault {
