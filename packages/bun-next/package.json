@@ -9,7 +9,10 @@
   },
   "exports": {
     ".": "./index.js",
-    "./run": "./lib/run.js",
+    "./run": {
+      "types": "./lib/run.d.ts",
+      "default": "./lib/run.js"
+    },
     "./patch": "./lib/patch.js",
     "./codemods": "./codemods/index.ts",
     "./codemods/cli": "./codemods/cli.ts",
