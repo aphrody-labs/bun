@@ -115,18 +115,21 @@ Fichiers : `packages/bun-next/**`, `test/integration/next-bun*/`, `test/integrat
   les loaders), conservé ; test next-app « no node on PATH » (`1172f762478`).
 - ⏳ Suite du plan détaillé (`packages/bun-next/docs/PLAN.md`) : App Router via Bun.build, dev/HMR.
 
-### D. Plugin Tailwind CSS — `@aphrody/bun-plugin-tailwind` (🔄)
+### D. Plugin Tailwind CSS — `@aphrody/bun-plugin-tailwind` (✅)
 
 Fichiers : `packages/bun-plugin-tailwind/**`, `test/integration/bun-plugin-tailwind/`, entrée dans
 `scripts/aphrody/publish-npm.ts`.
 
-- ⏳ Tailwind v4 (`@tailwindcss/node` + oxide) sans Node : Bun.build, serveur HTML (`[serve.static] plugins`),
-  HMR, minify, sourcemaps ; directives `@import`, `@source`, `@plugin`, `@config`, `@theme`, `@utility`,
-  `@variant`, `@custom-variant`. Au moins la parité avec `bun-plugin-tailwind` d'oven-sh.
-- ⏳ Export `/postcss` (même cœur) pour Turbopack ; intégration `withBun`.
-- ⏳ Préréglage M3 (`/m3`) qui consomme `@aphrody/m3-tokens` ; centraliser ici toute intégration Tailwind
-  générique dupliquée dans m3.
-- ⏳ Tests, docs, publication npm.
+- ✅ Tailwind v4 (`@tailwindcss/node` + oxide) sans Node : Bun.build, serveur HTML (`[serve.static] plugins`),
+  HMR, minify, optimize Lightning CSS, sourcemaps (PostCSS et API `TailwindRoot` ; le printer CSS de Bun n'émet
+  pas de map), toutes les directives, candidats du graphe de modules, `tailwindcss` résolu sans install ; parité
+  avec `bun-plugin-tailwind` d'oven-sh et au-delà (a9910769013).
+- ✅ Export `/postcss` (ESM + CJS, build `dist/` pour Node) ; `withBun({ tailwind, plugins })`, CSS globaux et CSS
+  modules dans le chemin Bun.build de next-bun (6c44336f2aa, publié dans `@aphrody/next-bun@0.2.0-aphrody.2`).
+- ✅ Préréglage M3 (`theme: "m3"`, `/m3`) sur `@aphrody/m3-tokens` et `m3-tailwind` ; `m3/src/tailwind.ts`
+  d'Aphrody consomme le plugin (aphrody 3c70e77d3 ; fonts-sync sous Windows acd731475).
+- ✅ 17 tests (`test/integration/bun-plugin-tailwind/`), README, `docs/bundler/html-static.mdx` (486cea3937e),
+  npm `@aphrody/bun-plugin-tailwind@0.1.0-aphrody.1` (7fca787d46c).
 
 ### E. Bugs Bun sous Windows (✅)
 
