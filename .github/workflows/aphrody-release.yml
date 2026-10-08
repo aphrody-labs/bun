@@ -221,6 +221,7 @@ jobs:
     env:
       TRIPLET: ${{ matrix.triplet }}
       CONTAINER: ${{ matrix.container }}
+      ABI: ${{ matrix.abi }}
       VERSION: ${{ needs.prepare.outputs.version }}
     steps:
       - uses: actions/download-artifact@v4
@@ -234,6 +235,8 @@ jobs:
           unzip -q -o "$TRIPLET.zip"
           cat > smoke.sh <<'EOF'
           set -eu
+          # Like upstream's musl build, the binary links libstdc++ and libgcc dynamically.
+          if command -v apk >/dev/null; then apk add --no-cache -q libstdc++ libgcc; fi
           bin="$1"
           v="$("$bin" --version)"; echo "--version: $v"
           [ "$v" = "$VERSION" ] || { echo "expected $VERSION"; exit 1; }
@@ -245,6 +248,10 @@ jobs:
           EOF
           if [ -n "$CONTAINER" ]; then
             docker run --rm -e VERSION -v "$PWD:/d" -w /d "$CONTAINER" sh smoke.sh "/d/$TRIPLET/bun"
+            # The oldest glibc above, the newest here (Aphrody's hosts and build image run Ubuntu 26.04).
+            if [ "$ABI" = gnu ]; then
+              docker run --rm -e VERSION -v "$PWD:/d" -w /d ubuntu:26.04 sh smoke.sh "/d/$TRIPLET/bun"
+            fi
           elif [ "$RUNNER_OS" = Windows ]; then
             bash smoke.sh "./$TRIPLET/bun.exe"
           else
@@ -260,7 +267,8 @@ jobs:
     permissions:
       contents: write
     env:
-      GH_TOKEN: ${{ github.token }}
+      # github.token was refused (403) creating the aphrody-v1.4.3-aphrody.2 release.
+      GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
       VERSION: ${{ needs.prepare.outputs.version }}
       TAG: ${{ needs.prepare.outputs.tag }}
       MATRIX: ${{ needs.prepare.outputs.matrix }}

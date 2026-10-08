@@ -21,7 +21,6 @@ import { parseRuntimeVersion, readBaseVersion, REPOSITORY, ROOT } from "./publis
 export const INSPECTOR_PACKAGE = "@aphrody/web-inspector-bun";
 export const FRONTEND_DIR = join(ROOT, "packages", "bun-inspector-frontend");
 const WEBKIT_REPO = "https://github.com/oven-sh/WebKit.git";
-const BACKEND_COMMANDS = "include/JavaScriptCore/inspector/InspectorBackendCommands.js";
 
 export function inspectorManifest(version: string) {
   return {
@@ -56,14 +55,21 @@ export function build(work: string): string {
     run(["git", "fetch", "-q", "--depth=1", "--filter=blob:none", "origin", WEBKIT_VERSION], webkit);
     run(["git", "checkout", "-q", "FETCH_HEAD"], webkit);
   }
-  const backend = join(work, BACKEND_COMMANDS);
-  if (!existsSync(backend)) {
+  const prebuilt = join(work, "webkit-prebuilt");
+  const findBackend = () =>
+    [...new Bun.Glob("**/InspectorBackendCommands.js").scanSync({ cwd: prebuilt, absolute: true })][0] as
+      | string
+      | undefined;
+  if (!existsSync(prebuilt) || !findBackend()) {
     const url = `https://github.com/oven-sh/WebKit/releases/download/autobuild-${WEBKIT_VERSION}/bun-webkit-linux-amd64.tar.gz`;
     const tarball = join(work, "bun-webkit.tar.gz");
     run(["curl", "-fsSL", "--retry", "3", "-o", tarball, url], work);
-    run(["tar", "-xzf", tarball, "--strip-components=1", "--wildcards", `*/${BACKEND_COMMANDS}`], work);
+    mkdirSync(prebuilt, { recursive: true });
+    run(["tar", "-xzf", tarball, "-C", prebuilt, "--wildcards", "*InspectorBackendCommands.js"], work);
     rmSync(tarball, { force: true });
   }
+  const backend = findBackend();
+  if (!backend) throw new Error(`no InspectorBackendCommands.js in the prebuilt WebKit`);
   run([process.execPath, "build.ts"], join(FRONTEND_DIR, "scripts"), {
     WEB_INSPECTOR_UI_DIR: join(webkit, "Source", "WebInspectorUI", "UserInterface"),
     INSPECTOR_BACKEND_COMMANDS: backend,
