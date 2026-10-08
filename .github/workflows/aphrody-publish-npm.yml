@@ -1,7 +1,7 @@
 name: Aphrody npm publish
 
 # Publishes the fork's JS packages (@aphrody/bun-types, inspector and debug
-# adapter protocols, svelte and yaml plugins) with
+# adapter protocols, svelte and yaml plugins, next-bun) with
 # scripts/aphrody/publish-npm.ts. Versions are `<base>-aphrody.<n>`; a package
 # whose content matches its newest published version is skipped, so re-running
 # is safe.

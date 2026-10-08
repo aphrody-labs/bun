@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   contentHash,
   nextVersion,
+  npmName,
   PACKAGES,
   publishManifest,
   rewriteSiblingImports,
@@ -76,6 +77,29 @@ describe("publishManifest", () => {
       resolved,
     );
     expect(out.dependencies).toEqual({ "semver": "^7.5.4", "@aphrody/bun-inspector-protocol": "0.0.2-aphrody.1" });
+  });
+
+  test("a fork-only package keeps its own npm name and license", () => {
+    const out = publishManifest(
+      {
+        name: "@aphrody/next-bun",
+        version: "0.2.0",
+        license: "MIT AND Apache-2.0",
+        peerDependencies: { next: ">=16.0.0" },
+      },
+      spec("bun-next"),
+      "0.2.0-aphrody.1",
+      resolved,
+    );
+    expect(npmName(spec("bun-next"))).toBe("@aphrody/next-bun");
+    expect(out).toMatchObject({
+      name: "@aphrody/next-bun",
+      version: "0.2.0-aphrody.1",
+      license: "MIT AND Apache-2.0",
+      peerDependencies: { next: ">=16.0.0" },
+      repository: { directory: "packages/bun-next" },
+      publishConfig: { access: "public" },
+    });
   });
 
   test("a fork dependency without a published version is an error", () => {

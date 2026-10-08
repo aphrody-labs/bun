@@ -28,6 +28,8 @@ const DEP_FIELDS = ["dependencies", "devDependencies", "peerDependencies", "opti
 export interface PackageSpec {
   /** Directory under packages/, also the upstream npm name. */
   dir: string;
+  /** npm name under the scope when it is not `dir` (fork-only packages). */
+  name?: string;
   /** Use the Bun version as the version base instead of the package's own. */
   bunVersion?: boolean;
   /** Fork packages imported by the published sources but not listed in the manifest. */
@@ -118,11 +120,21 @@ export const PACKAGES: PackageSpec[] = [
     fields: { description: "YAML plugin for Bun (Aphrody fork of Bun)" },
   },
   {
+    // Fork-only: Next.js on Bun (runner, withBun + next patch, codemods, testing helpers).
+    dir: "bun-next",
+    name: "next-bun",
+  },
+  {
     // Fork-only: Playwright-shaped page over Bun.WebView (moved from the aphrody monorepo).
     dir: "bun-webview-page",
     fields: { description: "Playwright-shaped page, locators and routing over Bun.WebView (Aphrody fork of Bun)" },
   },
 ];
+
+/** The scoped npm name of a fork package. */
+export function npmName(spec: PackageSpec): string {
+  return `${SCOPE}/${spec.name ?? spec.dir}`;
+}
 
 const FORK_NAMES = new Set(PACKAGES.map(p => p.dir));
 
@@ -164,7 +176,7 @@ export function publishManifest(
   version: string,
   resolved: ReadonlyMap<string, string>,
 ): Record<string, any> {
-  const out: Record<string, any> = { ...pkg, name: `${SCOPE}/${spec.dir}`, version };
+  const out: Record<string, any> = { ...pkg, name: npmName(spec), version };
   for (const field of DEP_FIELDS) {
     const deps = pkg[field];
     if (!deps) continue;
@@ -272,7 +284,7 @@ export async function publishAll(opts: {
   const results: Result[] = [];
 
   for (const spec of PACKAGES) {
-    const name = `${SCOPE}/${spec.dir}`;
+    const name = npmName(spec);
     const selected = !opts.only?.length || opts.only.includes(spec.dir);
     const doc = await packument(registry, name);
     if (!selected) {
