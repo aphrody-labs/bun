@@ -49,6 +49,63 @@ chaque lot. Contexte permanent : [APHRODY.md](APHRODY.md) (ce que le fork fourni
     dans `C:\bun` (`src/**` Rust/C++/JS, WebKit via chantier P), avec un test qui échoue sur `USE_SYSTEM_BUN=1` et
     passe sur `bun bd test`, sans régression de démarrage (chantier O). Jamais de shim, polyfill ou contournement dans
     m3, Shenron, Aphrody ou les plugins ; les contournements existants sont supprimés une fois le patch livré.
+12. **Bun est le seul shell.** Toute la logique passe par Bun Shell (`# Plan — aphrody-labs/bun, noyau d'Aphrody
+
+Plan commun à tous les agents qui travaillent sur ce fork (C:\bun), sur le monorepo Aphrody (C:\aphrody) et sur
+Shenron (C:\shenron). Lis-le en entier avant de commencer, puis mets à jour ta section (statut, commits) à la fin de
+chaque lot. Contexte permanent : [APHRODY.md](APHRODY.md) (ce que le fork fournit à Aphrody),
+[CLAUDE.md](CLAUDE.md) (build et tests Bun), [packages/bun-next/docs/PLAN.md](packages/bun-next/docs/PLAN.md)
+(plan détaillé Next sur Bun).
+
+## 1. Cible
+
+- **Objectif du fork : étendre Bun (modules, plugins, intégrations) sans rien perdre en vitesse.** Le temps de
+  démarrage, la mémoire au repos et le débit du binaire final restent au niveau d'upstream ou meilleurs : toute
+  extension est paresseuse (zéro coût tant qu'elle n'est pas importée), pas de travail ajouté au chemin de
+  démarrage, pas de goulot d'étranglement. Une régression mesurée bloque le merge (chantier O).
+- JavaScriptCore/WebKit peuvent être patchés quand c'est utile (perf, musl, fonctionnalités) via le fork
+  `aphrody-labs/WebKit` (fork d'`oven-sh/WebKit`, chantier P).
+- Ce fork est l'unique Bun d'Aphrody : runtime, types, paquets JS, crates, docs. Aphrody ne garde ni file de
+  patches Bun, ni copie de Bun, ni paquet qui duplique une API native Bun.
+- Upstream `oven-sh/bun` n'arrive que par fusion (`scripts/aphrody/sync-upstream.ts`, toutes les 6 h en CI). Le
+  scope `@aphrody` est réappliqué par `scripts/aphrody/scope.ts` ; `--check` doit toujours sortir 0.
+- Next.js tourne sur ce Bun avec la dernière version publiée de Next et `@aphrody/next-bun`.
+- Tailwind CSS est fourni par `@aphrody/bun-plugin-tailwind` (Bun.build, serveur HTML, PostCSS pour Turbopack,
+  préréglage M3).
+- Shenron (dragonballfr.com) tourne entièrement sur ce fork, le dernier Next et `@aphrody/next-bun`.
+
+## 2. Règles pour tous les agents
+
+1. Exécution autonome de bout en bout, sans demander de confirmation.
+2. Commits en anglais, Conventional Commits, **sans aucune mention d'IA/Claude/assistant ni co-auteur**
+   (ni trailer, ni « Generated with »). Idem pour PR et descriptions.
+3. Commit et push direct sur `main` à la fin de chaque lot. `git pull --rebase` avant chaque commit ; petits
+   commits ; ne stage que tes fichiers (`git add <chemins>`).
+4. Dans C:\aphrody et C:\shenron, d'autres agents ont des modifications non commitées : **jamais** `git stash`,
+   `git reset`, `git checkout --`, `git clean`.
+5. Toute erreur, tout blocage, toute limite rencontrés sont **corrigés**, pas listés. Ne rapporter comme restant
+   que ce qui est réellement impossible ici, avec la preuve et ce qui a été tenté.
+6. `bun bd` ne se lance **jamais** avec un timeout (arrière-plan si long). Tant que le debug build segfault sous
+   Windows (chantier E), les tests JS purs passent par le `bun test` système.
+7. **Pas de VPS** pour les essais : un build Shenron y tourne. Linux = Docker Desktop local (12 CPU / 12 Go),
+   conteneurs `--cpus 6 --memory 6g`, volumes de cache nommés. La stack Shenron locale
+   (`C:\shenron\deploy\docker`) doit rester saine. Builds lourds de release : runners GitHub.
+8. Outils : `aphrody` > `yolo` > `bun` > CLI Rust ; `git` et `gh` autorisés. Node absent : `bun`, `bun x`.
+9. Formatage : prettier dans le fork, oxfmt dans Aphrody/Shenron. Tests ajoutés au fichier existant le plus
+   proche ; tests du fork propres à Aphrody dans `test/internal/`, `test/integration/next-*`,
+   `test/integration/bun-plugin-tailwind/`, `test/js/first_party/`.
+10. Rapport final en français, concis : fait (commits, versions, tests chiffrés), puis seulement l'impossible prouvé.
+11. **Limite ou manque de Bun = patch dans le cœur du fork.** Tout bug, toute API manquante ou incompatible, toute
+    lenteur de Bun (runtime, Bun.build, Bake, install, test, Node/Web compat) vue par un agent se corrige directement
+    dans `C:\bun` (`src/**` Rust/C++/JS, WebKit via chantier P), avec un test qui échoue sur `USE_SYSTEM_BUN=1` et
+    passe sur `bun bd test`, sans régression de démarrage (chantier O). Jamais de shim, polyfill ou contournement dans
+    m3, Shenron, Aphrody ou les plugins ; les contournements existants sont supprimés une fois le patch livré.…``), `bun -e` ou des scripts `.ts` lancés
+    par bun ; pas de nu, pwsh ni bash.
+13. **Aucun build ni test pendant le travail** (ni `bun bd`, ni `bun test`, ni cargo build/check, ni build release,
+    ni `next build`, ni conteneur Docker de build). On code le plus vite possible et on écrit les tests sans les
+    lancer. Main fait **une seule** passe de build et de tests à la fin et les échecs sont corrigés en un lot. Le
+    rapport final liste les fichiers modifiés et les tests à lancer. Le verrou `<buildDir>/.build.lock`
+    (`scripts/build/lock.ts`) sérialise les builds de cette passe finale.
 
 ## 2 bis. Méthode de travail — gagner du temps
 
