@@ -243,7 +243,8 @@ jobs:
           "$bin" --revision
           "$bin" -e 'console.log(Bun.version, process.platform, process.arch, Bun.version_with_sha)'
           "$bin" -e 'const r = await fetch("data:text/plain,ok"); console.log(await r.text(), Bun.hash("x"))'
-          # The .1 Windows binary (MSVC 14.51 toolset, ABI break with WebKit) crashed on these two.
+          # The .1 Windows binary (MSVC 14.51 toolset, ABI break with WebKit) crashed on these.
+          "$bin" -e 'await import("node:fs"); console.log(2)'
           "$bin" -e 'const path = await import("node:path"); const { execFileSync } = require("node:child_process"); const out = execFileSync(process.execPath, ["-e", "console.log(6 * 7)"]).toString().trim(); if (out !== "42") throw new Error(out); console.log(path.join("a", "b"), out)'
           EOF
           if [ -n "$CONTAINER" ]; then
@@ -258,6 +259,13 @@ jobs:
             chmod +x "$TRIPLET/bun"
             bash smoke.sh "./$TRIPLET/bun"
           fi
+          touch "$RUNNER_TEMP/smoked"
+      # The release job ships only the targets that have this marker.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smoked-${{ matrix.triplet }}
+          path: ${{ runner.temp }}/smoked
+          retention-days: 1
 
   release:
     needs: [prepare, build, smoke]
@@ -278,6 +286,20 @@ jobs:
           path: dist
           pattern: bun-*
           merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          path: smoked
+          pattern: smoked-*
+      - name: Drop targets whose smoke test failed
+        run: |
+          cd dist
+          for zip in *.zip; do
+            triplet="${zip%.zip}"; triplet="${triplet%-profile}"
+            if [ ! -d "../smoked/smoked-$triplet" ]; then
+              echo "::warning::$triplet did not pass its smoke test; not released"
+              rm -f "$zip"
+            fi
+          done
       - name: Baseline aliases
         run: |
           cd dist
@@ -311,7 +333,7 @@ jobs:
           gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p '*.zip' -D ../all --clobber
           (cd ../all && sha256sum *.zip > SHA256SUMS.txt && cat SHA256SUMS.txt && gh release upload "$TAG" -R "$GITHUB_REPOSITORY" --clobber SHA256SUMS.txt)
           if [ "${{ needs.build.result }}" != success ] || [ "${{ needs.smoke.result }}" != success ]; then
-            echo "::warning::some targets failed to build or run; the release has only the ones that built"
+            echo "::warning::some targets failed to build or run; the release has only the ones that passed"
           fi
 
   npm:
