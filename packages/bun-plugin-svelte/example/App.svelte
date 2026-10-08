@@ -35,14 +35,14 @@
 
     <div class="flex-grid">
       <div>
-        <h3>1. Install from <a href="https://npmjs.com/package/bun-plugin-svelte" target="_blank">NPM</a></h3>
-        <pre><code class="language-bash">bun add -D bun-plugin-svelte</code></pre>
+        <h3>1. Install from <a href="https://npmjs.com/package/@aphrody/bun-plugin-svelte" target="_blank">NPM</a></h3>
+        <pre><code class="language-bash">bun add -D @aphrody/bun-plugin-svelte</code></pre>
       </div>
       <div>
         <h3>2. Add it to your <a href="https://bun.com/docs/runtime/bunfig" target="_blank">bunfig.toml</a></h3>
         <pre><code class="language-toml">
 [serve.static]
-plugins = ["bun-plugin-svelte"];
+plugins = ["@aphrody/bun-plugin-svelte"];
         </code></pre>
       </div>
     </div>

@@ -1,2 +1,2 @@
 [serve.static]
-plugins = ["bun-plugin-svelte"]
+plugins = ["@aphrody/bun-plugin-svelte"]
