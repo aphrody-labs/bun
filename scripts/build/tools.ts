@@ -675,6 +675,8 @@ export function resolveLlvmToolchain(
   // nasm: BoringSSL win-x64 and libjpeg-turbo x86_64 SIMD; compile.ts:nasm() asserts at the use site.
   const nasm = findTool({
     names: ["nasm"],
+    // `winget install NASM.NASM` installs here without adding it to PATH.
+    paths: os === "windows" ? [join(process.env.ProgramFiles ?? "C:\\Program Files", "NASM")] : [],
     required: false,
     hint:
       os === "windows"
