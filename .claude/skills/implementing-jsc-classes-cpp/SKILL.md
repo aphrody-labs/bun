@@ -9,7 +9,7 @@ description: Implements JavaScript classes in C++ using JavaScriptCore. Use when
 
 For publicly accessible Constructor and Prototype, create 3 classes:
 
-1. **`class Foo : public JSC::DestructibleObject`** - if C++ fields exist; otherwise use `JSC::constructEmptyObject` with `putDirectOffset`
+1. **`class Foo : public JSC::JSDestructibleObject`** - if C++ fields exist; otherwise use `JSC::constructEmptyObject` with `putDirectOffset`
 2. **`class FooPrototype : public JSC::JSNonFinalObject`**
 3. **`class FooConstructor : public JSC::InternalFunction`**
 
@@ -91,7 +91,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsFooGetter_prop, (JSGlobalObject* globalObject, Encode
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSFoo* thisObject = jsDynamicCast<JSFoo*>(JSValue::decode(thisValue));
-    if (UNLIKELY(!thisObject)) {
+    if (!thisObject) [[unlikely]] {
         Bun::throwThisTypeError(*globalObject, scope, "JSFoo"_s, "prop"_s);
         return {};
     }
@@ -103,7 +103,7 @@ JSC_DEFINE_HOST_FUNCTION(jsFooProtoFuncMethod, (JSGlobalObject* globalObject, Ca
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     auto* thisObject = jsDynamicCast<JSFoo*>(callFrame->thisValue());
-    if (UNLIKELY(!thisObject)) {
+    if (!thisObject) [[unlikely]] {
         Bun::throwThisTypeError(*globalObject, scope, "Foo"_s, "method"_s);
         return {};
     }
@@ -166,7 +166,7 @@ Visit in `visitChildrenImpl`:
 m_JSFooClassStructure.visit(visitor);
 ```
 
-## Expose to Zig
+## Expose to Rust
 
 ```cpp
 extern "C" JSC::EncodedJSValue Bun__JSFooConstructor(Zig::GlobalObject* globalObject) {

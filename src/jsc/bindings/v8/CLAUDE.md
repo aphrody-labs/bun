@@ -137,14 +137,15 @@ For **GCC/Clang** (Unix):
 bun bd --help  # This compiles your code
 
 # Extract symbols
-nm build/CMakeFiles/bun-debug.dir/src/jsc/bindings/v8/V8NewClass.cpp.o | grep "T _ZN2v8"
+# V8 sources are compiled as unified sources; your file is inside one of these objects
+nm build/debug/obj/unified/UnifiedSource-src_jsc_bindings_v8-*.cpp.o | grep "T _ZN2v8"
 ```
 
 For **MSVC** (Windows):
 
 ```powershell
 # Use the provided PowerShell script in the comments:
-dumpbin .\build\CMakeFiles\bun-debug.dir\src\jsc\bindings\v8\V8NewClass.cpp.obj /symbols | where-object { $_.Contains(' v8::') } | foreach-object { (($_ -split "\|")[1] -split " ")[1] } | ForEach-Object { "#[link_name = `"${_}`"] pub(super) fn ___() -> *mut c_void;" }
+Get-ChildItem .\build\debug\obj\unified\UnifiedSource-src_jsc_bindings_v8-*.cpp.obj | ForEach-Object { dumpbin $_.FullName /symbols } | where-object { $_.Contains(' v8::') } | foreach-object { (($_ -split "\|")[1] -split " ")[1] } | ForEach-Object { "#[link_name = `"${_}`"] pub(super) fn ___() -> *mut c_void;" }
 ```
 
 #### b. Add to Symbol Files

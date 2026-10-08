@@ -12,7 +12,7 @@ Dev server tests validate hot-reloading robustness and reliability.
 - `test/bake/bake-harness.ts` - shared utilities: `devTest`, `prodTest`, `devAndProductionTest`, `Dev` class, `Client` class
 - `test/bake/client-fixture.mjs` - subprocess for `Client` (page loading, IPC queries)
 - `test/bake/dev/*.test.ts` - dev server and hot reload tests
-- `test/bake/dev-and-prod.ts` - tests running on both dev and production mode
+- `test/bake/dev-and-prod.test.ts` - tests running on both dev and production mode
 
 ## Test Categories
 
