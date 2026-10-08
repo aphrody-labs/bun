@@ -97,14 +97,24 @@ Fichiers : `src/**`, tests dans les fichiers existants.
 - ⏳ `require()` d'un chemin absolu mêlant `\` et `/` → `__dirname` faux : correctif + test (échoue avec
   `USE_SYSTEM_BUN=1`, passe avec `bun bd test`).
 
-### F. Fork = noyau d'Aphrody (🔄)
+### F. Fork = noyau d'Aphrody (✅)
 
 Côté Aphrody : `patches/bun`, `vendor.toml`/lock, `tools/config/vendor.json`, `packages/infra/update`,
 `docs/operations/infra/update/BUN.md`, `crates/compat/bun-bridge`, `crates/compat/bun-docs`.
 
-- ✅ `APHRODY.md` décrit ce que le fork fournit.
-- ⏳ Patches `patches/bun/0001-0009` : déjà présents → supprimés ; sinon appliqués ici comme commits.
-- ⏳ Pins et vendoring Bun d'Aphrody pointent sur ce fork et ses releases.
+- ✅ `APHRODY.md` décrit ce que le fork fournit (fork `4e187a0e8a4`).
+- ✅ Patches `patches/bun/0001-0009` : tous déjà présents dans le fork → supprimés, avec
+  `scripts/tools/vendor/{bun_upstream_sync,bun_upstream_tracker,packages_upstream_sync}.ts` (suppression partie dans
+  Aphrody `e3aa1d730`).
+- ✅ Pins et vendoring : entrée `bun` retirée de `tools/config/vendor.json` ; `pins.json` suit les releases
+  `aphrody-labs/bun` (`stripTag`) ; fork inscrit dans `tools/config/update/forks.json` ; `UPSTREAMS.md` régénéré ;
+  références `vendor/bun` → fork / `APHRODY_BUN_CHECKOUT`. Aphrody `99eda6f67`.
+- ✅ `crates/compat/bun-bridge` (réimplémentation Rust de Bun) supprimé, consommateurs migrés (`aphrody shell bun` →
+  `bun exec`) ; `aphrody-bun-docs` lit d'abord le checkout du fork puis le miroir `docs/reference/upstream-bun` ;
+  `BUN.md` ne cite plus `patches/bun`. Aphrody `71cf2bb22`. Gates : `cargo test` bun-docs et n2b-core, clippy
+  `-D warnings` sur ces deux crates, `cargo check` discord/ffi/command.
+- Reste : `docs/ecosystem/{MCP-TOOLS.md,ecosystem.json}` et `docs/reference/workspace/TOOLS.md` (générés) gardent
+  l'ancienne description « vendored » de `bun_docs_*` jusqu'à leur prochaine régénération.
 
 ### G. Déduplication de la couche JS Bun d'Aphrody (🔄)
 
