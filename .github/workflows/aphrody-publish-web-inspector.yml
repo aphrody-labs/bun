@@ -1,0 +1,47 @@
+name: Aphrody web-inspector-bun publish
+
+# Builds packages/bun-inspector-frontend from oven-sh/WebKit at WEBKIT_VERSION
+# and publishes it as @aphrody/web-inspector-bun
+# (scripts/aphrody/publish-web-inspector.ts).
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "<X.Y.Z>-aphrody.<n> (empty: Bun version, next n on npm)"
+        type: string
+        required: false
+      dry-run:
+        description: "Build and pack without publishing"
+        type: boolean
+        default: false
+
+concurrency:
+  group: aphrody-publish-web-inspector
+  cancel-in-progress: false
+
+env:
+  BUN_HOST_VERSION: "1.4.2"
+
+jobs:
+  publish:
+    if: github.repository == 'aphrody-labs/bun'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+        with:
+          bun-version: ${{ env.BUN_HOST_VERSION }}
+      - name: Build and publish
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ inputs.version }}
+          DRY_RUN: ${{ inputs.dry-run && '--dry-run' || '' }}
+        run: |
+          bun scripts/aphrody/publish-web-inspector.ts publish ${VERSION:+--version "$VERSION"} $DRY_RUN

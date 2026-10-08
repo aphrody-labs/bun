@@ -12,6 +12,7 @@ import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import "../build/config"; // config.ts and deps/webkit.ts import each other: evaluate config.ts first.
 import { WEBKIT_VERSION } from "../build/deps/webkit";
 import { retirePlaceholder } from "./npm-placeholder";
 import { nextVersion } from "./publish-npm";

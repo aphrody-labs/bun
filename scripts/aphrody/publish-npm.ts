@@ -11,10 +11,9 @@
 // content matches the newest published `<base>-aphrody.*` tarball is skipped,
 // so re-running publishes nothing new.
 //
-// Not published: @aphrody/bun-mdx-rs (napi addon, needs per-platform binaries
-// built in CI) and @aphrody/web-inspector-bun (its build reads a WebKit
-// checkout under src/bun.js/WebKit that no longer exists, and it has no entry
-// point to publish).
+// Published by their own scripts: @aphrody/bun-mdx-rs (napi addon built per
+// platform, publish-mdx-rs.ts) and @aphrody/web-inspector-bun (built from a
+// WebKit checkout, publish-web-inspector.ts).
 
 import { cpSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

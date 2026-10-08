@@ -11,6 +11,7 @@ import {
   rootManifest,
   stage,
 } from "../../scripts/aphrody/publish-mdx-rs";
+import { inspectorManifest, stage as inspectorStage } from "../../scripts/aphrody/publish-web-inspector";
 
 describe("@aphrody/bun-mdx-rs packaging", () => {
   test("platforms use napi keys and the right cdylib", () => {
@@ -57,5 +58,24 @@ describe("@aphrody/bun-mdx-rs packaging", () => {
     expect(Object.keys(root.optionalDependencies)).toEqual(["@aphrody/bun-mdx-rs-win32-x64-msvc"]);
     expect(readFileSync(join(staged.root, "index.js"), "utf8")).toContain('symbol = "bun_mdx_rs"');
     expect(readFileSync(join(staged.platforms[0].dir, nodeFile(win)), "utf8")).toBe("binary");
+  });
+});
+
+describe("@aphrody/web-inspector-bun packaging", () => {
+  test("stage copies the build and writes the manifest", () => {
+    using dir = tempDir("inspector-stage", {
+      "built/index.html": "<html></html>",
+      "built/Protocol/InspectorBackendCommands.js": "// commands",
+    });
+    const out = inspectorStage("1.4.3-aphrody.1", join(String(dir), "built"), join(String(dir), "npm"));
+    expect(JSON.parse(readFileSync(join(out, "package.json"), "utf8"))).toEqual(inspectorManifest("1.4.3-aphrody.1"));
+    expect(inspectorManifest("1.4.3-aphrody.1")).toMatchObject({
+      name: "@aphrody/web-inspector-bun",
+      exports: { ".": "./index.html", "./*": "./*" },
+    });
+    expect(readFileSync(join(out, "Protocol/InspectorBackendCommands.js"), "utf8")).toBe("// commands");
+    expect(() => inspectorStage("1.4.3-aphrody.1", join(String(dir), "missing"), join(String(dir), "x"))).toThrow(
+      /no index.html/,
+    );
   });
 });

@@ -44,16 +44,18 @@ export async function retirePlaceholder(name: string, opts: { cwd: string; dryRu
   return r.status === 0;
 }
 
-/** Every package this fork publishes: the runtime, the JS packages and bun-mdx-rs. */
+/** Every package this fork publishes: the runtime, the JS packages, bun-mdx-rs and web-inspector-bun. */
 export async function forkPackages(): Promise<string[]> {
   const runtime = await import("./publish-runtime");
   const npm = await import("./publish-npm");
   const mdx = await import("./publish-mdx-rs");
+  const inspector = await import("./publish-web-inspector");
   return [
     runtime.RUNTIME_PACKAGE,
     ...runtime.runtimePlatforms.map(p => p.pkg),
     ...npm.PACKAGES.map(p => `@aphrody/${(p as { name?: string }).name ?? p.dir}`),
     ...mdx.mdxPackageNames(),
+    inspector.INSPECTOR_PACKAGE,
   ];
 }
 

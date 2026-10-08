@@ -59,6 +59,7 @@ jobs:
       FILE: ${{ matrix.file }}
       CDYLIB: ${{ matrix.cdylib }}
       CONTAINER: ${{ matrix.container }}
+      KEY: ${{ matrix.key }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -121,6 +122,11 @@ jobs:
         shell: bash
         run: |
           cat > smoke.ts <<'EOF'
+          // A host Bun of another architecture (x64 Bun on Windows on Arm) cannot load the addon.
+          if (!process.env.KEY.startsWith(`${process.platform}-${process.arch}`)) {
+            console.log(`skip: Bun is ${process.platform}-${process.arch}`);
+            process.exit(0);
+          }
           const napiModule = require(`${process.cwd()}/dist/${process.env.FILE}`);
           const r = await Bun.build({
             entrypoints: ["packages/bun-build-mdx-rs/input/index.ts"],
