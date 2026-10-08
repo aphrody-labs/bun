@@ -238,17 +238,28 @@ paquets `packages/**` qui refont une API Bun (`http`, `fuzzy`, `sql`, `paths`…
 - ✅ `aphrody_ffi.dll` construite (`target/runtime`, profil `runtime`) ; web-test 37/37 dont `sites` + `next-instant`. Commit `df6e5502d`.
 - ✅ m3 : scripts 51/0, m3-icons 13/0 (DLL `target/runtime` reconstruite avec polices embarquées), m3-theme 13/0, m3 61/0, m3-config/front/mcp/tailwind/material-design-icons 0 échec (aphrody 099a4fe180). `m3:theme.css` : `@import` à schéma tenu hors du compile Tailwind (fork 4265629bb50) ; m3-bun passe de 21 à 10 échecs avec la source du fork, effectif dans aphrody après publication npm `0.1.0-aphrody.2` (chantier D prévenu). Restent 10 échecs Windows dans m3-bun (zone réservée : compile/package/archive tar, PowerShell, M3_ICONS_ROOT).
 
-### J. Shenron sur le fork (🔄)
+### J. Shenron sur le fork (✅)
 
 Côté Shenron : `apps/site` (next.config.ts, scripts), `deploy/docker/**`, bun.lock ; côté fork : ajouts génériques
 dans `packages/bun-next`.
 
-- ⏳ Contournements génériques de `apps/site/next.config.ts` (alias next-intl, `DIST_ALIASED`, workarounds
-  Turbopack-sous-Bun) déplacés dans `@aphrody/next-bun` ; cause `DIST_ALIASED` corrigée dans m3 (exports
-  `import` → sources `.ts` non résolvables).
-- ⏳ Runtime = binaire du fork (local, Docker, CI) ; Next = dernier ; scripts `next-bun` + `withBun`.
-- ⏳ Build complet local + image Docker sur Docker local ; Tailwind via `@aphrody/bun-plugin-tailwind` une fois
-  publié.
+- ✅ Contournements génériques déplacés dans `@aphrody/next-bun` (`withBun` : racine du workspace pour Turbopack et
+  le tracing, `alias`/`dedupe` pour Turbopack et webpack, `transpilePackages` détecté par les conditions de bundler,
+  préfixe d'assets et deploymentId gelés au build pour `next start` ; `flattenStandalone` + `next-bun standalone`)
+  : fork `ea3bb1fea65`, `e503596a35e`, publié `@aphrody/next-bun@0.2.0-aphrody.1`. `DIST_ALIASED` : pas de défaut
+  dans m3 (sources publiées sans extension), contournement supprimé ; `typescript.ignoreBuildErrors` supprimé (Next
+  16.5 vérifie les types sans erreur de chemin).
+- ✅ Runtime = fork : `packageManager bun@1.4.3-aphrody.1`, `@aphrody/bun-runtime`, action CI `.github/actions/setup-bun`
+  (release du fork), Dockerfiles sur `ubuntu:26.04` + release du fork, `cloud-setup.sh` et image `aphrody-build`
+  (Aphrody `fa0964cb5`) via `scripts/aphrody/install.sh`. Next 16.5.0-canary.4 ; scripts `next-bun dev|build|start` ;
+  Shenron `7b1784ee`, `e2856cf0`, `d1c40600`.
+- ✅ Build local (`next-bun build`, mode compile) vert ; tests du site 1592 pass. Artefacts Linux construits sur le
+  binaire Linux du fork dans Docker local (`aphrody/build-linux:26.04`, `--cpus 6 --memory 6g`, site 135 s et 2,6 Gio
+  RSS), image `localhost/shenron:fork-bun` (`ubuntu:26.04`) servie à côté de la stack (337 Mio RSS, 200 sur
+  `/`, `/wiki`, `/news`, `/games`, chunks). Tailwind via `@aphrody/bun-plugin-tailwind/postcss` (0.1.0-aphrody.2,
+  correctif `dir-dependency` fork `ab63e3b47a3`) : CSS identique octet pour octet à `@tailwindcss/postcss`.
+- ⚠️ Binaire Windows `1.4.3-aphrody.1` inutilisable (MSVC 14.51, chantier E/B) : en local Windows, le `bun` système
+  sert jusqu'à la release `.2`.
 
 ### K. CLI Aphrody (✅)
 
@@ -272,9 +283,10 @@ Côté Aphrody : `crates/ai/code-graph`, `crates/engine/yolo-core`, `crates/infr
 - ✅ Binaire release réinstallé (`aphrody self install-path`, `aphrody 1.0.0-canary`, aphrody-mcp relié) ;
   `graph:bun` reconstruit (19 783 fichiers, 116 085 nœuds) et `claude-memory-bun` (573 nœuds).
 
-### M. Fork Next.js — `aphrody-labs/next.js` (⏳ après la fin de tous les autres chantiers ; le dépôt existe déjà, branche canary)
+### M. Fork Next.js + Turbopack — `aphrody-labs/next.js` (🔄 démarré le 2026-10-09 sur demande, branche canary)
 
-Démarre seulement quand B à L sont terminés. Reproduire pour Next.js le workflow appliqué à Bun :
+Reproduire pour Next.js le workflow appliqué à Bun, plus la bunisation agressive par le nouveau n2b
+(`packages/bun-n2b`) de Next et de Turbopack (pnpm → bun, jest → bun test là où c'est possible, APIs Node → Bun) :
 
 - ⏳ Fork `vercel/next.js` → `aphrody-labs/next.js` (clone local `C:\next.js`, remotes `origin` + `upstream`), branche
   `main` (canary upstream).
@@ -288,6 +300,28 @@ Démarre seulement quand B à L sont terminés. Reproduire pour Next.js le workf
 - ⏳ Absorber la couche Next restante d'Aphrody/Shenron qui relève de Next ; Aphrody et Shenron consomment
   `@aphrody/next`.
 - ⏳ `APHRODY.md` et `PLAN.md` propres au fork Next ; graphe `aphrody graph --source graph:next` et mémoire.
+
+### Q. Fork Tailwind CSS — `aphrody-labs/tailwindcss` (🔄)
+
+Clone `C:\tailwindcss` (`origin` fork, `upstream` tailwindlabs), même workflow que Bun et M : scope `@aphrody`
+(`@aphrody/tailwindcss`, `@aphrody/tailwindcss-oxide-*`), sync upstream 6 h, publication npm + crates, `PLAN.md` propre.
+Le fork porte déjà 1 commit Aphrody (à auditer) ; récupérer les anciens patches de `forks/tailwindcss` dans
+l'historique d'Aphrody (`m3/docs/guides/FORKS.md`, avant `2dc8354a01`). Bunisation n2b : pnpm → bun, vitest → bun test,
+APIs Node → Bun là où c'est plus rapide, oxide construit par le toolchain du fork. `@aphrody/bun-plugin-tailwind`
+consomme ensuite `@aphrody/tailwindcss`.
+
+### R. Fork Base UI + M3 — `aphrody-labs/base-ui` (🔄)
+
+Clone `C:\base-ui` (`origin` fork, `upstream` mui/base-ui), même workflow. Anciens patches de `forks/base-ui` et travail
+M3 d'Aphrody (`m3/*`, `@aphrody/material-web`, thème/tokens M3) appliqués à Base UI : composants Base UI stylés M3 via
+Tailwind (`@aphrody/base-ui`, `@aphrody/m3-base-ui`). Bunisation n2b (bun install/test, happy-dom).
+
+### S. Framework full Bun (🔄)
+
+Framework complet sans Node : Bun.serve + Bake (`src/runtime/bake`) pour dev server/HMR/RSC, Bun.build pour la prod,
+routage `app/` compatible Next (`page`/`layout`/`route`, Server Components, Server Actions), Tailwind via
+`@aphrody/bun-plugin-tailwind`, UI Base UI + M3 (R). Réutilise ce qui est bunisé dans M/Q/R (Turbopack/next-swc si plus
+rapide). Aucun coût au démarrage de `bun` (chantier O). Shenron sert d'application de validation.
 
 ### L. oxc et n2b dans le fork (🔄)
 
