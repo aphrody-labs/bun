@@ -6036,20 +6036,22 @@ impl<'a> Resolver<'a> {
                 // now that we've found it, we allocate it.
                 return Some(LoadResult {
                     path: {
-                        // SAFETY: EntryStore-owned slot; resolver mutex held. RHS is fully
-                        // evaluated (shared reads) before the LHS `&mut Entry` is
-                        // materialized for the write — no overlapping unique borrow.
-                        unsafe { &mut *query.entry }.abs_path = if query.entry().abs_path.is_empty()
-                        {
-                            Interned::from_static(
+                        // Built from the entry, not from `buffer`: the import path is
+                        // spelled by the caller (`C:\app/utils/a` on Windows) and the
+                        // entry caches this path for every later import of the file.
+                        if query.entry().abs_path.is_empty() {
+                            let abs_path_parts = [query.entry().dir, query.entry().base()];
+                            let joined =
+                                self.fs_ref().abs_buf(&abs_path_parts, bufs!(load_as_file));
+                            // SAFETY: EntryStore-owned slot; resolver mutex held. RHS fully
+                            // evaluated before LHS `&mut Entry` is materialized.
+                            unsafe { &mut *query.entry }.abs_path = Interned::from_static(
                                 self.fs_ref()
                                     .dirname_store
-                                    .append_slice(&buffer[..])
+                                    .append_slice(joined)
                                     .expect("unreachable"),
-                            )
-                        } else {
-                            query.entry().abs_path
-                        };
+                            );
+                        }
                         query.entry().abs_path.as_bytes()
                     },
                     dirname_fd,

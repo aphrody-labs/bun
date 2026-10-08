@@ -1,4 +1,4 @@
-import { bunRun, tempDir, tempDirWithFiles } from "harness";
+import { bunEnv, bunExe, bunRun, tempDir, tempDirWithFiles } from "harness";
 import fs from "node:fs";
 import path from "node:path";
 const fixture = (...segs: string[]): string => path.join(import.meta.dirname, "fixtures", "require", ...segs);
@@ -93,6 +93,41 @@ describe("require(specifier)", () => {
         signalCode: null,
       });
     });
+  });
+
+  // https://github.com/oven-sh/bun/issues/33325
+  it("an absolute path spelled with `/` and without an extension gives the module its real __dirname", async () => {
+    using dir = tempDir("bun-test-require-slashes", {
+      "utils/a.js": `module.exports = { dirname: __dirname, filename: __filename };`,
+      "utils/b.js": `module.exports = { dirname: __dirname, filename: __filename };`,
+      "index.cjs": `
+        const path = require("node:path");
+        const root = __dirname;
+        const results = [
+          [path.join(root, "utils", "a"), root.replaceAll(path.sep, "/") + "/utils/a"],
+          [path.join(root, "utils", "b"), root + (path.sep === "\\\\" ? "\\\\utils/b" : "/utils//b")],
+        ].map(([native, spelled]) => {
+          const m = require(spelled);
+          return {
+            dirname: m.dirname === path.dirname(native),
+            filename: m.filename === native + ".js",
+            sameModule: require(native) === m,
+            resolved: require.resolve(spelled) === native + ".js",
+          };
+        });
+        console.log(JSON.stringify(results));
+      `,
+    });
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), path.join(String(dir), "index.cjs")],
+      env: bunEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    const ok = { dirname: true, filename: true, sameModule: true, resolved: true };
+    expect({ results: JSON.parse(stdout), stderr }).toEqual({ results: [ok, ok], stderr: "" });
+    expect(exitCode).toBe(0);
   });
 
   describe("require.main", () => {
