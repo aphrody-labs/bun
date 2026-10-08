@@ -99,7 +99,7 @@ function run(argv: string[]) {
 }
 
 function status(name: string): string {
-  return existsSync(exitFile(name)) ? `done exit=${readFileSync(exitFile(name), "utf8").trim()}` : "running";
+  return existsSync(exitFile(name)) ? `done exit=${readFileSync(exitFile(name), "utf8").trim()}` : "lost";
 }
 
 if (import.meta.main) {
@@ -113,9 +113,15 @@ if (import.meta.main) {
       case "run":
         run(rest);
         break;
-      case "ls":
-        for (const w of windows()) console.log(`${w} ${status(w)}`);
+      case "ls": {
+        // A window closes when its job ends: jobs are listed from their log files.
+        const live = new Set(windows());
+        for (const log of new Bun.Glob("*.log").scanSync(LOGS)) {
+          const name = log.slice(0, -4);
+          console.log(`${name} ${existsSync(exitFile(name)) || !live.has(name) ? status(name) : "running"}`);
+        }
         break;
+      }
       case "logs": {
         const lines = readFileSync(logFile(rest[0]), "utf8").split(/\r?\n/);
         console.log(lines.slice(-Number(rest[1] ?? 50)).join("\n"));
@@ -126,7 +132,7 @@ if (import.meta.main) {
         process.exit(Number(readFileSync(exitFile(rest[0]), "utf8").trim()) || 0);
       case "kill":
         tmux("kill-window", "-t", `${SESSION}:${rest[0]}`);
-        rmSync(exitFile(rest[0]), { force: true });
+        for (const ext of [".exit", ".log", ".ps1", ".sh"]) rmSync(join(LOGS, rest[0] + ext), { force: true });
         break;
       case "attach":
         Bun.spawnSync(["tmux", "attach", "-t", SESSION], { stdio: ["inherit", "inherit", "inherit"] });

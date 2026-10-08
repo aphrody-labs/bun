@@ -43,16 +43,21 @@ chaque lot. Contexte permanent : [APHRODY.md](APHRODY.md) (ce que le fork fourni
 
 Ne jamais attendre une commande longue en premier plan ; paralléliser ; lire peu, chercher précisément.
 
-- **Tâches longues → tmux partagé** (session `aphrody` dans WSL `Ubuntu-24.04`, tmux 3.4) via
-  `scripts/aphrody/tmux.sh` (depuis Git Bash ou WSL) :
+- **Tâches longues → tmux natif partagé** (psmux 3.3.8 = `tmux` Windows natif, session `aphrody` ; **plus de
+  WSL**) via `scripts/aphrody/tmux.ts` (`tmux.sh` y renvoie) :
   ```sh
-  scripts/aphrody/tmux.sh run bd-E -- 'bun bd'                       # Windows (pwsh, MSVC)
-  scripts/aphrody/tmux.sh run docker-J --linux -- 'docker build ...' # Linux (WSL)
-  scripts/aphrody/tmux.sh ls | logs <nom> [n] | wait <nom> | kill <nom>
+  bun scripts/aphrody/tmux.ts run bd-E -- 'bun bd'                          # Windows natif (pwsh, MSVC 14.44)
+  bun scripts/aphrody/tmux.ts run cargo-L --cwd C:/aphrody -- 'cargo test -p x'
+  bun scripts/aphrody/tmux.ts run test-J --linux --cwd C:/shenron -- 'bun test'   # conteneur Ubuntu 26.04
+  bun scripts/aphrody/tmux.ts ls | logs <nom> [n] | wait <nom> | kill <nom> | attach
   ```
   Nom de job = `<action>-<chantier>` ; journal dans `tmp/tmux/<nom>.log` (lisible avec Read), code de sortie
-  dans `tmp/tmux/<nom>.exit`. Avant un `bun bd`/`cargo build` lourd, `tmux.sh ls` : ne pas lancer deux builds
+  dans `tmp/tmux/<nom>.exit`. Avant un `bun bd`/`cargo build` lourd, `tmux.ts ls` : ne pas lancer deux builds
   natifs du fork en même temps (un seul `bun bd` à la fois, nom `bd-*`).
+- **Linux = Ubuntu 26.04 LTS** (glibc 2.43, LLVM 22, mold, cmake 4), même OS/glibc que les hôtes vps et dbfr :
+  image `aphrody/build-linux:26.04` (`scripts/aphrody/linux.Dockerfile`), utilisée par `--linux`. Les binaires de
+  release Linux gardent le sysroot glibc ancien d'upstream (portabilité) ; les binaires destinés à vps/dbfr se
+  construisent et se testent dans ce conteneur.
 - **Sinon, tâches de fond de l'outil Bash** (`run_in_background: true`) : notification à la fin, pas de
   `sleep`/polling. `gh run watch` et `cargo test` longs aussi en fond.
 - **Sous-agents** : déléguer les recherches larges (agent `Explore`/`yolo:explore`) et les sous-tâches
@@ -72,7 +77,8 @@ Ne jamais attendre une commande longue en premier plan ; paralléliser ; lire pe
 - **Visual Studio** : VS 2026 (18) et 2022 installés ; le build du fork impose le toolset MSVC **14.44**
   (`scripts/vs-shell.ps1`, vérifié par `checkNativeMsvcToolset`) — 14.51 casse l'ABI avec WebKit. cdb/WinDbg
   pour les crashs natifs. `sccache` actif pour Rust.
-- **Docker local** (12 CPU / 12 Go) : conteneurs `--cpus 6 --memory 6g`, volumes de cache nommés
+- **Docker local** (Docker Desktop, 12 CPU / 12 Go ; pas de bind-mount massif de `C:\` en boucle chaude :
+  copier dans un volume pour les gros builds) : conteneurs `--cpus 6 --memory 6g`, volumes de cache nommés
   (`bun-cache:/root/.bun/install/cache`, `cargo-registry`, `cargo-target-<chantier>`), BuildKit (`docker buildx`,
   `--cache-to/--cache-from type=local`). Jamais le VPS.
 
