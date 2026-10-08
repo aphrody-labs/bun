@@ -8,6 +8,7 @@ What Aphrody consumes from this repository:
 | Artifact | Source here | Consumer in Aphrody |
 | --- | --- | --- |
 | Runtime binary | `aphrody-v*` GitHub releases, npm `@aphrody/bun-runtime` (`.github/workflows/aphrody-release.yml`, `scripts/aphrody/publish-runtime.ts`) | Bun version pin (`tools/config/update/pins.json` follows these releases) |
+| Installers | `scripts/aphrody/install.sh`, `scripts/aphrody/install.ps1` (`latest`, base `X.Y.Z` or a release tag; SHA256 checked) | every Bun install of Aphrody: bootstrap, Docker images, `yolo update`, hosts |
 | Types and tooling packages | npm `@aphrody/bun-types`, `@aphrody/bun-inspector-protocol`, … (`scripts/aphrody/publish-npm.ts`) | workspaces |
 | Rust crates | crates.io `aphrody-bun-native-plugin`, `aphrody-bun-macro` (`scripts/aphrody/publish-crates.ts`) | native plugins |
 | Documentation | `docs/` | `docs/reference/upstream-bun` (`bun run docs:bun:update`), MCP `bun_docs_*` |
