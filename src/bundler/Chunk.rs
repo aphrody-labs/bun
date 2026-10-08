@@ -828,10 +828,8 @@ impl IntermediateOutput {
                 let debug_id_len = if ENABLE_SOURCE_MAP_SHIFTS && FeatureFlags::SOURCE_MAP_DEBUG_ID
                 {
                     bun_core::fmt::count(format_args!(
-                        "\n//# debugId={}\n",
-                        source_map::DebugIDFormatter {
-                            id: chunk.isolated_hash
-                        }
+                        "{}",
+                        chunk.content.debug_id_comment(chunk.isolated_hash)
                     ))
                 } else {
                     0
@@ -1046,10 +1044,8 @@ impl IntermediateOutput {
                     let before_len = cursor.len();
                     write!(
                         &mut cursor,
-                        "\n//# debugId={}\n",
-                        source_map::DebugIDFormatter {
-                            id: chunk.isolated_hash
-                        }
+                        "{}",
+                        chunk.content.debug_id_comment(chunk.isolated_hash)
                     )
                     .unwrap_or_else(|_| panic!("unexpected NoSpaceLeft error from bufPrint"));
                     let written = before_len - cursor.len();
@@ -1085,10 +1081,8 @@ impl IntermediateOutput {
                         let mut debug_id_fmt = Vec::new();
                         let _ = write!(
                             &mut debug_id_fmt,
-                            "\n//# debugId={}\n",
-                            source_map::DebugIDFormatter {
-                                id: chunk.isolated_hash
-                            }
+                            "{}",
+                            chunk.content.debug_id_comment(chunk.isolated_hash)
                         );
 
                         let _ = arena; // Note: StringJoiner::done* allocates from global mimalloc; arena token is plumbing-only.
@@ -1644,8 +1638,38 @@ impl Content {
     pub(crate) fn sourcemap(&self, default: options::SourceMapOption) -> options::SourceMapOption {
         match self {
             Content::Javascript(_) => default,
-            Content::Css(_) => options::SourceMapOption::None, // TODO: css source maps
+            Content::Css(_) => default,
             Content::Html => options::SourceMapOption::None,
+        }
+    }
+
+    /// The `debugId` comment ahead of the `sourceMappingURL` one, in the chunk's comment syntax.
+    pub(crate) fn debug_id_comment(&self, id: u64) -> impl fmt::Display {
+        let css = matches!(self, Content::Css(_));
+        fmt::from_fn(move |f| {
+            let id = source_map::DebugIDFormatter { id };
+            if css {
+                write!(f, "\n/*# debugId={id} */\n")
+            } else {
+                write!(f, "\n//# debugId={id}\n")
+            }
+        })
+    }
+
+    /// The text around the URL of the comment that links this chunk to its
+    /// source map; with `inline` the URL is the base64 map itself.
+    pub(crate) fn source_mapping_url_comment(
+        &self,
+        inline: bool,
+    ) -> (&'static [u8], &'static [u8]) {
+        match (self, inline) {
+            (Content::Css(_), false) => (b"/*# sourceMappingURL=", b" */\n"),
+            (Content::Css(_), true) => (
+                b"/*# sourceMappingURL=data:application/json;base64,",
+                b" */\n",
+            ),
+            (_, false) => (b"//# sourceMappingURL=", b"\n"),
+            (_, true) => (b"//# sourceMappingURL=data:application/json;base64,", b"\n"),
         }
     }
 

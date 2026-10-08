@@ -19,8 +19,7 @@ pub struct FontPaletteValuesRule {
 
 impl FontPaletteValuesRule {
     pub(crate) fn to_css(&self, dest: &mut Printer) -> Result<(), PrintErr> {
-        // #[cfg(feature = "sourcemap")]
-        // dest.add_mapping(self.loc);
+        dest.add_mapping(self.loc);
 
         dest.write_str("@font-palette-values ")?;
         super::dashed_ident_to_css(&self.name, dest)?;

@@ -24,8 +24,7 @@ impl CustomMediaRule {
     }
 
     pub fn to_css(&self, dest: &mut Printer) -> Result<(), PrintErr> {
-        // #[cfg(feature = "sourcemap")]
-        // dest.add_mapping(self.loc);
+        dest.add_mapping(self.loc);
         dest.write_str("@custom-media ")?;
         DashedIdentFns::to_css(&self.name, dest)?;
         dest.write_char(b' ')?;

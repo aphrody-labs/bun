@@ -5,7 +5,15 @@ use bun_ast::ImportRecord;
 use bun_collections::VecExt;
 use bun_threading::thread_pool as ThreadPoolLib;
 
-use crate::bun_css::{BundlerStyleSheet, ImportInfo, LocalsResultsMap, PrinterOptions, Targets};
+use std::sync::Arc;
+
+use bun_core::strings;
+use bun_paths::resolve_path::{self, platform};
+use bun_sourcemap::{ChunkSources, InputSourceMap, LineColumnOffset, SourceMapState};
+
+use crate::bun_css::{
+    BundlerStyleSheet, ImportInfo, LocalsResultsMap, PrinterOptions, SourceMapping, Targets,
+};
 
 use crate::chunk::{Content, CssImportOrderKind};
 use crate::linker_context_mod::LinkerContext;
@@ -191,7 +199,9 @@ fn generate_compile_result_for_css_chunk_impl(
                     || c.options.minify_identifiers,
                 ..Default::default()
             };
-            match css.to_css_with_writer(
+            let wants_source_map = c.options.source_maps != crate::options::SourceMapOption::None;
+            let mut source_mappings: Vec<SourceMapping> = Vec::new();
+            match css.to_css_with_writer_and_source_map(
                 arena,
                 &mut allocating_writer,
                 &printer_options,
@@ -202,6 +212,7 @@ fn generate_compile_result_for_css_chunk_impl(
                 }),
                 Some(local_names),
                 symbols,
+                wants_source_map.then_some(&mut source_mappings),
             ) {
                 Ok(_) => {}
                 Err(_) => {
@@ -223,11 +234,124 @@ fn generate_compile_result_for_css_chunk_impl(
                     let _ = bytes.fetch_add(output.len(), Ordering::Relaxed);
                 }
             }
+            let source_map = if wants_source_map {
+                let mut end = LineColumnOffset::default();
+                end.advance(&output);
+                let source = &parse_graph.input_files.items_source()[idx.get() as usize];
+                let to_state = |m: &SourceMapping, (source_index, line, column)| SourceMapState {
+                    generated_line: m.generated_line as i32,
+                    generated_column: m.generated_column as i32,
+                    source_index,
+                    original_line: line,
+                    original_column: column,
+                };
+                match css_input_source_map(source) {
+                    // A plugin (or a CSS tool before the build) generated this
+                    // file: map through its source map to the original sources.
+                    Some(input) => bun_sourcemap::Chunk::from_line_column_mappings(
+                        source_mappings.iter().filter_map(|m| {
+                            let found =
+                                input.find(m.original_line as i32, m.original_column as i32)?;
+                            Some(to_state(m, found))
+                        }),
+                        end.lines.zero_based(),
+                        end.columns.zero_based(),
+                    )
+                    .map(|mut chunk| {
+                        let dir = bun_paths::dirname(source.path.text).unwrap_or(b"");
+                        let paths = input
+                            .sources
+                            .iter()
+                            .map(|path| resolve_input_source(dir, path))
+                            .collect();
+                        chunk.sources = Some(Arc::new(ChunkSources {
+                            paths,
+                            contents: input.sources_content,
+                        }));
+                        chunk
+                    }),
+                    None => bun_sourcemap::Chunk::from_line_column_mappings(
+                        source_mappings.iter().map(|m| {
+                            to_state(m, (0, m.original_line as i32, m.original_column as i32))
+                        }),
+                        end.lines.zero_based(),
+                        end.columns.zero_based(),
+                    ),
+                }
+            } else {
+                None
+            };
             CompileResult::Css {
                 result: Ok(output),
                 source_index: idx.get(),
-                source_map: None,
+                source_map,
             }
         }
     }
+}
+
+/// The source map a stylesheet links with its `sourceMappingURL` comment: a
+/// `data:` URL, or a file relative to the stylesheet.
+fn css_input_source_map(source: &bun_ast::Source) -> Option<InputSourceMap> {
+    const DIRECTIVE: &[u8] = b"sourceMappingURL=";
+    let contents = source.contents();
+    let start = strings::last_index_of(contents, DIRECTIVE)?;
+    let before = &contents[..start];
+    if !(before.ends_with(b"/*# ") || before.ends_with(b"/*@ ")) {
+        return None;
+    }
+    let rest = &contents[start + DIRECTIVE.len()..];
+    let url = rest[..strings::index_of(rest, b"*/")?].trim_ascii();
+    let json: Vec<u8> = if let Some(data) = url.strip_prefix(b"data:") {
+        let comma = strings::index_of_char(data, b',')? as usize;
+        let (header, payload) = (&data[..comma], &data[comma + 1..]);
+        if header.ends_with(b";base64") {
+            bun_base64::decode_alloc(payload).ok()?
+        } else {
+            percent_decode(payload)
+        }
+    } else {
+        if !source.path.is_file() || url.is_empty() {
+            return None;
+        }
+        let dir = bun_paths::dirname(source.path.text)?;
+        let path = resolve_path::join_abs_string::<platform::Auto>(dir, &[url]).to_vec();
+        bun_sys::File::read_from(bun_sys::Fd::cwd(), &path).ok()?
+    };
+    InputSourceMap::parse(&json).ok()
+}
+
+fn percent_decode(input: &[u8]) -> Vec<u8> {
+    let hex = |b: u8| (b as char).to_digit(16).map(|d| d as u8);
+    let mut out = Vec::with_capacity(input.len());
+    let mut i = 0;
+    while i < input.len() {
+        if input[i] == b'%' && i + 2 < input.len() {
+            if let (Some(hi), Some(lo)) = (hex(input[i + 1]), hex(input[i + 2])) {
+                out.push(hi << 4 | lo);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(input[i]);
+        i += 1;
+    }
+    out
+}
+
+/// An input source map entry as an absolute path when it names a file.
+fn resolve_input_source(dir: &[u8], path: &[u8]) -> Box<[u8]> {
+    let path = path.strip_prefix(b"file://").unwrap_or(path);
+    if dir.is_empty()
+        || path.is_empty()
+        || bun_paths::is_absolute_posix(path)
+        || bun_paths::is_absolute_windows(path)
+        || strings::index_of(path, b"://").is_some()
+    {
+        return Box::from(path);
+    }
+    Box::from(resolve_path::join_abs_string::<platform::Auto>(
+        dir,
+        &[path],
+    ))
 }

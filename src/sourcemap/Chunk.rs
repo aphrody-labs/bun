@@ -23,6 +23,18 @@ pub struct Chunk {
 
     /// ignore empty chunks
     pub should_ignore: bool,
+
+    /// Set when the mappings point into these sources instead of the file
+    /// that was printed; their `source_index` is then an index in this list.
+    pub sources: Option<std::sync::Arc<ChunkSources>>,
+}
+
+/// The sources a [`Chunk`] maps to, taken from the printed file's own source map.
+pub struct ChunkSources {
+    /// Absolute paths, or names as the input map gave them.
+    pub paths: Vec<Box<[u8]>>,
+    /// `sourcesContent` entries, `None` where unknown.
+    pub contents: Vec<Option<Box<[u8]>>>,
 }
 
 impl Chunk {
@@ -32,7 +44,49 @@ impl Chunk {
             end_state: SourceMapState::default(),
             final_generated_column: 0,
             should_ignore: true,
+            sources: None,
         }
+    }
+
+    /// Builds a chunk from mappings whose generated and original positions are
+    /// already zero-based line/column pairs, sorted by generated position (the
+    /// CSS printer tracks both). `end_line`/`end_column` is the generated
+    /// position at the end of the printed output. Returns `None` without
+    /// mappings, since [`crate::append_source_map_chunk`] needs a first one.
+    pub fn from_line_column_mappings(
+        mappings: impl IntoIterator<Item = SourceMapState>,
+        end_line: i32,
+        end_column: i32,
+    ) -> Option<Chunk> {
+        let mut buffer = MutableString::init_empty();
+        let mut prev_state = SourceMapState::default();
+        let mut count: usize = 0;
+        for mapping in mappings {
+            while prev_state.generated_line < mapping.generated_line {
+                bun_core::handle_oom(buffer.append_char(b';'));
+                prev_state.generated_line += 1;
+                prev_state.generated_column = 0;
+            }
+            let last_byte = buffer.list.last().copied().unwrap_or(0);
+            append_mapping_to_buffer(&mut buffer, last_byte, prev_state, mapping);
+            prev_state = mapping;
+            count += 1;
+        }
+        if count == 0 {
+            return None;
+        }
+        while prev_state.generated_line < end_line {
+            bun_core::handle_oom(buffer.append_char(b';'));
+            prev_state.generated_line += 1;
+            prev_state.generated_column = 0;
+        }
+        Some(Chunk {
+            buffer,
+            end_state: prev_state,
+            final_generated_column: end_column,
+            should_ignore: false,
+            sources: None,
+        })
     }
 
     // `pub fn deinit` dropped — body only freed `self.buffer`, which `Drop` on
@@ -479,6 +533,7 @@ impl NewBuilder<'_, VLQSourceMap> {
             end_state: self.prev_state,
             final_generated_column: self.generated_column,
             should_ignore: self.source_map.should_ignore(),
+            sources: None,
         }
     }
 

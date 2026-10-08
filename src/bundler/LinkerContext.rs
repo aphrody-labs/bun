@@ -1208,6 +1208,22 @@ impl<'a> LinkerContext<'a> {
         Ok(rel)
     }
 
+    fn push_source_map_path(
+        j: &mut StringJoiner,
+        path: &[u8],
+        separator: bool,
+    ) -> Result<(), BunError> {
+        let mut quote_buf = MutableString::init(path.len() + ", ".len() + 2)?;
+        if separator {
+            quote_buf.append_assume_capacity(b", ");
+        }
+        js_printer::quote_for_json(path, &mut quote_buf, false)?;
+        // `to_default_owned` moves the buffer into the joiner
+        // (joiner owns it until `done`).
+        j.push_owned(quote_buf.to_default_owned());
+        Ok(())
+    }
+
     pub(crate) fn generate_source_map_for_chunk(
         &mut self,
         isolated_hash: u64,
@@ -1235,76 +1251,76 @@ impl<'a> LinkerContext<'a> {
         let mut source_id_map: ArrayHashMap<u32, i32> = ArrayHashMap::new();
 
         let source_indices = results.items_source_index();
+        let source_map_chunks = results.items_source_map_chunk();
+
+        // A chunk carrying its own `sources` (CSS composed with an input source
+        // map) takes consecutive mapping source indices starting at its base;
+        // `own_base_map` dedupes those by graph `source_index`.
+        let mut own_base_map: ArrayHashMap<u32, i32> = ArrayHashMap::new();
+        let mut contents: Vec<SourceMapContent<'_>> = Vec::new();
+        let mut next_mapping_source_index: i32 = 0;
 
         j.push_static(b"{\n  \"version\": 3,\n  \"sources\": [");
-        if !source_indices.is_empty() {
-            {
-                let index = source_indices[0];
-                let path = &sources[index as usize].path;
-                source_id_map.put_no_clobber(index, 0)?;
-
-                // Note: the relative path lives in a local owned buffer
-                // (drops at scope exit).
-                let rel_path_storage;
-                let pretty: &[u8] = if path.is_file() {
-                    rel_path_storage = Self::source_map_relative_path(chunk_abs_dir, path.text)?;
-                    &rel_path_storage
-                } else {
-                    path.pretty
-                };
-
-                let mut quote_buf = MutableString::init(pretty.len() + 2)?;
-                js_printer::quote_for_json(pretty, &mut quote_buf, false)?;
-                // `to_default_owned` moves the buffer into the joiner
-                // (joiner owns it until `done`).
-                j.push_owned(quote_buf.to_default_owned());
-            }
-
-            let mut next_mapping_source_index: i32 = 1;
-            for &index in &source_indices[1..] {
-                let gop = source_id_map.get_or_put(index)?;
+        for (chunk, &index) in source_map_chunks.iter().zip(source_indices.iter()) {
+            if let Some(own) = chunk.sources.as_deref() {
+                let gop = own_base_map.get_or_put(index)?;
                 if gop.found_existing {
                     continue;
                 }
-
                 *gop.value_ptr = next_mapping_source_index;
-                next_mapping_source_index += 1;
-
-                let path = &sources[index as usize].path;
-
-                let rel_path_storage;
-                let pretty: &[u8] = if path.is_file() {
-                    rel_path_storage = Self::source_map_relative_path(chunk_abs_dir, path.text)?;
-                    &rel_path_storage
-                } else {
-                    path.pretty
-                };
-
-                let mut quote_buf = MutableString::init(pretty.len() + ", ".len() + 2)?;
-                quote_buf.append_assume_capacity(b", ");
-                js_printer::quote_for_json(pretty, &mut quote_buf, false)?;
-                j.push_owned(quote_buf.to_default_owned());
+                for (k, path) in own.paths.iter().enumerate() {
+                    let rel_path_storage;
+                    let pretty: &[u8] = if bun_paths::is_absolute(path) {
+                        rel_path_storage = Self::source_map_relative_path(chunk_abs_dir, path)?;
+                        &rel_path_storage
+                    } else {
+                        path
+                    };
+                    Self::push_source_map_path(&mut j, pretty, next_mapping_source_index > 0)?;
+                    contents.push(SourceMapContent::Own(
+                        own.contents.get(k).and_then(|c| c.as_deref()),
+                    ));
+                    next_mapping_source_index += 1;
+                }
+                continue;
             }
+
+            let gop = source_id_map.get_or_put(index)?;
+            if gop.found_existing {
+                continue;
+            }
+            *gop.value_ptr = next_mapping_source_index;
+
+            let path = &sources[index as usize].path;
+            // Note: the relative path lives in a local owned buffer
+            // (drops at scope exit).
+            let rel_path_storage;
+            let pretty: &[u8] = if path.is_file() {
+                rel_path_storage = Self::source_map_relative_path(chunk_abs_dir, path.text)?;
+                &rel_path_storage
+            } else {
+                path.pretty
+            };
+            Self::push_source_map_path(&mut j, pretty, next_mapping_source_index > 0)?;
+            contents.push(SourceMapContent::Graph(index));
+            next_mapping_source_index += 1;
         }
 
         j.push_static(b"],\n  \"sourcesContent\": [");
-
-        let source_indices_for_contents = source_id_map.keys();
-        if !source_indices_for_contents.is_empty() {
-            j.push_static(b"\n    ");
-            j.push_static(
-                quoted_source_map_contents[source_indices_for_contents[0] as usize]
-                    .as_deref()
-                    .unwrap_or(b""),
-            );
-
-            for &index in &source_indices_for_contents[1..] {
-                j.push_static(b",\n    ");
-                j.push_static(
+        for (i, content) in contents.iter().enumerate() {
+            j.push_static(if i == 0 { b"\n    " } else { b",\n    " });
+            match *content {
+                SourceMapContent::Graph(index) => j.push_static(
                     quoted_source_map_contents[index as usize]
                         .as_deref()
-                        .unwrap_or(b""),
-                );
+                        .unwrap_or(b"null"),
+                ),
+                SourceMapContent::Own(Some(text)) => {
+                    let mut quote_buf = MutableString::init(text.len() + 2)?;
+                    js_printer::quote_for_json(text, &mut quote_buf, false)?;
+                    j.push_owned(quote_buf.to_default_owned());
+                }
+                SourceMapContent::Own(None) => j.push_static(b"null"),
             }
         }
         j.push_static(b"\n  ],\n  \"mappings\": \"");
@@ -1312,7 +1328,6 @@ impl<'a> LinkerContext<'a> {
         let mapping_start = j.len;
         let mut prev_end_state = SourceMapState::default();
         let mut prev_column_offset: i32 = 0;
-        let source_map_chunks = results.items_source_map_chunk();
         let offsets = results.items_generated_offset();
         debug_assert_eq!(source_map_chunks.len(), offsets.len());
         debug_assert_eq!(source_map_chunks.len(), source_indices.len());
@@ -1321,9 +1336,12 @@ impl<'a> LinkerContext<'a> {
             .zip(offsets.iter())
             .zip(source_indices.iter())
         {
-            let mapping_source_index = *source_id_map
-                .get(&current_source_index)
-                .expect("unreachable"); // the pass above during printing of "sources" must add the index
+            let ids = if chunk.sources.is_some() {
+                &own_base_map
+            } else {
+                &source_id_map
+            };
+            let mapping_source_index = *ids.get(&current_source_index).expect("unreachable"); // the pass above during printing of "sources" must add the index
 
             let mut start_state = SourceMapState {
                 source_index: mapping_source_index,
@@ -1344,7 +1362,7 @@ impl<'a> LinkerContext<'a> {
             )?;
 
             prev_end_state = chunk.end_state;
-            prev_end_state.source_index = mapping_source_index;
+            prev_end_state.source_index = mapping_source_index + chunk.end_state.source_index;
             prev_column_offset = chunk.final_generated_column;
 
             if prev_end_state.generated_line == 0 {
@@ -1386,6 +1404,15 @@ impl<'a> LinkerContext<'a> {
 
         Ok(pieces)
     }
+}
+
+/// One `sourcesContent` entry of a chunk's source map.
+#[derive(Clone, Copy)]
+enum SourceMapContent<'a> {
+    /// Quoted contents of a graph source, computed by `SourceMapData`.
+    Graph(u32),
+    /// Raw contents from a chunk's own `sources`.
+    Own(Option<&'a [u8]>),
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -1730,7 +1757,7 @@ impl SourceMapData {
         // `parse_graph` backref accessor — read-only across all tasks.
         let parse_graph = this.parse_graph();
         let loader: Loader = parse_graph.input_files.items_loader()[source_index as usize];
-        if !loader.can_have_source_map() {
+        if !loader.can_have_source_map() && loader != Loader::Css {
             return;
         }
 

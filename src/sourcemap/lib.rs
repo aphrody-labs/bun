@@ -44,7 +44,7 @@ unsafe impl Sync for ParsedSourceMap {}
 // in higher tiers (bun_jsc) pass values straight through without conversion.
 pub use bun_core::Ordinal;
 
-pub use chunk::Chunk;
+pub use chunk::{Chunk, ChunkSources};
 pub use internal_source_map::InternalSourceMap;
 
 // ── leaf types that compile cleanly today ─────────────────────────────────
@@ -856,6 +856,118 @@ pub(crate) fn parse_url(
     };
 
     parse_json(json_bytes, hint)
+}
+
+/// The source map of an input file (its `sourceMappingURL`), used to map
+/// positions in that file back to the sources it was generated from.
+pub struct InputSourceMap {
+    map: ParsedSourceMap,
+    /// `sources`, with `sourceRoot` prepended.
+    pub sources: Vec<Box<[u8]>>,
+    /// `sourcesContent`, `None` where the map has none.
+    pub sources_content: Vec<Option<Box<[u8]>>>,
+}
+
+impl InputSourceMap {
+    /// Parses a version 3 source map.
+    pub fn parse(source: &[u8]) -> crate::Result<InputSourceMap> {
+        let json_src = bun_ast::Source::init_path_string("sourcemap.json", source);
+        let mut log = bun_ast::Log::init();
+        bun_ast::initialize_store();
+        let _store_scope = bun_ast::StoreResetGuard::new();
+        let parsed = match bun_parsers::json::ParsedJson::parse_json(&json_src, &mut log) {
+            Ok(p) => p,
+            Err(_) => return Err(crate::Error::InvalidJSON),
+        };
+        let json = parsed.root;
+
+        if let Some(version) = json.get(b"version") {
+            match version.data.as_e_number() {
+                Some(n) if n.value() == 3.0 => {}
+                _ => return Err(crate::Error::UnsupportedVersion),
+            }
+        }
+        let Some(mappings) = json.get(b"mappings") else {
+            return Err(crate::Error::InvalidSourceMap);
+        };
+        let Some(mappings_vlq) = mappings.as_utf8_string_literal() else {
+            return Err(crate::Error::InvalidSourceMap);
+        };
+        let source_root_expr = json.get(b"sourceRoot");
+        let source_root: &[u8] = source_root_expr
+            .as_ref()
+            .and_then(|r| r.as_utf8_string_literal())
+            .unwrap_or(b"");
+
+        let mut sources: Vec<Box<[u8]>> = Vec::new();
+        if let Some(list) = json.get(b"sources") {
+            let bun_ast::ExprData::EArrayJSON(arr) = list.data else {
+                return Err(crate::Error::InvalidSourceMap);
+            };
+            for item in arr.get().items() {
+                let path = item.as_str().unwrap_or(b"");
+                sources.push(
+                    if source_root.is_empty()
+                        || bun_paths::is_absolute_posix(path)
+                        || bun_paths::is_absolute_windows(path)
+                    {
+                        Box::from(path)
+                    } else {
+                        let sep: &[u8] = if source_root.ends_with(b"/") {
+                            b""
+                        } else {
+                            b"/"
+                        };
+                        [source_root, sep, path].concat().into_boxed_slice()
+                    },
+                );
+            }
+        }
+        let mut sources_content: Vec<Option<Box<[u8]>>> = vec![None; sources.len()];
+        if let Some(list) = json.get(b"sourcesContent") {
+            if let bun_ast::ExprData::EArrayJSON(arr) = list.data {
+                for (slot, item) in sources_content.iter_mut().zip(arr.get().items()) {
+                    *slot = item.as_str().map(Box::from);
+                }
+            }
+        }
+
+        let map = match mapping::parse(
+            mappings_vlq,
+            None,
+            i32::try_from(sources.len()).unwrap_or(i32::MAX),
+            i32::MAX as usize,
+            mapping::ParseOptions {
+                allow_names: false,
+                sort: true,
+            },
+        ) {
+            Ok(map) => map,
+            Err(fail) => return Err(fail.err),
+        };
+        Ok(InputSourceMap {
+            map,
+            sources,
+            sources_content,
+        })
+    }
+
+    /// The original `(source index, line, column)` of the zero-based generated
+    /// position: the closest mapping at or before it on the same line.
+    pub fn find(&self, line: i32, column: i32) -> Option<(i32, i32, i32)> {
+        let found = self.map.find_mapping(
+            Ordinal::from_zero_based(line),
+            Ordinal::from_zero_based(column),
+        )?;
+        if found.source_index < 0 || found.source_index as usize >= self.sources.len() {
+            return None;
+        }
+        Some((
+            found.source_index,
+            found.original.lines.zero_based(),
+            found.original.columns.zero_based(),
+        ))
+    }
 }
 
 /// Parses a JSON source-map

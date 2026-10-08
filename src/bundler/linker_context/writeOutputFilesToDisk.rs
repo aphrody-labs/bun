@@ -308,18 +308,19 @@ pub(crate) fn write_output_files_to_disk(
                         [b"" as &[u8], paths::basename(&source_map_final_rel_path)]
                     };
 
-                    let source_map_start = b"//# sourceMappingURL=";
+                    let (source_map_start, source_map_end) =
+                        chunk.content.source_mapping_url_comment(false);
                     let total_len = code_result.buffer.len()
                         + source_map_start.len()
                         + a.len()
                         + b.len()
-                        + b"\n".len();
+                        + source_map_end.len();
                     let mut buf: Vec<u8> = Vec::with_capacity(total_len);
                     buf.extend_from_slice(&code_result.buffer);
                     buf.extend_from_slice(source_map_start);
                     buf.extend_from_slice(a);
                     buf.extend_from_slice(b);
-                    buf.push(b'\n');
+                    buf.extend_from_slice(source_map_end);
                     code_result.buffer = buf.into_boxed_slice();
                 }
 
@@ -371,14 +372,18 @@ pub(crate) fn write_output_files_to_disk(
                     });
                 let encode_len = bun_base64::encode_len(&output_source_map);
 
-                let source_map_start = b"//# sourceMappingURL=data:application/json;base64,";
-                let total_len = code_result.buffer.len() + source_map_start.len() + encode_len + 1;
+                let (source_map_start, source_map_end) =
+                    chunk.content.source_mapping_url_comment(true);
+                let total_len = code_result.buffer.len()
+                    + source_map_start.len()
+                    + encode_len
+                    + source_map_end.len();
                 let mut buf: Vec<u8> = Vec::with_capacity(total_len);
 
                 buf.extend_from_slice(&code_result.buffer);
                 buf.extend_from_slice(source_map_start);
                 bun_base64::encode_append(&mut buf, &output_source_map);
-                buf.push(b'\n');
+                buf.extend_from_slice(source_map_end);
                 code_result.buffer = buf.into_boxed_slice();
             }
             SourceMapOption::None => {}

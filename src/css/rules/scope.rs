@@ -21,8 +21,7 @@ pub struct ScopeRule<R> {
 impl<R> ScopeRule<R> {
     pub fn to_css(&self, dest: &mut Printer) -> Result<(), PrintErr> {
         use crate::selectors::selector::serialize::serialize_selector_list;
-        // #[cfg(feature = "sourcemap")]
-        // dest.add_mapping(self.loc);
+        dest.add_mapping(self.loc);
 
         dest.write_str("@scope")?;
         dest.whitespace()?;

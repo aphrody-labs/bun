@@ -102,6 +102,16 @@ impl<'a> ImportInfo<'a> {
     }
 }
 
+/// A rule start recorded while printing, as zero-based generated and original
+/// line/column positions.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SourceMapping {
+    pub generated_line: u32,
+    pub generated_column: u32,
+    pub original_line: u32,
+    pub original_column: u32,
+}
+
 /// A `Printer` represents a destination to output serialized CSS, as used in
 /// the [ToCss](super::traits::ToCss) trait. It can wrap any destination that
 /// implements [std::fmt::Write](std::fmt::Write), such as a [String](String).
@@ -166,6 +176,8 @@ pub struct Printer<'a> {
     pub(crate) prefix_expansion_bytes: usize,
     pub(crate) scratchbuf: BumpVec<'a, u8>,
     pub(crate) error_kind: Option<css::PrinterError>,
+    /// Rule starts recorded by `add_mapping`; `None` when no source map is wanted.
+    pub(crate) source_mappings: Option<Vec<SourceMapping>>,
     pub(crate) import_info: Option<ImportInfo<'a>>,
     pub(crate) symbols: &'a SymbolMap,
     pub(crate) local_names: Option<&'a css::LocalsResultsMap>,
@@ -220,6 +232,26 @@ impl<'a> Printer<'a> {
             }
         }
         b"unknown.css"
+    }
+
+    /// Records that the output at the current position comes from `loc`.
+    pub(crate) fn add_mapping(&mut self, loc: Location) {
+        let Some(mappings) = &mut self.source_mappings else {
+            return;
+        };
+        let mapping = SourceMapping {
+            generated_line: self.line,
+            generated_column: self.col,
+            original_line: loc.line,
+            original_column: loc.column.saturating_sub(1),
+        };
+        if mappings.last().is_some_and(|last| {
+            (last.generated_line, last.generated_column)
+                >= (mapping.generated_line, mapping.generated_column)
+        }) {
+            return;
+        }
+        mappings.push(mapping);
     }
 
     /// Returns whether the indent level is greater than one.
@@ -312,6 +344,7 @@ impl<'a> Printer<'a> {
             nesting_expansions: 0,
             prefix_expansion_bytes: 0,
             error_kind: None,
+            source_mappings: None,
         }
     }
 

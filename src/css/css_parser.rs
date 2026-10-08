@@ -2432,8 +2432,30 @@ mod stylesheet_impl {
             local_names: Option<&'a LocalsResultsMap>,
             symbols: &'a bun_ast::symbol::Map,
         ) -> PrintResult<()> {
-            // Note: PrinterOptions has `&mut SourceMap` and so isn't Copy; capture
-            // the lone field we re-read after moving `options` into Printer::new.
+            self.to_css_with_writer_and_source_map(
+                arena,
+                writer,
+                options,
+                import_info,
+                local_names,
+                symbols,
+                None,
+            )
+        }
+
+        /// Like `to_css_with_writer`, and when `source_mappings` is set, fills it
+        /// with the generated and original position of every printed rule.
+        #[allow(clippy::too_many_arguments)]
+        pub fn to_css_with_writer_and_source_map<'a>(
+            &'a self,
+            arena: &'a Bump,
+            writer: &'a mut dyn bun_io::Write,
+            options: &PrinterOptions<'a>,
+            import_info: Option<ImportInfo<'a>>,
+            local_names: Option<&'a LocalsResultsMap>,
+            symbols: &'a bun_ast::symbol::Map,
+            source_mappings: Option<&mut Vec<crate::SourceMapping>>,
+        ) -> PrintResult<()> {
             let project_root = options.project_root;
             let mut printer = Printer::new(
                 arena,
@@ -2444,8 +2466,16 @@ mod stylesheet_impl {
                 local_names,
                 symbols,
             );
+            if source_mappings.is_some() {
+                printer.source_mappings = Some(Vec::new());
+            }
             match self.to_css_with_writer_impl(&mut printer, project_root) {
-                Ok(result) => Ok(result),
+                Ok(()) => {
+                    if let Some(out) = source_mappings {
+                        *out = printer.source_mappings.take().unwrap_or_default();
+                    }
+                    Ok(())
+                }
                 Err(_) => {
                     debug_assert!(printer.error_kind.is_some());
                     Err(printer.error_kind.unwrap())
@@ -2458,8 +2488,7 @@ mod stylesheet_impl {
             printer: &mut Printer<'a>,
             project_root: Option<&[u8]>,
         ) -> Result<(), PrintErr> {
-            // #[cfg(feature = "sourcemap")] { printer.sources = Some(&self.sources); }
-            // #[cfg(feature = "sourcemap")] if printer.source_map.is_some() { ... }
+            printer.sources = Some(&self.sources);
 
             for comment in &self.license_comments {
                 printer.write_str("/*")?;

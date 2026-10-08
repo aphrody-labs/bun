@@ -15,8 +15,7 @@ pub struct NamespaceRule {
 
 impl NamespaceRule {
     pub fn to_css(&self, dest: &mut Printer) -> Result<(), PrintErr> {
-        // #[cfg(feature = "sourcemap")]
-        // dest.add_mapping(self.loc);
+        dest.add_mapping(self.loc);
 
         dest.write_str("@namespace ")?;
         if let Some(prefix) = &self.prefix {
