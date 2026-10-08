@@ -20,7 +20,11 @@ const BUN_TYPES_PACKAGE_ROOT = join(BUN_REPO_ROOT, "packages", "bun-types");
 const FIXTURE_SOURCE_DIR = fileURLToPath(import.meta.resolve("./fixture"));
 const TSCONFIG_SOURCE_PATH = join(BUN_REPO_ROOT, "src/cli/init/tsconfig.default.json");
 const BUN_VERSION = (process.env.BUN_VERSION ?? Bun.version ?? process.versions.bun).replace(/^.*v/, "");
-const BUN_TYPES_TARBALL_NAME = `bun-types-${BUN_VERSION}.tgz`;
+// `bun pm pack` names the tarball after the package (`@scope/name` → `scope-name`).
+const BUN_TYPES_PACKAGE_NAME: string = JSON.parse(
+  readFileSync(join(BUN_TYPES_PACKAGE_ROOT, "package.json"), "utf8"),
+).name;
+const BUN_TYPES_TARBALL_NAME = `${BUN_TYPES_PACKAGE_NAME.replace(/^@/, "").replace("/", "-")}-${BUN_VERSION}.tgz`;
 
 const { config: sourceTsconfig } = ts.readConfigFile(TSCONFIG_SOURCE_PATH, ts.sys.readFile);
 
@@ -675,7 +679,9 @@ describe("@types/bun integration test", () => {
       // tmpdir() can contain a symlink (/var on macOS), so both sides are real paths.
       const bunTypesRealDir = await realpath(join(checkDir, "node_modules", "bun-types"));
       expect(bunTypesRealDir).toStartWith(await realpath(join(cacheDir, "links")));
-      expect(existsSync(join(dirname(bunTypesRealDir), "undici-types", "package.json"))).toBe(true);
+      // A scoped package sits one level deeper in the store (node_modules/@scope/name).
+      const storeNodeModules = join(bunTypesRealDir, BUN_TYPES_PACKAGE_NAME.includes("/") ? "../.." : "..");
+      expect(existsSync(join(storeNodeModules, "undici-types", "package.json"))).toBe(true);
     });
   });
 

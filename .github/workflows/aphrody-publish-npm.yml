@@ -1,0 +1,53 @@
+name: Aphrody npm publish
+
+# Publishes the fork's JS packages (@aphrody/bun-types, inspector and debug
+# adapter protocols, svelte and yaml plugins) with
+# scripts/aphrody/publish-npm.ts. Versions are `<base>-aphrody.<n>`; a package
+# whose content matches its newest published version is skipped, so re-running
+# is safe.
+
+permissions:
+  contents: read
+
+on:
+  push:
+    tags:
+      - "aphrody-v*"
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Pack and compute versions without publishing
+        type: boolean
+        default: false
+      only:
+        description: Comma-separated package directories to publish (default all)
+        type: string
+        default: ""
+
+concurrency:
+  group: aphrody-publish-npm
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'aphrody-labs/bun'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+        with:
+          bun-version: latest
+      - name: Test publish script
+        run: bun test test/internal/aphrody-publish-npm.test.ts
+      - name: Publish
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DRY_RUN: ${{ inputs.dry-run && '--dry-run' || '' }}
+          ONLY: ${{ inputs.only }}
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          bun scripts/aphrody/publish-npm.ts $DRY_RUN ${ONLY:+--only "$ONLY"} --out "$RUNNER_TEMP/aphrody-npm"
