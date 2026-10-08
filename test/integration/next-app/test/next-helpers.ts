@@ -26,10 +26,22 @@ export async function installFixture(fixture: string, files: string[]) {
 
 export const nextBin = "node_modules/next/dist/bin/next";
 
-/** Runs `bun --bun next build` and returns its output; throws with the output when it fails. */
-export async function nextBuild(cwd: string, args: string[], env: Record<string, string | undefined>) {
+/** The `next-bun` CLI of packages/bun-next (`next-bun build` = `bun --bun next build` with a Bun `node` on PATH). */
+export const nextBunBin = join(import.meta.dir, "..", "..", "..", "..", "packages", "bun-next", "bin", "next-bun.js");
+
+/**
+ * Runs `bun --bun next build` (or `next-bun build` when `runner` is set) and returns its output;
+ * throws with the output when it fails.
+ */
+export async function nextBuild(
+  cwd: string,
+  args: string[],
+  env: Record<string, string | undefined>,
+  runner: "bun" | "next-bun" = "bun",
+) {
   await using proc = Bun.spawn({
-    cmd: [bunExe(), "--bun", nextBin, "build", ...args],
+    cmd:
+      runner === "next-bun" ? [bunExe(), nextBunBin, "build", ...args] : [bunExe(), "--bun", nextBin, "build", ...args],
     cwd,
     env: { ...nextEnv, NODE_ENV: "production", ...env },
     stdout: "pipe",

@@ -4,28 +4,45 @@ import { join } from "path";
 import { installFixture, nextBuild, nextStart } from "./next-helpers";
 
 // App Router baseline (J0 of the Next.js-on-Bun plan): `next build` + `next start`
-// under `bun --bun`, once with Turbopack (the default bundler) and once with webpack.
+// under `bun --bun`, once with Turbopack (the default bundler) and once with webpack,
+// plus a Turbopack build through the `next-bun` runner. The fixture's PostCSS plugin
+// stamps the runtime it ran in into the CSS, so each variant asserts PostCSS ran on Bun.
 
 const fixture = join(import.meta.dir, "..");
 let dir: Awaited<ReturnType<typeof installFixture>>;
 
 beforeAll(async () => {
-  dir = await installFixture(fixture, ["app", "bun.lock", "bunfig.toml", "next.config.js", "package.json"]);
+  dir = await installFixture(fixture, [
+    "app",
+    "bun.lock",
+    "bunfig.toml",
+    "next.config.js",
+    "package.json",
+    "postcss.config.js",
+    "postcss-mark.js",
+  ]);
 }, 300_000);
 
 afterAll(() => dir?.[Symbol.dispose]());
 
 describe.concurrent.each([
-  ["turbopack", [], ".next-turbopack"],
-  ["webpack", ["--webpack"], ".next-webpack"],
-] as const)("next-app (%s)", (_name, args, distDir) => {
+  ["turbopack", [], ".next-turbopack", "bun"],
+  ["webpack", ["--webpack"], ".next-webpack", "bun"],
+  ["turbopack via next-bun", [], ".next-runner", "next-bun"],
+] as const)("next-app (%s)", (_name, args, distDir, runner) => {
   test(
     "builds and serves the App Router page and route handler",
     async () => {
       const env = { NEXT_DIST_DIR: distDir };
-      const buildOutput = await nextBuild(String(dir), [...args], env);
+      const buildOutput = await nextBuild(String(dir), [...args], env, runner);
       expect(buildOutput).toContain("○ /");
       expect(buildOutput).toContain("ƒ /api/hello");
+
+      let css = "";
+      for await (const file of new Bun.Glob("static/**/*.css").scan(join(String(dir), distDir)))
+        css += await Bun.file(join(String(dir), distDir, file)).text();
+      expect(css).toMatch(/#010203|rgb\(1,\s*2,\s*3\)/);
+      expect(css).toMatch(/--postcss-runtime:\s*bun/);
 
       await using server = await nextStart(String(dir), env);
 

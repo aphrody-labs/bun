@@ -1,18 +1,39 @@
 {
   "name": "@aphrody/next-bun",
-  "version": "0.1.0",
-  "description": "Build Next.js with Bun's bundler (experimental, Pages Router only)",
-  "license": "MIT",
+  "version": "0.2.0",
+  "description": "Next.js on Bun: run next with no Node.js (Turbopack workers included), build the Pages Router with Bun.build (experimental), Next 16 / Tailwind 4 codemods and instant navigation testing",
+  "license": "MIT AND Apache-2.0",
   "main": "index.js",
   "bin": {
     "next-bun": "bin/next-bun.js"
   },
+  "exports": {
+    ".": "./index.js",
+    "./run": "./lib/run.js",
+    "./patch": "./lib/patch.js",
+    "./codemods": "./codemods/index.ts",
+    "./codemods/cli": "./codemods/cli.ts",
+    "./codemods/lex": "./codemods/lex.ts",
+    "./testing": "./testing/index.ts",
+    "./package.json": "./package.json"
+  },
   "files": [
     "index.js",
     "bin",
-    "lib"
+    "lib",
+    "codemods",
+    "testing",
+    "README.md"
   ],
+  "engines": {
+    "bun": ">=1.4.2"
+  },
   "peerDependencies": {
-    "next": "16.1.6"
+    "next": ">=16.0.0"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    }
   }
 }
