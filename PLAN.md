@@ -396,17 +396,46 @@ Le fork ajoute des modules et plugins sans coût au démarrage ni goulot. Fichie
 
 ### P. Fork WebKit / JavaScriptCore — `aphrody-labs/WebKit` (🔄)
 
-`aphrody-labs/WebKit` existe déjà (fork d'`oven-sh/WebKit`, 1999 commits de retard au 2026-10-09, aucune release).
-Fichiers : côté fork Bun `scripts/build/deps/webkit.ts` (source des prébuilts, `WEBKIT_VERSION`) ; côté WebKit
-`.github/workflows/**`, scripts de build.
+Fichiers : côté fork Bun `scripts/build/deps/webkit.ts` (source des prébuilts, `WEBKIT_VERSION`,
+`APHRODY_WEBKIT_PREBUILTS`), `scripts/aphrody/webkit-prebuilt.ts` (flux), `test/internal/webkit-prebuilt-source.test.ts` ;
+côté WebKit `.github/workflows/aphrody-prebuilts.yml`, `aphrody-upstream-sync.yml`, `APHRODY.md`.
 
-- ⏳ Resynchroniser `aphrody-labs/WebKit` sur `oven-sh/WebKit` au commit `WEBKIT_VERSION` épinglé par le fork ;
-  workflow de sync automatique (comme pour Bun).
-- ⏳ CI de prébuilts identique à celle d'oven-sh (mêmes noms d'archives : linux x64/arm64 glibc **et musl Alpine**,
-  macOS, Windows ; debug/release/LTO/ASAN) publiés en releases `aphrody-labs/WebKit`.
-- ⏳ `scripts/build/deps/webkit.ts` : source configurable (`aphrody-labs` par défaut, repli `oven-sh`) ; test.
-- ⏳ Tout patch JSC/WebKit utile (perf démarrage, musl, fonctionnalités des plugins) = commit sur
-  `aphrody-labs/WebKit`, nouveau prébuilt, bump de `WEBKIT_VERSION`.
+- ✅ `aphrody-labs/WebKit` resynchronisé sur `oven-sh/WebKit` (2026-10-09, fast-forward des 1999 commits via
+  `merge-upstream`, `main` = `0c06faadf65b…` et au-delà). Sync programmé : `aphrody-upstream-sync.yml` (toutes les
+  6 h ; fast-forward, ou `git merge` blobless quand `main` porte des patchs ; secret `APHRODY_SYNC_TOKEN` pour les
+  fichiers `.github/workflows`).
+- ✅ CI de prébuilts : `ci.yml` d'oven-sh (désactivé dans le fork : runners privés `linux-x64-gh`/`linux-arm64-gh`)
+  est remplacé par `aphrody-prebuilts.yml`, qui réutilise **tels quels** `.github/scripts/lanes.mjs` et les
+  `Dockerfile*` d'upstream (donc mêmes lanes, mêmes noms `bun-webkit-<os>-<arch>[-musl][-debug|-lto][-asan].tar.gz`,
+  même contenu, tag `autobuild-<sha>`). Tous les lanes se construisent dans un conteneur linux/amd64 (macOS, Windows,
+  FreeBSD, Android et arm64 en cross-compilation) : un seul type de runner. Images de toolchain dans
+  `ghcr.io/aphrody-labs/bun-webkit-build-env`. Lanes au choix (`lanes` = regex sur les labels, `all` = les 42).
+- ✅ **Mesure** (2026-10-09, runner standard `ubuntu-latest` 4 vCPU/16 Go, dépôt public = gratuit) : image
+  `linux-musl` 4 min 18 s ; lane `bun-webkit-linux-amd64-musl-lto` **45 min** (limite d'un job : 6 h). Archive
+  223 265 820 o (oven-sh : 223 270 963 o), mêmes 2800 entrées. Pas besoin de runners larges : le disque est
+  contourné (data-root Docker sur `/mnt`, ~70 Go), l'unique limite réelle est la concurrence (20 jobs) ; toute la
+  matrice tient en quelques heures.
+- ✅ `scripts/build/deps/webkit.ts` : source par archive. Défaut `oven-sh/WebKit` tant que
+  `APHRODY_WEBKIT_PREBUILTS[sha]` ne liste pas l'archive ; `BUN_WEBKIT_REPO=aphrody|oven|<owner>/<repo>` force la
+  source ; le dépôt entre dans l'identité et le répertoire de cache (pas de collision à sha égal). Build Windows
+  MSVC 14.44 inchangé (clés de cache identiques par défaut). Test : `bun test test/internal/webkit-prebuilt-source.test.ts`.
+- 🔄 Alpine (chantier N) : `Dockerfile.musl` part de `alpine:3.23` + LLVM 23 (edge) ; les `-musl*` sont l'artefact
+  Linux principal. Passage de la base à Alpine 3.24 = commit sur le fork WebKit, puis relance du lane musl.
+
+**Flux d'un patch JSC/WebKit** (tout est dans `scripts/aphrody/webkit-prebuilt.ts`) :
+
+1. Patch JSC → commit sur `main` de `aphrody-labs/WebKit` (clone partiel :
+   `git clone --filter=blob:none --sparse`, ou PR sur le fork). Le sync upstream fusionne ensuite oven-sh au-dessus.
+2. CI prébuilt : `bun scripts/aphrody/webkit-prebuilt.ts build --ref <sha> [--lanes 'regex,…'|all]` (= `gh workflow
+   run aphrody-prebuilts.yml -R aphrody-labs/WebKit`) → release `autobuild-<sha>` publiée si tous les lanes passent.
+3. Bump dans le fork Bun : `webkit-prebuilt.ts bump --sha <sha>` (met `WEBKIT_VERSION`), puis `webkit-prebuilt.ts
+   record` (écrit dans `APHRODY_WEBKIT_PREBUILTS` les archives réellement publiées pour ce sha, ce qui bascule le
+   build dessus), prettier, `bun test test/internal/webkit-prebuilt-source.test.ts`, build, commit.
+4. `webkit-prebuilt.ts status` : écart au upstream et archives publiées.
+
+Itération avant la CI : `BUN_WEBKIT_PATH` (clone de `aphrody-labs/WebKit`, mode `webkit: local` de `webkit.ts`).
+
+- ⏳ Tout patch JSC/WebKit utile (perf démarrage, musl, fonctionnalités des plugins) suit le flux ci-dessus.
 
 ## 4. Vérification commune avant chaque push
 
