@@ -113,10 +113,15 @@ paquets `packages/**` qui refont une API Bun (`http`, `fuzzy`, `sql`, `paths`…
 
 - ⏳ Pour chaque paquet : API Bun native, suppression, migration ici sous `@aphrody/…`, ou maintien justifié.
 
-### H. Docs Bun d'Aphrody (🔄)
+### H. Docs Bun d'Aphrody (✅)
 
-- ⏳ Purge des copies et plans Bun périmés ; une seule page canonique « Bun = notre fork » ; seule copie de la doc :
-  `docs/reference/upstream-bun` (`bun run docs:bun:update|check`). `CLAUDE.md`, `AGENTS.md`, `TOOLS.md` à jour.
+- ✅ Purge des copies et plans Bun périmés ; une seule page canonique « Bun = notre fork »
+  (`docs/reference/upstream-bun/APHRODY-FORK.md`) ; seule copie de la doc : `docs/reference/upstream-bun`
+  (`bun run docs:bun:update|check`). `CLAUDE.md`, `AGENTS.md` à jour ; `TOOLS.md` est généré et ne contient rien de
+  périmé. Aphrody `8c13ad714` (une partie des suppressions est partie dans `e3aa1d730` et `9394cb5e8`).
+  `docs:check`, `docs:bun:check` verts ; `docs:check-links` : 0 lien cassé, 3 chemins morts dans des fichiers des
+  chantiers F (`docs/operations/infra/update/BUN.md` → `patches/bun`) et C (`packages/bun-next/docs/PLAN.md` cité
+  par next-fork/PLAN.md et NEXTJS_VERCEL_RUST_CRATES.md).
 
 ### I. Tests Windows d'Aphrody (🔄)
 
