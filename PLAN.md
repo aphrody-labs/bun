@@ -107,10 +107,12 @@ Fichiers : `packages/bun-next/**`, `test/integration/next-bun*/`, `test/integrat
 
 - ✅ J0 fixture App Router ; J1 build Pages Router via Bun.build (`withBun`).
 - ✅ Couche Next d'Aphrody absorbée : runner `next-bun dev|build|start`, codemods, helpers instant-navigation.
-- ⏳ Patch compatible avec la **dernière** version de Next publiée (pas seulement 16.1.6).
-- ⏳ Publication npm de `@aphrody/next-bun` ; Aphrody (m3-next, m3-next-migrate, web-test) passe de `file:` à
-  la version npm.
-- ⏳ Shim `node` du runner : vérifié sous Linux (Docker local) ; supprimé s'il ne sert nulle part.
+- ✅ Patch accepté pour tout Next 16.x ≥ 16.1.6 ; build Pages Router vérifié sur 16.1.6, 16.4.0 (`latest`) et
+  16.5.0-canary.4 (`1172f762478`).
+- ✅ `@aphrody/next-bun` 0.2.0-aphrody.1 publié sur npm (`e8cf6388174`) ; Aphrody (m3-next, m3-next-migrate,
+  web-test) en dépend depuis npm (aphrody `dc2eea357`).
+- ✅ Shim `node` du runner : nécessaire sous Linux (Docker) et Windows (Turbopack lance `node` pour PostCSS et
+  les loaders), conservé ; test next-app « no node on PATH » (`1172f762478`).
 - ⏳ Suite du plan détaillé (`packages/bun-next/docs/PLAN.md`) : App Router via Bun.build, dev/HMR.
 
 ### D. Plugin Tailwind CSS — `@aphrody/bun-plugin-tailwind` (🔄)
