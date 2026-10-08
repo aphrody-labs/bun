@@ -29,6 +29,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { platforms as upstreamPlatforms } from "../../packages/bun-release/src/platform";
+import { retirePlaceholder } from "./npm-placeholder";
 
 export const ROOT = join(import.meta.dir, "..", "..");
 export const RUNTIME_PACKAGE = "@aphrody/bun-runtime";
@@ -281,6 +282,7 @@ export async function publish(staged: Staged, version: string, dryRun: boolean) 
     console.log(`${dryRun ? "dry-run" : "publish"} ${name}@${version}`);
     bunPublish(dir, dryRun);
   }
+  for (const { name, dir } of order) await retirePlaceholder(name, { cwd: dir, dryRun });
 }
 
 function flag(args: string[], name: string): string | undefined {

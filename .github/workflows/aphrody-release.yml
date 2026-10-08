@@ -1,10 +1,18 @@
 name: Aphrody release
 
-# Builds the fork's runtime in release mode on GitHub-hosted runners, attaches
-# bun-<os>-<arch>.zip (upstream's asset names) + SHA256SUMS.txt to the GitHub
-# Release aphrody-v<version>, then publishes @aphrody/bun-runtime and
-# @aphrody/bun-runtime-<platform> to npm (scripts/aphrody/publish-runtime.ts).
-# Version: <package.json version>-aphrody.<n>.
+# Builds the fork's runtime like upstream does (.buildkite/ci.ts): every target
+# is compiled on one Linux arm64 host, a Debian 13 container set up by the
+# steps of CI's build image (scripts/aphrody/build-host.ts reuses
+# scripts/build/ci-images/spec.ts), with `scripts/build.ts --profile=release
+# --os --arch [--abi]` (ThinLTO on): linux-gnu links against the glibc 2.31
+# sysroot, musl against Alpine's, Windows against the xwin MSVC/SDK splat and
+# macOS against Apple's SDK. Each binary is then run on a machine of its own
+# platform (linux-gnu in debian:bullseye, glibc 2.31; musl in Alpine).
+# Assets use upstream's names: bun-<os>-<arch>[-musl].zip, x64 also re-zipped
+# as -baseline (upload-release.sh), + SHA256SUMS.txt on the GitHub Release
+# aphrody-v<version>; then @aphrody/bun-runtime and its platform packages go
+# to npm (scripts/aphrody/publish-runtime.ts).
+# Version: <package.json version>-aphrody.<n>, which `bun --version` prints.
 
 permissions:
   contents: read
@@ -20,14 +28,14 @@ on:
         type: string
         required: false
       targets:
-        description: "Comma-separated: linux-x64,linux-aarch64,darwin-aarch64,windows-x64"
+        description: "Comma-separated targets of scripts/aphrody/build-host.ts (empty: all)"
         type: string
-        default: "linux-x64,linux-aarch64,darwin-aarch64,windows-x64"
+        default: ""
       lto:
-        description: "ThinLTO (on needs far more RAM and time than hosted runners have)"
+        description: "ThinLTO across bun, JSC and Rust, as upstream ships"
         type: choice
-        options: ["off", "on"]
-        default: "off"
+        options: ["on", "off"]
+        default: "on"
       publish-npm:
         description: "Publish @aphrody/bun-runtime to npm after the release"
         type: boolean
@@ -43,8 +51,6 @@ concurrency:
 
 env:
   BUN_HOST_VERSION: "1.4.2"
-  LLVM_MAJOR: "23"
-  LLVM_VERSION: "23.1.1"
 
 jobs:
   prepare:
@@ -54,6 +60,7 @@ jobs:
     outputs:
       version: ${{ steps.plan.outputs.version }}
       tag: ${{ steps.plan.outputs.tag }}
+      version-tag: ${{ steps.plan.outputs.version-tag }}
       matrix: ${{ steps.plan.outputs.matrix }}
       build: ${{ steps.plan.outputs.build }}
     steps:
@@ -66,31 +73,28 @@ jobs:
       - id: plan
         env:
           INPUT_VERSION: ${{ inputs.version }}
-          INPUT_TARGETS: ${{ inputs.targets || 'linux-x64,linux-aarch64,darwin-aarch64,windows-x64' }}
+          INPUT_TARGETS: ${{ inputs.targets }}
           PUBLISH_ONLY: ${{ inputs.publish-only && 'true' || 'false' }}
           REF_NAME: ${{ github.ref_name }}
           REF_TYPE: ${{ github.ref_type }}
         run: |
           bun -e '
             const m = await import("./scripts/aphrody/publish-runtime.ts");
+            const host = await import("./scripts/aphrody/build-host.ts");
             const env = process.env;
             const version = env.REF_TYPE === "tag" ? m.versionFromTag(env.REF_NAME)
               : env.INPUT_VERSION ? m.versionFromTag(env.INPUT_VERSION)
               : m.computeRuntimeVersion(m.readBaseVersion(), 1);
-            if (m.parseRuntimeVersion(version).base !== m.readBaseVersion())
+            const { base, n } = m.parseRuntimeVersion(version);
+            if (base !== m.readBaseVersion())
               console.log(`::warning::${version} is not based on package.json ${m.readBaseVersion()}`);
-            const all = {
-              "linux-x64": { runner: "ubuntu-24.04", triplet: "bun-linux-x64" },
-              "linux-aarch64": { runner: "ubuntu-24.04-arm", triplet: "bun-linux-aarch64" },
-              "darwin-aarch64": { runner: "macos-15", triplet: "bun-darwin-aarch64" },
-              "windows-x64": { runner: "windows-2025", triplet: "bun-windows-x64" },
-            };
-            const wanted = env.INPUT_TARGETS.split(",").map(s => s.trim()).filter(Boolean);
-            for (const t of wanted) if (!all[t]) throw new Error(`unknown target ${t}`);
-            const include = env.PUBLISH_ONLY === "true" ? [] : wanted.map(t => ({ target: t, ...all[t] }));
+            const wanted = (env.INPUT_TARGETS ?? "").split(",").map(s => s.trim()).filter(Boolean);
+            const targets = wanted.length ? wanted.map(host.findTarget) : host.releaseTargets;
+            const include = env.PUBLISH_ONLY === "true" ? [] : targets;
             const out = [
               `version=${version}`,
               `tag=${m.releaseTag(version)}`,
+              `version-tag=aphrody.${n}`,
               `matrix=${JSON.stringify({ include })}`,
               `build=${include.length > 0}`,
             ];
@@ -102,28 +106,31 @@ jobs:
     needs: prepare
     if: needs.prepare.outputs.build == 'true'
     name: build ${{ matrix.target }}
-    runs-on: ${{ matrix.runner }}
+    # Upstream's build host is linux arm64 too; every target is cross-compiled from it.
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 355
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     env:
-      LTO: ${{ inputs.lto || 'off' }}
-      BUN_DEBUG_QUIET_LOGS: "1"
+      LTO: ${{ inputs.lto || 'on' }}
+      TARGET: ${{ matrix.target }}
+      TRIPLET: ${{ matrix.triplet }}
+      VERSION_TAG: ${{ needs.prepare.outputs.version-tag }}
     steps:
-      - name: Free disk space (Linux)
-        if: runner.os == 'Linux'
+      - name: Free disk space, add swap
         run: |
-          df -h /
+          df -h / /mnt || true
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup \
-            /opt/hostedtoolcache/CodeQL /usr/local/share/boost /usr/share/swift /usr/local/share/powershell \
+            /opt/hostedtoolcache /usr/local/share/boost /usr/share/swift /usr/local/share/powershell \
             /usr/local/lib/node_modules /opt/microsoft /opt/google /usr/lib/jvm || true
           docker image prune -af >/dev/null 2>&1 || true
+          # A ThinLTO link of bun + JSC + Rust peaks above the runner's 16 GB.
+          sudo swapoff -a || true
+          sudo fallocate -l 24G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+          free -h
           df -h /
-
-      - name: Configure git (Windows)
-        if: runner.os == 'Windows'
-        run: git config --global core.longpaths true
+          nproc
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -133,85 +140,61 @@ jobs:
         with:
           bun-version: ${{ env.BUN_HOST_VERSION }}
 
-      - name: Cache directory
-        shell: bash
-        run: echo "BUN_BUILD_CACHE_DIR=$RUNNER_TEMP/bun-build-cache" >> "$GITHUB_ENV"
-
-      - name: Toolchain (Linux)
-        if: runner.os == 'Linux'
+      - name: Plan
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq lsb-release wget software-properties-common gnupg cmake ccache nasm perl unzip zip binutils
-          wget -q https://apt.llvm.org/llvm.sh
-          sudo bash llvm.sh "$LLVM_MAJOR" all
-          echo "/usr/lib/llvm-$LLVM_MAJOR/bin" >> "$GITHUB_PATH"
-          /usr/lib/llvm-$LLVM_MAJOR/bin/clang --version
-
-      - name: Toolchain (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew install "llvm@$LLVM_MAJOR" ccache cmake nasm || brew install llvm ccache cmake nasm
-          keg="$(brew --prefix)/opt/llvm@$LLVM_MAJOR/bin"
-          [ -d "$keg" ] || keg="$(brew --prefix)/opt/llvm/bin"
-          echo "$keg" >> "$GITHUB_PATH"
-          "$keg/clang" --version
-          xcode-select -p
-
-      - name: Toolchain (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          # The image's own LLVM in C:\Program Files\LLVM is older: unpack the pinned one beside it.
-          $name = "clang+llvm-$env:LLVM_VERSION-x86_64-pc-windows-msvc"
-          Invoke-WebRequest "https://github.com/llvm/llvm-project/releases/download/llvmorg-$env:LLVM_VERSION/$name.tar.xz" -OutFile "$env:RUNNER_TEMP\llvm.tar.xz"
-          tar -xf "$env:RUNNER_TEMP\llvm.tar.xz" -C C:\
-          "BUN_TOOLCHAIN_LLVM=C:\$name" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-          "C:\$name\bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
-          & "C:\$name\bin\clang-cl.exe" --version
-          choco install nasm -y --no-progress
-          "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
-          # Strawberry's MinGW toolchain (gcc, ld, make) must not shadow the MSVC/LLVM tools.
-          $path = ($env:PATH -split ';' | Where-Object { $_ -notlike 'C:\Strawberry\c\bin*' }) -join ';'
-          "PATH=$path" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-          vswhere -products * -latest -property installationPath
+          bun scripts/aphrody/build-host.ts provision --target "$TARGET" --out "$RUNNER_TEMP/provision.sh"
+          args="$(bun scripts/aphrody/build-host.ts args --target "$TARGET" --lto "$LTO" --version-tag "$VERSION_TAG")"
+          echo "BUILD_ARGS=$args --build-dir=build/out" >> "$GITHUB_ENV"
+          echo "$args"
+          mkdir -p "$RUNNER_TEMP/cache" "$RUNNER_TEMP/dist"
 
       - name: Restore ccache
-        if: runner.os != 'Windows'
         uses: actions/cache/restore@v4
         with:
-          path: ${{ runner.temp }}/bun-build-cache/ccache
-          key: ccache-${{ matrix.target }}-lto-${{ inputs.lto || 'off' }}-${{ github.sha }}
+          path: ${{ runner.temp }}/cache/ccache
+          key: ccache-${{ matrix.target }}-lto-${{ inputs.lto || 'on' }}-${{ github.sha }}
           restore-keys: |
-            ccache-${{ matrix.target }}-lto-${{ inputs.lto || 'off' }}-
+            ccache-${{ matrix.target }}-lto-${{ inputs.lto || 'on' }}-
 
-      - name: Build (release)
-        shell: bash
+      - name: Build in debian:13
         run: |
-          jobs=()
-          # macOS runners have 3 cores and 7 GB: big rustc/clang units in parallel swap.
-          [ "$RUNNER_OS" = macOS ] && jobs=(-j2)
-          bun scripts/build.ts --profile=release --lto="$LTO" --canary=off "${jobs[@]}"
+          cat > "$RUNNER_TEMP/build.sh" <<'EOF'
+          set -eu
+          sh /work/provision.sh > /work/provision.log 2>&1 || { tail -80 /work/provision.log; exit 1; }
+          . /etc/profile.d/bun-ci.sh
+          git config --global --add safe.directory '*'
+          cd /src
+          clang --version | head -1; rustc --version; bun --version; node --version
+          # shellcheck disable=SC2086
+          bun scripts/build.ts $BUILD_ARGS
+          EOF
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/src" -v "$RUNNER_TEMP:/work" \
+            -e BUILD_ARGS -e BUN_BUILD_CACHE_DIR=/work/cache -e BUN_DEBUG_QUIET_LOGS=1 -e CI=true \
+            debian:13 sh /work/build.sh
+          sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE" "$RUNNER_TEMP"
 
       - name: Save ccache
-        if: always() && runner.os != 'Windows'
+        if: always()
         uses: actions/cache/save@v4
         with:
-          path: ${{ runner.temp }}/bun-build-cache/ccache
-          key: ccache-${{ matrix.target }}-lto-${{ inputs.lto || 'off' }}-${{ github.sha }}
+          path: ${{ runner.temp }}/cache/ccache
+          key: ccache-${{ matrix.target }}-lto-${{ inputs.lto || 'on' }}-${{ github.sha }}
 
       - name: Package
-        shell: bash
-        env:
-          TRIPLET: ${{ matrix.triplet }}
         run: |
-          ext=""; [ "$RUNNER_OS" = Windows ] && ext=".exe"
-          out="$RUNNER_TEMP/dist"; mkdir -p "$out/$TRIPLET" "$out/$TRIPLET-profile"
-          cp "build/release/bun$ext" "$out/$TRIPLET/"
-          cp "build/release/bun-profile$ext" "$out/$TRIPLET-profile/"
-          [ -f build/release/bun-profile.pdb ] && cp build/release/bun-profile.pdb "$out/$TRIPLET-profile/"
-          [ -f build/release/features.json ] && cp build/release/features.json "$out/$TRIPLET-profile/"
-          "$out/$TRIPLET/bun$ext" --version
-          "$out/$TRIPLET/bun$ext" --revision
+          ext=""; [ "${TARGET%%-*}" = windows ] && ext=".exe"
+          out="$RUNNER_TEMP/dist"; b=build/out
+          mkdir -p "$out/$TRIPLET" "$out/$TRIPLET-profile"
+          cp "$b/bun$ext" "$out/$TRIPLET/"
+          cp "$b/bun-profile$ext" "$out/$TRIPLET-profile/"
+          for f in bun-profile.pdb features.json; do [ -f "$b/$f" ] && cp "$b/$f" "$out/$TRIPLET-profile/"; done
+          [ -d "$b/bun-profile.dSYM" ] && cp -R "$b/bun-profile.dSYM" "$out/$TRIPLET-profile/"
+          file "$out/$TRIPLET/bun$ext"
+          if [ "${TARGET%%-*}" = linux ] && [ "${TARGET#*-*-}" != musl ]; then
+            echo "glibc symbol versions required:"
+            { objdump -T "$out/$TRIPLET/bun" | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -3; } || true
+          fi
           cd "$out"
           cmake -E tar cf "$TRIPLET.zip" --format=zip "$TRIPLET"
           cmake -E tar cf "$TRIPLET-profile.zip" --format=zip "$TRIPLET-profile"
@@ -226,8 +209,49 @@ jobs:
           compression-level: 0
           retention-days: 14
 
-  release:
+  smoke:
     needs: [prepare, build]
+    if: ${{ !cancelled() && needs.prepare.outputs.build == 'true' }}
+    name: smoke ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    env:
+      TRIPLET: ${{ matrix.triplet }}
+      CONTAINER: ${{ matrix.container }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.triplet }}
+          path: dist
+      - name: Run the binary
+        shell: bash
+        run: |
+          cd dist
+          unzip -q -o "$TRIPLET.zip"
+          cat > smoke.sh <<'EOF'
+          set -eu
+          bin="$1"
+          v="$("$bin" --version)"; echo "--version: $v"
+          [ "$v" = "$VERSION" ] || { echo "expected $VERSION"; exit 1; }
+          "$bin" --revision
+          "$bin" -e 'console.log(Bun.version, process.platform, process.arch, Bun.version_with_sha)'
+          "$bin" -e 'const r = await fetch("data:text/plain,ok"); console.log(await r.text(), Bun.hash("x"))'
+          EOF
+          if [ -n "$CONTAINER" ]; then
+            docker run --rm -e VERSION -v "$PWD:/d" -w /d "$CONTAINER" sh smoke.sh "/d/$TRIPLET/bun"
+          elif [ "$RUNNER_OS" = Windows ]; then
+            bash smoke.sh "./$TRIPLET/bun.exe"
+          else
+            chmod +x "$TRIPLET/bun"
+            bash smoke.sh "./$TRIPLET/bun"
+          fi
+
+  release:
+    needs: [prepare, build, smoke]
     if: ${{ !cancelled() && needs.prepare.result == 'success' && needs.prepare.outputs.build == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -237,33 +261,51 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       VERSION: ${{ needs.prepare.outputs.version }}
       TAG: ${{ needs.prepare.outputs.tag }}
+      MATRIX: ${{ needs.prepare.outputs.matrix }}
     steps:
       - uses: actions/download-artifact@v4
         with:
           path: dist
           pattern: bun-*
           merge-multiple: true
+      - name: Baseline aliases
+        run: |
+          cd dist
+          # x64 ships one binary under the plain name; upstream re-zips it as -baseline for older `bun upgrade`.
+          for pair in $(echo "$MATRIX" | jq -r '.include[] | select(.baselineAlias) | "\(.triplet)=\(.baselineAlias)"'); do
+            src="${pair%%=*}"; dst="${pair#*=}"
+            for kind in "" "-profile"; do
+              [ -f "$src$kind.zip" ] || continue
+              work="$(mktemp -d)"
+              unzip -q "$src$kind.zip" -d "$work"
+              mv "$work/$src$kind" "$work/$dst$kind"
+              (cd "$work" && zip -qr "$OLDPWD/$dst$kind.zip" "$dst$kind")
+              rm -rf "$work"
+            done
+          done
+          ls -la
       - name: Create or update the release
         run: |
           cd dist
           ls *.zip >/dev/null 2>&1 || { echo "::error::no target built"; exit 1; }
-          sha256sum *.zip > SHA256SUMS.txt
-          cat SHA256SUMS.txt
-          notes="Aphrody fork of Bun, built from ${GITHUB_SHA} (release profile, LTO ${{ inputs.lto || 'off' }}, canary off).
-          bun --revision prints the base version and this commit.
+          notes="Aphrody fork of Bun, built from ${GITHUB_SHA} like upstream: cross-compiled on linux arm64 against pinned sysroots (linux-gnu: glibc 2.31; musl: Alpine), release profile, LTO ${{ inputs.lto || 'on' }}.
+          \`bun --version\` prints ${VERSION}; \`Bun.version\` stays the base version for semver checks.
           npm: \`bunx @aphrody/bun-runtime@${VERSION} --version\`."
           if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" -R "$GITHUB_REPOSITORY" --clobber *.zip
-            gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p '*.zip' -D ../all --clobber
-            (cd ../all && sha256sum *.zip > SHA256SUMS.txt && gh release upload "$TAG" -R "$GITHUB_REPOSITORY" --clobber SHA256SUMS.txt)
           else
             gh release create "$TAG" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-              --title "Aphrody Bun $VERSION" --notes "$notes" *.zip SHA256SUMS.txt
+              --title "Aphrody Bun $VERSION" --notes "$notes" *.zip
           fi
-          if [ "${{ needs.build.result }}" != success ]; then echo "::warning::some targets failed; the release has only the ones that built"; fi
+          mkdir -p ../all
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p '*.zip' -D ../all --clobber
+          (cd ../all && sha256sum *.zip > SHA256SUMS.txt && cat SHA256SUMS.txt && gh release upload "$TAG" -R "$GITHUB_REPOSITORY" --clobber SHA256SUMS.txt)
+          if [ "${{ needs.build.result }}" != success ] || [ "${{ needs.smoke.result }}" != success ]; then
+            echo "::warning::some targets failed to build or run; the release has only the ones that built"
+          fi
 
   npm:
-    needs: [prepare, build, release]
+    needs: [prepare, build, smoke, release]
     if: ${{ !cancelled() && needs.prepare.result == 'success' && (needs.release.result == 'success' || needs.prepare.outputs.build != 'true') && (inputs.publish-npm || github.event_name == 'push') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
