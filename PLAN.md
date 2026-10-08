@@ -207,8 +207,9 @@ paquets `packages/**` qui refont une API Bun (`http`, `fuzzy`, `sql`, `paths`…
 
 ### I. Tests Windows d'Aphrody (🔄)
 
-- ⏳ ~105 échecs de `packages/infra/workspace` (dont 5 `cli-help.test.ts`) corrigés dans le code.
-- ⏳ `aphrody_ffi.dll` construite ; `sites.test.ts` et `next-instant.test.ts` de web-test passent.
+- ✅ `packages/infra/workspace` : 105 échecs → 0 sous Windows (349 pass, 90 skip Linux-only : procfs/flock/sudo, `supervise`, install.sh). Linux (Docker) : aucune régression vs HEAD. Commits aphrody `3c70e77d3` (lot intégré), `1a9b89a40`.
+- ✅ `aphrody_ffi.dll` construite (`target/runtime`, profil `runtime`) ; web-test 37/37 dont `sites` + `next-instant`. Commit `df6e5502d`.
+- ⚠️ m3 (5 échecs + suivants) : correctifs écrits (chemins Windows, `yolo` Windows, sonde FFI, `target/runtime`, racine fixture) puis perdus — `C:aphrody` a été repointé vers `aphrody-labs/codex` et rebasé sur `bd274564e1` par un autre agent (arbre m3/packages supprimé). Script de réapplication : `%TEMP%m3-reapply.ts`. Reste : plugin Tailwind ne résout pas `m3:theme.css` (m3-bun, chantier Tailwind).
 
 ### J. Shenron sur le fork (🔄)
 
