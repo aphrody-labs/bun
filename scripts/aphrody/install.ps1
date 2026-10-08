@@ -20,8 +20,8 @@ $Headers = @{ Accept = "application/vnd.github+json" }
 if ($Token) { $Headers.Authorization = "Bearer $Token" }
 
 $Arch = (Get-CimInstance Win32_OperatingSystem).OSArchitecture
-if ($Arch -match "ARM") { throw "no windows-aarch64 build of $Repo" }
-$Target = if ($DebugInfo) { "bun-windows-x64-profile" } else { "bun-windows-x64" }
+$BunArch = if ($Arch -match "ARM") { "aarch64" } else { "x64" }
+$Target = if ($DebugInfo) { "bun-windows-$BunArch-profile" } else { "bun-windows-$BunArch" }
 $Exe = if ($DebugInfo) { "bun-profile.exe" } else { "bun.exe" }
 
 $Tag = switch -Regex ($Version) {

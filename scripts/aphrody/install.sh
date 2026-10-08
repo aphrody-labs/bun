@@ -23,15 +23,14 @@ command -v unzip >/dev/null || die "unzip is required"
 case "$(uname -ms)" in
   'Darwin arm64') target=darwin-aarch64 ;;
   'Darwin x86_64')
-    [[ $(sysctl -n sysctl.proc_translated 2>/dev/null) = 1 ]] || die "no darwin-x64 build; use an arm64 Mac"
-    target=darwin-aarch64 ;;
+    # Under Rosetta 2 the machine is arm64.
+    if [[ $(sysctl -n sysctl.proc_translated 2>/dev/null) = 1 ]]; then target=darwin-aarch64; else target=darwin-x64; fi ;;
   'Linux aarch64' | 'Linux arm64') target=linux-aarch64 ;;
   'Linux x86_64') target=linux-x64 ;;
   *) die "unsupported platform $(uname -ms) (Windows: install.ps1)" ;;
 esac
 if [[ $target = linux-* ]] && { [[ -f /etc/alpine-release ]] || ldd --version 2>&1 | grep -qi musl; }; then
-  [[ -e /lib/ld-linux-x86-64.so.2 || -e /lib/ld-linux-aarch64.so.1 ]] ||
-    die "musl system without glibc loader: apk add gcompat libstdc++ libgcc"
+  target=$target-musl
 fi
 exe=bun
 if [[ $variant = debug-info || $variant = profile ]]; then target=$target-profile; exe=bun-profile; fi
