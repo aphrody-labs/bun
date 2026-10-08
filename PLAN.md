@@ -49,7 +49,7 @@ chaque lot. Contexte permanent : [APHRODY.md](APHRODY.md) (ce que le fork fourni
     dans `C:\bun` (`src/**` Rust/C++/JS, WebKit via chantier P), avec un test qui échoue sur `USE_SYSTEM_BUN=1` et
     passe sur `bun bd test`, sans régression de démarrage (chantier O). Jamais de shim, polyfill ou contournement dans
     m3, Shenron, Aphrody ou les plugins ; les contournements existants sont supprimés une fois le patch livré.
-12. **Bun est le seul shell.** Toute la logique passe par Bun Shell (`$`…``), `bun -e` ou des scripts `.ts` lancés
+12. **Bun est le seul shell.** Toute la logique passe par Bun Shell (``$`…` ``), `bun -e` ou des scripts `.ts` lancés
     par bun ; pas de nu, pwsh ni bash.
 13. **Aucun build ni test pendant le travail** (ni `bun bd`, ni `bun test`, ni cargo build/check, ni build release,
     ni `next build`, ni conteneur Docker de build). On code le plus vite possible et on écrit les tests sans les
@@ -380,9 +380,16 @@ m3-next-migrate, scaffold, templates, apps) = S ; m3-baseui = R. Dépendances Ta
   `./packages/*` (avant : `--filter "*"` lançait tout le monorepo Aphrody).
 - ✅ rg-ui intégré au workspace (deps Rosegriffon en peers optionnels typés), typecheck, tests (96 pass, 1 skip sans le site) ;
   m3-design (typeRoots du typecheck généré + délai du hook), app-ui (`allowImportingTsExtensions`).
-- 🔄 `node:*` → API Bun (n2b agressif en dry-run puis application par paquet) : voir les commits `refactor(<pkg>): node:* to Bun APIs`.
-  Restent en `node:*` par nécessité : `node:path`/`node:os`, `mkdtemp`, `rm` récursif, `mkdir` de dossier vide, `readdir withFileTypes`,
-  `isIP`, et les API publiques synchrones (`readFileSync`/`existsSync`).
+- ✅ `node:*` → API Bun, commits `refactor(<pkg>): node:* to Bun APIs` : app-ui, web-to-tauri, canvas, m3-front, m3-mcp,
+  m3-primitives, m3-fonts, m3-tokens, m3-tailwind, m3-icons, m3-react, m3-os-themes, material-design-icons, assets,
+  m3-codemods, scripts/. Non exécutés après la directive du 2026-10-09 (pas de test avant la passe finale de main) :
+  voir la liste de tests à lancer dans le rapport. Restent en `node:*` par nécessité : `node:path`/`node:os`, `mkdtemp`,
+  `rm` récursif, `mkdir` vide, `symlink`/`lstat`/`chmod`, `readdir withFileTypes`, `isIP`, API publiques synchrones
+  (`readFileSync`/`existsSync`), `node:zlib` (format zlib des PNG).
+- ⏳ Manques Bun à corriger dans le cœur (§2.11, avec test `USE_SYSTEM_BUN=1` en échec / `bun bd test` en succès) :
+  `Bun.write` sans option `mode` (chmod à l'écriture) ; `Bun.Glob.scan` lève ENOENT si `cwd` n'existe pas ; pas d'équivalent
+  Bun de `Bun.deflateSync` au format zlib (`node:zlib.deflateSync` produit l'en-tête 78 9c).
+- ⏳ `packages/assets` : les `index.ts` générés (images, videos, svgs) sont périmés (en-tête `pnpm assets gen`) ; régénérer par `bun run gen`.
 - Note : les tests de m3-next-migrate laissent des `m3/apps/m3-migrate-contract-*` qui cassent `bun install` (nom de workspace
   dupliqué) : à corriger côté S.
 
@@ -428,9 +435,9 @@ Décision utilisateur (2026-10-09) : le fork est **pensé d'abord pour la derni�
   demandé manque) ; `@aphrody/bun-runtime` (`isMusl()`) et `install.sh` choisissent déjà musl sur Alpine, glibc sinon.
 - ✅ Audit statique glibc dans `src/**` : `gnu_get_libc_version` (BunProcess.cpp, crash_handler), c-ares, sqlite
   `backtrace_symbols_fd` sont tous gardés `__GNU_LIBRARY__`/`target_env = "gnu"` ; `getauxval` existe dans musl.
-- ⏳ Builds natifs debug/release Alpine puis Ubuntu 26.04 (`bun scripts/aphrody/tmux.ts run bd-alpine-N --alpine
-  --sync-head --cpus 8 --memory 10g -- 'bun install && bun run build'`), `bash scripts/aphrody/linux-smoke.sh
-  build/debug/bun-debug`, puis `bun bd test` which/require/fetch : suspendus par la directive « aucun build » du
+- ⏳ Builds natifs debug/release Alpine puis Ubuntu 26.04, via le runner :
+  `bun scripts/aphrody/tmux.ts run bd-alpine-N --alpine --sync-head --cpus 8 --memory 10g -- 'bun install && bun run build'`,
+  puis `bash scripts/aphrody/linux-smoke.sh build/debug/bun-debug` et `bun bd test` which/require/fetch : suspendus par la directive « aucun build » du
   2026-10-09, à lancer dans la passe unique de main.
 
 ### O. Garde de performance (🔄)
