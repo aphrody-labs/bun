@@ -82,6 +82,9 @@ export class Browser {
   }
 }
 
+// An elevated Chrome on Windows relaunches itself de-elevated and exits, dropping the CDP pipe.
+const platformArgs = process.platform === "win32" ? ["--do-not-de-elevate"] : [];
+
 /** Launch the Chrome backend of Bun.WebView and read its product version. */
 export async function launch(options: LaunchOptions = {}): Promise<Browser> {
   const WebView = (globalThis as { Bun?: { WebView?: new (init: object) => WebViewLike } }).Bun?.WebView;
@@ -94,7 +97,7 @@ export async function launch(options: LaunchOptions = {}): Promise<Browser> {
         type: "chrome",
         url: false,
         ...(options.executablePath ? { path: options.executablePath } : {}),
-        ...(options.args ? { argv: options.args } : {}),
+        argv: [...platformArgs, ...(options.args ?? [])],
       },
       console,
     });
