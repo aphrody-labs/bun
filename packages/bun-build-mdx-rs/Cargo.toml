@@ -19,3 +19,6 @@ napi-build = "2.0.1"
 [profile.release]
 lto = true
 strip = "symbols"
+
+# Its own workspace: not a member of the Bun workspace at the repository root.
+[workspace]

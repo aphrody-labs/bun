@@ -51,3 +51,5 @@ jobs:
         run: |
           echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
           bun scripts/aphrody/publish-npm.ts $DRY_RUN ${ONLY:+--only "$ONLY"} --out "$RUNNER_TEMP/aphrody-npm"
+          # A first publish of a new name leaves an npm 0.0.0-stage placeholder; deprecate it.
+          bun scripts/aphrody/npm-placeholder.ts retire $DRY_RUN

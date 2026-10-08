@@ -1,0 +1,166 @@
+name: Aphrody bun-mdx-rs publish
+
+# Builds packages/bun-build-mdx-rs (MDX → JSX native plugin for Bun.build) on
+# each platform's own runner — Linux in rust:1-bullseye (glibc 2.31) and
+# rust:1-alpine (musl) — smoke-tests it with Bun.build, then publishes
+# @aphrody/bun-mdx-rs and @aphrody/bun-mdx-rs-<platform> to npm with
+# scripts/aphrody/publish-mdx-rs.ts.
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "<X.Y.Z>-aphrody.<n> (empty: Bun version, next n on npm)"
+        type: string
+        required: false
+      dry-run:
+        description: "Stage and pack without publishing"
+        type: boolean
+        default: false
+
+concurrency:
+  group: aphrody-publish-mdx-rs
+  cancel-in-progress: false
+
+env:
+  BUN_HOST_VERSION: "1.4.2"
+  CARGO_TERM_COLOR: always
+
+jobs:
+  plan:
+    if: github.repository == 'aphrody-labs/bun'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+        with:
+          bun-version: ${{ env.BUN_HOST_VERSION }}
+      - id: m
+        run: echo "matrix=$(bun scripts/aphrody/publish-mdx-rs.ts matrix)" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: plan
+    name: build ${{ matrix.key }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    env:
+      TRIPLE: ${{ matrix.triple }}
+      FILE: ${{ matrix.file }}
+      CDYLIB: ${{ matrix.cdylib }}
+      CONTAINER: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build in ${{ matrix.container }}
+        if: matrix.container != ''
+        run: |
+          # Only packages/ is mounted: the repository's rust-toolchain.toml (Bun's nightly) stays out of reach.
+          cat > "$RUNNER_TEMP/build.sh" <<'EOF'
+          set -eu
+          if command -v apk >/dev/null; then apk add --no-cache musl-dev gcc >/dev/null; fi
+          cd /src/packages/bun-build-mdx-rs
+          rustc --version
+          cargo build --release --locked --target "$TRIPLE"
+          EOF
+          docker run --rm -v "$GITHUB_WORKSPACE/packages:/src/packages" -v "$RUNNER_TEMP:/work" -e TRIPLE \
+            -e CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C target-feature=-crt-static" \
+            -e CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C target-feature=-crt-static" \
+            -e CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=cc \
+            "$CONTAINER" sh /work/build.sh
+          sudo chown -R "$(id -u):$(id -g)" packages
+
+      - name: Rust (Windows on Arm)
+        if: matrix.container == '' && runner.os == 'Windows'
+        shell: bash
+        run: |
+          if ! command -v rustup >/dev/null; then
+            curl -sSfL -o "$RUNNER_TEMP/rustup-init.exe" "https://static.rust-lang.org/rustup/dist/$TRIPLE/rustup-init.exe"
+            "$RUNNER_TEMP/rustup-init.exe" -y --profile minimal --default-toolchain stable
+            echo "$USERPROFILE/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+
+      - name: Build natively
+        if: matrix.container == ''
+        shell: bash
+        env:
+          # Ignore the repository's rust-toolchain.toml (Bun's nightly and its cross targets).
+          RUSTUP_TOOLCHAIN: stable
+        run: |
+          rustup toolchain install stable --profile minimal --target "$TRIPLE"
+          cd packages/bun-build-mdx-rs
+          rustc --version
+          cargo build --release --locked --target "$TRIPLE"
+
+      - name: Collect
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp "packages/bun-build-mdx-rs/target/$TRIPLE/release/$CDYLIB" "dist/$FILE"
+          ls -la dist
+
+      - uses: ./.github/actions/setup-bun
+        if: matrix.libc != 'musl'
+        with:
+          bun-version: ${{ env.BUN_HOST_VERSION }}
+
+      - name: Smoke test with Bun.build
+        if: matrix.libc != 'musl'
+        shell: bash
+        run: |
+          cat > smoke.ts <<'EOF'
+          const napiModule = require(`${process.cwd()}/dist/${process.env.FILE}`);
+          const r = await Bun.build({
+            entrypoints: ["packages/bun-build-mdx-rs/input/index.ts"],
+            external: ["react", "react/jsx-runtime", "react/jsx-dev-runtime"],
+            loader: { ".mdx": "jsx" },
+            plugins: [{ name: "mdx", setup: b => void b.onBeforeParse({ filter: /\.mdx$/ }, { napiModule, symbol: "bun_mdx_rs" }) }],
+          });
+          const out = await r.outputs[0].text();
+          if (!r.success || !out.includes("_createMdxContent")) throw new Error(r.logs.join("\n") || out.slice(0, 500));
+          console.log("ok", out.length);
+          EOF
+          bun smoke.ts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mdx-${{ matrix.key }}
+          path: dist/${{ matrix.file }}
+          retention-days: 14
+
+  publish:
+    needs: build
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+        with:
+          bun-version: ${{ env.BUN_HOST_VERSION }}
+      - uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/artifacts
+          pattern: mdx-*
+      - name: Publish
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ inputs.version }}
+          DRY_RUN: ${{ inputs.dry-run && '--dry-run' || '' }}
+        run: |
+          bun scripts/aphrody/publish-mdx-rs.ts publish --artifacts "$RUNNER_TEMP/artifacts" \
+            ${VERSION:+--version "$VERSION"} --out "$RUNNER_TEMP/npm" $DRY_RUN
