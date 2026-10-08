@@ -54,18 +54,25 @@ Ne jamais attendre une commande longue en premier plan ; paralléliser ; lire pe
   ```sh
   bun scripts/aphrody/tmux.ts run bd-E -- 'bun bd'                          # Windows natif (pwsh, MSVC 14.44)
   bun scripts/aphrody/tmux.ts run cargo-L --cwd C:/aphrody -- 'cargo test -p x'
-  bun scripts/aphrody/tmux.ts run test-J --linux --cwd C:/shenron -- 'bun test'   # conteneur Ubuntu 26.04
+  bun scripts/aphrody/tmux.ts run test-J --linux --cwd C:/shenron -- 'bun test'   # conteneur Alpine 3.24 (musl)
+  bun scripts/aphrody/tmux.ts run test-J --ubuntu --cwd C:/shenron -- 'bun test'  # conteneur Ubuntu 26.04 (glibc)
+  bun scripts/aphrody/tmux.ts run bd-N --alpine --sync-head --cpus 8 --memory 10g -- 'bun run build'
   bun scripts/aphrody/tmux.ts ls | logs <nom> [n] | wait <nom> | kill <nom> | attach
   ```
   Nom de job = `<action>-<chantier>` ; journal dans `tmp/tmux/<nom>.log` (lisible avec Read), code de sortie
   dans `tmp/tmux/<nom>.exit`. Avant un `bun bd`/`cargo build` lourd, `tmux.ts ls` : ne pas lancer deux builds
   natifs du fork en même temps (un seul `bun bd` à la fois, nom `bd-*`).
-- **Linux = Ubuntu 26.04 LTS** (glibc 2.43, LLVM 22, mold, cmake 4), même OS/glibc que les hôtes vps et dbfr :
-  image `aphrody/build-linux:26.04` (`scripts/aphrody/linux.Dockerfile`), utilisée par `--linux`. Les binaires de
-  release Linux gardent le sysroot glibc ancien d'upstream (portabilité) ; les binaires destinés à vps/dbfr se
-  construisent et se testent dans ce conteneur.
+- **Linux = Alpine d'abord** : `--linux` = `--alpine` = image `aphrody/build-alpine:3.24`
+  (`scripts/aphrody/alpine.Dockerfile` : musl, LLVM 23 d'edge, cmake 4, mold, nightly de `rust-toolchain.toml`
+  hôte musl, bun, node) ; `--ubuntu` = `aphrody/build-linux:26.04` (`scripts/aphrody/linux.Dockerfile` : glibc 2.43
+  comme vps/dbfr, LLVM 22 + 23). Le répertoire est monté sur `/work` ; avec `--sync` (HEAD + modifications non
+  commitées) ou `--sync-head` (HEAD seul, sans le travail en cours des autres agents), `/work` est un volume nommé
+  `aphrody-src-<distro>` (checkout git, symlinks et modes corrects, `build/` conservé entre jobs). Ressources :
+  `--cpus` (défaut 6), `--memory` (défaut 6g, plafond 10g) ; cache WebKit/ccache dans `aphrody-build-cache-<distro>`.
+  Les binaires de release Linux restent croisés depuis Debian (sysroots d'upstream) ; le build natif est vérifié
+  par `aphrody-linux-build.yml`.
 - **CI locale = nektos/act** (winget, 0.2.89) : tester un workflow avant de pousser, sans minutes GitHub.
-  `.actrc` mappe `ubuntu-*` sur `aphrody/build-linux:26.04` ; `bun scripts/aphrody/act.ts list | run <workflow>
+  `.actrc` mappe `ubuntu-*` sur `aphrody/build-linux:26.04` (`alpine-3.24` sur `aphrody/build-alpine:3.24`) ; `bun scripts/aphrody/act.ts list | run <workflow>
 [-j job] [-n] | tmux <nom> <workflow>`. Secrets lus depuis l'env (`-s NAME`). L'image doit contenir `node`
   (actions JS).
 - **Sinon, tâches de fond de l'outil Bash** (`run_in_background: true`) : notification à la fin, pas de
@@ -229,7 +236,7 @@ paquets `packages/**` qui refont une API Bun (`http`, `fuzzy`, `sql`, `paths`…
 
 - ✅ `packages/infra/workspace` : 105 échecs → 0 sous Windows (349 pass, 90 skip Linux-only : procfs/flock/sudo, `supervise`, install.sh). Linux (Docker) : aucune régression vs HEAD. Commits aphrody `3c70e77d3` (lot intégré), `1a9b89a40`.
 - ✅ `aphrody_ffi.dll` construite (`target/runtime`, profil `runtime`) ; web-test 37/37 dont `sites` + `next-instant`. Commit `df6e5502d`.
-- ⚠️ m3 (5 échecs + suivants) : correctifs écrits (chemins Windows, `yolo` Windows, sonde FFI, `target/runtime`, racine fixture) puis perdus — `C:aphrody` a été repointé vers `aphrody-labs/codex` et rebasé sur `bd274564e1` par un autre agent (arbre m3/packages supprimé). Script de réapplication : `%TEMP%m3-reapply.ts`. Reste : plugin Tailwind ne résout pas `m3:theme.css` (m3-bun, chantier Tailwind).
+- ✅ m3 : scripts 51/0, m3-icons 13/0 (DLL `target/runtime` reconstruite avec polices embarquées), m3-theme 13/0, m3 61/0, m3-config/front/mcp/tailwind/material-design-icons 0 échec (aphrody 099a4fe180). `m3:theme.css` : `@import` à schéma tenu hors du compile Tailwind (fork 4265629bb50) ; m3-bun passe de 21 à 10 échecs avec la source du fork, effectif dans aphrody après publication npm `0.1.0-aphrody.2` (chantier D prévenu). Restent 10 échecs Windows dans m3-bun (zone réservée : compile/package/archive tar, PowerShell, M3_ICONS_ROOT).
 
 ### J. Shenron sur le fork (🔄)
 
@@ -251,8 +258,10 @@ Côté Aphrody : `crates/ai/code-graph`, `crates/engine/yolo-core`, `crates/infr
 - ✅ graph (points 1-8) : résolution inter-crates, chemin orienté, `explain` `file::symbol`, pas de liaison
   d'homonymes, rapport enrichi, graphe Markdown, causes d'erreur d'extraction, `delete`/`drop` — `8d3109124`.
 - ✅ yolo (9-15) : ressources sans `APHRODY_YOLO_ROOT`, tiers verify ignorés proprement, gates réels du source
-  Bun, workspaces Cargo/package.json, état dans `~/.aphrody/yolo`, index fs TSV (.gitignore, .git exclu,
-  requêtes multi-mots), `require()` et enums — `e3aa1d730`.
+  Bun, workspaces Cargo/package.json, état dans `~/.aphrody/yolo`, `require()` et enums — `e3aa1d730` ;
+  index fs en SQLite (`fsindex.sqlite`, FTS5 trigram, requêtes multi-mots insensibles à la casse, `LIKE` pour
+  les mots < 3 caractères, migration automatique de l'ancien `fsindex.tsv`) — `8a35b2e06`. C:\bun : 20 153
+  entrées, recherche en ~0,08 s.
 - ✅ git (16) : `git inspect` log, hotspots, ahead/behind par remote — `922f9835c`.
 - ✅ MCP (17-20) : `github_branches` paginé/filtré (50 par défaut) — `d027032d8` ; `bun` au catalogue upstream
   (`checkout: ../bun`) et `upstream_search` sans jeton → recherche dans le checkout local ; `docs_auto_search`
