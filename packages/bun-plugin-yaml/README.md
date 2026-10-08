@@ -5,7 +5,7 @@ The official YAML plugin for Bun. Adds support for `.yml`/`.yaml` imports.
 ## Installation
 
 ```sh
-bun add bun-plugin-yaml -d
+bun add @aphrody/bun-plugin-yaml -d
 ```
 
 ## Bundler usage
@@ -13,7 +13,7 @@ bun add bun-plugin-yaml -d
 This plugin can be used to support `.yaml` loaders in Bun's bundler by passing it into the `plugins` array:
 
 ```ts
-import yamlPlugin from "bun-plugin-yaml";
+import yamlPlugin from "@aphrody/bun-plugin-yaml";
 
 await Bun.build({
   entrypoints: ["./index.tsx"],
@@ -41,7 +41,7 @@ To use as a runtime plugin, create a file that registers the plugin:
 
 ```ts
 // yaml.ts
-import yamlPlugin from "bun-plugin-yaml";
+import yamlPlugin from "@aphrody/bun-plugin-yaml";
 
 Bun.plugin(yamlPlugin());
 ```
@@ -60,8 +60,8 @@ By default VSCode/TypeScript will not recognize `.yaml` imports. To avoid import
   {
     "compilerOptions": {
       "types": [
-        // other packages, e.g. "bun-types",
-+       "bun-plugin-yaml"
+        // other packages, e.g. "@aphrody/bun-types",
++       "@aphrody/bun-plugin-yaml"
       ]
     }
   }

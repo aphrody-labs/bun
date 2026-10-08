@@ -8,19 +8,28 @@ These are the type definitions for Bun's JavaScript runtime APIs.
 
 # Installation
 
-Install the `@types/bun` npm package:
+Install the `@aphrody/bun-types` npm package:
 
 ```bash
 # yarn/npm/pnpm work too
-# @types/bun is an ordinary npm package
-bun add -D @types/bun
+bun add -D @aphrody/bun-types
 ```
 
-That's it! VS Code and TypeScript automatically load `@types/*` packages into your project, so the `Bun` global and all `bun:*` modules should be available immediately.
+TypeScript only auto-loads `@types/*` packages, so list it in `compilerOptions.types` in your `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "types": ["@aphrody/bun-types"]
+  }
+}
+```
+
+The `Bun` global and all `bun:*` modules are then available.
 
 # Contributing
 
-The `@types/bun` package is a shim that loads `bun-types`. The `bun-types` package lives in the Bun repo under `packages/bun-types`.
+The `@aphrody/bun-types` package lives in this repo under `packages/bun-types`. (Upstream, the `@types/bun` package is a shim that loads `bun-types`.)
 
 To add a new file, add it under `packages/bun-types`. Then add a [triple-slash directive](https://www.typescriptlang.org/docs/handbook/triple-slash-directives.html) pointing to it inside [./index.d.ts](./index.d.ts).
 

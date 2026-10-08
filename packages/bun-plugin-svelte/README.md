@@ -8,7 +8,7 @@ The official [Svelte](https://svelte.dev/) plugin for [Bun](https://bun.com/).
 ## Installation
 
 ```sh
-$ bun add -D bun-plugin-svelte
+$ bun add -D @aphrody/bun-plugin-svelte
 ```
 
 ## Dev Server Usage
@@ -20,7 +20,7 @@ Start by registering it in your [bunfig.toml](https://bun.com/docs/runtime/bunfi
 
 ```toml
 [serve.static]
-plugins = ["bun-plugin-svelte"]
+plugins = ["@aphrody/bun-plugin-svelte"]
 ```
 
 Then start your dev server:
@@ -38,7 +38,7 @@ See the [example](https://github.com/oven-sh/bun/tree/main/packages/bun-plugin-s
 ```ts
 // build.ts
 // to use: bun run build.ts
-import { SveltePlugin } from "bun-plugin-svelte"; // NOTE: not published to npm yet
+import { SveltePlugin } from "@aphrody/bun-plugin-svelte"; // NOTE: not published to npm yet
 
 Bun.build({
   entrypoints: ["src/index.ts"],

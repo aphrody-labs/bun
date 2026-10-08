@@ -20,10 +20,10 @@ The WebKit Inspector Protocol is a JSON-based protocol similar to the Chrome Dev
 ## Installation
 
 ```bash
-bun add bun-inspector-protocol
-# npm install bun-inspector-protocol
-# yarn add bun-inspector-protocol
-# pnpm add bun-inspector-protocol
+bun add @aphrody/bun-inspector-protocol
+# npm install @aphrody/bun-inspector-protocol
+# yarn add @aphrody/bun-inspector-protocol
+# pnpm add @aphrody/bun-inspector-protocol
 ```
 
 ## Basic Usage
@@ -45,7 +45,7 @@ bun --inspect-wait my-script.ts 2>&1 | grep -o '\sws://.*$'
 From there, you can connect to the inspector using the `WebSocketInspector` class:
 
 ```typescript
-import { WebSocketInspector } from "bun-inspector-protocol";
+import { WebSocketInspector } from "@aphrody/bun-inspector-protocol";
 
 // Create a new inspector client
 const inspector = new WebSocketInspector("ws://localhost:9229/ws");
@@ -54,7 +54,7 @@ const inspector = new WebSocketInspector("ws://localhost:9229/ws");
 ### Connecting via WebSocket
 
 ```typescript
-import { WebSocketInspector } from "bun-inspector-protocol";
+import { WebSocketInspector } from "@aphrody/bun-inspector-protocol";
 
 // Create a new inspector client
 const inspector = new WebSocketInspector("ws://localhost:9229/ws");
@@ -89,7 +89,7 @@ inspector.close();
 ### Connecting via Socket (for Local Debugging)
 
 ```typescript
-import { NodeSocketInspector } from "bun-inspector-protocol";
+import { NodeSocketInspector } from "@aphrody/bun-inspector-protocol";
 import { Socket } from "node:net";
 
 // Create a socket connection
@@ -209,7 +209,7 @@ Each domain has its own set of commands, events, and data types. Refer to the Ty
 When evaluating expressions, you'll often receive remote object references. Use the `remoteObjectToString` utility to convert these to string representations:
 
 ```typescript
-import { remoteObjectToString } from "bun-inspector-protocol";
+import { remoteObjectToString } from "@aphrody/bun-inspector-protocol";
 
 const result = await inspector.send("Runtime.evaluate", {
   expression: "{ a: 1, b: { c: 'hello' } }",
