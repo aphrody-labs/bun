@@ -216,9 +216,25 @@ dans `packages/bun-next`.
 - ⏳ Build complet local + image Docker sur Docker local ; Tailwind via `@aphrody/bun-plugin-tailwind` une fois
   publié.
 
-### K. CLI Aphrody (🔄)
+### K. CLI Aphrody (✅)
 
-Côté Aphrody : `crates/ai/code-graph`, remote-desktop, défauts graph/yolo/MCP ; réinstallation du binaire.
+Côté Aphrody : `crates/ai/code-graph`, `crates/engine/yolo-core`, `crates/infra/{yolo,git,aphrody-command}`,
+`crates/os/kernel/core` (cloud), `crates/ai/mcp` ; réinstallation du binaire.
+
+- ✅ graph (points 1-8) : résolution inter-crates, chemin orienté, `explain` `file::symbol`, pas de liaison
+  d'homonymes, rapport enrichi, graphe Markdown, causes d'erreur d'extraction, `delete`/`drop` — `8d3109124`.
+- ✅ yolo (9-15) : ressources sans `APHRODY_YOLO_ROOT`, tiers verify ignorés proprement, gates réels du source
+  Bun, workspaces Cargo/package.json, état dans `~/.aphrody/yolo`, index fs TSV (.gitignore, .git exclu,
+  requêtes multi-mots), `require()` et enums — `e3aa1d730`.
+- ✅ git (16) : `git inspect` log, hotspots, ahead/behind par remote — `922f9835c`.
+- ✅ MCP (17-20) : `github_branches` paginé/filtré (50 par défaut) — `d027032d8` ; `bun` au catalogue upstream
+  (`checkout: ../bun`) et `upstream_search` sans jeton → recherche dans le checkout local ; `docs_auto_search`
+  WebKit → `/websites/webkit` et sections bornées ; `coding_style_guide` `c++`/`cpp`/`ts`/`bash` — inclus
+  dans `3c70e77d3` (commit groupé d'un autre agent).
+- ✅ `aphrody scan` (21) : chemin absolu du rapport en fin de sortie, sans `-o` résumé seul, `-o -` JSON seul —
+  `3c70e77d3` + `8648e2d0a`.
+- ✅ Binaire release réinstallé (`aphrody self install-path`, `aphrody 1.0.0-canary`, aphrody-mcp relié) ;
+  `graph:bun` reconstruit (19 783 fichiers, 116 085 nœuds) et `claude-memory-bun` (573 nœuds).
 
 ### M. Fork Next.js — `aphrody-labs/next.js` (⏳ après la fin de tous les autres chantiers)
 
