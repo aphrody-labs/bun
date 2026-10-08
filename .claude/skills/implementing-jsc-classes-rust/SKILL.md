@@ -112,11 +112,19 @@ Most classes need nothing — `#[bun_jsc::JsClass]` wires the blanket `JsFinaliz
 
 ```rust
 pub fn finalize(self: Box<Self>) {
-    bun_ptr::finalize_js_box(self, |this| this.this_value.with_mut(|v| v.finalize()));
+    self.this_value.with_mut(|v| v.finalize());
 }
 ```
 
-Override with an **inherent** method, never `impl JsFinalize for T`.
+`refCounted: true` classes take `&self` instead (`JsFinalizeRefCounted`); the generated thunk drops the wrapper's ref after the hook:
+
+```rust
+pub(crate) fn finalize(&self) {
+    self.this_value.with_mut(|v| v.finalize());
+}
+```
+
+Override with an **inherent** method, never `impl JsFinalize for T` (blanket impls in `src/jsc/lib.rs`).
 
 ## Holding JS values
 
