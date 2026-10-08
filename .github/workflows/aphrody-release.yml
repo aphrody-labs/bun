@@ -245,6 +245,8 @@ jobs:
           "$bin" -e 'const r = await fetch("data:text/plain,ok"); console.log(await r.text(), Bun.hash("x"))'
           # The .1 Windows binary (MSVC 14.51 toolset, ABI break with WebKit) crashed on these.
           "$bin" -e 'await import("node:fs"); console.log(2)'
+          printf 'import { test, expect } from "bun:test";\ntest("smoke", async () => { await import("node:fs"); expect(1 + 1).toBe(2); });\n' > smoke.test.ts
+          "$bin" test ./smoke.test.ts
           "$bin" -e 'const path = await import("node:path"); const { execFileSync } = require("node:child_process"); const out = execFileSync(process.execPath, ["-e", "console.log(6 * 7)"]).toString().trim(); if (out !== "42") throw new Error(out); console.log(path.join("a", "b"), out)'
           EOF
           if [ -n "$CONTAINER" ]; then

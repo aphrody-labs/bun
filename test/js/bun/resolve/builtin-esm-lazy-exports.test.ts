@@ -727,3 +727,17 @@ for (const { name, install, exportName, importFrom, files } of linkReentrancyCas
     expect(result).toEqual({ E: "getter throws", X: "getter throws" });
   });
 }
+
+// A Windows binary built with an MSVC STL newer than the one the prebuilt WebKit was compiled against segfaulted
+// (address 0xFFFFFFFFFFFFFFFF) on the first dynamic import of a builtin, while static imports kept working.
+test("dynamic import of a builtin after startup works", async () => {
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "-e", 'const fs = await import("node:fs"); console.log(typeof fs.readFileSync, 2)'],
+    env: bunEnv,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, , exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(stdout).toBe("function 2\n");
+  expect(exitCode).toBe(0);
+});
