@@ -64,6 +64,10 @@ Ne jamais attendre une commande longue en premier plan ; paralléliser ; lire pe
   image `aphrody/build-linux:26.04` (`scripts/aphrody/linux.Dockerfile`), utilisée par `--linux`. Les binaires de
   release Linux gardent le sysroot glibc ancien d'upstream (portabilité) ; les binaires destinés à vps/dbfr se
   construisent et se testent dans ce conteneur.
+- **CI locale = nektos/act** (winget, 0.2.89) : tester un workflow avant de pousser, sans minutes GitHub.
+  `.actrc` mappe `ubuntu-*` sur `aphrody/build-linux:26.04` ; `bun scripts/aphrody/act.ts list | run <workflow>
+[-j job] [-n] | tmux <nom> <workflow>`. Secrets lus depuis l'env (`-s NAME`). L'image doit contenir `node`
+  (actions JS).
 - **Sinon, tâches de fond de l'outil Bash** (`run_in_background: true`) : notification à la fin, pas de
   `sleep`/polling. `gh run watch` et `cargo test` longs aussi en fond.
 - **Sous-agents** : déléguer les recherches larges (agent `Explore`/`yolo:explore`) et les sous-tâches
