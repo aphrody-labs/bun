@@ -171,6 +171,23 @@ Démarre seulement quand B à L sont terminés. Reproduire pour Next.js le workf
   `@aphrody/next`.
 - ⏳ `APHRODY.md` et `PLAN.md` propres au fork Next ; graphe `aphrody graph --source graph:next` et mémoire.
 
+### L. oxc et n2b dans le fork (🔄)
+
+Fichiers : `packages/bun-n2b/**`, `packages/bun-oxc/**`, `test/integration/bun-plugin-n2b/`,
+`test/integration/bun-plugin-oxc/`, `scripts/aphrody/publish-crates.ts`, `scripts/aphrody/publish-native.ts`,
+`.github/workflows/aphrody-publish-native.yml`. Côté Aphrody : `crates/compat/{n2b,n2b-core,n2b-registry,n2b-types,oxc-bridge}`
+(supprimés), `packages/engine/n2b-client` (absorbé), deps `aphrody-n2b*`/`aphrody-oxc-bridge`/`oxc_*` du workspace,
+consommateurs `aphrody-command`, `mcp`, `ffi`, `bun-docs` (Cargo.toml seulement), docs `docs/*/compat/n2b/`.
+
+- ⏳ Code déplacé : `packages/bun-n2b/` (workspace Cargo séparé : `aphrody-n2b`, `-core`, `-registry`, `-types` + addon
+  napi) et `packages/bun-oxc/` (`aphrody-oxc-bridge` + addon napi) ; Oxc à la dernière version publiée.
+- ⏳ `@aphrody/bun-plugin-oxc` (transform/minify/lint/format, plugin natif `onBeforeParse` + API JS) et
+  `@aphrody/bun-plugin-n2b` (codemods au chargement/build, CLI `bunx @aphrody/bun-plugin-n2b` = `aphrody n2b`,
+  absorbe `n2b-client`) ; binaires napi par plateforme sur npm ; crates sur crates.io.
+- ⏳ Aphrody consomme les crates publiées (version exacte) ; sources, deps Oxc inutiles et docs n2b retirées (renvoi).
+- ⏳ Tests : cargo test des workspaces du paquet, `test/integration/bun-plugin-{n2b,oxc}/`, cargo check/test des
+  consommateurs Aphrody, gates docs.
+
 ## 4. Vérification commune avant chaque push
 
 ```sh
