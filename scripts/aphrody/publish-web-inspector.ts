@@ -6,7 +6,7 @@
 // The UI sources come from oven-sh/WebKit at WEBKIT_VERSION (sparse checkout of
 // Source/WebInspectorUI/UserInterface); InspectorBackendCommands.js, which WebKit
 // generates while building JavaScriptCore, comes from the prebuilt WebKit
-// tarball of that same commit. Re-running skips a version already on npm.
+// Windows tarball of that same commit (the Linux ones do not ship it). Re-running skips a version already on npm.
 
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
@@ -61,7 +61,7 @@ export function build(work: string): string {
       | string
       | undefined;
   if (!existsSync(prebuilt) || !findBackend()) {
-    const url = `https://github.com/oven-sh/WebKit/releases/download/autobuild-${WEBKIT_VERSION}/bun-webkit-linux-amd64.tar.gz`;
+    const url = `https://github.com/oven-sh/WebKit/releases/download/autobuild-${WEBKIT_VERSION}/bun-webkit-windows-amd64.tar.gz`;
     const tarball = join(work, "bun-webkit.tar.gz");
     run(["curl", "-fsSL", "--retry", "3", "-o", tarball, url], work);
     mkdirSync(prebuilt, { recursive: true });
