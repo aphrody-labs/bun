@@ -2,7 +2,7 @@
 //
 //   bun scripts/aphrody/perf-gate.ts [--fork <bun>] [--upstream <bun> | --upstream-version <x.y.z>]
 //       [--config bench/aphrody/thresholds.json] [--runs 40] [--warmup 5] [--engine auto|hyperfine|spawn]
-//       [--only id,id] [--out <dir>] [--no-gate] [--list]
+//       [--only id,id] [--out <dir>] [--no-gate] [--strict] [--list]
 //
 // Sortie : <out>/perf-report.json et <out>/perf-report.md (aussi ajouté à $GITHUB_STEP_SUMMARY).
 // Code de sortie : 0 = seuils respectés, 1 = au moins un seuil dépassé, 2 = erreur d'exécution.
@@ -528,8 +528,11 @@ export async function main(argv: string[]): Promise<number> {
   });
   const forkInfo = info(bins[0]);
   const upInfo = info(bins[1]);
-  if (!note && forkInfo.version.split("-")[0] !== upInfo.version.split("-")[0]) {
-    note = `Versions de base différentes (fork ${forkInfo.version}, upstream ${upInfo.version}) : l'écart inclut le travail amont entre les deux.`;
+  const drift = forkInfo.version.split("-")[0] !== upInfo.version.split("-")[0];
+  // Taille et RSS dérivent avec le code amont : non bloquants quand les versions de base diffèrent (--strict les impose).
+  const skipBytes = drift && !argv.includes("--strict");
+  if (drift) {
+    note = `${note ? note + " " : ""}Versions de base différentes (fork ${forkInfo.version}, upstream ${upInfo.version}) : l'écart inclut le travail amont entre les deux; taille et RSS ne bloquent pas (--strict pour les imposer).`;
   }
 
   const work = await prepareWork(
@@ -558,7 +561,7 @@ export async function main(argv: string[]): Promise<number> {
         label: m.label,
         unit: m.unit,
         higherIsBetter: !!m.higherIsBetter,
-        info: !!m.info || !!spec.forkOnly,
+        info: !!m.info || !!spec.forkOnly || (m.unit === "bytes" && skipBytes),
         fork: stats(f),
         upstream: u ? stats(u) : undefined,
         status: "ok",
@@ -593,6 +596,7 @@ export async function main(argv: string[]): Promise<number> {
     const lim = thresholds.binarySize ?? {};
     const reasons: string[] = [];
     if (
+      !skipBytes &&
       lim.maxRatio !== undefined &&
       sizeRatio > lim.maxRatio &&
       (lim.maxDeltaBytes === undefined || delta > lim.maxDeltaBytes)

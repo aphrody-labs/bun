@@ -424,15 +424,42 @@ Décision utilisateur (2026-10-09) : le fork est **pensé d'abord pour la derni�
 Le fork ajoute des modules et plugins sans coût au démarrage ni goulot. Fichiers : `bench/aphrody/**`,
 `scripts/aphrody/perf-gate.ts`, `.github/workflows/aphrody-perf.yml`, `test/internal/aphrody-perf-gate.test.ts`.
 
-- ⏳ Banc comparatif fork vs upstream (même version, même machine) : démarrage (`bun -e ""`, `bun --version`,
-  `bun run` script vide, `bun test` vide), RSS au repos, `require`/`import` des builtins, `Bun.serve` hello
-  (req/s, p99), `bun install` hors-ligne, `Bun.build` d'un projet moyen, `next-bun build` de la fixture. Outils :
-  `hyperfine`/`bun:jsc`/`Bun.nanoseconds`, résultats JSON.
-- ⏳ Seuils (ex. démarrage +2 % max, RSS +1 Mo max) ; CI sur chaque push de `main` et chaque sync upstream ;
-  régression = échec + rapport.
-- ⏳ Audit des ajouts du fork (paquets `@aphrody/*`, modules internes, plugins Tailwind/oxc/n2b, next-bun) : chargés
-  paresseusement, rien d'enregistré au démarrage ; corriger tout coût mesuré.
-- ⏳ Optimisations trouvées en chemin (démarrage, résolution, transpileur) proposées comme commits du fork.
+- ✅ Banc `bun scripts/aphrody/perf-gate.ts [--fork <bun>] [--upstream <bun> | --upstream-version X]` (e95716e8b75) :
+  `bun --version`, `-e ''`, `run` vide, `test` vide, `build` petit projet, `install` hors-ligne (tarballs `file:` + cache
+  chaud), RSS au démarrage et après 11 `node:*`, `require`/`import()` de 31 `node:*` et 4 `bun:*`, `Bun.serve` hello,
+  `fetch` local (p50/p99/req/s), taille du binaire. Upstream téléchargé par `gh release download` (repli sur la dernière
+  release), hyperfine si présent sinon boucle `Bun.spawnSync` entrelacée ; médiane et p95 ; JSON + Markdown
+  (`$GITHUB_STEP_SUMMARY`) ; exit 1 si seuil dépassé, 2 si binaire cassé. Seuils : `bench/aphrody/thresholds.json`
+  (ratio ET écart absolu minimal, pour ignorer le bruit de lancement de processus). Taille et RSS ne bloquent pas quand
+  les versions de base diffèrent (`--strict` les impose). Reste non couvert : `next-bun build` de la fixture.
+- ✅ CI `.github/workflows/aphrody-perf.yml` : pull_request/push main (chemins src, scripts/build, vendor, bench),
+  `workflow_run` après « Aphrody release » (artefact de build neuf), dispatch avec `run-id`. Linux x64 bloquant, Windows
+  x64 informatif (la release .1 plante, chantier E). Sans `run-id`, PR et push mesurent la dernière release `aphrody-v*`,
+  pas le code de la PR : le binaire de la PR n'est mesuré qu'après son build de release.
+- ✅ Audit des ajouts du fork sur `merge-base..main` (21 fichiers `src/`, aucun changement de flags de compilation) :
+  rien d'eager au démarrage. `display_version`/`VERSION_TAG` sont des `const` ; `picocolors`, `tiny-invariant`, `dotenv`,
+  `uuid` sont 5 entrées de table de modules internes évaluées à la demande (`require` des 4 : 4 à 7 ms, fork seul) ;
+  `is_plain_bun` évite même `Graph::from_executable` ; `dlopen` global, WebView/Chrome, résolveur (join mis en cache par
+  entrée) hors chemin de démarrage. Aucun correctif nécessaire.
+- ✅ Mesures (Windows x64, i7-13700F 24 threads, 32 Go, release LTO, MSVC 14.44, 40 runs/5 échauffements, hyperfine,
+  médianes). Fork (working tree à 2d27bf316) contre le **même commit de base sans les patchs du fork** (620b50f6a, même
+  toolchain, `tmp/perf/r2`) : `--version` 9.70 vs 9.39 ms, `-e ''` 9.70 vs 9.91, `run` vide 25.7 vs 24.1, `test` 27.2 vs
+  27.9, `install` 59.5 vs 58.7, RSS démarrage 19.03 vs 19.00 MiB, RSS après builtins 26.55 vs 26.62 MiB, `require` 31
+  `node:*` 125 vs 118 ms (bruit : p95 255-278 ms, builds en cours), `import()` 64.8 vs 63.2, `Bun.serve` 8.06 vs 7.93,
+  `fetch` p50 0.11 vs 0.11 ms, taille 92.11 vs 92.08 MiB (+32 KiB). `build` petit projet 104 vs 88 ms : médiane bruitée
+  (p95 > 780 ms des deux côtés) à refaire sur machine au repos. Fork contre upstream **1.4.2** officiel (`tmp/perf/r1`) :
+  démarrage identique à ±0.4 ms, mais taille 92.11 vs 82.11 MiB et RSS 19.6 vs 16.5 MiB : ces écarts sont déjà dans le
+  commit de base (le même écart apparaît entre 1.4.2 et 620b50f6a), pas dans les patchs du fork. Aucune régression du
+  fork mesurée.
+- ✅ Régression d'outillage trouvée : `build/release/bun.exe` (23:57) plantait au hasard (0xC0000409,
+  `WTF::operator<=>` dans `TimeWithDynamicClockType.cpp`, thread AutomaticThread) dès qu'un script chargeait `node:fs` :
+  même ABI `std::partial_ordering` que le chantier E, binaire compilé avec le STL MSVC 14.51. Reconstruit avec le toolset
+  épinglé 14.44 (`build/release-perf`) : 0 crash sur 7 essais. Rien à porter au chantier P (ce n'est pas JSC).
+  Piège de mesure : le même binaire pèse 47 MiB de RSS lancé depuis `~/.bun/bin` contre 16 MiB copié ailleurs ; le banc
+  doit toujours mesurer des copies hors de `~/.bun/bin`.
+- ⏳ À faire : première exécution de la CI (vérifier le téléchargement `gh run download`/zip côté Windows), seuils resserrés
+  sur des runs de CI au repos, test d'intégration `next-bun build`, comparaison Linux (musl/glibc) dans le conteneur.
+  Les tests `test/internal/aphrody-perf-gate.test.ts` (12 passés avant ajout de `--strict`) sont à rejouer.
 
 ### P. Fork WebKit / JavaScriptCore — `aphrody-labs/WebKit` (🔄)
 
