@@ -270,6 +270,24 @@ consommateurs `aphrody-command`, `mcp`, `ffi`, `bun-docs` (Cargo.toml seulement)
 - ⏳ Tests : cargo test des workspaces du paquet, `test/integration/bun-plugin-{n2b,oxc}/`, cargo check/test des
   consommateurs Aphrody, gates docs.
 
+### N. Alpine d'abord, Ubuntu 26.04 garanti (🔄)
+
+Décision utilisateur (2026-10-09) : le fork est **pensé d'abord pour la dernière Alpine** (3.24.x, musl, LLVM 22,
+cmake 4.2, mold, rust 1.96 dans apk) et doit **aussi compiler sur Ubuntu 26.04** (glibc 2.43, = vps/dbfr).
+Fichiers : `scripts/build/**` (détection toolchain, deps vendorisées, flags musl), `scripts/build/ci-images/spec.ts`
+(`alpineRelease`), `scripts/aphrody/{alpine,linux}.Dockerfile`, `scripts/aphrody/tmux.ts` (`--alpine`),
+`.github/workflows/aphrody-*.yml`, tests `test/internal/`.
+
+- ⏳ Image `aphrody/build-alpine:3.24` (`scripts/aphrody/alpine.Dockerfile`) : toolchain native Alpine (clang/lld/llvm
+  22 apk, cmake, ninja, mold, rust, bun musl) ; mode `--alpine` du runner (défaut Linux = Alpine, `--linux` = Ubuntu).
+- ⏳ `bun run build` (debug puis release) **natif sur Alpine** (pas de cross-compile depuis Debian), toutes deps
+  vendorisées (WebKit musl prébuilt, boringssl, libuv…) ; écarts corrigés à la source dans `scripts/build/**`.
+- ⏳ Même build natif sur Ubuntu 26.04 (`aphrody/build-linux:26.04`) ; les deux en CI (`aphrody-linux-build.yml` :
+  matrice alpine-3.24 + ubuntu-26.04, x64 + arm64), tests de fumée + un échantillon de `bun bd test`.
+- ⏳ `alpineRelease` → 3.24 ; les assets `-musl` deviennent l'artefact Linux principal de la release (installeurs,
+  `@aphrody/bun-runtime` : musl par défaut sur Alpine, glibc sinon) ; images Aphrody (`aphrody-os`) basées sur Alpine.
+- ⏳ Toute dépendance glibc implicite (`dlopen` de libs glibc, `execinfo`, `getauxval`, locales) traitée pour musl.
+
 ## 4. Vérification commune avant chaque push
 
 ```sh
