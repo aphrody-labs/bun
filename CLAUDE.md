@@ -118,7 +118,7 @@ test("(multi-file test) my feature", async () => {
 
 ### Core Source Organization
 
-The Rust side is a Cargo workspace of ~200 crates rooted at `Cargo.toml`. The key ones:
+The Rust side is a Cargo workspace of ~100 crates rooted at `Cargo.toml`. The key ones:
 
 - `src/bun_core/` - The `bun.*`-namespace foundation: strings/`String` (`string/`), formatting (`fmt.rs`), logging (`output.rs`), feature flags, env vars, allocator helpers
 - `src/sys/` - Cross-platform syscall wrappers (`file.rs`, `dir.rs`, `fd.rs`, `Error.rs`, `tmp.rs`) — the `bun.sys` equivalent
