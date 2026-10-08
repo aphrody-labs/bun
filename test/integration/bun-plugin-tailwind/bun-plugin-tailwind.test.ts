@@ -159,6 +159,30 @@ describe("Bun.build", () => {
     expect(css).toContain(".b");
   });
 
+  test("@import of a scheme another plugin resolves (m3:theme.css) is left to that plugin", async () => {
+    using dir = tempDir("tw-scheme", {
+      "plain.css": `@import "virt:theme.css";\n.a { color: var(--brand); }`,
+      "tw.css": `@import "tailwindcss";\n@import "virt:theme.css" layer(theme);\n`,
+      "index.html": `<div class="flex"></div>`,
+    });
+    const virtual: import("bun").BunPlugin = {
+      name: "virtual-sheet",
+      setup(build) {
+        build.onResolve({ filter: /^virt:/ }, ({ path }) => ({ path, namespace: "virt" }));
+        build.onLoad({ filter: /.*/, namespace: "virt" }, () => ({
+          contents: ":root { --brand: #6750a4; }",
+          loader: "css",
+        }));
+      },
+    };
+    const plain = await buildCss(String(dir), "plain.css", {}, { plugins: [virtual, tw.tailwind()] });
+    expect(plain).toContain("--brand: #6750a4");
+    const css = await buildCss(String(dir), "tw.css", {}, { plugins: [virtual, tw.tailwind()] });
+    expect(css).toContain("--brand: #6750a4");
+    expect(css).toContain(".flex");
+    expect(css).not.toContain("external.invalid");
+  });
+
   test("module graph: candidates from imported files the scanner skips", async () => {
     const files = {
       ".gitignore": "generated/\nout/\n",

@@ -119,6 +119,35 @@ export function withPrelude(css: string, prelude: Prelude | undefined): string {
   return out;
 }
 
+/**
+ * `@import "m3:theme.css"`: a scheme another plugin of the build resolves. Tailwind only passes
+ * `data:` and `http(s):` imports through and fails on the others, so they stand in as
+ * `https://external.invalid/<n>` during the compile.
+ */
+const SCHEME_IMPORT =
+  /@import\s+(?:url\(\s*)?(["'])(?!(?:data|https?):)(?![a-z]:[\\/])[a-z][a-z0-9+.-]*:[^"']*\1\s*\)?[^;]*;/gi;
+const HELD_IMPORT = /@import\s+(?:url\(\s*)?["']?https:\/\/external\.invalid\/(\d+)["']?\s*\)?[^;]*;\n?/g;
+
+function holdSchemeImports(css: string): { css: string; held: string[] } {
+  const held: string[] = [];
+  const out = css.replace(SCHEME_IMPORT, (rule, quote: string) => {
+    const index = held.push(rule) - 1;
+    return rule.replace(/(["'])[^"']*\1/, `${quote}https://external.invalid/${index}${quote}`);
+  });
+  return { css: out, held };
+}
+
+/** Puts the held imports back, first in the sheet: Tailwind leaves them after its own rules. */
+function restoreSchemeImports(css: string, held: string[]): string {
+  if (!held.length) return css;
+  const rules: string[] = [];
+  const rest = css.replace(HELD_IMPORT, (_, index: string) => {
+    rules.push(held[Number(index)]);
+    return "";
+  });
+  return `${rules.join("")}${rest}`;
+}
+
 export interface GenerateResult {
   css: string;
   /** Raw source map JSON when `sourcemap` is on. */
@@ -174,7 +203,9 @@ export class TailwindRoot {
     input: string,
     extra?: (root: TailwindRoot) => Iterable<string>,
   ): Promise<GenerateResult | undefined> {
-    const source = withPrelude(input, this.#options.theme ? await m3Prelude(this.#options.theme) : undefined);
+    const { css: source, held } = holdSchemeImports(
+      withPrelude(input, this.#options.theme ? await m3Prelude(this.#options.theme) : undefined),
+    );
     if (!this.#compiler || !this.#scanner || source !== this.#input || this.#changed()) {
       clearRequireCache([...this.#dependencies.keys()]);
       this.#dependencies.clear();
@@ -224,6 +255,7 @@ export class TailwindRoot {
       css = out.code;
       map = map ? out.map : undefined;
     }
+    css = restoreSchemeImports(css, held);
     if (map) css += `\n${toSourceMap(map).inline}\n`;
 
     return {
