@@ -39,6 +39,43 @@ chaque lot. Contexte permanent : [APHRODY.md](APHRODY.md) (ce que le fork fourni
    `test/integration/bun-plugin-tailwind/`, `test/js/first_party/`.
 10. Rapport final en français, concis : fait (commits, versions, tests chiffrés), puis seulement l'impossible prouvé.
 
+## 2 bis. Méthode de travail — gagner du temps
+
+Ne jamais attendre une commande longue en premier plan ; paralléliser ; lire peu, chercher précisément.
+
+- **Tâches longues → tmux partagé** (session `aphrody` dans WSL `Ubuntu-24.04`, tmux 3.4) via
+  `scripts/aphrody/tmux.sh` (depuis Git Bash ou WSL) :
+  ```sh
+  scripts/aphrody/tmux.sh run bd-E -- 'bun bd'                       # Windows (pwsh, MSVC)
+  scripts/aphrody/tmux.sh run docker-J --linux -- 'docker build ...' # Linux (WSL)
+  scripts/aphrody/tmux.sh ls | logs <nom> [n] | wait <nom> | kill <nom>
+  ```
+  Nom de job = `<action>-<chantier>` ; journal dans `tmp/tmux/<nom>.log` (lisible avec Read), code de sortie
+  dans `tmp/tmux/<nom>.exit`. Avant un `bun bd`/`cargo build` lourd, `tmux.sh ls` : ne pas lancer deux builds
+  natifs du fork en même temps (un seul `bun bd` à la fois, nom `bd-*`).
+- **Sinon, tâches de fond de l'outil Bash** (`run_in_background: true`) : notification à la fin, pas de
+  `sleep`/polling. `gh run watch` et `cargo test` longs aussi en fond.
+- **Sous-agents** : déléguer les recherches larges (agent `Explore`/`yolo:explore`) et les sous-tâches
+  indépendantes à fichiers disjoints (agents `yolo:*` : `rust-engineer`, `test-runner`, `build`, `lint-workflow`,
+  `node2bun`, `devops-engineer`, `docs-researcher`…), plusieurs en parallèle dans un même message. Pour une
+  orchestration multi-étapes (revue + vérification, migrations en éventail), utiliser l'outil **Workflow**
+  (autorisé par l'utilisateur), taille moyenne (< 10 agents).
+- **Skills** : charger celle qui couvre la tâche avant de commencer (`yolo:bun-doctrine`, `yolo:docs`,
+  `yolo:yolo`, `aphrody:*`, skills du dépôt `.claude/`). Liste et usage : mémoire `bun-skills-catalog`.
+- **MCP aphrody d'abord** : docs (`bun_docs_search`/`read`, `docs_auto_search`, `context7_query_docs`), sources
+  amont (`upstream_search`/`read`/`tree`), web (`aphrody_search`, `universal_web_fetch`), GitHub
+  (`github_tree`, `github_docs_search`), `n2b`, `nu_eval`. Mémoire `bun-mcp-tools`.
+- **Graphe et mémoire** : `aphrody graph --source graph:bun query …` pour trouver appelants/structure avant de
+  lire des fichiers ; `aphrody memory search --agent-id bun …`.
+- **Shell** : `rg`/`fd`/`sd`, `bun -e`, Bun Shell, `nu` ; lectures ciblées (`rg -n`, `sed -n a,bp`) plutôt que
+  des fichiers entiers ; commandes indépendantes dans un même appel.
+- **Visual Studio** : VS 2026 (18) et 2022 installés ; le build du fork impose le toolset MSVC **14.44**
+  (`scripts/vs-shell.ps1`, vérifié par `checkNativeMsvcToolset`) — 14.51 casse l'ABI avec WebKit. cdb/WinDbg
+  pour les crashs natifs. `sccache` actif pour Rust.
+- **Docker local** (12 CPU / 12 Go) : conteneurs `--cpus 6 --memory 6g`, volumes de cache nommés
+  (`bun-cache:/root/.bun/install/cache`, `cargo-registry`, `cargo-target-<chantier>`), BuildKit (`docker buildx`,
+  `--cache-to/--cache-from type=local`). Jamais le VPS.
+
 ## 3. Chantiers
 
 Statut : ✅ fait · 🔄 en cours · ⏳ à faire. Un chantier = un propriétaire ; hors de ton périmètre, coordonne
