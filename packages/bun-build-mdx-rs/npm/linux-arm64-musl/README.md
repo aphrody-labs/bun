@@ -1,3 +1,3 @@
-# `bun-mdx-rs-linux-arm64-musl`
+# `@aphrody/bun-mdx-rs-linux-arm64-musl`
 
-This is the **aarch64-unknown-linux-musl** binary for `bun-mdx-rs`
+This is the **aarch64-unknown-linux-musl** binary for `@aphrody/bun-mdx-rs`

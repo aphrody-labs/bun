@@ -1,4 +1,4 @@
-# Authoring @types/bun
+# Authoring @aphrody/bun-types
 
 These declarations define the `'bun'` module, the `Bun` global variable, and lots of other global declarations like extending the `fetch` interface.
 

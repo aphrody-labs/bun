@@ -3,7 +3,7 @@
 // Developers load this file with the following triple-slash directive:
 //
 // ```ts
-// /// <reference types="bun-types/test-globals" />
+// /// <reference types="@aphrody/bun-types/test-globals" />
 // ```
 
 declare var test: typeof import("bun:test").test;

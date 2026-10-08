@@ -27,7 +27,7 @@ function SveltePlugin(options: SvelteOptions = kEmptyObject as SvelteOptions): B
   };
 
   return {
-    name: "bun-plugin-svelte",
+    name: "@aphrody/bun-plugin-svelte",
     setup(builder) {
       // resolve "svelte" export conditions
       //

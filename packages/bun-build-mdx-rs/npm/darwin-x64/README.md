@@ -1,3 +1,3 @@
-# `bun-mdx-rs-darwin-x64`
+# `@aphrody/bun-mdx-rs-darwin-x64`
 
-This is the **x86_64-apple-darwin** binary for `bun-mdx-rs`
+This is the **x86_64-apple-darwin** binary for `@aphrody/bun-mdx-rs`

@@ -1,4 +1,4 @@
-# `bun-plugin-yaml`
+# `@aphrody/bun-plugin-yaml`
 
 The official YAML plugin for Bun. Adds support for `.yml`/`.yaml` imports.
 

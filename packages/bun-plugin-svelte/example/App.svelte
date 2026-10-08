@@ -19,7 +19,7 @@
         />
       </a>
     </div>
-    <h1><span class="highlight">bun-plugin-svelte</span></h1>
+    <h1><span class="highlight">@aphrody/bun-plugin-svelte</span></h1>
     <p class="tagline">The official Svelte plugin for <a href="https://bun.com" target="_blank">Bun</a></p>
 
     <div class="cta-buttons">

@@ -1,6 +1,6 @@
-# bun-inspector-protocol
+# @aphrody/bun-inspector-protocol
 
-`bun-inspector-protocol` is a TypeScript library that provides a comprehensive interface for interacting with the WebKit Inspector Protocol. This package makes it easy to build debugging tools, IDE integrations, and other developer tools that communicate with Bun's JavaScript runtime.
+`@aphrody/bun-inspector-protocol` is a TypeScript library that provides a comprehensive interface for interacting with the WebKit Inspector Protocol. This package makes it easy to build debugging tools, IDE integrations, and other developer tools that communicate with Bun's JavaScript runtime.
 
 You can use this library with Node.js or Bun.
 

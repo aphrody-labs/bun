@@ -1,3 +1,3 @@
-# bun-debug-adapter-protocol
+# @aphrody/bun-debug-adapter-protocol
 
 https://microsoft.github.io/debug-adapter-protocol/overview

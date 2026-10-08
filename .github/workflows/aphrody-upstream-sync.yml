@@ -1,0 +1,47 @@
+name: Aphrody upstream sync
+
+# Merges oven-sh/bun main into the fork's main and re-applies the @aphrody
+# package scope (scripts/aphrody/sync-upstream.ts). A conflict beyond the
+# rename fails the run and leaves main untouched.
+
+permissions:
+  contents: read
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: aphrody-upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository == 'aphrody-labs/bun'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      # GITHUB_TOKEN cannot push commits that touch .github/workflows, and
+      # upstream merges often do: a token with the `workflow` scope goes in
+      # the APHRODY_SYNC_TOKEN secret.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+        with:
+          bun-version: latest
+      - name: Install ripgrep
+        run: command -v rg || (sudo apt-get update -qq && sudo apt-get install -y -qq ripgrep)
+      - name: Merge upstream
+        run: |
+          git config user.name "aphrody-dev"
+          git config user.email "contact@aphrody.com"
+          git remote add upstream https://github.com/oven-sh/bun.git
+          bun test test/internal/aphrody-upstream-sync.test.ts
+          bun scripts/aphrody/sync-upstream.ts --push --no-index

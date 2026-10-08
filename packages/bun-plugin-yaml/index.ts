@@ -4,7 +4,7 @@ import { load } from "js-yaml";
 
 function YamlPlugin(): BunPlugin {
   return {
-    name: "bun-plugin-yaml",
+    name: "@aphrody/bun-plugin-yaml",
     setup(builder) {
       builder.onLoad({ filter: /\.(yaml|yml)$/ }, args => {
         const text = readFileSync(args.path, "utf8");
