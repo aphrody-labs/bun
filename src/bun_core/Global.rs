@@ -485,14 +485,31 @@ pub const package_json_version: &str = if env::IS_DEBUG {
     version_string
 };
 
-/// `package_json_version` with a trailing `\n` baked in, so
+/// `version_string` plus the build's `--version-tag` (`1.4.3-aphrody.2`). Only displayed versions
+/// use it: `Bun.version` and the download/lockfile versions stay `package_json_version`.
+const tagged_version_string: &str = if env::VERSION_TAG.is_empty() {
+    version_string
+} else {
+    formatcp!("{}-{}", version_string, env::VERSION_TAG)
+};
+
+/// What `bun --version` prints: `package_json_version`, tagged if the build has a version tag.
+pub const display_version: &str = if env::IS_DEBUG {
+    package_json_version
+} else {
+    tagged_version_string
+};
+
+/// `display_version` with a trailing `\n` baked in, so
 /// `print_version_and_exit` is a single `write_all` (one syscall).
-pub const package_json_version_nl: &str = concatcp!(package_json_version, "\n");
+pub const package_json_version_nl: &str = concatcp!(display_version, "\n");
 
 /// This is used for `bun` without any arguments, it `package_json_version` but with canary if it is a canary build.
 /// like "1.0.0-canary.12"
 pub const package_json_version_with_canary: &str = if env::IS_DEBUG {
     concatcp!(version_string, "-debug")
+} else if !env::VERSION_TAG.is_empty() {
+    tagged_version_string
 } else if env::IS_CANARY {
     formatcp!("{}-canary.{}", version_string, env::CANARY_REVISION)
 } else {
@@ -504,6 +521,8 @@ pub const package_json_version_with_sha: &str = if env::GIT_SHA.is_empty() {
     package_json_version
 } else if env::IS_DEBUG {
     formatcp!("{} ({})", version_string, env::GIT_SHA_SHORT)
+} else if !env::VERSION_TAG.is_empty() {
+    formatcp!("{} ({})", tagged_version_string, env::GIT_SHA_SHORT)
 } else if env::IS_CANARY {
     formatcp!(
         "{}-canary.{} ({})",
@@ -521,6 +540,8 @@ pub const package_json_version_with_revision: &str = if env::GIT_SHA.is_empty() 
     package_json_version
 } else if env::IS_DEBUG {
     formatcp!("{}-debug+{}", version_string, env::GIT_SHA_SHORT)
+} else if !env::VERSION_TAG.is_empty() {
+    formatcp!("{}+{}", tagged_version_string, env::GIT_SHA_SHORT)
 } else if env::IS_CANARY {
     formatcp!(
         "{}-canary.{}+{}",
@@ -555,7 +576,7 @@ pub const unhandled_error_bun_version_string: &str = concatcp!(
     if env::IS_CANARY {
         package_json_version_with_revision
     } else {
-        package_json_version
+        display_version
     },
     " (",
     os_display,

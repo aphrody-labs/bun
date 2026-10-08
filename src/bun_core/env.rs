@@ -63,6 +63,8 @@ pub(crate) const CANARY_REVISION: &str = if IS_CANARY {
 } else {
     ""
 };
+/// Prerelease suffix of the displayed version (`--version-tag`), empty for none.
+pub(crate) const VERSION_TAG: &str = build_options::VERSION_TAG;
 pub const DUMP_SOURCE: bool = IS_DEBUG && !IS_TEST;
 pub const BASE_PATH: &[u8] = build_options::BASE_PATH;
 pub const ENABLE_LOGS: bool = build_options::ENABLE_LOGS;

@@ -445,6 +445,7 @@ const configFlags: { [K in keyof Required<PartialConfig>]: ConfigFlagKind<NonNul
   logs: "boolean",
   baseline: "boolean",
   canary: "boolean",
+  versionTag: "string",
   staticSqlite: "boolean",
   staticLibatomic: "boolean",
   tinycc: "boolean",

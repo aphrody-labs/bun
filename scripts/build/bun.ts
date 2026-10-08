@@ -866,7 +866,11 @@ function emitWindowsResources(n: Ninja, cfg: Config): string {
   const manifest = resolve(cfg.cwd, "src/bun.exe.manifest");
   const rcIn = readFileSync(rcTemplate, "utf8");
   const [major = "0", minor = "0", patch = "0"] = cfg.version.split(".");
-  const versionWithTag = cfg.canary ? `${cfg.version}-canary.${cfg.canaryRevision}` : cfg.version;
+  const versionWithTag = cfg.versionTag
+    ? `${cfg.version}-${cfg.versionTag}`
+    : cfg.canary
+      ? `${cfg.version}-canary.${cfg.canaryRevision}`
+      : cfg.version;
   // slash(): rc parses .rc as C-like source; backslashes in the ICON path
   // string would need escaping. Forward slashes work for Windows file APIs.
   const rcOut = rcIn

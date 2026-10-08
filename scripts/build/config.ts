@@ -321,6 +321,12 @@ export interface Config {
   /** Git commit of the bun checkout — feeds into the build's -Dsha equivalent. */
   revision: string;
   canaryRevision: string;
+  /**
+   * Semver prerelease suffix shown by `bun --version`, `--revision` and `Bun.version_with_sha`
+   * (`1.4.3-aphrody.2`), empty for none. `Bun.version` stays `version`, so engine range checks
+   * and the download URLs derived from it (`--compile --target`, `bun upgrade`) are unchanged.
+   */
+  versionTag: string;
   /** Node.js compat version. Default in versions.ts; override to test a bump. */
   nodejsVersion: string;
   nodejsAbiVersion: string;
@@ -347,6 +353,7 @@ export interface PartialConfig {
   logs?: boolean;
   baseline?: boolean;
   canary?: boolean;
+  versionTag?: string;
   staticSqlite?: boolean;
   staticLibatomic?: boolean;
   tinycc?: boolean;
@@ -822,6 +829,12 @@ function resolveBase(partial: PartialConfig, host: Host, os: OS, arch: Arch, js:
   // ─── What build_options.rs is generated from (buildOptionsRs.ts) ───
   const canary = partial.canary ?? true;
   const canaryRevision = canary ? "1" : "0";
+  const versionTag = partial.versionTag ?? "";
+  if (versionTag !== "" && !/^[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*$/.test(versionTag)) {
+    throw new BuildError(`--version-tag must be semver prerelease identifiers, got ${JSON.stringify(versionTag)}`, {
+      hint: "e.g. --version-tag=aphrody.2",
+    });
+  }
   const fuzzilli = partial.fuzzilli ?? false;
   const pkgJsonPath = resolve(cwd, "package.json");
   const pkgJson = JSON.parse(readFileSync(pkgJsonPath, "utf8")) as { version: string };
@@ -837,6 +850,7 @@ function resolveBase(partial: PartialConfig, host: Host, os: OS, arch: Arch, js:
     esbuild: js.esbuild,
     canary,
     canaryRevision,
+    versionTag,
     fuzzilli,
     version,
     revision,
@@ -883,6 +897,7 @@ export type CodegenFields = Pick<
   | "assertions"
   | "canary"
   | "canaryRevision"
+  | "versionTag"
   | "fuzzilli"
   | "version"
   | "revision"
@@ -937,6 +952,7 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
     packageManager,
     canary,
     canaryRevision,
+    versionTag,
     fuzzilli,
     version,
     revision,
@@ -1359,6 +1375,7 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
     nodejsV8Version,
     nodejsAbiVersion,
     canaryRevision,
+    versionTag,
     webkitVersion,
   };
 }
@@ -1660,6 +1677,7 @@ export function formatConfig(cfg: Config, exe: string): string {
     features.push(`socket-fault-injection:${cfg.socketFaultInjection ? "on" : "off"}`);
   }
   if (!cfg.canary) features.push("canary:off");
+  if (cfg.versionTag) features.push(`version-tag:${cfg.versionTag}`);
   // Non-default modes — show so you notice when a build is unusual.
   if (cfg.webkit !== "prebuilt") features.push(`webkit:${cfg.webkit}`);
   for (const name of Object.keys(cfg.localDeps)) features.push(`local:${name}`);

@@ -49,6 +49,7 @@ export function generateBuildOptionsRs(cfg: CodegenFields): string {
     `pub const RELEASE_SAFE: bool = ${cfg.assertions};`,
     `pub const IS_CANARY: bool = ${cfg.canary};`,
     `pub const CANARY_REVISION: &str = ${rstr(cfg.canaryRevision)};`,
+    `pub const VERSION_TAG: &str = ${rstr(cfg.versionTag)};`,
     `pub const ENABLE_FUZZILLI: bool = ${cfg.fuzzilli};`,
     `pub const FALLBACK_HTML_VERSION: &str = "0000000000000000";`,
     "pub const VERSION: crate::Version = crate::Version {",
