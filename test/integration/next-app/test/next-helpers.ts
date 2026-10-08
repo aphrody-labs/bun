@@ -1,6 +1,6 @@
 import { cpSync } from "fs";
 import { bunEnv, bunExe, tempDir } from "harness";
-import { join } from "path";
+import { delimiter, join } from "path";
 
 export const nextEnv = {
   ...bunEnv,
@@ -8,10 +8,14 @@ export const nextEnv = {
   NODE_NO_WARNINGS: "1",
 };
 
-/** Copies `files` of `fixture` into a fresh temp dir and installs its dependencies from `bun.lock`. */
-export async function installFixture(fixture: string, files: string[]) {
+/**
+ * Copies `files` of `fixture` into a fresh temp dir, then everything in `overlay` (another `package.json` and
+ * `bun.lock` pinning a different Next.js) over them, and installs the dependencies from `bun.lock`.
+ */
+export async function installFixture(fixture: string, files: string[], overlay?: string) {
   const dir = tempDir("next-fixture", {});
   for (const file of files) cpSync(join(fixture, file), join(String(dir), file), { recursive: true });
+  if (overlay) cpSync(overlay, String(dir), { recursive: true });
   await using install = Bun.spawn({
     cmd: [bunExe(), "install"],
     cwd: String(dir),
@@ -26,7 +30,18 @@ export async function installFixture(fixture: string, files: string[]) {
 
 export const nextBin = "node_modules/next/dist/bin/next";
 
-/** The `next-bun` CLI of packages/bun-next (`next-bun build` = `bun --bun next build` with a Bun `node` on PATH). */
+/** An env override whose PATH (under the key `nextEnv` uses) has no directory holding a `node`. */
+export function withoutNode(): Record<string, string> {
+  const key = Object.keys(nextEnv).find(k => k.toUpperCase() === "PATH") ?? "PATH";
+  const path = (nextEnv[key] ?? "")
+    .split(delimiter)
+    .filter(dir => dir && !Bun.which("node", { PATH: dir }))
+    .join(delimiter);
+  if (Bun.which("node", { PATH: path })) throw new Error("a node is still reachable on PATH");
+  return { [key]: path };
+}
+
+/** The `next-bun` CLI of packages/bun-next (`next-bun build` runs `bun --bun next build`). */
 export const nextBunBin = join(import.meta.dir, "..", "..", "..", "..", "packages", "bun-next", "bin", "next-bun.js");
 
 /**

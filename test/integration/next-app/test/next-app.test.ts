@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { isDebug } from "harness";
 import { join } from "path";
-import { installFixture, nextBuild, nextStart } from "./next-helpers";
+import { installFixture, nextBuild, nextStart, withoutNode } from "./next-helpers";
 
 // App Router baseline (J0 of the Next.js-on-Bun plan): `next build` + `next start`
 // under `bun --bun`, once with Turbopack (the default bundler) and once with webpack,
-// plus a Turbopack build through the `next-bun` runner. The fixture's PostCSS plugin
-// stamps the runtime it ran in into the CSS, so each variant asserts PostCSS ran on Bun.
+// plus a Turbopack build through the `next-bun` runner with no `node` on PATH. The fixture's
+// PostCSS plugin stamps the runtime it ran in into the CSS, so each variant asserts PostCSS ran on Bun.
 
 const fixture = join(import.meta.dir, "..");
 let dir: Awaited<ReturnType<typeof installFixture>>;
@@ -23,18 +23,18 @@ beforeAll(async () => {
   ]);
 }, 300_000);
 
-afterAll(() => dir?.[Symbol.dispose]());
+afterAll(() => dir?.[Symbol.dispose](), 120_000);
 
 describe.concurrent.each([
-  ["turbopack", [], ".next-turbopack", "bun"],
-  ["webpack", ["--webpack"], ".next-webpack", "bun"],
-  ["turbopack via next-bun", [], ".next-runner", "next-bun"],
-] as const)("next-app (%s)", (_name, args, distDir, runner) => {
+  ["turbopack", [], ".next-turbopack", "bun", false],
+  ["webpack", ["--webpack"], ".next-webpack", "bun", false],
+  ["turbopack via next-bun, no node on PATH", [], ".next-runner", "next-bun", true],
+] as const)("next-app (%s)", (_name, args, distDir, runner, noNode) => {
   test(
     "builds and serves the App Router page and route handler",
     async () => {
       const env = { NEXT_DIST_DIR: distDir };
-      const buildOutput = await nextBuild(String(dir), [...args], env, runner);
+      const buildOutput = await nextBuild(String(dir), [...args], noNode ? { ...env, ...withoutNode() } : env, runner);
       expect(buildOutput).toContain("○ /");
       expect(buildOutput).toContain("ƒ /api/hello");
 

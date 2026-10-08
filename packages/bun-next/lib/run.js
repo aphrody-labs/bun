@@ -3,6 +3,10 @@
 // the machine. `bun --bun next` runs Next itself on Bun, but Turbopack spawns
 // `node` from PATH for its PostCSS and webpack-loader workers. This runner puts
 // a `node` that is this Bun first on PATH, so the workers run on Bun too.
+// Needed on every platform: with an absolute path to `next` and no `node` on
+// PATH, Next 16.1.6 to 16.5 fails with "spawning node pooled process" on Linux
+// and Windows. `bun --bun node_modules/next/dist/bin/next` (bare relative path)
+// only works because Bun then runs it as a package bin and adds its own shim.
 
 const {
   copyFileSync,

@@ -1,7 +1,7 @@
 "use strict";
 // Next.js has no bundler plugin API, so selecting Bun's bundler takes two edits
-// to the installed `next/dist` files. Each edit is anchored on exact source text
-// of a known Next.js release; unknown releases are refused instead of guessed.
+// to the installed `next/dist` files. Each edit is anchored on exact source text,
+// which must occur exactly once: a release that moved it is refused, not guessed.
 
 const { existsSync, readFileSync, writeFileSync } = require("node:fs");
 const { join } = require("node:path");
@@ -25,8 +25,18 @@ const EDITS = [
   },
 ];
 
-/** Next.js releases whose `dist` files were checked against the anchors above. */
-const SUPPORTED_VERSIONS = ["16.1.6"];
+/** Lowest Next.js release the anchors were written against; any later 16.x (canaries included) is accepted. */
+const MIN_VERSION = "16.1.6";
+
+/** Releases whose `dist` files were checked against the anchors; the first and last also pass the build test. */
+const VERIFIED_VERSIONS = ["16.1.6", "16.2.12", "16.3.8", "16.4.0", "16.5.0-canary.4"];
+
+/** `version` is a 16.x release at or after MIN_VERSION, prerelease tags ignored. */
+function isSupported(version) {
+  const [major, minor, patch] = String(version).split(/[.-]/, 3).map(Number);
+  const [, minMinor, minPatch] = MIN_VERSION.split(".").map(Number);
+  return major === 16 && (minor > minMinor || (minor === minMinor && patch >= minPatch));
+}
 
 function readNextVersion(nextDir) {
   return JSON.parse(readFileSync(join(nextDir, "package.json"), "utf8")).version;
@@ -42,7 +52,7 @@ function checkPatch(nextDir) {
   });
   return {
     version,
-    supported: SUPPORTED_VERSIONS.includes(version),
+    supported: isSupported(version),
     patched: files.every(f => f.patched),
     files,
   };
@@ -55,9 +65,7 @@ function checkPatch(nextDir) {
 function applyPatch(nextDir) {
   const state = checkPatch(nextDir);
   if (!state.supported) {
-    throw new Error(
-      `@aphrody/next-bun: next@${state.version} is not supported (supported: ${SUPPORTED_VERSIONS.join(", ")}).`,
-    );
+    throw new Error(`@aphrody/next-bun: next@${state.version} is not supported (supported: >=${MIN_VERSION} <17).`);
   }
   const changed = [];
   for (const file of state.files) {
@@ -74,4 +82,4 @@ function applyPatch(nextDir) {
   return { version: state.version, changed };
 }
 
-module.exports = { MARKER, SUPPORTED_VERSIONS, applyPatch, checkPatch };
+module.exports = { MARKER, MIN_VERSION, VERIFIED_VERSIONS, applyPatch, checkPatch, isSupported };
