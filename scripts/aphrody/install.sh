@@ -61,7 +61,7 @@ if curl -fsSL --retry 3 -o "$tmp/SHA256SUMS.txt" "$base/SHA256SUMS.txt"; then
   want=$(grep " bun-$target.zip\$" "$tmp/SHA256SUMS.txt" | cut -d' ' -f1)
   if command -v sha256sum >/dev/null; then got=$(sha256sum "$tmp/bun.zip" | cut -d' ' -f1)
   else got=$(shasum -a 256 "$tmp/bun.zip" | cut -d' ' -f1); fi
-  [[ -n $want && $want = "$got" ]] || die "checksum mismatch for bun-$target.zip"
+  [[ -n $want && $want = "$got" ]] || die "checksum mismatch for bun-$target.zip (SHA256SUMS.txt: ${want:-none}, downloaded: $got)"
 fi
 
 unzip -oqd "$tmp" "$tmp/bun.zip"

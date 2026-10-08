@@ -63,6 +63,7 @@ jobs:
       version-tag: ${{ steps.plan.outputs.version-tag }}
       matrix: ${{ steps.plan.outputs.matrix }}
       build: ${{ steps.plan.outputs.build }}
+      exists: ${{ steps.plan.outputs.exists }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -77,6 +78,7 @@ jobs:
           PUBLISH_ONLY: ${{ inputs.publish-only && 'true' || 'false' }}
           REF_NAME: ${{ github.ref_name }}
           REF_TYPE: ${{ github.ref_type }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           bun -e '
             const m = await import("./scripts/aphrody/publish-runtime.ts");
@@ -90,13 +92,19 @@ jobs:
               console.log(`::warning::${version} is not based on package.json ${m.readBaseVersion()}`);
             const wanted = (env.INPUT_TARGETS ?? "").split(",").map(s => s.trim()).filter(Boolean);
             const targets = wanted.length ? wanted.map(host.findTarget) : host.releaseTargets;
-            const include = env.PUBLISH_ONLY === "true" ? [] : targets;
+            // A dispatched release pushes its own tag with a token that triggers this workflow again;
+            // that push must not rebuild and clobber assets already published to npm.
+            const exists = env.REF_TYPE === "tag" && (await fetch(
+              `https://api.github.com/repos/${env.GITHUB_REPOSITORY}/releases/tags/${m.releaseTag(version)}`,
+              { headers: { authorization: `Bearer ${env.GITHUB_TOKEN}` } })).ok;
+            const include = env.PUBLISH_ONLY === "true" || exists ? [] : targets;
             const out = [
               `version=${version}`,
               `tag=${m.releaseTag(version)}`,
               `version-tag=aphrody.${n}`,
               `matrix=${JSON.stringify({ include })}`,
               `build=${include.length > 0}`,
+              `exists=${exists}`,
             ];
             require("fs").appendFileSync(env.GITHUB_OUTPUT, out.join("\n") + "\n");
             console.log(out.join("\n"));
@@ -344,7 +352,7 @@ jobs:
 
   npm:
     needs: [prepare, build, smoke, release]
-    if: ${{ !cancelled() && needs.prepare.result == 'success' && (needs.release.result == 'success' || needs.prepare.outputs.build != 'true') && (inputs.publish-npm || github.event_name == 'push') }}
+    if: ${{ !cancelled() && needs.prepare.result == 'success' && needs.prepare.outputs.exists != 'true' && (needs.release.result == 'success' || needs.prepare.outputs.build != 'true') && (inputs.publish-npm || github.event_name == 'push') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
