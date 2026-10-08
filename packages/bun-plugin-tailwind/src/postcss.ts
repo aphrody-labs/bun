@@ -37,12 +37,9 @@ const tailwindPostcss: PluginCreator<TailwindOptions> = (options = {}) => ({
     for (const file of generated.scannedFiles) {
       result.messages.push({ type: "dependency", plugin: NAME, file, parent: path });
     }
+    // `glob` is always set: Turbopack deserializes it as a string.
     for (const { base, pattern } of generated.globs) {
-      result.messages.push(
-        pattern === "*" || pattern === ""
-          ? { type: "dir-dependency", plugin: NAME, dir: base, parent: path }
-          : { type: "dir-dependency", plugin: NAME, dir: base, glob: pattern, parent: path },
-      );
+      result.messages.push({ type: "dir-dependency", plugin: NAME, dir: base, glob: pattern || "**", parent: path });
     }
 
     const css = generated.map ? stripInlineMap(generated.css) : generated.css;

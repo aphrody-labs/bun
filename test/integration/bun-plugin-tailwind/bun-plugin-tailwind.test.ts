@@ -268,6 +268,10 @@ describe("postcss", () => {
     const types = new Set(result.messages.map((m: { type: string }) => m.type));
     expect(types.has("dependency")).toBeTrue();
     expect(types.has("dir-dependency")).toBeTrue();
+    for (const m of result.messages.filter((m: { type: string }) => m.type === "dir-dependency")) {
+      expect(typeof m.dir).toBe("string");
+      expect(typeof m.glob).toBe("string");
+    }
     expect(result.map.toJSON().sources.some((s: string) => s.includes("tailwindcss"))).toBeTrue();
   });
 
