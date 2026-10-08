@@ -34,6 +34,14 @@ export function tailwind(options: BunTailwindOptions = {}): BunPlugin {
     setup(build: PluginBuilder) {
       const base = options.base ?? build.config?.root ?? process.cwd();
       const roots = new Map<string, TailwindRoot>();
+      // With a build source map, Bun reads the inline map of the generated CSS and maps its
+      // output back to the original stylesheets.
+      const buildSourcemap = build.config?.sourcemap;
+      const rootOptions: TailwindOptions = {
+        ...options,
+        sourcemap:
+          options.sourcemap ?? (buildSourcemap !== undefined && buildSourcemap !== false && buildSourcemap !== "none"),
+      };
 
       // Module graph: path -> number of times it was loaded. A root rescans a
       // file whenever the count moved since it last read it (dev server edits).
@@ -75,7 +83,7 @@ export function tailwind(options: BunTailwindOptions = {}): BunPlugin {
         const input = await Bun.file(path).text();
         if (!mayUseTailwind(input)) return undefined;
         let root = roots.get(path);
-        if (!root) roots.set(path, (root = new TailwindRoot(path, base, options)));
+        if (!root) roots.set(path, (root = new TailwindRoot(path, base, rootOptions)));
         // Every other module is loaded once `defer` resolves, so the module
         // graph holds all of them.
         await defer?.();

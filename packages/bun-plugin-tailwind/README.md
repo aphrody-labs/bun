@@ -74,8 +74,9 @@ tailwind({
 ```
 
 `Bun.build({ minify: true })` already minifies the CSS Bun outputs; `optimize` is for the plugin's own output (for
-example with the PostCSS plugin). Bun's CSS bundler does not write CSS source maps, so `sourcemap` maps are available
-through the PostCSS plugin and the `TailwindRoot` API.
+example with the PostCSS plugin). `sourcemap` defaults to the build's `sourcemap` option: with
+`Bun.build({ sourcemap: "linked" })` (or `"external"`, `"inline"`), Bun composes Tailwind's map with its own, so the CSS
+map points at your stylesheets and Tailwind's.
 
 ## PostCSS (Next.js with Turbopack or webpack, Vite)
 

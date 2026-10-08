@@ -3,6 +3,7 @@ import { bunEnv, bunExe, isDebug, tempDir } from "harness";
 import { cpSync, existsSync, readFileSync, statSync, symlinkSync, utimesSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
+import { SourceMapConsumer } from "source-map";
 import { installFixture, nextBuild, nextEnv, nextStart } from "../next-app/test/next-helpers";
 
 // @aphrody/bun-plugin-tailwind (packages/bun-plugin-tailwind). The fixtures have
@@ -32,6 +33,9 @@ beforeAll(async () => {
   postcssPlugin = (await import(join(pluginDir, "src", "postcss.ts"))).default;
 });
 
+// Cold Tailwind loads, `bun build` and server spawns outlast the default timeout in a debug build.
+const slowInDebug = isDebug ? 60_000 : undefined;
+
 async function buildCss(dir: string, entry: string, options: Record<string, unknown> = {}, buildOptions = {}) {
   const result = await Bun.build({
     entrypoints: [join(dir, entry)],
@@ -48,18 +52,22 @@ async function buildCss(dir: string, entry: string, options: Record<string, unkn
 }
 
 describe("Bun.build", () => {
-  test("HTML entry: candidates from HTML and from the scripts it loads", async () => {
-    using dir = tempDir("tw-html", {
-      "index.html": `<!doctype html><html><head><link rel="stylesheet" href="./style.css"></head>
+  test(
+    "HTML entry: candidates from HTML and from the scripts it loads",
+    async () => {
+      using dir = tempDir("tw-html", {
+        "index.html": `<!doctype html><html><head><link rel="stylesheet" href="./style.css"></head>
 <body><main class="p-4 text-red-500"></main><script type="module" src="./app.ts"></script></body></html>`,
-      "app.ts": "document.body.className = `flex underline`;",
-      "style.css": `@import "tailwindcss";`,
-    });
-    const css = await buildCss(String(dir), "index.html");
-    expect(css).toContain("tailwindcss v4");
-    for (const cls of [".p-4", ".text-red-500", ".flex", ".underline"]) expect(css).toContain(cls);
-    expect(css).not.toContain(".grid");
-  });
+        "app.ts": "document.body.className = `flex underline`;",
+        "style.css": `@import "tailwindcss";`,
+      });
+      const css = await buildCss(String(dir), "index.html");
+      expect(css).toContain("tailwindcss v4");
+      for (const cls of [".p-4", ".text-red-500", ".flex", ".underline"]) expect(css).toContain(cls);
+      expect(css).not.toContain(".grid");
+    },
+    slowInDebug,
+  );
 
   test('<link href="tailwindcss"> and import "tailwindcss" without installing tailwindcss', async () => {
     using dir = tempDir("tw-link", {
@@ -103,6 +111,51 @@ describe("Bun.build", () => {
     expect(css).not.toContain("@utility");
     expect(css).not.toContain("@custom-variant");
   });
+
+  test.each([
+    ["", 3],
+    [`@import "virt:theme.css";\n`, 4],
+  ])(
+    "sourcemap: the build's CSS map goes through Tailwind's map to the original stylesheets (%j)",
+    async (extra, cardLine) => {
+      using dir = tempDir("tw-sourcemap", {
+        "index.html": `<div class="p-4 card"></div>`,
+        "style.css": `@import "tailwindcss";\n${extra}\n.card {\n  color: red;\n}\n`,
+      });
+      const virtual: import("bun").BunPlugin = {
+        name: "virtual-sheet",
+        setup(build) {
+          build.onResolve({ filter: /^virt:/ }, ({ path }) => ({ path, namespace: "virt" }));
+          build.onLoad({ filter: /.*/, namespace: "virt" }, () => ({
+            contents: ":root { --brand: red; }",
+            loader: "css",
+          }));
+        },
+      };
+      const result = await Bun.build({
+        entrypoints: [join(String(dir), "style.css")],
+        root: String(dir),
+        outdir: join(String(dir), "out"),
+        plugins: [virtual, tw.tailwind()],
+        sourcemap: "external",
+        throw: false,
+      });
+      expect(result.logs).toEqual([]);
+      const css = await result.outputs.find(o => o.path.endsWith(".css"))!.text();
+      const map = JSON.parse(await result.outputs.find(o => o.path.endsWith(".css.map"))!.text());
+      expect(css).not.toContain("sourceMappingURL");
+      expect(map.sources).toContain("../style.css");
+      expect(map.sources.some((s: string) => s.endsWith("tailwindcss/index.css"))).toBeTrue();
+      expect(map.sourcesContent[map.sources.indexOf("../style.css")]).toContain(".card {");
+
+      const line = css.split("\n").findIndex(l => l.startsWith(".card"));
+      expect(line).toBeGreaterThanOrEqual(0);
+      const original = await SourceMapConsumer.with(map, null, consumer =>
+        consumer.originalPositionFor({ line: line + 1, column: 0, bias: 1 }),
+      );
+      expect(original).toMatchObject({ source: "../style.css", line: cardLine, column: 0 });
+    },
+  );
 
   test("@source adds, excludes and inlines candidates", async () => {
     using dir = tempDir("tw-source", {
@@ -218,33 +271,37 @@ describe("Bun.build", () => {
     expect(pretty).toContain(".p-4 {");
   });
 
-  test("theme: m3 adds the Material 3 tokens, preset and baseline scheme", async () => {
-    using dir = tempDir("tw-m3", {
-      "style.css": `@import "tailwindcss";`,
-      "index.html": `<div class="bg-primary text-on-primary rounded-large shadow-elevation-2 text-body-large"></div>`,
-    });
-    const css = await buildCss(String(dir), "style.css", { theme: "m3" });
-    expect(css).toContain(".bg-primary");
-    expect(css).toContain("var(--md-sys-color-primary)");
-    expect(css).toMatch(/--md-sys-color-primary: #[0-9a-f]{6}/i);
-    expect(css).toContain(".rounded-large");
-    expect(css).toContain(".shadow-elevation-2");
-    expect(css).toContain(".text-body-large");
-    expect(css).toContain(".dark");
+  test(
+    "theme: m3 adds the Material 3 tokens, preset and baseline scheme",
+    async () => {
+      using dir = tempDir("tw-m3", {
+        "style.css": `@import "tailwindcss";`,
+        "index.html": `<div class="bg-primary text-on-primary rounded-large shadow-elevation-2 text-body-large"></div>`,
+      });
+      const css = await buildCss(String(dir), "style.css", { theme: "m3" });
+      expect(css).toContain(".bg-primary");
+      expect(css).toContain("var(--md-sys-color-primary)");
+      expect(css).toMatch(/--md-sys-color-primary: #[0-9a-f]{6}/i);
+      expect(css).toContain(".rounded-large");
+      expect(css).toContain(".shadow-elevation-2");
+      expect(css).toContain(".text-body-large");
+      expect(css).toContain(".dark");
 
-    using custom = tempDir("tw-m3-seed", {
-      "style.css": `@import "tailwindcss";`,
-      "index.html": `<div class="bg-primary"></div>`,
-    });
-    const noScheme = await buildCss(String(custom), "style.css", { theme: { seed: false } });
-    expect(noScheme).toContain(".bg-primary");
-    expect(noScheme).not.toMatch(/--md-sys-color-primary: #/);
-    const red = await buildCss(String(custom), "style.css", { theme: { seed: "#b3261e" } });
-    expect(red).toMatch(/--md-sys-color-primary: #[0-9a-f]{6}/i);
-    expect(red.match(/--md-sys-color-primary: (#[0-9a-f]{6})/i)![1]).not.toBe(
-      css.match(/--md-sys-color-primary: (#[0-9a-f]{6})/i)![1],
-    );
-  });
+      using custom = tempDir("tw-m3-seed", {
+        "style.css": `@import "tailwindcss";`,
+        "index.html": `<div class="bg-primary"></div>`,
+      });
+      const noScheme = await buildCss(String(custom), "style.css", { theme: { seed: false } });
+      expect(noScheme).toContain(".bg-primary");
+      expect(noScheme).not.toMatch(/--md-sys-color-primary: #/);
+      const red = await buildCss(String(custom), "style.css", { theme: { seed: "#b3261e" } });
+      expect(red).toMatch(/--md-sys-color-primary: #[0-9a-f]{6}/i);
+      expect(red.match(/--md-sys-color-primary: (#[0-9a-f]{6})/i)![1]).not.toBe(
+        css.match(/--md-sys-color-primary: (#[0-9a-f]{6})/i)![1],
+      );
+    },
+    slowInDebug,
+  );
 });
 
 describe("core", () => {
@@ -306,78 +363,86 @@ describe("postcss", () => {
     expect(plugin({}).postcssPlugin).toBe("@aphrody/bun-plugin-tailwind/postcss");
   });
 
-  test("dist build for Node.js hosts", async () => {
-    const out = join(pluginDir, "dist");
-    const build = Bun.spawnSync([bunExe(), join(pluginDir, "scripts", "build.ts"), out], {
-      env: bunEnv,
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    expect(build.stderr.toString()).toBe("");
-    expect(build.exitCode).toBe(0);
-    const postcss = requireFromPlugin("postcss");
-    const plugin = requireFromPlugin("./dist/postcss.cjs");
-    using dir = tempDir("tw-postcss-dist", {
-      "style.css": `@import "tailwindcss" source("./src");`,
-      "src/a.html": `<div class="m3-check bg-primary"></div>`,
-    });
-    const from = join(String(dir), "style.css");
-    const result = await postcss([plugin({ theme: "m3" })]).process(await Bun.file(from).text(), { from });
-    expect(result.css).toContain(".bg-primary");
-    expect(result.css).toMatch(/--md-sys-color-primary: #/);
-  });
+  test(
+    "dist build for Node.js hosts",
+    async () => {
+      const out = join(pluginDir, "dist");
+      const build = Bun.spawnSync([bunExe(), join(pluginDir, "scripts", "build.ts"), out], {
+        env: bunEnv,
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      expect(build.stderr.toString()).toBe("");
+      expect(build.exitCode).toBe(0);
+      const postcss = requireFromPlugin("postcss");
+      const plugin = requireFromPlugin("./dist/postcss.cjs");
+      using dir = tempDir("tw-postcss-dist", {
+        "style.css": `@import "tailwindcss" source("./src");`,
+        "src/a.html": `<div class="m3-check bg-primary"></div>`,
+      });
+      const from = join(String(dir), "style.css");
+      const result = await postcss([plugin({ theme: "m3" })]).process(await Bun.file(from).text(), { from });
+      expect(result.css).toContain(".bg-primary");
+      expect(result.css).toMatch(/--md-sys-color-primary: #/);
+    },
+    slowInDebug,
+  );
 });
 
 describe("dev server", () => {
-  test("[serve.static] plugins: HTML route compiles Tailwind and rebuilds on source edits", async () => {
-    using dir = tempDir("tw-serve", {
-      "bunfig.toml": `[serve.static]\nplugins = [${JSON.stringify(pluginEntry)}]\n`,
-      "index.html": `<!doctype html><html><head><link rel="stylesheet" href="./style.css"></head>
+  test(
+    "[serve.static] plugins: HTML route compiles Tailwind and rebuilds on source edits",
+    async () => {
+      using dir = tempDir("tw-serve", {
+        "bunfig.toml": `[serve.static]\nplugins = [${JSON.stringify(pluginEntry)}]\n`,
+        "index.html": `<!doctype html><html><head><link rel="stylesheet" href="./style.css"></head>
 <body><div class="p-4"></div><script type="module" src="./app.ts"></script></body></html>`,
-      "app.ts": "document.body.dataset.x = `underline`;",
-      "style.css": `@import "tailwindcss";`,
-      "server.ts": `import html from "./index.html";
+        "app.ts": "document.body.dataset.x = `underline`;",
+        "style.css": `@import "tailwindcss";`,
+        "server.ts": `import html from "./index.html";
 const server = Bun.serve({ port: 0, routes: { "/": html }, development: true });
 console.log(server.url.href);`,
-    });
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "server.ts"],
-      cwd: String(dir),
-      env: bunEnv,
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const reader = proc.stdout.getReader();
-    let text = "";
-    while (!text.includes("\n")) {
-      const { value, done } = await reader.read();
-      if (done) throw new Error(`server exited: ${await proc.stderr.text()}`);
-      text += new TextDecoder().decode(value);
-    }
-    const url = new URL(text.trim());
-    const stylesheet = async () => {
-      const html = await (await fetch(url)).text();
-      const href = /href="([^"]+\.css)"/.exec(html)?.[1];
-      expect(href).toBeDefined();
-      return (await fetch(new URL(href!, url))).text();
-    };
+      });
+      await using proc = Bun.spawn({
+        cmd: [bunExe(), "server.ts"],
+        cwd: String(dir),
+        env: bunEnv,
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const reader = proc.stdout.getReader();
+      let text = "";
+      while (!text.includes("\n")) {
+        const { value, done } = await reader.read();
+        if (done) throw new Error(`server exited: ${await proc.stderr.text()}`);
+        text += new TextDecoder().decode(value);
+      }
+      const url = new URL(text.trim());
+      const stylesheet = async () => {
+        const html = await (await fetch(url)).text();
+        const href = /href="([^"]+\.css)"/.exec(html)?.[1];
+        expect(href).toBeDefined();
+        return (await fetch(new URL(href!, url))).text();
+      };
 
-    const css = await stylesheet();
-    expect(css).toContain(".p-4");
-    expect(css).toContain(".underline");
-    expect(css).not.toContain(".tracking-widest");
+      const css = await stylesheet();
+      expect(css).toContain(".p-4");
+      expect(css).toContain(".underline");
+      expect(css).not.toContain(".tracking-widest");
 
-    await Bun.write(join(String(dir), "app.ts"), "document.body.dataset.x = `underline tracking-widest`;");
-    const deadline = Date.now() + 20_000;
-    let updated = "";
-    while (Date.now() < deadline) {
-      updated = await stylesheet();
-      if (updated.includes(".tracking-widest")) break;
-      await Bun.sleep(100);
-    }
-    expect(updated).toContain(".tracking-widest");
-    proc.kill();
-  });
+      await Bun.write(join(String(dir), "app.ts"), "document.body.dataset.x = `underline tracking-widest`;");
+      const deadline = Date.now() + 20_000;
+      let updated = "";
+      while (Date.now() < deadline) {
+        updated = await stylesheet();
+        if (updated.includes(".tracking-widest")) break;
+        await Bun.sleep(100);
+      }
+      expect(updated).toContain(".tracking-widest");
+      proc.kill();
+    },
+    slowInDebug,
+  );
 });
 
 describe("@aphrody/next-bun withBun", () => {

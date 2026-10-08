@@ -126,7 +126,7 @@ export function withPrelude(css: string, prelude: Prelude | undefined): string {
  */
 const SCHEME_IMPORT =
   /@import\s+(?:url\(\s*)?(["'])(?!(?:data|https?):)(?![a-z]:[\\/])[a-z][a-z0-9+.-]*:[^"']*\1\s*\)?[^;]*;/gi;
-const HELD_IMPORT = /@import\s+(?:url\(\s*)?["']?https:\/\/external\.invalid\/(\d+)["']?\s*\)?[^;]*;\n?/g;
+const HELD_IMPORT = /@import\s+(?:url\(\s*)?["']?https:\/\/external\.invalid\/(\d+)["']?\s*\)?[^;]*;/g;
 
 function holdSchemeImports(css: string): { css: string; held: string[] } {
   const held: string[] = [];
@@ -137,15 +137,25 @@ function holdSchemeImports(css: string): { css: string; held: string[] } {
   return { css: out, held };
 }
 
-/** Puts the held imports back, first in the sheet: Tailwind leaves them after its own rules. */
-function restoreSchemeImports(css: string, held: string[]): string {
-  if (!held.length) return css;
+/**
+ * Puts the held imports back, first in the sheet: Tailwind leaves them after its own rules.
+ * Each one moves to a line of its own and leaves an empty line behind, so `map` only shifts by
+ * whole lines.
+ */
+function restoreSchemeImports(css: string, held: string[], map: string | undefined) {
+  if (!held.length) return { css, map };
   const rules: string[] = [];
   const rest = css.replace(HELD_IMPORT, (_, index: string) => {
     rules.push(held[Number(index)]);
     return "";
   });
-  return `${rules.join("")}${rest}`;
+  if (!rules.length) return { css, map };
+  if (map) {
+    const json = JSON.parse(map);
+    json.mappings = ";".repeat(rules.length) + json.mappings;
+    map = JSON.stringify(json);
+  }
+  return { css: `${rules.join("\n")}\n${rest}`, map };
 }
 
 export interface GenerateResult {
@@ -255,7 +265,7 @@ export class TailwindRoot {
       css = out.code;
       map = map ? out.map : undefined;
     }
-    css = restoreSchemeImports(css, held);
+    ({ css, map } = restoreSchemeImports(css, held, map));
     if (map) css += `\n${toSourceMap(map).inline}\n`;
 
     return {
