@@ -1,7 +1,7 @@
 import { $, which } from "bun";
 import { dlopen, ptr } from "bun:ffi";
 import { expect, test } from "bun:test";
-import { isArm64, isIntelMacOS, isWindows, tempDir, tmpdirSync } from "harness";
+import { bunEnv, bunExe, isArm64, isIntelMacOS, isWindows, tempDir, tmpdirSync } from "harness";
 import { chmodSync, copyFileSync, existsSync, mkdirSync, realpathSync, rmdirSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
@@ -103,10 +103,19 @@ if (isWindows) {
     copyFileSync(chcp, join(base, "whichtest.com"));
     const run = (cmd: string[]) =>
       Bun.spawnSync(cmd, { cwd: base, stdout: "pipe", stderr: "pipe" }).stdout.toString().trim();
+    // The cwd search is off while the spawning process has NoDefaultCurrentDirectoryInExePath set.
+    const { NoDefaultCurrentDirectoryInExePath: _, ...env } = bunEnv;
+    const spawnFromCleanEnv = Bun.spawnSync({
+      cmd: [bunExe(), "-e", `console.log(Bun.spawnSync(["whichtest"], { stdout: "pipe" }).stdout.toString().trim())`],
+      cwd: base,
+      env,
+      stdout: "pipe",
+      stderr: "inherit",
+    });
     expect({
       which_dotted: which(join(base, "deploy.prod")),
       spawn_dotted: run([join(base, "deploy.prod")]),
-      spawn_com_in_cwd: run(["whichtest"]),
+      spawn_com_in_cwd: spawnFromCleanEnv.stdout.toString().trim(),
     }).toEqual({
       which_dotted: join(base, "deploy.prod.cmd"),
       spawn_dotted: "cmd-ok",
