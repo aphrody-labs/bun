@@ -18,7 +18,7 @@
 
 import { cpSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { SCOPE } from "./scope.ts";
 
 const ROOT = join(import.meta.dir, "..", "..");
@@ -128,6 +128,17 @@ export const PACKAGES: PackageSpec[] = [
     // Fork-only: Playwright-shaped page over Bun.WebView (moved from the aphrody monorepo).
     dir: "bun-webview-page",
     fields: { description: "Playwright-shaped page, locators and routing over Bun.WebView (Aphrody fork of Bun)" },
+  },
+  {
+    // Fork-only: Tailwind CSS v4 for Bun.build, the HTML dev server and PostCSS.
+    dir: "bun-plugin-tailwind",
+    fields: { description: "Tailwind CSS v4 plugin for Bun and PostCSS (Aphrody fork of Bun)" },
+    // dist/ holds the Node.js build (ES modules and the CommonJS PostCSS plugin).
+    prepare: staging => {
+      const dir = join(ROOT, "packages", "bun-plugin-tailwind");
+      run([process.execPath, "install", "--frozen-lockfile"], dir);
+      run([process.execPath, "scripts/build.ts", join(staging, "dist")], dir);
+    },
   },
 ];
 
@@ -277,7 +288,7 @@ export async function publishAll(opts: {
     /\/$/,
     "",
   );
-  const out = opts.out ?? join(tmpdir(), "aphrody-npm");
+  const out = resolve(opts.out ?? join(tmpdir(), "aphrody-npm"));
   mkdirSync(out, { recursive: true });
   const bunVersion: string = (await Bun.file(join(ROOT, "package.json")).json()).version;
   const resolved = new Map<string, string>();

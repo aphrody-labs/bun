@@ -102,6 +102,30 @@ describe("publishManifest", () => {
     });
   });
 
+  test("bun-plugin-tailwind ships its Node.js build and pins the fork types", () => {
+    const out = publishManifest(
+      {
+        name: "@aphrody/bun-plugin-tailwind",
+        version: "0.1.0",
+        exports: { "./postcss": { require: { bun: "./src/postcss.cjs", default: "./dist/postcss.cjs" } } },
+        dependencies: { "@tailwindcss/node": "^4.3.3" },
+        devDependencies: { "@types/bun": "../bun-types" },
+      },
+      spec("bun-plugin-tailwind"),
+      "0.1.0-aphrody.1",
+      resolved,
+    );
+    expect(typeof spec("bun-plugin-tailwind").prepare).toBe("function");
+    expect(out).toMatchObject({
+      name: "@aphrody/bun-plugin-tailwind",
+      version: "0.1.0-aphrody.1",
+      exports: { "./postcss": { require: { default: "./dist/postcss.cjs" } } },
+      dependencies: { "@tailwindcss/node": "^4.3.3" },
+      devDependencies: { "@aphrody/bun-types": "1.4.3-aphrody.2" },
+      repository: { directory: "packages/bun-plugin-tailwind" },
+    });
+  });
+
   test("a fork dependency without a published version is an error", () => {
     expect(() =>
       publishManifest(
