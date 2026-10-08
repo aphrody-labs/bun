@@ -89,13 +89,19 @@ Fichiers : `packages/bun-plugin-tailwind/**`, `test/integration/bun-plugin-tailw
   générique dupliquée dans m3.
 - ⏳ Tests, docs, publication npm.
 
-### E. Bugs Bun sous Windows (🔄)
+### E. Bugs Bun sous Windows (✅)
 
 Fichiers : `src/**`, tests dans les fichiers existants.
 
-- ⏳ Segfault du debug build sur `-e` et `test` : cause racine, correctif ; `bun bd test` utilisable.
-- ⏳ `require()` d'un chemin absolu mêlant `\` et `/` → `__dirname` faux : correctif + test (échoue avec
-  `USE_SYSTEM_BUN=1`, passe avec `bun bd test`).
+- ✅ Segfault du debug build sur `-e` et `test` : STL MSVC 14.51 (VS 2026) incompatible ABI avec le WebKit
+  prébuilt (14.44) — `std::partial_ordering` renvoyé par sret au lieu d'un registre, écriture via un pointeur
+  invalide dans `JSRunLoopTimer::Manager::scheduleTimer`. `scripts/vs-shell.ps1` choisit le toolset épinglé,
+  configure refuse un toolset plus récent, l'identité de toolchain inclut `VCToolsVersion` (`41a9c254070`).
+  Même cause pour le crash de la release `aphrody-v1.4.3-aphrody.1` (build Windows natif sur `windows-2025`,
+  MSVC 14.51.36231) ; la release croisée xwin (CRT 14.44) de `6afd1932d3e` l'évite.
+- ✅ `require()` d'un chemin absolu mêlant `\` et `/` sans extension → `__dirname` faux et module en double :
+  `load_extension` construit le chemin depuis l'entrée (`dbe3387ccf9`), test dans `require.test.ts`.
+- ✅ `which.test.ts` : cas `.com` du cwd indépendant de `NoDefaultCurrentDirectoryInExePath` (`e97556dd6c7`).
 
 ### F. Fork = noyau d'Aphrody (✅)
 
@@ -116,12 +122,24 @@ Côté Aphrody : `patches/bun`, `vendor.toml`/lock, `tools/config/vendor.json`, 
 - Reste : `docs/ecosystem/{MCP-TOOLS.md,ecosystem.json}` et `docs/reference/workspace/TOOLS.md` (générés) gardent
   l'ancienne description « vendored » de `bun_docs_*` jusqu'à leur prochaine régénération.
 
-### G. Déduplication de la couche JS Bun d'Aphrody (🔄)
+### G. Déduplication de la couche JS Bun d'Aphrody (✅)
 
 Côté Aphrody : `m3/packages/m3-bun`, `crates/ui/bun`, `crates/interop/ffi/bun`, `scripts/build/ui/packages/bun`,
 paquets `packages/**` qui refont une API Bun (`http`, `fuzzy`, `sql`, `paths`…).
 
-- ⏳ Pour chaque paquet : API Bun native, suppression, migration ici sous `@aphrody/…`, ou maintien justifié.
+- ✅ Supprimés : wrappers `bun-shell.ts` (doublons de `Bun.$`, `Bun.hash`, `Bun.semver`, `Bun.Glob`) et leurs 10
+  symboles FFI, `spawn-sync.ts`, `benchmark.ts`, `crates/interop/ffi/bun` (agent client déplacé dans
+  `@aphrody/bun/agent`), `scripts/build/ui/packages/bun`, `@aphrody/bun-forge` (npm déprécié). Aphrody `33a4b79a3`.
+- ✅ API Bun natives : `Bun.semver.order` (update), `Bun.Glob` (tauri apps), `Bun.hash.crc32` (canonical-tar,
+  mcu-image-fixture). Aphrody `9ad186926`.
+- ✅ Types : catalogue `@types/bun` → `npm:@aphrody/bun-types@1.4.3-aphrody.1`. Aphrody `aa4980040`.
+- ✅ Migré ici : `@aphrody/webview-page` → `packages/bun-webview-page` (`@aphrody/bun-webview-page`, publié
+  `0.1.1-aphrody.2`, ancien nom déprécié). Fork `5a11460837d`, `729caaf440f` ; Aphrody `69ba8ec2b`, `3250f76f6`.
+  Cause de l'e2e Windows « Chrome process closed the pipe » : un Chrome lancé en session élevée se relance
+  dé-élevé et perd le pipe CDP ; le paquet passe `--do-not-de-elevate` sous Windows (e2e Chrome 154 vert).
+  `Bun.WebView` natif a le même défaut (`src/runtime/webview/ChromeProcess.rs`, chantier E).
+- ✅ Maintenus (spécifiques Aphrody, pas une API Bun) : `@aphrody/bun` (FFI aphrody-ffi, ≠ `@aphrody/bun-runtime`),
+  `crates/ui/bun`, `m3-bun`, `@aphrody/http`, `@aphrody/sql` (fabriques sur `Bun.SQL`), `fuzzy`, `qr`.
 
 ### H. Docs Bun d'Aphrody (✅)
 
