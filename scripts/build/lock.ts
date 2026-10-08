@@ -41,8 +41,7 @@ export function lockBuildDir(buildDir: string, log: (line: string) => void): () 
       closeSync(fd);
       const release = () => {
         try {
-          if (readFileSync(path, "utf8").startsWith(`${process.pid}\n`))
-            rmSync(path, { force: true });
+          if (readFileSync(path, "utf8").startsWith(`${process.pid}\n`)) rmSync(path, { force: true });
         } catch {}
       };
       process.on("exit", release);

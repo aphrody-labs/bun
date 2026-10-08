@@ -35,12 +35,7 @@ import {
   spawnWithAnnotations,
   timingsChartName,
 } from "./build/ci.ts";
-import {
-  formatConfig,
-  formatConfigUnchanged,
-  type Config,
-  type PartialConfig,
-} from "./build/config.ts";
+import { formatConfig, formatConfigUnchanged, type Config, type PartialConfig } from "./build/config.ts";
 import {
   codegenConfigOf,
   configOf,
@@ -75,15 +70,7 @@ async function main(): Promise<void> {
     const vsShell = join(import.meta.dirname, "vs-shell.ps1");
     const result = spawnSync(
       "pwsh",
-      [
-        "-NoProfile",
-        "-NoLogo",
-        "-File",
-        vsShell,
-        process.argv0,
-        import.meta.filename,
-        ...process.argv.slice(2),
-      ],
+      ["-NoProfile", "-NoLogo", "-File", vsShell, process.argv0, import.meta.filename, ...process.argv.slice(2)],
       { stdio: "inherit" },
     );
     if (result.error) {
@@ -99,8 +86,7 @@ async function main(): Promise<void> {
   // build left behind, so it runs on the build directory as it is, with the ninja the build runs.
   if (args.ninjaTool !== undefined) {
     const toolInput: ConfigureInput = { profile: args.profile, overrides: args.overrides };
-    const cfg =
-      modeOf(toolInput) === "codegen" ? codegenConfigOf(toolInput) : configOf(toolInput).cfg;
+    const cfg = modeOf(toolInput) === "codegen" ? codegenConfigOf(toolInput) : configOf(toolInput).cfg;
     if (!existsSync(join(cfg.buildDir, "build.ninja"))) {
       throw new BuildError(`${cfg.buildDir} has not been configured`, {
         hint: "Build it, or configure it with --configure-only, using the same profile flags.",
@@ -131,12 +117,7 @@ async function main(): Promise<void> {
     ? loadConfigFile(args.configFile)
     : { profile: args.profile, overrides: args.overrides };
 
-  const ninjaArgv = (cfg: { buildDir: string }) => [
-    "-C",
-    cfg.buildDir,
-    ...args.ninjaArgs,
-    ...args.ninjaTargets,
-  ];
+  const ninjaArgv = (cfg: { buildDir: string }) => ["-C", cfg.buildDir, ...args.ninjaArgs, ...args.ninjaTargets];
   // GNU-style include-path vars (CPATH, C_INCLUDE_PATH, CPLUS_INCLUDE_PATH,
   // OBJC_INCLUDE_PATH) apply to every clang invocation regardless of
   // --target. A build environment may set them for the *host* gcc toolchain
@@ -145,10 +126,7 @@ async function main(): Promise<void> {
   // found"). Scrub them for Windows cross builds — they are host-targeted by
   // definition. Native Windows builds (INCLUDE/LIB from the VS dev shell) and
   // every other target keep the environment as provisioned.
-  const ninjaEnv = (
-    cfg: { windows: boolean; host: { os: string } },
-    env: Record<string, string>,
-  ) => {
+  const ninjaEnv = (cfg: { windows: boolean; host: { os: string } }, env: Record<string, string>) => {
     const merged: NodeJS.ProcessEnv = { ...process.env, ...env };
     if (cfg.windows && cfg.host.os !== "windows") {
       for (const name of ["CPATH", "C_INCLUDE_PATH", "CPLUS_INCLUDE_PATH", "OBJC_INCLUDE_PATH"]) {
@@ -176,9 +154,7 @@ async function main(): Promise<void> {
     }
     const result = await configureCodegen(input);
     if (!args.quiet) {
-      process.stderr.write(
-        `codegen only → ${result.cfg.codegenDir} (configured in ${result.elapsed}ms)\n`,
-      );
+      process.stderr.write(`codegen only → ${result.cfg.codegenDir} (configured in ${result.elapsed}ms)\n`);
     }
     if (args.configureOnly) return;
     const ninja = spawnSync(result.ninja, ninjaArgv(result.cfg), { stdio: "inherit" });
@@ -195,10 +171,8 @@ async function main(): Promise<void> {
     // The order file is a link input, so it must land before the linking ninja pass.
     const orderCtx = orderFileContext();
     const runInherit = () =>
-      inheritOrderFile(result.cfg, orderCtx).catch((e) => {
-        console.log(
-          `~ symbol order: inherit failed (${(e as Error)?.message ?? e}); linking unordered`,
-        );
+      inheritOrderFile(result.cfg, orderCtx).catch(e => {
+        console.log(`~ symbol order: inherit failed (${(e as Error)?.message ?? e}); linking unordered`);
         return false;
       });
     const ninja = result.ninja;
@@ -223,13 +197,9 @@ async function main(): Promise<void> {
     // artifacts still upload.
     startGroup("Build timings", () => {
       try {
-        reportTimings(result.cfg, (t) => process.stdout.write(t));
+        reportTimings(result.cfg, t => process.stdout.write(t));
       } catch (error) {
-        console.log(
-          error instanceof BuildError
-            ? error.format()
-            : `build timings: ${(error as Error).stack ?? error}`,
-        );
+        console.log(error instanceof BuildError ? error.format() : `build timings: ${(error as Error).stack ?? error}`);
       }
     });
 
@@ -239,13 +209,12 @@ async function main(): Promise<void> {
     }
   } else {
     // Local: configure, then spawn ninja, one build of a build directory at a time.
-    const releaseLock = lockBuildDir(configOf(input).cfg.buildDir, (line) =>
+    const releaseLock = lockBuildDir(configOf(input).cfg.buildDir, line =>
       process.stderr.write(`[build] ${line}
 `),
     );
     const result = await configure(input);
-    for (const exe of [result.output.exe, result.output.strippedExe])
-      if (exe) unlockRunningExe(exe);
+    for (const exe of [result.output.exe, result.output.strippedExe]) if (exe) unlockRunningExe(exe);
 
     // Quiet one-liner when configure was a no-op — the full banner only
     // prints when build.ninja changed. Timing matters: a regression here
@@ -256,8 +225,7 @@ async function main(): Promise<void> {
     // --quiet or automatically when positionals are present (you want to see
     // your test output, not a wall of [N/M] lines above it).
     // Not with -n, -d <mode> or -v: what ninja prints is what those were asked for.
-    const quiet =
-      (args.quiet || args.execArgs.length > 0) && !args.ninjaArgs.some((a) => /^-[ndv]/.test(a));
+    const quiet = (args.quiet || args.execArgs.length > 0) && !args.ninjaArgs.some(a => /^-[ndv]/.test(a));
 
     // Configure summary. Full block only when build.ninja changed (new
     // profile/flags/sources) — a no-op reconfigure, which happens every
@@ -277,7 +245,7 @@ async function main(): Promise<void> {
 
     if (args.configureOnly) {
       // The report describes the build directory, so it needs no build: this is how to ask for it without one.
-      if (args.timings) reportTimings(result.cfg, (t) => process.stderr.write(t));
+      if (args.timings) reportTimings(result.cfg, t => process.stderr.write(t));
       return;
     }
     // FD 3 sideband — only when interactive. stream.ts (wrapping deps and
@@ -323,17 +291,14 @@ async function main(): Promise<void> {
     }
 
     releaseLock();
-    if (args.timings) reportTimings(result.cfg, (t) => process.stderr.write(t));
+    if (args.timings) reportTimings(result.cfg, t => process.stderr.write(t));
 
     if (args.execArgs.length === 0) {
       // Closing line on success: when restat prunes most of the graph
       // (local WebKit no-op shows `[1/555] build WebKit` then silence),
       // it's not obvious ninja finished vs. stalled. This disambiguates.
       // Targets named when explicit so it's clear what was actually built.
-      const what =
-        args.ninjaTargets.length > 0
-          ? ` ${args.ninjaTargets.map((t) => nameColor(t)).join(", ")}`
-          : "";
+      const what = args.ninjaTargets.length > 0 ? ` ${args.ninjaTargets.map(t => nameColor(t)).join(", ")}` : "";
       status(`[build]${what} done`);
       process.exit(0);
     }
@@ -382,10 +347,7 @@ function reportTimings(cfg: Config, write: (text: string) => void): void {
  */
 async function maybeBypassProxyForCratesIo(): Promise<void> {
   const proxySet =
-    process.env.HTTPS_PROXY ||
-    process.env.HTTP_PROXY ||
-    process.env.https_proxy ||
-    process.env.http_proxy;
+    process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.https_proxy || process.env.http_proxy;
   if (!proxySet) return;
 
   // Both case variants are honoured by different tools; merge them so we
@@ -400,7 +362,7 @@ async function maybeBypassProxyForCratesIo(): Promise<void> {
   if (bypass.has("crates.io")) return;
 
   const { connect } = await import("node:net");
-  const directReachable = await new Promise<boolean>((resolve) => {
+  const directReachable = await new Promise<boolean>(resolve => {
     const sock = connect({ host: "index.crates.io", port: 443, timeout: 2000 });
     const done = (ok: boolean) => {
       sock.destroy();
@@ -473,11 +435,7 @@ interface CliArgs {
 }
 
 /** How a `--<field>=<value>` is read, which the field's type decides. */
-type ConfigFlagKind<T> = [T] extends [boolean]
-  ? "boolean"
-  : [T] extends [number]
-    ? "number"
-    : "string";
+type ConfigFlagKind<T> = [T] extends [boolean] ? "boolean" : [T] extends [number] ? "number" : "string";
 
 /**
  * Every `PartialConfig` field is a `--<field>` flag. The mapped type makes this list complete and correct by
@@ -532,14 +490,7 @@ const configFlags: {
 };
 
 /** `ninja -d list` */
-const ninjaDebugModes = new Set([
-  "stats",
-  "explain",
-  "keepdepfile",
-  "keeprsp",
-  "nostatcache",
-  "list",
-]);
+const ninjaDebugModes = new Set(["stats", "explain", "keepdepfile", "keeprsp", "nostatcache", "list"]);
 
 /**
  * Parse argv. Format:
@@ -637,11 +588,8 @@ function parseArgs(argv: string[]): CliArgs {
     }
     const rawKey = eq[1]!;
     const key = rawKey.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
-    const kind = Object.hasOwn(configFlags, key)
-      ? configFlags[key as keyof PartialConfig]
-      : undefined;
-    const isOurs =
-      key === "profile" || key === "target" || key === "configFile" || kind !== undefined;
+    const kind = Object.hasOwn(configFlags, key) ? configFlags[key as keyof PartialConfig] : undefined;
+    const isOurs = key === "profile" || key === "target" || key === "configFile" || kind !== undefined;
 
     let value = eq[2];
     if (value === undefined) {
@@ -676,11 +624,7 @@ function parseArgs(argv: string[]): CliArgs {
     } else {
       // The value's type follows `kind`, which `configFlags` ties to the field's declared type.
       (overrides as Record<string, boolean | number | string>)[key] =
-        kind === "boolean"
-          ? parseBool(value)
-          : kind === "number"
-            ? parseInteger(rawKey, value)
-            : value;
+        kind === "boolean" ? parseBool(value) : kind === "number" ? parseInteger(rawKey, value) : value;
     }
   }
 
@@ -699,8 +643,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function parseInteger(flag: string, v: string): number {
-  if (!/^\d+$/.test(v))
-    throw new BuildError(`--${flag} takes a non-negative integer, got: ${JSON.stringify(v)}`);
+  if (!/^\d+$/.test(v)) throw new BuildError(`--${flag} takes a non-negative integer, got: ${JSON.stringify(v)}`);
   return Number(v);
 }
 
