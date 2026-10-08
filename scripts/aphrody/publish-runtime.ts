@@ -282,7 +282,7 @@ export async function publish(staged: Staged, version: string, dryRun: boolean) 
     console.log(`${dryRun ? "dry-run" : "publish"} ${name}@${version}`);
     bunPublish(dir, dryRun);
   }
-  for (const { name, dir } of order) await retirePlaceholder(name, { cwd: dir, dryRun });
+  for (const { name, dir } of order) await retirePlaceholder(name, { cwd: dir, dryRun, published: version });
 }
 
 function flag(args: string[], name: string): string | undefined {

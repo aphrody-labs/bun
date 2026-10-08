@@ -127,7 +127,7 @@ if (import.meta.main) {
           [process.execPath, "publish", "--access", "public", "--tag", "latest", ...(dryRun ? ["--dry-run"] : [])],
           dir,
         );
-      await retirePlaceholder(INSPECTOR_PACKAGE, { cwd: dir, dryRun });
+      await retirePlaceholder(INSPECTOR_PACKAGE, { cwd: dir, dryRun, published: version });
     }
   }
 }

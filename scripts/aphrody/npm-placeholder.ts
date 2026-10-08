@@ -24,12 +24,29 @@ function npmCommand(): string[] {
   return Bun.which("npm") ? ["npm"] : [process.execPath, "x", "--bun", "npm"];
 }
 
-/** Deprecates `<name>@0.0.0-stage` if the registry has it; `cwd` holds the `.npmrc` with the token. */
-export async function retirePlaceholder(name: string, opts: { cwd: string; dryRun?: boolean }): Promise<boolean> {
-  const res = await fetch(`https://registry.npmjs.org/${name.replace("/", "%2f")}`);
-  if (res.status === 404) return false;
+async function packument(name: string): Promise<Packument | undefined> {
+  const res = await fetch(`https://registry.npmjs.org/${name.replace("/", "%2f")}`, {
+    headers: { "cache-control": "no-cache" },
+  });
+  if (res.status === 404) return undefined;
   if (!res.ok) throw new Error(`registry ${name}: HTTP ${res.status}`);
-  if (!placeholderNeedsRetiring((await res.json()) as Packument)) return false;
+  return (await res.json()) as Packument;
+}
+
+/**
+ * Deprecates `<name>@0.0.0-stage` if the registry has it; `cwd` holds the `.npmrc` with the token.
+ * `published`: a version just published, waited for (a new package takes minutes to appear).
+ */
+export async function retirePlaceholder(
+  name: string,
+  opts: { cwd: string; dryRun?: boolean; published?: string },
+): Promise<boolean> {
+  let doc = await packument(name);
+  for (let i = 0; !opts.dryRun && opts.published && !doc?.versions?.[opts.published] && i < 30; i++) {
+    await Bun.sleep(10_000);
+    doc = await packument(name);
+  }
+  if (!doc || !placeholderNeedsRetiring(doc)) return false;
   const spec = `${name}@${PLACEHOLDER_VERSION}`;
   console.log(`${opts.dryRun ? "dry-run " : ""}deprecate ${spec}`);
   if (opts.dryRun) return true;

@@ -265,7 +265,7 @@ export async function publish(staged: StagedMdx, version: string, dryRun: boolea
     const r = spawnSync(process.execPath, args, { cwd: dir, stdio: "inherit", env: process.env });
     if (r.status !== 0) throw new Error(`bun publish failed in ${dir}`);
   }
-  for (const { name, dir } of order) await retirePlaceholder(name, { cwd: dir, dryRun });
+  for (const { name, dir } of order) await retirePlaceholder(name, { cwd: dir, dryRun, published: version });
 }
 
 function flag(args: string[], name: string): string | undefined {

@@ -1,0 +1,36 @@
+name: Aphrody npm placeholder
+
+# Deprecates the `0.0.0-stage` placeholder that npm's staged publishing creates
+# on a package's first publish (scripts/aphrody/npm-placeholder.ts).
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: "Space-separated @aphrody package names (empty: every package of the fork)"
+        type: string
+        required: false
+
+env:
+  BUN_HOST_VERSION: "1.4.2"
+
+jobs:
+  retire:
+    if: github.repository == 'aphrody-labs/bun'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+        with:
+          bun-version: ${{ env.BUN_HOST_VERSION }}
+      - name: Retire placeholders
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PACKAGES: ${{ inputs.packages }}
+        run: bun scripts/aphrody/npm-placeholder.ts retire $PACKAGES
