@@ -1,0 +1,20 @@
+# V : passe lourde sur le VPS (état des runs)
+
+Hôte : vps-203bea89 (12 CPU, 45 Go, Ubuntu 26.04). Tout sous `nice -n 19 ionice -c3`, conteneurs `--cpu-shares 256`.
+Runner : `~/yolo/run.sh <job> '<cmd>'` (tmux `yolo`, log `~/yolo/logs/<job>.log`, code `<job>.exit`) ;
+état : `~/yolo/status.sh` ; conteneur : `~/yolo/dk.sh <image> <espace> '<cmd>'` (espace = `~/yolo/w/<espace>` sur `/work`,
+volumes `yolo-cargo-registry`, `yolo-bun-install-<distro>`, `yolo-build-cache-<distro>`, `yolo-ccache-<distro>`, `yolo-sccache-<distro>`).
+
+| Job | Commit testé | Statut | Durée | Preuve / remarque |
+| --- | --- | --- | --- | --- |
+| J1 image `aphrody/build-linux:26.04` | bun c6a6689e23 | ✅ | 678 s | `logs/j1.log` (clang 23, nightly-2026-09-15, bun 1.4.2) |
+| J2 image Alpine | bun c6a6689e23 | ⚠️ repli | 180 s | `aphrody-alpine.Dockerfile` échoue : le dépôt apk publié `aphrody-3.24-x86_64` ne contient que 5 paquets `cosmic-*` (bun, aphrody, n2b, aphrody-bun-build-deps, sudo-rs… absents) car tous les jobs CI « Aphrody packages » échouent. Image retenue : `aphrody/build-alpine:3.24` (alpine.Dockerfile de fd278401fca, llvm23@edge) |
+| J3 debug glibc + tests | en cours | ⏳ | | |
+| J4 debug musl + tests | a4590271ba0 | ⏳ | | 1er essai : E0502 dans `src/sys/bun_accel.rs:63` (code Linux seul, 1e76474491a) → corrigé a4590271ba0 |
+| J5 release glibc puis musl | en cours | ⏳ | | |
+| J6 rust:check-all / deny / nextest | en cours | ⏳ | | 1er essai : `vendor/lolhtml` absent (environnement) → job corrigé (`--target=lolhtml --target=rust-argon2 --target=rust-codegen-ready`) |
+| J7 abuild aphrody/* | aports 928e81e9392 | ⏳ | | zlib-rs (c_variadic instable) → 91f1df49ca8 ; uutils-findutils (3 tests en root), rust-stable/rust-nightly (busybox unxz « corrupted data », xz OK : `logs/xztest.log`), system76-scheduler (sched_param musl), linux-aphrody (libclang pour bindgen, pkgdesc v3 > 128) → 2f9b564280f ; cosmic-sound-theme, cosmic-wallpapers, uutils-diffutils ✅ |
+| J8 images aphrody-os | aphrody c46a59b7 | ❌ bloqué | 22 s | `runtime` ✅ ; `cli`/`desktop` : `aphrody-rust-base (no such package)` (même cause que J2) |
+| J9 aphrody Linux | aphrody 75bbbf51 | ⏳ | | install ✅ ; typecheck:packages ❌ : m3-example (`@aphrody/m3/config`, `/plugin` introuvables, m3 en cours chez F3), rag-core (`#cli-wasm-glue` et `wasm/aphrody_command_wasm.js` générés absents) ; PromiseWithResolvers/Uint8Array corrigés entre-temps par c17e57d7b9 |
+| J10 bun-oxc + bun-cosmic | bun 1498e391c8 | ❌ | 486 s | `crates/oxc-tools/src/lint.rs:196-197` : `RuleTableRow` sans `documentation`/`version` à la rev oxc b2569644 (6922c5edba7, Z1) ; clippy absent de la chaîne stable du paquet → job corrigé |
+| bun-types (Bun système) | bun 1498e391c8 | ✅ | 760 s | 22 pass / 0 fail |
