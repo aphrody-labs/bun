@@ -2441,6 +2441,7 @@ dependencies = [
 name = "bun_vfs"
 version = "0.0.0"
 dependencies = [
+ "bun_graph",
  "globset",
  "ignore",
  "memchr",

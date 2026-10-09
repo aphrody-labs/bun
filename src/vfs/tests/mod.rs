@@ -698,3 +698,36 @@ fn volume_build_and_query() {
     eprintln!("refresh={:?} {refresh:?}", started.elapsed());
     let _ = fs::remove_file(snapshot);
 }
+
+#[test]
+fn load_builds_then_reuses_the_snapshot() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::write(dir.path().join("src/a.txt"), "a").unwrap();
+    let snapshot = store.path().join("index.bvfs");
+    let options = IndexOptions {
+        root: dir.path().to_path_buf(),
+        ..IndexOptions::default()
+    };
+    let cancel = AtomicBool::new(false);
+    let (index, report) = Index::load(&options, Some(&snapshot), &cancel).unwrap();
+    assert!(!report.reused && report.saved_bytes.is_some());
+    let first = index.len();
+    drop(index);
+    let (index, report) = Index::load(&options, Some(&snapshot), &cancel).unwrap();
+    assert!(report.reused);
+    assert_eq!(index.len(), first);
+    drop(index);
+    std::fs::write(dir.path().join("src/b.txt"), "b").unwrap();
+    let (index, report) = Index::load(&options, Some(&snapshot), &cancel).unwrap();
+    assert!(report.reused && report.saved_bytes.is_some());
+    assert_eq!(index.len(), first + 1);
+    drop(index);
+    let other = IndexOptions {
+        hidden: false,
+        ..options
+    };
+    let (_, report) = Index::load(&other, Some(&snapshot), &cancel).unwrap();
+    assert!(!report.reused);
+}

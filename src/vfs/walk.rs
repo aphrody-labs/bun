@@ -16,9 +16,9 @@ use crate::{
 pub(crate) struct WalkConfig<'a> {
     pub threads: usize,
     pub hidden: bool,
-    #[cfg_attr(windows, allow(dead_code))]
+    #[cfg(not(windows))]
     pub stat: bool,
-    #[cfg_attr(windows, allow(dead_code))]
+    #[cfg(not(windows))]
     pub one_file_system: bool,
     pub max_entries: usize,
     pub exclusions: &'a Exclusions,

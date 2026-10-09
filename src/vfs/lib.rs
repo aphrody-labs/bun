@@ -81,11 +81,22 @@ pub use edit::{
     SpanProvider, edit,
 };
 pub use grep::{GrepHit, GrepOptions, GrepPage, grep};
-pub use index::{Index, IndexOptions, IndexStats, RefreshStats, SourceChoice};
+pub use index::{Index, IndexOptions, IndexStats, LoadReport, RefreshStats, SourceChoice};
 pub use search::{
     Hit, HitKind, KindFilter, MAX_LIMIT, QueryMode, SearchPage, SearchQuery, SortOrder,
 };
 pub use table::{Journal, Source};
+
+/// [`SpanProvider`] backed by the Oxc parser of `bun_graph` (feature `identifiers`).
+#[cfg(feature = "identifiers")]
+pub struct OxcIdentifiers;
+
+#[cfg(feature = "identifiers")]
+impl SpanProvider for OxcIdentifiers {
+    fn identifier_spans(&self, path: &str, source: &str, name: &str) -> core::result::Result<Vec<(usize, usize)>, String> {
+        bun_graph::extract::typescript::identifier_spans(path, source, name)
+    }
+}
 
 /// Errors of every vfs operation.
 #[derive(Debug, thiserror::Error)]

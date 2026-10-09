@@ -95,6 +95,17 @@ pub struct IndexStats {
     pub unreadable: usize,
 }
 
+/// What [`Index::load`] did.
+#[derive(Debug, Clone, Serialize)]
+pub struct LoadReport {
+    pub snapshot: String,
+    /// The snapshot was opened (and refreshed) rather than rebuilt.
+    pub reused: bool,
+    pub refresh: Option<RefreshStats>,
+    /// Size of the snapshot written back, when it was.
+    pub saved_bytes: Option<u64>,
+}
+
 /// What [`Index::refresh`] changed.
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct RefreshStats {
@@ -276,8 +287,9 @@ fn normalize_root(root: &Path) -> Result<Vec<u8>> {
 }
 
 /// `C:\` style volume root.
+#[cfg(windows)]
 fn is_volume_root(root: &[u8]) -> bool {
-    cfg!(windows) && root.len() == 3 && root[0].is_ascii_alphabetic() && root[1] == b':'
+    root.len() == 3 && root[0].is_ascii_alphabetic() && root[1] == b':'
 }
 
 impl Index {
@@ -382,6 +394,44 @@ impl Index {
             hash = (hash ^ u64::from(byte)).wrapping_mul(0x100_0000_01b3);
         }
         dir.join(format!("{hash:016x}.bvfs"))
+    }
+
+    /// Opens the snapshot of `options.root` (`snapshot`, else [`Index::default_snapshot_path`]) and
+    /// brings it up to date, or builds the index when the snapshot is missing, unreadable or was
+    /// built with other options; writes the snapshot back when it was built or changed.
+    pub fn load(options: &IndexOptions, snapshot: Option<&Path>, cancel: &AtomicBool) -> Result<(Index, LoadReport)> {
+        let root = normalize_root(&options.root)?;
+        let root_text = String::from_utf8_lossy(&root).into_owned();
+        let path = snapshot.map_or_else(|| Self::default_snapshot_path(&root_text), Path::to_path_buf);
+        let mut wanted = options.clone();
+        wanted.root = PathBuf::from(&root_text);
+        let comparable = |options: &IndexOptions| {
+            let mut options = options.clone();
+            options.threads = 0;
+            serde_json::to_string(&options).unwrap_or_default()
+        };
+        let reusable = Index::open(&path)
+            .ok()
+            .filter(|index| index.meta.root == root_text && comparable(&index.meta.options) == comparable(&wanted));
+        let (index, reused, refresh) = match reusable {
+            Some(mut index) => {
+                index.meta.options.threads = options.threads;
+                let stats = index.refresh(cancel)?;
+                (index, true, Some(stats))
+            }
+            None => (Index::build(&wanted, cancel)?, false, None),
+        };
+        let changed = refresh.as_ref().is_none_or(|stats| stats.rebuilt || stats.added + stats.removed + stats.updated > 0);
+        let saved_bytes = if changed { Some(index.save(&path)?) } else { None };
+        Ok((
+            index,
+            LoadReport {
+                snapshot: path.to_string_lossy().into_owned(),
+                reused,
+                refresh,
+                saved_bytes,
+            },
+        ))
     }
 
     pub fn root(&self) -> &str {
@@ -532,6 +582,7 @@ impl Index {
         Ok(())
     }
 
+    #[cfg(windows)]
     pub(crate) fn meta_mut(&mut self) -> &mut Meta {
         &mut self.meta
     }
@@ -633,7 +684,9 @@ impl Index {
         let config = WalkConfig {
             threads: 1,
             hidden: options.hidden,
+            #[cfg(not(windows))]
             stat: options.stat,
+            #[cfg(not(windows))]
             one_file_system: options.one_file_system,
             max_entries: options.max_entries,
             exclusions: &exclusions,
@@ -733,7 +786,9 @@ fn walk_tree(
     let config = WalkConfig {
         threads: crate::threads(options.threads),
         hidden: options.hidden,
+        #[cfg(not(windows))]
         stat: options.stat,
+        #[cfg(not(windows))]
         one_file_system: options.one_file_system,
         max_entries: options.max_entries,
         exclusions,

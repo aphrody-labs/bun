@@ -540,9 +540,80 @@ pub fn extract_with_limits(
     Ok(extractor.out)
 }
 
+struct Identifiers<'n> {
+    name: &'n str,
+    spans: Vec<(usize, usize)>,
+}
+
+impl Identifiers<'_> {
+    fn push(&mut self, name: &str, span: oxc_span::Span) {
+        if name == self.name {
+            self.spans.push((span.start as usize, span.end as usize));
+        }
+    }
+}
+
+impl<'a> Visit<'a> for Identifiers<'_> {
+    fn visit_identifier_name(&mut self, it: &oxc_ast::ast::IdentifierName<'a>) {
+        self.push(&it.name, it.span);
+    }
+    fn visit_identifier_reference(&mut self, it: &oxc_ast::ast::IdentifierReference<'a>) {
+        self.push(&it.name, it.span);
+    }
+    fn visit_binding_identifier(&mut self, it: &oxc_ast::ast::BindingIdentifier<'a>) {
+        self.push(&it.name, it.span);
+    }
+    fn visit_label_identifier(&mut self, it: &oxc_ast::ast::LabelIdentifier<'a>) {
+        self.push(&it.name, it.span);
+    }
+    fn visit_jsx_identifier(&mut self, it: &oxc_ast::ast::JSXIdentifier<'a>) {
+        self.push(&it.name, it.span);
+    }
+}
+
+/// Byte spans of every identifier token spelled `name` in a JS/TS source (bindings, references,
+/// property and member names, labels, JSX names), sorted and deduplicated; strings, comments and
+/// template text never match. `rel_path` picks the dialect from its extension.
+pub fn identifier_spans(rel_path: &str, source: &str, name: &str) -> core::result::Result<Vec<(usize, usize)>, String> {
+    let types = parse_source_types(rel_path);
+    if types.is_empty() {
+        return Err(format!("{rel_path}: not a JavaScript or TypeScript file"));
+    }
+    let allocator = Allocator::default();
+    let mut first_error = None;
+    for source_type in types {
+        let parsed = Parser::new(&allocator, source, source_type).parse();
+        if parsed.fatal_error || parsed.diagnostics.errors().next().is_some() {
+            if first_error.is_none() {
+                first_error = parsed.diagnostics.errors().next().map(|error| error.message.to_string());
+            }
+            continue;
+        }
+        let mut found = Identifiers { name, spans: Vec::new() };
+        found.visit_program(&parsed.program);
+        found.spans.sort_unstable();
+        found.spans.dedup();
+        return Ok(found.spans);
+    }
+    Err(format!("{rel_path}: Oxc could not parse the file: {}", first_error.unwrap_or_default()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn identifier_spans_skip_strings_and_comments() {
+        let source = "const foo = 1; // foo
+const s = \"foo\"; obj.foo(foo); label: foo;
+";
+        let spans = identifier_spans("a.ts", source, "foo").unwrap();
+        let texts: Vec<&str> = spans.iter().map(|(from, to)| &source[*from..*to]).collect();
+        assert_eq!(texts, ["foo"; 4]);
+        assert_eq!(spans.len(), 4);
+        assert!(identifier_spans("a.ts", "const = ;", "foo").is_err());
+        assert!(identifier_spans("a.txt", "foo", "foo").is_err());
+    }
 
     #[test]
     fn extracts_named_functions_calls_and_module_imports() {

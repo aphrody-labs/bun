@@ -17,6 +17,7 @@ pub(crate) const UNKNOWN_SIZE: u64 = u64::MAX;
 pub(crate) const FLAG_DIR: u16 = 1;
 pub(crate) const FLAG_LINK: u16 = 1 << 1;
 pub(crate) const FLAG_HIDDEN: u16 = 1 << 2;
+#[cfg(windows)]
 pub(crate) const FLAG_SYSTEM: u16 = 1 << 3;
 
 const MAGIC: [u8; 8] = *b"BUNVFS\x02\x00";
