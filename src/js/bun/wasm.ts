@@ -226,7 +226,7 @@ async function optimize(input, options = {}) {
 function rawLoader(name, wasi) {
   if (wasi) {
     return {
-      js: `import { WASI } from "node:wasi";
+      js: `const { WASI } = process.getBuiltinModule("node:wasi");
 
 const url = new URL("./${name}.wasm", import.meta.url);
 
@@ -417,8 +417,8 @@ function result(outdir, name, bindgen, component, cached) {
 }
 
 /**
- * A Bun plugin that makes `import init from "./crate/Cargo.toml"` and `import init from "./src/lib.rs"`
- * build the crate (cached in its Cargo target directory) and load the generated module.
+ * A Bun plugin that builds the crate when a module imports its `Cargo.toml` or one of its `.rs` files
+ * (cached in its Cargo target directory) and loads the generated module.
  */
 function plugin(options = {}) {
   return {
