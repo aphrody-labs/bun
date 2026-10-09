@@ -980,7 +980,6 @@ function pascalCase(s: string): string {
 function emitJsSink({ n, cfg, o, dirStamp }: Ctx): void {
   const script = resolve(cfg.cwd, "src", "codegen", "generate-jssink.ts");
   const hashTableScript = resolve(cfg.cwd, "src", "codegen", "create-hash-table.ts");
-  const perlScript = resolve(cfg.cwd, "src", "codegen", "create_hash_table");
 
   // generate-jssink.ts writes JSSink.{cpp,h,lut.txt} + generated_jssink.rs (the
   // Rust `#[no_mangle]` thunks), then calls create-hash-table.ts in-process to
@@ -997,7 +996,7 @@ function emitJsSink({ n, cfg, o, dirStamp }: Ctx): void {
   n.build({
     outputs,
     rule: "codegen",
-    inputs: [script, hashTableScript, perlScript],
+    inputs: [script, hashTableScript],
     orderOnlyInputs: [dirStamp],
     vars: {
       cwd: cfg.cwd,
@@ -1020,12 +1019,11 @@ function emitJsSink({ n, cfg, o, dirStamp }: Ctx): void {
  * script takes a single (src, out) pair.
  *
  * The source .cpp files contain `@begin XXXTable ... @end` blocks that the
- * perl script parses into JSC HashTableValue arrays. The TS wrapper adds
- * platform-specific #if preprocessing via TARGET_PLATFORM env var.
+ * script parses into JSC HashTableValue arrays, after dropping the #if blocks
+ * of other platforms (TARGET_PLATFORM env var).
  */
 function emitObjectLuts({ n, cfg, o, dirStamp }: Ctx): void {
   const script = resolve(cfg.cwd, "src", "codegen", "create-hash-table.ts");
-  const perlScript = resolve(cfg.cwd, "src", "codegen", "create_hash_table");
 
   // (source, output) pairs.
   const pairs: [src: string, out: string][] = [
@@ -1061,7 +1059,7 @@ function emitObjectLuts({ n, cfg, o, dirStamp }: Ctx): void {
       outputs: [out],
       rule: "codegen",
       inputs: [src],
-      implicitInputs: [script, perlScript],
+      implicitInputs: [script],
       orderOnlyInputs: [dirStamp],
       vars: {
         cwd: cfg.cwd,

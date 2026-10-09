@@ -145,8 +145,6 @@ function jobScript(name: string, command: string, cwd: string, container: Contai
       file,
       [
         `Set-Location -LiteralPath ${psQuote(cwd)}`,
-        // `bun bd` needs perl (LUT codegen); on Windows it is Git's, which only Git Bash puts on PATH.
-        `if (-not (Get-Command perl -ErrorAction SilentlyContinue) -and (Get-Command git -ErrorAction SilentlyContinue)) { $env:PATH += ';' + (Join-Path (Split-Path (Split-Path (Get-Command git).Source)) 'usr\\bin') }`,
         `pwsh -NoProfile -EncodedCommand ${encoded} *>&1 | Tee-Object -FilePath ${psQuote(log)} -Append`,
         `Set-Content -LiteralPath ${psQuote(exit)} -Value $LASTEXITCODE -NoNewline`,
       ].join("\n"),

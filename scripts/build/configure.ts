@@ -370,7 +370,7 @@ export interface CodegenConfigureResult<N extends string | undefined = string> {
 
 /**
  * configure() for `mode: "codegen"`: a graph of the code generators alone, whose default target is `codegen`.
- * Looks for bun, the root install's esbuild and perl, and for no compiler, linker, cmake or cargo; writes no
+ * Looks for bun and the root install's esbuild, and for no compiler, linker, cmake or cargo; writes no
  * `.cargo/config.toml` and fetches no SDK or sysroot. It has a build directory of its own (`build/debug-codegen`);
  * the type declarations go to `cfg.typesDir`, which every build directory shares.
  */
@@ -399,8 +399,6 @@ async function generateCodegen<N extends string | undefined>(
   const ninja = await resolveNinja(cfg);
   mark("ensureNinja");
 
-  requirePerl();
-
   const sources = globAllSources();
   mark("globAllSources");
 
@@ -415,15 +413,6 @@ async function generateCodegen<N extends string | undefined>(
 
   await writeManifest(n, cfg, ninja, mark);
   return { cfg, ninja, elapsed: Math.round(performance.now() - start) };
-}
-
-/** LUT codegen (create-hash-table.ts) shells out to a perl script; without perl it fails cryptically. */
-function requirePerl(): void {
-  if (findSystemTool("perl") === undefined) {
-    throw new BuildError("perl not found in PATH", {
-      hint: "LUT codegen (create-hash-table.ts) needs perl. Install it: apt install perl / brew install perl",
-    });
-  }
 }
 
 /** build.ts configuring before it spawns ninja: resolves the ninja to spawn (ninja-release.ts). */
@@ -496,12 +485,6 @@ async function generate<N extends string | undefined>(
   generateCargoConfig(cfg);
   writeToolIdentities(cfg);
   mark("generateCargoConfig");
-
-  // Perl check: LUT codegen (create-hash-table.ts) shells out to the
-  // perl script from JSC. If perl is missing, codegen fails cryptically.
-  // Check here so the error is at configure time with a clear hint.
-  requirePerl();
-  mark("validate+perl");
 
   // Glob all source lists — one pass, consistent filesystem snapshot.
   const sources = globAllSources();

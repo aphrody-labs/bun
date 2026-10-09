@@ -889,7 +889,7 @@ function resolveBase(partial: PartialConfig, host: Host, os: OS, arch: Arch, js:
 }
 
 /**
- * The fields of {@link Config} the code generators read. They need bun, the root install and perl, and no compiler,
+ * The fields of {@link Config} the code generators read. They need bun and the root install, and no compiler,
  * linker, cmake or cargo. codegen.ts takes this type, so a generator that starts reading a native tool does not compile.
  */
 export type CodegenFields = Pick<
