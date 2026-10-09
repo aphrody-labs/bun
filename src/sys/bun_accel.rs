@@ -60,7 +60,8 @@ pub fn device() -> Option<Fd> {
 pub fn copy_batch(device: Fd, entries: &mut [CopyEntry]) -> Maybe<()> {
     let mut start = 0;
     while start < entries.len() {
-        let chunk = &mut entries[start..(start + MAX_BATCH).min(entries.len())];
+        let end = (start + MAX_BATCH).min(entries.len());
+        let chunk = &mut entries[start..end];
         let mut batch = Batch {
             entries: chunk.as_mut_ptr() as u64,
             count: chunk.len() as u32,
