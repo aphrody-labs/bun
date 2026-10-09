@@ -1,0 +1,12 @@
+[
+  { "id": "A-vfs", "goal": "Index VFS disque et édition massive (bun vfs, bun:vfs)", "paths": ["src/vfs", "src/workspace", "src/file_tools"], "status": "active" },
+  { "id": "B-mcp", "goal": "bun mcp : registre d'outils extensible, schémas source unique", "paths": ["src/mcp", "docs/runtime/mcp.mdx", "test/cli/mcp"], "status": "active" },
+  { "id": "C-lsp", "goal": "bun lsp (TS, Python, Rust, clangd) fusionné avec le graphe et l'IA", "paths": ["src/lsp", "docs/runtime/lsp.mdx", "test/cli/lsp"], "status": "active" },
+  { "id": "D-plugin", "goal": "Plugin agents du fork (claude, codex, agy)", "paths": ["packages/bun-agent-plugin", "scripts/aphrody/agent-plugin.ts", "test/cli/agent-plugin", "docs/project/agent-plugin.mdx"], "status": "active" },
+  { "id": "E-skills", "goal": "Migration des outils et skills d'aphrody vers le fork", "paths": [".claude/skills", "src/agent_tools"], "status": "active" },
+  { "id": "F-gitssh", "goal": "bun git et bun ssh natifs", "paths": ["src/git", "src/ssh"], "status": "active" },
+  { "id": "I-discord", "goal": "Support Discord natif (discord.js, voice, discordx, erlpack, zlib-sync)", "paths": ["src/js/thirdparty/erlpack.ts", "src/js/thirdparty/zlib-sync.ts", "test/js/first_party/erlpack", "test/js/first_party/zlib-sync"], "status": "active" },
+  { "id": "K-host", "goal": "bun host : inventaire et sync des ressources hôtes", "paths": ["src/host"], "status": "active" },
+  { "id": "W-nowindow", "goal": "Aucune fenêtre console Windows", "paths": ["src/no_window"], "status": "active" },
+  { "id": "R-release", "goal": "Passe finale : musl, tests Linux, release aphrody-v*, rien publié avant", "paths": ["scripts/aphrody/release"], "status": "todo" }
+]
