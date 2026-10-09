@@ -87,6 +87,89 @@ declare module "bun:dotnet" {
     readonly frameworkMoniker: string;
   } & Record<string, any>;
 
+  export interface DotnetComponent {
+    version: string;
+    path: string;
+  }
+
+  export interface DotnetInstall {
+    root: string;
+    arch: string | null;
+    /** How the root was found: `DOTNET_ROOT`, `registry x64`, `PATH`, `default`, … */
+    sources: string[];
+    muxer: string | null;
+    hostfxr: DotnetComponent[];
+    sdks: string[];
+    /** Framework name → installed versions. */
+    frameworks: Record<string, string[]>;
+    workloads: {
+      installed: { band: string; id: string; source: string }[];
+      installerTypes: { band: string; type: string }[];
+      sets: { band: string; version: string }[];
+      manifests: { band: string; id: string; version: string | null }[];
+    };
+  }
+
+  export interface DotnetInfo {
+    hostArch: string;
+    /** Root of the install `dotnet` would use. */
+    primary: string | null;
+    primarySource: string | null;
+    sdk: {
+      globalJson: string | null;
+      globalJsonError: string | null;
+      requested: string | null;
+      rollForward: string;
+      allowPrerelease: boolean;
+      searchRoots: string[];
+      selected: DotnetComponent | null;
+      error: string | null;
+    } | null;
+    installs: DotnetInstall[];
+    netFramework: { version: string; build: string | null; release: number | null; servicePack: number | null }[];
+    environment: Record<string, string | null>;
+  }
+
+  export interface DotnetEnv {
+    dotnetRoot: string;
+    source: string;
+    hostfxr: string;
+    muxer: string | null;
+    arch: string | null;
+    globalJson: string | null;
+    sdk: DotnetComponent | null;
+    sdkError: string | null;
+    /** Hash of the inputs; the cached snapshot is recomputed when it changes. */
+    fingerprint: string;
+    env: Record<string, string>;
+    /** Directory to put first on `PATH`. */
+    pathPrepend: string;
+  }
+
+  export type DotnetResolution =
+    | { dotnetRoot: string; globalJson: string | null; sdk: DotnetComponent | null; error: string | null }
+    | {
+        runtimeConfig: string;
+        dotnetRoot: string;
+        frameworks: {
+          name: string;
+          requested: string;
+          rollForward: string;
+          applyPatches: boolean;
+          resolved: DotnetComponent | null;
+        }[];
+      };
+
+  /** Every .NET install on the machine (any version, location or architecture), read from disk and the registry without starting .NET. */
+  export function info(cwd?: string): DotnetInfo;
+  /** The environment (`DOTNET_ROOT`, `DOTNET_HOST_PATH`, `PATH`) for `cwd`, cached until an install or `global.json` changes. */
+  export function env(cwd?: string, refresh?: boolean): DotnetEnv;
+  /**
+   * The SDK `cwd` selects through `global.json`, or with `runtimeConfig` the frameworks a
+   * `.runtimeconfig.json` binds to, with the roll-forward rules of the .NET host.
+   */
+  export function resolve(runtimeConfig?: string, cwd?: string): DotnetResolution;
+
   /** Finds the .NET install, under `dotnetRoot` when given. Throws `ERR_BUN_DOTNET` when none is found. */
   export function locate(dotnetRoot?: string): DotnetLocation;
   /**
@@ -125,6 +208,9 @@ declare module "bun:dotnet" {
 
   const dotnetModule: {
     locate: typeof locate;
+    info: typeof info;
+    env: typeof env;
+    resolve: typeof resolve;
     initialize: typeof initialize;
     runtimeConfig: typeof runtimeConfig;
     functionPointer: typeof functionPointer;

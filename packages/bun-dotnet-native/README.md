@@ -17,6 +17,16 @@ installed .NET; nothing is linked against a .NET install.
   `load_assembly`. `bun:dotnet` binds `[UnmanagedCallersOnly]` methods through
   it; `node-api-dotnet` (packages/bun-dotnet) shares the same runtime.
 
+- Installs (`inventory`): every root from `DOTNET_ROOT*`, the registry
+  `InstalledVersions` keys (32/64-bit views), `/etc/dotnet/install_location*`,
+  default and user locations and `PATH`, with their SDKs, shared frameworks,
+  `hostfxr` versions, workloads and the .NET Framework (NDP) versions.
+- Selection (`select`): `global.json` with the `sdk_resolver` rules and
+  `.runtimeconfig.json` roll-forward with the `fx_resolver` rules.
+- `env` (cached snapshot, shell renderers), `info` (`dotnet --info` without a
+  process) and `releases` (release metadata, archive selection) back
+  `bun dotnet env|sync|info|resolve|setup` (src/runtime/dotnet/tools.rs).
+
 `include/hostfxr/` holds `hostfxr.h`, `nethost.h` and `coreclr_delegates.h` from
 dotnet/runtime (MIT, `include/hostfxr/LICENSE.TXT`) for C consumers;
 `include/bun_dotnet_host.h` is the C ABI of the cdylib (`c-abi` feature).

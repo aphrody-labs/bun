@@ -224,6 +224,32 @@ pub fn pick_asset(releases: &Value, product: Product, channel: &str, version: Op
     })
 }
 
+/// Fetches `releases-index.json` and the channel's `releases.json` from `feed` and picks the
+/// archive. Without `channel`, `version` gives `A.B`, else `LTS`.
+pub fn resolve_asset(
+    feed: &str,
+    channel: Option<&str>,
+    version: Option<&str>,
+    product: Product,
+    rid: &str,
+    fetch: &mut dyn FnMut(&str) -> Result<Vec<u8>, String>,
+) -> Result<Asset, String> {
+    let channel = match (channel, version) {
+        (Some(channel), _) => channel.to_owned(),
+        (None, Some(version)) => version.split('.').take(2).collect::<Vec<_>>().join("."),
+        (None, None) => "LTS".to_owned(),
+    };
+    let parse = |url: &str, bytes: Vec<u8>| -> Result<Value, String> {
+        serde_json::from_slice(bytes.strip_prefix(b"\xef\xbb\xbf").unwrap_or(&bytes)).map_err(|error| format!("{url}: {error}"))
+    };
+    let index_url = format!("{}/releases-index.json", feed.trim_end_matches('/'));
+    let index = parse(&index_url, fetch(&index_url)?)?;
+    let (channel_version, releases_url) = pick_channel(&index, &channel)?;
+    let releases = parse(&releases_url, fetch(&releases_url)?)?;
+    let channel = if channel.split('.').nth(2).is_some() { channel } else { channel_version };
+    pick_asset(&releases, product, &channel, version, rid)
+}
+
 /// `root` joined with an archive path, or `None` when the entry would escape `root`.
 pub fn safe_join(root: &Path, entry: &str) -> Option<PathBuf> {
     let mut path = root.to_path_buf();

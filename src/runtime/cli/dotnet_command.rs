@@ -35,6 +35,13 @@ pub(crate) fn exec(invocation: Invocation) -> ! {
         Invocation::Bun => 2,
         Invocation::Dotnet => 1,
     };
+    if matches!(invocation, Invocation::Bun)
+        && let Some(command) = std::env::args().nth(2)
+        && crate::dotnet::tools::COMMANDS.contains(&command.as_str())
+    {
+        let args: Vec<String> = std::env::args().skip(3).collect();
+        Global::exit(crate::dotnet::tools::run(&command, &args) as u32);
+    }
     muxer(std::env::args_os().skip(skip))
 }
 
@@ -65,6 +72,9 @@ fn muxer(args: impl IntoIterator<Item = OsString>) -> ! {
         Ok(code) => Global::exit(code as u32),
         Err(err) => {
             bun_core::pretty_errorln!("<r><red>error<r>: bun dotnet: {}", err.message);
+            if err.code.is_none() {
+                bun_core::pretty_errorln!("<d>Install .NET with <b>bun dotnet setup<r><d>, or set DOTNET_ROOT.<r>");
+            }
             Global::exit(1);
         }
     }

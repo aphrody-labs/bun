@@ -45,6 +45,7 @@ const uv = option("--uv", Bun.which("uv") ?? undefined);
 const oxc = option("--oxc", Bun.which("oxlint") ?? undefined);
 const ruff = option("--ruff", Bun.which("ruff") ?? undefined);
 const native = option("--native");
+const dotnet = args.includes("--no-dotnet") ? undefined : option("--dotnet", Bun.which("dotnet") ?? undefined);
 const deno = args.includes("--no-deno") ? undefined : option("--deno", Bun.which("deno") ?? undefined);
 const samples = count("--samples", 25, 3);
 const warmup = count("--warmup", 3, 0);
@@ -387,6 +388,21 @@ try {
     });
   }
 
+  if (dotnet) {
+    cases.push(
+      {
+        name: "CLR / .NET SDK --version",
+        left: { name: "bun dotnet (in-process hostfxr)", argv: [bun, "dotnet", "--version"] },
+        right: { name: "dotnet", argv: [dotnet, "--version"] },
+      },
+      {
+        name: "CLR / install inventory",
+        left: { name: "bun dotnet info", argv: [bun, "dotnet", "info"] },
+        right: { name: "dotnet --info", argv: [dotnet, "--info"] },
+      },
+    );
+  }
+
   console.log(
     `Host: ${platform()} / ${cpus()[0]?.model}; ${samples} samples; ${warmup} warmups; warm filesystem caches`,
   );
@@ -397,6 +413,7 @@ try {
     ["OXC", oxc],
     ["Ruff", ruff],
     ["Deno", deno],
+    [".NET SDK", dotnet],
   ]) {
     if (!executable) continue;
     const value = await run({ name: name!, argv: [executable, "--version"] });

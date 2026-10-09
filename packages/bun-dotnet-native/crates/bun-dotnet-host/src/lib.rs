@@ -29,6 +29,8 @@ pub mod releases;
 pub mod select;
 pub mod version;
 
+pub use serde_json;
+
 use library::Library;
 use version::Version;
 
@@ -60,7 +62,7 @@ pub struct Error {
 }
 
 impl Error {
-    fn new(message: impl Into<String>) -> Self {
+    pub fn new(message: impl Into<String>) -> Self {
         Self {
             code: None,
             message: message.into(),

@@ -587,6 +587,30 @@ pub fn framework_references(json: &Value, env: &RollForwardEnv) -> Result<Vec<Fr
     Ok(references)
 }
 
+/// The frameworks `runtimeconfig` binds to in `install`, as JSON:
+/// `{ runtimeConfig, dotnetRoot, frameworks: [{ name, requested, rollForward, applyPatches, resolved }] }`.
+pub fn resolve_app(install: &crate::inventory::Install, runtimeconfig: &Path, env: &RollForwardEnv) -> Result<Value, String> {
+    let json = read_json(runtimeconfig)?;
+    let references = framework_references(&json, env)?;
+    let frameworks: Vec<Value> = references
+        .iter()
+        .map(|reference| {
+            let dir = install.root.join("shared").join(&reference.name);
+            let resolved = reference
+                .resolve(&dir, install.framework(&reference.name))
+                .map(Resolved::into_component);
+            serde_json::json!({
+                "name": reference.name,
+                "requested": reference.version.as_str(),
+                "rollForward": reference.roll_forward.as_str(),
+                "applyPatches": reference.apply_patches,
+                "resolved": resolved.map(|component| serde_json::json!({ "version": component.version.as_str(), "path": component.path })),
+            })
+        })
+        .collect();
+    Ok(serde_json::json!({ "runtimeConfig": runtimeconfig, "dotnetRoot": install.root, "frameworks": frameworks }))
+}
+
 fn strip_bom(bytes: &[u8]) -> std::borrow::Cow<'_, [u8]> {
     std::borrow::Cow::Borrowed(bytes.strip_prefix(b"\xef\xbb\xbf").unwrap_or(bytes))
 }

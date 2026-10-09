@@ -1,41 +1,155 @@
 ---
 title: .NET
-description: Load .NET 10 assemblies in Bun and call them from JavaScript with @aphrody/bun-dotnet
+description: Run the .NET SDK inside Bun, install and resolve .NET without scripts, run C# files, and call .NET assemblies from JavaScript with bun:dotnet
 ---
 
-`@aphrody/bun-dotnet` hosts the .NET runtime inside the Bun process through [Node API for .NET](https://github.com/microsoft/node-api-dotnet) (MIT), whose code lives in `packages/bun-dotnet/dotnet`. Bun loads its native host, `Microsoft.JavaScript.NodeApi.node`, as a Node-API addon. That host starts the CLR and exposes .NET types to JavaScript.
-
-Build the packages once with the .NET 10 SDK:
+Bun hosts .NET in its own process through `hostfxr`, the library behind the `dotnet` command. `bun dotnet` runs the .NET SDK, `bun run app.cs` runs a C# file, and the `bun:dotnet` module calls .NET code from JavaScript. Bun finds every .NET install on the machine and applies the same `global.json` and roll-forward rules as `dotnet`.
 
 ```sh terminal icon="terminal"
-cd packages/bun-dotnet
-bun run build # dotnet pack: npm and NuGet packages in dotnet/out/pkg
+bun dotnet setup              # .NET SDK, LTS channel
+bun dotnet --version          # the .NET SDK, running inside Bun
+bun run app.cs                # a .NET 10 file-based app
 ```
-
-`bun run build` publishes the native AOT host, builds the managed host and the generator, and packs the npm packages with `bun pm pack`.
 
 ---
 
-## Load an assembly
+## Install .NET
+
+`bun dotnet setup` downloads .NET from the official release metadata (`releases-index.json`). It checks the archive's SHA-512 and extracts it. It runs no installer script, so PowerShell and bash are not needed.
+
+```sh terminal icon="terminal"
+bun dotnet setup                                  # latest SDK of the LTS channel
+bun dotnet setup --channel 10.0                   # latest 10.0 SDK
+bun dotnet setup --channel 10.0.1xx               # latest SDK of the 10.0.1xx feature band
+bun dotnet setup --version 10.0.100               # exact SDK version
+bun dotnet setup --runtime aspnetcore --channel STS
+bun dotnet setup --install-dir ./.dotnet --arch arm64 --dry-run --json
+```
+
+| Flag            | Values                                                | Default                                                                |
+| --------------- | ----------------------------------------------------- | ---------------------------------------------------------------------- |
+| `--channel`     | `A.B`, `A.B.Cxx`, `LTS`, `STS`, `latest`              | `A.B` of `--version`, else `LTS`                                       |
+| `--version`     | an exact version from the channel                     | the newest release of the channel                                      |
+| `--runtime`     | `dotnet`, `aspnetcore`, `windowsdesktop`              | the SDK                                                                |
+| `--install-dir` | a directory                                           | `%LOCALAPPDATA%\Microsoft\dotnet` on Windows, `~/.dotnet` elsewhere    |
+| `--arch`        | `x64`, `x86`, `arm64`                                 | the machine's architecture (musl Linux gets the `linux-musl-*` builds) |
+| `--force`       | overwrite files that already exist                    | existing files are kept, like `dotnet-install`                         |
+| `--dry-run`     | print the archive that would be installed             |                                                                        |
+| `--json`        | print `{ product, version, rid, name, url, sha512, installDir, status }` |                                                     |
+
+If the version is already installed, `bun dotnet setup` prints `already installed` and downloads nothing. Set `BUN_DOTNET_FEED` (or pass `--feed`) to read the release metadata from a mirror.
+
+---
+
+## Find and resolve installs
+
+Bun looks for .NET in all of these places, for every architecture:
+
+- `DOTNET_ROOT_<ARCH>`, `DOTNET_ROOT`, `DOTNET_ROOT(x86)` and `DOTNET_INSTALL_DIR`
+- On Windows, the registry key `HKLM\SOFTWARE\dotnet\Setup\InstalledVersions\<arch>\InstallLocation` (32-bit and 64-bit views), `%ProgramFiles%\dotnet` and `%ProgramFiles(x86)%\dotnet`
+- On Linux and macOS, `/etc/dotnet/install_location[_<arch>]`, `/usr/share/dotnet`, `/usr/lib/dotnet`, `/usr/local/share/dotnet`, Homebrew, snap and Nix locations
+- `~/.dotnet`, the user install directory, and every `dotnet` on `PATH`
+
+Bun reads the install layout on disk (`host/fxr`, `sdk`, `shared`, `metadata/workloads`). It does not use the Windows Installer product list.
+
+`bun dotnet info` replaces `dotnet --info`. It starts no process and no SDK. It lists the SDK the current directory selects, the host, workloads, SDKs and runtimes, every other install it found, the .NET Framework versions on Windows, and the `DOTNET_*` variables. `--json` prints the same data as an object.
+
+`bun dotnet resolve` prints the SDK that `dotnet` would use in the current directory. It follows `global.json` (`version`, `rollForward`, `allowPrerelease`, `paths`, `errorMessage`) with the semantics of the .NET host. Pass a `.runtimeconfig.json` to see which shared framework versions an app binds to. That lookup follows `rollForward`, `applyPatches`, `DOTNET_ROLL_FORWARD` and `DOTNET_ROLL_FORWARD_TO_PRERELEASE`.
+
+```sh terminal icon="terminal"
+bun dotnet resolve
+# 10.0.401
+
+bun dotnet resolve bin/App.runtimeconfig.json
+# Microsoft.NETCore.App 10.0.0 -> 10.0.12
+```
+
+---
+
+## Shell environment
+
+`bun dotnet env` prints the variables that point a shell at the selected install: `DOTNET_ROOT`, `DOTNET_HOST_PATH`, and `PATH` with the install first.
+
+```sh terminal icon="terminal"
+eval "$(bun dotnet env --shell sh)"                    # bash, zsh
+bun dotnet env --shell ps1 | Invoke-Expression         # PowerShell
+bun dotnet env --shell cmd > dotnet-env.cmd            # cmd.exe
+bun dotnet env --shell json
+```
+
+Bun caches the result per `global.json` in `%LOCALAPPDATA%\bun\dotnet` (or `~/.cache/bun/dotnet`, or `BUN_DOTNET_CACHE_DIR`). It recomputes the result when an install directory, `global.json` or a `DOTNET_*` variable changes. `bun dotnet sync` recomputes it now. `--refresh` skips the cache for one call.
+
+---
+
+## The .NET SDK inside Bun
+
+Every other `bun dotnet` command goes to the .NET muxer, which runs in the Bun process: `bun dotnet build`, `bun dotnet new console`, `bun dotnet test`, and so on. A Bun executable named `dotnet` (or `dotnet.exe`) behaves like `bun dotnet`. If no install is found, `bun dotnet` says so and suggests `bun dotnet setup`.
+
+`bun run app.cs` runs a .NET 10 [file-based app](https://learn.microsoft.com/dotnet/core/sdk/file-based-apps), with `#:package`, `#:sdk` and `#:property` directives. It is the same as `bun dotnet run --file app.cs -- <args>`.
+
+Files ending in `.csjs`, `.csts` and `.cstsx` are JavaScript, TypeScript and TSX that use .NET. Bun runs them like `.js`, `.ts` and `.tsx`, and `csjs:dotnet` is an alias of `bun:dotnet` there:
+
+```ts main.csts icon="/icons/typescript.svg"
+import dotnet from "csjs:dotnet";
+
+console.log(dotnet.resolve().sdk?.version);
+```
+
+---
+
+## bun:dotnet
+
+### Installs
+
+`info(cwd?)`, `env(cwd?, refresh?)` and `resolve(runtimeConfig?, cwd?)` return the data of `bun dotnet info --json`, `bun dotnet env --shell json` and `bun dotnet resolve --json`. `locate(dotnetRoot?)` returns the install that `bun:dotnet` loads: `{ dotnetRoot, hostfxr, source, muxer, sdks, runtimes }`.
 
 ```ts
-import { loadAssembly } from "@aphrody/bun-dotnet";
+import { info, resolve } from "bun:dotnet";
 
-const { Interop } = loadAssembly("./bin/Interop.dll");
-
-Interop.Calc.Add(20, 22); // 42, static method
-const counter = new Interop.Counter(5); // constructor
-counter.Increment(); // instance method
-counter.Value; // 6, property
+for (const install of info().installs) console.log(install.root, install.sdks);
+resolve("bin/App.runtimeconfig.json").frameworks; // [{ name, requested, resolved }]
 ```
 
-The first call loads the CLR. One .NET version runs per process, and `net10.0` is the default. It can roll forward to a newer installed runtime. `host(targetFramework)` returns the host object of `node-api-dotnet`. That object has `load(assemblyNameOrPath)`, the `resolving` event, and the loaded namespaces as properties.
+### Native entry points
 
-Dynamic loading keeps the .NET member names, such as `Add` and `Value`.
+`functionPointer` returns the address of a static .NET method. `unmanaged` wraps it as a [`bun:ffi`](/runtime/ffi) function. Methods marked `[UnmanagedCallersOnly]` need no `delegateType`. For other methods, pass the delegate type that matches their signature.
 
----
+```cs Native.cs icon="file-code"
+public static class Native
+{
+    [UnmanagedCallersOnly]
+    public static int Add(int a, int b) => a + b;
+}
+```
 
-## Tasks, delegates and events
+```ts
+import dotnet from "bun:dotnet";
+
+const add = dotnet.unmanaged(
+  { assembly: "./bin/Fixture.dll", type: "Fixture.Native, Fixture", method: "Add" },
+  { args: ["i32", "i32"], returns: "i32" },
+);
+add(20, 22); // 42
+```
+
+The first call starts the CLR with the newest installed `Microsoft.NETCore.App`. Call `initialize(runtimeConfig)` first to start it from a `.runtimeconfig.json`. One CLR runs per process. `initialize` returns `0` when it started the CLR, and `1` or `2` when the CLR was already running. `loadAssembly(path)` loads an assembly into the default load context. Failures throw an `Error` with `code: "ERR_BUN_DOTNET"` and, for .NET errors, the `hresult`.
+
+### Object model
+
+`load(assembly)` exposes .NET types as JavaScript objects through [Node API for .NET](https://github.com/microsoft/node-api-dotnet). It needs the packages that `@aphrody/bun-dotnet` ships. Install that package, or set `BUN_DOTNET_NODE_API` to its `dotnet/out/pkg` directory.
+
+```ts
+import dotnet from "bun:dotnet";
+
+const { Fixture } = dotnet.load("./bin/Fixture.dll");
+
+Fixture.Calc.Add(20, 22); // 42, static method
+const counter = new Fixture.Counter(5); // constructor
+counter.Increment(); // instance method
+counter.Value; // 6, property
+await Fixture.Calc.EchoAsync("bun"); // "bun!": a Task<string> is a Promise
+Fixture.Calc.Apply(x => x * 3, 14); // 42: a JS function passed as Func<int, int>
+```
 
 | .NET                   | JavaScript      |
 | ---------------------- | --------------- |
@@ -45,45 +159,12 @@ Dynamic loading keeps the .NET member names, such as `Add` and `Value`.
 | `int`, `double`, …     | `number`        |
 | `string`               | `string`        |
 
-```ts
-await Interop.Calc.EchoAsync("bun"); // "bun!": the Task<string> is a Promise
-Interop.Calc.Apply(x => x * 3, 14); // 42: a JS function passed as Func<int, int>
-```
-
 .NET events are not projected as JavaScript events. A .NET method can subscribe a delegate that calls a JavaScript function:
 
 ```cs
 public void OnChanged(Action<int> listener) => Changed += (_, value) => listener(value);
 ```
 
-```ts
-counter.OnChanged(value => console.log("changed", value));
-```
+`generateTypes({ assembly, output })` writes TypeScript declarations for an assembly. Pass `module: "esm"` for ES module declarations and `references` for dependent assemblies.
 
----
-
-## TypeScript declarations
-
-`generateTypes` runs `node-api-dotnet-generator` in Bun and writes the declarations of an assembly:
-
-```ts
-import { generateTypes } from "@aphrody/bun-dotnet";
-
-await generateTypes({ assembly: "./bin/Interop.dll", output: "./Interop.d.ts" });
-```
-
-The output declares the assembly's namespaces inside `declare module 'node-api-dotnet'`. Pass `module: "esm"` for ES module declarations and `references` for dependent assemblies.
-
----
-
-## The dotnet CLI
-
-`dotnet(args)`, `build`, `run`, `newProject` and `test` run the `dotnet` CLI and resolve to `{ stdout, stderr, exitCode }`.
-
-```ts
-import { build } from "@aphrody/bun-dotnet";
-
-await build(["-c", "Release"], { cwd: "./Interop" });
-```
-
-The reference for marshalling, threading, streams and the C# `[JSExport]` module scenario is in `packages/bun-dotnet/dotnet/docs`.
+`dotnet(args)`, `build`, `run`, `newProject` and `test` run `bun dotnet` in a child process and resolve to `{ stdout, stderr, exitCode }`.

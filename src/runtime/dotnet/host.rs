@@ -122,3 +122,49 @@ pub(crate) fn js_runtime_config(global: &JSGlobalObject, _frame: &CallFrame) -> 
         None => Ok(JSValue::NULL),
     }
 }
+
+fn json_result(global: &JSGlobalObject, value: Result<String, String>) -> JsResult<JSValue> {
+    match value {
+        Ok(json) => bun_jsc::bun_string_jsc::create_utf8_for_js(global, json.as_bytes()),
+        Err(message) => Err(dotnet_error(global, bun_dotnet_host::Error::new(message))),
+    }
+}
+
+fn cwd_arg(global: &JSGlobalObject, frame: &CallFrame, i: usize) -> JsResult<std::path::PathBuf> {
+    Ok(match opt_str_arg(global, frame, i)? {
+        Some(cwd) => std::path::PathBuf::from(cwd),
+        None => std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")),
+    })
+}
+
+/// `info(cwd?)` → JSON of every install, the primary one, the SDK `cwd` selects, workloads
+/// and .NET Framework.
+#[bun_jsc::host_fn]
+pub(crate) fn js_info(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
+    let cwd = cwd_arg(global, frame, 0)?;
+    json_result(global, Ok(bun_dotnet_host::info::collect(&cwd).to_json().to_string()))
+}
+
+/// `env(cwd?, refresh?)` → JSON of the cached environment snapshot.
+#[bun_jsc::host_fn]
+pub(crate) fn js_env(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
+    let cwd = cwd_arg(global, frame, 0)?;
+    let refresh = frame.argument(1).to_boolean();
+    json_result(
+        global,
+        bun_dotnet_host::env::load(&cwd, refresh)
+            .map(|(snapshot, _)| snapshot.to_json().to_string())
+            .map_err(|err| err.message),
+    )
+}
+
+/// `resolve(runtimeConfig?, cwd?)` → JSON of the selected SDK or of an app's frameworks.
+#[bun_jsc::host_fn]
+pub(crate) fn js_resolve(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
+    let config = opt_str_arg(global, frame, 0)?;
+    let cwd = cwd_arg(global, frame, 1)?;
+    json_result(
+        global,
+        super::tools::resolve_json(config.as_deref().map(Path::new), &cwd).map(|value| value.to_string()),
+    )
+}

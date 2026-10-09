@@ -3,6 +3,7 @@
 //! `js_*` host functions in [`host`] through `$newRustFunction`.
 
 pub(crate) mod host;
+pub(crate) mod tools;
 
 use bun_jsc::{JSGlobalObject, JsError};
 

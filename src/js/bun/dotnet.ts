@@ -12,6 +12,9 @@ const initializeNative = $newRustFunction("dotnet/host.rs", "jsInitialize", 1);
 const functionPointerNative = $newRustFunction("dotnet/host.rs", "jsFunctionPointer", 4);
 const loadAssemblyNative = $newRustFunction("dotnet/host.rs", "jsLoadAssembly", 1);
 const runtimeConfigNative = $newRustFunction("dotnet/host.rs", "jsRuntimeConfig", 0);
+const infoNative = $newRustFunction("dotnet/host.rs", "jsInfo", 1);
+const envNative = $newRustFunction("dotnet/host.rs", "jsEnv", 2);
+const resolveNative = $newRustFunction("dotnet/host.rs", "jsResolve", 2);
 
 const TARGET_FRAMEWORKS = ["net10.0", "net9.0", "net8.0", "net472"];
 
@@ -22,6 +25,20 @@ function optionalString(value, name) {
 
 function locate(dotnetRoot) {
   return JSON.parse(locateNative(optionalString(dotnetRoot, "dotnetRoot")));
+}
+
+function info(cwd) {
+  return JSON.parse(infoNative(optionalString(cwd, "cwd")));
+}
+
+function env(cwd, refresh = false) {
+  return JSON.parse(envNative(optionalString(cwd, "cwd"), !!refresh));
+}
+
+function resolve(runtimeConfig, cwd) {
+  runtimeConfig = optionalString(runtimeConfig, "runtimeConfig");
+  if (runtimeConfig !== undefined) runtimeConfig = require("node:path").resolve(runtimeConfig);
+  return JSON.parse(resolveNative(runtimeConfig, optionalString(cwd, "cwd")));
 }
 
 function initialize(runtimeConfig) {
@@ -171,6 +188,9 @@ function generateTypes(options) {
 
 export default {
   locate,
+  info,
+  env,
+  resolve,
   initialize,
   runtimeConfig,
   functionPointer,

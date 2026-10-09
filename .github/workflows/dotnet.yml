@@ -1,0 +1,93 @@
+name: .NET host
+
+on:
+  push:
+    branches: [main]
+    paths:
+      [
+        "packages/bun-dotnet-native/**",
+        "src/runtime/dotnet/**",
+        "src/runtime/cli/dotnet_command.rs",
+        "src/js/bun/dotnet.ts",
+        "packages/bun-types/dotnet.d.ts",
+        "test/js/bun/dotnet/**",
+        ".github/workflows/dotnet.yml",
+      ]
+  pull_request:
+    paths:
+      [
+        "packages/bun-dotnet-native/**",
+        "src/runtime/dotnet/**",
+        "src/runtime/cli/dotnet_command.rs",
+        "src/js/bun/dotnet.ts",
+        "packages/bun-types/dotnet.d.ts",
+        "test/js/bun/dotnet/**",
+        ".github/workflows/dotnet.yml",
+      ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dotnet-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+        with:
+          bun-version: "1.4.3"
+      - name: Install the shared Rust toolchain
+        run: rustup show
+      - name: Install the .NET 10 SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+      - name: Crate tests (inventory, global.json, roll-forward, releases)
+        run: cargo test --locked --manifest-path packages/bun-dotnet-native/Cargo.toml -p bun-dotnet-host
+      - name: C ABI against a real assembly
+        run: bun test ./packages/bun-dotnet-native/test
+
+  runtime:
+    if: github.repository == 'aphrody-labs/bun'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+        with:
+          bun-version: "1.4.3"
+      - uses: docker/setup-buildx-action@v3
+      - name: Select the owner toolchain
+        run: bun -e 'console.log("RUST_CHANNEL=" + Bun.TOML.parse(await Bun.file("rust-toolchain.toml").text()).toolchain.channel)' >> "$GITHUB_ENV"
+      - name: Build the native Linux factory
+        run: >
+          docker buildx build --load -t aphrody/build-linux:26.04
+          -f scripts/aphrody/linux.Dockerfile
+          --build-arg "RUST_CHANNEL=$RUST_CHANNEL" --build-arg BUN_VERSION=1.4.3
+          --cache-from type=gha,scope=dotnet-linux
+          --cache-to type=gha,mode=max,scope=dotnet-linux
+          scripts/aphrody
+      # The changed executable installs .NET with `bun dotnet setup`, then runs bun:dotnet, `bun dotnet`
+      # and `bun run app.cs` against it.
+      - name: bun dotnet setup + bun:dotnet tests with the changed executable
+        run: >
+          docker run --rm --cpus 6 --memory 10g
+          -v "$GITHUB_WORKSPACE:/src" -w /src
+          -e BUN_DEBUG_QUIET_LOGS=1 -e DOTNET_CLI_TELEMETRY_OPTOUT=1
+          aphrody/build-linux:26.04
+          sh -c 'bun install --frozen-lockfile
+          && bun bd dotnet setup --channel 10.0 --install-dir /tmp/dotnet
+          && DOTNET_ROOT=/tmp/dotnet bun bd dotnet info
+          && DOTNET_ROOT=/tmp/dotnet bun bd test test/js/bun/dotnet/dotnet.test.ts'
