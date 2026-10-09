@@ -62,6 +62,7 @@ async function bunBuild(compilerNames, webpackBuildDir) {
   const start = performance.now();
   const nextDist = path.join(webpackBuildDir, "..", "..");
   const next = id => require(path.join(nextDist, id));
+  next.root = path.dirname(nextDist);
 
   const { NextBuildContext: ctx } = next("build/build-context.js");
   const { createEntrypoints } = next("build/entries.js");
@@ -140,6 +141,8 @@ async function bunBuild(compilerNames, webpackBuildDir) {
   };
   const swcState = { next, ctx, dir, distDir, pagesDir, appDir, projectInfo };
   const swc = side => nextSwcPlugin({ ...swcState, side });
+  const postcss = await postcssPlugin(swcState);
+  const cssPlugins = postcss ? [...extraPlugins, postcss] : extraPlugins;
 
   const entriesDir = path.join(distDir, "cache", "bun-entries");
   rmSync(entriesDir, { recursive: true, force: true });
@@ -192,7 +195,7 @@ async function bunBuild(compilerNames, webpackBuildDir) {
       format: "cjs",
       packages: "external",
       define: defines("server"),
-      plugins: [swc("server"), ...extraPlugins],
+      plugins: [swc("server"), ...cssPlugins],
       throw: false,
     });
     if (!server.success) throw new AggregateError(server.logs, "@aphrody/next-bun: server build failed");
@@ -254,7 +257,7 @@ client.initialize({}).then(() => client.hydrate()).catch(console.error);
     splitting: true,
     minify: !ctx.noMangling,
     define: defines("client"),
-    plugins: [swc("client"), ...extraPlugins],
+    plugins: [swc("client"), ...cssPlugins],
     metafile: true,
     throw: false,
   });
@@ -297,7 +300,7 @@ client.initialize({}).then(() => client.hydrate()).catch(console.error);
         entriesDir,
         chunksDir,
         loaderOptions,
-        plugins: extraPlugins,
+        plugins: cssPlugins,
         minify: !ctx.noMangling,
         helpers: { UnsupportedError, write, posix, contentHash, swcCode },
       })
@@ -399,6 +402,35 @@ async function swcCode(state, filename, source, layer) {
   });
   const output = await transform(source, { ...options, filename, sourceMaps: false });
   return output.code;
+}
+
+/**
+ * The project's PostCSS configuration (`postcss.config.*`), loaded the way
+ * webpack's CSS rules load it, as a Bun plugin; null without one, where Bun's
+ * CSS bundler alone stands in for Next's default plugins.
+ */
+async function postcssPlugin({ next, ctx, dir, projectInfo }) {
+  const { findConfig } = next("lib/find-config.js");
+  if (!(await findConfig(dir, "postcss"))) return null;
+  const { getPostCssPlugins } = next("build/webpack/config/blocks/css/plugins.js");
+  const { config } = ctx;
+  const plugins = await getPostCssPlugins(
+    dir,
+    projectInfo.supportedBrowsers,
+    !!config.experimental.disablePostcssPresetEnv,
+    !!config.experimental.useLightningcss,
+  );
+  const postcss = require(Bun.resolveSync("postcss", next.root));
+  const processor = (postcss.default ?? postcss)(plugins);
+  return {
+    name: "next-postcss",
+    setup(build) {
+      build.onLoad({ filter: /\.css$/ }, async args => {
+        const result = await processor.process(readFileSync(args.path, "utf8"), { from: args.path, map: false });
+        return { contents: result.css, loader: "css" };
+      });
+    },
+  };
 }
 
 /** Runs Next.js' SWC transforms (SSG stripping, styled-jsx, next/dynamic, …) on project sources. */
