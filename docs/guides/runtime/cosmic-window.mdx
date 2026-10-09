@@ -1,0 +1,85 @@
+---
+title: Open a COSMIC (libcosmic) window with bun:ffi
+sidebarTitle: COSMIC window
+mode: center
+---
+
+[libcosmic](https://github.com/pop-os/libcosmic) is the Rust toolkit of the COSMIC desktop (Pop!_OS), built on iced and winit. Export a function from a Rust `cdylib` that runs a `cosmic::Application`, and call it from `bun:ffi`. The event loop runs on the calling thread, which is the JavaScript thread.
+
+```toml Cargo.toml icon="file-code"
+[package]
+name = "cosmic-window"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies.libcosmic]
+git = "https://github.com/pop-os/libcosmic"
+default-features = false
+features = ["winit", "tokio", "wayland", "x11"]
+```
+
+```rust src/lib.rs icon="file-code"
+use cosmic::app::{Core, Settings, Task};
+use cosmic::iced::Size;
+use cosmic::{Element, executor, widget};
+
+struct Window {
+    core: Core,
+}
+
+impl cosmic::Application for Window {
+    type Executor = executor::Default;
+    type Flags = ();
+    type Message = ();
+    const APP_ID: &'static str = "sh.bun.Example";
+
+    fn core(&self) -> &Core {
+        &self.core
+    }
+    fn core_mut(&mut self) -> &mut Core {
+        &mut self.core
+    }
+    fn init(core: Core, _flags: ()) -> (Self, Task<()>) {
+        (Window { core }, Task::none())
+    }
+    fn view(&self) -> Element<'_, ()> {
+        widget::text::body("libcosmic through bun:ffi").into()
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn cosmic_window_run(width: u32, height: u32) -> i32 {
+    let settings = Settings::default().size(Size::new(width as f32, height as f32));
+    match cosmic::app::run::<Window>(settings, ()) {
+        Ok(()) => 0,
+        Err(_) => 1,
+    }
+}
+```
+
+```ts window.ts icon="/icons/typescript.svg"
+import { dlopen, FFIType, suffix } from "bun:ffi";
+
+const { symbols } = dlopen(`./target/release/libcosmic_window.${suffix}`, {
+  cosmic_window_run: { args: [FFIType.u32, FFIType.u32], returns: FFIType.i32 },
+});
+process.exit(symbols.cosmic_window_run(640, 400)); // returns when the window closes
+```
+
+```sh terminal icon="terminal"
+cargo build --release
+bun window.ts
+```
+
+Building libcosmic needs `pkg-config`, `cmake` and the xkbcommon, Wayland, fontconfig and freetype development headers (on Ubuntu 24.04 and Pop!_OS 24.04: `libxkbcommon-dev libwayland-dev libfontconfig-dev libfreetype-dev libexpat1-dev`). With `default-features = false`, iced renders in software with tiny-skia, so the window also opens under `xvfb-run` in CI.
+
+Callbacks into JavaScript must stay on the thread that called into the library. If you pass a [`JSCallback`](/runtime/ffi#callbacks) to the `cdylib`, call it only from that thread, for example from `Application::init` after checking `std::thread::current().id()`.
+
+---
+
+A fuller version with a `JSCallback`, `--timeout` (an iced time subscription that returns `cosmic::iced::exit()`), and `--title`, `--width` and `--height` options lives in the Bun repository at [`test/js/bun/ffi/cosmic-window.fixture.ts`](https://github.com/aphrody-labs/bun/blob/main/test/js/bun/ffi/cosmic-window.fixture.ts) with its crate in [`test/js/bun/ffi/cosmic-window`](https://github.com/aphrody-labs/bun/tree/main/test/js/bun/ffi/cosmic-window). To show a libcosmic window without writing Rust, `bun:cosmic` runs one in a separate helper process.
+
+See [Docs > Runtime > FFI](/runtime/ffi) for the full `bun:ffi` reference.

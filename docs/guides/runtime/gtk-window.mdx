@@ -1,0 +1,67 @@
+---
+title: Open a GTK 4 window with bun:ffi
+sidebarTitle: GTK 4 window
+mode: center
+---
+
+GTK 4 is a C library, so `bun:ffi` can drive it directly: create a `GtkApplication`, connect its `activate` signal to a [`JSCallback`](/runtime/ffi#callbacks), and run the GLib main loop with `g_application_run`. GLib calls the callback synchronously on the JavaScript thread. No npm package or native addon is needed.
+
+```ts window.ts icon="/icons/typescript.svg"
+import { dlopen, FFIType, JSCallback } from "bun:ffi";
+
+const { ptr: p, i32, u32, u64, void: none } = FFIType;
+// Linux names; on Windows use libgtk-4-1.dll, libgobject-2.0-0.dll, libgio-2.0-0.dll.
+const { symbols: gtk } = dlopen("libgtk-4.so.1", {
+  gtk_application_new: { args: [p, u32], returns: p },
+  gtk_application_window_new: { args: [p], returns: p },
+  gtk_window_set_title: { args: [p, p], returns: none },
+  gtk_window_set_default_size: { args: [p, i32, i32], returns: none },
+  gtk_window_set_child: { args: [p, p], returns: none },
+  gtk_window_present: { args: [p], returns: none },
+  gtk_label_new: { args: [p], returns: p },
+});
+const { symbols: gobject } = dlopen("libgobject-2.0.so.0", {
+  g_signal_connect_data: { args: [p, p, p, p, p, u32], returns: u64 },
+  g_object_unref: { args: [p], returns: none },
+});
+const { symbols: gio } = dlopen("libgio-2.0.so.0", {
+  g_application_run: { args: [p, i32, p], returns: i32 },
+});
+
+const cstr = (s: string) => Buffer.from(s + "\0", "utf8");
+const title = cstr("Hello from Bun");
+const text = cstr("GTK 4 through bun:ffi");
+
+const onActivate = new JSCallback(
+  app => {
+    const window = gtk.gtk_application_window_new(app);
+    gtk.gtk_window_set_title(window, title);
+    gtk.gtk_window_set_default_size(window, 640, 400);
+    gtk.gtk_window_set_child(window, gtk.gtk_label_new(text));
+    gtk.gtk_window_present(window);
+  },
+  { args: [p, p], returns: none },
+);
+
+const G_APPLICATION_NON_UNIQUE = 1 << 5;
+const app = gtk.gtk_application_new(cstr("sh.bun.Example"), G_APPLICATION_NON_UNIQUE);
+gobject.g_signal_connect_data(app, cstr("activate"), onActivate.ptr, null, null, 0);
+const status = gio.g_application_run(app, 0, null); // returns when the last window closes
+gobject.g_object_unref(app);
+onActivate.close();
+process.exit(status);
+```
+
+```sh terminal icon="terminal"
+bun window.ts
+```
+
+GTK, GLib, GObject and GIO are separate libraries. On Linux, `dlsym` on the GTK handle would also find GLib symbols, but `GetProcAddress` on Windows does not, so open each one. On Windows, install GTK with [MSYS2](https://www.msys2.org) (`pacman -S mingw-w64-ucrt-x86_64-gtk4`) and pass absolute paths under `C:\msys64\ucrt64\bin`, or add that directory to `PATH`. On Linux, GTK needs a display (`DISPLAY` or `WAYLAND_DISPLAY`); `xvfb-run` works in CI.
+
+`g_application_run` blocks the JavaScript thread, so timers, promises and I/O callbacks do not run while the window is open. Use GLib sources such as `g_timeout_add` with a `JSCallback` for periodic work inside the loop.
+
+---
+
+A fuller version with a key controller for Escape, `g_timeout_add`, and `--title`, `--width`, `--height` and `--timeout` options lives in the Bun repository at [`test/js/bun/ffi/gtk-window.fixture.ts`](https://github.com/aphrody-labs/bun/blob/main/test/js/bun/ffi/gtk-window.fixture.ts).
+
+See [Docs > Runtime > FFI](/runtime/ffi) for the full `bun:ffi` reference.

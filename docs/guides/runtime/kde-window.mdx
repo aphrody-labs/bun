@@ -1,0 +1,67 @@
+---
+title: Open a KDE Kirigami window with bun:ffi
+sidebarTitle: KDE Kirigami window
+mode: center
+---
+
+KDE applications are Qt applications, and Kirigami (part of KDE Frameworks 6) is a QML module. As with [Qt](/guides/runtime/qt-window), `bun:ffi` loads a small `extern "C"` shim: it creates a `QQmlApplicationEngine`, loads a `Kirigami.ApplicationWindow` and runs `QApplication::exec()`.
+
+```cpp shim.cpp icon="file-code"
+#include <QApplication>
+#include <QQmlApplicationEngine>
+#include <QVariantMap>
+
+static const char qml[] = R"(
+import QtQuick
+import QtQuick.Controls as Controls
+import org.kde.kirigami as Kirigami
+
+Kirigami.ApplicationWindow {
+    pageStack.initialPage: Kirigami.Page {
+        title: "Kirigami through bun:ffi"
+        Controls.Label { text: "Hello from Bun" }
+    }
+}
+)";
+
+extern "C" int bun_kirigami_window_run(const char* title, int width, int height) {
+    static int argc = 1;
+    static char arg0[] = "bun";
+    static char* argv[] = {arg0, nullptr};
+    QApplication app(argc, argv);
+    QQmlApplicationEngine engine;
+    engine.setInitialProperties({
+        {"title", QString::fromUtf8(title)}, {"width", width}, {"height", height}, {"visible", true},
+    });
+    // A qrc: URL keeps loading synchronous, so rootObjects() is ready right away.
+    engine.loadData(qml, QUrl(QStringLiteral("qrc:/window.qml")));
+    if (engine.rootObjects().isEmpty())
+        return -1;
+    return app.exec();
+}
+```
+
+```sh terminal icon="terminal"
+c++ -std=c++20 -shared -fPIC -o libshim.so shim.cpp $(pkg-config --cflags --libs Qt6Widgets Qt6Quick Qt6Qml)
+```
+
+```ts window.ts icon="/icons/typescript.svg"
+import { dlopen, FFIType } from "bun:ffi";
+
+const { symbols } = dlopen("./libshim.so", {
+  bun_kirigami_window_run: { args: [FFIType.ptr, FFIType.i32, FFIType.i32], returns: FFIType.i32 },
+});
+process.exit(symbols.bun_kirigami_window_run(Buffer.from("Hello from Bun\0"), 640, 400));
+```
+
+```sh terminal icon="terminal"
+bun window.ts
+```
+
+Kirigami is a runtime dependency only: the shim links Qt Quick and Qt QML, and the engine imports `org.kde.kirigami` when it loads the QML. Install it with your distribution's `kirigami` package, or on Windows with [MSYS2](https://www.msys2.org) (`pacman -S mingw-w64-ucrt-x86_64-kirigami`, with `C:\msys64\ucrt64\bin` on `PATH`). Without a display, set `QT_QPA_PLATFORM=offscreen` and `QT_QUICK_BACKEND=software`.
+
+---
+
+A fuller version with a `JSCallback` for window creation, an Escape shortcut, `--timeout`, and `--title`, `--width` and `--height` options lives in the Bun repository at [`test/js/bun/ffi/kde-window.fixture.ts`](https://github.com/aphrody-labs/bun/blob/main/test/js/bun/ffi/kde-window.fixture.ts).
+
+See [Docs > Runtime > FFI](/runtime/ffi) for the full `bun:ffi` reference.

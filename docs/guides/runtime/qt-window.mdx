@@ -1,0 +1,60 @@
+---
+title: Open a Qt 6 window with bun:ffi
+sidebarTitle: Qt 6 window
+mode: center
+---
+
+Qt is a C++ library with no C ABI, so `bun:ffi` cannot call it directly. Write a small `extern "C"` shim, compile it into a shared library with your C++ compiler, and load that with `dlopen`. The shim owns `QApplication::exec()`, and calls a [`JSCallback`](/runtime/ffi#callbacks) synchronously on the JavaScript thread.
+
+```cpp shim.cpp icon="file-code"
+#include <QApplication>
+#include <QLabel>
+
+extern "C" int bun_qt_window_run(const char* title, int width, int height, void (*on_created)(int, int)) {
+    static int argc = 1;
+    static char arg0[] = "bun";
+    static char* argv[] = {arg0, nullptr};
+    QApplication app(argc, argv);
+    QLabel window(QStringLiteral("Qt 6 through bun:ffi"));
+    window.setWindowTitle(QString::fromUtf8(title));
+    window.resize(width, height);
+    window.show();
+    on_created(width, height);
+    return app.exec(); // returns when the last window closes
+}
+```
+
+```sh terminal icon="terminal"
+c++ -std=c++20 -shared -fPIC -o libshim.so shim.cpp $(pkg-config --cflags --libs Qt6Widgets)
+```
+
+```ts window.ts icon="/icons/typescript.svg"
+import { dlopen, FFIType, JSCallback } from "bun:ffi";
+
+const { symbols } = dlopen("./libshim.so", {
+  bun_qt_window_run: { args: [FFIType.ptr, FFIType.i32, FFIType.i32, FFIType.ptr], returns: FFIType.i32 },
+});
+
+const onCreated = new JSCallback((width: number, height: number) => console.log(`window ${width}x${height}`), {
+  args: [FFIType.i32, FFIType.i32],
+  returns: FFIType.void,
+});
+
+const status = symbols.bun_qt_window_run(Buffer.from("Hello from Bun\0"), 640, 400, onCreated.ptr);
+onCreated.close();
+process.exit(status);
+```
+
+```sh terminal icon="terminal"
+bun window.ts
+```
+
+TinyCC, which powers [`cc`](/runtime/ffi#cc) in `bun:ffi`, compiles C only, so a C++ shim needs the system compiler. On Windows, [MSYS2](https://www.msys2.org) provides both the compiler and Qt (`pacman -S mingw-w64-ucrt-x86_64-{gcc,pkgconf,qt6-base}`); add `C:\msys64\ucrt64\bin` to `PATH` so the Qt DLLs are found when the shim loads. On Linux without a display, set `QT_QPA_PLATFORM=offscreen`.
+
+`QApplication::exec()` blocks the JavaScript thread, so timers, promises and I/O callbacks do not run while the window is open. Use a `QTimer` in the shim for periodic work inside the loop.
+
+---
+
+A fuller version that builds and caches the shim, closes on Escape or after `--timeout`, and accepts `--title`, `--width` and `--height` lives in the Bun repository at [`test/js/bun/ffi/qt-window.fixture.ts`](https://github.com/aphrody-labs/bun/blob/main/test/js/bun/ffi/qt-window.fixture.ts) with the shim in [`qt-window.shim.cpp`](https://github.com/aphrody-labs/bun/blob/main/test/js/bun/ffi/qt-window.shim.cpp). For a KDE Kirigami window, see [Open a KDE Kirigami window](/guides/runtime/kde-window).
+
+See [Docs > Runtime > FFI](/runtime/ffi) for the full `bun:ffi` reference.
