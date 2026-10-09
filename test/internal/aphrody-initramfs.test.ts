@@ -259,6 +259,12 @@ describe("aphrody initramfs", () => {
         "/bin/sh",
         "--app",
         join(String(dir), "app"),
+        "--env",
+        "PORT=3000",
+        "--env",
+        "MOTD=a=b",
+        "--argv0",
+        "server",
         "--out",
         out,
       ],
@@ -279,6 +285,8 @@ describe("aphrody initramfs", () => {
     expect(byPath.get("init")!.mode).toBe(S_IFREG | 0o755);
     expect(JSON.parse(new TextDecoder().decode(byPath.get("etc/bun-init.json")!.data))).toEqual({
       argv: ["/bin/bun", "/app/index.ts"],
+      argv0: "server",
+      env: { PORT: "3000", MOTD: "a=b" },
       cwd: "/app",
       hostname: "aphrody",
     });
@@ -373,6 +381,7 @@ describe("initramfs network", () => {
     });
     expect(() => parseArgs(["--bun", "b", "--out", "o", "--ip", "10.0.2/24"])).toThrow("invalid IPv4 address");
     expect(parseArgs(["--bun", "b", "--out", "o"]).network).toBeUndefined();
+    expect(() => parseArgs(["--bun", "b", "--out", "o", "--env", "=x"])).toThrow("--env expects KEY=value");
     expect(resolvConf(["10.0.2.3", "1.1.1.1"])).toBe("nameserver 10.0.2.3\nnameserver 1.1.1.1\n");
     expect(hostsFile("vm1")).toBe("127.0.0.1\tlocalhost vm1\n::1\tlocalhost\n");
   });

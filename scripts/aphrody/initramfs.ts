@@ -11,7 +11,7 @@
 //     --bin /usr/bin/coreutils --app ./app --out build/initramfs.cpio.gz [--hostname aphrody] \
 //     [--module /lib/modules/<release>/kernel/drivers/net/virtio_net.ko.gz]... \
 //     [--ip dhcp|10.0.2.15/24 [--gateway 10.0.2.2] [--dns 10.0.2.3]... [--interface eth0]] \
-//     [--file host:/target]... [-- /bin/bun /app/index.ts]
+//     [--env KEY=value]... [--argv0 name] [--file host:/target]... [-- /bin/bun /app/index.ts]
 //
 // --bin takes a path inside --sysroot (kept at that path, with the symlinks
 // leading to it) or a host file (installed as /bin/<name>). --ip configures
@@ -19,7 +19,10 @@
 // /initramfs-net.ts): a static address or a DHCP lease, the default route and
 // /etc/resolv.conf. --module (sysroot or host path, .ko, .ko.gz or .ko.zst) is
 // copied to /lib/modules/<name> and loaded by /init in the order given, before
-// the network: pass the dependencies first.
+// the network: pass the dependencies first. --env adds to the workload's
+// environment and --argv0 sets its argv[0]: `--bun app --argv0 app -- /bin/bun`
+// runs a `bun build --compile` executable, which is plain Bun when called
+// `bun` (for /init) and the compiled app under any other name.
 //
 // Boot it with `qemu-system-x86_64 -kernel bzImage -initrd build/initramfs.cpio.gz -append console=ttyS0 -nographic`.
 
@@ -50,6 +53,8 @@ export interface Options {
   hostname: string;
   gzip: boolean;
   argv: string[];
+  argv0?: string;
+  env: Record<string, string>;
   network?: NetworkConfig;
   modules: string[];
 }
@@ -72,6 +77,7 @@ export function parseArgs(argv: string[]): Options {
     hostname: "aphrody",
     gzip: true,
     argv: [],
+    env: {},
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -126,6 +132,16 @@ export function parseArgs(argv: string[]): Options {
         options.files.push([spec.slice(0, at), spec.slice(at + 1)]);
         break;
       }
+      case "--env": {
+        const pair = value();
+        const eq = pair.indexOf("=");
+        if (eq <= 0) usage(`--env expects KEY=value, got ${pair}`);
+        options.env[pair.slice(0, eq)] = pair.slice(eq + 1);
+        break;
+      }
+      case "--argv0":
+        options.argv0 = value();
+        break;
       case "--no-gzip":
         options.gzip = false;
         break;
@@ -412,6 +428,8 @@ export function buildEntries(options: Options): Built {
   tree.file("/initramfs-net.ts", readFileSync(join(import.meta.dir, "initramfs-net.ts")), 0o644);
   const config = {
     argv: options.argv,
+    argv0: options.argv0,
+    env: Object.keys(options.env).length ? options.env : undefined,
     cwd: options.app ? "/app" : "/",
     hostname: options.hostname || undefined,
     network: options.network,
@@ -465,7 +483,7 @@ if (import.meta.main) {
     if (!(error instanceof UsageError)) throw error;
     console.error(`initramfs: ${error.message}`);
     console.error(
-      "usage: bun scripts/aphrody/initramfs.ts --bun <linux bun> --out <file.cpio.gz> [--sysroot <dir>] [--bin <elf>]... [--app <dir>] [--hostname <name>] [--ip dhcp|<cidr>] [--gateway <ip>] [--dns <ip>]... [--interface <name>] [--module <ko>]... [--file host:/target]... [--no-gzip] [-- argv...]",
+      "usage: bun scripts/aphrody/initramfs.ts --bun <linux bun> --out <file.cpio.gz> [--sysroot <dir>] [--bin <elf>]... [--app <dir>] [--hostname <name>] [--ip dhcp|<cidr>] [--gateway <ip>] [--dns <ip>]... [--interface <name>] [--module <ko>]... [--env KEY=value]... [--argv0 name] [--file host:/target]... [--no-gzip] [-- argv...]",
     );
     process.exit(2);
   }

@@ -5,7 +5,8 @@
 // in /etc/bun-init.json, reaps the orphans the kernel reparents to PID 1, and
 // powers the machine off (or reboots) once the workload exits.
 //
-//   /etc/bun-init.json  { "argv": ["/bin/bun", "/app/index.ts"], "env": {}, "cwd": "/app", "hostname": "aphrody",
+//   /etc/bun-init.json  { "argv": ["/bin/bun", "/app/index.ts"], "argv0": "app", "env": {}, "cwd": "/app",
+//                         "hostname": "aphrody",
 //                         "network": { "address": "10.0.2.15/24", "gateway": "10.0.2.2", "dns": ["10.0.2.3"] },
 //                         "modules": ["/lib/modules/virtio_net.ko.gz"],
 //                         "onExit": "poweroff" | "reboot" | "halt" }
@@ -19,6 +20,7 @@ import { configureNetwork, type NetworkConfig } from "./initramfs-net.ts";
 
 interface InitConfig {
   argv: string[];
+  argv0?: string;
   env?: Record<string, string>;
   cwd?: string;
   hostname?: string;
@@ -76,6 +78,7 @@ if (config.network) {
 
 const workload = Bun.spawn({
   cmd: config.argv,
+  argv0: config.argv0,
   cwd: config.cwd ?? "/",
   env: { PATH: "/bin:/usr/bin", HOME: "/root", TERM: "linux", ...config.env },
   stdio: ["inherit", "inherit", "inherit"],
