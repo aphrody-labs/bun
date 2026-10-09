@@ -1,4 +1,5 @@
 "use strict";
+const { existsSync } = require("node:fs");
 const { dirname, join } = require("node:path");
 const { checkPatch } = require("./lib/patch.js");
 const { applyBunConfig } = require("./lib/config.js");
@@ -7,6 +8,15 @@ const PHASE_PRODUCTION_BUILD = "phase-production-build";
 
 function nextDirFrom(projectDir) {
   return dirname(require.resolve("next/package.json", { paths: [projectDir] }));
+}
+
+/**
+ * The Bun bundler built into @aphrody/next (aphrody-labs/next.js), or undefined
+ * for a Vercel next, which still needs `next-bun patch` and lib/build.js.
+ */
+function nativeBunBuild(nextDir) {
+  const file = join(nextDir, "dist", "build", "bun-build", "index.js");
+  return existsSync(file) ? require(file) : undefined;
 }
 
 /** Bun.build compiles `next build` unless the command chose Next's own bundler. */
@@ -43,7 +53,8 @@ function bunPlugins(options, projectDir) {
  * deployment id its build baked into the client bundles.
  *
  * `bundler: "bun"` (the default) also compiles `next build` with `Bun.build`
- * (Pages Router, experimental; needs `bun --bun next build` and `next-bun patch`)
+ * (Pages Router, experimental; needs `bun --bun next build`, and `next-bun patch`
+ * unless next is @aphrody/next, which has the Bun bundler built in)
  * unless the command passes `--turbopack` or `--webpack`. `bundler: "turbopack"`
  * leaves the bundler to Next. With Bun.build, `plugins` are added to the client
  * and server builds and `tailwind` adds `@aphrody/bun-plugin-tailwind`; with
@@ -66,7 +77,14 @@ function withBun(nextConfig, options = {}) {
     if (typeof Bun === "undefined") {
       throw new Error("@aphrody/next-bun: run the build with `bun --bun next build`.");
     }
-    const state = checkPatch(nextDirFrom(projectDir));
+    const nextDir = nextDirFrom(projectDir);
+    const native = nativeBunBuild(nextDir);
+    if (native) {
+      process.env.NEXT_BUN = "1";
+      native.configureBunBuild({ plugins: bunPlugins(options, projectDir) });
+      return config;
+    }
+    const state = checkPatch(nextDir);
     if (!state.patched) {
       throw new Error(`@aphrody/next-bun: next@${state.version} is not patched; run \`bunx next-bun patch\` first.`);
     }

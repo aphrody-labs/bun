@@ -152,6 +152,33 @@ describe("withBun", () => {
     }
   });
 
+  test("@aphrody/next's built-in Bun bundler is used without a patch", async () => {
+    using dir = tempDir("next-bun-native", {
+      "package.json": pkg("app", { dependencies: { next: "1.0.0" } }),
+      "node_modules/next/package.json": pkg("next", { version: "16.5.0-canary.5-aphrody.1" }),
+      "node_modules/next/dist/build/bun-build/index.js": `
+        exports.configured = [];
+        exports.configureBunBuild = options => exports.configured.push(options.plugins.map(p => p.name));
+      `,
+    });
+    const plugin = { name: "probe", setup() {} };
+    const previous = { NEXT_BUN: process.env.NEXT_BUN, TURBOPACK: process.env.TURBOPACK };
+    delete process.env.NEXT_BUN;
+    delete process.env.TURBOPACK;
+    try {
+      await withBun({}, { projectDir: String(dir), root: false, plugins: [plugin] })("phase-production-build", {});
+      expect(process.env.NEXT_BUN).toBe("1");
+      expect(require(join(String(dir), "node_modules/next/dist/build/bun-build/index.js")).configured).toEqual([
+        ["probe"],
+      ]);
+    } finally {
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
+
   test("an unknown bundler is refused", async () => {
     await expect(withBun({}, { bundler: "rspack", root: false })("phase-production-build", {})).rejects.toThrow(
       'bundler must be "bun" or "turbopack"',

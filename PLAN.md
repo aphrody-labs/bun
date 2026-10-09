@@ -333,23 +333,47 @@ Côté Aphrody : `crates/ai/code-graph`, `crates/engine/yolo-core`, `crates/infr
 - ✅ Binaire release réinstallé (`aphrody self install-path`, `aphrody 1.0.0-canary`, aphrody-mcp relié) ;
   `graph:bun` reconstruit (19 783 fichiers, 116 085 nœuds) et `claude-memory-bun` (573 nœuds).
 
-### M. Fork Next.js + Turbopack — `aphrody-labs/next.js` (🔄 démarré le 2026-10-09 sur demande, branche canary)
+### M. Fork Next.js + Turbopack — `aphrody-labs/next.js` (🔄 démarré le 2026-10-09, branche canary)
 
-Reproduire pour Next.js le workflow appliqué à Bun, plus la bunisation agressive par le nouveau n2b
-(`packages/bun-n2b`) de Next et de Turbopack (pnpm → bun, jest → bun test là où c'est possible, APIs Node → Bun) :
+Reproduire pour Next.js le workflow appliqué à Bun, plus la bunisation agressive par n2b (`packages/bun-n2b`) de Next et
+de Turbopack. Détail et limites : `APHRODY.md` et `PLAN.md` du fork.
 
-- ⏳ Fork `vercel/next.js` → `aphrody-labs/next.js` (clone local `C:\next.js`, remotes `origin` + `upstream`), branche
-  `main` (canary upstream).
-- ⏳ Scope `@aphrody` : script `scripts/aphrody/scope.ts` (renommage idempotent des paquets publiés, `--check`/`--write`)
-  et `scripts/aphrody/sync-upstream.ts` (fusion à trois voies tenant compte du renommage) + workflow
-  `aphrody-upstream-sync.yml` toutes les 6 h + tests `test/internal/aphrody-*`.
-- ⏳ Publication : npm (`@aphrody/next`, `@aphrody/next-swc-*`, paquets `@next/*` renommés), crates.io pour les crates
-  Rust publiables, release GitHub ; workflows `aphrody-publish-*` / `aphrody-release`.
-- ⏳ Le patch et l'intégration Bun de `@aphrody/next-bun` deviennent des commits du fork Next (support Bun natif :
-  runtime, PostCSS sans Node, Bun.build) ; `@aphrody/next-bun` se réduit à ce qui reste côté Bun.
-- ⏳ Absorber la couche Next restante d'Aphrody/Shenron qui relève de Next ; Aphrody et Shenron consomment
-  `@aphrody/next`.
-- ⏳ `APHRODY.md` et `PLAN.md` propres au fork Next ; graphe `aphrody graph --source graph:next` et mémoire.
+- ✅ Fork `aphrody-labs/next.js`, clone `C:
+ext.js` (`--filter=blob:none`, `origin` + `upstream`), branche `canary`
+  synchronisée sur vercel/next.js (fusion uniquement).
+- ✅ pnpm → Bun (`8a2c9f6785`) : `scripts/aphrody/bunify.ts` (réécriture idempotente : `workspaces`, `overrides`,
+  `patchedDependencies`, scripts `pnpm`/`node`/`tsx` → `bun`, hook pre-commit), `bun.lock` migré du
+  `pnpm-lock.yaml` upstream, `bunfig.toml` (linker isolé + `publicHoistPattern` de pnpm, `minimumReleaseAge` 48 h).
+- ✅ Scope `@aphrody` à la publication seulement (`scripts/aphrody/scope.ts`) : `@aphrody/next`, `@aphrody/next-<x>`,
+  `@aphrody/next-swc-<plateforme>` ; dépendances internes en alias npm (`"@next/env": "npm:@aphrody/next-env@V"`), le
+  consommateur installe `"next": "npm:@aphrody/next@V"`. `download-swc.ts` et le postinstall
+  (`scripts/aphrody/install-native.ts`) ne téléchargent que `@aphrody/next-swc-*`, plus de repli sur Vercel.
+- ✅ Sync upstream toutes les 6 h (`aphrody-upstream-sync.yml`, `scripts/aphrody/sync-upstream.ts` : fusion à trois
+  voies après bunify, fichiers pnpm gardés supprimés, `bun.lock` re-migré).
+- ✅ Release (`8feee3dcfa`) : `aphrody-release.yml` (tag `aphrody-v*` ou manuel) : next-swc sur les 8 plateformes,
+  build JS sous Bun, `scripts/aphrody/publish-npm.ts` (version `<base>-aphrody.N` commune, natifs puis JS puis
+  `next`), release GitHub. ⏳ Premier run (secret `NPM_TOKEN`, `APHRODY_SYNC_TOKEN`). ⏳ crates.io non fait (crates
+  liées par chemins au workspace).
+- ✅ Bun natif dans Next (`e4b162850f`) : `packages/next/src/build/bun-build` (port de `lib/build.js`, Bun.build pour
+  `next build` Pages Router sous `NEXT_BUN`), `lib/bundler.ts` `isBunBundler()` ; Turbopack
+  `turbopack-core::environment::node_executable()` (`TURBOPACK_NODE_BINARY`, sinon le `node`/`bun` hôte, sinon
+  `node` du PATH) pour le pool de workers (PostCSS, loaders) et `process.version` : plus de shim `node` sous Bun.
+- ✅ `@aphrody/next-bun` : `withBun` utilise le Bun.build intégré de `@aphrody/next` (`NEXT_BUN=1`,
+  `configureBunBuild`) ; `patch`, `lib/build.js` et le shim `node` restent pour le `next` de Vercel, à retirer après la
+  première publication.
+- ⏳ Bunisation n2b des scripts/outillage et jest → bun test par lots (agent n2b en cours dans `C:
+ext.js`, branche
+  `bun`) ; `packages/next/src` garde `process.env` et les imports `node:` (DefinePlugin, bundles edge/client).
+- ⏳ Mesures avant/après (build natif, build d'app exemple, dev cold start) : à faire dans la passe unique de build.
+- ⏳ Shenron et Aphrody consomment `@aphrody/next` après la première release.
+- Limites Bun relevées (à corriger dans `src/install`, §2.11) : clés `patchedDependencies` sans version ignorées en
+  silence (bunify les versionne depuis `bun.lock`) ; les paquets de workspace non déclarés ne sont pas liés à la racine
+  comme pnpm (`@next/eslint-plugin-internal` déclaré par bunify). Autres : sccache échoue sur next-napi-bindings sous
+  Windows (ligne de commande trop longue), `taskr` « Taskfile not found! » pour `next#build` sous `turbo` (Windows).
+- Tests à lancer : `bun test scripts/aphrody/test` (C:
+ext.js), jest `packages/next/src/lib/bundler.test.ts`
+  et `packages/next/src/build/bun-build/index.test.ts`, `cargo test -p turbopack-core node_executable`,
+  `bun bd test test/integration/next-bun/with-bun.test.ts` (C:un).
 
 ### Q. Fork Tailwind CSS — `aphrody-labs/tailwindcss` (🔄)
 

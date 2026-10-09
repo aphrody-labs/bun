@@ -18,6 +18,10 @@ The codemods and testing entry points are TypeScript and run as is on Bun.
 
 ## `withBun`
 
+With `@aphrody/next` ([aphrody-labs/next.js](https://github.com/aphrody-labs/next.js)), the Bun bundler is built into `next build`
+(`next/dist/build/bun-build`, `NEXT_BUN=1`) and Turbopack starts its workers with the runtime that loaded it. Neither `next-bun patch` nor
+the `node` shim is needed there; both remain for Vercel's `next`.
+
 ```ts
 import { withBun } from "@aphrody/next-bun";
 
