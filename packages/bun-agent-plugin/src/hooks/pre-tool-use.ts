@@ -1,4 +1,4 @@
-// PreToolUse on shell commands: npm/npx/yarn/pnpm/node/pip/python/uv -> the Bun fork, `bun test` in a Bun checkout
+// PreToolUse on shell commands: npm/npx/yarn/pnpm/node/pip/python/uv -> the Aphrody runtime, `bun test` in a Bun checkout
 // -> `bun bd test`. Rewrites the command where the agent supports it, otherwise blocks it with the replacement.
 //
 //   claude: updatedInput; auto-approved only in bypassPermissions mode, otherwise the user sees the rewritten command
@@ -10,7 +10,7 @@
 //
 // BUN_AGENT_PLUGIN_REWRITE=0 turns the rewrite off; `# keep-node` (or keep-npm, keep-tool) in a command keeps it as written.
 
-import { bunCheckout, cwdOf, input, isFork, preferHint, reply, target } from "./common.ts";
+import { bunCheckout, cwdOf, input, isAphrodyBun, preferHint, reply, target } from "./common.ts";
 import { rewriteCommand } from "./rewrite.ts";
 
 const t = target();
@@ -29,7 +29,7 @@ function commandOf(e: Record<string, any>): string | undefined {
 
 const command = process.env.BUN_AGENT_PLUGIN_REWRITE === "0" ? undefined : commandOf(event);
 const result = command
-  ? rewriteCommand(command, { bunCheckout: bunCheckout(cwdOf(event)) !== undefined, fork: isFork() })
+  ? rewriteCommand(command, { bunCheckout: bunCheckout(cwdOf(event)) !== undefined, aphrody: isAphrodyBun() })
   : undefined;
 
 if (!result) {
@@ -37,7 +37,7 @@ if (!result) {
   if (hint) reply({ hookSpecificOutput: { hookEventName: "PreToolUse", additionalContext: hint } });
   else if (t === "agy") reply({});
 } else {
-  const reason = `Bun fork: ${result.changes.join("; ")}`;
+  const reason = `Aphrody runtime: ${result.changes.join("; ")}`;
   const autoAllow = process.env.BUN_AGENT_PLUGIN_AUTO_ALLOW === "1";
   if (t === "agy") {
     reply({ decision: autoAllow ? "allow" : "ask", reason, overwrite: { CommandLine: result.command } });

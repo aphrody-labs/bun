@@ -69,7 +69,15 @@ describe("generate", () => {
     expect(skills("claude")).toEqual(skills("codex"));
     expect(skills("claude")).toEqual(skills("agy"));
     expect(skills("claude")).toEqual(
-      expect.arrayContaining(["bun-build", "bun-crates", "bun-docs", "bun-fork", "bun-runtime", "bun-tests", "verify"]),
+      expect.arrayContaining([
+        "bun-aphrody",
+        "bun-build",
+        "bun-crates",
+        "bun-docs",
+        "bun-runtime",
+        "bun-tests",
+        "verify",
+      ]),
     );
     for (const name of skills("claude")) {
       const md = String(files.get(`claude/skills/${name}/SKILL.md`));
@@ -97,7 +105,7 @@ describe("generate", () => {
     if (Object.keys(lsp).length)
       expect(declared).toEqual({ bun: { command: "bun", args: ["lsp", "--stdio"], extensionToLanguage: lsp } });
     for (const t of ["claude", "codex", "agy"])
-      expect(String(files.get(`${t}/skills/bun-fork/SKILL.md`))).toContain("`graph_symbols`");
+      expect(String(files.get(`${t}/skills/bun-aphrody/SKILL.md`))).toContain("`graph_symbols`");
   });
 
   test("reads tool names, constants and agent tools from a checkout's sources", () => {
@@ -145,7 +153,7 @@ describe("generate", () => {
 });
 
 describe("rewriteCommand", () => {
-  const cases: [string, string | undefined, { bunCheckout?: boolean; fork?: boolean }?][] = [
+  const cases: [string, string | undefined, { bunCheckout?: boolean; aphrody?: boolean }?][] = [
     ["npm i", "bun i"],
     ["npm install", "bun install"],
     ["npm ci", "bun install --frozen-lockfile"],
@@ -156,8 +164,8 @@ describe("rewriteCommand", () => {
     ["npx -y prettier --write .", "bunx prettier --write ."],
     ["node script.js arg", "bun script.js arg"],
     ["cd app && npm test", "cd app && bun run test"],
-    ["pip install requests", "bun uv pip install requests", { fork: true }],
-    ["pip install requests", undefined, { fork: false }],
+    ["pip install requests", "bun uv pip install requests", { aphrody: true }],
+    ["pip install requests", undefined, { aphrody: false }],
     ["bun test foo.test.ts", "bun bd test foo.test.ts", { bunCheckout: true }],
     ["bun test foo.test.ts", undefined],
     ["echo npm install", undefined],
@@ -227,7 +235,7 @@ describe("hooks", () => {
   );
 
   test.concurrent(
-    "SessionStart recognizes the fork and the checkout",
+    "SessionStart recognizes the Aphrody runtime and the checkout",
     async () => {
       using home = tempDir("agent-plugin-session", {});
       const { stdout, exitCode } = await run([bunExe(), hook("session-start"), "claude"], {
@@ -235,7 +243,7 @@ describe("hooks", () => {
         env: { BUN_INSTALL: String(home) },
       });
       const context = JSON.parse(stdout).hookSpecificOutput.additionalContext;
-      expect(context).toContain("(aphrody-labs/bun fork)");
+      expect(context).toContain("(Aphrody runtime, aphrody-labs/bun)");
       expect(context).toContain("bun bd test");
       expect(exitCode).toBe(0);
     },

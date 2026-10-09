@@ -2,11 +2,11 @@
 
 export const PLUGIN = "bun";
 export const MARKETPLACE = "aphrody-bun";
-export const DISPLAY_NAME = "Bun (aphrody-labs fork)";
+export const DISPLAY_NAME = "Bun (Aphrody runtime)";
 export const REPOSITORY = "https://github.com/aphrody-labs/bun";
 export const AUTHOR = { name: "aphrody-labs", url: "https://github.com/aphrody-labs" };
 
-/** The MCP server every target registers: the fork's built-in server over stdio. */
+/** The MCP server every target registers: the built-in server of the Aphrody runtime, over stdio. */
 export const MCP_SERVER = { name: "bun", command: "bun", args: ["mcp"] };
 
 /** The language server: `bun lsp` serves every language it routes (src/lsp/language.rs) on stdio. */
@@ -32,7 +32,7 @@ export const COMMAND_ROOTS = [".claude/commands"];
 
 /**
  * The skills made from the code, the docs and the memory fiches. A fiche goes to the first skill whose pattern
- * matches its name; `bun-fork` takes the rest.
+ * matches its name; `bun-aphrody` takes the rest.
  */
 export const DERIVED_SKILLS: { name: string; fiches: RegExp[] }[] = [
   { name: "bun-build", fiches: [/^bun-build-/] },
@@ -40,7 +40,7 @@ export const DERIVED_SKILLS: { name: string; fiches: RegExp[] }[] = [
   { name: "bun-crates", fiches: [/^bun-core-/, /^bun-toolchain-/] },
   { name: "bun-runtime", fiches: [/^bun-runtime-/, /^bun-install-/, /^bun-graph-call-paths$/] },
   { name: "bun-docs", fiches: [/^bun-docs-/, /^bun-packages$/] },
-  { name: "bun-fork", fiches: [/./] },
+  { name: "bun-aphrody", fiches: [/./] },
 ];
 
 export const HOOKS = ["common.ts", "rewrite.ts", "session-start.ts", "pre-tool-use.ts", "post-tool-use.ts"];

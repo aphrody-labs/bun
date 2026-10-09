@@ -1,12 +1,12 @@
 // SessionStart (Claude, Codex) / first PreInvocation (Antigravity): says whether the `bun` on PATH is the
-// aphrody-labs/bun fork, adds the fork's working rules (context.md, generated from docs/project/agent-plugin.mdx),
+// Aphrody runtime (aphrody-labs/bun), adds its working rules (context.md, generated from docs/project/agent-plugin.mdx),
 // and refreshes the installed plugin in the background when its version differs from `bun --version`.
 
 import { spawn } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { bunCheckout, cwdOf, input, isFork, meta, reply, target } from "./common.ts";
+import { bunCheckout, cwdOf, input, isAphrodyBun, meta, reply, target } from "./common.ts";
 
 const t = target();
 const event = await input();
@@ -17,12 +17,12 @@ if (t === "agy" && Number(event.invocationNum ?? 0) > 1) {
 }
 
 const lines: string[] = [];
-const fork = isFork();
-if (fork) {
-  lines.push(`bun ${Bun.version_with_sha} (aphrody-labs/bun fork) at ${process.execPath}.`);
+const aphrody = isAphrodyBun();
+if (aphrody) {
+  lines.push(`bun ${Bun.version_with_sha} (Aphrody runtime, aphrody-labs/bun) at ${process.execPath}.`);
 } else {
   lines.push(
-    `WARNING: the bun on PATH (${process.execPath}, ${Bun.version_with_sha}) is not the aphrody-labs/bun fork. ` +
+    `WARNING: the bun on PATH (${process.execPath}, ${Bun.version_with_sha}) is not the Aphrody runtime (aphrody-labs/bun). ` +
       'Install it: `curl -fsSL https://aphrody.com/install | bash` (Windows: `powershell -c "irm aphrody.com/install.ps1|iex"`), ' +
       "then make sure ~/.bun/bin comes first on PATH.",
   );
@@ -47,7 +47,7 @@ let installed: { bun?: string; version?: string } | undefined;
 try {
   installed = JSON.parse(readFileSync(join(root, "install.json"), "utf8"));
 } catch {}
-if (fork && installed && installed.bun !== Bun.version_with_sha) {
+if (aphrody && installed && installed.bun !== Bun.version_with_sha) {
   const stamp = join(root, ".update-attempt");
   let last = "";
   try {

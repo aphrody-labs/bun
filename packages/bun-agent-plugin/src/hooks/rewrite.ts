@@ -1,12 +1,12 @@
-// Rewrites shell commands that call another runtime or package manager into the Bun fork's equivalent:
+// Rewrites shell commands that call another runtime or package manager into the Aphrody runtime's equivalent:
 // npm/npx/yarn/pnpm -> bun/bunx, node -> bun, pip/python/uv -> `bun uv`, and `bun test` inside a Bun checkout ->
 // `bun bd test`. Pure: no I/O, so the hooks and the tests share it.
 
 export type RewriteOptions = {
   /** The working directory is a checkout of the Bun repository (`bun test` there must be `bun bd test`). */
   bunCheckout?: boolean;
-  /** The bun that will run the command is the fork, which carries uv (`bun uv`); upstream Bun has none. */
-  fork?: boolean;
+  /** The bun that will run the command is the Aphrody runtime, which carries uv (`bun uv`); upstream Bun has none. */
+  aphrody?: boolean;
 };
 
 export type Rewrite = { command: string; changes: string[] };
@@ -279,21 +279,21 @@ export function rewriteCommand(line: string, options: RewriteOptions = {}): Rewr
         break;
       case "pip":
       case "pip3":
-        if (options.fork === false) break;
+        if (options.aphrody === false) break;
         next = ["bun", "uv", "pip", ...args];
         break;
       case "python":
       case "python3":
       case "py":
-        if (options.fork === false) break;
+        if (options.aphrody === false) break;
         next = python(args);
         break;
       case "uv":
-        if (options.fork === false) break;
+        if (options.aphrody === false) break;
         next = ["bun", "uv", ...args];
         break;
       case "uvx":
-        if (options.fork === false) break;
+        if (options.aphrody === false) break;
         next = ["bun", "uv", "tool", "run", ...args];
         break;
       case "bun":

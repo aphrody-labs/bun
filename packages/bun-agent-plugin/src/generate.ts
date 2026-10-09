@@ -319,12 +319,12 @@ function derivedSkills(root: string, fiches: Fiche[], repo: Skill[]): Skill[] {
   const scripts = packageScripts(root);
   make(
     "bun-build",
-    `Build, run and lint the Bun fork from a checkout: \`bun bd\`, the ${scripts.length} package.json scripts (${scripts
+    `Build, run and lint the Aphrody runtime (aphrody-labs/bun) from a checkout: \`bun bd\`, the ${scripts.length} package.json scripts (${scripts
       .slice(0, 8)
       .map(([k]) => k)
       .join(", ")}, ...), build profiles, Windows/Linux toolchains, codegen and vendored dependencies.`,
     [
-      "# Building the Bun fork",
+      "# Building the Aphrody runtime",
       section(claude, "Building and Running Bun") ?? "",
       "## package.json scripts",
       table(
@@ -342,9 +342,9 @@ function derivedSkills(root: string, fiches: Fiche[], repo: Skill[]): Skill[] {
   const testGuide = maybe(join(root, "test", "CLAUDE.md"));
   make(
     "bun-tests",
-    "Write and run tests in the Bun fork: `bun bd test <file>`, where a test goes (test/js, test/cli, test/bundler, regression), the harness (bunExe, bunEnv, tempDir, normalizeBunSnapshot...), CI runner and review rules.",
+    "Write and run tests in the Aphrody runtime (aphrody-labs/bun): `bun bd test <file>`, where a test goes (test/js, test/cli, test/bundler, regression), the harness (bunExe, bunEnv, tempDir, normalizeBunSnapshot...), CI runner and review rules.",
     [
-      "# Testing the Bun fork",
+      "# Testing the Aphrody runtime",
       section(claude, "Testing") ?? "",
       harness.length ? `## Exports of test/harness.ts\n\n${harness.map(n => `\`${n}\``).join(", ")}` : "",
       testGuide
@@ -359,9 +359,9 @@ function derivedSkills(root: string, fiches: Fiche[], repo: Skill[]): Skill[] {
   const srcGuide = maybe(join(root, "src", "CLAUDE.md"));
   make(
     "bun-crates",
-    `Navigate the Rust side of the Bun fork: the ${ws.length} crates of the Cargo workspace (bun_core, bun_sys, bun_jsc, bun_runtime, js_parser, bundler, install...), Rust idioms, JSC bindings, GC lifetimes, event loop, parser, printer, resolver, bundler and CSS.`,
+    `Navigate the Rust side of the Aphrody runtime (aphrody-labs/bun): the ${ws.length} crates of the Cargo workspace (bun_core, bun_sys, bun_jsc, bun_runtime, js_parser, bundler, install...), Rust idioms, JSC bindings, GC lifetimes, event loop, parser, printer, resolver, bundler and CSS.`,
     [
-      "# The crates of the Bun fork",
+      "# The crates of the Aphrody runtime",
       section(claude, "Code Architecture") ?? "",
       "## Workspace members",
       table(
@@ -378,7 +378,7 @@ function derivedSkills(root: string, fiches: Fiche[], repo: Skill[]): Skill[] {
   const runtimePages = pages.filter(p => p.page.startsWith("/runtime/"));
   make(
     "bun-runtime",
-    "How the Bun fork's runtime works and is documented: Bun APIs, CLI commands, built-in JS modules, node:* compatibility, Bun.serve, fetch and streams, HTTP/SQL/Valkey, the shell, the test runner and the package manager (bun install, lockfile, linkers).",
+    "How the Aphrody runtime works and is documented: Bun APIs, CLI commands, built-in JS modules, node:* compatibility, Bun.serve, fetch and streams, HTTP/SQL/Valkey, the shell, the test runner and the package manager (bun install, lockfile, linkers).",
     [
       "# The Bun runtime",
       "## Runtime documentation pages (docs/)",
@@ -393,9 +393,9 @@ function derivedSkills(root: string, fiches: Fiche[], repo: Skill[]): Skill[] {
   const groupsOfDocs = [...new Set(pages.map(p => p.group))];
   make(
     "bun-docs",
-    `Find the right page of the Bun fork's documentation (docs/, ${pages.length} pages: runtime, bundler, package manager, test runner, guides, project) and the packages in packages/.`,
+    `Find the right page of the Aphrody runtime's documentation (docs/, ${pages.length} pages: runtime, bundler, package manager, test runner, guides, project) and the packages in packages/.`,
     [
-      "# The documentation of the Bun fork",
+      "# The documentation of the Aphrody runtime",
       "`docs/docs.json` is the navigation; each page is `docs/<path>.mdx`.",
       ...groupsOfDocs.map(g =>
         [
@@ -411,14 +411,14 @@ function derivedSkills(root: string, fiches: Fiche[], repo: Skill[]): Skill[] {
 
   const all = [...repo.map(s => s.name), ...DERIVED_SKILLS.map(d => d.name)].sort();
   make(
-    "bun-fork",
-    "Start here for any work with Bun: use the aphrody-labs/bun fork for everything (bun, bunx, bun uv instead of node, npm, npx, yarn, pnpm, pip, python), install and upgrade it, and pick the skill or memory fiche for the task.",
+    "bun-aphrody",
+    "Start here for any work with Bun: use the Aphrody runtime (aphrody-labs/bun) for everything (bun, bunx, bun uv instead of node, npm, npx, yarn, pnpm, pip, python), install and upgrade it, and pick the skill or memory fiche for the task.",
     [
-      "# Working with the Bun fork",
+      "# Working with the Aphrody runtime",
       rules,
       "## Skills of this plugin",
       all.map(n => `- \`${n}\``).join("\n"),
-      referencesList(groups.get("bun-fork")!),
+      referencesList(groups.get("bun-aphrody")!),
     ],
   );
   return out;
@@ -473,11 +473,10 @@ export function generate(options: GenerateOptions): Files {
   ]
     .filter(Boolean)
     .join("\n\n");
-  const bunFork = skills.find(s => s.name === "bun-fork");
-  if (bunFork)
-    bunFork.files.set("SKILL.md", String(bunFork.files.get("SKILL.md")).trimEnd() + "\n\n" + toolsDoc + "\n");
+  const entry = skills.find(s => s.name === "bun-aphrody");
+  if (entry) entry.files.set("SKILL.md", String(entry.files.get("SKILL.md")).trimEnd() + "\n\n" + toolsDoc + "\n");
   const description =
-    "The aphrody-labs/bun fork for coding agents: its MCP server (bun mcp), hooks that run bun, bunx and bun uv " +
+    "The Aphrody runtime (aphrody-labs/bun) for coding agents: its MCP server (bun mcp), hooks that run bun, bunx and bun uv " +
     "instead of node, npm, npx, yarn, pnpm, pip and python, and skills for building, testing and navigating Bun.";
   const keywords = ["bun", "aphrody", "mcp", "runtime", "package-manager", "rust", "skills", "hooks"];
   const skillIndex = skills
@@ -486,7 +485,7 @@ export function generate(options: GenerateOptions): Files {
       return `- \`${s.name}\`: ${(fm.description ?? "").replace(/\s+/g, " ")}`;
     })
     .join("\n");
-  const instructions = `# Bun (aphrody-labs fork)\n\n${rules}\n\n${toolsDoc}\n\n## Skills\n\n${skillIndex}\n`;
+  const instructions = `# Bun (Aphrody runtime)\n\n${rules}\n\n${toolsDoc}\n\n## Skills\n\n${skillIndex}\n`;
   const context = rules;
 
   // Content shared by every target, before the version stamp.
@@ -571,7 +570,10 @@ export function generate(options: GenerateOptions): Files {
     json({
       name: MARKETPLACE,
       owner: AUTHOR,
-      metadata: { description: "The aphrody-labs/bun fork as a coding-agent plugin", version: pluginVersion },
+      metadata: {
+        description: "The Aphrody runtime (aphrody-labs/bun) as a coding-agent plugin",
+        version: pluginVersion,
+      },
       plugins: [{ name: PLUGIN, source: "./claude", version: pluginVersion, description, category: "development" }],
     }),
   );
@@ -590,7 +592,7 @@ export function generate(options: GenerateOptions): Files {
       keywords,
       interface: {
         displayName: DISPLAY_NAME,
-        shortDescription: "Bun fork: MCP, hooks, skills",
+        shortDescription: "Aphrody: MCP, hooks, skills",
         developerName: AUTHOR.name,
         category: "Developer Tools",
       },
@@ -639,7 +641,7 @@ export function generate(options: GenerateOptions): Files {
       version: pluginVersion,
       suggestedPrompts: [
         "Build this Bun checkout and run the tests of the file I am changing",
-        "Migrate this project's npm and node commands to the Bun fork",
+        "Migrate this project's npm and node commands to the Aphrody runtime",
         "Which Bun crate implements this API?",
       ],
     }),

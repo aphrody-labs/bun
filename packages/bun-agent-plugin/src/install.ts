@@ -167,7 +167,7 @@ export function install(files: Map<string, string | Uint8Array>, options: Instal
     write(configPath, upsertBlock(config, lines.join("\n"), toml));
     const agentsPath = join(p.codexHome, "AGENTS.md");
     const agents = existsSync(agentsPath) ? readFileSync(agentsPath, "utf8") : "";
-    actions.push(`merge ${agentsPath}: Bun fork rules`);
+    actions.push(`merge ${agentsPath}: Aphrody runtime rules`);
     write(agentsPath, upsertBlock(agents, str(files.get("codex/AGENTS.md")), markdown));
     if (real && which("codex")) run(["codex", "plugin", "add", PLUGIN_ID], actions, options.dryRun);
   }

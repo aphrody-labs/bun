@@ -1,4 +1,4 @@
-// bun-agent-plugin: the Bun fork as a plugin for Claude Code, Codex and Antigravity/Gemini CLI.
+// bun-agent-plugin: the Aphrody runtime (aphrody-labs/bun) as a plugin for Claude Code, Codex and Antigravity/Gemini CLI.
 //
 //   install [claude|codex|agy]... [--home DIR] [--dry-run] [--update] [--quiet] [--json]
 //   uninstall [claude|codex|agy]... [--home DIR] [--dry-run]
@@ -6,7 +6,7 @@
 //   pack --out FILE                      the archive `bun agent-plugin` embeds
 //   inputs                               the files generate reads (one per line)
 //   memory --from DIR                    import memory fiches (bun-*.md), sanitized, into <package>/memory
-//   doctor                               is the bun on PATH the fork, and what is installed
+//   doctor                               is the bun on PATH the Aphrody runtime, and what is installed
 //
 // Common options: --root DIR (the Bun checkout; default: the one this package is in), --skills DIR (more skills,
 // repeatable), --from DIR (install an already generated tree, e.g. the one `bun agent-plugin` extracts).
@@ -16,7 +16,7 @@ import { homedir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { pack } from "./archive.ts";
 import { generate, inputFiles, type Files } from "./generate.ts";
-import { isFork } from "./hooks/common.ts";
+import { isAphrodyBun } from "./hooks/common.ts";
 import { ALL_TARGETS, install, uninstall, type Target } from "./install.ts";
 import { forbiddenIn, sanitizeText } from "./sanitize.ts";
 
@@ -213,14 +213,14 @@ export async function main(argv: string[]) {
       const report = {
         bun: process.execPath,
         version: Bun.version_with_sha,
-        fork: isFork(),
+        aphrody: isAphrodyBun(),
         installed: installed ?? null,
         current: installed ? installed.bunVersion === Bun.version : false,
       };
       if (a.json) console.log(JSON.stringify(report, null, 2));
       else {
         console.log(
-          `bun: ${report.bun} ${report.version}${report.fork ? " (aphrody-labs/bun fork)" : " (NOT the fork: bun upgrade, or scripts/aphrody/install.sh|ps1)"}`,
+          `bun: ${report.bun} ${report.version}${report.aphrody ? " (Aphrody runtime)" : " (NOT the Aphrody runtime: bun upgrade, or scripts/aphrody/install.sh|ps1)"}`,
         );
         console.log(
           installed
@@ -228,7 +228,7 @@ export async function main(argv: string[]) {
             : "plugin: not installed (bun agent-plugin install)",
         );
       }
-      if (!report.fork) process.exitCode = 1;
+      if (!report.aphrody) process.exitCode = 1;
       return;
     }
     case "":

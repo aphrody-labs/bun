@@ -1,7 +1,7 @@
 {
   "name": "bun-agent-plugin",
   "version": "1.4.3",
-  "description": "The aphrody-labs/bun fork as a plugin for Claude Code, Codex and Antigravity/Gemini CLI: MCP server, hooks and skills",
+  "description": "The Aphrody runtime (aphrody-labs/bun) as a plugin for Claude Code, Codex and Antigravity/Gemini CLI: MCP server, hooks and skills",
   "type": "module",
   "license": "MIT",
   "repository": {

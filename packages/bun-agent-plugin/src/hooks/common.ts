@@ -25,11 +25,12 @@ export function reply(value: unknown): void {
   if (value !== undefined) process.stdout.write(JSON.stringify(value));
 }
 
-/** The bun running this hook is the aphrody-labs/bun fork (the bun on PATH, since hooks run `bun <hook>.ts`). */
-export function isFork(): boolean {
+/** The bun running this hook is the Aphrody runtime (the bun on PATH, since hooks run `bun <hook>.ts`). */
+export function isAphrodyBun(): boolean {
   if (Bun.version_with_sha.includes("aphrody")) return true;
   try {
-    // The fork serves these npm names from built-in modules (src/js/thirdparty); upstream resolves files or fails.
+    // The Aphrody runtime serves these npm names from built-in modules (src/js/thirdparty); upstream Bun resolves
+    // files or fails.
     return Bun.resolveSync("picocolors", import.meta.dir) === "picocolors";
   } catch {
     return false;
