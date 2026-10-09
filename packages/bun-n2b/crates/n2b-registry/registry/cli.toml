@@ -187,9 +187,11 @@ message = "npm publish → bun publish"
 
 [[cli]]
 id      = "cli/npm-link"
-pattern = '\bnpm\s+link\b'
-replace = "bun link"
+pattern = '\bnpm\s+link\b(\s+[^\s;&|)]+)?'
+replace = "bun link${1}"
 message = "npm link → bun link"
+# `bun link` takes a registered package name, not a folder (`npm link <dir>`).
+unless  = "^npm\\s+link\\s+(?:[\"'$.~/\\\\]|[A-Za-z]:)"
 
 [[cli]]
 id      = "cli/npm-init-y"

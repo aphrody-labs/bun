@@ -121,3 +121,18 @@ fn rewrites_pnpm_recursive_and_filter() {
         );
     }
 }
+
+#[test]
+fn npm_link_keeps_folder_arguments() {
+    assert_eq!(rewrite("npm link"), "bun link");
+    assert_eq!(rewrite("npm link @scope/pkg && next"), "bun link @scope/pkg && next");
+    // `bun link` rejects a folder ("unrecognised dependency format").
+    for src in [
+        "(cd app && npm link \"$(dirname \"$BIN\")/..\")",
+        "npm link ../pkg",
+        "npm link /abs/pkg",
+        r"npm link C:\pkg",
+    ] {
+        assert_eq!(rewrite(src), src);
+    }
+}
