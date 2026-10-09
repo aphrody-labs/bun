@@ -5,6 +5,8 @@ name: Aphrody Alpine image
 # image's root filesystem as aphrody-alpine-rootfs-<arch>.tar.gz to the
 # release alpine-3.24. Packages come from the aphrody-labs/aports apk
 # repository (its aphrody-packages.yml must have published them).
+# USERLAND=rust builds the variant with the Rust userland active by default
+# (aphrody-rust-base): tag 3.24-rust, aphrody-alpine-rust-rootfs-<arch>.tar.gz.
 
 permissions:
   contents: write
@@ -37,12 +39,16 @@ env:
 jobs:
   build:
     if: github.repository == 'aphrody-labs/bun'
-    name: ${{ matrix.arch }}
+    name: ${{ matrix.arch }} ${{ matrix.userland }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
+    env:
+      SUFFIX: ${{ matrix.userland == 'rust' && '-rust' || '' }}
     strategy:
       fail-fast: false
       matrix:
+        arch: [x86_64, aarch64]
+        userland: [gnu, rust]
         include:
           - arch: x86_64
             platform: amd64
@@ -63,8 +69,9 @@ jobs:
       - name: Build and push
         run: >
           docker buildx build --load --push
-          -t "$IMAGE:$TAG-${{ matrix.platform }}"
+          -t "$IMAGE:$TAG$SUFFIX-${{ matrix.platform }}"
           -f scripts/aphrody/aphrody-alpine.Dockerfile
+          --build-arg "USERLAND=${{ matrix.userland }}"
           --build-arg "OPTIONAL_PACKAGES=${{ inputs.optional_packages }}"
           scripts/aphrody
       - uses: oven-sh/setup-bun@v2
@@ -74,10 +81,10 @@ jobs:
         run: |
           bun -e '
             import { $ } from "bun";
-            const { IMAGE, TAG, RELEASE, GITHUB_REPOSITORY: repo } = process.env;
+            const { IMAGE, TAG, SUFFIX, RELEASE, GITHUB_REPOSITORY: repo } = process.env;
             const arch = "${{ matrix.arch }}";
-            const out = `aphrody-alpine-rootfs-${arch}.tar.gz`;
-            const id = (await $`docker create ${IMAGE}:${TAG}-${{ matrix.platform }} /bin/true`.text()).trim();
+            const out = `aphrody-alpine${SUFFIX}-rootfs-${arch}.tar.gz`;
+            const id = (await $`docker create ${IMAGE}:${TAG}${SUFFIX}-${{ matrix.platform }} /bin/true`.text()).trim();
             await $`docker export ${id} | gzip -9 > ${out}`;
             await $`docker rm ${id}`;
             if ((await $`gh release view ${RELEASE} -R ${repo}`.nothrow().quiet()).exitCode !== 0)
@@ -96,4 +103,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
       - name: Multi-arch tag
-        run: docker buildx imagetools create -t "$IMAGE:$TAG" -t "$IMAGE:latest" "$IMAGE:$TAG-amd64" "$IMAGE:$TAG-arm64"
+        run: |
+          docker buildx imagetools create -t "$IMAGE:$TAG" -t "$IMAGE:latest" "$IMAGE:$TAG-amd64" "$IMAGE:$TAG-arm64"
+          docker buildx imagetools create -t "$IMAGE:$TAG-rust" "$IMAGE:$TAG-rust-amd64" "$IMAGE:$TAG-rust-arm64"

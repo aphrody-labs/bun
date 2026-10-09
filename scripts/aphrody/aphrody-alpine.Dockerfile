@@ -12,6 +12,12 @@
 #
 #   docker build -t ghcr.io/aphrody-labs/alpine:3.24 -f scripts/aphrody/aphrody-alpine.Dockerfile scripts/aphrody
 #
+# USERLAND=rust (tag 3.24-rust) installs the meta-package aphrody-rust-base instead of GNU
+# coreutils: uutils find/xargs/diff/cmp win over GNU findutils/diffutils (kept for locate,
+# diff3, sdiff) through replaces_priority, plus ntpd-rs, sq, fish, Nushell... (section C2).
+#
+#   docker build -t ghcr.io/aphrody-labs/alpine:3.24-rust --build-arg USERLAND=rust -f scripts/aphrody/aphrody-alpine.Dockerfile scripts/aphrody
+#
 # OPTIONAL_PACKAGES adds packages from the same repositories, e.g.
 #   aphrody-libc-dev       /usr/lib/libaphrody_libc.a, for `bun run build --aphrody-libc=/usr/lib/libaphrody_libc.a`
 #   aphrody-libc-preload   LD_PRELOAD of the aphrody-libc overlay for login shells
@@ -36,6 +42,7 @@ FROM scratch
 COPY --from=rootfs /rootfs/ /
 
 ARG APHRODY_APORTS_REF=15e5fcd2686d113b0ebc0f356bcb974e1e612d58
+ARG USERLAND=gnu
 ARG OPTIONAL_PACKAGES=""
 ARG BUILD_USER=builder
 ADD https://raw.githubusercontent.com/aphrody-labs/aports/${APHRODY_APORTS_REF}/aphrody/keys/aphrody-labs.rsa.pub /etc/apk/keys/aphrody-labs.rsa.pub
@@ -47,11 +54,16 @@ ENV LANG=C.UTF-8 \
     BUN_TOOLCHAIN_RUST=/usr/lib/rust-nightly \
     PATH=/usr/lib/rust-nightly/bin:/usr/lib/llvm23/bin:/usr/lib/bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-RUN echo 'https://github.com/aphrody-labs/aports/releases/download/aphrody-3.24-${APK_ARCH}/APKINDEX.tar.gz' >> /etc/apk/repositories \
+RUN case "$USERLAND" in \
+      gnu) userland=coreutils ;; \
+      rust) userland=aphrody-rust-base ;; \
+      *) echo "USERLAND must be gnu or rust, not $USERLAND" >&2; exit 1 ;; \
+    esac \
+    && echo 'https://github.com/aphrody-labs/aports/releases/download/aphrody-3.24-${APK_ARCH}/APKINDEX.tar.gz' >> /etc/apk/repositories \
     && apk add --no-cache \
       bun bun-shell bun-apk aphrody n2b aphrody-bun-build-deps \
       sudo-rs sudo-rs-su aphrody-sudoers aphrody-sysctl \
-      bash coreutils findutils grep sed gawk diffutils patch tar xz zstd unzip rsync file \
+      bash $userland findutils grep sed gawk diffutils patch tar xz zstd unzip rsync file \
       git curl ca-certificates jq ripgrep fd procps tmux gdb strace nodejs \
       $OPTIONAL_PACKAGES \
     && sed -i 's#^root:\(.*\):/bin/sh$#root:\1:/bin/bunsh#' /etc/passwd \
@@ -61,6 +73,11 @@ RUN echo 'https://github.com/aphrody-labs/aports/releases/download/aphrody-3.24-
     && bun --version && bunsh -c 'exit 0' && aphrody --version && n2b --version \
     && clang-23 --version | head -1 && ld.lld --version && rustc -vV \
     && ! command -v doas >/dev/null \
+    && if [ "$USERLAND" = rust ]; then \
+         ls --version | grep -q uutils \
+         && test "$(readlink -f /usr/bin/find)" = /usr/bin/find && ! find --version | grep -q GNU \
+         && test "$(readlink -f /usr/bin/diff)" = /usr/bin/diffutils; \
+       fi \
     && adduser -D -G aphrody -s /bin/sh "$BUILD_USER"
 
 USER ${BUILD_USER}

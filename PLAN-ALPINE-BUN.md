@@ -721,6 +721,80 @@ cd C:/aphrody   # avec le bun du fork sur PATH
 bun test scripts/build/rust/wasm-package.test.ts packages/engine/yolo/test/stack.test.ts packages/engine/yolo/test/verify.test.ts
 ```
 
+### C2. Stack Rust 2026 : userland Alpine et bonnes pratiques Cargo de Bun (🔄 code écrit le 2026-10-09, ni build ni test)
+
+Commits : bun `b7b4699725f` (Cargo), aports `e435b369e27` (paquets + CI), aphrody `4d343ff71e` (cible `cli`).
+Sous-lot image U1 et plan : voir le log de `scripts/aphrody/aphrody-alpine.Dockerfile`.
+
+**Veille (2026-10-09).** Maturité, musl, présence dans Alpine 3.24 et décision :
+
+| Brique | Version | État | Alpine 3.24 | Décision |
+| --- | --- | --- | --- | --- |
+| [uutils coreutils](https://github.com/uutils/coreutils/releases/tag/0.12.0) | 0.12.0 | 96,9 % des tests GNU ; défaut d'Ubuntu 26.04 sauf cp/mv/rm (8 courses TOCTOU, audit Zellic : [discourse](https://discourse.ubuntu.com/t/an-update-on-rust-coreutils/80773), [guide](https://computingforgeeks.com/ubuntu-2604-rust-coreutils-guide/)) | community 0.11.0 | amont, base |
+| [uutils findutils](https://github.com/uutils/findutils/releases/tag/0.10.0) | 0.10.0 | beta, 84 % des tests GNU de find, archives musl | absent | **aphrody/** |
+| [uutils diffutils](https://github.com/uutils/diffutils) | 0.5.0 | diff + cmp seulement | absent | **aphrody/** |
+| [uutils procps](https://github.com/uutils/procps), [util-linux](https://github.com/uutils/util-linux) | — | aucune release | absent | écarté |
+| [oxidizr](https://github.com/jnsgruk/oxidizr) | 1.1.0 | remplacé par `coreutils-from-uutils` (Ubuntu) | — | sans objet (apk : replaces) |
+| [sudo-rs](https://github.com/trifectatechfoundation/sudo-rs/releases) | 0.2.15 | audité, défaut Ubuntu 26.04 ([doc](https://ubuntu.com/server/docs/reference/other-tools/sudo-rs/)) | community 0.2.15 | déjà dans aphrody/ (U3) |
+| [ntpd-rs](https://github.com/pendulum-project/ntpd-rs/releases) | 1.9.0 | NTS ; 2.0 en alpha | testing (hors 3.24) | **aphrody/** (depuis edge) |
+| [zlib-rs](https://github.com/trifectatechfoundation/zlib-rs/tree/main/libz-rs-sys-cdylib) | 0.6.8 | API zlib 1.3.2, Firefox ≥ 151 ([blog](https://trifectatech.org/blog/zlib-rs-in-firefox/)), ≈ zlib-ng ([bancs](https://trifectatech.org/blog/zlib-rs-is-faster-than-c/)) | absent | **aphrody/**, opt-in |
+| [rustls](https://github.com/rustls/rustls) / [rustls-openssl-compat](https://github.com/rustls/rustls-openssl-compat) | 0.23.45 / 0.2.1 | compat expérimental, glibc, garde libcrypto d'OpenSSL | rustls-ffi 0.15.3 | compat écarté |
+| Sequoia [sq](https://gitlab.com/sequoia-pgp/sequoia-sq) / sqv / chameleon | 1.5 / 1.5 / 0.13.1 | sqv dans apt Debian ([wiki](https://wiki.debian.org/OpenPGP/Sequoia)), rpm-sequoia Fedora ([blog](https://sequoia-pgp.org/blog/2024/12/13/202412-sequoia-fedora/)) ; chameleon beta | sq 1.3.1, sqv 1.3.0, chameleon 0.13.1 | sq + sqv en base, chameleon écarté |
+| [rav1d](https://github.com/memorysafety/rav1d) | 1.1.0 | ≈ 5 % plus lent que dav1d ([blog](https://www.memorysafety.org/blog/rav1d-performance-optimization/)) | absent | écarté |
+| [fish](https://github.com/fish-shell/fish-shell/releases), ripgrep, fd, eza | 4.9.3, 15.2, 10.5, 0.23.5 | stables | 4.6.0, 15.1.0, 10.2.0, 0.23.4 | amont, base |
+| uv, [mold](https://github.com/rui314/mold/releases/tag/v3.0.0), [wild](https://github.com/wild-linker/wild), sccache | 0.12.24, 3.0.0, 0.10.0 ([notes](https://www.phoronix.com/news/Wild-Linker-0.10)), 0.18.0 | mold 3.0 réécrit en Rust ; wild sans LTO plugin | 0.11.19, 2.39.1, 0.8.0, 0.15.0 | amont, `aphrody-rust-tools` |
+| cargo-auditable, [cargo-deny](https://github.com/EmbarkStudios/cargo-deny/blob/main/CHANGELOG.md), cargo-nextest, cargo-binstall | 0.7.7, 0.20.2, 0.9.148, 1.25.2 | stables | 0.7.5, 0.18.6, 0.9.110, absent | amont ; binstall écarté (télécharge des binaires non vérifiés par apk) |
+| Rust for Linux | 7.1+ | expérimental terminé ([LWN](https://lwn.net/Articles/1049831/)), rustc ≥ 1.85 ([politique](https://rust-for-linux.com/rust-version-policy)), Binder C retiré en 7.4 ([Phoronix](https://www.phoronix.com/news/Google-Binder-C-Goodbye)), Nova/Tyr en cours | — | `linux-aphrody` (U3, V) |
+
+**Alpine (`C:\aports\aphrody`).** Nouveaux : `uutils-findutils` (find, xargs), `uutils-diffutils` (diff, cmp),
+`zlib-rs` (`/usr/lib/zlib-rs/libz.so.1`, `LD_LIBRARY_PATH`, `somask`, jamais `so:libz.so.1`) ; `ntpd-rs` 1.9.0 repris
+d'edge testing. Pas de rétroportage de ce qui est déjà en amont (uutils-coreutils 0.11, sequoia, fish…).
+Conflits : `replaces="findutils"`/`"diffutils"` + `replaces_priority=100`, sans `provides` (fonctions GNU absentes) :
+nos fichiers gagnent quel que soit l'ordre d'installation (`apk_pkg_replaces_file`), GNU garde locate, diff3, sdiff ;
+les liens busybox n'appartiennent à aucun paquet et son trigger les recrée si un remplaçant part ; `busybox-binsh`
+reste `/bin/sh`. Méta `aphrody-rust-base` = la liste unique (celle de la cible `cli` d'aphrody-os + uutils
+findutils/diffutils, ntpd-rs, sq, sqv, fish) ; `aphrody-rust-tools` = cargo-auditable/deny/nextest, sccache, mold,
+wild, uv. Toolchain : `default.conf` d'abuild impose déjà `codegen-units=1`, `lto=true` (fat, ≥ thin),
+`opt-level=s`, `panic=abort`, et seule `/etc/abuild.conf` passe après ; `aphrody/scripts/abuild-rust.conf` y ajoute
+mold (`-fuse-ld=mold`) et sccache (`SCCACHE_DIR`) pour `publish.ts build @rust-base`, et `APHRODY_RUST_CPU=x86-64-v3`
+(flavor optimisée, builds locaux seulement : la publication le refuse). zlib-rs passe en `opt-level=3`.
+cargo-auditable : `makedepends` de chaque APKBUILD. CI : job `rust-base <arch>` (cache sccache) avant `index`.
+
+**Images.** aphrody-os cible `cli` : `apk add aphrody-rust-base` (dépôt Aphrody) au lieu de la liste ; selftest
+30 vérifications (find, xargs, diff, cmp, ntp-ctl, sq, fish ajoutés). `desktop` (C1) inchangée : son ajout de clé et de
+dépôt est désormais redondant. `ghcr.io/aphrody-labs/alpine:3.24-rust` = `--build-arg USERLAND=rust` (méta à la place
+de GNU coreutils, vérifie que ls/find/diff sont uutils) ; workflow `aphrody-alpine-image.yml` : matrice arch × userland.
+
+**Bun.** Existant vérifié et conservé : edition 2024, `[workspace.lints]` hérités partout, `clippy.toml`, release
+`lto="off"` + ThinLTO cross-langage au link (lld `-C linker-plugin-lto`), `codegen-units=1`, `panic="abort"`,
+`-Zshare-generics=y` (hors ASAN) et `-Zthreads=8` dans `scripts/build/rust.ts`, clang + lld. Ajouts : `resolver = "3"`
+(résolution MSRV, unification inchangée) ; `deny.toml` (13 cibles, licences, RustSec, `openssl`/`native-tls` bannis,
+crates.io seul) + `bun run rust:deny` + job CI ; `.config/nextest.toml` + `bun run rust:nextest` (crates de
+`rust:miri`) + job CI ; `publish = false` sur 102 crates ; bcrypt 0.19.2 (RUSTSEC-2026-0199, dépendance runtime) et
+crossbeam-epoch 0.9.21 ; `BUN_TOOLCHAIN_LD=wild` (Linux sans LTO, refusé sinon). Écartés : LTO fat rustc (casse le
+ThinLTO cross-langage), cranelift ([nightly](https://rust-lang.github.io/rust-project-goals/2025h2/production-ready-cranelift.html),
+intrinsics), zlib-rs dans Bun (zlib-ng déjà vendorisé, compat `node:zlib`), rustls (BoringSSL), MSRV (nightly
+épinglé), rust-lld par défaut ([1.90](https://blog.rust-lang.org/2025/09/01/rust-lld-on-1.90.0-stable), gnu
+seulement). Candidats vieillissants non changés (gain non prouvé) : rustix 0.38 → 1.x, strum 0.26, hashbrown 0.15,
+criterion 0.5 / itertools 0.10 (dev), paste (non maintenu, RUSTSEC-2024-0436 ignoré ; remplaçant direct pastey).
+Reste : `bun_md` et `bun_wasm` sans `publish = false` (exclus de `rust:deny` jusqu'à leurs propriétaires).
+
+Vérification (passe finale) :
+
+```sh
+# Bun (C:\bun)
+bun run rust:deny
+bun run build --configure-only && bun run build --target=codegen --target=clone-lolhtml --target=clone-rust-argon2
+bun run rust:nextest
+cargo check --workspace --all-targets --keep-going
+bun bd test test/js/bun/util/password.test.ts          # bcrypt 0.19.2
+# Alpine (C:\aports, conteneur alpine:3.24 avec alpine-sdk, mold, sccache, abuild-rust.conf dans /etc/abuild.conf)
+for p in uutils-findutils uutils-diffutils ntpd-rs zlib-rs aphrody-rust-base; do (cd aphrody/$p && abuild -F checksum && abuild -F -r); done
+# Images
+docker build -t ghcr.io/aphrody-labs/alpine:3.24-rust --build-arg USERLAND=rust -f scripts/aphrody/aphrody-alpine.Dockerfile scripts/aphrody
+docker build -t aphrody/rust-bun C:/aphrody/tools/config/container/aphrody-os && docker run --rm aphrody/rust-bun aphrody-selftest
+```
+
 ### A. Publication (✅ base)
 
 - ✅ crates.io : `aphrody-bun-macro` 0.1.0, `aphrody-bun-native-plugin` 0.2.0.
