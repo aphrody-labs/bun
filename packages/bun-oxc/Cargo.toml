@@ -39,7 +39,7 @@ oxc_resolver = "11.24.3"
 oxc_parser_napi = "0.153.0"
 oxc_transform_napi = "0.153.0"
 oxc_minify_napi = "0.153.0"
-oxc_linter = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
+oxc_linter = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624", features = ["ruledocs"] }
 oxfmt = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624", default-features = false }
 serde_json = "1.0.151"
 
