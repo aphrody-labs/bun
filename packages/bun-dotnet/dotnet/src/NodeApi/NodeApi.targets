@@ -71,6 +71,6 @@
     Condition=" '$(PackNpmPackage)' == 'true' "
   >
     <MakeDir Directories="$(PackageOutputPath)" />
-    <Exec Command="npm pack --pack-destination=&quot;$(PackageOutputPath)&quot;" />
+    <Exec Command="bun pm pack --destination &quot;$(PackageOutputPath)&quot;" />
   </Target>
 </Project>

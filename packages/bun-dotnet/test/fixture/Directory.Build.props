@@ -1,0 +1,3 @@
+<Project>
+  <!-- Isolates the fixture from packages/bun-dotnet/dotnet/Directory.Build.props. -->
+</Project>

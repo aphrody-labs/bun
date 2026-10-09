@@ -156,6 +156,7 @@
               "/runtime/ffi",
               "/runtime/linux",
               "/runtime/windows",
+              "/runtime/dotnet",
               "/runtime/cosmic",
               "/runtime/c-compiler",
               "/runtime/transpiler"
