@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import {
   chmodSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   rmSync,
@@ -53,7 +54,11 @@ describe("manifest", () => {
     const dir = prefix();
     const manifest = await buildManifest(dir, meta);
     expect(Object.keys(manifest.files)).toEqual(["bin/vu", "lib/libpython3.12.so.1.0"]);
-    expect(manifest.files["bin/vu"]).toMatchObject({ bytes: 5, mode: 0o755 });
+    expect(manifest.files["bin/vu"]).toMatchObject({
+      bytes: 5,
+      mode: lstatSync(join(dir, "bin", "vu")).mode & 0o777,
+    });
+    if (process.platform !== "win32") expect(manifest.files["bin/vu"]?.mode).toBe(0o755);
     expect(manifest.files["bin/vu"]?.sha256).toMatch(/^[0-9a-f]{64}$/);
     expect(manifest.links).toEqual({ "lib/libpython3.12.so": "libpython3.12.so.1.0" });
   });

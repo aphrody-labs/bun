@@ -64,7 +64,7 @@ export function runInSharedPython(
   const python = (
     dlopen as (
       path: string,
-      symbols: typeof symbols,
+      definitions: typeof symbols,
       options?: { global?: boolean },
     ) => ReturnType<typeof dlopen<typeof symbols>>
   )(libpython, symbols, { global: true });

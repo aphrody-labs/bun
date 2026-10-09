@@ -4,7 +4,7 @@
 //! consumer verifies it before using anything from the directory.
 
 import { lstatSync, readdirSync, readlinkSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import { mapLimit, sha256File } from "./lib.ts";
 
 export const MANIFEST_PATH = "share/vu/manifest.json";
@@ -44,15 +44,22 @@ function walk(directory: string, prefix: string, out: { files: string[]; links: 
     a.name.localeCompare(b.name),
   )) {
     const path = join(directory, entry.name);
-    if (entry.isSymbolicLink()) out.links.push(relative(prefix, path));
+    // Artifact keys are portable POSIX paths even on a native Windows builder.
+    const key = relative(prefix, path).split(sep).join("/");
+    if (entry.isSymbolicLink()) out.links.push(key);
     else if (entry.isDirectory()) walk(path, prefix, out);
-    else if (entry.isFile()) out.files.push(relative(prefix, path));
+    else if (entry.isFile()) out.files.push(key);
   }
 }
 
 function safeRelative(path: string): boolean {
-  return path.length > 0 && !path.startsWith("/") && !path.includes("\\") &&
-    path.split("/").every((part) => part !== "" && part !== "." && part !== "..");
+  return (
+    path.length > 0 &&
+    !path.startsWith("/") &&
+    !path.includes("\\") &&
+    !path.includes(":") &&
+    path.split("/").every((part) => part !== "" && part !== "." && part !== "..")
+  );
 }
 
 /** Hashes every file of a prefix (the manifest itself excluded) and records its symlinks. */

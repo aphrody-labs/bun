@@ -54,11 +54,14 @@ describe("assemble", () => {
       out,
       revision,
       toolchain: "rustc 1.98.1",
+      target: "x86_64-unknown-linux-gnu",
     });
     expect(artifact).toBe(join(out, `0.1.0-${revision.slice(0, 8)}`));
     expect(existsSync(`${artifact}.partial`)).toBe(false);
     for (const binary of ["vu", "uv", "ruff"]) {
-      expect(lstatSync(join(artifact, "bin", binary)).mode & 0o111).not.toBe(0);
+      const mode = lstatSync(join(artifact, "bin", binary)).mode & 0o777;
+      expect(manifest.files[`bin/${binary}`]?.mode).toBe(mode);
+      if (process.platform !== "win32") expect(mode & 0o111).not.toBe(0);
       expect(manifest.files[`bin/${binary}`]).toBeDefined();
     }
     expect(lstatSync(join(artifact, "bin", "python3")).isSymbolicLink()).toBe(true);

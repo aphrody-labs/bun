@@ -10,7 +10,7 @@ import {
   mkdirSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { downloadFile, hfChildEnv, readToken, repoFolder, resolveHf } from "./huggingface.ts";
 
 let scratch = "";
@@ -20,10 +20,10 @@ beforeEach(() => {
 afterEach(() => rmSync(scratch, { recursive: true, force: true }));
 
 test("defaults follow huggingface_hub: HF_HOME, XDG, ~/.cache/huggingface", () => {
-  expect(resolveHf({}, "/h").hubCache).toBe("/h/.cache/huggingface/hub");
-  expect(resolveHf({ XDG_CACHE_HOME: "/x" }, "/h").home).toBe("/x/huggingface");
-  expect(resolveHf({ HF_HOME: "/data/hf" }, "/h").hubCache).toBe("/data/hf/hub");
-  expect(resolveHf({ HF_HUB_CACHE: "/c" }, "/h").hubCache).toBe("/c");
+  expect(resolveHf({}, "/h").hubCache).toBe(resolve("/h", ".cache/huggingface/hub"));
+  expect(resolveHf({ XDG_CACHE_HOME: "/x" }, "/h").home).toBe(join("/x", "huggingface"));
+  expect(resolveHf({ HF_HOME: "/data/hf" }, "/h").hubCache).toBe(resolve("/data/hf", "hub"));
+  expect(resolveHf({ HF_HUB_CACHE: "/c" }, "/h").hubCache).toBe(resolve("/c"));
   expect(resolveHf({ HF_ENDPOINT: "https://mirror.example/" }, "/h").endpoint).toBe(
     "https://mirror.example",
   );
@@ -42,8 +42,8 @@ test("token precedence and it is never in the report", () => {
 
 test("child environment pins cache and endpoint", () => {
   expect(hfChildEnv({ HF_HOME: "/d" }, "/h")).toEqual({
-    HF_HOME: "/d",
-    HF_HUB_CACHE: "/d/hub",
+    HF_HOME: resolve("/d"),
+    HF_HUB_CACHE: resolve("/d", "hub"),
     HF_ENDPOINT: "https://huggingface.co",
   });
 });
@@ -76,7 +76,9 @@ test("download writes the hub layout, sends the token, and a second call hits th
   expect(readFileSync(join(folder, "refs/main"), "utf8")).toBe(COMMIT);
   expect(readFileSync(join(folder, "blobs/deadbeef01"), "utf8")).toBe("weights");
   expect(lstatSync(first.path).isSymbolicLink()).toBe(true);
-  expect(readlinkSync(first.path)).toBe("../../../blobs/deadbeef01");
+  expect(readlinkSync(first.path)).toBe(
+    relative(join(folder, "snapshots", COMMIT, "dir"), join(folder, "blobs", "deadbeef01")),
+  );
   expect(readFileSync(first.path, "utf8")).toBe("weights");
   const second = await downloadFile("org/model", "dir/config.json", {
     env,

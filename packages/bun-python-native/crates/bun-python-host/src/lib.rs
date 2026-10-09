@@ -16,10 +16,17 @@
 
 #![allow(unsafe_code)]
 
+use std::collections::HashMap;
 use std::ffi::{CStr, CString, c_char, c_int, c_void};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+
+mod buffers;
+pub use buffers::{
+    BunPyBuffer, bun_py_buffer_acquire, bun_py_buffer_deallocator, bun_py_buffer_release,
+    bun_py_capabilities,
+};
 
 /// Success.
 pub const APHRODY_PY_OK: i32 = 0;
@@ -64,6 +71,8 @@ struct Api {
     err_fetch: unsafe extern "C" fn(*mut PyObj, *mut PyObj, *mut PyObj),
     err_clear: unsafe extern "C" fn(),
     get_version: unsafe extern "C" fn() -> *const c_char,
+    get_buffer: unsafe extern "C" fn(PyObj, *mut buffers::PyBuffer, c_int) -> c_int,
+    release_buffer: unsafe extern "C" fn(*mut buffers::PyBuffer),
     #[cfg(not(windows))]
     bytes_main: unsafe extern "C" fn(c_int, *mut *mut c_char) -> c_int,
     #[cfg(windows)]
@@ -77,6 +86,8 @@ struct Host {
     owned: bool,
     /// Thread state saved after initialisation so any thread can attach with the GIL state API.
     saved: *mut c_void,
+    buffers: HashMap<u64, Box<buffers::PyBuffer>>,
+    next_buffer: u64,
 }
 
 // SAFETY: the raw pointers are opaque handles only used under the mutex or the GIL.
@@ -85,6 +96,21 @@ unsafe impl Send for Host {}
 static HOST: Mutex<Option<Host>> = Mutex::new(None);
 static LAST_ERROR: Mutex<String> = Mutex::new(String::new());
 static CLI_ACTIVE: AtomicBool = AtomicBool::new(false);
+static ACTIVE_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+struct ActiveCall;
+impl Drop for ActiveCall {
+    fn drop(&mut self) {
+        ACTIVE_CALLS.fetch_sub(1, Ordering::AcqRel);
+    }
+}
+
+struct ExclusiveCall;
+impl Drop for ExclusiveCall {
+    fn drop(&mut self) {
+        CLI_ACTIVE.store(false, Ordering::Release);
+    }
+}
 
 fn set_error(message: impl Into<String>) {
     if let Ok(mut slot) = LAST_ERROR.lock() {
@@ -146,6 +172,8 @@ fn bind_with(sym: impl Fn(&CStr) -> *mut c_void) -> Result<Api, String> {
         err_fetch: f!(c"PyErr_Fetch"),
         err_clear: f!(c"PyErr_Clear"),
         get_version: f!(c"Py_GetVersion"),
+        get_buffer: f!(c"PyObject_GetBuffer"),
+        release_buffer: f!(c"PyBuffer_Release"),
         #[cfg(not(windows))]
         bytes_main: f!(c"Py_BytesMain"),
         #[cfg(windows)]
@@ -314,6 +342,8 @@ fn load_inner(path: Option<&str>) -> i32 {
                 initialized: false,
                 owned: false,
                 saved: std::ptr::null_mut(),
+                buffers: HashMap::new(),
+                next_buffer: 1,
             });
             APHRODY_PY_OK
         }
@@ -381,13 +411,22 @@ pub extern "C" fn aphrody_py_init() -> i32 {
     })
 }
 
-fn api_ready() -> Result<Api, i32> {
+fn api_ready() -> Result<(Api, ActiveCall), i32> {
     if CLI_ACTIVE.load(Ordering::Acquire) {
         set_error("the Python CLI owns the interpreter until it returns");
         return Err(APHRODY_PY_ERR_STATE);
     }
-    match host().as_ref() {
-        Some(h) if h.initialized => Ok(h.api),
+    let slot = host();
+    if CLI_ACTIVE.load(Ordering::Acquire) {
+        set_error("exclusive interpreter lifecycle is active");
+        return Err(APHRODY_PY_ERR_STATE);
+    }
+    match slot.as_ref() {
+        Some(h) if h.initialized => {
+            // Acquired under the same host lock as finalize's active-call check.
+            ACTIVE_CALLS.fetch_add(1, Ordering::AcqRel);
+            Ok((h.api, ActiveCall))
+        }
         _ => {
             set_error("interpreter not initialised (call aphrody_py_init)");
             Err(APHRODY_PY_ERR_STATE)
@@ -468,10 +507,14 @@ unsafe fn object_to_owned(api: &Api, obj: PyObj, out: *mut *mut c_char) -> i32 {
 fn with_gil(body: impl FnOnce(&Api) -> i32) -> i32 {
     guard(APHRODY_PY_ERR_PANIC, || match api_ready() {
         Err(code) => code,
-        Ok(api) => {
+        Ok((api, _call)) => {
             // SAFETY: bound entry points; the GIL is held between ensure and release.
             let state = unsafe { (api.gil_ensure)() };
-            let code = catch_unwind(AssertUnwindSafe(|| body(&api))).unwrap_or_else(|_| {
+            let code = catch_unwind(AssertUnwindSafe(|| {
+                buffers::drain_releases(&api);
+                body(&api)
+            }))
+            .unwrap_or_else(|_| {
                 set_error("panic caught at the FFI boundary");
                 APHRODY_PY_ERR_PANIC
             });
@@ -628,6 +671,12 @@ pub unsafe extern "C" fn aphrody_py_version(out: *mut *mut c_char) -> i32 {
 #[unsafe(no_mangle)]
 pub extern "C" fn aphrody_py_finalize() -> i32 {
     guard(APHRODY_PY_ERR_PANIC, || {
+        if buffers::has_pending() {
+            let status = with_gil(|_| APHRODY_PY_OK);
+            if status != APHRODY_PY_OK {
+                return status;
+            }
+        }
         let mut slot = host();
         if CLI_ACTIVE.load(Ordering::Acquire) {
             set_error("the Python CLI owns the interpreter until it returns");
@@ -636,14 +685,27 @@ pub extern "C" fn aphrody_py_finalize() -> i32 {
         let Some(h) = slot.as_mut() else {
             return APHRODY_PY_OK;
         };
+        if ACTIVE_CALLS.load(Ordering::Acquire) != 0 || !h.buffers.is_empty() {
+            set_error("cannot finalize while Python calls or shared buffer leases are active");
+            return APHRODY_PY_ERR_STATE;
+        }
         if !h.owned || !h.initialized {
             return APHRODY_PY_OK;
         }
+        CLI_ACTIVE.store(true, Ordering::Release);
+        let _exclusive = ExclusiveCall;
+        let api = h.api;
+        let saved = h.saved;
+        // Destructors can call back into the host. Refuse those calls through
+        // the exclusive flag without keeping its mutex locked across Python.
+        drop(slot);
         // SAFETY: re-acquire the thread state saved at init, then finalise.
         let code = unsafe {
-            (h.api.restore_thread)(h.saved);
-            (h.api.finalize_ex)()
+            (api.restore_thread)(saved);
+            (api.finalize_ex)()
         };
+        let mut slot = host();
+        let h = slot.as_mut().expect("exclusive lifecycle retains the host");
         h.saved = std::ptr::null_mut();
         h.initialized = false;
         h.owned = false;
@@ -747,13 +809,7 @@ pub unsafe extern "C" fn bun_py_main(
             }
             h.api
         };
-        struct CliLease;
-        impl Drop for CliLease {
-            fn drop(&mut self) {
-                CLI_ACTIVE.store(false, Ordering::Release);
-            }
-        }
-        let _lease = CliLease;
+        let _lease = ExclusiveCall;
         set_error("");
         #[cfg(windows)]
         let result = {
@@ -1045,6 +1101,45 @@ mod tests {
             assert_eq!(
                 aphrody_py_eval(std::ptr::null(), &mut output),
                 APHRODY_PY_ERR_ARG
+            );
+            assert_eq!(
+                aphrody_py_run(c"shared_bytes = bytearray(b'abc')".as_ptr()),
+                0
+            );
+            let mut view = BunPyBuffer {
+                size: std::mem::size_of::<BunPyBuffer>() as u32,
+                ..BunPyBuffer::default()
+            };
+            assert_eq!(bun_py_capabilities() & 1, 1);
+            assert_eq!(
+                bun_py_buffer_acquire(c"shared_bytes".as_ptr(), 1, &mut view),
+                0
+            );
+            assert_eq!(view.length, 3);
+            assert_eq!(aphrody_py_finalize(), APHRODY_PY_ERR_STATE);
+            *view.data.cast::<u8>() = b'z';
+            assert_eq!(aphrody_py_eval(c"shared_bytes[0]".as_ptr(), &mut output), 0);
+            assert_eq!(CStr::from_ptr(output).to_bytes(), b"122");
+            aphrody_py_string_free(output);
+            assert_eq!(aphrody_py_run(c"shared_bytes[1] = 121".as_ptr()), 0);
+            assert_eq!(
+                std::slice::from_raw_parts(view.data.cast::<u8>(), view.length),
+                b"zyc"
+            );
+            assert_eq!(
+                aphrody_py_eval(c"shared_bytes.extend(b'x')".as_ptr(), &mut output),
+                APHRODY_PY_ERR_PYTHON
+            );
+            assert_eq!(bun_py_buffer_release(view.lease), 0);
+            assert_eq!(bun_py_buffer_release(view.lease), APHRODY_PY_ERR_ARG);
+            assert_eq!(aphrody_py_run(c"shared_bytes.extend(b'x')".as_ptr()), 0);
+            assert_eq!(
+                bun_py_buffer_acquire(c"b'constant'".as_ptr(), 1, &mut view),
+                APHRODY_PY_ERR_PYTHON
+            );
+            assert_eq!(
+                bun_py_buffer_acquire(c"memoryview(shared_bytes)[::2]".as_ptr(), 1, &mut view),
+                APHRODY_PY_ERR_PYTHON
             );
         }
         assert_eq!(aphrody_py_finalize(), APHRODY_PY_OK);

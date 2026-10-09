@@ -10,14 +10,17 @@ describe("glibc audit", () => {
     expect(compareVersions("2", "2.0")).toBe(0);
   });
 
-  test("the version needs of a real dynamic executable are read", async () => {
-    // The Bun running this test is a glibc executable: it needs libc.so.6 and at least one GLIBC_ version.
-    const audit = await auditFile(process.execPath);
-    const libc = audit.needs["libc.so.6"];
-    if (libc === undefined) return; // a musl host has no glibc needs to read
-    expect(libc.some((name) => /^GLIBC_\d+\.\d+/.test(name))).toBe(true);
-    expect(audit.glibcMax).toMatch(/^2\.\d+$/);
-  });
+  test.skipIf(process.platform !== "linux")(
+    "the version needs of a real dynamic executable are read",
+    async () => {
+      // The Bun running this test is a glibc executable: it needs libc.so.6 and at least one GLIBC_ version.
+      const audit = await auditFile(process.execPath);
+      const libc = audit.needs["libc.so.6"];
+      if (libc === undefined) return; // a musl host has no glibc needs to read
+      expect(libc.some((name) => /^GLIBC_\d+\.\d+/.test(name))).toBe(true);
+      expect(audit.glibcMax).toMatch(/^2\.\d+$/);
+    },
+  );
 
   test("anything but a little-endian ELF64 is refused", () => {
     expect(() => glibcNeeds(new Uint8Array(100), "zeros")).toThrow("not an ELF file");

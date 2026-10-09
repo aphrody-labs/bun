@@ -3,10 +3,10 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readlinkSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { flipLink, installArtifact, main, planInstall, rollback } from "./install.ts";
+import { flipLink, hostTarget, installArtifact, main, planInstall, rollback } from "./install.ts";
 import { buildManifest, MANIFEST_PATH } from "./manifest.ts";
 
-const TARGET = "x86_64-unknown-linux-gnu";
+const TARGET = hostTarget();
 const REVISION_A = "a".repeat(40);
 const REVISION_C = "c".repeat(40);
 let scratch = "";
@@ -46,8 +46,14 @@ test("a plan names the destination and replaces nothing", async () => {
 });
 
 test("a plan refuses an artifact for a different target", async () => {
-  const foreign = await artifact("0.1.0", "aaaaaaaa00000000000000000000000000000000", "not-this-target");
-  await expect(planInstall(foreign, join(scratch, "home"))).rejects.toThrow("does not match this host");
+  const foreign = await artifact(
+    "0.1.0",
+    "aaaaaaaa00000000000000000000000000000000",
+    "not-this-target",
+  );
+  await expect(planInstall(foreign, join(scratch, "home"))).rejects.toThrow(
+    "does not match this host",
+  );
 });
 
 test("main without --apply changes nothing", async () => {
@@ -108,7 +114,9 @@ test("an invalid short revision is refused before activation", async () => {
   const source = await artifact("0.1.0", "aaaaaaaabbbb");
   const plan = await planInstall(source, home);
 
-  await expect(installArtifact(plan)).rejects.toThrow("manifest target, version or revision is invalid");
+  await expect(installArtifact(plan)).rejects.toThrow(
+    "manifest target, version or revision is invalid",
+  );
   expect(await Bun.file(plan.destination).exists()).toBe(false);
   expect(() => readlinkSync(plan.link)).toThrow();
 });

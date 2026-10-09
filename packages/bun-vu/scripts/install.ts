@@ -13,6 +13,7 @@
 //! host's own sha256 before it is unpacked.
 
 import {
+  cpSync,
   existsSync,
   mkdirSync,
   readdirSync,
@@ -25,6 +26,7 @@ import { homedir, tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { run, sha256File, ROOT } from "./lib.ts";
 import { MANIFEST_PATH, verifyManifest, type Manifest } from "./manifest.ts";
+import { replaceDirectoryLink } from "./windows-rename.ts";
 
 export const ARTIFACTS = "/srv/aphrody-build/artifacts/vu";
 /** Where the archive is staged on the build host (the artifact volume can be full; the home volume is not). */
@@ -71,7 +73,9 @@ export async function readArtifactManifest(dir: string): Promise<Manifest> {
 export async function planInstall(source: string, home: string): Promise<InstallPlan> {
   const manifest = await readArtifactManifest(source);
   if (manifest.target !== hostTarget())
-    throw new Error(`artifact target ${manifest.target} does not match this host (${hostTarget()})`);
+    throw new Error(
+      `artifact target ${manifest.target} does not match this host (${hostTarget()})`,
+    );
   const name = `${manifest.version}-${manifest.revision.slice(0, 8)}`;
   const runtime = join(home, "runtime", manifest.target);
   const link = join(runtime, "current");
@@ -97,8 +101,13 @@ export async function planInstall(source: string, home: string): Promise<Install
 export function flipLink(link: string, target: string): void {
   const temporary = `${link}.tmp-${process.pid}`;
   rmSync(temporary, { force: true });
-  symlinkSync(target, temporary);
-  renameSync(temporary, link);
+  symlinkSync(target, temporary, "dir");
+  try {
+    if (process.platform === "win32") replaceDirectoryLink(temporary, link);
+    else renameSync(temporary, link);
+  } finally {
+    rmSync(temporary, { force: true });
+  }
 }
 
 export interface InstallReceipt {
@@ -120,8 +129,13 @@ export async function installArtifact(plan: InstallPlan, activate = true): Promi
     throw new Error(`staging path already exists; inspect it before retrying: ${staging}`);
   try {
     if (!existsSync(plan.destination)) {
-      const copy = await run(["cp", "-a", plan.source, staging]);
-      if (copy.code !== 0) throw new Error(`copy failed: ${copy.stderr.trim()}`);
+      cpSync(plan.source, staging, {
+        recursive: true,
+        verbatimSymlinks: true,
+        preserveTimestamps: true,
+        errorOnExist: true,
+        force: false,
+      });
       const problems = await verifyManifest(staging);
       if (problems.length > 0)
         throw new Error(`artifact failed verification: ${problems.slice(0, 5).join("; ")}`);
@@ -213,7 +227,7 @@ export async function fetchFromHost(
   ]);
   if (download.code !== 0 || !existsSync(local))
     throw new Error(`download failed: ${download.stderr.trim() || download.stdout.trim()}`);
-      const actual = await sha256File(local);
+  const actual = await sha256File(local);
   if (actual !== expected) throw new Error(`sha256 mismatch: host ${expected}, local ${actual}`);
   const extract = await run(["tar", "-C", scratch, "--zstd", "-xf", local]);
   if (extract.code !== 0) throw new Error(`unpack failed: ${extract.stderr.trim()}`);

@@ -22,15 +22,22 @@ const module = arg("--import") ?? "httpx";
 const packages = (arg("--packages") ?? "httpx,httpcore,h11,anyio,idna,certifi,sniffio").split(",");
 const prefix = arg("--vu") ?? join(homedir(), ".vu/runtime/x86_64-unknown-linux-gnu/current");
 if (!site) {
-  console.error("usage: bun scripts/bench-compile.ts --site <site-packages> [--import m] [--packages a,b]");
+  console.error(
+    "usage: bun scripts/bench-compile.ts --site <site-packages> [--import m] [--packages a,b]",
+  );
   process.exit(64);
 }
 const python = join(prefix, "bin/python3");
+const siteRoot = site;
 const work = mkdtempSync(join(tmpdir(), "vu-bench-compile-"));
 
 function stage(name: string): string {
   const dir = join(work, name);
-  for (const pkg of packages) cpSync(join(site, pkg), join(dir, pkg), { recursive: true, filter: (p) => !p.includes("__pycache__") });
+  for (const pkg of packages)
+    cpSync(join(siteRoot, pkg), join(dir, pkg), {
+      recursive: true,
+      filter: (p) => !p.includes("__pycache__"),
+    });
   return dir;
 }
 
@@ -51,23 +58,36 @@ function median(dir: string, env: Record<string, string>, runs: number) {
 
 const cases: Record<string, ReturnType<typeof summarize>> = {};
 const cold = stage("cold");
-cases["sources, no bytecode cache (PYTHONDONTWRITEBYTECODE)"] = median(cold, { PYTHONDONTWRITEBYTECODE: "1" }, 15);
+cases["sources, no bytecode cache (PYTHONDONTWRITEBYTECODE)"] = median(
+  cold,
+  { PYTHONDONTWRITEBYTECODE: "1" },
+  15,
+);
 
 const warm = stage("warm");
 Bun.spawnSync([python, "-c", `import ${module}`], { env: { ...process.env, PYTHONPATH: warm } });
 cases["interpreter timestamp cache, warm"] = median(warm, {}, 15);
 
 const compiled = stage("compiled");
-const compile = Bun.spawnSync([python, "-c", await Bun.file(join(ROOT, "crates/vu-runtime/py/compile.py")).text(), compiled], {
-  stdout: "pipe",
-  stderr: "pipe",
-});
+const compile = Bun.spawnSync(
+  [python, "-c", await Bun.file(join(ROOT, "crates/vu-runtime/py/compile.py")).text(), compiled],
+  {
+    stdout: "pipe",
+    stderr: "pipe",
+  },
+);
 if (compile.exitCode !== 0) throw new Error(`vu compile failed: ${compile.stderr.toString()}`);
-cases["vu compile (unchecked-hash bytecode)"] = median(compiled, { PYTHONDONTWRITEBYTECODE: "1" }, 15);
+cases["vu compile (unchecked-hash bytecode)"] = median(
+  compiled,
+  { PYTHONDONTWRITEBYTECODE: "1" },
+  15,
+);
 
 const base = cases["sources, no bytecode cache (PYTHONDONTWRITEBYTECODE)"]!;
 for (const [name, sample] of Object.entries(cases))
-  console.log(`${name.padEnd(56)} ${sample.median.toFixed(1).padStart(8)} ms  x${(base.median / sample.median).toFixed(2)} against no cache`);
+  console.log(
+    `${name.padEnd(56)} ${sample.median.toFixed(1).padStart(8)} ms  x${(base.median / sample.median).toFixed(2)} against no cache`,
+  );
 const at = new Date().toISOString();
 await Bun.write(
   join(ROOT, "receipts", `bench-compile-${at.replaceAll(/[:.]/g, "-")}.json`),

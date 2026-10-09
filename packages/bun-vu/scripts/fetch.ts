@@ -106,7 +106,11 @@ export async function fetchSource(root: string, source: Source): Promise<string>
 }
 
 /** Downloads (or reuses) the archive of an asset and verifies its sha256 and size. */
-export async function downloadAsset(cache: string, tag: string, asset: Asset): Promise<Uint8Array> {
+export async function downloadAsset(
+  cache: string,
+  tag: string,
+  asset: Asset,
+): Promise<Uint8Array<ArrayBuffer>> {
   mkdirSync(join(cache, "pbs"), { recursive: true });
   const file = join(cache, "pbs", asset.name);
   if (existsSync(file)) {
@@ -132,7 +136,7 @@ export async function downloadAsset(cache: string, tag: string, asset: Asset): P
 /** Extracts the verified archive to build/python and writes the PyO3 configuration. */
 export async function installPython(
   root: string,
-  bytes: Uint8Array,
+  bytes: Uint8Array<ArrayBuffer>,
   version: string,
 ): Promise<string> {
   const minor = minorOf(version);
