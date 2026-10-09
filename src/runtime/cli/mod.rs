@@ -312,6 +312,8 @@ pub(crate) mod arguments;
 pub(crate) use arguments as Arguments;
 #[path = "run_command.rs"]
 pub(crate) mod run_command;
+#[path = "python_command.rs"]
+pub(crate) mod python_command;
 
 // ─── per-subcommand bodies ───────────────────────────────────────────────────
 #[path = "build_command.rs"]

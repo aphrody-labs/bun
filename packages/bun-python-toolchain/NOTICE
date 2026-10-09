@@ -1,0 +1,9 @@
+This package contains no copies of CPython, uv, Ruff, PyO3, Cython, Jupyter,
+tree-sitter, PyTorch, model weights, or GPU drivers. It discovers and, when
+explicitly requested, delegates to an installed vu runtime artifact.
+
+The referenced uv source is licensed MIT OR Apache-2.0. The referenced Ruff
+source is licensed MIT. Their exact accepted source revisions and Cargo.lock
+blob identifiers are recorded in toolchain.receipt.json. A discovered
+PyTorch/Cython/Jupyter/tree-sitter installation remains governed by its own
+distribution license and provenance.

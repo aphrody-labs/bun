@@ -1,0 +1,12 @@
+{
+  "name": "@aphrody/bun-runtime",
+  "version": "1.4.2-aphrody.1",
+  "description": "Aphrody High-Performance Runtime Bridge & Optimization Kernel for Bun",
+  "main": "index.ts",
+  "types": "index.ts",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "test": "bun test"
+  }
+}

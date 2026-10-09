@@ -1,0 +1,14 @@
+{
+  "name": "@aphrody/bun-webos-m3-native-app",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "start": "bun main.ts",
+    "build": "bun build.ts"
+  },
+  "dependencies": {
+    "@aphrody/m3-front": "^3.3.7",
+    "@aphrody/material-web": "^3.3.7"
+  }
+}

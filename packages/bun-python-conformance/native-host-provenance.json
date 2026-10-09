@@ -1,0 +1,66 @@
+{
+  "schema": "aphrody.bun-python-conformance.native-host-provenance/1",
+  "captured_at": "2026-10-09",
+  "transported_source": {
+    "path": "/home/ubuntu/.aphrody/workspace/codex-relay-2026-10-09/native-host-abi-ephemeral",
+    "immutable_payload_path": "/home/ubuntu/.aphrody/workspace/codex-relay-2026-10-09/native-host-payload.json",
+    "payload_sha256": "9504ba1a5c437dd38379b50540c6af81fbb190e57666d4de480df9a916ea0a3a",
+    "header": {
+      "path": "include/bun_python_host.h",
+      "sha256": "1aa4b1d9f7f245b369e0cb5000b3bed256bced33bd5d9d696b10cf86f0e91387"
+    },
+    "implementation": {
+      "path": "crates/bun-python-host/src/lib.rs",
+      "sha256": "a51aa69295298cd024a11862b4f1f5458a8b358d93db2b3a2c1127b3dce60d84"
+    },
+    "header_and_implementation_match_payload": true
+  },
+  "built_host": {
+    "path": "/home/ubuntu/.aphrody/workspace/codex-relay-2026-10-09/native-host-gate-target/debug/deps/libbun_python_host.so",
+    "sha256": "004f85fb5332d0491f1cd97f4a0f0d389736de7e873a740deb1610e6eb295d63",
+    "abi_version": 1
+  },
+  "python_runtime": {
+    "executable": "/srv/aphrody-build/workspaces/vu-wsl/build/python/bin/python3.12",
+    "executable_sha256": "0886fb76ceec8ff568d23079b5da6342bb41675e216e11525d4d6a9e65988d10",
+    "libpython": "/srv/aphrody-build/workspaces/vu-wsl/build/python/lib/libpython3.12.so.1.0",
+    "libpython_sha256": "ed3c797dfe4f7d33b178db276eca143911ba2c6fa95bfdb69e419507ee255024"
+  },
+  "root_gate_proof": {
+    "native_host_cli_log": "/home/ubuntu/.aphrody/workspace/codex-relay-2026-10-09/native-host-cli.log",
+    "native_host_cli_log_sha256": "2dce20fce9b034c5b6aef96582a96ae6f851fbf52d911daf0c862f8c36cef505",
+    "system_exit_observation": {
+      "sys_exit_7_process_status": 7,
+      "sys_exit_negative_1_process_status": 255,
+      "bun_py_main_returned_for_system_exit": false
+    }
+  },
+  "actual_conformance_run": {
+    "native_dispatch_executed": true,
+    "runner_exit": 77,
+    "status": "open",
+    "activation_verified": false,
+    "passed": [
+      "abi-v1-probe",
+      "argv-and-utf8-argument",
+      "m-mode-and-sys.path",
+      "venv-create",
+      "venv-executable-prefix-and-site-packages",
+      "utf8-stdio-encoding",
+      "stdin-bytes",
+      "-c-dispatch",
+      "positive-exit-code-terminal",
+      "negative-exit-code-terminal",
+      "traceback-and-error-exit"
+    ],
+    "skipped": [
+      "pytorch-cpu-import: runtime has no installed PyTorch module",
+      "pytorch-cuda-import: PyTorch is not installed",
+      "pytorch-model-inference: no model weights configured"
+    ],
+    "failed": [],
+    "system_exit_interpretation": "SystemExit terminates the child process before bun_py_main returns; assert the real process status (negative values modulo 256), not out_exit_code.",
+    "nvidia_device_node": false,
+    "working_nvidia_smi": false
+  }
+}

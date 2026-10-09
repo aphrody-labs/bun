@@ -1,0 +1,133 @@
+{
+  "schema": "aphrody.bun-python-toolchain-provenance/1",
+  "package": "@aphrody/bun-python-toolchain",
+  "source": {
+    "vuRepository": "aphrody-labs/vu",
+    "vuCheckout": "/srv/aphrody-build/workspaces/vu-wsl",
+    "vuRevision": "6ea52f1aada7269d81470dd9d93144555610868e",
+    "vuVendorJsonSha256": "5bf4c3954cfadfb3eb8f2534fdf560771b9745746a79d3d1c7964c719345a76a",
+    "vuProvenanceJsonSha256": "eac22d4015331dc6e127df8f8f40ca84389b18ef3e2e4a391a81619eb291c92d",
+    "uvCheckout": {
+      "path": "/srv/aphrody-build/workspaces/vu-wsl/vendor/uv",
+      "revision": "46b84fd0bfec23b72f29e8e2185ba68a65052f48",
+      "upstreamTag": "0.12.23",
+      "lockBlob": "357c05bc89a3ed1b3aef2bf4d6354bec1a35b49c"
+    },
+    "ruffCheckout": {
+      "path": "/srv/aphrody-build/workspaces/vu-wsl/vendor/ruff",
+      "revision": "3265ed1f944c98bb4c04d632fbefb1257cdb583d",
+      "upstreamTag": "0.16.10",
+      "lockBlob": "af0a09d8590efe4f55cf36fc018c9a13cd02962e",
+      "parserCrate": "crates/ruff_python_parser",
+      "parserCrateVersion": "0.0.16",
+      "parserCargoTomlSha256": "b0a56db1eedc62982ae732a0790e8defaeb192c033b6d6f4a3854b01c0125def"
+    },
+    "pythonBuildStandalone": {
+      "revision": "5e46737f6480fc315ebfea83866910cbfcc772f0",
+      "release": "20261003",
+      "python": "3.12.15",
+      "archiveSha256": "731af898886c5f821890dc901eca3c651cca8e51fa7308c159d12a1194aeac91"
+    },
+    "receiptSha256": "6bf2df7a773112c4242eb4f62c0b1a022f9330551bfcb6efaf356b00186a948f",
+    "observedArtifactReceipts": [
+      {
+        "name": "0.1.0-7c3db189",
+        "target": "x86_64-unknown-linux-gnu",
+        "revision": "7c3db1890921babc0127eb3593e2c149b2786d8e",
+        "manifestSha256": "d4a751df5f0ffae50d98b211c6a07e0e91efa49a97374275f607b46531fe2da8",
+        "files": {
+          "uv": "6cdbf04d6a53b2f17ac5a6a09e1c724a74089a7342ae1658293d5afc8642aa33",
+          "ruff": "b8a49121c927b9d95e91704068cc80381f653648e4ddb19edf4b9d1551add013",
+          "python": "0886fb76ceec8ff568d23079b5da6342bb41675e216e11525d4d6a9e65988d10"
+        }
+      },
+      {
+        "name": "0.1.0-cf385dd2",
+        "target": "x86_64-unknown-linux-gnu",
+        "revision": "cf385dd26dda1b2518116bd979e19f256aa5a954",
+        "manifestSha256": "8f7b050fb6572cfdbe1b895feede96b4e8369c36efe5cb6ee240266c47ff4a9f",
+        "files": {
+          "uv": "6cdbf04d6a53b2f17ac5a6a09e1c724a74089a7342ae1658293d5afc8642aa33",
+          "ruff": "b8a49121c927b9d95e91704068cc80381f653648e4ddb19edf4b9d1551add013",
+          "python": "0886fb76ceec8ff568d23079b5da6342bb41675e216e11525d4d6a9e65988d10"
+        }
+      },
+      {
+        "name": "0.1.0-f0743b52",
+        "target": "x86_64-unknown-linux-gnu",
+        "revision": "f0743b526600068f0181d579b53e72a87fd2731d",
+        "manifestSha256": "5cb68b9067662f097f8677ab90f52278af251252059412d543377d6386ed47c7",
+        "files": {
+          "uv": "6cdbf04d6a53b2f17ac5a6a09e1c724a74089a7342ae1658293d5afc8642aa33",
+          "ruff": "b8a49121c927b9d95e91704068cc80381f653648e4ddb19edf4b9d1551add013",
+          "python": "0886fb76ceec8ff568d23079b5da6342bb41675e216e11525d4d6a9e65988d10"
+        }
+      }
+    ]
+  },
+  "transfer": {
+    "path": "packages/bun-python-toolchain",
+    "files": {
+      "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "NOTICE": "4bb74a879b20d886ebddc1a0280ebe518b055f13b0ed508d22e3c071812cc6b9",
+      "README.md": "fe43c3d30ba1fccd174626f315bdbd46cb4a7ec4e52b932d9f5eb583af8fdca3",
+      "package.json": "c82ecdd13cb24a0261cb47501ced67c4277ca5c36f8630bb49efddc890e8d9e9",
+      "scripts/inspect.ts": "e2859839868845d95726110ae999feec7e3c224a4de884eb2917b9e55aac18a3",
+      "scripts/run.ts": "89cdf6c02932c863ef5ba4b1504aad82500a5f76f54120ff1888383e42c96c4e",
+      "scripts/toolchain.test.ts": "1394e5e3287da5dd05f266933f5bad28190c497a1212bf84368cde955e87aaec",
+      "scripts/toolchain.ts": "cb587a14a1d65c8ec346f988e8271cea409e0aaf750b1dc45f35e58cb70b1fec",
+      "toolchain.receipt.json": "6bf2df7a773112c4242eb4f62c0b1a022f9330551bfcb6efaf356b00186a948f"
+    },
+    "provenanceSelfHash": "excluded"
+  },
+  "qualification": {
+    "method": "read-only inspection against an existing accepted vu runtime artifact; no tool sources or binaries copied",
+    "observedArtifact": "/srv/aphrody-build/artifacts/vu/0.1.0-cf385dd2",
+    "observedArtifactRevision": "cf385dd26dda1b2518116bd979e19f256aa5a954",
+    "observedManifestSha256": "8f7b050fb6572cfdbe1b895feede96b4e8369c36efe5cb6ee240266c47ff4a9f",
+    "observedTools": {
+      "uv": "0.12.23",
+      "ruff": "0.16.10",
+      "python": "3.12.15"
+    },
+    "qualifiedParser": "Ruff crates/ruff_python_parser 0.0.16 via pinned Ruff CLI",
+    "observedPythonModules": {
+      "cython": "not-installed",
+      "jupyter": "not-installed",
+      "tree-sitter-python": "not-installed",
+      "pytorch": "not-installed"
+    },
+    "observedTorchRuntime": {
+      "cpu": false,
+      "cudaBuild": null,
+      "cudaRuntimeAvailable": false,
+      "rocmBuild": null,
+      "rocmRuntimeAvailable": false
+    },
+    "tests": {
+      "command": "bun test ./packages/bun-python-toolchain/scripts/toolchain.test.ts",
+      "passed": 11,
+      "failed": 0,
+      "assertions": 33
+    },
+    "noBuild": true,
+    "noInstall": true,
+    "noDefaultGraphDependency": true
+  },
+  "notTransferred": [
+    "uv source",
+    "Ruff source",
+    "CPython runtime",
+    "Cython",
+    "Jupyter",
+    "tree-sitter-python",
+    "PyTorch",
+    "model weights",
+    "GPU drivers",
+    "provider credentials",
+    "runtime caches"
+  ],
+  "notes": [
+    "2026-10-09 native Windows qualification: canonical manifest keys, native directory copying and atomic directory-link replacement; portable fixtures preserve POSIX-only ELF coverage on Linux. Immutable source hashes remain unchanged; transfer hashes track owned corrections."
+  ]
+}

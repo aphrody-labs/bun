@@ -37,6 +37,22 @@ test("serves the desktop page as an HTML import", async () => {
   expect(await res.text()).toContain('<script type="module"');
 });
 
+test("the M3 native app browser entry bundles with the aphrody M3 front left external", async () => {
+  const example = new URL("../examples/m3-native-app/index.html", import.meta.url).pathname;
+  const result = await Bun.build({
+    entrypoints: [example],
+    target: "browser",
+    write: false,
+    external: ["@aphrody/m3-front/*", "@aphrody/material-web/*"],
+  });
+
+  expect(result.success).toBe(true);
+  expect(result.outputs.some(output => output.path.endsWith("index.html"))).toBe(true);
+  const app = result.outputs.find(output => output.path.endsWith(".js"));
+  expect(app).toBeDefined();
+  expect(new TextDecoder().decode(app!.contents)).toContain("@aphrody/material-web");
+});
+
 describe("commands", () => {
   test("Bun Shell runs a line in the home directory", async () => {
     const res = await post("/api/os/exec", { command: "echo bun-webos" });

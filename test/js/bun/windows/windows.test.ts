@@ -19,6 +19,7 @@ describe.skipIf(isWindows)("non-Windows", () => {
     expect(errorCode(() => windows.registry.get("HKCU\\Software"))).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => windows.storage.drives())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => windows.memory.status())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
+    expect(errorCode(() => windows.processes.setPriority(0, "normal"))).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => new windows.Job())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
   });
 });
@@ -123,6 +124,16 @@ describe.skipIf(!isWindows)("bun:windows", () => {
     expect(self).toBeDefined();
     expect(self!.threads).toBeGreaterThan(0);
     expect(windows.processes.path(process.pid).toLowerCase()).toBe(process.execPath.toLowerCase());
+  });
+
+  test("process controls", () => {
+    const pid = process.pid;
+    windows.processes.setPriority(pid, "normal");
+    windows.processes.setEcoMode(pid, true);
+    windows.processes.setEcoMode(pid, false);
+    windows.processes.trimWorkingSet(pid);
+    expect(errorCode(() => windows.processes.setAffinity(pid, 0))).toBe("ERR_OUT_OF_RANGE");
+    expect(errorCode(() => windows.processes.setPriority(pid, "invalid" as any))).toBe("ERR_INVALID_ARG_VALUE");
   });
 
   test("services", () => {
