@@ -1,7 +1,8 @@
 import { afterAll, describe, expect, it } from "bun:test";
 import { existsSync } from "fs";
-import { bunEnv, bunExe, compileFixture, isDebug, isGlibcVersionAtLeast, isWindows, tempDir } from "harness";
+import { bunEnv, bunExe, compileFixture, isDebug, isGlibcVersionAtLeast, isLinux, isMacOS, isWindows, tempDir } from "harness";
 import { platform } from "os";
+import { findQtToolchain } from "./qt-window-shim.ts";
 
 import {
   cc,
@@ -738,6 +739,85 @@ it.skipIf(!isWindows)("Win32 window message loop with a JSCallback WNDPROC", asy
     stderr: "",
   });
   expect(exitCode).toBe(0);
+});
+
+// GTK 4, Qt 6, KDE Kirigami and libcosmic windows: each toolkit's event loop owns
+// the JS thread (g_application_run, QApplication::exec, iced) and re-enters
+// JSCallbacks synchronously from it. Skipped where the toolkit is not installed.
+describe.concurrent("native toolkit windows", () => {
+  const hasDisplay = !isLinux || !!(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
+  const expected = 'window created: "café" 680x440\nwindow closed: by=timeout status=0\n';
+  const canDlopen = (paths, symbol) =>
+    paths.some(path => {
+      try {
+        dlopen(path, { [symbol]: { args: [], returns: "u32" } }).close();
+        return true;
+      } catch {
+        return false;
+      }
+    });
+  const gtk4 =
+    hasDisplay &&
+    canDlopen(
+      isWindows
+        ? ["libgtk-4-1.dll", "C:\\msys64\\ucrt64\\bin\\libgtk-4-1.dll"]
+        : isMacOS
+          ? ["libgtk-4.1.dylib", "/opt/homebrew/lib/libgtk-4.1.dylib", "/usr/local/lib/libgtk-4.1.dylib"]
+          : ["libgtk-4.so.1"],
+      "gtk_get_major_version",
+    );
+  const qt = typeof findQtToolchain("qt") === "object";
+  const kirigami = typeof findQtToolchain("kirigami") === "object";
+  const cosmicLib =
+    process.env.BUN_COSMIC_WINDOW_LIB ??
+    `${import.meta.dir}/cosmic-window/target/release/${isWindows ? "" : "lib"}bun_cosmic_window.${suffix}`;
+  const cosmic = hasDisplay && existsSync(cosmicLib);
+  // Qt needs no display server with its offscreen platform plugin.
+  const qtEnv = hasDisplay ? bunEnv : { ...bunEnv, QT_QPA_PLATFORM: "offscreen", QT_QUICK_BACKEND: "software" };
+
+  async function runWindow(fixture, extraArgs, env) {
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), `${import.meta.dir}/${fixture}`, "--title", "café", "--timeout", "50", ...extraArgs],
+      env,
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    // Toolkits print environment-specific diagnostics (themes, a11y bus); stderr is only shown on failure.
+    return { stdout, exitCode, stderr: exitCode === 0 ? "" : stderr };
+  }
+
+  it.skipIf(!gtk4)("GTK 4 window: activate and g_timeout_add JSCallbacks inside g_application_run", async () => {
+    expect(await runWindow("gtk-window.fixture.ts", [], bunEnv)).toEqual({ stdout: expected, exitCode: 0, stderr: "" });
+  });
+
+  // The first run compiles qt-window.shim.cpp with the system C++ compiler.
+  it.skipIf(!qt)(
+    'Qt 6 window through an extern "C" shim: JSCallback inside QApplication::exec',
+    async () => {
+      expect(await runWindow("qt-window.fixture.ts", [], qtEnv)).toEqual({ stdout: expected, exitCode: 0, stderr: "" });
+    },
+    60_000,
+  );
+
+  it.skipIf(!kirigami)(
+    'KDE Kirigami ApplicationWindow through an extern "C" shim',
+    async () => {
+      expect(await runWindow("kde-window.fixture.ts", [], qtEnv)).toEqual({
+        stdout: expected,
+        exitCode: 0,
+        stderr: "",
+      });
+    },
+    60_000,
+  );
+
+  it.skipIf(!cosmic)("libcosmic (COSMIC) window from a Rust cdylib: JSCallback on the calling thread", async () => {
+    expect(await runWindow("cosmic-window.fixture.ts", ["--lib", cosmicLib], bunEnv)).toEqual({
+      stdout: expected,
+      exitCode: 0,
+      stderr: "",
+    });
+  });
 });
 
 it('suffix does not start with a "."', () => {
