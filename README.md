@@ -23,7 +23,7 @@ listed under [Install](#install).
 | Branch            | `main` (the only working branch)                                                                     |
 | Upstream          | [Bun](https://github.com/oven-sh/bun) ([Upstream](#upstream))                                        |
 | License           | MIT, with LGPL-2 parts (JavaScriptCore, WebKit): [LICENSE.md](LICENSE.md)                            |
-| Documentation     | [aphrody.com/docs](https://aphrody.com/docs), built from [`docs/`](docs)                             |
+| Documentation     | [bun.aphrody.com/docs](https://bun.aphrody.com/docs), built from [`docs/`](docs)                     |
 | Security          | [SECURITY.md](SECURITY.md)                                                                           |
 | Governance        | [APHRODY.md](APHRODY.md)                                                                             |
 
@@ -34,10 +34,10 @@ the same ones it uses.
 
 ```sh
 # Linux and macOS
-curl -fsSL https://aphrody.com/install.sh | bash
+curl -fsSL https://bun.aphrody.com/install.sh | bash
 
 # Windows (PowerShell)
-irm https://aphrody.com/install.ps1 | iex
+irm https://bun.aphrody.com/install.ps1 | iex
 ```
 
 These are [`scripts/aphrody/install.sh`](scripts/aphrody/install.sh) and

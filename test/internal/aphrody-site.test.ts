@@ -27,8 +27,17 @@ import {
   parseFenceInfo,
   rewriteUpstreamUrls,
 } from "../../scripts/aphrody/site/mdx.ts";
-import { esc, generatedPages, publicLinks, table } from "../../scripts/aphrody/site/pages.ts";
-import { dataDigest, flipScript, parseTarget, releaseId, sameStamp } from "../../scripts/aphrody/site/publish.ts";
+import { esc, forkLinks, generatedPages, publicLinks, table } from "../../scripts/aphrody/site/pages.ts";
+import { brandHtml } from "../../scripts/aphrody/site/layout.ts";
+import {
+  DEFAULT_BASE,
+  DEFAULT_TARGET,
+  dataDigest,
+  flipScript,
+  parseTarget,
+  releaseId,
+  sameStamp,
+} from "../../scripts/aphrody/site/publish.ts";
 
 const ctx = { link: (href: string) => href };
 
@@ -253,6 +262,8 @@ function fixtureData(): SiteData {
       windowsBindings: null,
       npm: { name: "@aphrody/bun-runtime", version: "1.4.3-aphrody.3" },
       image: null,
+      guide:
+        "# Aphrody Bun fork\n\nIntro.\n\n## Patches\n\n- [dotenv](src/js/dotenv.ts), tested by [test](test/js/dotenv.test.ts). See [install](docs/installation.mdx).\n",
     },
     distribution: {
       repo: "aphrody-labs/aphrody",
@@ -407,6 +418,70 @@ describe("site pages", () => {
   });
 });
 
+describe("runtime site", () => {
+  const runtimeData = (): SiteData => ({ ...fixtureData(), distribution: null, downloads: null });
+
+  test("brand mark and fork links", () => {
+    expect(brandHtml("Aphrody Bun")).toBe('<span>Aphrody</span><span class="mark">Bun</span>');
+    expect(brandHtml("Aphrody")).toBe("<span>Aphrody</span>");
+    expect(
+      forkLinks(
+        "[i](docs/installation.mdx) [r](docs/runtime/index.mdx#a) [p](docs/aphrody/x.md) [s](src/a.rs) ![l](docs/logo/x.svg) [w](https://x.test) [h](#top)",
+        "aphrody-labs/bun",
+        "abc",
+      ),
+    ).toBe(
+      "[i](/docs/installation) [r](/docs/runtime#a) [p](https://github.com/aphrody-labs/bun/blob/abc/docs/aphrody/x.md) [s](https://github.com/aphrody-labs/bun/blob/abc/src/a.rs) ![l](https://github.com/aphrody-labs/bun/raw/abc/docs/logo/x.svg) [w](https://x.test) [h](#top)",
+    );
+  });
+
+  test("without a distribution the pages are the runtime home and /runtime", () => {
+    const pages = generatedPages(runtimeData(), { origin: "https://bun.aphrody.test", releases: null });
+    expect(pages.map(p => p.path)).toEqual(["/", "/runtime"]);
+    const home = pages[0]!;
+    expect(home.title).toBe("Aphrody Bun");
+    expect(home.markdown).toContain("## Patches");
+    expect(home.markdown).toContain("(https://github.com/aphrody-labs/bun/blob/" + sha("a") + "/src/js/dotenv.ts)");
+    expect(home.markdown).toContain("[install](/docs/installation)");
+    expect(home.markdown).toContain("@aphrody/bun-runtime");
+    expect(home.markdown).not.toContain("Cargo workspace");
+  });
+
+  test("build of the runtime site", async () => {
+    using dir = tempDir("aphrody-site-runtime", {
+      "docs/docs.json": JSON.stringify({
+        navigation: { tabs: [{ tab: "Runtime", groups: [{ group: "Start", pages: ["index"] }] }] },
+      }),
+      "docs/index.mdx": "---\ntitle: Welcome\n---\n\nHello.\n",
+    });
+    const out = join(String(dir), "out");
+    const result = await build({
+      src: String(dir),
+      out,
+      origin: "https://bun.aphrody.test",
+      commit: sha("a"),
+      repo: "aphrody-labs/bun",
+      releases: null,
+      data: runtimeData(),
+      now: new Date("2026-10-09T00:00:00Z"),
+    });
+    expect(result.generated).toEqual(["/", "/runtime"]);
+    const read = (p: string) => readFileSync(join(out, p), "utf8");
+    const index = read("index.html");
+    expect(index).toContain("<title>Aphrody Bun</title>");
+    expect(index).toContain('<span class="mark">Bun</span>');
+    expect(index).toContain("The Bun runtime of Aphrody");
+    expect(index).toContain("curl -fsSL https://bun.aphrody.test/install | bash");
+    expect(index).toContain("npm install -g @aphrody/bun-runtime");
+    expect(index).toContain('<a href="/runtime">Runtime</a>');
+    expect(index).not.toContain('href="/components"');
+    expect(index).toContain('href="https://github.com/aphrody-labs/bun"');
+    expect(read("runtime/index.html")).toContain("<table>");
+    expect(read("llms.txt")).toStartWith("# Aphrody Bun");
+    expect(existsSync(join(out, "components"))).toBe(false);
+  });
+});
+
 describe("site collect", () => {
   test("licences, private terms, installers, manifests and commit types", () => {
     expect(declaredLicenses("Bun itself is MIT-licensed.\n\nJavaScriptCore is LGPL-2 licensed.")).toEqual([
@@ -467,7 +542,9 @@ describe("site publish", () => {
   });
 
   test("targets and release ids", () => {
-    expect(parseTarget("dbfr")).toEqual({ kind: "ssh", host: "dbfr", base: "/home/ubuntu/apps/downloads/site" });
+    expect(DEFAULT_BASE).toBe("/var/www/bun.aphrody.com");
+    expect(DEFAULT_TARGET).toBe("local:/var/www/bun.aphrody.com");
+    expect(parseTarget("dbfr")).toEqual({ kind: "ssh", host: "dbfr", base: DEFAULT_BASE });
     expect(() => parseTarget("ssh:a;b")).toThrow();
     expect(releaseId("0123456789abcdef", new Date("2026-10-09T12:34:56.789Z"))).toBe("20261009T123456Z-0123456789ab");
   });

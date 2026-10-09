@@ -1,7 +1,7 @@
 blank_issues_enabled: true
 contact_links:
   - name: 📘 Documentation
-    url: https://aphrody.com/docs
+    url: https://bun.aphrody.com/docs
     about: Documentation of the Aphrody runtime.
   - name: 🔒 Report a vulnerability
     url: https://github.com/aphrody-labs/bun/security/advisories/new

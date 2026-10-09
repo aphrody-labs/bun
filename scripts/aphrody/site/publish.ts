@@ -1,26 +1,28 @@
-// Publie le site aphrody.com depuis origin/main d'aphrody-labs/bun (lancé sur le VPS, depuis un checkout du fork) :
-// git fetch du fork et du monorepo de la distribution, `git archive` de docs/ bench/ scripts/aphrody/ dans un
-// dossier temporaire, collect.ts (site-data.json : runtime, distribution, organisation GitHub, downloads), rapports
-// perf du dernier run réussi d'aphrody-perf.yml (gh), releases GitHub, build.ts de l'arbre extrait, puis envoi par
-// tar sur `ssh <host>` dans <base>/releases/<UTC>-<sha12> et bascule atomique de <base>/current (5 releases gardées).
+// Publie le site du runtime, https://bun.aphrody.com, depuis origin/main d'aphrody-labs/bun (lancé sur le VPS, depuis
+// un checkout du fork) : git fetch, `git archive` de docs/ bench/ scripts/aphrody/ dans un dossier temporaire,
+// collect.ts (site-data.json : runtime et APHRODY.md, organisation GitHub), rapports perf du dernier run réussi
+// d'aphrody-perf.yml (gh), releases GitHub, build.ts de l'arbre extrait, puis extraction dans
+// <base>/releases/<UTC>-<sha12> et bascule atomique de <base>/current, servi par nginx (vhost bun.aphrody.com du
+// catalogue d'aphrody-labs/aphrody, tools/config/host/nginx/aphrody/bun.aphrody.com.conf). Seule la release
+// courante est gardée par défaut ; revenir en arrière = republier un commit antérieur (--ref).
 //
-//   bun scripts/aphrody/site/publish.ts [--git <checkout du fork>] [--ref origin/main] [--to ssh:dbfr | local:<base>] [--keep 5]
-//       [--distribution <checkout aphrody-labs/aphrody> | --no-distribution] [--distribution-ref origin/main]
+//   bun scripts/aphrody/site/publish.ts [--git <checkout du fork>] [--ref origin/main]
+//       [--to local:/var/www/bun.aphrody.com | ssh:<hôte>] [--keep 1]
+//       [--distribution <checkout aphrody-labs/aphrody>] [--distribution-ref origin/main]
 //       [--perf <dossier> | --no-perf] [--offline] [--dry-run] [--if-changed]
-// Le checkout de la distribution est par défaut le voisin `aphrody` du checkout du fork.
+// Sans --distribution, c'est le site du runtime seul ; --distribution ajoute les pages de la distribution.
 // --if-changed ne fait rien si <base>/current/publish.json porte déjà le même commit, la même release, le même run
 // perf et la même empreinte de données ; une collecte en erreur (réseau, jeton GitHub absent) n'y publie rien.
 //   bun scripts/aphrody/site/publish.ts rollback [--to ...] [--release <id>]   # défaut : la release précédente
 //   bun scripts/aphrody/site/publish.ts status [--to ...]
 //
-// Côté serveur, aphrody-downloads (C:\aphrody packages/infra/workspace/src/downloads/server.ts) sert
-// <base>/current pour les hôtes aphrody.com et www.aphrody.com. Chaque action est journalisée dans
-// ~/.coord-dbfr.log de l'hôte cible.
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+// Chaque action est journalisée dans ~/.coord-dbfr.log de l'hôte cible.
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-export const DEFAULT_BASE = "/home/ubuntu/apps/downloads/site";
+export const DEFAULT_BASE = "/var/www/bun.aphrody.com";
+export const DEFAULT_TARGET = `local:${DEFAULT_BASE}`;
 const REPO = "aphrody-labs/bun";
 
 export type Target = { kind: "ssh"; host: string; base: string } | { kind: "local"; base: string };
@@ -51,7 +53,7 @@ cur=$id
 ls -1 "$base/releases" | grep -v '^\\.' | sort -r | tail -n +${keep + 1} | while read -r old; do
   [ "$old" = "$cur" ] || rm -rf -- "$base/releases/$old"
 done
-${log ? `echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) site aphrody.com : ${note.replaceAll('"', "'")} -> $id" >> "$HOME/.coord-dbfr.log"` : ":"}
+${log ? `echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) site bun.aphrody.com : ${note.replaceAll('"', "'")} -> $id" >> "$HOME/.coord-dbfr.log"` : ":"}
 readlink "$base/current"`;
 }
 
@@ -148,7 +150,7 @@ async function publish(args: string[], target: Target) {
   };
   const repoDir = resolve(option("--git") ?? join(import.meta.dir, "..", "..", ".."));
   const ref = option("--ref") ?? "origin/main";
-  const keep = Number(option("--keep") ?? 5);
+  const keep = Number(option("--keep") ?? 1);
   const ifChanged = args.includes("--if-changed");
   if (ref.startsWith("origin/")) run(["git", "-C", repoDir, "fetch", "-q", "origin", ref.slice(7)]);
   const sha = run(["git", "-C", repoDir, "rev-parse", `${ref}^{commit}`]);
@@ -165,19 +167,10 @@ async function publish(args: string[], target: Target) {
   };
   const perfRun = option("--perf") || args.includes("--no-perf") ? null : query("perf", latestPerfRun);
 
-  // Monorepo de la distribution : checkout voisin du fork (…/src/aphrody à côté de …/src/bun) par défaut.
-  const sibling = join(repoDir, "..", "aphrody");
+  // Monorepo de la distribution : seulement sur demande (--distribution), le site publié est celui du runtime.
   const distOption = option("--distribution");
-  const distDir = args.includes("--no-distribution")
-    ? null
-    : distOption
-      ? resolve(distOption)
-      : existsSync(join(sibling, ".git"))
-        ? sibling
-        : null;
+  const distDir = distOption ? resolve(distOption) : null;
   const distRef = option("--distribution-ref") ?? "origin/main";
-  if (!distDir && !args.includes("--no-distribution") && ifChanged)
-    throw new Error(`checkout de la distribution introuvable (${sibling}) : --distribution <dir> ou --no-distribution`);
   let distSha: string | null = null;
   if (distDir) {
     if (distRef.startsWith("origin/")) run(["git", "-C", distDir, "fetch", "-q", "origin", distRef.slice(7)]);
@@ -216,6 +209,7 @@ async function publish(args: string[], target: Target) {
       sha,
     ];
     if (distDir && distSha) collect.push("--distribution", distDir, "--distribution-ref", distSha);
+    else collect.push("--downloads", "none");
     if (args.includes("--offline")) collect.push("--offline");
     console.log(run(collect, { cwd: src }));
     const dataJson = readFileSync(dataFile, "utf8");
@@ -298,7 +292,7 @@ if (import.meta.main) {
   const args = process.argv.slice(2);
   const command = args[0] && !args[0].startsWith("--") ? args.shift()! : "publish";
   const toIndex = args.indexOf("--to");
-  const target = parseTarget(toIndex >= 0 ? args[toIndex + 1]! : "ssh:dbfr");
+  const target = parseTarget(toIndex >= 0 ? args[toIndex + 1]! : DEFAULT_TARGET);
   if (command === "publish") await publish(args, target);
   else if (command === "rollback") rollback(args, target);
   else if (command === "status") console.log(JSON.stringify(listReleases(target), null, 2));

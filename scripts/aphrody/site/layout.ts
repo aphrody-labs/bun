@@ -20,7 +20,17 @@ export type Shell = {
   footer: string;
   /** Lien GitHub de l'en-tête. */
   github: string;
+  /** Nom affiché dans l'en-tête : `Aphrody Bun` pour le site du runtime (bun.aphrody.com), `Aphrody` sinon. */
+  brand?: string;
 };
+
+/** `Aphrody Bun` : le mot après `Aphrody` devient une pastille, l'identité du site du runtime. */
+export function brandHtml(brand: string): string {
+  const [first = brand, ...rest] = brand.split(" ");
+  return rest.length
+    ? `<span>${escapeHtml(first)}</span><span class="mark">${escapeHtml(rest.join(" "))}</span>`
+    : `<span>${escapeHtml(brand)}</span>`;
+}
 
 export function shell(s: Shell): string {
   const canonical = s.origin + s.path;
@@ -50,7 +60,7 @@ ${s.description ? `<meta property="og:description" content="${escapeHtml(s.descr
 <script src="/assets/site.js" defer></script>
 </head><body class="${s.bodyClass ?? ""}">
 <header class="top"><div class="bar">
-<a class="brand" href="/"><img src="/icon.svg" alt="" width="28" height="28"><span>Aphrody</span></a>
+<a class="brand" href="/"><img src="/icon.svg" alt="" width="28" height="28">${brandHtml(s.brand ?? "Aphrody")}</a>
 <nav class="tabs-nav" aria-label="Sections">${s.tabs
     .map(t => `<a href="${escapeHtml(t.href)}"${t.active ? ' aria-current="page"' : ""}>${escapeHtml(t.label)}</a>`)
     .join("")}</nav>
@@ -79,6 +89,9 @@ a{color:var(--primary)}a:hover{text-decoration-thickness:2px}
 .bar{display:flex;align-items:center;gap:1rem;max-width:1440px;margin:0 auto;padding:.5rem 1rem;min-height:60px}
 .brand{display:flex;align-items:center;gap:.5rem;color:inherit;text-decoration:none;font-weight:600;white-space:nowrap}
 .brand small{font-weight:400;color:var(--on-sv);font-size:.75rem}
+.brand .mark{padding:0 .5rem;border-radius:999px;background:var(--primary-container);color:var(--on-primary-container);font-size:.8125rem;line-height:1.5rem}
+.hero-mark{display:block;margin:0 auto 1rem}
+.hero .eyebrow{margin:0 0 .25rem;color:var(--primary);font-weight:600;letter-spacing:.5px;text-transform:uppercase;font-size:.75rem}
 .tabs-nav{display:flex;gap:.25rem;overflow-x:auto;flex:1;scrollbar-width:none}
 .tabs-nav a{padding:.375rem .75rem;border-radius:999px;color:var(--on-sv);text-decoration:none;font-size:.875rem;white-space:nowrap}
 .tabs-nav a:hover{background:var(--sc-high)}
