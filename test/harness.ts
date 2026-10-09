@@ -252,9 +252,10 @@ async function findOrDownloadAbiMatchingNode(): Promise<string> {
     if (actualHash !== expectedHash) {
       throw new Error(`SHA-256 mismatch for ${url}: expected ${expectedHash}, got ${actualHash}`);
     }
-    // bsdtar (shipped with Windows 10+) extracts zip archives too.
+    // bsdtar (shipped with Windows 10+) extracts zip archives too; GNU tar from Git Bash or MSYS2 on PATH does not.
+    const tarExe = isWindows ? join(process.env.SystemRoot ?? "C:\\Windows", "System32", "tar.exe") : "tar";
     const tar = Bun.spawnSync({
-      cmd: ["tar", "-xf", archive, "-C", stagingDir],
+      cmd: [tarExe, "-xf", archive, "-C", stagingDir],
       env: bunEnv,
       stdout: "ignore",
       stderr: "pipe",
