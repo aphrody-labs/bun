@@ -16,16 +16,7 @@
 // Auth: NPM_TOKEN (written into each staged .npmrc), else the user's ~/.npmrc.
 
 import { spawnSync } from "node:child_process";
-import {
-  chmodSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { platforms as upstreamPlatforms } from "../../packages/bun-release/src/platform";
@@ -34,7 +25,7 @@ import { retirePlaceholder } from "./npm-placeholder";
 export const ROOT = join(import.meta.dir, "..", "..");
 export const RUNTIME_PACKAGE = "@aphrody/bun-runtime";
 export const REPOSITORY = "https://github.com/aphrody-labs/bun";
-export const TAG_PREFIX = "aphrody-v";
+export const TAG_PREFIX = "bun-v";
 
 export type RuntimePlatform = {
   /** Release asset, e.g. `bun-linux-x64.zip`. */
@@ -85,21 +76,22 @@ export function computeRuntimeVersion(base: string, n: number): string {
 const RUNTIME_VERSION = /^(\d+\.\d+\.\d+)-aphrody\.([1-9]\d*)$/;
 
 export function parseRuntimeVersion(version: string): { base: string; n: number } {
+  if (SEMVER.test(version)) return { base: version, n: 0 };
   const m = RUNTIME_VERSION.exec(version);
-  if (!m) throw new Error(`version must be <X.Y.Z>-aphrody.<n>, got ${JSON.stringify(version)}`);
+  if (!m) throw new Error(`version must be X.Y.Z or <X.Y.Z>-aphrody.<n>, got ${JSON.stringify(version)}`);
   return { base: m[1], n: Number(m[2]) };
 }
 
 /** Accepts `aphrody-v1.4.3-aphrody.1`, `v1.4.3-aphrody.1` or `1.4.3-aphrody.1`. */
 export function versionFromTag(tag: string): string {
-  const version = tag.replace(/^refs\/tags\//, "").replace(/^aphrody-v|^v/, "");
+  const version = tag.replace(/^refs\/tags\//, "").replace(/^(?:bun-v|aphrody-v|v)/, "");
   parseRuntimeVersion(version);
   return version;
 }
 
 export function releaseTag(version: string): string {
-  parseRuntimeVersion(version);
-  return `${TAG_PREFIX}${version}`;
+  const { n } = parseRuntimeVersion(version);
+  return `${n ? "aphrody-v" : TAG_PREFIX}${version}`;
 }
 
 /** Platforms whose zip is present among `assetNames`. */
@@ -294,7 +286,9 @@ function flag(args: string[], name: string): string | undefined {
 if (import.meta.main) {
   const [command, ...args] = process.argv.slice(2);
   if (command === "version") {
-    console.log(computeRuntimeVersion(readBaseVersion(), Number(flag(args, "--n") ?? "1")));
+    console.log(
+      flag(args, "--n") ? computeRuntimeVersion(readBaseVersion(), Number(flag(args, "--n"))) : readBaseVersion(),
+    );
   } else if (command === "stage" || command === "publish") {
     const raw = flag(args, "--version");
     const assets = flag(args, "--assets");

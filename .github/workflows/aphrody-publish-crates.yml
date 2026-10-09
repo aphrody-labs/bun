@@ -23,6 +23,7 @@ on:
   push:
     tags:
       - "aphrody-v*"
+      - "bun-v*"
 
 concurrency:
   group: aphrody-publish-crates

@@ -128,7 +128,7 @@ function latestRelease(): string | null {
     "api",
     `repos/${REPO}/releases?per_page=20`,
     "--jq",
-    '[.[] | select((.draft | not) and (.tag_name | startswith("aphrody-v")))][0] | "\\(.tag_name)#\\(.assets | length)"',
+    '[.[] | select((.draft | not) and (.tag_name | test("^(bun-v|aphrody-v)")))][0] | "\\(.tag_name)#\\(.assets | length)"',
   ]);
   return out && out !== "null" ? out : null;
 }

@@ -160,7 +160,7 @@ async function fetchReleases(repo: string): Promise<Release[]> {
   const list = (await res.json()) as any[];
   const releases: Release[] = [];
   for (const r of list) {
-    if (r.draft || !String(r.tag_name).startsWith("aphrody-v")) continue;
+    if (r.draft || !/^(?:bun-v|aphrody-v)/.test(String(r.tag_name))) continue;
     const release: Release = {
       tag: r.tag_name,
       name: r.name || r.tag_name,
@@ -600,13 +600,22 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
   );
 
   // Benchmarks
+  const productsDirectory = join(o.src, "docs/aphrody/benchmarks/latest");
+  for (const name of ["product-benchmarks.json", "README.md", "comparison.png", "comparison.svg", "samples.csv"]) {
+    const source = join(productsDirectory, name);
+    if (existsSync(source)) {
+      mkdirSync(join(o.out, "benchmarks/products"), { recursive: true });
+      cpSync(source, join(o.out, "benchmarks/products", name));
+    }
+  }
   const reports = loadPerfReports(o.perf);
   write(
     join(o.out, "benchmarks", "index.html"),
     page({
       path: "/benchmarks",
       title: titled("Benchmarks"),
-      description: "Measured performance of the Aphrody runtime against upstream Bun, and how to reproduce it.",
+      description:
+        "Measured Bun, Python, .NET, Tailwind CSS and Next.js workloads, raw samples and reproducible methodology.",
       body: highlightHtml(renderBenchmarks(reports, o, latest)),
       tabs: topTabs("Benchmarks"),
       toc: reports.map(r => ({ level: 2, id: r.platform, text: r.platform })),
@@ -830,7 +839,7 @@ ${runtimeInstallCommands(o.origin)}`;
         `<li><a href="${escapeHtml(r.url)}">${escapeHtml(r.tag)}</a> <span class="muted">${escapeHtml(r.publishedAt.slice(0, 10))}</span></li>`,
     )
     .join("");
-  const base = latest.tag.replace(/^aphrody-v/, "").replace(/-aphrody\.\d+$/, "");
+  const base = latest.tag.replace(/^(?:bun-v|aphrody-v)/, "").replace(/-aphrody\.\d+$/, "");
   const npm = data?.runtime?.npm;
   return `${head}
 <p class="banner" data-latest-tag="${escapeHtml(latest.tag)}" data-repo="${escapeHtml(o.repo)}" hidden></p>
@@ -868,17 +877,91 @@ ${releases
   .join("\n")}`;
 }
 
+export function renderProductBenchmarks(report: any, hasGraph = false): string {
+  if (!report || report.schema !== 1 || !Array.isArray(report.cases)) return "";
+  const measured = report.cases.filter((entry: any) => entry.status === "measured");
+  const body = report.cases
+    .map((entry: any) => {
+      const row =
+        entry.status === "measured" && Number.isFinite(entry.interval?.ratio)
+          ? "<td>" +
+            escapeHtml(entry.metric) +
+            "</td><td>" +
+            Number(entry.left.median).toFixed(4) +
+            "</td><td>" +
+            Number(entry.right.median).toFixed(4) +
+            "</td><td>" +
+            Number(entry.interval.ratio).toFixed(3) +
+            " [" +
+            Number(entry.interval.low).toFixed(3) +
+            ", " +
+            Number(entry.interval.high).toFixed(3) +
+            "]</td>"
+          : '<td colspan="4">' + escapeHtml(entry.status) + ": " + escapeHtml(entry.reason ?? "") + "</td>";
+      return '<tr><th scope="row">' + escapeHtml(entry.id) + "</th>" + row + "</tr>";
+    })
+    .join("");
+  const details = report.cases
+    .map(
+      (entry: any) =>
+        "<details><summary>" +
+        escapeHtml(entry.id) +
+        "</summary><p>" +
+        escapeHtml(entry.description) +
+        "</p>" +
+        (entry.status === "measured"
+          ? "<p>" +
+            entry.left.n +
+            " samples; p95 Bun " +
+            Number(entry.left.p95).toFixed(4) +
+            " ms, reference " +
+            Number(entry.right.p95).toFixed(4) +
+            " ms.</p>"
+          : "<p>" + escapeHtml(entry.reason ?? entry.status) + "</p>") +
+        "</details>",
+    )
+    .join("");
+  return [
+    '<section id="product-benchmarks"><h2>Bun products against their reference implementations</h2>',
+    "<p>" +
+      escapeHtml(report.generatedAt) +
+      " · SSH VPS · Bun " +
+      escapeHtml(report.environment?.bunVersion ?? "") +
+      " · " +
+      measured.length +
+      " measured cases. Python, .NET, Tailwind CSS and Next.js use checked fixtures and paired samples.</p>",
+    "<p>Reference / Bun above 1 favours Bun for this workload. Intervals are paired bootstrap 95% intervals. Process startup and internal operation timings are reported separately. Unsupported hosts receive no timing.</p>",
+    '<p><a href="/benchmarks/products/README.md">Complete methodology and report</a> · <a href="/benchmarks/products/product-benchmarks.json">Raw paired samples and provenance (JSON)</a></p>',
+    hasGraph
+      ? '<figure><img src="/benchmarks/products/comparison.png" alt="Reference to Bun time ratios with 95 percent paired bootstrap intervals" loading="lazy"><figcaption>Measured workloads only; the dashed reference is parity.</figcaption></figure>'
+      : "",
+    '<div class="table-wrap"><table><thead><tr><th>Workload</th><th>Metric</th><th>Bun median ms</th><th>Reference median ms</th><th>Reference / Bun [95% CI]</th></tr></thead><tbody>' +
+      body +
+      "</tbody></table></div>",
+    details,
+    "</section>",
+  ].join("\n");
+}
+
 function renderBenchmarks(reports: PerfReport[], o: BuildOptions, latest: Release | undefined): string {
-  const base = latest?.tag.replace(/^aphrody-v/, "").replace(/-aphrody\.\d+$/, "");
+  const base = latest?.tag.replace(/^(?:bun-v|aphrody-v)/, "").replace(/-aphrody\.\d+$/, "");
   const intro = `<h1>Benchmarks</h1>
-<p class="lead">The Aphrody runtime against upstream Bun of the same base version. Every number on this page comes from a measured run of <code>scripts/aphrody/perf-gate.ts</code>.</p>`;
+<p class="lead">Measured runtime and product workloads. Each table identifies its binaries, source, measurement method and execution host.</p>`;
   const results = reports.length
     ? `${o.perfRun ? `<p>Source: <a href="${escapeHtml(o.perfRun)}">CI run</a> of the <code>aphrody-perf</code> workflow (artifacts <code>perf-report-*</code>).</p>` : ""}${reports.map(renderPerfTable).join("\n")}`
     : `<p class="banner">No measured report was attached to this build of the site. Run the commands below to measure on your machine.</p>`;
   const thresholds = existsSync(join(o.src, "bench/aphrody/thresholds.json"))
     ? `<p>Thresholds live in <a href="https://github.com/${o.repo}/blob/main/bench/aphrody/thresholds.json"><code>bench/aphrody/thresholds.json</code></a>: a case fails when the runtime median exceeds upstream by more than its ratio <em>and</em> its absolute delta.</p>`
     : "";
+  const productPath = join(o.src, "docs/aphrody/benchmarks/latest/product-benchmarks.json");
+  const products = existsSync(productPath)
+    ? renderProductBenchmarks(
+        JSON.parse(readFileSync(productPath, "utf8")),
+        existsSync(join(dirname(productPath), "comparison.png")),
+      )
+    : "";
   return `${intro}
+${products}
 ${results}
 <h2 id="what">What is measured</h2>
 <ul>${Object.values(PERF_LABELS)

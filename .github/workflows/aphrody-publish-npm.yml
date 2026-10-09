@@ -13,6 +13,7 @@ on:
   push:
     tags:
       - "aphrody-v*"
+      - "bun-v*"
   workflow_dispatch:
     inputs:
       dry-run:
@@ -50,6 +51,7 @@ jobs:
           ONLY: ${{ inputs.only }}
         run: |
           echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-          bun scripts/aphrody/publish-npm.ts $DRY_RUN ${ONLY:+--only "$ONLY"} --out "$RUNNER_TEMP/aphrody-npm"
+          stable=""; case "$GITHUB_REF_NAME" in bun-v*) stable="--stable";; esac
+          bun scripts/aphrody/publish-npm.ts $DRY_RUN $stable ${ONLY:+--only "$ONLY"} --out "$RUNNER_TEMP/aphrody-npm"
           # A first publish of a new name leaves an npm 0.0.0-stage placeholder; deprecate it.
           bun scripts/aphrody/npm-placeholder.ts retire $DRY_RUN

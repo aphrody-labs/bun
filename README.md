@@ -18,7 +18,7 @@ listed under [Install](#install).
 |                   |                                                                                                      |
 | ----------------- | ---------------------------------------------------------------------------------------------------- |
 | Component         | runtime: executables `bun` and `bunx`                                                                |
-| Component version | `<upstream Bun version>-aphrody.<n>`, release tag `aphrody-v<version>` ([Versioning](#versioning))   |
+| Component version | `1.4.4`, stable release tag `bun-v1.4.4` ([Versioning](#versioning))                                 |
 | Releases          | [GitHub releases](https://github.com/aphrody-labs/bun/releases); notes in [RELEASES.md](RELEASES.md) |
 | Branch            | `main` (the only working branch)                                                                     |
 | Upstream          | [Bun](https://github.com/oven-sh/bun) ([Upstream](#upstream))                                        |
@@ -44,8 +44,8 @@ These are [`scripts/aphrody/install.sh`](scripts/aphrody/install.sh) and
 [`install.ps1`](scripts/aphrody/install.ps1). Each one downloads the release archive for the current platform and
 checks it against the release's `SHA256SUMS.txt`, then installs `bun` and `bunx` into `$BUN_INSTALL/bin` (default
 `~/.bun/bin`). By default they install the latest release. You can pass an upstream base version instead
-(`bash -s 1.4.3`, which selects the newest `aphrody.<n>` build of that base) or an exact tag
-(`bash -s aphrody-v1.4.3-aphrody.4`).
+(`bash -s 1.4.4`, which prefers the stable `bun-v1.4.4` release) or an exact tag
+(`bash -s bun-v1.4.4`). Legacy Aphrody tags remain accepted.
 
 - `bun upgrade` installs the latest release of this repository.
 - npm: `@aphrody/bun-runtime` installs the binary for the current platform through optional dependencies
@@ -71,7 +71,7 @@ These setup scripts are [`scripts/aphrody/install-dev.sh`](scripts/aphrody/insta
 ```sh
 bun bd                                    # debug build: build/debug/bun-debug
 bun bd test <file>                        # run a test with the debug build
-bun scripts/build.ts --profile=release --version-tag=aphrody.<n>   # release build: build/release/bun
+bun scripts/build.ts --profile=release --canary=off   # stable release, without a version suffix
 ```
 
 Requirements and platform notes: [CONTRIBUTING.md](CONTRIBUTING.md),
@@ -101,14 +101,22 @@ Tests for code that exists only in this component live in [`test/js/first_party/
 
 ## Versioning
 
-- **Component version.** `bun --version` prints `<base>-aphrody.<n>`. `<base>` is the upstream Bun version the
+Native Windows source synchronization defaults to **1.4.4**:
+`bun run bun:windows --apply`, then `bun run bun:windows --check`.
+See [the targeted version and infrastructure audit](docs/aphrody/windows-version-sync.md)
+for planning, checksum-qualified deployment pins and independent package versions.
+
+- **Stable runtime version.** New stable releases use `bun-v1.4.4` and print
+  `1.4.4`, without a suffix. Installers, deployment selection and runtime npm
+  publication accept this tag. Legacy `aphrody-v*` releases remain readable.
+- **Legacy component version.** `bun --version` prints `<base>-aphrody.<n>`. `<base>` is the upstream Bun version the
   component is built from, and `<n>` counts the Aphrody releases of that base. For example, `1.4.3-aphrody.4` is
   the fourth release built on Bun 1.4.3. Release tags are `aphrody-v<component version>`. `Bun.version` and
   `process.versions.bun` keep the upstream base version (`1.4.3`), so packages that check the Bun version see the
   version whose APIs this component provides.
 - **Distribution version.** Aphrody distribution releases have their own identifiers, published on
   [downloads.aphrody.com](https://downloads.aphrody.com/latest.json). A distribution release pins the runtime by its
-  upstream base version and installs the newest `aphrody-v<base>-aphrody.<n>` release of that base.
+  runtime version and prefers its stable `bun-v<version>` release, with legacy Aphrody tags accepted.
 
 ## Upstream
 

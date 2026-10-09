@@ -123,7 +123,7 @@ const groupBy = <T>(list: T[], key: (t: T) => string) => {
 export const latestRuntimeRelease = (releases: Release[] | null) => releases?.find(r => !r.prerelease) ?? releases?.[0];
 
 const runtimeVersion = (d: SiteData, ctx: PageContext) =>
-  latestRuntimeRelease(ctx.releases)?.tag.replace(/^aphrody-v/, "") ?? d.runtime?.upstream.version ?? "";
+  latestRuntimeRelease(ctx.releases)?.tag.replace(/^(?:bun-v|aphrody-v)/, "") ?? d.runtime?.upstream.version ?? "";
 
 function sourceLine(d: SiteData): string {
   const parts: string[] = [];

@@ -492,3 +492,27 @@ describe("site publish", () => {
     expect((await flip("missing", 5)).code).not.toBe(0);
   });
 });
+
+test("product benchmark page escapes labels and leaves unsupported cases unmeasured", async () => {
+  const { renderProductBenchmarks } = await import("../../scripts/aphrody/site/build.ts");
+  const html = renderProductBenchmarks({
+    schema: 1,
+    generatedAt: "2026-10-10",
+    environment: { bunVersion: "1.4.4" },
+    cases: [
+      {
+        id: "<windows>",
+        category: "Windows",
+        description: "<script>bad</script>",
+        status: "unsupported-host",
+        reason: "Requires Windows",
+      },
+    ],
+  });
+  expect(html).toContain("&lt;windows&gt;");
+  expect(html).toContain("unsupported-host: Requires Windows");
+  expect(html).toContain("0 measured cases");
+  expect(html).not.toContain("<script>bad</script>");
+  expect(html).not.toContain("comparison.png");
+  expect(renderProductBenchmarks({ schema: 2, cases: [] })).toBe("");
+});

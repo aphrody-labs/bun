@@ -98,6 +98,7 @@ function readTree(dir: string, base = dir, out: Files = new Map()): Files {
 /** The generated plugins: from --from, else generated from the checkout. */
 function plugins(a: Args): Files {
   if (a.from) return readTree(a.from);
+  if (!a.root && !a.skills.length && existsSync(join(pkg, "plugins"))) return readTree(join(pkg, "plugins"));
   return generate({ root: checkoutOf(a), pkg, skillDirs: a.skills });
 }
 

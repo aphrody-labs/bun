@@ -152,7 +152,7 @@ export async function resolveSource(
   const exec = io.run ?? run;
   if (s.kind === "release") {
     const releases = await (io.releases ?? ghReleases)(s.repo);
-    const prefix = s.tagPrefix ?? "aphrody-v";
+    const prefix = s.tagPrefix ?? "bun-v";
     const hit = releases.find(r => !r.draft && r.tag_name.startsWith(prefix));
     if (!hit) throw new Error(`${s.name}: no release tag starting with ${prefix}`);
     return { name: s.name, tag: hit.tag_name };

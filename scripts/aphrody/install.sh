@@ -44,15 +44,19 @@ api() {
 case "$version" in
   # The repository also publishes other releases (tools, n2b): the newest runtime release, not GitHub's "latest".
   latest)
-    tag=$(api 'releases?per_page=100' | grep -o '"tag_name": *"aphrody-v[0-9]*\.[0-9]*\.[0-9]*-aphrody\.[0-9]*"' |
+    tag=$(api 'releases?per_page=100' | grep -oE '"tag_name": *"(bun-v[0-9]+\.[0-9]+\.[0-9]+|aphrody-v[0-9]+\.[0-9]+\.[0-9]+-aphrody\.[0-9]+)"' |
       head -1 | cut -d'"' -f4 || true) ;;
   aphrody-v*) tag=$version ;;
+  bun-v*) tag=$version ;;
   *)
     version=${version#bun-}
     version=${version#v}
     [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "version must be latest, X.Y.Z or aphrody-vX.Y.Z-aphrody.N"
-    tag=$(api 'releases?per_page=100' | grep -o '"tag_name": *"aphrody-v'"$version"'-aphrody\.[0-9]*"' |
-      cut -d'"' -f4 | sort -t. -k4 -n | tail -1 || true) ;;
+    tag=$(api "releases/tags/bun-v$version" 2>/dev/null | grep -o '"tag_name": *"bun-v'"$version"'"' | cut -d'"' -f4 || true)
+    if [[ -z $tag ]]; then
+      tag=$(api 'releases?per_page=100' | grep -o '"tag_name": *"aphrody-v'"$version"'-aphrody\.[0-9]*"' |
+        cut -d'"' -f4 | sort -t. -k4 -n | tail -1 || true)
+    fi ;;
 esac
 [[ -n ${tag:-} ]] || die "no $repo release for $version"
 
