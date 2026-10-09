@@ -4,6 +4,23 @@ Release notes of the Aphrody runtime component (`aphrody-labs/bun`). Each releas
 `aphrody-v<base>-aphrody.<n>`, where `<base>` is the upstream Bun version it is built on
 ([Versioning](README.md#versioning)). Every release ships a `SHA256SUMS.txt` that the installers check.
 
+## Next
+
+- `c79c3c04b86`: the subcommands dispatched before the runtime (`bun mcp`, `lsp`, `ssh`, `host`, `agent-plugin`,
+  `uv`, `dotnet`, `msvc`, `winmd`) read their arguments with `bun_core::os_args()`, so they no longer ignore them
+  under musl. Checked with `cargo check` (Windows, and `bun_core` for `x86_64-unknown-linux-musl`), not yet with a
+  musl binary.
+- `c419fa2ca8c`: the agent plugin names the Aphrody runtime instead of "the fork"; its entry skill is `bun-aphrody`.
+  `test/cli/agent-plugin/agent-plugin.test.ts`: 27 of 30 pass with `bun 1.4.3-aphrody.3`; the 3 `bun agent-plugin`
+  tests need a binary built from this tree.
+- To verify both, on the VPS: `git -C ~/src/bun fetch origin`, a worktree under `~/build/w` with
+  `git sparse-checkout disable`, then in `aphrody/build-alpine:3.24`:
+  `bun scripts/build.ts --profile=release --lto=off --canary=off`, `build/release/bun mcp tools --markdown`, and
+  `build/release/bun test test/cli/mcp/mcp.test.ts test/cli/agent-plugin/agent-plugin.test.ts`. Remove the worktree
+  afterwards.
+- Not done: npm packages (`@aphrody/bun-runtime`) for 1.4.3-aphrody.4; the Docker image, Kubernetes and compose files
+  still pin 1.4.3-aphrody.3; no macOS or ARM64 binary.
+
 ## 1.4.3-aphrody.4
 
 - Tag: `aphrody-v1.4.3-aphrody.4`, commit `41211b56872`. Base: Bun 1.4.3, upstream `main` merged up to `e655c580329` (2026-10-08).
