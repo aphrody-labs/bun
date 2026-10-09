@@ -212,6 +212,22 @@ describe("glob.match", async () => {
       return undefined;
     }
   });
+
+  test("missing cwd yields no entries, like fs.globSync and fast-glob", async () => {
+    using dir = tempDir("glob-missing-cwd", { "file.txt": "" });
+    const missing = path.join(String(dir), "does-not-exist", "nested");
+    for (const pattern of ["*", "**/*", "a/*.txt"]) {
+      const glob = new Glob(pattern);
+      expect([...glob.scanSync({ cwd: missing })]).toEqual([]);
+      expect(await Array.fromAsync(glob.scan({ cwd: missing }))).toEqual([]);
+      expect([...glob.scanSync({ cwd: missing, absolute: true })]).toEqual([]);
+      expect(fs.globSync(pattern, { cwd: missing })).toEqual([]);
+      expect(fg.sync(pattern, { cwd: missing })).toEqual([]);
+    }
+    const absolute = new Glob(path.join(missing, "*").replaceAll("\\", "/"));
+    expect([...absolute.scanSync()]).toEqual([]);
+    expect(await Array.fromAsync(absolute.scan())).toEqual([]);
+  });
 });
 
 // From fast-glob regular.e2e.tes

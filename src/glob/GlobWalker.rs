@@ -480,6 +480,11 @@ impl<'a, A: Accessor, const SENTINEL: bool> Iterator<'a, A, SENTINEL> {
         let root_path_z = ZStr::from_buf(&self.walker.path_buf[..], root_path_len);
         let cwd_fd = match A::open(root_path_z)? {
             Err(err) => {
+                // A missing root matches nothing, like Node's `fs.glob` and fast-glob.
+                if err.get_errno() == E::ENOENT {
+                    self.iter_state = IterState::GetNext;
+                    return Ok(Ok(()));
+                }
                 return Ok(Err(err.with_path(&self.walker.path_buf[..root_path_len])));
             }
             Ok(fd) => fd,
