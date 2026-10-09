@@ -653,9 +653,11 @@ côté WebKit `.github/workflows/aphrody-prebuilts.yml`, `aphrody-upstream-sync.
   `linux-musl` 4 min 18 s ; lane `bun-webkit-linux-amd64-musl-lto` **45 min** (limite d'un job : 6 h). Archive
   223 265 820 o (oven-sh : 223 270 963 o), mêmes 2800 entrées. Pas besoin de runners larges : le disque est
   contourné (data-root Docker sur `/mnt`, ~70 Go), l'unique limite réelle est la concurrence (20 jobs) ; toute la
-  matrice tient en quelques heures.
-- ✅ `scripts/build/deps/webkit.ts` : source par archive. Défaut `oven-sh/WebKit` tant que
-  `APHRODY_WEBKIT_PREBUILTS[sha]` ne liste pas l'archive ; `BUN_WEBKIT_REPO=aphrody|oven|<owner>/<repo>` force la
+  matrice de 42 lanes (run 37861845867, 2026-10-09) : 51 jobs verts en ~4 h 50 de mur, release `autobuild-0c06faad…`
+  publiée avec les 42 archives, mêmes noms que oven-sh, tailles à ±0,003 %.
+- ✅ `scripts/build/deps/webkit.ts` : source par archive. Défaut `aphrody-labs/WebKit` pour les
+  42 archives listées dans `APHRODY_WEBKIT_PREBUILTS[0c06faad…]` (écrites par `webkit-prebuilt.ts record`), `oven-sh/WebKit`
+  pour tout sha/archive non listé ; `BUN_WEBKIT_REPO=aphrody|oven|<owner>/<repo>` force la
   source ; le dépôt entre dans l'identité et le répertoire de cache (pas de collision à sha égal). Build Windows
   MSVC 14.44 inchangé (clés de cache identiques par défaut). Test : `bun test test/internal/webkit-prebuilt-source.test.ts`.
 - 🔄 Alpine (chantier N) : `Dockerfile.musl` part de `alpine:3.23` + LLVM 23 (edge) ; les `-musl*` sont l'artefact
