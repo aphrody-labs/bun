@@ -233,10 +233,8 @@ impl CachedBytecode {
             Format::Cjs => generateCachedCommonJSProgramByteCodeFromSourceCode,
             _ => return None,
         };
-        // An executable stores the chunk as `encode_text_module` writes it (Latin-1, or UTF-16 when non-ASCII) and
-        // aliases it at runtime; a `.jsc` next to a bundle is keyed on the file's bytes read as Latin-1.
-        let source = match external_strings.and_then(|_| bun_core::strings::first_non_ascii(input))
-        {
+        // Both executable chunks and sidecar bytecode use the decoded source text.
+        let source = match bun_core::strings::first_non_ascii(input) {
             Some(first_non_ascii) => utf16_source(input, first_non_ascii as usize),
             None => BunString::clone_latin1(input),
         };

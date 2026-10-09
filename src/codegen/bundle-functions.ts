@@ -845,10 +845,9 @@ JSBuiltinInternalFunctions::JSBuiltinInternalFunctions(JSC::VM& vm) : m_vm(vm)
     if (internal) {
       dts += `\n// ${basename}.ts\n`;
       for (const fn of functions) {
-        dts += `declare const \$${fn.name}: RemoveThis<typeof import("${path.relative(
-          typesDir,
-          path.join(SRC_DIR, basename),
-        )}")[${JSON.stringify(fn.name)}]>;\n`;
+        dts += `declare const \$${fn.name}: RemoveThis<typeof import(${JSON.stringify(
+          path.relative(typesDir, path.join(SRC_DIR, basename)),
+        )})[${JSON.stringify(fn.name)}]>;\n`;
       }
     }
   }

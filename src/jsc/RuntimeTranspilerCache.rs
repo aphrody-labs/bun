@@ -64,7 +64,8 @@ bun_core::declare_scope!(cache, visible);
 /// `onResolve` rewrote (`namespace:path`). Older entries request the bare path, and
 /// the cache-HIT path reinstates #33904 for them.
 /// Version 34: An import that a plugin `onResolve` answers is printed as it is written.
-const EXPECTED_VERSION: u32 = 34;
+/// Version 35: Raw template literals retain UTF-8 and the output encoding reflects it.
+const EXPECTED_VERSION: u32 = 35;
 
 /// Source files smaller than this are not written to / read from the on-disk
 /// transpiler cache. Originally 50 KiB, which excluded almost every file in a
@@ -979,10 +980,9 @@ bun_ast::link_impl_TranspilerCacheImpl! {
             }
             debug_assert!(this.entry.is_none());
 
-            // Borrowed Latin-1 view: `to_file` only reads `byte_slice()` + the encoding
-            // tag (unmarked 8-bit EncodedSlice -> Encoding::LATIN1, same as clone_latin1),
-            // and `output_code_bytes` outlives the synchronous `to_file` call.
-            let output_code = BunString::ascii(output_code_bytes);
+            // The printer emits UTF-8, including verbatim raw template literals.
+            // `to_file` borrows these bytes synchronously and stores their encoding.
+            let output_code = BunString::borrow_utf8(output_code_bytes);
             let result = RuntimeTranspilerCache::to_file(
                 this.input_byte_length.unwrap(),
                 this.input_hash.unwrap(),

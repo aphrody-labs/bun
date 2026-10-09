@@ -21,6 +21,8 @@ pub enum HardcodedModule {
     BunGraph,
     #[strum(serialize = "bun:graph-native")]
     BunGraphNative,
+    #[strum(serialize = "bun:graph-index")]
+    BunGraphIndex,
     #[strum(serialize = "bun:graphx")]
     BunGraphx,
     #[strum(serialize = "bun:python")]
@@ -39,10 +41,10 @@ pub enum HardcodedModule {
     BunWasm,
     #[strum(serialize = "bun:windows")]
     BunWindows,
-    #[strum(serialize = "bun:winui")]
-    BunWinui,
     #[strum(serialize = "bun:winrt")]
     BunWinrt,
+    #[strum(serialize = "bun:winui")]
+    BunWinui,
     #[strum(serialize = "bun:wrap")]
     BunWrap,
     #[strum(serialize = "bun:sqlite")]
@@ -247,6 +249,7 @@ bun_core::comptime_string_map! {
         b"bun:dotnet" => HardcodedModule::BunDotnet,
         b"bun:graph" => HardcodedModule::BunGraph,
         b"bun:graph-native" => HardcodedModule::BunGraphNative,
+        b"bun:graph-index" => HardcodedModule::BunGraphIndex,
         b"bun:graphx" => HardcodedModule::BunGraphx,
         b"bun:python" => HardcodedModule::BunPython,
         b"bun:jsc" => HardcodedModule::BunJsc,
@@ -257,10 +260,10 @@ bun_core::comptime_string_map! {
         b"bun:sqlite" => HardcodedModule::BunSqlite,
         b"bun:wasm" => HardcodedModule::BunWasm,
         b"bun:windows" => HardcodedModule::BunWindows,
+        b"bun:winrt" => HardcodedModule::BunWinrt,
         b"bun:winui" => HardcodedModule::BunWinui,
         b"bun:wrap" => HardcodedModule::BunWrap,
         b"bun:internal-for-testing" => HardcodedModule::BunInternalForTesting,
-        b"bun:winrt" => HardcodedModule::BunWinrt,
         b"internal:cluster/RoundRobinHandle" => HardcodedModule::InternalClusterRoundRobinHandle,
         b"internal/repl" => HardcodedModule::NodeInternalRepl,
         b"internal/repl/await" => HardcodedModule::NodeInternalReplAwait,
@@ -776,6 +779,7 @@ const BUN_EXTRA_ALIAS_KVS: &[AliasKv] = &[
     ),
     entry!("bun:graph"),
     entry!("bun:graph-native"),
+    entry!("bun:graph-index"),
     entry!("bun:graphx"),
     entry!("bun:python"),
     (

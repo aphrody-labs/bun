@@ -3183,53 +3183,8 @@ pub(crate) mod __gated_printer {
         }
 
         fn print_raw_template_literal(&mut self, bytes: &[u8]) {
-            if IS_JSON || !ASCII_ONLY {
-                self.print(bytes);
-                return;
-            }
-
-            // Translate any non-ASCII to unicode escape sequences
-            // Note that this does not correctly handle malformed template literal strings
-            // template literal strings can contain invalid unicode code points
-            // and pretty much anything else
-            //
-            // we use WTF-8 here, but that's still not good enough.
-            //
-            let mut ascii_start: usize = 0;
-            let mut is_ascii = false;
-            let iter = CodepointIterator::init(bytes);
-            let mut cursor = strings::Cursor::default();
-
-            while iter.next(&mut cursor) {
-                match cursor.c as u32 {
-                    // unlike other versions, we only want to mutate > 0x7F
-                    0..=LAST_ASCII => {
-                        if !is_ascii {
-                            ascii_start = cursor.i as usize;
-                            is_ascii = true;
-                        }
-                    }
-                    _ => {
-                        if is_ascii {
-                            self.print(&bytes[ascii_start..(cursor.i as usize)]);
-                            is_ascii = false;
-                        }
-
-                        match cursor.c as u32 {
-                            c @ 0..=0xFFFF => self.print(&bmp_escape(c)[..]),
-                            _ => {
-                                self.print(b"\\u{");
-                                let _ = self.fmt(format_args!("{:x}", cursor.c));
-                                self.print(b"}");
-                            }
-                        }
-                    }
-                }
-            }
-
-            if is_ascii {
-                self.print(&bytes[ascii_start..]);
-            }
+            // Unicode escapes would change the raw strings observed by the template tag.
+            self.print(bytes);
         }
 
         pub(crate) fn check_stack_overflow(&self) -> crate::Result<()> {

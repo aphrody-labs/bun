@@ -132,15 +132,11 @@ for (let i = 0; i < nativeStartIndex; i++) {
     let importStatements: string[] = [];
 
     const processed = sliceSourceCode(
-      "{" +
-        input
-          .replace(
-            /\bimport(\s*type)?\s*(\{[^}]*\}|(\*\s*as)?\s[a-zA-Z0-9_$]+)\s*from\s*['"][^'"]+['"]/g,
-            stmt => (importStatements.push(stmt), ""),
-          )
-          .replace(/export\s*{\s*}\s*;/g, ""),
+      "{" + input,
       true,
       x => requireTransformer(x, moduleList[i]),
+      false,
+      importStatements,
     );
     // Guard rail: builtin-parser.ts's regex-position heuristic only recognises
     // `/` as regex-start after `[(,=;:{]|return|=>`; a regex whose body has `)`
@@ -778,7 +774,7 @@ declare module "module" {
       let internalName = idToPublicSpecifierOrEnumName(id);
       if (internalName.startsWith("internal:")) internalName = internalName.replace(":", "/");
 
-      dts += `        (id: "${internalName}"): typeof import("${path.join(BASE, id)}").default;\n`;
+      dts += `        (id: ${JSON.stringify(internalName)}): typeof import(${JSON.stringify(path.join(BASE, id))}).default;\n`;
     }
 
     dts += `

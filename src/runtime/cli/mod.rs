@@ -314,6 +314,8 @@ pub(crate) use arguments as Arguments;
 pub(crate) mod dotnet_command;
 #[path = "python_command.rs"]
 pub(crate) mod python_command;
+#[path = "python_compile.rs"]
+pub(crate) mod python_compile;
 #[path = "run_command.rs"]
 pub(crate) mod run_command;
 #[path = "uv_command.rs"]
@@ -1302,6 +1304,13 @@ pub(crate) mod command {
             super::uv_command::exec(invocation);
         }
 
+        if super::python_compile::is_compile_command(
+            argv.get(0).map(bun_core::ZStr::as_bytes).unwrap_or(b""),
+            argv.get(1).map(bun_core::ZStr::as_bytes),
+        ) {
+            super::python_compile::exec(&argv_zslice());
+        }
+
         {
             let argv0 = argv.get(0).map(bun_core::ZStr::as_bytes).unwrap_or(b"");
             let first = argv.get(1).map(bun_core::ZStr::as_bytes);
@@ -1736,6 +1745,10 @@ pub(crate) mod command {
     #[cold]
     #[inline(never)]
     fn exec_build(log: &mut bun_ast::Log) -> CmdResult {
+        let argv = argv_zslice();
+        if super::python_compile::is_python_build(&argv) {
+            super::python_compile::exec(&argv);
+        }
         if super::toolchain_command::is_wasm_build(&argv_zslice()) {
             return exec_toolchain(log);
         }

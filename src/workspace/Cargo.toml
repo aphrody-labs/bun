@@ -1,0 +1,44 @@
+[package]
+name = "bun_workspace"
+version.workspace = true
+edition.workspace = true
+publish = false
+license = "Apache-2.0"
+
+[lib]
+path = "lib.rs"
+
+[lints]
+workspace = true
+
+[features]
+default = []
+magika = ["bun-re/magika"]
+
+[dependencies]
+bun_core.workspace = true
+bun_sys.workspace = true
+bun_windows_sys.workspace = true
+bun_graph.workspace = true
+thiserror.workspace = true
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = "1.0.150"
+blake3 = "1.8.7"
+dunce = "1.0.5"
+ignore = "0.4.25"
+regex = "1.11"
+tokio = { version = "1.53.1", features = ["rt", "sync", "macros"] }
+bun-re = { path = "../../packages/bun-re", default-features = false }
+
+[dev-dependencies]
+tempfile = "3.27.0"
+
+[package.metadata.aphrody-source]
+repository = "https://github.com/aphrody-labs/aphrody"
+revision = "7e9df1c89c1b5de85c3a16a92949cb709de6f4ac"
+license = "Apache-2.0"
+paths = ["packages/infra/workspace/src/code-edit.ts", "packages/infra/workspace/src/pipeline-catalog.ts", "crates/os/kernel/libs/fsindex/src/walk.rs"]
+parser-owner = "packages/bun-runtime-sdk/crates/yolo-core/src/polyglot.rs"
+parser-owner-revision = "cfbcd9346455264d2b4830b8ad582df5481c4975"
+native-parser-owner = "src/graph/extract"
+binary-owner = "packages/bun-re/src/lib.rs"
