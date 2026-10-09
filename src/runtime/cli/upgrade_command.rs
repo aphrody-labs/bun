@@ -228,12 +228,16 @@ impl UpgradeCommand {
             Some(repo) if !repo.is_empty() => repo,
             _ => return DEFAULT_REPO.as_bytes(),
         };
-        let valid = strings::count_char(repo, b'/') == 1
-            && !repo.starts_with(b"/")
-            && !repo.ends_with(b"/")
-            && repo
-                .iter()
-                .all(|&c| c.is_ascii_alphanumeric() || matches!(c, b'/' | b'-' | b'_' | b'.'));
+        let segment_ok = |s: &[u8]| {
+            !s.is_empty()
+                && s != b"."
+                && s != b".."
+                && s
+                    .iter()
+                    .all(|&c| c.is_ascii_alphanumeric() || matches!(c, b'-' | b'_' | b'.'))
+        };
+        let valid = strings::split_once_char(repo, b'/')
+            .is_some_and(|(owner, name)| segment_ok(owner) && segment_ok(name));
         if !valid {
             bun_core::pretty_errorln!(
                 "<r><red>error:<r> APHRODY_BUN_REPO must look like <b>owner/name<r>, got {}",
