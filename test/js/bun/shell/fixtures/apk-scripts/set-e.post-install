@@ -1,0 +1,6 @@
+#!/bin/sh
+# aports pattern: `set -e` and the `:` no-op.
+set -e
+: "${ROOT:=/}"
+mkdir -p "$ROOT/var/lib/demo"
+exit 0

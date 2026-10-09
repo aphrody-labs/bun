@@ -1,0 +1,7 @@
+#!/bin/sh
+# The usual post-install: create state under the root and record the installed version ($1).
+mkdir -p "$ROOT/var/lib/demo" "$ROOT/var/log/demo"
+echo "$1" > "$ROOT/var/lib/demo/version"
+touch "$ROOT/var/log/demo/install.log"
+addgroup -S demo 2>/dev/null || true
+exit 0

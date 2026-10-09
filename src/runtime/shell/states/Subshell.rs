@@ -107,6 +107,7 @@ impl Subshell {
         child: NodeId,
         exit_code: ExitCode,
     ) -> Yield {
+        interp.absorb_exit();
         interp.deinit_node(child);
         {
             let me = interp.as_subshell_mut(this);

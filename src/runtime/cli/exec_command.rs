@@ -14,7 +14,7 @@ pub(crate) struct ExecCommand;
 /// `&'static Arena` per PORTING.md §AST crates. Same `Once`-guarded
 /// `RacyCell<MaybeUninit>` shape as `run_command::runner_arena` (Bump is
 /// `!Sync`, so `OnceLock` cannot hold it directly).
-fn exec_arena() -> &'static bun_alloc::Arena {
+pub(crate) fn exec_arena() -> &'static bun_alloc::Arena {
     static ONCE: std::sync::Once = std::sync::Once::new();
     // PORTING.md §Global mutable state: `Once`-guarded init; RacyCell because
     // `Bump` is `!Sync` so `OnceLock<Arena>` can't be used.

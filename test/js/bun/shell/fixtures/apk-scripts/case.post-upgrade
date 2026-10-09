@@ -1,0 +1,7 @@
+#!/bin/sh
+# aports pattern: `apk_version_compare`-style branch on the old version ($2).
+case "$2" in
+	1.*) echo "migrating from $2" ;;
+	*) ;;
+esac
+exit 0

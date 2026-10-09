@@ -1,0 +1,6 @@
+#!/bin/sh
+# aports pattern: `[ ... ]` (test) guarding a one-time migration.
+if [ -e "$ROOT/etc/demo.conf.old" ]; then
+	mv "$ROOT/etc/demo.conf.old" "$ROOT/etc/demo.conf"
+fi
+exit 0

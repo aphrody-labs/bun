@@ -316,6 +316,8 @@ pub(crate) mod run_command;
 // ─── per-subcommand bodies ───────────────────────────────────────────────────
 #[path = "build_command.rs"]
 pub(crate) mod build_command;
+#[path = "bunsh.rs"]
+pub(crate) mod bunsh;
 #[path = "bunx_command.rs"]
 pub(crate) mod bunx_command;
 #[path = "create_command.rs"]
@@ -1206,6 +1208,10 @@ pub(crate) mod command {
                 }
                 host_main(fd as i32);
             }
+        }
+
+        if super::bunsh::is_bunsh(bun::argv().get(0).map(bun_core::ZStr::as_bytes).unwrap_or(b"")) {
+            return super::bunsh::exec(write_context_no_parse(log));
         }
 
         // bun build --compile entry point. A compiled executable linked as `bun` is the engine itself (one `yolo`

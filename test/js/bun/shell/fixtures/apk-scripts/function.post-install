@@ -1,0 +1,7 @@
+#!/bin/sh
+# aports pattern (main/mkinitfs, main/alpine-baselayout): helper functions.
+ensure_dir() {
+	mkdir -p "$ROOT/$1"
+}
+ensure_dir var/lib/demo
+exit 0

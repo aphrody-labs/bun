@@ -90,7 +90,7 @@ impl Cursor {
 // ============================================================================
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Key {
+pub(crate) enum Key {
     // Control keys
     CtrlA,
     CtrlB,
@@ -141,7 +141,7 @@ enum Key {
 }
 
 impl Key {
-    fn from_byte(byte: u8) -> Key {
+    pub(crate) fn from_byte(byte: u8) -> Key {
         match byte {
             1 => Key::CtrlA,
             2 => Key::CtrlB,
@@ -171,7 +171,7 @@ impl Key {
 // History
 // ============================================================================
 
-struct History {
+pub(crate) struct History {
     entries: Vec<Box<[u8]>>,
     position: usize,
     temp_line: Option<Box<[u8]>>,
@@ -180,7 +180,7 @@ struct History {
 }
 
 impl History {
-    fn init() -> History {
+    pub(crate) fn init() -> History {
         History {
             entries: Vec::new(),
             position: 0,
@@ -190,7 +190,12 @@ impl History {
         }
     }
 
-    fn load(&mut self) -> Result<(), crate::Error> {
+    pub(crate) fn load(&mut self) -> Result<(), crate::Error> {
+        self.load_file(HISTORY_FILENAME)
+    }
+
+    /// Loads `$HOME/<filename>` and saves back to it.
+    pub(crate) fn load_file(&mut self, filename: &[u8]) -> Result<(), crate::Error> {
         let Some(home_path) = env_var::HOME.get() else {
             return Ok(());
         };
@@ -201,7 +206,7 @@ impl History {
         let mut path_buf = bun_paths::path_buffer_pool::get();
         let path = path::resolve_path::join_z_buf::<path::platform::Auto>(
             &mut path_buf,
-            &[home_path, HISTORY_FILENAME],
+            &[home_path, filename],
         );
         self.file_path = Some(Box::<[u8]>::from(path.as_bytes()));
 
@@ -225,7 +230,7 @@ impl History {
         Ok(())
     }
 
-    fn save(&mut self) {
+    pub(crate) fn save(&mut self) {
         if !self.modified {
             return;
         }
@@ -260,7 +265,7 @@ impl History {
         self.modified = false;
     }
 
-    fn add(&mut self, line: &[u8]) -> Result<(), bun_alloc::AllocError> {
+    pub(crate) fn add(&mut self, line: &[u8]) -> Result<(), bun_alloc::AllocError> {
         if line.is_empty() {
             return Ok(());
         }
@@ -285,7 +290,7 @@ impl History {
         Ok(())
     }
 
-    fn prev(&mut self, current_line: &[u8]) -> Option<&[u8]> {
+    pub(crate) fn prev(&mut self, current_line: &[u8]) -> Option<&[u8]> {
         if self.entries.is_empty() {
             return None;
         }
@@ -303,7 +308,7 @@ impl History {
         None
     }
 
-    fn next(&mut self) -> Option<&[u8]> {
+    pub(crate) fn next(&mut self) -> Option<&[u8]> {
         if self.position < self.entries.len() {
             self.position += 1;
         }
@@ -321,7 +326,7 @@ impl History {
         None
     }
 
-    fn reset_position(&mut self) {
+    pub(crate) fn reset_position(&mut self) {
         self.position = self.entries.len();
         self.temp_line = None;
     }
@@ -331,32 +336,32 @@ impl History {
 // Line Editor
 // ============================================================================
 
-struct LineEditor {
-    buffer: Vec<u8>,
-    cursor: usize,
+pub(crate) struct LineEditor {
+    pub(crate) buffer: Vec<u8>,
+    pub(crate) cursor: usize,
 }
 
 impl LineEditor {
-    fn init() -> LineEditor {
+    pub(crate) fn init() -> LineEditor {
         LineEditor {
             buffer: Vec::new(),
             cursor: 0,
         }
     }
 
-    fn clear(&mut self) {
+    pub(crate) fn clear(&mut self) {
         self.buffer.clear();
         self.cursor = 0;
     }
 
-    fn set(&mut self, text: &[u8]) -> Result<(), bun_alloc::AllocError> {
+    pub(crate) fn set(&mut self, text: &[u8]) -> Result<(), bun_alloc::AllocError> {
         self.buffer.clear();
         self.buffer.extend_from_slice(text);
         self.cursor = text.len();
         Ok(())
     }
 
-    fn insert(&mut self, ch: u8) -> Result<(), bun_alloc::AllocError> {
+    pub(crate) fn insert(&mut self, ch: u8) -> Result<(), bun_alloc::AllocError> {
         if self.cursor == self.buffer.len() {
             self.buffer.push(ch);
         } else {
@@ -366,7 +371,7 @@ impl LineEditor {
         Ok(())
     }
 
-    fn insert_slice(&mut self, slice: &[u8]) -> Result<(), bun_alloc::AllocError> {
+    pub(crate) fn insert_slice(&mut self, slice: &[u8]) -> Result<(), bun_alloc::AllocError> {
         if self.cursor == self.buffer.len() {
             self.buffer.extend_from_slice(slice);
         } else {
@@ -379,7 +384,7 @@ impl LineEditor {
 
     /// Byte offset of the start of the codepoint ending just before `pos`.
     /// Walks back over UTF-8 continuation bytes (0x80..=0xBF).
-    fn prev_boundary(&self, pos: usize) -> usize {
+    pub(crate) fn prev_boundary(&self, pos: usize) -> usize {
         let mut i = pos;
         while i > 0 {
             i -= 1;
@@ -393,7 +398,7 @@ impl LineEditor {
     /// Byte offset of the start of the codepoint after the one beginning at
     /// `pos`. Advances by the lead byte's UTF-8 sequence length, clamped to the
     /// buffer so a truncated/invalid sequence still makes progress.
-    fn next_boundary(&self, pos: usize) -> usize {
+    pub(crate) fn next_boundary(&self, pos: usize) -> usize {
         if pos >= self.buffer.len() {
             return self.buffer.len();
         }
@@ -401,14 +406,14 @@ impl LineEditor {
         (pos + step).min(self.buffer.len())
     }
 
-    fn delete_char(&mut self) {
+    pub(crate) fn delete_char(&mut self) {
         if self.cursor < self.buffer.len() {
             let end = self.next_boundary(self.cursor);
             self.buffer.drain(self.cursor..end);
         }
     }
 
-    fn backspace(&mut self) {
+    pub(crate) fn backspace(&mut self) {
         if self.cursor > 0 {
             let start = self.prev_boundary(self.cursor);
             self.buffer.drain(start..self.cursor);
@@ -416,7 +421,7 @@ impl LineEditor {
         }
     }
 
-    fn delete_word(&mut self) {
+    pub(crate) fn delete_word(&mut self) {
         // Delete word forward
         while self.cursor < self.buffer.len() && self.buffer[self.cursor].is_ascii_whitespace() {
             self.buffer.remove(self.cursor);
@@ -426,7 +431,7 @@ impl LineEditor {
         }
     }
 
-    fn backspace_word(&mut self) {
+    pub(crate) fn backspace_word(&mut self) {
         // Delete word backward
         while self.cursor > 0 && self.buffer[self.cursor - 1].is_ascii_whitespace() {
             self.cursor -= 1;
@@ -438,28 +443,28 @@ impl LineEditor {
         }
     }
 
-    fn delete_to_end(&mut self) {
+    pub(crate) fn delete_to_end(&mut self) {
         self.buffer.truncate(self.cursor);
     }
 
-    fn delete_to_start(&mut self) {
+    pub(crate) fn delete_to_start(&mut self) {
         self.buffer.drain_front(self.cursor);
         self.cursor = 0;
     }
 
-    fn move_left(&mut self) {
+    pub(crate) fn move_left(&mut self) {
         if self.cursor > 0 {
             self.cursor = self.prev_boundary(self.cursor);
         }
     }
 
-    fn move_right(&mut self) {
+    pub(crate) fn move_right(&mut self) {
         if self.cursor < self.buffer.len() {
             self.cursor = self.next_boundary(self.cursor);
         }
     }
 
-    fn move_word_left(&mut self) {
+    pub(crate) fn move_word_left(&mut self) {
         while self.cursor > 0 && self.buffer[self.cursor - 1].is_ascii_whitespace() {
             self.cursor -= 1;
         }
@@ -468,7 +473,7 @@ impl LineEditor {
         }
     }
 
-    fn move_word_right(&mut self) {
+    pub(crate) fn move_word_right(&mut self) {
         while self.cursor < self.buffer.len() && !self.buffer[self.cursor].is_ascii_whitespace() {
             self.cursor += 1;
         }
@@ -477,15 +482,15 @@ impl LineEditor {
         }
     }
 
-    fn move_to_start(&mut self) {
+    pub(crate) fn move_to_start(&mut self) {
         self.cursor = 0;
     }
 
-    fn move_to_end(&mut self) {
+    pub(crate) fn move_to_end(&mut self) {
         self.cursor = self.buffer.len();
     }
 
-    fn swap(&mut self) {
+    pub(crate) fn swap(&mut self) {
         // Transpose two whole codepoints (not bytes), so multi-byte UTF-8 is
         // not split. Mid-line swaps the codepoint before the cursor with the
         // one at it and advances past both; at end-of-line it transposes the
@@ -508,7 +513,7 @@ impl LineEditor {
         self.cursor = right_end;
     }
 
-    fn get_line(&self) -> &[u8] {
+    pub(crate) fn get_line(&self) -> &[u8] {
         &self.buffer
     }
 }
@@ -961,10 +966,7 @@ pub(super) struct Repl<'a> {
     drawing: Option<Drawing>,
     ctrl_c_pressed: bool,
 
-    // Buffered stdin
-    stdin_buf: [u8; 256],
-    stdin_buf_start: usize,
-    stdin_buf_end: usize,
+    keys: KeyReader,
 
     // JavaScript VM (JSC_BORROW per LIFETIMES.tsv)
     pub(super) vm: Option<&'a VirtualMachine>,
@@ -998,9 +1000,7 @@ impl<'a> Repl<'a> {
             use_colors: false,
             drawing: None,
             ctrl_c_pressed: false,
-            stdin_buf: [0u8; 256],
-            stdin_buf_start: 0,
-            stdin_buf_end: 0,
+            keys: KeyReader::new(),
             vm: None,
             global: None,
             // `adopt(UNDEFINED)`: no protect taken; drop's unprotect() is a
@@ -1163,28 +1163,49 @@ impl<'a> Repl<'a> {
         }
     }
 
+    fn read_key(&mut self) -> Option<Key> {
+        self.keys.read_key()
+    }
+}
+
+/// Buffered stdin decoded into keystrokes; shared with `bunsh`'s interactive mode.
+pub(crate) struct KeyReader {
+    buf: [u8; 256],
+    start: usize,
+    end: usize,
+}
+
+impl KeyReader {
+    pub(crate) const fn new() -> KeyReader {
+        KeyReader {
+            buf: [0u8; 256],
+            start: 0,
+            end: 0,
+        }
+    }
+
     fn read_byte(&mut self) -> Option<u8> {
-        if self.stdin_buf_start < self.stdin_buf_end {
-            let b = self.stdin_buf[self.stdin_buf_start];
-            self.stdin_buf_start += 1;
+        if self.start < self.end {
+            let b = self.buf[self.start];
+            self.start += 1;
             return Some(b);
         }
         // Refill buffer (stdio fd: `File::Drop` is a no-op, so this is safe to
         // re-create on every call).
         let stdin = sys::File::stdin();
-        let n = match stdin.read(&mut self.stdin_buf) {
+        let n = match stdin.read(&mut self.buf) {
             sys::Result::Ok(n) => n,
             sys::Result::Err(_) => return None,
         };
         if n == 0 {
             return None;
         }
-        self.stdin_buf_start = 1;
-        self.stdin_buf_end = n;
-        Some(self.stdin_buf[0])
+        self.start = 1;
+        self.end = n;
+        Some(self.buf[0])
     }
 
-    fn read_key(&mut self) -> Option<Key> {
+    pub(crate) fn read_key(&mut self) -> Option<Key> {
         let byte = self.read_byte()?;
 
         // Handle escape sequences
@@ -1280,7 +1301,7 @@ impl<'a> Repl<'a> {
                 // sequence is malformed; drop the lead bytes but push this one
                 // back so the next read_key sees it (it starts a new keystroke).
                 if cont & 0xC0 != 0x80 {
-                    self.stdin_buf_start -= 1;
+                    self.start -= 1;
                     return Some(Key::Unknown);
                 }
                 *slot = cont;
@@ -1297,7 +1318,9 @@ impl<'a> Repl<'a> {
 
         Some(Key::from_byte(byte))
     }
+}
 
+impl<'a> Repl<'a> {
     // ========================================================================
     // Prompt and Display
     // ========================================================================

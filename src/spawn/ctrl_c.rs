@@ -15,6 +15,16 @@ use crate::process::Status;
 static CHILDREN: AtomicU32 = AtomicU32::new(0);
 /// A Ctrl+C arrived while `CHILDREN > 0` and was left to them.
 static RECEIVED: AtomicBool = AtomicBool::new(false);
+/// An interactive shell (`bunsh` reading a terminal): Ctrl+C never ends it, only its job.
+static INTERACTIVE: AtomicBool = AtomicBool::new(false);
+
+pub fn set_interactive(on: bool) {
+    INTERACTIVE.store(on, Ordering::SeqCst);
+}
+
+pub fn interactive() -> bool {
+    INTERACTIVE.load(Ordering::SeqCst)
+}
 
 /// Process-lifetime; the handler is inert while no `Child` is alive. Not
 /// inherited by children: a caught signal resets to `SIG_DFL` on exec, and a
@@ -40,7 +50,7 @@ pub fn install() {
 
 #[cfg(unix)]
 extern "C" fn handler(sig: core::ffi::c_int) {
-    if CHILDREN.load(Ordering::SeqCst) > 0 {
+    if CHILDREN.load(Ordering::SeqCst) > 0 || INTERACTIVE.load(Ordering::SeqCst) {
         RECEIVED.store(true, Ordering::SeqCst);
         return;
     }
@@ -56,7 +66,9 @@ extern "C" fn handler(sig: core::ffi::c_int) {
 
 #[cfg(windows)]
 extern "system" fn handler(ctrl_type: bun_sys::windows::DWORD) -> bun_sys::windows::BOOL {
-    if ctrl_type == bun_sys::windows::CTRL_C_EVENT && CHILDREN.load(Ordering::SeqCst) > 0 {
+    if ctrl_type == bun_sys::windows::CTRL_C_EVENT
+        && (CHILDREN.load(Ordering::SeqCst) > 0 || INTERACTIVE.load(Ordering::SeqCst))
+    {
         RECEIVED.store(true, Ordering::SeqCst);
         return bun_sys::windows::TRUE;
     }

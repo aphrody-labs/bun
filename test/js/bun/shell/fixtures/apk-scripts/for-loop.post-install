@@ -1,0 +1,6 @@
+#!/bin/sh
+# aports pattern (main/busybox, main/openrc): loop over a word list.
+for dir in run log cache; do
+	mkdir -p "$ROOT/var/$dir/demo"
+done
+exit 0

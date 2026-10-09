@@ -80,6 +80,7 @@ impl Stmt {
             me.last_exit_code = Some(exit_code);
             me.idx += 1;
             me.currently_executing = None;
+            me.base.shell_mut().set_last_exit_code(exit_code);
         }
         // Async children are *not* freed here (they outlive their parent's
         // notion of "done"); see `Async`'s empty `deinit`.

@@ -363,6 +363,9 @@ impl Pipeline {
         // Exit code = last command's exit code (bash semantics).
         // For a single-runnable pipeline `last_exit_code` stays 0: only
         // inspect `cmds[len-1]` when `len >= 2`.
+        if cmds.len() >= 2 {
+            interp.absorb_exit();
+        }
         let exit = if cmds.len() >= 2 {
             match cmds.last() {
                 Some(CmdOrResult::Result(e)) => *e,

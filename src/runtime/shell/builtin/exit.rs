@@ -33,8 +33,8 @@ impl Exit {
                 return Self::fail(interp, cmd, b"exit: too many arguments\n");
             }
         };
-        // Intentional divergence from bash: this completes only the current
-        // Cmd rather than unwinding the whole script.
+        // In `Bun.$` this completes only the current Cmd; `bunsh` unwinds the script.
+        interp.request_exit();
         Builtin::done(interp, cmd, code)
     }
 

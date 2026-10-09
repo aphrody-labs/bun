@@ -341,6 +341,81 @@ impl InterpreterFlags {
     pub(crate) fn set_failed(&mut self, v: bool) {
         if v { self.0 |= 0b100 } else { self.0 &= !0b100 }
     }
+    /// `exit` ends the whole script, as in POSIX sh (`bunsh`), instead of only its command.
+    pub(crate) const fn posix_exit(self) -> bool {
+        self.0 & 0b1000 != 0
+    }
+    pub(crate) fn set_posix_exit(&mut self, v: bool) {
+        if v { self.0 |= 0b1000 } else { self.0 &= !0b1000 }
+    }
+    /// A `posix_exit` script ran `exit`: every state unwinds to the nearest subshell or the root.
+    pub(crate) const fn exit_requested(self) -> bool {
+        self.0 & 0b10000 != 0
+    }
+    pub(crate) fn set_exit_requested(&mut self, v: bool) {
+        if v { self.0 |= 0b10000 } else { self.0 &= !0b10000 }
+    }
+}
+
+impl Interpreter {
+    pub(crate) fn request_exit(&self) {
+        let mut flags = self.flags.get();
+        if flags.posix_exit() {
+            flags.set_exit_requested(true);
+            self.flags.set(flags);
+        }
+    }
+
+    /// A subshell (`( … )`, `$( … )`) absorbs the `exit` run inside it.
+    pub(crate) fn absorb_exit(&self) {
+        let mut flags = self.flags.get();
+        flags.set_exit_requested(false);
+        self.flags.set(flags);
+    }
+}
+
+/// What an interactive or `-c` `bunsh` run carries from one command line to the next.
+#[derive(Default)]
+pub(crate) struct ShellSession {
+    pub(crate) cwd: Option<Box<[u8]>>,
+    shell_env: Vec<(Box<[u8]>, Box<[u8]>)>,
+    export_env: Option<Vec<(Box<[u8]>, Box<[u8]>)>>,
+    /// The last line ran `exit`.
+    pub(crate) exited: bool,
+}
+
+impl ShellSession {
+    fn dump(map: &EnvMap) -> Vec<(Box<[u8]>, Box<[u8]>)> {
+        map.iter()
+            .map(|(k, v)| (Box::<[u8]>::from(k.slice()), Box::<[u8]>::from(v.slice())))
+            .collect()
+    }
+
+    fn rebuild(entries: &[(Box<[u8]>, Box<[u8]>)]) -> EnvMap {
+        use crate::shell::env_str::EnvStr;
+        let mut map = EnvMap::init_with_capacity(entries.len());
+        for (k, v) in entries {
+            let key = EnvStr::dupe_ref_counted(k);
+            let value = EnvStr::dupe_ref_counted(v);
+            map.insert(key, value);
+            key.deref();
+            value.deref();
+        }
+        map
+    }
+
+    fn restore_into(&self, shell: &mut ShellExecEnv) {
+        shell.shell_env = Self::rebuild(&self.shell_env);
+        if let Some(export_env) = &self.export_env {
+            shell.export_env = Self::rebuild(export_env);
+        }
+    }
+
+    fn save_from(&mut self, shell: &ShellExecEnv) {
+        self.cwd = Some(Box::<[u8]>::from(shell.cwd()));
+        self.shell_env = Self::dump(&shell.shell_env);
+        self.export_env = Some(Self::dump(&shell.export_env));
+    }
 }
 
 #[repr(u8)]
@@ -643,7 +718,7 @@ impl Interpreter {
         path: &[u8],
         src: &[u8],
     ) -> crate::Result<ExitCode> {
-        Self::init_and_run_impl(ctx, mini, bun_paths::basename(path), src, None, false)
+        Self::init_and_run_impl(ctx, mini, bun_paths::basename(path), src, None, false, None)
     }
 
     /// Standalone-shell entrypoint for `bun run <script>` / `bun exec` when
@@ -661,7 +736,20 @@ impl Interpreter {
         src: &[u8],
         cwd: Option<&[u8]>,
     ) -> crate::Result<ExitCode> {
-        Self::init_and_run_impl(ctx, mini, path_for_errors, src, cwd, true)
+        Self::init_and_run_impl(ctx, mini, path_for_errors, src, cwd, true, None)
+    }
+
+    /// `bunsh`: runs `src` as one step of `session`, whose cwd and variables it starts from and
+    /// leaves updated. `exit` ends the script (`session.exited`); a parse or run error is
+    /// reported and returned as the exit code instead of ending the process.
+    pub(crate) fn init_and_run_session(
+        ctx: &mut bun_options_types::context::ContextData,
+        mini: &'static mut bun_event_loop::MiniEventLoop::MiniEventLoop,
+        label: &[u8],
+        src: &[u8],
+        session: &mut ShellSession,
+    ) -> crate::Result<ExitCode> {
+        Self::init_and_run_impl(ctx, mini, label, src, None, false, Some(session))
     }
 
     /// Shared body for `init_and_run_from_file` / `init_and_run_from_source`.
@@ -675,6 +763,7 @@ impl Interpreter {
         src: &[u8],
         cwd: Option<&[u8]>,
         from_source: bool,
+        mut session: Option<&mut ShellSession>,
     ) -> crate::Result<ExitCode> {
         if from_source {
             bun_analytics::features::standalone_shell.fetch_add(1, Ordering::Relaxed);
@@ -719,6 +808,10 @@ impl Interpreter {
                         bstr::BStr::new(label),
                         bstr::BStr::new(errstr),
                     );
+                    if session.is_some() {
+                        bun_core::Output::flush();
+                        return Ok(2);
+                    }
                     bun_core::Global::exit(1);
                 }
             }
@@ -727,17 +820,24 @@ impl Interpreter {
 
         // ── init ───────────────────────────────────────────────────────────
         let evtloop = EventLoopHandle::init_mini(std::ptr::from_mut(mini));
+        let session_cwd: Option<Box<[u8]>> = session.as_deref().and_then(|s| s.cwd.clone());
         let interp = match Self::init(
             std::ptr::from_mut(ctx),
             evtloop,
             shargs,
             Vec::new(),
             None,
-            cwd,
+            cwd.or(session_cwd.as_deref()),
         ) {
             Ok(i) => i,
             Err(e) => e.throw_mini(),
         };
+        if let Some(session) = session.as_deref() {
+            let mut flags = interp.flags.get();
+            flags.set_posix_exit(true);
+            interp.flags.set(flags);
+            interp.root_shell.with_mut(|rs| session.restore_into(rs));
+        }
 
         // ── run ────────────────────────────────────────────────────────────
         interp.exit_code.set(Some(1));
@@ -749,6 +849,10 @@ impl Interpreter {
                 "Failed to run script <b>{}<r>",
                 (bstr::BStr::new(label),),
             );
+            if session.is_some() {
+                bun_core::Output::flush();
+                return Ok(1);
+            }
             bun_core::Global::exit(1);
         }
 
@@ -764,6 +868,10 @@ impl Interpreter {
         });
 
         let code = interp.exit_code.get().expect("exit_code set by finish()");
+        if let Some(session) = session.as_deref_mut() {
+            interp.root_shell.with_mut(|rs| session.save_from(rs));
+            session.exited = interp.flags.get().exit_requested();
+        }
         interp.deinit_from_exec();
         Ok(code)
     }
@@ -914,7 +1022,10 @@ impl Interpreter {
             return;
         }
         if parent == NodeId::INTERPRETER {
-            bun_spawn::ctrl_c::exit_like_child();
+            if !bun_spawn::ctrl_c::interactive() {
+                bun_spawn::ctrl_c::exit_like_child();
+            }
+            return;
         }
         if let Node::Pipeline(p) = self.node(parent) {
             let rightmost = p.cmds.as_deref().is_none_or(|c| {
@@ -926,7 +1037,7 @@ impl Interpreter {
             }
             return;
         }
-        if !self.in_pipeline(parent) {
+        if !self.in_pipeline(parent) && !bun_spawn::ctrl_c::interactive() {
             bun_spawn::ctrl_c::exit_like_child();
         }
         if let Some(base) = self.node_mut(parent).base_mut() {
@@ -938,6 +1049,7 @@ impl Interpreter {
     pub(crate) fn interrupted(&self, id: NodeId) -> bool {
         self.context_stopped()
             || self.failed()
+            || self.flags.get().exit_requested()
             || self.node(id).base().is_some_and(|b| b.interrupted)
     }
 
@@ -2152,6 +2264,14 @@ impl ShellExecEnv {
             AssignCtx::Cmd => self.cmd_local_env.insert(label, value),
             AssignCtx::Shell => self.shell_env.insert(label, value),
         }
+    }
+
+    /// `$?`
+    pub(crate) fn set_last_exit_code(&mut self, code: ExitCode) {
+        use crate::shell::env_str::EnvStr;
+        let value = EnvStr::init_ref_counted(code.to_string().into_bytes().into_boxed_slice());
+        self.shell_env.insert(EnvStr::init_slice(b"?"), value);
+        value.deref();
     }
 
     /// Looks up `$HOME` (`$USERPROFILE` on Windows) in `shell_env` first, then

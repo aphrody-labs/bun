@@ -3405,6 +3405,11 @@ impl<'bump, const ENCODING: StringEncoding> Lexer<'bump, ENCODING> {
                     c if c == u32::from(b'=') => {
                         return Ok(TextRange { start, end: self.j });
                     }
+                    c if c == u32::from(b'?') && !escaped => {
+                        self.eat().unwrap();
+                        self.append_char_to_str_pool(char)?;
+                        return Ok(TextRange { start, end: self.j });
+                    }
                     c if (u32::from(b'0')..=u32::from(b'9')).contains(&c) => {
                         is_int = true;
                         self.eat().unwrap();

@@ -19,10 +19,10 @@ use bun_core::{Global, Output};
 use bun_jsc::virtual_machine::VirtualMachine;
 use bun_jsc::{self as jsc, JSGlobalObject};
 
-// `repl.rs` is a sibling file with no other consumers; declare it as a child
-// module here so `Repl` resolves without touching `cli/mod.rs`.
+// `repl.rs` is a sibling file declared as a child module here; `bunsh` reuses
+// its line editor, history and key reader.
 #[path = "repl.rs"]
-mod repl;
+pub(crate) mod repl;
 use repl::Repl;
 
 use crate::Command;
