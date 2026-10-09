@@ -117,7 +117,7 @@ Aucun lot ne touche `tools/config/container/aphrody-os/Dockerfile`, `rootfs/`, `
      - `bun test test/internal/aphrody-initramfs.test.ts` (script, pas de code natif) ;
      - passe finale V : `bun scripts/aphrody/initramfs.ts --bun build/release/bun --sysroot <rootfs alpine> --bin /usr/bin/coreutils --out build/initramfs.cpio.gz`, puis `qemu-system-x86_64 … -append console=ttyS0`.
    - Allègement aphrody : supprimer `tools/config/container/aphrody-os/vm/**` (398 l., crate `aphrody-init`) et `patches/linux/0001-misc-add-aphrody_runtime-Rust-driver.patch` (225 l.) ; retirer la mention de `docs/reference/workspace/STATE.md`.
-   - Statut : ✅ `067e1af57ab` (côté bun : `--bin`, `hostname`, test 5/5 ; initramfs construit dans `alpine:3.24` et amorcé sous qemu avec `rdinit=/bin/sh`). ✅ réseau `f1292cd1e55` : `initramfs-net.ts` (lien et adresse par rtnetlink, client DHCP RFC 2131, route par défaut, `/etc/resolv.conf`, `/etc/hosts`), options `--ip dhcp|<cidr>`, `--gateway`, `--dns`, `--interface`, `--module` (modules `.ko`, `.ko.gz` ou `.ko.zst` chargés par `/init`) ; test 8/8 ; bail DHCP obtenu sous qemu (Alpine linux-virt 6.18, virtio-net en module, slirp : 10.0.2.15/24 via 10.0.2.2, DNS 10.0.2.3, HTTP 200). ✅ PID 1 `/init` amorcé sous qemu (Docker local `alpine:3.24`, noyau linux-virt 6.18, TCG) avec le bun musl debug de V (`aca9221709`) : `/init` est PID 1 (`/proc/1/cmdline` = `/bin/bun /init`), virtio-net chargé en module, `bun-init: eth0 10.0.2.15/24 via 10.0.2.2 dns 10.0.2.3` par DHCP, app compilée lancée sous `argv0` `app` (ppid 1, hostname posé), fetch sortant HTTP 200, arrêt propre (`workload exited with 0`, `reboot: Power down`). Scripts : `C:/tmp/g4/net/pid1-{kernel,build,boot}.sh`. `--file` accepte un dossier (`e19090225f7`), utile pour les builtins JS d'un bun debug. ⏳ aucune release publiée n'a encore `bun:linux`. Suppression de `vm/` et du patch `aphrody_runtime` : ✅ aphrody `8a06065c9b` (G1, 10 fichiers, −615 l.).
+   - Statut : ✅ `067e1af57ab` (côté bun : `--bin`, `hostname`, test 5/5 ; initramfs construit dans `alpine:3.24` et amorcé sous qemu avec `rdinit=/bin/sh`). ✅ réseau `f1292cd1e55` : `initramfs-net.ts` (lien et adresse par rtnetlink, client DHCP RFC 2131, route par défaut, `/etc/resolv.conf`, `/etc/hosts`), options `--ip dhcp|<cidr>`, `--gateway`, `--dns`, `--interface`, `--module` (modules `.ko`, `.ko.gz` ou `.ko.zst` chargés par `/init`) ; test 8/8 ; bail DHCP obtenu sous qemu (Alpine linux-virt 6.18, virtio-net en module, slirp : 10.0.2.15/24 via 10.0.2.2, DNS 10.0.2.3, HTTP 200). ✅ PID 1 `/init` amorcé sous qemu (Docker local `alpine:3.24`, noyau linux-virt 6.18, TCG) avec le bun musl debug de V (`aca9221709`) : `/init` est PID 1 (`/proc/1/cmdline` = `/bin/bun /init`), virtio-net chargé en module, `bun-init: eth0 10.0.2.15/24 via 10.0.2.2 dns 10.0.2.3` par DHCP, app compilée lancée sous `argv0` `app` (ppid 1, hostname posé), fetch sortant HTTP 200, arrêt propre (`workload exited with 0`, `reboot: Power down`). Scripts : `C:/tmp/g4/net/pid1-{kernel,build,boot}.sh`. `--file` accepte un dossier (`e19090225f7`), utile pour les builtins JS d'un bun debug. ✅ preuve réduite du 2026-10-09 : QEMU a exécuté Alpine 3.24.2, puis Bun 1.4.3 comme PID 1 ; `bun -e` a démarré un service HTTP qui répond 200 depuis l'hôte. Cette passe n'emploie pas le générateur ni `/init` de production : la release ne fournit pas `bun:linux`, donc l'initramfs Bun de `initramfs-init.ts` reste bloqué. ⏳ aucune release publiée n'a encore `bun:linux`. Suppression de `vm/` et du patch `aphrody_runtime` : ✅ aphrody `8a06065c9b` (G1, 10 fichiers, −615 l.).
 2. **A2 — image runtime minimale** (bun).
    - Nouveau `scripts/aphrody/alpine/runtime.Dockerfile` : minirootfs 3.24.2 aux sha256 épinglés, comme `aphrody-alpine.Dockerfile` ; dépôt du fork ; `apk add bun ca-certificates tzdata` ; utilisateur `agent` 1000.
    - Nouveau workflow `.github/workflows/aphrody-alpine-runtime.yml` → `ghcr.io/aphrody-labs/alpine:3.24-runtime` (amd64 + arm64).
@@ -158,6 +158,52 @@ Aucun lot ne touche `tools/config/container/aphrody-os/Dockerfile`, `rootfs/`, `
    - Prérequis : réseau minimal dans `initramfs-init.ts`.
    - Gate : tests `m3/packages/m3-bun` (`targets`, `system`).
    - Statut : ✅ code. Bun `5ff0a620cb3` : `--env K=V` et `--argv0 nom` ; l'exécutable compilé sert de `/bin/bun` pour `/init` (le fork traite un exécutable compilé nommé `bun` comme le moteur) et `/init` le relance sous le nom de l'app. Aphrody `fad1493c9f` : `linux-image.ts` ne génère plus d'init C ; `build-image.sh` vérifie `bun:linux` dans l'exécutable, prend `scripts/aphrody/initramfs*.ts` dans `BUN_SRC` ou sur `aphrody-labs/bun@BUN_REF`, et charge les modules virtio-net du noyau hôte ; `rootfs.tar` disparaît (la cible docker couvre ce cas) ; tests `targets` 24/24 (2 ignorés). ✅ amorçage : l'image de la preuve A1 est celle de `build-image.sh` généré par m3-bun (`INITRAMFS_ARGS`, aphrody `1902e54d7f`). ⏳ aucune release publiée n'a encore `bun:linux`.
+
+## Preuve de boot
+
+État constaté le 2026-10-09 sur le VPS partagé. Les images `alpine:3.24` et `aphrody/bun-alpine:latest` étaient déjà en cache ; la seconde contient Alpine 3.24.2 et Bun `1.4.3-aphrody.2`. Le noyau disponible dans `/home/ubuntu/wx/kernel/out/x86_64/bzImage` est `6.18.54.1-microsoft-standard-WSL2`, construit depuis les commits consignés dans `/home/ubuntu/wx/kernel/commits.txt` (dernier : `47f637c546bf4bb274c7149815ed66d748e4f325`). C'est un noyau de la série linux Aphrody, mais sa configuration est WSL2 et ne remplace pas la recette `linux-aphrody` 6.18.55.
+
+Rootfs exporté de l'image Alpine/Bun, initramfs `newc` gzip créé avec `cpio`, puis démarrage headless dans la session `tmux` dédiée `codex-osboot` :
+
+```sh
+OSBOOT="$HOME/.aphrody/workspace/codex-fleet-20261009/target-osboot"
+docker create --name codex-osboot-rootfs aphrody/bun-alpine:latest
+docker export codex-osboot-rootfs -o "$OSBOOT/alpine-3.24.2-rootfs.tar"
+docker rm codex-osboot-rootfs
+mkdir -p "$OSBOOT/rootfs"
+tar --numeric-owner -xf "$OSBOOT/alpine-3.24.2-rootfs.tar" -C "$OSBOOT/rootfs"
+sudo rm "$OSBOOT/rootfs/dev/console" "$OSBOOT/rootfs/dev/null"
+sudo mknod -m 600 "$OSBOOT/rootfs/dev/console" c 5 1
+sudo mknod -m 666 "$OSBOOT/rootfs/dev/null" c 1 3
+# /init monte proc/sysfs/devtmpfs, configure eth0 en 10.0.2.15/24 et fait exec bun -e '…'
+cd "$OSBOOT/rootfs"
+find . -print0 | cpio --create --format=newc --null | gzip -1 > "$OSBOOT/initramfs.cpio.gz"
+tmux new-session -d -s codex-osboot \
+  'docker run --rm --network host --device /dev/kvm \
+    -v "$HOME/.aphrody/workspace/codex-fleet-20261009/target-osboot:/osboot" \
+    osi/qemu:latest qemu-system-x86_64 -accel kvm -cpu host -m 2G -nographic -no-reboot \
+    -kernel /osboot/bzImage -initrd /osboot/initramfs.cpio.gz \
+    -append "console=ttyS0 rdinit=/init" \
+    -nic user,model=virtio-net-pci,hostfwd=tcp::18080-:8080'
+curl --max-time 4 -i http://127.0.0.1:18080/
+```
+
+Extrait de console (`[console complète](proof-osboot-2026-10-09.txt)`) :
+
+```text
+[    1.388034] Run /init as init process
+OSBOOT: init shell PID=1
+OSBOOT: Alpine 3.24.2
+    inet 10.0.2.15/24 scope global eth0
+default via 10.0.2.2 dev eth0
+OSBOOT: Bun PID=1 version=1.4.3
+OSBOOT: bun -e executed
+OSBOOT: service listening 0.0.0.0:8080
+```
+
+Réponse observée depuis l'hôte : `HTTP/1.1 200 OK`, corps `aphrody-bun-ok`. La sortie complète reste aussi dans `/home/ubuntu/.aphrody/workspace/codex-fleet-20261009/target-osboot/qemu-console.log` et la VM reste attachée à `codex-osboot`.
+
+Restes : le dépôt courant n'implémente pas `bun:linux` (aucune entrée de résolution trouvée dans `src/`), donc `scripts/aphrody/initramfs-init.ts` n'a pas été exécuté ; `bunsh` n'a pas été validé. Aucun arbre/noyau `linux-aphrody` prêt ni `apk` `linux-aphrody` n'existait dans `~/yolo/src`, `~/yolo/w` ou `~/yolo/jobs`. Cette preuve valide le démarrage Alpine + Bun PID 1 + réseau QEMU, pas le démarrage par l'initramfs de production ni la configuration noyau finale.
 8. **A8 (optionnel)** — image de build Ubuntu partagée.
    - Bun : publier `scripts/aphrody/linux.Dockerfile` (nouveau workflow `aphrody-build-linux-image.yml`).
    - Aphrody : `tools/config/container/build/Dockerfile` repart de cette image et ne garde que cargo-xwin, wasm-bindgen et uv.
