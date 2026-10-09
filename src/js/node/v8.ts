@@ -12,10 +12,8 @@ const {
   discardGCProfiler,
   heapLimit,
   setNearHeapLimitCallback,
-} = $cpp(
-  "NodeV8.cpp",
-  "Bun::createNodeV8Binding",
-);
+  setExposeGc,
+} = $cpp("NodeV8.cpp", "Bun::createNodeV8Binding");
 
 const DateNow = Date.now;
 const FunctionPrototypeCall = Function.prototype.call;
@@ -260,9 +258,15 @@ function getHeapCodeStatistics() {
 function setFlagsFromString(flags) {
   validateString(flags, "flags");
   // V8 flags have no JSC equivalent; record them so cachedDataVersionTag
-  // changes like node's does, and otherwise ignore them.
+  // changes like node's does. --expose-gc is honored: node:vm contexts created
+  // afterwards get a global gc().
   versionTagFlags += ` ${flags}`;
   versionTag = undefined;
+  for (const flag of flags.split(/\s+/)) {
+    const name = flag.replaceAll("_", "-");
+    if (name === "--expose-gc") setExposeGc(true);
+    else if (name === "--no-expose-gc") setExposeGc(false);
+  }
 }
 // Bun has no cppgc (Oilpan) C++ heap, so the statistics are always empty;
 // this matches node's shape with nothing allocated through cppgc.

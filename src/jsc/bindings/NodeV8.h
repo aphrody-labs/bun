@@ -188,4 +188,9 @@ private:
 
 JSC::JSObject* createNodeV8Binding(JSC::JSGlobalObject* globalObject);
 
+// --expose-gc (CLI or v8.setFlagsFromString): node:vm contexts created while
+// it is set get a global gc().
+void setExposeGcInNewContexts(bool);
+bool exposeGcInNewContexts();
+
 } // namespace Bun

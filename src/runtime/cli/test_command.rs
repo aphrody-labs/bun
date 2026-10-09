@@ -1965,6 +1965,14 @@ impl TestCommand {
 
         vm.transpiler.configure_defines()?;
 
+        if ctx.runtime_options.expose_gc {
+            unsafe extern "C" {
+                fn JSC__JSGlobalObject__addGc(global: *const bun_jsc::JSGlobalObject);
+            }
+            // SAFETY: FFI; the global object is live for the VM lifetime.
+            unsafe { JSC__JSGlobalObject__addGc(vm.global()) };
+        }
+
         vm.load_extra_env_and_source_code_printer();
         vm.is_main_thread = true;
         VirtualMachine::set_is_main_thread_vm(true);

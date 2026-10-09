@@ -9,6 +9,7 @@
 
 #include "BunClientData.h"
 #include "NodeVM.h"
+#include "NodeV8.h"
 #include "CodeGenerationFromStrings.h"
 #include "NodeVMScript.h"
 #include "NodeVMModule.h"
@@ -65,6 +66,8 @@
 #include "JavaScriptCore/GetterSetter.h"
 #include "JavaScriptCore/MicrotaskQueue.h"
 #include "JavaScriptCore/MicrotaskQueueInlines.h"
+
+extern "C" void JSC__JSGlobalObject__addGc(JSC::JSGlobalObject*);
 
 namespace Bun {
 using namespace WebCore;
@@ -1108,6 +1111,9 @@ void NodeVMGlobalObject::finishCreation(JSC::VM& vm)
     JSC::DeletePropertySlot slot;
     JSC::JSObject::deleteProperty(this, this, vm.propertyNames->Loader, slot);
     RETURN_IF_EXCEPTION(scope, );
+
+    if (Bun::exposeGcInNewContexts())
+        JSC__JSGlobalObject__addGc(this);
 
     vm.ensureTerminationException();
 

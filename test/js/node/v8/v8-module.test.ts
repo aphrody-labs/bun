@@ -216,3 +216,61 @@ describe.concurrent("--max-old-space-size", () => {
     );
   });
 });
+
+describe("--expose-gc", () => {
+  test.concurrent("v8.setFlagsFromString('--expose-gc') gives new vm contexts a gc()", async () => {
+    await using proc = Bun.spawn({
+      cmd: [
+        bunExe(),
+        "-e",
+        `const { setFlagsFromString } = require("node:v8");
+         const { runInNewContext } = require("node:vm");
+         const before = runInNewContext("typeof gc");
+         setFlagsFromString("--expose-gc");
+         const gc = runInNewContext("gc");
+         gc();
+         setFlagsFromString("--no-expose-gc");
+         console.log(before, typeof gc, typeof globalThis.gc, runInNewContext("typeof gc"));`,
+      ],
+      env: bunEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect({ stdout, stderr }).toEqual({ stdout: "undefined function undefined undefined\n", stderr: "" });
+    expect(exitCode).toBe(0);
+  });
+
+  test.concurrent("bun --expose-gc and bun test --expose-gc expose gc() to the global and vm contexts", async () => {
+    using dir = tempDir("expose-gc", {
+      "gc.test.js": `import { test, expect } from "bun:test";
+        test("gc", () => {
+          expect(typeof gc).toBe("function");
+          expect(typeof require("node:vm").runInNewContext("gc")).toBe("function");
+        });`,
+    });
+    await using run = Bun.spawn({
+      cmd: [bunExe(), "--expose-gc", "-e", `console.log(typeof gc, typeof require("node:vm").runInNewContext("gc"))`],
+      env: bunEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    await using testProc = Bun.spawn({
+      cmd: [bunExe(), "test", "--expose-gc", "./gc.test.js"],
+      env: bunEnv,
+      cwd: String(dir),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [runOut, testErr, runExit, testExit] = await Promise.all([
+      run.stdout.text(),
+      testProc.stderr.text(),
+      run.exited,
+      testProc.exited,
+    ]);
+    expect(runOut).toBe("function function\n");
+    expect(testErr).toContain(" 1 pass");
+    expect(runExit).toBe(0);
+    expect(testExit).toBe(0);
+  });
+});

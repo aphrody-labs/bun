@@ -232,6 +232,27 @@ JSC_DEFINE_HOST_FUNCTION(functionSetNearHeapLimitCallback, (JSGlobalObject * glo
     return JSValue::encode(jsUndefined());
 }
 
+// V8's --expose-gc is process-wide: set on the command line or later through
+// v8.setFlagsFromString(), it gives every context created afterwards a global
+// gc(), which is how `vm.runInNewContext("gc")` obtains one in node.
+static std::atomic<bool> s_exposeGcInNewContexts { false };
+
+void setExposeGcInNewContexts(bool expose)
+{
+    s_exposeGcInNewContexts.store(expose, std::memory_order_relaxed);
+}
+
+bool exposeGcInNewContexts()
+{
+    return s_exposeGcInNewContexts.load(std::memory_order_relaxed);
+}
+
+JSC_DEFINE_HOST_FUNCTION(functionSetExposeGc, (JSGlobalObject * globalObject, CallFrame* callFrame))
+{
+    setExposeGcInNewContexts(callFrame->argument(0).toBoolean(globalObject));
+    return JSValue::encode(jsUndefined());
+}
+
 // bun_runtime's Arguments.rs; --max-old-space-size in MiB, 0 when absent.
 extern "C" uint64_t Bun__Node__MaxOldSpaceSizeMB;
 
@@ -254,6 +275,7 @@ JSC::JSObject* createNodeV8Binding(JSC::JSGlobalObject* globalObject)
     object->putDirectNativeFunction(vm, globalObject, JSC::Identifier::fromString(vm, "heapLimit"_s), 0, functionHeapLimit, ImplementationVisibility::Public, JSC::NoIntrinsic, 0);
     object->putDirectNativeFunction(vm, globalObject, JSC::Identifier::fromString(vm, "setHeapLimit"_s), 1, functionSetHeapLimit, ImplementationVisibility::Public, JSC::NoIntrinsic, 0);
     object->putDirectNativeFunction(vm, globalObject, JSC::Identifier::fromString(vm, "setNearHeapLimitCallback"_s), 1, functionSetNearHeapLimitCallback, ImplementationVisibility::Public, JSC::NoIntrinsic, 0);
+    object->putDirectNativeFunction(vm, globalObject, JSC::Identifier::fromString(vm, "setExposeGc"_s), 1, functionSetExposeGc, ImplementationVisibility::Public, JSC::NoIntrinsic, 0);
     return object;
 }
 
