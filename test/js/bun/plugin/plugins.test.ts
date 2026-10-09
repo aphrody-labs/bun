@@ -855,6 +855,49 @@ it.concurrent("onResolve can redirect a specifier to a real file in the file nam
   expect(exitCode).toBe(0);
 });
 
+it.concurrent("onResolve runs on bare specifiers without an extension", async () => {
+  using dir = tempDir("plugin-onresolve-bare", {
+    "real.js": `export const value = "redirected";`,
+    "preload.js": `
+      import { join } from "node:path";
+      Bun.plugin({
+        name: "bare",
+        setup(build) {
+          build.onResolve({ filter: /^(virt-pkg|@virt\\/pkg)(\\/|$)/ }, () => ({ path: join(import.meta.dir, "real.js") }));
+        },
+      });
+    `,
+    "entry.js": `
+      import { value as staticBare } from "virt-pkg";
+      import { value as staticScoped } from "@virt/pkg/sub/path";
+      console.log(JSON.stringify({
+        staticBare,
+        staticScoped,
+        dynamicBare: (await import("virt-pkg")).value,
+        requireBare: require("virt-pkg" + "").value,
+        resolveSync: Bun.resolveSync("@virt/pkg", import.meta.dir),
+      }));
+    `,
+  });
+
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "--preload", "./preload.js", "entry.js"],
+    env: bunEnv,
+    cwd: String(dir),
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+
+  expect(stdout.trim() ? JSON.parse(stdout) : { crashed: stderr }).toEqual({
+    staticBare: "redirected",
+    staticScoped: "redirected",
+    dynamicBare: "redirected",
+    requireBare: "redirected",
+    resolveSync: resolve(String(dir), "real.js"),
+  });
+  expect(exitCode).toBe(0);
+});
+
 it.concurrent("a no-op onResolve that returns args.path unchanged is transparent", async () => {
   using dir = tempDir("plugin-onresolve-no-op", {
     "preload.js": `

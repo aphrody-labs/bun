@@ -248,12 +248,22 @@ pub(crate) fn plugin_namespace_and_path(specifier: &[u8]) -> Option<(&[u8], &[u8
     if !could_be_plugin(specifier) {
         return None;
     }
-    let namespace = extract_namespace(specifier);
-    Some(if namespace.is_empty() {
+    Some(on_resolve_namespace_and_path(specifier))
+}
+
+/// The namespace (`b""` for `file`) and path that `onResolve` filters are run on: every specifier,
+/// extensionless bare names included.
+pub(crate) fn on_resolve_namespace_and_path(specifier: &[u8]) -> (&[u8], &[u8]) {
+    let namespace = if bun_paths::is_absolute(specifier) {
+        b"".as_slice()
+    } else {
+        extract_namespace(specifier)
+    };
+    if namespace.is_empty() {
         (namespace, specifier)
     } else {
         (namespace, &specifier[namespace.len() + 1..])
-    })
+    }
 }
 
 /// The `namespace:` prefix of `specifier`, or `b""` if it has none
@@ -266,8 +276,7 @@ fn extract_namespace(specifier: &[u8]) -> &[u8] {
         && colon == 1
         && specifier.len() > 3
         && bun_paths::resolve_path::is_sep_any(specifier[2])
-        && ((specifier[0] > b'a' && specifier[0] < b'z')
-            || (specifier[0] > b'A' && specifier[0] < b'Z'))
+        && specifier[0].is_ascii_alphabetic()
     {
         return b"";
     }

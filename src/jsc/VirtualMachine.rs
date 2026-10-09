@@ -5260,8 +5260,9 @@ impl VirtualMachine {
                     // installed, if `onResolve` answers about it as well.
                     let answer_utf8 = answer.to_utf8();
                     let is_bare = bun_resolver::is_package_path(&answer_utf8)
-                        && ModuleLoader::plugin_namespace_and_path(&answer_utf8)
-                            .is_some_and(|(namespace, _)| namespace.is_empty());
+                        && ModuleLoader::on_resolve_namespace_and_path(&answer_utf8)
+                            .0
+                            .is_empty();
                     drop(answer_utf8);
                     let is_own = is_bare
                         && (answer.eql(specifier)
@@ -7689,9 +7690,7 @@ fn run_on_resolve(
     importer: &bun_core::String,
 ) -> JsResult<Option<Result<bun_core::String, JSValue>>> {
     let specifier = specifier.to_utf8();
-    let Some((namespace, path)) = ModuleLoader::plugin_namespace_and_path(&specifier) else {
-        return Ok(None);
-    };
+    let (namespace, path) = ModuleLoader::on_resolve_namespace_and_path(&specifier);
     // The importer's key ends in the query it was imported with.
     let importer = importer.to_utf8();
     let importer = match bun_core::strings::index_of_char_usize(&importer, b'?') {
