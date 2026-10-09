@@ -566,6 +566,59 @@ const wsl = Object.freeze({
   },
 });
 
+// Families
+//
+// The binary keeps the lazy core above. Every other Windows API family ships as a
+// package named @aphrody/bun-windows-<family> (bun:ffi bindings generated from
+// win32metadata, or a native addon). family(name) resolves it from the working
+// directory, then from the entry script, loads it once and returns its exports;
+// windows.families.<name> is the same lookup.
+
+const FAMILY_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+const familyCache = new Map();
+
+function resolveFamily(specifier) {
+  const path = require("node:path");
+  const bases = [path.join(process.cwd(), "noop.js")];
+  const main = Bun.main;
+  if (typeof main === "string" && path.isAbsolute(main)) bases.push(main);
+  for (const base of bases) {
+    try {
+      return Bun.resolveSync(specifier, base);
+    } catch {}
+  }
+  return undefined;
+}
+
+function family(name) {
+  validateString(name, "name");
+  if (!FAMILY_NAME.test(name)) {
+    throw $ERR_INVALID_ARG_VALUE("name", name, 'must be a lowercase family name such as "kernel32"');
+  }
+  const cached = familyCache.get(name);
+  if (cached !== undefined) return cached;
+  const specifier = `@aphrody/bun-windows-${name}`;
+  const resolved = resolveFamily(specifier);
+  if (resolved === undefined) {
+    const error = new Error(`bun:windows family "${name}" is not installed. Install it with: bun add ${specifier}`);
+    error.code = "ERR_BUN_WINDOWS_FAMILY_NOT_FOUND";
+    throw error;
+  }
+  const exports = require("node:module").createRequire(resolved)(resolved);
+  familyCache.set(name, exports);
+  return exports;
+}
+
+const families = new Proxy(Object.freeze({ __proto__: null }), {
+  get(_target, key) {
+    return typeof key === "string" && FAMILY_NAME.test(key) ? family(key) : undefined;
+  },
+  has(_target, key) {
+    if (typeof key !== "string" || !FAMILY_NAME.test(key)) return false;
+    return familyCache.has(key) || resolveFamily(`@aphrody/bun-windows-${key}`) !== undefined;
+  },
+});
+
 export default {
   isSupported,
   version,
@@ -583,4 +636,6 @@ export default {
   toast,
   notify,
   wsl,
+  family,
+  families,
 };

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import windows from "bun:windows";
-import { bunEnv, bunExe, isWindows } from "harness";
+import { bunEnv, bunExe, isWindows, tempDir } from "harness";
 
 function errorCode(fn: () => unknown): string | undefined {
   try {
@@ -167,5 +167,33 @@ describe.skipIf(!isWindows)("bun:windows", () => {
       expect([1, 2]).toContain(d.version);
     }
     expect(distros.filter(d => d.default).length).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("families", () => {
+  test("loads @aphrody/bun-windows-<family> once, from the working directory", async () => {
+    using dir = tempDir("bun-windows-family", {
+      "node_modules/@aphrody/bun-windows-demo/package.json": JSON.stringify({
+        name: "@aphrody/bun-windows-demo",
+        main: "index.js",
+      }),
+      "node_modules/@aphrody/bun-windows-demo/index.js":
+        "globalThis.loads = (globalThis.loads ?? 0) + 1; exports.answer = 42;",
+      "main.js": `
+        import windows from "bun:windows";
+        const a = windows.family("demo");
+        console.log(JSON.stringify([a.answer, windows.families.demo === a, "demo" in windows.families, "other" in windows.families, globalThis.loads]));
+        try { windows.family("other"); } catch (e) { console.log(e.code); }
+        try { windows.family("Bad Name"); } catch (e) { console.log(e.code); }
+      `,
+    });
+    await using proc = Bun.spawn({ cmd: [bunExe(), "main.js"], env: bunEnv, cwd: String(dir), stderr: "pipe" });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect(stdout.trim().split("\n")).toEqual([
+      "[42,true,true,false,1]",
+      "ERR_BUN_WINDOWS_FAMILY_NOT_FOUND",
+      "ERR_INVALID_ARG_VALUE",
+    ]);
+    expect(exitCode).toBe(0);
   });
 });
