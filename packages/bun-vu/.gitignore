@@ -1,0 +1,8 @@
+# Generated artifacts and external source checkouts; never commit these trees.
+/target/
+/vendor/
+/build/
+/dist/
+/var/
+*.tar.zst
+*.partial

@@ -1,0 +1,26 @@
+{
+  "$comment": "The single package identity for the transferred vu runtime packaging tools.",
+  "schemaVersion": 1,
+  "name": "vu",
+  "decision": {
+    "settledBy": "owner",
+    "date": "2026-10-05",
+    "alternativeRejected": "ir"
+  },
+  "runtimeSource": {
+    "repository": "aphrody-labs/vu",
+    "revision": "6ea52f1aada7269d81470dd9d93144555610868e",
+    "readOnlyCheckout": "VU_SOURCE_CHECKOUT",
+    "rustSourceTransferredInThisPackage": false
+  },
+  "derived": {
+    "binary": "{name}",
+    "environmentPrefix": "{NAME}_",
+    "homeDirectory": "~/.{name}",
+    "artifact": "{name}-runtime-{version}-{sha8}-{target}.tar.zst",
+    "pythonModule": "{name}",
+    "standaloneCommands": ["uv", "ruff", "python"],
+    "sharedHost": "bun-python-native",
+    "sharedHostReady": false
+  }
+}
