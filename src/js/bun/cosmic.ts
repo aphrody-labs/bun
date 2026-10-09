@@ -815,7 +815,14 @@ class Config {
     this.version = version;
     this.#userDir = path.join(base, relative);
     this.#previousDir = version > 1 ? path.join(base, "cosmic", name, `v${version - 1}`) : undefined;
-    const defaults = isWindows ? [env.ProgramData || "C:\\ProgramData"] : xdgDataDirs();
+    // XDG variables win on Windows too, as for the config and state bases above.
+    const defaults = isWindows
+      ? [
+          env.XDG_DATA_HOME,
+          ...(env.XDG_DATA_DIRS || "").split(path.delimiter),
+          env.ProgramData || "C:\\ProgramData",
+        ].filter(Boolean)
+      : xdgDataDirs();
     this.#defaultDirs = state ? [] : defaults.map(dir => path.join(dir, relative));
   }
 

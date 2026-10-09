@@ -88,7 +88,8 @@ describe("routing", () => {
     ["migrate", "Usage: bun migrate"],
     ["wasm", "Usage: bun wasm <command>"],
   ])("bun %s --help", async (command, usage) => {
-    const { stdout, exitCode } = await run([command, "--help"]);
+    using dir = tempDir("toolchain-help", {});
+    const { stdout, exitCode } = await run([command, "--help"], String(dir));
     expect(stdout).toContain(usage);
     expect(exitCode).toBe(0);
   });

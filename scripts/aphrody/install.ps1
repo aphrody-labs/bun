@@ -25,7 +25,12 @@ $Target = if ($DebugInfo) { "bun-windows-$BunArch-profile" } else { "bun-windows
 $Exe = if ($DebugInfo) { "bun-profile.exe" } else { "bun.exe" }
 
 $Tag = switch -Regex ($Version) {
-  "^latest$" { (Invoke-RestMethod -Headers $Headers "https://api.github.com/repos/$Repo/releases/latest").tag_name }
+  # The repository also publishes other releases (tools, n2b): the newest runtime release, not GitHub's "latest".
+  "^latest$" {
+    (Invoke-RestMethod -Headers $Headers "https://api.github.com/repos/$Repo/releases?per_page=100") |
+      Where-Object { -not $_.draft -and -not $_.prerelease -and $_.tag_name -match '^aphrody-v\d+\.\d+\.\d+-aphrody\.\d+$' } |
+      Select-Object -First 1 -ExpandProperty tag_name
+  }
   "^aphrody-v" { $Version }
   "^(bun-)?v?(\d+\.\d+\.\d+)$" {
     $Base = $Matches[2]

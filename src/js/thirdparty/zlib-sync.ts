@@ -25,7 +25,12 @@ class Inflate {
   #toString;
   #windowBits;
   #err = 0;
+  // As in zlib-sync, `result` is all the output since the last Z_SYNC_FLUSH or Z_FINISH push, concatenated on read.
   #result: Buffer | null = Buffer.alloc(0);
+  #resultChunks: Buffer[] = [];
+  #resultBytes = 0;
+  #pending: Buffer[] = [];
+  #pendingBytes = 0;
 
   constructor(options?) {
     let chunkSize = 16 * 1024;
@@ -67,8 +72,15 @@ class Inflate {
   }
 
   get result() {
-    if (this.#err < 0 || this.#result === null) return null;
-    return this.#toString ? this.#result.toString() : Buffer.from(this.#result);
+    if (this.#err < 0) return null;
+    let result = this.#result;
+    if (result === null) {
+      const chunks = this.#resultChunks;
+      const total = this.#resultBytes;
+      result = total === 0 ? Buffer.alloc(0) : chunks.length === 1 ? chunks[0] : Buffer.concat(chunks, total);
+      this.#result = result;
+    }
+    return this.#toString ? result.toString() : Buffer.from(result);
   }
 
   push(buffer, flush?) {
@@ -84,8 +96,8 @@ class Inflate {
     const state = this.#state;
     const chunkSize = this.#chunkSize;
     const input = Buffer.from(buffer.buffer, buffer.byteOffset, buffer.byteLength);
-    const chunks: Buffer[] = [];
-    let total = 0;
+    const chunks = this.#pending;
+    let total = this.#pendingBytes;
     let inOff = 0;
     let availIn = input.byteLength;
     this.#err = 0;
@@ -105,7 +117,15 @@ class Inflate {
       availIn = availInAfter;
       if (availOut !== 0) break;
     }
-    this.#result = total === 0 ? Buffer.alloc(0) : chunks.length === 1 ? chunks[0] : Buffer.concat(chunks, total);
+    this.#result = null;
+    this.#resultChunks = chunks;
+    this.#resultBytes = total;
+    if (flushFlag === constants.Z_SYNC_FLUSH || flushFlag === constants.Z_FINISH) {
+      this.#pending = [];
+      this.#pendingBytes = 0;
+    } else {
+      this.#pendingBytes = total;
+    }
   }
 }
 

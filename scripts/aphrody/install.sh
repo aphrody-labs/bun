@@ -42,7 +42,10 @@ api() {
 }
 
 case "$version" in
-  latest) tag=$(api releases/latest | grep -o '"tag_name": *"[^"]*"' | head -1 | cut -d'"' -f4 || true) ;;
+  # The repository also publishes other releases (tools, n2b): the newest runtime release, not GitHub's "latest".
+  latest)
+    tag=$(api 'releases?per_page=100' | grep -o '"tag_name": *"aphrody-v[0-9]*\.[0-9]*\.[0-9]*-aphrody\.[0-9]*"' |
+      head -1 | cut -d'"' -f4 || true) ;;
   aphrody-v*) tag=$version ;;
   *)
     version=${version#bun-}
