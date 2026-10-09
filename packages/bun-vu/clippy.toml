@@ -1,5 +1,0 @@
-# `vu` is an independent std-based workspace and does not link Bun's core/sys crates.
-# Clear only inherited engine-specific path bans; `-D warnings` remains enabled.
-disallowed-methods = []
-disallowed-macros = []
-disallowed-types = []

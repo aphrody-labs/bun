@@ -1,0 +1,21 @@
+{
+  "name": "@aphrody/buv",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Packaging and lifecycle tools for the native Buv JavaScript, UV and PyJS runtime.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "test": "bun test scripts transfer-integrity.test.ts",
+    "fetch": "bun scripts/fetch.ts",
+    "forge": "bun scripts/forge.ts",
+    "assemble": "bun scripts/assemble.ts",
+    "install-runtime": "bun scripts/install.ts",
+    "qualify": "bun scripts/core.ts"
+  },
+  "exports": {
+    "./runtime-sdk": "./runtime-sdk.ts",
+    "./runtime-artifact": "./runtime-artifact.ts",
+    "./runtime-release": "./runtime-release.ts"
+  }
+}

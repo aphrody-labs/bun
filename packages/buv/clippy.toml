@@ -1,0 +1,5 @@
+# Retained Buv predecessor crates are a std-based parity workspace outside Bun's default build.
+# Clear only inherited engine-specific path bans; `-D warnings` remains enabled.
+disallowed-methods = []
+disallowed-macros = []
+disallowed-types = []

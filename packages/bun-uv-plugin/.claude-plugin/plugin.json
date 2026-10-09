@@ -1,0 +1,20 @@
+{
+  "$schema": "https://code.claude.com/schema/plugin.json",
+  "name": "bun-uv",
+  "version": "0.1.0",
+  "description": "Buv and PyJS skills with a Bun stdio broker for qualified native language servers.",
+  "author": { "name": "aphrody-dev", "email": "contact@aphrody.com" },
+  "license": "Apache-2.0",
+  "skills": "./skills/",
+  "lspServers": {
+    "pyjs": {
+      "command": "buv",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/lsp.ts"],
+      "extensionToLanguage": {
+        ".pyjs": "javascript", ".pyts": "typescript", ".pytsx": "typescriptreact",
+        ".js": "javascript", ".jsx": "javascriptreact", ".ts": "typescript", ".tsx": "typescriptreact",
+        ".mjs": "javascript", ".cjs": "javascript", ".mts": "typescript", ".cts": "typescript", ".py": "python"
+      }
+    }
+  }
+}

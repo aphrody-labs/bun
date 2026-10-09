@@ -1,0 +1,8 @@
+{
+  "name": "bun-uv",
+  "version": "0.1.0",
+  "description": "Buv native JavaScript/UV and PyJS development with source-backed docs and real native LSP transport.",
+  "author": { "name": "aphrody-dev", "email": "contact@aphrody.com" },
+  "license": "Apache-2.0",
+  "skills": "./skills/"
+}
