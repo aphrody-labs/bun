@@ -152,6 +152,7 @@ Aucun lot ne touche `tools/config/container/aphrody-os/Dockerfile`, `rootfs/`, `
    - Bun : publier `scripts/aphrody/linux.Dockerfile` (nouveau workflow `aphrody-build-linux-image.yml`).
    - Aphrody : `tools/config/container/build/Dockerfile` repart de cette image et ne garde que cargo-xwin, wasm-bindgen et uv.
    - Gates : `bun scripts/build/container/aphrody-build.ts image` ; build `-p aphrody` dans l'image.
+   - Statut (G3, 2026-10-09) : ⏸ non fait, le recouvrement est plus faible que prévu. Les deux images ne partagent que la couche apt d'Ubuntu 26.04 et LLVM 22. Rust diffère : fork `nightly-2026-09-15` dans `/root/.cargo`, rustup inscriptible ; aphrody `1.98.1` dans `/opt/rust`, en lecture seule, avec toutes les cibles de son `rust-toolchain.toml` (Windows MSVC, wasm32). Bun diffère aussi : fork `bun.sh/install` `1.4.2` ; aphrody `install.sh` du fork, version épinglée. L'image aphrody tourne en `USER 65534:1500` avec ses caches `/cache`, alors que l'image du fork tourne en root avec un `PATH` sous `/root`. Un `FROM ghcr.io/aphrody-labs/build-linux:26.04` réinstallerait donc Rust et Bun, ajouterait LLVM 23 (≈ 1 Go) inutile à aphrody et ferait dépendre la construction d'une image encore jamais publiée. À reprendre seulement si les deux dépôts alignent leur canal Rust.
 
 Points signalés à C2, sans lot concurrent :
 - `rootfs/etc/sudoers.d/agent` fait doublon avec `aphrody-sudoers`.

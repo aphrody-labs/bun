@@ -256,6 +256,7 @@ bun run typecheck:packages
    - Fichiers touchés : `crates/infra/yolo/src/cli.rs`, `crates/infra/yolo/Cargo.toml`.
    - Gate : `cargo-serial.sh test -p aphrody-yolo -p aphrody-fsindex`.
    - Recouvre Z1 : à abandonner si Z1 retire ce code.
+   - Statut (G3, 2026-10-09) : ⏸ non fait, pas un remplacement à l'identique. `aphrody-fsindex::FsIndex` parcourt avec `walkdir` (ni `.gitignore` ni `.ignore`, entre dans `.git`), indexe aussi les dossiers, cherche par préfixe de mot (`term*`, classement `bm25`) et ne retire jamais un fichier disparu (upsert). Le `FsIndex` de yolo (`cli.rs:42-200`) parcourt avec `ignore`, ne garde que les fichiers, cherche une sous-chaîne sans casse (FTS5 trigram + `LIKE` sous 3 caractères, test `lib.RS`), reconstruit la base de façon atomique (`.partial` puis renommage) et importe l'ancien `fsindex.tsv`. Basculer changerait les résultats de `yolo fs search` ; aligner `aphrody-fsindex` changerait son schéma pour ses 3 autres consommateurs (`aphrody-command` feature `index`, `winclean`, `ui/app`). Gain ≈ 150 LOC : lot gardé en attente d'une décision de schéma commun.
 8. **Lot 8. Paquets TS morts et googleapis.**
    - Fichiers touchés :
      - supprimer `packages/web/http`, `packages/ai/inference` et `packages/ai/xai` ;
