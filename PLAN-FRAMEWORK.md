@@ -35,6 +35,12 @@ Fichiers : `packages/bun-next/**`, `test/integration/next-bun*/`, `test/integrat
   avec les mêmes ids de module côté serveur et navigateur (`react-loadable-manifest.json`, `dynamicIds`), App Router
   sans changement ; VPS : `next-bun-pages.test.ts` 8 pass (16.1.6, 16.4.0, 16.5 canary), `next-app.test.ts` 4 pass.
   ⏳ Hydratation vérifiée dans un navigateur, CSS importé par un module dynamique (non vérifié).
+- ✅ J3 Server Actions via Bun.build (F1, `28e6bdc0901`, `4195465a070`) : passe « actions »
+  (`server/bun-app-actions.js`, modules d'actions compilés côté serveur et exportés par id), `__next_require__` du
+  runtime ssr, `server-reference-manifest` avec un worker par page ; actionIds `{ name, loc }` des Next récents
+  normalisés. VPS : `bun test test/integration/next-app/test/next-app.test.ts` → 4 pass, 84 expect (formulaire sans
+  JS, closure liée chiffrée, action importée par un composant client appelée via `Next-Action`). ⏳ `"use cache"`
+  et `cacheComponents` (refusés explicitement), fichiers de métadonnées.
 - ⏳ J5 dev/HMR (`HotReloaderBun` sur Bun.build en watch).
 
 ### D. Plugin Tailwind CSS — `@aphrody/bun-plugin-tailwind` (✅)
@@ -114,8 +120,8 @@ ext.js` (`--filter=blob:none`, `origin` + `upstream`), branche `canary`
 - ✅ AGENTS.md et `scripts/**` sous Bun via `bunify.ts` (marqueurs `<!-- aphrody:bun -->`, gardés par la sync) ;
   `bun run test-unit-bun` : 128 des 155 `packages/next/src/**/*.test.ts` sous `bun test --isolate`, 1398 pass
   (`f489e60f28`) ; n2b 397 → 378 constats. ⏳ 27 fichiers restent sur Jest.
-- 🔄 App Router et next/dynamic dans le Bun.build intégré (F1, `4b680668eb`, `b3c7bead3b`, `31f5ba83fe`) : `bun-build/app.ts` (port de
-  `build-app.js`, mêmes correctifs PostCSS et proxy CJS), `shared.ts` ; `tsgo --noEmit -p packages/next/tsconfig.json`
+- 🔄 App Router, next/dynamic et Server Actions dans le Bun.build intégré (F1, `4b680668eb`, `b3c7bead3b`, `31f5ba83fe`,
+  `582a93f9ed`) : `bun-build/app.ts` (port de `build-app.js`, mêmes correctifs PostCSS et proxy CJS, passe actions), `shared.ts` ; `tsgo --noEmit -p packages/next/tsconfig.json`
   sans erreur dans bun-build (3 erreurs préexistantes de tsgo dans `@sinclair/typebox` de node_modules). Non exécuté
   dans le fork (la version `@aphrody/next-bun` est prouvée).
 - ✅ `scripts/aphrody/consume.ts` prépare Shenron et Aphrody (`catalog` → `npm:@aphrody/next@V`) et refuse tant que la
