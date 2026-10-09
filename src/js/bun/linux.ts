@@ -37,6 +37,16 @@ const deleteModuleNative = $newRustFunction("linux/kmod.rs", "jsDeleteModule", 2
 const rebootNative = $newRustFunction("linux/power.rs", "jsReboot", 1);
 const kexecFileLoadNative = $newRustFunction("linux/power.rs", "jsKexecFileLoad", 4);
 const ioUringProbeNative = $newRustFunction("linux/io_uring.rs", "jsIoUringProbe", 0);
+const seccompSetFilterNative = $newRustFunction("linux/seccomp.rs", "jsSeccompSetFilter", 2);
+const seccompActionAvailableNative = $newRustFunction("linux/seccomp.rs", "jsSeccompActionAvailable", 1);
+const perfEventOpenNative = $newRustFunction("linux/perf_event.rs", "jsPerfEventOpen", 5);
+const perfEventIoctlNative = $newRustFunction("linux/perf_event.rs", "jsPerfEventIoctl", 3);
+const bpfMapCreateNative = $newRustFunction("linux/bpf.rs", "jsBpfMapCreate", 6);
+const bpfMapElemNative = $newRustFunction("linux/bpf.rs", "jsBpfMapElem", 5);
+const bpfProgLoadNative = $newRustFunction("linux/bpf.rs", "jsBpfProgLoad", 6);
+const bpfObjPinNative = $newRustFunction("linux/bpf.rs", "jsBpfObjPin", 2);
+const bpfObjGetNative = $newRustFunction("linux/bpf.rs", "jsBpfObjGet", 2);
+const netlinkRequestNative = $newRustFunction("linux/netlink.rs", "jsNetlinkRequest", 2);
 
 const constants = Object.freeze({
   CLONE_NEWTIME: 0x00000080,
@@ -182,6 +192,96 @@ const constants = Object.freeze({
   KEXEC_FILE_UNLOAD: 1,
   KEXEC_FILE_ON_CRASH: 2,
   KEXEC_FILE_NO_INITRAMFS: 4,
+
+  SECCOMP_RET_KILL_PROCESS: 0x80000000,
+  SECCOMP_RET_KILL_THREAD: 0,
+  SECCOMP_RET_TRAP: 0x00030000,
+  SECCOMP_RET_ERRNO: 0x00050000,
+  SECCOMP_RET_USER_NOTIF: 0x7fc00000,
+  SECCOMP_RET_TRACE: 0x7ff00000,
+  SECCOMP_RET_LOG: 0x7ffc0000,
+  SECCOMP_RET_ALLOW: 0x7fff0000,
+  SECCOMP_FILTER_FLAG_TSYNC: 1,
+  SECCOMP_FILTER_FLAG_LOG: 2,
+  SECCOMP_FILTER_FLAG_SPEC_ALLOW: 4,
+  SECCOMP_FILTER_FLAG_NEW_LISTENER: 8,
+  SECCOMP_FILTER_FLAG_TSYNC_ESRCH: 16,
+  SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV: 32,
+  AUDIT_ARCH_X86_64: 0xc000003e,
+  AUDIT_ARCH_AARCH64: 0xc00000b7,
+
+  PERF_TYPE_HARDWARE: 0,
+  PERF_TYPE_SOFTWARE: 1,
+  PERF_TYPE_TRACEPOINT: 2,
+  PERF_TYPE_HW_CACHE: 3,
+  PERF_TYPE_RAW: 4,
+  PERF_TYPE_BREAKPOINT: 5,
+  PERF_COUNT_HW_CPU_CYCLES: 0,
+  PERF_COUNT_HW_INSTRUCTIONS: 1,
+  PERF_COUNT_HW_CACHE_REFERENCES: 2,
+  PERF_COUNT_HW_CACHE_MISSES: 3,
+  PERF_COUNT_HW_BRANCH_INSTRUCTIONS: 4,
+  PERF_COUNT_HW_BRANCH_MISSES: 5,
+  PERF_COUNT_SW_CPU_CLOCK: 0,
+  PERF_COUNT_SW_TASK_CLOCK: 1,
+  PERF_COUNT_SW_PAGE_FAULTS: 2,
+  PERF_COUNT_SW_CONTEXT_SWITCHES: 3,
+  PERF_COUNT_SW_CPU_MIGRATIONS: 4,
+  PERF_EVENT_IOC_ENABLE: 0x2400,
+  PERF_EVENT_IOC_DISABLE: 0x2401,
+  PERF_EVENT_IOC_REFRESH: 0x2402,
+  PERF_EVENT_IOC_RESET: 0x2403,
+  PERF_EVENT_IOC_SET_OUTPUT: 0x2405,
+  PERF_FLAG_FD_NO_GROUP: 1,
+  PERF_FLAG_FD_OUTPUT: 2,
+  PERF_FLAG_PID_CGROUP: 4,
+
+  BPF_MAP_TYPE_HASH: 1,
+  BPF_MAP_TYPE_ARRAY: 2,
+  BPF_MAP_TYPE_PROG_ARRAY: 3,
+  BPF_MAP_TYPE_PERF_EVENT_ARRAY: 4,
+  BPF_MAP_TYPE_LRU_HASH: 9,
+  BPF_MAP_TYPE_LPM_TRIE: 11,
+  BPF_MAP_TYPE_QUEUE: 22,
+  BPF_MAP_TYPE_STACK: 23,
+  BPF_MAP_TYPE_RINGBUF: 27,
+  BPF_PROG_TYPE_SOCKET_FILTER: 1,
+  BPF_PROG_TYPE_KPROBE: 2,
+  BPF_PROG_TYPE_SCHED_CLS: 3,
+  BPF_PROG_TYPE_TRACEPOINT: 5,
+  BPF_PROG_TYPE_XDP: 6,
+  BPF_PROG_TYPE_PERF_EVENT: 7,
+  BPF_PROG_TYPE_CGROUP_SKB: 8,
+  BPF_PROG_TYPE_CGROUP_SOCK: 9,
+  BPF_PROG_TYPE_CGROUP_DEVICE: 15,
+  BPF_PROG_TYPE_CGROUP_SYSCTL: 23,
+  BPF_ANY: 0,
+  BPF_NOEXIST: 1,
+  BPF_EXIST: 2,
+  BPF_F_LOCK: 4,
+  BPF_F_RDONLY: 1 << 3,
+  BPF_F_WRONLY: 1 << 4,
+
+  NETLINK_ROUTE: 0,
+  NETLINK_SOCK_DIAG: 4,
+  NETLINK_AUDIT: 9,
+  NETLINK_KOBJECT_UEVENT: 15,
+  NETLINK_GENERIC: 16,
+  NLM_F_REQUEST: 1,
+  NLM_F_MULTI: 2,
+  NLM_F_ACK: 4,
+  NLM_F_ROOT: 0x100,
+  NLM_F_MATCH: 0x200,
+  NLM_F_DUMP: 0x300,
+  NLMSG_NOOP: 1,
+  NLMSG_ERROR: 2,
+  NLMSG_DONE: 3,
+  RTM_NEWLINK: 16,
+  RTM_GETLINK: 18,
+  RTM_NEWADDR: 20,
+  RTM_GETADDR: 22,
+  RTM_NEWROUTE: 24,
+  RTM_GETROUTE: 26,
 });
 
 function unsupportedError() {
@@ -638,6 +738,311 @@ function ioUringProbe() {
 
 const ioUring = { probe: ioUringProbe };
 
+function validateBytes(value, name) {
+  if (!ArrayBuffer.isView(value)) {
+    throw $ERR_INVALID_ARG_TYPE(name, ["Buffer", "TypedArray", "DataView"], value);
+  }
+}
+
+// seccomp
+
+const SECCOMP_DATA_NR = 0;
+const SECCOMP_DATA_ARCH = 4;
+const BPF_LD_W_ABS = 0x20;
+const BPF_JMP_JEQ_K = 0x15;
+const BPF_JMP_JGE_K = 0x35;
+const BPF_RET_K = 0x06;
+const X32_SYSCALL_BIT = 0x40000000;
+
+function auditArch() {
+  switch (process.arch) {
+    case "x64":
+      return constants.AUDIT_ARCH_X86_64;
+    case "arm64":
+      return constants.AUDIT_ARCH_AARCH64;
+    default:
+      return null;
+  }
+}
+
+function sockFilter(view, index, code, jt, jf, k) {
+  const offset = index * 8;
+  view.setUint16(offset, code, true);
+  view.setUint8(offset + 2, jt);
+  view.setUint8(offset + 3, jf);
+  view.setUint32(offset + 4, k >>> 0, true);
+}
+
+/**
+ * Assemble a classic BPF deny-list: each syscall in `deny` returns
+ * `SECCOMP_RET_ERRNO | errno` (or `action`), a foreign architecture (and the
+ * x32 ABI on x86_64) gets `mismatch`, everything else is allowed.
+ */
+function seccompFilter(options) {
+  validateObjectArg(options, "options");
+  const { deny, errno = 1, action, mismatch = constants.SECCOMP_RET_KILL_PROCESS } = options;
+  if (!$isJSArray(deny)) throw $ERR_INVALID_ARG_TYPE("options.deny", "Array", deny);
+  if (deny.length > 4000) throw $ERR_OUT_OF_RANGE("options.deny.length", "<= 4000", deny.length);
+  for (let i = 0; i < deny.length; i++) validateInteger(deny[i], `options.deny[${i}]`, 0, MAX_INT32);
+  validateInteger(errno, "options.errno", 0, 0xffff);
+  if (action !== undefined) validateInteger(action, "options.action", 0, MAX_UINT32);
+  validateInteger(mismatch, "options.mismatch", 0, MAX_UINT32);
+  const arch = auditArch();
+  if (arch === null) throw $ERR_INVALID_ARG_VALUE("process.arch", process.arch, "has no seccomp filter support");
+  const denied = action === undefined ? (constants.SECCOMP_RET_ERRNO | errno) >>> 0 : action;
+  const x32 = arch === constants.AUDIT_ARCH_X86_64;
+
+  const count = 5 + (x32 ? 2 : 0) + deny.length * 2;
+  const program = new Uint8Array(count * 8);
+  const view = new DataView(program.buffer);
+  let i = 0;
+  sockFilter(view, i++, BPF_LD_W_ABS, 0, 0, SECCOMP_DATA_ARCH);
+  sockFilter(view, i++, BPF_JMP_JEQ_K, 1, 0, arch);
+  sockFilter(view, i++, BPF_RET_K, 0, 0, mismatch);
+  sockFilter(view, i++, BPF_LD_W_ABS, 0, 0, SECCOMP_DATA_NR);
+  if (x32) {
+    sockFilter(view, i++, BPF_JMP_JGE_K, 0, 1, X32_SYSCALL_BIT);
+    sockFilter(view, i++, BPF_RET_K, 0, 0, mismatch);
+  }
+  for (const nr of deny) {
+    sockFilter(view, i++, BPF_JMP_JEQ_K, 0, 1, nr);
+    sockFilter(view, i++, BPF_RET_K, 0, 0, denied);
+  }
+  sockFilter(view, i++, BPF_RET_K, 0, 0, constants.SECCOMP_RET_ALLOW);
+  return program.subarray(0, i * 8);
+}
+
+function seccompSetFilter(program, flags = 0) {
+  validateBytes(program, "program");
+  validateInteger(flags, "flags", 0, MAX_UINT32);
+  return seccompSetFilterNative(program, flags);
+}
+
+function seccompActionAvailable(action) {
+  validateInteger(action, "action", 0, MAX_UINT32);
+  return seccompActionAvailableNative(action);
+}
+
+const seccomp = {
+  filter: seccompFilter,
+  setFilter: seccompSetFilter,
+  actionAvailable: seccompActionAvailable,
+};
+
+// perf_event
+
+const PERF_ATTR_SIZE = 128;
+const perfAttrBits = [
+  "disabled",
+  "inherit",
+  "pinned",
+  "exclusive",
+  "excludeUser",
+  "excludeKernel",
+  "excludeHv",
+  "excludeIdle",
+];
+
+function perfEventOpen(options) {
+  validateObjectArg(options, "options");
+  const { type, config = 0, samplePeriod = 0, sampleType = 0, readFormat = 0 } = options;
+  const { pid = 0, cpu = -1, groupFd = -1, flags = 0 } = options;
+  validateInteger(type, "options.type", 0, MAX_UINT32);
+  validateInteger(pid, "options.pid", -1, MAX_INT32);
+  validateInteger(cpu, "options.cpu", -1, MAX_INT32);
+  validateInteger(groupFd, "options.groupFd", -1, MAX_INT32);
+  validateInteger(flags, "options.flags", 0, MAX_UINT32);
+  if (pid === -1 && cpu === -1) {
+    throw $ERR_INVALID_ARG_VALUE("options.cpu", cpu, "must name a CPU when pid is -1");
+  }
+  const attr = new Uint8Array(PERF_ATTR_SIZE);
+  const view = new DataView(attr.buffer);
+  view.setUint32(0, type, true);
+  view.setUint32(4, PERF_ATTR_SIZE, true);
+  view.setBigUint64(8, toUint64(config, "options.config"), true);
+  view.setBigUint64(16, toUint64(samplePeriod, "options.samplePeriod"), true);
+  view.setBigUint64(24, toUint64(sampleType, "options.sampleType"), true);
+  view.setBigUint64(32, toUint64(readFormat, "options.readFormat"), true);
+  let bits = 0;
+  for (let bit = 0; bit < perfAttrBits.length; bit++) {
+    const value = options[perfAttrBits[bit]];
+    if (value !== undefined && typeof value !== "boolean") {
+      throw $ERR_INVALID_ARG_TYPE(`options.${perfAttrBits[bit]}`, "boolean", value);
+    }
+    if (value) bits |= 1 << bit;
+  }
+  view.setUint32(40, bits, true);
+  return perfEventOpenNative(attr, pid, cpu, groupFd, flags);
+}
+
+function perfEventIoctl(fd, request, arg = 0) {
+  validateFd(fd, "fd");
+  validateInteger(request, "request", 0, MAX_UINT32);
+  validateInteger(arg, "arg", 0, MAX_INT32);
+  return perfEventIoctlNative(fd, request, arg);
+}
+
+/** Read the 64-bit counter of an event opened with the default `readFormat`. */
+function perfEventRead(fd) {
+  validateFd(fd, "fd");
+  const buffer = new Uint8Array(8);
+  const n = require("node:fs").readSync(fd, buffer, 0, 8, null);
+  if (n !== 8) throw $ERR_INVALID_ARG_VALUE("fd", fd, "did not return a 64-bit counter");
+  return new DataView(buffer.buffer).getBigUint64(0, true);
+}
+
+const perfEvent = {
+  open: perfEventOpen,
+  ioctl: perfEventIoctl,
+  read: perfEventRead,
+};
+
+// bpf
+
+const BPF_LOOKUP = 1;
+const BPF_UPDATE = 2;
+const BPF_DELETE = 3;
+const BPF_NEXT_KEY = 4;
+
+function bpfMapCreate(options) {
+  validateObjectArg(options, "options");
+  const { type, keySize, valueSize, maxEntries, flags = 0, name } = options;
+  validateInteger(type, "options.type", 0, MAX_UINT32);
+  validateInteger(keySize, "options.keySize", 0, MAX_UINT32);
+  validateInteger(valueSize, "options.valueSize", 0, MAX_UINT32);
+  validateInteger(maxEntries, "options.maxEntries", 1, MAX_UINT32);
+  validateInteger(flags, "options.flags", 0, MAX_UINT32);
+  validateOptionalString(name, "options.name");
+  return bpfMapCreateNative(type, keySize, valueSize, maxEntries, flags, name ?? null);
+}
+
+function bpfMapLookup(fd, key, value) {
+  validateFd(fd, "fd");
+  validateBytes(key, "key");
+  validateBytes(value, "value");
+  return bpfMapElemNative(BPF_LOOKUP, fd, key, value, 0);
+}
+
+function bpfMapUpdate(fd, key, value, flags = 0) {
+  validateFd(fd, "fd");
+  validateBytes(key, "key");
+  validateBytes(value, "value");
+  validateInteger(flags, "flags", 0, MAX_UINT32);
+  bpfMapElemNative(BPF_UPDATE, fd, key, value, flags);
+}
+
+function bpfMapDelete(fd, key) {
+  validateFd(fd, "fd");
+  validateBytes(key, "key");
+  return bpfMapElemNative(BPF_DELETE, fd, key, null, 0);
+}
+
+function bpfMapNextKey(fd, key, nextKey) {
+  validateFd(fd, "fd");
+  if (key !== null) validateBytes(key, "key");
+  validateBytes(nextKey, "nextKey");
+  return bpfMapElemNative(BPF_NEXT_KEY, fd, key, nextKey, 0);
+}
+
+function bpfProgLoad(options) {
+  validateObjectArg(options, "options");
+  const { type, insns, license = "GPL", logSize = 0, expectedAttachType = 0, name } = options;
+  validateInteger(type, "options.type", 0, MAX_UINT32);
+  validateBytes(insns, "options.insns");
+  validateString(license, "options.license");
+  validateInteger(logSize, "options.logSize", 0, 16 * 1024 * 1024);
+  validateInteger(expectedAttachType, "options.expectedAttachType", 0, MAX_UINT32);
+  validateOptionalString(name, "options.name");
+  return bpfProgLoadNative(type, insns, license, logSize, expectedAttachType, name ?? null);
+}
+
+function bpfPin(fd, path) {
+  validateFd(fd, "fd");
+  validateString(path, "path");
+  bpfObjPinNative(fd, path);
+}
+
+function bpfGet(path, flags = 0) {
+  validateString(path, "path");
+  validateInteger(flags, "flags", 0, MAX_UINT32);
+  return bpfObjGetNative(path, flags);
+}
+
+const bpf = {
+  mapCreate: bpfMapCreate,
+  mapLookup: bpfMapLookup,
+  mapUpdate: bpfMapUpdate,
+  mapDelete: bpfMapDelete,
+  mapNextKey: bpfMapNextKey,
+  progLoad: bpfProgLoad,
+  pin: bpfPin,
+  get: bpfGet,
+};
+
+// netlink
+
+const NLMSG_HDRLEN = 16;
+let netlinkSeq = 0;
+
+/** Encode one `nlmsghdr` message; `seq` defaults to a per-process counter. */
+function netlinkEncode(options) {
+  validateObjectArg(options, "options");
+  const { type, flags = constants.NLM_F_REQUEST, payload } = options;
+  let { seq } = options;
+  if (seq === undefined) seq = netlinkSeq = (netlinkSeq + 1) >>> 0;
+  validateInteger(type, "options.type", 0, 0xffff);
+  validateInteger(flags, "options.flags", 0, 0xffff);
+  validateInteger(seq, "options.seq", 0, MAX_UINT32);
+  let body = new Uint8Array(0);
+  if (payload !== undefined) {
+    validateBytes(payload, "options.payload");
+    body = new Uint8Array(payload.buffer, payload.byteOffset, payload.byteLength);
+  }
+  const length = NLMSG_HDRLEN + body.length;
+  const message = new Uint8Array((length + 3) & ~3);
+  const view = new DataView(message.buffer);
+  view.setUint32(0, length, true);
+  view.setUint16(4, type, true);
+  view.setUint16(6, flags, true);
+  view.setUint32(8, seq, true);
+  message.set(body, NLMSG_HDRLEN);
+  return message;
+}
+
+/** Split a reply buffer into `{ type, flags, seq, pid, payload }` messages. */
+function netlinkParse(buffer) {
+  validateBytes(buffer, "buffer");
+  const bytes = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const messages = [];
+  let offset = 0;
+  while (offset + NLMSG_HDRLEN <= bytes.length) {
+    const length = view.getUint32(offset, true);
+    if (length < NLMSG_HDRLEN || offset + length > bytes.length) break;
+    messages.push({
+      type: view.getUint16(offset + 4, true),
+      flags: view.getUint16(offset + 6, true),
+      seq: view.getUint32(offset + 8, true),
+      pid: view.getUint32(offset + 12, true),
+      payload: bytes.subarray(offset + NLMSG_HDRLEN, offset + length),
+    });
+    offset += (length + 3) & ~3;
+  }
+  return messages;
+}
+
+function netlinkRequest(protocol, message) {
+  validateInteger(protocol, "protocol", 0, 31);
+  validateBytes(message, "message");
+  return netlinkParse(netlinkRequestNative(protocol, message));
+}
+
+const netlink = {
+  encode: netlinkEncode,
+  parse: netlinkParse,
+  request: netlinkRequest,
+};
+
 export default {
   isSupported,
   constants,
@@ -662,4 +1067,8 @@ export default {
   reboot,
   kexecFileLoad,
   ioUring,
+  seccomp,
+  perfEvent,
+  bpf,
+  netlink,
 };

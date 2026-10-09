@@ -128,6 +128,27 @@ declare module "bun:linux" {
     readonly KEXEC_FILE_UNLOAD: number;
     readonly KEXEC_FILE_ON_CRASH: number;
     readonly KEXEC_FILE_NO_INITRAMFS: number;
+    readonly SECCOMP_RET_KILL_PROCESS: number;
+    readonly SECCOMP_RET_ERRNO: number;
+    readonly SECCOMP_RET_ALLOW: number;
+    readonly SECCOMP_FILTER_FLAG_TSYNC: number;
+    readonly SECCOMP_FILTER_FLAG_NEW_LISTENER: number;
+    readonly PERF_TYPE_HARDWARE: number;
+    readonly PERF_TYPE_SOFTWARE: number;
+    readonly PERF_COUNT_SW_TASK_CLOCK: number;
+    readonly PERF_EVENT_IOC_ENABLE: number;
+    readonly PERF_EVENT_IOC_DISABLE: number;
+    readonly PERF_EVENT_IOC_RESET: number;
+    readonly BPF_MAP_TYPE_HASH: number;
+    readonly BPF_MAP_TYPE_ARRAY: number;
+    readonly BPF_PROG_TYPE_SOCKET_FILTER: number;
+    readonly BPF_ANY: number;
+    readonly NETLINK_ROUTE: number;
+    readonly NLM_F_REQUEST: number;
+    readonly NLM_F_DUMP: number;
+    readonly NLMSG_DONE: number;
+    readonly RTM_GETLINK: number;
+    readonly RTM_NEWLINK: number;
   };
 
   /**
@@ -462,6 +483,124 @@ declare module "bun:linux" {
     function probe(): IoUringProbe;
   }
 
+  /** Options of {@link seccomp.filter}. */
+  interface SeccompDenyList {
+    /** Syscall numbers of the running architecture. */
+    deny: number[];
+    /** errno returned by denied syscalls. @default 1 (EPERM) */
+    errno?: number;
+    /** Full `SECCOMP_RET_*` action for denied syscalls; overrides `errno`. */
+    action?: number;
+    /** Action for a foreign architecture or the x32 ABI. @default SECCOMP_RET_KILL_PROCESS */
+    mismatch?: number;
+  }
+
+  /** seccomp(2) syscall filtering. Filters are permanent for the thread and its children. */
+  namespace seccomp {
+    /** Assembles a classic BPF deny-list program for the running architecture (x64, arm64). */
+    function filter(options: SeccompDenyList): Uint8Array<ArrayBuffer>;
+    /**
+     * Sets `no_new_privs` and installs `program` (an array of 8-byte `struct sock_filter`).
+     * @returns the listener fd with `SECCOMP_FILTER_FLAG_NEW_LISTENER`, otherwise 0.
+     */
+    function setFilter(program: ArrayBufferView, flags?: number): number;
+    /** Whether the kernel knows a `SECCOMP_RET_*` action. */
+    function actionAvailable(action: number): boolean;
+  }
+
+  /** Options of {@link perfEvent.open}, encoded into `struct perf_event_attr`. */
+  interface PerfEventOptions {
+    type: number;
+    config?: number | bigint;
+    samplePeriod?: number | bigint;
+    sampleType?: number | bigint;
+    readFormat?: number | bigint;
+    disabled?: boolean;
+    inherit?: boolean;
+    pinned?: boolean;
+    exclusive?: boolean;
+    excludeUser?: boolean;
+    excludeKernel?: boolean;
+    excludeHv?: boolean;
+    excludeIdle?: boolean;
+    /** @default 0 (this process) */
+    pid?: number;
+    /** @default -1 (any CPU) */
+    cpu?: number;
+    /** @default -1 */
+    groupFd?: number;
+    /** `PERF_FLAG_*`; `PERF_FLAG_FD_CLOEXEC` is always added. */
+    flags?: number;
+  }
+
+  /** perf_event_open(2) counters. */
+  namespace perfEvent {
+    /** @returns the event fd. @throws `EACCES`/`EPERM` under `kernel.perf_event_paranoid`, `ENOENT`, `ENODEV`. */
+    function open(options: PerfEventOptions): number;
+    /** `PERF_EVENT_IOC_ENABLE`, `DISABLE`, `REFRESH`, `RESET` or `SET_OUTPUT`. */
+    function ioctl(fd: number, request: number, arg?: number): number;
+    /** Reads the 64-bit counter of an event opened with the default `readFormat`. */
+    function read(fd: number): bigint;
+  }
+
+  interface BpfMapOptions {
+    type: number;
+    keySize: number;
+    valueSize: number;
+    maxEntries: number;
+    flags?: number;
+    name?: string;
+  }
+
+  interface BpfProgOptions {
+    type: number;
+    /** 8-byte `struct bpf_insn` array. */
+    insns: ArrayBufferView;
+    /** @default "GPL" */
+    license?: string;
+    /** Verifier log buffer size; on failure the error carries a `log` string. */
+    logSize?: number;
+    expectedAttachType?: number;
+    name?: string;
+  }
+
+  /** bpf(2) maps and programs. Requires `CAP_BPF` unless unprivileged BPF is enabled. */
+  namespace bpf {
+    function mapCreate(options: BpfMapOptions): number;
+    /** Copies the value of `key` into `value`. @returns false if the key is absent. */
+    function mapLookup(fd: number, key: ArrayBufferView, value: ArrayBufferView): boolean;
+    function mapUpdate(fd: number, key: ArrayBufferView, value: ArrayBufferView, flags?: number): void;
+    /** @returns false if the key is absent. */
+    function mapDelete(fd: number, key: ArrayBufferView): boolean;
+    /** Writes the key after `key` (the first key when null) into `nextKey`. @returns false at the end. */
+    function mapNextKey(fd: number, key: ArrayBufferView | null, nextKey: ArrayBufferView): boolean;
+    function progLoad(options: BpfProgOptions): number;
+    /** Pins a map or program in bpffs. */
+    function pin(fd: number, path: string): void;
+    /** Opens a pinned map or program. */
+    function get(path: string, flags?: number): number;
+  }
+
+  interface NetlinkMessage {
+    type: number;
+    flags: number;
+    seq: number;
+    pid: number;
+    payload: Uint8Array<ArrayBuffer>;
+  }
+
+  /** AF_NETLINK request/response exchanges with the kernel. */
+  namespace netlink {
+    /** Encodes one `nlmsghdr` message. `flags` defaults to `NLM_F_REQUEST`. */
+    function encode(options: { type: number; flags?: number; seq?: number; payload?: ArrayBufferView }): Uint8Array<ArrayBuffer>;
+    function parse(buffer: ArrayBufferView): NetlinkMessage[];
+    /**
+     * Sends `message` on a new `AF_NETLINK` socket and collects every reply until
+     * `NLMSG_DONE`, an ack or a single answer. A negative `NLMSG_ERROR` throws its errno.
+     */
+    function request(protocol: number, message: ArrayBufferView): NetlinkMessage[];
+  }
+
   const _default: {
     isSupported: typeof isSupported;
     constants: typeof constants;
@@ -486,6 +625,10 @@ declare module "bun:linux" {
     reboot: typeof reboot;
     kexecFileLoad: typeof kexecFileLoad;
     ioUring: typeof ioUring;
+    seccomp: typeof seccomp;
+    perfEvent: typeof perfEvent;
+    bpf: typeof bpf;
+    netlink: typeof netlink;
   };
   export default _default;
   export {
@@ -512,6 +655,15 @@ declare module "bun:linux" {
     reboot,
     kexecFileLoad,
     ioUring,
+    seccomp,
+    perfEvent,
+    bpf,
+    netlink,
+    SeccompDenyList,
+    PerfEventOptions,
+    BpfMapOptions,
+    BpfProgOptions,
+    NetlinkMessage,
     CgroupLimits,
     CapabilitySets,
     LandlockRules,

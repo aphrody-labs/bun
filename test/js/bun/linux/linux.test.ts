@@ -245,3 +245,200 @@ describe.skipIf(!isRoot)("bun:linux as root", () => {
     expect(linux.sysctl.get(name)).toBe(original);
   });
 });
+function probe(fn: () => unknown): boolean {
+  if (!isLinux) return false;
+  try {
+    const fd = fn();
+    if (typeof fd === "number") fs.closeSync(fd);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const perfAvailable = probe(() =>
+  linux.perfEvent.open({ type: linux.constants.PERF_TYPE_SOFTWARE, config: linux.constants.PERF_COUNT_SW_TASK_CLOCK }),
+);
+const bpfAvailable = probe(() =>
+  linux.bpf.mapCreate({ type: linux.constants.BPF_MAP_TYPE_HASH, keySize: 4, valueSize: 8, maxEntries: 4 }),
+);
+
+describe.skipIf(!isLinux)("bun:linux seccomp", () => {
+  test("filter assembles an arch-checked deny-list", () => {
+    const program = linux.seccomp.filter({ deny: [1, 2], errno: 13 });
+    const view = new DataView(program.buffer, program.byteOffset, program.byteLength);
+    const x64 = process.arch === "x64";
+    expect(program.byteLength).toBe((5 + (x64 ? 2 : 0) + 4) * 8);
+    expect(view.getUint16(0, true)).toBe(0x20);
+    expect(view.getUint32(4, true)).toBe(4);
+    expect(view.getUint32(12, true)).toBe(x64 ? 0xc000003e : 0xc00000b7);
+    const last = program.byteLength - 8;
+    expect(view.getUint16(last, true)).toBe(0x06);
+    expect(view.getUint32(last + 4, true)).toBe(linux.constants.SECCOMP_RET_ALLOW);
+    expect(view.getUint32(last - 4, true)).toBe((linux.constants.SECCOMP_RET_ERRNO | 13) >>> 0);
+  });
+
+  test("filter and setFilter validate their arguments", () => {
+    expect(errorCode(() => linux.seccomp.filter({ deny: "mkdir" } as never))).toBe("ERR_INVALID_ARG_TYPE");
+    expect(errorCode(() => linux.seccomp.filter({ deny: [-1] }))).toBe("ERR_OUT_OF_RANGE");
+    expect(errorCode(() => linux.seccomp.setFilter("x" as never))).toBe("ERR_INVALID_ARG_TYPE");
+    expect(() => linux.seccomp.setFilter(new Uint8Array(12))).toThrow();
+  });
+
+  test("actionAvailable knows SECCOMP_RET_ALLOW", () => {
+    expect(linux.seccomp.actionAvailable(linux.constants.SECCOMP_RET_ALLOW)).toBe(true);
+  });
+
+  test("setFilter denies syscalls in a child process", async () => {
+    const script = `
+      const linux = require("bun:linux").default;
+      const fs = require("node:fs");
+      const deny = process.arch === "x64" ? [83, 258] : [34];
+      linux.seccomp.setFilter(linux.seccomp.filter({ deny, errno: 1 }));
+      try {
+        fs.mkdirSync(require("node:path").join(process.env.SECCOMP_DIR, "denied"));
+        console.log("created");
+      } catch (error) {
+        console.log(error.code);
+      }
+      console.log(linux.prctl(linux.constants.PR_GET_NO_NEW_PRIVS));
+    `;
+    using dir = tempDir("bun-linux-seccomp", {});
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "-e", script],
+      env: { ...bunEnv, SECCOMP_DIR: String(dir) },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect(stderr).toBe("");
+    expect(stdout).toBe("EPERM\n1\n");
+    expect(fs.existsSync(`${dir}/denied`)).toBe(false);
+    expect(exitCode).toBe(0);
+  });
+});
+
+describe.skipIf(!isLinux)("bun:linux perfEvent", () => {
+  test("open validates its options", () => {
+    expect(errorCode(() => linux.perfEvent.open({} as never))).toBe("ERR_INVALID_ARG_TYPE");
+    expect(errorCode(() => linux.perfEvent.open({ type: 1, pid: -1 }))).toBe("ERR_INVALID_ARG_VALUE");
+    expect(errorCode(() => linux.perfEvent.open({ type: 1, disabled: 1 as never }))).toBe("ERR_INVALID_ARG_TYPE");
+    expect(() => linux.perfEvent.ioctl(0, 0x80082407)).toThrow();
+  });
+
+  test.skipIf(!perfAvailable)("counts task-clock between enable and disable", () => {
+    const { constants } = linux;
+    const fd = linux.perfEvent.open({
+      type: constants.PERF_TYPE_SOFTWARE,
+      config: constants.PERF_COUNT_SW_TASK_CLOCK,
+      disabled: true,
+    });
+    try {
+      linux.perfEvent.ioctl(fd, constants.PERF_EVENT_IOC_RESET);
+      linux.perfEvent.ioctl(fd, constants.PERF_EVENT_IOC_ENABLE);
+      let sum = 0;
+      for (let i = 0; i < 1e6; i++) sum += i;
+      linux.perfEvent.ioctl(fd, constants.PERF_EVENT_IOC_DISABLE);
+      expect(sum).toBeGreaterThan(0);
+      expect(linux.perfEvent.read(fd)).toBeGreaterThan(0n);
+    } finally {
+      fs.closeSync(fd);
+    }
+  });
+});
+
+describe.skipIf(!isLinux)("bun:linux bpf", () => {
+  test("mapCreate and progLoad validate their options", () => {
+    expect(errorCode(() => linux.bpf.mapCreate({} as never))).toBe("ERR_INVALID_ARG_TYPE");
+    expect(errorCode(() => linux.bpf.progLoad({ type: 1, insns: [] as never }))).toBe("ERR_INVALID_ARG_TYPE");
+    expect(errorCode(() => linux.bpf.mapLookup(0, "k" as never, new Uint8Array(8)))).toBe("ERR_INVALID_ARG_TYPE");
+  });
+
+  test.skipIf(!bpfAvailable)("hash map update, lookup, iterate and delete", () => {
+    const { constants } = linux;
+    const fd = linux.bpf.mapCreate({
+      type: constants.BPF_MAP_TYPE_HASH,
+      keySize: 4,
+      valueSize: 8,
+      maxEntries: 4,
+      name: "bun_test",
+    });
+    try {
+      const key = new Uint32Array([7]);
+      const value = new BigUint64Array([0x1234_5678_9abcn]);
+      const out = new BigUint64Array(1);
+      const next = new Uint32Array(1);
+      expect(linux.bpf.mapNextKey(fd, null, next)).toBe(false);
+      linux.bpf.mapUpdate(fd, key, value, constants.BPF_ANY);
+      expect(linux.bpf.mapLookup(fd, key, out)).toBe(true);
+      expect(out[0]).toBe(0x1234_5678_9abcn);
+      expect(linux.bpf.mapNextKey(fd, null, next)).toBe(true);
+      expect(next[0]).toBe(7);
+      expect(linux.bpf.mapNextKey(fd, next, next)).toBe(false);
+      expect(() => linux.bpf.mapLookup(fd, new Uint8Array(2), out)).toThrow();
+      expect(linux.bpf.mapDelete(fd, key)).toBe(true);
+      expect(linux.bpf.mapDelete(fd, key)).toBe(false);
+      expect(linux.bpf.mapLookup(fd, key, out)).toBe(false);
+    } finally {
+      fs.closeSync(fd);
+    }
+  });
+
+  test.skipIf(!bpfAvailable)("progLoad accepts a socket filter and reports the verifier log", () => {
+    const { constants } = linux;
+    // r0 = 0; exit
+    const ok = new Uint8Array([0xb7, 0, 0, 0, 0, 0, 0, 0, 0x95, 0, 0, 0, 0, 0, 0, 0]);
+    const fd = linux.bpf.progLoad({ type: constants.BPF_PROG_TYPE_SOCKET_FILTER, insns: ok, name: "bun_ok" });
+    expect(fd).toBeGreaterThan(2);
+    fs.closeSync(fd);
+
+    // exit without setting r0
+    const bad = new Uint8Array([0x95, 0, 0, 0, 0, 0, 0, 0]);
+    let error: { code?: string; log?: string } | undefined;
+    try {
+      linux.bpf.progLoad({ type: constants.BPF_PROG_TYPE_SOCKET_FILTER, insns: bad, logSize: 4096 });
+    } catch (e) {
+      error = e as typeof error;
+    }
+    expect(error?.code).toBe("EACCES");
+    expect(error?.log).toContain("R0");
+  });
+});
+
+describe.skipIf(!isLinux)("bun:linux netlink", () => {
+  test("encode and parse round-trip", () => {
+    const payload = new Uint8Array([1, 2, 3]);
+    const message = linux.netlink.encode({ type: 18, flags: 0x301, seq: 9, payload });
+    expect(message.byteLength).toBe(20);
+    expect(linux.netlink.parse(message)).toEqual([
+      { type: 18, flags: 0x301, seq: 9, pid: 0, payload: new Uint8Array([1, 2, 3]) },
+    ]);
+  });
+
+  test("request dumps the network links, loopback included", () => {
+    const { constants } = linux;
+    const message = linux.netlink.encode({
+      type: constants.RTM_GETLINK,
+      flags: constants.NLM_F_REQUEST | constants.NLM_F_DUMP,
+      payload: new Uint8Array(16),
+    });
+    const replies = linux.netlink.request(constants.NETLINK_ROUTE, message);
+    const links = replies.filter(reply => reply.type === constants.RTM_NEWLINK);
+    expect(links.length).toBeGreaterThan(0);
+    const indexes = links.map(link => new DataView(link.payload.buffer, link.payload.byteOffset).getInt32(4, true));
+    expect(indexes).toContain(1);
+    expect(replies.at(-1)?.type).toBe(constants.NLMSG_DONE);
+  });
+
+  test("request throws the errno of a negative NLMSG_ERROR", () => {
+    const { constants } = linux;
+    const ifinfo = new Uint8Array(16);
+    new DataView(ifinfo.buffer).setInt32(4, 0x7ffffff0, true);
+    const message = linux.netlink.encode({
+      type: constants.RTM_GETLINK,
+      flags: constants.NLM_F_REQUEST | constants.NLM_F_ACK,
+      payload: ifinfo,
+    });
+    expect(errorCode(() => linux.netlink.request(constants.NETLINK_ROUTE, message))).toBe("ENODEV");
+  });
+});

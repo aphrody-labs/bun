@@ -10,6 +10,7 @@
 //! Syscalls go through `libc::syscall` with the numbers in [`nr`]: musl lacks
 //! wrappers for most of them, and the numbers are stable kernel ABI.
 
+pub(crate) mod bpf;
 pub(crate) mod caps;
 pub(crate) mod cgroup;
 pub(crate) mod io_uring;
@@ -18,8 +19,11 @@ pub(crate) mod landlock;
 pub(crate) mod memfd;
 pub(crate) mod mount;
 pub(crate) mod namespaces;
+pub(crate) mod netlink;
+pub(crate) mod perf_event;
 pub(crate) mod pidfd;
 pub(crate) mod power;
+pub(crate) mod seccomp;
 pub(crate) mod sysctl;
 
 #[cfg(not(target_os = "linux"))]
@@ -63,6 +67,9 @@ pub(crate) mod nr {
         pub(super) const FINIT_MODULE: c_long = 313;
         pub(super) const MEMFD_CREATE: c_long = 319;
         pub(super) const KEXEC_FILE_LOAD: c_long = 320;
+        pub(super) const PERF_EVENT_OPEN: c_long = 298;
+        pub(super) const SECCOMP: c_long = 317;
+        pub(super) const BPF: c_long = 321;
     }
 
     #[cfg(target_arch = "aarch64")]
@@ -82,6 +89,9 @@ pub(crate) mod nr {
         pub(super) const FINIT_MODULE: c_long = 273;
         pub(super) const MEMFD_CREATE: c_long = 279;
         pub(super) const KEXEC_FILE_LOAD: c_long = 294;
+        pub(super) const PERF_EVENT_OPEN: c_long = 241;
+        pub(super) const SECCOMP: c_long = 277;
+        pub(super) const BPF: c_long = 280;
     }
 
     /// `-1` makes the kernel answer `ENOSYS`.
@@ -102,6 +112,9 @@ pub(crate) mod nr {
         pub(super) const FINIT_MODULE: c_long = -1;
         pub(super) const MEMFD_CREATE: c_long = -1;
         pub(super) const KEXEC_FILE_LOAD: c_long = -1;
+        pub(super) const PERF_EVENT_OPEN: c_long = -1;
+        pub(super) const SECCOMP: c_long = -1;
+        pub(super) const BPF: c_long = -1;
     }
 
     pub(crate) const MOUNT: c_long = arch::MOUNT;
@@ -118,6 +131,9 @@ pub(crate) mod nr {
     pub(crate) const FINIT_MODULE: c_long = arch::FINIT_MODULE;
     pub(crate) const MEMFD_CREATE: c_long = arch::MEMFD_CREATE;
     pub(crate) const KEXEC_FILE_LOAD: c_long = arch::KEXEC_FILE_LOAD;
+    pub(crate) const PERF_EVENT_OPEN: c_long = arch::PERF_EVENT_OPEN;
+    pub(crate) const SECCOMP: c_long = arch::SECCOMP;
+    pub(crate) const BPF: c_long = arch::BPF;
 
     pub(crate) const PIDFD_SEND_SIGNAL: c_long = 424;
     pub(crate) const IO_URING_SETUP: c_long = 425;

@@ -176,6 +176,59 @@ Bun does not use io_uring on Linux. `ioUring.probe()` only reports what the kern
 const { supported, ops } = linux.ioUring.probe();
 ```
 
+## seccomp
+
+`seccomp.filter()` builds a deny-list program for the running architecture (x64 or arm64). `seccomp.setFilter()` sets `no_new_privs` and installs it on the calling thread. The filter cannot be removed and child processes inherit it.
+
+```ts
+const deny = process.arch === "x64" ? [83, 258] : [34]; // mkdir, mkdirat
+linux.seccomp.setFilter(linux.seccomp.filter({ deny, errno: 1 })); // EPERM
+```
+
+`setFilter()` also accepts any `struct sock_filter` array you build yourself.
+
+## perf_event
+
+```ts
+const { constants } = linux;
+const fd = linux.perfEvent.open({
+  type: constants.PERF_TYPE_SOFTWARE,
+  config: constants.PERF_COUNT_SW_TASK_CLOCK,
+  disabled: true,
+});
+linux.perfEvent.ioctl(fd, constants.PERF_EVENT_IOC_ENABLE);
+work();
+linux.perfEvent.ioctl(fd, constants.PERF_EVENT_IOC_DISABLE);
+console.log(linux.perfEvent.read(fd)); // nanoseconds, as a bigint
+```
+
+The `kernel.perf_event_paranoid` sysctl decides what an unprivileged process may count.
+
+## eBPF
+
+`bpf` creates maps, reads and writes their elements, loads programs, and pins and opens objects in bpffs. Keys and values are `ArrayBufferView`s, and their sizes are checked against the map's. Per-CPU maps are not supported. When `progLoad()` fails with a `logSize`, the error's `log` property holds the verifier output.
+
+```ts
+const fd = linux.bpf.mapCreate({ type: linux.constants.BPF_MAP_TYPE_HASH, keySize: 4, valueSize: 8, maxEntries: 64 });
+linux.bpf.mapUpdate(fd, new Uint32Array([1]), new BigUint64Array([42n]));
+```
+
+## netlink
+
+`netlink.request()` sends one or more encoded messages to the kernel. It collects the replies until `NLMSG_DONE` or an ack arrives, and returns them parsed. A negative `NLMSG_ERROR` throws with its errno.
+
+```ts
+const { constants } = linux;
+const links = linux.netlink.request(
+  constants.NETLINK_ROUTE,
+  linux.netlink.encode({
+    type: constants.RTM_GETLINK,
+    flags: constants.NLM_F_REQUEST | constants.NLM_F_DUMP,
+    payload: new Uint8Array(16), // struct ifinfomsg
+  }),
+);
+```
+
 ---
 
 ## Reference
