@@ -38,7 +38,7 @@ pub(crate) fn exec(invocation: Invocation) -> ! {
     let args = prefix
         .iter()
         .map(OsString::from)
-        .chain(std::env::args_os().skip(skip));
+        .chain(bun_core::os_args().into_iter().skip(skip));
     // SAFETY: Command::start dispatches once, before Bun starts worker threads or JSC.
     let status = unsafe { uv::main_status(args) };
     let code = match status {

@@ -160,7 +160,8 @@ pub(crate) fn exec(invocation: Invocation) -> ! {
         Invocation::Bun => 2,
         Invocation::Winmd => 1,
     };
-    let raw: Vec<String> = std::env::args_os()
+    let raw: Vec<String> = bun_core::os_args()
+        .into_iter()
         .skip(skip)
         .map(|arg| arg.to_string_lossy().into_owned())
         .collect();

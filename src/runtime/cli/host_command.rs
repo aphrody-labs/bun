@@ -21,7 +21,7 @@ impl Invocation {
 #[cold]
 pub(crate) fn exec(Invocation::Bun: Invocation) -> ! {
     use std::io::Write;
-    let args = std::env::args_os().skip(2).collect();
+    let args = bun_core::os_args().into_iter().skip(2).collect();
     let mut io = bun_host::cli::Io::default();
     let code = bun_host::cli::main(args, &mut io);
     out(io.out.as_bytes());

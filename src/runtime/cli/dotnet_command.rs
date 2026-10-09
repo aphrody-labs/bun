@@ -35,14 +35,18 @@ pub(crate) fn exec(invocation: Invocation) -> ! {
         Invocation::Bun => 2,
         Invocation::Dotnet => 1,
     };
+    let os_args = bun_core::os_args();
     if matches!(invocation, Invocation::Bun)
-        && let Some(command) = std::env::args().nth(2)
-        && crate::dotnet::tools::COMMANDS.contains(&command.as_str())
+        && let Some(command) = os_args.get(2).and_then(|arg| arg.to_str())
+        && crate::dotnet::tools::COMMANDS.contains(&command)
     {
-        let args: Vec<String> = std::env::args().skip(3).collect();
-        Global::exit(crate::dotnet::tools::run(&command, &args) as u32);
+        let args: Vec<String> = os_args[3..]
+            .iter()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect();
+        Global::exit(crate::dotnet::tools::run(command, &args) as u32);
     }
-    muxer(std::env::args_os().skip(skip))
+    muxer(os_args.into_iter().skip(skip))
 }
 
 /// `.cs` source: a .NET 10 file-based app (`#:package`, `#:sdk`, `#:property`).

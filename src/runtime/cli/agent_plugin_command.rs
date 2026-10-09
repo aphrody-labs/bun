@@ -93,7 +93,7 @@ fn extract(bytes: &[u8]) -> Result<PathBuf, String> {
 #[cold]
 pub(crate) fn exec(Invocation::Bun: Invocation) -> ! {
     let dir = extract(archive()).unwrap_or_else(|e| super::msvc_command::fail(format_args!("{e}")));
-    let args: Vec<OsString> = std::env::args_os().skip(2).collect();
+    let args: Vec<OsString> = bun_core::os_args().into_iter().skip(2).collect();
     let mut command = std::process::Command::new(
         bun_core::self_exe_path()
             .map(|p| PathBuf::from(String::from_utf8_lossy(p.as_bytes()).into_owned()))

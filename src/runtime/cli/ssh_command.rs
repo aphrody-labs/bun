@@ -19,7 +19,7 @@ impl Invocation {
 
 #[cold]
 pub(crate) fn exec(_: Invocation) -> ! {
-    let args = std::env::args_os().skip(2).collect();
+    let args = bun_core::os_args().into_iter().skip(2).collect();
     let code = bun_ssh::cli::main(args, "bun ssh");
     Global::exit(code.clamp(0, 255) as u32);
 }

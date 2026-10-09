@@ -18,7 +18,7 @@ impl Invocation {
 
 #[cold]
 pub(crate) fn exec(Invocation::Bun: Invocation) -> ! {
-    let args = std::env::args_os().skip(2).collect();
+    let args = bun_core::os_args().into_iter().skip(2).collect();
     let code = bun_mcp::main(args, &[]);
     Global::exit(code as u32);
 }

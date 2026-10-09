@@ -78,7 +78,11 @@ pub(crate) fn is_bun(argv0: &[u8]) -> bool {
 
 #[cold]
 pub(crate) fn exec() -> ! {
-    let args: Vec<String> = std::env::args_os().skip(2).map(|it| it.to_string_lossy().into_owned()).collect();
+    let args: Vec<String> = bun_core::os_args()
+        .into_iter()
+        .skip(2)
+        .map(|it| it.to_string_lossy().into_owned())
+        .collect();
     let native: Arc<dyn NativeChecker> = Arc::new(BunCheck {
         turn: bun_threading::Guarded::new(()),
     });

@@ -59,7 +59,7 @@ pub(crate) fn exec(invocation: Invocation) -> ! {
         Invocation::Bun => (2, &["msvc"]),
         Invocation::Msvc => (1, &[]),
     };
-    let args = std::env::args_os().skip(skip).collect();
+    let args = bun_core::os_args().into_iter().skip(skip).collect();
     #[cfg(windows)]
     let code = find_msvc_tools::cli::main_with(args, self_args, &BunFetch::new());
     #[cfg(not(windows))]

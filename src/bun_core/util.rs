@@ -3851,6 +3851,22 @@ pub fn argv() -> Argv {
     Argv(argv_view())
 }
 
+/// The arguments the OS passed to the process, without the `BUN_OPTIONS` splice of [`argv`]: for the
+/// subcommands dispatched before the runtime that parse their own arguments. `std::env::args_os()` is empty
+/// on musl ([`init_argv`]).
+pub fn os_args() -> Vec<std::ffi::OsString> {
+    #[cfg(windows)]
+    return std::env::args_os().collect();
+    #[cfg(not(windows))]
+    {
+        use std::os::unix::ffi::OsStrExt;
+        argv_storage()
+            .iter()
+            .map(|arg| std::ffi::OsStr::from_bytes(arg.as_bytes()).to_owned())
+            .collect()
+    }
+}
+
 // ─── BUN_OPTIONS argv injection ──────────────────────────────────────────────
 /// Number of arguments injected into `argv` by the `BUN_OPTIONS` environment
 /// variable. Set once during single-threaded startup (`init_argv`).
