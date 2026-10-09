@@ -144,3 +144,18 @@ Cython executables need CPython and its standard library at run time. WASM outpu
 import { value } from "./value"; // value.pyjs, value.pyts or value.pytsx
 console.log(value);
 ```
+
+---
+
+## CPU-only vLLM
+
+`scripts/aphrody/vllm-cpu.ts` builds and launches the `aphrody` branch of `aphrody-labs/vllm` (a fork of vllm-project/vllm) on the CPU backend, in a virtualenv created by UV with the embedded CPython.
+
+| Command | Effect |
+| --- | --- |
+| `bun scripts/aphrody/vllm-cpu.ts env` | Prints the tuned environment: `OMP_NUM_THREADS` = physical cores, `OMP_PROC_BIND=close`, `OMP_PLACES=cores`, `VLLM_CPU_OMP_THREADS_BIND=auto`, `LD_PRELOAD` of tcmalloc or jemalloc when installed, `BUN_PYTHON_EXECUTABLE` of the virtualenv. |
+| `bun scripts/aphrody/vllm-cpu.ts run <args>` | Runs the OpenAI-compatible server with that environment. |
+| `bun scripts/aphrody/vllm-cpu.ts update` | Fetches `upstream/main`, rebases `aphrody` on it, rebuilds only when the sha differs from `built.sha`, replacing the previous virtualenv. A lock directory keeps a single build in the queue; the build runs under `nice -n 15` with half the cores. |
+| `bun scripts/aphrody/vllm-cpu.ts bench <model>` | Reports tokens/s with the default environment, then the tuned one. |
+
+The vLLM CPU backend compiles an AVX2 kernel set (`cmake/cpu_extension.cmake`) next to the AVX-512 and AMX sets, so an AVX2-only host (Haswell) works with the default build. The kernels are selected at build time from the host flags; build on the machine that serves, or on one with the same ISA. Run `update` from a timer on the build host only; the serving host receives the virtualenv, never builds. Tokens/s figures are not recorded yet.
