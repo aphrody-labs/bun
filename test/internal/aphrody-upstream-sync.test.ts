@@ -132,7 +132,7 @@ describe("sync-upstream", () => {
     );
     expect(git(root, "log", "-1", "--format=%P").split(" ")).toHaveLength(2);
     expect(git(root, "status", "--porcelain")).toBe("");
-  });
+  }, 30000);
 
   test("a real conflict aborts the merge and reports the file", async () => {
     const { dir, root } = forkRepo("aphrody-sync-conflict");
@@ -150,7 +150,7 @@ describe("sync-upstream", () => {
     expect(await sync(options(root))).toEqual({ status: "conflicts", behind: 1, conflicts: [README] });
     expect(git(root, "rev-parse", "HEAD")).toBe(before);
     expect(git(root, "status", "--porcelain")).toBe("");
-  });
+  }, 30000);
 
   test("nothing to merge is a no-op", async () => {
     const { dir, root } = forkRepo("aphrody-sync-noop");

@@ -62,6 +62,10 @@ describe("webkitPrebuiltRepo", () => {
     expect(webkitPrebuiltRepo(name, "f".repeat(40), undefined)).toBe(WEBKIT_UPSTREAM_REPO);
   });
 
+  test("uses aphrody-labs when listed in APHRODY_WEBKIT_PREBUILTS", () => {
+    expect(webkitPrebuiltRepo(name, WEBKIT_VERSION, undefined)).toBe(WEBKIT_APHRODY_REPO);
+  });
+
   test("$BUN_WEBKIT_REPO forces aphrody, oven or an explicit repo", () => {
     expect(webkitPrebuiltRepo(name, WEBKIT_VERSION, "aphrody")).toBe(WEBKIT_APHRODY_REPO);
     expect(webkitPrebuiltRepo(name, WEBKIT_VERSION, "oven")).toBe(WEBKIT_UPSTREAM_REPO);

@@ -15,7 +15,9 @@ export const WEBKIT_APHRODY_REPO = "aphrody-labs/WebKit";
  * an archive is the Aphrody fork once it is listed here, oven-sh otherwise. Add the names after the `aphrody-prebuilts`
  * run published them (PLAN.md, chantier P). `BUN_WEBKIT_REPO` overrides this (see `webkitPrebuiltRepo`).
  */
-export const APHRODY_WEBKIT_PREBUILTS: Readonly<Record<string, readonly string[]>> = {};
+export const APHRODY_WEBKIT_PREBUILTS: Readonly<Record<string, readonly string[]>> = {
+  "0c06faadf65bf8e8c8ad3a5a8aca83e1e9ed653f": ["bun-webkit-linux-amd64-musl-lto"],
+};
 
 /**
  * WebKit (JavaScriptCore) — the JS engine.
