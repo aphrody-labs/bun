@@ -110,6 +110,10 @@ function readOut(view, kind, type) {
     case "object": {
       const object = Number(view.getBigUint64(0, true));
       if (!object) return null;
+      if (Array.isArray(type) && type[0] === "IVector" && type.length === 2) {
+        const interfaceName = vectorInterface(type[1]);
+        return wrap(object, interfaceName, interfaceName);
+      }
       if (typeof type !== "string") return wrap(object, undefined, undefined);
       return wrap(object, kind === "class" ? registry.classes.get(type)?.defaultInterface : type, type);
     }
@@ -705,6 +709,10 @@ function systemMetadata(namespace) {
 
 // findMethod("Microsoft.UI.Xaml.Controls.Button", "add_Click") walks the class, its interfaces and base classes.
 function findMethod(className, methodName) {
+  if (!registry.classes.has(className) && registry.interfaces.has(className)) {
+    const method = registry.interfaces.get(className).methods.find(m => m[0] === methodName);
+    return method ? { interfaceName: className, method } : undefined;
+  }
   for (let name = className; name; ) {
     const desc = registry.classes.get(name);
     if (!desc) break;

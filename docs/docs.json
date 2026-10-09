@@ -157,6 +157,7 @@
               "/runtime/ffi",
               "/runtime/linux",
               "/runtime/windows",
+              "/runtime/winui",
               "/runtime/msvc",
               "/runtime/dotnet",
               "/runtime/cosmic",

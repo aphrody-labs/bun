@@ -117,6 +117,64 @@ Microsoft décrit plus de 45 contrôles WinUI. Le tableau couvre les contrôles 
 
 Le catalogue `md-*` est chargé à la demande avec `@aphrody/m3-front` (`registerM3Component` ou `registerM3`). `@aphrody/m3-react` publie le manifeste des tags et leurs modules; les extensions aphrody sont livrées dans son catalogue. Les contrôles encore à créer sont des écarts réels, à couvrir par un nouveau composant ou un assemblage M3 accessible, pas par du XAML.
 
+### Ressources de thème WinUI → Fluent 2 → M3
+
+Source unique : `winuiResources` de [`packages/bun-fluent`](../../../packages/bun-fluent) (tokens Fluent 2 absorbés de `microsoft/fluentui` `packages/tokens`). `packages/bun-fluent/test/fluent.test.ts` vérifie que chaque clé existe dans `winui-inventory.json`, que chaque token Fluent existe dans `webLightTheme` et que chaque token M3 est écrit par le thème `m3` de `bun-plugin-tailwind`. `fluentWinuiResources()` produit le `ResourceDictionary` XAML (dictionnaires Light/Dark) qui applique ces valeurs dans une app `bun:winui`; `fluent:theme.css` les expose à Tailwind (`schemeImport`). `SystemAccentColor*` n'est pas dans les dictionnaires de thème du dépôt : l'accent Windows reste le seed M3 (section suivante).
+
+| Ressource WinUI | Token Fluent 2 | Valeur web clair / sombre | Token M3 |
+| --- | --- | --- | --- |
+| `AccentFillColorDefaultBrush` | `colorBrandBackground` | `#0f6cbd` / `#115ea3` | `--md-sys-color-primary` |
+| `AccentFillColorSecondaryBrush` | `colorBrandBackgroundHover` | `#115ea3` / `#0f6cbd` | `--md-sys-color-primary` |
+| `AccentFillColorTertiaryBrush` | `colorBrandBackgroundPressed` | `#0c3b5e` / `#0c3b5e` | `--md-sys-color-primary` |
+| `AccentFillColorDisabledBrush` | `colorNeutralBackgroundDisabled` | `#f0f0f0` / `#141414` | `--md-sys-color-on-surface` |
+| `AccentTextFillColorPrimaryBrush` | `colorBrandForeground1` | `#0f6cbd` / `#479ef5` | `--md-sys-color-primary` |
+| `TextOnAccentFillColorPrimaryBrush` | `colorNeutralForegroundOnBrand` | `#ffffff` / `#ffffff` | `--md-sys-color-on-primary` |
+| `TextFillColorPrimaryBrush` | `colorNeutralForeground1` | `#242424` / `#ffffff` | `--md-sys-color-on-surface` |
+| `TextFillColorSecondaryBrush` | `colorNeutralForeground2` | `#424242` / `#d6d6d6` | `--md-sys-color-on-surface-variant` |
+| `TextFillColorTertiaryBrush` | `colorNeutralForeground3` | `#616161` / `#adadad` | `--md-sys-color-on-surface-variant` |
+| `TextFillColorDisabledBrush` | `colorNeutralForegroundDisabled` | `#bdbdbd` / `#5c5c5c` | `--md-sys-color-on-surface` |
+| `ApplicationPageBackgroundThemeBrush` | `colorNeutralBackground2` | `#fafafa` / `#1f1f1f` | `--md-sys-color-surface` |
+| `SolidBackgroundFillColorBaseBrush` | `colorNeutralBackground2` | `#fafafa` / `#1f1f1f` | `--md-sys-color-surface` |
+| `LayerFillColorDefaultBrush` | `colorNeutralBackground3` | `#f5f5f5` / `#141414` | `--md-sys-color-surface-container` |
+| `CardBackgroundFillColorDefaultBrush` | `colorNeutralCardBackground` | `#fafafa` / `#333333` | `--md-sys-color-surface-container-low` |
+| `ControlFillColorDefaultBrush` | `colorNeutralBackground1` | `#ffffff` / `#292929` | `--md-sys-color-surface-container-highest` |
+| `ControlFillColorSecondaryBrush` | `colorNeutralBackground1Hover` | `#f5f5f5` / `#3d3d3d` | `--md-sys-color-surface-container-high` |
+| `ControlFillColorTertiaryBrush` | `colorNeutralBackground1Pressed` | `#e0e0e0` / `#1f1f1f` | `--md-sys-color-surface-container` |
+| `ControlFillColorDisabledBrush` | `colorNeutralBackgroundDisabled` | `#f0f0f0` / `#141414` | `--md-sys-color-surface-container-low` |
+| `SubtleFillColorSecondaryBrush` | `colorSubtleBackgroundHover` | `#f5f5f5` / `#383838` | `--md-sys-color-surface-container-high` |
+| `SubtleFillColorTertiaryBrush` | `colorSubtleBackgroundPressed` | `#e0e0e0` / `#2e2e2e` | `--md-sys-color-surface-container` |
+| `SmokeFillColorDefaultBrush` | `colorBackgroundOverlay` | `rgba(0, 0, 0, 0.4)` / `rgba(0, 0, 0, 0.5)` | `--md-sys-color-scrim` |
+| `ControlStrokeColorDefaultBrush` | `colorNeutralStroke1` | `#d1d1d1` / `#666666` | `--md-sys-color-outline-variant` |
+| `ControlStrongStrokeColorDefaultBrush` | `colorNeutralStrokeAccessible` | `#616161` / `#adadad` | `--md-sys-color-outline` |
+| `CardStrokeColorDefaultBrush` | `colorNeutralStroke2` | `#e0e0e0` / `#525252` | `--md-sys-color-outline-variant` |
+| `DividerStrokeColorDefaultBrush` | `colorNeutralStroke2` | `#e0e0e0` / `#525252` | `--md-sys-color-outline-variant` |
+| `FocusStrokeColorOuterBrush` | `colorStrokeFocus2` | `#000000` / `#ffffff` | `--md-sys-color-secondary` |
+| `FocusStrokeColorInnerBrush` | `colorStrokeFocus1` | `#ffffff` / `#000000` | — |
+| `SystemFillColorCriticalBrush` | `colorStatusDangerForeground1` | `#b10e1c` / `#dc626d` | `--md-sys-color-error` |
+| `SystemFillColorCriticalBackgroundBrush` | `colorStatusDangerBackground1` | `#fdf3f4` / `#3b0509` | `--md-sys-color-error-container` |
+| `SystemFillColorSuccessBrush` | `colorStatusSuccessForeground1` | `#0e700e` / `#54b054` | — |
+| `SystemFillColorSuccessBackgroundBrush` | `colorStatusSuccessBackground1` | `#f1faf1` / `#052505` | — |
+| `SystemFillColorCautionBrush` | `colorStatusWarningForeground1` | `#bc4b09` / `#faa06b` | — |
+| `SystemFillColorCautionBackgroundBrush` | `colorStatusWarningBackground1` | `#fff9f5` / `#4a1e04` | — |
+| `ControlCornerRadius` | `borderRadiusMedium` | `4px` / `4px` | `--md-sys-shape-corner-extra-small` |
+| `OverlayCornerRadius` | `borderRadiusXLarge` | `8px` / `8px` | `--md-sys-shape-corner-small` |
+| `ContentControlThemeFontFamily` | `fontFamilyBase` | `'Segoe UI', 'Segoe UI Web (West European)', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif` / `'Segoe UI', 'Segoe UI Web (West European)', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif` | `--md-ref-typeface-plain` |
+| `CaptionTextBlockFontSize` | `fontSizeBase200` | `12px` / `12px` | `--md-sys-typescale-body-small-size` |
+| `BodyTextBlockFontSize` | `fontSizeBase300` | `14px` / `14px` | `--md-sys-typescale-body-medium-size` |
+| `BodyLargeTextBlockFontSize` | `fontSizeBase400` | `16px` / `16px` | `--md-sys-typescale-body-large-size` |
+| `SubtitleTextBlockFontSize` | `fontSizeBase500` | `20px` / `20px` | `--md-sys-typescale-title-large-size` |
+| `TitleTextBlockFontSize` | `fontSizeHero700` | `28px` / `28px` | `--md-sys-typescale-headline-medium-size` |
+| `TitleLargeTextBlockFontSize` | `fontSizeHero900` | `40px` / `40px` | `--md-sys-typescale-display-small-size` |
+| `DisplayTextBlockFontSize` | `fontSizeHero1000` | `68px` / `68px` | `--md-sys-typescale-display-large-size` |
+| `ControlFasterAnimationDuration` | `durationFaster` | `100ms` / `100ms` | `--md-sys-motion-duration-short2` |
+| `ControlFastAnimationDuration` | `durationFast` | `150ms` / `150ms` | `--md-sys-motion-duration-short3` |
+| `ControlNormalAnimationDuration` | `durationGentle` | `250ms` / `250ms` | `--md-sys-motion-duration-medium1` |
+| `ControlFastOutSlowInKeySpline` | `curveDecelerateMid` | `cubic-bezier(0,0,0,1)` / `cubic-bezier(0,0,0,1)` | `--md-sys-motion-easing-emphasized-decelerate` |
+
+### WinUI 3 natif depuis Bun
+
+`bun:winui` (`src/js/bun/winui.ts`, doc `docs/runtime/winui.mdx`) charge le Windows App Runtime installé et crée de vraies fenêtres XAML sur le thread JS. Les 11 contrôles marqués absents auparavant (TextBox, RichEditBox, PasswordBox, AutoSuggestBox, ComboBox, Pivot, MenuFlyout, CommandBar, CalendarDatePicker, TextBlock, CalendarView) sont chargés par `XamlReader.Load` dans `test/js/bun/winui/winui-window.fixture.ts`, qui vérifie l'arbre XAML, des propriétés et des événements. Exemple : [`packages/bun-webos/examples/winui-app`](../../../packages/bun-webos/examples/winui-app).
+
 ### Fenêtre et matériaux Windows
 
 - **Mica / Acrylic** : ce sont des matériaux d’arrière-plan de la fenêtre et du système Windows, pas des composants M3. Le backend natif Windows fournit le backdrop; le contenu transparent de la WebView laisse apparaître ce fond. Les surfaces de contenu M3 (`md-surface`, cartes et rôles `surface-container-*`) forment les couches au-dessus. Une couleur M3 opaque ou un `backdrop-filter` ne constitue pas Mica/Acrylic et ne doit pas être présenté comme tel. Mica est une couche de base; Microsoft recommande de ne l’appliquer qu’une fois et de garder transparents les niveaux qui doivent la laisser voir ([guide Mica](https://learn.microsoft.com/en-us/windows/apps/design/style/mica)).

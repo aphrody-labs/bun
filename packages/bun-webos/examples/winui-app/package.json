@@ -1,0 +1,13 @@
+{
+  "name": "@aphrody/bun-webos-winui-app",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "start": "bun main.ts"
+  },
+  "dependencies": {
+    "@aphrody/bun-fluent": "file:../../../bun-fluent",
+    "@aphrody/bun-windows-winrt": "file:../../../bun-windows-winrt"
+  }
+}

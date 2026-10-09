@@ -1,0 +1,123 @@
+---
+title: WinUI 3
+description: Open native WinUI 3 windows from Bun with bun:winui, load XAML, handle control events on the JS thread, and theme them with Fluent 2 tokens
+---
+
+`bun:winui` drives [WinUI 3](https://github.com/microsoft/microsoft-ui-xaml) (the Windows App SDK UI framework) from JavaScript. Bun loads the installed Windows App Runtime into the process, reads its `.winmd` metadata at run time and runs XAML on the JS thread. Every property, method and event of the WinUI controls can be reached this way, with no C#, no project file and no package identity.
+
+It is Windows-only. It needs the Windows App Runtime (1.4 or later) and the WinRT core `@aphrody/bun-windows-winrt`:
+
+```sh terminal icon="terminal"
+winget install Microsoft.WindowsAppRuntime.1.8
+bun add @aphrody/bun-windows-winrt
+```
+
+```ts app.ts icon="/icons/typescript.svg"
+import winui from "bun:winui";
+
+const app = winui.start();
+const win = app.createWindow({
+  title: "Hello",
+  width: 400,
+  height: 240,
+  content: `<StackPanel Padding="24" Spacing="12">
+    <TextBlock x:Name="label" Text="Hello WinUI"/>
+    <Button x:Name="ok" Content="OK" Style="{StaticResource AccentButtonStyle}"/>
+  </StackPanel>`,
+});
+
+win.find("ok")!.on("Click", () => win.find("label")!.set("Text", "Clicked"));
+await win.closed;
+```
+
+---
+
+## Runtime
+
+`winui.runtime()` adds the framework package to the process and describes it. On Windows 11 it uses dynamic dependencies (`TryCreatePackageDependency`/`AddPackageDependency`). Elsewhere it falls back to `MddBootstrapInitialize2` from `Microsoft.WindowsAppRuntime.Bootstrap.dll`, which you can point to with `bootstrapDll`. By default Bun tries 1.8, 1.7, 1.6, 1.5 and 1.4 in that order. Pass `version` or set `BUN_WINUI_VERSION` (a comma-separated list) to change that.
+
+```ts
+import winui from "bun:winui";
+
+if (!winui.isSupported()) console.log("no Windows App Runtime");
+winui.runtime({ version: "1.8" });
+// { version: "1.8", packageFamilyName: "Microsoft.WindowsAppRuntime.1.8_8wekyb3d8bbwe", path: "C:\\Program Files\\WindowsApps\\...", via: "dynamic-dependency", ... }
+```
+
+If no runtime is installed, it throws an error with `code: "ERR_WINUI_RUNTIME_NOT_FOUND"`. On any other platform the code is `ERR_WINUI_UNSUPPORTED`.
+
+## Application and windows
+
+`winui.start(options)` starts XAML on the current thread. It makes the thread a single-threaded apartment, creates a `DispatcherQueue`, the XAML `Application` (with the WinUI controls metadata provider) and `XamlControlsResources`, the Fluent styles of the controls. There is one application per process: later calls return the same one.
+
+| Option                   | Default         | Description                                             |
+| ------------------------ | --------------- | ------------------------------------------------------- |
+| `version`                | newest          | Windows App SDK release, such as `"1.8"`                |
+| `theme`                  | system          | `"light"` or `"dark"`                                   |
+| `resources`              | `true`          | load `XamlControlsResources`                            |
+| `exitOnLastWindowClosed` | `true`          | call `app.exit()` when the last window closes           |
+| `winrt`                  | `bun:windows`   | WinRT core to use instead of `@aphrody/bun-windows-winrt` |
+
+`app.createWindow({ title, width, height, content, activate })` creates a `Microsoft.UI.Xaml.Window`. The size is in device-independent pixels. `content` is either XAML markup or an element. The window exposes `hwnd`, `title`, `content`, `find(name)`, `resize()`, `activate()`, `close()` and the `closed` promise.
+
+Window messages are pumped from a timer, so the event loop stays free: `await`, `fetch`, `Bun.serve` and timers keep running while windows are open. Event listeners run on the JS thread. `app.exit()` closes the windows, removes the listeners and shuts XAML down for the thread.
+
+## XAML and elements
+
+`app.load(xaml)` is `XamlReader.Load`. Fragments that have no `xmlns` get the WinUI presentation namespace and `x:` added. `app.create("Button", { Content: "OK" })` creates an element by type name.
+
+Every XAML object is wrapped as an `Element`. Its members are resolved from the metadata of its runtime class and base classes:
+
+```ts
+const box = win.find("input")!;
+box.get("Text"); // property
+box.set("PlaceholderText", "Search"); // strings, numbers and booleans are boxed for Object members
+box.call("Focus", 3); // method (FocusState.Programmatic)
+const off = box.on("TextChanged", (sender, args) => console.log(sender!.get("Text")));
+off(); // removes the listener
+
+win.content!.append(`<ToggleSwitch x:Name="toggle"/>`); // Panel.Children
+win.content!.tree(); // { type: "StackPanel", children: [{ type: "TextBox", name: "input" }, ...] }
+win.find("ok")!.invoke(); // clicks through the automation peer
+```
+
+Collections typed `IVector<T>` (`Panel.Children`, `ItemsControl.Items`, `ResourceDictionary.MergedDictionaries`) have `GetAt`, `get_Size`, `Append`, `InsertAt`, `RemoveAt` and `Clear`:
+
+```ts
+win.find("list")!.get("Items").call("Append", "first item");
+```
+
+## Fluent 2 tokens
+
+`@aphrody/bun-fluent` carries the Fluent 2 design tokens of [microsoft/fluentui](https://github.com/microsoft/fluentui) (`packages/tokens`, MIT): colors, typography, radii, shadows and motion for the web light/dark and Teams themes. It exposes them as JS objects, as CSS custom properties, as a Tailwind v4 theme and as WinUI resources.
+
+```ts
+import { fluentWinuiResources } from "@aphrody/bun-fluent";
+
+// WinUI theme brushes (AccentFillColorDefaultBrush, TextFillColorPrimaryBrush, ...) set to the Fluent 2 web palette.
+app.application.get("Resources").get("MergedDictionaries").call("Append", app.load(fluentWinuiResources()));
+```
+
+For web UIs, `fluent:theme.css` plugs into `bun-plugin-tailwind` through `schemeImport`. It gives utilities such as `bg-fluent-brand-background`, `text-fluent-neutral-foreground-1`, `rounded-fluent-medium`, `shadow-fluent-8` and `fluent-body-1`:
+
+```ts build.ts icon="/icons/typescript.svg"
+import tailwind from "@aphrody/bun-plugin-tailwind";
+import { fluentPlugin, fluentSchemeImport } from "@aphrody/bun-fluent";
+
+await Bun.build({
+  entrypoints: ["./index.html"],
+  outdir: "dist",
+  plugins: [fluentPlugin(), tailwind({ schemeImport: fluentSchemeImport() })],
+});
+```
+
+```css style.css icon="file-code"
+@import "tailwindcss";
+@import "fluent:theme.css";
+```
+
+`winuiResources` maps each WinUI theme resource to its Fluent 2 token and Material 3 token. `docs/aphrody/merge/M-winui-m3.md` has the full table.
+
+## Example
+
+`packages/bun-webos/examples/winui-app` is a small notes window: XAML, a list, a theme switch and the Fluent brushes.

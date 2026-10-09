@@ -1,19 +1,19 @@
 import { describe, expect, test } from "bun:test";
-import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { bunEnv, bunExe, isWindows, tempDir } from "harness";
 
 const winrtCore = join(import.meta.dir, "../../../../packages/bun-windows-winrt/index.js");
 
-// The Windows App Runtime (WinUI 3) framework package, as installed by winget or the runtime installer.
+// A Windows App Runtime (WinUI 3) framework package loads. WindowsApps is not listable without admin rights.
 function hasWindowsAppRuntime() {
   if (!isWindows) return false;
-  try {
-    const dir = join(process.env.ProgramFiles ?? "C:\Program Files", "WindowsApps");
-    return readdirSync(dir).some(name => /^Microsoft\.WindowsAppRuntime\.1\.([4-9]|\d\d)_.*_x64__8wekyb3d8bbwe$/.test(name));
-  } catch {
-    return false;
-  }
+  const probe = Bun.spawnSync({
+    cmd: [bunExe(), "-e", `import w from "bun:winui"; process.exit(w.isSupported() ? 0 : 1)`],
+    env: bunEnv,
+    stdout: "ignore",
+    stderr: "ignore",
+  });
+  return probe.exitCode === 0;
 }
 
 function project() {
@@ -35,7 +35,15 @@ async function run(args: string[], cwd: string) {
 describe("bun:winui", () => {
   test("exports", async () => {
     const winui = (await import("bun:winui")).default;
-    expect(Object.keys(winui).sort()).toEqual(["Application", "Element", "Window", "app", "isSupported", "runtime", "start"]);
+    expect(Object.keys(winui).sort()).toEqual([
+      "Application",
+      "Element",
+      "Window",
+      "app",
+      "isSupported",
+      "runtime",
+      "start",
+    ]);
     expect(winui.app).toBeNull();
   });
 

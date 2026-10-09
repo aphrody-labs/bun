@@ -202,7 +202,10 @@ class Element {
     let className = object.className;
     try {
       const runtimeName = object.runtimeClassName;
-      if (app.winrt.registry.classes.has(runtimeName)) className = runtimeName;
+      const { classes, interfaces } = app.winrt.registry;
+      // A collection typed IVector<T> reports a base class (DependencyObject) that does not declare its members.
+      const typedByInterface = interfaces.has(className) && !classes.has(className);
+      if (classes.has(runtimeName) && !typedByInterface) className = runtimeName;
     } catch {}
     this.className = className;
     object.className = className;

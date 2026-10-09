@@ -1,0 +1,59 @@
+name: WinUI 3 and Fluent
+
+on:
+  push:
+    branches: [main]
+    paths:
+      [
+        "src/js/bun/winui.ts",
+        "packages/bun-windows-winrt/**",
+        "packages/bun-fluent/**",
+        "test/js/bun/winui/**",
+        "scripts/aphrody/winui-smoke.ts",
+        ".github/workflows/winui.yml",
+      ]
+  pull_request:
+    paths:
+      [
+        "src/js/bun/winui.ts",
+        "packages/bun-windows-winrt/**",
+        "packages/bun-fluent/**",
+        "test/js/bun/winui/**",
+        "scripts/aphrody/winui-smoke.ts",
+        ".github/workflows/winui.yml",
+      ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: winui-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  winui:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+        with:
+          bun-version: "1.4.3"
+      - name: Fluent 2 tokens and the WinUI -> Fluent -> M3 mapping
+        run: |
+          bun install --frozen-lockfile --cwd packages/bun-plugin-tailwind
+          bun test ./packages/bun-fluent/test
+      - name: Install the Windows App Runtime 1.8
+        shell: pwsh
+        run: |
+          $installer = "$env:RUNNER_TEMP\windowsappruntimeinstall-x64.exe"
+          Invoke-WebRequest https://aka.ms/windowsappsdk/1.8/latest/windowsappruntimeinstall-x64.exe -OutFile $installer
+          & $installer --quiet --force
+          if ($LASTEXITCODE -ne 0) { throw "Windows App Runtime installer exited with $LASTEXITCODE" }
+          Get-AppxPackage Microsoft.WindowsAppRuntime.1.8* | Select-Object -ExpandProperty PackageFullName
+      # Opens a real WinUI 3 window from src/js/bun/winui.ts on the runner's desktop session, checks its XAML
+      # tree, properties and events, and closes it.
+      - name: WinUI 3 window
+        run: bun scripts/aphrody/winui-smoke.ts
