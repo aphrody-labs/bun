@@ -11,6 +11,7 @@ manquantes côté Linux. Les recettes croisées Windows (`C:\aports\aphrody\ming
 bun scripts/aphrody/msys2-mirror.ts inventory --re   # relit C:\msys64, regénère msys2-inventory.json (~20 s)
 bun scripts/aphrody/msys2-mirror.ts verify           # vérifie chaque équivalent, taux de couverture
 bun scripts/aphrody/msys2-mirror.ts report           # regénère le tableau ci-dessous
+bun scripts/aphrody/msys2-mirror.ts shell            # analyse les scripts sh/bash MSYS2 avec Bun Shell
 ```
 
 - `msys2-inventory.json` : un objet par fichier (`path`, `env`, `pkg` propriétaire lu dans
@@ -60,11 +61,43 @@ mesure à part la reconstruction des PE ucrt64 : toolchain `C:\tools\llvm-mingw`
 `mingw-w64-*` pour crt/headers/gcc/binutils/winpthreads, recettes croisées `aphrody/mingw-w64/<nom>` (MS) pour le
 reste.
 
+## Scripts shell MSYS2 sous Bun Shell (`shell`)
+
+<!-- msys2-mirror:shell:begin -->
+Analyse syntaxique seule (`shellInternals.parse`, rien n'est exécuté) de 1343 scripts sh/bash de C:/msys64 par Bun Shell (`bun` 1.4.3) : 285 acceptés (21.2 %).
+
+| Famille | Scripts | Acceptés par Bun Shell |
+| --- | --- | --- |
+| msys sh/bash | 1276 | 270 (21.2 %) |
+| ucrt64 sh/bash | 52 | 12 (23.1 %) |
+| pacman install | 8 | 0 (0.0 %) |
+| etc/profile* | 7 | 3 (42.9 %) |
+
+| Erreur d'analyse (10 premières) | Scripts | Exemple |
+| --- | --- | --- |
+| Unexpected ')' | 818 | `etc/bash.bashrc` |
+| Unexpected token: '(' | 210 | `etc/profile.d/000-msys2.sh` |
+| Expected a conditional expression operator, but got: ]] | 14 | `usr/share/bash-completion/completions-fallback/airflow.bash` |
+| expected a command or assignment but got: "Redirect" | 4 | `ucrt64/lib/gcc/x86_64-w64-mingw32/16.2.0/install-tools/mkheaders` |
+| expected a command or assignment | 2 | `etc/profile.d/bash_completion.sh` |
+| Redirection with no file | 2 | `ucrt64/lib/p11-kit/trust-extract-compat` |
+| The shell argument must be a string without null bytes. Received "INTERPRETER_UN | 2 | `ucrt64/lib/python3.14/test/archivetestdata/exe_with_z64` |
+| Expected "then" but got: Eof | 1 | `ucrt64/bin/sqlite3_analyzer.sh` |
+| Unknown conditional expression operation: -x | 1 | `ucrt64/lib/python3.14/test/archivetestdata/header.sh` |
+| Background commands "&" are not supported yet. | 1 | `ucrt64/lib/tk8.6/demos/browse` |
+<!-- msys2-mirror:shell:end -->
+
 ## Statut
 
-- ⏳ Recettes Linux du fork pour les paquets absents d'Alpine 3.24 : `directx-headers`, `directxmath`, `jbigkit`,
-  `tre` (rétroportage d'edge testing).
-- ⏳ Rejeu des scripts shell MSYS2 (`/etc/profile`, `/etc/profile.d/*`, scripts `install` de pacman) sous bunsh et nu.
+- `verify` : 207 paquets, 207 couverts (100 %) ; Alpine Linux 100 %, Bun 28 %, reconstruction Windows 17,9 % ;
+  69 232 fichiers possédés et 1 416 PE couverts à 100 %.
+- ✅ Recettes Linux du fork pour les paquets absents d'Alpine 3.24 (aports `77978c6de99`, `ORDER` de
+  `publish.ts`) : `directx-headers` 1.619.5, `directxmath` 3.21b (+ `sal.h` de dotnet/runtime, comme vcpkg),
+  `jbigkit` 2.1, `tre` 0.9.0 (rétroportage d'aports master `testing/tre`, couvre `libtre` et `libsystre`).
+  Build de preuve `abuild -r` dans `alpine:3.24` x86_64 sur le VPS : les quatre au vert, tests amont compris.
+- ✅ Scripts shell MSYS2 : analysés par Bun Shell (section ci-dessus), sans exécution. Bun Shell (1.4.3) refuse
+  fonctions, `case`, `$(( ))`, `[[ -x ]]` et `&` : ces scripts restent à bash/bunsh POSIX (agent MS, lot MS-a).
+  `nu` n'est pas un interpréteur sh : pas de rejeu nu.
 - ⏳ Recettes croisées Windows : agent MS (`C:\aports\aphrody\mingw-w64\**`).
 
 <!-- msys2-mirror:table:begin -->
@@ -144,8 +177,8 @@ reste.
 | `mingw-w64-ucrt-x86_64-cc-libs` 16.2.0-4 | C++ Standard Library (mingw-w64) | ✅ main/gcc | ✅ C:/tools/llvm-mingw/bin/x86_64-w64-mingw32-clang.exe<br>✅ community/mingw-w64-gcc | — | ✅ |
 | `mingw-w64-ucrt-x86_64-crt` 14.0.0.r426.g4564ee4b5-1 | MinGW-w64 CRT for Windows (mingw-w64) | ✅ community/mingw-w64-crt | ✅ C:/tools/llvm-mingw/bin/x86_64-w64-mingw32-clang.exe<br>✅ community/mingw-w64-gcc | — | ✅ |
 | `mingw-w64-ucrt-x86_64-dbus` 1.16.2-4 | Freedesktop.org message bus system (mingw-w64) | ✅ main/dbus | ⏳ aphrody/mingw-w64/dbus | — | ✅ Linux / ⏳ Windows |
-| `mingw-w64-ucrt-x86_64-directx-headers` 1~1.619.5-1 | Official DirectX headers available under an open source license (mingw-w64) | ⏳ aphrody/directx-headers | ⏳ aphrody/mingw-w64/directx-headers | — | ⏳ |
-| `mingw-w64-ucrt-x86_64-directxmath` 3.20.b-1 | DirectXMath is an all inline SIMD C++ linear algebra library for use in games and graphics apps (mingw-w64) | ⏳ aphrody/directxmath | ⏳ aphrody/mingw-w64/directxmath | — | ⏳ |
+| `mingw-w64-ucrt-x86_64-directx-headers` 1~1.619.5-1 | Official DirectX headers available under an open source license (mingw-w64) | ✅ aphrody/directx-headers | ⏳ aphrody/mingw-w64/directx-headers | — | ✅ Linux / ⏳ Windows |
+| `mingw-w64-ucrt-x86_64-directxmath` 3.20.b-1 | DirectXMath is an all inline SIMD C++ linear algebra library for use in games and graphics apps (mingw-w64) | ✅ aphrody/directxmath | ⏳ aphrody/mingw-w64/directxmath | — | ✅ Linux / ⏳ Windows |
 | `mingw-w64-ucrt-x86_64-double-conversion` 3.4.0-1 | Binary-decimal and decimal-binary routines for IEEE doubles (mingw-w64) | ✅ community/double-conversion | ⏳ aphrody/mingw-w64/double-conversion | — | ✅ Linux / ⏳ Windows |
 | `mingw-w64-ucrt-x86_64-egl-headers` 1.5.r284.3ae2b7c-1 | EGL header files (mingw-w64) | ✅ main/mesa | ⏳ aphrody/mingw-w64/egl-headers | — | ✅ Linux / ⏳ Windows |
 | `mingw-w64-ucrt-x86_64-expat` 2.9.0-1 | An XML parser library (mingw-w64) | ✅ main/expat | ⏳ aphrody/mingw-w64/expat | — | ✅ Linux / ⏳ Windows |
@@ -166,14 +199,14 @@ reste.
 | `mingw-w64-ucrt-x86_64-gst-plugins-base` 1.28.7-1 | GStreamer Multimedia Framework Base Plugins (mingw-w64) | ✅ main/gst-plugins-base | ⏳ aphrody/mingw-w64/gst-plugins-base | — | ✅ Linux / ⏳ Windows |
 | `mingw-w64-ucrt-x86_64-gstreamer` 1.28.7-1 | GStreamer Multimedia Framework (mingw-w64) | ✅ main/gstreamer | ⏳ aphrody/mingw-w64/gstreamer | — | ✅ Linux / ⏳ Windows |
 | `mingw-w64-ucrt-x86_64-gtk-update-icon-cache` 3.24.52-1 | GTK+ icon cache updater (mingw-w64) | ✅ community/gtk+3.0 | ⏳ aphrody/mingw-w64/gtk-update-icon-cache | — | ✅ Linux / ⏳ Windows |
-| `mingw-w64-ucrt-x86_64-gtk4` 4.24.1-1 | GTK 4 (fixture test/js/bun/ffi/gtk-window.fixture.ts, agent UI) | ✅ community/gtk4.0 | ⏳ aphrody/mingw-w64/gtk4 | — | ✅ Linux / ⏳ Windows |
+| `mingw-w64-ucrt-x86_64-gtk4` 4.24.1-1 | GTK 4 (fixture test/js/bun/ffi/gtk-window.fixture.ts, agent UI) | ✅ community/gtk4.0 | ✅ aphrody/mingw-w64-gtk4 | — | ✅ |
 | `mingw-w64-ucrt-x86_64-harfbuzz` 14.6.0-1 | OpenType text shaping engine (mingw-w64) | ✅ main/harfbuzz | ⏳ aphrody/mingw-w64/harfbuzz | — | ✅ Linux / ⏳ Windows |
 | `mingw-w64-ucrt-x86_64-headers` 14.0.0.r426.g4564ee4b5-1 | MinGW-w64 headers for Windows (mingw-w64) | ✅ community/mingw-w64-headers | ✅ C:/tools/llvm-mingw/bin/x86_64-w64-mingw32-clang.exe<br>✅ community/mingw-w64-gcc | — | ✅ |
 | `mingw-w64-ucrt-x86_64-hicolor-icon-theme` 0.18-1 | Freedesktop.org Hicolor icon theme (mingw-w64) | ✅ main/hicolor-icon-theme | ⏳ aphrody/mingw-w64/hicolor-icon-theme | — | ✅ Linux / ⏳ Windows |
 | `mingw-w64-ucrt-x86_64-icu` 78.3-4 | International Components for Unicode library (mingw-w64) | ✅ main/icu | ✅ C:/Windows/System32/icu.dll | — | ✅ |
 | `mingw-w64-ucrt-x86_64-isl` 0.28-1 | Library for manipulating sets and relations of integer points bounded by linear constraints (mingw-w64) | ✅ main/isl26 | ✅ C:/tools/llvm-mingw/bin/x86_64-w64-mingw32-clang.exe<br>✅ community/mingw-w64-gcc | — | ✅ |
 | `mingw-w64-ucrt-x86_64-iso-codes` 4.20.1-1 | Lists of the country, language, and currency names (mingw-w64) | ✅ main/iso-codes | ⏳ aphrody/mingw-w64/iso-codes | — | ✅ Linux / ⏳ Windows |
-| `mingw-w64-ucrt-x86_64-jbigkit` 2.1-6 | Data compression library/utilities for bi-level high-resolution images (mingw-w64) | ⏳ aphrody/jbigkit | ⏳ aphrody/mingw-w64/jbigkit | — | ⏳ |
+| `mingw-w64-ucrt-x86_64-jbigkit` 2.1-6 | Data compression library/utilities for bi-level high-resolution images (mingw-w64) | ✅ aphrody/jbigkit | ⏳ aphrody/mingw-w64/jbigkit | — | ✅ Linux / ⏳ Windows |
 | `mingw-w64-ucrt-x86_64-json-glib` 1.10.8-2 | JSON-GLib implements a full suite of JSON-related tools using GLib and GObject (mingw-w64) | ✅ community/json-glib | ⏳ aphrody/mingw-w64/json-glib | — | ✅ Linux / ⏳ Windows |
 | `mingw-w64-ucrt-x86_64-karchive` 6.30.0-1 | Qt addon providing access to numerous types of archives (mingw-w64) | ✅ community/karchive | ⏳ aphrody/mingw-w64/karchive | — | ✅ Linux / ⏳ Windows |
 | `mingw-w64-ucrt-x86_64-kcodecs` 6.30.0-1 | Provide a collection of methods to manipulate strings using various encodings (mingw-w64) | ✅ community/kcodecs | ⏳ aphrody/mingw-w64/kcodecs | — | ✅ Linux / ⏳ Windows |
@@ -204,12 +237,12 @@ reste.
 | `mingw-w64-ucrt-x86_64-libquadmath` 16.2.0-4 | GCC Quad-Precision Math Runtime Library (mingw-w64) | ✅ main/gcc | ✅ C:/tools/llvm-mingw/bin/x86_64-w64-mingw32-clang.exe<br>✅ community/mingw-w64-gcc | — | ✅ |
 | `mingw-w64-ucrt-x86_64-librsvg` 2.63.2-1 | SVG rendering library (mingw-w64) | ✅ community/librsvg | ⏳ aphrody/mingw-w64/librsvg | — | ✅ Linux / ⏳ Windows |
 | `mingw-w64-ucrt-x86_64-libstdc++` 16.2.0-4 | C++ runtime libraries shipped by GCC (mingw-w64) | ✅ main/gcc | ✅ C:/tools/llvm-mingw/bin/x86_64-w64-mingw32-clang.exe<br>✅ community/mingw-w64-gcc | — | ✅ |
-| `mingw-w64-ucrt-x86_64-libsystre` 1.0.2-3 | Wrapper library around TRE that provides POSIX API (mingw-w64) | ⏳ aphrody/tre<br>✅ main/musl | ⏳ aphrody/mingw-w64/libsystre | — | ✅ Linux / ⏳ Windows |
+| `mingw-w64-ucrt-x86_64-libsystre` 1.0.2-3 | Wrapper library around TRE that provides POSIX API (mingw-w64) | ✅ aphrody/tre<br>✅ main/musl | ⏳ aphrody/mingw-w64/libsystre | — | ✅ Linux / ⏳ Windows |
 | `mingw-w64-ucrt-x86_64-libtasn1` 4.21.0-1 | A library for Abstract Syntax Notation One (ASN.1) and Distinguish Encoding Rules (DER) manipulation (mingw-w64) | ✅ main/libtasn1 | ⏳ aphrody/mingw-w64/libtasn1 | — | ✅ Linux / ⏳ Windows |
 | `mingw-w64-ucrt-x86_64-libthai` 0.1.30-1 | Thai language support routines (mingw-w64) | ✅ community/libthai | ⏳ aphrody/mingw-w64/libthai | — | ✅ Linux / ⏳ Windows |
 | `mingw-w64-ucrt-x86_64-libtheora` 1.2.0-1 | An open video codec developed by the Xiph.org (mingw-w64) | ✅ main/libtheora | ⏳ aphrody/mingw-w64/libtheora | — | ✅ Linux / ⏳ Windows |
 | `mingw-w64-ucrt-x86_64-libtiff` 4.7.2-1 | Library for manipulation of TIFF images (mingw-w64) | ✅ main/tiff | ⏳ aphrody/mingw-w64/libtiff | — | ✅ Linux / ⏳ Windows |
-| `mingw-w64-ucrt-x86_64-libtre` 0.9.0-2 | The approximate regex matching library and agrep command line tool (mingw-w64) | ⏳ aphrody/tre<br>✅ main/musl | ⏳ aphrody/mingw-w64/libtre | — | ✅ Linux / ⏳ Windows |
+| `mingw-w64-ucrt-x86_64-libtre` 0.9.0-2 | The approximate regex matching library and agrep command line tool (mingw-w64) | ✅ aphrody/tre<br>✅ main/musl | ⏳ aphrody/mingw-w64/libtre | — | ✅ Linux / ⏳ Windows |
 | `mingw-w64-ucrt-x86_64-libunistring` 1.4.2-1 | Library for manipulating Unicode strings and C strings. (mingw-w64) | ✅ main/libunistring | ⏳ aphrody/mingw-w64/libunistring | ✅ src/runtime/webcore/encoding.rs | ✅ Linux / ⏳ Windows |
 | `mingw-w64-ucrt-x86_64-libva` 2.24.1-1 | Video Acceleration (VA) API (mingw-w64) | ✅ main/libva | ⏳ aphrody/mingw-w64/libva | — | ✅ Linux / ⏳ Windows |
 | `mingw-w64-ucrt-x86_64-libvorbis` 1.3.7-3 | Vorbis codec library (mingw-w64) | ✅ main/libvorbis | ⏳ aphrody/mingw-w64/libvorbis | — | ✅ Linux / ⏳ Windows |

@@ -4,6 +4,7 @@
 //   bun scripts/aphrody/msys2-mirror.ts inventory [--root C:/msys64] [--re]   regénère msys2-inventory.json
 //   bun scripts/aphrody/msys2-mirror.ts verify [--json] [--min <pct>]       vérifie chaque équivalent, taux de couverture
 //   bun scripts/aphrody/msys2-mirror.ts report                              regénère le tableau de M-msys2-mirror.md
+//   bun scripts/aphrody/msys2-mirror.ts shell [--root C:/msys64]            scripts sh/bash MSYS2 analysés par Bun Shell
 //
 // L'inventaire lit C:/msys64 en lecture seule : paquets (var/lib/pacman/local/*/desc|files), et pour chaque
 // fichier l'environnement, le paquet propriétaire, le type, le sha256 et, pour les PE, l'arch, le
@@ -58,7 +59,14 @@ export interface Inventory {
   generated: string;
   root: string;
   installer: { version: string | null; source: string };
-  totals: { packages: number; files: number; bytes: number; pe: number; peMsys: number; unowned: number };
+  totals: {
+    packages: number;
+    files: number;
+    bytes: number;
+    pe: number;
+    peMsys: number;
+    unowned: number;
+  };
   byEnv: Record<string, { packages: number; files: number; bytes: number; pe: number }>;
   windows: WindowsFootprint;
   packages: InventoryPackage[];
@@ -68,7 +76,12 @@ export interface Inventory {
 export interface WindowsFootprint {
   source: string;
   environment: { scope: string; name: string; mentionsMsys: boolean }[];
-  uninstall: { key: string; displayName: string; displayVersion: string; installLocation: string }[];
+  uninstall: {
+    key: string;
+    displayName: string;
+    displayVersion: string;
+    installLocation: string;
+  }[];
   shortcuts: string[];
   launchers: string[];
 }
@@ -130,7 +143,12 @@ interface PeInfo {
   dlls: string[];
 }
 
-const MACHINES: Record<number, string> = { 0x8664: "x86_64", 0x14c: "i386", 0xaa64: "aarch64", 0x1c4: "arm" };
+const MACHINES: Record<number, string> = {
+  0x8664: "x86_64",
+  0x14c: "i386",
+  0xaa64: "aarch64",
+  0x1c4: "arm",
+};
 const SUBSYSTEMS: Record<number, string> = {
   1: "native",
   2: "gui",
@@ -430,7 +448,10 @@ async function inventory(root: string, useRe: boolean) {
   const inv: Inventory = {
     generated: new Date().toISOString(),
     root: root.replaceAll("\\", "/"),
-    installer: { version: /<Version>(\d+)<\/Version>/.exec(comps)?.[1] ?? null, source: "components.xml" },
+    installer: {
+      version: /<Version>(\d+)<\/Version>/.exec(comps)?.[1] ?? null,
+      source: "components.xml",
+    },
     totals: {
       packages: packages.length,
       files: files.length,
@@ -594,6 +615,83 @@ function verify(asJson: boolean, min: number | null) {
   if (min !== null && result.coverage < min) process.exit(1);
 }
 
+const SH_INTERPS = new Set(["sh", "bash", "dash", "ash"]);
+
+function shellScripts(inv: Inventory): { path: string; kind: string }[] {
+  const out: { path: string; kind: string }[] = [];
+  for (const f of inv.files) {
+    if (/^var\/lib\/pacman\/local\/[^/]+\/install$/.test(f.path)) out.push({ path: f.path, kind: "pacman install" });
+    else if (/^etc\/(profile|bash\.bashrc|bash\.bash_logout|profile\.d\/[^/]+\.sh)$/.test(f.path))
+      out.push({ path: f.path, kind: "etc/profile*" });
+    else if (f.type === "script" && (f.interp ? SH_INTERPS.has(f.interp) : /\.(sh|bash)$/i.test(f.path)))
+      out.push({ path: f.path, kind: `${f.env} sh/bash` });
+  }
+  return out;
+}
+
+// Parse only (bun:internal-for-testing shellInternals.parse): nothing from C:/msys64 is executed.
+async function shell(root: string) {
+  if (!process.env.BUN_FEATURE_FLAG_INTERNAL_FOR_TESTING) {
+    const proc = Bun.spawn([process.execPath, import.meta.path, "shell", "--root", root], {
+      env: {
+        ...process.env,
+        BUN_GARBAGE_COLLECTOR_LEVEL: "0",
+        BUN_FEATURE_FLAG_INTERNAL_FOR_TESTING: "1",
+      },
+      stdio: ["ignore", "inherit", "inherit"],
+    });
+    process.exit(await proc.exited);
+  }
+  const { shellInternals } = require("bun:internal-for-testing");
+  const inv: Inventory = JSON.parse(readFileSync(INVENTORY, "utf8"));
+  const byKind = new Map<string, { total: number; ok: number }>();
+  const errors = new Map<string, { n: number; example: string }>();
+  for (const { path, kind } of shellScripts(inv)) {
+    const text = readFileSync(join(root, path), "utf8").replace(/^#![^\n]*\n/, "");
+    const k = byKind.get(kind) ?? { total: 0, ok: 0 };
+    byKind.set(kind, k);
+    k.total++;
+    try {
+      shellInternals.parse(Object.assign([text], { raw: [text] }));
+      k.ok++;
+    } catch (e) {
+      const msg = String((e as Error).message ?? e)
+        .split("\n", 1)[0]
+        .slice(0, 80);
+      const err = errors.get(msg) ?? { n: 0, example: path };
+      err.n++;
+      errors.set(msg, err);
+    }
+  }
+  const total = [...byKind.values()].reduce((a, k) => a + k.total, 0);
+  const ok = [...byKind.values()].reduce((a, k) => a + k.ok, 0);
+  const pct = (a: number, b: number) => (b ? ((100 * a) / b).toFixed(1) : "0.0");
+  const lines = [
+    `Analyse syntaxique seule (\`shellInternals.parse\`, rien n'est exécuté) de ${total} scripts sh/bash de C:/msys64 par Bun Shell (\`bun\` ${Bun.version}) : ${ok} acceptés (${pct(ok, total)} %).`,
+    "",
+    "| Famille | Scripts | Acceptés par Bun Shell |",
+    "| --- | --- | --- |",
+    ...[...byKind]
+      .sort((a, b) => b[1].total - a[1].total)
+      .map(([kind, k]) => `| ${kind} | ${k.total} | ${k.ok} (${pct(k.ok, k.total)} %) |`),
+    "",
+    "| Erreur d'analyse (10 premières) | Scripts | Exemple |",
+    "| --- | --- | --- |",
+    ...[...errors]
+      .sort((a, b) => b[1].n - a[1].n)
+      .slice(0, 10)
+      .map(([m, e]) => `| ${m.replaceAll("|", "\\|").replaceAll("`", "'")} | ${e.n} | \`${e.example}\` |`),
+  ].join("\n");
+  const md = readFileSync(REPORT_MD, "utf8");
+  const begin = "<!-- msys2-mirror:shell:begin -->";
+  const end = "<!-- msys2-mirror:shell:end -->";
+  const a = md.indexOf(begin);
+  const b = md.indexOf(end);
+  if (a < 0 || b < 0) throw new Error(`marqueurs ${begin}/${end} absents de ${REPORT_MD}`);
+  await Bun.write(REPORT_MD, md.slice(0, a + begin.length) + "\n" + lines + "\n" + md.slice(b));
+  console.log(`shell : ${ok}/${total} scripts acceptés (${pct(ok, total)} %)`);
+}
+
 function report() {
   const inv: Inventory = JSON.parse(readFileSync(INVENTORY, "utf8"));
   const vs = verdicts(inv);
@@ -639,9 +737,10 @@ if (import.meta.main) {
   if (cmd === "inventory") await inventory(flag("--root") ?? "C:/msys64", args.includes("--re"));
   else if (cmd === "verify") verify(args.includes("--json"), flag("--min") === null ? null : Number(flag("--min")));
   else if (cmd === "report") report();
+  else if (cmd === "shell") await shell(flag("--root") ?? "C:/msys64");
   else {
     console.error(
-      "usage: msys2-mirror.ts [inventory [--root C:/msys64] [--re] | verify [--json] [--min <pct>] | report]",
+      "usage: msys2-mirror.ts [inventory [--root C:/msys64] [--re] | verify [--json] [--min <pct>] | report | shell [--root C:/msys64]]",
     );
     process.exit(2);
   }
