@@ -3395,6 +3395,42 @@ mod tests {
 thread_local! {
     /// Plugins registered with `expect.addSnapshotSerializer()`; the last one added is tried first.
     static SNAPSHOT_SERIALIZERS: core::cell::RefCell<Vec<bun_jsc::Strong>> = const { core::cell::RefCell::new(Vec::new()) };
+    /// How many entries at the end of `VirtualMachine::preload` come from bunfig `[test] snapshotSerializers`.
+    static SNAPSHOT_SERIALIZER_PRELOADS: Cell<usize> = const { Cell::new(0) };
+}
+
+pub(crate) fn set_snapshot_serializer_preloads(count: usize) {
+    SNAPSHOT_SERIALIZER_PRELOADS.set(count);
+}
+
+pub(crate) fn snapshot_serializer_preloads() -> usize {
+    SNAPSHOT_SERIALIZER_PRELOADS.get()
+}
+
+/// Under `--isolate` every file gets a fresh global and its preloads run again.
+pub(crate) fn clear_snapshot_serializers() {
+    SNAPSHOT_SERIALIZERS.with_borrow_mut(Vec::clear);
+}
+
+/// Registers a loaded `[test] snapshotSerializers` module: its default export, or the
+/// namespace itself when it exports `test` and `serialize`/`print` directly (vitest accepts both).
+pub(crate) fn register_snapshot_serializer_module(
+    global: &JSGlobalObject,
+    namespace: JSValue,
+    specifier: &[u8],
+) -> JsResult<()> {
+    let plugin = match namespace.get(global, "default")? {
+        Some(default) if default.is_object() => default,
+        _ => namespace,
+    };
+    if !plugin.is_object() || plugin.get_function(global, "test")?.is_none() {
+        return Err(global.throw_invalid_arguments(format_args!(
+            "snapshotSerializers: {} must export a serializer with a test() function",
+            bun_core::fmt::format_json_string_latin1(specifier),
+        )));
+    }
+    SNAPSHOT_SERIALIZERS.with_borrow_mut(|list| list.push(bun_jsc::Strong::create(plugin, global)));
+    Ok(())
 }
 
 /// Formats `value` for a snapshot, through the first registered serializer whose `test()` accepts it.

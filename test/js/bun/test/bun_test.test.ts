@@ -416,7 +416,12 @@ async function runTestDir(files: Record<string, string>, ...args: string[]) {
   for (const file of new Bun.Glob("**/__snapshots__/*.snap").scanSync(String(dir))) {
     snapshots[file.replaceAll("\\", "/")] = await Bun.file(`${dir}/${file}`).text();
   }
-  return { stdout: normalizeBunSnapshot(stdout, dir), stderr: normalizeBunSnapshot(stderr, dir), exitCode, snapshots };
+  return {
+    stdout: normalizeBunSnapshot(stdout, dir),
+    stderr: normalizeBunSnapshot(stderr, dir),
+    exitCode,
+    snapshots,
+  };
 }
 
 test.concurrent("vitest: test context exposes expect, task, signal, skip and per-test hooks", async () => {
@@ -567,4 +572,49 @@ test.concurrent("expect.addSnapshotSerializer() with serialize() and print() plu
   });
   expect(stderr).toContain("1 pass");
   expect(exitCode).toBe(0);
+});
+
+test.concurrent.each([{ args: [] as string[] }, { args: ["--isolate"] }])(
+  "bunfig [test] snapshotSerializers $args",
+  async ({ args }) => {
+    const serializerTest = (name: string) => `
+      import { test, expect } from "bun:test";
+      test("${name}", () => {
+        expect("secret:hunter2").toMatchInlineSnapshot(\`"<redacted>"\`);
+        expect({ raw: "value" }).toMatchInlineSnapshot(\`RAW value\`);
+        expect("plain").toMatchInlineSnapshot(\`"plain"\`);
+      });
+    `;
+    const { stderr, exitCode } = await runTestDir(
+      {
+        "bunfig.toml": `[test]\nsnapshotSerializers = ["./redact.ts", "./serializers/raw.js"]\n`,
+        "redact.ts": `
+        export default {
+          test: (val: unknown) => typeof val === "string" && val.startsWith("secret:"),
+          serialize: (val, config, indentation, depth, refs, printer) => printer("<redacted>", config, indentation, depth, refs),
+        };
+      `,
+        "serializers/raw.js": `
+        export const test = val => typeof val === "object" && val !== null && "raw" in val;
+        export const print = val => "RAW " + val.raw;
+      `,
+        "a.test.ts": serializerTest("a"),
+        "b.test.ts": serializerTest("b"),
+      },
+      ...args,
+    );
+    expect(stderr).toContain("2 pass");
+    expect(stderr).toContain("0 fail");
+    expect(exitCode).toBe(0);
+  },
+);
+
+test.concurrent("bunfig [test] snapshotSerializers rejects a module without test()", async () => {
+  const { stderr, exitCode } = await runTestDir({
+    "bunfig.toml": `[test]\nsnapshotSerializers = "./bad.ts"\n`,
+    "bad.ts": `export default { print: () => "x" };`,
+    "a.test.ts": `import { test } from "bun:test"; test("a", () => {});`,
+  });
+  expect(stderr).toContain(`snapshotSerializers: "./bad.ts" must export a serializer with a test() function`);
+  expect(exitCode).not.toBe(0);
 });

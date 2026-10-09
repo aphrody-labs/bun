@@ -222,6 +222,15 @@ pathIgnorePatterns = ["vendor/**", "submodules/**", "fixtures/**"]
 
 Equivalent CLI flag: `--path-ignore-patterns`. CLI flags override the `bunfig.toml` value entirely.
 
+### `test.snapshotSerializers`
+
+Modules whose default export (or the module itself) is a Jest/Vitest snapshot serializer, an object with `test()` and either `serialize()` or `print()`. They load after `test.preload` and are registered as if passed to `expect.addSnapshotSerializer()`. Paths resolve like `test.preload`.
+
+```toml title="bunfig.toml" icon="settings"
+[test]
+snapshotSerializers = ["./test/serializers/date.ts"]
+```
+
 ### `test.smol`
 
 Same as the top-level `smol` field, but only applies to `bun test`.

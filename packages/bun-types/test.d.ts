@@ -626,6 +626,56 @@ declare module "bun:test" {
 
   type ExpectNot = Omit<AsymmetricMatchers, keyof AsymmetricMatchersBuiltin> & AsymmetricMatchersBuiltinNegated;
 
+  /**
+   * Options passed to {@link NewSnapshotSerializer.serialize}.
+   */
+  export interface SnapshotSerializerConfig {
+    indent: string;
+    plugins: SnapshotSerializer[];
+  }
+
+  /**
+   * Formats a nested value with the registered serializers and the default snapshot format.
+   */
+  export type SnapshotPrinter = (value: unknown, ...rest: unknown[]) => string;
+
+  /**
+   * A snapshot serializer in the `serialize()` form (pretty-format `NewPlugin`).
+   */
+  export interface NewSnapshotSerializer {
+    test(value: any): boolean;
+    serialize(
+      value: any,
+      config: SnapshotSerializerConfig,
+      indentation: string,
+      depth: number,
+      refs: unknown[],
+      printer: SnapshotPrinter,
+    ): string;
+  }
+
+  /**
+   * A snapshot serializer in the legacy `print()` form (pretty-format `OldPlugin`).
+   */
+  export interface OldSnapshotSerializer {
+    test(value: any): boolean;
+    print(value: any, serialize: SnapshotPrinter, indent: (text: string) => string): string;
+  }
+
+  export type SnapshotSerializer = NewSnapshotSerializer | OldSnapshotSerializer;
+
+  /**
+   * The value returned by `expect.getState()`.
+   */
+  export interface ExpectState {
+    assertionCalls: number;
+    expectedAssertionsNumber: number | null;
+    isExpectingAssertions: boolean;
+    testPath: string | undefined;
+    currentTestName: string | undefined;
+    [key: string]: unknown;
+  }
+
   export interface Expect extends AsymmetricMatchers {
     // the `expect()` callable signature
     /**
@@ -715,6 +765,37 @@ declare module "bun:test" {
      * ```
      */
     unreachable(msg?: string | Error): never;
+
+    /**
+     * Register a Jest/Vitest snapshot serializer used by `toMatchSnapshot()`,
+     * `toMatchInlineSnapshot()` and their `toThrowError*` variants. The serializer
+     * added last is tried first.
+     *
+     * Serializers can also be listed in `bunfig.toml`, where each module's default
+     * export (or the module itself) is registered before the tests run:
+     *
+     * ```toml
+     * [test]
+     * snapshotSerializers = ["./test/serializer.ts"]
+     * ```
+     *
+     * @example
+     * expect.addSnapshotSerializer({
+     *   test: value => value instanceof Date,
+     *   serialize: (value, config, indentation, depth, refs, printer) => `Date<${value.toISOString()}>`,
+     * });
+     */
+    addSnapshotSerializer(serializer: SnapshotSerializer): void;
+
+    /**
+     * The running test's state, as in Jest and Vitest, merged with the values passed to {@link Expect.setState}.
+     */
+    getState(): ExpectState;
+
+    /**
+     * Merge custom values into the state returned by {@link Expect.getState}.
+     */
+    setState(state: Partial<ExpectState>): void;
 
     /**
      * Ensures that an assertion is made
