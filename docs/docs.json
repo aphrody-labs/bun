@@ -72,6 +72,9 @@
               "/runtime/index",
               "/runtime/watch-mode",
               "/runtime/check",
+              "/runtime/lint",
+              "/runtime/fmt",
+              "/runtime/n2b",
               "/runtime/debugger",
               "/runtime/repl",
               "/runtime/bunfig",
@@ -266,6 +269,11 @@
             "group": "Single File Executable",
             "icon": "binary",
             "pages": ["/bundler/executables"]
+          },
+          {
+            "group": "WebAssembly",
+            "icon": "cpu",
+            "pages": ["/bundler/wasm"]
           },
           {
             "group": "Extensions",

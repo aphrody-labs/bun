@@ -1,0 +1,52 @@
+---
+title: "Migrate from Node.js"
+description: "Find and rewrite Node.js APIs that have a Bun equivalent with bun n2b, and migrate a project with bun migrate"
+---
+
+`bun n2b` scans a project for Node.js APIs that have a faster or simpler Bun equivalent, such as `fs.readFile` for `Bun.file().text()` or `child_process` for `Bun.spawn`, and can rewrite them. `bun migrate` moves a whole Node.js project to Bun.
+
+```bash terminal icon="terminal"
+bun n2b
+```
+
+Each finding has a rule, a severity, a message and, when one exists, the replacement code.
+
+## Rewrite code
+
+```bash terminal icon="terminal"
+# apply the safe rewrites
+bun n2b --fix
+
+# also apply the rewrites that change behavior in edge cases
+bun n2b --aggressive
+```
+
+## Reports
+
+```bash terminal icon="terminal"
+bun n2b --report=json > n2b.json
+bun n2b --report=jsonl
+```
+
+[`bun lint`](/runtime/lint) runs the same rules beside oxlint and merges the findings into one report, so most projects only need `bun lint` and `bun lint --fix`.
+
+## Migrate a project
+
+`bun migrate` applies every n2b rewrite, converts pnpm workspaces, catalogs and overrides to `package.json`, removes the other lockfiles and runs `bun install`.
+
+```bash terminal icon="terminal"
+# print the migration plan and change nothing
+bun migrate --dry-run
+
+bun migrate
+```
+
+`bun migrate` is the same as `bun n2b migrate`.
+
+## How n2b is installed
+
+n2b is not part of the `bun` binary. The first `bun n2b`, `bun migrate` or `bun lint` downloads a pinned version of `@aphrody/bun-plugin-n2b` with [`bun x`](/pm/bunx) and caches it.
+
+`bun n2b --help` lists every n2b command and flag.
+
+If `package.json` has an `n2b` or `migrate` script, `bun n2b` or `bun migrate` runs that script. Inside the script, the name is the command.

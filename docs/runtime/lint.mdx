@@ -1,0 +1,126 @@
+---
+title: "Linting"
+description: "Lint JavaScript and TypeScript with bun lint: oxlint plus the Node.js-to-Bun rules"
+---
+
+`bun lint` lints JavaScript and TypeScript with [oxlint](https://oxc.rs/docs/guide/usage/linter) and adds the Node.js-to-Bun rules of [n2b](/runtime/n2b), which report Node.js APIs that have a faster Bun equivalent.
+
+```bash terminal icon="terminal"
+bun lint
+```
+
+```txt
+src/index.ts:3:7 warning eslint(no-unused-vars) Variable 'x' is declared but never used.
+src/fs.ts:1:1 warning n2b(node-fs-readfile) Use Bun.file(path).text() instead of fs.readFile
+  help: const text = await Bun.file(path).text();
+n2b: 0 error(s), 1 warning(s)
+```
+
+`bun lint` exits with code `1` if it finds an error, and `0` otherwise. Pass `--deny-warnings` to fail on warnings too.
+
+With no paths, oxlint lints the working directory. Pass files or directories to lint only those.
+
+```bash terminal icon="terminal"
+bun lint src test
+```
+
+## How oxlint is installed
+
+oxlint is not part of the `bun` binary. The first `bun lint` downloads a pinned version with [`bun x`](/pm/bunx) and caches it, so later runs start immediately and work offline. `bun lint` uses `node_modules/.bin/oxlint` instead when the project installs oxlint itself.
+
+To use another version, set `version` in `bunfig.toml` or install `oxlint` in the project.
+
+## Fix problems
+
+`--fix` applies the safe fixes of oxlint and n2b.
+
+```bash terminal icon="terminal"
+bun lint --fix
+```
+
+## Lint only changed files
+
+`--since` lints the files changed since a git ref, plus staged, unstaged and untracked files.
+
+```bash terminal icon="terminal"
+bun lint --since=main
+```
+
+## Workspaces
+
+`--workspaces` lints every package listed in the `workspaces` field of `package.json`. `--filter` lints the packages whose name or path matches.
+
+```bash terminal icon="terminal"
+bun lint --workspaces
+bun lint --filter 'packages/*'
+```
+
+## Output formats
+
+`--format` selects the reporter: `default`, `json`, `sarif`, `github`, `stylish`, `unix`, `checkstyle`, `junit` or `gitlab`. In `json` and `sarif` output, the n2b findings are merged into the oxlint report, so one file holds every diagnostic.
+
+```bash terminal icon="terminal"
+bun lint --format=sarif > lint.sarif
+```
+
+## Configure
+
+`bun lint` reads `.oxlintrc.json` the same way oxlint does. See the [oxlint configuration reference](https://oxc.rs/docs/guide/usage/linter/config) for rules, plugins and overrides.
+
+```json .oxlintrc.json icon="file-json"
+{
+  "plugins": ["typescript", "unicorn", "import"],
+  "rules": {
+    "no-console": "warn"
+  },
+  "ignorePatterns": ["dist/**"]
+}
+```
+
+Project defaults go in the `[lint]` section of [`bunfig.toml`](/runtime/bunfig).
+
+```toml bunfig.toml icon="settings"
+[lint]
+# oxlint configuration file
+config = ".oxlintrc.json"
+# paths linted when none are given
+paths = ["src", "test"]
+# glob patterns to skip
+ignore = ["dist/**"]
+# run the n2b rules (default: true)
+n2b = true
+# more oxlint arguments
+args = ["--deny-warnings"]
+# oxlint version to download
+version = "1.87.0"
+```
+
+## Flags
+
+| Flag                   | Description                                                                 |
+| ---------------------- | --------------------------------------------------------------------------- |
+| `--fix`                | Apply safe fixes                                                            |
+| `-f`, `--format`       | Reporter: `default`, `json`, `sarif`, `github`, `stylish`, `unix`, and more |
+| `--since=<ref>`        | Only files changed since a git ref                                          |
+| `--workspaces`         | Lint every workspace package                                                |
+| `--filter=<pattern>`   | Lint the workspace packages whose name or path matches                      |
+| `-c`, `--config=<path>` | oxlint configuration file                                                  |
+| `--no-n2b`             | Skip the n2b rules                                                          |
+| `--n2b-only`           | Run only the n2b rules                                                      |
+| `--deny-warnings`      | Exit with code `1` on warnings                                              |
+
+Every other flag goes to oxlint, for example `-D correctness -A no-console` or `--type-aware`.
+
+## `package.json` scripts
+
+If `package.json` has a `lint` script, `bun lint` runs that script, as it did before `bun lint` existed. Inside the script, `bun lint` is the command:
+
+```json package.json icon="file-json"
+{
+  "scripts": {
+    "lint": "bun lint --deny-warnings"
+  }
+}
+```
+
+To format code, use [`bun fmt`](/runtime/fmt).

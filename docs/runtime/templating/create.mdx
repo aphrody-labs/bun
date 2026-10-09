@@ -148,6 +148,42 @@ Bun then:
 
 <Note>By default Bun does _not overwrite_ existing files. Use the `--force` flag to overwrite them.</Note>
 
+## From the Aphrody stack
+
+`bun create aphrody/<template>` composes a project from the [Aphrody](https://github.com/aphrody-labs/aphrody) stack templates. Join templates with `+`. The `base` layer (Bun server, SQLite, server-sent events, tests) is always included; layers apply in order and a later file replaces an earlier one.
+
+```bash terminal icon="terminal"
+bun create aphrody/web my-app
+bun create aphrody/react+desktop my-app
+bun create aphrody/hono my-api
+```
+
+| Template  | Adds                                                        | Group     |
+| --------- | ----------------------------------------------------------- | --------- |
+| `base`    | Bun server, runtime SDK, SQLite, SSE, dev loop, tests       | always    |
+| `web`     | HTML-bundle frontend served by the same server              | frontend  |
+| `react`   | React 19 and Material 3 web components on the HTML bundler  | frontend  |
+| `desktop` | Tauri 3 desktop shell                                       |           |
+| `hono`    | Hono HTTP surface                                           | framework |
+| `elysia`  | Elysia HTTP surface                                         | framework |
+
+Pick at most one template of each group. `bun create aphrody --list` prints the templates.
+
+The templates live in `m3/templates` of an Aphrody checkout, described by its `stack.toml`. Bun looks for them in this order:
+
+1. `--templates <dir>`
+2. `$BUN_CREATE_APHRODY_DIR`
+3. `$YOLO_HOME/m3/templates`
+4. `m3/templates` in the working directory or one of its parents
+5. `$BUN_CREATE_DIR/aphrody`, then `~/.bun-create/aphrody`
+
+| Flag                | Description                                                        |
+| ------------------- | ------------------------------------------------------------------ |
+| `--name=<name>`     | Package name. Defaults to the directory name                       |
+| `--templates=<dir>` | Directory containing `stack.toml`                                  |
+| `--aphrody=<dir>`   | Aphrody checkout the project links to. Defaults to the one holding the templates |
+| `--list`            | List the templates                                                 |
+
 ## From a local template
 
 <Warning>

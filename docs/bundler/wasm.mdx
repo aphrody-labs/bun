@@ -1,0 +1,129 @@
+---
+title: "WebAssembly from Rust"
+description: "Build Rust crates into WebAssembly ES modules with bun wasm build, bun build --target=wasm and bun:wasm"
+---
+
+Bun builds a Rust crate into a WebAssembly package that you import like any ES module. It runs `cargo build` for a `wasm32` target, then `wasm-bindgen`, `wasm-opt` and writes the `.js`, `.d.ts`, `.wasm` and `package.json` files. It replaces `wasm-pack`.
+
+```bash terminal icon="terminal"
+bun wasm build ./crates/hello --outdir ./pkg
+```
+
+```ts index.ts icon="/icons/typescript.svg"
+import init, { greet } from "./pkg/hello.js";
+
+await init();
+console.log(greet("Bun"));
+```
+
+`bun build --target=wasm` is the same command:
+
+```bash terminal icon="terminal"
+bun build --target=wasm ./crates/hello --outdir ./pkg
+```
+
+## Requirements
+
+- A Rust toolchain with the target installed: `rustup target add wasm32-unknown-unknown` (or `wasm32-wasip1`, `wasm32-wasip2` for WASI).
+- `wasm-bindgen` and `wasm-opt` are used from `PATH` when present. Otherwise Bun installs them once into `$BUN_INSTALL/tools`: `wasm-bindgen-cli` with `cargo`, at the version the crate's `Cargo.lock` pins, and `wasm-opt` (binaryen) with [`bun x`](/pm/bunx).
+
+## Import a crate directly
+
+The `bun:wasm` plugin builds a crate when a module imports its `Cargo.toml` or one of its `.rs` files. The package is built into the crate's Cargo target directory and reused while the artifact is unchanged.
+
+```ts preload.ts icon="/icons/typescript.svg"
+import { plugin } from "bun:wasm";
+
+Bun.plugin(plugin());
+```
+
+```toml bunfig.toml icon="settings"
+preload = ["./preload.ts"]
+```
+
+```ts index.ts icon="/icons/typescript.svg"
+import init, { greet } from "./crates/hello/src/lib.rs";
+
+await init();
+console.log(greet("Bun"));
+```
+
+The same plugin works with [`Bun.build`](/bundler):
+
+```ts build.ts icon="/icons/typescript.svg"
+import { plugin } from "bun:wasm";
+
+await Bun.build({
+  entrypoints: ["./index.ts"],
+  outdir: "./dist",
+  plugins: [plugin()],
+});
+```
+
+## Build from JavaScript
+
+```ts build.ts icon="/icons/typescript.svg"
+import { build, optimize } from "bun:wasm";
+
+const result = await build({
+  crate: "./crates/hello", // a directory, its Cargo.toml or a .rs file in it
+  outdir: "./pkg",
+  target: "web",
+  optimize: "Oz",
+  maxBytes: 200_000,
+});
+console.log(result.js, result.bytes, result.rawBytes);
+
+// run wasm-opt on any module; a larger result is discarded
+await optimize("./module.wasm", { level: "O3" });
+```
+
+`outdir` is replaced only when the build succeeds, so a failed build keeps the last usable package.
+
+## Cargo workspaces and prebuilt artifacts
+
+`package` selects a member of a Cargo workspace, like `cargo build -p`. `artifact` packages a `.wasm` that cargo already built, for example on a build server, without running cargo.
+
+```bash terminal icon="terminal"
+bun wasm build --package hello --outdir ./pkg
+bun wasm build --package hello --artifact ./target/wasm32-unknown-unknown/release/hello.wasm --outdir ./pkg
+```
+
+## WASI
+
+`--wasi=p1` builds for `wasm32-wasip1`. The generated module's default export instantiates the module with [`node:wasi`](/runtime/nodejs-compat):
+
+```ts index.ts icon="/icons/typescript.svg"
+import init from "./pkg/tool.js";
+
+const { exports } = await init({ args: ["tool"], env: {}, preopens: { "/": "." } });
+```
+
+`--wasi=p2` builds a `wasm32-wasip2` component and transpiles it to JavaScript with [jco](https://github.com/bytecodealliance/jco), run through `bun x`. `wasm-opt` does not read components, so p2 output is not optimized.
+
+## Flags
+
+| Flag                      | Description                                                                         |
+| ------------------------- | ----------------------------------------------------------------------------------- |
+| `-o`, `--outdir=<dir>`    | Output package. Defaults to `pkg` in the crate                                      |
+| `-p`, `--package=<name>`  | A package of the Cargo workspace                                                    |
+| `--artifact=<file>`       | Package a `.wasm` cargo already built                                               |
+| `--target=<t>`            | `wasm-bindgen` target: `web` (default), `bundler`, `nodejs`, `deno`, `no-modules`   |
+| `--wasi=<p1\|p2>`          | Build for WASI preview 1 or preview 2                                               |
+| `--triple=<triple>`       | Any Rust target triple                                                              |
+| `--dev`                   | Debug profile, no `wasm-opt`                                                        |
+| `--profile=<name>`        | Cargo profile. Defaults to `release`                                                |
+| `--opt-level=<level>`     | `wasm-opt` level: `Oz` (default), `Os`, `O0` to `O4`                                |
+| `--no-opt`                | Skip `wasm-opt`                                                                     |
+| `--name=<name>`           | Base name of the generated files                                                    |
+| `--features=<a,b>`        | Cargo features                                                                      |
+| `--no-default-features`   | Disable the crate's default features                                                |
+| `--locked`                | Pass `--locked` to cargo                                                            |
+| `--no-typescript`         | Do not emit `.d.ts` files                                                           |
+| `--no-pack`               | Do not write `package.json`                                                         |
+| `--max-bytes=<n>`         | Fail when the optimized `.wasm` is larger                                           |
+| `-- <cargo args>`         | Passed to `cargo build`                                                             |
+
+`bun wasm opt <in.wasm>` runs `wasm-opt` (`-Oz` by default) on a module.
+
+If `package.json` has a `wasm` script, `bun wasm` runs that script. Inside the script, `bun wasm` is the command.

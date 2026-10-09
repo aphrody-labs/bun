@@ -163,6 +163,27 @@ The default port for `Bun.serve` to listen on. Default `3000`. You can also set 
 port = 3000
 ```
 
+## Lint and format
+
+The `[lint]` section configures [`bun lint`](/runtime/lint) and the `[fmt]` section configures [`bun fmt`](/runtime/fmt). Flags on the command line override them.
+
+```toml title="bunfig.toml" icon="settings"
+[lint]
+config = ".oxlintrc.json"   # oxlint configuration file
+paths = ["src", "test"]     # paths linted when none are given
+ignore = ["dist/**"]        # glob patterns to skip
+n2b = true                  # run the Node.js-to-Bun rules
+args = ["--deny-warnings"]  # more oxlint arguments
+version = "1.87.0"          # oxlint version to download
+
+[fmt]
+config = ".oxfmtrc.json"
+paths = ["src", "test"]
+ignore = ["dist/**"]
+args = []
+version = "0.72.0"
+```
+
 ## Test runner
 
 The `[test]` section of `bunfig.toml` configures the test runner.
