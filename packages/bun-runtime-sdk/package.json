@@ -45,7 +45,7 @@
     "test:dotnet": "dotnet test dotnet/YoloRuntime.slnx",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "stage": "bun scripts/stage.ts",
-    "test:python": "uv run --with pytest pytest python/ctypes"
+    "test:python": "YOLO_RUNTIME_HOME=target/artifact uv run --no-project --with pytest pytest python/ctypes"
   },
   "dependencies": {},
   "engines": {

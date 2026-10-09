@@ -7,7 +7,7 @@ SDK of the YOLO native runtime. One library, `yolo_runtime` (`crates/yolo-runtim
 | ---------- | ---------------------------------------------------- | ---------------------------------------- |
 | Bun        | `src/` through `bun:ffi`                             | `bun test test`                          |
 | .NET 10    | `dotnet/YoloRuntime` (`LibraryImport`, AOT-compatible) | `dotnet test dotnet/YoloRuntime.slnx`    |
-| Python     | `python/ctypes` (verified artifact), `python/pyo3` (`crates/yolo-pyo3`, maturin) | `uv run --with pytest pytest python/ctypes` |
+| Python     | `python/ctypes` (verified artifact), `python/pyo3` (`crates/yolo-pyo3`, maturin) | `bun run stage && bun run test:python` |
 | C, C++, Rust | `include/yolo_runtime.h`, `crates/yolo-core`       | `cargo test`                             |
 
 ```sh
