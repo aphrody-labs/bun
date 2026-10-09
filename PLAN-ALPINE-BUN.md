@@ -596,6 +596,28 @@ synchrone, et limite dure vérifiée après une collection complète seulement ;
 interne ; `postTaskTo` depuis le fil du GC. Arène : `ffi` et `sqlite` sous Deno dépendent de `node:sqlite` et de
 `Deno.dlopen` (`-A`) ; la release `bun-v1.4.3` amont doit exister (sinon prendre la dernière et le noter, C1).
 
+### Z1. yolo rename, parse, docs, bench dans le cœur de Bun (🔄 code écrit le 2026-10-09, ni build ni test)
+
+Bun `ce6bf79b619` : `bun rename`, `bun docs`, `bun parse`, `bun bench` = `src/js/eval/devtools.ts`, démarré comme
+`bun -e` par `ToolchainCommand` (`src/runtime/cli/devtools_command.rs`, routage dans `cli/mod.rs`). Un fichier
+`<nom>.{ts,js,…}`, `<nom>/index.*` ou un script `package.json` du même nom garde la priorité (`bun bench` = `bun run bench`).
+Test : `test/cli/devtools/devtools.test.ts`. Aphrody `90f5899e4d` : yolo appelle `bun <cmd>` (`yolo/src/bun-tools.ts`).
+
+| yolo | Bun | Reste dans yolo (Z2) |
+| --- | --- | --- |
+| `rename` (core `curation/rename.ts`, supprimé) | `bun rename --from/--to/--rules/--paths/--include/--exclude/--apply/--restore`, journal JSONL v2 identique | préréglage `aphrody`, cible `crates/tauri`, `.cache/rename`, exclusions `audits/`, `.changes/` |
+| `parse` | `bun parse <fichiers> [--json] [--md]` (schéma `bun.parse/1`, `Bun.Transpiler.scan`) | `vfs/parse.ts` (NativeTooling) garde l'outil MCP du registre et l'API |
+| `docs` | `bun docs [requête] [--dir] [--content] [--print]` : `docs/` local, `$BUN_DOCS_DIR`, sinon l'index `bun.com/docs/llms.txt` | `--dir docs/reference/upstream-bun` |
+| `bench` | `bun bench [--iterations]` (schéma `bun.bench/1`) | `--supervisor` ; `sys/benchmark.ts` garde `/api/bench` |
+
+Reste à Z2 dans yolo : status, generate, web/desktop/tauri, version/doctor, train, ai/tool, mcp, api/serve,
+runtime/upgrade/uninstall/desktop-runtime, awesome, import, plugin, vu, py/python/uv, infra/workflow/git/ssh/ship/hooks,
+ops/workspace/optimize/update/google/doc-ai/browser/forge/m3, host, n2b (scan/verify/create : Y).
+Passe finale : `bun bd test test/cli/devtools/devtools.test.ts` ; côté Aphrody, avec le Bun du fork sur PATH,
+`bun test packages/engine/yolo/test/rename.test.ts packages/engine/yolo/test/cli_app.test.ts` et
+`bun scripts/tools/cli-help-sync.ts` (aide `yolo rename -h` changée). Risque : un Bun amont sur PATH lit `bun rename`
+comme un script introuvable.
+
 ### Z2. yolo fusionné dans un CLI et une FFI Aphrody uniques (🔄 code écrit le 2026-10-09, ni build ni test)
 
 Dépôt `C:\aphrody` (aphrody-labs/aphrody). Z1 garde rename, parse, docs Bun, bench (et L/Y : lint, scan, verify, create).
@@ -989,6 +1011,19 @@ et `packages/engine/n2b-client` supprimés (2db2b5a973, 132 fichiers, −31 522 
   `bun test test/integration/bun-plugin-n2b`, puis publier 0.7.1 (crates + native) et passer Aphrody en `=0.7.1`.
   Limites Bun signalées : `bun:test` sans `vi.stubEnv/stubGlobal/importActual/hoisted/doMock/resetModules/waitFor`,
   `vi.mock` non hissé ; overrides pnpm imbriqués (`a>b>c`) sans équivalent.
+- 🔄 bun-oxc 0.3.0 (Z1, `6922c5edba7`, ni compilé ni testé) : l'addon lie `oxc_parser_napi`, `oxc_transform_napi`,
+  `oxc_minify_napi` (`extern crate … as _`, exports `#[napi]` enregistrés par leurs ctors) ; API pont `bridgeTransform`,
+  `bridgeMinify`, `bridgeParse`, `analyze`, `check`, `isolatedDeclarationText`, `resolve`, `format` et `lint` en
+  processus (config, fix), `lintRules`, `createTransformOptions` → hook natif `oxc_transform_with` ; sous-chemins
+  `./parser` (JS d'oxc-parser vendu par `scripts/sync-oxc-js.ts`, 40 fichiers), `./transform`, `./minify`, `./oxlint` ;
+  plugin (minify options, lint + fix, dts) ; CLI `bun-oxc`. Raw transfer d'oxc-parser indisponible sous Bun (JSC plafonne
+  les ArrayBuffer à 4 Gio ; `supported.js` renvoie déjà `false`) : voir P. jsPlugins seulement via la CLI oxlint ;
+  configs JS d'oxfmt et formatage Prettier embarqué non pris en charge.
+  Passe finale : `cd packages/bun-oxc && cargo generate-lockfile && cargo test --workspace && cargo clippy --workspace
+  --all-targets` (le `Cargo.lock` est périmé, la publication utilise `--locked`) ; `bun scripts/aphrody/build-napi.ts
+  packages/bun-oxc` ; `bun bd test test/integration/bun-plugin-oxc/` ; puis `gh workflow run aphrody-publish-crates.yml`
+  et `gh workflow run aphrody-publish-native.yml` (essai à blanc d'abord) pour `aphrody-oxc-bridge` et
+  `@aphrody/bun-plugin-oxc` 0.3.0.
 
 ### O. Garde de performance (🔄)
 
