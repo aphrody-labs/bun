@@ -1,0 +1,15 @@
+[package]
+name = "bun-runtime-bench"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "MIT"
+
+[lib]
+name = "bun_runtime_bench"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "=0.29.3", features = ["abi3-py311"] }
+
+[workspace]

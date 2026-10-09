@@ -161,8 +161,15 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(constructWebView, __attribute__((minsiz
                 backend = WebViewBackend::WebKit;
                 return true;
             }
+            // Native backends of packages/bun-webview-core: its host speaks the
+            // --remote-debugging-pipe CDP subset, so they ride the Chrome path.
+            if (s == "webkitgtk"_s || s == "webview2"_s || s == "wkwebview"_s || s == "cef"_s) {
+                backend = WebViewBackend::Chrome;
+                coreBackend = s;
+                return true;
+            }
             Bun::throwError(globalObject, scope, ErrorCode::ERR_INVALID_ARG_VALUE,
-                "backend.type must be \"webkit\" or \"chrome\""_s);
+                "backend.type must be \"webkit\", \"chrome\", \"webkitgtk\", \"webview2\", \"wkwebview\" or \"cef\""_s);
             return false;
         };
         if (be.isString()) {
