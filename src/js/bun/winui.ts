@@ -2,7 +2,7 @@
 //
 // The Windows App Runtime framework package is added to the process package graph (Windows 11 dynamic
 // dependencies, else the Bootstrap DLL's MddBootstrapInitialize2), its .winmd metadata is read at run time by
-// the WinRT core (@aphrody/bun-windows-winrt, loaded through bun:windows), and XAML runs on the JS thread as a
+// the WinRT core (bun:winrt), and XAML runs on the JS thread as a
 // single-threaded apartment. Window messages are pumped from a timer, so JS keeps running between frames and
 // XAML callbacks (events, the Application's metadata provider) run synchronously on the JS thread.
 const { dlopen, ptr, read, toArrayBuffer }: typeof import("bun:ffi") = require("bun:ffi");
@@ -166,7 +166,7 @@ function bootstrap(options: any): Runtime {
 
 function loadCore(options: any) {
   if (options?.winrt) return options.winrt;
-  return require("bun:windows").family("winrt");
+  return require("bun:winrt");
 }
 
 // XAML fragments without a default namespace get the WinUI ones, so `<Button Content="OK"/>` loads.
@@ -233,6 +233,7 @@ class Element {
     return this;
   }
 
+  // Internal code goes through #invokeMethod: builtins compile x.call(...) as Function.prototype.call.
   call(method: string, ...args: unknown[]) {
     return this.#app.fromWinRT(this.#invoke(method, args));
   }
@@ -272,12 +273,12 @@ class Element {
 
   append(child: Element | string) {
     const element = typeof child === "string" ? this.#app.load(child) : child;
-    this.get("Children").call("Append", element);
+    this.get("Children").#invokeMethod("Append", [element]);
     return element;
   }
 
   find(name: string): Element | null {
-    return this.call("FindName", String(name)) as Element | null;
+    return this.#invokeMethod("FindName", [String(name)]) as Element | null;
   }
 
   get children(): Element[] {
@@ -313,6 +314,10 @@ class Element {
     const pattern = peer?.GetPattern(0); // PatternInterface.Invoke
     if (!pattern) throw new TypeError(`bun:winui: ${this.className} cannot be invoked`);
     pattern.as("Microsoft.UI.Xaml.Automation.Provider.IInvokeProvider").Invoke();
+  }
+
+  #invokeMethod(method: string, args: unknown[]) {
+    return this.#app.fromWinRT(this.#invoke(method, args));
   }
 
   #invoke(name: string, values: unknown[]) {

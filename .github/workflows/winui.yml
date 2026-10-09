@@ -6,7 +6,7 @@ on:
     paths:
       [
         "src/js/bun/winui.ts",
-        "packages/bun-windows-winrt/**",
+        "src/js/bun/winrt.ts",
         "packages/bun-fluent/**",
         "test/js/bun/winui/**",
         "scripts/aphrody/winui-smoke.ts",
@@ -16,7 +16,7 @@ on:
     paths:
       [
         "src/js/bun/winui.ts",
-        "packages/bun-windows-winrt/**",
+        "src/js/bun/winrt.ts",
         "packages/bun-fluent/**",
         "test/js/bun/winui/**",
         "scripts/aphrody/winui-smoke.ts",
@@ -40,7 +40,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bun
         with:
-          bun-version: "1.4.3"
+          bun-version: canary
       - name: Fluent 2 tokens and the WinUI -> Fluent -> M3 mapping
         run: |
           bun install --frozen-lockfile --cwd packages/bun-plugin-tailwind
@@ -53,7 +53,7 @@ jobs:
           & $installer --quiet --force
           if ($LASTEXITCODE -ne 0) { throw "Windows App Runtime installer exited with $LASTEXITCODE" }
           Get-AppxPackage Microsoft.WindowsAppRuntime.1.8* | Select-Object -ExpandProperty PackageFullName
-      # Opens a real WinUI 3 window from src/js/bun/winui.ts on the runner's desktop session, checks its XAML
+      # Opens a real WinUI 3 window through bun:winui of the canary build on the runner's desktop session, checks its XAML
       # tree, properties and events, and closes it.
       - name: WinUI 3 window
         run: bun scripts/aphrody/winui-smoke.ts

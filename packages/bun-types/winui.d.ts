@@ -6,8 +6,8 @@
  * single-threaded apartment on the JS thread. Window messages are pumped from a timer, so JavaScript
  * keeps running while windows are open and event listeners run on the JS thread.
  *
- * Requires the `@aphrody/bun-windows-winrt` package (the WinRT core, resolved like the `bun:windows`
- * families) and an installed Windows App Runtime (`winget install Microsoft.WindowsAppRuntime.1.8`).
+ * Built on the `bun:winrt` core. Requires an installed Windows App Runtime
+ * (`winget install Microsoft.WindowsAppRuntime.1.8`).
  *
  * @example
  * ```ts
@@ -61,7 +61,7 @@ declare module "bun:winui" {
     theme?: "light" | "dark";
     /** Call {@link Application.exit} when the last window closes. @default true */
     exitOnLastWindowClosed?: boolean;
-    /** WinRT core to use instead of `@aphrody/bun-windows-winrt` resolved through `bun:windows`. */
+    /** WinRT core to use instead of `bun:winrt`. */
     winrt?: unknown;
   }
 

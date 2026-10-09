@@ -7,7 +7,6 @@
     "start": "bun main.ts"
   },
   "dependencies": {
-    "@aphrody/bun-fluent": "file:../../../bun-fluent",
-    "@aphrody/bun-windows-winrt": "file:../../../bun-windows-winrt"
+    "@aphrody/bun-fluent": "file:../../../bun-fluent"
   }
 }

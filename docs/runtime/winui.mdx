@@ -5,11 +5,10 @@ description: Open native WinUI 3 windows from Bun with bun:winui, load XAML, han
 
 `bun:winui` drives [WinUI 3](https://github.com/microsoft/microsoft-ui-xaml) (the Windows App SDK UI framework) from JavaScript. Bun loads the installed Windows App Runtime into the process, reads its `.winmd` metadata at run time and runs XAML on the JS thread. Every property, method and event of the WinUI controls can be reached this way, with no C#, no project file and no package identity.
 
-It is Windows-only. It needs the Windows App Runtime (1.4 or later) and the WinRT core `@aphrody/bun-windows-winrt`:
+It is Windows-only, built on the [`bun:winrt`](/runtime/winrt) core, and needs the Windows App Runtime (1.4 or later):
 
 ```sh terminal icon="terminal"
 winget install Microsoft.WindowsAppRuntime.1.8
-bun add @aphrody/bun-windows-winrt
 ```
 
 ```ts app.ts icon="/icons/typescript.svg"
@@ -56,7 +55,7 @@ If no runtime is installed, it throws an error with `code: "ERR_WINUI_RUNTIME_NO
 | `theme`                  | system          | `"light"` or `"dark"`                                   |
 | `resources`              | `true`          | load `XamlControlsResources`                            |
 | `exitOnLastWindowClosed` | `true`          | call `app.exit()` when the last window closes           |
-| `winrt`                  | `bun:windows`   | WinRT core to use instead of `@aphrody/bun-windows-winrt` |
+| `winrt`                  | `bun:winrt`     | WinRT core to use instead of `bun:winrt`                |
 
 `app.createWindow({ title, width, height, content, activate })` creates a `Microsoft.UI.Xaml.Window`. The size is in device-independent pixels. `content` is either XAML markup or an element. The window exposes `hwnd`, `title`, `content`, `find(name)`, `resize()`, `activate()`, `close()` and the `closed` promise.
 

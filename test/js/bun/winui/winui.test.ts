@@ -2,8 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { bunEnv, bunExe, isWindows, tempDir } from "harness";
 
-const winrtCore = join(import.meta.dir, "../../../../packages/bun-windows-winrt/index.js");
-
 // A Windows App Runtime (WinUI 3) framework package loads. WindowsApps is not listable without admin rights.
 function hasWindowsAppRuntime() {
   if (!isWindows) return false;
@@ -17,13 +15,7 @@ function hasWindowsAppRuntime() {
 }
 
 function project() {
-  return tempDir("bun-winui", {
-    "node_modules/@aphrody/bun-windows-winrt/package.json": JSON.stringify({
-      name: "@aphrody/bun-windows-winrt",
-      main: "index.js",
-    }),
-    "node_modules/@aphrody/bun-windows-winrt/index.js": `module.exports = require(${JSON.stringify(winrtCore)});`,
-  });
+  return tempDir("bun-winui", {});
 }
 
 async function run(args: string[], cwd: string) {

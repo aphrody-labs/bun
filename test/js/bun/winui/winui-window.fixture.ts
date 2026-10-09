@@ -1,5 +1,5 @@
 // Opens a real WinUI 3 window through bun:winui, checks its XAML tree, properties and events, then closes
-// itself: bun winui-window.fixture.ts. Needs @aphrody/bun-windows-winrt resolvable from the working directory.
+// itself: bun winui-window.fixture.ts.
 import winui from "bun:winui";
 
 const app = winui.start();
