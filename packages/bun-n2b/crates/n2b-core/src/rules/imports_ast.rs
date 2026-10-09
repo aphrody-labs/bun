@@ -246,13 +246,18 @@ impl<'a> Visit<'a> for AwaitScopes {
         match kind {
             AstKind::Function(f) => {
                 if let Some(body) = &f.body {
-                    self.0.push((body.span.start..body.span.end, f.r#async));
+                    let span = body.span();
+                    self.0.push((span.start..span.end, f.r#async));
                 }
             },
             AstKind::ArrowFunctionExpression(f) => {
-                self.0.push((f.body.span.start..f.body.span.end, f.r#async));
+                let span = f.body.span();
+                self.0.push((span.start..span.end, f.r#async));
             },
-            AstKind::StaticBlock(b) => self.0.push((b.span.start..b.span.end, false)),
+            AstKind::StaticBlock(b) => {
+                let span = b.span();
+                self.0.push((span.start..span.end, false));
+            },
             AstKind::PropertyDefinition(p) => {
                 if let Some(value) = &p.value {
                     let span = value.span();
