@@ -6,8 +6,9 @@
 # Wine runs win32-window.fixture.ts with a Windows bun.exe mounted at /opt/bun-windows/bun.exe.
 #
 #   docker build -t aphrody/gui-alpine:3.24 -f scripts/aphrody/gui/alpine.Dockerfile test/js/bun/ffi/cosmic-window
-#   docker run --rm -v "$PWD:/bun" -v /path/to/bun-windows:/opt/bun-windows:ro aphrody/gui-alpine:3.24 \
+#   docker run --rm --init -v "$PWD:/bun" -v /path/to/bun-windows:/opt/bun-windows:ro aphrody/gui-alpine:3.24 \
 #     xvfb-run -a bun test test/js/bun/ffi/ffi.test.js -t "native toolkit windows|Win32 window"
+# --init: as PID 1, xvfb-run never receives Xvfb's ready signal and hangs.
 
 ARG BASE=aphrody/bun-alpine:latest
 FROM ${BASE}

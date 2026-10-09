@@ -6,8 +6,9 @@
 # win32-window.fixture.ts with a Windows bun.exe mounted at /opt/bun-windows/bun.exe.
 #
 #   docker build -t aphrody/gui-ubuntu:26.04 -f scripts/aphrody/gui/ubuntu.Dockerfile test/js/bun/ffi/cosmic-window
-#   docker run --rm -v "$PWD:/bun" -v /path/to/bun-windows:/opt/bun-windows:ro aphrody/gui-ubuntu:26.04 \
+#   docker run --rm --init -v "$PWD:/bun" -v /path/to/bun-windows:/opt/bun-windows:ro aphrody/gui-ubuntu:26.04 \
 #     xvfb-run -a bun test test/js/bun/ffi/ffi.test.js -t "native toolkit windows|Win32 window"
+# --init: as PID 1, xvfb-run never receives Xvfb's ready signal and hangs.
 
 ARG BASE=aphrody/build-linux:26.04
 FROM ${BASE}

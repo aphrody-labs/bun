@@ -18,6 +18,12 @@ crate-type = ["cdylib"]
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic"
 default-features = false
+features = ["winit", "tokio"]
+
+# Wayland and X11 backends exist on Linux only.
+[target.'cfg(target_os = "linux")'.dependencies.libcosmic]
+git = "https://github.com/pop-os/libcosmic"
+default-features = false
 features = ["winit", "tokio", "wayland", "x11"]
 ```
 
@@ -52,7 +58,9 @@ impl cosmic::Application for Window {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn cosmic_window_run(width: u32, height: u32) -> i32 {
-    let settings = Settings::default().size(Size::new(width as f32, height as f32));
+    let settings = Settings::default()
+        .size(Size::new(width as f32, height as f32))
+        .transparent(false);
     match cosmic::app::run::<Window>(settings, ()) {
         Ok(()) => 0,
         Err(_) => 1,
@@ -63,7 +71,7 @@ pub extern "C" fn cosmic_window_run(width: u32, height: u32) -> i32 {
 ```ts window.ts icon="/icons/typescript.svg"
 import { dlopen, FFIType, suffix } from "bun:ffi";
 
-const { symbols } = dlopen(`./target/release/libcosmic_window.${suffix}`, {
+const { symbols } = dlopen(`./target/release/${process.platform === "win32" ? "" : "lib"}cosmic_window.${suffix}`, {
   cosmic_window_run: { args: [FFIType.u32, FFIType.u32], returns: FFIType.i32 },
 });
 process.exit(symbols.cosmic_window_run(640, 400)); // returns when the window closes
@@ -74,7 +82,7 @@ cargo build --release
 bun window.ts
 ```
 
-Building libcosmic needs `pkg-config`, `cmake` and the xkbcommon, Wayland, fontconfig and freetype development headers (on Ubuntu 24.04 and Pop!_OS 24.04: `libxkbcommon-dev libwayland-dev libfontconfig-dev libfreetype-dev libexpat1-dev`). With `default-features = false`, iced renders in software with tiny-skia, so the window also opens under `xvfb-run` in CI.
+Building libcosmic needs `pkg-config`, `cmake` and the xkbcommon, Wayland, fontconfig and freetype development headers (on Ubuntu 24.04 and Pop!_OS 24.04: `libxkbcommon-dev libwayland-dev libfontconfig-dev libfreetype-dev libexpat1-dev`). With `default-features = false`, iced renders in software with tiny-skia, so the window also opens under `xvfb-run` in CI. `.transparent(false)` keeps the window on a 24-bit visual: softbuffer rejects the 32-bit ARGB visual that a transparent window gets under Xvfb.
 
 Callbacks into JavaScript must stay on the thread that called into the library. If you pass a [`JSCallback`](/runtime/ffi#callbacks) to the `cdylib`, call it only from that thread, for example from `Application::init` after checking `std::thread::current().id()`.
 
