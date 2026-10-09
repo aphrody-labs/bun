@@ -339,6 +339,32 @@ try {
       right: { name: "Ruff / Python", argv: [ruff, "check", "--isolated", "--no-cache", pyTree], cwd: pyTree },
     });
   }
+  const vswhere = join(
+    process.env["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)",
+    "Microsoft Visual Studio\\Installer\\vswhere.exe",
+  );
+  if (
+    platform() === "win32" &&
+    !args.includes("--no-msvc") &&
+    (await Bun.file(vswhere).exists()) &&
+    Bun.spawnSync([bun, "msvc", "--help"], { env: { ...env, BUN_BE_BUN: "1" } }).exitCode === 0
+  ) {
+    const vcvars = await fixture(
+      "vcvars.cmd",
+      [
+        "@echo off",
+        `for /f "usebackq delims=" %%i in (\`"${vswhere}" -all -prerelease -latest -products * -property installationPath\`) do set "VSDIR=%%i"`,
+        'call "%VSDIR%\\VC\\Auxiliary\\Build\\vcvarsall.bat" x64 >nul || exit /b 1',
+        "set VCToolsVersion",
+        "",
+      ].join("\r\n"),
+    );
+    cases.push({
+      name: "MSVC x64 environment discovery",
+      left: { name: "bun msvc env", argv: [bun, "msvc", "env", "--arch", "x64", "--format", "cmd"] },
+      right: { name: "vswhere + vcvarsall.bat", argv: ["cmd.exe", "/d", "/c", vcvars] },
+    });
+  }
   if (native) {
     const nativePath = resolve(native);
     const extensionPath = join(out, platform() === "win32" ? "bun_runtime_bench.pyd" : "bun_runtime_bench.so");

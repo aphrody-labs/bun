@@ -417,6 +417,24 @@ win_host_fn! {
 }
 
 win_host_fn! {
+    /// `toolchain(arch)` → Visual Studio instances, MSVC toolset, Windows SDK, UCRT and the
+    /// vcvars environment for `arch` (`bun msvc info`). Discovery never fails: missing parts are
+    /// `null`.
+    js_toolchain(global, frame) {
+        let requested = str_arg(global, frame, 0)?;
+        let arch = if requested.is_empty() {
+            Some(sys::toolchain::host_arch())
+        } else {
+            sys::toolchain::normalize_arch(&requested)
+        };
+        let Some(arch) = arch else {
+            return Err(global.throw_invalid_arguments(format_args!("unknown architecture: {requested}")));
+        };
+        string(global, &sys::toolchain::to_json(arch))
+    }
+}
+
+win_host_fn! {
     /// `memoryStatus()` → physical, page-file and virtual memory counters.
     js_memory_status(global, frame) {
         string(global, &check(global, sys::system::memory_json())?)

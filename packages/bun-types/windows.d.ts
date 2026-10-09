@@ -389,6 +389,56 @@ declare module "bun:windows" {
     function status(): WindowsMemoryStatus;
   }
 
+  type WindowsToolchainArch = "x64" | "x86" | "arm64" | "arm64ec" | "arm";
+
+  interface VisualStudioInstance {
+    id: string;
+    name: string;
+    /** `BuildTools`, `Community`, `Professional`, `Enterprise`, ... */
+    product: string;
+    version: string;
+    path: string;
+  }
+
+  interface WindowsToolchain {
+    arch: WindowsToolchainArch;
+    host: WindowsToolchainArch;
+    /** Every Visual Studio 2017+ / Build Tools instance, newest first. */
+    instances: VisualStudioInstance[];
+    /** The instance whose MSVC toolset targets `arch`, or `null`. */
+    instance: VisualStudioInstance | null;
+    msvc: { version: string; dir: string; bin: string; hostBin: string } | null;
+    sdk: {
+      version: string;
+      dir: string;
+      bin: string;
+      unionMetadata: string | null;
+      /** `UnionMetadata\<version>\Windows.winmd`, the WinRT metadata `bun winmd --in sdk` reads. */
+      windowsWinmd: string | null;
+    } | null;
+    ucrt: { version: string; dir: string } | null;
+    /** Absolute path of each tool, or `null` when the toolset does not ship it. */
+    tools: Record<"cl" | "link" | "lib" | "dumpbin" | "editbin" | "nmake" | "rc" | "midl" | "mt", string | null>;
+    /** What `vcvarsall.bat <arch>` sets: `PATH`, `INCLUDE`, `LIB`, `LIBPATH`, `VCToolsInstallDir`, ... */
+    env: Record<string, string> | null;
+    paths: { path: string[]; include: string[]; lib: string[]; libpath: string[] } | null;
+  }
+
+  /**
+   * The native toolchain: Visual Studio / Build Tools (Setup Configuration COM, no `vswhere.exe`),
+   * MSVC, Windows SDK, UCRT and the `vcvarsall` environment, the same discovery as `bun msvc`.
+   * Missing parts are `null`. The result is frozen.
+   *
+   * @example
+   * ```ts
+   * const { tools, env } = windows.toolchain({ arch: "x64" });
+   * Bun.spawnSync([tools.cl!, "/nologo", "main.c"], { env: { ...process.env, ...env } });
+   * ```
+   */
+  function toolchain(options?: {
+    arch?: WindowsToolchainArch | "x86_64" | "aarch64" | "amd64";
+  }): Readonly<WindowsToolchain>;
+
   /**
    * Exports of the `@aphrody/bun-windows-<name>` package, the binding of one Windows API family that
    * ships outside the Bun binary. Resolved from the working directory, then from the entry script, and

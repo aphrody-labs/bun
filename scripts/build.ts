@@ -23,7 +23,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import {
   inheritOrderFile,
@@ -35,6 +35,7 @@ import {
   spawnWithAnnotations,
   timingsChartName,
 } from "./build/ci.ts";
+import { pins } from "./build/ci-images/spec.ts";
 import { formatConfig, formatConfigUnchanged, type Config, type PartialConfig } from "./build/config.ts";
 import {
   codegenConfigOf,
@@ -58,6 +59,44 @@ import { isBuildkite, isCI, printEnvironment, startGroup } from "./buildkite.ts"
 // Main
 // ───────────────────────────────────────────────────────────────────────────
 
+/**
+ * The VS dev shell environment from `bun msvc env` (in-process Setup Configuration discovery, no
+ * vswhere.exe, no PowerShell), pinned like scripts/vs-shell.ps1 to the toolset the prebuilt WebKit
+ * was built with. Leaves process.env untouched when the running bun has no `msvc` command, so
+ * build() falls back to re-executing inside vs-shell.ps1.
+ */
+function loadNativeMsvcEnv(): void {
+  const arch = process.arch === "arm64" ? "arm64" : "x64";
+  const msvc = (args: string[], env: NodeJS.ProcessEnv = process.env) => {
+    const result = spawnSync(process.execPath, ["msvc", ...args, "--arch", arch], {
+      env: { ...env, BUN_BE_BUN: "1" },
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    if (result.status !== 0) return undefined;
+    try {
+      return JSON.parse(result.stdout);
+    } catch {
+      return undefined;
+    }
+  };
+  const info = msvc(["info"]);
+  if (!info?.instance || !info.msvc) return;
+  const env = { ...process.env };
+  const pinned = pins.windowsSysroot.crt.split(".").slice(0, 2).join(".");
+  const toolsets = join(info.instance.path, "VC", "Tools", "MSVC");
+  const toolset = existsSync(toolsets)
+    ? readdirSync(toolsets)
+        .filter(name => name.startsWith(pinned + "."))
+        .sort()
+        .pop()
+    : undefined;
+  if (toolset !== undefined) env.VCToolsVersion = toolset;
+  const vars: Record<string, string> | undefined = msvc(["env", "--format", "json"], env);
+  if (!vars?.VSINSTALLDIR) return;
+  Object.assign(process.env, vars);
+}
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
 
@@ -66,6 +105,9 @@ async function main(): Promise<void> {
   // WindowsSdkDir — things clang-cl can mostly self-detect but nested
   // cmake projects can't. Cheap: VSINSTALLDIR check short-circuits on
   // subsequent runs in the same terminal.
+  if (process.platform === "win32" && !process.env.VSINSTALLDIR) {
+    loadNativeMsvcEnv();
+  }
   if (process.platform === "win32" && !process.env.VSINSTALLDIR) {
     const vsShell = join(import.meta.dirname, "vs-shell.ps1");
     const result = spawnSync(

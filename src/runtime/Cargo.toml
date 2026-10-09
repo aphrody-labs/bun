@@ -119,6 +119,10 @@ bun_patch_jsc.workspace = true
 bun_css_jsc.workspace = true
 uv = { path = "../../vendor/uv/crates/uv", default-features = false }
 uv-command-support = { path = "../../vendor/uv/crates/uv-command-support" }
+windows-bindgen = { path = "../../vendor/windows-rs/crates/libs/bindgen" }
+
+[target.'cfg(windows)'.dependencies]
+find-msvc-tools = { path = "../../vendor/find-msvc-tools" }
 
 [features]
 default = []

@@ -19,6 +19,7 @@ describe.skipIf(isWindows)("non-Windows", () => {
     expect(errorCode(() => windows.registry.get("HKCU\\Software"))).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => windows.storage.drives())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => windows.memory.status())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
+    expect(errorCode(() => windows.toolchain())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => windows.processes.setPriority(0, "normal"))).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => new windows.Job())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
   });
@@ -65,6 +66,27 @@ describe.skipIf(!isWindows)("bun:windows", () => {
     expect(memory.availablePageFile).toBeLessThanOrEqual(memory.totalPageFile);
     expect(memory.memoryLoad).toBeGreaterThanOrEqual(0);
     expect(memory.memoryLoad).toBeLessThanOrEqual(100);
+  });
+
+  test("toolchain discovers Visual Studio, MSVC, the SDK and the vcvars environment", () => {
+    const tc = windows.toolchain();
+    expect(Object.isFrozen(tc)).toBe(true);
+    expect(tc.arch).toBe(tc.host);
+    expect(Array.isArray(tc.instances)).toBe(true);
+    expect(errorCode(() => windows.toolchain({ arch: "sparc" as never }))).toBe("ERR_INVALID_ARG_TYPE");
+    expect(windows.toolchain({ arch: "x86_64" }).arch).toBe("x64");
+    if (tc.msvc === null) return;
+    expect(tc.instance).toEqual(tc.instances.find(i => i.id === tc.instance!.id)!);
+    expect(tc.msvc.version).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(tc.tools.cl).toEndWith("\\cl.exe");
+    expect(tc.tools.link).toEndWith("\\link.exe");
+    expect(tc.env!.VCToolsVersion).toBe(tc.msvc.version);
+    expect(tc.env!.PATH.toLowerCase()).toStartWith(tc.msvc.bin.toLowerCase());
+    expect(tc.paths!.include.some(dir => dir.toLowerCase().endsWith("\\include"))).toBe(true);
+    if (tc.sdk) {
+      expect(tc.sdk.version).toMatch(/^10\.0\.\d+\.\d+$/);
+      expect(tc.env!.WindowsSDKVersion).toBe(tc.sdk.version + "\\");
+    }
   });
 
   test("registry round-trip", () => {

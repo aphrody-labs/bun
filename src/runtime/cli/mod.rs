@@ -316,6 +316,10 @@ pub(crate) mod python_command;
 pub(crate) mod run_command;
 #[path = "uv_command.rs"]
 pub(crate) mod uv_command;
+#[path = "msvc_command.rs"]
+pub(crate) mod msvc_command;
+#[path = "winmd_command.rs"]
+pub(crate) mod winmd_command;
 
 // ─── per-subcommand bodies ───────────────────────────────────────────────────
 #[path = "build_command.rs"]
@@ -681,6 +685,8 @@ pub(crate) mod help_command {
   <b><blue>patch <d>\\<pkg\\><r>                    Prepare a package for patching
   <b><blue>pm <d>\\<subcommand\\><r>                Additional package management utilities
   <b><blue>uv <d>\\<command\\><r>                   Manage Python packages and projects with UV
+  <b><blue>msvc <d>\\<command\\><r>                 Find MSVC and the Windows SDK, print or run with their environment
+  <b><blue>winmd <d>\\<options\\><r>                Generate Rust or bun:ffi bindings from Windows metadata
   <b><blue>info<r>      <d>{:<16}<r>     Display package metadata from the registry
   <b><blue>why<r>       <d>{:<16}<r>     Explain why a package is installed
 
@@ -1279,6 +1285,22 @@ pub(crate) mod command {
         });
         if let Some(invocation) = uv_invocation {
             super::uv_command::exec(invocation);
+        }
+
+        {
+            let argv0 = argv.get(0).map(bun_core::ZStr::as_bytes).unwrap_or(b"");
+            let first = argv.get(1).map(bun_core::ZStr::as_bytes);
+            let be_bun = || bun_core::env_var::feature_flag::BUN_BE_BUN::get().unwrap_or(false);
+            if let Some(invocation) = super::msvc_command::Invocation::from_argv(argv0, first)
+                .or_else(|| (first == Some(b"msvc") && be_bun()).then_some(super::msvc_command::Invocation::Bun))
+            {
+                super::msvc_command::exec(invocation);
+            }
+            if let Some(invocation) = super::winmd_command::Invocation::from_argv(argv0, first)
+                .or_else(|| (first == Some(b"winmd") && be_bun()).then_some(super::winmd_command::Invocation::Bun))
+            {
+                super::winmd_command::exec(invocation);
+            }
         }
 
         // bun build --compile entry point. A compiled executable linked as `bun` is the engine itself (one `yolo`

@@ -17,6 +17,10 @@ if($env:VSINSTALLDIR -eq $null) {
 
   $vsDir = (& $vswhere -prerelease -latest -products * -property installationPath)
   if ($vsDir -eq $null) {
+    # An instance with a pending reboot or an interrupted update is not "complete" and only -all lists it.
+    $vsDir = (& $vswhere -all -prerelease -latest -products * -property installationPath)
+  }
+  if ($vsDir -eq $null) {
     # Check common VS installation paths
     $searchPaths = @(
       "C:\Program Files\Microsoft Visual Studio\2022",

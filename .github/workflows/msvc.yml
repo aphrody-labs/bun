@@ -1,0 +1,66 @@
+name: MSVC discovery and windows-bindgen
+
+on:
+  push:
+    branches: [main]
+    paths:
+      [
+        "vendor/find-msvc-tools/**",
+        "vendor/windows-rs/**",
+        "src/runtime/cli/msvc_command.rs",
+        "src/runtime/cli/winmd_command.rs",
+        "src/runtime/windows/**",
+        ".github/workflows/msvc.yml",
+      ]
+  pull_request:
+    paths:
+      [
+        "vendor/find-msvc-tools/**",
+        "vendor/windows-rs/**",
+        "src/runtime/cli/msvc_command.rs",
+        "src/runtime/cli/winmd_command.rs",
+        "src/runtime/windows/**",
+        ".github/workflows/msvc.yml",
+      ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: msvc-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discovery:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Rust toolchain
+        run: rustup show
+      # Setup Configuration COM discovery and the vcvars environment, checked against the
+      # Visual Studio installed on the runner (no vswhere.exe involved).
+      - name: find-msvc-tools
+        working-directory: vendor/find-msvc-tools
+        run: cargo test --locked
+      - name: Decompress the embedded metadata for the windows-bindgen tests
+        shell: pwsh
+        run: |
+          $dir = "$env:RUNNER_TEMP/winmd"
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          foreach ($name in "Windows.winmd", "Windows.Win32.winmd") {
+            zstd -d --long=27 -q -f "vendor/windows-rs/crates/libs/default/$name.zst" -o "$dir/$name"
+          }
+          "WINDOWS_BINDGEN_DEFAULT_METADATA=$dir" >> $env:GITHUB_ENV
+      - name: windows-bindgen (Rust, TS and JSON emitters)
+        working-directory: vendor/windows-rs
+        run: cargo test --locked -p windows-bindgen
+      - name: vswhere agrees with the native discovery
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $expected = & $vswhere -all -prerelease -products * -property installationPath | Sort-Object
+          Write-Host "vswhere: $($expected -join ', ')"
+          if (-not $expected) { throw "vswhere found no instance" }

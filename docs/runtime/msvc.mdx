@@ -1,0 +1,93 @@
+---
+title: MSVC & Windows metadata
+description: Find Visual Studio, MSVC and the Windows SDK without vswhere or vcvarsall, and generate Rust or bun:ffi bindings from .winmd metadata
+---
+
+Bun finds the native Windows toolchain the same way it ships `bun uv` for Python: in the process, with no helper executable. `bun msvc` asks the Visual Studio Setup Configuration COM API for the installed Visual Studio and Build Tools instances, without `vswhere.exe`. If that COM server is not registered, it reads the installer's own `state.json` records instead. It then resolves the MSVC toolset, the Windows SDK and the Universal CRT, and computes what `vcvarsall.bat` would set. `bun winmd` links [windows-bindgen](https://github.com/microsoft/windows-rs) and generates bindings from Windows metadata.
+
+Both commands are Windows-only. The discovery code comes from [find-msvc-tools](https://github.com/rust-lang/cc-rs) (MIT/Apache-2.0) and lives in `vendor/find-msvc-tools`; windows-bindgen (MIT/Apache-2.0) lives in `vendor/windows-rs`.
+
+---
+
+## `bun msvc`
+
+```sh terminal icon="terminal"
+bun msvc                       # doctor: checks Visual Studio, MSVC, cl/link/lib, the SDK and the UCRT
+bun msvc info                  # everything as JSON
+bun msvc which cl              # C:\...\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\cl.exe
+bun msvc env --format pwsh     # the vcvarsall environment
+bun msvc exec -- cl /nologo main.c
+```
+
+| Command                     | Output                                                                                                    |
+| --------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `doctor` (default)          | One line per component. The exit code is `1` when `cl`, `link`, `lib`, the SDK or the UCRT is missing     |
+| `info`                      | JSON: `instances`, `instance`, `msvc`, `sdk`, `ucrt`, `tools`, `env`, `paths`                             |
+| `env [--format <f>]`        | `json` (default, also `--json`), `pwsh`, `cmd`, `sh` (MSYS2/Git Bash, `PATH` in `/c/...` form), `github` |
+| `which <tool>`              | Absolute path of `cl`, `link`, `lib`, `dumpbin`, `editbin`, `nmake`, `rc`, `midl`, `mt`, ...              |
+| `exec [--] <tool> [args]`   | Runs the tool with the computed environment and exits with its exit code                                  |
+
+`--arch x64|x86|arm64|arm64ec|arm` selects the target. The default is the host. `x86_64`, `amd64` and `aarch64` are accepted too. The newest instance whose toolset can target that architecture wins. Set `VCToolsVersion` to pin a toolset, as `vcvarsall -vcvars_ver` does. Set `WindowsSdkDir` and `WindowsSDKVersion` to pin an SDK.
+
+`env` prepends `PATH`, `INCLUDE`, `EXTERNAL_INCLUDE`, `LIB` and `LIBPATH` to their current values. It also sets `VSINSTALLDIR`, `VCINSTALLDIR`, `VCToolsInstallDir`, `VCToolsVersion`, `VisualStudioVersion`, `VSCMD_ARG_HOST_ARCH`, `VSCMD_ARG_TGT_ARCH`, `VSCMD_VER`, `DevEnvDir`, `Platform`, `WindowsSdkDir`, `WindowsSDKVersion`, `WindowsSDKLibVersion`, `WindowsSdkBinPath`, `WindowsSdkVerBinPath`, `WindowsLibPath`, `UniversalCRTSdkDir` and `UCRTVersion`.
+
+In GitHub Actions, `--format github` appends to `$GITHUB_ENV`:
+
+```yaml
+- run: bun msvc env --arch x64 --format github >> $env:GITHUB_ENV
+```
+
+A binary named or linked as `msvc.exe` behaves like `bun msvc`.
+
+---
+
+## `toolchain()` in `bun:windows`
+
+```ts
+import windows from "bun:windows";
+
+const tc = windows.toolchain({ arch: "x64" });
+tc.instance?.version; // "18.10.12217.157"
+tc.msvc?.version; // "14.44.35207"
+tc.sdk?.version; // "10.0.26100.0"
+tc.sdk?.windowsWinmd; // "C:\\Program Files (x86)\\Windows Kits\\10\\UnionMetadata\\10.0.26100.0\\Windows.winmd"
+
+Bun.spawnSync([tc.tools.cl!, "/nologo", "main.c"], { env: { ...process.env, ...tc.env } });
+```
+
+The result has the shape of `bun msvc info`. Missing parts are `null`, and the object is frozen. An unknown `arch` throws.
+
+---
+
+## `bun winmd`
+
+```sh terminal icon="terminal"
+bun winmd --out src/bindings.rs --filter GetTickCount MessageBoxW --sys --flat   # Rust (windows-sys style)
+bun winmd --out kernel32.ts --filter GetCurrentProcessId GetTickCount            # bun:ffi module
+bun winmd --out user32.json --in win32 --filter Windows.Win32.UI.WindowsAndMessaging --dll user32.dll
+bun winmd inputs                                                                 # where the metadata comes from
+```
+
+`--lang rust|ts|json` follows the extension of `--out`: `.ts`, `.mts` or `.js` give `ts`, `.json` gives `json`, and any other extension gives `rust`. The filter grammar is the one windows-bindgen uses. It accepts namespaces, types, functions, `Type::Member`, and `!` to exclude.
+
+| Input                  | Metadata                                                                                                    |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------- |
+| none / `--in default`  | `Windows.Win32.winmd` (flattened `Windows.Win32` namespace) and `Windows.winmd` from windows-rs, embedded   |
+| `--in win32`           | The `Microsoft.Windows.SDK.Win32Metadata` NuGet package: full namespaces, enums, `SetLastError`             |
+| `--in sdk`             | `UnionMetadata\<version>\Windows.winmd` of the installed Windows SDK (WinRT)                                |
+| `--in <file or dir>`   | Any `.winmd` file, or a directory of them                                                                    |
+
+Rust-only options are passed to windows-bindgen: `--sys`, `--extern`, `--flat`, `--package`, `--minimal`, `--derive`, `--implement`, `--compose`, `--dead-code` and `--rustfmt`. The output is formatted when `rustfmt` is on `PATH`.
+
+For `ts` and `json` output, `--arch x64|arm64|x86` selects the struct layouts and the pointer width. The default is the host. `--dll <name>` keeps only the functions imported from those DLLs.
+
+The generated TypeScript module exports `signatures`, `symbols` (in `FFIType` form, per DLL), `structs` (size, alignment and field offsets), `enums`, `constants` (64-bit values are `bigint`), `wideAliases` (`MessageBox` maps to `MessageBoxW`) and `open(dll)`:
+
+```ts
+import { open } from "./kernel32.ts";
+
+const kernel32 = open("kernel32.dll");
+kernel32.symbols.GetCurrentProcessId() === process.pid; // true
+```
+
+A binary named or linked as `winmd.exe` behaves like `bun winmd`.

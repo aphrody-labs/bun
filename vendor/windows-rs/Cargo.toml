@@ -1,0 +1,14 @@
+# Subset of microsoft/windows-rs (642aca37075f2091a0950b4ea79f35a7ead43460) embedded for `bun winmd`.
+# windows-default (the 18 MB include_bytes! metadata crate) is not vendored: Bun hands the
+# default metadata to windows-bindgen through `windows_bindgen::set_default_input`.
+[workspace]
+resolver = "3"
+members = ["crates/libs/bindgen", "crates/libs/metadata"]
+
+[workspace.lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(windows_slim_errors, windows_cast_diagnostics)'] }
+
+[workspace.dependencies]
+proc-macro2 = { version = "1.0", default-features = false }
+quote = { version = "1.0", default-features = false }
+windows-metadata = { version = "0.100.0", path = "crates/libs/metadata", default-features = false }

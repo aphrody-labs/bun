@@ -1936,6 +1936,7 @@ dependencies = [
  "encoding_rs",
  "enum-map",
  "enumset",
+ "find-msvc-tools 0.1.14",
  "getrandom 0.4.2",
  "libc",
  "lol_html",
@@ -1946,6 +1947,7 @@ dependencies = [
  "thiserror",
  "uv",
  "uv-command-support",
+ "windows-bindgen",
 ]
 
 [[package]]
@@ -2612,7 +2614,7 @@ version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f74872d07caf508b30a21f6836e7d7016a2eaf7d9ff4f48deaa58cd8a0407630"
 dependencies = [
- "find-msvc-tools",
+ "find-msvc-tools 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "jobserver",
  "libc",
  "shlex",
@@ -3671,6 +3673,10 @@ dependencies = [
  "cfg-if",
  "libc",
 ]
+
+[[package]]
+name = "find-msvc-tools"
+version = "0.1.14"
 
 [[package]]
 name = "find-msvc-tools"
@@ -11554,6 +11560,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "windows-bindgen"
+version = "0.100.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "windows-metadata",
+]
+
+[[package]]
 name = "windows-collections"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11658,6 +11673,10 @@ name = "windows-link"
 version = "0.100.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b39de7c7fe78858b0144c50c3fc000bab3be17d5e9b85b1053871693c7f7415"
+
+[[package]]
+name = "windows-metadata"
+version = "0.100.0"
 
 [[package]]
 name = "windows-numerics"

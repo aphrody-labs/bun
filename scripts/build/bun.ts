@@ -24,6 +24,7 @@ import { lolhtml } from "./deps/lolhtml.ts";
 import { rustArgon2 } from "./deps/rust-argon2.ts";
 import { uutils } from "./deps/uutils.ts";
 import { uv, uvRustSources } from "./deps/uv.ts";
+import { windowsToolchainRustSources } from "./deps/windows-toolchain.ts";
 import { assert } from "./error.ts";
 import {
   bunIncludes,
@@ -195,7 +196,7 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
   depsByName.set(uv.name, uvDep);
   const rust = emitRust(n, cfg, {
     codegenOrderOnly: codegen.rustInputs,
-    rustSources: [...sources.rust, ...uvRustSources(cfg)],
+    rustSources: [...sources.rust, ...uvRustSources(cfg), ...windowsToolchainRustSources(cfg)],
     vendorStamps: [...lolhtmlDep.outputs, ...rustArgon2Dep.outputs, ...uutilsDep.outputs, ...uvDep.outputs],
     shimValidations: emitShimVerify(n, cfg),
   });

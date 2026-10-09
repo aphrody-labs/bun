@@ -22,6 +22,7 @@ pub(crate) mod services;
 pub(crate) mod storage;
 pub(crate) mod system;
 pub(crate) mod toast;
+pub(crate) mod toolchain;
 pub(crate) mod wsl;
 
 use core::ffi::c_void;
@@ -238,6 +239,12 @@ impl Json {
         } else {
             self.out.push_str("null");
         }
+        self
+    }
+
+    pub(crate) fn null(&mut self) -> &mut Self {
+        self.sep();
+        self.out.push_str("null");
         self
     }
 

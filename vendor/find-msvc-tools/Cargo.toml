@@ -1,0 +1,16 @@
+# find-msvc-tools 0.1.14 from rust-lang/cc-rs, absorbed for `bun msvc`: Visual Studio instances
+# are enumerated through the Setup Configuration COM API only (the vswhere.exe fallback is removed)
+# and the instance/toolset/SDK discovery is public.
+[package]
+name = "find-msvc-tools"
+version = "0.1.14"
+edition = "2021"
+rust-version = "1.65"
+description = "Find windows-specific tools, read MSVC versions from the registry and from COM interfaces"
+repository = "https://github.com/rust-lang/cc-rs"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+name = "find_msvc_tools"
+path = "src/lib.rs"

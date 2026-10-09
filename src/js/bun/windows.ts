@@ -52,6 +52,7 @@ const toastNative = $newRustFunction("windows/host.rs", "jsToast", 2);
 const wslDistributionsNative = $newRustFunction("windows/host.rs", "jsWslDistributions", 0);
 const storageDrivesNative = $newRustFunction("windows/host.rs", "jsStorageDrives", 0);
 const memoryStatusNative = $newRustFunction("windows/host.rs", "jsMemoryStatus", 0);
+const toolchainNative = $newRustFunction("windows/host.rs", "jsToolchain", 1);
 
 function unsupportedError() {
   const error = new Error("bun:windows is only available on Windows");
@@ -613,6 +614,29 @@ const memory = Object.freeze({
   },
 });
 
+// toolchain: Visual Studio / Build Tools, MSVC, Windows SDK and UCRT (same discovery as `bun msvc`)
+
+function deepFreeze(value) {
+  if (value !== null && typeof value === "object") {
+    for (const key of Object.keys(value)) deepFreeze(value[key]);
+    Object.freeze(value);
+  }
+  return value;
+}
+
+function toolchain(options) {
+  ensureSupported();
+  let arch = "";
+  if (options !== undefined) {
+    validateObject(options, "options");
+    if (options.arch !== undefined) {
+      validateString(options.arch, "options.arch");
+      arch = options.arch;
+    }
+  }
+  return deepFreeze(JSON.parse(toolchainNative(arch)));
+}
+
 // Families
 //
 // The binary keeps the lazy core above. Every other Windows API family ships as a
@@ -685,6 +709,7 @@ export default {
   wsl,
   storage,
   memory,
+  toolchain,
   family,
   families,
 };
