@@ -4,7 +4,7 @@ import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { assemble } from "./assemble.ts";
-import { qualifyCore, type NativeCore } from "./core.ts";
+import { coreCandidates, selectCore, type NativeCore } from "./core.ts";
 import { main as fetchInputs } from "./fetch.ts";
 import { hostTarget } from "./install.ts";
 import { readVendor, ROOT, run } from "./lib.ts";
@@ -15,15 +15,23 @@ type Step = (typeof ALL_STEPS)[number];
 
 export async function main(argv: string[]): Promise<number> {
   const value = (flag: string): string | undefined => {
+    const equal = argv.find(arg => arg.startsWith(`${flag}=`));
+    if (equal !== undefined) {
+      const result = equal.slice(flag.length + 1);
+      if (!result) throw new Error(`${flag} requires a value`);
+      return result;
+    }
     const index = argv.indexOf(flag);
-    return index >= 0 ? argv[index + 1] : undefined;
+    if (index < 0) return undefined;
+    const result = argv[index + 1];
+    if (!result || result.startsWith("--")) throw new Error(`${flag} requires a value`);
+    return result;
   };
   const wanted = value("--steps")?.split(",") ?? ["core", "assemble", "smoke"];
   if (!wanted.length || wanted.some(step => !ALL_STEPS.includes(step as Step)))
     throw new Error("steps must be fetch, core, assemble or smoke; the owner factory builds the core");
-  const executable = value("--buv") ?? process.env["BUV_EXECUTABLE"];
-  if (!executable && wanted.some(step => step !== "fetch"))
-    throw new Error("provide --buv <native core executable> or BUV_EXECUTABLE");
+  const selection = { executable: value("--buv"), workspace: value("--workspace") };
+  if (wanted.some(step => step !== "fetch")) coreCandidates(selection);
   if (wanted.includes("fetch") && !argv.includes("--allow-network")) throw new Error("fetch requires --allow-network");
   const vendor = await readVendor();
   const uv = vendor.sources.find(source => source.name === "uv");
@@ -44,9 +52,9 @@ export async function main(argv: string[]): Promise<number> {
       if (name === "fetch") {
         await fetchInputs(["--allow-network", ...(argv.includes("--skip-python") ? ["--skip-python"] : [])]);
       } else if (name === "core") {
-        core = await qualifyCore(executable!, uv.upstreamTag);
+        core = await selectCore(selection, uv.upstreamTag);
       } else if (name === "assemble") {
-        core ??= await qualifyCore(executable!, uv.upstreamTag);
+        core ??= await selectCore(selection, uv.upstreamTag);
         ({ artifact } = await assemble({
           root: ROOT,
           targetDir: resolve(value("--target-dir") ?? join(ROOT, "target")),

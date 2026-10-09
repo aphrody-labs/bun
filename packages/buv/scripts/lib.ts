@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Shared helpers of the buv build scripts (Bun only).
 
-import { createHash } from "node:crypto";
-import { createReadStream } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -69,17 +67,13 @@ export function cacheDir(): string {
 }
 
 export function sha256Bytes(bytes: Uint8Array): string {
-  return createHash("sha256").update(bytes).digest("hex");
+  return new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
 }
 
-export function sha256File(path: string): Promise<string> {
-  return new Promise((resolvePromise, reject) => {
-    const hash = createHash("sha256");
-    createReadStream(path)
-      .on("data", chunk => hash.update(chunk))
-      .on("error", reject)
-      .on("end", () => resolvePromise(hash.digest("hex")));
-  });
+export async function sha256File(path: string): Promise<string> {
+  const hash = new Bun.CryptoHasher("sha256");
+  for await (const chunk of Bun.file(path).stream()) hash.update(chunk);
+  return hash.digest("hex");
 }
 
 export interface RunResult {

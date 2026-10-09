@@ -4,7 +4,7 @@
 
 import { chmodSync, copyFileSync, cpSync, existsSync, mkdirSync, renameSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { qualifyCore, validateCore, type NativeCore } from "./core.ts";
+import { selectCore, validateCore, type NativeCore } from "./core.ts";
 import { hostTarget } from "./install.ts";
 import { minorOf, readVendor, ROOT, run, sha256File, workspaceVersion } from "./lib.ts";
 import { buildManifest, MANIFEST_PATH, type Manifest } from "./manifest.ts";
@@ -17,6 +17,7 @@ export interface AssembleOptions {
   toolchain: string;
   target?: string;
   executable?: string;
+  workspace?: string;
   core?: NativeCore;
 }
 
@@ -39,10 +40,7 @@ export async function assemble(options: AssembleOptions): Promise<{ artifact: st
   if (!uv?.embedded) throw new Error("UV must be embedded in the native core");
   const core =
     options.core ??
-    (await qualifyCore(
-      options.executable ?? join(targetDir, "release", process.platform === "win32" ? "buv.exe" : "buv"),
-      uv.upstreamTag,
-    ));
+    (await selectCore({ executable: options.executable, workspace: options.workspace }, uv.upstreamTag));
   validateCore(core);
   if (
     !/^[0-9a-f]{64}$/.test(core.sha256) ||
@@ -126,13 +124,24 @@ export async function assemble(options: AssembleOptions): Promise<{ artifact: st
 
 function parse(argv: string[]): AssembleOptions {
   const value = (flag: string): string | undefined => {
+    const equal = argv.find(arg => arg.startsWith(`${flag}=`));
+    if (equal !== undefined) {
+      const result = equal.slice(flag.length + 1);
+      if (!result) throw new Error(`${flag} requires a value`);
+      return result;
+    }
     const index = argv.indexOf(flag);
-    return index >= 0 ? argv[index + 1] : undefined;
+    if (index < 0) return undefined;
+    const result = argv[index + 1];
+    if (!result || result.startsWith("--")) throw new Error(`${flag} requires a value`);
+    return result;
   };
   const targetDir = value("--target-dir");
   const out = value("--out");
   if (!targetDir || !out)
-    throw new Error("usage: assemble.ts --target-dir <dir> --out <dir> [--revision <sha>] [--toolchain <text>]");
+    throw new Error(
+      "usage: assemble.ts --target-dir <dir> --out <dir> [--buv <executable> | --workspace <checkout>] [--revision <sha>] [--toolchain <text>]",
+    );
   return {
     root: resolve(value("--root") ?? ROOT),
     targetDir: resolve(targetDir),
@@ -140,7 +149,8 @@ function parse(argv: string[]): AssembleOptions {
     revision: value("--revision") ?? "unknown",
     toolchain: value("--toolchain") ?? "unknown",
     target: value("--target"),
-    executable: value("--buv") ?? process.env["BUV_EXECUTABLE"],
+    executable: value("--buv"),
+    workspace: value("--workspace"),
   };
 }
 
