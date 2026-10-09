@@ -167,6 +167,8 @@ pub struct Options {
     pub(crate) truncate: bool,
     /// `Bun.write(path, stream)`: create missing parent directories.
     pub(crate) mkdirp: bool,
+    /// `Bun.write(path, stream, { mode })`: also give an existing file `mode`.
+    pub(crate) chmod: bool,
 }
 
 impl Default for Options {
@@ -176,6 +178,7 @@ impl Default for Options {
             mode: 0o664,
             truncate: false,
             mkdirp: false,
+            chmod: false,
         }
     }
 }
@@ -757,6 +760,13 @@ impl FileSink {
             }
             sys::Result::Ok(fd) => fd,
         };
+
+        if options.chmod {
+            if let sys::Result::Err(err) = sys::fchmod(fd, options.mode) {
+                fd.close();
+                return sys::Result::Err(err);
+            }
+        }
 
         if matches!(options.input_path, PathOrFileDescriptor::Path(_)) {
             self.close_with_graph(context);

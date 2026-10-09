@@ -300,6 +300,98 @@ const IS_UV_FS_COPYFILE_DISABLED =
     expect(fs.statSync(existing).size).toBe(100);
   });
 
+  describe("options.mode", () => {
+    // Windows only keeps the read-only bit: 0o444 or 0o666.
+    const mode = isWindows ? 0o444 : 0o640;
+    const big = Buffer.alloc(1024 * 1024 + 7, "m").toString();
+
+    function expectMode(file) {
+      const actual = fs.statSync(file).mode & 0o777;
+      fs.chmodSync(file, 0o666);
+      expect(actual.toString(8)).toBe(mode.toString(8));
+    }
+
+    const sources = {
+      "string": () => "hello",
+      "empty string": () => "",
+      "large string": () => big,
+      "Uint8Array": () => new TextEncoder().encode("hello"),
+      "Blob": () => new Blob(["hello"]),
+      "Response": () => new Response("hello"),
+      "Response stream": () =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode("hello"));
+              controller.close();
+            },
+          }),
+        ),
+    };
+
+    for (const [name, source] of Object.entries(sources)) {
+      for (const existing of [false, true]) {
+        it(`Bun.write(path, ${name}, { mode }) ${existing ? "on an existing file" : "on a new file"}`, async () => {
+          using dir = tempDir("bun-write-mode", existing ? { "out.txt": "previous contents" } : {});
+          const out = join(String(dir), "out.txt");
+          const input = source();
+          await Bun.write(out, input, { mode });
+          expect(fs.readFileSync(out, "utf8")).toBe(
+            name === "large string" ? big : name === "empty string" ? "" : "hello",
+          );
+          expectMode(out);
+        });
+      }
+    }
+
+    it("Bun.write(path, Bun.file(src), { mode })", async () => {
+      using dir = tempDir("bun-write-mode-copy", { "src.txt": "copy me", "existing.txt": "previous contents" });
+      for (const name of ["new.txt", "existing.txt", "nested/dir/new.txt"]) {
+        const out = join(String(dir), name);
+        await Bun.write(out, Bun.file(join(String(dir), "src.txt")), { mode });
+        expect(fs.readFileSync(out, "utf8")).toBe("copy me");
+        expectMode(out);
+      }
+    });
+
+    it("Bun.write(Bun.file(path), data, { mode })", async () => {
+      using dir = tempDir("bun-write-mode-bunfile", {});
+      const out = join(String(dir), "out.txt");
+      await Bun.write(Bun.file(out), "hello", { mode });
+      expect(fs.readFileSync(out, "utf8")).toBe("hello");
+      expectMode(out);
+    });
+
+    it("BunFile.write(data, { mode })", async () => {
+      using dir = tempDir("bun-write-mode-file-write", { "existing.txt": "previous contents" });
+      for (const name of ["new.txt", "existing.txt"]) {
+        const out = join(String(dir), name);
+        await Bun.file(out).write("hello", { mode });
+        expect(fs.readFileSync(out, "utf8")).toBe("hello");
+        expectMode(out);
+      }
+    });
+
+    it("rejects an invalid mode", async () => {
+      using dir = tempDir("bun-write-mode-invalid", {});
+      const out = join(String(dir), "out.txt");
+      const settle = fn =>
+        (async () => fn())().then(
+          () => null,
+          e => e,
+        );
+      for (const write of [
+        options => Bun.write(out, "hello", options),
+        options => Bun.file(out).write("hello", options),
+      ]) {
+        expect(await settle(() => write({ mode: 0o1000 }))).toBeInstanceOf(RangeError);
+        expect(await settle(() => write({ mode: -1 }))).toBeInstanceOf(RangeError);
+        expect(await settle(() => write({ mode: "640" }))).toBeInstanceOf(TypeError);
+      }
+      expect(fs.existsSync(out)).toBe(false);
+    });
+  });
+
   it("Bun.file", async () => {
     const file = path.join(import.meta.dir, "fetch.js.txt");
     await gcTick();

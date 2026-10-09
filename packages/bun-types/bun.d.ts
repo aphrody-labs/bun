@@ -2150,7 +2150,13 @@ declare module "bun" {
     input: Blob | NodeJS.TypedArray | ArrayBufferLike | string | BlobPart[] | Archive | ReadableStream,
     options?: {
       /**
-       * If writing to a PathLike, set the permissions of the file.
+       * If writing to a PathLike, set the permission bits (`0` to `0o777`) of the file,
+       * whether it is created or overwritten.
+       *
+       * @example
+       * ```ts
+       * await Bun.write("./secret.txt", "token", { mode: 0o600 });
+       * ```
        */
       mode?: number;
       /**
@@ -2756,7 +2762,13 @@ declare module "bun" {
      */
     write(
       data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer | Request | Response | BunFile | ReadableStream,
-      options?: { highWaterMark?: number },
+      options?: {
+        highWaterMark?: number;
+        /**
+         * Permission bits (`0` to `0o777`) of the file, applied whether it is created or overwritten.
+         */
+        mode?: number;
+      },
     ): Promise<number>;
 
     /**

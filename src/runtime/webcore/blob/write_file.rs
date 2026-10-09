@@ -118,6 +118,9 @@ pub(crate) struct WriteFile {
     pub(crate) close_after_io: bool,
     #[cfg(not(windows))]
     pub(crate) mkdirp_if_not_exists: bool,
+    /// `Bun.write`'s `mode`: applied to a destination opened by path.
+    #[cfg(not(windows))]
+    pub(crate) mode: Option<bun_sys::Mode>,
 }
 
 bun_threading::intrusive_work_task!(WriteFile, task);
@@ -153,6 +156,10 @@ impl FileOpener for WriteFile {
             .data
             .as_file()
             .pathlike
+    }
+    #[cfg(not(windows))]
+    fn open_mode(&self) -> bun_sys::Mode {
+        self.mode.unwrap_or(crate::node::fs::DEFAULT_PERMISSION)
     }
     #[cfg(not(windows))]
     fn try_mkdirp(
@@ -289,6 +296,7 @@ impl WriteFile {
         file_blob: Blob,
         bytes_blob: Blob,
         mkdirp_if_not_exists: bool,
+        mode: Option<bun_sys::Mode>,
     ) -> Result<WriteFile, Error> {
         let write_file = WriteFile {
             file_blob,
@@ -309,6 +317,7 @@ impl WriteFile {
             could_block: false,
             close_after_io: false,
             mkdirp_if_not_exists,
+            mode,
         };
         Ok(write_file)
     }
@@ -418,6 +427,19 @@ impl WriteFile {
         }
 
         let fd = self.opened_fd;
+
+        // `open`'s mode only applies to a file it creates; an overwritten one gets it here.
+        if let Some(mode) = self.mode {
+            if self.is_allowed_to_close() {
+                if let Err(err) = sys::fchmod(fd, mode) {
+                    let err = err.with_path(self.pathlike().path().slice());
+                    self.errno = Some(bun_errno::from_errno(err.errno as i32).into());
+                    self.system_error = Some(err.to_system_error().into());
+                    self.on_finish();
+                    return;
+                }
+            }
+        }
 
         self.could_block = 'brk: {
             if let Some(store) = self.file_blob.store.get().as_ref() {
@@ -568,6 +590,8 @@ mod windows_impl {
         /// The context of the script that asked for the write.
         pub(crate) context: bun_jsc::ContextId,
         pub(crate) mkdirp_if_not_exists: bool,
+        /// `Bun.write`'s `mode`: applied to a destination opened by path.
+        pub(crate) mode: Option<bun_sys::Mode>,
         pub(crate) uv_bufs: [uv::uv_buf_t; 1],
 
         pub(crate) fd: uv::uv_file,
@@ -630,6 +654,7 @@ mod windows_impl {
             on_write_file_context: *mut c_void,
             on_complete_callback: WriteFileOnWriteFileCallback,
             mkdirp_if_not_exists: bool,
+            mode: Option<bun_sys::Mode>,
         ) -> Result<*mut WriteFileWindows, WriteFileWindowsError> {
             let mkdirp = mkdirp_if_not_exists
                 && file_blob
@@ -648,6 +673,7 @@ mod windows_impl {
                 on_complete_callback,
                 context: script_context.id(),
                 mkdirp_if_not_exists: mkdirp,
+                mode,
                 io_request: bun_core::ffi::zeroed::<uv::fs_t>(),
                 uv_bufs: [uv::uv_buf_t {
                     base: null_mut(),
@@ -785,7 +811,7 @@ mod windows_impl {
                         | uv::O::NONBLOCK
                         | uv::O::SEQUENTIAL
                         | uv::O::TRUNC,
-                    0o644,
+                    (*this).mode.map_or(0o644, |mode| mode as i32),
                     Some(Self::on_open),
                 )
             };
@@ -881,6 +907,20 @@ mod windows_impl {
 
             // SAFETY: `this` is live.
             unsafe { (*this).fd = i32::try_from(rc.int()).expect("int cast") };
+
+            // `open`'s mode only applies to a file it creates; an overwritten one gets it here.
+            // SAFETY: `this` is live.
+            if let Some(mode) = unsafe { (*this).mode } {
+                // SAFETY: `this` is live; `fd` was just opened.
+                if let Err(err) = sys::fchmod(Fd::from_uv(unsafe { (*this).fd }), mode) {
+                    // SAFETY: `this` is live; `throw` consumes it.
+                    match unsafe { Self::throw(this, err) } {
+                        WriteFileWindowsError::WriteFileWindowsDeinitialized => {}
+                        WriteFileWindowsError::Js(err) => crate::dispatch::fold(Err(err)),
+                    }
+                    return;
+                }
+            }
 
             // the loop must be copied
             // SAFETY: `this` is live; on `Err`, `*this` has been freed and is not accessed again.
@@ -1186,6 +1226,7 @@ mod windows_impl {
             context: *mut C,
             callback: WriteFileOnWriteFileCallback,
             mkdirp_if_not_exists: bool,
+            mode: Option<bun_sys::Mode>,
         ) -> Result<*mut WriteFileWindows, WriteFileWindowsError> {
             // see `WriteFile::create` — caller supplies an erased
             // `*mut c_void` callback directly; `context` is just `.cast()`ed.
@@ -1197,6 +1238,7 @@ mod windows_impl {
                 context.cast::<c_void>(),
                 callback,
                 mkdirp_if_not_exists,
+                mode,
             )
         }
     }
@@ -1263,6 +1305,7 @@ pub(crate) struct WriteFileWaitFromLockedValueTask {
     pub global_this: bun_ptr::BackRef<JSGlobalObject>,
     pub(crate) promise: jsc::JSPromiseStrong,
     pub(crate) mkdirp_if_not_exists: bool,
+    pub(crate) mode: Option<bun_sys::Mode>,
 }
 
 impl WriteFileWaitFromLockedValueTask {
@@ -1320,6 +1363,7 @@ impl WriteFileWaitFromLockedValueTask {
                     &mut file_blob,
                     &blob::WriteFileOptions {
                         mkdirp_if_not_exists: Some(this.mkdirp_if_not_exists),
+                        mode: this.mode,
                         ..Default::default()
                     },
                 ) {
