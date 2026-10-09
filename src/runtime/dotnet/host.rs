@@ -72,10 +72,17 @@ pub(crate) fn js_locate(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<
 #[bun_jsc::host_fn]
 pub(crate) fn js_initialize(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
     let config = opt_str_arg(global, frame, 0)?;
-    let runtime = bun_dotnet_host::hostfxr()
-        .and_then(|fxr| fxr.runtime(config.as_deref().map(Path::new)))
+    let fxr = bun_dotnet_host::hostfxr().map_err(|err| dotnet_error(global, err))?;
+    let running = fxr.started().is_some();
+    let runtime = fxr
+        .runtime(config.as_deref().map(Path::new))
         .map_err(|err| dotnet_error(global, err))?;
-    Ok(JSValue::js_number(f64::from(runtime.init_status)))
+    let status = if running {
+        bun_dotnet_host::status::SUCCESS_HOST_ALREADY_INITIALIZED
+    } else {
+        runtime.init_status
+    };
+    Ok(JSValue::js_number(f64::from(status)))
 }
 
 /// `functionPointer(assembly?, type, method, delegateType?)` → native address.

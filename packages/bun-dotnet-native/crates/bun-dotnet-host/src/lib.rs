@@ -550,6 +550,27 @@ unsafe extern "C" fn collect_error(message: *const CharT) {
 }
 
 /// The process-wide `hostfxr` of [`locate`]`(None)`.
+/// The SDK starts apps (`dotnet run`, test hosts, MSBuild nodes) as child processes that write
+/// to the inherited console handles; a host that cleared `HANDLE_FLAG_INHERIT` (libuv's
+/// `uv_disable_stdio_inheritance`) would leave their output nowhere.
+#[cfg(windows)]
+fn inherit_stdio() {
+    use windows_sys::Win32::Foundation::{HANDLE_FLAG_INHERIT, INVALID_HANDLE_VALUE, SetHandleInformation};
+    use windows_sys::Win32::System::Console::{GetStdHandle, STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE};
+    for id in [STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE] {
+        // SAFETY: GetStdHandle and SetHandleInformation take no pointers; invalid handles are skipped.
+        unsafe {
+            let handle = GetStdHandle(id);
+            if !handle.is_null() && handle != INVALID_HANDLE_VALUE {
+                SetHandleInformation(handle, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
+            }
+        }
+    }
+}
+
+#[cfg(not(windows))]
+fn inherit_stdio() {}
+
 pub fn hostfxr() -> Result<&'static Hostfxr> {
     HOSTFXR
         .get_or_init(|| locate(None).and_then(Hostfxr::open))
@@ -627,6 +648,7 @@ impl Hostfxr {
         let host = to_char_t(host.as_os_str())?;
         let root = to_char_t(root.as_os_str())?;
         let app = to_char_t(app.as_os_str())?;
+        inherit_stdio();
         // SAFETY: argv holds NUL-terminated strings alive for the call, as dotnet.cpp passes them.
         Ok(unsafe {
             (self.main_startupinfo)(

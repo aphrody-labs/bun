@@ -84,7 +84,6 @@ describe.skipIf(!hasDotnet)("bun:dotnet", () => {
     "Fixture.csproj": PROJECT,
     "Fixture.cs": LIBRARY,
     "Directory.Build.props": "<Project />\n",
-    "app.cs": `#:property Nullable=enable\nConsole.WriteLine($"hello {string.Join(",", args)} from {System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription.Split(' ')[0]}");\nreturn 3;\n`,
   });
   const cwd = String(dir);
   const assembly = join(cwd, "bin", "Fixture.dll");
@@ -102,7 +101,10 @@ describe.skipIf(!hasDotnet)("bun:dotnet", () => {
   });
 
   test("bun run app.cs runs a file-based C# app", async () => {
-    const { stdout, stderr, exitCode } = await run(["run", "app.cs", "a", "b"], cwd);
+    using app = tempDir("bun-dotnet-app", {
+      "app.cs": `#:property Nullable=enable\nConsole.WriteLine($"hello {string.Join(",", args)} from {System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription.Split(' ')[0]}");\nreturn 3;\n`,
+    });
+    const { stdout, stderr, exitCode } = await run(["run", "app.cs", "a", "b"], String(app));
     expect(stdout).toBe("hello a,b from .NET\n");
     expect(stderr).not.toContain("error");
     expect(exitCode).toBe(3);
