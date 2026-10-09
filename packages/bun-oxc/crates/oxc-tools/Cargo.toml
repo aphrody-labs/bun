@@ -1,0 +1,25 @@
+[package]
+name = "aphrody-oxc-tools"
+description = "In-process oxlint (all rules, config, fixes) and oxfmt for the Bun Oxc plugin. Not published: oxc_linter and oxfmt are git dependencies."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+aphrody-oxc-bridge.workspace = true
+oxc_allocator = { workspace = true }
+oxc_linter = { workspace = true }
+oxfmt = { workspace = true }
+rustc-hash = "2"
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

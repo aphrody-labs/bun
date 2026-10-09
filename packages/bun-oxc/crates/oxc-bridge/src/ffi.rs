@@ -1,5 +1,9 @@
-//! C ABI 1. Every function returns a heap-allocated JSON string that the caller releases with
+//! C ABI 2. Every function returns a heap-allocated JSON string that the caller releases with
 //! `aphrody_oxc_free`. These are thin wrappers over the safe API at the crate root.
+//!
+//! ABI 2 keeps every ABI 1 symbol and response shape, and adds `aphrody_oxc_transform`,
+//! `aphrody_oxc_isolated_declaration`, `aphrody_oxc_minify_with`, `aphrody_oxc_check` and
+//! `aphrody_oxc_resolve`, which answer `{ok: true, ...}` or `{ok: false, kind, error}`.
 
 use std::{
     ffi::{CStr, CString, c_char},
@@ -10,7 +14,7 @@ use crate::Error;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn aphrody_oxc_abi_version() -> u32 {
-    1
+    2
 }
 
 /// Reads the two NUL-terminated arguments and runs `operation`, turning a panic into `on_panic`.
@@ -132,6 +136,161 @@ pub unsafe extern "C" fn aphrody_oxc_parse(
     filename: *const c_char,
 ) -> *mut c_char {
     analysis(source, filename, crate::parse)
+}
+
+/// Reads an optional NUL-terminated JSON options string: null means `{}`.
+///
+/// # Safety
+/// `pointer` must be null or reference a NUL-terminated string valid for the call.
+unsafe fn options_json(pointer: *const c_char) -> Result<serde_json::Value, Error> {
+    if pointer.is_null() {
+        return Ok(serde_json::Value::Null);
+    }
+    // SAFETY: Caller contract.
+    let text =
+        unsafe { CStr::from_ptr(pointer) }.to_str().map_err(|error| Error::input(error.to_string()))?;
+    if text.trim().is_empty() {
+        return Ok(serde_json::Value::Null);
+    }
+    serde_json::from_str(text).map_err(|error| Error::input(format!("options: {error}")))
+}
+
+fn tagged(outcome: Result<serde_json::Value, Error>) -> *mut c_char {
+    into_c(&match outcome {
+        Ok(serde_json::Value::Object(mut fields)) => {
+            fields.insert("ok".to_owned(), serde_json::Value::Bool(true));
+            serde_json::Value::Object(fields)
+        },
+        Ok(value) => serde_json::json!({"ok": true, "result": value}),
+        Err(error) => {
+            serde_json::json!({"ok": false, "kind": error.kind.as_str(), "error": error.message})
+        },
+    })
+}
+
+fn code_and_map(out: crate::Transformed) -> serde_json::Value {
+    serde_json::json!({"code": out.code, "map": out.map})
+}
+
+/// TypeScript/JSX to JavaScript. `options` is null or the JSON of
+/// [`crate::TransformOptions::from_json`]. Answers `{ok, code, map}`.
+/// # Safety
+/// `source` and `filename` must reference NUL-terminated UTF-8 strings; `options` may be null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn aphrody_oxc_transform(
+    source: *const c_char,
+    filename: *const c_char,
+    options: *const c_char,
+) -> *mut c_char {
+    // SAFETY: Forwarded caller contract.
+    let options = unsafe { options_json(options) };
+    // SAFETY: Forwarded caller contract.
+    tagged(unsafe {
+        guarded(
+            source,
+            filename,
+            move |source, filename| {
+                let options = crate::TransformOptions::from_json(&options?)?;
+                crate::transform(source, filename, &options).map(code_and_map)
+            },
+            "Oxc transform panicked",
+        )
+    })
+}
+
+/// `.d.ts` emit. `options` is null or `{"stripInternal": bool, "sourcemap": bool}`.
+/// Answers `{ok, code, map}`.
+/// # Safety
+/// `source` and `filename` must reference NUL-terminated UTF-8 strings; `options` may be null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn aphrody_oxc_isolated_declaration(
+    source: *const c_char,
+    filename: *const c_char,
+    options: *const c_char,
+) -> *mut c_char {
+    // SAFETY: Forwarded caller contract.
+    let options = unsafe { options_json(options) };
+    // SAFETY: Forwarded caller contract.
+    tagged(unsafe {
+        guarded(
+            source,
+            filename,
+            move |source, filename| {
+                let options = options?;
+                let flag = |key: &str| options.get(key).and_then(serde_json::Value::as_bool);
+                crate::isolated_declaration(
+                    source,
+                    filename,
+                    flag("stripInternal").unwrap_or(false),
+                    flag("sourcemap").unwrap_or(false),
+                )
+                .map(code_and_map)
+            },
+            "Oxc isolated declarations panicked",
+        )
+    })
+}
+
+/// Minify with the JSON of [`crate::MinifyOptions::from_json`]. Answers `{ok, code, map}`.
+/// # Safety
+/// `source` and `filename` must reference NUL-terminated UTF-8 strings; `options` may be null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn aphrody_oxc_minify_with(
+    source: *const c_char,
+    filename: *const c_char,
+    options: *const c_char,
+) -> *mut c_char {
+    // SAFETY: Forwarded caller contract.
+    let options = unsafe { options_json(options) };
+    // SAFETY: Forwarded caller contract.
+    tagged(unsafe {
+        guarded(
+            source,
+            filename,
+            move |source, filename| {
+                let options = crate::MinifyOptions::from_json(&options?)?;
+                crate::minify_with(source, filename, &options).map(code_and_map)
+            },
+            "Oxc minify panicked",
+        )
+    })
+}
+
+/// Syntax and semantic diagnostics. Answers `{ok, result: {ok, diagnostics}}`; the inner `ok` is
+/// false when an error-severity diagnostic exists.
+/// # Safety
+/// Both pointers must reference NUL-terminated UTF-8 strings.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn aphrody_oxc_check(
+    source: *const c_char,
+    filename: *const c_char,
+) -> *mut c_char {
+    analysis(source, filename, crate::check)
+}
+
+/// Resolve `specifier` from `from` (directory or file) with the JSON options of the `oxc-resolver`
+/// npm package. Answers `{ok, path, query, fragment, moduleType}`.
+/// # Safety
+/// `from` and `specifier` must reference NUL-terminated UTF-8 strings; `options` may be null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn aphrody_oxc_resolve(
+    from: *const c_char,
+    specifier: *const c_char,
+    options: *const c_char,
+) -> *mut c_char {
+    // SAFETY: Forwarded caller contract.
+    let options = unsafe { options_json(options) };
+    // SAFETY: `guarded` reads `from` as its first string and `specifier` as its second.
+    tagged(unsafe {
+        guarded(
+            from,
+            specifier,
+            move |from, specifier| {
+                crate::resolve(from, specifier, &options?)
+            },
+            "Oxc resolver panicked",
+        )
+    })
 }
 
 /// Release exactly one string returned by this bridge. Null is accepted.

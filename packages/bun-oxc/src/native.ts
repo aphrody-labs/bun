@@ -3,15 +3,48 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import type * as Minify from "../vendor/oxc-minify/index";
+import type * as Parser from "../vendor/oxc-parser/index";
+import type * as Transform from "../vendor/oxc-transform/index";
+
+/** `{ code, map }` returned by the bridge functions. */
+export interface CodeOutput {
+  code: string;
+  map?: string | null;
+}
+
 /** Shape of the Node-API addon (`crates/napi`). */
 export interface NativeAddon {
   version(): string;
-  transform(source: string, filename: string, options?: object | null): { code: string; map?: string | null };
-  minify(source: string, filename: string): string;
-  format(source: string, filename: string): string;
-  lint(source: string, filename: string): string[];
+  bridgeTransform(source: string, filename: string, options?: object | null): CodeOutput;
+  bridgeMinify(source: string, filename: string, options?: object | null): CodeOutput;
+  bridgeParse(source: string, filename: string): unknown;
   analyze(source: string, filename: string): unknown;
-  parse(source: string, filename: string): unknown;
+  check(source: string, filename: string): unknown;
+  isolatedDeclarationText(source: string, filename: string, options?: object | null): CodeOutput;
+  resolve(from: string, specifier: string, options?: object | null): unknown;
+  format(source: string, filename: string, options?: object | null): string;
+  lint(
+    source: string,
+    filename: string,
+    options?: object | null,
+  ): { diagnostics: unknown[]; fixed?: string | null; errorCount: number; warningCount: number };
+  lintRules(): unknown[];
+  /** napi External holding transform options, for the `oxc_transform_with` native hook. */
+  createTransformOptions(options?: object | null): object;
+
+  // Official oxc-parser / oxc-transform / oxc-minify bindings linked into the addon.
+  parseSync: typeof Parser.parseSync;
+  parse: typeof Parser.parse;
+  rawTransferSupported(): boolean;
+  transformSync: typeof Transform.transformSync;
+  transform: typeof Transform.transform;
+  isolatedDeclarationSync: typeof Transform.isolatedDeclarationSync;
+  isolatedDeclaration: typeof Transform.isolatedDeclaration;
+  moduleRunnerTransformSync: typeof Transform.moduleRunnerTransformSync;
+  moduleRunnerTransform: typeof Transform.moduleRunnerTransform;
+  minifySync: typeof Minify.minifySync;
+  minify: typeof Minify.minify;
 }
 
 const NAME = "bun-plugin-oxc";

@@ -11,6 +11,8 @@ pub enum ErrorKind {
     Tool,
     /// The transformer reported an error.
     Transform,
+    /// The resolver could not resolve the specifier.
+    Resolve,
     /// An internal panic, caught at the C boundary.
     Panic,
 }
@@ -23,6 +25,7 @@ impl ErrorKind {
             Self::Syntax => "syntax",
             Self::Tool => "tool",
             Self::Transform => "transform",
+            Self::Resolve => "resolve",
             Self::Panic => "panic",
         }
     }
@@ -50,6 +53,10 @@ impl Error {
 
     pub(crate) fn tool(message: impl Into<String>) -> Self {
         Self::new(ErrorKind::Tool, message)
+    }
+
+    pub(crate) fn resolve(message: impl Into<String>) -> Self {
+        Self::new(ErrorKind::Resolve, message)
     }
 }
 

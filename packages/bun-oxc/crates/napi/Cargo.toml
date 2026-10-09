@@ -14,9 +14,15 @@ crate-type = ["cdylib"]
 
 [dependencies]
 aphrody-oxc-bridge.workspace = true
+aphrody-oxc-tools.workspace = true
 bun-native-plugin = { path = "../../../bun-native-plugin-rs" }
 napi = { version = "3", default-features = false, features = ["napi4", "serde-json"] }
 napi-derive = "3"
+# The official oxc-parser / oxc-transform / oxc-minify bindings, linked as libraries: their
+# #[napi] exports register in this addon under their npm names.
+oxc_parser_napi = { workspace = true }
+oxc_transform_napi = { workspace = true }
+oxc_minify_napi = { workspace = true }
 serde_json = { workspace = true }
 
 [build-dependencies]

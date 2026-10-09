@@ -1,6 +1,6 @@
 [package]
 name = "aphrody-oxc-bridge"
-description = "In-process Oxc bridge: transform, minify, format, lint and analyze JS/TS, with a stable C ABI."
+description = "In-process Oxc bridge: transform, isolated declarations, minify, check, resolve and analyze JS/TS, with a stable C ABI."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -20,8 +20,11 @@ oxc_allocator = { workspace = true }
 oxc_ast = { workspace = true, features = ["serialize"] }
 oxc_ast_visit = { workspace = true, features = ["serialize"] }
 oxc_codegen = { workspace = true }
+oxc_diagnostics = { workspace = true }
+oxc_isolated_declarations = { workspace = true }
 oxc_minifier = { workspace = true }
 oxc_parser = { workspace = true }
+oxc_resolver = { workspace = true }
 oxc_semantic = { workspace = true }
 oxc_span = { workspace = true }
 oxc_syntax = { workspace = true }

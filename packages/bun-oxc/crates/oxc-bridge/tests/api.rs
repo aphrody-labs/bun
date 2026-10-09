@@ -1,6 +1,9 @@
 //! Safe Rust API.
 
-use aphrody_oxc_bridge::{ErrorKind, Jsx, TransformOptions, analyze, minify, parse, transform};
+use aphrody_oxc_bridge::{
+    ErrorKind, Jsx, MinifyOptions, TransformOptions, analyze, check, isolated_declaration, minify,
+    minify_with, parse, resolve, transform,
+};
 
 #[test]
 fn transform_strips_typescript() {
@@ -96,4 +99,122 @@ fn analyze_and_parse() {
     let p = parse("export interface S {}", "a.ts").unwrap();
     assert_eq!(p["type"], "Program");
     assert_eq!(analyze("let a; let a;", "a.ts").unwrap_err().kind, ErrorKind::Syntax);
+}
+
+#[test]
+fn transform_legacy_decorators_refresh_and_styled_components() {
+    let src = "function d(t: any) {}\n@d export class A {}";
+    let legacy =
+        transform(src, "a.ts", &TransformOptions { decorators_legacy: true, ..Default::default() })
+            .unwrap();
+    assert!(!legacy.code.contains("@d"), "{}", legacy.code);
+    let standard = transform(src, "a.ts", &TransformOptions::default()).unwrap();
+    assert!(standard.code.contains("@d"), "{}", standard.code);
+
+    let component = "export function App() { const [n] = useState(0); return <b>{n}</b>; }";
+    let refresh = transform(
+        component,
+        "a.tsx",
+        &TransformOptions { react_refresh: true, ..Default::default() },
+    )
+    .unwrap();
+    assert!(refresh.code.contains("$RefreshReg$"), "{}", refresh.code);
+
+    let styled = transform(
+        "import styled from 'styled-components';\nexport const Box = styled.div`color: red;`;",
+        "a.js",
+        &TransformOptions { styled_components: true, ..Default::default() },
+    )
+    .unwrap();
+    assert!(styled.code.contains("displayName"), "{}", styled.code);
+}
+
+#[test]
+fn transform_options_from_json() {
+    let options = TransformOptions::from_json(&serde_json::json!({
+        "jsx": "classic",
+        "decorators": "legacy",
+        "reactRefresh": true,
+        "helpersModule": "@oxc-project/runtime",
+    }))
+    .unwrap();
+    assert_eq!(options.jsx, Jsx::Classic);
+    assert!(options.decorators_legacy && options.react_refresh);
+    assert_eq!(options.helpers_module.as_deref(), Some("@oxc-project/runtime"));
+    let error =
+        TransformOptions::from_json(&serde_json::json!({ "decorators": "2022" })).unwrap_err();
+    assert_eq!(error.kind, ErrorKind::Input);
+}
+
+#[test]
+fn isolated_declarations_emit_dts() {
+    let out = isolated_declaration(
+        "export function f(a: number): string { return String(a); }\n/** @internal */ export const x: number = 1;",
+        "a.ts",
+        true,
+        true,
+    )
+    .unwrap();
+    assert!(out.code.contains("export declare function f(a: number): string;"), "{}", out.code);
+    assert!(!out.code.contains("x: number"), "{}", out.code);
+    assert!(out.map.is_some());
+    let error =
+        isolated_declaration("export const f = (a) => a;", "a.ts", false, false).unwrap_err();
+    assert_eq!(error.kind, ErrorKind::Transform);
+}
+
+#[test]
+fn minify_with_switches_and_sourcemap() {
+    let src = "function f(longName) { debugger; console.log(longName); } f(1);";
+    let kept = minify_with(
+        src,
+        "a.js",
+        &MinifyOptions { mangle: false, drop_debugger: false, ..Default::default() },
+    )
+    .unwrap();
+    assert!(kept.code.contains("longName") && kept.code.contains("debugger"), "{}", kept.code);
+    let dropped = minify_with(
+        src,
+        "a.js",
+        &MinifyOptions { drop_console: true, sourcemap: true, ..Default::default() },
+    )
+    .unwrap();
+    assert!(!dropped.code.contains("console.log"), "{}", dropped.code);
+    assert!(dropped.map.is_some());
+}
+
+#[test]
+fn check_reports_semantic_errors_as_data() {
+    let clean = check("export const a = 1;", "a.ts").unwrap();
+    assert_eq!(clean["ok"], true);
+    assert_eq!(clean["diagnostics"], serde_json::json!([]));
+    let dup = check("// \u{1F408}\nlet a; let a;", "a.js").unwrap();
+    assert_eq!(dup["ok"], false);
+    let first = &dup["diagnostics"][0];
+    assert_eq!(first["severity"], "error");
+    // UTF-16 offsets: the cat is two code units, so the second `a` starts at 17 and not at 19.
+    assert!(first["labels"].as_array().unwrap().iter().any(|label| label["start"] == 17), "{dup}");
+    assert_eq!(check("x", "a.css").unwrap_err().kind, ErrorKind::Input);
+}
+
+#[test]
+fn resolve_with_extensions_alias_and_errors() {
+    let dir =
+        std::env::temp_dir().join(format!("aphrody-oxc-api-resolve-{}", std::process::id()));
+    std::fs::create_dir_all(dir.join("src")).unwrap();
+    std::fs::write(dir.join("src/util.ts"), "export {}").unwrap();
+    let from = dir.to_str().unwrap();
+    let options = serde_json::json!({
+        "extensions": [".ts"],
+        "alias": { "@": dir.join("src").to_str().unwrap() },
+    });
+    let direct = resolve(from, "./src/util", &options);
+    let aliased = resolve(from, "@/util", &options);
+    let missing = resolve(from, "./nope", &options);
+    let invalid = resolve(from, "./src/util", &serde_json::json!({ "extensions": 1 }));
+    let _ = std::fs::remove_dir_all(&dir);
+    assert!(direct.unwrap()["path"].as_str().unwrap().ends_with("util.ts"));
+    assert!(aliased.unwrap()["path"].as_str().unwrap().ends_with("util.ts"));
+    assert_eq!(missing.unwrap_err().kind, ErrorKind::Resolve);
+    assert_eq!(invalid.unwrap_err().kind, ErrorKind::Input);
 }

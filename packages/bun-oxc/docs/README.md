@@ -1,42 +1,26 @@
 # Oxc in the fork's packages
 
 [Oxc](https://oxc.rs) is a JavaScript and TypeScript toolchain written in Rust. Two packages of this
-repository use it. Each one is its own Cargo workspace and pins the Oxc crates from crates.io.
+repository use it. Each one is its own Cargo workspace. `packages/bun-oxc` pins Oxc 0.153.0 (oxlint 1.87.0, oxfmt
+0.72.0): the published bridge uses crates.io, and `[patch.crates-io]` points every Oxc crate at the `aphrody` branch
+of aphrody-labs/oxc so the unpublished `aphrody-oxc-tools` (oxc_linter, oxfmt) and the official napi crates share
+one AST. `packages/bun-n2b` pins its Oxc crates from crates.io.
 
 | Package                                        | Crates               | Oxc crates                                                                                                                                            |
 | ---------------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/bun-oxc` (`@aphrody/bun-plugin-oxc`) | `aphrody-oxc-bridge` | `oxc_allocator`, `oxc_ast`, `oxc_ast_visit`, `oxc_codegen`, `oxc_minifier`, `oxc_parser`, `oxc_semantic`, `oxc_span`, `oxc_syntax`, `oxc_transformer` |
+| `packages/bun-oxc` (`@aphrody/bun-plugin-oxc`) | `aphrody-oxc-bridge`, `aphrody-oxc-tools`, `bun-plugin-oxc-napi` | `oxc_allocator`, `oxc_ast`, `oxc_ast_visit`, `oxc_codegen`, `oxc_diagnostics`, `oxc_isolated_declarations`, `oxc_minifier`, `oxc_parser`, `oxc_semantic`, `oxc_span`, `oxc_syntax`, `oxc_transformer`, `oxc_resolver`, `oxc_linter`, `oxfmt`, `oxc_parser_napi`, `oxc_transform_napi`, `oxc_minify_napi` |
 | `packages/bun-n2b` (`@aphrody/bun-plugin-n2b`) | `aphrody-n2b-core`   | `oxc_allocator`, `oxc_ast`, `oxc_ast_visit`, `oxc_parser`, `oxc_span`                                                                                 |
 
 Bun itself does not use Oxc. `Bun.Transpiler`, `Bun.build`, `bun test` and the runtime keep Bun's own
 parser and printer.
 
-## `aphrody-oxc-bridge`
+## `aphrody-oxc-bridge` and the addon
 
-The bridge exposes synchronous Rust functions. The extension of `filename` selects the syntax
-(`.js`, `.mjs`, `.cjs`, `.jsx`, `.ts`, `.mts`, `.cts`, `.tsx`).
-
-| Function                         | Result                                              |
-| -------------------------------- | --------------------------------------------------- |
-| `transform(source, filename, …)` | TypeScript and JSX compiled to JavaScript           |
-| `minify(source, filename)`       | Minified code                                       |
-| `format(source, filename)`       | Code formatted with Oxc's default options           |
-| `lint(source, filename)`         | Diagnostics from Oxc's default rule set             |
-| `analyze(source, filename)`      | Static module requests and exports, in source order |
-| `parse(source, filename)`        | The ESTree JSON program                             |
-
-### C ABI
-
-`aphrody_oxc_abi_version()` returns `1`. The ABI exports `aphrody_oxc_format`, `aphrody_oxc_minify`,
-`aphrody_oxc_lint`, `aphrody_oxc_analyze`, `aphrody_oxc_parse` and `aphrody_oxc_free`.
-
-- Inputs are NUL-terminated UTF-8 `source` and `filename` strings.
-- Each call returns a JSON string: `{ "ok": true, "code": "…" }` for format and minify,
-  `{ "ok": true, "diagnostics": [ … ] }` for lint, `{ "ok": true, "result": … }` for analyze and
-  parse, and `{ "ok": false, "error": "…" }` on failure.
-- Analyze and parse use UTF-16 spans and report parser errors with `kind: "syntax"`.
-- Release every result once with `aphrody_oxc_free`. It accepts null.
-- A panic becomes an error result. Build the library with `panic = "unwind"` to keep that boundary.
+The bridge exposes synchronous Rust functions (`transform`, `isolated_declaration`, `minify_with`, `check`,
+`resolve`, `analyze`, `parse`, and subprocess `format`/`lint`) and a C ABI (version 2). The extension of
+`filename` selects the syntax. `aphrody-oxc-tools` runs oxlint (every rule, `.oxlintrc.json`, fixes) and oxfmt
+in process. The Node-API addon exposes both, plus the official `oxc-parser`/`oxc-transform`/`oxc-minify`
+functions. See [`crates/oxc-bridge/README.md`](../crates/oxc-bridge/README.md) and [`README.md`](../README.md).
 
 ## Oxc in n2b
 

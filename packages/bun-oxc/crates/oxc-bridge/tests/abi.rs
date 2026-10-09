@@ -1,4 +1,4 @@
-//! C ABI 1 contract: response shapes, ownership and error kinds.
+//! C ABI 2 contract: response shapes, ownership and error kinds.
 
 use std::{
     ffi::{CStr, CString, c_char},
@@ -6,8 +6,9 @@ use std::{
 };
 
 use aphrody_oxc_bridge::{
-    aphrody_oxc_abi_version, aphrody_oxc_analyze, aphrody_oxc_format, aphrody_oxc_free,
-    aphrody_oxc_lint, aphrody_oxc_minify, aphrody_oxc_parse,
+    aphrody_oxc_abi_version, aphrody_oxc_analyze, aphrody_oxc_check, aphrody_oxc_format,
+    aphrody_oxc_free, aphrody_oxc_isolated_declaration, aphrody_oxc_lint, aphrody_oxc_minify,
+    aphrody_oxc_minify_with, aphrody_oxc_parse, aphrody_oxc_resolve, aphrody_oxc_transform,
 };
 
 fn tool(env: &str, name: &str) -> String {
@@ -29,7 +30,7 @@ fn formatting_minification_and_lint_preserve_response_shapes() {
     let formatted = response(unsafe { aphrody_oxc_format(source.as_ptr(), filename.as_ptr()) });
     let minified = response(unsafe { aphrody_oxc_minify(source.as_ptr(), filename.as_ptr()) });
     let linted = response(unsafe { aphrody_oxc_lint(source.as_ptr(), filename.as_ptr()) });
-    assert_eq!(aphrody_oxc_abi_version(), 1);
+    assert_eq!(aphrody_oxc_abi_version(), 2);
     assert_eq!(minified["ok"], true);
     assert!(minified["code"].as_str().unwrap().contains("console.log"));
     // Formatting and linting need the external binaries; without them the error names the tool.
@@ -141,4 +142,62 @@ fn analysis_rejects_invalid_inputs_syntax_and_semantics() {
         assert_eq!(value["ok"], false);
         assert_eq!(value["kind"], "syntax");
     }
+}
+
+#[test]
+fn abi2_transform_declarations_minify_check_and_resolve() {
+    let filename = CString::new("fixture.ts").unwrap();
+    let source = CString::new("export const f = (a?: number): number => a ?? 1;").unwrap();
+    let options = CString::new(r#"{"target":"es2019","sourcemap":true}"#).unwrap();
+    let out = response(unsafe {
+        aphrody_oxc_transform(source.as_ptr(), filename.as_ptr(), options.as_ptr())
+    });
+    assert_eq!(out["ok"], true);
+    assert!(!out["code"].as_str().unwrap().contains("??"));
+    assert!(out["map"].as_str().unwrap().contains("\"version\":3"));
+    let plain = response(unsafe {
+        aphrody_oxc_transform(source.as_ptr(), filename.as_ptr(), std::ptr::null())
+    });
+    assert_eq!(plain["ok"], true);
+    assert_eq!(plain["map"], serde_json::Value::Null);
+    let bad = CString::new(r#"{"jsx":"nope"}"#).unwrap();
+    let rejected =
+        response(unsafe { aphrody_oxc_transform(source.as_ptr(), filename.as_ptr(), bad.as_ptr()) });
+    assert_eq!(rejected["kind"], "input");
+
+    let dts = response(unsafe {
+        aphrody_oxc_isolated_declaration(source.as_ptr(), filename.as_ptr(), std::ptr::null())
+    });
+    assert_eq!(dts["ok"], true);
+    assert!(dts["code"].as_str().unwrap().contains("export declare const f"), "{dts}");
+
+    let keep = CString::new(r#"{"mangle":false,"whitespace":false}"#).unwrap();
+    let js = CString::new("fixture.js").unwrap();
+    let code = CString::new("function f(longName) { return longName + 1; } f(1);").unwrap();
+    let min =
+        response(unsafe { aphrody_oxc_minify_with(code.as_ptr(), js.as_ptr(), keep.as_ptr()) });
+    assert_eq!(min["ok"], true);
+    assert!(min["code"].as_str().unwrap().contains("longName"));
+
+    let dup = CString::new("let a; let a;").unwrap();
+    let checked = response(unsafe { aphrody_oxc_check(dup.as_ptr(), js.as_ptr()) });
+    assert_eq!(checked["ok"], true);
+    assert_eq!(checked["result"]["ok"], false);
+    assert!(!checked["result"]["diagnostics"].as_array().unwrap().is_empty());
+
+    let dir = std::env::temp_dir().join(format!("aphrody-oxc-resolve-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("dep.ts"), "export {}").unwrap();
+    let from = CString::new(dir.to_str().unwrap()).unwrap();
+    let specifier = CString::new("./dep").unwrap();
+    let exts = CString::new(r#"{"extensions":[".ts",".js"]}"#).unwrap();
+    let resolved =
+        response(unsafe { aphrody_oxc_resolve(from.as_ptr(), specifier.as_ptr(), exts.as_ptr()) });
+    let missing = CString::new("./missing").unwrap();
+    let failed =
+        response(unsafe { aphrody_oxc_resolve(from.as_ptr(), missing.as_ptr(), exts.as_ptr()) });
+    let _ = std::fs::remove_dir_all(&dir);
+    assert_eq!(resolved["ok"], true, "{resolved}");
+    assert!(resolved["path"].as_str().unwrap().ends_with("dep.ts"));
+    assert_eq!(failed["kind"], "resolve");
 }
