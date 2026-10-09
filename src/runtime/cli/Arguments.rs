@@ -842,7 +842,10 @@ pub(crate) fn parse(cmd: CommandTag, ctx: Context<'_>) -> crate::Result<api::Tra
             diagnostic: Some(&mut diag),
             stop_after_positional_at: match cmd {
                 CommandTag::RunCommand => 2,
-                CommandTag::AutoCommand | CommandTag::RunAsNodeCommand => 1,
+                // `bun lint --fix`: what follows the subcommand is for eval/toolchain.ts.
+                CommandTag::AutoCommand
+                | CommandTag::RunAsNodeCommand
+                | CommandTag::ToolchainCommand => 1,
                 _ => 0,
             },
             // Only the paths standing in for `node` get node's aliases.

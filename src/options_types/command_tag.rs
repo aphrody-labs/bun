@@ -46,6 +46,8 @@ pub enum Tag {
     DedupeCommand,
     PruneCommand,
     FuzzilliCommand,
+    /// `lint`, `fmt`, `n2b`, `migrate`, `wasm` and `build --target=wasm` (embedded `eval/toolchain.ts`).
+    ToolchainCommand,
 }
 
 impl Tag {
@@ -89,6 +91,7 @@ impl Tag {
             Tag::DedupeCommand => b'd',
             Tag::PruneCommand => b'N',
             Tag::FuzzilliCommand => b'F',
+            Tag::ToolchainCommand => b'T',
         }
     }
 
@@ -175,6 +178,7 @@ impl Tag {
         Self::DedupeCommand,
         Self::PruneCommand,
         Self::FuzzilliCommand,
+        Self::ToolchainCommand,
     ];
 
     // Heavy methods that pull in `Arguments` / help text live in the CLI crate.

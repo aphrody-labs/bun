@@ -179,7 +179,7 @@ fn reject(rejected: &RejectedFlag) -> ! {
     }
 }
 
-fn working_directory() -> Vec<u8> {
+pub(crate) fn working_directory() -> Vec<u8> {
     let mut buf = bun_paths::path_buffer_pool::get();
     match bun_core::getcwd(&mut buf) {
         Ok(cwd) => cwd.as_bytes().to_vec(),
@@ -251,7 +251,7 @@ pub(crate) fn is_package_script() -> bool {
 
 /// The `package.json` nearest to `dir`, which is where `bun run` looks: its directory, its path and
 /// its text.
-fn nearest_package_json(mut dir: &[u8]) -> Option<(&[u8], Vec<u8>, Vec<u8>)> {
+pub(crate) fn nearest_package_json(mut dir: &[u8]) -> Option<(&[u8], Vec<u8>, Vec<u8>)> {
     use bun_paths::platform::Auto;
     use bun_paths::resolve_path::{dirname, join_abs_string};
     loop {

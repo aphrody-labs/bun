@@ -326,6 +326,8 @@ pub(crate) mod create_command;
 pub(crate) mod exec_command;
 #[path = "fuzzilli_command.rs"]
 pub(crate) mod fuzzilli_command;
+#[path = "toolchain_command.rs"]
+pub(crate) mod toolchain_command;
 #[path = "install_command.rs"]
 pub(crate) mod install_command;
 #[path = "repl_command.rs"]
@@ -650,6 +652,9 @@ pub(crate) mod help_command {
             <d>lint<r>                 Run a package.json script
   <b><magenta>test<r>                           Run unit tests with Bun
   <b><magenta>check<r>                          Type check a TypeScript project
+  <b><magenta>lint<r>                           Lint with oxlint and the Node-to-Bun rules
+  <b><magenta>fmt<r>                            Format with oxfmt
+  <b><magenta>n2b<r>       <d>scan | fix | migrate<r> Migrate a Node.js project to Bun
   <b><magenta>x<r>         <d>{:<16}<r>     Execute a package binary (CLI), installing if needed <d>(bunx)<r>
   <b><magenta>repl<r>                           Start a REPL session with Bun
   <b><magenta>exec<r>                           Run a shell script directly with Bun
@@ -671,6 +676,7 @@ pub(crate) mod help_command {
   <b><blue>why<r>       <d>{:<16}<r>     Explain why a package is installed
 
   <b><yellow>build<r>     <d>./a.ts ./b.jsx<r>       Bundle TypeScript & JavaScript into a single file
+  <b><yellow>wasm<r>      <d>build ./crate<r>        Build a Rust crate into a WebAssembly ES module
 
   <b><cyan>init<r>                           Start an empty Bun project from a built-in template
   <b><cyan>create<r>    <d>{:<16}<r>     Create a new project from a template <d>(bun c)<r>
@@ -1067,6 +1073,17 @@ pub(crate) mod command {
         if x == RootCommandMatcher::case(b"info") {
             return Tag::InfoCommand;
         }
+        if x == RootCommandMatcher::case(b"lint")
+            || x == RootCommandMatcher::case(b"fmt")
+            || x == RootCommandMatcher::case(b"n2b")
+            || x == RootCommandMatcher::case(b"migrate")
+            || x == RootCommandMatcher::case(b"wasm")
+        {
+            return match super::toolchain_command::is_package_script(first_arg_name) {
+                true => Tag::AutoCommand,
+                false => Tag::ToolchainCommand,
+            };
+        }
         if x == RootCommandMatcher::case(b"dedupe") {
             return Tag::DedupeCommand;
         }
@@ -1346,6 +1363,7 @@ pub(crate) mod command {
             Tag::UpgradeCommand => exec_upgrade(log),
             Tag::ExecCommand => exec_exec(log),
             Tag::FuzzilliCommand => exec_fuzzilli(log),
+            Tag::ToolchainCommand => exec_toolchain(log),
         }
     }
 
@@ -1584,7 +1602,17 @@ pub(crate) mod command {
 
     #[cold]
     #[inline(never)]
+    fn exec_toolchain(log: &mut bun_ast::Log) -> CmdResult {
+        let ctx = init(Tag::ToolchainCommand, log)?;
+        super::toolchain_command::ToolchainCommand::exec(ctx)
+    }
+
+    #[cold]
+    #[inline(never)]
     fn exec_build(log: &mut bun_ast::Log) -> CmdResult {
+        if super::toolchain_command::is_wasm_build(&argv_zslice()) {
+            return exec_toolchain(log);
+        }
         let ctx = init(Tag::BuildCommand, log)?;
         super::build_command::BuildCommand::exec(ctx, None)?;
         Ok(())
