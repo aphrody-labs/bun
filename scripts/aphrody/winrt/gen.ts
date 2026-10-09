@@ -18,7 +18,9 @@ const versionArg = versionIndex >= 0 ? args.splice(versionIndex, 2)[1] : undefin
 const kits = process.env.WindowsSdkDir ?? "C:/Program Files (x86)/Windows Kits/10";
 const winmdPath = winmdArg ?? join(kits, "UnionMetadata", sdk, "Windows.winmd");
 const source = winmdArg ? require("node:path").basename(winmdArg) : `UnionMetadata\\${sdk}\\Windows.winmd`;
-const packageVersion = versionArg ?? sdk;
+// The Windows SDK folder name has 4 dot-separated numbers ("10.0.26100.0"); npm requires strict
+// semver (3 numbers, optional prerelease) and `npm publish` rejects a 4th component outright.
+const packageVersion = versionArg ?? sdk.replace(/^(\d+\.\d+\.\d+)\.0$/, "$1");
 const repo = join(import.meta.dir, "..", "..", "..");
 
 export function familyName(ns: string) {

@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-windows-winrt-windows-system-profile",
-  "version": "10.0.26100.0",
+  "version": "10.0.26100",
   "description": "bun:windows WinRT family for Windows.System.Profile, generated from Windows SDK 10.0.26100.0 metadata",
   "license": "MIT",
   "main": "index.js"
