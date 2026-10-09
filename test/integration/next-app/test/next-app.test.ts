@@ -68,6 +68,7 @@ describe.concurrent.each([
       // Prerendered at build time inside `bun --bun`, so `Bun` is defined.
       expect(html).toContain('<p id="runtime">bun</p>');
       expect(html).toContain("<button>count: <!-- -->0</button>");
+      expect(html).toContain('<p id="lazy">loaded through next/dynamic</p>');
       expect(html).toContain("self.__next_f");
       expect(page.status).toBe(200);
 
@@ -106,6 +107,7 @@ test(
     expect(html).toContain("<h1>Hello from the App Router</h1>");
     expect(html).toContain('<p id="runtime">bun</p>');
     expect(html).toContain("<button>count: <!-- -->0</button>");
+    expect(html).toContain('<p id="lazy">loaded through next/dynamic</p>');
     expect(html).toContain("self.__next_f");
     expect(page.status).toBe(200);
 
