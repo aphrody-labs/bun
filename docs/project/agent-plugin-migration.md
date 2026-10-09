@@ -6,34 +6,35 @@ Owners in the fork: `bun mcp` (`src/mcp`, the tool registry), `bun lsp` (`src/ls
 
 ## MCP tools
 
-| aphrody                                                          | Decision | Fork                                         | Reason                                                                                                       |
-| ---------------------------------------------------------------- | -------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `git_ingest`                                                     | MIGRATE  | `bun mcp` → `git_ingest`                     | Reads local files only; native walker in parallel, honors `.gitignore`                                     |
-| `upstream_list`, `upstream_info`, `upstream_tree`, `upstream_read` | MIGRATE  | `deps_list`, `deps_info`, `deps_tree`, `deps_read` | Installed sources (node_modules, Cargo registry, vendor/) at the exact versions the project builds against |
-| `upstream_search`                                                | MIGRATE  | `deps_search`, `deps_docs`                   | Local regex search and ranked doc sections; fetching a remote repository stays in aphrody                  |
-| `n2b`                                                            | MIGRATE  | `bun n2b` + skill `n2b`                      | Already a Bun subcommand; the skill is generated from `docs/runtime/n2b.mdx`                              |
-| `docs_auto_search`, `context7_*`, `microsoft_docs_*`, `github_docs_search` | KEEP     | —                                            | Network documentation services and their index                                                            |
-| `aphrody_search`, `universal_web_fetch`, `aphrody_web_*`, `awesome_*` | KEEP     | —                                            | Web access, browser, crawl: aphrody web stack                                                              |
-| `re_triage`, `re_sections`, `re_strings`, `re_disasm`            | KEEP     | —                                            | Reverse engineering of arbitrary binaries, unrelated to Bun                                               |
+| aphrody                                                                               | Decision | Fork                                                                           | Reason                                                                                                                                                                |
+| ------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `git_ingest` on a local directory                                                     | MIGRATE  | `bun mcp` → `git_ingest`                                                       | Reads local files only; native parallel walker that honors `.gitignore`                                                                                               |
+| `git_ingest` on a repository URL                                                      | KEEP     | —                                                                              | Clones over the network, then digests                                                                                                                                 |
+| `upstream_list`, `upstream_info`, `upstream_tree`, `upstream_read`, `upstream_search` | KEEP     | —                                                                              | Live GitHub API over aphrody's upstream catalogue                                                                                                                     |
+| (new)                                                                                 | ADD      | `deps_list`, `deps_info`, `deps_tree`, `deps_read`, `deps_search`, `deps_docs` | Installed sources (node_modules, Cargo registry, vendor/) at the exact versions the project builds against; replaces the local-checkout fallback of `upstream_search` |
+| `n2b`                                                                                 | MIGRATE  | `bun n2b` + skill `n2b`                                                        | Already a Bun subcommand; the skill is generated from `docs/runtime/n2b.mdx`                                                                                          |
+| `docs_auto_search`, `context7_*`, `microsoft_docs_*`, `github_docs_search`            | KEEP     | —                                                                              | Network documentation services and their index                                                                                                                        |
+| `aphrody_search`, `universal_web_fetch`, `aphrody_web_*`, `awesome_*`                 | KEEP     | —                                                                              | Web access, browser, crawl: aphrody web stack                                                                                                                         |
+| `re_triage`, `re_sections`, `re_strings`, `re_disasm`                                 | KEEP     | —                                                                              | Reverse engineering of arbitrary binaries, unrelated to Bun                                                                                                           |
 
 ## Skills
 
-| aphrody                                                    | Decision | Fork                                        | Reason                                                                                           |
-| ---------------------------------------------------------- | -------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `bun-doctrine`                                             | MIGRATE  | `bun-apis` (generated)                      | Derived from `docs/runtime/bun-apis.mdx` and the Node compatibility pages                       |
-| `bun-upstream`, `upstreams`                                | MIGRATE  | `bun-deps` (generated)                      | Describes the `deps_*` and `git_ingest` tools from their schemas                                |
-| `cpp-pro` (Bun part)                                       | MIGRATE  | `cpp-bun`, `webkit` (generated)             | JSC bindings, classes codegen, WebKit fork; generic C++ advice stays                            |
-| (new)                                                      | ADD      | `win32`, `linux-kernel` (generated)         | Windows and Linux runtime modules, from their module docs and pages                             |
-| `n2b`                                                      | MIGRATE  | `n2b` (generated)                           | From `docs/runtime/n2b.mdx`                                                                       |
-| `rust-bun`, `rust-target-check`                            | MIGRATE  | `bun-crates`, `bun-build` (bun-agent-plugin) | Generated from the workspace and the build scripts                                             |
-| `code-intel`                                               | MIGRATE  | `bun lsp`                                   | Language servers (TypeScript, Python, Rust, C/C++) driven by Bun                                |
-| `typescript7-bun`, `docs`                                  | KEEP     | —                                           | Generic TypeScript and documentation research                                                    |
-| design, game, cloud, AI, Windows admin and plugin-authoring skills | KEEP     | —                                           | Not about Bun                                                                                     |
+| aphrody                                                            | Decision | Fork                                         | Reason                                                                        |
+| ------------------------------------------------------------------ | -------- | -------------------------------------------- | ----------------------------------------------------------------------------- |
+| `bun-doctrine`                                                     | MIGRATE  | `bun-apis` (generated)                       | Derived from `docs/runtime/bun-apis.mdx` and the Node compatibility pages     |
+| `bun-upstream`, `upstreams`                                        | KEEP     | `bun-deps` (generated) for local sources     | Catalogue of remote upstreams stays; `bun-deps` covers installed dependencies |
+| `cpp-pro` (Bun part)                                               | MIGRATE  | `cpp-bun`, `webkit` (generated)              | JSC bindings, classes codegen, WebKit fork; generic C++ advice stays          |
+| (new)                                                              | ADD      | `win32`, `linux-kernel` (generated)          | Windows and Linux runtime modules, from their module docs and pages           |
+| `n2b`                                                              | MIGRATE  | `n2b` (generated)                            | From `docs/runtime/n2b.mdx`                                                   |
+| `rust-bun`, `rust-target-check`                                    | MIGRATE  | `bun-crates`, `bun-build` (bun-agent-plugin) | Generated from the workspace and the build scripts                            |
+| `code-intel`                                                       | MIGRATE  | `bun lsp`                                    | Language servers (TypeScript, Python, Rust, C/C++) driven by Bun              |
+| `typescript7-bun`, `docs`                                          | KEEP     | —                                            | Generic TypeScript and documentation research                                 |
+| design, game, cloud, AI, Windows admin and plugin-authoring skills | KEEP     | —                                            | Not about Bun                                                                 |
 
 ## Hooks
 
-| aphrody                                                    | Decision | Reason                                                                                     |
-| ---------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------ |
-| `session-start.sh`, `session-context.ts`                   | KEEP     | Session context for the hosts and the aphrody workspace, not for Bun                     |
-| `permission-allow.sh`                                      | KEEP     | Agent permission policy                                                                    |
-| Skill and plugin refresh                                   | MIGRATE  | `bun agent-plugin` installs and updates the plugin built into the binary                  |
+| aphrody                                  | Decision | Reason                                                                   |
+| ---------------------------------------- | -------- | ------------------------------------------------------------------------ |
+| `session-start.sh`, `session-context.ts` | KEEP     | Session context for the hosts and the aphrody workspace, not for Bun     |
+| `permission-allow.sh`                    | KEEP     | Agent permission policy                                                  |
+| Skill and plugin refresh                 | MIGRATE  | `bun agent-plugin` installs and updates the plugin built into the binary |
