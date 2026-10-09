@@ -20,5 +20,20 @@ The host builds separately with `cargo build -p bun-python-host --release`.
 It preserves explicit interpreter selection, shared-library identity, error
 codes, string destruction, and attach-versus-own lifecycle behavior.
 
+`include/bun_python_host.h` defines ABI version 1. `bun_py_main` accepts UTF-8
+arguments including the selected Python executable as `argv[0]`; the Windows
+loader converts these to wide arguments. It reuses CPython's complete CLI,
+including `-c`, `-m`, stdin and virtual environments, without a second parser.
+This is a terminal entry point: stock CPython 3.12 can terminate the process on
+`SystemExit`, and `os._exit` retains its native semantics. When CPython returns,
+the host status and Python exit result remain separate. Use the evaluator API
+for embedded calls; an already initialized interpreter cannot be replaced by
+the CLI. Reentrant evaluator calls during CLI execution are rejected.
+
+Qualification: the Windows CPython 3.13 subprocess suite covers Unicode argv
+and paths, module/file/stdin execution, exceptions, exits, real venv selection
+and reentry. Run this suite against each actual target interpreter; default
+tests alone do not qualify CLI execution or a modified Bun binary.
+
 This source transfer alone does not establish installation, runtime activation,
 reboot persistence or a performance improvement. No Bun binary addition occurs.

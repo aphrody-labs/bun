@@ -19,6 +19,7 @@
 use std::ffi::{CStr, CString, c_char, c_int, c_void};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Success.
 pub const APHRODY_PY_OK: i32 = 0;
@@ -63,6 +64,10 @@ struct Api {
     err_fetch: unsafe extern "C" fn(*mut PyObj, *mut PyObj, *mut PyObj),
     err_clear: unsafe extern "C" fn(),
     get_version: unsafe extern "C" fn() -> *const c_char,
+    #[cfg(not(windows))]
+    bytes_main: unsafe extern "C" fn(c_int, *mut *mut c_char) -> c_int,
+    #[cfg(windows)]
+    wide_main: unsafe extern "C" fn(c_int, *mut *mut u16) -> c_int,
 }
 
 struct Host {
@@ -79,6 +84,7 @@ unsafe impl Send for Host {}
 
 static HOST: Mutex<Option<Host>> = Mutex::new(None);
 static LAST_ERROR: Mutex<String> = Mutex::new(String::new());
+static CLI_ACTIVE: AtomicBool = AtomicBool::new(false);
 
 fn set_error(message: impl Into<String>) {
     if let Ok(mut slot) = LAST_ERROR.lock() {
@@ -140,6 +146,10 @@ fn bind_with(sym: impl Fn(&CStr) -> *mut c_void) -> Result<Api, String> {
         err_fetch: f!(c"PyErr_Fetch"),
         err_clear: f!(c"PyErr_Clear"),
         get_version: f!(c"Py_GetVersion"),
+        #[cfg(not(windows))]
+        bytes_main: f!(c"Py_BytesMain"),
+        #[cfg(windows)]
+        wide_main: f!(c"Py_Main"),
     })
 }
 
@@ -256,6 +266,10 @@ fn library_candidates() -> Vec<String> {
 
 fn load_inner(path: Option<&str>) -> i32 {
     let mut slot = host();
+    if CLI_ACTIVE.load(Ordering::Acquire) {
+        set_error("the Python CLI owns the interpreter until it returns");
+        return APHRODY_PY_ERR_STATE;
+    }
     if slot.is_some() {
         return APHRODY_PY_OK;
     }
@@ -340,6 +354,10 @@ pub unsafe extern "C" fn aphrody_py_load(path: *const c_char) -> i32 {
 pub extern "C" fn aphrody_py_init() -> i32 {
     guard(APHRODY_PY_ERR_PANIC, || {
         let mut slot = host();
+        if CLI_ACTIVE.load(Ordering::Acquire) {
+            set_error("the Python CLI owns the interpreter until it returns");
+            return APHRODY_PY_ERR_STATE;
+        }
         let Some(h) = slot.as_mut() else {
             set_error("libpython not loaded (call aphrody_py_load)");
             return APHRODY_PY_ERR_STATE;
@@ -364,6 +382,10 @@ pub extern "C" fn aphrody_py_init() -> i32 {
 }
 
 fn api_ready() -> Result<Api, i32> {
+    if CLI_ACTIVE.load(Ordering::Acquire) {
+        set_error("the Python CLI owns the interpreter until it returns");
+        return Err(APHRODY_PY_ERR_STATE);
+    }
     match host().as_ref() {
         Some(h) if h.initialized => Ok(h.api),
         _ => {
@@ -607,6 +629,10 @@ pub unsafe extern "C" fn aphrody_py_version(out: *mut *mut c_char) -> i32 {
 pub extern "C" fn aphrody_py_finalize() -> i32 {
     guard(APHRODY_PY_ERR_PANIC, || {
         let mut slot = host();
+        if CLI_ACTIVE.load(Ordering::Acquire) {
+            set_error("the Python CLI owns the interpreter until it returns");
+            return APHRODY_PY_ERR_STATE;
+        }
         let Some(h) = slot.as_mut() else {
             return APHRODY_PY_OK;
         };
@@ -651,9 +677,318 @@ pub unsafe extern "C" fn aphrody_py_string_free(s: *mut c_char) {
     }
 }
 
+/// Version of the additional Bun CLI ABI. Historical `aphrody_py_*` symbols are unchanged.
+#[unsafe(no_mangle)]
+pub extern "C" fn bun_py_abi_version() -> u32 {
+    1
+}
+
+/// Executes the complete CPython CLI against the library loaded by `aphrody_py_load`.
+///
+/// Returns a host status (`APHRODY_PY_OK` on execution), writing CPython's actual
+/// process result to `exit_code` if CPython returns. CPython 3.12 may terminate
+/// the process on `SystemExit`; `os._exit` also retains its process semantics.
+/// This terminal CLI entry is not an embedded evaluation API. Separating status preserves negative
+/// codes without confusing them with host errors. `argv[0]` must be the selected
+/// Python executable, so CPython resolves its prefix, stdlib and venv correctly.
+/// The interpreter must not already be initialized. CPython owns CLI initialization
+/// and finalization; the mapped library remains in the process. Evaluation APIs
+/// refuse reentry while CLI execution is active.
+///
+/// # Safety
+/// `argv` points to `argc` valid NUL-terminated UTF-8 strings; `exit_code` is writable.
+/// The caller retains all input pointers through the call. Arguments are copied
+/// before CPython sees them. Windows uses wide argv to preserve Unicode paths.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn bun_py_main(
+    argc: c_int,
+    argv: *const *const c_char,
+    exit_code: *mut c_int,
+) -> i32 {
+    guard(APHRODY_PY_ERR_PANIC, || {
+        if argc < 1 || argv.is_null() || exit_code.is_null() {
+            set_error("Python CLI requires argv including its executable and an exit-code pointer");
+            return APHRODY_PY_ERR_ARG;
+        }
+        // SAFETY: caller provides argc valid pointer entries.
+        let pointers = unsafe { std::slice::from_raw_parts(argv, argc as usize) };
+        let mut arguments = Vec::with_capacity(pointers.len());
+        for &pointer in pointers {
+            if pointer.is_null() {
+                set_error("Python CLI argument is null");
+                return APHRODY_PY_ERR_ARG;
+            }
+            // SAFETY: each entry is a NUL-terminated string by caller contract.
+            match unsafe { CStr::from_ptr(pointer) }.to_str() {
+                Ok(argument) => arguments.push(argument.to_owned()),
+                Err(_) => {
+                    set_error("Python CLI argument is not UTF-8");
+                    return APHRODY_PY_ERR_ARG;
+                }
+            }
+        }
+        let api = {
+            let slot = host();
+            let Some(h) = slot.as_ref() else {
+                set_error("libpython not loaded (call aphrody_py_load)");
+                return APHRODY_PY_ERR_STATE;
+            };
+            // SAFETY: function comes from the loaded CPython library.
+            if h.initialized || unsafe { (h.api.is_initialized)() } != 0 {
+                set_error("Python CLI cannot replace an already initialized interpreter");
+                return APHRODY_PY_ERR_STATE;
+            }
+            if CLI_ACTIVE
+                .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+                .is_err()
+            {
+                set_error("another Python CLI execution is active");
+                return APHRODY_PY_ERR_STATE;
+            }
+            h.api
+        };
+        struct CliLease;
+        impl Drop for CliLease {
+            fn drop(&mut self) {
+                CLI_ACTIVE.store(false, Ordering::Release);
+            }
+        }
+        let _lease = CliLease;
+        set_error("");
+        #[cfg(windows)]
+        let result = {
+            let mut wide: Vec<Vec<u16>> = arguments
+                .iter()
+                .map(|argument| argument.encode_utf16().chain(std::iter::once(0)).collect())
+                .collect();
+            let mut entries: Vec<*mut u16> = wide
+                .iter_mut()
+                .map(|argument| argument.as_mut_ptr())
+                .collect();
+            // SAFETY: writable, terminated argv copies; interpreter not initialized.
+            unsafe { (api.wide_main)(argc, entries.as_mut_ptr()) }
+        };
+        #[cfg(not(windows))]
+        let result = {
+            let mut bytes: Vec<Vec<u8>> = arguments
+                .into_iter()
+                .map(|argument| {
+                    argument
+                        .into_bytes()
+                        .into_iter()
+                        .chain(std::iter::once(0))
+                        .collect()
+                })
+                .collect();
+            let mut entries: Vec<*mut c_char> = bytes
+                .iter_mut()
+                .map(|argument| argument.as_mut_ptr().cast())
+                .collect();
+            // SAFETY: writable, terminated argv copies; interpreter not initialized.
+            unsafe { (api.bytes_main)(argc, entries.as_mut_ptr()) }
+        };
+        // SAFETY: caller supplied writable output. Only successful execution updates it.
+        unsafe { *exit_code = result };
+        APHRODY_PY_OK
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+
+    #[test]
+    fn cli_abi_header_matches() {
+        let header = include_str!("../../../include/bun_python_host.h");
+        assert!(header.contains(&format!(
+            "#define BUN_PYTHON_HOST_ABI_VERSION {}u",
+            bun_py_abi_version()
+        )));
+        let mut result = 91;
+        // SAFETY: rejected null/empty inputs must never be dereferenced.
+        assert_eq!(
+            unsafe { bun_py_main(0, std::ptr::null(), &mut result) },
+            APHRODY_PY_ERR_ARG
+        );
+        assert_eq!(result, 91);
+    }
+
+    #[test]
+    #[ignore = "requires BUN_TEST_LIBPYTHON and BUN_TEST_PYTHON"]
+    fn cli_subprocess_conformance() {
+        let executable = std::env::var("BUN_TEST_PYTHON").expect("Python executable");
+        let directory = std::env::temp_dir().join(format!("bun python {}", std::process::id()));
+        std::fs::create_dir_all(&directory).expect("fixture directory");
+        let script = directory.join("été🐍.py");
+        std::fs::write(
+            &script,
+            "import sys\nassert sys.argv[1] == 'été🐍'\nprint('FILE_OK')\n",
+        )
+        .expect("Unicode Python script");
+        let module = directory.join("native_cli_module.py");
+        std::fs::write(
+            &module,
+            "import sys\nassert sys.argv[1] == 'été🐍'\nprint('MODULE_OK')\n",
+        )
+        .expect("module");
+        let venv = directory.join("venv space");
+        assert!(
+            Command::new(&executable)
+                .args(["-m", "venv", "--without-pip"])
+                .arg(&venv)
+                .env_remove("PYTHONHOME")
+                .status()
+                .expect("venv creation")
+                .success()
+        );
+        let venv_executable = venv.join(if cfg!(windows) {
+            "Scripts/python.exe"
+        } else {
+            "bin/python"
+        });
+        let cases = [
+            (
+                "code",
+                "import sys; assert sys.argv[1] == 'été🐍'; print('ARGV_OK')",
+                0,
+                "ARGV_OK",
+            ),
+            ("code", "import sys; sys.exit(7)", 7, ""),
+            ("code", "import sys; sys.exit(-1)", -1, ""),
+            ("code", "raise RuntimeError('CLI_TRACEBACK')", 1, ""),
+            ("file", "", 0, "FILE_OK"),
+            ("module", "", 0, "MODULE_OK"),
+            ("stdin", "", 0, "STDIN_OK"),
+            (
+                "venv",
+                "import sys; assert sys.prefix != sys.base_prefix; print('VENV_OK')",
+                0,
+                "VENV_OK",
+            ),
+            (
+                "callback",
+                "import ctypes, sys; f = ctypes.CFUNCTYPE(ctypes.c_int)(int(sys.argv[1])); assert f() == -3; print('REENTRY_REFUSED')",
+                0,
+                "REENTRY_REFUSED",
+            ),
+        ];
+        for (mode, code, expected, marker) in cases {
+            let mut command = Command::new(std::env::current_exe().expect("test executable"));
+            command
+                .args(["--exact", "tests::cli_child", "--ignored", "--nocapture"])
+                .current_dir(&directory)
+                .env_remove("PYTHONHOME")
+                .env("BUN_TEST_CLI_MODE", mode)
+                .env("BUN_TEST_CLI_CODE", code)
+                .env("BUN_TEST_CLI_EXPECTED", expected.to_string())
+                .env("BUN_TEST_CLI_FILE", &script)
+                .env("BUN_TEST_CLI_VENV", &venv_executable)
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped());
+            let mut child = command.spawn().expect("CLI subprocess");
+            if mode == "stdin" {
+                child
+                    .stdin
+                    .take()
+                    .expect("stdin")
+                    .write_all(b"print('STDIN_OK')\n")
+                    .expect("stdin program");
+            } else {
+                drop(child.stdin.take());
+            }
+            let output = child.wait_with_output().expect("CLI result");
+            if code.contains("sys.exit(")
+                && !String::from_utf8_lossy(&output.stdout).contains("HOST_RETURNED")
+            {
+                // Stock CPython 3.12 can exit inside Py_BytesMain. Validate the
+                // terminal status rather than claiming the ABI returned.
+                assert_eq!(output.status.code(), Some(expected & 255));
+                continue;
+            }
+            assert!(
+                output.status.success(),
+                "{mode}: {} {}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert!(
+                String::from_utf8_lossy(&output.stdout).contains(marker),
+                "{mode} output"
+            );
+            if code.contains("CLI_TRACEBACK") {
+                assert!(
+                    String::from_utf8_lossy(&output.stderr).contains("RuntimeError: CLI_TRACEBACK")
+                );
+            }
+        }
+        // Preserve the generated venv as a test artifact outside every checkout.
+        // Individual fixture files have no runtime or protected data.
+        std::fs::remove_file(script).expect("script cleanup");
+        std::fs::remove_file(module).expect("module cleanup");
+    }
+
+    #[test]
+    #[ignore = "child of cli_subprocess_conformance"]
+    fn cli_child() {
+        let mode = std::env::var("BUN_TEST_CLI_MODE").expect("parent selected mode");
+        let executable = std::env::var(if mode == "venv" {
+            "BUN_TEST_CLI_VENV"
+        } else {
+            "BUN_TEST_PYTHON"
+        })
+        .expect("Python executable");
+        let code = std::env::var("BUN_TEST_CLI_CODE").expect("program");
+        let args = match mode.as_str() {
+            "file" => vec![
+                executable,
+                std::env::var("BUN_TEST_CLI_FILE").expect("script"),
+                "été🐍".into(),
+            ],
+            "module" => vec![
+                executable,
+                "-m".into(),
+                "native_cli_module".into(),
+                "été🐍".into(),
+            ],
+            "stdin" => vec![executable, "-".into()],
+            "callback" => vec![
+                executable,
+                "-c".into(),
+                code,
+                (aphrody_py_init as *const () as usize).to_string(),
+            ],
+            _ => vec![executable, "-c".into(), code, "été🐍".into()],
+        };
+        let arguments: Vec<CString> = args
+            .into_iter()
+            .map(|argument| CString::new(argument).expect("argument"))
+            .collect();
+        let pointers: Vec<*const c_char> =
+            arguments.iter().map(|argument| argument.as_ptr()).collect();
+        let library = CString::new(std::env::var("BUN_TEST_LIBPYTHON").expect("library"))
+            .expect("library path");
+        let mut exit_code = 91;
+        // SAFETY: owned arguments and writable output survive the synchronous call.
+        unsafe {
+            assert_eq!(aphrody_py_load(library.as_ptr()), APHRODY_PY_OK);
+            assert_eq!(
+                bun_py_main(pointers.len() as i32, pointers.as_ptr(), &mut exit_code),
+                APHRODY_PY_OK
+            );
+        }
+        println!("HOST_RETURNED {exit_code}");
+        assert_eq!(
+            exit_code,
+            std::env::var("BUN_TEST_CLI_EXPECTED")
+                .expect("expected status")
+                .parse::<i32>()
+                .expect("integer status")
+        );
+        assert_eq!(aphrody_py_finalize(), APHRODY_PY_OK);
+    }
 
     // A single lifecycle test keeps CPython's process-wide state on one thread.
     // Explicitly ignored by default: qualification supplies a real host library.
