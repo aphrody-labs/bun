@@ -47,8 +47,14 @@ Fichiers : `packages/bun-plugin-tailwind/**`, `test/integration/bun-plugin-tailw
   `src/css`, `sourcesContent` CSS, commentaires `/*# … */`, composition avec la map d'entrée du fichier
   (`sourceMappingURL` data: ou fichier) ; tests `test/bundler/esbuild/css.test.ts` « css source maps »
   (71f91419311). Le plugin suit l'option `sourcemap` du build, map exacte avec les `@import` à schéma
-  (`m3:theme.css`) (43607890888). À faire après la passe unique : publier
-  `@aphrody/bun-plugin-tailwind@0.1.0-aphrody.2` et monter la dépendance dans aphrody (m3, shenron).
+  (`m3:theme.css`) (43607890888, @import à schéma laissés aux autres plugins : 4265629bb50).
+- ⏳ Aucune version publiée (.1 à .3) ne contient 4265629bb50 : `bun test m3/packages/m3-bun` a 16 échecs
+  (« Can't resolve 'm3:tokens.css' ») ; avec la source du fork (`--tsconfig-override` vers
+  `packages/bun-plugin-tailwind/src`) 117 pass, 0 échec hors sous-processus, build en sous-processus vert (F2,
+  2026-10-09). `publish-npm.ts --dry-run --only bun-plugin-tailwind` → `0.1.0-aphrody.4` (17 fichiers, correctif inclus).
+  À faire : publier, puis `@aphrody/bun-plugin-tailwind: 0.1.0-aphrody.4` dans `m3/packages/m3/package.json`
+  d'aphrody, `bun install`, `bun test m3/packages/m3-bun`. Les 2 tests « sourcemap » du plugin attendent
+  71f91419311 (passe `bun bd`).
 - ✅ Export `/postcss` (ESM + CJS, build `dist/` pour Node) ; `withBun({ tailwind, plugins })`, CSS globaux et CSS
   modules dans le chemin Bun.build de next-bun (6c44336f2aa, publié dans `@aphrody/next-bun@0.2.0-aphrody.2`).
 - ✅ Préréglage M3 (`theme: "m3"`, `/m3`) sur `@aphrody/m3-tokens` et `m3-tailwind` ; `m3/src/tailwind.ts`
@@ -159,8 +165,17 @@ consomme ensuite `@aphrody/tailwindcss`.
   contexte de test `{expect, task, skip, signal, onTestFinished, onTestFailed}`, séparateur ` > `), `expect.getState/setState`,
   `resolves/rejects` sur fonction, `expect.addSnapshotSerializer` (valeur de premier niveau seulement), erreurs `[Name: msg]`,
   `test.for/it.for/describe.for`. Test : `test/js/bun/test/bun_test.test.ts` (7 cas en fin de fichier). Serializer oklab de
-  Tailwind chargé par preload (tailwindcss `f2760d63`). Reste : clé bunfig `snapshotSerializers`, types `bun-types`.
-- ⏳ Première publication `4.3.3-aphrody.1` (workflow release), mesures avant/après (build CSS, démarrage à froid),
+  Tailwind chargé par preload (tailwindcss `f2760d63`). Clé bunfig `[test] snapshotSerializers` + types `bun-types`
+  (92a2f8d25c7).
+- ✅ CI et release sur le binaire du fork, `compileStream` relu (tailwindcss `2e23bfcf`) ; binaires
+  lightningcss/@parcel/watcher de toutes les plateformes pour le CLI standalone (`a6910a82`) ; globs `--filter` entre
+  guillemets via `bunify.ts`, napi FreeBSD via `npx -p` (`b3c0a9b1`). Cœur Bun : sous `bun run`, un glob sans
+  correspondance reste littéral comme en sh (14d16bc47f9) ; `--os='*' --cpu='*'` garde le binlink natif de l'hôte
+  (def82a77021). CI Linux rouge tant que la release du fork n'a pas 984c0a12081 (`expect.getState`,
+  `addSnapshotSerializer` « Not implemented » sur 1.4.3-aphrody.2).
+- 🔄 Première publication `4.3.3-aphrody.1` : `publish-npm.ts --print-version` → 4.3.3-aphrody.1, release en dry-run
+  verte de bout en bout (run 37878713132 : 13 bindings dont FreeBSD, npm et crates en dry-run ; tailwindcss `b3c0a9b1`,
+  `66bac499`), non publiée. ⏳ Mesures avant/après (build CSS, démarrage à froid),
   suite d'intégration sous `bun test`, `bench` encore sur `vitest bench`, bascule de `@aphrody/bun-plugin-tailwind`.
 
 ### R. Fork Base UI + M3 — `aphrody-labs/base-ui` (🔄)
@@ -185,10 +200,18 @@ Tailwind (`@aphrody/base-ui`, `@aphrody/m3-base-ui`). Bunisation n2b (bun instal
   "pnpm-workspace.yaml"`.
 - ⏳ Les `name` ajoutés à `test/{bundle-size,performance,public-types}/package.json` de base-ui sont à retirer quand
   `FORK_BUN` pointe sur une release contenant ce correctif.
-- ⏳ Cœur Bun : la migration pnpm perd les overrides à clé versionnée/parent (`brace-expansion@1`, `js-yaml@4`,
-  `nanoid@3`, `a>b: '-'`) ; `vi` de bun:test incomplet pour Base UI (fake timers, `advanceTimersToNextFrame`,
+- ✅ Overrides à clé versionnée/parent : Bun les gardait déjà ; la migration échouait sur `workspace:` lié à
+  `publishConfig.directory` (`link:../packages/react/build`) : corrigé (6613a966b5e, test
+  `pnpm-lock-v9.test.ts -t "publishConfig.directory"`). base-ui : overrides `brace-expansion@1/2/5`, `js-yaml@4`,
+  `nanoid@3` remis, `bun.lock` régénéré, patch code-infra vérifié (base-ui `b441c4864`). ⏳ `a>b: '-'` (retrait de
+  dépendance) non pris en charge par Bun (avertissement OverrideMap). ⏳ `vi` de bun:test incomplet pour Base UI (fake timers, `advanceTimersToNextFrame`,
   `importActual`, `hoisted`, `stubGlobal`…).
-- ⏳ Première publication npm (build `code-infra` sous Bun), puis `@aphrody/m3-baseui` (Aphrody `m3/packages/m3-baseui`,
+- 🔄 Publication npm préparée : `publish-npm.ts --dry-run` → `@aphrody/base-ui@1.8.0-aphrody.1`,
+  `@aphrody/base-ui-utils@0.4.0-aphrody.1` (build code-infra sous Bun), non publiée. m3-baseui sur ces paquets (copie
+  jetable, F2) : 81/82 ; le fork ajoute à `Menu` `Clear`, `Empty`, `FilterProvider`, `Input`, `List`, `useFilter`
+  à envelopper dans `src/menu.tsx` au moment de la bascule. Cœur Bun : `onResolve` d'un `Bun.plugin` s'applique
+  aux spécificateurs nus sans extension (2ff4c81c299, `plugins.test.ts -t "bare specifiers"`).
+- ⏳ Puis `@aphrody/m3-baseui` (Aphrody `m3/packages/m3-baseui`,
   gardé dans m3 et consommé par S) via l'alias `"@base-ui/react": "npm:@aphrody/base-ui@…"` + preset m3-tailwind,
   `m3:theme.css` (D), Material Symbols ; audit md-spec-checker.
 
@@ -204,12 +227,22 @@ non compilés ni testés. À reprendre :
 - ✅ Lot 3 (F3, 2026-10-09) : `m3/apps/example` recréée (`b5d6c23d31`, test bout en bout build + prerender + serve,
   7 pass ; workspace racine `m3/apps/example`, `4e97e2deff`) ; template `spa` TanStack Router dans scaffold
   (`5168569653`, tsgo et `Bun.build` OK sur le projet généré avec `@tanstack/react-router` 1.170.41, scaffold 25 pass) ;
-  `DataTable`/`VirtualList` : `m3-react` `test/data.test.tsx` 6 pass. Écart Bun relevé, non corrigé :
-  `FormData.prototype.toJSON` (extension Bun) fait refuser un FormData à `encodeReply` de React (le test construit la
-  réponse Flight à la main).
-- ⏳ Lot 4 : `m3 compile` et `m3 docker` pour l'App Router (image Aphrody Alpine, chantier U) ; `scripts/yolo.ts compile`
-  échoue explicitement tant que `apps/example` n'a pas de script `compile`.
-- ⏳ Lot 5 : tranche Shenron, banc de perf contre Next.
+  `DataTable`/`VirtualList` : `m3-react` `test/data.test.tsx` 6 pass. Écart Bun `FormData.prototype.toJSON` (extension
+  non standard qui fait refuser un FormData à `encodeReply` de React) : supprimé dans le cœur (c9408c68abe, entrées
+  lues par l'inspecteur via `WebCore__DOMFormData__toJSObject`) ; tests à passer par `bun bd test` (V) ; le test de
+  l'exemple garde la réponse Flight construite à la main ⏳ après release du fork.
+- ✅ Lot 4 (F3, aphrody 58bbe1ccb3) : `m3 compile` lie le build en un exécutable (couches rsc/ssr importées après la remise
+  à zéro du registre, autres fichiers embarqués `with { type: "file" }`, `PORT`/`HOSTNAME`) ; `m3 docker` écrit
+  `.m3/docker` (server.js autonome, dist, Dockerfile sur `ghcr.io/aphrody-labs/alpine:3.24-runtime`, `--tag` lance
+  `docker build`). Exemple : exe Windows 96,6 Mo, 64 fichiers embarqués, toutes les routes et l'action OK ; image sur
+  `aphrody-g4/alpine:3.24-runtime` (154 Mo, uid 1000, Bun 1.4.3-aphrody.2) OK ; publication GHCR de la base non
+  vérifiée. Correctif : `sideEffects` omettait le runtime client, bundle de démarrage vide (aucune hydratation).
+  `test/app` 55 pass, `apps/example` 7 pass, `scripts/yolo.ts compile` OK (avec `APHRODY_FFI_DEV=1`).
+- 🔄 Lot 5 : banc mesuré (F3, aphrody 70ef902075, `m3/apps/example/bench/next-vs-m3.ts`, méthode et chiffres dans
+  `m3/PLAN.md`) : même app, les deux sur Bun 1.4.3-aphrody.2, Windows ; m3 contre Next 16.5.0-canary.4 : build
+  170 contre 2691 ms, premier 200 85 contre 461 ms, JS de `/` 238 contre 577 Ko, `/` 10 101 contre 1 623 req/s.
+  Non mesuré : Next sur Node, Linux. ⏳ Tranche Shenron : Shenron ne dépend pas encore de `@aphrody/m3` avec
+  `/app` (non publié) et son `package.json`/`bun.lock` sont réservés par next-bun-fork.
 - Passe finale : `cd C:\aphrody\m3\packages\m3 && APHRODY_FFI_DEV=1 bun test test/app`, `cd C:\aphrody\m3\apps\example
   && bun run test`, `cd C:\aphrody\m3\packages\scaffold && bun test`, `cd C:\aphrody\m3\packages\m3-react && bun test
   test/data.test.tsx`, `cd C:\aphrody\m3 && bun test ./scripts/yolo.test.ts`.
