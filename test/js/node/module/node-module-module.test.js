@@ -270,6 +270,32 @@ console.log("survived", require("./late.js"));`,
     }
   });
 
+  test("BUN_COMPILE_CACHE_BUILTINS caches the bytecode of internal modules", async () => {
+    using dir = tempDir("compile-cache-builtins", {
+      "main.js": `const { internalModulesLoadedFromBytecode } = require("bun:internal-for-testing");
+require("node:assert").strictEqual(1, 1);
+console.log(internalModulesLoadedFromBytecode());`,
+    });
+    const cacheDir = path.join(String(dir), "cc");
+    const run = async env => {
+      await using proc = Bun.spawn({ cmd: [bunExe(), "main.js"], env, cwd: String(dir), stderr: "pipe" });
+      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+      expect(stderr).toBe("");
+      expect(exitCode).toBe(0);
+      return Number(stdout.trim());
+    };
+    const files = () => [...new Bun.Glob("**/*").scanSync({ cwd: cacheDir, onlyFiles: true })].length;
+
+    // Without the opt-in only main.js is cached, as in node.
+    expect(await run({ ...bunEnv, NODE_COMPILE_CACHE: cacheDir })).toBe(0);
+    expect(files()).toBe(1);
+
+    const env = { ...bunEnv, NODE_COMPILE_CACHE: cacheDir, BUN_COMPILE_CACHE_BUILTINS: "1" };
+    expect(await run(env)).toBe(0);
+    expect(files()).toBeGreaterThan(1);
+    expect(await run(env)).toBeGreaterThan(0);
+  });
+
   test.skipIf(isWindows)("compile cache entries are created 0600 like Node", async () => {
     // Entries hold the module's post-transpile source, and the default cache
     // location is a world-readable tmpdir; Node creates entry files 0600.

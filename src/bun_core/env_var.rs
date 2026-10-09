@@ -175,6 +175,8 @@ new!(pub NODE_CHANNEL_FD: string, "NODE_CHANNEL_FD", {});
 new!(pub NODE_NO_WARNINGS: string, "NODE_NO_WARNINGS", {});
 new!(pub NODE_COMPILE_CACHE: string, "NODE_COMPILE_CACHE", {});
 new!(pub NODE_COMPILE_CACHE_PORTABLE: string, "NODE_COMPILE_CACHE_PORTABLE", {});
+// With NODE_COMPILE_CACHE: also cache the bytecode of Bun's internal JS modules (node:*, bun:*) there.
+new!(pub BUN_COMPILE_CACHE_BUILTINS: boolean, "BUN_COMPILE_CACHE_BUILTINS", { default: false });
 new!(pub NODE_DEBUG_NATIVE: string, "NODE_DEBUG_NATIVE", {});
 new!(pub NODE_DISABLE_COMPILE_CACHE: string, "NODE_DISABLE_COMPILE_CACHE", {});
 // Set by `bun run` for a script named `check`: the directories of the packages whose `check` script

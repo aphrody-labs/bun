@@ -27,6 +27,9 @@
 // A `bun build --compile` executable may carry ahead-of-time bytecode for the internal modules the app uses
 // (StandaloneModuleGraph, Flags::HAS_BUILTIN_BYTECODE); those bytes live in the executable for the life of the process.
 extern "C" bool Bun__standaloneInternalModuleBytecode(void* bunVM, uint32_t id, const uint8_t** bytes, size_t* size, uint32_t* entryOffset);
+// NodeCompileCache.rs, with NODE_COMPILE_CACHE and BUN_COMPILE_CACHE_BUILTINS=1: bytecode for internal module `id` whose
+// source is `code`, cached by an earlier run; the bytes live for the rest of the process.
+extern "C" bool Bun__NodeCompileCache__fetchInternalModule(uint32_t id, const uint8_t* name, size_t nameLength, const uint8_t* code, size_t codeLength, const uint8_t** bytes, size_t* size);
 
 namespace Bun {
 
@@ -109,7 +112,8 @@ JSC::JSValue generateInternalModule(JSC::JSGlobalObject* globalObject, JSC::VM& 
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     const auto& m = internalModuleRecord(id);
     String moduleName = internalModuleString(m.nameOffset, m.nameLength);
-    SourceCode source = makeInternalModuleSource(internalModuleSource(id), moduleName, internalModuleString(m.urlOffset, m.urlLength));
+    String text = internalModuleSource(id);
+    SourceCode source = makeInternalModuleSource(text, moduleName, internalModuleString(m.urlOffset, m.urlLength));
     maybeAddCodeCoverage(vm, source);
 
     UnlinkedFunctionExecutable* executable = nullptr;
@@ -120,6 +124,15 @@ JSC::JSValue generateInternalModule(JSC::JSGlobalObject* globalObject, JSC::VM& 
         executable = JSC::decodeBuiltinFunction(vm, embeddedBytecode({ const_cast<uint8_t*>(cachedBytes), cachedSize }, cachedEntryOffset), *source.provider(), bun_internal_modules_header.sourceStamp);
         if (executable)
             s_internalModulesFromBytecode.fetch_add(1, std::memory_order_relaxed);
+    }
+    if (!executable) {
+        std::span<const uint8_t> code = text.is8Bit() ? asBytes(text.span8()) : asBytes(text.span16());
+        std::span<const uint8_t> name = moduleName.is8Bit() ? asBytes(moduleName.span8()) : asBytes(moduleName.span16());
+        if (Bun__NodeCompileCache__fetchInternalModule(id, name.data(), name.size(), code.data(), code.size(), &cachedBytes, &cachedSize)) {
+            executable = JSC::decodeBuiltinFunction(vm, embeddedBytecode({ const_cast<uint8_t*>(cachedBytes), cachedSize }, 0), *source.provider(), bun_internal_modules_header.sourceStamp);
+            if (executable)
+                s_internalModulesFromBytecode.fetch_add(1, std::memory_order_relaxed);
+        }
     }
     if (!executable)
         executable = createInternalModuleExecutable(vm, source, moduleName);
