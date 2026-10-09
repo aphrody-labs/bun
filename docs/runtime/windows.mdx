@@ -204,6 +204,68 @@ const { exitCode, stdout } = windows.wsl.run("Ubuntu", ["uname", "-r"]);
 
 ---
 
+## NTFS
+
+Read-only access to the USN change journal and the Master File Table of an NTFS volume.
+
+```ts
+const { ntfs } = windows;
+using vol = new ntfs.Volume("C"); // drive letter or "\\\\?\\Volume{guid}\\"
+
+const journal = vol.journalQuery(); // { journalId, nextUsn, maxSize, ... }
+vol.journalCreate(); // creates the journal if missing; no-op otherwise
+
+const change = vol.journalRead(journal.nextUsn, { bufferSize: 64 * 1024 });
+change.records; // [{ usn, record, parent, fileName, reason, timestamp, ... }, ...]
+change.nextUsn; // pass back in to continue reading
+
+const all = vol.enumerateMft(4 << 20); // every record, bounded by one read buffer size
+all.find(r => r.fileName === "autoexec.bat");
+```
+
+`record` and `parent` are NTFS file reference numbers: the low 48 bits are the stable MFT record number, the high 16 bits are a reuse sequence. `FSCTL_ENUM_USN_DATA` does not return the reserved metadata files (record numbers 0-15, including the volume root); their attributes are still readable through ordinary path APIs. Opening a volume handle needs an elevated process.
+
+---
+
+## PE, Authenticode and catalog signatures
+
+Pure byte-level parsing of PE32/PE32+ images: headers, sections, imports, exports, resources, ApiSet redirection and Authenticode. Nothing here maps or executes the image — no `LoadLibrary`, no WinRT activation, no `DllMain`.
+
+```ts
+const { pe } = windows;
+const bytes = new Uint8Array(await Bun.file("C:\\Windows\\System32\\kernel32.dll").arrayBuffer());
+
+pe.looksLikePe(bytes); // true: cheap DOS/NT header check before a full parse
+
+const info = pe.parse(bytes, "kernel32.dll");
+info.kind; // "exe" | "dll" | "sys" | ...
+info.machine; // "x86" | "x64" | "arm64" | "arm64ec"
+info.sections; // [{ name, virtualAddress, virtualSize, rawSize, characteristics }, ...]
+info.exports; // [{ name, ordinal, rva, forwarder }, ...]
+info.imports; // [{ module, names, delayLoad }, ...]
+info.authenticode; // { signer, issuer, digest, certificates } when the certificate table embeds a signature, else null
+```
+
+`pe.authenticode.parse(bytes)` parses a standalone PKCS#7 `SignedData` blob (the `WIN_CERTIFICATE` payload, or a `.cat` file) without needing a full PE image.
+
+Most Windows system binaries carry no embedded signature and are listed in a system catalog instead:
+
+```ts
+const catalog = pe.catalogFile("C:\\Windows\\System32\\kernel32.dll"); // full path of the .cat file, or null
+const signature = pe.catalogSignature("C:\\Windows\\System32\\kernel32.dll"); // { catalog, signer, issuer, digest } | null
+
+pe.releaseCatalogContexts(); // releases the cached SHA-256/SHA-1 admin contexts; optional
+```
+
+A `null` result means "not listed in any catalog", never "unsigned" — a file can be both embedded-signed and catalog-listed, or signed through neither API and still be trusted by a mechanism this module does not cover. `catalogFile`/`catalogSignature` are slow (a catalog-database query): avoid them in a hot path over many files.
+
+```ts
+pe.parseApiSetSchema(bytes); // apisetschema.dll's `.apiset` section: contract -> host DLLs
+pe.apiSetKey("api-ms-win-core-file-l1-2-4.dll"); // "api-ms-win-core-file-l1-2"
+```
+
+---
+
 ## API families
 
 The Bun binary contains the interfaces above. Other Windows API families ship as packages named `@aphrody/bun-windows-<family>`, and `bun:windows` loads them on first use.
