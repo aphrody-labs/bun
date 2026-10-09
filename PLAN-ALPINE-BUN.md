@@ -746,7 +746,8 @@ bun test scripts/build/rust/wasm-package.test.ts packages/engine/yolo/test/stack
 ### C1. COSMIC (Pop!_OS) sur Aphrody Alpine et module `bun:cosmic` (🔄 code écrit le 2026-10-09, ni build ni test)
 
 Commits : aports `071286df8e3` (paquets + CI), aphrody `766186e779` (cible `desktop`, sysext supprimé),
-`13ecc5f8a2` (athena-text), `2876937692` (clé/dépôt hérités de `cli`) ; bun : voir le log de `src/cosmic/`.
+`13ecc5f8a2` (athena-text), `2876937692` (clé/dépôt hérités de `cli`) ; bun : voir le log de `src/cosmic/`,
+`b8fedca2b4e` (`apps.launch`), `94be00b470c` (doc), `afc5000b62a` (lock de l'assistant) ; aports `928e81e9392`.
 
 **Veille (2026-10-09) : COSMIC tourne sur Alpine, nativement.** Alpine l'empaquette dans community :
 3.24 a l'epoch 1.0.15 ([cosmic-comp 3.24](https://pkgs.alpinelinux.org/packages?name=cosmic-comp&branch=v3.24&repo=&arch=x86_64)),
@@ -791,8 +792,22 @@ réécrit en TS et l'assistant hors workspace (son propre `Cargo.lock`). Pourquo
 2. un processus séparé laisse la boucle JS libre et isole les plantages du GPU/compositeur ;
 3. iced, wgpu et les dépendances git restent hors du binaire `bun`.
 
-Reste : paquet apk `bun-cosmic` (APKBUILD avec sha512 d'un tarball poussé), page `docs/runtime/cosmic.mdx`,
-`apps.launch` (codes de champ Exec), bascule des candidats Aphrody ci-dessus.
+`apps.launch(entry | id, {files, urls, action, terminal, cwd, env})` et `apps.expandExec` : découpage de `Exec`
+selon la spec Desktop Entry en TS (guillemets, échappements, `%f %F %u %U %i %c %k %%`, codes dépréciés retirés,
+code inconnu → `ERR_BUN_COSMIC_INVALID_EXEC`), puis `Bun.spawn` sans shell. Le `parse_exec` de
+freedesktop-desktop-entry coupe aux espaces et ignore les guillemets : non utilisé. Doc : `docs/runtime/cosmic.mdx`.
+Paquet apk : aports `928e81e9392`, `bun-cosmic` construit depuis les 3 fichiers bruts de `packages/bun-cosmic` au
+commit bun `afc5000b62a` (`Cargo.lock` amorcé sur celui de cosmic-osk 1.10.0, même libcosmic), dans
+`aphrody-desktop-cosmic` (r1) et le job `@desktop`.
+
+⏳ Après release du fork (le Bun système 1.4.3-aphrody.2 n'a pas `bun:cosmic`) :
+- m3-os-themes `cosmic.ts` : `builderEntries` via `ron.stringify(ron.some({ red, green, blue }))` (supprime
+  `srgb`/`srgba` et le RON écrit à la main) ; un `applyCosmic(input)` TS par `config.open(…, 1).set/delete` remplace
+  `install-cosmic.sh` quand Bun est présent (le script reste pour les hôtes sans Bun).
+- Pilote Linux d'aphrody-drive (`crates/ui/drive/src/file_opening/linux.rs`) : c'est du Rust, il ne peut pas
+  importer `bun:cosmic`. Bascule sur la même brique native, freedesktop-desktop-entry 0.8.3 sans `gettext`
+  (supprime `parse_desktop_entry`, `application_dirs`, `desktop_id`), et `gtk-launch` (absent sans GTK 3) remplacé par
+  le découpage `Exec` de `apps.expandExec` porté en Rust. Bloqué aussi par le claim G1 sur `Cargo.lock` d'aphrody.
 
 Vérification (passe finale) :
 
@@ -805,7 +820,7 @@ bun run rust:deny && bun run rust:check-all
 bun bd test test/internal/source-lints/byte-search.test.ts
 # assistant (conteneur alpine:3.24 : cargo, wayland-dev, libxkbcommon-dev, mesa-dev, dbus-dev)
 cargo build --release --manifest-path packages/bun-cosmic/Cargo.toml
-# Alpine (C:\aports, conteneur alpine:3.24 avec abuild)
+# Alpine (C:\aports, conteneur alpine:3.24 avec abuild) : bun-cosmic compris
 bun aphrody/scripts/publish.ts build @desktop
 # Image + Aphrody (C:\aphrody)
 docker build --target desktop -t aphrody/cosmic tools/config/container/aphrody-os
