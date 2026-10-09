@@ -245,6 +245,12 @@ Learn more about these at <magenta>https://bun.com/docs/cli/pm<r>.\n";
             .get(1)
             .is_some_and(|arg| strings::eql_comptime(arg.as_bytes(), b"whoami"));
 
+        if let Some(source) = args.get(1).copied() {
+            if bun_install::system::cli::is_source_command(source) {
+                Global::exit(bun_install::system::cli::run(source, &args[2..]) as u32);
+            }
+        }
+
         let cli = CommandLineArguments::parse(Subcommand::Pm)?;
         let licenses_flags = LicensesFlags {
             dev_only: cli.dev_only,

@@ -849,12 +849,9 @@ impl<'bump> Parser<'bump> {
                     .closing_tok(),
             ])
         } {
-            let expr = self.parse_expr()?;
+            let mut expr = self.parse_expr()?;
             if self.r#match(TokenTag::Ampersand) {
-                self.add_error(format_args!(
-                    "Background commands \"&\" are not supported yet."
-                ))?;
-                return Err(ParseError::Unsupported.into());
+                expr = ast::Expr::Async(self.allocate(expr));
             }
             exprs.push(expr);
         }

@@ -132,6 +132,8 @@ describe("expect()", () => {
       }),
     ).resolves.toThrow();
     await expect(Promise.resolve(new Error())).resolves.toThrow();
+    await expect(Promise.resolve(undefined)).resolves.not.toThrow();
+    await expect(Promise.resolve("str")).resolves.not.toThrow();
 
     // not receiving a resolved promise -> should throw
     if (isBun) {

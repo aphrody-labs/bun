@@ -72,6 +72,45 @@ describe("bun rename", () => {
     expect(stderr).toContain("No rules");
     expect(exitCode).toBe(1);
   });
+
+  test("renames and restores a large tree with shared destination parents", async () => {
+    const files: Record<string, string> = {};
+    for (let i = 0; i < 512; i++) files[`src/group-${i % 16}/acme-${i}.ts`] = "export const acme = 1;\n";
+    using dir = tempDir("bun-rename-large", files);
+    const cwd = String(dir);
+    gitInit(cwd);
+    const applied = await run(["rename", "--from", "acme", "--to", "nova", "--paths", "--apply", "--json"], cwd);
+    const report = JSON.parse(applied.stdout).reports[0];
+    expect(report.changedFiles).toBe(512);
+    expect(report.renamedPaths).toBe(512);
+    expect(report.replacements).toBe(512);
+    expect(readFileSync(join(cwd, "src/group-15/nova-511.ts"), "utf8")).toBe("export const nova = 1;\n");
+    expect(existsSync(join(cwd, "src/group-15/acme-511.ts"))).toBe(false);
+    expect(applied.exitCode).toBe(0);
+    const restored = await run(["rename", "--restore", report.journal, "--apply"], cwd);
+    expect(restored.stdout).toBe("restore: 512 file(s) (applied)\n");
+    expect(readFileSync(join(cwd, "src/group-15/acme-511.ts"), "utf8")).toBe("export const acme = 1;\n");
+    expect(existsSync(join(cwd, "src/group-15/nova-511.ts"))).toBe(false);
+    expect(restored.exitCode).toBe(0);
+  });
+
+  test("rejects a destination file used as another destination's parent before writing", async () => {
+    using dir = tempDir("bun-rename-ancestor", {
+      "first.txt": "first\n",
+      "folder/second.txt": "second\n",
+    });
+    const cwd = String(dir);
+    gitInit(cwd);
+    const result = await run(
+      ["rename", "--from", "first.txt", "--to", "nested", "--from", "folder", "--to", "nested", "--paths", "--apply"],
+      cwd,
+    );
+    expect(result.stderr).toContain("Destination ancestor collision:");
+    expect(readFileSync(join(cwd, "first.txt"), "utf8")).toBe("first\n");
+    expect(readFileSync(join(cwd, "folder/second.txt"), "utf8")).toBe("second\n");
+    expect(existsSync(join(cwd, "nested"))).toBe(false);
+    expect(result.exitCode).toBe(1);
+  });
 });
 
 test("bun parse reports exports and imports", async () => {

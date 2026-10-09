@@ -16,11 +16,14 @@
 //! ([`db::InstalledDb`]); `remove`/`upgrade` work from it, without the native
 //! package manager (`winget.exe`, `apk`, `apt`, `pacman`).
 
+pub mod apk;
 pub mod archive;
+pub mod cli;
 pub mod db;
 pub mod lock;
 pub mod mszip;
 pub mod net;
+pub mod rootfs;
 pub mod sqlite;
 pub mod value;
 pub mod version;
@@ -403,7 +406,8 @@ pub trait Source {
 pub fn source_for(kind: SourceKind) -> Option<Box<dyn Source>> {
     match kind {
         SourceKind::Winget => Some(Box::new(winget::Winget::default())),
-        SourceKind::Apk | SourceKind::Deb | SourceKind::Pacman => None,
+        SourceKind::Apk => Some(Box::new(apk::Apk)),
+        SourceKind::Deb | SourceKind::Pacman => None,
     }
 }
 

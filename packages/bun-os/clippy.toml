@@ -1,0 +1,1 @@
+# Own lint config: stops clippy from inheriting the bun workspace clippy.toml two levels up.

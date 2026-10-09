@@ -111,6 +111,8 @@ rien, `graph:bun` ne renvoie que du bruit (PipeWriter). `query "perl create_hash
 | MS7 | Qt6 qtbase/declarative en cross llvm-mingw | idem | ⏳ après MS6 |
 | MS8 | image CI Windows sans scoop `mingw`/`cygwin` | `scripts/build/ci-images/spec.ts` | ⏳ reconstruction d'image |
 | MS9 | Git Bash des agents, hooks git | — | ⏳ décision finale |
+| MS10 | uutils 0.13.0 (fork aphrody-labs/uutils-coreutils@ca3e965d, MIT) vendorisé : crate `bun_coreutils` (66 applets, 13 de plus sous Unix, aucun doublon des builtins de Bun Shell), `bun` lancé sous un nom d'applet (argv0), repli de Bun Shell quand la commande manque au PATH ; patch uucore `lazy-startup` (aucun constructeur `.init_array`) | `src/coreutils/**`, `scripts/build/deps/uutils.ts`, `patches/uutils/**`, `src/runtime/{Cargo.toml,cli/mod.rs,shell/states/Cmd.rs,shell/subproc.rs}`, `test/js/bun/shell/commands/coreutils.test.ts` | ✅ (voir commit) ; feature cargo `coreutils` de `bun_runtime`, **désactivée par défaut** : le multi-call release pèse 10,35 Mo (mesure Windows x64), décision de l'activer pour l'OS Bun à prendre par main |
+| MS11 | bunsh à la place de cmd.exe/pwsh : builtins de compatibilité cmd (dir, copy, del, set, where, start), délégation .bat/.cmd/.ps1, ComSpec optionnel avec retour arrière | `src/runtime/shell/builtin/**`, docs | ⏳ (le langage POSIX passe à codex-shellposix) |
 
 ## 6. Passe finale (main)
 
@@ -120,4 +122,4 @@ rien, `graph:bun` ne renvoie que du bruit (PipeWriter). `query "perl create_hash
 - MS3 : `bun bd test test/js/bun/shell/commands/test.test.ts test/js/bun/shell/commands/true.test.ts test/js/bun/shell/commands/basename.test.ts` ; copier le bun-debug sous `bunsh.exe` puis `bun scripts/aphrody/win/shell/prove.ts --bunsh <bunsh.exe>`.
 - MS4 : `bun test test/internal/aphrody-win-apk.test.ts` ; `bun build --compile scripts/aphrody/win/install.ts --outfile aphrody-win-setup.exe` puis `aphrody-win-setup.exe --root %TEMP%\aw --no-path --terminal-profile --bun <bunsh.exe>`.
 - gzip multi-membres : `bun bd test test/js/bun/util/zstd.test.ts -t concatenated`.
-- MS10 (point 12 de la directive, ⏳) : vendorer uutils (MIT, `C:\forks\msys2\uutils-coreutils`) dans les builtins de Bun Shell pour une seule implémentation par commande ; il faut une sortie `uumain` redirigée vers l'IO du shell.
+- MS10 : `cargo test -p bun_coreutils` ; avec la feature (`--cargo-features`/profil à câbler par main), `bun bd test test/js/bun/shell/commands/coreutils.test.ts` (ignoré sans la feature : le test sonde `nproc` par argv0) ; démarrage : `hyperfine 'bun -v'` avant/après, aucun coût attendu (pas de constructeur, test argv0 seulement hors `bun`/`bunx`/`node`).

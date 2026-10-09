@@ -371,6 +371,26 @@ test("basic unchanging inline snapshot", () => {
   );
 });
 
+test("inline snapshot of a Map or Set nested in an object or array", () => {
+  expect({ arr: [new Set([1])], m: new Map([[1, { x: 2 }]]), s: new Set(["slug"]) }).toMatchInlineSnapshot(`
+{
+  "arr": [
+    Set {
+      1,
+    },
+  ],
+  "m": Map {
+    1 => {
+      "x": 2,
+    },
+  },
+  "s": Set {
+    "slug",
+  },
+}
+`);
+});
+
 class InlineSnapshotTester {
   tmpdir: string;
   tmpid: number;

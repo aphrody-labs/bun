@@ -89,6 +89,29 @@ On macOS the default is `"webkit"`; elsewhere it's `"chrome"`. Requesting `backe
 const view = new Bun.WebView({ backend: "chrome" });
 ```
 
+### Native engines (`bun-webview-host`)
+
+`backend: "webkitgtk"`, `"webview2"`, `"wkwebview"` and `"cef"` run the page in the system engine through `bun-webview-host`, a separate executable built from `packages/bun-webview-core`. The host speaks the same `--remote-debugging-pipe` protocol as Chrome, so these backends share the Chrome backend's options (`path`, `argv`, `stdout`, `stderr`) and its single-host-per-process, main-thread-only rules. `backend.url` is not accepted.
+
+Bun looks for the host in this order: `backend.path`, the `BUN_WEBVIEW_HOST` environment variable, next to the `bun` executable, then `$PATH`.
+
+| Backend       | Engine                  | Status                                        |
+| ------------- | ----------------------- | --------------------------------------------- |
+| `"webkitgtk"` | WebKitGTK 6.0 on GTK 4  | Linux (glibc and musl); needs a display       |
+| `"webview2"`  | WebView2                | Not yet built into the host                   |
+| `"wkwebview"` | WKWebView               | Not yet built into the host; use `"webkit"`   |
+| `"cef"`       | Chromium Embedded       | Not yet built into the host                   |
+
+```sh
+cargo build --release --manifest-path packages/bun-webview-core/Cargo.toml
+```
+
+```ts
+const view = new Bun.WebView({ backend: "webkitgtk", headless: false });
+```
+
+WebKitGTK has no public input-injection API, so `click()`, `type()` and `press()` dispatch synthetic DOM events from inside the page (`isTrusted` is `false`).
+
 ### How the WebKit backend works
 
 Bun spawns a lightweight host subprocess (the `bun` binary itself, re-executed in a special mode) that owns the `WKWebView` on its main thread. Your Bun process talks to it over a Unix socket using a compact binary protocol. Bun spawns the host process once, and every `"webkit"` view in your program shares it.

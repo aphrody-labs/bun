@@ -132,6 +132,9 @@ pub(crate) mod dispatch_tasks;
 #[path = "subproc.rs"]
 pub(crate) mod subproc;
 
+#[path = "cmd_compat.rs"]
+pub(crate) mod cmd_compat;
+
 // ─── shell escaping (canonical impl lives in bun_shell_parser) ───────────────
 // Re-export so `crate::shell::*` callers resolve without duplicating the table.
 pub(crate) use bun_shell_parser::{escape_8bit, needs_escape_utf8_ascii_latin1};

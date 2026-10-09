@@ -2,23 +2,24 @@
 //! rasterization) and the freedesktop application index (freedesktop-desktop-entry).
 //!
 //! This crate has no JavaScriptCore dependency; `src/runtime/cosmic/` turns its results into JS values.
-//! Results that are trees are returned as JSON bytes, which `src/js/bun/cosmic.ts` parses. Outside
-//! Linux every entry point returns [`Error::Unsupported`].
+//! Results that are trees are returned as JSON bytes, which `src/js/bun/cosmic.ts` parses. Text works on
+//! Linux and Windows, the application index on Linux only; elsewhere an entry point returns
+//! [`Error::Unsupported`].
 //!
 //! Nothing runs before the first call: the font database is scanned on the first text call and then
 //! kept for the life of the process.
 
 #[cfg(target_os = "linux")]
 mod apps;
-#[cfg(any(target_os = "linux", test))]
+#[cfg(any(target_os = "linux", windows, test))]
 mod json;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 mod text;
 
 /// Why a call failed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Error {
-    /// Not built for Linux.
+    /// Not built for this platform.
     Unsupported,
     /// The bytes passed to [`load_font`] hold no font face.
     InvalidFont,
@@ -29,7 +30,7 @@ pub enum Error {
 impl Error {
     pub fn message(self) -> &'static str {
         match self {
-            Error::Unsupported => "bun:cosmic is only available on Linux",
+            Error::Unsupported => "this bun:cosmic feature is not available on this platform",
             Error::InvalidFont => "no font face found in the given data",
             Error::ImageSize => "image width and height must be between 1 and 16384",
         }
@@ -83,11 +84,11 @@ pub struct Image {
 /// glyphs: [{ start, end, x, y, width, fontSize, glyph, font }] }] }`, byte offsets into the
 /// paragraph (`line`) the glyph belongs to.
 pub fn layout(options: &TextOptions<'_>) -> Result<Vec<u8>, Error> {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     {
         Ok(text::layout(options))
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", windows)))]
     {
         let _ = options;
         Err(Error::Unsupported)
@@ -101,11 +102,11 @@ pub fn render(
     height: Option<u32>,
     background: u32,
 ) -> Result<Image, Error> {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     {
         text::render(options, width, height, background)
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", windows)))]
     {
         let _ = (options, width, height, background);
         Err(Error::Unsupported)
@@ -114,11 +115,11 @@ pub fn render(
 
 /// Add a font file (TTF, OTF or collection) to the font database. JSON: the family names it added.
 pub fn load_font(data: Vec<u8>) -> Result<Vec<u8>, Error> {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     {
         text::load_font(data)
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", windows)))]
     {
         drop(data);
         Err(Error::Unsupported)
@@ -127,11 +128,11 @@ pub fn load_font(data: Vec<u8>) -> Result<Vec<u8>, Error> {
 
 /// Every face of the font database. JSON: `[{ family, postscriptName, weight, style, monospaced }]`.
 pub fn fonts() -> Result<Vec<u8>, Error> {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     {
         Ok(text::fonts())
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", windows)))]
     {
         Err(Error::Unsupported)
     }
@@ -179,5 +180,35 @@ mod tests {
         j.number(3.0);
         j.end_array();
         assert_eq!(j.finish(), b"[1.5,0,3]".to_vec());
+    }
+
+    #[cfg(any(target_os = "linux", windows))]
+    #[test]
+    fn lays_out_and_renders_a_loaded_font() {
+        let font = std::fs::read(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../test/integration/expo-app/assets/fonts/SpaceMono-Regular.ttf"
+        ))
+        .unwrap();
+        assert_eq!(super::load_font(font).unwrap(), b"[\"Space Mono\"]".to_vec());
+        let options = super::TextOptions {
+            text: "Hello\nBun",
+            font_size: 20.0,
+            line_height: 24.0,
+            width: None,
+            height: None,
+            family: "Space Mono",
+            weight: 400,
+            italic: false,
+            wrap: 0,
+            align: 0,
+            color: 0xff0000ff,
+        };
+        let layout = String::from_utf8(super::layout(&options).unwrap()).unwrap();
+        assert!(layout.contains("\"height\":48"), "{layout}");
+        let image = super::render(&options, None, None, 0).unwrap();
+        assert_eq!(image.height, 48);
+        assert!(image.rgba.chunks(4).filter(|p| p[3] > 0).all(|p| p[..3] == [255, 0, 0]));
+        assert!(image.rgba.chunks(4).filter(|p| p[3] > 0).count() > 50);
     }
 }

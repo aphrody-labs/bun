@@ -1426,7 +1426,7 @@ pub mod bv2_impl {
     use crate::DeferredBatchTask::DeferredBatchTask;
     use crate::Graph::Graph;
     use crate::LinkerContext;
-    use crate::PathToSourceIndexMap::PathToSourceIndexMap;
+    use crate::PathToSourceIndexMap::{PathLike as _, PathToSourceIndexMap};
     use crate::ServerComponentParseTask::ServerComponentParseTask;
     use crate::barrel_imports;
 
@@ -2936,7 +2936,7 @@ pub mod bv2_impl {
 
             // borrowck: get-then-put (instead of a single get-or-put) so the map
             // borrow doesn't span `enqueue_parse_task` (which needs `&mut self`).
-            if let Some(existing) = self.path_to_source_index_map(target).get(path.text) {
+            if let Some(existing) = self.path_to_source_index_map(target).get_path(&path) {
                 out_source_index = Some(Index::init(existing));
             } else {
                 path = self
@@ -2976,7 +2976,7 @@ pub mod bv2_impl {
                     )
                     .expect("oom");
                 self.path_to_source_index_map(target)
-                    .put(path.text, idx)
+                    .put_path(&path, idx)
                     .expect("oom");
                 out_source_index = Some(Index::init(idx));
 
@@ -3138,7 +3138,7 @@ pub mod bv2_impl {
             // borrowck: get-then-put instead of a single get-or-put.
             if self
                 .path_to_source_index_map(target)
-                .get(path.text)
+                .get_path(&path)
                 .is_some()
             {
                 return Ok(None);
@@ -3176,7 +3176,7 @@ pub mod bv2_impl {
                 *p = path;
             }
             self.path_to_source_index_map(target)
-                .put(path.text, source_index.get())
+                .put_path(&path, source_index.get())
                 .expect("oom");
             let _ = self.graph.ast.append(JSAst::empty_in(self.graph.heap)); // OOM/capacity: fire-and-forget
 
@@ -5296,7 +5296,7 @@ pub mod bv2_impl {
                         let (value_ptr, found_existing) = {
                             let existing = this
                                 .path_to_source_index_map(resolve.import_record.original_target)
-                                .get_or_put(path.text)
+                                .get_or_put_path(&path)
                                 .expect("oom");
                             (
                                 std::ptr::from_mut(existing.value_ptr),
@@ -7180,7 +7180,7 @@ pub mod bv2_impl {
                     && target.is_server_side()
                     && self.dev_server.is_none();
 
-                if let Some(id) = self.path_to_source_index_map(target).get(path.text) {
+                if let Some(id) = self.path_to_source_index_map(target).get_path(&*path) {
                     if self.dev_server.is_some() && loader != Loader::Html {
                         import_record.path =
                             self.graph.input_files.items_source()[id as usize].path;
@@ -7194,7 +7194,7 @@ pub mod bv2_impl {
                     import_record.kind = ImportKind::HtmlManifest;
                 }
 
-                let resolve_entry = resolve_queue.get_or_put(path.text).expect("oom");
+                let resolve_entry = resolve_queue.get_or_put(&*path.path_key()).expect("oom");
                 if resolve_entry.found_existing {
                     // SAFETY: arena-allocated `ParseTask` stored in the queue; arena outlives the pass.
                     import_record.path =
@@ -7939,9 +7939,11 @@ pub mod bv2_impl {
                             (server_index, Index::INVALID.get())
                         };
 
+                        let source_path =
+                            this.graph.input_files.items_source()[result_source_index].path;
                         this.graph
                             .path_to_source_index_map(result_ast_target)
-                            .put(source_path_text, reference_source_index)
+                            .put_path(&source_path, reference_source_index)
                             .expect("oom");
 
                         this.graph

@@ -42,6 +42,14 @@ Fichiers : `packages/bun-next/**`, `test/integration/next-bun*/`, `test/integrat
   JS, closure liée chiffrée, action importée par un composant client appelée via `Next-Action`). ⏳ `"use cache"`
   et `cacheComponents` (refusés explicitement), fichiers de métadonnées.
 - ⏳ J5 dev/HMR (`HotReloaderBun` sur Bun.build en watch).
+- ✅ Lot 5 codex (F1, source aphrody@5b36d40c6c58) : `@aphrody/next-bun/app`, routeur App sans Next (`d2b3e332d66`,
+  `bun test test/integration/next-bun-app/test/next-bun-app.test.ts` → 55 pass dans le fixture) ; `withBun` gagne
+  `reactCompiler`, `typedRoutes`, `cacheComponents`, l'export statique Tauri et `@aphrody/next-bun/crawl`
+  (`9d4d57afa16`, `with-bun.test.ts` + `crawl.test.ts` → 23 pass) ; bundler : un module de namespace plugin ne
+  partage plus l'index du fichier de même chemin (`f0a9b59bd4a`, échoue avec `USE_SYSTEM_BUN=1`, `bun bd` non
+  vérifié : build local cassé par `src/js/bun/cosmic.ts` d'un autre lot). Sortie ESM + `module.exports` en format cjs :
+  `module` global (`068561d36a5`, `bun bd` non vérifié). ⏳ partie générique de `m3-bun` (serveur, package, cibles
+  de déploiement) ; publications Tailwind/Base UI à la passe finale de main.
 
 ### D. Plugin Tailwind CSS — `@aphrody/bun-plugin-tailwind` (✅)
 

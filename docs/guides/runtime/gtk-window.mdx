@@ -60,6 +60,15 @@ GTK, GLib, GObject and GIO are separate libraries. On Linux, `dlsym` on the GTK 
 
 `g_application_run` blocks the JavaScript thread, so timers, promises and I/O callbacks do not run while the window is open. Use GLib sources such as `g_timeout_add` with a `JSCallback` for periodic work inside the loop.
 
+## Tested platforms
+
+The fixture prints `window created` and `window closed` with exit code 0 on:
+
+- Windows 11: GTK 4.24.1 from MSYS2 UCRT64
+- Ubuntu 26.04: GTK 4.22.4 under `xvfb-run`
+
+The Linux images are `scripts/aphrody/gui/ubuntu.Dockerfile` and `scripts/aphrody/gui/alpine.Dockerfile`.
+
 ---
 
 A fuller version with a key controller for Escape, `g_timeout_add`, and `--title`, `--width`, `--height` and `--timeout` options lives in the Bun repository at [`test/js/bun/ffi/gtk-window.fixture.ts`](https://github.com/aphrody-labs/bun/blob/main/test/js/bun/ffi/gtk-window.fixture.ts).

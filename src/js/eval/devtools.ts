@@ -181,7 +181,7 @@ function atomicWrite(path: string, bytes: Uint8Array, mode: number) {
 async function checkPlan(root: string, entries: readonly JournalEntry[], restore = false) {
   const destinations = new Set<string>();
   const sources = new Set<string>();
-  for (const entry of entries) {
+  await pool(entries, 16, async entry => {
     const source = safePath(root, restore ? entry.destination : entry.path);
     if (sources.has(source)) throw new Error(`Duplicate source: ${source}`);
     sources.add(source);
@@ -191,11 +191,16 @@ async function checkPlan(root: string, entries: readonly JournalEntry[], restore
     if (source !== destination && existsSync(destination)) throw new Error(`Destination exists: ${destination}`);
     if (sha256(await readBytes(source)) !== (restore ? entry.after : entry.before))
       throw new Error(`File changed since ${restore ? "rename" : "planning"}: ${source}`);
+  });
+  for (const destination of destinations) {
+    let ancestor = dirname(destination);
+    while (ancestor !== root) {
+      if (destinations.has(ancestor)) throw new Error(`Destination ancestor collision: ${ancestor}`);
+      const parent = dirname(ancestor);
+      if (parent === ancestor) break;
+      ancestor = parent;
+    }
   }
-  for (const destination of destinations)
-    for (const other of destinations)
-      if (other !== destination && other.startsWith(destination + sep))
-        throw new Error(`Destination ancestor collision: ${destination}`);
 }
 
 interface RenameOptions {
@@ -270,12 +275,13 @@ async function renameTree(options: RenameOptions) {
       mode: 0o600,
     });
     for (const entry of entries) {
-      const source = safePath(cwd, entry.path);
-      if (sha256(await readBytes(source)) !== entry.before) throw new Error(`Concurrent edit: ${entry.path}`);
-      if (entry.replacements) atomicWrite(source, outputs.get(entry.path)!, entry.mode);
-      if (entry.destination !== entry.path) {
-        const destination = safePath(cwd, entry.destination, true);
-        if (existsSync(destination)) throw new Error(`Destination exists: ${entry.destination}`);
+      const { path, destination: destinationPath } = entry;
+      const source = safePath(cwd, path);
+      if (sha256(await readBytes(source)) !== entry.before) throw new Error(`Concurrent edit: ${path}`);
+      if (entry.replacements) atomicWrite(source, outputs.get(path)!, entry.mode);
+      if (destinationPath !== path) {
+        const destination = safePath(cwd, destinationPath, true);
+        if (existsSync(destination)) throw new Error(`Destination exists: ${destinationPath}`);
         mkdirSync(dirname(destination), { recursive: true });
         renameSync(source, destination);
       }
@@ -319,19 +325,20 @@ async function restoreJournal(journalPath: string, apply: boolean) {
   const pending: JournalEntry[] = [];
   const seen = new Set<string>();
   for (const entry of entries) {
-    if (seen.has(entry.path)) throw new Error(`Duplicate journal path: ${entry.path}`);
-    seen.add(entry.path);
-    const original = safePath(cwd, entry.path, true);
-    const renamed = safePath(cwd, entry.destination, true);
+    const { path, destination } = entry;
+    if (seen.has(path)) throw new Error(`Duplicate journal path: ${path}`);
+    seen.add(path);
+    const original = safePath(cwd, path, true);
+    const renamed = safePath(cwd, destination, true);
     if (existsSync(original)) {
       const current = sha256(await readBytes(original));
-      if (entry.path !== entry.destination && existsSync(renamed)) throw new Error(`Restore collision: ${entry.path}`);
+      if (path !== destination && existsSync(renamed)) throw new Error(`Restore collision: ${path}`);
       if (current === entry.before) continue;
       if (current === entry.after) {
-        pending.push({ ...entry, destination: entry.path });
+        pending.push({ ...entry, destination: path });
         continue;
       }
-      throw new Error(`File changed since rename: ${entry.path}`);
+      throw new Error(`File changed since rename: ${path}`);
     }
     pending.push(entry);
   }
@@ -386,8 +393,9 @@ async function rename(args: string[], cwd: string): Promise<number> {
     console.log(RENAME_HELP);
     return 0;
   }
-  if (flags.restore) {
-    const report = await restoreJournal(resolve(cwd, flags.restore), !!flags.apply);
+  const restore = flags.restore;
+  if (restore) {
+    const report = await restoreJournal(resolve(cwd, restore), !!flags.apply);
     if (flags.json) console.log(JSON.stringify(report, null, 2));
     else console.log(`restore: ${report.files} file(s) (${report.applied ? "applied" : "dry-run"})`);
     return 0;
@@ -396,10 +404,11 @@ async function rename(args: string[], cwd: string): Promise<number> {
   const to: string[] = flags.to ?? [];
   if (from.length !== to.length) throw new UsageError("Each --from needs a --to");
   const rules: RenameRule[] = from.map((text, i) => ({ from: text, to: to[i] }));
-  if (flags.rules) {
-    const extra = JSON.parse(readFileSync(resolve(cwd, flags.rules), "utf8"));
+  const rulesFile = flags.rules;
+  if (rulesFile) {
+    const extra = JSON.parse(readFileSync(resolve(cwd, rulesFile), "utf8"));
     if (!Array.isArray(extra) || extra.some(r => typeof r?.from !== "string" || typeof r?.to !== "string"))
-      throw new UsageError(`${flags.rules}: expected [{ "from": "...", "to": "..." }]`);
+      throw new UsageError(`${rulesFile}: expected [{ "from": "...", "to": "..." }]`);
     rules.push(...extra);
   }
   if (rules.length === 0) throw new UsageError(`No rules: pass --from and --to, or --rules\n\n${RENAME_HELP}`);
@@ -435,7 +444,8 @@ async function rename(args: string[], cwd: string): Promise<number> {
       console.log(
         `    ${file.path}${file.destination !== file.path ? ` -> ${file.destination}` : ""}${file.replacements ? ` (${file.replacements})` : ""}`,
       );
-    if (report.journal) console.log(`    journal: ${report.journal}`);
+    const journal = report.journal;
+    if (journal) console.log(`    journal: ${journal}`);
   }
   if (!flags.apply) console.log("Dry-run. Re-run with --apply to write.");
   return 0;
@@ -465,7 +475,8 @@ function frontmatter(text: string): Record<string, string> {
 /** `--dir`, `$BUN_DOCS_DIR`, or the nearest `docs/` with a Mintlify `docs.json` from the working directory up. */
 function findDocsDir(cwd: string, given?: string): string | undefined {
   if (given) return resolve(cwd, given);
-  if (process.env.BUN_DOCS_DIR) return resolve(cwd, process.env.BUN_DOCS_DIR);
+  const configured = process.env.BUN_DOCS_DIR;
+  if (configured) return resolve(cwd, configured);
   for (let dir = cwd; ; dir = dirname(dir)) {
     if (existsSync(join(dir, "docs", "docs.json")) && existsSync(join(dir, "docs", "runtime")))
       return join(dir, "docs");
@@ -612,9 +623,10 @@ async function parse(args: string[], cwd: string): Promise<number> {
     md: { type: "boolean" },
     help: { type: "boolean", short: "h" },
   });
-  if (flags.help || positionals.length === 0) {
+  const help = flags.help;
+  if (help || positionals.length === 0) {
     console.log(PARSE_HELP);
-    return flags.help ? 0 : 1;
+    return help ? 0 : 1;
   }
   const results = [];
   for (const file of positionals) {
