@@ -113,13 +113,89 @@ declare module "bun:test" {
     ): Mock<Extract<T[K], (...args: any[]) => any>>;
 
     /**
+     * Mock a module, like {@link mock.module}.
+     *
+     * Without `factory`, the module is its `__mocks__` file when there is one (`__mocks__/<name>` next to a
+     * file you wrote, `__mocks__/<package>` in the test's directory or a parent for a package or a builtin
+     * module), else an automatic mock of its exports: functions and classes become mock functions that return
+     * `undefined`, objects are mocked member by member, arrays become empty, other values are kept.
+     *
+     * Returns a promise when the module is already loaded and `factory` returns a promise that is still pending.
+     *
+     * @example
+     * ```ts
+     * jest.mock("./math");
+     * const { add } = require("./math");
+     * add(1, 2); // undefined
+     * ```
+     */
+    function mock(id: string, factory?: () => any): typeof jest | Promise<void>;
+    /**
+     * Same as {@link jest.mock}.
+     */
+    function doMock(id: string, factory?: () => any): typeof jest | Promise<void>;
+    /**
+     * Remove the mock of a module: the next import or `require()` loads the module itself, and a module that was
+     * already loaded when it was mocked gets its own exports back.
+     */
+    function unmock(id: string): typeof jest;
+    /**
+     * Same as {@link jest.unmock}.
+     */
+    function dontMock(id: string): typeof jest;
+    /**
+     * The module itself, even if it is mocked. Use it in a mock factory to keep part of the module.
+     *
+     * @example
+     * ```ts
+     * jest.mock("./math", () => ({ ...jest.requireActual("./math"), add: () => 42 }));
+     * ```
+     */
+    function requireActual<T = any>(id: string): T;
+    /**
+     * The mock of a module: its registered mock, its `__mocks__` file, or an automatic mock of its exports.
+     */
+    function requireMock<T = any>(id: string): T;
+    /**
+     * Forget every loaded module but the test file, so the next `require()` or `import()` loads it again and module
+     * mock factories run again. Bindings already imported with a static `import` keep the modules they had.
+     */
+    function resetModules(): typeof jest;
+    /**
+     * Run `fn` with a module registry of its own: modules it loads are loaded again, and the modules loaded before
+     * are back once it returns.
+     */
+    function isolateModules(fn: () => void): typeof jest;
+    /**
+     * Same as {@link jest.isolateModules} for an async `fn`: the modules loaded before are back once its promise settles.
+     */
+    function isolateModulesAsync(fn: () => Promise<void>): Promise<void>;
+    /**
+     * Type `source` as a mock. Returns `source` itself.
+     *
+     * @example
+     * ```ts
+     * import { readFileSync } from "node:fs";
+     * jest.mock("node:fs");
+     * jest.mocked(readFileSync).mockReturnValue("contents");
+     * ```
+     */
+    function mocked<T>(source: T, options?: { shallow?: boolean }): Mocked<T>;
+
+    /**
      * Constructs the type of a mock function, such as the return type of `jest.fn()`.
      */
     type Mock<T extends (...args: any[]) => any = (...args: any[]) => any> = JestMock.Mock<T>;
     /**
      * Wraps a class, function or object type with Jest mock type definitions.
      */
-    // type Mocked<T extends object> = JestMock.Mocked<T>;
+    type Mocked<T> = T extends (...args: infer Args) => infer Return
+      ? Mock<(...args: Args) => Return> & { [K in keyof T]: Mocked<T[K]> }
+      : T extends new (...args: infer Args) => infer Instance
+        ? T & Mock<(...args: Args) => Instance>
+        : T extends object
+          ? { [K in keyof T]: Mocked<T[K]> }
+          : T;
     /**
      * Wraps a class type with Jest mock type definitions.
      */
@@ -182,6 +258,26 @@ declare module "bun:test" {
      * Mock a module
      */
     mock: typeof mock.module;
+    /**
+     * Same as {@link vi.mock}.
+     */
+    doMock: typeof mock.module;
+    /**
+     * Remove the mock of a module
+     */
+    unmock: typeof jest.unmock;
+    /**
+     * Same as {@link vi.unmock}.
+     */
+    doUnmock: typeof jest.unmock;
+    /**
+     * Forget every loaded module but the test file
+     */
+    resetModules: typeof jest.resetModules;
+    /**
+     * Type a value as a mock. Returns the value itself.
+     */
+    mocked: typeof jest.mocked;
     /**
      * Restore all mocks to their original implementation
      */

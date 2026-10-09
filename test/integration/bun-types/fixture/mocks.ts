@@ -1,4 +1,4 @@
-import { jest, mock } from "bun:test";
+import { jest, mock, vi } from "bun:test";
 import { expectType } from "./utilities";
 
 const mock1 = mock((arg: string) => {
@@ -29,3 +29,22 @@ jest.fn<() => string>().mockResolvedValue("24");
 jest.fn().mockClear();
 jest.fn().mockReset();
 jest.fn().mockRejectedValueOnce(new Error());
+
+jest.mock("./math");
+jest.mock("./math", () => ({ add: () => 42 }));
+jest.doMock("./math", () => ({}));
+expectType<typeof jest>(jest.unmock("./math").dontMock("./math").resetModules());
+expectType<{ add(a: number, b: number): number }>(jest.requireActual<{ add(a: number, b: number): number }>("./math"));
+jest.requireMock("./math").anything;
+jest.isolateModules(() => {});
+expectType<Promise<void>>(jest.isolateModulesAsync(async () => {}));
+declare function readFileSync(path: string): string;
+jest.mocked(readFileSync).mockReturnValue("contents");
+// @ts-expect-error
+jest.mocked(readFileSync).mockReturnValue(1);
+expectType<string>(jest.mocked({ a: "a" }).a);
+vi.doMock("./math", () => ({}));
+vi.unmock("./math");
+vi.doUnmock("./math");
+vi.resetModules();
+vi.mocked(readFileSync).mockReturnValue("contents");
