@@ -15,6 +15,8 @@ pub enum HardcodedModule {
     BunFfi,
     #[strum(serialize = "bun:jsc")]
     BunJsc,
+    #[strum(serialize = "bun:linux")]
+    BunLinux,
     #[strum(serialize = "bun:main")]
     BunMain,
     #[strum(serialize = "bun:test")]
@@ -222,6 +224,7 @@ bun_core::comptime_string_map! {
         b"bun:app" => HardcodedModule::BunApp,
         b"bun:ffi" => HardcodedModule::BunFfi,
         b"bun:jsc" => HardcodedModule::BunJsc,
+        b"bun:linux" => HardcodedModule::BunLinux,
         b"bun:main" => HardcodedModule::BunMain,
         b"bun:test" => HardcodedModule::BunTest,
         b"bun:vitest" => HardcodedModule::BunVitest,
@@ -731,6 +734,7 @@ const BUN_EXTRA_ALIAS_KVS: &[AliasKv] = &[
     entry!("bun:app"),
     entry!("bun:ffi"),
     entry!("bun:jsc"),
+    entry!("bun:linux"),
     entry!("bun:main"),
     entry!("bun:sqlite"),
     entry!("bun:wrap"),

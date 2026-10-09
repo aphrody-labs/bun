@@ -1,0 +1,183 @@
+---
+title: Linux
+description: Call Linux kernel interfaces directly from JavaScript with bun:linux
+---
+
+`bun:linux` exposes Linux kernel interfaces as synchronous functions: namespaces, mounts, cgroups, capabilities, pidfds, memfds, Landlock, sysctl, kernel modules and reboot. The module loads on first import, so it costs nothing at startup.
+
+```ts
+import linux from "bun:linux";
+
+if (linux.isSupported) {
+  console.log(linux.sysctl.get("kernel.ostype")); // "Linux"
+}
+```
+
+On other platforms `isSupported` is `false`. Every function exists, and each call that reaches the kernel throws an error that says `bun:linux` is only available on Linux.
+
+---
+
+## Errors
+
+A failed kernel call throws a `SystemError` with `code`, `errno`, `syscall` and, when a path is involved, `path`.
+
+```ts
+try {
+  linux.mount(null, "/mnt", "tmpfs");
+} catch (error) {
+  console.log(error.code, error.syscall); // "EPERM" "mount"
+}
+```
+
+Invalid arguments throw `TypeError` or `RangeError` before any system call runs.
+
+---
+
+## Constants
+
+`linux.constants` holds the numeric values for `CLONE_NEW*`, `MS_*`, `MNT_*`, `PR_*`, `CAP_*`, `RB_*`, `LANDLOCK_ACCESS_FS_*`, `MFD_*` and the module, pidfd and kexec flags.
+
+---
+
+## Namespaces and mounts
+
+`unshare` and `setns` change the namespaces of the calling thread. Most calls need `CAP_SYS_ADMIN`.
+
+```ts
+const { constants } = linux;
+
+linux.unshare(constants.CLONE_NEWNS);
+linux.mount(null, "/", null, constants.MS_REC | constants.MS_PRIVATE);
+linux.mount("tmpfs", "/mnt", "tmpfs", 0, "size=1m");
+linux.umount("/mnt");
+```
+
+`pivotRoot(newRoot, putOld)` swaps the root of the mount namespace.
+
+---
+
+## Control groups
+
+`linux.cgroup` works on cgroup v2 under `/sys/fs/cgroup`. Paths with `.` or `..` segments are rejected.
+
+```ts
+const path = linux.cgroup.create("my-job", {
+  cpuMax: 0.5, // half a CPU
+  memoryMax: 256 * 1024 * 1024,
+  pidsMax: 64,
+});
+
+linux.cgroup.attach(path); // current process
+console.log(linux.cgroup.read(path, "memory.current"));
+console.log(linux.cgroup.current());
+
+linux.cgroup.remove(path);
+```
+
+`cpuMax` also accepts a string such as `"50000 100000"`. `cpuWeight` and `ioWeight` range from 1 to 10000.
+
+---
+
+## Capabilities and prctl
+
+```ts
+const { effective, permitted } = linux.capabilities.get();
+console.log((effective & (1n << BigInt(linux.constants.CAP_NET_ADMIN))) !== 0n);
+
+linux.capabilities.dropBounding(linux.constants.CAP_SYS_MODULE);
+linux.setNoNewPrivs();
+```
+
+Sets are `bigint` bit masks. `prctl(option, arg2?, arg3?, arg4?, arg5?)` calls `prctl(2)` directly.
+
+---
+
+## pidfd
+
+A pidfd names one process, so a signal can never reach a reused pid.
+
+```ts
+const child = Bun.spawn(["sleep", "60"]);
+const fd = linux.pidfdOpen(child.pid);
+linux.pidfdSendSignal(fd, "SIGKILL");
+await child.exited;
+require("node:fs").closeSync(fd);
+```
+
+`pidfdGetfd(pidfd, targetFd)` copies a descriptor from another process.
+
+---
+
+## memfd
+
+`memfdCreate(name, flags?)` returns the descriptor of an anonymous in-memory file. Use it with `node:fs`.
+
+```ts
+import fs from "node:fs";
+
+const fd = linux.memfdCreate("scratch");
+fs.writeSync(fd, "hello");
+fs.closeSync(fd);
+```
+
+---
+
+## Landlock
+
+`landlock.restrictSelf` confines the calling thread, and the processes it spawns, to a set of paths. The restriction is permanent.
+
+```ts
+if (linux.landlock.abiVersion() > 0) {
+  linux.landlock.restrictSelf({
+    readOnly: ["/usr", "/lib", "/etc"],
+    readWrite: ["/tmp/work"],
+    execute: ["/usr/bin"],
+  });
+}
+```
+
+`abiVersion()` returns `0` when Landlock is unavailable.
+
+---
+
+## sysctl
+
+```ts
+linux.sysctl.get("net.ipv4.ip_forward");
+linux.sysctl.set("net.ipv4.ip_forward", 1);
+```
+
+Names are dotted, such as `kernel.ostype`. Names with `..` or `/` are rejected.
+
+---
+
+## Kernel modules and power
+
+These calls need `CAP_SYS_MODULE` or `CAP_SYS_BOOT`.
+
+```ts
+linux.finitModule("/lib/modules/dummy.ko", "numdummies=1");
+linux.deleteModule("dummy");
+
+linux.reboot(linux.constants.RB_POWER_OFF);
+```
+
+`initModule` loads an image from an `ArrayBufferView`. `kexecFileLoad(kernelFd, initrdFd, cmdline, flags?)` stages a kernel for `RB_KEXEC`.
+
+<Warning>`reboot` with `RB_AUTOBOOT`, `RB_POWER_OFF`, `RB_HALT_SYSTEM` or `RB_KEXEC` acts immediately.</Warning>
+
+---
+
+## io_uring
+
+Bun does not use io_uring on Linux. `ioUring.probe()` only reports what the kernel allows.
+
+```ts
+const { supported, ops } = linux.ioUring.probe();
+```
+
+---
+
+## Reference
+
+See `packages/bun-types/linux.d.ts` for the complete signatures, required privileges and errors.

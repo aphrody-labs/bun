@@ -148,7 +148,13 @@
           {
             "group": "Interop & Tooling",
             "icon": "puzzle",
-            "pages": ["/runtime/node-api", "/runtime/ffi", "/runtime/c-compiler", "/runtime/transpiler"]
+            "pages": [
+              "/runtime/node-api",
+              "/runtime/ffi",
+              "/runtime/linux",
+              "/runtime/c-compiler",
+              "/runtime/transpiler"
+            ]
           },
           {
             "group": "Utilities",
