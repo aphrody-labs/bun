@@ -613,6 +613,29 @@ describe("sync compression argument handling", () => {
     expect(inflateSync(compressed).byteLength).toBe(0);
   });
 
+  it.each(["zlib", "libdeflate"] as const)("deflateSync honors windowBits like node:zlib (%s)", library => {
+    const input = new TextEncoder().encode(Buffer.alloc(4096, "png scanline ").toString());
+    const opts = (windowBits: number) => (library === "zlib" ? { windowBits } : { windowBits, library });
+
+    const zlibFormat = deflateSync(input, opts(15) as any);
+    expect([zlibFormat[0], zlibFormat[1]]).toEqual([0x78, 0x9c]);
+    expect(new Uint8Array(zlib.inflateSync(zlibFormat))).toEqual(input);
+    expect(inflateSync(zlibFormat, { windowBits: 15 })).toEqual(input);
+
+    const raw = deflateSync(input, opts(-15) as any);
+    expect(new Uint8Array(zlib.inflateRawSync(raw))).toEqual(input);
+    expect(inflateSync(raw)).toEqual(input);
+    expect(deflateSync(input, (library === "zlib" ? {} : { library }) as any)).toEqual(raw);
+
+    const gzip = deflateSync(input, opts(31) as any);
+    expect([gzip[0], gzip[1]]).toEqual([0x1f, 0x8b]);
+    expect(gunzipSync(gzip)).toEqual(input);
+
+    const gzipped = gzipSync(input, opts(15) as any);
+    expect([gzipped[0], gzipped[1]]).toEqual([0x1f, 0x8b]);
+    expect(gunzipSync(gzipped)).toEqual(input);
+  });
+
   it("gunzipSync evaluates the options object before validating the input", () => {
     expect(() =>
       gunzipSync(42 as any, {

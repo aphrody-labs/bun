@@ -2273,7 +2273,6 @@ pub(crate) mod JSZlib {
         is_gzip: bool,
     ) -> JsResult<JSValue> {
         let mut opts = zlib::Options {
-            gzip: is_gzip,
             window_bits: if is_gzip { 31 } else { -15 },
             ..Default::default()
         };
@@ -2449,11 +2448,11 @@ pub(crate) mod JSZlib {
     ) -> JsResult<JSValue> {
         let mut level: Option<i32> = None;
         let mut library = Library::Zlib;
-        let mut window_bits: i32 = 0;
+        let mut window_bits: Option<i32> = None;
 
         if let Some(options_val) = options_val_ {
             if let Some(window) = options_val.get(global_this, "windowBits")? {
-                window_bits = window.coerce::<i32>(global_this)?;
+                window_bits = Some(window.coerce::<i32>(global_this)?);
                 library = Library::Zlib;
             }
 
@@ -2480,7 +2479,14 @@ pub(crate) mod JSZlib {
 
         let buffer = coerce_compress_buffer(global_this, buffer_value)?;
         let compressed = buffer.slice();
-        let _ = window_bits; // unused
+        // zlib semantics: 8..=15 zlib header, -8..=-15 raw deflate, 24..=31 gzip.
+        // `gzipSync` always emits gzip; `windowBits` only sizes its window.
+        let window_bits = match window_bits {
+            None if is_gzip => 31,
+            None => -15,
+            Some(bits) if is_gzip => (bits.unsigned_abs() & 15) as i32 + 16,
+            Some(bits) => bits,
+        };
 
         match library {
             Library::Zlib => {
@@ -2491,8 +2497,7 @@ pub(crate) mod JSZlib {
                     compressed,
                     &mut list,
                     zlib::Options {
-                        window_bits: 15,
-                        gzip: is_gzip,
+                        window_bits,
                         level: level.unwrap_or(6),
                         ..Default::default()
                     },
@@ -2539,10 +2544,10 @@ pub(crate) mod JSZlib {
                 let Some(mut compressor) = bun_libdeflate::OwnedCompressor::new(level) else {
                     return Err(global_this.throw_out_of_memory());
                 };
-                let encoding = if is_gzip {
-                    bun_libdeflate::Encoding::Gzip
-                } else {
-                    bun_libdeflate::Encoding::Deflate
+                let encoding = match window_bits {
+                    16.. => bun_libdeflate::Encoding::Gzip,
+                    1.. => bun_libdeflate::Encoding::Zlib,
+                    _ => bun_libdeflate::Encoding::Deflate,
                 };
 
                 let mut list: Vec<u8> = Vec::new();
