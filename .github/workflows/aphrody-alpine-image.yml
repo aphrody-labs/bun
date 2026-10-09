@@ -1,0 +1,99 @@
+name: Aphrody Alpine image
+
+# Builds scripts/aphrody/aphrody-alpine.Dockerfile natively on x64 and arm64,
+# pushes ghcr.io/aphrody-labs/alpine:3.24 (multi-arch) and attaches the
+# image's root filesystem as aphrody-alpine-rootfs-<arch>.tar.gz to the
+# release alpine-3.24. Packages come from the aphrody-labs/aports apk
+# repository (its aphrody-packages.yml must have published them).
+
+permissions:
+  contents: write
+  packages: write
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/aphrody/aphrody-alpine.Dockerfile"
+      - ".github/workflows/aphrody-alpine-image.yml"
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+    inputs:
+      optional_packages:
+        description: "OPTIONAL_PACKAGES build arg (e.g. aphrody-libc-preload)"
+        type: string
+        default: ""
+
+concurrency:
+  group: aphrody-alpine-image
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/aphrody-labs/alpine
+  TAG: "3.24"
+  RELEASE: alpine-3.24
+
+jobs:
+  build:
+    if: github.repository == 'aphrody-labs/bun'
+    name: ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            platform: amd64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            platform: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Build and push
+        run: >
+          docker buildx build --load --push
+          -t "$IMAGE:$TAG-${{ matrix.platform }}"
+          -f scripts/aphrody/aphrody-alpine.Dockerfile
+          --build-arg "OPTIONAL_PACKAGES=${{ inputs.optional_packages }}"
+          scripts/aphrody
+      - uses: oven-sh/setup-bun@v2
+      - name: Export rootfs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bun -e '
+            import { $ } from "bun";
+            const { IMAGE, TAG, RELEASE, GITHUB_REPOSITORY: repo } = process.env;
+            const arch = "${{ matrix.arch }}";
+            const out = `aphrody-alpine-rootfs-${arch}.tar.gz`;
+            const id = (await $`docker create ${IMAGE}:${TAG}-${{ matrix.platform }} /bin/true`.text()).trim();
+            await $`docker export ${id} | gzip -9 > ${out}`;
+            await $`docker rm ${id}`;
+            if ((await $`gh release view ${RELEASE} -R ${repo}`.nothrow().quiet()).exitCode !== 0)
+              await $`gh release create ${RELEASE} -R ${repo} --title ${"Aphrody Alpine 3.24 rootfs"} --notes ${"Root filesystem of ghcr.io/aphrody-labs/alpine:3.24."} --latest=false`;
+            await $`gh release upload ${RELEASE} -R ${repo} --clobber ${out}`;
+          '
+
+  manifest:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Multi-arch tag
+        run: docker buildx imagetools create -t "$IMAGE:$TAG" -t "$IMAGE:latest" "$IMAGE:$TAG-amd64" "$IMAGE:$TAG-arm64"

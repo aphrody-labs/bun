@@ -5,7 +5,7 @@ const sh = (s: string) => `'${s.replaceAll("'", `'\\''`)}'`;
 
 describe("aphrody tmux runner containers", () => {
   test("Alpine is the default Linux, Ubuntu 26.04 the glibc one", () => {
-    expect(IMAGES.alpine).toStartWith("aphrody/build-alpine:");
+    expect(IMAGES.alpine).toStartWith("ghcr.io/aphrody-labs/alpine:");
     expect(IMAGES.ubuntu).toStartWith("aphrody/build-linux:26.04");
   });
 

@@ -2,8 +2,8 @@
 // session, so any agent can start, list, read and stop them. Native on both
 // sides: psmux (`tmux` on Windows) with pwsh, real tmux on Linux.
 // `--linux` (= `--alpine`) runs the command in the Alpine build container, the
-// fork's primary Linux target (image `aphrody/build-alpine`,
-// scripts/aphrody/alpine.Dockerfile, musl); `--ubuntu` in the Ubuntu 26.04 one
+// fork's primary Linux target (image `ghcr.io/aphrody-labs/alpine`,
+// scripts/aphrody/aphrody-alpine.Dockerfile, musl); `--ubuntu` in the Ubuntu 26.04 one
 // (`aphrody/build-linux`, scripts/aphrody/linux.Dockerfile), the same OS and
 // glibc as the vps and dbfr hosts. The directory is bind-mounted at /work,
 // unless `--sync`: then /work is a named volume holding a git checkout of the
@@ -22,7 +22,7 @@ const SESSION = process.env.APHRODY_TMUX_SESSION ?? "aphrody";
 const ROOT = resolve(import.meta.dir, "..", "..");
 const LOGS = join(ROOT, "tmp", "tmux");
 export const IMAGES = {
-  alpine: process.env.APHRODY_ALPINE_IMAGE ?? "aphrody/build-alpine:3.24",
+  alpine: process.env.APHRODY_ALPINE_IMAGE ?? "ghcr.io/aphrody-labs/alpine:3.24",
   ubuntu: process.env.APHRODY_LINUX_IMAGE ?? "aphrody/build-linux:26.04",
 } as const;
 export type Distro = keyof typeof IMAGES;

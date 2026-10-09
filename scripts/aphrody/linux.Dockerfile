@@ -1,7 +1,7 @@
 # Linux build and test environment for the fork and Aphrody: Ubuntu 26.04 LTS,
 # the same OS and glibc (2.43) as the vps and dbfr hosts, so binaries built here
 # run natively on both. The fork's primary Linux target is Alpine
-# (alpine.Dockerfile); this image is the glibc one. Used by
+# (aphrody-alpine.Dockerfile); this image is the glibc one. Used by
 # `scripts/aphrody/tmux.ts run --ubuntu` and .github/workflows/aphrody-linux-build.yml.
 #
 #   docker build -t aphrody/build-linux:26.04 \

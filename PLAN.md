@@ -74,9 +74,9 @@ Ne jamais attendre une commande longue en premier plan ; paralléliser ; lire pe
   Nom de job = `<action>-<chantier>` ; journal dans `tmp/tmux/<nom>.log` (lisible avec Read), code de sortie
   dans `tmp/tmux/<nom>.exit`. Avant un `bun bd`/`cargo build` lourd, `tmux.ts ls` : ne pas lancer deux builds
   natifs du fork en même temps (un seul `bun bd` à la fois, nom `bd-*`).
-- **Linux = Alpine d'abord** : `--linux` = `--alpine` = image `aphrody/build-alpine:3.24`
-  (`scripts/aphrody/alpine.Dockerfile` : musl, LLVM 23 d'edge, cmake 4, mold, nightly de `rust-toolchain.toml`
-  hôte musl, bun, node) ; `--ubuntu` = `aphrody/build-linux:26.04` (`scripts/aphrody/linux.Dockerfile` : glibc 2.43
+- **Linux = Alpine d'abord** : `--linux` = `--alpine` = image `ghcr.io/aphrody-labs/alpine:3.24`
+  (`scripts/aphrody/aphrody-alpine.Dockerfile`, Aphrody Alpine : musl, LLVM 23 et nightly de `rust-toolchain.toml`
+  depuis le dépôt apk d'aphrody-labs/aports, bun, bunsh, node) ; `--ubuntu` = `aphrody/build-linux:26.04` (`scripts/aphrody/linux.Dockerfile` : glibc 2.43
   comme vps/dbfr, LLVM 22 + 23). Le répertoire est monté sur `/work` ; avec `--sync` (HEAD + modifications non
   commitées) ou `--sync-head` (HEAD seul, sans le travail en cours des autres agents), `/work` est un volume nommé
   `aphrody-src-<distro>` (checkout git, symlinks et modes corrects, `build/` conservé entre jobs). Ressources :
@@ -84,7 +84,7 @@ Ne jamais attendre une commande longue en premier plan ; paralléliser ; lire pe
   Les binaires de release Linux restent croisés depuis Debian (sysroots d'upstream) ; le build natif est vérifié
   par `aphrody-linux-build.yml`.
 - **CI locale = nektos/act** (winget, 0.2.89) : tester un workflow avant de pousser, sans minutes GitHub.
-  `.actrc` mappe `ubuntu-*` sur `aphrody/build-linux:26.04` (`alpine-3.24` sur `aphrody/build-alpine:3.24`) ; `bun scripts/aphrody/act.ts list | run <workflow>
+  `.actrc` mappe `ubuntu-*` sur `aphrody/build-linux:26.04` (`alpine-3.24` sur `ghcr.io/aphrody-labs/alpine:3.24`) ; `bun scripts/aphrody/act.ts list | run <workflow>
 [-j job] [-n] | tmux <nom> <workflow>`. Secrets lus depuis l'env (`-s NAME`). L'image doit contenir `node`
   (actions JS).
 - **Sinon, tâches de fond de l'outil Bash** (`run_in_background: true`) : notification à la fin, pas de

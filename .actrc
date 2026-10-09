@@ -4,4 +4,4 @@
 -P ubuntu-22.04=aphrody/build-linux:26.04
 --container-architecture linux/amd64
 --pull=false
--P alpine-3.24=aphrody/build-alpine:3.24
+-P alpine-3.24=ghcr.io/aphrody-labs/alpine:3.24

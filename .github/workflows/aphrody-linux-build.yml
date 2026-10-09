@@ -1,8 +1,8 @@
 name: Aphrody Linux build
 
 # Native Linux builds of the fork, Alpine first: the build runs inside the
-# distribution itself (scripts/aphrody/alpine.Dockerfile, musl, LLVM 23 from
-# edge, rust nightly with a musl host) and inside Ubuntu 26.04
+# distribution itself (scripts/aphrody/aphrody-alpine.Dockerfile: Aphrody Alpine,
+# musl, LLVM 23 and rust nightly from the aphrody-labs/aports apk repository) and inside Ubuntu 26.04
 # (scripts/aphrody/linux.Dockerfile, glibc 2.43, as on the vps and dbfr hosts),
 # for x64 and arm64. No cross-compile and no sysroot: what is tested is that
 # `bun run build` works on the machine it targets. Each build is smoke-tested
@@ -18,7 +18,7 @@ on:
     paths:
       - "scripts/build/**"
       - "scripts/build.ts"
-      - "scripts/aphrody/alpine.Dockerfile"
+      - "scripts/aphrody/aphrody-alpine.Dockerfile"
       - "scripts/aphrody/linux.Dockerfile"
       - "scripts/aphrody/linux-smoke.sh"
       - "rust-toolchain.toml"
@@ -77,7 +77,7 @@ jobs:
       - name: Build image
         run: |
           case "${{ matrix.distro }}" in
-            alpine-*) dockerfile=scripts/aphrody/alpine.Dockerfile ;;
+            alpine-*) dockerfile=scripts/aphrody/aphrody-alpine.Dockerfile ;;
             ubuntu-*) dockerfile=scripts/aphrody/linux.Dockerfile ;;
           esac
           channel=$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)

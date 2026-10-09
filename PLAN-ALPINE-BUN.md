@@ -15,7 +15,7 @@ par `git pull --rebase` et ne réécris pas le travail d'un autre.
 Décision utilisateur (2026-10-09) : le fork est **pensé d'abord pour la dernière Alpine** (3.24.x, musl) et doit
 **aussi compiler sur Ubuntu 26.04** (glibc 2.43, = vps/dbfr). Commit `fd278401fca`.
 
-- ✅ Image `aphrody/build-alpine:3.24` (`scripts/aphrody/alpine.Dockerfile`) : LLVM 23.1.3 depuis edge/main (le
+- ✅ Image `aphrody/build-alpine:3.24` (`alpine.Dockerfile`, remplacée par Aphrody Alpine, section U) : LLVM 23.1.3 depuis edge/main (le
   build n'accepte que `pins.llvm` 23.1.x ; apk 3.24 n'a que 22), nightly `rust-toolchain.toml` (rustup hôte musl),
   cmake 4.2, samurai, mold, go, nasm, perl, python3, nodejs (act), bun 1.4.2. Construite et vérifiée localement.
 - ✅ `aphrody/build-linux:26.04` : + LLVM 23 apt.llvm.org (contournement SHA-1 sqv), nightly épinglée, go, nodejs.
@@ -38,14 +38,62 @@ Décision utilisateur (2026-10-09) : le fork est **pensé d'abord pour la derni�
 
 ### U. Aphrody Alpine — fork d'Alpine 3.24 + apk-tools (🔄 démarré le 2026-10-09)
 
-- Forks `aphrody-labs/aports` (3.24-stable) et `aphrody-labs/apk-tools`, clonés dans C:aports et C:apk-tools ;
-  image `ghcr.io/aphrody-labs/alpine` qui remplace `aphrody/build-alpine:3.24` (chantier N).
-- **U1** : paquets, `bunsh` (bun comme shell natif, login shell de root ; /bin/sh reste busybox ash tant que bunsh ne
-  passe pas les scripts apk), apk complété par bun, image.
-- **U2** : libc Rust en complément de musl (c-ward forké dans aphrody-labs, choix motivé).
-- **U3** : sudo-rs intégré nativement (groupe `aphrody` NOPASSWD), élévation dans le cœur Bun (`elevate.rs`), module
-  `bun:linux` (API noyau complète, root sans sandbox), noyau `linux-aphrody` et sysctl.
+- **U1** : paquets, `bunsh`, apk complété par bun, image. **U2** : libc Rust (section suivante). **U3** : sudo-rs,
+  `elevate.rs`, `bun:linux`, noyau `linux-aphrody`, sysctl (fragment `scripts/aphrody/alpine/u3.Dockerfile.fragment`).
 - Builds et tests : passe finale unique (§2 règle 13), conteneurs Docker locaux uniquement.
+
+**Forks** (synchro amont toutes les 6 h, `.github/workflows/aphrody-upstream-sync.yml`, secret `APHRODY_SYNC_TOKEN`) :
+
+- [aphrody-labs/aports](https://github.com/aphrody-labs/aports), branche par défaut `3.24-stable` (C:aports, sparse
+  `aphrody/` + `.github/`) ; tout l'ajout est sous `aphrody/`, détail dans son `PLAN.md`. Commit `15e5fcd2686`.
+- [aphrody-labs/apk-tools](https://github.com/aphrody-labs/apk-tools), `master` = 3.0.8 (C:apk-tools) : **aucun
+  patch** (justifié dans son `PLAN.md`). Commit `6e1261b`.
+
+**Paquets `aphrody/`** : `bun` 1.4.3_p2 (+ `bun-shell` : `/bin/bunsh`, `/etc/shells` ; + `bun-apk`), `n2b` 0.7.1
+(release `n2b-v0.7.1` de ce dépôt), `aphrody` (tarball du dépôt privé, `b70bfdf4446`), `aphrody-libc` 0.1.0 (U2 :
+`-dev` = `/usr/lib/libaphrody_libc.a` pour `--aphrody-libc=`, `-preload`), `llvm23`/`clang23`/`lld23`/`llvm-runtimes`
+23.1.3 (rétroportés d'aports master `6f2f659847f`), `rust-nightly` 2026-09-15 (`/usr/lib/rust-nightly`, =
+`rust-toolchain.toml`), `rust-stable` 1.98.1 (3.24 n'a que 1.96, aphrody/n2b veulent ≥ 1.97), méta
+`aphrody-bun-build-deps`.
+
+**Dépôt signé** : `aphrody-packages.yml` (`aphrody/scripts/publish.ts`, abuild dans `alpine:3.24`, x86_64 +
+aarch64) publie chaque `.apk` + `APKINDEX.tar.gz` signé (secret `APHRODY_ABUILD_KEY`) dans la release
+`aphrody-3.24-<arch>` ; paquets déjà publiés sautés (reprise après le plafond de 6 h, LLVM est long). apk 3 lit
+une ligne qui finit par `/APKINDEX.tar.gz` comme un dépôt NDX (paquets relatifs à l'index, `${APK_ARCH}` substitué) :
+`https://github.com/aphrody-labs/aports/releases/download/aphrody-3.24-${APK_ARCH}/APKINDEX.tar.gz`. Pages écarté
+(site ≤ 1 Go, fichier ≤ 100 Mo). Clé publique `aphrody/keys/aphrody-labs.rsa.pub` (copie privée :
+`~/.aphrody/keys/`).
+
+**apk complété par bun (option la plus simple)** : aucun patch apk, aucune sous-commande dupliquée. apk 3 lance
+scripts, triggers et hooks par `execve()` (shebang respecté) : `#!/usr/bin/bun` et `#!/bin/bunsh` marchent tels
+quels. Modules npm empaquetés dans `/usr/lib/bun/node_modules` (à apk) ; le trigger `bun-apk` (script bun) lie
+leurs `bin` dans `/usr/lib/bun/bin`. `bun add -g` écrit dans `/usr/local/lib/bun` (exclu de `apk audit` par
+`/etc/apk/protected_paths.d/bun-global.list`). Cache partagé `/var/cache/bun/install` (`/etc/profile.d/bun.sh`).
+
+**bunsh** (cœur du fork, `src/runtime/cli/bunsh.rs`) : dispatch argv0 `bunsh`/`-bunsh` ; `-c`, script, stdin (`-s`),
+interactif (`-i`, éditeur de ligne et historique de la REPL, `~/.bunsh_history`, Ctrl-C n'arrête pas la session) ;
+`exit` termine le script (absorbé par sous-shell, `$(…)` et pipeline comme POSIX), `$?`, `$0`/`$N`, env et
+`export` persistants entre lignes (`ShellSession`) ; erreur de syntaxe = 2, script introuvable = 127. Tests :
+`describe("bunsh")` de `test/js/bun/shell/exec.test.ts`. Dans l'image, `bunsh` est le login shell de root
+(`/etc/passwd`) et figure dans `/etc/shells`.
+
+**Critère de bascule `/bin/sh` → bunsh** : `/bin/sh` reste busybox ash tant que bunsh n'exécute pas les scripts
+apk réels. Test de conformité `describe("bunsh runs apk install scripts")` (même fichier, fixtures
+`test/js/bun/shell/fixtures/apk-scripts/`, extraits de scripts d'aports, PATH vide, `ROOT` en répertoire temporaire) :
+passent `nginx.pre-install`, `chrony.pre-install`, `state-dir.post-install` ; en `test.todo` : `[`/`test`, `for`,
+`case`, fonctions, `set -e`/`:`. Bascule quand `bun bd test test/js/bun/shell/exec.test.ts --todo` passe sans todo
+restant, chaque builtin ajouté au cœur avec son test, puis 1 semaine d'image avec `/bin/sh` → bunsh sans échec
+de `apk add` sur `aphrody-bun-build-deps`.
+
+**Image** `scripts/aphrody/aphrody-alpine.Dockerfile` : minirootfs 3.24.2 (sha256 épinglés) + dépôt du fork + bun,
+bunsh, aphrody, n2b, `aphrody-bun-build-deps` (LLVM 23, rust nightly via `BUN_TOOLCHAIN_RUST`), nodejs (act) ;
+`OPTIONAL_PACKAGES` (`aphrody-libc-dev`, `aphrody-libc-preload`, paquets U3). Remplace `aphrody/build-alpine:3.24`
+(`alpine.Dockerfile` supprimé) dans `tmux.ts`, `.actrc`, `aphrody-linux-build.yml`. `aphrody-alpine-image.yml` publie
+`ghcr.io/aphrody-labs/alpine:3.24` (amd64 + arm64) et `aphrody-alpine-rootfs-<arch>.tar.gz` (release `alpine-3.24`).
+
+⏳ Reste (passe finale) : `abuild checksum` d'`aphrody`, `rust-nightly`, `rust-stable` ; release du fork Bun
+contenant bunsh puis bump du paquet `bun` (l'image vérifie `bunsh -c 'exit 0'`) ; premier run complet
+d'`aphrody-packages.yml` puis d'`aphrody-alpine-image.yml` ; builtins POSIX manquants de bunsh.
 
 ### U2. libc Rust en complément de musl — `aphrody-labs/c-ward` (🔄)
 
