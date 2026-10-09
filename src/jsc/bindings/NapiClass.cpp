@@ -73,6 +73,9 @@ JSC_HOST_CALL_ATTRIBUTES JSC::EncodedJSValue NapiClass_ConstructorFunction(JSC::
         ret = jsUndefined();
     }
     if constexpr (ConstructCall) {
+        // Like V8's API construct path: an object returned by the callback replaces `this`.
+        if (ret.isObject())
+            RELEASE_AND_RETURN(scope, JSValue::encode(ret));
         RELEASE_AND_RETURN(scope, JSValue::encode(frame.thisValue()));
     } else {
         RELEASE_AND_RETURN(scope, JSValue::encode(ret));
@@ -89,7 +92,8 @@ NapiClass* NapiClass::create(VM& vm, napi_env env, WTF::String name,
     NativeExecutable* executable = vm.getHostFunction(
         // for normal call
         NapiClass_ConstructorFunction<false>,
-        ImplementationVisibility::Public,
+        // V8 leaves API callback frames out of Error.stack.
+        ImplementationVisibility::Private,
         // for constructor call
         NapiClass_ConstructorFunction<true>, 0, name);
     Structure* structure = env->globalObject()->NapiClassStructure();

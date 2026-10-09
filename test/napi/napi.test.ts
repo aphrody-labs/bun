@@ -1289,6 +1289,12 @@ describe.concurrent.skipIf(!canBuildNodeAddons())("napi", () => {
     });
   });
 
+  describe("napi callbacks", () => {
+    it("leave their frame out of Error.stack and return an object from new like V8", async () => {
+      await checkSameOutput("test_napi_callback_frame_and_construct_result", []);
+    });
+  });
+
   describe("napi_get_named_property", () => {
     it("handles edge cases", async () => {
       await checkSameOutput("test_get_property", []);

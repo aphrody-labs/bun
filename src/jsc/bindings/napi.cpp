@@ -182,13 +182,25 @@ extern "C" void NapiUngatedScope__destruct(void* storage)
         }                                                 \
     } while (0)
 
+// V8's ToObject message, which addons and their tests match on (JSC says
+// "undefined is not an object (evaluating ...)").
+static JSObject* napiToObject(JSGlobalObject* globalObject, JSValue value)
+{
+    if (value.isUndefinedOrNull()) [[unlikely]] {
+        auto scope = DECLARE_THROW_SCOPE(globalObject->vm());
+        throwTypeError(globalObject, scope, "Cannot convert undefined or null to object"_s);
+        return nullptr;
+    }
+    return value.toObject(globalObject);
+}
+
 // Node's CHECK_TO_OBJECT: ToObject coerces primitives and throws on
 // null/undefined; on failure the TypeError is left pending and the call
 // returns napi_object_expected. Callers must have run NAPI_PREAMBLE first
 // (which already bailed for an env-stashed napi_throw* exception). Declares
 // `_result` in the enclosing scope.
 #define NAPI_CHECK_TO_OBJECT(_env, _globalObject, _result, _src) \
-    JSObject* _result = (_src).toObject((_globalObject));        \
+    JSObject* _result = napiToObject((_globalObject), (_src));   \
     RETURN_IF_EXCEPTION(napi_preamble_throw_scope__,             \
         napi_set_last_error((_env), napi_object_expected))
 

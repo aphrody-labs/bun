@@ -233,7 +233,7 @@ nativeTests.test_get_property = () => {
         const ret = nativeTests.perform_get(object, key);
         console.log("native function returned", ret);
       } catch (e) {
-        console.log("threw", e.name);
+        console.log("threw", e.name, object == null ? e.message : "");
       }
     }
   }
@@ -405,7 +405,6 @@ nativeTests.test_get_all_property_names_throwing_proxy_traps = () => {
       napi_key_keep_numbers,
     ),
   );
-
 };
 
 nativeTests.test_get_all_property_names_get_prototype_throws_in_descriptor_walk = () => {
@@ -1981,6 +1980,21 @@ nativeTests.test_threadsafe_function_call_js_throws = async () => {
   await promise;
   await new Promise(r => setImmediate(r));
   console.log("done", seen);
+};
+
+nativeTests.test_napi_callback_frame_and_construct_result = () => {
+  function caller() {
+    try {
+      nativeTests.throw_error("CODE", "from native", "error");
+    } catch (e) {
+      return e;
+    }
+  }
+  const firstFrame = caller().stack.split("\n")[1].trim();
+  console.log("first stack frame is the JS caller:", firstFrame.startsWith("at caller "));
+
+  const constructed = new nativeTests.make_empty_object();
+  console.log("new returns the object from the callback:", Object.getPrototypeOf(constructed) === Object.prototype);
 };
 
 module.exports = nativeTests;
