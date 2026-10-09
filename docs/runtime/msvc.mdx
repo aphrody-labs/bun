@@ -1,11 +1,11 @@
 ---
 title: MSVC & Windows metadata
-description: Resolve, set up and cache Visual Studio, MSVC and the Windows SDK without vswhere or vcvarsall, and generate Rust or bun:ffi bindings from .winmd metadata
+description: Resolve, set up and cache Visual Studio, MSVC and the Windows SDK without vswhere or vcvarsall, cross-compile for Windows from Linux and macOS, and generate Rust or bun:ffi bindings from .winmd metadata
 ---
 
 Bun resolves the native Windows toolchain the same way it ships `bun uv` for Python: in the process, with no helper executable. `bun msvc` finds every Visual Studio and Build Tools instance without `vswhere.exe`. It resolves the MSVC toolsets, the Windows SDKs, the Universal CRT, the .NET Framework SDK, LLVM and the developer scripts. It computes what `vcvarsall.bat` would set without running it, caches that environment, and installs or repairs what is missing. `bun winmd` links [windows-bindgen](https://github.com/microsoft/windows-rs) and generates bindings from Windows metadata.
 
-Both commands are Windows-only. The discovery code comes from [find-msvc-tools](https://github.com/rust-lang/cc-rs) (MIT/Apache-2.0) and lives in `vendor/find-msvc-tools`; windows-bindgen (MIT/Apache-2.0) lives in `vendor/windows-rs`.
+On Linux and macOS, `bun msvc` sets up a [cross-compilation sysroot](#cross-compilation-from-linux-and-macos) instead. `bun winmd` is Windows-only. The discovery code comes from [find-msvc-tools](https://github.com/rust-lang/cc-rs) (MIT/Apache-2.0) and lives in `vendor/find-msvc-tools`; windows-bindgen (MIT/Apache-2.0) lives in `vendor/windows-rs`.
 
 ---
 
@@ -107,6 +107,76 @@ When `C:\Windows\Installer` no longer holds the cached `.msi` of a product that 
 `bun msvc msi --fix` removes their registration, so the installers install them again from scratch. `setup --fix-msi-orphans` does the same before it runs the installer. Every key it deletes is first exported with `reg.exe export` to `%LOCALAPPDATA%\bun\msvc\msi-backup\<time>`. `--backup-dir` changes that folder. When the process is not elevated, it asks for elevation.
 
 A binary named or linked as `msvc.exe` behaves like `bun msvc`. So does `bun-msvc.exe`, built from `vendor/find-msvc-tools`.
+
+---
+
+## Cross-compilation from Linux and macOS
+
+On Linux and macOS, `bun msvc` downloads the MSVC CRT and the Windows SDK. It then exports the environment that cargo, rustc and the `cc` crate need to build for `x86_64-pc-windows-msvc`, `aarch64-pc-windows-msvc` and `i686-pc-windows-msvc`. Code is compiled with `clang-cl`, archived with `llvm-lib` and linked with `lld-link`. On Windows, the same commands are under `bun msvc cross`.
+
+```sh terminal icon="terminal"
+bun msvc setup --accept-license          # MSVC CRT + Windows SDK for x64 and arm64
+eval "$(bun msvc env)"                   # CC_*, CXX_*, AR_*, CFLAGS_*, CARGO_TARGET_*_LINKER, CARGO_TARGET_*_RUSTFLAGS
+rustup target add x86_64-pc-windows-msvc
+cargo build --target x86_64-pc-windows-msvc
+```
+
+`setup` reads the Visual Studio release channel (`https://aka.ms/vs/17/release/channel`) and its installer manifest, the same files the Visual Studio Installer reads. It picks the newest CRT and SDK unless `--toolset` or `--sdk` names another. It downloads these packages and checks each one against the SHA-256 in the manifest:
+
+- the CRT headers, and the `Desktop` and `Store` CRT libraries of each architecture (VSIX archives)
+- the Windows SDK installers that hold headers and import libraries, and the cabinets they reference (MSI and CAB)
+
+Only the headers and the libraries of the requested architectures are extracted. Debug symbols, tools, sources and redistributables are skipped. The layout matches a Visual Studio install, so `clang-cl /winsysroot` also accepts it:
+
+```txt
+~/.cache/bun/msvc/sysroot/14.44.35220-10.0.26100/
+├── VC/Tools/MSVC/14.44.35207/{include,lib/x64,lib/arm64}
+├── Windows Kits/10/Include/10.0.26100.0/{ucrt,um,shared,winrt,cppwinrt}
+├── Windows Kits/10/Lib/10.0.26100.0/{um,ucrt}/{x64,arm64}
+├── crt -> VC/Tools/MSVC/14.44.35207
+├── sdk -> Windows Kits/10
+└── sysroot.json, env.sh, env.json
+```
+
+Windows file names are case-insensitive, but Linux file names are not. So `setup` adds symbolic links:
+
+- a lower-case name for every file, plus `name.lib` and `NAME.lib` for every library (`kernel32.lib` and `KERNEL32.lib` point to `kernel32.Lib`)
+- every `#include` spelling found in the headers that differs from the file on disk only in case (`WinError.h`, `GL/gl.h`)
+
+The `crt` and `sdk` links keep spaces out of the flags, because cargo and `cc` split `CFLAGS` and `RUSTFLAGS` on spaces.
+
+| Command                   | Output                                                                                                            |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `doctor` (default)        | The sysroot, `clang-cl`, `lld-link`, `llvm-lib`, the optional LLVM tools, and the installed rustup targets        |
+| `setup [--dry-run]`       | Downloads and lays out the sysroot, then prints its directory. `--dry-run` lists the downloads instead            |
+| `sync [--check]`          | Sets up the sysroot when it is missing and rewrites `env.sh` and `env.json`. `--check` exits with `1` instead     |
+| `env [--shell <f>]`       | `sh` (default), `json`, `pwsh`, `cmd` or `github`. `--format` is an alias                                         |
+| `which <tool>...`         | Path of `clang-cl`, `lld-link`, `llvm-lib`, `llvm-rc`, `llvm-mt` or `llvm-dlltool`                                |
+| `list [--json]`, `info`   | The installed sysroots; everything as JSON                                                                        |
+
+| Option                    | Meaning                                                                                                           |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `--arch <arch>`           | `x64`, `arm64` or `x86`, repeated or comma-separated. Default: `x64,arm64`                                        |
+| `--toolset <v>`           | A CRT version or prefix: `14.44`, `14.44.17.14` or `14.44.35220`                                                  |
+| `--sdk <v>`               | A Windows SDK version or prefix: `10.0.26100`                                                                     |
+| `--spectre`               | Also the Spectre-mitigated CRT libraries                                                                          |
+| `--manifest <url\|path>`  | Another channel or installer manifest, such as a local mirror. Relative payload URLs resolve against it           |
+| `--cache-dir <dir>`       | Default: `$XDG_CACHE_HOME/bun/msvc` (`~/.cache/bun/msvc`), or `%LOCALAPPDATA%\bun\msvc\cross` on Windows          |
+| `--accept-license`        | Required by `setup` and `sync`, as is `BUN_MSVC_ACCEPT_LICENSE=1`. Microsoft licenses the CRT and the SDK         |
+
+For each architecture of the sysroot, `env` sets these variables, where `T` is the Rust target triple:
+
+| Variable                                         | Value                                                                                   |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| `CC_T`, `CXX_T` (`CC_x86_64_pc_windows_msvc`)    | `clang-cl`                                                                              |
+| `AR_T`                                           | `llvm-lib`                                                                              |
+| `CFLAGS_T`, `CXXFLAGS_T`                         | `--target=T`, and `/imsvc` for the CRT and the SDK `ucrt`, `um`, `shared`, `winrt`, `cppwinrt` |
+| `CARGO_TARGET_T_LINKER`                          | `lld-link`                                                                              |
+| `CARGO_TARGET_T_RUSTFLAGS`                       | `-Lnative=` for the CRT, SDK `um` and SDK `ucrt` libraries                              |
+
+It also sets `BUN_MSVC_SYSROOT`, `BUN_MSVC_VERSION` and `BUN_MSVC_SDK_VERSION`. The LLVM tools are looked up on `PATH`, then in the newest `/usr/lib/llvm-<n>/bin` (Debian, Ubuntu) or `/usr/lib/llvm<n>/bin` (Alpine), then as `<tool>-<n>` on `PATH`. Install them with `apt install clang lld llvm` or `apk add clang lld llvm`.
+
+Downloads go through Bun's HTTP client, so `HTTPS_PROXY` and `NODE_TLS_REJECT_UNAUTHORIZED` apply. They are kept in `<cache>/downloads`, so a later `setup` for another architecture downloads only what it lacks. The `bun-msvc` binary of `vendor/find-msvc-tools` has the same commands, but it only downloads from paths, `file://` URLs and `http://` URLs.
 
 ---
 

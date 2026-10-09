@@ -18,11 +18,96 @@ async function run(args: string[], cwd?: string) {
 const info = isWindows ? JSON.parse((await run(["msvc", "info"])).stdout) : null;
 const hasMsvc = info?.msvc != null && info?.sdk != null;
 
-describe.skipIf(isWindows)("bun msvc outside Windows", () => {
-  test("fails", async () => {
-    const { stderr, exitCode } = await run(["msvc", "doctor"]);
-    expect(stderr).toContain("only available on Windows");
-    expect(exitCode).toBe(1);
+// `bun msvc` on Linux and macOS, `bun msvc cross` on Windows: the cross-compilation sysroot,
+// downloaded here from a local mirror of the Visual Studio manifests (written by
+// `BUN_MSVC_WRITE_FIXTURES=<dir> cargo test --lib write_fixtures` in vendor/find-msvc-tools).
+describe("bun msvc cross sysroot", () => {
+  const cross = isWindows ? ["msvc", "cross"] : ["msvc"];
+  const mirror = join(import.meta.dir, "fixtures", "vs-mirror");
+
+  test("help", async () => {
+    const { stdout, exitCode } = await run([...cross, "help"]);
+    expect(stdout).toContain(`Usage: bun ${cross.join(" ")} <command>`);
+    expect(stdout).toContain("x86_64/aarch64/i686-pc-windows-msvc");
+    expect(exitCode).toBe(0);
+  });
+
+  test("setup, env, sync and list from a Visual Studio mirror", async () => {
+    using server = Bun.serve({
+      port: 0,
+      async fetch(req) {
+        const file = Bun.file(join(mirror, decodeURIComponent(new URL(req.url).pathname)));
+        return (await file.exists()) ? new Response(file) : new Response("not found", { status: 404 });
+      },
+    });
+    using dir = tempDir("msvc-cross", {});
+    const cache = join(String(dir), "cache");
+    const options = ["--arch", "x64", "--manifest", `${server.url}channel`, "--cache-dir", cache];
+
+    const [refused, plan] = await Promise.all([
+      run([...cross, "setup", ...options]),
+      run([...cross, "setup", "--dry-run", "--json", ...options]),
+    ]);
+    expect(refused.stderr).toContain("--accept-license");
+    expect(refused.exitCode).toBe(1);
+    const planned = JSON.parse(plan.stdout);
+    expect(planned).toMatchObject({ crt: "14.44.17.14", crtVersion: "14.44.35220", sdk: "10.0.26100", archs: ["x64"] });
+    expect(planned.downloads.map((d: { package: string }) => d.package)).toContain(
+      "Microsoft.VC.14.44.17.14.CRT.x64.Store.base",
+    );
+    expect(plan.exitCode).toBe(0);
+
+    const setup = await run([...cross, "setup", "--accept-license", "--json", ...options]);
+    expect(setup.stderr).toContain("extracting Windows SDK Desktop Libs x64-x86_en-us.msi");
+    const sysroot = JSON.parse(setup.stdout);
+    expect(sysroot).toMatchObject({ msvcVersion: "14.44.35207", sdkVersion: "10.0.26100.0", archs: ["x64"] });
+    expect(setup.exitCode).toBe(0);
+    const root: string = sysroot.root;
+    const kits = join(root, "Windows Kits", "10");
+    for (const file of [
+      join(root, "VC", "Tools", "MSVC", "14.44.35207", "include", "vcruntime.h"),
+      join(root, "VC", "Tools", "MSVC", "14.44.35207", "lib", "x64", "msvcrt.lib"),
+      join(kits, "Include", "10.0.26100.0", "um", "Windows.h"),
+      join(kits, "Include", "10.0.26100.0", "shared", "winerror.h"),
+      join(kits, "Lib", "10.0.26100.0", "um", "x64", "kernel32.Lib"),
+      join(kits, "Lib", "10.0.26100.0", "ucrt", "x64", "ucrt.lib"),
+    ]) {
+      expect(await Bun.file(file).exists()).toBe(true);
+    }
+    expect(await Bun.file(join(root, "VC", "Tools", "MSVC", "14.44.35207", "lib", "x64", "libcmt.pdb")).exists()).toBe(
+      false,
+    );
+    if (!isWindows) {
+      // Case aliases for case-sensitive file systems, behind the space-free `crt` and `sdk` links.
+      for (const alias of [
+        "crt/include/vcruntime.h",
+        "sdk/Lib/10.0.26100.0/um/x64/kernel32.lib",
+        "sdk/Include/10.0.26100.0/shared/WinError.h",
+        "sdk/Include/10.0.26100.0/um/GL/gl.h",
+      ]) {
+        expect(await Bun.file(join(root, alias)).exists()).toBe(true);
+      }
+    }
+
+    const [json, sh, check, list] = await Promise.all([
+      run([...cross, "env", "--shell", "json", "--cache-dir", cache]),
+      run([...cross, "env", "--shell", "sh", "--cache-dir", cache]),
+      run([...cross, "sync", "--check", "--cache-dir", cache]),
+      run([...cross, "list", "--json", "--cache-dir", cache]),
+    ]);
+    const env = JSON.parse(json.stdout);
+    expect(env.CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER).toMatch(/lld-link(.exe)?$/);
+    expect(env.AR_x86_64_pc_windows_msvc).toMatch(/llvm-lib(.exe)?$/);
+    expect(env.CFLAGS_x86_64_pc_windows_msvc).toStartWith("--target=x86_64-pc-windows-msvc /imsvc");
+    expect(env.CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS).toContain("-Lnative=");
+    expect(env.BUN_MSVC_SDK_VERSION).toBe("10.0.26100.0");
+    expect(json.exitCode).toBe(0);
+    expect(sh.stdout).toContain("export CC_x86_64_pc_windows_msvc=");
+    expect(sh.exitCode).toBe(0);
+    expect(check.stdout.trim()).toBe(root);
+    expect(check.exitCode).toBe(0);
+    expect(JSON.parse(list.stdout).map((s: { root: string }) => s.root)).toEqual([root]);
+    expect(list.exitCode).toBe(0);
   });
 });
 
