@@ -884,8 +884,15 @@ impl Expect {
         let mut return_value_from_function: JSValue = JSValue::ZERO;
 
         if !value.js_type().is_function() {
-            if self.flags.get().promise() != Promise::None {
-                return Ok((Some(value), return_value_from_function));
+            match self.flags.get().promise() {
+                // Jest: a resolved value that is neither a function nor an Error threw nothing.
+                Promise::Resolves if !value.is_any_error() => {
+                    return Ok((None, return_value_from_function));
+                }
+                Promise::Resolves | Promise::Rejects => {
+                    return Ok((Some(value), return_value_from_function));
+                }
+                Promise::None => {}
             }
             return Err(global_this.throw(format_args!("Expected value must be a function")));
         }
