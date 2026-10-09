@@ -1,5 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
-export type Message = { jsonrpc: "2.0"; id?: string | number | null; method?: string; params?: any; result?: any; error?: {code: number; message: string; data?: any} };
+export type Message = {
+  jsonrpc: "2.0";
+  id?: string | number | null;
+  method?: string;
+  params?: any;
+  result?: any;
+  error?: { code: number; message: string; data?: any };
+};
 
 export class Frames {
   #header = Buffer.alloc(0);
@@ -8,7 +15,8 @@ export class Frames {
   readonly maxBytes: number;
 
   constructor(maxBytes = 8 * 1024 * 1024) {
-    if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > 64 * 1024 * 1024) throw new RangeError("invalid LSP message limit");
+    if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > 64 * 1024 * 1024)
+      throw new RangeError("invalid LSP message limit");
     this.maxBytes = maxBytes;
   }
 
@@ -42,7 +50,8 @@ export class Frames {
             if (charset && charset !== "utf-8" && charset !== "utf8") throw new TypeError("LSP requires UTF-8");
           }
         }
-        if (!Number.isSafeInteger(length) || length! < 1 || length! > this.maxBytes) throw new RangeError("invalid LSP body length");
+        if (!Number.isSafeInteger(length) || length! < 1 || length! > this.maxBytes)
+          throw new RangeError("invalid LSP body length");
         const consumed = separator + 4 - before;
         input = input.subarray(consumed);
         this.#header = Buffer.alloc(0);
@@ -56,7 +65,18 @@ export class Frames {
       if (this.#offset === this.#body.length) {
         const message = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(this.#body));
         this.#body = null;
-        if (!message || typeof message !== "object" || Array.isArray(message) || message.jsonrpc !== "2.0" || (message.id !== undefined && message.id !== null && typeof message.id !== "string" && typeof message.id !== "number") || (message.method !== undefined && typeof message.method !== "string")) throw new TypeError("invalid JSON-RPC message");
+        if (
+          !message ||
+          typeof message !== "object" ||
+          Array.isArray(message) ||
+          message.jsonrpc !== "2.0" ||
+          (message.id !== undefined &&
+            message.id !== null &&
+            typeof message.id !== "string" &&
+            typeof message.id !== "number") ||
+          (message.method !== undefined && typeof message.method !== "string")
+        )
+          throw new TypeError("invalid JSON-RPC message");
         messages.push(message);
       }
     }
@@ -74,10 +94,16 @@ export function frame(message: Message, maxBytes = 8 * 1024 * 1024): Uint8Array 
   return Buffer.concat([Buffer.from(`Content-Length: ${body.length}\r\n\r\n`), body]);
 }
 
-export async function* readMessages(stream: ReadableStream<Uint8Array>, maxBytes?: number, signal?: AbortSignal): AsyncGenerator<Message> {
+export async function* readMessages(
+  stream: ReadableStream<Uint8Array>,
+  maxBytes?: number,
+  signal?: AbortSignal,
+): AsyncGenerator<Message> {
   const frames = new Frames(maxBytes);
   const reader = stream.getReader();
-  const abort = () => { void reader.cancel(signal?.reason).catch(() => {}); };
+  const abort = () => {
+    void reader.cancel(signal?.reason).catch(() => {});
+  };
   signal?.addEventListener("abort", abort, { once: true });
   try {
     signal?.throwIfAborted();
@@ -87,7 +113,10 @@ export async function* readMessages(stream: ReadableStream<Uint8Array>, maxBytes
       for (const message of frames.push(value)) yield message;
     }
     if (!signal?.aborted) frames.finish();
-  } finally { signal?.removeEventListener("abort", abort); reader.releaseLock(); }
+  } finally {
+    signal?.removeEventListener("abort", abort);
+    reader.releaseLock();
+  }
 }
 
 export function virtualURI(uri: string): string {
@@ -102,14 +131,23 @@ export function virtualURI(uri: string): string {
 export function originalURI(uri: string): string {
   const parsed = new URL(uri);
   if (parsed.protocol !== "file:") return uri;
-  parsed.pathname = parsed.pathname.replace(/\.(pyjs)\.js$|\.(pyts)\.ts$|\.(pytsx)\.tsx$/, (_, a, b, c) => `.${a ?? b ?? c}`);
+  parsed.pathname = parsed.pathname.replace(
+    /\.(pyjs)\.js$|\.(pyts)\.ts$|\.(pytsx)\.tsx$/,
+    (_, a, b, c) => `.${a ?? b ?? c}`,
+  );
   return parsed.href;
 }
 
-export function mapURIs(value: any, mapper: (uri: string) => string, depth = 0): any {
+export function mapURIs(value: any, mapper: (uri: string) => string, depth = 0, field = ""): any {
   if (depth > 64) throw new RangeError("JSON-RPC nesting exceeds limit");
-  if (typeof value === "string") return value.startsWith("file:") ? mapper(value) : value;
-  if (Array.isArray(value)) return value.map(item => mapURIs(item, mapper, depth + 1));
+  if (typeof value === "string")
+    return value.startsWith("file:") && (/uri$/i.test(field) || field === "target") ? mapper(value) : value;
+  if (Array.isArray(value)) return value.map(item => mapURIs(item, mapper, depth + 1, field));
   if (!value || typeof value !== "object") return value;
-  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key.startsWith("file:") ? mapper(key) : key, mapURIs(item, mapper, depth + 1)]));
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [
+      key.startsWith("file:") ? mapper(key) : key,
+      mapURIs(item, mapper, depth + 1, key),
+    ]),
+  );
 }

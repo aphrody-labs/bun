@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "esnext",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "types": ["../bun-types"],
+    "skipLibCheck": true,
+    "lib": ["esnext", "dom", "dom.iterable", "dom.asynciterable"]
+  },
+  "include": ["scripts/*.ts"]
+}
