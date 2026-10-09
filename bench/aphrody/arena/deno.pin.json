@@ -1,0 +1,8 @@
+{
+  "comment": "METHOD C2: the only Deno binary the arena accepts. sha256 of the extracted binary from the official deno-x86_64-unknown-linux-gnu.zip v2.9.7 (zip checked against .sha256sum on dbfr, see C:/aphrody/docs/plans/fusion/bench/FACTS.md). Other platforms: pass --deno-sha256 explicitly.",
+  "version": "2.9.7",
+  "v8": "15.0.245.2-rusty",
+  "sha256": {
+    "linux-x64": "ce6a052beb97c2b92de67077e3f3924ba7c9661ede0d8dc2f66a116a3c841f21"
+  }
+}

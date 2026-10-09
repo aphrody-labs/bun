@@ -16,5 +16,11 @@
     "rss-startup": { "maxDeltaBytes": 1048576 },
     "rss-after-builtins": { "maxDeltaBytes": 2097152 }
   },
+  "arena": {
+    "comment": "Arène : échec si le fork est plus lent que l'upstream (médiane) au-delà de maxRatio, avec différence réelle (METHOD §3.4) et p de somme des rangs par processus <= alpha ; RSS crête : écart > maxDeltaBytes.",
+    "maxRatio": 1.05,
+    "maxDeltaBytes": 4194304,
+    "alpha": 0.05
+  },
   "binarySize": { "maxRatio": 1.03, "maxDeltaBytes": 4194304 }
 }

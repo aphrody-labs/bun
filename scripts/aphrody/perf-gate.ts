@@ -3,6 +3,7 @@
 //   bun scripts/aphrody/perf-gate.ts [--fork <bun>] [--upstream <bun> | --upstream-version <x.y.z>]
 //       [--config bench/aphrody/thresholds.json] [--runs 40] [--warmup 5] [--engine auto|hyperfine|spawn]
 //       [--only id,id] [--out <dir>] [--no-gate] [--strict] [--list]
+//       [--arena [--arena-only w,w] [--arena-procs 5] [--deno <deno> [--deno-sha256 <hex>]]]
 //
 // Sortie : <out>/perf-report.json et <out>/perf-report.md (aussi ajouté à $GITHUB_STEP_SUMMARY).
 // Code de sortie : 0 = seuils respectés, 1 = au moins un seuil dépassé, 2 = erreur d'exécution.
@@ -10,10 +11,13 @@
 // Bun.spawn entrelacée (fork/upstream alternés pour annuler la dérive de la machine). Les micro-benchs mesurent
 // dans le processus fils (performance.now) et rapportent un JSON sur stdout. Tous les runs sont « chauds » :
 // `warmup` exécutions écartées, caches d'install et de pages OS peuplés.
+// `--arena` ajoute l'arène (bench/aphrody/arena/arena.ts) : fork contre upstream bloquant (seuils `arena` de
+// thresholds.json, test de somme des rangs par processus), fork contre Deno informatif seulement.
 
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync, appendFileSync, cpSync } from "node:fs";
 import { arch, cpus, platform, release, totalmem } from "node:os";
 import { join, resolve } from "node:path";
+import { runArena, type ArenaResult, type Limit as ArenaLimit, type Summary } from "../../bench/aphrody/arena/arena.ts";
 
 const root = resolve(import.meta.dir, "..", "..");
 const benchDir = join(root, "bench", "aphrody");
@@ -52,6 +56,7 @@ export type Thresholds = {
   defaults?: Limit;
   cases?: Record<string, Limit>;
   binarySize?: Limit;
+  arena?: ArenaLimit;
 };
 
 export type Row = {
@@ -118,6 +123,33 @@ export type Report = {
   rows: Row[];
   failures: string[];
 };
+
+function fromSummary(s: Summary): Stats {
+  return { n: s.n, min: s.min, median: s.median, mean: s.mean, p95: s.p95, max: s.max };
+}
+
+/** Arena comparisons as report rows: fork/upstream gate, fork/Deno informs (the "upstream" column then holds Deno). */
+export function arenaRows(a: Pick<ArenaResult, "comparisons" | "results">): Row[] {
+  const rows: Row[] = [];
+  for (const c of a.comparisons) {
+    if (c.a !== "fork" || (c.b !== "upstream" && c.b !== "deno")) continue;
+    const byTarget = a.results[c.metric];
+    rows.push({
+      id: c.b === "deno" ? `arena:${c.metric}@deno` : `arena:${c.metric}`,
+      label: c.b === "deno" ? `arène ${c.metric} (contre Deno)` : `arène ${c.metric}`,
+      unit: c.unit,
+      higherIsBetter: false,
+      info: !c.gated,
+      fork: fromSummary(byTarget[c.a].summary),
+      upstream: fromSummary(byTarget[c.b].summary),
+      ratio: c.ratio,
+      delta: c.delta,
+      status: !c.gated ? "info" : c.regression ? "fail" : "ok",
+      reason: c.reason,
+    });
+  }
+  return rows;
+}
 
 export function buildFailures(report: Pick<Report, "rows" | "binarySize">): string[] {
   const out: string[] = [];
@@ -576,6 +608,22 @@ export async function main(argv: string[]): Promise<number> {
     }
   }
 
+  let arena: ArenaResult | undefined;
+  if (argv.includes("--arena")) {
+    console.error("[perf] arène ...");
+    arena = await runArena({
+      bun: forkPath,
+      upstream: upstreamPath,
+      deno: arg(argv, "--deno"),
+      denoSha256: arg(argv, "--deno-sha256"),
+      only: arg(argv, "--arena-only")?.split(",") as any,
+      procs: Number(arg(argv, "--arena-procs", "5")),
+      limit: thresholds.arena,
+      command: ["bun", "scripts/aphrody/perf-gate.ts", ...argv].join(" "),
+    });
+    rows.push(...arenaRows(arena));
+  }
+
   const report: Report = {
     meta: {
       fork: forkInfo,
@@ -586,6 +634,7 @@ export async function main(argv: string[]): Promise<number> {
       warmup,
       date: new Date().toISOString(),
       note,
+      arena: arena && { file: arena.file, verdict: arena.verdict, failedChecks: arena.failedChecks },
     },
     rows,
     failures: [],
@@ -615,6 +664,7 @@ export async function main(argv: string[]): Promise<number> {
     };
   }
   report.failures = buildFailures(report);
+  if (arena?.verdict === "invalide") report.failures.push(`arena: verdict invalide (${arena.failedChecks.join(" ; ")})`);
 
   mkdirSync(outDir, { recursive: true });
   writeFileSync(join(outDir, "perf-report.json"), JSON.stringify(report, null, 2));

@@ -1,0 +1,11 @@
+{
+  "comment": "BUN_JSC_* compute profiles (W, gap e). `--profiles a,b` adds one fork target per profile, compared to the default fork on every workload, startup included (rule O: a profile that slows S1 is rejected). None of these is a default of the fork.",
+  "profiles": {
+    "jit-eager": { "BUN_JSC_jitPolicyScale": "0.5" },
+    "ftl-earlier": { "BUN_JSC_thresholdForFTLOptimizeAfterWarmUp": "32000" },
+    "dfg-earlier": { "BUN_JSC_thresholdForOptimizeAfterWarmUp": "500" },
+    "more-compiler-threads": { "BUN_JSC_numberOfDFGCompilerThreads": "3", "BUN_JSC_numberOfFTLCompilerThreads": "4" },
+    "gc-markers-4": { "BUN_JSC_numberOfGCMarkers": "4" },
+    "interpreter-only": { "BUN_JSC_useJIT": "0" }
+  }
+}
