@@ -393,7 +393,7 @@ fn run_native(
     let silent = p.switch("Silent").map(split_args);
     let mut argv: Vec<String> = match ty {
         "msi" | "wix" => {
-            let mut a = vec!["msiexec".to_owned(), "/i".to_owned(), file.clone()];
+            let mut a = vec!["msiexec".to_owned(), "/i".to_owned(), file];
             a.extend(silent.unwrap_or_else(|| vec!["/quiet".to_owned(), "/norestart".to_owned()]));
             if user_scope {
                 a.push("ALLUSERS=2".to_owned());
@@ -402,7 +402,7 @@ fn run_native(
             a
         }
         "inno" => {
-            let mut a = vec![file.clone()];
+            let mut a = vec![file];
             a.extend(silent.unwrap_or_else(|| {
                 ["/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-"].map(str::to_owned).to_vec()
             }));
@@ -414,12 +414,12 @@ fn run_native(
             a
         }
         "nullsoft" => {
-            let mut a = vec![file.clone()];
+            let mut a = vec![file];
             a.extend(silent.unwrap_or_else(|| vec!["/S".to_owned()]));
             a
         }
         "burn" => {
-            let mut a = vec![file.clone()];
+            let mut a = vec![file];
             a.extend(silent.unwrap_or_else(|| vec!["/quiet".to_owned(), "/norestart".to_owned()]));
             a
         }
@@ -430,7 +430,7 @@ fn run_native(
                     entry.id
                 )));
             };
-            let mut a = vec![file.clone()];
+            let mut a = vec![file];
             a.extend(silent);
             a
         }
@@ -559,7 +559,7 @@ fn reg_uninstall_value(product_code: &str, value: &str) -> Option<String> {
                 RRF_RT_REG_SZ,
                 core::ptr::null_mut(),
                 buf.as_mut_ptr().cast(),
-                &mut len,
+                &raw mut len,
             )
         };
         if status == 0 {

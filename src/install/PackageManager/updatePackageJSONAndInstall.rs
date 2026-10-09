@@ -221,7 +221,7 @@ fn update_package_json_and_install_with_manager_with_updates_and_update_requests
         manager,
         ctx,
         core::mem::take(update_requests),
-        system_specs,
+        &system_specs,
         manager.subcommand,
         original_cwd,
     )
@@ -235,7 +235,7 @@ fn update_package_json_and_install_with_manager_with_updates(
     // `Box<[UpdateRequest]>`) and re-borrow afterwards without
     // aliasing `&mut manager`.
     mut updates: Vec<UpdateRequest>,
-    system_specs: Vec<crate::system::Spec>,
+    system_specs: &[crate::system::Spec],
     subcommand: Subcommand,
     original_cwd: &[u8],
 ) -> Result<(), Error> {
@@ -444,7 +444,7 @@ fn update_package_json_and_install_with_manager_with_updates(
                 remove_dependencies_from_package_json(&mut current_package_json_root, &updates);
             if remove_system_dependencies_from_package_json(
                 &mut current_package_json_root,
-                &system_specs,
+                system_specs,
             ) {
                 any_changes = true;
             }
@@ -455,7 +455,7 @@ fn update_package_json_and_install_with_manager_with_updates(
                 PackageJSONEditor::edit_system_dependencies(
                     manager,
                     &mut current_package_json_root,
-                    &system_specs,
+                    system_specs,
                 )?;
             }
             // `bun update <package>` is basically the same as `bun add <package>`, except

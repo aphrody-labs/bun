@@ -264,8 +264,8 @@ impl Source for Winget {
         let s = |k: &str| m.str_ci(k).map(str::to_owned);
         Ok(PackageInfo {
             id: row.id.clone(),
-            name: s("PackageName").unwrap_or(row.name.clone()),
-            latest: latest.version.clone(),
+            name: s("PackageName").unwrap_or(row.name),
+            latest: latest.version,
             versions: versions.into_iter().map(|v| v.version).collect(),
             publisher: s("Publisher"),
             description: s("ShortDescription").or_else(|| s("Description")),
@@ -289,8 +289,8 @@ impl Source for Winget {
             .expect("best_match returns one of the inputs");
         let m = self.manifest(ctx, &row.id, v)?;
         let mut entry = LockEntry::new(SourceKind::Winget, &row.id);
-        entry.specifier = range.to_owned();
-        entry.version = v.version.clone();
+        range.clone_into(&mut entry.specifier);
+        entry.version.clone_from(&v.version);
         entry.url = url_join(&base_url(ctx), &v.rel_path);
         entry.hash = format!("sha256:{}", v.sha256);
         entry.deps = manifest_deps(&m);

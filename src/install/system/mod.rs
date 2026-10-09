@@ -467,7 +467,7 @@ pub fn resolve_lock(ctx: &Ctx<'_>, specs: &[Spec], old: &SystemLock) -> Result<S
             }
         };
         let mut entry = source.resolve(ctx, &spec.id, &spec.range)?;
-        entry.specifier = spec.range.clone();
+        entry.specifier.clone_from(&spec.range);
         lock.entries.insert(key, entry);
     }
     Ok(lock)

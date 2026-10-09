@@ -73,7 +73,7 @@ fn inflate_block(input: &[u8], dict: &[u8], out: &mut Vec<u8>, total: usize) -> 
     strm.next_in = input.as_ptr();
     strm.avail_in = input.len() as _;
     loop {
-        let room = (total - out.len()).max(1).min(WINDOW);
+        let room = (total - out.len()).clamp(1, WINDOW);
         out.reserve(room);
         let before = out.len();
         // SAFETY: `reserve` guarantees `room` writable bytes past `len`.

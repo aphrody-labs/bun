@@ -90,7 +90,7 @@ fn comparator_matches(c: &str, version: &str) -> bool {
         if compare(version, rest) == Ordering::Less {
             return false;
         }
-        let first_nonzero = base.iter().position(|&n| n != 0).unwrap_or(base.len().saturating_sub(1));
+        let first_nonzero = base.iter().position(|&n| n != 0).unwrap_or_else(|| base.len().saturating_sub(1));
         return compare(version, &bump_at(&base, first_nonzero)) == Ordering::Less;
     }
     if let Some(rest) = c.strip_prefix('~') {
