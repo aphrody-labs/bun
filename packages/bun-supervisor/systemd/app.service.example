@@ -1,0 +1,70 @@
+# One service, one executable built with `bun build --compile`.
+# Install as /etc/systemd/system/app.service, then: systemctl daemon-reload && systemctl enable --now app
+# Sizes below assume 6 CPUs and 11.4 GB of RAM. Adjust MemoryHigh and MemoryMax to your host.
+[Unit]
+Description=App (supervisor and children in one binary)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# The supervisor calls notifyReady() once every child is ready.
+Type=notify
+NotifyAccess=main
+ExecStart=/opt/app/app serve
+WorkingDirectory=/opt/app
+EnvironmentFile=-/etc/app/app.env
+User=app
+Group=app
+
+# The supervisor pings WATCHDOG=1 every 15 s while its children are alive.
+WatchdogSec=30
+Restart=always
+RestartSec=3
+# Restart limits: 5 starts in 60 s, then systemd stops retrying.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# Stop: the supervisor drains inbound work, sends SIGTERM to the children and SIGKILL after
+# drainMs (default 15 s). TimeoutStopSec must stay above drainMs.
+TimeoutStopSec=30
+KillMode=mixed
+KillSignal=SIGTERM
+
+# Memory. MemoryHigh is the budget the supervisor reads (Budget.fromCgroup): the kernel throttles
+# above it, so the pressure monitor shrinks caches before that point. MemoryMax is the hard limit.
+MemoryAccounting=yes
+MemoryHigh=9G
+MemoryMax=10G
+MemorySwapMax=0
+OOMPolicy=stop
+
+# CPU and I/O. Lower priority than interactive work on the same host.
+CPUAccounting=yes
+CPUWeight=100
+Nice=5
+IOWeight=100
+TasksMax=512
+LimitNOFILE=65536
+
+# Hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/app
+StateDirectory=app
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

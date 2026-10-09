@@ -1,0 +1,135 @@
+---
+title: App supervisor
+description: "@aphrody/supervisor runs one systemd service and one `bun build --compile` binary that supervises its own children, with sd_notify, a watchdog, cgroup v2 memory budgets and pressure handling"
+---
+
+`@aphrody/supervisor` is a private, TypeScript-only package in `packages/bun-supervisor`. It is not published. It lets one executable play two roles: the supervisor that systemd starts, and the children it starts again from the same file.
+
+The package needs Linux for `sd_notify` and cgroup reads. Every call is a no-op or returns `null` elsewhere, so the code still runs on macOS and Windows.
+
+```ts
+import { Budget, Supervisor, monitorPressure } from "@aphrody/supervisor";
+
+const budget = Budget.fromCgroup({ name: "app" });
+const pressure = monitorPressure({ budget });
+const sup = new Supervisor({ name: "app", budget, healthPort: 9090, pressure });
+
+sup.spawnSelf("api", ["worker", "api"], { weight: 3 });
+sup.spawnSelf("bot", ["worker", "bot"], { weight: 1, restart: "on-failure" });
+
+sup.start();
+await sup.ready(); // READY=1 once every child is ready
+```
+
+## systemd
+
+`systemd/app.service.example` is a model unit: `Type=notify`, `NotifyAccess=main`, `WatchdogSec=30`, `Restart=always`, `KillMode=mixed`, `MemoryHigh`, `MemoryMax`, `MemorySwapMax=0` and the usual hardening. Keep `TimeoutStopSec` above `drainMs`.
+
+## Notifications
+
+```ts
+import { notifyReady, notifyStopping, notifyStatus, notifyReloading, sdNotify, startWatchdog } from "@aphrody/supervisor";
+
+sdNotify("READY=1"); // returns false when NOTIFY_SOCKET is unset
+const stop = startWatchdog({ health: async () => db.ping() });
+```
+
+`sdNotify(state)` sends one datagram to `$NOTIFY_SOCKET`. Abstract addresses (`@name`) work. The call goes through `bun:ffi` to `libc.so.6`, with `libc.musl-*.so.1` and `libc.so` as fallbacks, so it also works inside a `bun build --compile` executable.
+
+`startWatchdog` reads `WATCHDOG_USEC` and `WATCHDOG_PID`. It sends `WATCHDOG=1` every `WATCHDOG_USEC / 2` while `health()` returns true. The timer does not keep the process alive. It returns `stop()`.
+
+## cgroup v2
+
+`readCgroup()` reads the cgroup of the process, found through `/proc/self/cgroup`, and returns `current`, `high`, `max`, `swapMax`, `events` (`high`, `max`, `oom`, `oom_kill`) and `psi` (`some` and `full`, each with `avg10`, `avg60` and `total`). The value `max` becomes `Infinity`. A missing file gives `null`. Pass `read(file)` to read from another source, for example in tests.
+
+## Budget
+
+A `Budget` is a number of bytes split among children by weight.
+
+```ts
+const root = Budget.root({ name: "app", bytes: 8 * 2 ** 30 });
+const api = root.child("api", { weight: 3, min: 512 * 2 ** 20 });
+const cache = api.child("cache");
+
+api.bytes; // current share, reduced under pressure
+api.nominal; // share without the reduction
+root.resize(4 * 2 ** 30); // children are recomputed recursively
+cache.release(); // the share goes back to the siblings
+```
+
+| Member | Behavior |
+| --- | --- |
+| `Budget.root({ name, bytes })` | Fixed total. |
+| `Budget.fromCgroup({ name, ratio = 0.85 })` | `memory.high`, else `memory.max * ratio`, else `$SUPERVISOR_MEMORY_BYTES`, else half of the RAM. |
+| `child(name, { weight = 1, min = 0, max = Infinity })` | Shares are proportional to the weights of the siblings. Minimums are met first. Bytes above a maximum go to the others. |
+| `configure({ weight, min, max })` | Changes a child and rebalances the siblings. |
+| `resize(bytes)` | On a root, sets the total. On a child, pins its share. |
+| `onResize(cb(bytes, reason))` | Called when the effective share changes. |
+| `onShrink(cb(level))` | Release callback: close idle shards, empty caches. |
+| `shrink(level)` | Reduces the subtree (`soft` to 85%, `hard` to 60%), runs callbacks children first, then `Bun.gc(false)` for `soft` or `Bun.gc(true)` for `hard`. |
+| `relax()` | Removes the reduction. |
+| `idle()` | Runs `onIdle` callbacks, then `Bun.gc(true)`. |
+| `use(bytes)`, `usage` | Optional declared accounting. |
+| `tree()` | JSON snapshot with name, nominal, bytes, usage and children. |
+
+`BoundedLRU<K, V>(budget, { sizeOf, maxEntries, ttlMs })` is a cache whose capacity is `budget.bytes`. It evicts the least recently used entries, expires entries after `ttlMs`, evicts when the budget shrinks and empties on a `hard` shrink.
+
+## Pressure
+
+```ts
+const pressure = monitorPressure({ budget, intervalMs: 2000, psiHigh: 10, psiCritical: 40, highRatio: 0.9 });
+pressure.level(); // "ok" | "soft" | "hard"
+```
+
+Every `intervalMs`, the monitor reads `memory.current`, `memory.high`, `memory.events` and the PSI `avg10` value. It also listens to `process.on("memoryPressure")` when the runtime provides it.
+
+- The level rises at once: `soft` at `psiHigh` or `highRatio` of `memory.high`, `hard` at `psiCritical` or at `memory.high`. An increase of `oom_kill` or `max` events gives `hard`.
+- The level falls one step after `calmSamples` (3) calmer samples, using lower thresholds.
+- The monitor calls `budget.shrink(level)` on entry and at most once per level every 10 seconds.
+- After `idleMs` (60 s) at `ok`, it calls `budget.idle()` once to return memory to the system.
+
+## Supervisor
+
+`spawnSelf(name, args, options)` starts `process.execPath` again with `args`. With `bun: true` it sets `BUN_BE_BUN=1`, so a compiled executable acts as the `bun` CLI for an external script.
+
+| Option | Default | Behavior |
+| --- | --- | --- |
+| `weight`, `min`, `max` | 1, 0, `Infinity` | Share of the supervisor budget. |
+| `restart` | `"always"` | `"always"`, `"on-failure"` or `"never"`. |
+| `ipc` | `true` | Channel for budget, shrink and memory messages. |
+| `ready` | spawned | `(child) => Promise<void>` that resolves when the child can serve. |
+| `env`, `cwd`, `bun`, `jsc` | | Environment, directory, `BUN_BE_BUN`, JSC limits. |
+
+Each child receives `SUPERVISOR_NAME`, `SUPERVISOR_BUDGET_BYTES`, `BUN_JSC_forceRAMSize` (the budget) and `BUN_JSC_gcMaxHeapSize` (75% of the budget). `NOTIFY_SOCKET` and `WATCHDOG_*` are removed from the child environment. Set `jsc: false` to skip the JSC options.
+
+A child that exits restarts after an exponential delay: 1 s, 2 s, 4 s, up to 30 s. The delay returns to 1 s after 60 s of stable run. Change it with `backoff: { baseMs, maxMs, stableMs }`.
+
+In the child, `childBudget()` builds the local `Budget` from `SUPERVISOR_BUDGET_BYTES`, applies the `budget`, `shrink` and `idle` messages from the parent, and reports `{ type: "mem", rss, heapUsed }` every 5 seconds.
+
+```ts
+import { childBudget } from "@aphrody/supervisor";
+
+const budget = childBudget({ ready: true });
+const cache = new BoundedLRU(budget.child("cache"), { sizeOf: v => v.byteLength });
+```
+
+### Drain
+
+`sup.drain()` runs on `SIGTERM` and `SIGINT` after `sup.start()`.
+
+1. It calls `notifyStopping()`, then `onDrain`, so you stop inbound work first.
+2. It sends `SIGTERM` to the children in reverse launch order.
+3. It waits up to `drainMs` (15 s), then sends `SIGKILL` to the children still running.
+4. It returns only when every child has exited. A restarted service never overlaps its previous children, which matters for clients that allow one connection, such as a Discord bot.
+
+### Health
+
+`sup.start()` starts the watchdog. Its health check is: every child alive and `healthHandler()` true. With `healthPort`, it also serves `GET /healthz` on `127.0.0.1`: status `200` or `503` and a JSON body with the status, uptime, children (pid, state, restarts, RSS, budget), `budget.tree()` and the pressure level. `sup.rssOf(pid)` reads `/proc/<pid>/status`.
+
+## Tests
+
+The tests are in `test/js/bun/supervisor`. They run TypeScript only, with no native change, so run them with the installed fork:
+
+```bash
+bun test test/js/bun/supervisor
+```

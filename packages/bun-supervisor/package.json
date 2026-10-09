@@ -1,0 +1,21 @@
+{
+  "name": "@aphrody/supervisor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "One systemd service, one Bun binary: sd_notify, watchdog, cgroup v2 reads, recursive memory budgets, pressure monitor and a self-spawning child supervisor",
+  "license": "MIT",
+  "files": [
+    "src",
+    "systemd"
+  ],
+  "type": "module",
+  "module": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "engines": {
+    "bun": ">=1.4.3"
+  }
+}
