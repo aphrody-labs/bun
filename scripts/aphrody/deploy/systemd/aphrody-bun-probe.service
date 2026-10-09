@@ -1,0 +1,17 @@
+[Unit]
+Description=Sonde du fork Bun déployée par aphrody-deploy
+After=network-online.target
+
+[Service]
+User=ubuntu
+Environment=APHRODY_BUN_SERVICE_PORT=47661
+ExecStart=/srv/aphrody-bun-app/current/bun-probe
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

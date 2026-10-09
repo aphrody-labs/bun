@@ -16,5 +16,7 @@ description: "Image Docker du fork Bun, sonde prod sur dbfr, file de build sur l
 | Hôte | Service | Contenu |
 | --- | --- | --- |
 | dbfr (prod) | `docker compose --profile prod up -d` dans `/srv/aphrody-bun` | sonde `probe.ts` sur `127.0.0.1:47660` (`/healthz`, `/version`) ; `APP_BIN` ou `APP_SCRIPT` pour une autre app |
-| vps (build) | `bun install-host.ts --role build` | file `aphrody-deploy` (timer systemd utilisateur) ; activer avec une config `~/.config/aphrody-deploy/apps.json`, modèle `apps.example.json` |
+| vps (build) | `bun install-host.ts --role build`, timer actif | file `aphrody-deploy` ; `apps.bun-probe.json` compile `probe.ts` depuis un clone sparse du fork, le transfère sur dbfr et active l'unité `aphrody-bun-probe` (port 47661, `systemd/aphrody-bun-probe.service`) |
 | PC Windows | service `AphrodyBun` | `bun install-windows.ts` en administrateur : `bun-winsvc.exe` (packages/bun-winsvc) lance `bun.exe service.ts`, relance en cas de sortie, tue l'arbre à l'arrêt |
+
+Sur un autre PC Windows (celui d'Omar), le propriétaire lance lui-même `bun install-windows.ts` en administrateur : le service n'est jamais installé à distance.
