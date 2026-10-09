@@ -105,6 +105,12 @@ describe("bunshell", () => {
       expect(stdout.toString()).toContain("foreground\n");
       expect(stdout.toString()).toContain("background\n");
     });
+
+    test("runs a background and-or list", async () => {
+      const { stdout } = await $`echo first && echo background & echo foreground`;
+      expect(stdout.toString()).toContain("foreground\n");
+      expect(stdout.toString()).toContain("background\n");
+    });
   });
   describe("js_obj_test", async () => {
     function runTest(name: string, builder: TestBuilder) {

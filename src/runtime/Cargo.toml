@@ -103,6 +103,7 @@ bun_libuv_sys.workspace = true
 bun_tcc_sys.workspace = true
 bun_threading.workspace = true
 bun_url.workspace = true
+bun_vt.workspace = true
 bun_uws.workspace = true
 bun_uws_sys.workspace = true
 bun_valkey.workspace = true
