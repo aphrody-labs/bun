@@ -2318,7 +2318,7 @@ bool Bun__deepMatch(
             // `new URL(..)`) matches any received value, primitives included.
             if constexpr (enableAsymmetricMatchers) {
                 if (!isMatchingObjectContaining && subsetProp.isObject()) {
-                    JSType subsetType = subsetPropCell->type();
+                    JSC::JSType subsetType = subsetPropCell->type();
                     if (subsetType != JSDateType && subsetType != ErrorInstanceType) {
                         bool subsetPropIsArray = isArray(globalObject, subsetProp);
                         RETURN_IF_EXCEPTION(throwScope, false);

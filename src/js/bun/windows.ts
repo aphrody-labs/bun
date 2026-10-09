@@ -38,6 +38,10 @@ const isElevatedNative = $newRustFunction("windows/host.rs", "jsIsElevated", 0);
 const processListNative = $newRustFunction("windows/host.rs", "jsProcessList", 0);
 const processPathNative = $newRustFunction("windows/host.rs", "jsProcessPath", 1);
 const processTerminateNative = $newRustFunction("windows/host.rs", "jsProcessTerminate", 2);
+const processSetAffinityNative = $newRustFunction("windows/host.rs", "jsProcessSetAffinity", 2);
+const processSetPriorityNative = $newRustFunction("windows/host.rs", "jsProcessSetPriority", 2);
+const processSetEcoModeNative = $newRustFunction("windows/host.rs", "jsProcessSetEcoMode", 2);
+const processTrimWorkingSetNative = $newRustFunction("windows/host.rs", "jsProcessTrimWorkingSet", 1);
 const jobCreateNative = $newRustFunction("windows/host.rs", "jsJobCreate", 1);
 const jobSetLimitsNative = $newRustFunction("windows/host.rs", "jsJobSetLimits", 6);
 const jobAssignNative = $newRustFunction("windows/host.rs", "jsJobAssign", 2);
@@ -421,6 +425,33 @@ const processes = Object.freeze({
     ensureSupported();
     validateInteger(exitCode, "exitCode", 0, MAX_UINT32);
     processTerminateNative(pidOf(pid, "pid"), exitCode);
+  },
+  setAffinity(pid, mask) {
+    ensureSupported();
+    validateInteger(mask, "mask", 1, Number.MAX_SAFE_INTEGER);
+    processSetAffinityNative(pidOf(pid, "pid"), String(mask));
+  },
+  setPriority(pid, priority) {
+    ensureSupported();
+    validateOneOf(priority, "priority", ["idle", "below-normal", "normal", "above-normal", "high", "realtime"]);
+    const priorityClass = {
+      idle: 0x40,
+      "below-normal": 0x400,
+      normal: 0x20,
+      "above-normal": 0x800,
+      high: 0x80,
+      realtime: 0x100,
+    }[priority];
+    processSetPriorityNative(pidOf(pid, "pid"), priorityClass);
+  },
+  setEcoMode(pid, enabled) {
+    ensureSupported();
+    validateBoolean(enabled, "enabled");
+    processSetEcoModeNative(pidOf(pid, "pid"), enabled);
+  },
+  trimWorkingSet(pid) {
+    ensureSupported();
+    processTrimWorkingSetNative(pidOf(pid, "pid"));
   },
 });
 

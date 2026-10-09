@@ -303,6 +303,41 @@ win_host_fn! {
 }
 
 win_host_fn! {
+    /// `processSetAffinity(pid, mask)`.
+    js_process_set_affinity(global, frame) {
+        let mask = str_arg(global, frame, 1)?
+            .parse::<usize>()
+            .map_err(|_| global.throw_invalid_arguments(format_args!("affinity mask is out of range")))?;
+        check(global, sys::process::set_affinity(u32_arg(frame, 0), mask))?;
+        Ok(JSValue::UNDEFINED)
+    }
+}
+
+win_host_fn! {
+    /// `processSetPriority(pid, priorityClass)`.
+    js_process_set_priority(global, frame) {
+        check(global, sys::process::set_priority(u32_arg(frame, 0), u32_arg(frame, 1)))?;
+        Ok(JSValue::UNDEFINED)
+    }
+}
+
+win_host_fn! {
+    /// `processSetEcoMode(pid, enabled)`.
+    js_process_set_eco_mode(global, frame) {
+        check(global, sys::process::set_eco_mode(u32_arg(frame, 0), frame.argument(1).to_boolean()))?;
+        Ok(JSValue::UNDEFINED)
+    }
+}
+
+win_host_fn! {
+    /// `processTrimWorkingSet(pid)`.
+    js_process_trim_working_set(global, frame) {
+        check(global, sys::process::trim_working_set(u32_arg(frame, 0)))?;
+        Ok(JSValue::UNDEFINED)
+    }
+}
+
+win_host_fn! {
     /// `jobCreate(name?)` → job id.
     js_job_create(global, frame) {
         let name = opt_str_arg(global, frame, 0)?;

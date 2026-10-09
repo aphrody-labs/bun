@@ -2374,6 +2374,26 @@ impl RunCommand {
         // unclear why passthrough is an escaped string, it should probably be
         // []const []const u8 and allow its users to escape it.
 
+        let python_executable = cfg.bin_dirs_only
+            && crate::cli::python_command::is_python_executable(target_name);
+        let explicit_path = target_name.starts_with(b".") || paths::is_absolute(target_name);
+        let python_file = crate::cli::python_command::is_python_source(target_name)
+            && (cfg.allow_fast_run_for_extensions || explicit_path);
+        if python_executable || python_file {
+            let python_positionals = if python_executable {
+                &positionals[1..]
+            } else {
+                positionals
+            };
+            let python_args = crate::cli::python_command::script_arguments(
+                python_positionals,
+                &ctx.passthrough,
+            );
+            if crate::cli::python_command::run_if_configured(&python_args) {
+                return Ok(true);
+            }
+        }
+
         let mut try_fast_run = false;
         let mut skip_script_check = false;
         if (!target_name.is_empty() && target_name[0] == b'.') || paths::is_absolute(target_name) {

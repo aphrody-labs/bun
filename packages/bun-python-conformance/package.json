@@ -1,0 +1,9 @@
+{
+  "name": "@aphrody/bun-python-conformance",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "conformance": "bun run ./run.ts",
+    "test": "bun test ./conformance.test.ts"
+  }
+}
