@@ -17,6 +17,7 @@ describe.skipIf(isWindows)("non-Windows", () => {
     expect(windows.isSupported).toBe(false);
     expect(windows.isWindows11()).toBe(false);
     expect(errorCode(() => windows.version())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
+    expect(errorCode(() => windows.conpty.info())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => windows.registry.get("HKCU\\Software"))).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => windows.storage.drives())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => windows.memory.status())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
@@ -313,6 +314,28 @@ describe.skipIf(!isWindows)("bun:windows", () => {
       expect([1, 2]).toContain(d.version);
     }
     expect(distros.filter(d => d.default).length).toBeLessThanOrEqual(1);
+  });
+});
+
+describe.skipIf(!isWindows)("conpty", () => {
+  test("reports the ConPTY capabilities of this build", () => {
+    const info = windows.conpty.info();
+    expect(info.supported).toBe(true);
+    expect(info.build).toBeGreaterThanOrEqual(17763);
+    expect(info.closeBlocks).toBe(!info.releasePseudoConsole);
+    expect(windows.conpty.info()).toBe(info);
+  });
+
+  test("opens a Bun.Terminal session that resizes and closes", () => {
+    const terminal = windows.conpty.open({ cols: 80, rows: 24, data() {} });
+    expect(terminal).toBeInstanceOf(Bun.Terminal);
+    terminal.resize(100, 30);
+    terminal.close();
+    expect(terminal.closed).toBe(true);
+  });
+
+  test("rejects a non-object options argument", () => {
+    expect(errorCode(() => windows.conpty.open(undefined as never))).toBe("ERR_INVALID_ARG_TYPE");
   });
 });
 

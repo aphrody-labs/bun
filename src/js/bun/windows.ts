@@ -60,11 +60,8 @@ const ntfsJournalCreateNative = $newRustFunction("windows/host.rs", "jsNtfsJourn
 const ntfsMftEnumerateNative = $newRustFunction("windows/host.rs", "jsNtfsMftEnumerate", 2);
 const ntfsJournalReadNative = $newRustFunction("windows/host.rs", "jsNtfsJournalRead", 4);
 const wintrustCatalogFileNative = $newRustFunction("windows/host.rs", "jsWintrustCatalogFile", 1);
-const wintrustReleaseCatalogContextsNative = $newRustFunction(
-  "windows/host.rs",
-  "jsWintrustReleaseCatalogContexts",
-  0,
-);
+const wintrustReleaseCatalogContextsNative = $newRustFunction("windows/host.rs", "jsWintrustReleaseCatalogContexts", 0);
+const conptyInfoNative = $newRustFunction("windows/host.rs", "jsConptyInfo", 0);
 
 function unsupportedError() {
   const error = new Error("bun:windows is only available on Windows");
@@ -418,6 +415,30 @@ function knownFolder(nameOrGuid) {
   const guid = Object.hasOwn(knownFolders, nameOrGuid) ? knownFolders[nameOrGuid] : nameOrGuid;
   return knownFolderNative(guid);
 }
+
+// conpty
+
+let cachedConptyInfo;
+
+function conptyInfo() {
+  ensureSupported();
+  return (cachedConptyInfo ??= Object.freeze(JSON.parse(conptyInfoNative())));
+}
+
+const conpty = Object.freeze({
+  info() {
+    return conptyInfo();
+  },
+  open(options) {
+    if (!conptyInfo().supported) {
+      const error = new Error("ConPTY requires Windows 10 version 1809 or later");
+      error.code = "ERR_BUN_WINDOWS_UNSUPPORTED";
+      throw error;
+    }
+    validateObject(options, "options");
+    return new Bun.Terminal(options);
+  },
+});
 
 // processes
 
@@ -982,6 +1003,7 @@ export default {
   knownFolders,
   knownFolder,
   processes,
+  conpty,
   Job,
   toast,
   notify,

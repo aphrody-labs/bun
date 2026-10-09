@@ -136,6 +136,23 @@ windows.knownFolder("{FDD39AD0-238F-46AF-ADB4-6C85480369C7}"); // Documents
 
 ---
 
+## ConPTY
+
+```ts
+const info = windows.conpty.info();
+info.supported; // true on Windows 10 1809+
+info.releasePseudoConsole; // true on Windows 11 24H2+
+info.closeBlocks; // true when ClosePseudoConsole waits for the output pipe to drain
+
+const terminal = windows.conpty.open({ cols: 80, rows: 24, data(term, chunk) {} });
+terminal.resize(100, 30);
+terminal.close();
+```
+
+`conpty.open()` returns a `Bun.Terminal`. `info()` reads `RtlGetVersion` and checks kernel32 for `ReleasePseudoConsole` once.
+
+---
+
 ## Processes
 
 ```ts

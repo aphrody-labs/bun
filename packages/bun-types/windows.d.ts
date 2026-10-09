@@ -21,6 +21,8 @@
  * @category Windows
  */
 declare module "bun:windows" {
+  import type { Terminal, TerminalOptions } from "bun";
+
   /** Result of {@link version}. */
   interface WindowsVersion {
     major: number;
@@ -322,6 +324,23 @@ declare module "bun:windows" {
     /** Closes the handle. With `killOnClose`, the processes of the job are terminated. */
     close(): void;
     [Symbol.dispose](): void;
+  }
+
+  interface ConptyInfo {
+    /** Whether the running build provides `CreatePseudoConsole` (Windows 10 1809+). */
+    supported: boolean;
+    build: number;
+    /** kernel32 exports `ReleasePseudoConsole` (Windows 11 24H2+). */
+    releasePseudoConsole: boolean;
+    /** `ClosePseudoConsole` blocks until the output pipe is drained (no `ReleasePseudoConsole`). */
+    closeBlocks: boolean;
+  }
+
+  namespace conpty {
+    /** ConPTY capabilities of the running build. Throws on non-Windows platforms. */
+    function info(): ConptyInfo;
+    /** Opens a pseudo-terminal session; same options as `new Bun.Terminal()`. */
+    function open(options: TerminalOptions): Terminal;
   }
 
   interface NotificationOptions {

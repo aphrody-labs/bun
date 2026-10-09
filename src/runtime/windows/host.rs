@@ -264,6 +264,13 @@ win_host_fn! {
 }
 
 win_host_fn! {
+    /// `conptyInfo()` → JSON object.
+    js_conpty_info(global, frame) {
+        string(global, &sys::conpty::info_json())
+    }
+}
+
+win_host_fn! {
     /// `systemInfo()` → JSON object.
     js_system_info(global, frame) {
         let json = check(global, sys::system::info_json())?;
