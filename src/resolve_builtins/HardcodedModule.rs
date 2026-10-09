@@ -838,11 +838,11 @@ const BUN_EXTRA_ALIAS_KVS: &[AliasKv] = &[
     entry!("bun:sqlite"),
     entry!("bun:wasm"),
     entry!("bun:windows"),
+    entry!("bun:winrt"),
     entry!("bun:winui"),
     entry!("bun:wrap"),
     entry!("bun:internal-for-testing"),
     (
-    entry!("bun:winrt"),
         b"internal/cluster/round_robin_handle",
         Alias {
             path: zstr!("internal:cluster/RoundRobinHandle"),
