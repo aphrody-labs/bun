@@ -1020,6 +1020,12 @@ impl<const SIDE: bake::Side> IncrementalGraph<SIDE> {
 
         debug_assert!((imported_file_index.get() as usize) < self.bundled_files.count());
 
+        // The SSR proxy of a "use server" module imports the server copy, which
+        // shares its key.
+        if imported_file_index.get() == file_index.get() {
+            return Ok(EdgeAttachmentResult::Continue);
+        }
+
         // For CSS visiting CSS, prevent infinite recursion via tracing bits.
         if mode == EdgeAttachmentMode::Css && kind == FileKind::Css {
             if ctx

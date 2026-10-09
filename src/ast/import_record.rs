@@ -130,6 +130,9 @@ pub enum Tag {
     /// For Bun Kit, if a module in the server graph should actually
     /// crossover to the SSR graph. See bake.Framework.ServerComponents.separate_ssr_graph
     BakeResolveToSsrGraph,
+    /// A Bake "use server" proxy in the SSR graph that imports the real
+    /// module from the server graph so its functions get registered.
+    BakeResolveToServerGraph,
 }
 
 impl Tag {

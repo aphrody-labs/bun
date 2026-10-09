@@ -2763,9 +2763,15 @@ pub mod parse_worker {
 
         *step = Step::Resolve;
 
+        // A proxy's source map must not carry the server code to the client.
+        let mut result_source = source.clone();
+        if server_reference_proxy {
+            result_source.contents = std::borrow::Cow::Borrowed(b"".as_slice());
+        }
+
         Ok(Success {
             ast,
-            source: source.clone(),
+            source: result_source,
             log: core::mem::take(log),
             use_directive,
             unique_key_for_additional_file: unique_key_for_additional_file.key,

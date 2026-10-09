@@ -394,7 +394,8 @@ fn generate_client_reference_proxy(
 /// Replaces a "use server" module reached from the browser or SSR graph. The
 /// server code never leaves the server graph: in the browser each export is
 /// `<client_register_server_reference>(id, exportName)` from
-/// `client_runtime_import`, and during SSR each export throws when called.
+/// `client_runtime_import`, and during SSR each export throws when called while
+/// the module imports the server graph's copy so its functions are registered.
 pub(crate) fn generate_server_reference_proxy(
     ctx: &BundleV2,
     source: &'static Source,
@@ -434,6 +435,14 @@ pub(crate) fn generate_server_reference_proxy(
     } else {
         None
     };
+
+    // The server runtime registers the module's functions when it evaluates
+    // it; SSR evaluates it even when only client components import it.
+    if target == Target::ServerComponentsSsr {
+        b.add_import_stmt::<0>(source.path.text, [])?;
+        let record = b.import_records.len() - 1;
+        b.import_records[record].tag = bun_ast::ImportRecordTag::BakeResolveToServerGraph;
+    }
 
     for key in named_exports.keys() {
         let key: &'static [u8] = b.bump.alloc_slice_copy(key.as_ref());

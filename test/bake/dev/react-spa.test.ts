@@ -934,6 +934,13 @@ devTest('"use server" functions are proxied to the client and callable with a PO
       hasProxy: clientCode.includes('"actions.ts"'),
       leaksServerCode: clientCode.includes("server-only-"),
     }).toEqual({ hasProxy: true, leaksServerCode: false });
+    const mapUrls = [...clientCode.matchAll(/\n\/\/# sourceMappingURL=(\S+)/g)].map(m => m[1]);
+    expect(mapUrls.length).toBeGreaterThan(0);
+    const maps = (await Promise.all(mapUrls.map(src => dev.fetch(src).text()))).join("\n");
+    expect({
+      mapsActions: maps.includes("actions.ts"),
+      leaksServerCode: maps.includes("server-only-"),
+    }).toEqual({ mapsActions: true, leaksServerCode: false });
 
     const call = await dev.fetch("/", {
       method: "POST",
@@ -950,5 +957,41 @@ devTest('"use server" functions are proxied to the client and callable with a PO
     });
     expect(await missing.text()).toContain('Server function "actions.ts#missing" is not registered.');
     expect(missing.status).toBe(404);
+  },
+});
+devTest('"use server" functions imported only by a client component are registered on the server', {
+  framework: "react",
+  files: {
+    "pages/index.tsx": `
+      import Button from "../button";
+      export default function IndexPage() {
+        return <Button />;
+      }
+    `,
+    "button.tsx": `
+      "use client";
+      import { add } from "./actions";
+      export default function Button() {
+        return <button onClick={() => add(1, 2)}>{"client:" + typeof add}</button>;
+      }
+    `,
+    "actions.ts": `
+      "use server";
+      export async function add(a, b) {
+        return "sum:" + (a + b);
+      }
+    `,
+  },
+  async test(dev) {
+    expect(await dev.fetch("/").text()).toContain("client:function");
+
+    const call = await dev.fetch("/", {
+      method: "POST",
+      headers: { "Accept": "text/x-component", "Bun-Server-Function": "actions.ts#add" },
+      body: "[1,2]",
+    });
+    expect(call.headers.get("content-type")).toBe("text/x-component");
+    expect(await call.text()).toContain('"sum:3"');
+    expect(call.status).toBe(200);
   },
 });

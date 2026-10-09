@@ -6763,6 +6763,15 @@ pub mod bv2_impl {
                         bake::Graph::Ssr,
                         Target::ServerComponentsSsr,
                     )
+                } else if import_record.tag == bun_ast::ImportRecordTag::BakeResolveToServerGraph {
+                    let server_target = self.transpiler.options.target;
+                    (
+                        std::ptr::from_mut::<Transpiler<'a>>(
+                            self.transpiler_for_target(server_target),
+                        ),
+                        bake::Graph::Server,
+                        server_target,
+                    )
                 } else {
                     (
                         std::ptr::from_mut::<Transpiler<'a>>(
@@ -7275,10 +7284,19 @@ pub mod bv2_impl {
                 // Select map and perform get_or_put, capturing the slot as a raw ptr
                 // so the &mut on self.graph is released before we touch other fields.
                 let (found_existing, value_ptr): (bool, *mut IndexInt) = {
+                    // The SSR proxy of a "use server" module imports the real
+                    // module into the server graph, under the same path.
+                    let map_target = if target == Target::ServerComponentsSsr
+                        && value.known_target != Target::ServerComponentsSsr
+                    {
+                        value.known_target
+                    } else {
+                        target
+                    };
                     let map: &mut PathToSourceIndexMap = if is_html_entrypoint {
                         self.graph.path_to_source_index_map(Target::Browser)
                     } else {
-                        self.graph.path_to_source_index_map(target)
+                        self.graph.path_to_source_index_map(map_target)
                     };
                     let existing = map.get_or_put(key).expect("oom");
                     (
