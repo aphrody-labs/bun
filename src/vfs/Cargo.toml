@@ -1,0 +1,27 @@
+[package]
+name = "bun_vfs"
+version.workspace = true
+edition.workspace = true
+publish = false
+license = "Apache-2.0"
+
+[lib]
+path = "lib.rs"
+
+[lints]
+workspace = true
+
+# Leaf crate on std only (no bun_core/bun_sys), so `cargo test -p bun_vfs` links without Bun's C++
+# objects; `bun_workspace` adds the Oxc identifier matcher and the JSON task routes on top.
+[dependencies]
+globset = "0.4.16"
+ignore = "0.4.25"
+memchr = "2"
+memmap2 = "0.9"
+regex = "1.11"
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = "1.0.150"
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile = "3.27.0"

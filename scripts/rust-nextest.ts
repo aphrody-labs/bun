@@ -34,6 +34,7 @@ const CRATES = [
   "bun_shell_parser",
   "bun_threading",
   "bun_url",
+  "bun_vfs",
   "bun_wyhash",
 ];
 

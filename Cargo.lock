@@ -2438,6 +2438,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "bun_vfs"
+version = "0.0.0"
+dependencies = [
+ "globset",
+ "ignore",
+ "memchr",
+ "memmap2",
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "bun_vt"
 version = "0.0.0"
 
