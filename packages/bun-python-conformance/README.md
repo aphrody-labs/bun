@@ -4,14 +4,19 @@
 This standalone harness calls a real shared host library through ABI v1:
 
 ```sh
-BUN_PYTHON_HOST_LIBRARY=/absolute/path/to/libbun-python-host.so bun run packages/bun-python-conformance/run.ts
+BUN_PYTHON_HOST_LIBRARY=/absolute/path/to/libbun-python-host.so \\
+BUN_PYTHON_LIBPYTHON=/absolute/path/to/libpython.so \\
+bun run packages/bun-python-conformance/run.ts
 ```
 
 The required exports are `bun_py_abi_version() -> u32` and
 `bun_py_main(argc, argv, out_exit_code) -> status`. Each Python invocation runs in
-its own child process so `-c`, `-m`, stdin, tracebacks, and positive or negative
-exit values are observed without reinitializing CPython in one process. The
-driver forwards the actual `argv` vector and streams child stdin/stdout/stderr.
+The C driver first calls `aphrody_py_load` with the explicit libpython path; it
+does not call `aphrody_py_init`. The host library remains loaded until the
+child process exits. Each Python invocation runs in its own child process so
+`-c`, `-m`, stdin, tracebacks, and positive or negative exit values are observed
+without reinitializing CPython in one process. The driver forwards the actual
+`argv` vector and streams child stdin/stdout/stderr.
 
 The runner reports JSON with status `open`, `failed`, or `passed`. Missing
 libraries, missing ABI exports, absent PyTorch, unavailable CUDA hardware or

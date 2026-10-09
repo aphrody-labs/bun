@@ -57,10 +57,19 @@ function sourceModule(directory: string) {
 
 function main() {
   const library = process.env["BUN_PYTHON_HOST_LIBRARY"];
+  const pythonLibrary = process.env["BUN_PYTHON_LIBPYTHON"];
   if (library === undefined || library.trim() === "" || !existsSync(library)) {
     console.log(
       JSON.stringify(
         report(skippedChecks("No real shared host library was supplied in BUN_PYTHON_HOST_LIBRARY."), false, "open"),
+      ),
+    );
+    return 77;
+  }
+  if (pythonLibrary === undefined || pythonLibrary.trim() === "" || !existsSync(pythonLibrary)) {
+    console.log(
+      JSON.stringify(
+        report(skippedChecks("No explicit shared libpython was supplied in BUN_PYTHON_LIBPYTHON."), false, "open"),
       ),
     );
     return 77;
@@ -111,20 +120,23 @@ function main() {
     const checks: Check[] = [{ name: "abi-v1-probe", status: "passed" }];
     let nativeDispatchExecuted = false;
     function invoke(name: string, args: string[], expectedExit: number, validate: (stdout: string, stderr: string) => string | undefined, options: { env?: Record<string, string>; input?: string } = {}) {
-      const result = spawnSync(driver, ["--invoke", resolve(library), "--", ...args], {
+      const result = spawnSync(driver, ["--invoke", resolve(library), resolve(pythonLibrary), "--", ...args], {
         encoding: "utf8",
         env: { ...process.env, ...options.env },
         input: options.input,
       });
-      const marker = /^BUN_PY_CONFORMANCE host_status=(-?\d+) python_exit=(-?\d+)\r?$/m;
+      const marker = /^BUN_PY_CONFORMANCE phase=(load|main) host_status=(-?\d+) python_exit=(-?\d+)\r?$/m;
       const metadata = marker.exec(result.stderr);
       const pythonStderr = result.stderr.replace(marker, "").trim();
       let failure: string | undefined;
       if (metadata === null) failure = `native host did not return status metadata (driver=${result.status})`;
-      else if (Number(metadata[1]) !== 0) failure = `bun_py_main returned host status ${metadata[1]}`;
-      else nativeDispatchExecuted = true;
-      if (failure === undefined && metadata !== null && Number(metadata[1]) === 0 && Number(metadata[2]) !== expectedExit)
-        failure = `expected Python exit ${expectedExit}, received ${metadata[2]}`;
+      else if (metadata[1] === "load" && Number(metadata[2]) !== 0)
+        failure = `aphrody_py_load returned status ${metadata[2]}`;
+      else if (metadata[1] === "main" && Number(metadata[2]) !== 0)
+        failure = `bun_py_main returned host status ${metadata[2]}`;
+      else if (metadata[1] === "main") nativeDispatchExecuted = true;
+      if (failure === undefined && metadata !== null && metadata[1] === "main" && Number(metadata[3]) !== expectedExit)
+        failure = `expected Python exit ${expectedExit}, received ${metadata[3]}`;
       else if (failure === undefined) failure = validate(result.stdout, pythonStderr);
       checks.push(failure === undefined ? { name, status: "passed" } : { name, status: "failed", reason: failure });
       return { stdout: result.stdout, stderr: pythonStderr, failure };
