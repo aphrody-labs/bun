@@ -1,0 +1,122 @@
+# SPDX-License-Identifier: Apache-2.0
+# Absorbed from aphrody-labs/aphrody@5e55f4615a7d (crates/os/kernel/comps/re, aphrody-re 1.0.0-canary).
+[package]
+name = "bun-re"
+version = "1.0.0-canary"
+edition = "2024"
+rust-version = "1.97"
+license = "Apache-2.0"
+publish = false
+repository = "https://github.com/aphrody-labs/bun"
+description = "Reverse engineering primitives — PE/ELF/Mach-O triage, sections + entropy + hash, ASCII/UTF-16 strings, x86-64 disassembly, ASAR/Electron/Go/Adobe/Android/Steam/minidump inspection. Pure Rust, no C bindings, no GPL."
+
+# Not a member of Bun's workspace: its own workspace and lockfile, like packages/bun-cosmic, so
+# goblin/iced-x86/regex stay out of the bun binary and its Cargo.lock. Rust consumers depend on it with
+# `aphrody-re = { package = "bun-re", git = "https://github.com/aphrody-labs/bun" }` and keep `aphrody_re::` paths.
+[workspace]
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+unused_must_use = "deny"
+non_ascii_idents = "deny"
+
+[workspace.lints.clippy]
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+correctness = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -1 }
+
+[lib]
+name = "bun_re"
+crate-type = ["rlib"]
+
+[lints]
+workspace = true
+
+[features]
+# Native Google Magika deep-learning file-type classification. Opt-in because
+# the `magika` crate links the ONNX Runtime via `ort`, which is host-only and
+# fetches a prebuilt runtime at build time (not hermetic-offline, not wasm).
+# The final binary must also pull `ort` with a backend.
+magika = ["dep:magika"]
+
+# Read-only LevelDB key/value enumerator. Chromium stores Local/Session
+# Storage and `shared_proto_db` as LevelDB. Pure-Rust, MIT-licensed reader so we
+# keep the no-C, no-GPL guarantee (the C++ `leveldb`/`leveldb-sys` bindings are
+# avoided). Opt-in because it pulls a filesystem `Env` (host-only); the default
+# + wasm builds stay untouched.
+leveldb = ["dep:rusty-leveldb", "dep:tempfile"]
+
+# YARA-X pattern-matching scanner. Pure Rust (BSD-3-Clause). Opt-in because it
+# pulls the yara-x crate which is host-only (reads files + compiles rules at
+# runtime). Not wasm-safe.
+yara = ["dep:yara-x"]
+
+[dependencies]
+# Cross-platform binary parser (Apache-2.0/MIT).
+goblin     = { version = "0.10", default-features = false, features = ["std", "endian_fd", "pe32", "pe64", "elf32", "elf64"] }
+# SHA-256 for binary fingerprinting + per-section integrity.
+sha2       = "0.11.0"
+md-5       = "0.11.0"
+sha1       = "0.11.0"
+aes        = "0.9.3"
+flate2     = "1.1.10"
+crc32fast  = { version = "1.5", default-features = false }
+# Hex encoding for hashes in the JSON report.
+hex        = "0.4"
+# JSON serialization of the TriageReport (consumed by CLI + MCP tools).
+serde      = { version = "1.0.229", default-features = false, features = ["derive", "std"] }
+serde_json = "1.0.151"
+# Structured errors for the public API.
+thiserror  = "2.0.20"
+# Pure-Rust x86/x64 disassembler + Intel formatter. No C, no GPL.
+iced-x86   = "1.21"
+# Byte-level needle search for family detection in the `google` module.
+memchr     = "2"
+# Structured pattern extraction (OAuth IDs, endpoints, version strings).
+regex      = "1.11"
+# Compile-time memory layout validation + safe casting (BSD-2-Clause OR Apache-2.0).
+# Used in bun_re::headers for zero-copy ELF/PE magic header inspection.
+zerocopy   = { version = "0.8", features = ["derive"] }
+# Google Magika ML file-type classifier (Apache-2.0). Optional: links ONNX
+# Runtime via `ort` in the final binary. Pinned 1.1.0 (embeds the model).
+magika     = { version = "1.1.0", optional = true }
+# Pure-Rust LevelDB reader (MIT). `default-features = false` drops the async
+# runtimes; only `fs` is re-added so a real on-disk LevelDB directory can be opened.
+rusty-leveldb = { version = "4", optional = true, default-features = false, features = ["fs"] }
+# Forensic safety: Chromium DBs are often live/locked, and opening a LevelDB
+# replays the WAL into the directory. The dir is copied into a scratch temp dir
+# first and the copy is opened, leaving the source untouched. Optional, leveldb-gated.
+tempfile   = { version = "3.27.0", optional = true }
+# Recursive directory walker used by the `adobe` module mapper.
+walkdir    = "2.5.0"
+# Pure-Rust YARA pattern-matching engine (BSD-3-Clause). Optional: host-only,
+# compiles rules at runtime. Default features off: only the core scanner + string/pattern engine.
+yara-x     = { version = "=1.7.0", optional = true, default-features = false }
+
+[dev-dependencies]
+serde_json = "1.0.151"
+tempfile   = "3.27.0"
+# GoogleTest-style rich matchers (Apache-2.0).
+googletest = "0.14"
+# Criterion harness for benches/triage.rs.
+criterion  = { version = "0.8.2", features = ["html_reports"] }
+
+[[bench]]
+name    = "triage"
+harness = false
+
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.test]
+debug = "line-tables-only"
+
+[package.metadata.cargo-machete]
+# Optional deps guarded by feature flags — machete cannot see their uses when
+# the feature is inactive and raises false positives.
+ignored = ["magika", "yara-x"]
