@@ -18,6 +18,7 @@ import {
   rmSync,
   writeSync,
 } from "node:fs";
+import { hostname } from "node:os";
 import { basename, dirname, join } from "node:path";
 
 function alive(pid: number): boolean {
@@ -29,7 +30,11 @@ function alive(pid: number): boolean {
   }
 }
 
-/** Blocks until this process holds `<buildDir>/.build.lock`; returns its release (also run at exit). A dead holder's lock is taken over. */
+/**
+ * Blocks until this process holds `<buildDir>/.build.lock`; returns its release (also run at exit). A dead holder's lock
+ * is taken over, and so is one written on another host: a container that built the directory before (same bind mount,
+ * new pid namespace) leaves a pid that can name an unrelated live process, even this one.
+ */
 export function lockBuildDir(buildDir: string, log: (line: string) => void): () => void {
   mkdirSync(buildDir, { recursive: true });
   const path = join(buildDir, ".build.lock");
@@ -37,7 +42,7 @@ export function lockBuildDir(buildDir: string, log: (line: string) => void): () 
   for (;;) {
     try {
       const fd = openSync(path, "wx");
-      writeSync(fd, `${process.pid}\n${process.argv.slice(1).join(" ")}\n`);
+      writeSync(fd, `${process.pid}\n${process.argv.slice(1).join(" ")}\n${hostname()}\n`);
       closeSync(fd);
       const release = () => {
         try {
@@ -55,13 +60,14 @@ export function lockBuildDir(buildDir: string, log: (line: string) => void): () 
     } catch {
       continue;
     }
-    const pid = Number.parseInt(holder, 10);
-    if (!Number.isFinite(pid) || !alive(pid)) {
+    const [pidLine = "", command, host] = holder.split("\n");
+    const pid = Number.parseInt(pidLine, 10);
+    if (!Number.isFinite(pid) || pid === process.pid || (host && host !== hostname()) || !alive(pid)) {
       rmSync(path, { force: true });
       continue;
     }
     if (pid !== announced) {
-      log(`waiting for ${buildDir} (built by pid ${holder.trim().replace("\n", ": ")})`);
+      log(`waiting for ${buildDir} (built by pid ${pid}: ${command})`);
       announced = pid;
     }
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1000);
