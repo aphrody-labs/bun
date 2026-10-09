@@ -10,6 +10,7 @@
 /// <reference path="./bun.d.ts" />
 /// <reference path="./extensions.d.ts" />
 /// <reference path="./devserver.d.ts" />
+/// <reference path="./cosmic.d.ts" />
 /// <reference path="./ffi.d.ts" />
 /// <reference path="./linux.d.ts" />
 /// <reference path="./html-rewriter.d.ts" />

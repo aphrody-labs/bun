@@ -9,6 +9,7 @@ members = [
   "src/base64",
   "src/bundler",
   "src/collections",
+  "src/cosmic",
   "src/css",
   "src/errno",
   "src/glob",
@@ -112,7 +113,9 @@ members = [
 # fetched into `vendor/` by `scripts/build/deps/lolhtml.ts` before cargo runs.
 # Keeping it out of `members` means its `[profile]` section is ignored and its
 # heavy dev-dependencies (criterion, html5ever) never enter `Cargo.lock`.
-exclude = ["vendor"]
+# `packages/bun-cosmic` is the libcosmic window helper of `bun:cosmic`: its own
+# workspace and lockfile, because libcosmic is a git dependency.
+exclude = ["vendor", "packages/bun-cosmic"]
 
 [workspace.package]
 version = "0.0.0"
@@ -368,6 +371,7 @@ bun_api = { path = "src/api" }
 bun_base64 = { path = "src/base64" }
 bun_bundler = { path = "src/bundler" }
 bun_collections = { path = "src/collections" }
+bun_cosmic = { path = "src/cosmic" }
 bun_css = { path = "src/css" }
 bun_errno = { path = "src/errno" }
 bun_glob = { path = "src/glob" }

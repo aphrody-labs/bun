@@ -1,0 +1,19 @@
+[package]
+name = "bun_cosmic"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lib]
+path = "lib.rs"
+# Native side of `bun:cosmic` (src/js/bun/cosmic.ts, host functions in src/runtime/cosmic/): the pop-os crates
+# published on crates.io. cosmic-config and libcosmic are git-only, which deny.toml forbids; the config format is
+# reimplemented in cosmic.ts and windows go through the separate `bun-cosmic` helper (packages/bun-cosmic).
+
+[lints]
+workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+cosmic-text = "0.19"
+# No `gettext`: it links the system libintl for Ubuntu's X-Ubuntu-Gettext-Domain translations.
+freedesktop-desktop-entry = { version = "0.8.3", default-features = false }

@@ -55,6 +55,8 @@ const rustIdentifierPaths: Record<string, string> = {
   "Stat.rs": "runtime/node/Stat.rs",
   "bindgen_test.rs": "jsc/bindgen_test.rs",
   "collections/linear_fifo.rs": "collections/linear_fifo.rs",
+  "cosmic/apps.rs": "runtime/cosmic/apps.rs",
+  "cosmic/text.rs": "runtime/cosmic/text.rs",
   "crash_handler.rs": "crash_handler/crash_handler.rs",
   "css_internals.rs": "css_jsc/css_internals.rs",
   "BytecodeOrderRecorder.rs": "jsc/BytecodeOrderRecorder.rs",

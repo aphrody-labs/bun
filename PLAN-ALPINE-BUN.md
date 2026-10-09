@@ -721,6 +721,75 @@ cd C:/aphrody   # avec le bun du fork sur PATH
 bun test scripts/build/rust/wasm-package.test.ts packages/engine/yolo/test/stack.test.ts packages/engine/yolo/test/verify.test.ts
 ```
 
+### C1. COSMIC (Pop!_OS) sur Aphrody Alpine et module `bun:cosmic` (🔄 code écrit le 2026-10-09, ni build ni test)
+
+Commits : aports `071286df8e3` (paquets + CI), aphrody `766186e779` (cible `desktop`, sysext supprimé),
+`13ecc5f8a2` (athena-text), `2876937692` (clé/dépôt hérités de `cli`) ; bun : voir le log de `src/cosmic/`.
+
+**Veille (2026-10-09) : COSMIC tourne sur Alpine, nativement.** Alpine l'empaquette dans community :
+3.24 a l'epoch 1.0.15 ([cosmic-comp 3.24](https://pkgs.alpinelinux.org/packages?name=cosmic-comp&branch=v3.24&repo=&arch=x86_64)),
+edge a 1.10.0 ([aports master `cbc8344575b9`](https://github.com/alpinelinux/aports/tree/cbc8344575b90a7a5aa7c711aabd4f3c69368e55/community)).
+Tout est Rust (Smithay, iced/libcosmic) et compile contre musl sans correctif ; les dépendances système sont
+libinput, libseat, mesa, libxkbcommon, pipewire, pulseaudio-libs, dbus, fontconfig, gst-plugins (player). Pas de
+systemd : session `cosmic-session` + `seatd` (plutôt qu'elogind) ; connexion `greetd` + [cosmic-greeter](https://github.com/pop-os/cosmic-greeter)
+(services OpenRC). Absentes de 3.24 : [cosmic-monitor](https://github.com/pop-os/cosmic-monitor),
+[cosmic-osk](https://github.com/pop-os/cosmic-osk), [cosmic-sound-theme](https://github.com/pop-os/cosmic-sound-theme),
+[cosmic-viewer](https://github.com/pop-os/cosmic-viewer), [cosmic-wallpapers](https://github.com/pop-os/cosmic-wallpapers)
+(tags `epoch-1.10.0`) ; [system76-scheduler](https://github.com/pop-os/system76-scheduler) n'est dans aucune branche
+(il lit `execsnoop` de bcc-tools, présent dans 3.24). Pop!_OS publie des .deb ([apt.pop-os.org](https://apt.pop-os.org/release)),
+inutilisables sur musl : on reconstruit depuis les tags.
+
+**Alpine (`C:\aports\aphrody`).** Rétroportés seulement les 5 apps manquantes (APKBUILD d'edge, 1.10.0) et
+`system76-scheduler` (+ initd). Méta `aphrody-desktop-cosmic` = la liste unique (session, apps, portails, PipeWire,
+Mesa logiciel, polices, Xwayland, autostart pipewire) ; `-host` = seatd, greetd/cosmic-greeter, system76-scheduler,
+services activés en post-install. `publish.ts build @desktop` et job CI `desktop`.
+
+**Image (une seule définition).** La cible `desktop` d'aphrody-os (`C:\aphrody\tools\config\container\aphrody-os`)
+est canonique : `FROM cli` (clé et dépôt Aphrody déjà posés) puis `apk add aphrody-desktop-cosmic`.
+`scripts/aphrody/aphrody-alpine.Dockerfile` (U1) n'a pas de variante bureau et doit y renvoyer s'il en gagne une.
+
+**Aphrody.** `package-cosmic-sysext.sh` (bash, mort) et les variables `APHRODY_COSMIC_*` (lues par rien) supprimés ;
+wslg-manager renvoie à l'image `desktop`. athena-text gardé (moteur de texte d'obscura-render, pas de recouvrement
+utile avec cosmic-text côté navigateur). Candidats à basculer sur `bun:cosmic` : le parseur `.desktop` du pilote
+Linux et le thème COSMIC de m3-os-themes (`cosmic.ts`, qui pourra lire `config.open("com.system76.CosmicTheme.Dark", 1)`).
+
+**`bun:cosmic` (Bun).** Module intégré paresseux (`src/js/bun/cosmic.ts`), aucun coût au démarrage (la base de
+polices n'est lue qu'au premier appel de `text`). Natif Linux, stubs ailleurs (`ERR_BUN_COSMIC_UNSUPPORTED`) :
+
+| API | Implémentation |
+| --- | --- |
+| `text.layout/render/loadFont/fonts` | crate `bun_cosmic` (`src/cosmic`) sur [cosmic-text](https://crates.io/crates/cosmic-text) 0.19 (harfrust, swash, fontdb) ; host fns `src/runtime/cosmic/text.rs` |
+| `apps.list` | [freedesktop-desktop-entry](https://crates.io/crates/freedesktop-desktop-entry) 0.8.3 sans `gettext` (pas de libintl) |
+| `config.open(name, v)` get/set/keys/watch, `ron` | TS : format disque exact de cosmic-config (RON par clé, défauts XDG_DATA, écriture atomique `.atomicwrite*` + rename, repli v-1) |
+| `openWindow`, `notify` | assistant `bun-cosmic` (`packages/bun-cosmic`) : libcosmic (rev de l'epoch 1.10.0) et [notify-rust](https://github.com/hoodie/notify-rust) (zbus), protocole argv `--k=v` + JSON par ligne |
+
+cosmic-config et libcosmic ne sont que sur git, que `deny.toml` refuse (crates.io seul) : d'où le format RON
+réécrit en TS et l'assistant hors workspace (son propre `Cargo.lock`). Pourquoi un processus pour les fenêtres :
+1. la boucle d'événements libcosmic/iced/winit possède le thread principal de son processus, pas celui de Bun ;
+2. un processus séparé laisse la boucle JS libre et isole les plantages du GPU/compositeur ;
+3. iced, wgpu et les dépendances git restent hors du binaire `bun`.
+
+Reste : paquet apk `bun-cosmic` (APKBUILD avec sha512 d'un tarball poussé), page `docs/runtime/cosmic.mdx`,
+`apps.launch` (codes de champ Exec), bascule des candidats Aphrody ci-dessus.
+
+Vérification (passe finale) :
+
+```sh
+# Bun (C:\bun)
+bun bd test test/js/bun/cosmic/cosmic.test.ts
+bun test test/integration/bun-types/bun-types.test.ts
+cargo clippy -p bun_cosmic --target x86_64-unknown-linux-musl --all-targets
+bun run rust:deny && bun run rust:check-all
+bun bd test test/internal/source-lints/byte-search.test.ts
+# assistant (conteneur alpine:3.24 : cargo, wayland-dev, libxkbcommon-dev, mesa-dev, dbus-dev)
+cargo build --release --manifest-path packages/bun-cosmic/Cargo.toml
+# Alpine (C:\aports, conteneur alpine:3.24 avec abuild)
+bun aphrody/scripts/publish.ts build @desktop
+# Image + Aphrody (C:\aphrody)
+docker build --target desktop -t aphrody/cosmic tools/config/container/aphrody-os
+cargo check -p obscura-render --features paint
+```
+
 ### C2. Stack Rust 2026 : userland Alpine et bonnes pratiques Cargo de Bun (🔄 code écrit le 2026-10-09, ni build ni test)
 
 Commits : bun `b7b4699725f` (Cargo), aports `e435b369e27` (paquets + CI), aphrody `4d343ff71e` (cible `cli`).
@@ -761,8 +830,8 @@ mold (`-fuse-ld=mold`) et sccache (`SCCACHE_DIR`) pour `publish.ts build @rust-b
 cargo-auditable : `makedepends` de chaque APKBUILD. CI : job `rust-base <arch>` (cache sccache) avant `index`.
 
 **Images.** aphrody-os cible `cli` : `apk add aphrody-rust-base` (dépôt Aphrody) au lieu de la liste ; selftest
-30 vérifications (find, xargs, diff, cmp, ntp-ctl, sq, fish ajoutés). `desktop` (C1) inchangée : son ajout de clé et de
-dépôt est désormais redondant. `ghcr.io/aphrody-labs/alpine:3.24-rust` = `--build-arg USERLAND=rust` (méta à la place
+30 vérifications (find, xargs, diff, cmp, ntp-ctl, sq, fish ajoutés). `desktop` (C1) reprend la clé et le dépôt
+de `cli` (doublon retiré, aphrody `2876937692`). `ghcr.io/aphrody-labs/alpine:3.24-rust` = `--build-arg USERLAND=rust` (méta à la place
 de GNU coreutils, vérifie que ls/find/diff sont uutils) ; workflow `aphrody-alpine-image.yml` : matrice arch × userland.
 
 **Bun.** Existant vérifié et conservé : edition 2024, `[workspace.lints]` hérités partout, `clippy.toml`, release

@@ -1,0 +1,39 @@
+[package]
+name = "bun-cosmic"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.93"
+license = "MIT"
+publish = false
+description = "libcosmic window and desktop notification helper spawned by bun:cosmic"
+
+# Not a member of Bun's workspace (see `exclude` in the root Cargo.toml): libcosmic is a git
+# dependency, which Bun's deny.toml forbids, and its GUI stack (iced, winit, wgpu) must stay out
+# of the bun binary. bun:cosmic finds this binary through BUN_COSMIC_HELPER, PATH (`bun-cosmic`)
+# or next to the bun executable, and drives it over argv and JSON lines on stdout.
+[workspace]
+
+[[bin]]
+name = "bun-cosmic"
+path = "src/main.rs"
+
+[features]
+default = []
+# Render with wgpu instead of the tiny-skia software renderer.
+gpu = ["libcosmic/wgpu"]
+
+[dependencies]
+serde_json = "1"
+notify-rust = "4.18"
+
+# Same libcosmic revision as the COSMIC epoch-1.10.0 apps (cosmic-osk, cosmic-viewer Cargo.lock).
+[dependencies.libcosmic]
+git = "https://github.com/pop-os/libcosmic"
+rev = "7f715bc5d2d383a070fd8c760aa52c5627df96b6"
+default-features = false
+features = ["winit", "tokio", "wayland", "x11"]
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
