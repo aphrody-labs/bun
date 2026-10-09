@@ -108,7 +108,7 @@ async function update() {
     await sh(["uv", "venv", venv, "--python", out(["which", "python3"])]);
     const nice = ["nice", "-n", "15"];
     const uvEnv = { ...env, VIRTUAL_ENV: venv };
-    await sh([...nice, "uv", "pip", "install", "-r", "requirements/cpu-build.txt", "--extra-index-url", "https://download.pytorch.org/whl/cpu"], { cwd: src, env: uvEnv });
+    await sh([...nice, "uv", "pip", "install", "-r", "requirements/build/cpu.txt", "--extra-index-url", "https://download.pytorch.org/whl/cpu"], { cwd: src, env: uvEnv });
     await sh([...nice, "uv", "pip", "install", "-r", "requirements/cpu.txt", "--extra-index-url", "https://download.pytorch.org/whl/cpu"], { cwd: src, env: uvEnv });
     await sh([...nice, "uv", "pip", "install", ".", "--no-build-isolation"], { cwd: src, env: uvEnv });
     writeFileSync(marker, sha + "\n");
