@@ -117,3 +117,156 @@ test.concurrent.skipIf(!python || !uv)("CPython AST via offline UV captures nest
   expect(stderr).toBe("");
   expect(code).toBe(0);
 });
+
+test.concurrent("graph documentation pins historical input hashes and isolates domain evidence", async () => {
+  const { BunPython } = await import("../../scripts/aphrody/pyjs-store.ts");
+  const { writeGraphDocs } = await import("../../scripts/aphrody/graph-docs.ts");
+  using directory = tempDir("graph-documentation-history", {});
+  using registry = new BunPython(":memory:");
+  const domain = "src/runtime",
+    source = "graph:bun:src:runtime",
+    profile = "bun";
+  const scope = { source, profile };
+  const digest = (text: string) => new Bun.CryptoHasher("sha256").update(text).digest("hex");
+  const oldHash = digest("old café source");
+  const repo = registry.repository("bun/" + domain, "source", "/fixture", null, {
+    domain,
+    source,
+    profile,
+    surface: "src",
+  });
+  const old = {
+    producer: "fixture producer",
+    graph: {
+      scope,
+      domain,
+      producerSHA256: digest("fixture executable"),
+      hashKind: "runtime-executable",
+      coverage: { indexedFiles: 2, parsedFiles: 1, unsupportedFiles: 1, errors: [] },
+    },
+    nodes: [
+      {
+        id: "file:src/été.rs",
+        kind: "file",
+        label: "src/été.rs",
+        source_file: "src/été.rs",
+        sha256: oldHash,
+        bytes: 17,
+        hashKind: "content",
+        provenance: "EXTRACTED",
+      },
+      {
+        id: "file:z.bin",
+        kind: "file",
+        label: "z.bin",
+        source_file: "z.bin",
+        sha256: null,
+        bytes: 42,
+        hashKind: "metadata-only",
+        provenance: "UNRESOLVED",
+      },
+      { id: "fn:café", label: "<script>{owned}</script>", source_file: "src/été.rs", provenance: "EXTRACTED" },
+    ],
+    links: [{ source: "fn:café", target: "file:src/été.rs", relation: "defined-in", confidence: "EXTRACTED" }],
+  };
+  const oldGraphHash = digest(JSON.stringify(old));
+  await registry.importGraph(repo, old, oldGraphHash);
+  const snapshotId = registry.getSnapshot(repo)!.id;
+  await registry.importGraph(
+    repo,
+    {
+      ...old,
+      nodes: [
+        { id: "file:src/été.rs", kind: "file", label: "new", source_file: "src/été.rs", sha256: digest("new source") },
+      ],
+      links: [],
+    },
+    digest("new graph"),
+  );
+  registry.db
+    .query("INSERT INTO files VALUES(?,?,?,?,?,?,?)")
+    .run("current", repo, "src/été.rs", digest("mutable current"), "rust", 19, "{}");
+  const foreign = registry.repository("bun/packages/foreign", "source", "/foreign", null, {
+    domain: "packages/foreign",
+    source: "graph:bun:packages:foreign",
+    profile: "dbfr",
+  });
+  await registry.importGraph(
+    foreign,
+    { nodes: [{ id: "foreign", label: "FOREIGN_DOMAIN_ONLY" }], links: [] },
+    digest("foreign"),
+  );
+  const options = {
+    workspace: resolve(import.meta.dir, "../.."),
+    out: String(directory),
+    repositoryId: repo,
+    snapshotId,
+    domain,
+    source,
+    profile,
+    maxRows: 1,
+  };
+  const exported = await writeGraphDocs(registry, options);
+  expect(exported.manifest.snapshot.sha256).toBe(oldGraphHash);
+  expect(exported.manifest.counts).toMatchObject({ files: 2, nodes: 3, edges: 1, unresolved: 1, missingHashes: 1 });
+  expect(exported.manifest.truncated).toEqual({ inputs: true, nodes: true, edges: false });
+  expect((await Bun.file(join(exported.out, "inputs.json")).json())[0]).toMatchObject({
+    path: "src/été.rs",
+    sha256: oldHash,
+  });
+  expect(await Bun.file(exported.markdownPath).text()).not.toContain("FOREIGN_DOMAIN_ONLY");
+  expect(exported.manifest.producer.indexedHashKind).toBe("runtime-executable");
+  const repeated = await writeGraphDocs(registry, options);
+  expect(repeated.unchanged).toBe(true);
+  expect(repeated.out).toBe(exported.out);
+  await Bun.write(join(exported.out, "inputs.json"), "[]");
+  await expect(writeGraphDocs(registry, options)).rejects.toThrow("artifact differs");
+});
+
+test.concurrent("graph documentation escapes MDX and rejects cross-profile exports and aborted ownership", async () => {
+  const { BunPython } = await import("../../scripts/aphrody/pyjs-store.ts");
+  const { writeGraphDocs } = await import("../../scripts/aphrody/graph-docs.ts");
+  using directory = tempDir("graph-documentation-scope", {});
+  using registry = new BunPython(":memory:");
+  const domain = "packages/buv",
+    source = "graph:bun:packages:buv",
+    profile = "bun";
+  const repo = registry.repository("bun/" + domain, "source", "/fixture", null, {
+    domain,
+    source,
+    profile,
+    surface: "package",
+  });
+  await registry.importGraph(
+    repo,
+    {
+      graph: {
+        scope: { source, profile },
+        domain,
+        coverage: { indexedFiles: 0, parsedFiles: 0, unsupportedFiles: 0, errors: [] },
+      },
+      nodes: [{ id: "symbol", label: "<script>{owned}</script>" }],
+      links: [],
+    },
+    "a".repeat(64),
+  );
+  const options = {
+    workspace: resolve(import.meta.dir, "../.."),
+    out: String(directory),
+    repositoryId: repo,
+    snapshotId: registry.getSnapshot(repo)!.id,
+    domain,
+    source,
+    profile,
+  };
+  const exported = await writeGraphDocs(registry, options);
+  expect(await Bun.file(join(exported.out, "graph.mdx")).text()).toContain("\\{owned\\}");
+  expect(await Bun.file(join(exported.out, "graph.html")).text()).not.toContain("<script>");
+  expect(exported.manifest.missing.some(item => item.kind === "indexed-producer-sha256")).toBe(true);
+  await expect(writeGraphDocs(registry, { ...options, profile: "dbfr" })).rejects.toThrow("does not match");
+  await expect(writeGraphDocs(registry, { ...options, maxRows: Infinity })).rejects.toThrow("row limit");
+  const controller = new AbortController(),
+    reason = new Error("export cancelled by owner");
+  controller.abort(reason);
+  await expect(writeGraphDocs(registry, { ...options, signal: controller.signal })).rejects.toBe(reason);
+});

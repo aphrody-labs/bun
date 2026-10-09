@@ -135,7 +135,7 @@
           {
             "group": "Concurrency",
             "icon": "split",
-            "pages": ["/runtime/workers", "/runtime/module-graph"]
+            "pages": ["/runtime/workers", "/runtime/module-graph", "/runtime/graph"]
           },
           {
             "group": "Process & System",

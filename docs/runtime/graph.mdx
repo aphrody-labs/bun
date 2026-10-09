@@ -1,0 +1,67 @@
+---
+title: Native code graph
+description: Extract source graphs and export scoped snapshot evidence
+---
+
+`bun:graph` combines a native SQLite registry with Rust source extraction and graph queries.
+`bun:graph-native` runs extraction and graph algorithms in workers.
+Use the qualified fork for these APIs.
+
+## Source scopes
+
+Each indexed domain has a source and profile.
+A runtime domain can use `src/runtime`, source `graph:bun:src:runtime`, and profile `bun`.
+A package domain can use `packages/buv` and source `graph:bun:packages:buv`.
+The registry keeps these domain values in repository metadata.
+The snapshot repeats the scope and records coverage.
+
+File coverage and AST coverage measure different work.
+The file index can retain a path for an unsupported format.
+An unsupported or metadata-only input has `UNRESOLVED` provenance.
+A metadata-only record has no content SHA-256.
+The export reports these gaps explicitly.
+
+## Snapshot evidence
+
+Select the repository and snapshot IDs before generating documentation.
+The exporter verifies the requested domain, source and profile against both records.
+It reads nodes and edges only within that snapshot's namespace.
+Historical input hashes come from immutable file nodes in the snapshot.
+The current `files` table does not supply historical hashes.
+
+The export uses bounded SQL reads and streams Markdown and JSON files.
+Each section defaults to 256 rows.
+Each output defaults to an 8 MiB limit.
+You can set `--max-rows` up to 10,000 and `--max-bytes` up to 64 MiB.
+The manifest gives exact snapshot counts and marks truncated sections.
+Benchmark samples require matching domain metadata on a completed run.
+
+Use `scripts/aphrody/graph-docs.ts --help` for the exporter options.
+The command requires `--repository`, `--snapshot`, `--domain`, `--source`, and `--profile`.
+`--workspace` selects the checkout.
+`--db` selects its SQLite registry.
+`--out` selects a local staging root.
+
+The output directory contains:
+
+- `graph.md`, `graph.mdx`, and `graph.html` for source evidence.
+- `inputs.json`, `nodes.json`, `edges.json`, and `samples.json` for bounded evidence rows.
+- `manifest.json` for snapshot, producer, generation-source and artifact hashes.
+- `SKILL.md` for a scoped local skill.
+
+The exporter keys the directory by its generation inputs.
+Repeated exports verify existing artifact hashes before reusing that directory.
+Changes produce a new directory.
+
+## Docs and skills
+
+Bun's docs use MDX pages under `docs/` and navigation in `docs/docs.json`.
+Repository skills use `.claude/skills/<name>/SKILL.md` with `name` and `description` frontmatter.
+Generated graph evidence stays under local staging, which defaults to `tmp/graph-docs`.
+Generating evidence does not publish docs or install a skill into a private home.
+
+The PyJS plugin retains its API source hashes.
+Pass all five scope options to its docs generator to include graph evidence.
+An export identifies the indexed producer separately from the sources used during generation.
+A successful export establishes the selected evidence and its hashes.
+Runtime compatibility and full parser coverage require their own native tests.
