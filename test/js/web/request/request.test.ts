@@ -13,6 +13,28 @@ test("undefined args don't throw", () => {
   expect(request.method).toBe("GET");
 });
 
+test("request.keepalive reflects init and is inherited from an input Request", () => {
+  const url = "https://example.com/";
+  const keepalive = new Request(url, { keepalive: true });
+  expect({
+    default: new Request(url).keepalive,
+    init: keepalive.keepalive,
+    initFalse: new Request(url, { keepalive: false }).keepalive,
+    undefinedInit: new Request(url, { keepalive: undefined }).keepalive,
+    inherited: new Request(keepalive).keepalive,
+    overridden: new Request(keepalive, { keepalive: false }).keepalive,
+    cloned: keepalive.clone().keepalive,
+  }).toEqual({
+    default: false,
+    init: true,
+    initFalse: false,
+    undefinedInit: false,
+    inherited: true,
+    overridden: false,
+    cloned: true,
+  });
+});
+
 test("request can receive undefined signal", async () => {
   const request = new Request("http://example.com/", {
     method: "POST",

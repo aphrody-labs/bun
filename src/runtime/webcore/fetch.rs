@@ -889,7 +889,9 @@ fn fetch_impl<const ALLOW_GET_BODY: bool>(
         ];
 
         for obj in objects_to_try {
-            if !obj.is_empty() {
+            // `Request#keepalive` is the spec flag (default false), not Bun's
+            // connection-reuse switch, so `fetch(url, request)` ignores it.
+            if !obj.is_empty() && obj.as_::<Request>().is_none() {
                 if let Some(keepalive_value) =
                     obj.get_common_string(global_this, jsc::CommonString::FetchOptionKeepalive)?
                 {
