@@ -19,6 +19,7 @@ import { emitCodegen, type CodegenOutputs } from "./codegen.ts";
 import { cc, cxx, link, pch } from "./compile.ts";
 import { bunExeName, shouldStrip, type Config } from "./config.ts";
 import { generateDepVersionsHeader } from "./depVersionsHeader.ts";
+import { dotnetHostRustSources } from "./deps/dotnet-host.ts";
 import { allDeps } from "./deps/index.ts";
 import { lolhtml } from "./deps/lolhtml.ts";
 import { rustArgon2 } from "./deps/rust-argon2.ts";
@@ -196,7 +197,7 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
   depsByName.set(uv.name, uvDep);
   const rust = emitRust(n, cfg, {
     codegenOrderOnly: codegen.rustInputs,
-    rustSources: [...sources.rust, ...uvRustSources(cfg), ...windowsToolchainRustSources(cfg)],
+    rustSources: [...sources.rust, ...uvRustSources(cfg), ...windowsToolchainRustSources(cfg), ...dotnetHostRustSources(cfg)],
     vendorStamps: [...lolhtmlDep.outputs, ...rustArgon2Dep.outputs, ...uutilsDep.outputs, ...uvDep.outputs],
     shimValidations: emitShimVerify(n, cfg),
   });

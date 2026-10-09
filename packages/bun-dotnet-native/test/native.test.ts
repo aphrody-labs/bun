@@ -19,7 +19,7 @@ let host: DotnetHost;
 
 beforeAll(async () => {
   for (const cmd of [
-    ["cargo", "build", "-p", "bun-dotnet-host"],
+    ["cargo", "rustc", "-p", "bun-dotnet-host", "--crate-type", "cdylib"],
     ["dotnet", "build", "-v", "q", "-nologo"],
   ]) {
     if (cmd[0] === "cargo" && process.env.BUN_DOTNET_HOST_LIBRARY) continue;

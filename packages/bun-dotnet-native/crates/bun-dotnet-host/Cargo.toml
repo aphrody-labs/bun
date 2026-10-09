@@ -9,11 +9,11 @@ description = "CLR host for Bun: locates hostfxr (nethost semantics), runs the d
 
 [lib]
 name = "bun_dotnet_host"
-crate-type = ["rlib", "cdylib"]
 
 [features]
 default = ["c-abi"]
-# `bun_dotnet_*` C exports (include/bun_dotnet_host.h). Bun links the rlib without them.
+# `bun_dotnet_*` C exports (include/bun_dotnet_host.h), built as a cdylib with
+# `cargo rustc -p bun-dotnet-host --crate-type cdylib`. Bun links the rlib without them.
 c-abi = []
 
 [target.'cfg(unix)'.dependencies]

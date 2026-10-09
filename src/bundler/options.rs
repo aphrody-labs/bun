@@ -301,7 +301,7 @@ impl TargetExt for Target {
 
         const OUT_EXTENSIONS_LIST: &[&[u8]] = &[
             b".js", b".cjs", b".mts", b".cts", b".ts", b".tsx", b".jsx", b".json", b".pyjs",
-            b".pyts", b".pytsx",
+            b".pyts", b".pytsx", b".csjs", b".csts", b".cstsx",
         ];
 
         if self == Target::Node {
@@ -594,6 +594,9 @@ const DEFAULT_LOADERS_POSIX: &[(&[u8], Loader)] = &[
     (b".pyjs", Loader::Js),
     (b".pyts", Loader::Ts),
     (b".pytsx", Loader::Tsx),
+    (b".csjs", Loader::Js),
+    (b".csts", Loader::Ts),
+    (b".cstsx", Loader::Tsx),
     (b".mts", Loader::Ts),
     (b".cts", Loader::Ts),
     (b".toml", Loader::Toml),
@@ -618,7 +621,7 @@ const DEFAULT_LOADERS_WIN32_EXTRA: &[(&[u8], Loader)] = &[(b".sh", Loader::Bunsh
 ///
 /// PERF: deliberately not a hashed map (the old `phf::Map` SipHash-ed the full
 /// key, probed a displacement table, and finished with a memcmp on every
-/// lookup). With only 26 keys bucketing into 5 distinct lengths
+/// lookup). With only 29 keys bucketing into 5 distinct lengths
 /// (3/4/5/6/9, all `.`-prefixed), a length-gated `match` is cheaper: one
 /// `usize` compare rejects every wrong-length probe, and within each bucket
 /// rustc lowers the fixed-width byte-slice arms to single u32/u64 compares (no
@@ -665,6 +668,8 @@ impl DefaultLoaders {
             5 => match ext {
                 b".pyjs" => Some(&Loader::Js),
                 b".pyts" => Some(&Loader::Ts),
+                b".csjs" => Some(&Loader::Js),
+                b".csts" => Some(&Loader::Ts),
                 b".json" => Some(&Loader::Json),
                 b".toml" => Some(&Loader::Toml),
                 b".yaml" => Some(&Loader::Yaml),
@@ -676,6 +681,7 @@ impl DefaultLoaders {
             },
             6 => match ext {
                 b".pytsx" => Some(&Loader::Tsx),
+                b".cstsx" => Some(&Loader::Tsx),
                 b".jsonc" => Some(&Loader::Jsonc),
                 b".json5" => Some(&Loader::Json5),
                 _ => None,
@@ -983,8 +989,8 @@ const DEFAULT_LOADER_EXT_BUN: &[&[u8]] = &[b".node", b".html"];
 const DEFAULT_LOADER_EXT: &[&[u8]] = &[
     b".jsx", b".json", b".js", b".mjs", b".cjs", b".css",
     // https://devblogs.microsoft.com/typescript/announcing-typescript-4-5-beta/#new-file-extensions
-    b".ts", b".tsx", b".mts", b".cts", b".pyjs", b".pyts", b".pytsx", b".toml", b".yaml", b".yml",
-    b".wasm", b".txt", b".text", b".jsonc", b".json5",
+    b".ts", b".tsx", b".mts", b".cts", b".pyjs", b".pyts", b".pytsx", b".csjs", b".csts", b".cstsx",
+    b".toml", b".yaml", b".yml", b".wasm", b".txt", b".text", b".jsonc", b".json5",
 ];
 
 // Only set it for browsers by default.
@@ -1927,11 +1933,13 @@ impl<'a> BundleOptions<'a> {
                     // we must also support require'ing .node files
                     static EXT_WITH_NODE: &[&[u8]] = &[
                         b".tsx", b".ts", b".jsx", b".cts", b".cjs", b".js", b".mjs", b".mts",
-                        b".json", b".node", b".pyjs", b".pyts", b".pytsx",
+                        b".json", b".node", b".pyjs", b".pyts", b".pytsx", b".csjs", b".csts",
+                        b".cstsx",
                     ];
                     static NM_EXT_WITH_NODE: &[&[u8]] = &[
                         b".jsx", b".cjs", b".js", b".mjs", b".mts", b".tsx", b".ts", b".cts",
-                        b".json", b".node", b".pyjs", b".pyts", b".pytsx",
+                        b".json", b".node", b".pyjs", b".pyts", b".pytsx", b".csjs", b".csts",
+                        b".cstsx",
                     ];
                     opts.extension_order.default.default = owned_string_list(EXT_WITH_NODE);
                     opts.extension_order.node_modules.default = owned_string_list(NM_EXT_WITH_NODE);
@@ -2029,27 +2037,28 @@ pub enum ImportPathFormat {
 pub(crate) mod bundle_options_defaults {
     pub(crate) const EXTENSION_ORDER: &[&[u8]] = &[
         b".tsx", b".ts", b".jsx", b".cts", b".cjs", b".js", b".mjs", b".mts", b".json", b".pyjs",
-        b".pyts", b".pytsx",
+        b".pyts", b".pytsx", b".csjs", b".csts", b".cstsx",
     ];
 
     pub(crate) const MAIN_FIELD_EXTENSION_ORDER: &[&[u8]] = &[
-        b".js", b".cjs", b".cts", b".tsx", b".ts", b".jsx", b".json", b".pyjs", b".pyts", b".pytsx",
+        b".js", b".cjs", b".cts", b".tsx", b".ts", b".jsx", b".json", b".pyjs", b".pyts",
+        b".pytsx", b".csjs", b".csts", b".cstsx",
     ];
 
     pub(crate) const MODULE_EXTENSION_ORDER: &[&[u8]] = &[
         b".tsx", b".jsx", b".mts", b".ts", b".mjs", b".js", b".cts", b".cjs", b".json", b".pyjs",
-        b".pyts", b".pytsx",
+        b".pyts", b".pytsx", b".csjs", b".csts", b".cstsx",
     ];
 
     pub(crate) mod node_modules {
         pub(crate) const EXTENSION_ORDER: &[&[u8]] = &[
             b".jsx", b".cjs", b".js", b".mjs", b".mts", b".tsx", b".ts", b".cts", b".json",
-            b".pyjs", b".pyts", b".pytsx",
+            b".pyjs", b".pyts", b".pytsx", b".csjs", b".csts", b".cstsx",
         ];
 
         pub(crate) const MODULE_EXTENSION_ORDER: &[&[u8]] = &[
             b".mjs", b".jsx", b".mts", b".js", b".cjs", b".tsx", b".ts", b".cts", b".json",
-            b".pyjs", b".pyts", b".pytsx",
+            b".pyjs", b".pyts", b".pytsx", b".csjs", b".csts", b".cstsx",
         ];
     }
 }

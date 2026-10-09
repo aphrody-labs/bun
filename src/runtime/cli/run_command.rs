@@ -2391,6 +2391,13 @@ impl RunCommand {
                 return Ok(true);
             }
         }
+        if crate::cli::dotnet_command::is_csharp_source(target_name)
+            && (cfg.allow_fast_run_for_extensions || explicit_path)
+        {
+            let args =
+                crate::cli::python_command::script_arguments(&positionals[1..], &ctx.passthrough);
+            crate::cli::dotnet_command::run_file(target_name, &args);
+        }
 
         let mut try_fast_run = false;
         let mut skip_script_check = false;
@@ -2650,6 +2657,25 @@ impl RunCommand {
                     if crate::cli::python_command::run_if_configured(&python_args) {
                         return Ok(true);
                     }
+                }
+                if crate::cli::dotnet_command::is_csharp_source(path.text) {
+                    let skip = if ctx
+                        .positionals
+                        .first()
+                        .is_some_and(|arg| arg.as_ref() == b"run")
+                    {
+                        2
+                    } else {
+                        1
+                    };
+                    let args: Vec<&[u8]> = ctx
+                        .positionals
+                        .iter()
+                        .skip(skip)
+                        .chain(ctx.passthrough.iter())
+                        .map(Box::as_ref)
+                        .collect();
+                    crate::cli::dotnet_command::run_file(path.text, &args);
                 }
                 let ext = path.name().ext;
                 let loader: Loader = this_transpiler

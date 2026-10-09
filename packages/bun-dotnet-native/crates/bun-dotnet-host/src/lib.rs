@@ -717,12 +717,21 @@ impl Hostfxr {
             .runtime
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        if let Some(runtime) = slot.as_ref() {
-            return runtime.clone();
+        if let Some(Ok(runtime)) = slot.as_ref() {
+            return Ok(*runtime);
         }
         let started = self.start(runtime_config);
         *slot = Some(started.clone());
         started
+    }
+
+    /// The running CLR, if [`Hostfxr::runtime`] started it.
+    pub fn started(&self) -> Option<Runtime> {
+        let slot = self
+            .runtime
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        slot.as_ref().and_then(|runtime| runtime.as_ref().ok().copied())
     }
 
     fn start(&self, runtime_config: Option<&Path>) -> Result<Runtime> {

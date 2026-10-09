@@ -310,6 +310,8 @@ pub(crate) mod test {
 #[path = "Arguments.rs"]
 pub(crate) mod arguments;
 pub(crate) use arguments as Arguments;
+#[path = "dotnet_command.rs"]
+pub(crate) mod dotnet_command;
 #[path = "python_command.rs"]
 pub(crate) mod python_command;
 #[path = "run_command.rs"]
@@ -687,6 +689,7 @@ pub(crate) mod help_command {
   <b><blue>uv <d>\\<command\\><r>                   Manage Python packages and projects with UV
   <b><blue>msvc <d>\\<command\\><r>                 Find MSVC and the Windows SDK, print or run with their environment
   <b><blue>winmd <d>\\<options\\><r>                Generate Rust or bun:ffi bindings from Windows metadata
+  <b><blue>dotnet <d>\\<command\\><r>               Run the .NET SDK (dotnet) inside Bun
   <b><blue>info<r>      <d>{:<16}<r>     Display package metadata from the registry
   <b><blue>why<r>       <d>{:<16}<r>     Explain why a package is installed
 
@@ -870,6 +873,8 @@ pub(crate) mod command {
                 | b"buv.exe"
                 | b"pyjs"
                 | b"pyjs.exe"
+                | b"csjs"
+                | b"csjs.exe"
                 | b"bunx"
                 | b"bunx.exe"
                 | b"node"
@@ -1301,6 +1306,19 @@ pub(crate) mod command {
             {
                 super::winmd_command::exec(invocation);
             }
+        }
+
+        let dotnet_invocation = super::dotnet_command::Invocation::from_argv(
+            argv.get(0).map(bun_core::ZStr::as_bytes).unwrap_or(b""),
+            argv.get(1).map(bun_core::ZStr::as_bytes),
+        )
+        .or_else(|| {
+            (argv.get(1).is_some_and(|arg| arg.as_bytes() == b"dotnet")
+                && bun_core::env_var::feature_flag::BUN_BE_BUN::get().unwrap_or(false))
+            .then_some(super::dotnet_command::Invocation::Bun)
+        });
+        if let Some(invocation) = dotnet_invocation {
+            super::dotnet_command::exec(invocation);
         }
 
         // bun build --compile entry point. A compiled executable linked as `bun` is the engine itself (one `yolo`

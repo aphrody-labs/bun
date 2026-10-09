@@ -22,6 +22,6 @@ dotnet/runtime (MIT, `include/hostfxr/LICENSE.TXT`) for C consumers;
 `include/bun_dotnet_host.h` is the C ABI of the cdylib (`c-abi` feature).
 
 ```sh
-cargo build --release          # target/release/bun_dotnet_host.{dll,so,dylib}
+cargo rustc --release -p bun-dotnet-host --crate-type cdylib   # target/release/bun_dotnet_host.{dll,so,dylib}
 bun test ./test                # builds a C# fixture with the .NET SDK, calls it through the cdylib
 ```

@@ -33,6 +33,7 @@
     "./browser": "./src/browser.ts",
     "./gpu": "./src/gpu.ts",
     "./python": "./src/python.ts",
+    "./dotnet": "./src/dotnet.ts",
     "./desktop-artifact": "./src/desktop-artifact.ts",
     "./src/*": "./src/*"
   },
