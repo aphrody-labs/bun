@@ -112,7 +112,7 @@ Ne jamais attendre une commande longue en premier plan ; paralléliser ; lire pe
 - **Docker local** (Docker Desktop, 12 CPU / 12 Go ; pas de bind-mount massif de `C:\` en boucle chaude :
   copier dans un volume pour les gros builds) : conteneurs `--cpus 6 --memory 6g`, volumes de cache nommés
   (`bun-cache:/root/.bun/install/cache`, `cargo-registry`, `cargo-target-<chantier>`), BuildKit (`docker buildx`,
-  `--cache-to/--cache-from type=local`). Jamais le VPS.
+  `--cache-to/--cache-from type=local`). Le VPS sert au build et au dev (nice, checkout et `CARGO_TARGET_DIR` uniques) ; dbfr = prod uniquement.
 
 ## 3. Chantiers
 

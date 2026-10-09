@@ -10,6 +10,32 @@ Règles communes, cible et vérification : [PLAN.md](PLAN.md) (à lire en entier
 Statut : ✅ fait · 🔄 en cours · ⏳ à faire. Un chantier = un propriétaire ; hors de ton périmètre, coordonne
 par `git pull --rebase` et ne réécris pas le travail d'un autre.
 
+### INF. Infra MCP/A2A persistante et prod dbfr sur le fork (🔄 2026-10-09)
+
+Règle : zéro code, binaire, checkout, cache ou processus legacy ou dupliqué entre hôtes. Un processus par rôle,
+systemd `--user` avec `Restart=always` et `MemoryHigh`/`MemoryMax`, un seul checkout par dépôt et un seul
+`CARGO_TARGET_DIR` par hôte.
+
+- ✅ **Prod dbfr sans yolo** (aphrody `05eb852704`) : discord-dev, discord-ai-lab, discord-debate, downloads,
+  timeline-api et fonts-proxy tournent sur `~/.local/bin/bun`, la release `aphrody-v1.4.3-aphrody.2`
+  (`f7a7086b6`), avec `~/.bun/bin/bun` en lien. Les fonts passent par `@aphrody/google` `fonts-serve.ts`.
+  `~/.yolo` et `/srv/aphrody-cdn/app` sont supprimés, postgres n'a pas bougé.
+- ✅ **MCP client** (aphrody `4e529797e7`, `f86df720b1`) : `~/.aphrody/plugins/aphrody/scripts/mcp-launch.ts`
+  passe par le pont HTTP `127.0.0.1:24889`, avec le jeton de `private/mcp-http.env`. Il se replie en stdio local
+  si le tunnel ne répond pas en 2 s. L'alias `kernel mcp` est retiré. `find_repo_root` se replie sur `APHRODY_ROOT`,
+  qui vaut `C:\aphrody` dans le registre.
+- 🔄 **Hub VPS** : `aphrody-a2a.service` et `aphrody-mcp-http.service`, plus un timer de fast-forward sur main
+  dans le checkout unique. Les sessions tmux `codex-relay-20261009` et `codex-fleet` sont à retirer, et le tunnel
+  Windows doit passer par une tâche planifiée unique. Sur dbfr, retirer les doublons MCP/A2A, `pc-mcp-forward`,
+  `~/target`, `~/.aphrody/target` et `~/shenron-dev`.
+- ⏳ **Restes yolo** : `APHRODY_YOLO_TOOL_HOST` et `yolo-tool-host.mjs` dans les unités a2a et mcp-http,
+  `/srv/aphrody-lab/yolo-*.mjs`, `~/.yolo` du VPS, `install-yolo.*` des releases downloads.
+- ⏳ **Côté client** : purger les noms legacy `yolo mcp` et `kernel mcp` de la doc d'aphrody, migrer
+  `legacy_broker.rs`, ajouter l'entrée m3 dans `Cargo.lock`, faire passer `~/.codex/config.toml` par
+  `mcp-launch.ts`, et réinstaller le binaire `aphrody` depuis origin/main.
+- Preuve de clôture : `rg` des anciens noms vide sur tous les hôtes, un `kill -9` suivi d'un redémarrage
+  automatique, et A2A codex↔claude dans les deux sens.
+
 ### N. Alpine d'abord, Ubuntu 26.04 garanti (🔄)
 
 Décision utilisateur (2026-10-09) : le fork est **pensé d'abord pour la dernière Alpine** (3.24.x, musl) et doit
