@@ -111,6 +111,14 @@ describe("expect()", () => {
     ).rejects.toBe(1);
   });
 
+  test("rejects does not report a sibling rejection awaited by the next statement", async () => {
+    const shared = Promise.reject(new Error("shared"));
+    const first = shared.then(v => v);
+    const second = shared.then(v => v);
+    await expect(first).rejects.toThrow("shared");
+    await expect(second).rejects.toThrow("shared");
+  });
+
   test("resolves", async () => {
     await expect(Promise.resolve(4)).resolves.toBe(4);
     await expect(Promise.resolve(4)).resolves.not.toBe(5);

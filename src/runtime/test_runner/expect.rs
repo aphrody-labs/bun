@@ -471,6 +471,24 @@ impl Expect {
         }
     }
 
+    /// Blocks on `promise`, settling it through a microtask drain first: a full
+    /// event-loop tick reports unhandled rejections, but the awaiting test only
+    /// attaches handlers to sibling promises after the matcher returns (Jest's
+    /// matchers are plain `await`s).
+    fn wait_for_promise_deferring_rejections(
+        global_this: &JSGlobalObject,
+        promise: bun_jsc::AnyPromise,
+    ) -> JsResult<()> {
+        let vm = global_this.bun_vm().as_mut();
+        if promise.status() == js_promise::Status::Pending {
+            vm.event_loop_mut()
+                .drain_microtasks()
+                .map_err(|stopped| stopped.throw(global_this))?;
+        }
+        vm.wait_for_promise(promise)
+            .map_err(|stopped| stopped.throw(global_this))
+    }
+
     /// Processes the async flags (resolves/rejects), waiting for the async value if needed.
     /// If no flags, returns the original value
     /// If either flag is set, waits for the result, and returns either it as a JSValue, or null if the expectation failed (in which case if silent is false, also throws a js exception)
@@ -495,12 +513,7 @@ impl Expect {
                     let vm = global_this.vm();
                     promise.set_handled(vm);
 
-                    // SAFETY: bun_vm() returns the live thread-local VirtualMachine.
-            global_this
-                .bun_vm()
-                .as_mut()
-                .wait_for_promise(promise)
-                .map_err(|stopped| stopped.throw(global_this))?;
+                    Self::wait_for_promise_deferring_rejections(global_this, promise)?;
 
                     let new_value = promise.result(vm);
                     match promise.status() {
@@ -1484,12 +1497,7 @@ impl Expect {
             let vm = global_this.vm();
             promise.set_handled(vm);
 
-            // SAFETY: bun_vm() returns the live thread-local VirtualMachine.
-            global_this
-                .bun_vm()
-                .as_mut()
-                .wait_for_promise(promise)
-                .map_err(|stopped| stopped.throw(global_this))?;
+            Self::wait_for_promise_deferring_rejections(global_this, promise)?;
 
             result = promise.result(vm);
             result.ensure_still_alive();
