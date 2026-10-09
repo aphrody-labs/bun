@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+[package]
+name = "aphrody-rust"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Bun-owned PyO3 adapter for the Aphrody Python SDK"
+
+[lib]
+name = "aphrody_rust"
+crate-type = ["cdylib"]
+
+[dependencies]
+aphrody-rag-core.workspace = true
+pyo3 = { workspace = true, features = ["abi3-py311"] }

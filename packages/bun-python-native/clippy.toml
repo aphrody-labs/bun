@@ -1,0 +1,4 @@
+# This independent, std-based external package does not use Bun engine internals.
+# Keep standard strict Clippy checks without inheriting engine-only substitutions.
+disallowed-methods = []
+disallowed-types = []
