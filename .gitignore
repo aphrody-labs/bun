@@ -42,6 +42,9 @@ Library/Caches
 *.out.refresh.js
 *.pdb
 *.sqlite
+/bun_python.sqlite-wal
+/bun_python.sqlite-shm
+/bun_python.json
 *.swp
 *.tmp
 *.trace
@@ -145,7 +148,8 @@ tmp
 codegen-for-zig-team.tar.gz
 
 # Dependencies
-/vendor
+/vendor/*
+!/vendor/uv/
 
 # Dependencies (before CMake)
 # These can be removed in the far future
