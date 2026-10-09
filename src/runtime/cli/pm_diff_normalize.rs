@@ -40,6 +40,9 @@ bun_core::comptime_string_map! {
         b"mts" => Kind::Js(bun_ast::Loader::Ts),
         b"cts" => Kind::Js(bun_ast::Loader::Ts),
         b"tsx" => Kind::Js(bun_ast::Loader::Tsx),
+        b"pyjs" => Kind::Js(bun_ast::Loader::Js),
+        b"pyts" => Kind::Js(bun_ast::Loader::Ts),
+        b"pytsx" => Kind::Js(bun_ast::Loader::Tsx),
         b"css" => Kind::Css,
         b"json" => Kind::Json,
     };

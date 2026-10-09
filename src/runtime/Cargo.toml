@@ -117,6 +117,8 @@ bun_zstd.workspace = true
 bun_install_jsc.workspace = true
 bun_patch_jsc.workspace = true
 bun_css_jsc.workspace = true
+uv = { path = "../../vendor/uv/crates/uv", default-features = false }
+uv-command-support = { path = "../../vendor/uv/crates/uv-command-support" }
 
 [features]
 default = []

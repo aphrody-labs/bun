@@ -15,6 +15,12 @@ pub enum HardcodedModule {
     BunCosmic,
     #[strum(serialize = "bun:ffi")]
     BunFfi,
+    #[strum(serialize = "bun:graph")]
+    BunGraph,
+    #[strum(serialize = "bun:graphx")]
+    BunGraphx,
+    #[strum(serialize = "bun:python")]
+    BunPython,
     #[strum(serialize = "bun:jsc")]
     BunJsc,
     #[strum(serialize = "bun:linux")]
@@ -230,6 +236,9 @@ bun_core::comptime_string_map! {
         b"bun:app" => HardcodedModule::BunApp,
         b"bun:cosmic" => HardcodedModule::BunCosmic,
         b"bun:ffi" => HardcodedModule::BunFfi,
+        b"bun:graph" => HardcodedModule::BunGraph,
+        b"bun:graphx" => HardcodedModule::BunGraphx,
+        b"bun:python" => HardcodedModule::BunPython,
         b"bun:jsc" => HardcodedModule::BunJsc,
         b"bun:linux" => HardcodedModule::BunLinux,
         b"bun:main" => HardcodedModule::BunMain,
@@ -743,6 +752,63 @@ const BUN_EXTRA_ALIAS_KVS: &[AliasKv] = &[
     entry!("bun:app"),
     entry!("bun:cosmic"),
     entry!("bun:ffi"),
+    entry!("bun:graph"),
+    entry!("bun:graphx"),
+    entry!("bun:python"),
+    (
+        b"buv:python",
+        Alias {
+            path: zstr!("bun:python"),
+            tag: import_record::Tag::Builtin,
+            node_builtin: false,
+            node_only_prefix: false,
+        },
+    ),
+    (
+        b"pyjs:python",
+        Alias {
+            path: zstr!("bun:python"),
+            tag: import_record::Tag::Builtin,
+            node_builtin: false,
+            node_only_prefix: false,
+        },
+    ),
+    (
+        b"buv:graph",
+        Alias {
+            path: zstr!("bun:graph"),
+            tag: import_record::Tag::Builtin,
+            node_builtin: false,
+            node_only_prefix: false,
+        },
+    ),
+    (
+        b"pyjs:graph",
+        Alias {
+            path: zstr!("bun:graph"),
+            tag: import_record::Tag::Builtin,
+            node_builtin: false,
+            node_only_prefix: false,
+        },
+    ),
+    (
+        b"buv:graphx",
+        Alias {
+            path: zstr!("bun:graphx"),
+            tag: import_record::Tag::Builtin,
+            node_builtin: false,
+            node_only_prefix: false,
+        },
+    ),
+    (
+        b"pyjs:graphx",
+        Alias {
+            path: zstr!("bun:graphx"),
+            tag: import_record::Tag::Builtin,
+            node_builtin: false,
+            node_only_prefix: false,
+        },
+    ),
     entry!("bun:jsc"),
     entry!("bun:linux"),
     entry!("bun:main"),

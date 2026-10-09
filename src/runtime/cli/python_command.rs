@@ -157,9 +157,11 @@ fn python_executable(libpython: &Path) -> Result<String, String> {
         ));
     }
 
-    let prefix = if let Some(prefix) = bun_core::getenv_z(bun_core::zstr!("VU_RUNTIME")) {
+    let prefix = if let Some(prefix) = bun_core::getenv_z(bun_core::zstr!("BUV_RUNTIME"))
+        .or_else(|| bun_core::getenv_z(bun_core::zstr!("VU_RUNTIME")))
+    {
         let prefix = std::str::from_utf8(prefix)
-            .map_err(|_| "VU_RUNTIME must be a UTF-8 path".to_owned())?;
+            .map_err(|_| "BUV_RUNTIME must be a UTF-8 path".to_owned())?;
         PathBuf::from(prefix)
     } else {
         #[cfg(unix)]
@@ -173,7 +175,7 @@ fn python_executable(libpython: &Path) -> Result<String, String> {
         }
         #[cfg(not(unix))]
         {
-            return Err("set VU_RUNTIME or BUN_PYTHON_EXECUTABLE to select CPython".to_owned());
+            return Err("set BUV_RUNTIME or BUN_PYTHON_EXECUTABLE to select CPython".to_owned());
         }
     };
     #[cfg(windows)]

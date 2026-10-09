@@ -2374,8 +2374,8 @@ impl RunCommand {
         // unclear why passthrough is an escaped string, it should probably be
         // []const []const u8 and allow its users to escape it.
 
-        let python_executable = cfg.bin_dirs_only
-            && crate::cli::python_command::is_python_executable(target_name);
+        let python_executable =
+            cfg.bin_dirs_only && crate::cli::python_command::is_python_executable(target_name);
         let explicit_path = target_name.starts_with(b".") || paths::is_absolute(target_name);
         let python_file = crate::cli::python_command::is_python_source(target_name)
             && (cfg.allow_fast_run_for_extensions || explicit_path);
@@ -2385,10 +2385,8 @@ impl RunCommand {
             } else {
                 positionals
             };
-            let python_args = crate::cli::python_command::script_arguments(
-                python_positionals,
-                &ctx.passthrough,
-            );
+            let python_args =
+                crate::cli::python_command::script_arguments(python_positionals, &ctx.passthrough);
             if crate::cli::python_command::run_if_configured(&python_args) {
                 return Ok(true);
             }
@@ -2636,6 +2634,23 @@ impl RunCommand {
         match resolution {
             Ok(mut resolved) => {
                 let path = resolved.path().expect("resolved primary path");
+                if crate::cli::python_command::is_python_source(path.text) {
+                    let mut python_args = vec![path.text];
+                    let skip = if ctx
+                        .positionals
+                        .first()
+                        .is_some_and(|arg| arg.as_ref() == b"run")
+                    {
+                        2
+                    } else {
+                        1
+                    };
+                    python_args.extend(ctx.positionals.iter().skip(skip).map(Box::as_ref));
+                    python_args.extend(ctx.passthrough.iter().map(Box::as_ref));
+                    if crate::cli::python_command::run_if_configured(&python_args) {
+                        return Ok(true);
+                    }
+                }
                 let ext = path.name().ext;
                 let loader: Loader = this_transpiler
                     .options

@@ -93,6 +93,9 @@ pub trait StandaloneModuleGraph: Send + Sync {
                 b"mts",
                 b"cjs",
                 b"cts",
+                b"pyjs",
+                b"pyts",
+                b"pytsx",
             ]
             .iter()
             .any(|source| extension[1..].eq_ignore_ascii_case(source));

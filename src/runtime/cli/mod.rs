@@ -310,10 +310,12 @@ pub(crate) mod test {
 #[path = "Arguments.rs"]
 pub(crate) mod arguments;
 pub(crate) use arguments as Arguments;
-#[path = "run_command.rs"]
-pub(crate) mod run_command;
 #[path = "python_command.rs"]
 pub(crate) mod python_command;
+#[path = "run_command.rs"]
+pub(crate) mod run_command;
+#[path = "uv_command.rs"]
+pub(crate) mod uv_command;
 
 // ─── per-subcommand bodies ───────────────────────────────────────────────────
 #[path = "build_command.rs"]
@@ -324,18 +326,18 @@ pub(crate) mod bunsh;
 pub(crate) mod bunx_command;
 #[path = "create_command.rs"]
 pub(crate) mod create_command;
+#[path = "devtools_command.rs"]
+pub(crate) mod devtools_command;
 #[path = "exec_command.rs"]
 pub(crate) mod exec_command;
 #[path = "fuzzilli_command.rs"]
 pub(crate) mod fuzzilli_command;
-#[path = "toolchain_command.rs"]
-pub(crate) mod toolchain_command;
-#[path = "devtools_command.rs"]
-pub(crate) mod devtools_command;
 #[path = "install_command.rs"]
 pub(crate) mod install_command;
 #[path = "repl_command.rs"]
 pub(crate) mod repl_command;
+#[path = "toolchain_command.rs"]
+pub(crate) mod toolchain_command;
 #[path = "upgrade_command.rs"]
 pub(crate) mod upgrade_command;
 // MOVE_UP: `--analyze` branch + `Cli.log_` access of
@@ -678,6 +680,7 @@ pub(crate) mod help_command {
   <b><blue>publish<r>                        Publish a package to the npm registry
   <b><blue>patch <d>\\<pkg\\><r>                    Prepare a package for patching
   <b><blue>pm <d>\\<subcommand\\><r>                Additional package management utilities
+  <b><blue>uv <d>\\<command\\><r>                   Manage Python packages and projects with UV
   <b><blue>info<r>      <d>{:<16}<r>     Display package metadata from the registry
   <b><blue>why<r>       <d>{:<16}<r>     Explain why a package is installed
 
@@ -853,7 +856,19 @@ pub(crate) mod command {
             .rsplit(|byte| *byte == b'/' || *byte == b'\\')
             .next()
             .unwrap_or(argv0);
-        matches!(&name[..], b"bun" | b"bun.exe" | b"bunx" | b"bunx.exe" | b"node" | b"node.exe")
+        matches!(
+            &name[..],
+            b"bun"
+                | b"bun.exe"
+                | b"buv"
+                | b"buv.exe"
+                | b"pyjs"
+                | b"pyjs.exe"
+                | b"bunx"
+                | b"bunx.exe"
+                | b"node"
+                | b"node.exe"
+        )
     }
 
     fn is_node(argv0: &[u8]) -> bool {
@@ -1243,14 +1258,38 @@ pub(crate) mod command {
             }
         }
 
-        if super::bunsh::is_bunsh(bun::argv().get(0).map(bun_core::ZStr::as_bytes).unwrap_or(b"")) {
+        if super::bunsh::is_bunsh(
+            bun::argv()
+                .get(0)
+                .map(bun_core::ZStr::as_bytes)
+                .unwrap_or(b""),
+        ) {
             return super::bunsh::exec(write_context_no_parse(log));
+        }
+
+        let argv = bun::argv();
+        let uv_invocation = super::uv_command::Invocation::from_argv(
+            argv.get(0).map(bun_core::ZStr::as_bytes).unwrap_or(b""),
+            argv.get(1).map(bun_core::ZStr::as_bytes),
+        )
+        .or_else(|| {
+            (argv.get(1).is_some_and(|arg| arg.as_bytes() == b"uv")
+                && bun_core::env_var::feature_flag::BUN_BE_BUN::get().unwrap_or(false))
+            .then_some(super::uv_command::Invocation::Bun)
+        });
+        if let Some(invocation) = uv_invocation {
+            super::uv_command::exec(invocation);
         }
 
         // bun build --compile entry point. A compiled executable linked as `bun` is the engine itself (one `yolo`
         // file with the aliases `bun` and `vu`, selected by argv0); `BUN_BE_BUN=1` stays the explicit override.
         if !bun_core::env_var::feature_flag::BUN_BE_BUN::get().unwrap_or(false)
-            && !is_plain_bun(bun::argv().get(0).map(bun_core::ZStr::as_bytes).unwrap_or(b""))
+            && !is_plain_bun(
+                bun::argv()
+                    .get(0)
+                    .map(bun_core::ZStr::as_bytes)
+                    .unwrap_or(b""),
+            )
         {
             if let Some(graph) = bun_standalone_graph::Graph::from_executable()? {
                 // Never taken for a plain `bun` binary; ~2 KB of argv-splice
@@ -1259,9 +1298,12 @@ pub(crate) mod command {
             }
             // A coreutils applet (`head`, `sort`, ...) selected by argv0; never `bun`/`bunx`/`node`/`bunsh`.
             #[cfg(feature = "coreutils")]
-            if let Some(applet) =
-                bun_coreutils::applet_name(bun::argv().get(0).map(bun_core::ZStr::as_bytes).unwrap_or(b""))
-            {
+            if let Some(applet) = bun_coreutils::applet_name(
+                bun::argv()
+                    .get(0)
+                    .map(bun_core::ZStr::as_bytes)
+                    .unwrap_or(b""),
+            ) {
                 let argv = bun::argv();
                 let args: Vec<&[u8]> = (0..argv.len())
                     .filter_map(|i| argv.get(i).map(bun_core::ZStr::as_bytes))
