@@ -45,6 +45,7 @@ const FFIType = {
   uint64_t: 8,
   uint8_t: 2,
   usize: 8,
+  size_t: 8,
   "void*": 12,
   ptr: 12,
   pointer: 12,
@@ -193,16 +194,295 @@ function normalizePath(path: string | URL | Bun.BunFile | undefined) {
   return path;
 }
 
+// Structs/unions by value, `long double` and variadic prototypes cannot be
+// called by the engine's FFI trampolines. Those symbols are opened as plain
+// addresses and called through a TinyCC shim (`cc({ code })`) compiled with
+// the exact C prototype; aggregates cross the JS boundary as byte buffers.
+
+const C_SCALAR_TYPES = {
+  0: "signed char",
+  1: "signed char",
+  2: "unsigned char",
+  3: "short",
+  4: "unsigned short",
+  5: "int",
+  6: "unsigned int",
+  7: "long long",
+  8: "unsigned long long",
+  9: "double",
+  10: "float",
+  11: "_Bool",
+  12: "void*",
+  13: "void",
+  14: "char*",
+  15: "long long",
+  16: "unsigned long long",
+  17: "void*",
+  20: "void*",
+};
+
+const C_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+function isLongDouble(type) {
+  return type === "long double" || type === "f80";
+}
+
+function isAggregate(type) {
+  return $isObject(type) && (type.struct !== undefined || type.union !== undefined);
+}
+
+function needsShim(desc) {
+  if (!$isObject(desc)) return false;
+  if (desc.fixedArgs !== undefined) return true;
+  const ret = desc.returns;
+  if (isAggregate(ret) || isLongDouble(ret)) return true;
+  const args = desc.args;
+  if (!$isJSArray(args)) return false;
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (isAggregate(arg) || isLongDouble(arg) || ($isObject(arg) && arg.array !== undefined)) return true;
+  }
+  return false;
+}
+
+function scalarCType(type, where) {
+  if (isLongDouble(type)) return "long double";
+  const id = typeof type === "number" ? type : FFIType[type];
+  const c = id === undefined ? undefined : C_SCALAR_TYPES[id];
+  if (c === undefined || (where === "field" && c === "void")) {
+    throw new TypeError(`Unsupported FFI type in ${where}: ${String(type)}`);
+  }
+  return c;
+}
+
+class ShimBuilder {
+  declarations: string[] = [];
+  layoutFns: string[] = [];
+  aggregates = new Map();
+
+  aggregate(type) {
+    const cached = this.aggregates.get(type);
+    if (cached) return cached.name;
+    const isUnion = type.union !== undefined;
+    const fields = isUnion ? type.union : type.struct;
+    if (!$isObject(fields)) throw new TypeError("FFI struct/union fields must be an object of { name: type }");
+    const fieldNames = Object.keys(fields);
+    if (fieldNames.length === 0) throw new TypeError("FFI struct/union must have at least one field");
+    const lines: string[] = [];
+    for (const field of fieldNames) {
+      if (!C_IDENTIFIER.test(field)) throw new TypeError(`Invalid FFI struct field name: ${field}`);
+      lines.push(`  ${this.fieldDecl(fields[field], field)};`);
+    }
+    // Nested aggregates are registered while visiting the fields, so the name is taken afterwards.
+    const name = `bun_ffi_t${this.aggregates.size}`;
+    this.declarations.push(`typedef ${isUnion ? "union" : "struct"} {\n${lines.join("\n")}\n} ${name};`);
+    const offsets = fieldNames.map((f, i) => `  out[${i + 2}] = (unsigned long long)&((${name}*)0)->${f};`);
+    this.layoutFns.push(
+      `void ${name}_layout(unsigned long long* out) {\n  out[0] = sizeof(${name});\n  out[1] = _Alignof(${name});\n${offsets.join("\n")}\n}`,
+    );
+    this.aggregates.set(type, { name, fields: fieldNames });
+    return name;
+  }
+
+  fieldDecl(type, field) {
+    if ($isObject(type) && type.array !== undefined) {
+      const length = type.length;
+      if (typeof length !== "number" || !(length > 0) || Math.trunc(length) !== length) {
+        throw new TypeError("FFI array fields need a positive integer length");
+      }
+      return `${this.cType(type.array, "field")} ${field}[${length}]`;
+    }
+    return `${this.cType(type, "field")} ${field}`;
+  }
+
+  cType(type, where) {
+    if (isAggregate(type)) return this.aggregate(type);
+    if ($isObject(type) && type.array !== undefined) {
+      throw new TypeError(`FFI arrays are only supported as struct fields (${where})`);
+    }
+    return scalarCType(type, where);
+  }
+}
+
+function bindShimSymbols(options, nativeResult) {
+  const builder = new ShimBuilder();
+  const code: string[] = [];
+  const shimSymbols = {};
+  const plans = {};
+
+  for (const name in options) {
+    const desc = options[name];
+    if (!needsShim(desc)) continue;
+    if (!C_IDENTIFIER.test(name)) throw new TypeError(`Invalid FFI symbol name: ${name}`);
+    const args = desc.args ?? [];
+    const ret = desc.returns ?? "void";
+    const fixed = desc.fixedArgs;
+    if (
+      fixed !== undefined &&
+      (typeof fixed !== "number" || fixed < 0 || fixed > args.length || Math.trunc(fixed) !== fixed)
+    ) {
+      throw new TypeError(`fixedArgs for ${name} must be an integer between 0 and args.length`);
+    }
+
+    const retC = builder.cType(ret, "return type");
+    const retAggregate = isAggregate(ret);
+    const params: string[] = [];
+    const protoParams: string[] = [];
+    const callArgs: string[] = [];
+    const shimArgs: unknown[] = [];
+    const argAggregates: (string | null)[] = [];
+    if (retAggregate) {
+      params.push("void* bun_ret");
+      shimArgs.push("ptr");
+    }
+    for (let i = 0; i < args.length; i++) {
+      const type = args[i];
+      const c = builder.cType(type, `argument ${i}`);
+      if (c === "void") throw new TypeError(`void is not a valid FFI argument type (${name})`);
+      if (isAggregate(type)) {
+        params.push(`${c}* a${i}`);
+        callArgs.push(`*a${i}`);
+        shimArgs.push("ptr");
+        argAggregates.push(c);
+      } else if (isLongDouble(type)) {
+        params.push(`double a${i}`);
+        callArgs.push(`(long double)a${i}`);
+        shimArgs.push("f64");
+        argAggregates.push(null);
+      } else {
+        params.push(`${c} a${i}`);
+        callArgs.push(`a${i}`);
+        shimArgs.push(type);
+        argAggregates.push(null);
+      }
+      if (fixed === undefined || i < fixed) protoParams.push(c);
+    }
+    if (fixed !== undefined) protoParams.push("...");
+    if (protoParams.length === 0) protoParams.push("void");
+
+    const target = nativeResult.symbols[name].ptr;
+    const address = (typeof target === "bigint" ? target : BigInt(Math.trunc(target))).toString(16);
+    const call = `((${retC} (*)(${protoParams.join(", ")}))(void*)0x${address}ULL)(${callArgs.join(", ")})`;
+    let body;
+    let shimRetC;
+    let shimReturns;
+    if (retAggregate) {
+      body = `*(${retC}*)bun_ret = ${call};`;
+      shimRetC = "void";
+      shimReturns = "void";
+    } else if (retC === "void") {
+      body = `${call};`;
+      shimRetC = "void";
+      shimReturns = "void";
+    } else if (isLongDouble(ret)) {
+      body = `return (double)${call};`;
+      shimRetC = "double";
+      shimReturns = "f64";
+    } else {
+      body = `return ${call};`;
+      shimRetC = retC;
+      shimReturns = ret;
+    }
+    code.push(`${shimRetC} bun_shim_${name}(${params.length ? params.join(", ") : "void"}) {\n  ${body}\n}`);
+    shimSymbols[`bun_shim_${name}`] = { args: shimArgs, returns: shimReturns };
+    plans[name] = { argAggregates, ret: retAggregate ? retC : null };
+  }
+
+  for (const { name } of builder.aggregates.values()) {
+    shimSymbols[`${name}_layout`] = { args: ["ptr"], returns: "void" };
+  }
+
+  const source = [...builder.declarations, ...builder.layoutFns, ...code].join("\n\n") + "\n";
+  const shim = cc({ code: source, symbols: shimSymbols });
+
+  const layouts = new Map();
+  for (const { name, fields } of builder.aggregates.values()) {
+    const out = new BigUint64Array(fields.length + 2);
+    shim.symbols[`${name}_layout`](out);
+    const offsets = {};
+    for (let i = 0; i < fields.length; i++) offsets[fields[i]] = Number(out[i + 2]);
+    layouts.set(name, { size: Number(out[0]), align: Number(out[1]), offsets });
+  }
+
+  for (const name in plans) {
+    const plan = plans[name];
+    const fn = shim.symbols[`bun_shim_${name}`];
+    const argLayouts = plan.argAggregates.map(n => (n === null ? null : layouts.get(n)));
+    const retLayout = plan.ret === null ? null : layouts.get(plan.ret);
+    const checkArgs = args => {
+      for (let i = 0; i < argLayouts.length; i++) {
+        const layout = argLayouts[i];
+        if (layout === null) continue;
+        const value = args[i];
+        if (!ArrayBuffer.isView(value) && !(value instanceof ArrayBuffer)) {
+          throw new TypeError(
+            `${name}: argument ${i} must be a TypedArray, DataView or ArrayBuffer holding the struct`,
+          );
+        }
+        if (value.byteLength < layout.size) {
+          throw new RangeError(`${name}: argument ${i} needs ${layout.size} bytes, got ${value.byteLength}`);
+        }
+      }
+    };
+    let wrapped;
+    if (retLayout !== null) {
+      wrapped = function (...args) {
+        checkArgs(args);
+        const out = new Uint8Array(retLayout.size);
+        fn(out, ...args);
+        return out;
+      };
+    } else {
+      wrapped = function (...args) {
+        checkArgs(args);
+        return fn(...args);
+      };
+    }
+    Object.defineProperty(wrapped, "name", { value: name });
+    wrapped.native = fn;
+    wrapped.ptr = nativeResult.symbols[name].ptr;
+    wrapped.layouts = { args: argLayouts, returns: retLayout };
+    nativeResult.symbols[name] = wrapped;
+  }
+
+  const closeNative = nativeResult.close;
+  nativeResult.close = function () {
+    shim.close();
+    return closeNative();
+  };
+}
+
 function dlopen(path, options, loadOptions?) {
   path = normalizePath(path);
 
+  let nativeOptions = options;
+  let hasShims = false;
+  if ($isObject(options)) {
+    for (const name in options) {
+      if (needsShim(options[name])) {
+        if (!hasShims) nativeOptions = { ...options };
+        hasShims = true;
+        nativeOptions[name] = { args: [], returns: "void" };
+      }
+    }
+  }
+
   // `{ global: true }` opens with RTLD_NOW | RTLD_GLOBAL (one shared libpython for Bun and PyO3 extensions).
-  const result = nativeDLOpen(path, options, !!(loadOptions && loadOptions.global));
+  const result = nativeDLOpen(path, nativeOptions, !!(loadOptions && loadOptions.global));
   if (Error.isError(result)) throw result;
 
   // Bind it because it's a breaking change to not do so
   // Previously, it didn't need to be bound
   result.close = result.close.bind(result);
+
+  if (hasShims) {
+    try {
+      bindShimSymbols(options, result);
+    } catch (e) {
+      result.close();
+      throw e;
+    }
+  }
 
   return result;
 }
@@ -214,16 +494,20 @@ function cc(options) {
 
   let path = options?.source;
   if (!path) {
-    throw new Error("Expected source to be a string to a file path");
-  }
-  if ($isJSArray(path)) {
-    for (let i = 0; i < path.length; i++) {
-      path[i] = normalizePath(path[i]);
+    if (typeof options?.code !== "string") {
+      throw new Error("Expected source to be a string to a file path, or code to be a string of C source");
     }
+    path = "<inline>";
   } else {
-    path = normalizePath(path);
+    if ($isJSArray(path)) {
+      for (let i = 0; i < path.length; i++) {
+        path[i] = normalizePath(path[i]);
+      }
+    } else {
+      path = normalizePath(path);
+    }
+    options.source = path;
   }
-  options.source = path;
 
   const result = ccFn(options);
   if (Error.isError(result)) throw result;
@@ -240,7 +524,7 @@ function cc(options) {
         //    "/usr/lib/sqlite3.so"
         // we want
         //    "sqlite3_get_version() - sqlit3.so"
-        path.includes("/") ? `${key} (${path.split("/").pop()})` : `${key} (${path})`,
+        typeof path === "string" && path.includes("/") ? `${key} (${path.split("/").pop()})` : `${key} (${path})`,
       );
     } else {
       // consistentcy

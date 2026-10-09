@@ -271,6 +271,8 @@ impl Default for CompileC {
 enum Source {
     File(ZBox),
     Files(Vec<ZBox>),
+    /// `code`: C source passed inline instead of as a path.
+    Code(ZBox),
 }
 
 impl Source {
@@ -278,6 +280,7 @@ impl Source {
         match self {
             Source::File(f) => f,
             Source::Files(files) => &files[0],
+            Source::Code(_) => zstr!("<inline>"),
         }
     }
 
@@ -302,6 +305,13 @@ impl Source {
                         .map_err(|_| crate::Error::CompilationError)?;
                     *current_file_for_errors = ZBox::from_bytes(b"");
                 }
+            }
+            Source::Code(code) => {
+                *current_file_for_errors = ZBox::from_bytes(b"<inline>");
+                state
+                    .compile_string(code)
+                    .map_err(|_| crate::Error::CompilationError)?;
+                *current_file_for_errors = ZBox::from_bytes(b"");
             }
         }
         Ok(())
@@ -585,6 +595,13 @@ impl CompileC {
                     let _ = CACHED_DEFAULT_SYSTEM_LIBRARY_DIR
                         .set(bun_core::ZBox::from_vec_with_nul(b"/usr/lib64".to_vec()));
                 }
+            }
+
+            // Alpine (musl) and other non-multiarch distros keep everything in
+            // /usr/lib, which TinyCC does not search on its own.
+            if CACHED_DEFAULT_SYSTEM_LIBRARY_DIR.get().is_none() && dir_exists(b"/usr/lib") {
+                let _ = CACHED_DEFAULT_SYSTEM_LIBRARY_DIR
+                    .set(bun_core::ZBox::from_vec_with_nul(b"/usr/lib".to_vec()));
             }
         }
     }
@@ -889,6 +906,79 @@ impl CompileC {
     }
 }
 
+/// One TinyCC diagnostic, `<file>:<line>: <severity>: <message>`.
+struct Diagnostic<'a> {
+    file: &'a [u8],
+    line: u32,
+    severity: &'a [u8],
+    message: &'a [u8],
+}
+
+fn parse_diagnostic(text: &[u8]) -> Option<Diagnostic<'_>> {
+    for severity in [&b"error"[..], &b"warning"[..]] {
+        let mut marker = Vec::with_capacity(severity.len() + 4);
+        marker.extend_from_slice(b": ");
+        marker.extend_from_slice(severity);
+        marker.extend_from_slice(b": ");
+        let Some(at) = bun_core::strings::index_of(text, &marker) else {
+            continue;
+        };
+        let location = &text[..at];
+        let colon = bun_core::strings::last_index_of_char(location, b':')?;
+        let line = core::str::from_utf8(&location[colon + 1..])
+            .ok()?
+            .trim()
+            .parse::<u32>()
+            .ok()?;
+        let file = &location[..colon];
+        return Some(Diagnostic {
+            // tcc_compile_string() names its buffer "<string>".
+            file: if file == b"<string>" {
+                &b"<inline>"[..]
+            } else {
+                file
+            },
+            line,
+            severity,
+            message: &text[at + marker.len()..],
+        });
+    }
+    None
+}
+
+/// `error.errors` for a failed `cc()`: `{ file, line, severity, message }`
+/// per TinyCC diagnostic, or `{ message }` when it has no location.
+fn compile_diagnostics_to_js(
+    global: &JSGlobalObject,
+    deferred_errors: &[Box<[u8]>],
+) -> JsResult<JSValue> {
+    let array = JSValue::create_empty_array(global, deferred_errors.len())?;
+    for (i, text) in deferred_errors.iter().enumerate() {
+        let entry = JSValue::create_empty_object(global, 4);
+        match parse_diagnostic(text) {
+            Some(d) => {
+                entry.put(global, "file", bun_string_jsc::create_utf8_for_js(global, d.file)?);
+                entry.put(global, "line", JSValue::js_number(f64::from(d.line)));
+                entry.put(
+                    global,
+                    "severity",
+                    bun_string_jsc::create_utf8_for_js(global, d.severity)?,
+                );
+                entry.put(
+                    global,
+                    "message",
+                    bun_string_jsc::create_utf8_for_js(global, d.message)?,
+                );
+            }
+            None => {
+                entry.put(global, "message", bun_string_jsc::create_utf8_for_js(global, text)?);
+            }
+        }
+        array.put_index(global, u32::try_from(i).expect("int cast"), entry)?;
+    }
+    Ok(array)
+}
+
 // ─── SymbolsMap ─────────────────────────────────────────────────────────────
 
 #[derive(Default)]
@@ -1079,9 +1169,15 @@ impl FFI {
                     ));
                 }
 
-                let str = flags_value.to_bun_string(global_this)?;
-                if !str.is_empty() {
-                    compile_c.flags = str.to_owned_slice_z();
+                // Appended to the defaults, like the array form.
+                let slice = flags_value.to_utf8(global_this)?;
+                if !slice.slice().is_empty() {
+                    let mut flags: Vec<u8> = Vec::new();
+                    flags.extend_from_slice(CompileC::DEFAULT_TCC_OPTIONS.as_bytes());
+                    flags.push(b' ');
+                    flags.extend_from_slice(slice.slice());
+                    flags.push(0);
+                    compile_c.flags = ZBox::from_vec_with_nul(flags);
                 }
             }
         }
@@ -1145,6 +1241,18 @@ impl FFI {
                 let source_path = source_value.to_bun_string(global_this)?.to_owned_slice_z();
                 compile_c.source = Source::File(source_path);
             }
+        } else if let Some(code_value) =
+            object.get_own(global_this, &bun_core::String::borrow_utf8(b"code"))?
+        {
+            if !code_value.is_string() {
+                return Err(global_this.throw_invalid_argument_type_value(
+                    b"code",
+                    b"string",
+                    code_value,
+                ));
+            }
+            compile_c.source =
+                Source::Code(code_value.to_bun_string(global_this)?.to_owned_slice_z());
         }
 
         // Now we compile the code with tinycc.
@@ -1169,7 +1277,10 @@ impl FFI {
                         let _ = writeln!(&mut combined, "{}", BStr::new(deferred_error));
                     }
 
-                    return Err(global_this.throw(format_args!("{}", BStr::new(&combined))));
+                    let error = global_this.create_error_instance(format_args!("{}", BStr::new(&combined)));
+                    let diagnostics = compile_diagnostics_to_js(global_this, &compile_c.deferred_errors)?;
+                    error.put(global_this, "errors", diagnostics);
+                    return Err(global_this.throw_value(error));
                 }
                 crate::Error::JSError => return Err(JsError::Thrown),
                 crate::Error::Alloc(_) => return Err(JsError::OutOfMemory),
@@ -2103,49 +2214,40 @@ impl Function {
               ZIG_REPR_TYPE JSFunctionCall(void* JS_GLOBAL_OBJECT, void* callFrame) {\n",
         )?;
 
+        // Every argument is validated before the target is called: a value of
+        // the wrong JS type (or a missing one) throws a TypeError instead of
+        // being reinterpreted as raw bits.
+        if !self.arg_types.is_empty() {
+            writer.write_all(
+                b"  LOAD_ARGUMENTS_FROM_CALL_FRAME;\n  LOAD_ARGUMENT_COUNT_FROM_CALL_FRAME;\n",
+            )?;
+            for (i, arg) in self.arg_types.iter().enumerate() {
+                if *arg == ABIType::NapiEnv {
+                    writeln!(
+                        writer,
+                        "  napi_env arg{i} = (napi_env)&Bun__thisFFIModuleNapiEnv;"
+                    )?;
+                    continue;
+                }
+                writeln!(writer, "  EncodedJSValue arg{i} = LOAD_ARGUMENT({i});")?;
+                match arg_check_kind(*arg) {
+                    ArgCheck::None => {}
+                    ArgCheck::Number(kind) => writeln!(
+                        writer,
+                        "  if (!JSVALUE_CHECK_NUMBER(JS_GLOBAL_OBJECT, arg{i}, {i}, {kind})) return 0;"
+                    )?,
+                    ArgCheck::Pointer(kind) => writeln!(
+                        writer,
+                        "  void* parg{i};\n  if (!JSVALUE_TO_PTR_CHECKED(JS_GLOBAL_OBJECT, arg{i}, {i}, {kind}, &parg{i})) return 0;"
+                    )?,
+                }
+            }
+        }
+
         if self.needs_handle_scope() {
             writer.write_all(
                 b"  void* handleScope = NapiHandleScope__open(&Bun__thisFFIModuleNapiEnv, false);\n",
             )?;
-        }
-
-        if !self.arg_types.is_empty() {
-            writer.write_all(b"  LOAD_ARGUMENTS_FROM_CALL_FRAME;\n")?;
-            for (i, arg) in self.arg_types.iter().enumerate() {
-                if *arg == ABIType::NapiEnv {
-                    write!(
-                        writer,
-                        "  napi_env arg{} = (napi_env)&Bun__thisFFIModuleNapiEnv;\n  argsPtr++;\n",
-                        i
-                    )?;
-                } else if *arg == ABIType::NapiValue {
-                    writeln!(
-                        writer,
-                        "  EncodedJSValue arg{} = {{ .asInt64 = *argsPtr++ }};",
-                        i
-                    )?;
-                } else if arg.needs_a_cast_in_c() {
-                    if i < self.arg_types.len() - 1 {
-                        writeln!(
-                            writer,
-                            "  EncodedJSValue arg{} = {{ .asInt64 = *argsPtr++ }};",
-                            i
-                        )?;
-                    } else {
-                        write!(
-                            writer,
-                            "  EncodedJSValue arg{};\n  arg{}.asInt64 = *argsPtr;\n",
-                            i, i
-                        )?;
-                    }
-                } else {
-                    if i < self.arg_types.len() - 1 {
-                        writeln!(writer, "  int64_t arg{} = *argsPtr++;", i)?;
-                    } else {
-                        writeln!(writer, "  int64_t arg{} = *argsPtr;", i)?;
-                    }
-                }
-            }
         }
 
         let mut arg_buf = [0u8; 512];
@@ -2167,10 +2269,10 @@ impl Function {
 
             let length_buf = bun_core::fmt::print_int(&mut arg_buf[3..], i);
             let arg_name = &arg_buf[0..3 + length_buf];
-            if arg.needs_a_cast_in_c() {
-                write!(writer, "{}", arg.to_c(arg_name))?;
-            } else {
-                writer.write_all(arg_name)?;
+            match arg_check_kind(*arg) {
+                ArgCheck::Pointer(_) => write!(writer, "parg{i}")?,
+                _ if *arg == ABIType::NapiEnv => writer.write_all(arg_name)?,
+                _ => write!(writer, "{}", arg.to_c(arg_name))?,
             }
         }
         writer.write_all(b");\n")?;
@@ -2259,6 +2361,114 @@ impl Default for Compiled {
 // ─── ABIType ────────────────────────────────────────────────────────────────
 use super::abi_type::ABIType;
 
+// Mirrors FFI_ARG_KIND_* in FFI.h.
+const FFI_ARG_KIND_NUMBER: i32 = 0;
+const FFI_ARG_KIND_INT64: i32 = 1;
+const FFI_ARG_KIND_PTR: i32 = 2;
+const FFI_ARG_KIND_FUNCTION: i32 = 3;
+const FFI_ARG_KIND_BUFFER: i32 = 4;
+
+enum ArgCheck {
+    None,
+    Number(i32),
+    Pointer(i32),
+}
+
+fn arg_check_kind(arg: ABIType) -> ArgCheck {
+    match arg {
+        ABIType::Char
+        | ABIType::Int8T
+        | ABIType::Uint8T
+        | ABIType::Int16T
+        | ABIType::Uint16T
+        | ABIType::Int32T
+        | ABIType::Uint32T
+        | ABIType::Double
+        | ABIType::Float => ArgCheck::Number(FFI_ARG_KIND_NUMBER),
+        ABIType::Int64T
+        | ABIType::Uint64T
+        | ABIType::I64Fast
+        | ABIType::U64Fast
+        | ABIType::BufferLength => ArgCheck::Number(FFI_ARG_KIND_INT64),
+        ABIType::Ptr | ABIType::CString => ArgCheck::Pointer(FFI_ARG_KIND_PTR),
+        ABIType::Function => ArgCheck::Pointer(FFI_ARG_KIND_FUNCTION),
+        ABIType::Buffer => ArgCheck::Pointer(FFI_ARG_KIND_BUFFER),
+        ABIType::Bool | ABIType::Void | ABIType::NapiEnv | ABIType::NapiValue => ArgCheck::None,
+    }
+}
+
+fn throw_ffi_argument_type(global: &JSGlobalObject, value: JSValue, index: i32, kind: i32) {
+    let expected: &[u8] = match kind {
+        FFI_ARG_KIND_INT64 => b"number or bigint",
+        FFI_ARG_KIND_PTR => b"number, bigint, TypedArray, ArrayBuffer, DataView or null",
+        FFI_ARG_KIND_FUNCTION => b"JSCallback, number, bigint or null",
+        FFI_ARG_KIND_BUFFER => b"TypedArray, ArrayBuffer or DataView",
+        _ => b"number",
+    };
+    let mut name = Vec::new();
+    let _ = write!(&mut name, "arguments[{index}]");
+    let _ = global.throw_invalid_argument_type_value(name, expected, value);
+}
+
+/// `JSVALUE_ARGUMENT_SLOW` in FFI.h: the value failed the inline number check.
+extern "C" fn jsvalue_argument_slow(
+    global: *mut JSGlobalObject,
+    value: JSValue,
+    index: i32,
+    kind: i32,
+) -> bool {
+    // SAFETY: TCC trampolines pass the live global object they were called with.
+    let global = unsafe { &*global };
+    if kind == FFI_ARG_KIND_INT64 && value.is_big_int() {
+        return true;
+    }
+    throw_ffi_argument_type(global, value, index, kind);
+    false
+}
+
+/// `JSVALUE_TO_PTR_SLOW` in FFI.h: anything that is not null, a typed array
+/// or a number.
+extern "C" fn jsvalue_to_ptr_slow(
+    global: *mut JSGlobalObject,
+    value: JSValue,
+    index: i32,
+    kind: i32,
+    out: *mut *mut c_void,
+) -> bool {
+    // SAFETY: TCC trampolines pass the live global object they were called with
+    // and a pointer to a local `void*`.
+    let (global, out) = unsafe { (&*global, &mut *out) };
+    if kind != FFI_ARG_KIND_BUFFER {
+        if value.is_big_int() {
+            *out = value.to_uint64_no_truncate() as usize as *mut c_void;
+            return true;
+        }
+        // `CString` and `JSCallback` carry their address in `.ptr`.
+        if value.is_object() && value.as_array_buffer(global).is_none() {
+            match value.get(global, "ptr") {
+                Ok(Some(p)) if p.is_number() => {
+                    *out = p.as_number() as usize as *mut c_void;
+                    return true;
+                }
+                Ok(Some(p)) if p.is_big_int() => {
+                    *out = p.to_uint64_no_truncate() as usize as *mut c_void;
+                    return true;
+                }
+                Ok(_) => {}
+                Err(_) => return false,
+            }
+        }
+    }
+    if value.is_object() {
+        if let Some(buffer) = value.as_array_buffer(global) {
+            *out = buffer.ptr.cast::<c_void>();
+            return true;
+        }
+    }
+    throw_ffi_argument_type(global, value, index, kind);
+    false
+}
+
 // ─── CompilerRT ─────────────────────────────────────────────────────────────
 
 struct CompilerRT;
@@ -2277,6 +2487,8 @@ impl CompilerRtSources {
         ("stdalign.h", include_bytes!("./ffi-stdalign.h")),
         ("tgmath.h", include_bytes!("./ffi-tgmath.h")),
         ("stddef.h", include_bytes!("./ffi-stddef.h")),
+        ("stdatomic.h", include_bytes!("./ffi-stdatomic.h")),
+        ("float.h", include_bytes!("./ffi-float.h")),
         ("varargs.h", b"// empty"),
     ];
 
@@ -2574,6 +2786,186 @@ impl CompilerRT {
                 WORKAROUND.uint64_to_jsvalue as *const c_void,
             )
             .expect("unreachable");
+        state
+            .add_symbol(
+                zstr!("JSVALUE_ARGUMENT_SLOW"),
+                jsvalue_argument_slow as *const c_void,
+            )
+            .expect("unreachable");
+        state
+            .add_symbol(
+                zstr!("JSVALUE_TO_PTR_SLOW"),
+                jsvalue_to_ptr_slow as *const c_void,
+            )
+            .expect("unreachable");
+        atomics::inject(state);
+    }
+}
+
+/// The GCC libatomic ABI that TinyCC lowers `__atomic_*` builtins (and so
+/// `<stdatomic.h>`) to. TinyCC ships these in its own runtime library, which
+/// Bun replaces with `libtcc1.c`; every operation here is sequentially
+/// consistent regardless of the requested memory order.
+mod atomics {
+    use super::*;
+    use core::sync::atomic::{
+        AtomicBool, AtomicU8, AtomicU16, AtomicU32, AtomicU64, Ordering::SeqCst,
+    };
+
+    macro_rules! atomic_helpers {
+        ($mod_name:ident, $t:ty, $atomic:ty) => {
+            pub(super) mod $mod_name {
+                use super::*;
+
+                #[inline(always)]
+                fn cell<'a>(p: *mut c_void) -> &'a $atomic {
+                    // SAFETY: TinyCC only emits these calls for a pointer to a
+                    // naturally aligned object of exactly this size.
+                    unsafe { <$atomic>::from_ptr(p.cast::<$t>()) }
+                }
+
+                pub(super) extern "C" fn store(p: *mut c_void, v: $t, _order: c_int) {
+                    cell(p).store(v, SeqCst)
+                }
+                pub(super) extern "C" fn load(p: *mut c_void, _order: c_int) -> $t {
+                    cell(p).load(SeqCst)
+                }
+                pub(super) extern "C" fn exchange(p: *mut c_void, v: $t, _order: c_int) -> $t {
+                    cell(p).swap(v, SeqCst)
+                }
+                pub(super) extern "C" fn compare_exchange(
+                    p: *mut c_void,
+                    expected: *mut $t,
+                    desired: $t,
+                    _weak: bool,
+                    _success: c_int,
+                    _failure: c_int,
+                ) -> bool {
+                    // SAFETY: `expected` points to a local of the same type in the caller.
+                    let expected = unsafe { &mut *expected };
+                    match cell(p).compare_exchange(*expected, desired, SeqCst, SeqCst) {
+                        Ok(_) => true,
+                        Err(current) => {
+                            *expected = current;
+                            false
+                        }
+                    }
+                }
+                pub(super) extern "C" fn fetch_add(p: *mut c_void, v: $t, _o: c_int) -> $t {
+                    cell(p).fetch_add(v, SeqCst)
+                }
+                pub(super) extern "C" fn fetch_sub(p: *mut c_void, v: $t, _o: c_int) -> $t {
+                    cell(p).fetch_sub(v, SeqCst)
+                }
+                pub(super) extern "C" fn fetch_and(p: *mut c_void, v: $t, _o: c_int) -> $t {
+                    cell(p).fetch_and(v, SeqCst)
+                }
+                pub(super) extern "C" fn fetch_or(p: *mut c_void, v: $t, _o: c_int) -> $t {
+                    cell(p).fetch_or(v, SeqCst)
+                }
+                pub(super) extern "C" fn fetch_xor(p: *mut c_void, v: $t, _o: c_int) -> $t {
+                    cell(p).fetch_xor(v, SeqCst)
+                }
+                pub(super) extern "C" fn fetch_nand(p: *mut c_void, v: $t, _o: c_int) -> $t {
+                    cell(p).fetch_nand(v, SeqCst)
+                }
+                pub(super) extern "C" fn add_fetch(p: *mut c_void, v: $t, _o: c_int) -> $t {
+                    cell(p).fetch_add(v, SeqCst).wrapping_add(v)
+                }
+                pub(super) extern "C" fn sub_fetch(p: *mut c_void, v: $t, _o: c_int) -> $t {
+                    cell(p).fetch_sub(v, SeqCst).wrapping_sub(v)
+                }
+                pub(super) extern "C" fn and_fetch(p: *mut c_void, v: $t, _o: c_int) -> $t {
+                    cell(p).fetch_and(v, SeqCst) & v
+                }
+                pub(super) extern "C" fn or_fetch(p: *mut c_void, v: $t, _o: c_int) -> $t {
+                    cell(p).fetch_or(v, SeqCst) | v
+                }
+                pub(super) extern "C" fn xor_fetch(p: *mut c_void, v: $t, _o: c_int) -> $t {
+                    cell(p).fetch_xor(v, SeqCst) ^ v
+                }
+                pub(super) extern "C" fn nand_fetch(p: *mut c_void, v: $t, _o: c_int) -> $t {
+                    !(cell(p).fetch_nand(v, SeqCst) & v)
+                }
+
+                pub(super) fn symbols() -> [(&'static str, *const c_void); 16] {
+                    [
+                        ("store", store as *const c_void),
+                        ("load", load as *const c_void),
+                        ("exchange", exchange as *const c_void),
+                        ("compare_exchange", compare_exchange as *const c_void),
+                        ("fetch_add", fetch_add as *const c_void),
+                        ("fetch_sub", fetch_sub as *const c_void),
+                        ("fetch_and", fetch_and as *const c_void),
+                        ("fetch_or", fetch_or as *const c_void),
+                        ("fetch_xor", fetch_xor as *const c_void),
+                        ("fetch_nand", fetch_nand as *const c_void),
+                        ("add_fetch", add_fetch as *const c_void),
+                        ("sub_fetch", sub_fetch as *const c_void),
+                        ("and_fetch", and_fetch as *const c_void),
+                        ("or_fetch", or_fetch as *const c_void),
+                        ("xor_fetch", xor_fetch as *const c_void),
+                        ("nand_fetch", nand_fetch as *const c_void),
+                    ]
+                }
+            }
+        };
+    }
+
+    atomic_helpers!(size1, u8, AtomicU8);
+    atomic_helpers!(size2, u16, AtomicU16);
+    atomic_helpers!(size4, u32, AtomicU32);
+    atomic_helpers!(size8, u64, AtomicU64);
+
+    extern "C" fn thread_fence(_order: c_int) {
+        core::sync::atomic::fence(SeqCst);
+    }
+    extern "C" fn signal_fence(_order: c_int) {
+        core::sync::atomic::compiler_fence(SeqCst);
+    }
+    extern "C" fn is_lock_free(size: usize, _ptr: *mut c_void) -> bool {
+        matches!(size, 1 | 2 | 4 | 8)
+    }
+    extern "C" fn flag_test_and_set(p: *mut c_void) -> bool {
+        // SAFETY: `atomic_flag` is a struct holding one `atomic_bool`.
+        unsafe { AtomicBool::from_ptr(p.cast::<bool>()) }.swap(true, SeqCst)
+    }
+    extern "C" fn flag_test_and_set_explicit(p: *mut c_void, _order: c_int) -> bool {
+        flag_test_and_set(p)
+    }
+    extern "C" fn flag_clear(p: *mut c_void) {
+        // SAFETY: as in `flag_test_and_set`.
+        unsafe { AtomicBool::from_ptr(p.cast::<bool>()) }.store(false, SeqCst)
+    }
+    extern "C" fn flag_clear_explicit(p: *mut c_void, _order: c_int) {
+        flag_clear(p)
+    }
+
+    pub(super) fn inject(state: &mut TCC::State) {
+        let sized: [(u8, [(&str, *const c_void); 16]); 4] = [
+            (1, size1::symbols()),
+            (2, size2::symbols()),
+            (4, size4::symbols()),
+            (8, size8::symbols()),
+        ];
+        for (size, symbols) in sized {
+            for (op, address) in symbols {
+                let name = ZBox::from_bytes(format!("__atomic_{op}_{size}").as_bytes());
+                let _ = state.add_symbol(&name, address);
+            }
+        }
+        let _ = state.add_symbols(&[
+            ("atomic_thread_fence", thread_fence as *const c_void),
+            ("atomic_signal_fence", signal_fence as *const c_void),
+            ("__atomic_is_lock_free", is_lock_free as *const c_void),
+            ("atomic_flag_test_and_set", flag_test_and_set as *const c_void),
+            (
+                "atomic_flag_test_and_set_explicit",
+                flag_test_and_set_explicit as *const c_void,
+            ),
+            ("atomic_flag_clear", flag_clear as *const c_void),
+            ("atomic_flag_clear_explicit", flag_clear_explicit as *const c_void),
+        ]);
     }
 }
 

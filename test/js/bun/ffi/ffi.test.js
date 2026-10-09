@@ -1873,4 +1873,88 @@ describe.skipIf(!ABI_FIXTURE_PATH)("ABI conformance", () => {
       cbL.close();
     }
   });
+
+  it("structs and unions by value, nested structs and array fields (TinyCC shim)", () => {
+    const point = { struct: { x: "i32", y: "i32" } };
+    const mixed = { struct: { a: "f64", b: "f32", tag: "u8", big: "i64" } };
+    const rect = { struct: { min: point, max: point, ids: { array: "i16", length: 3 } } };
+    const lib = dlopen(ABI_FIXTURE_PATH, {
+      abi_point_add: { args: [point, point], returns: point },
+      abi_mixed_scale: { args: [mixed, "i32"], returns: mixed },
+      abi_rect_area: { args: [rect], returns: "i64" },
+      abi_union_bits: { args: ["f32"], returns: { union: { i: "i32", f: "f32" } } },
+    });
+    try {
+      const { abi_point_add, abi_mixed_scale, abi_rect_area, abi_union_bits } = lib.symbols;
+      expect(abi_point_add.layouts.returns).toEqual({ size: 8, align: 4, offsets: { x: 0, y: 4 } });
+      const sum = abi_point_add(new Int32Array([1, -2]), new Int32Array([40, 30]));
+      expect(Array.from(new Int32Array(sum.buffer))).toEqual([41, 28]);
+
+      const layout = abi_mixed_scale.layouts.returns;
+      expect(layout.offsets).toEqual({ a: 0, b: 8, tag: 12, big: 16 });
+      const input = new DataView(new ArrayBuffer(layout.size));
+      input.setFloat64(layout.offsets.a, 1.5, true);
+      input.setFloat32(layout.offsets.b, 2.25, true);
+      input.setUint8(layout.offsets.tag, 7);
+      input.setBigInt64(layout.offsets.big, 2n ** 40n, true);
+      const out = new DataView(abi_mixed_scale(input, 3).buffer);
+      expect(out.getFloat64(layout.offsets.a, true)).toBe(4.5);
+      expect(out.getFloat32(layout.offsets.b, true)).toBe(6.75);
+      expect(out.getUint8(layout.offsets.tag)).toBe(8);
+      expect(out.getBigInt64(layout.offsets.big, true)).toBe(3n * 2n ** 40n);
+
+      const r = abi_rect_area.layouts.args[0];
+      expect(r.offsets).toEqual({ min: 0, max: 8, ids: 16 });
+      const rv = new DataView(new ArrayBuffer(r.size));
+      rv.setInt32(8, 10, true);
+      rv.setInt32(12, 5, true);
+      rv.setInt16(16, 1, true);
+      rv.setInt16(18, 2, true);
+      rv.setInt16(20, 3, true);
+      expect(abi_rect_area(rv)).toBe(56n);
+
+      const bits = abi_union_bits(1);
+      expect(new Int32Array(bits.buffer)[0]).toBe(0x3f800000);
+
+      expect(() => abi_point_add(new Int32Array(1), new Int32Array(2))).toThrow(RangeError);
+      expect(() => abi_point_add(1, 2)).toThrow(TypeError);
+    } finally {
+      lib.close();
+    }
+  });
+
+  it("variadic functions with fixedArgs", () => {
+    const lib = dlopen(ABI_FIXTURE_PATH, {
+      abi_variadic_sum: { args: ["i32", "f64", "f64", "f64"], fixedArgs: 1, returns: "f64" },
+    });
+    try {
+      expect(lib.symbols.abi_variadic_sum(3, 0.5, 1.25, 2)).toBe(3.75);
+    } finally {
+      lib.close();
+    }
+  });
+
+  // aarch64 Linux long double is IEEE quad; TinyCC needs libtcc1 soft-float helpers bun does not link.
+  it.skipIf(process.platform === "linux" && process.arch === "arm64")("long double arguments and return", () => {
+    const lib = dlopen(ABI_FIXTURE_PATH, {
+      abi_long_double_mul: { args: ["long double", "long double"], returns: "long double" },
+    });
+    try {
+      expect(lib.symbols.abi_long_double_mul(1.5, -4)).toBe(-6);
+    } finally {
+      lib.close();
+    }
+  });
+
+  it("shim signatures reject invalid descriptions", () => {
+    expect(() =>
+      dlopen(ABI_FIXTURE_PATH, { abi_variadic_sum: { args: ["i32"], fixedArgs: 2, returns: "f64" } }),
+    ).toThrow(TypeError);
+    expect(() =>
+      dlopen(ABI_FIXTURE_PATH, { abi_point_add: { args: [{ struct: {} }], returns: "void" } }),
+    ).toThrow(TypeError);
+    expect(() =>
+      dlopen(ABI_FIXTURE_PATH, { abi_point_add: { args: [{ struct: { "x;": "i32" } }], returns: "void" } }),
+    ).toThrow(TypeError);
+  });
 });

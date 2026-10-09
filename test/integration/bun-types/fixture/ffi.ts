@@ -1,4 +1,4 @@
-import { dlopen, FFIType, JSCallback, read, suffix, type CString, type Pointer } from "bun:ffi";
+import { cc, dlopen, FFIType, JSCallback, read, suffix, type CString, type Pointer } from "bun:ffi";
 import * as tsd from "./utilities";
 
 // `suffix` is either "dylib", "so", or "dll" depending on the platform
@@ -181,3 +181,22 @@ tsd.expectType<number>(read.f32(ptr, 0));
 tsd.expectType<number>(read.f64(ptr, 0));
 tsd.expectType<number>(read.ptr(ptr, 0));
 tsd.expectType<number>(read.intptr(ptr, 0));
+
+const point = { struct: { x: "i32", y: "i32" } } as const;
+const structLib = dlopen(path, {
+  point_add: { args: [point, point], returns: point },
+  sum: { args: ["i32", "f64", "f64"], fixedArgs: 1, returns: "f64" },
+  ld: { args: ["long double"], returns: "long double" },
+  len: { args: ["ptr"], returns: "size_t" },
+} as const);
+tsd.expectType<Uint8Array<ArrayBuffer>>(structLib.symbols.point_add(new Int32Array(2), new DataView(new ArrayBuffer(8))));
+tsd.expectType<number>(structLib.symbols.sum(2, 1, 2));
+tsd.expectType<number>(structLib.symbols.ld(1.5));
+tsd.expectType<bigint>(structLib.symbols.len(null));
+// @ts-expect-error a struct argument is its bytes, not a number
+structLib.symbols.point_add(1, 2);
+
+const inline = cc({ code: "int one(void) { return 1; }", symbols: { one: { returns: "int" } } });
+tsd.expectType<number>(inline.symbols.one());
+// @ts-expect-error source and code are exclusive
+cc({ code: "", source: "a.c", symbols: {} });

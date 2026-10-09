@@ -224,6 +224,63 @@ static void* JSVALUE_TO_PTR(EncodedJSValue val) {
   return (void*)(uintptr_t)val.asDouble;
 }
 
+// Argument kinds understood by the checked conversions below; the values are
+// mirrored by FFI_ARG_KIND_* in ffi_body.rs.
+#define FFI_ARG_KIND_NUMBER   0
+#define FFI_ARG_KIND_INT64    1
+#define FFI_ARG_KIND_PTR      2
+#define FFI_ARG_KIND_FUNCTION 3
+#define FFI_ARG_KIND_BUFFER   4
+
+// Both return false with a TypeError pending on the global object.
+bool JSVALUE_ARGUMENT_SLOW(void* jsGlobalObject, EncodedJSValue value, int32_t index, int32_t kind);
+bool JSVALUE_TO_PTR_SLOW(void* jsGlobalObject, EncodedJSValue value, int32_t index, int32_t kind, void** out);
+
+// argumentCountIncludingThis sits two slots below the first argument.
+#define LOAD_ARGUMENT_COUNT_FROM_CALL_FRAME \
+  int32_t argCount = (int32_t)(((int64_t*)callFrame)[Bun_FFI_PointerOffsetToArgumentsList - 2]) - 1
+
+#define LOAD_ARGUMENT(index) \
+  ((EncodedJSValue){ .asInt64 = argCount > (index) ? argsPtr[(index)] : TagValueUndefined })
+
+static bool JSVALUE_CHECK_NUMBER(void* jsGlobalObject, EncodedJSValue val, int32_t index, int32_t kind) {
+  if (JSVALUE_IS_NUMBER(val)) return true;
+  return JSVALUE_ARGUMENT_SLOW(jsGlobalObject, val, index, kind);
+}
+
+static bool JSVALUE_TO_PTR_CHECKED(void* jsGlobalObject, EncodedJSValue val, int32_t index, int32_t kind, void** out) {
+  if (kind == FFI_ARG_KIND_BUFFER) {
+    if (JSCELL_IS_TYPED_ARRAY(val)) {
+      *out = JSVALUE_TO_TYPED_ARRAY_VECTOR(val);
+      return true;
+    }
+    return JSVALUE_TO_PTR_SLOW(jsGlobalObject, val, index, kind, out);
+  }
+
+  if (val.asInt64 == TagValueNull) {
+    *out = 0;
+    return true;
+  }
+
+  if (JSCELL_IS_TYPED_ARRAY(val)) {
+    *out = JSVALUE_TO_TYPED_ARRAY_VECTOR(val);
+    return true;
+  }
+
+  if (JSVALUE_IS_INT32(val)) {
+    *out = (void*)(uintptr_t)JSVALUE_TO_INT32(val);
+    return true;
+  }
+
+  if (JSVALUE_IS_NUMBER(val)) {
+    val.asInt64 -= DoubleEncodeOffset;
+    *out = (void*)(uintptr_t)val.asDouble;
+    return true;
+  }
+
+  return JSVALUE_TO_PTR_SLOW(jsGlobalObject, val, index, kind, out);
+}
+
 static EncodedJSValue PTR_TO_JSVALUE(void* ptr) {
   EncodedJSValue val;
   if (ptr == 0) {

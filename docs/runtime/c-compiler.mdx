@@ -177,6 +177,19 @@ cc({
 });
 ```
 
+`source` can also be an array of paths, which are compiled into one library.
+
+#### `code: string`
+
+Instead of `source`, pass the C source as a string. Diagnostics name it `<inline>`.
+
+```ts
+const { symbols } = cc({
+  code: "int twice(int x) { return x * 2; }",
+  symbols: { twice: { args: ["int"], returns: "int" } },
+});
+```
+
 #### `flags: string | string[]`
 
 `flags` is an optional string or array of strings passed to the TinyCC compiler.
@@ -185,7 +198,25 @@ cc({
 type Flags = string | string[];
 ```
 
-These are flags like `-I` for include directories and `-D` for preprocessor definitions.
+These are flags like `-I` for include directories and `-D` for preprocessor definitions. They are appended after the defaults (`-std=c11 -Wl,--export-all-symbols -g -O2`), so a later `-std=` or `-O` wins. `-std=` accepts `c99`, `c11`, `c17` and `c23`, and their `gnu` variants; `-std=c23` defines `bool`, `true`, `false`, `nullptr`, `static_assert`, `alignas`, `alignof` and `thread_local`.
+
+### Language support
+
+TinyCC compiles C11: `_Static_assert`, `_Generic`, `_Alignas`, `_Thread_local` and `_Atomic`. Bun ships the freestanding headers (`<stdbool.h>`, `<stddef.h>`, `<stdarg.h>`, `<stdalign.h>`, `<stdnoreturn.h>`, `<float.h>`, `<stdatomic.h>`, `<tgmath.h>`). Atomic operations are sequentially consistent whatever memory order is requested. Other headers (`<stdio.h>`, `<string.h>`, …) come from the system: on Linux, including musl distributions such as Alpine, Bun looks in `/usr/include` and links against the C library in `/usr/lib`.
+
+### Arguments and errors
+
+Every argument is checked against its declared type before the C function runs. A value of the wrong type, or a missing argument, throws a `TypeError` (`ERR_INVALID_ARG_TYPE`) naming `arguments[i]`. `ptr` and `cstring` arguments accept a `TypedArray`, `DataView`, `ArrayBuffer`, `CString`, number, `bigint` or `null`.
+
+When compilation fails, `cc()` throws an `Error` whose `errors` property lists each compiler diagnostic as `{ file, line, severity, message }`.
+
+```ts
+try {
+  cc({ code: "int f(void) { return 1 +; }", symbols: { f: { returns: "int" } } });
+} catch (error) {
+  console.log(error.errors[0]); // { file: "<inline>", line: 1, severity: "error", message: "..." }
+}
+```
 
 #### `define: Record<string, string>`
 

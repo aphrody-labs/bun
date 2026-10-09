@@ -62,3 +62,29 @@ FFI_EXPORT double abi_cb_mix12(double (*cb)(int32_t,double,int32_t,double,int32_
 FFI_EXPORT int64_t abi_cb_i64_x10(int64_t (*cb)(int64_t,int64_t,int64_t,int64_t,int64_t,int64_t,int64_t,int64_t,int64_t,int64_t), int64_t k) {
   return cb(k, k+1, k+2, k+3, k+4, k+5, k+6, k+7, k+8, k+9);
 }
+
+#include <stdarg.h>
+
+typedef struct { int32_t x; int32_t y; } abi_point;
+typedef struct { double a; float b; uint8_t tag; int64_t big; } abi_mixed;
+typedef struct { abi_point min; abi_point max; int16_t ids[3]; } abi_rect;
+typedef union { int32_t i; float f; } abi_union;
+
+FFI_EXPORT abi_point abi_point_add(abi_point a, abi_point b) { abi_point r = { a.x + b.x, a.y + b.y }; return r; }
+FFI_EXPORT abi_mixed abi_mixed_scale(abi_mixed m, int32_t k) {
+  abi_mixed r = { m.a * k, m.b * k, (uint8_t)(m.tag + 1), m.big * k };
+  return r;
+}
+FFI_EXPORT int64_t abi_rect_area(abi_rect r) {
+  return (int64_t)(r.max.x - r.min.x) * (r.max.y - r.min.y) + r.ids[0] + r.ids[1] + r.ids[2];
+}
+FFI_EXPORT abi_union abi_union_bits(float f) { abi_union u; u.f = f; return u; }
+FFI_EXPORT long double abi_long_double_mul(long double a, long double b) { return a * b; }
+FFI_EXPORT double abi_variadic_sum(int32_t count, ...) {
+  va_list ap;
+  double total = 0;
+  va_start(ap, count);
+  for (int32_t i = 0; i < count; i++) total += va_arg(ap, double);
+  va_end(ap);
+  return total;
+}

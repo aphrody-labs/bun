@@ -69,16 +69,16 @@ describe.skipIf(isASAN)("given an add(a, b) function", () => {
       expect(res.symbols.add(1, 2)).toBe(3);
     });
 
-    // FIXME: produces junk
-    it.skip("when passed arguments with incorrect types, throws an error", () => {
+    it("when passed arguments with incorrect types, throws a TypeError", () => {
       // @ts-expect-error
-      expect(() => res.symbols.add("1", "2")).toThrow();
+      expect(() => res.symbols.add("1", "2")).toThrow(TypeError);
+      // @ts-expect-error
+      expect(() => res.symbols.add(1, {})).toThrow(/arguments\[1\]/);
     });
 
-    // looks like `b` defaults to `0`, is this U.B. or expected?
-    it.skip("when passed too few arguments, throws an error", () => {
+    it("when passed too few arguments, throws a TypeError instead of reading past the call frame", () => {
       // @ts-expect-error
-      expect(() => res.symbols.add(1)).toThrow();
+      expect(() => res.symbols.add(1)).toThrow(TypeError);
     });
 
     it("when passed too many arguments, still works", () => {
@@ -119,13 +119,10 @@ describe("given a source file with syntax errors", () => {
     await fs.rm(dir, { recursive: true, force: true });
   });
 
-  // FIXME: fails asan poisoning check
-  // TinyCC uses `setjmp` on an internal error handler, then jumps there when it
-  // encounters a syntax error. Newer versions of tcc added a public API to
-  // set a runtime error handler, but we need to upgrade in order to get it.
-  // https://github.com/TinyCC/tinycc/blob/f8bd136d198bdafe71342517fa325da2e243dc68/libtcc.h#L106C9-L106C24
-  it.skip("when compiled, throws an error", () => {
-    expect(() => {
+  // TinyCC's setjmp/longjmp error handling conflicts with ASan.
+  it.skipIf(isASAN)("when compiled, throws an error with file:line diagnostics", () => {
+    let error: any;
+    try {
       cc({
         source: path.join(dir, "add.c"),
         symbols: {
@@ -135,7 +132,15 @@ describe("given a source file with syntax errors", () => {
           },
         },
       });
-    }).toThrow();
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(Error);
+    expect(Array.isArray(error.errors)).toBe(true);
+    const [first] = error.errors;
+    expect(first.severity).toBe("error");
+    expect(path.basename(first.file)).toBe("add.c");
+    expect(first.line).toBe(3);
   });
 });
 
@@ -170,7 +175,7 @@ describe.skipIf(isASAN)("given a symbol that returns a cstring", () => {
   }
 });
 
-describe.skip("given a ping(cstr) function", () => {
+describe.skipIf(isASAN)("given a ping(cstr) function", () => {
   const library = makeValidCase(
     "ping",
     /* c */ `
@@ -191,16 +196,30 @@ describe.skip("given a ping(cstr) function", () => {
     const arr = new Uint8Array(buf);
     const cstr = new CString(ptr(arr));
 
-    expect(library.symbols.ping(cstr)).toBe(cstr);
+    const result = library.symbols.ping(cstr);
+    expect(result).toBeInstanceOf(CString);
+    expect(result.ptr).toBe(cstr.ptr);
+    expect(String(result)).toBe("hello");
+  });
+
+  it("given a typed array, passes its address", () => {
+    const arr = new Uint8Array(Buffer.from("typed\0"));
+    expect(String(library.symbols.ping(arr))).toBe("typed");
+  });
+
+  it("given a value that is not a pointer, throws a TypeError", () => {
+    // @ts-expect-error
+    expect(() => library.symbols.ping({})).toThrow(TypeError);
+    // @ts-expect-error
+    expect(() => library.symbols.ping("hello")).toThrow(TypeError);
   });
 }); // </given a ping(cstr) function>
 
-// FIXME: bus error
-describe.skip("given a strlen(cstring) function", () => {
+describe.skipIf(isASAN)("given a strlen(cstring) function", () => {
   const library = makeValidCase(
     "strlen",
     /* c */ `
-      size_t strlen(char* str) {
+      unsigned long long strlen(char* str) {
         char* s = str;
         while (*s) s++;
         return s - str;
@@ -219,7 +238,7 @@ describe.skip("given a strlen(cstring) function", () => {
     const arr = new Uint8Array(buf);
     const cstr = new CString(ptr(arr));
 
-    expect(library.symbols.strlen(cstr)).toBe(5);
+    expect(library.symbols.strlen(cstr)).toBe(5n);
   });
 
   it("given a JSString, throws", () => {
@@ -227,6 +246,111 @@ describe.skip("given a strlen(cstring) function", () => {
     expect(() => library.symbols.strlen("hello")).toThrow(TypeError);
   });
 }); // </given a strlen(cstring) function>
+
+// TinyCC's setjmp/longjmp error handling conflicts with ASan.
+describe.skipIf(isASAN)("cc() C language support", () => {
+  it("compiles inline C passed as code, without a source file", () => {
+    const lib = cc({
+      code: /* c */ `int twice(int x) { return x * 2; }`,
+      symbols: { twice: { args: ["int"], returns: "int" } },
+    });
+    try {
+      expect(lib.symbols.twice(21)).toBe(42);
+    } finally {
+      lib.close();
+    }
+  });
+
+  it("reports diagnostics for inline code against <inline>", () => {
+    let error: any;
+    try {
+      cc({ code: "int broken(void) {\n  return 1 +;\n}\n", symbols: { broken: { returns: "int" } } });
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(Error);
+    expect(error.errors[0]).toMatchObject({ file: "<inline>", line: 2, severity: "error" });
+  });
+
+  it("supports <stdatomic.h> and the __atomic builtins", () => {
+    const lib = cc({
+      code: /* c */ `
+        #include <stdatomic.h>
+        static _Atomic int counter;
+        static atomic_flag flag = ATOMIC_FLAG_INIT;
+        long long bump(int n) {
+          for (int i = 0; i < n; i++) atomic_fetch_add(&counter, 2);
+          int expected = 2 * n;
+          int swapped = atomic_compare_exchange_strong(&counter, &expected, 7);
+          int first = atomic_flag_test_and_set(&flag);
+          int second = atomic_flag_test_and_set(&flag);
+          atomic_thread_fence(memory_order_seq_cst);
+          return (long long)atomic_load(&counter) * 1000 + swapped * 100 + first * 10 + second;
+        }
+      `,
+      symbols: { bump: { args: ["int"], returns: "i64" } },
+    });
+    try {
+      expect(lib.symbols.bump(5)).toBe(7101n);
+    } finally {
+      lib.close();
+    }
+  });
+
+  it("supports <float.h>", () => {
+    const lib = cc({
+      code: /* c */ `
+        #include <float.h>
+        double dbl_max(void) { return DBL_MAX; }
+        double flt_epsilon(void) { return FLT_EPSILON; }
+        int dbl_dig(void) { return DBL_DIG; }
+      `,
+      symbols: {
+        dbl_max: { returns: "f64" },
+        flt_epsilon: { returns: "f64" },
+        dbl_dig: { returns: "int" },
+      },
+    });
+    try {
+      expect(lib.symbols.dbl_max()).toBe(Number.MAX_VALUE);
+      expect(lib.symbols.flt_epsilon()).toBe(Math.fround(2 ** -23));
+      expect(lib.symbols.dbl_dig()).toBe(15);
+    } finally {
+      lib.close();
+    }
+  });
+
+  it("string flags are appended to the defaults, and -std=c23 enables C23 keywords", () => {
+    const lib = cc({
+      code: /* c */ `
+        static_assert(sizeof(int) == 4, "int is 32-bit");
+        _Static_assert(__STDC_VERSION__ >= 202311L, "c23");
+        #define KIND(x) _Generic((x), int: 1, double: 2, default: 0)
+        int kinds(void) { return KIND(1) * 10 + KIND(1.0); }
+        int is_null(void) { void* p = nullptr; bool t = true; return p == 0 && t; }
+        int from_define(void) { return FROM_FLAGS; }
+      `,
+      flags: "-std=c23 -DFROM_FLAGS=9",
+      symbols: {
+        kinds: { returns: "int" },
+        is_null: { returns: "int" },
+        from_define: { returns: "int" },
+      },
+    });
+    try {
+      expect(lib.symbols.kinds()).toBe(12);
+      expect(lib.symbols.is_null()).toBe(1);
+      expect(lib.symbols.from_define()).toBe(9);
+    } finally {
+      lib.close();
+    }
+  });
+
+  it("rejects code that is not a string", () => {
+    // @ts-expect-error
+    expect(() => cc({ code: 42, symbols: {} })).toThrow();
+  });
+});
 
 // =============================================================================
 

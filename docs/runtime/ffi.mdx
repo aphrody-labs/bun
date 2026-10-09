@@ -180,6 +180,33 @@ argument passed at that position is a placeholder and is ignored. `napi_value` p
 JavaScript value through unchanged. Using either type in a `dlopen`, `linkSymbols`, `JSCallback`,
 or `CFunction` descriptor throws a `TypeError`.
 
+### Structs, unions, variadic functions and `long double`
+
+`dlopen` also accepts struct and union types passed or returned by value, variadic functions and `long double`. Bun calls these through a small TinyCC shim compiled with the exact C prototype, so they cost a little more than other symbols and are not available in `linkSymbols`, `JSCallback` or `CFunction`.
+
+```ts
+import { dlopen } from "bun:ffi";
+
+const point = { struct: { x: "i32", y: "i32" } };
+const lib = dlopen("libgeometry.so", {
+  // C: Point point_add(Point a, Point b)
+  point_add: { args: [point, point], returns: point },
+  // C: double sum(int count, ...)
+  sum: { args: ["i32", "f64", "f64"], fixedArgs: 1, returns: "f64" },
+});
+
+const result = lib.symbols.point_add(new Int32Array([1, 2]), new Int32Array([3, 4]));
+new Int32Array(result.buffer); // Int32Array [4, 6]
+lib.symbols.point_add.layouts.returns; // { size: 8, align: 4, offsets: { x: 0, y: 4 } }
+lib.symbols.sum(2, 0.5, 1.5); // 2
+```
+
+- A struct is its bytes: pass a `TypedArray`, `DataView` or `ArrayBuffer` of at least `sizeof` bytes; a struct return is a new `Uint8Array`. The layout computed by the C compiler is on `symbol.layouts`.
+- Fields can be any `FFIType`, `"long double"`, a nested `{ struct }` or `{ union }`, or a fixed array `{ array: type, length: n }`.
+- `fixedArgs` is the number of named parameters of a variadic function. The remaining `args` describe this binding's variadic arguments; declare one binding per argument list you need.
+- `"long double"` converts to and from a JavaScript number, so precision beyond a `double` is lost. It is not supported on Linux arm64.
+- 128-bit integers, bitfields and struct arguments in callbacks are not supported.
+
 ---
 
 ## Strings

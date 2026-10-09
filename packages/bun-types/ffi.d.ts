@@ -429,6 +429,7 @@ declare module "bun:ffi" {
     ["cstring"]: FFIType.cstring;
     ["function"]: FFIType.pointer; // for now
     ["usize"]: FFIType.uint64_t; // for now
+    ["size_t"]: FFIType.uint64_t;
     ["callback"]: FFIType.pointer; // for now
     ["napi_env"]: FFIType.napi_env;
     ["napi_value"]: FFIType.napi_value;
@@ -438,6 +439,52 @@ declare module "bun:ffi" {
   }
 
   type FFITypeOrString = FFIType | keyof FFITypeStringToType;
+
+  /**
+   * A C struct passed or returned by value, as `{ struct: { field: type } }`.
+   *
+   * Fields keep their declaration order and C alignment. In JavaScript the
+   * struct is its raw bytes: pass a TypedArray, DataView or ArrayBuffer at
+   * least `sizeof` bytes long, and a struct return is a new `Uint8Array`.
+   * The computed layout is on `lib.symbols.fn.layouts`.
+   *
+   * Only supported by {@link dlopen}; the call goes through a TinyCC shim.
+   */
+  interface FFIStructType {
+    readonly struct: Readonly<Record<string, FFIFieldType>>;
+  }
+
+  /** A C union passed or returned by value. See {@link FFIStructType}. */
+  interface FFIUnionType {
+    readonly union: Readonly<Record<string, FFIFieldType>>;
+  }
+
+  /** A fixed-size array field inside a struct or union, `T name[length]` in C. */
+  interface FFIArrayField {
+    readonly array: FFITypeOrString | FFIStructType | FFIUnionType;
+    readonly length: number;
+  }
+
+  type FFIAggregateType = FFIStructType | FFIUnionType;
+
+  /**
+   * C `long double`. Converted to and from a JavaScript number (a `double`),
+   * so precision beyond 53 bits is lost. Only supported by {@link dlopen}.
+   */
+  type FFILongDouble = "long double";
+
+  type FFIFieldType = FFITypeOrString | FFILongDouble | FFIAggregateType | FFIArrayField;
+
+  type FFIArgType = FFITypeOrString | FFILongDouble | FFIAggregateType;
+
+  type FFIStructValue = NodeJS.TypedArray | DataView | ArrayBufferLike;
+
+  /** Byte layout of a struct or union computed by the C compiler. */
+  interface FFIStructLayout {
+    readonly size: number;
+    readonly align: number;
+    readonly offsets: Readonly<Record<string, number>>;
+  }
 
   interface FFIFunction {
     /**
@@ -468,7 +515,7 @@ declare module "bun:ffi" {
      * }
      * ```
      */
-    readonly args?: readonly FFITypeOrString[];
+    readonly args?: readonly FFIArgType[];
     /**
      * Return type of an FFI function (C ABI)
      *
@@ -496,7 +543,16 @@ declare module "bun:ffi" {
      * }
      * ```
      */
-    readonly returns?: FFITypeOrString;
+    readonly returns?: FFIArgType;
+
+    /**
+     * Number of fixed parameters of a variadic C function (`int printf(const char*, ...)`
+     * has 1). The remaining `args` describe the variadic arguments of this binding,
+     * which C promotes as usual (`float` to `double`, small integers to `int`).
+     *
+     * Only supported by {@link dlopen}; the call goes through a TinyCC shim.
+     */
+    readonly fixedArgs?: number;
 
     /**
      * Function pointer to the native function
@@ -543,20 +599,41 @@ declare module "bun:ffi" {
 
   type ToFFIType<T extends FFITypeOrString> = T extends FFIType ? T : T extends string ? FFITypeStringToType[T] : never;
 
+  type FFIArgValue<T> = T extends FFIAggregateType
+    ? FFIStructValue
+    : T extends FFILongDouble
+      ? number
+      : T extends FFITypeOrString
+        ? FFITypeToArgsType[ToFFIType<T>]
+        : never;
+
+  type FFIReturnValue<T> = T extends FFIAggregateType
+    ? Uint8Array<ArrayBuffer>
+    : T extends FFILongDouble
+      ? number
+      : T extends FFITypeOrString
+        ? FFITypeToReturnsType[ToFFIType<T>]
+        : never;
+
   const FFIFunctionCallableSymbol: unique symbol;
   type ConvertFns<Fns extends Symbols> = {
     [K in keyof Fns]: {
       (
-        ...args: Fns[K]["args"] extends infer A extends readonly FFITypeOrString[]
-          ? { [L in keyof A]: FFITypeToArgsType[ToFFIType<A[L]>] }
+        ...args: Fns[K]["args"] extends infer A extends readonly FFIArgType[]
+          ? { [L in keyof A]: FFIArgValue<A[L]> }
           : // eslint-disable-next-line @definitelytyped/no-single-element-tuple-type
             [unknown] extends [Fns[K]["args"]]
             ? []
             : never
       ): [unknown] extends [Fns[K]["returns"]] // eslint-disable-next-line @definitelytyped/no-single-element-tuple-type
         ? undefined
-        : FFITypeToReturnsType[ToFFIType<NonNullable<Fns[K]["returns"]>>];
+        : FFIReturnValue<NonNullable<Fns[K]["returns"]>>;
       __ffi_function_callable: typeof FFIFunctionCallableSymbol;
+      /** Struct layouts of a binding that has struct or union arguments or return (see {@link FFIStructType}). */
+      readonly layouts?: {
+        readonly args: readonly (FFIStructLayout | null)[];
+        readonly returns: FFIStructLayout | null;
+      };
     };
   };
 
@@ -629,11 +706,7 @@ declare module "bun:ffi" {
    * }
    * ```
    */
-  function cc<Fns extends Record<string, FFIFunction>>(options: {
-    /**
-     * File path to an ISO C11 source file to compile and link
-     */
-    source: string | import("bun").BunFile | URL;
+  function cc<Fns extends Record<string, FFIFunction>>(options: CcSource & {
 
     /**
      * Library names to link against
@@ -684,6 +757,9 @@ declare module "bun:ffi" {
      * frameworks. Bun makes no guarantees about which compiler version is
      * used.
      *
+     * Appended after the defaults, so a later `-std=c23` or `-O0` wins.
+     * `-std` accepts c99, c11, c17 and c23 (and their gnu variants).
+     *
      * @default "-std=c11 -Wl,--export-all-symbols -g -O2"
      *
      * @example
@@ -704,6 +780,38 @@ declare module "bun:ffi" {
      */
     flags?: string | string[];
   }): Library<Fns>;
+
+  /**
+   * What {@link cc} compiles: a file (`source`) or a string of C (`code`).
+   *
+   * When compilation fails, the thrown `Error` has an `errors` array of
+   * {@link CcDiagnostic}.
+   */
+  type CcSource =
+    | {
+        /**
+         * File path to an ISO C source file to compile and link, or several
+         */
+        source: string | import("bun").BunFile | URL | readonly (string | import("bun").BunFile | URL)[];
+        code?: never;
+      }
+    | {
+        /**
+         * C source code to compile, as a string. Diagnostics name it `<inline>`.
+         */
+        code: string;
+        source?: never;
+      };
+
+  /** One compiler diagnostic of a failed {@link cc} call, on `error.errors`. */
+  interface CcDiagnostic {
+    /** Source file, or `<inline>` for {@link CcSource.code}. Absent when the diagnostic has no location. */
+    file?: string;
+    /** 1-based line number. */
+    line?: number;
+    severity?: "error" | "warning";
+    message: string;
+  }
 
   /**
    * Turn a native library's function pointer into a JavaScript function
