@@ -1,8 +1,19 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { bunEnv, bunExe, tempDir } from "harness";
+import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { buildEntries, elfDependencies, newc, parseArgs, resolveInSysroot } from "../../scripts/aphrody/initramfs";
+import {
+  addressPayload,
+  defaultRoutePayload,
+  DHCP,
+  encodeDhcp,
+  hostsFile,
+  linkUpPayload,
+  parseDhcp,
+  prefixFromMask,
+  resolvConf,
+} from "../../scripts/aphrody/initramfs-net";
 
 const S_IFMT = 0o170000;
 const S_IFREG = 0o100000;
@@ -114,7 +125,11 @@ function alpineSysroot(dir: string) {
   write("usr/lib/tool/libfoo.so.1", makeElf({ needed: ["libc.musl-x86_64.so.1"] }));
   write(
     "usr/bin/tool",
-    makeElf({ interp: musl, needed: ["libfoo.so.1", "libc.musl-x86_64.so.1"], runpath: "$ORIGIN/../lib/tool" }),
+    makeElf({
+      interp: musl,
+      needed: ["libfoo.so.1", "libc.musl-x86_64.so.1"],
+      runpath: "$ORIGIN/../lib/tool",
+    }),
   );
   write("bin/busybox", makeElf({ interp: musl, needed: ["libc.musl-x86_64.so.1"] }));
   link("bin/sh", "/bin/busybox");
@@ -124,7 +139,11 @@ function alpineSysroot(dir: string) {
 describe("aphrody initramfs", () => {
   test("reads PT_INTERP, DT_NEEDED and DT_RUNPATH", () => {
     const info = elfDependencies(
-      makeElf({ interp: "/lib/ld-musl-x86_64.so.1", needed: ["libc.so", "libz.so.1"], runpath: "$ORIGIN/lib" }),
+      makeElf({
+        interp: "/lib/ld-musl-x86_64.so.1",
+        needed: ["libc.so", "libz.so.1"],
+        runpath: "$ORIGIN/lib",
+      }),
     );
     expect(info).toEqual({
       interp: "/lib/ld-musl-x86_64.so.1",
@@ -160,6 +179,14 @@ describe("aphrody initramfs", () => {
       "/bin/sh",
       "--hostname",
       "vm1",
+      "--ip",
+      "10.0.2.15/24",
+      "--gateway",
+      "10.0.2.2",
+      "--dns",
+      "10.0.2.3",
+      "--module",
+      "/usr/lib/tool/libfoo.so.1",
       "--out",
       "unused",
     ]);
@@ -180,8 +207,10 @@ describe("aphrody initramfs", () => {
       "file etc/bun-init.json",
       "file etc/hostname",
       "file init",
+      "file initramfs-net.ts",
       "file lib/ld-musl-x86_64.so.1",
       "link lib/libc.musl-x86_64.so.1 -> ld-musl-x86_64.so.1",
+      "file lib/modules/libfoo.so.1",
       "file usr/bin/tool",
       "file usr/lib/libgcc_s.so.1",
       "link usr/lib/libstdc++.so.6 -> libstdc++.so.6.0.34",
@@ -193,10 +222,13 @@ describe("aphrody initramfs", () => {
       argv: ["/bin/bun", "repl"],
       cwd: "/",
       hostname: "vm1",
+      network: { address: "10.0.2.15/24", gateway: "10.0.2.2", dns: ["10.0.2.3"] },
+      modules: ["/lib/modules/libfoo.so.1"],
     });
     const init = new TextDecoder().decode(entries.find(e => e.path === "init")!.data);
     expect(init).toStartWith("#!/bin/bun\n");
     expect(init).toContain("/proc/sys/kernel/hostname");
+    expect(init).toContain('from "./initramfs-net.ts"');
   });
 
   test("a library missing from the sysroot is an error", () => {
@@ -251,5 +283,97 @@ describe("aphrody initramfs", () => {
       hostname: "aphrody",
     });
     expect(readNewc(newc([]))).toEqual([]);
+  });
+});
+
+// A BOOTREPLY as a DHCP server sends it: yiaddr, then the options.
+function dhcpReply(type: number, xid: number, options: [number, number[]][]): Uint8Array {
+  const out = new Uint8Array(300);
+  const view = new DataView(out.buffer);
+  out[0] = 2;
+  view.setUint32(4, xid);
+  out.set([10, 0, 2, 15], 16);
+  view.setUint32(236, 0x63825363);
+  let at = 240;
+  for (const [code, data] of [[53, [type]], ...options] as [number, number[]][]) {
+    out[at++] = code;
+    out[at++] = data.length;
+    out.set(data, at);
+    at += data.length;
+  }
+  out[at] = 255;
+  return out;
+}
+
+describe("initramfs network", () => {
+  test("rtnetlink payloads: link up, address, default route", () => {
+    expect(Array.from(linkUpPayload(2))).toEqual([0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]);
+    // ifaddrmsg (AF_INET, /24, index 2), then IFA_LOCAL, IFA_ADDRESS, IFA_BROADCAST.
+    expect(Array.from(addressPayload(2, Uint8Array.of(10, 0, 2, 15), 24))).toEqual([
+      2, 24, 0, 0, 2, 0, 0, 0, 8, 0, 2, 0, 10, 0, 2, 15, 8, 0, 1, 0, 10, 0, 2, 15, 8, 0, 4, 0, 10, 0, 2, 255,
+    ]);
+    // rtmsg (AF_INET, main table, RTPROT_BOOT, universe, unicast), RTA_OIF, RTA_GATEWAY.
+    expect(Array.from(defaultRoutePayload(2, Uint8Array.of(10, 0, 2, 2)))).toEqual([
+      2, 0, 0, 0, 254, 3, 0, 1, 0, 0, 0, 0, 8, 0, 4, 0, 2, 0, 0, 0, 8, 0, 5, 0, 10, 0, 2, 2,
+    ]);
+    // Without a gateway the route is on-link (RT_SCOPE_LINK), as used for the DHCP broadcasts.
+    expect(Array.from(defaultRoutePayload(3))).toEqual([
+      2, 0, 0, 0, 254, 3, 253, 1, 0, 0, 0, 0, 8, 0, 4, 0, 3, 0, 0, 0,
+    ]);
+  });
+
+  test("DHCP request encoding and reply parsing", () => {
+    const mac = Uint8Array.of(0x52, 0x54, 0, 0x12, 0x34, 0x56);
+    const request = encodeDhcp({
+      type: DHCP.REQUEST,
+      xid: 0x01020304,
+      mac,
+      requested: Uint8Array.of(10, 0, 2, 15),
+      server: Uint8Array.of(10, 0, 2, 2),
+      hostname: "vm1",
+    });
+    const view = new DataView(request.buffer);
+    expect([request[0], request[1], request[2], view.getUint32(4), view.getUint16(10)]).toEqual([
+      1, 1, 6, 0x01020304, 0x8000,
+    ]);
+    expect(Array.from(request.subarray(28, 34))).toEqual(Array.from(mac));
+    expect(view.getUint32(236)).toBe(0x63825363);
+    expect(Array.from(request.subarray(240, 270))).toEqual([
+      53, 1, 3, 61, 7, 1, 0x52, 0x54, 0, 0x12, 0x34, 0x56, 50, 4, 10, 0, 2, 15, 54, 4, 10, 0, 2, 2, 12, 3, 118, 109, 49,
+      55,
+    ]);
+    // A client's own request is not a reply.
+    expect(parseDhcp(request)).toBeUndefined();
+
+    const ack = dhcpReply(DHCP.ACK, 0x01020304, [
+      [1, [255, 255, 255, 0]],
+      [3, [10, 0, 2, 2]],
+      [6, [10, 0, 2, 3, 1, 1, 1, 1]],
+      [51, [0, 0, 0x0e, 0x10]],
+      [54, [10, 0, 2, 2]],
+    ]);
+    expect(parseDhcp(ack)).toEqual({
+      type: DHCP.ACK,
+      xid: 0x01020304,
+      address: "10.0.2.15",
+      mask: "255.255.255.0",
+      router: "10.0.2.2",
+      dns: ["10.0.2.3", "1.1.1.1"],
+      server: "10.0.2.2",
+      leaseSeconds: 3600,
+    });
+    expect(prefixFromMask(Uint8Array.of(255, 255, 240, 0))).toBe(20);
+  });
+
+  test("--ip dhcp, resolv.conf and hosts", () => {
+    const options = parseArgs(["--bun", "b", "--out", "o", "--ip", "dhcp", "--interface", "enp0s3"]);
+    expect(options.network).toEqual({ interface: "enp0s3" });
+    expect(parseArgs(["--bun", "b", "--out", "o", "--ip", "192.168.1.9"]).network).toEqual({
+      address: "192.168.1.9/24",
+    });
+    expect(() => parseArgs(["--bun", "b", "--out", "o", "--ip", "10.0.2/24"])).toThrow("invalid IPv4 address");
+    expect(parseArgs(["--bun", "b", "--out", "o"]).network).toBeUndefined();
+    expect(resolvConf(["10.0.2.3", "1.1.1.1"])).toBe("nameserver 10.0.2.3\nnameserver 1.1.1.1\n");
+    expect(hostsFile("vm1")).toBe("127.0.0.1\tlocalhost vm1\n::1\tlocalhost\n");
   });
 });

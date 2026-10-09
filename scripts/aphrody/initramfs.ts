@@ -9,15 +9,23 @@
 //
 //   bun scripts/aphrody/initramfs.ts --bun build/release/bun --sysroot /path/to/alpine-rootfs \
 //     --bin /usr/bin/coreutils --app ./app --out build/initramfs.cpio.gz [--hostname aphrody] \
+//     [--module /lib/modules/<release>/kernel/drivers/net/virtio_net.ko.gz]... \
+//     [--ip dhcp|10.0.2.15/24 [--gateway 10.0.2.2] [--dns 10.0.2.3]... [--interface eth0]] \
 //     [--file host:/target]... [-- /bin/bun /app/index.ts]
 //
 // --bin takes a path inside --sysroot (kept at that path, with the symlinks
-// leading to it) or a host file (installed as /bin/<name>).
+// leading to it) or a host file (installed as /bin/<name>). --ip configures
+// one interface at boot (scripts/aphrody/initramfs-net.ts, copied to
+// /initramfs-net.ts): a static address or a DHCP lease, the default route and
+// /etc/resolv.conf. --module (sysroot or host path, .ko, .ko.gz or .ko.zst) is
+// copied to /lib/modules/<name> and loaded by /init in the order given, before
+// the network: pass the dependencies first.
 //
 // Boot it with `qemu-system-x86_64 -kernel bzImage -initrd build/initramfs.cpio.gz -append console=ttyS0 -nographic`.
 
 import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, statSync } from "node:fs";
 import { join, posix, resolve } from "node:path";
+import { parseCidr, parseIPv4, type NetworkConfig } from "./initramfs-net.ts";
 
 export interface Entry {
   path: string;
@@ -42,6 +50,8 @@ export interface Options {
   hostname: string;
   gzip: boolean;
   argv: string[];
+  network?: NetworkConfig;
+  modules: string[];
 }
 
 function usage(message: string): never {
@@ -57,6 +67,7 @@ export function parseArgs(argv: string[]): Options {
     sysroot: "/",
     app: "",
     bins: [],
+    modules: [],
     files: [],
     hostname: "aphrody",
     gzip: true,
@@ -83,6 +94,30 @@ export function parseArgs(argv: string[]): Options {
         break;
       case "--hostname":
         options.hostname = value();
+        break;
+      case "--ip": {
+        const ip = value();
+        options.network ??= {};
+        if (ip !== "dhcp") {
+          parseCidr(ip);
+          options.network.address = ip.includes("/") ? ip : `${ip}/24`;
+        }
+        break;
+      }
+      case "--gateway":
+        options.network ??= {};
+        options.network.gateway = parseIPv4(value()).join(".");
+        break;
+      case "--dns":
+        options.network ??= {};
+        (options.network.dns ??= []).push(parseIPv4(value()).join("."));
+        break;
+      case "--module":
+        options.modules.push(value());
+        break;
+      case "--interface":
+        options.network ??= {};
+        options.network.interface = value();
         break;
       case "--file": {
         const spec = value();
@@ -275,7 +310,11 @@ class Tree {
   symlink(path: string, target: string) {
     const rel = path.replace(/^\/+/, "");
     this.dir(posix.dirname(rel) === "." ? "" : posix.dirname(rel));
-    this.#entries.set(rel, { path: rel, mode: S_IFLNK | 0o777, data: new TextEncoder().encode(target) });
+    this.#entries.set(rel, {
+      path: rel,
+      mode: S_IFLNK | 0o777,
+      data: new TextEncoder().encode(target),
+    });
   }
 
   charDevice(path: string, mode: number, major: number, minor: number) {
@@ -370,7 +409,20 @@ export function buildEntries(options: Options): Built {
     readFileSync(join(import.meta.dir, "initramfs-init.ts"), "utf8"),
   );
   tree.file("/init", new TextEncoder().encode(`#!/bin/bun\n${init}`), 0o755);
-  const config = { argv: options.argv, cwd: options.app ? "/app" : "/", hostname: options.hostname || undefined };
+  tree.file("/initramfs-net.ts", readFileSync(join(import.meta.dir, "initramfs-net.ts")), 0o644);
+  const config = {
+    argv: options.argv,
+    cwd: options.app ? "/app" : "/",
+    hostname: options.hostname || undefined,
+    network: options.network,
+    modules: options.modules.length ? ([] as string[]) : undefined,
+  };
+  for (const module of options.modules) {
+    const name = `/lib/modules/${posix.basename(module.replaceAll("\\", "/"))}`;
+    const found = module.startsWith("/") ? resolveInSysroot(options.sysroot, module) : undefined;
+    tree.file(name, readFileSync(found ? join(options.sysroot, found.path) : resolve(module)), 0o644);
+    config.modules!.push(name);
+  }
   tree.file("/etc/bun-init.json", new TextEncoder().encode(JSON.stringify(config, null, 2) + "\n"), 0o644);
   if (options.hostname) tree.file("/etc/hostname", new TextEncoder().encode(options.hostname + "\n"), 0o644);
   if (options.app) {
@@ -413,7 +465,7 @@ if (import.meta.main) {
     if (!(error instanceof UsageError)) throw error;
     console.error(`initramfs: ${error.message}`);
     console.error(
-      "usage: bun scripts/aphrody/initramfs.ts --bun <linux bun> --out <file.cpio.gz> [--sysroot <dir>] [--bin <elf>]... [--app <dir>] [--hostname <name>] [--file host:/target]... [--no-gzip] [-- argv...]",
+      "usage: bun scripts/aphrody/initramfs.ts --bun <linux bun> --out <file.cpio.gz> [--sysroot <dir>] [--bin <elf>]... [--app <dir>] [--hostname <name>] [--ip dhcp|<cidr>] [--gateway <ip>] [--dns <ip>]... [--interface <name>] [--module <ko>]... [--file host:/target]... [--no-gzip] [-- argv...]",
     );
     process.exit(2);
   }

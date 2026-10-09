@@ -6,16 +6,24 @@
 // powers the machine off (or reboots) once the workload exits.
 //
 //   /etc/bun-init.json  { "argv": ["/bin/bun", "/app/index.ts"], "env": {}, "cwd": "/app", "hostname": "aphrody",
+//                         "network": { "address": "10.0.2.15/24", "gateway": "10.0.2.2", "dns": ["10.0.2.3"] },
+//                         "modules": ["/lib/modules/virtio_net.ko.gz"],
 //                         "onExit": "poweroff" | "reboot" | "halt" }
+//
+// "network" without "address" asks for a DHCP lease; a network failure is
+// logged and the workload still starts.
 
 import linux from "bun:linux";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { configureNetwork, type NetworkConfig } from "./initramfs-net.ts";
 
 interface InitConfig {
   argv: string[];
   env?: Record<string, string>;
   cwd?: string;
   hostname?: string;
+  network?: NetworkConfig;
+  modules?: string[];
   onExit?: "poweroff" | "reboot" | "halt";
 }
 
@@ -40,6 +48,31 @@ mountOnce("tmpfs", "/tmp", "tmpfs", c.MS_NOSUID | c.MS_NODEV, "mode=1777");
 
 const config: InitConfig = JSON.parse(readFileSync("/etc/bun-init.json", "utf8"));
 if (config.hostname) writeFileSync("/proc/sys/kernel/hostname", config.hostname);
+for (const module of config.modules ?? []) {
+  try {
+    const bytes = readFileSync(module);
+    const image = module.endsWith(".gz")
+      ? Bun.gunzipSync(bytes)
+      : module.endsWith(".zst")
+        ? Bun.zstdDecompressSync(bytes)
+        : bytes;
+    linux.initModule(image, "");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code !== "EEXIST")
+      console.error(`bun-init: ${module}: ${(error as Error).message}`);
+  }
+}
+if (config.network) {
+  try {
+    const lease = await configureNetwork(linux, config.network, config.hostname);
+    const via = lease.gateway ? ` via ${lease.gateway}` : "";
+    console.log(
+      `bun-init: ${config.network.interface ?? "eth0"} ${lease.address}/${lease.prefix}${via} dns ${lease.dns.join(",")}`,
+    );
+  } catch (error) {
+    console.error(`bun-init: network: ${(error as Error).message}`);
+  }
+}
 
 const workload = Bun.spawn({
   cmd: config.argv,
