@@ -462,4 +462,102 @@ declare module "bun:windows" {
   function systemInfo(): WindowsSystemInfo;
   /** Whether the process runs with an elevated (administrator) token. */
   function isElevated(): boolean;
+
+  /** A native address, or memory whose address is passed: typed arrays, structs, COM objects, `null`. */
+  type Win32Pointer =
+    | number
+    | bigint
+    | null
+    | undefined
+    | ArrayBuffer
+    | ArrayBufferView
+    | Win32Struct
+    | Win32ComObject
+    | import("bun:ffi").JSCallback;
+  /** A JS function (bound for the duration of the call) or a long-lived `win32.callback(...)`. */
+  type Win32Callback = ((...args: any[]) => any) | import("bun:ffi").JSCallback | number | null;
+  /** Field values to assign; nested structs take nested objects, members of anonymous unions are flattened. */
+  type Win32StructInit = Record<string, unknown>;
+
+  /** A Win32 struct laid out from win32metadata, backed by a `Uint8Array`; fields are accessors. */
+  interface Win32Struct {
+    readonly $type: string;
+    readonly $size: number;
+    readonly $buffer: Uint8Array;
+    readonly $ptr: number;
+    [field: string]: any;
+  }
+
+  /** A COM interface pointer; methods follow the vtable, `[retval]` out parameters are returned and HRESULT failures throw. */
+  interface Win32ComObject {
+    readonly $ptr: number;
+    readonly $interface: string;
+    /** `QueryInterface` for another interface, e.g. `"UI.Accessibility.IUIAutomationElement2"`. */
+    as(type: string): Win32ComObject;
+    release(): number;
+    [Symbol.dispose](): void;
+    [method: string]: any;
+  }
+
+  /** Exports of a generated `@aphrody/bun-windows-<dll>` family: its functions (lazily bound), constants and enum values. */
+  interface Win32Family {
+    readonly dll: string;
+    readonly family: string;
+    readonly namespaces: readonly string[];
+    readonly constants: Readonly<Record<string, number | bigint | string>>;
+    struct(type: string, init?: Win32StructInit): Win32Struct;
+    sizeof(type: string): number;
+    [name: string]: any;
+  }
+
+  class Win32Error extends Error {
+    /** HRESULT or Win32 error code. */
+    code: number;
+  }
+
+  /**
+   * Runtime of the generated Win32 families (`windows.family("user32")`): structs, constants, callbacks and COM,
+   * resolved from the `@aphrody/bun-windows-win32` metadata. Type names are `"RECT"` or `"Foundation.RECT"`
+   * (namespace without `Windows.Win32.`).
+   */
+  const win32: {
+    defineFamily(json: unknown, metadata?: unknown): Win32Family;
+    struct(type: string, init?: Win32StructInit): Win32Struct;
+    /** A struct view over native memory (no copy). */
+    structAt(type: string, address: number | bigint): Win32Struct;
+    sizeof(type: string): number;
+    constant(name: string, namespace?: string): number | bigint | string | undefined;
+    namespace(name: string): unknown;
+    /** A long-lived native callback for a callback type such as `"WNDENUMPROC"`; `close()` it when done. */
+    callback(
+      type: string,
+      fn: (...args: any[]) => any,
+      options?: { threadsafe?: boolean },
+    ): import("bun:ffi").JSCallback;
+    com: {
+      initialize(): void;
+      /** `CoCreateInstance` by coclass name (`"CUIAutomation"`) or CLSID, for an interface name. */
+      create(clsid: string, type: string, context?: number): Win32ComObject;
+      /** Wraps an interface pointer, taking ownership of one reference. */
+      wrap(address: number | bigint, type: string): Win32ComObject | null;
+      addRef(address: number): number;
+      release(address: number): number;
+      iid(type: string): string | undefined;
+      clsid(name: string): string;
+    };
+    guid(value: string): Uint8Array;
+    guidString(bytes: Uint8Array): string;
+    /** UTF-16 + NUL. */
+    wstr(value: string): Buffer;
+    readWide(address: number | bigint | ArrayBufferView | null, length?: number): string | null;
+    readAnsi(address: number | bigint | null): string | null;
+    readBstr(address: number | bigint | null): string | null;
+    variant(value: unknown): Win32Struct;
+    variantValue(variant: Win32Struct, release?: boolean): unknown;
+    /** `GetLastError()` captured right after the last call of a function marked SetLastError. */
+    lastError(): number;
+    /** Throws a `Win32Error` for a failed HRESULT, returns it otherwise. */
+    check(hr: number, where?: string): number;
+    Win32Error: typeof Win32Error;
+  };
 }

@@ -658,6 +658,17 @@ function resolveFamily(specifier) {
       return Bun.resolveSync(specifier, base);
     } catch {}
   }
+  // BUN_WINDOWS_FAMILY_PATH: directories holding unpacked bun-windows-<family> packages (a source checkout).
+  const extra = process.env.BUN_WINDOWS_FAMILY_PATH;
+  if (extra) {
+    const dir = specifier.slice(specifier.indexOf("/") + 1);
+    for (const root of extra.split(path.delimiter)) {
+      if (!root) continue;
+      try {
+        return Bun.resolveSync(path.join(root, dir), path.join(root, "noop.js"));
+      } catch {}
+    }
+  }
   return undefined;
 }
 
@@ -712,4 +723,7 @@ export default {
   toolchain,
   family,
   families,
+  get win32() {
+    return require("internal/win32");
+  },
 };

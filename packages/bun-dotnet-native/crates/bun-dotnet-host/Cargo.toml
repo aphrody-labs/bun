@@ -16,6 +16,9 @@ default = ["c-abi"]
 # `cargo rustc -p bun-dotnet-host --crate-type cdylib`. Bun links the rlib without them.
 c-abi = []
 
+[dependencies]
+serde_json = "1"
+
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 

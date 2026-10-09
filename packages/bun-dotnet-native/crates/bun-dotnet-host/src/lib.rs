@@ -19,9 +19,18 @@ use std::sync::{Mutex, OnceLock};
 
 #[cfg(feature = "c-abi")]
 pub mod cabi;
+pub mod env;
+pub mod info;
+pub mod inventory;
 mod library;
+#[cfg(windows)]
+mod registry;
+pub mod releases;
+pub mod select;
+pub mod version;
 
 use library::Library;
+use version::Version;
 
 /// `char_t` of the hosting headers: UTF-16 on Windows, bytes elsewhere.
 #[cfg(windows)]
@@ -360,36 +369,6 @@ fn versions_in(dir: &Path, accept: impl Fn(&Path) -> bool) -> Vec<String> {
         .collect();
     versions.sort();
     versions.into_iter().map(|(_, name)| name).collect()
-}
-
-/// `major.minor.patch[-pre]`; a release sorts after its prereleases.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-struct Version {
-    numbers: [u64; 3],
-    release: bool,
-    pre: String,
-}
-
-impl Version {
-    fn parse(text: &str) -> Option<Self> {
-        let (core, pre) = match text.split_once('-') {
-            Some((core, pre)) => (core, pre.to_owned()),
-            None => (text, String::new()),
-        };
-        let mut numbers = [0u64; 3];
-        let mut parts = core.split('.');
-        for slot in &mut numbers {
-            *slot = parts.next()?.parse().ok()?;
-        }
-        if parts.next().is_some() {
-            return None;
-        }
-        Some(Self {
-            numbers,
-            release: pre.is_empty(),
-            pre,
-        })
-    }
 }
 
 fn nethost_location(nethost: &Path) -> Result<Location> {

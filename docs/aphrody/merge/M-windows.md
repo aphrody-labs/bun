@@ -1,6 +1,6 @@
 # Couverture Win32 de System32
 
-Source : Microsoft.Windows.SDK.Win32Metadata 71.0.30-preview (NuGet). Génération avec scripts/aphrody/win32gen.ts.
+Source : Microsoft.Windows.SDK.Win32Metadata 71.0.30-preview (NuGet). Génération avec scripts/aphrody/win32/gen.ts (vérification : scripts/aphrody/win32/verify.ts layouts|exports).
 
 | DLL | Fonctions | bun:ffi | crate | C++ | .NET |
 | --- | ---: | :---: | :---: | :---: | :---: |
