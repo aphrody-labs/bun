@@ -673,6 +673,54 @@ Risques : `bun_bridge` exige un checkout (binaire installé hors dépôt sans `A
 Rust ≠ yolo awesome ; `ai doc-ai`/`ai tools` annoncés mais pas branchés ; `workflow` et `ssh` doublés (`aphrody infra
 workflow`) ; hooks yolo et aphrody actifs deux fois tant que yolo n'est pas désinstallé.
 
+### Y. Bun outil ultime : lint, fmt, n2b/migrate, wasm, create (🔄 code écrit le 2026-10-09, ni build ni test)
+
+Bun : `5d71825be6b` (CLI), `05258490fbe` (tests), `4ba861b7c8b` (create aphrody/), `90482ce997c` (bun:wasm package/artifact),
+`7a30918cd08` (docs). Aphrody : `19823fc04e` (verify), `4ff21550d7` (create), `31b72597e9` (wasm-package), `27cfae4196` (renvois docs).
+
+**Cœur** : `src/runtime/cli/toolchain_command.rs` (routage) + script embarqué `src/js/eval/toolchain.ts` (exécuté comme
+`bun -e`) + module `bun:wasm` (`src/js/bun/wasm.ts`, types `packages/bun-types/wasm-build.d.ts`). `which()` envoie
+lint, fmt, n2b, migrate, wasm vers `Tag::ToolchainCommand` ; `bun build --target=wasm` et `bun create aphrody/…` aussi.
+
+Matrice (source → destination → statut) :
+
+| Source | Destination | Statut |
+|---|---|---|
+| oxlint / yolo verify (gate lint) | `bun lint` : oxlint + règles n2b, `--fix`, `--format=json\|sarif\|…`, `--since`, `--workspaces/--filter`, `[lint]` bunfig, `.oxlintrc.json` | ✅ code + test |
+| oxfmt / yolo verify (gate fmt) | `bun fmt` : `--check`, `--since`, workspaces, `[fmt]` bunfig, `.oxfmtrc.json` | ✅ code + test |
+| `aphrody n2b`, bun-plugin-n2b | `bun n2b` (relais), `bun migrate` = `n2b --migrate` | ✅ code + test |
+| wasm-pack, `scripts/build/rust/wasm-package.ts` (bindgen, opt, staging) | `bun wasm build`, `bun build --target=wasm`, `bun:wasm` `build/optimize/plugin` (import `Cargo.toml`/`.rs`), WASI p1 (`node:wasi`) et p2 (jco) | ✅ code + test ; wasm-package.ts garde seulement le routage cargo (cloud/Windows/VPS) |
+| `packages/engine/core/src/scaffold/create.ts` (compositeur) | `bun create aphrody/<a>+<b>` lit `m3/templates/stack.toml` (required, exclusive, deps) ; create.ts n'est plus qu'un appel | ✅ code + test |
+| docs wasm Aphrody (wasm-stack-api-reference, RELEASE-CHECKLIST, CONTAINER, TROUBLESHOOTING, wgpu-webgpu) | renvois vers `docs/bundler/wasm.mdx` ; le reste est propre à Aphrody et y reste | ✅ |
+| yolo scan | non repris : scanner VFS, pas un lint | ⏸ décision |
+| yolo rename, parse, docs, bench | Z1 | — |
+
+Décisions :
+- oxlint/oxfmt **non liés** au binaire (≈ +20 Mo, `oxc_linter` absent de crates.io, > garde de +3 %) : téléchargés à la
+  première utilisation par `bun x --bun oxlint@1.87.0` / `oxfmt@0.72.0` (versions de la section L, oxc 0.153.0),
+  `node_modules/.bin` prioritaire, `version` surchargeable dans bunfig. Variables de test `BUN_OXLINT/BUN_OXFMT/BUN_N2B`.
+- Un script `package.json` du même nom garde la priorité (`bun lint` = `bun run lint`, comme avant) ; à l'intérieur du
+  script (`npm_lifecycle_event` = nom) c'est la commande. Les gates d'Aphrody posent `npm_lifecycle_event`.
+- Templates : source unique dans Aphrody (`m3/templates`, liés au SDK via `__YOLO__`) ; la composition est dans Bun.
+- binaryen (wasm-opt) et wasm-bindgen viennent de PATH ou sont installés une fois dans `$BUN_INSTALL/tools` ; jco par `bun x`.
+
+Risques : aucun build ni test lancé ; Aphrody (verify, create, wasm-package) exige le Bun du fork (Bun 1.4.3 système
+n'a pas ces commandes) ; versions oxc suivies à la main (L/Z1) ; licences : binaryen Apache-2.0, jco Apache-2.0 WITH
+LLVM-exception, oxc MIT (outils téléchargés, non redistribués) ; premier `bun lint` hors ligne échoue sans cache.
+
+Passe finale :
+
+```sh
+cd C:/bun
+bun bd --version
+bun bd test test/cli/lint/toolchain.test.ts
+bun test test/integration/bun-types/bun-types.test.ts
+bun run rust:check-all
+bun bd lint --help ; bun bd fmt --check docs ; bun bd wasm build --help ; bun bd create aphrody --list
+cd C:/aphrody   # avec le bun du fork sur PATH
+bun test scripts/build/rust/wasm-package.test.ts packages/engine/yolo/test/stack.test.ts packages/engine/yolo/test/verify.test.ts
+```
+
 ### A. Publication (✅ base)
 
 - ✅ crates.io : `aphrody-bun-macro` 0.1.0, `aphrody-bun-native-plugin` 0.2.0.
