@@ -1,11 +1,26 @@
-import { cpus, platform } from "node:os";
+import { cpus, platform, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { mkdirSync, copyFileSync } from "node:fs";
-import { stats } from "./perf-gate.ts";
 
 type Command = { name: string; argv: string[]; cwd?: string; internal?: boolean };
 type Case = { name: string; left: Command; right: Command; check?: string };
-type Result = { name: string; left: string; right: string; leftMs: number; rightMs: number; ratio: number };
+type Result = {
+  name: string;
+  left: string;
+  right: string;
+  leftMs: number;
+  rightMs: number;
+  leftP95Ms: number;
+  rightP95Ms: number;
+  ratio: number;
+};
+
+function stats(values: number[]) {
+  const sorted = values.toSorted((a, b) => a - b);
+  const midpoint = sorted.length / 2;
+  const median = sorted.length % 2 ? sorted[Math.floor(midpoint)]! : (sorted[midpoint - 1]! + sorted[midpoint]!) / 2;
+  return { median, p95: sorted[Math.ceil(sorted.length * 0.95) - 1]! };
+}
 
 const args = process.argv.slice(2);
 const option = (name: string, fallback?: string) => {
@@ -21,7 +36,9 @@ const count = (name: string, fallback: number, minimum: number) => {
   return value;
 };
 const bun = resolve(option("--bun", process.execPath)!);
-const python = resolve(option("--python")!);
+const pythonOption = option("--python");
+if (pythonOption === undefined) throw new Error("--python requires a qualified CPython executable");
+const python = resolve(pythonOption);
 const uv = option("--uv", Bun.which("uv") ?? undefined);
 const oxc = option("--oxc", Bun.which("oxlint") ?? undefined);
 const ruff = option("--ruff", Bun.which("ruff") ?? undefined);
@@ -117,6 +134,37 @@ const cases: Case[] = [
     "return hashlib.sha256(data).hexdigest()",
     3,
   ),
+  await micro(
+    "json-stringify",
+    `const value=JSON.parse(await Bun.file(${JSON.stringify(payloadPath)}).text());`,
+    "return JSON.stringify(value).length;",
+    `import json\nvalue=json.load(open(${JSON.stringify(payloadPath)},encoding='utf-8'))`,
+    "return len(json.dumps(value,separators=(',',':')))",
+    10,
+  ),
+  await micro(
+    "gzip-roundtrip-8MiB",
+    `import {gzipSync,gunzipSync} from 'node:zlib';const data=await Bun.file(${JSON.stringify(binaryPath)}).arrayBuffer();`,
+    "const result=gunzipSync(gzipSync(new Uint8Array(data),{level:6}));return result.length+result[result.length-1];",
+    `import gzip\ndata=open(${JSON.stringify(binaryPath)},'rb').read()`,
+    "result=gzip.decompress(gzip.compress(data,compresslevel=6,mtime=0))\nreturn len(result)+result[-1]",
+  ),
+  await micro(
+    "regexp-10000-records",
+    "const text='item-123 value=456\\n'.repeat(10000);",
+    "let count=0;for(const match of text.matchAll(/item-(\\d+) value=(\\d+)/g))count+=Number(match[1])+Number(match[2]);return count;",
+    "import re\ntext='item-123 value=456\\n'*10000\npattern=re.compile(r'item-(\\d+) value=(\\d+)')",
+    "return sum(int(m[1])+int(m[2]) for m in pattern.finditer(text))",
+    3,
+  ),
+  await micro(
+    "sqlite-1000-inserts",
+    "import {Database} from 'bun:sqlite';",
+    "const db=new Database(':memory:');try{db.run('CREATE TABLE records(value INTEGER)');db.run('BEGIN');const query=db.query('INSERT INTO records VALUES (?)');for(let i=0;i<1000;i++)query.run(i);db.run('COMMIT');return db.query('SELECT sum(value) AS total FROM records').get().total;}finally{db.close();}",
+    "import sqlite3",
+    "db=sqlite3.connect(':memory:')\ntry:\n    db.execute('CREATE TABLE records(value INTEGER)')\n    db.execute('BEGIN')\n    for i in range(1000): db.execute('INSERT INTO records VALUES (?)',(i,))\n    db.commit()\n    return db.execute('SELECT sum(value) FROM records').fetchone()[0]\nfinally:\n    db.close()",
+    3,
+  ),
 ];
 
 const jsRead = await fixture(
@@ -166,8 +214,9 @@ if (uv) {
   cases.push({ name: "warm dependency-free install", left, right });
 }
 if (oxc && ruff) {
-  const jsTree = join(out, "lint-js"),
-    pyTree = join(out, "lint-py");
+  const lintRoot = join(tmpdir(), "aphrody-runtime-bench", Bun.hash(out).toString(16));
+  const jsTree = join(lintRoot, "lint-js"),
+    pyTree = join(lintRoot, "lint-py");
   for (let i = 0; i < 100; i++) {
     await Bun.write(
       join(jsTree, `mod${i}.js`),
@@ -180,8 +229,12 @@ if (oxc && ruff) {
   }
   cases.push({
     name: "lint 100 files / 10000 functions",
-    left: { name: "OXC / JavaScript", argv: [oxc, jsTree] },
-    right: { name: "Ruff / Python", argv: [ruff, "check", "--isolated", "--no-cache", pyTree] },
+    left: {
+      name: "OXC / JavaScript",
+      argv: [oxc, "--no-ignore", jsTree],
+      cwd: jsTree,
+    },
+    right: { name: "Ruff / Python", argv: [ruff, "check", "--isolated", "--no-cache", pyTree], cwd: pyTree },
   });
 }
 if (native) {
@@ -193,11 +246,11 @@ if (native) {
   await Bun.write(numbersPath, numbers);
   const ffi = await fixture(
     "ffi.js",
-    `import {dlopen,FFIType,ptr} from 'bun:ffi';const bytes=new Uint8Array(await Bun.file(${JSON.stringify(numbersPath)}).arrayBuffer());const lib=dlopen(${JSON.stringify(nativePath)},{bun_bench_sum_f64:{args:[FFIType.ptr,FFIType.usize],returns:FFIType.f64}});const p=ptr(bytes);for(let i=0;i<10000;i++)lib.symbols.bun_bench_sum_f64(p,bytes.length);const t=performance.now();let value;for(let i=0;i<100000;i++)value=lib.symbols.bun_bench_sum_f64(p,bytes.length);console.log(((performance.now()-t)/100000).toFixed(9)+';'+value);lib.close();`,
+    `import assert from 'node:assert/strict';import {dlopen,FFIType,ptr} from 'bun:ffi';const bytes=new Uint8Array(await Bun.file(${JSON.stringify(numbersPath)}).arrayBuffer());const lib=dlopen(${JSON.stringify(nativePath)},{bun_bench_sum_f64:{args:[FFIType.ptr,FFIType.usize],returns:FFIType.f64}});const p=ptr(bytes);assert.equal(lib.symbols.bun_bench_sum_f64(null,0),0);assert.ok(Number.isNaN(lib.symbols.bun_bench_sum_f64(p,7)));assert.equal(lib.symbols.bun_bench_sum_f64(p,bytes.length),124);for(let i=0;i<10000;i++)lib.symbols.bun_bench_sum_f64(p,bytes.length);const t=performance.now();let value;for(let i=0;i<100000;i++)value=lib.symbols.bun_bench_sum_f64(p,bytes.length);console.log(((performance.now()-t)/100000).toFixed(9)+';'+value);lib.close();`,
   );
   const pyo3 = await fixture(
     "pyo3.py",
-    `import importlib.util,time\nspec=importlib.util.spec_from_file_location('bun_runtime_bench',${JSON.stringify(extensionPath)})\nmodule=importlib.util.module_from_spec(spec)\nspec.loader.exec_module(module)\ndata=open(${JSON.stringify(numbersPath)},'rb').read()\nfor _ in range(10000): module.sum_f64(data)\nt=time.perf_counter_ns()\nfor _ in range(100000): value=module.sum_f64(data)\nprint(f'{(time.perf_counter_ns()-t)/1e6/100000:.9f};{value}')`,
+    `import importlib.util,time\nspec=importlib.util.spec_from_file_location('bun_runtime_bench',${JSON.stringify(extensionPath)})\nmodule=importlib.util.module_from_spec(spec)\nspec.loader.exec_module(module)\ndata=open(${JSON.stringify(numbersPath)},'rb').read()\nassert module.sum_f64(b'') == 0\ntry:\n    module.sum_f64(b'invalid')\nexcept ValueError:\n    pass\nelse:\n    raise AssertionError('invalid binary input accepted')\nassert module.sum_f64(data) == 124\nfor _ in range(10000): module.sum_f64(data)\nt=time.perf_counter_ns()\nfor _ in range(100000): value=module.sum_f64(data)\nprint(f'{(time.perf_counter_ns()-t)/1e6/100000:.9f};{value}')`,
   );
   cases.push({
     name: "same Rust sum / 32 float64 / one call",
@@ -221,7 +274,10 @@ for (const [name, executable] of [
 const results: Result[] = [],
   raw: string[] = ["case,implementation,sample,milliseconds"];
 const csv = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`;
-for (const entry of cases) {
+const selected = option("--case");
+const selectedCases = selected === undefined ? cases : cases.filter(entry => entry.name.includes(selected));
+if (!selectedCases.length) throw new Error(`No benchmark matches --case ${selected}`);
+for (const entry of selectedCases) {
   const left: number[] = [],
     right: number[] = [];
   for (let i = -warmup; i < samples; i++) {
@@ -258,17 +314,27 @@ for (const entry of cases) {
     right: entry.right.name,
     leftMs: l.median,
     rightMs: r.median,
+    leftP95Ms: l.p95,
+    rightP95Ms: r.p95,
     ratio: r.median / l.median,
   });
   console.log(
     `${entry.name}: ${l.median.toFixed(6)} / ${r.median.toFixed(6)} ms; right/left=${(r.median / l.median).toFixed(3)}`,
+  );
+  await Bun.write(join(out, "samples.csv"), raw.join("\n") + "\n");
+  await Bun.write(
+    join(out, "comparison.csv"),
+    [
+      "case,left,right,left_median_ms,right_median_ms,left_p95_ms,right_p95_ms,right_over_left",
+      ...results.map(row => Object.values(row).map(csv).join(",")),
+    ].join("\n") + "\n",
   );
 }
 await Bun.write(join(out, "samples.csv"), raw.join("\n") + "\n");
 await Bun.write(
   join(out, "comparison.csv"),
   [
-    "case,left,right,left_median_ms,right_median_ms,right_over_left",
+    "case,left,right,left_median_ms,right_median_ms,left_p95_ms,right_p95_ms,right_over_left",
     ...results.map(row => Object.values(row).map(csv).join(",")),
   ].join("\n") + "\n",
 );

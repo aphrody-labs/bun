@@ -6,8 +6,10 @@ fn sum_bytes(bytes: &[u8]) -> Result<f64, &'static str> {
         return Err("expected little-endian float64 bytes");
     }
     Ok(bytes
-        .chunks_exact(8)
-        .map(|chunk| f64::from_le_bytes(chunk.try_into().expect("eight-byte chunk")))
+        .as_chunks::<8>()
+        .0
+        .iter()
+        .map(|chunk| f64::from_le_bytes(*chunk))
         .sum())
 }
 
@@ -34,4 +36,34 @@ fn python_sum(data: &[u8]) -> PyResult<f64> {
 #[pymodule]
 fn bun_runtime_bench(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(python_sum, module)?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rejects_invalid_binary_inputs_without_dereferencing_them() {
+        assert!(sum_bytes(&[0; 7]).is_err());
+        // SAFETY: null and oversized buffers are rejected before they are dereferenced.
+        unsafe {
+            assert_eq!(bun_bench_sum_f64(std::ptr::null(), 0), 0.0);
+            assert!(bun_bench_sum_f64(std::ptr::null(), 8).is_nan());
+            assert!(bun_bench_sum_f64(std::ptr::dangling(), usize::MAX).is_nan());
+        }
+    }
+
+    #[test]
+    fn c_abi_preserves_little_endian_signed_float64_values() {
+        let bytes: Vec<u8> = [1.5_f64, -0.25, 2.0]
+            .into_iter()
+            .flat_map(f64::to_le_bytes)
+            .collect();
+        // SAFETY: the Vec owns the complete readable buffer throughout the call.
+        assert_eq!(
+            unsafe { bun_bench_sum_f64(bytes.as_ptr(), bytes.len()) },
+            3.25
+        );
+        assert_eq!(sum_bytes(&bytes), Ok(3.25));
+    }
 }
