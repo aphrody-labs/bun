@@ -100,7 +100,7 @@ service.release();
 ## Read next
 
 - `docs/runtime/windows.mdx`: **Windows**. Call Windows interfaces directly from JavaScript with bun:windows
-  Sections: Errors; System; Registry; Services; Event log; Clipboard; Known folders; Processes; Job Objects; Notifications; WSL; API families.
+  Sections: Errors; System; Registry; Services; Event log; Clipboard; Known folders; Processes; Job Objects; Notifications; WSL; NTFS; PE, Authenticode and catalog signatures; API families.
 - `docs/runtime/winrt.mdx`: **Windows Runtime**. Call Windows Runtime (WinRT) APIs from Bun with bun:winrt, with namespaces projected on demand and async operations as Promises
   Sections: Classes and objects; Async operations; Other metadata.
 - `docs/runtime/winui.mdx`: **WinUI 3**. Open native WinUI 3 windows from Bun with bun:winui, load XAML, handle control events on the JS thread, and theme them with Fluent 2 tokens
