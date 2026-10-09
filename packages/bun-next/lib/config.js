@@ -153,12 +153,35 @@ function readBuiltClientConfig(distDir) {
 
 const PHASE_PRODUCTION_SERVER = "phase-production-server";
 
+/** `true` when the Tauri CLI drives this process (it sets `TAURI_ENV_PLATFORM` for `beforeBuildCommand` and `beforeDevCommand`). */
+function isTauriBuild(env = process.env) {
+  return env.TAURI_ENV_PLATFORM !== undefined || env.TAURI_ENV_ARCH !== undefined;
+}
+
+/**
+ * Static export a Tauri webview loads: `output: "export"`, unoptimized images, trailing slashes, no Cache
+ * Components (no server renders the shell on demand), `tauri.env` merged under the config's `env`, and the
+ * dev server as asset prefix outside production when a dev host is known (`devHost`, else `TAURI_DEV_HOST`).
+ */
+function applyStaticExport(out, config, tauri, env) {
+  const { devHost = env.TAURI_DEV_HOST, devPort = 3000, env: exportEnv } = tauri === true ? {} : tauri;
+  out.output ??= "export";
+  out.trailingSlash ??= true;
+  out.images = { unoptimized: true, ...config.images };
+  if (config.cacheComponents === undefined) out.cacheComponents = false;
+  if (exportEnv) out.env = { ...exportEnv, ...config.env };
+  if (devHost !== undefined && env.NODE_ENV !== "production") out.assetPrefix ??= `http://${devHost}:${devPort}`;
+}
+
 /**
  * Applies the generic rewrites to a resolved Next.js config object.
  *
  * @param {Record<string, any>} config
  * @param {{ phase: string, projectDir: string, alias?: Record<string, string>, dedupe?: string[],
- *   root?: string | false, transpileSources?: boolean, freezeBuildConfig?: boolean }} options
+ *   root?: string | false, transpileSources?: boolean, freezeBuildConfig?: boolean, reactCompiler?: boolean,
+ *   typedRoutes?: boolean, cacheComponents?: boolean,
+ *   tauri?: boolean | "auto" | { devHost?: string, devPort?: number, env?: Record<string, string> },
+ *   env?: Record<string, string | undefined> }} options
  */
 function applyBunConfig(config, options) {
   const { phase, projectDir } = options;
@@ -180,6 +203,13 @@ function applyBunConfig(config, options) {
       return typeof userWebpack === "function" ? userWebpack(webpackConfig, context) : webpackConfig;
     };
   }
+
+  for (const key of ["reactCompiler", "typedRoutes", "cacheComponents"]) {
+    if (options[key] !== undefined) out[key] ??= options[key];
+  }
+  const env = options.env ?? process.env;
+  const tauri = options.tauri === "auto" ? isTauriBuild(env) : options.tauri;
+  if (tauri !== undefined && tauri !== false) applyStaticExport(out, config, tauri, env);
 
   if (options.transpileSources !== false) {
     const external = new Set(out.serverExternalPackages ?? []);
@@ -203,6 +233,7 @@ module.exports = {
   applyBunConfig,
   findPackageDir,
   findWorkspaceRoot,
+  isTauriBuild,
   readBuiltClientConfig,
   shipsTypeScriptSource,
   typeScriptSourcePackages,

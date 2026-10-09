@@ -41,6 +41,12 @@ of its build (`<distDir>/required-server-files.json`): Turbopack bakes both into
 server environment that differs from the build's otherwise serves HTML whose chunks never load. Each rewrite
 has an option to turn it off (`root: false`, `transpileSources: false`, `freezeBuildConfig: false`).
 
+`reactCompiler`, `typedRoutes` and `cacheComponents` set the Next 16 keys of the same name when the config
+leaves them unset. `tauri` turns the build into a static export a Tauri webview loads (`output: "export"`,
+unoptimized images, trailing slashes, no Cache Components, `tauri.env` baked under the config's `env`, and the
+dev server as asset prefix outside production); `tauri: "auto"` does it only when the Tauri CLI runs the build
+(`isTauriBuild()`). Keys the config sets always win.
+
 ### CSS and Tailwind CSS
 
 The Bun.build path bundles global stylesheets (imported from `pages/_app`) and CSS modules, and lists each
@@ -86,6 +92,22 @@ await serveApp({ outDir: "dist", port: 3000 });
 
 `runAppCommand("dev" | "build" | "start", project, flags)` wraps them for a CLI; `compileAppRouter` links the build into one
 executable and `dockerAppRouter` writes a Docker context.
+
+## `@aphrody/next-bun/crawl`
+
+Pure functions for the crawler-facing files of a site, to return from a route handler or write at build time:
+`sitemapXml(routes, origin)` (Sitemaps 0.9, de-duplicated and sorted), `robotsTxt({ origin, rules, sitemaps })`
+(RFC 9309), `llmsTxt({ origin, name, summary, details, sections })` ([llmstxt.org](https://llmstxt.org)) and
+`jsonLd(data)` for an inline `<script type="application/ld+json">`.
+
+```ts
+import { sitemapXml } from "@aphrody/next-bun/crawl";
+
+export const GET = () =>
+  new Response(sitemapXml(["/", "/docs"], "https://example.com"), {
+    headers: { "content-type": "application/xml" },
+  });
+```
 
 ## The `node` shim
 

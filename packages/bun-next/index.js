@@ -2,7 +2,7 @@
 const { existsSync } = require("node:fs");
 const { dirname, join } = require("node:path");
 const { checkPatch } = require("./lib/patch.js");
-const { applyBunConfig } = require("./lib/config.js");
+const { applyBunConfig, isTauriBuild } = require("./lib/config.js");
 
 const PHASE_PRODUCTION_BUILD = "phase-production-build";
 
@@ -50,7 +50,9 @@ function bunPlugins(options, projectDir) {
  * workspace root (Bun's isolated store lives there), `alias` and `dedupe` are
  * written for both Turbopack and webpack, packages that ship TypeScript sources
  * join `transpilePackages`, and `next start` keeps the asset prefix and
- * deployment id its build baked into the client bundles.
+ * deployment id its build baked into the client bundles. `reactCompiler`, `typedRoutes`
+ * and `cacheComponents` fill the Next keys the config leaves unset; `tauri` turns the
+ * build into a static export for a Tauri webview.
  *
  * `bundler: "bun"` (the default) also compiles `next build` with `Bun.build`
  * (Pages Router and App Router with Server Actions, experimental; needs `bun --bun next build`, and `next-bun patch`
@@ -64,7 +66,9 @@ function bunPlugins(options, projectDir) {
  * @param {T} nextConfig a config object or a `(phase, ctx) => config` function
  * @param {{ bundler?: "bun" | "turbopack", alias?: Record<string, string>, dedupe?: string[],
  *   root?: string | false, transpileSources?: boolean, freezeBuildConfig?: boolean,
- *   projectDir?: string, plugins?: import("bun").BunPlugin[], tailwind?: boolean | Record<string, unknown> }} [options]
+ *   projectDir?: string, plugins?: import("bun").BunPlugin[], tailwind?: boolean | Record<string, unknown>,
+ *   reactCompiler?: boolean, typedRoutes?: boolean, cacheComponents?: boolean,
+ *   tauri?: boolean | "auto" | { devHost?: string, devPort?: number, env?: Record<string, string> } }} [options]
  * @returns {(phase: string, ctx: any) => Promise<any>}
  */
 function withBun(nextConfig, options = {}) {
@@ -95,4 +99,4 @@ function withBun(nextConfig, options = {}) {
   };
 }
 
-module.exports = { withBun };
+module.exports = { isTauriBuild, withBun };

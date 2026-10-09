@@ -18,6 +18,7 @@
     },
     "./patch": "./lib/patch.js",
     "./config": "./lib/config.js",
+    "./crawl": "./lib/crawl.ts",
     "./standalone": {
       "types": "./lib/standalone.d.ts",
       "default": "./lib/standalone.js"

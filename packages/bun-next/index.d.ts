@@ -24,7 +24,30 @@ export interface WithBunOptions {
    * `@aphrody/bun-plugin-tailwind/postcss` from `postcss.config.mjs` instead.
    */
   tailwind?: boolean | Record<string, unknown>;
+  /** `reactCompiler` when the config leaves it unset (needs `babel-plugin-react-compiler` in the app). */
+  reactCompiler?: boolean;
+  /** `typedRoutes` when the config leaves it unset: `Link` hrefs and `redirect` are checked against `app/`. */
+  typedRoutes?: boolean;
+  /** `cacheComponents` when the config leaves it unset: `use cache`, `cacheLife`, `cacheTag`, partial prerendering. */
+  cacheComponents?: boolean;
+  /**
+   * Static export for a Tauri webview: `output: "export"`, unoptimized images, trailing slashes, no Cache Components,
+   * `env` merged under the config's `env`, and the dev server (`devHost`, else `TAURI_DEV_HOST`; port 3000) as asset
+   * prefix outside production. `true` always, `"auto"` when the Tauri CLI runs the build ({@link isTauriBuild}).
+   * Config keys always win.
+   */
+  tauri?: boolean | "auto" | WithBunTauriOptions;
 }
+
+export interface WithBunTauriOptions {
+  devHost?: string;
+  devPort?: number;
+  /** Variables the static build bakes in (`NEXT_PUBLIC_*`), under the config's own `env`. */
+  env?: Record<string, string>;
+}
+
+/** `true` when the Tauri CLI drives this process (`TAURI_ENV_PLATFORM` or `TAURI_ENV_ARCH` is set). */
+export function isTauriBuild(env?: Record<string, string | undefined>): boolean;
 
 type ConfigOrFunction<T> = T | ((phase: string, ctx: any) => T | Promise<T>);
 

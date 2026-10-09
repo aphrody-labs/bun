@@ -6,9 +6,14 @@ import { join } from "node:path";
 
 const nextBun = join(import.meta.dir, "..", "..", "..", "packages", "bun-next");
 const { withBun } = require(nextBun);
-const { aliasTables, applyBunConfig, findWorkspaceRoot, readBuiltClientConfig, typeScriptSourcePackages } = require(
-  join(nextBun, "lib", "config.js"),
-);
+const {
+  aliasTables,
+  applyBunConfig,
+  findWorkspaceRoot,
+  isTauriBuild,
+  readBuiltClientConfig,
+  typeScriptSourcePackages,
+} = require(join(nextBun, "lib", "config.js"));
 const { flattenStandalone } = require(join(nextBun, "lib", "standalone.js"));
 
 const pkg = (name: string, extra: Record<string, unknown> = {}) => JSON.stringify({ name, version: "1.0.0", ...extra });
@@ -129,6 +134,60 @@ describe("config rewrites", () => {
     expect(building.assetPrefix).toBe("https://other.example");
     const unfrozen = applyBunConfig(config, { ...options, phase: "phase-production-server", freezeBuildConfig: false });
     expect(unfrozen.assetPrefix).toBe("https://other.example");
+  });
+
+  const base = { phase: "phase-production-build", projectDir: "/", root: false, transpileSources: false } as const;
+
+  test("reactCompiler, typedRoutes and cacheComponents fill only unset Next keys", () => {
+    const set = applyBunConfig({}, { ...base, reactCompiler: true, typedRoutes: true, cacheComponents: true });
+    expect([set.reactCompiler, set.typedRoutes, set.cacheComponents]).toEqual([true, true, true]);
+    expect(applyBunConfig({}, base).reactCompiler).toBeUndefined();
+    const kept = applyBunConfig(
+      { reactCompiler: false, typedRoutes: false, cacheComponents: false },
+      { ...base, reactCompiler: true, typedRoutes: true, cacheComponents: true },
+    );
+    expect([kept.reactCompiler, kept.typedRoutes, kept.cacheComponents]).toEqual([false, false, false]);
+  });
+
+  test("tauri makes a static export a webview loads; config keys win", () => {
+    const env = { NODE_ENV: "development" };
+    const exported = applyBunConfig(
+      {},
+      { ...base, env, tauri: { env: { NEXT_PUBLIC_STATIC: "1" } }, cacheComponents: true },
+    );
+    expect(exported).toMatchObject({
+      output: "export",
+      trailingSlash: true,
+      images: { unoptimized: true },
+      cacheComponents: false,
+      env: { NEXT_PUBLIC_STATIC: "1" },
+    });
+    expect(exported.assetPrefix).toBeUndefined();
+    const user = applyBunConfig(
+      { output: "standalone", trailingSlash: false, images: { formats: ["image/avif"] }, env: { A: "1" } },
+      { ...base, env, tauri: { env: { NEXT_PUBLIC_STATIC: "1", A: "0" } } },
+    );
+    expect(user).toMatchObject({
+      output: "standalone",
+      trailingSlash: false,
+      images: { unoptimized: true, formats: ["image/avif"] },
+      env: { NEXT_PUBLIC_STATIC: "1", A: "1" },
+    });
+    for (const tauri of [undefined, false]) expect(applyBunConfig({}, { ...base, env, tauri }).output).toBeUndefined();
+  });
+
+  test('tauri "auto" follows the Tauri CLI and the dev asset prefix never reaches production', () => {
+    expect(isTauriBuild({})).toBe(false);
+    expect(isTauriBuild({ TAURI_ENV_ARCH: "x86_64" })).toBe(true);
+    expect(applyBunConfig({}, { ...base, env: {}, tauri: "auto" }).output).toBeUndefined();
+    expect(applyBunConfig({}, { ...base, env: { TAURI_ENV_PLATFORM: "linux" }, tauri: "auto" }).output).toBe("export");
+    const prefix = (env: Record<string, string>, tauri: unknown) =>
+      applyBunConfig({}, { ...base, env, tauri }).assetPrefix;
+    expect(prefix({ NODE_ENV: "development" }, { devHost: "192.168.1.5", devPort: 3100 })).toBe(
+      "http://192.168.1.5:3100",
+    );
+    expect(prefix({ NODE_ENV: "development", TAURI_DEV_HOST: "10.0.0.2" }, true)).toBe("http://10.0.0.2:3000");
+    expect(prefix({ NODE_ENV: "production", TAURI_DEV_HOST: "10.0.0.2" }, true)).toBeUndefined();
   });
 });
 
