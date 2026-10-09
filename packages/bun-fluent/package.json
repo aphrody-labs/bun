@@ -1,0 +1,15 @@
+{
+  "name": "@aphrody/bun-fluent",
+  "version": "0.1.0",
+  "description": "Fluent 2 design tokens (from microsoft/fluentui packages/tokens) as JS, CSS custom properties, a Tailwind v4 theme (fluent:theme.css) and WinUI 3 resources",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "LICENSE-fluentui.txt"
+  ]
+}

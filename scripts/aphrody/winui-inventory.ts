@@ -40,7 +40,7 @@ type Klass = {
   namespace: string;
   base: string | null;
   source: string;
-  origin: "controls/dev idl" | "XamlOM model";
+  origin: "controls/dev idl" | "XamlOM model" | "XamlOM module";
   properties: Member[];
   dependencyProperties: string[];
   events: string[];
@@ -126,7 +126,12 @@ function parseIdl(file: string, text: string): { classes: Klass[]; enums: string
 }
 
 // Accessor contents are needed to tell read-only properties apart, so keep them per member.
-function parseModel(file: string, text: string, namespace: string): { classes: Klass[]; enums: string[] } {
+function parseModel(
+  file: string,
+  text: string,
+  namespace: string,
+  origin: Klass["origin"] = "XamlOM model",
+): { classes: Klass[]; enums: string[] } {
   const src = stripComments(text).replace(/\[[^\]]*\]/g, " ");
   const classes: Klass[] = [];
   const enums = [...src.matchAll(/\benum\s+(\w+)/g)].map(m => `${namespace}.${m[1]}`);
@@ -140,7 +145,7 @@ function parseModel(file: string, text: string, namespace: string): { classes: K
       namespace,
       base: m[2] ?? null,
       source: rel(file),
-      origin: "XamlOM model",
+      origin,
       properties: [],
       dependencyProperties: [],
       events: [],
@@ -228,6 +233,16 @@ for (const ns of ["Microsoft.UI.Xaml.Controls", "Microsoft.UI.Xaml.Controls.Prim
   classes.push(...r.classes);
   enums.push(...r.enums);
 }
+// The core controls (TextBox, ComboBox, CommandBar, CalendarView, Pivot...) are declared one module per file.
+const moduleDir = join(WINUI, "dxaml/xcp/tools/XCPTypesAutoGen/Modules");
+for (const f of await scan(moduleDir, "**/*.cs")) {
+  const text = await Bun.file(f).text();
+  const namespace = stripComments(text).match(/\bnamespace\s+([\w.]+)/)?.[1];
+  if (!namespace) continue;
+  const r = parseModel(f, text, namespace, "XamlOM module");
+  classes.push(...r.classes);
+  enums.push(...r.enums);
+}
 const xamlFiles = [
   ...(await scan(WINUI, "controls/dev/**/*.xaml")),
   join(WINUI, "dxaml/xcp/dxaml/themes/generic.xaml"),
@@ -236,7 +251,11 @@ const xaml: XamlFile[] = [];
 for (const f of xamlFiles) xaml.push(parseXaml(f, await Bun.file(f).text()));
 
 const byName = new Map<string, Klass>();
-for (const k of classes) if (!byName.has(k.name) || k.origin === "controls/dev idl") byName.set(k.name, k);
+const rank = { "controls/dev idl": 0, "XamlOM module": 1, "XamlOM model": 2 } as const;
+for (const k of classes) {
+  const known = byName.get(k.name);
+  if (!known || rank[k.origin] < rank[known.origin]) byName.set(k.name, k);
+}
 const isControl = (k: Klass): boolean => {
   const seen = new Set<string>();
   let cur: Klass | undefined = k;

@@ -62,9 +62,9 @@
  "totals": {
   "idlFiles": 131,
   "xamlFiles": 184,
-  "classes": 527,
-  "controls": 163,
-  "enums": 149,
+  "classes": 660,
+  "controls": 216,
+  "enums": 168,
   "styles": 757,
   "themeResourceKeys": {
    "Default": 2835,
@@ -199,6 +199,197 @@
    "events": [
     "Scrolling",
     "DetailLabelRequested"
+   ],
+   "style": true
+  },
+  {
+   "name": "AppBar",
+   "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
+   "base": "Microsoft.UI.Xaml.Controls.ContentControl",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/AppBar.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "IsOpen",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "IsSticky",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "ClosedDisplayMode",
+     "type": "Microsoft.UI.Xaml.Controls.AppBarClosedDisplayMode"
+    },
+    {
+     "name": "TemplateSettings",
+     "type": "Microsoft.UI.Xaml.Controls.Primitives.AppBarTemplateSettings"
+    },
+    {
+     "name": "LightDismissOverlayMode",
+     "type": "Microsoft.UI.Xaml.Controls.LightDismissOverlayMode"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "Opening",
+    "Opened",
+    "Closing",
+    "Closed"
+   ],
+   "style": true
+  },
+  {
+   "name": "AppBarButton",
+   "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
+   "base": "Microsoft.UI.Xaml.Controls.Button",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/AppBarButton.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "Label",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "Icon",
+     "type": "Microsoft.UI.Xaml.Controls.IconElement"
+    },
+    {
+     "name": "LabelPosition",
+     "type": "Microsoft.UI.Xaml.Controls.CommandBarLabelPosition"
+    },
+    {
+     "name": "KeyboardAcceleratorTextOverride",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "TemplateSettings",
+     "type": "Microsoft.UI.Xaml.Controls.Primitives.AppBarButtonTemplateSettings"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [],
+   "style": true
+  },
+  {
+   "name": "AppBarElementContainer",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.ContentControl",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/AppBarElementContainer.cs",
+   "origin": "XamlOM module",
+   "properties": [],
+   "dependencyProperties": [],
+   "events": [],
+   "style": true
+  },
+  {
+   "name": "AppBarSeparator",
+   "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
+   "base": "Microsoft.UI.Xaml.Controls.Control",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/AppBarButton.cs",
+   "origin": "XamlOM module",
+   "properties": [],
+   "dependencyProperties": [],
+   "events": [],
+   "style": true
+  },
+  {
+   "name": "AppBarToggleButton",
+   "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
+   "base": "Microsoft.UI.Xaml.Controls.Primitives.ToggleButton",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/AppBarButton.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "Label",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "Icon",
+     "type": "Microsoft.UI.Xaml.Controls.IconElement"
+    },
+    {
+     "name": "LabelPosition",
+     "type": "Microsoft.UI.Xaml.Controls.CommandBarLabelPosition"
+    },
+    {
+     "name": "KeyboardAcceleratorTextOverride",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "TemplateSettings",
+     "type": "Microsoft.UI.Xaml.Controls.Primitives.AppBarToggleButtonTemplateSettings"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [],
+   "style": true
+  },
+  {
+   "name": "AutoSuggestBox",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.ItemsControl",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/AutoSuggestBox/AutoSuggestBox.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "MaxSuggestionListHeight",
+     "type": "Windows.Foundation.Double"
+    },
+    {
+     "name": "IsSuggestionListOpen",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "TextMemberPath",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "Text",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "UpdateTextOnSelect",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "PlaceholderText",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "Header",
+     "type": "Windows.Foundation.Object"
+    },
+    {
+     "name": "AutoMaximizeSuggestionArea",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "TextBoxStyle",
+     "type": "Microsoft.UI.Xaml.Style"
+    },
+    {
+     "name": "QueryIcon",
+     "type": "Microsoft.UI.Xaml.Controls.IconElement"
+    },
+    {
+     "name": "LightDismissOverlayMode",
+     "type": "Microsoft.UI.Xaml.Controls.LightDismissOverlayMode"
+    },
+    {
+     "name": "Description",
+     "type": "object"
+    },
+    {
+     "name": "HeaderPlacement",
+     "type": "Microsoft.UI.Xaml.Controls.ControlHeaderPlacement"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "SuggestionChosen",
+    "TextChanged",
+    "QuerySubmitted"
    ],
    "style": true
   },
@@ -357,6 +548,95 @@
    "style": true
   },
   {
+   "name": "CalendarDatePicker",
+   "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
+   "base": "Microsoft.UI.Xaml.Controls.Control",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/Calendar/Calendar.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "IsCalendarOpen",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "DateFormat",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "PlaceholderText",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "HeaderPlacement",
+     "type": "Microsoft.UI.Xaml.Controls.ControlHeaderPlacement"
+    },
+    {
+     "name": "Header",
+     "type": "Windows.Foundation.Object"
+    },
+    {
+     "name": "HeaderTemplate",
+     "type": "Microsoft.UI.Xaml.DataTemplate"
+    },
+    {
+     "name": "CalendarViewStyle",
+     "type": "Microsoft.UI.Xaml.Style"
+    },
+    {
+     "name": "LightDismissOverlayMode",
+     "type": "Microsoft.UI.Xaml.Controls.LightDismissOverlayMode"
+    },
+    {
+     "name": "Description",
+     "type": "object"
+    },
+    {
+     "name": "MinDate",
+     "type": "Windows.Foundation.DateTime"
+    },
+    {
+     "name": "MaxDate",
+     "type": "Windows.Foundation.DateTime"
+    },
+    {
+     "name": "IsTodayHighlighted",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "DisplayMode",
+     "type": "CalendarViewDisplayMode"
+    },
+    {
+     "name": "FirstDayOfWeek",
+     "type": "Windows.Globalization.DayOfWeek"
+    },
+    {
+     "name": "DayOfWeekFormat",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "CalendarIdentifier",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "IsOutOfScopeEnabled",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "IsGroupLabelVisible",
+     "type": "Windows.Foundation.Boolean"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "CalendarViewDayItemChanging",
+    "DateChanged",
+    "Opened",
+    "Closed"
+   ],
+   "style": true
+  },
+  {
    "name": "CalendarPanel",
    "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
    "base": "Microsoft.UI.Xaml.Controls.ModernCollectionBasePanel",
@@ -415,6 +695,360 @@
    "dependencyProperties": [],
    "events": [],
    "style": false
+  },
+  {
+   "name": "CalendarView",
+   "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
+   "base": "Microsoft.UI.Xaml.Controls.Control",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/Calendar/Calendar.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "CalendarIdentifier",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "DayOfWeekFormat",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "IsGroupLabelVisible",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "DisplayMode",
+     "type": "CalendarViewDisplayMode"
+    },
+    {
+     "name": "FirstDayOfWeek",
+     "type": "Windows.Globalization.DayOfWeek"
+    },
+    {
+     "name": "IsOutOfScopeEnabled",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "IsTodayHighlighted",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "MaxDate",
+     "type": "Windows.Foundation.DateTime"
+    },
+    {
+     "name": "MinDate",
+     "type": "Windows.Foundation.DateTime"
+    },
+    {
+     "name": "NumberOfWeeksInView",
+     "type": "Windows.Foundation.Int32"
+    },
+    {
+     "name": "SelectedDates",
+     "type": "Windows.Foundation.Collections.IVector<Windows.Foundation.DateTime>"
+    },
+    {
+     "name": "SelectionMode",
+     "type": "CalendarViewSelectionMode"
+    },
+    {
+     "name": "TemplateSettings",
+     "type": "Microsoft.UI.Xaml.Controls.Primitives.CalendarViewTemplateSettings"
+    },
+    {
+     "name": "FocusBorderBrush",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "SelectedHoverBorderBrush",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "SelectedPressedBorderBrush",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "SelectedDisabledBorderBrush",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "SelectedBorderBrush",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "HoverBorderBrush",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "PressedBorderBrush",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "TodaySelectedInnerBorderBrush",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "BlackoutStrikethroughBrush",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "CalendarItemBorderBrush",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "BlackoutBackground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "OutOfScopeBackground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "CalendarItemBackground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "CalendarItemHoverBackground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "CalendarItemPressedBackground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "CalendarItemDisabledBackground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "TodayBackground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "TodayBlackoutBackground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "TodayHoverBackground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "TodayPressedBackground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "TodayDisabledBackground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "PressedForeground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "TodayForeground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "BlackoutForeground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "TodayBlackoutForeground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "SelectedForeground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "SelectedHoverForeground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "SelectedPressedForeground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "SelectedDisabledForeground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "OutOfScopeForeground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "OutOfScopeHoverForeground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "OutOfScopePressedForeground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "CalendarItemForeground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "DisabledForeground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "DayItemFontFamily",
+     "type": "Microsoft.UI.Xaml.Media.FontFamily"
+    },
+    {
+     "name": "DayItemFontSize",
+     "type": "Windows.Foundation.Double"
+    },
+    {
+     "name": "DayItemFontStyle",
+     "type": "Windows.UI.Text.FontStyle"
+    },
+    {
+     "name": "DayItemFontWeight",
+     "type": "Windows.UI.Text.FontWeight"
+    },
+    {
+     "name": "TodayFontWeight",
+     "type": "Windows.UI.Text.FontWeight"
+    },
+    {
+     "name": "FirstOfMonthLabelFontFamily",
+     "type": "Microsoft.UI.Xaml.Media.FontFamily"
+    },
+    {
+     "name": "FirstOfMonthLabelFontSize",
+     "type": "Windows.Foundation.Double"
+    },
+    {
+     "name": "FirstOfMonthLabelFontStyle",
+     "type": "Windows.UI.Text.FontStyle"
+    },
+    {
+     "name": "FirstOfMonthLabelFontWeight",
+     "type": "Windows.UI.Text.FontWeight"
+    },
+    {
+     "name": "MonthYearItemFontFamily",
+     "type": "Microsoft.UI.Xaml.Media.FontFamily"
+    },
+    {
+     "name": "MonthYearItemFontSize",
+     "type": "Windows.Foundation.Double"
+    },
+    {
+     "name": "MonthYearItemFontStyle",
+     "type": "Windows.UI.Text.FontStyle"
+    },
+    {
+     "name": "MonthYearItemFontWeight",
+     "type": "Windows.UI.Text.FontWeight"
+    },
+    {
+     "name": "FirstOfYearDecadeLabelFontFamily",
+     "type": "Microsoft.UI.Xaml.Media.FontFamily"
+    },
+    {
+     "name": "FirstOfYearDecadeLabelFontSize",
+     "type": "Windows.Foundation.Double"
+    },
+    {
+     "name": "FirstOfYearDecadeLabelFontStyle",
+     "type": "Windows.UI.Text.FontStyle"
+    },
+    {
+     "name": "FirstOfYearDecadeLabelFontWeight",
+     "type": "Windows.UI.Text.FontWeight"
+    },
+    {
+     "name": "DayItemMargin",
+     "type": "Microsoft.UI.Xaml.Thickness"
+    },
+    {
+     "name": "MonthYearItemMargin",
+     "type": "Microsoft.UI.Xaml.Thickness"
+    },
+    {
+     "name": "FirstOfMonthLabelMargin",
+     "type": "Microsoft.UI.Xaml.Thickness"
+    },
+    {
+     "name": "FirstOfYearDecadeLabelMargin",
+     "type": "Microsoft.UI.Xaml.Thickness"
+    },
+    {
+     "name": "HorizontalDayItemAlignment",
+     "type": "Microsoft.UI.Xaml.HorizontalAlignment"
+    },
+    {
+     "name": "VerticalDayItemAlignment",
+     "type": "Microsoft.UI.Xaml.VerticalAlignment"
+    },
+    {
+     "name": "HorizontalFirstOfMonthLabelAlignment",
+     "type": "Microsoft.UI.Xaml.HorizontalAlignment"
+    },
+    {
+     "name": "VerticalFirstOfMonthLabelAlignment",
+     "type": "Microsoft.UI.Xaml.VerticalAlignment"
+    },
+    {
+     "name": "CalendarItemBorderThickness",
+     "type": "Microsoft.UI.Xaml.Thickness"
+    },
+    {
+     "name": "CalendarViewDayItemStyle",
+     "type": "Microsoft.UI.Xaml.Style"
+    },
+    {
+     "name": "CalendarItemCornerRadius",
+     "type": "Microsoft.UI.Xaml.CornerRadius"
+    },
+    {
+     "name": "TodayHoverBorderBrush",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "TodayPressedBorderBrush",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "CalendarViewDayItemChanging",
+    "SelectedDatesChanged"
+   ],
+   "style": true
+  },
+  {
+   "name": "CalendarViewBaseItem",
+   "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
+   "base": "Microsoft.UI.Xaml.Controls.Control",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/Calendar/Calendar.cs",
+   "origin": "XamlOM module",
+   "properties": [],
+   "dependencyProperties": [],
+   "events": [],
+   "style": false
+  },
+  {
+   "name": "CalendarViewDayItem",
+   "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
+   "base": "Microsoft.UI.Xaml.Controls.Primitives.CalendarViewBaseItem",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/Calendar/Calendar.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "IsBlackout",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "Date",
+     "type": "Windows.Foundation.DateTime"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [],
+   "style": true
   },
   {
    "name": "Canvas",
@@ -695,6 +1329,100 @@
    "style": true
   },
   {
+   "name": "ComboBox",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.Primitives.Selector",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/ComboBox.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "IsDropDownOpen",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "IsEditable",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "IsEditableProperty",
+     "type": "Microsoft.UI.Xaml.DependencyProperty",
+     "static": true,
+     "readonly": true
+    },
+    {
+     "name": "IsSelectionBoxHighlighted",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "MaxDropDownHeight",
+     "type": "Windows.Foundation.Double"
+    },
+    {
+     "name": "SelectionBoxItem",
+     "type": "Windows.Foundation.Object"
+    },
+    {
+     "name": "SelectionBoxItemTemplate",
+     "type": "Microsoft.UI.Xaml.DataTemplate"
+    },
+    {
+     "name": "TemplateSettings",
+     "type": "Microsoft.UI.Xaml.Controls.Primitives.ComboBoxTemplateSettings"
+    },
+    {
+     "name": "Header",
+     "type": "Windows.Foundation.Object"
+    },
+    {
+     "name": "HeaderTemplate",
+     "type": "Microsoft.UI.Xaml.DataTemplate"
+    },
+    {
+     "name": "PlaceholderText",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "LightDismissOverlayMode",
+     "type": "Microsoft.UI.Xaml.Controls.LightDismissOverlayMode"
+    },
+    {
+     "name": "IsTextSearchEnabled",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "SelectionChangedTrigger",
+     "type": "Microsoft.UI.Xaml.Controls.ComboBoxSelectionChangedTrigger"
+    },
+    {
+     "name": "PlaceholderForeground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "Text",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "TextBoxStyle",
+     "type": "Microsoft.UI.Xaml.Style"
+    },
+    {
+     "name": "Description",
+     "type": "object"
+    },
+    {
+     "name": "HeaderPlacement",
+     "type": "Microsoft.UI.Xaml.Controls.ControlHeaderPlacement"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "DropDownClosed",
+    "DropDownOpened",
+    "TextSubmitted"
+   ],
+   "style": true
+  },
+  {
    "name": "ComboBoxItem",
    "namespace": "Microsoft.UI.Xaml.Controls",
    "base": "Microsoft.UI.Xaml.Controls.Primitives.SelectorItem",
@@ -703,6 +1431,48 @@
    "properties": [],
    "dependencyProperties": [],
    "events": [],
+   "style": true
+  },
+  {
+   "name": "CommandBar",
+   "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
+   "base": "Microsoft.UI.Xaml.Controls.AppBar",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/CommandBar.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "PrimaryCommands",
+     "type": "Microsoft.UI.Xaml.Controls.CommandBarElementCollection"
+    },
+    {
+     "name": "SecondaryCommands",
+     "type": "Microsoft.UI.Xaml.Controls.CommandBarElementCollection"
+    },
+    {
+     "name": "CommandBarOverflowPresenterStyle",
+     "type": "Microsoft.UI.Xaml.Style"
+    },
+    {
+     "name": "CommandBarTemplateSettings",
+     "type": "Microsoft.UI.Xaml.Controls.Primitives.CommandBarTemplateSettings"
+    },
+    {
+     "name": "DefaultLabelPosition",
+     "type": "Microsoft.UI.Xaml.Controls.CommandBarDefaultLabelPosition"
+    },
+    {
+     "name": "OverflowButtonVisibility",
+     "type": "Microsoft.UI.Xaml.Controls.CommandBarOverflowButtonVisibility"
+    },
+    {
+     "name": "IsDynamicOverflowEnabled",
+     "type": "Windows.Foundation.Boolean"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "DynamicOverflowItemsChanging"
+   ],
    "style": true
   },
   {
@@ -719,6 +1489,62 @@
    ],
    "dependencyProperties": [],
    "events": [],
+   "style": false
+  },
+  {
+   "name": "CommandBarFlyoutCommandBar",
+   "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
+   "base": "Microsoft.UI.Xaml.Controls.CommandBar",
+   "source": "controls/dev/CommandBarFlyout/CommandBarFlyoutCommandBar.idl",
+   "origin": "controls/dev idl",
+   "properties": [
+    {
+     "name": "FlyoutTemplateSettings",
+     "type": "CommandBarFlyoutCommandBarTemplateSettings"
+    },
+    {
+     "name": "SystemBackdrop",
+     "type": "Microsoft.UI.Xaml.Media.SystemBackdrop"
+    }
+   ],
+   "dependencyProperties": [
+    "SystemBackdrop"
+   ],
+   "events": [],
+   "style": true
+  },
+  {
+   "name": "CommandBarOverflowPresenter",
+   "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
+   "base": "Microsoft.UI.Xaml.Controls.ItemsControl",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/CommandBar.cs",
+   "origin": "XamlOM module",
+   "properties": [],
+   "dependencyProperties": [],
+   "events": [],
+   "style": true
+  },
+  {
+   "name": "CommandingContainer",
+   "namespace": "Microsoft.UI.Xaml.Input",
+   "base": "Microsoft.UI.Xaml.Controls.ContentPresenter",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/Commanding.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "CommandingTarget",
+     "type": "Microsoft.UI.Xaml.DependencyObject"
+    },
+    {
+     "name": "AttachedCommandingContainer",
+     "type": "CommandingContainer",
+     "static": true
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "ContextChanged"
+   ],
    "style": false
   },
   {
@@ -1178,6 +2004,76 @@
    "style": true
   },
   {
+   "name": "DatePickerFlyout",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.Primitives.PickerFlyoutBase",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Phone/Phone.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "CalendarIdentifier",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "Date",
+     "type": "Windows.Foundation.DateTime"
+    },
+    {
+     "name": "DayVisible",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "MonthVisible",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "YearVisible",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "MinYear",
+     "type": "Windows.Foundation.DateTime"
+    },
+    {
+     "name": "MaxYear",
+     "type": "Windows.Foundation.DateTime"
+    },
+    {
+     "name": "DayFormat",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "MonthFormat",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "YearFormat",
+     "type": "Windows.Foundation.String"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "DatePicked"
+   ],
+   "style": false
+  },
+  {
+   "name": "DatePickerFlyoutPresenter",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Controls.Control",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Phone/Phone.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "IsDefaultShadowEnabled",
+     "type": "Windows.Foundation.Boolean"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [],
+   "style": true
+  },
+  {
    "name": "DropDownButton",
    "namespace": "Microsoft.UI.Xaml.Controls",
    "base": "Microsoft.UI.Xaml.Controls.Button",
@@ -1607,6 +2503,77 @@
    "style": true
   },
   {
+   "name": "Hub",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.Control",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/Hub.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "Header",
+     "type": "Windows.Foundation.Object"
+    },
+    {
+     "name": "HeaderTemplate",
+     "type": "Microsoft.UI.Xaml.DataTemplate"
+    },
+    {
+     "name": "Orientation",
+     "type": "Microsoft.UI.Xaml.Controls.Orientation"
+    },
+    {
+     "name": "DefaultSectionIndex",
+     "type": "int"
+    },
+    {
+     "name": "Sections",
+     "type": "Microsoft.UI.Xaml.Controls.HubSectionCollection"
+    },
+    {
+     "name": "SectionsInView",
+     "type": "Microsoft.UI.Xaml.Controls.HubSectionCollection"
+    },
+    {
+     "name": "SectionHeaders",
+     "type": "Microsoft.UI.Xaml.Controls.ItemCollection"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "SectionHeaderClick",
+    "SectionsInViewChanged"
+   ],
+   "style": true
+  },
+  {
+   "name": "HubSection",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.Control",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/Hub.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "Header",
+     "type": "Windows.Foundation.Object"
+    },
+    {
+     "name": "HeaderTemplate",
+     "type": "Microsoft.UI.Xaml.DataTemplate"
+    },
+    {
+     "name": "ContentTemplate",
+     "type": "Microsoft.UI.Xaml.DataTemplate"
+    },
+    {
+     "name": "IsHeaderInteractive",
+     "type": "Windows.Foundation.Boolean"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [],
+   "style": true
+  },
+  {
    "name": "HyperlinkButton",
    "namespace": "Microsoft.UI.Xaml.Controls",
    "base": "Microsoft.UI.Xaml.Controls.Primitives.ButtonBase",
@@ -1632,6 +2599,22 @@
     {
      "name": "Foreground",
      "type": "Microsoft.UI.Xaml.Media.Brush"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [],
+   "style": false
+  },
+  {
+   "name": "IconSourceElement",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.IconElement",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/IconSource.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "IconSource",
+     "type": "Microsoft.UI.Xaml.Controls.IconSource"
     }
    ],
    "dependencyProperties": [],
@@ -2693,6 +3676,72 @@
    "style": true
   },
   {
+   "name": "ListPickerFlyout",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.Primitives.PickerFlyoutBase",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Phone/Phone.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "ItemsSource",
+     "type": "Windows.Foundation.Object"
+    },
+    {
+     "name": "ItemTemplate",
+     "type": "Microsoft.UI.Xaml.DataTemplate"
+    },
+    {
+     "name": "DisplayMemberPath",
+     "type": "string"
+    },
+    {
+     "name": "SelectionMode",
+     "type": "Microsoft.UI.Xaml.Controls.ListPickerFlyoutSelectionMode"
+    },
+    {
+     "name": "SelectedIndex",
+     "type": "Windows.Foundation.Int32"
+    },
+    {
+     "name": "SelectedItem",
+     "type": "Windows.Foundation.Object"
+    },
+    {
+     "name": "SelectedValue",
+     "type": "Windows.Foundation.Object"
+    },
+    {
+     "name": "SelectedValuePath",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "SelectedItems",
+     "type": "Microsoft.UI.Xaml.Controls.ItemCollection"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "ItemsPicked"
+   ],
+   "style": false
+  },
+  {
+   "name": "ListPickerFlyoutPresenter",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Controls.Control",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Phone/Phone.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "ItemsHost",
+     "type": "Microsoft.UI.Xaml.Controls.ListViewBase"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [],
+   "style": true
+  },
+  {
    "name": "ListView",
    "namespace": "Microsoft.UI.Xaml.Controls",
    "base": "Microsoft.UI.Xaml.Controls.ListViewBase",
@@ -3116,6 +4165,70 @@
    "style": false
   },
   {
+   "name": "LoopingSelector",
+   "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
+   "base": "Controls.Control",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Phone/Primitives.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "ShouldLoop",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "Items",
+     "type": "Microsoft.UI.Xaml.Controls.ItemCollection"
+    },
+    {
+     "name": "SelectedIndex",
+     "type": "Windows.Foundation.Int32"
+    },
+    {
+     "name": "SelectedItem",
+     "type": "Windows.Foundation.Object"
+    },
+    {
+     "name": "ItemWidth",
+     "type": "Windows.Foundation.Int32"
+    },
+    {
+     "name": "ItemHeight",
+     "type": "Windows.Foundation.Int32"
+    },
+    {
+     "name": "ItemTemplate",
+     "type": "DataTemplate"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "SelectionChanged"
+   ],
+   "style": true
+  },
+  {
+   "name": "LoopingSelectorItem",
+   "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
+   "base": "Controls.ContentControl",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Phone/Primitives.cs",
+   "origin": "XamlOM module",
+   "properties": [],
+   "dependencyProperties": [],
+   "events": [],
+   "style": true
+  },
+  {
+   "name": "LoopingSelectorPanel",
+   "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
+   "base": "Controls.Canvas",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Phone/Primitives.cs",
+   "origin": "XamlOM module",
+   "properties": [],
+   "dependencyProperties": [],
+   "events": [],
+   "style": false
+  },
+  {
    "name": "MapControl",
    "namespace": "Microsoft.UI.Xaml.Controls",
    "base": "Microsoft.UI.Xaml.Controls.Control",
@@ -3308,6 +4421,149 @@
     "Title",
     "Items"
    ],
+   "events": [],
+   "style": true
+  },
+  {
+   "name": "MenuBarItemFlyout",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.MenuFlyout",
+   "source": "controls/dev/MenuBar/MenuBar.idl",
+   "origin": "controls/dev idl",
+   "properties": [],
+   "dependencyProperties": [],
+   "events": [],
+   "style": false
+  },
+  {
+   "name": "MenuFlyout",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.Primitives.FlyoutBase",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/MenuFlyout.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "Items",
+     "type": "Microsoft.UI.Xaml.Controls.MenuFlyoutItemBaseCollection"
+    },
+    {
+     "name": "MenuFlyoutPresenterStyle",
+     "type": "Microsoft.UI.Xaml.Style"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [],
+   "style": false
+  },
+  {
+   "name": "MenuFlyoutItem",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.MenuFlyoutItemBase",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/MenuFlyout.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "Text",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "Command",
+     "type": "Microsoft.UI.Xaml.Input.ICommand"
+    },
+    {
+     "name": "CommandParameter",
+     "type": "Windows.Foundation.Object"
+    },
+    {
+     "name": "Icon",
+     "type": "Microsoft.UI.Xaml.Controls.IconElement"
+    },
+    {
+     "name": "KeyboardAcceleratorTextOverride",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "TemplateSettings",
+     "type": "Microsoft.UI.Xaml.Controls.Primitives.MenuFlyoutItemTemplateSettings"
+    },
+    {
+     "name": "PreventDismissOnPointer",
+     "type": "Windows.Foundation.Boolean"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "Click"
+   ],
+   "style": true
+  },
+  {
+   "name": "MenuFlyoutItemBase",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.Control",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/MenuFlyout.cs",
+   "origin": "XamlOM module",
+   "properties": [],
+   "dependencyProperties": [],
+   "events": [],
+   "style": false
+  },
+  {
+   "name": "MenuFlyoutPresenter",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.ItemsControl",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/MenuFlyout.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "TemplateSettings",
+     "type": "Microsoft.UI.Xaml.Controls.Primitives.MenuFlyoutPresenterTemplateSettings"
+    },
+    {
+     "name": "IsDefaultShadowEnabled",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "SystemBackdrop",
+     "type": "Microsoft.UI.Xaml.Media.SystemBackdrop"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [],
+   "style": true
+  },
+  {
+   "name": "MenuFlyoutSeparator",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.MenuFlyoutItemBase",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/MenuFlyout.cs",
+   "origin": "XamlOM module",
+   "properties": [],
+   "dependencyProperties": [],
+   "events": [],
+   "style": true
+  },
+  {
+   "name": "MenuFlyoutSubItem",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.MenuFlyoutItemBase",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/MenuFlyout.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "Items",
+     "type": "Microsoft.UI.Xaml.Controls.MenuFlyoutItemBaseCollection"
+    },
+    {
+     "name": "Text",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "Icon",
+     "type": "Microsoft.UI.Xaml.Controls.IconElement"
+    }
+   ],
+   "dependencyProperties": [],
    "events": [],
    "style": true
   },
@@ -3757,6 +5013,34 @@
    "style": false
   },
   {
+   "name": "Page",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.UserControl",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/Page.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "Frame",
+     "type": "Microsoft.UI.Xaml.Controls.Frame"
+    },
+    {
+     "name": "NavigationCacheMode",
+     "type": "Microsoft.UI.Xaml.Navigation.NavigationCacheMode"
+    },
+    {
+     "name": "TopAppBar",
+     "type": "Microsoft.UI.Xaml.Controls.AppBar"
+    },
+    {
+     "name": "BottomAppBar",
+     "type": "Microsoft.UI.Xaml.Controls.AppBar"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [],
+   "style": false
+  },
+  {
    "name": "PagerControl",
    "namespace": "Microsoft.UI.Xaml.Controls",
    "base": "Microsoft.UI.Xaml.Controls.Control",
@@ -3990,6 +5274,88 @@
    "style": false
   },
   {
+   "name": "PasswordBox",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.Control",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/PasswordBox.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "Password",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "PasswordChar",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "IsPasswordRevealButtonEnabled",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "MaxLength",
+     "type": "Windows.Foundation.Int32"
+    },
+    {
+     "name": "Header",
+     "type": "Windows.Foundation.Object"
+    },
+    {
+     "name": "HeaderTemplate",
+     "type": "Microsoft.UI.Xaml.DataTemplate"
+    },
+    {
+     "name": "PlaceholderText",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "SelectionHighlightColor",
+     "type": "Microsoft.UI.Xaml.Media.SolidColorBrush"
+    },
+    {
+     "name": "PreventKeyboardDisplayOnProgrammaticFocus",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "PasswordRevealMode",
+     "type": "PasswordRevealMode"
+    },
+    {
+     "name": "TextReadingOrder",
+     "type": "Microsoft.UI.Xaml.TextReadingOrder"
+    },
+    {
+     "name": "InputScope",
+     "type": "Microsoft.UI.Xaml.Input.InputScope"
+    },
+    {
+     "name": "CanPasteClipboardContent",
+     "type": "Windows.Foundation.Boolean",
+     "readonly": true
+    },
+    {
+     "name": "SelectionFlyout",
+     "type": "Microsoft.UI.Xaml.Controls.Primitives.FlyoutBase"
+    },
+    {
+     "name": "Description",
+     "type": "object"
+    },
+    {
+     "name": "HeaderPlacement",
+     "type": "Microsoft.UI.Xaml.Controls.ControlHeaderPlacement"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "PasswordChanged",
+    "ContextMenuOpening",
+    "Paste",
+    "PasswordChanging"
+   ],
+   "style": true
+  },
+  {
    "name": "PathIcon",
    "namespace": "Microsoft.UI.Xaml.Controls",
    "base": "Microsoft.UI.Xaml.Controls.IconElement",
@@ -4073,6 +5439,56 @@
    "style": true
   },
   {
+   "name": "PickerFlyout",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.Primitives.PickerFlyoutBase",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Phone/Phone.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "Content",
+     "type": "Microsoft.UI.Xaml.UIElement"
+    },
+    {
+     "name": "ConfirmationButtonsVisible",
+     "type": "Windows.Foundation.Boolean"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "Confirmed"
+   ],
+   "style": false
+  },
+  {
+   "name": "PickerFlyoutBase",
+   "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
+   "base": "Microsoft.UI.Xaml.Controls.Primitives.FlyoutBase",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Phone/Primitives.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "AttachedTitle",
+     "type": "Windows.Foundation.String",
+     "static": true
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [],
+   "style": false
+  },
+  {
+   "name": "PickerFlyoutPresenter",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.ContentControl",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Phone/Phone.cs",
+   "origin": "XamlOM module",
+   "properties": [],
+   "dependencyProperties": [],
+   "events": [],
+   "style": true
+  },
+  {
    "name": "PipsPager",
    "namespace": "Microsoft.UI.Xaml.Controls",
    "base": "Microsoft.UI.Xaml.Controls.Control",
@@ -4140,6 +5556,129 @@
     "SelectedIndexChanged"
    ],
    "style": true
+  },
+  {
+   "name": "Pivot",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Controls.ItemsControl",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Phone/Phone.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "Title",
+     "type": "Windows.Foundation.Object"
+    },
+    {
+     "name": "TitleTemplate",
+     "type": "Microsoft.UI.Xaml.DataTemplate"
+    },
+    {
+     "name": "LeftHeader",
+     "type": "Windows.Foundation.Object"
+    },
+    {
+     "name": "LeftHeaderTemplate",
+     "type": "Microsoft.UI.Xaml.DataTemplate"
+    },
+    {
+     "name": "RightHeader",
+     "type": "Windows.Foundation.Object"
+    },
+    {
+     "name": "RightHeaderTemplate",
+     "type": "Microsoft.UI.Xaml.DataTemplate"
+    },
+    {
+     "name": "HeaderTemplate",
+     "type": "Microsoft.UI.Xaml.DataTemplate"
+    },
+    {
+     "name": "SelectedIndex",
+     "type": "Windows.Foundation.Int32"
+    },
+    {
+     "name": "SelectedItem",
+     "type": "Windows.Foundation.Object"
+    },
+    {
+     "name": "IsLocked",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "HeaderFocusVisualPlacement",
+     "type": "Microsoft.UI.Xaml.Controls.PivotHeaderFocusVisualPlacement"
+    },
+    {
+     "name": "SlideInAnimationGroup",
+     "type": "PivotSlideInAnimationGroup"
+    },
+    {
+     "name": "IsHeaderItemsCarouselEnabled",
+     "type": "bool"
+    },
+    {
+     "name": "SlideInElementInformation",
+     "type": "Windows.Foundation.Object"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "SelectionChanged",
+    "PivotItemLoading",
+    "PivotItemLoaded",
+    "PivotItemUnloading",
+    "PivotItemUnloaded"
+   ],
+   "style": true
+  },
+  {
+   "name": "PivotHeaderItem",
+   "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
+   "base": "Controls.ContentControl",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Phone/Primitives.cs",
+   "origin": "XamlOM module",
+   "properties": [],
+   "dependencyProperties": [],
+   "events": [],
+   "style": true
+  },
+  {
+   "name": "PivotHeaderPanel",
+   "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
+   "base": "Controls.Canvas",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Phone/Primitives.cs",
+   "origin": "XamlOM module",
+   "properties": [],
+   "dependencyProperties": [],
+   "events": [],
+   "style": false
+  },
+  {
+   "name": "PivotItem",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Controls.ContentControl",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Phone/Phone.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "Header",
+     "type": "Windows.Foundation.Object"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [],
+   "style": true
+  },
+  {
+   "name": "PivotPanel",
+   "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
+   "base": "Controls.Panel",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Phone/Primitives.cs",
+   "origin": "XamlOM module",
+   "properties": [],
+   "dependencyProperties": [],
+   "events": [],
+   "style": false
   },
   {
    "name": "Popup",
@@ -4374,6 +5913,29 @@
    "events": [
     "SelectionChanged"
    ],
+   "style": true
+  },
+  {
+   "name": "RadioMenuFlyoutItem",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.MenuFlyoutItem",
+   "source": "controls/dev/RadioMenuFlyoutItem/RadioMenuFlyoutItem.idl",
+   "origin": "controls/dev idl",
+   "properties": [
+    {
+     "name": "IsChecked",
+     "type": "Boolean"
+    },
+    {
+     "name": "GroupName",
+     "type": "String"
+    }
+   ],
+   "dependencyProperties": [
+    "IsChecked",
+    "GroupName"
+   ],
+   "events": [],
    "style": true
   },
   {
@@ -4705,6 +6267,354 @@
    "properties": [],
    "dependencyProperties": [],
    "events": [],
+   "style": false
+  },
+  {
+   "name": "RichEditBox",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.Control",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/RichEditBox.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "IsReadOnly",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "AcceptsReturn",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "TextAlignment",
+     "type": "Microsoft.UI.Xaml.TextAlignment"
+    },
+    {
+     "name": "TextWrapping",
+     "type": "Microsoft.UI.Xaml.TextWrapping"
+    },
+    {
+     "name": "IsSpellCheckEnabled",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "IsTextPredictionEnabled",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "Document",
+     "type": "Microsoft.UI.Text.RichEditTextDocument"
+    },
+    {
+     "name": "InputScope",
+     "type": "Microsoft.UI.Xaml.Input.InputScope"
+    },
+    {
+     "name": "Header",
+     "type": "Windows.Foundation.Object"
+    },
+    {
+     "name": "HeaderTemplate",
+     "type": "Microsoft.UI.Xaml.DataTemplate"
+    },
+    {
+     "name": "PlaceholderText",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "SelectionHighlightColor",
+     "type": "Microsoft.UI.Xaml.Media.SolidColorBrush"
+    },
+    {
+     "name": "PreventKeyboardDisplayOnProgrammaticFocus",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "IsColorFontEnabled",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "DesiredCandidateWindowAlignment",
+     "type": "CandidateWindowAlignment"
+    },
+    {
+     "name": "TextReadingOrder",
+     "type": "Microsoft.UI.Xaml.TextReadingOrder"
+    },
+    {
+     "name": "ClipboardCopyFormat",
+     "type": "RichEditClipboardFormat"
+    },
+    {
+     "name": "SelectionHighlightColorWhenNotFocused",
+     "type": "Microsoft.UI.Xaml.Media.SolidColorBrush"
+    },
+    {
+     "name": "MaxLength",
+     "type": "Windows.Foundation.Int32"
+    },
+    {
+     "name": "HorizontalTextAlignment",
+     "type": "Microsoft.UI.Xaml.TextAlignment"
+    },
+    {
+     "name": "CharacterCasing",
+     "type": "CharacterCasing"
+    },
+    {
+     "name": "DisabledFormattingAccelerators",
+     "type": "DisabledFormattingAccelerators"
+    },
+    {
+     "name": "TextDocument",
+     "type": "Microsoft.UI.Text.RichEditTextDocument",
+     "readonly": true
+    },
+    {
+     "name": "SelectionFlyout",
+     "type": "Microsoft.UI.Xaml.Controls.Primitives.FlyoutBase"
+    },
+    {
+     "name": "ProofingMenuFlyout",
+     "type": "Microsoft.UI.Xaml.Controls.Primitives.FlyoutBase",
+     "readonly": true
+    },
+    {
+     "name": "Description",
+     "type": "object"
+    },
+    {
+     "name": "HeaderPlacement",
+     "type": "Microsoft.UI.Xaml.Controls.ControlHeaderPlacement"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "TextChanged",
+    "SelectionChanged",
+    "ContextMenuOpening",
+    "Paste",
+    "CandidateWindowBoundsChanged",
+    "TextChanging",
+    "TextCompositionStarted",
+    "TextCompositionChanged",
+    "TextCompositionEnded",
+    "CopyingToClipboard",
+    "CuttingToClipboard",
+    "SelectionChanging"
+   ],
+   "style": true
+  },
+  {
+   "name": "RichTextBlock",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.FrameworkElement",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/RichTextBlock.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "FontSize",
+     "type": "Windows.Foundation.Double"
+    },
+    {
+     "name": "FontFamily",
+     "type": "Microsoft.UI.Xaml.Media.FontFamily"
+    },
+    {
+     "name": "FontWeight",
+     "type": "Windows.UI.Text.FontWeight"
+    },
+    {
+     "name": "FontStyle",
+     "type": "Windows.UI.Text.FontStyle"
+    },
+    {
+     "name": "FontStretch",
+     "type": "Windows.UI.Text.FontStretch"
+    },
+    {
+     "name": "Foreground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "TextWrapping",
+     "type": "Microsoft.UI.Xaml.TextWrapping"
+    },
+    {
+     "name": "TextTrimming",
+     "type": "Microsoft.UI.Xaml.TextTrimming"
+    },
+    {
+     "name": "TextAlignment",
+     "type": "Microsoft.UI.Xaml.TextAlignment"
+    },
+    {
+     "name": "Blocks",
+     "type": "Microsoft.UI.Xaml.Documents.BlockCollection"
+    },
+    {
+     "name": "Padding",
+     "type": "Microsoft.UI.Xaml.Thickness"
+    },
+    {
+     "name": "LineHeight",
+     "type": "Windows.Foundation.Double"
+    },
+    {
+     "name": "LineStackingStrategy",
+     "type": "Microsoft.UI.Xaml.LineStackingStrategy"
+    },
+    {
+     "name": "CharacterSpacing",
+     "type": "Windows.Foundation.Int32"
+    },
+    {
+     "name": "OverflowContentTarget",
+     "type": "Microsoft.UI.Xaml.Controls.RichTextBlockOverflow"
+    },
+    {
+     "name": "IsTextSelectionEnabled",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "HasOverflowContent",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "SelectedText",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "ContentStart",
+     "type": "Microsoft.UI.Xaml.Documents.TextPointer"
+    },
+    {
+     "name": "ContentEnd",
+     "type": "Microsoft.UI.Xaml.Documents.TextPointer"
+    },
+    {
+     "name": "SelectionStart",
+     "type": "Microsoft.UI.Xaml.Documents.TextPointer"
+    },
+    {
+     "name": "SelectionEnd",
+     "type": "Microsoft.UI.Xaml.Documents.TextPointer"
+    },
+    {
+     "name": "BaselineOffset",
+     "type": "Windows.Foundation.Double"
+    },
+    {
+     "name": "TextIndent",
+     "type": "Windows.Foundation.Double"
+    },
+    {
+     "name": "MaxLines",
+     "type": "Windows.Foundation.Int32"
+    },
+    {
+     "name": "TextLineBounds",
+     "type": "Microsoft.UI.Xaml.TextLineBounds"
+    },
+    {
+     "name": "SelectionHighlightColor",
+     "type": "Microsoft.UI.Xaml.Media.SolidColorBrush"
+    },
+    {
+     "name": "OpticalMarginAlignment",
+     "type": "Microsoft.UI.Xaml.OpticalMarginAlignment"
+    },
+    {
+     "name": "IsColorFontEnabled",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "TextReadingOrder",
+     "type": "Microsoft.UI.Xaml.TextReadingOrder"
+    },
+    {
+     "name": "IsTextScaleFactorEnabled",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "TextDecorations",
+     "type": "Windows.UI.Text.TextDecorations"
+    },
+    {
+     "name": "IsTextTrimmed",
+     "type": "Windows.Foundation.Boolean",
+     "readonly": true
+    },
+    {
+     "name": "HorizontalTextAlignment",
+     "type": "Microsoft.UI.Xaml.TextAlignment"
+    },
+    {
+     "name": "TextHighlighters",
+     "type": "Microsoft.UI.Xaml.Documents.TextHighlighterCollection",
+     "readonly": true
+    },
+    {
+     "name": "SelectionFlyout",
+     "type": "Microsoft.UI.Xaml.Controls.Primitives.FlyoutBase"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "SelectionChanged",
+    "ContextMenuOpening",
+    "IsTextTrimmedChanged"
+   ],
+   "style": true
+  },
+  {
+   "name": "RichTextBlockOverflow",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.FrameworkElement",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/RichTextBlockOverflow.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "OverflowContentTarget",
+     "type": "Microsoft.UI.Xaml.Controls.RichTextBlockOverflow"
+    },
+    {
+     "name": "Padding",
+     "type": "Microsoft.UI.Xaml.Thickness"
+    },
+    {
+     "name": "ContentSource",
+     "type": "Microsoft.UI.Xaml.Controls.RichTextBlock"
+    },
+    {
+     "name": "HasOverflowContent",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "ContentStart",
+     "type": "Microsoft.UI.Xaml.Documents.TextPointer"
+    },
+    {
+     "name": "ContentEnd",
+     "type": "Microsoft.UI.Xaml.Documents.TextPointer"
+    },
+    {
+     "name": "BaselineOffset",
+     "type": "Windows.Foundation.Double"
+    },
+    {
+     "name": "MaxLines",
+     "type": "Windows.Foundation.Int32"
+    },
+    {
+     "name": "IsTextTrimmed",
+     "type": "Windows.Foundation.Boolean",
+     "readonly": true
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "IsTextTrimmedChanged"
+   ],
    "style": false
   },
   {
@@ -5665,6 +7575,83 @@
    "style": true
   },
   {
+   "name": "SplitMenuFlyoutItem",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.MenuFlyoutItem",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/MenuFlyout.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "Items",
+     "type": "Microsoft.UI.Xaml.Controls.MenuFlyoutItemBaseCollection"
+    },
+    {
+     "name": "SubMenuPresenterStyle",
+     "type": "Microsoft.UI.Xaml.Style"
+    },
+    {
+     "name": "SubMenuItemStyle",
+     "type": "Microsoft.UI.Xaml.Style"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [],
+   "style": true
+  },
+  {
+   "name": "SplitView",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.Control",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/SplitView/SplitView.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "Content",
+     "type": "Microsoft.UI.Xaml.UIElement"
+    },
+    {
+     "name": "Pane",
+     "type": "Microsoft.UI.Xaml.UIElement"
+    },
+    {
+     "name": "IsPaneOpen",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "OpenPaneLength",
+     "type": "Windows.Foundation.Double"
+    },
+    {
+     "name": "CompactPaneLength",
+     "type": "Windows.Foundation.Double"
+    },
+    {
+     "name": "PanePlacement",
+     "type": "SplitViewPanePlacement"
+    },
+    {
+     "name": "DisplayMode",
+     "type": "SplitViewDisplayMode"
+    },
+    {
+     "name": "PaneBackground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "LightDismissOverlayMode",
+     "type": "Microsoft.UI.Xaml.Controls.LightDismissOverlayMode"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "PaneClosing",
+    "PaneClosed",
+    "PaneOpening",
+    "PaneOpened"
+   ],
+   "style": true
+  },
+  {
    "name": "StackPanel",
    "namespace": "Microsoft.UI.Xaml.Controls",
    "base": "Microsoft.UI.Xaml.Controls.Panel",
@@ -6247,6 +8234,318 @@
    "style": true
   },
   {
+   "name": "TextBlock",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.FrameworkElement",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/TextBlock.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "FontSize",
+     "type": "Windows.Foundation.Double"
+    },
+    {
+     "name": "FontFamily",
+     "type": "Microsoft.UI.Xaml.Media.FontFamily"
+    },
+    {
+     "name": "FontWeight",
+     "type": "Windows.UI.Text.FontWeight"
+    },
+    {
+     "name": "FontStyle",
+     "type": "Windows.UI.Text.FontStyle"
+    },
+    {
+     "name": "FontStretch",
+     "type": "Windows.UI.Text.FontStretch"
+    },
+    {
+     "name": "CharacterSpacing",
+     "type": "Windows.Foundation.Int32"
+    },
+    {
+     "name": "Foreground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "TextWrapping",
+     "type": "Microsoft.UI.Xaml.TextWrapping"
+    },
+    {
+     "name": "TextTrimming",
+     "type": "Microsoft.UI.Xaml.TextTrimming"
+    },
+    {
+     "name": "TextAlignment",
+     "type": "Microsoft.UI.Xaml.TextAlignment"
+    },
+    {
+     "name": "Text",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "Inlines",
+     "type": "Microsoft.UI.Xaml.Documents.InlineCollection"
+    },
+    {
+     "name": "Padding",
+     "type": "Microsoft.UI.Xaml.Thickness"
+    },
+    {
+     "name": "LineHeight",
+     "type": "Windows.Foundation.Double"
+    },
+    {
+     "name": "LineStackingStrategy",
+     "type": "Microsoft.UI.Xaml.LineStackingStrategy"
+    },
+    {
+     "name": "IsTextSelectionEnabled",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "SelectedText",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "ContentStart",
+     "type": "Microsoft.UI.Xaml.Documents.TextPointer"
+    },
+    {
+     "name": "ContentEnd",
+     "type": "Microsoft.UI.Xaml.Documents.TextPointer"
+    },
+    {
+     "name": "SelectionStart",
+     "type": "Microsoft.UI.Xaml.Documents.TextPointer"
+    },
+    {
+     "name": "SelectionEnd",
+     "type": "Microsoft.UI.Xaml.Documents.TextPointer"
+    },
+    {
+     "name": "BaselineOffset",
+     "type": "Windows.Foundation.Double"
+    },
+    {
+     "name": "SelectionHighlightColor",
+     "type": "Microsoft.UI.Xaml.Media.SolidColorBrush"
+    },
+    {
+     "name": "MaxLines",
+     "type": "Windows.Foundation.Int32"
+    },
+    {
+     "name": "TextLineBounds",
+     "type": "Microsoft.UI.Xaml.TextLineBounds"
+    },
+    {
+     "name": "OpticalMarginAlignment",
+     "type": "Microsoft.UI.Xaml.OpticalMarginAlignment"
+    },
+    {
+     "name": "IsColorFontEnabled",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "TextReadingOrder",
+     "type": "Microsoft.UI.Xaml.TextReadingOrder"
+    },
+    {
+     "name": "IsTextScaleFactorEnabled",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "TextDecorations",
+     "type": "Windows.UI.Text.TextDecorations"
+    },
+    {
+     "name": "IsTextTrimmed",
+     "type": "Windows.Foundation.Boolean",
+     "readonly": true
+    },
+    {
+     "name": "HorizontalTextAlignment",
+     "type": "Microsoft.UI.Xaml.TextAlignment"
+    },
+    {
+     "name": "TextHighlighters",
+     "type": "Microsoft.UI.Xaml.Documents.TextHighlighterCollection",
+     "readonly": true
+    },
+    {
+     "name": "SelectionFlyout",
+     "type": "Microsoft.UI.Xaml.Controls.Primitives.FlyoutBase"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "SelectionChanged",
+    "ContextMenuOpening",
+    "IsTextTrimmedChanged"
+   ],
+   "style": true
+  },
+  {
+   "name": "TextBox",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.Control",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/TextBox.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "Text",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "SelectedText",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "SelectionLength",
+     "type": "Windows.Foundation.Int32"
+    },
+    {
+     "name": "SelectionStart",
+     "type": "Windows.Foundation.Int32"
+    },
+    {
+     "name": "MaxLength",
+     "type": "Windows.Foundation.Int32"
+    },
+    {
+     "name": "IsReadOnly",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "AcceptsReturn",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "TextAlignment",
+     "type": "Microsoft.UI.Xaml.TextAlignment"
+    },
+    {
+     "name": "TextWrapping",
+     "type": "Microsoft.UI.Xaml.TextWrapping"
+    },
+    {
+     "name": "IsSpellCheckEnabled",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "IsTextPredictionEnabled",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "IsCoreDesktopPopupMenuEnabled",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "InputScope",
+     "type": "Microsoft.UI.Xaml.Input.InputScope"
+    },
+    {
+     "name": "Header",
+     "type": "Windows.Foundation.Object"
+    },
+    {
+     "name": "HeaderTemplate",
+     "type": "Microsoft.UI.Xaml.DataTemplate"
+    },
+    {
+     "name": "PlaceholderText",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "SelectionHighlightColor",
+     "type": "Microsoft.UI.Xaml.Media.SolidColorBrush"
+    },
+    {
+     "name": "PreventKeyboardDisplayOnProgrammaticFocus",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "IsColorFontEnabled",
+     "type": "Windows.Foundation.Boolean"
+    },
+    {
+     "name": "DesiredCandidateWindowAlignment",
+     "type": "CandidateWindowAlignment"
+    },
+    {
+     "name": "TextReadingOrder",
+     "type": "Microsoft.UI.Xaml.TextReadingOrder"
+    },
+    {
+     "name": "SelectionHighlightColorWhenNotFocused",
+     "type": "Microsoft.UI.Xaml.Media.SolidColorBrush"
+    },
+    {
+     "name": "HorizontalTextAlignment",
+     "type": "Microsoft.UI.Xaml.TextAlignment"
+    },
+    {
+     "name": "CharacterCasing",
+     "type": "CharacterCasing"
+    },
+    {
+     "name": "PlaceholderForeground",
+     "type": "Microsoft.UI.Xaml.Media.Brush"
+    },
+    {
+     "name": "CanPasteClipboardContent",
+     "type": "Windows.Foundation.Boolean",
+     "readonly": true
+    },
+    {
+     "name": "CanUndo",
+     "type": "Windows.Foundation.Boolean",
+     "readonly": true
+    },
+    {
+     "name": "CanRedo",
+     "type": "Windows.Foundation.Boolean",
+     "readonly": true
+    },
+    {
+     "name": "SelectionFlyout",
+     "type": "Microsoft.UI.Xaml.Controls.Primitives.FlyoutBase"
+    },
+    {
+     "name": "ProofingMenuFlyout",
+     "type": "Microsoft.UI.Xaml.Controls.Primitives.FlyoutBase",
+     "readonly": true
+    },
+    {
+     "name": "Description",
+     "type": "object"
+    },
+    {
+     "name": "HeaderPlacement",
+     "type": "Microsoft.UI.Xaml.Controls.ControlHeaderPlacement"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "TextChanged",
+    "SelectionChanged",
+    "ContextMenuOpening",
+    "Paste",
+    "CandidateWindowBoundsChanged",
+    "TextChanging",
+    "TextCompositionStarted",
+    "TextCompositionChanged",
+    "TextCompositionEnded",
+    "CopyingToClipboard",
+    "CuttingToClipboard",
+    "BeforeTextChanging",
+    "SelectionChanging"
+   ],
+   "style": true
+  },
+  {
    "name": "TextCommandBarFlyout",
    "namespace": "Microsoft.UI.Xaml.Controls",
    "base": "CommandBarFlyout",
@@ -6341,6 +8640,48 @@
    "style": true
   },
   {
+   "name": "TimePickerFlyout",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.Primitives.PickerFlyoutBase",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Phone/Phone.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "ClockIdentifier",
+     "type": "Windows.Foundation.String"
+    },
+    {
+     "name": "Time",
+     "type": "Windows.Foundation.TimeSpan"
+    },
+    {
+     "name": "MinuteIncrement",
+     "type": "Windows.Foundation.Int32"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [
+    "TimePicked"
+   ],
+   "style": false
+  },
+  {
+   "name": "TimePickerFlyoutPresenter",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Controls.Control",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Phone/Phone.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "IsDefaultShadowEnabled",
+     "type": "Windows.Foundation.Boolean"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [],
+   "style": true
+  },
+  {
    "name": "TitleBar",
    "namespace": "Microsoft.UI.Xaml.Controls",
    "base": "Microsoft.UI.Xaml.Controls.Control",
@@ -6424,6 +8765,22 @@
     "Unchecked",
     "Indeterminate"
    ],
+   "style": true
+  },
+  {
+   "name": "ToggleMenuFlyoutItem",
+   "namespace": "Microsoft.UI.Xaml.Controls",
+   "base": "Microsoft.UI.Xaml.Controls.MenuFlyoutItem",
+   "source": "dxaml/xcp/tools/XCPTypesAutoGen/Modules/Controls/MenuFlyout.cs",
+   "origin": "XamlOM module",
+   "properties": [
+    {
+     "name": "IsChecked",
+     "type": "Windows.Foundation.Boolean"
+    }
+   ],
+   "dependencyProperties": [],
+   "events": [],
    "style": true
   },
   {
@@ -6962,6 +9319,7 @@
   "Microsoft.UI.Private.Composition.Effects.EffectChannelSelect",
   "Microsoft.UI.Private.Composition.Effects.EffectOptimization",
   "Microsoft.UI.Xaml.Controls.AnnotatedScrollBarScrollingEventKind",
+  "Microsoft.UI.Xaml.Controls.AutoSuggestionBoxTextChangeReason",
   "Microsoft.UI.Xaml.Controls.BackgroundSizing",
   "Microsoft.UI.Xaml.Controls.CandidateWindowAlignment",
   "Microsoft.UI.Xaml.Controls.CharacterCasing",
@@ -6969,10 +9327,12 @@
   "Microsoft.UI.Xaml.Controls.ColorPickerHsvChannel",
   "Microsoft.UI.Xaml.Controls.ColorSpectrumComponents",
   "Microsoft.UI.Xaml.Controls.ColorSpectrumShape",
+  "Microsoft.UI.Xaml.Controls.ComboBoxSelectionChangedTrigger",
   "Microsoft.UI.Xaml.Controls.ContentDialogButton",
   "Microsoft.UI.Xaml.Controls.ContentDialogPlacement",
   "Microsoft.UI.Xaml.Controls.ContentDialogResult",
   "Microsoft.UI.Xaml.Controls.ControlHeaderPlacement",
+  "Microsoft.UI.Xaml.Controls.DisabledFormattingAccelerators",
   "Microsoft.UI.Xaml.Controls.ElementRealizationOptions",
   "Microsoft.UI.Xaml.Controls.ElementType",
   "Microsoft.UI.Xaml.Controls.ExpandDirection",
@@ -7008,6 +9368,7 @@
   "Microsoft.UI.Xaml.Controls.LightDismissOverlayMode",
   "Microsoft.UI.Xaml.Controls.LinedFlowLayoutItemsJustification",
   "Microsoft.UI.Xaml.Controls.LinedFlowLayoutItemsStretch",
+  "Microsoft.UI.Xaml.Controls.ListPickerFlyoutSelectionMode",
   "Microsoft.UI.Xaml.Controls.ListViewReorderMode",
   "Microsoft.UI.Xaml.Controls.ListViewSelectionMode",
   "Microsoft.UI.Xaml.Controls.NavigationViewBackButtonVisible",
@@ -7023,10 +9384,20 @@
   "Microsoft.UI.Xaml.Controls.PagerControlDisplayMode",
   "Microsoft.UI.Xaml.Controls.PanelScrollingDirection",
   "Microsoft.UI.Xaml.Controls.ParallaxSourceOffsetKind",
+  "Microsoft.UI.Xaml.Controls.PasswordRevealMode",
   "Microsoft.UI.Xaml.Controls.PipsPagerButtonVisibility",
   "Microsoft.UI.Xaml.Controls.PipsPagerWrapMode",
+  "Microsoft.UI.Xaml.Controls.PivotHeaderFocusVisualPlacement",
+  "Microsoft.UI.Xaml.Controls.PivotSlideInAnimationGroup",
   "Microsoft.UI.Xaml.Controls.PlayerAnimationOptimization",
   "Microsoft.UI.Xaml.Controls.Primitives.AnimationDirection",
+  "Microsoft.UI.Xaml.Controls.Primitives.AppBarClosedDisplayMode",
+  "Microsoft.UI.Xaml.Controls.Primitives.CalendarViewDisplayMode",
+  "Microsoft.UI.Xaml.Controls.Primitives.CalendarViewSelectionMode",
+  "Microsoft.UI.Xaml.Controls.Primitives.CommandBarDefaultLabelPosition",
+  "Microsoft.UI.Xaml.Controls.Primitives.CommandBarDynamicOverflowAction",
+  "Microsoft.UI.Xaml.Controls.Primitives.CommandBarLabelPosition",
+  "Microsoft.UI.Xaml.Controls.Primitives.CommandBarOverflowButtonVisibility",
   "Microsoft.UI.Xaml.Controls.Primitives.ComponentResourceLocation",
   "Microsoft.UI.Xaml.Controls.Primitives.CornerRadiusFilterKind",
   "Microsoft.UI.Xaml.Controls.Primitives.CornerRadiusToThicknessConverterKind",
@@ -7052,6 +9423,7 @@
   "Microsoft.UI.Xaml.Controls.RefreshVisualizerState",
   "Microsoft.UI.Xaml.Controls.RelativePosition",
   "Microsoft.UI.Xaml.Controls.RequiresPointer",
+  "Microsoft.UI.Xaml.Controls.RichEditClipboardFormat",
   "Microsoft.UI.Xaml.Controls.ScrollBarVisibility",
   "Microsoft.UI.Xaml.Controls.ScrollIntoViewAlignment",
   "Microsoft.UI.Xaml.Controls.ScrollMode",
@@ -7066,8 +9438,11 @@
   "Microsoft.UI.Xaml.Controls.ScrollingSnapPointsMode",
   "Microsoft.UI.Xaml.Controls.ScrollingZoomMode",
   "Microsoft.UI.Xaml.Controls.SelectionMode",
+  "Microsoft.UI.Xaml.Controls.SlideNavigationTransitionEffect",
   "Microsoft.UI.Xaml.Controls.SnapPointsType",
   "Microsoft.UI.Xaml.Controls.SortDirection",
+  "Microsoft.UI.Xaml.Controls.SplitViewDisplayMode",
+  "Microsoft.UI.Xaml.Controls.SplitViewPanePlacement",
   "Microsoft.UI.Xaml.Controls.StretchDirection",
   "Microsoft.UI.Xaml.Controls.SwipeBehaviorOnInvoked",
   "Microsoft.UI.Xaml.Controls.SwipeMode",
@@ -7094,7 +9469,8 @@
   "Microsoft.UI.Xaml.Controls.UniformGridLayoutItemsStretch",
   "Microsoft.UI.Xaml.Controls.VirtualizationMode",
   "Microsoft.UI.Xaml.Controls.WrapPanelItemsStretch",
-  "Microsoft.UI.Xaml.Controls.ZoomMode"
+  "Microsoft.UI.Xaml.Controls.ZoomMode",
+  "Microsoft.UI.Xaml.Input.StandardUICommandKind"
  ],
  "themeResources": {
   "controls/dev/AnnotatedScrollBar/AnnotatedScrollBar_themeresources.xaml": {

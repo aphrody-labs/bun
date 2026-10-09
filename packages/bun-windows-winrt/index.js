@@ -708,7 +708,11 @@ function findMethod(className, methodName) {
   for (let name = className; name; ) {
     const desc = registry.classes.get(name);
     if (!desc) break;
-    for (const interfaceName of desc.interfaces ?? [desc.defaultInterface]) {
+    for (let interfaceName of desc.interfaces ?? [desc.defaultInterface]) {
+      if (Array.isArray(interfaceName)) {
+        if (interfaceName[0] !== "IVector" || interfaceName.length !== 2) continue;
+        interfaceName = vectorInterface(interfaceName[1]);
+      }
       const method = registry.interfaces.get(interfaceName)?.methods.find(m => m[0] === methodName);
       if (method) return { interfaceName, method };
     }
@@ -741,8 +745,8 @@ function kindOf(type) {
   return ["object", type];
 }
 
-// vector(object, "Microsoft.UI.Xaml.UIElement"): the object's IVector<T> (Panel.Children, ItemCollection...).
-function vector(object, elementType) {
+// IVector<T> described from its well-known ABI (slots 6..15) and registered as "IVector<T>".
+function vectorInterface(elementType) {
   const signature = ["IVector", elementType];
   const interfaceName = `IVector<${elementType}>`;
   if (!registry.interfaces.has(interfaceName)) {
@@ -787,6 +791,12 @@ function vector(object, elementType) {
       ],
     });
   }
+  return interfaceName;
+}
+
+// vector(object, "Microsoft.UI.Xaml.UIElement"): the object's IVector<T> (Panel.Children, ItemCollection...).
+function vector(object, elementType) {
+  const interfaceName = vectorInterface(elementType);
   const result = wrap(queryInterface(toPointer(object), registry.interfaces.get(interfaceName).iid), interfaceName);
   result[Symbol.iterator] = function* () {
     for (let i = 0, n = result.Size; i < n; i++) yield result.GetAt(i);

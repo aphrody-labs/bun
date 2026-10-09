@@ -4,6 +4,7 @@ import { cpSync, existsSync, readFileSync, statSync, symlinkSync, utimesSync } f
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { SourceMapConsumer } from "source-map";
+import * as fluent from "../../../packages/bun-fluent/src/index.ts";
 import { installFixture, nextBuild, nextEnv, nextStart } from "../next-app/test/next-helpers";
 
 // @aphrody/bun-plugin-tailwind (packages/bun-plugin-tailwind). The fixtures have
@@ -273,6 +274,27 @@ describe("Bun.build", () => {
     await expect(cycle.generate(await Bun.file(path).text())).rejects.toThrow(
       "@import cycle: virt:theme.css -> virt:theme.css",
     );
+  });
+
+  test("schemeImport: the Fluent 2 theme of @aphrody/bun-fluent (fluent:theme.css)", async () => {
+    using dir = tempDir("tw-scheme-fluent", {
+      "style.css": `@import "tailwindcss";\n@import "fluent:theme.css";`,
+      "index.html": `<div class="bg-fluent-brand-background rounded-fluent-medium fluent-body-1 dark"></div>`,
+    });
+    const css = await buildCss(
+      String(dir),
+      "style.css",
+      {},
+      {
+        plugins: [fluent.fluentPlugin(), tw.tailwind({ schemeImport: fluent.fluentSchemeImport() })],
+      },
+    );
+    expect(css).toMatch(/\.bg-fluent-brand-background\s*\{\s*background-color: var\(--colorBrandBackground\)/);
+    expect(css).toMatch(/\.rounded-fluent-medium\s*\{\s*border-radius: var\(--borderRadiusMedium\)/);
+    expect(css).toMatch(/\.fluent-body-1\s*\{[^}]*font-size: var\(--fontSizeBase300\)/);
+    expect(css).toContain("--colorBrandBackground: #0f6cbd");
+    expect(css).toContain("--colorBrandBackground: #115ea3");
+    expect(css).not.toContain("@theme");
   });
 
   test("module graph: candidates from imported files the scanner skips", async () => {
