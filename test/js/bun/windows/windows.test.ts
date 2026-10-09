@@ -17,6 +17,8 @@ describe.skipIf(isWindows)("non-Windows", () => {
     expect(windows.isWindows11()).toBe(false);
     expect(errorCode(() => windows.version())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => windows.registry.get("HKCU\\Software"))).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
+    expect(errorCode(() => windows.storage.drives())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
+    expect(errorCode(() => windows.memory.status())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => new windows.Job())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
   });
 });
@@ -40,6 +42,28 @@ describe.skipIf(!isWindows)("bun:windows", () => {
     expect(info.computerName.length).toBeGreaterThan(0);
     expect(["dark", "light"]).toContain(info.theme);
     expect(typeof windows.isElevated()).toBe("boolean");
+  });
+
+  test("logical drive capacity", () => {
+    const drives = windows.storage.drives();
+    expect(drives.length).toBeGreaterThan(0);
+    const systemRoot = process.env.SystemRoot!.slice(0, 3).toLowerCase();
+    const systemDrive = drives.find(drive => drive.root.toLowerCase() === systemRoot)!;
+    expect(systemDrive).toBeDefined();
+    expect(systemDrive.type).toBe("fixed");
+    expect(systemDrive.totalBytes).toBeGreaterThan(0);
+    expect(systemDrive.freeBytes).toBeLessThanOrEqual(systemDrive.totalBytes);
+    expect(systemDrive.availableBytes).toBeLessThanOrEqual(systemDrive.totalBytes);
+  });
+
+  test("physical, page-file and virtual memory status", () => {
+    const memory = windows.memory.status();
+    expect(memory.totalPhysical).toBeGreaterThan(0);
+    expect(memory.availablePhysical).toBeLessThanOrEqual(memory.totalPhysical);
+    expect(memory.totalPageFile).toBeGreaterThan(0);
+    expect(memory.availablePageFile).toBeLessThanOrEqual(memory.totalPageFile);
+    expect(memory.memoryLoad).toBeGreaterThanOrEqual(0);
+    expect(memory.memoryLoad).toBeLessThanOrEqual(100);
   });
 
   test("registry round-trip", () => {
