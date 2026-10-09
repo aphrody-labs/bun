@@ -1,0 +1,20 @@
+[package]
+name = "aphrody-wgpu-probe"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+description = "WSLg GPU probe of the Aphrody Alpine WSL distribution: wgpu adapter info, then a winit window cleared for N frames"
+
+# Standalone: its GUI stack stays out of Bun's workspace.
+[workspace]
+
+[dependencies]
+wgpu = "30.0.1"
+winit = "0.30.13"
+pollster = "0.4"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true

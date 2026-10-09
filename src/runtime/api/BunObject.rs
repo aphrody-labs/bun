@@ -330,6 +330,7 @@ pub(crate) mod bun_object {
         BunObject_lazyPropCb_ValkeyClient => super::get_valkey_client_constructor,
         BunObject_lazyPropCb_valkey => super::get_valkey_default_client,
         BunObject_lazyPropCb_Terminal => super::get_terminal_constructor,
+        BunObject_lazyPropCb_TerminalScreen => super::get_terminal_screen_constructor,
     }
     // --- Lazy property callbacks ---
 
@@ -1844,6 +1845,10 @@ fn get_valkey_client_constructor(global_this: &JSGlobalObject, _: &JSObject) -> 
 
 fn get_terminal_constructor(global_this: &JSGlobalObject, _: &JSObject) -> JSValue {
     crate::api::bun_terminal_body::js::get_constructor(global_this)
+}
+
+fn get_terminal_screen_constructor(global_this: &JSGlobalObject, _: &JSObject) -> JSValue {
+    jsc::codegen::js::get_constructor::<crate::api::terminal_screen::TerminalScreen>(global_this)
 }
 
 fn get_is_standalone_executable(global_this: &JSGlobalObject, _: &JSObject) -> JSValue {

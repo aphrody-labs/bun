@@ -1,0 +1,76 @@
+<Project>
+  <!-- This C# task makes some small modifications to a module-loader script so it loads an
+  AOT module directly instead of loading the .NET assembly via the node-api-dotnet package. -->
+  <UsingTask TaskName="TransformModuleLoaderForAot"
+    TaskFactory="RoslynCodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <TargetFile ParameterType="System.String" Required="true" />
+      <IncludeRidSubpath ParameterType="System.Boolean" Required="false" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Code Type="Fragment" Language="cs">
+      <![CDATA[
+        string js = File.ReadAllText(TargetFile);
+        js = js.Replace("const dotnet = require('node-api-dotnet');", "const dotnet = undefined;");
+        js = js.Replace("import dotnet from 'node-api-dotnet';", "const dotnet = undefined;");
+        if (!IncludeRidSubpath) js = js.Replace("rid, ", "");
+        File.WriteAllText(TargetFile, js);
+      ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!-- Starting with .NET 9 SDK, AOT publish fails (ILLinkNotSupportedError) if SelfContained is
+  not explicitly set to true. This makes that automatic when publishing AOT node modules. -->
+  <Target Name="PublishAotSelfContained"
+    BeforeTargets="PrepareForILLink"
+    Condition=" '$(PublishNodeModule)' == 'true' "
+  >
+    <PropertyGroup>
+      <SelfContained>true</SelfContained>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="RenameToDotNode"
+    AfterTargets="CopyNativeBinary"
+    BeforeTargets="PublishManagedAssembly"
+    DependsOnTargets="_CopyAotSymbols"
+    Condition=" '$(PublishNodeModule)' == 'true' "
+  >
+    <!-- If publishing a node module for for multiple platforms, use an rid-specific subdir. -->
+    <PropertyGroup>
+      <PublishNodeModuleDir  Condition=" '$(PublishMultiPlatformNodeModule)' != 'true' ">$(PublishDir)</PublishNodeModuleDir>
+      <PublishNodeModuleDir  Condition=" '$(PublishMultiPlatformNodeModule)' == 'true' ">$(PublishDir)$(RuntimeIdentifier)/</PublishNodeModuleDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(PublishNodeModuleDir)" />
+
+    <!-- Rename/move the native library (and its symbols file) to have a .node extension. -->
+    <Move SourceFiles="$(PublishDir)$(TargetName)$(NativeBinaryExt)"
+      DestinationFiles="$(PublishNodeModuleDir)$(TargetName).node" />
+    <Move Condition="Exists('$(PublishDir)$(TargetName).pdb')"
+      SourceFiles="$(PublishDir)$(TargetName).pdb"
+      DestinationFiles="$(PublishNodeModuleDir)$(TargetName).node.pdb" />
+    <Move Condition="Exists('$(PublishDir)$(TargetName).so.dbg')"
+      SourceFiles="$(PublishDir)$(TargetName).so.dbg"
+      DestinationFiles="$(PublishNodeModuleDir)$(TargetName).node.dbg" />
+
+    <!-- Transform the module-loader script(s) for AOT. -->
+    <TransformModuleLoaderForAot IncludeRidSubpath="$(PublishMultiPlatformNodeModule)"
+      TargetFile="$(PublishDir)$(TargetName).js" Condition="Exists('$(PublishDir)$(TargetName).js')" />
+    <TransformModuleLoaderForAot IncludeRidSubpath="$(PublishMultiPlatformNodeModule)"
+      TargetFile="$(PublishDir)$(TargetName).cjs" Condition="Exists('$(PublishDir)$(TargetName).cjs')" />
+    <TransformModuleLoaderForAot IncludeRidSubpath="$(PublishMultiPlatformNodeModule)"
+      TargetFile="$(PublishDir)$(TargetName).mjs" Condition="Exists('$(PublishDir)$(TargetName).mjs')" />
+  </Target>
+
+  <Target Name="PackNpmPackage"
+    AfterTargets="RenameToDotNode"
+    BeforeTargets="PublishManagedAssembly"
+    Condition=" '$(PackNpmPackage)' == 'true' "
+  >
+    <MakeDir Directories="$(PackageOutputPath)" />
+    <Exec Command="npm pack --pack-destination=&quot;$(PackageOutputPath)&quot;" />
+  </Target>
+</Project>

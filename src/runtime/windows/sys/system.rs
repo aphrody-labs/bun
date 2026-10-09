@@ -1,7 +1,7 @@
 //! Windows version, edition and machine information.
 
 use super::registry::{read_dword, read_string, root};
-use super::{BOOL, HANDLE, Json, WinErr, WinResult};
+use super::{Json, WinErr, WinResult, BOOL, HANDLE};
 
 const CURRENT_VERSION: &str = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion";
 const PERSONALIZE: &str = r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
@@ -158,17 +158,39 @@ pub(crate) fn version_json() -> String {
     j.finish()
 }
 
-/// `{ computerName, userName, processors, totalMemory, freeMemory, memoryLoad, uptime, theme }`.
-/// `uptime` is in milliseconds; `theme` is the apps theme, `"dark"` or `"light"`.
-pub(crate) fn info_json() -> WinResult<String> {
+fn memory_status() -> WinResult<MemoryStatusEx> {
     let mut mem = MemoryStatusEx {
         length: core::mem::size_of::<MemoryStatusEx>() as u32,
         ..Default::default()
     };
-    // SAFETY: `mem.length` is set.
+    // SAFETY: `mem.length` is set and Windows writes the documented structure fields.
     if unsafe { GlobalMemoryStatusEx(&mut mem) } == 0 {
         return Err(WinErr::last("GlobalMemoryStatusEx"));
     }
+    Ok(mem)
+}
+
+/// `{ memoryLoad, totalPhysical, availablePhysical, totalPageFile, availablePageFile,
+/// totalVirtual, availableVirtual }` in bytes, except `memoryLoad` which is a percentage.
+pub(crate) fn memory_json() -> WinResult<String> {
+    let mem = memory_status()?;
+    let mut j = Json::new();
+    j.begin_object()
+        .field_num("memoryLoad", mem.memory_load as f64)
+        .field_num("totalPhysical", mem.total_phys as f64)
+        .field_num("availablePhysical", mem.avail_phys as f64)
+        .field_num("totalPageFile", mem.total_page_file as f64)
+        .field_num("availablePageFile", mem.avail_page_file as f64)
+        .field_num("totalVirtual", mem.total_virtual as f64)
+        .field_num("availableVirtual", mem.avail_virtual as f64)
+        .end_object();
+    Ok(j.finish())
+}
+
+/// `{ computerName, userName, processors, totalMemory, freeMemory, memoryLoad, uptime, theme }`.
+/// `uptime` is in milliseconds; `theme` is the apps theme, `"dark"` or `"light"`.
+pub(crate) fn info_json() -> WinResult<String> {
+    let mem = memory_status()?;
     // SAFETY: no preconditions. ALL_PROCESSOR_GROUPS = 0xffff.
     let processors = unsafe { GetActiveProcessorCount(0xffff) };
     // SAFETY: no preconditions.

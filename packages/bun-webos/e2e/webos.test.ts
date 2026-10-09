@@ -27,7 +27,7 @@ function real<T extends Record<string, unknown>>(body: T): T {
   return body;
 }
 
-if (backends.length === 0) test.todo("WebOS e2e needs Chrome/Edge (or WebView2 on Windows)");
+if (backends.length === 0) test.todo("WebOS e2e needs Chrome/Edge (or WebView2 on Windows)", () => {});
 
 describe.each(backends)("WebOS on Bun.WebView (%s)", (backend: BackendName) => {
   let os: WebOSSession;
@@ -73,11 +73,7 @@ describe.each(backends)("WebOS on Bun.WebView (%s)", (backend: BackendName) => {
     const expected = String(Bun.semver.satisfies("1.4.0", "^1.2") && Bun.semver.order("1.4.0", "1.10.0"));
     expect(await waitForText(os.view, output, new RegExp(`(^|\s)${expected}(\s|$)`))).toContain(expected);
 
-    await fill(
-      os.view,
-      input,
-      'await Bun.write("/home/aphrody/e2e.txt", "bun-webos e2e"), await Bun.file("/home/aphrody/e2e.txt").text()',
-    );
+    await fill(os.view, input, 'await Bun.write("e2e.txt", "bun-webos e2e"), await Bun.file("e2e.txt").text()');
     await os.view.click(inWindow("bun-repl", '[data-webos-action="run"]'));
     await waitForText(os.view, output, /bun-webos e2e/);
   }, 30_000);

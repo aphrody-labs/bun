@@ -8982,6 +8982,71 @@ declare module "bun" {
     controlFlags: number;
   }
 
+  interface TerminalScreenOptions {
+    /** Number of columns, from 1 to 4096. @default 80 */
+    cols?: number;
+    /** Number of rows, from 1 to 4096. @default 24 */
+    rows?: number;
+    /** Number of rows kept after they scroll off the top. @default 1000 */
+    scrollback?: number;
+    /** Treat `\n` as `\r\n`. @default false */
+    convertEol?: boolean;
+  }
+
+  /**
+   * A headless VT100/xterm screen. Write the bytes a program sends to its
+   * terminal and read back the text, cells, cursor and title. It does not
+   * spawn anything; pair it with {@link Terminal} to run a program.
+   *
+   * @example
+   * ```ts
+   * const screen = new Bun.TerminalScreen({ cols: 80, rows: 24 });
+   * await using terminal = new Bun.Terminal({
+   *   data(term, data) {
+   *     screen.write(data);
+   *     const replies = screen.takeReplies();
+   *     if (replies) term.write(replies);
+   *   },
+   * });
+   * ```
+   */
+  class TerminalScreen {
+    constructor(options?: TerminalScreenOptions);
+
+    /** Feed output bytes. Sequences split across calls are kept. Returns the number of bytes consumed. */
+    write(data: string | BufferSource): number;
+
+    /** Change the size, keeping the top-left content. */
+    resize(cols: number, rows: number): void;
+
+    /** Clear the screen, scrollback and all modes. */
+    reset(): void;
+
+    /** Screen text, one line per row, trailing blanks and trailing empty rows trimmed. */
+    text(options?: { scrollback?: boolean }): string;
+
+    /**
+     * Visible cells, row-major, four words per cell: codepoint, foreground,
+     * background and flags. Colors are `0xRRGGBBAA`, `0` for the default
+     * color. Flags: 1 bold, 2 dim, 4 italic, 8 underline, 16 blink,
+     * 32 inverse, 64 invisible, 128 strikethrough, 256 wide character,
+     * 512 right half of a wide character.
+     */
+    cells(): Uint32Array;
+
+    /** Answers to terminal queries (cursor position, device attributes) to send back to the program. */
+    takeReplies(): string;
+
+    readonly cols: number;
+    readonly rows: number;
+    /** Zero-based cursor position. */
+    readonly cursor: { col: number; row: number; visible: boolean };
+    /** Last title set with OSC 0 or OSC 2. */
+    readonly title: string;
+    /** Whether the alternate screen (full-screen programs) is active. */
+    readonly alternateScreen: boolean;
+  }
+
   // Blocked on https://github.com/oven-sh/bun/issues/8329
   // /**
   //  *

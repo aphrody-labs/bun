@@ -464,6 +464,7 @@ export type DepName =
   | "rust-argon2"
   | "sqlite"
   | "tinycc"
+  | "uutils"
   | "zlib"
   | "zstd";
 

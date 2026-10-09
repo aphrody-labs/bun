@@ -12,6 +12,7 @@ import { BunReplApp } from "./apps/BunReplApp";
 import { AlpinePackageManagerApp } from "./apps/AlpinePackageManagerApp";
 import { M3FusionStudioApp } from "./apps/M3FusionStudioApp";
 import { DiagnosticsApp } from "./apps/DiagnosticsApp";
+import { FluentWindowsApp } from "./apps/FluentWindowsApp";
 import { ArcadeGame } from "../arcade/ArcadeGame";
 import { ApiPlayground } from "../components/ApiPlayground";
 import { BenchmarkSuite } from "../benchmarks/BenchmarkSuite";
@@ -154,6 +155,8 @@ export const DesktopOS: React.FC = () => {
         return <DiagnosticsApp />;
       case "ffi":
         return <FFIExplorer />;
+      case "fluent-windows":
+        return <FluentWindowsApp />;
       case "m3-fusion":
         return (
           <Static>

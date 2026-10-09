@@ -1,0 +1,96 @@
+[package]
+name = "bun_coreutils"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lib]
+path = "lib.rs"
+
+[lints]
+workspace = true
+
+# uutils coreutils (MIT), vendored by scripts/build/deps/uutils.ts.
+[dependencies]
+uucore = { path = "../../vendor/uutils/src/uucore", features = ["lazy-startup"] }
+uu_arch = { path = "../../vendor/uutils/src/uu/arch" }
+uu_base32 = { path = "../../vendor/uutils/src/uu/base32" }
+uu_base64 = { path = "../../vendor/uutils/src/uu/base64" }
+uu_basenc = { path = "../../vendor/uutils/src/uu/basenc" }
+uu_cksum = { path = "../../vendor/uutils/src/uu/cksum" }
+uu_b2sum = { path = "../../vendor/uutils/src/uu/b2sum" }
+uu_md5sum = { path = "../../vendor/uutils/src/uu/md5sum" }
+uu_sha1sum = { path = "../../vendor/uutils/src/uu/sha1sum" }
+uu_sha224sum = { path = "../../vendor/uutils/src/uu/sha224sum" }
+uu_sha256sum = { path = "../../vendor/uutils/src/uu/sha256sum" }
+uu_sha384sum = { path = "../../vendor/uutils/src/uu/sha384sum" }
+uu_sha512sum = { path = "../../vendor/uutils/src/uu/sha512sum" }
+uu_comm = { path = "../../vendor/uutils/src/uu/comm" }
+uu_csplit = { path = "../../vendor/uutils/src/uu/csplit" }
+uu_cut = { path = "../../vendor/uutils/src/uu/cut" }
+uu_date = { path = "../../vendor/uutils/src/uu/date" }
+uu_dd = { path = "../../vendor/uutils/src/uu/dd" }
+uu_df = { path = "../../vendor/uutils/src/uu/df" }
+uu_du = { path = "../../vendor/uutils/src/uu/du" }
+uu_env = { path = "../../vendor/uutils/src/uu/env" }
+uu_expand = { path = "../../vendor/uutils/src/uu/expand" }
+uu_expr = { path = "../../vendor/uutils/src/uu/expr" }
+uu_factor = { path = "../../vendor/uutils/src/uu/factor" }
+uu_fmt = { path = "../../vendor/uutils/src/uu/fmt" }
+uu_fold = { path = "../../vendor/uutils/src/uu/fold" }
+uu_head = { path = "../../vendor/uutils/src/uu/head" }
+uu_hostid = { path = "../../vendor/uutils/src/uu/hostid" }
+uu_hostname = { path = "../../vendor/uutils/src/uu/hostname" }
+uu_join = { path = "../../vendor/uutils/src/uu/join" }
+uu_link = { path = "../../vendor/uutils/src/uu/link" }
+uu_ln = { path = "../../vendor/uutils/src/uu/ln" }
+uu_mktemp = { path = "../../vendor/uutils/src/uu/mktemp" }
+uu_nice = { path = "../../vendor/uutils/src/uu/nice" }
+uu_nl = { path = "../../vendor/uutils/src/uu/nl" }
+uu_nproc = { path = "../../vendor/uutils/src/uu/nproc" }
+uu_numfmt = { path = "../../vendor/uutils/src/uu/numfmt" }
+uu_od = { path = "../../vendor/uutils/src/uu/od" }
+uu_paste = { path = "../../vendor/uutils/src/uu/paste" }
+uu_pathchk = { path = "../../vendor/uutils/src/uu/pathchk" }
+uu_pr = { path = "../../vendor/uutils/src/uu/pr" }
+uu_printenv = { path = "../../vendor/uutils/src/uu/printenv" }
+uu_printf = { path = "../../vendor/uutils/src/uu/printf" }
+uu_ptx = { path = "../../vendor/uutils/src/uu/ptx" }
+uu_readlink = { path = "../../vendor/uutils/src/uu/readlink" }
+uu_realpath = { path = "../../vendor/uutils/src/uu/realpath" }
+uu_rmdir = { path = "../../vendor/uutils/src/uu/rmdir" }
+uu_shred = { path = "../../vendor/uutils/src/uu/shred" }
+uu_shuf = { path = "../../vendor/uutils/src/uu/shuf" }
+uu_sleep = { path = "../../vendor/uutils/src/uu/sleep" }
+uu_sort = { path = "../../vendor/uutils/src/uu/sort" }
+uu_split = { path = "../../vendor/uutils/src/uu/split" }
+uu_sum = { path = "../../vendor/uutils/src/uu/sum" }
+uu_sync = { path = "../../vendor/uutils/src/uu/sync" }
+uu_tac = { path = "../../vendor/uutils/src/uu/tac" }
+uu_tail = { path = "../../vendor/uutils/src/uu/tail" }
+uu_tee = { path = "../../vendor/uutils/src/uu/tee" }
+uu_tr = { path = "../../vendor/uutils/src/uu/tr" }
+uu_truncate = { path = "../../vendor/uutils/src/uu/truncate" }
+uu_tsort = { path = "../../vendor/uutils/src/uu/tsort" }
+uu_tty = { path = "../../vendor/uutils/src/uu/tty" }
+uu_uname = { path = "../../vendor/uutils/src/uu/uname" }
+uu_unexpand = { path = "../../vendor/uutils/src/uu/unexpand" }
+uu_uniq = { path = "../../vendor/uutils/src/uu/uniq" }
+uu_unlink = { path = "../../vendor/uutils/src/uu/unlink" }
+uu_wc = { path = "../../vendor/uutils/src/uu/wc" }
+uu_whoami = { path = "../../vendor/uutils/src/uu/whoami" }
+
+[target.'cfg(unix)'.dependencies]
+uu_chgrp = { path = "../../vendor/uutils/src/uu/chgrp" }
+uu_chmod = { path = "../../vendor/uutils/src/uu/chmod" }
+uu_chown = { path = "../../vendor/uutils/src/uu/chown" }
+uu_chroot = { path = "../../vendor/uutils/src/uu/chroot" }
+uu_groups = { path = "../../vendor/uutils/src/uu/groups" }
+uu_id = { path = "../../vendor/uutils/src/uu/id" }
+uu_install = { path = "../../vendor/uutils/src/uu/install" }
+uu_logname = { path = "../../vendor/uutils/src/uu/logname" }
+uu_mkfifo = { path = "../../vendor/uutils/src/uu/mkfifo" }
+uu_mknod = { path = "../../vendor/uutils/src/uu/mknod" }
+uu_stat = { path = "../../vendor/uutils/src/uu/stat" }
+uu_stty = { path = "../../vendor/uutils/src/uu/stty" }
+uu_timeout = { path = "../../vendor/uutils/src/uu/timeout" }

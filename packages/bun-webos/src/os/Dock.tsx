@@ -30,6 +30,13 @@ export const DOCK_ITEMS: DockItemConfig[] = [
   { id: "bun-repl", title: "Bun REPL", icon: "🥟", color: "bg-amber-600", size: { width: 700, height: 460 } },
   { id: "apk-manager", title: "Paquets système", icon: "📦", color: "bg-blue-500", size: { width: 760, height: 500 } },
   { id: "diagnostics", title: "Diagnostics", icon: "📊", color: "bg-indigo-600", size: { width: 820, height: 510 } },
+  {
+    id: "fluent-windows",
+    title: "Windows 11 (Fluent 2)",
+    icon: "🪟",
+    color: "bg-sky-700",
+    size: { width: 720, height: 460 },
+  },
   { id: "ffi", title: "bun:ffi", icon: "🔌", color: "bg-slate-600", size: { width: 720, height: 480 } },
   {
     id: "bun-apis",

@@ -1,0 +1,38 @@
+diff --git a/src/uucore/Cargo.toml b/src/uucore/Cargo.toml
+index e5a1788..2bc9ff7 100644
+--- a/src/uucore/Cargo.toml
++++ b/src/uucore/Cargo.toml
+@@ -149,6 +149,8 @@ utmp-classic = { workspace = true, optional = true }
+ default = ["signals"]
+ # * non-default features
+ backup-control = []
++# No .init_array constructor (see init_startup_state_capture!).
++lazy-startup = []
+ colors = []
+ diagnostics = ["dep:ariadne"]
+ checksum = ["base64-simd", "quoting-style", "rustix/fs", "sum"]
+diff --git a/src/uucore/src/lib/features/signals.rs b/src/uucore/src/lib/features/signals.rs
+index b648266..8579608 100644
+--- a/src/uucore/src/lib/features/signals.rs
++++ b/src/uucore/src/lib/features/signals.rs
+@@ -700,7 +700,7 @@ pub unsafe extern "C" fn capture_startup_state() {
+ 
+ /// Initializes startup state capture. Call once at crate root level.
+ #[macro_export]
+-#[cfg(unix)]
++#[cfg(all(unix, not(feature = "lazy-startup")))]
+ macro_rules! init_startup_state_capture {
+     () => {
+         #[cfg(not(target_vendor = "apple"))]
+@@ -717,8 +717,10 @@ macro_rules! init_startup_state_capture {
+     };
+ }
+ 
++/// With `lazy-startup` (utilities linked into a host binary such as Bun), nothing runs
++/// before `main`: the host pays no startup cost and the state reads as "open, not ignored".
+ #[macro_export]
+-#[cfg(not(unix))]
++#[cfg(any(not(unix), feature = "lazy-startup"))]
+ macro_rules! init_startup_state_capture {
+     () => {};
+ }

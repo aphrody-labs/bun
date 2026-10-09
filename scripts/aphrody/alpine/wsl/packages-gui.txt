@@ -10,7 +10,8 @@ mesa-egl
 mesa-gl
 mesa-gles
 mesa-gbm
-mesa-vulkan-dzn?
+# mesa-vulkan-dzn is left out: its ICD is loaded by every Vulkan app and WSL's glibc
+# libd3d12.so aborts under musl+gcompat (see aphrody-wslg.sh, APHRODY_D3D12).
 mesa-vulkan-swrast
 vulkan-loader
 # Wayland clients (winit, wgpu, GTK 4, Qt 6, libcosmic) talk to WSLg's Weston directly;

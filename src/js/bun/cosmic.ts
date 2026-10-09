@@ -11,7 +11,9 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const isSupported = process.platform === "linux";
+const isWindows = process.platform === "win32";
+// Text, config and windows work on Linux and Windows; the .desktop application index is Linux only.
+const isSupported = process.platform === "linux" || isWindows;
 
 const textLayoutNative = $newRustFunction("cosmic/text.rs", "jsTextLayout", 11);
 const textRenderNative = $newRustFunction("cosmic/text.rs", "jsTextRender", 14);
@@ -20,7 +22,7 @@ const fontsNative = $newRustFunction("cosmic/text.rs", "jsFonts", 0);
 const desktopEntriesNative = $newRustFunction("cosmic/apps.rs", "jsDesktopEntries", 2);
 
 function unsupportedError() {
-  const error = new Error("bun:cosmic is only available on Linux");
+  const error = new Error("this bun:cosmic feature is not available on this platform");
   error.code = "ERR_BUN_COSMIC_UNSUPPORTED";
   return error;
 }
@@ -796,15 +798,21 @@ class Config {
   constructor(name, version, state) {
     const env = process.env;
     const home = env.HOME || os.homedir();
-    const base = state
-      ? env.XDG_STATE_HOME || path.join(home, ".local", "state")
-      : env.XDG_CONFIG_HOME || path.join(home, ".config");
+    // cosmic-config follows dirs::config_dir() / dirs::state_dir(): %APPDATA% and %LOCALAPPDATA% on Windows.
+    const base = isWindows
+      ? state
+        ? env.XDG_STATE_HOME || env.LOCALAPPDATA || path.join(home, "AppData", "Local")
+        : env.XDG_CONFIG_HOME || env.APPDATA || path.join(home, "AppData", "Roaming")
+      : state
+        ? env.XDG_STATE_HOME || path.join(home, ".local", "state")
+        : env.XDG_CONFIG_HOME || path.join(home, ".config");
     const relative = path.join("cosmic", name, `v${version}`);
     this.name = name;
     this.version = version;
     this.#userDir = path.join(base, relative);
     this.#previousDir = version > 1 ? path.join(base, "cosmic", name, `v${version - 1}`) : undefined;
-    this.#defaultDirs = state ? [] : xdgDataDirs().map(dir => path.join(dir, relative));
+    const defaults = isWindows ? [env.ProgramData || "C:\\ProgramData"] : xdgDataDirs();
+    this.#defaultDirs = state ? [] : defaults.map(dir => path.join(dir, relative));
   }
 
   get path() {
@@ -902,7 +910,7 @@ function helperPath() {
   if (env) return env;
   const onPath = Bun.which("bun-cosmic");
   if (onPath) return onPath;
-  const beside = path.join(path.dirname(process.execPath), "bun-cosmic");
+  const beside = path.join(path.dirname(process.execPath), isWindows ? "bun-cosmic.exe" : "bun-cosmic");
   if (fs.existsSync(beside)) return beside;
   const error = new Error(
     "bun-cosmic helper not found: build packages/bun-cosmic, then put it on PATH, next to bun, or in BUN_COSMIC_HELPER",
@@ -1035,6 +1043,12 @@ async function notify(options) {
     args.push(`--action=${id}=${label}`);
   }
   if (options.wait) args.push("--wait");
+
+  if (isWindows) {
+    // Toasts go through bun:windows (WinRT ToastNotificationManager); actions and wait are not wired yet.
+    require("./windows").notify(summary, optionString("options.body", options.body));
+    return { id: undefined, action: null };
+  }
 
   const proc = spawnHelper(args);
   let id;

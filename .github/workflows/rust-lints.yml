@@ -60,7 +60,7 @@ jobs:
           llvm-version: ${{ env.LLVM_VERSION_MAJOR }}
           toolchain: ${{ env.RUSTUP_TOOLCHAIN }}
           components: clippy
-          ninja-targets: codegen clone-lolhtml clone-rust-argon2
+          ninja-targets: codegen clone-lolhtml clone-rust-argon2 clone-uutils
 
       - name: cargo clippy
         env:
@@ -142,7 +142,7 @@ jobs:
           bun-version: ${{ env.BUN_VERSION }}
           llvm-version: ${{ env.LLVM_VERSION_MAJOR }}
           toolchain: ${{ env.RUSTUP_TOOLCHAIN }}
-          ninja-targets: codegen clone-lolhtml clone-rust-argon2
+          ninja-targets: codegen clone-lolhtml clone-rust-argon2 clone-uutils
 
       - name: Install cargo-nextest
         uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
@@ -211,7 +211,7 @@ jobs:
           toolchain: ${{ env.MORDANT_TOOLCHAIN }}
           # What building against rustc's own crates (`rustc_private`) needs.
           components: rustc-dev llvm-tools-preview
-          ninja-targets: codegen clone-lolhtml clone-rust-argon2
+          ninja-targets: codegen clone-lolhtml clone-rust-argon2 clone-uutils
 
       - name: Restore the mordant binaries
         # cargo-mordant and mordant-driver are a pure function of the pinned
