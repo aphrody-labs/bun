@@ -2,6 +2,7 @@
 name = "bun_shell_parser"
 version.workspace = true
 edition.workspace = true
+publish = false
 
 [lib]
 path = "lib.rs"

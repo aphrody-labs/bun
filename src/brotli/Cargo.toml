@@ -2,6 +2,7 @@
 name = "bun_brotli"
 version.workspace = true
 edition.workspace = true
+publish = false
 
 [lib]
 path = "lib.rs"

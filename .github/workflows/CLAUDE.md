@@ -116,12 +116,14 @@ export LLVM_VERSION_MAJOR=23
 
 ## rust-lints.yml Workflow
 
-Four independent jobs over the Rust workspace. They share `.github/actions/rust-lint-setup`, a composite action that installs LLVM from apt.llvm.org (configure resolves a clang even though nothing here compiles C++), Bun, optionally a pinned Rust toolchain plus components, runs `bun install`, then `bun scripts/build.ts --configure-only` and the ninja targets a job asks for: `clone-lolhtml clone-rust-argon2` (cargo cannot resolve the workspace until the vendored `lol_html` and `rust-argon2` path dependencies exist) and, for jobs that check `bun_runtime`/`bun_jsc`/`bun_core`, `codegen` (their `include!()`d sources under `build/debug/codegen`).
+Six independent jobs over the Rust workspace. They share `.github/actions/rust-lint-setup`, a composite action that installs LLVM from apt.llvm.org (configure resolves a clang even though nothing here compiles C++), Bun, optionally a pinned Rust toolchain plus components, runs `bun install`, then `bun scripts/build.ts --configure-only` and the ninja targets a job asks for: `clone-lolhtml clone-rust-argon2` (cargo cannot resolve the workspace until the vendored `lol_html` and `rust-argon2` path dependencies exist) and, for jobs that check `bun_runtime`/`bun_jsc`/`bun_core`, `codegen` (their `include!()`d sources under `build/debug/codegen`).
 
 | Job       | Check name            | Runs                                                                | Blocking                       |
 | --------- | --------------------- | ------------------------------------------------------------------- | ------------------------------ |
 | `clippy`  | `cargo clippy`        | `bun run rust:clippy`, then `cargo check --workspace --all-targets` | yes                            |
 | `miri`    | `cargo miri test`     | `bun run rust:miri` (`scripts/rust-miri.ts`)                        | yes                            |
+| `deny`    | `cargo deny`          | `bun run rust:deny` (`deny.toml`)                                   | yes                            |
+| `nextest` | `cargo nextest`       | `bun run rust:nextest --profile ci` (`.config/nextest.toml`)        | yes                            |
 | `lolhtml` | `lol-html cargo test` | `cargo test` in `vendor/lolhtml`                                    | yes                            |
 | `mordant` | `mordant`             | `bun run rust:mordant`                                              | advisory (`continue-on-error`) |
 

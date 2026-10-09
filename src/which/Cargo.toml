@@ -2,6 +2,7 @@
 name = "bun_which"
 version.workspace = true
 edition.workspace = true
+publish = false
 
 [lib]
 path = "lib.rs"

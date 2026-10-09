@@ -37,6 +37,7 @@ import type { Ninja } from "./ninja.ts";
 import { emitRust, windowsShimPath } from "./rust.ts";
 import { quote, slash } from "./shell.ts";
 import { emitShims, machoPostlinkCommand, machoPostlinkImplicitInputs } from "./shims.ts";
+import { toolchainOverride } from "./tools.ts";
 import { resolveDep, type Dependency, type DepName, type ResolvedDep } from "./source.ts";
 import { streamPath } from "./stream.ts";
 import { generateUnifiedSources } from "./unified.ts";
@@ -1020,6 +1021,14 @@ export function validateBunConfig(cfg: Config): void {
         `remove the symlink; ccache already shares compiled objects.`,
     );
   }
+
+  assert(
+    toolchainOverride.ld === undefined || (cfg.linux && !cfg.lto),
+    `BUN_TOOLCHAIN_LD=${toolchainOverride.ld} needs a Linux build without LTO`,
+    {
+      hint: "The release link is a cross-language ThinLTO link that only ld.lld performs; unset BUN_TOOLCHAIN_LD or build debug",
+    },
+  );
 
   // --local-deps names must match a dep — a typo would otherwise silently
   // build the pinned tarball while the banner claims `local:<typo>`.

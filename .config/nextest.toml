@@ -1,0 +1,24 @@
+# cargo-nextest (https://nexte.st) for the workspace's native Rust unit tests.
+# `bun run rust:nextest` (scripts/rust-nextest.ts) picks the crates: only those
+# whose tests link without bun's C/C++ objects, the same set `rust:miri` runs.
+
+[store]
+dir = "target/nextest"
+
+[profile.default]
+fail-fast = false
+slow-timeout = { period = "30s", terminate-after = 4 }
+status-level = "fail"
+final-status-level = "slow"
+
+[profile.ci]
+fail-fast = false
+# One retry tells a flaky test (reported as FLAKY) from a broken one.
+retries = 1
+slow-timeout = { period = "60s", terminate-after = 5 }
+status-level = "retry"
+final-status-level = "flaky"
+failure-output = "immediate-final"
+
+[profile.ci.junit]
+path = "junit.xml"

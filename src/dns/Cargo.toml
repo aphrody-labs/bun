@@ -2,6 +2,7 @@
 name = "bun_dns"
 version.workspace = true
 edition.workspace = true
+publish = false
 
 [lib]
 path = "lib.rs"

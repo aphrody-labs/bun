@@ -388,11 +388,16 @@ const LLVM_VERSION_RANGE = `>=${LLVM_MAJOR}.${LLVM_MINOR}.0 <${LLVM_MAJOR}.${LLV
  *   BUN_TOOLCHAIN_LLVM   dir containing bin/clang, bin/ld.lld, bin/llvm-ar, …
  *   BUN_TOOLCHAIN_RUST   rustc sysroot dir containing bin/rustc (and bin/cargo)
  *   BUN_TOOLCHAIN_CARGO  cargo binary, if not <BUN_TOOLCHAIN_RUST>/bin/cargo
+ *   BUN_TOOLCHAIN_LD     ELF linker for bun's link on Linux instead of ld.lld
+ *                        (e.g. `wild`, faster debug relinks). Opt-in, non-LTO
+ *                        builds only: wild has no linker-plugin LTO
+ *                        (validateBunConfig refuses the combination).
  */
 export const toolchainOverride = {
   llvm: process.env.BUN_TOOLCHAIN_LLVM,
   rust: process.env.BUN_TOOLCHAIN_RUST,
   cargo: process.env.BUN_TOOLCHAIN_CARGO,
+  ld: process.env.BUN_TOOLCHAIN_LD || undefined,
 };
 
 /**
@@ -614,7 +619,7 @@ export function resolveLlvmToolchain(
   if (msvcTarget) {
     ld = findLlvmTool("lld-link", paths, os, { checkVersion: false, required: true })?.path ?? "";
   } else if (os === "linux") {
-    ld = findLlvmTool("ld.lld", paths, os, { checkVersion: true, required: true })?.path ?? "";
+    ld = toolchainOverride.ld ?? findLlvmTool("ld.lld", paths, os, { checkVersion: true, required: true })?.path ?? "";
   } else {
     ld = ""; // darwin: unused
   }

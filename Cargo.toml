@@ -1,5 +1,7 @@
 [workspace]
-resolver = "2"
+# 3 = 2 + MSRV-aware resolution (`cargo update` keeps versions the pinned
+# toolchain can build); feature unification is unchanged.
+resolver = "3"
 members = [
   "src/opaque",
   "src/analytics",

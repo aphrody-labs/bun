@@ -2,6 +2,7 @@
 name = "bun_boringssl"
 version.workspace = true
 edition.workspace = true
+publish = false
 
 [lib]
 path = "lib.rs"
