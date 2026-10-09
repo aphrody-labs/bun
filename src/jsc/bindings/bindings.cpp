@@ -2314,6 +2314,24 @@ bool Bun__deepMatch(
                 if (!matched) return false;
             }
         } else {
+            // Jest's subsetEquality: an expected object with no own keys (`{}`,
+            // `new URL(..)`) matches any received value, primitives included.
+            if constexpr (enableAsymmetricMatchers) {
+                if (!isMatchingObjectContaining && subsetProp.isObject()) {
+                    JSType subsetType = subsetPropCell->type();
+                    if (subsetType != JSDateType && subsetType != ErrorInstanceType) {
+                        bool subsetPropIsArray = isArray(globalObject, subsetProp);
+                        RETURN_IF_EXCEPTION(throwScope, false);
+                        if (!subsetPropIsArray) {
+                            JSObject* subsetPropObj = subsetProp.getObject();
+                            PropertyNameArrayBuilder ownKeys(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
+                            subsetPropObj->methodTable()->getOwnPropertyNames(subsetPropObj, globalObject, ownKeys, DontEnumPropertiesMode::Exclude);
+                            RETURN_IF_EXCEPTION(throwScope, false);
+                            if (ownKeys.size() == 0) continue;
+                        }
+                    }
+                }
+            }
             auto same = JSC::sameValue(globalObject, prop, subsetProp);
             RETURN_IF_EXCEPTION(throwScope, false);
             if (!same) return false;

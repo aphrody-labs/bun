@@ -3682,6 +3682,17 @@ describe("expect()", () => {
       expect(a1).not.toMatchObject({ 1: 1 });
       expect(a1).toMatchObject(a1);
     });
+
+    test("an expected object without own keys matches a primitive, like Jest", () => {
+      expect({ a: "str" }).toMatchObject({ a: {} });
+      expect({ a: 1, b: null }).toMatchObject({ a: {}, b: {} });
+      expect({ a: ["s"] }).toMatchObject({ a: [{}] });
+      expect({ url: "https://test.com/" }).toMatchObject({ url: new URL("https://test.com") });
+      expect({ a: "str" }).not.toMatchObject({ a: { length: 3 } });
+      expect({ a: "str" }).not.toMatchObject({ a: [] });
+      expect({ a: 1 }).not.toMatchObject({ a: new Date(1) });
+      expect({ a: "str" }).not.toEqual({ a: {} });
+    });
   });
 
   describe("toMatch()", () => {
