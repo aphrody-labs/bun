@@ -2,7 +2,8 @@
 //   sudo -n bun activate.ts [--root R] [--unit U] [--health URL] [--timeout S] [--min-free-gb 15] <releaseDir>
 // current -> release by atomic symlink rename, `systemctl restart <unit>` (the old version is fully stopped before the new
 // one starts: never two versions, never two Discord clients), wait for `active` then GET health = 200. On failure the
-// previous release is restored and the failed one is marked `bad`. APHRODY_DEPLOY_SYSTEMCTL overrides the systemctl command.
+// release that was current is restored and the failed one is marked `bad`; once healthy, clean removes it (rollback after
+// that = rebuild from git or a tag). APHRODY_DEPLOY_SYSTEMCTL overrides the systemctl command.
 // `--unit docker:<container>` targets a container of the host compose project instead (`docker restart`, running state).
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
@@ -57,7 +58,6 @@ export async function activateRelease(o: ActivateOptions): Promise<ActivateResul
   const releaseDir = resolve(o.releaseDir);
   const id = basename(releaseDir);
   const current = join(o.root, "current");
-  const previous = join(o.root, "previous");
 
   const bad = verifySums(releaseDir);
   if (bad.length) {
@@ -98,7 +98,6 @@ export async function activateRelease(o: ActivateOptions): Promise<ActivateResul
     (container ? await run([...docker, "restart", container]) : await sys("restart", o.unit)).code === 0;
 
   const old = readLink(current);
-  if (old && old !== releaseDir) swapLink(previous, old);
   swapLink(current, releaseDir);
   log("switched", { id, previous: old ? basename(old) : null });
 

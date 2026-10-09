@@ -328,7 +328,7 @@ export function verifySums(dir: string): string[] {
 
 // ---------- releases on disk ----------
 
-/** Pinned names (current, previous) are always kept; then the newest others until `keep` entries are kept. */
+/** Pinned names (current) are always kept; then the newest others until `keep` entries are kept. */
 export function selectReleasesToKeep(
   releases: { name: string; mtimeMs: number }[],
   pinned: (string | null | undefined)[],

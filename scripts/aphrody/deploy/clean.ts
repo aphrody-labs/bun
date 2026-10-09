@@ -153,9 +153,12 @@ export async function runClean(ctx: CleanContext): Promise<CleanReport> {
   if (ctx.role === "prod") {
     if (ctx.root) {
       const releasesDir = join(ctx.root, "releases");
-      const pins = [readLink(join(ctx.root, "current")), readLink(join(ctx.root, "previous"))].map(p =>
-        p ? basename(p) : null,
-      );
+      const pins = [readLink(join(ctx.root, "current"))].map(p => (p ? basename(p) : null));
+      const previousLink = join(ctx.root, "previous");
+      if (readLink(previousLink) !== null) {
+        if (!ctx.dryRun) rmSync(previousLink, { force: true });
+        report.removed.push({ path: previousLink, bytes: 0, why: "rollback = rebuild from git or a tag" });
+      }
       const all = entries(releasesDir);
       for (const e of all.filter(e => e.name.endsWith(".partial") && olderThan(e.st.mtimeMs, 1 / 24, now))) {
         remove(e.path, "stale partial transfer");
@@ -166,7 +169,7 @@ export async function runClean(ctx: CleanContext): Promise<CleanReport> {
         pins,
         0,
       );
-      for (const name of drop) remove(join(releasesDir, name), "release not current/previous");
+      for (const name of drop) remove(join(releasesDir, name), "release not current");
     }
     await command("docker", "image", "prune", "-f");
     await command("docker", "builder", "prune", "-f");

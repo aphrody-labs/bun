@@ -239,7 +239,7 @@ describe.skipIf(isWindows)("activate with a fake systemctl", () => {
   const healthy = (root: string) => async () =>
     existsSync(join(readlinkSync(join(root, "current")), "broken")) ? 503 : 200;
 
-  test("success swaps current, records previous, restarts once and runs clean", async () => {
+  test("success swaps current without a previous link, restarts once and runs clean", async () => {
     using dir = tempDir("deploy-activate-ok", {});
     const s = await setup(String(dir));
     let cleaned = 0;
@@ -259,7 +259,7 @@ describe.skipIf(isWindows)("activate with a fake systemctl", () => {
     });
     expect(r.ok).toBe(true);
     expect(readlinkSync(join(s.root, "current"))).toEndWith("new");
-    expect(readlinkSync(join(s.root, "previous"))).toEndWith("old");
+    expect(existsSync(join(s.root, "previous"))).toBe(false);
     expect(
       readFileSync(s.log, "utf8")
         .split("\n")
@@ -405,7 +405,7 @@ describe("clean", () => {
   const exec = (calls: string[][]) => async (cmd: string[]) => (calls.push(cmd), { code: 0, stdout: "", stderr: "" });
 
   test.skipIf(isWindows)(
-    "prod keeps only current and previous, prunes caches, never touches protected paths",
+    "prod keeps only current, drops previous, prunes caches, never touches protected paths",
     async () => {
       using dir = tempDir("deploy-clean", {});
       const { root, home, tmp } = layout(String(dir));
@@ -421,7 +421,8 @@ describe("clean", () => {
       });
       expect(report.ok).toBe(true);
       expect(existsSync(join(root, "releases/a"))).toBe(false);
-      expect(existsSync(join(root, "releases/b"))).toBe(true);
+      expect(existsSync(join(root, "releases/b"))).toBe(false);
+      expect(existsSync(join(root, "previous"))).toBe(false);
       expect(existsSync(join(root, "releases/c"))).toBe(true);
       expect(existsSync(join(root, "releases/d.partial"))).toBe(false);
       expect(existsSync(join(home, ".bun/install/cache"))).toBe(false);
