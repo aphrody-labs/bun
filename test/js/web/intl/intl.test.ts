@@ -151,7 +151,7 @@ describe("Intl.Collator", () => {
         `console.log(JSON.stringify([new Intl.Collator().resolvedOptions().locale, "a".localeCompare("B")]))`,
       ],
       // whatever the environment says, including nothing at all
-      env: { ...bunEnv, LANG: undefined, LC_ALL: undefined, LC_CTYPE: undefined },
+      env: { ...bunEnv, LANG: undefined, LC_ALL: undefined, LC_MESSAGES: undefined, LC_CTYPE: undefined },
       stdout: "pipe",
       stderr: "pipe",
     });
@@ -175,7 +175,7 @@ describe("Intl.Collator", () => {
          const set = libc.symbols.setlocale(LC_CTYPE, Buffer.from("C.UTF-8\\0"));
          console.log(JSON.stringify([set, new Intl.Collator().resolvedOptions().locale, "a".localeCompare("B"), (12345.5).toLocaleString()]));`,
       ],
-      env: bunEnv,
+      env: { ...bunEnv, LANG: undefined, LC_ALL: undefined, LC_MESSAGES: undefined },
       stdout: "pipe",
       stderr: "pipe",
     });
@@ -192,10 +192,10 @@ describe("Intl.Collator", () => {
 // ICU reads its own default locale from LC_ALL, then LC_MESSAGES, then LANG the
 // first time a calendar or collator is opened. A value it cannot parse used to
 // leave that default unset, and the first Date#toString / localeCompare / Intl
-// constructor then crashed inside ICU. Bun's own default locale does not come
-// from these variables, so every value, parseable or not, must give the en-US
-// output. On Windows neither holds: ICU reads the system locale and JSC reports
-// the UI language of the machine.
+// constructor then crashed inside ICU. Every value below is unparseable, names
+// the C locale or names en_US, so each must give the en-US output. On Windows
+// neither holds: ICU reads the system locale and JSC reports the UI language of
+// the machine.
 describe.skipIf(isWindows).concurrent("locale variables in the environment", () => {
   const script = `console.log(JSON.stringify([
     new Date(0).toString(),
@@ -216,7 +216,6 @@ describe.skipIf(isWindows).concurrent("locale variables in the environment", () 
     // a parseable or empty variable in front of an unparseable one wins
     { LC_ALL: "C", LANG: "abcdefghijkl" },
     { LC_ALL: "", LANG: "abcdefghijkl" },
-    { LC_ALL: "de_DE.UTF-8" },
   ])("%o", async vars => {
     await using proc = Bun.spawn({
       cmd: [bunExe(), "-e", script],
@@ -228,6 +227,37 @@ describe.skipIf(isWindows).concurrent("locale variables in the environment", () 
     expect(stdout).toBe(
       JSON.stringify(["Thu Jan 01 1970 00:00:00 GMT+0000 (Coordinated Universal Time)", -1, "1,234.5", "en-US"]) + "\n",
     );
+    expect(stderr).toBe("");
+    expect(exitCode).toBe(0);
+  });
+});
+
+// Like Node and Deno, the default locale on Linux and the other Unixes is ICU's,
+// taken from LC_ALL, then LC_MESSAGES, then LANG. macOS and Windows report the
+// UI language of the machine instead.
+describe.skipIf(isWindows || isMacOS).concurrent("default locale follows the environment", () => {
+  const script = `console.log(JSON.stringify([
+    new Intl.DateTimeFormat().resolvedOptions().locale,
+    new Intl.NumberFormat().resolvedOptions().locale,
+    (1234.5).toLocaleString(),
+  ]))`;
+
+  test.each([
+    [{ LANG: "fr_FR.UTF-8" }, "fr-FR", "1\u202F234,5"],
+    [{ LC_ALL: "de_DE.UTF-8" }, "de-DE", "1.234,5"],
+    [{ LC_MESSAGES: "de_DE.UTF-8", LANG: "fr_FR.UTF-8" }, "de-DE", "1.234,5"],
+    [{ LC_ALL: "de_DE.UTF-8", LANG: "fr_FR.UTF-8" }, "de-DE", "1.234,5"],
+    [{ LC_ALL: "C", LANG: "fr_FR.UTF-8" }, "en-US", "1,234.5"],
+    [{ LANG: "pt_BR" }, "pt-BR", "1.234,5"],
+  ])("%o -> %s", async (vars, locale, number) => {
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "-e", script],
+      env: { ...bunEnv, LANG: undefined, LC_ALL: undefined, LC_MESSAGES: undefined, ...vars },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect(stdout).toBe(JSON.stringify([locale, locale, number]) + "\n");
     expect(stderr).toBe("");
     expect(exitCode).toBe(0);
   });
