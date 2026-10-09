@@ -78,7 +78,7 @@ fn convert(expr: &Expr, source: &[u8], bump: &bun_alloc::Arena, depth: u32) -> V
     }
     match &expr.data {
         ExprData::EString(_) => match expr.as_string(bump) {
-            Some(s) => Value::String(String::from_utf8_lossy(s).into_owned()),
+            Some(s) => Value::String(super::lossy(s)),
             None => Value::Null,
         },
         ExprData::ENumber(n) => Value::Number(
@@ -98,7 +98,7 @@ fn convert(expr: &Expr, source: &[u8], bump: &bun_alloc::Arena, depth: u32) -> V
             let mut rows = Vec::new();
             expr.for_each_property(|key, _, value| {
                 rows.push((
-                    String::from_utf8_lossy(key).into_owned(),
+                    super::lossy(key),
                     convert(&value, source, bump, depth + 1),
                 ));
             });

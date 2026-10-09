@@ -747,6 +747,7 @@ dependencies = [
  "bun_uws",
  "bun_which",
  "bun_wyhash",
+ "bun_zlib",
  "bytemuck",
  "const_format",
  "enum-map",

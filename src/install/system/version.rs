@@ -9,11 +9,15 @@
 
 use core::cmp::Ordering;
 
+use bun_core::strings;
+
+/// ASCII-delimited pieces of a `&str` are still valid UTF-8.
+fn text(piece: &[u8]) -> &str {
+    core::str::from_utf8(piece).unwrap_or("")
+}
+
 fn parts(v: &str) -> impl Iterator<Item = &str> {
-    v.trim()
-        .trim_start_matches(['v', 'V'])
-        .split(['.', '-', '+', '_'])
-        .filter(|p| !p.is_empty())
+    strings::tokenize_any(v.trim().trim_start_matches(['v', 'V']).as_bytes(), b".-+_").map(text)
 }
 
 fn cmp_part(a: Option<&str>, b: Option<&str>) -> Ordering {
@@ -97,7 +101,7 @@ fn comparator_matches(c: &str, version: &str) -> bool {
         let idx = if base.len() >= 2 { 1 } else { 0 };
         return compare(version, &bump_at(&base, idx)) == Ordering::Less;
     }
-    if c.split('.').any(|p| matches!(p, "x" | "X" | "*")) {
+    if strings::split(c.as_bytes(), b".").any(|p| matches!(p, b"x" | b"X" | b"*")) {
         return prefix_matches(c, version);
     }
     compare(version, c) == Ordering::Equal
@@ -105,8 +109,8 @@ fn comparator_matches(c: &str, version: &str) -> bool {
 
 /// Whether `version` satisfies `range`.
 pub fn satisfies(range: &str, version: &str) -> bool {
-    range.split("||").any(|alt| {
-        let mut tokens = alt.split_whitespace().peekable();
+    strings::split(range.as_bytes(), b"||").any(|alt| {
+        let mut tokens = strings::tokenize_any(alt, b" \t").map(text);
         let mut all = true;
         let mut any = false;
         while let Some(tok) = tokens.next() {
@@ -135,7 +139,7 @@ pub fn is_exact(range: &str) -> bool {
     let r = range.trim();
     !r.is_empty()
         && !r.eq_ignore_ascii_case("latest")
-        && !r.contains(['*', 'x', 'X', '^', '~', '<', '>', '=', '|', ' '])
+        && strings::index_of_any(r.as_bytes(), b"*xX^~<>=| ").is_none()
 }
 
 /// Highest version in `versions` satisfying `range`, by `cmp`.

@@ -16,15 +16,20 @@
 //! ([`db::InstalledDb`]); `remove`/`upgrade` work from it, without the native
 //! package manager (`winget.exe`, `apk`, `apt`, `pacman`).
 
+pub mod archive;
 pub mod db;
 pub mod lock;
+pub mod mszip;
 pub mod net;
+pub mod sqlite;
 pub mod value;
 pub mod version;
 
 pub mod winget;
 
 use core::fmt;
+
+use bun_core::strings;
 
 pub use db::{InstallKind, InstalledDb, InstalledRecord};
 pub use lock::{LockEntry, SystemLock};
@@ -96,7 +101,7 @@ pub fn is_system_spec(spec: &[u8]) -> bool {
 }
 
 fn split_source(spec: &[u8]) -> Option<(SourceKind, &[u8])> {
-    let colon = spec.iter().position(|&c| c == b':')?;
+    let colon = strings::index_of_char_usize(spec, b':')?;
     let kind = SourceKind::from_name(&spec[..colon])?;
     let rest = &spec[colon + 1..];
     if rest.is_empty() {
@@ -109,14 +114,15 @@ fn split_source(spec: &[u8]) -> Option<(SourceKind, &[u8])> {
 /// is not the first character, so ids never need quoting.
 pub fn parse_spec(spec: &[u8]) -> Option<Spec> {
     let (source, rest) = split_source(spec)?;
-    let rest = core::str::from_utf8(rest).ok()?;
-    let (id, range) = match rest.rfind('@') {
+    let (id, range) = match strings::last_index_of_char(rest, b'@') {
         Some(at) if at > 0 => (&rest[..at], &rest[at + 1..]),
-        _ => (rest, ""),
+        _ => (rest, &b""[..]),
     };
-    if id.is_empty() || id.bytes().any(|c| c.is_ascii_whitespace()) {
+    if id.is_empty() || strings::index_of_any(id, b" \t\r\n").is_some() {
         return None;
     }
+    let id = core::str::from_utf8(id).ok()?;
+    let range = core::str::from_utf8(range).ok()?;
     Some(Spec {
         source,
         id: id.to_owned(),
@@ -198,7 +204,7 @@ impl Options {
         let get = |name: &[u8]| -> Option<String> {
             env.get(name)
                 .filter(|v| !v.is_empty())
-                .map(|v| String::from_utf8_lossy(v).into_owned())
+                .map(lossy)
         };
         Options {
             root: env.get(b"BUN_SYSTEM_ROOT").filter(|v| !v.is_empty()).map(<[u8]>::to_vec),
@@ -273,7 +279,7 @@ impl<'a> Ctx<'a> {
         self.env
             .get(name)
             .filter(|v| !v.is_empty())
-            .map(|v| String::from_utf8_lossy(v).into_owned())
+            .map(lossy)
     }
 
     /// HTTP GET honoring proxies/TLS settings from the environment.
@@ -554,6 +560,12 @@ pub fn sha256_hex_of(bytes: &[u8]) -> String {
     hex(&out)
 }
 
+/// UTF-8 text of `bytes`, replacing invalid sequences.
+pub fn lossy(bytes: &[u8]) -> String {
+    use bstr::ByteSlice as _;
+    bytes.to_str_lossy().into_owned()
+}
+
 pub fn hex(bytes: &[u8]) -> String {
     const DIGITS: &[u8; 16] = b"0123456789abcdef";
     let mut s = String::with_capacity(bytes.len() * 2);
@@ -614,7 +626,9 @@ pub mod fs {
     }
 
     pub fn parent(path: &[u8]) -> &[u8] {
-        match path.iter().rposition(|&c| c == b'/' || c == b'\\') {
+        let slash = bun_core::strings::last_index_of_char(path, b'/');
+        let backslash = bun_core::strings::last_index_of_char(path, b'\\');
+        match slash.max(backslash) {
             Some(i) => &path[..i],
             None => b"",
         }
@@ -625,7 +639,7 @@ pub mod fs {
             return Ok(());
         }
         bun_sys::mkdir_recursive(dir).map_err(|e| {
-            Error::Io(format!("mkdir {}: {}", String::from_utf8_lossy(dir), e))
+            Error::Io(format!("mkdir {}: {}", super::lossy(dir), e))
         })
     }
 
@@ -638,7 +652,7 @@ pub mod fs {
             bun_core::ZStr::from_buf(&p, path.len()),
             data,
         )
-        .map_err(|e| Error::Io(format!("write {}: {}", String::from_utf8_lossy(path), e)))
+        .map_err(|e| Error::Io(format!("write {}: {}", super::lossy(path), e)))
     }
 
     pub fn remove_file(path: &[u8]) {
