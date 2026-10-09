@@ -3,6 +3,7 @@ use crate::shell::ast;
 use crate::shell::interpreter::{EventLoopHandle, Interpreter, Node, NodeId, ShellExecEnv, log};
 use crate::shell::io::IO;
 use crate::shell::states::base::Base;
+use crate::shell::states::binary::Binary;
 use crate::shell::states::cmd::Cmd;
 use crate::shell::states::cond_expr::CondExpr;
 use crate::shell::states::r#if::If;
@@ -107,14 +108,14 @@ impl Async {
                 // Init the child WITHOUT starting it, store it, enqueue self, return
                 // suspended. The child is started on the NEXT event-loop tick
                 // via the `StartChild` arm above. Restricted to
-                // pipeline/cmd/if/condexpr — other Expr variants panic.
+                // pipeline/cmd/if/condexpr/binary — other Expr variants panic.
                 let child = match node.get() {
+                    ast::Expr::Binary(b) => Binary::init(interp, shell, *b, this, io),
                     ast::Expr::Pipeline(p) => Pipeline::init(interp, shell, *p, this, io),
                     ast::Expr::Cmd(c) => Cmd::init(interp, shell, *c, this, io),
                     ast::Expr::If(i) => If::init(interp, shell, *i, this, io),
                     ast::Expr::CondExpr(c) => CondExpr::init(interp, shell, *c, this, io),
                     ast::Expr::Assign(_)
-                    | ast::Expr::Binary(_)
                     | ast::Expr::Subshell(_)
                     | ast::Expr::Async(_) => panic!(
                         "Unexpected Expr variant as Async child, this indicates a bug in Bun."
