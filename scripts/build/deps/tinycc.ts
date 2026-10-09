@@ -27,7 +27,9 @@ export const tinycc: Dependency = {
     commit: TINYCC_COMMIT,
   }),
 
-  patches: ["patches/tinycc/tcc.h.patch"],
+  // c23-std.patch: -std=c17/c23/c99, C23 keyword macros, and drops
+  // __STDC_NO_ATOMICS__ (bun:ffi provides the __atomic_* helpers, ffi_body.rs).
+  patches: ["patches/tinycc/tcc.h.patch", "patches/tinycc/c23-std.patch"],
 
   build: cfg => {
     const sources = ["libtcc.c", "tccpp.c", "tccgen.c", "tccdbg.c", "tccelf.c", "tccasm.c", "tccrun.c"];
