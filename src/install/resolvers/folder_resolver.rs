@@ -314,6 +314,20 @@ fn read_package_json_from_disk<R: FolderResolverImpl>(
                 features,
             )?;
         }
+        if package.name.is_empty() {
+            if let Some(name) =
+                crate::lockfile_real::package::workspace_map::unnamed_workspace_name(abs.as_bytes())
+            {
+                let lockfile = &mut *manager.lockfile;
+                let hash = semver::string::Builder::string_hash(name);
+                package.name = semver::string::Buf {
+                    bytes: &mut lockfile.buffers.string_bytes,
+                    pool: &mut lockfile.string_pool,
+                }
+                .append_with_hash(name, hash)?;
+                package.name_hash = hash;
+            }
+        }
     } else {
         let _tracer =
             bun_perf::trace(bun_perf::PerfEvent::FolderResolverReadPackageJSONFromDiskFolder);

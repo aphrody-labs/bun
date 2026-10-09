@@ -312,3 +312,35 @@ describe.concurrent("workspaces entries longer than the path buffer", () => {
     },
   );
 });
+
+// npm and pnpm accept a workspace package.json without "name" and npm names it after its directory.
+test("workspace without a name is named after its directory", async () => {
+  using dir = tempDir("workspace-without-name", {
+    "package.json": JSON.stringify({ name: "root", workspaces: ["packages/*", "tools/*"] }),
+    "packages/lib/package.json": JSON.stringify({ name: "lib", version: "1.0.0" }),
+    "tools/bench/package.json": JSON.stringify({ private: true, dependencies: { lib: "workspace:*" } }),
+  });
+
+  const first = await runInstall(String(dir));
+  expect(first.stderr).not.toContain("error:");
+  expect(first.exitCode).toBe(0);
+
+  const lockfile = await Bun.file(join(String(dir), "bun.lock")).text();
+  expect(lockfile).toContain(`"tools/bench": {\n      "name": "bench",`);
+  expect(lockfile).toContain(`"bench": ["bench@workspace:tools/bench"]`);
+  expect(await Bun.file(join(String(dir), "node_modules", "lib", "package.json")).json()).toEqual({
+    name: "lib",
+    version: "1.0.0",
+  });
+
+  await using proc = spawn({
+    cmd: [bunExe(), "install", "--frozen-lockfile"],
+    cwd: String(dir),
+    env: bunEnv,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(stderr).not.toContain("error:");
+  expect(exitCode).toBe(0);
+});

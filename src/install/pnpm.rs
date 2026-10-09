@@ -450,6 +450,18 @@ fn get_string(expr: &Expr, name: &[u8]) -> Option<(&'static [u8], bun_ast::Loc)>
     Some((as_string(&q.expr)?, q.expr.loc))
 }
 
+/// A workspace's "name", or its directory's basename when it has none (npm and pnpm accept that).
+fn workspace_name(root: &Expr, package_json_path: &[u8]) -> Option<Box<[u8]>> {
+    match get_string(root, b"name") {
+        Some((name, _)) => Some(Box::from(name)),
+        None if root.as_property(b"name").is_none() => {
+            crate::lockfile_real::package::workspace_map::unnamed_workspace_name(package_json_path)
+                .map(Box::from)
+        }
+        None => None,
+    }
+}
+
 fn e_object(expr: &Expr) -> &E::Object {
     match &expr.data {
         ExprData::EObject(o) => &**o,
@@ -768,10 +780,9 @@ pub(crate) fn migrate_pnpm_lockfile<'a>(
 
             let workspace_root = &importer_pkg_json.root;
 
-            let Some((name, _)) = get_string(workspace_root, b"name") else {
-                // we require workspace names.
-                return Err(MigratePnpmLockfileError::WorkspaceNameMissing);
-            };
+            let name = workspace_name(workspace_root, pkg_json_path.slice())
+                .ok_or(MigratePnpmLockfileError::WorkspaceNameMissing)?;
+            let name: &[u8] = &name;
 
             let name_hash = semver::string::Builder::string_hash(name);
 
@@ -894,7 +905,9 @@ pub(crate) fn migrate_pnpm_lockfile<'a>(
                 // is reborrowed below for `parse_append_importer_dependencies`.
                 let workspace_root: Expr = workspace_pkg_json.root;
 
-                let name = as_string(&workspace_root.get(b"name").unwrap()).unwrap();
+                let name = workspace_name(&workspace_root, path_buf.slice())
+                    .ok_or(MigratePnpmLockfileError::WorkspaceNameMissing)?;
+                let name: &[u8] = &name;
                 let name_hash = semver::string::Builder::string_hash(name);
 
                 pkg.name = sbuf!(lockfile).append_with_hash(name, name_hash)?;
@@ -2254,9 +2267,10 @@ fn parse_append_importer_dependencies(
                     Err(_) => return Err(ParseAppendDependenciesError::InvalidPnpmLockfile),
                 };
 
-                let Some((name, _)) = get_string(&workspace_pkg_json.root, b"name") else {
+                let Some(name) = workspace_name(&workspace_pkg_json.root, path_buf.slice()) else {
                     return Err(ParseAppendDependenciesError::InvalidPnpmLockfile);
                 };
+                let name: &[u8] = &name;
 
                 let name_hash = semver::string::Builder::string_hash(name);
                 let dep = Dependency {
@@ -2507,6 +2521,7 @@ fn update_package_json_after_migration(
     let mut catalogs_obj: Option<Expr> = None;
     let mut workspace_overrides_obj: Option<Expr> = None;
     let mut workspace_patched_deps_obj: Option<Expr> = None;
+    let mut built_dependencies: Vec<&'static [u8]> = Vec::new();
 
     match sys::File::read_from(Fd::cwd(), b"pnpm-workspace.yaml") {
         Ok(contents) => 'read_pnpm_workspace_yaml: {
@@ -2546,6 +2561,30 @@ fn update_package_json_after_migration(
                         }
                     }
                     workspace_paths = Some(paths);
+                }
+            }
+
+            // Packages pnpm lets run lifecycle scripts: `onlyBuiltDependencies` (pnpm 10) or
+            // `allowBuilds` (pnpm 11, name -> bool).
+            if let Some(only_built) = ws_root.get(b"onlyBuiltDependencies") {
+                if let Some(mut names) = only_built.as_array() {
+                    while let Some(name) = names.next() {
+                        if let Some(name) = as_string(&name) {
+                            built_dependencies.push(js_ast::data_store_dupe_str(name));
+                        }
+                    }
+                }
+            }
+            if let Some(allow) = ws_root.get_object(b"allowBuilds") {
+                for prop in e_object(&allow).properties.slice() {
+                    let (Some(key), Some(value)) = (prop.key.as_ref(), prop.value.as_ref()) else {
+                        continue;
+                    };
+                    if let (Some(name), ExprData::EBoolean(b)) = (as_string(key), &value.data) {
+                        if b.value {
+                            built_dependencies.push(js_ast::data_store_dupe_str(name));
+                        }
+                    }
                 }
             }
 
@@ -2671,6 +2710,18 @@ fn update_package_json_after_migration(
     if wrote_workspaces {
         needs_update = true;
         moved.push("pnpm-workspace.yaml to workspaces");
+    }
+
+    if !built_dependencies.is_empty() && json.as_property(b"trustedDependencies").is_none() {
+        built_dependencies.sort_unstable();
+        built_dependencies.dedup();
+        e_object_mut(&mut json).put(
+            &bump,
+            b"trustedDependencies",
+            paths_array(&built_dependencies),
+        )?;
+        needs_update = true;
+        moved.push("pnpm-workspace.yaml allowBuilds to trustedDependencies");
     }
 
     // Handle overrides from pnpm-workspace.yaml

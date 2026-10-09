@@ -176,13 +176,20 @@ fn process_workspace_name(
     // results are immediately boxed so the bump can drop at scope exit.
     let scratch = Arena::new();
 
-    let name_expr = workspace_json
-        .root
-        .get(b"name")
-        .ok_or(crate::Error::MissingPackageName)?;
-    let name = name_expr
-        .as_string_cloned(&scratch)?
-        .ok_or(crate::Error::MissingPackageName)?;
+    let (name, name_loc): (&[u8], bun_ast::Loc) = match workspace_json.root.get(b"name") {
+        Some(name_expr) => (
+            name_expr
+                .as_string_cloned(&scratch)?
+                .ok_or(crate::Error::MissingPackageName)?,
+            name_expr.loc,
+        ),
+        // npm and pnpm accept a workspace without "name"; npm names it after its directory.
+        None => (
+            unnamed_workspace_name(abs_package_json_path)
+                .ok_or(crate::Error::MissingPackageName)?,
+            bun_ast::Loc::EMPTY,
+        ),
+    };
 
     let hoisting_limits: Option<Box<[u8]>> = match workspace_json
         .root
@@ -198,7 +205,7 @@ fn process_workspace_name(
     };
     let entry = Entry {
         name: Box::<[u8]>::from(name),
-        name_loc: name_expr.loc,
+        name_loc,
         hoisting_limits: hoisting_limits.as_deref() == Some(b"workspaces".as_slice()),
         unsupported_hoisting_limits: match hoisting_limits {
             // "none" is yarn's default: no limit, which is how every workspace hoists
@@ -222,6 +229,13 @@ fn process_workspace_name(
     );
 
     Ok(entry)
+}
+
+/// Name of a workspace whose package.json has no "name": its directory's basename, as npm does.
+pub fn unnamed_workspace_name(package_json_path: &[u8]) -> Option<&[u8]> {
+    let dir = bun_paths::dirname(package_json_path)?;
+    let name = path::basename(dir);
+    (!name.is_empty() && name != b"." && name != b"..").then_some(name)
 }
 
 fn workspace_dir_of(abs_package_json_path: &[u8]) -> &[u8] {

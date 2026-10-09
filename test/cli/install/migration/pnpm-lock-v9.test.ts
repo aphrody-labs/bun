@@ -1116,6 +1116,66 @@ snapshots:
     expect(bunLock).not.toContain("orphan");
   });
 
+  describe("pnpm-workspace.yaml", () => {
+    // pnpm (like npm) accepts a workspace package.json without "name"; npm names it after its directory.
+    test.concurrent("workspaces without a name migrate under their directory name", async () => {
+      using dir = tempDir("pnpm-v9-unnamed-workspace", {
+        "package.json": JSON.stringify({ name: "root", private: true }),
+        "pnpm-workspace.yaml": "packages:\n  - packages/*\n  - tools/*\n",
+        "packages/lib/package.json": JSON.stringify({ name: "lib", version: "1.0.0" }),
+        "tools/bench/package.json": JSON.stringify({ private: true, dependencies: { lib: "workspace:*" } }),
+        "pnpm-lock.yaml": `lockfileVersion: '9.0'
+
+importers:
+
+  .: {}
+
+  packages/lib: {}
+
+  tools/bench:
+    dependencies:
+      lib:
+        specifier: workspace:*
+        version: link:../../packages/lib
+`,
+      });
+
+      const { stderr, exitCode } = await migrate(String(dir));
+
+      expect(stderr).not.toContain("missing workspace name");
+      expect(stderr).toContain("migrated lockfile from pnpm-lock.yaml");
+      expect(exitCode).toBe(0);
+
+      const bunLock = await bunLockOf(String(dir));
+      expect(workspaceBlock(bunLock, "tools/bench")).toContain(`"name": "bench"`);
+      expect(bunLock).toContain(`"bench": ["bench@workspace:tools/bench"]`);
+
+      const install = await run(String(dir), "install", "--frozen-lockfile", "--linker", "hoisted");
+      expect(install.stderr).not.toContain("error:");
+      expect(await installedPackageJson(String(dir), "", "lib")).toStrictEqual({ name: "lib", version: "1.0.0" });
+      expect(install.exitCode).toBe(0);
+    });
+
+    test.concurrent("allowBuilds and onlyBuiltDependencies become trustedDependencies", async () => {
+      using dir = tempDir("pnpm-v9-allow-builds", {
+        "package.json": JSON.stringify({ name: "root", private: true }),
+        "pnpm-workspace.yaml":
+          "allowBuilds:\n  esbuild: true\n  sharp: false\n  nx: true\nonlyBuiltDependencies:\n  - unrs-resolver\n",
+        "pnpm-lock.yaml": "lockfileVersion: '9.0'\n\nimporters:\n\n  .: {}\n",
+      });
+
+      const { stderr, exitCode } = await migrate(String(dir));
+
+      expect(stderr).toContain("migrated lockfile from pnpm-lock.yaml");
+      expect(exitCode).toBe(0);
+      expect(await Bun.file(join(String(dir), "package.json")).json()).toStrictEqual({
+        name: "root",
+        private: true,
+        trustedDependencies: ["esbuild", "nx", "unrs-resolver"],
+      });
+    });
+  });
+
   describe("injected workspace packages", () => {
     test.concurrent("resolve to the workspace package instead of a folder package", async () => {
       using dir = fixture("v9-injected-workspace");
