@@ -384,3 +384,264 @@ it("verifies the downloaded release archive against the digest reported by the r
   expect(matched.stderr).not.toContain("did not match the checksum reported by the GitHub API for this release");
   expect(matched.exitCode).toBe(1);
 });
+
+// Fork releases (aphrody-labs/bun): `GET /repos/<repo>/releases` lists every release of the
+// repository, newest first; only non-draft, non-prerelease `aphrody-v*` tags are runtime releases.
+function startForkServer(opts: {
+  releases?: (origin: string) => unknown[];
+  canary?: (origin: string) => unknown;
+  sums?: string;
+  zipBody?: string;
+}) {
+  const requests: { path: string; authorization: string | null }[] = [];
+  const server = Bun.serve({
+    tls,
+    port: 0,
+    fetch(req) {
+      const url = new URL(req.url);
+      requests.push({ path: url.pathname + url.search, authorization: req.headers.get("authorization") });
+      const origin = `https://${server.hostname}:${server.port}`;
+      if (url.pathname.endsWith("/SHA256SUMS.txt")) return new Response(opts.sums ?? "");
+      if (url.pathname.startsWith("/download/")) return new Response(opts.zipBody ?? "not a zip");
+      if (url.pathname.endsWith("/releases/tags/canary")) {
+        return opts.canary ? Response.json(opts.canary(origin)) : new Response("Not Found", { status: 404 });
+      }
+      if (url.pathname.endsWith("/releases")) return Response.json(opts.releases?.(origin) ?? []);
+      return new Response("Not Found", { status: 404 });
+    },
+  });
+  const { GITHUB_TOKEN, GH_TOKEN, GITHUB_ACCESS_TOKEN, APHRODY_BUN_REPO, ...rest } = env;
+  return {
+    requests,
+    env: {
+      ...rest,
+      NODE_TLS_REJECT_UNAUTHORIZED: "0",
+      GITHUB_API_DOMAIN: `${server.hostname}:${server.port}`,
+      ASAN_OPTIONS: [env.ASAN_OPTIONS, "detect_leaks=0"].filter(Boolean).join(":"),
+    } as Record<string, string>,
+    [Symbol.dispose]() {
+      server.stop(true);
+    },
+  };
+}
+
+function forkRelease(origin: string, tag: string, extra: Record<string, unknown> = {}) {
+  return {
+    tag_name: tag,
+    draft: false,
+    prerelease: false,
+    assets: [
+      ...allAssetNames().map(name => ({
+        name,
+        content_type: "application/zip",
+        browser_download_url: `${origin}/download/${tag}/${name}`,
+      })),
+      {
+        name: "SHA256SUMS.txt",
+        content_type: "text/plain",
+        browser_download_url: `${origin}/download/${tag}/SHA256SUMS.txt`,
+      },
+    ],
+    ...extra,
+  };
+}
+
+function currentZipName() {
+  const os = process.platform === "win32" ? "windows" : process.platform === "darwin" ? "darwin" : "linux";
+  const arch = process.arch === "arm64" ? "aarch64" : "x64";
+  return `bun-${os}-${arch}${isMusl ? "-musl" : ""}.zip`;
+}
+
+async function runForkUpgrade(args: string[], upgradeEnv: Record<string, string>) {
+  const cwd = tmpdirSync();
+  const execPath = join(cwd, basename(bunExe()));
+  await copyFile(bunExe(), execPath);
+  await using proc = Bun.spawn({
+    cmd: [execPath, "upgrade", ...args],
+    cwd,
+    stdout: "pipe",
+    stdin: "ignore",
+    stderr: "pipe",
+    env: upgradeEnv,
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  return { stdout, stderr, exitCode };
+}
+
+describe.concurrent("aphrody-labs/bun releases", () => {
+  const zipBody = "not a zip";
+  const zipSha = new Bun.CryptoHasher("sha256").update(zipBody).digest("hex");
+
+  it("takes the newest aphrody-v release, skipping other packages, drafts and prereleases", async () => {
+    using fork = startForkServer({
+      zipBody,
+      sums: `${"0".repeat(64)}  other.zip\n${zipSha}  ${currentZipName()}\n`,
+      releases: origin => [
+        { tag_name: "n2b-v0.7.1", draft: false, prerelease: false, assets: [] },
+        forkRelease(origin, "aphrody-v9.9.9-aphrody.1", { draft: true }),
+        forkRelease(origin, "aphrody-v9.9.9-aphrody.0", { prerelease: true }),
+        forkRelease(origin, "aphrody-v9.9.8-aphrody.3"),
+        forkRelease(origin, "aphrody-v9.9.8-aphrody.2"),
+      ],
+    });
+    const { stderr, exitCode } = await runForkUpgrade(["--stable"], fork.env);
+    const paths = fork.requests.map(r => r.path);
+    expect(paths[0]).toBe("/repos/aphrody-labs/bun/releases?per_page=20");
+    expect(paths).toContain(`/download/aphrody-v9.9.8-aphrody.3/${currentZipName()}`);
+    expect(paths).toContain("/download/aphrody-v9.9.8-aphrody.3/SHA256SUMS.txt");
+    expect(stderr).toContain("9.9.8-aphrody.3");
+    expect(stderr).not.toContain("SHA256SUMS");
+    // The served archive is not a real zip: the upgrade gets past the checksum and fails to unpack.
+    expect(exitCode).toBe(1);
+  });
+
+  it("rejects an archive that does not match SHA256SUMS.txt", async () => {
+    using fork = startForkServer({
+      zipBody,
+      sums: `${"ab".repeat(32)}  ${currentZipName()}\n`,
+      releases: origin => [forkRelease(origin, "aphrody-v9.9.8-aphrody.3")],
+    });
+    const { stderr, exitCode } = await runForkUpgrade(["--stable"], fork.env);
+    expect(stderr).toContain("does not match its SHA256SUMS.txt entry");
+    expect(exitCode).toBe(1);
+  });
+
+  it("rejects a release whose SHA256SUMS.txt has no entry for the archive", async () => {
+    using fork = startForkServer({
+      zipBody,
+      sums: `${zipSha}  bun-other-target.zip\n`,
+      releases: origin => [forkRelease(origin, "aphrody-v9.9.8-aphrody.3")],
+    });
+    const { stderr, exitCode } = await runForkUpgrade(["--stable"], fork.env);
+    expect(stderr).toContain(`SHA256SUMS.txt of release aphrody-v9.9.8-aphrody.3 has no entry for ${currentZipName()}`);
+    expect(exitCode).toBe(1);
+  });
+
+  it("uses APHRODY_BUN_REPO and sends GH_TOKEN to the API only, without printing it", async () => {
+    const token = "ghp_secret_token_for_upgrade_test";
+    using fork = startForkServer({
+      zipBody,
+      sums: `${zipSha}  ${currentZipName()}\n`,
+      releases: origin => [forkRelease(origin, "aphrody-v9.9.8-aphrody.3")],
+    });
+    const { stdout, stderr, exitCode } = await runForkUpgrade(["--stable"], {
+      ...fork.env,
+      APHRODY_BUN_REPO: "someone/bun-fork",
+      GH_TOKEN: token,
+    });
+    expect(fork.requests[0]).toEqual({
+      path: "/repos/someone/bun-fork/releases?per_page=20",
+      authorization: `Bearer ${token}`,
+    });
+    expect(fork.requests.length).toBeGreaterThan(1);
+    expect(fork.requests.slice(1).every(r => r.authorization === null)).toBe(true);
+    expect(stdout + stderr).not.toContain(token);
+    expect(exitCode).toBe(1);
+  });
+
+  it("rejects a malformed APHRODY_BUN_REPO", async () => {
+    using fork = startForkServer({});
+    const { stderr, exitCode } = await runForkUpgrade(["--stable"], { ...fork.env, APHRODY_BUN_REPO: "../etc" });
+    expect(stderr).toContain("APHRODY_BUN_REPO must look like owner/name");
+    expect(fork.requests).toEqual([]);
+    expect(exitCode).toBe(1);
+  });
+
+  it("--canary explains that the repository has no canary build", async () => {
+    using fork = startForkServer({});
+    const { stderr, exitCode } = await runForkUpgrade(["--canary"], fork.env);
+    expect(fork.requests.map(r => r.path)).toEqual(["/repos/aphrody-labs/bun/releases/tags/canary"]);
+    expect(stderr).toContain("aphrody-labs/bun has no canary build of Bun");
+    expect(stderr).toContain("bun upgrade --stable");
+    expect(exitCode).toBe(1);
+  });
+
+  it("--canary downloads the canary release of main when it exists", async () => {
+    using fork = startForkServer({
+      zipBody,
+      sums: `${zipSha}  ${currentZipName()}\n`,
+      canary: origin => forkRelease(origin, "canary"),
+    });
+    const { exitCode } = await runForkUpgrade(["--canary"], fork.env);
+    expect(fork.requests.map(r => r.path)).toEqual([
+      "/repos/aphrody-labs/bun/releases/tags/canary",
+      `/download/canary/${currentZipName()}`,
+      "/download/canary/SHA256SUMS.txt",
+    ]);
+    expect(exitCode).toBe(1);
+  });
+});
+
+describe("bun upgrade --local", () => {
+  const marker = Buffer.from("\n-- bun upgrade --local test build --\n");
+
+  // POSIX: a script stands in for the build. Windows: the verify step spawns a real PE image, so the
+  // build is this bun followed by bytes the loader ignores, which identify the copy.
+  async function writeLocalBuild(path: string) {
+    if (isWindows) {
+      await writeFile(path, Buffer.concat([Buffer.from(await Bun.file(bunExe()).arrayBuffer()), marker]));
+    } else {
+      await writeFile(path, `#!/bin/sh\nprintf '%s\\n' 9.9.9-local\n`, { mode: 0o755 });
+    }
+    return Buffer.from(await Bun.file(path).arrayBuffer());
+  }
+
+  async function upgradeLocal(installed: string, args: string[], cwd: string) {
+    await using proc = Bun.spawn({
+      cmd: [installed, "upgrade", "--local", ...args],
+      cwd,
+      env,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
+    return { stderr, exitCode };
+  }
+
+  it("installs build/release/bun of the current directory over the running bun", async () => {
+    using dir = tempDir("bun-upgrade-local", { "install/.keep": "", "checkout/build/release/.keep": "" });
+    const installed = join(String(dir), "install", basename(bunExe()));
+    await copyFile(bunExe(), installed);
+    const build = await writeLocalBuild(
+      join(String(dir), "checkout", "build", "release", isWindows ? "bun.exe" : "bun"),
+    );
+
+    const { stderr, exitCode } = await upgradeLocal(installed, [], join(String(dir), "checkout"));
+    expect(stderr).toContain("Installed");
+    expect(exitCode).toBe(0);
+    expect(Buffer.from(await Bun.file(installed).arrayBuffer()).equals(build)).toBe(true);
+    expect(existsSync(installed + ".new")).toBe(false);
+
+    if (isWindows) {
+      // The running executable was renamed aside; the next launch removes it.
+      expect(existsSync(installed + ".old")).toBe(true);
+      await using next = Bun.spawn({ cmd: [installed, "--version"], env, stdout: "pipe", stderr: "pipe" });
+      expect(await next.exited).toBe(0);
+      expect(existsSync(installed + ".old")).toBe(false);
+    }
+  });
+
+  it("installs an explicit path", async () => {
+    using dir = tempDir("bun-upgrade-local-path", { "install/.keep": "", "out/.keep": "" });
+    const installed = join(String(dir), "install", basename(bunExe()));
+    await copyFile(bunExe(), installed);
+    const buildPath = join(String(dir), "out", isWindows ? "custom.exe" : "custom");
+    const build = await writeLocalBuild(buildPath);
+
+    const { stderr, exitCode } = await upgradeLocal(installed, [buildPath], String(dir));
+    expect(stderr).not.toContain("does not take package names");
+    expect(exitCode).toBe(0);
+    expect(Buffer.from(await Bun.file(installed).arrayBuffer()).equals(build)).toBe(true);
+  });
+
+  it("fails without touching the running bun when there is no build", async () => {
+    using dir = tempDir("bun-upgrade-local-missing", {});
+    const installed = join(String(dir), basename(bunExe()));
+    await copyFile(bunExe(), installed);
+    const { stderr, exitCode } = await upgradeLocal(installed, [], String(dir));
+    expect(stderr).toContain("No Bun build at");
+    expect(exitCode).toBe(1);
+    expect(existsSync(installed)).toBe(true);
+    expect(existsSync(installed + ".old")).toBe(false);
+  });
+});

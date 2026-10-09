@@ -2305,7 +2305,10 @@ Learn more: <magenta>https://bun.com/docs/cli/bun-create<r>
   <d>{}<r>
   <b><green>bun upgrade<r> <cyan>--{}<r>
 
-Full documentation is available at <magenta>https://bun.com/docs/installation#upgrading<r>
+  <d>Install a local build (default: build/release/bun of the current directory)<r>
+  <b><green>bun upgrade<r> <cyan>--local<r> <d>[path]<r>
+
+Releases come from <magenta>https://github.com/aphrody-labs/bun/releases<r> (override with APHRODY_BUN_REPO)
 ",
                     latest,
                     switch_desc,

@@ -188,6 +188,7 @@ pub(crate) unsafe extern "C" fn main(argc: c_int, argv: *const *const c_char) ->
         // block to WTF-8 and publishes it via `bun_core::os::set_environ()`.
         // Without this, `Bun.env`/`process.env` see only `.env`-file vars.
         bun_core::handle_oom(bun_sys::windows::env::convert_env_to_wtf8());
+        remove_replaced_executable();
     }
 
     // 2/3. Allocator is static above; argv was captured at step 0; start_time
@@ -210,6 +211,26 @@ pub(crate) unsafe extern "C" fn main(argc: c_int, argv: *const *const c_char) ->
     crate::cli::Cli::start();
     // `Global::exit` is `-> !`; it coerces to the `c_int` return type.
     Global::exit(0)
+}
+
+/// `bun upgrade` renames the running executable to `<exe>.old` before installing the new one
+/// (Windows cannot delete a running image); the next launch deletes it.
+#[cfg(windows)]
+fn remove_replaced_executable() {
+    const SUFFIX: [u16; 5] = [b'.' as u16, b'o' as u16, b'l' as u16, b'd' as u16, 0];
+    let mut buf = [0u16; 1024];
+    let cap = buf.len() - SUFFIX.len();
+    let Some(len) =
+        bun_sys::windows::get_module_name_w(core::ptr::null_mut(), &mut buf[..cap]).map(<[u16]>::len)
+    else {
+        return;
+    };
+    if len >= cap {
+        return;
+    }
+    buf[len..len + SUFFIX.len()].copy_from_slice(&SUFFIX);
+    // SAFETY: `buf` is NUL-terminated by `SUFFIX`.
+    unsafe { bun_sys::windows::DeleteFileW(buf.as_ptr()) };
 }
 
 /// Linux's `expand_fdtable()` waits for an RCU grace period (tens of ms on a
