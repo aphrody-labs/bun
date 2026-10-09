@@ -242,7 +242,6 @@ describe.skipIf(isASAN)("given a strlen(cstring) function", () => {
   });
 
   it("given a JSString, throws", () => {
-    // @ts-expect-error
     expect(() => library.symbols.strlen("hello")).toThrow(TypeError);
   });
 }); // </given a strlen(cstring) function>
