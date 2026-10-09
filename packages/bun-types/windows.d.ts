@@ -391,52 +391,133 @@ declare module "bun:windows" {
 
   type WindowsToolchainArch = "x64" | "x86" | "arm64" | "arm64ec" | "arm";
 
+  interface MsvcToolset {
+    /** e.g. `14.44.35207`. */
+    version: string;
+    dir: string;
+    /** Named by `Microsoft.VCToolsVersion.default.txt`. */
+    default: boolean;
+    /** Side-by-side names: `v143`, `14.44.17.14`, ... */
+    aliases: string[];
+    /** Targets per host: `{ x64: ["arm64", "x64", "x86"] }`. */
+    hosts: Record<string, string[]>;
+  }
+
+  interface VisualStudioLlvm {
+    version: string | null;
+    dir: string;
+    bin: string;
+    clangCl: string;
+  }
+
   interface VisualStudioInstance {
+    /** Installer instance id, or `registry:<version>`, `env`, `dir` for instances found otherwise. */
     id: string;
     name: string;
     /** `BuildTools`, `Community`, `Professional`, `Enterprise`, ... */
     product: string;
+    productId: string | null;
+    /** e.g. `Visual Studio Build Tools 2026`. */
+    title: string | null;
+    /** e.g. `18.10.12217.157`. */
     version: string;
+    /** e.g. `18.10.2`. */
+    displayVersion: string | null;
+    year: number | null;
+    channel: string | null;
+    prerelease: boolean;
+    /** From the Setup Configuration state; `null` without COM. */
+    complete: boolean | null;
+    rebootRequired: boolean | null;
     path: string;
+    /** Where it was found: `com`, `state`, `registry`, `env`, `dir`. */
+    sources: string[];
+    toolsets: MsvcToolset[];
+    /** `vcvarsall`, `vcvars64`, `VsDevCmd`, `Launch-VsDevShell`, `vswhere`, `setup`, ... → path. */
+    scripts: Record<string, string>;
+    llvm: VisualStudioLlvm | null;
+    /** Installed component and workload ids. */
+    components: string[];
+  }
+
+  interface WindowsSdkInfo {
+    version: string;
+    dir: string;
+    bin: string;
+    /** `um\Windows.h` and the `um` import libraries are present. */
+    complete: boolean;
+    unionMetadata: string | null;
+    /** `UnionMetadata\<version>\Windows.winmd`, the WinRT metadata `bun winmd --in sdk` reads. */
+    windowsWinmd: string | null;
+  }
+
+  interface NetFxSdkInfo {
+    version: string;
+    dir: string;
+    tools: string | null;
   }
 
   interface WindowsToolchain {
     arch: WindowsToolchainArch;
     host: WindowsToolchainArch;
+    /** Why the toolchain could not be resolved, or `null`. */
+    error: string | null;
     /** Every Visual Studio 2017+ / Build Tools instance, newest first. */
     instances: VisualStudioInstance[];
-    /** The instance whose MSVC toolset targets `arch`, or `null`. */
+    /** Every Windows 10/11 SDK, newest first. */
+    sdks: WindowsSdkInfo[];
+    netfxSdks: NetFxSdkInfo[];
+    /** The selected instance, or `null`. */
     instance: VisualStudioInstance | null;
-    msvc: { version: string; dir: string; bin: string; hostBin: string } | null;
-    sdk: {
-      version: string;
-      dir: string;
-      bin: string;
-      unionMetadata: string | null;
-      /** `UnionMetadata\<version>\Windows.winmd`, the WinRT metadata `bun winmd --in sdk` reads. */
-      windowsWinmd: string | null;
-    } | null;
+    msvc: { version: string; dir: string; bin: string; hostBin: string; default: boolean } | null;
+    sdk: WindowsSdkInfo | null;
     ucrt: { version: string; dir: string } | null;
-    /** Absolute path of each tool, or `null` when the toolset does not ship it. */
-    tools: Record<"cl" | "link" | "lib" | "dumpbin" | "editbin" | "nmake" | "rc" | "midl" | "mt", string | null>;
+    netfx: NetFxSdkInfo | null;
+    llvm: VisualStudioLlvm | null;
+    scripts: Record<string, string>;
+    /** Absolute path of each tool, or `null` when the toolchain does not ship it. */
+    tools: Record<
+      | "cl"
+      | "link"
+      | "lib"
+      | "dumpbin"
+      | "editbin"
+      | "nmake"
+      | "ml64"
+      | "rc"
+      | "midl"
+      | "mt"
+      | "signtool"
+      | "clang-cl"
+      | "cmake"
+      | "ninja",
+      string | null
+    >;
     /** What `vcvarsall.bat <arch>` sets: `PATH`, `INCLUDE`, `LIB`, `LIBPATH`, `VCToolsInstallDir`, ... */
     env: Record<string, string> | null;
-    paths: { path: string[]; include: string[]; lib: string[]; libpath: string[] } | null;
+    paths: { path: string[]; pathAppend: string[]; include: string[]; lib: string[]; libpath: string[] } | null;
   }
 
   /**
-   * The native toolchain: Visual Studio / Build Tools (Setup Configuration COM, no `vswhere.exe`),
-   * MSVC, Windows SDK, UCRT and the `vcvarsall` environment, the same discovery as `bun msvc`.
-   * Missing parts are `null`. The result is frozen.
+   * The native toolchain, resolved like `bun msvc info`: every Visual Studio 2017+ / Build Tools
+   * instance (Setup Configuration COM, installer records, registry, environment, default folders,
+   * no `vswhere.exe`), MSVC toolsets, Windows SDKs, UCRT, .NET Framework SDK, LLVM, the developer
+   * scripts and the `vcvarsall` environment. Missing parts are `null`. The result is frozen.
    *
    * @example
    * ```ts
-   * const { tools, env } = windows.toolchain({ arch: "x64" });
+   * const { tools, env } = windows.toolchain({ arch: "x64", toolset: "14.44" });
    * Bun.spawnSync([tools.cl!, "/nologo", "main.c"], { env: { ...process.env, ...env } });
    * ```
    */
   function toolchain(options?: {
     arch?: WindowsToolchainArch | "x86_64" | "aarch64" | "amd64";
+    /** MSVC toolset: exact version, prefix (`14.44`) or alias (`v143`). */
+    toolset?: string;
+    /** Windows SDK version or prefix (`10.0.26100`). */
+    sdk?: string;
+    /** Instance id, path, product (`BuildTools`), year (`2026`) or version prefix (`17.14`). */
+    instance?: string;
   }): Readonly<WindowsToolchain>;
 
   /**

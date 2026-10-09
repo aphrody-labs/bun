@@ -23,7 +23,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import {
   inheritOrderFile,
@@ -60,68 +60,107 @@ import { isBuildkite, isCI, printEnvironment, startGroup } from "./buildkite.ts"
 // ───────────────────────────────────────────────────────────────────────────
 
 /**
- * The VS dev shell environment from `bun msvc env` (in-process Setup Configuration discovery, no
- * vswhere.exe, no PowerShell), pinned like scripts/vs-shell.ps1 to the toolset the prebuilt WebKit
- * was built with. Leaves process.env untouched when the running bun has no `msvc` command, so
- * build() falls back to re-executing inside vs-shell.ps1.
+ * The VS dev shell environment, resolved natively by `bun msvc sync` (Setup Configuration COM and
+ * the installer records, no vswhere.exe, no .bat, no PowerShell) and cached in
+ * %LOCALAPPDATA%\bun\msvc\<key>\env.json until an instance, toolset or SDK changes. Pinned to
+ * the toolset the prebuilt WebKit was built with when it is installed (its STL is not
+ * ABI-compatible with newer ones, see checkNativeMsvcToolset in scripts/build/winsysroot.ts).
+ * When the bun running this script predates `bun msvc`, the same code runs as the `bun-msvc`
+ * binary of vendor/find-msvc-tools through cargo.
  */
 function loadNativeMsvcEnv(): void {
   const arch = process.arch === "arm64" ? "arm64" : "x64";
-  const msvc = (args: string[], env: NodeJS.ProcessEnv = process.env) => {
-    const result = spawnSync(process.execPath, ["msvc", ...args, "--arch", arch], {
-      env: { ...env, BUN_BE_BUN: "1" },
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-    if (result.status !== 0) return undefined;
+  // Like vs-shell.ps1 did: the x64-hosted tools, also on ARM64 hosts.
+  const host = arch === "arm64" ? ["--host", "x64"] : [];
+  const toolset = pins.windowsSysroot.crt.split(".").slice(0, 2).join(".");
+  const root = join(process.env.LOCALAPPDATA ?? join(process.env.USERPROFILE ?? "C:\\", "AppData", "Local"), "bun", "msvc");
+  type MsvcEnv = {
+    format: number;
+    set: Record<string, string>;
+    prepend: Record<string, string[]>;
+    append: Record<string, string[]>;
+    fingerprint: { path: string; mtimeMs: number | null }[];
+  };
+  const fresh = (dir: string): MsvcEnv | undefined => {
+    let env: MsvcEnv;
     try {
-      return JSON.parse(result.stdout);
+      env = JSON.parse(readFileSync(join(dir, "env.json"), "utf8"));
     } catch {
       return undefined;
     }
+    if (env.format !== 1) return undefined;
+    for (const { path, mtimeMs } of env.fingerprint) {
+      let current: number | null = null;
+      try {
+        current = Math.floor(statSync(path).mtimeMs);
+      } catch {}
+      if (current !== mtimeMs) return undefined;
+    }
+    return env;
   };
-  const info = msvc(["info"]);
-  if (!info?.instance || !info.msvc) return;
-  const env = { ...process.env };
-  const pinned = pins.windowsSysroot.crt.split(".").slice(0, 2).join(".");
-  const toolsets = join(info.instance.path, "VC", "Tools", "MSVC");
-  const toolset = existsSync(toolsets)
-    ? readdirSync(toolsets)
-        .filter(name => name.startsWith(pinned + "."))
-        .sort()
-        .pop()
-    : undefined;
-  if (toolset !== undefined) env.VCToolsVersion = toolset;
-  const vars: Record<string, string> | undefined = msvc(["env", "--format", "json"], env);
-  if (!vars?.VSINSTALLDIR) return;
-  Object.assign(process.env, vars);
+  const sync = (selection: string[]): string | undefined => {
+    const args = ["sync", "--json", ...selection];
+    const attempts: [string, string[]][] = [
+      [process.execPath, ["msvc", ...args]],
+      [
+        "cargo",
+        [
+          "run",
+          "--quiet",
+          "--manifest-path",
+          join(import.meta.dirname, "..", "vendor", "find-msvc-tools", "Cargo.toml"),
+          "--bin",
+          "bun-msvc",
+          "--",
+          ...args,
+        ],
+      ],
+    ];
+    for (const [program, argv] of attempts) {
+      const result = spawnSync(program, argv, {
+        env: { ...process.env, BUN_BE_BUN: "1" },
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      try {
+        return JSON.parse(result.stdout).dir;
+      } catch {}
+      // `bun msvc` exists and could not resolve this selection: cargo would say the same.
+      if (result.stderr?.includes("run `bun msvc setup`")) return undefined;
+    }
+    return undefined;
+  };
+  for (const selection of [["--arch", arch, ...host, "--toolset", toolset], ["--arch", arch, ...host]]) {
+    // The directory name is `cache_key` in vendor/find-msvc-tools/src/sync.rs.
+    const key = selection.join(" ").replace(/--arch (\S+)/, "$1").replace(/ --(host|toolset) /g, "-$1-");
+    const dir = join(root, key);
+    let env = fresh(dir);
+    if (env === undefined && sync(selection) !== undefined) env = fresh(dir);
+    if (env === undefined) continue;
+    for (const [name, prepend] of Object.entries(env.prepend)) {
+      const parts = [...prepend, ...(process.env[name] ?? "").split(";").filter(Boolean)];
+      for (const path of env.append[name] ?? []) {
+        if (!parts.some(part => part.toLowerCase() === path.toLowerCase())) parts.push(path);
+      }
+      process.env[name] = parts.join(";");
+    }
+    Object.assign(process.env, env.set);
+    return;
+  }
 }
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
 
-  // Windows: re-exec inside the VS dev shell if not already there.
-  // The shell provides PATH (mt.exe, rc.exe, cl.exe), INCLUDE, LIB,
-  // WindowsSdkDir — things clang-cl can mostly self-detect but nested
-  // cmake projects can't. Cheap: VSINSTALLDIR check short-circuits on
-  // subsequent runs in the same terminal.
+  // Windows: the VS dev shell environment (PATH with cl.exe, mt.exe, rc.exe; INCLUDE, LIB,
+  // WindowsSdkDir), which nested cmake projects need. Skipped inside a developer shell.
   if (process.platform === "win32" && !process.env.VSINSTALLDIR) {
     loadNativeMsvcEnv();
-  }
-  if (process.platform === "win32" && !process.env.VSINSTALLDIR) {
-    const vsShell = join(import.meta.dirname, "vs-shell.ps1");
-    const result = spawnSync(
-      "pwsh",
-      ["-NoProfile", "-NoLogo", "-File", vsShell, process.argv0, import.meta.filename, ...process.argv.slice(2)],
-      { stdio: "inherit" },
-    );
-    if (result.error) {
-      throw new BuildError(`Failed to spawn pwsh`, {
-        cause: result.error,
-        hint: "Is PowerShell 7+ (pwsh) installed?",
+    if (!process.env.VSINSTALLDIR) {
+      throw new BuildError("No Visual Studio C++ toolchain was found", {
+        hint: "Run `bun msvc setup` (or `cargo run --manifest-path vendor/find-msvc-tools/Cargo.toml --bin bun-msvc -- setup`), then `bun msvc doctor`.",
       });
     }
-    process.exit(result.status ?? 1);
   }
 
   // A ninja tool (`-t query <target>`, `-t deps <object>`, `-t commands`, …) inspects what the last configure and

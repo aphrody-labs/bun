@@ -67,22 +67,19 @@ scoop install make cygwin python
 
 <Note>ARM64 builds do not need Cygwin because WebKit is provided as a pre-built binary.</Note>
 
-From here on out, **use a PowerShell terminal with `.\scripts\vs-shell.ps1` sourced**. Load the script by running it:
+`bun run build` loads the Visual Studio environment itself. It resolves the toolchain natively with `bun msvc sync`, without `vswhere.exe` or `vcvarsall.bat`, and caches it in `%LOCALAPPDATA%\bun\msvc`. When the installed bun has no `msvc` command, it runs the same code through `cargo run --bin bun-msvc` from `vendor/find-msvc-tools`. To check the toolchain, or to install what is missing:
 
 ```ps1
+bun msvc doctor
+bun msvc setup --toolset 14.44
+```
+
+To run MSVC tools by hand, load the environment into the current PowerShell terminal. Either script works:
+
+```ps1
+. "$(bun msvc sync --toolset 14.44)\env.ps1"
 .\scripts\vs-shell.ps1
 ```
-
-To verify, check for an MSVC-only command such as `mt.exe`:
-
-```ps1
-Get-Command mt
-```
-
-<Note>
-  Avoid installing `ninja` / `cmake` into your global path: you may end up building Bun without `.\scripts\vs-shell.ps1`
-  sourced.
-</Note>
 
 ## Building
 

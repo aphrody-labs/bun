@@ -417,20 +417,18 @@ win_host_fn! {
 }
 
 win_host_fn! {
-    /// `toolchain(arch)` → Visual Studio instances, MSVC toolset, Windows SDK, UCRT and the
-    /// vcvars environment for `arch` (`bun msvc info`). Discovery never fails: missing parts are
-    /// `null`.
+    /// `toolchain(arch, toolset, sdk, instance)` → `bun msvc info` for those selections (empty
+    /// strings pick the defaults). Resolution never throws: what is missing is `null` and the
+    /// reason is in `error`.
     js_toolchain(global, frame) {
-        let requested = str_arg(global, frame, 0)?;
-        let arch = if requested.is_empty() {
-            Some(sys::toolchain::host_arch())
-        } else {
-            sys::toolchain::normalize_arch(&requested)
-        };
-        let Some(arch) = arch else {
-            return Err(global.throw_invalid_arguments(format_args!("unknown architecture: {requested}")));
-        };
-        string(global, &sys::toolchain::to_json(arch))
+        let arch = str_arg(global, frame, 0)?;
+        if !arch.is_empty() && sys::toolchain::normalize_arch(&arch).is_none() {
+            return Err(global.throw_invalid_arguments(format_args!("unknown architecture: {arch}")));
+        }
+        let toolset = str_arg(global, frame, 1)?;
+        let sdk = str_arg(global, frame, 2)?;
+        let instance = str_arg(global, frame, 3)?;
+        string(global, &sys::toolchain::to_json(&arch, &toolset, &sdk, &instance))
     }
 }
 

@@ -330,7 +330,6 @@ mod impl_ {
         GetMachineTypeAttributes, GetProcAddress, LoadLibraryA, UserEnabled, HMODULE,
         IMAGE_FILE_MACHINE_AMD64, MACHINE_ATTRIBUTES, S_OK,
     };
-    use std::convert::TryFrom;
     use std::env;
     use std::ffi::OsString;
     use std::fs::File;

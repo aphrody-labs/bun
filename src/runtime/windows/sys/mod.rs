@@ -242,12 +242,6 @@ impl Json {
         self
     }
 
-    pub(crate) fn null(&mut self) -> &mut Self {
-        self.sep();
-        self.out.push_str("null");
-        self
-    }
-
     pub(crate) fn bool(&mut self, b: bool) -> &mut Self {
         self.sep();
         self.out.push_str(if b { "true" } else { "false" });

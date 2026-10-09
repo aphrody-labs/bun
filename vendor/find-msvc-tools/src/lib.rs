@@ -29,3 +29,12 @@ mod com;
 mod setup_config;
 #[cfg(windows)]
 mod vs_instances;
+
+// Bun additions for `bun msvc`.
+pub mod json;
+#[cfg(windows)]
+pub mod setup;
+#[cfg(windows)]
+pub mod sync;
+#[cfg(windows)]
+pub mod cli;

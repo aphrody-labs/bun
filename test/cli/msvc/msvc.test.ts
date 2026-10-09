@@ -69,6 +69,74 @@ describe.skipIf(!isWindows)("bun msvc", () => {
     expect(sh.stdout).toMatch(/^export PATH='\/[a-z]\//m);
   });
 
+  test.skipIf(!hasMsvc)("list and toolset selection", async () => {
+    const instance = info.instance;
+    const toolsets: { version: string }[] = instance.toolsets;
+    const prefix = (version: string) => version.split(".").slice(0, 2).join(".");
+    const [list, listJson, ...selected] = await Promise.all([
+      run(["msvc", "list"]),
+      run(["msvc", "list", "--json"]),
+      ...toolsets.map(t => run(["msvc", "info", "--toolset", prefix(t.version)])),
+    ]);
+    expect(list.stdout).toContain(instance.path);
+    expect(list.exitCode).toBe(0);
+    expect(JSON.parse(listJson.stdout).instances.map((i: { path: string }) => i.path)).toContain(instance.path);
+    toolsets.forEach((toolset, i) => {
+      const report = JSON.parse(selected[i].stdout);
+      expect(report.msvc.version).toBe(toolset.version);
+      expect(report.env.VCToolsVersion).toBe(toolset.version);
+      expect(report.env.VSCMD_ARG_VCVARS_VER).toBe(prefix(toolset.version));
+      expect(windows.toolchain({ toolset: toolset.version }).msvc!.version).toBe(toolset.version);
+    });
+    const missing = await run(["msvc", "env", "--toolset", "13.99"]);
+    expect(missing.stderr).toContain("no MSVC toolset matching 13.99");
+    expect(missing.exitCode).toBe(1);
+    expect(windows.toolchain({ toolset: "13.99" }).error).toContain("13.99");
+  });
+
+  test.skipIf(!hasMsvc)("sync caches the environment until the toolchain changes", async () => {
+    using dir = tempDir("bun-msvc-sync", {});
+    const first = await run(["msvc", "sync", "--json", "--cache-dir", String(dir)]);
+    expect(first.exitCode).toBe(0);
+    const synced = JSON.parse(first.stdout);
+    expect(synced.hit).toBe(false);
+    const envJson = await Bun.file(synced.files.json).json();
+    expect(envJson.set.VCToolsVersion).toBe(info.msvc.version);
+    expect(envJson.prepend.PATH[0]).toBe(info.msvc.bin);
+    expect(envJson.fingerprint.length).toBeGreaterThan(2);
+    expect(await Bun.file(synced.files.cmd).text()).toContain(`@set "VCToolsVersion=${info.msvc.version}"`);
+    expect(await Bun.file(synced.files.ps1).text()).toContain("$env:INCLUDE = ");
+    expect(await Bun.file(synced.files.sh).text()).toMatch(/^export PATH='\/[a-z]\//m);
+    const [second, check] = await Promise.all([
+      run(["msvc", "sync", "--json", "--cache-dir", String(dir)]),
+      run(["msvc", "sync", "--check", "--cache-dir", String(dir)]),
+    ]);
+    expect(JSON.parse(second.stdout).hit).toBe(true);
+    expect(check.exitCode).toBe(0);
+    envJson.fingerprint[0].mtimeMs = 1;
+    await Bun.write(synced.files.json, JSON.stringify(envJson));
+    const stale = await run(["msvc", "sync", "--check", "--cache-dir", String(dir)]);
+    expect(stale.exitCode).toBe(1);
+  });
+
+  test("setup --dry-run plans the installer commands, msi lists orphans", async () => {
+    const [setup, repair, msi] = await Promise.all([
+      run(["msvc", "setup", "--dry-run", "--add", "Microsoft.VisualStudio.Component.VC.CMake.Project"]),
+      run(["msvc", "setup", "--dry-run", "--repair"]),
+      run(["msvc", "msi", "--json"]),
+    ]);
+    expect(setup.exitCode).toBe(0);
+    if (info.instances.length === 0) {
+      expect(setup.stdout).toContain("Microsoft.VisualStudio.BuildTools");
+    } else {
+      expect(setup.stdout).toContain("setup.exe");
+      expect(repair.stdout).toContain(" repair --installPath ");
+    }
+    expect(repair.exitCode).toBe(0);
+    expect(Array.isArray(JSON.parse(msi.stdout).orphans)).toBe(true);
+    expect(msi.exitCode).toBe(0);
+  });
+
   test.skipIf(!hasMsvc)("exec compiles and links a C program with the computed environment", async () => {
     using dir = tempDir("bun-msvc-exec", {
       "main.c": `#include <stdio.h>\n#include <windows.h>\nint main(void) { printf("%u\\n", (unsigned)GetCurrentProcessId() > 0); return 0; }\n`,

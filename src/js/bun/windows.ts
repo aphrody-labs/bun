@@ -52,7 +52,7 @@ const toastNative = $newRustFunction("windows/host.rs", "jsToast", 2);
 const wslDistributionsNative = $newRustFunction("windows/host.rs", "jsWslDistributions", 0);
 const storageDrivesNative = $newRustFunction("windows/host.rs", "jsStorageDrives", 0);
 const memoryStatusNative = $newRustFunction("windows/host.rs", "jsMemoryStatus", 0);
-const toolchainNative = $newRustFunction("windows/host.rs", "jsToolchain", 1);
+const toolchainNative = $newRustFunction("windows/host.rs", "jsToolchain", 4);
 
 function unsupportedError() {
   const error = new Error("bun:windows is only available on Windows");
@@ -626,15 +626,19 @@ function deepFreeze(value) {
 
 function toolchain(options) {
   ensureSupported();
-  let arch = "";
+  const selection = ["", "", "", ""];
   if (options !== undefined) {
     validateObject(options, "options");
-    if (options.arch !== undefined) {
-      validateString(options.arch, "options.arch");
-      arch = options.arch;
+    const keys = ["arch", "toolset", "sdk", "instance"];
+    for (let i = 0; i < keys.length; i++) {
+      const value = options[keys[i]];
+      if (value !== undefined) {
+        validateString(value, "options." + keys[i]);
+        selection[i] = value;
+      }
     }
   }
-  return deepFreeze(JSON.parse(toolchainNative(arch)));
+  return deepFreeze(JSON.parse(toolchainNative(selection[0], selection[1], selection[2], selection[3])));
 }
 
 // Families

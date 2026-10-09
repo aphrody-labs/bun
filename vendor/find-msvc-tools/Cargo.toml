@@ -14,3 +14,10 @@ publish = false
 [lib]
 name = "find_msvc_tools"
 path = "src/lib.rs"
+
+[[bin]]
+name = "bun-msvc"
+path = "src/bin/bun-msvc.rs"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(disable_clang_cl_tests)"] }

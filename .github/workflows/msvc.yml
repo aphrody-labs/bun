@@ -64,3 +64,18 @@ jobs:
           $expected = & $vswhere -all -prerelease -products * -property installationPath | Sort-Object
           Write-Host "vswhere: $($expected -join ', ')"
           if (-not $expected) { throw "vswhere found no instance" }
+          cargo run --quiet --locked --manifest-path vendor/find-msvc-tools/Cargo.toml --bin bun-msvc -- list --json > "$env:RUNNER_TEMP/list.json"
+          $actual = (Get-Content "$env:RUNNER_TEMP/list.json" -Raw | ConvertFrom-Json).instances.path | Sort-Object
+          Write-Host "bun-msvc: $($actual -join ', ')"
+          if (Compare-Object $expected $actual) { throw "bun-msvc and vswhere disagree" }
+      - name: bun-msvc doctor, sync and setup plan
+        shell: pwsh
+        working-directory: vendor/find-msvc-tools
+        run: |
+          cargo run --quiet --locked --bin bun-msvc -- doctor
+          $dir = cargo run --quiet --locked --bin bun-msvc -- sync --cache-dir "$env:RUNNER_TEMP/msvc"
+          cargo run --quiet --locked --bin bun-msvc -- sync --check --cache-dir "$env:RUNNER_TEMP/msvc"
+          if ($LASTEXITCODE -ne 0) { throw "the sync cache is stale right after sync" }
+          . "$dir\env.ps1"
+          Get-Command cl, link, rc | Format-Table -AutoSize
+          cargo run --quiet --locked --bin bun-msvc -- setup --dry-run

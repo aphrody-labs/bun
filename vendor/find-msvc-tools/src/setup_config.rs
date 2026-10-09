@@ -247,6 +247,16 @@ impl SetupInstance {
         }
         Ok(bstr.to_osstring())
     }
+    /// `eLocal | eRegistered | eNoRebootRequired` bits; `eComplete` when all are set.
+    pub fn state(&self) -> Result<InstanceState, i32> {
+        let mut state = 0;
+        let this = self.0.cast::<ISetupInstance2>()?;
+        let err = unsafe { this.GetState(&mut state) };
+        if err < 0 {
+            return Err(err);
+        }
+        Ok(state)
+    }
     pub fn product_path(&self) -> Result<OsString, i32> {
         let mut s = null();
         let this = self.0.cast::<ISetupInstance2>()?;

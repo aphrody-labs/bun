@@ -10,6 +10,7 @@ pub enum VsInstance {
 }
 
 impl VsInstance {
+    #[allow(dead_code)]
     pub fn instance_id(&self) -> Option<Cow<'_, str>> {
         match self {
             VsInstance::Com(s) => s

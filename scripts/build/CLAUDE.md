@@ -146,7 +146,7 @@ Tables: `cpuTargetFlags` (`-march`/`-mcpu`/`-mtune` — also forwarded to local 
 
 ### Phase 0 — Entry (`scripts/build.ts`)
 
-1. Windows: re-exec inside VS dev shell if `VSINSTALLDIR` unset (provides PATH/INCLUDE/LIB for nested cmake).
+1. Windows: if `VSINSTALLDIR` is unset, load the MSVC environment (PATH/INCLUDE/LIB for nested cmake) from the `bun msvc sync` cache, pinned toolset first (`loadNativeMsvcEnv()`).
 2. Parse CLI: `--profile=<name>`, `--<field>=<value>` overrides, `--target=<ninja-target>`, `-j`/`-v`/`-k` passthrough, bare positionals = exec args for built binary.
 3. Resolve `PartialConfig` from profile + overrides (or `--config-file` for ninja's self-reconfigure).
 

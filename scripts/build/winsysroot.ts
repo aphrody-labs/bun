@@ -79,9 +79,9 @@ export function checkNativeMsvcToolset(cfg: Config): void {
     `MSVC toolset ${version} is newer than ${MSVC_TOOLSET_VERSION}, the toolset the prebuilt WebKit is built with; its STL is not ABI-compatible with it`,
     {
       hint:
-        `Install the MSVC v${MSVC_TOOLSET_VERSION} build tools (Visual Studio Installer > Modify > Individual components, or\n` +
-        `  setup.exe modify --installPath "<VS install dir>" --add ${component} --quiet)\n` +
-        `then open a new terminal: scripts/vs-shell.ps1 selects it. Or build WebKit locally (--webkit=local).`,
+        `Install the MSVC v${MSVC_TOOLSET_VERSION} build tools: bun msvc setup --toolset ${MSVC_TOOLSET_VERSION}${cfg.arch === "aarch64" ? " --arch arm64" : ""}\n` +
+        `  (it adds ${component}), then build from a terminal without VSINSTALLDIR set: scripts/build.ts selects it.\n` +
+        `  Or build WebKit locally (--webkit=local).`,
     },
   );
 }
