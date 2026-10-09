@@ -22,6 +22,7 @@ import { generateDepVersionsHeader } from "./depVersionsHeader.ts";
 import { allDeps } from "./deps/index.ts";
 import { lolhtml } from "./deps/lolhtml.ts";
 import { rustArgon2 } from "./deps/rust-argon2.ts";
+import { uutils } from "./deps/uutils.ts";
 import { assert } from "./error.ts";
 import {
   bunIncludes,
@@ -181,10 +182,13 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
   const rustArgon2Dep = resolveDep(n, cfg, rustArgon2, depsByName);
   assert(rustArgon2Dep !== null, "rust-argon2 resolveDep returned null — should never be skipped");
   depsByName.set(rustArgon2.name, rustArgon2Dep);
+  const uutilsDep = resolveDep(n, cfg, uutils, depsByName);
+  assert(uutilsDep !== null, "uutils resolveDep returned null — should never be skipped");
+  depsByName.set(uutils.name, uutilsDep);
   const rust = emitRust(n, cfg, {
     codegenOrderOnly: codegen.rustInputs,
     rustSources: sources.rust,
-    vendorStamps: [...lolhtmlDep.outputs, ...rustArgon2Dep.outputs],
+    vendorStamps: [...lolhtmlDep.outputs, ...rustArgon2Dep.outputs, ...uutilsDep.outputs],
     shimValidations: emitShimVerify(n, cfg),
   });
 

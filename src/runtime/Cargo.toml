@@ -111,6 +111,7 @@ bun_which.workspace = true
 bun_hash.workspace = true
 bun_wyhash.workspace = true
 bun_zlib.workspace = true
+bun_coreutils = { workspace = true, optional = true }
 bun_zstd.workspace = true
 bun_install_jsc.workspace = true
 bun_patch_jsc.workspace = true
@@ -118,3 +119,5 @@ bun_css_jsc.workspace = true
 
 [features]
 default = []
+# uutils applets (src/coreutils, ~10 MB): `bun` run as `head`, `sort`, ... and Bun Shell's fallback.
+coreutils = ["dep:bun_coreutils"]

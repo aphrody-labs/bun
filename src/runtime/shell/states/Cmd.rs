@@ -505,7 +505,9 @@ impl Cmd {
             spawn_args.fill_env::<false>(&mut iter);
         }
 
-        // Resolve argv[0] via PATH (`bun_which::which`).
+        // Resolve argv[0] via PATH (`bun_which::which`); a coreutils applet missing from PATH
+        // runs as this executable with argv[0] = the applet name.
+        let mut applet = false;
         let resolved: Option<Vec<u8>> = {
             let mut path_buf = bun_paths::path_buffer_pool::get();
             match bun_which::which(&mut *path_buf, spawn_args.path, spawn_args.cwd, &first_arg) {
@@ -514,6 +516,18 @@ impl Cmd {
                     bun_core::self_exe_path()
                         .ok()
                         .map(|z| z.as_bytes().to_vec())
+                }
+                #[cfg(feature = "coreutils")]
+                None if !sudo_wrap
+                    && bun_coreutils::applet_name(&first_arg).is_some_and(|name| name.len() == first_arg.len()) =>
+                {
+                    spawn_args.argv0 = bun_core::self_exe_path().ok().map(|z| {
+                        let mut exe = z.as_bytes().to_vec();
+                        exe.push(0);
+                        exe
+                    });
+                    applet = spawn_args.argv0.is_some();
+                    applet.then(|| first_arg.to_vec())
                 }
                 None => None,
             }
@@ -532,7 +546,7 @@ impl Cmd {
         // re-tokenizes the command line with shell metacharacter rules
         // (BatBadBut). libuv's MSVCRT-style quoting cannot make that safe, so
         // reject arguments that cmd.exe would reinterpret.
-        if cfg!(windows) && bun_which::is_batch_file(&resolved) {
+        if cfg!(windows) && !applet && bun_which::is_batch_file(&resolved) {
             let unsafe_arg: Option<Vec<u8>> = interp
                 .as_cmd(this)
                 .args

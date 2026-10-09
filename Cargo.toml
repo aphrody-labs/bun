@@ -9,6 +9,7 @@ members = [
   "src/base64",
   "src/bundler",
   "src/collections",
+  "src/coreutils",
   "src/cosmic",
   "src/css",
   "src/errno",
@@ -422,6 +423,7 @@ bun_picohttp = { path = "src/picohttp" }
 bun_s3_signing = { path = "src/s3_signing" }
 bun_sql_jsc = { path = "src/sql_jsc" }
 bun_zlib = { path = "src/zlib" }
+bun_coreutils = { path = "src/coreutils" }
 bun_patch = { path = "src/patch" }
 bun_platform = { path = "src/platform" }
 bun_sha_hmac = { path = "src/sha_hmac" }
