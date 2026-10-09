@@ -165,11 +165,12 @@ const cacheDir = join(process.env.BUN_INSTALL ?? join(homedir(), ".bun"), "setup
 
 /** Downloads `url` into the setup cache unless a file with that sha256 is already there; returns its path. */
 async function download(url: string, sha256: string): Promise<string> {
-  const dest = join(cacheDir, `${sha256.slice(0, 16)}-${basename(new URL(url).pathname)}`);
+  // The file keeps its own name: rustup-init picks its mode from argv[0].
+  const dest = join(cacheDir, sha256.slice(0, 16), decodeURIComponent(basename(new URL(url).pathname)));
   planned.push(`download ${url} (sha256 ${sha256})`);
   if (dryRun) return dest;
   if (existsSync(dest) && (await sha256File(dest)) === sha256) return dest;
-  mkdirSync(cacheDir, { recursive: true });
+  mkdirSync(dirname(dest), { recursive: true });
   log(`download ${url}`);
   let lastError: unknown;
   for (let attempt = 1; attempt <= 3; attempt++) {
