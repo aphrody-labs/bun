@@ -34,8 +34,7 @@ impl Drop for ExecuteJob {
     }
 }
 
-#[allow(non_snake_case)]
-pub(crate) fn jsGraphNative(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
+pub(crate) fn js_graph_native(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
     let action = frame.argument(0).to_utf8(global)?;
     let id = frame.argument(1).to_utf8(global)?;
     if id.is_empty() || id.len() > 64 {
