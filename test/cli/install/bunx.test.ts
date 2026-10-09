@@ -1380,3 +1380,19 @@ it.concurrent.skipIf(isWindows)(
     }
   },
 );
+
+it.concurrent("a copy of bun named npx behaves as bunx", async () => {
+  const dir = tmpdirSync();
+  const npx = join(dir, isWindows ? "npx.exe" : "npx");
+  copyFileSync(bunExe(), npx);
+  await using proc = spawn({
+    cmd: [npx],
+    cwd: dir,
+    env: bunEnv,
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(stdout + stderr).toContain("Usage: bunx [flags] <package>");
+});

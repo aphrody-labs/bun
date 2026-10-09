@@ -848,7 +848,17 @@ pub(crate) mod command {
     // `bun_clap::streaming::WARN_ON_UNRECOGNIZED_FLAG` so node-mode argv parsing
     // stays silent on unknown flags.
     // ──────────────────
+    fn argv0_basename(argv0: &[u8]) -> &[u8] {
+        argv0
+            .rsplit(|byte| *byte == b'/' || *byte == b'\\')
+            .next()
+            .unwrap_or(argv0)
+    }
+
     fn is_bun_x(argv0: &[u8]) -> bool {
+        if matches!(argv0_basename(argv0), b"npx" | b"npx.exe") {
+            return true;
+        }
         #[cfg(windows)]
         {
             return strings::ends_with(argv0, b"bunx.exe") || strings::ends_with(argv0, b"bunx");
@@ -859,14 +869,10 @@ pub(crate) mod command {
         }
     }
 
-    /// argv0 names an engine alias: the final path component is `bun`, `bunx` or `node` (with or without `.exe`).
+    /// argv0 names an engine alias: the final path component is `bun`, `bunx`, `node`, `npm` or `npx` (with or without `.exe`).
     fn is_plain_bun(argv0: &[u8]) -> bool {
-        let name = argv0
-            .rsplit(|byte| *byte == b'/' || *byte == b'\\')
-            .next()
-            .unwrap_or(argv0);
         matches!(
-            &name[..],
+            argv0_basename(argv0),
             b"bun"
                 | b"bun.exe"
                 | b"buv"
@@ -879,6 +885,10 @@ pub(crate) mod command {
                 | b"bunx.exe"
                 | b"node"
                 | b"node.exe"
+                | b"npm"
+                | b"npm.exe"
+                | b"npx"
+                | b"npx.exe"
         )
     }
 
@@ -1427,6 +1437,11 @@ pub(crate) mod command {
                 {
                     return exec_auto_or_run(Tag::AutoCommand, log);
                 }
+            } else if is_node(argv0)
+                && argv.len() == 2
+                && matches!(argv.get(1).map(bun_core::ZStr::as_bytes), Some(b"-v" | b"--version"))
+            {
+                print_node_version_and_exit();
             }
         }
 
@@ -2531,6 +2546,16 @@ pub(crate) fn print_version_and_exit() -> ! {
     // `\n` is baked into the constant) → one syscall.
     let w = Output::writer();
     let _ = w.write_all(Global::package_json_version_nl.as_bytes());
+    Output::flush();
+    Global::exit(0);
+}
+
+#[cold]
+fn print_node_version_and_exit() -> ! {
+    let w = Output::writer();
+    let _ = w.write_all(b"v");
+    let _ = w.write_all(bun_core::env::REPORTED_NODEJS_VERSION.as_bytes());
+    let _ = w.write_all(b"\n");
     Output::flush();
     Global::exit(0);
 }

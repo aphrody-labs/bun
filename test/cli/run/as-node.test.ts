@@ -97,6 +97,11 @@ describe("fake node cli", () => {
     );
   });
 
+  test.each(["--version", "-v"])("node %s prints the reported Node.js version", flag => {
+    using temp = tempDir("fake-node", {});
+    expect(fakeNodeRun(temp, flag).stdout).toBe(process.version);
+  });
+
   // Bare `node` now matches Node.js: a TTY stdin enters the REPL, a
   // non-TTY stdin (pipe) prints "Missing script". fakeNodeRun's default
   // stdin is platform-dependent (Windows may inherit a console), so pin
