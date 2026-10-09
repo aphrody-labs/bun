@@ -564,12 +564,33 @@ Objectif : mesurer le fork contre l'amont (bloquant) et contre Deno 2.9.7 éping
 Propositions restantes :
 
 - d : un vrai snapshot de démarrage (tas JSC sérialisé, équivalent de `create_snapshot` V8) n'existe pas dans JSC ;
-  il demande un patch du chantier P. D'ici là, activer `BUN_COMPILE_CACHE_BUILTINS` par défaut seulement si l'arène
+  il demande un patch du chantier P, écarté pour l'instant (§3). D'ici là, activer `BUN_COMPILE_CACHE_BUILTINS` par défaut seulement si l'arène
   montre un gain S1 sans perte de RSS (règle O).
 - e : un profil `BUN_JSC_*` ne devient défaut que s'il gagne sur E1 sans dégrader `startup.wall` ni `startup.hwm`
   (règle O) ; sinon il reste documenté comme réglage par charge.
 - b : P1 au sens strict (le processus survit, le contexte suivant évalue `1+1`) demande un rappel de limite par realm
   côté hôte Obscura, hors CLI.
+
+**3. Démarrage JSC (H6, 2026-10-09)**. Mesures sur le VPS (x64, chargé : écarts entrelacés, p50 CPU par processus,
+`~/h6/bench.ts`), release du fork `1.4.3-aphrody.2` contre amont `1.4.2` :
+
+1. `bun -e 0` : 8,00 ms CPU contre 6,01 (+33 %) ; hyperfine 8,7 ± 2,2 ms ; `bun run hello.js` 11,1 ms.
+2. Cause : 899 défauts de page contre 639, dont 290 contre 57 dans `.text`. La release du fork est liée sans fichier
+   d'ordre des symboles (`linker.order` vide) : l'amont l'hérite de son étape Buildkite `trace-order`, que le
+   workflow GitHub du fork n'avait pas.
+3. Profil `perf` de `-e 0` : ld.so 11,6 %, `JSCInitialize` 10,4 %, `VM::tryCreate` 18,7 %, `GlobalObject::finishCreation`
+   10,8 %, `init_runtime_state` 6,6 %, chargement du point d'entrée 16 %. Génération du bytecode des builtins : 0,65 %.
+4. Écarté : snapshot du tas JSC. Gain plafonné vers 1,9 ms (VM + GlobalObject). Risque extrême : pointeurs, thunks JIT,
+   atomes, StructureID. Rien d'équivalent dans oven-sh/WebKit.
+5. Écarté pour le démarrage : cache mmap du bytecode des builtins (< 1 %). `decodeBuiltinFunction` (CachedTypes) et
+   `BUN_COMPILE_CACHE_BUILTINS` existent déjà.
+6. Retenu, premier incrément : un fichier d'ordre pour chaque release. Le smoke `linux-gnu`/`darwin-aarch64` trace
+   `bun-profile` (`scripts/orderfile/generate.ts`) et publie `<triplet>.order`. Le build de la release suivante le
+   récupère dans `build/out/linker.order`. Gain attendu : environ −2 ms CPU et −230 défauts, comportement inchangé.
+7. Incréments JSC suivants (chantier P), par gain mesuré : thunks JIT et `ExecutableAllocator` paresseux (`useJIT=0` :
+   −0,59 ms), hachages précalculés de CommonIdentifiers/BuiltinNames (≈ 0,17 ms), `Options` (1,8 %), mémoire
+   disponible paresseuse dans `Heap::Heap` (≈ 0,06 ms).
+8. Banc avant/après (même commit, `--lto=off`, relink avec et sans `linker.order`) : ⏳ résultats ci-dessous.
 
 **Passe finale** (dans cet ordre ; rien n'a encore tourné) :
 

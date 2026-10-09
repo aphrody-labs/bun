@@ -164,6 +164,26 @@ jobs:
           restore-keys: |
             ccache-${{ matrix.target }}-lto-${{ inputs.lto || 'on' }}-
 
+      # Upstream's builds inherit the order file a trace-order step of an earlier
+      # build published (scripts/build/ci.ts inheritOrderFile); without it the fork
+      # linked unordered: `bun -e 0` took 8.0 ms CPU vs 6.0 ms for upstream 1.4.2,
+      # with 290 vs 57 page faults in .text. Here the smoke job traces each release
+      # and publishes <triplet>.order; configure keeps a linker.order already there.
+      - name: Inherit the symbol order file
+        if: matrix.abi == 'gnu' || matrix.target == 'darwin-aarch64'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p build/out
+          for tag in $(gh release list -R "$GITHUB_REPOSITORY" --limit 10 --json tagName -q '.[].tagName'); do
+            gh release download "$tag" -R "$GITHUB_REPOSITORY" -p "$TRIPLET.order" -O build/out/linker.order --clobber 2>/dev/null || continue
+            n="$(grep -cv '^#' build/out/linker.order || true)"
+            if [ "${n:-0}" -gt 0 ]; then echo "symbol order: $TRIPLET.order from $tag, $n functions"; exit 0; fi
+          done
+          rm -f build/out/linker.order
+          echo "::warning::no recent release has $TRIPLET.order; $TRIPLET links unordered"
+
       - name: Build in debian:13
         run: |
           cat > "$RUNNER_TEMP/build.sh" <<'EOF'
@@ -222,7 +242,7 @@ jobs:
     if: ${{ !cancelled() && needs.prepare.outputs.build == 'true' }}
     name: smoke ${{ matrix.target }}
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 20
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
@@ -232,6 +252,12 @@ jobs:
       ABI: ${{ matrix.abi }}
       VERSION: ${{ needs.prepare.outputs.version }}
     steps:
+      # Before the download: checkout cleans the workspace.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: matrix.abi == 'gnu' || matrix.target == 'darwin-aarch64'
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts/orderfile
       - uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.triplet }}
@@ -276,6 +302,27 @@ jobs:
           name: smoked-${{ matrix.triplet }}
           path: ${{ runner.temp }}/smoked
           retention-days: 1
+      # Like upstream's trace-order step (.buildkite/ci.ts getTraceOrderStep): the
+      # traced bun-profile is its own interpreter; the next release links with it.
+      - name: Trace the symbol order file
+        if: matrix.abi == 'gnu' || matrix.target == 'darwin-aarch64'
+        continue-on-error: true
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          unzip -q -o "dist/$TRIPLET-profile.zip" -d dist
+          chmod +x "dist/$TRIPLET-profile/bun-profile"
+          "./dist/$TRIPLET-profile/bun-profile" scripts/orderfile/generate.ts \
+            --build-dir="dist/$TRIPLET-profile" --out="dist/$TRIPLET.order"
+          echo "$(grep -cv '^#' "dist/$TRIPLET.order") functions in $TRIPLET.order"
+      - uses: actions/upload-artifact@v4
+        if: matrix.abi == 'gnu' || matrix.target == 'darwin-aarch64'
+        continue-on-error: true
+        with:
+          name: order-${{ matrix.triplet }}
+          path: dist/${{ matrix.triplet }}.order
+          if-no-files-found: ignore
+          retention-days: 14
 
   release:
     needs: [prepare, build, smoke]
@@ -300,6 +347,12 @@ jobs:
         with:
           path: smoked
           pattern: smoked-*
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          path: dist
+          pattern: order-*
+          merge-multiple: true
       - name: Drop targets whose smoke test failed
         run: |
           cd dist
@@ -337,11 +390,13 @@ jobs:
           notes="Aphrody fork of Bun, built from ${GITHUB_SHA} like upstream: cross-compiled on linux arm64 against pinned sysroots (musl: Alpine, the primary Linux assets; linux-gnu: glibc 2.31), release profile, LTO ${{ inputs.lto || 'on' }}.
           \`bun --version\` prints ${VERSION}; \`Bun.version\` stays the base version for semver checks.
           npm: \`bunx @aphrody/bun-runtime@${VERSION} --version\`."
+          # <triplet>.order: the symbol order file the next release's build links with.
+          assets="$(ls *.zip *.order 2>/dev/null)"
           if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$TAG" -R "$GITHUB_REPOSITORY" --clobber *.zip
+            gh release upload "$TAG" -R "$GITHUB_REPOSITORY" --clobber $assets
           else
             gh release create "$TAG" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-              --title "Aphrody Bun $VERSION" --notes "$notes" *.zip
+              --title "Aphrody Bun $VERSION" --notes "$notes" $assets
           fi
           mkdir -p ../all
           gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p '*.zip' -D ../all --clobber
