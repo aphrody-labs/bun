@@ -2358,3 +2358,37 @@ test.skipIf(isWindows)(
   },
   30_000,
 );
+
+test.concurrent("an onLoad that returns undefined for an asset still emits the asset", async () => {
+  using dir = tempDir("build-onload-undefined-asset", {
+    "entry.ts": `import url from "./logo.png"; console.log(url);`,
+    "logo.png": "not really a png",
+    "run.ts": `
+      import { basename } from "path";
+      const result = await Bun.build({
+        entrypoints: ["./entry.ts"],
+        outdir: "./out",
+        throw: false,
+        plugins: [{ name: "pass", setup(b) { b.onLoad({ filter: /\\.png$/ }, () => undefined); } }],
+      });
+      const asset = result.outputs.find(o => o.kind === "asset");
+      const entry = result.outputs.find(o => o.kind === "entry-point");
+      console.log(JSON.stringify({
+        success: result.success,
+        asset: await asset?.text(),
+        linked: (await entry!.text()).includes(basename(asset!.path)),
+      }));
+    `,
+  });
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "run.ts"],
+    cwd: String(dir),
+    env: bunEnv,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(stderr).toBe("");
+  expect(JSON.parse(stdout)).toEqual({ success: true, asset: "not really a png", linked: true });
+  expect(exitCode).toBe(0);
+});

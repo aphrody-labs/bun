@@ -4989,7 +4989,21 @@ pub mod bv2_impl {
                     // If it's a file namespace, we should run it through the parser like normal.
                     // The file could be on disk.
                     if source.path.is_file() {
-                        this.graph.pool().schedule(load.parse_task_mut());
+                        let source_index = load.source_index.get() as usize;
+                        let parse_task = load.parse_task_mut();
+                        // The enqueue site skipped asset registration because a plugin matched.
+                        if parse_task
+                            .loader
+                            .is_some_and(|l| l.should_copy_for_bundling())
+                        {
+                            let _ = this.graph.input_files.items_additional_files_mut()
+                                [source_index]
+                                .push(crate::AdditionalFile::SourceIndex(source_index as u32));
+                            this.graph.input_files.items_side_effects_mut()[source_index] =
+                                bun_ast::SideEffects::NoSideEffectsPureData;
+                            this.graph.estimated_file_loader_count += 1;
+                        }
+                        this.graph.pool().schedule(parse_task);
                         return;
                     }
 
