@@ -76,15 +76,13 @@
       "scripts/hardware.ts": "e49336a9ae4174ed9508b8539ae924525d9820a7e97264affe720340ed9ba6e5",
       "scripts/huggingface.test.ts": "4bd3d1bc106511c68b3842a081d08242d5ed858edead724b6539a4fe4ce48023",
       "scripts/huggingface.ts": "e7d75292c41234fbed2861df2e4992366cdfe593e6353f67f4a13be783e41c47",
-      "scripts/install.test.ts": "88c2df74028e94dcc5683a05539529a4ba644d43a0a095a75114166cadea366b",
+      "scripts/install.test.ts": "1eafc82deac2e05e5a0a0a47404f52d8c5895b128a035af0f32e1aecf801fb45",
       "scripts/install.ts": "de506962843de9922249af23c59c51a8b4067342b8807b8fc7dbac8be1f6aefc",
       "scripts/lib.test.ts": "63e1533bf62af7e0f3be0901c03eeb2a1b21849fcb3a8d064f0c50f3d16d85c1",
       "scripts/lib.ts": "cb2a55f7c5bbecd5337b7c143bd4afa68c81728995c7c6f05b8ae7f963d21f8b",
       "scripts/manifest.test.ts": "05e57566a06a9cd6fdce7364dba92d3db10472154ee92c7145feaba3359899f6",
       "scripts/manifest.ts": "969907ecdc7af949cb300071ee63969251edcaa44ceed5970fba129fcdfe7493",
-      "scripts/programs.test.ts": "1dc442c71b61c6731279c3dcec05946ea238d2ed0c5df16a1f803396b70335de",
-      "scripts/programs/compile.py": "ed4799fed84ae2a68414d2000bb2019e056fbaf12b86aedb6f1a68863d830a45",
-      "scripts/programs/hf.py": "14433da3c65765d552c46ec26004ada0b0dee44c6bc55d162a5055ed8cf75c15",
+      "scripts/programs.test.ts": "adf9d24194ae433346efc212800fdf94bb60f74bbbc7c82335760944c6d8ce22",
       "scripts/shared-libpython.test.ts": "522d6d2a5727ca29b2e4ac1e35c848cfdc8c64f091aa5690b0a1db4ee398b3b8",
       "scripts/shared-libpython.ts": "68df1070ab0cc654f6ded13b9758f34858e4157adb06b1ecd031c22cab728134",
       "scripts/smoke.ts": "4a08d502a92860c392c6feea7404f33fe2fc6e512f693a2a015f3365214610fd",
@@ -128,6 +126,18 @@
         "Runtime crate hashes match the source revision; the workspace manifest/lock are retained as integrated Bun-package files.",
         "They are not part of this lane commit."
       ]
+    },
+    "duplicateHelpers": {
+      "scripts/programs/compile.py": {
+        "disposition": "removed byte-identical packaging copy; Rust include_str! helper remains canonical",
+        "canonicalSource": "crates/vu-runtime/py/compile.py",
+        "sha256": "ed4799fed84ae2a68414d2000bb2019e056fbaf12b86aedb6f1a68863d830a45"
+      },
+      "scripts/programs/hf.py": {
+        "disposition": "removed byte-identical packaging copy; Rust include_str! helper remains canonical",
+        "canonicalSource": "crates/vu-runtime/py/hf.py",
+        "sha256": "14433da3c65765d552c46ec26004ada0b0dee44c6bc55d162a5055ed8cf75c15"
+      }
     }
   },
   "pins": {
@@ -159,6 +169,15 @@
     "Runtime Rust source hashes are recorded as provenance; Rust code remains outside this package file ownership scope.",
     "Existing standalone CPython behavior remains the fallback pending shared-host ABI and permission qualification.",
     "No receipts, provider authentication, caches, installed runtimes, datasets, binaries, pycache, or pyc files were transferred.",
-    "No builds, installs, tests, or benchmarks were run."
-  ]
+    "LICENSE bytes are normalized from CRLF to LF; legal text is unchanged. The source hash records the original CRLF file, while the transfer hash records the normalized package file.",
+    "The former scripts/programs/compile.py and hf.py copies were byte-identical to the canonical crates/vu-runtime/py helpers embedded with Rust include_str!; package tests run against the canonical source checkout and the redundant copies were removed."
+  ],
+  "validation": {
+    "scopedTests": {
+      "command": "VU_SOURCE_CHECKOUT=/srv/aphrody-build/workspaces/vu-wsl VU_PREFIX=/srv/aphrody-build/workspaces/vu-wsl/build/python PYTHONDONTWRITEBYTECODE=1 bun test ./packages/bun-vu/scripts/install.test.ts ./packages/bun-vu/scripts/programs.test.ts",
+      "result": "9 passed, 0 failed; Python unittest suite uses canonical source helpers and temporary test data",
+      "runtimeInstall": "none; installer test artifacts and activation paths are under temporary directories"
+    },
+    "licenseNormalization": "CRLF-to-LF only; normalized source bytes equal package LICENSE bytes"
+  }
 }

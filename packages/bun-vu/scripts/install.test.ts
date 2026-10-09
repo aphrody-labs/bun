@@ -7,6 +7,8 @@ import { flipLink, installArtifact, main, planInstall, rollback } from "./instal
 import { buildManifest, MANIFEST_PATH } from "./manifest.ts";
 
 const TARGET = "x86_64-unknown-linux-gnu";
+const REVISION_A = "a".repeat(40);
+const REVISION_C = "c".repeat(40);
 let scratch = "";
 
 beforeEach(() => {
@@ -36,7 +38,7 @@ async function artifact(version: string, revision: string, target = TARGET): Pro
 
 test("a plan names the destination and replaces nothing", async () => {
   const home = join(scratch, "home");
-  const plan = await planInstall(await artifact("0.1.0", "aaaaaaaabbbb"), home);
+  const plan = await planInstall(await artifact("0.1.0", REVISION_A), home);
   expect(plan.name).toBe("0.1.0-aaaaaaaa");
   expect(plan.destination).toBe(join(home, "runtime", TARGET, "0.1.0-aaaaaaaa"));
   expect(plan.previous).toBeNull();
@@ -50,19 +52,19 @@ test("a plan refuses an artifact for a different target", async () => {
 
 test("main without --apply changes nothing", async () => {
   const home = join(scratch, "home");
-  const source = await artifact("0.1.0", "aaaaaaaabbbb");
+  const source = await artifact("0.1.0", REVISION_A);
   expect(await main(["--from", source, "--home", home])).toBe(0);
   expect(await Bun.file(join(home, "runtime")).exists()).toBe(false);
 });
 
 test("install activates, a second install keeps the previous link, rollback returns to it", async () => {
   const home = join(scratch, "home");
-  const first = await planInstall(await artifact("0.1.0", "aaaaaaaabbbb"), home);
+  const first = await planInstall(await artifact("0.1.0", REVISION_A), home);
   const receipt = await installArtifact(first);
   expect(receipt.activated).toBe(true);
   expect(readlinkSync(first.link)).toBe("0.1.0-aaaaaaaa");
 
-  const second = await planInstall(await artifact("0.2.0", "ccccccccdddd"), home);
+  const second = await planInstall(await artifact("0.2.0", REVISION_C), home);
   expect(second.previous).toBe("0.1.0-aaaaaaaa");
   await installArtifact(second);
   const runtime = join(home, "runtime", TARGET);
@@ -75,7 +77,7 @@ test("install activates, a second install keeps the previous link, rollback retu
 
 test("a damaged artifact is refused and never activated", async () => {
   const home = join(scratch, "home");
-  const source = await artifact("0.1.0", "aaaaaaaabbbb");
+  const source = await artifact("0.1.0", REVISION_A);
   writeFileSync(join(source, "bin/vu"), "tampered");
   const plan = await planInstall(source, home);
   await expect(installArtifact(plan)).rejects.toThrow("failed verification");
@@ -92,11 +94,21 @@ test("the link flip is atomic and replaces an existing link", () => {
 
 test("re-installing the active artifact keeps no previous link", async () => {
   const home = join(scratch, "home");
-  const source = await artifact("0.1.0", "aaaaaaaabbbb");
+  const source = await artifact("0.1.0", REVISION_A);
   await installArtifact(await planInstall(source, home));
   const again = await planInstall(source, home);
   expect(again.previous).toBeNull();
   const receipt = await installArtifact(again);
   expect(receipt.activated).toBe(true);
   expect(() => readlinkSync(join(home, "runtime", TARGET, "previous"))).toThrow();
+});
+
+test("an invalid short revision is refused before activation", async () => {
+  const home = join(scratch, "home");
+  const source = await artifact("0.1.0", "aaaaaaaabbbb");
+  const plan = await planInstall(source, home);
+
+  await expect(installArtifact(plan)).rejects.toThrow("manifest target, version or revision is invalid");
+  expect(await Bun.file(plan.destination).exists()).toBe(false);
+  expect(() => readlinkSync(plan.link)).toThrow();
 });

@@ -7,20 +7,24 @@ import { ROOT } from "./lib.ts";
 
 const sourceRoot = process.env["VU_SOURCE_CHECKOUT"] ?? ROOT;
 
-const prefix =
-  process.env["VU_TEST_ARTIFACT"] ??
+const prefix = process.env["VU_PREFIX"] ?? process.env["VU_TEST_ARTIFACT"] ??
   join(homedir(), ".vu/runtime/x86_64-unknown-linux-gnu/current");
-const python = join(prefix, "bin/python3");
+const python = ["python3", "python3.12", "python"].map((name) => join(prefix, "bin", name))
+  .find(existsSync) ?? join(prefix, "bin/python3");
+const tests = join(sourceRoot, "tests");
 
-// The programs embedded in the binary (vu hf, vu compile) are tested with the runtime's own interpreter.
-test.skipIf(!existsSync(python))("embedded Python programs pass their unittest suite", () => {
-  const run = Bun.spawnSync([python, "-m", "unittest", "discover", "-s", "tests", "-v"], {
-    cwd: sourceRoot,
-    env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1" },
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const output = run.stderr.toString() + run.stdout.toString();
-  expect(output).toContain("OK");
-  expect(run.exitCode).toBe(0);
-});
+// The canonical helpers embedded in the binary are tested with the runtime's own interpreter.
+test.skipIf(!existsSync(python) || !existsSync(tests))(
+  "canonical embedded Python programs pass their unittest suite",
+  () => {
+    const run = Bun.spawnSync([python, "-m", "unittest", "discover", "-s", tests, "-v"], {
+      cwd: sourceRoot,
+      env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1" },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const output = run.stderr.toString() + run.stdout.toString();
+    expect(output).toContain("OK");
+    expect(run.exitCode).toBe(0);
+  },
+);
