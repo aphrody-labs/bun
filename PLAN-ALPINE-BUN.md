@@ -530,6 +530,72 @@ aphrody webos            # http://localhost:3000 ; dans la console, crossOriginI
 - Le Cargo.lock d'Aphrody est à régénérer : un autre agent l'avait modifié sans le commiter au moment du commit.
 - Rien n'a été compilé ni testé.
 
+### W. Arène reproductible et écarts du cœur JSC (🔄 code écrit le 2026-10-09, ni build, ni test, ni banc)
+
+Objectif : mesurer le fork contre l'amont (bloquant) et contre Deno 2.9.7 épinglé (informatif) selon la méthode du banc
+(`C:/aphrody/docs/plans/fusion/bench/METHOD.md`, C1 à C14), et fermer dans le cœur les écarts JSC relevés par ce banc.
+
+**1. Arène** (`e97cab02b3f`) : `bench/aphrody/arena/`.
+
+- `shared/*.mjs` : charges identiques octet pour octet sous Bun et Deno, PRNG à graine fixe, sommes de contrôle.
+  Voie moteur : `startup` (S1), `compute` (nbody, fannkuch, collections, texte, tri ; E1), `json` (E2). Voie runtime
+  (R1, jamais décisive pour #8) : `realm` (S3, S4 avec et sans `cachedData`), `serve`, `fetch` (pair fixe lancé avec le
+  fork), `sqlite` (`bun:sqlite` / `node:sqlite`), `gzip` (`CompressionStream`), `ffi` (`abs` de la libc).
+- `arena.ts` : processus frais entrelacés (A, B, C puis C, B, A), `nice -n 10`, 1 appel à froid rapporté à part,
+  ≥ 10 échauffements, VmHWM lu dans l'enfant, verrous testés par `flock -n`, sha256 des binaires et des sources avant
+  et après, Deno vérifié contre `deno.pin.json`, sondes P1 à P5, statistique par processus (test exact de somme des
+  rangs), verdict `valide`/`indicatif`/`invalide`/`à reproduire`, JSON brut au format §6 dans `results/`.
+  `--profiles` ajoute des cibles `fork@<profil>` (`profiles.json`, variables `BUN_JSC_*`). `--container alpine|ubuntu`
+  relance la même commande dans le conteneur local de `scripts/aphrody/tmux.ts` et rapatrie le JSON (jamais le VPS).
+- `scripts/aphrody/perf-gate.ts --arena` : fork contre amont bloquant (seuils `arena` de `thresholds.json` : ratio
+  1,05, différence réelle §3.4, p ≤ 0,05 ; RSS crête + 4 Mio), fork contre Deno en lignes `info`. Tests purs ajoutés à
+  `test/internal/aphrody-perf-gate.test.ts`.
+
+**2. Écarts du cœur** (un test chacun, dans le fichier existant) :
+
+| Écart | Commit | Correctif | Test |
+| --- | --- | --- | --- |
+| a. Locale par défaut (P3) | `efc1be764f0` | Unix : la locale ICU de LC_ALL / LC_MESSAGES / LANG passe à `WTF::overrideUserPreferredLanguages` | `test/js/web/intl/intl.test.ts` |
+| b. Limite de tas avec rappel (P1) | `046736e6c49` | `--max-old-space-size` (`HeapLimitObserver`) : sortie fatale 134 sur le fil principal, arrêt du Worker ; `v8.setHeapSnapshotNearHeapLimit`, `heap_size_limit` réel | `test/js/node/v8/v8-module.test.ts` |
+| c. Cache de bytecode `vm` (S4) | `1ae176a457e` | `vm.Script` adopte le `cachedData` accepté au lieu de compiler la source d'abord | `test/js/node/vm/vm.test.ts` |
+| d. Démarrage, modules internes (C11) | `010b4bcf97d` | `BUN_COMPILE_CACHE_BUILTINS=1` : bytecode des modules internes dans le compile cache | `test/js/node/module/node-module-module.test.js` |
+| e. Réglages de calcul | — | aucun défaut changé ; profils candidats dans `profiles.json`, à départager par l'arène | arène `--profiles all` |
+
+Propositions restantes :
+
+- d : un vrai snapshot de démarrage (tas JSC sérialisé, équivalent de `create_snapshot` V8) n'existe pas dans JSC ;
+  il demande un patch du chantier P. D'ici là, activer `BUN_COMPILE_CACHE_BUILTINS` par défaut seulement si l'arène
+  montre un gain S1 sans perte de RSS (règle O).
+- e : un profil `BUN_JSC_*` ne devient défaut que s'il gagne sur E1 sans dégrader `startup.wall` ni `startup.hwm`
+  (règle O) ; sinon il reste documenté comme réglage par charge.
+- b : P1 au sens strict (le processus survit, le contexte suivant évalue `1+1`) demande un rappel de limite par realm
+  côté hôte Obscura, hors CLI.
+
+**Passe finale** (dans cet ordre ; rien n'a encore tourné) :
+
+```sh
+bun bd
+bun bd test test/js/node/vm/vm.test.ts -t "cachedData"
+bun bd test test/js/web/intl/intl.test.ts
+bun bd test test/js/node/v8/v8-module.test.ts
+bun bd test test/js/node/module/node-module-module.test.js -t "BUN_COMPILE_CACHE_BUILTINS"
+bun bd test/js/node/test/parallel/test-compile-cache-api-success.js
+bun bd test/js/node/test/parallel/test-compile-cache-success.js
+bun test test/internal/aphrody-perf-gate.test.ts
+bun run rust:check-all
+# arène, conteneur Ubuntu 26.04 local (glibc des hôtes, binaire Deno gnu) ; volume aphrody-src-ubuntu
+bun scripts/aphrody/tmux.ts run arena-prep --ubuntu --sync -- "bun run build:release && mkdir -p tmp/arena && cd tmp/arena && curl -fsSLO https://github.com/oven-sh/bun/releases/download/bun-v1.4.3/bun-linux-x64.zip && unzip -oq bun-linux-x64.zip && curl -fsSLO https://github.com/denoland/deno/releases/download/v2.9.7/deno-x86_64-unknown-linux-gnu.zip && unzip -oq deno-x86_64-unknown-linux-gnu.zip"
+bun scripts/aphrody/tmux.ts wait arena-prep
+bun bench/aphrody/arena/arena.ts --container ubuntu --bun build/release/bun --upstream tmp/arena/bun-linux-x64/bun --deno tmp/arena/deno --gate
+bun bench/aphrody/arena/arena.ts --container ubuntu --bun build/release/bun --only startup,compute,json --profiles all --no-probes --name profiles-e
+```
+
+Risques : test `vm` temporel (`fromCache < fresh/2`) ; tests supposant `en-US` sur une machine où `LANG` n'est pas
+anglais (`bunEnv` garde `LANG`) ; rappel « proche de la limite » servi à la reprise de la boucle, pas pendant une boucle
+synchrone, et limite dure vérifiée après une collection complète seulement ; offset d'entrée 0 supposé pour le bytecode
+interne ; `postTaskTo` depuis le fil du GC. Arène : `ffi` et `sqlite` sous Deno dépendent de `node:sqlite` et de
+`Deno.dlopen` (`-A`) ; la release `bun-v1.4.3` amont doit exister (sinon prendre la dernière et le noter, C1).
+
 ### A. Publication (✅ base)
 
 - ✅ crates.io : `aphrody-bun-macro` 0.1.0, `aphrody-bun-native-plugin` 0.2.0.
