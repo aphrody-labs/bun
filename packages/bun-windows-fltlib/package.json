@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-windows-fltlib",
-  "version": "71.0.30.0",
+  "version": "71.0.30-preview",
   "description": "bun:windows Win32 family for fltlib.dll, generated from Microsoft.Windows.SDK.Win32Metadata 71.0.30-preview",
   "license": "MIT",
   "main": "index.js",
@@ -11,6 +11,6 @@
     "family.json"
   ],
   "dependencies": {
-    "@aphrody/bun-windows-win32": "71.0.30.0"
+    "@aphrody/bun-windows-win32": "71.0.30-preview"
   }
 }
