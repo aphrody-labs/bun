@@ -1084,7 +1084,17 @@ async function main() {
     process.exit(await proc.exited);
   }
 
-  if (o.update && !dryRun) await ensureCheckout(o, dir);
+  if (o.update && !dryRun) {
+    const before = capture(["git", "-C", dir, "rev-parse", "HEAD"]);
+    await ensureCheckout(o, dir);
+    if (capture(["git", "-C", dir, "rev-parse", "HEAD"]) !== before) {
+      // The pull may have changed this very script: continue with the new copy.
+      const proc = Bun.spawn([process.execPath, import.meta.path, ...process.argv.slice(2), "--no-update"], {
+        stdio: ["inherit", "inherit", "inherit"],
+      });
+      process.exit(await proc.exited);
+    }
+  }
   const pins = await readPins(dir);
   const steps: Step[] = [];
   if (o.system) steps.push(systemStep());
