@@ -11,9 +11,10 @@
 //
 // Scope: Pages Router on the Node.js runtime, global CSS and CSS modules (Bun's
 // CSS bundler, plus the Bun plugins given to `withBun`, e.g. Tailwind CSS).
-// App Router, middleware/proxy, instrumentation, the edge runtime, next/font,
-// next/image static imports and next/dynamic are rejected or produce empty
-// manifests.
+// The App Router (Server and Client Components, route handlers) is compiled by
+// build-app.js. Server Actions, middleware/proxy, instrumentation, the edge
+// runtime, next/font, next/image static imports and next/dynamic are rejected
+// or produce empty manifests.
 
 const { mkdirSync, readFileSync, rmSync, writeFileSync } = require("node:fs");
 const { parse: parseQuery } = require("node:querystring");
@@ -78,7 +79,7 @@ async function bunBuild(compilerNames, webpackBuildDir) {
   const { dir, config, pagesDir, appDir, buildId } = ctx;
   const distDir = path.join(dir, config.distDir);
 
-  if (ctx.mappedAppPages && Object.keys(ctx.mappedAppPages).length > 0) throw new UnsupportedError("The App Router");
+  const hasAppRouter = !!ctx.mappedAppPages && Object.keys(ctx.mappedAppPages).length > 0;
   if (ctx.hasInstrumentationHook) throw new UnsupportedError("instrumentation");
 
   const entrypoints = await createEntrypoints({
@@ -137,7 +138,8 @@ async function bunBuild(compilerNames, webpackBuildDir) {
     for (const key in env) env[key] ??= "undefined";
     return env;
   };
-  const swc = side => nextSwcPlugin({ next, ctx, dir, distDir, pagesDir, appDir, projectInfo, side });
+  const swcState = { next, ctx, dir, distDir, pagesDir, appDir, projectInfo };
+  const swc = side => nextSwcPlugin({ ...swcState, side });
 
   const entriesDir = path.join(distDir, "cache", "bun-entries");
   rmSync(entriesDir, { recursive: true, force: true });
@@ -148,6 +150,7 @@ async function bunBuild(compilerNames, webpackBuildDir) {
   const serverEntries = [];
   const pagesManifest = {};
   for (const [name, imports] of Object.entries(entrypoints.server)) {
+    if (hasAppRouter && name.startsWith("app/")) continue;
     const [request] = [imports].flat();
     if (!name.startsWith("pages/")) throw new UnsupportedError(`The server entry "${name}"`);
     const route = loaderOptions(request);
@@ -179,19 +182,21 @@ async function bunBuild(compilerNames, webpackBuildDir) {
     pagesManifest[getRouteFromEntrypoint(name)] = name + ".js";
   }
 
-  const server = await Bun.build({
-    entrypoints: serverEntries,
-    root: serverEntriesDir,
-    outdir: path.join(distDir, "server"),
-    naming: "[dir]/[name].[ext]",
-    target: "node",
-    format: "cjs",
-    packages: "external",
-    define: defines("server"),
-    plugins: [swc("server"), ...extraPlugins],
-    throw: false,
-  });
-  if (!server.success) throw new AggregateError(server.logs, "@aphrody/next-bun: server build failed");
+  if (serverEntries.length > 0) {
+    const server = await Bun.build({
+      entrypoints: serverEntries,
+      root: serverEntriesDir,
+      outdir: path.join(distDir, "server"),
+      naming: "[dir]/[name].[ext]",
+      target: "node",
+      format: "cjs",
+      packages: "external",
+      define: defines("server"),
+      plugins: [swc("server"), ...extraPlugins],
+      throw: false,
+    });
+    if (!server.success) throw new AggregateError(server.logs, "@aphrody/next-bun: server build failed");
+  }
 
   // Client: ES modules with code splitting so React and Next's client runtime
   // are shared between pages. Next.js loads page scripts as classic scripts, so
@@ -215,6 +220,9 @@ client.initialize({}).then(() => client.hydrate()).catch(console.error);
   );
   clientEntries.push(mainEntry);
   for (const [name, imports] of Object.entries(entrypoints.client)) {
+    // Pages-style fallbacks of the App Router (`app/_not-found/page`, …): webpack
+    // builds them but no manifest references them.
+    if (hasAppRouter && name.startsWith("app/")) continue;
     const [request, ...extra] = [imports].flat();
     const route = loaderOptions(request);
     if (route?.loader !== "next-client-pages-loader") throw new UnsupportedError(`The client entry "${name}"`);
@@ -279,13 +287,29 @@ client.initialize({}).then(() => client.hydrate()).catch(console.error);
   const polyfillFile = `static/chunks/polyfills-${contentHash(polyfills)}.js`;
   write(path.join(distDir, polyfillFile), polyfills);
 
+  const app = hasAppRouter
+    ? await require("./build-app.js").buildApp({
+        ...swcState,
+        nextDist,
+        buildId,
+        entrypoints,
+        defines,
+        entriesDir,
+        chunksDir,
+        loaderOptions,
+        plugins: extraPlugins,
+        minify: !ctx.noMangling,
+        helpers: { UnsupportedError, write, posix, contentHash, swcCode },
+      })
+    : null;
+
   // Same shape and helpers as webpack's BuildManifestPlugin.
   const mainFile = clientFiles.get("main");
   const assetMap = {
     polyfillFiles: [polyfillFile],
     devFiles: [],
     lowPriorityFiles: [],
-    rootMainFiles: [],
+    rootMainFiles: app ? app.rootMainFiles : [],
     rootMainFilesTree: {},
     pages: { "/_app": [] },
   };
@@ -299,7 +323,12 @@ client.initialize({}).then(() => client.hydrate()).catch(console.error);
   assetMap.lowPriorityFiles.push(buildManifestPath, ssgManifestPath);
   assetMap.pages = Object.fromEntries(Object.entries(assetMap.pages).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
 
-  const fontManifest = JSON.stringify({ pages: {}, app: {}, appUsingSizeAdjust: false, pagesUsingSizeAdjust: false });
+  const fontManifest = JSON.stringify({
+    pages: {},
+    app: {},
+    appUsingSizeAdjust: false,
+    pagesUsingSizeAdjust: false,
+  });
   const files = {
     "build-manifest.json": JSON.stringify(assetMap, null, 2),
     "server/middleware-build-manifest.js": createEdgeRuntimeManifest(assetMap),
@@ -322,6 +351,7 @@ client.initialize({}).then(() => client.hydrate()).catch(console.error);
       2,
     ),
     "server/interception-route-rewrite-manifest.js": `self.__INTERCEPTION_ROUTE_REWRITE_MANIFEST="[]";`,
+    ...app?.files,
   };
   for (const [file, contents] of Object.entries(files)) write(path.join(distDir, file), contents);
 
@@ -330,11 +360,50 @@ client.initialize({}).then(() => client.hydrate()).catch(console.error);
   return { duration, buildTraceContext: {} };
 }
 
-/** Runs Next.js' SWC transforms (SSG stripping, styled-jsx, next/dynamic, …) on project sources. */
-function nextSwcPlugin({ next, ctx, dir, distDir, pagesDir, appDir, projectInfo, side }) {
+/**
+ * Next.js' SWC transform of one module, with the options next-swc-loader gives
+ * it in the webpack layer `bundleLayer`.
+ * @param {{ next: (id: string) => any, ctx: any, dir: string, distDir: string, pagesDir?: string,
+ *   appDir?: string, projectInfo: any }} state
+ * @param {{ isServer: boolean, bundleLayer: string, serverComponents: boolean, isPageFile?: boolean }} layer
+ */
+async function swcCode(state, filename, source, layer) {
+  const { next, ctx, dir, distDir, pagesDir, appDir, projectInfo } = state;
   const { transform } = next("build/swc/index.js");
   const { getLoaderSWCOptions } = next("build/swc/options.js");
   const { config } = ctx;
+  const options = getLoaderSWCOptions({
+    filename,
+    development: !!config.experimental.allowDevelopmentBuild,
+    isServer: layer.isServer,
+    pagesDir,
+    appDir,
+    isPageFile: !!layer.isPageFile,
+    isCacheComponents: config.cacheComponents,
+    hasReactRefresh: false,
+    modularizeImports: config.modularizeImports,
+    optimizePackageImports: config.experimental.optimizePackageImports,
+    swcPlugins: config.experimental.swcPlugins,
+    compilerOptions: config.compiler,
+    optimizeServerReact: config.experimental.optimizeServerReact,
+    jsConfig: projectInfo.jsConfig,
+    supportedBrowsers: projectInfo.supportedBrowsers,
+    swcCacheDir: path.join(distDir, "cache", "swc"),
+    relativeFilePathFromRoot: path.relative(dir, filename),
+    serverComponents: layer.serverComponents,
+    serverReferenceHashSalt: ctx.encryptionKey,
+    bundleLayer: layer.bundleLayer,
+    esm: true,
+    cacheHandlers: config.cacheHandlers,
+    useCacheEnabled: config.experimental.useCache,
+  });
+  const output = await transform(source, { ...options, filename, sourceMaps: false });
+  return output.code;
+}
+
+/** Runs Next.js' SWC transforms (SSG stripping, styled-jsx, next/dynamic, …) on project sources. */
+function nextSwcPlugin({ side, ...state }) {
+  const { distDir, pagesDir } = state;
   const isServer = side === "server";
   const generated = path.join(distDir, "cache", "bun-entries") + path.sep;
 
@@ -345,7 +414,7 @@ function nextSwcPlugin({ next, ctx, dir, distDir, pagesDir, appDir, projectInfo,
       // are bundled by the client build alone.
       if (isServer) {
         build.onLoad({ filter: /\.css$/ }, args => {
-          if (!/\.module\.css$/.test(args.path)) return { contents: "", loader: "js" };
+          if (!args.path.endsWith(".module.css")) return { contents: "", loader: "js" };
         });
       }
       build.onLoad({ filter: SOURCE_FILE }, async args => {
@@ -353,34 +422,14 @@ function nextSwcPlugin({ next, ctx, dir, distDir, pagesDir, appDir, projectInfo,
         if (args.path.endsWith(".d.ts")) return;
         const isPageFile = !!pagesDir && args.path.startsWith(pagesDir + path.sep);
         const isApiRoute = isPageFile && args.path.startsWith(path.join(pagesDir, "api") + path.sep);
-        const options = getLoaderSWCOptions({
-          filename: args.path,
-          development: !!config.experimental.allowDevelopmentBuild,
-          isServer,
-          pagesDir,
-          appDir,
-          isPageFile,
-          isCacheComponents: config.cacheComponents,
-          hasReactRefresh: false,
-          modularizeImports: config.modularizeImports,
-          optimizePackageImports: config.experimental.optimizePackageImports,
-          swcPlugins: config.experimental.swcPlugins,
-          compilerOptions: config.compiler,
-          optimizeServerReact: config.experimental.optimizeServerReact,
-          jsConfig: projectInfo.jsConfig,
-          supportedBrowsers: projectInfo.supportedBrowsers,
-          swcCacheDir: path.join(distDir, "cache", "swc"),
-          relativeFilePathFromRoot: path.relative(dir, args.path),
-          serverComponents: false,
-          serverReferenceHashSalt: ctx.encryptionKey,
-          bundleLayer: isServer ? (isApiRoute ? "api-node" : "pages-dir-node") : "pages-dir-browser",
-          esm: true,
-          cacheHandlers: config.cacheHandlers,
-          useCacheEnabled: config.experimental.useCache,
-        });
         const source = readFileSync(args.path, "utf8");
-        const output = await transform(source, { ...options, filename: args.path, sourceMaps: false });
-        return { contents: output.code, loader: "js" };
+        const code = await swcCode(state, args.path, source, {
+          isServer,
+          isPageFile,
+          serverComponents: false,
+          bundleLayer: isServer ? (isApiRoute ? "api-node" : "pages-dir-node") : "pages-dir-browser",
+        });
+        return { contents: code, loader: "js" };
       });
     },
   };
