@@ -2,7 +2,7 @@
 // functions that return undefined, keeping their own members mocked; a function's prototype methods are
 // mocked too, so a mocked class can still be constructed; objects are mocked member by member; arrays become
 // empty arrays; every other value is kept. A value reached twice gets the same mock.
-export function createAutomock(actual: object, mockFn: (implementation?: unknown) => Function) {
+export function createAutomock(actual: object, mockFn: Function) {
   const mocks = new Map<unknown, unknown>();
   const objectPrototype = Object.prototype;
   const functionPrototype = Function.prototype;
