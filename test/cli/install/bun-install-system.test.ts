@@ -236,7 +236,8 @@ describe.concurrent("systemDependencies (winget)", () => {
 
     const removed = await bun(["remove", "winget:Test.Tool"], cwd);
     expect(JSON.parse(readFileSync(join(cwd, "package.json"), "utf8")).systemDependencies).toBeUndefined();
-    expect(systemBlock(readFileSync(join(cwd, "bun.lock"), "utf8"))).toBeUndefined();
+    // Like removing the last npm dependency, removing the last system one deletes the now-empty lockfile.
+    expect(existsSync(join(cwd, "bun.lock"))).toBe(false);
     if (isWindows) {
       expect(removed.stderr).toContain("- winget:Test.Tool");
       expect(existsSync(shim)).toBe(false);

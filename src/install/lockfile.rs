@@ -490,7 +490,9 @@ impl<'a> LoadResult<'a> {
 impl Lockfile {
     pub(crate) fn is_empty(&self) -> bool {
         self.packages.len() == 0
-            || (self.packages.len() == 1 && self.packages.get(0).resolutions.len == 0)
+            || (self.packages.len() == 1
+                && self.packages.get(0).resolutions.len == 0
+                && self.system.is_empty())
     }
 
     pub fn load_from_cwd<'a, const ATTEMPT_LOADING_FROM_OTHER_LOCKFILE: bool>(

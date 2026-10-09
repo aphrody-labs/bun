@@ -424,7 +424,12 @@ pub fn read_package_json_specs(package_json_path: &[u8]) -> Result<Vec<Spec>> {
     let Some(bytes) = fs::read(package_json_path) else {
         return Ok(Vec::new());
     };
-    let root = value::parse_json(&bytes, "package.json")?;
+    package_json_specs(&bytes)
+}
+
+/// Parses `systemDependencies` from `package.json` contents. Unknown sources are errors.
+pub fn package_json_specs(bytes: &[u8]) -> Result<Vec<Spec>> {
+    let root = value::parse_json(bytes, "package.json")?;
     let mut specs = Vec::new();
     let Some(deps) = root.get("systemDependencies") else {
         return Ok(specs);

@@ -1152,7 +1152,19 @@ fn resolve_system_dependencies(
 ) -> bool {
     use crate::system;
     manager.lockfile.system = before.system.clone();
-    let specs = match system::read_package_json_specs(root_package_json_path.as_bytes()) {
+    // `bun add`/`bun remove` edit the cached package.json and only write it after the lockfile is saved.
+    let log = manager.log_mut();
+    let specs = match manager.workspace_package_json_cache.get_with_path(
+        log,
+        root_package_json_path.as_bytes(),
+        Default::default(),
+    ) {
+        WorkspacePackageJsonCacheResult::Entry(entry) => {
+            system::package_json_specs(&entry.source.contents)
+        }
+        _ => system::read_package_json_specs(root_package_json_path.as_bytes()),
+    };
+    let specs = match specs {
         Ok(specs) => specs,
         Err(err) => {
             bun_core::pretty_errorln!("<r><red>error<r><d>:<r> {}", err);
@@ -2004,13 +2016,24 @@ fn create_new_lockfile_and_enqueue(
         }
         _ => None,
     };
+    // A lockfile that pins only `systemDependencies` has no npm dependencies, which lands here; keep its
+    // pins so they are reused, and let the frozen checks after resolution decide whether it changed.
+    let (preserved_system, only_system) = match load_result {
+        lockfile::LoadResult::Ok(ok) => (
+            ok.lockfile.system.clone(),
+            !ok.lockfile.system.is_empty() && ok.lockfile.buffers.dependencies.is_empty(),
+        ),
+        _ => (Default::default(), false),
+    };
     manager.lockfile.init_empty();
     if let Some(version) = preserved_text_version {
         manager.lockfile.text_lockfile_version = version;
     }
+    manager.lockfile.system = preserved_system;
 
     if manager.options.enable.frozen_lockfile()
         && !matches!(load_result, lockfile::LoadResult::NotFound)
+        && !only_system
     {
         if log_level != Options::LogLevel::Silent {
             bun_core::pretty_errorln!(
