@@ -1114,7 +1114,9 @@ mod tests {
             {
                 // Stock CPython 3.12 can exit inside Py_BytesMain. Validate the
                 // terminal status rather than claiming the ABI returned.
-                assert_eq!(output.status.code(), Some(expected & 255));
+                // Windows preserves the signed process exit value; POSIX truncates it.
+                let expected_status = if cfg!(windows) { expected } else { expected & 255 };
+                assert_eq!(output.status.code(), Some(expected_status));
                 continue;
             }
             assert!(
