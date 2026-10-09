@@ -1,0 +1,24 @@
+---
+title: rclone et rsync natifs
+description: rclone (CLI et librclone via bun:ffi) et rsync statique, forks aphrody-labs, intégrés au fork Bun
+---
+
+Les binaires viennent de la release `aphrody-tools-1` d'aphrody-labs/bun, construits depuis les forks `aphrody-labs/rclone` (branche `aphrody`) et `aphrody-labs/rsync`. Le paquet `packages/bun-tools` les télécharge, vérifie `SHA256SUMS.txt` et les met en cache (`APHRODY_TOOLS_DIR`).
+
+| Asset | Contenu |
+| --- | --- |
+| `rclone-linux-x64`, `rclone-windows-x64.exe` | CLI rclone |
+| `librclone-linux-x64.so`, `librclone-windows-x64.dll` | librclone, avec l'export `RcloneRPCJSON` (réponse JSON en une chaîne, car bun:ffi ne lit pas une struct retournée par valeur) |
+| `rsync-linux-x64-musl` | rsync statique (musl) |
+
+```ts
+import { rclone, rcloneRpc, rsync } from "@aphrody/bun-tools";
+
+await rclone(["lsd", "remote:"]);
+await rcloneRpc("core/version");
+await rsync(["-a", "src/", "host:/dst/"]);
+```
+
+Sous Windows, rsync s'exécute dans la distro WSL `AphrodyAlpine` (`/usr/local/bin/rsync`), les chemins `C:\…` étant convertis en `/mnt/c/…`. Variables : `APHRODY_RCLONE`, `APHRODY_LIBRCLONE`, `APHRODY_RSYNC`, `APHRODY_RSYNC_DISTRO`.
+
+Construction : `build-rsync.sh` (Alpine 3.24) et `build-rclone.sh` (Go + mingw) sur le vps.
