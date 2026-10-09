@@ -11,7 +11,7 @@ use bun_sys::DynLib;
 
 const ABI_VERSION: u32 = 1;
 const HOST_LIBRARY_ENV: &str = "BUN_PYTHON_HOST_LIBRARY";
-const LIBPYTHON_ENV: &str = "APHRODY_LIBPYTHON";
+const LIBPYTHON_ENV: &str = "BUN_PYTHON_LIBPYTHON";
 
 type AbiVersion = unsafe extern "C" fn() -> u32;
 type LoadPython = unsafe extern "C" fn(*const c_char) -> c_int;
@@ -36,8 +36,10 @@ fn host_api() -> Result<&'static HostApi, String> {
 }
 
 unsafe fn load_host() -> Result<HostApi, String> {
-    let host_path = std::env::var(HOST_LIBRARY_ENV)
-        .map_err(|_| format!("set {HOST_LIBRARY_ENV} to the installed Python host library"))?;
+    let host_path = bun_core::getenv_z(bun_core::zstr!("BUN_PYTHON_HOST_LIBRARY"))
+        .ok_or_else(|| format!("set {HOST_LIBRARY_ENV} to the installed Python host library"))?;
+    let host_path = std::str::from_utf8(host_path)
+        .map_err(|_| format!("{HOST_LIBRARY_ENV} must be a UTF-8 path"))?;
     let library = DynLib::open(host_path.as_bytes())
         .map_err(|error| format!("cannot load Python host {host_path}: {error}"))?;
 
@@ -101,39 +103,100 @@ fn path_to_utf8(path: &Path, description: &str) -> Result<String, String> {
         .ok_or_else(|| format!("{description} path must be valid UTF-8: {}", path.display()))
 }
 
+fn is_executable(path: &Path, description: &str) -> Result<String, String> {
+    let path = path_to_utf8(path, description)?;
+    let c_path =
+        CString::new(path.as_bytes()).map_err(|_| format!("{description} contains NUL"))?;
+    let z_path = ZStr::from_slice_with_nul(c_path.as_bytes_with_nul());
+    #[cfg(unix)]
+    let executable = bun_sys::is_executable_file_path(z_path);
+    #[cfg(windows)]
+    let executable = {
+        let is_exe = Path::new(&path)
+            .extension()
+            .and_then(|extension| extension.to_str())
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"));
+        is_exe && bun_sys::exists_z(z_path)
+    };
+    #[cfg(not(any(unix, windows)))]
+    let executable = bun_sys::exists_z(z_path);
+    if !executable {
+        return Err(format!("{description} is not an executable file: {path}"));
+    }
+    Ok(path)
+}
+
 fn python_executable(libpython: &Path) -> Result<String, String> {
-    if let Ok(executable) = std::env::var("BUN_PYTHON_EXECUTABLE") {
-        return Ok(executable);
+    #[cfg(not(unix))]
+    let _ = libpython;
+
+    if let Some(executable) = bun_core::getenv_z(bun_core::zstr!("BUN_PYTHON_EXECUTABLE")) {
+        let executable = std::str::from_utf8(executable)
+            .map_err(|_| "BUN_PYTHON_EXECUTABLE must be a UTF-8 path".to_owned())?;
+        return is_executable(Path::new(executable), "BUN_PYTHON_EXECUTABLE");
     }
 
-    if let Some(venv) = std::env::var_os("VIRTUAL_ENV") {
+    if let Some(venv) = bun_core::getenv_z(bun_core::zstr!("VIRTUAL_ENV")) {
+        let venv =
+            std::str::from_utf8(venv).map_err(|_| "VIRTUAL_ENV must be a UTF-8 path".to_owned())?;
         let bin_dir = PathBuf::from(venv).join(if cfg!(windows) { "Scripts" } else { "bin" });
         #[cfg(windows)]
-        let names = ["python.exe", "python3.exe"];
+        let names = ["python.exe"];
         #[cfg(not(windows))]
-        let names = ["python3", "python"];
+        let names = ["python", "python3"];
         for name in names {
             let executable = bin_dir.join(name);
-            if executable.is_file() {
-                return path_to_utf8(&executable, "virtual environment Python executable");
+            if let Ok(executable) =
+                is_executable(&executable, "virtual environment Python executable")
+            {
+                return Ok(executable);
             }
         }
+        return Err(format!(
+            "VIRTUAL_ENV has no executable Python entry point: {venv}"
+        ));
     }
 
-    let prefix = std::env::var_os("VU_RUNTIME")
-        .map(PathBuf::from)
-        .or_else(|| {
-            libpython
-                .parent()
-                .and_then(Path::parent)
-                .map(Path::to_path_buf)
-        })
-        .ok_or_else(|| format!("cannot derive Python prefix from {}", libpython.display()))?;
+    let prefix = if let Some(prefix) = bun_core::getenv_z(bun_core::zstr!("VU_RUNTIME")) {
+        let prefix = std::str::from_utf8(prefix)
+            .map_err(|_| "VU_RUNTIME must be a UTF-8 path".to_owned())?;
+        PathBuf::from(prefix)
+    } else {
+        #[cfg(unix)]
+        {
+            derive_unix_prefix(libpython).ok_or_else(|| {
+                format!(
+                    "cannot derive Python prefix from unqualified libpython path {}",
+                    libpython.display()
+                )
+            })?
+        }
+        #[cfg(not(unix))]
+        {
+            return Err("set VU_RUNTIME or BUN_PYTHON_EXECUTABLE to select CPython".to_owned());
+        }
+    };
     #[cfg(windows)]
-    let executable = prefix.join("Scripts").join("python.exe");
+    let executable = prefix.join("python.exe");
     #[cfg(not(windows))]
     let executable = prefix.join("bin").join("python3");
-    path_to_utf8(&executable, "Python executable")
+    is_executable(&executable, "runtime Python executable")
+}
+
+#[cfg(unix)]
+fn derive_unix_prefix(libpython: &Path) -> Option<PathBuf> {
+    let filename = libpython.file_name()?.to_str()?;
+    let is_libpython = filename.starts_with("libpython")
+        && (filename.ends_with(".so")
+            || bun_core::strings::contains(filename.as_bytes(), b".so.")
+            || filename.ends_with(".dylib")
+            || bun_core::strings::contains(filename.as_bytes(), b".dylib."));
+    let libdir = libpython.parent()?;
+    let libdir_name = libdir.file_name()?.to_str()?;
+    if !is_libpython || !matches!(libdir_name, "lib" | "lib64") {
+        return None;
+    }
+    libdir.parent().map(Path::to_path_buf)
 }
 
 pub(crate) fn is_python_source(path: &[u8]) -> bool {
@@ -158,7 +221,7 @@ pub(crate) fn script_arguments<'a>(
 /// Runs a Python source target when the separately installed host is configured.
 /// Returns false only when the optional host was not configured.
 pub(crate) fn run_if_configured(arguments: &[&[u8]]) -> bool {
-    if std::env::var_os(HOST_LIBRARY_ENV).is_none() {
+    if bun_core::getenv_z(bun_core::zstr!("BUN_PYTHON_HOST_LIBRARY")).is_none() {
         return false;
     }
 
@@ -170,8 +233,10 @@ pub(crate) fn run_if_configured(arguments: &[&[u8]]) -> bool {
 }
 
 fn run(arguments: &[&[u8]]) -> Result<(), String> {
-    let libpython = std::env::var(LIBPYTHON_ENV)
-        .map_err(|_| format!("set {LIBPYTHON_ENV} to the selected runtime's shared library"))?;
+    let libpython = bun_core::getenv_z(bun_core::zstr!("BUN_PYTHON_LIBPYTHON"))
+        .ok_or_else(|| format!("set {LIBPYTHON_ENV} to the selected runtime's shared library"))?;
+    let libpython = std::str::from_utf8(libpython)
+        .map_err(|_| format!("{LIBPYTHON_ENV} must be a UTF-8 path"))?;
     let executable = python_executable(Path::new(&libpython))?;
     let mut argv = Vec::with_capacity(arguments.len() + 1);
     argv.push(CString::new(executable).map_err(|_| "Python executable contains NUL".to_owned())?);
@@ -194,7 +259,8 @@ fn run(arguments: &[&[u8]]) -> Result<(), String> {
 
     let mut exit_code = 0;
     // SAFETY: argv is a live array of NUL-terminated UTF-8 strings; the host copies it before
-    // entering CPython and writes exit_code only on successful CLI execution.
+    // entering CPython. A SystemExit may terminate the process inside the host before this call
+    // returns, so the out parameter is consumed only when control returns successfully here.
     let status =
         unsafe { (api.python_main)(pointers.len() as c_int, pointers.as_ptr(), &mut exit_code) };
     if status != 0 {
@@ -228,6 +294,24 @@ mod tests {
         assert_eq!(
             script_arguments(&positionals, &passthrough),
             vec![&b"app.py"[..], &b"-m"[..], &b"--flag"[..]]
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn derives_prefix_only_from_a_libpython_in_lib_directory() {
+        assert_eq!(
+            derive_unix_prefix(Path::new("/opt/vu/lib/libpython3.12.so.1.0")),
+            Some(PathBuf::from("/opt/vu"))
+        );
+        assert_eq!(
+            derive_unix_prefix(Path::new("/opt/vu/lib64/libpython3.12.dylib")),
+            Some(PathBuf::from("/opt/vu"))
+        );
+        assert_eq!(derive_unix_prefix(Path::new("/opt/vu/python312.dll")), None);
+        assert_eq!(
+            derive_unix_prefix(Path::new("/opt/vu/libexec/libpython3.12.so")),
+            None
         );
     }
 }
