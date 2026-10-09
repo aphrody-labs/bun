@@ -59,6 +59,8 @@ int main(int argc, char **argv) {
     fprintf(stderr, "BUN_PY_CONFORMANCE phase=load host_status=%d python_exit=0\n", load_status);
     return 125;
   }
+  fputs("BUN_PY_CONFORMANCE phase=load host_status=0 python_exit=0\n", stderr);
+  fflush(stderr);
   int32_t exit_code = 0;
   int32_t status = py_main((int32_t)(argc - 5), (const char *const *)&argv[5], &exit_code);
   fprintf(stderr, "BUN_PY_CONFORMANCE phase=main host_status=%d python_exit=%d\n", status, exit_code);
