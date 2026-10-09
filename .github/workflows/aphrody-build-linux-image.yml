@@ -1,0 +1,92 @@
+name: Aphrody build-linux image
+
+# Builds scripts/aphrody/linux.Dockerfile (Ubuntu 26.04, LLVM 23 + 22, the Rust
+# channel of rust-toolchain.toml, bun) natively on x64 and arm64 and smoke-tests
+# it. Pushes ghcr.io/aphrody-labs/build-linux:26.04 (multi-arch) only on a
+# workflow_dispatch with push=true; scripts/aphrody/tmux.ts --ubuntu picks it up
+# through APHRODY_LINUX_IMAGE. aphrody-linux-build.yml keeps building the same
+# Dockerfile locally on every change, so this workflow has no push trigger.
+
+permissions:
+  contents: read
+  packages: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      push:
+        description: "Push ghcr.io/aphrody-labs/build-linux:26.04"
+        type: boolean
+        default: false
+
+concurrency:
+  group: aphrody-build-linux-image-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/aphrody-labs/build-linux
+  TAG: "26.04"
+  PUSH: ${{ inputs.push && 'true' || 'false' }}
+
+jobs:
+  build:
+    if: github.repository == 'aphrody-labs/bun'
+    name: ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: amd64
+            runner: ubuntu-24.04
+          - platform: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v3
+      - name: Build
+        run: |
+          channel=$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)
+          docker buildx build --load \
+            --platform "linux/${{ matrix.platform }}" \
+            -t "$IMAGE:$TAG-${{ matrix.platform }}" \
+            -f scripts/aphrody/linux.Dockerfile \
+            --build-arg "RUST_CHANNEL=$channel" \
+            --cache-from "type=gha,scope=ubuntu-26.04-${{ matrix.platform }}" \
+            scripts/aphrody
+      - name: Smoke test
+        run: |
+          docker run --rm "$IMAGE:$TAG-${{ matrix.platform }}" bash -euc '
+            clang-23 --version | head -1
+            clang-22 --version | head -1
+            rustc --version
+            cargo --version
+            bun --version
+            cmake --version | head -1
+            test "$(bun -e "console.log(1)")" = 1'
+      - uses: docker/login-action@v3
+        if: env.PUSH == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Push
+        if: env.PUSH == 'true'
+        run: docker push "$IMAGE:$TAG-${{ matrix.platform }}"
+
+  manifest:
+    needs: build
+    if: inputs.push
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Multi-arch tag
+        run: docker buildx imagetools create -t "$IMAGE:$TAG" "$IMAGE:$TAG-amd64" "$IMAGE:$TAG-arm64"
