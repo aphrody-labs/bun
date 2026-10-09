@@ -218,7 +218,9 @@ pub(crate) fn js_bpf_prog_load(global: &JSGlobalObject, frame: &CallFrame) -> Js
             .ptr(16, license.as_ptr())
             .u32(68, super::int_arg(frame, 4) as u32);
         if log_size > 0 {
-            attr.u32(24, 1).u32(28, log_size as u32).ptr(32, log.as_mut_ptr().cast_const());
+            attr.u32(24, 1)
+                .u32(28, log_size as u32)
+                .ptr(32, log.as_mut_ptr().cast_const());
         }
         if let Some(name) = &name {
             attr.name(48, name.to_bytes());

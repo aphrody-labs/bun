@@ -405,6 +405,40 @@ describe.skipIf(!isLinux)("bun:linux bpf", () => {
   });
 });
 
+describe.skipIf(!isLinux)("bun:linux reapOrphans", () => {
+  test("validates exclude", () => {
+    expect(errorCode(() => linux.reapOrphans(5 as never))).toBe("ERR_INVALID_ARG_TYPE");
+    expect(linux.reapOrphans([])).toBeArray();
+  });
+
+  test("a subreaper collects its orphaned grandchildren", async () => {
+    const script = `
+      const linux = require("bun:linux").default;
+      linux.prctl(linux.constants.PR_SET_CHILD_SUBREAPER, 1);
+      const shell = Bun.spawnSync(["/bin/sh", "-c", "sleep 0 & echo $!"]);
+      const orphan = Number(shell.stdout.toString().trim());
+      const deadline = Date.now() + 5000;
+      let reaped = [];
+      while (reaped.length === 0 && Date.now() < deadline) {
+        reaped = linux.reapOrphans().filter(r => r.pid === orphan);
+        if (reaped.length === 0) await Bun.sleep(5);
+      }
+      console.log(reaped.length, reaped[0]?.status);
+    `;
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "-e", script],
+      env: bunEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect(stderr).toBe("");
+    expect(stdout).toBe("1 0
+");
+    expect(exitCode).toBe(0);
+  });
+});
+
 describe.skipIf(!isLinux)("bun:linux netlink", () => {
   test("encode and parse round-trip", () => {
     const payload = new Uint8Array([1, 2, 3]);

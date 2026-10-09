@@ -47,6 +47,7 @@ const bpfProgLoadNative = $newRustFunction("linux/bpf.rs", "jsBpfProgLoad", 6);
 const bpfObjPinNative = $newRustFunction("linux/bpf.rs", "jsBpfObjPin", 2);
 const bpfObjGetNative = $newRustFunction("linux/bpf.rs", "jsBpfObjGet", 2);
 const netlinkRequestNative = $newRustFunction("linux/netlink.rs", "jsNetlinkRequest", 2);
+const reapZombieNative = $newRustFunction("linux/reap.rs", "jsReapZombie", 1);
 
 const constants = Object.freeze({
   CLONE_NEWTIME: 0x00000080,
@@ -1043,6 +1044,52 @@ const netlink = {
   request: netlinkRequest,
 };
 
+// PID 1 and subreapers
+
+/**
+ * Reap exited children of this process that are not in `exclude`. Orphans are
+ * reparented to PID 1 or to the nearest `PR_SET_CHILD_SUBREAPER` ancestor, and
+ * stay zombies until it waits for them. Pass the pids of processes started with
+ * `Bun.spawn` in `exclude` so their exit status still reaches Bun.
+ */
+function reapOrphans(exclude) {
+  let skip = null;
+  if (exclude !== undefined) {
+    if (exclude === null || typeof exclude[Symbol.iterator] !== "function") {
+      throw $ERR_INVALID_ARG_TYPE("exclude", "Iterable", exclude);
+    }
+    skip = new Set(exclude);
+  }
+  if (!isSupported) throw unsupportedError();
+  const fs = require("node:fs");
+  const self = process.pid;
+  const reaped = [];
+  for (const name of fs.readdirSync("/proc")) {
+    const first = name.charCodeAt(0);
+    if (first < 48 || first > 57) continue;
+    const pid = Number(name);
+    if (pid === self || skip?.has(pid)) continue;
+    let stat;
+    try {
+      stat = fs.readFileSync(`/proc/${name}/stat`, "latin1");
+    } catch {
+      continue;
+    }
+    // `pid (comm) state ppid ...`; `comm` may contain spaces and parentheses.
+    const fields = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
+    if (fields[0] !== "Z" || Number(fields[1]) !== self) continue;
+    let status;
+    try {
+      status = reapZombieNative(pid);
+    } catch (error) {
+      if (error?.code === "ECHILD") continue;
+      throw error;
+    }
+    if (status !== null) reaped.push({ pid, status });
+  }
+  return reaped;
+}
+
 export default {
   isSupported,
   constants,
@@ -1071,4 +1118,5 @@ export default {
   perfEvent,
   bpf,
   netlink,
+  reapOrphans,
 };

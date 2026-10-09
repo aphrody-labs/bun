@@ -581,6 +581,14 @@ declare module "bun:linux" {
     function get(path: string, flags?: number): number;
   }
 
+  /**
+   * Reaps exited children of this process (orphans reparented to PID 1 or to a
+   * `PR_SET_CHILD_SUBREAPER`) whose pid is not in `exclude`. Pass the pids of
+   * `Bun.spawn` children in `exclude` so Bun still receives their exit status.
+   * @returns the reaped pids with their raw wait status.
+   */
+  function reapOrphans(exclude?: Iterable<number>): Array<{ pid: number; status: number }>;
+
   interface NetlinkMessage {
     type: number;
     flags: number;
@@ -629,6 +637,7 @@ declare module "bun:linux" {
     perfEvent: typeof perfEvent;
     bpf: typeof bpf;
     netlink: typeof netlink;
+    reapOrphans: typeof reapOrphans;
   };
   export default _default;
   export {
@@ -659,6 +668,7 @@ declare module "bun:linux" {
     perfEvent,
     bpf,
     netlink,
+    reapOrphans,
     SeccompDenyList,
     PerfEventOptions,
     BpfMapOptions,

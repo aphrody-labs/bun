@@ -23,6 +23,7 @@ pub(crate) mod netlink;
 pub(crate) mod perf_event;
 pub(crate) mod pidfd;
 pub(crate) mod power;
+pub(crate) mod reap;
 pub(crate) mod seccomp;
 pub(crate) mod sysctl;
 

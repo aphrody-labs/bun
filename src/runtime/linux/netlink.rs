@@ -93,10 +93,7 @@ fn scan(datagram: &[u8]) -> Progress {
 /// `nlmsghdr` messages) to the kernel and returns every reply datagram,
 /// concatenated, as a `Uint8Array`. A negative `NLMSG_ERROR` throws with its errno.
 #[bun_jsc::host_fn]
-pub(crate) fn js_netlink_request(
-    global: &JSGlobalObject,
-    frame: &CallFrame,
-) -> JsResult<JSValue> {
+pub(crate) fn js_netlink_request(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
     #[cfg(target_os = "linux")]
     {
         let protocol = super::int_arg(frame, 0) as libc::c_int;
@@ -120,7 +117,8 @@ pub(crate) fn js_netlink_request(
                 protocol,
             )
         };
-        let socket = Socket(super::check(global, raw as libc::c_long, "socket", None)? as libc::c_int);
+        let socket =
+            Socket(super::check(global, raw as libc::c_long, "socket", None)? as libc::c_int);
 
         // SAFETY: all-zero is a valid `sockaddr_nl`; the kernel is port 0.
         let mut kernel: libc::sockaddr_nl = unsafe { core::mem::zeroed() };

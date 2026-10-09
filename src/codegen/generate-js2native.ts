@@ -81,6 +81,7 @@ const rustIdentifierPaths: Record<string, string> = {
   "linux/perf_event.rs": "runtime/linux/perf_event.rs",
   "linux/pidfd.rs": "runtime/linux/pidfd.rs",
   "linux/power.rs": "runtime/linux/power.rs",
+  "linux/reap.rs": "runtime/linux/reap.rs",
   "linux/seccomp.rs": "runtime/linux/seccomp.rs",
   "linux/sysctl.rs": "runtime/linux/sysctl.rs",
   "memory_pressure.rs": "runtime/node/memory_pressure.rs",

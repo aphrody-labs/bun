@@ -13,10 +13,7 @@ const PERF_ATTR_SIZE_VER0: usize = 64;
 
 /// `perfEventOpen(attr, pid, cpu, groupFd, flags)` returns the event fd (close-on-exec).
 #[bun_jsc::host_fn]
-pub(crate) fn js_perf_event_open(
-    global: &JSGlobalObject,
-    frame: &CallFrame,
-) -> JsResult<JSValue> {
+pub(crate) fn js_perf_event_open(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
     #[cfg(target_os = "linux")]
     {
         let Some(buffer) = frame.argument(0).as_array_buffer(global) else {
@@ -67,10 +64,7 @@ const INTEGER_REQUESTS: [u32; 5] = [0x2400, 0x2401, 0x2402, 0x2403, 0x2405];
 
 /// `perfEventIoctl(fd, request, arg)` for the integer-argument `PERF_EVENT_IOC_*` requests.
 #[bun_jsc::host_fn]
-pub(crate) fn js_perf_event_ioctl(
-    global: &JSGlobalObject,
-    frame: &CallFrame,
-) -> JsResult<JSValue> {
+pub(crate) fn js_perf_event_ioctl(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
     #[cfg(target_os = "linux")]
     {
         let fd = super::int_arg(frame, 0) as libc::c_int;
