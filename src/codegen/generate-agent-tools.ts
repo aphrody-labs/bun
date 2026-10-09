@@ -75,7 +75,7 @@ function source(rel: string): string {
 function globRegex(glob: string): RegExp {
   let re = "";
   for (let i = 0; i < glob.length; i++) {
-    const c = glob[i];
+    const c = glob[i]!;
     if (c === "*" && glob[i + 1] === "*") {
       re += glob[i + 2] === "/" ? "(?:.*/)?" : ".*";
       i += glob[i + 2] === "/" ? 2 : 1;
@@ -162,9 +162,9 @@ export function frontMatter(md: string): { fields: Record<string, string>; body:
   const m = /^---\n([\s\S]*?)\n---\n?/.exec(md);
   if (!m) return { fields: {}, body: md };
   const fields: Record<string, string> = {};
-  for (const line of m[1].split("\n")) {
+  for (const line of m[1]!.split("\n")) {
     const kv = /^([\w-]+):\s*(.*)$/.exec(line);
-    if (kv) fields[kv[1]] = kv[2].replace(/^(["'])(.*)\1$/, "$2");
+    if (kv) fields[kv[1]!] = kv[2]!.replace(/^(["'])(.*)\1$/, "$2");
   }
   return { fields, body: md.slice(m[0].length) };
 }
@@ -179,7 +179,7 @@ function lines(md: string): Line[] {
     const f = /^\s*(```+|~~~+)/.exec(text);
     if (f) {
       if (!fence) fence = f[1];
-      else if (f[1].startsWith(fence[0]) && f[1].length >= fence.length) fence = undefined;
+      else if (f[1]!.startsWith(fence[0]!) && f[1]!.length >= fence.length) fence = undefined;
       out.push({ text, code: true });
       continue;
     }
@@ -188,14 +188,14 @@ function lines(md: string): Line[] {
       continue;
     }
     const h = /^(#{1,6})\s+(.*?)\s*#*\s*$/.exec(text);
-    out.push(h ? { text, code: false, heading: { level: h[1].length, title: h[2] } } : { text, code: false });
+    out.push(h ? { text, code: false, heading: { level: h[1]!.length, title: h[2]! } } : { text, code: false });
   }
   return out;
 }
 
 function findHeading(ls: Line[], title: string, from = 0, prefix = false): number {
   for (let i = from; i < ls.length; i++) {
-    const h = ls[i].heading;
+    const h = ls[i]!.heading;
     if (h && (prefix ? h.title.startsWith(title) : h.title === title)) return i;
   }
   return -1;
@@ -203,9 +203,9 @@ function findHeading(ls: Line[], title: string, from = 0, prefix = false): numbe
 
 /** End (exclusive) of the section opened by the heading at `at`. */
 function sectionEnd(ls: Line[], at: number): number {
-  const level = ls[at].heading!.level;
+  const level = ls[at]!.heading!.level;
   for (let i = at + 1; i < ls.length; i++) {
-    const h = ls[i].heading;
+    const h = ls[i]!.heading;
     if (h && h.level <= level) return i;
   }
   return ls.length;
@@ -281,18 +281,18 @@ function markdownSection(s: Extract<Section, { kind: "markdown" }>): string {
   if (s.heading) {
     const at = findHeading(ls.slice(0, end), s.heading, start);
     if (at < 0) throw new Error(`${s.file}: no heading ${JSON.stringify(s.heading)}`);
-    const h = ls[at].heading!;
+    const h = ls[at]!.heading!;
     const content = relevel(ls.slice(at + 1, sectionEnd(ls, at)), h.level + 1, 3);
     return `## ${s.title ?? h.title}\n\n_From \`${s.file}\`._\n\n${squeeze(plain(content))}`;
   }
   if (s.bold) {
     const label = `**${s.bold}`;
     let at = -1;
-    for (let i = start; i < end; i++) if (!ls[i].code && ls[i].text.startsWith(label)) at = at < 0 ? i : at;
+    for (let i = start; i < end; i++) if (!ls[i]!.code && ls[i]!.text.startsWith(label)) at = at < 0 ? i : at;
     if (at < 0) throw new Error(`${s.file}: no paragraph starting with ${label}**`);
     let stop = at + 1;
-    while (stop < end && !ls[stop].heading && !(!ls[stop].code && ls[stop].text.startsWith("**"))) stop++;
-    const first = ls[at].text.replace(/^\*\*[^*]+\*\*\s*(?:[—:-]\s*)?/, "");
+    while (stop < end && !ls[stop]!.heading && !(!ls[stop]!.code && ls[stop]!.text.startsWith("**"))) stop++;
+    const first = ls[at]!.text.replace(/^\*\*[^*]+\*\*\s*(?:[—:-]\s*)?/, "");
     const content = [{ text: first, code: false }, ...ls.slice(at + 1, stop)];
     return `## ${s.title ?? s.bold}\n\n_From \`${s.file}\`._\n\n${squeeze(plain(content))}`;
   }
@@ -326,11 +326,11 @@ function moduleDoc(text: string): string {
       if (doc.length || !/^\s*(?:#!?\[|\/\/|$)/.test(line)) break;
       continue;
     }
-    if (!m[1].trim()) {
+    if (!m[1]!.trim()) {
       if (doc.length) break;
       continue;
     }
-    doc.push(m[1].trim());
+    doc.push(m[1]!.trim());
   }
   return clip(doc.join(" "), 300);
 }
@@ -366,7 +366,7 @@ function tsdocSection(s: Extract<Section, { kind: "tsdoc" }>): string {
     const d = decl.exec(m[2] ?? "");
     if (d) {
       if (!d[1]) continue;
-      const value = /^\s*(?::[^=]+)?=\s*("[^"\n]{1,100}"|\d+)\s*;?\s*$/.exec(d[3])?.[1];
+      const value = /^\s*(?::[^=]+)?=\s*("[^"\n]{1,100}"|\d+)\s*;?\s*$/.exec(d[3]!)?.[1];
       items.push(`- \`${d[2]}\`${value ? ` = \`${value}\`` : ""}: ${doc.replace(/\s*\n\s*/g, " ")}`);
     } else if (doc.split("\n").length >= 3) {
       prose.push(squeeze(plain(relevel(lines(doc), 2, 3))));
@@ -410,15 +410,15 @@ function lspSection(s: Extract<Section, { kind: "lsp" }>): string | undefined {
   const language = maybe("src/lsp/language.rs");
   if (cli === undefined || lib === undefined || language === undefined) return undefined;
   for (const f of ["src/lsp/cli.rs", "src/lsp/lib.rs", "src/lsp/language.rs"]) inputs.add(f);
-  const help = /const HELP: &str = "\\\n([\s\S]*?)";/.exec(cli)?.[1].replace(/\\"/g, '"');
+  const help = /const HELP: &str = "\\\n([\s\S]*?)";/.exec(cli)?.[1]?.replace(/\\"/g, '"');
   if (!help) throw new Error("src/lsp/cli.rs: no HELP text");
   const variant = (name: string) => {
     for (const m of language.matchAll(/^\s*((?:"[^"]+"\s*\|\s*)*"[^"]+")\s*=>\s*Language::(\w+),/gm))
-      if (m[1].split("|").some(a => a.trim() === JSON.stringify(name))) return m[2];
+      if (m[1]!.split("|").some(a => a.trim() === JSON.stringify(name))) return m[2]!;
     throw new Error(`src/lsp/language.rs: no language named ${name}`);
   };
   const bullets = [...lib.matchAll(/^\/\/! - (.*(?:\n\/\/! {3}.*)*)/gm)].map(m =>
-    m[1].replace(/\n\/\/! {3}/g, " ").trim(),
+    m[1]!.replace(/\n\/\/! {3}/g, " ").trim(),
   );
   const items = s.languages.map(name => {
     const v = variant(name);
@@ -439,7 +439,7 @@ function scriptsSection(s: Extract<Section, { kind: "scripts" }>): string {
   const scripts: Record<string, string> = JSON.parse(source("package.json")).scripts ?? {};
   const rows = s.names.map(name => {
     if (!(name in scripts)) throw new Error(`package.json has no script ${name}`);
-    return `| \`bun run ${name}\` | \`${scripts[name].replace(/\|/g, "\\|")}\` |`;
+    return `| \`bun run ${name}\` | \`${scripts[name]!.replace(/\|/g, "\\|")}\` |`;
   });
   return `## ${s.title ?? "Gates"}\n\n_From \`package.json\`._\n\n| Script | Runs |\n| --- | --- |\n${rows.join("\n")}`;
 }

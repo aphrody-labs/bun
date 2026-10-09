@@ -65,7 +65,7 @@ export function section(md: string, title: string): string | undefined {
   let start = -1;
   let level = 0;
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+    const line = lines[i]!;
     if (/^\s*(```|~~~)/.test(line)) inFence = !inFence;
     if (inFence) continue;
     const m = /^(#{1,6})\s+(.*?)\s*$/.exec(line);
@@ -73,9 +73,9 @@ export function section(md: string, title: string): string | undefined {
     if (start === -1) {
       if (m[2] === title) {
         start = i + 1;
-        level = m[1].length;
+        level = m[1]!.length;
       }
-    } else if (m[1].length <= level) {
+    } else if (m[1]!.length <= level) {
       return lines.slice(start, i).join("\n").trim();
     }
   }
@@ -87,10 +87,10 @@ export function frontMatter(md: string): Record<string, string> {
   const m = /^---\n([\s\S]*?)\n---\n?/.exec(md);
   const out: Record<string, string> = {};
   if (!m) return out;
-  for (const line of m[1].split("\n")) {
+  for (const line of m[1]!.split("\n")) {
     const kv = /^([\w-]+):\s*(.*)$/.exec(line);
     if (!kv) continue;
-    let v = kv[2].trim();
+    let v = kv[2]!.trim();
     if (/^".*"$/.test(v)) {
       try {
         v = JSON.parse(v);
@@ -98,7 +98,7 @@ export function frontMatter(md: string): Record<string, string> {
         v = v.slice(1, -1);
       }
     } else if (/^'.*'$/.test(v)) v = v.slice(1, -1).replace(/''/g, "'");
-    out[kv[1]] = v;
+    out[kv[1]!] = v;
   }
   return out;
 }
@@ -190,7 +190,7 @@ function crates(root: string): { name: string; path: string; doc: string }[] {
   const members = /\bmembers\s*=\s*\[([\s\S]*?)\]/.exec(cargo)?.[1] ?? "";
   const out: { name: string; path: string; doc: string }[] = [];
   for (const m of members.matchAll(/"([^"]+)"/g)) {
-    const path = m[1];
+    const path = m[1]!;
     const manifest = maybe(join(root, path, "Cargo.toml"));
     if (!manifest) continue;
     const name = /^\s*name\s*=\s*"([^"]+)"/m.exec(manifest)?.[1] ?? path;
@@ -206,11 +206,11 @@ function crates(root: string): { name: string; path: string; doc: string }[] {
       for (const line of text(lib).split("\n")) {
         const d = /^\s*\/\/!\s?(.*)$/.exec(line);
         if (d) {
-          if (!d[1].trim()) {
+          if (!d[1]!.trim()) {
             if (docLines.length) break;
             continue;
           }
-          docLines.push(d[1].trim());
+          docLines.push(d[1]!.trim());
         } else if (docLines.length || !/^\s*(#!?\[|$|\/\/)/.test(line)) break;
       }
       doc = docLines.join(" ");
@@ -226,7 +226,7 @@ function harnessExports(root: string): string[] {
   for (const m of src.matchAll(
     /^export\s+(?:async\s+)?(?:function\*?|const|let|class|enum|type|interface)\s+([\w$]+)/gm,
   ))
-    names.add(m[1]);
+    names.add(m[1]!);
   return [...names].sort();
 }
 

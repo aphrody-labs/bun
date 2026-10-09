@@ -26,7 +26,7 @@ function constants(root: string): Map<string, string> {
   for (const d of dirs) {
     const body = maybe(join(src, d, "tools.rs"));
     if (!body) continue;
-    for (const m of body.matchAll(/pub const (\w+): &str = "((?:[^"\\]|\\.)*)";/g)) out.set(m[1], m[2]);
+    for (const m of body.matchAll(/pub const (\w+): &str = "((?:[^"\\]|\\.)*)";/g)) out.set(m[1]!, m[2]!);
   }
   return out;
 }
@@ -35,7 +35,7 @@ function value(raw: string, consts: Map<string, string>): string | undefined {
   const lit = /^"((?:[^"\\]|\\.)*)"$/.exec(raw);
   if (lit) return lit[1];
   const path = /(?:\w+::)*(\w+)$/.exec(raw);
-  return path ? consts.get(path[1]) : undefined;
+  return path ? consts.get(path[1]!) : undefined;
 }
 
 /** The tools of `bun mcp`, in `tools/list` order. Empty when the checkout has no MCP server. */
@@ -51,8 +51,8 @@ export function mcpTools(root: string): McpTool[] {
     const body = maybe(join(dir, `${m}.rs`)) ?? "";
     const found: McpTool[] = [];
     for (const t of body.matchAll(/\bname:\s*([^,\n]+),\s*title:\s*([^,\n]+),/g)) {
-      const name = value(t[1].trim(), consts);
-      if (name && /^\w+$/.test(name)) found.push({ name, title: value(t[2].trim(), consts) ?? name });
+      const name = value(t[1]!.trim(), consts);
+      if (name && /^\w+$/.test(name)) found.push({ name, title: value(t[2]!.trim(), consts) ?? name });
     }
     if (!found.length && body.includes("tools.json")) {
       const spec = maybe(join(root, "src", "agent_tools", "tools.json"));
@@ -75,8 +75,8 @@ export function lspExtensions(root: string): Record<string, string> {
   };
   const arms = (code: string) =>
     [...code.matchAll(/((?:"[^"]+"\s*\|\s*)*"[^"]+")\s*=>\s*(?:\{\s*)?([^,\n}]+)/g)].map(m => ({
-      keys: [...m[1].matchAll(/"([^"]+)"/g)].map(k => k[1]),
-      to: m[2].trim(),
+      keys: [...m[1]!.matchAll(/"([^"]+)"/g)].map(k => k[1]!),
+      to: m[2]!.trim(),
     }));
   const ids = new Map<string, string>();
   let fallback: string | undefined;
