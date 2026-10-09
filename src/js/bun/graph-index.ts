@@ -538,8 +538,9 @@ async function indexDomain(
         !/graph limit exceeded: (?:AST depth|source syntax complexity)/.test(error.message)
       )
         throw error;
-      if (files.length > 1) {
-        const middle = Math.floor(files.length / 2);
+      const fileCount = files.length;
+      if (fileCount > 1) {
+        const middle = Math.floor(fileCount / 2);
         return [...(await extract(files.slice(0, middle))), ...(await extract(files.slice(middle)))];
       }
       const node = nodes.get(`file:${files[0]!.path}`)!;

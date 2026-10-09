@@ -326,21 +326,22 @@ class Winmd {
   }
 
   typeName(table: number, row: number): { ns: string; name: string } {
-    if (table === T.TypeDef) {
+    const { TypeDef, TypeRef } = T;
+    if (table === TypeDef) {
       const parent = this.enclosing(row);
       if (parent) {
-        const outer = this.typeName(T.TypeDef, parent);
-        return { ns: outer.ns, name: `${outer.name}/${this.str(T.TypeDef, row, 1)}` };
+        const outer = this.typeName(TypeDef, parent);
+        return { ns: outer.ns, name: `${outer.name}/${this.str(TypeDef, row, 1)}` };
       }
-      return { ns: this.str(T.TypeDef, row, 2), name: this.str(T.TypeDef, row, 1) };
+      return { ns: this.str(TypeDef, row, 2), name: this.str(TypeDef, row, 1) };
     }
-    if (table === T.TypeRef) {
-      const [scopeTable, scopeRow] = this.decode("ResolutionScope", this.col(T.TypeRef, row, 0));
-      if (scopeTable === T.TypeRef && scopeRow) {
-        const outer = this.typeName(T.TypeRef, scopeRow);
-        return { ns: outer.ns, name: `${outer.name}/${this.str(T.TypeRef, row, 1)}` };
+    if (table === TypeRef) {
+      const [scopeTable, scopeRow] = this.decode("ResolutionScope", this.col(TypeRef, row, 0));
+      if (scopeTable === TypeRef && scopeRow) {
+        const outer = this.typeName(TypeRef, scopeRow);
+        return { ns: outer.ns, name: `${outer.name}/${this.str(TypeRef, row, 1)}` };
       }
-      return { ns: this.str(T.TypeRef, row, 2), name: this.str(T.TypeRef, row, 1) };
+      return { ns: this.str(TypeRef, row, 2), name: this.str(TypeRef, row, 1) };
     }
     return { ns: "", name: `TypeSpec#${row}` };
   }
@@ -413,7 +414,8 @@ class Winmd {
   /** Type signature of an InterfaceImpl, Event or other TypeDefOrRef value. */
   typeDefOrRef(value: number): TypeSig {
     const [table, row] = this.decode("TypeDefOrRef", value);
-    if (table === T.TypeSpec) return this.parseType(this.blobAt(T.TypeSpec, row, 0), { p: 0 });
+    const { TypeSpec } = T;
+    if (table === TypeSpec) return this.parseType(this.blobAt(TypeSpec, row, 0), { p: 0 });
     return { kind: "named", ...this.typeName(table, row), valueType: false, table, row };
   }
 
@@ -552,10 +554,11 @@ class Winmd {
     const [ctorTable, ctorRow] = this.decode("CustomAttributeType", this.col(T.CustomAttribute, row, 1));
     let owner: { ns: string; name: string };
     let ctor: { ret: TypeSig; params: TypeSig[] };
-    if (ctorTable === T.MemberRef) {
-      const [parentTable, parentRow] = this.decode("MemberRefParent", this.col(T.MemberRef, ctorRow, 0));
+    const { MemberRef } = T;
+    if (ctorTable === MemberRef) {
+      const [parentTable, parentRow] = this.decode("MemberRefParent", this.col(MemberRef, ctorRow, 0));
       owner = this.typeName(parentTable, parentRow);
-      ctor = this.parseMethodSig(this.blobAt(T.MemberRef, ctorRow, 2), { p: 0 });
+      ctor = this.parseMethodSig(this.blobAt(MemberRef, ctorRow, 2), { p: 0 });
     } else {
       owner = this.typeName(T.TypeDef, this.methodOwner(ctorRow));
       ctor = this.methodSig(ctorRow);
@@ -805,8 +808,9 @@ function winrtModel(data: Uint8Array): Map<string, WinrtNamespace> {
     const [parentTable, parentRow] = md.decode("HasCustomAttribute", md.col(T.CustomAttribute, row, 0));
     const [ctorTable, ctorRow] = md.decode("CustomAttributeType", md.col(T.CustomAttribute, row, 1));
     let name = "";
-    if (ctorTable === T.MemberRef) {
-      const [ownerTable, ownerRow] = md.decode("MemberRefParent", md.col(T.MemberRef, ctorRow, 0));
+    const { MemberRef } = T;
+    if (ctorTable === MemberRef) {
+      const [ownerTable, ownerRow] = md.decode("MemberRefParent", md.col(MemberRef, ctorRow, 0));
       name = md.typeName(ownerTable, ownerRow).name;
     }
     const key = `${parentTable}:${parentRow}`;
@@ -829,9 +833,10 @@ function winrtModel(data: Uint8Array): Map<string, WinrtNamespace> {
   };
 
   const enumUnderlying = (row: number) => {
-    const [first, last] = md.range(T.TypeDef, row, 4, T.Field);
+    const { Field } = T;
+    const [first, last] = md.range(T.TypeDef, row, 4, Field);
     for (let f = first; f < last; f++) {
-      if (md.str(T.Field, f, 1) === "value__") return md.blobAt(T.Field, f, 2)[1] === 0x09 ? "u32" : "i32";
+      if (md.str(Field, f, 1) === "value__") return md.blobAt(Field, f, 2)[1] === 0x09 ? "u32" : "i32";
     }
     return "i32";
   };
@@ -860,7 +865,8 @@ function winrtModel(data: Uint8Array): Map<string, WinrtNamespace> {
 
   const typeOfRef = (coded: number): unknown => {
     const [table, r] = md.decode("TypeDefOrRef", coded);
-    if (table === T.TypeSpec) return genericType(md.parseType(md.blobAt(T.TypeSpec, r, 0), { p: 0 }));
+    const { TypeSpec } = T;
+    if (table === TypeSpec) return genericType(md.parseType(md.blobAt(TypeSpec, r, 0), { p: 0 }));
     const n = md.typeName(table, r);
     return `${n.ns}.${n.name}`;
   };
@@ -975,8 +981,9 @@ function winrtModel(data: Uint8Array): Map<string, WinrtNamespace> {
       for (const a of attr(T.TypeDef, row, "StaticAttribute")) statics.push(serString(a.blob));
       for (const a of attr(T.TypeDef, row, "ActivatableAttribute")) {
         // ActivatableAttribute(uint version[, string platform]) vs ActivatableAttribute(Type factory, uint version).
-        if (a.blob.length >= 6 && a.blob[2] > 4 && a.blob[3] !== 0) {
-          const name = serString(a.blob);
+        const { blob } = a;
+        if (blob.length >= 6 && blob[2] > 4 && blob[3] !== 0) {
+          const name = serString(blob);
           if (name.includes(".")) {
             factories.push(name);
             continue;

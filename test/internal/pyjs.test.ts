@@ -310,7 +310,7 @@ test.skipIf(!nativeGraphBuiltin)(
         scope,
         files: [{ path: "../outside.rs", content: "fn run() {}" }],
       }),
-    ).rejects.toThrow("relative source path");
+    ).rejects.toThrow("distinct relative paths");
     await expect(
       nativeGraphBuiltin!.executeGraph({
         op: "export",

@@ -439,14 +439,13 @@ function cgroupWrites(limits) {
       throw $ERR_INVALID_ARG_VALUE("limits", key, `has unknown limit '${key}'`);
     }
   }
-  if (limits.cpuMax !== undefined) writes.push(["cpu.max", cgroupCpuMax(limits.cpuMax)]);
-  if (limits.memoryMax !== undefined) writes.push(["memory.max", cgroupLimit(limits.memoryMax, "limits.memoryMax")]);
-  if (limits.memoryHigh !== undefined) {
-    writes.push(["memory.high", cgroupLimit(limits.memoryHigh, "limits.memoryHigh")]);
-  }
-  if (limits.pidsMax !== undefined) writes.push(["pids.max", cgroupLimit(limits.pidsMax, "limits.pidsMax")]);
-  if (limits.cpuWeight !== undefined) writes.push(["cpu.weight", cgroupWeight(limits.cpuWeight, "limits.cpuWeight")]);
-  if (limits.ioWeight !== undefined) writes.push(["io.weight", cgroupWeight(limits.ioWeight, "limits.ioWeight")]);
+  const { cpuMax, memoryMax, memoryHigh, pidsMax, cpuWeight, ioWeight } = limits;
+  if (cpuMax !== undefined) writes.push(["cpu.max", cgroupCpuMax(cpuMax)]);
+  if (memoryMax !== undefined) writes.push(["memory.max", cgroupLimit(memoryMax, "limits.memoryMax")]);
+  if (memoryHigh !== undefined) writes.push(["memory.high", cgroupLimit(memoryHigh, "limits.memoryHigh")]);
+  if (pidsMax !== undefined) writes.push(["pids.max", cgroupLimit(pidsMax, "limits.pidsMax")]);
+  if (cpuWeight !== undefined) writes.push(["cpu.weight", cgroupWeight(cpuWeight, "limits.cpuWeight")]);
+  if (ioWeight !== undefined) writes.push(["io.weight", cgroupWeight(ioWeight, "limits.ioWeight")]);
   return writes;
 }
 
@@ -783,8 +782,9 @@ function seccompFilter(options) {
   validateObjectArg(options, "options");
   const { deny, errno = 1, action, mismatch = constants.SECCOMP_RET_KILL_PROCESS } = options;
   if (!$isJSArray(deny)) throw $ERR_INVALID_ARG_TYPE("options.deny", "Array", deny);
-  if (deny.length > 4000) throw $ERR_OUT_OF_RANGE("options.deny.length", "<= 4000", deny.length);
-  for (let i = 0; i < deny.length; i++) validateInteger(deny[i], `options.deny[${i}]`, 0, MAX_INT32);
+  const denyLength = deny.length;
+  if (denyLength > 4000) throw $ERR_OUT_OF_RANGE("options.deny.length", "<= 4000", denyLength);
+  for (let i = 0; i < denyLength; i++) validateInteger(deny[i], `options.deny[${i}]`, 0, MAX_INT32);
   validateInteger(errno, "options.errno", 0, 0xffff);
   if (action !== undefined) validateInteger(action, "options.action", 0, MAX_UINT32);
   validateInteger(mismatch, "options.mismatch", 0, MAX_UINT32);

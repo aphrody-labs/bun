@@ -32,9 +32,10 @@ class Inflate {
     let toString = false;
     let windowBits = 15;
     if (options !== null && typeof options === "object") {
-      if (typeof options.chunkSize === "number") chunkSize = options.chunkSize >>> 0;
-      if (options.to === "string") toString = true;
-      if (typeof options.windowBits === "number") windowBits = options.windowBits | 0;
+      const { chunkSize: chunkSizeOption, to, windowBits: windowBitsOption } = options;
+      if (typeof chunkSizeOption === "number") chunkSize = chunkSizeOption >>> 0;
+      if (to === "string") toString = true;
+      if (typeof windowBitsOption === "number") windowBits = windowBitsOption | 0;
     }
     this.#chunkSize = chunkSize < 64 ? 64 : chunkSize;
     this.#toString = toString;

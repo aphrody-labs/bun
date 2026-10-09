@@ -63,9 +63,10 @@ function functionPointer(options) {
 
 function unmanaged(options, signature = {}) {
   validateObject(signature, "signature");
-  if (signature.args !== undefined) validateArray(signature.args, "signature.args");
+  const { args, returns } = signature;
+  if (args !== undefined) validateArray(args, "signature.args");
   const { CFunction } = require("bun:ffi");
-  return CFunction({ args: signature.args ?? [], returns: signature.returns ?? "void", ptr: functionPointer(options) });
+  return CFunction({ args: args ?? [], returns: returns ?? "void", ptr: functionPointer(options) });
 }
 
 function loadAssembly(assemblyPath) {
@@ -177,8 +178,9 @@ function generateTypes(options) {
   const framework = options.framework ?? "net10.0";
   validateFramework(framework);
   const args = ["-a", assemblies.join(";"), "-t", options.output, "-f", framework];
-  if (options.references?.length) args.push("-r", options.references.join(";"));
-  if (options.module) args.push("-m", options.module);
+  const { references, module } = options;
+  if (references?.length) args.push("-r", references.join(";"));
+  if (module) args.push("-m", module);
   const generator = nodeApiModule(
     require("node:path").join("node-api-dotnet-generator", "index.js"),
     "node-api-dotnet-generator",

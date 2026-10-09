@@ -1,6 +1,6 @@
 /**
- * WebKit prebuilt source selection (scripts/build/deps/webkit.ts): oven-sh/WebKit by default, aphrody-labs/WebKit
- * once it lists the archive for the pinned sha or when $BUN_WEBKIT_REPO forces it. Configure-time logic only.
+ * WebKit prebuilt source selection (scripts/build/deps/webkit.ts): aphrody-labs/WebKit when it lists the archive for
+ * the pinned sha, oven-sh/WebKit otherwise, $BUN_WEBKIT_REPO forces either. Configure-time logic only.
  */
 import { describe, expect, test } from "bun:test";
 
@@ -59,8 +59,9 @@ describe("webkitPrebuiltRepo", () => {
 
   test("defaults to oven-sh for a sha or an archive the fork did not publish", () => {
     expect(webkitPrebuiltRepo(name, "f".repeat(40), undefined)).toBe(WEBKIT_UPSTREAM_REPO);
-    expect(APHRODY_WEBKIT_PREBUILTS[WEBKIT_VERSION] ?? []).not.toContain("bun-webkit-macos-arm64-lto");
-    expect(webkitPrebuiltRepo("bun-webkit-macos-arm64-lto", WEBKIT_VERSION, undefined)).toBe(WEBKIT_UPSTREAM_REPO);
+    const unpublished = "bun-webkit-windows-arm64-lto";
+    expect(APHRODY_WEBKIT_PREBUILTS[WEBKIT_VERSION] ?? []).not.toContain(unpublished);
+    expect(webkitPrebuiltRepo(unpublished, WEBKIT_VERSION, undefined)).toBe(WEBKIT_UPSTREAM_REPO);
   });
 
   test("uses aphrody-labs for an archive listed in APHRODY_WEBKIT_PREBUILTS", () => {
@@ -78,11 +79,11 @@ describe("webkitPrebuiltRepo", () => {
 });
 
 describe("webkit prebuilt source", () => {
-  test("keeps oven-sh's archive names and tag (macOS arm64 LTO)", () => {
+  test("keeps oven-sh's archive names and tag in the fork's repo (macOS arm64 LTO)", () => {
     const cfg = resolveDarwin();
     if (process.env.BUN_WEBKIT_REPO) return; // forced elsewhere: the default is not under test
     expect(webkitPrebuiltUrl(cfg)).toBe(
-      `https://github.com/oven-sh/WebKit/releases/download/autobuild-${WEBKIT_VERSION}/bun-webkit-macos-arm64-lto.tar.gz`,
+      `https://github.com/aphrody-labs/WebKit/releases/download/autobuild-${WEBKIT_VERSION}/bun-webkit-macos-arm64-lto.tar.gz`,
     );
   });
 

@@ -316,17 +316,18 @@ const eventLog = Object.freeze({
     let newestFirst = true;
     if (options !== undefined) {
       validateObject(options, "options");
-      if (options.xpath !== undefined) {
-        validateString(options.xpath, "options.xpath");
-        xpath = options.xpath;
+      const { xpath: xpathOption, limit: limitOption, newestFirst: newestFirstOption } = options;
+      if (xpathOption !== undefined) {
+        validateString(xpathOption, "options.xpath");
+        xpath = xpathOption;
       }
-      if (options.limit !== undefined) {
-        validateInteger(options.limit, "options.limit", 0, MAX_UINT32);
-        limit = options.limit;
+      if (limitOption !== undefined) {
+        validateInteger(limitOption, "options.limit", 0, MAX_UINT32);
+        limit = limitOption;
       }
-      if (options.newestFirst !== undefined) {
-        validateBoolean(options.newestFirst, "options.newestFirst");
-        newestFirst = options.newestFirst;
+      if (newestFirstOption !== undefined) {
+        validateBoolean(newestFirstOption, "options.newestFirst");
+        newestFirst = newestFirstOption;
       }
     }
     return JSON.parse(eventLogQueryNative(channel, xpath, limit, newestFirst));
@@ -339,13 +340,14 @@ const eventLog = Object.freeze({
     let eventId = 0;
     if (options !== undefined) {
       validateObject(options, "options");
-      if (options.type !== undefined) {
-        validateOneOf(options.type, "options.type", ["error", "warning", "information"]);
-        type = options.type;
+      const { type: typeOption, eventId: eventIdOption } = options;
+      if (typeOption !== undefined) {
+        validateOneOf(typeOption, "options.type", ["error", "warning", "information"]);
+        type = typeOption;
       }
-      if (options.eventId !== undefined) {
-        validateInteger(options.eventId, "options.eventId", 0, 65535);
-        eventId = options.eventId;
+      if (eventIdOption !== undefined) {
+        validateInteger(eventIdOption, "options.eventId", 0, 65535);
+        eventId = eventIdOption;
       }
     }
     eventLogWriteNative(source, eventTypes[type], eventId, message);

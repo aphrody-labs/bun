@@ -158,7 +158,10 @@ function readOut(view, kind, type) {
 function toPointer(value) {
   if (value == null) return 0;
   if (typeof value === "number") return value;
-  if (typeof value === "object" && typeof value.ptr === "number") return value.ptr;
+  if (typeof value === "object") {
+    const { ptr } = value;
+    if (typeof ptr === "number") return ptr;
+  }
   throw new TypeError("expected a WinRT object");
 }
 
@@ -561,7 +564,8 @@ function iunknown() {
           return 0;
         }
       }
-      if (state.inner) return vfunc(state.inner, 0, ["ptr", "ptr"])(state.inner, riid, out);
+      const { inner } = state;
+      if (inner) return vfunc(inner, 0, ["ptr", "ptr"])(inner, riid, out);
       writePointer(out, 0);
       return E_NOINTERFACE;
     },
@@ -816,8 +820,9 @@ function systemMetadata(namespace) {
 
 // findMethod("Microsoft.UI.Xaml.Controls.Button", "add_Click") walks the class, its interfaces and base classes.
 function findMethod(className, methodName) {
-  if (!registry.classes.has(className) && registry.interfaces.has(className)) {
-    const method = registry.interfaces.get(className).methods.find(m => m[0] === methodName);
+  const { interfaces } = registry;
+  if (!registry.classes.has(className) && interfaces.has(className)) {
+    const method = interfaces.get(className).methods.find(m => m[0] === methodName);
     return method ? { interfaceName: className, method } : undefined;
   }
   for (let name = className; name; ) {
@@ -865,11 +870,12 @@ function kindOf(type) {
 function vectorInterface(elementType, view = false) {
   const signature = [view ? "IVectorView" : "IVector", elementType];
   const interfaceName = `${signature[0]}<${elementType}>`;
-  if (!registry.interfaces.has(interfaceName)) {
+  const { interfaces } = registry;
+  if (!interfaces.has(interfaceName)) {
     const element = kindOf(elementType);
     const u32 = ["prim", "u32"];
     if (view) {
-      registry.interfaces.set(interfaceName, {
+      interfaces.set(interfaceName, {
         iid: iidOf(signature),
         methods: [
           ["GetAt", 6, [["in", ...u32]], element],
@@ -887,7 +893,7 @@ function vectorInterface(elementType, view = false) {
       });
       return interfaceName;
     }
-    registry.interfaces.set(interfaceName, {
+    interfaces.set(interfaceName, {
       iid: iidOf(signature),
       methods: [
         ["GetAt", 6, [["in", ...u32]], element],

@@ -125,7 +125,7 @@ export function stateDir(
 
 // ---------- release id ----------
 
-const sanitize = (s: string) => s.replace(/[^A-Za-z0-9._]/g, "_");
+const sanitize = (s: string) => s.replace(/[^A-Za-z0-9._-]/g, "_");
 
 /** `<sha7>-<sha7>-<tag>` in source order; git sources contribute sha7, release sources their tag. */
 export function computeReleaseId(sources: ResolvedSource[]): string {

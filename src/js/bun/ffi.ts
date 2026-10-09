@@ -285,12 +285,13 @@ class ShimBuilder {
   }
 
   fieldDecl(type, field) {
-    if ($isObject(type) && type.array !== undefined) {
+    const array = $isObject(type) ? type.array : undefined;
+    if (array !== undefined) {
       const length = type.length;
       if (typeof length !== "number" || !(length > 0) || Math.trunc(length) !== length) {
         throw new TypeError("FFI array fields need a positive integer length");
       }
-      return `${this.cType(type.array, "field")} ${field}[${length}]`;
+      return `${this.cType(array, "field")} ${field}[${length}]`;
     }
     return `${this.cType(type, "field")} ${field}`;
   }
@@ -419,8 +420,10 @@ function bindShimSymbols(options, nativeResult) {
             `${name}: argument ${i} must be a TypedArray, DataView or ArrayBuffer holding the struct`,
           );
         }
-        if (value.byteLength < layout.size) {
-          throw new RangeError(`${name}: argument ${i} needs ${layout.size} bytes, got ${value.byteLength}`);
+        const { byteLength } = value;
+        const { size } = layout;
+        if (byteLength < size) {
+          throw new RangeError(`${name}: argument ${i} needs ${size} bytes, got ${byteLength}`);
         }
       }
     };

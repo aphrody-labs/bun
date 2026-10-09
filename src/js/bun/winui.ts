@@ -93,7 +93,8 @@ function bootstrapDllCandidates(options: any) {
   if (typeof options?.bootstrapDll === "string") candidates.push(options.bootstrapDll);
   const name = "Microsoft.WindowsAppRuntime.Bootstrap.dll";
   candidates.push(join(dirname(process.execPath), name), join(process.cwd(), name));
-  if (typeof Bun.main === "string" && isAbsolute(Bun.main)) candidates.push(join(dirname(Bun.main), name));
+  const { main } = Bun;
+  if (typeof main === "string" && isAbsolute(main)) candidates.push(join(dirname(main), name));
   return candidates.filter(path => existsSync(path));
 }
 
@@ -569,9 +570,9 @@ class Application {
 
   exit() {
     if (this.closed) return this.exited;
-    for (const window of [...this.windows]) window.winrt.Close();
+    for (const window of Array.from(this.windows)) window.winrt.Close();
     this.pump();
-    for (const off of [...this.handlers]) off();
+    for (const off of Array.from(this.handlers)) off();
     this.closed = true;
     const core = this.winrt;
     const keep = this.#keep;

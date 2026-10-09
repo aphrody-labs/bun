@@ -218,7 +218,8 @@ function expandExecRaw(exec, context) {
       continue;
     }
     if (word === "%i") {
-      if (context.icon) argv.push("--icon", context.icon);
+      const { icon } = context;
+      if (icon) argv.push("--icon", icon);
       continue;
     }
     let out = "";
@@ -280,9 +281,10 @@ function launchApp(entry, options) {
   const files = stringList("options.files", options.files, () => []);
   const urls = stringList("options.urls", options.urls, () => []);
   let exec = entry.exec;
-  if (options.action !== undefined) {
-    const action = (entry.actions ?? []).find(a => a.id === options.action);
-    if (!action) throw $ERR_INVALID_ARG_VALUE("options.action", options.action, "is not an action of this entry");
+  const actionId = options.action;
+  if (actionId !== undefined) {
+    const action = (entry.actions ?? []).find(a => a.id === actionId);
+    if (!action) throw $ERR_INVALID_ARG_VALUE("options.action", actionId, "is not an action of this entry");
     exec = action.exec;
   }
   if (typeof exec !== "string" || exec === "") {
@@ -697,9 +699,10 @@ function stringifyRon(value) {
       if (value instanceof Some) return `Some(${write(value.value, indent)})`;
       if (value instanceof Tuple) return inline(value.values, indent);
       if (value instanceof Enum) {
-        if (value.fields !== undefined) return value.name + fieldsOf(value.fields, indent);
-        if (value.values !== undefined) return value.name + inline(value.values, indent);
-        return value.name;
+        const { name, fields, values } = value;
+        if (fields !== undefined) return name + fieldsOf(fields, indent);
+        if (values !== undefined) return name + inline(values, indent);
+        return name;
       }
       if (value instanceof Uint8Array) return ronString(new TextDecoder().decode(value)).replace(/^"/, 'b"');
       if (Array.isArray(value))
@@ -784,7 +787,8 @@ function listDir(dir, into) {
     throw error;
   }
   for (const entry of names) {
-    if (entry.isFile() && !entry.name.startsWith(ATOMIC_PREFIX)) into.add(entry.name);
+    const { name } = entry;
+    if (entry.isFile() && !name.startsWith(ATOMIC_PREFIX)) into.add(name);
   }
 }
 
@@ -1025,15 +1029,16 @@ async function notify(options) {
     const value = optionString(`options.${name}`, options[name]);
     if (value !== undefined) args.push(`--${flag}=${value}`);
   }
-  if (options.timeout !== undefined) {
-    if (!Number.isInteger(options.timeout) || options.timeout < -1 || options.timeout > 2147483647) {
-      throw $ERR_OUT_OF_RANGE("options.timeout", "an integer from -1 to 2147483647", options.timeout);
+  const { timeout, urgency } = options;
+  if (timeout !== undefined) {
+    if (!Number.isInteger(timeout) || timeout < -1 || timeout > 2147483647) {
+      throw $ERR_OUT_OF_RANGE("options.timeout", "an integer from -1 to 2147483647", timeout);
     }
-    args.push(`--timeout=${options.timeout}`);
+    args.push(`--timeout=${timeout}`);
   }
-  if (options.urgency !== undefined) {
-    oneOf("options.urgency", options.urgency, URGENCIES, 1);
-    args.push(`--urgency=${options.urgency}`);
+  if (urgency !== undefined) {
+    oneOf("options.urgency", urgency, URGENCIES, 1);
+    args.push(`--urgency=${urgency}`);
   }
   const actions = validateOptions("options.actions", options.actions);
   for (const id of Object.keys(actions)) {

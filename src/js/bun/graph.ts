@@ -717,6 +717,8 @@ class BunPython implements Disposable {
         ? Database.deserialize(this.db.serialize(), { readonly: true, strict: true })
         : new Database(this.path, { readonly: true, strict: true });
     reader.exec("PRAGMA busy_timeout=30000; BEGIN");
+    // A deferred BEGIN takes its snapshot at the first read; take it before the first await.
+    reader.query("SELECT count(*) FROM sqlite_schema").get();
     let transaction = true;
     let ended = false;
     let buffered = 0;

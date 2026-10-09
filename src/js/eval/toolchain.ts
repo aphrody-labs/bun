@@ -217,7 +217,8 @@ async function n2bFindings(roots: string[], cwd: string, opts: { fix: boolean; s
   for (const root of roots) {
     const args = [...command, "--report=json", "--agent"];
     if (opts.fix) args.push("--fix");
-    if (opts.since) args.push("--since", opts.since);
+    const { since } = opts;
+    if (since) args.push("--since", since);
     args.push(root);
     const result = await spawn(args, cwd, true);
     let report: any;
@@ -267,8 +268,9 @@ function printDiagnostics(diagnostics: Diagnostic[]) {
     process.stdout.write(
       `${paint("1", `${d.filename}:${line}:${column}`)} ${sev} ${paint("2", d.code)} ${d.message}\n`,
     );
-    if (d.help) process.stdout.write(`  ${paint("36", "help")}: ${d.help}\n`);
-    if (d.url) process.stdout.write(`  ${paint("2", d.url)}\n`);
+    const { help, url } = d;
+    if (help) process.stdout.write(`  ${paint("36", "help")}: ${help}\n`);
+    if (url) process.stdout.write(`  ${paint("2", url)}\n`);
   }
   const errors = shown.filter(d => d.severity === "error").length;
   const warnings = shown.length - errors;
@@ -331,15 +333,16 @@ async function lint(args: string[], cwd: string): Promise<number> {
 
   let paths = positionals.length ? [] : strings(config.paths, "lint.paths");
   const toolArgs = [...strings(config.args, "lint.args"), ...rest];
-  if (flags.workspaces || flags.filter) paths = workspaces(cwd, flags.filter ?? []);
+  const { filter, since } = flags;
+  if (flags.workspaces || filter) paths = workspaces(cwd, filter ?? []);
   let files: string[] | undefined;
-  if (flags.since) {
+  if (since) {
     const scope = [...paths, ...positionals].map(p => path.resolve(cwd, p));
-    files = (await changedSince(flags.since, cwd, LINT_EXTENSIONS)).filter(
+    files = (await changedSince(since, cwd, LINT_EXTENSIONS)).filter(
       f => !scope.length || scope.some(s => path.resolve(cwd, f).startsWith(s)),
     );
     if (!files.length) {
-      if (format === "default") process.stdout.write(`No changed files since ${flags.since}\n`);
+      if (format === "default") process.stdout.write(`No changed files since ${since}\n`);
       else if (format === "json") process.stdout.write(`{"diagnostics":[]}\n`);
       return 0;
     }
@@ -389,7 +392,8 @@ async function lint(args: string[], cwd: string): Promise<number> {
     } catch {
       out = { diagnostics: [], oxlint: oxlintOut };
     }
-    if (Array.isArray(out.diagnostics)) out.diagnostics.push(...n2b.diagnostics);
+    const { diagnostics } = out;
+    if (Array.isArray(diagnostics)) diagnostics.push(...n2b.diagnostics);
     else out.n2b = n2b.diagnostics;
     process.stdout.write(JSON.stringify(out) + "\n");
   } else if (format === "sarif") {
@@ -447,18 +451,19 @@ async function fmt(args: string[], cwd: string): Promise<number> {
   }
   const config = bunfig(cwd).fmt ?? {};
   let paths = positionals.length ? [] : strings(config.paths, "fmt.paths");
-  if (flags.workspaces || flags.filter) paths = workspaces(cwd, flags.filter ?? []);
+  const { filter, since } = flags;
+  if (flags.workspaces || filter) paths = workspaces(cwd, filter ?? []);
   const cmd = toolCommand("BUN_OXFMT", "oxfmt", "oxfmt", config.version ?? OXFMT_VERSION, cwd);
   const configPath = flags.config ?? config.config;
   if (configPath) cmd.push("--config", configPath);
   cmd.push(...strings(config.args, "fmt.args"), ...rest);
-  if (flags.since) {
+  if (since) {
     const scope = [...paths, ...positionals].map(p => path.resolve(cwd, p));
-    const files = (await changedSince(flags.since, cwd, FMT_EXTENSIONS)).filter(
+    const files = (await changedSince(since, cwd, FMT_EXTENSIONS)).filter(
       f => !scope.length || scope.some(s => path.resolve(cwd, f).startsWith(s)),
     );
     if (!files.length) {
-      process.stdout.write(`No changed files since ${flags.since}\n`);
+      process.stdout.write(`No changed files since ${since}\n`);
       return 0;
     }
     cmd.push("--no-error-on-unmatched-pattern", ...files.filter(f => !rest.includes(f)));
@@ -658,13 +663,14 @@ const TEMPLATE_TEXT =
 function findAphrodyTemplates(cwd: string, given?: string): string {
   const candidates: string[] = [];
   if (given) candidates.push(path.resolve(cwd, given));
-  if (process.env.BUN_CREATE_APHRODY_DIR) candidates.push(process.env.BUN_CREATE_APHRODY_DIR);
-  if (process.env.YOLO_HOME) candidates.push(path.join(process.env.YOLO_HOME, "m3", "templates"));
+  const { BUN_CREATE_APHRODY_DIR, YOLO_HOME, BUN_CREATE_DIR } = process.env;
+  if (BUN_CREATE_APHRODY_DIR) candidates.push(BUN_CREATE_APHRODY_DIR);
+  if (YOLO_HOME) candidates.push(path.join(YOLO_HOME, "m3", "templates"));
   for (let dir = cwd; ; dir = path.dirname(dir)) {
     candidates.push(path.join(dir, "m3", "templates"));
     if (path.dirname(dir) === dir) break;
   }
-  if (process.env.BUN_CREATE_DIR) candidates.push(path.join(process.env.BUN_CREATE_DIR, "aphrody"));
+  if (BUN_CREATE_DIR) candidates.push(path.join(BUN_CREATE_DIR, "aphrody"));
   candidates.push(path.join(require("node:os").homedir(), ".bun-create", "aphrody"));
   const found = (given ? candidates.slice(0, 1) : candidates).find(dir => fs.existsSync(path.join(dir, "stack.toml")));
   if (found) return found;
@@ -712,8 +718,9 @@ async function create(args: string[], cwd: string): Promise<number> {
   const stack = Bun.TOML.parse(fs.readFileSync(path.join(templatesDir, "stack.toml"), "utf8")) as any;
   const templates: Record<string, any> = stack.template ?? {};
 
-  if (flags.list || !spec?.startsWith("aphrody/")) {
-    if (!flags.list) process.stdout.write(CREATE_HELP + "\n");
+  const { list } = flags;
+  if (list || !spec?.startsWith("aphrody/")) {
+    if (!list) process.stdout.write(CREATE_HELP + "\n");
     process.stdout.write(`${stack.meta?.name ?? "aphrody"} (${templatesDir})\n`);
     for (const [id, t] of Object.entries(templates))
       process.stdout.write(`  ${id.padEnd(8)} ${t.required ? "(always) " : "         "}${t.description ?? ""}\n`);

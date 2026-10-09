@@ -36,9 +36,9 @@ function exe(name) {
 }
 
 function toolsDir() {
-  const env = process.env;
-  if (env.BUN_WASM_TOOLS_DIR) return env.BUN_WASM_TOOLS_DIR;
-  return path.join(env.BUN_INSTALL || path.join(os.homedir(), ".bun"), "tools");
+  const { BUN_WASM_TOOLS_DIR, BUN_INSTALL } = process.env;
+  if (BUN_WASM_TOOLS_DIR) return BUN_WASM_TOOLS_DIR;
+  return path.join(BUN_INSTALL || path.join(os.homedir(), ".bun"), "tools");
 }
 
 async function run(cmd, options = {}) {
@@ -65,11 +65,10 @@ async function checked(cmd, options = {}) {
   } catch (error) {
     throw new Error(`${cmd[0]} could not be started: ${error?.message ?? error}`);
   }
-  if (result.exitCode !== 0) {
+  const { exitCode } = result;
+  if (exitCode !== 0) {
     const output = (result.stderr || result.stdout || "").trim();
-    throw new Error(
-      `${path.basename(cmd[0])} ${cmd[1] ?? ""} failed (exit ${result.exitCode})${output ? "\n" + output : ""}`,
-    );
+    throw new Error(`${path.basename(cmd[0])} ${cmd[1] ?? ""} failed (exit ${exitCode})${output ? "\n" + output : ""}`);
   }
   return result;
 }
@@ -323,10 +322,11 @@ async function build(options = {}) {
     const cargo = [...cargoBin, "build", "--lib", "--manifest-path", manifest, "--target", triple];
     if (profile === "release") cargo.push("--release");
     else if (profile !== "dev") cargo.push("--profile", profile);
-    if (options.features?.length) cargo.push("--features", options.features.join(","));
+    const { features, cargoArgs } = options;
+    if (features?.length) cargo.push("--features", features.join(","));
     if (options.noDefaultFeatures) cargo.push("--no-default-features");
     if (options.locked) cargo.push("--locked");
-    if (options.cargoArgs?.length) cargo.push(...options.cargoArgs);
+    if (cargoArgs?.length) cargo.push(...cargoArgs);
     await checked(cargo, { cwd: crateDir, inherit: !options.quiet });
   }
   const artifact = options.artifact
@@ -389,8 +389,9 @@ async function build(options = {}) {
       throw new Error(`${wasmFile} is not a valid WebAssembly module`);
     }
     const bytes = fs.statSync(wasmFile).size;
-    if (options.maxBytes && bytes > options.maxBytes) {
-      throw new Error(`${name}: ${bytes} bytes is over maxBytes ${options.maxBytes}`);
+    const { maxBytes } = options;
+    if (maxBytes && bytes > maxBytes) {
+      throw new Error(`${name}: ${bytes} bytes is over maxBytes ${maxBytes}`);
     }
     if (options.packageJson !== false) {
       const files = fs.readdirSync(stage).filter(f => f !== "package.json");

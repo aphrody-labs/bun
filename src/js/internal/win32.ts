@@ -300,7 +300,8 @@ function toPointer(value: any, keep: any[]): number | null {
         keep.push(value);
         return ptrOf(value);
       }
-      if (typeof value.ptr === "number") return value.ptr;
+      const { ptr } = value;
+      if (typeof ptr === "number") return ptr;
   }
   throw $ERR_INVALID_ARG_TYPE("pointer", ["number", "bigint", "TypedArray", "Win32Struct", "ComObject"], value);
 }
@@ -443,10 +444,11 @@ function arrayToken(tok: string) {
 function defineField(proto: any, st: StructType, field: FieldInfo) {
   const { name, tok, off } = field;
   const arr = arrayToken(tok);
+  const elem = arr ? arr.elem : "";
   let get: (this: any) => any;
   let set: (this: any, value: any) => void;
-  if (arr && (arr.elem === "c" || arr.elem === "ca")) {
-    const wide = arr.elem === "c";
+  if (arr && (elem === "c" || elem === "ca")) {
+    const wide = elem === "c";
     const unit = wide ? 2 : 1;
     get = function () {
       const buf: Uint8Array = this[kBuf];
@@ -464,14 +466,14 @@ function defineField(proto: any, st: StructType, field: FieldInfo) {
       buf.set(encoded.subarray(0, Math.min(max, encoded.length - (encoded.length % unit))), off);
     };
   } else if (arr) {
-    const size = tokenSize(arr.elem);
+    const size = tokenSize(elem);
     get = function () {
       let cache = this[kChildren];
       const hit = cache?.get(name);
       if (hit !== undefined) return hit;
       let out: any;
-      if (isStructToken(arr.elem)) {
-        const inner = structType(structToken(arr.elem).name);
+      if (isStructToken(elem)) {
+        const inner = structType(structToken(elem).name);
         out = [];
         for (let i = 0; i < arr.length; i++) out.push(viewStruct(inner, this[kBuf], off + i * size, this));
       } else {
@@ -480,16 +482,16 @@ function defineField(proto: any, st: StructType, field: FieldInfo) {
           get: (_t, key) => {
             if (key === "length") return arr.length;
             if (typeof key === "string" && /^\d+$/.test(key) && Number(key) < arr.length)
-              return readScalar(view, off + Number(key) * size, arr.elem);
+              return readScalar(view, off + Number(key) * size, elem);
             if (key === Symbol.iterator)
               return function* () {
-                for (let i = 0; i < arr.length; i++) yield readScalar(view, off + i * size, arr.elem);
+                for (let i = 0; i < arr.length; i++) yield readScalar(view, off + i * size, elem);
               };
             return undefined;
           },
           set: (_t, key, value) => {
             if (typeof key !== "string" || !/^\d+$/.test(key) || Number(key) >= arr.length) return false;
-            writeScalar(view, off + Number(key) * size, arr.elem, value, this[kKeep]);
+            writeScalar(view, off + Number(key) * size, elem, value, this[kKeep]);
             return true;
           },
         });
@@ -503,7 +505,7 @@ function defineField(proto: any, st: StructType, field: FieldInfo) {
       let i = 0;
       for (const item of value) {
         if (i >= arr.length) break;
-        if (isStructToken(arr.elem)) assign(target[i], item);
+        if (isStructToken(elem)) assign(target[i], item);
         else target[i] = item;
         i++;
       }
@@ -542,9 +544,9 @@ function buildProto(st: StructType) {
     const inner = structType(structToken(field.tok).name);
     const names = new Set<string>();
     const collect = (t: StructType) => {
-      for (const f of t.fields) {
-        if (/^Anonymous\d*$/.test(f.name) && isStructToken(f.tok)) collect(structType(structToken(f.tok).name));
-        names.add(f.name);
+      for (const { name, tok } of t.fields) {
+        if (/^Anonymous\d*$/.test(name) && isStructToken(tok)) collect(structType(structToken(tok).name));
+        names.add(name);
       }
     };
     collect(inner);
@@ -989,8 +991,9 @@ function constant(name: string, ns?: string) {
   for (const space of spaces) {
     const data = md.namespace(space);
     if (!data) continue;
-    if (data.consts && name in data.consts) return constValue(data.consts[name]);
-    for (const e of Object.values(data.enums ?? {}) as any[]) if (name in e.v) return constValue(e.v[name]);
+    const { consts } = data;
+    if (consts && name in consts) return constValue(consts[name]);
+    for (const { v } of Object.values(data.enums ?? {}) as any[]) if (name in v) return constValue(v[name]);
   }
   return undefined;
 }

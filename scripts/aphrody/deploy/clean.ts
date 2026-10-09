@@ -4,7 +4,7 @@
 // ~/aphrody-root, ~/yolo/src/* checkouts or tmux sockets is ever removed; prod keeps >= 15 GB free or exits non-zero.
 import { existsSync, lstatSync, readdirSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, join, resolve, sep } from "node:path";
+import { basename, join, posix, resolve, sep } from "node:path";
 import {
   EXIT,
   GB,
@@ -48,7 +48,7 @@ export interface CleanReport {
   ok: boolean;
 }
 
-const norm = (p: string) => resolve(p).split(sep).join("/").toLowerCase();
+const norm = (p: string) => (p.startsWith("/") ? posix.resolve(p) : resolve(p).split(sep).join("/")).toLowerCase();
 
 /** Returns the reason a path must never be removed, or null when removal is allowed. */
 export function protectedReason(path: string, home: string): string | null {

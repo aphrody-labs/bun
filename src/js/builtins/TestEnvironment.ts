@@ -171,7 +171,8 @@ export function installTestEnvironment(name: string, requireFromTest: Function) 
       if (descriptor) Object.defineProperty(globalThis, key, descriptor);
       else delete globalThis[key];
     }
-    if (typeof window.happyDOM?.close === "function") window.happyDOM.close();
+    const { happyDOM } = window;
+    if (typeof happyDOM?.close === "function") happyDOM.close();
     else if (typeof window.close === "function") window.close();
   };
 }
