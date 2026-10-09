@@ -544,7 +544,8 @@ describe("bundler", () => {
   });
 
   // Define all the invalid cases
-  const invalidComposesTests = [
+  type InvalidComposesTest = { name: string; cssContent: string; expectedError?: string; expectedWarning?: string };
+  const invalidComposesTests: InvalidComposesTest[] = [
     {
       name: "IDSelector",
       cssContent: `
