@@ -20,6 +20,8 @@ type PathAutoOs = bun_paths::Path<
 >;
 
 pub(crate) struct FileCopier {
+    #[cfg(target_os = "linux")]
+    src_dir: Fd,
     pub(crate) src_path: AbsPathAutoOs,
     pub(crate) dest_subpath: PathAutoOs,
     pub(crate) walker: Walker,
@@ -33,6 +35,8 @@ impl FileCopier {
         skip_dirnames: &[&OSPathSlice],
     ) -> Result<FileCopier, AllocError> {
         Ok(FileCopier {
+            #[cfg(target_os = "linux")]
+            src_dir,
             src_path,
             dest_subpath,
             walker: {
@@ -91,6 +95,15 @@ impl FileCopier {
 
         #[cfg(not(windows))]
         let mut copy_file_state = bun_sys::copy_file::CopyFileState::default();
+
+        // NUL-terminated paths relative to both `self.src_dir` and `dest_dir`,
+        // copied in batches by the Aphrody kernel's /dev/bun_accel when present.
+        #[cfg(target_os = "linux")]
+        let accel = bun_sys::bun_accel::device();
+        #[cfg(target_os = "linux")]
+        let mut pending: Vec<u8> = Vec::new();
+        #[cfg(target_os = "linux")]
+        let mut pending_count = 0usize;
 
         loop {
             let entry = {
@@ -179,70 +192,158 @@ impl FileCopier {
                     return sys::Result::Err(err);
                 }
             }
+            #[cfg(target_os = "linux")]
+            if let Some(device) = accel {
+                match entry.kind {
+                    // Walkers yield a directory before its contents, so parents exist
+                    // by the time a batch runs; a failure falls back per file below.
+                    EntryKind::Directory => {
+                        let _ = bun_sys::mkdirat(dest_dir.fd(), entry.path, 0o755);
+                    }
+                    EntryKind::File => {
+                        pending.extend_from_slice(entry.path.as_bytes_with_nul());
+                        pending_count += 1;
+                        if pending_count == bun_sys::bun_accel::MAX_BATCH {
+                            flush_accel(
+                                device,
+                                self.src_dir,
+                                &dest_dir,
+                                &pending,
+                                &mut copy_file_state,
+                            )?;
+                            pending.clear();
+                            pending_count = 0;
+                        }
+                    }
+                    _ => {}
+                }
+                continue;
+            }
+
             #[cfg(not(windows))]
             {
                 if entry.kind != EntryKind::File {
                     continue;
                 }
-
-                let src = match bun_sys::openat(entry.dir, entry.basename, bun_sys::O::RDONLY, 0) {
-                    sys::Result::Ok(fd) => bun_sys::File::from_fd(fd),
-                    sys::Result::Err(err) => {
-                        return sys::Result::Err(err);
-                    }
-                };
-
-                let dest = match dest_dir.create_file_z(entry.path, Default::default()) {
-                    Ok(f) => f,
-                    Err(_) => 'dest: {
-                        if let Some(entry_dirname) =
-                            bun_paths::Dirname::dirname::<OSPathChar>(entry.path)
-                        {
-                            let _ = bun_sys::make_path::make_path::<OSPathChar>(
-                                &dest_dir,
-                                entry_dirname,
-                            );
-                        }
-
-                        match dest_dir.create_file_z(entry.path, Default::default()) {
-                            Ok(f) => break 'dest f,
-                            Err(err) => {
-                                bun_core::pretty_errorln!(
-                                    "<r><red>{}<r>: copy file {}",
-                                    bstr::BStr::new(err.name()),
-                                    bun_fmt::fmt_os_path(entry.path, Default::default()),
-                                );
-                                Global::exit(1);
-                            }
-                        }
-                    }
-                };
-
-                #[cfg(unix)]
-                {
-                    let stat = match bun_sys::fstat(src.handle()) {
-                        sys::Result::Ok(s) => s,
-                        sys::Result::Err(_) => continue,
-                    };
-                    // SAFETY: fchmod is safe to call with any fd + mode; errors are ignored (`_ =`).
-                    unsafe {
-                        let _ = bun_sys::c::fchmod(dest.handle().native(), stat.st_mode);
-                    }
-                }
-
-                match bun_sys::copy_file::copy_file_with_state(
-                    src.handle(),
-                    dest.handle(),
+                copy_one(
+                    entry.dir,
+                    entry.basename,
+                    &dest_dir,
+                    entry.path,
                     &mut copy_file_state,
-                ) {
-                    sys::Result::Ok(()) => {}
-                    sys::Result::Err(err) => {
-                        return sys::Result::Err(err);
-                    }
-                }
+                )?;
             }
+        }
+
+        #[cfg(target_os = "linux")]
+        if let Some(device) = accel {
+            flush_accel(
+                device,
+                self.src_dir,
+                &dest_dir,
+                &pending,
+                &mut copy_file_state,
+            )?;
         }
 
         sys::Result::Ok(())
     }
+}
+
+/// Copies `src_dir/src_name` to `dest_dir/dest_path`, creating missing parents.
+#[cfg(not(windows))]
+fn copy_one(
+    src_dir: Fd,
+    src_name: &OSPathSliceZ,
+    dest_dir: &Dir,
+    dest_path: &OSPathSliceZ,
+    copy_file_state: &mut bun_sys::copy_file::CopyFileState,
+) -> sys::Result<()> {
+    let src = match bun_sys::openat(src_dir, src_name, bun_sys::O::RDONLY, 0) {
+        sys::Result::Ok(fd) => bun_sys::File::from_fd(fd),
+        sys::Result::Err(err) => {
+            return sys::Result::Err(err);
+        }
+    };
+
+    let dest = match dest_dir.create_file_z(dest_path, Default::default()) {
+        Ok(f) => f,
+        Err(_) => 'dest: {
+            if let Some(entry_dirname) = bun_paths::Dirname::dirname::<OSPathChar>(dest_path) {
+                let _ = bun_sys::make_path::make_path::<OSPathChar>(dest_dir, entry_dirname);
+            }
+
+            match dest_dir.create_file_z(dest_path, Default::default()) {
+                Ok(f) => break 'dest f,
+                Err(err) => {
+                    bun_core::pretty_errorln!(
+                        "<r><red>{}<r>: copy file {}",
+                        bstr::BStr::new(err.name()),
+                        bun_fmt::fmt_os_path(dest_path, Default::default()),
+                    );
+                    Global::exit(1);
+                }
+            }
+        }
+    };
+
+    #[cfg(unix)]
+    {
+        let stat = match bun_sys::fstat(src.handle()) {
+            sys::Result::Ok(s) => s,
+            sys::Result::Err(_) => return sys::Result::Ok(()),
+        };
+        // SAFETY: fchmod is safe to call with any fd + mode; errors are ignored (`_ =`).
+        unsafe {
+            let _ = bun_sys::c::fchmod(dest.handle().native(), stat.st_mode);
+        }
+    }
+
+    bun_sys::copy_file::copy_file_with_state(src.handle(), dest.handle(), copy_file_state)
+}
+
+/// Copies `paths` (NUL-terminated, each relative to both directories) in
+/// /dev/bun_accel batches. Entries the device could not copy, such as an
+/// existing destination or a missing parent, go through [`copy_one`] so
+/// errors and overwrite behavior match the per-file path.
+#[cfg(target_os = "linux")]
+fn flush_accel(
+    device: Fd,
+    src_dir: Fd,
+    dest_dir: &Dir,
+    paths: &[u8],
+    copy_file_state: &mut bun_sys::copy_file::CopyFileState,
+) -> sys::Result<()> {
+    use bun_sys::bun_accel::{CopyEntry, SOURCE_MODE, copy_batch};
+
+    let mut spans: Vec<(usize, usize)> = Vec::new();
+    let mut entries: Vec<CopyEntry> = Vec::new();
+    let mut start = 0;
+    while start < paths.len() {
+        let len = bun_core::strings::index_of_char_usize(&paths[start..], 0)
+            .unwrap_or(paths.len() - start);
+        let ptr = paths[start..].as_ptr() as u64;
+        spans.push((start, len));
+        entries.push(CopyEntry {
+            src_dirfd: src_dir.native(),
+            dst_dirfd: dest_dir.fd().native(),
+            src_path: ptr,
+            dst_path: ptr,
+            mode: 0,
+            flags: SOURCE_MODE,
+            result: 0,
+        });
+        start += len + 1;
+    }
+
+    // `paths` outlives the call, so every pointer in `entries` stays valid.
+    let batch_ok = copy_batch(device, &mut entries).is_ok();
+    for (entry, &(start, len)) in entries.iter().zip(&spans) {
+        if batch_ok && entry.result >= 0 {
+            continue;
+        }
+        let path = bun_core::ZStr::from_buf(&paths[start..], len);
+        copy_one(src_dir, path, dest_dir, path, copy_file_state)?;
+    }
+    sys::Result::Ok(())
 }

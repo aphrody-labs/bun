@@ -89,6 +89,8 @@ pub mod walker_skippable;
 // kernel-version probe goes through `bun_core::linux_kernel_version()`.
 #[path = "copy_file.rs"]
 pub mod copy_file;
+#[cfg(target_os = "linux")]
+pub mod bun_accel;
 
 // Directory-entry kind — same set as `bun_core::FileKind`.
 pub use bun_core::FileKind as EntryKind;
