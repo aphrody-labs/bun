@@ -2960,6 +2960,13 @@ console.log(<div {...obj} key="after" />);`),
       expect(imports.filter(({ path }) => path === "react")).toHaveLength(1);
       expect(imports).toHaveLength(2);
     });
+
+    it("skips a leading hashbang like scan() and transformSync()", () => {
+      const source = `#!/usr/bin/env bun\nimport a from "./a";\nconsole.log(a);\n`;
+      for (const loader of ["js", "ts", "tsx"]) {
+        expect(transpiler.scanImports(source, loader).map(i => i.path)).toEqual(["./a"]);
+      }
+    });
   });
 
   const parsed = (code, trim = true, autoExport = false, transpiler_ = transpiler) => {
