@@ -350,6 +350,34 @@ declare module "bun:windows" {
     ): { exitCode: number | null; stdout: string; stderr: string };
   }
 
+  interface LogicalDrive {
+    root: string;
+    type: "removable" | "fixed" | "remote" | "optical" | "ramdisk" | "unknown";
+    totalBytes: number;
+    freeBytes: number;
+    availableBytes: number;
+  }
+
+  /** Logical drives visible to the process, with total and available capacity. */
+  namespace storage {
+    function drives(): LogicalDrive[];
+  }
+
+  interface WindowsMemoryStatus {
+    memoryLoad: number;
+    totalPhysical: number;
+    availablePhysical: number;
+    totalPageFile: number;
+    availablePageFile: number;
+    totalVirtual: number;
+    availableVirtual: number;
+  }
+
+  /** Physical, page-file and virtual memory counters from `GlobalMemoryStatusEx`. */
+  namespace memory {
+    function status(): WindowsMemoryStatus;
+  }
+
   /**
    * Exports of the `@aphrody/bun-windows-<name>` package, the binding of one Windows API family that
    * ships outside the Bun binary. Resolved from the working directory, then from the entry script, and

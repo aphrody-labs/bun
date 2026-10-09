@@ -46,6 +46,8 @@ const jobInfoNative = $newRustFunction("windows/host.rs", "jsJobInfo", 1);
 const jobCloseNative = $newRustFunction("windows/host.rs", "jsJobClose", 1);
 const toastNative = $newRustFunction("windows/host.rs", "jsToast", 2);
 const wslDistributionsNative = $newRustFunction("windows/host.rs", "jsWslDistributions", 0);
+const storageDrivesNative = $newRustFunction("windows/host.rs", "jsStorageDrives", 0);
+const memoryStatusNative = $newRustFunction("windows/host.rs", "jsMemoryStatus", 0);
 
 function unsupportedError() {
   const error = new Error("bun:windows is only available on Windows");
@@ -566,6 +568,20 @@ const wsl = Object.freeze({
   },
 });
 
+const storage = Object.freeze({
+  drives() {
+    ensureSupported();
+    return JSON.parse(storageDrivesNative());
+  },
+});
+
+const memory = Object.freeze({
+  status() {
+    ensureSupported();
+    return JSON.parse(memoryStatusNative());
+  },
+});
+
 // Families
 //
 // The binary keeps the lazy core above. Every other Windows API family ships as a
@@ -636,6 +652,8 @@ export default {
   toast,
   notify,
   wsl,
+  storage,
+  memory,
   family,
   families,
 };
