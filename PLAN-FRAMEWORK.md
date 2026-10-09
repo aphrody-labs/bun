@@ -22,7 +22,13 @@ Fichiers : `packages/bun-next/**`, `test/integration/next-bun*/`, `test/integrat
   web-test) en dépend depuis npm (aphrody `dc2eea357`).
 - ✅ Shim `node` du runner : nécessaire sous Linux (Docker) et Windows (Turbopack lance `node` pour PostCSS et
   les loaders), conservé ; test next-app « no node on PATH » (`1172f762478`).
-- ⏳ Suite du plan détaillé (`packages/bun-next/docs/PLAN.md`) : App Router via Bun.build, dev/HMR.
+- 🔄 J2 App Router via Bun.build (F1, `b1f89bb18c7`) : `lib/build-app.js`, passes rsc (références client, proxy
+  `registerClientReference`/`createProxy`), ssr (`bun-app-ssr.js`, `__webpack_require__` par id) et navigateur
+  (`main-app`, une entrée par module client, CSS par segment), manifestes `*_client-reference-manifest.js`,
+  `app-paths-manifest.json`, `server-reference-manifest.{js,json}` ; rejet explicite des Server Actions, de
+  `cacheComponents` et des fichiers de métadonnées. Codé, lint oxlint propre, **non exécuté** : variante « Bun.build »
+  de `test/integration/next-app/test/next-app.test.ts` à passer en passe finale. next/dynamic ⏳.
+- ⏳ J5 dev/HMR (`HotReloaderBun` sur Bun.build en watch) : après la preuve de J2.
 
 ### D. Plugin Tailwind CSS — `@aphrody/bun-plugin-tailwind` (✅)
 
@@ -87,8 +93,19 @@ ext.js` (`--filter=blob:none`, `origin` + `upstream`), branche `canary`
   voies après bunify, fichiers pnpm gardés supprimés, `bun.lock` re-migré).
 - ✅ Release (`8feee3dcfa`) : `aphrody-release.yml` (tag `aphrody-v*` ou manuel) : next-swc sur les 8 plateformes,
   build JS sous Bun, `scripts/aphrody/publish-npm.ts` (version `<base>-aphrody.N` commune, natifs puis JS puis
-  `next`), release GitHub. ⏳ Premier run (secret `NPM_TOKEN`, `APHRODY_SYNC_TOKEN`). ⏳ crates.io non fait (crates
-  liées par chemins au workspace).
+  `next`), release GitHub. ⏳ crates.io non fait (crates liées par chemins au workspace).
+- ✅ Release sur le Bun du fork (F1, `a86c3b0f4a`) : action `aphrody-setup-bun`, version du tag vérifiée contre
+  `packages/next`, `test-unit-bun` avant publication, staging sans tar ; `publish-npm.ts --dry-run` exit 0 en local ;
+  secrets `NPM_TOKEN`, `APHRODY_SYNC_TOKEN`, `CARGO_REGISTRY_TOKEN` présents. ⏳ Aucun run des deux workflows aphrody
+  terminé (dry-run CI lancé : actions/runs/37875577660), rien publié.
+- ✅ AGENTS.md et `scripts/**` sous Bun via `bunify.ts` (marqueurs `<!-- aphrody:bun -->`, gardés par la sync) ;
+  `bun run test-unit-bun` : 128 des 155 `packages/next/src/**/*.test.ts` sous `bun test --isolate`, 1398 pass
+  (`f489e60f28`) ; n2b 397 → 378 constats. ⏳ 27 fichiers restent sur Jest.
+- 🔄 App Router dans le Bun.build intégré (F1, `4b680668eb`) : `bun-build/app.ts` (port de `build-app.js`),
+  `shared.ts` ; `tsgo --noEmit -p packages/next/tsconfig.json` sans erreur dans bun-build (3 erreurs préexistantes de
+  tsgo dans `@sinclair/typebox` de node_modules). Non exécuté.
+- ✅ `scripts/aphrody/consume.ts` prépare Shenron et Aphrody (`catalog` → `npm:@aphrody/next@V`) et refuse tant que la
+  version n'est pas sur npm (`a86c3b0f4a`).
 - ✅ Bun natif dans Next (`e4b162850f`) : `packages/next/src/build/bun-build` (port de `lib/build.js`, Bun.build pour
   `next build` Pages Router sous `NEXT_BUN`), `lib/bundler.ts` `isBunBundler()` ; Turbopack
   `turbopack-core::environment::node_executable()` (`TURBOPACK_NODE_BINARY`, sinon le `node`/`bun` hôte, sinon
@@ -96,9 +113,8 @@ ext.js` (`--filter=blob:none`, `origin` + `upstream`), branche `canary`
 - ✅ `@aphrody/next-bun` : `withBun` utilise le Bun.build intégré de `@aphrody/next` (`NEXT_BUN=1`,
   `configureBunBuild`) ; `patch`, `lib/build.js` et le shim `node` restent pour le `next` de Vercel, à retirer après la
   première publication.
-- ⏳ Bunisation n2b des scripts/outillage et jest → bun test par lots (agent n2b en cours dans `C:
-ext.js`, branche
-  `bun`) ; `packages/next/src` garde `process.env` et les imports `node:` (DefinePlugin, bundles edge/client).
+- 🔄 Bunisation n2b et jest → bun test : voir plus haut ; `packages/next/src` garde `process.env` et les imports
+  `node:` (DefinePlugin, bundles edge/client).
 - ⏳ Mesures avant/après (build natif, build d'app exemple, dev cold start) : à faire dans la passe unique de build.
 - ⏳ Shenron et Aphrody consomment `@aphrody/next` après la première release.
 - Limites Bun relevées (à corriger dans `src/install`, §2.11) : clés `patchedDependencies` sans version ignorées en
