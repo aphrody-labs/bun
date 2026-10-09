@@ -369,14 +369,14 @@ extern "C" size_t Bun__Chrome__autoDetect(char* out, size_t cap);
 JSWebView* JSWebView::createChrome(JSGlobalObject* g, Structure* structure,
     uint32_t width, uint32_t height, const WTF::String& userDataDir,
     const WTF::String& path, const WTF::Vector<WTF::String>& extraArgv,
-    bool stdoutInherit, bool stderrInherit, const WTF::String& wsUrl, bool skipAutoDetect)
+    bool stdoutInherit, bool stderrInherit, const WTF::String& wsUrl, bool skipAutoDetect, bool headless)
 {
     auto* zig = defaultGlobalObject(g);
     auto& t = CDP::transport();
 
     // Transport selection, in priority order:
     //   1. url: "ws://..." → connect (autoDetected=false → no fallback)
-    //   2. path/argv set OR url:false → spawn, skip auto-detect
+    //   2. path/argv set OR url:false OR headless:false → spawn, skip auto-detect
     //   3. neither → auto-detect DevToolsActivePort → connect OR spawn
     //
     // All paths end up in the same singleton; first call wins. A stale
@@ -386,8 +386,8 @@ JSWebView* JSWebView::createChrome(JSGlobalObject* g, Structure* structure,
     bool ok;
     if (!wsUrl.isEmpty()) {
         ok = t.ensureConnected(zig, wsUrl, /* autoDetected */ false);
-    } else if (skipAutoDetect || !path.isEmpty() || !extraArgv.isEmpty()) {
-        ok = t.ensureSpawned(zig, userDataDir, path, extraArgv, stdoutInherit, stderrInherit);
+    } else if (skipAutoDetect || !headless || !path.isEmpty() || !extraArgv.isEmpty()) {
+        ok = t.ensureSpawned(zig, userDataDir, path, extraArgv, stdoutInherit, stderrInherit, headless);
     } else {
         // Auto-detect. DevToolsActivePort URL caps at
         // ws://127.0.0.1:65535/devtools/browser/<36-char-uuid> ≈ 70B.

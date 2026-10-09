@@ -84,7 +84,7 @@ using namespace JSC;
 // terminated) appends after core flags. All pointers nullable.
 extern "C" int32_t Bun__Chrome__ensure(Zig::GlobalObject*, const char* userDataDir,
     const char* path, const char* const* extraArgv, uint32_t extraArgvLen,
-    bool stdoutInherit, bool stderrInherit);
+    bool stdoutInherit, bool stderrInherit, bool headless);
 #if OS(WINDOWS)
 // Copies and queues one chunk; a failure arrives later as Bun__Chrome__onPipeClosed.
 extern "C" void Bun__Chrome__writePipe(const char* data, size_t len);
@@ -276,7 +276,7 @@ static constexpr us_socket_vtable_t s_cdpVTable = {
 
 bool Transport::ensureSpawned(Zig::GlobalObject* zig, const WTF::String& userDataDir,
     const WTF::String& path, const WTF::Vector<WTF::String>& extraArgv,
-    bool stdoutInherit, bool stderrInherit)
+    bool stdoutInherit, bool stderrInherit, bool headless)
 {
     if (m_mode != TransportMode::None && !m_dead) return true;
     if (m_dead) {
@@ -305,7 +305,7 @@ bool Transport::ensureSpawned(Zig::GlobalObject* zig, const WTF::String& userDat
         pathC.length() ? pathC.legacyCStringPointer() : nullptr,
         argvPtrs.isEmpty() ? nullptr : argvPtrs.span().data(),
         static_cast<uint32_t>(argvPtrs.size()),
-        stdoutInherit, stderrInherit);
+        stdoutInherit, stderrInherit, headless);
     if (rc < 0) {
         m_dead = true;
         return false;

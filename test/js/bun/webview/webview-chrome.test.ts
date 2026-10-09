@@ -344,6 +344,50 @@ test("chrome: constructor rejects url combined with spawn options", () => {
   ).toThrow(/connect mode.*cannot be combined.*spawn/i);
 });
 
+test("chrome: headless option validates", () => {
+  expect(() => new Bun.WebView({ backend: "chrome", headless: "no" as any })).toThrow(/headless must be a boolean/);
+  expect(
+    () =>
+      new Bun.WebView({
+        backend: { type: "chrome", url: "ws://localhost:9222/devtools/browser/x" },
+        headless: false,
+      }),
+  ).toThrow(/headless: false.*cannot be combined with backend.url/);
+});
+
+// A headed Chrome needs a display server on Linux.
+const hasDisplay = process.platform !== "linux" || !!(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
+(hasDisplay ? it : test.todo)("chrome: headless: false spawns a windowed Chrome", async () => {
+  // Spawn flags belong to the process-wide Chrome, so this runs in its own process.
+  await using proc = Bun.spawn({
+    cmd: [
+      bunExe(),
+      "-e",
+      `
+        await using view = new Bun.WebView({ backend: "chrome", headless: false, width: 320, height: 240 });
+        await view.navigate("data:text/html,<title>headed</title>");
+        const { windowId } = await view.cdp("Browser.getWindowForTarget");
+        const { bounds } = await view.cdp("Browser.getWindowBounds", { windowId });
+        console.log(JSON.stringify({
+          headless: /Headless/.test(await view.evaluate("navigator.userAgent")),
+          title: await view.evaluate("document.title"),
+          windowState: bounds.windowState,
+        }));
+      `,
+    ],
+    env: bunEnv,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(JSON.parse(stdout.trim() || "null"), stderr).toEqual({
+    headless: false,
+    title: "headed",
+    windowState: "normal",
+  });
+  expect(exitCode).toBe(0);
+});
+
 it("chrome: cdp() enable + addEventListener receives CDP events", async () => {
   await using view = new Bun.WebView({ backend: chrome, width: 200, height: 200 });
   // First navigate to get a sessionId (cdp() guards before that).

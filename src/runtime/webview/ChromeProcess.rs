@@ -129,6 +129,7 @@ unsafe extern "C" fn Bun__Chrome__ensure(
     extra_argv_len: u32,
     stdout_inherit: bool,
     stderr_inherit: bool,
+    headless: bool,
 ) -> i32 {
     {
         if !INSTANCE.load(Ordering::Relaxed).is_null() {
@@ -161,6 +162,7 @@ unsafe extern "C" fn Bun__Chrome__ensure(
             extra,
             stdout_inherit,
             stderr_inherit,
+            headless,
         ) {
             Ok(rc) => rc,
             Err(err) => {
@@ -484,6 +486,7 @@ fn spawn(
     extra_argv: &[*const c_char],
     stdout_inherit: bool,
     stderr_inherit: bool,
+    headless: bool,
 ) -> crate::Result<i32> {
     {
         let chrome = find_chrome(explicit_path).ok_or(crate::Error::ChromeNotFound)?;
@@ -539,10 +542,15 @@ fn spawn(
             chrome.as_ptr(),
             data_dir.as_ptr(),
             c"--remote-debugging-pipe".as_ptr(),
-            c"--headless".as_ptr(),
+        ];
+        // headless: false keeps a real window per view (Target.createTarget's newWindow) and the GPU.
+        if headless {
+            argv.push(c"--headless".as_ptr());
+            argv.push(c"--disable-gpu".as_ptr()); // headless CI has no GPU context
+        }
+        argv.extend_from_slice(&[
             c"--no-first-run".as_ptr(),
             c"--no-default-browser-check".as_ptr(),
-            c"--disable-gpu".as_ptr(), // headless CI has no GPU context
             // Enterprise policy can force-install extensions (webRequest spam on
             // stderr). --disable-extensions is best-effort; mandatory extensions
             // may still load. --disable-background-networking shuts up GCM/update.
@@ -561,7 +569,7 @@ fn spawn(
             // No startup window — targets are Target.createTarget'd, not the
             // default about:blank. Saves one tab and the visual-complete wait.
             c"--no-startup-window".as_ptr(),
-        ];
+        ]);
         // An elevated Chrome relaunches itself de-elevated and exits; the relaunched
         // browser does not inherit fd 3/4, so the pipe closes before the first command.
         #[cfg(windows)]

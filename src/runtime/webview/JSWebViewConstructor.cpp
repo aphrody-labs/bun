@@ -120,6 +120,7 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(constructWebView, __attribute__((minsiz
     WTF::Vector<WTF::String> chromeArgv;
     bool stdoutInherit = false;
     bool stderrInherit = false;
+    bool headless = true;
     bool consoleIsGlobal = false;
     JSObject* consoleCallback = nullptr;
 
@@ -136,11 +137,13 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(constructWebView, __attribute__((minsiz
         if (h.isNumber()) height = static_cast<uint32_t>(h.toUInt32(globalObject));
         RETURN_IF_EXCEPTION(scope, {});
 
-        JSValue headless = opts->get(globalObject, Identifier::fromString(vm, "headless"_s));
+        JSValue headlessOpt = opts->get(globalObject, Identifier::fromString(vm, "headless"_s));
         RETURN_IF_EXCEPTION(scope, {});
-        if (headless.isBoolean() && !headless.asBoolean()) {
-            return Bun::throwError(globalObject, scope, ErrorCode::ERR_METHOD_NOT_IMPLEMENTED,
-                "headless: false is not yet implemented"_s);
+        if (headlessOpt.isBoolean()) {
+            headless = headlessOpt.asBoolean();
+        } else if (!headlessOpt.isUndefined()) {
+            return Bun::throwError(globalObject, scope, ErrorCode::ERR_INVALID_ARG_TYPE,
+                "headless must be a boolean"_s);
         }
 
         // backend: "chrome" | "webkit" | { type: "chrome", path?, argv? }
@@ -233,6 +236,10 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(constructWebView, __attribute__((minsiz
                 return Bun::throwError(globalObject, scope, ErrorCode::ERR_INVALID_ARG_TYPE,
                     "backend.argv must be an array of strings"_s);
             }
+
+            if (!chromeWsUrl.isEmpty() && !headless)
+                return Bun::throwError(globalObject, scope, ErrorCode::ERR_INVALID_ARG_VALUE,
+                    "headless: false spawns its own Chrome and cannot be combined with backend.url"_s);
 
             if (!chromeWsUrl.isEmpty() && (!chromePath.isEmpty() || !chromeArgv.isEmpty()))
                 return Bun::throwError(globalObject, scope, ErrorCode::ERR_INVALID_ARG_VALUE,
@@ -341,6 +348,11 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(constructWebView, __attribute__((minsiz
         RETURN_IF_EXCEPTION(scope, {});
     }
 
+    if (!headless && backend != WebViewBackend::Chrome) {
+        return Bun::throwError(globalObject, scope, ErrorCode::ERR_METHOD_NOT_IMPLEMENTED,
+            "headless: false is not implemented for backend \"webkit\"; use backend: \"chrome\""_s);
+    }
+
     if (backend == WebViewBackend::Chrome) {
         // The CDP transport is one per process and belongs to the global that spawned it.
         if (!zigGlobalObject->scriptExecutionContext()->isMainThread()) {
@@ -350,7 +362,7 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(constructWebView, __attribute__((minsiz
         Bun__Feature__webview_chrome += 1;
         JSWebView* view = JSWebView::createChrome(globalObject, structure, width, height,
             persistDir, chromePath, chromeArgv, stdoutInherit, stderrInherit, chromeWsUrl,
-            chromeSkipAutoDetect);
+            chromeSkipAutoDetect, headless);
         if (!view) {
             return Bun::throwError(globalObject, scope, ErrorCode::ERR_DLOPEN_FAILED,
                 chromeWsUrl.isEmpty()

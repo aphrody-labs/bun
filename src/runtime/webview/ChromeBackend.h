@@ -377,7 +377,7 @@ public:
     // one Chrome, so mismatched args across views get the first-call's.
     bool ensureSpawned(Zig::GlobalObject*, const WTF::String& userDataDir = {},
         const WTF::String& path = {}, const WTF::Vector<WTF::String>& extraArgv = {},
-        bool stdoutInherit = false, bool stderrInherit = false);
+        bool stdoutInherit = false, bool stderrInherit = false, bool headless = true);
 
     // Connect to an already-running Chrome's DevTools endpoint. wsUrl is
     // a full ws:// URL (from DevToolsActivePort or user-supplied). Same

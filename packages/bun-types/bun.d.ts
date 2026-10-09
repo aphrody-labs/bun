@@ -9800,7 +9800,12 @@ declare module "bun" {
       width?: number;
       /** Viewport height in pixels. Range: [1, 16384]. @default 600 */
       height?: number;
-      /** Only `true` (headless) is implemented. @default true */
+      /**
+       * `false` opens each view in its own browser window (`backend: "chrome"` only;
+       * the WebKit backend throws). The first view's value applies to the whole
+       * Chrome process, and it cannot be combined with `backend.url`.
+       * @default true
+       */
       headless?: boolean;
       /**
        * Browser backend. Defaults to `"webkit"` on macOS, throws on other

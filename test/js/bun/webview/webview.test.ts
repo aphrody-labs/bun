@@ -136,7 +136,7 @@ it("width/height validation", () => {
   expect(() => new Bun.WebView({ width: 99999, height: 100 })).toThrow();
 });
 
-it("headless: false throws NOT_IMPLEMENTED", () => {
+it("headless: false throws NOT_IMPLEMENTED on the webkit backend", () => {
   expect(() => new Bun.WebView({ width: 100, height: 100, headless: false })).toThrow(/not.*implemented/i);
 });
 

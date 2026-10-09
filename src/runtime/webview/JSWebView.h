@@ -204,7 +204,7 @@ public:
         uint32_t width, uint32_t height, const WTF::String& userDataDir,
         const WTF::String& path, const WTF::Vector<WTF::String>& extraArgv,
         bool stdoutInherit, bool stderrInherit, const WTF::String& wsUrl = {},
-        bool skipAutoDetect = false);
+        bool skipAutoDetect = false, bool headless = true);
 
     void finishCreation(JSC::VM&);
     static JSC::Structure* createStructure(JSC::VM&, JSC::JSGlobalObject*, JSC::JSValue prototype);
