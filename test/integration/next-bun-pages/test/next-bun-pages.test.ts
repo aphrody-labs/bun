@@ -22,14 +22,24 @@ const versions = [
   { next: "16.5.0-canary.4", overlay: join(fixture, "next-16.5") },
 ];
 
-/** Removes what legitimately differs between the two bundlers: the client script tags. */
+/** Removes what legitimately differs between the two bundlers: the client script tags and next/dynamic module ids. */
 function normalizeHtml(html: string) {
   return html
     .replace(/<script\b[^>]*\bsrc="[^"]*"[^>]*><\/script>/g, "")
-    .replace(/<link\b[^>]*\bas="script"[^>]*\/?>/g, "");
+    .replace(/<link\b[^>]*\bas="script"[^>]*\/?>/g, "")
+    .replace(/,"dynamicIds":\[[^\]]*\]/g, "");
 }
 
-const paths = ["/", "/ssr?name=x", "/posts/first", "/posts/second", "/api/hello", "/api/hello?name=bun", "/nope"];
+const paths = [
+  "/",
+  "/ssr?name=x",
+  "/posts/first",
+  "/posts/second",
+  "/dynamic",
+  "/api/hello",
+  "/api/hello?name=bun",
+  "/nope",
+];
 
 describe.each(versions)("next@$next", ({ next, overlay }) => {
   let dir: Awaited<ReturnType<typeof installFixture>>;
@@ -68,7 +78,7 @@ describe.each(versions)("next@$next", ({ next, overlay }) => {
       ]);
       expect(bunOutput).toContain("Compiled successfully with Bun");
       expect(webpackOutput).not.toContain("Compiled successfully with Bun");
-      for (const route of ["● /", "ƒ /api/hello", "ƒ /ssr"]) {
+      for (const route of ["● /", "○ /dynamic", "ƒ /api/hello", "ƒ /ssr"]) {
         expect(bunOutput).toContain(route);
       }
       // 16.1 marks the dynamic route SSG, 16.5 its prerendered paths.
@@ -105,6 +115,7 @@ describe.each(versions)("next@$next", ({ next, overlay }) => {
         "/ssr?name=x": 200,
         "/posts/first": 200,
         "/posts/second": 200,
+        "/dynamic": 200,
         "/api/hello": 200,
         "/api/hello?name=bun": 200,
         "/nope": 404,
@@ -112,13 +123,29 @@ describe.each(versions)("next@$next", ({ next, overlay }) => {
       const home = results[0].bun[1] as string;
       expect(home).toContain('<div id="app-shell">');
       expect(home).toContain("Hello, static!");
-      expect(JSON.parse(results[5].bun[1] as string)).toEqual({ message: "Hello, bun!", method: "GET" });
+      expect(JSON.parse(results[6].bun[1] as string)).toEqual({ message: "Hello, bun!", method: "GET" });
+
+      // next/dynamic: the server renders the module and lists its id; the browser build gives
+      // the same call that id, so the module is loaded before hydration.
+      const dynamicHtml = await (await fetch(bunServer.url + "/dynamic")).text();
+      expect(dynamicHtml).toContain('<p id="dynamic">Hello from a dynamic import</p>');
+      expect(dynamicHtml).toContain("<p>loading</p>");
+      expect(dynamicHtml).toContain('"dynamicIds":["lib/hello.js"]');
+      const loadableManifest = readFileSync(join(String(dir), ".next-bun", "react-loadable-manifest.json"), "utf8");
+      expect(JSON.parse(loadableManifest)).toEqual({
+        "lib/client-only.js": { id: "lib/client-only.js", files: [] },
+        "lib/hello.js": { id: "lib/hello.js", files: [] },
+      });
+      const clientSources = clientFiles.map(file => readFileSync(join(clientDir, file), "utf8")).join("\n");
+      expect(clientSources).toMatch(/modules:\s*\["lib\/hello\.js"\]/);
+      expect(clientSources).toMatch(/modules:\s*\["lib\/client-only\.js"\]/);
+      expect(clientSources).not.toContain('resolveWeak("../lib/');
 
       // Every client script referenced by the pages, and every module they import, is served.
       const transpiler = new Bun.Transpiler({ loader: "js" });
       const seen = new Set<string>();
       const queue: string[] = [];
-      for (const path of ["/", "/ssr", "/posts/first"]) {
+      for (const path of ["/", "/ssr", "/posts/first", "/dynamic"]) {
         const html = await (await fetch(bunServer.url + path)).text();
         for (const [, src] of html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)) {
           queue.push(new URL(src, bunServer.url).href);
@@ -141,6 +168,8 @@ describe.each(versions)("next@$next", ({ next, overlay }) => {
       }
       expect(missing).toEqual([]);
       expect([...seen].filter(url => url.includes("/_next/static/chunks/_bun/chunks/")).length).toBeGreaterThan(0);
+      const served = await Promise.all([...seen].map(async url => (await fetch(url)).text()));
+      expect(served.some(source => source.includes("Hello from a dynamic import"))).toBe(true);
     },
     timeout,
   );

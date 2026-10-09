@@ -13,8 +13,9 @@
 // CSS bundler, plus the Bun plugins given to `withBun`, e.g. Tailwind CSS).
 // The App Router (Server and Client Components, route handlers) is compiled by
 // build-app.js. Server Actions, middleware/proxy, instrumentation, the edge
-// runtime, next/font, next/image static imports and next/dynamic are rejected
-// or produce empty manifests.
+// runtime, next/font and next/image static imports are rejected or produce
+// empty manifests. next/dynamic preloads nothing: the chunk of a dynamic import
+// is fetched before hydration, by its id in react-loadable-manifest.json.
 
 const { mkdirSync, readFileSync, rmSync, writeFileSync } = require("node:fs");
 const { parse: parseQuery } = require("node:querystring");
@@ -140,7 +141,8 @@ async function bunBuild(compilerNames, webpackBuildDir) {
     return env;
   };
   const swcState = { next, ctx, dir, distDir, pagesDir, appDir, projectInfo };
-  const swc = side => nextSwcPlugin({ ...swcState, side });
+  const loadableIds = new Set();
+  const swc = side => nextSwcPlugin({ ...swcState, side, loadableIds });
   const postcss = await postcssPlugin(swcState);
   const cssPlugins = postcss ? [...extraPlugins, postcss] : extraPlugins;
 
@@ -326,6 +328,10 @@ client.initialize({}).then(() => client.hydrate()).catch(console.error);
   assetMap.lowPriorityFiles.push(buildManifestPath, ssgManifestPath);
   assetMap.pages = Object.fromEntries(Object.entries(assetMap.pages).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
 
+  // Bundled ESM chunks cannot be listed as classic preload scripts: `files` stays empty.
+  const loadableManifest = JSON.stringify(
+    Object.fromEntries([...loadableIds].sort().map(id => [id, { id, files: [] }])),
+  );
   const fontManifest = JSON.stringify({
     pages: {},
     app: {},
@@ -342,8 +348,8 @@ client.initialize({}).then(() => client.hydrate()).catch(console.error);
     )};self.__BUILD_MANIFEST_CB && self.__BUILD_MANIFEST_CB()`,
     [ssgManifestPath]: srcEmptySsgManifest,
     "server/pages-manifest.json": JSON.stringify(pagesManifest, null, 2),
-    "react-loadable-manifest.json": "{}",
-    "server/middleware-react-loadable-manifest.js": `self.__REACT_LOADABLE_MANIFEST='{}';`,
+    "react-loadable-manifest.json": loadableManifest,
+    "server/middleware-react-loadable-manifest.js": `self.__REACT_LOADABLE_MANIFEST=${JSON.stringify(loadableManifest)};`,
     "dynamic-css-manifest.json": "[]",
     "server/dynamic-css-manifest.js": `self.__DYNAMIC_CSS_MANIFEST="[]";`,
     "server/next-font-manifest.json": fontManifest,
@@ -433,8 +439,51 @@ async function postcssPlugin({ next, ctx, dir, projectInfo }) {
   };
 }
 
+const STRING = String.raw`"(?:[^"\x5c]|\x5c.)*"`;
+const LOADABLE_GENERATED = /\bloadableGenerated:/g;
+// Browser: `webpack: () => [require.resolveWeak("./x")]` (function or arrow form).
+const LOADABLE_WEBPACK =
+  /loadableGenerated:\s*\{\s*webpack:\s*(?:function\s*\(\)\s*\{\s*return\s*\[([^\]]*)\];?\s*\}|\(\)\s*=>\s*\[([^\]]*)\])\s*\}/g;
+const RESOLVE_WEAK = new RegExp(String.raw`require\.resolveWeak\(\s*(${STRING})\s*\)`, "g");
+// Server: `modules: ["pages/x.js -> " + "./x"]`.
+const LOADABLE_MODULES = /loadableGenerated:\s*\{\s*modules:\s*\[([^\]]*)\]\s*\}/g;
+const MODULE_REQUEST = new RegExp(String.raw`${STRING}\s*\+\s*(${STRING})`, "g");
+
+/**
+ * Gives every next/dynamic call the same module ids on both sides (the imported
+ * file relative to the project) in place of webpack's `require.resolveWeak`
+ * ids, so the server's `dynamicIds` match the browser's ready initializers.
+ */
+function loadableModules(code, { file, dir, isServer, loadableIds }) {
+  const expected = code.match(LOADABLE_GENERATED)?.length ?? 0;
+  if (expected === 0) return code;
+  let replaced = 0;
+  const ids = (list, pattern) =>
+    [...list.matchAll(pattern)].map(([, literal]) => {
+      const request = JSON.parse(literal);
+      let resolved;
+      try {
+        resolved = Bun.resolveSync(request, path.dirname(file));
+      } catch {
+        throw new UnsupportedError(`next/dynamic of "${request}" in ${file} (unresolved)`);
+      }
+      const id = posix(path.relative(dir, resolved));
+      loadableIds.add(id);
+      return id;
+    });
+  const rewrite = (list, pattern) => {
+    replaced++;
+    return `loadableGenerated: { modules: ${JSON.stringify(ids(list, pattern))} }`;
+  };
+  code = isServer
+    ? code.replace(LOADABLE_MODULES, (_, list) => rewrite(list, MODULE_REQUEST))
+    : code.replace(LOADABLE_WEBPACK, (_, fn, arrow) => rewrite(fn ?? arrow, RESOLVE_WEAK));
+  if (replaced !== expected) throw new UnsupportedError(`This next/dynamic call shape (${file})`);
+  return code;
+}
+
 /** Runs Next.js' SWC transforms (SSG stripping, styled-jsx, next/dynamic, …) on project sources. */
-function nextSwcPlugin({ side, ...state }) {
+function nextSwcPlugin({ side, loadableIds, ...state }) {
   const { distDir, pagesDir } = state;
   const isServer = side === "server";
   const generated = path.join(distDir, "cache", "bun-entries") + path.sep;
@@ -461,7 +510,10 @@ function nextSwcPlugin({ side, ...state }) {
           serverComponents: false,
           bundleLayer: isServer ? (isApiRoute ? "api-node" : "pages-dir-node") : "pages-dir-browser",
         });
-        return { contents: code, loader: "js" };
+        return {
+          contents: loadableModules(code, { file: args.path, dir: state.dir, isServer, loadableIds }),
+          loader: "js",
+        };
       });
     },
   };
