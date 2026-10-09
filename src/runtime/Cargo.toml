@@ -122,8 +122,6 @@ uv = { path = "../../vendor/uv/crates/uv", default-features = false }
 uv-command-support = { path = "../../vendor/uv/crates/uv-command-support" }
 bun-dotnet-host = { path = "../../packages/bun-dotnet-native/crates/bun-dotnet-host", default-features = false }
 windows-bindgen = { path = "../../vendor/windows-rs/crates/libs/bindgen" }
-
-[target.'cfg(windows)'.dependencies]
 find-msvc-tools = { path = "../../vendor/find-msvc-tools" }
 
 [features]
