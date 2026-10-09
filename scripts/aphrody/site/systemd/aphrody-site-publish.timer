@@ -6,6 +6,7 @@ Description=Publication du site aphrody.com toutes les 15 minutes
 
 [Timer]
 OnBootSec=5min
+OnActiveSec=2min
 OnUnitInactiveSec=15min
 
 [Install]
