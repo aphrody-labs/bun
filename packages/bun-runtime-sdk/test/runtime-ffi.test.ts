@@ -7,6 +7,14 @@ import { defaultLibraryPath, libraryFile, Runtime, SYMBOLS } from "../src/index.
 import { hostTarget } from "../src/target.ts";
 import { NativeTooling } from "../src/tooling.ts";
 import {
+  libpythonIn,
+  Python,
+  PythonError,
+  pythonHostLibraryPath,
+  PyStatus,
+  vuLibpython,
+} from "../src/python.ts";
+import {
   nativeLibrary,
   embeddedNativeLibraryPath,
   readNativeBytes,
@@ -137,6 +145,165 @@ describe("runtime SDK ffi helpers", () => {
     expect(lib.isAvailable()).toBe(false);
     expect(lib.loadError()).toContain("Nope.Ffi.so");
   });
+});
+
+describe("Bun Python host SDK", () => {
+  it("selects the dedicated host without consulting core runtime variables", () => {
+    const library = join(import.meta.dir, "qualified-bun-python-host");
+    expect(pythonHostLibraryPath({
+      BUN_PYTHON_HOST_LIBRARY: library,
+      YOLO_RUNTIME_LIB: import.meta.path,
+      YOLO_RUNTIME_HOME: import.meta.dir,
+    })).toBe(library);
+  });
+
+  it.skipIf(embeddedNativeLibraryPath("bun_python_host") !== null)(
+    "reports a missing Python host instead of loading the core runtime",
+    () => {
+      const env = { BUN_PYTHON_HOST_LIBRARY: "", YOLO_RUNTIME_LIB: import.meta.path };
+      expect(() => pythonHostLibraryPath(env)).toThrow(PythonError);
+      expect(() => pythonHostLibraryPath(env)).toThrow("BUN_PYTHON_HOST_LIBRARY");
+    },
+  );
+
+  it("preserves explicit CPython selection and reports missing artifacts", () => {
+    const explicit = join(import.meta.dir, "selected-libpython");
+    expect(vuLibpython({
+      APHRODY_LIBPYTHON: explicit,
+      VU_RUNTIME: import.meta.dir,
+      VU_HOME: import.meta.dir,
+    })).toBe(explicit);
+    expect(libpythonIn(join(import.meta.dir, "missing-python-artifact"))).toBeNull();
+    expect(vuLibpython({ VU_RUNTIME: join(import.meta.dir, "missing-python-artifact") })).toBeNull();
+  });
+
+  it("uses the selected CPython artifact before the installed artifact", async () => {
+    const module = Bun.pathToFileURL(join(import.meta.dir, "../src/python.ts")).href;
+    const harness = Bun.pathToFileURL(join(import.meta.dir, "../../../test/harness.ts")).href;
+    await using proc = Bun.spawn({
+      cmd: [process.execPath, "-e", `
+        import { join } from "node:path";
+        import { tempDir } from ${JSON.stringify(harness)};
+        import { hostTarget } from ${JSON.stringify(Bun.pathToFileURL(join(import.meta.dir, "../src/target.ts")).href)};
+        import { libpythonIn, vuLibpython } from ${JSON.stringify(module)};
+        const name = process.platform === "win32" ? "python313.dll"
+          : process.platform === "darwin" ? "libpython3.13.dylib" : "libpython3.13.so.1.0";
+        const folder = process.platform === "win32" ? "bin" : "lib";
+        using direct = tempDir("bun-python-direct", { [folder]: { [name]: "" } });
+        using installed = tempDir("bun-python-installed", {
+          runtime: { [hostTarget()]: { current: { [folder]: { [name]: "" } } } },
+        });
+        const selected = join(String(direct), folder, name);
+        const active = join(String(installed), "runtime", hostTarget(), "current", folder, name);
+        console.log(JSON.stringify({
+          direct: libpythonIn(String(direct)) === selected,
+          selected: vuLibpython({ VU_RUNTIME: String(direct), VU_HOME: String(installed) }) === selected,
+          installed: vuLibpython({ VU_HOME: String(installed) }) === active,
+        }));
+      `],
+      env: { ...process.env, BUN_DEBUG_QUIET_LOGS: "1" },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([
+      proc.stdout.text(), proc.stderr.text(), proc.exited,
+    ]);
+    expect(stdout).toBe('{"direct":true,"selected":true,"installed":true}\n');
+    expect(stderr).toBe("");
+    expect(exitCode).toBe(0);
+  });
+
+  it("honours an explicit historical host path before the configured default", () => {
+    expect(() => Python.open({ libraryPath: import.meta.path })).toThrow(import.meta.path);
+  });
+
+  it("matches the shared native host header, including ABI negotiation", async () => {
+    const header = await Bun.file(join(import.meta.dir, "../../bun-python-native/include/bun_python_host.h")).text();
+    const source = await Bun.file(join(import.meta.dir, "../src/python.ts")).text();
+    const declared = new Map<string, number>();
+    for (const match of header.matchAll(/\b((?:aphrody_py_|bun_py_)\w+)\s*\(([^;{]*)\)\s*;/g)) {
+      const params = match[2]!.trim();
+      declared.set(match[1]!, params === "void" ? 0 : params.split(",").length);
+    }
+    const bound = [...source.matchAll(/^ {2}((?:aphrody_py_|bun_py_)\w+): \{\s*args: \[([^\]]*)\]/gm)];
+    expect(bound).toHaveLength(10);
+    expect(bound.map((match) => ({
+      name: match[1]!,
+      arity: match[2]!.split(",").filter((arg) => arg.trim()).length,
+    })).filter(({ name, arity }) => declared.get(name) !== arity)).toEqual([]);
+    expect(source.match(/const HOST_ABI_VERSION = (\d+);/)?.[1]).toBe(
+      header.match(/#define BUN_PYTHON_HOST_ABI_VERSION (\d+)u/)?.[1],
+    );
+  });
+
+  const host = process.env.BUN_PYTHON_HOST_LIBRARY;
+  const libpython = process.env.APHRODY_LIBPYTHON;
+  // Native qualification requires the separately built host and a complete CPython installation.
+  it.skipIf(!host || !libpython || !existsSync(host) || !existsSync(libpython))(
+    "negotiates the real host, shares the interpreter and releases owned handles safely",
+    async () => {
+      const module = Bun.pathToFileURL(join(import.meta.dir, "../src/python.ts")).href;
+      await using proc = Bun.spawn({
+        cmd: [process.execPath, "-e", `
+          import assert from "node:assert/strict";
+          import { dlopen, FFIType } from "bun:ffi";
+          import { Python, PythonError, PyStatus } from ${JSON.stringify(module)};
+          const probe = dlopen(process.env.BUN_PYTHON_HOST_LIBRARY, {
+            bun_py_abi_version: { args: [], returns: FFIType.u32 },
+          });
+          try { assert.equal(probe.symbols.bun_py_abi_version(), 1); }
+          finally { probe.close(); }
+          assert.throws(() => Python.open({ libpython: process.env.BUN_TEST_MISSING_LIBPYTHON }),
+            error => error instanceof PythonError && error.status === PyStatus.Load);
+          const owner = Python.open();
+          try {
+            assert.equal(owner.started, true);
+            assert.match(owner.version(), /^3\\./);
+            owner.run("sdk_value = 'élève 🐈'");
+            using attached = Python.open();
+            assert.equal(attached.started, false);
+            assert.equal(attached.eval("sdk_value"), "élève 🐈");
+            attached.close();
+            attached.close();
+            assert.equal(owner.eval("sdk_value"), "élève 🐈");
+            assert.equal(owner.call("json", "loads", "[1,2]"), "[1, 2]");
+            assert.equal(owner.call("sys", "getdefaultencoding"), "utf-8");
+            assert.throws(() => owner.eval("1 / 0"),
+              error => error instanceof PythonError && error.status === PyStatus.Python
+                && error.message.includes("division by zero"));
+            assert.equal(owner.eval("40 + 2"), "42");
+          } finally { owner.close(); }
+          owner.close();
+          for (const call of [
+            () => owner.run("pass"), () => owner.eval("42"),
+            () => owner.call("sys", "getdefaultencoding"), () => owner.version(),
+          ]) assert.throws(call, error => error instanceof PythonError
+            && error.status === PyStatus.State && error.message === "Python host handle is closed");
+          const python = dlopen(process.env.APHRODY_LIBPYTHON, {
+            Py_IsInitialized: { args: [], returns: FFIType.i32 },
+          });
+          try { assert.equal(python.symbols.Py_IsInitialized(), 0); }
+          finally { python.close(); }
+          console.log("abi=1 shared=true owned-finalize=true closed=true");
+        `],
+        env: {
+          ...process.env,
+          BUN_DEBUG_QUIET_LOGS: "1",
+          BUN_TEST_MISSING_LIBPYTHON: join(import.meta.dir, "missing-libpython"),
+          YOLO_RUNTIME_LIB: import.meta.path,
+          VU_RUNTIME: join(import.meta.dir, "missing-python-artifact"),
+        },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [stdout, stderr, exitCode] = await Promise.all([
+        proc.stdout.text(), proc.stderr.text(), proc.exited,
+      ]);
+      expect(stdout).toBe("abi=1 shared=true owned-finalize=true closed=true\n");
+      expect(stderr).toBe("");
+      expect(exitCode).toBe(0);
+    },
+  );
 });
 
 describe("yolo_runtime.h contract", () => {
