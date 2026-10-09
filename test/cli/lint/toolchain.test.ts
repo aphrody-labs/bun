@@ -253,6 +253,20 @@ describe("bun create aphrody/<template>", () => {
     expect(stderr).toContain("Choose one frontend template: web or react");
     expect(exitCode).toBe(1);
   });
+
+  test.concurrent("bun create aphrody --list lists the templates", async () => {
+    using dir = tempDir("toolchain-create-list", stack);
+    const { stdout, exitCode } = await run(["create", "aphrody", "--list"], join(String(dir), "aphrody"));
+    const row = (id: string, always: boolean, description: string) =>
+      `  ${id.padEnd(8)} ${always ? "(always) " : "         "}${description}`;
+    expect(stdout.split("\n").slice(1)).toEqual([
+      row("base", true, "server"),
+      row("web", false, "web"),
+      row("react", false, "react"),
+      "",
+    ]);
+    expect(exitCode).toBe(0);
+  });
 });
 
 describe("bun:wasm", () => {
