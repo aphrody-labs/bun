@@ -294,6 +294,91 @@ bun aphrody/kernel/check-config.ts --sysctl
 ⏳ Reste : `bunsh --root` (U1) ; `ORDER` de `publish.ts` (U1) ; épingler `_fork_commit` quand V publie `aphrody-bun`.
 Placeholder : `APHRODY_APK_REPO` du fragment Dockerfile (le dépôt NDX de U1 le remplacera).
 
+**Demandé par V** (2026-10-09) :
+
+- `_fork_commit` : `aphrody-bun` est publiée, HEAD `217dc43f7592f78321658e747539fadad08faf87` (3 commits sur
+  linux-lts 6.18.55).
+- `bun.config` : `CONFIG_BUN_ACCEL=m` (dépend de `RUST=y`, déjà demandé). Pour l'initramfs de V (c), vérifier que
+  `BINFMT_SCRIPT=y`, `DEVTMPFS=y`, `BLK_DEV_INITRD=y` et `RD_GZIP=y` restent actifs (valeurs de lts).
+- `aphrody-sysctl` : `bun_accel` dans `/etc/modules-load.d/aphrody.conf`, et une règle mdev
+  `bun_accel root:root 0666` (`/etc/mdev.conf` ou `/lib/mdev/`). Le 0666 est sûr : le pilote n'agit qu'avec les
+  droits de l'appelant.
+- `check-config.ts` : ajouter `BUN_ACCEL` à la liste contrôlée.
+
+### V. bun:ffi, TinyCC et noyau `aphrody-labs/linux` (🔄 code écrit le 2026-10-09, ni build ni test)
+
+**1. bun:ffi et C** (`fd9f482740d`). Limites relevées et corrigées dans le cœur :
+
+| Limite                                                                 | Correctif                                                                                          |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Trampolines `cc()` sans contrôle de type ; argument manquant lu hors du cadre | chaque argument est vérifié, absent = `undefined`, sinon `ERR_INVALID_ARG_TYPE`                    |
+| `ptr` n'acceptait que des nombres                                      | TypedArray, ArrayBuffer, `CString`/`JSCallback` (`.ptr`), number, bigint, null                     |
+| `cc()` sans source en ligne, `flags` remplaçait les défauts            | option `code`, les flags chaîne s'ajoutent aux défauts                                             |
+| Pas de `<stdatomic.h>` ni de `<float.h>`                               | en-têtes livrés (`ffi-stdatomic.h`, `ffi-float.h`) + helpers `__atomic_*` façon libatomic          |
+| libc introuvable sur musl                                              | recherche dans `/usr/lib`                                                                          |
+| Diagnostics C perdus                                                   | `error.errors` = `{ file, line, severity, message }`                                               |
+| `dlopen()` sans struct/union par valeur, sans variadiques ni `long double` | shim TinyCC compilé avec le prototype exact ; structs imbriquées, champs tableau, `fixedArgs`, layouts exposés |
+
+Tests ajoutés dans `test/js/bun/ffi/cc.test.ts`, `ffi.test.js` (+ `ffi-abi-fixture.c`) et la fixture bun-types.
+
+**2. TinyCC** (`efde885acc9`) :
+
+- `patches/tinycc/c23-std.patch` : `-std=c99/c17/c23` (et `gnu*`) règlent `__STDC_VERSION__` ; macros C23
+  (`bool`, `nullptr`, `static_assert`…) ; `__STDC_NO_ATOMICS__` n'est plus prédéfini.
+- aarch64 : déjà construit (`arm64-gen/link/asm.c`). En-têtes musl : ceux du système, libc trouvée dans `/usr/lib`.
+- **Pas de fork tinycc** : deux patches courts sur `oven-sh/tinycc`, appliqués par `scripts/build/deps/tinycc.ts`.
+- Cache d'objets : non implémenté. Conception retenue : clé = wyhash(source + flags + symboles + version tinycc +
+  arch), image relogée `tcc_relocate` stockée sous `$BUN_INSTALL/cache/cc/<clé>` ; à reprendre si `cc()` au
+  démarrage pèse dans la garde O.
+
+**3. Noyau** — fork `aphrody-labs/linux`, branche `aphrody-bun` (`C:\linux`), sur linux-lts 6.18.55 d'Alpine
+(`1d842f9dd`). checkpatch : 0 erreur, 0 avertissement sur les 3 commits ; `Signed-off-by: aphrody-dev`.
+
+- (a) API utilisateur, dans `bun:linux` sans doublon avec l'existant (`7a14aa1f99a`, `14ade19f275`) :
+  - `seccomp` : `filter({ deny, errno, action, mismatch })` produit le cBPF (contrôle d'arch, garde x32),
+    `setFilter`, `actionAvailable`.
+  - `perfEvent` : `open(options)` (perf_event_attr de 128 octets), `ioctl`, `read`.
+  - `bpf` : maps (create/lookup/update/delete/nextKey), `progLoad` avec journal du vérifieur, `pin`/`get`.
+  - `netlink` : `encode`, `parse`, `request` (dump avec `NLM_F_DUMP`, erreurs en errno).
+  - `reapOrphans(exclude?)` : attend les zombies hérités par un subreaper ou PID 1.
+  - io_uring et landlock étaient déjà là (U3).
+- (b) Module Rust `drivers/misc/bun_accel.rs` (`/dev/bun_accel`, `CONFIG_BUN_ACCEL`, ioctl `0xB9`) :
+  `BUN_ACCEL_IOC_COPY_BATCH` copie jusqu'à 1024 fichiers par appel. Résolution sous le répertoire (`file_open_root`,
+  `..` ne sort pas), destination `O_EXCL|O_NOFOLLOW`, `vfs_copy_file_range` (reflink sur le même FS), repli
+  `COPY_FILE_SPLICE` en `EXDEV`, résultat par entrée, arrêt sur signal. Selftests
+  `tools/testing/selftests/bun_accel`. Côté Bun (`1e76474491a`) : `bun_sys::bun_accel` et `FileCopier`
+  (install isolée, backend copyfile) regroupent les fichiers ; une entrée refusée repasse par le chemin par fichier.
+  Gain attendu : ~7 syscalls par fichier → 1 ioctl par 1024 fichiers. Non mesuré.
+- (c) `scripts/aphrody/initramfs.ts` : initramfs newc gzip avec `/bin/bun`, son interpréteur ELF et ses
+  `DT_NEEDED` (pris dans `--sysroot`), `/init` = `initramfs-init.ts` transpilé derrière `#!/bin/bun` : monte
+  proc/sys/devtmpfs/devpts/run/tmp, lance la charge de `/etc/bun-init.json`, récolte les orphelins, puis
+  `reboot(RB_POWER_OFF)`. Usermode helper : rien à patcher, `core_pattern=|/bin/bun …` ou `modprobe` pointent déjà
+  vers n'importe quel exécutable.
+- (d) Patchs ciblés : seul `rust: helpers: add file_user_path()`. Config et sysctl relèvent de U3 (demandes
+  ci-dessus). Candidat suivant : `uring_cmd` pour `bun_accel` (lots asynchrones via io_uring).
+
+**Passe finale** (Docker local, pas le VPS) :
+
+```sh
+bun bd test test/js/bun/ffi/cc.test.ts
+bun bd test test/js/bun/ffi/ffi.test.js
+bun bd test test/js/bun/linux/linux.test.ts
+bun bd test test/cli/install/isolated-install.test.ts
+bun test test/integration/bun-types/bun-types.test.ts
+bun run rust:check-all
+# C:\linux, conteneur Alpine 3.24 (clang/lld/rust 1.96.1, rust-bindgen) :
+make LLVM=1 rustavailable && make LLVM=1 defconfig && scripts/config -e RUST -m BUN_ACCEL && make LLVM=1 olddefconfig
+make LLVM=1 -j12 && make LLVM=1 headers_install
+make LLVM=1 -C tools/testing/selftests TARGETS=bun_accel run_tests   # sur une VM avec bun_accel chargé
+# initramfs, sur une VM qemu :
+bun scripts/aphrody/initramfs.ts --bun build/release/bun --sysroot <rootfs alpine> --out build/initramfs.cpio.gz
+qemu-system-x86_64 -kernel arch/x86/boot/bzImage -initrd build/initramfs.cpio.gz -append console=ttyS0 -nographic
+```
+
+⏳ Reste : passe finale ; mesure de `bun install --linker isolated` avec et sans `/dev/bun_accel` ; cache d'objets
+`cc()` ; `uring_cmd`. Points à risque à la compilation : signatures JSC des nouvelles fns, bindings Rust noyau
+(`bindings::file_user_path`, accès `f_inode->i_mode`, `COPY_FILE_SPLICE`), emprunts dans `FileCopier`.
+
 ### A. Publication (✅ base)
 
 - ✅ crates.io : `aphrody-bun-macro` 0.1.0, `aphrody-bun-native-plugin` 0.2.0.
