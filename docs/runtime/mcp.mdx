@@ -1,0 +1,91 @@
+---
+title: MCP server
+description: bun mcp is a Model Context Protocol server built into Bun, for coding agents
+---
+
+`bun mcp` runs a [Model Context Protocol](https://modelcontextprotocol.io) server from the `bun` binary itself. Coding agents (Claude Code, Codex, Antigravity/Gemini CLI and any MCP client) get Bun's documentation, agent skills, a persistent memory, a code graph of the project, file search and bulk edits, language-server answers and bounded `bun run` / `bun test`, with no package to install and no Node.js process.
+
+```sh terminal icon="terminal"
+bun mcp install          # register it in Claude Code, Codex and Antigravity
+bun mcp install claude   # or one agent: claude, codex, agy
+```
+
+`bun mcp install` adds a `bun` server entry and leaves every other server and setting in place:
+
+| Agent       | File                                                          | Entry                       |
+| ----------- | ------------------------------------------------------------- | --------------------------- |
+| Claude Code | `~/.claude.json` (with `--project`: `.mcp.json` of the folder) | `mcpServers.bun`            |
+| Codex       | `$CODEX_HOME/config.toml` (default `~/.codex/config.toml`)    | `[mcp_servers.bun]`         |
+| Antigravity | `~/.gemini/config/mcp_config.json`                            | `mcpServers.bun`            |
+
+`bun mcp uninstall [agent]` removes the entry. The install also writes `~/.bun/agent/mcp/manifest.json` (version, executable and tool list). When `bun upgrade` replaces that executable, the next `bun mcp` start rewrites the manifest and the agent entries, so the agents follow the new version.
+
+To configure a client by hand, run `bun mcp` as a stdio server:
+
+```json .mcp.json icon="file-json"
+{
+  "mcpServers": {
+    "bun": { "type": "stdio", "command": "bun", "args": ["mcp"] }
+  }
+}
+```
+
+## Transports
+
+- **stdio** (default): one JSON-RPC message per line on stdin and stdout.
+- **Streamable HTTP**: `bun mcp --http <port>` listens on `127.0.0.1:<port>/mcp` (`--http 0` picks a free port and prints it on stderr). `POST` carries a JSON-RPC message and gets an `application/json` reply, or `202` for a notification. Requests with a non-local `Origin` are refused.
+
+The server speaks protocol revisions `2025-06-18`, `2025-03-26` and `2024-11-05`. It starts before the JavaScript runtime, so it answers `initialize` in a few milliseconds.
+
+## Response budget
+
+Every tool result is capped at a token budget that depends on the agent (8000 tokens for Claude Code and Antigravity, 6000 for Codex and others), roughly 4 bytes per token. A longer result ends with a cursor:
+
+```txt
+… [truncated at byte 31994 of 81520; call docs_read with {"cursor":"3.31994"} for the rest]
+```
+
+Calling the same tool with `{"cursor": "3.31994"}` returns the next page. The cursor is also in the result's `_meta.cursor`. Every tool takes `max_tokens` (256 to 50000) to change the budget of one call; lists (`tools/list`, `resources/list`, `prompts/list`) are paginated with `nextCursor`.
+
+## Agent profile
+
+`bun mcp` detects the agent that started it from its environment (`CLAUDECODE`, `CODEX_*`, `GEMINI_CLI` / `ANTIGRAVITY_CLI`), then from `clientInfo` in `initialize`. The profile sets the default budget. Override it with `--profile claude|codex|agy|generic` or `BUN_MCP_PROFILE`.
+
+## Tools
+
+{/* generated:mcp-tools:start — bun scripts/aphrody/mcp-docs.ts */}
+{/* generated:mcp-tools:end */}
+
+- **Docs** come from the `docs/` folder of the Bun version that runs, compressed into the binary; `docs_read` with `"path": "llms.txt"` returns the index.
+- **Skills** are the skills of the Bun repository and the agent plugin, plus those installed in `~/.claude/skills`, `~/.codex/skills`, `~/.bun/agent/skills`, `$BUN_MCP_SKILLS_PATH` and the project's `.claude/skills`. They are also MCP prompts and `bun://skills/<name>` resources.
+- **Memory** is a SQLite database with full-text search, `~/.bun/agent/memory.db` (`BUN_MCP_MEMORY_DB` to change it). Entries belong to the git repository they were written in; `memory_import` loads a folder of Markdown notes with front matter.
+- **Graph** tools build a code graph (Rust, TypeScript/JavaScript, Markdown) of the working directory on first use and keep it for the session; with `REDIS_URL` or `VALKEY_URL` set, built graphs are shared between sessions through Valkey, otherwise through the SQLite database.
+- **vfs_edit** never writes: it returns the diff and a plan id. **vfs_apply** applies that exact plan as one transaction, rolled back on any failure.
+- **lsp_*** tools go through [`bun lsp`](/runtime/lsp) and its language servers.
+- **run** and **test** run `bun run` / `bun test` with a timeout and return the exit code with a digest of the output (head, error lines, tail).
+
+## Resources and prompts
+
+| URI                     | Content                          |
+| ----------------------- | -------------------------------- |
+| `bun://docs/llms.txt`   | Index of the documentation       |
+| `bun://docs/<path>`     | A documentation page (Markdown)  |
+| `bun://skills/<name>`   | The `SKILL.md` of a skill        |
+
+Each skill is also a prompt, with an optional `task` argument.
+
+## Options
+
+| Flag                 | Environment          | Default                    |
+| -------------------- | -------------------- | -------------------------- |
+| `--http <port>`      |                      | stdio                      |
+| `--max-tokens <n>`   | `BUN_MCP_MAX_TOKENS` | by profile (6000-8000)     |
+| `--page-size <n>`    | `BUN_MCP_PAGE_SIZE`  | 100 tools per page         |
+| `--profile <agent>`  | `BUN_MCP_PROFILE`    | detected                   |
+| `--cwd <dir>`        |                      | the current directory      |
+
+`bun mcp tools` lists the tools; `--json` prints their MCP descriptors and `--markdown` the table above.
+
+## Adding tools
+
+Tools are Rust values registered in the `bun_mcp` crate (`src/mcp/registry.rs`): a name, a description, a JSON Schema of the arguments, behaviour annotations and a function. A module exposes a `TOOLS: &[Tool]` slice; the same descriptors produce `tools/list`, the install manifest and the table on this page.

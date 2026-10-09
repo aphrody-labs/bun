@@ -1,0 +1,100 @@
+---
+title: Agent plugin
+description: The aphrody-labs/bun fork as a plugin for Claude Code, Codex and Antigravity/Gemini CLI, with its MCP server, hooks and skills
+---
+
+`bun agent-plugin` installs the fork into the coding agents found on the machine: Claude Code, Codex, and Antigravity (`agy`) or Gemini CLI. Each gets the same three things:
+
+- the fork's MCP server, `bun mcp`, over stdio;
+- hooks that run `bun`, `bunx` and `bun uv` instead of `node`, `npm`, `npx`, `yarn`, `pnpm`, `pip` and `python`, and `bun bd test` instead of `bun test` inside a Bun checkout;
+- skills for building, testing and navigating Bun, generated from the repository.
+
+<CodeGroup>
+
+```bash Every agent found
+bun agent-plugin install
+```
+
+```bash Some agents
+bun agent-plugin install claude codex
+```
+
+```bash From a checkout
+bun x bun-agent-plugin install
+```
+
+</CodeGroup>
+
+The plugin is carried inside the `bun` executable, so it always matches it. `bun upgrade` reinstalls it after replacing the executable, and the plugin's own session hook does the same when the `bun` on `PATH` is a different version from the one the plugin was made for.
+
+## What gets installed
+
+Everything lands in `~/.bun/agent-plugin` (`$BUN_INSTALL/agent-plugin`). The agents' own files are only merged into, and `bun agent-plugin uninstall` takes back exactly what was added:
+
+| Agent       | Where                          | How it is registered                                                                                                                                              |
+| ----------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code | `~/.bun/agent-plugin/claude`   | `extraKnownMarketplaces.aphrody-bun` and `enabledPlugins["bun@aphrody-bun"]` in `~/.claude/settings.json`, then `claude plugin install` when the CLI is on `PATH` |
+| Codex       | `~/.bun/agent-plugin/codex`    | a delimited block in `~/.codex/config.toml` (`[marketplaces.aphrody-bun]`, `[plugins."bun@aphrody-bun"]`) and in `~/.codex/AGENTS.md`                             |
+| Antigravity | `~/.gemini/config/plugins/bun` | a plugin directory: `plugin.json`, `mcp_config.json`, `hooks.json`, `rules/`, `skills/`                                                                           |
+| Gemini CLI  | `~/.gemini/extensions/bun`     | the same directory, read through `gemini-extension.json` and `GEMINI.md`                                                                                          |
+
+Other plugins, marketplaces and settings are left as they are.
+
+Every agent gets the `bun` MCP server (`bun mcp`). Claude Code also gets `bun lsp` as its language server (`bun lsp --stdio`, one server for every language it routes). The list of tools in the plugin's instructions and the extensions given to Claude Code are read from the sources (`src/mcp/tools`, `src/agent_tools/tools.json`, `src/lsp/language.rs`), so a tool or a language added there shows up at the next generation.
+
+| Command                                              | Does                                                                            |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `bun agent-plugin install [claude\|codex\|agy]...`   | install for the agents named, or every agent found                              |
+| `bun agent-plugin install --update`                  | reinstall only when the installed copy differs, for the agents installed before |
+| `bun agent-plugin install --dry-run`                 | print what would be written                                                     |
+| `bun agent-plugin uninstall [claude\|codex\|agy]...` | remove it                                                                       |
+| `bun agent-plugin doctor`                            | tell whether the `bun` on `PATH` is the fork and which plugin is installed      |
+
+## Hooks
+
+The hooks are TypeScript files run by `bun` (`bun --no-install --no-env-file hooks/<hook>.ts <agent>`); each takes a few milliseconds.
+
+| Hook             | Claude Code and Codex                                                               | Antigravity                   | Does                                                                                                                                                                                                           |
+| ---------------- | ----------------------------------------------------------------------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Session start    | `SessionStart`                                                                      | `PreInvocation`               | checks that `bun` is the fork (`bun --revision` contains `aphrody`), otherwise says how to install it; in a Bun checkout, recalls `bun bd` and `bun bd test`; reinstalls the plugin when `bun` changed version |
+| Before a command | `PreToolUse` (`Bash`)                                                               | `PreToolUse` (`run_command`)  | rewrites the command, see below                                                                                                                                                                                |
+| Before a search  | `PreToolUse` (`Grep`, `Glob`, and `rg`, `grep`, `find` in `Bash`; Claude Code only) |                               | once per session, names the `bun mcp` tools to prefer (`graph_*`, `lsp_*`, `vfs_*` when the server has them)                                                                                                   |
+| After a command  | `PostToolUse` (`Bash`)                                                              | `PostToolUse` (`run_command`) | when `node`, `npm` or `python` is not found, names the fork's equivalent                                                                                                                                       |
+
+| Command                                    | Becomes                                                          |
+| ------------------------------------------ | ---------------------------------------------------------------- |
+| `npm i`, `npm install`, `npm ci`           | `bun i`, `bun install`, `bun install --frozen-lockfile`          |
+| `npm install -D x`                         | `bun install --dev x`                                            |
+| `yarn add -D x`, `pnpm add -D x`           | `bun add --dev x`                                                |
+| `npm run x`, `yarn x`, `pnpm x`            | `bun run x`                                                      |
+| `npx x`, `pnpm dlx x`, `yarn dlx x`        | `bunx x`                                                         |
+| `node file.js`                             | `bun file.js`                                                    |
+| `pip install x`, `python -m pip install x` | `bun uv pip install x`                                           |
+| `python file.py`, `uv ...`, `uvx ...`      | `bun uv run python file.py`, `bun uv ...`, `bun uv tool run ...` |
+| `bun test` inside a Bun checkout           | `bun bd test`                                                    |
+
+The Python rewrites only happen when the `bun` that runs the hook is the fork, which carries `uv`. A rewritten command runs without confirmation only when the agent already runs without asking (Claude Code `bypassPermissions`, Codex `approval_policy = "never"`); otherwise Claude Code and Antigravity ask for it, and Codex refuses the original with the rewritten one to run instead.
+
+A command ending with `# keep-node` (or `# keep-npm`, `# keep-tool`) is left as written; `BUN_AGENT_PLUGIN_REWRITE=0` turns the rewriting off, and `BUN_AGENT_PLUGIN_AUTO_ALLOW=1` runs rewritten commands without asking.
+
+## Generating
+
+The plugins are generated, never written by hand. The generator is `packages/bun-agent-plugin`; `scripts/aphrody/agent-plugin.ts` runs it from a checkout:
+
+```bash
+bun scripts/aphrody/agent-plugin.ts generate          # packages/bun-agent-plugin/dist
+bun scripts/aphrody/agent-plugin.ts generate --check  # fails when dist is stale
+bun scripts/aphrody/agent-plugin.ts install           # generate and install
+```
+
+Its inputs are the repository's skills (`.claude/skills`, `skills`, `.agents/skills`, first one of a name wins) and slash commands (`.claude/commands`), more skill directories given with `--skills <dir>`, this page (the rules below), `docs/docs.json` and the pages it lists, `CLAUDE.md`, `test/CLAUDE.md`, `src/CLAUDE.md`, the scripts of `package.json`, the crates of `Cargo.toml`, the exports of `test/harness.ts`, the tools of `bun mcp`, the languages of `bun lsp` and the notes in `packages/bun-agent-plugin/memory`. The same inputs give the same bytes; the plugin's version is the version of Bun followed by a hash of its contents.
+
+The build packs the result into the executable (`codegen/agent-plugin.bin`), which `bun agent-plugin` extracts.
+
+## Agent rules
+
+- Use the aphrody-labs/bun fork for everything JavaScript, TypeScript and Python: `bun` instead of `node`, `bun install`/`bun add`/`bun remove`/`bun run` instead of `npm`, `yarn` and `pnpm`, `bunx` instead of `npx`, `bun uv` instead of `pip`, `python` and `uv`.
+- Check which `bun` runs: `bun --revision` contains `aphrody` for the fork. Otherwise install it (`curl -fsSL https://aphrody.com/install | bash`, or `powershell -c "irm aphrody.com/install.ps1|iex"` on Windows) or upgrade it (`bun upgrade`).
+- The `bun` MCP server (`bun mcp`) exposes the fork's tools to the agent; prefer them over ad hoc scripts when they cover the task.
+- In a checkout of the Bun repository, build with `bun bd` and test with `bun bd test <file>`: plain `bun test` runs the installed `bun`, not your changes. Read `CLAUDE.md` at the root of the checkout first.
+- For a task on Bun itself, load the matching skill of this plugin (`bun-build`, `bun-tests`, `bun-crates`, `bun-runtime`, `bun-docs`) and the reference it lists.

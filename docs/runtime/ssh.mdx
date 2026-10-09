@@ -1,0 +1,65 @@
+---
+title: SSH
+description: Run commands, copy files, forward ports and serve SSH with bun ssh, through the system OpenSSH or Bun's built-in client and server
+---
+
+`bun ssh` drives the OpenSSH that is already installed and falls back to a client built into Bun when there is none. On Windows the OpenSSH can be the Windows feature (`System32\OpenSSH`) or Git for Windows; on Linux and macOS it is the system `ssh`. With the system OpenSSH, your `~/.ssh/config`, agent, `known_hosts` and `ProxyJump` setup apply unchanged. The built-in client is [russh](https://github.com/Eugeny/russh) (Apache-2.0) with [russh-sftp](https://github.com/AspectUnk/russh-sftp) (Apache-2.0, in `vendor/russh-sftp`). It reads the same configuration and uses the same agent and `known_hosts` files.
+
+```sh terminal icon="terminal"
+bun ssh vps uptime                       # same as `ssh vps uptime`
+bun ssh exec --json vps 'systemctl is-active nginx'
+bun ssh cp -r ./dist vps:/srv/app        # scp; `--delta` uses rsync when installed
+bun ssh forward -L 5432:localhost:5432 db
+bun ssh doctor                           # which ssh, scp, sftp, sshd, rsync, git and gh were found
+```
+
+---
+
+## Commands
+
+`bun ssh [options] <destination> [command]` passes its arguments to the system `ssh`. Without one, the built-in client runs the command, or a login shell when no command is given.
+
+| Command                                                 | What it does                                                                                                     |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `exec [-n] [-t] [--json] <dest> <command...>`           | Runs a command. `--json` collects the result with the built-in client: `{"code","stdout","stderr"}`              |
+| `shell <dest>`                                          | Interactive shell with a pseudo-terminal                                                                         |
+| `cp [-r] [--delta] <src> <dst>`                         | Copies one side to or from `[user@]host:path`, with `scp`, `rsync` (`--delta`) or the built-in SFTP client        |
+| `sftp <op> <dest> <path> [extra]`                       | `ls`, `stat`, `tree [depth]`, `cat`, `get <local>`, `put <local>`, `rm`, `mkdir`, with JSON output               |
+| `forward -L/-R/-D <spec> <dest>`                        | Local, remote and SOCKS5 forwards. The built-in client prints `{"local": port}` (or `remote`, `dynamic`) when bound |
+| `config <dest>`                                         | The resolved host configuration as JSON                                                                          |
+| `known-hosts check\|add <dest>`                         | Fetches the host key and compares it with `known_hosts` (`known`, `unknown`, `changed`); `add` records it        |
+| `keygen [-t ed25519\|rsa] [-b bits] [-C comment] -f <file>` | Writes a key pair. The passphrase comes from `BUN_SSH_NEW_PASSPHRASE`, never from the command line          |
+| `keys list\|add <file>\|fingerprint <file>`             | Agent identities and fingerprints                                                                                |
+| `server [status\|install\|start\|stop\|enable]`          | Manages the system `sshd` (the Windows `OpenSSH.Server` capability, or the `ssh`/`sshd` service on Linux)        |
+| `server --embedded [--port 0] --authorized-keys <file>` | Serves SSH from Bun: exec, shell, SFTP and TCP forwards. Prints `{"port","hostKey","fingerprint"}` first         |
+| `doctor`                                                | The tools found, where they come from and their versions, as JSON                                                |
+
+The connection options are the OpenSSH ones: `-p`, `-i`, `-l`, `-o Key=Value`, `-J` and `-F`. `--native` selects the built-in client and `--system` the system OpenSSH.
+
+## Built-in client
+
+`--native` or `BUN_SSH_BACKEND=native` selects the built-in client. It is also used when no `ssh` is found.
+
+- **Configuration.** The host configuration comes from `ssh -G` when OpenSSH is installed. Otherwise Bun parses `~/.ssh/config` or `-F <file>`: `Host` patterns with `!` negation, `Include`, `Match all` and the `%h %p %r %u` expansions.
+- **Host keys.** They are checked against `UserKnownHostsFile` and the global `/etc/ssh/ssh_known_hosts` or `%ProgramData%\ssh\ssh_known_hosts`, following `StrictHostKeyChecking` (`yes`, `accept-new`, `no`).
+- **Authentication.** In order:
+  1. agent identities (`SSH_AUTH_SOCK`, the Windows `openssh-ssh-agent` pipe, Pageant), filtered by `IdentitiesOnly`;
+  2. `IdentityFile` keys;
+  3. a password.
+- **Jump hosts.** `ProxyJump` chains work.
+- **Session.** `ConnectTimeout`, `ServerAliveInterval` and `ServerAliveCountMax` apply. Pseudo-terminals use raw mode and follow window resizes; on Windows they use virtual-terminal console modes.
+
+On Linux and macOS, the system `ssh` shares one connection per host (`ControlMaster=auto`, sockets in `~/.bun/ssh`, `ControlPersist=600`). The Windows OpenSSH port has no control sockets.
+
+## Environment variables
+
+| Variable                                          | Effect                                                                                        |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `BUN_SSH_BACKEND=native`                          | Use the built-in client                                                                       |
+| `BUN_SSH_SSH`, `BUN_SSH_SCP`, `BUN_SSH_RSYNC`, ... | Path of a tool, or `none` to hide it. `BUN_GIT_BIN` is the path of `git`                      |
+| `BUN_SSH_NATIVE_CONFIG=1`                         | Parse the configuration in Bun instead of running `ssh -G`                                    |
+| `BUN_SSH_KNOWN_HOSTS`                             | The `known_hosts` file to read and update, ahead of the configured ones                       |
+| `BUN_SSH_PASSPHRASE`, `BUN_SSH_PASSWORD`          | Key passphrase and password for the built-in client. Without them, `SSH_ASKPASS` is asked     |
+| `BUN_SSH_NEW_PASSPHRASE`                          | Passphrase of the key written by `keygen`                                                     |
+| `BUN_SSH_STATE_DIR`                               | Directory of the control sockets (default `~/.bun/ssh`)                                       |
+| `BUN_SSH_NO_MULTIPLEX`                            | Disable connection sharing                                                                    |

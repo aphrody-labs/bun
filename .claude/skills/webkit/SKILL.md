@@ -165,6 +165,59 @@ Things to check for a successful upgrade:
 - `javascriptcore-garbage-collector`: JSC GC reference for Bun. Use for use-after-free, JS object leaks, "collected too early", or when touching WriteBarrier, visitChildren, visitAdditionalChildren, JSRef, JSC::Strong/Weak, hasPendingActivity, ensureStillAlive, addOpaqueRoot, reportExtraMemoryAllocated, IsoSubspace, HeapAnalyzer, finalize.
 - `implementing-jsc-classes-cpp`: Implements JavaScript classes in C++ using JavaScriptCore. Use when creating new JS classes with C++ bindings, prototypes, or constructors.
 
+## Language server (`bun lsp`)
+
+_From `src/lsp`._
+
+- `cpp` (C, C++, Objective-C and Objective-C++, through clangd): C and C++: `clangd`, with the `compile_commands.json` of the project (written with `ninja -t compdb` or the Linux kernel's `gen_compile_commands.py` when there is none). Project root: the nearest "compile_commands.json", "compile_flags.txt", ".clangd".
+
+```
+Usage: bun lsp [--stdio]
+       bun lsp query <kind> <file>[:<line>[:<column>]] [<text>] [options]
+       bun lsp warm|status|stop|servers|compdb [<dir>]
+
+One language server for TypeScript/JavaScript, Python, Rust and C/C++: it starts tsgo,
+ty/basedpyright/ruff, rust-analyzer and clangd as files of their language need them, and adds
+the code graph of the workspace: calls, and links across Rust, C++, Zig and TypeScript (C ABI
+names, $newRustFunction and kin, .classes.ts members).
+
+  (no command), --stdio  Serve an editor on stdin and stdout
+  query                  Ask once, through a daemon of the workspace that keeps servers warm
+  warm                   Start the daemon and the servers of the workspace in <dir>
+  status                 Show the servers that the daemon runs
+  stop                   Stop the daemon and its servers
+  servers                Show the servers that each language would start
+  compdb                 Write compile_commands.json (ninja -t compdb, or the kernel's script)
+
+Query kinds:
+  diagnostics <file>                 Errors and warnings
+  definition <file>:<line>:<col>     Where the symbol is defined
+  references <file>:<line>:<col>     Where it is used
+  hover <file>:<line>:<col>          Its type and documentation
+  symbols <file>                     The symbols of the file
+  workspace-symbols <dir> <name>     The symbols of the workspace that match <name>
+  rename <file>:<line>:<col> <name>  The edits of a rename (--apply writes them)
+  context <file>:<line>:<col>        What the graph, the server and the docs know of the symbol
+  callers <file>:<line>:<col>        The functions that call it, and its uses in other languages
+  callees <file>:<line>:<col>        The functions it calls, and its definitions in other languages
+  fix <file>[:<line>]                The lines around <line> or the first error, fixed by the
+                                     model of BUN_LSP_AI (--apply writes them)
+
+Options:
+  --json             Print the answer as JSON
+  --limit <n>        At most <n> items (default 100, BUN_LSP_LIMIT)
+  --timeout <ms>     How long servers may take (default 30000, BUN_LSP_TIMEOUT_MS)
+  --apply            rename, fix: write the edits
+  --no-daemon        Answer in this process, without a daemon
+  --lang <a,b>       warm: only these languages (typescript, python, rust, cpp)
+
+Environment: BUN_LSP_<LANGUAGE>="<command> <args>" picks a server; BUN_LSP_OFFLINE=1 never
+downloads one; BUN_LSP_TS_DIAGNOSTICS=server takes TypeScript diagnostics from the server
+rather than bun check; BUN_LSP_MAX_SERVERS, BUN_LSP_JOBS, BUN_LSP_IDLE_MS bound resources.
+BUN_LSP_GRAPH=0 turns the code graph off, BUN_LSP_GRAPH_FILES bounds it (20000 files).
+BUN_LSP_AI="claude -p" names the command that fixes code: it reads a prompt on stdin.
+```
+
 ## Gates
 
 _From `package.json`._

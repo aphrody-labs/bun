@@ -1,0 +1,107 @@
+---
+title: "Language server"
+description: "One language server for TypeScript, JavaScript, Python, Rust, C and C++ with bun lsp"
+---
+
+`bun lsp` is a language server for editors and a command line for agents and scripts. It speaks the Language Server Protocol and passes each request to the server of the document's language. It starts that server the first time a file of that language needs it.
+
+| Language                | Server                                                                                                  | Diagnostics                                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| TypeScript, JavaScript  | `tsgo` (`@typescript/native-preview`), else `typescript-language-server`, else `bun x` downloads `tsgo` | [`bun check`](/runtime/check), in the same process  |
+| Python                  | `ty`, else `basedpyright`, else `pyright`, else `ty` through [`bun uv`](/runtime/buv)                   | the server, plus `ruff server` if it is installed   |
+| Rust                    | `rust-analyzer`                                                                                         | the server                                          |
+| C, C++, Objective-C     | `clangd`, else `clangd` from PyPI through `bun uv`                                                      | the server                                          |
+
+`bun lsp` finds servers in `node_modules/.bin`, in the `.venv` of the project, and on `PATH`.
+
+## Editors
+
+Configure `bun lsp` as the language server of every language it handles. It reads requests on stdin and writes answers on stdout.
+
+```json Zed settings.json icon="file-code"
+{
+  "lsp": {
+    "bun": { "binary": { "path": "bun", "arguments": ["lsp"] } }
+  }
+}
+```
+
+```lua Neovim icon="file-code"
+vim.lsp.config("bun", {
+  cmd = { "bun", "lsp" },
+  filetypes = { "typescript", "javascript", "typescriptreact", "python", "rust", "c", "cpp" },
+  root_markers = { ".git" },
+})
+vim.lsp.enable("bun")
+```
+
+The editor gets the diagnostics of all of a document's servers in one list. Completions, code actions, inlay hints, code lenses and document links are resolved by the server that returned them. `workspace/symbol` asks every running server.
+
+## Queries from the command line
+
+`bun lsp query` asks one question and prints the answer. The first query of a workspace starts a daemon for it, which keeps the servers running between queries. Later queries take milliseconds instead of the seconds a server needs to load a project.
+
+```bash terminal icon="terminal"
+bun lsp query diagnostics src/index.ts
+bun lsp query definition src/index.ts:12:8
+bun lsp query references src/index.ts:12:8
+bun lsp query hover src/index.ts:12:8
+bun lsp query symbols src/index.ts
+bun lsp query workspace-symbols . Router
+bun lsp query rename src/index.ts:12:8 newName --apply
+```
+
+```txt
+src/index.ts:3:7: error TS2322: Type 'string' is not assignable to type 'number'.
+```
+
+Lines and columns start at 1, and columns count characters. `bun lsp query diagnostics` exits with code `1` if there is an error.
+
+| Flag              | Description                                                         |
+| ----------------- | ------------------------------------------------------------------- |
+| `--json`          | Print the answer as JSON                                            |
+| `--limit <n>`     | Print at most `n` items. Defaults to `100`                          |
+| `--timeout <ms>`  | How long a server may take. Defaults to `30000`                     |
+| `--apply`         | With `rename`, write the edits to the files                         |
+| `--no-daemon`     | Start the servers in this process, and stop them after the answer   |
+
+The other commands manage the daemon of the workspace in the current directory, or in the given directory:
+
+```bash terminal icon="terminal"
+bun lsp warm            # start the daemon and the servers of each language in the workspace
+bun lsp warm --lang typescript,rust
+bun lsp status          # the running servers
+bun lsp stop
+bun lsp servers         # the server that each language would start, or what to install
+```
+
+The daemon of a workspace exits after 30 minutes without a query. A server stops after 15 minutes without a request. When more than 6 servers would run, the least recently used one stops.
+
+## C and C++
+
+`clangd` needs a `compile_commands.json`. `bun lsp` looks for it in the project root, then in `build/`, `out/` and `cmake-build-debug/` and their subdirectories, with `build/debug` first. If there is none, it writes one with `ninja -t compdb` from the `build.ninja` it finds there, keeping only the compile commands. In a Linux kernel tree, it runs `scripts/clang-tools/gen_compile_commands.py` after a build.
+
+```bash terminal icon="terminal"
+bun lsp compdb          # write compile_commands.json now
+```
+
+`clangd` keeps its background index next to `compile_commands.json`, in `.cache/clangd`, so it survives restarts. `bun lsp` starts it with `--background-index`, `--limit-results=100`, `-j` set to half the CPU cores (at most 4), and `--pch-storage=disk`. On Windows, when `INCLUDE` is not set, it gives `clangd` the MSVC and Windows SDK environment from [`bun msvc env`](/runtime/msvc) so that `clang-cl` command lines find their headers.
+
+## Configuration
+
+| Environment variable       | Description                                                                                       |
+| -------------------------- | ------------------------------------------------------------------------------------------------- |
+| `BUN_LSP_TYPESCRIPT`       | The TypeScript server command, such as `"tsgo --lsp --stdio"` or a JSON array of arguments        |
+| `BUN_LSP_PYTHON`           | The Python server command                                                                         |
+| `BUN_LSP_RUST`             | The Rust server command                                                                           |
+| `BUN_LSP_CPP`              | The C and C++ server command. Its arguments replace those that `bun lsp` adds                     |
+| `BUN_LSP_TS_DIAGNOSTICS`   | `server` to take TypeScript diagnostics from the server instead of `bun check`                    |
+| `BUN_LSP_OFFLINE`          | `1` to never download a server with `bun x` or `bun uv`                                           |
+| `BUN_LSP_LIMIT`            | The most items in an answer, and `clangd --limit-results`. Defaults to `100`                      |
+| `BUN_LSP_JOBS`             | Threads of `clangd` and `rust-analyzer`. Defaults to half the CPU cores, at most 4                |
+| `BUN_LSP_MAX_SERVERS`      | The most servers that run at once. Defaults to `6`                                                |
+| `BUN_LSP_SERVER_IDLE_MS`   | How long an unused server keeps running. Defaults to 15 minutes                                   |
+| `BUN_LSP_IDLE_MS`          | How long the daemon waits for a query before it exits. Defaults to 30 minutes                     |
+| `BUN_LSP_TIMEOUT_MS`       | How long a server may take to answer. Defaults to 30 seconds                                      |
+
+`rust-analyzer` starts with `checkOnSave` off, so it does not run `cargo check` after each save.

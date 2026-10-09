@@ -1,0 +1,133 @@
+---
+title: Run discord.js, @discordjs/voice and discordx
+sidebarTitle: Discord bots (voice, discordx, compile)
+mode: center
+---
+
+discord.js, `@discordjs/voice` and discordx run on Bun without a shim. This guide lists what each one needs, which optional native packages Bun replaces, and how to ship the bot as one executable with `bun build --compile`. For a first bot with a slash command, start with [Create a Discord bot](/guides/ecosystem/discordjs).
+
+---
+
+## What was checked
+
+Each row below was run on Bun against a fake gateway, a fake voice server and a UDP socket on `127.0.0.1` (no Discord connection, no token). The packages are discord.js 14.27, `@discordjs/voice` 0.19, `@discordjs/ws` 1.2 and discordx 11.13.
+
+| Part                                      | Result                                                                                                                              |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `Client.login`, `READY`, `GUILD_CREATE`   | Works. `ws` is the built-in WebSocket client.                                                                                       |
+| REST (`@discordjs/rest`, `undici`)        | Works. Both resolve to Bun's `fetch`.                                                                                               |
+| `WorkerShardingStrategy`                  | Works. The shard worker is a `worker_threads` `Worker`.                                                                             |
+| Gateway `compress=zlib-stream`            | Works. `zlib-sync` is built in (see below).                                                                                         |
+| ETF payloads (`erlpack`)                  | Built in. discord.js 14 and `@discordjs/ws` 1.2 only speak JSON; Eris and older libraries use ETF.                                |
+| Voice: gateway, UDP IP discovery, RTP     | Works. `node:dgram` carries the packets.                                                                                            |
+| Voice encryption                          | `aead_aes256_gcm_rtpsize` through `node:crypto`; `aead_xchacha20_poly1305_rtpsize` through `sodium-native` or `libsodium-wrappers`. |
+| Voice DAVE (end-to-end encryption)        | `@snazzah/davey` loads (Node-API).                                                                                                  |
+| Opus                                      | `opusscript` (WASM) and `@discordjs/opus` (Node-API) both load.                                                                     |
+| discordx decorators, `reflect-metadata`   | Works with `experimentalDecorators` and `emitDecoratorMetadata`, with tsyringe as the injector.                                     |
+| `bun build --compile` of all of the above | Works. Voice loads `sodium-native` and `davey` from inside the executable.                                                          |
+
+---
+
+## zlib-sync and erlpack are built in
+
+`zlib-sync` and `erlpack` are C++ addons written for V8 (Nan), which Bun cannot load. Bun resolves both names to built-in modules with the same API, so `@discordjs/ws` (and any library that asks for them) finds them without `node-gyp`:
+
+```ts
+import { WebSocketManager, CompressionMethod } from "@discordjs/ws";
+
+const manager = new WebSocketManager({
+  token: process.env.DISCORD_TOKEN!,
+  intents: 1,
+  rest,
+  compression: CompressionMethod.ZlibStream,
+});
+```
+
+- `zlib-sync` exports `Inflate`, which keeps its window between `push()` calls, and the `Z_*` constants. `push(data, flush)` sets `result`, `err` and `msg` as the npm package does. Inflate only, like the npm package.
+- `erlpack` exports `pack` and `unpack` for Erlang External Term Format 131. The mapping of values is the same as the addon's: `null` and `undefined` become the `nil` atom, strings become binaries, objects become maps, and integers over 32 bits unpack as decimal strings.
+
+You can drop both from `package.json`. If they stay installed, the built-in modules win.
+
+---
+
+## discordx
+
+discordx needs the decorator options in `tsconfig.json`:
+
+```json tsconfig.json icon="file-code"
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  }
+}
+```
+
+Import `reflect-metadata` before the first decorated class. Import types that appear in decorated signatures with `import type` or the `type` modifier:
+
+```ts bot.ts icon="/icons/typescript.svg"
+import "reflect-metadata";
+import { Discord, Slash, On, type ArgsOf } from "discordx";
+```
+
+Bun cannot see across files whether `ArgsOf` is a type, so a plain `import { ArgsOf }` is kept in the output and fails with `Export named 'ArgsOf' not found`. TypeScript itself reports the same case as error TS1272 under `isolatedModules`.
+
+---
+
+## Voice
+
+`@discordjs/voice` picks its libraries from what is installed. These choices work on Bun:
+
+| Need                  | Package                                                    | Note                                                                                              |
+| --------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Encryption            | none for AES-256-GCM; `sodium-native` for XChaCha20        | `libsodium-wrappers` or `@noble/ciphers` also work, and need no native binary.                    |
+| Opus encoding         | `opusscript` (WASM, no install script) or `@discordjs/opus` | Native Opus is about 5.7 times faster, see below.                                                 |
+| Audio from a file     | `ffmpeg` on `PATH`                                         | `prism-media` also tries `ffmpeg-static`, which is optional.                                      |
+
+Measured on one core, encoding a stereo 48 kHz 20 ms frame:
+
+| Encoder          | Time per frame | Share of one core per live stream |
+| ---------------- | -------------- | --------------------------------- |
+| `opusscript`     | 1.10 ms        | 5.5%                                |
+| `@discordjs/opus` | 0.19 ms        | 1.0%                                |
+
+A bot that plays to a handful of channels is fine with `opusscript`. Beyond about ten simultaneous streams use `@discordjs/opus`.
+
+`@discordjs/opus` publishes its prebuilt binaries per Node ABI, up to `node-v127`, and Bun reports ABI 147, so its install script finds no download and tries to compile. The binary is Node-API and does not depend on the ABI, so fetch the newest one and name the folder for Bun:
+
+```sh terminal icon="terminal"
+bun add @discordjs/opus --ignore-scripts
+gh release download v0.10.0 -R discordjs/opus -p "opus-v0.10.0-node-v127-napi-v3-linux-x64-glibc-2.35.tar.gz"
+mkdir -p node_modules/@discordjs/opus/prebuild
+tar xzf opus-v0.10.0-node-v127-*.tar.gz -C node_modules/@discordjs/opus/prebuild
+mv node_modules/@discordjs/opus/prebuild/node-v127-* node_modules/@discordjs/opus/prebuild/node-v$(bun -p "process.versions.modules")-napi-v3-linux-x64-glibc-2.35
+```
+
+Use the asset for your platform (`win32-x64-unknown-unknown`, `darwin-arm64-unknown-unknown`, `linux-x64-musl-1.2.5`, and so on) and the same suffix in the folder name.
+
+---
+
+## Compile the bot
+
+```sh terminal icon="terminal"
+bun build --compile --minify bot.ts --outfile bot \
+  --external ffmpeg-static --external @discordjs/opus --external node-opus
+```
+
+Put in `--external` every optional package that is not installed. `prism-media` and `@discordjs/voice` require them inside functions, and the bundler stops on a name it cannot resolve. `zlib-sync` and `erlpack` need no flag. Native addons that are installed (`sodium-native`, `@snazzah/davey`) are embedded in the executable and load from there.
+
+Measured with the Windows x64 build of Bun 1.4.3-aphrody.3 on the bot used for the table above. Each run connects to a fake gateway, receives a message, sends a reply and exits, so the time includes the whole round trip. Median of 5 runs:
+
+| Bot                           | `bun file.ts`          | `bun build --compile` |
+| ----------------------------- | ---------------------- | --------------------- |
+| discord.js client             | 382 ms, 60 MiB peak    | 251 ms, 55 MiB peak   |
+| discord.js + discordx         | 385 ms, 64 MiB peak    | 338 ms, 56 MiB peak   |
+| discord.js + voice + playback | not measured           | 501 ms, 68 MiB peak   |
+
+The executable is about 147 MB, nearly all of it the Bun runtime.
+
+---
+
+## Test a bot without Discord
+
+A bot can be tested end to end against a fake gateway made with `Bun.serve`. Point REST at it with `rest: { api }`, and return its WebSocket URL from `GET /gateway/bot`. For voice, the voice endpoint is always `wss://<endpoint>?v=8`, so serve it with `tls` and start the bot with `NODE_TLS_REJECT_UNAUTHORIZED=0`, then use `node:dgram` for the UDP side. Never point a test at the real gateway with a production token: Discord allows one connection per token.

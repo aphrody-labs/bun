@@ -1,0 +1,77 @@
+---
+title: Host inventory
+description: Collect the CPU, RAM, GPU, disks, kernel and OS of a machine, and share them between machines with bun host
+---
+
+`bun host` describes the machine it runs on and merges the descriptions of several machines into one registry. An agent or a scheduler reads the registry to pick a host: the one with 24 GB of free VRAM, the one with enough RAM for a build.
+
+```sh terminal icon="terminal"
+bun host collect          # the card of this machine, JSON
+bun host collect --text   # one line
+bun host schema           # JSON Schema of a card
+```
+
+## The card
+
+A card (`HostInfo`, `schema: 1`) holds:
+
+| Section   | Content                                                                                                      |
+| --------- | ------------------------------------------------------------------------------------------------------------ |
+| `os`      | family (`linux`, `windows`, `macos`), name, version, Windows build, architecture, libc (`glibc`, `musl`, `msvc`) |
+| `kernel`  | release, cgroup v2, io_uring, WSL                                                                            |
+| `cpu`     | model, physical and logical cores, flags among `avx`, `avx2`, `avx_vnni`, `avx512f`, `avx512bw`, `avx512vnni`, `amx_tile`, `amx_bf16`, `amx_int8` |
+| `memory`  | total and available RAM, swap, memory pressure (`/proc/pressure/memory`, Linux)                              |
+| `gpus`    | vendor, name, total and free VRAM, driver, CUDA version                                                      |
+| `disks`   | mount, device, filesystem, size, free space, kind (`nvme`, `ssd`, `hdd`, `unknown`)                          |
+| `network` | WireGuard interfaces and addresses                                                                           |
+
+Sizes are in MiB. Collection reads `/proc`, `/sys`, `/etc/os-release` and runs read-only probes; a probe that is missing leaves its section empty.
+
+| OS      | Probes                                                                                                                       |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Linux   | `/proc/{cpuinfo,meminfo,uptime,pressure}`, `nvidia-smi` (also `/usr/lib/wsl/lib`), `/sys/class/drm` for AMD and Intel, `lsblk`, `df`, `ip` |
+| Windows | PowerShell CIM (`Win32_OperatingSystem`, `Win32_Processor`, `Win32_VideoController`, `Win32_LogicalDisk`, `Get-PhysicalDisk`), `wmic` if PowerShell fails, `nvidia-smi` |
+| macOS   | `sysctl`, `sw_vers`, `df` (no GPU section yet)                                                                               |
+
+`Win32_VideoController` reports at most 4 GiB of VRAM; on NVIDIA GPUs `nvidia-smi` replaces it. WireGuard interfaces are those named `wg*` or `WireGuard*`, or holding an address that starts with a prefix of `BUN_HOST_WG_PREFIXES` (default `10.200.,10.8.`). The host id is `--id`, `BUN_HOST_ID` or the machine name.
+
+## Registry
+
+The registry is a directory (`$BUN_HOST_DIR`, default `~/.bun/host`): `inventory.json` and `inbox/`, where cards dropped by other hosts wait as `<id>.json`. There is no daemon. One host is the master and pulls; the others push their own card.
+
+```sh terminal icon="terminal"
+# on each machine (a timer or cron entry)
+bun host push --to ubuntu@master:.bun/host/inbox -s HOST_SECRET
+
+# on the master
+bun host sync -s HOST_SECRET                         # refresh its own card, merge inbox/ into inventory.json
+bun host sync --from vps:.bun/host/inbox -s HOST_SECRET   # also pull the cards of a host
+bun host list
+bun host find --vram-free 24 --cuda
+bun host find --ram 16 --os ubuntu --json
+```
+
+A target is a directory, `[user@]host:dir` or `ssh://[user@]host[:port]/dir`. Remote targets need a POSIX shell and use the system OpenSSH in `BatchMode` (keys and agent from `~/.ssh`); `BUN_HOST_SSH` names another `ssh` program. A relative remote directory starts in the home directory.
+
+Merging is idempotent and does not depend on order: for each host id the card with the newest `collected_at` wins, and on an exact tie the larger canonical JSON wins. A card whose id is not made of letters, digits, `-`, `_` and `.`, or whose `schema` is not 1, is rejected.
+
+### Signatures
+
+With a secret, `push` signs each card with HMAC-SHA256 over its canonical JSON (keys sorted) and every reader rejects cards that are unsigned or badly signed. The secret never travels in argv:
+
+- `-s NAME` reads the environment variable `NAME`.
+- `--secret-file PATH` reads a file; on Unix its mode must be `0600`.
+- Without either flag, `BUN_HOST_SECRET_FILE` then `BUN_HOST_SECRET_ENV` (the name of a variable) apply. The `bun mcp` tools use these two.
+
+A secret is at least 16 bytes. The HMAC proves that a card comes from a holder of the secret; it does not hide the card.
+
+## MCP tools
+
+`bun mcp` serves two tools over the registry, with the same schema as the command line:
+
+| Tool             | Use                                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------ |
+| `host_inventory` | The cards of the registry plus a fresh card of this machine (`refresh`, default true); `host`, `max_age_s` filter |
+| `host_find`      | Hosts with `min_vram_free_gb`, `min_ram_gb` (available), `min_disk_free_gb`, `gpu`, `os`, `cuda`; most free VRAM first. Cards older than `max_age_s` (default 86400) are dropped |
+
+The tools read the registry and write nothing.
