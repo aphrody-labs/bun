@@ -1591,7 +1591,7 @@ impl<'a> Resolver<'a> {
                 result.flags.set_experimental_decorators(
                     result.flags.experimental_decorators() || tsconfig.experimental_decorators,
                 );
-                if let Some(v) = tsconfig.use_define_for_class_fields {
+                if let Some(v) = tsconfig.effective_use_define_for_class_fields() {
                     result.flags.set_use_define_for_class_fields(v);
                 }
             }
@@ -6556,6 +6556,9 @@ impl<'a> Resolver<'a> {
                     mc.emit_decorator_metadata || parent_config.emit_decorator_metadata;
                 if let Some(v) = parent_config.use_define_for_class_fields {
                     mc.use_define_for_class_fields = Some(v);
+                }
+                if let Some(v) = parent_config.target_use_define_for_class_fields {
+                    mc.target_use_define_for_class_fields = Some(v);
                 }
                 if !parent_config.base_url.is_empty() {
                     mc.base_url = core::mem::take(&mut parent_config.base_url);

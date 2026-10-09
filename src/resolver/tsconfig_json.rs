@@ -163,6 +163,9 @@ pub struct TSConfigJSON {
     pub experimental_decorators: bool,
     /// `None` = unset (keeps native [[Define]] class-field semantics).
     pub use_define_for_class_fields: Option<bool>,
+    /// Default implied by `"target"` when `useDefineForClassFields` is unset:
+    /// `true` from ES2022/ESNext, `false` below, as in tsc.
+    pub target_use_define_for_class_fields: Option<bool>,
 }
 
 impl Default for TSConfigJSON {
@@ -179,6 +182,7 @@ impl Default for TSConfigJSON {
             emit_decorator_metadata: false,
             experimental_decorators: false,
             use_define_for_class_fields: None,
+            target_use_define_for_class_fields: None,
         }
     }
 }
@@ -224,6 +228,25 @@ impl TSConfigJSON {
 
     pub(crate) fn has_base_url(&self) -> bool {
         !self.base_url.is_empty()
+    }
+
+    /// `useDefineForClassFields`, or the default its `"target"` implies.
+    pub fn effective_use_define_for_class_fields(&self) -> Option<bool> {
+        self.use_define_for_class_fields
+            .or(self.target_use_define_for_class_fields)
+    }
+
+    fn target_implies_define_for_class_fields(target: &[u8]) -> Option<bool> {
+        let lower = target.to_ascii_lowercase();
+        match lower.as_slice() {
+            b"esnext" => Some(true),
+            b"es3" | b"es5" | b"es6" => Some(false),
+            _ => {
+                let year = lower.strip_prefix(b"es")?;
+                let year: u32 = core::str::from_utf8(year).ok()?.parse().ok()?;
+                (year >= 2015).then_some(year >= 2022)
+            }
+        }
     }
 
     pub fn merge_jsx(&self, current: options::jsx::Pragma) -> options::jsx::Pragma {
@@ -375,6 +398,7 @@ impl TSConfigJSON {
             let mut emit_decorator_metadata_v: Option<&bun_ast::E::JsonValue> = None;
             let mut experimental_decorators_v: Option<&bun_ast::E::JsonValue> = None;
             let mut use_define_for_class_fields_v: Option<&bun_ast::E::JsonValue> = None;
+            let mut target_v: Option<&bun_ast::E::JsonValue> = None;
             let mut jsx_factory_v: Option<(&bun_ast::E::JsonValue, bun_ast::Loc)> = None;
             let mut jsx_fragment_factory_v: Option<(&bun_ast::E::JsonValue, bun_ast::Loc)> = None;
             let mut jsx_v: Option<&bun_ast::E::JsonValue> = None;
@@ -398,6 +422,7 @@ impl TSConfigJSON {
                         b"useDefineForClassFields" if use_define_for_class_fields_v.is_none() => {
                             use_define_for_class_fields_v = Some(value)
                         }
+                        b"target" if target_v.is_none() => target_v = Some(value),
                         b"jsxFactory" if jsx_factory_v.is_none() => {
                             jsx_factory_v = Some((value, loc))
                         }
@@ -445,6 +470,10 @@ impl TSConfigJSON {
             // Parse "useDefineForClassFields"
             if let Some(&bun_ast::E::JsonValue::Boolean(val)) = use_define_for_class_fields_v {
                 result.use_define_for_class_fields = Some(val);
+            }
+            if let Some(target) = target_v.and_then(|v| v.as_str()) {
+                result.target_use_define_for_class_fields =
+                    Self::target_implies_define_for_class_fields(target);
             }
 
             // Parse "jsxFactory"

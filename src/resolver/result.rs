@@ -135,7 +135,7 @@ bitflags::bitflags! {
         const IS_FROM_NODE_MODULES = 1 << 3;
         const EMIT_DECORATOR_METADATA = 1 << 5;
         const EXPERIMENTAL_DECORATORS = 1 << 6;
-        /// tsconfig `"useDefineForClassFields": false` was set explicitly.
+        /// tsconfig `"useDefineForClassFields"` is `false`, set or implied by `"target"`.
         const SET_SEMANTICS_FOR_CLASS_FIELDS = 1 << 7;
     }
 }
@@ -206,7 +206,7 @@ impl ResultFlags {
     pub(crate) fn set_experimental_decorators(&mut self, v: bool) {
         self.set(Self::EXPERIMENTAL_DECORATORS, v)
     }
-    /// Effective `useDefineForClassFields`; `false` only when tsconfig set it to `false`.
+    /// Effective `useDefineForClassFields`; `false` only when tsconfig sets or implies it.
     #[inline]
     pub fn use_define_for_class_fields(self) -> bool {
         !self.contains(Self::SET_SEMANTICS_FOR_CLASS_FIELDS)

@@ -170,6 +170,61 @@ describe("tsconfig compilerOptions.useDefineForClassFields", () => {
     });
   }
 
+  // tsc defaults useDefineForClassFields to `target >= ES2022`.
+  const fieldReadsParamProp = `
+    class Base { set p(v: any) { setterCalled = true; } get p() { return "getter"; } }
+    let setterCalled = false;
+    class C extends Base {
+      x = this._r.v + 1;
+      p: any = "field";
+      constructor(private _r: { v: number }) { super(); }
+    }
+    let x: unknown;
+    try { x = new C({ v: 1 }).x; } catch (e) { x = (e as Error).name; }
+    process.stdout.write(JSON.stringify({ x, setterCalled }));
+  `;
+  for (const [target, expected] of [
+    ["ES2018", { x: 2, setterCalled: true }],
+    ["es2021", { x: 2, setterCalled: true }],
+    ["ES2022", { x: "TypeError", setterCalled: false }],
+    ["ESNext", { x: "TypeError", setterCalled: false }],
+  ] as const) {
+    test.concurrent(`unset with target ${target}: follows the target's default`, async () => {
+      using dir = tempDir("udfcf-target", {
+        "tsconfig.json": JSON.stringify({ compilerOptions: { target } }),
+        "index.ts": fieldReadsParamProp,
+      });
+      const { stdout, stderr, exitCode } = await run(String(dir));
+      expect(stderr).toBe("");
+      expect(JSON.parse(stdout)).toEqual(expected);
+      expect(exitCode).toBe(0);
+    });
+  }
+
+  test.concurrent("explicit value inherited through extends wins over the child's target", async () => {
+    using dir = tempDir("udfcf-target-extends", {
+      "base.json": JSON.stringify({ compilerOptions: { useDefineForClassFields: true } }),
+      "tsconfig.json": JSON.stringify({ extends: "./base.json", compilerOptions: { target: "ES2018" } }),
+      "index.ts": fieldReadsParamProp,
+    });
+    const { stdout, stderr, exitCode } = await run(String(dir));
+    expect(stderr).toBe("");
+    expect(JSON.parse(stdout)).toEqual({ x: "TypeError", setterCalled: false });
+    expect(exitCode).toBe(0);
+  });
+
+  test.concurrent("target inherited through extends sets the default", async () => {
+    using dir = tempDir("udfcf-target-inherit", {
+      "base.json": JSON.stringify({ compilerOptions: { target: "ES2019" } }),
+      "tsconfig.json": JSON.stringify({ extends: "./base.json", compilerOptions: {} }),
+      "index.ts": fieldReadsParamProp,
+    });
+    const { stdout, stderr, exitCode } = await run(String(dir));
+    expect(stderr).toBe("");
+    expect(JSON.parse(stdout)).toEqual({ x: 2, setterCalled: true });
+    expect(exitCode).toBe(0);
+  });
+
   test.concurrent("false: standard-decorated field keeps its initializer for the decorator", async () => {
     using dir = tempDir("udfcf-std-dec", {
       "tsconfig.json": JSON.stringify({ compilerOptions: { useDefineForClassFields: false } }),
