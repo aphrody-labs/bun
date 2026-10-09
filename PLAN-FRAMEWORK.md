@@ -179,12 +179,18 @@ non compilés ni testés. À reprendre :
   du `todo_panic`), import dans `parse_entry.rs` ; proxy de références serveur client/SSR dans `bundle_v2.rs`
   (~4029, ~7839) et `ServerComponentParseTask.rs` ; POST d'action + `callServer` ; SSR dynamique dans
   `production.rs` ; React 19 stable au lieu de `react-server-dom-bun` ; tests `test/bake/dev/bundle.test.ts`.
-- Lot 3 : template SPA TanStack Router dans scaffold, test de l'app d'exemple.
-- Lot 4 : `m3 compile` et `m3 docker` (image Aphrody Alpine, chantier U).
-- Lot 5 : tranche Shenron, banc de perf contre Next.
-- Passe finale : `bun install` à la racine d'Aphrody (nouveau workspace `apps/example`, deps TanStack), puis
-  `bun test test/app` (m3), `bun test test/data.test.tsx` (m3-react), `bun test ./scripts/yolo.test.ts`, build et
-  typecheck de `apps/example`.
+- ✅ Lot 3 (F3, 2026-10-09) : `m3/apps/example` recréée (`b5d6c23d31`, test bout en bout build + prerender + serve,
+  7 pass ; workspace racine `m3/apps/example`, `4e97e2deff`) ; template `spa` TanStack Router dans scaffold
+  (`5168569653`, tsgo et `Bun.build` OK sur le projet généré avec `@tanstack/react-router` 1.170.41, scaffold 25 pass) ;
+  `DataTable`/`VirtualList` : `m3-react` `test/data.test.tsx` 6 pass. Écart Bun relevé, non corrigé :
+  `FormData.prototype.toJSON` (extension Bun) fait refuser un FormData à `encodeReply` de React (le test construit la
+  réponse Flight à la main).
+- ⏳ Lot 4 : `m3 compile` et `m3 docker` pour l'App Router (image Aphrody Alpine, chantier U) ; `scripts/yolo.ts compile`
+  échoue explicitement tant que `apps/example` n'a pas de script `compile`.
+- ⏳ Lot 5 : tranche Shenron, banc de perf contre Next.
+- Passe finale : `cd C:\aphrody\m3\packages\m3 && APHRODY_FFI_DEV=1 bun test test/app`, `cd C:\aphrody\m3\apps\example
+  && bun run test`, `cd C:\aphrody\m3\packages\scaffold && bun test`, `cd C:\aphrody\m3\packages\m3-react && bun test
+  test/data.test.tsx`, `cd C:\aphrody\m3 && bun test ./scripts/yolo.test.ts`.
 
 Le framework est **m3** (`C:\aphrody\m3`, `@aphrody/m3/app`). Périmètre S : m3, m3-bun, m3-config, m3-next,
 m3-next-migrate, scaffold, templates, apps ; T possède le reste de m3, R possède m3-baseui.
@@ -201,8 +207,8 @@ m3-next-migrate, scaffold, templates, apps ; T possède le reste de m3, R possè
   server,cache,image}`, SSR en streaming avec payload RSC inline, CSS des composants serveur, images importées.
 - ✅ CLI : `m3 dev` (rebuild + rafraîchissement RSC par WebSocket `/_m3/hmr`), `m3 build [--no-prerender]`, `m3 start` ;
   `m3.config.ts` accepte `app`. `m3 create` passe par scaffold (inchangé).
-- ✅ Tests écrits, non exécutés (directive du 2026-10-09) : `packages/m3/test/app/{scan,plugin,router}.test.ts`,
-  fixture `packages/m3/test/fixtures/app-router`. Commande : `cd C:\aphrody\m3\packages\m3 && bun test test/app`.
+- ✅ Tests `packages/m3/test/app/{scan,plugin,router}.test.ts` (fixture `packages/m3/test/fixtures/app-router`) : 40 pass
+  le 2026-10-09 (F3). Commande : `cd C:\aphrody\m3\packages\m3 && APHRODY_FFI_DEV=1 bun test test/app`.
 - ✅ Nettoyage : dossiers `m3/apps/m3-migrate-contract-*` laissés par des runs interrompus de m3-next-migrate supprimés
   (ils cassaient `bun install`) ; `apps/showcase` déjà supprimé, docs alignées (m3 PLAN.md, GOAL.md, FRAMEWORK.md).
 - TanStack (règle de choix documentée dans `m3/docs/guides/FRAMEWORK.md`) : App Router m3 pour le web rendu serveur ;
@@ -212,9 +218,19 @@ m3-next-migrate, scaffold, templates, apps ; T possède le reste de m3, R possè
   `"use server"` inline → `todo_panic` (`src/js_parser/p.rs` ~8753/8760, `src/bundler/bundle_v2.rs` ~4029/7839) ;
   production Bake = SSG uniquement (pas de SSR/actions en prod) ; `react-server-dom-bun` épinglé sur une React
   expérimentale de 2024.
-- ⏳ Lots suivants : app d'exemple (remplace showcase), template SPA TanStack Router, M3 `DataTable`/`VirtualList`,
-  adaptateurs compile + Docker Alpine via m3-bun, tranche Shenron, comparaison perf avec `next build`/`next start`,
-  `scripts/yolo.ts` (T) référence encore `apps/showcase`.
+- ⏳ Lots suivants : adaptateurs compile + Docker Alpine via m3-bun, tranche Shenron, comparaison perf avec
+  `next build`/`next start`. `scripts/yolo.ts` pointe sur `apps/example` (`b5d6c23d31`).
+- ✅ Cœur Bun (F3) : `Bun.Transpiler.scanImports` sautait mal un hashbang initial (`809b733f681`, test dans
+  `test/bundler/transpiler/transpiler.test.js`, échoue avec le Bun système ; Rust non compilé : `bun bd test
+  test/bundler/transpiler/transpiler.test.js -t "hashbang"`).
+- ✅ WebOS `C:\aphrody\apps\web` (F3, `bc81496767`) : apps WASM (`WASM_APPS`) et pages outils (Bun APIs, benchmarks,
+  FFI, templates, docs, bridge, composants M3) dans `AppId`/`DOCK_ITEMS`/`DesktopOS` ; `KernelMonitorApp`, `TopBar` et
+  À propos sur `GET /api/webos/system` (node:os, process, /proc, /sys, liste `unavailable` explicite) ;
+  `/api/ffi/sources` et `/api/ffi/abi` (appel réel de `yolo_abi_version` : 1.5 sur `target/runtime/aphrody_ffi.dll`) ;
+  orphelins sans backend supprimés ; `bun test test` 24 pass, tsgo propre hors `server.ts`. ⏳ Montage dans
+  `apps/web/server.ts` (modifié sans commit par codex) : lignes à ajouter en tête de
+  `apps/web/src/os/server-extensions.ts` ; erreurs tsgo restantes de `server.ts` (données WebSocket non typées, l. 30,
+  230, 236, 245) à corriger par codex.
 
 ### T. m3 full Bun — `C:aphrodym3` hors framework (🔄)
 
@@ -243,6 +259,7 @@ m3-next-migrate, scaffold, templates, apps) = S ; m3-baseui = R. Dépendances Ta
   ignoré, il suit désormais zlib (15 → en-tête 78 9c, -15 → deflate brut par défaut, 31 → gzip). Tests :
   `bun bd test test/js/bun/io/bun-write.test.js -t "options.mode"`, `bun bd test test/js/bun/glob/scan.test.ts -t "missing cwd"`,
   `bun bd test test/js/bun/util/zstd.test.ts -t "windowBits"`.
-- ⏳ `packages/assets` : les `index.ts` générés (images, videos, svgs) sont périmés (en-tête `pnpm assets gen`) ; régénérer par `bun run gen`.
-- Note : les tests de m3-next-migrate laissent des `m3/apps/m3-migrate-contract-*` qui cassent `bun install` (nom de workspace
-  dupliqué) : à corriger côté S.
+- ✅ `packages/assets` : régénérés par agy (`840abc8881`) ; `bun run gen` relancé par F3, aucun écart.
+- ✅ Locales m3 : « Zero-Overhead » / « à coût nul » retirés, `generate-i18n.ts --apply` relancé (`baa610959a`).
+- ✅ `m3/apps/m3-migrate-contract-*` (runs interrompus de m3-next-migrate) : le workspace racine ne liste plus que
+  `m3/apps/example` (`4e97e2deff`), ces restes ne cassent plus `bun install`.
