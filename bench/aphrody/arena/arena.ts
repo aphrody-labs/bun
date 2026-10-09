@@ -474,11 +474,7 @@ export async function runArena(o: ArenaOptions): Promise<ArenaResult> {
   for (const t of targets) if (t.role !== "profile") revisions[t.id] = revisionOf(t);
 
   const host = hostInfo();
-  const lockDirs = o.lockDirs ?? [
-    "/srv/aphrody-build/locks",
-    "/home/ubuntu/aphrody-build/locks",
-    join(root, "tmp", "locks"),
-  ];
+  const lockDirs = o.lockDirs ?? ["/home/ubuntu/build/locks", join(root, "tmp", "locks")];
   const locksBefore = lockState(lockDirs);
   const statBefore = cpuStat();
   const niceBin = isWin ? null : Bun.which("nice");

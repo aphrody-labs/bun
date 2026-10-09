@@ -1,8 +1,8 @@
 # V : passe lourde sur le VPS (état des runs)
 
 Hôte : vps-203bea89 (12 CPU, 45 Go, Ubuntu 26.04). Tout sous `nice -n 19 ionice -c3`, conteneurs `--cpu-shares 256`.
-Runner : `~/yolo/run.sh <job> '<cmd>'` (tmux `yolo`, log `~/yolo/logs/<job>.log`, code `<job>.exit`) ;
-état : `~/yolo/status.sh` ; conteneur : `~/yolo/dk.sh <image> <espace> '<cmd>'` (espace = `~/yolo/w/<espace>` sur `/work`,
+Runner de ces runs (retiré depuis, `~/yolo` n'existe plus ; espaces actuels sous `~/build/w/<espace>`, logs `~/build/w/logs`) :
+`run.sh <job> '<cmd>'` (tmux, log `logs/<job>.log`, code `<job>.exit`), `status.sh`, `dk.sh <image> <espace> '<cmd>'` (espace monté sur `/work`,
 volumes `yolo-cargo-registry`, `yolo-bun-install-<distro>`, `yolo-build-cache-<distro>`, `yolo-ccache-<distro>`, `yolo-sccache-<distro>`).
 
 | Job | Commit testé | Statut | Durée | Preuve / remarque |
