@@ -254,9 +254,9 @@ impl FileCopier {
 #[cfg(not(windows))]
 fn copy_one(
     src_dir: Fd,
-    src_name: &OSPathSliceZ,
+    src_name: &bun_paths::OSPathSliceZ,
     dest_dir: &Dir,
-    dest_path: &OSPathSliceZ,
+    dest_path: &bun_paths::OSPathSliceZ,
     copy_file_state: &mut bun_sys::copy_file::CopyFileState,
 ) -> sys::Result<()> {
     let src = match bun_sys::openat(src_dir, src_name, bun_sys::O::RDONLY, 0) {
