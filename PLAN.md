@@ -408,12 +408,37 @@ Tailwind (`@aphrody/base-ui`, `@aphrody/m3-base-ui`). Bunisation n2b (bun instal
   gardé dans m3 et consommé par S) via l'alias `"@base-ui/react": "npm:@aphrody/base-ui@…"` + preset m3-tailwind,
   `m3:theme.css` (D), Material Symbols ; audit md-spec-checker.
 
-### S. Framework full Bun (🔄)
+### S. Framework full Bun — m3 App Router (🔄)
 
-Framework complet sans Node : Bun.serve + Bake (`src/runtime/bake`) pour dev server/HMR/RSC, Bun.build pour la prod,
-routage `app/` compatible Next (`page`/`layout`/`route`, Server Components, Server Actions), Tailwind via
-`@aphrody/bun-plugin-tailwind`, UI Base UI + M3 (R). Réutilise ce qui est bunisé dans M/Q/R (Turbopack/next-swc si plus
-rapide). Aucun coût au démarrage de `bun` (chantier O). Shenron sert d'application de validation.
+Le framework est **m3** (`C:\aphrody\m3`, `@aphrody/m3/app`). Périmètre S : m3, m3-bun, m3-config, m3-next,
+m3-next-migrate, scaffold, templates, apps ; T possède le reste de m3, R possède m3-baseui.
+
+- ✅ Décision moteur : **Bun.build + Bun.serve publics** avec `react-server-dom-parcel` 19.3 (catalog aphrody), trois
+  couches `rsc` (`conditions: ["react-server"]`, `server.node` pour l'ALS), `ssr` (`client.edge`), `client`
+  (`client.browser`), registre `parcelRequire` partagé sur `globalThis`, chargeurs paresseux. Bake n'est pas retenu
+  pour l'instant (manques du cœur ci-dessous).
+- ✅ Routage `app/` compatible Next : page, layout, template, loading, error, not-found, groupes, `[x]`/`[...x]`/`[[...x]]`,
+  `route.ts` (HEAD, OPTIONS, 405), `proxy.ts`/`middleware.ts` (`matcher`, rewrite, redirect, en-têtes de requête),
+  RSC, `"use client"`, Server Actions (fetch + `<form>` sans JS, `useActionState`), `redirect`/`notFound` avec statut
+  HTTP correct avant le streaming, metadata/generateMetadata/viewport, robots/sitemap/manifest, `generateStaticParams` +
+  SSG au build avec détection dynamique (`headers()`, `cookies()`, `searchParams`), alias `next/{link,navigation,headers,
+  server,cache,image}`, SSR en streaming avec payload RSC inline, CSS des composants serveur, images importées.
+- ✅ CLI : `m3 dev` (rebuild + rafraîchissement RSC par WebSocket `/_m3/hmr`), `m3 build [--no-prerender]`, `m3 start` ;
+  `m3.config.ts` accepte `app`. `m3 create` passe par scaffold (inchangé).
+- ✅ Tests écrits, non exécutés (directive du 2026-10-09) : `packages/m3/test/app/{scan,plugin,router}.test.ts`,
+  fixture `packages/m3/test/fixtures/app-router`. Commande : `cd C:\aphrody\m3\packages\m3 && bun test test/app`.
+- ✅ Nettoyage : dossiers `m3/apps/m3-migrate-contract-*` laissés par des runs interrompus de m3-next-migrate supprimés
+  (ils cassaient `bun install`) ; `apps/showcase` déjà supprimé, docs alignées (m3 PLAN.md, GOAL.md, FRAMEWORK.md).
+- TanStack (règle de choix documentée dans `m3/docs/guides/FRAMEWORK.md`) : App Router m3 pour le web rendu serveur ;
+  **TanStack Router** pour SPA/Tauri ; **Query** gardé ; Table/Virtual → M3 `DataTable`/`VirtualList` ; **Start** évalué,
+  non retenu (build Vite obligatoire) ; m3-forms vs TanStack Form tranché par mesure.
+- ⏳ Manques Bun à corriger dans le cœur (§2.11, aucun contournement dans m3) avant de passer le dev sur Bake :
+  `"use server"` inline → `todo_panic` (`src/js_parser/p.rs` ~8753/8760, `src/bundler/bundle_v2.rs` ~4029/7839) ;
+  production Bake = SSG uniquement (pas de SSR/actions en prod) ; `react-server-dom-bun` épinglé sur une React
+  expérimentale de 2024.
+- ⏳ Lots suivants : app d'exemple (remplace showcase), template SPA TanStack Router, M3 `DataTable`/`VirtualList`,
+  adaptateurs compile + Docker Alpine via m3-bun, tranche Shenron, comparaison perf avec `next build`/`next start`,
+  `scripts/yolo.ts` (T) référence encore `apps/showcase`.
 
 ### T. m3 full Bun — `C:aphrodym3` hors framework (🔄)
 
