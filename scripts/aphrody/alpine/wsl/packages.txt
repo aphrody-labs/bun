@@ -1,0 +1,15 @@
+# apk packages of the Aphrody Alpine WSL distribution, on top of the base image
+# (ghcr.io/aphrody-labs/alpine:3.24-runtime: Alpine 3.24 + musl Bun). One per line, # comments.
+ca-certificates
+tzdata
+libstdc++
+libgcc
+# /usr/lib/wsl/lib (libd3d12.so, libd3d12core.so, libdxcore.so, mounted by WSL from
+# C:\Program Files\WSL\lib) is linked against glibc (NEEDED libc.so.6, libpthread.so.0,
+# libm.so.6, libdl.so.2): gcompat loads it under musl.
+gcompat
+iproute2
+procps
+git
+openssh-client
+less
