@@ -24,7 +24,7 @@ RUN set -eu; \
     lists=/tmp/wsl/packages.txt; \
     [ "$GUI" = 1 ] && lists="$lists /tmp/wsl/packages-gui.txt"; \
     pkgs=$(cat $lists | sed 's/#.*//'); \
-    apk update -q; \
+    apk update -q || echo "apk update: unreachable repository (aphrody-3.24-$(apk --print-arch) unpublished?)"; \
     apk add --no-cache $(echo "$pkgs" | grep -v '?$'); \
     for p in $(echo "$pkgs" | grep '?$' | tr -d '?'); do \
       if apk search -q -x "$p" | grep -q .; then apk add --no-cache "$p"; else echo "absent: $p"; fi; \

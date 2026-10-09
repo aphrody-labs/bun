@@ -1,0 +1,86 @@
+name: Aphrody Alpine WSL distribution
+
+# Builds the Aphrody Alpine WSL2 distribution (lot A4, scripts/aphrody/alpine/wsl.ts) natively
+# on x64 and arm64: runtime.Dockerfile is built locally as the base (no registry pull), then
+# wsl.Dockerfile on top, exported to aphrody-alpine-<arch>.wsl (+ .sha256) and uploaded as a
+# workflow artifact. Publishes nothing (no image push, no release).
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/aphrody/alpine/wsl.ts"
+      - "scripts/aphrody/alpine/wsl.Dockerfile"
+      - "scripts/aphrody/alpine/wsl/**"
+      - "scripts/aphrody/alpine/runtime.Dockerfile"
+      - "test/internal/aphrody-alpine-wsl.test.ts"
+      - ".github/workflows/aphrody-alpine-wsl.yml"
+  workflow_dispatch:
+    inputs:
+      gui:
+        description: "Install wsl/packages-gui.txt (Mesa, Wayland)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: aphrody-alpine-wsl-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.repository == 'aphrody-labs/bun'
+    name: ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            platform: amd64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            platform: arm64
+            runner: ubuntu-24.04-arm
+    env:
+      BASE: aphrody-local/alpine:3.24-runtime-${{ matrix.platform }}
+      OUT: dist/aphrody-alpine-${{ matrix.arch }}.wsl
+      GUI_FLAG: ${{ (github.event_name == 'workflow_dispatch' && !inputs.gui) && '--no-gui' || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+      - name: Unit tests
+        run: bun test test/internal/aphrody-alpine-wsl.test.ts
+      # The default docker driver (no setup-buildx-action) so wsl.ts's buildx sees the local base.
+      - name: Runtime base
+        run: >
+          docker buildx build --load
+          --platform "linux/${{ matrix.platform }}"
+          -t "$BASE"
+          -f scripts/aphrody/alpine/runtime.Dockerfile
+          scripts/aphrody/alpine
+      - name: Build .wsl
+        run: bun scripts/aphrody/alpine/wsl.ts --base "$BASE" --arch "${{ matrix.arch }}" --out "$OUT" $GUI_FLAG
+      - name: Inspect
+        run: |
+          ls -l dist
+          cat "$OUT.sha256"
+          tar -tzf "$OUT" > list.txt
+          for p in etc/wsl.conf etc/wsl-distribution.conf bin/bunsh usr/share/aphrody/wsl/aphrody.ico; do
+            grep -qxE "(\./)?$p" list.txt || { echo "missing $p"; exit 1; }
+          done
+          if grep -qxE '(\./)?etc/resolv\.conf' list.txt; then echo "resolv.conf must not ship"; exit 1; fi
+          docker run --rm --platform "linux/${{ matrix.platform }}" "aphrody-alpine-wsl:${{ matrix.arch }}" sh -c 'bun --version && cat /etc/ld-musl-*.path && grep -x /bin/bunsh /etc/shells'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aphrody-alpine-${{ matrix.arch }}-wsl
+          path: |
+            ${{ env.OUT }}
+            ${{ env.OUT }}.sha256
+          retention-days: 14
+          compression-level: 0
