@@ -1,0 +1,69 @@
+---
+title: "System packages (winget)"
+description: "Declare winget packages in package.json and install them with bun install"
+---
+
+`bun install` can install system packages next to npm packages. You list them under `systemDependencies` in `package.json`, keyed as `<source>:<id>`. Bun resolves them, records them in `bun.lock`, and installs them. It reads winget's index directly and never calls `winget.exe`.
+
+```json package.json icon="file-json"
+{
+  "name": "my-app",
+  "systemDependencies": {
+    "winget:jqlang.jq": "*",
+    "winget:Microsoft.PowerToys": "0.100.0"
+  }
+}
+```
+
+## Adding and removing
+
+```sh terminal icon="terminal"
+bun add winget:jqlang.jq
+bun add winget:Microsoft.PowerToys@0.100.0
+bun remove winget:jqlang.jq
+```
+
+A specifier is `<source>:<id>[@<range>]`. If you leave out the range, Bun writes `"*"`. Package ids are case-insensitive. The key written to `package.json` is the one you typed.
+
+Ranges compare version components numerically, the way winget does. Supported ranges are `*`, an exact version, `1.2.x`, `>=`, `>`, `<=`, `<`, `^`, `~` and alternatives joined with `||`.
+
+## How resolution works
+
+Bun reads the winget community source the same way `winget` does:
+
+1. It downloads `source2.msix` and reads `Public/index.db` with Bun's built-in SQLite reader. The index is cached for one hour.
+2. It downloads `packages/<id>/<hash>/versionData.mszyml` and decompresses the list of versions.
+3. It downloads the manifest for the chosen version and checks it against the sha256 listed in the version data.
+
+The result is pinned in the `"system"` block of `bun.lock` (or `bun.lockb`). Each entry records the version, the manifest URL and the manifest's sha256. `bun install --frozen-lockfile` fails when `systemDependencies` no longer matches the lockfile.
+
+## Installing
+
+On Windows, `bun install` picks the installer that best matches the host architecture, the requested scope and the locale. Before running anything, it checks the installer against the manifest's `InstallerSha256`.
+
+| Installer type                           | What Bun does                                                                                     |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `portable`, `zip`                        | Extracts into `node_modules/.system/winget/<id>` and creates `node_modules/.bin/<command>` shims  |
+| `msi`, `wix`, `burn`, `inno`, `nullsoft` | Runs the installer silently with the manifest's switches                                          |
+| `exe`                                    | Runs the installer only if the manifest provides a `Silent` switch                                |
+| `msix`, `appx`                           | Runs `Add-AppxPackage`                                                                            |
+
+Some installers need administrator rights: those with `ElevationRequirement`, machine-scoped ones, and msi, inno or burn installers with no scope. Bun refuses to run these unless the shell is already elevated or `BUN_SYSTEM_ELEVATE=1` is set.
+
+Bun records what it installed in `node_modules/.system/.bun-system/installed.json`. When an entry leaves the lockfile, `bun install` uninstalls it: `msiexec /x` for msi packages, `Remove-AppxPackage` for msix packages, and the registered uninstall command for the others.
+
+On other platforms, winget packages are still resolved and locked, but installing them is skipped with a warning. A lockfile created on Linux or macOS therefore works unchanged on Windows.
+
+## Environment variables
+
+| Variable             | Effect                                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------------- |
+| `BUN_WINGET_SOURCE`  | Base URL of the winget source. Default: `https://cdn.winget.microsoft.com/cache`              |
+| `BUN_SYSTEM_ROOT`    | Install into this directory instead of `node_modules/.system`. Shims go to `<root>/bin`       |
+| `BUN_SYSTEM_ELEVATE` | Set to `1` to allow installers that need administrator rights                                 |
+| `BUN_SYSTEM_ARCH`    | Override the host architecture: `x64`, `arm64` or `x86`                                       |
+| `BUN_SYSTEM_SCOPE`   | Prefer `user` or `machine` installers                                                         |
+| `BUN_SYSTEM_LOCALE`  | Preferred installer locale, for example `en-US`                                               |
+| `BUN_SYSTEM_REFRESH` | Set to `1` to download the index again even if the cached copy is less than an hour old      |
+
+Downloaded indexes, manifests and installers are cached under `<install cache>/system/winget`.

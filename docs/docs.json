@@ -243,7 +243,8 @@
               "/pm/scopes-registries",
               "/pm/overrides",
               "/pm/security-scanner-api",
-              "/pm/npmrc"
+              "/pm/npmrc",
+              "/pm/winget"
             ]
           }
         ]
