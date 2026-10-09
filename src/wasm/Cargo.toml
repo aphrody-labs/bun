@@ -1,0 +1,19 @@
+[package]
+name = "bun_wasm"
+version.workspace = true
+edition.workspace = true
+description = "WebAssembly surface of Bun's Rust crates (semver, shell parser, markdown) for the Aphrody WebOS; JS runs on the page's engine."
+
+[lib]
+path = "lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+bun_alloc.workspace = true
+bun_core.workspace = true
+bun_md.workspace = true
+bun_semver.workspace = true
+bun_shell_parser.workspace = true

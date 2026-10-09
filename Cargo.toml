@@ -25,6 +25,7 @@ members = [
   "src/sema/driver",
   "src/sema/standalone",
   "src/semver",
+  "src/wasm",
   "src/sourcemap",
   "src/sql",
   "src/sys",
@@ -136,6 +137,14 @@ codegen-units = 1
 debug = "line-tables-only"
 strip = "none"
 panic = "abort"
+
+[profile.wasm]
+inherits = "release"
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
 
 [profile.dev]
 panic = "abort"
@@ -373,6 +382,7 @@ bun_sema = { path = "src/sema" }
 bun_sema_baselines = { path = "src/sema/baselines" }
 bun_sema_driver = { path = "src/sema/driver" }
 bun_semver = { path = "src/semver" }
+bun_wasm = { path = "src/wasm" }
 bun_sourcemap = { path = "src/sourcemap" }
 bun_sql = { path = "src/sql" }
 bun_sys = { path = "src/sys" }

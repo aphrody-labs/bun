@@ -68,6 +68,7 @@
     "test:release": "node scripts/runner.node.ts --exec-path ./build/release/bun",
     "rust:check": "cargo check --workspace --keep-going",
     "rust:check-all": "bun scripts/rust-check-all.ts",
+    "rust:check-wasm": "cargo check --target wasm32-wasip1-threads -p bun_wasm --profile wasm",
     "rust:clippy": "cargo clippy --workspace --no-deps --keep-going",
     "rust:mordant": "bun scripts/rust-mordant.ts",
     "rust:mordant:baseline": "bun scripts/rust-mordant.ts --baseline",
