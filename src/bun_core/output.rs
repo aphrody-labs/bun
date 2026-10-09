@@ -610,7 +610,7 @@ pub mod stdio {
         /// No preconditions; one-shot stdio fixup at process startup.
         pub(crate) safe fn bun_initialize_process();
         /// No preconditions; restores TTY state on the standard streams.
-        #[cfg(not(windows))]
+        #[cfg(not(any(windows, target_arch = "wasm32")))]
         pub(crate) safe fn bun_restore_stdio();
     }
 
@@ -657,7 +657,8 @@ pub mod stdio {
         {
             super::windows_stdio::restore();
         }
-        #[cfg(not(windows))]
+        // wasm32 has no termios state to restore.
+        #[cfg(not(any(windows, target_arch = "wasm32")))]
         {
             bun_restore_stdio();
         }

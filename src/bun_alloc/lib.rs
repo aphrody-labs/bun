@@ -605,7 +605,7 @@ pub unsafe fn realloc_raw(
 #[cold]
 #[inline(never)]
 pub fn out_of_memory() -> ! {
-    #[cfg(not(test))]
+    #[cfg(not(any(test, target_arch = "wasm32")))]
     {
         unsafe extern "Rust" {
             // Defined `#[no_mangle] extern "Rust"` in `bun_crash_handler` and
@@ -615,7 +615,7 @@ pub fn out_of_memory() -> ! {
         }
         __bun_crash_handler_out_of_memory()
     }
-    #[cfg(test)]
+    #[cfg(any(test, target_arch = "wasm32"))]
     {
         let _ = std::io::Write::write_all(&mut std::io::stderr(), b"bun: out of memory\n");
         std::process::abort()

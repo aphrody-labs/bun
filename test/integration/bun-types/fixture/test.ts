@@ -421,3 +421,18 @@ unknownMatchers.toContainEqual([""]);
 unknownMatchers.toEqual(["a", "b"]);
 unknownMatchers.toBeCloseTo(2);
 unknownMatchers.toBe("a");
+
+expect.addSnapshotSerializer({
+  test: (value: unknown) => value instanceof Date,
+  serialize: (value: Date, config, indentation, depth, refs, printer) =>
+    `Date<${printer(value.toISOString(), config, indentation, depth, refs)}>`,
+});
+expect.addSnapshotSerializer({
+  test: (value: unknown) => typeof value === "bigint",
+  print: (value: bigint, serialize, indent) => indent(serialize(String(value))),
+});
+// @ts-expect-error a serializer needs serialize() or print()
+expect.addSnapshotSerializer({ test: () => true });
+expectType<number>(expect.getState().assertionCalls);
+expectType<number | null>(expect.getState().expectedAssertionsNumber);
+expect.setState({ custom: 1 });

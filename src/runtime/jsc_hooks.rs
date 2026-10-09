@@ -733,6 +733,13 @@ unsafe fn load_preloads(vm: *mut VirtualMachine) -> bun_jsc::CrateResult<*mut JS
 
     // SAFETY: per fn contract.
     let n = unsafe { &*vm }.preload.len();
+    // bun test appends bunfig `[test] snapshotSerializers` after the preloads.
+    let first_serializer =
+        n.saturating_sub(crate::test_runner::expect::snapshot_serializer_preloads());
+    // SAFETY: per fn contract.
+    if unsafe { &*vm }.test_isolation_enabled {
+        crate::test_runner::expect::clear_snapshot_serializers();
+    }
     for i in 0..n {
         // SAFETY: `i < n`; the `Box<[u8]>` allocation is stable across the
         // `resolve_and_auto_install` call below (which only touches
@@ -869,6 +876,22 @@ unsafe fn load_preloads(vm: *mut VirtualMachine) -> bun_jsc::CrateResult<*mut JS
         // SAFETY: `promise` is a live (still-protected) JSC heap cell.
         if unsafe { &*promise }.status() == PromiseStatus::Rejected {
             return Ok(promise);
+        }
+        // SAFETY: `promise` is a live (still-protected) JSC heap cell.
+        if i >= first_serializer && unsafe { &*promise }.status() == PromiseStatus::Fulfilled {
+            // SAFETY: `vm.global` is set during `VirtualMachine::init` and outlives the VM.
+            let global = unsafe { &*global };
+            // SAFETY: `promise` is live and fulfilled; its value is the module namespace object.
+            let namespace = unsafe { (*promise).result(global.vm()) };
+            if crate::test_runner::expect::register_snapshot_serializer_module(
+                global,
+                namespace,
+                preload_slice,
+            )
+            .is_err()
+            {
+                return Err(bun_jsc::CrateError::JSError);
+            }
         }
         // A stop was requested (worker terminate()/exit) while it loaded: the
         // caller checks the same and shuts down; load nothing more.

@@ -1937,6 +1937,12 @@ impl TestCommand {
         vm.argv = core::mem::take(&mut ctx.passthrough);
         // Clone (not take): build_worker_argv reads ctx.preloads to forward --preload.
         vm.preload = ctx.preloads.clone();
+        // Loaded last among the preloads; `load_preloads` registers their exports.
+        vm.preload
+            .extend(ctx.test_options.snapshot_serializers.iter().cloned());
+        crate::test_runner::expect::set_snapshot_serializer_preloads(
+            ctx.test_options.snapshot_serializers.len(),
+        );
         vm.transpiler.options.rewrite_jest_for_tests = true;
         bun_http::EXPERIMENTAL_HTTP2_CLIENT_FROM_CLI.store(
             ctx.runtime_options.experimental_http2_fetch,

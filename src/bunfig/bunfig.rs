@@ -707,6 +707,37 @@ impl<'a> Parser<'a> {
                         }
                     }
                 }
+
+                if let Some(expr) = test.get(b"snapshotSerializers") {
+                    match &expr.data {
+                        ExprData::EString(s) => {
+                            self.ctx.test_options.snapshot_serializers =
+                                vec![estring_to_owned(s, self.bump)];
+                        }
+                        ExprData::EArray(arr) => {
+                            let items = arr.items.slice();
+                            let mut paths: Vec<Box<[u8]>> = Vec::with_capacity(items.len());
+                            for item in items {
+                                let ExprData::EString(s) = &item.data else {
+                                    self.add_error(
+                                        item.loc,
+                                        b"snapshotSerializers array must contain only strings",
+                                    )?;
+                                    return Ok(());
+                                };
+                                paths.push(estring_to_owned(s, self.bump));
+                            }
+                            self.ctx.test_options.snapshot_serializers = paths;
+                        }
+                        _ => {
+                            self.add_error(
+                                expr.loc,
+                                b"snapshotSerializers must be a string or array of strings",
+                            )?;
+                            return Ok(());
+                        }
+                    }
+                }
             }
         }
 
