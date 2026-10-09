@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MIT
+[package]
+name = "bun-dotnet-host"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/aphrody-labs/bun"
+description = "CLR host for Bun: locates hostfxr (nethost semantics), runs the dotnet muxer in-process and binds UnmanagedCallersOnly entry points"
+
+[lib]
+name = "bun_dotnet_host"
+crate-type = ["rlib", "cdylib"]
+
+[features]
+default = ["c-abi"]
+# `bun_dotnet_*` C exports (include/bun_dotnet_host.h). Bun links the rlib without them.
+c-abi = []
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_LibraryLoader", "Win32_System_Registry"] }

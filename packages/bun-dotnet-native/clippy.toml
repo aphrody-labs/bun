@@ -1,0 +1,3 @@
+# Independent std-based package: standard strict Clippy, no engine-only substitutions.
+disallowed-methods = []
+disallowed-types = []
