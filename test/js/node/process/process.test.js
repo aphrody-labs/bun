@@ -2262,7 +2262,7 @@ describe("process.exitCode", () => {
       process.exitCode = 3;
       process.exitCode = ${value};
     `,
-      "exit 0 undefined\n",
+      `exit 0 ${value}\n`,
       0,
     );
   });
