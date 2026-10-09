@@ -564,6 +564,40 @@ describe("bundler", () => {
     },
   });
 
+  // An ES module that also assigns `module.exports` has no CommonJS wrapper: `module` is the output's own module.
+  itBundled("cjs/esm_entry_assigns_module_exports_format_cjs", {
+    files: {
+      "/entry.js": /* js */ `
+        import { b } from "./b.js";
+        export const x = 1;
+        module.exports = { b, x, kind: "assigned" };
+      `,
+      "/b.js": /* js */ `
+        export const b = 2;
+      `,
+      "/lib.js": /* js */ `
+        import path from "path";
+        export function sep() { return path.sep.length; }
+        module.exports.extra = 3;
+      `,
+    },
+    runtimeFiles: {
+      "/check.js": /* js */ `
+        const entry = require("./out/entry.js");
+        const lib = require("./out/lib.js");
+        console.log(JSON.stringify(entry), typeof lib.sep, lib.extra);
+      `,
+    },
+    entryPoints: ["/entry.js", "/lib.js"],
+    outdir: "/out",
+    target: "node",
+    format: "cjs",
+    run: {
+      file: "/check.js",
+      stdout: '{"b":2,"x":1,"kind":"assigned"} function 3',
+    },
+  });
+
   // ============================================================================
   // The __commonJS wrapper must be a regular function (not an arrow) so a
   // top-level `arguments` reference in a CJS body has a binding in ESM output.

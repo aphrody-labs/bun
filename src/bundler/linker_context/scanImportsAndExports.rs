@@ -617,6 +617,21 @@ pub(crate) fn scan_imports_and_exports(
                     col!(flags)[source_index] = flag;
                 }
 
+                // An ES module that still reads `module` (`module.exports = …` beside `export`)
+                // gets no CommonJS wrapper to declare it, so it is the global `module`, as in esbuild.
+                if export_kind != ExportsKind::Cjs
+                    && flag.wrap != WrapKind::Cjs
+                    && col_ref!(ast_flags_list)[source_index].contains(AstFlags::USES_MODULE_REF)
+                {
+                    let module_ref = this
+                        .graph
+                        .symbols
+                        .follow(col_ref!(module_refs)[source_index]);
+                    // SAFETY: `follow` returns a valid in-bounds `Ref`; no other
+                    // borrow into `this.graph.symbols` is live across this write.
+                    unsafe { this.graph.symbol_mut(module_ref) }.kind = SymbolKind::Unbound;
+                }
+
                 let is_lifted_commonjs = col_ref!(ast_flags_list)[source_index]
                     .contains(AstFlags::COMMONJS_LIFTED_TO_ESM);
                 if is_lifted_commonjs && flag.wrap == WrapKind::Cjs {
