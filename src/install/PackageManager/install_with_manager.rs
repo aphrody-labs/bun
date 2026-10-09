@@ -699,6 +699,9 @@ pub fn install_with_manager(
         root = *manager.lockfile.packages.get(0);
     }
 
+    let system_changed =
+        resolve_system_dependencies(manager, root_package_json_path, &lockfile_before_clean);
+
     if manager.lockfile.packages.len() > 0 {
         for request in &manager.update_requests {
             // prevent redundant errors
@@ -789,7 +792,7 @@ pub fn install_with_manager(
     {
         'frozen_lockfile: {
             let changed_section = frozen_changed_section(manager, root_package_json_path);
-            if changed_section.is_none() {
+            if changed_section.is_none() && !system_changed {
                 if load_result.loaded_from_text_lockfile() {
                     if bun_core::handle_oom(Lockfile::eql(
                         &manager.lockfile,
@@ -819,6 +822,11 @@ pub fn install_with_manager(
                     bun_core::note!(
                         "{} in package.json changed since {} was saved",
                         section,
+                        loaded_lockfile_name(&load_result)
+                    );
+                } else if system_changed {
+                    bun_core::note!(
+                        "systemDependencies in package.json changed since {} was saved",
                         loaded_lockfile_name(&load_result)
                     );
                 }
@@ -926,7 +934,7 @@ pub fn install_with_manager(
     let did_meta_hash_change =
         // If the lockfile was frozen, we already checked it
         !manager.options.enable.frozen_lockfile()
-            && if load_result.loaded_from_text_lockfile() {
+            && (system_changed || if load_result.loaded_from_text_lockfile() {
                 !manager.lockfile.eql(
                     &lockfile_before_clean,
                     lockfile_before_clean.loaded_package_count as usize,
@@ -936,7 +944,7 @@ pub fn install_with_manager(
                     PackageManager::verbose_install() || manager.options.do_.print_meta_hash_string(),
                     packages_len_before_install.min(manager.lockfile.packages.len()),
                 )?
-            };
+            });
 
     // It's unnecessary work to re-save the lockfile if there are no changes.
     // A loaded text lockfile is never re-saved just to bump its version: an
@@ -968,6 +976,10 @@ pub fn install_with_manager(
 
     // Before root lifecycle scripts, which exit the process on failure.
     super::package_json_write_back::flush(manager)?;
+
+    if manager.options.do_.install_packages() && !manager.options.dry_run && !manager.options.global {
+        install_system_dependencies(manager, root_package_json_path, log_level);
+    }
 
     if needs_new_lockfile {
         manager.summary.add = manager.lockfile.packages.len() as u32;
@@ -1131,6 +1143,87 @@ fn wait_for_peers(this: &mut PackageManager) -> crate::Result<()> {
 // `#[cold] #[inline(never)]` helper that LLVM places in `.text.unlikely`.
 #[cold]
 #[inline(never)]
+/// Resolves `systemDependencies` (winget/apk/deb/pacman) into `lockfile.system`,
+/// reusing pinned entries from the previous lockfile. Returns whether the block changed.
+fn resolve_system_dependencies(
+    manager: &mut PackageManager,
+    root_package_json_path: &ZStr,
+    before: &Lockfile,
+) -> bool {
+    use crate::system;
+    manager.lockfile.system = before.system.clone();
+    let specs = match system::read_package_json_specs(root_package_json_path.as_bytes()) {
+        Ok(specs) => specs,
+        Err(err) => {
+            bun_core::pretty_errorln!("<r><red>error<r><d>:<r> {}", err);
+            Global::crash();
+        }
+    };
+    if specs.is_empty() && before.system.is_empty() {
+        return false;
+    }
+    let _ = manager.get_cache_directory();
+    let cache_dir = manager.cache_directory_path.as_bytes().to_vec();
+    let ctx = system::Ctx::new(manager.env(), &cache_dir, PackageManager::verbose_install());
+    match system::resolve_lock(&ctx, &specs, &before.system) {
+        Ok(lock) => {
+            let changed = lock != before.system;
+            manager.lockfile.system = lock;
+            changed
+        }
+        Err(err) => {
+            bun_core::pretty_errorln!("<r><red>error<r><d>:<r> systemDependencies: {}", err);
+            Global::crash();
+        }
+    }
+}
+
+/// Installs/removes system packages so the install root matches `lockfile.system`.
+fn install_system_dependencies(
+    manager: &mut PackageManager,
+    root_package_json_path: &ZStr,
+    log_level: Options::LogLevel,
+) {
+    use crate::system;
+    let project_dir = bun_paths::dirname(root_package_json_path.as_bytes()).unwrap_or(b".").to_vec();
+    let _ = manager.get_cache_directory();
+    let cache_dir = manager.cache_directory_path.as_bytes().to_vec();
+    let ctx = system::Ctx::new(manager.env(), &cache_dir, PackageManager::verbose_install());
+    let install_root = system::InstallRoot::for_project(&project_dir, &ctx.options);
+    if manager.lockfile.system.is_empty() && system::fs::read(&install_root.db_path()).is_none() {
+        return;
+    }
+    match system::install_lock(&ctx, &manager.lockfile.system, &install_root) {
+        Ok(summary) => {
+            if log_level == Options::LogLevel::Silent {
+                return;
+            }
+            for key in &summary.installed {
+                let version = manager
+                    .lockfile
+                    .system
+                    .entries
+                    .get(key)
+                    .map(|e| e.version.as_str())
+                    .unwrap_or("");
+                bun_core::pretty_errorln!("<r><green>+<r> <b>{}<r><d>@{}<r>", key, version);
+            }
+            for key in &summary.removed {
+                bun_core::pretty_errorln!("<r><red>-<r> {}", key);
+            }
+            for (key, reason) in &summary.skipped {
+                bun_core::pretty_errorln!("<r><yellow>warn<r><d>:<r> skipped {}: {}", key, reason);
+            }
+        }
+        Err(err) => {
+            if log_level != Options::LogLevel::Silent {
+                bun_core::pretty_errorln!("<r><red>error<r><d>:<r> systemDependencies: {}", err);
+            }
+            manager.any_failed_to_install = true;
+        }
+    }
+}
+
 fn print_install_summary(
     this: &mut PackageManager,
     ctx: Command::Context,

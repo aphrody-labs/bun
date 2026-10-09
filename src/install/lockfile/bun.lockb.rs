@@ -40,6 +40,7 @@ const HAS_OVERRIDES_TAG: u64 = u64::from_ne_bytes(*b"oVeRriDs");
 const HAS_CATALOGS_TAG: u64 = u64::from_ne_bytes(*b"cAtAlOgS");
 const HAS_CONFIG_VERSION_TAG: u64 = u64::from_ne_bytes(*b"cNfGvRsN");
 const HAS_SCOPED_OVERRIDES_TAG: u64 = u64::from_ne_bytes(*b"sCoPdOvR");
+const HAS_SYSTEM_TAG: u64 = u64::from_ne_bytes(*b"sYsTeMdP");
 
 /// Wraps a growing `Vec<u8>` to provide both positional-write semantics
 /// (`get_pos`/`pwrite`) and append semantics (`write_all`/`write_int_*`) for
@@ -373,6 +374,13 @@ pub(crate) fn save(
             externals.push(dependency::to_external(&rule.dep));
         }
         write_array::<dependency::External>(&mut stream, &externals, PREFIX_DEP_EXTERNAL)?;
+    }
+
+    if !this.system.is_empty() {
+        let doc = this.system.to_document();
+        stream.write_all(&HAS_SYSTEM_TAG.to_ne_bytes())?;
+        stream.write_int_le::<u64>(doc.len() as u64)?;
+        stream.write_all(&doc)?;
     }
 
     *total_size = stream.get_pos()?;
@@ -815,6 +823,28 @@ pub(crate) fn load(
                     };
                     overrides.push_scoped(rule, string_bytes);
                 }
+            } else {
+                stream.pos -= 8;
+            }
+        }
+    }
+
+    {
+        let remaining_in_buffer = total_buffer_size.saturating_sub(stream.pos as u64);
+
+        if remaining_in_buffer > 8 && total_buffer_size <= stream.buffer.len() as u64 {
+            let next_num = stream.read_int_le::<u64>()?;
+            if next_num == HAS_SYSTEM_TAG {
+                let len = usize::try_from(stream.read_int_le::<u64>()?)
+                    .map_err(|_| crate::Error::InvalidLockfile)?;
+                let start = stream.pos;
+                let doc = stream
+                    .buffer
+                    .get(start..start + len)
+                    .ok_or(crate::Error::InvalidLockfile)?;
+                lockfile.system = crate::system::SystemLock::from_document(doc)
+                    .map_err(|_| crate::Error::InvalidLockfile)?;
+                stream.pos = start + len;
             } else {
                 stream.pos -= 8;
             }

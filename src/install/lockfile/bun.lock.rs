@@ -670,6 +670,12 @@ impl Stringifier {
             let mut pkg_deps_sort_buf: Vec<DependencyID> = Vec::new();
             let mut pkg_key_buf: Vec<u8> = Vec::new();
 
+            if !lockfile.system.is_empty() {
+                let mut block = Vec::new();
+                lockfile.system.write_text(&mut block, *indent as usize);
+                writer.write_all(&block)?;
+            }
+
             Self::write_indent(writer, *indent)?;
             writer.write_all(b"\"packages\": {")?;
             let mut first = true;
@@ -1653,6 +1659,7 @@ pub enum ParseError {
     InvalidOverridesObject,
     InvalidCatalogObject,
     InvalidCatalogsObject,
+    InvalidSystemObject,
     InvalidDependencyVersion,
     InvalidPackageResolution,
     UnexpectedResolution,
@@ -2151,6 +2158,21 @@ pub(crate) fn parse_into_binary_lockfile(
 
             *entry.key_ptr = dep_name;
             *entry.value_ptr = dep;
+        }
+    }
+
+    if let Some(system_expr) = root.get(b"system") {
+        let value = crate::system::value::from_expr(&system_expr, source.contents());
+        match crate::system::SystemLock::from_value(&value) {
+            Ok(system) => lockfile.system = system,
+            Err(err) => {
+                log.add_error_fmt(
+                    Some(source),
+                    value_loc_of(source, system_expr.loc),
+                    format_args!("{err}"),
+                );
+                return Err(ParseError::InvalidSystemObject);
+            }
         }
     }
 

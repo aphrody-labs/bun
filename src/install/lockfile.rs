@@ -189,6 +189,8 @@ pub struct Lockfile {
     pub(crate) patched_dependencies: PatchedDependenciesMap,
     pub(crate) overrides: OverrideMap,
     pub catalogs: CatalogMap,
+    /// `systemDependencies` resolutions (winget, apk, deb, pacman): the `"system"` block of `bun.lock`.
+    pub system: crate::system::SystemLock,
 
     pub(crate) saved_config_version: Option<ConfigVersion>,
 
@@ -689,6 +691,7 @@ impl Lockfile {
         self.self_contained_workspaces = ArrayHashMap::default();
         self.overrides = OverrideMap::default();
         self.catalogs = CatalogMap::default();
+        self.system = Default::default();
         self.patched_dependencies = PatchedDependenciesMap::default();
 
         let link_workspace_packages = pm
@@ -1072,6 +1075,7 @@ impl Lockfile {
             *lf.overrides = old.overrides.clone(manager, old_buf, &mut builder)?;
             *lf.catalogs = old.catalogs.clone(manager, old_buf, &mut builder)?;
         }
+        new.system = old.system.clone();
 
         // Step 1. Recreate the lockfile with only the packages that are still alive
         let root = old.root_package().ok_or(crate::Error::NoPackage)?;
@@ -2119,6 +2123,7 @@ impl Lockfile {
             self_contained_workspaces: ArrayHashMap::default(),
             overrides: OverrideMap::default(),
             catalogs: CatalogMap::default(),
+            system: Default::default(),
             meta_hash: ZERO_HASH,
             patched_dependencies: PatchedDependenciesMap::default(),
             saved_config_version: None,

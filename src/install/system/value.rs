@@ -136,6 +136,12 @@ fn format_number(v: f64) -> String {
     }
 }
 
+/// Converts an already-parsed JSON/YAML expression; `source` is the text it was parsed from.
+pub fn from_expr(expr: &Expr, source: &[u8]) -> Value {
+    let bump = bun_alloc::Arena::new();
+    convert(expr, source, &bump, 0)
+}
+
 pub fn parse_json(bytes: &[u8], name: &str) -> Result<Value> {
     let mut log = bun_ast::Log::init();
     let source = bun_ast::Source::init_path_string(name.as_bytes(), bytes);
