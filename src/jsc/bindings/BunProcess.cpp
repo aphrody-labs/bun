@@ -2300,7 +2300,7 @@ JSC_DEFINE_CUSTOM_GETTER(processExitCode, (JSC::JSGlobalObject * lexicalGlobalOb
         return JSValue::encode(jsUndefined());
     }
     if (!process->m_isExitCodeObservable) {
-        return JSValue::encode(jsUndefined());
+        return JSValue::encode(process->m_exitCodeIsNull ? jsNull() : jsUndefined());
     }
 
     return JSValue::encode(jsNumber(Bun__getExitCode(process->globalObject()->bunVM())));
@@ -2327,6 +2327,7 @@ bool setProcessExitCodeInner(JSC::JSGlobalObject* lexicalGlobalObject, Process* 
         RETURN_IF_EXCEPTION(throwScope, false);
 
         process->m_isExitCodeObservable = true;
+        process->m_exitCodeIsNull = false;
         void* ptr = process->globalObject()->bunVM();
         Bun__setExitCode(ptr, static_cast<uint8_t>(exitCodeInt % 256));
     }
@@ -2338,9 +2339,16 @@ JSC_DEFINE_CUSTOM_SETTER(setProcessExitCode, (JSC::JSGlobalObject * lexicalGloba
     if (!process) {
         return false;
     }
-    auto throwScope = DECLARE_THROW_SCOPE(process->vm());
     auto code = JSValue::decode(value);
+    // process.exit() keeps a previous exitCode; assigning undefined/null clears it.
+    if (code.isUndefinedOrNull()) {
+        process->m_isExitCodeObservable = false;
+        process->m_exitCodeIsNull = code.isNull();
+        Bun__setExitCode(process->globalObject()->bunVM(), 0);
+        return true;
+    }
 
+    auto throwScope = DECLARE_THROW_SCOPE(process->vm());
     RELEASE_AND_RETURN(throwScope, setProcessExitCodeInner(lexicalGlobalObject, process, code));
 }
 

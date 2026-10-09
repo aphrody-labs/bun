@@ -2255,6 +2255,18 @@ describe("process.exitCode", () => {
     );
   });
 
+  it.concurrent.each(["undefined", "null"])("setter %s resets a previous exit code", async value => {
+    await runInlineFixture(
+      `
+      process.on("exit", (code) => console.log("exit", code, process.exitCode));
+      process.exitCode = 3;
+      process.exitCode = ${value};
+    `,
+      "exit 0 undefined\n",
+      0,
+    );
+  });
+
   it("exit", async () => {
     await runInlineFixture(
       `

@@ -56,6 +56,7 @@ public:
     ~Process();
 
     bool m_isExitCodeObservable = false;
+    bool m_exitCodeIsNull = false;
     bool m_sourceMapsEnabled = false;
     // Node's per-Environment EmitProcessEnvWarning one-shot for DEP0104.
     bool m_emitEnvNonstringWarning = true;
