@@ -12,7 +12,7 @@ This output comes from `n2b . --report json` on a file containing `const fs = re
   "schema_version": 2,
   "$schema": "https://raw.githubusercontent.com/aphrody-code/n2b/main/schema/v2.json",
   "tool": "node2bun",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "mode": "check",
   "root": "/path/to/project",
   "files_scanned": 1,

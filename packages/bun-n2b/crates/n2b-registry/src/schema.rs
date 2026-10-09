@@ -201,6 +201,13 @@ pub struct CliEntry {
     pub respect_comments: bool,
     #[serde(default)]
     pub docs: String,
+    /// Réécriture appliquée seulement en mode `--aggressive`/`--migrate` ;
+    /// sinon le finding est émis sans autofix.
+    #[serde(default)]
+    pub aggressive: bool,
+    /// Regex : un match dont le texte y correspond est ignoré.
+    #[serde(default)]
+    pub unless: Option<String>,
 }
 
 fn default_true() -> bool {

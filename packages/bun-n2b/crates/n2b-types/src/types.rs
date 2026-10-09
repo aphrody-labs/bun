@@ -105,6 +105,10 @@ pub struct RunOptions {
     /// Dry-run : applique les transformations en mémoire mais n'écrit rien
     /// sur le disque. Utilisé par `n2b patch --self`.
     pub dry_run: bool,
+    /// Scan incrémental : ne scanne que les fichiers modifiés depuis cette ref
+    /// git (`<ref>...HEAD`, modifications locales et fichiers non suivis),
+    /// plus les manifestes racine.
+    pub since: Option<String>,
 }
 
 #[derive(Default)]

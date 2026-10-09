@@ -22,6 +22,8 @@ export interface ScanOptions {
   jobs?: number;
   /** With `fix`/`aggressive`, compute the fixes without writing files. Defaults to true. */
   dryRun?: boolean;
+  /** Incremental scan: only files changed since this git ref (`<ref>...HEAD`, local edits, untracked files) plus root manifests. */
+  since?: string;
 }
 
 /** Scans the project under `root` and returns the n2b JSON report (schema v2). */
@@ -31,6 +33,7 @@ export function scan(root: string, options: ScanOptions = {}): N2BReport {
   if (options.ignore !== undefined) opts.ignore = options.ignore;
   if (options.jobs !== undefined) opts.jobs = options.jobs;
   if (options.dryRun !== undefined) opts.dryRun = options.dryRun;
+  if (options.since !== undefined) opts.since = options.since;
   return native().scan(resolve(root), opts);
 }
 

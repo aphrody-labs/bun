@@ -1,10 +1,85 @@
 # registry/cli.toml — commandes npm/pnpm/yarn → bun.
 #
-# Phase 1 : transcription mécanique des 47 mappings de
+# Phase 1 : transcription mécanique des 47 mappings historiques de
 #   crates/compat/n2b-core/src/rules/cli_commands.rs::MAPPINGS
 # Ordre identique à la source — cli_commands.rs applique les règles en
 # séquence et l'ordre influence le résultat (ex. `npm install --save-dev`
 # avant `npm install`).
+
+# --- test runners, TS runners, pnpm monorepo filters ---
+# Appliquées avant les règles génériques npx/pnpm exec : elles consomment le
+# préfixe (`npx vitest`, `pnpm exec jest`, …). `(^|[\s;&|(])` remplace une
+# assertion arrière (absente du crate regex) : `@vitest/ui`, `vitest-x` et
+# `vitest.config.ts` ne correspondent pas.
+
+[[cli]]
+id         = "cli/vitest-watch"
+pattern    = '(?m)(^|[\s;&|(])(?:(?:npx|bunx|npm\s+exec|pnpm(?:\s+(?:exec|dlx))?|yarn(?:\s+(?:exec|dlx))?)\s+(?:--bun\s+)?)?vitest\s+(?:watch|dev)\b'
+replace    = "${1}bun test --watch"
+message    = "vitest watch → bun test --watch (bun:test : options et API vi.* partiellement compatibles)"
+aggressive = true
+docs       = "https://bun.com/docs/test/writing-tests"
+
+[[cli]]
+id         = "cli/vitest-run"
+pattern    = '(?m)(^|[\s;&|(])(?:(?:npx|bunx|npm\s+exec|pnpm(?:\s+(?:exec|dlx))?|yarn(?:\s+(?:exec|dlx))?)\s+(?:--bun\s+)?)?vitest\s+run\b'
+replace    = "${1}bun test"
+message    = "vitest run → bun test (bun:test : options et API vi.* partiellement compatibles)"
+aggressive = true
+docs       = "https://bun.com/docs/test/writing-tests"
+
+[[cli]]
+id         = "cli/vitest"
+pattern    = '(?m)(^|[\s;&|(])(?:(?:npx|bunx|npm\s+exec|pnpm(?:\s+(?:exec|dlx))?|yarn(?:\s+(?:exec|dlx))?)\s+(?:--bun\s+)?)?vitest(\s|$|[;&|)"])'
+replace    = "${1}bun test${2}"
+message    = "vitest → bun test (vitest sans sous-commande ne surveille qu'en TTY ; ajouter --watch si voulu)"
+aggressive = true
+docs       = "https://bun.com/docs/test/writing-tests"
+
+[[cli]]
+id         = "cli/jest"
+pattern    = '(?m)(^|[\s;&|(])(?:(?:npx|bunx|npm\s+exec|pnpm(?:\s+(?:exec|dlx))?|yarn(?:\s+(?:exec|dlx))?)\s+(?:--bun\s+)?)?jest(\s|$|[;&|)"])'
+replace    = "${1}bun test${2}"
+message    = "jest → bun test (vérifier les options : --watchAll, --runInBand… n'existent pas dans bun test)"
+aggressive = true
+docs       = "https://bun.com/docs/test/writing-tests"
+
+[[cli]]
+id      = "cli/node-ts-loader"
+pattern = '(?m)(^|[\s;&|(])node\s+(?:--loader|--import|--require|-r)[\s=](?:ts-node(?:/esm|/register(?:/transpile-only)?)?|tsx(?:/esm|/cjs)?)\s+'
+replace = "${1}bun "
+message = "node --loader/--import/-r ts-node|tsx → bun (Bun exécute TypeScript nativement)"
+docs    = "https://bun.com/docs/runtime/typescript"
+
+[[cli]]
+id      = "cli/tsx-watch"
+pattern = '(?m)(^|[\s;&|(])(?:(?:npx|bunx|npm\s+exec|pnpm(?:\s+(?:exec|dlx))?|yarn(?:\s+(?:exec|dlx))?)\s+)?tsx\s+watch\s+([^\s;&|-][^\s;&|]*\.[cm]?[jt]sx?)\b'
+replace = "${1}bun --watch ${2}"
+message = "tsx watch <fichier> → bun --watch <fichier> (Bun exécute TypeScript nativement)"
+docs    = "https://bun.com/docs/runtime/watch-mode"
+
+[[cli]]
+id      = "cli/ts-node"
+pattern = '(?m)(^|[\s;&|(])(?:(?:npx|bunx|npm\s+exec|pnpm(?:\s+(?:exec|dlx))?|yarn(?:\s+(?:exec|dlx))?)\s+)?(?:ts-node(?:-esm)?|tsx)\s+([^\s;&|-][^\s;&|]*\.[cm]?[jt]sx?)\b'
+replace = "${1}bun ${2}"
+message = "ts-node/tsx <fichier> → bun <fichier> (Bun exécute TypeScript nativement)"
+docs    = "https://bun.com/docs/runtime/typescript"
+
+[[cli]]
+id      = "cli/pnpm-recursive"
+pattern = '(?m)(^|[\s;&|(])pnpm\s+(?:-r|--recursive)\s+(?:run\s+)?([\w:.][\w:.-]*)'
+replace = "${1}bun run --filter '*' ${2}"
+message = "pnpm -r [run] <script> → bun run --filter '*' <script>"
+unless  = '\s(?:exec|install|i|add|remove|rm|update|up|publish|list|ls|why|outdated|link|unlink|rebuild|dlx|deploy|prune|audit)$'
+docs    = "https://bun.com/docs/pm/filter"
+
+[[cli]]
+id      = "cli/pnpm-filter"
+pattern = '(?m)(^|[\s;&|(])pnpm\s+(?:--filter|-F)[\s=]+([^\s;&|]+)\s+(?:run\s+)?([\w:.][\w:.-]*)'
+replace = "${1}bun run --filter ${2} ${3}"
+message = "pnpm --filter <pkg> [run] <script> → bun run --filter <pkg> <script>"
+unless  = '(?:\.\.\.|\[|\{|\^)|\s(?:exec|install|i|add|remove|rm|update|up|publish|list|ls|why|outdated|link|unlink|rebuild|dlx|deploy|prune|audit)$'
+docs    = "https://bun.com/docs/pm/filter"
 
 # --- npm ---
 

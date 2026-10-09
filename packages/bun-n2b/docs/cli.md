@@ -12,6 +12,8 @@ n2b --fix                    # apply the safe rewrites
 n2b --aggressive             # also apply the rewrites marked `aggressive`
 n2b --migrate                # --aggressive plus migration side effects
 n2b --fix --dry-run          # compute the rewrites without writing files
+n2b --migrate --dry-run      # print the migration plan without touching the project
+n2b --since origin/main      # scan only what changed since a git ref
 ```
 
 | Flag                   | Effect                                                                                            |
@@ -24,14 +26,28 @@ n2b --fix --dry-run          # compute the rewrites without writing files
 | `--report <fmt>`       | `text` (default), `json`, `jsonl`, `md`, `markdown` or `sarif`. `md` and `markdown` are the same. |
 | `--ignore <glob>`      | Excludes paths. Repeatable. `.gitignore` is always honoured.                                      |
 | `--jobs <1..6>`        | Number of scan workers. Defaults to the available parallelism, capped at 6.                       |
-| `--dry-run`            | Computes fixes without writing files or running side effects. Excludes `--migrate`.               |
+| `--dry-run`            | Computes fixes without writing files or running side effects. With `--migrate`, reports the plan. |
+| `--since <GIT_REF>`    | Scans only files changed in `<ref>...HEAD`, local edits, untracked files and the root manifests.  |
 | `--quiet`              | Prints nothing on stdout. The exit code stays meaningful.                                         |
 | `--agent`              | Disables colours, logs to stderr and keeps stdout for the payload. A `text` report becomes JSON.  |
 
-`--migrate` runs `bun install`, removes rival lockfiles, moves `pnpm-workspace.yaml` into
-`package.json`.
+`--migrate` runs these steps in order:
+
+1. writes `package.json`: `pnpm-workspace.yaml` and the `pnpm` field become `workspaces`,
+   `catalog`/`catalogs`, `overrides`, `patchedDependencies` and `trustedDependencies`;
+2. writes `bunfig.toml` `[install]` from the pnpm settings (`nodeLinker`, `hoistPattern`,
+   `publicHoistPattern`, `minimumReleaseAge`, …);
+3. runs `bun install` while the old lockfiles still exist, so Bun migrates them to `bun.lock`;
+4. deletes `pnpm-workspace.yaml` and the rival lockfiles.
+
+`--migrate --dry-run` performs none of these steps. The JSON report carries them in
+`migration_plan` (`dry_run`, `steps[]` with `action` `write|delete|run`, `path`, `detail`, and
+`warnings[]` for the pnpm settings Bun cannot express).
 When the sources use `Bun.*`, it adds the upstream `@types/bun` package as a dev dependency.
 Every file it touches is backed up first, and n2b restores the backups if the migration fails or panics.
+
+`--since` needs a git repository. Workspace-wide findings (root `package.json`,
+`pnpm-workspace.yaml`, lockfiles) are always rescanned so CI runs on a branch stay complete.
 
 Fix mode is not transactional. When a later file fails, files already processed stay written. Run
 `--dry-run` first to review a migration.

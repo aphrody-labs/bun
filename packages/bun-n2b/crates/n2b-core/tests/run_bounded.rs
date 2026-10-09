@@ -17,6 +17,7 @@ fn options(root: &Path) -> RunOptions {
         ignore: vec![],
         agent: false,
         dry_run: true,
+        since: None,
     }
 }
 

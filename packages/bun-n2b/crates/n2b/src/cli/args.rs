@@ -111,9 +111,15 @@ pub(crate) struct Cli {
     #[arg(long, value_parser = clap::value_parser!(u8).range(1..=6))]
     pub jobs: Option<u8>,
 
-    /// Preview fixes without writing source files or running migration side effects.
-    #[arg(long, conflicts_with = "migrate")]
+    /// Preview fixes without writing source files. With --migrate, prints the
+    /// migration plan (files written/deleted, bun install) and runs nothing.
+    #[arg(long)]
     pub dry_run: bool,
+
+    /// Incremental scan: only files changed since this git ref
+    /// (`<ref>...HEAD`, plus local edits and untracked files) and root manifests.
+    #[arg(long, value_name = "GIT_REF")]
+    pub since: Option<String>,
 
     /// Supprime toute sortie sur stdout (le code de retour reste significatif).
     #[arg(long)]

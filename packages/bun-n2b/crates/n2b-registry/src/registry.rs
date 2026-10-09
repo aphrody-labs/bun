@@ -80,6 +80,11 @@ pub static CLI: Lazy<Vec<CliEntry>> = Lazy::new(|| {
         Regex::new(&e.pattern).unwrap_or_else(|err| {
             panic!("registry/cli.toml: regex invalide pour '{}': {err}", e.id)
         });
+        if let Some(unless) = &e.unless {
+            Regex::new(unless).unwrap_or_else(|err| {
+                panic!("registry/cli.toml: regex `unless` invalide pour '{}': {err}", e.id)
+            });
+        }
     }
     parsed.cli
 });
@@ -185,7 +190,7 @@ mod tests {
 
     #[test]
     fn cli_count_matches_baseline() {
-        // Source : cli_commands.rs MAPPINGS — 47 entrées.
-        assert_eq!(CLI.len(), 47, "cli.toml a divergé de cli_commands.rs MAPPINGS");
+        // 47 mappings npm/pnpm/yarn historiques + 9 règles test/runner/monorepo.
+        assert_eq!(CLI.len(), 56, "cli.toml a divergé de cli_commands.rs MAPPINGS");
     }
 }

@@ -36,9 +36,12 @@ fn classify(name: &str) -> Option<JsConfigKind> {
     if name == ".mocharc" || name.starts_with(".mocharc.") {
         return Some(JsConfigKind::Mocha);
     }
+    if name == ".babelrc" {
+        return Some(JsConfigKind::Babel);
+    }
     match base {
         "jest.config" => Some(JsConfigKind::Jest),
-        "vitest.config" => Some(JsConfigKind::Vitest),
+        "vitest.config" | "vitest.workspace" | "vitest.projects" => Some(JsConfigKind::Vitest),
         "webpack.config" => Some(JsConfigKind::Webpack),
         "rollup.config" => Some(JsConfigKind::Rollup),
         "babel.config" => Some(JsConfigKind::Babel),
@@ -71,12 +74,17 @@ impl JsConfigKind {
     fn message(&self) -> &'static str {
         match self {
             Self::Jest => {
-                "Bun.test API est compatible Jest (`describe`/`it`/`expect`) — supprimer \
-                 jest.config + `jest` et utiliser `bun test`"
+                "bun test ne lit pas jest.config : porter setupFiles/setupFilesAfterEnv → \
+                 bunfig.toml [test] preload, roots → root, collectCoverage/coverageThreshold → \
+                 coverage/coverageThreshold, testEnvironment jsdom → preload happy-dom \
+                 (@happy-dom/global-registrator) ; moduleNameMapper/transform n'ont pas \
+                 d'équivalent (Bun résout les paths de tsconfig et transpile TS/JSX)"
             },
             Self::Vitest => {
-                "Bun.test couvre les usages courants Vitest — supprimer vitest.config + `vitest` \
-                 et utiliser `bun test` (mocks via `mock.module()`)"
+                "bun test ne lit pas vitest.config : porter test.setupFiles → bunfig.toml [test] \
+                 preload, test.root/include → root, test.coverage → coverage/coverageThreshold, \
+                 environment jsdom/happy-dom → preload happy-dom \
+                 (@happy-dom/global-registrator) ; les plugins Vite ne s'appliquent pas aux tests"
             },
             Self::Webpack => {
                 "Bun.build remplace webpack pour la plupart des cas (esbuild-like, plugins \
@@ -129,6 +137,8 @@ mod tests {
     #[test]
     fn classifies_vitest_config() {
         assert!(is_js_config("vitest.config.ts"));
+        assert!(is_js_config("vitest.workspace.ts"));
+        assert!(is_js_config(".babelrc"));
     }
 
     #[test]

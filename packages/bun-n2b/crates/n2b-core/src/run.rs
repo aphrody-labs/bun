@@ -12,10 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::path::Path;
 
 use anyhow::{Context, Result};
 use crossbeam_channel::bounded;
@@ -37,7 +34,7 @@ use crate::{
         next_config::{is_next_config, scan_next_config},
         npmrc::{is_rc_file, scan_npmrc},
         nvmrc::scan_nvmrc,
-        package_json::scan_package_json,
+        package_json::{PackageJsonContext, scan_package_json_in},
         pnpm_workspace::scan_pnpm_workspace,
         procfile::{is_procfile, scan_procfile},
         shell::scan_shell,
@@ -65,6 +62,14 @@ const DEFAULT_IGNORE: &[&str] = &[
     "**/.bun/**",
     "**/target/**",
     "**/upstream/**",
+    "**/.pnpm-store/**",
+    "**/.yarn/**",
+    "**/.cache/**",
+    "**/.vercel/**",
+    "**/.svelte-kit/**",
+    "**/.nuxt/**",
+    "**/.output/**",
+    "**/.n2b/**",
 ];
 
 fn is_workflow(rel: &str) -> bool {
@@ -104,18 +109,16 @@ where
 {
     // Repository mapping and N2B share this owner across native/JS callers.
     let _lease = crate::util::resources::acquire_scan_lease(jobs)?;
-    // Phase 4 §4.7 : résout n2b.json (parent-first), valide, applique
-    // `ignore` + `rules` overrides. Précédence : flags CLI > n2b.json > défauts.
+    // Phase 4 §4.7 : résout n2b.json (parent-first, borné au dépôt), valide,
+    // applique `ignore` + `rules` overrides. Précédence : flags CLI > n2b.json > défauts.
     let manifest = crate::manifest::resolve_and_load(&opts.root)?;
-    let manifest_overrides: Arc<crate::manifest::RuleOverrideMap> =
-        Arc::new(manifest.as_ref().map(|m| m.manifest.rules.clone()).unwrap_or_default());
+    let overrides: crate::manifest::RuleOverrideMap =
+        manifest.as_ref().map(|m| m.manifest.rules.clone()).unwrap_or_default();
 
     // Build matcher for default + user ignore globs.
     let mut gsb = GlobSetBuilder::new();
     for p in DEFAULT_IGNORE.iter().copied() {
-        if let Ok(g) = Glob::new(p) {
-            gsb.add(g);
-        }
+        gsb.add(Glob::new(p)?);
     }
     for p in opts.ignore.iter() {
         if let Ok(g) = Glob::new(p) {
@@ -131,21 +134,85 @@ where
         }
         // n2b ignore lui-même son manifeste + .n2b/.
         for p in &["**/n2b.json", "**/.n2b/**"] {
-            if let Ok(g) = Glob::new(p) {
-                gsb.add(g);
-            }
+            gsb.add(Glob::new(p)?);
         }
     }
-    let ignore_set: Arc<GlobSet> = Arc::new(gsb.build()?);
+    let ignore_set = gsb.build()?;
 
-    // Shared opts fields needed inside the worker closure.
-    let root: Arc<PathBuf> = Arc::new(opts.root.clone());
-    let opts_arc: Arc<RunOptions> = Arc::new(opts.clone());
+    let scan = |abs: &Path, rel: &str| -> Result<Option<(String, T)>> {
+        let fix = process_file(abs, rel, opts)
+            .and_then(|fix| {
+                fix.map(|fix| finalize_file(abs, fix, opts, &overrides)).transpose().map(Option::flatten)
+            })
+            .with_context(|| format!("scan {}", abs.display()))?;
+        fix.map(|fix| {
+            let path = fix.file.clone();
+            map(fix).map(|value| (path, value))
+        })
+        .transpose()
+    };
 
+    let mut fixes = match opts.since.as_deref() {
+        Some(since) => {
+            let files: Vec<String> = crate::since::changed_files(&opts.root, since)?
+                .into_iter()
+                .filter(|rel| !ignore_set.is_match(rel))
+                .collect();
+            scan_listed(&opts.root, &files, jobs, &scan)?
+        },
+        None => scan_tree(&opts.root, &ignore_set, jobs, &scan)?,
+    };
+    // Restore deterministic order (parallel walk produces non-deterministic order).
+    fixes.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+
+    Ok(fixes.into_iter().map(|(_, value)| value).collect())
+}
+
+type ScanFn<'a, T> = dyn Fn(&Path, &str) -> Result<Option<(String, T)>> + Sync + 'a;
+
+/// Scan incrémental : fichiers déjà listés (`--since`), répartis sur `jobs` workers.
+fn scan_listed<T: Send>(
+    root: &Path,
+    files: &[String],
+    jobs: usize,
+    scan: &ScanFn<'_, T>,
+) -> Result<Vec<(String, T)>> {
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    std::thread::scope(|scope| {
+        let workers: Vec<_> = (0..jobs.min(files.len()).max(1))
+            .map(|_| {
+                scope.spawn(|| -> Result<Vec<(String, T)>> {
+                    let mut out = Vec::new();
+                    loop {
+                        let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        let Some(rel) = files.get(i) else { return Ok(out) };
+                        if let Some(fix) = scan(&root.join(rel), rel)? {
+                            out.push(fix);
+                        }
+                    }
+                })
+            })
+            .collect();
+        let mut all = Vec::new();
+        for worker in workers {
+            all.extend(worker.join().map_err(|_| anyhow::anyhow!("scan worker panicked"))??);
+        }
+        Ok(all)
+    })
+}
+
+/// Scan complet : parcours parallèle de l'arbre, `.gitignore` respecté,
+/// dossiers ignorés élagués avant d'être lus.
+fn scan_tree<T: Send>(
+    root: &Path,
+    ignore_set: &GlobSet,
+    jobs: usize,
+    scan: &ScanFn<'_, T>,
+) -> Result<Vec<(String, T)>> {
     let (tx, rx) = bounded::<Result<(String, T)>>(jobs * 2);
     // Drain while workers run: a bounded queue followed by collection only after
     // run() joins would deadlock as soon as workers filled the queue.
-    let mut fixes = std::thread::scope(|scope| -> Result<Vec<(String, T)>> {
+    std::thread::scope(|scope| -> Result<Vec<(String, T)>> {
         let collector = scope.spawn(move || {
             let mut fixes = Vec::new();
             let mut failure = None;
@@ -161,14 +228,14 @@ where
             }
             failure.map_or(Ok(fixes), Err)
         });
-        let directory_ignores = Arc::clone(&ignore_set);
-        let directory_root = Arc::clone(&root);
-        WalkBuilder::new(opts.root.clone())
+        let directory_root = root.to_path_buf();
+        let directory_ignores = ignore_set.clone();
+        WalkBuilder::new(root)
             .hidden(false)
             .git_ignore(true)
+            .git_exclude(true)
             .git_global(false)
-            .git_exclude(false)
-            .parents(false)
+            .parents(true)
             .threads(jobs)
             .filter_entry(move |entry| {
                 if !entry.file_type().is_some_and(|kind| kind.is_dir()) {
@@ -176,7 +243,7 @@ where
                 }
                 let rel = entry
                     .path()
-                    .strip_prefix(directory_root.as_ref())
+                    .strip_prefix(&directory_root)
                     .unwrap_or(entry.path())
                     .to_string_lossy()
                     .replace('\\', "/");
@@ -187,11 +254,6 @@ where
             .build_parallel()
             .run(|| {
                 let tx = tx.clone();
-                let ignore_set = Arc::clone(&ignore_set);
-                let root = Arc::clone(&root);
-                let opts = Arc::clone(&opts_arc);
-                let overrides = Arc::clone(&manifest_overrides);
-                let map = &map;
                 Box::new(move |result| {
                     let entry = match result {
                         Ok(entry) => entry,
@@ -204,28 +266,12 @@ where
                         return WalkState::Continue;
                     }
                     let abs = entry.into_path();
-                    let rel = abs
-                        .strip_prefix(root.as_ref())
-                        .unwrap_or(&abs)
-                        .to_string_lossy()
-                        .replace('\\', "/");
+                    let rel =
+                        abs.strip_prefix(root).unwrap_or(&abs).to_string_lossy().replace('\\', "/");
                     if ignore_set.is_match(&rel) {
                         return WalkState::Continue;
                     }
-                    let result = process_file(&abs, &rel, &opts)
-                        .and_then(|fix| {
-                            fix.map(|fix| finalize_file(&abs, fix, &opts, &overrides))
-                                .transpose()
-                                .map(Option::flatten)
-                        })
-                        .and_then(|fix| {
-                            fix.map(|fix| {
-                                let path = fix.file.clone();
-                                map(fix).map(|value| (path, value))
-                            })
-                            .transpose()
-                        });
-                    match result {
+                    match scan(&abs, &rel) {
                         Ok(Some(fix)) => {
                             if tx.send(Ok(fix)).is_err() {
                                 return WalkState::Quit;
@@ -233,7 +279,7 @@ where
                         },
                         Ok(None) => {},
                         Err(error) => {
-                            let _ = tx.send(Err(error.context(format!("scan {}", abs.display()))));
+                            let _ = tx.send(Err(error));
                             return WalkState::Quit;
                         },
                     }
@@ -242,11 +288,7 @@ where
             });
         drop(tx);
         collector.join().map_err(|_| anyhow::anyhow!("scan result collector panicked"))?
-    })?;
-    // Restore deterministic order (parallel walk produces non-deterministic order).
-    fixes.sort_unstable_by(|a, b| a.0.cmp(&b.0));
-
-    Ok(fixes.into_iter().map(|(_, value)| value).collect())
+    })
 }
 
 fn finalize_file(
@@ -350,14 +392,19 @@ fn process_file(abs: &Path, rel: &str, opts: &RunOptions) -> Result<Option<FileF
     let bytes = std::fs::read(abs).context("read source bytes")?;
     let before = std::str::from_utf8(&bytes).context("source is not valid UTF-8")?.to_string();
 
+    let aggressive = opts.mode == Mode::Aggressive;
     let (findings, after) = if is_pkg {
-        scan_package_json(rel, &before)
+        scan_package_json_in(rel, &before, PackageJsonContext { root: Some(&opts.root), aggressive })
     } else if is_workflow {
-        scan_workflow(rel, &before)
+        scan_workflow(rel, &before, aggressive)
     } else if is_source {
-        scan_source(rel, &before, opts)
+        let (source_findings, after) = scan_source(rel, &before, opts);
+        // `vitest.config.ts`, `jest.config.js`… sont aussi des sources JS/TS.
+        let mut findings = if is_jsconf { scan_js_config(rel, &before).0 } else { Vec::new() };
+        findings.extend(source_findings);
+        (findings, after)
     } else if is_dockerfile {
-        scan_dockerfile(rel, &before)
+        scan_dockerfile(rel, &before, aggressive)
     } else if is_nvmrc {
         scan_nvmrc(rel, &before)
     } else if is_tsconfig {
@@ -383,13 +430,13 @@ fn process_file(abs: &Path, rel: &str, opts: &RunOptions) -> Result<Option<FileF
     } else if is_env {
         scan_env_file(rel, &before)
     } else if is_compose {
-        scan_docker_compose(rel, &before)
+        scan_docker_compose(rel, &before, aggressive)
     } else if is_proc {
-        scan_procfile(rel, &before)
+        scan_procfile(rel, &before, aggressive)
     } else if is_jsconf {
         scan_js_config(rel, &before)
     } else {
-        scan_shell(rel, &before)
+        scan_shell(rel, &before, aggressive)
     };
 
     if findings.is_empty() && before == after {

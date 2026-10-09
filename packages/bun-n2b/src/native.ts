@@ -15,6 +15,7 @@ export interface NativeScanOptions {
   ignore?: string[];
   jobs?: number;
   dryRun?: boolean;
+  since?: string;
 }
 
 export interface NativeTransformResult {

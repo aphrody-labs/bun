@@ -52,6 +52,7 @@ fn run_self_patch(opts: PatchOpts) -> Result<()> {
         ignore: opts.ignore,
         agent: false,
         dry_run: true,
+        since: None,
     };
 
     // `run::run` applique les transformations en mémoire et retourne les FileFix
@@ -151,6 +152,7 @@ fn run_npm_patch(opts: PatchOpts) -> Result<()> {
         ignore: opts.ignore,
         agent: false,
         dry_run: false,
+        since: None,
     };
     let fixes = run::run(&run_opts)?;
     let changed = fixes.iter().filter(|f| f.before != f.after).count();

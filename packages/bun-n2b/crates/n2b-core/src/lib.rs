@@ -22,11 +22,13 @@ pub mod audit;
 pub mod github;
 pub mod llmstxt;
 pub mod manifest;
+pub mod pnpm;
 pub mod report;
 pub mod report_card;
 pub mod rules;
 pub mod run;
 pub mod scanners;
+pub mod since;
 pub mod util;
 
 pub use aphrody_n2b_types::{REPORT_SCHEMA_V2, schema, types};

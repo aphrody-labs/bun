@@ -40,7 +40,11 @@ pub fn is_docker_compose(name: &str) -> bool {
     )
 }
 
-pub fn scan_docker_compose(path: &str, content: &str) -> (Vec<Finding>, String) {
+pub fn scan_docker_compose(
+    path: &str,
+    content: &str,
+    aggressive: bool,
+) -> (Vec<Finding>, String) {
     let offsets = line_offsets(content);
     let mut findings: Vec<Finding> = Vec::new();
 
@@ -84,7 +88,7 @@ pub fn scan_docker_compose(path: &str, content: &str) -> (Vec<Finding>, String) 
     // Délègue aussi à apply_cli_rules pour `command:` / `entrypoint:`
     // contenant `npm install`, `yarn dev`, etc. Le scanner shell capture
     // les patterns inline.
-    let (cli_findings, _) = apply_cli_rules(path, content);
+    let (cli_findings, _) = apply_cli_rules(path, content, aggressive);
     findings.extend(cli_findings);
 
     (findings, content.to_string())
@@ -97,7 +101,7 @@ mod tests {
     #[test]
     fn detects_node_image_alpine() {
         let src = "services:\n  app:\n    image: node:20-alpine\n";
-        let (findings, _) = scan_docker_compose("docker-compose.yml", src);
+        let (findings, _) = scan_docker_compose("docker-compose.yml", src, false);
         assert!(findings.iter().any(|f| f.rule_id == "docker-compose/node-image"));
         let f = findings.iter().find(|f| f.rule_id == "docker-compose/node-image").unwrap();
         assert_eq!(f.replacement.as_deref(), Some("oven/bun:1-alpine"));
@@ -106,7 +110,7 @@ mod tests {
     #[test]
     fn detects_node_image_default_to_1() {
         let src = "services:\n  app:\n    image: 'node:20'\n";
-        let (findings, _) = scan_docker_compose("compose.yaml", src);
+        let (findings, _) = scan_docker_compose("compose.yaml", src, false);
         let f = findings.iter().find(|f| f.rule_id == "docker-compose/node-image").unwrap();
         assert_eq!(f.replacement.as_deref(), Some("oven/bun:1"));
     }
@@ -114,7 +118,7 @@ mod tests {
     #[test]
     fn ignores_non_node_image() {
         let src = "services:\n  db:\n    image: postgres:16\n";
-        let (findings, _) = scan_docker_compose("docker-compose.yml", src);
+        let (findings, _) = scan_docker_compose("docker-compose.yml", src, false);
         assert!(!findings.iter().any(|f| f.rule_id == "docker-compose/node-image"));
     }
 

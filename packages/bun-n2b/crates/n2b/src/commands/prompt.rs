@@ -38,6 +38,7 @@ pub(crate) fn run_prompt(
         ignore,
         agent,
         dry_run: false,
+        since: None,
     };
     let mut fixes = run::run(&opts)?;
     if !include_info {

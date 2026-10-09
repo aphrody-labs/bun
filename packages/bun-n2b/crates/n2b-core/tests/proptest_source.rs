@@ -29,6 +29,7 @@ fn opts() -> RunOptions {
         ignore: Vec::new(),
         agent: false,
         dry_run: false,
+        since: None,
     }
 }
 

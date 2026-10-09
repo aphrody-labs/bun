@@ -172,6 +172,101 @@ describe("CLI", () => {
   });
 });
 
+describe("monorepo migration", () => {
+  const pnpmMonorepo = () => ({
+    ".git/HEAD": "ref: refs/heads/main\n",
+    "package.json": JSON.stringify({
+      name: "mono",
+      private: true,
+      packageManager: "pnpm@9.0.0",
+      scripts: { test: "vitest run", build: "pnpm -r build", dev: "tsx watch src/server.ts" },
+    }),
+    "pnpm-workspace.yaml": "packages:\n  - packages/*\ncatalog:\n  zod: ^3.23.0\nonlyBuiltDependencies:\n  - esbuild\n",
+    "packages/a/package.json": JSON.stringify({
+      name: "a",
+      scripts: { build: "tsc" },
+      dependencies: { zod: "catalog:" },
+    }),
+    "packages/a/a.test.ts": `import { vi, test } from "vitest";\ntest("x", () => { vi.stubEnv("A", "1"); });\n`,
+  });
+
+  test.concurrent("scan reports pnpm workspace settings and test-runner scripts", async () => {
+    using dir = tempDir("n2b-pnpm-scan", pnpmMonorepo());
+    const { stdout } = await cli([".", "--report=json"], String(dir));
+    const report = JSON.parse(stdout);
+    const ids = new Set<string>(report.files.flatMap((f: any) => f.findings.map((x: any) => x.rule_id)));
+    for (const id of [
+      "workspace/pnpm-yaml",
+      "workspace/pnpm-catalog",
+      "workspace/only-built-deps",
+      "cli/vitest-run",
+      "cli/pnpm-recursive",
+      "cli/tsx-watch",
+      "test/unsupported-api",
+    ]) {
+      expect(ids).toContain(id);
+    }
+    const vitest = report.files
+      .flatMap((f: any) => f.findings)
+      .find((x: any) => x.rule_id === "cli/vitest-run");
+    expect(vitest.autofix).toBe(false);
+    expect(vitest.replacement).toBe("bun test");
+  });
+
+  test.concurrent("--aggressive rewrites vitest and pnpm scripts to bun", async () => {
+    using dir = tempDir("n2b-pnpm-aggressive", pnpmMonorepo());
+    await cli([".", "--aggressive"], String(dir));
+    const pkg = JSON.parse(readFileSync(join(String(dir), "package.json"), "utf8"));
+    expect(pkg.scripts).toEqual({
+      test: "bun test",
+      build: "bun run --filter '*' build",
+      dev: "bun --watch src/server.ts",
+    });
+  });
+
+  test.concurrent("--migrate --dry-run returns the plan and writes nothing", async () => {
+    const files = pnpmMonorepo();
+    using dir = tempDir("n2b-pnpm-dry", files);
+    const { stdout } = await cli([".", "--migrate", "--dry-run", "--report=json"], String(dir));
+    const report = JSON.parse(stdout);
+    const plan = report.migration_plan;
+    expect(plan.dry_run).toBe(true);
+    const deleted = plan.steps.filter((s: any) => s.action === "delete").map((s: any) => s.path);
+    expect(deleted).toContain("pnpm-workspace.yaml");
+    expect(plan.steps.some((s: any) => s.action === "run" && s.detail.includes("bun install"))).toBe(true);
+    const written = plan.steps.find((s: any) => s.action === "write" && s.path === "package.json");
+    expect(written).toBeDefined();
+    expect(readFileSync(join(String(dir), "package.json"), "utf8")).toBe(files["package.json"]);
+    expect(existsSync(join(String(dir), "pnpm-workspace.yaml"))).toBe(true);
+    expect(existsSync(join(String(dir), "bunfig.toml"))).toBe(false);
+    expect(existsSync(join(String(dir), "bun.lock"))).toBe(false);
+  });
+
+  test.concurrent("--since only scans files changed since the ref", async () => {
+    using dir = tempDir("n2b-since", { "old.ts": nodeFile, "package.json": `{"name":"since"}` });
+    const cwd = String(dir);
+    const git = (...args: string[]) => {
+      const r = Bun.spawnSync(["git", "-c", "user.email=n2b@test", "-c", "user.name=n2b", ...args], {
+        cwd,
+        env: bunEnv,
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      if (r.exitCode !== 0) throw new Error(`git ${args.join(" ")}: ${r.stderr}`);
+    };
+    git("init", "-q");
+    git("add", ".");
+    git("commit", "-q", "-m", "init");
+    await Bun.write(join(cwd, "new.ts"), nodeFile);
+    const { stdout } = await cli([".", "--since", "HEAD", "--report=json"], cwd);
+    const report = JSON.parse(stdout);
+    const paths = report.files.map((f: any) => f.path.replaceAll("\\", "/"));
+    expect(paths.some((p: string) => p.endsWith("new.ts"))).toBe(true);
+    expect(paths.some((p: string) => p.endsWith("old.ts"))).toBe(false);
+    expect(report.since).toBe("HEAD");
+  });
+});
+
 describe("shims", () => {
   test("env parses typed values and enforces required keys", () => {
     process.env.N2B_SHIM_INT = "42";

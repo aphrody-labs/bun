@@ -47,6 +47,7 @@ pub(crate) fn run(cli: &Cli) -> Result<ExitCode> {
         ignore: cli.ignore.clone(),
         agent: cli.agent,
         dry_run: cli.dry_run,
+        since: cli.since.clone(),
     };
 
     let fixes = match cli.jobs {
@@ -57,30 +58,42 @@ pub(crate) fn run(cli: &Cli) -> Result<ExitCode> {
     // Mode --migrate : applique les side-effects après le scan+fix +
     // génère/persiste le report card (Phase 5 §5.4 + §5.6).
     // Phase 6 §6.3 : `--scaffold-polyfills` opt-in pour bunpp scaffold.
-    let report_card = if cli.migrate {
-        let migrate_opts =
-            crate::commands::migrate::MigrateOpts { scaffold_polyfills: cli.scaffold_polyfills };
-        crate::commands::migrate::run_migrate_side_effects_with_opts(
+    // Avec --dry-run, le plan est seulement calculé et rapporté.
+    let (report_card, migration_plan) = if cli.migrate {
+        let migrate_opts = crate::commands::migrate::MigrateOpts {
+            scaffold_polyfills: cli.scaffold_polyfills,
+            dry_run: cli.dry_run,
+        };
+        let plan = crate::commands::migrate::run_migrate_side_effects_with_opts(
             &opts.root,
             &fixes,
             opts.quiet,
             migrate_opts,
         )?;
         let card = aphrody_n2b_core::report_card::build(&fixes);
-        let state = aphrody_n2b_core::report_card::N2bState::from_card(&card, &fixes);
-        if let Err(e) = state.write_to(&opts.root) {
-            eprintln!("note: impossible d'écrire .n2b/state.json: {e}");
+        if !cli.dry_run {
+            let state = aphrody_n2b_core::report_card::N2bState::from_card(&card, &fixes);
+            if let Err(e) = state.write_to(&opts.root) {
+                eprintln!("note: impossible d'écrire .n2b/state.json: {e}");
+            }
         }
-        Some(card)
+        (Some(card), Some(plan))
     } else {
-        None
+        (None, None)
     };
 
     let card_value = report_card.as_ref().and_then(|c| serde_json::to_value(c).ok());
+    let plan_value = migration_plan.as_ref().and_then(|p| serde_json::to_value(p).ok());
     match opts.report {
-        Report::Json => {
-            println!("{}", report::render_json_with_card(&fixes, &opts, card_value.as_ref()))
-        },
+        Report::Json => println!(
+            "{}",
+            report::render_json_with_migration(
+                &fixes,
+                &opts,
+                card_value.as_ref(),
+                plan_value.as_ref()
+            )
+        ),
         Report::Jsonl => print!("{}", report::render_jsonl(&fixes, &opts)),
         Report::Markdown => println!("{}", report::render_markdown(&fixes, &opts)),
         Report::Sarif => println!("{}", report::render_sarif(&fixes, &opts)),

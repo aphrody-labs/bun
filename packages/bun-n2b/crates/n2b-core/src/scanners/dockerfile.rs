@@ -23,7 +23,7 @@ static FROM_NODE_RE: Lazy<Regex> = Lazy::new(|| {
         .expect("invariant: FROM_NODE_RE regex literal is valid")
 });
 
-pub fn scan_dockerfile(path: &str, content: &str) -> (Vec<Finding>, String) {
+pub fn scan_dockerfile(path: &str, content: &str, aggressive: bool) -> (Vec<Finding>, String) {
     let mut findings: Vec<Finding> = Vec::new();
     let mut out = content.to_string();
     let offsets = line_offsets(content);
@@ -54,7 +54,7 @@ pub fn scan_dockerfile(path: &str, content: &str) -> (Vec<Finding>, String) {
     out = FROM_NODE_RE.replace_all(&out, "FROM oven/bun:$1").into_owned();
 
     // Applique aussi les règles CLI (npm/pnpm/yarn → bun) dans les RUN.
-    let (cli_f, cli_out) = apply_cli_rules(path, &out);
+    let (cli_f, cli_out) = apply_cli_rules(path, &out, aggressive);
     findings.extend(cli_f);
     (findings, cli_out)
 }

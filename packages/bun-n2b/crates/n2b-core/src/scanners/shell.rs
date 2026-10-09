@@ -15,6 +15,6 @@
 use crate::rules::cli_commands::apply_cli_rules;
 use aphrody_n2b_types::types::Finding;
 
-pub fn scan_shell(path: &str, content: &str) -> (Vec<Finding>, String) {
-    apply_cli_rules(path, content)
+pub fn scan_shell(path: &str, content: &str, aggressive: bool) -> (Vec<Finding>, String) {
+    apply_cli_rules(path, content, aggressive)
 }

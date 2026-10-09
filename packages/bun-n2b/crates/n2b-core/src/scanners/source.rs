@@ -34,6 +34,7 @@ pub fn scan_source(path: &str, content: &str, opts: &RunOptions) -> (Vec<Finding
     let (f, working) =
         apply_bun_api_rules_with_context(path, &working, aggressive, &context.imports, &context);
     all.extend(f);
+    all.extend(crate::rules::test_apis::test_api_findings(path, content));
 
     if opts.mode == Mode::Check {
         return (all, content.to_string());

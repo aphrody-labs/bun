@@ -22,6 +22,24 @@ bunx @aphrody/bun-plugin-n2b rules --report=json
 
 It is the same CLI as the `n2b` binary of the `aphrody-n2b` crate and `aphrody n2b`. See [docs/cli.md](./docs/cli.md).
 
+## Migrating a monorepo
+
+```sh
+bunx @aphrody/bun-plugin-n2b . --migrate --dry-run --report=json   # review the plan
+bunx @aphrody/bun-plugin-n2b . --migrate                           # apply it
+bunx @aphrody/bun-plugin-n2b . --since origin/main                 # CI: changed files only
+```
+
+`--migrate` moves `pnpm-workspace.yaml` and the `pnpm` field into `package.json` (`workspaces`,
+`catalog`/`catalogs`, `overrides`, `patchedDependencies`, `trustedDependencies`), writes the pnpm
+settings to `bunfig.toml` `[install]`, runs `bun install` so Bun migrates `pnpm-lock.yaml`, then
+removes the old lockfiles. Scripts are rewritten too: `vitest run`/`jest` become `bun test`,
+`tsx`/`ts-node` become `bun`, and `pnpm -r`/`--filter` become `bun run --filter`.
+
+These are reported, not migrated: pnpm override selectors deeper than `a>b`, `pkg@` and `"-"`;
+`vi.*`/`jest.*` APIs that `bun:test` lacks; `vi.mock` hoisting; `jest.config`/`vitest.config` options,
+which need porting to `bunfig.toml [test]` by hand.
+
 ## Plugin
 
 ```ts

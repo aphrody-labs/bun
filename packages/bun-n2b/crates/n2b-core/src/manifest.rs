@@ -142,17 +142,21 @@ pub struct ResolvedManifest {
 }
 
 /// Cherche `n2b.json` en remontant l'arbre depuis `start` (typiquement la
-/// racine du scan). Retourne `Ok(None)` si rien trouvé jusqu'à la racine du FS.
+/// racine du scan). N'examine PAS les sous-dossiers — recherche *parent-first*
+/// comme `package.json` ou `tsconfig.json`.
 ///
-/// Phase 4 — résolution conservatrice, ne traverse pas les boundaries de
-/// container (s'arrête à `/`). N'examine PAS les sous-dossiers — c'est une
-/// recherche *parent-first* comme `package.json` ou `tsconfig.json`.
+/// La remontée s'arrête à la frontière du dépôt : le premier dossier qui
+/// contient `.git` (dossier, ou fichier pour un worktree/sous-module) est le
+/// dernier examiné. Hors dépôt, elle va jusqu'à la racine du FS.
 pub fn find_manifest(start: &Path) -> Option<PathBuf> {
     let mut cur: Option<&Path> = Some(start);
     while let Some(dir) = cur {
         let candidate = dir.join("n2b.json");
         if candidate.is_file() {
             return Some(candidate);
+        }
+        if dir.join(".git").exists() {
+            return None;
         }
         cur = dir.parent();
     }
@@ -321,14 +325,35 @@ mod tests {
 
     #[test]
     fn find_manifest_walks_up() {
-        let tmp = std::env::temp_dir().join(format!("n2b-test-{}", std::process::id()));
-        let nested = tmp.join("a/b/c");
+        let tmp = tempfile::tempdir().unwrap();
+        let nested = tmp.path().join("a/b/c");
         std::fs::create_dir_all(&nested).unwrap();
-        std::fs::write(tmp.join("n2b.json"), "{}").unwrap();
+        std::fs::write(tmp.path().join("n2b.json"), "{}").unwrap();
 
         let found = find_manifest(&nested);
-        assert_eq!(found.as_deref(), Some(tmp.join("n2b.json").as_path()));
+        assert_eq!(found.as_deref(), Some(tmp.path().join("n2b.json").as_path()));
+    }
 
-        std::fs::remove_dir_all(&tmp).ok();
+    #[test]
+    fn find_manifest_stops_at_repository_boundary() {
+        let tmp = tempfile::tempdir().unwrap();
+        // A stray manifest above the repository must never be picked up.
+        std::fs::write(tmp.path().join("n2b.json"), "not json").unwrap();
+        let repo = tmp.path().join("repo");
+        let nested = repo.join("packages/app");
+        std::fs::create_dir_all(&nested).unwrap();
+        std::fs::create_dir_all(repo.join(".git")).unwrap();
+        assert_eq!(find_manifest(&nested), None);
+        assert!(resolve_and_load(&nested).unwrap().is_none());
+
+        // Worktrees and submodules have a `.git` file instead of a directory.
+        let worktree = tmp.path().join("worktree");
+        std::fs::create_dir_all(&worktree).unwrap();
+        std::fs::write(worktree.join(".git"), "gitdir: ../repo/.git/worktrees/w\n").unwrap();
+        assert_eq!(find_manifest(&worktree), None);
+
+        // The repository root itself is still examined.
+        std::fs::write(repo.join("n2b.json"), "{}").unwrap();
+        assert_eq!(find_manifest(&nested).as_deref(), Some(repo.join("n2b.json").as_path()));
     }
 }

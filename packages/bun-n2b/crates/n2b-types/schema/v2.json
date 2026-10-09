@@ -52,9 +52,54 @@
 		"files": {
 			"type": "array",
 			"items": { "$ref": "#/definitions/FileFix" }
+		},
+		"since": {
+			"type": "string",
+			"description": "Git ref of an incremental scan (`--since`): only files changed in `<ref>...HEAD`, local edits, untracked files and root manifests were scanned."
+		},
+		"report_card": {
+			"type": "object",
+			"description": "Migration report card, present with `--migrate`."
+		},
+		"migration_plan": {
+			"$ref": "#/definitions/MigrationPlan"
 		}
 	},
 	"definitions": {
+		"MigrationPlan": {
+			"type": "object",
+			"description": "Side effects of `--migrate`, in execution order. With `--dry-run` nothing was executed.",
+			"required": ["dry_run", "steps", "warnings"],
+			"additionalProperties": false,
+			"properties": {
+				"dry_run": { "type": "boolean" },
+				"steps": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/MigrationStep" }
+				},
+				"warnings": {
+					"type": "array",
+					"description": "What Bun cannot take over (unsupported pnpm settings, ambiguous patches, ...).",
+					"items": { "type": "string" }
+				}
+			}
+		},
+		"MigrationStep": {
+			"type": "object",
+			"required": ["action", "detail"],
+			"additionalProperties": false,
+			"properties": {
+				"action": {
+					"type": "string",
+					"enum": ["write", "delete", "run"]
+				},
+				"path": {
+					"type": "string",
+					"description": "File relative to the root (`write`/`delete`)."
+				},
+				"detail": { "type": "string" }
+			}
+		},
 		"Mode": {
 			"type": "string",
 			"enum": ["check", "fix", "aggressive"]

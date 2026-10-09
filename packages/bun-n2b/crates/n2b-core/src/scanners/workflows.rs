@@ -31,7 +31,7 @@ static CACHE_PM_RE: Lazy<Regex> = Lazy::new(|| {
         .expect("invariant: CACHE_PM_RE regex literal is valid")
 });
 
-pub fn scan_workflow(path: &str, content: &str) -> (Vec<Finding>, String) {
+pub fn scan_workflow(path: &str, content: &str, aggressive: bool) -> (Vec<Finding>, String) {
     let mut findings: Vec<Finding> = Vec::new();
     let mut out = content.to_string();
 
@@ -67,7 +67,7 @@ pub fn scan_workflow(path: &str, content: &str) -> (Vec<Finding>, String) {
 
     out = CACHE_PM_RE.replace_all(&out, "").into_owned();
 
-    let (cli_f, cli_out) = apply_cli_rules(path, &out);
+    let (cli_f, cli_out) = apply_cli_rules(path, &out, aggressive);
     findings.extend(cli_f);
     (findings, cli_out)
 }

@@ -153,6 +153,90 @@ impl Finding {
         Default::default()
     }
 }
+#[doc = "Side effects of `--migrate`, in execution order. With `--dry-run` nothing was executed."]
+#[derive(:: serde :: Deserialize, :: serde :: Serialize, Clone, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct MigrationPlan {
+    pub dry_run: bool,
+    pub steps: ::std::vec::Vec<MigrationStep>,
+    #[doc = "What Bun cannot take over (unsupported pnpm settings, ambiguous patches, ...)."]
+    pub warnings: ::std::vec::Vec<::std::string::String>,
+}
+impl MigrationPlan {
+    pub fn builder() -> builder::MigrationPlan {
+        Default::default()
+    }
+}
+#[doc = "`MigrationStep`"]
+#[derive(:: serde :: Deserialize, :: serde :: Serialize, Clone, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct MigrationStep {
+    pub action: MigrationStepAction,
+    pub detail: ::std::string::String,
+    #[doc = "File relative to the root (`write`/`delete`)."]
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub path: ::std::option::Option<::std::string::String>,
+}
+impl MigrationStep {
+    pub fn builder() -> builder::MigrationStep {
+        Default::default()
+    }
+}
+#[doc = "`MigrationStepAction`"]
+#[derive(
+    :: serde :: Deserialize,
+    :: serde :: Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum MigrationStepAction {
+    #[serde(rename = "write")]
+    Write,
+    #[serde(rename = "delete")]
+    Delete,
+    #[serde(rename = "run")]
+    Run,
+}
+impl ::std::fmt::Display for MigrationStepAction {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::Write => f.write_str("write"),
+            Self::Delete => f.write_str("delete"),
+            Self::Run => f.write_str("run"),
+        }
+    }
+}
+impl ::std::str::FromStr for MigrationStepAction {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "write" => Ok(Self::Write),
+            "delete" => Ok(Self::Delete),
+            "run" => Ok(Self::Run),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for MigrationStepAction {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for MigrationStepAction {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
 #[doc = "`Mode`"]
 #[derive(
     :: serde :: Deserialize,
@@ -215,7 +299,12 @@ pub struct N2bReport {
     pub files: ::std::vec::Vec<FileFix>,
     pub files_scanned: u64,
     pub findings_total: u64,
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub migration_plan: ::std::option::Option<MigrationPlan>,
     pub mode: Mode,
+    #[doc = "Migration report card, present with `--migrate`."]
+    #[serde(default, skip_serializing_if = "::serde_json::Map::is_empty")]
+    pub report_card: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
     #[doc = "Absolute path of the scanned root."]
     pub root: ::std::string::String,
     #[doc = "URL to this schema."]
@@ -223,6 +312,9 @@ pub struct N2bReport {
     pub schema: ::std::option::Option<::std::string::String>,
     #[doc = "Schema version, bumped on breaking changes."]
     pub schema_version: N2bReportSchemaVersion,
+    #[doc = "Git ref of an incremental scan (`--since`): only files changed in `<ref>...HEAD`, local edits, untracked files and root manifests were scanned."]
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub since: ::std::option::Option<::std::string::String>,
     #[doc = "Tool name (historically \"node2bun\")."]
     pub tool: ::std::string::String,
     #[doc = "n2b binary semver."]
@@ -790,17 +882,157 @@ pub mod builder {
         }
     }
     #[derive(Clone, Debug)]
+    pub struct MigrationPlan {
+        dry_run: ::std::result::Result<bool, ::std::string::String>,
+        steps: ::std::result::Result<::std::vec::Vec<super::MigrationStep>, ::std::string::String>,
+        warnings:
+            ::std::result::Result<::std::vec::Vec<::std::string::String>, ::std::string::String>,
+    }
+    impl ::std::default::Default for MigrationPlan {
+        fn default() -> Self {
+            Self {
+                dry_run: Err("no value supplied for dry_run".to_string()),
+                steps: Err("no value supplied for steps".to_string()),
+                warnings: Err("no value supplied for warnings".to_string()),
+            }
+        }
+    }
+    impl MigrationPlan {
+        pub fn dry_run<T>(mut self, value: T) -> Self
+        where
+            T: ::std::convert::TryInto<bool>,
+            T::Error: ::std::fmt::Display,
+        {
+            self.dry_run = value
+                .try_into()
+                .map_err(|e| format!("error converting supplied value for dry_run: {e}"));
+            self
+        }
+        pub fn steps<T>(mut self, value: T) -> Self
+        where
+            T: ::std::convert::TryInto<::std::vec::Vec<super::MigrationStep>>,
+            T::Error: ::std::fmt::Display,
+        {
+            self.steps = value
+                .try_into()
+                .map_err(|e| format!("error converting supplied value for steps: {e}"));
+            self
+        }
+        pub fn warnings<T>(mut self, value: T) -> Self
+        where
+            T: ::std::convert::TryInto<::std::vec::Vec<::std::string::String>>,
+            T::Error: ::std::fmt::Display,
+        {
+            self.warnings = value
+                .try_into()
+                .map_err(|e| format!("error converting supplied value for warnings: {e}"));
+            self
+        }
+    }
+    impl ::std::convert::TryFrom<MigrationPlan> for super::MigrationPlan {
+        type Error = super::error::ConversionError;
+        fn try_from(
+            value: MigrationPlan,
+        ) -> ::std::result::Result<Self, super::error::ConversionError> {
+            Ok(Self { dry_run: value.dry_run?, steps: value.steps?, warnings: value.warnings? })
+        }
+    }
+    impl ::std::convert::From<super::MigrationPlan> for MigrationPlan {
+        fn from(value: super::MigrationPlan) -> Self {
+            Self {
+                dry_run: Ok(value.dry_run),
+                steps: Ok(value.steps),
+                warnings: Ok(value.warnings),
+            }
+        }
+    }
+    #[derive(Clone, Debug)]
+    pub struct MigrationStep {
+        action: ::std::result::Result<super::MigrationStepAction, ::std::string::String>,
+        detail: ::std::result::Result<::std::string::String, ::std::string::String>,
+        path: ::std::result::Result<
+            ::std::option::Option<::std::string::String>,
+            ::std::string::String,
+        >,
+    }
+    impl ::std::default::Default for MigrationStep {
+        fn default() -> Self {
+            Self {
+                action: Err("no value supplied for action".to_string()),
+                detail: Err("no value supplied for detail".to_string()),
+                path: Ok(Default::default()),
+            }
+        }
+    }
+    impl MigrationStep {
+        pub fn action<T>(mut self, value: T) -> Self
+        where
+            T: ::std::convert::TryInto<super::MigrationStepAction>,
+            T::Error: ::std::fmt::Display,
+        {
+            self.action = value
+                .try_into()
+                .map_err(|e| format!("error converting supplied value for action: {e}"));
+            self
+        }
+        pub fn detail<T>(mut self, value: T) -> Self
+        where
+            T: ::std::convert::TryInto<::std::string::String>,
+            T::Error: ::std::fmt::Display,
+        {
+            self.detail = value
+                .try_into()
+                .map_err(|e| format!("error converting supplied value for detail: {e}"));
+            self
+        }
+        pub fn path<T>(mut self, value: T) -> Self
+        where
+            T: ::std::convert::TryInto<::std::option::Option<::std::string::String>>,
+            T::Error: ::std::fmt::Display,
+        {
+            self.path = value
+                .try_into()
+                .map_err(|e| format!("error converting supplied value for path: {e}"));
+            self
+        }
+    }
+    impl ::std::convert::TryFrom<MigrationStep> for super::MigrationStep {
+        type Error = super::error::ConversionError;
+        fn try_from(
+            value: MigrationStep,
+        ) -> ::std::result::Result<Self, super::error::ConversionError> {
+            Ok(Self { action: value.action?, detail: value.detail?, path: value.path? })
+        }
+    }
+    impl ::std::convert::From<super::MigrationStep> for MigrationStep {
+        fn from(value: super::MigrationStep) -> Self {
+            Self { action: Ok(value.action), detail: Ok(value.detail), path: Ok(value.path) }
+        }
+    }
+    #[derive(Clone, Debug)]
     pub struct N2bReport {
         files: ::std::result::Result<::std::vec::Vec<super::FileFix>, ::std::string::String>,
         files_scanned: ::std::result::Result<u64, ::std::string::String>,
         findings_total: ::std::result::Result<u64, ::std::string::String>,
+        migration_plan: ::std::result::Result<
+            ::std::option::Option<super::MigrationPlan>,
+            ::std::string::String,
+        >,
         mode: ::std::result::Result<super::Mode, ::std::string::String>,
+        report_card: ::std::result::Result<
+            ::serde_json::Map<::std::string::String, ::serde_json::Value>,
+            ::std::string::String,
+        >,
         root: ::std::result::Result<::std::string::String, ::std::string::String>,
         schema: ::std::result::Result<
             ::std::option::Option<::std::string::String>,
             ::std::string::String,
         >,
         schema_version: ::std::result::Result<super::N2bReportSchemaVersion, ::std::string::String>,
+        since: ::std::result::Result<
+            ::std::option::Option<::std::string::String>,
+            ::std::string::String,
+        >,
         tool: ::std::result::Result<::std::string::String, ::std::string::String>,
         version: ::std::result::Result<::std::string::String, ::std::string::String>,
     }
@@ -810,10 +1042,13 @@ pub mod builder {
                 files: Err("no value supplied for files".to_string()),
                 files_scanned: Err("no value supplied for files_scanned".to_string()),
                 findings_total: Err("no value supplied for findings_total".to_string()),
+                migration_plan: Ok(Default::default()),
                 mode: Err("no value supplied for mode".to_string()),
+                report_card: Ok(Default::default()),
                 root: Err("no value supplied for root".to_string()),
                 schema: Ok(Default::default()),
                 schema_version: Err("no value supplied for schema_version".to_string()),
+                since: Ok(Default::default()),
                 tool: Err("no value supplied for tool".to_string()),
                 version: Err("no value supplied for version".to_string()),
             }
@@ -850,6 +1085,16 @@ pub mod builder {
                 .map_err(|e| format!("error converting supplied value for findings_total: {e}"));
             self
         }
+        pub fn migration_plan<T>(mut self, value: T) -> Self
+        where
+            T: ::std::convert::TryInto<::std::option::Option<super::MigrationPlan>>,
+            T::Error: ::std::fmt::Display,
+        {
+            self.migration_plan = value
+                .try_into()
+                .map_err(|e| format!("error converting supplied value for migration_plan: {e}"));
+            self
+        }
         pub fn mode<T>(mut self, value: T) -> Self
         where
             T: ::std::convert::TryInto<super::Mode>,
@@ -858,6 +1103,18 @@ pub mod builder {
             self.mode = value
                 .try_into()
                 .map_err(|e| format!("error converting supplied value for mode: {e}"));
+            self
+        }
+        pub fn report_card<T>(mut self, value: T) -> Self
+        where
+            T: ::std::convert::TryInto<
+                    ::serde_json::Map<::std::string::String, ::serde_json::Value>,
+                >,
+            T::Error: ::std::fmt::Display,
+        {
+            self.report_card = value
+                .try_into()
+                .map_err(|e| format!("error converting supplied value for report_card: {e}"));
             self
         }
         pub fn root<T>(mut self, value: T) -> Self
@@ -890,6 +1147,16 @@ pub mod builder {
                 .map_err(|e| format!("error converting supplied value for schema_version: {e}"));
             self
         }
+        pub fn since<T>(mut self, value: T) -> Self
+        where
+            T: ::std::convert::TryInto<::std::option::Option<::std::string::String>>,
+            T::Error: ::std::fmt::Display,
+        {
+            self.since = value
+                .try_into()
+                .map_err(|e| format!("error converting supplied value for since: {e}"));
+            self
+        }
         pub fn tool<T>(mut self, value: T) -> Self
         where
             T: ::std::convert::TryInto<::std::string::String>,
@@ -920,10 +1187,13 @@ pub mod builder {
                 files: value.files?,
                 files_scanned: value.files_scanned?,
                 findings_total: value.findings_total?,
+                migration_plan: value.migration_plan?,
                 mode: value.mode?,
+                report_card: value.report_card?,
                 root: value.root?,
                 schema: value.schema?,
                 schema_version: value.schema_version?,
+                since: value.since?,
                 tool: value.tool?,
                 version: value.version?,
             })
@@ -935,10 +1205,13 @@ pub mod builder {
                 files: Ok(value.files),
                 files_scanned: Ok(value.files_scanned),
                 findings_total: Ok(value.findings_total),
+                migration_plan: Ok(value.migration_plan),
                 mode: Ok(value.mode),
+                report_card: Ok(value.report_card),
                 root: Ok(value.root),
                 schema: Ok(value.schema),
                 schema_version: Ok(value.schema_version),
+                since: Ok(value.since),
                 tool: Ok(value.tool),
                 version: Ok(value.version),
             }

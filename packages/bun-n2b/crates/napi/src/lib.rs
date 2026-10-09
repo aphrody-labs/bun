@@ -25,8 +25,14 @@ fn mode(name: Option<&str>) -> Result<Mode> {
     }
 }
 
-fn options(root: PathBuf, mode: Mode, ignore: Vec<String>, dry_run: bool) -> RunOptions {
-    RunOptions { root, mode, report: Report::Json, quiet: true, ignore, agent: true, dry_run }
+fn options(
+    root: PathBuf,
+    mode: Mode,
+    ignore: Vec<String>,
+    dry_run: bool,
+    since: Option<String>,
+) -> RunOptions {
+    RunOptions { root, mode, report: Report::Json, quiet: true, ignore, agent: true, dry_run, since }
 }
 
 /// Version of the n2b crates compiled into this addon.
@@ -51,6 +57,8 @@ pub struct ScanOptions {
     pub jobs: Option<u32>,
     /// Compute fixes without writing files. Defaults to true.
     pub dry_run: Option<bool>,
+    /// Incremental scan: only files changed since this git ref, plus root manifests.
+    pub since: Option<String>,
 }
 
 /// Scans the project under `root` and returns the n2b JSON report (schema v2).
@@ -63,13 +71,19 @@ pub fn scan(root: String, options: Option<ScanOptions>) -> Result<serde_json::Va
             format!("project root is not a directory: {}", root.display()),
         ));
     }
-    let options =
-        options.unwrap_or(ScanOptions { mode: None, ignore: None, jobs: None, dry_run: None });
+    let options = options.unwrap_or(ScanOptions {
+        mode: None,
+        ignore: None,
+        jobs: None,
+        dry_run: None,
+        since: None,
+    });
     let opts = self::options(
         root,
         mode(options.mode.as_deref())?,
         options.ignore.unwrap_or_default(),
         options.dry_run.unwrap_or(true),
+        options.since,
     );
     let jobs = options.jobs.map_or_else(run::default_jobs, |jobs| jobs as usize);
     let files = run::run_map_with_jobs(&opts, jobs, |fix| Ok(report::json_file(&fix)?))
@@ -91,7 +105,7 @@ pub struct TransformResult {
 pub fn transform(path: String, source: String, mode: Option<String>) -> Result<TransformResult> {
     let mode = self::mode(mode.as_deref())?;
     let root = PathBuf::from(&path).parent().map(PathBuf::from).unwrap_or_default();
-    let opts = options(root, mode, Vec::new(), true);
+    let opts = options(root, mode, Vec::new(), true, None);
     let (findings, after) = scan_source(&path, &source, &opts);
     let changed = after != source;
     let fix = FileFix { file: path, before: source, after, findings };

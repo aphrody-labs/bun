@@ -209,7 +209,7 @@ fn meta(opts: &RunOptions, fixes: &[FileFix]) -> Value {
 }
 
 fn meta_counts(opts: &RunOptions, files_scanned: usize, findings_total: usize) -> Value {
-    json!({
+    let mut meta = json!({
         "schema_version": SCHEMA_VERSION,
         "$schema": SCHEMA_URL,
         "tool": TOOL,
@@ -218,7 +218,11 @@ fn meta_counts(opts: &RunOptions, files_scanned: usize, findings_total: usize) -
         "root": opts.root.display().to_string(),
         "files_scanned": files_scanned,
         "findings_total": findings_total,
-    })
+    });
+    if let Some(since) = &opts.since {
+        meta["since"] = Value::String(since.clone());
+    }
+    meta
 }
 
 pub fn render_json(fixes: &[FileFix], opts: &RunOptions) -> String {
@@ -230,6 +234,17 @@ pub fn render_json(fixes: &[FileFix], opts: &RunOptions) -> String {
 /// `serde_json::Value` (sérialisé en amont) pour rester decoupled de
 /// `n2b-core::report_card` au niveau du module `report`.
 pub fn render_json_with_card(fixes: &[FileFix], opts: &RunOptions, card: Option<&Value>) -> String {
+    render_json_with_migration(fixes, opts, card, None)
+}
+
+/// Variante `--migrate` complète : `report_card` et `migration_plan` (effets de
+/// bord planifiés ou exécutés, voir le schéma `MigrationPlan`).
+pub fn render_json_with_migration(
+    fixes: &[FileFix],
+    opts: &RunOptions,
+    card: Option<&Value>,
+    plan: Option<&Value>,
+) -> String {
     let files = fixes
         .iter()
         .map(json_file)
@@ -242,6 +257,11 @@ pub fn render_json_with_card(fixes: &[FileFix], opts: &RunOptions, card: Option<
         && let Ok(v) = serde_json::to_value(c)
     {
         obj.insert("report_card".to_string(), v);
+    }
+    if let Some(obj) = m.as_object_mut()
+        && let Some(plan) = plan
+    {
+        obj.insert("migration_plan".to_string(), plan.clone());
     }
     serde_json::to_string_pretty(&m).unwrap_or_default()
 }

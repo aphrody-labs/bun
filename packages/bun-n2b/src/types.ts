@@ -41,6 +41,17 @@ export interface N2BReport {
   files_scanned: number;
   findings_total: number;
   files: FileFix[];
+  /**
+   * Git ref of an incremental scan (`--since`): only files changed in `<ref>...HEAD`, local edits, untracked files and root manifests were scanned.
+   */
+  since?: string;
+  /**
+   * Migration report card, present with `--migrate`.
+   */
+  report_card?: {
+    [k: string]: unknown;
+  };
+  migration_plan?: MigrationPlan;
 }
 /**
  * This interface was referenced by `N2BReport`'s JSON-Schema
@@ -144,6 +155,32 @@ export interface Compat {
    * Polyfill @bun++/node-* recommandé quand status=missing. Optionnel.
    */
   bunpp?: string;
+}
+/**
+ * Side effects of `--migrate`, in execution order. With `--dry-run` nothing was executed.
+ *
+ * This interface was referenced by `N2BReport`'s JSON-Schema
+ * via the `definition` "MigrationPlan".
+ */
+export interface MigrationPlan {
+  dry_run: boolean;
+  steps: MigrationStep[];
+  /**
+   * What Bun cannot take over (unsupported pnpm settings, ambiguous patches, ...).
+   */
+  warnings: string[];
+}
+/**
+ * This interface was referenced by `N2BReport`'s JSON-Schema
+ * via the `definition` "MigrationStep".
+ */
+export interface MigrationStep {
+  action: "write" | "delete" | "run";
+  /**
+   * File relative to the root (`write`/`delete`).
+   */
+  path?: string;
+  detail: string;
 }
 /**
  * Bun↔Node compatibility metadata of the host module — Phase 3+. Optional (rétro-compat). Le champ status pilote la sévérité dérivée.

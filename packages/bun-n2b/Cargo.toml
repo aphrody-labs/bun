@@ -6,7 +6,7 @@ resolver = "3"
 members = ["crates/n2b-types", "crates/n2b-registry", "crates/n2b-core", "crates/n2b", "crates/napi"]
 
 [workspace.package]
-version = "0.7.0"
+version = "0.7.1"
 edition = "2024"
 rust-version = "1.97"
 license = "Apache-2.0"
@@ -15,10 +15,10 @@ repository = "https://github.com/aphrody-labs/bun"
 homepage = "https://github.com/aphrody-labs/bun/tree/main/packages/bun-n2b"
 
 [workspace.dependencies]
-aphrody-n2b = { path = "crates/n2b", version = "=0.7.0" }
-aphrody-n2b-core = { path = "crates/n2b-core", version = "=0.7.0" }
-aphrody-n2b-registry = { path = "crates/n2b-registry", version = "=0.7.0" }
-aphrody-n2b-types = { path = "crates/n2b-types", version = "=0.7.0" }
+aphrody-n2b = { path = "crates/n2b", version = "=0.7.1" }
+aphrody-n2b-core = { path = "crates/n2b-core", version = "=0.7.1" }
+aphrody-n2b-registry = { path = "crates/n2b-registry", version = "=0.7.1" }
+aphrody-n2b-types = { path = "crates/n2b-types", version = "=0.7.1" }
 
 anyhow = "1.0.104"
 clap = { version = "4.6.6", features = ["derive", "env", "color"] }
@@ -39,7 +39,7 @@ regex = "1.11"
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider", "json", "blocking", "charset", "http2", "system-proxy"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1.0.151"
+serde_json = { version = "1.0.151", features = ["preserve_order"] }
 serde_yaml = { package = "yaml_serde", version = "0.10" }
 similar = "3"
 tokio = { version = "1.53.1", features = ["full"] }

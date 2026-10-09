@@ -61,6 +61,7 @@ let opts = RunOptions {
     ignore: Vec::new(),
     agent: true,
     dry_run: true,
+    since: None,
 };
 let fixes = run(&opts)?;
 println!("{}", render_json(&fixes, &opts));

@@ -426,8 +426,8 @@ static NEXT_BUILD_RE: Lazy<Regex> = Lazy::new(|| {
 });
 
 /// Parcourt src/ du package pour détecter un import de "bun" (statique ou dynamique).
-fn package_uses_bun_import(package_json_path: &str) -> bool {
-    let pkg_dir = std::path::Path::new(package_json_path)
+fn package_uses_bun_import(package_json_path: &std::path::Path) -> bool {
+    let pkg_dir = package_json_path
         .parent()
         .unwrap_or_else(|| std::path::Path::new("."));
     let src_dir = pkg_dir.join("src");
@@ -460,8 +460,29 @@ fn package_uses_bun_import(package_json_path: &str) -> bool {
     walk(&src_dir)
 }
 
+/// Contexte de scan d'un package.json.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct PackageJsonContext<'a> {
+    /// Racine du scan : `path` lui est relatif. `None` : relatif au répertoire courant.
+    pub root: Option<&'a std::path::Path>,
+    /// Mode `--aggressive`/`--migrate` : applique les règles CLI `aggressive`.
+    pub aggressive: bool,
+}
+
 pub fn scan_package_json(path: &str, content: &str) -> (Vec<Finding>, String) {
+    scan_package_json_in(path, content, PackageJsonContext::default())
+}
+
+pub fn scan_package_json_in(
+    path: &str,
+    content: &str,
+    ctx: PackageJsonContext<'_>,
+) -> (Vec<Finding>, String) {
     let mut findings: Vec<Finding> = Vec::new();
+    let on_disk = |rel: &str| match ctx.root {
+        Some(root) => root.join(rel),
+        None => std::path::PathBuf::from(rel),
+    };
 
     let mut parsed: Value = match serde_json::from_str(content) {
         Ok(v) => v,
@@ -495,7 +516,8 @@ pub fn scan_package_json(path: &str, content: &str) -> (Vec<Finding>, String) {
                 None => continue,
             };
             let (script_findings, rewritten) =
-                apply_cli_rules(&format!("{path} [scripts.{name}]"), &raw);
+                apply_cli_rules(&format!("{path} [scripts.{name}]"), &raw, ctx.aggressive);
+            let jest_rule = script_findings.iter().any(|f| f.rule_id == "cli/jest");
             findings.extend(script_findings);
             if rewritten != raw {
                 scripts.insert(name.clone(), Value::String(rewritten.clone()));
@@ -503,7 +525,7 @@ pub fn scan_package_json(path: &str, content: &str) -> (Vec<Finding>, String) {
             }
 
             // pkg/jest-script — détecte "jest ..." dans les scripts
-            if JEST_RE.is_match(&rewritten) {
+            if !jest_rule && JEST_RE.is_match(&rewritten) {
                 findings.push(make_finding(
                     path,
                     &[],
@@ -574,7 +596,7 @@ pub fn scan_package_json(path: &str, content: &str) -> (Vec<Finding>, String) {
             // Ne flaggue que si le package contient effectivement un import de "bun".
             if TSUP_RE.is_match(&rewritten)
                 && !rewritten.contains("--external bun")
-                && package_uses_bun_import(path)
+                && package_uses_bun_import(&on_disk(path))
             {
                 findings.push(make_finding(
                     path,
@@ -596,6 +618,59 @@ pub fn scan_package_json(path: &str, content: &str) -> (Vec<Finding>, String) {
                 ));
             }
         }
+    }
+
+    // 1b. champ `pnpm` (overrides, patchedDependencies, onlyBuiltDependencies, …)
+    if let Some(cfg) = crate::pnpm::parse_package_field(&parsed) {
+        let keys: Vec<&str> = parsed
+            .get("pnpm")
+            .and_then(|v| v.as_object())
+            .map(|o| o.keys().map(String::as_str).collect())
+            .unwrap_or_default();
+        findings.push(make_finding(
+            path,
+            &[],
+            0,
+            "pkg/pnpm-field",
+            format!(
+                "champ \"pnpm\" ({}) ignoré par Bun — `n2b --migrate` le convertit en champs \
+                 racine (overrides, patchedDependencies, trustedDependencies) puis le retire",
+                keys.join(", ")
+            ),
+            "pnpm".to_string(),
+            None,
+            MakeFindingOpts {
+                autofix: Some(false),
+                severity: Some(Severity::Warn),
+                ..Default::default()
+            },
+        ));
+        findings.extend(crate::scanners::pnpm_workspace::pnpm_config_findings(
+            path,
+            "package.json#pnpm",
+            &cfg,
+        ));
+    }
+
+    // 1c. champ `jest` : bun test ne le lit pas.
+    if parsed.get("jest").is_some_and(|v| v.is_object()) {
+        findings.push(make_finding(
+            path,
+            &[],
+            0,
+            "pkg/jest-field",
+            "champ \"jest\" ignoré par bun test — porter setupFiles → bunfig.toml [test] \
+             preload, roots → root, collectCoverage/coverageThreshold → coverage/\
+             coverageThreshold, testEnvironment jsdom → preload happy-dom"
+                .to_string(),
+            "jest".to_string(),
+            None,
+            MakeFindingOpts {
+                autofix: Some(false),
+                severity: Some(Severity::Warn),
+                ..Default::default()
+            },
+        ));
     }
 
     // 2. packageManager
@@ -685,8 +760,12 @@ pub fn scan_package_json(path: &str, content: &str) -> (Vec<Finding>, String) {
     //    + @types/bun manquant quand code utilise Bun.*
     let is_root_pkg = !path.contains('/');
     if is_root_pkg {
-        let dir = std::path::Path::new(path).parent().unwrap_or_else(|| std::path::Path::new("."));
-        let pnpm_ws = dir.join("pnpm-workspace.yaml");
+        let pnpm_ws = on_disk("pnpm-workspace.yaml");
+        let ws_packages = std::fs::read_to_string(&pnpm_ws)
+            .ok()
+            .and_then(|c| crate::scanners::pnpm_workspace::parse_pnpm_workspace(&c))
+            .map(|info| info.packages)
+            .unwrap_or_default();
         if pnpm_ws.exists() && parsed.get("workspaces").is_none() {
             findings.push(make_finding(
                 path,
@@ -697,7 +776,10 @@ pub fn scan_package_json(path: &str, content: &str) -> (Vec<Finding>, String) {
                  \"workspaces\" — requis par Bun"
                     .to_string(),
                 "workspaces".to_string(),
-                Some(r#""workspaces": ["packages/*"]"#.to_string()),
+                Some(format!(
+                    r#""workspaces": {}"#,
+                    serde_json::to_string(&ws_packages).unwrap_or_default()
+                )),
                 MakeFindingOpts {
                     autofix: Some(false),
                     severity: Some(Severity::Warn),
