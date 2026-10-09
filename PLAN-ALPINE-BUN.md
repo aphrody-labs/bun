@@ -396,6 +396,140 @@ qemu-system-x86_64 -kernel arch/x86/boot/bzImage -initrd build/initramfs.cpio.gz
 `cc()` ; `uring_cmd`. Points à risque à la compilation : signatures JSC des nouvelles fns, bindings Rust noyau
 (`bindings::file_user_path`, accès `f_inode->i_mode`, `COPY_FILE_SPLICE`), emprunts dans `FileCopier`.
 
+### X. WebOS en WebAssembly : Bun, Aphrody et Aphrody Alpine dans le navigateur (🔄 code écrit le 2026-10-09, ni build ni test)
+
+Cible : `aphrody webos` (C:\aphrody\apps\web), sans xterm, sans couche shell et sans émulation d'OS (ni qemu-wasm, ni
+container2wasm). Les apps appellent des modules wasm par des API typées. Le build wasm (`bun build --target=wasm`,
+loader `.rs`/Cargo.toml) est le chantier Y. X rend les crates compilables et fait l'intégration WebOS.
+
+**Décisions**
+
+| Question | Choix | Raison (sources : recherche du 2026-10-09, liens dans « Existant réutilisé ») |
+| --- | --- | --- |
+| JS de Bun dans la page | API Bun (`Bun.*`, puis `node:*` et `bun:test`) **sur le moteur JS de la page**. La logique vient des crates Rust de Bun compilées en wasm. | JSC.js, le seul JSC compilé en wasm, est abandonné depuis 2021 et pèse ~4 Mo compressé. CLoop n'a pas de JIT et obligerait à recompiler toutes les liaisons C++, avec deux moteurs dans la page. Edge.js (Wasmer, 2026) montre qu'une API Node posée sur un moteur hôte suffit (3592/3626 tests Node, chiffre de seconde main). JSC CLoop en wasm est reporté. |
+| Cible des crates Bun | `wasm32-wasip1-threads` (C ABI, réacteur WASI) | bun_core et bun_threading supposent des threads. mimalloc, simdutf et highway ont des backends wasm. Côté page, le shim WASI est browser_wasi_shim, qui ne gère pas les threads : `thread-spawn` renvoie -1, ce qui suffit tant qu'aucun appel ne crée de thread. |
+| Cible des crates Aphrody | `wasm32-unknown-unknown` + wasm-bindgen | Déjà en place (aphrody-command-wasm, shell-web, dragon-pixel-wasm), avec `[profile.wasm-release]` et `wasm-package.ts`. |
+| Alpine, phase 1 | Seed de rootfs Aphrody Alpine 3.24 dans l'image APFS1 sur OPFS. Outils en modules wasm, arch apk `wasm32`. | Pas besoin de noyau pour avoir des fichiers, des processus (Workers) et des apps. Les apk x86_64 ne tournent pas en WASI : il faut un dépôt `aphrody-3.24-wasm32`. |
+| Alpine, phase 2 | Noyau Linux wasm : tombl/linux, puis le rebase 7.0 et le wasm64 de joelseverin/linux-wasm | tombl/linux est le plus actif (SMP sur Workers, virtio-blk). Les deux sont NOMMU et expérimentaux. Partir de la branche aphrody-bun de C:\linux (6.18) serait un retour en arrière : il faut suivre 7.0. busybox et sudo-rs n'ont de sens qu'au-dessus de ce noyau. |
+| Réseau | Relais par le serveur Bun d'Aphrody : `/api/webos/fetch` et WebSocket vers TCP `/api/webos/tcp`. Boucle locale seule par défaut (`WEBOS_NET_ALLOW`). | Une page ne peut pas ouvrir de socket. Étape suivante : parler WISP (spec ouverte, `wisp-mux` MIT) pour être compatible avec @wasmer/sdk et epoxy-tls. |
+| Stockage | Image APFS1 existante (`opfs.rs` de crates/shell/web, 80 Mio) sur deux slots OPFS, via sync access handle | `createSyncAccessHandle` est standard (Chrome 102, Firefox 111, Safari 15.2) et s'utilise dans un Worker. SQLite viendra plus tard via sqlite-wasm-rs `sahpool`. |
+
+**Existant réutilisé**
+
+| Besoin | Brique retenue | Lien | Licence | État 2026 | Reste pour nous |
+| --- | --- | --- | --- | --- | --- |
+| Shim WASI pour le navigateur | browser_wasi_shim 0.4.2 (dans le lockfile) | github.com/bjorn3/browser_wasi_shim | MIT OR Apache-2.0 | Utilisable. preview1 partiel, sans threads (#46), OPFS fichier par fichier (#32). | Glue `bun-wasm.ts` : mémoire partagée importée, `thread-spawn` factice |
+| Sandbox WASIX complète (option) | @wasmer/sdk 0.19.1 | github.com/wasmerio/wasmer-js | MIT modifiée : mention Wasmer obligatoire au-delà de 1 M MAU | Actif | À évaluer si les threads WASI deviennent nécessaires |
+| Composants WASI P2 (option) | jco 1.37 + preview2-shim | github.com/bytecodealliance/jco | Apache-2.0 WITH LLVM-exception | Partiel dans le navigateur | Rien tant qu'on reste en wasm-bindgen / preview1 |
+| Polyfills `node:*` | unenv (utilisé par Nitro et Cloudflare) | github.com/unjs/unenv | MIT | Actif | Brancher sur `bun-api.ts` |
+| Coreutils WASI | uutils/coreutils (CI officielle wasip1/wasip2, `feat_wasm`). Aussi `wasmer/coreutils` 1.0.27 dans le registre Wasmer. | github.com/uutils/coreutils | MIT | Actif | Empaqueter en apk `wasm32` |
+| Noyau Linux wasm | tombl/linux (branche `wasm`) + joelseverin/linux-wasm (7.0, wasm64) | github.com/tombl/linux · github.com/joelseverin/linux-wasm | GPL-2.0 | Expérimental | Phase 2 : fork aphrody-labs, initramfs Aphrody |
+| busybox / musl wasm | Ports de tombl et de linux-wasm (musl 1.2.5, busybox 1.36.1) | idem | GPL-2.0 / MIT | Expérimental, liés au noyau wasm | Phase 2 |
+| libc WASI | wasi-libc (musl 1.2.6), wasi-sdk 34 | github.com/WebAssembly/wasi-libc | MIT/Apache | Production | build.rs des crates `-sys` de Bun, gardés par `target_family = "wasm"` |
+| Persistance | OPFS sync access handles + image APFS1 d'Aphrody | MDN | Standard | Standard | Rien : réutilisé tel quel |
+| SQLite | rusqlite ≥ 0.38 (wasm32-unknown via sqlite-wasm-rs, VFS `sahpool`) | crates.io/crates/sqlite-wasm-rs | MIT | Actif, mono-thread | Features wasm pour aphrody-store, memory et fsindex |
+| HTTP Rust | reqwest 0.13 (fetch sur wasm32-unknown) | docs.rs/reqwest | MIT/Apache | Production, mais sans blocking, cookies ni timeout | Crates Aphrody « à adapter » : `default-features = false` côté wasm |
+| tokio | tokio 1.53, seulement `rt`, `sync`, `time`, `macros` et `io-util` | docs.rs/tokio | MIT | Expérimental sur wasm | cfg par crate : `net`, `process`, `fs` et `signal` hors wasm |
+| Git | Sous-crates gix testées en CI wasm (gix-pack, gix-url…). `gix` complet n'est pas testé. | github.com/GitoxideLabs/gitoxide | MIT/Apache | Partiel | aphrody-git en lecture seule via les sous-crates |
+| TLS | rustls 0.23 + `ring`. rustls-rustcrypto est marqué « do not use in production ». | github.com/rustls/rustls | Apache/ISC/MIT | Production. ring sur wasm32-unknown non vérifié. | TLS terminé côté serveur Bun tant que ring wasm n'est pas vérifié |
+| Relais réseau | WISP (`wisp-mux` 6.0, epoxy-server). wstcp sert de modèle simple. | github.com/MercuryWorkshop/epoxy-tls | MIT | Actif | Relais Bun écrit (`server-routes.ts`) ; WISP à suivre |
+| Écartés | WebContainers (licence commerciale), Nodebox (Sustainable Use License, abandonné), JSC.js (abandonné), LKL (aucun port wasm), container2wasm et qemu-wasm (émulation, hors cible), warg (archivé), websockify (LGPL), wisp-server-node (AGPL) | — | — | — | — |
+
+**Matrice crates/packages → wasm**
+
+Premier passage statique de `scripts/webos/wasm-inventory.ts`, à confirmer par `cargo check --target`. Aphrody : 189
+crates (48 OK, 110 à adapter, 31 impossibles) et 30 packages (10 OK, 13 à adapter, 7 impossibles). Pour la matrice
+complète : `bun scripts/webos/wasm-inventory.ts --md <fichier>` dans C:\aphrody.
+
+| Groupe | Statut | Crates / packages | Raison, action |
+| --- | --- | --- | --- |
+| Aphrody pur Rust | OK | agent-home, config, models, patch, prompts, providers, rag-core, toolcall(-repair), tools, translate-core, command-pure, command-wasm, re, sandbox, proc, capture, guard, shell-vfs, shell-web, shell-session, terminal-core, a2a-ui, gui-core, identity, m3-tokens, softraster, sprite-sheet, svg, taffy, dragon-pixel-*, obscura-dom, obscura-ssrf, web-extract | Exposés via wasm-bindgen. `aphrody-webos-wasm` agrège vfs, re et patch. |
+| Aphrody réseau/async | À adapter | mcp-client, model-client, firefly, mcp-oauth, engine, llm-infra, rollout, ocr-vlm, gateway, jev… Dépendances en cause : tokio (61 crates), reqwest (34), chrono (22), rustls (14), uuid (14), dirs (12). | Features wasm : reqwest via fetch, tokio réduit, `chrono/wasmbind`, `uuid/js`, chemins injectés au lieu de `dirs` |
+| Aphrody données | À adapter | memory, store, fsindex, code-graph, embed, context, bun-docs, git, kernel | rusqlite → sqlite-wasm-rs `sahpool`. tree-sitter → wasi-sdk ou web-tree-sitter. tokenizers avec `unstable_wasm`. gix en sous-crates. |
+| Aphrody hôte natif | Impossible | agent-runtime, agent-tools, app-server, mcp (tokio-postgres, serveur), rag et rag-eval (Postgres), ocr et ocr-onnx (ort), aphrody-rust et yolo-pyo3 (pyo3), diffusion, llama, torch et ml-runtime (libloading, C++), term et terminal-backend (PTY), shell-tauri, tauri-cli, tauri-bundler, create-app, aphrody-app, obscura-browser, obscura-cdp, obscura-js (deno_core), obscura-mcp, web-engine, web-index (memmap2), web-service | Restent côté serveur. Le WebOS les appelle par le relais du serveur Bun. |
+| Packages Bun | OK | cli-wasm, shell-web, inference, plugins, paths, winclean, web-test, fuzzy, http, qr | Importables dans la page |
+| Packages Bun | À adapter ou impossible | rag-core, yolo-core, runtime-sdk, workspace, @aphrody/bun, a2a, os (bun:ffi, napi, Bun.spawn, Bun.serve, bun:sqlite) | n2b : napi-rs → `wasm32-wasip1-threads` + @napi-rs/wasm-runtime (oxc le fait déjà) |
+
+Bun (C:\bun, 103 crates). Le passage statique sous-estime les blocages, ceux-ci ont été relevés à la main :
+
+| Crate(s) | Statut | Raison, action |
+| --- | --- | --- |
+| bun_semver, bun_shell_parser, bun_md | OK via `bun_wasm` | Exposés dès maintenant par `src/wasm` |
+| bun_core, bun_alloc | À adapter | Trois dépendances C/C++ : `bun_mimalloc_sys` (mimalloc gère WASI), `bun_simdutf_sys` (simdutf a un backend wasm SIMD128) et `bun_highway` (71 fonctions extern, C++ dans `highway_*.cpp` ; Highway a une cible WASM). Soit build.rs avec wasi-sdk sous `target_family = "wasm"`, soit un repli scalaire en Rust. |
+| bun_sys, bun_paths | À adapter | `bun_windows_sys` tire libuv : à garder sous `cfg(windows)`. Des reliquats de l'époque Zig existent déjà : Futex `wasm_impl`, `MAX_PATH_BYTES` à 1024, OS Wasm dans `env.rs`. |
+| bun_js_parser, bun_js_printer, bun_transpiler | À adapter | Tirent uws_sys, boringssl_sys, io, crash_handler et zlib. Ajouter des features pour couper ces dépendances, puis exposer `bun_wasm_transpile` (W2). |
+| bun_css, bun_sourcemap, bun_resolver | À adapter | Mêmes dépendances bun_core/bun_sys. Le resolver travaillera sur la VFS du WebOS. |
+| bun_bundler, bun_install | À adapter (tard) | event_loop, uws, http : threads WASI + relais réseau |
+| bun_jsc, bun_runtime, uws, boringssl, http, sql | Impossible (par choix) | Moteur JSC et I/O natifs, remplacés par le moteur de la page et le relais serveur |
+
+**Fait (commits)**
+
+- C:\bun `c4d7ca9c410` : crate `bun_wasm` (`src/wasm`). C ABI `bun_wasm_alloc/free/version/semver_order/semver_satisfies/shell_parse/markdown_html`, résultats packés `ptr << 32 | len` avec un octet de statut. Profil `[profile.wasm]`, script `rust:check-wasm`, tests Rust dans `lib.rs`.
+- C:\aphrody `0d6c3444b8` : crate `aphrody-webos-wasm` (VFS APFS1/OPFS, `triage`, `strings`, `applyPatch`, `unifiedDiff`).
+  apps/web `src/os/wasm/` : protocole, worker fichiers à deux slots OPFS, table de processus, loader bun_wasm, API `Bun` sur le moteur de la page, worker REPL, relais réseau.
+  Apps Fichiers, Processus, Bun REPL et Outils Aphrody. Seed rootfs (`scripts/webos/rootfs-seed.ts`), inventaire (`scripts/webos/wasm-inventory.ts`) et test (`scripts/webos/webos.test.ts`).
+- C:\aphrody `09de3ab719` : `@bjorn3/browser_wasi_shim` ajouté au lockfile.
+
+**Étapes ordonnées**
+
+1. ⏳ Brancher les apps dans le bureau. `server.ts`, `DesktopOS.tsx`, `Dock.tsx` et `types.ts` appartiennent à agy et n'étaient pas commités au moment du lot : le diff à appliquer est noté ici.
+   - Importer `WASM_APPS` et l'ajouter à `AppId`, à `DOCK_ITEMS` et au rendu.
+   - Appliquer `withIsolation()` à chaque réponse.
+   - Appeler `handleWebOsNet()` avant les autres routes.
+   - Ajouter `webosTcpSocket` dans `websocket`.
+2. ⏳ Passe finale (commandes ci-dessous) et corrections de compilation de `bun_wasm` et `aphrody-webos-wasm`.
+3. ⏳ Couper les dépendances C de bun_core pour wasm (mimalloc, simdutf, highway via wasi-sdk ou repli). Puis `bun_js_parser` + `bun_transpiler` → `bun_wasm_transpile`, et `Bun.Transpiler` dans `bun-api.ts`.
+4. ⏳ Adapter les crates Aphrody « à adapter » par lots de domaine : memory et store via sqlite-wasm-rs, mcp-client et model-client via reqwest fetch. Les exposer dans `aphrody-webos-wasm` (scan, docs, memory, parse, rename).
+5. ⏳ n2b : napi-rs → `wasm32-wasip1-threads` + @napi-rs/wasm-runtime.
+6. ⏳ aports :
+   - arch `wasm32` et release `aphrody-3.24-wasm32` (uutils coreutils, modules WebOS) ;
+   - lien `aphrody-mcp` ;
+   - apk en wasm limité à `noarch` + `wasm32`.
+7. ⏳ `node:*` via unenv dans `bun-api.ts` ; relais WISP.
+8. ⏳ Phase 2 : fork de tombl/linux chez aphrody-labs, avec le rebase 7.0 de linux-wasm. initramfs Aphrody avec busybox, et sudo-rs sur le noyau wasm.
+
+**Commandes de passe finale**
+
+```sh
+# Bun (C:\bun)
+cargo test -p bun_wasm
+bun run rust:check-wasm
+cargo build --target wasm32-wasip1-threads -p bun_wasm --profile wasm
+#   -> target/wasm32-wasip1-threads/wasm/bun_wasm.wasm, à copier dans C:\aphrody\apps\web\dist\wasm\bun\
+
+# Aphrody (C:\aphrody)
+cargo test -p aphrody-webos-wasm
+bun build --target=wasm crates/web/webos-wasm/Cargo.toml --outdir apps/web/dist/wasm/webos
+bun build --target=wasm crates/infra/aphrody-command-wasm/Cargo.toml --outdir apps/web/dist/wasm/cli
+#   repli tant que Y n'a pas fini :
+bun scripts/build/rust/wasm-package.ts --crate aphrody-webos-wasm --out apps/web/dist/wasm/webos
+bun scripts/build/rust/wasm-package.ts --crate aphrody-command-wasm --out apps/web/dist/wasm/cli
+bun scripts/webos/rootfs-seed.ts
+bun test scripts/webos/webos.test.ts
+bun run --cwd apps/web build
+
+# Noyau wasm (phase 2, Docker local)
+git clone https://github.com/joelseverin/linux-wasm && cd linux-wasm && ./linux-wasm.sh all
+
+# Scénario WebOS de bout en bout
+aphrody webos            # http://localhost:3000 ; dans la console, crossOriginIsolated === true
+# Fichiers : /home/aphrody/README.md présent ; créer, renommer, supprimer ; recharger la page -> persistant (OPFS)
+# Fichiers : « Analyser » sur un binaire déposé -> rapport triage JSON
+# Bun REPL : Bun.version ; Bun.semver.satisfies("1.4.0", "^1.2") -> true ; Bun.markdown.html("# a") ;
+#            Bun.shellParse("echo hi | wc -c") ; await Bun.write("x.txt", "hi") puis Fichiers montre x.txt
+# Processus : files et bun-repl listés ; kill bun-repl -> le worker disparaît
+# Outils Aphrody : « text --help » -> sortie de aphrody pure
+```
+
+**Risques**
+
+- `bun_wasm` tire `bun_core`, donc mimalloc, simdutf et highway en C. `rust:check-wasm` échouera tant que l'étape 3 n'est pas faite : c'est le premier blocage attendu.
+- La mémoire partagée importée (512 pages initiales, 1 Gio max) doit correspondre à celle que déclare le module.
+- `thread-spawn` est factice.
+- `bun build --target=wasm` (chantier Y) n'est pas encore livré.
+- Le Cargo.lock d'Aphrody est à régénérer : un autre agent l'avait modifié sans le commiter au moment du commit.
+- Rien n'a été compilé ni testé.
+
 ### A. Publication (✅ base)
 
 - ✅ crates.io : `aphrody-bun-macro` 0.1.0, `aphrody-bun-native-plugin` 0.2.0.
