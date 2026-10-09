@@ -7,12 +7,12 @@
 //   bun gtk-window.fixture.ts [--title T] [--width W] [--height H] [--timeout MS] [--lib-dir DIR]
 //
 // Libraries: libgtk-4.so.1 (Linux), libgtk-4.1.dylib (Homebrew), libgtk-4-1.dll
-// (MSYS2 `mingw-w64-ucrt-x86_64-gtk4`, looked up on PATH, in --lib-dir, in
-// $BUN_GTK4_DIR, then C:\msys64\ucrt64\bin). GTK needs a display: on Linux,
-// DISPLAY or WAYLAND_DISPLAY must be set (xvfb-run works).
+// (Windows: PATH, --lib-dir, then windowsToolkitBinDir() in native-toolkits.ts).
+// GTK needs a display: on Linux, DISPLAY or WAYLAND_DISPLAY must be set (xvfb-run works).
 import { dlopen, FFIType, JSCallback } from "bun:ffi";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { gtk4Libraries as names, gtk4SearchDirs, hasDisplay } from "./native-toolkits.ts";
 
 const { ptr: p, i32, u32, u64, void: none } = FFIType;
 
@@ -20,7 +20,7 @@ let timeoutMs = 0;
 let width = 680;
 let height = 440;
 let title = "Bun GTK 4 window (bun:ffi)";
-let libDir = process.env.BUN_GTK4_DIR ?? "";
+let libDir = "";
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const value = argv[i + 1];
@@ -44,23 +44,9 @@ for (let i = 0; i < argv.length; i++) {
   }
 }
 
-const names =
-  process.platform === "win32"
-    ? { gtk: "libgtk-4-1.dll", gobject: "libgobject-2.0-0.dll", glib: "libglib-2.0-0.dll", gio: "libgio-2.0-0.dll" }
-    : process.platform === "darwin"
-      ? {
-          gtk: "libgtk-4.1.dylib",
-          gobject: "libgobject-2.0.0.dylib",
-          glib: "libglib-2.0.0.dylib",
-          gio: "libgio-2.0.0.dylib",
-        }
-      : { gtk: "libgtk-4.so.1", gobject: "libgobject-2.0.so.0", glib: "libglib-2.0.so.0", gio: "libgio-2.0.so.0" };
-
-// "" is the platform search path (PATH on Windows). The directory GTK loads from
-// is reused for GLib, GObject and GIO so two GLib copies are never mixed.
-const searchDirs = libDir ? [libDir, ""] : [""];
-if (process.platform === "win32") searchDirs.push("C:\\msys64\\ucrt64\\bin");
-if (process.platform === "darwin") searchDirs.push("/opt/homebrew/lib", "/usr/local/lib");
+// The directory GTK loads from is reused for GLib, GObject and GIO so two GLib
+// copies are never mixed.
+const searchDirs = gtk4SearchDirs(libDir);
 let chosenDir: string | undefined;
 
 function open<T extends Record<string, { args: readonly FFIType[]; returns: FFIType }>>(name: string, symbols: T) {
@@ -80,7 +66,7 @@ function open<T extends Record<string, { args: readonly FFIType[]; returns: FFIT
   process.exit(2);
 }
 
-if (process.platform === "linux" && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) {
+if (!hasDisplay) {
   console.error("gtk-window: no display (set DISPLAY or WAYLAND_DISPLAY, e.g. run under xvfb-run)");
   process.exit(2);
 }

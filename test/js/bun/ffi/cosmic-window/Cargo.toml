@@ -14,8 +14,15 @@ description = "libcosmic window cdylib loaded by test/js/bun/ffi/cosmic-window.f
 crate-type = ["cdylib"]
 path = "src/lib.rs"
 
-# Same libcosmic revision as packages/bun-cosmic (COSMIC epoch-1.10.0).
+# Same libcosmic revision as packages/bun-cosmic (COSMIC epoch-1.10.0). Wayland and X11 are
+# Linux-only; elsewhere winit picks the native windowing backend.
 [dependencies.libcosmic]
+git = "https://github.com/pop-os/libcosmic"
+rev = "7f715bc5d2d383a070fd8c760aa52c5627df96b6"
+default-features = false
+features = ["winit", "tokio", "multi-window"]
+
+[target.'cfg(target_os = "linux")'.dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic"
 rev = "7f715bc5d2d383a070fd8c760aa52c5627df96b6"
 default-features = false

@@ -1,5 +1,5 @@
 // C ABI over Qt 6 for bun:ffi (Qt has no C API). Built on demand by
-// qt-window-shim.ts with the system C++ compiler and pkg-config:
+// native-toolkits.ts with the system C++ compiler and pkg-config:
 //   c++ -std=c++17 -shared -fPIC qt-window.shim.cpp $(pkg-config --cflags --libs Qt6Widgets)
 //   c++ -std=c++17 -shared -fPIC -DBUN_QT_KIRIGAMI qt-window.shim.cpp \
 //     $(pkg-config --cflags --libs Qt6Widgets Qt6Quick Qt6Qml)

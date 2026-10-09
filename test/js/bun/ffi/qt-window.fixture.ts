@@ -1,6 +1,6 @@
 // Native Qt 6 Widgets window driven from bun:ffi. Qt has no C ABI, so
 // qt-window.shim.cpp wraps QApplication + a QLabel window + QTimer in one
-// extern "C" function; qt-window-shim.ts compiles it with the system C++
+// extern "C" function; native-toolkits.ts compiles it with the system C++
 // compiler and pkg-config (cached) and loads it with dlopen. The "window
 // created" line comes from a JSCallback that the shim calls synchronously
 // before QApplication::exec(). Escape, the close button or `--timeout <ms>`
@@ -10,7 +10,7 @@
 //
 // Linux without a display: QT_QPA_PLATFORM=offscreen, or run under xvfb-run.
 import { FFIType, JSCallback } from "bun:ffi";
-import { loadQtShim } from "./qt-window-shim.ts";
+import { loadQtShim } from "./native-toolkits.ts";
 
 let timeoutMs = 0;
 let width = 680;

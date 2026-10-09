@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, it } from "bun:test";
 import { existsSync } from "fs";
-import { bunEnv, bunExe, compileFixture, isDebug, isGlibcVersionAtLeast, isLinux, isMacOS, isWindows, tempDir } from "harness";
+import { bunEnv, bunExe, compileFixture, isDebug, isGlibcVersionAtLeast, isLinux, isWindows, tempDir } from "harness";
 import { platform } from "os";
-import { findQtToolchain } from "./qt-window-shim.ts";
+import { findQtToolchain, gtk4Libraries, gtk4SearchDirs, hasDisplay } from "./native-toolkits.ts";
 
 import {
   cc,
@@ -741,11 +741,32 @@ it.skipIf(!isWindows)("Win32 window message loop with a JSCallback WNDPROC", asy
   expect(exitCode).toBe(0);
 });
 
+// The same fixture on Linux: a Windows bun.exe ($BUN_WINDOWS_EXE) under Wine, which
+// maps user32 windows onto the X display (xvfb-run in scripts/aphrody/gui/*.Dockerfile).
+const wine = isLinux && hasDisplay ? Bun.which("wine") : null;
+const bunWindowsExe = process.env.BUN_WINDOWS_EXE;
+it.skipIf(!wine || !bunWindowsExe || !existsSync(bunWindowsExe))(
+  "Win32 window message loop under Wine with a Windows bun.exe",
+  async () => {
+    await using proc = Bun.spawn({
+      cmd: [wine, bunWindowsExe, `${import.meta.dir}/win32-window.fixture.ts`, "--title", "café", "--timeout", "50"],
+      env: { ...bunEnv, WINEDEBUG: "-all" },
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect({ stdout, exitCode, stderr: exitCode === 0 ? "" : stderr }).toEqual({
+      stdout: 'window created: "café" 680x440\nwindow closed: message=0x12 wParam=0\n',
+      exitCode: 0,
+      stderr: "",
+    });
+  },
+  60_000,
+);
+
 // GTK 4, Qt 6, KDE Kirigami and libcosmic windows: each toolkit's event loop owns
 // the JS thread (g_application_run, QApplication::exec, iced) and re-enters
 // JSCallbacks synchronously from it. Skipped where the toolkit is not installed.
 describe.concurrent("native toolkit windows", () => {
-  const hasDisplay = !isLinux || !!(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
   const expected = 'window created: "café" 680x440\nwindow closed: by=timeout status=0\n';
   const canDlopen = (paths, symbol) =>
     paths.some(path => {
@@ -759,11 +780,7 @@ describe.concurrent("native toolkit windows", () => {
   const gtk4 =
     hasDisplay &&
     canDlopen(
-      isWindows
-        ? ["libgtk-4-1.dll", "C:\\msys64\\ucrt64\\bin\\libgtk-4-1.dll"]
-        : isMacOS
-          ? ["libgtk-4.1.dylib", "/opt/homebrew/lib/libgtk-4.1.dylib", "/usr/local/lib/libgtk-4.1.dylib"]
-          : ["libgtk-4.so.1"],
+      gtk4SearchDirs().map(dir => (dir ? `${dir}/${gtk4Libraries.gtk}` : gtk4Libraries.gtk)),
       "gtk_get_major_version",
     );
   const qt = typeof findQtToolchain("qt") === "object";

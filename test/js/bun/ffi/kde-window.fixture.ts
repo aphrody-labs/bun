@@ -1,6 +1,6 @@
 // KDE window driven from bun:ffi: a Kirigami (KDE Frameworks 6)
 // ApplicationWindow loaded by QQmlApplicationEngine. qt-window.shim.cpp,
-// built with -DBUN_QT_KIRIGAMI by qt-window-shim.ts, exposes it as
+// built with -DBUN_QT_KIRIGAMI by native-toolkits.ts, exposes it as
 // `bun_kirigami_window_run`; the "window created" line comes from a JSCallback
 // the shim calls synchronously before QApplication::exec(). Escape (a QML
 // Shortcut), the close button or `--timeout <ms>` end the event loop.
@@ -11,7 +11,7 @@
 // package; Windows: MSYS2 `mingw-w64-ucrt-x86_64-kirigami`). Linux without a
 // display: QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software, or xvfb-run.
 import { FFIType, JSCallback } from "bun:ffi";
-import { loadQtShim } from "./qt-window-shim.ts";
+import { loadQtShim } from "./native-toolkits.ts";
 
 let timeoutMs = 0;
 let width = 680;

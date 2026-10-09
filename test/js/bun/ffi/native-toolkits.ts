@@ -1,15 +1,48 @@
-// Builds and loads qt-window.shim.cpp, the C ABI that qt-window.fixture.ts and
-// kde-window.fixture.ts call through bun:ffi. Qt is C++ only and TinyCC (bun:ffi
-// `cc`) compiles C, so the shim is built with the system C++ compiler and
-// pkg-config, once per source/toolchain hash, into the OS temp directory.
+// Shared by the *-window fixtures and ffi.test.js: where GTK 4 and Qt 6 live on
+// each platform, and how qt-window.shim.cpp (the C ABI that qt-window.fixture.ts
+// and kde-window.fixture.ts call through bun:ffi) is built. Qt is C++ only and
+// TinyCC (bun:ffi `cc`) compiles C, so the shim is built with the system C++
+// compiler and pkg-config, once per source/toolchain hash, into the OS temp dir.
 //
-// Toolchain lookup: Linux/macOS use `c++`/`g++`/`clang++` and `pkg-config` from
-// PATH; Windows uses MSYS2 UCRT64 (`mingw-w64-ucrt-x86_64-{gcc,pkgconf,qt6-base}`,
-// plus `kirigami` for KDE) from $BUN_QT_BIN_DIR or C:\msys64\ucrt64\bin.
+// Linux/macOS: libraries from the dynamic loader path, `c++`/`g++`/`clang++` and
+// `pkg-config` from PATH. Windows: see windowsToolkitBinDir().
 import { dlopen, FFIType } from "bun:ffi";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+/**
+ * The one directory the Windows fixtures take GTK 4, Qt 6, KF6, g++ and
+ * pkg-config from. Today that is MSYS2 UCRT64 (`mingw-w64-ucrt-x86_64-{gtk4,gcc,
+ * pkgconf,qt6-base,qt6-declarative,kirigami}`); $BUN_GUI_TOOLKIT_DIR points it
+ * elsewhere. Nothing else in the fixtures names an MSYS2 path.
+ */
+export function windowsToolkitBinDir(): string {
+  return process.env.BUN_GUI_TOOLKIT_DIR || "C:\\msys64\\ucrt64\\bin";
+}
+
+export const gtk4Libraries =
+  process.platform === "win32"
+    ? { gtk: "libgtk-4-1.dll", gobject: "libgobject-2.0-0.dll", glib: "libglib-2.0-0.dll", gio: "libgio-2.0-0.dll" }
+    : process.platform === "darwin"
+      ? {
+          gtk: "libgtk-4.1.dylib",
+          gobject: "libgobject-2.0.0.dylib",
+          glib: "libglib-2.0.0.dylib",
+          gio: "libgio-2.0.0.dylib",
+        }
+      : { gtk: "libgtk-4.so.1", gobject: "libgobject-2.0.so.0", glib: "libglib-2.0.so.0", gio: "libgio-2.0.so.0" };
+
+/** Directories to try for GTK 4, in order; "" is the platform's own search path (PATH on Windows). */
+export function gtk4SearchDirs(libDir = ""): string[] {
+  const dirs = libDir ? [libDir, ""] : [""];
+  if (process.platform === "win32") dirs.push(windowsToolkitBinDir());
+  if (process.platform === "darwin") dirs.push("/opt/homebrew/lib", "/usr/local/lib");
+  return dirs;
+}
+
+/** Linux needs an X11 or Wayland display for GTK, libcosmic and Qt's default platform plugin. */
+export const hasDisplay = process.platform !== "linux" || !!(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
 
 export type QtVariant = "qt" | "kirigami";
 
@@ -42,10 +75,10 @@ export function findQtToolchain(variant: QtVariant): QtToolchain | string {
   let binDir: string | null = null;
   const env: Record<string, string | undefined> = { ...process.env };
   if (process.platform === "win32") {
-    binDir = process.env.BUN_QT_BIN_DIR ?? "C:\\msys64\\ucrt64\\bin";
+    binDir = windowsToolkitBinDir();
     cxx = join(binDir, "g++.exe");
     pkgConfig = join(binDir, "pkg-config.exe");
-    if (!existsSync(cxx) || !existsSync(pkgConfig)) return `MSYS2 UCRT64 g++/pkg-config not found in ${binDir}`;
+    if (!existsSync(cxx) || !existsSync(pkgConfig)) return `g++/pkg-config not found in ${binDir}`;
     const pathKey = Object.keys(env).find(k => k.toUpperCase() === "PATH") ?? "PATH";
     env[pathKey] = `${binDir};${env[pathKey] ?? ""}`;
   } else {
