@@ -20,10 +20,6 @@ export function placeholderNeedsRetiring(packument: Packument): boolean {
   return v !== undefined && !v.deprecated;
 }
 
-function npmCommand(): string[] {
-  return Bun.which("npm") ? ["npm"] : [process.execPath, "x", "--bun", "npm"];
-}
-
 async function packument(name: string): Promise<Packument | undefined> {
   const res = await fetch(`https://registry.npmjs.org/${name.replace("/", "%2f")}`, {
     headers: { "cache-control": "no-cache" },
@@ -50,8 +46,8 @@ export async function retirePlaceholder(
   const spec = `${name}@${PLACEHOLDER_VERSION}`;
   console.log(`${opts.dryRun ? "dry-run " : ""}deprecate ${spec}`);
   if (opts.dryRun) return true;
-  const [cmd, ...args] = npmCommand();
-  const r = spawnSync(cmd!, [...args, "deprecate", spec, PLACEHOLDER_MESSAGE], {
+  // `npm` on PATH may be an alias of bun, which has no `deprecate`.
+  const r = spawnSync(process.execPath, ["x", "--bun", "npm@latest", "deprecate", spec, PLACEHOLDER_MESSAGE], {
     cwd: opts.cwd,
     stdio: "inherit",
     env: process.env,

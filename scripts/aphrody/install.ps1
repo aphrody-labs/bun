@@ -60,8 +60,18 @@ try {
   $env:IS_BUN_AUTO_UPDATE = "1"
   & $Bun completions *> $null
   $env:IS_BUN_AUTO_UPDATE = $null
-  $Bunx = Join-Path $Bin "bunx.exe"
-  if (-not (Test-Path $Bunx)) { Copy-Item -Force $Bun $Bunx }
+  # bun picks its mode from argv0; existing node/npm/npx aliases are relinked so they never keep an older build.
+  foreach ($Alias in "bunx.exe", "node.exe", "npm.exe", "npx.exe") {
+    $Link = Join-Path $Bin $Alias
+    if ($Alias -ne "bunx.exe" -and -not (Test-Path $Link)) { continue }
+    if (Test-Path $Link) {
+      $Old = "$Link.old"
+      Remove-Item -Force $Old -ErrorAction SilentlyContinue
+      Move-Item -Force $Link $Old
+      Remove-Item -Force $Old -ErrorAction SilentlyContinue
+    }
+    New-Item -ItemType HardLink -Path $Link -Target $Bun | Out-Null
+  }
   Write-Output "Installed $Tag ($(& $Bun --revision)) to $Bun"
 
   if (-not $NoPathUpdate) {
