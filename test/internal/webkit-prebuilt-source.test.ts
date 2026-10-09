@@ -57,13 +57,16 @@ function resolveDarwin(partial: PartialConfig = {}): Config {
 describe("webkitPrebuiltRepo", () => {
   const name = "bun-webkit-linux-amd64-musl-lto";
 
-  test("defaults to oven-sh while no Aphrody release is listed for the sha", () => {
-    expect(APHRODY_WEBKIT_PREBUILTS[WEBKIT_VERSION] ?? []).not.toContain("x");
+  test("defaults to oven-sh for a sha or an archive the fork did not publish", () => {
     expect(webkitPrebuiltRepo(name, "f".repeat(40), undefined)).toBe(WEBKIT_UPSTREAM_REPO);
+    expect(APHRODY_WEBKIT_PREBUILTS[WEBKIT_VERSION] ?? []).not.toContain("bun-webkit-macos-arm64-lto");
+    expect(webkitPrebuiltRepo("bun-webkit-macos-arm64-lto", WEBKIT_VERSION, undefined)).toBe(WEBKIT_UPSTREAM_REPO);
   });
 
-  test("uses aphrody-labs when listed in APHRODY_WEBKIT_PREBUILTS", () => {
+  test("uses aphrody-labs for an archive listed in APHRODY_WEBKIT_PREBUILTS", () => {
+    expect(APHRODY_WEBKIT_PREBUILTS[WEBKIT_VERSION]).toContain(name);
     expect(webkitPrebuiltRepo(name, WEBKIT_VERSION, undefined)).toBe(WEBKIT_APHRODY_REPO);
+    expect(webkitPrebuiltRepo(name, `autobuild-${WEBKIT_VERSION}`, undefined)).toBe(WEBKIT_APHRODY_REPO);
   });
 
   test("$BUN_WEBKIT_REPO forces aphrody, oven or an explicit repo", () => {
