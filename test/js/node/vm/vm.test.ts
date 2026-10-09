@@ -1029,6 +1029,65 @@ test("can't use bytecode from a different script", () => {
   expect(secondScript.runInThisContext()).toBe(4);
 });
 
+// Accepted cachedData used to be decoded after a full compile of the source (plus a synchronous
+// baseline JIT of the decoded block, which evaluate() then ignored), so it never made Script
+// construction faster. The payload comes from another process: in the same process the source is
+// already in JSC's in-memory CodeCache and the compile it would replace costs nothing.
+test("vm.Script built from cachedData skips the compile", async () => {
+  const generator = `
+    const body = Array.from({ length: 4000 }, (_, i) =>
+      "function f" + i + "(a, b) { let s = 0; for (let j = 0; j < a; j++) { s += j * b + " + i + "; if (s > 1e9) s %= 7; } return [s, { k: " + i + ", v: 'x" + i + "' }]; }"
+    ).join("\\n") + "\\nf3999(3, 4)[0];";
+    const variant = name => body + "\\n// " + name;
+  `;
+  const runs = 5;
+  using dir = tempDir("vm-script-cached-data", {
+    "produce.js": `${generator}
+      const vm = require("node:vm");
+      const out = [];
+      for (let k = 0; k < ${runs}; k++) out.push(new vm.Script(variant("c" + k)).createCachedData().toString("base64"));
+      require("node:fs").writeFileSync(require("node:path").join(__dirname, "cached.json"), JSON.stringify(out));
+    `,
+    "consume.js": `${generator}
+      const vm = require("node:vm");
+      const cached = JSON.parse(require("node:fs").readFileSync(require("node:path").join(__dirname, "cached.json"), "utf8"));
+      const fresh = [], fromCache = [], rejected = [], results = [];
+      for (let k = 0; k < ${runs}; k++) {
+        let t = performance.now();
+        new vm.Script(variant("f" + k));
+        fresh.push(performance.now() - t);
+        const cachedData = Buffer.from(cached[k], "base64");
+        t = performance.now();
+        const script = new vm.Script(variant("c" + k), { cachedData });
+        fromCache.push(performance.now() - t);
+        rejected.push(script.cachedDataRejected);
+        results.push(script.runInThisContext());
+      }
+      const median = xs => xs.sort((a, b) => a - b)[xs.length >> 1];
+      console.log(JSON.stringify({ rejected, results, fresh: median(fresh), fromCache: median(fromCache) }));
+    `,
+  });
+
+  const run = async (file: string) => {
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), file],
+      env: bunEnv,
+      cwd: String(dir),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    if (exitCode !== 0) throw new Error(stderr);
+    return stdout;
+  };
+
+  await run("produce.js");
+  const { rejected, results, fresh, fromCache } = JSON.parse(await run("consume.js"));
+  expect(rejected).toEqual(Array(runs).fill(false));
+  expect(results).toEqual(Array(runs).fill(12009));
+  expect(fromCache).toBeLessThan(fresh / 2);
+});
+
 test("SourceTextModule accepts the cachedData it produced", () => {
   const source = `{ function inBlock() { return 1; } }\nexport default await Promise.resolve(inBlock);`; // module-only syntax, and a block function (strict semantics)
   const cachedData = new SourceTextModule(source, { identifier: "m" }).createCachedData();
