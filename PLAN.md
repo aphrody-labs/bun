@@ -487,10 +487,13 @@ m3-next-migrate, scaffold, templates, apps) = S ; m3-baseui = R. Dépendances Ta
   m3-codemods, scripts/. Non exécutés après la directive du 2026-10-09 (pas de test avant la passe finale de main) :
   voir la liste de tests à lancer dans le rapport. Restent en `node:*` par nécessité : `node:path`/`node:os`, `mkdtemp`,
   `rm` récursif, `mkdir` vide, `symlink`/`lstat`/`chmod`, `readdir withFileTypes`, `isIP`, API publiques synchrones
-  (`readFileSync`/`existsSync`), `node:zlib` (format zlib des PNG).
-- ⏳ Manques Bun à corriger dans le cœur (§2.11, avec test `USE_SYSTEM_BUN=1` en échec / `bun bd test` en succès) :
-  `Bun.write` sans option `mode` (chmod à l'écriture) ; `Bun.Glob.scan` lève ENOENT si `cwd` n'existe pas ; pas d'équivalent
-  Bun de `Bun.deflateSync` au format zlib (`node:zlib.deflateSync` produit l'en-tête 78 9c).
+  (`readFileSync`/`existsSync`). PNG de m3-os-themes : `Bun.deflateSync(raw, { windowBits: 15 })` (requiert le binaire du fork).
+- ✅ Manques Bun corrigés dans le cœur (§2.11), non exécutés (passe finale) : `Bun.write`/`BunFile.write` option `mode`
+  (tous les chemins, fichier créé ou écrasé) ; `Bun.Glob.scan`/`scanSync` sur un `cwd` absent rend une liste vide (comme
+  `fs.globSync` et fast-glob ; un `cwd` fichier lève toujours ENOTDIR) ; `windowBits` de `Bun.deflateSync`/`gzipSync` était
+  ignoré, il suit désormais zlib (15 → en-tête 78 9c, -15 → deflate brut par défaut, 31 → gzip). Tests :
+  `bun bd test test/js/bun/io/bun-write.test.js -t "options.mode"`, `bun bd test test/js/bun/glob/scan.test.ts -t "missing cwd"`,
+  `bun bd test test/js/bun/util/zstd.test.ts -t "windowBits"`.
 - ⏳ `packages/assets` : les `index.ts` générés (images, videos, svgs) sont périmés (en-tête `pnpm assets gen`) ; régénérer par `bun run gen`.
 - Note : les tests de m3-next-migrate laissent des `m3/apps/m3-migrate-contract-*` qui cassent `bun install` (nom de workspace
   dupliqué) : à corriger côté S.
