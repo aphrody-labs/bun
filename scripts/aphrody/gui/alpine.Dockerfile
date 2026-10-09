@@ -12,6 +12,8 @@
 
 ARG BASE=aphrody/bun-alpine:latest
 FROM ${BASE}
+# The runtime image runs as `agent`; packages, /opt and the Wine prefix need root.
+USER root
 
 ENV BUN_COSMIC_WINDOW_LIB=/opt/bun-cosmic-window/libbun_cosmic_window.so \
     BUN_WINDOWS_EXE=/opt/bun-windows/bun.exe \
