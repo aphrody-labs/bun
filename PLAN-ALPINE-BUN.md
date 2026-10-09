@@ -596,6 +596,83 @@ synchrone, et limite dure vérifiée après une collection complète seulement ;
 interne ; `postTaskTo` depuis le fil du GC. Arène : `ffi` et `sqlite` sous Deno dépendent de `node:sqlite` et de
 `Deno.dlopen` (`-A`) ; la release `bun-v1.4.3` amont doit exister (sinon prendre la dernière et le noter, C1).
 
+### Z2. yolo fusionné dans un CLI et une FFI Aphrody uniques (🔄 code écrit le 2026-10-09, ni build ni test)
+
+Dépôt `C:\aphrody` (aphrody-labs/aphrody). Z1 garde rename, parse, docs Bun, bench (et L/Y : lint, scan, verify, create).
+Commits : `be449b3975` (aphrody.h unique), `7862f46c00` (pont Bun du binaire), `936b263411` et `16543f2fd6`
+(lanceur `bin/aphrody.ts` réduit). `multicall/bun_bridge.rs` est entré dans `8925b0edaf` (commit d'agy).
+
+**FFI** : `crates/interop/ffi/include/aphrody.h` est le seul en-tête de `aphrody_ffi` (`aphrody_*`, `yolo_*`,
+`bun_rs_*`), `APHRODY_HEADER_VERSION 2u`. `yolo_runtime.h` est supprimé ; l'artefact de release garde un
+`yolo_runtime.h` qui inclut `aphrody.h`. Gardes : `header-drift.test.ts`, `runtime-ffi.test.ts` (arité SDK = en-tête),
+`yolo-runtime` (`include_str!` sur aphrody.h), loader Python (accepte les deux noms).
+
+**CLI** : le binaire Rust `aphrody` sert tout. Les commandes à propriétaire Bun passent par `bun_bridge` :
+`bun <checkout>/packages/engine/yolo/src/index.ts <cmd>` (checkout : `APHRODY_ROOT`, ancêtres de l'exe ou du cwd,
+`~/aphrody`, `C:\aphrody`), avec `APHRODY_BIN` = l'exe courant. Invoqué sous le nom `yolo`, le binaire se comporte
+comme `aphrody`.
+
+Arbre cible, premier niveau (clap + multi-call) :
+
+```
+aphrody  ai shell(sh) tui voice native os web(webos) term search google translate n2b ssh git mcp discord
+         ingest docs awesome re forensics index memory model infer job ocr rag gateway config codex
+         package runtime scan winclean auto self completions version doctor
+         infra ovh kernel wsl backend mcp-server web-engine x embed home graph tauri identity canvas app-server workflow
+         # propriétaire Bun (bun_bridge)
+         status generate desktop desktop-runtime ffi import plugin py uv vu ship hooks ops workspace optimize
+         update browser forge m3 host api tool
+aphrody ai  rag model infer voice ocr translate memory gateway train agent status   (agy)
+            + doc-ai, tools (à brancher par agy : AiAction -> bun_bridge::dispatch("doc-ai"|"tool", args))
+```
+
+Matrice (commande `yolo` → destination → statut) :
+
+| yolo | Destination | Statut |
+|---|---|---|
+| infra, workflow, ssh | `aphrody infra`, `aphrody workflow`, `aphrody ssh` (Rust) | ✅ code |
+| git | `aphrody infra git` (`aphrody git` = git_cmd Rust) | ✅ code |
+| mcp | `aphrody mcp` sans argument = serveur `aphrody-mcp` ; avec sous-commande = config clap | ✅ code |
+| doctor, version, n2b, awesome, scan, web, tauri, train, ai | Rust du même nom (`train` → `aphrody ai train`, agy) ; `awesome` Rust n'a pas stats/github/check | ✅ Rust gagne |
+| google drive\|fonts | `aphrody google drive\|fonts` → bun ; le reste de `google` = Gemini Rust | ✅ code |
+| runtime (artefacts FFI) | `aphrody ffi` → bun (`aphrody runtime` reste uv/Python) | ✅ code |
+| status, generate, desktop, desktop-runtime, import, plugin, py, uv, vu, ship, hooks, ops, workspace, optimize, update, browser, forge, m3, host, api, tool | même nom → bun (propriétaires TS : Bun.serve, runners en process, tmux/ssh de la fabrique, host.ts 2 700 lignes) | ✅ code |
+| python, serve, doc-ai | alias dépréciés (stderr) → `aphrody py`, `aphrody api`, `aphrody ai doc-ai` | ✅ code ; `ai doc-ai` à brancher (agy) |
+| ai list\|call | `aphrody tool list\|call` ; `aphrody ai tools` à brancher (agy) | ⏳ |
+| upgrade, uninstall | retirés avec la distribution yolo autonome : `aphrody self install-path`, `aphrody package uninstall` | ⏳ suppression TS à la bascule |
+| rename, parse, docs, bench | Z1 (fork Bun) ; relais transitoire dans `bin/aphrody.ts` (`Z1_PENDING_COMMANDS`, + create, verify) | ⏳ Z1 |
+
+**Plugin Claude** : `yolo` 2.2.2 fusionné dans `aphrody` 2.3.0 (`C:\Users\aphro\.aphrody\plugins\aphrody`) : 39 skills,
+22 agents, hooks (sortie `[aphrody]`), serveurs LSP, reçus amont bun/typescript-go, README → `docs/yolo-toolkit.md`,
+licence MIT → `LICENSE-MIT-yolo`. `yolo <cmd>` → `aphrody <cmd>` dans skills et docs. Marketplace `aphrody-user` mise à
+jour, plugin installé en 2.3.0. Fin : `claude plugin uninstall yolo@aphrody-user`.
+
+Bascule finale (bloquée par Z1) : `bin/yolo(.cmd)` et `~/.bun/bin/yolo(.cmd)` (aujourd'hui
+`bun C:/aphrody/packages/engine/yolo/src/index.ts`) appellent `aphrody` ; `"yolo"` entre dans les liens de
+`aphrody self install-path` ; les branches Rust de `index.ts` (infra, workflow, git, ssh, mcp, train, ai, n2b, doctor,
+version, upgrade, uninstall) sont supprimées ; les tests qui lancent `./bin/yolo` (scan, ai-adapters, web-command,
+workspace_profiles) et `scripts/release/factory-current.sh` (`./bin/yolo verify`) migrent.
+
+Passe finale :
+
+```sh
+cd C:/aphrody
+cargo check -p aphrody-command -p aphrody -p aphrody-ffi -p yolo-runtime
+cargo test -p aphrody-command multicall
+cargo test -p yolo-runtime
+bun test packages/interop/native/test/header-drift.test.ts packages/interop/native/test/ffi-drift.test.ts packages/engine/runtime/test/runtime-ffi.test.ts scripts/release/runtime-artifact-info.test.ts packages/engine/yolo/test/aphrody-launcher.test.ts
+uv run pytest py/packages/aphrody/tests/test_yolo_runtime.py
+cargo build --release -p aphrody
+target/release/aphrody status ; target/release/aphrody ffi list ; target/release/aphrody google drive --help
+target/release/aphrody workflow --help ; target/release/aphrody serve --help ; target/release/aphrody mcp --help
+cp target/release/aphrody.exe target/release/yolo.exe && target/release/yolo.exe status
+bun bin/aphrody.ts rename --help
+```
+
+Risques : `bun_bridge` exige un checkout (binaire installé hors dépôt sans `APHRODY_ROOT` → 127) ; `aphrody awesome`
+Rust ≠ yolo awesome ; `ai doc-ai`/`ai tools` annoncés mais pas branchés ; `workflow` et `ssh` doublés (`aphrody infra
+workflow`) ; hooks yolo et aphrody actifs deux fois tant que yolo n'est pas désinstallé.
+
 ### A. Publication (✅ base)
 
 - ✅ crates.io : `aphrody-bun-macro` 0.1.0, `aphrody-bun-native-plugin` 0.2.0.
