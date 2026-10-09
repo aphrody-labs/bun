@@ -45,3 +45,5 @@ jobs:
           git remote add upstream https://github.com/oven-sh/bun.git
           bun test test/internal/aphrody-upstream-sync.test.ts
           bun scripts/aphrody/sync-upstream.ts --push --no-index
+      - name: Fast-forward the bun alias branch
+        run: git push origin HEAD:refs/heads/bun

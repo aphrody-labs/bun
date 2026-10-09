@@ -16,3 +16,7 @@ What Aphrody consumes from this repository:
 
 Upstream `oven-sh/bun` arrives by merge only: `bun scripts/aphrody/sync-upstream.ts` (also run every 6 hours by
 `.github/workflows/aphrody-upstream-sync.yml`). Fork-only tests live in `test/js/first_party/`.
+
+Branches: `main` is the only working branch. `bun` exists because every aphrody-labs fork (tailwindcss, base-ui,
+next.js, shenron) publishes its Bun port on a `bun` branch; here it is an alias of `main`, never committed to directly
+and only moved by fast-forward (`git push origin main:bun`), which the upstream sync workflow does after each run.
