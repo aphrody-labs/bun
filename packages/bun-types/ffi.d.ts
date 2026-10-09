@@ -905,6 +905,41 @@ declare module "bun:ffi" {
    * @param byteLength bytes to read
    */
   function toBuffer(ptr: Pointer | number | bigint, byteOffset?: number, byteLength?: number): Buffer;
+  /**
+   * Wrap a pointer in a {@link Buffer} that calls `deallocator` once the
+   * garbage collector frees it. `deallocator` is a C function pointer with the
+   * signature `void (*)(void *bytes, void *deallocatorContext)`; the context
+   * passed to it is `NULL`. It may run on a garbage-collector thread, so it
+   * must not call into JavaScript.
+   *
+   * @param ptr The memory address to read
+   * @param byteOffset bytes to skip before reading
+   * @param byteLength bytes to read
+   * @param deallocator C function pointer called with the bytes when the Buffer is collected
+   */
+  function toBuffer(
+    ptr: Pointer | number | bigint,
+    byteOffset: number | undefined,
+    byteLength: number | undefined,
+    deallocator: Pointer | number | bigint,
+  ): Buffer;
+  /**
+   * Like {@link toBuffer} with a `deallocator`, and `deallocatorContext` is
+   * passed as the deallocator's second argument.
+   *
+   * @param ptr The memory address to read
+   * @param byteOffset bytes to skip before reading
+   * @param byteLength bytes to read
+   * @param deallocatorContext pointer passed to `deallocator` as its second argument
+   * @param deallocator C function pointer called with the bytes and the context when the Buffer is collected
+   */
+  function toBuffer(
+    ptr: Pointer | number | bigint,
+    byteOffset: number | undefined,
+    byteLength: number | undefined,
+    deallocatorContext: Pointer | number | bigint | null | undefined,
+    deallocator: Pointer | number | bigint,
+  ): Buffer;
 
   /**
    * Read a pointer as an {@link ArrayBuffer}
@@ -920,6 +955,42 @@ declare module "bun:ffi" {
    * @param byteLength bytes to read
    */
   function toArrayBuffer(ptr: Pointer | number | bigint, byteOffset?: number, byteLength?: number): ArrayBuffer;
+  /**
+   * Wrap a pointer in an {@link ArrayBuffer} that calls `deallocator` once
+   * the garbage collector frees it, so native memory can be handed to
+   * JavaScript without a copy. `deallocator` is a C function pointer with the
+   * signature `void (*)(void *bytes, void *deallocatorContext)`; the context
+   * passed to it is `NULL`. It may run on a garbage-collector thread, so it
+   * must not call into JavaScript.
+   *
+   * @param ptr The memory address to read
+   * @param byteOffset bytes to skip before reading
+   * @param byteLength bytes to read
+   * @param deallocator C function pointer called with the bytes when the ArrayBuffer is collected
+   */
+  function toArrayBuffer(
+    ptr: Pointer | number | bigint,
+    byteOffset: number | undefined,
+    byteLength: number | undefined,
+    deallocator: Pointer | number | bigint,
+  ): ArrayBuffer;
+  /**
+   * Like {@link toArrayBuffer} with a `deallocator`, and `deallocatorContext`
+   * is passed as the deallocator's second argument.
+   *
+   * @param ptr The memory address to read
+   * @param byteOffset bytes to skip before reading
+   * @param byteLength bytes to read
+   * @param deallocatorContext pointer passed to `deallocator` as its second argument
+   * @param deallocator C function pointer called with the bytes and the context when the ArrayBuffer is collected
+   */
+  function toArrayBuffer(
+    ptr: Pointer | number | bigint,
+    byteOffset: number | undefined,
+    byteLength: number | undefined,
+    deallocatorContext: Pointer | number | bigint | null | undefined,
+    deallocator: Pointer | number | bigint,
+  ): ArrayBuffer;
 
   /**
    * Read a value directly from a memory address, without creating a

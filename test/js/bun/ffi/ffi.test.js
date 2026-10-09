@@ -1496,6 +1496,48 @@ describe("toBuffer borrowed-pointer ownership (no bad-free on GC)", () => {
       expect(getDeallocatorCalledCount()).toBe(1);
     },
   );
+
+  it.skipIf(!FFI_FIXTURE_PATH)(
+    "toArrayBuffer with a finalizer and context passes both to the deallocator exactly once on GC",
+    async () => {
+      const {
+        symbols: {
+          getDeallocatorCallback,
+          getDeallocatorBuffer,
+          getDeallocatorCalledCount,
+          getDeallocatorBytes,
+          getDeallocatorContext,
+        },
+      } = dlopen(FFI_FIXTURE_PATH, {
+        getDeallocatorCallback: { args: [], returns: "ptr" },
+        getDeallocatorBuffer: { args: [], returns: "ptr" },
+        getDeallocatorCalledCount: { args: [], returns: "int" },
+        getDeallocatorBytes: { args: [], returns: "ptr" },
+        getDeallocatorContext: { args: [], returns: "ptr" },
+      });
+      const bufPtr = getDeallocatorBuffer();
+      const context = 4096;
+      (() => {
+        let ab = toArrayBuffer(bufPtr, 0, 128, context, getDeallocatorCallback());
+        expect(ab).toBeInstanceOf(ArrayBuffer);
+        expect(ab.byteLength).toBe(128);
+        expect(getDeallocatorCalledCount()).toBe(0);
+        ab = null;
+      })();
+      for (let i = 0; i < 100 && getDeallocatorCalledCount() === 0; i++) {
+        Bun.gc(true);
+        Buffer.alloc(1024 * 1024);
+        await Bun.sleep(0);
+      }
+      expect({
+        count: getDeallocatorCalledCount(),
+        bytes: getDeallocatorBytes(),
+        context: getDeallocatorContext(),
+      }).toEqual({ count: 1, bytes: bufPtr, context });
+      Bun.gc(true);
+      expect(getDeallocatorCalledCount()).toBe(1);
+    },
+  );
 });
 
 // toBuffer hands an arbitrary (pointer, byteLength) pair straight to the Buffer
@@ -1950,9 +1992,9 @@ describe.skipIf(!ABI_FIXTURE_PATH)("ABI conformance", () => {
     expect(() =>
       dlopen(ABI_FIXTURE_PATH, { abi_variadic_sum: { args: ["i32"], fixedArgs: 2, returns: "f64" } }),
     ).toThrow(TypeError);
-    expect(() =>
-      dlopen(ABI_FIXTURE_PATH, { abi_point_add: { args: [{ struct: {} }], returns: "void" } }),
-    ).toThrow(TypeError);
+    expect(() => dlopen(ABI_FIXTURE_PATH, { abi_point_add: { args: [{ struct: {} }], returns: "void" } })).toThrow(
+      TypeError,
+    );
     expect(() =>
       dlopen(ABI_FIXTURE_PATH, { abi_point_add: { args: [{ struct: { "x;": "i32" } }], returns: "void" } }),
     ).toThrow(TypeError);

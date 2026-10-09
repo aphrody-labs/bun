@@ -1,4 +1,15 @@
-import { cc, dlopen, FFIType, JSCallback, read, suffix, type CString, type Pointer } from "bun:ffi";
+import {
+  cc,
+  dlopen,
+  FFIType,
+  JSCallback,
+  read,
+  suffix,
+  toArrayBuffer,
+  toBuffer,
+  type CString,
+  type Pointer,
+} from "bun:ffi";
 import * as tsd from "./utilities";
 
 // `suffix` is either "dylib", "so", or "dll" depending on the platform
@@ -189,12 +200,21 @@ const structLib = dlopen(path, {
   ld: { args: ["long double"], returns: "long double" },
   len: { args: ["ptr"], returns: "size_t" },
 } as const);
-tsd.expectType<Uint8Array<ArrayBuffer>>(structLib.symbols.point_add(new Int32Array(2), new DataView(new ArrayBuffer(8))));
+tsd.expectType<Uint8Array<ArrayBuffer>>(
+  structLib.symbols.point_add(new Int32Array(2), new DataView(new ArrayBuffer(8))),
+);
 tsd.expectType<number>(structLib.symbols.sum(2, 1, 2));
 tsd.expectType<number>(structLib.symbols.ld(1.5));
 tsd.expectType<bigint>(structLib.symbols.len(null));
 // @ts-expect-error a struct argument is its bytes, not a number
 structLib.symbols.point_add(1, 2);
+
+tsd.expectType<ArrayBuffer>(toArrayBuffer(ptr, 0, 8));
+tsd.expectType<ArrayBuffer>(toArrayBuffer(ptr, 0, 8, ptr));
+tsd.expectType<ArrayBuffer>(toArrayBuffer(ptr, 0, 8, null, ptr));
+tsd.expectType<Buffer>(toBuffer(ptr, undefined, 8, 4096, ptr));
+// @ts-expect-error the deallocator is a C function pointer, not a JS function
+toArrayBuffer(ptr, 0, 8, () => {});
 
 const inline = cc({ code: "int one(void) { return 1; }", symbols: { one: { returns: "int" } } });
 tsd.expectType<number>(inline.symbols.one());

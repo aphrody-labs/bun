@@ -124,7 +124,15 @@ void *ptr_should_point_to_42_as_int32_t() { return &ffi_static_42; }
 
 static uint8_t buffer_with_deallocator[128];
 static int deallocatorCalled;
-FFI_EXPORT void deallocator(void *ptr, void *userData) { deallocatorCalled++; }
+static void *deallocatorBytes;
+static void *deallocatorContext;
+FFI_EXPORT void deallocator(void *ptr, void *userData) {
+  deallocatorCalled++;
+  deallocatorBytes = ptr;
+  deallocatorContext = userData;
+}
+FFI_EXPORT void *getDeallocatorBytes() { return deallocatorBytes; }
+FFI_EXPORT void *getDeallocatorContext() { return deallocatorContext; }
 FFI_EXPORT void *getDeallocatorCallback() {
   deallocatorCalled = 0;
   return &deallocator;
