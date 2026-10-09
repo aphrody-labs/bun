@@ -245,11 +245,8 @@ fn stdio_tty_flag(idx: usize) -> bool {
 // Source
 // ──────────────────────────────────────────────────────────────────────────
 
-/// `Source.StreamType` — `File` on native, a fixed-buffer stream on WASM.
-#[cfg(not(target_arch = "wasm32"))]
+/// `Source.StreamType`.
 pub type StreamType = File;
-#[cfg(target_arch = "wasm32")]
-pub type StreamType = io::FixedBufferStream; // wasm32 is not built yet; FixedBufferStream is unported.
 
 pub struct Source {
     pub(crate) stdout_buffer: [u8; 4096],
@@ -267,20 +264,9 @@ pub struct Source {
 impl Source {
     // Field-wise placeholder value for the pre-`init()` thread_local slot.
     // Every field is overwritten by `init()` before use.
-    //
-    // The pre-init stream placeholder is cfg-split because the two
-    // `StreamType` aliases have different const surfaces: native
     // `File::ZEROED` is `Fd::INVALID`, so a pre-init read fails loudly
-    // instead of aliasing fd 0; `FixedBufferStream` has no `ZEROED` const,
-    // so the wasm32 arm spells out the empty stream field-wise.
-    #[cfg(not(target_arch = "wasm32"))]
+    // instead of aliasing fd 0.
     const ZEROED_STREAM: StreamType = StreamType::ZEROED;
-    #[cfg(target_arch = "wasm32")]
-    const ZEROED_STREAM: StreamType = StreamType {
-        buf: core::ptr::null_mut(),
-        len: 0,
-        pos: 0,
-    };
 
     pub(crate) const ZEROED: Self = Self {
         stdout_buffer: [0u8; 4096],
@@ -409,6 +395,7 @@ impl Source {
         })
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn is_force_color() -> bool {
         Self::get_force_color_depth().unwrap_or(ColorDepth::None) != ColorDepth::None
     }
@@ -1287,12 +1274,6 @@ fn write_bytes(dest: Destination, bytes: &[u8]) {
 
 #[inline]
 pub fn print_to(dest: Destination, args: fmt::Arguments<'_>) {
-    #[cfg(target_arch = "wasm32")]
-    {
-        // wasm32 is not built yet; output is dropped.
-        let _ = (dest, args);
-        return;
-    }
     // PERF: `fmt::Arguments::as_str()` returns Some only when there are no
     // interpolations, giving a single `write_bytes(dest, str)` fast path per
     // such call site.

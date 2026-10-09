@@ -202,7 +202,11 @@ fn is_valid_memory(address: usize) -> bool {
             && mbi.Protect & (PAGE_NOACCESS | PAGE_GUARD) == 0
             && mbi.Protect & READABLE != 0
     }
-    #[cfg(not(windows))]
+    #[cfg(not(any(unix, windows)))]
+    {
+        true
+    }
+    #[cfg(unix)]
     {
         // SAFETY: msync only inspects the mapping; aligned_address is page-aligned.
         let rc = unsafe {
@@ -274,6 +278,7 @@ impl StackIterator {
     }
 }
 
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 pub(crate) const PC_OFFSET: usize = StackIterator::PC_OFFSET;
 
 /// Capture the current thread's call stack.

@@ -624,9 +624,10 @@ pub fn set_thread_name(name: &ZStr) {
             libc::pthread_set_name_np(libc::pthread_self(), name.as_ptr().cast::<c_char>());
         }
     }
+    #[cfg(not(unix))]
+    let _ = name;
     #[cfg(windows)]
     {
-        let _ = name;
         // TODO: use SetThreadDescription or NtSetInformationThread with 0x26 (ThreadNameInformation)
         // without causing exit code 0xC0000409 (stack buffer overrun) in child process
     }
@@ -699,6 +700,7 @@ fn is_exiting() -> bool {
 unsafe extern "C" {
     #[link_name = "abort"]
     safe fn libc_abort() -> !;
+    #[cfg(any(unix, windows))]
     #[link_name = "raise"]
     safe fn libc_raise(sig: c_int) -> c_int;
     #[cfg(unix)]
@@ -737,7 +739,11 @@ pub fn exit(code: u32) -> ! {
         // `ExitProcess` is `safe fn` (no preconditions; never returns).
         crate::windows_sys::kernel32::ExitProcess(code)
     }
-    #[cfg(not(any(target_os = "macos", windows)))]
+    #[cfg(not(any(unix, windows)))]
+    {
+        std::process::exit(code as i32)
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
     {
         if env::ENABLE_ASAN {
             libc_exit(code as i32);
@@ -794,7 +800,7 @@ pub fn raise_ignoring_panic_handler_raw(sig: c_int) -> ! {
     }
 
     // clear signal handler
-    #[cfg(not(windows))]
+    #[cfg(unix)]
     {
         // SAFETY: zeroed sigset + SIG_DFL handler is a valid Sigaction.
         unsafe {
@@ -807,7 +813,10 @@ pub fn raise_ignoring_panic_handler_raw(sig: c_int) -> ! {
     }
 
     // kill self — `raise`/`abort` have no preconditions (see `safe fn` decls above).
+    #[cfg(any(unix, windows))]
     let _ = libc_raise(sig);
+    #[cfg(not(any(unix, windows)))]
+    let _ = sig;
     libc_abort();
 }
 

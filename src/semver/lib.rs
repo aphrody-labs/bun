@@ -251,6 +251,7 @@ pub mod semver_string {
     // Pointers are truncated to 63 bits via this mask.
     const MAX_ADDRESSABLE_SPACE_MASK: u64 = (1u64 << 63) - 1;
 
+    #[cfg(not(target_arch = "wasm32"))]
     const _: () = assert!(
         core::mem::size_of::<usize>() == 8,
         "This code needs to be updated for non-64-bit architectures",

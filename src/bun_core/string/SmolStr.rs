@@ -4,8 +4,8 @@ use bun_alloc::AllocError;
 
 // NOTE: the tag-bit scheme below only works on little-endian systems.
 const _: () = assert!(cfg!(target_endian = "little"));
-// NOTE: the packed layout assumes 64-bit pointers (`__ptr` occupies the upper 64 bits of the u128).
-const _: () = assert!(mem::size_of::<usize>() == 8);
+// NOTE: `__ptr` occupies the upper 64 bits of the u128 (zero-extended on 32-bit targets).
+const _: () = assert!(mem::size_of::<usize>() <= 8);
 
 /// This is a string type that stores up to 15 bytes inline on the stack, and heap allocates if it is longer.
 ///
@@ -16,8 +16,8 @@ const _: () = assert!(mem::size_of::<usize>() == 8);
 #[repr(transparent)]
 pub struct SmolStr(u128);
 
-const TAG: usize = 0x8000_0000_0000_0000; // bit 63 of the ptr word == bit 127 of the u128
-const NEGATED_TAG: usize = !TAG;
+const TAG: u64 = 0x8000_0000_0000_0000; // bit 63 of the ptr word == bit 127 of the u128
+const NEGATED_TAG: u64 = !TAG;
 
 impl SmolStr {
     // ---- raw field accessors (packed-struct shims) ------------------------
@@ -39,11 +39,11 @@ impl SmolStr {
         self.0 = (self.0 & !(0xFFFF_FFFFu128 << 32)) | ((v as u128) << 32);
     }
     #[inline]
-    fn raw_ptr_bits(&self) -> usize {
-        (self.0 >> 64) as usize
+    fn raw_ptr_bits(&self) -> u64 {
+        (self.0 >> 64) as u64
     }
     #[inline]
-    fn set_raw_ptr_bits(&mut self, v: usize) {
+    fn set_raw_ptr_bits(&mut self, v: u64) {
         self.0 = (self.0 & 0xFFFF_FFFF_FFFF_FFFFu128) | ((v as u128) << 64);
     }
 
@@ -61,11 +61,11 @@ impl SmolStr {
     }
 
     pub fn ptr(&mut self) -> *mut u8 {
-        (self.raw_ptr_bits() & NEGATED_TAG) as *mut u8
+        (self.raw_ptr_bits() & NEGATED_TAG) as usize as *mut u8
     }
 
     pub(crate) fn ptr_const(&self) -> *const u8 {
-        (self.raw_ptr_bits() & NEGATED_TAG) as *const u8
+        (self.raw_ptr_bits() & NEGATED_TAG) as usize as *const u8
     }
 
     pub(crate) fn mark_inlined(&mut self) {
@@ -98,7 +98,7 @@ impl SmolStr {
         let mut smol_str = SmolStr(0);
         smol_str.set_raw_len(len);
         smol_str.set_raw_cap(cap);
-        smol_str.set_raw_ptr_bits(p as usize);
+        smol_str.set_raw_ptr_bits(p as usize as u64);
         smol_str.mark_heap();
         smol_str
     }

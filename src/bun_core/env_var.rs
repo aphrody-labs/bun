@@ -753,7 +753,7 @@ macro_rules! platform_specific_new {
 
             /// Retrieve the key of the environment variable for the current platform, if any.
             pub(crate) fn platform_key() -> Option<&'static ZStr> {
-                #[cfg(unix)]
+                #[cfg(not(windows))]
                 { return $crate::env_var::__key_opt!($posix); }
                 #[cfg(windows)]
                 { return $crate::env_var::__key_opt!($windows); }

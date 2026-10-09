@@ -94,6 +94,7 @@ pub struct String {
 // C++ mirror: `struct BunString { BunStringTag tag; BunStringImpl impl; }`
 // (`headers-handwritten.h`); returned **by value** from every `BunString__*`
 // FFI below, so size/align drift is silent ABI corruption.
+#[cfg(target_pointer_width = "64")]
 crate::assert_ffi_layout!(String, 24, 8);
 // FFI surface from `src/jsc/bindings/BunString.cpp`. Constructors return an
 // owned +1 (declared `-> String`).
@@ -1169,11 +1170,19 @@ impl core::fmt::Display for EncodedSlice<'_> {
 }
 
 // `EncodedSlice` pointer-tag scheme. Flag bits live in the pointer's high
-// byte; untagging truncates to 53 bits.
-const TAG_UTF8_BIT: usize = 1usize << 61;
-const TAG_GLOBAL_BIT: usize = 1usize << 62;
-const TAG_UTF16_BIT: usize = 1usize << 63;
+// byte; untagging truncates to 53 bits. On 32-bit (wasm32) the top three bits
+// are used, which caps tagged addresses at 512 MiB of linear memory.
+#[cfg(target_pointer_width = "64")]
+const TAG_SHIFT: u32 = 61;
+#[cfg(target_pointer_width = "64")]
 const UNTAG_MASK: usize = (1usize << 53) - 1;
+#[cfg(target_pointer_width = "32")]
+const TAG_SHIFT: u32 = 29;
+#[cfg(target_pointer_width = "32")]
+const UNTAG_MASK: usize = (1usize << 29) - 1;
+const TAG_UTF8_BIT: usize = 1usize << TAG_SHIFT;
+const TAG_GLOBAL_BIT: usize = 1usize << (TAG_SHIFT + 1);
+const TAG_UTF16_BIT: usize = 1usize << (TAG_SHIFT + 2);
 
 /// `{tagged ptr, len}` with encoding bits (Latin-1 / UTF-8 / UTF-16 / global)
 /// in the pointer's high byte; borrows `'a`. Also the [`String`] union arm.
@@ -1185,6 +1194,7 @@ pub struct EncodedSlice<'a> {
     pub len: usize,
     _marker: PhantomData<&'a [u8]>,
 }
+#[cfg(target_pointer_width = "64")]
 crate::assert_ffi_layout!(EncodedSlice<'static>, 16, 8);
 
 impl<'a> EncodedSlice<'a> {

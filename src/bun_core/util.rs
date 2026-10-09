@@ -2687,6 +2687,16 @@ fn os_entropy(bytes: &mut [u8]) {
             }
         }
     }
+    #[cfg(target_os = "wasi")]
+    {
+        for chunk in bytes.chunks_mut(256) {
+            // SAFETY: chunk is a valid writable slice ≤ 256 bytes.
+            let rc = unsafe { libc::getentropy(chunk.as_mut_ptr().cast(), chunk.len()) };
+            if rc != 0 {
+                panic!("getentropy failed");
+            }
+        }
+    }
     #[cfg(windows)]
     {
         unsafe extern "system" {
@@ -2747,6 +2757,10 @@ pub fn self_exe_path() -> crate::CrateResult<&'static ZStr> {
                 s = rest.to_owned();
             }
             Ok(ZBox::from_vec_with_nul(s.into_bytes()))
+        }
+        #[cfg(not(any(unix, windows)))]
+        {
+            Ok(ZBox::from_vec_with_nul(path.into_os_string().into_encoded_bytes()))
         }
     });
     match r {
@@ -4400,8 +4414,11 @@ pub fn reload_process(clear_terminal: bool, may_return: bool) {
     {
         // Bun only targets POSIX + Windows; any other target
         // is a build-time error, not a runtime panic.
-        let _ = (clear_terminal, may_return);
-        compile_error!("unsupported platform for reload_process");
+        let _ = clear_terminal;
+        if may_return {
+            return;
+        }
+        panic!("reload_process is not supported on this platform");
     }
 }
 
@@ -4993,6 +5010,19 @@ impl Timespec {
             let mut nsec: i64 = 0;
             clock_gettime_monotonic(&mut sec, &mut nsec);
             Timespec { sec, nsec }
+        }
+        #[cfg(not(any(unix, windows)))]
+        {
+            let mut ts = libc::timespec {
+                tv_sec: 0,
+                tv_nsec: 0,
+            };
+            // SAFETY: `ts` is a valid out-pointer.
+            unsafe { libc::clock_gettime(libc::CLOCK_MONOTONIC, &raw mut ts) };
+            Timespec {
+                sec: ts.tv_sec,
+                nsec: i64::from(ts.tv_nsec),
+            }
         }
     }
 
