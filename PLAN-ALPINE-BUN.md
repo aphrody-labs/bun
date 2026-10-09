@@ -296,13 +296,13 @@ Placeholder : `APHRODY_APK_REPO` du fragment Dockerfile (le dépôt NDX de U1 le
 
 **Demandé par V** (2026-10-09) :
 
-- `_fork_commit` : `aphrody-bun` est publiée, HEAD `217dc43f7592f78321658e747539fadad08faf87` (3 commits sur
+- `_fork_commit` : `aphrody-bun` est publiée, HEAD `47f637c546bf4bb274c7149815ed66d748e4f325` (3 commits sur
   linux-lts 6.18.55).
 - `bun.config` : `CONFIG_BUN_ACCEL=m` (dépend de `RUST=y`, déjà demandé). Pour l'initramfs de V (c), vérifier que
   `BINFMT_SCRIPT=y`, `DEVTMPFS=y`, `BLK_DEV_INITRD=y` et `RD_GZIP=y` restent actifs (valeurs de lts).
 - `aphrody-sysctl` : `bun_accel` dans `/etc/modules-load.d/aphrody.conf`, et une règle mdev
-  `bun_accel root:root 0666` (`/etc/mdev.conf` ou `/lib/mdev/`). Le 0666 est sûr : le pilote n'agit qu'avec les
-  droits de l'appelant.
+  `bun_accel root:root 0666` (`/etc/mdev.conf` ou `/lib/mdev/`). Le 0666 est sûr, revue de sécurité de V (ci-dessous) :
+  le pilote n'agit qu'avec les droits de l'appelant.
 - `check-config.ts` : ajouter `BUN_ACCEL` à la liste contrôlée.
 
 ### V. bun:ffi, TinyCC et noyau `aphrody-labs/linux` (🔄 code écrit le 2026-10-09, ni build ni test)
@@ -349,6 +349,23 @@ Tests ajoutés dans `test/js/bun/ffi/cc.test.ts`, `ffi.test.js` (+ `ffi-abi-fixt
   `tools/testing/selftests/bun_accel`. Côté Bun (`1e76474491a`) : `bun_sys::bun_accel` et `FileCopier`
   (install isolée, backend copyfile) regroupent les fichiers ; une entrée refusée repasse par le chemin par fichier.
   Gain attendu : ~7 syscalls par fichier → 1 ioctl par 1024 fichiers. Non mesuré.
+- **Revue de sécurité** (périphérique en 0666, 2026-10-09) : pas d'élévation de privilèges, le mode 0666 reste.
+  - Ouvertures : `file_open_root` → `path_openat` dans le contexte de l'appelant (`current_cred()`) : droit de
+    recherche sur chaque répertoire, `may_open`, LSM `security_file_open`, protections des répertoires sticky,
+    umask. Détenir un fd de répertoire ou du périphérique ouvert par root ne donne aucun droit.
+  - Copie : `vfs_copy_file_range` / `vfs_clone_file_range` seulement ; `generic_file_rw_checks` exige
+    FMODE_READ (source `O_RDONLY`) et FMODE_WRITE (destination `O_WRONLY`) ; `rw_verify_area` (LSM),
+    RLIMIT_FSIZE, `file_start_write` ; quotas imputés par le système de fichiers.
+  - Bornes : au plus 1024 entrées, chaque structure lue à sa taille exacte, noms copiés dans un tampon PATH_MAX
+    (`ENAMETOOLONG` si tronqué), adresses calculées en `checked_*`.
+  - Liens : `O_NOFOLLOW` sur le dernier composant ; `..` et liens absolus s'arrêtent au répertoire. Contrairement
+    à `RESOLVE_IN_ROOT`, un renommage concurrent peut faire sortir la résolution ; ce confinement n'est donc pas une
+    frontière de sécurité, la résolution n'atteint que ce que l'appelant peut ouvrir.
+  - Corrigé pendant la revue : source ouverte en `O_NONBLOCK` et limitée aux fichiers réguliers (FIFO, périphériques
+    → `EINVAL`), vérification des signaux dans la boucle de copie, additions d'adresses vérifiées.
+  - Selftests ajoutés : `unprivileged_user_cannot_write_root_files` (enfant passé en nobody, fds hérités de root :
+    source 0600 → `EACCES`, répertoire root → `EACCES`, fichier root existant → `EEXIST`, rien d'écrit) et
+    `special_files_are_rejected`.
 - (c) `scripts/aphrody/initramfs.ts` : initramfs newc gzip avec `/bin/bun`, son interpréteur ELF et ses
   `DT_NEEDED` (pris dans `--sysroot`), `/init` = `initramfs-init.ts` transpilé derrière `#!/bin/bun` : monte
   proc/sys/devtmpfs/devpts/run/tmp, lance la charge de `/etc/bun-init.json`, récolte les orphelins, puis
