@@ -1737,9 +1737,7 @@ export function bunIncludes(cfg: Config): string[] {
     // NODEJS_HEADERS_PATH comes from the nodejs dep; added separately
   ];
 
-  if (cfg.windows) {
-    includes.push(join(cwd, "src/jsc/bindings/windows"));
-  } else {
+  if (!cfg.windows) {
     // libuv stubs for unix (real libuv used on windows)
     includes.push(join(cwd, "src/jsc/bindings/libuv"));
   }
@@ -1775,12 +1773,6 @@ export const fileOverrides: FileOverride[] = [
     extraFlags: ["-fno-lto", "-fno-whole-program-vtables"],
     when: c => c.linux && c.lto && c.abi === "gnu",
     desc: "Disable LTO: LLD (first seen with 21; not re-checked on 23) emits glibc versioned symbols (exp@GLIBC_2.17) into .lto_discard which fails to parse '@'",
-  },
-  {
-    file: "src/jsc/bindings/windows/rescle.cpp",
-    extraFlags: "/EHsc",
-    when: c => c.windows,
-    desc: "Vendored electron/rcedit; VersionInfo ctor throws std::system_error caught in OnEnumResourceLanguage. Self-contained throw/catch — already excluded from PCH",
   },
   {
     file: "src/jsc/bindings/highway_xml.cpp",

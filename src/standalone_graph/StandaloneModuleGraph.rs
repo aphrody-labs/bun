@@ -2387,6 +2387,43 @@ pub(crate) fn inject<'a>(
                     return None;
                 }
             }
+            let o = inject_options;
+            if o.icon.is_some()
+                || o.title.is_some()
+                || o.publisher.is_some()
+                || o.version.is_some()
+                || o.description.is_some()
+                || o.copyright.is_some()
+            {
+                let icon = match o.icon.as_deref().filter(|p| !p.is_empty()) {
+                    Some(icon_path) => match bun_sys::File::read_from(Fd::cwd(), icon_path) {
+                        Ok(b) => Some(b),
+                        Err(err) => {
+                            bun_core::pretty_errorln!(
+                                "Failed to read Windows icon {}: {}",
+                                bstr::BStr::new(icon_path),
+                                err
+                            );
+                            cleanup(zname, cloned_executable_fd);
+                            return None;
+                        }
+                    },
+                    None => None,
+                };
+                let meta = bun_exe_format::pe_resources::WindowsMetadata {
+                    icon: icon.as_deref(),
+                    title: o.title.as_deref(),
+                    publisher: o.publisher.as_deref(),
+                    version: o.version.as_deref(),
+                    description: o.description.as_deref(),
+                    copyright: o.copyright.as_deref(),
+                };
+                if let Err(e) = pe_file.set_windows_metadata(&meta) {
+                    bun_core::pretty_errorln!("Failed to set Windows metadata: {}", e);
+                    cleanup(zname, cloned_executable_fd);
+                    return None;
+                }
+            }
             // Always strip authenticode when adding .bun section for --compile
             if let Err(e) = pe_file.add_bun_section(bytes) {
                 bun_core::pretty_errorln!("Error adding Bun section to PE file: {}", e);
@@ -2977,33 +3014,6 @@ pub fn to_executable(
                 bstr::BStr::new(dest_path),
                 err
             )));
-        }
-
-        // Set Windows icon and/or metadata using unified function
-        if windows_options.icon.is_some()
-            || windows_options.title.is_some()
-            || windows_options.publisher.is_some()
-            || windows_options.version.is_some()
-            || windows_options.description.is_some()
-            || windows_options.copyright.is_some()
-        {
-            // The file has been moved to dest_path
-            // SAFETY: full-buffer pointer so provenance includes the NUL at
-            // `dest_buf_u16[dest_w_len]` (FFI reads it as a C wide string).
-            if let Err(e) = windows::rescle::set_windows_metadata(
-                dest_buf_u16.as_ptr(),
-                windows_options.icon.as_deref(),
-                windows_options.title.as_deref(),
-                windows_options.publisher.as_deref(),
-                windows_options.version.as_deref(),
-                windows_options.description.as_deref(),
-                windows_options.copyright.as_deref(),
-            ) {
-                return Ok(CompileResult::fail_fmt(format_args!(
-                    "Failed to set Windows metadata: {}",
-                    e
-                )));
-            }
         }
         return Ok(CompileResult::Success);
     }

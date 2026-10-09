@@ -136,7 +136,7 @@ describe.skipIf(!isWindows).concurrent("--windows-hide-console", () => {
     expect(await readPESubsystem(outfile)).toBe(IMAGE_SUBSYSTEM_WINDOWS_GUI);
   });
 
-  // The "GUI subsystem survives the rescle metadata pass" case is asserted
+  // The "GUI subsystem survives the metadata pass" case is asserted
   // inside "Combined > metadata with --windows-hide-console" below, which
   // builds the same flag combination and checks both Subsystem and VersionInfo.
 });
@@ -177,7 +177,7 @@ describe.skipIf(!isWindows).concurrent("Windows compile metadata", () => {
       await expectBuildOk(proc);
 
       // No --windows-hide-console here, so the default build must stay a
-      // console (CUI) subsystem even after the rescle metadata pass.
+      // console (CUI) subsystem even after the metadata pass.
       expect(await readPESubsystem(outfile)).toBe(IMAGE_SUBSYSTEM_WINDOWS_CUI);
 
       // OriginalFilename must be cleared (not "bun.exe") even with every
@@ -416,45 +416,6 @@ describe.skipIf(!isWindows).concurrent("Windows compile metadata", () => {
         OriginalFilename: "",
       });
     });
-
-    test.each([
-      { version: "not.a.version" },
-      { version: "1.2.3.4.5" },
-      { version: "1.-2.3.4" },
-      { version: "65536.0.0.0" }, // > 65535
-      { version: "" },
-    ])("invalid version format should error gracefully: $version", async ({ version }) => {
-      // InvalidVersionFormat is raised by the Rust-side validator *before* the
-      // rescle C++ bindings touch the output, so we can compile against a
-      // ~128 KiB minimal PE template instead of cloning the full debug bun.exe.
-      using dir = tempDir("windows-invalid-version", {
-        "app.js": `console.log("Invalid version test");`,
-      });
-      const tmplPath = join(String(dir), "template.exe");
-      await Bun.write(tmplPath, minimalPE64Template());
-
-      await using proc = Bun.spawn({
-        cmd: [
-          bunExe(),
-          "build",
-          "--compile",
-          "--compile-executable-path",
-          tmplPath,
-          join(String(dir), "app.js"),
-          "--outfile",
-          join(String(dir), "test.exe"),
-          "--windows-version",
-          version,
-        ],
-        env: bunEnv,
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-
-      const [, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-      expect(stderr).toContain("InvalidVersionFormat");
-      expect(exitCode).not.toBe(0);
-    });
   });
 
   describe("Edge cases", () => {
@@ -493,8 +454,7 @@ describe.skipIf(!isWindows).concurrent("Windows compile metadata", () => {
     });
 
     // Every --windows-* string field flows through the same
-    // `to_utf16_alloc_for_real` -> rescle `SetVersionString` wide-string path,
-    // so a single build that mixes Latin-1 symbols, ASCII punctuation, BMP CJK
+    // `to_utf16_alloc_for_real` -> VS_VERSIONINFO string path, so a single build that mixes Latin-1 symbols, ASCII punctuation, BMP CJK
     // and surrogate-pair emoji round-tripping across the four fields covers the
     // same encoding surface as two separate compiles would.
     test("unicode and special characters in metadata", async () => {
@@ -564,8 +524,8 @@ describe.skipIf(!isWindows).concurrent("Windows compile metadata", () => {
 
       await expectBuildOk(proc);
 
-      // rescle-binding.cpp skips empty title/description but still clears
-      // OriginalFilename unconditionally, so asserting on it proves the
+      // Empty title/description are skipped but OriginalFilename is still
+      // cleared, so asserting on it proves the
       // metadata pass ran (and that the output is a readable PE).
       expect(await readVersionInfo(outfile)).toMatchObject({ OriginalFilename: "" });
     });
@@ -600,7 +560,7 @@ describe.skipIf(!isWindows).concurrent("Windows compile metadata", () => {
 
       await expectBuildOk(proc);
 
-      // rescle must not undo the GUI subsystem patch inject() applied.
+      // The metadata pass must not undo the GUI subsystem patch.
       expect(await readPESubsystem(outfile)).toBe(IMAGE_SUBSYSTEM_WINDOWS_GUI);
       // Version input "1.2.3" (3-part) is zero-padded to 4 parts.
       expect(await readVersionInfo(outfile)).toMatchObject({
@@ -611,35 +571,9 @@ describe.skipIf(!isWindows).concurrent("Windows compile metadata", () => {
     });
 
     test("metadata with --windows-icon", async () => {
-      // Create a simple .ico file (minimal valid ICO header)
-      const icoHeader = Buffer.from([
-        0x00,
-        0x00, // Reserved
-        0x01,
-        0x00, // Type (1 = ICO)
-        0x01,
-        0x00, // Count (1 image)
-        0x10, // Width (16)
-        0x10, // Height (16)
-        0x00, // Color count
-        0x00, // Reserved
-        0x01,
-        0x00, // Color planes
-        0x20,
-        0x00, // Bits per pixel
-        0x68,
-        0x01,
-        0x00,
-        0x00, // Size
-        0x16,
-        0x00,
-        0x00,
-        0x00, // Offset
-      ]);
-
       using dir = tempDir("windows-metadata-icon", {
         "app.js": `console.log("Icon test");`,
-        "icon.ico": icoHeader,
+        "icon.ico": makeIco(),
       });
 
       const outfile = join(String(dir), "icon-with-metadata.exe");
@@ -674,9 +608,10 @@ describe.skipIf(!isWindows).concurrent("Windows compile metadata", () => {
   });
 });
 
-// Build a minimal PE32+ image with one .text section and an optional Authenticode
-// overlay past it. Large enough that the correct CheckSum exceeds 0xffff.
-function minimalPE64Template(certSize = 0): Buffer {
+// Build a minimal PE32+ image with one .text section, an optional .rsrc section
+// holding `manifest`, and an optional Authenticode overlay past them. Large
+// enough that the correct CheckSum exceeds 0xffff.
+function minimalPE64Template(certSize = 0, manifest?: string): Buffer {
   const fileAlign = 512;
   const sectAlign = 4096;
   const peOff = 64;
@@ -686,7 +621,11 @@ function minimalPE64Template(certSize = 0): Buffer {
   const textRaw = 512;
   const textRawSize = 128 * 1024;
   const textVA = sectAlign;
-  const lastRawEnd = textRaw + textRawSize;
+  const rsrcVA = textVA + textRawSize;
+  const rsrcRaw = textRaw + textRawSize;
+  const rsrc = manifest === undefined ? undefined : manifestResources(rsrcVA, manifest);
+  const rsrcRawSize = rsrc ? Math.ceil(rsrc.length / fileAlign) * fileAlign : 0;
+  const lastRawEnd = rsrcRaw + rsrcRawSize;
 
   const tmpl = Buffer.alloc(lastRawEnd + certSize);
   // DOS header
@@ -695,7 +634,7 @@ function minimalPE64Template(certSize = 0): Buffer {
   // COFF header
   tmpl.writeUInt32LE(0x00004550, peOff); // "PE\0\0"
   tmpl.writeUInt16LE(0x8664, peOff + 4); // machine = AMD64
-  tmpl.writeUInt16LE(1, peOff + 6); // NumberOfSections
+  tmpl.writeUInt16LE(rsrc ? 2 : 1, peOff + 6); // NumberOfSections
   tmpl.writeUInt16LE(optSize, peOff + 20); // SizeOfOptionalHeader
   tmpl.writeUInt16LE(0x0022, peOff + 22); // Characteristics
   // Optional header (PE32+)
@@ -724,7 +663,20 @@ function minimalPE64Template(certSize = 0): Buffer {
   tmpl.writeUInt32LE(textRawSize, shOff + 16); // SizeOfRawData
   tmpl.writeUInt32LE(textRaw, shOff + 20); // PointerToRawData
   tmpl.writeUInt32LE(0x60000020, shOff + 36); // Characteristics
-  tmpl.fill(0xcc, textRaw, lastRawEnd); // .text body
+  tmpl.fill(0xcc, textRaw, rsrcRaw); // .text body
+  if (rsrc) {
+    tmpl.writeUInt32LE(rsrcVA + sectAlign, optOff + 56); // SizeOfImage
+    tmpl.writeUInt32LE(rsrcVA, optOff + 112 + 2 * 8); // resource directory
+    tmpl.writeUInt32LE(rsrc.length, optOff + 112 + 2 * 8 + 4);
+    const o = shOff + 40;
+    tmpl.write(".rsrc\0\0\0", o, 8, "latin1");
+    tmpl.writeUInt32LE(rsrc.length, o + 8); // VirtualSize
+    tmpl.writeUInt32LE(rsrcVA, o + 12); // VirtualAddress
+    tmpl.writeUInt32LE(rsrcRawSize, o + 16); // SizeOfRawData
+    tmpl.writeUInt32LE(rsrcRaw, o + 20); // PointerToRawData
+    tmpl.writeUInt32LE(0x40000040, o + 36); // initialized data, readable
+    rsrc.copy(tmpl, rsrcRaw);
+  }
   if (certSize > 0) tmpl.fill(0xab, lastRawEnd); // cert overlay marker
   return tmpl;
 }
@@ -760,7 +712,7 @@ function lastSectionEnd(bytes: Buffer): number {
   return end;
 }
 
-async function compileWindowsTemplate(dir: string, tmpl: Buffer): Promise<Buffer> {
+async function compileWindowsTemplate(dir: string, tmpl: Buffer, extraArgs: string[] = []): Promise<Buffer> {
   const tmplPath = join(dir, "template.exe");
   const outPath = join(dir, "out.exe");
   await Bun.write(tmplPath, tmpl);
@@ -775,6 +727,7 @@ async function compileWindowsTemplate(dir: string, tmpl: Buffer): Promise<Buffer
       join(dir, "entry.js"),
       "--outfile",
       outPath,
+      ...extraArgs,
     ],
     env: bunEnv,
     cwd: dir,
@@ -815,4 +768,236 @@ test.concurrent("bun build --compile truncates the PE output when Authenticode s
 
   const { stored, expected } = peChecksum(out);
   expect(stored).toBe(expected);
+});
+
+// A one-image 16x16 32-bit ICO: ICONDIR, one ICONDIRENTRY, then the image as a
+// headerless BMP (BITMAPINFOHEADER with doubled height, XOR pixels, AND mask).
+function makeIco(): Buffer {
+  const image = Buffer.alloc(40 + 16 * 16 * 4 + 16 * 4);
+  image.writeUInt32LE(40, 0);
+  image.writeInt32LE(16, 4);
+  image.writeInt32LE(32, 8);
+  image.writeUInt16LE(1, 12);
+  image.writeUInt16LE(32, 14);
+  image.fill(0x7f, 40, 40 + 16 * 16 * 4);
+  const header = Buffer.alloc(6 + 16);
+  header.writeUInt16LE(1, 2); // type: icon
+  header.writeUInt16LE(1, 4); // count
+  header[6] = 16;
+  header[7] = 16;
+  header.writeUInt16LE(1, 10); // planes
+  header.writeUInt16LE(32, 12); // bit count
+  header.writeUInt32LE(image.length, 14);
+  header.writeUInt32LE(header.length, 18);
+  return Buffer.concat([header, image]);
+}
+
+// A resource section holding one RT_MANIFEST (24), id 1, en-US, mapped at `va`.
+function manifestResources(va: number, manifest: string): Buffer {
+  const data = Buffer.from(manifest);
+  const out = Buffer.alloc(0x58 + data.length);
+  const dir = (off: number, id: number, target: number) => {
+    out.writeUInt16LE(1, off + 14);
+    out.writeUInt32LE(id, off + 16);
+    out.writeUInt32LE(target, off + 20);
+  };
+  dir(0x00, 24, 0x80000000 + 0x18);
+  dir(0x18, 1, 0x80000000 + 0x30);
+  dir(0x30, 1033, 0x48);
+  out.writeUInt32LE(va + 0x58, 0x48);
+  out.writeUInt32LE(data.length, 0x4c);
+  data.copy(out, 0x58);
+  return out;
+}
+
+function peSections(bytes: Buffer) {
+  const peOff = bytes.readUInt32LE(0x3c);
+  const shOff = peOff + 24 + bytes.readUInt16LE(peOff + 20);
+  return Array.from({ length: bytes.readUInt16LE(peOff + 6) }, (_, i) => {
+    const o = shOff + i * 40;
+    return {
+      name: bytes.toString("latin1", o, o + 8).replace(/\0+$/, ""),
+      va: bytes.readUInt32LE(o + 12),
+      rawSize: bytes.readUInt32LE(o + 16),
+      raw: bytes.readUInt32LE(o + 20),
+    };
+  });
+}
+
+// Every resource leaf of the image, keyed "type/name/lang" (numeric ids only).
+function readResources(bytes: Buffer) {
+  const peOff = bytes.readUInt32LE(0x3c);
+  const rootRva = bytes.readUInt32LE(peOff + 24 + 112 + 2 * 8);
+  const sections = peSections(bytes);
+  const fileOffset = (rva: number) => {
+    const s = sections.find(s => rva >= s.va && rva < s.va + s.rawSize)!;
+    return s.raw + rva - s.va;
+  };
+  const base = fileOffset(rootRva);
+  const entries = (off: number) =>
+    Array.from(
+      { length: bytes.readUInt16LE(base + off + 12) + bytes.readUInt16LE(base + off + 14) },
+      (_, i) => [bytes.readUInt32LE(base + off + 16 + i * 8), bytes.readUInt32LE(base + off + 20 + i * 8)] as const,
+    );
+  const leaves = new Map<string, Buffer>();
+  for (const [type, typeDir] of entries(0))
+    for (const [name, nameDir] of entries(typeDir & 0x7fffffff))
+      for (const [lang, leaf] of entries(nameDir & 0x7fffffff)) {
+        const at = fileOffset(bytes.readUInt32LE(base + leaf));
+        leaves.set(`${type}/${name}/${lang}`, bytes.subarray(at, at + bytes.readUInt32LE(base + leaf + 4)));
+      }
+  return { rootRva, leaves };
+}
+
+function parseVersionInfo(data: Buffer) {
+  const align4 = (n: number) => (n + 3) & ~3;
+  const strings: Record<string, string> = {};
+  let fixed = Buffer.alloc(0);
+  const walk = (off: number, depth: number) => {
+    const len = data.readUInt16LE(off);
+    const valueLen = data.readUInt16LE(off + 2);
+    const valueBytes = data.readUInt16LE(off + 4) === 1 ? valueLen * 2 : valueLen;
+    let p = off + 6;
+    let key = "";
+    for (let c; (c = data.readUInt16LE(p)) !== 0; p += 2) key += String.fromCharCode(c);
+    p = align4(p + 2);
+    if (depth === 0) fixed = data.subarray(p, p + valueBytes);
+    if (depth === 3) strings[key] = data.toString("utf16le", p, p + valueBytes).replace(/\0+$/, "");
+    if (depth === 3) return;
+    for (let child = align4(p + valueBytes); child < off + len; ) {
+      const childLen = data.readUInt16LE(child);
+      if (childLen === 0) break;
+      walk(child, depth + 1);
+      child = align4(child + childLen);
+    }
+  };
+  walk(0, 0);
+  const version = (at: number) => {
+    const ms = fixed.readUInt32LE(at);
+    const ls = fixed.readUInt32LE(at + 4);
+    return `${ms >>> 16}.${ms & 0xffff}.${ls >>> 16}.${ls & 0xffff}`;
+  };
+  return { strings, fileVersion: version(8), productVersion: version(16) };
+}
+
+// --windows-icon and the VersionInfo flags edit the PE resources in Rust, so
+// they work from every host.
+describe.concurrent("Windows resources from any host", () => {
+  test("icon and version metadata are written into a new .rsrc section", async () => {
+    const icon = makeIco();
+    const manifest = `<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0"/>`;
+    using dir = tempDir("pe-resources", { "entry.js": `console.log("hi");`, "icon.ico": icon });
+    const out = await compileWindowsTemplate(String(dir), minimalPE64Template(0, manifest), [
+      "--windows-icon",
+      join(String(dir), "icon.ico"),
+      "--windows-title",
+      "Tést App 世界",
+      "--windows-publisher",
+      "Publisher",
+      "--windows-version",
+      "1.2.3",
+      "--windows-description",
+      "Description 🚀",
+      "--windows-copyright",
+      "© 2026",
+    ]);
+
+    const sections = peSections(out);
+    expect(sections.map(s => s.name)).toEqual([".text", ".rsrc_0", ".rsrc", ".bun"]);
+    const { rootRva, leaves } = readResources(out);
+    expect(rootRva).toBe(sections[2].va);
+    expect([...leaves.keys()]).toEqual(["3/1/1033", "14/1/1033", "16/1/1033", "24/1/1033"]);
+
+    expect(leaves.get("24/1/1033")!.toString()).toBe(manifest);
+    expect(leaves.get("3/1/1033")!.equals(icon.subarray(22))).toBe(true);
+    const group = leaves.get("14/1/1033")!;
+    expect({
+      count: group.readUInt16LE(4),
+      entry: group.subarray(6, 18).equals(icon.subarray(6, 18)),
+      id: group.readUInt16LE(18),
+    }).toEqual({ count: 1, entry: true, id: 1 });
+
+    expect(parseVersionInfo(leaves.get("16/1/1033")!)).toEqual({
+      strings: {
+        ProductName: "Tést App 世界",
+        CompanyName: "Publisher",
+        FileDescription: "Description 🚀",
+        LegalCopyright: "© 2026",
+        FileVersion: "1.2.3.0",
+        ProductVersion: "1.2.3.0",
+        OriginalFilename: "",
+      },
+      fileVersion: "1.2.3.0",
+      productVersion: "1.2.3.0",
+    });
+
+    const { stored, expected } = peChecksum(out);
+    expect(stored).toBe(expected);
+  });
+
+  test.each([
+    { version: "not.a.version" },
+    { version: "1.2.3.4.5" },
+    { version: "1.-2.3.4" },
+    { version: "65536.0.0.0" }, // > 65535
+    { version: "" },
+  ])("invalid version format should error gracefully: $version", async ({ version }) => {
+    using dir = tempDir("windows-invalid-version", {
+      "app.js": `console.log("Invalid version test");`,
+    });
+    const tmplPath = join(String(dir), "template.exe");
+    await Bun.write(tmplPath, minimalPE64Template());
+
+    await using proc = Bun.spawn({
+      cmd: [
+        bunExe(),
+        "build",
+        "--compile",
+        "--target=bun-windows-x64",
+        "--compile-executable-path",
+        tmplPath,
+        join(String(dir), "app.js"),
+        "--outfile",
+        join(String(dir), "test.exe"),
+        "--windows-version",
+        version,
+      ],
+      env: bunEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+
+    const [, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect(stderr).toContain("InvalidVersionFormat");
+    expect(exitCode).not.toBe(0);
+  });
+
+  test("an invalid icon is rejected", async () => {
+    using dir = tempDir("windows-invalid-icon", { "entry.js": `console.log("hi");`, "icon.ico": "not an icon" });
+    const tmplPath = join(String(dir), "template.exe");
+    await Bun.write(tmplPath, minimalPE64Template());
+
+    await using proc = Bun.spawn({
+      cmd: [
+        bunExe(),
+        "build",
+        "--compile",
+        "--target=bun-windows-x64",
+        "--compile-executable-path",
+        tmplPath,
+        join(String(dir), "entry.js"),
+        "--outfile",
+        join(String(dir), "out.exe"),
+        "--windows-icon",
+        join(String(dir), "icon.ico"),
+      ],
+      env: bunEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+
+    const [, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect(stderr).toContain("InvalidIcon");
+    expect(exitCode).not.toBe(0);
+  });
 });

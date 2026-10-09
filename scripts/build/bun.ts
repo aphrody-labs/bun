@@ -304,17 +304,6 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
     noPchSources.add(resolve(cfg.cwd, "src/jsc/bindings/highway_xml.cpp"));
   }
 
-  // Windows-only cpp sources (rescle — PE resource editor for --compile).
-  if (cfg.windows) {
-    // rescle.h does `#define UNICODE` before including ATL; with PCH the
-    // headers are already past in MBCS mode and ATL's TCHAR mismatches.
-    const rescle = resolve(cfg.cwd, "src/jsc/bindings/windows/rescle.cpp");
-    const rescleBinding = resolve(cfg.cwd, "src/jsc/bindings/windows/rescle-binding.cpp");
-    cxxSources.push(rescle, rescleBinding);
-    noPchSources.add(rescle);
-    noPchSources.add(rescleBinding);
-  }
-
   // Deps with provides.sources compiled in the loop below so each dep's
   // phony can point at its own .o files.
 
@@ -857,9 +846,8 @@ function emitDsymutil(n: Ninja, cfg: Config, inputExe: string, exeName: string, 
  *     non-Windows hosts. The resource route produces the same RT_MANIFEST
  *     id-1 resource with any linker.
  *
- * This resource section is what rescle's ResourceUpdater modifies when
- * `bun build --compile --windows-title ...` runs. Without it, the copied
- * bun.exe has no VersionInfo to update and rescle silently does nothing.
+ * `bun build --compile --windows-title ...` rebuilds this resource tree with
+ * the requested icon and VersionInfo (src/exe_format/pe_resources.rs).
  */
 function emitWindowsResources(n: Ninja, cfg: Config): string {
   assert(cfg.windows, "emitWindowsResources is windows-only");

@@ -34,6 +34,14 @@ pub enum Error {
     SecurityDirInsideImage,
     #[error("UnexpectedOverlayPresent")]
     UnexpectedOverlayPresent,
+    #[error("InvalidResources")]
+    InvalidResources,
+    #[error("InvalidIcon")]
+    InvalidIcon,
+    #[error("InvalidVersionFormat")]
+    InvalidVersionFormat,
+    #[error("ResourceTooLarge")]
+    ResourceTooLarge,
 }
 
 /// Windows PE Binary manipulation for codesigning standalone executables
@@ -152,6 +160,7 @@ const IMAGE_SCN_CNT_INITIALIZED_DATA: u32 = 0x0000_0040;
 const IMAGE_SCN_MEM_READ: u32 = 0x4000_0000;
 
 // Directory indices and DLL characteristics
+const IMAGE_DIRECTORY_ENTRY_RESOURCE: usize = 2;
 const IMAGE_DIRECTORY_ENTRY_SECURITY: usize = 4;
 const IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY: u16 = 0x0080;
 
@@ -159,6 +168,9 @@ pub const IMAGE_SUBSYSTEM_WINDOWS_GUI: u16 = 2;
 
 // Section name constant for exact comparison
 const BUN_SECTION_NAME: [u8; 8] = [b'.', b'b', b'u', b'n', 0, 0, 0, 0];
+const RSRC_SECTION_NAME: [u8; 8] = *b".rsrc\0\0\0";
+// The resource section a metadata edit replaced; kept mapped, no longer referenced.
+const OLD_RSRC_SECTION_NAME: [u8; 8] = *b".rsrc_0\0";
 
 // Safe access helpers for unaligned views.
 // All header structs are `#[repr(C, packed)]` (align 1), so a bounds-checked byte
@@ -461,59 +473,35 @@ impl PEFile {
 
     /// Add a new section to the PE file for storing Bun module data
     pub fn add_bun_section(&mut self, data_to_embed: &[u8]) -> Result<(), Error> {
-        // 1. Strip Authenticode (before any addition)
+        // Strip Authenticode (before any addition)
         self.strip_authenticode()?;
 
-        // 2. Re-read PE/Optional (pointers may have moved due to resize in strip)
-        let opt = self.get_optional_header_mut()?;
-        // SAFETY: opt points into self.data at validated offset
-        // Capture the needed scalars from opt before re-borrowing self.data below.
-        let file_alignment = unsafe { (*opt).file_alignment };
-        // SAFETY: opt points into self.data at the offset validated by get_optional_header_mut
-        let section_alignment = unsafe { (*opt).section_alignment };
-
-        // 3. Duplicate .bun guard - compare all 8 bytes exactly
-        let section_headers = self.get_section_headers()?;
-        for section in section_headers {
+        // Duplicate .bun guard - compare all 8 bytes exactly
+        for section in self.get_section_headers()? {
             if section.name[0..8] == BUN_SECTION_NAME {
                 return Err(Error::SectionExists);
             }
         }
 
-        // Check if we can add another section
-        if self.num_sections >= 96 {
-            // PE limit
-            return Err(Error::TooManySections);
+        // Check for overflow before adding 8
+        if data_to_embed.len() > (u32::MAX - 8) as usize {
+            return Err(Error::Overflow);
         }
+        // u64 LE length prefix, then the data
+        let prefix = (data_to_embed.len() as u64).to_le_bytes();
+        self.append_section(BUN_SECTION_NAME, &[&prefix, data_to_embed])?;
+        Ok(())
+    }
 
-        // 4. Compute header slack requirement
-        let new_headers_end = self.section_headers_offset
-            + size_of::<SectionHeader>() * (self.num_sections as usize + 1);
-        let new_size_of_headers = align_up_u32(
-            u32::try_from(new_headers_end).expect("int cast"),
-            file_alignment,
-        )?;
-
-        // Determine first_raw (min PointerToRawData among sections with raw data, else data.len)
-        let mut first_raw: u32 = u32::try_from(self.data.len()).expect("int cast");
-        for section in section_headers {
-            if section.size_of_raw_data > 0 {
-                if section.pointer_to_raw_data < first_raw {
-                    first_raw = section.pointer_to_raw_data;
-                }
-            }
-        }
-
-        // Require new_size_of_headers <= first_raw
-        if new_size_of_headers > first_raw {
-            return Err(Error::InsufficientHeaderSpace);
-        }
-
-        // 5. Placement calculations
-        // Recompute last_file_end and last_va_end after strip
+    /// The virtual address and file offset a section appended now would get.
+    fn next_section_placement(&self) -> Result<(u32, u32), Error> {
+        let opt = view_at_const::<OptionalHeader64>(&self.data, self.optional_header_offset)?;
+        // SAFETY: opt points into self.data at a validated offset
+        let (file_alignment, section_alignment) =
+            unsafe { ((*opt).file_alignment, (*opt).section_alignment) };
         let mut last_file_end: u32 = 0;
         let mut last_va_end: u32 = 0;
-        for section in section_headers {
+        for section in self.get_section_headers()? {
             let file_end = section.pointer_to_raw_data + section.size_of_raw_data;
             if file_end > last_file_end {
                 last_file_end = file_end;
@@ -525,24 +513,61 @@ impl PEFile {
                 last_va_end = va_end;
             }
         }
+        Ok((
+            align_up_u32(last_va_end, section_alignment)?,
+            align_up_u32(last_file_end, file_alignment)?,
+        ))
+    }
 
-        // Check for overflow before adding 8
-        if data_to_embed.len() > (u32::MAX - 8) as usize {
-            return Err(Error::Overflow);
+    /// Append a readable initialized-data section holding `parts` back to back. Authenticode
+    /// must already be stripped. Returns the section's virtual address.
+    fn append_section(&mut self, name: [u8; 8], parts: &[&[u8]]) -> Result<u32, Error> {
+        let opt = self.get_optional_header_mut()?;
+        // SAFETY: opt points into self.data at validated offset
+        let file_alignment = unsafe { (*opt).file_alignment };
+
+        // Check if we can add another section
+        if self.num_sections >= 96 {
+            // PE limit
+            return Err(Error::TooManySections);
         }
-        let payload_len = u32::try_from(data_to_embed.len() + 8).expect("int cast"); // 8 for LE length prefix
-        let raw_size = align_up_u32(payload_len, file_alignment)?;
-        let new_va = align_up_u32(last_va_end, section_alignment)?;
-        let new_raw = align_up_u32(last_file_end, file_alignment)?;
 
-        // 6. Resize & zero only the new section area
+        // Compute header slack requirement
+        let new_headers_end = self.section_headers_offset
+            + size_of::<SectionHeader>() * (self.num_sections as usize + 1);
+        let new_size_of_headers = align_up_u32(
+            u32::try_from(new_headers_end).map_err(|_| Error::Overflow)?,
+            file_alignment,
+        )?;
+
+        // Determine first_raw (min PointerToRawData among sections with raw data, else data.len)
+        let mut first_raw: u32 = u32::try_from(self.data.len()).map_err(|_| Error::Overflow)?;
+        for section in self.get_section_headers()? {
+            if section.size_of_raw_data > 0 && section.pointer_to_raw_data < first_raw {
+                first_raw = section.pointer_to_raw_data;
+            }
+        }
+
+        // Require new_size_of_headers <= first_raw
+        if new_size_of_headers > first_raw {
+            return Err(Error::InsufficientHeaderSpace);
+        }
+
+        let payload_len = parts
+            .iter()
+            .try_fold(0u32, |n, p| n.checked_add(u32::try_from(p.len()).ok()?))
+            .ok_or(Error::Overflow)?;
+        let raw_size = align_up_u32(payload_len, file_alignment)?;
+        let (new_va, new_raw) = self.next_section_placement()?;
+
+        // Resize & zero only the new section area
         let new_file_size = new_raw as usize + raw_size as usize;
         self.data.resize(new_file_size, 0);
         self.data[new_raw as usize..new_file_size].fill(0);
 
-        // 7. Write the new SectionHeader by byte copy
+        // Write the new SectionHeader by byte copy
         let sh = SectionHeader {
-            name: [b'.', b'b', b'u', b'n', 0, 0, 0, 0],
+            name,
             virtual_size: payload_len,
             virtual_address: new_va,
             size_of_raw_data: raw_size,
@@ -566,15 +591,14 @@ impl PEFile {
         };
         self.data[new_sh_off..new_sh_off + size_of::<SectionHeader>()].copy_from_slice(sh_bytes);
 
-        // 8. Write payload
-        // At data[new_raw ..]: write u64 LE length prefix, then data
-        let new_raw_usize = new_raw as usize;
-        self.data[new_raw_usize..new_raw_usize + 8]
-            .copy_from_slice(&(data_to_embed.len() as u64).to_le_bytes());
-        self.data[new_raw_usize + 8..new_raw_usize + 8 + data_to_embed.len()]
-            .copy_from_slice(data_to_embed);
+        // Write payload
+        let mut at = new_raw as usize;
+        for part in parts {
+            self.data[at..at + part.len()].copy_from_slice(part);
+            at += part.len();
+        }
 
-        // 9. Update headers
+        // Update headers
         // Get fresh pointers after resize
         let pe_after = self.get_pe_header_mut()?;
         // SAFETY: pe_after points into self.data at validated offset
@@ -606,7 +630,85 @@ impl PEFile {
 
         // Do not touch size_of_initialized_data (leave as is)
 
-        // 10. Recompute checksum (recommended)
+        // Recompute checksum (recommended)
+        self.recompute_pe_checksum()?;
+        Ok(new_va)
+    }
+
+    /// The file bytes of `size` bytes at `rva`, when they lie in one section's raw data.
+    fn read_rva(&self, rva: u32, size: u32) -> Option<&[u8]> {
+        let sections = self.get_section_headers().ok()?;
+        let section = sections.iter().find(|s| {
+            let start = s.virtual_address;
+            rva >= start && rva - start < s.virtual_size.max(s.size_of_raw_data)
+        })?;
+        let delta = rva - section.virtual_address;
+        let end = delta.checked_add(size)?;
+        if end > section.size_of_raw_data {
+            return None;
+        }
+        let file_start = section.pointer_to_raw_data as usize + delta as usize;
+        self.data.get(file_start..file_start + size as usize)
+    }
+
+    /// Set the icon and the version information (`--windows-icon`, `--windows-title`, ...) of the
+    /// image, on any host. The resource tree is rebuilt in a new `.rsrc` section; the previous one
+    /// is renamed `.rsrc_0`. Strips Authenticode.
+    pub fn set_windows_metadata(
+        &mut self,
+        meta: &crate::pe_resources::WindowsMetadata<'_>,
+    ) -> Result<(), Error> {
+        use crate::pe_resources as res;
+
+        self.strip_authenticode()?;
+        let opt = view_at_const::<OptionalHeader64>(&self.data, self.optional_header_offset)?;
+        // SAFETY: opt points into self.data at validated offset
+        let dir = unsafe { (*opt).data_directories[IMAGE_DIRECTORY_ENTRY_RESOURCE] };
+        let (dir_rva, dir_size) = (dir.virtual_address, dir.size);
+
+        let mut tree = if dir_rva == 0 || dir_size == 0 {
+            res::Tree::new()
+        } else {
+            let sections = self.get_section_headers()?;
+            let section = sections
+                .iter()
+                .find(|s| {
+                    dir_rva >= s.virtual_address
+                        && dir_rva - s.virtual_address < s.size_of_raw_data
+                })
+                .ok_or(Error::InvalidResources)?;
+            let start = section.pointer_to_raw_data as usize
+                + (dir_rva - section.virtual_address) as usize;
+            let end = section.pointer_to_raw_data as usize + section.size_of_raw_data as usize;
+            let bytes = self.data.get(start..end).ok_or(Error::InvalidResources)?;
+            res::parse_tree(bytes, &|rva, size| self.read_rva(rva, size).map(<[u8]>::to_vec))?
+        };
+        res::apply(&mut tree, meta)?;
+
+        let (new_va, _) = self.next_section_placement()?;
+        let section = res::serialize_tree(&tree, new_va)?;
+        let section_len = u32::try_from(section.len()).map_err(|_| Error::Overflow)?;
+        let va = self.append_section(RSRC_SECTION_NAME, &[&section])?;
+        debug_assert_eq!(va, new_va);
+
+        // The new section is last; rename the old one so `.rsrc` names the live tree.
+        let last = self.num_sections as usize - 1;
+        for i in 0..last {
+            let off = self.section_headers_offset + i * size_of::<SectionHeader>();
+            let header = view_at_mut::<SectionHeader>(&mut self.data, off)?;
+            // SAFETY: header points into self.data at a bounds-checked offset
+            unsafe {
+                if (*header).name == RSRC_SECTION_NAME {
+                    (*header).name = OLD_RSRC_SECTION_NAME;
+                }
+            }
+        }
+        let opt = self.get_optional_header_mut()?;
+        // SAFETY: opt points into self.data at validated offset
+        unsafe {
+            (*opt).data_directories[IMAGE_DIRECTORY_ENTRY_RESOURCE] =
+                DataDirectory { virtual_address: va, size: section_len };
+        }
         self.recompute_pe_checksum()?;
         Ok(())
     }

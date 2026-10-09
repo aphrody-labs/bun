@@ -1078,7 +1078,7 @@ This uses Bun's minifier to reduce the code size. Overall though, Bun's binary i
 
 ## Windows-specific flags
 
-When compiling a standalone executable on Windows, platform-specific options customize metadata on the generated `.exe` file:
+When compiling a standalone executable for Windows, these options customize metadata on the generated `.exe` file. They work from any host, including when cross-compiling with `--target=bun-windows-x64`:
 
 <Tabs>
   <Tab title="CLI">
@@ -1122,10 +1122,6 @@ Available Windows options:
 - `version` - Version string in file properties
 - `description` - Description in file properties
 - `copyright` - Copyright notice in file properties
-
-<Warning>
-  Except for `hideConsole`, you can't use these flags when cross-compiling because they depend on Windows APIs.
-</Warning>
 
 ---
 

@@ -5,6 +5,7 @@ pub mod error;
 pub mod macho;
 pub mod macho_types;
 pub mod pe;
+pub mod pe_resources;
 
 pub use error::{Error, Result};
 
