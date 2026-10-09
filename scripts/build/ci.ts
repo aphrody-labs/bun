@@ -475,9 +475,9 @@ export function orderFileContext(): OrderFileContext {
   };
 }
 
-/** Targets that use an order file. Every build links. */
+/** Targets that use an order file. Every build links. musl consumes the gnu trace, which Buildkite does not publish under its name. */
 export function orderFileEligible(cfg: Config, ctx: OrderFileContext): boolean {
-  return usesOrderFile(cfg) && ctx.buildkite;
+  return usesOrderFile(cfg) && cfg.abi !== "musl" && ctx.buildkite;
 }
 
 /**

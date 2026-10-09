@@ -116,6 +116,8 @@ const ctx = (overrides: Partial<OrderFileContext> = {}): OrderFileContext => ({
 describe("symbol ordering file", () => {
   it("is enabled for the linux release link", () => {
     expect(usesOrderFile(cfg())).toBe(true);
+    // musl links with the gnu trace of the same arch (aphrody-release.yml).
+    expect(usesOrderFile(cfg({ abi: "musl" }))).toBe(true);
   });
 
   it("is enabled for the macOS arm64 release link, cross-compiled or not", () => {
@@ -137,9 +139,6 @@ describe("symbol ordering file", () => {
     expect(usesOrderFile(cfg({ ...windowsX64, release: false }))).toBe(false);
     expect(usesOrderFile(cfg({ asan: true }))).toBe(false); // tracer swaps .text
     expect(usesOrderFile(cfg({ valgrind: true }))).toBe(false);
-    // Both of these would otherwise attempt a trace that can never succeed and
-    // annotate every build about it.
-    expect(usesOrderFile(cfg({ abi: "musl" }))).toBe(false); // static: no LD_PRELOAD
     expect(usesOrderFile(cfg({ abi: "android" }))).toBe(false); // cross: cannot run the binary
     // darwin x64: the tracer is arm64-only, so nothing ever seeds the chain.
     expect(usesOrderFile(cfg({ ...darwinArm64, arm64: false }))).toBe(false);

@@ -169,20 +169,22 @@ jobs:
       # linked unordered: `bun -e 0` took 8.0 ms CPU vs 6.0 ms for upstream 1.4.2,
       # with 290 vs 57 page faults in .text. Here the smoke job traces each release
       # and publishes <triplet>.order; configure keeps a linker.order already there.
+      # musl is not traced: it links with the gnu trace of its arch (same code).
       - name: Inherit the symbol order file
-        if: matrix.abi == 'gnu' || matrix.target == 'darwin-aarch64'
+        if: matrix.abi == 'gnu' || matrix.abi == 'musl' || matrix.target == 'darwin-aarch64'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p build/out
+          order="${TRIPLET%-musl}.order"
           for tag in $(gh release list -R "$GITHUB_REPOSITORY" --limit 10 --json tagName -q '.[].tagName'); do
-            gh release download "$tag" -R "$GITHUB_REPOSITORY" -p "$TRIPLET.order" -O build/out/linker.order --clobber 2>/dev/null || continue
+            gh release download "$tag" -R "$GITHUB_REPOSITORY" -p "$order" -O build/out/linker.order --clobber 2>/dev/null || continue
             n="$(grep -cv '^#' build/out/linker.order || true)"
-            if [ "${n:-0}" -gt 0 ]; then echo "symbol order: $TRIPLET.order from $tag, $n functions"; exit 0; fi
+            if [ "${n:-0}" -gt 0 ]; then echo "symbol order: $order from $tag, $n functions"; exit 0; fi
           done
           rm -f build/out/linker.order
-          echo "::warning::no recent release has $TRIPLET.order; $TRIPLET links unordered"
+          echo "::warning::no recent release has $order; $TRIPLET links unordered"
 
       - name: Build in debian:13
         run: |

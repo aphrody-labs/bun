@@ -1559,9 +1559,10 @@ function linkLtoIsRustOnly(c: Config): boolean {
  * (scripts/orderfile/functrace-windows.c), so it needs no preload mechanism,
  * and it plants INT3 or BRK depending on which architecture it is built for.
  *
- * linux gnu only: musl links statically, so LD_PRELOAD cannot load the tracer,
- * and no musl test host exists to trace on either. android has no order-file
- * linker support. Neither can produce or consume one.
+ * linux: gnu traces and consumes. musl (the fork's primary Linux assets) only
+ * consumes: it is the same code, so the fork's release links it with the gnu
+ * trace of the same arch, and lld skips the few names that differ. android has
+ * no order-file linker support.
  *
  * darwin arm64 only: the BRK-based tracer is arm64-only, so x64 has nothing to
  * inherit and linking with an always-empty order file just adds noise.
@@ -1570,7 +1571,7 @@ export function usesOrderFile(
   cfg: Pick<Config, "linux" | "darwin" | "windows" | "abi" | "arm64" | "release" | "asan" | "valgrind">,
 ): boolean {
   if (!cfg.release || cfg.asan || cfg.valgrind) return false;
-  if (cfg.linux) return cfg.abi === "gnu";
+  if (cfg.linux) return cfg.abi === "gnu" || cfg.abi === "musl";
   if (cfg.darwin) return cfg.arm64;
   return cfg.windows;
 }
