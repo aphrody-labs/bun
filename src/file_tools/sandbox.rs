@@ -34,7 +34,7 @@ pub(super) struct ReadFile {
 
 fn path_bytes(path: &Path) -> Result<&[u8]> {
     let bytes = path.as_os_str().as_encoded_bytes();
-    if bytes.contains(&0) {
+    if bun_core::strings::contains_char(bytes, 0) {
         return Err(WorkspaceError::Sandbox(path.display().to_string()));
     }
     Ok(bytes)
@@ -95,11 +95,11 @@ impl Sandbox {
             match component {
                 Component::Normal(part) => {
                     let bytes = part.as_encoded_bytes();
-                    if bytes.contains(&0) {
+                    if bun_core::strings::contains_char(bytes, 0) {
                         return Err(WorkspaceError::Sandbox(path.display().to_string()));
                     }
                     #[cfg(windows)]
-                    if bytes.contains(&b':') || bytes.ends_with(b".") || bytes.ends_with(b" ") {
+                    if bun_core::strings::contains_char(bytes, b':') || bytes.ends_with(b".") || bytes.ends_with(b" ") {
                         return Err(WorkspaceError::Sandbox(path.display().to_string()));
                     }
                     parts.push(bytes);

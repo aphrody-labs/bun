@@ -23,23 +23,26 @@ pub(crate) enum Elevation {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ElevateError {
-    #[cfg_attr(windows, allow(dead_code))]
+    #[cfg(not(windows))]
     SudoNotFound,
-    #[cfg_attr(windows, allow(dead_code))]
+    #[cfg(not(windows))]
     PasswordRequired,
-    #[cfg_attr(not(windows), allow(dead_code))]
+    #[cfg(windows)]
     NoSelfExe,
 }
 
 impl ElevateError {
     pub(crate) fn message(self) -> &'static str {
         match self {
+            #[cfg(not(windows))]
             ElevateError::SudoNotFound => {
                 "elevate: sudo was not found in PATH. Run as root, or install sudo-rs with a NOPASSWD rule (Aphrody Alpine: group 'aphrody')"
             }
+            #[cfg(not(windows))]
             ElevateError::PasswordRequired => {
                 "elevate: 'sudo -n true' failed: sudo requires a password or denies this user. Add a NOPASSWD rule (Aphrody Alpine: /etc/sudoers.d/aphrody, group 'aphrody') or run as root"
             }
+            #[cfg(windows)]
             ElevateError::NoSelfExe => "elevate: cannot locate the bun executable to run the elevation helper",
         }
     }

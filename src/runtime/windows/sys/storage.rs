@@ -41,10 +41,14 @@ pub(crate) fn drives_json() -> WinResult<String> {
 
     let mut json = Json::new();
     json.begin_array();
-    for root in buffer
-        .split(|unit| *unit == 0)
-        .filter(|root| !root.is_empty())
-    {
+    let mut rest = &buffer[..written as usize];
+    while !rest.is_empty() {
+        let end = bun_core::strings::index_of_any16(rest, &[0]).unwrap_or(rest.len());
+        let root = &rest[..end];
+        rest = &rest[(end + 1).min(rest.len())..];
+        if root.is_empty() {
+            continue;
+        }
         let path = super::from_wide(root);
         let wide = super::wide(&path);
         let mut available = 0u64;

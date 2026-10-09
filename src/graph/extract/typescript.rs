@@ -137,11 +137,10 @@ fn require_specifier<'b>(init: Option<&'b Expression<'_>>) -> Option<&'b str> {
 
 impl Extractor<'_> {
     fn line(&self, offset: u32) -> usize {
-        self.source.as_bytes()[..(offset as usize).min(self.source.len())]
-            .iter()
-            .filter(|b| **b == b'\n')
-            .count()
-            + 1
+        bun_core::strings::count_char(
+            &self.source.as_bytes()[..(offset as usize).min(self.source.len())],
+            b'\n',
+        ) + 1
     }
 
     fn add_symbol(&mut self, label: String, offset: u32, class: NodeClass) -> String {

@@ -672,7 +672,7 @@ pub fn add_pre_exit_callback(function: ExitFn) {
     }
 }
 
-#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+#[cfg(not(target_arch = "wasm32"))]
 fn run_exit_callbacks() {
     // Drain under lock, run outside it (callbacks may call `Bun__atexit`).
     let cbs: Vec<ExitFn> = core::mem::take(&mut *ON_EXIT_CALLBACKS.lock());
@@ -876,8 +876,8 @@ macro_rules! keep_symbols {
     };
 }
 
-#[cfg_attr(not(target_arch = "wasm32"), unsafe(no_mangle))]
-#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+#[cfg(not(target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
 extern "C" fn Bun__onExit() {
     // FSEvents close-and-wait runs BEFORE the generic exit-callback list.
     // fs_events pushes into `PRE_EXIT_CALLBACKS` on first loop create.

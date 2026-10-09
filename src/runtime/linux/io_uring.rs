@@ -11,23 +11,21 @@ const IO_URING_OP_SUPPORTED: u16 = 1;
 #[cfg(target_os = "linux")]
 #[repr(C)]
 #[derive(Clone, Copy)]
-#[allow(dead_code)]
 struct ProbeOp {
     op: u8,
-    resv: u8,
+    _resv: u8,
     flags: u16,
-    resv2: u32,
+    _resv2: u32,
 }
 
 /// `struct io_uring_probe` with room for all 256 opcodes.
 #[cfg(target_os = "linux")]
 #[repr(C)]
-#[allow(dead_code)]
 struct Probe {
-    last_op: u8,
+    _last_op: u8,
     ops_len: u8,
-    resv: u16,
-    resv2: [u32; 3],
+    _resv: u16,
+    _resv2: [u32; 3],
     ops: [ProbeOp; 256],
 }
 
