@@ -634,7 +634,7 @@ pub fn fetch(
 /// returns `None`. The returned bytes stay valid for the process.
 pub fn fetch_internal(id: u32, name: &[u8], code: &[u8]) -> Option<&'static [u8]> {
     // Opt-in: these entries are not modules node would cache, and node's tests count the entries.
-    if !env_var::BUN_COMPILE_CACHE_BUILTINS::get() {
+    if !env_var::BUN_COMPILE_CACHE_BUILTINS::get().unwrap_or(false) {
         return None;
     }
     init_from_env_once();
