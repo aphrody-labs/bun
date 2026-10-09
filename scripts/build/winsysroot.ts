@@ -1,7 +1,7 @@
 /**
  * Windows sysroot (xwin splat) handling for Windows cross-compiles.
  *
- * Cross-compiling for Windows needs the MSVC CRT/STL + Windows SDK + ATL
+ * Cross-compiling for Windows needs the MSVC CRT/STL + Windows SDK
  * headers and import libraries (see `Config.winsysroot`). Provisioned
  * sysroots come from the agent image (the `windowsSysroot` tool of ci-images/spec.ts bakes
  * an xwin splat at /opt/winsysroot) or from a
@@ -11,7 +11,7 @@
  *
  * The fetch is two steps, both pinned:
  *   1. Download the xwin release binary for the build host (GitHub).
- *   2. Run `xwin splat` — xwin downloads the CRT/SDK/ATL packages from
+ *   2. Run `xwin splat` — xwin downloads the CRT/SDK packages from
  *      Microsoft's CDN and lays them out like a Visual Studio install so a
  *      single `/winsysroot` flag works for clang-cl and lld-link.
  *      `--accept-license` accepts Microsoft's license terms for those
@@ -19,7 +19,7 @@
  *      installing VS Build Tools).
  *
  * Idempotent: a sentinel check (SDK include + lib trees with the target
- * arch's kernel32 import lib, plus the ATL headers) makes re-runs a no-op,
+ * arch's kernel32 import lib, plus the MSVC CRT headers) makes re-runs a no-op,
  * so calling this on every build only costs time when the sysroot is
  * genuinely absent or incomplete.
  */
@@ -80,7 +80,7 @@ export function checkNativeMsvcToolset(cfg: Config): void {
     {
       hint:
         `Install the MSVC v${MSVC_TOOLSET_VERSION} build tools (Visual Studio Installer > Modify > Individual components, or\n` +
-        `  setup.exe modify --installPath "<VS install dir>" --add ${component} --add Microsoft.VisualStudio.Component.VC.${MSVC_CRT_VERSION}.ATL --quiet)\n` +
+        `  setup.exe modify --installPath "<VS install dir>" --add ${component} --quiet)\n` +
         `then open a new terminal: scripts/vs-shell.ps1 selects it. Or build WebKit locally (--webkit=local).`,
     },
   );
@@ -132,10 +132,10 @@ function msArchName(arch: Arch): string {
 
 /**
  * Does `dir` look like a winsysroot usable for an `arch` build? Checks the
- * SDK include tree, the kernel32 import lib for the target arch, and the ATL
- * headers so an interrupted or pre-ATL splat isn't treated as complete.
+ * SDK include tree, the kernel32 import lib for the target arch, and the MSVC
+ * CRT headers so an interrupted splat isn't treated as complete.
  * Mirrors `detectWindowsSysroot()`'s sentinel (config.ts), with the extra
- * lib/ATL checks. Case-tolerant: accepts both the SDK's title-case layout
+ * lib/CRT checks. Case-tolerant: accepts both the SDK's title-case layout
  * and xwin's lowercase winsysroot-style layout.
  */
 export function isCompleteWindowsSysroot(dir: string, arch: Arch): boolean {
@@ -148,14 +148,9 @@ export function isCompleteWindowsSysroot(dir: string, arch: Arch): boolean {
     listDir(join(sdkLib, ver, "um", msArchName(arch))).some(f => f.toLowerCase() === "kernel32.lib"),
   );
   if (!hasKernel32) return false;
-  // ATL (<atlstr.h>, needed by src/jsc/bindings/windows/rescle.cpp): xwin's
-  // --include-atl merges the ATL headers into the VC include dir; a real
-  // Visual Studio copy keeps them under atlmfc/include.
   const msvcRoot = join(dir, "VC", "Tools", "MSVC");
   return listDir(msvcRoot).some(ver =>
-    [join(msvcRoot, ver, "include"), join(msvcRoot, ver, "atlmfc", "include")].some(incDir =>
-      listDir(incDir).some(f => f.toLowerCase() === "atlstr.h"),
-    ),
+    listDir(join(msvcRoot, ver, "include")).some(f => f.toLowerCase() === "vcruntime.h"),
   );
 }
 
@@ -219,10 +214,10 @@ export async function ensureWindowsSysroot(cfg: Config): Promise<void> {
 
   if (!isCompleteWindowsSysroot(dest, cfg.arch)) {
     if (!cfg.ci && !cfg.buildkite) {
-      throw new BuildError(`Windows sysroot at ${dest} is missing the MSVC CRT / Windows SDK / ATL for ${cfg.arch}`, {
+      throw new BuildError(`Windows sysroot at ${dest} is missing the MSVC CRT / Windows SDK for ${cfg.arch}`, {
         hint:
           "Re-create it with xwin (see docs/project/building-windows.mdx):\n" +
-          `  xwin --accept-license --arch x86_64,aarch64 --sdk-version ${WINDOWS_SDK_VERSION} --crt-version ${MSVC_CRT_VERSION} --include-atl splat --use-winsysroot-style --preserve-ms-arch-notation --include-debug-libs --output ${dest}`,
+          `  xwin --accept-license --arch x86_64,aarch64 --sdk-version ${WINDOWS_SDK_VERSION} --crt-version ${MSVC_CRT_VERSION} splat --use-winsysroot-style --preserve-ms-arch-notation --include-debug-libs --output ${dest}`,
       });
     }
     await fetchWindowsSysroot(cfg, dest);
@@ -301,9 +296,9 @@ async function fetchWindowsSysroot(cfg: Config, dest: string): Promise<void> {
     }
   }
 
-  // ─── 2. Splat the MSVC CRT + Windows SDK + ATL ───
+  // ─── 2. Splat the MSVC CRT + Windows SDK ───
   // Both target arches in one splat; --include-debug-libs so /MTd (debug
-  // CRT) links work; --include-atl for <atlstr.h> (rescle.cpp);
+  // CRT) links work;
   // winsysroot-style + MS arch notation so clang-cl and lld-link resolve it
   // with a single /winsysroot flag; symlinks stay ON (default) to fix
   // include/lib casing on a case-sensitive filesystem.
@@ -336,8 +331,6 @@ async function fetchWindowsSysroot(cfg: Config, dest: string): Promise<void> {
     WINDOWS_SDK_VERSION,
     "--crt-version",
     MSVC_CRT_VERSION,
-    // Top-level option (payload selection), not a `splat` option.
-    "--include-atl",
     "--cache-dir",
     join(cfg.cacheDir, "xwin-dl"),
     "splat",

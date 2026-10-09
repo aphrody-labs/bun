@@ -996,7 +996,7 @@ function muslSysroot(image: LinuxImage): Tool {
   };
 }
 
-/** The MSVC CRT, the Windows SDK and ATL, which xwin downloads from Microsoft. */
+/** The MSVC CRT and the Windows SDK, which xwin downloads from Microsoft. */
 function windowsSysroot(image: LinuxImage): Tool {
   const { xwin, sdk, crt } = pins.windowsSysroot;
   const sysroot = locations.windowsSysroot;
@@ -1026,7 +1026,6 @@ function windowsSysroot(image: LinuxImage): Tool {
             sdk,
             "--crt-version",
             crt,
-            "--include-atl",
           ],
           ...[
             "--cache-dir",
