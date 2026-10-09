@@ -13,14 +13,18 @@
 //!   (EXTRACTED for a relative specifier); a built-in or package specifier is external;
 //! - a plain JS/TS call resolves only to an ambient `.d.ts` declaration.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use crate::collections::{HashMap, HashSet};
+use std::collections::BTreeMap;
 
 use super::{
     FileExtract, ImportKind, NodeClass, RawCall, RawEdge, RawImport,
     ids::{file_stem, make_id},
     rust::{is_blocklisted, strip_generics},
 };
-use crate::graph::{Confidence, Edge, Graph, Node, NodeKind};
+use crate::{
+    graph::{Confidence, Edge, Graph, Node, NodeKind},
+    text,
+};
 
 /// Counters describing an assembly.
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -58,7 +62,7 @@ pub struct AssembleContext {
 
 fn lang_of(file: &str) -> Option<String> {
     Some(
-        match file.rsplit_once('.')?.1 {
+        match text::rsplit_once(file, ".")?.1 {
             "rs" => "rust",
             "ts" | "tsx" | "mts" | "cts" => "typescript",
             "js" | "jsx" | "mjs" | "cjs" => "javascript",
@@ -73,12 +77,12 @@ fn lang_of(file: &str) -> Option<String> {
 /// File nodes whose bare name is shared by several files get the shortest path suffix (at
 /// least two components) that is unique among them, as Graphify labels them.
 fn disambiguate_file_labels(nodes: &mut [Node]) {
-    let mut groups: HashMap<String, Vec<usize>> = HashMap::new();
+    let mut groups: HashMap<String, Vec<usize>> = HashMap::default();
     for (i, n) in nodes.iter().enumerate() {
         if let Some(file) = &n.file
             && n.id == make_id(&[file])
             && n.loc.as_deref() == Some("L1")
-            && file.rsplit('/').next() == Some(n.label.as_str())
+            && text::rsplit(file, "/").next() == Some(n.label.as_str())
         {
             groups.entry(n.label.clone()).or_default().push(i);
         }
@@ -86,7 +90,7 @@ fn disambiguate_file_labels(nodes: &mut [Node]) {
     for members in groups.into_values().filter(|m| m.len() > 1) {
         let paths: Vec<Vec<&str>> = members
             .iter()
-            .map(|&i| nodes[i].file.as_deref().unwrap_or("").split('/').collect())
+            .map(|&i| text::split(nodes[i].file.as_deref().unwrap_or(""), "/").collect())
             .collect();
         let suffix =
             |parts: &Vec<&str>, depth: usize| parts[parts.len().saturating_sub(depth)..].join("/");
@@ -176,7 +180,7 @@ fn is_builtin_module(spec: &str) -> bool {
         return true;
     }
     NODE_BUILTINS.contains(&spec)
-        || spec.split_once('/').is_some_and(|(head, _)| {
+        || text::split_once(spec, "/").is_some_and(|(head, _)| {
             NODE_BUILTINS.contains(&head)
                 && matches!(
                     head,
@@ -193,13 +197,13 @@ fn is_builtin_module(spec: &str) -> bool {
 }
 
 fn parent_dir(path: &str) -> &str {
-    path.rsplit_once('/').map_or("", |(d, _)| d)
+    text::rsplit_once(path, "/").map_or("", |(d, _)| d)
 }
 
 /// `a/b` + `../c/./d` gives `a/c/d`; `None` when it escapes the root.
 fn join_relative(dir: &str, rel: &str) -> Option<String> {
-    let mut parts: Vec<&str> = dir.split('/').filter(|p| !p.is_empty()).collect();
-    for part in rel.split('/') {
+    let mut parts: Vec<&str> = text::split(dir, "/").filter(|p| !p.is_empty()).collect();
+    for part in text::split(rel, "/") {
         match part {
             "" | "." => {}
             ".." => {
@@ -222,7 +226,7 @@ enum Target {
 
 fn module_stem(path: &str) -> &str {
     path.strip_suffix(".d.ts")
-        .unwrap_or_else(|| path.rsplit_once('.').map_or(path, |(s, _)| s))
+        .unwrap_or_else(|| text::rsplit_once(path, ".").map_or(path, |(s, _)| s))
 }
 
 struct Files {
@@ -235,9 +239,9 @@ struct Files {
 impl Files {
     fn new(paths: impl Iterator<Item = String>) -> Self {
         let all: HashSet<String> = paths.collect();
-        let mut by_stem: HashMap<String, Vec<String>> = HashMap::new();
+        let mut by_stem: HashMap<String, Vec<String>> = HashMap::default();
         for p in &all {
-            let name = p.rsplit('/').next().unwrap_or(p);
+            let name = text::rsplit(p, "/").next().unwrap_or(p);
             by_stem
                 .entry(module_stem(name).to_lowercase())
                 .or_default()
@@ -249,7 +253,7 @@ impl Files {
         Self {
             all,
             by_stem,
-            cache: HashMap::new(),
+            cache: HashMap::default(),
         }
     }
 
@@ -291,14 +295,14 @@ impl Files {
                 .map(|p| Target::File(p, true))
         } else if is_builtin_module(spec) {
             Some(Target::External)
-        } else if spec.contains('/') && !spec.starts_with('@') {
+        } else if text::contains(spec, "/") && !spec.starts_with('@') {
             // Path aliases such as Bun's `internal/fs/streams`: a unique file ending with it.
             let suffix = format!("/{spec}");
             let index = format!("{suffix}/index");
             let mut hits: Vec<&String> = self
                 .all
                 .iter()
-                .filter(|p| !p.contains("node_modules/"))
+                .filter(|p| !text::contains(p, "node_modules/"))
                 .filter(|p| {
                     let stem = module_stem(p);
                     stem.ends_with(&suffix) || stem.ends_with(&index)
@@ -314,7 +318,7 @@ impl Files {
             // A bare name: a unique first-party file of that name (a `paths` alias such as
             // `harness`), otherwise an npm package.
             match self.by_stem.get(&spec.to_lowercase()).map(Vec::as_slice) {
-                Some([only]) if !only.contains("node_modules/") => {
+                Some([only]) if !text::contains(only, "node_modules/") => {
                     Some(Target::File(only.clone(), false))
                 }
                 _ => Some(Target::External),
@@ -362,10 +366,7 @@ fn module_segments<'f>(file: &'f str, dir: Option<&str>) -> Vec<&'f str> {
         .and_then(|d| file.strip_prefix(d).and_then(|rest| rest.strip_prefix('/')))
         .unwrap_or(file);
     let inside = inside.strip_prefix("src/").unwrap_or(inside);
-    let mut segs: Vec<&str> = inside
-        .strip_suffix(".rs")
-        .unwrap_or(inside)
-        .split('/')
+    let mut segs: Vec<&str> = text::split(inside.strip_suffix(".rs").unwrap_or(inside), "/")
         .filter(|s| !s.is_empty())
         .collect();
     if segs
@@ -442,7 +443,7 @@ impl Resolver<'_> {
     /// Resolve a Rust call that carries a path.
     fn rust_path(&self, call: &RawCall, path: &str) -> Option<(String, f64)> {
         let own = self.package(&call.file);
-        let segs: Vec<&str> = path.split("::").filter(|s| !s.is_empty()).collect();
+        let segs: Vec<&str> = text::split(path, "::").filter(|s| !s.is_empty()).collect();
         let mut i = 0;
         while i < segs.len() && matches!(segs[i], "crate" | "self" | "super") {
             i += 1;
@@ -534,7 +535,7 @@ pub fn assemble_with_cancellable(
     let mut edges: Vec<RawEdge> = Vec::new();
     let mut calls = Vec::new();
     let mut imports: Vec<(String, RawImport)> = Vec::new();
-    let mut globs: HashMap<String, Vec<String>> = HashMap::new();
+    let mut globs: HashMap<String, Vec<String>> = HashMap::default();
     for f in files {
         crate::error::check_cancel(cancelled)?;
         let file = f
@@ -568,7 +569,7 @@ pub fn assemble_with_cancellable(
     }
 
     // 2. Fold sourceless stubs onto a unique sourced node of the same label (types only).
-    let mut by_label: HashMap<String, Vec<String>> = HashMap::new();
+    let mut by_label: HashMap<String, Vec<String>> = HashMap::default();
     for n in nodes
         .values()
         .filter(|n| matches!(n.class, NodeClass::Type | NodeClass::Variant))
@@ -579,7 +580,7 @@ pub fn assemble_with_cancellable(
             .or_default()
             .push(n.id.clone());
     }
-    let mut rewire: HashMap<String, String> = HashMap::new();
+    let mut rewire: HashMap<String, String> = HashMap::default();
     for n in nodes.values().filter(|n| n.file.is_empty()) {
         crate::error::check_cancel(cancelled)?;
         if let Some(candidates) = by_label.get(&n.label.to_lowercase())
@@ -602,16 +603,16 @@ pub fn assemble_with_cancellable(
 
     // 2b. Rust import targets: a unique type with that name, else a unique file with that stem,
     // else a concept node labelled by the imported name.
-    let mut by_stem: HashMap<String, Vec<String>> = HashMap::new();
+    let mut by_stem: HashMap<String, Vec<String>> = HashMap::default();
     for n in nodes.values().filter(|n| n.class == NodeClass::File) {
         crate::error::check_cancel(cancelled)?;
-        let stem = file_stem(n.file.rsplit('/').next().unwrap_or(&n.file));
+        let stem = file_stem(text::rsplit(&n.file, "/").next().unwrap_or(&n.file));
         by_stem
             .entry(stem.to_lowercase())
             .or_default()
             .push(n.id.clone());
     }
-    let mut import_targets: HashMap<String, String> = HashMap::new();
+    let mut import_targets: HashMap<String, String> = HashMap::default();
     let mut concepts: Vec<String> = Vec::new();
     for e in edges
         .iter()
@@ -643,7 +644,7 @@ pub fn assemble_with_cancellable(
     }
     for id in concepts {
         crate::error::check_cancel(cancelled)?;
-        nodes.entry(id.clone()).or_insert(super::RawNode {
+        nodes.entry(id.clone()).or_insert_with(|| super::RawNode {
             id: id.clone(),
             label: id,
             file: String::new(),
@@ -660,7 +661,7 @@ pub fn assemble_with_cancellable(
             .filter(|n| n.class == NodeClass::File)
             .map(|n| n.file.clone()),
     );
-    let mut symbols_by_file: HashMap<(String, String), String> = HashMap::new();
+    let mut symbols_by_file: HashMap<(String, String), String> = HashMap::default();
     for n in nodes
         .values()
         .filter(|n| !n.file.is_empty() && n.class != NodeClass::File)
@@ -673,7 +674,7 @@ pub fn assemble_with_cancellable(
                 .or_insert_with(|| n.id.clone());
         }
     }
-    let mut module_of: HashMap<(String, String), Option<Target>> = HashMap::new();
+    let mut module_of: HashMap<(String, String), Option<Target>> = HashMap::default();
     for (file, import) in &imports {
         crate::error::check_cancel(cancelled)?;
         let from = make_id(&[file]);
@@ -739,14 +740,14 @@ pub fn assemble_with_cancellable(
     }
 
     // 4. Resolve call sites.
-    let mut owner_of: HashMap<String, String> = HashMap::new();
+    let mut owner_of: HashMap<String, String> = HashMap::default();
     for e in edges.iter().filter(|e| e.relation == "method") {
         crate::error::check_cancel(cancelled)?;
         if let Some(owner) = nodes.get(&e.src) {
             owner_of.insert(e.dst.clone(), strip_generics(&owner.label));
         }
     }
-    let mut defs: HashMap<String, Vec<Def>> = HashMap::new();
+    let mut defs: HashMap<String, Vec<Def>> = HashMap::default();
     for n in nodes.values().filter(|n| !n.file.is_empty()) {
         crate::error::check_cancel(cancelled)?;
         if let Some(inner) = n.label.strip_suffix("()") {
@@ -778,7 +779,7 @@ pub fn assemble_with_cancellable(
         crates,
         globs,
     };
-    let mut seen_calls: HashSet<(String, String)> = HashSet::new();
+    let mut seen_calls: HashSet<(String, String)> = HashSet::default();
     for call in calls {
         crate::error::check_cancel(cancelled)?;
         stats.calls += 1;
@@ -883,7 +884,7 @@ pub fn assemble_with_cancellable(
 
     // 5. Build the graph; edges to nodes that do not exist are dropped (imports to stubs stay
     // because stubs remain nodes).
-    let mut index: HashMap<String, usize> = HashMap::new();
+    let mut index: HashMap<String, usize> = HashMap::default();
     let mut graph_nodes: Vec<Node> = Vec::new();
     for (id, n) in &nodes {
         crate::error::check_cancel(cancelled)?;
@@ -972,7 +973,7 @@ mod tests {
     }
 
     fn crates() -> AssembleContext {
-        let mut package_of = HashMap::new();
+        let mut package_of = HashMap::default();
         for (file, krate) in [
             ("src/sys/lib.rs", "bun_sys"),
             ("src/sys/file.rs", "bun_sys"),

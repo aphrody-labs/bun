@@ -13,8 +13,9 @@
   },
   "alignedBunDependencies": {
     "serde": "1.0.228",
-    "serdeJson": "1.0.149",
-    "thiserror": "2.0.18"
+    "serdeJson": "1.0.150",
+    "thiserror": "2.0.18",
+    "serdeJsonQualifiedLock": "1.0.151"
   },
   "adaptations": [
     "Removed HomeDb persistence and CLI/pipeline dependencies; SQLite remains owned by Bun.",
@@ -22,12 +23,14 @@
     "Added cooperative cancellation to graph traversal, scoring, assembly, adjacency and community passes.",
     "Guarded Rust cursor and OXC pre-walk depth before recursive owner extraction.",
     "Reused owner extraction oracle fixtures; removed Agent Home-only persistence tests.",
-    "OXC preflight conservatively bounds raw grouping/operator complexity before parsing; literal contents also count."
+    "OXC preflight conservatively bounds raw grouping/operator complexity before parsing; literal contents also count.",
+    "Bun-native collections re-export hashbrown with Bun wyhash; native strings SIMD searches replace owner std string byte searches."
   ],
   "qualification": {
-    "rustTests": "pending root Cargo gate",
+    "rustTests": "47 unit tests passed on native Windows; collection and SIMD adaptations await final rerun",
     "nativeBinding": "pending root Bun gate",
-    "parserCancellation": "between bounded files; source parsers and standard sorting are non-interruptible passes"
+    "parserCancellation": "between bounded files; source parsers and standard sorting are non-interruptible passes",
+    "clippy": "pending final strict root gate"
   },
   "files": [
     {
@@ -76,14 +79,14 @@
       "source": "crates/ai/code-graph/src/extract/rust.rs",
       "target": "extract/rust.rs",
       "sourceSha256": "2dd4f0b15e7c2df3a2facb9de4a39b936d60994737a4f6e7d2a26765254347c5",
-      "targetSha256": "288a7c0c56ae8337bf1b4dfa50dc7aac040d1642fc611d7c8032558cb309dbce",
+      "targetSha256": "b7a8df315c176453da60e9fca0a84558fb05ea28e5f621a8b99a0735e48047a3",
       "adapted": true
     },
     {
       "source": "crates/ai/code-graph/src/extract/typescript.rs",
       "target": "extract/typescript.rs",
       "sourceSha256": "e9dbb8667ebf1bc731c9a3e46cfb75a1eedffb806bb7e0e4d32381a2240aeba3",
-      "targetSha256": "7e3280e0aa1b0f163a01bb32c52e51a6e1b40491dedac6ac98c58c42a5665794",
+      "targetSha256": "50343ccbcbc4a16cc4086cf568e0f211aba0f9d9f1b4b2d2b1c83b88519a24c3",
       "adapted": true
     },
     {
@@ -209,19 +212,23 @@
   "integrationFiles": [
     {
       "path": "Cargo.toml",
-      "sha256": "eeff0b589acf743b350c756df2ca28a2b4b5e20773bd78a1b1d9f2510b1c6157"
+      "sha256": "badbd3f4bc716187a70bb886048ac75b640e7022ee0a45d10a92399ec055ed3d"
     },
     {
       "path": "lib.rs",
-      "sha256": "70d249b0fe7b0360a465b209986fea4577b30f7f603f571d5e2a8716a33c6ca9"
+      "sha256": "589220b712f71079aa426aad87d38f7c559c9a3d599bddcccf529a2dda63ce38"
     },
     {
       "path": "api.rs",
-      "sha256": "c6019abe0c0420d9592ab04b1f6deb8fd31606be5b1cdff3e9e5246cfe6149b6"
+      "sha256": "1ecf9125d69ef313001f5f029c75f6ba77c2aab4f0b3cc7ab291143f237e3637"
     },
     {
       "path": "error.rs",
       "sha256": "8f7251b74b19863ecc812c7e06495959efa5bb375e557dcac6616ea50b2e4221"
+    },
+    {
+      "path": "collections.rs",
+      "sha256": "8552931f35a12c0fa3c5861354afeabe0ec4f2081e28dfb62462ea20fe342f29"
     }
   ]
 }

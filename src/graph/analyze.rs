@@ -3,7 +3,8 @@
 //! Graph analysis: god nodes, Louvain community detection and modularity. Deterministic: no
 //! randomness, fixed iteration order, ties broken by the smaller index.
 
-use std::collections::{BTreeMap, HashMap};
+use crate::collections::HashMap;
+use std::collections::BTreeMap;
 
 use crate::{
     error::{Result, check_cancel},
@@ -64,8 +65,8 @@ impl Graph {
                 .flatten()
                 .unwrap_or(-(i as i64) - 1)
         };
-        let mut inside: HashMap<i64, f64> = HashMap::new();
-        let mut total: HashMap<i64, f64> = HashMap::new();
+        let mut inside: HashMap<i64, f64> = HashMap::default();
+        let mut total: HashMap<i64, f64> = HashMap::default();
         for (i, neighbors) in adj.iter().enumerate() {
             check_cancel(cancelled)?;
             let ci = label(i);

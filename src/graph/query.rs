@@ -3,17 +3,16 @@
 //! `explain`, `path` and `query`: node lookup, neighborhood description, shortest path and
 //! budgeted breadth-first retrieval.
 
-use std::{
-    collections::{HashSet, VecDeque},
-    fmt::Write as _,
-};
+use std::{collections::VecDeque, fmt::Write as _};
 
 use serde::Serialize;
 use std::sync::atomic::AtomicBool;
 
 use crate::{
+    collections::HashSet,
     error::{GraphError, Result},
     graph::{Confidence, Graph},
+    text,
 };
 
 /// Direction of a connection relative to the explained node.
@@ -27,7 +26,7 @@ pub enum Direction {
 }
 
 /// One neighbor of an explained node.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Connection {
     /// Direction.
     pub direction: Direction,
@@ -42,7 +41,7 @@ pub struct Connection {
 }
 
 /// Result of [`Graph::explain`].
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Explanation {
     /// Node label.
     pub label: String,
@@ -101,7 +100,7 @@ impl std::fmt::Display for Explanation {
 }
 
 /// One step of a shortest path.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Hop {
     /// Node reached.
     pub node: usize,
@@ -148,7 +147,7 @@ impl Default for QueryOptions {
 }
 
 /// Result of [`Graph::query`].
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct QueryResult {
     /// Start node indices.
     pub starts: Vec<usize>,
@@ -169,7 +168,15 @@ const STOPWORDS: &[&str] = &[
 
 fn tokens(question: &str) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
-    for raw in question.split(|c: char| !(c.is_alphanumeric() || c == '_')) {
+    let mut start = 0;
+    for (end, next) in question
+        .char_indices()
+        .filter(|(_, character)| !(character.is_alphanumeric() || *character == '_'))
+        .map(|(index, character)| (index, index + character.len_utf8()))
+        .chain(std::iter::once((question.len(), question.len())))
+    {
+        let raw = &question[start..end];
+        start = next;
         let token = raw.to_lowercase();
         if token.chars().count() >= 3
             && !STOPWORDS.contains(&token.as_str())
@@ -199,9 +206,9 @@ impl Graph {
     }
 
     fn find_by_label(&self, text: &str) -> Vec<usize> {
-        let (file, symbol) = match text.rsplit_once("::") {
-            Some((file, symbol)) if file.contains('.') || file.contains('/') => {
-                (Some(file.replace('\\', "/")), symbol)
+        let (file, symbol) = match text::rsplit_once(text, "::") {
+            Some((file, symbol)) if text::contains(file, ".") || text::contains(file, "/") => {
+                (Some(text::replace(file, "\\", "/")), symbol)
             }
             _ => (None, text),
         };
@@ -224,7 +231,9 @@ impl Graph {
             .collect();
         let mut partial: Vec<usize> = (0..self.nodes.len())
             .filter(|&i| {
-                in_file(i) && !exact.contains(&i) && self.nodes[i].norm_label.contains(&needle)
+                in_file(i)
+                    && !exact.contains(&i)
+                    && text::contains(&self.nodes[i].norm_label, &needle)
             })
             .collect();
         exact.sort_by(|&a, &b| {
@@ -263,8 +272,7 @@ impl Graph {
         if found.is_empty() {
             return by_id.ok_or_else(|| GraphError::NoMatch(text.to_owned()));
         }
-        let symbol = text
-            .rsplit_once("::")
+        let symbol = text::rsplit_once(text, "::")
             .map_or(text, |(_, s)| s)
             .to_lowercase();
         let exact: Vec<usize> = found
@@ -474,7 +482,7 @@ impl Graph {
             let file = n.file.as_deref().unwrap_or("").to_lowercase();
             let score = words
                 .iter()
-                .filter(|w| n.norm_label.contains(w.as_str()) || file.contains(w.as_str()))
+                .filter(|w| text::contains(&n.norm_label, w) || text::contains(&file, w))
                 .count();
             if score > 0 {
                 scored.push((i, score));
@@ -495,7 +503,7 @@ impl Graph {
         };
 
         let mut order: Vec<usize> = Vec::new();
-        let mut seen: HashSet<usize> = HashSet::new();
+        let mut seen: HashSet<usize> = HashSet::default();
         let mut queue: VecDeque<(usize, usize)> = VecDeque::new();
         for &s in &starts {
             if seen.insert(s) {
@@ -605,9 +613,9 @@ mod tests {
         assert_eq!(e.degree, 3);
         assert_eq!(e.connections.len(), 3);
         let text = e.to_string();
-        assert!(text.contains("<-- RagStore [contains] [EXTRACTED]"));
-        assert!(text.contains("<-- .open() [calls] [INFERRED]"));
-        assert!(text.contains("--> Connection [calls] [EXTRACTED]"));
+        assert!(text::contains(&text, "<-- RagStore [contains] [EXTRACTED]"));
+        assert!(text::contains(&text, "<-- .open() [calls] [INFERRED]"));
+        assert!(text::contains(&text, "--> Connection [calls] [EXTRACTED]"));
         assert!(matches!(g.explain("nothing"), Err(GraphError::NoMatch(_))));
     }
 
@@ -681,7 +689,8 @@ mod tests {
                     "the stub is not a candidate when sourced nodes exist"
                 );
                 assert!(
-                    candidates[0].contains("src/a.ts") && candidates[0].contains("[id a_join]"),
+                    text::contains(&candidates[0], "src/a.ts")
+                        && text::contains(&candidates[0], "[id a_join]"),
                     "{candidates:?}"
                 );
             }
@@ -709,11 +718,11 @@ mod tests {
         let r = g.query("where is upsert_doc called?", &QueryOptions::default());
         assert_eq!(r.starts, vec![2]);
         assert!(r.nodes.len() >= 3);
-        assert!(r.text.contains("NODE .upsert_doc()"));
-        assert!(
-            r.text
-                .contains("EDGE .open() --calls [INFERRED]--> .upsert_doc()")
-        );
+        assert!(text::contains(&r.text, "NODE .upsert_doc()"));
+        assert!(text::contains(
+            &r.text,
+            "EDGE .open() --calls [INFERRED]--> .upsert_doc()"
+        ));
         let tight = g.query(
             "upsert_doc",
             &QueryOptions {
@@ -740,5 +749,20 @@ mod tests {
             g.query("the and", &QueryOptions::default()),
             QueryResult::default()
         );
+    }
+
+    #[test]
+    fn unicode_questions_retrieve_symbols_across_punctuation() {
+        let graph = Graph::from_parts(
+            vec![crate::graph::Node::code(
+                "cafe",
+                "café()",
+                Some("src/café.rs"),
+            )],
+            Vec::new(),
+        );
+        let result = graph.query("Où est café ?", &QueryOptions::default());
+        assert_eq!(result.starts, vec![0]);
+        assert!(text::contains(&result.text, "NODE café()"));
     }
 }

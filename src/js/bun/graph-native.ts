@@ -50,8 +50,9 @@ async function executeGraph<R extends GraphRequest>(
   if (signal?.aborted) throw signal.reason;
   const input = JSONStringify(request);
   if (typeof input !== "string") throw $ERR_INVALID_ARG_VALUE("request", request, "must encode as JSON");
-  if (input.length > MAX_JSON_BYTES || byteLength(input, "utf8") > MAX_JSON_BYTES)
-    throw $ERR_OUT_OF_RANGE("request JSON bytes", `<= ${MAX_JSON_BYTES}`, input.length);
+  const length = input.length;
+  if (length > MAX_JSON_BYTES || byteLength(input, "utf8") > MAX_JSON_BYTES)
+    throw $ERR_OUT_OF_RANGE("request JSON bytes", `<= ${MAX_JSON_BYTES}`, length);
   if (signal?.aborted) throw signal.reason;
 
   const id = randomUUID();

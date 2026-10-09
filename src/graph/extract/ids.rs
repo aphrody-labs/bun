@@ -3,6 +3,8 @@
 //! Node id normalisation (the Graphify recipe: lower-case, runs of non-word characters become
 //! one underscore, edges trimmed).
 
+use crate::text;
+
 /// Normalise one id string.
 #[must_use]
 pub fn normalize_id(s: &str) -> String {
@@ -38,8 +40,8 @@ pub fn make_id(parts: &[&str]) -> String {
 /// File stem used as the symbol id prefix: the path without its extension.
 #[must_use]
 pub fn file_stem(rel_path: &str) -> &str {
-    match rel_path.rsplit_once('.') {
-        Some((stem, ext)) if !ext.contains('/') => stem,
+    match text::rsplit_once(rel_path, ".") {
+        Some((stem, ext)) if !text::contains(ext, "/") => stem,
         _ => rel_path,
     }
 }

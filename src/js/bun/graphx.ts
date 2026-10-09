@@ -116,10 +116,12 @@ async function writeJSONRows(path: string, rows: Iterable<unknown>, options: JSO
   let pending = 0;
   try {
     for (const chunk of jsonChunks(rows, options)) {
-      writer.write(chunk);
+      const written = writer.write(chunk);
+      if (typeof written !== "number") await written;
       pending += Buffer.byteLength(chunk);
       if (pending >= 65536) {
         await writer.flush();
+        await scheduler.yield();
         pending = 0;
       }
     }

@@ -7,7 +7,8 @@
 //! against the corpus at assembly; a call to an imported name keeps the specifier so it can only
 //! reach the module it came from.
 
-use std::collections::{HashMap, HashSet};
+use crate::collections::{HashMap, HashSet};
+use bun_core::strings;
 
 use oxc_allocator::Allocator;
 use oxc_ast::ast::{
@@ -515,16 +516,17 @@ pub fn extract_with_limits(
         return Err(crate::GraphError::Limit("AST depth"));
     }
     let file_id = make_id(&[rel_path]);
-    let file_name = rel_path.rsplit('/').next().unwrap_or(rel_path);
+    let file_name = strings::last_index_of_char(rel_path.as_bytes(), b'/')
+        .map_or(rel_path, |at| &rel_path[at + 1..]);
     let mut extractor = Extractor {
         rel: rel_path,
         stem: file_stem(rel_path).to_owned(),
         file_id: file_id.clone(),
         source,
         out: FileExtract::default(),
-        seen: HashSet::new(),
+        seen: HashSet::default(),
         owners: Vec::new(),
-        imported: HashMap::new(),
+        imported: HashMap::default(),
     };
     extractor.seen.insert(file_id.clone());
     extractor.out.nodes.push(RawNode {

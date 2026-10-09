@@ -36,14 +36,62 @@ export function nativeLanguageConfig(language: "c" | "cpp") {
   return `ruleDirs: []\nlanguageGlobs:\n  ${language}: ${JSON.stringify(globs)}\n`;
 }
 
-export function nativeCommand(language: "c" | "cpp", config: string, threads: number, root: string, format: "compact" | "stream" = "stream") {
-  return ["ast-grep", "run", "--config", config, "--lang", language, "--pattern", "$CALLEE($$$ARGS);", "--selector", "call_expression", `--json=${format}`, "--threads", String(threads),
-    "--no-ignore", "hidden", "--no-ignore", "vcs", "--inspect", "summary", root];
+export function nativeCommand(
+  language: "c" | "cpp",
+  config: string,
+  threads: number,
+  root: string,
+  format: "compact" | "stream" = "stream",
+) {
+  return [
+    "ast-grep",
+    "run",
+    "--config",
+    config,
+    "--lang",
+    language,
+    "--pattern",
+    "$CALLEE($$$ARGS);",
+    "--selector",
+    "call_expression",
+    `--json=${format}`,
+    "--threads",
+    String(threads),
+    "--no-ignore",
+    "hidden",
+    "--no-ignore",
+    "vcs",
+    "--inspect",
+    "summary",
+    root,
+  ];
 }
 
-export function pythonCommand(runner: "bun-uv" | "uv", executable: string, python: string, root: string, manifest: string) {
-  return [executable, ...(runner === "bun-uv" ? ["uv"] : []), "--no-config", "run", "--offline", "--no-project", "--no-python-downloads", "--python", python,
-    "--", "python", "-I", "-c", pythonGraphProgram, root, manifest];
+export function pythonCommand(
+  runner: "bun-uv" | "uv",
+  executable: string,
+  python: string,
+  root: string,
+  manifest: string,
+) {
+  return [
+    executable,
+    ...(runner === "bun-uv" ? ["uv"] : []),
+    "--no-config",
+    "run",
+    "--offline",
+    "--no-project",
+    "--no-python-downloads",
+    "--python",
+    python,
+    "--",
+    "python",
+    "-I",
+    "-c",
+    pythonGraphProgram,
+    root,
+    manifest,
+  ];
 }
 
 export function mergeGraphs(base: EngineGraph, extra: EngineGraph): EngineGraph {
@@ -66,20 +114,39 @@ export function mergeGraphs(base: EngineGraph, extra: EngineGraph): EngineGraph 
 export function memoryReferences(graph: EngineGraph) {
   const patterns = {
     arena: /(?:\bArena\b|PyArena|_arena\b|ArenaAllocator|BumpArena)/,
-    allocator: /(?:\b(?:malloc|calloc|realloc|free)\b|PyMem_|PyObject_(?:Malloc|Calloc|Realloc|Free)|Allocator|allocateCell)/,
+    allocator:
+      /(?:\b(?:malloc|calloc|realloc|free)\b|PyMem_|PyObject_(?:Malloc|Calloc|Realloc|Free)|Allocator|allocateCell)/,
     tracing: /(?:MarkedSpace|MarkedBlock|IsoSubspace|SlotVisitor|WriteBarrier|visitChildren|\bgc\b)/,
     referenceCounting: /(?:Py_(?:X?INCREF|X?DECREF)|\b(?:incref|decref|deref)\b)/,
   };
-  return Object.fromEntries(Object.entries(patterns).map(([kind, pattern]) => [kind, graph.nodes.filter(node => pattern.test(String(node.label ?? ""))).map(node => ({
-    id: node.id, label: node.label, source_file: node.source_file, source_location: node.source_location, kind: node.kind, provenance: node.provenance,
-  }))]));
+  return Object.fromEntries(
+    Object.entries(patterns).map(([kind, pattern]) => [
+      kind,
+      graph.nodes
+        .filter(node => pattern.test(String(node.label ?? "")))
+        .map(node => ({
+          id: node.id,
+          label: node.label,
+          source_file: node.source_file,
+          source_location: node.source_location,
+          kind: node.kind,
+          provenance: node.provenance,
+        })),
+    ]),
+  );
 }
 
 function coverageSummary(metadata: Record<string, unknown>): Record<string, unknown> {
   const result = { ...metadata };
-  if (Array.isArray(metadata.sources)) result.sources = metadata.sources.map(source => coverageSummary(source as Record<string, unknown>));
+  if (Array.isArray(metadata.sources))
+    result.sources = metadata.sources.map(source => coverageSummary(source as Record<string, unknown>));
   if (metadata.memoryReferences && typeof metadata.memoryReferences === "object") {
-    result.memoryReferences = Object.fromEntries(Object.entries(metadata.memoryReferences).map(([kind, nodes]) => [kind, Array.isArray(nodes) ? nodes.length : nodes]));
+    result.memoryReferences = Object.fromEntries(
+      Object.entries(metadata.memoryReferences).map(([kind, nodes]) => [
+        kind,
+        Array.isArray(nodes) ? nodes.length : nodes,
+      ]),
+    );
   }
   return result;
 }
@@ -89,30 +156,68 @@ export class NativeCalls {
   readonly links: GraphEdge[] = [];
   calls = 0;
 
-  constructor(readonly root: string, readonly language: string) {}
+  constructor(
+    readonly root: string,
+    readonly language: string,
+  ) {}
 
   add(match: CallMatch) {
     const { root, language, nodes, links } = this;
     const file = relative(root, resolve(root, match.file)).replaceAll("\\", "/");
-    if (isAbsolute(file) || file === ".." || file.startsWith("../")) throw new Error(`AST result is outside the selected source root: ${match.file}`);
+    if (isAbsolute(file) || file === ".." || file.startsWith("../"))
+      throw new Error(`AST result is outside the selected source root: ${match.file}`);
     const fileId = `file:${file}`;
     const callee = match.metaVariables.single.CALLEE.text;
     const call = `${file}:native-call:${match.range.byteOffset.start}:${match.range.byteOffset.end}`;
     const reference = `${language}:reference:${callee}`;
-    nodes.set(fileId, { id: fileId, label: file, kind: "source-file", source_file: file, language, provenance: "EXTRACTED" });
-    nodes.set(call, { id: call, label: callee, kind: "native-call", source_file: file, source_location: `L${match.range.start.line + 1}`,
-      range: match.range, language, provenance: "EXTRACTED" });
+    nodes.set(fileId, {
+      id: fileId,
+      label: file,
+      kind: "source-file",
+      source_file: file,
+      language,
+      provenance: "EXTRACTED",
+    });
+    nodes.set(call, {
+      id: call,
+      label: callee,
+      kind: "native-call",
+      source_file: file,
+      source_location: `L${match.range.start.line + 1}`,
+      range: match.range,
+      language,
+      provenance: "EXTRACTED",
+    });
     nodes.set(reference, { id: reference, label: callee, kind: "native-callable", language, provenance: "UNRESOLVED" });
     links.push({ source: fileId, target: call, relation: "contains", confidence: "EXTRACTED", confidence_score: 1 });
-    links.push({ source: call, target: reference, relation: "references-callee", confidence: "EXTRACTED", confidence_score: 1, resolution: "UNRESOLVED",
-      source_file: file, source_location: `L${match.range.start.line + 1}` });
+    links.push({
+      source: call,
+      target: reference,
+      relation: "references-callee",
+      confidence: "EXTRACTED",
+      confidence_score: 1,
+      resolution: "UNRESOLVED",
+      source_file: file,
+      source_location: `L${match.range.start.line + 1}`,
+    });
     this.calls++;
   }
 
   graph(): EngineGraph {
-    return { producer: "ast-grep native call expressions", directed: true, multigraph: true,
-      graph: { language: this.language, filesWithCalls: [...this.nodes.values()].filter(node => node.kind === "source-file").length, calls: this.calls,
-        extraction: "syntactic call expressions; overloads, preprocessor expansion and dynamic dispatch are not resolved" }, nodes: [...this.nodes.values()], links: this.links };
+    return {
+      producer: "ast-grep native call expressions",
+      directed: true,
+      multigraph: true,
+      graph: {
+        language: this.language,
+        filesWithCalls: [...this.nodes.values()].filter(node => node.kind === "source-file").length,
+        calls: this.calls,
+        extraction:
+          "syntactic call expressions; overloads, preprocessor expansion and dynamic dispatch are not resolved",
+      },
+      nodes: [...this.nodes.values()],
+      links: this.links,
+    };
   }
 }
 
@@ -144,13 +249,13 @@ async function* textChunks(path: string) {
 export async function* jsonLines(path: string): AsyncGenerator<unknown> {
   let pending = "";
   for await (const chunk of textChunks(path)) {
-      pending += chunk;
-      let newline: number;
-      while ((newline = pending.indexOf("\n")) !== -1) {
-        const line = pending.slice(0, newline);
-        pending = pending.slice(newline + 1);
-        if (line.trim()) yield JSON.parse(line);
-      }
+    pending += chunk;
+    let newline: number;
+    while ((newline = pending.indexOf("\n")) !== -1) {
+      const line = pending.slice(0, newline);
+      pending = pending.slice(newline + 1);
+      if (line.trim()) yield JSON.parse(line);
+    }
   }
   if (pending.trim()) yield JSON.parse(pending);
 }
@@ -158,8 +263,18 @@ export async function* jsonLines(path: string): AsyncGenerator<unknown> {
 export async function readGraphFile(path: string): Promise<SourceGraph> {
   const graph: Record<string, unknown> = Object.create(null);
   const keys = new Set<string>();
-  type State = "root" | "key" | "key-string" | "colon" | "value-start" | "value" | "array-start" | "array-after" | "after" | "done";
-  let state: State = "root";
+  type State =
+    | "root"
+    | "key"
+    | "key-string"
+    | "colon"
+    | "value-start"
+    | "value"
+    | "array-start"
+    | "array-after"
+    | "after"
+    | "done";
+  const parser: { state: State } = { state: "root" };
   let key = "";
   let token = "";
   let depth = 0;
@@ -168,18 +283,23 @@ export async function readGraphFile(path: string): Promise<SourceGraph> {
   let container = false;
   let array: unknown[] | null = null;
   let mayEnd = true;
-  const fail = () => { throw new SyntaxError(`Invalid graph JSON framing in ${path}`); };
+  const fail = () => {
+    throw new SyntaxError(`Invalid graph JSON framing in ${path}`);
+  };
   const finish = () => {
     const value: unknown = JSON.parse(token);
     if (array) {
       if (!value || typeof value !== "object" || Array.isArray(value)) fail();
       const row = value as Record<string, unknown>;
-      if (key === "nodes" ? typeof row.id !== "string" : typeof row.source !== "string" || typeof row.target !== "string") fail();
+      if (
+        key === "nodes" ? typeof row.id !== "string" : typeof row.source !== "string" || typeof row.target !== "string"
+      )
+        fail();
       array.push(value);
-      state = "array-after";
+      parser.state = "array-after";
     } else {
       graph[key] = value;
-      state = "after";
+      parser.state = "after";
     }
     token = "";
   };
@@ -190,24 +310,27 @@ export async function readGraphFile(path: string): Promise<SourceGraph> {
     escaped = false;
     container = character === "{" || character === "[";
     depth = container ? 1 : 0;
-    state = "value";
+    parser.state = "value";
   };
   for await (const chunk of textChunks(path)) {
     for (let index = 0; index < chunk.length; index++) {
       const character = chunk[index]!;
       const whitespace = character === " " || character === "\n" || character === "\r" || character === "\t";
-      if (state !== "value" && state !== "key-string" && whitespace) continue;
-      switch (state) {
+      if (parser.state !== "value" && parser.state !== "key-string" && whitespace) continue;
+      switch (parser.state) {
         case "root":
           if (character !== "{") fail();
-          state = "key";
+          parser.state = "key";
           break;
         case "key":
-          if (character === "}" && mayEnd) { state = "done"; break; }
+          if (character === "}" && mayEnd) {
+            parser.state = "done";
+            break;
+          }
           if (character !== '"') fail();
           token = character;
           escaped = false;
-          state = "key-string";
+          parser.state = "key-string";
           break;
         case "key-string":
           token += character;
@@ -218,12 +341,12 @@ export async function readGraphFile(path: string): Promise<SourceGraph> {
             if (keys.has(key)) fail();
             keys.add(key);
             token = "";
-            state = "colon";
+            parser.state = "colon";
           }
           break;
         case "colon":
           if (character !== ":") fail();
-          state = "value-start";
+          parser.state = "value-start";
           break;
         case "value-start":
           if (key === "nodes" || key === "links") {
@@ -231,11 +354,15 @@ export async function readGraphFile(path: string): Promise<SourceGraph> {
             array = [];
             graph[key] = array;
             mayEnd = true;
-            state = "array-start";
+            parser.state = "array-start";
           } else begin(character);
           break;
         case "array-start":
-          if (character === "]" && mayEnd) { array = null; state = "after"; break; }
+          if (character === "]" && mayEnd) {
+            array = null;
+            parser.state = "after";
+            break;
+          }
           if (character !== "{") fail();
           begin(character);
           break;
@@ -256,13 +383,19 @@ export async function readGraphFile(path: string): Promise<SourceGraph> {
           if (!quoted && depth === 0 && (container || token.startsWith('"'))) finish();
           break;
         case "array-after":
-          if (character === ",") { mayEnd = false; state = "array-start"; }
-          else if (character === "]") { array = null; state = "after"; }
-          else fail();
+          if (character === ",") {
+            mayEnd = false;
+            parser.state = "array-start";
+          } else if (character === "]") {
+            array = null;
+            parser.state = "after";
+          } else fail();
           break;
         case "after":
-          if (character === ",") { mayEnd = false; state = "key"; }
-          else if (character === "}") state = "done";
+          if (character === ",") {
+            mayEnd = false;
+            parser.state = "key";
+          } else if (character === "}") parser.state = "done";
           else fail();
           break;
         case "done":
@@ -271,7 +404,7 @@ export async function readGraphFile(path: string): Promise<SourceGraph> {
     }
     await scheduler.yield();
   }
-  if (state !== "done" || !Array.isArray(graph.nodes) || !Array.isArray(graph.links)) fail();
+  if (parser.state !== "done" || !Array.isArray(graph.nodes) || !Array.isArray(graph.links)) fail();
   return graph as SourceGraph;
 }
 
@@ -283,7 +416,10 @@ export async function writeGraph(path: string, graph: EngineGraph) {
   try {
     const { nodes, links, ...metadata } = graph;
     writer.write(JSON.stringify(metadata).slice(0, -1));
-    for (const [name, rows] of [["nodes", nodes], ["links", links]] as const) {
+    for (const [name, rows] of [
+      ["nodes", nodes],
+      ["links", links],
+    ] as const) {
       writer.write(`,${JSON.stringify(name)}:[`);
       for (let index = 0; index < rows.length; index++) {
         writer.write(`${index ? "," : ""}${JSON.stringify(rows[index])}`);
@@ -325,16 +461,34 @@ async function recorded(registry: BunPython, kind: string, command: string[], cw
 }
 
 async function main() {
-  const { values, positionals } = parseArgs({ args: process.argv.slice(2), allowPositionals: true, strict: true,
-    options: { root: { type: "string" }, name: { type: "string" }, db: { type: "string", default: registryPath }, out: { type: "string" },
-      outline: { type: "string" }, python: { type: "string" }, runner: { type: "string", default: "bun-uv" }, executable: { type: "string" },
-      language: { type: "string" }, threads: { type: "string", default: "4" }, "defer-import": { type: "boolean", default: false } } });
+  const { values, positionals } = parseArgs({
+    args: process.argv.slice(2),
+    allowPositionals: true,
+    strict: true,
+    options: {
+      root: { type: "string" },
+      name: { type: "string" },
+      db: { type: "string", default: registryPath },
+      out: { type: "string" },
+      outline: { type: "string" },
+      python: { type: "string" },
+      runner: { type: "string", default: "bun-uv" },
+      executable: { type: "string" },
+      language: { type: "string" },
+      threads: { type: "string", default: "4" },
+      "defer-import": { type: "boolean", default: false },
+    },
+  });
   const mode = positionals[0];
   if (!values.root || !values.name || !["python", "native"].includes(mode ?? "")) {
-    throw new Error("Usage: engine-graph.ts <python|native> --root <checkout> --name <repository> [--outline <graph>] [--python <interpreter>] [--language c|cpp]");
+    throw new Error(
+      "Usage: engine-graph.ts <python|native> --root <checkout> --name <repository> [--outline <graph>] [--python <interpreter>] [--language c|cpp]",
+    );
   }
   const root = resolve(values.root);
-  const output = resolve(values.out ?? resolve(import.meta.dir, "../../tmp/bun-python", `graph-${values.name}-${mode}.json`));
+  const output = resolve(
+    values.out ?? resolve(import.meta.dir, "../../tmp/bun-python", `graph-${values.name}-${mode}.json`),
+  );
   await mkdir(dirname(output), { recursive: true });
   const revision = await git(root, "rev-parse", "HEAD");
   using registry = new BunPython(values.db);
@@ -343,22 +497,30 @@ async function main() {
   let run: string;
   if (mode === "python") {
     const runner = values.runner ?? "bun-uv";
-    if (!values.python || !["bun-uv", "uv"].includes(runner)) throw new Error("Python extraction requires --python <qualified interpreter> and --runner bun-uv|uv");
+    if (!values.python || !["bun-uv", "uv"].includes(runner))
+      throw new Error("Python extraction requires --python <qualified interpreter> and --runner bun-uv|uv");
     const paths = (await git(root, "ls-files", "-z", "--", "*.py")).split("\0").filter(Boolean);
     const manifest = `${output}.files.json`;
     await Bun.write(manifest, JSON.stringify(paths));
     const executable = values.executable ?? (runner === "bun-uv" ? process.execPath : Bun.which("uv"));
     if (!executable) throw new Error("Native UV executable is unavailable; provide --executable");
-    const result = await recorded(registry, "python-ast-graph", pythonCommand(runner as "bun-uv" | "uv", executable, values.python, root, manifest), root);
-    graph = await readGraphFile(result.stdoutPath) as EngineGraph;
+    const result = await recorded(
+      registry,
+      "python-ast-graph",
+      pythonCommand(runner as "bun-uv" | "uv", executable, values.python, root, manifest),
+      root,
+    );
+    graph = (await readGraphFile(result.stdoutPath)) as EngineGraph;
     graph.graph.runner = runner;
     graph.graph.uvExecutable = executable;
     graph.graph.qualifiedPython = resolve(values.python);
     run = result.run;
   } else {
-    if (!values.language || !["c", "cpp"].includes(values.language)) throw new Error("Native extraction requires --language c|cpp");
+    if (!values.language || !["c", "cpp"].includes(values.language))
+      throw new Error("Native extraction requires --language c|cpp");
     const threads = Number(values.threads);
-    if (!Number.isSafeInteger(threads) || threads < 1 || threads > 32) throw new Error("AST threads must be an integer between 1 and 32");
+    if (!Number.isSafeInteger(threads) || threads < 1 || threads > 32)
+      throw new Error("AST threads must be an integer between 1 and 32");
     const language = values.language as "c" | "cpp";
     const config = `${output}.ast-grep.yml`;
     await Bun.write(config, nativeLanguageConfig(language));
@@ -373,27 +535,37 @@ async function main() {
   }
   graph.built_at_commit = revision;
   if (values.outline) {
-    const base = await readGraphFile(resolve(values.outline)) as EngineGraph;
-    if (base.built_at_commit !== revision) throw new Error(`Outline revision ${base.built_at_commit} differs from selected checkout ${revision}`);
+    const base = (await readGraphFile(resolve(values.outline))) as EngineGraph;
+    if (base.built_at_commit !== revision)
+      throw new Error(`Outline revision ${base.built_at_commit} differs from selected checkout ${revision}`);
     graph = mergeGraphs(base, graph);
   }
   const files = graph.nodes.filter(node => typeof node.source_file === "string" && String(node.id).startsWith("file:"));
   for (let offset = 0; offset < files.length; offset += 32) {
-    await Promise.all(files.slice(offset, offset + 32).map(async node => {
-      const path = resolve(root, node.source_file as string);
-      const bytes = await Bun.file(path).bytes();
-      node.sha256 = new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
-      node.bytes = bytes.length;
-    }));
+    await Promise.all(
+      files.slice(offset, offset + 32).map(async node => {
+        const path = resolve(root, node.source_file as string);
+        const bytes = await Bun.file(path).bytes();
+        node.sha256 = new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
+        node.bytes = bytes.length;
+      }),
+    );
   }
   const finishedRevision = await git(root, "rev-parse", "HEAD");
-  if (finishedRevision !== revision) throw new Error(`Source revision changed while extracting ${revision} to ${finishedRevision}`);
+  if (finishedRevision !== revision)
+    throw new Error(`Source revision changed while extracting ${revision} to ${finishedRevision}`);
   graph.graph.memoryReferences = memoryReferences(graph);
   graph.graph.unresolvedReferences = graph.nodes.filter(node => node.provenance === "UNRESOLVED").length;
   await writeGraph(output, graph);
   const sha256 = await registry.artifact(output, "engine-source-graph", run, { root, revision, mode });
-  const result = values["defer-import"] ? { nodes: graph.nodes.length, edges: graph.links.length, deferred: true } : await registry.importGraph(repository, graph, sha256);
-  registry.event("engine-graph-coverage", { repository, revision, mode, sha256, output, coverage: graph.graph, ...result }, run);
+  const result = values["defer-import"]
+    ? { nodes: graph.nodes.length, edges: graph.links.length, deferred: true }
+    : await registry.importGraph(repository, graph, sha256);
+  registry.event(
+    "engine-graph-coverage",
+    { repository, revision, mode, sha256, output, coverage: graph.graph, ...result },
+    run,
+  );
   console.log(JSON.stringify({ output, revision, sha256, ...result, coverage: coverageSummary(graph.graph) }));
 }
 

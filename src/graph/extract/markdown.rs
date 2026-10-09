@@ -7,22 +7,18 @@ use super::{
     FileExtract, ImportKind, NodeClass, RawEdge, RawImport, RawNode,
     ids::{file_stem, make_id},
 };
-use crate::graph::Confidence;
+use crate::{collections::HashSet, graph::Confidence, text};
 
 fn wiki_links(line: &str, out: &mut Vec<String>) {
     let mut rest = line;
-    while let Some(start) = rest.find("[[") {
+    while let Some(start) = text::find(rest, "[[") {
         let after = &rest[start + 2..];
-        let Some(end) = after.find("]]") else { break };
+        let Some(end) = text::find(after, "]]") else {
+            break;
+        };
         let inner = &after[..end];
-        let target = inner
-            .split('|')
-            .next()
-            .unwrap_or("")
-            .split('#')
-            .next()
-            .unwrap_or("")
-            .trim();
+        let target = text::split(inner, "|").next().unwrap_or("");
+        let target = text::split(target, "#").next().unwrap_or("").trim();
         if !target.is_empty() {
             out.push(target.to_owned());
         }
@@ -32,13 +28,16 @@ fn wiki_links(line: &str, out: &mut Vec<String>) {
 
 fn md_links(line: &str, out: &mut Vec<String>) {
     let mut rest = line;
-    while let Some(start) = rest.find("](") {
+    while let Some(start) = text::find(rest, "](") {
         let after = &rest[start + 2..];
-        let Some(end) = after.find(')') else { break };
+        let Some(end) = text::find(after, ")") else {
+            break;
+        };
         let target = after[..end].split_whitespace().next().unwrap_or("");
-        let target = target.split('#').next().unwrap_or("");
-        let external =
-            target.contains("://") || target.starts_with("mailto:") || target.starts_with('/');
+        let target = text::split(target, "#").next().unwrap_or("");
+        let external = text::contains(target, "://")
+            || target.starts_with("mailto:")
+            || target.starts_with('/');
         if !target.is_empty() && !external && (target.ends_with(".md") || target.ends_with(".mdx"))
         {
             out.push(target.to_owned());
@@ -50,20 +49,30 @@ fn md_links(line: &str, out: &mut Vec<String>) {
 /// Extract one Markdown file.
 #[must_use]
 pub fn extract(rel_path: &str, source: &[u8]) -> FileExtract {
-    let text = String::from_utf8_lossy(source);
+    let Some(source) = bun_core::strings::str_utf8(source) else {
+        return FileExtract {
+            error: Some("source is not valid UTF-8".to_owned()),
+            ..FileExtract::default()
+        };
+    };
     let file_id = make_id(&[rel_path]);
     let stem = file_stem(rel_path);
     let mut out = FileExtract::default();
     out.nodes.push(RawNode {
         id: file_id.clone(),
-        label: rel_path.rsplit('/').next().unwrap_or(rel_path).to_owned(),
+        label: text::rsplit(rel_path, "/")
+            .next()
+            .unwrap_or(rel_path)
+            .to_owned(),
         file: rel_path.to_owned(),
         loc: "L1".into(),
         class: NodeClass::File,
     });
     let mut fenced = false;
-    let mut seen = std::collections::HashSet::new();
-    for (index, line) in text.lines().enumerate() {
+    let mut seen = HashSet::default();
+    let lines = text::split(source.strip_suffix('\n').unwrap_or(source), "\n");
+    for (index, line) in lines.enumerate() {
+        let line = line.strip_suffix('\r').unwrap_or(line);
         let loc = format!("L{}", index + 1);
         let trimmed = line.trim_start();
         if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
@@ -145,5 +154,21 @@ mod tests {
                 ("bun-build.md", ImportKind::Link)
             ]
         );
+    }
+
+    #[test]
+    fn unicode_crlf_sources_keep_locations_and_invalid_utf8_is_reported() {
+        let parsed = extract(
+            "notes/été.md",
+            "# Été 🐍\r\n[[café#section|titre]]\r\n## Suite\r\n".as_bytes(),
+        );
+        assert!(parsed.error.is_none());
+        assert_eq!(parsed.nodes[1].label, "Été 🐍");
+        assert_eq!(parsed.nodes[2].loc, "L3");
+        assert_eq!(parsed.imports[0].specifier, "café");
+        let invalid = extract("notes/invalid.md", b"# heading\n\xff");
+        assert_eq!(invalid.error.as_deref(), Some("source is not valid UTF-8"));
+        assert!(invalid.nodes.is_empty());
+        assert!(invalid.imports.is_empty());
     }
 }

@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::{
-    collections::{HashMap, HashSet},
     io::{self, Write},
     sync::atomic::AtomicBool,
 };
 
+use crate::collections::{HashMap, HashSet};
+use bun_core::strings;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -287,10 +288,9 @@ fn validate(scope: &GraphScope, limits: &GraphLimits) -> Result<()> {
 fn relative(path: &str) -> bool {
     !path.is_empty()
         && path.len() <= 4096
-        && !path.contains(['\\', ':', '\0'])
-        && path
-            .split('/')
-            .all(|part| !part.is_empty() && part != "." && part != "..")
+        && !strings::contains_any(path.as_bytes(), b"\\:\0")
+        && strings::split(path.as_bytes(), b"/")
+            .all(|part| !part.is_empty() && part != b"." && part != b"..")
 }
 
 fn count(graph: &Graph, limits: &GraphLimits) -> Result<()> {
@@ -311,7 +311,7 @@ impl GraphDocument {
         if self.links.len() > limits.max_edges {
             return Err(GraphError::Limit("edge count"));
         }
-        let mut index = HashMap::with_capacity(self.nodes.len());
+        let mut index = HashMap::with_capacity_and_hasher(self.nodes.len(), Default::default());
         let mut nodes = Vec::with_capacity(self.nodes.len());
         for n in self.nodes {
             check_cancel(cancelled)?;
@@ -449,7 +449,7 @@ pub fn execute(request: GraphRequest, cancelled: &AtomicBool) -> Result<GraphRes
                 return Err(GraphError::Limit("file count"));
             }
             let mut bytes = 0usize;
-            let mut paths = HashSet::new();
+            let mut paths = HashSet::default();
             let mut extracts = Vec::with_capacity(files.len());
             let mut parse_errors = Vec::new();
             let mut node_count = 0usize;
@@ -687,11 +687,8 @@ mod tests {
         json!({"source": "graph:bun", "profile": "aphrody"})
     }
 
-    fn invoke(value: Value) -> Result<Value> {
-        let bytes = execute_json(
-            &serde_json::to_vec(&value).unwrap(),
-            &AtomicBool::new(false),
-        )?;
+    fn invoke(value: &Value) -> Result<Value> {
+        let bytes = execute_json(&serde_json::to_vec(value).unwrap(), &AtomicBool::new(false))?;
         Ok(serde_json::from_slice(&bytes)?)
     }
 
@@ -704,30 +701,39 @@ mod tests {
 
     #[test]
     fn native_unicode_extraction_path_query_and_explanation_share_one_graph() {
-        let built = invoke(rust_build()).unwrap();
+        let built = invoke(&rust_build()).unwrap();
         assert_eq!(built["scope"], scope());
         assert_eq!(built["result"]["parse_errors"], json!([]));
-        assert_eq!(built["result"]["stats"]["same_file"], 1);
         let graph = built["result"]["graph"].clone();
         let nodes = graph["nodes"].as_array().unwrap();
         let from = &nodes.iter().find(|n| n["label"] == "run()").unwrap()["id"];
         let to = &nodes.iter().find(|n| n["label"] == "café()").unwrap()["id"];
-        let path = invoke(json!({"scope":scope(), "op":"path", "graph":graph, "from":from,"to":to,"directed":true,"relations":["calls"]})).unwrap();
+        let call = graph["links"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|edge| {
+                edge["source"] == *from && edge["target"] == *to && edge["relation"] == "calls"
+            })
+            .unwrap();
+        assert_eq!(call["confidence"], "EXTRACTED");
+        assert_eq!(call["source_file"], "src/lib.rs");
+        assert_eq!(call["source_location"], "L2");
+        assert_eq!(call["context"], "call");
+        let path = invoke(&json!({"scope":scope(), "op":"path", "graph":graph, "from":from,"to":to,"directed":true,"relations":["calls"]})).unwrap();
         assert_eq!(path["result"]["hops"].as_array().unwrap().len(), 2);
         assert_eq!(path["result"]["hops"][1]["edge"]["confidence"], "EXTRACTED");
         assert_eq!(path["result"]["hops"][1]["forward"], true);
         let explained =
-            invoke(json!({"scope":scope(),"op":"explain","graph":graph,"node":to})).unwrap();
+            invoke(&json!({"scope":scope(),"op":"explain","graph":graph,"node":to})).unwrap();
         assert_eq!(explained["result"]["explanation"]["label"], "café()");
         assert_eq!(explained["result"]["explanation"]["package"], "fixture");
-        let queried = invoke(json!({"scope":scope(),"op":"query","graph":graph,"question":"café","depth":2,"budget_tokens":1000})).unwrap();
-        assert!(
-            queried["result"]["text"]
-                .as_str()
-                .unwrap()
-                .contains("café()")
-        );
-        let analyzed = invoke(json!({"scope":scope(),"op":"analyze","graph":graph})).unwrap();
+        let queried = invoke(&json!({"scope":scope(),"op":"query","graph":graph,"question":"café","depth":2,"budget_tokens":1000})).unwrap();
+        assert!(strings::contains(
+            queried["result"]["text"].as_str().unwrap().as_bytes(),
+            "café()".as_bytes()
+        ));
+        let analyzed = invoke(&json!({"scope":scope(),"op":"analyze","graph":graph})).unwrap();
         assert!(analyzed["result"]["modularity"].is_number());
         assert!(
             !analyzed["result"]["god_nodes"]
@@ -741,32 +747,32 @@ mod tests {
     fn sources_and_profiles_are_explicit_and_domain_scoped() {
         let mut request = rust_build();
         request.as_object_mut().unwrap().remove("scope");
-        assert!(invoke(request).is_err());
+        assert!(invoke(&request).is_err());
         for invalid in ["", "../aphrody", "dbfr/aphrody", "aphrody\0"] {
             let mut request = rust_build();
             request["scope"]["profile"] = json!(invalid);
-            assert!(invoke(request).is_err());
+            assert!(invoke(&request).is_err());
         }
         let mut request = rust_build();
         request["scope"]["profile"] = json!("dbfr");
-        assert_eq!(invoke(request).unwrap()["scope"]["profile"], "dbfr");
+        assert_eq!(invoke(&request).unwrap()["scope"]["profile"], "dbfr");
         let mut request = rust_build();
         request["scope"]["source"] = json!("");
-        assert!(invoke(request).is_err());
+        assert!(invoke(&request).is_err());
     }
 
     #[test]
     fn malformed_snapshot_never_drops_endpoints_or_rewires_duplicate_ids() {
         let graph = json!({"nodes":[{"id":"a","label":"A"}],"links":[{"source":"a","target":"missing","relation":"calls","confidence":"EXTRACTED"}]});
         assert!(matches!(
-            invoke(json!({"scope":scope(),"op":"export","graph":graph})),
+            invoke(&json!({"scope":scope(),"op":"export","graph":graph})),
             Err(GraphError::Invalid(_))
         ));
         let graph = json!({"nodes":[{"id":"a","label":"A"},{"id":"a","label":"B"}],"links":[]});
-        assert!(invoke(json!({"scope":scope(),"op":"export","graph":graph})).is_err());
+        assert!(invoke(&json!({"scope":scope(),"op":"export","graph":graph})).is_err());
         for score in [-1.0, 1.5] {
             let graph = json!({"nodes":[{"id":"a","label":"A"}],"links":[{"source":"a","target":"a","relation":"calls","confidence":"EXTRACTED","confidence_score":score}]});
-            assert!(invoke(json!({"scope":scope(),"op":"export","graph":graph})).is_err());
+            assert!(invoke(&json!({"scope":scope(),"op":"export","graph":graph})).is_err());
         }
     }
 
@@ -781,26 +787,26 @@ mod tests {
         ] {
             let mut request = rust_build();
             request["files"][0]["path"] = json!(path);
-            assert!(invoke(request).is_err());
+            assert!(invoke(&request).is_err());
         }
         let mut request = rust_build();
         request["limits"] = json!({"max_file_bytes": 2});
         assert!(matches!(
-            invoke(request),
+            invoke(&request),
             Err(GraphError::Limit("file bytes"))
         ));
         let mut request = rust_build();
         request["limits"] = json!({"max_output_bytes": 2});
-        assert!(invoke(request).is_err());
+        assert!(invoke(&request).is_err());
         let mut request = rust_build();
         request["limits"] = json!({"max_ast_depth": 2});
         assert!(matches!(
-            invoke(request),
+            invoke(&request),
             Err(GraphError::Limit("AST depth"))
         ));
         let mut request = rust_build();
         request["files"][0]["path"] = json!("fixture.py");
-        assert!(invoke(request).is_err());
+        assert!(invoke(&request).is_err());
         let source = format!(
             "export const nested = {}0{};",
             "(".repeat(1024),
@@ -808,7 +814,7 @@ mod tests {
         );
         assert!(matches!(
             invoke(
-                json!({"scope":scope(),"op":"build","files":[{"path":"nested.ts","content":source}]})
+                &json!({"scope":scope(),"op":"build","files":[{"path":"nested.ts","content":source}]})
             ),
             Err(GraphError::Limit("source syntax complexity"))
         ));
@@ -838,7 +844,7 @@ mod tests {
 
     #[test]
     fn native_typescript_import_resolution_preserves_confidence_and_external_calls() {
-        let result = invoke(json!({"scope":scope(),"op":"build","files":[
+        let result = invoke(&json!({"scope":scope(),"op":"build","files":[
             {"path":"math.ts","content":"export function café() { return 42; }"},
             {"path":"main.ts","content":"import { café } from './math'; import { join } from 'node:path'; export function run() { café(); join('a','b'); }"}
         ]})).unwrap();

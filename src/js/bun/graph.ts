@@ -772,4 +772,8 @@ function executeGraph(
   return require("bun:graph-native").executeGraph(request, options);
 }
 
-export default { BunPython, PyJS: BunPython, registryPath, executeGraph };
+function indexCodebase(registry: BunPython, root: string, options: import("bun:graph-index").IndexOptions) {
+  return require("bun:graph-index").indexCodebase(registry, root, options);
+}
+
+export default { BunPython, PyJS: BunPython, registryPath, executeGraph, indexCodebase };

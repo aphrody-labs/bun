@@ -3,7 +3,8 @@
 //! Rust extraction with tree-sitter: files, functions, methods, types, traits, impl blocks,
 //! macros, `use` imports, type references of signatures and call sites.
 
-use std::collections::{HashMap, HashSet};
+use crate::collections::{HashMap, HashSet};
+use bun_core::strings;
 
 use tree_sitter::{Node, Parser};
 
@@ -173,13 +174,14 @@ pub fn strip_generics(path: &str) -> String {
 }
 
 fn last_segment(path: &str) -> &str {
-    path.rsplit("::").next().unwrap_or(path)
+    strings::last_index_of(path.as_bytes(), b"::").map_or(path, |at| &path[at + 2..])
 }
 
 /// `std::fs`, `core::mem::take`, or a bare std/prelude type such as `Vec`.
 fn is_std_path(path: &str) -> bool {
-    let first = path.split("::").next().unwrap_or(path);
-    STD_QUALIFIERS.contains(&first) || (!path.contains("::") && BUILTIN_TYPES.contains(&path))
+    let first = strings::index_of(path.as_bytes(), b"::").map_or(path, |at| &path[..at]);
+    STD_QUALIFIERS.contains(&first)
+        || (!strings::contains(path.as_bytes(), b"::") && BUILTIN_TYPES.contains(&path))
 }
 
 fn join_path(head: &str, rest: &str) -> String {
@@ -324,7 +326,7 @@ fn import_targets(node: Node<'_>, src: &[u8], prefix: &str, out: &mut Vec<String
         }
         "scoped_identifier" => {
             let value = text(node, src);
-            out.push(value.rsplit("::").next().unwrap_or(value).to_owned());
+            out.push(last_segment(value).to_owned());
         }
         "identifier" | "self" | "super" | "crate" => {
             let value = text(node, src);
@@ -389,7 +391,7 @@ impl<'a> Ctx<'a> {
             .iter_mut()
             .find(|n| n.id == stub && n.file.is_empty() && n.label == stub)
         {
-            node.label = name.to_owned();
+            name.clone_into(&mut node.label);
         }
         stub
     }
@@ -408,14 +410,14 @@ impl<'a> Ctx<'a> {
                 }
             }
             "scoped_type_identifier" => {
-                let t = text(node, self.src).rsplit("::").next().unwrap_or("");
+                let t = last_segment(text(node, self.src));
                 if keep(t) {
                     out.push((t.to_owned(), generic));
                 }
             }
             "generic_type" => {
                 if let Some(name) = node.child_by_field_name("type") {
-                    let t = text(name, self.src).rsplit("::").next().unwrap_or("");
+                    let t = last_segment(text(name, self.src));
                     if keep(t) {
                         out.push((t.to_owned(), generic));
                     }
@@ -627,9 +629,7 @@ impl<'a> Ctx<'a> {
                     let at = line(node);
                     let nid = make_id(&[self.stem, "macro", &name]);
                     self.add_node(&nid, &format!("{name}!"), at, NodeClass::Macro);
-                    self.macros
-                        .entry(name.clone())
-                        .or_insert_with(|| nid.clone());
+                    self.macros.entry(name).or_insert_with(|| nid.clone());
                     let file = self.file_nid.clone();
                     self.add_edge(&file, &nid, "contains", at, None);
                 }
@@ -781,9 +781,8 @@ impl<'a> Ctx<'a> {
 
     fn expand(&self, path: &str) -> String {
         let path = strip_generics(path);
-        let (first, rest) = path
-            .split_once("::")
-            .map_or((path.as_str(), ""), |(f, r)| (f, r));
+        let (first, rest) = strings::index_of(path.as_bytes(), b"::")
+            .map_or((path.as_str(), ""), |at| (&path[..at], &path[at + 2..]));
         let first = if first == "Self" {
             self.impl_type.as_deref().unwrap_or(first)
         } else {
@@ -796,7 +795,7 @@ impl<'a> Ctx<'a> {
     /// Whether a type path names a type defined in this file (or the current impl type).
     fn is_local_type(&self, path: &str) -> bool {
         let last = last_segment(path);
-        !path.contains("::")
+        !strings::contains(path.as_bytes(), b"::")
             && (self.local_types.contains(last) || self.impl_type.as_deref() == Some(last))
     }
 
@@ -1009,10 +1008,10 @@ impl<'a> Ctx<'a> {
                 let builtin =
                     BUILTIN_TYPES.contains(&name.as_str()) && !self.local_types.contains(&name);
                 if !name.is_empty() && !builtin && !self.label_edge(from, &name, at) {
-                    let path = self
-                        .aliases
-                        .get(&name)
-                        .and_then(|full| full.rsplit_once("::").map(|(p, _)| p.to_owned()));
+                    let path = self.aliases.get(&name).and_then(|full| {
+                        strings::last_index_of(full.as_bytes(), b"::")
+                            .map(|at| full[..at].to_owned())
+                    });
                     if path.is_some() || !is_blocklisted(&name.to_lowercase()) {
                         self.defer_call(from, &name, false, path, at);
                     }
@@ -1153,18 +1152,19 @@ pub fn extract_with_limits(
         src: source,
         file_nid: file_nid.clone(),
         out: FileExtract::default(),
-        seen: HashSet::new(),
-        local_types: HashSet::new(),
+        seen: HashSet::default(),
+        local_types: HashSet::default(),
         bodies: Vec::new(),
-        macros: HashMap::new(),
-        labels: HashMap::new(),
-        type_nids: HashSet::new(),
-        pairs: HashSet::new(),
-        aliases: HashMap::new(),
-        locals: HashMap::new(),
+        macros: HashMap::default(),
+        labels: HashMap::default(),
+        type_nids: HashSet::default(),
+        pairs: HashSet::default(),
+        aliases: HashMap::default(),
+        locals: HashMap::default(),
         impl_type: None,
     };
-    let file_name = rel_path.rsplit('/').next().unwrap_or(rel_path);
+    let file_name = strings::last_index_of_char(rel_path.as_bytes(), b'/')
+        .map_or(rel_path, |at| &rel_path[at + 1..]);
     ctx.add_node(&file_nid, file_name, 1, NodeClass::File);
     let root = tree.root_node();
     ctx.scan_local_types(root);

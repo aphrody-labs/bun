@@ -2,7 +2,7 @@
 // Modified for Bun; see provenance.json for the owner revision and adaptations.
 //! The owner in-memory graph, independent of database and profile storage.
 
-use std::collections::HashMap;
+use crate::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
@@ -60,7 +60,7 @@ impl Confidence {
 }
 
 /// A graph node.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Node {
     /// Stable id (unique in the graph).
     pub id: String,

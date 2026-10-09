@@ -3,12 +3,12 @@
 //! Markdown report of a graph (summary, provenance, confidence split, relations, languages,
 //! packages and their dependencies, top files, god nodes, communities).
 
-use std::{
-    collections::{BTreeMap, HashMap},
-    fmt::Write as _,
-};
+use std::{collections::BTreeMap, fmt::Write as _};
 
-use crate::graph::{Confidence, Graph};
+use crate::{
+    collections::{HashMap, HashSet},
+    graph::{Confidence, Graph},
+};
 
 impl Graph {
     /// Render `GRAPH_REPORT.md` for this graph.
@@ -104,7 +104,7 @@ impl Graph {
 
     /// Files ranked by the edges touching their nodes: `(file, nodes, edges)`.
     fn top_files(&self, top: usize) -> Vec<(&str, usize, usize)> {
-        let mut files: HashMap<&str, (usize, usize)> = HashMap::new();
+        let mut files: HashMap<&str, (usize, usize)> = HashMap::default();
         for (i, n) in self.nodes.iter().enumerate() {
             if let Some(file) = n.file.as_deref() {
                 let entry = files.entry(file).or_default();
@@ -126,7 +126,7 @@ impl Graph {
     fn write_languages_and_packages(&self, out: &mut String, top: usize) {
         let mut languages: BTreeMap<&str, (usize, usize)> = BTreeMap::new();
         let mut packages: BTreeMap<&str, (usize, usize)> = BTreeMap::new();
-        let mut files_seen: std::collections::HashSet<&str> = std::collections::HashSet::new();
+        let mut files_seen: HashSet<&str> = HashSet::default();
         for n in &self.nodes {
             let Some(file) = n.file.as_deref() else {
                 continue;
@@ -189,21 +189,22 @@ impl Graph {
 #[cfg(test)]
 mod tests {
     use crate::graph::sample;
+    use crate::text;
 
     #[test]
     fn the_report_summarises_counts_confidence_and_hubs() {
         let mut g = sample();
         g.detect_communities();
         let r = g.report("sample", 5);
-        assert!(r.contains("# Graph Report - sample"));
-        assert!(r.contains("5 nodes, 4 edges"));
-        assert!(r.contains("75 % EXTRACTED, 25 % INFERRED"));
-        assert!(r.contains("INFERRED average confidence: 0.80"));
-        assert!(r.contains("- .upsert_doc() (3 edges)"));
-        assert!(r.contains("- calls: 2"));
-        assert!(r.contains("Built at commit: unknown"));
+        assert!(text::contains(&r, "# Graph Report - sample"));
+        assert!(text::contains(&r, "5 nodes, 4 edges"));
+        assert!(text::contains(&r, "75 % EXTRACTED, 25 % INFERRED"));
+        assert!(text::contains(&r, "INFERRED average confidence: 0.80"));
+        assert!(text::contains(&r, "- .upsert_doc() (3 edges)"));
+        assert!(text::contains(&r, "- calls: 2"));
+        assert!(text::contains(&r, "Built at commit: unknown"));
         assert!(
-            r.contains("## Top files\n- store.rs: 3 nodes, 7 edges"),
+            text::contains(&r, "## Top files\n- store.rs: 3 nodes, 7 edges"),
             "{r}"
         );
     }
@@ -218,11 +219,11 @@ mod tests {
         g.nodes[3].file = Some("sql.rs".into());
         g.meta.built_at_commit = Some("abc123".into());
         let r = g.report("sample", 5);
-        assert!(r.contains("Built at commit: abc123"));
+        assert!(text::contains(&r, "Built at commit: abc123"));
         assert!(
-            r.contains("## Packages (3)\n- rag: 1 files, 3 nodes"),
+            text::contains(&r, "## Packages (3)\n- rag: 1 files, 3 nodes"),
             "{r}"
         );
-        assert!(r.contains("- rag -> sql: 1 edges"), "{r}");
+        assert!(text::contains(&r, "- rag -> sql: 1 edges"), "{r}");
     }
 }

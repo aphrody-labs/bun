@@ -5,12 +5,14 @@
 
 pub mod analyze;
 pub mod api;
+pub mod collections;
 pub mod error;
 pub mod export;
 pub mod extract;
 pub mod graph;
 pub mod query;
 pub mod report;
+pub(crate) mod text;
 
 pub use api::{GraphRequest, GraphResponse, execute, execute_json};
 pub use error::{GraphError, Result};
