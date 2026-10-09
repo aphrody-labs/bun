@@ -1,0 +1,31 @@
+{
+  "name": "@aphrody/bun-icons",
+  "version": "0.1.0",
+  "description": "Bun plugin and helpers for Material Symbols (symbol:home) and ICO imports",
+  "module": "index.ts",
+  "type": "module",
+  "types": "index.ts",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "import": "./index.ts",
+      "default": "./index.ts"
+    },
+    "./register": "./register.ts",
+    "./modules": {
+      "types": "./modules.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.ts",
+    "register.ts",
+    "src",
+    "modules.d.ts",
+    "tsconfig.json",
+    "package.json"
+  ],
+  "devDependencies": {
+    "bun-types": "canary"
+  }
+}
