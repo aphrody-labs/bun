@@ -79,7 +79,7 @@ unsafe fn load_host() -> Result<HostApi, String> {
 
 unsafe fn lookup<T>(library: &DynLib, name: &ZStr) -> Option<T> {
     // SAFETY: caller supplies the exact C ABI function-pointer type for each symbol.
-    unsafe { library.lookup(name) }
+    library.lookup(name)
 }
 
 fn host_error(api: &HostApi, operation: &str, status: i32) -> String {
@@ -226,7 +226,7 @@ pub(crate) fn run_if_configured(arguments: &[&[u8]]) -> bool {
     }
 
     if let Err(error) = run(arguments) {
-        bun_core::pretty_errorln!("<r><red>error<r>: {error}");
+        bun_core::pretty_errorln!("<r><red>error<r>: {}", error);
         Global::exit(1);
     }
     unreachable!("Python host exits the process with CPython's result")
