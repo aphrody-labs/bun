@@ -165,6 +165,10 @@ pub enum HardcodedModule {
     DotenvConfig,
     #[strum(serialize = "uuid")]
     Uuid,
+    #[strum(serialize = "zlib-sync")]
+    ZlibSync,
+    #[strum(serialize = "erlpack")]
+    Erlpack,
     #[strum(serialize = "utf-8-validate")]
     Utf8Validate,
     #[strum(serialize = "node:v8")]
@@ -354,6 +358,8 @@ bun_core::comptime_string_map! {
         b"dotenv" => HardcodedModule::Dotenv,
         b"dotenv/config" => HardcodedModule::DotenvConfig,
         b"uuid" => HardcodedModule::Uuid,
+        b"zlib-sync" => HardcodedModule::ZlibSync,
+        b"erlpack" => HardcodedModule::Erlpack,
         b"utf-8-validate" => HardcodedModule::Utf8Validate,
         b"abort-controller" => HardcodedModule::AbortController,
     };
@@ -886,6 +892,8 @@ const BUN_EXTRA_ALIAS_KVS: &[AliasKv] = &[
     entry!("dotenv"),
     entry!("dotenv/config"),
     entry!("uuid"),
+    entry!("zlib-sync"),
+    entry!("erlpack"),
     (
         b"ws/lib/websocket",
         Alias {
