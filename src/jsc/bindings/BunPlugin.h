@@ -127,5 +127,7 @@ class GlobalObject;
 
 namespace Bun {
 JSC::JSValue runVirtualModule(Zig::GlobalObject*, BunString* specifier, bool& wasModuleMock);
+// What `require()` of the builtin module `specifier` returns while it is mocked, or the empty value.
+JSC::JSValue builtinModuleMockExports(Zig::GlobalObject*, const String& specifier);
 JSC::Structure* createModuleMockStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype);
 }

@@ -86,6 +86,7 @@
 
 #include "ErrorCode.h"
 #include "WebCoreJSBuiltins.h"
+#include "BunPlugin.h"
 
 namespace Bun {
 using namespace JSC;
@@ -1490,6 +1491,10 @@ JSC_DEFINE_HOST_FUNCTION(jsFunctionRequireNativeModule, (JSGlobalObject * lexica
     JSValue specifierValue = callframe->argument(0);
     WTF::String specifier = specifierValue.toWTFString(globalObject);
     RETURN_IF_EXCEPTION(throwScope, {});
+    JSValue mockedExports = Bun::builtinModuleMockExports(globalObject, specifier);
+    RETURN_IF_EXCEPTION(throwScope, {});
+    if (mockedExports)
+        return JSValue::encode(mockedExports);
     ErrorableResolvedSource res;
     BunString specifierStr = Bun::toString(specifier);
     auto result = fetchBuiltinModuleWithoutResolution(globalObject, &specifierStr, &res);

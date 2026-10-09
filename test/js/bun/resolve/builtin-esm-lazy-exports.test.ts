@@ -19,9 +19,11 @@ function kinds(...materialized: (typeof STREAMS)[number][]): Record<string, Kind
 }
 
 // `import fs from "node:fs"` here is itself an import of the module under test; the default export is the
-// exports object, which is also the thing whose property descriptors we inspect.
+// exports object, which is also the thing whose property descriptors we inspect. It is read once, before a test can
+// mock.module() node:fs and so rebind the default export to the mock.
 const helper = `
-  import fs from "node:fs";
+  import fsDefault from "node:fs";
+  const fs = fsDefault;
   export const STREAMS = ${JSON.stringify(STREAMS)};
   export function kinds() {
     return Object.fromEntries(

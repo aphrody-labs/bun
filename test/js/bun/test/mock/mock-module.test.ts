@@ -761,3 +761,55 @@ test.concurrent("jest.resetModules, jest.isolateModules and jest.isolateModulesA
   expect(stderr).toContain(" 0 fail");
   expect(exitCode).toBe(0);
 });
+
+test.concurrent(
+  "require() of a mocked builtin, the default export of a mocked loaded module, static imports after resetModules",
+  async () => {
+    const { stderr, exitCode } = await runJestModuleTest(
+      "jest-mock-builtin-default",
+      {
+        "math-default.js": `export function add(a, b) { return a + b; }\nexport default { kind: "real" };`,
+        "esm-counter.js": `globalThis.esmLoads = (globalThis.esmLoads ?? 0) + 1;\nexport const load = globalThis.esmLoads;`,
+        "limits.test.js": `
+        import { expect, jest, test } from "bun:test";
+        import mathDefault, { add } from "./math-default";
+        import { load as staticLoad } from "./esm-counter";
+
+        test("require() of a mocked builtin returns the mock", () => {
+          const actualHostname = require("node:os").hostname();
+          jest.mock("node:os", () => ({ hostname: () => "mocked-host" }));
+          expect(require("node:os").hostname()).toBe("mocked-host");
+          expect(require("os").hostname()).toBe("mocked-host");
+          expect(jest.requireActual("node:os").hostname()).toBe(actualHostname);
+          jest.unmock("node:os");
+          expect(require("node:os").hostname()).toBe(actualHostname);
+        });
+
+        test("a mock without a default export of its own is the default export of a loaded module", () => {
+          jest.mock("./math-default", () => ({ add: () => 0 }));
+          expect(add(1, 2)).toBe(0);
+          expect(mathDefault.add).toBe(add);
+          jest.mock("./math-default", () => ({ add: () => 1, default: { kind: "mocked" } }));
+          expect(mathDefault).toEqual({ kind: "mocked" });
+          jest.unmock("./math-default");
+          expect(mathDefault).toEqual({ kind: "real" });
+          expect(add(1, 2)).toBe(3);
+        });
+
+        // Jest and Vitest do the same: a static import is linked once, resetModules only affects later loads.
+        test("static imports keep the module they were linked to after resetModules", async () => {
+          expect(staticLoad).toBe(1);
+          jest.resetModules();
+          const fresh = await import("./esm-counter");
+          expect(fresh.load).toBe(2);
+          expect(staticLoad).toBe(1);
+        });
+      `,
+      },
+      "limits.test.js",
+    );
+    expect(stderr).toContain(" 3 pass");
+    expect(stderr).toContain(" 0 fail");
+    expect(exitCode).toBe(0);
+  },
+);

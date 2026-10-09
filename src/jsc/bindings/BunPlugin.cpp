@@ -645,8 +645,15 @@ static void overrideLoadedModuleExports(Zig::GlobalObject* globalObject, const L
             throwOutOfMemoryError(globalObject, scope);
             return;
         }
+        bool hasDefault = false;
         for (size_t i = 0; i < names.size(); ++i) {
+            hasDefault |= names[i] == vm.propertyNames->defaultKeyword;
             moduleNamespaceObject->overrideExportValue(globalObject, names[i], values.at(i));
+            RETURN_IF_EXCEPTION(scope, );
+        }
+        // Without a `default` of its own, the mock is the default export, as Jest and Babel's interop make it.
+        if (!hasDefault) {
+            moduleNamespaceObject->overrideExportValue(globalObject, vm.propertyNames->defaultKeyword, exports);
             RETURN_IF_EXCEPTION(scope, );
         }
     }
@@ -1880,6 +1887,46 @@ JSC::JSValue runVirtualModule(Zig::GlobalObject* globalObject, BunString* specif
     }
 
     return fallback();
+}
+
+JSC::JSValue builtinModuleMockExports(Zig::GlobalObject* globalObject, const String& specifier)
+{
+    auto& plugins = globalObject->onLoadPlugins;
+    if (!plugins.hasVirtualModules())
+        return {};
+    auto& vm = JSC::getVM(globalObject);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    String key = specifier;
+    Zig::JSModuleMock* mock = Zig::registeredModuleMock(globalObject, key);
+    if (!mock && specifier.startsWith("node:"_s)) {
+        key = specifier.substring(5);
+        mock = Zig::registeredModuleMock(globalObject, key);
+    }
+    if (!mock || plugins.actualModuleRequests.contains(key))
+        return {};
+
+    JSC::JSValue result = mock->executeOnce(globalObject);
+    RETURN_IF_EXCEPTION(scope, {});
+    if (auto* promise = dynamicDowncast<JSC::JSPromise>(result)) {
+        switch (promise->status()) {
+        case JSC::JSPromise::Status::Fulfilled:
+            result = promise->result();
+            break;
+        case JSC::JSPromise::Status::Rejected:
+            promise->markAsHandled();
+            scope.throwException(globalObject, promise->result());
+            return {};
+        case JSC::JSPromise::Status::Pending:
+            JSC::throwTypeError(globalObject, scope, makeString("require(\""_s, specifier, "\"): the factory of its mock has not settled yet"_s));
+            return {};
+        }
+    }
+    if (!result.isObject()) {
+        Zig::throwFactoryMustReturnObject(globalObject, scope);
+        return {};
+    }
+    return result;
 }
 
 } // namespace Bun
