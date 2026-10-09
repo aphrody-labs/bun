@@ -144,6 +144,7 @@
               "/runtime/environment-variables",
               "/runtime/shell",
               "/runtime/buv",
+              "/runtime/python",
               "/runtime/child-process",
               "/runtime/webview",
               "/runtime/cron"

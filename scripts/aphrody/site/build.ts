@@ -8,8 +8,17 @@
 //
 // --src pointe sur un arbre extrait (git archive) ou sur le dépôt lui-même (défaut). La publication
 // (scripts/aphrody/site/publish.ts) extrait origin/main et appelle ce script depuis l'arbre extrait.
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
+import { HIGHLIGHT_CSS, highlightHtml } from "./highlight.ts";
 import { CSS, JS, shell, type NavLink } from "./layout.ts";
 import {
   absolutizeMarkdownLinks,
@@ -52,10 +61,12 @@ export function readNavigation(docsJson: any): { tabs: NavTab[]; pages: PageInfo
 }
 
 /** Markdown brut d'une page : `/docs/index.md`, `/docs/runtime.md` (runtime/index), `/docs/runtime/http/server.md`. */
-export const markdownUrl = (slug: string) => (slug === "index" ? "/docs/index.md" : pageUrl(slug) + ".md");
+export const markdownUrl = (slug: string) =>
+  slug === "index" ? "/docs/index.md" : pageUrl(slug) + ".md";
 
 /** URL publique d'une page : `/docs`, `/docs/runtime` (runtime/index), `/docs/runtime/http/server`. */
-export const pageUrl = (slug: string) => "/docs" + ("/" + slug).replace(/\/index$/, "").replace(/^\/$/, "");
+export const pageUrl = (slug: string) =>
+  "/docs" + ("/" + slug).replace(/\/index$/, "").replace(/^\/$/, "");
 
 // ---------------------------------------------------------------------------------------------------------------
 // Petits utilitaires
@@ -139,7 +150,10 @@ export function parseSums(text: string): Map<string, string> {
 
 async function fetchReleases(repo: string): Promise<Release[]> {
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-  const headers: Record<string, string> = { accept: "application/vnd.github+json", "user-agent": "aphrody-site" };
+  const headers: Record<string, string> = {
+    accept: "application/vnd.github+json",
+    "user-agent": "aphrody-site",
+  };
   if (token) headers.authorization = `Bearer ${token}`;
   const res = await fetch(`https://api.github.com/repos/${repo}/releases?per_page=30`, { headers });
   if (!res.ok) throw new Error(`GitHub releases ${repo}: HTTP ${res.status}`);
@@ -154,11 +168,15 @@ async function fetchReleases(repo: string): Promise<Release[]> {
       publishedAt: r.published_at,
       body: r.body ?? "",
       prerelease: !!r.prerelease,
-      assets: r.assets.map((a: any) => ({ name: a.name, url: a.browser_download_url, size: a.size })),
+      assets: r.assets.map((a: any) => ({
+        name: a.name,
+        url: a.browser_download_url,
+        size: a.size,
+      })),
     };
-    const sums = release.assets.find(a => /^SHA256SUMS(\.txt)?$/.test(a.name));
+    const sums = release.assets.find((a) => /^SHA256SUMS(\.txt)?$/.test(a.name));
     if (sums) {
-      const text = await fetch(sums.url, { headers: { "user-agent": "aphrody-site" } }).then(x =>
+      const text = await fetch(sums.url, { headers: { "user-agent": "aphrody-site" } }).then((x) =>
         x.ok ? x.text() : "",
       );
       const map = parseSums(text);
@@ -171,7 +189,9 @@ async function fetchReleases(repo: string): Promise<Release[]> {
 
 /** `bun-linux-x64-musl-baseline-profile.zip` -> os, arch, variantes. */
 export function describeAsset(name: string) {
-  const m = /^bun-(linux|darwin|windows)-(x64|aarch64)((?:-musl|-baseline|-profile)*)\.zip$/.exec(name);
+  const m = /^bun-(linux|darwin|windows)-(x64|aarch64)((?:-musl|-baseline|-profile)*)\.zip$/.exec(
+    name,
+  );
   if (!m) return null;
   const flags = m[3]!.split("-").filter(Boolean);
   return {
@@ -218,9 +238,9 @@ type PerfReport = { platform: string; report: any };
 function loadPerfReports(dir: string | undefined): PerfReport[] {
   if (!dir || !existsSync(dir)) return [];
   return walk(dir)
-    .filter(p => p.endsWith("perf-report.json"))
+    .filter((p) => p.endsWith("perf-report.json"))
     .sort()
-    .map(p => ({
+    .map((p) => ({
       platform: relative(dir, dirname(p)).replace(/^perf-report-?/, "") || "report",
       report: JSON.parse(readFileSync(p, "utf8")),
     }));
@@ -230,7 +250,7 @@ export function renderPerfTable({ platform, report }: PerfReport): string {
   const m = report.meta ?? {};
   const rows = (report.rows ?? []) as any[];
   const body = rows
-    .map(r => {
+    .map((r) => {
       const label = inlineCode(PERF_LABELS[r.id] ?? r.label ?? r.id);
       const ratio = typeof r.ratio === "number" ? r.ratio.toFixed(3) : "";
       const status =
@@ -285,7 +305,7 @@ export async function build(o: BuildOptions) {
   const rendered: Rendered[] = [];
   const titles = new Map<string, string>();
   for (const p of pages) {
-    const file = [".mdx", ".md"].map(e => join(docs, p.slug + e)).find(f => existsSync(f));
+    const file = [".mdx", ".md"].map((e) => join(docs, p.slug + e)).find((f) => existsSync(f));
     if (!file) continue;
     const { data, body } = parseFrontmatter(readFileSync(file, "utf8"));
     const title = String(data.title ?? p.slug.split("/").pop());
@@ -298,7 +318,7 @@ export async function build(o: BuildOptions) {
       file: relative(o.src, file).replaceAll("\\", "/"),
     });
   }
-  const bySlug = new Map(rendered.map(r => [r.slug, r]));
+  const bySlug = new Map(rendered.map((r) => [r.slug, r]));
 
   // Onglets du haut
   const tabHref = (t: NavTab) => {
@@ -316,17 +336,19 @@ export async function build(o: BuildOptions) {
     }
   };
   const topTabs = (active?: string): NavLink[] => [
-    ...tabs.filter(t => t.tab !== "Feedback").map(t => ({ label: t.tab, href: tabHref(t), active: t.tab === active })),
+    ...tabs
+      .filter((t) => t.tab !== "Feedback")
+      .map((t) => ({ label: t.tab, href: tabHref(t), active: t.tab === active })),
     { label: "Benchmarks", href: "/benchmarks", active: active === "Benchmarks" },
     { label: "Downloads", href: "/downloads", active: active === "Downloads" },
   ];
 
   const sidebarFor = (tabName: string, current: string) => {
-    const tab = tabs.find(t => t.tab === tabName);
+    const tab = tabs.find((t) => t.tab === tabName);
     if (!tab) return "";
     const items = (list: (string | NavGroup)[]): string =>
       list
-        .map(item => {
+        .map((item) => {
           if (typeof item === "string") {
             if (!bySlug.has(item)) return "";
             return `<li><a href="${pageUrl(item)}"${item === current ? ' aria-current="page"' : ""}>${escapeHtml(titles.get(item) ?? item)}</a></li>`;
@@ -334,20 +356,26 @@ export async function build(o: BuildOptions) {
           return `<li><span class="muted">${escapeHtml(item.group)}</span><ul>${items(item.items)}</ul></li>`;
         })
         .join("");
-    return tab.groups.map(g => `<p>${escapeHtml(g.group)}</p><ul>${items(g.items)}</ul>`).join("");
+    return tab.groups
+      .map((g) => `<p>${escapeHtml(g.group)}</p><ul>${items(g.items)}</ul>`)
+      .join("");
   };
 
   // Liste des guides (remplace <GuidesList />)
-  const guidesTab = tabs.find(t => t.tab === "Guides");
+  const guidesTab = tabs.find((t) => t.tab === "Guides");
   const guidesHtml = guidesTab
     ? guidesTab.groups
-        .filter(g => g.items.some(i => typeof i === "string" && i !== "guides/index" && bySlug.has(i)))
+        .filter((g) =>
+          g.items.some((i) => typeof i === "string" && i !== "guides/index" && bySlug.has(i)),
+        )
         .map(
-          g =>
+          (g) =>
             `<h2 id="${escapeHtml(g.group.toLowerCase().replace(/[^a-z0-9]+/g, "-"))}">${escapeHtml(g.group)}</h2><div class="card-group">${g.items
-              .filter((i): i is string => typeof i === "string" && i !== "guides/index" && bySlug.has(i))
+              .filter(
+                (i): i is string => typeof i === "string" && i !== "guides/index" && bySlug.has(i),
+              )
               .map(
-                i =>
+                (i) =>
                   `<div class="card"><p class="card-title"><a href="${pageUrl(i)}">${escapeHtml(bySlug.get(i)!.title)}</a></p><p class="muted">${escapeHtml(bySlug.get(i)!.description)}</p></div>`,
               )
               .join("")}</div>`,
@@ -362,7 +390,7 @@ export async function build(o: BuildOptions) {
   for (let i = 0; i < ordered.length; i++) {
     const p = ordered[i]!;
     const md = mdxToHtmlMarkdown(p.markdown, ctx);
-    let html = prefixDocsLinks(Bun.markdown.html(md, { headings: { ids: true } }));
+    let html = highlightHtml(prefixDocsLinks(Bun.markdown.html(md, { headings: { ids: true } })));
     html = html.replace(/<h1 id="[^"]*">[\s\S]*?<\/h1>\n?/, (h, offset) => (offset < 4 ? "" : h));
     const toc = extractToc(html);
     const url = pageUrl(p.slug);
@@ -392,13 +420,14 @@ ${pager}`;
     );
     const markdown = pageMarkdown(p, o.origin);
     write(join(o.out, "docs", p.slug + ".md"), markdown);
-    if (p.slug.endsWith("/index")) write(join(o.out, "docs", p.slug.slice(0, -6) + ".md"), markdown);
+    if (p.slug.endsWith("/index"))
+      write(join(o.out, "docs", p.slug.slice(0, -6) + ".md"), markdown);
     search.push({
       t: p.title,
       d: p.description,
       u: url,
       g: p.group,
-      h: toc.map(h => h.text),
+      h: toc.map((h) => h.text),
       x: textOf(html).slice(0, 240),
     });
   }
@@ -419,7 +448,7 @@ ${pager}`;
     "## Docs",
     "",
     ...ordered.map(
-      p =>
+      (p) =>
         `- [${p.title}](${o.origin}${markdownUrl(p.slug)})${p.description ? `: ${p.description.replace(/\s+/g, " ")}` : ""}`,
     ),
     "",
@@ -439,7 +468,7 @@ ${pager}`;
     join(o.out, "llms-full.txt"),
     ordered
       .map(
-        p =>
+        (p) =>
           `# ${p.title}\nSource: ${o.origin}${pageUrl(p.slug)}\n\n${p.description ? p.description + "\n\n" : ""}${absolutizeMarkdownLinks(p.markdown, o.origin)}\n`,
       )
       .join("\n"),
@@ -450,15 +479,16 @@ ${pager}`;
 
   // Releases, téléchargements et notes de version
   const releases = o.releases;
-  const latest = releases?.find(r => !r.prerelease) ?? releases?.[0];
+  const latest = releases?.find((r) => !r.prerelease) ?? releases?.[0];
   write(
     join(o.out, "downloads", "index.html"),
     shell({
       origin: o.origin,
       path: "/downloads",
       title: "Downloads - Bun (Aphrody fork)",
-      description: "Download Bun (Aphrody fork) for Linux, macOS and Windows, with SHA-256 checksums.",
-      body: renderDownloads(releases, latest, o),
+      description:
+        "Download Bun (Aphrody fork) for Linux, macOS and Windows, with SHA-256 checksums.",
+      body: highlightHtml(renderDownloads(releases, latest, o)),
       tabs: topTabs("Downloads"),
     }),
   );
@@ -482,10 +512,11 @@ ${pager}`;
       origin: o.origin,
       path: "/benchmarks",
       title: "Benchmarks - Bun (Aphrody fork)",
-      description: "Measured performance of the Aphrody fork of Bun against upstream Bun, and how to reproduce it.",
-      body: renderBenchmarks(reports, o),
+      description:
+        "Measured performance of the Aphrody fork of Bun against upstream Bun, and how to reproduce it.",
+      body: highlightHtml(renderBenchmarks(reports, o)),
       tabs: topTabs("Benchmarks"),
-      toc: reports.map(r => ({ level: 2, id: r.platform, text: r.platform })),
+      toc: reports.map((r) => ({ level: 2, id: r.platform, text: r.platform })),
     }),
   );
 
@@ -532,16 +563,26 @@ ${pager}`;
     }),
   );
   write(join(o.out, "robots.txt"), `User-agent: *\nAllow: /\n\nSitemap: ${o.origin}/sitemap.xml\n`);
-  const urls = ["/", "/docs", "/benchmarks", "/downloads", "/blog", ...ordered.map(p => pageUrl(p.slug))];
+  const urls = [
+    "/",
+    "/docs",
+    "/benchmarks",
+    "/downloads",
+    "/blog",
+    ...ordered.map((p) => pageUrl(p.slug)),
+  ];
   write(
     join(o.out, "sitemap.xml"),
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[
       ...new Set(urls),
     ]
-      .map(u => `<url><loc>${escapeHtml(o.origin + u)}</loc><lastmod>${now.slice(0, 10)}</lastmod></url>`)
+      .map(
+        (u) =>
+          `<url><loc>${escapeHtml(o.origin + u)}</loc><lastmod>${now.slice(0, 10)}</lastmod></url>`,
+      )
       .join("\n")}\n</urlset>\n`,
   );
-  write(join(o.out, "assets", "site.css"), CSS);
+  write(join(o.out, "assets", "site.css"), CSS + HIGHLIGHT_CSS);
   write(join(o.out, "assets", "site.js"), JS);
   write(
     join(o.out, "site.json"),
@@ -553,7 +594,7 @@ ${pager}`;
         commit: o.commit,
         pages: ordered.length,
         latestRelease: latest?.tag ?? null,
-        perfReports: reports.map(r => r.platform),
+        perfReports: reports.map((r) => r.platform),
         scripts: served,
       },
       null,
@@ -568,10 +609,18 @@ ${pager}`;
     if (data.length < 1024) continue;
     write(file + ".gz", Bun.gzipSync(data, { level: 9 }));
   }
-  return { pages: ordered.length, latest: latest?.tag ?? null, reports: reports.length, scripts: served };
+  return {
+    pages: ordered.length,
+    latest: latest?.tag ?? null,
+    reports: reports.length,
+    scripts: served,
+  };
 }
 
-export function pageMarkdown(p: { title: string; description: string; markdown: string }, origin: string): string {
+export function pageMarkdown(
+  p: { title: string; description: string; markdown: string },
+  origin: string,
+): string {
   return `# ${p.title}\n\n${p.description ? `> ${p.description.replace(/\s+/g, " ")}\n\n` : ""}${absolutizeMarkdownLinks(p.markdown, origin)}\n`;
 }
 
@@ -614,7 +663,11 @@ ${tile("Releases", "Release notes", "Every release of the fork, from GitHub.", "
 </div>`;
 }
 
-function renderDownloads(releases: Release[] | null, latest: Release | undefined, o: BuildOptions): string {
+function renderDownloads(
+  releases: Release[] | null,
+  latest: Release | undefined,
+  o: BuildOptions,
+): string {
   const head = `<h1>Downloads</h1><p class="lead">Release builds of Bun (Aphrody fork) from <a href="https://github.com/${o.repo}/releases">GitHub releases</a>. Every archive is listed with its SHA-256 from the release <code>SHA256SUMS.txt</code>.</p>
 ${installCommands(o.origin)}`;
   if (!releases || !latest)
@@ -636,18 +689,18 @@ ${installCommands(o.origin)}`;
     const key = osName[d.os];
     groups.set(key, [...(groups.get(key) ?? []), row]);
   }
-  const sums = latest.assets.find(a => a.name.startsWith("SHA256SUMS"));
+  const sums = latest.assets.find((a) => a.name.startsWith("SHA256SUMS"));
   const tables = ["Linux", "macOS", "Windows"]
-    .filter(k => groups.has(k))
+    .filter((k) => groups.has(k))
     .map(
-      k =>
+      (k) =>
         `<h3 id="${k.toLowerCase()}">${k}</h3><table><thead><tr><th>Archive</th><th>Target</th><th class="num">Size</th><th>SHA-256</th></tr></thead><tbody>${groups.get(k)!.join("")}</tbody></table>`,
     )
     .join("");
   const older = releases
-    .filter(r => r !== latest)
+    .filter((r) => r !== latest)
     .map(
-      r =>
+      (r) =>
         `<li><a href="${escapeHtml(r.url)}">${escapeHtml(r.tag)}</a> <span class="muted">${escapeHtml(r.publishedAt.slice(0, 10))}</span></li>`,
     )
     .join("");
@@ -673,7 +726,7 @@ function renderBlog(releases: Release[] | null, o: BuildOptions): string {
   return `<h1>Release notes</h1><p class="lead">Releases of the aphrody-labs/bun fork. Upstream release notes are on <a href="https://bun.com/blog">bun.com/blog</a>.</p>
 ${releases
   .map(
-    r =>
+    (r) =>
       `<article><h2 id="${escapeHtml(r.tag)}"><a href="${escapeHtml(r.url)}">${escapeHtml(r.name)}</a></h2><p class="muted">${escapeHtml(r.publishedAt.slice(0, 10))} · ${r.assets.length} assets</p>${
         r.body.trim()
           ? Bun.markdown.html(r.body, { headings: { ids: false }, tagFilter: true } as any)

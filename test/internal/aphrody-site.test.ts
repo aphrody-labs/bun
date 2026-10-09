@@ -9,7 +9,8 @@ import {
   parseFenceInfo,
   rewriteUpstreamUrls,
 } from "../../scripts/aphrody/site/mdx.ts";
-import { flipScript, parseTarget, releaseId } from "../../scripts/aphrody/site/publish.ts";
+import { highlight, highlightHtml } from "../../scripts/aphrody/site/highlight.ts";
+import { flipScript, parseTarget, releaseId, sameStamp } from "../../scripts/aphrody/site/publish.ts";
 
 const ctx = { link: (href: string) => href };
 
@@ -132,7 +133,40 @@ describe("site build helpers", () => {
   });
 });
 
+describe("site highlight", () => {
+  test("tokens per language, escaped output", () => {
+    expect(highlight('const a = await fetch("<x>"); // c', "ts")).toBe(
+      '<span class="hl-k">const</span> a = <span class="hl-k">await</span> <span class="hl-f">fetch</span>(<span class="hl-s">"&lt;x&gt;"</span>); <span class="hl-c">// c</span>',
+    );
+    expect(highlight("bun install --frozen-lockfile # c", "bash")).toBe(
+      '<span class="hl-f">bun</span> install <span class="hl-a">--frozen-lockfile</span> <span class="hl-c"># c</span>',
+    );
+    expect(highlight("[install]\nfrozen = true", "toml")).toBe(
+      '<span class="hl-t">[install]</span>\n<span class="hl-p">frozen</span> = <span class="hl-l">true</span>',
+    );
+    expect(highlight("def f(): return None", "python")).toBe(
+      '<span class="hl-k">def</span> <span class="hl-f">f</span>(): <span class="hl-k">return</span> <span class="hl-l">None</span>',
+    );
+    expect(highlight("plain", "txt")).toBeUndefined();
+  });
+
+  test("rewrites only language-tagged blocks of rendered HTML", () => {
+    const html = Bun.markdown.html('```json\n{ "a": 1 }\n```\n\n```\n<raw>\n```\n');
+    expect(highlightHtml(html)).toBe(
+      '<pre><code class="language-json">{ <span class="hl-p">"a"</span>: <span class="hl-n">1</span> }\n</code></pre>\n<pre><code>&lt;raw&gt;\n</code></pre>\n',
+    );
+  });
+});
+
 describe("site publish", () => {
+  test("publication stamp comparison", () => {
+    const stamp = { commit: "abc", release: "aphrody-v1#25", perfRun: 7 };
+    expect(sameStamp(null, stamp)).toBe(false);
+    expect(sameStamp({ ...stamp }, stamp)).toBe(true);
+    expect(sameStamp({ ...stamp, release: "aphrody-v1#26" }, stamp)).toBe(false);
+    expect(sameStamp({ ...stamp, perfRun: 8 }, stamp)).toBe(false);
+  });
+
   test("targets and release ids", () => {
     expect(parseTarget("dbfr")).toEqual({ kind: "ssh", host: "dbfr", base: "/srv/aphrody-downloads/site" });
     expect(() => parseTarget("ssh:a;b")).toThrow();

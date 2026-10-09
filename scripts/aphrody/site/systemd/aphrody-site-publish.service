@@ -1,0 +1,17 @@
+# Republie aphrody.com quand origin/main d'aphrody-labs/bun, la dernière release ou le dernier run aphrody-perf change.
+# Installation (VPS, utilisateur ubuntu) : voir scripts/aphrody/site/systemd/aphrody-site-publish.timer.
+[Unit]
+Description=Publication du site aphrody.com (si origin/main, release ou perf ont changé)
+After=network-online.target
+
+[Service]
+Type=oneshot
+Environment=PATH=%h/.bun/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.local/bin/aphrody-site-publish
+Nice=19
+IOSchedulingClass=idle
+CPUWeight=10
+IOWeight=10
+MemoryHigh=2G
+MemoryMax=4G
+TimeoutStartSec=30min

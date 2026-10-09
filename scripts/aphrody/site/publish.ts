@@ -4,14 +4,15 @@
 // `ssh <host>` dans <base>/releases/<UTC>-<sha12> et bascule atomique de <base>/current (5 releases gardées).
 //
 //   bun scripts/aphrody/site/publish.ts [--git <checkout du fork>] [--ref origin/main] [--to ssh:dbfr | local:<base>] [--keep 5]
-//       [--perf <dossier> | --no-perf] [--offline] [--dry-run]
+//       [--perf <dossier> | --no-perf] [--offline] [--dry-run] [--if-changed]
+// --if-changed ne fait rien si <base>/current/publish.json porte déjà le même commit, la même release et le même run perf.
 //   bun scripts/aphrody/site/publish.ts rollback [--to ...] [--release <id>]   # défaut : la release précédente
 //   bun scripts/aphrody/site/publish.ts status [--to ...]
 //
 // Côté serveur, aphrody-downloads (C:\aphrody packages/infra/workspace/src/downloads/server.ts) sert
 // <base>/current pour les hôtes aphrody.com et www.aphrody.com. Chaque action est journalisée dans
 // ~/.coord-dbfr.log de l'hôte cible.
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -84,7 +85,12 @@ function listReleases(target: Target): { current: string; releases: string[] } {
   };
 }
 
-async function latestPerf(dir: string): Promise<string | undefined> {
+/** Ce qui détermine le contenu publié : rien n'est republié tant que ces trois valeurs ne changent pas. */
+export type Stamp = { commit: string; release: string | null; perfRun: number | null };
+export const sameStamp = (a: Stamp | null, b: Stamp) =>
+  !!a && a.commit === b.commit && a.release === b.release && a.perfRun === b.perfRun;
+
+function latestPerfRun(): { id: number; url: string } | null {
   const list = JSON.parse(
     run([
       "gh",
@@ -102,9 +108,29 @@ async function latestPerf(dir: string): Promise<string | undefined> {
       "databaseId,url",
     ]),
   ) as { databaseId: number; url: string }[];
-  if (!list[0]) return;
-  run(["gh", "run", "download", String(list[0].databaseId), "-R", REPO, "-D", dir]);
-  return list[0].url;
+  return list[0] ? { id: list[0].databaseId, url: list[0].url } : null;
+}
+
+/** Dernière release publiée du fork (`aphrody-v*`, hors brouillon) et son nombre d'assets, ou null. */
+function latestRelease(): string | null {
+  const out = run([
+    "gh",
+    "api",
+    `repos/${REPO}/releases?per_page=20`,
+    "--jq",
+    '[.[] | select((.draft | not) and (.tag_name | startswith("aphrody-v")))][0] | "\\(.tag_name)#\\(.assets | length)"',
+  ]);
+  return out && out !== "null" ? out : null;
+}
+
+function remoteStamp(target: Target): Stamp | null {
+  try {
+    return JSON.parse(
+      remote(target, `cat ${shq(`${target.base}/current/publish.json`)} 2>/dev/null || echo null`),
+    );
+  } catch {
+    return null;
+  }
 }
 
 async function publish(args: string[], target: Target) {
@@ -115,8 +141,34 @@ async function publish(args: string[], target: Target) {
   const repoDir = resolve(option("--git") ?? join(import.meta.dir, "..", "..", ".."));
   const ref = option("--ref") ?? "origin/main";
   const keep = Number(option("--keep") ?? 5);
+  const ifChanged = args.includes("--if-changed");
   if (ref.startsWith("origin/")) run(["git", "-C", repoDir, "fetch", "-q", "origin", ref.slice(7)]);
   const sha = run(["git", "-C", repoDir, "rev-parse", `${ref}^{commit}`]);
+
+  // En mode --if-changed, une requête GitHub en échec arrête tout plutôt que de publier un site dégradé.
+  const query = <T>(what: string, fn: () => T): T | null => {
+    try {
+      return fn();
+    } catch (error) {
+      if (ifChanged) throw error;
+      console.warn(`${what} : ${(error as Error).message}`);
+      return null;
+    }
+  };
+  const perfRun =
+    option("--perf") || args.includes("--no-perf") ? null : query("perf", latestPerfRun);
+  const stamp: Stamp = {
+    commit: sha,
+    release: args.includes("--offline") ? null : query("releases", latestRelease),
+    perfRun: perfRun?.id ?? null,
+  };
+  if (ifChanged && sameStamp(remoteStamp(target), stamp)) {
+    console.log(
+      `à jour : ${sha.slice(0, 12)}, release ${stamp.release ?? "aucune"}, perf ${stamp.perfRun ?? "aucun"}`,
+    );
+    return;
+  }
+
   const work = mkdtempSync(join(tmpdir(), "aphrody-site-"));
   try {
     const src = join(work, "src");
@@ -147,20 +199,15 @@ async function publish(args: string[], target: Target) {
       sha,
     ];
     let perf = option("--perf");
-    let perfRun: string | undefined;
-    if (!perf && !args.includes("--no-perf")) {
+    if (perfRun) {
       perf = join(work, "perf");
-      try {
-        perfRun = await latestPerf(perf);
-      } catch (error) {
-        console.warn(`perf : ${(error as Error).message} (page benchmarks sans mesures)`);
-        perf = undefined;
-      }
+      run(["gh", "run", "download", String(perfRun.id), "-R", REPO, "-D", perf]);
+      build.push("--perf-run", perfRun.url);
     }
     if (perf) build.push("--perf", perf);
-    if (perfRun) build.push("--perf-run", perfRun);
     if (args.includes("--offline")) build.push("--offline");
     console.log(run(build, { cwd: src }));
+    writeFileSync(join(out, "publish.json"), JSON.stringify(stamp) + "\n");
 
     const id = releaseId(sha);
     if (args.includes("--dry-run")) return console.log(`dry-run : ${out} prêt pour ${id}`);

@@ -1,0 +1,12 @@
+# install -m 0755 scripts/aphrody/site/auto-publish.sh ~/.local/bin/aphrody-site-publish
+# install -m 0644 scripts/aphrody/site/systemd/aphrody-site-publish.{service,timer} ~/.config/systemd/user/
+# systemctl --user daemon-reload && systemctl --user enable --now aphrody-site-publish.timer
+[Unit]
+Description=Publication du site aphrody.com toutes les 15 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitInactiveSec=15min
+
+[Install]
+WantedBy=timers.target

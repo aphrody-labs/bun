@@ -1,0 +1,146 @@
+---
+title: Python
+description: Run Python files and the python CLI through a CPython host, embed CPython in the JavaScript process with bun:python, and compile Python with bun compile
+---
+
+Bun runs Python through a separately installed CPython host library (`bun_python_host`, ABI 1) that it loads on demand. JavaScript that never touches Python never loads it. Once the host is configured, `bun app.py` and `bun python` run CPython in the Bun process, and `bun:python` calls the same interpreter from JavaScript. Python packages and projects are managed with the embedded UV (see [Buv and PyJS](/runtime/buv)).
+
+```sh terminal icon="terminal"
+export BUN_PYTHON_HOST_LIBRARY=/opt/bun-python/lib/libbun_python_host.so
+export BUN_PYTHON_LIBPYTHON=/opt/python/lib/libpython3.13.so
+bun app.py --flag            # a Python file, arguments passed through
+bun python -c "print('hi')"  # the python CLI: -c, -m, - (stdin)
+```
+
+---
+
+## Configure the host
+
+Python dispatch is enabled only when `BUN_PYTHON_HOST_LIBRARY` is set. Without it, `.py` files go through the normal Bun resolution and JavaScript keeps its usual startup.
+
+| Variable                                       | Purpose                                                                                                         |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `BUN_PYTHON_HOST_LIBRARY`                      | Path to the `bun_python_host` shared library. Required. Its `bun_py_abi_version()` must return `1`.            |
+| `BUN_PYTHON_LIBPYTHON`                         | Path to the CPython shared library (`libpython3.x.so`, `.dylib` or `python3x.dll`). Required for `.py` dispatch. |
+| `BUN_PYTHON_EXECUTABLE`                        | Explicit `sys.executable`. Takes precedence over the two below.                                                 |
+| `VIRTUAL_ENV`                                  | An activated virtual environment: `bin/python` (`Scripts/python.exe` on Windows) becomes `sys.executable`.      |
+| `BUV_RUNTIME`                                  | A CPython prefix (`bin/python3`, or `python.exe` on Windows). On Linux and macOS it is otherwise derived from the `lib/` directory of `BUN_PYTHON_LIBPYTHON`. |
+
+On Windows, set `BUV_RUNTIME` or `BUN_PYTHON_EXECUTABLE`, or activate a virtual environment: the prefix cannot be derived from the DLL path.
+
+## Run Python files and the CLI
+
+A path ending in `.py` or `.pyw` runs in CPython, with Unicode arguments, `sys.argv`, the script directory on `sys.path`, the selected interpreter and the exit status preserved. `bun python` (or `bun python3`) accepts CPython's command line.
+
+```sh terminal icon="terminal"
+bun ./script.py été🐍                 # sys.argv[1] == "été🐍"
+bun run script.py                     # same through bun run
+bun python -c "import sys; print(sys.version)"
+bun python -m http.server 8000
+echo "print('from stdin')" | bun python -
+```
+
+Tracebacks are printed by CPython and an uncaught exception exits with a non-zero status. A missing or incompatible host fails before any Python source is evaluated.
+
+## Embed CPython with `bun:python`
+
+`bun:python` loads the host through `bun:ffi` and runs code in the `__main__` module of an interpreter inside the current process (`os.getpid()` equals `process.pid`). The modules `buv:python` and `pyjs:python` are aliases.
+
+```ts title="python.ts" icon="/icons/typescript.svg"
+import { Python, PythonError } from "bun:python";
+
+using py = Python.open();
+console.log(py.version()); // Py_GetVersion()
+
+py.exec`import math; value = {"text": "café🐍", "n": 42}`;
+console.log(py.evalJSON("value")); // { text: "café🐍", n: 42 }
+console.log(py.eval("math.sqrt(2)")); // "1.4142135623730951" (str() of the result)
+console.log(py.call("platform", "system")); // module.function(), returns str()
+
+try {
+  py.eval("1 / 0");
+} catch (error) {
+  if (error instanceof PythonError) console.log(error.status, error.message); // -4, "... division by zero"
+}
+```
+
+| Method                       | Description                                                                                                          |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `Python.open(options?)`      | Loads the host and initialises the interpreter, or attaches to a running one. `started` tells whether this handle owns it. |
+| `run(code)`, ``exec`code` `` | Runs statements in `__main__`. The tagged template takes raw source and refuses interpolation.                      |
+| `eval(expression)`           | Evaluates an expression and returns `str(result)`.                                                                   |
+| `evalJSON(expression)`       | Evaluates an expression, serialises it with Python's `json` module and parses it in JavaScript.                     |
+| `call(module, fn, arg?)`     | Calls `module.fn(arg)` (without an argument when `arg` is omitted) and returns `str(result)`.                       |
+| `version()`                  | `Py_GetVersion()`.                                                                                                   |
+| `close()` / `using`          | Finalises the interpreter if this handle started it, then closes the host library.                                  |
+
+`Python.open()` options:
+
+- `libraryPath`: a host library to load instead of `BUV_PYTHON_HOST_LIBRARY` / `BUN_PYTHON_HOST_LIBRARY` or a host embedded in a compiled executable.
+- `libpython`: the CPython library, or `null` to use one already loaded. By default it comes from `BUV_PYTHON_LIBPYTHON`, `BUN_PYTHON_LIBPYTHON` or `APHRODY_LIBPYTHON`, then from the active buv artifact (`BUV_RUNTIME`, or `$BUV_HOME/runtime/<target>/current`, default `~/.buv`).
+
+The helpers `pythonHostLibraryPath()`, `buvLibpython()` and `libpythonIn(directory)` expose this resolution.
+
+### Errors
+
+Every failure throws a `PythonError` with a `status` from `PyStatus`:
+
+| `PyStatus`    | Value | Meaning                                                   |
+| ------------- | ----- | --------------------------------------------------------- |
+| `Ok`          | `0`   | success                                                   |
+| `Arg`         | `-1`  | invalid argument (for example a NUL character)            |
+| `Load`        | `-2`  | the host or libpython could not be loaded                 |
+| `State`       | `-3`  | closed handle or interpreter state error                  |
+| `Python`      | `-4`  | a Python exception; the message carries it                |
+| `Panic`       | `-5`  | a panic inside the host                                   |
+| `Unsupported` | `-6`  | host ABI mismatch or unsupported operation                |
+
+### Asynchronous calls
+
+`Python.async()` (or `PythonAsync.open()`) runs the interpreter in a `Worker` of the same process, so long Python calls do not block the event loop. Calls are queued in order (up to 256 pending) and every method returns a promise.
+
+```ts title="async.ts" icon="/icons/typescript.svg"
+import { Python } from "bun:python";
+
+await using py = await Python.async();
+await py.exec`import os; value = 40`;
+const [a, b] = await Promise.all([py.eval("value + 2"), py.eval("value + 3")]);
+console.log(a, b); // "42" "43"
+```
+
+## Compile Python
+
+`bun compile <entry.py>` (also `buv compile` and `pyjs compile`) compiles Python with an isolated native compiler resolved through the embedded UV: Cython 3.3.0 by default, or Nuitka 4.2.2.
+
+```sh terminal icon="terminal"
+bun compile app.py                                  # native executable (Cython)
+bun compile app.py --backend nuitka --onefile       # one-file Nuitka executable
+bun compile mod.py --format shared --module-name mod # CPython extension exporting PyInit_mod
+bun compile app.py --zipapp                         # executable archive
+bun compile --help
+```
+
+| Flag                           | Description                                                          |
+| ------------------------------ | -------------------------------------------------------------------- |
+| `--format exe\|shared\|wasm`   | Product kind. `shared` exports the `PyInit_*` extension ABI.         |
+| `--outfile <path>`             | Output path. An existing product is kept unless `--force` is given.  |
+| `--backend cython\|nuitka`     | Native compiler (default Cython).                                    |
+| `--module-name <name>`         | Import name of the extension and of its `PyInit_*` symbol.           |
+| `--onefile`                    | Nuitka standalone executable in a single file.                       |
+| `--target native\|wasm`        | Cross-platform products require a qualified host.                    |
+| `--bytecode`, `--zipapp`       | Bytecode or executable-archive products.                             |
+| `--db <bun_python.sqlite>`     | Record compilation receipts.                                         |
+| `--offline`                    | Resolve compiler packages from the UV cache only.                    |
+
+`bun build app.py` with the same flags takes the same path.
+
+Cython executables need CPython and its standard library at run time. WASM output needs a real CPython WASI toolchain and fails without one; it never writes a partial artifact. Compilation never overwrites its source file.
+
+## PyJS files
+
+`.pyjs`, `.pyts` and `.pytsx` modules use Bun's JavaScript, TypeScript and TSX loaders. Python code inside them still goes through `bun:python` explicitly.
+
+```ts title="entry.pyts" icon="/icons/typescript.svg"
+import { value } from "./value"; // value.pyjs, value.pyts or value.pytsx
+console.log(value);
+```
