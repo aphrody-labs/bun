@@ -216,11 +216,13 @@ bun run typecheck:packages
      - la branche `aphrody-skills` de `agent-plugin-providers.ts:277-292`.
    - Gates : `W` + `cargo-serial.sh test -p aphrody-config -p aphrody-mcp -p aphrody-a2a-coord -p aphrody-agent-runtime` + `bun test packages/infra/workspace`.
    - Gain : −11 crates, −20 643 LOC.
+   - Statut (G1, 2026-10-09) : ✅ aphrody `90f5899e4d` (suppressions des 11 crates, faites dans Z1) + `6963130884` (références, `ai-release-gate.ts`, branche `aphrody-skills`) ; lock 2555 → 2544. Tests : `cargo test -p aphrody-config -p aphrody-mcp -p aphrody-a2a-coord -p aphrody-agent-runtime` verts (423 + 122 tests). `bun test packages/infra/workspace` : 360 pass, 2 échecs hors lot (contrat bun-workspace sur `apps/web`, `m3/apps/example`, `m3-codemods`, `winclean` : chantier en cours chez un autre agent, `68fe1a3389` ; `bun-native.test.ts` expire à 60 s). Gate `W` complète : en cours sur le VPS (chargé, load ≈ 90), non conclue à cette date ; checks et tests ciblés verts ci-dessous.
 2. **Lot 2. `engine-mistralrs`.**
    - À supprimer : `crates/ai/engine-mistralrs`, ses entrées dans `tools/config/update/rust-doctor.json` et dans `packages/infra/update/test/rust-doctor.test.ts`.
    - Gates : `W` + `bun test packages/infra/update` + `cargo tree -i serde-saphyr` vide.
    - Gain : −118 paquets du lock.
    - Ensuite, chez M-compat : retirer `[patch.crates-io] serde-saphyr` et `crates/compat/serde-saphyr` (36 961 LOC).
+   - Statut (G1, 2026-10-09) : ✅ aphrody `81d968bf69` : `engine-mistralrs`, le patch `serde-saphyr` et `crates/compat/serde-saphyr` retirés (449 fichiers, −42 634 l.) ; lock 2544 → 2390 (−154). `bun test packages/infra/update` vert.
 3. **Lot 3. Vecteurs de `memory`.**
    - Fichiers touchés :
      - supprimer `crates/ai/memory/src/{lancedb.rs, hnsw.rs}` et la feature `memory-lancedb` (`crates/ai/memory/Cargo.toml`) ;
@@ -229,6 +231,7 @@ bun run typecheck:packages
      - regrouper les noyaux dans `crates/ai/rag-core/src/fusion.rs`, à consommer depuis `web-index/src/kernels.rs` et `embed/src/native/{embedder.rs, quantize.rs}`.
    - Gates : `W` + `cargo-serial.sh test -p aphrody-memory -p aphrody-web-index -p aphrody-rag-core -p aphrody-embed` + `cargo check -p aphrody-rag-core --target wasm32-unknown-unknown`.
    - Gain : −126 paquets du lock, ≈−650 LOC.
+   - Statut (G1, 2026-10-09) : ✅ aphrody `75bbbf51e2` : LanceDB retiré, `HnswBackend` sur `aphrody-web-index` (vrai HNSW, groupé par dimension, compaction des pierres tombales) ; tests ajoutés `put_replaces_embedding` et `recall_matches_exact_search` (500 vecteurs, dim 32, top-10, rappel ≥ 0,98) ; `cargo test -p aphrody-memory` 82/82, `cargo check -p aphrody-command -p aphrody-memory --all-targets` vert. Lock 2390 → 2257 (−133), −1 324/+205 l. ⏳ regroupement des noyaux dans `rag-core` : `web-index` et `embed` ne dépendent pas de `rag-core`, qui tire syn, regex, ndarray, blake3 et oxc ; et risque de divergence numérique (AVX2/FMA contre code sûr, seuils EPSILON). À refaire comme une petite crate de noyaux sans dépendance, avec tests de parité.
 4. **Lot 4. ml et ui morts.**
    - À supprimer :
      - `crates/ml/{torch, torch-sys, diffusion, diffusion-sys}` ;
@@ -239,10 +242,12 @@ bun run typecheck:packages
    - Gates : `W` + `cargo-serial.sh test -p aphrody-ml-runtime -p aphrody-llama-server -p aphrody-m3-tokens`.
    - Gain : −8 crates, −80 960 LOC.
    - Avant de commencer : vérifier qu'aucun consommateur externe n'utilise la crate publiée `aphrody-torch`.
+   - Statut (G1, 2026-10-09) : ✅ aphrody `81a89be6af` (124 fichiers, −82 028 l.) ; lock 2257 → 2243. `aphrody-torch`, `-sys`, `diffusion`, `-sys`, `gui-core`, `a2a-ui`, `tauri-specta{,-macros}` : aucune dépendance inverse sur crates.io. `Feature`/`Component` de `ml-runtime` réduits à Llama (+ Cuda/Rocm) ; catalogues `rust-doctor`, `forks.json`, `tauri-upstream.json`, `UPSTREAMS.md` régénéré. Tests : `cargo test -p aphrody-ml-runtime -p aphrody-llama-server -p aphrody-a2a-coord` (122) et `-p aphrody-m3-tokens` verts ; `bun test packages/infra/update` 186 pass. Non touché (modifié par un autre) : `tools/config/product-residue.baseline.json` garde 3 entrées mortes (`crates/ml/torch/README.md`, `dinov2.rs`, `aphrody-tauri-specta/UPSTREAM.md`).
 5. **Lot 5. dragon-pixel hors workspace.**
    - Fichiers touchés : `exclude` de `crates/web/dragon-pixel-*` dans le `Cargo.toml` racine et `Cargo.lock` propre ; `examples/crystal-universe/README.md`.
    - Gates : `W` + `cargo check --manifest-path crates/web/dragon-pixel-wasm/Cargo.toml --target wasm32-unknown-unknown`.
    - Gain : −164 paquets du lock principal.
+   - Statut (G1, 2026-10-09) : ✅ aphrody `274733def6` : `exclude`, trois manifestes autonomes (`[workspace]` vide, lints copiés, `Cargo.lock` propre), `wasm-package.ts --manifest-path` (artefact dans le `target/` du dépôt ; 3 tests ajoutés, 11 pass). Lock 2243 → 2074 (−169, 0 ajout). Gates : `cargo check --manifest-path crates/web/dragon-pixel-wasm/Cargo.toml --target wasm32-unknown-unknown --locked` vert (sous Windows, sans sccache : la ligne de commande de `web-sys` dépasse la limite, os error 206) ; `cargo test --manifest-path crates/web/dragon-pixel-server/Cargo.toml` 5/5.
 6. **Lot 6. Feature `tauri` d'`aphrody-command`.**
    - Fichiers touchés :
      - `crates/infra/aphrody-command/Cargo.toml:153-154`, qui passent `optional` ;

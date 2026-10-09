@@ -210,6 +210,7 @@ Importeurs : `cli-wasm` 2, `paths` 16, `workspace` 6, `update` 18, `http` 0, `fu
      - `scripts/release/tooling-asset.ts` ;
      - `scripts/tools/compat/scripts/n2b` et `scripts/audit/compat`.
    - Gates : `cargo check -p aphrody-ffi`, `bun test packages/engine packages/interop/native` et `bun install --frozen-lockfile`.
+   - Statut (G1, 2026-10-09) : ⏳ non fait. (1) `@aphrody/bun-plugin-oxc` 0.2.0 est publié sans addon ni parser (constat de H2, lot 11 de M-produit) ; la 0.3.0, qui porte transform, minify, lint et l'analyse de module, n'est pas publiée. (2) Pas d'équivalent dans les plugins pour `findNewlinesUtf16`, `probeNativeTooling` et `closeNativeTooling`, exportés par `runtime/src/tooling.ts` et utilisés par `interop/native`, `workspace/src/bun-native.ts:285` et leurs tests. (3) Fichiers du lot en cours chez d'autres : `yolo/src/index.ts` et `workspace_profiles.test.ts` (attend `browser,tooling`) chez H1, `interop/native/test/ffi-drift.test.ts` chez G2. Préalable : publier `@aphrody/bun-plugin-oxc` 0.3.0 avec ses addons (linux gnu/musl, win32).
 7. **Dédup interne à aphrody, sans changement côté fork**
    - Supprimer :
      - `interop/native/src/http.ts` et `infra/workspace/src/http.ts` (`@aphrody/web/http` reste la copie canonique) ;
