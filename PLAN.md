@@ -1,5 +1,7 @@
 # Plan — aphrody-labs/bun, noyau d'Aphrody
 
+> Correction propriétaire du 2026-10-09 : Aphrody et Bun peuvent être développés et construits sur tout hôte qualifié. Sélectionner checkout, cible, outils, ressources et droits selon le contexte ; les chemins Windows ci-dessous sont des exemples du poste courant. Yoyo / aphrody-dev administre tout Aphrody Labs ; Omar administre DBFR. WSL est retiré du workflow du poste actuel.
+
 Plan commun à tous les agents qui travaillent sur ce fork (C:\bun), sur le monorepo Aphrody (C:\aphrody) et sur
 Shenron (C:\shenron). Lis-le en entier avant de commencer, puis mets à jour ta section (statut, commits) à la fin de
 chaque lot. Contexte permanent : [APHRODY.md](APHRODY.md) (ce que le fork fournit à Aphrody),
@@ -36,9 +38,10 @@ chaque lot. Contexte permanent : [APHRODY.md](APHRODY.md) (ce que le fork fourni
    que ce qui est réellement impossible ici, avec la preuve et ce qui a été tenté.
 6. `bun bd` ne se lance **jamais** avec un timeout (arrière-plan si long). Tant que le debug build segfault sous
    Windows (chantier E), les tests JS purs passent par le `bun test` système.
-7. **Pas de VPS** pour les essais : un build Shenron y tourne. Linux = Docker Desktop local (12 CPU / 12 Go),
-   conteneurs `--cpus 6 --memory 6g`, volumes de cache nommés. La stack Shenron locale
-   (`C:\shenron\deploy\docker`) doit rester saine. Builds lourds de release : runners GitHub.
+7. **Hôte selon le contexte** : builds natifs, fabrique SSH, Docker ou runners qualifiés.
+   Respecter les jobs concurrents, allocations, verrous et caches de l'hôte choisi.
+   Le poste courant utilise Windows natif, VPS via SSH ou Docker local Alpine/Ubuntu 26.04 ;
+   DBFR est la destination de déploiement actuelle. Aucun hôte n'est imposé par le produit.
 8. Outils : `aphrody` > `yolo` > `bun` > CLI Rust ; `git` et `gh` autorisés. Node absent : `bun`, `bun x`.
 9. Formatage : prettier dans le fork, oxfmt dans Aphrody/Shenron. Tests ajoutés au fichier existant le plus
    proche ; tests du fork propres à Aphrody dans `test/internal/`, `test/integration/next-*`,
