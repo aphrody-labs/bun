@@ -123,3 +123,7 @@ rien, `graph:bun` ne renvoie que du bruit (PipeWriter). `query "perl create_hash
 - MS4 : `bun test test/internal/aphrody-win-apk.test.ts` ; `bun build --compile scripts/aphrody/win/install.ts --outfile aphrody-win-setup.exe` puis `aphrody-win-setup.exe --root %TEMP%\aw --no-path --terminal-profile --bun <bunsh.exe>`.
 - gzip multi-membres : `bun bd test test/js/bun/util/zstd.test.ts -t concatenated`.
 - MS10 : `cargo test -p bun_coreutils` ; avec la feature (`--cargo-features`/profil à câbler par main), `bun bd test test/js/bun/shell/commands/coreutils.test.ts` (ignoré sans la feature : le test sonde `nproc` par argv0) ; démarrage : `hyperfine 'bun -v'` avant/après, aucun coût attendu (pas de constructeur, test argv0 seulement hors `bun`/`bunx`/`node`).
+
+## rsync / rclone natifs du fork
+
+`rsync` (msys) est remplacé par le fork `aphrody-labs/rsync` (binaire statique musl, WSL `AphrodyAlpine` sous Windows) et rclone par `aphrody-labs/rclone` (branche `aphrody`, CLI + librclone `RcloneRPCJSON` en `bun:ffi`). Assets : release `aphrody-tools-1` d'aphrody-labs/bun ; paquet `packages/bun-tools` ; voir `docs/project/rclone-rsync.mdx`.
