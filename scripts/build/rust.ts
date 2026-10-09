@@ -573,6 +573,14 @@ export function cargoBuildInvocation(cfg: Config): CargoInvocation {
       unitEnv[`CXXFLAGS_${tripleEnv}`] = sdkFlags;
     }
   }
+  // cc-rs compiles C deps (aws-lc-sys via the embedded uv's rustls) with /MD, whose `__imp__wassert`-style imports
+  // cannot resolve against the static CRT bun links; cc-rs appends CFLAGS_<triple> after its own flags, so this wins.
+  if (cfg.windows) {
+    const crt = cfg.debug ? "/MTd" : "/MT";
+    const tripleEnv = triple.replace(/-/g, "_");
+    unitEnv[`CFLAGS_${tripleEnv}`] = crt;
+    unitEnv[`CXXFLAGS_${tripleEnv}`] = crt;
+  }
 
   // The linker for target units (cargo: `CARGO_TARGET_<TRIPLE>_LINKER`). The `bun_runtime` artifact is a staticlib
   // (no link step); what actually gets linked are host executables/dylibs in the dep graph (build scripts,
