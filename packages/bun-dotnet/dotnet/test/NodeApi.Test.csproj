@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsDotNet10SdkAvailable Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(MSBuildVersion)', '17.15'))">true</IsDotNet10SdkAvailable>
+    <AotTargetFramework Condition="'$(IsDotNet10SdkAvailable)' != 'true'">net9.0</AotTargetFramework>
+    <AotTargetFramework Condition="'$(IsDotNet10SdkAvailable)' == 'true'">net10.0</AotTargetFramework>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' == ''">
+    <!-- Exclude netstandard2.0 from target frameworks for tests. -->
+    <TargetFrameworks>net9.0;net8.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(IsDotNet10SdkAvailable)' == 'true'">net10.0;$(TargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOsPlatform('Windows'))">$(TargetFrameworks);net472</TargetFrameworks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <TestTfmsInParallel>false</TestTfmsInParallel>
+    <RootNamespace>Microsoft.JavaScript.NodeApi.Test</RootNamespace>
+    <AssemblyName>Microsoft.JavaScript.NodeApi.Test</AssemblyName>
+    <IsPublishable>false</IsPublishable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="TestCases\**" />
+    <None Include="TestCases\**\*.cs" />
+    <None Include="TestCases\**\*.ts" />
+    <None Include="TestCases\**\*.js" />
+    <Compile Remove="TestCases\**" />
+    <Compile Condition="'$(TargetFramework)' != '$(AotTargetFramework)'" Remove="NativeAotTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.JavaScript.LibNode" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\src\NodeApi\NodeApi.csproj" />
+    <ProjectReference Include="..\src\NodeApi.DotNetHost\NodeApi.DotNetHost.csproj" />
+    <ProjectReference Include="..\src\NodeApi.Generator\NodeApi.Generator.csproj" />
+  </ItemGroup>
+
+  <!--
+    Pass the "no-build" flag to the tests so they can also skip the automatic build of dependencies.
+  -->
+  <Target Name="RecordTestNoBuild" BeforeTargets="VSTest"
+    Condition=" Exists('$(IntermediateOutputPath)\no-build-$(VSTestSessionCorrelationId).txt') "
+  >
+    <WriteLinesToFile Condition=" '$(VSTestNoBuild)' == 'true' " File="$(IntermediateOutputPath)\no-build.txt" />
+    <Delete Condition=" '$(VSTestNoBuild)' != 'true' " Files="$(IntermediateOutputPath)\no-build.txt" />
+    <WriteLinesToFile File="$(IntermediateOutputPath)\no-build-$(VSTestSessionCorrelationId).txt" />
+  </Target>
+
+</Project>
