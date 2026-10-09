@@ -1,5 +1,8 @@
 blank_issues_enabled: true
 contact_links:
-  - name: 💬 Ask a Question
-    url: https://discord.com/invite/CXdq2DP29u
-    about: Join our Discord server for questions, support requests, or just to chat.
+  - name: 📘 Documentation
+    url: https://aphrody.com/docs
+    about: Documentation of the Aphrody runtime.
+  - name: 🔒 Report a vulnerability
+    url: https://github.com/aphrody-labs/bun/security/advisories/new
+    about: Report security issues privately, as described in SECURITY.md.

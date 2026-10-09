@@ -7,7 +7,7 @@ body:
       value: |
         Thank you for submitting a documentation request. It helps make Bun better.
 
-        We are working on moving documentation from the [README](https://github.com/oven-sh/bun#table-of-contents) to a documentation website. Please report as many issues or missing content requests as you can so we can incoperate that in the new documentation.  
+        The documentation is built from [`docs/`](https://github.com/aphrody-labs/bun/tree/main/docs) and published at [aphrody.com/docs](https://aphrody.com/docs).
   - type: dropdown
     attributes:
       label: What is the type of issue?

@@ -285,7 +285,7 @@ Bun's XML parser is written in Rust and implements [XML 1.0 (Fifth Edition)](htt
 - The parser does not fetch or read external DTDs or external entities, so there is no XXE surface. In a document with no DTD, a reference to an undeclared entity is an error. When the DOCTYPE points at an external subset (or uses parameter entities) that could have declared the entity, the parser keeps the reference as written (`&nbsp;` stays `&nbsp;`), unless the document says `standalone="yes"`.
 - The parser validates nothing against the DTD. It does not resolve namespaces and keeps prefixed names verbatim.
 
-The parser is run against the [W3C XML Conformance Test Suite](https://www.w3.org/XML/Test/). All 1,679 cases that have a required outcome for this class of processor pass: the parser rejects not-well-formed documents and accepts well-formed ones. Where the suite gives a canonical output, the element tree of a well-formed document (processing instructions included) matches it byte for byte. The [translated test suite](https://github.com/oven-sh/bun/blob/main/test/js/bun/xml/xml-test-suite.test.ts) lists every case, including the ones whose outcome legitimately depends on not reading external entities.
+The parser is run against the [W3C XML Conformance Test Suite](https://www.w3.org/XML/Test/). All 1,679 cases that have a required outcome for this class of processor pass: the parser rejects not-well-formed documents and accepts well-formed ones. Where the suite gives a canonical output, the element tree of a well-formed document (processing instructions included) matches it byte for byte. The [translated test suite](https://github.com/aphrody-labs/bun/blob/main/test/js/bun/xml/xml-test-suite.test.ts) lists every case, including the ones whose outcome legitimately depends on not reading external entities.
 
 ---
 
@@ -293,7 +293,7 @@ The parser is run against the [W3C XML Conformance Test Suite](https://www.w3.or
 
 The parser works in two stages, like Bun's JSON parser. A SIMD pass (runtime-dispatched AVX2/AVX-512/NEON/SVE kernels) finds the bytes that can change the parse, so the parser never scans character data, attribute values, comments and CDATA sections a byte at a time. Element and attribute names reuse JavaScriptCore's atom-string cache the same way `JSON.parse` does.
 
-[`bench/xml/xml.mjs`](https://github.com/oven-sh/bun/blob/main/bench/xml/xml.mjs) compares `Bun.XML.parse` with popular npm parsers on the same documents (lower is better; Linux x64, one core):
+[`bench/xml/xml.mjs`](https://github.com/aphrody-labs/bun/blob/main/bench/xml/xml.mjs) compares `Bun.XML.parse` with popular npm parsers on the same documents (lower is better; Linux x64, one core):
 
 | Document                            | `Bun.XML.parse` |   txml | fast-xml-parser | @xmldom/xmldom | xml2js |
 | ----------------------------------- | --------------: | -----: | --------------: | -------------: | -----: |

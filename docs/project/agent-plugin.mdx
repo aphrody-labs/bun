@@ -1,11 +1,11 @@
 ---
 title: Agent plugin
-description: The aphrody-labs/bun fork as a plugin for Claude Code, Codex and Antigravity/Gemini CLI, with its MCP server, hooks and skills
+description: The Aphrody runtime as a plugin for Claude Code, Codex and Antigravity/Gemini CLI, with its MCP server, hooks and skills
 ---
 
-`bun agent-plugin` installs the fork into the coding agents found on the machine: Claude Code, Codex, and Antigravity (`agy`) or Gemini CLI. Each gets the same three things:
+`bun agent-plugin` installs the Aphrody runtime's plugin into the coding agents found on the machine: Claude Code, Codex, and Antigravity (`agy`) or Gemini CLI. Each gets the same three things:
 
-- the fork's MCP server, `bun mcp`, over stdio;
+- the runtime's MCP server, `bun mcp`, over stdio;
 - hooks that run `bun`, `bunx` and `bun uv` instead of `node`, `npm`, `npx`, `yarn`, `pnpm`, `pip` and `python`, and `bun bd test` instead of `bun test` inside a Bun checkout;
 - skills for building, testing and navigating Bun, generated from the repository.
 
@@ -42,24 +42,24 @@ Other plugins, marketplaces and settings are left as they are.
 
 Every agent gets the `bun` MCP server (`bun mcp`). Claude Code also gets `bun lsp` as its language server (`bun lsp --stdio`, one server for every language it routes). The list of tools in the plugin's instructions and the extensions given to Claude Code are read from the sources (`src/mcp/tools`, `src/agent_tools/tools.json`, `src/lsp/language.rs`), so a tool or a language added there shows up at the next generation.
 
-| Command                                              | Does                                                                            |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `bun agent-plugin install [claude\|codex\|agy]...`   | install for the agents named, or every agent found                              |
-| `bun agent-plugin install --update`                  | reinstall only when the installed copy differs, for the agents installed before |
-| `bun agent-plugin install --dry-run`                 | print what would be written                                                     |
-| `bun agent-plugin uninstall [claude\|codex\|agy]...` | remove it                                                                       |
-| `bun agent-plugin doctor`                            | tell whether the `bun` on `PATH` is the fork and which plugin is installed      |
+| Command                                              | Does                                                                                  |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `bun agent-plugin install [claude\|codex\|agy]...`   | install for the agents named, or every agent found                                    |
+| `bun agent-plugin install --update`                  | reinstall only when the installed copy differs, for the agents installed before       |
+| `bun agent-plugin install --dry-run`                 | print what would be written                                                           |
+| `bun agent-plugin uninstall [claude\|codex\|agy]...` | remove it                                                                             |
+| `bun agent-plugin doctor`                            | tell whether the `bun` on `PATH` is the Aphrody runtime and which plugin is installed |
 
 ## Hooks
 
 The hooks are TypeScript files run by `bun` (`bun --no-install --no-env-file hooks/<hook>.ts <agent>`); each takes a few milliseconds.
 
-| Hook             | Claude Code and Codex                                                               | Antigravity                   | Does                                                                                                                                                                                                           |
-| ---------------- | ----------------------------------------------------------------------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Session start    | `SessionStart`                                                                      | `PreInvocation`               | checks that `bun` is the fork (`bun --revision` contains `aphrody`), otherwise says how to install it; in a Bun checkout, recalls `bun bd` and `bun bd test`; reinstalls the plugin when `bun` changed version |
-| Before a command | `PreToolUse` (`Bash`)                                                               | `PreToolUse` (`run_command`)  | rewrites the command, see below                                                                                                                                                                                |
-| Before a search  | `PreToolUse` (`Grep`, `Glob`, and `rg`, `grep`, `find` in `Bash`; Claude Code only) |                               | once per session, names the `bun mcp` tools to prefer (`graph_*`, `lsp_*`, `vfs_*` when the server has them)                                                                                                   |
-| After a command  | `PostToolUse` (`Bash`)                                                              | `PostToolUse` (`run_command`) | when `node`, `npm` or `python` is not found, names the fork's equivalent                                                                                                                                       |
+| Hook             | Claude Code and Codex                                                               | Antigravity                   | Does                                                                                                                                                                                                                      |
+| ---------------- | ----------------------------------------------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Session start    | `SessionStart`                                                                      | `PreInvocation`               | checks that `bun` is the Aphrody runtime (`bun --revision` contains `aphrody`), otherwise says how to install it; in a Bun checkout, recalls `bun bd` and `bun bd test`; reinstalls the plugin when `bun` changed version |
+| Before a command | `PreToolUse` (`Bash`)                                                               | `PreToolUse` (`run_command`)  | rewrites the command, see below                                                                                                                                                                                           |
+| Before a search  | `PreToolUse` (`Grep`, `Glob`, and `rg`, `grep`, `find` in `Bash`; Claude Code only) |                               | once per session, names the `bun mcp` tools to prefer (`graph_*`, `lsp_*`, `vfs_*` when the server has them)                                                                                                              |
+| After a command  | `PostToolUse` (`Bash`)                                                              | `PostToolUse` (`run_command`) | when `node`, `npm` or `python` is not found, names the Aphrody runtime's equivalent                                                                                                                                       |
 
 | Command                                    | Becomes                                                          |
 | ------------------------------------------ | ---------------------------------------------------------------- |
@@ -73,7 +73,7 @@ The hooks are TypeScript files run by `bun` (`bun --no-install --no-env-file hoo
 | `python file.py`, `uv ...`, `uvx ...`      | `bun uv run python file.py`, `bun uv ...`, `bun uv tool run ...` |
 | `bun test` inside a Bun checkout           | `bun bd test`                                                    |
 
-The Python rewrites only happen when the `bun` that runs the hook is the fork, which carries `uv`. A rewritten command runs without confirmation only when the agent already runs without asking (Claude Code `bypassPermissions`, Codex `approval_policy = "never"`); otherwise Claude Code and Antigravity ask for it, and Codex refuses the original with the rewritten one to run instead.
+The Python rewrites only happen when the `bun` that runs the hook is the Aphrody runtime, which carries `uv`. A rewritten command runs without confirmation only when the agent already runs without asking (Claude Code `bypassPermissions`, Codex `approval_policy = "never"`); otherwise Claude Code and Antigravity ask for it, and Codex refuses the original with the rewritten one to run instead.
 
 A command ending with `# keep-node` (or `# keep-npm`, `# keep-tool`) is left as written; `BUN_AGENT_PLUGIN_REWRITE=0` turns the rewriting off, and `BUN_AGENT_PLUGIN_AUTO_ALLOW=1` runs rewritten commands without asking.
 

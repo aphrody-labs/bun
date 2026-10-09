@@ -388,7 +388,7 @@ When a `bun.lock` exists and `package.json` hasn’t changed, Bun downloads miss
 
 ## CI/CD
 
-Use the official [`oven-sh/setup-bun`](https://github.com/oven-sh/setup-bun) action to install `bun` in a GitHub Actions pipeline:
+Use the [`setup-bun`](https://github.com/aphrody-labs/bun/blob/main/.github/actions/setup-bun/action.yml) action of aphrody-labs/bun to install `bun` in a GitHub Actions pipeline:
 
 ```yaml .github/workflows/release.yml icon="file-code"
 name: bun-types
@@ -400,7 +400,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
       - name: Install bun
-        uses: oven-sh/setup-bun@v2
+        uses: aphrody-labs/bun/.github/actions/setup-bun@main
       - name: Install dependencies
         run: bun install
       - name: Build app
@@ -427,7 +427,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
       - name: Install bun
-        uses: oven-sh/setup-bun@v2
+        uses: aphrody-labs/bun/.github/actions/setup-bun@main
       - name: Install dependencies
         run: bun ci
       - name: Build app

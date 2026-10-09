@@ -1,35 +1,38 @@
 ---
 title: Installation
-description: Install Bun with npm, Homebrew, Docker, or the official script.
+description: Install the Aphrody runtime with the install script, npm, or a release archive.
 ---
 
 ## Overview
 
-Bun ships as a single, dependency-free executable. Install it with the install script, a package manager, or Docker on macOS, Linux, and Windows.
+The Aphrody runtime ships as a single executable, `bun`. Inside an Aphrody installation, the distribution installs and updates it. Elsewhere, install it with the install script, npm, or a release archive from [GitHub releases](https://github.com/aphrody-labs/bun/releases).
 
 <Tip>After installation, verify with `bun --version` and `bun --revision`.</Tip>
 
 ## Installation
 
 <Tabs>
-  <Tab title="macOS & Linux">
+  <Tab title="Linux & macOS">
 
     <CodeGroup>
       ```bash curl icon="globe"
-      curl -fsSL https://bun.com/install | bash
+      curl -fsSL https://aphrody.com/install.sh | bash
       ```
 
     </CodeGroup>
     <Note>
-      **Linux users:** You need the `unzip` package to install Bun (`sudo apt install unzip`). We recommend kernel version 5.6 or higher. Bun runs on kernels as old as 3.10 (RHEL 7) with graceful degradation of newer syscalls. Use `uname -r` to check your kernel version.
-      </Note>
+      **Linux users:** You need the `unzip` package to install Bun (`sudo apt install unzip`). The script picks the musl archive on Alpine and other musl systems.
+    </Note>
+    <Note>
+      **macOS users:** The latest release has no macOS binary. Install `aphrody-v1.4.3-aphrody.2`, the last release with macOS builds (`bash -s aphrody-v1.4.3-aphrody.2`), or [build from source](/project/contributing).
+    </Note>
 
   </Tab>
 
   <Tab title="Windows">
     <CodeGroup>
       ```powershell PowerShell icon="terminal"
-      powershell -c "irm bun.sh/install.ps1|iex"
+      powershell -c "irm https://aphrody.com/install.ps1|iex"
       ```
 
     </CodeGroup>
@@ -37,62 +40,36 @@ Bun ships as a single, dependency-free executable. Install it with the install s
       Bun requires Windows 10 version 1809 or later.
     </Warning>
 
-
-    For support and discussion, join the **#windows** channel on the [Discord](https://bun.com/discord).
-
   </Tab>
 
-    <Tab title="Package Managers">
-    	<CodeGroup>
+  <Tab title="npm">
+    <CodeGroup>
 
-    	```bash npm icon="npm"
-    	npm install -g bun # the last `npm` command you'll ever need
-    	```
-
-    	```bash Homebrew icon="/icons/homebrew.svg"
-    	brew install oven-sh/bun/bun
-    	```
-
-    	```bash Scoop icon="terminal"
-    	scoop install bun
-    	```
-
-    	</CodeGroup>
-
-    </Tab>
-
-  <Tab title="Docker">
-    Bun provides a Docker image that supports both Linux x64 and arm64.
-
-    ```bash Docker icon="docker"
-    docker pull oven/bun
-    docker run --rm --init --ulimit memlock=-1:-1 oven/bun
+    ```bash npm icon="npm"
+    npm install -g @aphrody/bun-runtime
     ```
 
-    ### Image Variants
+    </CodeGroup>
 
-    Bun also publishes image variants for different operating systems:
-
-    ```bash Docker icon="docker"
-    docker pull oven/bun:debian
-    docker pull oven/bun:slim
-    docker pull oven/bun:distroless
-    docker pull oven/bun:alpine
-    ```
+    `@aphrody/bun-runtime` installs the binary for the current platform through optional dependencies. It is published after the GitHub release, so its version can lag behind.
 
   </Tab>
 </Tabs>
+
+The scripts are [`scripts/aphrody/install.sh`](https://github.com/aphrody-labs/bun/blob/main/scripts/aphrody/install.sh) and [`install.ps1`](https://github.com/aphrody-labs/bun/blob/main/scripts/aphrody/install.ps1). They download the release archive for the current platform, check it against the release's `SHA256SUMS.txt`, and install `bun` and `bunx` into `$BUN_INSTALL/bin` (default `~/.bun/bin`). Set `GITHUB_TOKEN` to authenticate the release lookup.
 
 To check that Bun was installed successfully, open a new terminal window and run:
 
 ```bash terminal icon="terminal"
 bun --version
-# Output: 1.x.y
+# Output: 1.4.3-aphrody.4
 
-# See the precise commit of `oven-sh/bun` that you're using
+# See the release and the commit of aphrody-labs/bun that you're using
 bun --revision
-# Output: 1.x.y+b7982ac13189
+# Output: 1.4.3-aphrody.4+86ad19e8c
 ```
+
+`bun --version` prints the component version. `Bun.version` and `process.versions.bun` keep the upstream Bun base version (`1.4.3`).
 
 <Warning>
   If you've installed Bun but are seeing a `command not found` error, you may have to manually add the installation
@@ -114,7 +91,7 @@ bun --revision
           - For zsh: `~/.zshrc`
           - For fish: `~/.config/fish/config.fish`
         </Step>
-        
+
         <Step title="Add the Bun directory to PATH">
           Add these lines to your configuration file:
           ```bash terminal icon="terminal"
@@ -122,7 +99,7 @@ bun --revision
           export PATH="$BUN_INSTALL/bin:$PATH"
           ```
         </Step>
-        
+
         <Step title="Reload your shell configuration">
           ```bash terminal icon="terminal"
           source ~/.bashrc  # or ~/.zshrc
@@ -165,59 +142,29 @@ bun --revision
 
 ## Upgrading
 
-Once installed, the binary can upgrade itself:
+Once installed, the binary can upgrade itself to the latest `aphrody-v*` release:
 
 ```bash terminal icon="terminal"
 bun upgrade
 ```
 
-<Tip>
-**Homebrew users** <br />
-To avoid conflicts with Homebrew, use `brew upgrade bun` instead.
-
-**Scoop users** <br />
-To avoid conflicts with Scoop, use `scoop update bun` instead.
-
-</Tip>
-
----
-
-## Canary Builds
-
-[-> View canary build](https://github.com/oven-sh/bun/releases/tag/canary)
-
-Bun automatically releases an (untested) canary build on every commit to main. To upgrade to the latest canary build:
-
-```bash terminal icon="terminal"
-# Upgrade to latest canary
-bun upgrade --canary
-
-# Switch back to stable
-bun upgrade --stable
-```
-
-Use a canary build to test new features and bug fixes before they reach a stable release. To help the Bun team fix bugs faster, canary builds automatically upload crash reports.
-
 ---
 
 ## Installing Older Versions
 
-Since Bun is a single binary, you can install older versions by re-running the installer script with a specific version.
+Pass an upstream base version (the newest `aphrody.<n>` release of that base) or an exact release tag to the install script.
 
 <Tabs>
   <Tab title="Linux & macOS">
-    To install a specific version, pass the git tag to the install script:
-
     ```bash terminal icon="terminal"
-    curl -fsSL https://bun.com/install | bash -s "bun-v1.3.3"
+    curl -fsSL https://aphrody.com/install.sh | bash -s 1.4.3
+    curl -fsSL https://aphrody.com/install.sh | bash -s aphrody-v1.4.3-aphrody.2
     ```
 
   </Tab>
   <Tab title="Windows">
-    On Windows, pass the version number to the PowerShell install script:
-
     ```powershell PowerShell icon="windows"
-    iex "& {$(irm https://bun.com/install.ps1)} -Version 1.3.3"
+    & ([scriptblock]::Create((irm https://aphrody.com/install.ps1))) -Version aphrody-v1.4.3-aphrody.2
     ```
 
   </Tab>
@@ -227,66 +174,19 @@ Since Bun is a single binary, you can install older versions by re-running the i
 
 ## Direct Downloads
 
-To download Bun binaries directly, visit the [releases page on GitHub](https://github.com/oven-sh/bun/releases).
+Release archives are attached to each release on the [releases page](https://github.com/aphrody-labs/bun/releases), with a `SHA256SUMS.txt`. Archive names follow upstream Bun: `bun-<os>-<arch>[-musl].zip`, each containing `bun-<os>-<arch>[-musl]/bun` (`bun.exe` on Windows).
 
-### Latest Version Downloads
+| Archive                  | Platform                 |
+| ------------------------ | ------------------------ |
+| `bun-linux-x64.zip`      | Linux x64, glibc         |
+| `bun-linux-x64-musl.zip` | Linux x64, musl (Alpine) |
+| `bun-windows-x64.zip`    | Windows x64              |
 
-<CardGroup cols={2}>
-  <Card
-    icon="/icons/linux.svg"
-    title="Linux x64"
-    href="https://github.com/oven-sh/bun/releases/latest/download/bun-linux-x64.zip"
-  >
-    glibc, Nehalem or newer
-  </Card>
-  <Card
-    icon="/icons/linux.svg"
-    title="Linux ARM64"
-    href="https://github.com/oven-sh/bun/releases/latest/download/bun-linux-aarch64.zip"
-  >
-    ARM64 Linux systems
-  </Card>
-  <Card
-    icon="/icons/windows.svg"
-    title="Windows x64"
-    href="https://github.com/oven-sh/bun/releases/latest/download/bun-windows-x64.zip"
-  >
-    Nehalem or newer
-  </Card>
-  <Card
-    icon="/icons/windows.svg"
-    title="Windows ARM64"
-    href="https://github.com/oven-sh/bun/releases/latest/download/bun-windows-aarch64.zip"
-  >
-    Windows on ARM (Snapdragon, etc.)
-  </Card>
-  <Card
-    icon="/icons/apple.svg"
-    title="macOS ARM64"
-    href="https://github.com/oven-sh/bun/releases/latest/download/bun-darwin-aarch64.zip"
-  >
-    Apple Silicon (M1/M2/M3)
-  </Card>
-  <Card
-    icon="/icons/apple.svg"
-    title="macOS x64"
-    href="https://github.com/oven-sh/bun/releases/latest/download/bun-darwin-x64.zip"
-  >
-    Intel Macs
-  </Card>
-</CardGroup>
-
-### Musl Binaries
-
-For distributions without `glibc` (Alpine Linux, Void Linux):
-
-- [Linux x64 musl](https://github.com/oven-sh/bun/releases/latest/download/bun-linux-x64-musl.zip)
-- [Linux ARM64 musl](https://github.com/oven-sh/bun/releases/latest/download/bun-linux-aarch64-musl.zip)
+The targets of each release are listed in [RELEASES.md](https://github.com/aphrody-labs/bun/blob/main/RELEASES.md). `aphrody-v1.4.3-aphrody.2` also has macOS, Linux ARM64 and Windows ARM64 archives.
 
 <Note>
-  Bun's glibc binaries require glibc 2.17 or newer. If you encounter an error like `bun:
-  /lib/x86_64-linux-gnu/libc.so.6: version GLIBC_... not found`, try using the musl binary. Bun's install script
-  automatically chooses the correct binary for your system.
+  A glibc binary needs the glibc version of the system it was built on, or newer. The glibc requirement of each release
+  is in its notes. If `bun` fails with `GLIBC_... not found`, use an older release or build from source.
 </Note>
 
 ---
@@ -300,43 +200,22 @@ code paths at runtime when the CPU supports them, so there is no separate "basel
 | -------- | ------------------------------- | ------------------ |
 | x64      | Nehalem (1st gen Core) or newer | Bulldozer or newer |
 
-<Note>
-  Bun does not support x64 CPUs without the SSE4.2 extension. Bun requires macOS 13.0 or later. The `-baseline` release
-  assets and `@oven/bun-*-x64-baseline` npm packages are kept as aliases of the single x64 binary for backward
-  compatibility with older install scripts.
-</Note>
+<Note>Bun does not support x64 CPUs without the SSE4.2 extension.</Note>
 
 ---
 
 ## Uninstall
 
-To remove Bun from your system:
+The install scripts only write to `$BUN_INSTALL` (default `~/.bun`). Delete that directory, then remove its `bin` directory from your `PATH` (on Windows, the user `Path`).
 
-<Tabs>
-	<Tab title="macOS & Linux">
-  ```bash terminal icon="terminal"
-  rm -rf ~/.bun
-  ```
-  </Tab>
+```bash macOS & Linux icon="terminal"
+rm -rf ~/.bun
+```
 
-    <Tab title="Windows">
-    	```powershell PowerShell icon="windows"
-    powershell -c ~\.bun\uninstall.ps1
-    ```
-    </Tab>
+```powershell Windows icon="windows"
+Remove-Item -Recurse -Force "$env:USERPROFILE\.bun"
+```
 
-    <Tab title="Package Managers">
-    	<CodeGroup>
-    		```bash npm icon="npm"
-      npm uninstall -g bun
-      ```
-      ```bash Homebrew icon="/icons/homebrew.svg"
-      brew uninstall bun
-      ```
-      ```bash Scoop icon="terminal"
-      scoop uninstall bun
-      ```
-    	</CodeGroup>
-    </Tab>
-
-</Tabs>
+```bash npm icon="npm"
+npm uninstall -g @aphrody/bun-runtime
+```

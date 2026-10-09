@@ -6,8 +6,9 @@
 // Conflicts are first retried as a rename-aware three-way merge: the merge
 // base and the upstream side are passed through scope.ts `rewrite()` before
 // `git merge-file`, so lines that differ only by the package rename merge
-// cleanly and only real divergences remain. Anything still conflicting stops
-// the sync (exit 2) with the merge aborted, unless --keep-conflicts.
+// cleanly and only real divergences remain. The files this repository owns
+// (OWNED) keep their local version. Anything still conflicting stops the sync
+// (exit 2) with the merge aborted, unless --keep-conflicts.
 
 import { join } from "node:path";
 import { apply, rewrite } from "./scope.ts";
@@ -24,9 +25,18 @@ type Options = {
   index: boolean;
 };
 
+// Files whose content is this component's, not upstream's: on a conflict the local version is kept.
+export const OWNED: readonly string[] = [
+  "README.md",
+  "SECURITY.md",
+  "CODE_OF_CONDUCT.md",
+  "CONTRIBUTING.md",
+  "docs/installation.mdx",
+];
+
 export type SyncResult =
   | { status: "up-to-date"; behind: 0 }
-  | { status: "merged"; behind: number; commit: string; renameResolved: string[]; pushed: boolean }
+  | { status: "merged"; behind: number; commit: string; renameResolved: string[]; kept: string[]; pushed: boolean }
   | { status: "dry-run"; behind: number; conflicts: string[] }
   | { status: "conflicts"; behind: number; conflicts: string[] };
 
@@ -71,6 +81,15 @@ function stage(root: string, n: 1 | 2 | 3, path: string): string | null {
   return r.code === 0 ? r.out : null;
 }
 
+async function keepOurs(root: string, path: string): Promise<boolean> {
+  if (!OWNED.includes(path)) return false;
+  const ours = stage(root, 2, path);
+  if (ours === null) return false;
+  await Bun.write(join(root, path), ours);
+  gitOk(root, ["add", "--", path]);
+  return true;
+}
+
 async function resolveWithRename(root: string, path: string): Promise<boolean> {
   const base = stage(root, 1, path);
   const ours = stage(root, 2, path);
@@ -113,9 +132,11 @@ export async function sync(opts: Options): Promise<SyncResult> {
   }
 
   const renameResolved: string[] = [];
+  const kept: string[] = [];
   const conflicts: string[] = [];
   for (const path of conflicted) {
-    if (await resolveWithRename(root, path)) renameResolved.push(path);
+    if (await keepOurs(root, path)) kept.push(path);
+    else if (await resolveWithRename(root, path)) renameResolved.push(path);
     else conflicts.push(path);
   }
 
@@ -138,6 +159,7 @@ export async function sync(opts: Options): Promise<SyncResult> {
   const lines = [`Merge ${opts.ref} (${upstreamHead}) into ${opts.branch}`, ""];
   lines.push(`${behind} upstream commit(s).`);
   if (renameResolved.length) lines.push(`Rename-aware resolution: ${renameResolved.join(", ")}.`);
+  if (kept.length) lines.push(`Kept the local version: ${kept.join(", ")}.`);
   if (rescoped.length) lines.push(`Re-scoped to @aphrody: ${rescoped.join(", ")}.`);
   const commit = git(root, ["commit", "--quiet", "-F", "-"], lines.join("\n") + "\n");
   if (commit.code !== 0) throw new Error(`git commit failed: ${commit.err.trim()}`);
@@ -149,7 +171,7 @@ export async function sync(opts: Options): Promise<SyncResult> {
     pushed = true;
   }
   if (opts.index) refreshIndex(root, head);
-  return { status: "merged", behind, commit: head, renameResolved, pushed };
+  return { status: "merged", behind, commit: head, renameResolved, kept, pushed };
 }
 
 // Keep the aphrody code graph and memory in step with the merged tree. Both

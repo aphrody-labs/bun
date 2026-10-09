@@ -56,7 +56,7 @@ describe("publishManifest", () => {
     expect(out.homepage).toBe("https://github.com/aphrody-labs/bun/tree/main/packages/bun-plugin-svelte#readme");
     expect(out.bugs).toEqual({ url: "https://github.com/aphrody-labs/bun/issues" });
     expect(out.license).toBe("MIT");
-    expect(out.description).toContain("Aphrody fork of Bun");
+    expect(out.description).toContain("Aphrody runtime, based on Bun");
   });
 
   test("upstream registry names of fork packages are pinned too", () => {

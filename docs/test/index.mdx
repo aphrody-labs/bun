@@ -86,7 +86,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install bun
-        uses: oven-sh/setup-bun@v2
+        uses: aphrody-labs/bun/.github/actions/setup-bun@main
       - name: Install dependencies # (assuming your project has dependencies)
         run: bun install # You can use npm/yarn/pnpm instead if you prefer
       - name: Run tests
@@ -402,7 +402,7 @@ jobs:
         shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: aphrody-labs/bun/.github/actions/setup-bun@main
       - run: bun install
       # last successful run's per-shard timings (nothing on the very first run)
       - uses: actions/cache/restore@v4

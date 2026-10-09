@@ -161,7 +161,7 @@ You can pass `--timings` more than once. Bun reads the files as one table and sk
 
 ## How it compares
 
-2 000 TypeScript test files × 8 small tests each, all importing a small app built on `zod`, `date-fns` and `lodash`, with a shared setup file (custom matcher + `beforeEach`/`afterEach`) loaded via each runner's preload mechanism — the shape of a large application's unit-test suite ([`bench/test/app`](https://github.com/oven-sh/bun/tree/main/bench/test/app), `bun app/setup.ts 2000 20`). 16-core Apple M4 Max:
+2 000 TypeScript test files × 8 small tests each, all importing a small app built on `zod`, `date-fns` and `lodash`, with a shared setup file (custom matcher + `beforeEach`/`afterEach`) loaded via each runner's preload mechanism — the shape of a large application's unit-test suite ([`bench/test/app`](https://github.com/aphrody-labs/bun/tree/main/bench/test/app), `bun app/setup.ts 2000 20`). 16-core Apple M4 Max:
 
 | Mode                             | Bun                                           | Vitest 4.1                                            | Jest 30 (`@swc/jest`)                                  |
 | -------------------------------- | --------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------ |

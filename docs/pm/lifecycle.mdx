@@ -44,7 +44,7 @@ Bun is "default-secure": it only runs lifecycle scripts for packages on an allow
 
 After adding the package to `trustedDependencies`, install or re-install it. Bun reads the field and runs its lifecycle scripts.
 
-A curated list of popular npm packages with lifecycle scripts is allowed by default. See [the full list](https://github.com/oven-sh/bun/blob/main/src/install/default-trusted-dependencies.txt).
+A curated list of popular npm packages with lifecycle scripts is allowed by default. See [the full list](https://github.com/aphrody-labs/bun/blob/main/src/install/default-trusted-dependencies.txt).
 
 <Note>
   The default trusted dependencies list only applies to packages installed from npm. For packages from other sources
@@ -63,7 +63,7 @@ Defining `trustedDependencies` in `package.json` **replaces** the default list r
 | `trustedDependencies: ["pkg-a", ...]` | **Only** the listed packages. The default list is ignored. |
 | `trustedDependencies: []`             | **No** packages, including none from the default list.     |
 
-Set `trustedDependencies: []` when you want to opt out of the default allow list entirely without passing `--ignore-scripts` on every install. If you define `trustedDependencies` with an explicit list, include any packages from the [default list](https://github.com/oven-sh/bun/blob/main/src/install/default-trusted-dependencies.txt) whose lifecycle scripts you still need (for example, `sharp` or `esbuild`). Bun no longer trusts those packages implicitly.
+Set `trustedDependencies: []` when you want to opt out of the default allow list entirely without passing `--ignore-scripts` on every install. If you define `trustedDependencies` with an explicit list, include any packages from the [default list](https://github.com/aphrody-labs/bun/blob/main/src/install/default-trusted-dependencies.txt) whose lifecycle scripts you still need (for example, `sharp` or `esbuild`). Bun no longer trusts those packages implicitly.
 
 ---
 

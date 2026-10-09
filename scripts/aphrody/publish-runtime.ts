@@ -112,7 +112,7 @@ export function platformManifest(p: RuntimePlatform, version: string) {
   return {
     name: p.pkg,
     version,
-    description: `The ${p.os} ${p.cpu}${p.libc === "musl" ? " musl" : ""} binary of ${RUNTIME_PACKAGE}, the aphrody-labs fork of the Bun runtime.`,
+    description: `The ${p.os} ${p.cpu}${p.libc === "musl" ? " musl" : ""} binary of ${RUNTIME_PACKAGE}, the Aphrody runtime (based on Bun).`,
     license: "MIT",
     repository: { type: "git", url: `git+${REPOSITORY}.git` },
     homepage: REPOSITORY,
@@ -128,7 +128,8 @@ export function rootManifest(version: string, platforms: RuntimePlatform[]) {
   return {
     name: RUNTIME_PACKAGE,
     version,
-    description: "The aphrody-labs fork of Bun, a fast all-in-one JavaScript runtime, as a native binary.",
+    description:
+      "The Aphrody runtime (based on Bun) as a native binary: JavaScript and TypeScript runtime, bundler, test runner and package manager.",
     license: "MIT",
     repository: { type: "git", url: `git+${REPOSITORY}.git` },
     homepage: REPOSITORY,

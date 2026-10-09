@@ -121,7 +121,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: aphrody-labs/bun/.github/actions/setup-bun@main
       - run: bun install
       - run: bun test --coverage --coverage-reporter=lcov
       - name: Upload coverage to Codecov
@@ -259,7 +259,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: aphrody-labs/bun/.github/actions/setup-bun@main
 
       - name: Install dependencies
         run: bun install

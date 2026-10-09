@@ -1,4 +1,4 @@
-// Publishes the fork's JS packages to npm under the @aphrody scope.
+// Publishes the JS packages of the Aphrody runtime to npm under the @aphrody scope.
 //
 //   bun scripts/aphrody/publish-npm.ts [--dry-run] [--only <dir>[,<dir>]] [--out <dir>]
 //
@@ -50,7 +50,7 @@ export const PACKAGES: PackageSpec[] = [
   {
     dir: "bun-types",
     bunVersion: true,
-    fields: { description: "Type definitions and documentation for Bun (Aphrody fork of Bun)" },
+    fields: { description: "Type definitions and documentation for Bun (Aphrody runtime, based on Bun)" },
     // Generates CLAUDE.md and docs/ next to the .d.ts files, as release.yml does upstream.
     prepare: (staging, { base }) =>
       void run([process.execPath, "scripts/build.ts", staging], join(ROOT, "packages", "bun-types"), {
@@ -59,7 +59,7 @@ export const PACKAGES: PackageSpec[] = [
   },
   {
     dir: "bun-inspector-protocol",
-    fields: { description: "WebKit Inspector Protocol client for Bun (Aphrody fork of Bun)" },
+    fields: { description: "WebKit Inspector Protocol client for Bun (Aphrody runtime, based on Bun)" },
     // node-socket.ts borrows the framer from the debug adapter, which itself
     // depends on this package: ship a copy instead of a dependency cycle.
     prepare: async staging => {
@@ -94,7 +94,7 @@ export const PACKAGES: PackageSpec[] = [
     dir: "bun-debug-adapter-protocol",
     addDependencies: ["bun-inspector-protocol"],
     fields: {
-      description: "Debug Adapter Protocol implementation for Bun (Aphrody fork of Bun)",
+      description: "Debug Adapter Protocol implementation for Bun (Aphrody runtime, based on Bun)",
       module: "./index.ts",
       types: "./index.ts",
       files: ["index.ts", "src", "!src/**/*.test.ts", "!src/**/fixtures", "README.md"],
@@ -112,11 +112,11 @@ export const PACKAGES: PackageSpec[] = [
   },
   {
     dir: "bun-plugin-svelte",
-    fields: { description: "Svelte plugin for Bun (Aphrody fork of Bun)" },
+    fields: { description: "Svelte plugin for Bun (Aphrody runtime, based on Bun)" },
   },
   {
     dir: "bun-plugin-yaml",
-    fields: { description: "YAML plugin for Bun (Aphrody fork of Bun)" },
+    fields: { description: "YAML plugin for Bun (Aphrody runtime, based on Bun)" },
   },
   {
     // Fork-only: Next.js on Bun (runner, withBun + next patch, codemods, testing helpers).
@@ -126,12 +126,14 @@ export const PACKAGES: PackageSpec[] = [
   {
     // Fork-only: Playwright-shaped page over Bun.WebView (moved from the aphrody monorepo).
     dir: "bun-webview-page",
-    fields: { description: "Playwright-shaped page, locators and routing over Bun.WebView (Aphrody fork of Bun)" },
+    fields: {
+      description: "Playwright-shaped page, locators and routing over Bun.WebView (Aphrody runtime, based on Bun)",
+    },
   },
   {
     // Fork-only: Tailwind CSS v4 for Bun.build, the HTML dev server and PostCSS.
     dir: "bun-plugin-tailwind",
-    fields: { description: "Tailwind CSS v4 plugin for Bun and PostCSS (Aphrody fork of Bun)" },
+    fields: { description: "Tailwind CSS v4 plugin for Bun and PostCSS (Aphrody runtime, based on Bun)" },
     // dist/ holds the Node.js build (ES modules and the CommonJS PostCSS plugin).
     prepare: staging => {
       const dir = join(ROOT, "packages", "bun-plugin-tailwind");

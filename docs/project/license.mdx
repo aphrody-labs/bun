@@ -19,6 +19,8 @@ Bun's patched version of WebKit lives at https://github.com/oven-sh/webkit. To r
 
 `bun run build:local` compiles JavaScriptCore, compiles Bun's `.cpp` bindings for JavaScriptCore (the object files that use JavaScriptCore), and outputs a new `bun` binary with your changes.
 
+The Aphrody runtime builds with the same pinned WebKit. Its release builds download prebuilt archives of it from https://github.com/aphrody-labs/WebKit when that repository publishes them, otherwise from https://github.com/oven-sh/WebKit (`webkitPrebuiltRepo` in `scripts/build/deps/webkit.ts`).
+
 ## Linked libraries
 
 Bun statically links these libraries:

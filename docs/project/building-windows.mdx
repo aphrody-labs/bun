@@ -3,7 +3,7 @@ title: Building Windows
 description: Building Bun on Windows
 ---
 
-Use [PowerShell 7 (`pwsh.exe`)](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.4) instead of the default `powershell.exe`. If you run into problems, ask in the [#contributing channel on our Discord](http://bun.com/discord).
+Use [PowerShell 7 (`pwsh.exe`)](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.4) instead of the default `powershell.exe`. If you run into problems, open an issue on [aphrody-labs/bun](https://github.com/aphrody-labs/bun/issues).
 
 ## Prerequisites
 
@@ -20,7 +20,7 @@ Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Unrestricted
 Bun v1.1 or later. The build uses Bun to run its own code generators.
 
 ```ps1
-irm bun.sh/install.ps1 | iex
+irm https://aphrody.com/install.ps1 | iex
 ```
 
 [Visual Studio](https://visualstudio.microsoft.com) with the "Desktop Development with C++" workload. While installing, also install Git if Git for Windows is not already installed.

@@ -1,6 +1,6 @@
 Configuring a development environment for Bun can take 10-30 minutes depending on your internet connection and computer speed. You will need ~10GB of free disk space for the repository and build artifacts.
 
-If you are using Windows, please refer to [this guide](https://bun.com/docs/project/building-windows)
+If you are using Windows, please refer to [this guide](docs/project/building-windows.mdx). The one-command setup in [docs/project/setup.mdx](docs/project/setup.mdx) installs everything below on Linux, macOS and Windows.
 
 ## Using Nix (Alternative)
 
@@ -50,21 +50,20 @@ Bun is written in Rust and requires a specific nightly toolchain (pinned in [`ru
 $ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-Before starting, you will need to already have a release build of Bun installed, as we use our bundler to transpile and minify our code, as well as for code generation scripts.
+Before starting, you will need to already have a release build of Bun installed, as we use our bundler to transpile and minify our code, as well as for code generation scripts. Install the latest release of this component:
 
 {% codetabs %}
 
-```bash#Native
-$ curl -fsSL https://bun.com/install | bash
+```bash#Linux
+$ curl -fsSL https://aphrody.com/install.sh | bash
+```
+
+```powershell#Windows
+> irm https://aphrody.com/install.ps1 | iex
 ```
 
 ```bash#npm
-$ npm install -g bun
-```
-
-```bash#Homebrew
-$ brew tap oven-sh/bun
-$ brew install bun
+$ npm install -g @aphrody/bun-runtime
 ```
 
 {% /codetabs %}
@@ -220,40 +219,9 @@ $ bun run build:release
 
 The binary will be located at `./build/release/bun` and `./build/release/bun-profile`.
 
-### Download release build from pull requests
+### Pull requests and CI
 
-To save you time spent building a release build locally, we provide a way to run release builds from pull requests. This is useful for manually testing changes in a release build before they are merged.
-
-To run a release build from a pull request, you can use the `bun-pr` npm package:
-
-```sh
-bunx bun-pr <pr-number>
-bunx bun-pr <branch-name>
-bunx bun-pr "https://github.com/oven-sh/bun/pull/1234566"
-bunx bun-pr --asan <pr-number> # Linux x64 only
-```
-
-This will download the release build from the pull request and add it to `$PATH` as `bun-${pr-number}`. You can then run the build with `bun-${pr-number}`.
-
-```sh
-bun-1234566 --version
-```
-
-This works by downloading the release build from the GitHub Actions artifacts on the linked pull request. You may need the `gh` CLI installed to authenticate with GitHub.
-
-### Viewing CI failures from the terminal
-
-Bun's CI runs on BuildKite. Install the [BuildKite CLI](https://github.com/buildkite/cli) (`brew install buildkite/buildkite/bk`) and set `BUILDKITE_API_TOKEN` to a read-scoped [API token](https://buildkite.com/user/api-access-tokens). The repo includes a `.bk.yaml` so `bk` commands default to the `bun` pipeline.
-
-```sh
-bun run ci:status         # progress summary for the current branch's latest build
-bun run ci:errors         # rendered test-failure output, tagged [new] vs [also on main]
-bun run ci:logs           # save full logs for each failed job to ./tmp/ci-<build>/
-bun run ci:watch          # watch until the build finishes
-bun run ci:find           # print the build number (compose with raw `bk`)
-```
-
-All of these accept a target: `#1234` (PR number), a PR URL, a branch name, or a build number. Without one they use the current git branch.
+This repository has no hosted CI: GitHub Actions is disabled and pull requests are not built automatically. Before opening a pull request, build and run the tests for your change locally (`bun bd test <file>`), and run the source lints with `bun bd test test/internal/source-lints`. Maintainers build releases by hand, as described in [APHRODY.md](APHRODY.md#releases).
 
 ## AddressSanitizer
 
@@ -295,7 +263,7 @@ Note that the WebKit folder, including build artifacts, is 8GB+ in size.
 
 If you are using a JSC debug build and using VScode, make sure to run the `C/C++: Select a Configuration` command to configure intellisense to find the debug headers.
 
-Note that if you make changes to our [WebKit fork](https://github.com/oven-sh/WebKit), you will also have to change `WEBKIT_VERSION` in [`scripts/build/deps/webkit.ts`](/scripts/build/deps/webkit.ts) to point to your commit hash or release tag.
+Note that if you make changes to Bun's [WebKit fork](https://github.com/oven-sh/WebKit) (prebuilt archives also come from [aphrody-labs/WebKit](https://github.com/aphrody-labs/WebKit)), you will also have to change `WEBKIT_VERSION` in [`scripts/build/deps/webkit.ts`](/scripts/build/deps/webkit.ts) to point to your commit hash or release tag.
 
 ## Troubleshooting
 

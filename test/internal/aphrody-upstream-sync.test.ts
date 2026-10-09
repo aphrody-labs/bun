@@ -152,6 +152,37 @@ describe("sync-upstream", () => {
     expect(git(root, "status", "--porcelain")).toBe("");
   }, 30000);
 
+  test("a conflict in a file the repository owns keeps the local version", async () => {
+    const { dir, root } = forkRepo("aphrody-sync-owned");
+    using _ = dir;
+    writeFileSync(join(root, "README.md"), "# Bun\n\nUpstream intro.\n");
+    git(root, "add", "-A");
+    git(root, "commit", "--quiet", "-m", "base readme");
+    git(root, "branch", "-f", "upstream");
+
+    git(root, "checkout", "--quiet", "upstream");
+    writeFileSync(join(root, "README.md"), "# Bun\n\nNew upstream intro.\n");
+    writeFileSync(join(root, README), "# bun-plugin-yaml\n\nbun add bun-plugin-yaml\n\nUpstream usage.\n");
+    git(root, "commit", "--quiet", "-am", "upstream: readme");
+
+    git(root, "checkout", "--quiet", "main");
+    await apply(root, true);
+    writeFileSync(join(root, "README.md"), "# Aphrody runtime\n\nComponent intro.\n");
+    git(root, "commit", "--quiet", "-am", "fork: readme");
+
+    const result = await sync(options(root));
+
+    expect(result).toMatchObject({ status: "merged", behind: 1, kept: ["README.md"], pushed: false });
+    expect({
+      readme: readFileSync(join(root, "README.md"), "utf8"),
+      package: readFileSync(join(root, README), "utf8"),
+    }).toEqual({
+      readme: "# Aphrody runtime\n\nComponent intro.\n",
+      package: "# @aphrody/bun-plugin-yaml\n\nbun add @aphrody/bun-plugin-yaml\n\nUpstream usage.\n",
+    });
+    expect(git(root, "status", "--porcelain")).toBe("");
+  }, 30000);
+
   test("nothing to merge is a no-op", async () => {
     const { dir, root } = forkRepo("aphrody-sync-noop");
     using _ = dir;

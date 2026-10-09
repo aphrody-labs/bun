@@ -7,10 +7,10 @@ body:
       value: |
         Thank you for submitting a bug report. It helps make Bun better.
 
-        If you need help or support using Bun, and are not reporting a bug, please
-        join our [Discord](https://discord.gg/CXdq2DP29u) server, where you can ask questions in the [`#help`](https://discord.gg/32EtH6p7HN) forum.
+        This tracker covers the Aphrody runtime built from aphrody-labs/bun (`bun --version` prints `<base>-aphrody.<n>`).
+        A bug that also happens with upstream Bun can be reported here too.
 
-        Make sure you are running the [latest](https://bun.com/docs/installation#upgrading) version of Bun.
+        Make sure you are running the [latest](https://aphrody.com/docs/installation#upgrading) release (`bun upgrade`).
         The bug you are experiencing may already have been fixed.
 
         Please try to include as much information as possible.

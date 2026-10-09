@@ -1,9 +1,9 @@
 {
   "theme": "aspen",
-  "name": "Bun",
+  "name": "Aphrody runtime",
   "seo": {
     "metatags": {
-      "canonical": "https://bun.com/docs"
+      "canonical": "https://aphrody.com/docs"
     }
   },
   "colors": {
@@ -28,8 +28,8 @@
   "navbar": {
     "links": [
       {
-        "label": "Install Bun",
-        "href": "https://www.bun.com/docs/installation",
+        "label": "Install",
+        "href": "https://aphrody.com/docs/installation",
         "icon": "download",
         "primary": true
       }
@@ -672,14 +672,14 @@
         ]
       },
       {
-        "tab": "Reference",
+        "tab": "Bun API reference",
         "icon": "book",
         "href": "https://bun.com/reference"
       },
       {
-        "tab": "Blog",
+        "tab": "Release notes",
         "icon": "newspaper",
-        "href": "https://bun.com/blog"
+        "href": "https://aphrody.com/blog"
       },
       {
         "tab": "Feedback",
@@ -690,10 +690,7 @@
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/bunjavascript",
-      "github": "https://github.com/oven-sh/bun",
-      "discord": "https://bun.com/discord",
-      "youtube": "https://www.youtube.com/@bunjs"
+      "github": "https://github.com/aphrody-labs/bun"
     }
   }
 }

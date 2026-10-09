@@ -128,7 +128,7 @@ const cache = new BoundedLRU(budget.child("cache"), { sizeOf: v => v.byteLength 
 
 ## Tests
 
-The tests are in `test/js/bun/supervisor`. They run TypeScript only, with no native change, so run them with the installed fork:
+The tests are in `test/js/bun/supervisor`. They run TypeScript only, with no native change, so run them with the installed Aphrody runtime:
 
 ```bash
 bun test test/js/bun/supervisor
