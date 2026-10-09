@@ -18,3 +18,11 @@ aphrody-rag-core = { git = "https://github.com/aphrody-labs/aphrody", rev = "c58
 
 [profile.release]
 panic = "unwind"
+
+# PyO3 comes from the aphrody-labs fork, same pin as packages/buv/vendor.json.
+[patch.crates-io]
+pyo3 = { git = "https://github.com/aphrody-labs/pyo3", rev = "451d99fdcdcddf159e8e0a1186960b332cdb5d7c" }
+pyo3-build-config = { git = "https://github.com/aphrody-labs/pyo3", rev = "451d99fdcdcddf159e8e0a1186960b332cdb5d7c" }
+pyo3-ffi = { git = "https://github.com/aphrody-labs/pyo3", rev = "451d99fdcdcddf159e8e0a1186960b332cdb5d7c" }
+pyo3-macros = { git = "https://github.com/aphrody-labs/pyo3", rev = "451d99fdcdcddf159e8e0a1186960b332cdb5d7c" }
+pyo3-macros-backend = { git = "https://github.com/aphrody-labs/pyo3", rev = "451d99fdcdcddf159e8e0a1186960b332cdb5d7c" }
