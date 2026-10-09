@@ -1,0 +1,51 @@
+name: Windows API families
+
+on:
+  push:
+    branches: [main]
+    paths:
+      [
+        "scripts/aphrody/win32/**",
+        "src/js/internal/winmd.ts",
+        "packages/bun-windows-*/**",
+        ".github/workflows/windows-api.yml",
+      ]
+  pull_request:
+    paths:
+      [
+        "scripts/aphrody/win32/**",
+        "src/js/internal/winmd.ts",
+        "packages/bun-windows-*/**",
+        ".github/workflows/windows-api.yml",
+      ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-api-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  families:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+        with:
+          bun-version: "1.4.3"
+      - name: Restore win32metadata
+        shell: pwsh
+        run: nuget install Microsoft.Windows.SDK.Win32Metadata -Version 71.0.30-preview -OutputDirectory "$env:RUNNER_TEMP\nuget"
+      # The committed packages/bun-windows-* must be exactly what the generator writes from that metadata.
+      - name: Generated families are up to date
+        shell: pwsh
+        run: bun scripts/aphrody/win32/gen.ts --winmd "$env:RUNNER_TEMP\nuget\Microsoft.Windows.SDK.Win32Metadata.71.0.30-preview\Windows.Win32.winmd" --check
+      # Functions resolved with LoadLibraryExW + GetProcAddress on the runner's Windows; a few exist only on
+      # newer builds or in DLLs a server image lacks.
+      - name: Exports resolve
+        continue-on-error: true
+        run: bun scripts/aphrody/win32/verify.ts exports

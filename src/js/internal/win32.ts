@@ -324,7 +324,8 @@ const SIZE_FIELDS = new Set(["cbSize", "dwSize", "cb", "dwLength", "nLength", "c
 function structType(type: string): StructType {
   let st = structTypes.get(type);
   if (st !== undefined) return st;
-  if (type === "System.Guid" || type === "GUID") return (structTypes.set(type, structType("Foundation.GUID")), structTypes.get(type)!);
+  if (type === "System.Guid" || type === "GUID")
+    return (structTypes.set(type, structType("Foundation.GUID")), structTypes.get(type)!);
   const { full, entry } = lookup("structs", type);
   st = structTypes.get(full);
   if (st === undefined) {
@@ -1194,8 +1195,50 @@ function check(hr: number, where = "call") {
   return hr;
 }
 
+const comDelegateNative = $newRustFunction("windows/com.rs", "jsComDelegate", 3);
+let liveDelegates = 0;
+let delegateKeepAlive: any;
+
+// A COM object implementing one callback interface (IUnknown + Invoke at slot 3), callable from any
+// thread. `handler(a, b, c, d)` runs on the JS thread with the raw Invoke arguments; those flagged in
+// `interfaces` are owned references released after the handler returns. Returns the address of the
+// delegate with one reference owned by the caller.
+function comDelegate(iid: string | Uint8Array, handler: (...args: number[]) => unknown, interfaces = 0) {
+  if (!$isCallable(handler)) throw $ERR_INVALID_ARG_TYPE("handler", "function", handler);
+  const iidBytes = typeof iid === "string" ? guid(iid) : iid;
+  let cb: any;
+  cb = new JSCallback(
+    (self: number | null, a: number, b: number, c: number, d: number) => {
+      if (!self) {
+        // Last Release: no further Invoke can reach this callback.
+        const closing = cb;
+        cb = undefined;
+        if (--liveDelegates === 0 && delegateKeepAlive !== undefined) {
+          clearInterval(delegateKeepAlive);
+          delegateKeepAlive = undefined;
+        }
+        setImmediate(() => closing.close());
+        return 0;
+      }
+      const args = [a, b, c, d];
+      try {
+        handler.$apply(undefined, args);
+      } finally {
+        for (let i = 0; i < 4; i++) if (interfaces & (1 << i) && args[i]) comRelease(args[i]);
+        comRelease(self);
+      }
+      return 0;
+    },
+    { args: ["ptr", "u64_fast", "u64_fast", "u64_fast", "u64_fast"], returns: "i32", threadsafe: true },
+  );
+  const address = comDelegateNative(ptrOf(iidBytes), cb.ptr, interfaces);
+  if (liveDelegates++ === 0) delegateKeepAlive = setInterval(() => {}, 0x7fffffff);
+  return address as number;
+}
+
 const com = Object.freeze({
   initialize: comInitialize,
+  delegate: comDelegate,
   create: comCreate,
   wrap: wrapCom,
   addRef: comAddRef,

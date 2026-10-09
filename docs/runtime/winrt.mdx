@@ -1,0 +1,61 @@
+---
+title: Windows Runtime
+description: Call Windows Runtime (WinRT) APIs from Bun with bun:winrt, with namespaces projected on demand and async operations as Promises
+---
+
+`bun:winrt` calls the Windows Runtime directly. It reads each namespace from the system metadata in `C:\Windows\System32\WinMetadata` the first time you use it. Nothing is generated ahead of time, so every namespace that Windows ships can be reached. It is Windows-only.
+
+```ts
+import winrt from "bun:winrt";
+
+const { Uri } = winrt.namespace("Windows.Foundation");
+const uri = Uri.CreateUri("https://example.com/a?b=1");
+uri.Host; // "example.com"
+```
+
+---
+
+## Classes and objects
+
+A namespace exposes its runtime classes and enums.
+
+- A class exposes the methods of its static and factory interfaces. An activatable class also has `activate()`.
+- An object exposes the methods of every interface its class implements, base classes included.
+- `get_X` methods with no arguments can also be read as `X` properties.
+- Overloaded methods keep their ABI name, for example `GetFilesAsyncOverloadDefaultOptionsStartAndCount`.
+
+| WinRT type                         | JavaScript                     |
+| ---------------------------------- | ------------------------------ |
+| `String`                           | `string`                       |
+| `Boolean`, integers up to 32 bits  | `boolean`, `number`            |
+| `Int64`, `UInt64`                  | `bigint`                       |
+| enum                               | `number`                       |
+| `IAsyncAction`, `IAsyncOperation<T>` | `Promise<undefined>`, `Promise<T>` |
+| `IVector<T>`, `IVectorView<T>`     | iterable object                |
+| interface or class                 | object                         |
+
+A failing `HRESULT` throws an error with code `ERR_WINRT_HRESULT`. Objects release their reference when they are garbage collected.
+
+---
+
+## Async operations
+
+Methods that return `IAsyncAction` or `IAsyncOperation<T>` return a Promise. Windows calls the completion handler on a thread pool thread. The handler is a native COM object, so the result is read on the JavaScript thread.
+
+```ts
+const { StorageFolder } = winrt.namespace("Windows.Storage");
+const folder = await StorageFolder.GetFolderFromPathAsync("C:\Windows");
+for (const file of await folder.GetFilesAsyncOverloadDefaultOptionsStartAndCount()) {
+  console.log(file.Name);
+}
+```
+
+A canceled operation rejects with an `AbortError`. A failed operation rejects with its `HRESULT`.
+
+---
+
+## Other metadata
+
+`winrt.loadMetadata(path)` projects every namespace of another `.winmd` file, such as the Windows App SDK metadata that [`bun:winui`](/runtime/winui) uses. The parsed model is cached in the temporary directory and keyed by the file's size and modification time.
+
+`winrt.box(value)` and `winrt.unbox(object)` convert between JavaScript values and `IPropertyValue`. `winrt.delegate(type, fn)` builds an event handler for a delegate type.

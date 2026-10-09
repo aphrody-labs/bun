@@ -619,6 +619,17 @@ declare module "bun:windows" {
       initialize(): void;
       /** `CoCreateInstance` by coclass name (`"CUIAutomation"`) or CLSID, for an interface name. */
       create(clsid: string, type: string, context?: number): Win32ComObject;
+      /**
+       * Creates a COM callback object (IUnknown + `Invoke` at slot 3) that any thread may call; `handler`
+       * runs on the JavaScript thread with the four raw `Invoke` arguments. Bit `i` of `interfaces` marks
+       * argument `i` as an interface pointer, kept alive until `handler` returns. Returns the object's
+       * address with one reference owned by the caller.
+       */
+      delegate(
+        iid: string | Uint8Array,
+        handler: (a: number, b: number, c: number, d: number) => unknown,
+        interfaces?: number,
+      ): number;
       /** Wraps an interface pointer, taking ownership of one reference. */
       wrap(address: number | bigint, type: string): Win32ComObject | null;
       addRef(address: number): number;

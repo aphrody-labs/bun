@@ -1,7 +1,7 @@
 {
   "name": "@aphrody/bun-windows-winrt",
   "version": "10.0.26100.0",
-  "description": "Windows Runtime core for the bun:windows WinRT families (RoGetActivationFactory and COM vtable calls through bun:ffi)",
+  "description": "Re-exports bun:winrt (Windows Runtime projection) for the bun:windows WinRT families",
   "license": "MIT",
   "main": "index.js"
 }

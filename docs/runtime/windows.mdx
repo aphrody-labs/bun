@@ -215,3 +215,40 @@ windows.families.user32; // same as windows.family("user32")
 ```
 
 The package is resolved from the working directory, then from the entry script, and loaded once per process. A family that is not installed throws an error with code `ERR_BUN_WINDOWS_FAMILY_NOT_FOUND`.
+
+`BUN_WINDOWS_FAMILY_PATH` adds directories to search for `bun-windows-<family>` package folders (separated by `;`).
+
+### Win32 functions, structs and COM
+
+The families are generated from [win32metadata](https://github.com/microsoft/win32metadata) by `scripts/aphrody/win32/gen.ts`: one package per DLL (368 families, about 18,000 functions), plus `@aphrody/bun-windows-win32` with the struct, enum, constant and COM interface descriptions they share. A function is bound with `bun:ffi` the first time it is read.
+
+```ts
+const kernel32 = windows.family("kernel32");
+kernel32.GetCurrentProcessId(); // 1234
+kernel32.constants.PROCESS_QUERY_LIMITED_INFORMATION; // 0x1000
+
+const { win32 } = windows;
+const mem = win32.struct("MEMORYSTATUSEX"); // dwLength is filled in
+kernel32.GlobalMemoryStatusEx(mem);
+mem.ullAvailPhys; // bigint
+```
+
+Arguments are converted from their declared types:
+
+- Strings are passed to `PWSTR`, `PSTR` and `BSTR` parameters.
+- Plain objects are passed to struct pointers.
+- Structs of 8 bytes or less are passed by value (`PtInRect(rect, { x, y })`).
+- Functions are passed to callback parameters.
+
+Functions that set the last error record it in `win32.lastError()`.
+
+COM classes are created by coclass name or CLSID. Methods are called through the vtable. `[retval]` parameters become the return value. A failing `HRESULT` throws a `win32.Win32Error`:
+
+```ts
+const service = win32.com.create("TaskScheduler", "System.TaskScheduler.ITaskService");
+service.Connect(undefined, undefined, undefined, undefined);
+service.GetFolder("\\").GetTasks(1).get_Count();
+service.release();
+```
+
+`win32.com.delegate(iid, handler)` returns a COM callback object that any thread may call. Its reference count is atomic and lives in native code. `handler` runs on the JavaScript thread. Use it for completion and event callbacks that Windows invokes from its thread pool.

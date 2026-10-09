@@ -41,6 +41,8 @@ pub enum HardcodedModule {
     BunWindows,
     #[strum(serialize = "bun:winui")]
     BunWinui,
+    #[strum(serialize = "bun:winrt")]
+    BunWinrt,
     #[strum(serialize = "bun:wrap")]
     BunWrap,
     #[strum(serialize = "bun:sqlite")]
@@ -258,6 +260,7 @@ bun_core::comptime_string_map! {
         b"bun:winui" => HardcodedModule::BunWinui,
         b"bun:wrap" => HardcodedModule::BunWrap,
         b"bun:internal-for-testing" => HardcodedModule::BunInternalForTesting,
+        b"bun:winrt" => HardcodedModule::BunWinrt,
         b"internal:cluster/RoundRobinHandle" => HardcodedModule::InternalClusterRoundRobinHandle,
         b"internal/repl" => HardcodedModule::NodeInternalRepl,
         b"internal/repl/await" => HardcodedModule::NodeInternalReplAwait,
@@ -839,6 +842,7 @@ const BUN_EXTRA_ALIAS_KVS: &[AliasKv] = &[
     entry!("bun:wrap"),
     entry!("bun:internal-for-testing"),
     (
+    entry!("bun:winrt"),
         b"internal/cluster/round_robin_handle",
         Alias {
             path: zstr!("internal:cluster/RoundRobinHandle"),

@@ -783,5 +783,229 @@ function guidFromArgs(args: unknown[]): string {
   return formatGuid(b);
 }
 
+export type WinrtNamespace = {
+  interfaces: Record<string, unknown>;
+  classes: Record<string, unknown>;
+  enums: Record<string, unknown>;
+  delegates?: Record<string, unknown>;
+};
 
-export default { Winmd, Tables: T, readCompressed, formatGuid, guidFromArgs };
+/**
+ * WinRT model of a .winmd, per namespace: interfaces (IID, ABI methods with vtable slots), runtime
+ * classes (default interface, statics, factories), enums and delegates. Consumed by bun:winrt and
+ * scripts/aphrody/winrt/gen.ts.
+ */
+function winrtModel(data: Uint8Array): Map<string, WinrtNamespace> {
+  const md = new Winmd(data);
+  const typeKind = new Map<string, { row: number; kind: string }>();
+
+  // Custom attributes keyed by "<table>:<row>", blobs kept raw.
+  const attrs = new Map<string, { name: string; blob: Uint8Array }[]>();
+  for (let row = 1; row <= md.count(T.CustomAttribute); row++) {
+    const [parentTable, parentRow] = md.decode("HasCustomAttribute", md.col(T.CustomAttribute, row, 0));
+    const [ctorTable, ctorRow] = md.decode("CustomAttributeType", md.col(T.CustomAttribute, row, 1));
+    let name = "";
+    if (ctorTable === T.MemberRef) {
+      const [ownerTable, ownerRow] = md.decode("MemberRefParent", md.col(T.MemberRef, ctorRow, 0));
+      name = md.typeName(ownerTable, ownerRow).name;
+    }
+    const key = `${parentTable}:${parentRow}`;
+    let list = attrs.get(key);
+    if (!list) attrs.set(key, (list = []));
+    list.push({ name, blob: md.blobAt(T.CustomAttribute, row, 2) });
+  }
+  const attr = (table: number, row: number, name: string) =>
+    attrs.get(`${table}:${row}`)?.filter(a => a.name === name) ?? [];
+  const serString = (blob: Uint8Array) => readSerString(blob, { p: 2 }) ?? "";
+
+  for (let row = 1; row <= md.count(T.TypeDef); row++) {
+    const ns = md.str(T.TypeDef, row, 2);
+    if (ns) typeKind.set(`${ns}.${md.str(T.TypeDef, row, 1)}`, { row, kind: md.kind(row) });
+  }
+
+  const guidOf = (row: number) => {
+    const blob = attr(T.TypeDef, row, "GuidAttribute")[0]?.blob;
+    return blob ? formatGuid(blob.subarray(2, 18)) : undefined;
+  };
+
+  const enumUnderlying = (row: number) => {
+    const [first, last] = md.range(T.TypeDef, row, 4, T.Field);
+    for (let f = first; f < last; f++) {
+      if (md.str(T.Field, f, 1) === "value__") return md.blobAt(T.Field, f, 2)[1] === 0x09 ? "u32" : "i32";
+    }
+    return "i32";
+  };
+
+  // Generic instantiations become ["TypedEventHandler", "Object", "Ns.Type", ...] (signatureOf in bun:winrt).
+  const genericType = (sig: TypeSig): unknown => {
+    switch (sig.kind) {
+      case "object":
+        return "Object";
+      case "string":
+        return "String";
+      case "prim":
+        return sig.name;
+      case "named":
+        return `${sig.ns}.${sig.name}`;
+      case "generic": {
+        const base = sig.base.kind === "named" ? sig.base : undefined;
+        const name = base ? base.name.replace(/`\d+$/, "") : "Object";
+        const foundation = base?.ns === "Windows.Foundation" || base?.ns === "Windows.Foundation.Collections";
+        return [foundation ? name : `${base?.ns}.${name}`, ...sig.args.map(genericType)];
+      }
+      default:
+        return "Object";
+    }
+  };
+
+  const typeOfRef = (coded: number): unknown => {
+    const [table, r] = md.decode("TypeDefOrRef", coded);
+    if (table === T.TypeSpec) return genericType(md.parseType(md.blobAt(T.TypeSpec, r, 0), { p: 0 }));
+    const n = md.typeName(table, r);
+    return `${n.ns}.${n.name}`;
+  };
+
+  // [kind, type, unsupported reason]
+  const marshal = (sig: TypeSig): [string, unknown, string?] => {
+    switch (sig.kind) {
+      case "prim":
+        return ["prim", sig.name];
+      case "string":
+        return ["hstring", ""];
+      case "object":
+        return ["object", ""];
+      case "generic":
+        return ["object", genericType(sig)];
+      case "named": {
+        const full = `${sig.ns}.${sig.name}`;
+        const info = typeKind.get(full);
+        if (info?.kind === "enum") return ["prim", enumUnderlying(info.row)];
+        if (info?.kind === "interface") return ["iface", full];
+        if (info?.kind === "class") return ["class", full];
+        if (info?.kind === "delegate") return ["object", full];
+        // EventRegistrationToken { int64 value } travels as a plain 64-bit integer.
+        if (full === "Windows.Foundation.EventRegistrationToken") return ["prim", "i64"];
+        return ["object", full, sig.valueType ? `struct ${full} by value` : undefined];
+      }
+      case "array":
+        return ["object", "", "array parameter"];
+      default:
+        return ["object", "", `signature ${sig.kind}`];
+    }
+  };
+
+  const interfaceDesc = (row: number) => {
+    const [first, last] = md.range(T.TypeDef, row, 5, T.MethodDef);
+    const methods: unknown[] = [];
+    let slot = 6;
+    for (let m = first; m < last; m++, slot++) {
+      // Overloads keep their ABI name (OverloadAttribute), which is also unique in JS.
+      const overload = attr(T.MethodDef, m, "OverloadAttribute")[0];
+      const name = overload ? serString(overload.blob) : md.str(T.MethodDef, m, 3);
+      const sig = md.methodSig(m);
+      const paramRows = md.params(m);
+      let unsupported: string | undefined;
+      const params = sig.params.map((p, i) => {
+        const ps = p.kind === "const" ? p.inner : p;
+        const out = (paramRows.get(i + 1)?.flags ?? 0) & 2 || ps.kind === "byref";
+        const [kind, type, reason] = marshal(ps.kind === "byref" ? ps.inner : ps);
+        unsupported ??= reason;
+        return [out ? "out" : "in", kind, type];
+      });
+      let ret: unknown = null;
+      if (!(sig.ret.kind === "prim" && sig.ret.name === "void")) {
+        const [kind, type, reason] = marshal(sig.ret);
+        unsupported ??= reason;
+        ret = [kind, type];
+      }
+      methods.push(unsupported ? [name, slot, params, ret, unsupported] : [name, slot, params, ret]);
+    }
+    return { iid: guidOf(row), methods };
+  };
+
+  let constants: Map<number, number> | undefined;
+  const fieldConstants = () => {
+    if (constants) return constants;
+    constants = new Map();
+    for (let k = 1; k <= md.count(T.Constant); k++) {
+      const [table, r] = md.decode("HasConstant", md.col(T.Constant, k, 2));
+      if (table === T.Field) constants.set(r, k);
+    }
+    return constants;
+  };
+
+  const namespaces = new Map<string, WinrtNamespace>();
+  const bucket = (ns: string) => {
+    let b = namespaces.get(ns);
+    if (!b) namespaces.set(ns, (b = { interfaces: {}, classes: {}, enums: {} }));
+    return b;
+  };
+
+  for (const [full, { row, kind }] of typeKind) {
+    if (full.includes("`")) continue;
+    const ns = md.str(T.TypeDef, row, 2);
+    if (kind === "interface") {
+      const desc = interfaceDesc(row);
+      if (desc.iid) bucket(ns).interfaces[full] = desc;
+    } else if (kind === "delegate") {
+      const iid = guidOf(row);
+      const [first, last] = md.range(T.TypeDef, row, 5, T.MethodDef);
+      for (let m = first; m < last; m++) {
+        if (md.str(T.MethodDef, m, 3) !== "Invoke") continue;
+        const params = md.methodSig(m).params.map(ps => marshal(ps).slice(0, 2));
+        if (iid) (bucket(ns).delegates ??= {})[full] = { iid, params };
+      }
+    } else if (kind === "enum") {
+      const values: Record<string, number> = {};
+      const [first, last] = md.range(T.TypeDef, row, 4, T.Field);
+      for (let f = first; f < last; f++) {
+        const name = md.str(T.Field, f, 1);
+        if (name === "value__") continue;
+        const k = fieldConstants().get(f);
+        if (k !== undefined) {
+          const blob = md.blobAt(T.Constant, k, 3);
+          values[name] = new DataView(blob.buffer, blob.byteOffset, 4).getInt32(0, true);
+        }
+      }
+      bucket(ns).enums[full] = values;
+    } else if (kind === "class") {
+      const statics: string[] = [];
+      const factories: string[] = [];
+      let activatable = false;
+      for (const a of attr(T.TypeDef, row, "StaticAttribute")) statics.push(serString(a.blob));
+      for (const a of attr(T.TypeDef, row, "ActivatableAttribute")) {
+        // ActivatableAttribute(uint version[, string platform]) vs ActivatableAttribute(Type factory, uint version).
+        if (a.blob.length >= 6 && a.blob[2] > 4 && a.blob[3] !== 0) {
+          const name = serString(a.blob);
+          if (name.includes(".")) {
+            factories.push(name);
+            continue;
+          }
+        }
+        activatable = true;
+      }
+      // ComposableAttribute(Type factory, CompositionType type, uint version): CreateInstance(outer, out inner).
+      for (const a of attr(T.TypeDef, row, "ComposableAttribute")) factories.push(serString(a.blob));
+      let defaultInterface: unknown;
+      const interfaces: unknown[] = [];
+      for (const i of md.interfaceImpls(row)) {
+        const type = typeOfRef(md.col(T.InterfaceImpl, i, 1));
+        interfaces.push(type);
+        if (attr(T.InterfaceImpl, i, "DefaultAttribute").length !== 0) defaultInterface = type;
+      }
+      const extendsValue = md.col(T.TypeDef, row, 3);
+      const base = extendsValue ? (typeOfRef(extendsValue) as string) : undefined;
+      bucket(ns).classes[full] = {
+        defaultInterface,
+        statics,
+        factories,
+        activatable,
+        ...(base && base !== "System.Object" ? { base } : {}),
+        interfaces,
+      };
+    }
+  }
+  return namespaces;
+}
+
+export default { Winmd, Tables: T, readCompressed, formatGuid, guidFromArgs, winrtModel };
