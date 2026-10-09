@@ -18,7 +18,7 @@ ARG APHRODY_APORTS_REF=15e5fcd2686d113b0ebc0f356bcb974e1e612d58
 ADD https://raw.githubusercontent.com/aphrody-labs/aports/${APHRODY_APORTS_REF}/aphrody/keys/aphrody-labs.rsa.pub /etc/apk/keys/aphrody-labs.rsa.pub
 COPY wsl/packages*.txt /tmp/wsl/
 RUN set -eu; \
-    repo="https://github.com/aphrody-labs/aports/releases/download/aphrody-3.24-$(apk --print-arch)"; \
+    repo="https://github.com/aphrody-labs/aports/releases/download/aphrody-3.24-$(apk --print-arch)/APKINDEX.tar.gz"; \
     grep -qF "$repo" /etc/apk/repositories || echo "$repo" >> /etc/apk/repositories; \
     chmod 0644 /etc/apk/keys/aphrody-labs.rsa.pub; \
     lists=/tmp/wsl/packages.txt; \

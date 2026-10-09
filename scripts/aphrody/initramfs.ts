@@ -19,7 +19,8 @@
 // /initramfs-net.ts): a static address or a DHCP lease, the default route and
 // /etc/resolv.conf. --module (sysroot or host path, .ko, .ko.gz or .ko.zst) is
 // copied to /lib/modules/<name> and loaded by /init in the order given, before
-// the network: pass the dependencies first. --env adds to the workload's
+// the network: pass the dependencies first. --file copies a host file, or a
+// host directory recursively, to the target path. --env adds to the workload's
 // environment and --argv0 sets its argv[0]: `--bun app --argv0 app -- /bin/bun`
 // runs a `bun build --compile` executable, which is plain Bun when called
 // `bun` (for /init) and the compiled app under any other name.
@@ -447,7 +448,10 @@ export function buildEntries(options: Options): Built {
     tree.dir("app");
     tree.copyHostDir(resolve(options.app), "/app");
   }
-  for (const [host, target] of options.files) tree.file(target, readFileSync(host), 0o755);
+  for (const [host, target] of options.files) {
+    if (statSync(host).isDirectory()) tree.copyHostDir(host, target);
+    else tree.file(target, readFileSync(host), 0o755);
+  }
 
   const entries = tree.entries();
   return { entries, interp, files: entries.filter(e => (e.mode & S_IFMT) === S_IFREG).length };

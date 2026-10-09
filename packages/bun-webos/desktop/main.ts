@@ -25,6 +25,7 @@ const { values } = parseArgs({
     width: { type: "string", default: "1280" },
     height: { type: "string", default: "800" },
     chrome: { type: "string" },
+    "no-sandbox": { type: "boolean", default: false },
   },
   strict: true,
 });
@@ -52,7 +53,7 @@ async function embeddedDist(): Promise<string | undefined> {
 }
 
 const distDir = await embeddedDist();
-const options: WebOSOptions & { distDir?: string } = {
+const options: WebOSOptions = {
   port: Number(values.port),
   hostname: "127.0.0.1",
   development: false,
@@ -74,7 +75,15 @@ const READ_DESKTOP = `new Promise((resolve, reject) => {
   if (first) done(first); else observer.observe(document, { subtree: true, childList: true });
 })`;
 
-const backend = { type: "chrome" as const, url: false as const, ...(values.chrome ? { path: values.chrome } : {}) };
+// In a container Chrome has no user namespaces for its sandbox and /dev/shm is 64 MB (renderer crashes).
+const noSandbox = values["no-sandbox"] || existsSync("/.dockerenv") || existsSync("/run/.containerenv");
+const chromeArgs = noSandbox ? ["--no-sandbox", "--disable-dev-shm-usage"] : [];
+const backend = {
+  type: "chrome" as const,
+  url: false as const,
+  argv: chromeArgs,
+  ...(values.chrome ? { path: values.chrome } : {}),
+};
 
 interface DesktopWindow {
   mode: "webview" | "app";
@@ -135,6 +144,7 @@ function openAppWindow(): DesktopWindow {
       `--window-size=${width},${height}`,
       "--no-first-run",
       "--no-default-browser-check",
+      ...chromeArgs,
     ],
     stdio: ["ignore", "ignore", "ignore"],
   });
@@ -145,7 +155,7 @@ function openAppWindow(): DesktopWindow {
     read: async () => {
       await using probe = new Bun.WebView({ backend, width, height });
       await probe.navigate(url);
-      return probe.evaluate(READ_DESKTOP);
+      return await probe.evaluate(READ_DESKTOP);
     },
     close: () => chrome.kill(),
   };
@@ -155,7 +165,8 @@ const window = openWebView() ?? openAppWindow();
 
 async function shutdown(code: number): Promise<never> {
   window.close();
-  await server.stop(true);
+  // stop() waits on the page worker socket Chrome keeps open; exit regardless after a bound.
+  await Promise.race([server.stop(true), Bun.sleep(2000)]);
   process.exit(code);
 }
 process.on("SIGINT", () => void shutdown(130));

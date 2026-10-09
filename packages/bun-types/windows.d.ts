@@ -350,6 +350,48 @@ declare module "bun:windows" {
     ): { exitCode: number | null; stdout: string; stderr: string };
   }
 
+  interface LogicalDrive {
+    root: string;
+    type: "removable" | "fixed" | "remote" | "optical" | "ramdisk" | "unknown";
+    totalBytes: number;
+    freeBytes: number;
+    availableBytes: number;
+  }
+
+  /** Logical drives visible to the process, with total and available capacity. */
+  namespace storage {
+    function drives(): LogicalDrive[];
+  }
+
+  interface WindowsMemoryStatus {
+    memoryLoad: number;
+    totalPhysical: number;
+    availablePhysical: number;
+    totalPageFile: number;
+    availablePageFile: number;
+    totalVirtual: number;
+    availableVirtual: number;
+  }
+
+  /** Physical, page-file and virtual memory counters from `GlobalMemoryStatusEx`. */
+  namespace memory {
+    function status(): WindowsMemoryStatus;
+  }
+
+  /**
+   * Exports of the `@aphrody/bun-windows-<name>` package, the binding of one Windows API family that
+   * ships outside the Bun binary. Resolved from the working directory, then from the entry script, and
+   * loaded once. Throws `ERR_BUN_WINDOWS_FAMILY_NOT_FOUND` when the package is not installed.
+   *
+   * @example
+   * ```ts
+   * const kernel32 = windows.family("kernel32");
+   * ```
+   */
+  function family<T = Record<string, unknown>>(name: string): T;
+  /** `windows.families.kernel32` is `windows.family("kernel32")`. `"kernel32" in windows.families` checks the package is installed. */
+  const families: { readonly [name: string]: Record<string, unknown> };
+
   /** `true` on Windows. */
   const isSupported: boolean;
   /** Windows version, read once and cached. */

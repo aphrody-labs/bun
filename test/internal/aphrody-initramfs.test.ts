@@ -244,7 +244,10 @@ describe("aphrody initramfs", () => {
   });
 
   test("the CLI writes a gzip newc archive that reads back", async () => {
-    using dir = tempDir("aphrody-initramfs-cli", { "app/index.ts": "console.log('hi')\n" });
+    using dir = tempDir("aphrody-initramfs-cli", {
+      "app/index.ts": "console.log('hi')\n",
+      "js/bun/linux.js": "// builtin\n",
+    });
     alpineSysroot(String(dir));
     const out = join(String(dir), "initramfs.cpio.gz");
     await using proc = Bun.spawn({
@@ -265,6 +268,8 @@ describe("aphrody initramfs", () => {
         "MOTD=a=b",
         "--argv0",
         "server",
+        "--file",
+        `${join(String(dir), "js")}:/opt/js`,
         "--out",
         out,
       ],
@@ -280,6 +285,7 @@ describe("aphrody initramfs", () => {
     const read = readNewc(Bun.gunzipSync(await Bun.file(out).bytes()));
     const byPath = new Map(read.map(e => [e.path, e]));
     expect(new TextDecoder().decode(byPath.get("app/index.ts")!.data)).toBe("console.log('hi')\n");
+    expect(new TextDecoder().decode(byPath.get("opt/js/bun/linux.js")!.data)).toBe("// builtin\n");
     expect(byPath.get("dev/console")!.rdev).toEqual([5, 1]);
     expect(byPath.get("bin/sh")!.mode).toBe(S_IFLNK | 0o777);
     expect(byPath.get("init")!.mode).toBe(S_IFREG | 0o755);
