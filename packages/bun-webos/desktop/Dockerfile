@@ -9,9 +9,9 @@
 ARG BASE=aphrody/gui-alpine:3.24
 FROM ${BASE}
 RUN if command -v apk >/dev/null; then \
-      apk add --no-cache chromium nss font-noto; \
+      apk add --no-cache chromium nss font-noto font-dejavu xvfb-run xauth mesa-dri-gallium; \
     else \
-      apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
+      apt-get update && apt-get install -y --no-install-recommends ca-certificates curl xvfb xauth \
       && curl -fsSL -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
       && apt-get install -y --no-install-recommends /tmp/chrome.deb \
       && rm -rf /tmp/chrome.deb /var/lib/apt/lists/*; \

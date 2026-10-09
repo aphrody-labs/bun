@@ -10,6 +10,7 @@
  * `--bun` / `--bun-dir` select the fork's runtime as the executable base (compile.executablePath);
  * without them a cross target would embed the upstream runtime Bun downloads by default.
  */
+import { tailwind } from "@aphrody/bun-plugin-tailwind";
 import { existsSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
@@ -31,6 +32,22 @@ export function hostTarget(): DesktopTarget {
   return `bun-linux-${arch}${musl ? "-musl" : ""}` as DesktopTarget;
 }
 
+const pkg = join(import.meta.dir, "..");
+
+/** Runs the package's build.ts (page bundle + workers into dist/) and packs dist/ into desktop/dist/webos-dist.tar.gz. */
+export async function packWebDist(outdir: string): Promise<string> {
+  const web = Bun.spawn({ cmd: [process.execPath, "build.ts"], cwd: pkg, stdio: ["ignore", "inherit", "inherit"] });
+  if ((await web.exited) !== 0) throw new Error("packages/bun-webos/build.ts failed");
+  const dist = join(pkg, "dist");
+  const files: Record<string, Blob> = {};
+  for await (const rel of new Bun.Glob("**/*").scan({ cwd: dist, onlyFiles: true }))
+    files[rel.replaceAll("\\", "/")] = Bun.file(join(dist, rel));
+  if (Object.keys(files).length === 0) throw new Error(`${dist} is empty after build.ts`);
+  const archive = join(outdir, "webos-dist.tar.gz");
+  await Bun.Archive.write(archive, files, { compress: "gzip" });
+  return archive;
+}
+
 export interface DesktopBuild {
   target: DesktopTarget;
   outfile: string;
@@ -41,6 +58,8 @@ export async function buildDesktop(options: {
   target?: DesktopTarget;
   executablePath?: string;
   outdir?: string;
+  /** Prebuilt webos-dist.tar.gz (one pack for several targets). */
+  webDist?: string;
 }): Promise<DesktopBuild> {
   const target = options.target ?? hostTarget();
   const outdir = resolve(options.outdir ?? join(import.meta.dir, "dist"));
@@ -49,7 +68,13 @@ export async function buildDesktop(options: {
   const executablePath = options.executablePath ?? (target === hostTarget() ? process.execPath : undefined);
   if (executablePath && !existsSync(executablePath)) throw new Error(`--bun ${executablePath} does not exist`);
   const result = await Bun.build({
-    entrypoints: [join(import.meta.dir, "main.ts")],
+    // bench-worker: `new Worker(new URL(...))` in server.ts; the tarball: Bun.embeddedFiles, extracted by main.ts.
+    entrypoints: [
+      join(import.meta.dir, "main.ts"),
+      join(pkg, "src", "server", "bench-worker.ts"),
+      options.webDist ?? (await packWebDist(outdir)),
+    ],
+    plugins: [tailwind({ theme: "m3" })],
     compile: { target, outfile, ...(executablePath ? { executablePath } : {}) },
     minify: true,
     sourcemap: "linked",
@@ -74,6 +99,9 @@ if (import.meta.main) {
     values.target === "all"
       ? (Object.keys(DESKTOP_TARGETS) as DesktopTarget[])
       : [(values.target as DesktopTarget | undefined) ?? hostTarget()];
+  const outdir = resolve(values.outdir ?? join(import.meta.dir, "dist"));
+  mkdirSync(outdir, { recursive: true });
+  const webDist = await packWebDist(outdir);
   for (const target of targets) {
     if (!(target in DESKTOP_TARGETS)) throw new Error(`unknown target ${target}`);
     const executablePath =
@@ -85,7 +113,7 @@ if (import.meta.main) {
       console.log(`skip ${target}: ${executablePath} missing`);
       continue;
     }
-    const built = await buildDesktop({ target, executablePath, outdir: values.outdir });
+    const built = await buildDesktop({ target, executablePath, outdir, webDist });
     console.log(`${built.target} -> ${built.outfile} (${(built.bytes / 1048576).toFixed(1)} MiB)`);
   }
 }
