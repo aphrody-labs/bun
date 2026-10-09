@@ -166,6 +166,9 @@ pub struct ZlibReaderArrayList<'a> {
     /// Decompression-bomb guard: `read_all` errors instead of growing the
     /// output past this many bytes. Defaults to unbounded.
     pub(crate) max_output_size: usize,
+    /// Same rule as [`InflateDecoder`]: gzip-only `window_bits` decode every
+    /// concatenated member (RFC 1952 §2.2), like Node's `zlib.gunzipSync`.
+    multi_member: bool,
 }
 
 impl<'a> Drop for ZlibReaderArrayList<'a> {
@@ -212,6 +215,7 @@ impl<'a> ZlibReaderArrayList<'a> {
             zlib: bun_core::ffi::zeroed(),
             state: ZlibReaderArrayListState::Uninitialized,
             max_output_size: usize::MAX,
+            multi_member: (16..32).contains(&options.window_bits),
         });
 
         let list_len = zlib_reader.list_ptr.len();
@@ -335,6 +339,21 @@ impl<'a> ZlibReaderArrayList<'a> {
 
                 match rc {
                     ReturnCode::StreamEnd => {
+                        // SAFETY: avail_in > 0, so next_in points at an unread input byte.
+                        if self.multi_member
+                            && self.zlib.avail_in > 0
+                            && unsafe { *self.zlib.next_in } == 0x1f
+                        {
+                            // inflateReset zeroes total_out, which the epilogue uses as the list length.
+                            let total_out = self.zlib.total_out;
+                            // SAFETY: self.zlib was initialized via inflateInit2_.
+                            if unsafe { inflateReset(&raw mut self.zlib) } != ReturnCode::Ok {
+                                self.state = ZlibReaderArrayListState::Error;
+                                return Err(ZlibError::ZlibError);
+                            }
+                            self.zlib.total_out = total_out;
+                            continue;
+                        }
                         self.end();
                         return Ok(());
                     }

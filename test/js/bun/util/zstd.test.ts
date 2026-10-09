@@ -706,6 +706,21 @@ describe("sync compression argument handling", () => {
   }, 60_000);
 });
 
+describe("gunzipSync with concatenated gzip members", () => {
+  it("decodes every member, like node:zlib", () => {
+    const parts = [Buffer.from("first member\n"), Buffer.alloc(70000, "b"), Buffer.from("third")];
+    const joined = Buffer.concat([gzipSync(parts[0]), gzipSync(parts[1]), zlib.gzipSync(parts[2])]);
+    const expected = Buffer.concat(parts);
+    expect(Buffer.from(gunzipSync(joined))).toEqual(expected);
+    expect(zlib.gunzipSync(joined)).toEqual(expected);
+  });
+
+  it("still ignores trailing bytes that do not start a member", () => {
+    const joined = Buffer.concat([gzipSync("only"), Buffer.alloc(8)]);
+    expect(Buffer.from(gunzipSync(joined)).toString()).toBe("only");
+  });
+});
+
 // x64 builds target nehalem, so zstd picks its BMI2 kernels at run time. It used to ask CPUID in
 // every CCtx and DCtx init. CPUID is a VM exit under a hypervisor, about 2 us each, two per init.
 // arch_prctl(ARCH_SET_CPUID, 0) makes CPUID raise SIGSEGV on the calling thread, so a context that
