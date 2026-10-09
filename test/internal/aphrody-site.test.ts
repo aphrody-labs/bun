@@ -2,6 +2,15 @@ import { describe, expect, test } from "bun:test";
 import { isWindows, tempDir } from "harness";
 import { existsSync, readFileSync, readlinkSync } from "node:fs";
 import { join } from "node:path";
+import {
+  DOCS_LOGO_FILES,
+  SITE_ROOT_FILES as SYNCED_ROOT_FILES,
+  fromDir,
+  hashedPath,
+  plan,
+  sync,
+} from "../../scripts/aphrody/brand-sync.ts";
+import { BRAND, SITE_ROOT_FILES } from "../../scripts/aphrody/site/brand.ts";
 import { build, describeAsset, pageUrl, parseSums, readNavigation } from "../../scripts/aphrody/site/build.ts";
 import {
   PRIVATE_TERMS,
@@ -104,6 +113,9 @@ describe("site build helpers", () => {
       "docs/index.mdx":
         "---\ntitle: Welcome\ndescription: Intro\n---\n\n<Tip>Install with `curl -fsSL https://bun.sh/install | bash`.</Tip>\n\nSee [runtime](/runtime).\n",
       "docs/runtime/index.mdx": "---\ntitle: Runtime\n---\n\n## Section\n\n| a | b |\n| - | - |\n| 1 | 2 |\n",
+      "docs/logo/favicon.ico": "ico",
+      "docs/logo/site.webmanifest": "{}",
+      "docs/logo/logo-wordmark-light.svg": "<svg/>",
       "scripts/aphrody/install.sh": "#!/bin/sh\necho fork\n",
       "scripts/aphrody/install-dev.sh": "#!/bin/sh\necho setup\n",
     });
@@ -132,6 +144,21 @@ describe("site build helpers", () => {
     expect(read("benchmarks/index.html")).toContain("perf-gate.ts");
     expect(read("blog/index.html")).toContain("url=/release-notes");
     expect(existsSync(join(out, "components"))).toBe(false);
+    expect(read("favicon.ico")).toBe("ico");
+    expect(read("site.webmanifest")).toBe("{}");
+    expect(existsSync(join(out, "logo-wordmark-light.svg"))).toBe(false);
+    expect(read("docs/logo/logo-wordmark-light.svg")).toBe("<svg/>");
+    const head = read("docs/index.html");
+    for (const tag of [
+      '<link rel="icon" href="/favicon.ico" sizes="any">',
+      '<link rel="apple-touch-icon" href="/apple-touch-icon.png">',
+      '<link rel="manifest" href="/site.webmanifest">',
+      `<link rel="stylesheet" href="${BRAND.tokensCss}">`,
+      `<link rel="stylesheet" href="${BRAND.fontsCss}">`,
+      `<meta name="theme-color" media="(prefers-color-scheme: dark)" content="${BRAND.themeColor.dark}">`,
+    ])
+      expect(head).toContain(tag);
+    expect(read("assets/site.css")).toContain("--bg:var(--md-sys-color-surface)");
     for (const p of [
       "index.html",
       "404.html",
@@ -142,6 +169,46 @@ describe("site build helpers", () => {
       "site.json",
     ])
       expect(existsSync(join(out, p))).toBe(true);
+  });
+});
+
+describe("brand sync", () => {
+  test("a brand directory lands in docs/logo, src/bun.ico and site/brand.ts", () => {
+    const tokens = { seed: "#e2dbad", light: { surface: "#fef9eb" }, dark: { surface: "#15140c" } };
+    using brand = tempDir("aphrody-brand", {
+      ...Object.fromEntries(DOCS_LOGO_FILES.map(name => [name, name])),
+      "m3-tokens.css": ":root{}",
+      "aphrody-fonts.css": "@font-face{}",
+      "m3-tokens.json": JSON.stringify(tokens),
+    });
+    using repo = tempDir("aphrody-brand-repo", { "docs/logo/bun.png": "old", "docs/logo/icon.svg": "icon.svg" });
+    const files = plan(fromDir(String(brand)), "https://cdn.test");
+    const changed = [...files.keys()].filter(p => p !== "docs/logo/icon.svg");
+    expect(sync(String(repo), files, { check: true })).toEqual({ changed, removed: ["docs/logo/bun.png"] });
+    expect(existsSync(join(String(repo), "src/bun.ico"))).toBe(false);
+
+    sync(String(repo), files);
+    const read = (p: string) => readFileSync(join(String(repo), p), "utf8");
+    expect(read("src/bun.ico")).toBe("favicon.ico");
+    expect(read("docs/logo/logo-wordmark-dark.svg")).toBe("logo-wordmark-dark.svg");
+    expect(existsSync(join(String(repo), "docs/logo/bun.png"))).toBe(false);
+    const module = read("scripts/aphrody/site/brand.ts");
+    const css = new TextEncoder().encode(":root{}");
+    expect(module).toContain(`tokensCss: "https://cdn.test${hashedPath("m3-tokens.css", css)}"`);
+    expect(module).toContain('themeColor: { light: "#fef9eb", dark: "#15140c" }');
+    expect(sync(String(repo), files, { check: true })).toEqual({ changed: [], removed: [] });
+  });
+
+  test("the committed brand is the one brand-sync writes", () => {
+    const root = join(import.meta.dir, "../..");
+    expect([...SITE_ROOT_FILES]).toEqual([...SYNCED_ROOT_FILES]);
+    expect(readFileSync(join(root, "src/bun.ico"))).toEqual(readFileSync(join(root, "docs/logo/favicon.ico")));
+    for (const name of DOCS_LOGO_FILES) expect(existsSync(join(root, "docs/logo", name))).toBe(true);
+    const docs = JSON.parse(readFileSync(join(root, "docs/docs.json"), "utf8"));
+    for (const path of [docs.favicon, docs.logo.light, docs.logo.dark])
+      expect(existsSync(join(root, "docs", path))).toBe(true);
+    expect(BRAND.tokensCss).toMatch(/^https:\/\/cdn\.aphrody\.com\/h\/[0-9a-f]{16}\.css$/);
+    expect(BRAND.fontsCss).toMatch(/^https:\/\/cdn\.aphrody\.com\/h\/[0-9a-f]{16}\.css$/);
   });
 });
 

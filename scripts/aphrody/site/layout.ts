@@ -1,5 +1,6 @@
-// Gabarit HTML, feuille de style et script du site aphrody.com (rôles Material 3 de la graine Aphrody #8c6c88,
-// les mêmes que la page de downloads.aphrody.com).
+// Gabarit HTML, feuille de style et script du site aphrody.com. Couleurs : rôles --md-sys-color-* de m3-tokens.css et
+// police Google Sans Flex d'aphrody-fonts.css, servis par cdn.aphrody.com (brand.ts, scripts/aphrody/brand-sync.ts).
+import { BRAND } from "./brand.ts";
 import { escapeHtml } from "./mdx.ts";
 
 export type NavLink = { label: string; href: string; active?: boolean };
@@ -38,7 +39,13 @@ ${s.alternateMarkdown ? `<link rel="alternate" type="text/markdown" href="${esca
 <meta property="og:title" content="${escapeHtml(s.title)}">
 <meta property="og:url" content="${escapeHtml(canonical)}">
 ${s.description ? `<meta property="og:description" content="${escapeHtml(s.description)}">` : ""}
-<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="${BRAND.themeColor.light}">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="${BRAND.themeColor.dark}">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="stylesheet" href="${BRAND.tokensCss}">
+<link rel="stylesheet" href="${BRAND.fontsCss}">
 <link rel="stylesheet" href="/assets/site.css">
 <script src="/assets/site.js" defer></script>
 </head><body class="${s.bodyClass ?? ""}">
@@ -62,8 +69,8 @@ ${s.footer}
 `;
 }
 
-export const CSS = `:root{color-scheme:light dark;--bg:#fff7fa;--on-bg:#201a1e;--primary:#7e4d7c;--on-primary:#fff;--primary-container:#ffd6f8;--on-primary-container:#310a32;--surface:#fff7fa;--sc-low:#fbf1f5;--sc:#f7ebf1;--sc-high:#f1e5eb;--on-sv:#4e444b;--outline:#7f747c;--outline-v:#d1c3cc;--tertiary:#805341;--error:#ba1a1a;--ok:#2e6b30;--code-bg:#f7ebf1;--radius:12px;--font:Roboto,"Segoe UI",system-ui,-apple-system,sans-serif;--mono:"Roboto Mono",ui-monospace,SFMono-Regular,Consolas,monospace}
-@media (prefers-color-scheme:dark){:root{--bg:#171216;--on-bg:#ebdfe6;--primary:#efb4e9;--on-primary:#4b1f4b;--primary-container:#643563;--on-primary-container:#ffd6f8;--surface:#171216;--sc-low:#201a1e;--sc:#241e22;--sc-high:#2f282d;--on-sv:#d1c3cc;--outline:#9a8d96;--outline-v:#4e444b;--tertiary:#f4b8a0;--error:#ffb4ab;--ok:#8fd88a;--code-bg:#201a1e}}
+export const CSS = `:root{color-scheme:light dark;--bg:var(--md-sys-color-surface);--on-bg:var(--md-sys-color-on-surface);--primary:var(--md-sys-color-primary);--on-primary:var(--md-sys-color-on-primary);--primary-container:var(--md-sys-color-primary-container);--on-primary-container:var(--md-sys-color-on-primary-container);--surface:var(--md-sys-color-surface);--sc-low:var(--md-sys-color-surface-container-low);--sc:var(--md-sys-color-surface-container);--sc-high:var(--md-sys-color-surface-container-high);--on-sv:var(--md-sys-color-on-surface-variant);--outline:var(--md-sys-color-outline);--outline-v:var(--md-sys-color-outline-variant);--tertiary:var(--md-sys-color-tertiary);--error:var(--md-sys-color-error);--ok:#2e6b30;--code-bg:var(--md-sys-color-surface-container);--radius:12px;--font:var(--md-ref-typeface-plain,"Google Sans Flex",system-ui,-apple-system,"Segoe UI",sans-serif);--mono:"Roboto Mono",ui-monospace,SFMono-Regular,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root{--ok:#8fd88a}}
 *{box-sizing:border-box}html{scroll-padding-top:80px}
 body{margin:0;background:var(--bg);color:var(--on-bg);font:16px/1.65 var(--font);-webkit-font-smoothing:antialiased}
 a{color:var(--primary)}a:hover{text-decoration-thickness:2px}

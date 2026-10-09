@@ -13,6 +13,7 @@
 // l'arbre extrait. Sans --data, seules la doc du runtime et ses pages de téléchargement sont produites.
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
+import { SITE_ROOT_FILES } from "./brand.ts";
 import type { SiteData } from "./collect.ts";
 import { HIGHLIGHT_CSS, highlightHtml } from "./highlight.ts";
 import { CSS, JS, shell, type NavLink, type Shell } from "./layout.ts";
@@ -105,7 +106,7 @@ const inlineCode = (s: string) => escapeHtml(s).replace(/`([^`]+)`/g, "<code>$1<
 /** Liens racine Mintlify dans le HTML rendu (`/runtime/x`) vers `/docs/runtime/x`. */
 export function prefixDocsLinks(html: string): string {
   return html.replace(
-    /(href|src)="\/(?!\/|docs(?:\/|"|#)|install|downloads|benchmarks|blog|guides|llms|bun\/|icon\.svg|pet\.webp|assets\/)([^"]*)"/g,
+    /(href|src)="\/(?!\/|docs(?:\/|"|#)|install|downloads|benchmarks|blog|guides|llms|bun\/|favicon\.ico|apple-touch-icon\.png|site\.webmanifest|icon(?:-\d+)?\.(?:svg|png)|maskable-\d+\.png|pet\.webp|assets\/)([^"]*)"/g,
     (_, attr, path) => `${attr}="/docs/${path.replace(/\.mdx?(?=$|#)/, "")}"`,
   );
 }
@@ -509,6 +510,10 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
   for (const dir of ["images", "icons", "logo"]) {
     const from = join(docs, dir);
     if (existsSync(from)) cpSync(from, join(o.out, "docs", dir), { recursive: true });
+  }
+  for (const name of SITE_ROOT_FILES) {
+    const from = join(docs, "logo", name);
+    if (existsSync(from)) cpSync(from, join(o.out, name));
   }
 
   // llms.txt / llms-full.txt (format llmstxt.org)

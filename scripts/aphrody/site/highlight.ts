@@ -59,10 +59,7 @@ const LANGS: Record<string, Rule[]> = {
         "if then else elif fi for while until do done case esac function in select return export local set unset source",
       ),
     ],
-    [
-      "f",
-      String.raw`(?:^|(?<=^\s*\$\s)|(?<=[|;&]\s*)|(?<=&&\s*)|(?<=^\s+))(?![-#$])[\w./@:+-]+(?=[ \t]|$)`,
-    ],
+    ["f", String.raw`(?:^|(?<=^\s*\$\s)|(?<=[|;&]\s*)|(?<=&&\s*)|(?<=^\s+))(?![-#$])[\w./@:+-]+(?=[ \t]|$)`],
     ["a", String.raw`(?<=\s)--?[\w-]+(?:=\S*)?`],
     ["n", String.raw`(?<=\s)\d+(?=\s|$)`],
   ],
@@ -78,10 +75,7 @@ const LANGS: Record<string, Rule[]> = {
         "if else elseif foreach for while do until switch function param return try catch finally throw begin process end in",
       ),
     ],
-    [
-      "f",
-      String.raw`\b[A-Z][a-z]+-[A-Za-z]+\b|(?:^|(?<=[|;]\s*)|(?<=^\s+))(?![-#$])[\w./:-]+(?=[ \t]|$)`,
-    ],
+    ["f", String.raw`\b[A-Z][a-z]+-[A-Za-z]+\b|(?:^|(?<=[|;]\s*)|(?<=^\s+))(?![-#$])[\w./:-]+(?=[ \t]|$)`],
     ["a", String.raw`(?<=\s)-[A-Za-z][\w-]*`],
     ["n", NUM],
   ],
@@ -137,10 +131,7 @@ const LANGS: Record<string, Rule[]> = {
     ["l", words("true false None Some Ok Err")],
     ["n", NUM],
     ["f", String.raw`\b[a-z_]\w*!|\b[a-z_]\w*(?=\s*(?:::<[^>]*>)?\()`],
-    [
-      "t",
-      String.raw`\b[A-Z]\w*\b|\b(?:u8|u16|u32|u64|u128|usize|i8|i16|i32|i64|i128|isize|f32|f64|bool|char|str)\b`,
-    ],
+    ["t", String.raw`\b[A-Z]\w*\b|\b(?:u8|u16|u32|u64|u128|usize|i8|i16|i32|i64|i128|isize|f32|f64|bool|char|str)\b`],
   ],
   python: [
     HASH_COMMENT,
@@ -246,8 +237,7 @@ function lexer(lang: string) {
   return entry;
 }
 
-const escape = (s: string) =>
-  s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+const escape = (s: string) => s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 const unescape = (s: string) =>
   s
     .replaceAll("&lt;", "<")
@@ -284,12 +274,10 @@ export function highlightHtml(html: string): string {
     /<pre><code class="language-([\w+#.-]+)">([\s\S]*?)<\/code><\/pre>/g,
     (all, lang: string, body: string) => {
       const colored = highlight(unescape(body), lang);
-      return colored === undefined
-        ? all
-        : `<pre><code class="language-${lang}">${colored}</code></pre>`;
+      return colored === undefined ? all : `<pre><code class="language-${lang}">${colored}</code></pre>`;
     },
   );
 }
 
-export const HIGHLIGHT_CSS = `.hl-c{color:#6f6670;font-style:italic}.hl-s{color:#2e6b30}.hl-n,.hl-l{color:#9a4a12}.hl-k{color:#7e2d7c;font-weight:500}.hl-t{color:#1d5f8a}.hl-f{color:#5b3fa0}.hl-p{color:#8a2846}.hl-v{color:#9a4a12}.hl-a{color:#1d5f8a}.hl-d{color:#2e6b30;background:#2e6b3014}.hl-r{color:#ba1a1a;background:#ba1a1a14}
-@media (prefers-color-scheme:dark){.hl-c{color:#9a8d96}.hl-s{color:#a8db9a}.hl-n,.hl-l,.hl-v{color:#f4b8a0}.hl-k{color:#efb4e9}.hl-t,.hl-a{color:#9ccaf3}.hl-f{color:#cdbdff}.hl-p{color:#ffb1c4}.hl-d{color:#8fd88a;background:#8fd88a14}.hl-r{color:#ffb4ab;background:#ffb4ab14}}`;
+export const HIGHLIGHT_CSS = `.hl-c{color:var(--on-sv);font-style:italic}.hl-s{color:#2e6b30}.hl-n,.hl-l{color:#9a4a12}.hl-k{color:var(--primary);font-weight:500}.hl-t{color:#1d5f8a}.hl-f{color:#5b3fa0}.hl-p{color:#8a2846}.hl-v{color:#9a4a12}.hl-a{color:#1d5f8a}.hl-d{color:#2e6b30;background:#2e6b3014}.hl-r{color:#ba1a1a;background:#ba1a1a14}
+@media (prefers-color-scheme:dark){.hl-s{color:#a8db9a}.hl-n,.hl-l,.hl-v{color:#f4b8a0}.hl-t,.hl-a{color:#9ccaf3}.hl-f{color:#cdbdff}.hl-p{color:#ffb1c4}.hl-d{color:#8fd88a;background:#8fd88a14}.hl-r{color:#ffb4ab;background:#ffb4ab14}}`;

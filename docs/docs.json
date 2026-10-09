@@ -7,14 +7,14 @@
     }
   },
   "colors": {
-    "light": "#ff73a8",
-    "primary": "#ff73a8",
-    "dark": "#ff73a8"
+    "light": "#d3c972",
+    "primary": "#676013",
+    "dark": "#676013"
   },
   "background": {
     "decoration": "gradient"
   },
-  "favicon": "/logo/bun.png",
+  "favicon": "/logo/icon-512.png",
   "icons": {
     "library": "lucide"
   },
@@ -22,8 +22,8 @@
     "default": "system"
   },
   "logo": {
-    "light": "/logo/logo-with-wordmark-dark.svg",
-    "dark": "/logo/logo-with-wordmark-light.svg"
+    "light": "/logo/logo-wordmark-light.svg",
+    "dark": "/logo/logo-wordmark-dark.svg"
   },
   "navbar": {
     "links": [

@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/logo/logo-wordmark-dark.svg">
+    <img alt="Aphrody" src="docs/logo/logo-wordmark-light.svg" height="80">
+  </picture>
+</p>
+
 # Aphrody runtime
 
 The JavaScript and TypeScript runtime of [Aphrody](https://aphrody.com).
