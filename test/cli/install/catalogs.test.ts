@@ -696,6 +696,23 @@ describe("errors", () => {
     expect(exitCode).not.toBe(0);
   });
 
+  test.concurrent("a catalog version the registry does not have is reported as unresolved, not missing", async () => {
+    const { packageDir } = await registry.createTestDir({
+      files: {
+        "package.json": JSON.stringify({
+          name: "catalog-error-4",
+          workspaces: { catalog: { "no-deps": "9.9.9" } },
+          dependencies: { "no-deps": "catalog:" },
+        }),
+      },
+    });
+
+    const { err, exitCode } = await failingInstall(packageDir);
+    expect(err).toContain("error: no-deps@catalog: failed to resolve its catalog version 9.9.9\n");
+    expect(err).not.toContain("is not in the catalog");
+    expect(exitCode).not.toBe(0);
+  });
+
   test("invalid dependency version", async () => {
     const { packageDir, packageJson } = await registry.createTestDir();
     await write(

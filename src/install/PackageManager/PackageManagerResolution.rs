@@ -351,7 +351,16 @@ impl PackageManager {
                                 .keys()
                                 .iter()
                                 .any(|k| k.slice(string_buf) == catalog_name);
-                        if !catalog_exists {
+                        if let Some(entry) = lockfile.catalogs.find(
+                            string_buf,
+                            catalog_name,
+                            failed_dep.name.slice(string_buf),
+                        ) {
+                            Output::err_generic(
+                                "<b>{}@{}<r><d> failed to resolve<r> its catalog version <b>{}<r>",
+                                (name, literal, entry.version.literal.fmt(string_buf)),
+                            );
+                        } else if !catalog_exists {
                             Output::err_generic(
                                 "<b>{}@{}<r>: there is no catalog named \"{}\" in the root package.json",
                                 (name, literal, bstr::BStr::new(catalog_name)),
