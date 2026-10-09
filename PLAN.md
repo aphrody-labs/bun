@@ -516,8 +516,16 @@ et `packages/engine/n2b-client` supprimés (2db2b5a973, 132 fichiers, −31 522 
   `docs/reference/compat/N2B.md`.
 - ✅ Tests : cargo n2b (~97) et oxc (13) ; `bun test test/integration/bun-plugin-{n2b,oxc}` 17 + 16 pass (Windows),
   29 pass / 4 skip oxfmt-oxlint absents (conteneur Linux 26.04) ; Aphrody cargo test --lib des consommateurs 396 pass.
-- 🔄 n2b pour les chantiers M/Q/R (bunnisation de gros monorepos) : catalogs/overrides pnpm, vitest/jest → bun test,
-  `--since <ref>`, `--migrate --dry-run`, manifeste borné au dépôt ; version 0.7.1.
+- 🔄 n2b 0.7.1 pour M/Q/R, code poussé (96aa81a7598), ni compilé ni testé (directive : passe unique de main) :
+  `--migrate` reporte `pnpm-workspace.yaml`/champ `pnpm` (workspaces, catalog(s), overrides, patchedDependencies,
+  onlyBuiltDependencies → trustedDependencies) ; `--migrate --dry-run` → `migration_plan` ; 9 règles `cli/*` (vitest/jest →
+  `bun test` en aggressive, tsx/ts-node/`node --loader` → `bun`, `pnpm -r|--filter` → `bun run --filter`) ;
+  `test/unsupported-api`, `test/mock-hoisting` ; `--since <ref>` ; `find_manifest` borné à `.git` ; schéma v2.
+  À faire après la passe verte : `cd packages/bun-n2b && cargo test --workspace && cargo clippy --workspace --all-targets`,
+  `bun packages/bun-n2b/scripts/generate-schema-types.ts --check`, `bun scripts/aphrody/build-napi.ts packages/bun-n2b`,
+  `bun test test/integration/bun-plugin-n2b`, puis publier 0.7.1 (crates + native) et passer Aphrody en `=0.7.1`.
+  Limites Bun signalées : `bun:test` sans `vi.stubEnv/stubGlobal/importActual/hoisted/doMock/resetModules/waitFor`,
+  `vi.mock` non hissé ; overrides pnpm imbriqués (`a>b>c`) sans équivalent.
 
 ### N. Alpine d'abord, Ubuntu 26.04 garanti (🔄)
 
