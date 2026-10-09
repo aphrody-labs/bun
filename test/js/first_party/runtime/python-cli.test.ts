@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { afterAll, expect, test } from "bun:test";
 import { bunEnv, bunExe, tempDir } from "harness";
-import { writeFileSync } from "node:fs";
+import { realpathSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 
 const fixture = tempDir("bun-python-cli", {});
@@ -188,6 +188,13 @@ test.concurrent("embedded uv runs under its executable alias", async () => {
   const result = await run(["--version"], undefined, environment, "uv");
   expect(result.out).toMatch(/^uv 0\.12\.24(?: .*)?$/);
   expect(result.err).toBe("");
+  expect(result.code).toBe(0);
+});
+
+test.concurrent("embedded uv frees the paths it canonicalizes", async () => {
+  using dir = tempDir("uv-canonicalize", {});
+  const result = await run(["uv", "tool", "dir"], undefined, { ...environment, UV_TOOL_DIR: String(dir) });
+  expect(realpathSync(result.out)).toBe(realpathSync(String(dir)));
   expect(result.code).toBe(0);
 });
 

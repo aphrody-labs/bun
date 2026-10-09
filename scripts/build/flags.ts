@@ -1289,6 +1289,11 @@ export const linkerFlags: Flag[] = [
     desc: "Retry pthread_create EAGAIN caused by an in-flight execve",
   },
   {
+    flag: "-Wl,--wrap=realpath",
+    when: c => c.linux,
+    desc: "realpath(path, NULL) allocates with bun's malloc, so its free() is mimalloc's (c-bindings.cpp)",
+  },
+  {
     flag: ["-static-libstdc++", "-static-libgcc"],
     when: c => c.linux && c.abi === "gnu",
     desc: "Static C++ runtime (don't depend on host libstdc++)",

@@ -398,6 +398,29 @@ extern "C" int __wrap_pthread_create(pthread_t* thread, const pthread_attr_t* at
         usleep(1000);
     }
 }
+
+// Linked in with -Wl,--wrap=realpath (scripts/build/flags.ts). mimalloc overrides malloc inside
+// this executable only (linker.lds keeps it local, and a BUN_1.2-versioned export would not bind
+// libc's GLIBC_2.2.5 references anyway), so the result of libc's realpath(path, NULL) comes from
+// libc's heap and free() here crashed in mi_free (Rust's std::fs::canonicalize in the embedded uv).
+extern "C" char* __real_realpath(const char*, char*);
+
+extern "C" char* __wrap_realpath(const char* path, char* resolved)
+{
+    if (resolved)
+        return __real_realpath(path, resolved);
+    char buffer[PATH_MAX];
+    if (!__real_realpath(path, buffer))
+        return nullptr;
+    size_t size = strlen(buffer) + 1;
+    char* result = static_cast<char*>(malloc(size));
+    if (!result) {
+        errno = ENOMEM;
+        return nullptr;
+    }
+    memcpy(result, buffer, size);
+    return result;
+}
 #endif // OS(LINUX)
 
 #endif // !OS(WINDOWS)
