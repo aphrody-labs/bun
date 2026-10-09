@@ -2,6 +2,7 @@
 name = "bun_wasm"
 version.workspace = true
 edition.workspace = true
+publish = false
 description = "WebAssembly surface of Bun's Rust crates (semver, shell parser, markdown) for the Aphrody WebOS; JS runs on the page's engine."
 
 [lib]

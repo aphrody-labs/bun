@@ -2155,10 +2155,28 @@ fn thread_id() -> u64 {
 pub struct StackCheck {
     cached_stack_end: usize,
 }
+#[cfg(target_arch = "wasm32")]
+mod wasm_stack {
+    unsafe extern "C" {
+        /// Lowest address of the main shadow stack, synthesized by wasm-ld; only
+        /// its address is taken. Threads spawned off-main get no bound.
+        safe static __stack_low: u8;
+    }
+    #[inline]
+    pub(super) fn initialize() {}
+    #[inline]
+    pub(super) fn max_stack() -> *mut core::ffi::c_void {
+        (&raw const __stack_low).cast_mut().cast()
+    }
+}
+#[cfg(target_arch = "wasm32")]
+use wasm_stack::{initialize as Bun__StackCheck__initialize, max_stack as Bun__StackCheck__getMaxStack};
 unsafe extern "C" {
     /// No preconditions; initializes thread-local stack bookkeeping.
+    #[cfg(not(target_arch = "wasm32"))]
     safe fn Bun__StackCheck__initialize();
     /// No preconditions; returns the cached stack-bound pointer for this thread.
+    #[cfg(not(target_arch = "wasm32"))]
     safe fn Bun__StackCheck__getMaxStack() -> *mut core::ffi::c_void;
     /// `&mut libc::timespec` is ABI-identical to libc's `struct timespec *`
     /// (thin non-null pointer to a `#[repr(C)]` struct); the type encodes the
