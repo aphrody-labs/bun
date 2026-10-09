@@ -748,9 +748,12 @@ dependencies = [
  "bun_which",
  "bun_wyhash",
  "bun_zlib",
+ "bun_zstd",
  "bytemuck",
  "const_format",
  "enum-map",
+ "libc",
+ "lzma-rust2",
  "scopeguard",
  "strum",
  "thiserror",
@@ -2619,6 +2622,12 @@ dependencies = [
  "selectors",
  "thiserror",
 ]
+
+[[package]]
+name = "lzma-rust2"
+version = "0.16.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca93e534d1142d1d0dcca6d25fe302508a5dfb40b302802904577725ea0b695b"
 
 [[package]]
 name = "memchr"
