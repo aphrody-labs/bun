@@ -231,6 +231,9 @@ Côté Aphrody : `patches/bun`, `vendor.toml`/lock, `tools/config/vendor.json`, 
   (`0c4fd6368`) ; `docs:gen`, `docs:check`, `docs:check-links` verts (`866e22453`).
 - ✅ yolo : `cli_app` (sources vendor absentes, `doctor --json`) et `workspace_profiles` lent (glob sans
   node_modules/target) : `a7998d168`. kernel-client lancé via `aphrody kernel serve` : `f7c490072`.
+- ✅ `packages/engine/core` : 35 → 0 échec Windows (racine hôte = checkout source, wrapper Cargo pwsh/sh, beacon
+  `dirname`, état git en un spawn, commandes Cargo légères hors verrou) : `9b40294ed7`. Linux (Ubuntu 26.04) : 4 échecs
+  restants avant build de `libaphrody_ffi.so`/oxfmt global, à rejouer dans la passe de tests finale.
 - ✅ Hypothèse WSL Ubuntu-24.04 remplacée par `aphrody/build-linux:26.04` (infra cli, inventaire, docs) : `2d3f713f9`.
 - Bloquant hors F : le binaire release Windows du fork (`aphrody.1` et build local `aphrody.2`) segfault sur
   `bun -e 'await import("node:fs")'` (debug OK) ; hôte Windows laissé sur l'upstream 1.4.2 en attendant. Linux glibc
