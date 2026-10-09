@@ -87,6 +87,7 @@ inline To tryJSDynamicCast(JSC::WriteBarrier<WriteBarrierT>& from)
 }
 
 JSC_DECLARE_HOST_FUNCTION(jsMockFunctionCall);
+JSC_DECLARE_HOST_FUNCTION(jsMockFunctionConstruct);
 JSC_DECLARE_CUSTOM_GETTER(jsMockFunctionGetter_protoImpl);
 JSC_DECLARE_CUSTOM_GETTER(jsMockFunctionGetter_mock);
 JSC_DECLARE_HOST_FUNCTION(jsMockFunctionGetter_mockGetLastCall);
@@ -456,7 +457,7 @@ public:
     }
 
     JSMockFunction(JSC::VM& vm, JSC::Structure* structure, CallbackKind wrapKind)
-        : Base(vm, structure, jsMockFunctionCall, jsMockFunctionCall)
+        : Base(vm, structure, jsMockFunctionCall, jsMockFunctionConstruct)
     {
         initMock();
     }
@@ -825,9 +826,10 @@ static JSValue createMockResult(JSC::VM& vm, Zig::GlobalObject* globalObject, Mo
     return result;
 }
 
-JSC_DEFINE_HOST_FUNCTION(jsMockFunctionCall, (JSGlobalObject * lexicalGlobalObject, CallFrame* callframe))
+// `newTarget` is set when the mock is called with `new`: `thisValue` is then the fresh instance, recorded in
+// `mock.instances`, and a non-object result is replaced by it, as for a plain `function` called with `new`.
+static JSC::EncodedJSValue invokeMockFunction(Zig::GlobalObject* globalObject, CallFrame* callframe, JSValue thisValue, JSObject* newTarget)
 {
-    Zig::GlobalObject* globalObject = uncheckedDowncast<Zig::GlobalObject>(lexicalGlobalObject);
     auto& vm = JSC::getVM(globalObject);
     JSMockFunction* fn = dynamicDowncast<JSMockFunction>(callframe->jsCallee());
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -837,7 +839,9 @@ JSC_DEFINE_HOST_FUNCTION(jsMockFunctionCall, (JSGlobalObject * lexicalGlobalObje
     }
 
     JSC::ArgList args = JSC::ArgList(callframe);
-    JSValue thisValue = callframe->thisValue().toThis(globalObject, ECMAMode::strict());
+    auto constructResult = [&](JSValue value) -> JSValue {
+        return newTarget && !value.isObject() ? thisValue : value;
+    };
     JSC::JSArray* argumentsArray = nullptr;
     {
         JSC::ObjectInitializationScope object(vm);
@@ -876,6 +880,16 @@ JSC_DEFINE_HOST_FUNCTION(jsMockFunctionCall, (JSGlobalObject * lexicalGlobalObje
             1);
         contexts->initializeIndex(object, 0, thisValue);
         fn->contexts.set(vm, fn, contexts);
+    }
+
+    unsigned contextIndex = contexts->length() - 1;
+    unsigned instanceIndex = 0;
+    if (newTarget) {
+        JSC::JSArray* instances = fn->getInstances();
+        RETURN_IF_EXCEPTION(scope, {});
+        instanceIndex = instances->length();
+        instances->push(globalObject, thisValue);
+        RETURN_IF_EXCEPTION(scope, {});
     }
 
     auto invocationId = JSMockModule::nextInvocationId();
@@ -933,7 +947,15 @@ JSC_DEFINE_HOST_FUNCTION(jsMockFunctionCall, (JSGlobalObject * lexicalGlobalObje
 
             auto topExceptionScope = DECLARE_TOP_EXCEPTION_SCOPE(vm);
 
-            JSValue returnValue = Bun::call(globalObject, result, callData, thisValue, args);
+            // A class implementation cannot be called; construct it and record what it built as the instance.
+            JSC::CallData constructData = newTarget ? JSC::getConstructData(result) : JSC::CallData();
+            auto* resultFunction = dynamicDowncast<JSC::JSFunction>(result);
+            bool constructImplementation = constructData.type != JSC::CallData::Type::None
+                && (constructData.type == JSC::CallData::Type::Native || (resultFunction && !resultFunction->isHostFunction() && resultFunction->jsExecutable()->isClassConstructorFunction()));
+
+            JSValue returnValue = constructImplementation
+                ? JSC::construct(globalObject, result, constructData, args, newTarget == fn ? asObject(result) : newTarget)
+                : Bun::call(globalObject, result, callData, thisValue, args);
 
             if (auto* exc = topExceptionScope.exception()) {
                 if (auto* returnValuesArray = fn->returnValues.get()) {
@@ -949,6 +971,14 @@ JSC_DEFINE_HOST_FUNCTION(jsMockFunctionCall, (JSGlobalObject * lexicalGlobalObje
                 returnValue = jsUndefined();
             }
 
+            if (constructImplementation && returnValue.isObject()) {
+                fn->getContexts()->putDirectIndex(globalObject, contextIndex, returnValue);
+                RETURN_IF_EXCEPTION(scope, {});
+                fn->getInstances()->putDirectIndex(globalObject, instanceIndex, returnValue);
+                RETURN_IF_EXCEPTION(scope, {});
+            }
+            returnValue = constructResult(returnValue);
+
             if (auto* returnValuesArray = fn->returnValues.get()) {
                 returnValuesArray->putDirectIndex(globalObject, returnValueIndex, createMockResult(vm, globalObject, MockResultType::Return, returnValue));
                 fn->returnValues.set(vm, fn, returnValuesArray);
@@ -957,7 +987,7 @@ JSC_DEFINE_HOST_FUNCTION(jsMockFunctionCall, (JSGlobalObject * lexicalGlobalObje
             return JSValue::encode(returnValue);
         }
         case JSMockImplementation::Kind::ReturnValue: {
-            JSValue returnValue = impl->underlyingValue.get();
+            JSValue returnValue = constructResult(impl->underlyingValue.get());
             setReturnValue(createMockResult(vm, globalObject, MockResultType::Return, returnValue));
             RETURN_IF_EXCEPTION(scope, {});
             return JSValue::encode(returnValue);
@@ -980,9 +1010,29 @@ JSC_DEFINE_HOST_FUNCTION(jsMockFunctionCall, (JSGlobalObject * lexicalGlobalObje
         }
     }
 
-    setReturnValue(createMockResult(vm, globalObject, MockResultType::Return, jsUndefined()));
+    JSValue returnValue = constructResult(jsUndefined());
+    setReturnValue(createMockResult(vm, globalObject, MockResultType::Return, returnValue));
     RETURN_IF_EXCEPTION(scope, {});
-    return JSValue::encode(jsUndefined());
+    return JSValue::encode(returnValue);
+}
+
+JSC_DEFINE_HOST_FUNCTION(jsMockFunctionCall, (JSGlobalObject * lexicalGlobalObject, CallFrame* callframe))
+{
+    Zig::GlobalObject* globalObject = uncheckedDowncast<Zig::GlobalObject>(lexicalGlobalObject);
+    JSValue thisValue = callframe->thisValue().toThis(globalObject, ECMAMode::strict());
+    return invokeMockFunction(globalObject, callframe, thisValue, nullptr);
+}
+
+JSC_DEFINE_HOST_FUNCTION(jsMockFunctionConstruct, (JSGlobalObject * lexicalGlobalObject, CallFrame* callframe))
+{
+    Zig::GlobalObject* globalObject = uncheckedDowncast<Zig::GlobalObject>(lexicalGlobalObject);
+    auto& vm = JSC::getVM(globalObject);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    JSObject* newTarget = asObject(callframe->newTarget());
+    JSValue prototype = newTarget->get(globalObject, vm.propertyNames->prototype);
+    RETURN_IF_EXCEPTION(scope, {});
+    JSObject* instance = JSC::constructEmptyObject(globalObject, prototype.isObject() ? asObject(prototype) : globalObject->objectPrototype());
+    RELEASE_AND_RETURN(scope, invokeMockFunction(globalObject, callframe, instance, newTarget));
 }
 
 void JSMockFunctionPrototype::finishCreation(JSC::VM& vm, JSC::JSGlobalObject* globalObject)

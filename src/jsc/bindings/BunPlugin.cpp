@@ -1139,7 +1139,9 @@ extern "C" [[ZIG_EXPORT(zero_is_throw)]] JSC::EncodedJSValue Bun__installTestEnv
     JSC::MarkedArgumentBuffer arguments;
     arguments.append(JSC::jsString(vm, name->toWTFString()));
     arguments.append(require);
-    RELEASE_AND_RETURN(scope, JSC::JSValue::encode(JSC::call(globalObject, install, JSC::getCallData(install), JSC::jsUndefined(), arguments)));
+    JSC::JSValue teardown = JSC::call(globalObject, install, JSC::getCallData(install), JSC::jsUndefined(), arguments);
+    RETURN_IF_EXCEPTION(scope, {});
+    return JSC::JSValue::encode(teardown);
 }
 
 BUN_DECLARE_HOST_FUNCTION(JSMock__jsRequireActual);

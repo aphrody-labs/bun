@@ -384,6 +384,37 @@ describe("mock()", () => {
     expect(fn).toHaveBeenLastCalledWith(43);
     expect(fn).toHaveBeenCalledWith(43);
   });
+  test("calling a mock with new returns and records the instance", () => {
+    const fn = jest.fn();
+    fn.prototype = { sum: jest.fn(() => 3) };
+    const a = new fn(1);
+    expect(Object.getPrototypeOf(a)).toBe(fn.prototype);
+    expect(a.sum()).toBe(3);
+    expect(fn.mock.instances).toEqual([a]);
+    expect(fn.mock.instances[0]).toBe(a);
+    expect(fn.mock.contexts[0]).toBe(a);
+    expect(fn.mock.results[0]).toEqual({ type: "return", value: a });
+    expect(fn).toHaveBeenCalledWith(1);
+
+    const withThis = jest.fn(function (x) {
+      this.x = x;
+    });
+    expect(new withThis(5)).toEqual({ x: 5 });
+
+    const replaced = { replaced: true };
+    expect(new (jest.fn(() => replaced))()).toBe(replaced);
+
+    class Point {
+      constructor(x) {
+        this.x = x;
+      }
+    }
+    const ctor = jest.fn().mockImplementation(Point);
+    const point = new ctor(2);
+    expect(point).toBeInstanceOf(Point);
+    expect(point.x).toBe(2);
+    expect(ctor.mock.instances[0]).toBe(point);
+  });
   test("mockReset works", () => {
     const instance = new Error("foo");
     const fn = jest.fn(f => {
