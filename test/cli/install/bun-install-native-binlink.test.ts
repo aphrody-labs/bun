@@ -117,6 +117,66 @@ describe.concurrent("native binlink optimization", () => {
       await expectPlatformBin();
     });
 
+    // `--os='*' --cpu='*'` installs the aix/ppc64 decoy too; the bin must still be the host's.
+    test(`--os='*' --cpu='*' still links the host platform's bin with linker ${linker}`, async () => {
+      const env = { ...bunEnv };
+      const { packageDir, packageJson } = await verdaccio.createTestDir();
+      env.BUN_INSTALL_CACHE_DIR = join(packageDir, ".bun-cache");
+      env.BUN_TMPDIR = env.TMPDIR = env.TEMP = join(packageDir, ".bun-tmp");
+
+      await writeFile(
+        join(packageDir, "bunfig.toml"),
+        Bun.TOML.stringify({
+          install: {
+            cache: join(packageDir, ".bun-cache"),
+            registry: verdaccio.registryUrl(),
+            linker,
+          },
+        }),
+      );
+      await writeFile(
+        packageJson,
+        JSON.stringify({
+          name: "test-app",
+          version: "1.0.0",
+          dependencies: { "test-native-binlink-multi": "1.0.0" },
+          nativeDependencies: ["test-native-binlink-multi"],
+          trustedDependencies: ["test-native-binlink-multi"],
+        }),
+      );
+
+      await using install = spawn({
+        cmd: [bunExe(), "install", "--os=*", "--cpu=*"],
+        cwd: packageDir,
+        stdout: "pipe",
+        stdin: "ignore",
+        stderr: "pipe",
+        env,
+      });
+      const [, installStderr, installExit] = await Promise.all([
+        install.stdout.text(),
+        install.stderr.text(),
+        install.exited,
+      ]);
+      expect(installStderr).not.toContain("error:");
+      expect(installExit).toBe(0);
+
+      const binDir = join(packageDir, "node_modules", ".bin");
+      expect(readBinTarget(binDir, "test-binlink-cmd")).toContain(join("test-native-binlink-target", "bin", "main.js"));
+
+      await using proc = spawn({
+        cmd: [binEntry(binDir, "test-binlink-cmd")],
+        cwd: packageDir,
+        stdout: "pipe",
+        stdin: "ignore",
+        stderr: "inherit",
+        env,
+      });
+      const [stdout, exitCode] = await Promise.all([proc.stdout.text(), proc.exited]);
+      expect(stdout).toContain("SUCCESS: Using platform-specific bin");
+      expect(exitCode).toBe(0);
+    });
+
     // Regression: a package on the nativeDependencies list whose platform-specific
     // optionalDependency does NOT contain the bin file at the expected path must
     // fall back to linking the original package's bin. Previously the `seen` map

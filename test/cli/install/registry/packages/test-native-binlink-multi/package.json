@@ -1,0 +1,26 @@
+{
+  "_id": "test-native-binlink-multi",
+  "name": "test-native-binlink-multi",
+  "dist-tags": {
+    "latest": "1.0.0"
+  },
+  "versions": {
+    "1.0.0": {
+      "name": "test-native-binlink-multi",
+      "version": "1.0.0",
+      "_id": "test-native-binlink-multi@1.0.0",
+      "bin": {
+        "test-binlink-cmd": "./bin/main.js"
+      },
+      "optionalDependencies": {
+        "test-native-binlink-decoy": "1.0.0",
+        "test-native-binlink-target": "1.0.0"
+      },
+      "dist": {
+        "integrity": "sha512-5BwYroX5rq8B3KP2R6utjMwXkeDEvgdvDSyMQTcJ/A7Pe3eqD75I4d628t8qVGmY236BW0RmEI1kt3YTLnTuNw==",
+        "shasum": "d6eebe998299f70068094a1db9e95b29f1beb274",
+        "tarball": "http://localhost:4873/test-native-binlink-multi/-/test-native-binlink-multi-1.0.0.tgz"
+      }
+    }
+  }
+}

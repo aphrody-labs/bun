@@ -95,6 +95,21 @@ impl PostinstallOptimizer {
         target_cpu: npm::Architecture,
         target_os: npm::OperatingSystem,
     ) -> Option<PackageID> {
+        // `--cpu='*' --os='*'` installs every platform's package; the bin must still run here.
+        if target_cpu.is_match(npm::Architecture::CURRENT)
+            && target_os.is_match(npm::OperatingSystem::CURRENT)
+            && (target_cpu != npm::Architecture::CURRENT
+                || target_os != npm::OperatingSystem::CURRENT)
+        {
+            if let Some(id) = Self::get_native_binlink_replacement_package_id(
+                resolutions,
+                metas,
+                npm::Architecture::CURRENT,
+                npm::OperatingSystem::CURRENT,
+            ) {
+                return Some(id);
+            }
+        }
         // Loop through the list of optional dependencies with platform-specific constraints
         // Find a matching target-specific dependency.
         for &resolution in resolutions {

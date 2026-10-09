@@ -1,0 +1,25 @@
+{
+  "_id": "test-native-binlink-decoy",
+  "name": "test-native-binlink-decoy",
+  "dist-tags": {
+    "latest": "1.0.0"
+  },
+  "versions": {
+    "1.0.0": {
+      "name": "test-native-binlink-decoy",
+      "version": "1.0.0",
+      "_id": "test-native-binlink-decoy@1.0.0",
+      "os": [
+        "aix"
+      ],
+      "cpu": [
+        "ppc64"
+      ],
+      "dist": {
+        "integrity": "sha512-rFml1Yi1mMBoJtr/FSdgIH8Rd5RPgTDVXhn9xt6yCkukHmT/BIiUtkmG9D6lQxZzdzxxEQAe46dgNUxU4Kpe4A==",
+        "shasum": "750f9ae5571f2fca00561b8e4f05b76a272d876f",
+        "tarball": "http://localhost:4873/test-native-binlink-decoy/-/test-native-binlink-decoy-1.0.0.tgz"
+      }
+    }
+  }
+}
