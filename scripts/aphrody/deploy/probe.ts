@@ -6,7 +6,7 @@ const port = Number(process.env.APHRODY_BUN_SERVICE_PORT ?? 47660);
 const started = Date.now();
 
 Bun.serve({
-  hostname: "127.0.0.1",
+  hostname: process.env.APHRODY_BUN_SERVICE_HOST ?? "127.0.0.1",
   port,
   fetch(req) {
     const path = new URL(req.url).pathname;

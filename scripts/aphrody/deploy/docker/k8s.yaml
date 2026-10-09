@@ -1,0 +1,27 @@
+# Sonde du fork Bun sur Kubernetes (Docker Desktop, kind) : kubectl apply -f k8s.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: aphrody-bun-probe }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: aphrody-bun-probe } }
+  template:
+    metadata: { labels: { app: aphrody-bun-probe } }
+    spec:
+      containers:
+        - name: probe
+          image: ghcr.io/aphrody-labs/bun:1.4.3-aphrody.3
+          imagePullPolicy: Never
+          args: ["prod"]
+          env:
+            - { name: APHRODY_ROLE, value: prod }
+            - { name: APHRODY_BUN_SERVICE_HOST, value: "0.0.0.0" }
+            - { name: HEALTH_URL, value: "http://127.0.0.1:47660/healthz" }
+          readinessProbe: { httpGet: { path: /healthz, port: 47660 }, periodSeconds: 10 }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: aphrody-bun-probe }
+spec:
+  selector: { app: aphrody-bun-probe }
+  ports: [{ port: 47660, targetPort: 47660 }]
