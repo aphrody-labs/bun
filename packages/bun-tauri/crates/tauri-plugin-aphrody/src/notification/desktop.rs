@@ -115,7 +115,7 @@ mod imp {
     /// // first we build the application to access the Tauri configuration
     /// let app = tauri::Builder::default()
     ///   // on an actual app, remove the string argument
-    ///   .build(tauri::generate_context!("test/tauri.conf.json"))
+    ///   .build(tauri::generate_context!("tests/fixtures/notification/tauri.conf.json"))
     ///   .expect("error while building tauri application");
     ///
     /// // shows a notification with the given title and body
@@ -197,7 +197,7 @@ mod imp {
         ///       .unwrap();
         ///     Ok(())
         ///   })
-        ///   .run(tauri::generate_context!("test/tauri.conf.json"))
+        ///   .run(tauri::generate_context!("tests/fixtures/notification/tauri.conf.json"))
         ///   .expect("error while running tauri application");
         /// ```
         pub fn show(self) -> crate::notification::Result<()> {

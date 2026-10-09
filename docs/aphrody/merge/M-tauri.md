@@ -11,7 +11,7 @@ Legend: ✅ verified by a real run (command and date) · ⏳ not done · ➖ not
 | aphrody (Bun: bun_info / bun_request / bun_restart, real `bun` server) | ✅ 2026-10-09 | ✅ `bun_server_over_ipc`, `bun_restart_needs_its_permission` | ⏳ | ⏳ | ⏳ (WebOS demo) |
 | ACL bundle (`__BUNDLE__` keys, `tauri_plugin::Bundle`) | ✅ | ✅ `acl_denies_commands_without_permission` + utils `bundle_tests` | ⏳ | ⏳ | ➖ |
 | os | ✅ | ✅ `os` | ⏳ | ⏳ | ➖ |
-| fs | ✅ | ✅ `fs_inside_scope_only` (mkdir, read_dir, stat, exists, outside scope refused) | ⏳ | ⏳ | ➖ |
+| fs | ✅ | ✅ `fs_inside_scope_only` (mkdir, read_dir, stat, exists, outside scope refused; command scopes — global `fs:scope` under MockRuntime ⏳) | ⏳ | ⏳ | ➖ |
 | store | ✅ | ✅ `store_set_get_save` | ⏳ | ⏳ | ➖ |
 | log, window-state, notification, deep-link | ✅ | ✅ `log_window_state_notification_deep_link` | ⏳ | ⏳ | ➖ |
 | autostart | ✅ | ⏳ (needs a real app identifier) | ⏳ | ⏳ | ➖ |
@@ -29,7 +29,7 @@ Commands:
 
 ```sh
 cd packages/bun-tauri
-cargo test -p tauri-plugin-aphrody            # unit (36) + e2e
+cargo test -p tauri-plugin-aphrody            # 36 unit + 7 e2e + 61 doctests, Windows 11 2026-10-09
 cargo test -p aphrody-tauri-utils bundle_tests
 # Linux (VPS, nice): docker run --rm -v $PWD:/w -w /w <ubuntu-26.04|alpine-3.24 image with rust+bun> cargo test -p tauri-plugin-aphrody
 ```

@@ -83,17 +83,15 @@ fn os() {
 
 #[test]
 fn fs_inside_scope_only() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::Builder::new().prefix("tp-fs-").tempdir().unwrap();
     let root = dunce::canonicalize(dir.path()).unwrap();
     std::fs::write(root.join("a.txt"), "bun").unwrap();
+    let allow = json!([{ "path": root.to_string_lossy() }, { "path": root.join("**").to_string_lossy() }]);
     let (_app, w) = app(
-        json!([
-            "fs:allow-mkdir",
-            "fs:allow-read-dir",
-            "fs:allow-stat",
-            "fs:allow-exists",
-            { "identifier": "fs:scope", "allow": [{ "path": root.to_string_lossy() }, { "path": root.join("**").to_string_lossy() }] }
-        ]),
+        json!(["fs:allow-mkdir", "fs:allow-read-dir", "fs:allow-stat", "fs:allow-exists"]
+            .iter()
+            .map(|id| json!({ "identifier": id, "allow": allow }))
+            .collect::<Vec<_>>()),
         json!({}),
         |b| b.plugin(tauri_plugin_aphrody::fs::init()),
     );
