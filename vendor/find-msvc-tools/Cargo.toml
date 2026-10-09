@@ -5,7 +5,7 @@
 name = "find-msvc-tools"
 version = "0.1.14"
 edition = "2021"
-rust-version = "1.65"
+rust-version = "1.82"
 description = "Find windows-specific tools, read MSVC versions from the registry and from COM interfaces"
 repository = "https://github.com/rust-lang/cc-rs"
 license = "MIT OR Apache-2.0"

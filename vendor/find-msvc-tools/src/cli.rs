@@ -31,6 +31,7 @@ Commands:
   setup [--dry-run]           Install or complete the C++ tools, the SDK and the requested toolset
                               (Visual Studio Installer, or winget when nothing is installed)
   msi [--fix]                 Orphaned Windows Installer products (cached .msi gone: errors 1714/1612)
+  cross <command>             The Linux/macOS cross-compilation sysroot (`bun msvc cross help`)
 
 Selection:
   --arch <arch>               Target: x64, x86, arm64, arm64ec, arm (default: host)
@@ -160,6 +161,15 @@ fn fail(message: &str) -> i32 {
 /// Runs `bun msvc <args>`; returns the exit code. `self_args` re-invokes this command
 /// (`["msvc"]` for bun, `[]` for `bun-msvc`) when `msi --fix` needs to elevate.
 pub fn main(args: Vec<OsString>, self_args: &[&str]) -> i32 {
+    main_with(args, self_args, &crate::cross::StdFetch)
+}
+
+/// [`main`] with the HTTP client `bun msvc cross` downloads through.
+pub fn main_with(args: Vec<OsString>, self_args: &[&str], fetch: &dyn crate::cross::Fetch) -> i32 {
+    if args.first().is_some_and(|a| a == "cross") {
+        let prog = if self_args.is_empty() { "bun-msvc cross".to_owned() } else { format!("bun {} cross", self_args.join(" ")) };
+        return crate::cross::cli::main(args[1..].to_vec(), &prog, fetch);
+    }
     let args = match parse(args) {
         Ok(args) => args,
         Err(message) => return fail(&message),

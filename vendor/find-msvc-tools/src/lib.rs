@@ -38,3 +38,4 @@ pub mod setup;
 pub mod sync;
 #[cfg(windows)]
 pub mod cli;
+pub mod cross;
