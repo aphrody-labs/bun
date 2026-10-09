@@ -121,6 +121,8 @@ const ALLOW: Record<string, number> = {
   // `#[cfg(test)]` unit test built only by `cargo test -p bun_collections`,
   // which does not link the highway objects.
   "src/collections/linear_fifo.rs": 1,
+  // The wasm32 stand-in for the highway kernels themselves; it cannot call them.
+  "src/highway/wasm_fallback.rs": 1,
 };
 
 const counts: Record<string, number> = {};
