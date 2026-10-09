@@ -8,6 +8,7 @@ use crate::shell::states::cmd::Cmd;
 use crate::shell::states::cond_expr::CondExpr;
 use crate::shell::states::r#if::If;
 use crate::shell::states::pipeline::Pipeline;
+use crate::shell::states::subshell::Subshell;
 use crate::shell::yield_::Yield;
 
 pub(crate) struct Async {
@@ -108,15 +109,23 @@ impl Async {
                 // Init the child WITHOUT starting it, store it, enqueue self, return
                 // suspended. The child is started on the NEXT event-loop tick
                 // via the `StartChild` arm above. Restricted to
-                // pipeline/cmd/if/condexpr/binary — other Expr variants panic.
+                // pipeline/cmd/if/condexpr/binary/subshell — other Expr variants panic.
                 let child = match node.get() {
                     ast::Expr::Binary(b) => Binary::init(interp, shell, *b, this, io),
                     ast::Expr::Pipeline(p) => Pipeline::init(interp, shell, *p, this, io),
                     ast::Expr::Cmd(c) => Cmd::init(interp, shell, *c, this, io),
                     ast::Expr::If(i) => If::init(interp, shell, *i, this, io),
                     ast::Expr::CondExpr(c) => CondExpr::init(interp, shell, *c, this, io),
+                    ast::Expr::Subshell(s) => {
+                        match Subshell::init_dupe_shell_state(interp, shell, *s, this, io) {
+                            Ok(child) => child,
+                            Err(err) => {
+                                interp.throw(crate::shell::ShellErr::new_sys(&err));
+                                return Yield::Failed(this);
+                            }
+                        }
+                    }
                     ast::Expr::Assign(_)
-                    | ast::Expr::Subshell(_)
                     | ast::Expr::Async(_) => panic!(
                         "Unexpected Expr variant as Async child, this indicates a bug in Bun."
                     ),
