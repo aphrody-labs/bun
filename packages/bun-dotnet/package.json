@@ -1,0 +1,23 @@
+{
+  "name": "@aphrody/bun-dotnet",
+  "version": "0.1.0",
+  "description": "Interop .NET 10 dans Bun via Node API for .NET",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": ["src", "README.md"],
+  "scripts": {
+    "test": "bun test ./test"
+  },
+  "dependencies": {
+    "node-api-dotnet": "0.9.27",
+    "node-api-dotnet-generator": "0.9.27"
+  },
+  "engines": {
+    "bun": ">=1.4.3"
+  }
+}
