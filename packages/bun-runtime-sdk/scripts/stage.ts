@@ -5,6 +5,7 @@
 import { $ } from "bun";
 import { copyFileSync, mkdirSync, rmSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
+import { standaloneLibraryFile } from "../src/index.ts";
 
 const root = resolve(import.meta.dir, "..");
 const library = join(
@@ -17,6 +18,7 @@ const library = join(
       : "libyolo_runtime.so",
 );
 const header = join(root, "include/yolo_runtime.h");
+const canonicalHeader = join(root, "include/buv_runtime.h");
 if (!(await Bun.file(library).exists())) {
   console.error(`missing ${library}: run cargo build --profile runtime -p yolo-runtime`);
   process.exit(1);
@@ -26,27 +28,32 @@ const triple = (await $`rustc -vV`.cwd(root).text()).match(/^host: (.+)$/m)![1].
 const rev = (await $`git rev-parse HEAD`.cwd(root).text()).trim();
 const dirty = (await $`git status --porcelain -- .`.cwd(root).text()).trim().length > 0;
 const abi = (await Bun.file(header).text()).match(/YOLO_ABI_MAJOR (\d+)u[\s\S]*?YOLO_ABI_MINOR (\d+)u/)!;
+const cargo = Bun.TOML.parse(await Bun.file(join(root, "Cargo.toml")).text()) as {
+  workspace: { package: { version: string } };
+};
 
 const out = join(root, "target/artifact", triple, "current");
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
 const files: Record<string, { bytes: number; sha256: string }> = {};
-for (const source of [library, header]) {
-  const target = join(out, basename(source));
+for (const source of [library, header, canonicalHeader]) {
+  const name = source === library ? standaloneLibraryFile() : basename(source);
+  const target = join(out, name);
   copyFileSync(source, target);
   const bytes = await Bun.file(target).bytes();
-  files[basename(source)] = { bytes: bytes.length, sha256: new Bun.CryptoHasher("sha256").update(bytes).digest("hex") };
+  files[name] = { bytes: bytes.length, sha256: new Bun.CryptoHasher("sha256").update(bytes).digest("hex") };
 }
 await Bun.write(
   join(out, "manifest.json"),
   JSON.stringify(
     {
       schema: 1,
-      name: "yolo-runtime",
+      name: "buv-runtime",
+      version: cargo.workspace.package.version,
       target: triple,
       abi: `${abi[1]}.${abi[2]}`,
       compatibility: { abiMajor: Number(abi[1]) },
-      sources: { yolo: { rev, dirty } },
+      sources: { bun: { rev, dirty } },
       build: { panicRecovery: true, profile: "runtime" },
       files,
     },
@@ -54,5 +61,5 @@ await Bun.write(
     2,
   ),
 );
-console.log(join(out, basename(library)));
+console.log(join(out, standaloneLibraryFile()));
 if (dirty) console.warn("warning: uncommitted changes, the Python binding refuses a dirty artifact");

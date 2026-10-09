@@ -1,7 +1,7 @@
 {
   "name": "@aphrody/bun-runtime-sdk",
   "version": "0.2.0",
-  "description": "SDK of the YOLO native runtime: the yolo_* C ABI built as the standalone yolo_runtime library, with Bun (bun:ffi), .NET and Python bindings",
+  "description": "SDK of the buv native runtime: versioned buv C ABI with compatible yolo exports and Bun, .NET and Python bindings",
   "license": "MIT AND Apache-2.0",
   "repository": {
     "type": "git",
@@ -25,6 +25,7 @@
     "./runtime.d.ts": "./runtime.d.ts",
     "./bundler": "./src/bundler.ts",
     "./artifact": "./src/artifact.ts",
+    "./release": "./src/release.ts",
     "./ffi": "./src/ffi.ts",
     "./tooling": "./src/tooling.ts",
     "./tooling-schema": "./src/tooling-schema.ts",

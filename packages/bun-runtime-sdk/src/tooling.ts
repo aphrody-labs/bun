@@ -5,6 +5,7 @@ import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { nativeLibrary, readNativeString, toCString, type NativeLibrary } from "./ffi.ts";
 import { defaultLibraryPath } from "./index.ts";
+import { runtimeHome } from "./paths.ts";
 import type { Finding, N2BReport } from "./tooling-schema.ts";
 
 export type NodeProjectFinding = Finding;
@@ -75,22 +76,18 @@ function optionsJson(options: ScanNodeProjectOptions): Uint8Array {
   if (!options || typeof options !== "object" || Array.isArray(options))
     throw new TypeError("N2B options must be an object");
   for (const key of Object.keys(options)) {
-    if (!["mode", "ignore", "dry_run", "jobs"].includes(key))
-      throw new TypeError(`Unknown N2B option: ${key}`);
+    if (!["mode", "ignore", "dry_run", "jobs"].includes(key)) throw new TypeError(`Unknown N2B option: ${key}`);
   }
   if (options.mode !== undefined && !["check", "fix", "aggressive"].includes(options.mode))
     throw new TypeError("N2B mode must be check, fix or aggressive");
   if (
     options.ignore !== undefined &&
-    (!Array.isArray(options.ignore) || !options.ignore.every((entry) => typeof entry === "string"))
+    (!Array.isArray(options.ignore) || !options.ignore.every(entry => typeof entry === "string"))
   )
     throw new TypeError("N2B ignore must be an array of strings");
   if (options.dry_run !== undefined && typeof options.dry_run !== "boolean")
     throw new TypeError("N2B dry_run must be a boolean");
-  if (
-    options.jobs !== undefined &&
-    (!Number.isInteger(options.jobs) || options.jobs < 1 || options.jobs > 6)
-  )
+  if (options.jobs !== undefined && (!Number.isInteger(options.jobs) || options.jobs < 1 || options.jobs > 6))
     throw new TypeError("N2B jobs must be an integer between 1 and 6");
   return cString(JSON.stringify(options), "N2B options");
 }
@@ -103,12 +100,11 @@ function envelope(
   if (!pointer) throw new Error(`${name} returned a null pointer`);
   let value: unknown;
   try {
-    value = JSON.parse(readNativeString(pointer, (address) => free(address as Pointer)));
+    value = JSON.parse(readNativeString(pointer, address => free(address as Pointer)));
   } catch (cause) {
     throw new Error(`${name}: invalid native JSON`, { cause });
   }
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error(`${name}: invalid native response`);
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${name}: invalid native response`);
   const result = value as Record<string, unknown>;
   if (result.ok !== true) {
     const message = `${name}: ${typeof result.error === "string" ? result.error : "native operation failed"}`;
@@ -119,7 +115,7 @@ function envelope(
 }
 
 function strings(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+  return Array.isArray(value) && value.every(entry => typeof entry === "string");
 }
 
 /** One lazy provider owner. All native operations finish before close can unload its handle. */
@@ -141,7 +137,7 @@ export class NativeTooling {
   #symbols(): Symbols {
     if (this.#closed) throw new Error(this.#failure ?? "Native tooling is closed");
     if (!this.#library) {
-      let path = this.#options.path ?? process.env.YOLO_TOOLING_LIB;
+      let path = this.#options.path ?? process.env.BUV_TOOLING_LIB ?? process.env.YOLO_TOOLING_LIB;
       if (path !== undefined) {
         cString(path, "Native tooling path");
         if (!path || !existsSync(path))
@@ -149,7 +145,7 @@ export class NativeTooling {
       } else {
         const selected = defaultLibraryPath();
         if (existsSync(selected)) path = selected;
-        else if (process.env.YOLO_RUNTIME_LIB)
+        else if (process.env.BUV_RUNTIME_LIB || process.env.YOLO_RUNTIME_LIB)
           throw new Error("Selected native runtime library is missing; selection preserved");
       }
       this.#library = nativeLibrary({
@@ -157,17 +153,12 @@ export class NativeTooling {
         symbols: SYMBOLS,
         ...(path === undefined ? {} : { path }),
         searchDirs: [
-          resolve(homedir(), ".yolo/runtime"),
+          runtimeHome(),
           resolve(homedir(), ".local/lib"),
           resolve(process.cwd(), "target/release"),
           resolve(process.cwd(), "target/debug"),
-          resolve(homedir(), "yolo/target/release"),
-          resolve(homedir(), "yolo/target/debug"),
-          resolve(homedir(), "aphrody/target/release"),
-          resolve(homedir(), "aphrody/target/debug"),
         ],
-        buildHint:
-          "Install the qualified aphrody_ffi library (feature `tooling`) or select YOLO_TOOLING_LIB.",
+        buildHint: "Install the qualified aphrody_ffi library (feature `tooling`) or select BUV_TOOLING_LIB.",
       });
     }
     const symbols = this.#library.load();
@@ -208,20 +199,14 @@ export class NativeTooling {
     }
   }
 
-  #oxc(
-    operation: "format" | "minify" | "lint" | "analyze" | "parse",
-    source: string,
-    filename: string,
-  ) {
+  #oxc(operation: "format" | "minify" | "lint" | "analyze" | "parse", source: string, filename: string) {
     const input = cString(source, "Oxc source");
     const path = cString(filename, "Oxc filename");
     const symbols = this.#symbols();
     return envelope(
       symbols[`aphrody_oxc_${operation}`](input, path),
       symbols.aphrody_oxc_free,
-      operation === "analyze" || operation === "parse"
-        ? `Cannot parse ${filename}`
-        : `Oxc ${operation}`,
+      operation === "analyze" || operation === "parse" ? `Cannot parse ${filename}` : `Oxc ${operation}`,
     );
   }
 
@@ -296,8 +281,7 @@ export class NativeTooling {
     if (source.length === 0) return new Uint32Array();
     const bytes = new Uint8Array(source.length * 2);
     const view = new DataView(bytes.buffer);
-    for (let index = 0; index < source.length; index++)
-      view.setUint16(index * 2, source.charCodeAt(index), true);
+    for (let index = 0; index < source.length; index++) view.setUint16(index * 2, source.charCodeAt(index), true);
     const symbols = this.#symbols();
     const count = Number(symbols.find_newlines_u16(bytes, bytes.length, null, 0));
     if (!Number.isSafeInteger(count) || count < 0 || count > source.length)
@@ -329,21 +313,17 @@ function sharedTooling(): NativeTooling {
   return shared[KEY];
 }
 
-export const scanNodeProject = (
-  root: string,
-  options?: ScanNodeProjectOptions,
-): NodeProjectReport => sharedTooling().scanNodeProject(root, options);
+export const scanNodeProject = (root: string, options?: ScanNodeProjectOptions): NodeProjectReport =>
+  sharedTooling().scanNodeProject(root, options);
 export const formatSource = (source: string, filename?: string): string =>
   sharedTooling().formatSource(source, filename);
 export const minifySource = (source: string, filename?: string): string =>
   sharedTooling().minifySource(source, filename);
-export const lintSource = (source: string, filename?: string): string[] =>
-  sharedTooling().lintSource(source, filename);
+export const lintSource = (source: string, filename?: string): string[] => sharedTooling().lintSource(source, filename);
 export const analyzeModule = (source: string, filename?: string): ModuleAnalysis =>
   sharedTooling().analyzeModule(source, filename);
 export const parseProgram = <T = unknown>(source: string, filename?: string): T =>
   sharedTooling().parseProgram<T>(source, filename);
-export const findNewlinesUtf16 = (source: string): Uint32Array =>
-  sharedTooling().findNewlinesUtf16(source);
+export const findNewlinesUtf16 = (source: string): Uint32Array => sharedTooling().findNewlinesUtf16(source);
 export const probeNativeTooling = (): NativeToolingProbe => sharedTooling().probe();
 export const closeNativeTooling = (): void => sharedTooling().close();

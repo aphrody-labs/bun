@@ -46,6 +46,31 @@ pub const APHRODY_PY_ERR_UNSUPPORTED: i32 = -6;
 type PyObj = *mut c_void;
 const PY_EVAL_INPUT: c_int = 258;
 
+#[cfg(windows)]
+#[repr(C)]
+struct PyPreConfig {
+    config_init: c_int,
+    parse_argv: c_int,
+    isolated: c_int,
+    use_environment: c_int,
+    configure_locale: c_int,
+    coerce_c_locale: c_int,
+    coerce_c_locale_warn: c_int,
+    legacy_windows_fs_encoding: c_int,
+    utf8_mode: c_int,
+    dev_mode: c_int,
+    allocator: c_int,
+}
+
+#[cfg(windows)]
+#[repr(C)]
+struct PyInitStatus {
+    status: c_int,
+    function: *const c_char,
+    message: *const c_char,
+    exit_code: c_int,
+}
+
 #[derive(Clone, Copy)]
 struct Api {
     is_initialized: unsafe extern "C" fn() -> c_int,
@@ -77,6 +102,11 @@ struct Api {
     bytes_main: unsafe extern "C" fn(c_int, *mut *mut c_char) -> c_int,
     #[cfg(windows)]
     wide_main: unsafe extern "C" fn(c_int, *mut *mut u16) -> c_int,
+    #[cfg(windows)]
+    preconfig_python: unsafe extern "C" fn(*mut PyPreConfig),
+    #[cfg(windows)]
+    preinitialize_args:
+        unsafe extern "C" fn(*const PyPreConfig, c_int, *mut *mut u16) -> PyInitStatus,
 }
 
 struct Host {
@@ -178,7 +208,81 @@ fn bind_with(sym: impl Fn(&CStr) -> *mut c_void) -> Result<Api, String> {
         bytes_main: f!(c"Py_BytesMain"),
         #[cfg(windows)]
         wide_main: f!(c"Py_Main"),
+        #[cfg(windows)]
+        preconfig_python: f!(c"PyPreConfig_InitPythonConfig"),
+        #[cfg(windows)]
+        preinitialize_args: f!(c"Py_PreInitializeFromArgs"),
     })
+}
+
+#[cfg(windows)]
+fn has_utf8_option(arguments: &[String]) -> bool {
+    let mut args = arguments.iter().skip(1);
+    while let Some(arg) = args.next() {
+        if arg == "--"
+            || arg == "-"
+            || !arg.starts_with('-')
+            || arg.starts_with("-c")
+            || arg.starts_with("-m")
+        {
+            break;
+        }
+        if arg == "-X" {
+            if args
+                .next()
+                .is_some_and(|value| value == "utf8" || value.starts_with("utf8="))
+            {
+                return true;
+            }
+        } else if arg == "-Xutf8" || arg.starts_with("-Xutf8=") {
+            return true;
+        } else if arg == "-W" {
+            args.next();
+        }
+    }
+    false
+}
+
+#[cfg(windows)]
+fn prepare_stdio(api: &Api, arguments: &[String]) -> Result<(), String> {
+    if ["PYTHONIOENCODING", "PYTHONUTF8", "PYTHONLEGACYWINDOWSSTDIO"]
+        .iter()
+        .any(|name| std::env::var_os(name).is_some())
+        || has_utf8_option(arguments)
+    {
+        return Ok(());
+    }
+    let mut config = std::mem::MaybeUninit::<PyPreConfig>::uninit();
+    let mut wide: Vec<Vec<u16>> = arguments
+        .iter()
+        .map(|arg| arg.encode_utf16().chain(std::iter::once(0)).collect())
+        .collect();
+    let mut entries: Vec<*mut u16> = wide.iter_mut().map(|arg| arg.as_mut_ptr()).collect();
+    // SAFETY: CPython initializes its public preconfiguration before it is read; argv is writable UTF-16.
+    let result = unsafe {
+        (api.preconfig_python)(config.as_mut_ptr());
+        let mut config = config.assume_init();
+        config.utf8_mode = 1;
+        if arguments.is_empty() {
+            config.parse_argv = 0;
+        }
+        (api.preinitialize_args)(&config, entries.len() as c_int, entries.as_mut_ptr())
+    };
+    if result.status == 0 {
+        return Ok(());
+    }
+    let detail = if result.message.is_null() {
+        format!(
+            "preinitialization status {} (exit {})",
+            result.status, result.exit_code
+        )
+    } else {
+        // SAFETY: CPython returns a static, NUL-terminated error message.
+        unsafe { CStr::from_ptr(result.message) }
+            .to_string_lossy()
+            .into_owned()
+    };
+    Err(detail)
 }
 
 #[cfg(unix)]
@@ -400,6 +504,11 @@ pub extern "C" fn aphrody_py_init() -> i32 {
             if (h.api.is_initialized)() != 0 {
                 h.initialized = true;
                 return 0;
+            }
+            #[cfg(windows)]
+            if let Err(message) = prepare_stdio(&h.api, &[]) {
+                set_error(message);
+                return APHRODY_PY_ERR_PYTHON;
             }
             (h.api.initialize_ex)(0);
             // Release the GIL so every thread attaches through PyGILState_Ensure.
@@ -812,6 +921,11 @@ pub unsafe extern "C" fn bun_py_main(
         let _lease = ExclusiveCall;
         set_error("");
         #[cfg(windows)]
+        if let Err(message) = prepare_stdio(&api, &arguments) {
+            set_error(message);
+            return APHRODY_PY_ERR_PYTHON;
+        }
+        #[cfg(windows)]
         let result = {
             let mut wide: Vec<Vec<u16>> = arguments
                 .iter()
@@ -854,6 +968,45 @@ mod tests {
     use super::*;
     use std::io::Write;
     use std::process::{Command, Stdio};
+
+    #[test]
+    #[cfg(windows)]
+    fn explicit_utf8_options_stop_at_the_python_program() {
+        let args = |values: &[&str]| {
+            values
+                .iter()
+                .map(|value| (*value).to_owned())
+                .collect::<Vec<_>>()
+        };
+        assert!(has_utf8_option(&args(&[
+            "python",
+            "-X",
+            "utf8=0",
+            "script.py"
+        ])));
+        assert!(has_utf8_option(&args(&[
+            "python", "-Xutf8=1", "-c", "pass"
+        ])));
+        assert!(!has_utf8_option(&args(&[
+            "python",
+            "script.py",
+            "-X",
+            "utf8=0"
+        ])));
+        assert!(!has_utf8_option(&args(&[
+            "python",
+            "-c",
+            "print('-Xutf8=0')"
+        ])));
+        assert!(!has_utf8_option(&args(&[
+            "python",
+            "-W",
+            "ignore",
+            "-X",
+            "dev",
+            "script.py"
+        ])));
+    }
 
     #[test]
     fn cli_abi_header_matches() {

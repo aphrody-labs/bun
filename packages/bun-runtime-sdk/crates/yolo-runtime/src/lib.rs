@@ -17,14 +17,16 @@
 
 mod process;
 pub use process::*;
+mod buv;
+pub use buv::*;
 #[cfg(feature = "browser")]
 mod browser;
 #[cfg(feature = "gpu")]
 mod gpu;
-#[cfg(feature = "gpu")]
-pub use gpu::*;
 #[cfg(feature = "browser")]
 pub use browser::*;
+#[cfg(feature = "gpu")]
+pub use gpu::*;
 
 use std::cell::RefCell;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -126,10 +128,7 @@ pub(crate) fn write_buffer(out: *mut YoloBuffer, bytes: Vec<u8>) -> YoloStatus {
 pub(crate) fn write_json(out: *mut YoloBuffer, value: &impl serde::Serialize) -> YoloStatus {
   match serde_json::to_vec(value) {
     Ok(bytes) => write_buffer(out, bytes),
-    Err(error) => set_error(
-      YoloStatus::Internal,
-      format!("serialization failed: {error}"),
-    ),
+    Err(error) => set_error(YoloStatus::Internal, format!("serialization failed: {error}")),
   }
 }
 
@@ -150,11 +149,7 @@ pub unsafe extern "C" fn yolo_buffer_free(buffer: *mut YoloBuffer) {
     // Reclaim the original capacity with the same allocator, including when len is zero.
     drop(unsafe { Vec::from_raw_parts(b.data, b.len, b.cap) });
   }
-  *b = YoloBuffer {
-    data: ptr::null_mut(),
-    len: 0,
-    cap: 0,
-  };
+  *b = YoloBuffer { data: ptr::null_mut(), len: 0, cap: 0 };
 }
 
 /// Last error of the calling thread as JSON `{"status":…,"message":…}`; empty if none.
@@ -226,9 +221,7 @@ pub(crate) struct Registry {
 }
 
 pub(crate) fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-  mutex
-    .lock()
-    .unwrap_or_else(|poisoned| poisoned.into_inner())
+  mutex.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 pub(crate) fn registry() -> &'static Mutex<Registry> {
@@ -252,10 +245,7 @@ impl Registry {
       slot.entry = Some(entry);
       encode(index, slot.generation)
     } else {
-      self.slots.push(Slot {
-        generation: 1,
-        entry: Some(entry),
-      });
+      self.slots.push(Slot { generation: 1, entry: Some(entry) });
       encode(self.slots.len() - 1, 1)
     }
   }
@@ -263,9 +253,7 @@ impl Registry {
   pub(crate) fn get(&self, handle: YoloHandle) -> Option<&Entry> {
     let (index, generation) = decode(handle)?;
     let slot = self.slots.get(index)?;
-    (slot.generation == generation)
-      .then_some(slot.entry.as_ref())
-      .flatten()
+    (slot.generation == generation).then_some(slot.entry.as_ref()).flatten()
   }
 
   pub(crate) fn remove(&mut self, handle: YoloHandle) -> Option<Entry> {
@@ -305,10 +293,7 @@ impl Registry {
 pub(crate) fn runtime_limit(reg: &Registry, runtime: YoloHandle) -> Result<u32, YoloStatus> {
   match reg.get(runtime) {
     Some(Entry::Runtime { max_operations }) => Ok(*max_operations),
-    _ => Err(set_error(
-      YoloStatus::InvalidHandle,
-      "invalid runtime handle",
-    )),
+    _ => Err(set_error(YoloStatus::InvalidHandle, "invalid runtime handle")),
   }
 }
 
@@ -380,16 +365,9 @@ pub unsafe extern "C" fn yolo_runtime_create(
       0
     };
     if requested > MAX_OPERATIONS_LIMIT {
-      return set_error(
-        YoloStatus::InvalidArgument,
-        "max_operations above the limit",
-      );
+      return set_error(YoloStatus::InvalidArgument, "max_operations above the limit");
     }
-    let max_operations = if requested == 0 {
-      DEFAULT_MAX_OPERATIONS
-    } else {
-      requested
-    };
+    let max_operations = if requested == 0 { DEFAULT_MAX_OPERATIONS } else { requested };
     let handle = lock(registry()).insert(Entry::Runtime { max_operations });
     // SAFETY: `out` is writable per the contract.
     unsafe { out.write(handle) };
@@ -407,11 +385,8 @@ pub extern "C" fn yolo_runtime_destroy(runtime: YoloHandle) -> YoloStatus {
       if runtime_limit(&reg, runtime).is_err() {
         return YoloStatus::InvalidHandle;
       }
-      let operations: Vec<Entry> = reg
-        .operations_of(runtime)
-        .into_iter()
-        .filter_map(|h| reg.remove(h))
-        .collect();
+      let operations: Vec<Entry> =
+        reg.operations_of(runtime).into_iter().filter_map(|h| reg.remove(h)).collect();
       reg.remove(runtime);
       operations
     };
@@ -438,11 +413,15 @@ struct BuildInfo {
 /// `out` must point to a writable `YoloBuffer`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn yolo_runtime_build_info(out: *mut YoloBuffer) -> YoloStatus {
+  runtime_build_info(out, "yolo-runtime")
+}
+
+fn runtime_build_info(out: *mut YoloBuffer, name: &'static str) -> YoloStatus {
   guard(|| {
     write_json(
       out,
       &BuildInfo {
-        name: "yolo-runtime",
+        name,
         version: env!("CARGO_PKG_VERSION"),
         abi: format!("{ABI_MAJOR}.{ABI_MINOR}"),
         target: env!("YOLO_RUNTIME_TARGET"),
@@ -531,10 +510,7 @@ pub(crate) fn start_operation(
   let mut reg = lock(registry());
   let limit = runtime_limit(&reg, runtime)?;
   if bounded && reg.operations_of(runtime).len() as u32 >= limit {
-    return Err(set_error(
-      YoloStatus::Busy,
-      format!("{limit} operations already running"),
-    ));
+    return Err(set_error(YoloStatus::Busy, format!("{limit} operations already running")));
   }
   let worker_state = Arc::clone(&state);
   let thread = std::thread::Builder::new()
@@ -544,17 +520,8 @@ pub(crate) fn start_operation(
       worker_state
         .finish(outcome.unwrap_or_else(|_| OpResult::Failed(format!("{name} operation panicked"))));
     })
-    .map_err(|error| {
-      set_error(
-        YoloStatus::Internal,
-        format!("cannot spawn worker: {error}"),
-      )
-    })?;
-  Ok(reg.insert(Entry::Operation {
-    owner: runtime,
-    state,
-    thread: Some(thread),
-  }))
+    .map_err(|error| set_error(YoloStatus::Internal, format!("cannot spawn worker: {error}")))?;
+  Ok(reg.insert(Entry::Operation { owner: runtime, state, thread: Some(thread) }))
 }
 
 /// `bench.compute`: starts a cancellable benchmark and returns an operation handle.
@@ -595,10 +562,7 @@ pub unsafe extern "C" fn yolo_bench_start(
 fn operation_state(operation: YoloHandle) -> Result<Arc<OpState>, YoloStatus> {
   match lock(registry()).get(operation) {
     Some(Entry::Operation { state, .. }) => Ok(Arc::clone(state)),
-    _ => Err(set_error(
-      YoloStatus::InvalidHandle,
-      "invalid operation handle",
-    )),
+    _ => Err(set_error(YoloStatus::InvalidHandle, "invalid operation handle")),
   }
 }
 
@@ -622,9 +586,7 @@ pub unsafe extern "C" fn yolo_operation_wait(
     let guard_ = lock(&state.result);
     let (result, _) = state
       .done
-      .wait_timeout_while(guard_, Duration::from_millis(u64::from(timeout_ms)), |r| {
-        r.is_none()
-      })
+      .wait_timeout_while(guard_, Duration::from_millis(u64::from(timeout_ms)), |r| r.is_none())
       .unwrap_or_else(|poisoned| poisoned.into_inner());
     match result.as_ref() {
       None => set_error(YoloStatus::Timeout, "operation still running"),

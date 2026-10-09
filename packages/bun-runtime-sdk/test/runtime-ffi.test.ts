@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { defaultLibraryPath, libraryFile, Runtime, SYMBOLS } from "../src/index.ts";
 import { hostTarget } from "../src/target.ts";
 import { NativeTooling } from "../src/tooling.ts";
+import { runtimeHome } from "../src/paths.ts";
 import { libpythonIn, Python, PythonError, pythonHostLibraryPath, vuLibpython } from "../src/python.ts";
 import {
   nativeLibrary,
@@ -18,7 +19,12 @@ import {
 } from "../src/ffi";
 
 describe("runtime SDK ffi helpers", () => {
-  const provider = process.env.YOLO_TOOLING_LIB;
+  it("uses canonical buv runtime selections before compatibility aliases", () => {
+    expect(runtimeHome({ BUV_RUNTIME_HOME: import.meta.dir, YOLO_RUNTIME_HOME: "/ignored" })).toBe(import.meta.dir);
+    expect(runtimeHome({ BUV_HOME: import.meta.dir })).toBe(join(import.meta.dir, "runtime"));
+    expect(runtimeHome({ YOLO_HOME: import.meta.dir })).toBe(join(import.meta.dir, "runtime"));
+  });
+  const provider = process.env.BUV_TOOLING_LIB ?? process.env.YOLO_TOOLING_LIB;
   it.skipIf(!provider || !existsSync(provider))(
     "loads the same installed provider for runtime and tooling without explicit library variables",
     () => {
@@ -27,7 +33,16 @@ describe("runtime SDK ffi helpers", () => {
       mkdirSync(current, { recursive: true });
       const path = join(current, libraryFile());
       symlinkSync(provider!, path, "file");
-      const keys = ["YOLO_HOME", "YOLO_RUNTIME_HOME", "YOLO_RUNTIME_LIB", "YOLO_TOOLING_LIB"] as const;
+      const keys = [
+        "BUV_HOME",
+        "BUV_RUNTIME_HOME",
+        "BUV_RUNTIME_LIB",
+        "BUV_TOOLING_LIB",
+        "YOLO_HOME",
+        "YOLO_RUNTIME_HOME",
+        "YOLO_RUNTIME_LIB",
+        "YOLO_TOOLING_LIB",
+      ] as const;
       const previous = Object.fromEntries(keys.map(key => [key, process.env[key]]));
       try {
         for (const key of keys) delete process.env[key];
@@ -207,7 +222,7 @@ describe("Bun Python host SDK", () => {
 
   it("matches the shared native host header, including ABI negotiation", async () => {
     const header = await Bun.file(join(import.meta.dir, "../../bun-python-native/include/bun_python_host.h")).text();
-    const source = await Bun.file(join(import.meta.dir, "../src/python.ts")).text();
+    const source = await Bun.file(join(import.meta.dir, "../../../src/js/bun/python.ts")).text();
     const declared = new Map<string, number>();
     for (const match of header.matchAll(/\b((?:aphrody_py_|bun_py_)\w+)\s*\(([^;{]*)\)\s*;/g)) {
       const params = match[2]!.trim();

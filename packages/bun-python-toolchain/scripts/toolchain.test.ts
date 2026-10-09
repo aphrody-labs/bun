@@ -4,8 +4,8 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
-  artifactPath,
   ACCEPTED_RECEIPT_SHA256,
+  artifactPath,
   classifyTorchAvailability,
   hostTarget,
   validateManifest,
@@ -13,9 +13,7 @@ import {
   type VuManifest,
 } from "./toolchain.ts";
 
-const receipt = (await Bun.file(
-  join(import.meta.dir, "..", "toolchain.receipt.json"),
-).json()) as ToolchainReceipt;
+const receipt = (await Bun.file(join(import.meta.dir, "..", "toolchain.receipt.json")).json()) as ToolchainReceipt;
 const fixtureReceipt: ToolchainReceipt = {
   ...receipt,
   observedArtifacts: [
@@ -52,18 +50,18 @@ function manifest(): VuManifest {
 }
 
 test("the accepted uv and Ruff refs are exactly the vu source pins and lock blobs", async () => {
-  const vu = (await Bun.file(
-    join(import.meta.dir, "..", "..", "bun-vu", "vendor.json"),
-  ).json()) as {
+  const vu = (await Bun.file(join(import.meta.dir, "..", "..", "buv", "vendor.json")).json()) as {
     sources: {
       name: string;
       ref: string;
       upstreamTag: string;
       workspace: { cargoLockBlob: string };
+      predecessor?: { ref: string; upstreamTag: string; workspace: { cargoLockBlob: string } };
     }[];
   };
   for (const name of ["uv", "ruff"] as const) {
-    const source = vu.sources.find((entry) => entry.name === name);
+    const current = vu.sources.find(entry => entry.name === name);
+    const source = current?.predecessor ?? current;
     expect(source).toBeDefined();
     expect(source?.ref).toBe(receipt.sidecars[name].revision);
     expect(source?.upstreamTag).toBe(receipt.sidecars[name].version);
@@ -72,43 +70,34 @@ test("the accepted uv and Ruff refs are exactly the vu source pins and lock blob
 });
 
 test("a runtime manifest must match the exact pins, host ABI and manifested binaries", () => {
-  expect(
-    validateManifest(manifest(), "x86_64-unknown-linux-gnu", fixtureReceipt, "a".repeat(64)),
-  ).toEqual([]);
+  expect(validateManifest(manifest(), "x86_64-unknown-linux-gnu", fixtureReceipt, "a".repeat(64))).toEqual([]);
   const drifted = manifest();
   drifted.pins["ruff"] = { upstreamTag: "0.16.10", ref: "f".repeat(40) };
-  expect(
-    validateManifest(drifted, "x86_64-unknown-linux-gnu", fixtureReceipt, "a".repeat(64)),
-  ).toContain("ruff source pin does not match the accepted receipt");
+  expect(validateManifest(drifted, "x86_64-unknown-linux-gnu", fixtureReceipt, "a".repeat(64))).toContain(
+    "ruff source pin does not match the accepted receipt",
+  );
 });
 
 test("an ABI mismatch or missing binary hash fails closed", () => {
   const invalid = manifest();
   invalid.files["bin/uv"] = { sha256: "not-a-digest", bytes: 8, mode: 0o755 };
-  const problems = validateManifest(
-    invalid,
-    "aarch64-unknown-linux-gnu",
-    fixtureReceipt,
-    "a".repeat(64),
-  );
-  expect(problems).toContain(
-    "artifact target x86_64-unknown-linux-gnu does not match host aarch64-unknown-linux-gnu",
-  );
+  const problems = validateManifest(invalid, "aarch64-unknown-linux-gnu", fixtureReceipt, "a".repeat(64));
+  expect(problems).toContain("artifact target x86_64-unknown-linux-gnu does not match host aarch64-unknown-linux-gnu");
   expect(problems).toContain("uv has no valid manifested executable");
 });
 
 test("a byte-perfect manifest outside the committed artifact receipt is rejected", () => {
-  expect(
-    validateManifest(manifest(), "x86_64-unknown-linux-gnu", fixtureReceipt, "b".repeat(64)),
-  ).toContain("artifact manifest is not covered by the immutable toolchain receipt");
+  expect(validateManifest(manifest(), "x86_64-unknown-linux-gnu", fixtureReceipt, "b".repeat(64))).toContain(
+    "artifact manifest is not covered by the immutable toolchain receipt",
+  );
 });
 
 test("a file hash cannot be changed independently of its immutable artifact receipt", () => {
   const modified = manifest();
   modified.files["bin/ruff"] = { sha256: "f".repeat(64), bytes: 8, mode: 0o755 };
-  expect(
-    validateManifest(modified, "x86_64-unknown-linux-gnu", fixtureReceipt, "a".repeat(64)),
-  ).toContain("ruff file hash does not match the immutable toolchain receipt");
+  expect(validateManifest(modified, "x86_64-unknown-linux-gnu", fixtureReceipt, "a".repeat(64))).toContain(
+    "ruff file hash does not match the immutable toolchain receipt",
+  );
 });
 
 test("artifact discovery uses only explicit vu paths or VU_HOME, never PATH", () => {
@@ -116,9 +105,7 @@ test("artifact discovery uses only explicit vu paths or VU_HOME, never PATH", ()
     resolve("/artifacts/pinned"),
   );
   expect(artifactPath({ VU_PREFIX: "/prefix" }, "target")).toBe(resolve("/prefix"));
-  expect(artifactPath({ VU_HOME: "/runtime-home" }, "target")).toBe(
-    join("/runtime-home", "runtime/target/current"),
-  );
+  expect(artifactPath({ VU_HOME: "/runtime-home" }, "target")).toBe(join("/runtime-home", "runtime/target/current"));
 });
 
 test("Torch capability classification distinguishes a built CUDA backend from a working runtime", () => {

@@ -9,20 +9,13 @@ fn create(max_operations: u32) -> YoloHandle {
     max_operations,
   };
   let mut handle = 0;
-  assert_eq!(
-    unsafe { yolo_runtime_create(&info, &mut handle) },
-    YoloStatus::Ok
-  );
+  assert_eq!(unsafe { yolo_runtime_create(&info, &mut handle) }, YoloStatus::Ok);
   assert_ne!(handle, 0);
   handle
 }
 
 fn empty() -> YoloBuffer {
-  YoloBuffer {
-    data: ptr::null_mut(),
-    len: 0,
-    cap: 0,
-  }
+  YoloBuffer { data: ptr::null_mut(), len: 0, cap: 0 }
 }
 
 fn take_json(mut buffer: YoloBuffer) -> serde_json::Value {
@@ -40,6 +33,31 @@ fn last_error() -> String {
 }
 
 #[test]
+fn buv_and_compatibility_exports_share_handles_and_buffer_ownership() {
+  let info = YoloCreateInfo {
+    struct_size: size_of::<YoloCreateInfo>() as u32,
+    abi_major: ABI_MAJOR,
+    abi_minor: ABI_MINOR,
+    max_operations: 1,
+  };
+  let mut runtime = 0;
+  assert_eq!(buv_abi_version(), yolo_abi_version());
+  // SAFETY: creation and output slots live until each native call returns.
+  assert_eq!(unsafe { buv_runtime_create(&info, &mut runtime) }, YoloStatus::Ok);
+  let mut output = empty();
+  assert_eq!(unsafe { buv_system_stats(runtime, &mut output) }, YoloStatus::Ok);
+  assert!(take_json(output)["os"].is_string());
+  let mut identity = empty();
+  assert_eq!(unsafe { buv_runtime_build_info(&mut identity) }, YoloStatus::Ok);
+  assert_eq!(take_json(identity)["name"], "buv-runtime");
+  let mut legacy_identity = empty();
+  assert_eq!(unsafe { yolo_runtime_build_info(&mut legacy_identity) }, YoloStatus::Ok);
+  assert_eq!(take_json(legacy_identity)["name"], "yolo-runtime");
+  assert_eq!(yolo_runtime_destroy(runtime), YoloStatus::Ok);
+  assert_eq!(buv_runtime_destroy(runtime), YoloStatus::InvalidHandle);
+}
+
+#[test]
 fn buffer_transfer_preserves_allocation_and_initialized_length() {
   let mut bytes = Vec::with_capacity(64);
   bytes.extend_from_slice(b"abc");
@@ -52,10 +70,7 @@ fn buffer_transfer_preserves_allocation_and_initialized_length() {
   assert!(out.cap > out.len);
   assert_eq!(out.len, 3);
   // SAFETY: the buffer is live; only the initialized prefix is exposed by len.
-  assert_eq!(
-    unsafe { std::slice::from_raw_parts(out.data, out.len) },
-    b"abc"
-  );
+  assert_eq!(unsafe { std::slice::from_raw_parts(out.data, out.len) }, b"abc");
   unsafe { yolo_buffer_free(&mut out) };
   assert!(out.data.is_null());
   assert_eq!((out.len, out.cap), (0, 0));
@@ -112,10 +127,7 @@ fn buffer_free_zeroes_owned_parts_and_accepts_repeated_or_null_release() {
 fn buffer_transfer_rejects_null_output() {
   let mut bytes = Vec::with_capacity(64);
   bytes.extend_from_slice(b"abc");
-  assert_eq!(
-    write_buffer(ptr::null_mut(), bytes),
-    YoloStatus::InvalidArgument
-  );
+  assert_eq!(write_buffer(ptr::null_mut(), bytes), YoloStatus::InvalidArgument);
   assert_eq!(last_error(), "null output buffer");
 }
 
@@ -133,64 +145,31 @@ fn create_rejects_incompatible_or_truncated_callers() {
     abi_minor: 0,
     max_operations: 0,
   };
-  assert_eq!(
-    unsafe { yolo_runtime_create(&wrong_major, &mut handle) },
-    YoloStatus::AbiMismatch
-  );
+  assert_eq!(unsafe { yolo_runtime_create(&wrong_major, &mut handle) }, YoloStatus::AbiMismatch);
   assert!(last_error().contains("ABI"));
   assert_eq!(handle, 0);
 
-  let newer_minor = YoloCreateInfo {
-    abi_major: ABI_MAJOR,
-    abi_minor: ABI_MINOR + 1,
-    ..wrong_major
-  };
-  assert_eq!(
-    unsafe { yolo_runtime_create(&newer_minor, &mut handle) },
-    YoloStatus::AbiMismatch
-  );
+  let newer_minor =
+    YoloCreateInfo { abi_major: ABI_MAJOR, abi_minor: ABI_MINOR + 1, ..wrong_major };
+  assert_eq!(unsafe { yolo_runtime_create(&newer_minor, &mut handle) }, YoloStatus::AbiMismatch);
 
-  let truncated = YoloCreateInfo {
-    struct_size: 4,
-    abi_major: ABI_MAJOR,
-    abi_minor: 0,
-    max_operations: 0,
-  };
-  assert_eq!(
-    unsafe { yolo_runtime_create(&truncated, &mut handle) },
-    YoloStatus::InvalidArgument
-  );
+  let truncated =
+    YoloCreateInfo { struct_size: 4, abi_major: ABI_MAJOR, abi_minor: 0, max_operations: 0 };
+  assert_eq!(unsafe { yolo_runtime_create(&truncated, &mut handle) }, YoloStatus::InvalidArgument);
 
-  assert_eq!(
-    unsafe { yolo_runtime_create(ptr::null(), &mut handle) },
-    YoloStatus::InvalidArgument
-  );
-  let too_many = YoloCreateInfo {
-    abi_major: ABI_MAJOR,
-    abi_minor: 0,
-    max_operations: 1000,
-    ..wrong_major
-  };
-  assert_eq!(
-    unsafe { yolo_runtime_create(&too_many, &mut handle) },
-    YoloStatus::InvalidArgument
-  );
+  assert_eq!(unsafe { yolo_runtime_create(ptr::null(), &mut handle) }, YoloStatus::InvalidArgument);
+  let too_many =
+    YoloCreateInfo { abi_major: ABI_MAJOR, abi_minor: 0, max_operations: 1000, ..wrong_major };
+  assert_eq!(unsafe { yolo_runtime_create(&too_many, &mut handle) }, YoloStatus::InvalidArgument);
 }
 
 #[test]
 fn older_caller_without_max_operations_gets_the_default() {
   // A caller built against a smaller structure (12 bytes) must still work.
-  let info = YoloCreateInfo {
-    struct_size: 12,
-    abi_major: ABI_MAJOR,
-    abi_minor: 0,
-    max_operations: 999,
-  };
+  let info =
+    YoloCreateInfo { struct_size: 12, abi_major: ABI_MAJOR, abi_minor: 0, max_operations: 999 };
   let mut handle = 0;
-  assert_eq!(
-    unsafe { yolo_runtime_create(&info, &mut handle) },
-    YoloStatus::Ok
-  );
+  assert_eq!(unsafe { yolo_runtime_create(&info, &mut handle) }, YoloStatus::Ok);
   assert_eq!(yolo_runtime_destroy(handle), YoloStatus::Ok);
 }
 
@@ -204,10 +183,7 @@ fn handles_are_validated_and_invalidated_on_destroy() {
 
   assert_eq!(yolo_runtime_destroy(rt), YoloStatus::Ok);
   let mut out = empty();
-  assert_eq!(
-    unsafe { yolo_system_stats(rt, &mut out) },
-    YoloStatus::InvalidHandle
-  );
+  assert_eq!(unsafe { yolo_system_stats(rt, &mut out) }, YoloStatus::InvalidHandle);
   assert!(out.data.is_null());
   assert_eq!(yolo_runtime_destroy(rt), YoloStatus::InvalidHandle);
 
@@ -217,10 +193,7 @@ fn handles_are_validated_and_invalidated_on_destroy() {
   assert_eq!(yolo_runtime_destroy(rt), YoloStatus::InvalidHandle);
   assert_eq!(yolo_runtime_destroy(rt2), YoloStatus::Ok);
   assert_eq!(yolo_runtime_destroy(0), YoloStatus::InvalidHandle);
-  assert_eq!(
-    yolo_runtime_destroy(0xdead_beef_dead_beef),
-    YoloStatus::InvalidHandle
-  );
+  assert_eq!(yolo_runtime_destroy(0xdead_beef_dead_beef), YoloStatus::InvalidHandle);
 }
 
 #[test]
@@ -235,21 +208,11 @@ fn build_info_and_capabilities_are_json() {
 
   let rt = create(0);
   let mut out = empty();
-  assert_eq!(
-    unsafe { yolo_runtime_capabilities(rt, &mut out) },
-    YoloStatus::Ok
-  );
+  assert_eq!(unsafe { yolo_runtime_capabilities(rt, &mut out) }, YoloStatus::Ok);
   let capabilities = take_json(out);
-  let names: Vec<&str> = capabilities
-    .as_array()
-    .unwrap()
-    .iter()
-    .map(|c| c.as_str().unwrap())
-    .collect();
-  assert_eq!(
-    names[..4],
-    ["system.stats", "bench.compute", "process.supervise", "http.probe"]
-  );
+  let names: Vec<&str> =
+    capabilities.as_array().unwrap().iter().map(|c| c.as_str().unwrap()).collect();
+  assert_eq!(names[..4], ["system.stats", "bench.compute", "process.supervise", "http.probe"]);
   // Optional providers appear exactly when they are compiled in.
   for (name, enabled) in [
     ("browser.navigate", cfg!(feature = "browser")),
@@ -266,22 +229,13 @@ fn build_info_and_capabilities_are_json() {
 fn benchmark_completes_and_is_released() {
   let rt = create(0);
   let mut op = 0;
-  assert_eq!(
-    unsafe { yolo_bench_start(rt, 1000, &mut op) },
-    YoloStatus::Ok
-  );
+  assert_eq!(unsafe { yolo_bench_start(rt, 1000, &mut op) }, YoloStatus::Ok);
   let mut out = empty();
-  assert_eq!(
-    unsafe { yolo_operation_wait(op, 10_000, &mut out) },
-    YoloStatus::Ok
-  );
+  assert_eq!(unsafe { yolo_operation_wait(op, 10_000, &mut out) }, YoloStatus::Ok);
   assert!(take_json(out)["message"].as_str().unwrap().contains("1000"));
   // The result stays readable until the operation is released.
   let mut again = empty();
-  assert_eq!(
-    unsafe { yolo_operation_wait(op, 0, &mut again) },
-    YoloStatus::Ok
-  );
+  assert_eq!(unsafe { yolo_operation_wait(op, 0, &mut again) }, YoloStatus::Ok);
   take_json(again);
   assert_eq!(yolo_operation_release(op), YoloStatus::Ok);
   assert_eq!(yolo_operation_release(op), YoloStatus::InvalidHandle);
@@ -292,22 +246,13 @@ fn benchmark_completes_and_is_released() {
 fn long_benchmark_can_be_cancelled_and_times_out_before() {
   let rt = create(0);
   let mut op = 0;
-  assert_eq!(
-    unsafe { yolo_bench_start(rt, u32::MAX, &mut op) },
-    YoloStatus::Ok
-  );
+  assert_eq!(unsafe { yolo_bench_start(rt, u32::MAX, &mut op) }, YoloStatus::Ok);
   let mut out = empty();
-  assert_eq!(
-    unsafe { yolo_operation_wait(op, 0, &mut out) },
-    YoloStatus::Timeout
-  );
+  assert_eq!(unsafe { yolo_operation_wait(op, 0, &mut out) }, YoloStatus::Timeout);
   assert!(out.data.is_null());
   assert_eq!(yolo_operation_cancel(op), YoloStatus::Ok);
   assert_eq!(yolo_operation_cancel(op), YoloStatus::Ok);
-  assert_eq!(
-    unsafe { yolo_operation_wait(op, 10_000, &mut out) },
-    YoloStatus::Cancelled
-  );
+  assert_eq!(unsafe { yolo_operation_wait(op, 10_000, &mut out) }, YoloStatus::Cancelled);
   assert_eq!(yolo_operation_release(op), YoloStatus::Ok);
   assert_eq!(yolo_runtime_destroy(rt), YoloStatus::Ok);
 }
@@ -316,21 +261,12 @@ fn long_benchmark_can_be_cancelled_and_times_out_before() {
 fn operations_are_bounded_per_runtime() {
   let rt = create(1);
   let mut first = 0;
-  assert_eq!(
-    unsafe { yolo_bench_start(rt, u32::MAX, &mut first) },
-    YoloStatus::Ok
-  );
+  assert_eq!(unsafe { yolo_bench_start(rt, u32::MAX, &mut first) }, YoloStatus::Ok);
   let mut second = 0;
-  assert_eq!(
-    unsafe { yolo_bench_start(rt, 10, &mut second) },
-    YoloStatus::Busy
-  );
+  assert_eq!(unsafe { yolo_bench_start(rt, 10, &mut second) }, YoloStatus::Busy);
   assert_eq!(second, 0);
   assert_eq!(yolo_operation_release(first), YoloStatus::Ok);
-  assert_eq!(
-    unsafe { yolo_bench_start(rt, 10, &mut second) },
-    YoloStatus::Ok
-  );
+  assert_eq!(unsafe { yolo_bench_start(rt, 10, &mut second) }, YoloStatus::Ok);
   assert_eq!(yolo_runtime_destroy(rt), YoloStatus::Ok);
 }
 
@@ -339,25 +275,13 @@ fn destroying_a_runtime_cancels_joins_and_invalidates_its_operations() {
   let rt = create(0);
   let mut a = 0;
   let mut b = 0;
-  assert_eq!(
-    unsafe { yolo_bench_start(rt, u32::MAX, &mut a) },
-    YoloStatus::Ok
-  );
-  assert_eq!(
-    unsafe { yolo_bench_start(rt, u32::MAX, &mut b) },
-    YoloStatus::Ok
-  );
+  assert_eq!(unsafe { yolo_bench_start(rt, u32::MAX, &mut a) }, YoloStatus::Ok);
+  assert_eq!(unsafe { yolo_bench_start(rt, u32::MAX, &mut b) }, YoloStatus::Ok);
   let started = std::time::Instant::now();
   assert_eq!(yolo_runtime_destroy(rt), YoloStatus::Ok);
-  assert!(
-    started.elapsed() < Duration::from_secs(10),
-    "workers must stop promptly"
-  );
+  assert!(started.elapsed() < Duration::from_secs(10), "workers must stop promptly");
   let mut out = empty();
-  assert_eq!(
-    unsafe { yolo_operation_wait(a, 0, &mut out) },
-    YoloStatus::InvalidHandle
-  );
+  assert_eq!(unsafe { yolo_operation_wait(a, 0, &mut out) }, YoloStatus::InvalidHandle);
   assert_eq!(yolo_operation_cancel(b), YoloStatus::InvalidHandle);
 }
 
@@ -367,15 +291,9 @@ fn an_operation_handle_is_not_a_runtime_handle() {
   let mut op = 0;
   assert_eq!(unsafe { yolo_bench_start(rt, 10, &mut op) }, YoloStatus::Ok);
   let mut out = empty();
-  assert_eq!(
-    unsafe { yolo_system_stats(op, &mut out) },
-    YoloStatus::InvalidHandle
-  );
+  assert_eq!(unsafe { yolo_system_stats(op, &mut out) }, YoloStatus::InvalidHandle);
   assert_eq!(yolo_runtime_destroy(op), YoloStatus::InvalidHandle);
-  assert_eq!(
-    unsafe { yolo_operation_wait(rt, 0, &mut out) },
-    YoloStatus::InvalidHandle
-  );
+  assert_eq!(unsafe { yolo_operation_wait(rt, 0, &mut out) }, YoloStatus::InvalidHandle);
   yolo_operation_release(op);
   yolo_runtime_destroy(rt);
 }
@@ -383,14 +301,8 @@ fn an_operation_handle_is_not_a_runtime_handle() {
 #[test]
 fn null_outputs_are_rejected() {
   let rt = create(0);
-  assert_eq!(
-    unsafe { yolo_system_stats(rt, ptr::null_mut()) },
-    YoloStatus::InvalidArgument
-  );
-  assert_eq!(
-    unsafe { yolo_bench_start(rt, 1, ptr::null_mut()) },
-    YoloStatus::InvalidArgument
-  );
+  assert_eq!(unsafe { yolo_system_stats(rt, ptr::null_mut()) }, YoloStatus::InvalidArgument);
+  assert_eq!(unsafe { yolo_bench_start(rt, 1, ptr::null_mut()) }, YoloStatus::InvalidArgument);
   unsafe { yolo_buffer_free(ptr::null_mut()) };
   let mut zeroed = empty();
   unsafe { yolo_buffer_free(&mut zeroed) };
@@ -431,10 +343,7 @@ fn every_exported_function_is_declared_in_the_c_header() {
     "yolo_http_probe_start",
     "ffi_sum_squares",
   ] {
-    assert!(
-      header.contains(&format!("{name}(")),
-      "{name} missing from yolo_runtime.h"
-    );
+    assert!(header.contains(&format!("{name}(")), "{name} missing from yolo_runtime.h");
   }
   assert!(header.contains(&format!("#define YOLO_ABI_MAJOR {ABI_MAJOR}u")));
   assert!(header.contains(&format!("#define YOLO_ABI_MINOR {ABI_MINOR}u")));
@@ -480,10 +389,7 @@ mod process {
       signal: 0,
       pid: 0,
     };
-    assert_eq!(
-      unsafe { yolo_process_status(process, &mut out) },
-      YoloStatus::Ok
-    );
+    assert_eq!(unsafe { yolo_process_status(process, &mut out) }, YoloStatus::Ok);
     out
   }
 
@@ -501,12 +407,7 @@ mod process {
   #[test]
   fn spawn_reports_exit_code_and_environment() {
     let rt = create(0);
-    let (status, process) = spawn(
-      rt,
-      "sh",
-      &["-c", "exit $YOLO_TEST_CODE"],
-      &["YOLO_TEST_CODE=3"],
-    );
+    let (status, process) = spawn(rt, "sh", &["-c", "exit $YOLO_TEST_CODE"], &["YOLO_TEST_CODE=3"]);
     assert_eq!(status, YoloStatus::Ok);
     let done = wait_exited(process);
     assert_eq!((done.exit_code, done.signal), (3, 0));
@@ -539,10 +440,7 @@ mod process {
 
   fn read_stream(process: YoloHandle, stream: u32, mode: u32) -> String {
     let mut out = empty();
-    assert_eq!(
-      unsafe { yolo_process_read(process, stream, mode, &mut out) },
-      YoloStatus::Ok
-    );
+    assert_eq!(unsafe { yolo_process_read(process, stream, mode, &mut out) }, YoloStatus::Ok);
     let bytes = if out.data.is_null() {
       Vec::new()
     } else {
@@ -564,46 +462,21 @@ mod process {
     assert_eq!(status, YoloStatus::Ok);
     wait_exited(process);
     std::thread::sleep(Duration::from_millis(50));
-    assert_eq!(
-      read_stream(process, YOLO_STREAM_STDERR, YOLO_READ_PEEK),
-      "to-stderr\n"
-    );
-    assert_eq!(
-      read_stream(process, YOLO_STREAM_STDERR, YOLO_READ_PEEK),
-      "to-stderr\n"
-    );
-    assert_eq!(
-      read_stream(process, YOLO_STREAM_STDOUT, YOLO_READ_DRAIN),
-      "first-line\n"
-    );
-    assert_eq!(
-      read_stream(process, YOLO_STREAM_STDOUT, YOLO_READ_DRAIN),
-      ""
-    );
+    assert_eq!(read_stream(process, YOLO_STREAM_STDERR, YOLO_READ_PEEK), "to-stderr\n");
+    assert_eq!(read_stream(process, YOLO_STREAM_STDERR, YOLO_READ_PEEK), "to-stderr\n");
+    assert_eq!(read_stream(process, YOLO_STREAM_STDOUT, YOLO_READ_DRAIN), "first-line\n");
+    assert_eq!(read_stream(process, YOLO_STREAM_STDOUT, YOLO_READ_DRAIN), "");
     let mut out = empty();
-    assert_eq!(
-      unsafe { yolo_process_read(process, 9, 0, &mut out) },
-      YoloStatus::InvalidArgument
-    );
-    assert_eq!(
-      unsafe { yolo_process_read(process, 1, 9, &mut out) },
-      YoloStatus::InvalidArgument
-    );
+    assert_eq!(unsafe { yolo_process_read(process, 9, 0, &mut out) }, YoloStatus::InvalidArgument);
+    assert_eq!(unsafe { yolo_process_read(process, 1, 9, &mut out) }, YoloStatus::InvalidArgument);
     yolo_process_release(process);
 
     // 200 KiB of output: only the last 64 KiB are kept and the child never blocks on a full pipe.
-    let (_, noisy) = spawn_flags(
-      rt,
-      YOLO_SPAWN_CAPTURE,
-      "sh",
-      &["-c", "head -c 204800 /dev/zero | tr '\\0' x"],
-    );
+    let (_, noisy) =
+      spawn_flags(rt, YOLO_SPAWN_CAPTURE, "sh", &["-c", "head -c 204800 /dev/zero | tr '\\0' x"]);
     wait_exited(noisy);
     std::thread::sleep(Duration::from_millis(100));
-    assert_eq!(
-      read_stream(noisy, YOLO_STREAM_STDOUT, YOLO_READ_PEEK).len(),
-      64 * 1024
-    );
+    assert_eq!(read_stream(noisy, YOLO_STREAM_STDOUT, YOLO_READ_PEEK).len(), 64 * 1024);
     yolo_process_release(noisy);
     yolo_runtime_destroy(rt);
   }
@@ -626,28 +499,16 @@ mod process {
       rt,
       YOLO_SPAWN_CAPTURE_LOSSLESS,
       "sh",
-      &[
-        "-c",
-        "head -c 204800 /dev/zero; printf '\\377\\376\\200' >&2",
-      ],
+      &["-c", "head -c 204800 /dev/zero; printf '\\377\\376\\200' >&2"],
     );
     wait_exited(child);
     // Stop joins both readers; no arbitrary post-exit sleep is needed for the final drain.
     assert_eq!(yolo_process_stop(child, 0), YoloStatus::Ok);
     let mut complete = 0;
-    assert_eq!(
-      unsafe { yolo_process_output_complete(child, &mut complete) },
-      YoloStatus::Ok
-    );
+    assert_eq!(unsafe { yolo_process_output_complete(child, &mut complete) }, YoloStatus::Ok);
     assert_eq!(complete, 1);
-    assert_eq!(
-      read_bytes(child, YOLO_STREAM_STDOUT).unwrap(),
-      vec![0; 204800]
-    );
-    assert_eq!(
-      read_bytes(child, YOLO_STREAM_STDERR).unwrap(),
-      vec![255, 254, 128]
-    );
+    assert_eq!(read_bytes(child, YOLO_STREAM_STDOUT).unwrap(), vec![0; 204800]);
+    assert_eq!(read_bytes(child, YOLO_STREAM_STDERR).unwrap(), vec![255, 254, 128]);
     assert!(read_bytes(child, YOLO_STREAM_STDOUT).unwrap().is_empty());
     yolo_process_release(child);
     yolo_runtime_destroy(rt);
@@ -676,10 +537,7 @@ mod process {
       capture_limit: 8,
     };
     let mut child = 0;
-    assert_eq!(
-      unsafe { yolo_process_spawn(rt, &info.base, &mut child) },
-      YoloStatus::Ok
-    );
+    assert_eq!(unsafe { yolo_process_spawn(rt, &info.base, &mut child) }, YoloStatus::Ok);
     let mut initial = Vec::new();
     for _ in 0..100 {
       initial.extend(read_bytes(child, YOLO_STREAM_STDOUT).unwrap());
@@ -691,16 +549,10 @@ mod process {
     assert_eq!(initial, b"12345678");
     wait_exited(child);
     yolo_process_stop(child, 0);
-    assert_eq!(
-      read_bytes(child, YOLO_STREAM_STDOUT),
-      Err(YoloStatus::OutputLimit)
-    );
+    assert_eq!(read_bytes(child, YOLO_STREAM_STDOUT), Err(YoloStatus::OutputLimit));
     assert!(last_error().contains("8 byte capture budget"));
     // The error remains visible on subsequent reads, even after draining earlier chunks.
-    assert_eq!(
-      read_bytes(child, YOLO_STREAM_STDOUT),
-      Err(YoloStatus::OutputLimit)
-    );
+    assert_eq!(read_bytes(child, YOLO_STREAM_STDOUT), Err(YoloStatus::OutputLimit));
     yolo_process_release(child);
     yolo_runtime_destroy(rt);
   }
@@ -708,26 +560,12 @@ mod process {
   #[test]
   fn capture_rejects_unknown_flags_and_null_output_without_losing_data() {
     let rt = create(0);
+    assert_eq!(spawn_flags(rt, 8, "true", &[]).0, YoloStatus::InvalidArgument);
     assert_eq!(
-      spawn_flags(rt, 8, "true", &[]).0,
+      spawn_flags(rt, YOLO_SPAWN_CAPTURE | YOLO_SPAWN_CAPTURE_LOSSLESS, "true", &[]).0,
       YoloStatus::InvalidArgument
     );
-    assert_eq!(
-      spawn_flags(
-        rt,
-        YOLO_SPAWN_CAPTURE | YOLO_SPAWN_CAPTURE_LOSSLESS,
-        "true",
-        &[]
-      )
-      .0,
-      YoloStatus::InvalidArgument
-    );
-    let (_, child) = spawn_flags(
-      rt,
-      YOLO_SPAWN_CAPTURE_LOSSLESS,
-      "sh",
-      &["-c", "printf bytes"],
-    );
+    let (_, child) = spawn_flags(rt, YOLO_SPAWN_CAPTURE_LOSSLESS, "sh", &["-c", "printf bytes"]);
     wait_exited(child);
     yolo_process_stop(child, 0);
     assert_eq!(
@@ -750,10 +588,7 @@ mod process {
     let pid = status_of(child).pid as i32;
     wait_exited(child);
     assert_eq!(yolo_process_release(child), YoloStatus::Ok);
-    assert!(
-      group_is_gone(pid),
-      "descendant survived leader exit and handle release"
-    );
+    assert!(group_is_gone(pid), "descendant survived leader exit and handle release");
     yolo_runtime_destroy(rt);
   }
 
@@ -776,11 +611,7 @@ mod process {
       }
       std::thread::sleep(Duration::from_millis(5));
     }
-    let escaped: i32 = String::from_utf8(pid_bytes)
-      .unwrap()
-      .trim()
-      .parse()
-      .unwrap();
+    let escaped: i32 = String::from_utf8(pid_bytes).unwrap().trim().parse().unwrap();
     let started = Instant::now();
     let stopped = yolo_process_stop(child, 0);
     let read = read_bytes(child, YOLO_STREAM_STDOUT);
@@ -811,12 +642,8 @@ mod process {
     unsafe { std::env::set_var("YOLO_TEST_INHERITED", "yes") };
     let (_, kept) = spawn(rt, "sh", &["-c", "test -n \"$YOLO_TEST_INHERITED\""], &[]);
     assert_eq!(wait_exited(kept).exit_code, 0);
-    let (_, removed) = spawn(
-      rt,
-      "sh",
-      &["-c", "test -z \"$YOLO_TEST_INHERITED\""],
-      &["YOLO_TEST_INHERITED"],
-    );
+    let (_, removed) =
+      spawn(rt, "sh", &["-c", "test -z \"$YOLO_TEST_INHERITED\""], &["YOLO_TEST_INHERITED"]);
     assert_eq!(wait_exited(removed).exit_code, 0);
     yolo_process_release(kept);
     yolo_process_release(removed);
@@ -894,10 +721,7 @@ mod process {
     assert_eq!(done.state, 1);
     assert_eq!(done.signal, libc::SIGTERM);
     // the group leader is gone and no member of the group answers any more
-    assert!(
-      group_is_gone(pid),
-      "a member of process group {pid} is still alive"
-    );
+    assert!(group_is_gone(pid), "a member of process group {pid} is still alive");
     yolo_process_release(process);
     yolo_runtime_destroy(rt);
   }
@@ -908,24 +732,15 @@ mod process {
     let (_, process) = spawn(rt, "sh", &["-c", "sleep 60 & wait"], &[]);
     // the limit (1) is exhausted by the process itself, a stop must still start
     let mut op = 0;
-    assert_eq!(
-      unsafe { yolo_process_stop_start(process, 2000, &mut op) },
-      YoloStatus::Ok
-    );
+    assert_eq!(unsafe { yolo_process_stop_start(process, 2000, &mut op) }, YoloStatus::Ok);
     let mut out = empty();
-    assert_eq!(
-      unsafe { yolo_operation_wait(op, 10_000, &mut out) },
-      YoloStatus::Ok
-    );
+    assert_eq!(unsafe { yolo_operation_wait(op, 10_000, &mut out) }, YoloStatus::Ok);
     let result = take_json(out);
     assert_eq!(result["signal"], libc::SIGTERM);
     assert_eq!(status_of(process).state, 1);
     assert_eq!(yolo_operation_release(op), YoloStatus::Ok);
     let mut none = 0;
-    assert_eq!(
-      unsafe { yolo_process_stop_start(0, 0, &mut none) },
-      YoloStatus::InvalidHandle
-    );
+    assert_eq!(unsafe { yolo_process_stop_start(0, 0, &mut none) }, YoloStatus::InvalidHandle);
     yolo_process_release(process);
     yolo_runtime_destroy(rt);
   }
@@ -933,12 +748,7 @@ mod process {
   #[test]
   fn a_process_ignoring_sigterm_is_killed_after_the_grace_period() {
     let rt = create(0);
-    let (_, process) = spawn(
-      rt,
-      "sh",
-      &["-c", "trap '' TERM; while :; do sleep 1; done"],
-      &[],
-    );
+    let (_, process) = spawn(rt, "sh", &["-c", "trap '' TERM; while :; do sleep 1; done"], &[]);
     std::thread::sleep(Duration::from_millis(100));
     let started = Instant::now();
     assert_eq!(yolo_process_stop(process, 200), YoloStatus::Ok);
@@ -954,10 +764,7 @@ mod process {
     let (status, process) = spawn(rt, "sleep", &["60"], &[]);
     assert_eq!(status, YoloStatus::Ok);
     let mut op = 0;
-    assert_eq!(
-      unsafe { yolo_bench_start(rt, 10, &mut op) },
-      YoloStatus::Busy
-    );
+    assert_eq!(unsafe { yolo_bench_start(rt, 10, &mut op) }, YoloStatus::Busy);
     let (status, _) = spawn(rt, "sleep", &["60"], &[]);
     assert_eq!(status, YoloStatus::Busy);
     let pid = status_of(process).pid as i32;
@@ -993,10 +800,7 @@ mod process {
       return (status, serde_json::Value::Null);
     }
     let mut out = empty();
-    assert_eq!(
-      unsafe { yolo_operation_wait(op, 10_000, &mut out) },
-      YoloStatus::Ok
-    );
+    assert_eq!(unsafe { yolo_operation_wait(op, 10_000, &mut out) }, YoloStatus::Ok);
     let value = take_json(out);
     assert_eq!(yolo_operation_release(op), YoloStatus::Ok);
     (YoloStatus::Ok, value)
@@ -1017,11 +821,7 @@ mod process {
     assert!(value["status"].is_null() && value["error"].as_str().unwrap().contains("not an HTTP"));
 
     // a closed port: connection refused is "not ready yet", reported as data
-    let closed = TcpListener::bind("127.0.0.1:0")
-      .unwrap()
-      .local_addr()
-      .unwrap()
-      .port();
+    let closed = TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port();
     let (status, value) = probe(rt, closed, "/");
     assert_eq!(status, YoloStatus::Ok);
     assert!(value["status"].is_null());
@@ -1041,7 +841,8 @@ mod windows_process {
 
   fn spawn_cmd(rt: YoloHandle, command: &str) -> YoloHandle {
     let program = CString::new("cmd.exe").unwrap();
-    let owned = [CString::new("/d").unwrap(), CString::new("/c").unwrap(), CString::new(command).unwrap()];
+    let owned =
+      [CString::new("/d").unwrap(), CString::new("/c").unwrap(), CString::new(command).unwrap()];
     let mut args: Vec<*const std::ffi::c_char> = owned.iter().map(|c| c.as_ptr()).collect();
     args.push(ptr::null());
     let info = YoloSpawnInfo {

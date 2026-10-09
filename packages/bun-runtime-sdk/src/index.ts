@@ -1,5 +1,5 @@
 /**
- * Light SDK of the YOLO native runtime (phase R0 slice).
+ * Light SDK of the buv native runtime.
  *
  * Loads the precompiled yolo_* library (`yolo_runtime`, or aphrody's `aphrody_ffi`) through `bun:ffi` and its versioned yolo_* C ABI
  * (declared in the single header `crates/interop/ffi/include/aphrody.h`, contract in
@@ -10,8 +10,8 @@
 import { dlopen, FFIType, ptr, read, suffix, toArrayBuffer, type Pointer } from "bun:ffi";
 import { embeddedNativeLibraryPath } from "./ffi.ts";
 import { existsSync, readFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join, resolve } from "node:path";
+import { runtimeHome } from "./paths.ts";
 
 /** ABI major this SDK was written for. A library with another major is refused before any call. */
 export const EXPECTED_ABI_MAJOR = 1;
@@ -80,28 +80,24 @@ export function libraryFile(): string {
   return process.platform === "win32" ? "aphrody_ffi.dll" : `libaphrody_ffi.${suffix}`;
 }
 
-/** File name of the standalone library built by this package (`cargo build --profile runtime`): `libyolo_runtime.so|dylib`, `yolo_runtime.dll` on Windows. */
+/** Canonical shared-library name staged from the standalone runtime build. */
 export function standaloneLibraryFile(): string {
-  return process.platform === "win32" ? "yolo_runtime.dll" : `libyolo_runtime.${suffix}`;
+  return process.platform === "win32" ? "buv_runtime.dll" : `libbuv_runtime.${suffix}`;
 }
 
 /**
- * Resolution order: `$YOLO_RUNTIME_LIB`, the embedded sole FFI provider, the active installed artifact
- * (`$YOLO_RUNTIME_HOME` or `$YOLO_HOME/runtime`, default `~/.yolo/runtime`, `<target>/current`), then this package's `target/runtime/`.
+ * Resolve an explicit BUV provider, embedded library, installed artifact, then local build.
+ * Legacy YOLO environment selections remain compatible.
  */
 export function defaultLibraryPath(): string {
-  const fromEnv = process.env["YOLO_RUNTIME_LIB"];
+  const fromEnv = process.env["BUV_RUNTIME_LIB"] || process.env["YOLO_RUNTIME_LIB"];
   if (fromEnv !== undefined && fromEnv !== "") return fromEnv;
-  const embedded = embeddedNativeLibraryPath("aphrody_ffi") ?? embeddedNativeLibraryPath("yolo_runtime");
+  const embedded =
+    embeddedNativeLibraryPath("buv_runtime") ??
+    embeddedNativeLibraryPath("aphrody_ffi") ??
+    embeddedNativeLibraryPath("yolo_runtime");
   if (embedded !== null) return embedded;
-  const runtimeHomeEnv = process.env["YOLO_RUNTIME_HOME"];
-  const yoloHome = process.env["YOLO_HOME"];
-  const base =
-    runtimeHomeEnv !== undefined && runtimeHomeEnv !== ""
-      ? resolve(runtimeHomeEnv)
-      : yoloHome !== undefined && yoloHome !== ""
-        ? resolve(yoloHome, "runtime")
-        : join(homedir(), ".yolo", "runtime");
+  const base = runtimeHome();
   const current = resolve(base, installedTarget(), "current");
   const installed = join(current, libraryFile());
   if (existsSync(installed)) return installed;
@@ -115,7 +111,10 @@ export function defaultLibraryPath(): string {
   } catch {
     // no installed artifact: fall through to the local build
   }
-  return resolve(import.meta.dir, "..", "target/runtime", standaloneLibraryFile());
+  const directory = resolve(import.meta.dir, "..", "target/runtime");
+  const canonical = join(directory, standaloneLibraryFile());
+  const legacy = join(directory, process.platform === "win32" ? "yolo_runtime.dll" : `libyolo_runtime.${suffix}`);
+  return existsSync(canonical) ? canonical : existsSync(legacy) ? legacy : canonical;
 }
 
 function installedTarget(): string {
@@ -162,7 +161,14 @@ export const SYMBOLS = {
   yolo_last_error: { args: [FFIType.ptr], returns: FFIType.i32 },
 } as const;
 
-type Library = ReturnType<typeof dlopen<typeof SYMBOLS>>;
+type BuvSymbols = {
+  [K in keyof typeof SYMBOLS as K extends `yolo_${infer Name}` ? `buv_${Name}` : never]: (typeof SYMBOLS)[K];
+};
+export const BUV_SYMBOLS = Object.fromEntries(
+  Object.entries(SYMBOLS).map(([name, definition]) => [name.replace(/^yolo_/, "buv_"), definition]),
+) as BuvSymbols;
+
+type Library = Pick<ReturnType<typeof dlopen<typeof SYMBOLS>>, "symbols" | "close">;
 type Symbols = Library["symbols"];
 
 function readBufferBytes(symbols: Symbols, buffer: Uint8Array): Uint8Array {
@@ -561,29 +567,49 @@ export class Runtime implements Disposable {
   #handle: bigint;
   #closed = false;
   readonly abi: { major: number; minor: number };
+  readonly abiNamespace: "buv" | "yolo";
 
-  private constructor(library: Library, handle: bigint, abi: { major: number; minor: number }) {
+  private constructor(
+    library: Library,
+    handle: bigint,
+    abi: { major: number; minor: number },
+    abiNamespace: "buv" | "yolo",
+  ) {
     this.#library = library;
     this.#handle = handle;
     this.abi = abi;
+    this.abiNamespace = abiNamespace;
   }
 
   static load(options: LoadOptions = {}): Runtime {
     const path = options.libraryPath ?? defaultLibraryPath();
     if (!existsSync(path)) {
       throw new Error(
-        `YOLO runtime library not found at ${path}. Build it in packages/bun-runtime-sdk with ` +
+        `buv runtime library not found at ${path}. Build it in packages/bun-runtime-sdk with ` +
           `\`cargo build --profile runtime -p yolo-runtime\` ` +
-          `or point YOLO_RUNTIME_LIB to a prebuilt artifact.`,
+          `or point BUV_RUNTIME_LIB to a prebuilt artifact.`,
       );
     }
     // Negotiate before binding anything else: an older library lacks symbols the SDK needs and
     // must be refused with a clear ABI error, not a missing-symbol one.
-    const probe = dlopen(path, {
-      yolo_abi_version: SYMBOLS.yolo_abi_version,
-    });
-    const version = probe.symbols.yolo_abi_version();
-    probe.close();
+    const { namespace, version } = (() => {
+      let probe: ReturnType<typeof dlopen<{ buv_abi_version: typeof SYMBOLS.yolo_abi_version }>>;
+      try {
+        probe = dlopen(path, { buv_abi_version: BUV_SYMBOLS.buv_abi_version });
+      } catch {
+        const legacy = dlopen(path, { yolo_abi_version: SYMBOLS.yolo_abi_version });
+        try {
+          return { namespace: "yolo" as const, version: legacy.symbols.yolo_abi_version() };
+        } finally {
+          legacy.close();
+        }
+      }
+      try {
+        return { namespace: "buv" as const, version: probe.symbols.buv_abi_version() };
+      } finally {
+        probe.close();
+      }
+    })();
     const major = version >>> 16;
     const minor = version & 0xffff;
     if (major !== EXPECTED_ABI_MAJOR || minor < EXPECTED_ABI_MINOR) {
@@ -592,7 +618,18 @@ export class Runtime implements Disposable {
         `library implements ABI ${major}.${minor}, this SDK needs ${EXPECTED_ABI_MAJOR}.${EXPECTED_ABI_MINOR}+`,
       );
     }
-    const library = dlopen(path, SYMBOLS);
+    let library: Library;
+    if (namespace === "buv") {
+      const native = dlopen(path, BUV_SYMBOLS);
+      library = {
+        symbols: Object.fromEntries(
+          Object.entries(native.symbols).map(([name, fn]) => [name.replace(/^buv_/, "yolo_"), fn]),
+        ) as Symbols,
+        close: () => native.close(),
+      };
+    } else {
+      library = dlopen(path, SYMBOLS);
+    }
     const symbols = library.symbols;
 
     const info = new Uint32Array([16, EXPECTED_ABI_MAJOR, EXPECTED_ABI_MINOR, options.maxOperations ?? 0]);
@@ -603,7 +640,7 @@ export class Runtime implements Disposable {
       library.close();
       throw error;
     }
-    return new Runtime(library, out[0] as bigint, { major, minor });
+    return new Runtime(library, out[0] as bigint, { major, minor }, namespace);
   }
 
   /** Handles reject further calls after close without entering an unloaded library. */
