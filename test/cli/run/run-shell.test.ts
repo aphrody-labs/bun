@@ -80,3 +80,28 @@ test.skipIf(isWindows)(
     expect(exitCode).toBe(0);
   },
 );
+
+// POSIX sh (and cmd.exe) pass a glob with no match through as the literal word, e.g. turbo's
+// `--filter=!./playgrounds/*`; Bun's shell does the same for package.json scripts and `bun exec`.
+test.concurrent("package script under the Bun shell keeps an unmatched glob literal", async () => {
+  using dir = tempDir("run-shell-unmatched-glob", {
+    "package.json": JSON.stringify({
+      name: "unmatched-glob",
+      scripts: { args: "bun ./args.js --filter=!./playgrounds/* nothing-*.txt" },
+    }),
+    "args.js": "console.log(JSON.stringify(process.argv.slice(2)));",
+  });
+
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "run", "--shell=bun", "args"],
+    cwd: String(dir),
+    env: bunEnv,
+    stderr: "pipe",
+    stdout: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+
+  expect(stderr).not.toContain("no matches found");
+  expect(stdout.trim()).toBe(JSON.stringify(["--filter=!./playgrounds/*", "nothing-*.txt"]));
+  expect(exitCode).toBe(0);
+});

@@ -678,10 +678,11 @@ impl Expansion {
         };
 
         if result.is_empty() || walk_err.is_some() {
-            // In variable assignments a no-match glob
+            // In variable assignments, and in `bun run` scripts, a no-match glob
             // expands to the literal pattern; otherwise it's an error.
             let parent = interp.as_expansion(this).base.parent;
-            let in_assign = matches!(interp.node(parent).kind(), StateKind::Assign)
+            let keep_literal = (walk_err.is_none() && interp.flags.get().literal_unmatched_glob())
+                || matches!(interp.node(parent).kind(), StateKind::Assign)
                 || matches!(
                     interp.node(parent),
                     Node::Cmd(c) if matches!(
@@ -690,7 +691,7 @@ impl Expansion {
                     )
                 );
             let me = interp.as_expansion_mut(this);
-            if in_assign {
+            if keep_literal {
                 Self::push_current_out(me);
                 me.state = ExpansionState::Done;
             } else if let Some(err) = walk_err {

@@ -355,6 +355,13 @@ impl InterpreterFlags {
     pub(crate) fn set_exit_requested(&mut self, v: bool) {
         if v { self.0 |= 0b10000 } else { self.0 &= !0b10000 }
     }
+    /// A glob with no match stays the literal word, as in POSIX sh (`bun run` scripts, `bun exec`).
+    pub(crate) const fn literal_unmatched_glob(self) -> bool {
+        self.0 & 0b100000 != 0
+    }
+    pub(crate) fn set_literal_unmatched_glob(&mut self, v: bool) {
+        if v { self.0 |= 0b100000 } else { self.0 &= !0b100000 }
+    }
 }
 
 impl Interpreter {
@@ -832,6 +839,11 @@ impl Interpreter {
             Ok(i) => i,
             Err(e) => e.throw_mini(),
         };
+        if from_source {
+            let mut flags = interp.flags.get();
+            flags.set_literal_unmatched_glob(true);
+            interp.flags.set(flags);
+        }
         if let Some(session) = session.as_deref() {
             let mut flags = interp.flags.get();
             flags.set_posix_exit(true);
