@@ -231,7 +231,8 @@ static STDOUT_STREAM_SET: AtomicBool = AtomicBool::new(false);
 // `#[repr(C, align(4))]`), so the `#[no_mangle]` symbol is bit-compatible with
 // the C declaration `int32_t bun_stdio_tty[3]`. Using atomics instead of
 // `RacyCell` makes Rust-side reads/writes fully safe (cell-get reduction).
-#[unsafe(no_mangle)]
+#[cfg_attr(not(target_arch = "wasm32"), unsafe(no_mangle))]
+#[allow(non_upper_case_globals)]
 static bun_stdio_tty: [AtomicI32; 3] = [AtomicI32::new(0), AtomicI32::new(0), AtomicI32::new(0)];
 
 /// Read `bun_stdio_tty[idx]`. Written once at startup (in `Source::set_init` /

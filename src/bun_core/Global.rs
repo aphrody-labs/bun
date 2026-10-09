@@ -646,7 +646,7 @@ type ExitFn = extern "C" fn();
 // guarded with a Mutex.
 static ON_EXIT_CALLBACKS: crate::Mutex<Vec<ExitFn>> = crate::Mutex::new(Vec::new());
 
-#[unsafe(no_mangle)]
+#[cfg_attr(not(target_arch = "wasm32"), unsafe(no_mangle))]
 extern "C" fn Bun__atexit(function: ExitFn) {
     let mut cbs = ON_EXIT_CALLBACKS.lock();
     if !cbs.iter().any(|f| *f as usize == function as usize) {
@@ -672,6 +672,7 @@ pub fn add_pre_exit_callback(function: ExitFn) {
     }
 }
 
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 fn run_exit_callbacks() {
     // Drain under lock, run outside it (callbacks may call `Bun__atexit`).
     let cbs: Vec<ExitFn> = core::mem::take(&mut *ON_EXIT_CALLBACKS.lock());
@@ -682,11 +683,13 @@ fn run_exit_callbacks() {
 
 static IS_EXITING: AtomicBool = AtomicBool::new(false);
 
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 extern "C" fn bun_is_exiting() -> c_int {
     is_exiting() as c_int
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn is_exiting() -> bool {
     IS_EXITING.load(Ordering::Relaxed)
 }
@@ -858,6 +861,7 @@ pub const user_agent: &str = concatcp!("Bun/", package_json_version);
 pub struct SyncCStr(pub *const c_char);
 // SAFETY: points into a `'static` string literal; the pointer is never mutated.
 unsafe impl Sync for SyncCStr {}
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 static Bun__userAgent: SyncCStr = SyncCStr(concatcp!(user_agent, "\0").as_ptr().cast::<c_char>());
 
@@ -872,7 +876,8 @@ macro_rules! keep_symbols {
     };
 }
 
-#[unsafe(no_mangle)]
+#[cfg_attr(not(target_arch = "wasm32"), unsafe(no_mangle))]
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 extern "C" fn Bun__onExit() {
     // FSEvents close-and-wait runs BEFORE the generic exit-callback list.
     // fs_events pushes into `PRE_EXIT_CALLBACKS` on first loop create.

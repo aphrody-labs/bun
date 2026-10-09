@@ -1883,7 +1883,10 @@ pub mod lexer_tables {
 /// because [`String::max_length`] / `create_external*` need it without an
 /// upward dep; `bun_jsc::VirtualMachine` writes it during init / via the
 /// `setSyntheticAllocationLimitForTesting` hook.
-#[unsafe(export_name = "Bun__stringSyntheticAllocationLimit")]
+#[cfg_attr(
+    not(target_arch = "wasm32"),
+    unsafe(export_name = "Bun__stringSyntheticAllocationLimit")
+)]
 pub static STRING_ALLOCATION_LIMIT: AtomicUsize = AtomicUsize::new(u32::MAX as usize);
 
 /// Mirror of `WTF::StringImpl::MaxLength` (`INT32_MAX`), which C++ enforces
