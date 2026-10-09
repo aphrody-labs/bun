@@ -328,6 +328,8 @@ pub(crate) mod exec_command;
 pub(crate) mod fuzzilli_command;
 #[path = "toolchain_command.rs"]
 pub(crate) mod toolchain_command;
+#[path = "devtools_command.rs"]
+pub(crate) mod devtools_command;
 #[path = "install_command.rs"]
 pub(crate) mod install_command;
 #[path = "repl_command.rs"]
@@ -654,6 +656,8 @@ pub(crate) mod help_command {
   <b><magenta>check<r>                          Type check a TypeScript project
   <b><magenta>lint<r>                           Lint with oxlint and the Node-to-Bun rules
   <b><magenta>fmt<r>                            Format with oxfmt
+  <b><magenta>rename<r>    <d>--from a --to b<r>      Rename identifiers and paths across a git repository
+  <b><magenta>docs<r>      <d>[query]<r>              Search the Bun documentation
   <b><magenta>n2b<r>       <d>scan | fix | migrate<r> Migrate a Node.js project to Bun
   <b><magenta>x<r>         <d>{:<16}<r>     Execute a package binary (CLI), installing if needed <d>(bunx)<r>
   <b><magenta>repl<r>                           Start a REPL session with Bun
@@ -1080,6 +1084,16 @@ pub(crate) mod command {
             || x == RootCommandMatcher::case(b"wasm")
         {
             return match super::toolchain_command::is_package_script(first_arg_name) {
+                true => Tag::AutoCommand,
+                false => Tag::ToolchainCommand,
+            };
+        }
+        if x == RootCommandMatcher::case(b"rename")
+            || x == RootCommandMatcher::case(b"docs")
+            || x == RootCommandMatcher::case(b"parse")
+            || x == RootCommandMatcher::case(b"bench")
+        {
+            return match super::devtools_command::is_project_entry(first_arg_name) {
                 true => Tag::AutoCommand,
                 false => Tag::ToolchainCommand,
             };
