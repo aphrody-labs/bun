@@ -398,8 +398,11 @@ consomme ensuite `@aphrody/tailwindcss`.
   `package.json`), workflows `aphrody-{upstream-sync,ci,release}.yml`, `APHRODY.md`, `PLAN.md`. Non exécutés (directive
   du 2026-10-09) ; test : `bun test scripts/aphrody/aphrody.test.ts` dans `C:\tailwindcss`.
 - Mesure (avant les patchs du cœur) : vitest sous Bun 37,5 s, 5463 réussis ; `bun test packages` 58 s, 5238/5494.
-- ⏳ Patchs du cœur Bun pour la parité vitest (getState/setState, rejects/resolves sur fonction, snapshot serializers +
-  clé bunfig, contexte de test vitest, `test.for`) : en cours, à noter ici à la livraison.
+- ✅ Cœur Bun (§2.11, `984c0a12081`, non compilé ni exécuté) : module `bun:vitest` (import `vitest` sous `bun test`,
+  contexte de test `{expect, task, skip, signal, onTestFinished, onTestFailed}`, séparateur ` > `), `expect.getState/setState`,
+  `resolves/rejects` sur fonction, `expect.addSnapshotSerializer` (valeur de premier niveau seulement), erreurs `[Name: msg]`,
+  `test.for/it.for/describe.for`. Test : `test/js/bun/test/bun_test.test.ts` (7 cas en fin de fichier). Serializer oklab de
+  Tailwind chargé par preload (tailwindcss `f2760d63`). Reste : clé bunfig `snapshotSerializers`, types `bun-types`.
 - ⏳ Première publication `4.3.3-aphrody.1` (workflow release), mesures avant/après (build CSS, démarrage à froid),
   suite d'intégration sous `bun test`, `bench` encore sur `vitest bench`, bascule de `@aphrody/bun-plugin-tailwind`.
 
