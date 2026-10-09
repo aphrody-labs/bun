@@ -569,10 +569,10 @@ function buildProto(st: StructType) {
 }
 
 class StructBase {
-  get $buffer(): Uint8Array {
+  get ["$buffer"](): Uint8Array {
     return this[kBuf];
   }
-  get $ptr(): number {
+  get ["$ptr"](): number {
     return ptrOf(this[kBuf]);
   }
   toJSON() {
@@ -612,7 +612,7 @@ function assign(target: any, init: any) {
     return target;
   }
   for (const key of Object.keys(init)) {
-    if (!(key in target)) throw $ERR_INVALID_ARG_VALUE(key, init[key], `is not a field of ${target.$type}`);
+    if (!(key in target)) throw $ERR_INVALID_ARG_VALUE(key, init[key], `is not a field of ${target["$type"]}`);
     target[key] = init[key];
   }
   return target;
@@ -863,7 +863,7 @@ function structReturn(tok: string) {
 function unpackStruct(name: string, raw: any) {
   const s = struct(name);
   const view: DataView = s[kView];
-  switch (s.$size) {
+  switch (s["$size"]) {
     case 1:
       view.setUint8(0, Number(raw));
       break;
@@ -1124,7 +1124,7 @@ function comRelease(p: number) {
 }
 
 class ComObject {
-  get $ptr(): number {
+  get ["$ptr"](): number {
     return this[kPtr];
   }
   as(type: string) {
