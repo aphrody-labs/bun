@@ -1,0 +1,38 @@
+# Fragment to insert in the Aphrody Alpine image (Alpine 3.24, musl), as root, after the base
+# packages and before the final USER. Packages come from the aports fork (aphrody-labs/aports,
+# branch 3.24-stable, aphrody/{sudo-rs,aphrody-sysctl,linux-aphrody}), built with
+# abuild -r and published in the apk repository signed with aphrody/keys/aphrody-labs.rsa.pub.
+#
+# The kernel package linux-aphrody is NOT installed in the container image: a container uses
+# the kernel of its host. linux-aphrody is for VMs and bare metal (installer/ISO) only.
+
+# ARG APHRODY_APK_REPO=https://example.invalid/aphrody
+#   Repository URL (dir containing <arch>/APKINDEX.tar.gz) or a local directory mounted at
+#   /packages (ex: docker build --build-context packages=./repo  +  COPY --from=packages / /packages).
+#   (local variant: ARG APHRODY_APK_REPO=/packages instead of the URL above)
+# ARG BUILD_USER=builder
+
+# Repository key: for a local repo, copy the abuild public key to /etc/apk/keys/ beforehand
+# (COPY aphrody-labs.rsa.pub /etc/apk/keys/aphrody-labs.rsa.pub).
+# RUN echo "${APHRODY_APK_REPO}" >> /etc/apk/repositories
+
+# sudo-rs provides "sudo" and replaces sudo and doas; aphrody-sudoers creates group aphrody and
+# installs /etc/sudoers.d/aphrody (%aphrody NOPASSWD: ALL); aphrody-sysctl installs
+# /etc/sysctl.d/90-aphrody-bun.conf and /etc/security/limits.d/90-aphrody-bun.conf (applying the
+# sysctls in a container is harmless: sysctl -e ... || true).
+# RUN apk del --no-cache sudo doas 2>/dev/null || true \
+#  && apk add --no-cache sudo-rs sudo-rs-su aphrody-sudoers aphrody-sysctl \
+#  && ! command -v doas >/dev/null
+
+# Build user in group aphrody (create it, or add it if it already exists).
+# RUN if id "${BUILD_USER}" >/dev/null 2>&1; then \
+#       addgroup "${BUILD_USER}" aphrody; \
+#     else \
+#       adduser -D -G aphrody -s /bin/sh "${BUILD_USER}"; \
+#     fi \
+#  && id "${BUILD_USER}"
+
+# Verify (final RUN, as the build user): passwordless sudo, effective root.
+# USER ${BUILD_USER}
+# RUN sudo -n true && test "$(sudo -n id -u)" = 0
+# USER root

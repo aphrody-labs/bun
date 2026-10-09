@@ -38,7 +38,7 @@ Décision utilisateur (2026-10-09) : le fork est **pensé d'abord pour la derni�
 
 ### U. Aphrody Alpine — fork d'Alpine 3.24 + apk-tools (🔄 démarré le 2026-10-09)
 
-- **U1** : paquets, `bunsh`, apk complété par bun, image. **U2** : libc Rust (section suivante). **U3** : sudo-rs,
+- **U1** : paquets, `bunsh`, apk complété par bun, image. **U2** : libc Rust (section suivante). **U3** (section U3) : sudo-rs,
   `elevate.rs`, `bun:linux`, noyau `linux-aphrody`, sysctl (fragment `scripts/aphrody/alpine/u3.Dockerfile.fragment`).
 - Builds et tests : passe finale unique (§2 règle 13), conteneurs Docker locaux uniquement.
 
@@ -169,6 +169,120 @@ Reste en musl, et critères de bascule :
 - Bascule vers une libc Rust complète seulement si : une cible ABI musl existe (dispositions x86_64/aarch64 musl,
   `ld-musl` ou chargeur compatible), libc-test au moins au niveau de musl, dlopen/locale/wchar/iconv/pthread_cancel
   implémentés, suites de busybox, git et LLVM vertes, et banc O sans régression de démarrage ni de RSS.
+
+### U3. Root et noyau (🔄 code écrit le 2026-10-09, ni build ni test)
+
+**Root natif dans Bun** (`src/runtime/elevate.rs`) :
+
+- `Bun.spawn/spawnSync({ elevate: true })` (`js_bun_spawn_bindings.rs`). Déjà root ou élevé : exécution directe.
+  - Linux/macOS : `sudo -n VAR=val… /abs/cmd args`, sans `--` (sudo-rs n'accepte `VAR=val` qu'avant `--`, sudo
+    seulement après). La commande est résolue dans le `PATH` de l'appelant. La sonde `sudo -n true` est en cache.
+  - Windows : `sudo.exe` inbox s'il est activé (clé `HKLM\…\Sudo` `Enabled`), sinon un assistant `bun -e`
+    (`ShellExecuteExW "runas"`) qui attend le processus et renvoie son code. `env` est alors refusé.
+  - Erreurs : `ERR_ACCESS_DENIED` (pas de sudo, mot de passe requis) ; `elevate` refusé avec `argv0`, `uid` ou `gid`.
+  - `bun_sys::windows::is_elevated()` lit TokenElevation.
+- Bun Shell : `sudo cmd …` (`states/Cmd.rs`) passe par le même plan ; s'il est déjà root, `sudo` est retiré et les
+  builtins s'exécutent. `sudo -u …` et les autres formes lancent le sudo système tel quel.
+- **`bunsh --root` (à faire par U1, propriétaire de `bunsh.rs`)** : si `!crate::elevate::is_elevated()`, appeler
+  `crate::elevate::plan(PATH, cwd)` puis ré-exécuter `préfixe ++ [self_exe] ++ argv sans --root` et propager le code
+  de sortie ; sinon continuer. En cas d'`Err(e)`, `e.message()` sur stderr et exit 1.
+- Types (`bun.d.ts`), docs (`child-process.mdx` « Running as root », `shell.mdx`). Tests : `describe("elevate")`
+  de `spawn.test.ts` et `describe("sudo")` de `bunshell.test.ts`, en skip sans root ni sudo NOPASSWD.
+
+**`bun:linux`** (paresseux, `src/js/bun/linux.ts` + `src/runtime/linux/*.rs`, un fichier par domaine) :
+namespaces, mount/pivot_root, cgroup v2, capabilities/prctl, pidfd, memfd, landlock, sysctl, kmod, power
+(reboot/kexec), `ioUring.probe()` (Bun n'utilise pas io_uring sous Linux, pas de doublon). Numéros de syscall par
+architecture ; hors Linux : `ERR_BUN_LINUX_UNSUPPORTED`. Types `packages/bun-types/linux.d.ts`, doc
+`docs/runtime/linux.mdx`, test `test/js/bun/linux/linux.test.ts`. À vérifier à la compilation : chemins js2native,
+`#[bun_jsc::host_fn]` sur des fns `pub(crate)`, let-chains d'`io_uring.rs`, `PathBeneathAttr` packed.
+
+**Paquets** (fork aports, `aphrody/`, commits `c3ffb089c93` et `a74fe8ed9a3` sur `3.24-stable`) :
+
+- `sudo-rs` 0.2.15-r1 : repris de 3.24 community (`8b25d8295f3f`), `provides=sudo`, `replaces="sudo doas"`.
+  Sous-paquet `aphrody-sudoers` : groupe `aphrody` et `/etc/sudoers.d/aphrody` (`%aphrody ALL=(ALL:ALL) NOPASSWD: ALL`,
+  0440).
+- `aphrody-sysctl` 1.1 :
+  - `/etc/sysctl.d/90-aphrody-bun.conf` : `vm.max_map_count=1048576`, `vm.overcommit_memory=1`,
+    `fs.inotify.max_user_watches=1048576` et `max_user_instances=1024`, `fs.file-max`, `net.core.somaxconn=8192`,
+    `tcp_fastopen=3`, `default_qdisc=fq`, `bbr`, `rmem_max`/`wmem_max` à 16 Mio (QUIC), `perf_event_paranoid=1`,
+    `io_uring_disabled=0`.
+  - `/etc/security/limits.d/90-aphrody-bun.conf` : nofile 1048576 (pam_limits ; services OpenRC : `rc_ulimit`).
+  - `/etc/modules-load.d/aphrody.conf`.
+- `linux-aphrody` / `linux-aphrody-v3` 6.18.55, d'après linux-lts 3.24 (`52fae6d7d56f`), x86_64 et aarch64 :
+  - Build en `LLVM=1` (clang, lld et llvm 22). `make LLVM=1 rustavailable` avant `olddefconfig`.
+  - Config : `lts.<arch>.config` + `config-aphrody.fragment` (système et Rust) + `bun.config` (options utiles à Bun et
+    JSC, une ligne de commentaire par option), fusionnés par `merge_config.sh`.
+  - Contrôle : les options refusées par Kconfig sont signalées (fatales avec `APHRODY_STRICT_CONFIG=1`) ;
+    « is not set » est satisfait par un symbole absent.
+  - `-v3` : `KCFLAGS=-march=x86-64-v3 KRUSTFLAGS=-Ctarget-cpu=x86-64-v3` (aarch64 : `armv8.2-a`). Même voie
+    que `X86_NATIVE_CPU` en amont ; `X86_64_VERSION` n'existe pas en 6.18 (patch hors arbre).
+  - Source `_kernel_source=fork` : `aphrody-labs/linux`, branche `aphrody-bun` (chantier V), épinglée par
+    `_fork_commit`, suivie d'`abuild checksum`.
+- Vérification : `bun aphrody/kernel/check-config.ts [--sysctl] [--json]` (fork aports) lit `/proc/config.gz`
+  (`IKCONFIG=y` dans `bun.config`) et compare chaque option des fragments, avec `@arch` ; la dernière valeur l'emporte.
+- Dockerfile : lignes pour U1 dans `scripts/aphrody/alpine/u3.Dockerfile.fragment`, qui retire sudo/doas et installe
+  `sudo-rs sudo-rs-su aphrody-sudoers aphrody-sysctl` ; l'utilisateur de build entre dans le groupe `aphrody`. Le
+  noyau ne va pas dans l'image. U1 doit aussi ajouter `sudo-rs` et `aphrody-sysctl` à `ORDER` (`publish.ts`) ; le
+  noyau doit tourner dans un job à part (deux noyaux, plafond de 6 h).
+
+**Config noyau** (6.18, symboles vérifiés sur les Kconfig de v6.18.5) :
+
+- Rust, minima de `scripts/min-tool-version.sh` : rustc 1.78.0, bindgen 0.65.1, LLVM 15.0.0. Alpine 3.24 fournit
+  rust 1.96.1 (LLVM 22) + rust-src, rust-bindgen 0.72.1, clang/lld/llvm 22, pahole 1.30.
+  - `RUST=y`, `GENDWARFKSYMS=y` (lts garde `MODVERSIONS=y`), `RANDSTRUCT_NONE=y`, sans overflow checks ni debug
+    assertions.
+  - Modules Rust : `RUST_FW_LOADER_ABSTRACTIONS`, `RUST_PHYLIB_ABSTRACTIONS`, `DRM_PANIC` +
+    `DRM_PANIC_SCREEN_QR_CODE`, `NOVA_CORE=m`, `DRM_NOVA=m` (x86_64 seulement : il faut `DRM=y`), `BLK_DEV_RUST_NULL=m`,
+    `CPUFREQ_DT_RUST=m` (aarch64).
+  - Écartés : `ANDROID_BINDER_IPC_RUST`, `DRM_TYR` (`DRM=m` en aarch64), `AX88796B_RUST_PHY`.
+- Compilation : `CC_OPTIMIZE_FOR_PERFORMANCE`. Désactivés : PROVE_LOCKING/LOCKDEP, DEBUG_PREEMPT, KASAN,
+  SLUB_DEBUG_ON, PAGE_POISONING, PAGE_TABLE_CHECK. Désactivés aussi, sans perte de sécurité utile :
+  HARDENED_USERCOPY, INIT_ON_ALLOC/FREE_DEFAULT_ON. `CPU_MITIGATIONS=y` reste.
+- **ThinLTO hors des images par défaut.** En 6.18, `RUST` exige `!DEBUG_INFO_BTF || !LTO` et `GENDWARFKSYMS` exige
+  `!LTO` : LTO + Rust coûterait BTF, sched_ext, CO-RE et MODVERSIONS. L'option reste disponible :
+  `APHRODY_KERNEL_LTO=1` fusionne `lto.config`, que check-config applique si `LTO_CLANG_THIN=y`.
+- Ordonnanceur : `PREEMPT_DYNAMIC` + `PREEMPT` (full par défaut), `HZ_1000`, `NO_HZ_FULL`, `SCHED_CLASS_EXT` (BTF
+  requis), `SCHED_AUTOGROUP`.
+- E/S : `IO_URING`, `FUTEX`(+`FUTEX_PI`, `futex_waitv`), `EVENTFD`, `TIMERFD`, `SIGNALFD`, `EPOLL`, `AIO`.
+- Mémoire : `TRANSPARENT_HUGEPAGE_MADVISE`, `LRU_GEN(_ENABLED)`, `ZSWAP_DEFAULT_ON` + zstd, `USERFAULTFD`,
+  `MEMFD_CREATE`, `SECRETMEM` (memfd_secret), `CMA`, `NUMA_BALANCING_DEFAULT_ENABLED`, `KSM=y` (inactif au démarrage).
+- Processus : `CHECKPOINT_RESTORE` (sans coût hors usage), tous les namespaces, cgroup v2 (memory, cpu, io, pids,
+  cpuset), `SECCOMP_FILTER`, `LANDLOCK`, `BPF_SYSCALL`, `BPF_JIT_ALWAYS_ON`.
+- Réseau : `TCP_CONG_BBR=y` + `DEFAULT_BBR`, `NET_SCH_FQ=y` + `DEFAULT_FQ`, `TLS=m` + `TLS_DEVICE`, `XDP_SOCKETS`,
+  `NET_RX_BUSY_POLL`, `IPV6`.
+- Fichiers : `INOTIFY_USER`, `FANOTIFY`, `OVERLAY_FS`, `BTRFS_FS`, `XFS_FS` (reflink), `EXT4_FS`, `FS_VERITY`,
+  `FUSE_FS`.
+- Profilage : `PERF_EVENTS`, `KALLSYMS_ALL`, `UPROBES`, `KPROBES`, `DEBUG_INFO_BTF`, `UNWINDER_ORC` (x86_64),
+  `FRAME_POINTER` (arm64).
+- Sans symbole Kconfig en 6.18 : pidfd et clone3, futex_waitv, TCP Fast Open, SO_REUSEPORT, UDP GSO/GRO,
+  copy_file_range, FICLONE, perf map de JSC (`/tmp/perf-<pid>.map`).
+
+**Code noyau** : aucun écrit en U3. Tout patch noyau passe par V (`aphrody-labs/linux`, `aphrody-bun`), en Rust sur
+les abstractions `rust/kernel`, sinon en C. Règles de docs.kernel.org/process : un patch par sujet, chaque patch
+compile (bisect), `scripts/checkpatch.pl`, `Signed-off-by`. Les options demandées par V s'ajoutent ci-dessous avec
+la mention « demandé par V ».
+
+**Passe finale** (Docker local, Alpine 3.24) :
+
+```sh
+bun run rust:check-all
+bun bd test test/js/bun/spawn/spawn.test.ts -t elevate
+bun bd test test/js/bun/shell/bunshell.test.ts -t sudo
+bun bd test test/js/bun/linux/linux.test.ts
+bun test test/integration/bun-types/bun-types.test.ts
+# en root puis en utilisateur du groupe aphrody, dans le conteneur Aphrody Alpine :
+bun scripts/aphrody/tmux.ts run bd-U3 --alpine --sync-head -- bun bd test test/js/bun/linux/linux.test.ts
+# fork aports (C:\aports), dans alpine:3.24 avec abuild :
+cd aphrody/sudo-rs && abuild checksum && abuild -r
+cd aphrody/aphrody-sysctl && abuild -r
+cd aphrody/linux-aphrody && abuild checksum && abuild unpack prepare && abuild prepareconfigs   # rustavailable + config
+APHRODY_STRICT_CONFIG=1 abuild -r
+# sur une VM démarrée sur linux-aphrody :
+bun aphrody/kernel/check-config.ts --sysctl
+```
+
+⏳ Reste : `bunsh --root` (U1) ; `ORDER` de `publish.ts` (U1) ; épingler `_fork_commit` quand V publie `aphrody-bun`.
+Placeholder : `APHRODY_APK_REPO` du fragment Dockerfile (le dépôt NDX de U1 le remplacera).
 
 ### A. Publication (✅ base)
 
