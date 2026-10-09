@@ -96,6 +96,35 @@ pub(super) fn remove_dependencies_from_package_json(
     any_changes
 }
 
+fn remove_system_dependencies_from_package_json(
+    package_json: &mut bun_ast::Expr,
+    specs: &[crate::system::Spec],
+) -> bool {
+    let Some(query) = package_json.as_property(crate::system::PACKAGE_JSON_FIELD) else {
+        return false;
+    };
+    let Some(mut e_object) = query.expr.data.e_object() else {
+        return false;
+    };
+    let before = e_object.properties.len();
+    let keys: Vec<String> = specs.iter().map(crate::system::Spec::key).collect();
+    e_object.properties.retain(|property| {
+        !property
+            .key
+            .and_then(|key| key.data.e_string())
+            .is_some_and(|key| keys.iter().any(|k| key.eql_bytes(k.as_bytes())))
+    });
+    if e_object.properties.len() == before {
+        return false;
+    }
+    if e_object.properties.is_empty() {
+        let root = package_json.data.as_e_object_mut();
+        let _ = root.properties.swap_remove(query.i as usize);
+        root.package_json_sort();
+    }
+    true
+}
+
 pub fn update_package_json_and_install_with_manager(
     manager: &mut PackageManager,
     ctx: Command::Context,
@@ -145,6 +174,29 @@ fn update_package_json_and_install_with_manager_with_updates_and_update_requests
     update_requests: &mut UpdateRequestArray,
 ) -> Result<(), Error> {
     let subcommand = manager.subcommand;
+    let mut system_specs: Vec<crate::system::Spec> = Vec::new();
+    let npm_positionals: Vec<&[u8]>;
+    let positionals: &[&[u8]] = if matches!(subcommand, Subcommand::Add | Subcommand::Remove) {
+        let mut rest = Vec::with_capacity(positionals.len());
+        for &positional in positionals {
+            if !crate::system::is_system_spec(positional) {
+                rest.push(positional);
+                continue;
+            }
+            let Some(spec) = crate::system::parse_spec(positional) else {
+                Output::err_generic(
+                    "invalid system package \"{s}\": expected \"<source>:<id>[@<range>]\"",
+                    (BStr::new(positional),),
+                );
+                Global::crash();
+            };
+            system_specs.push(spec);
+        }
+        npm_positionals = rest;
+        &npm_positionals
+    } else {
+        positionals
+    };
     if subcommand != Subcommand::PatchCommit && subcommand != Subcommand::Patch {
         // reshaped for borrowck — `parse` returns a `&mut [UpdateRequest]`
         // sub-slice of `update_requests`; we take its length and truncate the Vec so
@@ -169,6 +221,7 @@ fn update_package_json_and_install_with_manager_with_updates_and_update_requests
         manager,
         ctx,
         core::mem::take(update_requests),
+        system_specs,
         manager.subcommand,
         original_cwd,
     )
@@ -182,6 +235,7 @@ fn update_package_json_and_install_with_manager_with_updates(
     // `Box<[UpdateRequest]>`) and re-borrow afterwards without
     // aliasing `&mut manager`.
     mut updates: Vec<UpdateRequest>,
+    system_specs: Vec<crate::system::Spec>,
     subcommand: Subcommand,
     original_cwd: &[u8],
 ) -> Result<(), Error> {
@@ -368,6 +422,9 @@ fn update_package_json_and_install_with_manager_with_updates(
             && current_package_json_root
                 .as_property(b"peerDependencies")
                 .is_none()
+            && current_package_json_root
+                .as_property(crate::system::PACKAGE_JSON_FIELD)
+                .is_none()
         {
             bun_core::pretty_errorln!(
                 "package.json doesn't have dependencies, there's nothing to {}!",
@@ -385,9 +442,22 @@ fn update_package_json_and_install_with_manager_with_updates(
         Subcommand::Remove => {
             any_changes =
                 remove_dependencies_from_package_json(&mut current_package_json_root, &updates);
+            if remove_system_dependencies_from_package_json(
+                &mut current_package_json_root,
+                &system_specs,
+            ) {
+                any_changes = true;
+            }
         }
 
         Subcommand::Link | Subcommand::Add | Subcommand::Update => {
+            if !system_specs.is_empty() {
+                PackageJSONEditor::edit_system_dependencies(
+                    manager,
+                    &mut current_package_json_root,
+                    &system_specs,
+                )?;
+            }
             // `bun update <package>` is basically the same as `bun add <package>`, except
             // update will not exceed the current dependency range if it exists
 

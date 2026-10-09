@@ -224,6 +224,40 @@ pub(crate) fn edit_patched_dependencies(
     Ok(())
 }
 
+/// Upserts `"<source>:<id>": range` rows into `systemDependencies`.
+pub(crate) fn edit_system_dependencies(
+    manager: &mut PackageManager,
+    package_json: &mut Expr,
+    specs: &[crate::system::Spec],
+) -> Result<(), bun_alloc::AllocError> {
+    let arena = &manager.ast_arena;
+    let field = crate::system::PACKAGE_JSON_FIELD;
+    let mut system = E::Object::default();
+    if let Some(query) = package_json.as_property(field) {
+        if let bun_ast::ExprData::EObject(obj) = &query.expr.data {
+            system.is_single_line = obj.is_single_line;
+            system.close_brace_loc = obj.close_brace_loc;
+            for p in obj.properties.slice() {
+                VecExt::append(&mut system.properties, copy_property(p));
+            }
+        }
+    }
+    for spec in specs {
+        let range = Expr::init(
+            E::EString::init(arena_dup(arena, spec.range.as_bytes())),
+            bun_ast::Loc::EMPTY,
+        );
+        system.put(arena, arena_dup(arena, spec.key().as_bytes()), range)?;
+    }
+    system.alphabetize_properties();
+    package_json.data.e_object_mut().unwrap().put(
+        arena,
+        field,
+        Expr::init(system, bun_ast::Loc::EMPTY),
+    )?;
+    Ok(())
+}
+
 pub fn edit_trusted_dependencies(
     package_json: &mut Expr,
     names_to_add: &mut [Box<[u8]>],
