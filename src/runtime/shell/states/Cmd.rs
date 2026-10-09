@@ -533,15 +533,41 @@ impl Cmd {
             }
         };
         let Some(mut resolved) = resolved else {
+            drop(spawn_args);
+            if !sudo_wrap && crate::shell::cmd_compat::rewrite(&mut interp.as_cmd_mut(this).args) {
+                return Self::transition_to_exec(interp, this);
+            }
             // writeFailingError("bun: command not found: {s}\n") →
             // `.waiting_write_err` → onIOWriterChunk → `parent.childDone(this, 1)`.
-            drop(spawn_args);
             return Builtin::cmd_write_failing_error(
                 interp,
                 this,
                 format_args!("bun: command not found: {}\n", bstr::BStr::new(&first_arg)),
             );
         };
+        if !applet && crate::shell::cmd_compat::is_powershell_script(&resolved) {
+            let host = {
+                let mut path_buf = bun_paths::path_buffer_pool::get();
+                crate::shell::cmd_compat::POWERSHELL_HOSTS.iter().find_map(|host| {
+                    bun_which::which(&mut *path_buf, spawn_args.path, spawn_args.cwd, host)
+                        .map(|z| z.as_bytes().to_vec())
+                })
+            };
+            let Some(host) = host else {
+                drop(spawn_args);
+                return Builtin::cmd_write_failing_error(
+                    interp,
+                    this,
+                    format_args!("bun: PowerShell (pwsh) not found to run {}\n", bstr::BStr::new(&resolved)),
+                );
+            };
+            let script = core::mem::replace(&mut resolved, host);
+            let host_args = crate::shell::cmd_compat::POWERSHELL_ARGS
+                .iter()
+                .map(|a| [*a, &b"\0"[..]].concat())
+                .chain([[&script[..], &b"\0"[..]].concat()]);
+            interp.as_cmd_mut(this).args.splice(1..1, host_args);
+        }
         // CreateProcessW runs `.bat`/`.cmd` files through `cmd.exe`, which
         // re-tokenizes the command line with shell metacharacter rules
         // (BatBadBut). libuv's MSVCRT-style quoting cannot make that safe, so
