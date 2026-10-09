@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import { mkdir, realpath, rename, rm } from "node:fs/promises";
+import { lstat, mkdir, realpath, rename, rm } from "node:fs/promises";
 import { join, relative, resolve, sep } from "node:path";
 import { scheduler } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
@@ -36,7 +36,12 @@ const generationInputs = [
   ".github/workflows/deploy-site.yml",
 ];
 function text(value: string, name: string, maximum = 2048) {
-  if (typeof value !== "string" || !value || value.length > maximum || /[\u0000-\u001f\u007f]/u.test(value))
+  if (
+    typeof value !== "string" ||
+    !value ||
+    value.length > maximum ||
+    [...value].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)
+  )
     throw new TypeError(`invalid graph documentation ${name}`);
   return value;
 }
@@ -51,7 +56,7 @@ function metadata(input: string) {
 function cell(value: unknown) {
   return Bun.escapeHTML(String(value ?? ""))
     .replaceAll("\\", "\\\\")
-    .replace(/[|`*_{}\[\]()#+.!>~]/gu, "\\$&")
+    .replace(/[|`*_{}[\]()#+.!>~]/gu, "\\$&")
     .replace(/[\r\n]+/gu, " ");
 }
 function hash(value: string | Uint8Array) {
@@ -209,6 +214,30 @@ async function writeChunks(path: string, chunks: Iterable<string>, maxBytes: num
     ended = true;
   } finally {
     if (!ended) await writer.end();
+  }
+}
+
+async function promoteDirectory(staged: string, out: string, signal?: AbortSignal) {
+  const deadline = performance.now() + 2000;
+  while (true) {
+    signal?.throwIfAborted();
+    try {
+      await rename(staged, out);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (process.platform !== "win32" || (code !== "EPERM" && code !== "EACCES") || performance.now() >= deadline)
+        throw error;
+      const destination = await lstat(out).then(
+        () => true,
+        error => {
+          if (error.code === "ENOENT") return false;
+          throw error;
+        },
+      );
+      if (destination) throw error;
+      await scheduler.yield();
+    }
   }
 }
 
@@ -396,7 +425,7 @@ export async function writeGraphDocs(registry: Registry, options: GraphDocsOptio
       options.signal,
     );
     options.signal?.throwIfAborted();
-    await rename(staged, out);
+    await promoteDirectory(staged, out, options.signal);
     for (const file of [
       "graph.md",
       "graph.mdx",

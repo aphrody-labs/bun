@@ -166,6 +166,7 @@
               "/runtime/winui",
               "/runtime/msvc",
               "/runtime/dotnet",
+              "/aphrody/iecode-runtime-capabilities",
               "/runtime/cosmic",
               "/runtime/c-compiler",
               "/runtime/transpiler"
