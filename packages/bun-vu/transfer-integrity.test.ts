@@ -86,6 +86,14 @@ test("package metadata keeps vu optional and avoids import-time runtime activati
   expect(readFileSync(join(root, ".gitignore"), "utf8")).toMatch(/^\/build\/$/m);
 });
 
+test("standalone Clippy clears Bun-engine-only policy without allowing warnings", () => {
+  const config = readFileSync(join(root, "clippy.toml"), "utf8");
+  expect(config).toContain("disallowed-methods = []");
+  expect(config).toContain("disallowed-macros = []");
+  expect(config).toContain("disallowed-types = []");
+  expect(config).not.toMatch(/^\s*allow\s*=/m);
+});
+
 test("transfer metadata excludes caches, source checkouts, artifacts, and receipts", () => {
   const provenance = JSON.parse(readFileSync(join(root, "provenance.json"), "utf8"));
   const excluded = new Set(provenance.transfer.excluded);
