@@ -51,7 +51,11 @@ if (runs.length === 0) throw new Error(`no desktop exe in ${dist}; run bun deskt
 let failed = 0;
 for (const run of runs) {
   const proc = Bun.spawn({ cmd: run.cmd, stdout: "pipe", stderr: "pipe" });
-  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
   const line = stdout.trim().split("\n").at(-1) ?? "";
   let report: SmokeReport | undefined;
   try {
