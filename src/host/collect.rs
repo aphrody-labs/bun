@@ -141,8 +141,7 @@ pub fn collect(id: &str) -> HostInfo {
     collect_linux(id)
 }
 
-#[cfg(unix)]
-#[cfg_attr(target_os = "macos", allow(dead_code))]
+#[cfg(all(unix, not(target_os = "macos")))]
 fn collect_linux(id: &str) -> HostInfo {
     let release = read("/proc/sys/kernel/osrelease").map(|s| s.trim().to_string()).unwrap_or_default();
     let wsl = release.to_ascii_lowercase().contains("microsoft") || read("/proc/version").is_some_and(|v| v.to_ascii_lowercase().contains("microsoft"));

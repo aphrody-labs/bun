@@ -23,6 +23,10 @@ test("Rust sources linked into Bun do not use the streams of the standard librar
     ["src/libuv_sys/libuv.rs", 1],
     // The uutils applets write with the streams of the standard library anyway.
     ["src/coreutils/lib.rs", 3],
+    // bun mcp speaks JSON-RPC on the process streams.
+    ["src/mcp/cli.rs", 8],
+    ["src/mcp/http.rs", 1],
+    ["src/mcp/install.rs", 3],
     ["src/react_compiler/pipeline.rs", 3],
     ["src/router/lib.rs", 4],
   ]);

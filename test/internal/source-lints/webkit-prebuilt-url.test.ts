@@ -77,14 +77,14 @@ describe("WebKit prebuilt URL", () => {
     const cfg = resolveLinuxRelease();
     expect(cfg.webkitVersion).toBe(WEBKIT_VERSION);
     expect(prebuiltUrlOf(cfg)).toBe(
-      `https://github.com/oven-sh/WebKit/releases/download/${defaultTag}/bun-webkit-linux-amd64.tar.gz`,
+      `https://github.com/aphrody-labs/WebKit/releases/download/${defaultTag}/bun-webkit-linux-amd64.tar.gz`,
     );
   });
 
   test("lto picks the -lto artifact from the same release tag", () => {
     const cfg = resolveLinuxRelease({ lto: true });
     expect(prebuiltUrlOf(cfg)).toBe(
-      `https://github.com/oven-sh/WebKit/releases/download/${defaultTag}/bun-webkit-linux-amd64-lto.tar.gz`,
+      `https://github.com/aphrody-labs/WebKit/releases/download/${defaultTag}/bun-webkit-linux-amd64-lto.tar.gz`,
     );
   });
 
@@ -94,16 +94,16 @@ describe("WebKit prebuilt URL", () => {
       mockToolchain(),
     );
     expect(prebuiltUrlOf(cfg)).toBe(
-      `https://github.com/oven-sh/WebKit/releases/download/${defaultTag}/bun-webkit-linux-amd64-debug.tar.gz`,
+      `https://github.com/aphrody-labs/WebKit/releases/download/${defaultTag}/bun-webkit-linux-amd64-debug.tar.gz`,
     );
   });
 
   test("baseline does not affect the suffix (every x64 WebKit is built at the nehalem floor)", () => {
     expect(prebuiltUrlOf(resolveLinuxRelease({ lto: true, baseline: true }))).toBe(
-      `https://github.com/oven-sh/WebKit/releases/download/${defaultTag}/bun-webkit-linux-amd64-lto.tar.gz`,
+      `https://github.com/aphrody-labs/WebKit/releases/download/${defaultTag}/bun-webkit-linux-amd64-lto.tar.gz`,
     );
     expect(prebuiltUrlOf(resolveLinuxRelease({ asan: true, baseline: true }))).toBe(
-      `https://github.com/oven-sh/WebKit/releases/download/${defaultTag}/bun-webkit-linux-amd64-asan.tar.gz`,
+      `https://github.com/aphrody-labs/WebKit/releases/download/${defaultTag}/bun-webkit-linux-amd64-asan.tar.gz`,
     );
   });
 
