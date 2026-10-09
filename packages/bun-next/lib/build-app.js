@@ -6,14 +6,16 @@
 //                                    every "use client" module becomes a client reference
 //   ssr      server/bun-app-ssr.js   the client modules for server rendering, required by
 //                                    id through `__next_app__.require`
+//   actions  server/bun-app-actions.js  every Server Action module ("rsc" layer), exported
+//                                    by action id; the module id of every page's worker
 //   browser  static/chunks/**        main-app plus one entry per client module, which React
 //                                    loads through `__webpack_chunk_load__`
 //
 // and the manifests next-server reads: server/app/*_client-reference-manifest.js,
 // server/app-paths-manifest.json and server/server-reference-manifest.{js,json}.
 //
-// Not supported yet (rejected with an error): Server Actions and "use cache",
-// cacheComponents, metadata files (icon, opengraph-image, sitemap, …).
+// Not supported yet (rejected with an error): "use cache", cacheComponents,
+// metadata files (icon, opengraph-image, sitemap, …).
 
 const { existsSync, readFileSync } = require("node:fs");
 const path = require("node:path");
@@ -24,6 +26,8 @@ const FORCE_TRANSPILE = /next\/font|next\/dynamic|use server|use client|use cach
 const NODE_MODULES = /[/\\]node_modules[/\\]/;
 const EMPTY_NAMESPACE = "next-bun-empty";
 const SSR_RUNTIME = "bun-app-ssr.js";
+const ACTIONS_RUNTIME = "bun-app-actions.js";
+const ACTIONS_MODULE_ID = "bun-app-actions";
 const EXTERNAL_FILE = /next[/\\]dist(?:[/\\]esm)?[/\\].*\.external(?:\.js)?$/;
 const ESM_DIST = /([/\\]next[/\\]dist)[/\\]esm([/\\])/;
 const DECLARATION = /^const \w+ = \(\) => import\(\/\* webpackMode: "eager" \*\/ ("(?:[^"\\]|\\.)*")\);$/gm;
@@ -121,10 +125,15 @@ async function buildApp(state) {
 
   const generated = entriesDir + path.sep;
   const relativeToDir = file => posix(path.relative(dir, file));
-  const fail = (file, info) => {
-    if (info.actionIds && Object.keys(info.actionIds).length > 0) {
-      throw new UnsupportedError(`Server Actions and "use cache" (${relativeToDir(file)})`);
-    }
+  // Server Action modules by file: their `{ [id]: exportedName }` and the layers importing them.
+  const actionModules = new Map();
+  const collectActions = (file, code, info, layer) => {
+    if (!info.actionIds || Object.keys(info.actionIds).length === 0) return;
+    if (code.includes("private-next-rsc-cache-wrapper"))
+      throw new UnsupportedError(`"use cache" (${relativeToDir(file)})`);
+    let mod = actionModules.get(file);
+    if (!mod) actionModules.set(file, (mod = { file, ids: info.actionIds, fromServer: false }));
+    if (layer === "rsc") mod.fromServer = true;
   };
 
   // Route entries: next-app-loader's code, as webpack would compile it.
@@ -265,7 +274,11 @@ async function buildApp(state) {
         const request = args.path;
         if (/^next-[\w-]+-loader\?/.test(request))
           throw new UnsupportedError(`The webpack loader request "${request}"`);
-        if (isServer && request.startsWith(".") && path.posix.basename(request) === SSR_RUNTIME) {
+        if (
+          isServer &&
+          request.startsWith(".") &&
+          [SSR_RUNTIME, ACTIONS_RUNTIME].includes(path.posix.basename(request))
+        ) {
           return { path: request, external: true };
         }
         const importer = args.importer || undefined;
@@ -295,7 +308,7 @@ async function buildApp(state) {
 
   /** next-swc-loader for `layer`; the rsc layer also turns client boundaries into references. */
   const clientModules = new Map();
-  const swcLayer = layer => ({
+  const swcLayer = (layer, collect = true) => ({
     name: `next-app-swc-${layer}`,
     setup(build) {
       if (layer !== "browser") {
@@ -311,7 +324,7 @@ async function buildApp(state) {
         if (NODE_MODULES.test(args.path) && !FORCE_TRANSPILE.test(source)) return;
         const code = await swcCode(state, args.path, source, LAYERS[layer]);
         const info = getRSCModuleInformation(code, layer === "rsc");
-        fail(args.path, info);
+        if (collect) collectActions(args.path, code, info, layer);
         if (layer !== "rsc" || info.type !== "client") return { contents: code, loader: "js" };
         let mod = clientModules.get(args.path);
         if (!mod) {
@@ -390,6 +403,7 @@ async function buildApp(state) {
       ),
       `};`,
       `exports.__next_bun_require = function (id) {`,
+      `  if (id === ${JSON.stringify(ACTIONS_MODULE_ID)}) return require(${JSON.stringify("./" + ACTIONS_RUNTIME)});`,
       `  if (id.startsWith("rsc:")) {`,
       `    const proxy = globalThis.__next_bun_rsc && globalThis.__next_bun_rsc.get(id.slice(4));`,
       `    if (proxy === undefined) throw new Error("@aphrody/next-bun: client reference " + id + " is not loaded");`,
@@ -414,6 +428,39 @@ async function buildApp(state) {
     throw: false,
   });
   if (!ssr.success) throw new AggregateError(ssr.logs, "@aphrody/next-bun: App Router SSR build failed");
+
+  // actions: the Server Action modules found by the rsc and ssr passes, compiled for
+  // the server and exported by action id, which is what React reads from the module.
+  if (actionModules.size > 0) {
+    const actionsEntry = path.join(entriesDir, "actions", ACTIONS_RUNTIME);
+    const lines = [`"use strict";`];
+    [...actionModules.values()].forEach((mod, i) => {
+      lines.push(`const m${i} = require(${JSON.stringify(mod.file)});`);
+      for (const [id, name] of Object.entries(mod.ids)) {
+        lines.push(
+          `Object.defineProperty(exports, ${JSON.stringify(id)}, { enumerable: true, get: () => m${i}[${JSON.stringify(name)}] });`,
+        );
+      }
+    });
+    write(actionsEntry, lines.join("\n") + "\n");
+    const knownClientModules = clientModules.size;
+    const actions = await Bun.build({
+      entrypoints: [actionsEntry],
+      root: path.dirname(actionsEntry),
+      outdir: serverDir,
+      naming: "[dir]/[name].[ext]",
+      target: "node",
+      format: "cjs",
+      conditions: ["react-server"],
+      define: defines("server"),
+      plugins: [resolver("rsc"), swcLayer("rsc", false), ...plugins],
+      throw: false,
+    });
+    if (!actions.success) throw new AggregateError(actions.logs, "@aphrody/next-bun: Server Actions build failed");
+    if (clientModules.size !== knownClientModules) {
+      throw new UnsupportedError("Client Components imported only by Server Action modules");
+    }
+  }
 
   // Which stylesheets and client modules each layout/page pulls in on the server.
   const cwd = process.cwd();
@@ -480,6 +527,7 @@ async function buildApp(state) {
     segmentCssEntry.set(segment, name);
   }
 
+  const actionCount = actionModules.size;
   const browser = await Bun.build({
     entrypoints: browserEntries,
     root: browserEntriesDir,
@@ -499,6 +547,8 @@ async function buildApp(state) {
     throw: false,
   });
   if (!browser.success) throw new AggregateError(browser.logs, "@aphrody/next-bun: App Router client build failed");
+  if (actionModules.size !== actionCount)
+    throw new UnsupportedError("Server Actions imported only by the browser build");
 
   const cssBundles = new Map();
   for (const [output, meta] of Object.entries(browser.metafile.outputs)) {
@@ -585,7 +635,22 @@ async function buildApp(state) {
     appPathsManifest[route.page] = `${route.name}.js`;
   }
   files["server/app-paths-manifest.json"] = JSON.stringify(appPathsManifest, null, 2);
-  const serverManifest = { node: {}, edge: {}, encryptionKey: ctx.encryptionKey };
+  // Every page can run every action: they all share one actions module.
+  const pageRoutes = routes.filter(route => !route.name.endsWith("/route"));
+  const serverActions = {};
+  for (const mod of actionModules.values()) {
+    const filename = relativeToDir(mod.file);
+    for (const [id, exportedName] of Object.entries(mod.ids)) {
+      const workers = {};
+      const layer = {};
+      for (const route of pageRoutes) {
+        workers[route.name] = { moduleId: ACTIONS_MODULE_ID, async: false };
+        layer[route.name] = mod.fromServer ? "rsc" : "action-browser";
+      }
+      serverActions[id] = { workers, layer, filename, exportedName };
+    }
+  }
+  const serverManifest = { node: serverActions, edge: {}, encryptionKey: ctx.encryptionKey };
   files["server/server-reference-manifest.json"] = JSON.stringify(serverManifest);
   files["server/server-reference-manifest.js"] = `self.__RSC_SERVER_MANIFEST=${JSON.stringify(
     JSON.stringify({

@@ -14,6 +14,41 @@ const fixture = join(import.meta.dir, "..");
 const nextBunPackage = join(import.meta.dir, "..", "..", "..", "..", "packages", "bun-next");
 let dir: Awaited<ReturnType<typeof installFixture>>;
 
+/**
+ * Submits the server-rendered `<form id={id}>` of /form without JavaScript (its hidden
+ * `$ACTION_*` inputs plus `name=bun`), as a browser would, and returns the cookies the action set.
+ */
+async function submitForm(url: string, html: string, id: string) {
+  const form = new RegExp(`<form id="${id}"[^>]*>([^]*?)</form>`).exec(html);
+  if (!form) throw new Error(`no form #${id} in /form`);
+  const decode = (value: string) =>
+    value
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;/g, "'")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&amp;/g, "&");
+  const body = new FormData();
+  for (const [input] of form[1].matchAll(/<input[^>]*>/g)) {
+    if (!input.includes('type="hidden"')) continue;
+    const name = /name="([^"]*)"/.exec(input)![1];
+    body.append(decode(name), decode(/value="([^"]*)"/.exec(input)?.[1] ?? ""));
+  }
+  body.append("name", "bun");
+  const response = await fetch(url + "/form", { method: "POST", body, redirect: "manual" });
+  await response.text();
+  expect(response.status).toBe(200);
+  return response.headers.getSetCookie().join("; ");
+}
+
+/** The two forms of /form: a module-level action and an inline one with a bound (encrypted) closure value. */
+async function checkFormActions(url: string) {
+  const html = await (await fetch(url + "/form")).text();
+  expect(html).toContain("$ACTION_ID_");
+  expect(await submitForm(url, html, "greet")).toContain("greeted=bun");
+  expect(await submitForm(url, html, "shout")).toMatch(/shouted=bun(!|%21)/);
+}
+
 beforeAll(async () => {
   dir = await installFixture(fixture, [
     "app",
@@ -78,6 +113,8 @@ describe.concurrent.each([
 
       const missing = await fetch(server.url + "/does-not-exist");
       expect(missing.status).toBe(404);
+
+      await checkFormActions(server.url);
     },
     isDebug ? Infinity : 300_000,
   );
@@ -116,13 +153,36 @@ test(
     expect(api.status).toBe(200);
     expect((await fetch(server.url + "/does-not-exist")).status).toBe(404);
 
+    // Server Actions: forms without JavaScript, then the action a Client Component imports, called as the browser does.
+    await checkFormActions(server.url);
+    const actionsManifest = await Bun.file(
+      join(String(dir), ".next-bun", "server", "server-reference-manifest.json"),
+    ).json();
+    const [echoId] = Object.entries(actionsManifest.node).find(([, action]: any) => action.exportedName === "echo")!;
+    expect(actionsManifest.node[echoId].workers["app/form/page"]).toEqual({
+      moduleId: "bun-app-actions",
+      async: false,
+    });
+    const reply = await fetch(server.url + "/form", {
+      method: "POST",
+      headers: { "Next-Action": echoId, "Content-Type": "text/plain;charset=UTF-8", Accept: "text/x-component" },
+      body: JSON.stringify(["bun"]),
+    });
+    expect(await reply.text()).toContain('"echo:bun"');
+    expect(reply.status).toBe(200);
+    const formHtml = await (await fetch(server.url + "/form")).text();
+
     // Every script in the HTML and in the flight payload (client reference chunks), and every module they import.
     const transpiler = new Bun.Transpiler({ loader: "js" });
-    const queue = [...html.matchAll(/\/_next\/static\/[^"'\\\s]+?\.js/g)].map(([path]) => server.url + path);
+    const queue = [
+      ...html.matchAll(/\/_next\/static\/[^"'\\\s]+?\.js/g),
+      ...formHtml.matchAll(/\/_next\/static\/[^"'\\\s]+?\.js/g),
+    ].map(([path]) => server.url + path);
     expect(queue.length).toBeGreaterThan(0);
     const seen = new Set<string>();
     const missing: string[] = [];
     let clientComponent = false;
+    let echoReference = false;
     while (queue.length) {
       const url = queue.pop()!;
       if (seen.has(url)) continue;
@@ -134,12 +194,14 @@ test(
       }
       const source = await response.text();
       if (source.includes("count: ")) clientComponent = true;
+      if (source.includes(echoId)) echoReference = true;
       for (const { path } of transpiler.scanImports(source)) {
         if (path.startsWith(".")) queue.push(new URL(path, url).href);
       }
     }
     expect(missing).toEqual([]);
     expect(clientComponent).toBe(true);
+    expect(echoReference).toBe(true);
   },
   isDebug ? Infinity : 300_000,
 );
