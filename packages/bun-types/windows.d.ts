@@ -363,6 +363,21 @@ declare module "bun:windows" {
     function drives(): LogicalDrive[];
   }
 
+  interface WindowsMemoryStatus {
+    memoryLoad: number;
+    totalPhysical: number;
+    availablePhysical: number;
+    totalPageFile: number;
+    availablePageFile: number;
+    totalVirtual: number;
+    availableVirtual: number;
+  }
+
+  /** Physical, page-file and virtual memory counters from `GlobalMemoryStatusEx`. */
+  namespace memory {
+    function status(): WindowsMemoryStatus;
+  }
+
   /** `true` on Windows. */
   const isSupported: boolean;
   /** Windows version, read once and cached. */

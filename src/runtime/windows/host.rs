@@ -380,3 +380,10 @@ win_host_fn! {
         string(global, &check(global, sys::storage::drives_json())?)
     }
 }
+
+win_host_fn! {
+    /// `memoryStatus()` → physical, page-file and virtual memory counters.
+    js_memory_status(global, frame) {
+        string(global, &check(global, sys::system::memory_json())?)
+    }
+}
