@@ -724,6 +724,22 @@ it.skipIf(!isWindows)("dlopen accepts non-ASCII library paths on Windows", async
   });
 });
 
+// A JSCallback WNDPROC is re-entered synchronously from DispatchMessageW
+// (WM_PAINT, WM_TIMER, WM_DESTROY) while a bun:ffi GetMessageW loop runs.
+it.skipIf(!isWindows)("Win32 window message loop with a JSCallback WNDPROC", async () => {
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), `${import.meta.dir}/win32-window.fixture.ts`, "--title", "café", "--timeout", "50"],
+    env: bunEnv,
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect({ stdout, stderr }).toEqual({
+    stdout: 'window created: "café" 680x440\nwindow closed: message=0x12 wParam=0\n',
+    stderr: "",
+  });
+  expect(exitCode).toBe(0);
+});
+
 it('suffix does not start with a "."', () => {
   expect(suffix).not.toMatch(/^\./);
 });

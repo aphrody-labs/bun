@@ -1,0 +1,90 @@
+---
+title: Open a native Win32 window with bun:ffi
+sidebarTitle: Native Win32 window
+mode: center
+---
+
+On Windows, `bun:ffi` can call `user32.dll`, `kernel32.dll` and `gdi32.dll` directly. No npm package or native addon is needed: register a window class, create the window, and run the message loop from JavaScript. The window procedure is a [`JSCallback`](/runtime/ffi#callbacks) that Windows calls synchronously from `DispatchMessageW`.
+
+```ts window.ts icon="/icons/typescript.svg"
+import { dlopen, FFIType, JSCallback, ptr } from "bun:ffi";
+
+const { ptr: p, u16, u32, i32, u64, i64, bool, void: none } = FFIType;
+const { symbols: k32 } = dlopen("kernel32.dll", { GetModuleHandleW: { args: [p], returns: p } });
+const { symbols: u } = dlopen("user32.dll", {
+  RegisterClassExW: { args: [p], returns: u16 },
+  CreateWindowExW: { args: [u32, p, p, u32, i32, i32, i32, i32, p, p, p, p], returns: p },
+  ShowWindow: { args: [p, i32], returns: bool },
+  DestroyWindow: { args: [p], returns: bool },
+  DefWindowProcW: { args: [p, u32, u64, i64], returns: i64 },
+  GetMessageW: { args: [p, p, u32, u32], returns: i32 },
+  TranslateMessage: { args: [p], returns: bool },
+  DispatchMessageW: { args: [p], returns: i64 },
+  PostQuitMessage: { args: [i32], returns: none },
+});
+
+const WM_DESTROY = 0x0002;
+const WM_KEYDOWN = 0x0100;
+const VK_ESCAPE = 0x1b;
+const wstr = (s: string) => Buffer.from(s + "\0", "utf16le");
+
+const wndProc = new JSCallback(
+  (hwnd, msg: number, wParam: bigint, lParam: bigint): bigint => {
+    if (msg === WM_KEYDOWN && wParam === BigInt(VK_ESCAPE)) u.DestroyWindow(hwnd);
+    else if (msg === WM_DESTROY) u.PostQuitMessage(0);
+    else return u.DefWindowProcW(hwnd, msg, wParam, lParam);
+    return 0n;
+  },
+  { args: [p, u32, u64, i64], returns: i64 },
+);
+
+const hInstance = k32.GetModuleHandleW(null);
+const className = wstr("BunWindow");
+
+// WNDCLASSEXW is 80 bytes on 64-bit Windows.
+const wc = Buffer.alloc(80);
+wc.writeUInt32LE(80, 0); // cbSize
+wc.writeUInt32LE(0x0003, 4); // CS_HREDRAW | CS_VREDRAW
+wc.writeBigUInt64LE(BigInt(wndProc.ptr!), 8); // lpfnWndProc
+wc.writeBigUInt64LE(BigInt(hInstance ?? 0), 24); // hInstance
+wc.writeBigUInt64LE(6n, 48); // hbrBackground = COLOR_WINDOW + 1
+wc.writeBigUInt64LE(BigInt(ptr(className)), 64); // lpszClassName
+u.RegisterClassExW(wc);
+
+const CW_USEDEFAULT = -0x80000000;
+const hwnd = u.CreateWindowExW(
+  0,
+  className,
+  wstr("Hello from Bun"),
+  0x00cf0000,
+  CW_USEDEFAULT,
+  CW_USEDEFAULT,
+  640,
+  400,
+  null,
+  null,
+  hInstance,
+  null,
+);
+u.ShowWindow(hwnd, 5); // SW_SHOW
+
+// MSG is 48 bytes on 64-bit Windows.
+const msg = Buffer.alloc(48);
+while (u.GetMessageW(msg, null, 0, 0) > 0) {
+  u.TranslateMessage(msg);
+  u.DispatchMessageW(msg);
+}
+wndProc.close();
+```
+
+```sh terminal icon="terminal"
+bun window.ts
+```
+
+`GetMessageW` blocks the JavaScript thread, so timers, promises and I/O callbacks do not run while the window is open. Use Win32 timers (`SetTimer` + `WM_TIMER`) for periodic work inside the loop.
+
+---
+
+A fuller version that paints text with GDI (`BeginPaint`, `DrawTextW`, `SetTextColor`) and accepts `--title`, `--width`, `--height` and `--timeout` lives in the Bun repository at [`test/js/bun/ffi/win32-window.fixture.ts`](https://github.com/aphrody-labs/bun/blob/main/test/js/bun/ffi/win32-window.fixture.ts).
+
+See [Docs > Runtime > FFI](/runtime/ffi) for the full `bun:ffi` reference.
