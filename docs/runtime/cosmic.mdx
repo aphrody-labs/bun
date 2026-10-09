@@ -1,0 +1,125 @@
+---
+title: COSMIC
+description: Use the COSMIC desktop from JavaScript with bun:cosmic
+---
+
+`bun:cosmic` gives you the parts of the COSMIC desktop (Pop!_OS, Alpine and other Linux distributions) that an app needs: text shaping with cosmic-text, the freedesktop application index, cosmic-config settings, libcosmic windows and desktop notifications. The module loads on first import, so it costs nothing at startup.
+
+```ts
+import { apps, config, isSupported, text } from "bun:cosmic";
+
+if (isSupported) {
+  const { width, height } = text.layout("Hello", { fontSize: 24 });
+  console.log(width, height, apps.list().length);
+}
+
+const comp = config.open("com.system76.CosmicComp", 1);
+console.log(comp.get("autotile"));
+```
+
+`config` and `ron` work on every platform. On other platforms `isSupported` is `false`, and the text, application, window and notification calls throw an error with code `ERR_BUN_COSMIC_UNSUPPORTED`.
+
+---
+
+## Text
+
+`text.layout` shapes and wraps text, with font fallback, bidirectional text and ligatures. It returns the size of the block and the position of every glyph.
+
+```ts
+const layout = text.layout("Bun on COSMIC", { fontSize: 18, width: 120, family: "monospace" });
+
+for (const line of layout.lines) {
+  console.log(line.baseline, line.glyphs.length);
+}
+```
+
+`text.render` takes the same options plus `color`, `background`, `imageWidth` and `imageHeight`. It returns an RGBA image with 4 bytes per pixel.
+
+```ts
+const { width, height, data } = text.render("42", { fontSize: 32, color: "#ffffff", background: "#000000" });
+```
+
+The font database holds the system fonts. `text.loadFont` adds a TrueType or OpenType font from a path or a buffer and returns the families it added. `text.fonts` lists every face.
+
+---
+
+## Applications
+
+`apps.list` reads the `.desktop` files under `applications` in `$XDG_DATA_HOME` and `$XDG_DATA_DIRS`. Names and comments come in the language of `LC_ALL`, `LC_MESSAGES` or `LANG`.
+
+```ts
+const editors = apps.list().filter(app => app.mimeTypes?.includes("text/plain") && !app.noDisplay);
+```
+
+Pass `dirs` or `locales` to read other directories or languages.
+
+`apps.launch` starts an application from its entry or its id. It splits the `Exec` value into arguments as the Desktop Entry specification describes, expands the field codes and calls `Bun.spawn` without a shell.
+
+```ts
+const proc = apps.launch("org.gnome.TextEditor", { files: ["/tmp/notes.txt"] });
+proc.unref();
+```
+
+`files` fill `%f` and `%F`, and `urls` fill `%u` and `%U`. A file or URL code with nothing to fill removes its argument. `action` runs one of the entry's desktop actions. For an entry with `Terminal=true`, `terminal` is the command placed in front, such as `["cosmic-term", "-e"]`.
+
+`apps.expandExec` returns the arguments without starting anything. An unknown field code or an unterminated quote throws an error with code `ERR_BUN_COSMIC_INVALID_EXEC`.
+
+```ts
+apps.expandExec('"/opt/my app/bin" --open %F %i', { files: ["a.txt", "b.txt"], icon: "my-app" });
+// ["/opt/my app/bin", "--open", "a.txt", "b.txt", "--icon", "my-app"]
+```
+
+---
+
+## Settings
+
+COSMIC stores each setting as a RON file in `$XDG_CONFIG_HOME/cosmic/<name>/v<version>/<key>`. `config.open` gives you the same view as cosmic-config.
+
+```ts
+const theme = config.open("com.system76.CosmicTheme.Mode", 1);
+
+theme.get("is_dark"); // the user value, else the system default
+theme.set("is_dark", true);
+
+const watcher = theme.watch(key => console.log("changed", key));
+```
+
+`get` falls back to the system default from `$XDG_DATA_DIRS`. `getLocal` and `getDefault` read one side only. `set` writes the file atomically, and running COSMIC apps pick up the change. `state: true` opens `$XDG_STATE_HOME` instead.
+
+`ron.parse` and `ron.stringify` convert between RON and JavaScript. `None` is `null` and maps are `Map`s. `ron.some`, `ron.tuple` and `ron.variant` build `Some(…)`, tuples and enum variants.
+
+```ts
+import { ron } from "bun:cosmic";
+
+ron.stringify(ron.variant("Rgba", [1, 0.5, 0, 1])); // "Rgba(1, 0.5, 0, 1)"
+```
+
+---
+
+## Windows and notifications
+
+Windows and notifications run in the `bun-cosmic` helper process, so the GUI never blocks JavaScript. Bun looks for the helper in `BUN_COSMIC_HELPER`, then in `PATH`, then next to the `bun` executable. On Alpine, install the `bun-cosmic` package.
+
+`openWindow` opens a libcosmic dialog. `closed` resolves with the button the user chose, or `null` when the window was closed another way.
+
+```ts
+import { openWindow } from "bun:cosmic";
+
+const win = openWindow({ title: "Update", body: "Restart now?", buttons: ["Restart", "Later"] });
+const choice = await win.closed;
+console.log(choice?.label);
+```
+
+`notify` sends a notification over D-Bus. With `actions`, the promise waits for the user to pick one or close the notification.
+
+```ts
+import { notify } from "bun:cosmic";
+
+const { action } = await notify({
+  summary: "Build finished",
+  body: "3 warnings",
+  actions: { open: "Open log" },
+});
+```
+
+When the helper is missing, both calls throw an error with code `ERR_BUN_COSMIC_HELPER_NOT_FOUND`.
