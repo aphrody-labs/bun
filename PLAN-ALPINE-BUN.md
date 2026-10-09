@@ -30,9 +30,11 @@ systemd `--user` avec `Restart=always` et `MemoryHigh`/`MemoryMax`, un seul chec
   `~/target`, `~/.aphrody/target` et `~/shenron-dev`.
 - ⏳ **Restes yolo** : `APHRODY_YOLO_TOOL_HOST` et `yolo-tool-host.mjs` dans les unités a2a et mcp-http,
   `/srv/aphrody-lab/yolo-*.mjs`, `~/.yolo` du VPS, `install-yolo.*` des releases downloads.
-- ⏳ **Côté client** : purger les noms legacy `yolo mcp` et `kernel mcp` de la doc d'aphrody, migrer
-  `legacy_broker.rs`, ajouter l'entrée m3 dans `Cargo.lock`, faire passer `~/.codex/config.toml` par
-  `mcp-launch.ts`, et réinstaller le binaire `aphrody` depuis origin/main.
+- ✅ **Côté client** (aphrody `29dc459efa`, `6a8a6e9a57`, `7de8ad1a1f`) : `rg` de `yolo mcp`, `kernel mcp` et
+  `yolo-mcp` vide ; `legacy_broker.rs` supprimé, ainsi que les routes `/jsonrpc` et `/events` ;
+  `~/.codex/config.toml` passe par `mcp-launch.ts` ; `aphrody-m3` déjà présent dans `Cargo.lock` ; binaire
+  `aphrody` réinstallé depuis origin/main (`kernel mcp` → unrecognized). Le PLAN aphrody (root.json) inclut
+  désormais la prod dbfr ; yolo est retiré des tables Owners et Surfaces.
 - Preuve de clôture : `rg` des anciens noms vide sur tous les hôtes, un `kill -9` suivi d'un redémarrage
   automatique, et A2A codex↔claude dans les deux sens.
 
