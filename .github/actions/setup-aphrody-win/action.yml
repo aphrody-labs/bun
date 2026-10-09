@@ -49,7 +49,7 @@ runs:
 
     - name: Installer Bun
       if: steps.bun.outputs.found != 'true'
-      uses: oven-sh/setup-bun@v2
+      uses: aphrody-labs/bun/.github/actions/setup-bun@main
 
     - name: Préparer
       id: prep

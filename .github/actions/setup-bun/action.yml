@@ -1,10 +1,10 @@
 name: Setup Bun
-description: An internal version of the 'oven-sh/setup-bun' action.
+description: Installs the aphrody-labs/bun runtime (the fork's own GitHub releases, SHA256SUMS-checked).
 
 inputs:
   bun-version:
     type: string
-    description: "The version of bun to install: 'latest', 'canary', 'bun-v1.2.0', etc."
+    description: "'latest', 'canary' (falls back to latest when the fork has no canary release), an upstream base 'X.Y.Z' (newest aphrody.N build of it, else latest) or a tag 'aphrody-vX.Y.Z-aphrody.N'."
     default: latest
     required: false
   baseline:
@@ -12,10 +12,15 @@ inputs:
     description: "Whether to use the baseline version of bun."
     default: false
     required: false
-  download-url:
+  repo:
     type: string
-    description: "The base URL to download bun from."
-    default: "https://pub-5e11e972747a44bf9aaf9394f185a982.r2.dev/releases"
+    description: "Repository whose releases are installed."
+    default: aphrody-labs/bun
+    required: false
+  token:
+    type: string
+    description: "Token for the GitHub API release lookup."
+    default: ${{ github.token }}
     required: false
 
 runs:
@@ -26,8 +31,11 @@ runs:
       env:
         BUN_VERSION: ${{ inputs.bun-version }}
         BUN_BASELINE: ${{ inputs.baseline }}
-        BUN_DOWNLOAD_URL: ${{ inputs.download-url }}
+        APHRODY_BUN_REPO: ${{ inputs.repo }}
+        GH_TOKEN: ${{ inputs.token }}
       run: |
+        set -euo pipefail
+        repo="${APHRODY_BUN_REPO:-aphrody-labs/bun}"
         case "$(uname -s)" in
           Linux*)  os=linux;;
           Darwin*) os=darwin;;
@@ -41,15 +49,53 @@ runs:
           true | 1) target="bun-${os}-${arch}-baseline";;
           *)        target="bun-${os}-${arch}";;
         esac
-        case "$BUN_VERSION" in
-          latest) release="latest";;
-          canary) release="canary";;
-          *)      release="bun-v${BUN_VERSION}";;
+
+        # The token goes through curl's stdin config, never argv.
+        api() {
+          printf 'header = "Accept: application/vnd.github+json"\n%s' \
+            "${GH_TOKEN:+header = \"Authorization: Bearer $GH_TOKEN\"}" |
+            curl -fsSL --retry 5 -K - "https://api.github.com/repos/$repo/$1"
+        }
+        latest() {
+          api "releases?per_page=50" |
+            jq -r '[.[] | select((.draft | not) and (.prerelease | not) and (.tag_name | startswith("aphrody-v")))][0].tag_name // empty'
+        }
+
+        version="${BUN_VERSION:-latest}"
+        version="${version#bun-}"
+        version="${version#v}"
+        case "$version" in
+          latest) tag=$(latest);;
+          canary)
+            tag=$(api releases/tags/canary 2>/dev/null | jq -r '.tag_name // empty' || true)
+            if [ -z "$tag" ]; then echo "::notice::$repo has no canary release, installing the latest release"; tag=$(latest); fi;;
+          aphrody-v*) tag="$version";;
+          [0-9]*.[0-9]*.[0-9]*)
+            tag=$(api "releases?per_page=100" |
+              jq -r --arg base "$version" '[.[] | select(.draft | not) | .tag_name
+                | select(startswith("aphrody-v" + $base + "-aphrody."))]
+                | sort_by(sub("^.*\\."; "") | tonumber) | last // empty')
+            if [ -z "$tag" ]; then echo "::notice::$repo has no build of Bun $version, installing the latest release"; tag=$(latest); fi;;
+          *) echo "::error::unsupported bun-version '$BUN_VERSION'"; exit 1;;
         esac
-        curl -LO "${BUN_DOWNLOAD_URL}/${release}/${target}.zip" --retry 5
-        unzip "${target}.zip"
+        [ -n "$tag" ] || { echo "::error::no $repo release found"; exit 1; }
+
+        base="https://github.com/$repo/releases/download/$tag"
+        cd "$RUNNER_TEMP"
+        curl -fsSLO --retry 5 "$base/$target.zip"
+        curl -fsSLO --retry 5 "$base/SHA256SUMS.txt"
+        want=$(awk -v f="$target.zip" '$2 == f || $2 == "*" f { print $1 }' SHA256SUMS.txt)
+        if command -v sha256sum >/dev/null; then got=$(sha256sum "$target.zip" | cut -d' ' -f1); else got=$(shasum -a 256 "$target.zip" | cut -d' ' -f1); fi
+        [ -n "$want" ] && [ "$want" = "$got" ] || { echo "::error::checksum mismatch for $target.zip ($tag)"; exit 1; }
+        unzip -q -o "$target.zip"
         mkdir -p "$RUNNER_TEMP/.bun/bin"
-        mv "${target}"/bun* "$RUNNER_TEMP/.bun/bin/"
-        chmod +x "$RUNNER_TEMP"/.bun/bin/*
-        ln -fs "$RUNNER_TEMP/.bun/bin/bun" "$RUNNER_TEMP/.bun/bin/bunx"
+        mv "$target"/bun* "$RUNNER_TEMP/.bun/bin/"
+        rm -rf "$target" "$target.zip" SHA256SUMS.txt
+        if [ "$os" = windows ]; then
+          cp -f "$RUNNER_TEMP/.bun/bin/bun.exe" "$RUNNER_TEMP/.bun/bin/bunx.exe"
+        else
+          chmod +x "$RUNNER_TEMP"/.bun/bin/*
+          ln -fs "$RUNNER_TEMP/.bun/bin/bun" "$RUNNER_TEMP/.bun/bin/bunx"
+        fi
         echo "$RUNNER_TEMP/.bun/bin" >> "$GITHUB_PATH"
+        echo "Installed $repo $tag ($target): $("$RUNNER_TEMP/.bun/bin/bun" --revision)"

@@ -133,7 +133,7 @@ export function findBun(os: OS): string {
   return findTool({
     names: ["bun"],
     required: true,
-    hint: "Codegen requires bun (for `bun install`, `bun build`, and scripts using Bun APIs). Install: curl -fsSL https://bun.sh/install | bash",
+    hint: "Codegen requires bun (for `bun install`, `bun build`, and scripts using Bun APIs). Install: curl -fsSL https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install.sh | bash",
   })!.path;
 }
 

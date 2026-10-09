@@ -14,7 +14,7 @@ FROM ubuntu:26.04
 # ships 22, which stays installed for Aphrody's own builds.
 ARG LLVM_MAJOR=23
 ARG RUST_CHANNEL=nightly-2026-09-15
-ARG BUN_VERSION=1.4.2
+ARG BUN_VERSION=latest
 
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8 \
@@ -51,6 +51,6 @@ RUN curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-to
     && rustup toolchain install "$RUST_CHANNEL" --profile minimal --component rust-src \
     && (cargo install --locked sccache 2>/dev/null || true)
 
-RUN curl -fsSL https://bun.sh/install | bash -s "bun-v${BUN_VERSION}" && bun --version
+RUN curl -fsSL https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install.sh | bash -s "$BUN_VERSION" && bun --revision
 
 WORKDIR /work

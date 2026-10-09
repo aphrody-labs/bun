@@ -74,7 +74,7 @@ jobs:
           --build-arg "USERLAND=${{ matrix.userland }}"
           --build-arg "OPTIONAL_PACKAGES=${{ inputs.optional_packages }}"
           scripts/aphrody
-      - uses: oven-sh/setup-bun@v2
+      - uses: ./.github/actions/setup-bun
       - name: Export rootfs
         env:
           GH_TOKEN: ${{ github.token }}
