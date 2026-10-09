@@ -2475,6 +2475,21 @@ pub mod parse_worker {
 
         let output_format = topts.output_format;
 
+        // A "use server" module keeps its code in the server graph only; the
+        // browser and SSR graphs get a reference proxy built from its exports.
+        let server_reference_proxy = use_directive == UseDirective::Server
+            && matches!(
+                target,
+                options::Target::Browser | options::Target::ServerComponentsSsr
+            );
+        if use_directive == UseDirective::Server && !topts.has_dev_server() {
+            log.add_error(
+                Some(source),
+                bun_ast::Loc::EMPTY,
+                b"\"use server\" modules are only supported by the development server; production builds are static and cannot serve server functions",
+            );
+        }
+
         // D042: `crate::options::jsx::Pragma` IS `bun_js_parser::options::JSX::Pragma`
         // (both re-export `bun_options_types::jsx::Pragma`). `to_parser_jsx_pragma`
         // applies the `_None → Automatic` runtime fold the old `From` bridge did so
@@ -2567,6 +2582,8 @@ pub mod parse_worker {
         opts.features.server_components = if topts.server_components {
             use bun_ast::runtime::ServerComponentsMode as SC;
             match target {
+                _ if server_reference_proxy => SC::None,
+                _ if use_directive == UseDirective::Server && !topts.has_dev_server() => SC::None,
                 options::Target::Browser => SC::ClientSide,
                 _ => match use_directive {
                     UseDirective::None => SC::WrapAnonServerFunctions,
@@ -2669,6 +2686,7 @@ pub mod parse_worker {
         // SAFETY: task.ctx backref valid for the bundle pass (outlives `'r`).
         let task_ctx = unsafe { task.ctx() };
         let module_type = opts.module_type;
+        let hot_module_reloading = opts.features.hot_module_reloading;
         // `topts` (a `&BundleOptions`) is dead past this point; the callees take
         // raw `*mut Transpiler` and reborrow `(*transpiler).options` mutably.
         let ast_result: core::result::Result<JSAst, AnyError> =
@@ -2714,6 +2732,22 @@ pub mod parse_worker {
                 }
                 return Err(e);
             }
+        };
+
+        let use_directive = if server_reference_proxy {
+            let proxy = crate::ServerComponentParseTask::generate_server_reference_proxy(
+                task_ctx,
+                source,
+                &ast.named_exports,
+                target,
+                bump,
+                hot_module_reloading,
+                log,
+            )?;
+            ast = proxy;
+            UseDirective::None
+        } else {
+            use_directive
         };
 
         ast.target = target;

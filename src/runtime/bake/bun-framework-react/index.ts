@@ -12,6 +12,8 @@ export function react(): Bake.Framework {
       { import: "bun-framework-react/client.tsx", path: require.resolve("./client.tsx") },
       { import: "bun-framework-react/server.tsx", path: require.resolve("./server.tsx") },
       { import: "bun-framework-react/ssr.tsx", path: require.resolve("./ssr.tsx") },
+      { import: "bun-framework-react/server-runtime.ts", path: require.resolve("./server-runtime.ts") },
+      { import: "bun-framework-react/client-runtime.ts", path: require.resolve("./client-runtime.ts") },
     ],
     fileSystemRouterTypes: [
       {
@@ -31,7 +33,8 @@ export function react(): Bake.Framework {
     serverComponents: {
       separateSSRGraph: true,
       serverRegisterClientReferenceExport: "registerClientReference",
-      serverRuntimeImportSource: "react-server-dom-webpack/server",
+      serverRuntimeImportSource: "bun-framework-react/server-runtime.ts",
+      clientRuntimeImportSource: "bun-framework-react/client-runtime.ts",
     },
     bundlerOptions: {
       ssr: {

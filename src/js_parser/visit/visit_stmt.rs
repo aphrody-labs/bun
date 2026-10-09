@@ -71,7 +71,13 @@ impl<'a, const TYPESCRIPT: bool, const SCAN_ONLY: bool, const SEMA: bool>
         // points into the arena, not into `*stmt`.
         let data_copy = stmt.data;
         match data_copy {
-            StmtData::SDirective(_) | StmtData::SComment(_) | StmtData::SEmpty(_) => {
+            StmtData::SDirective(dir) => {
+                p.cur_scope().is_after_const_local_prefix = was_after_after_const_local_prefix;
+                p.check_inline_use_server_directive(dir.value.slice(), stmt.loc);
+                stmts.push(*stmt);
+                Ok(())
+            }
+            StmtData::SComment(_) | StmtData::SEmpty(_) => {
                 p.cur_scope().is_after_const_local_prefix = was_after_after_const_local_prefix;
                 stmts.push(*stmt);
                 Ok(())

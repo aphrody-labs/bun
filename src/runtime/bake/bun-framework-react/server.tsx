@@ -3,7 +3,8 @@ import { renderToHtml, renderToStaticHtml } from "bun-framework-react/ssr.tsx" w
 import { serverManifest } from "bun:bake/server";
 import type { AsyncLocalStorage } from "node:async_hooks";
 import { PassThrough } from "node:stream";
-import { renderToPipeableStream } from "react-server-dom-bun/server.node.unbundled.js";
+import { decodeReply, renderToPipeableStream } from "react-server-dom-bun/server.node.unbundled.js";
+import { getServerFunction, serverFunctionHeader } from "bun-framework-react/server-runtime.ts";
 import type { RequestContext } from "../hmr-runtime-server";
 
 function assertReactComponent(Component: any) {
@@ -66,6 +67,11 @@ export async function render(
   meta: Bake.RouteMetadata,
   als?: AsyncLocalStorage<RequestContext>,
 ): Promise<Response> {
+  if (request.method === "POST") {
+    const serverFunctionId = request.headers.get(serverFunctionHeader);
+    if (serverFunctionId !== null) return callServerFunction(request, serverFunctionId);
+  }
+
   // The framework generally has two rendering modes.
   // - Standard browser navigation
   // - Client-side navigation
@@ -156,6 +162,30 @@ export async function render(
       ...response_options,
     });
   }
+}
+
+// `client-runtime.ts` POSTs the encoded arguments of a server function to the
+// route that rendered it. The page's modules are loaded before `render` runs,
+// which registers every "use server" export they import.
+async function callServerFunction(request: Request, id: string): Promise<Response> {
+  const fn = getServerFunction(id);
+  if (fn === undefined) {
+    return new Response(
+      `Server function "${id}" is not registered. Import its "use server" module from a server component of this route.`,
+      { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8" } },
+    );
+  }
+  const contentType = request.headers.get("Content-Type") ?? "";
+  const body = contentType.startsWith("multipart/form-data") ? await request.formData() : await request.text();
+  const args = await decodeReply<unknown[]>(body, serverManifest);
+  const result = (async () => fn(...args))();
+
+  const payload = new PassThrough();
+  renderToPipeableStream(result, serverManifest, { filterStackFrame: () => false }).pipe(payload);
+  return new Response(payload as any, {
+    status: 200,
+    headers: { "Content-Type": "text/x-component" },
+  });
 }
 
 // When a production build is performed, pre-rendering is invoked here. If this

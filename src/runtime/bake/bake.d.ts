@@ -206,6 +206,33 @@ declare module "bun" {
        * @default "registerClientReference"
        */
       serverRegisterClientReferenceExport?: string | undefined;
+      /**
+       * Every export of a "use server" module is wrapped on the server:
+       *
+       *     export const action = registerServerReference(
+       *         async function action() { ... },
+       *         "src/actions.ts", // module id
+       *         "action",         // export name
+       *     );
+       *
+       * Server functions are only supported by the development server.
+       * @default "registerServerReference"
+       */
+      serverRegisterServerReferenceExport?: string | undefined;
+      /**
+       * Runtime imported by client code that imports a "use server" module.
+       * The browser receives a stub module instead of the server code, where
+       * every export is `clientRegisterServerReferenceExport(id, exportName)`.
+       * During SSR those exports throw when called. When unset, importing a
+       * "use server" module from client code is a build error.
+       */
+      clientRuntimeImportSource?: ImportSource | undefined;
+      /**
+       * Export of `clientRuntimeImportSource` that returns the callable
+       * reference for a server function.
+       * @default "registerServerReference"
+       */
+      clientRegisterServerReferenceExport?: string | undefined;
       // /**
       //  * Allow creating client components inside of server-side files by using "use client"
       //  * as the first line of a function declaration. This is useful for small one-off

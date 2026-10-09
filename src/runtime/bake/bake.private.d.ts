@@ -86,7 +86,14 @@ declare var __bun_f: any;
 // The following interfaces have been transcribed manually.
 
 declare module "react-server-dom-bun/client.browser" {
-  export function createFromReadableStream<T = any>(readable: ReadableStream<Uint8Array>): Promise<T>;
+  export type CallServer = (id: string, args: unknown[]) => Promise<unknown>;
+  export interface Options {
+    callServer?: CallServer;
+  }
+  export function createFromReadableStream<T = any>(readable: ReadableStream<Uint8Array>, options?: Options): Promise<T>;
+  export function createFromFetch<T = any>(response: Promise<Response>, options?: Options): Promise<T>;
+  export function createServerReference(id: string, callServer: CallServer): (...args: unknown[]) => Promise<unknown>;
+  export function encodeReply(value: unknown): Promise<string | FormData>;
 }
 
 declare module "react-server-dom-bun/client.node.unbundled.js" {
@@ -119,10 +126,14 @@ declare module "react-server-dom-bun/server.node.unbundled.js" {
   }
 
   export function renderToPipeableStream<T = any>(
-    model: ReactElement,
+    model: ReactElement | Promise<unknown>,
     webpackMap: ReactServerManifest,
     options?: RenderToPipeableStreamOptions,
   ): PipeableStream<T>;
+
+  export function decodeReply<T = unknown>(body: string | FormData, webpackMap: ReactServerManifest): Promise<T>;
+  export function registerClientReference<T>(proxy: T, id: string, exportName: string): T;
+  export function registerServerReference<T>(reference: T, id: string, exportName: string | null): T;
 
   export interface RenderToPipeableStreamOptions {
     onError?: Function;

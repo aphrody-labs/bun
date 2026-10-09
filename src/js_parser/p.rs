@@ -521,6 +521,7 @@ pub struct P<'a, const TYPESCRIPT: bool, const SCAN_ONLY: bool, const SEMA: bool
     /// only applicable when `.options.features.server_components` is
     /// configured to wrap exports. populated before visit pass starts.
     pub(crate) server_components_wrap_ref: Ref,
+    pub(crate) reported_client_reference_without_dev: bool,
 
     pub(crate) jest: Jest,
 
@@ -3561,9 +3562,13 @@ impl<'a, const TYPESCRIPT: bool, const SCAN_ONLY: bool, const SEMA: bool>
                         b"registerClientReference",
                     );
                 }
-                // TODO: these wrapping modes.
+                options::ServerComponents::WrapExportsForServerReference => {
+                    self.server_components_wrap_ref = self.declare_generated_symbol(
+                        js_ast::symbol::Kind::Other,
+                        b"registerServerReference",
+                    );
+                }
                 options::ServerComponents::WrapAnonServerFunctions => {}
-                options::ServerComponents::WrapExportsForServerReference => {}
             }
 
             // Server-side components: declare "Response" / "bun:app" upfront.
@@ -8739,6 +8744,27 @@ impl<'a, const TYPESCRIPT: bool, const SCAN_ONLY: bool, const SEMA: bool>
         Ok(())
     }
 
+    pub(crate) fn check_inline_use_server_directive(
+        &mut self,
+        directive: &[u8],
+        loc: bun_ast::Loc,
+    ) {
+        use options::ServerComponents as SC;
+        if directive != b"use server" || self.current_scope == self.module_scope {
+            return;
+        }
+        let msg: &'static [u8] = match self.options.features.server_components {
+            SC::None | SC::WrapExportsForServerReference => return,
+            SC::WrapAnonServerFunctions => {
+                b"Inline \"use server\" functions are not supported yet. Move the function into a separate file that starts with \"use server\" and import it."
+            }
+            SC::ClientSide | SC::WrapExportsForClientReference => {
+                b"\"use server\" functions cannot be defined in client code. Move the function into a separate file that starts with \"use server\" and import it."
+            }
+        };
+        self.log().add_error(Some(self.source), loc, msg);
+    }
+
     pub(crate) fn wrap_value_for_server_component_reference(
         &mut self,
         val: Expr,
@@ -8747,26 +8773,28 @@ impl<'a, const TYPESCRIPT: bool, const SCAN_ONLY: bool, const SEMA: bool>
         debug_assert!(self.options.features.server_components.wraps_exports());
         debug_assert!(self.current_scope == self.module_scope);
 
+        // The bundler only selects `WrapExportsForServerReference` for the dev
+        // server, so a "use server" module id is always its pretty path.
         if self.options.features.server_components
-            == options::ServerComponents::WrapExportsForServerReference
+            == options::ServerComponents::WrapExportsForClientReference
+            && !self.options.jsx.development
+            && !self.reported_client_reference_without_dev
         {
-            bun_core::todo_panic!("registerServerReference");
+            self.reported_client_reference_without_dev = true;
+            self.log().add_error(
+                Some(self.source),
+                bun_ast::Loc::EMPTY,
+                b"\"use client\" modules in a production build require \"serverComponents.separateSSRGraph\" to be enabled",
+            );
         }
 
         let module_path = self.new_expr(
-            E::String::init(if self.options.jsx.development {
-                self.source.path.pretty
-            } else {
-                bun_core::todo_panic!("unique_key here")
-            }),
+            E::String::init(self.source.path.pretty),
             bun_ast::Loc::EMPTY,
         );
 
-        // registerClientReference(
-        //   Comp,
-        //   "src/filepath.tsx",
-        //   "Comp"
-        // );
+        // registerClientReference(Comp, "src/filepath.tsx", "Comp");
+        // registerServerReference(action, "src/actions.ts", "action");
         let name_expr = self.new_expr(E::String::init(original_name), bun_ast::Loc::EMPTY);
         self.new_expr(
             E::Call {
@@ -10020,6 +10048,7 @@ impl<'a, const TYPESCRIPT: bool, const SCAN_ONLY: bool, const SEMA: bool>
             react_compiler_result: None,
             react_compiler_may_replace_body: false,
             server_components_wrap_ref: Ref::NONE,
+            reported_client_reference_without_dev: false,
             jest: Jest::default(),
             import_records_for_current_part: BumpVec::new_in(arena),
             export_star_import_records: BumpVec::new_in(arena),

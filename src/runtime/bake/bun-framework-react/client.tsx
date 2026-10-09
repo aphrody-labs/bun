@@ -6,6 +6,7 @@ import { onServerSideReload } from "bun:bake/client";
 import * as React from "react";
 import { flushSync } from "react-dom";
 import { hydrateRoot } from "react-dom/client";
+import { callServer } from "bun-framework-react/client-runtime.ts";
 import { createFromReadableStream } from "react-server-dom-bun/client.browser";
 
 const te = new TextEncoder();
@@ -42,6 +43,7 @@ let rscPayload: any = createFromReadableStream(
       }
     },
   }),
+  { callServer },
 );
 
 // This is a function component that uses the `use` hook, which unwraps a
@@ -187,7 +189,7 @@ async function goto(href: string, cacheId?: number) {
 
   const cssWaitPromise = ensureCssIsReady(currentCssList!);
 
-  const p = await createFromReadableStream(stream);
+  const p = await createFromReadableStream(stream, { callServer });
   if (thisNavigationId !== lastNavigationId) return;
 
   if (cssWaitPromise) {

@@ -940,3 +940,45 @@ devTest("a render() that does not return a Response is reported as that", {
     }).toEqual({ status: 500, saysWhatIsWrong: true, referenceError: false });
   },
 });
+devTest('"use server" exports are registered as server references', {
+  framework: minimalFramework,
+  files: {
+    "routes/index.ts": `
+      import action, { add } from "../actions";
+      export default async function () {
+        return new Response([add.$$id, await add(1, 2), action.$$id].join(" "));
+      }
+    `,
+    "actions.ts": `
+      "use server";
+      export async function add(a, b) {
+        return a + b;
+      }
+      export default async function () {}
+    `,
+  },
+  async test(dev) {
+    await dev.fetch("/").equals("actions.ts#add 3 actions.ts#default");
+  },
+});
+devTest('inline "use server" functions are a build error', {
+  framework: minimalFramework,
+  files: {
+    "routes/index.ts": `
+      export default function () {
+        async function action() {
+          "use server";
+          return 1;
+        }
+        return new Response(typeof action);
+      }
+    `,
+  },
+  async test(dev) {
+    await using c = await dev.client("/", {
+      errors: [
+        'routes/index.ts:3:5: error: Inline "use server" functions are not supported yet. Move the function into a separate file that starts with "use server" and import it.',
+      ],
+    });
+  },
+});

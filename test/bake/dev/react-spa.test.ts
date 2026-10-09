@@ -898,3 +898,57 @@ devTest("react component with hooks and mutual recursion renders without error",
     );
   },
 });
+devTest('"use server" functions are proxied to the client and callable with a POST', {
+  framework: "react",
+  files: {
+    "pages/index.tsx": `
+      import { add } from "../actions";
+      import Button from "../button";
+      export default function IndexPage() {
+        return <Button label={"server:" + typeof add} />;
+      }
+    `,
+    "button.tsx": `
+      "use client";
+      import { add } from "./actions";
+      export default function Button({ label }) {
+        return <button onClick={() => add(1, 2)}>{label + " client:" + typeof add}</button>;
+      }
+    `,
+    "actions.ts": `
+      "use server";
+      const secret = "server-only-" + "code";
+      export async function add(a, b) {
+        return secret + ":" + (a + b);
+      }
+    `,
+  },
+  async test(dev) {
+    const html = await dev.fetch("/").text();
+    expect(html).toContain("server:function client:function");
+
+    const scripts = [...html.matchAll(/src="(\/_bun\/client\/[^"]+)"/g)].map(m => m[1]);
+    expect(scripts.length).toBeGreaterThan(0);
+    const clientCode = (await Promise.all(scripts.map(src => dev.fetch(src).text()))).join("\n");
+    expect({
+      hasProxy: clientCode.includes('"actions.ts"'),
+      leaksServerCode: clientCode.includes("server-only-"),
+    }).toEqual({ hasProxy: true, leaksServerCode: false });
+
+    const call = await dev.fetch("/", {
+      method: "POST",
+      headers: { "Accept": "text/x-component", "Bun-Server-Function": "actions.ts#add" },
+      body: "[1,2]",
+    });
+    expect(call.headers.get("content-type")).toBe("text/x-component");
+    expect(await call.text()).toContain('"server-only-code:3"');
+
+    const missing = await dev.fetch("/", {
+      method: "POST",
+      headers: { "Bun-Server-Function": "actions.ts#missing" },
+      body: "[]",
+    });
+    expect(await missing.text()).toContain('Server function "actions.ts#missing" is not registered.');
+    expect(missing.status).toBe(404);
+  },
+});

@@ -86,6 +86,8 @@ pub(crate) struct ServerComponents {
     pub(crate) separate_ssr_graph: bool,
     /// REQUIRED — `fromJS` throws if `serverRuntimeImportSource` is absent.
     pub(crate) server_runtime_import: Cow<'static, [u8]>,
+    /// Empty when "use server" modules cannot be imported from client code.
+    pub(crate) client_runtime_import: Cow<'static, [u8]>,
     pub(crate) server_register_client_reference: Cow<'static, [u8]>,
     pub(crate) server_register_server_reference: Cow<'static, [u8]>,
     pub(crate) client_register_server_reference: Cow<'static, [u8]>,
@@ -151,6 +153,7 @@ impl Framework {
             .map(|sc| bt::ServerComponents {
                 separate_ssr_graph: sc.separate_ssr_graph,
                 server_runtime_import: sc.server_runtime_import.as_ref().into(),
+                client_runtime_import: sc.client_runtime_import.as_ref().into(),
                 server_register_client_reference: sc
                     .server_register_client_reference
                     .as_ref()
@@ -360,6 +363,15 @@ impl Framework {
                 &mut had_errors,
                 b"server components runtime",
             );
+            if !sc.client_runtime_import.is_empty() {
+                Self::resolve_helper(
+                    &self.built_in_modules,
+                    client,
+                    &mut sc.client_runtime_import,
+                    &mut had_errors,
+                    b"server components client runtime",
+                );
+            }
         }
         for fsr in self.file_system_router_types.iter_mut() {
             let top_level_dir = bun_resolver::fs::FileSystem::get().top_level_dir;
@@ -486,6 +498,7 @@ impl From<bake_body::ServerComponents> for ServerComponents {
         Self {
             separate_ssr_graph: src.separate_ssr_graph,
             server_runtime_import: Cow::Borrowed(src.server_runtime_import),
+            client_runtime_import: Cow::Borrowed(src.client_runtime_import),
             server_register_client_reference: Cow::Borrowed(src.server_register_client_reference),
             server_register_server_reference: Cow::Borrowed(src.server_register_server_reference),
             client_register_server_reference: Cow::Borrowed(src.client_register_server_reference),

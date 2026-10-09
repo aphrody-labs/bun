@@ -390,3 +390,126 @@ fn generate_client_reference_proxy(
 
     Ok(())
 }
+
+/// Replaces a "use server" module reached from the browser or SSR graph. The
+/// server code never leaves the server graph: in the browser each export is
+/// `<client_register_server_reference>(id, exportName)` from
+/// `client_runtime_import`, and during SSR each export throws when called.
+pub(crate) fn generate_server_reference_proxy(
+    ctx: &BundleV2,
+    source: &'static Source,
+    named_exports: &NamedExports,
+    target: Target,
+    bump: &'static Arena,
+    hot_module_reloading: bool,
+    log: &mut Log,
+) -> Result<JSAst<'static>, OOM> {
+    let server_components = ctx
+        .framework
+        .as_ref()
+        .and_then(|f| f.server_components.as_ref())
+        .unwrap_or_else(|| unreachable!());
+    let mut ab = AstBuilder::init(bump, source, hot_module_reloading)?;
+    let b = &mut ab;
+
+    let pretty: &[u8] = source.path.pretty;
+    let id: &[u8] = pretty.strip_prefix(b"ssr:").unwrap_or(pretty);
+    let id: &'static [u8] = b.bump.alloc_slice_copy(id);
+
+    let register = if target == Target::Browser {
+        if server_components.client_runtime_import.is_empty() {
+            log.add_error(
+                Some(source),
+                Loc::EMPTY,
+                b"This \"use server\" module is imported from client code, but the framework does not set \"serverComponents.clientRuntimeImportSource\"",
+            );
+            None
+        } else {
+            let runtime_import =
+                bun_ast::StoreStr::new(&server_components.client_runtime_import[..]);
+            let register_name =
+                bun_ast::StoreStr::new(&server_components.client_register_server_reference[..]);
+            Some(b.add_import_stmt(runtime_import.slice(), [register_name.slice()])?[0])
+        }
+    } else {
+        None
+    };
+
+    for key in named_exports.keys() {
+        let key: &'static [u8] = b.bump.alloc_slice_copy(key.as_ref());
+        let value = if let Some(register) = register {
+            // registerServerReference("src/actions.ts", "action")
+            b.new_expr(E::Call {
+                target: register,
+                args: ExprNodeList::from_slice(&[
+                    b.new_expr(E::String::init(id)),
+                    b.new_expr(E::String::init(key)),
+                ]),
+                ..Default::default()
+            })
+        } else {
+            // () => { throw new Error(...) }
+            let message: &[u8] = {
+                let mut buf = bun_alloc::ArenaString::new_in(b.bump);
+                write!(
+                    &mut buf,
+                    "Server function \"{}\" from \"{}\" cannot be called during server-side rendering",
+                    bstr::BStr::new(key),
+                    bstr::BStr::new(id),
+                )
+                .map_err(|_| OOM)?;
+                buf.into_bump_str().as_bytes()
+            };
+            let error_ref = b.new_external_symbol(b"Error")?;
+            let error = b.new_expr(E::New {
+                target: b.new_expr(E::Identifier {
+                    ref_: error_ref,
+                    ..Default::default()
+                }),
+                args: ExprNodeList::from_slice(&[b.new_expr(E::String::init(message))]),
+                close_parens_loc: Loc::EMPTY,
+                ..Default::default()
+            });
+            let throw_stmt = b.new_stmt(S::Throw { value: error });
+            let body: &mut [Stmt] = b.bump.alloc_slice_copy(&[throw_stmt]);
+            b.new_expr(E::Arrow {
+                body: G::FnBody {
+                    stmts: bun_ast::StoreSlice::new_mut(body),
+                    loc: Loc::EMPTY,
+                },
+                ..Default::default()
+            })
+        };
+
+        if key == b"default" {
+            let ref_ = b.new_symbol(symbol::Kind::Other, b"default")?;
+            b.append_stmt(S::ExportDefault {
+                value: StmtOrExpr::Expr(value),
+                default_name: LocRef {
+                    loc: Loc::EMPTY,
+                    ref_,
+                },
+            })?;
+        } else {
+            let export_ref = b.new_symbol(symbol::Kind::Other, key)?;
+            b.append_stmt(S::Local {
+                decls: G::DeclList::from_slice(&[G::Decl {
+                    binding: Binding::alloc(
+                        b.bump,
+                        B::Identifier { r#ref: export_ref },
+                        Loc::EMPTY,
+                    ),
+                    value: Some(value),
+                }]),
+                is_export: true,
+                kind: S::Kind::KConst,
+                ..Default::default()
+            })?;
+        }
+    }
+
+    let hmr_api_ref = ab.hmr_api_ref;
+    let mut bundled_ast: JSAst = ab.to_bundled_ast(target)?;
+    bundled_ast.wrapper_ref = hmr_api_ref;
+    Ok(bundled_ast)
+}

@@ -15,3 +15,7 @@ export function registerClientReference(value: any, file: any, uid: any) {
     uid,
   };
 }
+
+export function registerServerReference(value: any, id: string, exportName: string) {
+  return Object.assign(value, { $$id: id + "#" + exportName });
+}

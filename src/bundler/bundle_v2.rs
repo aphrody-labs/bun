@@ -500,6 +500,9 @@ pub mod bv2_impl {
         pub struct ServerComponents {
             pub separate_ssr_graph: bool,
             pub server_runtime_import: Box<[u8]>,
+            /// Empty when the framework does not support importing "use server"
+            /// modules from client code.
+            pub client_runtime_import: Box<[u8]>,
             pub server_register_client_reference: Box<[u8]>,
             pub server_register_server_reference: Box<[u8]>,
             pub client_register_server_reference: Box<[u8]>,
@@ -4026,7 +4029,9 @@ pub mod bv2_impl {
                         ..Default::default()
                     });
                 } else {
-                    bun_core::todo_panic!("\"use server\"");
+                    unreachable!(
+                        "\"use server\" modules are proxied by ParseTask, never boundaries"
+                    );
                 }
             }
 
@@ -7794,8 +7799,8 @@ pub mod bv2_impl {
                     // `result.ast` is moved into `graph.ast` and `result.source` was
                     // swapped earlier, so snapshot the data the use-directive block
                     // needs *before* the move. Only paid for files that hit the SCB gate.
-                    let named_exports_for_scb = if result.use_directive != crate::UseDirective::None
-                        && {
+                    let named_exports_for_scb =
+                        if result.use_directive == crate::UseDirective::Client && {
                             let separate = this
                                 .framework
                                 .as_ref()
@@ -7804,18 +7809,13 @@ pub mod bv2_impl {
                                 .as_ref()
                                 .unwrap()
                                 .separate_ssr_graph;
-                            let is_client = result.use_directive == crate::UseDirective::Client;
                             let is_browser = result_ast_target == Target::Browser;
-                            if separate {
-                                is_client == is_browser
-                            } else {
-                                is_client != is_browser
-                            }
+                            if separate { is_browser } else { !is_browser }
                         } {
-                        Some(result.ast.named_exports.clone().expect("oom"))
-                    } else {
-                        None
-                    };
+                            Some(result.ast.named_exports.clone().expect("oom"))
+                        } else {
+                            None
+                        };
 
                     let result_heap = *result.ast.parts.allocator();
                     this.graph.ast.set(
@@ -7835,10 +7835,6 @@ pub mod bv2_impl {
                     }
 
                     if let Some(named_exports) = named_exports_for_scb {
-                        if result.use_directive == crate::UseDirective::Server {
-                            bun_core::todo_panic!("\"use server\"");
-                        }
-
                         let separate_ssr_graph = this
                             .framework
                             .as_ref()

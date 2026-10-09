@@ -844,6 +844,8 @@ pub(crate) fn init(options: Options) -> JsResult<Box<DevServer>> {
             h.update(&[0]);
             h.update(&sc.server_runtime_import);
             h.update(&[0]);
+            h.update(&sc.client_runtime_import);
+            h.update(&[0]);
         } else {
             bun_core::write_any_to_hasher(&mut h, 0u8);
         }

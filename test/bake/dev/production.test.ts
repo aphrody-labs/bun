@@ -367,6 +367,29 @@ export default function Docs() {
     expect(stderr.toString()).toContain("Multiple pages matching the same route pattern is ambiguous");
   });
 
+  test('"use server" modules are rejected because the build is static', async () => {
+    const dir = await tempDirWithBakeDeps("bake-production-use-server", {
+      "src/index.tsx": `export default { app: { framework: "react" } };`,
+      "pages/index.tsx": `import { add } from "../actions";
+export default function IndexPage() {
+  return <p>{typeof add}</p>;
+}`,
+      "actions.ts": `"use server";
+export async function add(a, b) {
+  return a + b;
+}`,
+    });
+
+    const { exitCode, stderr } = await Bun.$`${bunExe()} build --app ./src/index.tsx --outdir ./dist`
+      .cwd(dir)
+      .env(bunEnv)
+      .throws(false);
+    expect(stderr.toString()).toContain(
+      '"use server" modules are only supported by the development server; production builds are static and cannot serve server functions',
+    );
+    expect(exitCode).toBe(1);
+  });
+
   test("handles build with no pages directory without crashing", async () => {
     const dir = await tempDirWithBakeDeps("bake-production-no-pages", {
       "app.ts": `export default { app: { framework: "react" } };`,

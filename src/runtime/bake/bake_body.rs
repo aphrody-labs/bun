@@ -463,13 +463,28 @@ impl Framework {
                 bun_core::runtime_embed_file!(Src, "runtime/bake/bun-framework-react/ssr.tsx")
                     .as_bytes(),
             ),
+            BuiltInModule::Code(
+                bun_core::runtime_embed_file!(
+                    Src,
+                    "runtime/bake/bun-framework-react/server-runtime.ts"
+                )
+                .as_bytes(),
+            ),
+            BuiltInModule::Code(
+                bun_core::runtime_embed_file!(
+                    Src,
+                    "runtime/bake/bun-framework-react/client-runtime.ts"
+                )
+                .as_bytes(),
+            ),
         ];
 
         Ok(Framework {
             is_built_in_react: true,
             server_components: Some(ServerComponents {
                 separate_ssr_graph: true,
-                server_runtime_import: b"react-server-dom-bun/server",
+                server_runtime_import: b"bun-framework-react/server-runtime.ts",
+                client_runtime_import: b"bun-framework-react/client-runtime.ts",
                 ..ServerComponents::default()
             }),
             react_fast_refresh: Some(ReactFastRefresh::default()),
@@ -489,10 +504,12 @@ impl Framework {
                 // Note: was `ArrayHashMap::from_entries(arena, keys, vals)`;
                 // that constructor doesn't exist on the heap-backed
                 // `ArrayHashMap` — build it imperatively. `bun.handleOom`.
-                let keys: [&'static [u8]; 3] = [
+                let keys: [&'static [u8]; 5] = [
                     b"bun-framework-react/client.tsx",
                     b"bun-framework-react/server.tsx",
                     b"bun-framework-react/ssr.tsx",
+                    b"bun-framework-react/server-runtime.ts",
+                    b"bun-framework-react/client-runtime.ts",
                 ];
                 let mut m: ArrayHashMap<&'static [u8], BuiltInModule> = ArrayHashMap::new();
                 bun_core::handle_oom(m.ensure_total_capacity(keys.len()));
@@ -619,7 +636,14 @@ impl Framework {
                 &mut had_errors,
                 b"server components runtime",
             );
-            // self.resolve_helper(client, &mut sc.client_runtime_import, &mut had_errors);
+            if !sc.client_runtime_import.is_empty() {
+                self.resolve_helper(
+                    client,
+                    &mut sc.client_runtime_import,
+                    &mut had_errors,
+                    b"server components client runtime",
+                );
+            }
         }
 
         for fsr in clone.file_system_router_types.iter_mut() {
@@ -806,6 +830,12 @@ impl Framework {
                         }
                     },
                 ),
+                client_runtime_import: match sc
+                    .get_optional_slice(global, "clientRuntimeImportSource")?
+                {
+                    Some(slice) => refs.track(slice),
+                    None => b"",
+                },
                 server_register_client_reference: if let Some(slice) =
                     sc.get_optional_slice(global, "serverRegisterClientReferenceExport")?
                 {
@@ -813,7 +843,20 @@ impl Framework {
                 } else {
                     b"registerClientReference"
                 },
-                ..ServerComponents::default()
+                server_register_server_reference: if let Some(slice) =
+                    sc.get_optional_slice(global, "serverRegisterServerReferenceExport")?
+                {
+                    refs.track(slice)
+                } else {
+                    b"registerServerReference"
+                },
+                client_register_server_reference: if let Some(slice) =
+                    sc.get_optional_slice(global, "clientRegisterServerReferenceExport")?
+                {
+                    refs.track(slice)
+                } else {
+                    b"registerServerReference"
+                },
             })
         };
         let built_in_modules: ArrayHashMap<&'static [u8], BuiltInModule> = 'built_in_modules: {
@@ -1062,6 +1105,7 @@ impl Framework {
             .map(|sc| bt::ServerComponents {
                 separate_ssr_graph: sc.separate_ssr_graph,
                 server_runtime_import: sc.server_runtime_import.into(),
+                client_runtime_import: sc.client_runtime_import.into(),
                 server_register_client_reference: sc.server_register_client_reference.into(),
                 server_register_server_reference: sc.server_register_server_reference.into(),
                 client_register_server_reference: sc.client_register_server_reference.into(),
@@ -1259,7 +1303,7 @@ pub enum BuiltInModule {
 pub(crate) struct ServerComponents {
     pub separate_ssr_graph: bool,
     pub server_runtime_import: &'static [u8],
-    // pub client_runtime_import: &'static [u8],
+    pub client_runtime_import: &'static [u8],
     pub server_register_client_reference: &'static [u8],
     pub server_register_server_reference: &'static [u8],
     pub client_register_server_reference: &'static [u8],
@@ -1270,6 +1314,7 @@ impl Default for ServerComponents {
         Self {
             separate_ssr_graph: false,
             server_runtime_import: b"",
+            client_runtime_import: b"",
             server_register_client_reference: b"registerClientReference",
             server_register_server_reference: b"registerServerReference",
             client_register_server_reference: b"registerServerReference",
