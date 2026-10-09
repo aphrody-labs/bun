@@ -341,25 +341,44 @@ describe("FormData", () => {
 
   test("FormData.from (URLSearchParams)", () => {
     expect(
-      // @ts-expect-error
-      FormData.from(
-        new URLSearchParams({
-          a: "b",
-          c: "d",
-        }).toString(),
-      ).toJSON(),
+      Object.fromEntries(
+        // @ts-expect-error
+        FormData.from(
+          new URLSearchParams({
+            a: "b",
+            c: "d",
+          }).toString(),
+        ),
+      ),
     ).toEqual({
       a: "b",
       c: "d",
     });
   });
 
-  test("FormData.toJSON doesn't crash with numbers", () => {
+  test("inspecting a FormData with numeric names doesn't crash", () => {
     const fd = new FormData();
     // @ts-expect-error
     fd.append(1, 1);
-    // @ts-expect-error
-    expect(fd.toJSON()).toEqual({ "1": "1" });
+    expect(Bun.inspect(fd)).toBe('FormData {\n  "1": "1",\n}');
+  });
+
+  test("FormData has no toJSON, so JSON.stringify and its replacer see the FormData itself", () => {
+    const fd = new FormData();
+    fd.append("a", "b");
+    expect("toJSON" in fd).toBe(false);
+    expect(JSON.stringify(fd)).toBe("{}");
+    // React's encodeReply (Server Actions) recognizes FormData arguments in a JSON.stringify replacer.
+    const seen: unknown[] = [];
+    const json = JSON.stringify({ args: [fd] }, function (key, value) {
+      if (value instanceof FormData) {
+        seen.push(value);
+        return "$K1";
+      }
+      return value;
+    });
+    expect(json).toBe('{"args":["$K1"]}');
+    expect(seen).toEqual([fd]);
   });
 
   test("FormData.from throws on very large input instead of crashing", () => {
@@ -923,7 +942,7 @@ it("drops multipart part Content-Type values containing control characters", asy
   expect(tabbed.type).toBe("text/plain;\tcharset=utf-8");
 });
 
-test("FormData.toJSON merges duplicate numeric field names into an array", async () => {
+test("inspecting a FormData merges duplicate numeric field names into an array", async () => {
   // Field names that parse as array indices ("0", "1", ...) are stored as indexed
   // properties on the serialized object; appending the same numeric name more than
   // once must merge into an array (like any other duplicate key) instead of
@@ -935,7 +954,7 @@ test("FormData.toJSON merges duplicate numeric field names into an array", async
     fd.append("0", "c");
     fd.append("tag", "x");
     fd.append("tag", "y");
-    console.log(JSON.stringify(fd.toJSON()));
+    console.log(JSON.stringify(Bun.inspect(fd)));
 
     // Same shape arriving from an untrusted multipart request body.
     const body =
@@ -943,7 +962,7 @@ test("FormData.toJSON merges duplicate numeric field names into an array", async
     const parsed = await new Response(body, {
       headers: { "Content-Type": "multipart/form-data; boundary=foo" },
     }).formData();
-    console.log(JSON.stringify(parsed.toJSON()));
+    console.log(JSON.stringify(Bun.inspect(parsed)));
   `;
 
   await using proc = Bun.spawn({
@@ -954,7 +973,15 @@ test("FormData.toJSON merges duplicate numeric field names into an array", async
 
   const [stdout, exitCode] = await Promise.all([proc.stdout.text(), proc.exited]);
 
-  expect(stdout.trim().split("\n")).toEqual(['{"0":["a","b","c"],"tag":["x","y"]}', '{"0":["first","second"]}']);
+  expect(
+    stdout
+      .trim()
+      .split("\n")
+      .map(line => JSON.parse(line)),
+  ).toEqual([
+    'FormData {\n  "0": [ "a", "b", "c" ],\n  "tag": [ "x", "y" ],\n}',
+    'FormData {\n  "0": [ "first", "second" ],\n}',
+  ]);
   expect(exitCode).toBe(0);
 });
 

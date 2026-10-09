@@ -100,9 +100,6 @@ static JSC_DECLARE_HOST_FUNCTION(jsDOMFormDataPrototypeFunction_keys);
 static JSC_DECLARE_HOST_FUNCTION(jsDOMFormDataPrototypeFunction_values);
 static JSC_DECLARE_HOST_FUNCTION(jsDOMFormDataPrototypeFunction_forEach);
 
-// Non-standard functions
-static JSC_DECLARE_HOST_FUNCTION(jsDOMFormDataPrototypeFunction_toJSON);
-
 // Attributes
 
 static JSC_DECLARE_CUSTOM_GETTER(jsDOMFormDataConstructor);
@@ -205,7 +202,6 @@ static const HashTableValue JSDOMFormDataPrototypeTableValues[] = {
     { "keys"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsDOMFormDataPrototypeFunction_keys, 0 } },
     { "values"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsDOMFormDataPrototypeFunction_values, 0 } },
     { "forEach"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsDOMFormDataPrototypeFunction_forEach, 1 } },
-    { "toJSON"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly), NoIntrinsic, { HashTableValue::NativeFunctionType, jsDOMFormDataPrototypeFunction_toJSON, 1 } },
     { "length"_s, static_cast<unsigned>(JSC::PropertyAttribute::CustomAccessor | JSC::PropertyAttribute::ReadOnly | JSC::PropertyAttribute::DontDelete | JSC::PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::GetterSetterType, jsDOMFormDataPrototype_getLength, 0 } }
 };
 
@@ -499,19 +495,6 @@ static inline JSC::EncodedJSValue jsDOMFormDataPrototypeFunction_setOverloadDisp
 JSC_DEFINE_HOST_FUNCTION(jsDOMFormDataPrototypeFunction_set, (JSGlobalObject * lexicalGlobalObject, CallFrame* callFrame))
 {
     return IDLOperation<JSDOMFormData>::call<jsDOMFormDataPrototypeFunction_setOverloadDispatcher>(*lexicalGlobalObject, *callFrame, "set");
-}
-
-/**
- * Non standard function.
- **/
-static inline JSC::EncodedJSValue jsDOMFormDataPrototypeFunction_toJSONBody(JSC::JSGlobalObject* lexicalGlobalObject, JSC::CallFrame* callFrame, typename IDLOperation<JSDOMFormData>::ClassParameter castedThis)
-{
-    return JSValue::encode(getInternalProperties(lexicalGlobalObject->vm(), lexicalGlobalObject, castedThis));
-}
-
-JSC_DEFINE_HOST_FUNCTION(jsDOMFormDataPrototypeFunction_toJSON, (JSGlobalObject * lexicalGlobalObject, CallFrame* callFrame))
-{
-    return IDLOperation<JSDOMFormData>::call<jsDOMFormDataPrototypeFunction_toJSONBody>(*lexicalGlobalObject, *callFrame, "toJSON");
 }
 
 struct DOMFormDataIteratorTraits {

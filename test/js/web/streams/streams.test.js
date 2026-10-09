@@ -182,34 +182,34 @@ describe("readableStreamToFormData", () => {
     }
 
     test("response.formData()", async () => {
-      expect((await responseWithPull().formData()).toJSON()).toEqual(expected.toJSON());
-      expect((await responseWithStart().formData()).toJSON()).toEqual(expected.toJSON());
-      expect((await responseWithPullAsync().formData()).toJSON()).toEqual(expected.toJSON());
+      expect((await responseWithPull().formData()).entries().toArray().sort()).toEqual(expected.entries().toArray().sort());
+      expect((await responseWithStart().formData()).entries().toArray().sort()).toEqual(expected.entries().toArray().sort());
+      expect((await responseWithPullAsync().formData()).entries().toArray().sort()).toEqual(expected.entries().toArray().sort());
     });
 
     test("Bun.readableStreamToFormData", async () => {
       expect(
         (
           await Bun.readableStreamToFormData(await responseWithPull().body, "WebKitFormBoundary7MA4YWxkTrZu0gW")
-        ).toJSON(),
-      ).toEqual(expected.toJSON());
+        ).entries().toArray().sort(),
+      ).toEqual(expected.entries().toArray().sort());
     });
 
     test("FormData.from", async () => {
-      expect(FormData.from(await responseWithPull().text(), "WebKitFormBoundary7MA4YWxkTrZu0gW").toJSON()).toEqual(
-        expected.toJSON(),
+      expect(FormData.from(await responseWithPull().text(), "WebKitFormBoundary7MA4YWxkTrZu0gW").entries().toArray().sort()).toEqual(
+        expected.entries().toArray().sort(),
       );
 
-      expect(FormData.from(await responseWithPull().blob(), "WebKitFormBoundary7MA4YWxkTrZu0gW").toJSON()).toEqual(
-        expected.toJSON(),
+      expect(FormData.from(await responseWithPull().blob(), "WebKitFormBoundary7MA4YWxkTrZu0gW").entries().toArray().sort()).toEqual(
+        expected.entries().toArray().sort(),
       );
 
       expect(
         FormData.from(
           await (await responseWithPull().blob()).arrayBuffer(),
           "WebKitFormBoundary7MA4YWxkTrZu0gW",
-        ).toJSON(),
-      ).toEqual(expected.toJSON());
+        ).entries().toArray().sort(),
+      ).toEqual(expected.entries().toArray().sort());
     });
   }
 

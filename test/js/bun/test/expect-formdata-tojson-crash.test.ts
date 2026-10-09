@@ -39,8 +39,8 @@ test("failing matcher on FormData without a callable toJSON does not abort the t
   const [, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
   expect(stderr).toContain("Received: FormData");
-  // The non-callable toJSON is printed as a property rather than being called.
-  expect(stderr).toContain(`"toJSON": 42`);
+  // The formatter prints the entries whatever own `toJSON` property the FormData carries.
+  expect(stderr).toContain(`"a": "b"`);
   expect(stderr).not.toContain("is not a function");
   expect(stderr).toContain("3 fail");
   expect(exitCode).toBe(1);

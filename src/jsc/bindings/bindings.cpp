@@ -6375,6 +6375,16 @@ CPP_DECL WebCore::DOMFormData* WebCore__DOMFormData__fromJS(JSC::EncodedJSValue 
     return WebCoreCast<WebCore::JSDOMFormData, WebCore::DOMFormData>(JSValue1);
 }
 
+// FormData has no `toJSON` (as in browsers and Node.js), so the console and test-runner
+// formatters read its entries through this instead.
+CPP_DECL JSC::EncodedJSValue WebCore__DOMFormData__toJSObject(JSC::JSGlobalObject* arg0, JSC::EncodedJSValue JSValue1)
+{
+    auto* formData = JSC::jsDynamicCast<WebCore::JSDOMFormData*>(JSC::JSValue::decode(JSValue1));
+    if (!formData)
+        return JSValue::encode(jsUndefined());
+    return JSValue::encode(WebCore::getInternalProperties(arg0->vm(), arg0, formData));
+}
+
 #pragma mark - JSC::JSMap
 
 CPP_DECL [[ZIG_EXPORT(nothrow)]] JSC::EncodedJSValue JSC__JSMap__create(JSC::JSGlobalObject* arg0)

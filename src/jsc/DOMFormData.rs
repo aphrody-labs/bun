@@ -33,6 +33,7 @@ unsafe extern "C" {
         arg4: &EncodedSlice,
     );
     safe fn WebCore__DOMFormData__count(arg0: &mut DOMFormData) -> usize;
+    safe fn WebCore__DOMFormData__toJSObject(arg0: &JSGlobalObject, value: JSValue) -> JSValue;
 }
 
 impl DOMFormData {
@@ -80,5 +81,12 @@ impl DOMFormData {
 
     pub fn count(&mut self) -> usize {
         WebCore__DOMFormData__count(self)
+    }
+
+    /// The entries of the FormData wrapper `value` as a plain object, duplicate names
+    /// merged into arrays. `undefined` when `value` is not a FormData.
+    #[track_caller]
+    pub fn to_js_object(global: &JSGlobalObject, value: JSValue) -> JsResult<JSValue> {
+        crate::from_js_host_call(global, || WebCore__DOMFormData__toJSObject(global, value))
     }
 }

@@ -4535,22 +4535,12 @@ pub mod formatter {
             // `DOMFormData` is a C++-backed WebCore type — no `JsClass` derive,
             // so use its dedicated `from_js` FFI downcast instead of `value.as_`.
             if crate::DOMFormData::from_js(value).is_some() {
-                if let Some(to_json_function) = value.get(self.global_this, "toJSON")? {
-                    let prev_quote_keys = self.quote_keys;
-                    self.quote_keys = true;
-                    let _r = defer_restore!(self.quote_keys, prev_quote_keys);
+                let prev_quote_keys = self.quote_keys;
+                self.quote_keys = true;
+                let _r = defer_restore!(self.quote_keys, prev_quote_keys);
 
-                    let result = to_json_function.call(self.global_this, value, &[])?;
-                    return self.print_as::<C>(Tag::Object, writer_, result, jsc::JSType::Object);
-                }
-
-                // this case should never happen
-                return self.print_as::<C>(
-                    Tag::Undefined,
-                    writer_,
-                    JSValue::UNDEFINED,
-                    jsc::JSType::Cell,
-                );
+                let entries = crate::DOMFormData::to_js_object(self.global_this, value)?;
+                return self.print_as::<C>(Tag::Object, writer_, entries, jsc::JSType::Object);
             } else if js_type != jsc::JSType::DOMWrapper {
                 if *remove_before_recurse {
                     *remove_before_recurse = false;
