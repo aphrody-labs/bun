@@ -1853,6 +1853,10 @@ pub(crate) mod command {
             };
         }
 
+        if super::toolchain_command::is_aphrody_create(&argv_zslice()) {
+            return exec_toolchain(log);
+        }
+
         // Create command wraps bunx
         let ctx = init(Tag::CreateCommand, log)?;
         let args = argv_zslice();

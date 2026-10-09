@@ -5,7 +5,14 @@ import { describe, expect, test } from "bun:test";
 import { bunEnv, bunExe, normalizeBunSnapshot, tempDir } from "harness";
 import { join } from "node:path";
 
-const env = { ...bunEnv, npm_lifecycle_event: undefined, NO_COLOR: "1", FORCE_COLOR: undefined };
+const env = {
+  ...bunEnv,
+  npm_lifecycle_event: undefined,
+  NO_COLOR: "1",
+  FORCE_COLOR: undefined,
+  YOLO_HOME: undefined,
+  BUN_CREATE_APHRODY_DIR: undefined,
+};
 
 async function run(args: string[], cwd?: string, extraEnv: Record<string, string | undefined> = {}) {
   await using proc = Bun.spawn({
@@ -192,6 +199,59 @@ describe("bun n2b / bun migrate", () => {
     expect(n2b.stdout.trim()).toBe(`n2b ["--migrate","--dry-run","."]`);
     expect(migrate.exitCode).toBe(0);
     expect(n2b.exitCode).toBe(0);
+  });
+});
+
+describe("bun create aphrody/<template>", () => {
+  const stack = {
+    "aphrody/m3/templates/stack.toml": [
+      `[meta]\nname = "aphrody-stack"\n`,
+      `[template.base]\npath = "m3/templates/base"\ndescription = "server"\nrequired = true\n`,
+      `[template.web]\npath = "m3/templates/web"\ndescription = "web"\nexclusive = "frontend"\n`,
+      `[template.react]\npath = "m3/templates/react"\ndescription = "react"\nexclusive = "frontend"\ndependencies = { react = "19.3.0" }\n`,
+    ].join("\n"),
+    "aphrody/m3/templates/base/package.json": JSON.stringify({
+      name: "__NAME__",
+      dependencies: { "@aphrody/runtime-sdk": "file:__YOLO__/packages/engine/runtime" },
+      devDependencies: {},
+    }),
+    "aphrody/m3/templates/base/gitignore": "node_modules\n",
+    "aphrody/m3/templates/base/src/home.ts": `export const home = "base __IDENT__";\n`,
+    "aphrody/m3/templates/web/src/home.ts": `export const home = "web";\n`,
+    "aphrody/m3/templates/react/src/app.tsx": `export {};\n`,
+  };
+
+  test.concurrent("composes the required layer and the requested ones", async () => {
+    using dir = tempDir("toolchain-create", stack);
+    const { stdout, stderr, exitCode } = await run(
+      ["create", "aphrody/web", "my-app", "--templates", "aphrody/m3/templates"],
+      String(dir),
+    );
+    expect(stderr).toBe("");
+    expect(stdout).toContain("Created my-app (3 files: base, web)");
+    const app = join(String(dir), "my-app");
+    expect(await Bun.file(join(app, "src/home.ts")).text()).toBe(`export const home = "web";\n`);
+    expect(await Bun.file(join(app, ".gitignore")).text()).toBe("node_modules\n");
+    const pkg = await Bun.file(join(app, "package.json")).json();
+    expect(pkg.name).toBe("my-app");
+    expect(pkg.dependencies["@aphrody/runtime-sdk"]).toMatch(/^file:.*\/aphrody\/packages\/engine\/runtime$/);
+    expect(exitCode).toBe(0);
+  });
+
+  test.concurrent("finds the templates of the checkout around the working directory", async () => {
+    using dir = tempDir("toolchain-create-checkout", stack);
+    const { stdout, exitCode } = await run(["create", "aphrody/react", "app"], join(String(dir), "aphrody"));
+    expect(stdout).toContain("Created app (4 files: base, react)");
+    const pkg = await Bun.file(join(String(dir), "aphrody", "app", "package.json")).json();
+    expect(pkg.dependencies.react).toBe("19.3.0");
+    expect(exitCode).toBe(0);
+  });
+
+  test.concurrent("rejects two templates of one exclusive group", async () => {
+    using dir = tempDir("toolchain-create-exclusive", stack);
+    const { stderr, exitCode } = await run(["create", "aphrody/web+react", "app"], join(String(dir), "aphrody"));
+    expect(stderr).toContain("Choose one frontend template: web or react");
+    expect(exitCode).toBe(1);
   });
 });
 

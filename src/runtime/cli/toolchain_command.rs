@@ -68,6 +68,15 @@ pub(crate) fn is_package_script(name: &[u8]) -> bool {
         .is_some_and(|script| matches!(script.expr.data, bun_ast::ExprData::EString(_)))
 }
 
+/// `bun create aphrody/<template>` composes the Aphrody stack templates instead of cloning a GitHub repository.
+pub(crate) fn is_aphrody_create(argv: &[&ZStr]) -> bool {
+    argv.iter()
+        .skip(2)
+        .map(|arg| arg.as_bytes())
+        .find(|arg| !arg.starts_with(b"-"))
+        .is_some_and(|template| template.starts_with(b"aphrody/"))
+}
+
 /// `bun build --target=wasm` (or `--target wasm`) builds a Rust crate, not a bundle.
 pub(crate) fn is_wasm_build(argv: &[&ZStr]) -> bool {
     let mut args = argv.iter().map(|arg| arg.as_bytes());

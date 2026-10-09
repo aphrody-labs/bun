@@ -18,7 +18,7 @@ const LINT_EXTENSIONS = /\.(?:[cm]?[jt]sx?|vue|svelte|astro)$/;
 const FMT_EXTENSIONS =
   /\.(?:[cm]?[jt]sx?|json5?|jsonc|md|mdx|css|scss|less|ya?ml|toml|html|vue|graphql|gql|hbs|handlebars)$/;
 
-const COMMANDS = ["lint", "fmt", "n2b", "migrate", "wasm", "build"];
+const COMMANDS = ["lint", "fmt", "n2b", "migrate", "wasm", "build", "create", "c"];
 
 type FlagSpec = Record<string, { type: "boolean" | "string" | "strings"; short?: string }>;
 type Parsed = { flags: Record<string, any>; rest: string[]; positionals: string[] };
@@ -611,6 +611,169 @@ async function wasm(args: string[], cwd: string): Promise<number> {
   return sub === undefined || sub === "--help" || sub === "-h" || sub === "help" ? 0 : 1;
 }
 
+// ─── bun create aphrody/<template> ───────────────────────────────────────────
+
+const CREATE_HELP = `Usage: bun create aphrody/<template>[+<template>...] [dir] [flags]
+  Create a project from the Aphrody stack templates: a Bun server (always), plus web or react,
+  desktop (Tauri 3), hono or elysia. Layers are applied in order; a later file replaces an earlier one.
+
+Examples:
+  bun create aphrody/web my-app
+  bun create aphrody/react+desktop my-app
+
+Flags:
+      --name=<name>        Package name (default: the directory name)
+      --templates=<dir>    Directory with stack.toml (default: found as described below)
+      --aphrody=<dir>      Aphrody checkout the project links to (default: the one holding the templates)
+      --list               List the templates
+  -h, --help               Print this help
+
+The templates are m3/templates of an Aphrody checkout: --templates, $BUN_CREATE_APHRODY_DIR,
+$YOLO_HOME/m3/templates, the checkout containing the working directory, then
+$BUN_CREATE_DIR/aphrody and ~/.bun-create/aphrody.
+
+Full documentation is available at https://bun.com/docs/runtime/templating/create
+`;
+
+const TEMPLATE_TEXT =
+  /\.(?:json|ts|tsx|js|toml|md|html|css|rs|yml|yaml|txt|sh|service)$|(?:^|\/)(?:gitignore|\.gitignore|Dockerfile)$/;
+
+function findAphrodyTemplates(cwd: string, given?: string): string {
+  const candidates: string[] = [];
+  if (given) candidates.push(path.resolve(cwd, given));
+  if (process.env.BUN_CREATE_APHRODY_DIR) candidates.push(process.env.BUN_CREATE_APHRODY_DIR);
+  if (process.env.YOLO_HOME) candidates.push(path.join(process.env.YOLO_HOME, "m3", "templates"));
+  for (let dir = cwd; ; dir = path.dirname(dir)) {
+    candidates.push(path.join(dir, "m3", "templates"));
+    if (path.dirname(dir) === dir) break;
+  }
+  if (process.env.BUN_CREATE_DIR) candidates.push(path.join(process.env.BUN_CREATE_DIR, "aphrody"));
+  candidates.push(path.join(require("node:os").homedir(), ".bun-create", "aphrody"));
+  const found = (given ? candidates.slice(0, 1) : candidates).find(dir => fs.existsSync(path.join(dir, "stack.toml")));
+  if (found) return found;
+  if (given) throw new UsageError(`No stack.toml in ${given}`);
+  throw new UsageError(
+    "The Aphrody templates were not found. Pass --templates <aphrody>/m3/templates, set YOLO_HOME, or run from an Aphrody checkout.",
+  );
+}
+
+function walkFiles(dir: string, base = dir, out: string[] = []): string[] {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const abs = path.join(dir, entry.name);
+    if (entry.isDirectory()) walkFiles(abs, base, out);
+    else out.push(path.relative(base, abs).replaceAll("\\", "/"));
+  }
+  return out;
+}
+
+function toIdent(name: string): string {
+  const ident = name
+    .replace(/[^A-Za-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase();
+  return /^[a-z_]/.test(ident) ? ident : `app_${ident}`;
+}
+
+async function create(args: string[], cwd: string): Promise<number> {
+  const { flags, rest, positionals } = parseFlags(args, {
+    "name": { type: "string" },
+    "templates": { type: "string" },
+    "aphrody": { type: "string" },
+    "yolo-path": { type: "string" },
+    "list": { type: "boolean" },
+    "help": { type: "boolean", short: "h" },
+  });
+  if (flags.help) {
+    process.stdout.write(CREATE_HELP);
+    return 0;
+  }
+  const unknown = rest.find(a => a.startsWith("-"));
+  if (unknown) throw new UsageError(`Unknown flag ${unknown}`);
+  const [spec, dirArg, ...extra] = positionals;
+  if (extra.length) throw new UsageError(`Unexpected ${extra.join(" ")}`);
+  const templatesDir = findAphrodyTemplates(cwd, flags.templates);
+  const stack = Bun.TOML.parse(fs.readFileSync(path.join(templatesDir, "stack.toml"), "utf8")) as any;
+  const templates: Record<string, any> = stack.template ?? {};
+
+  if (flags.list || !spec?.startsWith("aphrody/")) {
+    if (!flags.list) process.stdout.write(CREATE_HELP + "\n");
+    process.stdout.write(`${stack.meta?.name ?? "aphrody"} (${templatesDir})\n`);
+    for (const [id, t] of Object.entries(templates))
+      process.stdout.write(`  ${id.padEnd(8)} ${t.required ? "(always) " : "         "}${t.description ?? ""}\n`);
+    return flags.list ? 0 : 1;
+  }
+
+  const requested = spec.slice("aphrody/".length).split(/[+,]/).filter(Boolean);
+  const required = Object.entries(templates)
+    .filter(([, t]) => t.required)
+    .map(([id]) => id);
+  const names = [...new Set([...required, ...requested])];
+  for (const name of names)
+    if (!templates[name])
+      throw new UsageError(`Unknown template "${name}" (available: ${Object.keys(templates).join(", ")})`);
+  const groups = new Map<string, string[]>();
+  for (const name of names) {
+    const group = templates[name].exclusive;
+    if (group) groups.set(group, [...(groups.get(group) ?? []), name]);
+  }
+  for (const [group, members] of groups)
+    if (members.length > 1) throw new UsageError(`Choose one ${group} template: ${members.join(" or ")}`);
+
+  // stack.toml paths are relative to the Aphrody checkout (m3/templates/<name>).
+  const checkout = path.resolve(templatesDir, "..", "..");
+  const templateDir = (t: any) => {
+    const fromCheckout = path.resolve(checkout, t.path);
+    return fs.existsSync(fromCheckout) ? fromCheckout : path.join(templatesDir, path.basename(t.path));
+  };
+  const aphrody = path.resolve(cwd, flags.aphrody ?? flags["yolo-path"] ?? process.env.YOLO_HOME ?? checkout);
+  const target = path.resolve(cwd, dirArg ?? requested.at(-1) ?? "aphrody-app");
+  if (fs.existsSync(target) && fs.readdirSync(target).length > 0)
+    throw new UsageError(`${path.relative(cwd, target) || "."} exists and is not empty`);
+  const name = flags.name ?? path.basename(target);
+  const substitutions: [string, string][] = [
+    ["__NAME__", name],
+    ["__IDENT__", toIdent(name)],
+    ["__YOLO__", aphrody.replaceAll("\\", "/")],
+  ];
+
+  const written = new Map<string, string | Uint8Array>();
+  const dependencies: Record<string, string> = {};
+  const devDependencies: Record<string, string> = {};
+  for (const id of names) {
+    const dir = templateDir(templates[id]);
+    for (const rel of walkFiles(dir)) {
+      const dest = rel
+        .split("/")
+        .map(part => (part === "gitignore" ? ".gitignore" : part))
+        .join("/");
+      const bytes = fs.readFileSync(path.join(dir, rel));
+      if (TEMPLATE_TEXT.test(rel)) {
+        let text = bytes.toString("utf8");
+        for (const [token, value] of substitutions) text = text.split(token).join(value);
+        written.set(dest, text);
+      } else written.set(dest, new Uint8Array(bytes));
+    }
+    Object.assign(dependencies, templates[id].dependencies ?? {});
+    Object.assign(devDependencies, templates[id].dev_dependencies ?? {});
+  }
+  if (written.has("package.json") && (Object.keys(dependencies).length || Object.keys(devDependencies).length)) {
+    const pkg = JSON.parse(written.get("package.json") as string);
+    pkg.dependencies = { ...pkg.dependencies, ...dependencies };
+    pkg.devDependencies = { ...pkg.devDependencies, ...devDependencies };
+    written.set("package.json", JSON.stringify(pkg, null, 2) + "\n");
+  }
+  for (const [rel, content] of written) {
+    const dest = path.join(target, rel);
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.writeFileSync(dest, content);
+  }
+  const shown = path.relative(cwd, target) || ".";
+  process.stdout.write(
+    `${paint("32", "Created")} ${shown} (${written.size} files: ${names.join(", ")})\n\n  cd ${shown}\n  bun install\n  bun run dev\n`,
+  );
+  return 0;
+}
+
 // ─── dispatch ────────────────────────────────────────────────────────────────
 
 async function main(): Promise<number> {
@@ -633,6 +796,9 @@ async function main(): Promise<number> {
       return wasm(args, cwd);
     case "build":
       return wasmBuild(args, cwd);
+    case "create":
+    case "c":
+      return create(args, cwd);
   }
   return 1;
 }
