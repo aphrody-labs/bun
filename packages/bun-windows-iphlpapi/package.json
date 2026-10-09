@@ -1,0 +1,14 @@
+{
+  "name": "@aphrody/bun-windows-iphlpapi",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.ts"
+    }
+  },
+  "scripts": {
+    "test": "bun test"
+  }
+}
