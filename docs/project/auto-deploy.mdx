@@ -1,0 +1,20 @@
+---
+title: Auto-deploy et conteneur Bun
+description: "Image Docker du fork Bun, sonde prod sur dbfr, file de build sur le VPS et service Windows bun-winsvc"
+---
+
+## Release
+
+`aphrody-v1.4.3-aphrody.3` (commit `d46f0ed6c69`) fournit `bun-linux-x64.zip` (construit sur le VPS), `bun-windows-x64.zip` et `SHA256SUMS.txt`. GitHub Actions est désactivé sur le dépôt : la release est construite à la main puis envoyée avec `gh release create`.
+
+## Image
+
+`scripts/aphrody/deploy/docker/Dockerfile` (contexte `scripts/aphrody/deploy`) : Ubuntu 26.04, Bun de la release (somme vérifiée), git, ssh, gh, rsync et le pipeline `queue.ts`/`activate.ts`. Rôles de l'entrée : `build`, `prod`, `health`, ou toute commande bun.
+
+## Services
+
+| Hôte | Service | Contenu |
+| --- | --- | --- |
+| dbfr (prod) | `docker compose --profile prod up -d` dans `/srv/aphrody-bun` | sonde `probe.ts` sur `127.0.0.1:47660` (`/healthz`, `/version`) ; `APP_BIN` ou `APP_SCRIPT` pour une autre app |
+| vps (build) | `bun install-host.ts --role build` | file `aphrody-deploy` (timer systemd utilisateur) ; activer avec une config `~/.config/aphrody-deploy/apps.json`, modèle `apps.example.json` |
+| PC Windows | service `AphrodyBun` | `bun install-windows.ts` en administrateur : `bun-winsvc.exe` (packages/bun-winsvc) lance `bun.exe service.ts`, relance en cas de sortie, tue l'arbre à l'arrêt |

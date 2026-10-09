@@ -207,6 +207,7 @@
               "/project/setup",
               "/project/agent-tools",
               "/project/agent-plugin",
+              "/project/auto-deploy",
               "/project/contributing",
               "/project/building-windows",
               "/project/bindgen",
