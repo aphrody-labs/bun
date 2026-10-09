@@ -1046,7 +1046,7 @@ async function notify(options) {
 
   if (isWindows) {
     // Toasts go through bun:windows (WinRT ToastNotificationManager); actions and wait are not wired yet.
-    require("bun:windows").notify(summary, optionString("options.body", options.body));
+    require("./windows").notify(summary, optionString("options.body", options.body));
     return { id: undefined, action: null };
   }
 
