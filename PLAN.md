@@ -363,6 +363,29 @@ Clone `C:\base-ui` (`origin` fork, `upstream` mui/base-ui), même workflow. Anci
 M3 d'Aphrody (`m3/*`, `@aphrody/material-web`, thème/tokens M3) appliqués à Base UI : composants Base UI stylés M3 via
 Tailwind (`@aphrody/base-ui`, `@aphrody/m3-base-ui`). Bunisation n2b (bun install/test, happy-dom).
 
+- ✅ Fork resynchronisé (fast-forward sur `mui/base-ui` 7e4b2f921, poussé). Archéologie : l'ancien `m3/forks/base-ui`
+  (base upstream 19511bb17) ne portait aucun patch de source, seulement un remplacement textuel pnpm→bun en partie cassé ;
+  rien à réappliquer.
+- ✅ Outillage du fork (base-ui `99d727aa6`, `17b332ff3`) : `scripts/aphrody/bunify.ts` (scripts pnpm/npx/node/tsx → bun,
+  Vitest jsdom → `bun test`, `packageManager bun@1.4.3-aphrody.2`), `sync-upstream.ts` (6 h, fusion à trois voies via
+  `bunify.rewrite`, `bun.lock` régénéré), `publish-npm.ts` (`@aphrody/base-ui`, `@aphrody/base-ui-utils`, versions
+  `<upstream>-aphrody.N`, dépendance interne en alias `npm:` : aucun import réécrit), workflows, action `setup-bun`
+  (release du fork), secrets `NPM_TOKEN`/`APHRODY_SYNC_TOKEN`, `bunfig.toml` + `test/setupBunTest.ts` (happy-dom,
+  réutilise `test/setupVitest.ts`), `APHRODY.md`, `PLAN.md`, `bun.lock` (migration pnpm).
+- ✅ Cœur Bun (§2.11, non exécuté, directive du 2026-10-09) : un workspace sans `"name"` prend le nom de son dossier comme
+  npm (install et `bun pm migrate` pnpm, au lieu de « Missing name » / « missing workspace name » / panique) ;
+  `allowBuilds`/`onlyBuiltDependencies` de `pnpm-workspace.yaml` → `trustedDependencies`. Tests :
+  `test/cli/install/bad-workspace.test.ts -t "without a name"`, `test/cli/install/migration/pnpm-lock-v9.test.ts -t
+  "pnpm-workspace.yaml"`.
+- ⏳ Les `name` ajoutés à `test/{bundle-size,performance,public-types}/package.json` de base-ui sont à retirer quand
+  `FORK_BUN` pointe sur une release contenant ce correctif.
+- ⏳ Cœur Bun : la migration pnpm perd les overrides à clé versionnée/parent (`brace-expansion@1`, `js-yaml@4`,
+  `nanoid@3`, `a>b: '-'`) ; `vi` de bun:test incomplet pour Base UI (fake timers, `advanceTimersToNextFrame`,
+  `importActual`, `hoisted`, `stubGlobal`…).
+- ⏳ Première publication npm (build `code-infra` sous Bun), puis `@aphrody/m3-baseui` (Aphrody `m3/packages/m3-baseui`,
+  gardé dans m3 et consommé par S) via l'alias `"@base-ui/react": "npm:@aphrody/base-ui@…"` + preset m3-tailwind,
+  `m3:theme.css` (D), Material Symbols ; audit md-spec-checker.
+
 ### S. Framework full Bun (🔄)
 
 Framework complet sans Node : Bun.serve + Bake (`src/runtime/bake`) pour dev server/HMR/RSC, Bun.build pour la prod,
