@@ -223,6 +223,33 @@ fn is_browser_binary(path: &bun_core::ZStr) -> bool {
     }
 }
 
+/// Sentinel `backend.path` set by JSWebViewConstructor for the native
+/// backends ("webkitgtk", "webview2", "wkwebview", "cef"): they are served by
+/// packages/bun-webview-core's host, which speaks the same CDP pipe as Chrome.
+const WEBVIEW_HOST: &[u8] = b"bun-webview-host";
+
+/// BUN_WEBVIEW_HOST > next to the bun executable > $PATH.
+fn find_webview_host() -> Option<ZBox> {
+    if let Some(p) = getenv_z(zstr!("BUN_WEBVIEW_HOST")) {
+        return Some(ZBox::from_bytes(p));
+    }
+    #[cfg(windows)]
+    let name: &[u8] = b"bun-webview-host.exe";
+    #[cfg(not(windows))]
+    let name: &[u8] = WEBVIEW_HOST;
+    let mut buf = path_buffer_pool::get();
+    if let Ok(exe) = bun_core::self_exe_path() {
+        let dir = resolve_path::dirname::<platform::Auto>(exe.as_bytes());
+        let parts: [&[u8]; 2] = [dir, name];
+        let candidate = resolve_path::join_string_buf_z::<platform::Auto>(&mut buf[..], &parts);
+        if is_browser_binary(candidate) {
+            return Some(ZBox::from_bytes(&candidate[..]));
+        }
+    }
+    let path = env_var::PATH.get().unwrap_or(b"");
+    which(&mut buf, path, b"", WEBVIEW_HOST).map(|found| ZBox::from_bytes(&found[..]))
+}
+
 /// Auto-detect the Chrome binary. chrome-headless-shell is the ~100MB
 /// stripped variant (no GPU compositor, no extensions) — ships with
 /// playwright installs. Falls through to the full app bundles.
@@ -239,6 +266,9 @@ fn find_chrome(explicit_path: Option<&CStr>) -> Option<ZBox> {
     // backend.path is per-Bun.WebView call (first wins — later views reuse
     // the already-spawned Chrome); env var is per-process.
     if let Some(p) = explicit_path {
+        if p.to_bytes() == WEBVIEW_HOST {
+            return find_webview_host();
+        }
         return Some(ZBox::from_bytes(p.to_bytes()));
     }
     if let Some(p) = getenv_z(zstr!("BUN_CHROME_PATH")) {

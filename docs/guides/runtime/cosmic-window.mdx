@@ -86,6 +86,15 @@ Building libcosmic needs `pkg-config`, `cmake` and the xkbcommon, Wayland, fontc
 
 Callbacks into JavaScript must stay on the thread that called into the library. If you pass a [`JSCallback`](/runtime/ffi#callbacks) to the `cdylib`, call it only from that thread, for example from `Application::init` after checking `std::thread::current().id()`.
 
+## Tested platforms
+
+The fixture prints `window created` and `window closed` with exit code 0 on:
+
+- Windows 11: winit/Win32 backend, MSVC toolchain
+- Ubuntu 26.04: X11 backend under `xvfb-run`
+
+The Linux images are `scripts/aphrody/gui/ubuntu.Dockerfile` and `scripts/aphrody/gui/alpine.Dockerfile`.
+
 ---
 
 A fuller version with a `JSCallback`, `--timeout` (an iced time subscription that returns `cosmic::iced::exit()`), and `--title`, `--width` and `--height` options lives in the Bun repository at [`test/js/bun/ffi/cosmic-window.fixture.ts`](https://github.com/aphrody-labs/bun/blob/main/test/js/bun/ffi/cosmic-window.fixture.ts) with its crate in [`test/js/bun/ffi/cosmic-window`](https://github.com/aphrody-labs/bun/tree/main/test/js/bun/ffi/cosmic-window). To show a libcosmic window without writing Rust, `bun:cosmic` runs one in a separate helper process.

@@ -1638,3 +1638,96 @@ describe.concurrent("Bun.spawn with terminal option", () => {
     expect(outcomes).toEqual(Array.from({ length: N }, () => "data"));
   });
 });
+
+describe("Bun.TerminalScreen", () => {
+  const cell = (screen: Bun.TerminalScreen, col: number, row: number) => {
+    const i = (row * screen.cols + col) * 4;
+    const cells = screen.cells();
+    return { codepoint: cells[i], fg: cells[i + 1], bg: cells[i + 2], flags: cells[i + 3] };
+  };
+
+  test("defaults and plain text", () => {
+    const screen = new Bun.TerminalScreen();
+    expect([screen.cols, screen.rows]).toEqual([80, 24]);
+    expect(screen.write("hello\r\nworld")).toBe(12);
+    expect(screen.text()).toBe("hello\nworld");
+    expect(screen.cursor).toEqual({ col: 5, row: 1, visible: true });
+    expect(screen.cells()).toHaveLength(80 * 24 * 4);
+    expect(screen.alternateScreen).toBe(false);
+  });
+
+  test("keeps escape and UTF-8 sequences split across writes", () => {
+    const screen = new Bun.TerminalScreen({ cols: 10, rows: 2 });
+    const bytes = new TextEncoder().encode("\x1b[1;38;2;1;2;3mé\x1b[0m!");
+    for (const byte of bytes) screen.write(new Uint8Array([byte]));
+    expect(screen.text()).toBe("é!");
+    expect(cell(screen, 0, 0)).toEqual({ codepoint: 0xe9, fg: 0x010203ff, bg: 0, flags: 1 });
+    expect(cell(screen, 1, 0)).toEqual({ codepoint: 0x21, fg: 0, bg: 0, flags: 0 });
+  });
+
+  test("wide characters, scrollback and resize", () => {
+    const screen = new Bun.TerminalScreen({ cols: 4, rows: 2, convertEol: true });
+    screen.write("a中\n1\n2\n3");
+    expect(cell(screen, 0, 0).codepoint).toBe(0x32);
+    expect(screen.text()).toBe("2\n3");
+    expect(screen.text({ scrollback: true })).toBe("a中\n1\n2\n3");
+    screen.resize(6, 1);
+    expect([screen.cols, screen.rows]).toEqual([6, 1]);
+    expect(screen.text()).toBe("3");
+    screen.reset();
+    expect(screen.text({ scrollback: true })).toBe("");
+    expect([screen.cols, screen.rows]).toEqual([6, 1]);
+  });
+
+  test("alternate screen, title and replies to queries", () => {
+    const screen = new Bun.TerminalScreen({ cols: 10, rows: 3 });
+    screen.write("shell$ ");
+    screen.write("\x1b]2;vim\x07\x1b[?1049h\x1b[2;3Hfull");
+    expect(screen.alternateScreen).toBe(true);
+    expect(screen.title).toBe("vim");
+    expect(screen.text()).toBe("\n  full");
+    screen.write("\x1b[6n\x1b[c");
+    expect(screen.takeReplies()).toBe("\x1b[2;7R\x1b[?6c");
+    expect(screen.takeReplies()).toBe("");
+    screen.write("\x1b[?1049l");
+    expect(screen.text()).toBe("shell$");
+    expect(screen.cursor).toEqual({ col: 7, row: 0, visible: true });
+  });
+
+  test("validates arguments", () => {
+    expect(() => new Bun.TerminalScreen({ cols: 0 })).toThrow(expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }));
+    expect(() => new Bun.TerminalScreen({ rows: 5000 })).toThrow(
+      expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }),
+    );
+    const screen = new Bun.TerminalScreen({ cols: 2, rows: 2 });
+    // @ts-expect-error
+    expect(() => screen.write(123)).toThrow(expect.objectContaining({ code: "ERR_INVALID_ARG_TYPE" }));
+    expect(() => screen.resize(0, 1)).toThrow(expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }));
+  });
+
+  test("renders a program running in Bun.Terminal", async () => {
+    const screen = new Bun.TerminalScreen({ cols: 40, rows: 5 });
+    const done = Promise.withResolvers<void>();
+    await using terminal = new Bun.Terminal({
+      cols: 40,
+      rows: 5,
+      data(term, chunk) {
+        screen.write(chunk);
+        const replies = screen.takeReplies();
+        if (replies) term.write(replies);
+        if (screen.text().includes("DONE")) done.resolve();
+      },
+    });
+    const proc = Bun.spawn({
+      cmd: [bunExe(), "-e", `process.stdout.write("\x1b[31mred\x1b[0m\r\n\x1b[1mDONE\x1b[0m")`],
+      env: bunEnv,
+      terminal,
+    });
+    await done.promise;
+    const lines = screen.text().split("\n");
+    const row = lines.findIndex(line => line.includes("red"));
+    expect(lines[row + 1]).toContain("DONE");
+    expect(cell(screen, lines[row].indexOf("red"), row).fg).not.toBe(0);
+    expect(await proc.exited).toBe(0);
+  });
+});

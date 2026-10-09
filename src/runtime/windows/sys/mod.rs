@@ -19,6 +19,7 @@ pub(crate) mod jobs;
 pub(crate) mod process;
 pub(crate) mod registry;
 pub(crate) mod services;
+pub(crate) mod storage;
 pub(crate) mod system;
 pub(crate) mod toast;
 pub(crate) mod wsl;

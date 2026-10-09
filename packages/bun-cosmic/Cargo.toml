@@ -24,10 +24,20 @@ gpu = ["libcosmic/wgpu"]
 
 [dependencies]
 serde_json = "1"
+
+[target.'cfg(unix)'.dependencies]
+# On Windows bun:cosmic sends toasts through bun:windows instead.
 notify-rust = "4.18"
 
 # Same libcosmic revision as the COSMIC epoch-1.10.0 apps (cosmic-osk, cosmic-viewer Cargo.lock).
-[dependencies.libcosmic]
+[target.'cfg(not(target_os = "linux"))'.dependencies.libcosmic]
+git = "https://github.com/pop-os/libcosmic"
+rev = "7f715bc5d2d383a070fd8c760aa52c5627df96b6"
+default-features = false
+features = ["winit", "tokio", "multi-window"]
+
+# Wayland and X11 backends on Linux only; on Windows winit drives Win32 windows directly.
+[target.'cfg(target_os = "linux")'.dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic"
 rev = "7f715bc5d2d383a070fd8c760aa52c5627df96b6"
 default-features = false

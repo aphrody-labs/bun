@@ -30,6 +30,7 @@ import { mimalloc } from "./mimalloc.ts";
 import { nodejsHeaders } from "./nodejs-headers.ts";
 import { picohttpparser } from "./picohttpparser.ts";
 import { rustArgon2 } from "./rust-argon2.ts";
+import { uutils } from "./uutils.ts";
 import { sqlite } from "./sqlite.ts";
 import { tinycc } from "./tinycc.ts";
 import { webkit } from "./webkit.ts";
@@ -63,6 +64,7 @@ export const allDeps: readonly Dependency[] = [
   libuv,
   lolhtml,
   rustArgon2,
+  uutils,
   lshpack,
   lsqpack,
   mimalloc,
@@ -101,6 +103,7 @@ export {
   rustArgon2,
   sqlite,
   tinycc,
+  uutils,
   webkit,
   zlib,
   zstd,

@@ -168,13 +168,13 @@ job.terminate(1);
 
 With `killOnClose`, closing the job (or leaving the `using` block) terminates its processes. A job that is garbage collected is closed too.
 
-| Limit             | Meaning                                    |
-| ----------------- | ------------------------------------------ |
+| Limit             | Meaning                                     |
+| ----------------- | ------------------------------------------- |
 | `killOnClose`     | Terminate the processes when the job closes |
-| `processMemory`   | Committed memory per process, in bytes     |
+| `processMemory`   | Committed memory per process, in bytes      |
 | `jobMemory`       | Committed memory of the whole job, in bytes |
-| `activeProcesses` | Maximum number of live processes           |
-| `cpuRate`         | Hard CPU cap, percentage of the machine    |
+| `activeProcesses` | Maximum number of live processes            |
+| `cpuRate`         | Hard CPU cap, percentage of the machine     |
 
 ---
 
@@ -201,3 +201,17 @@ const { exitCode, stdout } = windows.wsl.run("Ubuntu", ["uname", "-r"]);
 ```
 
 `distributions` reads the registry and does not start WSL. `run` calls `wsl.exe -d <name> -- <command>` and waits for it.
+
+---
+
+## API families
+
+The Bun binary contains the interfaces above. Other Windows API families ship as packages named `@aphrody/bun-windows-<family>`, and `bun:windows` loads them on first use.
+
+```ts
+const kernel32 = windows.family("kernel32"); // exports of @aphrody/bun-windows-kernel32
+windows.families.user32; // same as windows.family("user32")
+"gdi32" in windows.families; // true when the package is installed
+```
+
+The package is resolved from the working directory, then from the entry script, and loaded once per process. A family that is not installed throws an error with code `ERR_BUN_WINDOWS_FAMILY_NOT_FOUND`.

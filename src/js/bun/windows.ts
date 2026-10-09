@@ -38,6 +38,10 @@ const isElevatedNative = $newRustFunction("windows/host.rs", "jsIsElevated", 0);
 const processListNative = $newRustFunction("windows/host.rs", "jsProcessList", 0);
 const processPathNative = $newRustFunction("windows/host.rs", "jsProcessPath", 1);
 const processTerminateNative = $newRustFunction("windows/host.rs", "jsProcessTerminate", 2);
+const processSetAffinityNative = $newRustFunction("windows/host.rs", "jsProcessSetAffinity", 2);
+const processSetPriorityNative = $newRustFunction("windows/host.rs", "jsProcessSetPriority", 2);
+const processSetEcoModeNative = $newRustFunction("windows/host.rs", "jsProcessSetEcoMode", 2);
+const processTrimWorkingSetNative = $newRustFunction("windows/host.rs", "jsProcessTrimWorkingSet", 1);
 const jobCreateNative = $newRustFunction("windows/host.rs", "jsJobCreate", 1);
 const jobSetLimitsNative = $newRustFunction("windows/host.rs", "jsJobSetLimits", 6);
 const jobAssignNative = $newRustFunction("windows/host.rs", "jsJobAssign", 2);
@@ -46,6 +50,8 @@ const jobInfoNative = $newRustFunction("windows/host.rs", "jsJobInfo", 1);
 const jobCloseNative = $newRustFunction("windows/host.rs", "jsJobClose", 1);
 const toastNative = $newRustFunction("windows/host.rs", "jsToast", 2);
 const wslDistributionsNative = $newRustFunction("windows/host.rs", "jsWslDistributions", 0);
+const storageDrivesNative = $newRustFunction("windows/host.rs", "jsStorageDrives", 0);
+const memoryStatusNative = $newRustFunction("windows/host.rs", "jsMemoryStatus", 0);
 
 function unsupportedError() {
   const error = new Error("bun:windows is only available on Windows");
@@ -420,6 +426,33 @@ const processes = Object.freeze({
     validateInteger(exitCode, "exitCode", 0, MAX_UINT32);
     processTerminateNative(pidOf(pid, "pid"), exitCode);
   },
+  setAffinity(pid, mask) {
+    ensureSupported();
+    validateInteger(mask, "mask", 1, Number.MAX_SAFE_INTEGER);
+    processSetAffinityNative(pidOf(pid, "pid"), String(mask));
+  },
+  setPriority(pid, priority) {
+    ensureSupported();
+    validateOneOf(priority, "priority", ["idle", "below-normal", "normal", "above-normal", "high", "realtime"]);
+    const priorityClass = {
+      idle: 0x40,
+      "below-normal": 0x400,
+      normal: 0x20,
+      "above-normal": 0x800,
+      high: 0x80,
+      realtime: 0x100,
+    }[priority];
+    processSetPriorityNative(pidOf(pid, "pid"), priorityClass);
+  },
+  setEcoMode(pid, enabled) {
+    ensureSupported();
+    validateBoolean(enabled, "enabled");
+    processSetEcoModeNative(pidOf(pid, "pid"), enabled);
+  },
+  trimWorkingSet(pid) {
+    ensureSupported();
+    processTrimWorkingSetNative(pidOf(pid, "pid"));
+  },
 });
 
 // job objects
@@ -566,6 +599,73 @@ const wsl = Object.freeze({
   },
 });
 
+const storage = Object.freeze({
+  drives() {
+    ensureSupported();
+    return JSON.parse(storageDrivesNative());
+  },
+});
+
+const memory = Object.freeze({
+  status() {
+    ensureSupported();
+    return JSON.parse(memoryStatusNative());
+  },
+});
+
+// Families
+//
+// The binary keeps the lazy core above. Every other Windows API family ships as a
+// package named @aphrody/bun-windows-<family> (bun:ffi bindings generated from
+// win32metadata, or a native addon). family(name) resolves it from the working
+// directory, then from the entry script, loads it once and returns its exports;
+// windows.families.<name> is the same lookup.
+
+const FAMILY_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+const familyCache = new Map();
+
+function resolveFamily(specifier) {
+  const path = require("node:path");
+  const bases = [path.join(process.cwd(), "noop.js")];
+  const main = Bun.main;
+  if (typeof main === "string" && path.isAbsolute(main)) bases.push(main);
+  for (const base of bases) {
+    try {
+      return Bun.resolveSync(specifier, base);
+    } catch {}
+  }
+  return undefined;
+}
+
+function family(name) {
+  validateString(name, "name");
+  if (!FAMILY_NAME.test(name)) {
+    throw $ERR_INVALID_ARG_VALUE("name", name, 'must be a lowercase family name such as "kernel32"');
+  }
+  const cached = familyCache.get(name);
+  if (cached !== undefined) return cached;
+  const specifier = `@aphrody/bun-windows-${name}`;
+  const resolved = resolveFamily(specifier);
+  if (resolved === undefined) {
+    const error = new Error(`bun:windows family "${name}" is not installed. Install it with: bun add ${specifier}`);
+    error.code = "ERR_BUN_WINDOWS_FAMILY_NOT_FOUND";
+    throw error;
+  }
+  const exports = require("node:module").createRequire(resolved)(resolved);
+  familyCache.set(name, exports);
+  return exports;
+}
+
+const families = new Proxy(Object.freeze({ __proto__: null }), {
+  get(_target, key) {
+    return typeof key === "string" && FAMILY_NAME.test(key) ? family(key) : undefined;
+  },
+  has(_target, key) {
+    if (typeof key !== "string" || !FAMILY_NAME.test(key)) return false;
+    return familyCache.has(key) || resolveFamily(`@aphrody/bun-windows-${key}`) !== undefined;
+  },
+});
+
 export default {
   isSupported,
   version,
@@ -583,4 +683,8 @@ export default {
   toast,
   notify,
   wsl,
+  storage,
+  memory,
+  family,
+  families,
 };

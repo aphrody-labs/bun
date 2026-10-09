@@ -53,6 +53,15 @@ TinyCC, which powers [`cc`](/runtime/ffi#cc) in `bun:ffi`, compiles C only, so a
 
 `QApplication::exec()` blocks the JavaScript thread, so timers, promises and I/O callbacks do not run while the window is open. Use a `QTimer` in the shim for periodic work inside the loop.
 
+## Tested platforms
+
+The fixture prints `window created` and `window closed` with exit code 0 on:
+
+- Windows 11: Qt 6.11.2 and GCC from MSYS2 UCRT64
+- Ubuntu 26.04: Qt 6.10.2 under `xvfb-run`
+
+The Linux images are `scripts/aphrody/gui/ubuntu.Dockerfile` and `scripts/aphrody/gui/alpine.Dockerfile`.
+
 ---
 
 A fuller version that builds and caches the shim, closes on Escape or after `--timeout`, and accepts `--title`, `--width` and `--height` lives in the Bun repository at [`test/js/bun/ffi/qt-window.fixture.ts`](https://github.com/aphrody-labs/bun/blob/main/test/js/bun/ffi/qt-window.fixture.ts) with the shim in [`qt-window.shim.cpp`](https://github.com/aphrody-labs/bun/blob/main/test/js/bun/ffi/qt-window.shim.cpp). For a KDE Kirigami window, see [Open a KDE Kirigami window](/guides/runtime/kde-window).

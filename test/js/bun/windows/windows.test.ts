@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import windows from "bun:windows";
-import { bunEnv, bunExe, isWindows } from "harness";
+import { bunEnv, bunExe, isWindows, tempDir } from "harness";
 
 function errorCode(fn: () => unknown): string | undefined {
   try {
@@ -17,6 +17,9 @@ describe.skipIf(isWindows)("non-Windows", () => {
     expect(windows.isWindows11()).toBe(false);
     expect(errorCode(() => windows.version())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => windows.registry.get("HKCU\\Software"))).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
+    expect(errorCode(() => windows.storage.drives())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
+    expect(errorCode(() => windows.memory.status())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
+    expect(errorCode(() => windows.processes.setPriority(0, "normal"))).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => new windows.Job())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
   });
 });
@@ -40,6 +43,28 @@ describe.skipIf(!isWindows)("bun:windows", () => {
     expect(info.computerName.length).toBeGreaterThan(0);
     expect(["dark", "light"]).toContain(info.theme);
     expect(typeof windows.isElevated()).toBe("boolean");
+  });
+
+  test("logical drive capacity", () => {
+    const drives = windows.storage.drives();
+    expect(drives.length).toBeGreaterThan(0);
+    const systemRoot = process.env.SystemRoot!.slice(0, 3).toLowerCase();
+    const systemDrive = drives.find(drive => drive.root.toLowerCase() === systemRoot)!;
+    expect(systemDrive).toBeDefined();
+    expect(systemDrive.type).toBe("fixed");
+    expect(systemDrive.totalBytes).toBeGreaterThan(0);
+    expect(systemDrive.freeBytes).toBeLessThanOrEqual(systemDrive.totalBytes);
+    expect(systemDrive.availableBytes).toBeLessThanOrEqual(systemDrive.totalBytes);
+  });
+
+  test("physical, page-file and virtual memory status", () => {
+    const memory = windows.memory.status();
+    expect(memory.totalPhysical).toBeGreaterThan(0);
+    expect(memory.availablePhysical).toBeLessThanOrEqual(memory.totalPhysical);
+    expect(memory.totalPageFile).toBeGreaterThan(0);
+    expect(memory.availablePageFile).toBeLessThanOrEqual(memory.totalPageFile);
+    expect(memory.memoryLoad).toBeGreaterThanOrEqual(0);
+    expect(memory.memoryLoad).toBeLessThanOrEqual(100);
   });
 
   test("registry round-trip", () => {
@@ -99,6 +124,16 @@ describe.skipIf(!isWindows)("bun:windows", () => {
     expect(self).toBeDefined();
     expect(self!.threads).toBeGreaterThan(0);
     expect(windows.processes.path(process.pid).toLowerCase()).toBe(process.execPath.toLowerCase());
+  });
+
+  test("process controls", () => {
+    const pid = process.pid;
+    windows.processes.setPriority(pid, "normal");
+    windows.processes.setEcoMode(pid, true);
+    windows.processes.setEcoMode(pid, false);
+    windows.processes.trimWorkingSet(pid);
+    expect(errorCode(() => windows.processes.setAffinity(pid, 0))).toBe("ERR_OUT_OF_RANGE");
+    expect(errorCode(() => windows.processes.setPriority(pid, "invalid" as any))).toBe("ERR_INVALID_ARG_VALUE");
   });
 
   test("services", () => {
@@ -167,5 +202,33 @@ describe.skipIf(!isWindows)("bun:windows", () => {
       expect([1, 2]).toContain(d.version);
     }
     expect(distros.filter(d => d.default).length).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("families", () => {
+  test("loads @aphrody/bun-windows-<family> once, from the working directory", async () => {
+    using dir = tempDir("bun-windows-family", {
+      "node_modules/@aphrody/bun-windows-demo/package.json": JSON.stringify({
+        name: "@aphrody/bun-windows-demo",
+        main: "index.js",
+      }),
+      "node_modules/@aphrody/bun-windows-demo/index.js":
+        "globalThis.loads = (globalThis.loads ?? 0) + 1; exports.answer = 42;",
+      "main.js": `
+        import windows from "bun:windows";
+        const a = windows.family("demo");
+        console.log(JSON.stringify([a.answer, windows.families.demo === a, "demo" in windows.families, "other" in windows.families, globalThis.loads]));
+        try { windows.family("other"); } catch (e) { console.log(e.code); }
+        try { windows.family("Bad Name"); } catch (e) { console.log(e.code); }
+      `,
+    });
+    await using proc = Bun.spawn({ cmd: [bunExe(), "main.js"], env: bunEnv, cwd: String(dir), stderr: "pipe" });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect(stdout.trim().split("\n")).toEqual([
+      "[42,true,true,false,1]",
+      "ERR_BUN_WINDOWS_FAMILY_NOT_FOUND",
+      "ERR_INVALID_ARG_VALUE",
+    ]);
+    expect(exitCode).toBe(0);
   });
 });

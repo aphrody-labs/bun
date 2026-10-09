@@ -27,6 +27,7 @@
     macro(XML) \
     macro(YAML) \
     macro(Terminal) \
+    macro(TerminalScreen) \
     macro(Transpiler) \
     macro(ValkeyClient) \
     macro(argv) \

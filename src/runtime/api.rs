@@ -43,6 +43,8 @@ pub(crate) mod csrf_jsc;
 pub(crate) mod filesystem_router;
 #[path = "api/glob.rs"]
 pub(crate) mod glob;
+#[path = "api/terminal_screen.rs"]
+pub(crate) mod terminal_screen;
 #[path = "api/HashObject.rs"]
 pub(crate) mod hash_object;
 #[path = "api/html_rewriter.rs"]

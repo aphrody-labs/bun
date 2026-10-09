@@ -1732,7 +1732,12 @@ impl<'a> Formatter<'a> {
                         return Ok(());
                     }
 
-                    writer.print(format_args!("\n{} {{\n", map_name));
+                    // Nested values continue the current line; only a top-level one is set apart.
+                    let top_level = self.indent == 0;
+                    if top_level {
+                        writer.write_all(b"\n");
+                    }
+                    writer.print(format_args!("{} {{\n", map_name));
                     {
                         self.indent += 1;
                         // hoist global_this (Copy &ref) before iter mutably
@@ -1756,7 +1761,9 @@ impl<'a> Formatter<'a> {
                     }
                     let _ = self.write_indent(writer.ctx);
                     writer.write_all(b"}");
-                    writer.write_all(b"\n");
+                    if top_level {
+                        writer.write_all(b"\n");
+                    }
                 }
                 Tag::Set => {
                     let length_value = value
@@ -1771,8 +1778,6 @@ impl<'a> Formatter<'a> {
                     let prev_quote_strings = self.quote_strings;
                     self.quote_strings = true;
 
-                    let _ = self.write_indent(writer.ctx);
-
                     let set_name: &str =
                         if value.js_type() == JSType::WeakSet { "WeakSet" } else { "Set" };
 
@@ -1782,7 +1787,11 @@ impl<'a> Formatter<'a> {
                         return Ok(());
                     }
 
-                    writer.print(format_args!("\n{} {{\n", set_name));
+                    let top_level = self.indent == 0;
+                    if top_level {
+                        writer.write_all(b"\n");
+                    }
+                    writer.print(format_args!("{} {{\n", set_name));
                     {
                         self.indent += 1;
                         let global = self.global_this;
@@ -1803,7 +1812,9 @@ impl<'a> Formatter<'a> {
                     }
                     let _ = self.write_indent(writer.ctx);
                     writer.write_all(b"}");
-                    writer.write_all(b"\n");
+                    if top_level {
+                        writer.write_all(b"\n");
+                    }
                 }
                 Tag::JSON => {
                     let str = value.json_stringify(self.global_this, self.indent)?;

@@ -41,6 +41,7 @@ for (const [path, hint] of [
   ["build/debug/codegen/build_options.rs", "bun run build --configure-only"],
   ["vendor/lolhtml/Cargo.toml", "bun run build --target=clone-lolhtml"],
   ["vendor/rust-argon2/Cargo.toml", "bun run build --target=clone-rust-argon2"],
+  ["vendor/uutils/Cargo.toml", "bun run build --target=clone-uutils"],
 ] as const) {
   if (!existsSync(resolve(repo, path))) {
     console.error(`\x1b[31m[nextest]\x1b[0m ${path} missing — run: ${hint}`);

@@ -277,6 +277,31 @@ describe("bundler", () => {
       },
     };
   });
+  for (const order of ["NamespaceFirst", "FileFirst"]) {
+    itBundled(`plugin/NamespaceDoesNotShareModuleWithSamePathFile${order}`, ({ root }) => {
+      const imports = [`import url from "./a.txt?url";`, `import text from "./a.txt";`];
+      if (order === "FileFirst") imports.reverse();
+      return {
+        files: {
+          "index.ts": `${imports.join("\n")}\nconsole.log(url, text.trim());`,
+          "a.txt": "hello",
+        },
+        plugins(builder) {
+          builder.onResolve({ filter: /\?url$/ }, args => ({
+            path: path.resolve(path.dirname(args.importer), args.path.slice(0, -"?url".length)),
+            namespace: "url",
+          }));
+          builder.onLoad({ filter: /.*/, namespace: "url" }, args => ({
+            contents: `export default ${JSON.stringify("url:" + path.relative(root, args.path))};`,
+            loader: "js",
+          }));
+        },
+        run: {
+          stdout: "url:a.txt hello",
+        },
+      };
+    });
+  }
   itBundled("plugin/ResolveNamespaceFilterIgnored", ({ root }) => {
     let onResolveCountBad = 0;
 

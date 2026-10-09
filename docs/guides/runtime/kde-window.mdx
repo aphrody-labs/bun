@@ -60,6 +60,15 @@ bun window.ts
 
 Kirigami is a runtime dependency only: the shim links Qt Quick and Qt QML, and the engine imports `org.kde.kirigami` when it loads the QML. Install it with your distribution's `kirigami` package, or on Windows with [MSYS2](https://www.msys2.org) (`pacman -S mingw-w64-ucrt-x86_64-kirigami`, with `C:\msys64\ucrt64\bin` on `PATH`). Without a display, set `QT_QPA_PLATFORM=offscreen` and `QT_QUICK_BACKEND=software`.
 
+## Tested platforms
+
+The fixture prints `window created` and `window closed` with exit code 0 on:
+
+- Windows 11: Kirigami 6.30.0 from MSYS2 UCRT64
+- Ubuntu 26.04: Kirigami 6.24.0 under `xvfb-run`
+
+The Linux images are `scripts/aphrody/gui/ubuntu.Dockerfile` and `scripts/aphrody/gui/alpine.Dockerfile`.
+
 ---
 
 A fuller version with a `JSCallback` for window creation, an Escape shortcut, `--timeout`, and `--title`, `--width` and `--height` options lives in the Bun repository at [`test/js/bun/ffi/kde-window.fixture.ts`](https://github.com/aphrody-labs/bun/blob/main/test/js/bun/ffi/kde-window.fixture.ts).

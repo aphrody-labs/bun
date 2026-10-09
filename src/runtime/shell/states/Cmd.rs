@@ -505,7 +505,9 @@ impl Cmd {
             spawn_args.fill_env::<false>(&mut iter);
         }
 
-        // Resolve argv[0] via PATH (`bun_which::which`).
+        // Resolve argv[0] via PATH (`bun_which::which`); a coreutils applet missing from PATH
+        // runs as this executable with argv[0] = the applet name.
+        let mut applet = false;
         let resolved: Option<Vec<u8>> = {
             let mut path_buf = bun_paths::path_buffer_pool::get();
             match bun_which::which(&mut *path_buf, spawn_args.path, spawn_args.cwd, &first_arg) {
@@ -515,24 +517,62 @@ impl Cmd {
                         .ok()
                         .map(|z| z.as_bytes().to_vec())
                 }
+                #[cfg(feature = "coreutils")]
+                None if !sudo_wrap
+                    && bun_coreutils::applet_name(&first_arg).is_some_and(|name| name.len() == first_arg.len()) =>
+                {
+                    spawn_args.argv0 = bun_core::self_exe_path().ok().map(|z| {
+                        let mut exe = z.as_bytes().to_vec();
+                        exe.push(0);
+                        exe
+                    });
+                    applet = spawn_args.argv0.is_some();
+                    applet.then(|| first_arg.to_vec())
+                }
                 None => None,
             }
         };
         let Some(mut resolved) = resolved else {
+            drop(spawn_args);
+            if !sudo_wrap && crate::shell::cmd_compat::rewrite(&mut interp.as_cmd_mut(this).args) {
+                return Self::transition_to_exec(interp, this);
+            }
             // writeFailingError("bun: command not found: {s}\n") →
             // `.waiting_write_err` → onIOWriterChunk → `parent.childDone(this, 1)`.
-            drop(spawn_args);
             return Builtin::cmd_write_failing_error(
                 interp,
                 this,
                 format_args!("bun: command not found: {}\n", bstr::BStr::new(&first_arg)),
             );
         };
+        if !applet && crate::shell::cmd_compat::is_powershell_script(&resolved) {
+            let host = {
+                let mut path_buf = bun_paths::path_buffer_pool::get();
+                crate::shell::cmd_compat::POWERSHELL_HOSTS.iter().find_map(|host| {
+                    bun_which::which(&mut *path_buf, spawn_args.path, spawn_args.cwd, host)
+                        .map(|z| z.as_bytes().to_vec())
+                })
+            };
+            let Some(host) = host else {
+                drop(spawn_args);
+                return Builtin::cmd_write_failing_error(
+                    interp,
+                    this,
+                    format_args!("bun: PowerShell (pwsh) not found to run {}\n", bstr::BStr::new(&resolved)),
+                );
+            };
+            let script = core::mem::replace(&mut resolved, host);
+            let host_args = crate::shell::cmd_compat::POWERSHELL_ARGS
+                .iter()
+                .map(|a| [*a, &b"\0"[..]].concat())
+                .chain([[&script[..], &b"\0"[..]].concat()]);
+            interp.as_cmd_mut(this).args.splice(1..1, host_args);
+        }
         // CreateProcessW runs `.bat`/`.cmd` files through `cmd.exe`, which
         // re-tokenizes the command line with shell metacharacter rules
         // (BatBadBut). libuv's MSVCRT-style quoting cannot make that safe, so
         // reject arguments that cmd.exe would reinterpret.
-        if cfg!(windows) && bun_which::is_batch_file(&resolved) {
+        if cfg!(windows) && !applet && bun_which::is_batch_file(&resolved) {
             let unsafe_arg: Option<Vec<u8>> = interp
                 .as_cmd(this)
                 .args
