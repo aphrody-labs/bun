@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Flux des prébuilts WebKit du fork (PLAN.md, chantier P).
+ * Flux des prébuilts WebKit du fork (PLAN-ALPINE-BUN.md, chantier P).
  *
  *   bun scripts/aphrody/webkit-prebuilt.ts status
  *   bun scripts/aphrody/webkit-prebuilt.ts build  [--ref <sha|branche>] [--lanes <regex,regex|all>]
