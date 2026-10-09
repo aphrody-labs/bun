@@ -5,15 +5,17 @@
 // in /etc/bun-init.json, reaps the orphans the kernel reparents to PID 1, and
 // powers the machine off (or reboots) once the workload exits.
 //
-//   /etc/bun-init.json  { "argv": ["/bin/bun", "/app/index.ts"], "env": {}, "cwd": "/app", "onExit": "poweroff" | "reboot" | "halt" }
+//   /etc/bun-init.json  { "argv": ["/bin/bun", "/app/index.ts"], "env": {}, "cwd": "/app", "hostname": "aphrody",
+//                         "onExit": "poweroff" | "reboot" | "halt" }
 
 import linux from "bun:linux";
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 interface InitConfig {
   argv: string[];
   env?: Record<string, string>;
   cwd?: string;
+  hostname?: string;
   onExit?: "poweroff" | "reboot" | "halt";
 }
 
@@ -37,6 +39,7 @@ mountOnce("tmpfs", "/run", "tmpfs", c.MS_NOSUID | c.MS_NODEV, "mode=0755");
 mountOnce("tmpfs", "/tmp", "tmpfs", c.MS_NOSUID | c.MS_NODEV, "mode=1777");
 
 const config: InitConfig = JSON.parse(readFileSync("/etc/bun-init.json", "utf8"));
+if (config.hostname) writeFileSync("/proc/sys/kernel/hostname", config.hostname);
 
 const workload = Bun.spawn({
   cmd: config.argv,

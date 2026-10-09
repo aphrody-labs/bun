@@ -1,48 +1,66 @@
 // Builds a gzip newc initramfs whose PID 1 is Bun (chantier V (c)).
 //
-// /bin/bun is a Linux Bun binary (the musl build for Alpine); its ELF
-// interpreter and DT_NEEDED libraries are copied from --sysroot so the image
+// /bin/bun is a Linux Bun binary (the musl build for Alpine). Every ELF put in
+// the image (Bun and each --bin) has its interpreter and DT_NEEDED libraries
+// resolved inside --sysroot, recursively, at their sysroot paths, so the image
 // runs without a distribution. /init is scripts/aphrody/initramfs-init.ts,
 // transpiled, behind a `#!/bin/bun` line; it reads /etc/bun-init.json for the
 // workload. The kernel needs CONFIG_BINFMT_SCRIPT, CONFIG_DEVTMPFS and CONFIG_RD_GZIP.
 //
 //   bun scripts/aphrody/initramfs.ts --bun build/release/bun --sysroot /path/to/alpine-rootfs \
-//     --app ./app --out build/initramfs.cpio.gz [--file host:/target]... [-- /bin/bun /app/index.ts]
+//     --bin /usr/bin/coreutils --app ./app --out build/initramfs.cpio.gz [--hostname aphrody] \
+//     [--file host:/target]... [-- /bin/bun /app/index.ts]
+//
+// --bin takes a path inside --sysroot (kept at that path, with the symlinks
+// leading to it) or a host file (installed as /bin/<name>).
 //
 // Boot it with `qemu-system-x86_64 -kernel bzImage -initrd build/initramfs.cpio.gz -append console=ttyS0 -nographic`.
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, statSync } from "node:fs";
 import { join, posix, resolve } from "node:path";
 
-interface Entry {
+export interface Entry {
   path: string;
   mode: number;
   data?: Uint8Array;
   rdev?: [number, number];
 }
 
+const S_IFMT = 0o170000;
 const S_IFDIR = 0o040000;
 const S_IFREG = 0o100000;
 const S_IFLNK = 0o120000;
 const S_IFCHR = 0o020000;
 
-function usage(message: string): never {
-  console.error(`initramfs: ${message}`);
-  console.error(
-    "usage: bun scripts/aphrody/initramfs.ts --bun <linux bun> --out <file.cpio.gz> [--sysroot <dir>] [--app <dir>] [--file host:/target]... [--no-gzip] [-- argv...]",
-  );
-  process.exit(2);
+export interface Options {
+  bun: string;
+  out: string;
+  sysroot: string;
+  app: string;
+  bins: string[];
+  files: [string, string][];
+  hostname: string;
+  gzip: boolean;
+  argv: string[];
 }
 
-function parseArgs(argv: string[]) {
-  const options = {
+function usage(message: string): never {
+  throw new UsageError(message);
+}
+
+class UsageError extends Error {}
+
+export function parseArgs(argv: string[]): Options {
+  const options: Options = {
     bun: "",
     out: "",
     sysroot: "/",
     app: "",
-    files: [] as [string, string][],
+    bins: [],
+    files: [],
+    hostname: "aphrody",
     gzip: true,
-    argv: [] as string[],
+    argv: [],
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -59,6 +77,12 @@ function parseArgs(argv: string[]) {
         break;
       case "--app":
         options.app = value();
+        break;
+      case "--bin":
+        options.bins.push(value());
+        break;
+      case "--hostname":
+        options.hostname = value();
         break;
       case "--file": {
         const spec = value();
@@ -86,11 +110,20 @@ function parseArgs(argv: string[]) {
   return options;
 }
 
-// ELF64 little-endian: the interpreter (PT_INTERP) and DT_NEEDED sonames.
-export function elfDependencies(bytes: Uint8Array): { interp?: string; needed: string[] } {
+export interface ElfInfo {
+  interp?: string;
+  needed: string[];
+  runpath: string[];
+  machine: number;
+}
+
+// ELF64 little-endian: the interpreter (PT_INTERP), DT_NEEDED sonames and
+// DT_RUNPATH (or DT_RPATH) directories.
+export function elfDependencies(bytes: Uint8Array): ElfInfo {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  if (view.getUint32(0) !== 0x7f454c46) throw new Error("not an ELF file");
+  if (bytes.length < 64 || view.getUint32(0) !== 0x7f454c46) throw new Error("not an ELF file");
   if (bytes[4] !== 2 || bytes[5] !== 1) throw new Error("only ELF64 little-endian is supported");
+  const machine = view.getUint16(0x12, true);
   const phoff = Number(view.getBigUint64(0x20, true));
   const phentsize = view.getUint16(0x36, true);
   const phnum = view.getUint16(0x38, true);
@@ -113,7 +146,7 @@ export function elfDependencies(bytes: Uint8Array): { interp?: string; needed: s
     else if (type === 2) dynamic = [offset, filesz];
     else if (type === 3) interp = cstr(offset);
   }
-  if (!dynamic) return { interp, needed: [] };
+  if (!dynamic) return { interp, needed: [], runpath: [], machine };
 
   const toOffset = (vaddr: number) => {
     const load = loads.find(l => vaddr >= l.vaddr && vaddr < l.vaddr + l.filesz);
@@ -122,46 +155,100 @@ export function elfDependencies(bytes: Uint8Array): { interp?: string; needed: s
   };
   let strtab = 0;
   const neededOffsets: number[] = [];
+  let runpath: number | undefined;
+  let rpath: number | undefined;
   for (let at = dynamic[0]; at + 16 <= dynamic[0] + dynamic[1]; at += 16) {
     const tag = Number(view.getBigInt64(at, true));
     const val = Number(view.getBigUint64(at + 8, true));
     if (tag === 0) break;
     if (tag === 1) neededOffsets.push(val);
     else if (tag === 5) strtab = toOffset(val);
+    else if (tag === 15) rpath = val;
+    else if (tag === 29) runpath = val;
   }
-  return { interp, needed: neededOffsets.map(offset => cstr(strtab + offset)) };
-}
-
-function findLibrary(sysroot: string, soname: string): string {
-  for (const dir of ["lib", "usr/lib", "lib64", "usr/lib64", "usr/local/lib"]) {
-    const candidate = join(sysroot, dir, soname);
-    try {
-      if (statSync(candidate).isFile()) return candidate;
-    } catch {}
-  }
-  throw new Error(`${soname} not found under ${sysroot}; pass --sysroot or --file`);
-}
-
-// newc (SVR4 without CRC): a 110-byte ASCII header, the NUL-terminated name and
-// the data, each padded to 4 bytes.
-export function newc(entries: Entry[]): Uint8Array {
-  const chunks: Uint8Array[] = [];
-  const encoder = new TextEncoder();
-  const hex = (n: number) => (n >>> 0).toString(16).padStart(8, "0");
-  const pad = (length: number) => new Uint8Array((4 - (length % 4)) % 4);
-  let ino = 1;
-  const push = (path: string, mode: number, data: Uint8Array, rdev: [number, number]) => {
-    const name = encoder.encode(path + "\0");
-    const nlink = (mode & 0o170000) === S_IFDIR ? 2 : 1;
-    const fields = [ino++, mode, 0, 0, nlink, 0, data.length, 0, 0, rdev[0], rdev[1], name.length, 0];
-    const header = encoder.encode("070701" + fields.map(hex).join(""));
-    chunks.push(header, name, pad(header.length + name.length), data, pad(data.length));
+  const paths = runpath ?? rpath;
+  return {
+    interp,
+    needed: neededOffsets.map(offset => cstr(strtab + offset)),
+    runpath:
+      paths === undefined
+        ? []
+        : cstr(strtab + paths)
+            .split(":")
+            .filter(Boolean),
+    machine,
   };
-  for (const entry of entries) {
-    push(entry.path, entry.mode, entry.data ?? new Uint8Array(0), entry.rdev ?? [0, 0]);
+}
+
+// musl's loader serves these names itself (ldso/dynlink.c, `reserved`).
+const MUSL_BUILTIN = /^lib(c|pthread|rt|m|dl|util|xnet)\.so(\.|$)/;
+
+const MULTIARCH: Record<number, string> = { 62: "x86_64-linux-gnu", 183: "aarch64-linux-gnu" };
+
+export interface SysrootFile {
+  // Absolute path inside the sysroot / image, after following every symlink.
+  path: string;
+  // Symlinks crossed on the way, as image paths and their raw targets.
+  links: [string, string][];
+}
+
+// Follows symlinks with the sysroot as `/`, so an absolute link such as
+// /lib/libc.musl-x86_64.so.1 -> /lib/ld-musl-x86_64.so.1 never escapes to the host.
+export function resolveInSysroot(sysroot: string, path: string): SysrootFile | undefined {
+  const links: [string, string][] = [];
+  let parts = path.split("/").filter(Boolean);
+  for (let hops = 0; hops < 40; hops++) {
+    let current = "";
+    let restarted = false;
+    for (let i = 0; i < parts.length; i++) {
+      const next = current + "/" + parts[i];
+      let stat;
+      try {
+        stat = lstatSync(join(sysroot, next));
+      } catch {
+        return undefined;
+      }
+      if (stat.isSymbolicLink()) {
+        let target = readlinkSync(join(sysroot, next));
+        // Windows stores `/bin/busybox` as `C:\bin\busybox`.
+        if (process.platform === "win32")
+          target = target.replace(/^(\\\\\?\\|\\\?\?\\)?[A-Za-z]:/, "").replaceAll("\\", "/");
+        links.push([next, target]);
+        const base = target.startsWith("/") ? [] : current.split("/").filter(Boolean);
+        parts = posix.normalize([...base, ...target.split("/"), ...parts.slice(i + 1)].join("/")).split("/");
+        parts = parts.filter(p => p && p !== "." && p !== "..");
+        restarted = true;
+        break;
+      }
+      current = next;
+    }
+    if (!restarted) {
+      try {
+        return statSync(join(sysroot, current)).isFile() ? { path: current, links } : undefined;
+      } catch {
+        return undefined;
+      }
+    }
   }
-  push("TRAILER!!!", 0, new Uint8Array(0), [0, 0]);
-  return Buffer.concat(chunks);
+  throw new Error(`too many symlinks resolving ${path} in ${sysroot}`);
+}
+
+function searchDirs(sysroot: string, info: ElfInfo, origin: string): string[] {
+  const dirs = info.runpath.map(dir => dir.replaceAll("$ORIGIN", origin).replaceAll("${ORIGIN}", origin));
+  if (info.interp && posix.basename(info.interp).startsWith("ld-musl")) {
+    const arch = posix
+      .basename(info.interp)
+      .replace(/^ld-musl-/, "")
+      .replace(/\.so\.1$/, "");
+    const pathFile = join(sysroot, "etc", `ld-musl-${arch}.path`);
+    if (existsSync(pathFile)) dirs.push(...readFileSync(pathFile, "utf8").split(/[:\n]/).filter(Boolean));
+    else dirs.push("/lib", "/usr/local/lib", "/usr/lib");
+  } else {
+    const triple = MULTIARCH[info.machine];
+    if (triple) dirs.push(`/lib/${triple}`, `/usr/lib/${triple}`);
+    dirs.push("/lib", "/usr/lib", "/lib64", "/usr/lib64", "/usr/local/lib");
+  }
+  return dirs;
 }
 
 class Tree {
@@ -173,6 +260,10 @@ class Tree {
       const sub = parts.slice(0, i).join("/");
       if (!this.#entries.has(sub)) this.#entries.set(sub, { path: sub, mode: S_IFDIR | mode });
     }
+  }
+
+  has(path: string) {
+    return this.#entries.has(path.replace(/^\/+/, ""));
   }
 
   file(path: string, data: Uint8Array, mode: number) {
@@ -212,9 +303,46 @@ class Tree {
   }
 }
 
-if (import.meta.main) {
-  const options = parseArgs(process.argv.slice(2));
+// Adds an ELF already placed in the tree and, recursively, everything its
+// loader will open: PT_INTERP, then each DT_NEEDED found in the sysroot.
+function addElfDependencies(tree: Tree, sysroot: string, bytes: Uint8Array, imagePath: string, seen: Set<string>) {
+  const info = elfDependencies(bytes);
+  const musl = info.interp !== undefined && posix.basename(info.interp).startsWith("ld-musl");
+  if (info.interp) addSysrootFile(tree, sysroot, info.interp, seen, false);
+  const dirs = searchDirs(sysroot, info, posix.dirname(imagePath));
+  for (const soname of info.needed) {
+    if (musl && MUSL_BUILTIN.test(soname)) continue;
+    const candidates = soname.includes("/") ? [soname] : dirs.map(dir => posix.join(dir, soname));
+    if (!candidates.some(candidate => addSysrootFile(tree, sysroot, candidate, seen, true))) {
+      throw new Error(`${soname} (needed by ${imagePath}) not found under ${sysroot}; pass --sysroot or --file`);
+    }
+  }
+}
+
+function addSysrootFile(tree: Tree, sysroot: string, path: string, seen: Set<string>, optional: boolean): boolean {
+  const found = resolveInSysroot(sysroot, path);
+  if (!found) {
+    if (optional) return false;
+    throw new Error(`${path} not found under ${sysroot}`);
+  }
+  for (const [link, target] of found.links) if (!tree.has(link)) tree.symlink(link, target);
+  if (seen.has(found.path)) return true;
+  seen.add(found.path);
+  const bytes = readFileSync(join(sysroot, found.path));
+  tree.file(found.path, bytes, 0o755);
+  addElfDependencies(tree, sysroot, bytes, found.path, seen);
+  return true;
+}
+
+export interface Built {
+  entries: Entry[];
+  interp?: string;
+  files: number;
+}
+
+export function buildEntries(options: Options): Built {
   const tree = new Tree();
+  const seen = new Set<string>();
   for (const dir of ["dev", "proc", "sys", "run", "tmp", "root", "etc", "bin"]) tree.dir(dir);
   tree.charDevice("/dev/console", 0o600, 5, 1);
   tree.charDevice("/dev/null", 0o666, 1, 3);
@@ -222,13 +350,19 @@ if (import.meta.main) {
   const bun = readFileSync(resolve(options.bun));
   tree.file("/bin/bun", bun, 0o755);
   tree.symlink("/bin/bunx", "bun");
+  seen.add("bin/bun");
+  addElfDependencies(tree, options.sysroot, bun, "/bin/bun", seen);
+  const { interp } = elfDependencies(bun);
 
-  const { interp, needed } = elfDependencies(bun);
-  if (interp) tree.file(interp, readFileSync(join(options.sysroot, interp)), 0o755);
-  for (const soname of needed) {
-    // musl's libc.so is the interpreter itself.
-    if (interp && posix.basename(interp).startsWith("ld-musl") && soname === "libc.so") continue;
-    tree.file(`/lib/${soname}`, readFileSync(findLibrary(options.sysroot, soname)), 0o755);
+  for (const bin of options.bins) {
+    if (bin.startsWith("/") && resolveInSysroot(options.sysroot, bin)) {
+      addSysrootFile(tree, options.sysroot, bin, seen, false);
+    } else {
+      const bytes = readFileSync(resolve(bin));
+      const target = `/bin/${posix.basename(bin.replaceAll("\\", "/"))}`;
+      tree.file(target, bytes, 0o755);
+      addElfDependencies(tree, options.sysroot, bytes, target, seen);
+    }
   }
 
   // /init has no extension, so Bun loads it as JavaScript: strip the types here.
@@ -236,21 +370,58 @@ if (import.meta.main) {
     readFileSync(join(import.meta.dir, "initramfs-init.ts"), "utf8"),
   );
   tree.file("/init", new TextEncoder().encode(`#!/bin/bun\n${init}`), 0o755);
-  tree.file(
-    "/etc/bun-init.json",
-    new TextEncoder().encode(JSON.stringify({ argv: options.argv, cwd: options.app ? "/app" : "/" }, null, 2) + "\n"),
-    0o644,
-  );
+  const config = { argv: options.argv, cwd: options.app ? "/app" : "/", hostname: options.hostname || undefined };
+  tree.file("/etc/bun-init.json", new TextEncoder().encode(JSON.stringify(config, null, 2) + "\n"), 0o644);
+  if (options.hostname) tree.file("/etc/hostname", new TextEncoder().encode(options.hostname + "\n"), 0o644);
   if (options.app) {
     tree.dir("app");
     tree.copyHostDir(resolve(options.app), "/app");
   }
   for (const [host, target] of options.files) tree.file(target, readFileSync(host), 0o755);
 
-  const archive = newc(tree.entries());
+  const entries = tree.entries();
+  return { entries, interp, files: entries.filter(e => (e.mode & S_IFMT) === S_IFREG).length };
+}
+
+// newc (SVR4 without CRC): a 110-byte ASCII header, the NUL-terminated name and
+// the data, each padded to 4 bytes.
+export function newc(entries: Entry[]): Uint8Array {
+  const chunks: Uint8Array[] = [];
+  const encoder = new TextEncoder();
+  const hex = (n: number) => (n >>> 0).toString(16).padStart(8, "0");
+  const pad = (length: number) => new Uint8Array((4 - (length % 4)) % 4);
+  let ino = 1;
+  const push = (path: string, mode: number, data: Uint8Array, rdev: [number, number]) => {
+    const name = encoder.encode(path + "\0");
+    const nlink = (mode & S_IFMT) === S_IFDIR ? 2 : 1;
+    const fields = [ino++, mode, 0, 0, nlink, 0, data.length, 0, 0, rdev[0], rdev[1], name.length, 0];
+    const header = encoder.encode("070701" + fields.map(hex).join(""));
+    chunks.push(header, name, pad(header.length + name.length), data, pad(data.length));
+  };
+  for (const entry of entries) {
+    push(entry.path, entry.mode, entry.data ?? new Uint8Array(0), entry.rdev ?? [0, 0]);
+  }
+  push("TRAILER!!!", 0, new Uint8Array(0), [0, 0]);
+  return Buffer.concat(chunks);
+}
+
+if (import.meta.main) {
+  let options: Options;
+  try {
+    options = parseArgs(process.argv.slice(2));
+  } catch (error) {
+    if (!(error instanceof UsageError)) throw error;
+    console.error(`initramfs: ${error.message}`);
+    console.error(
+      "usage: bun scripts/aphrody/initramfs.ts --bun <linux bun> --out <file.cpio.gz> [--sysroot <dir>] [--bin <elf>]... [--app <dir>] [--hostname <name>] [--file host:/target]... [--no-gzip] [-- argv...]",
+    );
+    process.exit(2);
+  }
+  const built = buildEntries(options);
+  const archive = newc(built.entries);
   const output = options.gzip ? Bun.gzipSync(archive, { level: 9 }) : archive;
   await Bun.write(options.out, output);
   console.log(
-    `initramfs: ${options.out} (${(output.length / 1048576).toFixed(1)} MiB, interpreter ${interp ?? "none"}, ${needed.length} libraries)`,
+    `initramfs: ${options.out} (${(output.length / 1048576).toFixed(1)} MiB, interpreter ${built.interp ?? "none"}, ${built.files} files)`,
   );
 }
