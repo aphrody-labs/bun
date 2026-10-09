@@ -1696,9 +1696,7 @@ describe("Bun.TerminalScreen", () => {
 
   test("validates arguments", () => {
     expect(() => new Bun.TerminalScreen({ cols: 0 })).toThrow(expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }));
-    expect(() => new Bun.TerminalScreen({ rows: 5000 })).toThrow(
-      expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }),
-    );
+    expect(() => new Bun.TerminalScreen({ rows: 5000 })).toThrow(expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }));
     const screen = new Bun.TerminalScreen({ cols: 2, rows: 2 });
     // @ts-expect-error
     expect(() => screen.write(123)).toThrow(expect.objectContaining({ code: "ERR_INVALID_ARG_TYPE" }));
@@ -1719,7 +1717,7 @@ describe("Bun.TerminalScreen", () => {
       },
     });
     const proc = Bun.spawn({
-      cmd: [bunExe(), "-e", `process.stdout.write("\x1b[31mred\x1b[0m\r\n\x1b[1mDONE\x1b[0m")`],
+      cmd: [bunExe(), "-e", String.raw`process.stdout.write("\x1b[31mred\x1b[0m\r\n\x1b[1mDONE\x1b[0m")`],
       env: bunEnv,
       terminal,
     });
