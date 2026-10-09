@@ -134,6 +134,11 @@ fn parse(args: Vec<OsString>) -> Result<Args, String> {
     if parsed.json && parsed.format.is_none() {
         parsed.format = Some("json".into());
     }
+    for arch in [&parsed.options.arch, &parsed.options.host].into_iter().flatten() {
+        if toolchain::normalize_arch(arch).is_none() {
+            return Err(format!("unknown architecture: {arch}"));
+        }
+    }
     Ok(parsed)
 }
 

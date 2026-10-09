@@ -121,7 +121,7 @@ describe.skipIf(!isWindows)("bun msvc", () => {
 
   test("setup --dry-run plans the installer commands, msi lists orphans", async () => {
     const [setup, repair, msi] = await Promise.all([
-      run(["msvc", "setup", "--dry-run", "--add", "Microsoft.VisualStudio.Component.VC.CMake.Project"]),
+      run(["msvc", "setup", "--dry-run", "--add", "Microsoft.VisualStudio.Component.Bun.NotInstalled"]),
       run(["msvc", "setup", "--dry-run", "--repair"]),
       run(["msvc", "msi", "--json"]),
     ]);
