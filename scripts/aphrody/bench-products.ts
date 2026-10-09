@@ -74,6 +74,35 @@ export function validatePair(left: Sample, right: Sample, expected?: string) {
   if (left.value !== right.value || (expected !== undefined && left.value !== expected))
     throw new Error("Compared products returned different or invalid results");
 }
+export function reportCsv(report: {
+  cases: { id: string; status: string; raw?: { sample: number; order: string; left: Sample; right: Sample }[] }[];
+}): string {
+  const rows: unknown[][] = [
+    ["case", "sample", "order", "variant", "wallMs", "workMs", "rssKiB", "userMs", "systemMs", "value"],
+  ];
+  for (const entry of report.cases) {
+    for (const pair of entry.raw ?? []) {
+      for (const variant of ["left", "right"] as const) {
+        const sample = pair[variant];
+        rows.push([
+          entry.id,
+          pair.sample,
+          pair.order,
+          variant,
+          sample.wallMs,
+          sample.workMs,
+          sample.rssKiB,
+          sample.userMs,
+          sample.systemMs,
+          sample.value,
+        ]);
+      }
+    }
+  }
+  return (
+    rows.map(row => row.map(value => '"' + String(value ?? "").replaceAll('"', '""') + '"').join(",")).join("\n") + "\n"
+  );
+}
 const ROOT = resolve(import.meta.dir, "../..");
 async function measure(variant: Variant, out: string, name: string): Promise<Sample> {
   const resource = join(out, name + ".resources");
@@ -238,6 +267,13 @@ if (import.meta.main) {
       freeMemoryBytes: freemem(),
       loadAverage: loadavg(),
       bunVersion,
+      bunRevision: Bun.spawnSync([manifest.bun, "-p", "Bun.revision"], { stdout: "pipe", stderr: "pipe" })
+        .stdout.toString()
+        .trim(),
+      bunExecutableSha256: new Bun.CryptoHasher("sha256")
+        .update(await Bun.file(manifest.bun).arrayBuffer())
+        .digest("hex"),
+      runnerSha256: new Bun.CryptoHasher("sha256").update(await Bun.file(import.meta.path).arrayBuffer()).digest("hex"),
       sourceCommit: git(["rev-parse", "HEAD"]),
       candidatePatchSha256: new Bun.CryptoHasher("sha256").update(git(["diff", "--binary"])).digest("hex"),
       manifestSha256: new Bun.CryptoHasher("sha256").update(await Bun.file(manifestPath).arrayBuffer()).digest("hex"),
@@ -312,8 +348,10 @@ if (import.meta.main) {
     }
     await Bun.write(join(out, "product-benchmarks.json"), JSON.stringify(report, null, 2) + "\n");
     await Bun.write(join(out, "README.md"), reportMarkdown(report));
+    await Bun.write(join(out, "product-benchmarks.csv"), reportCsv(report));
   }
   await Bun.write(join(out, "product-benchmarks.json"), JSON.stringify(report, null, 2) + "\n");
   await Bun.write(join(out, "README.md"), reportMarkdown(report));
+  await Bun.write(join(out, "product-benchmarks.csv"), reportCsv(report));
   if (report.cases.some((entry: any) => entry.status === "failed")) process.exitCode = 1;
 }

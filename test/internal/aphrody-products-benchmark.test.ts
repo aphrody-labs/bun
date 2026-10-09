@@ -3,6 +3,7 @@ import {
   pairedInterval,
   parseMeasurement,
   reportMarkdown,
+  reportCsv,
   summary,
   validatePair,
 } from "../../scripts/aphrody/bench-products.ts";
@@ -35,4 +36,21 @@ test("reports keep unsupported hosts unmeasured", () => {
   expect(markdown).toContain("| windows | unsupported-host | — | — | — |");
   expect(markdown).toContain("Requires win32");
   expect(markdown).toContain("Wine");
+});
+
+test("raw CSV preserves paired samples and escapes correctness witnesses", () => {
+  const csv = reportCsv({
+    cases: [
+      {
+        id: "case,one",
+        status: "measured",
+        raw: [{ sample: 0, order: "AB", left: { wallMs: 1, value: 'a,"b"' }, right: { wallMs: 2, value: 'a,"b"' } }],
+      },
+      { id: "windows", status: "unsupported-host" },
+    ],
+  });
+  expect(csv.split("\n")).toHaveLength(4);
+  expect(csv).toContain('"case,one","0","AB","left","1"');
+  expect(csv).toContain('"a,""b"""');
+  expect(csv).not.toContain('"windows"');
 });
