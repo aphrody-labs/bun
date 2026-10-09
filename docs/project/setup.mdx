@@ -1,0 +1,87 @@
+---
+title: One-command setup
+description: Clone and build the aphrody-labs/bun fork, toolchains and dependencies included, with one command
+---
+
+One command clones `aphrody-labs/bun`, installs everything the build needs and ends with a debug build that prints its version (`bun bd --version`).
+
+<CodeGroup>
+
+```bash Linux & macOS
+curl -fsSL https://aphrody.com/bun/setup.sh | bash
+```
+
+```powershell Windows
+irm https://aphrody.com/bun/setup.ps1 | iex
+```
+
+</CodeGroup>
+
+The same launchers live in the repository and can be fetched from GitHub directly:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install-dev.sh | bash
+```
+
+```powershell
+irm https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install-dev.ps1 | iex
+```
+
+Plan for 30 to 90 minutes on the first run and about 40 GB of free disk space. Most of that is the first build.
+
+## What it does
+
+`install-dev.sh` (Ubuntu/Debian, Alpine, macOS) and `install-dev.ps1` (Windows) install the fork's `bun` when the machine has none or has an upstream one (`scripts/aphrody/install.sh` / `install.ps1`, verified against the release's `SHA256SUMS.txt`). They then run `scripts/aphrody/setup.ts`, which takes these steps in order:
+
+| Step | Linux | macOS | Windows |
+| --- | --- | --- | --- |
+| Clone | `git clone --filter=blob:none` into `~/bun` | `~/bun` | `C:\bun` |
+| System packages | apt or apk: compiler, CMake, NASM, ccache, git | Xcode Command Line Tools, Homebrew: CMake, NASM, ccache | winget: Git, CMake, NASM, PowerShell 7 |
+| LLVM, at the series of `pins.llvm` | apt.llvm.org (Debian/Ubuntu), `edge/main` (Alpine) | `brew install llvm@23` | release tarball, verified against the sha256 digest GitHub publishes for it, in `%LOCALAPPDATA%\bun\toolchain`, with `BUN_TOOLCHAIN_LLVM` set |
+| Rust | `rustup-init`, verified against its `.sha256`, then `rustup toolchain install` for `rust-toolchain.toml` | same | same |
+| MSVC and the Windows SDK | | | `bun msvc setup --toolset 14.44` |
+| JS dependencies | `bun install` | same | same |
+| Native dependencies | every `clone-*` target of the build: `vendor/*` at their pinned commits, the WebKit prebuilt, Node.js headers | same | same |
+| First build | `bun bd --version` | same | same |
+
+Every step checks its own result first. A second run, or a run after a failure, only does what is missing. Downloads are cached in `~/.bun/setup-cache` under their sha256.
+
+## Options
+
+Options go after `bash -s --` on Linux and macOS, or in `APHRODY_BUN_SETUP_ARGS` on Windows. In a checkout, pass them to the script itself:
+
+```bash
+curl -fsSL https://aphrody.com/bun/setup.sh | bash -s -- --dry-run
+bun scripts/aphrody/setup.ts --no-build
+```
+
+```powershell
+$env:APHRODY_BUN_SETUP_ARGS = "--dry-run"; irm https://aphrody.com/bun/setup.ps1 | iex
+```
+
+| Option | Effect |
+| --- | --- |
+| `--dry-run` | Print each step with its state and the commands it would run. Nothing is changed. Add `--json` to get the plan as JSON. |
+| `--dir <path>` | Checkout to use or create. `APHRODY_BUN_CHECKOUT` sets the default. |
+| `--ref <ref>` | Branch or tag to clone. Defaults to `main`. |
+| `--no-build` | Stop before `bun bd --version`. |
+| `--no-system` | Skip the system packages, for machines where you manage them yourself. |
+| `--no-update` | Leave an existing checkout as it is. By default, a clean checkout on a branch is fast-forwarded. |
+| `--packages` | Also fetch the Cargo git dependencies of `packages/*` (the `aphrody-labs` forks of Oxc, PyO3 and wry). |
+
+`APHRODY_BUN_REPO` points the launchers and the clone at another fork. `GITHUB_TOKEN` or `GH_TOKEN`, when set, is sent with the GitHub API requests.
+
+## Dependencies
+
+`scripts/aphrody/deps.json` lists every dependency of the build: the vendored C/C++ libraries and their commits, the WebKit prebuilt, the Cargo git dependencies of `packages/*`, our forks (`aphrody-labs/*`) and the toolchains, each with its pinned ref and GitHub visibility. It is generated from the sources, and a test fails when they pin something else:
+
+```bash
+bun scripts/aphrody/setup.ts deps --write   # regenerate, visibility from `gh repo view`
+bun scripts/aphrody/setup.ts deps --check   # what test/internal/aphrody-setup.test.ts checks
+```
+
+The repository has no git submodules. The build fetches the native dependencies itself as GitHub archives at pinned commits. `vendor/uv`, `vendor/find-msvc-tools` and `vendor/windows-rs` are committed. npm dependencies, including `tailwindcss`, come from the registry through `bun.lock`.
+
+## Manual setup
+
+To install the toolchains yourself, see [Contributing](/project/contributing) and [Building Windows](/project/building-windows), then run `bun scripts/aphrody/setup.ts --no-system` to check what is still missing.

@@ -199,6 +199,7 @@
             "pages": [
               "/project/roadmap",
               "/project/benchmarking",
+              "/project/setup",
               "/project/contributing",
               "/project/building-windows",
               "/project/bindgen",

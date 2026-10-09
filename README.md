@@ -41,6 +41,20 @@ bun install <pkg>             # install a package
 bunx cowsay 'Hello, world!'   # execute a package
 ```
 
+## Build this fork in one command
+
+This repository is `aphrody-labs/bun`, a fork of Bun. One command clones it, installs the toolchains (LLVM, Rust, MSVC on Windows) and the dependencies, and builds it:
+
+```sh
+# Linux & macOS
+curl -fsSL https://aphrody.com/bun/setup.sh | bash
+
+# Windows
+irm https://aphrody.com/bun/setup.ps1 | iex
+```
+
+The launchers are [`scripts/aphrody/install-dev.sh`](scripts/aphrody/install-dev.sh) and [`install-dev.ps1`](scripts/aphrody/install-dev.ps1). Options, steps and the dependency inventory: [docs/project/setup.mdx](docs/project/setup.mdx). The fork's runtime alone: `curl -fsSL https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install.sh | bash` (Windows: `install.ps1`).
+
 ## Install
 
 Bun supports Linux (x64 & arm64), macOS (x64 & Apple Silicon), and Windows (x64 & arm64).
