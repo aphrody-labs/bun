@@ -31,8 +31,10 @@ Fichiers : `packages/bun-next/**`, `test/integration/next-bun*/`, `test/integrat
   test/integration/next-bun-pages/test/next-bun-pages.test.ts` → 12 pass, 0 fail (variante « Bun.build » incluse ;
   prerender de `/`, `/_not-found`, `/_global-error`, scripts et chunk du composant client servis en 200). Écart
   relevé : `import()` d'un module CJS donne un espace de noms `__toESM` qui hérite du prototype de `module.exports`
-  (le proxy client de React renvoie `Promise.prototype`) ; contourné dans la référence client générée. ⏳ next/dynamic,
-  hydratation vérifiée dans un navigateur.
+  (le proxy client de React renvoie `Promise.prototype`) ; contourné dans la référence client générée. ✅ next/dynamic (F1, `8c527c5754e`, `7a06342bb07`) : Pages Router
+  avec les mêmes ids de module côté serveur et navigateur (`react-loadable-manifest.json`, `dynamicIds`), App Router
+  sans changement ; VPS : `next-bun-pages.test.ts` 8 pass (16.1.6, 16.4.0, 16.5 canary), `next-app.test.ts` 4 pass.
+  ⏳ Hydratation vérifiée dans un navigateur, CSS importé par un module dynamique (non vérifié).
 - ⏳ J5 dev/HMR (`HotReloaderBun` sur Bun.build en watch).
 
 ### D. Plugin Tailwind CSS — `@aphrody/bun-plugin-tailwind` (✅)
@@ -112,7 +114,7 @@ ext.js` (`--filter=blob:none`, `origin` + `upstream`), branche `canary`
 - ✅ AGENTS.md et `scripts/**` sous Bun via `bunify.ts` (marqueurs `<!-- aphrody:bun -->`, gardés par la sync) ;
   `bun run test-unit-bun` : 128 des 155 `packages/next/src/**/*.test.ts` sous `bun test --isolate`, 1398 pass
   (`f489e60f28`) ; n2b 397 → 378 constats. ⏳ 27 fichiers restent sur Jest.
-- 🔄 App Router dans le Bun.build intégré (F1, `4b680668eb`, `b3c7bead3b`) : `bun-build/app.ts` (port de
+- 🔄 App Router et next/dynamic dans le Bun.build intégré (F1, `4b680668eb`, `b3c7bead3b`, `31f5ba83fe`) : `bun-build/app.ts` (port de
   `build-app.js`, mêmes correctifs PostCSS et proxy CJS), `shared.ts` ; `tsgo --noEmit -p packages/next/tsconfig.json`
   sans erreur dans bun-build (3 erreurs préexistantes de tsgo dans `@sinclair/typebox` de node_modules). Non exécuté
   dans le fork (la version `@aphrody/next-bun` est prouvée).
