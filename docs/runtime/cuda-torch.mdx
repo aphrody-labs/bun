@@ -1,0 +1,27 @@
+---
+title: PyTorch CUDA
+description: Install PyTorch with the CUDA build matching the NVIDIA driver in a uv virtual environment and check it from bun python
+---
+
+`scripts/aphrody/cuda-torch.ts` creates a virtual environment with the embedded UV (`uv`, aliased to Bun), installs `torch` from the PyTorch index that matches the CUDA version reported by `nvidia-smi`, then runs `torch.cuda.is_available()` through `bun python`.
+
+```sh terminal icon="terminal"
+bun scripts/aphrody/cuda-torch.ts                 # detects the driver, installs into ~/.aphrody/venvs/torch-cuda
+bun scripts/aphrody/cuda-torch.ts --cuda cu128    # force an index
+bun scripts/aphrody/cuda-torch.ts --dry-run       # print the commands only
+```
+
+| Driver CUDA | Index   |
+| ----------- | ------- |
+| 13.0 and up | `cu130` |
+| 12.8, 12.9  | `cu128` |
+| older       | `cu126` |
+
+| Option             | Default                              |
+| ------------------ | ------------------------------------ |
+| `--dir <path>`     | `$APHRODY_HOME/venvs/torch-cuda`     |
+| `--python <ver>`   | `3.12`                               |
+| `--cuda <cuXXX>`   | detected from the driver             |
+| `--cpu`            | CPU wheels, for servers without GPU  |
+
+The script exits with status 3 when a CUDA index was requested and CUDA is not available after the install. Servers use `--cpu` only.
