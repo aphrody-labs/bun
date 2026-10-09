@@ -29,7 +29,8 @@ Agent M-bun, 2026-10-09. Lecture seule. Périmètre : runtime, outillage JS/TS, 
 - **X** :
   - crate `bun_wasm` (`c4d7ca9c410`) ;
   - repli en Rust pur de mimalloc, simdutf et highway sur wasm32 (`f55ad2a4774`) ;
-  - vérification sur la cible `wasm32-wasip1-threads` (`b71e31bf26a`).
+  - vérification sur la cible `wasm32-wasip1-threads` (`b71e31bf26a`) ;
+  - exports C du runtime natif (`Bun__atexit`, `Bun__onExit`, `bun_is_exiting`, `Bun__userAgent`, `Bun__stringSyntheticAllocationLimit`, `bun_stdio_tty`) retirés du module wasm, natif inchangé (H4, `c20fff4602a`) : 16 → 10 exports, 277 400 → 276 433 octets, `wasm-tools validate` VALID, smoke `C:/tmp/main/wasm-smoke.ts` vert.
 - **L** : `bun-n2b`, `bun-oxc` 0.3.0 et les plugins `@aphrody/bun-plugin-n2b` et `@aphrody/bun-plugin-oxc`.
 - **I** : `Bun.Archive` avec zip, mode et mtime (`5ffed5d5e53`).
 - **V** : `bun:ffi`.
@@ -92,7 +93,7 @@ Imports comptés dans les fichiers `ts`, `tsx`, `js` et `mjs` : `@aphrody/yolo-c
 | `bin/aphrody.ts` (lanceur, `Z1_PENDING_COMMANDS`) | — | — | `yolo/test/aphrody-launcher.test.ts` | — | réduire au fil de Z1 (retirer `create` dès maintenant : Y ✅) | — | Gate : `bun test packages/engine/yolo/test/aphrody-launcher.test.ts` | Z1/Y |
 | `packages/engine/runtime/src/tooling.ts` (NativeTooling) | 350 | 46e436e96e 2026-10-07 | parse, n2b et oxc ; `scripts/release/tooling-asset.ts` (graphe) | Oui : les plugins L (`packages/bun-n2b`, `packages/bun-oxc`). | suppr. | dédup et FFI plus petite | Gate : `bun test packages/engine/runtime` | L |
 | `packages/engine/runtime/src/tooling-schema.ts` | 176 | 0b74677d8d 2026-10-05 | `tooling.ts` ; générée par `scripts/tools/compat/scripts/n2b/generate-schema-types.ts` | Oui : `packages/bun-n2b/scripts/generate-schema-types.ts` dans le fork. | suppr. | une seule source de schéma | Gate : `bun test packages/engine/runtime` | L |
-| `packages/engine/runtime/src/ffi.ts` (`toCString`, `readOwnedBytes`, `nativeLibrary`) | 216 | 46e436e96e 2026-10-07 | runtime-sdk, rag-core | En partie : `bun:ffi` `toArrayBuffer` n'a pas de paramètre deallocator (`ffi.d.ts:922`). La libération par finaliseur reste à vérifier (non vérifié). | reste ; si V ajoute un finaliseur à `toArrayBuffer`, réduire `readOwnedBytes` | moins de copies | Gate : `bun bd test test/js/bun/ffi/ffi.test.ts` | V (optionnel) |
+| `packages/engine/runtime/src/ffi.ts` (`toCString`, `readOwnedBytes`, `nativeLibrary`) | 216 | 46e436e96e 2026-10-07 | runtime-sdk, rag-core | Le finaliseur existait déjà (`toArrayBuffer(ptr, off, len, ctx?, deallocator)`, `FFIObject.rs:603`) ; seuls les types manquaient (H4, `04ef0f8260f`). Le `free(data, len, cap)` d'`OWNED_SLOT` n'a pas la signature `(bytes, ctx)` d'un deallocator JSC. | reste ; `readOwnedString` décode la vue empruntée sans copie (aphrody `0296ad4c9c`) | moins de copies | Gate : `bun bd test test/js/bun/ffi/ffi.test.ts` | V (optionnel) |
 | `packages/engine/runtime` (reste : `index.ts`, desktop, modules) | ≈3500 | be449b3975 2026-10-09 | 38 importeurs | Non. | reste | — | — | — |
 | `packages/interop/native` (`@aphrody/bun`) | 5850 | be449b3975 2026-10-09 | 38 importeurs | G ✅ : la dédup est déjà faite. | reste | — | — | G |
 | ↳ `src/http.ts` | 81 | a43286b85f 2026-10-07 | aucun importeur (graphe : `requestJson`, 2 nœuds) | Identique, octet pour octet, à `infra/workspace/src/http.ts` et à `@aphrody/web/http`. | suppr. | dédup ×3 | Gate : `bun test packages/interop/native` | nouveau (aphrody) |
@@ -165,7 +166,7 @@ Importeurs : `cli-wasm` 2, `paths` 16, `workspace` 6, `update` 18, `http` 0, `fu
 1. **`bun:wasm` ne permet pas de surcharger cargo** (`src/js/bun/wasm.ts:307`) : lot 1.
 2. **`--windows-icon`, `--windows-title` et `--windows-publisher` sont refusés hors de Windows** (`Arguments.rs:2479-2486`) : lot 3.
 3. **Aucune commande `rename` ni bench micro des primitives** côté fork : lot 2 (Z1).
-4. **`toArrayBuffer` n'a pas de finaliseur ou deallocator** (`ffi.d.ts:922`) : lot 4, optionnel (non vérifié).
+4. ~~**`toArrayBuffer` n'a pas de finaliseur ou deallocator**~~ : faux, le natif l'acceptait déjà ; seuls les types et un test manquaient (lot 4, ✅ `04ef0f8260f`).
 
 ## Lots de migration (ordonnés, disjoints en fichiers)
 
@@ -193,6 +194,8 @@ Importeurs : `cli-wasm` 2, `paths` 16, `workspace` 6, `update` 18, `http` 0, `fu
    - Fork : `src/runtime/ffi/` et `packages/bun-types/ffi.d.ts`.
    - Gate : `bun bd test test/js/bun/ffi/ffi.test.ts`.
    - Dans aphrody : réduire `runtime/src/ffi.ts` `readOwnedBytes`.
+   - Statut : fork ✅ `04ef0f8260f` (H4). Le natif (`FFIObject.rs:603-657`, 5 arguments : ptr, byteOffset, byteLength, contexte ou deallocator, deallocator) et `docs/runtime/ffi.mdx:494` existaient déjà, et le Bun système `1.4.3-aphrody.2` les a. Ajouts : surcharges `toArrayBuffer`/`toBuffer` avec deallocator et contexte dans `ffi.d.ts`, fixture de types `test/integration/bun-types/fixture/ffi.ts`, fixture C qui enregistre bytes et contexte, et test `toArrayBuffer with a finalizer and context…` dans `test/js/bun/ffi/ffi.test.js`. Le test passe aussi avec le Bun système, puisqu'il couvre un comportement existant. `bun test test/js/bun/ffi/ffi.test.js -t finalizer` : 2 pass ; `bun test test/integration/bun-types/bun-types.test.ts` : 22 pass. `bun bd test test/js/bun/ffi/ffi.test.js` : passe finale.
+   - Aphrody ✅ `0296ad4c9c` : `readOwnedBytes` et `readOwnedString` partagent `withOwnedView`, et `readOwnedString` décode la vue empruntée (une copie de moins). Pas de copie zéro par finaliseur : le `free(data, len, cap)` des consommateurs (dont iecode `nie.ts:444`) n'a pas la signature `(bytes, ctx)`. Il faudrait un symbole natif dédié dans chaque bibliothèque, ce qui n'est pas fait. `bun test packages/engine/runtime/test/runtime-ffi.test.ts` : 11 pass.
 5. **B : retrait de forge**
    - Dans aphrody : supprimer `packages/engine/yolo/src/cli/forge/*` (1554 LOC), une fois la release B publiée.
    - Gate fork : `bun scripts/build/binary-expectations.ts` sur l'artefact Linux. Gate aphrody : `bun test packages/engine/yolo`.
