@@ -1708,7 +1708,7 @@ impl Expect {
                     if value.is_empty() {
                         continue;
                     }
-                    state.put(global_this, &key, value);
+                    state.put(global_this, &*key, value);
                 }
             }
         }
@@ -1744,7 +1744,7 @@ impl Expect {
             if value.is_empty() {
                 continue;
             }
-            target.put(global_this, &key, value);
+            target.put(global_this, &*key, value);
         }
         Ok(JSValue::UNDEFINED)
     }
