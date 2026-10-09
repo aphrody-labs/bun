@@ -350,6 +350,19 @@ declare module "bun:windows" {
     ): { exitCode: number | null; stdout: string; stderr: string };
   }
 
+  interface LogicalDrive {
+    root: string;
+    type: "removable" | "fixed" | "remote" | "optical" | "ramdisk" | "unknown";
+    totalBytes: number;
+    freeBytes: number;
+    availableBytes: number;
+  }
+
+  /** Logical drives visible to the process, with total and available capacity. */
+  namespace storage {
+    function drives(): LogicalDrive[];
+  }
+
   /** `true` on Windows. */
   const isSupported: boolean;
   /** Windows version, read once and cached. */

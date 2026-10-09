@@ -46,6 +46,7 @@ const jobInfoNative = $newRustFunction("windows/host.rs", "jsJobInfo", 1);
 const jobCloseNative = $newRustFunction("windows/host.rs", "jsJobClose", 1);
 const toastNative = $newRustFunction("windows/host.rs", "jsToast", 2);
 const wslDistributionsNative = $newRustFunction("windows/host.rs", "jsWslDistributions", 0);
+const storageDrivesNative = $newRustFunction("windows/host.rs", "jsStorageDrives", 0);
 
 function unsupportedError() {
   const error = new Error("bun:windows is only available on Windows");
@@ -566,6 +567,13 @@ const wsl = Object.freeze({
   },
 });
 
+const storage = Object.freeze({
+  drives() {
+    ensureSupported();
+    return JSON.parse(storageDrivesNative());
+  },
+});
+
 export default {
   isSupported,
   version,
@@ -583,4 +591,5 @@ export default {
   toast,
   notify,
   wsl,
+  storage,
 };
