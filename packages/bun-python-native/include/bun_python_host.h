@@ -7,6 +7,22 @@ extern "C" {
 #endif
 #define BUN_PYTHON_HOST_ABI_VERSION 1u
 uint32_t bun_py_abi_version(void);
+/* Optional capability bit 0: contiguous writable Python buffer leases. */
+uint64_t bun_py_capabilities(void);
+typedef struct BunPyBuffer {
+  uint32_t size;
+  uint32_t flags;
+  void *data;
+  uintptr_t length;
+  uint64_t lease;
+} BunPyBuffer;
+/* Set size=sizeof(BunPyBuffer), flags=1. Keep lease live while using the
+ * bytes; serialize writes with Python. Detach JS views before release. */
+int32_t bun_py_buffer_acquire(const char *expression, uint32_t flags, BunPyBuffer *out);
+int32_t bun_py_buffer_release(uint64_t lease);
+/* Bun external-ArrayBuffer GC callback: queues release, never calls Python/JS
+ * on a collector thread. Supply lease as deallocatorContext. */
+void bun_py_buffer_deallocator(void *bytes, void *deallocatorContext);
 /* UTF-8 argv including selected Python executable. Returns host status;
  * If CPython returns, writes its actual result. This terminal CLI entry can
  * terminate the process (notably SystemExit on CPython 3.12, and os._exit).

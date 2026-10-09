@@ -1,0 +1,89 @@
+{
+  "schema": "aphrody.python-toolchain-receipt/1",
+  "owner": "@aphrody/bun-python-toolchain",
+  "source": {
+    "repository": "aphrody-labs/vu",
+    "revision": "6ea52f1aada7269d81470dd9d93144555610868e",
+    "manifest": "vu-runtime/share/vu/manifest.json",
+    "manifestSchema": 1
+  },
+  "observedArtifacts": [
+    {
+      "name": "0.1.0-7c3db189",
+      "target": "x86_64-unknown-linux-gnu",
+      "revision": "7c3db1890921babc0127eb3593e2c149b2786d8e",
+      "manifestSha256": "d4a751df5f0ffae50d98b211c6a07e0e91efa49a97374275f607b46531fe2da8",
+      "files": {
+        "uv": "6cdbf04d6a53b2f17ac5a6a09e1c724a74089a7342ae1658293d5afc8642aa33",
+        "ruff": "b8a49121c927b9d95e91704068cc80381f653648e4ddb19edf4b9d1551add013",
+        "python": "0886fb76ceec8ff568d23079b5da6342bb41675e216e11525d4d6a9e65988d10"
+      }
+    },
+    {
+      "name": "0.1.0-cf385dd2",
+      "target": "x86_64-unknown-linux-gnu",
+      "revision": "cf385dd26dda1b2518116bd979e19f256aa5a954",
+      "manifestSha256": "8f7b050fb6572cfdbe1b895feede96b4e8369c36efe5cb6ee240266c47ff4a9f",
+      "files": {
+        "uv": "6cdbf04d6a53b2f17ac5a6a09e1c724a74089a7342ae1658293d5afc8642aa33",
+        "ruff": "b8a49121c927b9d95e91704068cc80381f653648e4ddb19edf4b9d1551add013",
+        "python": "0886fb76ceec8ff568d23079b5da6342bb41675e216e11525d4d6a9e65988d10"
+      }
+    },
+    {
+      "name": "0.1.0-f0743b52",
+      "target": "x86_64-unknown-linux-gnu",
+      "revision": "f0743b526600068f0181d579b53e72a87fd2731d",
+      "manifestSha256": "5cb68b9067662f097f8677ab90f52278af251252059412d543377d6386ed47c7",
+      "files": {
+        "uv": "6cdbf04d6a53b2f17ac5a6a09e1c724a74089a7342ae1658293d5afc8642aa33",
+        "ruff": "b8a49121c927b9d95e91704068cc80381f653648e4ddb19edf4b9d1551add013",
+        "python": "0886fb76ceec8ff568d23079b5da6342bb41675e216e11525d4d6a9e65988d10"
+      }
+    }
+  ],
+  "sidecars": {
+    "uv": {
+      "version": "0.12.23",
+      "revision": "46b84fd0bfec23b72f29e8e2185ba68a65052f48",
+      "upstream": "astral-sh/uv",
+      "lockBlob": "357c05bc89a3ed1b3aef2bf4d6354bec1a35b49c",
+      "license": "MIT OR Apache-2.0"
+    },
+    "ruff": {
+      "version": "0.16.10",
+      "revision": "3265ed1f944c98bb4c04d632fbefb1257cdb583d",
+      "upstream": "astral-sh/ruff",
+      "lockBlob": "af0a09d8590efe4f55cf36fc018c9a13cd02962e",
+      "license": "MIT"
+    }
+  },
+  "python": {
+    "version": "3.12.15",
+    "source": "python-build-standalone",
+    "release": "20261003",
+    "archiveSha256": "731af898886c5f821890dc901eca3c651cca8e51fa7308c159d12a1194aeac91"
+  },
+  "capabilities": {
+    "packageResolution": "delegated to the exact uv sidecar; this package adds no resolver",
+    "pythonLintFormat": "Ruff 0.16.10 sidecar",
+    "pythonParser": {
+      "implementation": "Ruff parser",
+      "implementationSource": "ruff crates/ruff_python_parser 0.0.16 at the accepted Ruff revision",
+      "implementationSourceSha256": "b0a56db1eedc62982ae732a0790e8defaeb192c033b6d6f4a3854b01c0125def",
+      "qualifiedBy": "ruff revision 3265ed1f944c98bb4c04d632fbefb1257cdb583d",
+      "surface": "Ruff CLI only; no parser library API is exported"
+    },
+    "cython": "discover-only; no version pin or source is bundled",
+    "jupyter": "discover-only; no version pin or source is bundled",
+    "treeSitterPython": "discover-only; no version pin or source is bundled",
+    "pytorch": "discover-only; inspect installed package and actual CPU/CUDA/ROCm runtime state; never install weights or drivers"
+  },
+  "artifactAcceptance": {
+    "targetMustMatchHost": true,
+    "requiredCapabilities": ["uv", "ruff", "python"],
+    "verifyManifestedSidecarSha256BeforeExecution": true,
+    "verifyManifestedVersionBeforeExecution": true,
+    "missingOrMismatchedPin": "reject without fallback to PATH"
+  }
+}

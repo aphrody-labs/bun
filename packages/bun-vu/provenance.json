@@ -1,0 +1,185 @@
+{
+  "schema": "aphrody.bun-vu-provenance/1",
+  "source": {
+    "repository": "aphrody-labs/vu",
+    "revision": "6ea52f1aada7269d81470dd9d93144555610868e",
+    "path": "/srv/aphrody-build/workspaces/vu-wsl",
+    "trackedSourceSize": "128 KiB crates; vendor tree observed 202 MiB (not transferred)",
+    "sourceFiles": {
+      ".cargo/config.toml": "46160c7d380ad01d68489b4a4a1946449b40929a15ca2f5fd345f72c3429360e",
+      ".gitignore": "02d17a0dcfa66812ea88b98f44f3a4e0c363c9c523b708767e1f54703cba83e1",
+      "Cargo.toml": "0455a7c3d07e6a8de5551bb96723c9c4aff3bc6bf1051f08f5c4e90a117fcbcc",
+      "LICENSE": "1eb85fc97224598dad1852b5d6483bbcf0aa8608790dcc657a5a2a761ae9c8c6",
+      "NOTICE": "366c865b0b0e95cb6489ef10a5793934d25945c7eccb4852421e5ac1e64023cd",
+      "README.md": "ebc9830cb082d56e1dd845ab8a3f72514cd2530c682a1ec8c6681acb8f72dadc",
+      "crates/vu-runtime/Cargo.toml": "37904559543f9bc11e4c2fa00f420c42e047778efa9e9c8ab175f6d2c789c1e4",
+      "crates/vu-runtime/build.rs": "ca4a4a4bdcb661fb1a43d6f4cf752f6246da932981eb450a045d50334dd0837d",
+      "crates/vu-runtime/py/compile.py": "ed4799fed84ae2a68414d2000bb2019e056fbaf12b86aedb6f1a68863d830a45",
+      "crates/vu-runtime/py/hf.py": "14433da3c65765d552c46ec26004ada0b0dee44c6bc55d162a5055ed8cf75c15",
+      "crates/vu-runtime/src/commands.rs": "23acc280c86d78a8e1c491dec39296bee7c6cfa17185a0ac6d15cfbb9b104f40",
+      "crates/vu-runtime/src/launcher.rs": "348e604fedc7de1eabfbdebf856cc0827ef550033dcb584d836eff82227a0b79",
+      "crates/vu-runtime/src/lib.rs": "d5e1d6971908208595d8d1f34fdd3ae0dfa6a1a67a332d9fc05313ddbeabc52b",
+      "crates/vu/Cargo.toml": "a1235316a917e2f39609725a5ad1635346559226a54852bbb4e22448cb134d67",
+      "crates/vu/build.rs": "26bbcbadb8788cd03c1c80a43c96b288ad3c6809e72ff3d153ea056f9f5078bb",
+      "crates/vu/src/main.rs": "08aaee60d7683b7c667ef0f9b71b7f9a0157febf77129a265da0abd4ecdc297e",
+      "package.json": "3afbb706b0b27708df0a7e4b22c11d81792692df43880f74a81a189336a767c9",
+      "rust-toolchain.toml": "4d566ea2381e8c28d6f1e2dce11b807e897094d6229b5610ad5419c7d97783bd",
+      "scripts/assemble.test.ts": "37b92d9d425f93ff364fc9795d43d87d55f0bed74841fbc9805d0c361b6abb62",
+      "scripts/assemble.ts": "64142da19e11879ddf47305d145a2598e3db51d2efafbd284d034a25e61ee537",
+      "scripts/bench-compile.ts": "1144ac09f26176f5d2670ad5911255ddffa917faac101269c4dcf691ef45eb8f",
+      "scripts/bench.test.ts": "5482d26e4d0373e99689ea2a7a512d6ca58fc3a9a62fdacd9880e4c349b3b5a3",
+      "scripts/bench.ts": "f0b46a2c2afc3ec59fabc2107b346991cb23a0a4dfa1221008c6a8d791cb915b",
+      "scripts/cli.test.ts": "16d02c76ad146810175772b0be9405ef3afdefe125c7add05452cadca5d566a1",
+      "scripts/fetch.test.ts": "b1f12005742ec3e40664fe179aa9519b7fecd972ce62a485158e48cc33d4ee5a",
+      "scripts/fetch.ts": "b31e44ebfc1676c5229f8270df231243ae75a7a9d9c211f6404c3487b440bf58",
+      "scripts/forge.ts": "c7794ec150a74336dbedb4721493b692a4810f1d18a1630b55a522f9365c3f87",
+      "scripts/glibc.test.ts": "d8fa8e4727b4b0157e1c29d40890afe5a10370fe3531b1b881e466e9468c058c",
+      "scripts/glibc.ts": "fc312ac7605670bf71278206076a1d016411a813cdbcd31323c7232e8d832624",
+      "scripts/hardware.test.ts": "753b1f24e96dfbd26f1136f6bd15f5e83f517dd547232784b3757647c4d81eef",
+      "scripts/hardware.ts": "e49336a9ae4174ed9508b8539ae924525d9820a7e97264affe720340ed9ba6e5",
+      "scripts/huggingface.test.ts": "4bd3d1bc106511c68b3842a081d08242d5ed858edead724b6539a4fe4ce48023",
+      "scripts/huggingface.ts": "e7d75292c41234fbed2861df2e4992366cdfe593e6353f67f4a13be783e41c47",
+      "scripts/install.test.ts": "a8bbb2e2aadd725cdee59efe36480352f3065fae0aac437f0e14636b20b6ba4a",
+      "scripts/install.ts": "8467dc39dfbebb725c6b8e3686aabc4f41516101c4187e7906ee720b3475017d",
+      "scripts/lib.test.ts": "63e1533bf62af7e0f3be0901c03eeb2a1b21849fcb3a8d064f0c50f3d16d85c1",
+      "scripts/lib.ts": "eee58b56f26ae36212e302719380e8e85e7bb87464740de5c45b7bc3418eccdc",
+      "scripts/manifest.test.ts": "05e57566a06a9cd6fdce7364dba92d3db10472154ee92c7145feaba3359899f6",
+      "scripts/manifest.ts": "33912178373788196e0602e620caef24f8fb1de37ebf77d501af4b0aaf1c058a",
+      "scripts/programs.test.ts": "7550f28fc1ccde57c9136da3108758761e20a7ff2cfb57e15c13ba0f0c701965",
+      "scripts/shared-libpython.test.ts": "522d6d2a5727ca29b2e4ac1e35c848cfdc8c64f091aa5690b0a1db4ee398b3b8",
+      "scripts/shared-libpython.ts": "68df1070ab0cc654f6ded13b9758f34858e4157adb06b1ecd031c22cab728134",
+      "scripts/smoke.ts": "4a08d502a92860c392c6feea7404f33fe2fc6e512f693a2a015f3365214610fd",
+      "vendor.json": "5bf4c3954cfadfb3eb8f2534fdf560771b9745746a79d3d1c7964c719345a76a",
+      "vu.json": "bb4c30a8695100b86e5f695f9080e311ff3c5c114d39b09c5c65f99ea210d5ef"
+    }
+  },
+  "transfer": {
+    "destination": "packages/bun-vu",
+    "files": {
+      ".gitignore": "4369e551a875125f4201a298bffe29857dd7aeb03edd6d0a8bc11467bc70dbeb",
+      "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "NOTICE": "366c865b0b0e95cb6489ef10a5793934d25945c7eccb4852421e5ac1e64023cd",
+      "README.md": "480a4ca3a5a5870a0f4fc7fd4bdce7df8b0ba62a1760f8796f18d0be0b4cfce2",
+      "package.json": "58246517c4383bd93db0e674c87d75373fa594e6e8532c64fce4e80a343616c5",
+      "scripts/assemble.test.ts": "ecc1915792b4f62fea1d5f4d9e22a984564b90cac9e10f78b76644a2c0e766d0",
+      "scripts/assemble.ts": "65ce0bd14610d4249f1ab6e8c1c58c402a589aad7f1bd7f0ba51a1c234c130da",
+      "scripts/bench-compile.ts": "03dcd54e26a940a512c8f5109b652b4cdae33d7b502a5a318a9dc76746cea03c",
+      "scripts/bench.test.ts": "5482d26e4d0373e99689ea2a7a512d6ca58fc3a9a62fdacd9880e4c349b3b5a3",
+      "scripts/bench.ts": "f0b46a2c2afc3ec59fabc2107b346991cb23a0a4dfa1221008c6a8d791cb915b",
+      "scripts/cli.test.ts": "16d02c76ad146810175772b0be9405ef3afdefe125c7add05452cadca5d566a1",
+      "scripts/fetch.test.ts": "f84d9a0da1c919f93dda91b2f379582f7368295eb89859a4fb02a8b7c39d656d",
+      "scripts/fetch.ts": "fdee49f0b37915562183bb30034c049c99fe0411730b55a2d1b28875057d55ec",
+      "scripts/forge.ts": "86a5c400c3be2182febd46e787c74c7bc9c5a234d77638eb78c8ae75b068fc44",
+      "scripts/glibc.test.ts": "f0541a5d27db57cb530f65f49df78764643bae11e68a2d443a9b1570625bced6",
+      "scripts/glibc.ts": "fc312ac7605670bf71278206076a1d016411a813cdbcd31323c7232e8d832624",
+      "scripts/hardware.test.ts": "753b1f24e96dfbd26f1136f6bd15f5e83f517dd547232784b3757647c4d81eef",
+      "scripts/hardware.ts": "e49336a9ae4174ed9508b8539ae924525d9820a7e97264affe720340ed9ba6e5",
+      "scripts/huggingface.test.ts": "c5dfe7f43aee8b6a2afb6593a4ade21d5216cbec63b8cda66440e1d9b58111d9",
+      "scripts/huggingface.ts": "e7d75292c41234fbed2861df2e4992366cdfe593e6353f67f4a13be783e41c47",
+      "scripts/install.test.ts": "4721258a1a46162952cb1e7bff71e670f7781f615208f700957158b1155424c8",
+      "scripts/install.ts": "837ce97f1494dd85ec9f77f1b17d77faa9f3a7ca64420a375f65b62e6487f090",
+      "scripts/lib.test.ts": "63e1533bf62af7e0f3be0901c03eeb2a1b21849fcb3a8d064f0c50f3d16d85c1",
+      "scripts/lib.ts": "cb2a55f7c5bbecd5337b7c143bd4afa68c81728995c7c6f05b8ae7f963d21f8b",
+      "scripts/manifest.test.ts": "7c2ef3332126739c8d7e76c106461291cf37b6cf91dcf24e2114f371ee992f1f",
+      "scripts/manifest.ts": "07e621602a9878771f921ffd1514bb33a93d553f2de0f8df3520a86c93d888d4",
+      "scripts/programs.test.ts": "adf9d24194ae433346efc212800fdf94bb60f74bbbc7c82335760944c6d8ce22",
+      "scripts/shared-libpython.test.ts": "522d6d2a5727ca29b2e4ac1e35c848cfdc8c64f091aa5690b0a1db4ee398b3b8",
+      "scripts/shared-libpython.ts": "b7d0610fb9177524628ec0d1eccf572a172014b13159a63de4b3b687ce18efed",
+      "scripts/smoke.ts": "4a08d502a92860c392c6feea7404f33fe2fc6e512f693a2a015f3365214610fd",
+      "vendor.json": "5bf4c3954cfadfb3eb8f2534fdf560771b9745746a79d3d1c7964c719345a76a",
+      "vu.json": "8e2ac45417926e5f1e7d544cffef736cac164a99c8d0f9b5b12055e4eb8f4636",
+      "scripts/windows-rename.ts": "e971a15820ddbd32cacde8c7e147567d2355b43c725b38fd8910ff0e9ca931da"
+    },
+    "excluded": [
+      ".git",
+      ".claude",
+      "receipts/**",
+      "**/__pycache__/**",
+      "**/*.pyc",
+      "vendor/**",
+      "build/**",
+      "target/**",
+      "dist/**"
+    ],
+    "preexistingRuntime": {
+      "commit": "3eb98a38742560b180513f7ac20bd7bfb00ea983",
+      "sourceRevision": "6ea52f1aada7269d81470dd9d93144555610868e",
+      "files": {
+        "crates/vu/Cargo.toml": "a1235316a917e2f39609725a5ad1635346559226a54852bbb4e22448cb134d67",
+        "crates/vu/src/main.rs": "08aaee60d7683b7c667ef0f9b71b7f9a0157febf77129a265da0abd4ecdc297e",
+        "crates/vu/build.rs": "26bbcbadb8788cd03c1c80a43c96b288ad3c6809e72ff3d153ea056f9f5078bb",
+        "crates/vu-runtime/Cargo.toml": "37904559543f9bc11e4c2fa00f420c42e047778efa9e9c8ab175f6d2c789c1e4",
+        "crates/vu-runtime/build.rs": "ca4a4a4bdcb661fb1a43d6f4cf752f6246da932981eb450a045d50334dd0837d",
+        "crates/vu-runtime/src/lib.rs": "d5e1d6971908208595d8d1f34fdd3ae0dfa6a1a67a332d9fc05313ddbeabc52b",
+        "crates/vu-runtime/src/commands.rs": "23acc280c86d78a8e1c491dec39296bee7c6cfa17185a0ac6d15cfbb9b104f40",
+        "crates/vu-runtime/src/launcher.rs": "348e604fedc7de1eabfbdebf856cc0827ef550033dcb584d836eff82227a0b79",
+        "crates/vu-runtime/py/hf.py": "14433da3c65765d552c46ec26004ada0b0dee44c6bc55d162a5055ed8cf75c15",
+        "crates/vu-runtime/py/compile.py": "ed4799fed84ae2a68414d2000bb2019e056fbaf12b86aedb6f1a68863d830a45"
+      },
+      "bunWorkspaceFiles": {
+        "Cargo.toml": "870335577649e21957e91bc310cd54399b0e81e3772d8f2214a33a1373f0d3d6",
+        "Cargo.lock": "345d0e466450b4b63ffa82c980dd7da05816ed5e51d52d17d84fd0b6e7d1f871",
+        ".cargo/config.toml": "87e2505072e8d513ceffdf69a0c351e15eb56ba6f700fa186787d8630aa5726d",
+        "rust-toolchain.toml": "4d566ea2381e8c28d6f1e2dce11b807e897094d6229b5610ad5419c7d97783bd"
+      },
+      "notes": [
+        "These runtime crate files were already committed on the isolated branch before this owned packaging batch.",
+        "Runtime crate hashes match the source revision; the workspace manifest/lock are retained as integrated Bun-package files.",
+        "They are not part of this lane commit."
+      ]
+    },
+    "duplicateHelpers": {
+      "scripts/programs/compile.py": {
+        "disposition": "removed byte-identical packaging copy; Rust include_str! helper remains canonical",
+        "canonicalSource": "crates/vu-runtime/py/compile.py",
+        "sha256": "ed4799fed84ae2a68414d2000bb2019e056fbaf12b86aedb6f1a68863d830a45"
+      },
+      "scripts/programs/hf.py": {
+        "disposition": "removed byte-identical packaging copy; Rust include_str! helper remains canonical",
+        "canonicalSource": "crates/vu-runtime/py/hf.py",
+        "sha256": "14433da3c65765d552c46ec26004ada0b0dee44c6bc55d162a5055ed8cf75c15"
+      }
+    }
+  },
+  "pins": {
+    "uv": {
+      "revision": "46b84fd0bfec23b72f29e8e2185ba68a65052f48",
+      "upstreamTag": "0.12.23",
+      "lockBlob": "357c05bc89a3ed1b3aef2bf4d6354bec1a35b49c"
+    },
+    "ruff": {
+      "revision": "3265ed1f944c98bb4c04d632fbefb1257cdb583d",
+      "upstreamTag": "0.16.10",
+      "lockBlob": "af0a09d8590efe4f55cf36fc018c9a13cd02962e"
+    },
+    "pyo3": {
+      "revision": "451d99fdcdcddf159e8e0a1186960b332cdb5d7c",
+      "upstreamTag": "v0.29.3"
+    },
+    "pythonBuildStandalone": {
+      "revision": "5e46737f6480fc315ebfea83866910cbfcc772f0",
+      "tag": "20261003",
+      "assets": {
+        "3.12.15": "731af898886c5f821890dc901eca3c651cca8e51fa7308c159d12a1194aeac91",
+        "3.14.8": "d9ec7a6935ade8b671a57ebaf111083d7314eab8dae5071d167054dadd2b97d6"
+      }
+    }
+  },
+  "notes": [
+    "Source license texts and notices were preserved.",
+    "Runtime Rust source hashes are recorded as provenance; Rust code remains outside this package file ownership scope.",
+    "Existing standalone CPython behavior remains the fallback pending shared-host ABI and permission qualification.",
+    "No receipts, provider authentication, caches, installed runtimes, datasets, binaries, pycache, or pyc files were transferred.",
+    "LICENSE bytes are normalized from CRLF to LF; legal text is unchanged. The source hash records the original CRLF file, while the transfer hash records the normalized package file.",
+    "The former scripts/programs/compile.py and hf.py copies were byte-identical to the canonical crates/vu-runtime/py helpers embedded with Rust include_str!; package tests run against the canonical source checkout and the redundant copies were removed.",
+    "2026-10-09 native Windows qualification: canonical manifest keys, native directory copying and atomic directory-link replacement; portable fixtures preserve POSIX-only ELF coverage on Linux. Immutable source hashes remain unchanged; transfer hashes track owned corrections."
+  ],
+  "validation": {
+    "scopedTests": {
+      "command": "VU_SOURCE_CHECKOUT=/srv/aphrody-build/workspaces/vu-wsl VU_PREFIX=/srv/aphrody-build/workspaces/vu-wsl/build/python PYTHONDONTWRITEBYTECODE=1 bun test ./packages/bun-vu/scripts/install.test.ts ./packages/bun-vu/scripts/programs.test.ts",
+      "result": "9 passed, 0 failed; Python unittest suite uses canonical source helpers and temporary test data",
+      "runtimeInstall": "none; installer test artifacts and activation paths are under temporary directories"
+    },
+    "licenseNormalization": "CRLF-to-LF only; normalized source bytes equal package LICENSE bytes"
+  }
+}
