@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: Apache-2.0
+# Absorbed from aphrody-labs/aphrody@5b36d40c6c (crates/os/ostd/guard, aphrody-guard).
+[package]
+publish = false
+name = "bun-guard"
+version = "1.0.0-canary"
+edition.workspace      = true
+rust-version.workspace = true
+authors.workspace      = true
+repository.workspace   = true
+license.workspace      = true
+description            = "Autonomous-agent safety guardrails: pre-main process hardening (disable core dumps, block ptrace attach, strip LD_*/DYLD_* loader env) and a cross-platform shell command-safety classifier (Allow / Prompt / Forbidden) for gating agent-issued commands. Inspired by OpenAI Codex (Apache-2.0)."
+
+[lints]
+workspace = true
+
+[dependencies]
+
+[target.'cfg(unix)'.dependencies]
+libc = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
