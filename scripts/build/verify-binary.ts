@@ -23,7 +23,9 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { closeSync, openSync, readFileSync, readSync, statSync, writeFileSync } from "node:fs";
+import { closeSync, openSync, readFileSync, readSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { type BinaryExpectations, symbolList, versionScriptGlobals } from "./binary-expectations.ts";
 import { BuildError, assert } from "./error.ts";
 
@@ -632,8 +634,20 @@ function verifyPE(spec: VerifySpec): void {
 /** Windows' command line tops out at 32K characters; keep each nm invocation well inside it. */
 const NM_ARGV_BUDGET = 16_000;
 
-/** Run `tool args... <inputs>` over all inputs, chunked to stay under the argv limit. */
-function* chunkedRun(tool: string, args: string[], inputs: string[]): Generator<{ stdout: string; stderr: string }> {
+/** Bytes of tool output parsed at a time: a debug JavaScriptCore.lib alone prints more than a JS string holds. */
+const OUTPUT_PIECE = 1 << 26;
+
+/**
+ * Run `tool args... <inputs>` over all inputs, chunked to stay under the argv limit. The output
+ * goes to a file and is yielded in pieces that end right before a line starting with `marker`
+ * (or at a line end when `marker` is omitted), so no record straddles two pieces.
+ */
+function* chunkedRun(
+  tool: string,
+  args: string[],
+  inputs: string[],
+  marker?: string,
+): Generator<{ stdout: string; stderr: string }> {
   for (let start = 0; start < inputs.length; ) {
     let end = start;
     let length = 0;
@@ -641,13 +655,55 @@ function* chunkedRun(tool: string, args: string[], inputs: string[]): Generator<
       length += inputs[end]!.length + 1;
       end++;
     } while (end < inputs.length && length + inputs[end]!.length < NM_ARGV_BUDGET);
-    const r = spawnSync(tool, [...args, ...inputs.slice(start, end)], { encoding: "utf8", maxBuffer: 1 << 30 });
-    if (r.error) throw new BuildError(`duplicates: failed to run ${tool}`, { cause: r.error });
-    if (r.signal) throw new BuildError(`duplicates: ${tool} died with ${r.signal}\n${r.stderr}`);
-    // A non-zero exit means some input could not be read; the caller turns
-    // the stderr lines into per-file diagnostics rather than dropping them.
-    yield { stdout: r.stdout, stderr: r.status === 0 ? "" : r.stderr || `${tool} exited ${r.status}` };
+    const outPath = join(tmpdir(), `verify-binary-${process.pid}-${start}.out`);
+    const out = openSync(outPath, "w");
+    let r;
+    try {
+      r = spawnSync(tool, [...args, ...inputs.slice(start, end)], {
+        stdio: ["ignore", out, "pipe"],
+        encoding: "utf8",
+        maxBuffer: 1 << 30,
+      });
+    } finally {
+      closeSync(out);
+    }
+    try {
+      if (r.error) throw new BuildError(`duplicates: failed to run ${tool}`, { cause: r.error });
+      if (r.signal) throw new BuildError(`duplicates: ${tool} died with ${r.signal}\n${r.stderr}`);
+      // A non-zero exit means some input could not be read; the caller turns
+      // the stderr lines into per-file diagnostics rather than dropping them.
+      let stderr = r.status === 0 ? "" : r.stderr || `${tool} exited ${r.status}`;
+      for (const stdout of readPieces(outPath, marker)) {
+        yield { stdout, stderr };
+        stderr = "";
+      }
+      if (stderr) yield { stdout: "", stderr };
+    } finally {
+      rmSync(outPath, { force: true });
+    }
     start = end;
+  }
+}
+
+function* readPieces(path: string, marker: string | undefined): Generator<string> {
+  const fd = openSync(path, "r");
+  try {
+    const decoder = new TextDecoder();
+    const buffer = Buffer.allocUnsafe(OUTPUT_PIECE);
+    let carry = "";
+    for (;;) {
+      const read = readSync(fd, buffer, 0, buffer.length, null);
+      carry += decoder.decode(buffer.subarray(0, read), { stream: read > 0 });
+      if (read === 0) break;
+      const at = marker === undefined ? carry.length : carry.lastIndexOf(marker);
+      const cut = at <= 0 ? -1 : carry.lastIndexOf("\n", at - 1);
+      if (cut < 0) continue;
+      yield carry.slice(0, cut + 1);
+      carry = carry.slice(cut + 1);
+    }
+    if (carry.length > 0) yield carry;
+  } finally {
+    closeSync(fd);
   }
 }
 
@@ -699,7 +755,7 @@ function coffDefinitions(
   // A standalone bitcode .obj makes objdump stop at it ("not a valid object
   // file"), so those go to nm only; inside archives objdump skips them itself.
   const inputs = allInputs.filter(f => !isBitcode(f));
-  for (const { stdout: out, stderr } of chunkedRun(objdump, ["-t"], inputs)) {
+  for (const { stdout: out, stderr } of chunkedRun(objdump, ["-t"], inputs, ":\tfile format ")) {
     errors.push(...toolErrors(stderr));
     // One block per object: `<path>:\tfile format coff-…` or `<archive>(<member>):…`.
     for (const block of out.split(/^(?=\S.*:\tfile format )/m)) {
