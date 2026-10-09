@@ -672,6 +672,10 @@ pub fn page_size() -> usize {
             GetSystemInfo(&mut info);
             info.dw_page_size as usize
         }
+        #[cfg(target_arch = "wasm32")]
+        {
+            65536
+        }
     })
 }
 

@@ -53,8 +53,11 @@ unsafe impl Allocator for FreesOnly<'_> {
 /// See the module doc.
 pub struct ArenaBox<'a, T: ?Sized>(Box<T, FreesOnly<'a>>);
 
+#[cfg(target_pointer_width = "64")]
 const _: () = assert!(size_of::<ArenaBox<'static, u64>>() == 8);
+#[cfg(target_pointer_width = "64")]
 const _: () = assert!(size_of::<ArenaBox<'static, [u64]>>() == 16);
+#[cfg(target_pointer_width = "64")]
 const _: () = assert!(size_of::<Option<ArenaBox<'static, [u64]>>>() == 16);
 
 impl<'a, T: ?Sized> ArenaBox<'a, T> {

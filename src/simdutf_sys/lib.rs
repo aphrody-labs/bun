@@ -1,5 +1,7 @@
 #![warn(unused_must_use)]
 pub mod simdutf;
+#[cfg(target_arch = "wasm32")]
+mod wasm_fallback;
 
 // Top-level re-exports of the safe slice-taking wrappers in `simdutf::validate`.
 // These are the canonical UTF-8 validation entry points for the codebase —

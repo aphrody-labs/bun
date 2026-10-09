@@ -215,9 +215,10 @@ pub use crate::types;
 
 pub use crate::helpers;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub use crate::ansi_renderer as ansi;
-pub use ansi::ImageUrlCollector;
-pub use ansi::Theme as AnsiTheme;
-pub use ansi::detect_kitty_graphics;
-pub use ansi::render_to_ansi;
-pub use ansi::{detect_light_background, detect_light_background_probing};
+#[cfg(not(target_arch = "wasm32"))]
+pub use ansi::{
+    ImageUrlCollector, Theme as AnsiTheme, detect_kitty_graphics, detect_light_background,
+    detect_light_background_probing, render_to_ansi,
+};

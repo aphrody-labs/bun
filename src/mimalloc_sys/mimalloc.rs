@@ -1,11 +1,14 @@
 #![allow(non_camel_case_types)]
 
-use core::ffi::{c_char, c_long, c_void};
+#[cfg(not(target_arch = "wasm32"))]
+use core::ffi::c_long;
+use core::ffi::{c_char, c_void};
 
 // `Option` below is the mimalloc `mi_option_t` enum, which shadows
 // `core::option::Option` in this module. Nullable fn-pointer params therefore
 // spell out `core::option::Option<...>` to avoid the shadow.
 
+#[cfg(not(target_arch = "wasm32"))]
 unsafe extern "C" {
     /// No preconditions; returns null on failure.
     pub safe fn mi_malloc(size: usize) -> *mut c_void;
@@ -21,6 +24,7 @@ unsafe extern "C" {
 
 pub type mi_output_fun = extern "C" fn(*const c_char, *mut c_void);
 
+#[cfg(not(target_arch = "wasm32"))]
 unsafe extern "C" {
     /// No preconditions.
     pub safe fn mi_collect(force: bool);
@@ -63,6 +67,7 @@ bun_opaque::opaque_ffi! {
     pub struct Heap;
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 unsafe extern "C" {
     pub fn mi_heap_new() -> *mut Heap;
     pub fn mi_heap_destroy(heap: *mut Heap);
@@ -95,6 +100,7 @@ pub type mi_heap_area_t = struct_mi_heap_area_s;
 type mi_block_visit_fun =
     extern "C" fn(*const Heap, *const mi_heap_area_t, *mut c_void, usize, *mut c_void) -> bool;
 
+#[cfg(not(target_arch = "wasm32"))]
 unsafe extern "C" {
     pub fn mi_heap_visit_blocks(
         heap: *const Heap,
@@ -156,6 +162,7 @@ pub enum Option {
     page_cross_thread_max_reclaim = 42,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 unsafe extern "C" {
     // `mi_option_*` take only by-value `#[repr(C)]` enum + scalar args and
     // mutate mimalloc-internal global state; no pointer invariants → `safe fn`.
@@ -226,3 +233,9 @@ pub unsafe fn mi_heap_zalloc_auto_align(heap: *mut Heap, size: usize, align: usi
         }
     }
 }
+
+#[cfg(target_arch = "wasm32")]
+#[path = "wasm_shim.rs"]
+mod wasm_shim;
+#[cfg(target_arch = "wasm32")]
+pub use wasm_shim::*;

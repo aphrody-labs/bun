@@ -43,7 +43,7 @@ static C_ALLOCATOR_VTABLE: &AllocatorVTable = &AllocatorVTable {
 mod memory_allocator_tags {
     use core::ffi::c_void;
 
-    const DEFAULT_ALLOCATOR_TAG: usize = 0xBEEFA110C; // "BEEFA110C"  beef a110c i guess
+    const DEFAULT_ALLOCATOR_TAG: usize = 0xBEEFA110C_u64 as usize; // "BEEFA110C"  beef a110c i guess
     pub(crate) const DEFAULT_ALLOCATOR_TAG_PTR: *mut c_void = DEFAULT_ALLOCATOR_TAG as *mut c_void;
 }
 

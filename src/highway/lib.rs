@@ -1,6 +1,12 @@
 // Direct `extern "C"` re-exports of the Google Highway SIMD C++ helpers.
 // Per crate map: `bun.highway.*` → `bun_highway::*` (same C++ backing).
 
+#[cfg(target_arch = "wasm32")]
+mod wasm_fallback;
+#[cfg(target_arch = "wasm32")]
+use wasm_fallback::*;
+
+#[cfg(not(target_arch = "wasm32"))]
 unsafe extern "C" {
     fn highway_index_of_char(haystack: *const u8, haystack_len: usize, needle: u8) -> usize;
 
@@ -884,6 +890,7 @@ pub fn count_mapping_delims(bytes: &[u8]) -> usize {
 }
 
 /// JSON structural index (simdjson-style stage 1) for one chunk of a document.
+#[cfg(not(target_arch = "wasm32"))]
 #[inline(always)]
 pub fn json_structural_index_chunk(
     chunk: &[u8],
@@ -912,6 +919,7 @@ pub fn json_structural_index_chunk(
 }
 
 /// XML structural index (stage 1) for one chunk of a document.
+#[cfg(not(target_arch = "wasm32"))]
 #[inline(always)]
 pub fn xml_structural_index_chunk(
     chunk: &[u8],
@@ -933,6 +941,7 @@ pub fn xml_structural_index_chunk(
 }
 
 /// [`xml_structural_index_chunk`] over UTF-16 code units (positions in units).
+#[cfg(not(target_arch = "wasm32"))]
 #[inline(always)]
 pub fn xml_structural_index16_chunk(
     chunk: &[u16],

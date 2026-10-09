@@ -1,5 +1,6 @@
 #![warn(unused_must_use)]
 
+#[cfg(not(target_arch = "wasm32"))]
 pub mod ansi_renderer;
 pub mod autolinks;
 pub(crate) mod blocks;

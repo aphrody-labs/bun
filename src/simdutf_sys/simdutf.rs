@@ -30,6 +30,7 @@ impl Status {
     // `_` => any other i32: not related to validation/transcoding.
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 unsafe extern "C" {
     pub(crate) fn simdutf__validate_utf8(buf: *const u8, len: usize) -> bool;
     pub(crate) fn simdutf__validate_utf8_with_errors(buf: *const u8, len: usize) -> SIMDUTFResult;
@@ -59,6 +60,9 @@ unsafe extern "C" {
     pub fn simdutf__utf16_length_from_utf8(input: *const u8, length: usize) -> usize;
     pub fn simdutf__utf8_length_from_latin1(input: *const u8, length: usize) -> usize;
 }
+
+#[cfg(target_arch = "wasm32")]
+pub use crate::wasm_fallback::*;
 
 pub mod validate {
     use super::*;
@@ -196,7 +200,13 @@ pub mod length {
 pub mod base64 {
     use super::SIMDUTFResult;
     use core::ffi::c_int;
+    #[cfg(target_arch = "wasm32")]
+    use crate::wasm_fallback::{
+        simdutf__base64_decode_from_binary, simdutf__base64_decode_from_binary_lenient,
+        simdutf__base64_encode, simdutf__base64_length_from_binary,
+    };
 
+    #[cfg(not(target_arch = "wasm32"))]
     unsafe extern "C" {
         fn simdutf__base64_encode(
             input: *const u8,
