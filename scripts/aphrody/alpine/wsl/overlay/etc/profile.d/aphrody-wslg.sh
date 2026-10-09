@@ -13,13 +13,15 @@ if [ -d /mnt/wslg ]; then
 	# WebKitGTK (Tauri on Linux): WSLg has no dmabuf import, the DMA-BUF renderer draws blank.
 	export WEBKIT_DISABLE_DMABUF_RENDERER="${WEBKIT_DISABLE_DMABUF_RENDERER:-1}"
 
+	# Opt-in (APHRODY_D3D12=1): WSL's glibc libd3d12.so aborts under musl+gcompat on its first
+	# device (std::system_error from its C++ runtime), so d3d12/dozen stay off by default.
 	_aphrody_arch=$(uname -m)
-	if [ -e /dev/dxg ] && [ -e /usr/lib/wsl/lib/libd3d12.so ] && [ -e /usr/lib/dri/d3d12_dri.so ]; then
+	if [ "${APHRODY_D3D12:-0}" = 1 ] && [ -e /dev/dxg ] && [ -e /usr/lib/wsl/lib/libd3d12.so ] && [ -e /usr/lib/dri/d3d12_dri.so ]; then
 		export GALLIUM_DRIVER="${GALLIUM_DRIVER:-d3d12}"
 		# Pick the adapter by name substring when several GPUs exist, e.g. NVIDIA.
 		[ -n "${APHRODY_GPU:-}" ] && export MESA_D3D12_DEFAULT_ADAPTER_NAME="$APHRODY_GPU"
 	fi
-	if [ -e /dev/dxg ] && [ -e "/usr/share/vulkan/icd.d/dzn_icd.$_aphrody_arch.json" ]; then
+	if [ "${APHRODY_D3D12:-0}" = 1 ] && [ -e /dev/dxg ] && [ -e "/usr/share/vulkan/icd.d/dzn_icd.$_aphrody_arch.json" ]; then
 		export VK_DRIVER_FILES="${VK_DRIVER_FILES:-/usr/share/vulkan/icd.d/dzn_icd.$_aphrody_arch.json}"
 		# wgpu apps reading Backends::from_env(): Vulkan through dozen.
 		export WGPU_BACKEND="${WGPU_BACKEND:-vulkan}"

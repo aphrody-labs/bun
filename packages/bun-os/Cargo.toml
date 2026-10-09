@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: Apache-2.0
+# System engines absorbed from aphrody-labs/aphrody@5b36d40c6c (lot os-kernel): process supervision,
+# process hardening + command-safety classifier, Windows screen capture, local filesystem index.
+# Own workspace and lockfile, like packages/bun-re, so none of this enters the bun binary or its
+# Cargo.lock. Rust consumers keep their paths with
+# `aphrody-proc = { package = "bun-proc", git = "https://github.com/aphrody-labs/bun", rev = "<sha>" }`.
+[workspace]
+resolver = "3"
+members = ["proc", "guard", "capture", "fsindex"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.97"
+repository = "https://github.com/aphrody-labs/bun"
+license = "Apache-2.0"
+authors = ["aphrody-code"]
+
+[workspace.dependencies]
+image = { version = "0.25.10", default-features = false }
+libc = "0.2.189"
+pretty_assertions = "1"
+rusqlite = { version = "0.40", features = ["bundled"] }
+rustix = { version = "1.0", default-features = false, features = ["std", "fs", "event", "process", "net"] }
+serde = { version = "1.0.229", features = ["derive", "std"], default-features = false }
+serde_json = "1.0.151"
+tempfile = "3.27.0"
+thiserror = "2.0.20"
+tracing = "0.1.44"
+walkdir = "2.5.0"
+windows = "0.62.2"
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+unused_must_use = "deny"
+non_ascii_idents = "deny"
+
+[workspace.lints.clippy]
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+correctness = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -1 }

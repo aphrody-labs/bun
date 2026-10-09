@@ -1257,6 +1257,19 @@ pub(crate) mod command {
                 // and ctx-setup code lives behind this cold call.
                 return boot_standalone(graph, log);
             }
+            // A coreutils applet (`head`, `sort`, ...) selected by argv0; never `bun`/`bunx`/`node`/`bunsh`.
+            #[cfg(feature = "coreutils")]
+            if let Some(applet) =
+                bun_coreutils::applet_name(bun::argv().get(0).map(bun_core::ZStr::as_bytes).unwrap_or(b""))
+            {
+                let argv = bun::argv();
+                let args: Vec<&[u8]> = (0..argv.len())
+                    .filter_map(|i| argv.get(i).map(bun_core::ZStr::as_bytes))
+                    .collect();
+                let code = bun_coreutils::run(applet, &args);
+                Output::flush();
+                Global::exit(u32::try_from(code).unwrap_or(1));
+            }
         }
 
         // Fast path: `bun -v` / `bun --version` / `bun --revision`, the

@@ -4,6 +4,8 @@ use super::{BOOL, HANDLE, Json, OwnedHandle, WinErr, WinResult};
 
 const TH32CS_SNAPPROCESS: u32 = 0x2;
 const PROCESS_TERMINATE: u32 = 0x0001;
+const PROCESS_SET_QUOTA: u32 = 0x0100;
+const PROCESS_SET_INFORMATION: u32 = 0x0200;
 const PROCESS_QUERY_LIMITED_INFORMATION: u32 = 0x1000;
 const INVALID_HANDLE_VALUE: HANDLE = -1isize as HANDLE;
 
@@ -28,6 +30,15 @@ unsafe extern "system" {
     fn Process32NextW(snapshot: HANDLE, entry: *mut ProcessEntry32W) -> BOOL;
     pub(crate) fn OpenProcess(access: u32, inherit: BOOL, pid: u32) -> HANDLE;
     fn TerminateProcess(process: HANDLE, exit_code: u32) -> BOOL;
+    fn SetProcessAffinityMask(process: HANDLE, mask: usize) -> BOOL;
+    fn SetPriorityClass(process: HANDLE, priority_class: u32) -> BOOL;
+    fn SetProcessInformation(
+        process: HANDLE,
+        information_class: u32,
+        information: *const core::ffi::c_void,
+        size: u32,
+    ) -> BOOL;
+    fn SetProcessWorkingSetSize(process: HANDLE, minimum: usize, maximum: usize) -> BOOL;
     fn QueryFullProcessImageNameW(
         process: HANDLE,
         flags: u32,
@@ -93,6 +104,77 @@ pub(crate) fn terminate(pid: u32, exit_code: u32) -> WinResult<()> {
     // SAFETY: `h` was opened with PROCESS_TERMINATE.
     if unsafe { TerminateProcess(h.0, exit_code) } == 0 {
         return Err(WinErr::last("TerminateProcess"));
+    }
+    Ok(())
+}
+
+/// Sets the processor affinity mask for the process in its current processor group.
+pub(crate) fn set_affinity(pid: u32, mask: usize) -> WinResult<()> {
+    let h = open(
+        pid,
+        PROCESS_SET_INFORMATION | PROCESS_QUERY_LIMITED_INFORMATION,
+    )?;
+    // SAFETY: `h` has process-information access and `mask` is a processor affinity mask.
+    if unsafe { SetProcessAffinityMask(h.0, mask) } == 0 {
+        return Err(WinErr::last("SetProcessAffinityMask"));
+    }
+    Ok(())
+}
+
+/// Sets one of the documented Win32 process priority classes.
+pub(crate) fn set_priority(pid: u32, priority_class: u32) -> WinResult<()> {
+    let h = open(pid, PROCESS_SET_INFORMATION)?;
+    // SAFETY: `h` was opened with PROCESS_SET_INFORMATION.
+    if unsafe { SetPriorityClass(h.0, priority_class) } == 0 {
+        return Err(WinErr::last("SetPriorityClass"));
+    }
+    Ok(())
+}
+
+#[repr(C)]
+struct ProcessPowerThrottlingState {
+    version: u32,
+    control_mask: u32,
+    state_mask: u32,
+}
+
+/// Enables or disables Windows process power throttling.
+pub(crate) fn set_eco_mode(pid: u32, enabled: bool) -> WinResult<()> {
+    const PROCESS_POWER_THROTTLING: u32 = 4;
+    const PROCESS_POWER_THROTTLING_CURRENT_VERSION: u32 = 1;
+    const PROCESS_POWER_THROTTLING_EXECUTION_SPEED: u32 = 1;
+
+    let h = open(pid, PROCESS_SET_INFORMATION)?;
+    let state = ProcessPowerThrottlingState {
+        version: PROCESS_POWER_THROTTLING_CURRENT_VERSION,
+        control_mask: PROCESS_POWER_THROTTLING_EXECUTION_SPEED,
+        state_mask: if enabled {
+            PROCESS_POWER_THROTTLING_EXECUTION_SPEED
+        } else {
+            0
+        },
+    };
+    // SAFETY: `state` matches PROCESS_POWER_THROTTLING_STATE's documented layout and size.
+    if unsafe {
+        SetProcessInformation(
+            h.0,
+            PROCESS_POWER_THROTTLING,
+            (&state as *const ProcessPowerThrottlingState).cast(),
+            core::mem::size_of::<ProcessPowerThrottlingState>() as u32,
+        )
+    } == 0
+    {
+        return Err(WinErr::last("SetProcessInformation"));
+    }
+    Ok(())
+}
+
+/// Requests that Windows trim a process's working set.
+pub(crate) fn trim_working_set(pid: u32) -> WinResult<()> {
+    let h = open(pid, PROCESS_SET_QUOTA | PROCESS_QUERY_LIMITED_INFORMATION)?;
+    // SAFETY: -1 requests the system to choose both working-set bounds.
+    if unsafe { SetProcessWorkingSetSize(h.0, usize::MAX, usize::MAX) } == 0 {
+        return Err(WinErr::last("SetProcessWorkingSetSize"));
     }
     Ok(())
 }

@@ -67,12 +67,13 @@ function run(cmd: string, args: string[], opts: Parameters<typeof spawnSync>[2] 
 const buildOptionsRs = resolve(repo, "build/debug/codegen/build_options.rs");
 const lolhtmlCargo = resolve(repo, "vendor/lolhtml/Cargo.toml");
 const argon2Cargo = resolve(repo, "vendor/rust-argon2/Cargo.toml");
-if (!existsSync(buildOptionsRs) || !existsSync(lolhtmlCargo) || !existsSync(argon2Cargo)) {
+const uutilsCargo = resolve(repo, "vendor/uutils/Cargo.toml");
+if (!existsSync(buildOptionsRs) || !existsSync(lolhtmlCargo) || !existsSync(argon2Cargo) || !existsSync(uutilsCargo)) {
   console.log("\x1b[36m[setup]\x1b[0m bun run build --configure-only");
   if (run("bun", ["run", "build", "--configure-only"]).status !== 0) process.exit(1);
   if (
-    (!existsSync(lolhtmlCargo) || !existsSync(argon2Cargo)) &&
-    run("bun", ["run", "build", "--target=clone-lolhtml", "--target=clone-rust-argon2"]).status !== 0
+    (!existsSync(lolhtmlCargo) || !existsSync(argon2Cargo) || !existsSync(uutilsCargo)) &&
+    run("bun", ["run", "build", "--target=clone-lolhtml", "--target=clone-rust-argon2", "--target=clone-uutils"]).status !== 0
   ) {
     process.exit(1);
   }
@@ -83,6 +84,7 @@ if (!existsSync(buildOptionsRs) || !existsSync(lolhtmlCargo) || !existsSync(argo
     [buildOptionsRs, "bun run build --configure-only"],
     [lolhtmlCargo, "bun run build --target=clone-lolhtml"],
     [argon2Cargo, "bun run build --target=clone-rust-argon2"],
+    [uutilsCargo, "bun run build --target=clone-uutils"],
   ] as const) {
     if (!existsSync(path)) {
       console.error(`\x1b[31m[error]\x1b[0m ${path} still missing after setup — try: ${hint}`);

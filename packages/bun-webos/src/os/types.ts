@@ -11,6 +11,7 @@ export type AppId =
   | "bun-apis"
   | "benchmarks"
   | "m3-fusion"
+  | "fluent-windows"
   | "arcade";
 
 export interface WindowPosition {

@@ -1,0 +1,13 @@
+{
+  "name": "aot-npm-package",
+  "private": true,
+  "version": "0.2",
+  "description": "Example npm-packaged C# Native AOT node module",
+  "license": "MIT",
+  "author": "Microsoft",
+  "repository": "github:microsoft/node-api-dotnet",
+  "type": "module",
+  "main": "./bin/aot-npm-package.js",
+  "scripts": {
+  }
+}

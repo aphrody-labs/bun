@@ -118,6 +118,7 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(constructWebView, __attribute__((minsiz
     WTF::String chromeWsUrl;
     bool chromeSkipAutoDetect = false;
     WTF::Vector<WTF::String> chromeArgv;
+    WTF::String coreBackend;
     bool stdoutInherit = false;
     bool stderrInherit = false;
     bool headless = true;
@@ -161,8 +162,15 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(constructWebView, __attribute__((minsiz
                 backend = WebViewBackend::WebKit;
                 return true;
             }
+            // Native backends of packages/bun-webview-core: its host speaks the
+            // --remote-debugging-pipe CDP subset, so they ride the Chrome path.
+            if (s == "webkitgtk"_s || s == "webview2"_s || s == "wkwebview"_s || s == "cef"_s) {
+                backend = WebViewBackend::Chrome;
+                coreBackend = s;
+                return true;
+            }
             Bun::throwError(globalObject, scope, ErrorCode::ERR_INVALID_ARG_VALUE,
-                "backend.type must be \"webkit\" or \"chrome\""_s);
+                "backend.type must be \"webkit\", \"chrome\", \"webkitgtk\", \"webview2\", \"wkwebview\" or \"cef\""_s);
             return false;
         };
         if (be.isString()) {
@@ -346,6 +354,15 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(constructWebView, __attribute__((minsiz
         structure = InternalFunction::createSubclassStructure(globalObject, newTarget.getObject(),
             functionGlobalObject->m_JSWebViewClassStructure.get(functionGlobalObject));
         RETURN_IF_EXCEPTION(scope, {});
+    }
+
+    if (!coreBackend.isEmpty()) {
+        if (!chromeWsUrl.isEmpty())
+            return Bun::throwError(globalObject, scope, ErrorCode::ERR_INVALID_ARG_VALUE,
+                "backend.url requires type: \"chrome\""_s);
+        if (chromePath.isEmpty()) chromePath = "bun-webview-host"_s;
+        chromeSkipAutoDetect = true;
+        chromeArgv.insert(0, makeString("--backend="_s, coreBackend));
     }
 
     if (!headless && backend != WebViewBackend::Chrome) {

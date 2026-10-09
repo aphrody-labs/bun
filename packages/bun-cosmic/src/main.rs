@@ -193,6 +193,12 @@ fn window(args: &Args) -> ExitCode {
     }
 }
 
+#[cfg(not(unix))]
+fn notify(_args: &Args) -> ExitCode {
+    fail("notifications go through bun:windows on Windows")
+}
+
+#[cfg(unix)]
 fn notify(args: &Args) -> ExitCode {
     let Some(summary) = args.get("summary") else {
         return fail("--summary is required");

@@ -3889,6 +3889,7 @@ test("ModuleGraph isolation: every property of Bun is classified", () => {
         "SHA512",
         "SHA512_256",
         "TOML",
+        "TerminalScreen",
         "XML",
         "YAML",
         "allocUnsafe",

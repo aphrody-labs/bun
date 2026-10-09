@@ -1,0 +1,23 @@
+# M-osbun : ligne d'arrivée « OS Bun » (Aphrody Alpine 3.24 + fork Bun + noyau fork + WebOS)
+
+Pilote : OSI. État au 2026-10-09 08:20 (heure de Paris). Chaque critère se vérifie par une commande ; « vert » seulement avec une sortie relevée.
+Assemblage : VPS `~/osi` (scripts `kernel.sh`, `prep.sh`, `boot.sh`, sources des scripts dans le clone clairsemé `~/osi/bun`).
+
+| # | Critère | Commande de preuve | Propriétaire | État réel | Bloquant |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Le noyau du fork démarre sous QEMU/KVM | `~/osi/kernel.sh` (alpine:3.24, LLVM=1, `x86_64_defconfig` + `kvm_guest.config` + `CONFIG_RUST=y CONFIG_BUN_ACCEL=y`) puis `~/osi/boot.sh bzImage-fork bun-rel/bun fork2 --argv0 bunsh -- /bin/bun` | OSI (build), noyau : V/WX | ✅ partiel : `bzImage-fork 15180800 6.18.55 47f637c54` (aphrody-labs/linux@aphrody-bun) ; le noyau démarre et exécute `/init` (Bun du fork) | — |
+| 2 | Bun du fork est PID 1 (`/init` = initramfs-init.ts, bun:linux) | même commande ; attendu `bun-init: workload exited with 0` | G4 (initramfs), OSI | ✅ G4 hors noyau fork : debug musl du fork (aca9221709, ≥ bun:linux), noyau Alpine linux-virt 6.18, QEMU TCG dans Docker local → `bun-init: eth0 10.0.2.15/24 via 10.0.2.2 dns 10.0.2.3`, app servie sur hostfwd (ppid 1), `bun-init: workload exited with 0`, `reboot: Power down` (9074ef45576, M-alpine A1/A7) ; ⏳ release : la seule build Linux du fork disponible est la release `aphrody-v1.4.3-aphrody.2` (f7a7086b602, 00:55), antérieure à bun:linux (e91f0f96ce0, 02:45) ; `/init` échoue sur `bun:linux` (tentative d'auto-install), « Attempted to kill init! exitcode=0x00000100 » (logs `~/osi/rel2.boot.log`, `~/osi/fork2.boot.log`) | binaire Linux musl du fork ≥ 14ade19f275 : release aphrody.3 (main) ou build V |
+| 3 | La session atteint le shell bunsh sur la console série | `boot.sh` envoie `echo osi-bunsh-ok $((6*7))` ; attendu `osi-bunsh-ok 42` | G4 + OSI ; preuve finale : codex-osboot | ⏳ bloqué par 2 (bunsh = b4c195bb7b8, 02:37, absent de aphrody.2) | idem 2 |
+| 4 | `bun --version` est le fork | `docker run --rm aphrody-g4/alpine:3.24-runtime bun --revision` | G4 (image runtime 7e86bccc862) | ✅ `1.4.3-aphrody.2+f7a7086b6`, Alpine 3.24.2 x86_64 | à refaire avec aphrody.3 |
+| 5 | Rootfs construit par `bun pm apk add --root <dir> --initdb` sans binaire apk | `bun pm apk add --root /tmp/r --initdb alpine-base libstdc++ && ls /tmp/r/lib/apk/db/installed` | SP | ⏳ en cours : `src/install/system/{apk,rootfs}/**` non commités (rien sur origin/main) ; en attendant `~/osi/rootfs` = minirootfs 3.24.2 + `apk --root` (conteneur) | commit SP + build Linux du fork |
+| 6 | Le WebOS (packages/bun-webos) est servi par Bun | `bun packages/bun-webos/server.ts` puis requête HTTP sur le port | OS (499dbd0b9f1), G2 (52808997726, 389c807620b) | ✅ côté code poussé ; servi et affiché sous WSLg selon WX 347dcf77355 (preuve dans le message de commit seulement, non revérifiée par OSI) | — |
+| 7 | Le WebOS s'affiche dans Bun.WebView | e2e `packages/bun-webos/e2e` (Bun.WebView, backend Chrome) ; WebKitGTK : WV | G2, WV (3065186b9ae bun-webview-core) | ⏳ Chrome : e2e poussé 52808997726, exécution non relevée ici ; WebKitGTK : WV en cours | WV |
+| 8 | L'image se lance en distro WSL | `wsl -d AphrodyAlpine -- sh -lc 'bun --revision; bunsh -c "echo ok"'` | WX (cc8a58c309e, 51f53f372e6, 347dcf77355) | ✅ partiel : distro importée et lancée, `bun --revision` → `1.4.3-aphrody.2+f7a7086b6`, Alpine 3.24.2 ; ❌ `bunsh -c` → `Script not found` (aphrody.2 sans bunsh) | release aphrody.3 |
+| 9 | Même chose en conteneur Docker | `docker run --rm aphrody-g4/alpine:3.24-runtime sh -c 'bun --version; bunsh -c "echo ok"'` | G4 | ✅ partiel (bun du fork) ; bunsh ⏳ comme 8 | release aphrody.3 |
+| 10 | Image native (disque/ISO) | — | G4 | ⏳ non commencé (initramfs seulement) | après 2-3 |
+
+## Chemin critique
+
+1. Binaire Linux musl du fork contenant bun:linux + bunsh (+ `bun pm apk` de SP). Les builds VPS de V meurent sous la charge (j5 release tuée à 1384/1548 sans erreur, charge 158 sur 12 CPU) ; la voie fiable est `aphrody-release.yml` (≈ 30 min sur runners GitHub, cf. run 37856453908). Décision de publication : main (`version=1.4.3-aphrody.3`, `targets=linux-x64-musl,linux-aarch64-musl,linux-x64,windows-x64`, `publish-npm=false`). H6 possède ce workflow : une entrée `release: false` (artefacts seulement) éviterait de publier pour un essai.
+2. Puis : `~/osi/prep.sh` (remplacer `bun-rel/bun`), `~/osi/boot.sh bzImage-fork <bun> osbun --argv0 bunsh -- /bin/bun` → critères 2-3 ; rebâtir l'image runtime (BUN_RELEASE) puis `scripts/aphrody/alpine/wsl.ts --install` → 4, 8, 9.
+3. SP pousse apk/rootfs → critère 5 sur le même binaire.

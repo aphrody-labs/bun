@@ -1,7 +1,7 @@
 import { apps, config, isSupported, notify, openWindow, ron, text } from "bun:cosmic";
 import { describe, expect, test } from "bun:test";
 import { chmodSync, readFileSync } from "node:fs";
-import { bunEnv, bunExe, isLinux, normalizeBunSnapshot, tempDir } from "harness";
+import { bunEnv, bunExe, isLinux, isWindows, normalizeBunSnapshot, tempDir } from "harness";
 import { join } from "node:path";
 
 const fontPath = join(
@@ -202,11 +202,47 @@ test("config rejects names that are not one path component", () => {
   expect(() => config.open("com.example.Test").get("a/b")).toThrow();
 });
 
-test.skipIf(isLinux)("native calls throw ERR_BUN_COSMIC_UNSUPPORTED outside Linux", () => {
+test.skipIf(isLinux || isWindows)("native calls throw ERR_BUN_COSMIC_UNSUPPORTED outside Linux and Windows", () => {
   expect(isSupported).toBe(false);
   expect(() => text.layout("x")).toThrow(expect.objectContaining({ code: "ERR_BUN_COSMIC_UNSUPPORTED" }));
   expect(() => apps.list({ dirs: [] })).toThrow(expect.objectContaining({ code: "ERR_BUN_COSMIC_UNSUPPORTED" }));
   expect(() => openWindow()).toThrow(expect.objectContaining({ code: "ERR_BUN_COSMIC_UNSUPPORTED" }));
+});
+
+describe.skipIf(!isWindows)("windows", () => {
+  test("lays out and renders text with cosmic-text", () => {
+    expect(isSupported).toBe(true);
+    expect(text.loadFont(fontPath)).toEqual(["Space Mono"]);
+    const options = { family: "Space Mono", fontSize: 20, color: "#ff0000" };
+    const layout = text.layout("Hello\nBun", options);
+    expect(layout.lines.map(line => [line.line, line.glyphs.length])).toEqual([
+      [0, 5],
+      [1, 3],
+    ]);
+    const image = text.render("Hello\nBun", options);
+    expect(image.height).toBe(48);
+    expect(image.data.length).toBe(image.width * image.height * 4);
+  });
+
+  test("config lives under %APPDATA%\cosmic", () => {
+    using dir = tempDir("cosmic-config-win", {});
+    const previous = process.env.APPDATA;
+    process.env.APPDATA = String(dir);
+    try {
+      const cfg = config.open("com.example.Win", 1);
+      expect(cfg.path).toBe(join(String(dir), "cosmic", "com.example.Win", "v1"));
+      cfg.set("accent", [0.5, 0.25, 1]);
+      expect(readFileSync(join(cfg.path, "accent"), "utf8")).toBe(ron.stringify([0.5, 0.25, 1]));
+      expect(cfg.get("accent")).toEqual([0.5, 0.25, 1]);
+    } finally {
+      if (previous === undefined) delete process.env.APPDATA;
+      else process.env.APPDATA = previous;
+    }
+  });
+
+  test(".desktop application index stays Linux-only", () => {
+    expect(() => apps.list({ dirs: [] })).toThrow(expect.objectContaining({ code: "ERR_BUN_COSMIC_UNSUPPORTED" }));
+  });
 });
 
 describe.skipIf(!isLinux)("linux", () => {

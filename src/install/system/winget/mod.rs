@@ -17,26 +17,9 @@ use super::{
     SourceKind,
 };
 
-pub const DEFAULT_SOURCE: &str = "https://cdn.winget.microsoft.com/cache";
+use aphrody_pkg_system::winget::{self as pure, IndexRow, VersionRef, check_id, url_join};
 
-/// The index is refreshed after an hour, like `winget source update`'s auto-update.
-const INDEX_MAX_AGE_SECS: u64 = 60 * 60;
-
-#[derive(Clone, Debug)]
-struct IndexRow {
-    id: String,
-    name: String,
-    moniker: Option<String>,
-    latest: String,
-    hash: Vec<u8>,
-}
-
-#[derive(Clone, Debug)]
-struct VersionRef {
-    version: String,
-    rel_path: String,
-    sha256: String,
-}
+pub use pure::DEFAULT_SOURCE;
 
 #[derive(Default)]
 pub struct Winget {
@@ -53,28 +36,6 @@ pub fn base_url(ctx: &Ctx<'_>) -> String {
     base
 }
 
-fn url_join(base: &str, rel: &str) -> String {
-    let mut url = String::with_capacity(base.len() + 1 + rel.len());
-    url.push_str(base);
-    url.push('/');
-    url.push_str(rel.trim_start_matches('/'));
-    url
-}
-
-/// Package ids go into URLs verbatim; reject anything that could escape the path.
-fn check_id(id: &str) -> Result<()> {
-    let ok = !id.is_empty()
-        && id
-            .bytes()
-            .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'.' | b'-' | b'_' | b'+'))
-        && !id.starts_with('.');
-    if ok {
-        Ok(())
-    } else {
-        Err(Error::Parse(format!("invalid winget package id \"{id}\"")))
-    }
-}
-
 impl Winget {
     fn load_index(&mut self, ctx: &Ctx<'_>) -> Result<&[IndexRow]> {
         if self.index.is_none() {
@@ -89,7 +50,7 @@ impl Winget {
             let cached = super::fs::read_with_age(&cache_path);
             let fresh = cached
                 .as_ref()
-                .is_some_and(|(_, age)| !ctx.options.refresh && (ctx.options.offline || *age <= INDEX_MAX_AGE_SECS));
+                .is_some_and(|(_, age)| !ctx.options.refresh && (ctx.options.offline || *age <= pure::INDEX_MAX_AGE_SECS));
             let db = match cached {
                 Some((bytes, _)) if fresh => bytes,
                 stale => match download_index(ctx, &base) {
@@ -103,45 +64,23 @@ impl Winget {
                     },
                 },
             };
-            self.index = Some(parse_index(&db)?);
+            self.index = Some(pure::parse_index(&db)?);
         }
         Ok(self.index.as_deref().unwrap_or(&[]))
     }
 
     fn find(&mut self, ctx: &Ctx<'_>, id: &str) -> Result<IndexRow> {
         check_id(id)?;
-        self.load_index(ctx)?
-            .iter()
-            .find(|r| r.id.eq_ignore_ascii_case(id))
-            .cloned()
-            .ok_or_else(|| Error::NotFound(format!("winget package \"{id}\"")))
+        Ok(pure::find(self.load_index(ctx)?, id)?.clone())
     }
 
     fn versions(&self, ctx: &Ctx<'_>, row: &IndexRow) -> Result<Vec<VersionRef>> {
-        let hash8 = &super::hex(&row.hash)[..8.min(row.hash.len() * 2)];
-        let rel = format!("packages/{}/{}/versionData.mszyml", row.id, hash8);
-        let url = url_join(&base_url(ctx), &rel);
-        let cache_name = format!("versions/{}-{}.mszyml", row.id, hash8);
+        let url = url_join(&base_url(ctx), &row.version_data_path());
         // The path embeds the index hash, so a cached copy never goes stale.
-        let bytes = ctx.fetch_cached(SourceKind::Winget, &cache_name, &url, u64::MAX)?;
+        let bytes = ctx.fetch_cached(SourceKind::Winget, &row.version_data_cache_name(), &url, u64::MAX)?;
         let yaml = super::mszip::decode(&bytes)?;
         let doc = value::parse_yaml(&yaml, "versionData.yaml")?;
-        let mut out = Vec::new();
-        for v in doc.array_ci("vD") {
-            let (Some(version), Some(rel_path), Some(sha256)) = (v.str_ci("v"), v.str_ci("rP"), v.str_ci("s256H")) else {
-                continue;
-            };
-            out.push(VersionRef {
-                version: version.to_owned(),
-                rel_path: rel_path.to_owned(),
-                sha256: sha256.to_ascii_lowercase(),
-            });
-        }
-        if out.is_empty() {
-            return Err(Error::Parse(format!("winget: no versions listed for {}", row.id)));
-        }
-        out.sort_by(|a, b| super::version::compare(&b.version, &a.version));
-        Ok(out)
+        Ok(pure::version_refs(&doc, &row.id)?)
     }
 
     fn manifest(&self, ctx: &Ctx<'_>, id: &str, v: &VersionRef) -> Result<Value> {
@@ -153,63 +92,9 @@ impl Winget {
 }
 
 fn download_index(ctx: &Ctx<'_>, base: &str) -> Result<Vec<u8>> {
-    let msix = ctx.fetch(&url_join(base, "source2.msix"))?;
-    super::archive::read_entry(&msix, "source2.msix", b"Public/index.db")?
+    let msix = ctx.fetch(&url_join(base, pure::SOURCE_MSIX))?;
+    super::archive::read_entry(&msix, "source2.msix", pure::INDEX_ENTRY)?
         .ok_or_else(|| Error::Parse("source2.msix has no Public/index.db".to_owned()))
-}
-
-fn parse_index(db: &[u8]) -> Result<Vec<IndexRow>> {
-    let db = super::sqlite::Database::open(db)?;
-    let (root, cols) = db.table("packages")?;
-    let col = |name: &str| cols.iter().position(|c| c.eq_ignore_ascii_case(name));
-    let (Some(c_id), Some(c_name), Some(c_latest), Some(c_hash)) =
-        (col("id"), col("name"), col("latest_version"), col("hash"))
-    else {
-        return Err(Error::Parse("winget index: unexpected packages table layout".to_owned()));
-    };
-    let c_moniker = col("moniker");
-    let mut rows = Vec::new();
-    db.scan(root, &mut |_, cells| {
-        let text = |i: usize| cells.get(i).and_then(|c| c.text()).map(super::lossy);
-        let (Some(id), Some(latest)) = (text(c_id), text(c_latest)) else {
-            return Ok(());
-        };
-        rows.push(IndexRow {
-            id,
-            name: text(c_name).unwrap_or_default(),
-            moniker: c_moniker.and_then(text),
-            latest,
-            hash: cells.get(c_hash).and_then(|c| c.bytes()).map(<[u8]>::to_vec).unwrap_or_default(),
-        });
-        Ok(())
-    })?;
-    Ok(rows)
-}
-
-/// `Dependencies.PackageDependencies[].PackageIdentifier`, at the root or on any installer.
-fn manifest_deps(m: &Value) -> Vec<String> {
-    let mut deps: Vec<String> = Vec::new();
-    let mut add = |node: &Value| {
-        if let Some(d) = node.get_ci("Dependencies") {
-            for p in d.array_ci("PackageDependencies") {
-                if let Some(id) = p.str_ci("PackageIdentifier") {
-                    let key = super::lock_key(SourceKind::Winget, id);
-                    if !deps.contains(&key) {
-                        deps.push(key);
-                    }
-                }
-            }
-        }
-    };
-    add(m);
-    for inst in m.array_ci("Installers") {
-        add(inst);
-    }
-    deps
-}
-
-fn contains_ci(haystack: &str, needle_lower: &str) -> bool {
-    bun_core::strings::index_of(haystack.to_ascii_lowercase().as_bytes(), needle_lower.as_bytes()).is_some()
 }
 
 impl Source for Winget {
@@ -222,32 +107,10 @@ impl Source for Winget {
     }
 
     fn search(&mut self, ctx: &Ctx<'_>, query: &str, limit: usize) -> Result<Vec<SearchHit>> {
-        let q = query.trim().to_ascii_lowercase();
         let index = self.load_index(ctx)?;
-        let mut hits: Vec<(u8, &IndexRow)> = index
-            .iter()
-            .filter_map(|r| {
-                let rank = if r.id.eq_ignore_ascii_case(&q)
-                    || r.moniker.as_deref().is_some_and(|m| m.eq_ignore_ascii_case(&q))
-                {
-                    0
-                } else if r.name.eq_ignore_ascii_case(&q) {
-                    1
-                } else if contains_ci(&r.id, &q) || r.moniker.as_deref().is_some_and(|m| contains_ci(m, &q)) {
-                    2
-                } else if contains_ci(&r.name, &q) {
-                    3
-                } else {
-                    return None;
-                };
-                Some((rank, r))
-            })
-            .collect();
-        hits.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.id.to_ascii_lowercase().cmp(&b.1.id.to_ascii_lowercase())));
-        Ok(hits
+        Ok(pure::search(index, query, limit)
             .into_iter()
-            .take(if limit == 0 { usize::MAX } else { limit })
-            .map(|(_, r)| SearchHit {
+            .map(|r| SearchHit {
                 id: r.id.clone(),
                 name: r.name.clone(),
                 version: r.latest.clone(),
@@ -277,23 +140,14 @@ impl Source for Winget {
     fn resolve(&mut self, ctx: &Ctx<'_>, id: &str, range: &str) -> Result<LockEntry> {
         let row = self.find(ctx, id)?;
         let versions = self.versions(ctx, &row)?;
-        let best = super::version::best_match(versions.iter().map(|v| v.version.as_str()), range, super::version::compare)
-            .ok_or_else(|| Error::NoMatchingVersion {
-                id: row.id.clone(),
-                range: range.to_owned(),
-            })?
-            .to_owned();
-        let v = versions
-            .iter()
-            .find(|v| v.version == best)
-            .expect("best_match returns one of the inputs");
+        let v = pure::select_version(&versions, &row.id, range)?;
         let m = self.manifest(ctx, &row.id, v)?;
         let mut entry = LockEntry::new(SourceKind::Winget, &row.id);
         range.clone_into(&mut entry.specifier);
         entry.version.clone_from(&v.version);
         entry.url = url_join(&base_url(ctx), &v.rel_path);
         entry.hash = format!("sha256:{}", v.sha256);
-        entry.deps = manifest_deps(&m);
+        entry.deps = pure::manifest_deps(&m);
         entry.meta.insert("manifest".to_owned(), v.rel_path.clone());
         Ok(entry)
     }

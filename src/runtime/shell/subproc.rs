@@ -680,6 +680,7 @@ impl ShellSubprocess {
         {
             spawn_options.no_sigpipe = no_sigpipe;
         }
+        spawn_options.argv0 = spawn_args.argv0.as_ref().map(|exe| exe.as_ptr().cast());
 
         // Backref so PipeReader callbacks can drive `Yield::run` from async I/O
         // completion; plumbed explicitly through `SpawnArgs`.
@@ -1393,6 +1394,8 @@ pub(crate) struct SpawnArgs<'a> {
     pub(crate) redirect_stderr: Option<jsc::PinnedArrayBuffer>,
     pub(crate) lazy: bool,
     pub path: &'a [u8],
+    /// NUL-terminated executable to run when it differs from `argv[0]` (coreutils applets).
+    pub(crate) argv0: Option<Vec<u8>>,
     // ipc_mode: IPCMode,
     // ipc_callback: JSValue,
 }
@@ -1431,6 +1434,7 @@ impl<'a> SpawnArgs<'a> {
                     b""
                 }
             },
+            argv0: None,
             // .ipc_mode = IPCMode.none,
             // .ipc_callback = .zero,
         };
