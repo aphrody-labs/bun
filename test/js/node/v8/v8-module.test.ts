@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { bunEnv, bunExe } from "harness";
-import { GCProfiler, isStringOneByteRepresentation } from "node:v8";
+import { bunEnv, bunExe, tempDir } from "harness";
+import { GCProfiler, isStringOneByteRepresentation, setHeapSnapshotNearHeapLimit } from "node:v8";
 
 describe("v8.isStringOneByteRepresentation", () => {
   test("rejects non-string arguments", () => {
@@ -129,5 +129,90 @@ describe("v8.GCProfiler", () => {
       stderr: "",
       exitCode: 0,
     });
+  });
+});
+
+describe.concurrent("--max-old-space-size", () => {
+  test("is the heap_size_limit node:v8 reports", async () => {
+    await using proc = Bun.spawn({
+      cmd: [
+        bunExe(),
+        "--max-old-space-size=48",
+        "-e",
+        `console.log(require("node:v8").getHeapStatistics().heap_size_limit)`,
+      ],
+      env: bunEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect({ stdout, stderr, exitCode }).toEqual({ stdout: `${48 * 1024 * 1024}\n`, stderr: "", exitCode: 0 });
+  });
+
+  test("ends the process like node's fatal out-of-memory error", async () => {
+    await using proc = Bun.spawn({
+      cmd: [
+        bunExe(),
+        "--max-old-space-size=32",
+        "-e",
+        `const keep = []; for (let i = 0; ; i++) keep.push({ i, s: "x" + i });`,
+      ],
+      env: bunEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
+    expect(stderr).toContain("FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory");
+    expect(exitCode).toBe(134);
+  });
+
+  test("rejects a value that is not a number of MiB", async () => {
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "--max-old-space-size=lots", "-e", ""],
+      env: bunEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
+    expect(stderr).toContain("--max-old-space-size expects a whole number of MiB");
+    expect(exitCode).toBe(1);
+  });
+
+  test("v8.setHeapSnapshotNearHeapLimit writes a snapshot before the limit", async () => {
+    using dir = tempDir("v8-near-heap-limit", {});
+    await using proc = Bun.spawn({
+      cmd: [
+        bunExe(),
+        "--max-old-space-size=48",
+        "-e",
+        `
+          const v8 = require("node:v8");
+          const fs = require("node:fs");
+          v8.setHeapSnapshotNearHeapLimit(1);
+          const keep = [];
+          const written = () => fs.readdirSync(".").filter(f => f.endsWith(".heapsnapshot"));
+          (async () => {
+            for (let i = 0; written().length === 0; i++) {
+              for (let j = 0; j < 2000; j++) keep.push({ i, j, s: "x" + j });
+              await new Promise(resolve => setImmediate(resolve));
+            }
+            keep.length = 0;
+            console.log(JSON.stringify(written().map(f => /^Heap\.\d{8}\.\d{6}\.\d+\.0\.001\.heapsnapshot$/.test(f))));
+          })();
+        `,
+      ],
+      env: bunEnv,
+      cwd: String(dir),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect({ stdout, stderr, exitCode }).toEqual({ stdout: "[true]\n", stderr: "", exitCode: 0 });
+  });
+
+  test("v8.setHeapSnapshotNearHeapLimit validates its argument", () => {
+    expect(() => setHeapSnapshotNearHeapLimit("1" as any)).toThrow(
+      expect.objectContaining({ code: "ERR_INVALID_ARG_TYPE" }),
+    );
   });
 });

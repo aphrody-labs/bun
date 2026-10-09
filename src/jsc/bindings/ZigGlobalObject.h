@@ -39,6 +39,7 @@ class JSNextTickQueue;
 class Process;
 class SecureContextCache;
 class GCProfilerObserver;
+class HeapLimitObserver;
 
 struct ModuleGraphState;
 } // namespace Bun
@@ -820,6 +821,9 @@ public:
     // destructor detaches from the heap so a worker that exits mid-profile
     // does not leave the observer registered.
     std::unique_ptr<Bun::GCProfilerObserver> m_gcProfilerObserver;
+
+    // Backs --max-old-space-size and node:v8 setHeapSnapshotNearHeapLimit. Created on first use.
+    std::unique_ptr<Bun::HeapLimitObserver> m_heapLimitObserver;
 
     WTF::Vector<WTF::Ref<NapiEnv>> m_napiEnvs;
     Ref<NapiEnv> makeNapiEnv(const napi_module&);

@@ -249,6 +249,9 @@ const RUNTIME_PARAMS_: &[ParamType] = &[
         "--expose-gc                       Expose gc() on the global object. Has no effect on Bun.gc()."
     ),
     parse_param!(
+        "--max-old-space-size <STR>        Exit with a fatal out-of-memory error once the live JavaScript heap exceeds this many MiB"
+    ),
+    parse_param!(
         "--no-deprecation                  Suppress all reporting of the custom deprecation."
     ),
     parse_param!(
@@ -726,6 +729,10 @@ fn tag_table(cmd: CommandTag) -> &'static clap::ConvertedTable {
 #[unsafe(no_mangle)]
 static Bun__Node__ZeroFillBuffers: core::sync::atomic::AtomicBool =
     core::sync::atomic::AtomicBool::new(false);
+/// `--max-old-space-size` in MiB, 0 when absent. Read by NodeV8.cpp.
+#[unsafe(no_mangle)]
+static Bun__Node__MaxOldSpaceSizeMB: core::sync::atomic::AtomicU64 =
+    core::sync::atomic::AtomicU64::new(0);
 #[unsafe(no_mangle)]
 static Bun__Node__ProcessNoDeprecation: core::sync::atomic::AtomicBool =
     core::sync::atomic::AtomicBool::new(false);
@@ -1512,6 +1519,19 @@ pub(crate) fn parse(cmd: CommandTag, ctx: Context<'_>) -> crate::Result<api::Tra
             // can drop the previous value; box the argv-borrowed slice up
             // front.
             *cli::Bun__Node__ProcessTitle.lock() = Some(title.into());
+        }
+        if let Some(value) = args.option(b"--max-old-space-size") {
+            match core::str::from_utf8(value).ok().and_then(|v| v.trim().parse::<u64>().ok()) {
+                Some(megabytes) => {
+                    Bun__Node__MaxOldSpaceSizeMB.store(megabytes, core::sync::atomic::Ordering::Relaxed)
+                }
+                None => {
+                    bun_core::pretty_errorln!(
+                        "<r><red>error<r>: --max-old-space-size expects a whole number of MiB"
+                    );
+                    Global::exit(1);
+                }
+            }
         }
         if args.flag(b"--zero-fill-buffers") {
             Bun__Node__ZeroFillBuffers.store(true, core::sync::atomic::Ordering::Relaxed);

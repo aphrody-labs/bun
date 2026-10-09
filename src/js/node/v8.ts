@@ -2,10 +2,17 @@
 
 // This is a stub! None of this is actually implemented yet.
 const { hideFromStack, throwNotImplemented } = require("internal/shared");
-const { validateString, validateOneOf } = require("internal/validators");
+const { validateString, validateOneOf, validateUint32 } = require("internal/validators");
 const { isDataView, isAnyArrayBuffer } = require("node:util/types");
 const jsc: typeof import("bun:jsc") = require("bun:jsc");
-const { isStringOneByteRepresentation, startGCProfiler, stopGCProfiler, discardGCProfiler } = $cpp(
+const {
+  isStringOneByteRepresentation,
+  startGCProfiler,
+  stopGCProfiler,
+  discardGCProfiler,
+  heapLimit,
+  setNearHeapLimitCallback,
+} = $cpp(
   "NodeV8.cpp",
   "Bun::createNodeV8Binding",
 );
@@ -188,7 +195,7 @@ function getHeapStatistics() {
     total_available_size: totalmem() - stats.heapSize,
     used_heap_size: stats.heapSize,
     total_allocated_bytes: stats.heapCapacity,
-    heap_size_limit: Math.min(memory.peak * 10, totalmem()),
+    heap_size_limit: heapLimit() || Math.min(memory.peak * 10, totalmem()),
     malloced_memory: stats.heapSize,
     peak_malloced_memory: memory.peak,
 
@@ -338,7 +345,7 @@ function getDefaultHeapSnapshotPath() {
   const thread_id = worker_threads.threadId;
 
   const yyyy = date.getFullYear();
-  const mm = date.getMonth().toString().padStart(2, "0");
+  const mm = (date.getMonth() + 1).toString().padStart(2, "0");
   const dd = date.getDate().toString().padStart(2, "0");
   const hh = date.getHours().toString().padStart(2, "0");
   const MM = date.getMinutes().toString().padStart(2, "0");
@@ -370,8 +377,23 @@ function writeHeapSnapshot(path, _options) {
 
   return path;
 }
-function setHeapSnapshotNearHeapLimit() {
-  notimpl("setHeapSnapshotNearHeapLimit");
+let heapSnapshotNearHeapLimitSet = false;
+// Writes up to `limit` heap snapshots, each once the live heap after a collection
+// reaches 90% of --max-old-space-size. Without that flag there is no limit to be
+// near, so nothing is written. The snapshot is taken on the event loop, not
+// inside the collection as in node, so a synchronous allocation loop that never
+// yields reaches the limit first.
+function setHeapSnapshotNearHeapLimit(limit) {
+  validateUint32(limit, "limit");
+  if (heapSnapshotNearHeapLimitSet || limit === 0) return;
+  heapSnapshotNearHeapLimitSet = true;
+  let written = 0;
+  setNearHeapLimitCallback(() => {
+    // node names these Heap.${yyyymmdd}.${hhmmss}.${pid}.${thread_id}.${seq}.heapsnapshot
+    const [, ymd, hms, pid, tid] = getDefaultHeapSnapshotPath().split(/[-.]/);
+    writeHeapSnapshot(`Heap.${ymd}.${hms}.${pid}.${tid}.${String(written + 1).padStart(3, "0")}.heapsnapshot`);
+    if (++written >= limit) setNearHeapLimitCallback(undefined);
+  });
 }
 function throwNotBuildingSnapshot() {
   throw $ERR_NOT_BUILDING_SNAPSHOT("Operation cannot be invoked when not building startup snapshot");

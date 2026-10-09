@@ -1329,6 +1329,7 @@ impl Run<'_> {
         unsafe extern "C" {
             fn Bun__ExposeNodeModuleGlobals(global: *const JSGlobalObject);
             fn JSC__JSGlobalObject__addGc(global: *const JSGlobalObject);
+            fn Bun__NodeV8__applyMaxOldSpaceSize(global: *const JSGlobalObject);
         }
         let ro = &ctx.runtime_options;
         if !ro.eval.script.is_empty() {
@@ -1339,6 +1340,8 @@ impl Run<'_> {
             // SAFETY: FFI; `vm.global` is live for the VM lifetime.
             unsafe { JSC__JSGlobalObject__addGc(vm.global) };
         }
+        // SAFETY: FFI; `vm.global` is live for the VM lifetime. A no-op without --max-old-space-size.
+        unsafe { Bun__NodeV8__applyMaxOldSpaceSize(vm.global) };
     }
 
     /// `Run.start`: take the JSC API lock, load the entry point, run the event

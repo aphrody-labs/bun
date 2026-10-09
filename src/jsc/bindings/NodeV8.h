@@ -7,12 +7,14 @@
 #include <JavaScriptCore/HeapObserver.h>
 #include <JavaScriptCore/JSGlobalObject.h>
 #include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/Strong.h>
 #include <JavaScriptCore/VM.h>
 #include <wtf/HashMap.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/Vector.h>
 
 #include <algorithm>
+#include <atomic>
 #include <optional>
 #include <utility>
 
@@ -144,6 +146,44 @@ private:
     std::optional<WTF::MonotonicTime> m_collectionStart;
     size_t m_capacityBefore { 0 };
     size_t m_externalBefore { 0 };
+};
+
+// A JavaScript heap limit (--max-old-space-size) and the "near the limit"
+// notification node:v8 setHeapSnapshotNearHeapLimit() needs, both measured
+// on the live bytes JavaScriptCore reports after each collection. Lives on
+// Zig::GlobalObject. didGarbageCollect() can run on the collector thread with
+// the mutator stopped, so it never runs JS: the near-limit callback is posted
+// to the context's event loop, and the hard limit ends the process (main
+// thread, like node's fatal OOM) or terminates the worker's VM.
+class HeapLimitObserver final : public JSC::HeapObserver {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(HeapLimitObserver);
+
+public:
+    explicit HeapLimitObserver(JSC::JSGlobalObject*);
+    ~HeapLimitObserver() final;
+
+    void willGarbageCollect() final {}
+    void didGarbageCollect(JSC::CollectionScope) final;
+
+    // 0 removes the limit.
+    void setLimit(size_t bytes);
+    size_t limit() const { return m_limit.load(std::memory_order_relaxed); }
+
+    // Null clears it. Called on the JS thread.
+    void setNearLimitCallback(JSC::VM&, JSC::JSObject*);
+    void runNearLimitCallback(JSC::JSGlobalObject*, size_t used);
+
+private:
+    void updateAttachment();
+
+    JSC::VM* m_vm;
+    uint32_t m_contextIdentifier { 0 };
+    bool m_isMainThread { false };
+    bool m_attached { false };
+    std::atomic<size_t> m_limit { 0 };
+    std::atomic<bool> m_hasNearCallback { false };
+    std::atomic<bool> m_nearArmed { true };
+    JSC::Strong<JSC::JSObject> m_nearCallback;
 };
 
 JSC::JSObject* createNodeV8Binding(JSC::JSGlobalObject* globalObject);
