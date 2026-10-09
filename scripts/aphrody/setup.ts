@@ -13,6 +13,7 @@
 //   --no-system      skip system packages (apt/apk/brew/winget); toolchains still checked
 //   --no-update      never fast-forward an existing checkout
 //   --packages       also fetch the Cargo git dependencies of packages/* (our forks: oxc, pyo3, wry, ...)
+//   --no-agent-plugin  skip installing the Bun plugin into Claude Code, Codex and Antigravity (when found)
 //
 // Each step checks its own result first, so a second run (or a run after a failure) only does what is
 // missing. Downloads are verified with sha256 (rustup-init: its .sha256 file; LLVM: the release asset digest
@@ -42,6 +43,7 @@ type Options = {
   system: boolean;
   update: boolean;
   packages: boolean;
+  agentPlugin: boolean;
   write: boolean;
   check: boolean;
 };
@@ -56,6 +58,7 @@ export function parseOptions(argv: string[]): Options {
     system: true,
     update: true,
     packages: false,
+    agentPlugin: true,
     write: false,
     check: false,
   };
@@ -75,6 +78,7 @@ export function parseOptions(argv: string[]): Options {
     else if (a === "--no-system") o.system = false;
     else if (a === "--no-update") o.update = false;
     else if (a === "--packages") o.packages = true;
+    else if (a === "--no-agent-plugin") o.agentPlugin = false;
     else if (a === "--write") o.write = true;
     else if (a === "--check") o.check = true;
     else if (a === "--help" || a === "-h") {
@@ -760,6 +764,17 @@ function packagesStep(checkout: string): Step {
   };
 }
 
+function agentPluginStep(checkout: string): Step {
+  return {
+    id: "agent-plugin",
+    title: "Bun plugin for the coding agents found (Claude Code, Codex, Antigravity): bun agent-plugin install",
+    check: () => undefined,
+    async run() {
+      await exec([bunExe(), "scripts/aphrody/agent-plugin.ts", "install"], { cwd: checkout });
+    },
+  };
+}
+
 function buildStep(checkout: string): Step {
   return {
     id: "build",
@@ -1103,6 +1118,7 @@ async function main() {
   steps.push(bunInstallStep(dir), vendorStep(dir));
   if (o.packages) steps.push(packagesStep(dir));
   if (o.build) steps.push(buildStep(dir));
+  if (o.agentPlugin) steps.push(agentPluginStep(dir));
 
   const report: { id: string; title: string; done?: string; commands: string[] }[] = [];
   log(
@@ -1122,7 +1138,7 @@ async function main() {
     report.push({ id: step.id, title: step.title, commands: [...planned] });
     if (!dryRun) {
       const after = await step.check();
-      if (after === undefined && !["bun-install", "vendor", "packages", "build"].includes(step.id)) {
+      if (after === undefined && !["bun-install", "vendor", "packages", "build", "agent-plugin"].includes(step.id)) {
         throw new Error(`${step.title}: still missing after the step ran`);
       }
     }

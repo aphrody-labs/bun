@@ -51,7 +51,10 @@ test("dry run plans every step and changes nothing", async () => {
     "vendor",
     "packages",
     "build",
+    "agent-plugin",
   ]);
+  const agentPlugin = plan.steps.find((s: { id: string }) => s.id === "agent-plugin");
+  expect(agentPlugin.commands.at(-1)).toEndWith("scripts/aphrody/agent-plugin.ts install");
   const build = plan.steps.find((s: { id: string }) => s.id === "build");
   expect(build.commands.at(-1)).toEndWith("run bd --version");
   const packages = plan.steps.find((s: { id: string }) => s.id === "packages");

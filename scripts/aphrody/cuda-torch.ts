@@ -25,8 +25,8 @@ export function indexFor(driverCuda: string): string {
 
 async function detect(): Promise<string | null> {
   try {
-    const out = await Bun.$`nvidia-smi`.quiet().text();
-    return out.match(/CUDA Version:\s*([\d.]+)/)?.[1] ?? null;
+    const out = await new Response(Bun.spawn(["nvidia-smi"], { stdout: "pipe", stderr: "ignore" }).stdout).text();
+    return out.match(/CUDA (?:UMD )?Version:\s*([\d.]+)/)?.[1] ?? null;
   } catch {
     return null;
   }

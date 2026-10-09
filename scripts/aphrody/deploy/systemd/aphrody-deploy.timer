@@ -1,0 +1,11 @@
+# Installation : voir aphrody-deploy.service.
+[Unit]
+Description=File de déploiement automatique toutes les 2 minutes
+
+[Timer]
+OnBootSec=3min
+OnActiveSec=1min
+OnUnitInactiveSec=2min
+
+[Install]
+WantedBy=timers.target

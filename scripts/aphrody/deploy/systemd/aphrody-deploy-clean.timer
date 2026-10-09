@@ -1,0 +1,11 @@
+# Installation : voir aphrody-deploy-clean.service.
+[Unit]
+Description=Nettoyage disque quotidien aphrody-deploy
+
+[Timer]
+OnCalendar=*-*-* 04:30:00
+RandomizedDelaySec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

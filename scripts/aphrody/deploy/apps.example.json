@@ -1,0 +1,26 @@
+{
+  "_doc": "Copy to ~/.config/aphrody-deploy/apps.json on the build host. One app per file. See docs/project/auto-deploy.mdx.",
+  "name": "shenron",
+  "sources": [
+    { "name": "shenron", "repo": "aphrody-labs/shenron", "branch": "main", "checkout": "~/yolo/src/shenron" },
+    { "name": "aphrody", "repo": "aphrody-labs/aphrody", "branch": "main" },
+    { "name": "bun", "repo": "aphrody-labs/bun", "kind": "release", "tagPrefix": "aphrody-v" }
+  ],
+  "build": {
+    "_doc": "{src.<name>} = ephemeral worktree of that source, {out}/{id}/{work} also available. DEPLOY_SHA_<NAME> / DEPLOY_TAG_<NAME> are exported.",
+    "cwd": "{src.shenron}",
+    "cmd": ["bun", "build", "--compile", "src/server.ts", "--outfile", "dist/shenron-server"],
+    "artifact": "dist/shenron-server",
+    "env": {}
+  },
+  "host": "dbfr",
+  "ssh": { "target": "dbfr-wg", "identity": "~/.ssh/id_ed25519" },
+  "remote": {
+    "root": "/srv/shenron-app",
+    "unit": "shenron",
+    "health": "http://127.0.0.1:3000/healthz",
+    "keep": 2,
+    "bun": "/home/ubuntu/.local/bin/bun"
+  },
+  "clean": { "cacheDirs": [], "cacheDays": 14 }
+}
