@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { bunEnv, bunExe, tempDir } from "harness";
 import { createHash, generateKeyPairSync, sign, type KeyObject } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { run } from "../../scripts/aphrody/win/apk/apk";
+import { DEFAULT_KEY_NAME, install, mergePath, removeFromPath } from "../../scripts/aphrody/win/install";
 import {
   compareVersions,
   openApk,
@@ -366,5 +367,54 @@ describe("apk (dépôt signé fabriqué)", () => {
     const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
     expect(stdout + stderr).toContain("ERROR: commande inconnue : frobnicate");
     expect(exitCode).toBe(1);
+  });
+});
+
+describe("install.ts", () => {
+  test("mergePath / removeFromPath", () => {
+    expect(mergePath("C:\\a;C:\\Root\\usr\\bin\\;C:\\b", ["C:\\root\\usr\\bin"])).toBe(
+      "C:\\root\\usr\\bin;C:\\a;C:\\b",
+    );
+    expect(removeFromPath("C:\\a;c:\\root\\usr\\bin;;C:\\b", ["C:\\root\\usr\\bin"])).toBe("C:\\a;C:\\b");
+  });
+
+  test("amorce la racine, installe, crée bunsh et le profil Windows Terminal", async () => {
+    using dir = tempDir("aphrody-win-setup", {});
+    const root = join(String(dir), "root");
+    const keys = join(String(dir), "keys");
+    const repo = join(String(dir), "repo");
+    const terminalDir = join(String(dir), "wt");
+    makeRepo(repo, PKGS, keypair(keys, "setup.rsa.pub"), "setup.rsa.pub");
+    const lines: string[] = [];
+    const code = await install({
+      root,
+      repos: [repo],
+      keys: [join(keys, "setup.rsa.pub")],
+      arch: "x86_64",
+      packages: ["foo"],
+      update: false,
+      path: false,
+      terminalProfile: true,
+      terminalDir,
+      allowUntrusted: false,
+      quiet: true,
+      bun: process.execPath,
+      out: s => lines.push(s),
+    });
+    expect(lines.filter(l => !l.startsWith("ATTENTION"))).toEqual([]);
+    expect(code).toBe(0);
+    expect(readFileSync(join(root, "etc/apk/keys", DEFAULT_KEY_NAME), "utf8")).toContain("BEGIN PUBLIC KEY");
+    expect(readFileSync(join(root, "etc/apk/repositories"), "utf8")).toBe(repo + "\n");
+    expect(readFileSync(join(root, "etc/apk/arch"), "utf8")).toBe("x86_64\n");
+    expect(readFileSync(join(root, "etc/apk/world"), "utf8")).toBe("foo\n");
+    expect(readFileSync(join(root, "usr/lib/libfoo.dll"), "utf8")).toBe("MZ libfoo");
+    const bunsh = join(root, "usr/bin", process.platform === "win32" ? "bunsh.exe" : "bunsh");
+    expect(statSync(bunsh).size).toBe(statSync(process.execPath).size);
+    const frag = JSON.parse(readFileSync(join(terminalDir, "aphrody-win.json"), "utf8"));
+    expect(frag.profiles[0]).toMatchObject({
+      name: "Aphrody (bunsh)",
+      commandline: `"${bunsh.replace(/\//g, "\\")}" -l`,
+    });
+    expect(frag.profiles[0].guid).toMatch(/^\{[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\}$/);
   });
 });

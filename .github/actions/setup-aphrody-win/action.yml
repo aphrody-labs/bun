@@ -1,0 +1,96 @@
+name: Setup Aphrody Windows
+description: >-
+  Équivalent de msys2/setup-msys2 sans émulation POSIX : racine apk native Windows (client Bun
+  scripts/aphrody/win/apk/apk.ts), paquets signés aphrody-labs, <root>\usr\bin ajouté au PATH du job.
+
+inputs:
+  packages:
+    description: "Paquets apk à installer (séparés par des espaces ou des retours à la ligne)"
+    required: false
+    default: ""
+  root:
+    description: "Racine (défaut : $RUNNER_TEMP\\aphrody-win)"
+    required: false
+    default: ""
+  repo:
+    description: "Dépôts apk (URL ou dossier, un par ligne ; défaut : release aphrody-3.24-${APK_ARCH} de aphrody-labs/aports)"
+    required: false
+    default: ""
+  keys:
+    description: "Clés publiques supplémentaires (.rsa.pub, une par ligne) ; aphrody-labs.rsa.pub est toujours installée"
+    required: false
+    default: ""
+  arch:
+    description: "Arch apk (défaut : windows-x86_64 ou windows-aarch64 selon le runner)"
+    required: false
+    default: ""
+  update:
+    description: "Met à jour les paquets déjà présents (apk upgrade), utile avec le cache"
+    required: false
+    default: "false"
+  cache:
+    description: "Met la racine en cache (actions/cache)"
+    required: false
+    default: "true"
+
+outputs:
+  root:
+    description: "Chemin absolu de la racine"
+    value: ${{ steps.prep.outputs.root }}
+
+runs:
+  using: composite
+  steps:
+    - name: Bun présent ?
+      id: bun
+      shell: pwsh
+      run: |
+        "found=$([bool](Get-Command bun -ErrorAction SilentlyContinue))".ToLower() >> $env:GITHUB_OUTPUT
+
+    - name: Installer Bun
+      if: steps.bun.outputs.found != 'true'
+      uses: oven-sh/setup-bun@v2
+
+    - name: Préparer
+      id: prep
+      shell: pwsh
+      env:
+        INPUT_ROOT: ${{ inputs.root }}
+        INPUT_PACKAGES: ${{ inputs.packages }}
+        INPUT_REPO: ${{ inputs.repo }}
+        INPUT_ARCH: ${{ inputs.arch }}
+      run: |
+        $root = if ($env:INPUT_ROOT) { $env:INPUT_ROOT } else { Join-Path $env:RUNNER_TEMP 'aphrody-win' }
+        $root = [IO.Path]::GetFullPath($root)
+        $seed = "$env:INPUT_PACKAGES|$env:INPUT_REPO|$env:INPUT_ARCH|$env:RUNNER_ARCH"
+        $hash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($seed))).Substring(0, 16)
+        "root=$root" >> $env:GITHUB_OUTPUT
+        "key=aphrody-win-$env:RUNNER_OS-$env:RUNNER_ARCH-$hash" >> $env:GITHUB_OUTPUT
+        "APHRODY_WIN_ROOT=$root" >> $env:GITHUB_ENV
+
+    - name: Cache de la racine
+      if: inputs.cache == 'true'
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.prep.outputs.root }}
+        key: ${{ steps.prep.outputs.key }}
+
+    - name: Installer les paquets
+      shell: pwsh
+      env:
+        ROOT: ${{ steps.prep.outputs.root }}
+        INPUT_PACKAGES: ${{ inputs.packages }}
+        INPUT_REPO: ${{ inputs.repo }}
+        INPUT_KEYS: ${{ inputs.keys }}
+        INPUT_ARCH: ${{ inputs.arch }}
+        INPUT_UPDATE: ${{ inputs.update }}
+        SETUP: ${{ github.action_path }}/../../../scripts/aphrody/win/install.ts
+      run: |
+        $argv = @('--root', $env:ROOT)
+        foreach ($r in ($env:INPUT_REPO -split "`r?`n" | Where-Object { $_.Trim() })) { $argv += @('--repo', $r.Trim()) }
+        foreach ($k in ($env:INPUT_KEYS -split "`r?`n" | Where-Object { $_.Trim() })) { $argv += @('--key', $k.Trim()) }
+        if ($env:INPUT_ARCH) { $argv += @('--arch', $env:INPUT_ARCH) }
+        if ($env:INPUT_UPDATE -eq 'true') { $argv += '--update' }
+        $argv += ($env:INPUT_PACKAGES -split '\s+' | Where-Object { $_ })
+        bun $env:SETUP @argv
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

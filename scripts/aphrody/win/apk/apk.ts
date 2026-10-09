@@ -37,8 +37,10 @@ export function defaultRoot(): string {
   return join(base, "aphrody", "win");
 }
 
+/** Arch apk des paquets PE natifs : distincte des paquets ELF d'Alpine (x86_64, aarch64). */
 export function defaultArch(): string {
-  return process.arch === "arm64" ? "aarch64" : process.arch === "x64" ? "x86_64" : process.arch;
+  const cpu = process.arch === "arm64" ? "aarch64" : process.arch === "x64" ? "x86_64" : process.arch;
+  return process.platform === "win32" ? `windows-${cpu}` : cpu;
 }
 
 export interface Ctx {
@@ -404,7 +406,7 @@ export async function run(argv: string[], out: (s: string) => void = s => consol
     switch (cmd) {
       case "update": {
         const pkgs = await update(ctx);
-        out(`OK: ${new Set(pkgs.map(p => p.name)).size} paquets distincts disponibles`);
+        if (!ctx.quiet) out(`OK: ${new Set(pkgs.map(p => p.name)).size} paquets distincts disponibles`);
         return 0;
       }
       case "search": {
