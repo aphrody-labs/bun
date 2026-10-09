@@ -6,7 +6,7 @@ version = "1.0.0-canary"
 edition = "2024"
 rust-version = "1.97"
 license = "Apache-2.0"
-publish = false
+publish = true
 repository = "https://github.com/aphrody-labs/bun"
 description = "Reverse engineering primitives — PE/ELF/Mach-O triage, sections + entropy + hash, ASCII/UTF-16 strings, x86-64 disassembly, ASAR/Electron/Go/Adobe/Android/Steam/minidump inspection. Pure Rust, no C bindings, no GPL."
 
