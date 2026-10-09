@@ -15,10 +15,19 @@ pub(crate) struct ToolchainCommand;
 impl ToolchainCommand {
     #[cold]
     pub(crate) fn exec(ctx: Command::Context) -> crate::Result<()> {
-        let script = bun_core::runtime_embed_file!(Codegen, "eval/toolchain.ts").as_bytes();
+        let script = if super::devtools_command::is_devtools_invocation() {
+            bun_core::runtime_embed_file!(Codegen, "eval/devtools.ts").as_bytes()
+        } else {
+            bun_core::runtime_embed_file!(Codegen, "eval/toolchain.ts").as_bytes()
+        };
         ctx.runtime_options.eval.script = script.to_vec().into_boxed_slice();
         RunCommand::exec_eval(ctx)
     }
+}
+
+/// Command names `eval/toolchain.ts` dispatches on (its `COMMANDS`).
+pub(crate) fn is_toolchain_name(arg: &[u8]) -> bool {
+    matches!(arg, b"lint" | b"fmt" | b"n2b" | b"migrate" | b"wasm" | b"build" | b"create" | b"c")
 }
 
 /// Whether `bun <name>` is `bun run <name>`: `scripts.<name>` of the nearest `package.json`, which
