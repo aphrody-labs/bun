@@ -151,6 +151,51 @@ declare module "bun:cosmic" {
      * localized for `locales` (default: from `LC_ALL`, `LC_MESSAGES`, `LANG`, `LANGUAGE`).
      */
     function list(options?: { dirs?: string[]; locales?: string[] }): DesktopEntry[];
+
+    interface ExecContext {
+      /** Replaces `%f` (first file) and `%F` (one argument per file). */
+      files?: string[];
+      /** Replaces `%u` (first URL) and `%U` (one argument per URL). */
+      urls?: string[];
+      /** Replaces `%c`. */
+      name?: string;
+      /** `%i` becomes `--icon <icon>`, or nothing without an icon. */
+      icon?: string;
+      /** Replaces `%k`. */
+      path?: string;
+    }
+
+    /**
+     * Splits an `Exec` value into argv as the Desktop Entry spec describes: spaces separate
+     * arguments, double quotes group them, and field codes expand from `context`. A `%f`, `%u`,
+     * `%F` or `%U` without files or URLs removes its argument. Deprecated codes are dropped.
+     * Throws `ERR_BUN_COSMIC_INVALID_EXEC` on an unknown code or an unterminated quote.
+     */
+    function expandExec(exec: string, context?: ExecContext): string[];
+
+    interface LaunchOptions {
+      files?: string[];
+      urls?: string[];
+      /** Runs the `Exec` of this desktop action instead of the entry's. */
+      action?: string;
+      /** Prefix for entries with `Terminal=true`, such as `["cosmic-term", "-e"]`. */
+      terminal?: string[];
+      /** @default the entry's `Path`, else the current directory */
+      cwd?: string;
+      env?: Record<string, string | undefined>;
+      /** @default "ignore" */
+      stdin?: "ignore" | "inherit" | "pipe";
+      /** @default "inherit" */
+      stdout?: "ignore" | "inherit" | "pipe";
+      /** @default "inherit" */
+      stderr?: "ignore" | "inherit" | "pipe";
+    }
+
+    /**
+     * Starts an application from its entry (or its id, looked up with {@link list}) with
+     * `Bun.spawn`, without a shell. Call `unref()` on the result so Bun can exit before it.
+     */
+    function launch(entry: DesktopEntry | string, options?: LaunchOptions): Bun.Subprocess;
   }
 
   /** A RON value as JavaScript: `None` is `null`, maps are `Map`s, anonymous structs are plain objects. */

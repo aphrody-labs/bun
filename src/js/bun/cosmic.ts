@@ -173,7 +173,144 @@ function listApps(options) {
   return JSON.parse(desktopEntriesNative(dirs.join("\0"), locales.join("\0")));
 }
 
-const apps = Object.freeze({ list: listApps });
+/** Desktop Entry spec "Possible value types": `\s`, `\n`, `\t`, `\r`, `\\` in string values. */
+function unescapeValue(value) {
+  return value.replace(/\\([sntr\\])/g, (_, c) => ({ s: " ", n: "\n", t: "\t", r: "\r", "\\": "\\" })[c]);
+}
+
+function execError(exec, message) {
+  const error = new Error(`Invalid Exec value ${JSON.stringify(exec)}: ${message}`);
+  error.code = "ERR_BUN_COSMIC_INVALID_EXEC";
+  return error;
+}
+
+/**
+ * Splits an Exec value into argv and expands its field codes (Desktop Entry spec, "The Exec key").
+ * Arguments are separated by spaces; a double-quoted argument keeps its spaces and takes `\"`,
+ * `` \` ``, `\$` and `\\` as escapes. Field codes in quoted arguments stay literal.
+ */
+function expandExecRaw(exec, context) {
+  const raw = unescapeValue(exec);
+  const argv = [];
+  let i = 0;
+  while (i < raw.length) {
+    while (raw[i] === " " || raw[i] === "\t") i++;
+    if (i >= raw.length) break;
+    if (raw[i] === '"') {
+      let arg = "";
+      i++;
+      while (i < raw.length && raw[i] !== '"') {
+        if (raw[i] === "\\" && '"`$\\'.includes(raw[i + 1] ?? "")) i++;
+        arg += raw[i++];
+      }
+      if (i >= raw.length) throw execError(exec, "unterminated quote");
+      i++;
+      argv.push(arg);
+      continue;
+    }
+    let word = "";
+    while (i < raw.length && raw[i] !== " " && raw[i] !== "\t") word += raw[i++];
+    // A list code standing alone becomes one argument per file or URL.
+    if (word === "%F" || word === "%U") {
+      for (const item of word === "%F" ? context.files : context.urls) argv.push(item);
+      continue;
+    }
+    if (word === "%i") {
+      if (context.icon) argv.push("--icon", context.icon);
+      continue;
+    }
+    let out = "";
+    let dropped = false;
+    for (let j = 0; j < word.length; j++) {
+      if (word[j] !== "%") {
+        out += word[j];
+        continue;
+      }
+      const code = word[++j];
+      switch (code) {
+        case "%":
+          out += "%";
+          break;
+        case "f":
+        case "F":
+          if (context.files.length === 0) dropped = true;
+          else out += context.files[0];
+          break;
+        case "u":
+        case "U":
+          if (context.urls.length === 0) dropped = true;
+          else out += context.urls[0];
+          break;
+        case "c":
+          out += context.name ?? "";
+          break;
+        case "k":
+          out += context.path ?? "";
+          break;
+        case "d":
+        case "D":
+        case "n":
+        case "N":
+        case "v":
+        case "m":
+          dropped = true;
+          break;
+        default:
+          throw execError(exec, `unknown field code %${code ?? ""}`);
+      }
+    }
+    // `%f` with no file, or a deprecated code, removes an argument it leaves empty.
+    if (!(dropped && out === "")) argv.push(out);
+  }
+  if (argv.length === 0) throw execError(exec, "no program");
+  return argv;
+}
+
+function launchApp(entry, options) {
+  if (typeof entry === "string") {
+    const id = entry;
+    entry = listApps().find(e => e.id === id);
+    if (!entry) throw $ERR_INVALID_ARG_VALUE("entry", id, "is not an installed application id");
+  } else if (entry === null || typeof entry !== "object") {
+    throw $ERR_INVALID_ARG_TYPE("entry", ["string", "object"], entry);
+  }
+  options = validateOptions("options", options);
+  const files = stringList("options.files", options.files, () => []);
+  const urls = stringList("options.urls", options.urls, () => []);
+  let exec = entry.exec;
+  if (options.action !== undefined) {
+    const action = (entry.actions ?? []).find(a => a.id === options.action);
+    if (!action) throw $ERR_INVALID_ARG_VALUE("options.action", options.action, "is not an action of this entry");
+    exec = action.exec;
+  }
+  if (typeof exec !== "string" || exec === "") {
+    throw $ERR_INVALID_ARG_VALUE("entry", entry.id, "has no Exec value");
+  }
+  const argv = expandExecRaw(exec, { files, urls, name: entry.name, icon: entry.icon, path: entry.path });
+  const terminal = entry.terminal ? stringList("options.terminal", options.terminal, () => []) : [];
+  return Bun.spawn({
+    cmd: [...terminal, ...argv],
+    cwd: options.cwd ?? entry.workingDirectory ?? undefined,
+    env: options.env ?? process.env,
+    stdin: options.stdin ?? "ignore",
+    stdout: options.stdout ?? "inherit",
+    stderr: options.stderr ?? "inherit",
+  });
+}
+
+function expandExec(exec, context) {
+  if (typeof exec !== "string") throw $ERR_INVALID_ARG_TYPE("exec", "string", exec);
+  context = validateOptions("context", context);
+  return expandExecRaw(exec, {
+    files: stringList("context.files", context.files, () => []),
+    urls: stringList("context.urls", context.urls, () => []),
+    name: optionString("context.name", context.name),
+    icon: optionString("context.icon", context.icon),
+    path: optionString("context.path", context.path),
+  });
+}
+
+const apps = Object.freeze({ list: listApps, launch: launchApp, expandExec });
 
 // ---------------------------------------------------------------------------------------------
 // RON, the format of cosmic-config values

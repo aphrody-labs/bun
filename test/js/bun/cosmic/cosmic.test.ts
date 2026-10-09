@@ -138,6 +138,65 @@ test("config reads defaults, writes atomically and watches", async () => {
   expect(exitCode).toBe(0);
 });
 
+describe("apps.expandExec", () => {
+  const context = { files: ["/a b.txt", "/c"], urls: ["https://x/"], name: "Editor", icon: "ed", path: "/e.desktop" };
+
+  test.each([
+    ["editor %f", ["editor", "/a b.txt"]],
+    ["editor %F", ["editor", "/a b.txt", "/c"]],
+    ["editor %U --x", ["editor", "https://x/", "--x"]],
+    ["editor --file=%f", ["editor", "--file=/a b.txt"]],
+    ["editor %i --title=%c %k", ["editor", "--icon", "ed", "--title=Editor", "/e.desktop"]],
+    ['"/opt/my app/bin" "two words" "q\\\\"" 100%%', ["/opt/my app/bin", "two words", 'q"', "100%"]],
+    ['sh -c "echo \\\\$HOME %f"', ["sh", "-c", "echo $HOME %f"]],
+    ["editor\\s%d %m --x", ["editor", "--x"]],
+  ])("%s", (exec, argv) => {
+    expect(apps.expandExec(exec, context)).toEqual(argv);
+  });
+
+  test("drops file and URL codes without files or URLs", () => {
+    expect(apps.expandExec("editor %f %F %u %U --new", {})).toEqual(["editor", "--new"]);
+  });
+
+  test("rejects unknown codes and unterminated quotes", () => {
+    expect(() => apps.expandExec("editor %z")).toThrow(
+      expect.objectContaining({ code: "ERR_BUN_COSMIC_INVALID_EXEC" }),
+    );
+    expect(() => apps.expandExec('"editor')).toThrow(expect.objectContaining({ code: "ERR_BUN_COSMIC_INVALID_EXEC" }));
+  });
+});
+
+test("apps.launch spawns the Exec of an entry or action without a shell", async () => {
+  using dir = tempDir("cosmic-launch", {
+    "print.js": "console.log(JSON.stringify(process.argv.slice(2)));",
+  });
+  // Exec escaping, then the string-level escaping of every backslash (Windows paths).
+  const quote = (s: string) => `"${s.replace(/[\\"`$]/g, c => "\\" + c).replaceAll("\\", "\\\\")}"`;
+  const program = `${quote(bunExe())} ${quote(join(String(dir), "print.js"))}`;
+  const entry = {
+    id: "t",
+    path: "/t.desktop",
+    name: "Test App",
+    icon: "test-icon",
+    exec: `${program} %F --name=%c %i 100%% $HOME`,
+    terminal: false,
+    workingDirectory: null,
+    actions: [{ id: "new", name: "New", exec: `${program} --new %u` }],
+  } as any;
+
+  await using proc = apps.launch(entry, { files: ["a b.txt", "c"], stdout: "pipe", env: bunEnv });
+  const [stdout, exitCode] = await Promise.all([proc.stdout.text(), proc.exited]);
+  expect(JSON.parse(stdout)).toEqual(["a b.txt", "c", "--name=Test App", "--icon", "test-icon", "100%", "$HOME"]);
+  expect(exitCode).toBe(0);
+
+  await using action = apps.launch(entry, { action: "new", urls: ["https://x/"], stdout: "pipe", env: bunEnv });
+  const [actionOut, actionCode] = await Promise.all([action.stdout.text(), action.exited]);
+  expect(JSON.parse(actionOut)).toEqual(["--new", "https://x/"]);
+  expect(actionCode).toBe(0);
+
+  expect(() => apps.launch(entry, { action: "missing" })).toThrow();
+});
+
 test("config rejects names that are not one path component", () => {
   expect(() => config.open("../etc")).toThrow();
   expect(() => config.open("com.example.Test").get("a/b")).toThrow();
