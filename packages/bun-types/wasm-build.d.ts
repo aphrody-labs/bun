@@ -22,6 +22,13 @@ declare module "bun:wasm" {
   interface BuildOptions {
     /** A crate directory, its `Cargo.toml`, or a `.rs` file in it. Defaults to the working directory. */
     crate?: string;
+    /** A package of the Cargo workspace of {@link crate}, like `cargo build -p`. */
+    package?: string;
+    /**
+     * A `.wasm` cargo already built (for example on another machine): packaged as is, without
+     * running cargo.
+     */
+    artifact?: string;
     /** Output package directory. Defaults to `pkg` in the crate. Replaced only when the build succeeds. */
     outdir?: string;
     /** `wasm-bindgen --target`. Defaults to `"web"`: an ES module whose default export is `init()`. */

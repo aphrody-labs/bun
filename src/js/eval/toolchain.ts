@@ -509,6 +509,8 @@ Commands:
 
 Flags of build:
   -o, --outdir=<dir>     Output package (default: <crate>/pkg)
+  -p, --package=<name>   A package of the Cargo workspace, like cargo build -p
+      --artifact=<file>  Package a .wasm cargo already built, without running cargo
       --target=<t>       wasm-bindgen target: web (default), bundler, nodejs, deno, no-modules
       --wasi=<p1|p2>     wasm32-wasip1 (node:wasi loader) or wasm32-wasip2 (component, jco transpile)
       --triple=<triple>  Any Rust target triple
@@ -534,6 +536,8 @@ async function wasmBuild(args: string[], cwd: string): Promise<number> {
   const { flags, rest, positionals } = parseFlags(args, {
     "outdir": { type: "string", short: "o" },
     "out-dir": { type: "string" },
+    "package": { type: "string", short: "p" },
+    "artifact": { type: "string" },
     "target": { type: "string" },
     "wasi": { type: "string" },
     "triple": { type: "string" },
@@ -564,6 +568,8 @@ async function wasmBuild(args: string[], cwd: string): Promise<number> {
   const { build } = require(WASM_MODULE);
   const result = await build({
     crate: path.resolve(cwd, positionals[0] ?? "."),
+    package: flags.package,
+    artifact: flags.artifact ? path.resolve(cwd, flags.artifact) : undefined,
     outdir: (flags.outdir ?? flags["out-dir"]) ? path.resolve(cwd, flags.outdir ?? flags["out-dir"]) : undefined,
     target,
     wasi: flags.wasi,

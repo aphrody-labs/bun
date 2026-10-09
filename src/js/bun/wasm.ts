@@ -106,7 +106,8 @@ function findManifest(input) {
   }
 }
 
-async function metadata(manifest) {
+// `name` selects a member of the workspace of `manifest`; otherwise the package of `manifest` itself.
+async function metadata(manifest, name) {
   const { stdout } = await checked([
     "cargo",
     "metadata",
@@ -118,14 +119,16 @@ async function metadata(manifest) {
   ]);
   const meta = JSON.parse(stdout);
   const same = (a, b) => path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase();
-  const pkg = meta.packages.find(p => same(p.manifest_path, manifest));
-  if (!pkg) throw new Error(`${manifest} is a virtual workspace manifest: point at a member crate`);
+  const pkg = name ? meta.packages.find(p => p.name === name) : meta.packages.find(p => same(p.manifest_path, manifest));
+  if (!pkg && name) throw new Error(`${name} is not a package of the workspace ${meta.workspace_root}`);
+  if (!pkg) throw new Error(`${manifest} is a virtual workspace manifest: point at a member crate or pass package`);
   const lib = pkg.targets.find(t => t.kind.includes("cdylib"));
   if (!lib) {
     throw new Error(`${pkg.name} has no cdylib target: add [lib] crate-type = ["cdylib"] to ${manifest}`);
   }
   return {
     name: pkg.name,
+    manifestPath: pkg.manifest_path,
     version: pkg.version,
     description: pkg.description ?? undefined,
     license: pkg.license ?? undefined,
@@ -281,9 +284,9 @@ function hashFile(file, extra) {
  */
 async function build(options = {}) {
   if (typeof options !== "object" || options === null) throw $ERR_INVALID_ARG_TYPE("options", "object", options);
-  const manifest = findManifest(options.crate ?? process.cwd());
+  const meta = await metadata(findManifest(options.crate ?? process.cwd()), options.package);
+  const manifest = meta.manifestPath;
   const crateDir = path.dirname(manifest);
-  const meta = await metadata(manifest);
   const wasi = options.wasi ?? undefined;
   if (wasi !== undefined && wasi !== "p1" && wasi !== "p2") throw new Error(`wasi must be "p1" or "p2", got ${wasi}`);
   const triple = options.triple ?? TRIPLES[wasi ?? "unknown"];
@@ -299,7 +302,7 @@ async function build(options = {}) {
   }
   const log = options.quiet ? () => {} : msg => process.stderr.write(msg + "\n");
 
-  if (options.cargo !== false) {
+  if (options.cargo !== false && !options.artifact) {
     await ensureTarget(triple);
     const cargo = ["cargo", "build", "--lib", "--manifest-path", manifest, "--target", triple];
     if (profile === "release") cargo.push("--release");
@@ -310,7 +313,9 @@ async function build(options = {}) {
     if (options.cargoArgs?.length) cargo.push(...options.cargoArgs);
     await checked(cargo, { cwd: crateDir, inherit: !options.quiet });
   }
-  const artifact = path.join(meta.targetDirectory, triple, profileDir, `${meta.libName}.wasm`);
+  const artifact = options.artifact
+    ? path.resolve(options.artifact)
+    : path.join(meta.targetDirectory, triple, profileDir, `${meta.libName}.wasm`);
   if (!fs.existsSync(artifact)) throw new Error(`cargo did not produce ${artifact}`);
 
   const bindgen = triple === TRIPLES.unknown && meta.usesBindgen && options.bindgen !== false;
