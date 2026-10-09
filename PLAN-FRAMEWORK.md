@@ -22,13 +22,18 @@ Fichiers : `packages/bun-next/**`, `test/integration/next-bun*/`, `test/integrat
   web-test) en dépend depuis npm (aphrody `dc2eea357`).
 - ✅ Shim `node` du runner : nécessaire sous Linux (Docker) et Windows (Turbopack lance `node` pour PostCSS et
   les loaders), conservé ; test next-app « no node on PATH » (`1172f762478`).
-- 🔄 J2 App Router via Bun.build (F1, `b1f89bb18c7`) : `lib/build-app.js`, passes rsc (références client, proxy
-  `registerClientReference`/`createProxy`), ssr (`bun-app-ssr.js`, `__webpack_require__` par id) et navigateur
-  (`main-app`, une entrée par module client, CSS par segment), manifestes `*_client-reference-manifest.js`,
-  `app-paths-manifest.json`, `server-reference-manifest.{js,json}` ; rejet explicite des Server Actions, de
-  `cacheComponents` et des fichiers de métadonnées. Codé, lint oxlint propre, **non exécuté** : variante « Bun.build »
-  de `test/integration/next-app/test/next-app.test.ts` à passer en passe finale. next/dynamic ⏳.
-- ⏳ J5 dev/HMR (`HotReloaderBun` sur Bun.build en watch) : après la preuve de J2.
+- ✅ J2 App Router via Bun.build (F1, `b1f89bb18c7`, `3ea9c75b869`) : `lib/build-app.js`, passes rsc (références
+  client, proxy `registerClientReference`/`createProxy`), ssr (`bun-app-ssr.js`, `__webpack_require__` par id) et
+  navigateur (`main-app`, une entrée par module client, CSS par segment), manifestes `*_client-reference-manifest.js`,
+  `app-paths-manifest.json`, `server-reference-manifest.{js,json}` ; config PostCSS du projet appliquée (Pages et
+  App Router) ; rejet explicite des Server Actions, de `cacheComponents` et des fichiers de métadonnées. Prouvé sur le
+  VPS (Linux, Bun système 1.4.3, paquet JS pur) : `bun test test/integration/next-app/test/next-app.test.ts
+  test/integration/next-bun-pages/test/next-bun-pages.test.ts` → 12 pass, 0 fail (variante « Bun.build » incluse ;
+  prerender de `/`, `/_not-found`, `/_global-error`, scripts et chunk du composant client servis en 200). Écart
+  relevé : `import()` d'un module CJS donne un espace de noms `__toESM` qui hérite du prototype de `module.exports`
+  (le proxy client de React renvoie `Promise.prototype`) ; contourné dans la référence client générée. ⏳ next/dynamic,
+  hydratation vérifiée dans un navigateur.
+- ⏳ J5 dev/HMR (`HotReloaderBun` sur Bun.build en watch).
 
 ### D. Plugin Tailwind CSS — `@aphrody/bun-plugin-tailwind` (✅)
 
@@ -101,9 +106,10 @@ ext.js` (`--filter=blob:none`, `origin` + `upstream`), branche `canary`
 - ✅ AGENTS.md et `scripts/**` sous Bun via `bunify.ts` (marqueurs `<!-- aphrody:bun -->`, gardés par la sync) ;
   `bun run test-unit-bun` : 128 des 155 `packages/next/src/**/*.test.ts` sous `bun test --isolate`, 1398 pass
   (`f489e60f28`) ; n2b 397 → 378 constats. ⏳ 27 fichiers restent sur Jest.
-- 🔄 App Router dans le Bun.build intégré (F1, `4b680668eb`) : `bun-build/app.ts` (port de `build-app.js`),
-  `shared.ts` ; `tsgo --noEmit -p packages/next/tsconfig.json` sans erreur dans bun-build (3 erreurs préexistantes de
-  tsgo dans `@sinclair/typebox` de node_modules). Non exécuté.
+- 🔄 App Router dans le Bun.build intégré (F1, `4b680668eb`, `b3c7bead3b`) : `bun-build/app.ts` (port de
+  `build-app.js`, mêmes correctifs PostCSS et proxy CJS), `shared.ts` ; `tsgo --noEmit -p packages/next/tsconfig.json`
+  sans erreur dans bun-build (3 erreurs préexistantes de tsgo dans `@sinclair/typebox` de node_modules). Non exécuté
+  dans le fork (la version `@aphrody/next-bun` est prouvée).
 - ✅ `scripts/aphrody/consume.ts` prépare Shenron et Aphrody (`catalog` → `npm:@aphrody/next@V`) et refuse tant que la
   version n'est pas sur npm (`a86c3b0f4a`).
 - ✅ Bun natif dans Next (`e4b162850f`) : `packages/next/src/build/bun-build` (port de `lib/build.js`, Bun.build pour
@@ -191,7 +197,7 @@ Tailwind (`@aphrody/base-ui`, `@aphrody/m3-base-ui`). Bunisation n2b (bun instal
 **État au 2026-10-09 (passage à agy)** : lot 1 (App Router, `42a83e3540`) et lot 3 partiel (`DataTable`/`VirtualList`
 dans `@aphrody/m3-react/data`, `apps/example`, `b70bfdf444` ; `yolo.ts` vers `apps/example`, `2bfba1d057`) poussés,
 non compilés ni testés. À reprendre :
-- Lot 2, Bake `"use server"` dans le cœur : `src/js_parser/p.rs` ~8750 (`registerServerReference`, id stable au lieu
+- 🔄 Lot 2 (dev fait, `a893348caa6`, voir plus bas), Bake `"use server"` dans le cœur : `src/js_parser/p.rs` ~8750 (`registerServerReference`, id stable au lieu
   du `todo_panic`), import dans `parse_entry.rs` ; proxy de références serveur client/SSR dans `bundle_v2.rs`
   (~4029, ~7839) et `ServerComponentParseTask.rs` ; POST d'action + `callServer` ; SSR dynamique dans
   `production.rs` ; React 19 stable au lieu de `react-server-dom-bun` ; tests `test/bake/dev/bundle.test.ts`.
@@ -230,10 +236,17 @@ m3-next-migrate, scaffold, templates, apps ; T possède le reste de m3, R possè
 - TanStack (règle de choix documentée dans `m3/docs/guides/FRAMEWORK.md`) : App Router m3 pour le web rendu serveur ;
   **TanStack Router** pour SPA/Tauri ; **Query** gardé ; Table/Virtual → M3 `DataTable`/`VirtualList` ; **Start** évalué,
   non retenu (build Vite obligatoire) ; m3-forms vs TanStack Form tranché par mesure.
-- ⏳ Manques Bun à corriger dans le cœur (§2.11, aucun contournement dans m3) avant de passer le dev sur Bake :
-  `"use server"` inline → `todo_panic` (`src/js_parser/p.rs` ~8753/8760, `src/bundler/bundle_v2.rs` ~4029/7839) ;
-  production Bake = SSG uniquement (pas de SSR/actions en prod) ; `react-server-dom-bun` épinglé sur une React
-  expérimentale de 2024.
+- 🔄 Manques Bun dans le cœur (§2.11) : `"use server"` dans Bake fait en dev (F1, `a893348caa6`, `01b09f0ff5a`,
+  `7f5bc827482`, non exécuté) : exports et `export { x as y }` enveloppés par `registerServerReference`, proxy client
+  (`createServerReference`, `serverComponents.clientRuntimeImportSource`, sourcesContent sans code serveur) et SSR (qui
+  importe le module réel dans le graphe serveur : une action importée seulement par un client est enregistrée), POST
+  `Bun-Server-Function` (`decodeReply` → Flight), `callServer` ; les quatre `todo_panic` de `p.rs`/`bundle_v2.rs`
+  remplacés ; `"use server"` inline, `export * from`/`export { … } from` et production (`bun build --app`, SSG
+  seulement) en erreur explicite. Vérifié : `cargo check -p bun_js_parser` et `-p bun_bundler`, rustfmt, tsgo bake ;
+  borrowck de `bun_runtime` non vérifié (erreurs d'autres agents). Passe finale : `bun bd test
+  test/bake/dev/{bundle,react-spa,production}.test.ts -t "use server"`. ⏳ Production : SSR dynamique, endpoint
+  d'actions, manifeste serveur dans `production.rs` ; `react-server-dom-bun` reste sur une React expérimentale de 2024
+  (pas d'équivalent stable, adaptateur webpack requis). Correctif préexistant au passage : `c527c7727cd`.
 - ⏳ Lots suivants : adaptateurs compile + Docker Alpine via m3-bun, tranche Shenron, comparaison perf avec
   `next build`/`next start`. `scripts/yolo.ts` pointe sur `apps/example` (`b5d6c23d31`).
 - ✅ Cœur Bun (F3) : `Bun.Transpiler.scanImports` sautait mal un hashbang initial (`809b733f681`, test dans
