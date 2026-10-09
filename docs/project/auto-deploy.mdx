@@ -20,3 +20,10 @@ description: "Image Docker du fork Bun, sonde prod sur dbfr, file de build sur l
 | PC Windows | service `AphrodyBun` | `bun install-windows.ts` en administrateur : `bun-winsvc.exe` (packages/bun-winsvc) lance `bun.exe service.ts`, relance en cas de sortie, tue l'arbre à l'arrêt |
 
 Sur un autre PC Windows (celui d'Omar), le propriétaire lance lui-même `bun install-windows.ts` en administrateur : le service n'est jamais installé à distance.
+
+## Docker sur les trois hôtes
+
+Le PC (Docker Desktop, VMM libkrun) ainsi que le vps et dbfr (Docker Engine) partagent le magasin d'images containerd (`"containerd-snapshotter": true` dans `/etc/docker/daemon.json`), compose, buildx, le réseau host, Model Runner (API OpenAI sur `localhost:12434`, modèle `ai/smollm2`) et Kubernetes. Sur le PC, c'est le Kubernetes de Docker Desktop ; sur le vps et dbfr, un cluster kind `aphrody`. La sonde y tourne via `docker/k8s.yaml`. Sur le PC, les contextes `vps` et `dbfr` (`docker --context vps …`) pilotent les moteurs distants par ssh.
+
+- `bun scripts/aphrody/docker-sync.ts [--force] [--from pc|vps|dbfr]` copie les images manquantes entre les hôtes (`docker save | docker load`).
+- `bun scripts/aphrody/docker-doctor.ts [hôte…]` vérifie chaque fonction sur chaque hôte.
