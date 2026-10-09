@@ -1,0 +1,65 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Bun M3 Desktop</title>
+    <link rel="stylesheet" href="./style.css" />
+    <script type="module" src="./app.ts"></script>
+  </head>
+  <body>
+    <m3-theme seed="#6750a4" mode="auto" variant="tonalSpot">
+      <header class="titlebar">
+        <span class="mark" aria-hidden="true">✦</span>
+        <strong>Bun M3 Desktop</strong>
+        <span class="window-state" id="window-state">Bun.WebView</span>
+      </header>
+      <main>
+        <section class="intro">
+          <div>
+            <p class="eyebrow">EXEMPLE NATIF</p>
+            <h1>Material 3, servi par Bun.</h1>
+            <p class="lede">Une vraie fenêtre native, des composants web M3 et des appels au runtime local.</p>
+          </div>
+          <md-circular-progress indeterminate aria-label="Chargement"></md-circular-progress>
+        </section>
+        <section class="workspace" aria-label="Démonstration Bun et M3">
+          <nav class="rail" aria-label="Navigation principale">
+            <md-navigation-rail>
+              <md-navigation-rail-item selected>
+                <span slot="icon">⌂</span><span slot="label">Accueil</span>
+              </md-navigation-rail-item>
+              <md-navigation-rail-item>
+                <span slot="icon">▤</span><span slot="label">Fichier</span>
+              </md-navigation-rail-item>
+            </md-navigation-rail>
+          </nav>
+          <div class="panels">
+            <md-card class="panel">
+              <div class="panel-heading">
+                <div><h2>Fichier local</h2><p>Lu et écrit par le processus Bun hôte.</p></div>
+                <span class="status-dot" aria-label="Runtime actif"></span>
+              </div>
+              <label for="note">Note</label>
+              <textarea id="note" rows="5" maxlength="4096">Chargement…</textarea>
+              <div class="actions">
+                <md-outlined-button id="reload">Relire</md-outlined-button>
+                <md-filled-button id="save">Enregistrer avec Bun</md-filled-button>
+              </div>
+              <p class="message" id="file-message" role="status"></p>
+            </md-card>
+            <md-card class="panel compact">
+              <h2>Runtime Windows</h2>
+              <p>Import facultatif de <code>bun:windows</code> sur Windows.</p>
+              <md-outlined-button id="windows">Vérifier bun:windows</md-outlined-button>
+              <pre id="windows-result" aria-live="polite">Non vérifié</pre>
+            </md-card>
+          </div>
+        </section>
+        <footer>Thème M3 dynamique · WebView Chrome · API Bun locale</footer>
+      </main>
+    </m3-theme>
+  </body>
+</html>
