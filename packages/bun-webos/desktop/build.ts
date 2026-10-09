@@ -28,7 +28,8 @@ export function hostTarget(): DesktopTarget {
   const arch = process.arch === "arm64" ? "arm64" : "x64";
   if (process.platform === "win32") return "bun-windows-x64";
   if (process.platform !== "linux") throw new Error(`no desktop target for ${process.platform}`);
-  const musl = !process.report?.getReport?.()?.header?.glibcVersionRuntime;
+  const report = process.report?.getReport?.() as { header?: { glibcVersionRuntime?: string } } | undefined;
+  const musl = !report?.header?.glibcVersionRuntime;
   return `bun-linux-${arch}${musl ? "-musl" : ""}` as DesktopTarget;
 }
 
