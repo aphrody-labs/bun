@@ -129,6 +129,13 @@ export interface Config {
   smol: boolean;
   staticSqlite: boolean;
   staticLibatomic: boolean;
+  /**
+   * linux-musl only: absolute path of the aphrody-libc overlay archive
+   * (`libaphrody_libc.a` from the `aphrody-libc-dev` apk), linked just before
+   * `-lc` so its SIMD memcmp/strlen/strchr/strcmp/memchr/qsort replace musl's.
+   * Off unless `--aphrody-libc=<path>` or `APHRODY_LIBC` is set.
+   */
+  aphrodyLibc: string | undefined;
   tinycc: boolean;
   valgrind: boolean;
   fuzzilli: boolean;
@@ -356,6 +363,8 @@ export interface PartialConfig {
   versionTag?: string;
   staticSqlite?: boolean;
   staticLibatomic?: boolean;
+  /** Path to libaphrody_libc.a, or `off`. See `Config.aphrodyLibc`. */
+  aphrodyLibc?: string;
   tinycc?: boolean;
   valgrind?: boolean;
   fuzzilli?: boolean;
@@ -1044,6 +1053,20 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
   // failure is loud ("cannot find -l:libatomic.a") and the fix is obvious.
   const staticLibatomic = partial.staticLibatomic ?? true;
 
+  const aphrodyLibcArg = partial.aphrodyLibc ?? process.env.APHRODY_LIBC;
+  let aphrodyLibc: string | undefined;
+  if (aphrodyLibcArg !== undefined && aphrodyLibcArg !== "" && aphrodyLibcArg !== "off") {
+    if (!linux || abi !== "musl") {
+      throw new BuildError(`--aphrody-libc only applies to linux-musl builds (target abi: ${abi ?? "none"})`);
+    }
+    aphrodyLibc = isAbsolute(aphrodyLibcArg) ? aphrodyLibcArg : resolve(cwd, aphrodyLibcArg);
+    if (!existsSync(aphrodyLibc)) {
+      throw new BuildError(`aphrody-libc overlay not found: ${aphrodyLibc}`, {
+        hint: "apk add aphrody-libc-dev (installs /usr/lib/libaphrody_libc.a), or build it from aphrody-labs/c-ward.",
+      });
+    }
+  }
+
   // TinyCC: off on Android (no upstream bionic support; FFI cc() falls back
   // to dlopen-only) and FreeBSD (oven-sh/tinycc has no FreeBSD target).
   const tinycc = partial.tinycc ?? !(abi === "android" || freebsd);
@@ -1301,6 +1324,7 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
     smol,
     staticSqlite,
     staticLibatomic,
+    aphrodyLibc,
     tinycc,
     valgrind,
     fuzzilli,
@@ -1673,6 +1697,7 @@ export function formatConfig(cfg: Config, exe: string): string {
   if (cfg.assertions) features.push("assertions");
   if (cfg.logs) features.push("logs");
   if (cfg.baseline) features.push("baseline");
+  if (cfg.aphrodyLibc) features.push("aphrody-libc");
   if (cfg.valgrind) features.push("valgrind");
   if (cfg.fuzzilli) features.push("fuzzilli");
   if (cfg.socketFaultInjection !== cfg.asan) {

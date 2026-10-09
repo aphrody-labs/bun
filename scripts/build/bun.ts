@@ -61,6 +61,9 @@ function systemLibs(cfg: Config): string[] {
       // (compiler-rt builtins). -llog for __android_log_*.
       libs.push("-lc", "-lm", "-llog");
     } else {
+      // After every object and dependency archive, before libc: the overlay's
+      // members win for the string/qsort symbols still undefined at this point.
+      if (cfg.aphrodyLibc !== undefined) libs.push(cfg.aphrodyLibc);
       libs.push("-lc", "-lpthread", "-ldl");
       // libatomic: static by default (CI distros ship it), dynamic on Arch-like.
       // The static path needs to be the actual file path for lld to find it;
@@ -434,7 +437,12 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
     libs: depLibs,
     lazyObjects: depLink.lazy,
     flags: ldflags,
-    implicitInputs: [...linkImplicitInputs(cfg), ...shimInputs, ...(rust.nativeLink ? [rust.nativeLink] : [])],
+    implicitInputs: [
+      ...linkImplicitInputs(cfg),
+      ...shimInputs,
+      ...(rust.nativeLink ? [rust.nativeLink] : []),
+      ...(cfg.aphrodyLibc !== undefined ? [cfg.aphrodyLibc] : []),
+    ],
     // Declare the maps the release link writes as side-products (`perf`
     // symbolication on linux; the order file tracer's symbol table on windows).
     linkerMapOutputs: linkerMapOutputs(cfg),

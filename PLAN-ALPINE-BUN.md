@@ -9,6 +9,7 @@ Règles communes, cible et vérification : [PLAN.md](PLAN.md) (à lire en entier
 
 Statut : ✅ fait · 🔄 en cours · ⏳ à faire. Un chantier = un propriétaire ; hors de ton périmètre, coordonne
 par `git pull --rebase` et ne réécris pas le travail d'un autre.
+
 ### N. Alpine d'abord, Ubuntu 26.04 garanti (🔄)
 
 Décision utilisateur (2026-10-09) : le fork est **pensé d'abord pour la dernière Alpine** (3.24.x, musl) et doit
@@ -45,6 +46,81 @@ Décision utilisateur (2026-10-09) : le fork est **pensé d'abord pour la derni�
 - **U3** : sudo-rs intégré nativement (groupe `aphrody` NOPASSWD), élévation dans le cœur Bun (`elevate.rs`), module
   `bun:linux` (API noyau complète, root sans sandbox), noyau `linux-aphrody` et sysctl.
 - Builds et tests : passe finale unique (§2 règle 13), conteneurs Docker locaux uniquement.
+
+### U2. libc Rust en complément de musl — `aphrody-labs/c-ward` (🔄)
+
+**Décision : musl reste la libc et l'ABI ; une surcouche Rust, `aphrody-libc`, remplace les fonctions feuilles où musl
+est lent.** Aucune libc Rust n'est aujourd'hui compatible ABI musl ni assez complète pour LLVM, git et busybox.
+
+Preuves (2026-10-09, sources lues dans les dépôts) :
+
+| Candidat                                                        | ABI                                                                                                    | Couverture                                                                                                                                                                             | Perf. des points faibles musl                                                                                                             | Licence                                           | Activité                                                         |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------- |
+| **c-ward** (c-scape `no_std` + c-gull `std`, sur rustix/origin) | \*-linux-**gnu** seulement (README) ; modes `take-charge` et `coexist-with-libc`                       | fs, io, process, pthread (mutex/rwlock/key/once), signal, stdio, printf, strtod, regex, qsort ; stubs `todo/` : dlopen, locale, wchar, fenv, long double, aio, pthread_cancel, catgets | str*/mem* octet par octet (`mem/ntbs.rs`) ; `getaddrinfo` lance `getent` (`c-gull/src/resolve.rs`) ; malloc = dlmalloc ou allocateur Rust | Apache-2.0 WITH LLVM-exception / Apache-2.0 / MIT | v0.22.3 (2026-02-21), dernier commit 2026-06-15                  |
+| **relibc** (Redox)                                              | en-têtes cbindgen et dispositions propres (pthread, FILE…) : **pas** l'ABI musl, binaires à recompiler | large (ld.so, pthread, stdio, locale partielle), Linux secondaire via `sc`                                                                                                             | non orienté SIMD                                                                                                                          | MIT                                               | très active (2026-09-27), tags 0.5/0.6                           |
+| rusl, mustang, eyra, tinyrlibc, tz-rs                           | —                                                                                                      | rusl abandonné (2018, « DONT USE ») ; mustang/eyra = c-ward pour programmes Rust seulement (eyra figé 2025-04) ; tinyrlibc embarqué ; tz-rs = localtime                                | —                                                                                                                                         | —                                                 | aucune alternative sérieuse 2025-2026 trouvée (recherche GitHub) |
+
+Retenu : **c-ward**, forké (`aphrody-labs/c-ward`, clone `C:\c-ward`, `origin` = fork, `upstream` =
+`sunfishcode/c-ward`) : Rust, rustix, licence permissive, conçu pour coexister avec une libc, base d'une bascule
+complète plus tard. Son code n'est pas exporté tel quel (il exporterait des centaines de symboles d'ABI glibc et ses
+str*/mem* sont plus lents que musl) : la crate `aphrody-libc/` du fork n'exporte que des fonctions sans état, sans
+verrou, sans appel à la libc, dont la signature est identique en ABI musl.
+
+- ✅ `aphrody-libc` 0.1.0 (c-ward `5649d96`, `3ff7142`, `d7034d0`, tag `aphrody-libc-v0.1.0`) : `memcmp`, `bcmp`,
+  `strlen`, `strnlen`, `strchr`, `strchrnul`, `strrchr`, `strcmp`, `strncmp`, `memchr`, `memrchr` (SSE2 sur x86_64,
+  NEON sur aarch64, 16 o par pas, lectures alignées ou bornées à la page : jamais de faute après le terminateur, même
+  avec `memchr(p, c, SIZE_MAX)`), `memmem`/`strstr` (crate `memchr`, Two-Way + SIMD), `qsort`/`qsort_r` (introsort
+  sans allocation, ninther, heapsort au-delà de 2·log2 n, échanges par mots de 8 o ; musl = smoothsort à échanges
+  octet par octet). `#![no_builtins]` : LLVM ne retransforme pas les boucles en appels récursifs. Liste des exports :
+  `aphrody-libc/exports.txt`. Tests unitaires différentiels (toutes alignements, page de garde PROT_NONE, comparateur
+  incohérent qui reste dans les bornes).
+- ✅ Paquet apk `aphrody-libc` (fichier à transmettre à U1 : `C:\c-ward\aphrody\aports\aphrody-libc\` →
+  `aphrody-labs/aports` `aphrody/aphrody-libc/`, sha512 épinglés) : `libaphrody_libc.so.0` ;
+  `-dev` = `libaphrody_libc.a` **lié partiellement** (`ld -r` + `objcopy --keep-global-symbol` des exports : ni core,
+  ni compiler_builtins, ni panic handler visibles, donc aucune collision avec le Rust d'un programme hôte comme Bun) ;
+  `-preload` = `/etc/profile.d/aphrody-libc.sh` (`LD_PRELOAD`). Méthodes de link : `.a` avant `-lc` (statique),
+  `-laphrody_libc` avant `-lc` (DT_NEEDED en tête), ou `LD_PRELOAD` pour les binaires musl existants. Les appels
+  internes de musl (printf, getaddrinfo…) restent liés dans `libc.so` et gardent les versions musl.
+- ✅ Conformité : `aphrody/conformance/libc-test.ts` (libc-test de musl trois fois : musl seul, overlay lié
+  statiquement via `LDLIBS`, overlay en `LD_PRELOAD` ; échec si l'overlay ajoute un échec que musl n'a pas) ;
+  `aphrody/conformance/bun-smoke.ts` (`/proc/self/maps` contient l'overlay, `--version`, `-e` chaînes/tri/JSON/regex/
+  Buffer, `bun install` hors ligne d'un `file:`, `Bun.serve` port 0 + fetch). CI manuelle
+  `.github/workflows/aphrody-libc.yml` (Alpine 3.24 x86_64 + aarch64).
+- ✅ Lien avec Bun (non compilé) : option `--aphrody-libc=<chemin>` / `APHRODY_LIBC` (`scripts/build/config.ts`,
+  `scripts/build.ts`), linux-musl seulement, archive placée juste avant `-lc` dans `systemLibs` et entrée implicite du
+  link (`scripts/build/bun.ts`), libellé `aphrody-libc` dans le résumé de configuration ; test
+  `test/internal/aphrody-libc-config.test.ts`. Gain attendu : `memcmp`/`bcmp` des comparaisons de slices Rust (parseur,
+  résolveur, lockfile), `strlen`/`strchr`/`memchr` des dépendances C/C++ (sqlite, libarchive, c-ares, BoringSSL,
+  zlib), `qsort`. Désactivé par défaut tant que le banc O (`perf-gate.ts`, musl) ne montre pas de gain. Pas de malloc
+  (Bun a déjà mimalloc, JSC libpas) ni de DNS (Bun utilise c-ares sur Linux, `src/dns/lib.rs`).
+- ⏳ Passe finale (aucune commande lancée pendant le lot) :
+  ```sh
+  # Alpine 3.24 (conteneur local, ou workflow aphrody-libc.yml : gh workflow run aphrody-libc.yml -R aphrody-labs/c-ward)
+  cd /work/c-ward/aphrody-libc && cargo test --release
+  cargo rustc --release --lib -- -C link-arg=-Wl,-soname,libaphrody_libc.so.0
+  bun ../aphrody/conformance/libc-test.ts --archive target/release/libaphrody_libc.a --preload target/release/libaphrody_libc.so
+  bun ../aphrody/conformance/bun-smoke.ts --bun "$(command -v bun)" --preload target/release/libaphrody_libc.so
+  abuild -r   # dans aphrody-labs/aports/aphrody/aphrody-libc, une fois copié par U1
+  # Fork Bun
+  bun test test/internal/aphrody-libc-config.test.ts
+  bun run build:release --aphrody-libc=/usr/lib/libaphrody_libc.a   # Alpine, aphrody-libc-dev installé
+  bun ../c-ward/aphrody/conformance/bun-smoke.ts --bun build/release/bun --static
+  bun scripts/aphrody/perf-gate.ts --fork build/release/bun --upstream <bun musl sans overlay>
+  ```
+  Si la compilation échoue, corriger puis publier `aphrody-libc-v0.1.1` (le tag 0.1.0 et la somme du tarball sont figés).
+
+Reste en musl, et critères de bascule :
+
+- Restent musl : ld.so, démarrage, pthread, stdio, malloc (mallocng ; `mimalloc2` d'Alpine en `LD_PRELOAD` pour les
+  services qui allouent beaucoup), résolveur DNS (celui de c-gull, via `getent`, est pire), locale/iconv, libm.
+- Étape suivante (⏳) : AVX2 à détection CPUID pour les mêmes fonctions ; puis intégrer `aphrody_libc.o` dans
+  `libc.so` de musl (APKBUILD musl du fork aports : retirer `src/string/{memcmp,bcmp,strlen,…}.c` et
+  `src/stdlib/qsort*.c`) pour que les appels internes de musl en profitent, si libc-test ne régresse pas et si l'image
+  tourne deux semaines avec `-preload` sans incident. Candidats suivants : `getaddrinfo` sur `hickory-proto`
+  (EDNS, TCP, `rotate`) et `iconv` sur `encoding_rs`, chacun avec le même protocole libc-test + banc.
+- Bascule vers une libc Rust complète seulement si : une cible ABI musl existe (dispositions x86_64/aarch64 musl,
+  `ld-musl` ou chargeur compatible), libc-test au moins au niveau de musl, dlopen/locale/wchar/iconv/pthread_cancel
+  implémentés, suites de busybox, git et LLVM vertes, et banc O sans régression de démarrage ni de RSS.
 
 ### A. Publication (✅ base)
 

@@ -461,6 +461,7 @@ const configFlags: {
   versionTag: "string",
   staticSqlite: "boolean",
   staticLibatomic: "boolean",
+  aphrodyLibc: "string",
   tinycc: "boolean",
   valgrind: "boolean",
   fuzzilli: "boolean",
