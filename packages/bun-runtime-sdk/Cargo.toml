@@ -1,0 +1,57 @@
+# Its own workspace: not a member of the Bun workspace at the repository root.
+# Runtime SDK absorbed from aphrody-labs/aphrody (crates/engine/yolo-core, yolo-runtime, yolo-pyo3,
+# packages/engine/runtime, packages/engine/python) at 55652e3f56. The yolo_* C ABI is built here as the
+# standalone `yolo_runtime` library; `include/yolo_runtime.h` declares it for C, C++, .NET (dotnet/),
+# Python (python/) and Bun (src/, bun:ffi).
+[workspace]
+resolver = "3"
+members = ["crates/yolo-core", "crates/yolo-runtime", "crates/yolo-pyo3"]
+# yolo-pyo3 needs a Python interpreter at build time; build it through maturin (python/pyo3).
+default-members = ["crates/yolo-core", "crates/yolo-runtime"]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2024"
+rust-version = "1.97"
+license = "MIT AND Apache-2.0"
+authors = ["aphrody-code"]
+repository = "https://github.com/aphrody-labs/bun"
+homepage = "https://github.com/aphrody-labs/bun/tree/main/packages/bun-runtime-sdk"
+
+[workspace.dependencies]
+anyhow = "1.0.104"
+blake3 = "1.8.7"
+chrono = { version = "0.4", features = ["serde"] }
+dashmap = "6"
+dunce = "1.0.5"
+globset = "0.4"
+ignore = "0.4"
+libc = "0.2.189"
+notify = "8"
+notify-debouncer-full = "0.6"
+oxc_allocator = "0.153.0"
+oxc_ast = "0.153.0"
+oxc_ast_visit = "0.153.0"
+oxc_parser = "0.153.0"
+oxc_span = "0.153.0"
+parking_lot = "0.12.5"
+pyo3 = "0.29"
+rayon = "1.12.0"
+regex = "1.11"
+serde = { version = "1.0.229", features = ["derive", "std"], default-features = false }
+serde_json = "1.0.151"
+tempfile = "3.27.0"
+tokio = { version = "1.53.1", features = ["full"] }
+tracing = "0.1.44"
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+unused_must_use = "deny"
+# yolo-runtime keeps the cfg gates of the browser/GPU extensions built in aphrody.
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("browser", "gpu", "cuda"))'] }
+
+# The C ABI catches panics at every entry point: the shipped library is built with
+# `cargo build --profile runtime` so that it unwinds.
+[profile.runtime]
+inherits = "release"
+panic = "unwind"

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Aphrody.Yolo</RootNamespace>
+    <AssemblyName>Aphrody.YoloRuntime</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsAotCompatible>true</IsAotCompatible>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <Description>P/Invoke binding of the yolo_runtime C ABI (include/yolo_runtime.h).</Description>
+  </PropertyGroup>
+</Project>
