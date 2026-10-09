@@ -89,6 +89,12 @@ bun wasm build --package hello --outdir ./pkg
 bun wasm build --package hello --artifact ./target/wasm32-unknown-unknown/release/hello.wasm --outdir ./pkg
 ```
 
+`cargo` replaces the command that runs `cargo metadata` and `cargo build`, for example a wrapper script or `cross`. In code it is a path or an array of words; on the command line, quote words that contain spaces. Bun does not run `rustup target add` for a custom cargo.
+
+```bash terminal icon="terminal"
+bun wasm build --package hello --cargo=./scripts/cargo.sh --outdir ./pkg
+```
+
 ## WASI
 
 `--wasi=p1` builds for `wasm32-wasip1`. The generated module's default export instantiates the module with [`node:wasi`](/runtime/nodejs-compat):
@@ -108,6 +114,7 @@ const { exports } = await init({ args: ["tool"], env: {}, preopens: { "/": "." }
 | `-o`, `--outdir=<dir>`    | Output package. Defaults to `pkg` in the crate                                      |
 | `-p`, `--package=<name>`  | A package of the Cargo workspace                                                    |
 | `--artifact=<file>`       | Package a `.wasm` cargo already built                                               |
+| `--cargo=<cmd>`           | Run `<cmd>` instead of `cargo`                                                      |
 | `--target=<t>`            | `wasm-bindgen` target: `web` (default), `bundler`, `nodejs`, `deno`, `no-modules`   |
 | `--wasi=<p1\|p2>`          | Build for WASI preview 1 or preview 2                                               |
 | `--triple=<triple>`       | Any Rust target triple                                                              |

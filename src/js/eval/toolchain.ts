@@ -511,6 +511,7 @@ Flags of build:
   -o, --outdir=<dir>     Output package (default: <crate>/pkg)
   -p, --package=<name>   A package of the Cargo workspace, like cargo build -p
       --artifact=<file>  Package a .wasm cargo already built, without running cargo
+      --cargo=<cmd>      Run <cmd> instead of cargo (a wrapper script, cross); quote words with spaces
       --target=<t>       wasm-bindgen target: web (default), bundler, nodejs, deno, no-modules
       --wasi=<p1|p2>     wasm32-wasip1 (node:wasi loader) or wasm32-wasip2 (component, jco transpile)
       --triple=<triple>  Any Rust target triple
@@ -538,6 +539,7 @@ async function wasmBuild(args: string[], cwd: string): Promise<number> {
     "out-dir": { type: "string" },
     "package": { type: "string", short: "p" },
     "artifact": { type: "string" },
+    "cargo": { type: "string" },
     "target": { type: "string" },
     "wasi": { type: "string" },
     "triple": { type: "string" },
@@ -565,11 +567,20 @@ async function wasmBuild(args: string[], cwd: string): Promise<number> {
   if (unknown) throw new UsageError(`Unknown flag ${unknown} (cargo flags go after --)`);
   if (positionals.length > 1) throw new UsageError(`Expected one crate, got ${positionals.join(", ")}`);
   const target = flags.target === "wasm" ? undefined : flags.target;
+  // Quotes keep spaces and are not escapes, so Windows paths pass unchanged.
+  const cargo: string[] | undefined =
+    flags.cargo === undefined
+      ? undefined
+      : [...flags.cargo.matchAll(/"([^"]*)"|'([^']*)'|(\S+)/g)]
+          .map(m => m[1] ?? m[2] ?? m[3])
+          .map((word, i) => (i === 0 && /[\\/]/.test(word) ? path.resolve(cwd, word) : word));
+  if (cargo?.length === 0) throw new UsageError("--cargo needs a command");
   const { build } = require(WASM_MODULE);
   const result = await build({
     crate: path.resolve(cwd, positionals[0] ?? "."),
     package: flags.package,
     artifact: flags.artifact ? path.resolve(cwd, flags.artifact) : undefined,
+    cargo,
     outdir: (flags.outdir ?? flags["out-dir"]) ? path.resolve(cwd, flags.outdir ?? flags["out-dir"]) : undefined,
     target,
     wasi: flags.wasi,

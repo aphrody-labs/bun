@@ -106,10 +106,22 @@ function findManifest(input) {
   }
 }
 
+// `options.cargo`: a string is the executable run instead of `cargo` (cross, a wrapper script), an
+// array is the command and its leading arguments. `cargo metadata` and `cargo build` go through it.
+function cargoCommand(cargo) {
+  if (cargo === undefined || cargo === true || cargo === false) return ["cargo"];
+  const command = typeof cargo === "string" ? [cargo] : cargo;
+  if (!$isArray(command) || command.length === 0 || command.some(part => typeof part !== "string" || !part)) {
+    throw $ERR_INVALID_ARG_TYPE("options.cargo", ["boolean", "string", "string[]"], cargo);
+  }
+  const [bin, ...args] = command;
+  return [/[\\/]/.test(bin) ? path.resolve(bin) : bin, ...args];
+}
+
 // `name` selects a member of the workspace of `manifest`; otherwise the package of `manifest` itself.
-async function metadata(manifest, name) {
+async function metadata(manifest, name, cargo = ["cargo"]) {
   const { stdout } = await checked([
-    "cargo",
+    ...cargo,
     "metadata",
     "--format-version",
     "1",
@@ -119,7 +131,9 @@ async function metadata(manifest, name) {
   ]);
   const meta = JSON.parse(stdout);
   const same = (a, b) => path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase();
-  const pkg = name ? meta.packages.find(p => p.name === name) : meta.packages.find(p => same(p.manifest_path, manifest));
+  const pkg = name
+    ? meta.packages.find(p => p.name === name)
+    : meta.packages.find(p => same(p.manifest_path, manifest));
   if (!pkg && name) throw new Error(`${name} is not a package of the workspace ${meta.workspace_root}`);
   if (!pkg) throw new Error(`${manifest} is a virtual workspace manifest: point at a member crate or pass package`);
   const lib = pkg.targets.find(t => t.kind.includes("cdylib"));
@@ -284,7 +298,8 @@ function hashFile(file, extra) {
  */
 async function build(options = {}) {
   if (typeof options !== "object" || options === null) throw $ERR_INVALID_ARG_TYPE("options", "object", options);
-  const meta = await metadata(findManifest(options.crate ?? process.cwd()), options.package);
+  const cargoBin = cargoCommand(options.cargo);
+  const meta = await metadata(findManifest(options.crate ?? process.cwd()), options.package, cargoBin);
   const manifest = meta.manifestPath;
   const crateDir = path.dirname(manifest);
   const wasi = options.wasi ?? undefined;
@@ -303,8 +318,9 @@ async function build(options = {}) {
   const log = options.quiet ? () => {} : msg => process.stderr.write(msg + "\n");
 
   if (options.cargo !== false && !options.artifact) {
-    await ensureTarget(triple);
-    const cargo = ["cargo", "build", "--lib", "--manifest-path", manifest, "--target", triple];
+    // A custom cargo may build elsewhere (a build server, a container): its toolchain is its own.
+    if (cargoBin.length === 1 && cargoBin[0] === "cargo") await ensureTarget(triple);
+    const cargo = [...cargoBin, "build", "--lib", "--manifest-path", manifest, "--target", triple];
     if (profile === "release") cargo.push("--release");
     else if (profile !== "dev") cargo.push("--profile", profile);
     if (options.features?.length) cargo.push("--features", options.features.join(","));
@@ -431,7 +447,7 @@ function plugin(options = {}) {
     setup(builder) {
       builder.onLoad({ filter: /(^|[\\/])Cargo\.toml$|\.rs$/ }, async args => {
         const manifest = findManifest(args.path);
-        const meta = await metadata(manifest);
+        const meta = await metadata(manifest, undefined, cargoCommand(options.cargo));
         const triple = options.triple ?? TRIPLES[options.wasi ?? "unknown"];
         const outdir = path.join(
           meta.targetDirectory,

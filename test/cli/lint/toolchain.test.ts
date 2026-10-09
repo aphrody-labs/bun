@@ -279,6 +279,58 @@ describe("bun:wasm", () => {
     expect(exitCode).toBe(0);
   });
 
+  // Stands in for cargo: answers `metadata` for the --manifest-path crate, writes an empty module on
+  // `build`, and logs each call next to itself.
+  const fakeCargo = `
+const fs = require("node:fs");
+const path = require("node:path");
+const args = process.argv.slice(2);
+const manifest = args[args.indexOf("--manifest-path") + 1];
+const logged = args.filter(a => a !== "--manifest-path" && a !== manifest);
+fs.appendFileSync(path.join(__dirname, "calls.txt"), logged.join(" ") + "\\n");
+const targetDirectory = path.join(__dirname, "target");
+if (args[0] === "metadata") {
+  console.log(JSON.stringify({
+    workspace_root: path.dirname(manifest),
+    target_directory: targetDirectory,
+    packages: [{ name: "add", version: "0.1.0", manifest_path: manifest, dependencies: [],
+      targets: [{ name: "add", kind: ["cdylib"] }] }],
+  }));
+} else if (args[0] === "build") {
+  const out = path.join(targetDirectory, args[args.indexOf("--target") + 1], "release");
+  fs.mkdirSync(out, { recursive: true });
+  fs.writeFileSync(path.join(out, "add.wasm"), Uint8Array.of(0, 0x61, 0x73, 0x6d, 1, 0, 0, 0));
+} else process.exit(2);
+`;
+
+  test.concurrent("bun wasm build --cargo and the cargo option replace cargo", async () => {
+    using dir = tempDir("toolchain-wasm-cargo", {
+      "add/Cargo.toml": `[package]\nname = "add"\nversion = "0.1.0"\n`,
+      "fake-cargo.js": fakeCargo,
+      "api.ts": `import { build } from "bun:wasm";
+const { bytes } = await build({ crate: "add", outdir: "api-pkg", optimize: false, quiet: true, cargo: [process.execPath, import.meta.dir + "/fake-cargo.js"] });
+console.log(bytes);
+`,
+    });
+    const fake = join(String(dir), "fake-cargo.js");
+    const cli = await run(["wasm", "build", "add", "--no-opt", `--cargo="${bunExe()}" "${fake}"`], String(dir));
+    expect(cli.stdout).toContain("built add");
+    expect(cli.exitCode).toBe(0);
+    const api = await run(["api.ts"], String(dir));
+    expect(api.stdout.trim()).toBe("8");
+    expect(api.exitCode).toBe(0);
+    const calls = await Bun.file(join(String(dir), "calls.txt")).text();
+    const cargoCalls = [
+      "metadata --format-version 1 --no-deps",
+      "build --lib --target wasm32-unknown-unknown --release",
+    ];
+    expect(calls.split("\n")).toEqual([...cargoCalls, ...cargoCalls, ""]);
+    expect(await Bun.file(join(String(dir), "add", "pkg", "add.wasm")).bytes()).toEqual(
+      Uint8Array.of(0, 0x61, 0x73, 0x6d, 1, 0, 0, 0),
+    );
+    expect(await Bun.file(join(String(dir), "add", "pkg", "add.js")).exists()).toBe(true);
+  });
+
   // Compiles a crate: needs cargo with the wasm32-unknown-unknown target.
   test.skipIf(!Bun.which("cargo"))(
     "bun wasm build packages a crate and the plugin imports Cargo.toml",

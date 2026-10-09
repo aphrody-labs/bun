@@ -61,8 +61,15 @@ declare module "bun:wasm" {
     locked?: boolean;
     /** More `cargo build` arguments. */
     cargoArgs?: string[];
-    /** Set to `false` to package the artifact cargo already built. */
-    cargo?: boolean;
+    /**
+     * The cargo that runs `cargo metadata` and `cargo build`. A string is an executable run
+     * instead of `cargo` (a wrapper script, `cross`); an array is a command with its leading
+     * arguments, like `["bash", "scripts/cargo.sh"]`. A custom cargo installs its own Rust target
+     * (`rustup target add` is skipped). Set to `false` to package the artifact cargo already built.
+     *
+     * @default "cargo"
+     */
+    cargo?: boolean | string | string[];
     /** Fail when the optimized `.wasm` is larger than this many bytes. */
     maxBytes?: number;
     /** Reuse {@link outdir} when the cargo artifact and options did not change. */
