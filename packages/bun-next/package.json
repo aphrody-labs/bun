@@ -1,7 +1,7 @@
 {
   "name": "@aphrody/next-bun",
   "version": "0.2.0",
-  "description": "Next.js on Bun: run next with no Node.js (Turbopack workers included), build the Pages Router with Bun.build (experimental), Next 16 / Tailwind 4 codemods and instant navigation testing",
+  "description": "Next.js on Bun: run next with no Node.js (Turbopack workers included), build the Pages Router with Bun.build (experimental), Next 16 / Tailwind 4 codemods, instant navigation testing and a Next-compatible App Router on Bun.build + Bun.serve without Next (`@aphrody/next-bun/app`)",
   "license": "MIT AND Apache-2.0",
   "main": "index.js",
   "bin": {
@@ -26,6 +26,16 @@
     "./codemods/cli": "./codemods/cli.ts",
     "./codemods/lex": "./codemods/lex.ts",
     "./testing": "./testing/index.ts",
+    "./app": "./app/index.ts",
+    "./app/link": "./app/link.tsx",
+    "./app/navigation": {
+      "react-server": "./app/navigation.server.ts",
+      "default": "./app/navigation.ts"
+    },
+    "./app/headers": "./app/headers.ts",
+    "./app/server": "./app/server.ts",
+    "./app/cache": "./app/cache.ts",
+    "./app/image": "./app/image.tsx",
     "./package.json": "./package.json"
   },
   "files": [
@@ -33,6 +43,7 @@
     "index.d.ts",
     "bin",
     "lib",
+    "app",
     "codemods",
     "testing",
     "README.md"
@@ -41,10 +52,22 @@
     "bun": ">=1.4.2"
   },
   "peerDependencies": {
-    "next": ">=16.0.0"
+    "next": ">=16.0.0",
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0",
+    "react-server-dom-parcel": ">=19.0.0"
   },
   "peerDependenciesMeta": {
     "next": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
+    "react-server-dom-parcel": {
       "optional": true
     }
   },

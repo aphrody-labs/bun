@@ -1,0 +1,10 @@
+{
+  "name": "next-bun-app-fixture",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-server-dom-parcel": "19.3.0"
+  }
+}

@@ -62,6 +62,31 @@ With Turbopack or webpack, the same engine runs as a PostCSS plugin:
 export default { plugins: { "@aphrody/bun-plugin-tailwind/postcss": {} } };
 ```
 
+## `@aphrody/next-bun/app`: the App Router without Next
+
+The Next.js `app/` conventions (page, layout, template, loading, error, not-found, route handlers, route groups, dynamic and
+catch-all segments, robots/sitemap/manifest, `proxy.ts` middleware) with React Server Components, server actions, streaming SSR
+and static generation, built by three `Bun.build` passes (rsc, client, ssr) and served by `Bun.serve`. `next/link`,
+`next/navigation`, `next/headers`, `next/server`, `next/cache` and `next/image` map to the modules of `app/`. Needs `react`,
+`react-dom` and `react-server-dom-parcel` 19.
+
+```ts
+import {
+  buildApp,
+  prerenderApp,
+  serveApp,
+  devApp,
+  compileAppRouter,
+} from "@aphrody/next-bun/app";
+
+await buildApp({ root: process.cwd(), outDir: "dist", clientPlugins: [] });
+await prerenderApp("dist");
+await serveApp({ outDir: "dist", port: 3000 });
+```
+
+`runAppCommand("dev" | "build" | "start", project, flags)` wraps them for a CLI; `compileAppRouter` links the build into one
+executable and `dockerAppRouter` writes a Docker context.
+
 ## The `node` shim
 
 `bunNodeShim()` puts a `node` (a hard link or copy of Bun on Windows, a symlink elsewhere) in a temp directory and `next-bun` prepends it to
@@ -79,6 +104,7 @@ Pure JS, run with the installed Bun (the debug build is not needed):
 bun test test/integration/next-bun/
 bun test test/integration/next-app/test/next-app.test.ts
 bun test test/integration/next-bun-pages/test/next-bun-pages.test.ts
+bun test test/integration/next-bun-app/test/next-bun-app.test.ts
 ```
 
 Plan and history: [docs/PLAN.md](https://github.com/aphrody-labs/bun/blob/main/packages/bun-next/docs/PLAN.md).
