@@ -555,7 +555,14 @@ Côté Aphrody : `crates/ai/code-graph`, `crates/engine/yolo-core`, `crates/infr
 - ✅ Binaire release réinstallé (`aphrody self install-path`, `aphrody 1.0.0-canary`, aphrody-mcp relié) ;
   `graph:bun` reconstruit (19 783 fichiers, 116 085 nœuds) et `claude-memory-bun` (573 nœuds).
 
-### L. oxc et n2b dans le fork (✅ ; n2b 0.7.1 monorepo en cours)
+### L. oxc et n2b dans le fork (✅ ; n2b 0.7.1 monorepo en cours ; bun-oxc 0.3.0 en cours, Z1)
+
+> **Version oxc retenue (propriétaire : Z1 ; `bun lint` / `bun fmt` de Y s'alignent dessus)** : crates Oxc
+> **0.153.0** (crates.io, dernière publiée au 2026-10-09), **oxlint 1.87.0**, **oxfmt 0.72.0**, `oxc_resolver` **11.24.3**,
+> `oxc_sourcemap` **9.0.0**. Source : fork `aphrody-labs/oxc` (C:\oxc), branche `aphrody` = tag `oxlint_v1.87.0`
+> (`2bd08ebe8f36`) + patch oxfmt (API `core` publique sans napi) = **`b25696441c80fd580c35d671797f1940c642a624`**.
+> `oxc_linter`/`oxfmt` ne sont pas sur crates.io : `git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80…"`
+> et `[patch.crates-io]` de tous les `oxc_*` sur ce même `rev` (une seule copie de l'AST).
 
 Fichiers : `packages/bun-n2b/**`, `packages/bun-oxc/**`, `test/integration/bun-plugin-n2b/`,
 `test/integration/bun-plugin-oxc/`, `scripts/aphrody/{build-napi,publish-crates,publish-native}.ts`,
