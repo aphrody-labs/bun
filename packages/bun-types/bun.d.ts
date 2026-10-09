@@ -7732,6 +7732,28 @@ declare module "bun" {
       cgroup?: string | number;
 
       /**
+       * Run the subprocess as root (Linux, macOS) or Administrator (Windows).
+       *
+       * - When Bun already runs as root or elevated, the command runs as is.
+       * - On Linux and macOS, Bun runs `sudo -n VAR=value… /abs/command args…` (sudo-rs or sudo). `sudo -n`
+       *   never prompts: the spawn throws `ERR_ACCESS_DENIED` when sudo is missing or needs a password. Grant a
+       *   `NOPASSWD` rule (Aphrody Alpine: group `aphrody`). sudo resets the environment; the variables of
+       *   `env` are passed as `VAR=value` words, so they appear in the process list.
+       * - On Windows, Bun uses the inbox `sudo.exe` when it is enabled, else the UAC prompt
+       *   (`ShellExecuteExW` with the `runas` verb). With UAC, the elevated process gets its own console:
+       *   stdio is not connected and `env` is rejected.
+       *
+       * Throws when combined with `argv0`, `uid` or `gid`.
+       *
+       * @default false
+       * @example
+       * ```ts
+       * await Bun.spawn(["apk", "add", "htop"], { elevate: true }).exited;
+       * ```
+       */
+      elevate?: boolean;
+
+      /**
        * The environment variables of the process
        *
        * Defaults to `process.env` as it was when the current Bun process launched.

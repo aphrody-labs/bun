@@ -189,6 +189,29 @@ const proc = Bun.spawn({
 
 You can pass the same directory to any number of spawns; the limit applies to their combined usage. Bun supports both cgroup v1 and v2 hierarchies. Creating cgroups typically requires root or a delegated subtree. Bun ignores the option on other platforms; on Linux, the spawn fails if the child cannot join the cgroup.
 
+## Running as root
+
+Pass `elevate: true` to run the subprocess as root on Linux and macOS, or as Administrator on Windows.
+
+```ts index.ts icon="/icons/typescript.svg"
+const proc = Bun.spawn(["apk", "add", "htop"], { elevate: true });
+await proc.exited;
+```
+
+Bun picks the mechanism from the platform:
+
+- When Bun already runs as root (uid 0) or elevated, the command runs directly.
+- On Linux and macOS, Bun runs the command through `sudo -n`. It works with sudo-rs and sudo. Bun resolves the command from `PATH` first, so sudo runs the same binary. `sudo -n` never prompts. If sudo is missing or asks for a password, the spawn throws `ERR_ACCESS_DENIED`.
+- On Windows, Bun uses the inbox `sudo.exe` when it is enabled. Otherwise, Windows shows the UAC prompt. A UAC-elevated process gets its own console, so its stdio is not connected to the parent.
+
+sudo resets the environment. Bun passes the variables from `env` to sudo as `VAR=value` arguments, so they appear in the process list. On Windows without an enabled `sudo.exe`, Bun rejects `env` with `elevate`. Bun also rejects `elevate` combined with `argv0`, `uid` or `gid`.
+
+To allow it without a password, add a `NOPASSWD` rule. Aphrody Alpine ships one for the `aphrody` group in `/etc/sudoers.d/aphrody`:
+
+```text /etc/sudoers.d/aphrody
+%aphrody ALL=(ALL:ALL) NOPASSWD: ALL
+```
+
 ## Using AbortSignal
 
 You can abort a subprocess using an `AbortSignal`:
@@ -544,6 +567,7 @@ namespace SpawnOptions {
     killSignal?: string | number;
     maxBuffer?: number;
     cgroup?: string | number; // Linux only; cgroup directory path or open directory fd
+    elevate?: boolean; // run as root/Administrator (sudo -n, Windows sudo or UAC)
     terminal?: TerminalOptions | Terminal; // Bun.spawn only (spawnSync throws); PTY (POSIX) / ConPTY (Windows) support
   }
 

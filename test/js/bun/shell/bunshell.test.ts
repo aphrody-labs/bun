@@ -3520,3 +3520,32 @@ test.skipIf(isWindows)("external command resolution uses the PATH from the shell
     expect(exitCode).toBe(0);
   }
 });
+
+describe("sudo", () => {
+  const sudoPath = `${process.env.PATH ?? ""}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`;
+  const isRoot = isPosix && process.getuid!() === 0;
+  const sudo = isPosix ? Bun.which("sudo", { PATH: sudoPath }) : null;
+  const canElevate =
+    isRoot || (sudo !== null && Bun.spawnSync({ cmd: [sudo, "-n", "true"], stdout: "ignore", stderr: "ignore" }).success);
+
+  test.skipIf(!isRoot)("runs builtins directly when already root, without a sudo binary", async () => {
+    const { stdout, exitCode } = await $`sudo echo hi`.env({ ...bunEnv, PATH: "/nonexistent" }).nothrow().quiet();
+    expect(stdout.toString()).toBe("hi\n");
+    expect(exitCode).toBe(0);
+  });
+
+  test.skipIf(!isPosix || !canElevate)("runs the command as root", async () => {
+    const { stdout, exitCode } = await $`sudo ${bunExe()} -e "console.log(process.getuid())"`.env(bunEnv).nothrow().quiet();
+    expect(stdout.toString()).toBe("0\n");
+    expect(exitCode).toBe(0);
+  });
+
+  test.skipIf(!isPosix || canElevate)("fails clearly without root or passwordless sudo", async () => {
+    const { stderr, exitCode } = await $`sudo ${bunExe()} -e 1`
+      .env({ ...bunEnv, PATH: "/nonexistent" })
+      .nothrow()
+      .quiet();
+    expect(stderr.toString()).toContain("elevate:");
+    expect(exitCode).toBe(1);
+  });
+});

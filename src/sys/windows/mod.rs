@@ -448,6 +448,32 @@ pub fn is_app_container() -> bool {
     })
 }
 
+/// Whether the process token is elevated (Administrator with UAC consent, or UAC off).
+pub fn is_elevated() -> bool {
+    /// `TOKEN_INFORMATION_CLASS::TokenElevation`
+    const TOKEN_ELEVATION: c_int = 20;
+    let mut token: win32::HANDLE = core::ptr::null_mut();
+    // SAFETY: GetCurrentProcess() is the pseudo-handle; TOKEN_QUERY suffices for TokenElevation.
+    if unsafe { win32::OpenProcessToken(win32::GetCurrentProcess(), win32::TOKEN_QUERY, &mut token) } == 0 {
+        return false;
+    }
+    let mut elevated: win32::DWORD = 0;
+    let mut ret_len: win32::DWORD = 0;
+    // SAFETY: `token` is live from OpenProcessToken above; TOKEN_ELEVATION is one DWORD.
+    let ok = unsafe {
+        win32::GetTokenInformation(
+            token,
+            TOKEN_ELEVATION,
+            (&raw mut elevated).cast(),
+            size_of::<win32::DWORD>() as win32::DWORD,
+            &mut ret_len,
+        )
+    };
+    // SAFETY: `token` is a real handle (not the pseudo-handle); close it.
+    unsafe { win32::CloseHandle(token) };
+    ok != 0 && elevated != 0
+}
+
 pub use bun_errno::translate_uv_error_to_e;
 
 pub use bun_windows_sys::externs::GetProcAddress;

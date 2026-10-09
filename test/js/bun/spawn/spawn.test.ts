@@ -2368,3 +2368,53 @@ describe.skipIf(!isPosix)("a spawn while fd 0, 1 or 2 is closed", () => {
     });
   });
 });
+
+describe("elevate", () => {
+  const sudoPath = `${process.env.PATH ?? ""}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`;
+  const isRoot = isPosix && process.getuid!() === 0;
+  const sudo = isPosix ? Bun.which("sudo", { PATH: sudoPath }) : null;
+  const canElevate =
+    isRoot || (sudo !== null && spawnSync({ cmd: [sudo, "-n", "true"], stdout: "ignore", stderr: "ignore" }).success);
+  const printUid = [bunExe(), "-e", "console.log(process.getuid(), process.env.ELEVATE_TEST ?? '')"];
+
+  it("rejects a non-boolean elevate", () => {
+    expect(() => spawnSync({ cmd: [bunExe(), "-e", ""], elevate: "yes" as any })).toThrow(
+      expect.objectContaining({ code: "ERR_INVALID_ARG_TYPE" }),
+    );
+  });
+
+  it("rejects elevate with argv0, uid or gid", () => {
+    for (const extra of [{ argv0: "x" }, { uid: 0 }, { gid: 0 }]) {
+      expect(() => spawnSync({ cmd: [bunExe(), "-e", ""], elevate: true, ...extra })).toThrow(/elevate cannot be combined/);
+    }
+  });
+
+  it.skipIf(!isPosix || canElevate)("throws ERR_ACCESS_DENIED without root or passwordless sudo", () => {
+    expect(() => spawnSync({ cmd: [bunExe(), "-e", ""], env: bunEnv, elevate: true })).toThrow(
+      expect.objectContaining({ code: "ERR_ACCESS_DENIED" }),
+    );
+  });
+
+  it.skipIf(!isPosix || !canElevate)("spawnSync runs the command as root and forwards env", () => {
+    const { stdout, exitCode } = spawnSync({
+      cmd: printUid,
+      env: { ...bunEnv, ELEVATE_TEST: "yes" },
+      elevate: true,
+    });
+    expect(stdout.toString().trim()).toBe("0 yes");
+    expect(exitCode).toBe(0);
+  });
+
+  it.skipIf(!isPosix || !canElevate)("spawn runs the command as root", async () => {
+    await using proc = spawn({ cmd: printUid, env: { ...bunEnv, ELEVATE_TEST: "async" }, elevate: true, stdout: "pipe" });
+    const [stdout, exitCode] = await Promise.all([proc.stdout.text(), proc.exited]);
+    expect(stdout.trim()).toBe("0 async");
+    expect(exitCode).toBe(0);
+  });
+
+  it.skipIf(!isPosix)("elevate: false keeps the current uid", () => {
+    const { stdout, exitCode } = spawnSync({ cmd: printUid, env: bunEnv, elevate: false });
+    expect(stdout.toString().trim()).toBe(`${process.getuid!()}`);
+    expect(exitCode).toBe(0);
+  });
+});

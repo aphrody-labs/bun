@@ -262,6 +262,64 @@ fn get_argv(
     Ok(())
 }
 
+/// `elevate: true`: rewrites `argv` to run through sudo (or the Windows elevation path) unless the process is
+/// already root/Administrator. `argv0` holds the resolved command path from `get_argv`.
+#[allow(clippy::too_many_arguments)]
+fn elevate_argv(
+    global_this: &JSGlobalObject,
+    path: &[u8],
+    cwd: &[u8],
+    override_env: bool,
+    env_array: &[CStrPtr],
+    argv0: &mut Option<*const c_char>,
+    argv: &mut Vec<CStrPtr>,
+    storage: &mut Vec<ZBox>,
+) -> JsResult<()> {
+    use crate::elevate::{self, Elevation};
+    let (prefix, env_as_args) = match elevate::plan(path, cwd) {
+        Ok(Elevation::Direct) => return Ok(()),
+        Ok(Elevation::Wrapped {
+            prefix,
+            env_as_args,
+        }) => (prefix, env_as_args),
+        Err(e) => {
+            return Err(global_this
+                .err(jsc::ErrorCode::ERR_ACCESS_DENIED, format_args!("{}", e.message()))
+                .throw());
+        }
+    };
+    if override_env && !env_as_args {
+        return Err(global_this.throw_invalid_arguments(format_args!(
+            "elevate: the env option is not supported on Windows unless Bun already runs elevated",
+        )));
+    }
+    let Some(target) = *argv0 else {
+        return Err(global_this.throw_invalid_arguments(format_args!("cmd must not be empty")));
+    };
+    let mut new_argv: Vec<CStrPtr> = Vec::with_capacity(prefix.len() + env_array.len() + argv.len());
+    for word in &prefix {
+        let z = ZBox::from_bytes(word);
+        new_argv.push(z.as_ptr());
+        storage.push(z);
+    }
+    if env_as_args && override_env {
+        for &kv in env_array {
+            // SAFETY: every `env_array` entry is a NUL-terminated `K=V` string owned by `storage`.
+            let bytes = unsafe { bun_core::ffi::cstr(kv) }.to_bytes();
+            if let Some(eq) = strings::index_of_char_usize(bytes, b'=') {
+                if elevate::is_env_name(&bytes[..eq]) {
+                    new_argv.push(kv);
+                }
+            }
+        }
+    }
+    new_argv.push(target);
+    new_argv.extend_from_slice(&argv[1..]);
+    *argv0 = Some(new_argv[0]);
+    *argv = new_argv;
+    Ok(())
+}
+
 /// Bun.spawn() calls this.
 pub(crate) fn spawn(
     cx: &bun_jsc::JsThread<'_>,
@@ -388,6 +446,7 @@ fn spawn_maybe_sync(
     #[cfg(not(windows))]
     let mut socket_fd_indices: Vec<usize> = Vec::new();
     let mut argv0: Option<*const c_char> = None;
+    let mut user_argv0 = false;
     let mut ipc_channel: i32 = -1;
     let mut timeout: Option<i32> = None;
     let mut uid: Option<u32> = None;
@@ -450,6 +509,7 @@ fn spawn_maybe_sync(
                             .throw());
                     }
                     argv0 = Some(owned.as_ptr());
+                    user_argv0 = true;
                     cstr_storage.push(owned);
                 }
             }
@@ -901,6 +961,35 @@ fn spawn_maybe_sync(
                 &mut argv,
                 &mut cstr_storage,
             )?;
+        }
+    }
+
+    if !args.is_empty() && args.is_object() {
+        if let Some(val) = args.get(cx.global(), "elevate")? {
+            if !val.is_undefined_or_null() {
+                if !val.is_boolean() {
+                    return Err(cx
+                        .global()
+                        .throw_invalid_argument_type("spawn", "elevate", "boolean"));
+                }
+                if val.as_boolean() {
+                    if user_argv0 || uid.is_some() || gid.is_some() {
+                        return Err(cx.global().throw_invalid_arguments(format_args!(
+                            "elevate cannot be combined with argv0, uid or gid",
+                        )));
+                    }
+                    elevate_argv(
+                        cx.global(),
+                        path,
+                        cwd,
+                        override_env,
+                        &env_array,
+                        &mut argv0,
+                        &mut argv,
+                        &mut cstr_storage,
+                    )?;
+                }
+            }
         }
     }
 

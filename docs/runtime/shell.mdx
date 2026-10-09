@@ -479,10 +479,27 @@ For cross-platform compatibility, Bun Shell implements a set of builtin commands
 - `seq`
 - `dirname`
 - `basename`
+- `sudo`: run a command as root or Administrator (see [Running as root](#running-as-root))
 
 **Not** implemented yet, but planned:
 
 - See [Issue #9716](https://github.com/oven-sh/bun/issues/9716) for the full list.
+
+### Running as root
+
+`sudo cmd args…` runs `cmd` with the same mechanism as [`Bun.spawn({ elevate: true })`](/runtime/child-process#running-as-root):
+
+```js
+import { $ } from "bun";
+
+await $`sudo apk add htop`;
+```
+
+- When Bun already runs as root or elevated, Bun Shell drops `sudo` and runs the command itself. Builtins such as `rm` work too.
+- Otherwise, Bun Shell resolves `cmd` from `PATH` and runs `sudo -n /abs/cmd args…` on Linux and macOS. `sudo -n` never prompts. If sudo is missing or asks for a password, the command fails with exit code 1 and an error on stderr.
+- On Windows, Bun Shell uses the inbox `sudo.exe` when it is enabled, else the UAC prompt.
+
+`sudo` with options or `VAR=value` words (`sudo -u nobody id`) runs the system sudo unchanged.
 
 ---
 

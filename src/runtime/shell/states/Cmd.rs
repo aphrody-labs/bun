@@ -434,7 +434,7 @@ impl Cmd {
         // Empty/null argv[0] → exit
         // with the exit code from a sole command-substitution (stashed by
         // `child_done` from `Expansion::out_exit_code`), else 0.
-        let first_arg: Vec<u8> = {
+        let mut first_arg: Vec<u8> = {
             let me = interp.as_cmd(this);
             match me.args.first() {
                 Some(a) if a.len() > 1 => {
@@ -449,7 +449,25 @@ impl Cmd {
             }
         };
 
-        if let Some(kind) = BuiltinKind::from_argv0(&first_arg) {
+        // `sudo cmd args...` (no sudo flags, no VAR=value): when already root/Administrator, run `cmd` here
+        // (builtins included); otherwise spawn `cmd` through `crate::elevate` (sudo -n, Windows sudo/UAC). Other
+        // forms (`sudo -u user ...`) run the system sudo unchanged.
+        let mut sudo_wrap = false;
+        if &first_arg[..] == b"sudo" {
+            let me = interp.as_cmd(this);
+            let bare = me.args.get(1).is_some_and(|a| {
+                let a = &a[..a.len() - 1];
+                !a.is_empty() && a[0] != b'-' && !bun_core::strings::contains_char(a, b'=')
+            });
+            if bare {
+                let me = interp.as_cmd_mut(this);
+                me.args.remove(0);
+                first_arg = me.args[0][..me.args[0].len() - 1].to_vec();
+                sudo_wrap = !crate::elevate::is_elevated();
+            }
+        }
+
+        if let Some(kind) = BuiltinKind::from_argv0(&first_arg).filter(|_| !sudo_wrap) {
             log!("Cmd {} exec builtin={:?}", this, kind);
             if let Some(y) = Builtin::init(interp, this, kind) {
                 return y;
@@ -538,6 +556,30 @@ impl Cmd {
         // `execve`).
         resolved.push(0);
         interp.as_cmd_mut(this).args[0] = resolved;
+
+        if sudo_wrap {
+            match crate::elevate::plan(spawn_args.path, spawn_args.cwd) {
+                Ok(crate::elevate::Elevation::Direct) => {}
+                Ok(crate::elevate::Elevation::Wrapped { prefix, .. }) => {
+                    let me = interp.as_cmd_mut(this);
+                    me.args.splice(
+                        0..0,
+                        prefix.into_iter().map(|mut word| {
+                            word.push(0);
+                            word
+                        }),
+                    );
+                }
+                Err(e) => {
+                    drop(spawn_args);
+                    return Builtin::cmd_write_failing_error(
+                        interp,
+                        this,
+                        format_args!("{}\n", e.message()),
+                    );
+                }
+            }
+        }
 
         // Convert shell IO → subprocess stdio.
         let mut shellio = ShellIO::default();
