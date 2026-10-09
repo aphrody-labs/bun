@@ -6,14 +6,18 @@
 # The kernel package linux-aphrody is NOT installed in the container image: a container uses
 # the kernel of its host. linux-aphrody is for VMs and bare metal (installer/ISO) only.
 
-# ARG APHRODY_APK_REPO=https://example.invalid/aphrody
-#   Repository URL (dir containing <arch>/APKINDEX.tar.gz) or a local directory mounted at
-#   /packages (ex: docker build --build-context packages=./repo  +  COPY --from=packages / /packages).
-#   (local variant: ARG APHRODY_APK_REPO=/packages instead of the URL above)
+# Integrated in scripts/aphrody/aphrody-alpine.Dockerfile; kept as the reference for other images.
+#
+# ARG APHRODY_APK_REPO=https://github.com/aphrody-labs/aports/releases/download/aphrody-3.24-${APK_ARCH}/APKINDEX.tar.gz
+#   The signed release repository (aphrody-labs/aports .github/workflows/aphrody-packages.yml); apk
+#   substitutes ${APK_ARCH} itself, so the line is written with single quotes. Local variant: a
+#   directory mounted at /packages (docker build --build-context packages=./repo + COPY --from=packages
+#   / /packages) and ARG APHRODY_APK_REPO=/packages.
 # ARG BUILD_USER=builder
 
 # Repository key: for a local repo, copy the abuild public key to /etc/apk/keys/ beforehand
 # (COPY aphrody-labs.rsa.pub /etc/apk/keys/aphrody-labs.rsa.pub).
+# ADD https://raw.githubusercontent.com/aphrody-labs/aports/3.24-stable/aphrody/keys/aphrody-labs.rsa.pub /etc/apk/keys/
 # RUN echo "${APHRODY_APK_REPO}" >> /etc/apk/repositories
 
 # sudo-rs provides "sudo" and replaces sudo and doas; aphrody-sudoers creates group aphrody and

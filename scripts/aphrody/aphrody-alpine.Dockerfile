@@ -5,14 +5,16 @@
 # .github/workflows/aphrody-linux-build.yml) and is published as
 # ghcr.io/aphrody-labs/alpine plus a rootfs tarball
 # (.github/workflows/aphrody-alpine-image.yml). root's login shell is bunsh;
-# /bin/sh stays busybox ash (PLAN-ALPINE-BUN.md, section U).
+# /bin/sh stays busybox ash (PLAN-ALPINE-BUN.md, section U). sudo is sudo-rs
+# (scripts/aphrody/alpine/u3.Dockerfile.fragment): BUILD_USER is in group
+# aphrody, NOPASSWD, so `sudo`, `Bun.spawn({ elevate: true })` and
+# `bunsh --root` work without a prompt.
 #
 #   docker build -t ghcr.io/aphrody-labs/alpine:3.24 -f scripts/aphrody/aphrody-alpine.Dockerfile scripts/aphrody
 #
 # OPTIONAL_PACKAGES adds packages from the same repositories, e.g.
 #   aphrody-libc-dev       /usr/lib/libaphrody_libc.a, for `bun run build --aphrody-libc=/usr/lib/libaphrody_libc.a`
 #   aphrody-libc-preload   LD_PRELOAD of the aphrody-libc overlay for login shells
-#   sudo-rs sudo-rs-su aphrody-sudoers aphrody-sysctl   (U3, scripts/aphrody/alpine/u3.Dockerfile.fragment)
 
 ARG ALPINE_RELEASE=3.24.2
 
@@ -35,6 +37,7 @@ COPY --from=rootfs /rootfs/ /
 
 ARG APHRODY_APORTS_REF=15e5fcd2686d113b0ebc0f356bcb974e1e612d58
 ARG OPTIONAL_PACKAGES=""
+ARG BUILD_USER=builder
 ADD https://raw.githubusercontent.com/aphrody-labs/aports/${APHRODY_APORTS_REF}/aphrody/keys/aphrody-labs.rsa.pub /etc/apk/keys/aphrody-labs.rsa.pub
 
 ENV LANG=C.UTF-8 \
@@ -47,6 +50,7 @@ ENV LANG=C.UTF-8 \
 RUN echo 'https://github.com/aphrody-labs/aports/releases/download/aphrody-3.24-${APK_ARCH}/APKINDEX.tar.gz' >> /etc/apk/repositories \
     && apk add --no-cache \
       bun bun-shell bun-apk aphrody n2b aphrody-bun-build-deps \
+      sudo-rs sudo-rs-su aphrody-sudoers aphrody-sysctl \
       bash coreutils findutils grep sed gawk diffutils patch tar xz zstd unzip rsync file \
       git curl ca-certificates jq ripgrep fd procps tmux gdb strace nodejs \
       $OPTIONAL_PACKAGES \
@@ -55,6 +59,12 @@ RUN echo 'https://github.com/aphrody-labs/aports/releases/download/aphrody-3.24-
     && grep -q '^root:.*:/bin/bunsh$' /etc/passwd \
     && test "$(readlink -f /bin/sh)" = /bin/busybox \
     && bun --version && bunsh -c 'exit 0' && aphrody --version && n2b --version \
-    && clang-23 --version | head -1 && ld.lld --version && rustc -vV
+    && clang-23 --version | head -1 && ld.lld --version && rustc -vV \
+    && ! command -v doas >/dev/null \
+    && adduser -D -G aphrody -s /bin/sh "$BUILD_USER"
+
+USER ${BUILD_USER}
+RUN sudo -n true && test "$(sudo -n id -u)" = 0 && test "$(bunsh --root -c 'id -u')" = 0
+USER root
 
 WORKDIR /work
