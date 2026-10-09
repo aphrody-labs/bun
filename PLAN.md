@@ -360,6 +360,25 @@ l'historique d'Aphrody (`m3/docs/guides/FORKS.md`, avant `2dc8354a01`). Bunisati
 APIs Node → Bun là où c'est plus rapide, oxide construit par le toolchain du fork. `@aphrody/bun-plugin-tailwind`
 consomme ensuite `@aphrody/tailwindcss`.
 
+- ✅ Fork à jour sur `tailwindlabs/tailwindcss` (base `fa81d697`, 4.3.3), workflows upstream désactivés, secrets posés.
+  Archéologie : seul l'ancien commit `d5f915c3` (remplacement textuel pnpm→bun) existait, remplacé par `bunify.ts`. Trailer
+  d'IA retiré de l'historique (force-with-lease, `main` = `9137bbd1`).
+- ✅ pnpm → Bun (tailwindcss `937b5902`, `9137bbd1`) : workspaces/catalog/patchedDependencies/trustedDependencies dans
+  `package.json`, `bun.lock`, `bunfig.toml` (linker isolé, `bun test`), `pnpm-*.yaml` supprimés, scripts réécrits par
+  `scripts/aphrody/bunify.ts`, `pnpm -r`/`pnpm pack` → `scripts/aphrody/workspaces.ts` + `bun pm pack`. L'oxide (napi) se
+  charge sous Bun.
+- ✅ Outillage : `scope.ts` (`tailwindcss` → `@aphrody/tailwindcss`, `@tailwindcss/x` → `@aphrody/tailwindcss-x`, crates
+  `aphrody-tailwindcss-{classification-macros,ignore,oxide}`), `publish-npm.ts` (manifests en staging, dépendances
+  internes en alias `npm:`, sources non renommées, version `X.Y.Z-aphrody.N`), `publish-crates.ts`, `place-bindings.ts`,
+  `sync-upstream.ts` (6 h, fusion à trois voies après `bunify.rewrite`, `pnpm-workspace.yaml` upstream replié dans
+  `package.json`), workflows `aphrody-{upstream-sync,ci,release}.yml`, `APHRODY.md`, `PLAN.md`. Non exécutés (directive
+  du 2026-10-09) ; test : `bun test scripts/aphrody/aphrody.test.ts` dans `C:\tailwindcss`.
+- Mesure (avant les patchs du cœur) : vitest sous Bun 37,5 s, 5463 réussis ; `bun test packages` 58 s, 5238/5494.
+- ⏳ Patchs du cœur Bun pour la parité vitest (getState/setState, rejects/resolves sur fonction, snapshot serializers +
+  clé bunfig, contexte de test vitest, `test.for`) : en cours, à noter ici à la livraison.
+- ⏳ Première publication `4.3.3-aphrody.1` (workflow release), mesures avant/après (build CSS, démarrage à froid),
+  suite d'intégration sous `bun test`, `bench` encore sur `vitest bench`, bascule de `@aphrody/bun-plugin-tailwind`.
+
 ### R. Fork Base UI + M3 — `aphrody-labs/base-ui` (🔄)
 
 Clone `C:\base-ui` (`origin` fork, `upstream` mui/base-ui), même workflow. Anciens patches de `forks/base-ui` et travail
