@@ -79,15 +79,15 @@ rien, `graph:bun` ne renvoie que du bruit (PipeWriter). `query "perl create_hash
 | `rsync` (msys) | `toolchain.json`, shim rsync.cmd | rclone 1.75.1 natif (remotes vps/dbfr déjà configurés) ; delta rsync en Rust dans `C:\aphrody\crates\infra\ssh\src\rsync.rs` (`aphrody infra ssh`) | MS2 | ✅ preuve (`rsync-rclone`) ; ⏳ bascule toolchain-sync |
 | Rust `windows-gnu` | — | `x86_64-pc-windows-gnullvm` + llvm-mingw + `crt-static` : uutils diffutils construit et testé | MS2 | ✅ |
 | `msys2-runtime` (`msys-2.0.dll`, fork Cygwin) | tout `usr\bin` de Git Bash et de `C:\msys64` | aucun : les remplaçants sont des PE natifs (`api-ms-win-crt-*`, `kernel32`) | — | objectif |
-| bash, dash, coreutils, sed, grep, gawk, findutils, diffutils, which, less, file, time | agents et scripts `.sh` | Bun Shell (`Bun.$`), `bunsh` (`src/runtime/cli/bunsh.rs`, b4c195bb7b8), uutils coreutils/findutils/diffutils natifs, rg/fd/sd | MS3 | en cours (MS-a) |
-| tar, gzip, bsdtar, xz, zstd, bzip2 | scripts, archives | `tar.exe` de Windows (bsdtar 3.8.4) ; `Bun.Archive`, `Bun.gzipSync`, `Bun.zstdCompressSync` | MS3 | en cours (MS-a) |
+| bash, dash, coreutils, sed, grep, gawk, findutils, diffutils, which, less, file, time | agents et scripts `.sh` | Bun Shell (`Bun.$`), `bunsh` (`src/runtime/cli/bunsh.rs`, b4c195bb7b8), uutils coreutils/findutils/diffutils natifs, rg/fd/sd | MS3 | ✅ ad86cf5a84e : `scripts/aphrody/win/shell/prove.ts` → 59/82 cas prouvés (head…xargs, sed/awk/find/diff/cmp, sha256sum, grep→rg), aucun des 102 exe vérifiés n'importe msys-2.0.dll ; builtins `test`, `[`, `:` et `basename` à suffixe ajoutés au fork. Manquent à Bun Shell : `for`, `while`, `case`, fonctions, `{ }`, here-doc, `${V:-x}`, `$((…))`, `set -e`, `read`, `command -v`, `!`, `source` (MS10) |
+| tar, gzip, bsdtar, xz, zstd, bzip2 | scripts, archives | `tar.exe` de Windows (bsdtar 3.8.4) ; `Bun.Archive`, `Bun.gzipSync`, `Bun.zstdCompressSync` | MS3 | ✅ ad86cf5a84e (`tar.exe` lit aussi les zip) ; `Bun.gunzipSync` décode désormais les gzip multi-membres comme node:zlib (4319ce598b2) |
 | curl, wget | scripts | `curl.exe` de Windows, `fetch` Bun, `xh` | MS3 | natif (rien à faire) |
 | nano, vim, mintty | édition et terminal interactifs | `hx` (Helix, déjà là), Windows Terminal | MS4 | ⏳ |
-| `pacman`, `pacman-contrib`, `pacman-mirrors`, `MSYS2-keyring`, gnupg | gestion de paquets | apk : client Bun `scripts/aphrody/win/apk/apk.ts` (APKINDEX, signatures RSA des clés `C:\aports\aphrody\keys`), faisabilité d'apk-tools natif dans `C:\apk-tools\PLAN.md` | MS4/MS5 | en cours (MS-d) |
-| `msys2-installer` (Qt IFW) | installation | `scripts/aphrody/win/install.ts`, compilé par `bun build --compile` | MS4 | en cours (MS-d) |
-| `msys2-launcher` (mintty + MSYSTEM) | lanceurs ucrt64/clang64 | profil Windows Terminal → `bunsh` (prévu dans `install.ts`) | MS4 | en cours (MS-d) |
-| `setup-msys2` (action CI) | aucun workflow ne l'utilise (rg `.github`) | `.github/actions/setup-aphrody-win` | MS4 | en cours (MS-d) |
-| `mingw-w64-ucrt-x86_64-gtk4` et ~60 dépendances (glib2, cairo, pango, harfbuzz…) | fixtures GTK de l'agent UI | paquets apk Windows construits par aports/abuild en cross llvm-mingw : `C:\aports\aphrody\mingw-w64\*`, pointés par `BUN_GTK4_DIR` | MS6 | ⏳ pas commencé (plus de place pour un sous-agent, session à 20) |
+| `pacman`, `pacman-contrib`, `pacman-mirrors`, `MSYS2-keyring`, gnupg | gestion de paquets | apk : client Bun `scripts/aphrody/win/apk/apk.ts` (APKINDEX v2 signé, résolution, extraction, base installée, scripts bun/bunsh), arch apk `windows-x86_64` ; apk-tools natif : pas de port (15 à 20 jours, `C:\apk-tools\PLAN.md` e2e497fe915) | MS4/MS5 | ✅ 61b00191448 ; ⏳ publier la release `aphrody-3.24-windows-x86_64` |
+| `msys2-installer` (Qt IFW) | installation | `scripts/aphrody/win/install.ts`, compilé par `bun build --compile` (clé du dépôt embarquée, PATH utilisateur par bun:ffi) | MS4 | ✅ 475b16db106 |
+| `msys2-launcher` (mintty + MSYSTEM) | lanceurs ucrt64/clang64 | profil Windows Terminal → `bunsh` (`install.ts --terminal-profile`) | MS4 | ✅ 475b16db106 |
+| `setup-msys2` (action CI) | aucun workflow ne l'utilise (rg `.github`) | `.github/actions/setup-aphrody-win` | MS4 | ✅ 475b16db106 (simulée en local) |
+| `mingw-w64-ucrt-x86_64-gtk4` et ~60 dépendances (glib2, cairo, pango, harfbuzz…) | fixtures GTK de l'agent UI | recette `aphrody/llvm-mingw` (toolchain croisée sur clang23/lld23 d'Alpine) puis `aphrody/mingw-w64-gtk4` (GTK 4.24.1 et ses dépendances en sous-projets meson, `CARCH=windows-x86_64`), installée par le client apk et pointée par `BUN_GTK4_DIR` | MS6 | en cours (build VPS `~/ms`) |
 | `qt6-base`, `qt6-declarative`, `pkgconf` | shim Qt et KDE de l'agent UI | idem, Qt6 refait avec llvm-mingw (libc++ : on ne mélange pas avec le libstdc++ de MSYS2), `BUN_QT_BIN_DIR` | MS7 | ⏳ |
 | `mingw-w64-ucrt-x86_64-python`, tcl/tk | tirés par les dépendances | uv (Python 3.13 natif, déjà là) | — | non utilisé |
 | scoop `mingw` et `cygwin` de l'image CI Windows | `cc` des tests napi/ffi ; scripts des tests | clang de LLVM (déjà dans l'image) pour `cc` ; bunsh et uutils pour les scripts | MS8 | ⏳ demande une reconstruction de l'image CI |
@@ -104,10 +104,10 @@ rien, `graph:bun` ne renvoie que du bruit (PipeWriter). `query "perl create_hash
 | MS0 | 30 forks + clones partiels | GitHub aphrody-labs, `C:\forks\msys2` | ✅ |
 | MS1 | perl retiré du build Bun | `src/codegen/create-hash-table.ts`, `scripts/build/{codegen,configure,config}.ts`, `scripts/aphrody/tmux.ts`, docs Windows | ✅ b1f11fc9637 |
 | MS2 | toolchain llvm-mingw, pigz, zlib1, rclone, Rust gnullvm | `scripts/aphrody/win/toolchain/{prove.ts,report.json}` | ✅ 91276e15c03 ; ⏳ `toolchain.json` + `toolchain-sync.ps1` (réservés) |
-| MS3 | shell et coreutils : inventaire, preuve Bun Shell/uutils, manques de Bun Shell | `scripts/aphrody/win/shell/**`, `test/internal/aphrody-win-shell.test.ts`, `src/runtime/shell/**` | en cours (MS-a) |
-| MS4 | client apk Windows en Bun, `install.ts`, action `setup-aphrody-win`, profil Windows Terminal | `scripts/aphrody/win/apk/**`, `scripts/aphrody/win/install.ts`, `.github/actions/setup-aphrody-win/**` | en cours (MS-d) |
-| MS5 | apk-tools natif Windows (faisabilité) | `C:\apk-tools\PLAN.md` | en cours (MS-d) |
-| MS6 | dépôt apk « mingw » : zlib, pkgconf, chaîne GTK4 en cross llvm-mingw (abuild, VPS) | `C:\aports\aphrody\mingw-w64\**` | ⏳ |
+| MS3 | shell et coreutils : inventaire, preuve Bun Shell/uutils, manques de Bun Shell | `scripts/aphrody/win/shell/**`, `test/internal/aphrody-win-shell.test.ts`, `src/runtime/shell/**` | ✅ ad86cf5a84e |
+| MS4 | client apk Windows en Bun, `install.ts`, action `setup-aphrody-win`, profil Windows Terminal | `scripts/aphrody/win/apk/**`, `scripts/aphrody/win/install.ts`, `.github/actions/setup-aphrody-win/**` | ✅ 61b00191448, 475b16db106 |
+| MS5 | apk-tools natif Windows (faisabilité) | `C:\apk-tools\PLAN.md` | ✅ e2e497fe915 : pas de port, à rouvrir avec le format v3 |
+| MS6 | toolchain `llvm-mingw` en paquet Alpine, puis GTK4 Windows (`mingw-w64-gtk4`) en cross (abuild, VPS) | `C:\aports\aphrody\{llvm-mingw,mingw-w64-*}` | en cours |
 | MS7 | Qt6 qtbase/declarative en cross llvm-mingw | idem | ⏳ après MS6 |
 | MS8 | image CI Windows sans scoop `mingw`/`cygwin` | `scripts/build/ci-images/spec.ts` | ⏳ reconstruction d'image |
 | MS9 | Git Bash des agents, hooks git | — | ⏳ décision finale |
@@ -117,4 +117,7 @@ rien, `graph:bun` ne renvoie que du bruit (PipeWriter). `query "perl create_hash
 - `bun bd` puis `bun bd test test/internal/create-hash-table.test.ts` : la passe régénère les 12 `.lut.h` sans perl.
   Pour le vérifier, retirer `Git\usr\bin` du PATH de la passe.
 - `bun scripts/aphrody/win/toolchain/prove.ts` → `5/5 étapes prouvées`.
-- MS3 et MS4 : commandes dans leurs rapports, reportées ici à la fusion.
+- MS3 : `bun bd test test/js/bun/shell/commands/test.test.ts test/js/bun/shell/commands/true.test.ts test/js/bun/shell/commands/basename.test.ts` ; copier le bun-debug sous `bunsh.exe` puis `bun scripts/aphrody/win/shell/prove.ts --bunsh <bunsh.exe>`.
+- MS4 : `bun test test/internal/aphrody-win-apk.test.ts` ; `bun build --compile scripts/aphrody/win/install.ts --outfile aphrody-win-setup.exe` puis `aphrody-win-setup.exe --root %TEMP%\aw --no-path --terminal-profile --bun <bunsh.exe>`.
+- gzip multi-membres : `bun bd test test/js/bun/util/zstd.test.ts -t concatenated`.
+- MS10 (point 12 de la directive, ⏳) : vendorer uutils (MIT, `C:\forks\msys2\uutils-coreutils`) dans les builtins de Bun Shell pour une seule implémentation par commande ; il faut une sortie `uumain` redirigée vers l'IO du shell.
