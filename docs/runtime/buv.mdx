@@ -1,0 +1,37 @@
+---
+name: Buv and PyJS
+description: Native JavaScriptCore and UV runtime with the PyJS language surface
+---
+
+Run the embedded UV command with `buv uv`:
+
+```sh
+buv uv --version
+buv uv venv
+buv uv sync
+buv uv run python main.py
+buv uv pip install --python .venv/bin/python requests
+```
+
+On Windows, use `.venv/Scripts/python.exe` for a virtual environment's Python executable.
+The runtime keeps compatibility dispatch for explicitly configured `uv` or `uvx` aliases. New Buv artifacts export `buv` and `pyjs`; invoke embedded UV through `buv uv`.
+
+The command links UV 0.12.24 into the native core and dispatches before JavaScriptCore starts.
+It preserves UV's arguments, Python discovery, project configuration, cache, and child exit statuses.
+UV's allocator and self-update features are disabled; Bun owns allocation and executable updates.
+
+The complete UV source tree, licenses, Python packages, documentation, scripts, and upstream workflow definitions live in `vendor/uv`.
+Its Cargo workspace retains upstream dependency and lint rules. Bun's native Cargo graph includes the embedded UV library and its runtime dependencies.
+The root commands `uv:check`, `uv:test`, `uv:lint`, `uv:fmt`, `uv:metadata`, and `uv:docs` operate on that workspace.
+`uv:embedded` builds Bun through `bun bd` and runs its embedded UV and Python CLI tests.
+Set `BUN_UV_CARGO_COMMAND` to a JSON array of command arguments to use a host's configured Cargo factory.
+The root GitHub workflow checks the UV crates on Linux, Windows, and macOS and runs the embedded CLI tests through the native build factory.
+
+`packages/buv` supplies immutable artifact assembly, native core qualification, installation, rollback and preserved predecessor source. Its forge accepts an owner-built core and records the executable hash, Bun/JSC revisions and embedded UV version. It does not build an external UV launcher. A pinned CPython prefix and optional Ruff binary have separate provenance and target gates.
+
+PyJS combines the JavaScript and Python surface; `.pyjs`, `.pyts` and `.pytsx` use the core's JavaScript, TypeScript and TSX loaders respectively. Embedded Python code remains an explicit native Python API call. The shared Python ABI and extension imports require their own native integration checks; a successful graph or UV version check alone does not establish them.
+
+`bun run bun:python` manages `bun_python.sqlite` using `bun:sqlite` and exports its tables to `bun_python.json`.
+The registry stores source hashes, graph provenance, Cargo dependencies, commands, outputs, benchmark samples, fixes, and artifact hashes.
+`bun run bun:python run -- <command>` records a validation command. Add `--no-export` before `--` when batching commands, then export once at the end.
+Keep these generated files in local storage; they are excluded from Git.

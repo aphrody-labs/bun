@@ -84,6 +84,16 @@
     "node:test": "node ./scripts/runner.node.ts --quiet --exec-path=$npm_execpath --node-tests ",
     "node:test:cp": "bun ./scripts/fetch-node-test.ts ",
     "clean": "bun scripts/build/clean.ts",
-    "sync-webkit-source": "bun ./scripts/sync-webkit-source.ts"
+    "sync-webkit-source": "bun ./scripts/sync-webkit-source.ts",
+    "pyjs": "bun scripts/aphrody/pyjs.ts",
+    "buv:check": "bun scripts/aphrody/buv.ts check",
+    "buv:test": "bun scripts/aphrody/buv.ts test",
+    "buv:lint": "bun scripts/aphrody/buv.ts lint",
+    "buv:fmt": "bun scripts/aphrody/buv.ts fmt",
+    "buv:metadata": "bun scripts/aphrody/buv.ts metadata",
+    "buv:docs": "bun scripts/aphrody/buv.ts docs",
+    "buv:embedded": "bun scripts/aphrody/buv.ts embedded",
+    "buv:bench": "bun scripts/aphrody/bench.ts",
+    "buv:formats": "bun scripts/aphrody/formats.ts"
   }
 }

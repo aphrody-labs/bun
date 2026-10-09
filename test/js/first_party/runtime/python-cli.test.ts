@@ -20,11 +20,12 @@ writeFileSync(
 );
 writeFileSync(join(root, "cli_module.py"), executableCheck + "assert sys.argv[1]=='été🐍'; print('MODULE_OK')\n");
 
-async function run(args: string[], input?: string, env = environment) {
-  const child = Bun.spawn({
+async function run(args: string[], input?: string, env = environment, argv0?: string) {
+  await using child = Bun.spawn({
     cmd: [bunExe(), ...args],
     cwd: root,
     env,
+    argv0,
     stdin: input === undefined ? "ignore" : new Blob([input]),
     stdout: "pipe",
     stderr: "pipe",
@@ -36,6 +37,208 @@ async function run(args: string[], input?: string, env = environment) {
 function success(result: Awaited<ReturnType<typeof run>>, output: string) {
   expect(result).toEqual({ code: 0, out: output, err: "" });
 }
+
+test.concurrent("native bun:graph records dependency edges in SQLite", async () => {
+  success(
+    await run([
+      "-e",
+      `
+    import { BunPython, PyJS } from "bun:graph";
+    if (PyJS !== BunPython) throw new Error("Graph constructor alias mismatch");
+    using graph = new BunPython(":memory:");
+    const repository = graph.repository("bun", "source", process.cwd());
+    await graph.importGraph(repository, {
+      nodes: [{ id: "cli", label: "CLI", source_file: "src/runtime/cli/mod.rs" }],
+      links: [{ source: "cli", target: "uv", relation: "calls", confidence: "EXTRACTED" }],
+    }, "native-smoke");
+    const counts = graph.counts();
+    console.log(JSON.stringify({ nodes: counts.nodes, edges: counts.edges,
+      snapshots: counts.graph_snapshots, foreignKeys: graph.db.query("PRAGMA foreign_key_check").all() }));
+  `,
+    ]),
+    '{"nodes":2,"edges":1,"snapshots":1,"foreignKeys":[]}',
+  );
+});
+
+test.concurrent("native buv and pyjs graph aliases share the SQLite and serialization APIs", async () => {
+  success(
+    await run([
+      "-e",
+      `
+    import { PyJS } from "buv:graph";
+    import { BunPython } from "pyjs:graph";
+    import { encodeJSON, decodeJSON, markdown, html } from "buv:graphx";
+    if (PyJS !== BunPython) throw new Error("Graph aliases do not share their constructor");
+    using graph = new PyJS(":memory:");
+    graph.repository("buv", "source", process.cwd());
+    const report = await markdown(graph);
+    console.log(encodeJSON({ same: PyJS === BunPython,
+      json: decodeJSON(encodeJSON({ value: 42 })),
+      markdown: report.includes("buv"), html: html(report).includes("<main>") }));
+  `,
+    ]),
+    '{"same":true,"json":{"value":42},"markdown":true,"html":true}',
+  );
+});
+
+test.concurrent("embedded uv reports its own version", async () => {
+  const result = await run(["uv", "--version"]);
+  expect(result.out).toMatch(/^uv 0\.12\.24(?: .*)?$/);
+  expect(result.err).toBe("");
+  expect(result.code).toBe(0);
+});
+
+test.concurrent("buv dispatches its embedded UV command", async () => {
+  const result = await run(["uv", "--version"], undefined, environment, "buv");
+  expect(result.out).toMatch(/^uv 0\.12\.24(?: .*)?$/);
+  expect(result.err).toBe("");
+  expect(result.code).toBe(0);
+});
+
+test.concurrent("pyjs executes JavaScript through the native engine", async () => {
+  success(await run(["-e", "console.log('PYJS_JS_OK')"], undefined, environment, "pyjs"), "PYJS_JS_OK");
+});
+
+for (const [extension, source] of [
+  ["pyjs", "export const value = 42;"],
+  ["pyts", "export const value: number = 42;"],
+  [
+    "pytsx",
+    "/* @jsxRuntime classic @jsx element */ function element(tag: string, props: unknown, value: number) { return value; } export const value = <span>{42}</span>;",
+  ],
+]) {
+  test.concurrent(`native ${extension} modules use their JavaScript, TypeScript or TSX grammar`, async () => {
+    using dir = tempDir(`buv-${extension}`, {
+      [`value.${extension}`]: source,
+      "entry.pyts": "import { value } from './value'; console.log(value);",
+    });
+    await using child = Bun.spawn({
+      cmd: [bunExe(), "entry.pyts"],
+      cwd: String(dir),
+      env: environment,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [out, err, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+    expect({ out, err }).toEqual({ out: "42\n", err: "" });
+    expect(code).toBe(0);
+  });
+}
+
+nativeTest.concurrent("pyjs embeds CPython in the JavaScript process through its native ABI", async () => {
+  success(
+    await run([
+      "-e",
+      `
+    import { Python, PythonError } from "buv:python";
+    using py = Python.open();
+    py.exec\`import os; value = {'text': 'café🐍', 'n': 42}\`;
+    if (py.evalJSON("__import__('os').getpid()") !== process.pid) throw new Error("Python process mismatch");
+    try { py.eval("1 / 0"); } catch (error) {
+      if (!(error instanceof PythonError) || !error.message.includes("division by zero")) throw error;
+    }
+    console.log(JSON.stringify(py.evalJSON("value")));
+  `,
+    ]),
+    '{"text":"café🐍","n":42}',
+  );
+});
+
+nativeTest.concurrent("async Python runs in a worker in the same process and serializes dependent calls", async () => {
+  success(
+    await run([
+      "-e",
+      `
+    import { Python } from "pyjs:python";
+    await using py = await Python.async();
+    await py.exec\`import os; value = 40\`;
+    const [first, second, pid] = await Promise.all([py.eval("value + 2"), py.eval("value + 3"), py.evalJSON("os.getpid()")]);
+    if (pid !== process.pid) throw new Error("Python worker process mismatch");
+    console.log(JSON.stringify([first, second]));
+  `,
+    ]),
+    '["42","43"]',
+  );
+});
+
+nativeTest.concurrent("pyjs dispatches Python files through the selected host", async () => {
+  success(await run([basename(script), "été🐍"], undefined, environment, "pyjs"), '{"argv": "été🐍"}');
+});
+
+test.concurrent("Bun help advertises its embedded UV command", async () => {
+  const result = await run(["--help"]);
+  expect(result.out).toContain("Manage Python packages and projects with UV");
+  expect(result.err).toBe("");
+  expect(result.code).toBe(0);
+});
+
+test.concurrent("embedded uv rejects unknown arguments", async () => {
+  const result = await run(["uv", "--aphrody-invalid-option"]);
+  expect(result.err).toContain("--aphrody-invalid-option");
+  expect(result.code).toBe(2);
+});
+
+test.concurrent("embedded uv accepts its Python command namespace", async () => {
+  const result = await run(["uv", "python", "--help"]);
+  expect(result.out).toContain("Manage Python versions");
+  expect(result.code).toBe(0);
+});
+
+test.concurrent("embedded uv runs under its executable alias", async () => {
+  const result = await run(["--version"], undefined, environment, "uv");
+  expect(result.out).toMatch(/^uv 0\.12\.24(?: .*)?$/);
+  expect(result.err).toBe("");
+  expect(result.code).toBe(0);
+});
+
+test.concurrent("embedded uvx uses its tool command namespace", async () => {
+  const result = await run(["--help"], undefined, environment, "uvx");
+  expect(result.out.split(/\r?\n/, 1)[0]).toBe("Run a command provided by a Python package.");
+  expect(result.out).toContain("Usage: uvx [OPTIONS] [COMMAND]");
+  expect(result.err).toBe("");
+  expect(result.code).toBe(0);
+});
+
+test.concurrent("embedded uv honors explicit engine dispatch under another name", async () => {
+  const result = await run(["uv", "--version"], undefined, { ...environment, BUN_BE_BUN: "1" }, "custom-runtime");
+  expect(result.out).toMatch(/^uv 0\.12\.24(?: .*)?$/);
+  expect(result.err).toBe("");
+  expect(result.code).toBe(0);
+});
+
+test.concurrent("node alias keeps scripts named uv", async () => {
+  using dir = tempDir("node-uv-script", { uv: "console.log('NODE_UV_SCRIPT');\n" });
+  await using child = Bun.spawn({
+    cmd: [bunExe(), "uv"],
+    argv0: "node",
+    cwd: String(dir),
+    env: environment,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [out, err, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+  expect({ out, err }).toEqual({ out: "NODE_UV_SCRIPT\n", err: "" });
+  expect(code).toBe(0);
+});
+
+test.skipIf(!python)("embedded uv preserves child process status offline", async () => {
+  const result = await run([
+    "uv",
+    "run",
+    "--offline",
+    "--no-project",
+    "--no-python-downloads",
+    "--python",
+    python!,
+    "--",
+    "python",
+    "-c",
+    "import sys; assert sys.argv[1] == 'été🐍'; print('UV_CHILD_OK'); sys.exit(37)",
+    "été🐍",
+  ]);
+  expect(result.out).toBe("UV_CHILD_OK");
+  expect(result.code).toBe(37);
+});
 
 test("optional Python host remains lazy for JavaScript", async () => {
   success(
@@ -67,6 +270,28 @@ nativeTest.concurrent("native Python stdin executes input", async () => {
 });
 nativeTest.concurrent("Python UTF-8 stdio survives native dispatch", async () => {
   success(await run(["python", "-c", executableCheck + "print('café🐍')"]), "café🐍");
+});
+
+nativeTest.concurrent("Python honors explicit standard-stream encoding", async () => {
+  success(
+    await run(["python", "-c", "import sys; print(sys.stdout.encoding)"], undefined, {
+      ...environment,
+      PYTHONIOENCODING: "ascii:backslashreplace",
+    }),
+    "ascii",
+  );
+  success(
+    await run(["python", "-c", "print('été🐍')"], undefined, {
+      ...environment,
+      PYTHONIOENCODING: "ascii:backslashreplace",
+    }),
+    "\\xe9t\\xe9\\U0001f40d",
+  );
+});
+
+nativeTest.concurrent("Python honors explicit UTF-8 mode flags", async () => {
+  success(await run(["python", "-X", "utf8=0", "-c", "import sys; print(sys.flags.utf8_mode)"]), "0");
+  success(await run(["python", "-Xutf8=1", "-c", "import sys; print(sys.flags.utf8_mode)"]), "1");
 });
 nativeTest.concurrent("Python imports the standard native extensions", async () => {
   success(

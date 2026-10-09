@@ -143,6 +143,7 @@
             "pages": [
               "/runtime/environment-variables",
               "/runtime/shell",
+              "/runtime/buv",
               "/runtime/child-process",
               "/runtime/webview",
               "/runtime/cron"

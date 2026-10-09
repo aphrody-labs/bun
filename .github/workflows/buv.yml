@@ -1,0 +1,114 @@
+name: Bun and embedded UV
+
+on:
+  push:
+    branches: [main]
+    paths:
+      [
+        "vendor/uv/**",
+        "src/runtime/cli/**",
+        "src/runtime/Cargo.toml",
+        "src/js/bun/graph.ts",
+        "Cargo.lock",
+        "scripts/build/**",
+        "scripts/aphrody/pyjs*",
+        "scripts/aphrody/buv.ts",
+        "test/internal/pyjs.test.ts",
+        "test/js/first_party/runtime/python-cli.test.ts",
+        ".github/workflows/buv.yml",
+      ]
+  pull_request:
+    paths:
+      [
+        "vendor/uv/**",
+        "src/runtime/cli/**",
+        "src/runtime/Cargo.toml",
+        "src/js/bun/graph.ts",
+        "Cargo.lock",
+        "scripts/build/**",
+        "scripts/aphrody/pyjs*",
+        "scripts/aphrody/buv.ts",
+        "test/internal/pyjs.test.ts",
+        "test/js/first_party/runtime/python-cli.test.ts",
+        ".github/workflows/buv.yml",
+      ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: buv-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  buv:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.3"
+      - name: Install the shared Rust toolchain
+        working-directory: vendor/uv
+        run: rustup show
+      - name: UV formatting
+        run: bun run buv:fmt
+      - name: UV crate checks
+        run: bun run buv:check
+      - name: UV strict Clippy
+        run: bun run buv:lint
+      - name: Offline UV library tests
+        run: bun run buv:test
+      - name: SQLite registry tests
+        run: bun test test/internal/pyjs.test.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bun-python-${{ matrix.os }}
+          path: bun_python.json
+
+  embedded:
+    if: github.repository == 'aphrody-labs/bun'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.3"
+      - uses: docker/setup-buildx-action@v3
+      - name: Select the owner toolchain
+        run: bun -e 'console.log("RUST_CHANNEL=" + Bun.TOML.parse(await Bun.file("rust-toolchain.toml").text()).toolchain.channel)' >> "$GITHUB_ENV"
+      - name: Build the native Linux factory
+        run: >
+          docker buildx build --load -t aphrody/build-linux:26.04
+          -f scripts/aphrody/linux.Dockerfile
+          --build-arg "RUST_CHANNEL=$RUST_CHANNEL" --build-arg BUN_VERSION=1.4.3
+          --cache-from type=gha,scope=buv-linux
+          --cache-to type=gha,mode=max,scope=buv-linux
+          scripts/aphrody
+      - name: Install build dependencies inside the factory
+        run: >
+          docker run --rm --cpus 6 --memory 10g
+          -v "$GITHUB_WORKSPACE:/src" -w /src
+          aphrody/build-linux:26.04 bun install --frozen-lockfile
+      - name: Run the embedded CLI with the changed executable
+        run: >
+          docker run --rm --cpus 6 --memory 10g
+          -v "$GITHUB_WORKSPACE:/src" -w /src
+          -e BUN_PYTHON_EXECUTABLE=/usr/bin/python3 -e BUN_DEBUG_QUIET_LOGS=1
+          aphrody/build-linux:26.04
+          bun scripts/aphrody/buv.ts embedded
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bun-python-native-linux
+          path: bun_python.json
