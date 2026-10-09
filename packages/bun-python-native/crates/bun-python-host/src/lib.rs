@@ -1010,7 +1010,7 @@ mod tests {
 
     #[test]
     fn cli_abi_header_matches() {
-        let header = include_str!("../../../include/bun_python_host.h");
+        let header = include_str!("../include/bun_python_host.h");
         assert!(header.contains(&format!(
             "#define BUN_PYTHON_HOST_ABI_VERSION {}u",
             bun_py_abi_version()

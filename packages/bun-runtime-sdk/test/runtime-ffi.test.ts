@@ -221,7 +221,7 @@ describe("Bun Python host SDK", () => {
   });
 
   it("matches the shared native host header, including ABI negotiation", async () => {
-    const header = await Bun.file(join(import.meta.dir, "../../bun-python-native/include/bun_python_host.h")).text();
+    const header = await Bun.file(join(import.meta.dir, "../../bun-python-native/crates/bun-python-host/include/bun_python_host.h")).text();
     const source = await Bun.file(join(import.meta.dir, "../../../src/js/bun/python.ts")).text();
     const declared = new Map<string, number>();
     for (const match of header.matchAll(/\b((?:aphrody_py_|bun_py_)\w+)\s*\(([^;{]*)\)\s*;/g)) {
