@@ -403,7 +403,7 @@ mod sys {
 
     pub(super) fn set_mtime(path: &[u8], mtime: i64) {
         let p = c(path);
-        let t = libc::timespec { tv_sec: mtime as libc::time_t, tv_nsec: 0 };
+        let t = libc::timespec { tv_sec: mtime as _, tv_nsec: 0 };
         let times = [t, t];
         // SAFETY: `p` is NUL-terminated and `times` holds two timespecs.
         unsafe { libc::utimensat(libc::AT_FDCWD, ptr(&p), times.as_ptr(), libc::AT_SYMLINK_NOFOLLOW) };
