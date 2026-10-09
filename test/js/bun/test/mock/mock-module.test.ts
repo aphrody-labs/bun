@@ -540,3 +540,224 @@ test.concurrent("mock.module() of a module whose import() is still loading its d
   expect(stderr).toContain(" 1 pass");
   expect(exitCode).toBe(0);
 });
+
+async function runJestModuleTest(prefix: string, files: Record<string, string>, testFile: string) {
+  using dir = tempDir(prefix, files);
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "test", `./${testFile}`],
+    cwd: String(dir),
+    env: bunEnv,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  return { stderr, exitCode };
+}
+
+const mathModule = `
+export function add(a, b) { return a + b; }
+export function sub(a, b) { return a - b; }
+export const PI = 3.14;
+export const list = [1, 2, 3];
+export const nested = { twice(n) { return n * 2; } };
+export class Calculator {
+  constructor() { this.ready = true; }
+  sum(a, b) { return a + b; }
+}
+`;
+
+test.concurrent("jest.requireActual, jest.requireMock, jest.mock() without a factory and __mocks__", async () => {
+  const { stderr, exitCode } = await runJestModuleTest(
+    "jest-require-actual",
+    {
+      "math.js": mathModule,
+      "manual.js": `export function hello() { return "real"; }`,
+      "__mocks__/manual.js": `export function hello() { return "manual"; }`,
+      "jest.test.js": `
+        import { expect, jest, test } from "bun:test";
+
+        test("requireActual inside a factory gives the module the factory replaces", () => {
+          jest.mock("./math", () => ({ ...jest.requireActual("./math"), add: () => 42 }));
+          const math = require("./math");
+          expect(math.add(1, 2)).toBe(42);
+          expect(math.sub(3, 1)).toBe(2);
+          expect(jest.requireActual("./math").add(1, 2)).toBe(3);
+          expect(require("./math").add(1, 2)).toBe(42);
+          expect(jest.requireActual("node:path").join("a", "b")).toBe(require("node:path").join("a", "b"));
+        });
+
+        test("jest.mock() without a factory mocks every export", () => {
+          jest.mock("./math");
+          const math = require("./math");
+          expect(math.add(1, 2)).toBeUndefined();
+          expect(math.add).toHaveBeenCalledWith(1, 2);
+          math.add.mockReturnValue(7);
+          expect(math.add(1, 2)).toBe(7);
+          expect(math.PI).toBe(3.14);
+          expect(math.list).toEqual([]);
+          expect(math.nested.twice(2)).toBeUndefined();
+          const calculator = new math.Calculator();
+          expect(calculator.sum(1, 2)).toBeUndefined();
+          expect(math.Calculator).toHaveBeenCalledTimes(1);
+          expect(jest.requireActual("./math").add(1, 2)).toBe(3);
+        });
+
+        test("jest.mock() without a factory uses the adjacent __mocks__ file", () => {
+          jest.mock("./manual");
+          expect(require("./manual").hello()).toBe("manual");
+          expect(jest.requireActual("./manual").hello()).toBe("real");
+        });
+
+        test("jest.requireMock returns the registered mock, or an automock", () => {
+          expect(jest.requireMock("./manual").hello()).toBe("manual");
+          jest.unmock("./math");
+          const automock = jest.requireMock("./math");
+          expect(automock.add(1, 2)).toBeUndefined();
+          expect(require("./math").add(1, 2)).toBe(3);
+        });
+
+        test("jest.mocked is the identity", () => {
+          const value = { a: 1 };
+          expect(jest.mocked(value)).toBe(value);
+        });
+      `,
+    },
+    "jest.test.js",
+  );
+  expect(stderr).toContain(" 5 pass");
+  expect(stderr).toContain(" 0 fail");
+  expect(exitCode).toBe(0);
+});
+
+test.concurrent("jest.mock() of an already-imported module and jest.unmock()", async () => {
+  const { stderr, exitCode } = await runJestModuleTest(
+    "jest-mock-loaded",
+    {
+      "math.js": mathModule,
+      "loaded.test.js": `
+        import { expect, jest, test } from "bun:test";
+        import { add, sub } from "./math";
+        import { readFileSync } from "node:fs";
+
+        test("an automock patches the bindings that are already imported", () => {
+          jest.mock("./math");
+          expect(add(1, 2)).toBeUndefined();
+          expect(jest.requireActual("./math").add(1, 2)).toBe(3);
+          jest.unmock("./math");
+          expect(add(1, 2)).toBe(3);
+        });
+
+        test("a factory mock patches them too, and unmock puts the module back", () => {
+          jest.mock("./math", () => ({ ...jest.requireActual("./math"), sub: () => 0 }));
+          expect(sub(3, 1)).toBe(0);
+          expect(add(1, 2)).toBe(3);
+          jest.unmock("./math");
+          expect(sub(3, 1)).toBe(2);
+        });
+
+        test("jest.unmock() of a module that was not loaded drops the mock", () => {
+          jest.mock("./not-loaded-yet", () => ({ value: "mocked" }));
+          expect(require("./not-loaded-yet").value).toBe("mocked");
+          jest.unmock("./not-loaded-yet");
+          expect(() => require("./not-loaded-yet")).toThrow();
+        });
+
+        test("an automock of an imported builtin", () => {
+          jest.mock("node:fs");
+          readFileSync.mockReturnValue("from the mock");
+          expect(readFileSync("/does/not/exist", "utf8")).toBe("from the mock");
+          expect(typeof jest.requireActual("node:fs").readFileSync).toBe("function");
+          jest.unmock("node:fs");
+          expect(readFileSync).toBe(jest.requireActual("node:fs").readFileSync);
+        });
+      `,
+    },
+    "loaded.test.js",
+  );
+  expect(stderr).toContain(" 4 pass");
+  expect(stderr).toContain(" 0 fail");
+  expect(exitCode).toBe(0);
+});
+
+test.concurrent("jest.resetModules, jest.isolateModules and jest.isolateModulesAsync", async () => {
+  const { stderr, exitCode } = await runJestModuleTest(
+    "jest-reset-modules",
+    {
+      "counter.js": `globalThis.loads = (globalThis.loads ?? 0) + 1; module.exports = { load: globalThis.loads, prefix: process.env.COUNTER_PREFIX ?? "" };`,
+      "reset.test.js": `
+        import { expect, jest, test } from "bun:test";
+
+        test("resetModules makes the next require load the module again", () => {
+          const first = require("./counter");
+          expect(require("./counter")).toBe(first);
+          expect(jest.resetModules()).toBe(jest);
+          const second = require("./counter");
+          expect(second).not.toBe(first);
+          expect(second.load).toBe(first.load + 1);
+        });
+
+        test("resetModules runs a mock factory again", () => {
+          let calls = 0;
+          jest.mock("./mocked-by-factory", () => ({ calls: ++calls }));
+          expect(require("./mocked-by-factory").calls).toBe(1);
+          jest.resetModules();
+          expect(require("./mocked-by-factory").calls).toBe(2);
+        });
+
+        test("isolateModules gives the callback its own registry and restores the outer one", () => {
+          const outer = require("./counter");
+          let inner;
+          process.env.COUNTER_PREFIX = "isolated";
+          try {
+            expect(
+              jest.isolateModules(() => {
+                inner = require("./counter");
+                expect(require("./counter")).toBe(inner);
+              }),
+            ).toBe(jest);
+          } finally {
+            delete process.env.COUNTER_PREFIX;
+          }
+          expect(inner).not.toBe(outer);
+          expect(inner.prefix).toBe("isolated");
+          expect(require("./counter")).toBe(outer);
+        });
+
+        test("isolateModules cannot be nested and restores the registry when the callback throws", () => {
+          const outer = require("./counter");
+          expect(() => jest.isolateModules(() => jest.isolateModules(() => {}))).toThrow(
+            "isolateModules cannot be nested inside another isolateModules or isolateModulesAsync",
+          );
+          expect(() =>
+            jest.isolateModules(() => {
+              require("./counter");
+              throw new Error("inside");
+            }),
+          ).toThrow("inside");
+          expect(require("./counter")).toBe(outer);
+        });
+
+        test("isolateModulesAsync restores the registry once the callback's promise settles", async () => {
+          const outer = require("./counter");
+          let inner;
+          await jest.isolateModulesAsync(async () => {
+            await Promise.resolve();
+            inner = require("./counter");
+          });
+          expect(inner).not.toBe(outer);
+          expect(require("./counter")).toBe(outer);
+          await expect(
+            jest.isolateModulesAsync(async () => {
+              throw new Error("async inside");
+            }),
+          ).rejects.toThrow("async inside");
+          expect(require("./counter")).toBe(outer);
+        });
+      `,
+    },
+    "reset.test.js",
+  );
+  expect(stderr).toContain(" 5 pass");
+  expect(stderr).toContain(" 0 fail");
+  expect(exitCode).toBe(0);
+});

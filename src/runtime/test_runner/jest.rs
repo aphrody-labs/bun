@@ -440,9 +440,28 @@ pub(crate) mod Jest {
         mock_fn.put(global_object, b"restore", restore_all_mocks);
         mock_fn.put(global_object, b"clearAllMocks", clear_all_mocks);
 
-        let jest = JSValue::create_empty_object(global_object, 9 + fake_timers::TIMER_FNS_COUNT);
+        let require_actual = jsc::JSFunction::create(global_object, "requireActual", JSMock__jsRequireActual, 1, Default::default());
+        let require_mock = jsc::JSFunction::create(global_object, "requireMock", JSMock__jsRequireMock, 1, Default::default());
+        let unmock = jsc::JSFunction::create(global_object, "unmock", JSMock__jsUnmock, 1, Default::default());
+        let reset_modules = jsc::JSFunction::create(global_object, "resetModules", JSMock__jsResetModules, 0, Default::default());
+        let isolate_modules = jsc::JSFunction::create(global_object, "isolateModules", JSMock__jsIsolateModules, 1, Default::default());
+        let isolate_modules_async =
+            jsc::JSFunction::create(global_object, "isolateModulesAsync", JSMock__jsIsolateModulesAsync, 1, Default::default());
+        let mocked = jsc::JSFunction::create(global_object, "mocked", __jsc_host_js_mocked, 1, Default::default());
+        let jest_mock = jsc::JSFunction::create(global_object, "mock", JSMock__jsJestMock, 2, Default::default());
+
+        let jest = JSValue::create_empty_object(global_object, 18 + fake_timers::TIMER_FNS_COUNT);
         jest.put(global_object, b"fn", mock_fn);
-        jest.put(global_object, b"mock", mock_module_fn);
+        jest.put(global_object, b"mock", jest_mock);
+        jest.put(global_object, b"doMock", jest_mock);
+        jest.put(global_object, b"unmock", unmock);
+        jest.put(global_object, b"dontMock", unmock);
+        jest.put(global_object, b"requireActual", require_actual);
+        jest.put(global_object, b"requireMock", require_mock);
+        jest.put(global_object, b"resetModules", reset_modules);
+        jest.put(global_object, b"isolateModules", isolate_modules);
+        jest.put(global_object, b"isolateModulesAsync", isolate_modules_async);
+        jest.put(global_object, b"mocked", mocked);
         jest.put(global_object, b"spyOn", spy_on);
         jest.put(global_object, b"restoreAllMocks", restore_all_mocks);
         jest.put(global_object, b"clearAllMocks", clear_all_mocks);
@@ -455,9 +474,14 @@ pub(crate) mod Jest {
         module.put(global_object, b"spyOn", spy_on);
         module.put(global_object, b"expect", jsc::codegen::js::get_constructor::<Expect>(global_object));
 
-        let vi = JSValue::create_empty_object(global_object, 6 + fake_timers::TIMER_FNS_COUNT);
+        let vi = JSValue::create_empty_object(global_object, 11 + fake_timers::TIMER_FNS_COUNT);
         vi.put(global_object, b"fn", mock_fn);
         vi.put(global_object, b"mock", mock_module_fn);
+        vi.put(global_object, b"doMock", mock_module_fn);
+        vi.put(global_object, b"unmock", unmock);
+        vi.put(global_object, b"doUnmock", unmock);
+        vi.put(global_object, b"resetModules", reset_modules);
+        vi.put(global_object, b"mocked", mocked);
         vi.put(global_object, b"spyOn", spy_on);
         vi.put(global_object, b"restoreAllMocks", restore_all_mocks);
         vi.put(global_object, b"resetAllMocks", reset_all_mocks);
@@ -473,12 +497,25 @@ pub(crate) mod Jest {
     bun_jsc::jsc_abi_extern! {
         pub(crate) fn JSMock__jsMockFn(global: *mut JSGlobalObject, frame: *mut CallFrame) -> JSValue;
         pub(crate) fn JSMock__jsModuleMock(global: *mut JSGlobalObject, frame: *mut CallFrame) -> JSValue;
+        pub(crate) fn JSMock__jsJestMock(global: *mut JSGlobalObject, frame: *mut CallFrame) -> JSValue;
         pub(crate) fn JSMock__jsNow(global: *mut JSGlobalObject, frame: *mut CallFrame) -> JSValue;
         pub(crate) fn JSMock__jsSetSystemTime(global: *mut JSGlobalObject, frame: *mut CallFrame) -> JSValue;
         pub(crate) fn JSMock__jsRestoreAllMocks(global: *mut JSGlobalObject, frame: *mut CallFrame) -> JSValue;
         pub(crate) fn JSMock__jsClearAllMocks(global: *mut JSGlobalObject, frame: *mut CallFrame) -> JSValue;
         pub(crate) fn JSMock__jsResetAllMocks(global: *mut JSGlobalObject, frame: *mut CallFrame) -> JSValue;
         pub(crate) fn JSMock__jsSpyOn(global: *mut JSGlobalObject, frame: *mut CallFrame) -> JSValue;
+        pub(crate) fn JSMock__jsRequireActual(global: *mut JSGlobalObject, frame: *mut CallFrame) -> JSValue;
+        pub(crate) fn JSMock__jsRequireMock(global: *mut JSGlobalObject, frame: *mut CallFrame) -> JSValue;
+        pub(crate) fn JSMock__jsUnmock(global: *mut JSGlobalObject, frame: *mut CallFrame) -> JSValue;
+        pub(crate) fn JSMock__jsResetModules(global: *mut JSGlobalObject, frame: *mut CallFrame) -> JSValue;
+        pub(crate) fn JSMock__jsIsolateModules(global: *mut JSGlobalObject, frame: *mut CallFrame) -> JSValue;
+        pub(crate) fn JSMock__jsIsolateModulesAsync(global: *mut JSGlobalObject, frame: *mut CallFrame) -> JSValue;
+    }
+
+    /// `jest.mocked(value)`: a typing helper in Jest, the identity at run time.
+    #[bun_jsc::host_fn]
+    fn js_mocked(_global_object: &JSGlobalObject, callframe: &CallFrame) -> JsResult<JSValue> {
+        Ok(callframe.argument(0))
     }
 
     #[bun_jsc::host_fn]

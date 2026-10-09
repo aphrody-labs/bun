@@ -82,6 +82,9 @@ public:
 
         VirtualModuleMap* _Nullable virtualModules = nullptr;
         bool mustDoExpensiveRelativeLookup = false;
+        // Keys `jest.requireActual()` is loading past their mock.
+        Vector<String> actualModuleRequests;
+        bool isIsolatingModules = false;
         JSC::EncodedJSValue run(JSC::JSGlobalObject* globalObject, const BunString* namespaceString, const BunString* path);
 
         bool hasVirtualModules() const { return virtualModules != nullptr; }
