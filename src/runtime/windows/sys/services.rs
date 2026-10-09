@@ -1,6 +1,6 @@
 //! Service Control Manager: list, query, start and stop services (advapi32).
 
-use super::{from_pwstr, wide, Json, WinErr, WinResult, BOOL};
+use super::{BOOL, Json, WinErr, WinResult, from_pwstr, wide};
 use core::ffi::c_void;
 
 type SC_HANDLE = *mut c_void;
@@ -85,7 +85,13 @@ unsafe extern "system" {
         resume_handle: *mut u32,
         group_name: *const u16,
     ) -> BOOL;
-    fn QueryServiceStatusEx(h: SC_HANDLE, level: u32, buf: *mut u8, size: u32, needed: *mut u32) -> BOOL;
+    fn QueryServiceStatusEx(
+        h: SC_HANDLE,
+        level: u32,
+        buf: *mut u8,
+        size: u32,
+        needed: *mut u32,
+    ) -> BOOL;
     fn QueryServiceConfigW(h: SC_HANDLE, config: *mut u8, size: u32, needed: *mut u32) -> BOOL;
     fn StartServiceW(h: SC_HANDLE, argc: u32, argv: *const *const u16) -> BOOL;
     fn ControlService(h: SC_HANDLE, control: u32, status: *mut SERVICE_STATUS) -> BOOL;
@@ -117,7 +123,11 @@ fn service(name: &str, access: u32) -> WinResult<Option<Sc>> {
     let h = unsafe { OpenServiceW(scm.0, name_w.as_ptr(), access) };
     if h.is_null() {
         let err = WinErr::last("OpenServiceW");
-        return if err.code == ERROR_SERVICE_DOES_NOT_EXIST { Ok(None) } else { Err(err) };
+        return if err.code == ERROR_SERVICE_DOES_NOT_EXIST {
+            Ok(None)
+        } else {
+            Err(err)
+        };
     }
     Ok(Some(Sc(h)))
 }
@@ -245,7 +255,14 @@ pub(crate) fn query(name: &str) -> WinResult<Option<String>> {
     let mut cfg: Vec<u64> = vec![0; 8 * 1024 / 8];
     loop {
         // SAFETY: `cfg` is valid for its byte length.
-        let ok = unsafe { QueryServiceConfigW(svc.0, cfg.as_mut_ptr().cast(), (cfg.len() * 8) as u32, &mut needed) };
+        let ok = unsafe {
+            QueryServiceConfigW(
+                svc.0,
+                cfg.as_mut_ptr().cast(),
+                (cfg.len() * 8) as u32,
+                &mut needed,
+            )
+        };
         if ok != 0 {
             break;
         }
@@ -289,7 +306,10 @@ pub(crate) fn query(name: &str) -> WinResult<Option<String>> {
 /// Asks the SCM to start the service. Already running is not an error.
 pub(crate) fn start(name: &str) -> WinResult<()> {
     let Some(svc) = service(name, SERVICE_START)? else {
-        return Err(WinErr { code: ERROR_SERVICE_DOES_NOT_EXIST, call: "OpenServiceW" });
+        return Err(WinErr {
+            code: ERROR_SERVICE_DOES_NOT_EXIST,
+            call: "OpenServiceW",
+        });
     };
     // SAFETY: no arguments are passed.
     if unsafe { StartServiceW(svc.0, 0, core::ptr::null()) } == 0 {
@@ -304,7 +324,10 @@ pub(crate) fn start(name: &str) -> WinResult<()> {
 /// Sends `SERVICE_CONTROL_STOP`. Already stopped is not an error.
 pub(crate) fn stop(name: &str) -> WinResult<()> {
     let Some(svc) = service(name, SERVICE_STOP)? else {
-        return Err(WinErr { code: ERROR_SERVICE_DOES_NOT_EXIST, call: "OpenServiceW" });
+        return Err(WinErr {
+            code: ERROR_SERVICE_DOES_NOT_EXIST,
+            call: "OpenServiceW",
+        });
     };
     let mut status = SERVICE_STATUS::default();
     // SAFETY: `status` receives the last reported status.

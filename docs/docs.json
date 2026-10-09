@@ -155,6 +155,7 @@
               "/runtime/node-api",
               "/runtime/ffi",
               "/runtime/linux",
+              "/runtime/windows",
               "/runtime/cosmic",
               "/runtime/c-compiler",
               "/runtime/transpiler"

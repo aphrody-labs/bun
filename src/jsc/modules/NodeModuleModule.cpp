@@ -76,6 +76,7 @@ static constexpr ASCIILiteral builtinModuleNames[] = {
     "bun:sqlite"_s,
     "bun:test"_s,
     "bun:wasm"_s,
+    "bun:windows"_s,
     "bun"_s,
     "child_process"_s,
     "cluster"_s,

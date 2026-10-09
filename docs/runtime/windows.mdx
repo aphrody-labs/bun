@@ -1,0 +1,203 @@
+---
+title: Windows
+description: Call Windows interfaces directly from JavaScript with bun:windows
+---
+
+`bun:windows` exposes Windows interfaces as synchronous functions: the registry, services, the event log, the clipboard, known folders, processes, Job Objects, toast notifications and WSL. The module loads on first import, so it costs nothing at startup.
+
+```ts
+import windows from "bun:windows";
+
+if (windows.isSupported) {
+  console.log(windows.version().productName); // "Windows 11 Pro"
+}
+```
+
+On other platforms `isSupported` is `false`. Every function exists, and each call throws an error with code `ERR_BUN_WINDOWS_UNSUPPORTED`.
+
+---
+
+## Errors
+
+A failed Windows call throws a `SystemError` with `code` (such as `"EACCES"`), `syscall` (the Win32 function) and `winError`, the raw `GetLastError` or `HRESULT` value. The message includes the system text for the error.
+
+```ts
+try {
+  windows.services.stop("EventLog");
+} catch (error) {
+  // Without elevation: error.winError is 5 (ERROR_ACCESS_DENIED)
+  console.log(error.code, error.syscall, error.winError);
+}
+```
+
+Invalid arguments throw `TypeError` or `RangeError` before any Windows call runs.
+
+---
+
+## System
+
+```ts
+const v = windows.version();
+v.build; // 26100
+v.displayVersion; // "24H2"
+v.isWindows11; // true
+
+windows.isWindows11(); // false on other platforms instead of throwing
+windows.isElevated(); // true in an administrator process
+
+const info = windows.systemInfo();
+info.totalMemory; // bytes
+info.theme; // "dark" | "light"
+```
+
+`version()` reads `RtlGetVersion` and the `CurrentVersion` registry key once. `productName` says Windows 11 on builds 22000 and later, where the registry still says Windows 10.
+
+---
+
+## Registry
+
+Paths start with a root (`HKCR`, `HKCU`, `HKLM`, `HKU`, `HKCC`, or the long `HKEY_*` names) and use `\` or `/`.
+
+```ts
+const { registry } = windows;
+
+registry.set("HKCU\\Software\\MyApp", "Theme", "dark"); // REG_SZ
+registry.set("HKCU\\Software\\MyApp", "Launches", 3); // REG_DWORD
+registry.set("HKCU\\Software\\MyApp", "Id", 2n ** 40n); // REG_QWORD
+registry.set("HKCU\\Software\\MyApp", "Paths", ["C:\\a", "C:\\b"]); // REG_MULTI_SZ
+registry.set("HKCU\\Software\\MyApp", "Path", "%USERPROFILE%\\x", "REG_EXPAND_SZ");
+
+registry.get("HKCU\\Software\\MyApp", "Theme"); // { type: "REG_SZ", value: "dark" }
+registry.get("HKCU\\Software\\MyApp", "Missing"); // null
+
+registry.list("HKCU\\Software\\MyApp"); // { keys: [], values: [{ name, type, value }, ...] }
+registry.deleteValue("HKCU\\Software\\MyApp", "Theme"); // true
+registry.deleteKey("HKCU\\Software\\MyApp", { recursive: true }); // true
+```
+
+`set` creates missing keys. `REG_QWORD` values read as `bigint` and binary values as `Buffer`. Pass `{ view: "64" }` or `{ view: "32" }` to choose the registry view.
+
+---
+
+## Services
+
+```ts
+windows.services.list(); // [{ name, displayName, state, type, pid }, ...]
+windows.services.list({ drivers: true });
+
+const svc = windows.services.get("Spooler");
+svc?.state; // "running"
+svc?.startType; // "auto"
+
+windows.services.stop("Spooler"); // needs an elevated process
+windows.services.start("Spooler");
+```
+
+`get` returns `null` for an unknown service. Starting a running service and stopping a stopped service are not errors.
+
+---
+
+## Event log
+
+```ts
+const errors = windows.eventLog.query("System", {
+  xpath: "*[System[(Level=2)]]",
+  limit: 10,
+});
+// Array of event XML strings, newest first
+
+windows.eventLog.write("MyApp", "Started", { type: "information", eventId: 1 });
+```
+
+`write` adds an event to the Application log. A source that is not registered still writes, and Event Viewer shows the message with a note about the missing source.
+
+---
+
+## Clipboard
+
+```ts
+windows.clipboard.writeText("hello");
+windows.clipboard.readText(); // "hello"
+windows.clipboard.clear();
+windows.clipboard.readText(); // null
+```
+
+---
+
+## Known folders
+
+```ts
+windows.knownFolder("Downloads"); // "C:\\Users\\me\\Downloads"
+windows.knownFolder("ProgramData"); // "C:\\ProgramData"
+windows.knownFolder("{FDD39AD0-238F-46AF-ADB4-6C85480369C7}"); // Documents
+```
+
+`windows.knownFolders` maps the accepted names to their `KNOWNFOLDERID` GUIDs. Any other GUID works too.
+
+---
+
+## Processes
+
+```ts
+windows.processes.list(); // [{ pid, ppid, name, threads }, ...]
+windows.processes.path(process.pid); // full path of bun.exe
+windows.processes.terminate(1234, 1);
+```
+
+A `pid` argument also accepts an object with a `pid` property, such as the `Subprocess` returned by `Bun.spawn`.
+
+---
+
+## Job Objects
+
+A Job Object groups processes under shared limits and accounting. Children of an assigned process join the job.
+
+```ts
+using job = new windows.Job({
+  killOnClose: true,
+  jobMemory: 512 * 1024 * 1024,
+  cpuRate: 50,
+});
+
+const child = Bun.spawn(["bun", "worker.ts"]);
+job.assign(child);
+
+job.info(); // { activeProcesses, totalProcesses, userTime, kernelTime, peakJobMemory, pids, ... }
+job.terminate(1);
+```
+
+With `killOnClose`, closing the job (or leaving the `using` block) terminates its processes. A job that is garbage collected is closed too.
+
+| Limit             | Meaning                                    |
+| ----------------- | ------------------------------------------ |
+| `killOnClose`     | Terminate the processes when the job closes |
+| `processMemory`   | Committed memory per process, in bytes     |
+| `jobMemory`       | Committed memory of the whole job, in bytes |
+| `activeProcesses` | Maximum number of live processes           |
+| `cpuRate`         | Hard CPU cap, percentage of the machine    |
+
+---
+
+## Notifications
+
+```ts
+windows.notify("Build finished", "3 warnings");
+
+windows.toast(`<toast><visual><binding template="ToastGeneric">
+  <text>Custom</text>
+</binding></visual></toast>`);
+```
+
+Notifications are shown under an App User Model ID. The default is the one of Windows PowerShell, which every Windows install has. Pass `{ appId }` to use the id of your own installed app.
+
+---
+
+## WSL
+
+```ts
+windows.wsl.distributions(); // [{ id, name, basePath, version, default }, ...]
+
+const { exitCode, stdout } = windows.wsl.run("Ubuntu", ["uname", "-r"]);
+```
+
+`distributions` reads the registry and does not start WSL. `run` calls `wsl.exe -d <name> -- <command>` and waits for it.

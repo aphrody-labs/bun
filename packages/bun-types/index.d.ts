@@ -19,6 +19,7 @@
 /// <reference path="./test.d.ts" />
 /// <reference path="./wasm.d.ts" />
 /// <reference path="./wasm-build.d.ts" />
+/// <reference path="./windows.d.ts" />
 /// <reference path="./overrides.d.ts" />
 /// <reference path="./deprecated.d.ts" />
 /// <reference path="./redis.d.ts" />

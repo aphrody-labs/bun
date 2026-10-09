@@ -1,7 +1,7 @@
 //! Event log: query a channel with an XPath filter (wevtapi, loaded on first use) and write
 //! an entry with `ReportEventW` (advapi32).
 
-use super::{system_proc, wide, Json, WinErr, WinResult, BOOL, HANDLE};
+use super::{BOOL, HANDLE, Json, WinErr, WinResult, system_proc, wide};
 use core::ffi::c_void;
 use std::sync::OnceLock;
 
@@ -15,7 +15,8 @@ const ERROR_PROC_NOT_FOUND: u32 = 127;
 
 type EvtQueryFn = unsafe extern "system" fn(HANDLE, *const u16, *const u16, u32) -> HANDLE;
 type EvtNextFn = unsafe extern "system" fn(HANDLE, u32, *mut HANDLE, u32, u32, *mut u32) -> BOOL;
-type EvtRenderFn = unsafe extern "system" fn(HANDLE, HANDLE, u32, u32, *mut c_void, *mut u32, *mut u32) -> BOOL;
+type EvtRenderFn =
+    unsafe extern "system" fn(HANDLE, HANDLE, u32, u32, *mut c_void, *mut u32, *mut u32) -> BOOL;
 type EvtCloseFn = unsafe extern "system" fn(HANDLE) -> BOOL;
 
 #[derive(Clone, Copy)]
@@ -43,7 +44,10 @@ fn wevt() -> WinResult<Wevt> {
             })
         }
     });
-    api.ok_or(WinErr { code: ERROR_PROC_NOT_FOUND, call: "LoadLibraryExW(wevtapi.dll)" })
+    api.ok_or(WinErr {
+        code: ERROR_PROC_NOT_FOUND,
+        call: "LoadLibraryExW(wevtapi.dll)",
+    })
 }
 
 struct Evt(HANDLE, EvtCloseFn);
@@ -63,9 +67,21 @@ pub(crate) fn query(channel: &str, xpath: &str, max: u32, reverse: bool) -> WinR
     let api = wevt()?;
     let channel_w = wide(channel);
     let xpath_w = wide(xpath);
-    let flags = EVT_QUERY_CHANNEL_PATH | if reverse { EVT_QUERY_REVERSE_DIRECTION } else { EVT_QUERY_FORWARD_DIRECTION };
+    let flags = EVT_QUERY_CHANNEL_PATH
+        | if reverse {
+            EVT_QUERY_REVERSE_DIRECTION
+        } else {
+            EVT_QUERY_FORWARD_DIRECTION
+        };
     // SAFETY: null session = local; both strings are NUL-terminated.
-    let results = unsafe { (api.query)(core::ptr::null_mut(), channel_w.as_ptr(), xpath_w.as_ptr(), flags) };
+    let results = unsafe {
+        (api.query)(
+            core::ptr::null_mut(),
+            channel_w.as_ptr(),
+            xpath_w.as_ptr(),
+            flags,
+        )
+    };
     if results.is_null() {
         return Err(WinErr::last("EvtQuery"));
     }
@@ -87,7 +103,10 @@ pub(crate) fn query(channel: &str, xpath: &str, max: u32, reverse: bool) -> WinR
             }
             return Err(err);
         }
-        let events: Vec<Evt> = batch[..got as usize].iter().map(|&h| Evt(h, api.close)).collect();
+        let events: Vec<Evt> = batch[..got as usize]
+            .iter()
+            .map(|&h| Evt(h, api.close))
+            .collect();
         for event in &events {
             loop {
                 let mut used = 0u32;
@@ -152,9 +171,23 @@ pub(crate) fn write(source: &str, ty: u16, event_id: u32, message: &str) -> WinR
     let strings = [message_w.as_ptr()];
     // SAFETY: one NUL-terminated string; no SID and no binary data.
     let ok = unsafe {
-        ReportEventW(h, ty, 0, event_id, core::ptr::null(), 1, 0, strings.as_ptr(), core::ptr::null())
+        ReportEventW(
+            h,
+            ty,
+            0,
+            event_id,
+            core::ptr::null(),
+            1,
+            0,
+            strings.as_ptr(),
+            core::ptr::null(),
+        )
     };
-    let result = if ok == 0 { Err(WinErr::last("ReportEventW")) } else { Ok(()) };
+    let result = if ok == 0 {
+        Err(WinErr::last("ReportEventW"))
+    } else {
+        Ok(())
+    };
     // SAFETY: registered above, deregistered once.
     unsafe { DeregisterEventSource(h) };
     result

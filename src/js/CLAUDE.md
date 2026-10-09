@@ -6,7 +6,7 @@ Write JS builtins for Bun's Node.js compatibility and APIs. Run `bun bd` after c
 
 - `builtins/` - Individual functions (`*CodeGenerator(vm)` in C++)
 - `node/` - Node.js modules (`node:fs`, `node:path`)
-- `bun/` - Bun modules (`bun:ffi`, `bun:sqlite`, `bun:linux`, `bun:cosmic`)
+- `bun/` - Bun modules (`bun:ffi`, `bun:sqlite`, `bun:linux`, `bun:cosmic`, `bun:windows`)
 - `thirdparty/` - NPM replacements (`ws`, `node-fetch`)
 - `internal/` - Internal modules
 

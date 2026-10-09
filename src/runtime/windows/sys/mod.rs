@@ -10,7 +10,7 @@
 //! loaded on first use from System32.
 
 #![cfg(windows)]
-#![allow(non_snake_case, clippy::upper_case_acronyms)]
+#![allow(non_snake_case, non_camel_case_types, clippy::upper_case_acronyms)]
 
 pub(crate) mod clipboard;
 pub(crate) mod eventlog;
@@ -38,10 +38,16 @@ pub(crate) struct WinErr {
 impl WinErr {
     pub(crate) fn last(call: &'static str) -> WinErr {
         // SAFETY: no preconditions.
-        WinErr { code: unsafe { GetLastError() }, call }
+        WinErr {
+            code: unsafe { GetLastError() },
+            call,
+        }
     }
     pub(crate) fn status(code: i32, call: &'static str) -> WinErr {
-        WinErr { code: code as u32, call }
+        WinErr {
+            code: code as u32,
+            call,
+        }
     }
 }
 
@@ -75,9 +81,13 @@ pub(crate) fn wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain(core::iter::once(0)).collect()
 }
 
+pub(crate) fn is_nul(c: &u16) -> bool {
+    *c == 0
+}
+
 /// `s` up to its first NUL, lossily decoded.
 pub(crate) fn from_wide(s: &[u16]) -> String {
-    let end = s.iter().position(|&c| c == 0).unwrap_or(s.len());
+    let end = s.iter().take_while(|&&c| c != 0).count();
     String::from_utf16_lossy(&s[..end])
 }
 
@@ -125,7 +135,13 @@ pub(crate) fn system_proc(dll: &str, name: &core::ffi::CStr) -> Option<*mut c_vo
     const LOAD_LIBRARY_SEARCH_SYSTEM32: u32 = 0x800;
     let dll_w = wide(dll);
     // SAFETY: `dll_w` is NUL-terminated; a module handle stays valid for the process.
-    let module = unsafe { LoadLibraryExW(dll_w.as_ptr(), core::ptr::null_mut(), LOAD_LIBRARY_SEARCH_SYSTEM32) };
+    let module = unsafe {
+        LoadLibraryExW(
+            dll_w.as_ptr(),
+            core::ptr::null_mut(),
+            LOAD_LIBRARY_SEARCH_SYSTEM32,
+        )
+    };
     if module.is_null() {
         return None;
     }

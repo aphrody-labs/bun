@@ -59,6 +59,7 @@ pub(crate) mod ipc;
 pub(crate) mod ipc_host;
 pub(crate) mod jsc_hooks;
 pub(crate) mod linux;
+pub(crate) mod windows;
 #[path = "JSONLineBuffer.rs"]
 pub(crate) mod json_line_buffer;
 pub(crate) mod linear_fifo_testing;

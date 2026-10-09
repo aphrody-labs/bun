@@ -1,9 +1,12 @@
 //! Registry: read, write, enumerate and delete keys and values (advapi32).
 
-use super::{wide, from_wide, Json, WinErr, WinResult, ERROR_FILE_NOT_FOUND, ERROR_MORE_DATA, ERROR_NO_MORE_ITEMS};
+use super::{
+    ERROR_FILE_NOT_FOUND, ERROR_MORE_DATA, ERROR_NO_MORE_ITEMS, Json, WinErr, WinResult, from_wide,
+    wide,
+};
 use core::ffi::c_void;
 
-type HKEY = *mut c_void;
+pub(crate) type HKEY = *mut c_void;
 
 const KEY_QUERY_VALUE: u32 = 0x0001;
 const KEY_SET_VALUE: u32 = 0x0002;
@@ -24,7 +27,13 @@ pub(crate) const REG_QWORD: u32 = 11;
 
 #[link(name = "advapi32")]
 unsafe extern "system" {
-    fn RegOpenKeyExW(key: HKEY, sub_key: *const u16, options: u32, sam: u32, result: *mut HKEY) -> i32;
+    fn RegOpenKeyExW(
+        key: HKEY,
+        sub_key: *const u16,
+        options: u32,
+        sam: u32,
+        result: *mut HKEY,
+    ) -> i32;
     fn RegCreateKeyExW(
         key: HKEY,
         sub_key: *const u16,
@@ -45,7 +54,14 @@ unsafe extern "system" {
         data: *mut u8,
         len: *mut u32,
     ) -> i32;
-    fn RegSetValueExW(key: HKEY, name: *const u16, reserved: u32, ty: u32, data: *const u8, len: u32) -> i32;
+    fn RegSetValueExW(
+        key: HKEY,
+        name: *const u16,
+        reserved: u32,
+        ty: u32,
+        data: *const u8,
+        len: u32,
+    ) -> i32;
     fn RegDeleteValueW(key: HKEY, name: *const u16) -> i32;
     fn RegDeleteKeyExW(key: HKEY, sub_key: *const u16, sam: u32, reserved: u32) -> i32;
     fn RegDeleteTreeW(key: HKEY, sub_key: *const u16) -> i32;
@@ -158,7 +174,14 @@ fn query(key: &Key, name: &str) -> WinResult<Option<(u32, Vec<u8>)>> {
         let mut len = data.len() as u32;
         // SAFETY: `data` is valid for `len` bytes.
         let rc = unsafe {
-            RegQueryValueExW(key.0, name_w.as_ptr(), core::ptr::null_mut(), &mut ty, data.as_mut_ptr(), &mut len)
+            RegQueryValueExW(
+                key.0,
+                name_w.as_ptr(),
+                core::ptr::null_mut(),
+                &mut ty,
+                data.as_mut_ptr(),
+                &mut len,
+            )
         };
         match rc as u32 {
             0 => {
@@ -188,7 +211,10 @@ fn type_name(ty: u32) -> &'static str {
 }
 
 fn utf16_units(bytes: &[u8]) -> Vec<u16> {
-    bytes.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect()
+    bytes
+        .chunks_exact(2)
+        .map(|c| u16::from_le_bytes([c[0], c[1]]))
+        .collect()
 }
 
 fn hex(bytes: &[u8]) -> String {
@@ -213,7 +239,7 @@ fn write_value(j: &mut Json, ty: u32, data: &[u8]) {
         REG_MULTI_SZ => {
             let units = utf16_units(data);
             j.begin_array();
-            for part in units.split(|&c| c == 0) {
+            for part in units.split(super::is_nul) {
                 if !part.is_empty() {
                     j.str(&String::from_utf16_lossy(part));
                 }
@@ -254,11 +280,27 @@ pub(crate) fn get(root: HKEY, sub_key: &str, name: &str, view: u32) -> WinResult
 
 /// Creates the key if needed and writes the value. `data` is already encoded by `windows.ts`
 /// (strings as UTF-16 by this function, numbers and binary as raw little-endian bytes).
-pub(crate) fn set(root: HKEY, sub_key: &str, name: &str, ty: u32, data: &[u8], view: u32) -> WinResult<()> {
+pub(crate) fn set(
+    root: HKEY,
+    sub_key: &str,
+    name: &str,
+    ty: u32,
+    data: &[u8],
+    view: u32,
+) -> WinResult<()> {
     let key = create(root, sub_key, KEY_SET_VALUE | view_bits(view))?;
     let name_w = wide(name);
     // SAFETY: `data` is valid for its length.
-    let rc = unsafe { RegSetValueExW(key.0, name_w.as_ptr(), 0, ty, data.as_ptr(), data.len() as u32) };
+    let rc = unsafe {
+        RegSetValueExW(
+            key.0,
+            name_w.as_ptr(),
+            0,
+            ty,
+            data.as_ptr(),
+            data.len() as u32,
+        )
+    };
     if rc != 0 {
         return Err(WinErr::status(rc, "RegSetValueExW"));
     }
@@ -299,7 +341,12 @@ pub(crate) fn delete_value(root: HKEY, sub_key: &str, name: &str, view: u32) -> 
 pub(crate) fn delete_key(root: HKEY, sub_key: &str, view: u32, recursive: bool) -> WinResult<bool> {
     let sub = wide(sub_key);
     if recursive {
-        let Some(key) = open(root, sub_key, DELETE | KEY_ENUMERATE_SUB_KEYS | KEY_QUERY_VALUE | KEY_SET_VALUE | view_bits(view))? else {
+        let Some(key) = open(
+            root,
+            sub_key,
+            DELETE | KEY_ENUMERATE_SUB_KEYS | KEY_QUERY_VALUE | KEY_SET_VALUE | view_bits(view),
+        )?
+        else {
             return Ok(false);
         };
         // SAFETY: a null subkey empties `key` itself.
@@ -322,7 +369,8 @@ pub(crate) fn list(root: HKEY, sub_key: &str, view: u32) -> WinResult<Option<Str
     let Some(key) = open(root, sub_key, KEY_READ | view_bits(view))? else {
         return Ok(None);
     };
-    let (mut sub_keys, mut max_sub, mut values, mut max_name, mut max_data) = (0u32, 0u32, 0u32, 0u32, 0u32);
+    let (mut sub_keys, mut max_sub, mut values, mut max_name, mut max_data) =
+        (0u32, 0u32, 0u32, 0u32, 0u32);
     // SAFETY: every out-param is a valid `u32` or null.
     let rc = unsafe {
         RegQueryInfoKeyW(
@@ -426,7 +474,9 @@ pub(crate) fn read_string(root: HKEY, sub_key: &str, name: &str) -> Option<Strin
     let (ty, data) = query(&key, name).ok()??;
     match ty {
         REG_SZ | REG_EXPAND_SZ => Some(from_wide(&utf16_units(&data))),
-        REG_DWORD if data.len() >= 4 => Some(u32::from_le_bytes([data[0], data[1], data[2], data[3]]).to_string()),
+        REG_DWORD if data.len() >= 4 => {
+            Some(u32::from_le_bytes([data[0], data[1], data[2], data[3]]).to_string())
+        }
         _ => None,
     }
 }
@@ -434,7 +484,8 @@ pub(crate) fn read_string(root: HKEY, sub_key: &str, name: &str) -> Option<Strin
 pub(crate) fn read_dword(root: HKEY, sub_key: &str, name: &str) -> Option<u32> {
     let key = open(root, sub_key, KEY_QUERY_VALUE).ok()??;
     let (ty, data) = query(&key, name).ok()??;
-    (ty == REG_DWORD && data.len() >= 4).then(|| u32::from_le_bytes([data[0], data[1], data[2], data[3]]))
+    (ty == REG_DWORD && data.len() >= 4)
+        .then(|| u32::from_le_bytes([data[0], data[1], data[2], data[3]]))
 }
 
 /// Subkey names of `sub_key`; empty when it is missing.
