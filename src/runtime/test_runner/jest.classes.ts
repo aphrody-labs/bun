@@ -270,6 +270,14 @@ export default [
         fn: "addSnapshotSerializer",
         length: 1,
       },
+      getState: {
+        fn: "getState",
+        length: 0,
+      },
+      setState: {
+        fn: "setState",
+        length: 1,
+      },
       not: {
         getter: "getStaticNot",
       },
@@ -864,6 +872,10 @@ export default [
       },
       each: {
         fn: "fnEach",
+        length: 1,
+      },
+      for: {
+        fn: "fnFor",
         length: 1,
       },
     },

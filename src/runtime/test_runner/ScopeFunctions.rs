@@ -128,6 +128,23 @@ impl ScopeFunctions {
         }
         create_bound(global, this.mode, array, this.cfg, "each")
     }
+    /// `test.for(table)`: like `.each`, but the row is passed as one argument
+    /// (not spread) and the test context follows it.
+    #[bun_jsc::host_fn(method)]
+    pub(crate) fn fn_for(this: &Self, global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
+        let _g = group_log::begin();
+
+        let [array] = frame.arguments_as_array::<1>();
+        if array.is_undefined_or_null() || !array.is_array() {
+            let mut formatter = bun_jsc::ConsoleObject::Formatter::new(global);
+            return Err(global.throw(format_args!("Expected array, got {}", array.to_fmt(&mut formatter))));
+        }
+
+        if !this.each.is_empty() {
+            return Err(global.throw(format_args!("Cannot {} on {}", "for", this)));
+        }
+        create_bound(global, this.mode, array, BaseScopeCfg { each_for: true, ..this.cfg }, "for")
+    }
 }
 
 #[bun_jsc::host_fn]
@@ -204,8 +221,9 @@ fn call_as_function(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSVa
                     None
                 };
 
+                let bound_args: &[JSValue] = if this.cfg.each_for { core::slice::from_ref(&item) } else { args_list.as_slice() };
                 let bound = if let Some(cb) = args.callback {
-                    Some(JSValueTestExt::bind(cb, global, item, &BunString::static_("cb"), 0.0, args_list.as_slice())?)
+                    Some(JSValueTestExt::bind(cb, global, item, &BunString::static_("cb"), 0.0, bound_args)?)
                 } else {
                     None
                 };
@@ -218,7 +236,7 @@ fn call_as_function(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSVa
                     bound,
                     formatted_label.as_deref(),
                     &args.options,
-                    callback_length.saturating_sub(args_list.len()),
+                    callback_length.saturating_sub(bound_args.len()),
                     line_no,
                 )
             })?;
@@ -346,7 +364,16 @@ impl ScopeFunctions {
                 test_id_for_debugger = id;
             }
         }
-        let has_done_parameter = if callback.is_some() { callback_length >= 1 } else { false };
+        let takes_argument = callback.is_some() && callback_length >= 1;
+        // `.for` and vitest callbacks never receive `done`; they get the test context instead
+        // (vitest's `.each` passes neither).
+        let (has_done_parameter, pass_context) = if self.cfg.each_for {
+            (false, takes_argument)
+        } else if self.cfg.vitest {
+            (false, takes_argument && self.each.is_empty())
+        } else {
+            (takes_argument, false)
+        };
 
         let mut base = self.cfg;
         base.line_no = line_no;
@@ -426,6 +453,9 @@ impl ScopeFunctions {
                         timeout: options.timeout,
                         retry_count: options.retry.unwrap_or(0),
                         repeat_count: options.repeats,
+                        pass_context,
+                        vitest: self.cfg.vitest,
+                        only_on_failure: false,
                     },
                     base,
                     bun_test::AddedInPhase::Collection,
@@ -739,7 +769,11 @@ impl fmt::Display for ScopeFunctions {
             write!(f, ".only")?;
         }
         if !self.each.is_empty() {
-            write!(f, ".each()")?;
+            if self.cfg.each_for {
+                write!(f, ".for()")?;
+            } else {
+                write!(f, ".each()")?;
+            }
         }
         Ok(())
     }

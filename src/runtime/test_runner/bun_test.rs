@@ -130,6 +130,8 @@ pub(crate) mod js_fns {
         AfterAll,
         #[strum(serialize = "onTestFinished")]
         OnTestFinished,
+        #[strum(serialize = "onTestFailed")]
+        OnTestFailed,
     }
     impl GenericHookTag {
         const fn as_hook_tag(self) -> Option<HookTag> {
@@ -138,7 +140,7 @@ pub(crate) mod js_fns {
                 Self::BeforeEach => Some(HookTag::BeforeEach),
                 Self::AfterEach => Some(HookTag::AfterEach),
                 Self::AfterAll => Some(HookTag::AfterAll),
-                Self::OnTestFinished => None,
+                Self::OnTestFinished | Self::OnTestFailed => None,
             }
         }
         /// Per-variant signature string: the tag name plus `"()"`.
@@ -149,6 +151,7 @@ pub(crate) mod js_fns {
                 Self::AfterEach => b"afterEach()",
                 Self::AfterAll => b"afterAll()",
                 Self::OnTestFinished => b"onTestFinished()",
+                Self::OnTestFailed => b"onTestFailed()",
             }
         }
     }
@@ -158,6 +161,7 @@ pub(crate) mod js_fns {
     // (one fn per JS function so JSFunction::create gets a distinct address).
     pub(crate) fn generic_hook_impl(
         tag: GenericHookTag,
+        vitest: bool,
         global_this: &JSGlobalObject,
         call_frame: &CallFrame,
     ) -> JsResult<JSValue> {
@@ -176,22 +180,28 @@ pub(crate) mod js_fns {
                 ScopeFunctions::ParseArgumentsCfg { callback: ScopeFunctions::CallbackMode::Require, kind: ScopeFunctions::FunctionKind::Hook },
             )?;
 
-            let has_done_parameter = if let Some(callback) = args.callback {
+            let takes_argument = if let Some(callback) = args.callback {
                 callback.get_length(global_this)? > 0
             } else {
                 false
             };
+            let is_per_test = matches!(tag, GenericHookTag::OnTestFinished | GenericHookTag::OnTestFailed);
+            let is_all_hook = matches!(tag, GenericHookTag::BeforeAll | GenericHookTag::AfterAll);
 
             let bun_test_root = get_test_root(global_this, Signature::Str(sig_bytes))?;
 
             let cfg = ExecutionEntryCfg {
-                has_done_parameter,
+                // vitest hooks never receive `done`; each-hooks and per-test hooks get the test context.
+                has_done_parameter: takes_argument && !vitest,
+                pass_context: takes_argument && vitest && !is_all_hook,
+                vitest,
+                only_on_failure: tag == GenericHookTag::OnTestFailed,
                 timeout: args.options.timeout,
                 ..Default::default()
             };
 
             let Some(bun_test) = bun_test_root.get_active_file_unless_in_preload(global_this.bun_vm()) else {
-                if tag == GenericHookTag::OnTestFinished {
+                if is_per_test {
                     return Err(global_this.throw(format_args!(
                         "Cannot call {}() in preload. It can only be called inside a test.",
                         tag_name
@@ -211,7 +221,7 @@ pub(crate) mod js_fns {
 
             match bun_test.phase {
                 Phase::Collection => {
-                    if tag == GenericHookTag::OnTestFinished {
+                    if is_per_test {
                         return Err(global_this.throw(format_args!(
                             "Cannot call {}() outside of a test. It can only be called inside a test.",
                             tag_name
@@ -229,7 +239,7 @@ pub(crate) mod js_fns {
                 Phase::Execution => {
                     let active = bun_test.get_current_state_data();
                     let Some((sequence, _)) = bun_test.execution.get_current_and_valid_execution_sequence(&active) else {
-                        return Err(if tag == GenericHookTag::OnTestFinished {
+                        return Err(if is_per_test {
                             global_this.throw(format_args!(
                                 "Cannot call {}() here. It cannot be called inside a concurrent test. Use test.serial or remove test.concurrent.",
                                 tag_name
@@ -266,7 +276,7 @@ pub(crate) mod js_fns {
                                 }
                             }
                         }
-                        GenericHookTag::OnTestFinished => 'blk: {
+                        GenericHookTag::OnTestFinished | GenericHookTag::OnTestFailed => 'blk: {
                             // Find the last entry in the sequence
                             let Some(mut last_entry) = sequence_ref.active_entry.map(|p| p.as_ptr()) else {
                                 return Err(global_this.throw(format_args!(
@@ -325,21 +335,27 @@ pub(crate) mod js_fns {
     pub(crate) mod generic_hook {
         use super::*;
         macro_rules! hook {
-            ($name:ident, $tag:ident) => {
+            ($name:ident, $tag:ident, $vitest:literal) => {
                 #[bun_jsc::host_fn]
                 pub(crate) fn $name(
                     global_this: &JSGlobalObject,
                     call_frame: &CallFrame,
                 ) -> JsResult<JSValue> {
-                    super::generic_hook_impl(GenericHookTag::$tag, global_this, call_frame)
+                    super::generic_hook_impl(GenericHookTag::$tag, $vitest, global_this, call_frame)
                 }
             };
         }
-        hook!(before_all, BeforeAll);
-        hook!(before_each, BeforeEach);
-        hook!(after_each, AfterEach);
-        hook!(after_all, AfterAll);
-        hook!(on_test_finished, OnTestFinished);
+        hook!(before_all, BeforeAll, false);
+        hook!(before_each, BeforeEach, false);
+        hook!(after_each, AfterEach, false);
+        hook!(after_all, AfterAll, false);
+        hook!(on_test_finished, OnTestFinished, false);
+        hook!(vitest_before_all, BeforeAll, true);
+        hook!(vitest_before_each, BeforeEach, true);
+        hook!(vitest_after_each, AfterEach, true);
+        hook!(vitest_after_all, AfterAll, true);
+        hook!(vitest_on_test_finished, OnTestFinished, true);
+        hook!(vitest_on_test_failed, OnTestFailed, true);
     }
 }
 
@@ -640,6 +656,8 @@ pub(crate) struct BunTest {
     /// Only the Box header may be freed in `Drop` — fields alias `DescribeScope` originals.
     pub(crate) cloned_hook_entries: Vec<*mut ExecutionEntry>,
     pub(crate) wants_wakeup: bool,
+    /// Properties merged in by `expect.setState()`, layered over `expect.getState()`.
+    pub(crate) expect_state: Option<Strong>,
 
     pub(crate) phase: Phase,
     pub(crate) collection: Collection,
@@ -677,6 +695,7 @@ impl BunTest {
             // `next = EPOCH, state = PENDING`.
             timer: EventLoopTimer::init_paused(EventLoopTimerTag::BunTest),
             wants_wakeup: false,
+            expect_state: None,
         }
     }
 
@@ -1098,6 +1117,8 @@ impl BunTest {
         global_this: &JSGlobalObject,
         cfg_callback: JSValue,
         cfg_done_parameter: bool,
+        // vitest test context passed as the only argument; `ZERO` = none.
+        context_arg: JSValue,
         cfg_data: RefDataValue,
         timeout: &Timespec,
     ) -> Option<RefDataValue> {
@@ -1129,7 +1150,13 @@ impl BunTest {
 
         // SAFETY: `UnsafeCell`-derived; sole `&mut` at this point (before JS re-entry).
         unsafe { (*this).update_min_timeout(global_this, timeout) };
-        let args_slice: &[JSValue] = if !done_arg.is_empty() { core::slice::from_ref(&done_arg) } else { &[] };
+        let args_slice: &[JSValue] = if !context_arg.is_empty() {
+            core::slice::from_ref(&context_arg)
+        } else if !done_arg.is_empty() {
+            core::slice::from_ref(&done_arg)
+        } else {
+            &[]
+        };
         let result: JSValue = match vm.event_loop_mut().run_callback_with_result_and_forcefully_drain_microtasks(bun_event_loop::ContextId::NONE, 
             cfg_callback,
             global_this,
@@ -1596,6 +1623,10 @@ pub(crate) struct BaseScopeCfg {
     pub(crate) self_only: bool,
     pub(crate) test_id_for_debugger: i32,
     pub(crate) line_no: u32,
+    /// Created from the `vitest` module: callbacks receive the test context, never `done`.
+    pub(crate) vitest: bool,
+    /// `.for(table)` instead of `.each(table)`: the row is passed unspread, then the context.
+    pub(crate) each_for: bool,
 }
 impl BaseScopeCfg {
     /// returns None if the other already has the value
@@ -1860,6 +1891,11 @@ pub(crate) struct ExecutionEntryCfg {
     pub(crate) retry_count: u32,
     /// Number of times to repeat a test (0 = run once, 1 = run twice, etc.)
     pub(crate) repeat_count: u32,
+    /// Pass the vitest test context object as the callback's last argument.
+    pub(crate) pass_context: bool,
+    pub(crate) vitest: bool,
+    /// `onTestFailed`: only run if the sequence has failed.
+    pub(crate) only_on_failure: bool,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -1883,6 +1919,9 @@ pub(crate) struct ExecutionEntry {
     pub(crate) retry_count: u32,
     /// Number of times to repeat a test (0 = run once, 1 = run twice, etc.)
     pub(crate) repeat_count: u32,
+    pub(crate) pass_context: bool,
+    pub(crate) vitest: bool,
+    pub(crate) only_on_failure: bool,
 
     pub(crate) next: Option<*mut ExecutionEntry>,
     /// if this entry fails, go to the entry 'failure_skip_past.next'
@@ -1906,6 +1945,9 @@ impl ExecutionEntry {
             added_in_phase: phase,
             retry_count: cfg.retry_count,
             repeat_count: cfg.repeat_count,
+            pass_context: cfg.pass_context,
+            vitest: cfg.vitest,
+            only_on_failure: cfg.only_on_failure,
             timespec: Timespec::EPOCH,
             next: None,
             failure_skip_past: None,

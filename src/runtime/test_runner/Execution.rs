@@ -167,6 +167,10 @@ pub(crate) struct ExecutionSequence {
     /// Expectation set by expect.hasAssertions() or expect.assertions(n).
     pub(crate) expect_assertions: ExpectAssertions,
     pub(crate) maybe_skip: bool,
+    /// vitest test context shared by the beforeEach/test/afterEach callbacks of this sequence.
+    pub(crate) vitest_context: Option<bun_jsc::Strong>,
+    /// Set by the vitest `context.skip()`: the error it throws must not fail or print.
+    pub(crate) hide_next_error: bool,
 }
 
 impl ExecutionSequence {
@@ -189,6 +193,8 @@ impl ExecutionSequence {
             expect_call_count: 0,
             expect_assertions: ExpectAssertions::NotSet,
             maybe_skip: false,
+            vitest_context: None,
+            hide_next_error: false,
         }
     }
 
@@ -780,6 +786,10 @@ impl Execution {
         let sequence = unsafe { &mut *sequence_ptr.as_ptr() };
 
         sequence.maybe_skip = true;
+        if sequence.hide_next_error {
+            sequence.hide_next_error = false;
+            return HandleUncaughtExceptionResult::HideError;
+        }
         if sequence.active_entry != sequence.test_entry {
             // executing hook
             if sequence.result == Result::Pending {
@@ -1003,6 +1013,11 @@ fn step_sequence_one(
     }
     Execution::on_entry_started(next_item);
 
+    if next_item.only_on_failure && !sequence.result.is_fail() {
+        Execution::advance_sequence(buntest_ptr, sequence_ptr, group);
+        return Ok(None); // run again
+    }
+
     if let Some(cb) = next_item.callback.as_ref() {
         group_log::log(format_args!("runSequence queued callback"));
 
@@ -1028,11 +1043,25 @@ fn step_sequence_one(
             (*on_stack_data_cell).set(prev_on_stack_data);
         });
 
+        let context_arg = if next_item.pass_context {
+            match sequence.vitest_context.as_ref() {
+                Some(ctx) => ctx.get(),
+                None => {
+                    let ctx = super::jest::create_vitest_context(global_this, sequence)?;
+                    sequence.vitest_context = Some(bun_jsc::Strong::create(ctx, global_this));
+                    ctx
+                }
+            }
+        } else {
+            bun_jsc::JSValue::ZERO
+        };
+
         if BunTest::run_test_callback(
             buntest_strong,
             global_this,
             cb.get(),
             next_item.has_done_parameter,
+            context_arg,
             callback_data,
             &next_item.timespec,
         )

@@ -235,6 +235,7 @@ impl Collection {
                 global_this,
                 callback.get(),
                 false,
+                JSValue::ZERO,
                 RefDataValue::Collection { active_scope: previous_scope },
                 &Timespec::EPOCH,
             ) {

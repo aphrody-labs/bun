@@ -485,6 +485,12 @@ impl Expect {
     ) -> JsResult<JSValue> {
         match flags.promise() {
             resolution @ (Promise::Resolves | Promise::Rejects) => {
+                // `expect(fn).rejects`: like Vitest, call the function and use the promise it returns.
+                let value = if !silent && value.is_callable() && value.as_any_promise().is_none() {
+                    value.call(global_this, JSValue::UNDEFINED, &[])?
+                } else {
+                    value
+                };
                 if let Some(promise) = value.as_any_promise() {
                     let vm = global_this.vm();
                     promise.set_handled(vm);
@@ -629,6 +635,8 @@ impl Expect {
             .ok_or(crate::Error::SnapshotInConcurrentGroup)?;
 
         let test_name: &[u8] = execution_entry.base.name.as_deref().unwrap_or(b"(unnamed)");
+        // Vitest snapshot keys join describe names with " > ".
+        let separator: &[u8] = if execution_entry.vitest { b" > " } else { b" " };
 
         let mut length: usize = 0;
         let mut curr_scope = execution_entry.base.parent;
@@ -637,7 +645,7 @@ impl Expect {
             let scope = unsafe { &*scope };
             if let Some(name) = scope.base.name.as_deref() {
                 if !name.is_empty() {
-                    length += name.len() + 1;
+                    length += name.len() + separator.len();
                 }
             }
             curr_scope = scope.base.parent;
@@ -667,9 +675,9 @@ impl Expect {
             let scope = unsafe { &*scope };
             if let Some(name) = scope.base.name.as_deref() {
                 if !name.is_empty() {
-                    index -= name.len() + 1;
+                    index -= name.len() + separator.len();
                     buf[index..index + name.len()].copy_from_slice(name);
-                    buf[index + name.len()] = b' ';
+                    buf[index + name.len()..index + name.len() + separator.len()].copy_from_slice(separator);
                 }
             }
             curr_scope = scope.base.parent;
@@ -829,6 +837,28 @@ pub(crate) struct TrimResult<'a> {
     pub(crate) end_indent: Option<&'a [u8]>,
 }
 
+/// "describe > test" (Vitest) or "describe test" (Jest), as reported by `expect.getState().currentTestName`.
+fn full_test_name(entry: &bun_test::ExecutionEntry) -> Vec<u8> {
+    let separator: &[u8] = if entry.vitest { b" > " } else { b" " };
+    let mut parts: Vec<&[u8]> = Vec::new();
+    if let Some(name) = entry.base.name.as_deref() {
+        parts.push(name);
+    }
+    let mut curr_scope = entry.base.parent;
+    while let Some(scope) = curr_scope {
+        // SAFETY: `parent` is a live `*mut DescribeScope` owned by the BunTest arena.
+        let scope = unsafe { &*scope };
+        if let Some(name) = scope.base.name.as_deref() {
+            if !name.is_empty() {
+                parts.push(name);
+            }
+        }
+        curr_scope = scope.base.parent;
+    }
+    parts.reverse();
+    parts.join(separator)
+}
+
 impl Expect {
     pub(crate) fn get_value_as_to_throw(
         &self,
@@ -898,6 +928,14 @@ impl Expect {
         ))
     }
 
+    /// Whether this `expect()` runs inside a callback registered through the `vitest` module.
+    pub(crate) fn in_vitest_callback(&self) -> bool {
+        let Some(parent) = self.parent.as_ref() else { return false };
+        let Some(buntest_strong) = parent.bun_test() else { return false };
+        let buntest = buntest_strong.get();
+        parent.phase.entry(buntest).is_some_and(|entry| entry.vitest)
+    }
+
     pub(crate) fn fn_to_err_string_or_undefined(
         &self,
         global_this: &JSGlobalObject,
@@ -906,6 +944,10 @@ impl Expect {
         let (err_value, _) = self.get_value_as_to_throw(global_this, value)?;
 
         let Some(mut err_value_res) = err_value else { return Ok(None) };
+        if self.in_vitest_callback() {
+            // Vitest snapshots the thrown value itself; errors print as `[Name: message]`.
+            return Ok(Some(err_value_res));
+        }
         if err_value_res.is_any_error() {
             let message: JSValue = err_value_res
                 .get_truthy(global_this, "message")?
@@ -1149,7 +1191,7 @@ impl Expect {
             }
         }
 
-        value.jest_snapshot_pretty_format(pretty_value, global_this)
+        write_snapshot_value(global_this, value, pretty_value)
     }
 
     pub(crate) fn snapshot(
@@ -1601,7 +1643,110 @@ impl Expect {
     // `Expect::add_snapshot_serializer(..)` UFCS, so forward.
     #[inline]
     pub(crate) fn add_snapshot_serializer(global_this: &JSGlobalObject, call_frame: &CallFrame) -> JsResult<JSValue> {
-        Self::not_implemented_static_fn(global_this, call_frame)
+        let [plugin] = call_frame.arguments_as_array::<1>();
+        if !plugin.is_object() || plugin.get_function(global_this, "test")?.is_none() {
+            return Err(global_this.throw_invalid_arguments(format_args!(
+                "expect.addSnapshotSerializer() expects a plugin object with a test() function"
+            )));
+        }
+        SNAPSHOT_SERIALIZERS.with_borrow_mut(|list| list.push(bun_jsc::Strong::create(plugin, global_this)));
+        Ok(JSValue::UNDEFINED)
+    }
+
+    /// `expect.getState()` (Jest/Vitest): the running test's path, name and assertion counters.
+    pub(crate) fn get_state(global_this: &JSGlobalObject, _call_frame: &CallFrame) -> JsResult<JSValue> {
+        let state = JSValue::create_empty_object(global_this, 8);
+        let mut assertion_calls: u32 = 0;
+        let mut expected_assertions: Option<u32> = None;
+        let mut is_expecting_assertions = false;
+        let mut test_path = JSValue::UNDEFINED;
+        let mut current_test_name = JSValue::UNDEFINED;
+        let mut custom_state: Option<JSValue> = None;
+
+        if let Some(buntest_strong) = bun_test::clone_active_strong() {
+            let buntest = buntest_strong.get();
+            if let Some(runner) = Jest::runner() {
+                let path = runner.files.items_source()[buntest.file_id as usize].path.text;
+                test_path = bun_string_jsc::create_utf8_for_js(global_this, path)?;
+            }
+            custom_state = buntest.expect_state.as_ref().map(|s| s.get());
+            let state_data = buntest.get_current_state_data();
+            let mut test_name: Option<Vec<u8>> = None;
+            if let Some(sequence) = state_data.sequence(buntest) {
+                assertion_calls = sequence.expect_call_count;
+                match sequence.expect_assertions {
+                    ExpectAssertions::Exact(n) => expected_assertions = Some(n),
+                    ExpectAssertions::AtLeastOne => is_expecting_assertions = true,
+                    ExpectAssertions::NotSet => {}
+                }
+                // SAFETY: `test_entry` points at an entry owned by the live BunTest.
+                test_name = sequence.test_entry.map(|entry| full_test_name(unsafe { entry.as_ref() }));
+            }
+            if let Some(name) = test_name {
+                current_test_name = bun_string_jsc::create_utf8_for_js(global_this, &name)?;
+            }
+        }
+
+        state.put(global_this, b"assertionCalls", JSValue::from(assertion_calls as i32));
+        state.put(
+            global_this,
+            b"expectedAssertionsNumber",
+            expected_assertions.map_or(JSValue::NULL, |n| JSValue::from(n as f64)),
+        );
+        state.put(global_this, b"isExpectingAssertions", JSValue::from(is_expecting_assertions));
+        state.put(global_this, b"testPath", test_path);
+        state.put(global_this, b"currentTestName", current_test_name);
+
+        if let Some(custom) = custom_state {
+            if let Some(custom_object) = custom.get_object() {
+                let iter = JSPropertyIterator::init(
+                    global_this,
+                    custom_object,
+                    bun_jsc::PropertyIteratorOptions { skip_empty_name: false, include_value: true },
+                )?;
+                while let Some((key, value)) = iter.next()? {
+                    if value.is_empty() {
+                        continue;
+                    }
+                    state.put(global_this, &key, value);
+                }
+            }
+        }
+        Ok(state)
+    }
+
+    /// `expect.setState(object)`: merged into what later `expect.getState()` calls return in this file.
+    pub(crate) fn set_state(global_this: &JSGlobalObject, call_frame: &CallFrame) -> JsResult<JSValue> {
+        let [update] = call_frame.arguments_as_array::<1>();
+        let Some(update_object) = update.get_object() else {
+            return Err(global_this.throw_invalid_arguments(format_args!("expect.setState() expects an object")));
+        };
+        let Some(buntest_strong) = bun_test::clone_active_strong() else {
+            return Err(global_this.throw(format_args!("expect.setState() must be called within a test file")));
+        };
+        let target = {
+            let buntest = buntest_strong.get();
+            match buntest.expect_state.as_ref() {
+                Some(existing) => existing.get(),
+                None => {
+                    let created = JSValue::create_empty_object(global_this, 4);
+                    buntest.expect_state = Some(bun_jsc::Strong::create(created, global_this));
+                    created
+                }
+            }
+        };
+        let iter = JSPropertyIterator::init(
+            global_this,
+            update_object,
+            bun_jsc::PropertyIteratorOptions { skip_empty_name: false, include_value: true },
+        )?;
+        while let Some((key, value)) = iter.next()? {
+            if value.is_empty() {
+                continue;
+            }
+            target.put(global_this, &key, value);
+        }
+        Ok(JSValue::UNDEFINED)
     }
 
     // extern shim emitted by `#[bun_jsc::JsClass]` codegen (TypeClass__construct/__call); bare `#[host_fn]` cannot target an associated fn without a receiver.
@@ -3245,4 +3390,77 @@ mod tests {
             "\n\"æ™\n\n!!!!*5897yhduN\"'\\`Il\"\n".as_bytes(),
         );
     }
+}
+
+thread_local! {
+    /// Plugins registered with `expect.addSnapshotSerializer()`; the last one added is tried first.
+    static SNAPSHOT_SERIALIZERS: core::cell::RefCell<Vec<bun_jsc::Strong>> = const { core::cell::RefCell::new(Vec::new()) };
+}
+
+/// Formats `value` for a snapshot, through the first registered serializer whose `test()` accepts it.
+fn write_snapshot_value(global: &JSGlobalObject, value: JSValue, out: &mut impl bun_io::Write) -> JsResult<()> {
+    match apply_snapshot_serializers(global, value)? {
+        Some(serialized) => out
+            .write_all(&serialized)
+            .map_err(|e| global.throw_error(e, "snapshot writer failed")),
+        None => value.jest_snapshot_pretty_format(out, global),
+    }
+}
+
+fn apply_snapshot_serializers(
+    global: &JSGlobalObject,
+    value: JSValue,
+) -> JsResult<Option<bun_core::Utf8Bytes<'static>>> {
+    let plugins: Vec<JSValue> = SNAPSHOT_SERIALIZERS.with_borrow(|list| list.iter().rev().map(|p| p.get()).collect());
+    for plugin in plugins {
+        let Some(test) = plugin.get_function(global, "test")? else {
+            continue;
+        };
+        if !test.call(global, plugin, &[value])?.to_boolean() {
+            continue;
+        }
+        let printer = JSFunction::create(global, "printer", __jsc_host_snapshot_serializer_printer, 1, Default::default());
+        let result = if let Some(serialize) = plugin.get_function(global, "serialize")? {
+            let config = JSValue::create_empty_object(global, 2);
+            config.put(global, b"indent", bun_string_jsc::create_utf8_for_js(global, b"  ")?);
+            config.put(global, b"plugins", JSValue::create_empty_array(global, 0)?);
+            let indentation = bun_string_jsc::create_utf8_for_js(global, b"")?;
+            let refs = JSValue::create_empty_array(global, 0)?;
+            serialize.call(global, plugin, &[value, config, indentation, JSValue::js_number(0.0), refs, printer])?
+        } else if let Some(print) = plugin.get_function(global, "print")? {
+            let indent = JSFunction::create(global, "indent", __jsc_host_snapshot_serializer_indent, 1, Default::default());
+            print.call(global, plugin, &[value, printer, indent])?
+        } else {
+            return Err(global.throw_invalid_arguments(format_args!(
+                "snapshot serializer must define serialize() or print()"
+            )));
+        };
+        return Ok(Some(result.to_utf8(global)?));
+    }
+    Ok(None)
+}
+
+/// The `printer`/`serialize` callback handed to snapshot serializers: formats a nested value.
+#[bun_jsc::host_fn]
+fn snapshot_serializer_printer(global: &JSGlobalObject, callframe: &CallFrame) -> JsResult<JSValue> {
+    let [value] = callframe.arguments_as_array::<1>();
+    let mut out: Vec<u8> = Vec::new();
+    write_snapshot_value(global, value, &mut out)?;
+    bun_string_jsc::create_utf8_for_js(global, &out)
+}
+
+/// The `indent` callback of the legacy `print(val, serialize, indent)` serializer form.
+#[bun_jsc::host_fn]
+fn snapshot_serializer_indent(global: &JSGlobalObject, callframe: &CallFrame) -> JsResult<JSValue> {
+    let [value] = callframe.arguments_as_array::<1>();
+    let text = value.to_utf8(global)?;
+    let mut out: Vec<u8> = Vec::with_capacity(text.len() + 2);
+    out.extend_from_slice(b"  ");
+    for &byte in text.iter() {
+        out.push(byte);
+        if byte == b'\n' {
+            out.extend_from_slice(b"  ");
+        }
+    }
+    bun_string_jsc::create_utf8_for_js(global, &out)
 }

@@ -401,3 +401,170 @@ test("no --only flag with multiple files", async () => {
   `);
   expect(exitCode).toBe(0);
 });
+
+async function runTestDir(files: Record<string, string>, ...args: string[]) {
+  using dir = tempDir("bun-test-vitest", files);
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "test", ...args],
+    env: bunEnv,
+    cwd: String(dir),
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  const snapshots: Record<string, string> = {};
+  for (const file of new Bun.Glob("**/__snapshots__/*.snap").scanSync(String(dir))) {
+    snapshots[file.replaceAll("\\", "/")] = await Bun.file(`${dir}/${file}`).text();
+  }
+  return { stdout: normalizeBunSnapshot(stdout, dir), stderr: normalizeBunSnapshot(stderr, dir), exitCode, snapshots };
+}
+
+test.concurrent("vitest: test context exposes expect, task, signal, skip and per-test hooks", async () => {
+  const { stdout, stderr, exitCode } = await runTestDir({
+    "ctx.test.ts": `
+      import { test } from "vitest";
+      test("ctx", ({ expect, task, signal, onTestFinished, onTestFailed }) => {
+        expect(task.name).toBe("ctx");
+        expect(signal).toBeInstanceOf(AbortSignal);
+        onTestFinished(() => console.log("finished"));
+        onTestFailed(() => console.log("failed hook must not run"));
+      });
+      test("skipped from context", ({ skip }) => {
+        skip();
+        throw new Error("unreachable");
+      });
+      test("context is not a done callback", async ctx => {
+        await Promise.resolve();
+        ctx.expect(typeof ctx).toBe("object");
+      });
+    `,
+  });
+  expect(stdout).toBe("finished");
+  expect(stderr).toContain("2 pass");
+  expect(stderr).toContain("1 skip");
+  expect(stderr).toContain("0 fail");
+  expect(exitCode).toBe(0);
+});
+
+test.concurrent("vitest: onTestFailed runs only when the test fails", async () => {
+  const { stdout, exitCode } = await runTestDir({
+    "failed.test.ts": `
+      import { test, onTestFailed } from "vitest";
+      test("fails", ({ onTestFailed: onFailed }) => {
+        onFailed(() => console.log("context onTestFailed"));
+        onTestFailed(() => console.log("module onTestFailed"));
+        throw new Error("boom");
+      });
+    `,
+  });
+  expect(stdout).toBe("context onTestFailed\nmodule onTestFailed");
+  expect(exitCode).toBe(1);
+});
+
+test.concurrent("vitest: test.for, describe.for and %# labels", async () => {
+  const { stdout, stderr, exitCode } = await runTestDir({
+    "for.test.ts": `
+      import { test, describe, expect } from "vitest";
+      test.for([[1, 2], [3, 4]])("for %#", ([a, b], { expect }) => {
+        console.log("for", a, b);
+        expect(a + 1).toBe(b);
+      });
+      describe.for(["x", "y"])("suite %s", name => {
+        test("inner", () => console.log("suite", name));
+      });
+      test.each([["a", "b"]])("each %# %s", (a, b) => console.log("each", a, b));
+    `,
+  });
+  expect(stdout).toBe("for 1 2\nfor 3 4\nsuite x\nsuite y\neach a b");
+  expect(stderr).toContain("for 0");
+  expect(stderr).toContain("for 1");
+  expect(stderr).toContain("each 0 a");
+  expect(stderr).toContain("5 pass");
+  expect(exitCode).toBe(0);
+});
+
+test.concurrent("vitest: thrown errors snapshot as [Name: message] and snapshot keys use ' > '", async () => {
+  const { stderr, exitCode, snapshots } = await runTestDir(
+    {
+      "snap.test.ts": `
+        import { describe, test, expect } from "vitest";
+        describe("group", () => {
+          test("error", () => {
+            expect(() => {
+              throw new TypeError("boom");
+            }).toThrowErrorMatchingInlineSnapshot(\`[TypeError: boom]\`);
+          });
+          test("named", () => {
+            expect({ a: 1 }).toMatchSnapshot();
+          });
+        });
+      `,
+    },
+    "--update-snapshots",
+  );
+  expect(Object.keys(snapshots)).toEqual(["__snapshots__/snap.test.ts.snap"]);
+  expect(snapshots["__snapshots__/snap.test.ts.snap"]).toContain("exports[`group > named 1`]");
+  expect(stderr).toContain("2 pass");
+  expect(exitCode).toBe(0);
+});
+
+test.concurrent("expect.getState() and expect.setState()", async () => {
+  const { stdout, stderr, exitCode } = await runTestDir({
+    "state.test.ts": `
+      import { describe, test, expect } from "vitest";
+      describe("outer", () => {
+        test("inner", () => {
+          expect.assertions(2);
+          expect(1).toBe(1);
+          expect.setState({ custom: 42 });
+          const state = expect.getState();
+          console.log(state.currentTestName, state.assertionCalls, state.expectedAssertionsNumber, state.isExpectingAssertions, state.custom);
+          console.log(state.testPath.replaceAll("\\\\", "/").endsWith("/state.test.ts"));
+          expect(state.custom).toBe(42);
+        });
+      });
+    `,
+  });
+  expect(stdout).toBe("outer > inner 1 2 false 42\ntrue");
+  expect(stderr).toContain("1 pass");
+  expect(exitCode).toBe(0);
+});
+
+test.concurrent("expect(fn).rejects / .resolves call the function", async () => {
+  const { stderr, exitCode } = await runTestDir({
+    "promise.test.ts": `
+      import { test, expect } from "bun:test";
+      test("rejects", async () => {
+        await expect(async () => {
+          throw new Error("nope");
+        }).rejects.toThrow("nope");
+        await expect(() => Promise.resolve(5)).resolves.toBe(5);
+      });
+    `,
+  });
+  expect(stderr).toContain("1 pass");
+  expect(exitCode).toBe(0);
+});
+
+test.concurrent("expect.addSnapshotSerializer() with serialize() and print() plugins", async () => {
+  const { stderr, exitCode } = await runTestDir({
+    "serializer.test.ts": `
+      import { test, expect } from "bun:test";
+      expect.addSnapshotSerializer({
+        test: val => typeof val === "string" && val.startsWith("raw:"),
+        print: (val, serialize, indent) => "PRINT " + val.slice(4),
+      });
+      expect.addSnapshotSerializer({
+        test: val => typeof val === "string" && val.startsWith("secret:"),
+        serialize: (val, config, indentation, depth, refs, printer) => printer("<redacted>", config, indentation, depth, refs),
+      });
+      test("serializers", () => {
+        expect("secret:hunter2").toMatchInlineSnapshot(\`"<redacted>"\`);
+        expect("raw:value").toMatchInlineSnapshot(\`PRINT value\`);
+        expect("plain").toMatchInlineSnapshot(\`"plain"\`);
+      });
+    `,
+  });
+  expect(stderr).toContain("1 pass");
+  expect(exitCode).toBe(0);
+});

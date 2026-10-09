@@ -324,20 +324,33 @@ pub(crate) mod Jest {
     extern "C" fn Bun__Jest__createTestModuleObject(
         global_object: &JSGlobalObject,
     ) -> JSValue {
-        match create_test_module(global_object) {
+        match create_test_module(global_object, false) {
             Ok(v) => v,
             Err(_) => JSValue::ZERO,
         }
     }
 
-    fn create_test_module(global_object: &JSGlobalObject) -> JsResult<JSValue> {
-        let module = JSValue::create_empty_object(global_object, 23);
+    /// The `vitest` module: same API as `bun:test`, but callbacks receive the
+    /// vitest test context instead of `done`, and errors snapshot in vitest's format.
+    #[unsafe(no_mangle)]
+    extern "C" fn Bun__Jest__createVitestModuleObject(
+        global_object: &JSGlobalObject,
+    ) -> JSValue {
+        match create_test_module(global_object, true) {
+            Ok(v) => v,
+            Err(_) => JSValue::ZERO,
+        }
+    }
+
+    fn create_test_module(global_object: &JSGlobalObject, vitest: bool) -> JsResult<JSValue> {
+        let module = JSValue::create_empty_object(global_object, 26);
+        let base_cfg = BaseScopeCfg { vitest, ..Default::default() };
 
         let test_scope_functions = create_bound(
             global_object,
             ScopeKind::Test,
             JSValue::ZERO,
-            BaseScopeCfg::default(),
+            base_cfg,
             "test",
         )?;
         module.put(global_object, b"test", test_scope_functions);
@@ -347,7 +360,7 @@ pub(crate) mod Jest {
             global_object,
             ScopeKind::Test,
             JSValue::ZERO,
-            BaseScopeCfg { self_mode: ScopeMode::Skip, ..Default::default() },
+            BaseScopeCfg { self_mode: ScopeMode::Skip, ..base_cfg },
             "xtest",
         )?;
         module.put(global_object, b"xtest", xtest_scope_functions);
@@ -357,47 +370,47 @@ pub(crate) mod Jest {
             global_object,
             ScopeKind::Describe,
             JSValue::ZERO,
-            BaseScopeCfg::default(),
+            base_cfg,
             "describe",
         )?;
         module.put(global_object, b"describe", describe_scope_functions);
+        if vitest {
+            module.put(global_object, b"suite", describe_scope_functions);
+        }
 
         let xdescribe_scope_functions = create_bound(
             global_object,
             ScopeKind::Describe,
             JSValue::ZERO,
-            BaseScopeCfg { self_mode: ScopeMode::Skip, ..Default::default() },
+            BaseScopeCfg { self_mode: ScopeMode::Skip, ..base_cfg },
             "xdescribe",
         )?;
         module.put(global_object, b"xdescribe", xdescribe_scope_functions);
 
         // `#[bun_jsc::host_fn]` emits a `__jsc_host_{name}` shim with the raw
         // C-ABI `JSHostFn` signature; pass that to JSFunction::create.
-        module.put(
-            global_object,
-            b"beforeEach",
-            jsc::JSFunction::create(global_object, "beforeEach", generic_hook::__jsc_host_before_each, 1, Default::default()),
-        );
-        module.put(
-            global_object,
-            b"beforeAll",
-            jsc::JSFunction::create(global_object, "beforeAll", generic_hook::__jsc_host_before_all, 1, Default::default()),
-        );
-        module.put(
-            global_object,
-            b"afterAll",
-            jsc::JSFunction::create(global_object, "afterAll", generic_hook::__jsc_host_after_all, 1, Default::default()),
-        );
-        module.put(
-            global_object,
-            b"afterEach",
-            jsc::JSFunction::create(global_object, "afterEach", generic_hook::__jsc_host_after_each, 1, Default::default()),
-        );
-        module.put(
-            global_object,
-            b"onTestFinished",
-            jsc::JSFunction::create(global_object, "onTestFinished", generic_hook::__jsc_host_on_test_finished, 1, Default::default()),
-        );
+        type HostFn = bun_jsc::JSHostFn;
+        let hooks: [(&'static str, HostFn, HostFn); 5] = [
+            ("beforeEach", generic_hook::__jsc_host_before_each, generic_hook::__jsc_host_vitest_before_each),
+            ("beforeAll", generic_hook::__jsc_host_before_all, generic_hook::__jsc_host_vitest_before_all),
+            ("afterAll", generic_hook::__jsc_host_after_all, generic_hook::__jsc_host_vitest_after_all),
+            ("afterEach", generic_hook::__jsc_host_after_each, generic_hook::__jsc_host_vitest_after_each),
+            ("onTestFinished", generic_hook::__jsc_host_on_test_finished, generic_hook::__jsc_host_vitest_on_test_finished),
+        ];
+        for (name, bun_fn, vitest_fn) in hooks {
+            module.put(
+                global_object,
+                name.as_bytes(),
+                jsc::JSFunction::create(global_object, name, if vitest { vitest_fn } else { bun_fn }, 1, Default::default()),
+            );
+        }
+        if vitest {
+            module.put(
+                global_object,
+                b"onTestFailed",
+                jsc::JSFunction::create(global_object, "onTestFailed", generic_hook::__jsc_host_vitest_on_test_failed, 1, Default::default()),
+            );
+        }
         module.put(
             global_object,
             b"setDefaultTimeout",
@@ -588,6 +601,69 @@ pub(crate) fn js_node_test_mark_result(
     Ok(JSValue::UNDEFINED)
 }
 
+/// The vitest test context (`test("x", (ctx) => {})`), created once per sequence.
+pub(crate) fn create_vitest_context(
+    global: &JSGlobalObject,
+    sequence: &super::execution::ExecutionSequence,
+) -> JsResult<JSValue> {
+    let ctx = JSValue::create_empty_object(global, 6);
+    ctx.put(global, b"expect", jsc::codegen::js::get_constructor::<Expect>(global));
+
+    // SAFETY: `test_entry` points at an entry owned by the live BunTest.
+    let name: &[u8] = sequence
+        .test_entry
+        .and_then(|e| unsafe { e.as_ref() }.base.name.as_deref())
+        .unwrap_or(b"");
+    let task = JSValue::create_empty_object(global, 2);
+    task.put(global, b"name", bun_string_jsc::create_utf8_for_js(global, name)?);
+    task.put(global, b"type", bun_string_jsc::create_utf8_for_js(global, b"test")?);
+    ctx.put(global, b"task", task);
+
+    ctx.put(global, b"skip", jsc::JSFunction::create(global, "skip", __jsc_host_vitest_context_skip, 0, Default::default()));
+    ctx.put(
+        global,
+        b"onTestFinished",
+        jsc::JSFunction::create(global, "onTestFinished", generic_hook::__jsc_host_vitest_on_test_finished, 1, Default::default()),
+    );
+    ctx.put(
+        global,
+        b"onTestFailed",
+        jsc::JSFunction::create(global, "onTestFailed", generic_hook::__jsc_host_vitest_on_test_failed, 1, Default::default()),
+    );
+    ctx.put(global, b"signal", jsc::AbortSignal::create(global));
+    Ok(ctx)
+}
+
+/// `context.skip(condition?, note?)`: marks the running test skipped and stops it.
+#[bun_jsc::host_fn]
+fn vitest_context_skip(global: &JSGlobalObject, callframe: &CallFrame) -> JsResult<JSValue> {
+    use super::execution::Result as ExecResult;
+    let [condition] = callframe.arguments_as_array::<1>();
+    if condition.is_boolean() && !condition.to_boolean() {
+        return Ok(JSValue::UNDEFINED);
+    }
+    if let Some(buntest_strong) = bun_test::clone_active_strong() {
+        // SAFETY: single-threaded JS VM; no other borrow of the BunTest is live here.
+        let buntest = unsafe { bun_test::buntest_as_mut(&buntest_strong) };
+        let state = match buntest.execution.on_stack_entry_data.get() {
+            Some(entry_data) => RefDataValue::Execution {
+                group_index: buntest.execution.group_index,
+                entry_data: Some(entry_data),
+            },
+            None => buntest.get_current_state_data(),
+        };
+        if let Some((sequence_ptr, _)) = buntest.execution.get_current_and_valid_execution_sequence(&state) {
+            // SAFETY: NonNull into `execution.sequences`; deref at point-of-use only.
+            let sequence = unsafe { &mut *sequence_ptr.as_ptr() };
+            if sequence.result == ExecResult::Pending {
+                sequence.result = ExecResult::Skip;
+            }
+            sequence.hide_next_error = true;
+        }
+    }
+    Err(global.throw(format_args!("Test skipped")))
+}
+
 pub(crate) mod on_unhandled_rejection {
     use super::*;
 
@@ -746,8 +822,12 @@ pub(crate) fn format_label(
             list.push(b'$');
             list.extend_from_slice(&label[var_start..var_end]);
             idx = var_end;
-        } else if char == b'%' && (idx + 1 < label.len()) && !(args_idx >= function_args.len()) {
-            let current_arg = function_args[args_idx];
+        } else if char == b'%'
+            && (idx + 1 < label.len())
+            // `%#`, `%$` and `%%` consume no argument, so they still apply once every argument is used.
+            && (args_idx < function_args.len() || matches!(label[idx + 1], b'#' | b'$' | b'%'))
+        {
+            let current_arg = function_args.get(args_idx).copied().unwrap_or(JSValue::UNDEFINED);
 
             match label[idx + 1] {
                 b's' => {
@@ -810,6 +890,10 @@ pub(crate) fn format_label(
                 }
                 b'#' => {
                     write!(&mut list, "{}", test_idx).unwrap();
+                    idx += 1;
+                }
+                b'$' => {
+                    write!(&mut list, "{}", test_idx + 1).unwrap();
                     idx += 1;
                 }
                 b'%' => {

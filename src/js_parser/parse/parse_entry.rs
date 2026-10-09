@@ -2225,6 +2225,7 @@ impl<'a> Parser<'a> {
                 if item.path.text == b"bun:test"
                     || item.path.text == b"@jest/globals"
                     || item.path.text == b"vitest"
+                    || item.path.text == b"bun:vitest"
                 {
                     if let Some(cache) = p.options.features.runtime_transpiler_cache_mut() {
                         // If we rewrote import paths, we need to disable the runtime transpiler cache
