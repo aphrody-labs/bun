@@ -6,17 +6,11 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": [
-      "bun"
-    ],
-    "lib": [
-      "ESNext"
-    ]
+    "allowImportingTsExtensions": true,
+    "types": [],
+    "typeRoots": ["../bun-types/node_modules/@types"],
+    "paths": { "bun": ["../bun-types/bun.d.ts"] },
+    "lib": ["ESNext"]
   },
-  "include": [
-    "src/**/*",
-    "runtime.d.ts",
-    "examples/**/*",
-    "test/**/*"
-  ]
+  "include": ["src/**/*", "runtime.d.ts", "examples/**/*", "test/**/*", "../bun-types/index.d.ts"]
 }
