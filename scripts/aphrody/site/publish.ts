@@ -3,7 +3,7 @@
 // run réussi d'aphrody-perf.yml (gh), releases GitHub, build.ts de l'arbre extrait, puis envoi par tar sur
 // `ssh <host>` dans <base>/releases/<UTC>-<sha12> et bascule atomique de <base>/current (5 releases gardées).
 //
-//   bun scripts/aphrody/site/publish.ts [--ref origin/main] [--to ssh:dbfr | local:<base>] [--keep 5]
+//   bun scripts/aphrody/site/publish.ts [--git <checkout du fork>] [--ref origin/main] [--to ssh:dbfr | local:<base>] [--keep 5]
 //       [--perf <dossier> | --no-perf] [--offline] [--dry-run]
 //   bun scripts/aphrody/site/publish.ts rollback [--to ...] [--release <id>]   # défaut : la release précédente
 //   bun scripts/aphrody/site/publish.ts status [--to ...]
@@ -36,7 +36,13 @@ export const releaseId = (sha: string, now = new Date()) =>
 const shq = (s: string) => `'${s.replaceAll("'", `'\\''`)}'`;
 
 /** Script shell de bascule : vérifie site.json, flip atomique de current, purge au-delà de `keep`, journal. */
-export function flipScript(base: string, id: string, keep: number, note: string, log = true): string {
+export function flipScript(
+  base: string,
+  id: string,
+  keep: number,
+  note: string,
+  log = true,
+): string {
   return `set -eu
 base=${shq(base)}; id=${shq(id)}
 test -f "$base/releases/$id/site.json" || { echo "release incomplète : $id" >&2; exit 1; }
@@ -51,8 +57,14 @@ readlink "$base/current"`;
 }
 
 function run(cmd: string[], opts: { cwd?: string; stdin?: Blob | "inherit" } = {}): string {
-  const r = Bun.spawnSync(cmd, { cwd: opts.cwd, stdin: opts.stdin ?? "ignore", stdout: "pipe", stderr: "pipe" });
-  if (!r.success) throw new Error(`${cmd.slice(0, 3).join(" ")} : ${r.stderr.toString().trim() || r.exitCode}`);
+  const r = Bun.spawnSync(cmd, {
+    cwd: opts.cwd,
+    stdin: opts.stdin ?? "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (!r.success)
+    throw new Error(`${cmd.slice(0, 3).join(" ")} : ${r.stderr.toString().trim() || r.exitCode}`);
   return r.stdout.toString().trim();
 }
 
@@ -66,7 +78,10 @@ function listReleases(target: Target): { current: string; releases: string[] } {
     target,
     `base=${shq(target.base)}; readlink "$base/current" 2>/dev/null || echo; ls -1 "$base/releases" 2>/dev/null | grep -v '^\\.' | sort || true`,
   ).split("\n");
-  return { current: (out[0] ?? "").replace(/^releases\//, ""), releases: out.slice(1).filter(Boolean) };
+  return {
+    current: (out[0] ?? "").replace(/^releases\//, ""),
+    releases: out.slice(1).filter(Boolean),
+  };
 }
 
 async function latestPerf(dir: string): Promise<string | undefined> {
@@ -97,7 +112,7 @@ async function publish(args: string[], target: Target) {
     const i = args.indexOf(name);
     return i >= 0 ? args[i + 1] : undefined;
   };
-  const repoDir = resolve(import.meta.dir, "..", "..", "..");
+  const repoDir = resolve(option("--git") ?? join(import.meta.dir, "..", "..", ".."));
   const ref = option("--ref") ?? "origin/main";
   const keep = Number(option("--keep") ?? 5);
   if (ref.startsWith("origin/")) run(["git", "-C", repoDir, "fetch", "-q", "origin", ref.slice(7)]);
@@ -121,7 +136,16 @@ async function publish(args: string[], target: Target) {
     if (!archive.success) throw new Error(`git archive : ${archive.stderr.toString()}`);
     run(["tar", "-x", "-C", src], { stdin: new Blob([archive.stdout]) });
 
-    const build = ["bun", join(src, "scripts/aphrody/site/build.ts"), "--src", src, "--out", out, "--commit", sha];
+    const build = [
+      "bun",
+      join(src, "scripts/aphrody/site/build.ts"),
+      "--src",
+      src,
+      "--out",
+      out,
+      "--commit",
+      sha,
+    ];
     let perf = option("--perf");
     let perfRun: string | undefined;
     if (!perf && !args.includes("--no-perf")) {
@@ -150,7 +174,13 @@ async function publish(args: string[], target: Target) {
     );
     const current = remote(
       target,
-      flipScript(target.base, id, keep, `publication ${REPO}@${sha.slice(0, 12)}`, target.kind === "ssh"),
+      flipScript(
+        target.base,
+        id,
+        keep,
+        `publication ${REPO}@${sha.slice(0, 12)}`,
+        target.kind === "ssh",
+      ),
     );
     console.log(`publié : ${current} (${(tar.stdout.length / 1048576).toFixed(1)} Mio compressés)`);
   } finally {
@@ -161,12 +191,19 @@ async function publish(args: string[], target: Target) {
 function rollback(args: string[], target: Target) {
   const i = args.indexOf("--release");
   const { current, releases } = listReleases(target);
-  const to = i >= 0 ? args[i + 1]! : releases.filter(r => r < current).at(-1);
-  if (!to || !releases.includes(to)) throw new Error(`aucune release cible (courante ${current || "aucune"})`);
+  const to = i >= 0 ? args[i + 1]! : releases.filter((r) => r < current).at(-1);
+  if (!to || !releases.includes(to))
+    throw new Error(`aucune release cible (courante ${current || "aucune"})`);
   console.log(
     remote(
       target,
-      flipScript(target.base, to, Number.MAX_SAFE_INTEGER, `rollback depuis ${current}`, target.kind === "ssh"),
+      flipScript(
+        target.base,
+        to,
+        Number.MAX_SAFE_INTEGER,
+        `rollback depuis ${current}`,
+        target.kind === "ssh",
+      ),
     ),
   );
 }
