@@ -87,7 +87,6 @@ const rustIdentifierPaths: Record<string, string> = {
   "linux/seccomp.rs": "runtime/linux/seccomp.rs",
   "linux/sysctl.rs": "runtime/linux/sysctl.rs",
   "graph_native.rs": "runtime/graph_native.rs",
-  "vfs_native.rs": "runtime/vfs_native.rs",
   "windows/com.rs": "runtime/windows/com.rs",
   "windows/host.rs": "runtime/windows/host.rs",
   "dotnet/host.rs": "runtime/dotnet/host.rs",

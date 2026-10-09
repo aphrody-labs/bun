@@ -80,7 +80,6 @@ bun_lsp.workspace = true
 bun_md.workspace = true
 bun_no_window.workspace = true
 bun_graph.workspace = true
-bun_vfs = { workspace = true, features = ["identifiers"] }
 bun_host.workspace = true
 bun_mcp.workspace = true
 bun_options_types.workspace = true

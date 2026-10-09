@@ -6,7 +6,7 @@
 
 use std::ffi::OsString;
 use std::hash::Hasher;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use bun_core::Global;
 
@@ -30,7 +30,7 @@ fn archive() -> &'static [u8] {
         static COPY: std::sync::OnceLock<Vec<u8>> = std::sync::OnceLock::new();
         COPY.get_or_init(|| {
             let codegen = std::str::from_utf8(bun_core::build_options::CODEGEN_PATH).unwrap_or_default();
-            let path = Path::new(codegen).join("agent-plugin.bin");
+            let path = std::path::Path::new(codegen).join("agent-plugin.bin");
             std::fs::read(&path).unwrap_or_else(|e| {
                 super::msvc_command::fail(format_args!("{}: {e} (run the codegen step of the build)", path.display()))
             })

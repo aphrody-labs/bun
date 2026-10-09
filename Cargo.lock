@@ -2116,7 +2116,6 @@ dependencies = [
  "bun_uws",
  "bun_uws_sys",
  "bun_valkey",
- "bun_vfs",
  "bun_vt",
  "bun_watcher",
  "bun_which",
