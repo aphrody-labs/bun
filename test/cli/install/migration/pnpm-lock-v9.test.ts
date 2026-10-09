@@ -1156,6 +1156,69 @@ importers:
       expect(install.exitCode).toBe(0);
     });
 
+    // Base UI shape: pnpm links `workspace:*` to the package's publishConfig.directory, and the
+    // workspace overrides use versioned and parent selectors.
+    test.concurrent("workspace: linked to publishConfig.directory, selector overrides kept", async () => {
+      using dir = tempDir("pnpm-v9-publish-directory-link", {
+        "package.json": JSON.stringify({ name: "root", private: true }),
+        "pnpm-workspace.yaml": `packages:
+  - packages/*
+  - test/*
+overrides:
+  brace-expansion@1: '1.1.21'
+  js-yaml@4: '^5.4.2'
+  lerna>nx: '~23.2.1'
+`,
+        "packages/lib/package.json": JSON.stringify({
+          name: "lib",
+          version: "1.0.0",
+          publishConfig: { directory: "build" },
+        }),
+        "packages/lib/build/package.json": JSON.stringify({ name: "lib", version: "1.0.0" }),
+        "test/size/package.json": JSON.stringify({
+          name: "size",
+          private: true,
+          dependencies: { lib: "workspace:*" },
+        }),
+        "pnpm-lock.yaml": `lockfileVersion: '9.0'
+
+overrides:
+  brace-expansion@1: 1.1.21
+  js-yaml@4: ^5.4.2
+  lerna>nx: ~23.2.1
+
+importers:
+
+  .: {}
+
+  packages/lib: {}
+
+  test/size:
+    dependencies:
+      lib:
+        specifier: workspace:*
+        version: link:../../packages/lib/build
+`,
+      });
+
+      const { stderr, exitCode } = await migrate(String(dir));
+
+      expect(stderr).not.toContain("non-existent");
+      expect(stderr).toContain("migrated lockfile from pnpm-lock.yaml");
+      expect(exitCode).toBe(0);
+
+      const pkg = await Bun.file(join(String(dir), "package.json")).json();
+      expect(pkg.overrides).toEqual({
+        "brace-expansion@1": "1.1.21",
+        "js-yaml@4": "^5.4.2",
+        "lerna>nx": "~23.2.1",
+      });
+
+      const bunLock = await bunLockOf(String(dir));
+      expect(bunLock).toContain(`"lib": ["lib@workspace:packages/lib"]`);
+      expect(bunLock).not.toContain("packages/lib/build");
+    });
+
     test.concurrent("allowBuilds and onlyBuiltDependencies become trustedDependencies", async () => {
       using dir = tempDir("pnpm-v9-allow-builds", {
         "package.json": JSON.stringify({ name: "root", private: true }),

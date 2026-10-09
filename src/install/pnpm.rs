@@ -1036,6 +1036,24 @@ pub(crate) fn migrate_pnpm_lockfile<'a>(
                                     }
                                 }
 
+                                // pnpm links `workspace:` to the package's `publishConfig.directory`.
+                                if let Some(&same_name) =
+                                    lockfile.workspace_paths.get(&dep.name_hash)
+                                {
+                                    let mut workspace_path_buf =
+                                        bun_paths::AutoAbsPath::init_top_level_dir();
+                                    let _ = workspace_path_buf
+                                        .append(same_name.slice(string_bytes!(lockfile)));
+                                    let ws = workspace_path_buf.slice();
+                                    let link = link_path_buf.slice();
+                                    if link.len() > ws.len()
+                                        && bun_paths::is_sep_any(link[ws.len()])
+                                        && strings::eql_long(&link[..ws.len()], ws, true)
+                                    {
+                                        continue 'next_dep;
+                                    }
+                                }
+
                                 return Err(
                                     MigratePnpmLockfileError::NonExistentWorkspaceDependency,
                                 );
