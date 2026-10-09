@@ -16,6 +16,7 @@ pub(crate) mod clipboard;
 pub(crate) mod eventlog;
 pub(crate) mod folders;
 pub(crate) mod jobs;
+pub(crate) mod ntfs;
 pub(crate) mod process;
 pub(crate) mod registry;
 pub(crate) mod services;
@@ -23,6 +24,7 @@ pub(crate) mod storage;
 pub(crate) mod system;
 pub(crate) mod toast;
 pub(crate) mod toolchain;
+pub(crate) mod wintrust;
 pub(crate) mod wsl;
 
 use core::ffi::c_void;

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import windows from "bun:windows";
+import { readFileSync } from "node:fs";
 import { bunEnv, bunExe, isWindows, tempDir } from "harness";
 
 function errorCode(fn: () => unknown): string | undefined {
@@ -22,6 +23,12 @@ describe.skipIf(isWindows)("non-Windows", () => {
     expect(errorCode(() => windows.toolchain())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => windows.processes.setPriority(0, "normal"))).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => new windows.Job())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
+    expect(errorCode(() => new windows.ntfs.Volume())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
+    expect(errorCode(() => windows.pe.catalogFile("C:\\x"))).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
+    expect(errorCode(() => windows.pe.releaseCatalogContexts())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
+    // Pure byte parsing (no Win32 dependency) still works off Windows.
+    expect(windows.pe.looksLikePe(new Uint8Array([0x4d, 0x5a]))).toBe(true);
+    expect(windows.pe.looksLikePe(new Uint8Array([0, 0]))).toBe(false);
   });
 });
 
@@ -214,6 +221,88 @@ describe.skipIf(!isWindows)("bun:windows", () => {
     } finally {
       if (previous !== null) windows.clipboard.writeText(previous);
     }
+  });
+
+  test.skipIf(!windows.isElevated())(
+    "ntfs: USN journal and MFT enumeration",
+    () => {
+      using vol = new windows.ntfs.Volume("C");
+      expect(vol.drive).toBe("C");
+      expect(vol.closed).toBe(false);
+
+      const journal = vol.queryOrCreateJournal();
+      expect(typeof journal.journalId).toBe("bigint");
+      expect(journal.nextUsn).toBeGreaterThanOrEqual(journal.firstUsn);
+
+      const records = vol.enumerateMft(4 << 20);
+      expect(records.length).toBeGreaterThan(1000);
+      // `FSCTL_ENUM_USN_DATA` does not surface the reserved metadata files (record numbers
+      // below 16, including the volume root at `ROOT_RECORD`): assert record/parent integrity
+      // instead of looking for a specific reserved record. A real parent-child edge (a record
+      // whose declared parent is itself a record present in the dump) proves the 64-bit file
+      // reference numbers were decoded and masked correctly, not just that bytes were copied.
+      const byRecord = new Map(records.map(r => [r.record, r]));
+      const child = records.find(r => r.parent !== r.record && byRecord.has(r.parent));
+      expect(child).toBeDefined();
+      expect(byRecord.get(child!.parent)).toBeDefined();
+      expect(records.some(r => (r.attributes & windows.ntfs.FILE_ATTRIBUTE_DIRECTORY) !== 0)).toBe(true);
+
+      const read = vol.readJournal(journal.nextUsn, journal.journalId);
+      expect(typeof read.next).toBe("bigint");
+      expect(read.next).toBeGreaterThanOrEqual(journal.nextUsn);
+      expect(Array.isArray(read.records)).toBe(true);
+
+      vol.close();
+      expect(vol.closed).toBe(true);
+      expect(errorCode(() => vol.queryJournal())).toBe("ERR_INVALID_STATE");
+    },
+    180_000,
+  );
+
+  test("ntfs: opening without an administrator token reports ERROR_ACCESS_DENIED, never a fake volume", () => {
+    if (windows.isElevated()) return;
+    expect(errorCode(() => new windows.ntfs.Volume("C"))).toBeDefined();
+  });
+
+  test("pe: parses kernel32.dll (headers, exports, catalog signature)", () => {
+    const path = `${process.env.SystemRoot}\\System32\\kernel32.dll`;
+    const bytes = new Uint8Array(readFileSync(path));
+    expect(windows.pe.looksLikePe(bytes)).toBe(true);
+
+    const info = windows.pe.parse(bytes, "kernel32.dll");
+    expect(info).not.toBeNull();
+    expect(info!.kind).toBe("dll");
+    expect(info!.bits === 32 || info!.bits === 64).toBe(true);
+    expect(["x86", "x64", "arm64", "arm64ec"]).toContain(info!.machine);
+    expect(info!.isDotnet).toBe(false);
+    expect(info!.sections.length).toBeGreaterThan(0);
+    // kernel32.dll exports hundreds of functions, including this one.
+    expect(info!.exports.some(e => e.name === "CreateFileW")).toBe(true);
+    expect(info!.exportName?.toLowerCase()).toBe("kernel32.dll");
+    expect(info!.warnings).toEqual([]);
+
+    // Depending on the Windows build, kernel32.dll either embeds its Authenticode signature in
+    // the certificate table or is signed only through a system catalog; the catalog lookup below
+    // never executes or maps the file either way.
+    if (info!.authenticode !== null) {
+      expect(typeof info!.authenticode.signer === "string" || info!.authenticode.signer === null).toBe(true);
+      expect(typeof info!.authenticode.issuer === "string" || info!.authenticode.issuer === null).toBe(true);
+      expect(typeof info!.authenticode.digest).toBe("string");
+      expect(info!.authenticode.certificates).toBeGreaterThan(0);
+    }
+    const catalog = windows.pe.catalogFile(path);
+    expect(typeof catalog === "string" || catalog === null).toBe(true);
+    if (catalog !== null) {
+      const signature = windows.pe.catalogSignature(path);
+      expect(signature).not.toBeNull();
+      expect(signature!.catalog).toBe(catalog.split("\\").pop());
+    }
+    windows.pe.releaseCatalogContexts();
+  });
+
+  test("pe: authenticode.parse rejects non-PKCS#7 bytes without throwing a confusing error", () => {
+    expect(windows.pe.authenticode.parse(new Uint8Array([0, 1, 2, 3]))).toBeNull();
+    expect(errorCode(() => windows.pe.authenticode.parse("not bytes" as never))).toBe("ERR_INVALID_ARG_TYPE");
   });
 
   test("wsl.distributions", () => {

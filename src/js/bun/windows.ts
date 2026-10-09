@@ -53,6 +53,18 @@ const wslDistributionsNative = $newRustFunction("windows/host.rs", "jsWslDistrib
 const storageDrivesNative = $newRustFunction("windows/host.rs", "jsStorageDrives", 0);
 const memoryStatusNative = $newRustFunction("windows/host.rs", "jsMemoryStatus", 0);
 const toolchainNative = $newRustFunction("windows/host.rs", "jsToolchain", 4);
+const ntfsVolumeOpenNative = $newRustFunction("windows/host.rs", "jsNtfsVolumeOpen", 1);
+const ntfsVolumeCloseNative = $newRustFunction("windows/host.rs", "jsNtfsVolumeClose", 1);
+const ntfsJournalQueryNative = $newRustFunction("windows/host.rs", "jsNtfsJournalQuery", 1);
+const ntfsJournalCreateNative = $newRustFunction("windows/host.rs", "jsNtfsJournalCreate", 3);
+const ntfsMftEnumerateNative = $newRustFunction("windows/host.rs", "jsNtfsMftEnumerate", 2);
+const ntfsJournalReadNative = $newRustFunction("windows/host.rs", "jsNtfsJournalRead", 4);
+const wintrustCatalogFileNative = $newRustFunction("windows/host.rs", "jsWintrustCatalogFile", 1);
+const wintrustReleaseCatalogContextsNative = $newRustFunction(
+  "windows/host.rs",
+  "jsWintrustReleaseCatalogContexts",
+  0,
+);
 
 function unsupportedError() {
   const error = new Error("bun:windows is only available on Windows");
@@ -616,6 +628,256 @@ const memory = Object.freeze({
   },
 });
 
+// NTFS: USN journal query/create/read and MFT enumeration (FSCTL_QUERY_USN_JOURNAL,
+// FSCTL_CREATE_USN_JOURNAL, FSCTL_READ_USN_JOURNAL, FSCTL_ENUM_USN_DATA). Opening `\\.\X:`
+// requires an administrator token (elevated session or a SYSTEM task); without it `Volume.open`
+// throws with the Win32 `ERROR_ACCESS_DENIED` code, never a fake result.
+
+const FILE_ATTRIBUTE_DIRECTORY = 0x10;
+/**
+ * MFT record number 5 is the root directory of every NTFS volume. `FSCTL_ENUM_USN_DATA` does not
+ * surface the reserved metadata files (record numbers below 16, including this one): use this
+ * constant to recognize a parent reference to the root, not to find the root itself through
+ * {@link NtfsVolume.enumerateMft}.
+ */
+const NTFS_ROOT_RECORD = 5;
+
+function decodeJournal(json) {
+  const j = JSON.parse(json);
+  return {
+    journalId: BigInt(j.journalId),
+    firstUsn: BigInt(j.firstUsn),
+    nextUsn: BigInt(j.nextUsn),
+    lowestValidUsn: BigInt(j.lowestValidUsn),
+    maxUsn: BigInt(j.maxUsn),
+    maximumSize: BigInt(j.maximumSize),
+  };
+}
+
+function decodeUsnRecord(r) {
+  return {
+    major: r.major,
+    frn: BigInt(r.frn),
+    parentFrn: BigInt(r.parentFrn),
+    record: r.record,
+    parentRecord: r.parentRecord,
+    usn: BigInt(r.usn),
+    timestamp: BigInt(r.timestamp),
+    reason: r.reason,
+    attributes: r.attributes,
+    name: r.name,
+  };
+}
+
+const ntfsVolumeRegistry = new FinalizationRegistry(id => ntfsVolumeCloseNative(id));
+
+/** An open `\\.\<drive>:` volume handle: USN journal and MFT access. */
+class NtfsVolume {
+  #id;
+  #drive;
+
+  constructor(drive = "C") {
+    ensureSupported();
+    validateString(drive, "drive");
+    this.#drive = drive.replace(/:$/, "").toUpperCase();
+    this.#id = ntfsVolumeOpenNative(this.#drive);
+    ntfsVolumeRegistry.register(this, this.#id, this);
+  }
+
+  get drive() {
+    return this.#drive;
+  }
+
+  get closed() {
+    return this.#id === undefined;
+  }
+
+  #handle() {
+    if (this.#id === undefined) throw $ERR_INVALID_STATE("Volume is closed");
+    return this.#id;
+  }
+
+  /** `USN_JOURNAL_DATA_V0` of this volume's USN journal. Throws when none exists. */
+  queryJournal() {
+    return decodeJournal(ntfsJournalQueryNative(this.#handle()));
+  }
+
+  /** Creates the USN journal (default 32 MiB, 4 MiB delta); a no-op if one already exists. */
+  createJournal(options) {
+    let maximumSize = 32n * 1024n * 1024n;
+    let allocationDelta = 4n * 1024n * 1024n;
+    if (options !== undefined) {
+      validateObject(options, "options");
+      if (options.maximumSize !== undefined) maximumSize = BigInt(options.maximumSize);
+      if (options.allocationDelta !== undefined) allocationDelta = BigInt(options.allocationDelta);
+    }
+    ntfsJournalCreateNative(this.#handle(), maximumSize.toString(), allocationDelta.toString());
+  }
+
+  /** Queries the journal, creating it when the volume has none yet. */
+  queryOrCreateJournal() {
+    try {
+      return this.queryJournal();
+    } catch (e) {
+      // ERROR_JOURNAL_NOT_ACTIVE (1179) or ERROR_JOURNAL_DELETE_IN_PROGRESS (1178).
+      if (e?.winError !== 1179 && e?.winError !== 1178) throw e;
+      this.createJournal();
+      return this.queryJournal();
+    }
+  }
+
+  /**
+   * Enumerates every MFT record (hidden and system entries included) as `{ record, parent,
+   * attributes, name }`. Metadata only: names, parents and attributes, never file contents.
+   */
+  enumerateMft(bufferBytes = 4 << 20) {
+    validateInteger(bufferBytes, "bufferBytes", 4096, MAX_UINT32);
+    const raw = JSON.parse(ntfsMftEnumerateNative(this.#handle(), bufferBytes));
+    const out = new Array(raw.length);
+    for (let i = 0; i < raw.length; i++) {
+      const [record, parent, attributes, name] = raw[i];
+      out[i] = { record, parent, attributes, name };
+    }
+    return out;
+  }
+
+  /**
+   * Reads the journal from `startUsn` without waiting: `{ records, next }`. A thrown
+   * `ERROR_JOURNAL_ENTRY_DELETED` (1181) means the checkpoint fell out of the journal; the
+   * caller should requery and rescan.
+   */
+  readJournal(startUsn, journalId, bufferBytes = 1 << 20) {
+    validateInteger(bufferBytes, "bufferBytes", 4096, MAX_UINT32);
+    const raw = JSON.parse(
+      ntfsJournalReadNative(this.#handle(), BigInt(startUsn).toString(), BigInt(journalId).toString(), bufferBytes),
+    );
+    return { records: raw.records.map(decodeUsnRecord), next: BigInt(raw.next) };
+  }
+
+  close() {
+    if (this.#id === undefined) return;
+    ntfsVolumeRegistry.unregister(this);
+    ntfsVolumeCloseNative(this.#id);
+    this.#id = undefined;
+  }
+
+  [Symbol.dispose]() {
+    this.close();
+  }
+}
+
+const ntfs = Object.freeze({
+  FILE_ATTRIBUTE_DIRECTORY,
+  ROOT_RECORD: NTFS_ROOT_RECORD,
+  Volume: NtfsVolume,
+});
+
+// PE/Authenticode/catalog: pure byte parsing of PE32/PE32+ images (`internal/pe`,
+// `internal/authenticode`) plus a native wintrust `CryptCATAdmin*` lookup for files that are
+// signed through a system catalog rather than an embedded certificate. Nothing here maps or
+// executes the image: no `LoadLibrary`, no WinRT activation, no `DllMain`.
+
+function parsePe(bytes, fileName = "") {
+  if (!ArrayBuffer.isView(bytes)) throw $ERR_INVALID_ARG_TYPE("bytes", "Uint8Array", bytes);
+  validateString(fileName, "fileName");
+  const pe = require("internal/pe");
+  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return pe.parsePe(pe.memorySource(u8), fileName);
+}
+
+function looksLikePe(bytes) {
+  if (!ArrayBuffer.isView(bytes)) throw $ERR_INVALID_ARG_TYPE("bytes", "Uint8Array", bytes);
+  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return require("internal/pe").looksLikePe(u8);
+}
+
+function parseAuthenticode(bytes) {
+  if (!ArrayBuffer.isView(bytes)) throw $ERR_INVALID_ARG_TYPE("bytes", "Uint8Array", bytes);
+  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return require("internal/authenticode").parseAuthenticode(u8);
+}
+
+function parseSignedData(bytes) {
+  if (!ArrayBuffer.isView(bytes)) throw $ERR_INVALID_ARG_TYPE("bytes", "Uint8Array", bytes);
+  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return require("internal/authenticode").parseSignedData(u8);
+}
+
+/** ApiSet schema v6 (Windows 10+, `.apiset` section of apisetschema.dll): contract -> host modules. */
+function parseApiSetSchema(bytes) {
+  if (!ArrayBuffer.isView(bytes)) throw $ERR_INVALID_ARG_TYPE("bytes", "Uint8Array", bytes);
+  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return require("internal/pe").parseApiSetSchema(u8);
+}
+
+/** Contract key of an imported module: `api-ms-win-core-file-l1-2-4.dll` -> `api-ms-win-core-file-l1-2`. */
+function apiSetKey(moduleName) {
+  validateString(moduleName, "moduleName");
+  return require("internal/pe").apiSetKey(moduleName);
+}
+
+/**
+ * Full path of the system catalog that lists `path` (SHA-256 database first, then SHA-1), or
+ * `null` when no catalog lists it. A failed lookup means "no catalog", never "signed": callers
+ * must not infer trust from the absence of an error. Slow (a synchronous catalog-database query):
+ * callers that scan many files should run it out of their hot path.
+ */
+function wintrustCatalogFile(path) {
+  validateString(path, "path");
+  ensureSupported();
+  return wintrustCatalogFileNative(path);
+}
+
+const catalogSigners = new Map();
+
+/** Signer declared by a catalog file's own PKCS#7 envelope (cached: a few thousand catalogs sign the whole system). */
+function catalogSigner(file) {
+  let signer = catalogSigners.get(file);
+  if (signer === undefined) {
+    let parsed = null;
+    try {
+      const fs = require("node:fs");
+      parsed = require("internal/authenticode").parseSignedData(new Uint8Array(fs.readFileSync(file)));
+    } catch {
+      parsed = null;
+    }
+    signer = { signer: parsed?.signer ?? null, issuer: parsed?.issuer ?? null, digest: parsed?.digest ?? null };
+    catalogSigners.set(file, signer);
+  }
+  return signer;
+}
+
+/** Catalog that lists `path` and the catalog's own declared signer, or `null` when unlisted. */
+function catalogSignature(path) {
+  const file = wintrustCatalogFile(path);
+  if (file === null) return null;
+  const path_ = require("node:path");
+  return {
+    catalog: path_.basename(file),
+    ...(file.includes("\\") ? catalogSigner(file) : { signer: null, issuer: null, digest: null }),
+  };
+}
+
+/** Releases the cached SHA-256/SHA-1 catalog-admin contexts (see {@link wintrustCatalogFile}). */
+function releaseCatalogContexts() {
+  ensureSupported();
+  wintrustReleaseCatalogContextsNative();
+}
+
+const pe = Object.freeze({
+  parse: parsePe,
+  looksLikePe,
+  parseApiSetSchema,
+  apiSetKey,
+  authenticode: Object.freeze({
+    parse: parseAuthenticode,
+    parseSignedData,
+  }),
+  catalogFile: wintrustCatalogFile,
+  catalogSignature,
+  releaseCatalogContexts,
+});
+
 // toolchain: Visual Studio / Build Tools, MSVC, Windows SDK and UCRT (same discovery as `bun msvc`)
 
 function deepFreeze(value) {
@@ -726,6 +988,8 @@ export default {
   wsl,
   storage,
   memory,
+  ntfs,
+  pe,
   toolchain,
   family,
   families,

@@ -85,6 +85,7 @@ service.release();
 - `src/runtime/windows/sys/folders.rs`: Known folders (`SHGetKnownFolderPath`). The name → GUID table lives in `windows.ts`.
 - `src/runtime/windows/sys/jobs.rs`: Job Objects. JS holds an id; the handles stay in this module so a stale or forged id can never close an unrelated handle of the process.
 - `src/runtime/windows/sys/mod.rs`: Win32 side of `bun:windows`, free of JSC types so it can be exercised on its own.
+- `src/runtime/windows/sys/ntfs.rs`: NTFS volume access: USN journal query/create/read and MFT enumeration through `FSCTL_QUERY_USN_JOURNAL`, `FSCTL_CREATE_USN_JOURNAL`, `FSCTL_READ_USN_JOURNAL` and `FSCTL_ENUM_USN_DATA`.
 - `src/runtime/windows/sys/process.rs`: Process snapshot (Toolhelp), image path and termination.
 - `src/runtime/windows/sys/registry.rs`: Registry: read, write, enumerate and delete keys and values (advapi32).
 - `src/runtime/windows/sys/services.rs`: Service Control Manager: list, query, start and stop services (advapi32).
@@ -92,6 +93,7 @@ service.release();
 - `src/runtime/windows/sys/system.rs`: Windows version, edition and machine information.
 - `src/runtime/windows/sys/toast.rs`: Toast notifications through WinRT `Windows.UI.Notifications`, with `combase.dll` loaded on first use.
 - `src/runtime/windows/sys/toolchain.rs`: Native Windows toolchain discovery shared by `bun msvc` and `bun:windows` `toolchain()`. The resolution (every Visual Studio / Build Tools instance, MSVC toolset, Windows SDK, UCRT, .NET Framework SDK, LLVM, the developer scripts and the vcvars environment) is `vendor/find-msvc-tools` (`toolchain`…
+- `src/runtime/windows/sys/wintrust.rs`: System-catalog signature lookup through `wintrust.dll`'s `CryptCATAdmin*` family.
 - `src/runtime/windows/sys/wsl.rs`: Registered WSL distributions, read from `HKCU\...\Lxss` (no `wsl.exe` round-trip).
 - `src/windows_sys/externs.rs`: Raw Win32 extern fn declarations + tier-0 Win32 typedefs. `bun_sys::windows` re-exports FROM here (see the layering doc). This crate is a tier-0 leaf: it depends on nothing above `libuv_sys`.
 
