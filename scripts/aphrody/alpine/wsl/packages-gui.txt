@@ -25,6 +25,10 @@ libxrandr
 libxi
 fontconfig
 font-noto
+# Bun.WebView's Chrome backend (src/runtime/webview/ChromeProcess.rs finds
+# /usr/bin/chromium-browser): the WebOS (packages/bun-webos) window through WSLg.
+chromium
+font-noto-emoji
 # Probes: eglinfo/glxinfo (mesa-utils), vulkaninfo (vulkan-tools).
 mesa-utils
 vulkan-tools
