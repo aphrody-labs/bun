@@ -1,13 +1,26 @@
 # @aphrody/bun-dotnet
 
-Hébergeur .NET 10 dans Bun, conçu autour de [`node-api-dotnet`](https://github.com/microsoft/node-api-dotnet) (MIT) et de l’API Node-API 10 de Bun.
+.NET 10 hosted in Bun. `dotnet/` is [Node API for .NET](https://github.com/microsoft/node-api-dotnet)
+(MIT, Copyright (c) Microsoft Corporation), absorbed from aphrody-labs/node-api-dotnet: the C#
+Node-API layer and AOT host (`src/NodeApi`), the CLR host (`src/NodeApi.DotNetHost`), the
+source/type-definition generator (`src/NodeApi.Generator`), the JS package (`src/node-api-dotnet`),
+tests, examples and docs.
 
-```ts
-import { loadAssembly } from "@aphrody/bun-dotnet";
-
-const dotnet = await loadAssembly("./bin/Debug/net10.0/Exemple.dll");
-const instance = new dotnet.Exemple.Calculateur();
-console.log(instance.Add(20, 22));
+```sh
+bun run build   # dotnet pack: NuGet + npm packages in dotnet/out/pkg (npm side packed by bun pm pack)
+bun run test    # loads test/fixture in the CLR from Bun
 ```
 
-Les méthodes statiques et d’instance, événements, `Task`/`Promise` et callbacks JS suivent le marshalling de Microsoft. `build`, `run`, `newProject` et `test` pilotent le SDK `dotnet`; `generateTypes({ assembly, output })` produit des déclarations TypeScript. Le SDK .NET 10 doit être disponible dans le `PATH`.
+```ts
+import { loadAssembly, generateTypes } from "@aphrody/bun-dotnet";
+
+const { Interop } = loadAssembly("./bin/Interop.dll");
+Interop.Calc.Add(20, 22); // 42
+await Interop.Calc.EchoAsync("bun"); // Task<string> -> Promise<string>
+await generateTypes({
+  assembly: "./bin/Interop.dll",
+  output: "./Interop.d.ts",
+});
+```
+
+Documentation: `docs/runtime/dotnet.mdx`.

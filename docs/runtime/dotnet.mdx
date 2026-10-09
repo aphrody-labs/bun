@@ -1,0 +1,89 @@
+---
+title: .NET
+description: Load .NET 10 assemblies in Bun and call them from JavaScript with @aphrody/bun-dotnet
+---
+
+`@aphrody/bun-dotnet` hosts the .NET runtime inside the Bun process through [Node API for .NET](https://github.com/microsoft/node-api-dotnet) (MIT), whose code lives in `packages/bun-dotnet/dotnet`. Bun loads its native host, `Microsoft.JavaScript.NodeApi.node`, as a Node-API addon. That host starts the CLR and exposes .NET types to JavaScript.
+
+Build the packages once with the .NET 10 SDK:
+
+```sh terminal icon="terminal"
+cd packages/bun-dotnet
+bun run build # dotnet pack: npm and NuGet packages in dotnet/out/pkg
+```
+
+`bun run build` publishes the native AOT host, builds the managed host and the generator, and packs the npm packages with `bun pm pack`.
+
+---
+
+## Load an assembly
+
+```ts
+import { loadAssembly } from "@aphrody/bun-dotnet";
+
+const { Interop } = loadAssembly("./bin/Interop.dll");
+
+Interop.Calc.Add(20, 22); // 42, static method
+const counter = new Interop.Counter(5); // constructor
+counter.Increment(); // instance method
+counter.Value; // 6, property
+```
+
+The first call loads the CLR. One .NET version runs per process, and `net10.0` is the default. It can roll forward to a newer installed runtime. `host(targetFramework)` returns the host object of `node-api-dotnet`. That object has `load(assemblyNameOrPath)`, the `resolving` event, and the loaded namespaces as properties.
+
+Dynamic loading keeps the .NET member names, such as `Add` and `Value`.
+
+---
+
+## Tasks, delegates and events
+
+| .NET                   | JavaScript      |
+| ---------------------- | --------------- |
+| `Task`                 | `Promise<void>` |
+| `Task<T>`              | `Promise<T>`    |
+| `Func<…>`, `Action<…>` | function        |
+| `int`, `double`, …     | `number`        |
+| `string`               | `string`        |
+
+```ts
+await Interop.Calc.EchoAsync("bun"); // "bun!": the Task<string> is a Promise
+Interop.Calc.Apply(x => x * 3, 14); // 42: a JS function passed as Func<int, int>
+```
+
+.NET events are not projected as JavaScript events. A .NET method can subscribe a delegate that calls a JavaScript function:
+
+```cs
+public void OnChanged(Action<int> listener) => Changed += (_, value) => listener(value);
+```
+
+```ts
+counter.OnChanged(value => console.log("changed", value));
+```
+
+---
+
+## TypeScript declarations
+
+`generateTypes` runs `node-api-dotnet-generator` in Bun and writes the declarations of an assembly:
+
+```ts
+import { generateTypes } from "@aphrody/bun-dotnet";
+
+await generateTypes({ assembly: "./bin/Interop.dll", output: "./Interop.d.ts" });
+```
+
+The output declares the assembly's namespaces inside `declare module 'node-api-dotnet'`. Pass `module: "esm"` for ES module declarations and `references` for dependent assemblies.
+
+---
+
+## The dotnet CLI
+
+`dotnet(args)`, `build`, `run`, `newProject` and `test` run the `dotnet` CLI and resolve to `{ stdout, stderr, exitCode }`.
+
+```ts
+import { build } from "@aphrody/bun-dotnet";
+
+await build(["-c", "Release"], { cwd: "./Interop" });
+```
+
+The reference for marshalling, threading, streams and the C# `[JSExport]` module scenario is in `packages/bun-dotnet/dotnet/docs`.

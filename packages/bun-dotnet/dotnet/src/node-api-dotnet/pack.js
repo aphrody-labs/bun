@@ -1,12 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-const nodeMajorVersion = process.versions.node.split('.')[0];
-if (nodeMajorVersion < 16) {
-  console.error('Node.js version 16 or later is required.');
-  process.exit(1);
-}
-
 const packageName = process.argv[2];
 const configuration = ['Debug', 'Release'].find(
   (c) => c.toLowerCase() == (process.argv[3] ?? '').toLowerCase());
@@ -14,7 +8,7 @@ const rids = process.argv.slice(4);
 
 if (!packageName || !configuration || rids.length === 0) {
   console.error('Missing command arguments.');
-  console.error('Usage: node pack.js package-name Debug|Release rids...');
+  console.error('Usage: bun pack.js package-name Debug|Release rids...');
   process.exit(1);
 }
 
@@ -40,7 +34,7 @@ if (packageName === 'node-api-dotnet') {
   packGeneratorPackage();
 } else {
   console.error('Invalid package name.');
-  console.error('Usage: node pack.js package-name Debug|Release rids...');
+  console.error('Usage: bun pack.js package-name Debug|Release rids...');
   process.exit(1);
 }
 
@@ -83,8 +77,8 @@ function packMainPackage() {
     `NodeApi/${assemblyName}.node`,
   );
 
-  // npm pack
-  const command = `npm pack --pack-destination "${outPkgDir}"`;
+  // bun pm pack
+  const command = `bun pm pack --destination "${outPkgDir}"`;
   childProcess.execSync(command, { cwd: packageStageDir, stdio: 'inherit' });
   const packageFilePath = path.join(outPkgDir, `${packageName}-${packageVersion}.tgz`);
   console.log(`Successfully created package '${packageFilePath}'`);
@@ -117,8 +111,8 @@ function packGeneratorPackage() {
     `NodeApi.Generator/System.Reflection.MetadataLoadContext.dll`
   );
 
-  // npm pack
-  const command = `npm pack --pack-destination "${outPkgDir}"`;
+  // bun pm pack
+  const command = `bun pm pack --destination "${outPkgDir}"`;
   childProcess.execSync(command, { cwd: packageStageDir, stdio: 'inherit' });
   const packageFilePath = path.join(outPkgDir, `${packageName}-${buildVersion}.tgz`)
   console.log(`Successfully created package '${packageFilePath}'`);

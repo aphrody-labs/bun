@@ -1,7 +1,7 @@
 {
   "name": "@aphrody/bun-dotnet",
   "version": "0.1.0",
-  "description": "Interop .NET 10 dans Bun via Node API for .NET",
+  "description": ".NET 10 hosted in Bun: node-api-dotnet (MIT) absorbed in dotnet/, built by dotnet pack with Bun as the JS runtime",
   "license": "MIT",
   "type": "module",
   "main": "./src/index.ts",
@@ -9,13 +9,16 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "files": ["src", "README.md"],
+  "files": [
+    "src",
+    "README.md",
+    "dotnet/out/pkg/node-api-dotnet",
+    "dotnet/out/pkg/node-api-dotnet-generator"
+  ],
   "scripts": {
-    "test": "bun test ./test"
-  },
-  "dependencies": {
-    "node-api-dotnet": "0.9.27",
-    "node-api-dotnet-generator": "0.9.27"
+    "build": "dotnet pack dotnet -c Release",
+    "test": "bun test ./test",
+    "test:dotnet": "dotnet test dotnet/test/NodeApi.Test.csproj -f net10.0"
   },
   "engines": {
     "bun": ">=1.4.3"

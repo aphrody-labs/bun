@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: Apache-2.0
+[workspace]
+resolver = "3"
+members = ["crates/vu", "crates/vu-runtime"]
+# External sidecar workspaces are built independently with their own locks.
+exclude = ["vendor"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.98"
+license = "Apache-2.0"
+repository = "https://github.com/aphrody-labs/bun"
+authors = ["aphrody-dev <contact@aphrody.com>"]
+version = "0.1.0"
+
+[workspace.dependencies]
+# The pinned PyO3 fork is an external checkout under ignored vendor/; the standalone runtime
+# uses its existing Py_BytesMain embedding contract.
+pyo3 = { path = "vendor/pyo3", version = "=0.29.3", default-features = false, features = ["macros", "auto-initialize"] }
+vu-runtime = { path = "crates/vu-runtime" }
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.dev]
+debug = "line-tables-only"
