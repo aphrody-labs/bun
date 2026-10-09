@@ -6379,7 +6379,7 @@ CPP_DECL WebCore::DOMFormData* WebCore__DOMFormData__fromJS(JSC::EncodedJSValue 
 // formatters read its entries through this instead.
 CPP_DECL JSC::EncodedJSValue WebCore__DOMFormData__toJSObject(JSC::JSGlobalObject* arg0, JSC::EncodedJSValue JSValue1)
 {
-    auto* formData = JSC::jsDynamicCast<WebCore::JSDOMFormData*>(JSC::JSValue::decode(JSValue1));
+    auto* formData = dynamicDowncast<WebCore::JSDOMFormData>(JSC::JSValue::decode(JSValue1));
     if (!formData)
         return JSValue::encode(jsUndefined());
     return JSValue::encode(WebCore::getInternalProperties(arg0->vm(), arg0, formData));

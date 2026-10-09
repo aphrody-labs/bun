@@ -1820,12 +1820,6 @@ impl Expect {
     }
 
 
-    // extern shim emitted by `#[bun_jsc::JsClass]` codegen (TypeClass__construct/__call); bare `#[host_fn]` cannot target an associated fn without a receiver.
-    pub(crate) fn not_implemented_static_fn(global_this: &JSGlobalObject, _: &CallFrame) -> JsResult<JSValue> {
-        Err(global_this.throw(format_args!("Not implemented")))
-    }
-
-
     pub(crate) fn post_match(&self, global_this: &JSGlobalObject) {
         global_this.bun_vm().auto_garbage_collect();
     }
