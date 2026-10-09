@@ -1,0 +1,17 @@
+[package]
+name = "bun_no_window"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lib]
+path = "lib.rs"
+
+[lints]
+workspace = true
+
+[features]
+# `command` and `NoWindow` for `std::process::Command`. The freestanding
+# Windows shim turns it off and keeps `creation_flags`.
+default = ["std"]
+std = []

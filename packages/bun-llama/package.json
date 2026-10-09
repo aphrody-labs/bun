@@ -1,0 +1,13 @@
+{
+  "name": "bun-llama",
+  "version": "0.1.0",
+  "description": "llama.cpp for Bun through bun:ffi: GGUF loading, tokenization and streaming CPU inference",
+  "type": "module",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build:native": "bun native/build.ts"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,28 @@
+[package]
+name = "bun_lsp"
+version.workspace = true
+edition.workspace = true
+publish = false
+license = "Apache-2.0"
+
+[lib]
+path = "lib.rs"
+
+[lints]
+workspace = true
+
+[features]
+# The code graph of `bun_graph`, which links Bun's C++ objects: on in Bun, off in the tests of this crate.
+graph = ["dep:bun_graph", "dep:ignore"]
+
+[dependencies]
+bun_graph = { workspace = true, optional = true }
+ignore = { version = "0.4.25", optional = true }
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = "1.0.150"
+
+[target.'cfg(windows)'.dependencies]
+bun_windows_sys.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true

@@ -4816,7 +4816,7 @@ fn spawn_sync_inherit_impl(
 
         let mut iter = argv.iter();
         let argv0 = iter.next().ok_or(crate::CrateError::FileNotFound)?;
-        let mut cmd = std::process::Command::new(to_os(argv0.as_ref()));
+        let mut cmd = bun_no_window::command(to_os(argv0.as_ref()));
         for arg in iter {
             cmd.arg(to_os(arg.as_ref()));
         }

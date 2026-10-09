@@ -4,7 +4,7 @@
 use std::fmt::Write as _;
 use std::io::Read;
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::time::{Duration, Instant};
 
 use crate::registry::{Annotations, Args, Context, Output, Tool, ToolError};
@@ -117,7 +117,7 @@ fn exec(ctx: &Context, args: &Args<'_>, argv: &[String]) -> Result<Output, ToolE
     }
     let timeout = Duration::from_millis(args.uint("timeout_ms", 120_000, 600_000).max(1000));
     let exe: PathBuf = std::env::current_exe()?;
-    let mut cmd = Command::new(&exe);
+    let mut cmd = bun_no_window::command(&exe);
     cmd.args(argv)
         .current_dir(&cwd)
         .stdin(Stdio::null())

@@ -2879,7 +2879,7 @@ mod draft {
                     core::ptr::null_mut(),
                     core::ptr::null_mut(),
                     1, // true
-                    0,
+                    bun_no_window::creation_flags(),
                     core::ptr::null_mut(),
                     core::ptr::null(),
                     &mut startup_info,

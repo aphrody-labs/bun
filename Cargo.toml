@@ -20,11 +20,14 @@ members = [
   "src/parsers",
   "src/io",
   "src/libarchive",
+  "src/lsp",
   "src/md",
   "src/graph",
+  "src/host",
   "src/mcp",
-  "src/vfs",
   "src/agent_tools",
+  "src/workspace",
+  "src/vfs",
   "src/paths",
   "src/resolver",
   "src/safety",
@@ -113,6 +116,9 @@ members = [
   "src/react_compiler",
   "src/spawn",
   "src/spawn_sys",
+  "src/no_window",
+  "src/ssh",
+  "src/git",
   "src/bunfig",
 ]
 # `vendor/lolhtml` (the `lol_html` crate) is a non-member path dependency,
@@ -121,7 +127,7 @@ members = [
 # heavy dev-dependencies (criterion, html5ever) never enter `Cargo.lock`.
 # `packages/bun-cosmic` is the libcosmic window helper of `bun:cosmic`: its own
 # workspace and lockfile, because libcosmic is a git dependency.
-exclude = ["vendor", "packages/bun-cosmic", "packages/bun-dotnet-native"]
+exclude = ["vendor", "packages/bun-cosmic", "packages/bun-dotnet-native", "packages/bun-re"]
 
 [workspace.package]
 version = "0.0.0"
@@ -390,11 +396,14 @@ bun_install = { path = "src/install" }
 bun_parsers = { path = "src/parsers" }
 bun_io = { path = "src/io" }
 bun_libarchive = { path = "src/libarchive" }
+bun_lsp = { path = "src/lsp" }
 bun_md = { path = "src/md" }
 bun_graph = { path = "src/graph" }
+bun_host = { path = "src/host" }
 bun_mcp = { path = "src/mcp" }
-bun_vfs = { path = "src/vfs" }
 bun_agent_tools = { path = "src/agent_tools" }
+bun_workspace = { path = "src/workspace" }
+bun_vfs = { path = "src/vfs" }
 bun_paths = { path = "src/paths" }
 bun_resolver = { path = "src/resolver" }
 bun_safety = { path = "src/safety" }
@@ -470,8 +479,11 @@ bun_output_tags = { path = "src/bun_output_tags" }
 bun_patch_jsc = { path = "src/patch_jsc" }
 bun_router = { path = "src/router" }
 bun_shell_parser = { path = "src/shell_parser" }
+bun_ssh = { path = "src/ssh" }
+bun_git = { path = "src/git" }
 bun_spawn = { path = "src/spawn" }
 bun_spawn_sys = { path = "src/spawn_sys" }
+bun_no_window = { path = "src/no_window" }
 bun_tcc_sys = { path = "src/tcc_sys" }
 bun_uws_sys = { path = "src/uws_sys" }
 bun_lsquic_sys = { path = "src/lsquic_sys" }

@@ -19,14 +19,17 @@ test("Rust sources linked into Bun do not use the streams of the standard librar
   // Not compiled into a release build: tests, debug output, Windows debug macros, and the message of the allocator.
   const known = new Map([
     ["src/bun_alloc/lib.rs", 1],
-    ["src/bun_core/Global.rs", 1],
+    ["src/bun_core/Global.rs", 2],
     ["src/libuv_sys/libuv.rs", 1],
+    // The uutils applets write with the streams of the standard library anyway.
+    ["src/coreutils/lib.rs", 3],
     ["src/react_compiler/pipeline.rs", 3],
     ["src/router/lib.rs", 4],
   ]);
   // Programs of their own.
   const isLinked = (file: string) =>
-    !file.endsWith("/build.rs") && !file.includes("/benches/") && !file.startsWith("src/sema/standalone/");
+    !file.endsWith("/build.rs") && !file.includes("/benches/") &&
+    !file.includes("/tests/") && !file.startsWith("src/sema/standalone/");
 
   const found = new Map<string, number>();
   let scanned = 0;

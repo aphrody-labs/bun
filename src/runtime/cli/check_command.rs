@@ -1012,3 +1012,18 @@ fn check_and_report(paths: &Paths, provided: Provided) -> bool {
     Output::flush();
     report.is_ok()
 }
+
+/// The diagnostics of `files` and of what they import, in the project of `cwd`, for `bun lsp`.
+/// `texts` are read in place of the files at those paths. All paths are absolute and native.
+pub(crate) fn check_for_language_server(cwd: &[u8], files: &[Vec<u8>], texts: &[(Vec<u8>, Vec<u8>)]) -> Report {
+    let mut sources = texts.iter().map(|(path, text)| (&path[..], &text[..]));
+    let provided = Provided {
+        already_read: already_read(cwd, &mut sources),
+        ..Default::default()
+    };
+    let paths = Paths::EntryPoints(Entries {
+        paths: files,
+        ..Default::default()
+    });
+    run_quietly(cwd, None, &paths, &[], 0, None, provided, |report| report)
+}

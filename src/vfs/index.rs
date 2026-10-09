@@ -399,10 +399,17 @@ impl Index {
     /// Opens the snapshot of `options.root` (`snapshot`, else [`Index::default_snapshot_path`]) and
     /// brings it up to date, or builds the index when the snapshot is missing, unreadable or was
     /// built with other options; writes the snapshot back when it was built or changed.
-    pub fn load(options: &IndexOptions, snapshot: Option<&Path>, cancel: &AtomicBool) -> Result<(Index, LoadReport)> {
+    pub fn load(
+        options: &IndexOptions,
+        snapshot: Option<&Path>,
+        cancel: &AtomicBool,
+    ) -> Result<(Index, LoadReport)> {
         let root = normalize_root(&options.root)?;
         let root_text = String::from_utf8_lossy(&root).into_owned();
-        let path = snapshot.map_or_else(|| Self::default_snapshot_path(&root_text), Path::to_path_buf);
+        let path = snapshot.map_or_else(
+            || Self::default_snapshot_path(&root_text),
+            Path::to_path_buf,
+        );
         let mut wanted = options.clone();
         wanted.root = PathBuf::from(&root_text);
         let comparable = |options: &IndexOptions| {
@@ -410,9 +417,9 @@ impl Index {
             options.threads = 0;
             serde_json::to_string(&options).unwrap_or_default()
         };
-        let reusable = Index::open(&path)
-            .ok()
-            .filter(|index| index.meta.root == root_text && comparable(&index.meta.options) == comparable(&wanted));
+        let reusable = Index::open(&path).ok().filter(|index| {
+            index.meta.root == root_text && comparable(&index.meta.options) == comparable(&wanted)
+        });
         let (index, reused, refresh) = match reusable {
             Some(mut index) => {
                 index.meta.options.threads = options.threads;
@@ -421,8 +428,14 @@ impl Index {
             }
             None => (Index::build(&wanted, cancel)?, false, None),
         };
-        let changed = refresh.as_ref().is_none_or(|stats| stats.rebuilt || stats.added + stats.removed + stats.updated > 0);
-        let saved_bytes = if changed { Some(index.save(&path)?) } else { None };
+        let changed = refresh
+            .as_ref()
+            .is_none_or(|stats| stats.rebuilt || stats.added + stats.removed + stats.updated > 0);
+        let saved_bytes = if changed {
+            Some(index.save(&path)?)
+        } else {
+            None
+        };
         Ok((
             index,
             LoadReport {

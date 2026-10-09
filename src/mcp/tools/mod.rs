@@ -3,11 +3,15 @@
 
 use crate::registry::Tool;
 
+pub(crate) mod agent;
 pub(crate) mod docs;
 pub(crate) mod graph;
+pub(crate) mod host;
+pub(crate) mod lsp;
 pub(crate) mod memory;
 pub(crate) mod run;
 pub(crate) mod skills;
+pub(crate) mod vfs;
 
 /// Tool slices in `tools/list` order.
 pub(crate) const BUILTIN: &[&[Tool]] = &[
@@ -15,5 +19,9 @@ pub(crate) const BUILTIN: &[&[Tool]] = &[
     skills::TOOLS,
     memory::TOOLS,
     graph::TOOLS,
+    host::TOOLS,
+    vfs::TOOLS,
+    lsp::TOOLS,
     run::TOOLS,
+    agent::TOOLS,
 ];

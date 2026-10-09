@@ -525,8 +525,7 @@ impl CompileC {
             // capture stdout, treat any spawn/exit failure as "not found".
             // `Command::new("xcrun")` does PATH lookup, and
             // /usr/bin is always in PATH on macOS.
-            #[allow(clippy::disallowed_types)]
-            let out = match std::process::Command::new("xcrun")
+            let out = match bun_no_window::command("xcrun")
                 .arg("-sdk")
                 .arg("macosx")
                 .arg("-show-sdk-path")

@@ -1383,12 +1383,13 @@ fn launcher<const MODE: LauncherMode, Ctx: BunCtx>(bun_ctx: Ctx) -> LauncherRet 
                     1, // true
                     // `CREATE_UNICODE_ENVIRONMENT` only when running inside
                     // bun.exe (lpEnvironment is then a UTF-16 block); the
-                    // standalone PE passes a null environment so flags are 0.
-                    if IS_STANDALONE {
-                        0
-                    } else {
-                        0x0000_0400 /* CREATE_UNICODE_ENVIRONMENT */
-                    },
+                    // standalone PE passes a null environment.
+                    bun_no_window::creation_flags()
+                        | if IS_STANDALONE {
+                            0
+                        } else {
+                            0x0000_0400 /* CREATE_UNICODE_ENVIRONMENT */
+                        },
                     if IS_STANDALONE {
                         core::ptr::null_mut()
                     } else {

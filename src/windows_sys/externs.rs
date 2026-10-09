@@ -337,6 +337,17 @@ pub const PIPE_ACCESS_OUTBOUND: DWORD = 0x0000_0002;
 pub const PIPE_TYPE_BYTE: DWORD = 0x0000_0000;
 pub const PIPE_READMODE_BYTE: DWORD = 0x0000_0000;
 pub const PIPE_WAIT: DWORD = 0x0000_0000;
+pub const PIPE_ACCESS_DUPLEX: DWORD = 0x0000_0003;
+pub const PIPE_REJECT_REMOTE_CLIENTS: DWORD = 0x0000_0008;
+pub const PIPE_UNLIMITED_INSTANCES: DWORD = 255;
+pub const FILE_FLAG_FIRST_PIPE_INSTANCE: DWORD = 0x0008_0000;
+/// `ConnectNamedPipe` failed because the client connected between `CreateNamedPipeW` and it.
+pub const ERROR_PIPE_CONNECTED: DWORD = 535;
+
+// `CreateProcessW` dwCreationFlags (`winbase.h`).
+pub const CREATE_NEW_PROCESS_GROUP: DWORD = 0x0000_0200;
+pub const CREATE_BREAKAWAY_FROM_JOB: DWORD = 0x0100_0000;
+pub const CREATE_NO_WINDOW: DWORD = 0x0800_0000;
 
 /// `CreateSymbolicLinkW` dwFlags (`winbase.h`).
 pub const SYMBOLIC_LINK_FLAG_DIRECTORY: DWORD = 0x1;
@@ -942,6 +953,9 @@ pub mod kernel32 {
             nDefaultTimeOut: DWORD,
             lpSecurityAttributes: *mut c_void,
         ) -> HANDLE;
+        /// `ConnectNamedPipe` (`namedpipeapi.h`). Waits for a client of a pipe made by
+        /// `CreateNamedPipeW`; `lpOverlapped` may be null for a pipe without `FILE_FLAG_OVERLAPPED`.
+        pub fn ConnectNamedPipe(hNamedPipe: HANDLE, lpOverlapped: *mut c_void) -> BOOL;
         /// `AddVectoredExceptionHandler` (`errhandlingapi.h`).
         pub fn AddVectoredExceptionHandler(
             First: u32,

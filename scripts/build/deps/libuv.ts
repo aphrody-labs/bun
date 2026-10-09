@@ -52,6 +52,11 @@ export const libuv: Dependency = {
     commit: LIBUV_COMMIT,
   }),
 
+  // win-hide-console-without-console: UV_PROCESS_WINDOWS_HIDE and
+  // UV_PROCESS_WINDOWS_HIDE_CONSOLE add CREATE_NO_WINDOW whenever this process
+  // has no console window, also when stdio is inherited. Otherwise a child of a
+  // service, scheduled task or GUI gets a visible console of its own.
+  //
   // Re-arm the AFD ioctl before poll_cb (matching wepoll's
   // port__update_events_if_polling-before-return). AFD is level-triggered
   // (ReactOS AfdSelect: `Events & FCB->PollState` checked on IRP arrival),
@@ -64,6 +69,7 @@ export const libuv: Dependency = {
     "patches/libuv/win-poll-rearm-before-callback.patch",
     "patches/libuv/win-poll-abort-with-disconnect.patch",
     "patches/libuv/win-allow-wer.patch",
+    "patches/libuv/win-hide-console-without-console.patch",
   ],
 
   build: () => ({

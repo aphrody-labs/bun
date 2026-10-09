@@ -4,7 +4,7 @@ use std::{fs, path::Path, sync::atomic::AtomicBool};
 
 use crate::{
     EditOp, EditPlan, EditStatus, GrepOptions, HitKind, Index, IndexOptions, KindFilter, MatchKind,
-    QueryMode, SearchQuery, SortOrder, SourceChoice, SpanProvider, VfsError, edit, grep,
+    QueryMode, SearchQuery, Session, SortOrder, SourceChoice, SpanProvider, VfsError, edit, grep,
 };
 
 fn write(root: &Path, relative: &str, content: &str) {
@@ -730,4 +730,49 @@ fn load_builds_then_reuses_the_snapshot() {
     };
     let (_, report) = Index::load(&other, Some(&snapshot), &cancel).unwrap();
     assert!(!report.reused);
+}
+
+#[test]
+fn session_routes_json() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("needle.txt"), "alpha beta\n").unwrap();
+    let session = Session::new(None);
+    let cancel = AtomicBool::new(false);
+    let call = |op: &str, input: serde_json::Value| -> serde_json::Value {
+        serde_json::from_str(&session.call(op, &input.to_string(), &cancel).unwrap()).unwrap()
+    };
+    let snapshot = store.path().join("s.bvfs");
+    let loaded = call(
+        "load",
+        serde_json::json!({ "options": { "root": dir.path() }, "snapshot": snapshot }),
+    );
+    let handle = loaded["handle"].as_u64().unwrap();
+    assert_eq!(loaded["report"]["reused"], false);
+    let page = call(
+        "search",
+        serde_json::json!({ "handle": handle, "query": { "query": "needle" } }),
+    );
+    assert_eq!(page["hits"][0]["name"], "needle.txt");
+    let grep = call(
+        "grep",
+        serde_json::json!({ "root": dir.path(), "pattern": "beta" }),
+    );
+    assert_eq!(grep["hits"][0]["line"], 1);
+    assert_eq!(
+        call("close", serde_json::json!({ "handle": handle }))["closed"],
+        true
+    );
+    let error = session
+        .call(
+            "stats",
+            &serde_json::json!({ "handle": handle }).to_string(),
+            &cancel,
+        )
+        .unwrap_err();
+    assert_eq!(error.code(), "ERR_VFS_INVALID");
+    let error = session
+        .call("search", r#"{"handle":1,"bogus":1}"#, &cancel)
+        .unwrap_err();
+    assert_eq!(error.code(), "ERR_VFS_INVALID");
 }

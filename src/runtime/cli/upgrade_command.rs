@@ -1537,6 +1537,24 @@ impl UpgradeCommand {
                         ..Default::default()
                     });
                 }
+
+                // The agent plugin carried by the new executable replaces the installed one, if any
+                // (`bun agent-plugin install --update` does nothing when it was never installed).
+                let agent_plugin_argv: [&[u8]; 5] =
+                    [target_filename.as_bytes(), b"agent-plugin", b"install", b"--update", b"--quiet"];
+                if let Ok(envp) = env_loader.map.create_null_delimited_env_map() {
+                    let _ = spawn_sync::spawn(&spawn_sync::Options {
+                        argv: build_argv(&agent_plugin_argv),
+                        envp: Some(envp.as_ptr().cast::<*const c_char>()),
+                        cwd: Box::<[u8]>::from(target_dirname.as_bytes()),
+                        stdout: spawn_sync::SyncStdio::Buffer,
+                        stderr: spawn_sync::SyncStdio::Buffer,
+                        stdin: spawn_sync::SyncStdio::Ignore,
+                        #[cfg(windows)]
+                        windows: spawn_windows_options(),
+                        ..Default::default()
+                    });
+                }
             }
 
             Output::print_start_end(ctx.start_time, bun_core::time::nano_timestamp());

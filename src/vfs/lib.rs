@@ -67,6 +67,7 @@
 mod edit;
 mod grep;
 mod index;
+mod json;
 #[cfg(windows)]
 mod mft;
 mod search;
@@ -82,6 +83,7 @@ pub use edit::{
 };
 pub use grep::{GrepHit, GrepOptions, GrepPage, grep};
 pub use index::{Index, IndexOptions, IndexStats, LoadReport, RefreshStats, SourceChoice};
+pub use json::Session;
 pub use search::{
     Hit, HitKind, KindFilter, MAX_LIMIT, QueryMode, SearchPage, SearchQuery, SortOrder,
 };
@@ -93,7 +95,12 @@ pub struct OxcIdentifiers;
 
 #[cfg(feature = "identifiers")]
 impl SpanProvider for OxcIdentifiers {
-    fn identifier_spans(&self, path: &str, source: &str, name: &str) -> core::result::Result<Vec<(usize, usize)>, String> {
+    fn identifier_spans(
+        &self,
+        path: &str,
+        source: &str,
+        name: &str,
+    ) -> core::result::Result<Vec<(usize, usize)>, String> {
         bun_graph::extract::typescript::identifier_spans(path, source, name)
     }
 }

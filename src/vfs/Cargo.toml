@@ -13,7 +13,7 @@ path = "lib.rs"
 workspace = true
 
 # Leaf crate on std only (no bun_core/bun_sys), so `cargo test -p bun_vfs` links without Bun's C++
-# objects; `bun_workspace` adds the Oxc identifier matcher and the JSON task routes on top.
+# objects; the `identifiers` feature adds the Oxc identifier matcher of bun_graph.
 [dependencies]
 globset = "0.4.16"
 ignore = "0.4.25"

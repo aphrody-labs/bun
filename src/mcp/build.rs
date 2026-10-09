@@ -4,7 +4,8 @@
     clippy::disallowed_types,
     clippy::disallowed_macros
 )]
-//! Packs `docs/**/*.mdx` and `.claude/skills/**/*.md` into two zstd archives in `OUT_DIR`,
+//! Packs `docs/**/*.mdx` and the skills (`.claude/skills/**/*.md`, overridden per skill by the
+//! agent plugin build in `packages/bun-agent-plugin/dist/claude/skills` when present) into two zstd archives in `OUT_DIR`,
 //! embedded by `embedded.rs`. Layout before compression: `u32 count`, then per entry
 //! `u32 path_len, path, u32 data_len, data` (little endian, `/`-separated relative paths, sorted).
 
@@ -36,10 +37,17 @@ fn collect(root: &Path, dir: &Path, ext: &str, out: &mut Vec<(String, Vec<u8>)>)
     }
 }
 
-fn pack(name: &str, root: &Path, ext: &str) {
-    println!("cargo:rerun-if-changed={}", root.display());
-    let mut files = Vec::new();
-    collect(root, root, ext, &mut files);
+fn pack(name: &str, roots: &[PathBuf], ext: &str) {
+    let mut files: Vec<(String, Vec<u8>)> = Vec::new();
+    for root in roots {
+        println!("cargo:rerun-if-changed={}", root.display());
+        let mut found = Vec::new();
+        collect(root, root, ext, &mut found);
+        let top = |p: &str| p.split('/').next().unwrap_or(p).trim_end_matches(".md").to_owned();
+        let replaced: std::collections::HashSet<String> = found.iter().map(|(p, _)| top(p)).collect();
+        files.retain(|(p, _)| !replaced.contains(&top(p)));
+        files.extend(found);
+    }
     files.sort_by(|a, b| a.0.cmp(&b.0));
     let mut raw = Vec::new();
     raw.extend_from_slice(&u32::try_from(files.len()).unwrap().to_le_bytes());
@@ -57,6 +65,13 @@ fn pack(name: &str, root: &Path, ext: &str) {
 fn main() {
     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let repo = manifest.parent().and_then(Path::parent).expect("repo root");
-    pack("docs.bin.zst", &repo.join("docs"), "mdx");
-    pack("skills.bin.zst", &repo.join(".claude").join("skills"), "md");
+    pack("docs.bin.zst", &[repo.join("docs")], "mdx");
+    pack(
+        "skills.bin.zst",
+        &[
+            repo.join(".claude").join("skills"),
+            repo.join("packages/bun-agent-plugin/dist/claude/skills"),
+        ],
+        "md",
+    );
 }

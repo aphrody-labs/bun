@@ -271,11 +271,7 @@ pub(super) fn inspect(
             }
             parse_source(path, text, limits, cancel)?
         }
-        InspectMode::Binary => {
-            let report = bun_re::triage_bounded(&read.bytes, limits.max_matches)
-                .map_err(|error| WorkspaceError::Native(error.to_string()))?;
-            serde_json::to_value(report)?
-        }
+        InspectMode::Binary => triage(&read.bytes, limits)?,
         InspectMode::Magika => classify(&read.bytes)?,
     };
     check_cancel(cancel)?;
@@ -309,18 +305,14 @@ fn parse_source(path: &Path, text: &str, limits: &Limits, cancel: &AtomicBool) -
     }
 }
 
-#[cfg(feature = "magika")]
-fn classify(bytes: &[u8]) -> Result<Value> {
-    serde_json::to_value(
-        bun_re::magika::classify_bytes(bytes)
-            .map_err(|error| WorkspaceError::Native(error.to_string()))?,
-    )
-    .map_err(WorkspaceError::from)
+fn triage(_bytes: &[u8], _limits: &Limits) -> Result<Value> {
+    Err(WorkspaceError::Unavailable(
+        "binary triage lives in packages/bun-re, outside the bun binary",
+    ))
 }
 
-#[cfg(not(feature = "magika"))]
 fn classify(_bytes: &[u8]) -> Result<Value> {
     Err(WorkspaceError::Unavailable(
-        "Magika requires the qualified native magika feature and ONNX backend",
+        "Magika classification lives in packages/bun-re, outside the bun binary",
     ))
 }

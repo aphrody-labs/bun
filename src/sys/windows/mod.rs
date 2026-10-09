@@ -1523,7 +1523,8 @@ pub(crate) fn spawn_watcher_child(
 
     // The win32 layer exposes these as DWORD constants — assemble the raw mask.
     const CREATE_UNICODE_ENVIRONMENT: DWORD = 0x00000400;
-    let flags: DWORD = CREATE_UNICODE_ENVIRONMENT | EXTENDED_STARTUPINFO_PRESENT;
+    let flags: DWORD =
+        CREATE_UNICODE_ENVIRONMENT | EXTENDED_STARTUPINFO_PRESENT | bun_no_window::creation_flags();
 
     let image_path = exe_path_w();
     let mut wbuf = bun_paths::w_path_buffer_pool::get();

@@ -37,7 +37,7 @@ pub(crate) fn charge(
     name: &'static str,
 ) -> Result<()> {
     counter
-        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |used| {
+        .try_update(Ordering::Relaxed, Ordering::Relaxed, |used| {
             used.checked_add(count).filter(|next| *next <= ceiling)
         })
         .map(|_| ())

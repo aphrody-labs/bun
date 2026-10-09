@@ -36,6 +36,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync } from "node:fs";
 import { basename, dirname, relative, resolve } from "node:path";
 import type { Sources } from "../glob-sources.ts";
+import { inputFiles as agentPluginInputs } from "../../packages/bun-agent-plugin/src/generate.ts";
 import { plan as agentToolsPlan } from "../../src/codegen/generate-agent-tools.ts";
 import { generateBuildOptionsRs } from "./buildOptionsRs.ts";
 import type { CodegenFields } from "./config.ts";
@@ -341,6 +342,7 @@ export function emitCodegen(n: Ninja, cfg: CodegenFields, sources: Sources): Cod
   emitBindgen(ctx);
   emitJsSink(ctx);
   emitObjectLuts(ctx);
+  emitAgentPlugin(ctx);
   emitCompressedEmbeds(ctx);
 
   n.phony("codegen", o.all);
@@ -482,6 +484,7 @@ function emitCompressedEmbeds({ n, cfg, o, dirStamp }: Ctx): void {
       "bun-error/index.js",
       "bun-error/bun-error.css",
       "node-fallbacks/react-refresh.js",
+      "agent-plugin.bin",
     ].map(rel => ({ input: resolve(cfg.codegenDir, rel), name: `codegen/${rel}` })),
   ];
   for (const { input, name } of assets) {
@@ -497,6 +500,29 @@ function emitCompressedEmbeds({ n, cfg, o, dirStamp }: Ctx): void {
     // Debug reads the originals at runtime; only release embeds these.
     o.rustInputs.push(out);
   }
+}
+
+/**
+ * The plugin for Claude Code, Codex and Antigravity/Gemini CLI that `bun agent-plugin` installs, generated from the
+ * repository (skills, docs, CLAUDE.md, memory notes) by packages/bun-agent-plugin and packed into one archive.
+ */
+function emitAgentPlugin({ n, cfg, o, dirStamp }: Ctx): void {
+  const pkg = resolve(cfg.cwd, "packages", "bun-agent-plugin");
+  const cli = resolve(pkg, "src", "cli.ts");
+  const out = resolve(cfg.codegenDir, "agent-plugin.bin");
+  n.build({
+    outputs: [out],
+    rule: "codegen_bun",
+    inputs: [cli],
+    implicitInputs: agentPluginInputs(cfg.cwd, pkg),
+    orderOnlyInputs: [dirStamp],
+    vars: {
+      cwd: cfg.cwd,
+      desc: "agent-plugin.bin",
+      args: shJoin(cfg, [cli, "pack", "--root", cfg.cwd, "--out", out, "--quiet"]),
+    },
+  });
+  o.all.push(out);
 }
 
 function emitRuntimeJs({ n, cfg, o, dirStamp }: Ctx): void {

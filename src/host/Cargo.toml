@@ -1,0 +1,21 @@
+[package]
+name = "bun_host"
+version.workspace = true
+edition.workspace = true
+publish = false
+license = "MIT"
+
+[lib]
+path = "lib.rs"
+
+[lints]
+workspace = true
+
+# Leaf crate on std only (no bun_core/bun_sys), like `bun_vfs`: it runs inside a CLI subcommand and
+# an MCP tool, reads /proc and spawns read-only probes, so `cargo test -p bun_host` links without
+# Bun's C++ objects.
+[dependencies]
+hmac = "0.12.1"
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = { version = "1.0.150", features = ["preserve_order"] }
+sha2 = "0.10.9"

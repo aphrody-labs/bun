@@ -134,8 +134,8 @@ async fn missing_or_stale_expected_hash_never_starts_a_multi_file_edit() -> Resu
     let root = tempfile::tempdir()?;
     let a = root.path().join("a.ts");
     let z = root.path().join("z.ts");
-    write(&a, b"old");
-    write(&z, b"old");
+    write(&a, b"old").unwrap();
+    write(&z, b"old").unwrap();
     let preview = execute(
         root.path(),
         edit(
@@ -167,7 +167,7 @@ async fn missing_or_stale_expected_hash_never_starts_a_multi_file_edit() -> Resu
     ));
     assert_eq!(read(&a)?, b"old");
     assert_eq!(read(&z)?, b"old");
-    write(&z, b"old changed externally");
+    write(&z, b"old changed externally").unwrap();
     assert!(matches!(
         execute(
             root.path(),
@@ -192,7 +192,7 @@ async fn missing_or_stale_expected_hash_never_starts_a_multi_file_edit() -> Resu
 async fn regex_replacement_expands_captures_but_insertions_are_literal() -> Result<()> {
     let root = tempfile::tempdir()?;
     let path = root.path().join("main.ts");
-    write(&path, b"foo42");
+    write(&path, b"foo42").unwrap();
     let preview = execute(
         root.path(),
         edit(

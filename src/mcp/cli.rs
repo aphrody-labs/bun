@@ -33,9 +33,14 @@ Environment: BUN_MCP_PROFILE, BUN_MCP_MAX_TOKENS, BUN_MCP_PAGE_SIZE, BUN_MCP_MEM
 BUN_MCP_SKILLS_PATH, REDIS_URL / VALKEY_URL (shared cache).
 ";
 
-/// Version reported in `serverInfo` and the manifest.
+/// Version reported in `serverInfo` and the manifest: what `bun --version` prints, plus the commit
+/// so that a rebuilt binary at the same version also refreshes the installed entries.
 pub(crate) fn version() -> &'static str {
-    bun_core::Global::package_json_version_with_sha
+    static VERSION: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    VERSION.get_or_init(|| match bun_core::env::GIT_SHA_SHORT {
+        "" => bun_core::Global::display_version.to_owned(),
+        sha => format!("{} ({sha})", bun_core::Global::display_version),
+    })
 }
 
 struct Options {

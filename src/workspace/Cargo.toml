@@ -11,10 +11,6 @@ path = "lib.rs"
 [lints]
 workspace = true
 
-[features]
-default = []
-magika = ["bun-re/magika"]
-
 [dependencies]
 bun_core.workspace = true
 bun_sys.workspace = true
@@ -28,7 +24,9 @@ dunce = "1.0.5"
 ignore = "0.4.25"
 regex = "1.11"
 tokio = { version = "1.53.1", features = ["rt", "sync", "macros"] }
-bun-re = { path = "../../packages/bun-re", default-features = false }
+memchr = "2"
+memmap2 = "0.9"
+bun_glob.workspace = true
 
 [dev-dependencies]
 tempfile = "3.27.0"
@@ -41,4 +39,3 @@ paths = ["packages/infra/workspace/src/code-edit.ts", "packages/infra/workspace/
 parser-owner = "packages/bun-runtime-sdk/crates/yolo-core/src/polyglot.rs"
 parser-owner-revision = "cfbcd9346455264d2b4830b8ad582df5481c4975"
 native-parser-owner = "src/graph/extract"
-binary-owner = "packages/bun-re/src/lib.rs"

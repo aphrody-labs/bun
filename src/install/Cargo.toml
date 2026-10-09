@@ -33,6 +33,7 @@ bun_alloc.workspace = true
 bun_bunfig.workspace = true
 bun_clap.workspace = true
 bun_core.workspace = true
+bun_no_window.workspace = true
 bun_collections.workspace = true
 bun_crash_handler.workspace = true
 bun_dns.workspace = true

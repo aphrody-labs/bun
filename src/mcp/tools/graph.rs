@@ -1,9 +1,10 @@
-//! `graph_query` / `graph_symbols` / `graph_callers`: the native code graph of `bun_graph`
+//! `graph_query` / `graph_symbols` / `graph_callers` / `graph_path` / `graph_community` /
+//! `graph_impact`: the native code graph of `bun_graph`
 //! (Rust, TypeScript/JavaScript and Markdown extractors, the engine behind `bun:graph-index`),
 //! built over the working directory (or `path` under it), kept in memory for the session and in
 //! the result cache across sessions, keyed by a fingerprint of file sizes and mtimes.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt::Write as _;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::{Path, PathBuf};
@@ -12,7 +13,7 @@ use std::sync::{Arc, Mutex};
 use std::time::UNIX_EPOCH;
 
 use bun_graph::api::{
-    GraphDocument, GraphLimits, GraphOperation, GraphRequest, GraphResult, GraphScope,
+    GraphDocument, GraphLimits, GraphNode, GraphOperation, GraphRequest, GraphResult, GraphScope,
     PackageContext, SourceFile,
 };
 use bun_graph::extract::Language;
@@ -26,6 +27,14 @@ struct Built {
     skipped: usize,
     /// `built`, or the cache backend the graph came from.
     origin: &'static str,
+    /// Communities, modularity and the most connected nodes, computed on first use.
+    analyzed: Mutex<Option<Arc<Analyzed>>>,
+}
+
+struct Analyzed {
+    graph: GraphDocument,
+    modularity: f64,
+    god_nodes: Vec<(String, usize)>,
 }
 
 #[derive(Default)]
@@ -171,6 +180,7 @@ fn build(ctx: &Context, args: &Args<'_>) -> Result<Arc<Built>, ToolError> {
         files: files.len(),
         skipped,
         origin,
+        analyzed: Mutex::new(None),
     });
     state
         .graphs
@@ -300,6 +310,277 @@ fn graph_symbols(ctx: &Context, args: &Args<'_>) -> Result<Output, ToolError> {
     Ok(Output::text(out))
 }
 
+/// Ids of the nodes named `name`: an exact id, or a label equal to it or ending in `::name` / `.name`.
+fn resolve<'g>(g: &'g GraphDocument, name: &str) -> Vec<&'g str> {
+    let lower = name.to_lowercase();
+    let (colons, dot) = (format!("::{lower}"), format!(".{lower}"));
+    g.nodes
+        .iter()
+        .filter(|n| {
+            let label = n.label.to_lowercase();
+            n.id == name || label == lower || label.ends_with(&colons) || label.ends_with(&dot)
+        })
+        .map(|n| n.id.as_str())
+        .collect()
+}
+
+fn not_found(name: &str) -> Output {
+    Output::error(format!(
+        "No node named \"{name}\"; find the exact name with graph_symbols."
+    ))
+}
+
+fn graph_path(ctx: &Context, args: &Args<'_>) -> Result<Output, ToolError> {
+    let (from, to) = (args.str("from")?, args.str("to")?);
+    let built = build(ctx, args)?;
+    let g = &*built.graph;
+    let Some(from_id) = resolve(g, from).first().copied() else {
+        return Ok(not_found(from));
+    };
+    let Some(to_id) = resolve(g, to).first().copied() else {
+        return Ok(not_found(to));
+    };
+    let request = GraphRequest {
+        scope: scope(),
+        limits: GraphLimits::default(),
+        operation: GraphOperation::Path {
+            graph: g.clone(),
+            from: from_id.to_owned(),
+            to: to_id.to_owned(),
+            directed: args.bool("directed", false),
+            relations: args.strings("relations"),
+        },
+    };
+    let response = bun_graph::execute(request, &AtomicBool::new(false))?;
+    let GraphResult::Path { hops } = response.result else {
+        return Err(ToolError::Failed(
+            "graph path returned another operation".into(),
+        ));
+    };
+    let by_id: HashMap<&str, &GraphNode> = g.nodes.iter().map(|n| (n.id.as_str(), n)).collect();
+    let mut out = header(&built);
+    let Some(hops) = hops else {
+        let _ = writeln!(out, "no path from {from_id} to {to_id}");
+        return Ok(Output::text(out));
+    };
+    let _ = writeln!(
+        out,
+        "{} hops from {from_id} to {to_id}:",
+        hops.len().saturating_sub(1)
+    );
+    for hop in &hops {
+        if let Some(edge) = &hop.edge {
+            let arrow = if hop.forward == Some(false) { "<-" } else { "->" };
+            let _ = writeln!(
+                out,
+                "  {arrow} {} ({})",
+                edge.relation,
+                location(&edge.source_file, &edge.source_location)
+            );
+        }
+        let node = by_id.get(hop.node.as_str());
+        let _ = writeln!(
+            out,
+            "- {} {}",
+            node.map_or(hop.node.as_str(), |n| n.label.as_str()),
+            node.map(|n| location(&n.source_file, &n.source_location))
+                .unwrap_or_default()
+        );
+    }
+    Ok(Output::text(out))
+}
+
+fn analyze(built: &Built) -> Result<Arc<Analyzed>, ToolError> {
+    let mut slot = built.analyzed.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(a) = &*slot {
+        return Ok(Arc::clone(a));
+    }
+    let request = GraphRequest {
+        scope: scope(),
+        limits: GraphLimits::default(),
+        operation: GraphOperation::Analyze {
+            graph: (*built.graph).clone(),
+            top: 50,
+        },
+    };
+    let response = bun_graph::execute(request, &AtomicBool::new(false))?;
+    let GraphResult::Analyze {
+        graph,
+        modularity,
+        god_nodes,
+    } = response.result
+    else {
+        return Err(ToolError::Failed(
+            "graph analyze returned another operation".into(),
+        ));
+    };
+    let analyzed = Arc::new(Analyzed {
+        graph,
+        modularity,
+        god_nodes: god_nodes.into_iter().map(|n| (n.id, n.degree)).collect(),
+    });
+    *slot = Some(Arc::clone(&analyzed));
+    Ok(analyzed)
+}
+
+fn graph_community(ctx: &Context, args: &Args<'_>) -> Result<Output, ToolError> {
+    let built = build(ctx, args)?;
+    let top = args.uint("top", 15, 200) as usize;
+    let a = analyze(&built)?;
+    let mut degree: HashMap<&str, usize> = HashMap::new();
+    for link in &a.graph.links {
+        *degree.entry(link.source.as_str()).or_default() += 1;
+        *degree.entry(link.target.as_str()).or_default() += 1;
+    }
+    let mut groups: BTreeMap<i64, Vec<&GraphNode>> = BTreeMap::new();
+    for n in &a.graph.nodes {
+        if let Some(c) = n.community {
+            groups.entry(c).or_default().push(n);
+        }
+    }
+    for members in groups.values_mut() {
+        members.sort_by(|x, y| {
+            degree
+                .get(y.id.as_str())
+                .cmp(&degree.get(x.id.as_str()))
+                .then(x.label.cmp(&y.label))
+        });
+    }
+    let mut out = header(&built);
+    if let Some(name) = args.opt_str("node") {
+        let ids = resolve(&a.graph, name);
+        let Some(c) = a
+            .graph
+            .nodes
+            .iter()
+            .find(|n| ids.contains(&n.id.as_str()))
+            .and_then(|n| n.community)
+        else {
+            return Ok(not_found(name));
+        };
+        let members = &groups[&c];
+        let shown = top * 4;
+        let _ = writeln!(
+            out,
+            "community {c} \"{}\" of {name}: {} nodes",
+            members[0].community_name.as_deref().unwrap_or(""),
+            members.len()
+        );
+        for n in members.iter().take(shown) {
+            let _ = writeln!(
+                out,
+                "- {} {}",
+                n.label,
+                location(&n.source_file, &n.source_location)
+            );
+        }
+        if members.len() > shown {
+            let _ = writeln!(out, "… {} more", members.len() - shown);
+        }
+        return Ok(Output::text(out));
+    }
+    let _ = writeln!(
+        out,
+        "{} communities, modularity {:.3}; largest first:",
+        groups.len(),
+        a.modularity
+    );
+    for (c, members) in groups.iter().take(top) {
+        let names: Vec<&str> = members.iter().take(6).map(|n| n.label.as_str()).collect();
+        let _ = writeln!(
+            out,
+            "- {c} \"{}\" ({} nodes): {}",
+            members[0].community_name.as_deref().unwrap_or(""),
+            members.len(),
+            names.join(", ")
+        );
+    }
+    let _ = writeln!(out, "\nmost connected nodes:");
+    for (id, d) in a.god_nodes.iter().take(top) {
+        let _ = writeln!(out, "- {id} (degree {d})");
+    }
+    Ok(Output::text(out))
+}
+
+fn graph_impact(ctx: &Context, args: &Args<'_>) -> Result<Output, ToolError> {
+    let symbol = args.str("symbol")?;
+    let depth = args.uint("depth", 3, 8) as usize;
+    let limit = args.uint("limit", 100, 2000) as usize;
+    let mut relations = args.strings("relations");
+    if relations.is_empty() {
+        relations = ["calls", "imports", "imports_from", "references", "method"]
+            .map(String::from)
+            .to_vec();
+    }
+    let built = build(ctx, args)?;
+    let g = &*built.graph;
+    let start = resolve(g, symbol);
+    if start.is_empty() {
+        return Ok(not_found(symbol));
+    }
+    let mut dependents: HashMap<&str, Vec<&str>> = HashMap::new();
+    for link in g.links.iter().filter(|l| relations.contains(&l.relation)) {
+        dependents
+            .entry(link.target.as_str())
+            .or_default()
+            .push(link.source.as_str());
+    }
+    let mut level_of: HashMap<&str, usize> = start.iter().map(|id| (*id, 0)).collect();
+    let mut frontier = start;
+    for level in 1..=depth {
+        let mut next = Vec::new();
+        for id in &frontier {
+            for dep in dependents.get(id).into_iter().flatten() {
+                if !level_of.contains_key(dep) {
+                    level_of.insert(dep, level);
+                    next.push(*dep);
+                }
+            }
+        }
+        if next.is_empty() {
+            break;
+        }
+        frontier = next;
+    }
+    let by_id: HashMap<&str, &GraphNode> = g.nodes.iter().map(|n| (n.id.as_str(), n)).collect();
+    let mut hits: Vec<(usize, &str)> = level_of
+        .iter()
+        .filter(|(_, d)| **d > 0)
+        .map(|(id, d)| (*d, *id))
+        .collect();
+    hits.sort_unstable();
+    let files: BTreeSet<&str> = hits
+        .iter()
+        .filter_map(|(_, id)| by_id.get(id).and_then(|n| n.source_file.as_deref()))
+        .collect();
+    let mut out = header(&built);
+    let _ = writeln!(
+        out,
+        "changing {symbol} can affect {} nodes in {} files (up to {depth} levels over {}):",
+        hits.len(),
+        files.len(),
+        relations.join(",")
+    );
+    for (d, id) in hits.iter().take(limit) {
+        let n = by_id.get(id);
+        let _ = writeln!(
+            out,
+            "- [{d}] {} {}",
+            n.map_or(*id, |n| n.label.as_str()),
+            n.map(|n| location(&n.source_file, &n.source_location))
+                .unwrap_or_default()
+        );
+    }
+    if hits.len() > limit {
+        let _ = writeln!(out, "… {} more (raise `limit`)", hits.len() - limit);
+    }
+    let _ = writeln!(out, "\nfiles:");
+    for f in files.iter().take(limit) {
+        let _ = writeln!(out, "- {f}");
+    }
+    Ok(Output::text(out))
+}
+
 fn graph_callers(ctx: &Context, args: &Args<'_>) -> Result<Output, ToolError> {
     let symbol = args.str("symbol")?;
     let callees = args.opt_str("direction") == Some("callees");
@@ -310,22 +591,9 @@ fn graph_callers(ctx: &Context, args: &Args<'_>) -> Result<Output, ToolError> {
     let limit = args.uint("limit", 50, 1000) as usize;
     let built = build(ctx, args)?;
     let g = &*built.graph;
-    let lower = symbol.to_lowercase();
-    let targets: Vec<&str> = g
-        .nodes
-        .iter()
-        .filter(|n| {
-            n.id == symbol
-                || n.label.to_lowercase() == lower
-                || n.label.to_lowercase().ends_with(&format!("::{lower}"))
-                || n.label.to_lowercase().ends_with(&format!(".{lower}"))
-        })
-        .map(|n| n.id.as_str())
-        .collect();
+    let targets = resolve(g, symbol);
     if targets.is_empty() {
-        return Ok(Output::error(format!(
-            "No node named \"{symbol}\"; find the exact name with graph_symbols."
-        )));
+        return Ok(not_found(symbol));
     }
     let by_id: HashMap<&str, &bun_graph::api::GraphNode> =
         g.nodes.iter().map(|n| (n.id.as_str(), n)).collect();
@@ -428,5 +696,38 @@ pub(crate) const TOOLS: &[Tool] = &[
         ),
         annotations: Annotations::READ_ONLY,
         call: graph_callers,
+    },
+    Tool {
+        name: "graph_path",
+        title: "Path between symbols",
+        description: "Shortest path between two symbols or files of the code graph, with the relation and location of every hop: how A reaches B.",
+        input_schema: schema!(
+            r#""from":{"type":"string","description":"Node label or id"},"to":{"type":"string","description":"Node label or id"},"directed":{"type":"boolean","default":false,"description":"Follow edges in their direction only"},"relations":{"type":"array","items":{"type":"string"}}"#,
+            r#"["from","to"]"#
+        ),
+        annotations: Annotations::READ_ONLY,
+        call: graph_path,
+    },
+    Tool {
+        name: "graph_community",
+        title: "Code communities",
+        description: "Modules of the code found by community detection (Louvain) on the code graph: the largest communities with their main members and the most connected nodes, or with `node` the community of that symbol.",
+        input_schema: schema!(
+            r#""node":{"type":"string","description":"List the community of this symbol"},"top":{"type":"integer","minimum":1,"maximum":200,"default":15}"#,
+            r#"[]"#
+        ),
+        annotations: Annotations::READ_ONLY,
+        call: graph_community,
+    },
+    Tool {
+        name: "graph_impact",
+        title: "Change impact",
+        description: "What depends on a symbol, transitively (callers, importers, references) up to a depth: the nodes and files a change to it can affect.",
+        input_schema: schema!(
+            r#""symbol":{"type":"string","description":"Node label or id"},"depth":{"type":"integer","minimum":1,"maximum":8,"default":3},"relations":{"type":"array","items":{"type":"string"},"description":"Default: calls, imports, imports_from, references, method"},"limit":{"type":"integer","minimum":1,"maximum":2000,"default":100}"#,
+            r#"["symbol"]"#
+        ),
+        annotations: Annotations::READ_ONLY,
+        call: graph_impact,
     },
 ];

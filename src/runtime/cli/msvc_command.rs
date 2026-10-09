@@ -44,15 +44,13 @@ pub(crate) fn is_bun_argv0(name: &[u8]) -> bool {
 
 pub(crate) fn fail(message: core::fmt::Arguments<'_>) -> ! {
     use std::io::Write;
-    let _ = writeln!(std::io::stderr().lock(), "error: {message}");
+    let _ = writeln!(bun_sys::FileWriter(bun_sys::Fd::stderr()), "error: {message}");
     Global::exit(1);
 }
 
 pub(crate) fn out(bytes: &[u8]) {
     use std::io::Write;
-    let mut stdout = std::io::stdout().lock();
-    let _ = stdout.write_all(bytes);
-    let _ = stdout.flush();
+    let _ = bun_sys::FileWriter(bun_sys::Fd::stdout()).write_all(bytes);
 }
 
 #[cold]

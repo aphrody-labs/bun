@@ -1,0 +1,26 @@
+--- a/src/win/process.c
++++ b/src/win/process.c
+@@ -1076,12 +1076,17 @@
+     process_flags |= EXTENDED_STARTUPINFO_PRESENT;
+   } else if ((options->flags & UV_PROCESS_WINDOWS_HIDE_CONSOLE) ||
+       (options->flags & UV_PROCESS_WINDOWS_HIDE)) {
+-    /* Avoid creating console window if stdio is not inherited. */
+-    for (i = 0; i < options->stdio_count; i++) {
+-      if (options->stdio[i].flags & UV_INHERIT_FD)
+-        break;
+-      if (i == options->stdio_count - 1)
+-        process_flags |= CREATE_NO_WINDOW;
++    /* Avoid creating console window if stdio is not inherited, or if this
++     * process has no console window of its own for the child to share. */
++    if (GetConsoleWindow() == NULL) {
++      process_flags |= CREATE_NO_WINDOW;
++    } else {
++      for (i = 0; i < options->stdio_count; i++) {
++        if (options->stdio[i].flags & UV_INHERIT_FD)
++          break;
++        if (i == options->stdio_count - 1)
++          process_flags |= CREATE_NO_WINDOW;
++      }
+     }
+   }
+   if ((options->flags & UV_PROCESS_WINDOWS_HIDE_GUI) ||

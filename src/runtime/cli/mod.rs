@@ -320,8 +320,18 @@ pub(crate) mod python_compile;
 pub(crate) mod run_command;
 #[path = "uv_command.rs"]
 pub(crate) mod uv_command;
+#[path = "mcp_command.rs"]
+pub(crate) mod mcp_command;
+#[path = "agent_plugin_command.rs"]
+pub(crate) mod agent_plugin_command;
 #[path = "msvc_command.rs"]
 pub(crate) mod msvc_command;
+#[path = "ssh_command.rs"]
+pub(crate) mod ssh_command;
+#[path = "host_command.rs"]
+pub(crate) mod host_command;
+#[path = "lsp_command.rs"]
+pub(crate) mod lsp_command;
 #[path = "winmd_command.rs"]
 pub(crate) mod winmd_command;
 
@@ -689,9 +699,13 @@ pub(crate) mod help_command {
   <b><blue>patch <d>\\<pkg\\><r>                    Prepare a package for patching
   <b><blue>pm <d>\\<subcommand\\><r>                Additional package management utilities
   <b><blue>uv <d>\\<command\\><r>                   Manage Python packages and projects with UV
+  <b><blue>agent-plugin <d>[install]<r>         Install Bun's plugin into Claude Code, Codex and Antigravity
+  <b><blue>ssh <d>\\<host\\> [command]<r>           SSH client, copies, forwards and server (system OpenSSH or built in)
   <b><blue>msvc <d>\\<command\\><r>                 Find MSVC and the Windows SDK, print or run with their environment
+  <b><blue>lsp <d>[query]<r>                    Language server for TypeScript, Python, Rust and C/C++
   <b><blue>winmd <d>\\<options\\><r>                Generate Rust or bun:ffi bindings from Windows metadata
   <b><blue>dotnet <d>\\<command\\><r>               Run the .NET SDK (dotnet) inside Bun
+  <b><blue>mcp <d>[install]<r>                  Model Context Protocol server for coding agents
   <b><blue>info<r>      <d>{:<16}<r>     Display package metadata from the registry
   <b><blue>why<r>       <d>{:<16}<r>     Explain why a package is installed
 
@@ -1315,10 +1329,31 @@ pub(crate) mod command {
             let argv0 = argv.get(0).map(bun_core::ZStr::as_bytes).unwrap_or(b"");
             let first = argv.get(1).map(bun_core::ZStr::as_bytes);
             let be_bun = || bun_core::env_var::feature_flag::BUN_BE_BUN::get().unwrap_or(false);
+            if let Some(invocation) = super::mcp_command::Invocation::from_argv(argv0, first)
+                .or_else(|| (first == Some(b"mcp") && be_bun()).then_some(super::mcp_command::Invocation::Bun))
+            {
+                super::mcp_command::exec(invocation);
+            }
+            if let Some(invocation) = super::agent_plugin_command::Invocation::from_argv(argv0, first).or_else(|| {
+                (first == Some(b"agent-plugin") && be_bun()).then_some(super::agent_plugin_command::Invocation::Bun)
+            }) {
+                super::agent_plugin_command::exec(invocation);
+            }
             if let Some(invocation) = super::msvc_command::Invocation::from_argv(argv0, first)
                 .or_else(|| (first == Some(b"msvc") && be_bun()).then_some(super::msvc_command::Invocation::Bun))
             {
                 super::msvc_command::exec(invocation);
+            }
+            if let Some(invocation) = super::ssh_command::Invocation::from_argv(argv0, first, be_bun) {
+                super::ssh_command::exec(invocation);
+            }
+            if let Some(invocation) = super::host_command::Invocation::from_argv(argv0, first)
+                .or_else(|| (first == Some(b"host") && be_bun()).then_some(super::host_command::Invocation::Bun))
+            {
+                super::host_command::exec(invocation);
+            }
+            if first == Some(b"lsp") && (super::lsp_command::is_bun(argv0) || be_bun()) {
+                super::lsp_command::exec();
             }
             if let Some(invocation) = super::winmd_command::Invocation::from_argv(argv0, first)
                 .or_else(|| (first == Some(b"winmd") && be_bun()).then_some(super::winmd_command::Invocation::Bun))

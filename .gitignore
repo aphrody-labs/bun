@@ -152,6 +152,7 @@ codegen-for-zig-team.tar.gz
 !/vendor/uv/
 !/vendor/find-msvc-tools/
 !/vendor/windows-rs/
+!/vendor/russh-sftp/
 
 # Dependencies (before CMake)
 # These can be removed in the far future
