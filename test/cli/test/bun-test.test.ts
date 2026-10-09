@@ -2120,3 +2120,113 @@ describe.concurrent("test file discovery (scanner)", () => {
     expect(exitCode).toBe(0);
   });
 });
+
+describe.concurrent("@jest-environment docblock", () => {
+  // A minimal stand-in for jsdom and happy-dom: what the test runner reads from a window.
+  const fakeWindow = (title: string) => /* js */ `
+    class FakeEvent { constructor(type) { this.type = type; } }
+    class Window {
+      constructor(options) {
+        this.document = { title: ${JSON.stringify(title)} };
+        this.HTMLElement = class HTMLElement {};
+        this.Event = FakeEvent;
+        this.Array = function FakeArray() {};
+        this.location = { href: options.url };
+        this._internal = true;
+        this.window = this;
+      }
+      addEventListener(type, listener) { (this.listeners ??= []).push(listener); }
+      dispatchEvent(event) { for (const listener of this.listeners ?? []) listener(event); return true; }
+      close() { globalThis.closedWindows = (globalThis.closedWindows ?? 0) + 1; }
+    }
+  `;
+
+  test("installs the window of jsdom or happy-dom for the file and removes it after", async () => {
+    using dir = tempDir("jest-environment-docblock", {
+      "node_modules/jsdom/package.json": `{ "name": "jsdom", "main": "index.js" }`,
+      "node_modules/jsdom/index.js": `${fakeWindow("jsdom")}
+        exports.JSDOM = class JSDOM { constructor(html, options) { this.window = new Window(options); } };`,
+      "node_modules/happy-dom/package.json": `{ "name": "happy-dom", "main": "index.js" }`,
+      "node_modules/happy-dom/index.js": `${fakeWindow("happy-dom")}
+        exports.Window = Window;`,
+      "1-jsdom.test.js": `/**
+         * @jest-environment jsdom
+         */
+        import { expect, test } from "bun:test";
+        test("jsdom window", () => {
+          expect(document.title).toBe("jsdom");
+          expect(window.document).toBe(document);
+          expect(location.href).toBe("http://localhost/");
+          expect(new HTMLElement()).toBeInstanceOf(window.HTMLElement);
+          expect(Event).toBe(window.Event);
+          expect(Array).toBe([].constructor);
+          expect(typeof _internal).toBe("undefined");
+          let dispatched;
+          addEventListener("resize", event => (dispatched = event.type));
+          dispatchEvent(new Event("resize"));
+          expect(dispatched).toBe("resize");
+        });`,
+      "2-node.test.js": `import { expect, test } from "bun:test";
+        test("no window", () => {
+          expect(typeof document).toBe("undefined");
+          expect(typeof window).toBe("undefined");
+          expect(typeof location).toBe("undefined");
+          expect(Event.name).toBe("Event");
+          expect(globalThis.closedWindows).toBe(1);
+        });`,
+      "3-happy-dom.test.js": `// @vitest-environment happy-dom
+        import { expect, test } from "bun:test";
+        test("happy-dom window", () => {
+          expect(document.title).toBe("happy-dom");
+          expect(window.document).toBe(document);
+        });`,
+    });
+
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "test", "./1-jsdom.test.js", "./2-node.test.js", "./3-happy-dom.test.js"],
+      env: bunEnv,
+      cwd: String(dir),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
+
+    expect(stderr).toContain(" 3 pass");
+    expect(stderr).toContain(" 0 fail");
+    expect(exitCode).toBe(0);
+  });
+
+  test("finds jsdom through jest-environment-jsdom, and fails the file when the package is missing", async () => {
+    using dir = tempDir("jest-environment-docblock-nested", {
+      "node_modules/jest-environment-jsdom/package.json": `{ "name": "jest-environment-jsdom", "main": "index.js" }`,
+      "node_modules/jest-environment-jsdom/index.js": `module.exports = {};`,
+      "node_modules/jest-environment-jsdom/node_modules/jsdom/package.json": `{ "name": "jsdom", "main": "index.js" }`,
+      "node_modules/jest-environment-jsdom/node_modules/jsdom/index.js": `${fakeWindow("nested jsdom")}
+        exports.JSDOM = class JSDOM { constructor(html, options) { this.window = new Window(options); } };`,
+      "jsdom.test.js": `/** @jest-environment jsdom */
+        import { expect, test } from "bun:test";
+        test("nested jsdom window", () => {
+          expect(document.title).toBe("nested jsdom");
+        });`,
+      "happy-dom.test.js": `/** @jest-environment happy-dom */
+        import { test } from "bun:test";
+        test("never runs", () => {});`,
+    });
+
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "test", "./jsdom.test.js", "./happy-dom.test.js"],
+      env: bunEnv,
+      cwd: String(dir),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
+
+    expect(stderr).toContain(
+      `Test environment "happy-dom" needs "happy-dom" or "@happy-dom/jest-environment" installed`,
+    );
+    expect(stderr).toContain(" 1 pass");
+    expect(stderr).toContain(" 1 fail");
+    expect(exitCode).toBe(1);
+  });
+});

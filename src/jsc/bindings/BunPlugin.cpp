@@ -1127,6 +1127,21 @@ extern "C" [[ZIG_EXPORT(nothrow)]] void JSMock__forgetPendingModulePatches(Zig::
     forEachPendingModulePatch(globalObject, [](JSModuleMock* mock) { mock->hasPendingPatch = false; });
 }
 
+// Installs the window of a test file's `@jest-environment` docblock on the global object; returns the function
+// that removes it, or undefined for the node environment.
+extern "C" [[ZIG_EXPORT(zero_is_throw)]] JSC::EncodedJSValue Bun__installTestEnvironment(Zig::GlobalObject* globalObject, const BunString* name, const BunString* testPath)
+{
+    auto& vm = JSC::getVM(globalObject);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    JSC::JSObject* require = Bun::JSCommonJSModule::createBoundRequireFunction(vm, globalObject, testPath->toWTFString());
+    RETURN_IF_EXCEPTION(scope, {});
+    JSC::JSFunction* install = JSC::JSFunction::create(vm, globalObject, testEnvironmentInstallTestEnvironmentCodeGenerator(vm), globalObject);
+    JSC::MarkedArgumentBuffer arguments;
+    arguments.append(JSC::jsString(vm, name->toWTFString()));
+    arguments.append(require);
+    RELEASE_AND_RETURN(scope, JSC::JSValue::encode(JSC::call(globalObject, install, JSC::getCallData(install), JSC::jsUndefined(), arguments)));
+}
+
 BUN_DECLARE_HOST_FUNCTION(JSMock__jsRequireActual);
 extern "C" JSC_DEFINE_HOST_FUNCTION(JSMock__jsRequireActual, (JSC::JSGlobalObject * lexicalGlobalObject, JSC::CallFrame* callframe))
 {

@@ -76,6 +76,30 @@ dom.test.ts:
 Ran 1 test across 1 file. [125.00ms]
 ```
 
+## Per-file environment
+
+A test file can ask for a DOM in its leading comment, as in Jest and Vitest. `bun test` loads the window from the project's dependencies, installs its globals for that file only, and removes them when the file finishes.
+
+| Comment                                                          | Package loaded                                             |
+| ---------------------------------------------------------------- | ---------------------------------------------------------- |
+| `@jest-environment jsdom` or `@vitest-environment jsdom`         | `jsdom`, or the one `jest-environment-jsdom` uses          |
+| `@jest-environment happy-dom` or `@vitest-environment happy-dom` | `happy-dom`, or the one `@happy-dom/jest-environment` uses |
+| `@jest-environment node`                                         | none                                                       |
+
+```ts title="button.test.ts" icon="/icons/typescript.svg"
+/**
+ * @jest-environment jsdom
+ */
+import { test, expect } from "bun:test";
+
+test("button", () => {
+  document.body.innerHTML = `<button>My button</button>`;
+  expect(document.querySelector("button")?.textContent).toBe("My button");
+});
+```
+
+The language globals, the timers, `console`, `crypto`, `performance`, `fetch` and `structuredClone` stay Bun's, so `jest.useFakeTimers()` still applies.
+
 ## React Testing Library
 
 Bun works with React Testing Library for testing React components. After setting up happy-dom as described earlier, install and use React Testing Library normally.

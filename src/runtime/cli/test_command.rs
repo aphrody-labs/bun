@@ -937,6 +937,42 @@ fn should_drain_event_loop() -> bool {
     env_var::BUN_TEST_DRAIN_EVENT_LOOP.get().unwrap_or(false)
 }
 
+/// The environment a test file asks for in its leading comments: Jest's `@jest-environment <name>` docblock
+/// pragma or Vitest's `@vitest-environment <name>`.
+fn docblock_test_environment(source: &[u8]) -> Option<&[u8]> {
+    let mut rest = source.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(source);
+    if rest.starts_with(b"#!") {
+        rest = &rest[strings::index_of_char_usize(rest, b'\n')? + 1..];
+    }
+    loop {
+        rest = rest.trim_ascii_start();
+        let end = if rest.starts_with(b"/*") {
+            strings::index_of(&rest[2..], b"*/")? + 4
+        } else if rest.starts_with(b"//") {
+            strings::index_of_char_usize(rest, b'\n').unwrap_or(rest.len())
+        } else {
+            return None;
+        };
+        let (comment, after) = rest.split_at(end);
+        rest = after;
+        for pragma in [&b"@jest-environment"[..], b"@vitest-environment"] {
+            let mut search = comment;
+            while let Some(at) = strings::index_of(search, pragma) {
+                search = &search[at + pragma.len()..];
+                // `@jest-environment-options` is another pragma.
+                if !search.first().is_some_and(|b| b.is_ascii_whitespace()) {
+                    continue;
+                }
+                let value = search.trim_ascii_start();
+                let len = strings::index_of_any(value, b" \t\r\n*").unwrap_or(value.len());
+                if len > 0 {
+                    return Some(&value[..len]);
+                }
+            }
+        }
+    }
+}
+
 /// jest and vitest never run a test file's `process.on('exit')` listeners; node's test harness asserts from them.
 pub(crate) fn skip_exit_listeners(reporter: &CommandLineReporter) -> bool {
     !(reporter.jest.node_test_used || should_drain_event_loop())
@@ -2894,6 +2930,10 @@ impl TestCommand {
             b""
         };
 
+        let source = File::read_from(Fd::cwd(), file_path).unwrap_or_default();
+        let test_environment = docblock_test_environment(&source).map(<[u8]>::to_vec);
+        drop(source);
+
         let repeat_count = reporter.repeat_count;
         let mut repeat_index: u32 = 0;
         vm.on_unhandled_rejection_ctx = None;
@@ -2950,6 +2990,33 @@ impl TestCommand {
             if let Some(junit) = reporter.reporters.junit.as_mut() {
                 junit.file_start_ns = bun::Timespec::now(bun::TimespecMockMode::ForceRealTime).ns();
             }
+
+            let mut environment_teardown = None;
+            if let Some(name) = test_environment.as_deref() {
+                let name = bun::String::borrow_utf8(name);
+                let path = bun::String::borrow_utf8(file_path);
+                // SAFETY: `name` and `path` outlive the call.
+                match unsafe { bun_jsc::cpp::Bun__installTestEnvironment(global, &name, &path) } {
+                    Ok(teardown) if teardown.is_callable() => {
+                        environment_teardown = Some(jsc::Strong::create(teardown, global));
+                    }
+                    Ok(_) => {}
+                    Err(err) => {
+                        let exception = global.take_exception(err);
+                        let _ = vm.uncaught_exception(global, exception, false);
+                        reporter.summary().fail += 1;
+                        return Ok(());
+                    }
+                }
+            }
+            scopeguard::defer! {
+                if let Some(teardown) = &environment_teardown
+                    && teardown.get().call(global, jsc::JSValue::UNDEFINED, &[]).is_err()
+                {
+                    global.clear_exception();
+                }
+            }
+
             // need to wake up so autoTick() doesn't wait for 16-100ms after loading the entrypoint
             vm.wakeup();
             let promise = vm.load_entry_point_for_test_runner(file_path)?;
