@@ -230,17 +230,19 @@ describe("bunsh", () => {
 describe.skipIf(isWindows)("bunsh runs apk install scripts", () => {
   const fixtures = join(import.meta.dir, "fixtures", "apk-scripts");
 
-  async function runScript(name: string, args: string[] = ["1.0.0-r0"]) {
-    using dir = tempDir("bunsh-apk", { "bin/.keep": "" });
+  async function runScript(name: string, args: string[] = ["1.0.0-r0"], files: Record<string, string> = {}) {
+    using dir = tempDir("bunsh-apk", { "bin/.keep": "", ...files });
     // An empty PATH: the scripts' addgroup/adduser must fail quietly, never touch the host.
     const result = await bunsh([join(fixtures, name), ...args], {
       cwd: String(dir),
       env: { ROOT: String(dir), PATH: join(String(dir), "bin") },
     });
-    const version = await Bun.file(join(String(dir), "var/lib/demo/version"))
-      .text()
-      .catch(() => null);
-    return { ...result, version };
+    const read = (path: string) =>
+      Bun.file(join(String(dir), path))
+        .text()
+        .catch(() => null);
+    const [version, conf] = await Promise.all([read("var/lib/demo/version"), read("etc/demo.conf")]);
+    return { ...result, version, conf };
   }
 
   for (const name of ["nginx.pre-install", "chrony.pre-install"]) {
@@ -258,8 +260,11 @@ describe.skipIf(isWindows)("bunsh runs apk install scripts", () => {
     expect(exitCode).toBe(0);
   });
 
-  test.todo("test-bracket.post-upgrade: needs a [ / test builtin", async () => {
-    const { exitCode } = await runScript("test-bracket.post-upgrade");
+  test.concurrent("test-bracket.post-upgrade", async () => {
+    const { conf, exitCode } = await runScript("test-bracket.post-upgrade", undefined, {
+      "etc/demo.conf.old": "migrated\n",
+    });
+    expect(conf).toBe("migrated\n");
     expect(exitCode).toBe(0);
   });
 
@@ -279,7 +284,7 @@ describe.skipIf(isWindows)("bunsh runs apk install scripts", () => {
     expect(exitCode).toBe(0);
   });
 
-  test.todo("set-e.post-install: needs set -e and the : builtin", async () => {
+  test.todo("set-e.post-install: needs set -e", async () => {
     const { exitCode } = await runScript("set-e.post-install");
     expect(exitCode).toBe(0);
   });

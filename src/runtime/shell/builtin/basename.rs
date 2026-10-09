@@ -21,13 +21,18 @@ impl Basename {
     pub(crate) fn start(interp: &Interpreter, cmd: NodeId) -> Yield {
         let buf = {
             let bltn = Builtin::of(interp, cmd);
-            let argc = bltn.args_slice().len();
-            if argc == 0 {
+            let args: Vec<&[u8]> = (0..bltn.args_slice().len())
+                .map(|i| bltn.arg_bytes(i))
+                .collect();
+            let Some((suffix, names)) = parse_args(&args) else {
                 return Self::fail(interp, cmd, Kind::Basename.usage_string());
-            }
+            };
             let mut buf = Vec::new();
-            for i in 0..argc {
-                buf.extend_from_slice(bun_paths::resolve_path::basename(bltn.arg_bytes(i)));
+            for name in names {
+                buf.extend_from_slice(strip_suffix(
+                    bun_paths::resolve_path::basename(name),
+                    suffix,
+                ));
                 buf.push(b'\n');
             }
             buf
@@ -66,5 +71,47 @@ impl Basename {
             State::Err => Builtin::done(interp, cmd, 1),
             State::Idle => unreachable!("Basename.onIOWriterChunk: idle"),
         }
+    }
+}
+
+/// BSD/POSIX operands: `basename string [suffix]` and `basename [-a] [-s suffix] string ...`.
+fn parse_args<'a>(args: &[&'a [u8]]) -> Option<(&'a [u8], Vec<&'a [u8]>)> {
+    let mut all = false;
+    let mut suffix: Option<&'a [u8]> = None;
+    let mut i = 0;
+    while let Some(&arg) = args.get(i) {
+        match arg {
+            b"--" => {
+                i += 1;
+                break;
+            }
+            b"-a" => all = true,
+            b"-s" => {
+                i += 1;
+                suffix = Some(args.get(i).copied()?);
+                all = true;
+            }
+            _ if arg.len() > 2 && arg.starts_with(b"-s") => {
+                suffix = Some(&arg[2..]);
+                all = true;
+            }
+            _ if arg.len() > 1 && arg[0] == b'-' => return None,
+            _ => break,
+        }
+        i += 1;
+    }
+    match &args[i..] {
+        [] => None,
+        [name, sfx] if !all => Some((*sfx, vec![*name])),
+        names => Some((suffix.unwrap_or(b""), names.to_vec())),
+    }
+}
+
+/// POSIX: the suffix is removed only when it is not the whole name.
+fn strip_suffix<'a>(name: &'a [u8], suffix: &[u8]) -> &'a [u8] {
+    if !suffix.is_empty() && name.len() > suffix.len() && name.ends_with(suffix) {
+        &name[..name.len() - suffix.len()]
+    } else {
+        name
     }
 }

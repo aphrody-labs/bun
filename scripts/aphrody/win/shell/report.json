@@ -1,0 +1,4449 @@
+{
+  "genere": "2026-10-09T04:02:13.595Z",
+  "commande": "bun scripts/aphrody/win/shell/prove.ts",
+  "machine": {
+    "bun": "1.4.3+f7a7086b6",
+    "gitBash": "GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)",
+    "uutils": "C:\\tools\\uutils\\bin",
+    "versions": {
+      "coreutils": "coreutils 0.12.0 (multi-call binary)",
+      "find": "find (Rust) 0.10.0",
+      "diff": "Unknown option: \"--version\"",
+      "sed": "sed 0.3.0 (uutils)",
+      "awk": "v1.32.0",
+      "tar": "bsdtar 3.8.4 - libarchive 3.8.4 zlib/1.3.1 liblzma/5.8.1 bz2lib/1.0.8 libzstd/1.5.7 cng/2.0 libb2/bundled",
+      "rg": "ripgrep 15.2.0 (rev e89fff89ac)"
+    }
+  },
+  "pathFiltre": {
+    "entete": "C:\\tools\\uutils\\bin",
+    "retires": [
+      "C:\\Program Files\\Git\\mingw64\\bin",
+      "C:\\Program Files\\Git\\usr\\bin",
+      "C:\\Program Files\\Git\\usr\\bin\\vendor_perl",
+      "C:\\Program Files\\Git\\usr\\bin\\core_perl"
+    ]
+  },
+  "legende": {
+    "gitBash": "référence : C:\\Program Files\\Git\\bin\\bash.exe -c",
+    "bunShell": "Bun.$ (bun installé) avec PATH filtré",
+    "remplacant": "commande native de remplacement sous Bun.$ (grep → rg, unzip → tar)",
+    "bunsh": "<exe> -c avec PATH filtré (passe finale, binaire du fork)",
+    "match": "identique | équivalent (séparateurs, chemins de fixture, blancs, marqueur binaire `*` de sha*sum msys) | code seulement | différent"
+  },
+  "resume": {
+    "cas": 82,
+    "bunShellOk": 53,
+    "remplacantOk": 6,
+    "prouves": 59,
+    "binairesProuves": [
+      "echo",
+      "printf",
+      "dirname",
+      "test",
+      "true",
+      "false",
+      "head",
+      "tail",
+      "cat",
+      "ls",
+      "wc",
+      "cut",
+      "sort",
+      "uniq",
+      "tr",
+      "sed",
+      "cp",
+      "awk",
+      "grep",
+      "find",
+      "xargs",
+      "diff",
+      "cmp",
+      "env",
+      "printenv",
+      "mktemp",
+      "mkdir",
+      "touch",
+      "mv",
+      "rm",
+      "ln",
+      "sha256sum",
+      "md5sum",
+      "timeout",
+      "sleep",
+      "nproc",
+      "nice",
+      "seq",
+      "tee",
+      "expr",
+      "date",
+      "tar",
+      "unzip",
+      "which",
+      "uname"
+    ],
+    "binairesNonProuves": [
+      "basename",
+      "[",
+      ":",
+      "chmod",
+      "gzip",
+      "cygpath",
+      "file",
+      "perl",
+      "flock",
+      "id",
+      "bash"
+    ],
+    "syntaxeManquante": [
+      "default-exp",
+      "for",
+      "while",
+      "case",
+      "function",
+      "group",
+      "heredoc",
+      "arith",
+      "status",
+      "set-e",
+      "command-v",
+      "negate"
+    ]
+  },
+  "imports": {
+    "executables": 102,
+    "dll": [
+      "advapi32.dll",
+      "api-ms-win-core-console-l1-1-0.dll",
+      "api-ms-win-core-debug-l1-1-0.dll",
+      "api-ms-win-core-errorhandling-l1-1-0.dll",
+      "api-ms-win-core-file-l1-1-0.dll",
+      "api-ms-win-core-interlocked-l1-1-0.dll",
+      "api-ms-win-core-libraryloader-l1-2-0.dll",
+      "api-ms-win-core-processenvironment-l1-1-0.dll",
+      "api-ms-win-core-processthreads-l1-1-0.dll",
+      "api-ms-win-core-processthreads-l1-1-1.dll",
+      "api-ms-win-core-profile-l1-1-0.dll",
+      "api-ms-win-core-rtlsupport-l1-1-0.dll",
+      "api-ms-win-core-string-l1-1-0.dll",
+      "api-ms-win-core-synch-l1-2-0.dll",
+      "api-ms-win-core-sysinfo-l1-1-0.dll",
+      "api-ms-win-crt-convert-l1-1-0.dll",
+      "api-ms-win-crt-environment-l1-1-0.dll",
+      "api-ms-win-crt-heap-l1-1-0.dll",
+      "api-ms-win-crt-locale-l1-1-0.dll",
+      "api-ms-win-crt-math-l1-1-0.dll",
+      "api-ms-win-crt-private-l1-1-0.dll",
+      "api-ms-win-crt-runtime-l1-1-0.dll",
+      "api-ms-win-crt-stdio-l1-1-0.dll",
+      "api-ms-win-crt-string-l1-1-0.dll",
+      "api-ms-win-crt-time-l1-1-0.dll",
+      "api-ms-win-crt-utility-l1-1-0.dll",
+      "archiveint.dll",
+      "bcrypt.dll",
+      "bcryptprimitives.dll",
+      "kernel32.dll",
+      "mpr.dll",
+      "ntdll.dll",
+      "user32.dll",
+      "userenv.dll",
+      "vcruntime140.dll",
+      "version.dll",
+      "ws2_32.dll",
+      "wtsapi32.dll"
+    ],
+    "runtimePosix": [],
+    "parExe": {
+      "uutils/arch.exe": [
+        "kernel32.dll",
+        "version.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/awk.exe": [
+        "kernel32.dll"
+      ],
+      "uutils/b2sum.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-utility-l1-1-0.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "uutils/base32.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/base64.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/basename.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/basenc.exe": [
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "kernel32.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/cat.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/cksum.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-utility-l1-1-0.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "uutils/cmp.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "bcryptprimitives.dll",
+        "ntdll.dll"
+      ],
+      "uutils/comm.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/coreutils.exe": [
+        "kernel32.dll",
+        "bcryptprimitives.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "wtsapi32.dll",
+        "advapi32.dll",
+        "user32.dll",
+        "version.dll",
+        "ntdll.dll",
+        "mpr.dll",
+        "bcrypt.dll",
+        "ws2_32.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-utility-l1-1-0.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll"
+      ],
+      "uutils/cp.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/csplit.exe": [
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "kernel32.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/cut.exe": [
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "kernel32.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/date.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/dd.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/df.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "mpr.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/diff.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "bcryptprimitives.dll",
+        "ntdll.dll"
+      ],
+      "uutils/diffutils.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "bcryptprimitives.dll",
+        "ntdll.dll"
+      ],
+      "uutils/dir.exe": [
+        "kernel32.dll",
+        "ntdll.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/dircolors.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/dirname.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/du.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/echo.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/env.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/expand.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/expr.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/factor.exe": [
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "kernel32.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "bcrypt.dll",
+        "advapi32.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/false.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/find.exe": [
+        "kernel32.dll",
+        "ntdll.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "bcryptprimitives.dll",
+        "advapi32.dll"
+      ],
+      "uutils/fmt.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/fold.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/head.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/hostid.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "ws2_32.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/hostname.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "ws2_32.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/join.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/kill.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "advapi32.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/ln.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/locate.exe": [
+        "kernel32.dll",
+        "ntdll.dll",
+        "api-ms-win-core-synch-l1-2-0.dll"
+      ],
+      "uutils/ls.exe": [
+        "kernel32.dll",
+        "ntdll.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/md5sum.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-utility-l1-1-0.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "uutils/mkdir.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/mktemp.exe": [
+        "bcryptprimitives.dll",
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/more.exe": [
+        "kernel32.dll",
+        "user32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/mv.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/nice.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/nl.exe": [
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "kernel32.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/nohup.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/nproc.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/numfmt.exe": [
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "kernel32.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/od.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/paste.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/pathchk.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/pr.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/printenv.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/printf.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/ptx.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/pwd.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/readlink.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/realpath.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/rm.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/rmdir.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/sed.exe": [
+        "bcryptprimitives.dll",
+        "kernel32.dll",
+        "ntdll.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/seq.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/sha1sum.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-utility-l1-1-0.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "uutils/sha224sum.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-utility-l1-1-0.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "uutils/sha256sum.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-utility-l1-1-0.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "uutils/sha384sum.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-utility-l1-1-0.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "uutils/sha512sum.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-utility-l1-1-0.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "uutils/shred.exe": [
+        "bcryptprimitives.dll",
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/shuf.exe": [
+        "bcryptprimitives.dll",
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/sleep.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/sort.exe": [
+        "bcryptprimitives.dll",
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/split.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/stdbuf.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/sum.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/sync.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/tac.exe": [
+        "bcryptprimitives.dll",
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/tail.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/tee.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/test.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "advapi32.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/timeout.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/touch.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/tr.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/true.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/truncate.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/tsort.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/tty.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/uname.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "version.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/unexpand.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/uniq.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/unlink.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/updatedb.exe": [
+        "kernel32.dll",
+        "ntdll.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "bcryptprimitives.dll",
+        "advapi32.dll"
+      ],
+      "uutils/uptime.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "wtsapi32.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/vdir.exe": [
+        "kernel32.dll",
+        "ntdll.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/wc.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/whoami.exe": [
+        "kernel32.dll",
+        "advapi32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "uutils/xargs.exe": [
+        "kernel32.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "api-ms-win-core-synch-l1-2-0.dll"
+      ],
+      "uutils/yes.exe": [
+        "kernel32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "ntdll.dll",
+        "bcryptprimitives.dll",
+        "vcruntime140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "C:\\WINDOWS\\System32\\tar.exe": [
+        "api-ms-win-crt-time-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-core-file-l1-1-0.dll",
+        "api-ms-win-core-processenvironment-l1-1-0.dll",
+        "api-ms-win-core-string-l1-1-0.dll",
+        "api-ms-win-core-errorhandling-l1-1-0.dll",
+        "api-ms-win-core-console-l1-1-0.dll",
+        "api-ms-win-core-rtlsupport-l1-1-0.dll",
+        "api-ms-win-core-processthreads-l1-1-0.dll",
+        "api-ms-win-core-processthreads-l1-1-1.dll",
+        "api-ms-win-core-profile-l1-1-0.dll",
+        "api-ms-win-core-sysinfo-l1-1-0.dll",
+        "api-ms-win-core-interlocked-l1-1-0.dll",
+        "api-ms-win-core-debug-l1-1-0.dll",
+        "api-ms-win-core-libraryloader-l1-2-0.dll",
+        "archiveint.dll"
+      ],
+      "C:\\Users\\aphro\\.cargo\\bin\\rg.exe": [
+        "kernel32.dll",
+        "ntdll.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "bcryptprimitives.dll",
+        "userenv.dll"
+      ]
+    }
+  },
+  "binaires": {
+    "echo": {
+      "cas": [
+        "echo",
+        "timeout",
+        "nice"
+      ],
+      "prouve": true,
+      "remplacant": "builtin Bun Shell",
+      "usage": {
+        "scripts": {
+          "total": 97,
+          "win32": 17,
+          "all": 1,
+          "posix": 79
+        },
+        "agents": 2089
+      }
+    },
+    "printf": {
+      "cas": [
+        "printf"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (printf.exe)",
+      "usage": {
+        "scripts": {
+          "total": 48,
+          "win32": 0,
+          "all": 0,
+          "posix": 48
+        },
+        "agents": 141
+      }
+    },
+    "dirname": {
+      "cas": [
+        "dirname"
+      ],
+      "prouve": true,
+      "remplacant": "builtin Bun Shell",
+      "usage": {
+        "scripts": {
+          "total": 40,
+          "win32": 6,
+          "all": 0,
+          "posix": 34
+        },
+        "agents": 36
+      }
+    },
+    "basename": {
+      "cas": [
+        "basename"
+      ],
+      "prouve": false,
+      "remplacant": "builtin Bun Shell",
+      "usage": {
+        "scripts": {
+          "total": 7,
+          "win32": 0,
+          "all": 0,
+          "posix": 7
+        },
+        "agents": 16
+      }
+    },
+    "test": {
+      "cas": [
+        "test",
+        "mktemp"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (test.exe)",
+      "usage": {
+        "scripts": {
+          "total": 8,
+          "win32": 1,
+          "all": 0,
+          "posix": 7
+        },
+        "agents": 129
+      }
+    },
+    "[": {
+      "cas": [
+        "bracket"
+      ],
+      "prouve": false,
+      "remplacant": "introuvable",
+      "usage": {
+        "scripts": {
+          "total": 27,
+          "win32": 4,
+          "all": 0,
+          "posix": 23
+        },
+        "agents": 387
+      }
+    },
+    ":": {
+      "cas": [
+        "colon"
+      ],
+      "prouve": false,
+      "remplacant": "introuvable",
+      "usage": {
+        "scripts": null,
+        "agents": 0
+      }
+    },
+    "true": {
+      "cas": [
+        "true-false"
+      ],
+      "prouve": true,
+      "remplacant": "builtin Bun Shell",
+      "usage": {
+        "scripts": {
+          "total": 37,
+          "win32": 3,
+          "all": 0,
+          "posix": 34
+        },
+        "agents": 116
+      }
+    },
+    "false": {
+      "cas": [
+        "true-false"
+      ],
+      "prouve": true,
+      "remplacant": "builtin Bun Shell",
+      "usage": {
+        "scripts": {
+          "total": 2,
+          "win32": 0,
+          "all": 0,
+          "posix": 2
+        },
+        "agents": 36
+      }
+    },
+    "head": {
+      "cas": [
+        "head-n",
+        "head-c"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (head.exe)",
+      "usage": {
+        "scripts": {
+          "total": 14,
+          "win32": 0,
+          "all": 0,
+          "posix": 14
+        },
+        "agents": 9230
+      }
+    },
+    "tail": {
+      "cas": [
+        "tail-n"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (tail.exe)",
+      "usage": {
+        "scripts": {
+          "total": 5,
+          "win32": 0,
+          "all": 0,
+          "posix": 5
+        },
+        "agents": 2866
+      }
+    },
+    "cat": {
+      "cas": [
+        "cat",
+        "wc-pipe",
+        "xargs"
+      ],
+      "prouve": true,
+      "remplacant": "builtin Bun Shell",
+      "usage": {
+        "scripts": {
+          "total": 31,
+          "win32": 0,
+          "all": 0,
+          "posix": 31
+        },
+        "agents": 3374
+      }
+    },
+    "ls": {
+      "cas": [
+        "ls",
+        "fs-ops"
+      ],
+      "prouve": true,
+      "remplacant": "builtin Bun Shell",
+      "usage": {
+        "scripts": {
+          "total": 8,
+          "win32": 0,
+          "all": 0,
+          "posix": 8
+        },
+        "agents": 2701
+      }
+    },
+    "wc": {
+      "cas": [
+        "wc-l",
+        "wc-pipe"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (wc.exe)",
+      "usage": {
+        "scripts": {
+          "total": 2,
+          "win32": 0,
+          "all": 1,
+          "posix": 1
+        },
+        "agents": 856
+      }
+    },
+    "cut": {
+      "cas": [
+        "cut"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (cut.exe)",
+      "usage": {
+        "scripts": {
+          "total": 8,
+          "win32": 0,
+          "all": 0,
+          "posix": 8
+        },
+        "agents": 491
+      }
+    },
+    "sort": {
+      "cas": [
+        "sort",
+        "sort-n",
+        "sort-u",
+        "sort-k",
+        "uniq-c"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (sort.exe)",
+      "usage": {
+        "scripts": {
+          "total": 10,
+          "win32": 0,
+          "all": 0,
+          "posix": 10
+        },
+        "agents": 377
+      }
+    },
+    "uniq": {
+      "cas": [
+        "uniq-c"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (uniq.exe)",
+      "usage": {
+        "scripts": null,
+        "agents": 172
+      }
+    },
+    "tr": {
+      "cas": [
+        "tr"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (tr.exe)",
+      "usage": {
+        "scripts": {
+          "total": 5,
+          "win32": 0,
+          "all": 0,
+          "posix": 5
+        },
+        "agents": 281
+      }
+    },
+    "sed": {
+      "cas": [
+        "sed-n",
+        "sed-s",
+        "sed-E",
+        "sed-i"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (sed.exe)",
+      "usage": {
+        "scripts": {
+          "total": 24,
+          "win32": 1,
+          "all": 0,
+          "posix": 23
+        },
+        "agents": 4697
+      }
+    },
+    "cp": {
+      "cas": [
+        "sed-i",
+        "fs-ops"
+      ],
+      "prouve": true,
+      "remplacant": "builtin Bun Shell",
+      "usage": {
+        "scripts": {
+          "total": 20,
+          "win32": 0,
+          "all": 1,
+          "posix": 19
+        },
+        "agents": 170
+      }
+    },
+    "awk": {
+      "cas": [
+        "awk-F",
+        "awk-sum"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (awk.exe)",
+      "usage": {
+        "scripts": {
+          "total": 6,
+          "win32": 0,
+          "all": 0,
+          "posix": 6
+        },
+        "agents": 227
+      }
+    },
+    "grep": {
+      "cas": [
+        "grep-n",
+        "grep-c",
+        "grep-v",
+        "grep-E",
+        "grep-rl"
+      ],
+      "prouve": true,
+      "remplacant": "rg (commande de remplacement)",
+      "usage": {
+        "scripts": {
+          "total": 35,
+          "win32": 0,
+          "all": 0,
+          "posix": 35
+        },
+        "agents": 4819
+      }
+    },
+    "find": {
+      "cas": [
+        "find-name",
+        "find-type"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (find.exe)",
+      "usage": {
+        "scripts": {
+          "total": 20,
+          "win32": 2,
+          "all": 0,
+          "posix": 18
+        },
+        "agents": 73
+      }
+    },
+    "xargs": {
+      "cas": [
+        "xargs"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (xargs.exe)",
+      "usage": {
+        "scripts": {
+          "total": 6,
+          "win32": 0,
+          "all": 0,
+          "posix": 6
+        },
+        "agents": 70
+      }
+    },
+    "diff": {
+      "cas": [
+        "diff",
+        "diff-same"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (diff.exe)",
+      "usage": {
+        "scripts": {
+          "total": 1,
+          "win32": 1,
+          "all": 0,
+          "posix": 0
+        },
+        "agents": 85
+      }
+    },
+    "cmp": {
+      "cas": [
+        "cmp"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (cmp.exe)",
+      "usage": {
+        "scripts": {
+          "total": 3,
+          "win32": 0,
+          "all": 0,
+          "posix": 3
+        },
+        "agents": 11
+      }
+    },
+    "env": {
+      "cas": [
+        "env"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (env.exe)",
+      "usage": {
+        "scripts": {
+          "total": 8,
+          "win32": 1,
+          "all": 0,
+          "posix": 7
+        },
+        "agents": 93
+      }
+    },
+    "printenv": {
+      "cas": [
+        "env"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (printenv.exe)",
+      "usage": {
+        "scripts": null,
+        "agents": 0
+      }
+    },
+    "mktemp": {
+      "cas": [
+        "mktemp"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (mktemp.exe)",
+      "usage": {
+        "scripts": {
+          "total": 28,
+          "win32": 0,
+          "all": 0,
+          "posix": 28
+        },
+        "agents": 8
+      }
+    },
+    "mkdir": {
+      "cas": [
+        "fs-ops"
+      ],
+      "prouve": true,
+      "remplacant": "builtin Bun Shell",
+      "usage": {
+        "scripts": {
+          "total": 50,
+          "win32": 2,
+          "all": 2,
+          "posix": 46
+        },
+        "agents": 321
+      }
+    },
+    "touch": {
+      "cas": [
+        "fs-ops"
+      ],
+      "prouve": true,
+      "remplacant": "builtin Bun Shell",
+      "usage": {
+        "scripts": {
+          "total": 8,
+          "win32": 0,
+          "all": 0,
+          "posix": 8
+        },
+        "agents": 7
+      }
+    },
+    "mv": {
+      "cas": [
+        "fs-ops"
+      ],
+      "prouve": true,
+      "remplacant": "builtin Bun Shell",
+      "usage": {
+        "scripts": {
+          "total": 20,
+          "win32": 0,
+          "all": 0,
+          "posix": 20
+        },
+        "agents": 30
+      }
+    },
+    "rm": {
+      "cas": [
+        "fs-ops"
+      ],
+      "prouve": true,
+      "remplacant": "builtin Bun Shell",
+      "usage": {
+        "scripts": {
+          "total": 33,
+          "win32": 0,
+          "all": 1,
+          "posix": 32
+        },
+        "agents": 266
+      }
+    },
+    "ln": {
+      "cas": [
+        "ln-s"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (ln.exe)",
+      "usage": {
+        "scripts": {
+          "total": 13,
+          "win32": 0,
+          "all": 0,
+          "posix": 13
+        },
+        "agents": 11
+      }
+    },
+    "chmod": {
+      "cas": [
+        "chmod"
+      ],
+      "prouve": false,
+      "remplacant": "introuvable",
+      "usage": {
+        "scripts": {
+          "total": 29,
+          "win32": 1,
+          "all": 0,
+          "posix": 28
+        },
+        "agents": 19
+      }
+    },
+    "sha256sum": {
+      "cas": [
+        "sha256sum"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (sha256sum.exe)",
+      "usage": {
+        "scripts": {
+          "total": 16,
+          "win32": 0,
+          "all": 0,
+          "posix": 16
+        },
+        "agents": 21
+      }
+    },
+    "md5sum": {
+      "cas": [
+        "md5sum"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (md5sum.exe)",
+      "usage": {
+        "scripts": null,
+        "agents": 2
+      }
+    },
+    "timeout": {
+      "cas": [
+        "timeout"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (timeout.exe)",
+      "usage": {
+        "scripts": {
+          "total": 2,
+          "win32": 0,
+          "all": 0,
+          "posix": 2
+        },
+        "agents": 815
+      }
+    },
+    "sleep": {
+      "cas": [
+        "sleep"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (sleep.exe)",
+      "usage": {
+        "scripts": {
+          "total": 11,
+          "win32": 0,
+          "all": 0,
+          "posix": 11
+        },
+        "agents": 407
+      }
+    },
+    "nproc": {
+      "cas": [
+        "nproc"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (nproc.exe)",
+      "usage": {
+        "scripts": {
+          "total": 3,
+          "win32": 1,
+          "all": 0,
+          "posix": 2
+        },
+        "agents": 6
+      }
+    },
+    "nice": {
+      "cas": [
+        "nice"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (nice.exe)",
+      "usage": {
+        "scripts": {
+          "total": 2,
+          "win32": 1,
+          "all": 0,
+          "posix": 1
+        },
+        "agents": 7
+      }
+    },
+    "seq": {
+      "cas": [
+        "seq"
+      ],
+      "prouve": true,
+      "remplacant": "builtin Bun Shell",
+      "usage": {
+        "scripts": {
+          "total": 8,
+          "win32": 0,
+          "all": 1,
+          "posix": 7
+        },
+        "agents": 38
+      }
+    },
+    "tee": {
+      "cas": [
+        "tee"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (tee.exe)",
+      "usage": {
+        "scripts": {
+          "total": 9,
+          "win32": 0,
+          "all": 0,
+          "posix": 9
+        },
+        "agents": 8
+      }
+    },
+    "expr": {
+      "cas": [
+        "expr"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (expr.exe)",
+      "usage": {
+        "scripts": null,
+        "agents": 3
+      }
+    },
+    "date": {
+      "cas": [
+        "date"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (date.exe)",
+      "usage": {
+        "scripts": {
+          "total": 22,
+          "win32": 0,
+          "all": 0,
+          "posix": 22
+        },
+        "agents": 34
+      }
+    },
+    "tar": {
+      "cas": [
+        "tar-gz"
+      ],
+      "prouve": true,
+      "remplacant": "System32 (tar.exe)",
+      "usage": {
+        "scripts": {
+          "total": 29,
+          "win32": 1,
+          "all": 3,
+          "posix": 25
+        },
+        "agents": 80
+      }
+    },
+    "unzip": {
+      "cas": [
+        "unzip"
+      ],
+      "prouve": true,
+      "remplacant": "mkdir (commande de remplacement)",
+      "usage": {
+        "scripts": {
+          "total": 10,
+          "win32": 1,
+          "all": 3,
+          "posix": 6
+        },
+        "agents": 18
+      }
+    },
+    "gzip": {
+      "cas": [
+        "gzip"
+      ],
+      "prouve": false,
+      "remplacant": "introuvable",
+      "usage": {
+        "scripts": {
+          "total": 3,
+          "win32": 0,
+          "all": 0,
+          "posix": 3
+        },
+        "agents": 1
+      }
+    },
+    "which": {
+      "cas": [
+        "which"
+      ],
+      "prouve": true,
+      "remplacant": "builtin Bun Shell",
+      "usage": {
+        "scripts": {
+          "total": 1,
+          "win32": 0,
+          "all": 0,
+          "posix": 1
+        },
+        "agents": 330
+      }
+    },
+    "uname": {
+      "cas": [
+        "uname"
+      ],
+      "prouve": true,
+      "remplacant": "uutils (uname.exe)",
+      "usage": {
+        "scripts": {
+          "total": 10,
+          "win32": 0,
+          "all": 0,
+          "posix": 10
+        },
+        "agents": 3
+      }
+    },
+    "cygpath": {
+      "cas": [
+        "cygpath"
+      ],
+      "prouve": false,
+      "remplacant": "introuvable",
+      "usage": {
+        "scripts": null,
+        "agents": 120
+      }
+    },
+    "file": {
+      "cas": [
+        "file"
+      ],
+      "prouve": false,
+      "remplacant": "introuvable",
+      "usage": {
+        "scripts": {
+          "total": 1,
+          "win32": 0,
+          "all": 0,
+          "posix": 1
+        },
+        "agents": 94
+      }
+    },
+    "perl": {
+      "cas": [
+        "perl"
+      ],
+      "prouve": false,
+      "remplacant": "introuvable",
+      "usage": {
+        "scripts": {
+          "total": 1,
+          "win32": 0,
+          "all": 0,
+          "posix": 1
+        },
+        "agents": 11
+      }
+    },
+    "flock": {
+      "cas": [
+        "flock"
+      ],
+      "prouve": false,
+      "remplacant": "introuvable",
+      "usage": {
+        "scripts": {
+          "total": 3,
+          "win32": 1,
+          "all": 0,
+          "posix": 2
+        },
+        "agents": 9
+      }
+    },
+    "id": {
+      "cas": [
+        "id"
+      ],
+      "prouve": false,
+      "remplacant": "introuvable",
+      "usage": {
+        "scripts": {
+          "total": 25,
+          "win32": 0,
+          "all": 0,
+          "posix": 25
+        },
+        "agents": 71
+      }
+    },
+    "bash": {
+      "cas": [
+        "bash"
+      ],
+      "prouve": false,
+      "remplacant": "rejeté (C:\\Windows\\system32\\bash.exe = lanceur WSL)",
+      "usage": {
+        "scripts": {
+          "total": 120,
+          "win32": 6,
+          "all": 8,
+          "posix": 106
+        },
+        "agents": 74
+      }
+    },
+    "(syntaxe)": {
+      "cas": [
+        "dbl-bracket",
+        "assign",
+        "glob",
+        "devnull",
+        "subst",
+        "default-exp",
+        "for",
+        "while",
+        "case",
+        "function",
+        "group",
+        "heredoc",
+        "arith",
+        "status",
+        "set-e",
+        "command-v",
+        "negate"
+      ],
+      "prouve": false,
+      "remplacant": "grammaire Bun Shell",
+      "usage": null
+    }
+  },
+  "cas": [
+    {
+      "id": "echo",
+      "bins": [
+        "echo"
+      ],
+      "cmd": "echo hello world",
+      "resolution": {
+        "echo": "builtin Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "hello world\n",
+        "stderr": "",
+        "ms": 18
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "hello world\n",
+        "stderr": "",
+        "ms": 1,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "printf",
+      "bins": [
+        "printf"
+      ],
+      "cmd": "printf '%s-%03d\\n' x 7",
+      "resolution": {
+        "printf": "uutils (printf.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "x-007\n",
+        "stderr": "",
+        "ms": 23
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "x-007\n",
+        "stderr": "",
+        "ms": 4,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "dirname",
+      "bins": [
+        "dirname"
+      ],
+      "cmd": "dirname a/b/c.txt",
+      "resolution": {
+        "dirname": "builtin Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "a/b\n",
+        "stderr": "",
+        "ms": 21
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "a/b\n",
+        "stderr": "",
+        "ms": 0,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "basename",
+      "bins": [
+        "basename"
+      ],
+      "cmd": "basename a/b/c.txt .txt",
+      "resolution": {
+        "basename": "builtin Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "c\n",
+        "stderr": "",
+        "ms": 20
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "c.txt\n.txt\n",
+        "stderr": "",
+        "ms": 0,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "test",
+      "bins": [
+        "test"
+      ],
+      "cmd": "test -d sub && test -f a.txt && test 3 -lt 10 && echo ok",
+      "resolution": {
+        "test": "uutils (test.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 23
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 18,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "bracket",
+      "bins": [
+        "["
+      ],
+      "cmd": "[ -s a.txt ] && [ ! -e nope ] && echo ok",
+      "resolution": {
+        "[": "introuvable"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 17
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "bun: command not found: [\n",
+        "ms": 2,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "colon",
+      "bins": [
+        ":"
+      ],
+      "cmd": ": ignored && echo ok",
+      "resolution": {
+        ":": "introuvable"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 19
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "bun: command not found: :\n",
+        "ms": 1,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "true-false",
+      "bins": [
+        "true",
+        "false"
+      ],
+      "cmd": "true && false || echo ok",
+      "resolution": {
+        "true": "builtin Bun Shell",
+        "false": "builtin Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 18
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 0,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "head-n",
+      "bins": [
+        "head"
+      ],
+      "cmd": "head -n 3 lines.txt",
+      "resolution": {
+        "head": "uutils (head.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "l1\nl2\nl3\n",
+        "stderr": "",
+        "ms": 22
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "l1\nl2\nl3\n",
+        "stderr": "",
+        "ms": 4,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "head-c",
+      "bins": [
+        "head"
+      ],
+      "cmd": "head -c 5 lines.txt",
+      "resolution": {
+        "head": "uutils (head.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "l1\nl2",
+        "stderr": "",
+        "ms": 27
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "l1\nl2",
+        "stderr": "",
+        "ms": 4,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "tail-n",
+      "bins": [
+        "tail"
+      ],
+      "cmd": "tail -n 2 lines.txt",
+      "resolution": {
+        "tail": "uutils (tail.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "l9\nl10\n",
+        "stderr": "",
+        "ms": 21
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "l9\nl10\n",
+        "stderr": "",
+        "ms": 4,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "cat",
+      "bins": [
+        "cat"
+      ],
+      "cmd": "cat a.txt b.txt",
+      "resolution": {
+        "cat": "builtin Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "foo 1\nbar 2\nfoo 3\nfoo 1\nbaz 2\nfoo 3\n",
+        "stderr": "",
+        "ms": 22
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "foo 1\nbar 2\nfoo 3\nfoo 1\nbaz 2\nfoo 3\n",
+        "stderr": "",
+        "ms": 1,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "ls",
+      "bins": [
+        "ls"
+      ],
+      "cmd": "ls sub",
+      "resolution": {
+        "ls": "builtin Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "c.txt\n",
+        "stderr": "",
+        "ms": 28
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "c.txt\n",
+        "stderr": "",
+        "ms": 1,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "wc-l",
+      "bins": [
+        "wc"
+      ],
+      "cmd": "wc -l lines.txt",
+      "resolution": {
+        "wc": "uutils (wc.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "10 lines.txt\n",
+        "stderr": "",
+        "ms": 22
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "10 lines.txt\n",
+        "stderr": "",
+        "ms": 4,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "wc-pipe",
+      "bins": [
+        "wc",
+        "cat"
+      ],
+      "cmd": "cat lines.txt | wc -l",
+      "resolution": {
+        "wc": "uutils (wc.exe)",
+        "cat": "builtin Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "10\n",
+        "stderr": "",
+        "ms": 37
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "10\n",
+        "stderr": "",
+        "ms": 10,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "cut",
+      "bins": [
+        "cut"
+      ],
+      "cmd": "cut -d, -f2 data.csv",
+      "resolution": {
+        "cut": "uutils (cut.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "1\n22\n3\n",
+        "stderr": "",
+        "ms": 22
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "1\n22\n3\n",
+        "stderr": "",
+        "ms": 4,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "sort",
+      "bins": [
+        "sort"
+      ],
+      "cmd": "sort words.txt",
+      "resolution": {
+        "sort": "uutils (sort.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "apple\nfig\npear\npear\n",
+        "stderr": "",
+        "ms": 24
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "apple\nfig\npear\npear\n",
+        "stderr": "",
+        "ms": 5,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "sort-n",
+      "bins": [
+        "sort"
+      ],
+      "cmd": "sort -n nums.txt",
+      "resolution": {
+        "sort": "uutils (sort.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "9\n10\n100\n",
+        "stderr": "",
+        "ms": 21
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "9\n10\n100\n",
+        "stderr": "",
+        "ms": 10,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "sort-u",
+      "bins": [
+        "sort"
+      ],
+      "cmd": "sort -u words.txt",
+      "resolution": {
+        "sort": "uutils (sort.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "apple\nfig\npear\n",
+        "stderr": "",
+        "ms": 21
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "apple\nfig\npear\n",
+        "stderr": "",
+        "ms": 5,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "sort-k",
+      "bins": [
+        "sort"
+      ],
+      "cmd": "sort -t, -k2 -n data.csv",
+      "resolution": {
+        "sort": "uutils (sort.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "x,1\nz,3\ny,22\n",
+        "stderr": "",
+        "ms": 21
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "x,1\nz,3\ny,22\n",
+        "stderr": "",
+        "ms": 7,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "uniq-c",
+      "bins": [
+        "uniq",
+        "sort"
+      ],
+      "cmd": "sort words.txt | uniq -c",
+      "resolution": {
+        "uniq": "uutils (uniq.exe)",
+        "sort": "uutils (sort.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "      1 apple\n      1 fig\n      2 pear\n",
+        "stderr": "",
+        "ms": 42
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "      1 apple\n      1 fig\n      2 pear\n",
+        "stderr": "",
+        "ms": 6,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "tr",
+      "bins": [
+        "tr"
+      ],
+      "cmd": "echo hello | tr a-z A-Z",
+      "resolution": {
+        "tr": "uutils (tr.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "HELLO\n",
+        "stderr": "",
+        "ms": 42
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "HELLO\n",
+        "stderr": "",
+        "ms": 10,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "sed-n",
+      "bins": [
+        "sed"
+      ],
+      "cmd": "sed -n 2,3p lines.txt",
+      "resolution": {
+        "sed": "uutils (sed.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "l2\nl3\n",
+        "stderr": "",
+        "ms": 25
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "l2\nl3\n",
+        "stderr": "",
+        "ms": 4,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "sed-s",
+      "bins": [
+        "sed"
+      ],
+      "cmd": "sed 's/foo/qux/g' a.txt",
+      "resolution": {
+        "sed": "uutils (sed.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "qux 1\nbar 2\nqux 3\n",
+        "stderr": "",
+        "ms": 22
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "qux 1\nbar 2\nqux 3\n",
+        "stderr": "",
+        "ms": 4,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "sed-E",
+      "bins": [
+        "sed"
+      ],
+      "cmd": "sed -E 's/([a-z]+) ([0-9])/\\2 \\1/' a.txt",
+      "resolution": {
+        "sed": "uutils (sed.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "1 foo\n2 bar\n3 foo\n",
+        "stderr": "",
+        "ms": 28
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "1 foo\n2 bar\n3 foo\n",
+        "stderr": "",
+        "ms": 5,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "sed-i",
+      "bins": [
+        "sed",
+        "cp"
+      ],
+      "cmd": "cp b.txt e.txt && sed -i 's/baz/BAZ/' e.txt && cat e.txt",
+      "resolution": {
+        "sed": "uutils (sed.exe)",
+        "cp": "builtin Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "foo 1\nBAZ 2\nfoo 3\n",
+        "stderr": "",
+        "ms": 44
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "foo 1\nBAZ 2\nfoo 3\n",
+        "stderr": "",
+        "ms": 5,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "awk-F",
+      "bins": [
+        "awk"
+      ],
+      "cmd": "awk -F, '{print $1}' data.csv",
+      "resolution": {
+        "awk": "uutils (awk.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "x\ny\nz\n",
+        "stderr": "",
+        "ms": 30
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "x\ny\nz\n",
+        "stderr": "",
+        "ms": 7,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "awk-sum",
+      "bins": [
+        "awk"
+      ],
+      "cmd": "awk '{s+=$2} END {print s}' a.txt",
+      "resolution": {
+        "awk": "uutils (awk.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "6\n",
+        "stderr": "",
+        "ms": 24
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "6\n",
+        "stderr": "",
+        "ms": 6,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "grep-n",
+      "bins": [
+        "grep"
+      ],
+      "cmd": "grep -n foo a.txt",
+      "resolution": {
+        "grep": "introuvable"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "1:foo 1\n3:foo 3\n",
+        "stderr": "",
+        "ms": 22
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "bun: command not found: grep\n",
+        "ms": 2,
+        "ok": false,
+        "match": "différent"
+      },
+      "remplacant": {
+        "cmd": "rg -n foo a.txt",
+        "code": 0,
+        "stdout": "1:foo 1\n3:foo 3\n",
+        "stderr": "",
+        "ms": 5,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "grep-c",
+      "bins": [
+        "grep"
+      ],
+      "cmd": "grep -c foo a.txt",
+      "resolution": {
+        "grep": "introuvable"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "2\n",
+        "stderr": "",
+        "ms": 26
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "bun: command not found: grep\n",
+        "ms": 2,
+        "ok": false,
+        "match": "différent"
+      },
+      "remplacant": {
+        "cmd": "rg -c foo a.txt",
+        "code": 0,
+        "stdout": "2\n",
+        "stderr": "",
+        "ms": 5,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "grep-v",
+      "bins": [
+        "grep"
+      ],
+      "cmd": "grep -v foo a.txt",
+      "resolution": {
+        "grep": "introuvable"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "bar 2\n",
+        "stderr": "",
+        "ms": 21
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "bun: command not found: grep\n",
+        "ms": 2,
+        "ok": false,
+        "match": "différent"
+      },
+      "remplacant": {
+        "cmd": "rg -v foo a.txt",
+        "code": 0,
+        "stdout": "bar 2\n",
+        "stderr": "",
+        "ms": 5,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "grep-E",
+      "bins": [
+        "grep"
+      ],
+      "cmd": "grep -E 'ba[rz]' a.txt b.txt",
+      "resolution": {
+        "grep": "introuvable"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "a.txt:bar 2\nb.txt:baz 2\n",
+        "stderr": "",
+        "ms": 21
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "bun: command not found: grep\n",
+        "ms": 2,
+        "ok": false,
+        "match": "différent"
+      },
+      "remplacant": {
+        "cmd": "rg --sort path --no-heading 'ba[rz]' a.txt b.txt",
+        "code": 0,
+        "stdout": "a.txt:bar 2\nb.txt:baz 2\n",
+        "stderr": "",
+        "ms": 12,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "grep-rl",
+      "bins": [
+        "grep"
+      ],
+      "cmd": "grep -rl foo sub",
+      "resolution": {
+        "grep": "introuvable"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "sub/c.txt\n",
+        "stderr": "",
+        "ms": 26
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "bun: command not found: grep\n",
+        "ms": 2,
+        "ok": false,
+        "match": "différent"
+      },
+      "remplacant": {
+        "cmd": "rg -l foo sub",
+        "code": 0,
+        "stdout": "sub\\c.txt\n",
+        "stderr": "",
+        "ms": 11,
+        "ok": true,
+        "match": "équivalent"
+      },
+      "prouve": true
+    },
+    {
+      "id": "find-name",
+      "bins": [
+        "find"
+      ],
+      "cmd": "find sub -name '*.txt'",
+      "resolution": {
+        "find": "uutils (find.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "sub/c.txt\n",
+        "stderr": "",
+        "ms": 24
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "sub\\c.txt\n",
+        "stderr": "",
+        "ms": 4,
+        "ok": true,
+        "match": "équivalent"
+      },
+      "prouve": true
+    },
+    {
+      "id": "find-type",
+      "bins": [
+        "find"
+      ],
+      "cmd": "find . -maxdepth 1 -type f -name '*.csv'",
+      "resolution": {
+        "find": "uutils (find.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "./data.csv\n",
+        "stderr": "",
+        "ms": 24
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": ".\\data.csv\n",
+        "stderr": "",
+        "ms": 4,
+        "ok": true,
+        "match": "équivalent"
+      },
+      "prouve": true
+    },
+    {
+      "id": "xargs",
+      "bins": [
+        "xargs",
+        "cat"
+      ],
+      "cmd": "echo a.txt b.txt | xargs cat",
+      "resolution": {
+        "xargs": "uutils (xargs.exe)",
+        "cat": "builtin Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "foo 1\nbar 2\nfoo 3\nfoo 1\nbaz 2\nfoo 3\n",
+        "stderr": "",
+        "ms": 65
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "foo 1\nbar 2\nfoo 3\nfoo 1\nbaz 2\nfoo 3\n",
+        "stderr": "",
+        "ms": 8,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "diff",
+      "bins": [
+        "diff"
+      ],
+      "cmd": "diff a.txt b.txt",
+      "resolution": {
+        "diff": "uutils (diff.exe)"
+      },
+      "gitBash": {
+        "code": 1,
+        "stdout": "2c2\n< bar 2\n---\n> baz 2\n",
+        "stderr": "",
+        "ms": 41
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "2c2\n< bar 2\n---\n> baz 2\n",
+        "stderr": "",
+        "ms": 5,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "diff-same",
+      "bins": [
+        "diff"
+      ],
+      "cmd": "diff a.txt a.txt && echo same",
+      "resolution": {
+        "diff": "uutils (diff.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "same\n",
+        "stderr": "",
+        "ms": 41
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "same\n",
+        "stderr": "",
+        "ms": 5,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "cmp",
+      "bins": [
+        "cmp"
+      ],
+      "cmd": "cmp -s a.txt b.txt || echo differ",
+      "resolution": {
+        "cmp": "uutils (cmp.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "differ\n",
+        "stderr": "",
+        "ms": 50
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "differ\n",
+        "stderr": "",
+        "ms": 7,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "env",
+      "bins": [
+        "env",
+        "printenv"
+      ],
+      "cmd": "env FOO=bar printenv FOO",
+      "resolution": {
+        "env": "uutils (env.exe)",
+        "printenv": "uutils (printenv.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "bar\n",
+        "stderr": "",
+        "ms": 26
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "bar\n",
+        "stderr": "",
+        "ms": 7,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "mktemp",
+      "bins": [
+        "mktemp",
+        "test"
+      ],
+      "cmd": "test -d \"$(mktemp -d)\" && echo ok",
+      "resolution": {
+        "mktemp": "uutils (mktemp.exe)",
+        "test": "uutils (test.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 34
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 8,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "fs-ops",
+      "bins": [
+        "mkdir",
+        "touch",
+        "cp",
+        "mv",
+        "ls",
+        "rm"
+      ],
+      "cmd": "mkdir -p x/y && touch x/y/z && cp a.txt x/ && mv x/a.txt x/m.txt && ls x && rm -rf x && echo gone",
+      "resolution": {
+        "mkdir": "builtin Bun Shell",
+        "touch": "builtin Bun Shell",
+        "cp": "builtin Bun Shell",
+        "mv": "builtin Bun Shell",
+        "ls": "builtin Bun Shell",
+        "rm": "builtin Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "m.txt\ny\ngone\n",
+        "stderr": "",
+        "ms": 90
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "m.txt\ny\ngone\n",
+        "stderr": "",
+        "ms": 2,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "ln-s",
+      "bins": [
+        "ln"
+      ],
+      "cmd": "ln -s a.txt l.txt && cat l.txt",
+      "resolution": {
+        "ln": "uutils (ln.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "foo 1\nbar 2\nfoo 3\n",
+        "stderr": "",
+        "ms": 34
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "foo 1\nbar 2\nfoo 3\n",
+        "stderr": "",
+        "ms": 4,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "chmod",
+      "bins": [
+        "chmod"
+      ],
+      "cmd": "chmod +x a.txt && echo ok",
+      "note": "sans objet sous Windows (pas de bit x)",
+      "resolution": {
+        "chmod": "introuvable"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 29
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "bun: command not found: chmod\n",
+        "ms": 2,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "sha256sum",
+      "bins": [
+        "sha256sum"
+      ],
+      "cmd": "sha256sum a.txt",
+      "resolution": {
+        "sha256sum": "uutils (sha256sum.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "337dddec0565af9cb332c1a14aa65b6b3ccb262ebf6b12202fe3cfd23d2f2cf0 *a.txt\n",
+        "stderr": "",
+        "ms": 27
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "337dddec0565af9cb332c1a14aa65b6b3ccb262ebf6b12202fe3cfd23d2f2cf0  a.txt\n",
+        "stderr": "",
+        "ms": 4,
+        "ok": true,
+        "match": "équivalent"
+      },
+      "prouve": true
+    },
+    {
+      "id": "md5sum",
+      "bins": [
+        "md5sum"
+      ],
+      "cmd": "md5sum a.txt",
+      "resolution": {
+        "md5sum": "uutils (md5sum.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "934f2b705b8c201846d2024564c65fd2 *a.txt\n",
+        "stderr": "",
+        "ms": 21
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "934f2b705b8c201846d2024564c65fd2  a.txt\n",
+        "stderr": "",
+        "ms": 4,
+        "ok": true,
+        "match": "équivalent"
+      },
+      "prouve": true
+    },
+    {
+      "id": "timeout",
+      "bins": [
+        "timeout",
+        "echo"
+      ],
+      "cmd": "timeout 5 echo hi",
+      "resolution": {
+        "timeout": "uutils (timeout.exe)",
+        "echo": "builtin Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "hi\n",
+        "stderr": "",
+        "ms": 32
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "hi\n",
+        "stderr": "",
+        "ms": 8,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "sleep",
+      "bins": [
+        "sleep"
+      ],
+      "cmd": "sleep 0.1 && echo ok",
+      "resolution": {
+        "sleep": "uutils (sleep.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 145
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 105,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "nproc",
+      "bins": [
+        "nproc"
+      ],
+      "cmd": "nproc",
+      "resolution": {
+        "nproc": "uutils (nproc.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "24\n",
+        "stderr": "",
+        "ms": 23
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "24\n",
+        "stderr": "",
+        "ms": 4,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "nice",
+      "bins": [
+        "nice",
+        "echo"
+      ],
+      "cmd": "nice -n 19 echo hi",
+      "resolution": {
+        "nice": "uutils (nice.exe)",
+        "echo": "builtin Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "hi\n",
+        "stderr": "",
+        "ms": 28
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "hi\n",
+        "stderr": "",
+        "ms": 7,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "seq",
+      "bins": [
+        "seq"
+      ],
+      "cmd": "seq 3",
+      "resolution": {
+        "seq": "builtin Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "1\n2\n3\n",
+        "stderr": "",
+        "ms": 27
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "1\n2\n3\n",
+        "stderr": "",
+        "ms": 0,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "tee",
+      "bins": [
+        "tee"
+      ],
+      "cmd": "echo hi | tee t.txt && cat t.txt",
+      "resolution": {
+        "tee": "uutils (tee.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "hi\nhi\n",
+        "stderr": "",
+        "ms": 40
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "hi\nhi\n",
+        "stderr": "",
+        "ms": 4,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "expr",
+      "bins": [
+        "expr"
+      ],
+      "cmd": "expr 2 + 3",
+      "resolution": {
+        "expr": "uutils (expr.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "5\n",
+        "stderr": "",
+        "ms": 21
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "5\n",
+        "stderr": "",
+        "ms": 4,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "date",
+      "bins": [
+        "date"
+      ],
+      "cmd": "date +%Y",
+      "resolution": {
+        "date": "uutils (date.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "2026\n",
+        "stderr": "",
+        "ms": 22
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "2026\n",
+        "stderr": "",
+        "ms": 10,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "tar-gz",
+      "bins": [
+        "tar"
+      ],
+      "cmd": "tar -czf o.tgz a.txt b.txt && tar -tzf o.tgz",
+      "resolution": {
+        "tar": "System32 (tar.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "a.txt\nb.txt\n",
+        "stderr": "",
+        "ms": 60
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "a.txt\nb.txt\n",
+        "stderr": "",
+        "ms": 12,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "unzip",
+      "bins": [
+        "unzip"
+      ],
+      "cmd": "unzip -o -q x.zip -d out && cat out/a.txt",
+      "resolution": {
+        "unzip": "introuvable"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "foo 1\nbar 2\nfoo 3\n",
+        "stderr": "",
+        "ms": 41
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "bun: command not found: unzip\n",
+        "ms": 2,
+        "ok": false,
+        "match": "différent"
+      },
+      "remplacant": {
+        "cmd": "mkdir out && tar -xf x.zip -C out && cat out/a.txt",
+        "code": 0,
+        "stdout": "foo 1\nbar 2\nfoo 3\n",
+        "stderr": "",
+        "ms": 7,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "gzip",
+      "bins": [
+        "gzip"
+      ],
+      "cmd": "gzip -c a.txt | gzip -dc",
+      "note": "remplaçant hors shell : Bun.gzipSync / tar -z",
+      "resolution": {
+        "gzip": "introuvable"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "foo 1\nbar 2\nfoo 3\n",
+        "stderr": "",
+        "ms": 47
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "bun: command not found: gzip\nbun: command not found: gzip\n",
+        "ms": 3,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "which",
+      "bins": [
+        "which"
+      ],
+      "cmd": "which bun",
+      "resolution": {
+        "which": "builtin Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "/c/Users/aphro/.bun/bin/bun\n",
+        "stderr": "",
+        "ms": 24
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "C:\\Users\\aphro\\.bun\\bin\\bun.exe\n",
+        "stderr": "",
+        "ms": 0,
+        "ok": true,
+        "match": "code seulement"
+      },
+      "prouve": true
+    },
+    {
+      "id": "uname",
+      "bins": [
+        "uname"
+      ],
+      "cmd": "uname -s",
+      "note": "MINGW64_NT-… contre Windows_NT : attendu",
+      "resolution": {
+        "uname": "uutils (uname.exe)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "MINGW64_NT-10.0-28000\n",
+        "stderr": "",
+        "ms": 31
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "Windows_NT\n",
+        "stderr": "",
+        "ms": 4,
+        "ok": true,
+        "match": "code seulement"
+      },
+      "prouve": true
+    },
+    {
+      "id": "cygpath",
+      "bins": [
+        "cygpath"
+      ],
+      "cmd": "cygpath -w /c/x",
+      "note": "inutile en natif : les chemins sont déjà Windows",
+      "resolution": {
+        "cygpath": "introuvable"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "C:\\x\n",
+        "stderr": "",
+        "ms": 23
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "bun: command not found: cygpath\n",
+        "ms": 2,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "file",
+      "bins": [
+        "file"
+      ],
+      "cmd": "file a.txt",
+      "resolution": {
+        "file": "introuvable"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "a.txt: ASCII text\n",
+        "stderr": "",
+        "ms": 30
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "bun: command not found: file\n",
+        "ms": 2,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "perl",
+      "bins": [
+        "perl"
+      ],
+      "cmd": "perl -e 'print 1'",
+      "resolution": {
+        "perl": "introuvable"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "1",
+        "stderr": "",
+        "ms": 26
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "bun: command not found: perl\n",
+        "ms": 2,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "flock",
+      "bins": [
+        "flock"
+      ],
+      "cmd": "flock x.lock echo hi",
+      "note": "cargo-serial.sh : portage TS du verrou requis",
+      "resolution": {
+        "flock": "introuvable"
+      },
+      "gitBash": {
+        "code": 127,
+        "stdout": "",
+        "stderr": "/usr/bin/bash: line 1: flock: command not found\n",
+        "ms": 20
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "bun: command not found: flock\n",
+        "ms": 2,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "id",
+      "bins": [
+        "id"
+      ],
+      "cmd": "id -u",
+      "resolution": {
+        "id": "introuvable"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "197610\n",
+        "stderr": "",
+        "ms": 28
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "bun: command not found: id\n",
+        "ms": 2,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "bash",
+      "bins": [
+        "bash"
+      ],
+      "cmd": "bash -c 'echo ok'",
+      "note": "scripts .sh : portage TS ou bunsh",
+      "resolution": {
+        "bash": "rejeté (C:\\Windows\\system32\\bash.exe = lanceur WSL)"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 25
+      },
+      "bunShell": {
+        "code": null,
+        "stdout": "",
+        "stderr": "rejeté (C:\\Windows\\system32\\bash.exe = lanceur WSL)",
+        "ms": 0,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "dbl-bracket",
+      "bins": [
+        "(syntaxe)"
+      ],
+      "cmd": "[[ -d sub ]] && echo ok",
+      "resolution": {
+        "(syntaxe)": "grammaire Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 17
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 0,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "assign",
+      "bins": [
+        "(syntaxe)"
+      ],
+      "cmd": "X=1; echo $X",
+      "resolution": {
+        "(syntaxe)": "grammaire Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "1\n",
+        "stderr": "",
+        "ms": 17
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "1\n",
+        "stderr": "",
+        "ms": 0,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "glob",
+      "bins": [
+        "(syntaxe)"
+      ],
+      "cmd": "echo *.csv",
+      "resolution": {
+        "(syntaxe)": "grammaire Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "data.csv\n",
+        "stderr": "",
+        "ms": 17
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "data.csv\n",
+        "stderr": "",
+        "ms": 0,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "devnull",
+      "bins": [
+        "(syntaxe)"
+      ],
+      "cmd": "echo a > /dev/null && echo ok",
+      "resolution": {
+        "(syntaxe)": "grammaire Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 17
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 0,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "subst",
+      "bins": [
+        "(syntaxe)"
+      ],
+      "cmd": "echo $(echo hi)",
+      "resolution": {
+        "(syntaxe)": "grammaire Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "hi\n",
+        "stderr": "",
+        "ms": 35
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "hi\n",
+        "stderr": "",
+        "ms": 0,
+        "ok": true,
+        "match": "identique"
+      },
+      "prouve": true
+    },
+    {
+      "id": "default-exp",
+      "bins": [
+        "(syntaxe)"
+      ],
+      "cmd": "echo ${UNSET_V:-dflt}",
+      "resolution": {
+        "(syntaxe)": "grammaire Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "dflt\n",
+        "stderr": "",
+        "ms": 17
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "${UNSET_V:-dflt}\n",
+        "stderr": "",
+        "ms": 1,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "for",
+      "bins": [
+        "(syntaxe)"
+      ],
+      "cmd": "for i in 1 2; do echo $i; done",
+      "resolution": {
+        "(syntaxe)": "grammaire Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "1\n2\n",
+        "stderr": "",
+        "ms": 18
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "bun: command not found: for\nbun: command not found: do\nbun: command not found: done\n",
+        "ms": 4,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "while",
+      "bins": [
+        "(syntaxe)"
+      ],
+      "cmd": "while false; do echo x; done; echo ok",
+      "resolution": {
+        "(syntaxe)": "grammaire Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 17
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "bun: command not found: while\nbun: command not found: do\nbun: command not found: done\n",
+        "ms": 4,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "case",
+      "bins": [
+        "(syntaxe)"
+      ],
+      "cmd": "case a in a) echo A;; esac",
+      "resolution": {
+        "(syntaxe)": "grammaire Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "A\n",
+        "stderr": "",
+        "ms": 22
+      },
+      "bunShell": {
+        "code": null,
+        "stdout": "",
+        "stderr": "exception : Unexpected ')'",
+        "ms": 0,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "function",
+      "bins": [
+        "(syntaxe)"
+      ],
+      "cmd": "f() { echo fn; }; f",
+      "resolution": {
+        "(syntaxe)": "grammaire Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "fn\n",
+        "stderr": "",
+        "ms": 20
+      },
+      "bunShell": {
+        "code": null,
+        "stdout": "",
+        "stderr": "exception : Unexpected token: `(`",
+        "ms": 0,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "group",
+      "bins": [
+        "(syntaxe)"
+      ],
+      "cmd": "{ echo a; echo b; }",
+      "resolution": {
+        "(syntaxe)": "grammaire Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "a\nb\n",
+        "stderr": "",
+        "ms": 19
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "b\n",
+        "stderr": "bun: command not found: {\nbun: command not found: }\n",
+        "ms": 3,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "heredoc",
+      "bins": [
+        "(syntaxe)"
+      ],
+      "cmd": "cat <<EOF\nhi\nEOF",
+      "resolution": {
+        "(syntaxe)": "grammaire Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "hi\n",
+        "stderr": "",
+        "ms": 35
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "bun: No such file or directory: EOFbun: command not found: hi\nbun: command not found: EOF\n",
+        "ms": 3,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "arith",
+      "bins": [
+        "(syntaxe)"
+      ],
+      "cmd": "echo $((1+2))",
+      "resolution": {
+        "(syntaxe)": "grammaire Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "3\n",
+        "stderr": "",
+        "ms": 18
+      },
+      "bunShell": {
+        "code": null,
+        "stdout": "",
+        "stderr": "exception : expected a command or assignment but got: \"CmdSubstEnd\"",
+        "ms": 0,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "status",
+      "bins": [
+        "(syntaxe)"
+      ],
+      "cmd": "false; echo $?",
+      "resolution": {
+        "(syntaxe)": "grammaire Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "1\n",
+        "stderr": "",
+        "ms": 17
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "$?\n",
+        "stderr": "",
+        "ms": 0,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "set-e",
+      "bins": [
+        "(syntaxe)"
+      ],
+      "cmd": "set -e; echo ok",
+      "resolution": {
+        "(syntaxe)": "grammaire Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 19
+      },
+      "bunShell": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "bun: command not found: set\n",
+        "ms": 2,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "command-v",
+      "bins": [
+        "(syntaxe)"
+      ],
+      "cmd": "command -v cat > /dev/null && echo ok",
+      "resolution": {
+        "(syntaxe)": "grammaire Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 18
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "bun: command not found: command\n",
+        "ms": 2,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    },
+    {
+      "id": "negate",
+      "bins": [
+        "(syntaxe)"
+      ],
+      "cmd": "! false && echo ok",
+      "resolution": {
+        "(syntaxe)": "grammaire Bun Shell"
+      },
+      "gitBash": {
+        "code": 0,
+        "stdout": "ok\n",
+        "stderr": "",
+        "ms": 17
+      },
+      "bunShell": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "bun: command not found: !\n",
+        "ms": 2,
+        "ok": false,
+        "match": "différent"
+      },
+      "prouve": false
+    }
+  ]
+}

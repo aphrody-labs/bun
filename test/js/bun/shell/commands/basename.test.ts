@@ -17,11 +17,35 @@ describe("basename", async () => {
     .stderr("")
     .runAsTest("works absolute");
 
-  TestBuilder.command`basename /usr/share/aclocal/pkg.m4 /var/log/bar/file.txt`
+  TestBuilder.command`basename -a /usr/share/aclocal/pkg.m4 /var/log/bar/file.txt`
     .exitCode(0)
     .stdout("pkg.m4\nfile.txt\n")
     .stderr("")
     .runAsTest("works multiple");
+
+  TestBuilder.command`basename /usr/share/aclocal/pkg.m4 /var/log/bar/file.txt /tmp/x`
+    .exitCode(0)
+    .stdout("pkg.m4\nfile.txt\nx\n")
+    .stderr("")
+    .runAsTest("more than two operands are all names");
+
+  TestBuilder.command`basename a/b/c.txt .txt`
+    .exitCode(0)
+    .stdout("c\n")
+    .stderr("")
+    .runAsTest("second operand is a suffix");
+
+  TestBuilder.command`basename a/b/.txt .txt`
+    .exitCode(0)
+    .stdout(".txt\n")
+    .stderr("")
+    .runAsTest("suffix equal to the name is kept");
+
+  TestBuilder.command`basename -s .ts a/x.ts b/y.ts c/z.js`
+    .exitCode(0)
+    .stdout("x\ny\nz.js\n")
+    .stderr("")
+    .runAsTest("-s strips the suffix from every name");
 
   TestBuilder.command`basename C:/Documents/Newsletters/Summer2018.pdf`
     .exitCode(0)

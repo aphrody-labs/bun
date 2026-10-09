@@ -11,3 +11,12 @@ describe("true", async () => {
 
   TestBuilder.command`true --version`.exitCode(0).runAsTest("works with --version");
 });
+
+describe(":", async () => {
+  TestBuilder.command`: ignored args && echo ok`
+    .env({ PATH: "" })
+    .stdout("ok\n")
+    .stderr("")
+    .exitCode(0)
+    .runAsTest("is a builtin no-op");
+});
