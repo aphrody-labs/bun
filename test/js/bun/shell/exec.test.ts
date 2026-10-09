@@ -113,15 +113,13 @@ async function bunsh(args: string[], opts: { cwd?: string; env?: Record<string, 
 describe("bunsh", () => {
   test.concurrent("-c runs the command and exits with its code", async () => {
     const { stdout, exitCode } = await bunsh(["-c", "echo one; false"]);
-    expect(stdout).toBe("one
-");
+    expect(stdout).toBe("one\n");
     expect(exitCode).toBe(1);
   });
 
   test.concurrent("exit ends the whole script", async () => {
     const { stdout, exitCode } = await bunsh(["-c", "echo before; exit 3; echo after"]);
-    expect(stdout).toBe("before
-");
+    expect(stdout).toBe("before\n");
     expect(exitCode).toBe(3);
   });
 
@@ -133,46 +131,34 @@ describe("bunsh", () => {
 
   test.concurrent("a subshell absorbs exit", async () => {
     const { stdout, exitCode } = await bunsh(["-c", "(exit 2); echo $?; echo $(echo in; exit 5)out"]);
-    expect(stdout).toBe("2
-inout
-");
+    expect(stdout).toBe("2\ninout\n");
     expect(exitCode).toBe(0);
   });
 
   test.concurrent("$? is the last exit code", async () => {
     const { stdout, exitCode } = await bunsh(["-c", "false; echo $?; true; echo $?; false || echo $?"]);
-    expect(stdout).toBe("1
-0
-1
-");
+    expect(stdout).toBe("1\n0\n1\n");
     expect(exitCode).toBe(0);
   });
 
   test.concurrent("-c name args sets $0 and $1..", async () => {
     const { stdout, exitCode } = await bunsh(["-c", "echo $0 $1 $2", "myname", "a", "b"]);
-    expect(stdout).toBe("myname a b
-");
+    expect(stdout).toBe("myname a b\n");
     expect(exitCode).toBe(0);
   });
 
   test.concurrent("environment variables and assignments", async () => {
     const { stdout, exitCode } = await bunsh(["-c", "X=local; echo $FROM_ENV $X"], { env: { FROM_ENV: "inherited" } });
-    expect(stdout).toBe("inherited local
-");
+    expect(stdout).toBe("inherited local\n");
     expect(exitCode).toBe(0);
   });
 
   test.concurrent("runs a script file with arguments", async () => {
     using dir = tempDir("bunsh-script", {
-      "script.sh": "#!/usr/bin/env bunsh
-echo $0 $1
-exit 6
-echo unreachable
-",
+      "script.sh": "#!/usr/bin/env bunsh\necho $0 $1\nexit 6\necho unreachable\n",
     });
     const { stdout, exitCode } = await bunsh(["script.sh", "arg"], { cwd: String(dir) });
-    expect(stdout).toBe("script.sh arg
-");
+    expect(stdout).toBe("script.sh arg\n");
     expect(exitCode).toBe(6);
   });
 
@@ -183,12 +169,8 @@ echo unreachable
   });
 
   test.concurrent("reads the script from stdin when it is not a terminal", async () => {
-    const { stdout, exitCode } = await bunsh([], { stdin: "echo from-stdin
-exit 7
-echo no
-" });
-    expect(stdout).toBe("from-stdin
-");
+    const { stdout, exitCode } = await bunsh([], { stdin: "echo from-stdin\nexit 7\necho no\n" });
+    expect(stdout).toBe("from-stdin\n");
     expect(exitCode).toBe(7);
   });
 
@@ -204,15 +186,7 @@ echo no
     const { stdout, exitCode } = await bunsh(["-i"], {
       cwd: String(dir),
       env: { HOME: String(dir), USERPROFILE: String(dir) },
-      stdin: "cd sub
-X=kept
-export Y=exported
-false
-echo $? $X $Y
-ls
-exit 9
-echo unreachable
-",
+      stdin: "cd sub\nX=kept\nexport Y=exported\nfalse\necho $? $X $Y\nls\nexit 9\necho unreachable\n",
     });
     expect(stdout).toContain("1 kept exported");
     expect(stdout).toContain("marker");
@@ -225,10 +199,16 @@ echo unreachable
     using dir = tempDir("bunsh-eof", {});
     const { exitCode } = await bunsh(["-i"], {
       env: { HOME: String(dir), USERPROFILE: String(dir) },
-      stdin: "false
-",
+      stdin: "false\n",
     });
     expect(exitCode).toBe(1);
+  });
+
+  // Unelevated, --root re-executes through sudo -n or UAC, which a test cannot answer.
+  test.skipIf(isWindows || process.getuid?.() !== 0)("--root runs in place when already root", async () => {
+    const { stdout, exitCode } = await bunsh(["--root", "-c", "echo $0 $1; exit 5", "name", "arg"]);
+    expect(stdout).toBe("name arg\n");
+    expect(exitCode).toBe(5);
   });
 
   test.concurrent("is also selected by a login argv0", async () => {
@@ -274,8 +254,7 @@ describe.skipIf(isWindows)("bunsh runs apk install scripts", () => {
   test.concurrent("state-dir.post-install", async () => {
     const { stdout, version, exitCode } = await runScript("state-dir.post-install", ["2.4.1-r3"]);
     expect(stdout).toBe("");
-    expect(version).toBe("2.4.1-r3
-");
+    expect(version).toBe("2.4.1-r3\n");
     expect(exitCode).toBe(0);
   });
 
@@ -291,8 +270,7 @@ describe.skipIf(isWindows)("bunsh runs apk install scripts", () => {
 
   test.todo("case.post-upgrade: needs case/esac", async () => {
     const { stdout, exitCode } = await runScript("case.post-upgrade", ["2.0.0-r0", "1.9.0-r0"]);
-    expect(stdout).toBe("migrating from 1.9.0-r0
-");
+    expect(stdout).toBe("migrating from 1.9.0-r0\n");
     expect(exitCode).toBe(0);
   });
 

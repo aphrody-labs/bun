@@ -4,6 +4,7 @@
 //! bunsh -c '<cmd>' [name [args...]]   $0 = name, $1.. = args
 //! bunsh script.sh [args...]
 //! bunsh                               interactive on a terminal, else reads the script from stdin
+//! bunsh --root ...                    the same, as root/Administrator (`crate::elevate`)
 //! ```
 //!
 //! Unlike `Bun.$`, `exit` ends the whole script, and the interactive session keeps `cd`, variables,
@@ -23,7 +24,7 @@ use crate::shell::{ExitCode, Interpreter};
 
 const HISTORY_FILENAME: &[u8] = b".bunsh_history";
 
-const USAGE: &str = "Usage: bunsh [-l] [-c command [name [args...]] | script [args...]]\n\
+const USAGE: &str = "Usage: bunsh [-l] [--root] [-c command [name [args...]] | script [args...]]\n\
 \n\
 Bun Shell as a login and system shell.\n\
 \n\
@@ -31,6 +32,7 @@ Bun Shell as a login and system shell.\n\
   -s           read the script from stdin\n\
   -l, --login  login shell (accepted; bunsh reads no profile files)\n\
   -i           interactive (the default on a terminal)\n\
+  --root       run as root/Administrator (sudo -n, Windows sudo or UAC)\n\
   --version    print the Bun version\n";
 
 /// argv0 names `bunsh`; a login shell gets it with a leading `-`.
@@ -65,6 +67,7 @@ pub(crate) fn exec(ctx: &'static mut ContextData) -> Result<(), crate::Error> {
     let mut i = 0;
     let mut mode: Option<Mode> = None;
     let mut force_interactive = false;
+    let mut root_index: Option<usize> = None;
     while i < args.len() {
         match &*args[i] {
             b"-c" => {
@@ -81,6 +84,10 @@ pub(crate) fn exec(ctx: &'static mut ContextData) -> Result<(), crate::Error> {
                 break;
             }
             b"-l" | b"--login" => i += 1,
+            b"--root" => {
+                root_index.get_or_insert(i);
+                i += 1;
+            }
             b"-i" => {
                 force_interactive = true;
                 i += 1;
@@ -106,6 +113,15 @@ pub(crate) fn exec(ctx: &'static mut ContextData) -> Result<(), crate::Error> {
         .get(0)
         .map(|a| Box::<[u8]>::from(a.as_bytes()))
         .unwrap_or_else(|| Box::from(&b"bunsh"[..]));
+    if let Some(index) = root_index {
+        let forwarded: Vec<&[u8]> = args
+            .iter()
+            .enumerate()
+            .filter(|(j, _)| *j != index)
+            .map(|(_, a)| &a[..])
+            .collect();
+        elevate_self(&argv0, &forwarded);
+    }
 
     let mode = match mode {
         Some(Mode::Command(cmd)) => {
@@ -166,6 +182,76 @@ pub(crate) fn exec(ctx: &'static mut ContextData) -> Result<(), crate::Error> {
     };
     Output::flush();
     Global::exit(u32::from(code));
+}
+
+/// `--root`: returns when the process is already root/Administrator, else runs this bunsh again through
+/// `crate::elevate` with the other arguments and never returns. sudo needs a file named `bunsh` (argv0 selects
+/// the mode), so the executable is the one argv0 or `PATH` names, not `self_exe_path()`.
+fn elevate_self(argv0: &[u8], args: &[&[u8]]) {
+    let mut cwd_buf = bun_paths::path_buffer_pool::get();
+    let cwd: &[u8] = match bun_sys::getcwd(&mut *cwd_buf) {
+        Ok(n) => &cwd_buf[..n],
+        Err(err) => {
+            Output::err(err, "bunsh: cannot read the current directory", ());
+            Output::flush();
+            Global::exit(1);
+        }
+    };
+    let path_env = bun_core::env_var::PATH.get().unwrap_or(b"");
+    let prefix = match crate::elevate::plan(path_env, cwd) {
+        Ok(crate::elevate::Elevation::Direct) => return,
+        Ok(crate::elevate::Elevation::Wrapped { prefix, .. }) => prefix,
+        Err(e) => {
+            bun_core::pretty_errorln!("bunsh: {}", e.message());
+            Output::flush();
+            Global::exit(126);
+        }
+    };
+    let name = argv0.strip_prefix(b"-").unwrap_or(argv0);
+    let mut exe_buf = bun_paths::path_buffer_pool::get();
+    let exe: Vec<u8> = if bun_core::strings::index_of_any(name, b"/\\").is_some() {
+        bun_paths::resolve_path::join_abs_string::<bun_paths::resolve_path::platform::Auto>(cwd, &[name]).to_vec()
+    } else {
+        match bun_which::which(&mut exe_buf, path_env, cwd, name) {
+            Some(z) => z.as_bytes().to_vec(),
+            None => {
+                bun_core::pretty_errorln!("bunsh: --root: cannot find {} in PATH", BStr::new(name));
+                Output::flush();
+                Global::exit(127);
+            }
+        }
+    };
+    let mut command: Vec<&[u8]> = prefix.iter().map(|w| &w[..]).collect();
+    command.push(&exe);
+    command.extend_from_slice(args);
+    Output::flush();
+
+    #[cfg(unix)]
+    {
+        let owned: Vec<std::ffi::CString> = command
+            .iter()
+            .filter_map(|w| std::ffi::CString::new(*w).ok())
+            .collect();
+        let mut ptrs: Vec<*const core::ffi::c_char> = owned.iter().map(|c| c.as_ptr()).collect();
+        ptrs.push(core::ptr::null());
+        // SAFETY: `ptrs` is a NULL-terminated array of NUL-terminated strings that `owned` keeps alive; execv only
+        // returns on failure.
+        unsafe { libc::execv(ptrs[0], ptrs.as_ptr()) };
+        bun_core::pretty_errorln!("bunsh: --root: cannot execute {}", BStr::new(command[0]));
+        Output::flush();
+        Global::exit(126);
+    }
+    #[cfg(windows)]
+    {
+        match bun_core::spawn_sync_inherit(&command) {
+            Ok(status) => Global::exit(status.code() as u32),
+            Err(_) => {
+                bun_core::pretty_errorln!("bunsh: --root: cannot execute {}", BStr::new(command[0]));
+                Output::flush();
+                Global::exit(126);
+            }
+        }
+    }
 }
 
 /// Loads the process environment (no `.env` files: this is a system shell) and the mini event loop.
