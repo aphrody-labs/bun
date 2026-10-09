@@ -24,7 +24,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { downloadWithRetry, extractTarGz, fetchPrebuilt } from "./download.ts";
 import { BuildError, assert } from "./error.ts";
 import { writeIfChanged } from "./fs.ts";
@@ -325,10 +325,13 @@ function normalizeLf(s: string): string {
  * so a CRLF-mangled checkout still applies cleanly. --no-index: dest/ is
  * not a git repo. --ignore-whitespace / --ignore-space-change: patches are
  * authored against upstream which may have different trailing whitespace.
+ * GIT_CEILING_DIRECTORIES: vendor/<dep> sits inside the bun checkout, and a
+ * discovered parent repo makes git apply print "Skipped patch" and exit 0.
  */
 function applyPatch(dest: string, patchPath: string, patchBody: string): void {
   const result = spawnSync("git", ["apply", "--ignore-whitespace", "--ignore-space-change", "--no-index", "-"], {
     cwd: dest,
+    env: { ...process.env, GIT_CEILING_DIRECTORIES: dirname(dest) },
     input: normalizeLf(patchBody),
     stdio: ["pipe", "ignore", "pipe"],
     encoding: "utf8",

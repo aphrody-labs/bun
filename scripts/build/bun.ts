@@ -110,6 +110,10 @@ function systemLibs(cfg: Config): string[] {
       "bcrypt.lib",
       "ntdll.lib",
       "userenv.lib",
+      "user32.lib", // clipboard + message loop (webview, terminal)
+      "ole32.lib", // COM (WIC image codecs, webview)
+      "oleaut32.lib", // VARIANT (image_wic_shim.cpp)
+      "shell32.lib", // SHGetKnownFolderPath (libuv)
       "dbghelp.lib",
       "crypt32.lib",
       "wsock32.lib", // ws2_32 + wsock32 — wsock32 has TransmitFile (sendfile equiv)

@@ -55,7 +55,6 @@ impl WinErr {
 pub(crate) type WinResult<T> = Result<T, WinErr>;
 
 pub(crate) const ERROR_FILE_NOT_FOUND: u32 = 2;
-pub(crate) const ERROR_ACCESS_DENIED: u32 = 5;
 pub(crate) const ERROR_INSUFFICIENT_BUFFER: u32 = 122;
 pub(crate) const ERROR_MORE_DATA: u32 = 234;
 pub(crate) const ERROR_NO_MORE_ITEMS: u32 = 259;
@@ -245,12 +244,6 @@ impl Json {
     pub(crate) fn bool(&mut self, b: bool) -> &mut Self {
         self.sep();
         self.out.push_str(if b { "true" } else { "false" });
-        self
-    }
-
-    pub(crate) fn null(&mut self) -> &mut Self {
-        self.sep();
-        self.out.push_str("null");
         self
     }
 

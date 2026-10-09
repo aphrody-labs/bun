@@ -23,7 +23,9 @@ pub(crate) enum Elevation {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ElevateError {
+    #[cfg_attr(windows, allow(dead_code))]
     SudoNotFound,
+    #[cfg_attr(windows, allow(dead_code))]
     PasswordRequired,
     #[cfg_attr(not(windows), allow(dead_code))]
     NoSelfExe,

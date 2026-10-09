@@ -507,6 +507,7 @@ impl Cmd {
 
         // Resolve argv[0] via PATH (`bun_which::which`); a coreutils applet missing from PATH
         // runs as this executable with argv[0] = the applet name.
+        #[cfg_attr(not(feature = "coreutils"), allow(unused_mut))]
         let mut applet = false;
         let resolved: Option<Vec<u8>> = {
             let mut path_buf = bun_paths::path_buffer_pool::get();
