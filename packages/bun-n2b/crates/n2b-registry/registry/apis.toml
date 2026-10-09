@@ -635,3 +635,114 @@ severity    = "warn"
 replace     = "none"
 aggressive  = false
 
+
+# Surface de Node (aphrody-labs/node, doc/api) sans règle jusqu'ici ; voir docs/aphrody/merge/M-n2b-node.md.
+
+[[apis]]
+id          = "api/util-isDeepStrictEqual"
+pattern     = '\butil\.isDeepStrictEqual\s*\(\s*([^,()]+?)\s*,\s*([^,()]+?)\s*\)'
+message     = "Bun.deepEquals(a, b, true) est l'égalité profonde stricte native"
+severity    = "warn"
+replace     = "template"
+replacement = "Bun.deepEquals($1, $2, true)"
+aggressive  = true
+
+[[apis]]
+id          = "api/util-stripVTControlCharacters"
+pattern     = '\butil\.stripVTControlCharacters\s*\(\s*([^,()]+?)\s*\)'
+message     = "Bun.stripANSI() est natif (SIMD)"
+severity    = "warn"
+replace     = "template"
+replacement = "Bun.stripANSI($1)"
+aggressive  = true
+
+[[apis]]
+id          = "api/os-availableParallelism"
+pattern     = '\bos\.availableParallelism\s*\(\s*\)'
+message     = "navigator.hardwareConcurrency donne le parallélisme disponible sans importer node:os"
+severity    = "info"
+replace     = "static"
+replacement = "navigator.hardwareConcurrency"
+aggressive  = true
+
+[[apis]]
+id          = "api/os-cpus-length"
+pattern     = '\bos\.cpus\s*\(\s*\)\.length\b'
+message     = "navigator.hardwareConcurrency évite de construire la liste des CPU pour les compter"
+severity    = "info"
+replace     = "static"
+replacement = "navigator.hardwareConcurrency"
+aggressive  = true
+
+[[apis]]
+id          = "api/zlib-gunzipSync"
+pattern     = '\bzlib\.gunzipSync\s*\('
+message     = "Bun.gunzipSync() est natif (retourne un Uint8Array, pas un Buffer)"
+severity    = "info"
+replace     = "none"
+aggressive  = false
+
+[[apis]]
+id          = "api/child-process-spawnSync"
+import_from = "child_process"
+pattern     = '\b(?:child_process\.)?spawnSync\s*\('
+message     = "Bun.spawnSync([cmd, ...args]) est natif (stdout/stderr en Buffer, exitCode au lieu de status)"
+severity    = "warn"
+replace     = "none"
+aggressive  = false
+
+[[apis]]
+id          = "api/sqlite-DatabaseSync"
+pattern     = '\bnew\s+DatabaseSync\s*\('
+message     = "node:sqlite DatabaseSync → Database de bun:sqlite (prepare/query/run, statements en cache)"
+severity    = "warn"
+replace     = "none"
+aggressive  = false
+
+[[apis]]
+id          = "api/fs-globSync"
+pattern     = '\bfs\.globSync\s*\('
+message     = "Array.from(new Bun.Glob(motif).scanSync()) est le glob natif de Bun"
+severity    = "info"
+replace     = "none"
+aggressive  = false
+
+[[apis]]
+id          = "api/net-createServer"
+pattern     = '\bnet\.createServer\s*\('
+message     = "Bun.listen({ hostname, port, socket: { data, open, close } }) est le serveur TCP natif"
+severity    = "info"
+replace     = "none"
+aggressive  = false
+
+[[apis]]
+id          = "api/dns-lookup"
+pattern     = '\bdns\.(?:promises\.)?lookup\s*\('
+message     = "Bun.dns.lookup(hostname) est natif (c-ares, cache DNS de Bun)"
+severity    = "info"
+replace     = "none"
+aggressive  = false
+
+[[apis]]
+id          = "api/process-hrtime"
+pattern     = '\bprocess\.hrtime\s*\(\s*\)'
+message     = "Bun.nanoseconds() donne le temps monotone en un seul nombre"
+severity    = "info"
+replace     = "none"
+aggressive  = false
+
+[[apis]]
+id          = "api/crypto-hash"
+pattern     = '\bcrypto\.hash\s*\('
+message     = "Bun.CryptoHasher.hash(algorithme, données, encodage) est le hachage one-shot natif"
+severity    = "info"
+replace     = "none"
+aggressive  = false
+
+[[apis]]
+id          = "api/readline-createInterface"
+pattern     = '\breadline\.createInterface\s*\(\s*\{\s*input\s*:\s*process\.stdin\b'
+message     = "for await (const line of console) lit stdin ligne à ligne sans node:readline"
+severity    = "info"
+replace     = "none"
+aggressive  = false

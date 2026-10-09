@@ -135,9 +135,9 @@ mod tests {
     #[test]
     fn apis_count_matches_baseline() {
         // Garde-fou Phase 1 : la transcription préserve le nombre d'entrées.
-        // Source : crates/compat/n2b-core/src/rules/bun_apis.rs RULES — 73 entrées
+        // Source : crates/compat/n2b-core/src/rules/bun_apis.rs RULES (73 entrées) + surface Node de M-n2b-node.md (13)
         // (incluant 2 next/* + 71 api/*).
-        assert_eq!(APIS.len(), 73, "apis.toml a divergé de bun_apis.rs RULES");
+        assert_eq!(APIS.len(), 86, "apis.toml a divergé de bun_apis.rs RULES");
     }
 
     #[test]

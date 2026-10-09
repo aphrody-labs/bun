@@ -11,7 +11,7 @@ workflows, …) add rules written in code in `crates/n2b-core/src/scanners/`.
 
 | File            | Static     | Entries | Matches                                                                          |
 | --------------- | ---------- | ------- | -------------------------------------------------------------------------------- |
-| `apis.toml`     | `APIS`     | 73      | Node API calls and their Bun rewrite (`fs.readFileSync` → `Bun.file().text()`)   |
+| `apis.toml`     | `APIS`     | 86      | Node API calls and their Bun rewrite (`fs.readFileSync` → `Bun.file().text()`)   |
 | `modules.toml`  | `MODULES`  | 56      | `node:*` built-ins and their Bun support level                                   |
 | `packages.toml` | `PACKAGES` | 115     | npm packages with a Bun-native replacement (`dotenv`, `ws`, `better-sqlite3`, …) |
 | `cli.toml`      | `CLI`      | 47      | `node`, `npm`, `npx`, `yarn` and `pnpm` commands in scripts and workflows        |
