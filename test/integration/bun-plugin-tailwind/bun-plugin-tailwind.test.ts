@@ -236,6 +236,45 @@ describe("Bun.build", () => {
     expect(css).not.toContain("external.invalid");
   });
 
+  test("schemeImport: the CSS of a scheme import is compiled with the root, its @theme included", async () => {
+    using dir = tempDir("tw-scheme-inline", {
+      "style.css": `@import "tailwindcss";\n@import "virt:theme.css";\n@import "virt:kept.css";\n.a { color: var(--brand); }`,
+      "index.html": `<div class="bg-brand"></div>`,
+    });
+    const sheets: Record<string, string> = {
+      "virt:theme.css": `@import "virt:nested.css";\n@theme inline { --color-brand: var(--brand); }`,
+      "virt:nested.css": ":root { --brand: #6750a4; }",
+    };
+    const requested: [string, string][] = [];
+    const virtual: import("bun").BunPlugin = {
+      name: "virtual-sheet",
+      setup(build) {
+        build.onResolve({ filter: /^virt:/ }, ({ path }) => ({ path, namespace: "virt" }));
+        build.onLoad({ filter: /.*/, namespace: "virt" }, () => ({ contents: ":root { --kept: 1; }", loader: "css" }));
+      },
+    };
+    const schemeImport = (id: string, importer: string) => {
+      requested.push([id, importer.replaceAll("\\", "/")]);
+      return sheets[id];
+    };
+    const css = await buildCss(String(dir), "style.css", {}, { plugins: [virtual, tw.tailwind({ schemeImport })] });
+    expect(css).toMatch(/\.bg-brand\s*\{\s*background-color: var\(--brand\)/);
+    expect(css).toContain("--brand: #6750a4");
+    expect(css).toContain("--kept: 1");
+    expect(css).not.toContain("@theme");
+    expect(requested).toEqual([
+      ["virt:theme.css", join(String(dir), "style.css").replaceAll("\\", "/")],
+      ["virt:nested.css", "virt:theme.css"],
+      ["virt:kept.css", join(String(dir), "style.css").replaceAll("\\", "/")],
+    ]);
+
+    const path = join(String(dir), "style.css");
+    const cycle = new tw.TailwindRoot(path, String(dir), { schemeImport: id => `@import "${id}";` });
+    await expect(cycle.generate(await Bun.file(path).text())).rejects.toThrow(
+      "@import cycle: virt:theme.css -> virt:theme.css",
+    );
+  });
+
   test("module graph: candidates from imported files the scanner skips", async () => {
     const files = {
       ".gitignore": "generated/\nout/\n",

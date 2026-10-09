@@ -45,6 +45,12 @@ export interface TailwindOptions {
    * `@import "tailwindcss"`; pass `M3Options` to choose the seed or drop parts.
    */
   theme?: "m3" | M3Options;
+  /**
+   * CSS of an unconditional `@import "<scheme>:…";` that another plugin of the build serves
+   * (`m3:theme.css`). The CSS returned replaces the import before the compile, so its `@theme`,
+   * `@utility` and `@apply` reach Tailwind; `undefined` leaves the import to the bundler.
+   */
+  schemeImport?: (id: string, importer: string) => string | undefined | Promise<string | undefined>;
 }
 
 /** Bit set of `Features` from `tailwindcss`: any of these makes a file a Tailwind root. */
@@ -158,6 +164,30 @@ function restoreSchemeImports(css: string, held: string[], map: string | undefin
   return { css: `${rules.join("\n")}\n${rest}`, map };
 }
 
+const PLAIN_IMPORT = /@import\s+(?:url\(\s*(["'])([^"']*)\1\s*\)|(["'])([^"']*)\3)\s*;/gi;
+const SCHEME_ID = /^(?!(?:data|https?):)(?![a-z]:[\\/])[a-z][a-z0-9+.-]*:/i;
+
+/** Replaces each unconditional scheme import `load` serves by its CSS, recursively. */
+async function inlineSchemeImports(
+  css: string,
+  importer: string,
+  load: NonNullable<TailwindOptions["schemeImport"]>,
+  stack: string[] = [],
+): Promise<string> {
+  let out = "";
+  let last = 0;
+  for (const m of css.matchAll(PLAIN_IMPORT)) {
+    const id = m[2] ?? m[4];
+    if (!SCHEME_ID.test(id)) continue;
+    if (stack.includes(id)) throw new Error(`@import cycle: ${[...stack, id].join(" -> ")}`);
+    const content = await load(id, importer);
+    if (content === undefined) continue;
+    out += css.slice(last, m.index) + (await inlineSchemeImports(content, id, load, [...stack, id]));
+    last = m.index + m[0].length;
+  }
+  return last ? out + css.slice(last) : css;
+}
+
 export interface GenerateResult {
   css: string;
   /** Raw source map JSON when `sourcemap` is on. */
@@ -213,9 +243,9 @@ export class TailwindRoot {
     input: string,
     extra?: (root: TailwindRoot) => Iterable<string>,
   ): Promise<GenerateResult | undefined> {
-    const { css: source, held } = holdSchemeImports(
-      withPrelude(input, this.#options.theme ? await m3Prelude(this.#options.theme) : undefined),
-    );
+    const { schemeImport, theme } = this.#options;
+    if (schemeImport) input = await inlineSchemeImports(input, this.path, schemeImport);
+    const { css: source, held } = holdSchemeImports(withPrelude(input, theme ? await m3Prelude(theme) : undefined));
     if (!this.#compiler || !this.#scanner || source !== this.#input || this.#changed()) {
       clearRequireCache([...this.#dependencies.keys()]);
       this.#dependencies.clear();

@@ -70,6 +70,7 @@ tailwind({
   sourcemap: true, // inline source map to the original stylesheets
   moduleGraph: { exclude: /node_modules/ }, // or `false` to scan only the sources
   theme: "m3", // Material 3 preset, see below
+  schemeImport: id => sheets[id], // CSS of `@import "m3:theme.css"`-style imports, compiled with the root
 });
 ```
 
@@ -77,6 +78,11 @@ tailwind({
 example with the PostCSS plugin). `sourcemap` defaults to the build's `sourcemap` option: with
 `Bun.build({ sourcemap: "linked" })` (or `"external"`, `"inline"`), Bun composes Tailwind's map with its own, so the CSS
 map points at your stylesheets and Tailwind's.
+
+An `@import` of another plugin's scheme (`@import "m3:theme.css";`) stays an import the bundler resolves through
+that plugin, so Tailwind never sees its content. When that content holds `@theme`, `@utility` or `@apply`, pass
+`schemeImport(id, importer)`: the CSS it returns replaces each unconditional import before the compile (recursively,
+cycles are errors); `undefined` keeps the import.
 
 ## PostCSS (Next.js with Turbopack or webpack, Vite)
 
