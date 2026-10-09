@@ -1,18 +1,22 @@
 // Publie le site aphrody.com depuis origin/main d'aphrody-labs/bun (lancé sur le VPS, depuis un checkout du fork) :
-// git fetch, `git archive` de docs/ bench/ scripts/aphrody/ dans un dossier temporaire, rapports perf du dernier
-// run réussi d'aphrody-perf.yml (gh), releases GitHub, build.ts de l'arbre extrait, puis envoi par tar sur
-// `ssh <host>` dans <base>/releases/<UTC>-<sha12> et bascule atomique de <base>/current (5 releases gardées).
+// git fetch du fork et du monorepo de la distribution, `git archive` de docs/ bench/ scripts/aphrody/ dans un
+// dossier temporaire, collect.ts (site-data.json : runtime, distribution, organisation GitHub, downloads), rapports
+// perf du dernier run réussi d'aphrody-perf.yml (gh), releases GitHub, build.ts de l'arbre extrait, puis envoi par
+// tar sur `ssh <host>` dans <base>/releases/<UTC>-<sha12> et bascule atomique de <base>/current (5 releases gardées).
 //
 //   bun scripts/aphrody/site/publish.ts [--git <checkout du fork>] [--ref origin/main] [--to ssh:dbfr | local:<base>] [--keep 5]
+//       [--distribution <checkout aphrody-labs/aphrody> | --no-distribution] [--distribution-ref origin/main]
 //       [--perf <dossier> | --no-perf] [--offline] [--dry-run] [--if-changed]
-// --if-changed ne fait rien si <base>/current/publish.json porte déjà le même commit, la même release et le même run perf.
+// Le checkout de la distribution est par défaut le voisin `aphrody` du checkout du fork.
+// --if-changed ne fait rien si <base>/current/publish.json porte déjà le même commit, la même release, le même run
+// perf et la même empreinte de données ; une collecte en erreur (réseau, jeton GitHub absent) n'y publie rien.
 //   bun scripts/aphrody/site/publish.ts rollback [--to ...] [--release <id>]   # défaut : la release précédente
 //   bun scripts/aphrody/site/publish.ts status [--to ...]
 //
 // Côté serveur, aphrody-downloads (C:\aphrody packages/infra/workspace/src/downloads/server.ts) sert
 // <base>/current pour les hôtes aphrody.com et www.aphrody.com. Chaque action est journalisée dans
 // ~/.coord-dbfr.log de l'hôte cible.
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -37,13 +41,7 @@ export const releaseId = (sha: string, now = new Date()) =>
 const shq = (s: string) => `'${s.replaceAll("'", `'\\''`)}'`;
 
 /** Script shell de bascule : vérifie site.json, flip atomique de current, purge au-delà de `keep`, journal. */
-export function flipScript(
-  base: string,
-  id: string,
-  keep: number,
-  note: string,
-  log = true,
-): string {
+export function flipScript(base: string, id: string, keep: number, note: string, log = true): string {
   return `set -eu
 base=${shq(base)}; id=${shq(id)}
 test -f "$base/releases/$id/site.json" || { echo "release incomplète : $id" >&2; exit 1; }
@@ -64,8 +62,7 @@ function run(cmd: string[], opts: { cwd?: string; stdin?: Blob | "inherit" } = {
     stdout: "pipe",
     stderr: "pipe",
   });
-  if (!r.success)
-    throw new Error(`${cmd.slice(0, 3).join(" ")} : ${r.stderr.toString().trim() || r.exitCode}`);
+  if (!r.success) throw new Error(`${cmd.slice(0, 3).join(" ")} : ${r.stderr.toString().trim() || r.exitCode}`);
   return r.stdout.toString().trim();
 }
 
@@ -85,10 +82,23 @@ function listReleases(target: Target): { current: string; releases: string[] } {
   };
 }
 
-/** Ce qui détermine le contenu publié : rien n'est republié tant que ces trois valeurs ne changent pas. */
-export type Stamp = { commit: string; release: string | null; perfRun: number | null };
+/**
+ * Ce qui détermine le contenu publié : rien n'est republié tant que ces valeurs ne changent pas. `data` est
+ * l'empreinte de site-data.json (collect.ts) hors date de collecte.
+ */
+export type Stamp = { commit: string; release: string | null; perfRun: number | null; data?: string | null };
 export const sameStamp = (a: Stamp | null, b: Stamp) =>
-  !!a && a.commit === b.commit && a.release === b.release && a.perfRun === b.perfRun;
+  !!a &&
+  a.commit === b.commit &&
+  a.release === b.release &&
+  a.perfRun === b.perfRun &&
+  (a.data ?? null) === (b.data ?? null);
+
+/** Empreinte des données collectées, sans leur date de collecte. */
+export function dataDigest(json: string): string {
+  const { generatedAt: _, ...rest } = JSON.parse(json);
+  return new Bun.CryptoHasher("sha256").update(JSON.stringify(rest)).digest("hex").slice(0, 16);
+}
 
 function latestPerfRun(): { id: number; url: string } | null {
   const list = JSON.parse(
@@ -125,9 +135,7 @@ function latestRelease(): string | null {
 
 function remoteStamp(target: Target): Stamp | null {
   try {
-    return JSON.parse(
-      remote(target, `cat ${shq(`${target.base}/current/publish.json`)} 2>/dev/null || echo null`),
-    );
+    return JSON.parse(remote(target, `cat ${shq(`${target.base}/current/publish.json`)} 2>/dev/null || echo null`));
   } catch {
     return null;
   }
@@ -155,18 +163,25 @@ async function publish(args: string[], target: Target) {
       return null;
     }
   };
-  const perfRun =
-    option("--perf") || args.includes("--no-perf") ? null : query("perf", latestPerfRun);
-  const stamp: Stamp = {
-    commit: sha,
-    release: args.includes("--offline") ? null : query("releases", latestRelease),
-    perfRun: perfRun?.id ?? null,
-  };
-  if (ifChanged && sameStamp(remoteStamp(target), stamp)) {
-    console.log(
-      `à jour : ${sha.slice(0, 12)}, release ${stamp.release ?? "aucune"}, perf ${stamp.perfRun ?? "aucun"}`,
-    );
-    return;
+  const perfRun = option("--perf") || args.includes("--no-perf") ? null : query("perf", latestPerfRun);
+
+  // Monorepo de la distribution : checkout voisin du fork (…/src/aphrody à côté de …/src/bun) par défaut.
+  const sibling = join(repoDir, "..", "aphrody");
+  const distOption = option("--distribution");
+  const distDir = args.includes("--no-distribution")
+    ? null
+    : distOption
+      ? resolve(distOption)
+      : existsSync(join(sibling, ".git"))
+        ? sibling
+        : null;
+  const distRef = option("--distribution-ref") ?? "origin/main";
+  if (!distDir && !args.includes("--no-distribution") && ifChanged)
+    throw new Error(`checkout de la distribution introuvable (${sibling}) : --distribution <dir> ou --no-distribution`);
+  let distSha: string | null = null;
+  if (distDir) {
+    if (distRef.startsWith("origin/")) run(["git", "-C", distDir, "fetch", "-q", "origin", distRef.slice(7)]);
+    distSha = run(["git", "-C", distDir, "rev-parse", `${distRef}^{commit}`]);
   }
 
   const work = mkdtempSync(join(tmpdir(), "aphrody-site-"));
@@ -188,6 +203,41 @@ async function publish(args: string[], target: Target) {
     if (!archive.success) throw new Error(`git archive : ${archive.stderr.toString()}`);
     run(["tar", "-x", "-C", src], { stdin: new Blob([archive.stdout]) });
 
+    // Données du site (collect.ts de l'arbre extrait) : runtime au commit publié, distribution, organisation.
+    const dataFile = join(work, "site-data.json");
+    const collect = [
+      "bun",
+      join(src, "scripts/aphrody/site/collect.ts"),
+      "--out",
+      dataFile,
+      "--runtime",
+      repoDir,
+      "--runtime-ref",
+      sha,
+    ];
+    if (distDir && distSha) collect.push("--distribution", distDir, "--distribution-ref", distSha);
+    if (args.includes("--offline")) collect.push("--offline");
+    console.log(run(collect, { cwd: src }));
+    const dataJson = readFileSync(dataFile, "utf8");
+    const errors = (JSON.parse(dataJson).errors ?? []) as string[];
+    if (errors.length) {
+      if (ifChanged) throw new Error(`collecte incomplète, rien n'est publié : ${errors.join(" ; ")}`);
+      for (const e of errors) console.warn(`collecte : ${e}`);
+    }
+
+    const stamp: Stamp = {
+      commit: sha,
+      release: args.includes("--offline") ? null : query("releases", latestRelease),
+      perfRun: perfRun?.id ?? null,
+      data: dataDigest(dataJson),
+    };
+    if (ifChanged && sameStamp(remoteStamp(target), stamp)) {
+      console.log(
+        `à jour : ${sha.slice(0, 12)}, distribution ${distSha?.slice(0, 12) ?? "aucune"}, release ${stamp.release ?? "aucune"}, perf ${stamp.perfRun ?? "aucun"}, données ${stamp.data}`,
+      );
+      return;
+    }
+
     const build = [
       "bun",
       join(src, "scripts/aphrody/site/build.ts"),
@@ -197,6 +247,8 @@ async function publish(args: string[], target: Target) {
       out,
       "--commit",
       sha,
+      "--data",
+      dataFile,
     ];
     let perf = option("--perf");
     if (perfRun) {
@@ -221,13 +273,7 @@ async function publish(args: string[], target: Target) {
     );
     const current = remote(
       target,
-      flipScript(
-        target.base,
-        id,
-        keep,
-        `publication ${REPO}@${sha.slice(0, 12)}`,
-        target.kind === "ssh",
-      ),
+      flipScript(target.base, id, keep, `publication ${REPO}@${sha.slice(0, 12)}`, target.kind === "ssh"),
     );
     console.log(`publié : ${current} (${(tar.stdout.length / 1048576).toFixed(1)} Mio compressés)`);
   } finally {
@@ -238,19 +284,12 @@ async function publish(args: string[], target: Target) {
 function rollback(args: string[], target: Target) {
   const i = args.indexOf("--release");
   const { current, releases } = listReleases(target);
-  const to = i >= 0 ? args[i + 1]! : releases.filter((r) => r < current).at(-1);
-  if (!to || !releases.includes(to))
-    throw new Error(`aucune release cible (courante ${current || "aucune"})`);
+  const to = i >= 0 ? args[i + 1]! : releases.filter(r => r < current).at(-1);
+  if (!to || !releases.includes(to)) throw new Error(`aucune release cible (courante ${current || "aucune"})`);
   console.log(
     remote(
       target,
-      flipScript(
-        target.base,
-        to,
-        Number.MAX_SAFE_INTEGER,
-        `rollback depuis ${current}`,
-        target.kind === "ssh",
-      ),
+      flipScript(target.base, to, Number.MAX_SAFE_INTEGER, `rollback depuis ${current}`, target.kind === "ssh"),
     ),
   );
 }

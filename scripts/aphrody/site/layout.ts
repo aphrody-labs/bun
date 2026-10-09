@@ -15,6 +15,10 @@ export type Shell = {
   toc?: { level: number; id: string; text: string }[];
   alternateMarkdown?: string;
   bodyClass?: string;
+  /** HTML du pied de page (sources et licences, construit par build.ts depuis les données). */
+  footer: string;
+  /** Lien GitHub de l'en-tête. */
+  github: string;
 };
 
 export function shell(s: Shell): string {
@@ -39,12 +43,12 @@ ${s.description ? `<meta property="og:description" content="${escapeHtml(s.descr
 <script src="/assets/site.js" defer></script>
 </head><body class="${s.bodyClass ?? ""}">
 <header class="top"><div class="bar">
-<a class="brand" href="/"><img src="/icon.svg" alt="" width="28" height="28"><span>Bun <small>Aphrody fork</small></span></a>
+<a class="brand" href="/"><img src="/icon.svg" alt="" width="28" height="28"><span>Aphrody</span></a>
 <nav class="tabs-nav" aria-label="Sections">${s.tabs
     .map(t => `<a href="${escapeHtml(t.href)}"${t.active ? ' aria-current="page"' : ""}>${escapeHtml(t.label)}</a>`)
     .join("")}</nav>
-<div class="search"><input type="search" id="q" placeholder="Search docs" aria-label="Search docs" autocomplete="off"><div id="results" role="listbox" hidden></div></div>
-<a class="gh" href="https://github.com/aphrody-labs/bun" aria-label="GitHub">GitHub</a>
+<div class="search"><input type="search" id="q" placeholder="Search" aria-label="Search the site" autocomplete="off"><div id="results" role="listbox" hidden></div></div>
+<a class="gh" href="${escapeHtml(s.github)}" aria-label="GitHub">GitHub</a>
 </div></header>
 <div class="layout${s.sidebar ? " with-sidebar" : ""}${toc ? " with-toc" : ""}">
 ${s.sidebar ? `<aside class="sidebar" aria-label="Documentation">${s.sidebar}</aside>` : ""}
@@ -52,8 +56,7 @@ ${s.sidebar ? `<aside class="sidebar" aria-label="Documentation">${s.sidebar}</a
 ${toc}
 </div>
 <footer class="foot"><div>
-<p>Bun, Aphrody fork, built from <a href="https://github.com/aphrody-labs/bun">aphrody-labs/bun</a>. Bun is MIT licensed by Oven; upstream at <a href="https://bun.com">bun.com</a>.</p>
-<p><a href="/docs">Docs</a> · <a href="/guides">Guides</a> · <a href="/benchmarks">Benchmarks</a> · <a href="/downloads">Downloads</a> · <a href="/blog">Releases</a> · <a href="/llms.txt">llms.txt</a> · <a href="https://downloads.aphrody.com">Aphrody</a></p>
+${s.footer}
 </div></footer>
 </body></html>
 `;
@@ -83,10 +86,14 @@ a{color:var(--primary)}a:hover{text-decoration-thickness:2px}
 .layout{max-width:1440px;margin:0 auto;padding:0 1rem;display:grid;grid-template-columns:minmax(0,1fr);gap:2rem}
 .layout.with-sidebar{grid-template-columns:260px minmax(0,1fr)}
 .layout.with-sidebar.with-toc{grid-template-columns:260px minmax(0,1fr) 220px}
+.layout.with-toc:not(.with-sidebar){grid-template-columns:minmax(0,1fr) 220px}
 main{min-width:0;padding:2rem 0 4rem;max-width:820px}
 .layout:not(.with-sidebar) main{max-width:1100px;margin:0 auto;width:100%}
 .sidebar{position:sticky;top:61px;align-self:start;max-height:calc(100vh - 61px);overflow:auto;padding:1.5rem .5rem 2rem 0;font-size:.875rem}
 .sidebar p{margin:1.25rem 0 .25rem;font-weight:600;font-size:.8125rem;color:var(--on-bg)}
+.doc-tabs{display:flex;flex-wrap:wrap;gap:.25rem;padding-bottom:.75rem;border-bottom:1px solid var(--outline-v)}
+.sidebar .doc-tabs a{display:inline-block;padding:.25rem .625rem;border:1px solid var(--outline-v);font-size:.8125rem}
+.sidebar .doc-tabs a[aria-current]{border-color:transparent}
 .sidebar ul{list-style:none;margin:0;padding:0}.sidebar ul ul{padding-left:.75rem;border-left:1px solid var(--outline-v);margin-left:.5rem}
 .sidebar a{display:block;padding:.3rem .75rem;border-radius:999px;color:var(--on-sv);text-decoration:none}
 .sidebar a:hover{background:var(--sc-high)}
@@ -94,7 +101,7 @@ main{min-width:0;padding:2rem 0 4rem;max-width:820px}
 .toc{position:sticky;top:61px;align-self:start;padding:2rem 0;font-size:.8125rem;max-height:calc(100vh - 61px);overflow:auto}
 .toc p{font-weight:600;margin:0 0 .5rem}.toc ul{list-style:none;margin:0;padding:0}.toc li{margin:.25rem 0}.toc li.l3{padding-left:.75rem}
 .toc a{color:var(--on-sv);text-decoration:none}.toc a:hover{color:var(--primary)}
-@media (max-width:1200px){.layout.with-sidebar.with-toc{grid-template-columns:240px minmax(0,1fr)}.toc{display:none}}
+@media (max-width:1200px){.layout.with-sidebar.with-toc{grid-template-columns:240px minmax(0,1fr)}.layout.with-toc:not(.with-sidebar){grid-template-columns:minmax(0,1fr)}.toc{display:none}}
 @media (max-width:860px){.layout.with-sidebar,.layout.with-sidebar.with-toc{grid-template-columns:minmax(0,1fr)}.sidebar{position:static;max-height:none;border-bottom:1px solid var(--outline-v)}.sidebar:not(.open) ul{display:none}.gh{display:none}}
 h1{font-size:2.25rem;line-height:2.75rem;font-weight:400;margin:.25rem 0 .5rem}
 h2{font-size:1.5rem;line-height:2rem;font-weight:500;margin:2.5rem 0 .75rem}

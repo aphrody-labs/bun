@@ -1,7 +1,6 @@
 /**
- * Aphrody Bun Runtime Bridge & Optimization Kernel
- * High-performance native process, memory management, and FFI interop layer
- * engineered for Google DeepMind Gemini 4 autonomous agent workflows.
+ * Singleton holding a runtime configuration object and a map of FFI library descriptors.
+ * TypeScript only: it loads no library and calls no native code beyond `Bun.gc`.
  */
 
 export interface AphrodyRuntimeConfig {

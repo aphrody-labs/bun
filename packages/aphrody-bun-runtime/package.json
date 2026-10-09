@@ -1,7 +1,7 @@
 {
   "name": "@aphrody/bun-runtime",
   "version": "1.4.2-aphrody.1",
-  "description": "Aphrody High-Performance Runtime Bridge & Optimization Kernel for Bun",
+  "description": "Singleton holding a runtime configuration object and a map of FFI library descriptors (TypeScript only, no native code)",
   "main": "index.ts",
   "types": "index.ts",
   "license": "MIT",

@@ -1,33 +1,43 @@
-// Génère le site statique aphrody.com (miroir de l'infra de bun.sh pour le fork aphrody-labs/bun) :
-// /docs (docs/docs.json + .mdx, pages .md brutes, recherche), /guides, /benchmarks, /downloads, /blog,
-// /install (+ .sh, .ps1), /bun/setup.sh|ps1, /llms.txt, /llms-full.txt, sitemap.xml, robots.txt.
+// Génère le site statique aphrody.com : la distribution Aphrody (accueil produit, /components, /runtime, /m3,
+// /security, /contributing, /about, pages générées par pages.ts depuis site-data.json de collect.ts), la doc du
+// runtime aphrody-labs/bun (/docs depuis docs/docs.json + .mdx, pages .md brutes, recherche), /guides,
+// /benchmarks, /downloads, /release-notes, /install (+ .sh, .ps1), /bun/setup.sh|ps1, /llms.txt,
+// /llms-full.txt, sitemap.xml, robots.txt.
 //
 //   bun scripts/aphrody/site/build.ts --out <dir> [--src <arbre du dépôt>] [--origin https://aphrody.com]
 //       [--commit <sha>] [--repo aphrody-labs/bun] [--perf <dossier des perf-report.json>] [--perf-run <url>]
-//       [--releases <releases.json> | --offline]
+//       [--releases <releases.json> | --offline] [--data <site-data.json>]
 //
 // --src pointe sur un arbre extrait (git archive) ou sur le dépôt lui-même (défaut). La publication
-// (scripts/aphrody/site/publish.ts) extrait origin/main et appelle ce script depuis l'arbre extrait.
-import {
-  cpSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+// (scripts/aphrody/site/publish.ts) extrait origin/main, collecte site-data.json et appelle ce script depuis
+// l'arbre extrait. Sans --data, seules la doc du runtime et ses pages de téléchargement sont produites.
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
+import type { SiteData } from "./collect.ts";
 import { HIGHLIGHT_CSS, highlightHtml } from "./highlight.ts";
-import { CSS, JS, shell, type NavLink } from "./layout.ts";
+import { CSS, JS, shell, type NavLink, type Shell } from "./layout.ts";
 import {
   absolutizeMarkdownLinks,
   escapeHtml,
   inlineSnippets,
+  mapOutsideFences,
   mdxToHtmlMarkdown,
   parseFrontmatter,
   rewriteUpstreamUrls,
 } from "./mdx.ts";
+import {
+  componentsJson,
+  distributionDownloads,
+  distributionInstallers,
+  distributionReleaseNotes,
+  formatBytes,
+  generatedPages,
+  latestRuntimeRelease,
+  plainText,
+  type GeneratedPage,
+} from "./pages.ts";
+
+export { formatBytes };
 
 // ---------------------------------------------------------------------------------------------------------------
 // Navigation (docs.json)
@@ -61,12 +71,10 @@ export function readNavigation(docsJson: any): { tabs: NavTab[]; pages: PageInfo
 }
 
 /** Markdown brut d'une page : `/docs/index.md`, `/docs/runtime.md` (runtime/index), `/docs/runtime/http/server.md`. */
-export const markdownUrl = (slug: string) =>
-  slug === "index" ? "/docs/index.md" : pageUrl(slug) + ".md";
+export const markdownUrl = (slug: string) => (slug === "index" ? "/docs/index.md" : pageUrl(slug) + ".md");
 
 /** URL publique d'une page : `/docs`, `/docs/runtime` (runtime/index), `/docs/runtime/http/server`. */
-export const pageUrl = (slug: string) =>
-  "/docs" + ("/" + slug).replace(/\/index$/, "").replace(/^\/$/, "");
+export const pageUrl = (slug: string) => "/docs" + ("/" + slug).replace(/\/index$/, "").replace(/^\/$/, "");
 
 // ---------------------------------------------------------------------------------------------------------------
 // Petits utilitaires
@@ -91,15 +99,6 @@ function walk(dir: string): string[] {
   }
   return out;
 }
-
-export const formatBytes = (n: number) =>
-  n >= 1024 ** 3
-    ? `${(n / 1024 ** 3).toFixed(2)} GiB`
-    : n >= 1024 ** 2
-      ? `${(n / 1024 ** 2).toFixed(1)} MiB`
-      : n >= 1024
-        ? `${(n / 1024).toFixed(1)} KiB`
-        : `${n} B`;
 
 const inlineCode = (s: string) => escapeHtml(s).replace(/`([^`]+)`/g, "<code>$1</code>");
 
@@ -174,9 +173,9 @@ async function fetchReleases(repo: string): Promise<Release[]> {
         size: a.size,
       })),
     };
-    const sums = release.assets.find((a) => /^SHA256SUMS(\.txt)?$/.test(a.name));
+    const sums = release.assets.find(a => /^SHA256SUMS(\.txt)?$/.test(a.name));
     if (sums) {
-      const text = await fetch(sums.url, { headers: { "user-agent": "aphrody-site" } }).then((x) =>
+      const text = await fetch(sums.url, { headers: { "user-agent": "aphrody-site" } }).then(x =>
         x.ok ? x.text() : "",
       );
       const map = parseSums(text);
@@ -189,9 +188,7 @@ async function fetchReleases(repo: string): Promise<Release[]> {
 
 /** `bun-linux-x64-musl-baseline-profile.zip` -> os, arch, variantes. */
 export function describeAsset(name: string) {
-  const m = /^bun-(linux|darwin|windows)-(x64|aarch64)((?:-musl|-baseline|-profile)*)\.zip$/.exec(
-    name,
-  );
+  const m = /^bun-(linux|darwin|windows)-(x64|aarch64)((?:-musl|-baseline|-profile)*)\.zip$/.exec(name);
   if (!m) return null;
   const flags = m[3]!.split("-").filter(Boolean);
   return {
@@ -238,9 +235,9 @@ type PerfReport = { platform: string; report: any };
 function loadPerfReports(dir: string | undefined): PerfReport[] {
   if (!dir || !existsSync(dir)) return [];
   return walk(dir)
-    .filter((p) => p.endsWith("perf-report.json"))
+    .filter(p => p.endsWith("perf-report.json"))
     .sort()
-    .map((p) => ({
+    .map(p => ({
       platform: relative(dir, dirname(p)).replace(/^perf-report-?/, "") || "report",
       report: JSON.parse(readFileSync(p, "utf8")),
     }));
@@ -250,7 +247,7 @@ export function renderPerfTable({ platform, report }: PerfReport): string {
   const m = report.meta ?? {};
   const rows = (report.rows ?? []) as any[];
   const body = rows
-    .map((r) => {
+    .map(r => {
       const label = inlineCode(PERF_LABELS[r.id] ?? r.label ?? r.id);
       const ratio = typeof r.ratio === "number" ? r.ratio.toFixed(3) : "";
       const status =
@@ -287,14 +284,33 @@ export type BuildOptions = {
   perf?: string;
   perfRun?: string;
   releases: Release[] | null;
+  /** Données de la distribution, du runtime et de l'organisation (collect.ts) ; sans elles, pas de pages produit. */
+  data?: SiteData | null;
   now?: Date;
 };
+
+/** Onglets du haut : les pages de la distribution, puis la doc du runtime et ses pages. */
+const TOP_TABS: [label: string, href: string, needsData: boolean][] = [
+  ["Components", "/components", true],
+  ["Runtime", "/runtime", true],
+  ["M3", "/m3", true],
+  ["Docs", "/docs", false],
+  ["Downloads", "/downloads", false],
+  ["Release notes", "/release-notes", false],
+  ["Benchmarks", "/benchmarks", false],
+  ["Security", "/security", true],
+];
+
+/** Liens racine (`/components`) d'un Markdown généré vers des URL absolues, pour sa variante `.md`. */
+const absolutizeRootLinks = (markdown: string, origin: string) =>
+  mapOutsideFences(markdown, chunk => chunk.replace(/\]\(\/(?!\/)/g, `](${origin}/`));
 
 export async function build(o: BuildOptions) {
   const docs = join(o.src, "docs");
   const docsJson = JSON.parse(readFileSync(join(docs, "docs.json"), "utf8"));
   const { tabs, pages } = readNavigation(docsJson);
   const now = (o.now ?? new Date()).toISOString();
+  const data = o.data ?? null;
   const readSnippet = (path: string) => {
     const file = join(docs, path);
     return existsSync(file) ? readFileSync(file, "utf8") : undefined;
@@ -305,7 +321,7 @@ export async function build(o: BuildOptions) {
   const rendered: Rendered[] = [];
   const titles = new Map<string, string>();
   for (const p of pages) {
-    const file = [".mdx", ".md"].map((e) => join(docs, p.slug + e)).find((f) => existsSync(f));
+    const file = [".mdx", ".md"].map(e => join(docs, p.slug + e)).find(f => existsSync(f));
     if (!file) continue;
     const { data, body } = parseFrontmatter(readFileSync(file, "utf8"));
     const title = String(data.title ?? p.slug.split("/").pop());
@@ -318,11 +334,16 @@ export async function build(o: BuildOptions) {
       file: relative(o.src, file).replaceAll("\\", "/"),
     });
   }
-  const bySlug = new Map(rendered.map((r) => [r.slug, r]));
+  const bySlug = new Map(rendered.map(r => [r.slug, r]));
 
-  // Onglets du haut
+  // Pages générées depuis les données (accueil produit, composants, runtime, M3, documents)
+  const ctx = { origin: o.origin, releases: o.releases };
+  const generated = data ? generatedPages(data, ctx) : [];
+  const generatedPaths = new Set(generated.map(g => g.path));
+
+  // Onglets du haut, et onglets de la doc dans la barre latérale (sans Feedback ni le blog : /release-notes est en haut)
   const tabHref = (t: NavTab) => {
-    if (t.href) return t.href.replace(/^https:\/\/bun\.com\/blog$/, "/blog");
+    if (t.href) return t.href.startsWith(o.origin + "/") ? t.href.slice(o.origin.length) : t.href;
     for (const g of t.groups) {
       const first = firstSlug(g);
       if (first) return pageUrl(first);
@@ -335,20 +356,26 @@ export async function build(o: BuildOptions) {
       if (s) return s;
     }
   };
-  const topTabs = (active?: string): NavLink[] => [
-    ...tabs
-      .filter((t) => t.tab !== "Feedback")
-      .map((t) => ({ label: t.tab, href: tabHref(t), active: t.tab === active })),
-    { label: "Benchmarks", href: "/benchmarks", active: active === "Benchmarks" },
-    { label: "Downloads", href: "/downloads", active: active === "Downloads" },
-  ];
+  const topTabs = (active?: string): NavLink[] =>
+    TOP_TABS.filter(([, href, needsData]) => !needsData || generatedPaths.has(href)).map(([label, href]) => ({
+      label,
+      href,
+      active: label === active,
+    }));
+  const docTabs = tabs.filter(t => t.tab !== "Feedback" && !(t.href ?? "").endsWith("/blog"));
 
   const sidebarFor = (tabName: string, current: string) => {
-    const tab = tabs.find((t) => t.tab === tabName);
-    if (!tab) return "";
+    const switcher = `<nav class="doc-tabs" aria-label="Documentation sections">${docTabs
+      .map(
+        t =>
+          `<a href="${escapeHtml(tabHref(t))}"${t.tab === tabName ? ' aria-current="true"' : ""}>${escapeHtml(t.tab)}</a>`,
+      )
+      .join("")}</nav>`;
+    const tab = tabs.find(t => t.tab === tabName);
+    if (!tab) return switcher;
     const items = (list: (string | NavGroup)[]): string =>
       list
-        .map((item) => {
+        .map(item => {
           if (typeof item === "string") {
             if (!bySlug.has(item)) return "";
             return `<li><a href="${pageUrl(item)}"${item === current ? ' aria-current="page"' : ""}>${escapeHtml(titles.get(item) ?? item)}</a></li>`;
@@ -356,26 +383,31 @@ export async function build(o: BuildOptions) {
           return `<li><span class="muted">${escapeHtml(item.group)}</span><ul>${items(item.items)}</ul></li>`;
         })
         .join("");
-    return tab.groups
-      .map((g) => `<p>${escapeHtml(g.group)}</p><ul>${items(g.items)}</ul>`)
-      .join("");
+    return switcher + tab.groups.map(g => `<p>${escapeHtml(g.group)}</p><ul>${items(g.items)}</ul>`).join("");
   };
 
+  // Gabarit commun : marque, lien GitHub et pied de page viennent des données quand elles existent.
+  const footer = siteFooter(data, o);
+  const page = (s: Omit<Shell, "origin" | "footer" | "github">) =>
+    shell({
+      ...s,
+      origin: o.origin,
+      footer,
+      github: data?.org ? `https://github.com/${data.org.login}` : `https://github.com/${o.repo}`,
+    });
+  const titled = (title: string) => (title === "Aphrody" ? title : `${title} - Aphrody`);
+
   // Liste des guides (remplace <GuidesList />)
-  const guidesTab = tabs.find((t) => t.tab === "Guides");
+  const guidesTab = tabs.find(t => t.tab === "Guides");
   const guidesHtml = guidesTab
     ? guidesTab.groups
-        .filter((g) =>
-          g.items.some((i) => typeof i === "string" && i !== "guides/index" && bySlug.has(i)),
-        )
+        .filter(g => g.items.some(i => typeof i === "string" && i !== "guides/index" && bySlug.has(i)))
         .map(
-          (g) =>
+          g =>
             `<h2 id="${escapeHtml(g.group.toLowerCase().replace(/[^a-z0-9]+/g, "-"))}">${escapeHtml(g.group)}</h2><div class="card-group">${g.items
-              .filter(
-                (i): i is string => typeof i === "string" && i !== "guides/index" && bySlug.has(i),
-              )
+              .filter((i): i is string => typeof i === "string" && i !== "guides/index" && bySlug.has(i))
               .map(
-                (i) =>
+                i =>
                   `<div class="card"><p class="card-title"><a href="${pageUrl(i)}">${escapeHtml(bySlug.get(i)!.title)}</a></p><p class="muted">${escapeHtml(bySlug.get(i)!.description)}</p></div>`,
               )
               .join("")}</div>`,
@@ -383,13 +415,13 @@ export async function build(o: BuildOptions) {
         .join("\n")
     : "";
 
-  const ctx = { link: (href: string) => href, guides: guidesHtml };
+  const mdxCtx = { link: (href: string) => href, guides: guidesHtml };
   const search: { t: string; d: string; u: string; g: string; h: string[]; x: string }[] = [];
   const ordered = rendered;
 
   for (let i = 0; i < ordered.length; i++) {
     const p = ordered[i]!;
-    const md = mdxToHtmlMarkdown(p.markdown, ctx);
+    const md = mdxToHtmlMarkdown(p.markdown, mdxCtx);
     let html = highlightHtml(prefixDocsLinks(Bun.markdown.html(md, { headings: { ids: true } })));
     html = html.replace(/<h1 id="[^"]*">[\s\S]*?<\/h1>\n?/, (h, offset) => (offset < 4 ? "" : h));
     const toc = extractToc(html);
@@ -398,7 +430,7 @@ export async function build(o: BuildOptions) {
     const prev = ordered[i - 1];
     const next = ordered[i + 1];
     const pager = `<nav class="pager">${prev ? `<a href="${pageUrl(prev.slug)}"><small>Previous</small>${escapeHtml(prev.title)}</a>` : ""}${next ? `<a class="next" href="${pageUrl(next.slug)}"><small>Next</small>${escapeHtml(next.title)}</a>` : ""}</nav>`;
-    const body = `<p class="muted">${escapeHtml(p.tab)} · ${escapeHtml(p.group)}</p>
+    const body = `<p class="muted">Runtime docs · ${escapeHtml(p.tab)} · ${escapeHtml(p.group)}</p>
 <h1>${escapeHtml(p.title)}</h1>
 ${p.description ? `<p class="lead">${inlineCode(p.description)}</p>` : ""}
 <div class="page-actions"><button type="button" data-copy-url="${mdUrl}">Copy page</button><a href="${mdUrl}">View as Markdown</a><a href="https://github.com/${o.repo}/edit/main/${p.file}">Edit on GitHub</a></div>
@@ -406,13 +438,12 @@ ${p.description ? `<p class="lead">${inlineCode(p.description)}</p>` : ""}
 ${pager}`;
     write(
       join(o.out, "docs", p.slug + ".html"),
-      shell({
-        origin: o.origin,
+      page({
         path: url,
-        title: `${p.title} - Bun (Aphrody fork)`,
+        title: titled(p.title),
         description: p.description,
         body,
-        tabs: topTabs(p.tab),
+        tabs: topTabs("Docs"),
         sidebar: sidebarFor(p.tab, p.slug),
         toc,
         alternateMarkdown: mdUrl,
@@ -420,17 +451,58 @@ ${pager}`;
     );
     const markdown = pageMarkdown(p, o.origin);
     write(join(o.out, "docs", p.slug + ".md"), markdown);
-    if (p.slug.endsWith("/index"))
-      write(join(o.out, "docs", p.slug.slice(0, -6) + ".md"), markdown);
+    if (p.slug.endsWith("/index")) write(join(o.out, "docs", p.slug.slice(0, -6) + ".md"), markdown);
     search.push({
       t: p.title,
       d: p.description,
       u: url,
-      g: p.group,
-      h: toc.map((h) => h.text),
+      g: `Runtime docs · ${p.group}`,
+      h: toc.map(h => h.text),
       x: textOf(html).slice(0, 240),
     });
   }
+
+  // Pages générées : HTML, variante .md, entrée de recherche
+  const renderMarkdown = (markdown: string) =>
+    highlightHtml(Bun.markdown.html(markdown, { headings: { ids: true } } as any));
+  const generatedFile = (path: string, ext: string) =>
+    join(o.out, path === "/" ? `index${ext}` : `${path.slice(1)}${ext}`);
+  const generatedMarkdown = (g: GeneratedPage) =>
+    `# ${g.title}\n\n${g.description ? `> ${g.description}\n\n` : ""}${absolutizeRootLinks(g.markdown, o.origin)}\n`;
+  for (const g of generated) {
+    const html = renderMarkdown(g.markdown);
+    const mdUrl = g.path === "/" ? "/index.md" : `${g.path}.md`;
+    const body =
+      g.path === "/"
+        ? `${renderHero(data!)}\n<article>${html}</article>`
+        : `<h1>${escapeHtml(g.title)}</h1>
+${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
+<div class="page-actions"><button type="button" data-copy-url="${mdUrl}">Copy page</button><a href="${mdUrl}">View as Markdown</a></div>
+<article>${html}</article>`;
+    write(
+      g.path === "/" ? join(o.out, "index.html") : join(o.out, g.path.slice(1), "index.html"),
+      page({
+        path: g.path,
+        title: titled(g.title),
+        description: g.description,
+        body,
+        tabs: topTabs(g.tab),
+        toc: g.path === "/" ? undefined : extractToc(html),
+        alternateMarkdown: mdUrl,
+        bodyClass: g.path === "/" ? "home" : undefined,
+      }),
+    );
+    write(generatedFile(g.path, ".md"), generatedMarkdown(g));
+    search.push({
+      t: g.title,
+      d: g.description,
+      u: g.path,
+      g: "Aphrody",
+      h: extractToc(html).map(h => h.text),
+      x: textOf(html).slice(0, 240),
+    });
+  }
+  if (data) write(join(o.out, "components.json"), JSON.stringify(componentsJson(data), null, 2) + "\n");
   write(join(o.out, "docs", "search.json"), JSON.stringify(search));
 
   // Ressources des docs (images, icônes, logos)
@@ -439,68 +511,86 @@ ${pager}`;
     if (existsSync(from)) cpSync(from, join(o.out, "docs", dir), { recursive: true });
   }
 
-  // llms.txt / llms-full.txt (format llmstxt.org, comme bun.com/llms.txt)
+  // llms.txt / llms-full.txt (format llmstxt.org)
+  const summary = data?.distribution?.summary ? plainText(data.distribution.summary) : "";
   const llms = [
-    "# Bun (Aphrody fork)",
+    "# Aphrody",
     "",
-    `> Bun is a fast all-in-one JavaScript runtime, package manager, bundler and test runner. This is the documentation of the aphrody-labs/bun fork, built from ${o.repo}@${o.commit.slice(0, 12)}; it adds native Windows APIs (bun:windows, bun:winrt, bun:winui, bun:dotnet), bun msvc, bun n2b, lint and format commands and more on top of upstream Bun.`,
+    ...(summary ? [`> ${summary}`, ""] : []),
+    `Site built from ${o.repo}@${o.commit.slice(0, 12)}${data?.distribution ? ` and ${data.distribution.repo}@${data.distribution.commit.slice(0, 12)}` : ""}.`,
     "",
-    "## Docs",
+    ...(generated.length
+      ? [
+          "## Aphrody",
+          "",
+          ...generated.map(
+            g =>
+              `- [${g.title}](${o.origin}${g.path === "/" ? "/index.md" : `${g.path}.md`})${g.description ? `: ${g.description}` : ""}`,
+          ),
+          "",
+        ]
+      : []),
+    `## Runtime docs (${o.repo})`,
     "",
     ...ordered.map(
-      (p) =>
+      p =>
         `- [${p.title}](${o.origin}${markdownUrl(p.slug)})${p.description ? `: ${p.description.replace(/\s+/g, " ")}` : ""}`,
     ),
     "",
     "## Optional",
     "",
-    `- [Install script (bash)](${o.origin}/install)`,
-    `- [Install script (PowerShell)](${o.origin}/install.ps1)`,
+    `- [Runtime install script (bash)](${o.origin}/install)`,
+    `- [Runtime install script (PowerShell)](${o.origin}/install.ps1)`,
     `- [Downloads](${o.origin}/downloads)`,
     `- [Benchmarks](${o.origin}/benchmarks)`,
-    `- [Release notes](${o.origin}/blog)`,
-    `- [Source](https://github.com/${o.repo})`,
-    `- [Upstream API reference](https://bun.com/reference)`,
+    `- [Release notes](${o.origin}/release-notes)`,
+    ...(data ? [`- [Components (JSON)](${o.origin}/components.json)`] : []),
+    `- [Runtime source](https://github.com/${o.repo})`,
+    `- [Upstream Bun API reference](https://bun.com/reference)`,
     "",
   ].join("\n");
   write(join(o.out, "llms.txt"), llms);
   write(
     join(o.out, "llms-full.txt"),
-    ordered
-      .map(
-        (p) =>
+    [
+      ...generated.map(
+        g => `# ${g.title}\nSource: ${o.origin}${g.path}\n\n${absolutizeRootLinks(g.markdown, o.origin)}\n`,
+      ),
+      ...ordered.map(
+        p =>
           `# ${p.title}\nSource: ${o.origin}${pageUrl(p.slug)}\n\n${p.description ? p.description + "\n\n" : ""}${absolutizeMarkdownLinks(p.markdown, o.origin)}\n`,
-      )
-      .join("\n"),
+      ),
+    ].join("\n"),
   );
 
-  // /guides -> /docs/guides
+  // /guides -> /docs/guides, /blog -> /release-notes
   write(join(o.out, "guides", "index.html"), redirectPage(o.origin, "/docs/guides"));
+  write(join(o.out, "blog", "index.html"), redirectPage(o.origin, "/release-notes"));
 
-  // Releases, téléchargements et notes de version
+  // Téléchargements et notes de version : la distribution (données), puis le runtime (releases GitHub)
   const releases = o.releases;
-  const latest = releases?.find((r) => !r.prerelease) ?? releases?.[0];
+  const latest = latestRuntimeRelease(releases);
+  const distDownloads = data ? renderMarkdown(distributionDownloads(data)) : "";
   write(
     join(o.out, "downloads", "index.html"),
-    shell({
-      origin: o.origin,
+    page({
       path: "/downloads",
-      title: "Downloads - Bun (Aphrody fork)",
-      description:
-        "Download Bun (Aphrody fork) for Linux, macOS and Windows, with SHA-256 checksums.",
-      body: highlightHtml(renderDownloads(releases, latest, o)),
+      title: titled("Downloads"),
+      description: "Aphrody distribution artifacts and runtime builds, with SHA-256 checksums.",
+      body: `<h1>Downloads</h1>${distDownloads}${highlightHtml(renderDownloads(releases, latest, o, data))}`,
       tabs: topTabs("Downloads"),
+      toc: extractToc(distDownloads),
     }),
   );
+  const distNotes = data ? renderMarkdown(distributionReleaseNotes(data)) : "";
   write(
-    join(o.out, "blog", "index.html"),
-    shell({
-      origin: o.origin,
-      path: "/blog",
-      title: "Release notes - Bun (Aphrody fork)",
-      description: "Release notes of the aphrody-labs/bun fork.",
-      body: renderBlog(releases, o),
-      tabs: topTabs("Blog"),
+    join(o.out, "release-notes", "index.html"),
+    page({
+      path: "/release-notes",
+      title: titled("Release notes"),
+      description: "Releases of the Aphrody distribution and of its runtime.",
+      body: `<h1>Release notes</h1>${distNotes}${renderRuntimeNotes(releases, o)}`,
+      tabs: topTabs("Release notes"),
     }),
   );
 
@@ -508,19 +598,17 @@ ${pager}`;
   const reports = loadPerfReports(o.perf);
   write(
     join(o.out, "benchmarks", "index.html"),
-    shell({
-      origin: o.origin,
+    page({
       path: "/benchmarks",
-      title: "Benchmarks - Bun (Aphrody fork)",
-      description:
-        "Measured performance of the Aphrody fork of Bun against upstream Bun, and how to reproduce it.",
-      body: highlightHtml(renderBenchmarks(reports, o)),
+      title: titled("Benchmarks"),
+      description: "Measured performance of the Aphrody runtime against upstream Bun, and how to reproduce it.",
+      body: highlightHtml(renderBenchmarks(reports, o, latest)),
       tabs: topTabs("Benchmarks"),
-      toc: reports.map((r) => ({ level: 2, id: r.platform, text: r.platform })),
+      toc: reports.map(r => ({ level: 2, id: r.platform, text: r.platform })),
     }),
   );
 
-  // Scripts d'installation et de build depuis les sources
+  // Scripts d'installation du runtime et de build depuis les sources
   const scripts: [string, string][] = [
     ["scripts/aphrody/install.sh", "install"],
     ["scripts/aphrody/install.sh", "install.sh"],
@@ -536,50 +624,48 @@ ${pager}`;
     served.push(to);
   }
 
-  // Accueil
-  write(
-    join(o.out, "index.html"),
-    shell({
-      origin: o.origin,
-      path: "/",
-      title: "Bun (Aphrody fork) - fast all-in-one JavaScript runtime",
-      description:
-        "Bun, Aphrody fork: JavaScript runtime, package manager, bundler and test runner, with native Windows, WinRT, WinUI and .NET APIs.",
-      body: renderHome(o, latest, served),
-      tabs: topTabs(),
-      bodyClass: "home",
-    }),
-  );
+  // Accueil sans données : la doc et les téléchargements du runtime seulement
+  if (!generatedPaths.has("/"))
+    write(
+      join(o.out, "index.html"),
+      page({
+        path: "/",
+        title: "Aphrody",
+        body: `<section class="hero"><div class="pet" role="img" aria-label="Aphrody"></div><h1>Aphrody</h1>
+<p class="lead">Runtime ${link(o.repo, `https://github.com/${o.repo}`)}${latest ? `, release ${link(latest.tag, latest.url)}` : ""}.</p>
+${runtimeInstallCommands(o.origin)}
+<div class="btns"><a class="btn" href="/docs">Runtime docs</a><a class="btn tonal" href="/downloads">Downloads</a></div></section>`,
+        tabs: topTabs(),
+        bodyClass: "home",
+      }),
+    );
 
   // 404, robots, sitemap, ressources, manifeste
   write(
     join(o.out, "404.html"),
-    shell({
-      origin: o.origin,
+    page({
       path: "/404",
-      title: "Not found - Bun (Aphrody fork)",
-      body: `<div class="hero"><h1>404</h1><p class="lead">This page does not exist. Try the <a href="/docs">documentation</a> or the search box.</p></div>`,
+      title: titled("Not found"),
+      body: `<div class="hero"><h1>404</h1><p class="lead">This page does not exist. Try the <a href="/">home page</a>, the <a href="/docs">runtime docs</a> or the search box.</p></div>`,
       tabs: topTabs(),
     }),
   );
   write(join(o.out, "robots.txt"), `User-agent: *\nAllow: /\n\nSitemap: ${o.origin}/sitemap.xml\n`);
   const urls = [
     "/",
+    ...generated.map(g => g.path),
     "/docs",
     "/benchmarks",
     "/downloads",
-    "/blog",
-    ...ordered.map((p) => pageUrl(p.slug)),
+    "/release-notes",
+    ...ordered.map(p => pageUrl(p.slug)),
   ];
   write(
     join(o.out, "sitemap.xml"),
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[
       ...new Set(urls),
     ]
-      .map(
-        (u) =>
-          `<url><loc>${escapeHtml(o.origin + u)}</loc><lastmod>${now.slice(0, 10)}</lastmod></url>`,
-      )
+      .map(u => `<url><loc>${escapeHtml(o.origin + u)}</loc><lastmod>${now.slice(0, 10)}</lastmod></url>`)
       .join("\n")}\n</urlset>\n`,
   );
   write(join(o.out, "assets", "site.css"), CSS + HIGHLIGHT_CSS);
@@ -592,9 +678,12 @@ ${pager}`;
         generatedAt: now,
         repo: o.repo,
         commit: o.commit,
+        distribution: data?.distribution ? { repo: data.distribution.repo, commit: data.distribution.commit } : null,
+        dataGeneratedAt: data?.generatedAt ?? null,
         pages: ordered.length,
+        generated: generated.map(g => g.path),
         latestRelease: latest?.tag ?? null,
-        perfReports: reports.map((r) => r.platform),
+        perfReports: reports.map(r => r.platform),
         scripts: served,
       },
       null,
@@ -605,71 +694,103 @@ ${pager}`;
   // Variantes gzip servies par l'origine (Accept-Encoding) pour les fichiers texte.
   for (const file of walk(o.out)) {
     if (!/\.(html|md|txt|json|xml|css|js|svg|sh|ps1)$|[\\/]install$/.test(file)) continue;
-    const data = readFileSync(file);
-    if (data.length < 1024) continue;
-    write(file + ".gz", Bun.gzipSync(data, { level: 9 }));
+    const content = readFileSync(file);
+    if (content.length < 1024) continue;
+    write(file + ".gz", Bun.gzipSync(content, { level: 9 }));
   }
   return {
     pages: ordered.length,
+    generated: generated.map(g => g.path),
     latest: latest?.tag ?? null,
     reports: reports.length,
     scripts: served,
   };
 }
 
-export function pageMarkdown(
-  p: { title: string; description: string; markdown: string },
-  origin: string,
-): string {
+export function pageMarkdown(p: { title: string; description: string; markdown: string }, origin: string): string {
   return `# ${p.title}\n\n${p.description ? `> ${p.description.replace(/\s+/g, " ")}\n\n` : ""}${absolutizeMarkdownLinks(p.markdown, origin)}\n`;
 }
 
 const redirectPage = (origin: string, to: string) =>
   `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Redirecting</title><link rel="canonical" href="${origin}${to}"><meta http-equiv="refresh" content="0; url=${to}"></head><body><a href="${to}">${origin}${to}</a></body></html>\n`;
 
+const link = (text: string, href: string) => `<a href="${escapeHtml(href)}">${escapeHtml(text)}</a>`;
+
 const cmd = (label: string, text: string) =>
   `<button class="cmd" type="button" data-copy="${escapeHtml(text)}"><span>${escapeHtml(label)}</span><code>${escapeHtml(text)}</code></button>`;
 
-function installCommands(origin: string) {
+/** Commandes des scripts d'installation du runtime servis par ce site (/install, /install.ps1). */
+function runtimeInstallCommands(origin: string) {
   const host = new URL(origin).host;
-  return `<div class="cmds">${cmd("Linux & macOS", `curl -fsSL ${origin}/install | bash`)}${cmd("Windows", `powershell -c "irm ${host}/install.ps1|iex"`)}</div>`;
+  return `<div class="cmds">${cmd("Runtime, Linux and macOS (bash)", `curl -fsSL ${origin}/install | bash`)}${cmd("Runtime, Windows (PowerShell)", `powershell -c "irm ${host}/install.ps1|iex"`)}</div>`;
 }
 
-function renderHome(o: BuildOptions, latest: Release | undefined, served: string[]): string {
-  const tile = (tag: string, title: string, text: string, href: string) =>
-    `<a class="tile" href="${href}"><span class="tag">${escapeHtml(tag)}</span><h3>${escapeHtml(title)}</h3><p>${inlineCode(text)}</p></a>`;
+/** En-tête de l'accueil : résumé de la distribution, commandes d'installation de ses scripts publiés. */
+function renderHero(d: SiteData): string {
+  const summary = d.distribution?.summary
+    ? Bun.markdown
+        .html(d.distribution.summary)
+        .trim()
+        .replace(/^<p>|<\/p>$/g, "")
+    : "";
+  const installers = distributionInstallers(d);
+  const release = d.downloads?.release;
   return `<section class="hero">
 <div class="pet" role="img" aria-label="Aphrody"></div>
-<h1>Bun, Aphrody fork</h1>
-<p class="lead">A fast all-in-one JavaScript runtime, package manager, bundler and test runner, built from <a href="https://github.com/${o.repo}">${o.repo}</a>: upstream Bun plus native Windows, WinRT, WinUI and .NET APIs, a Rust toolchain story and more.</p>
-${installCommands(o.origin)}
-<div class="btns"><a class="btn" href="/docs">Read the docs</a><a class="btn tonal" href="/downloads">Downloads${latest ? ` · ${escapeHtml(latest.tag.replace(/^aphrody-v/, ""))}` : ""}</a><a class="btn outlined" href="/benchmarks">Benchmarks</a></div>
-</section>
-<div class="grid">
-${tile("Runtime", "Bun runtime", "Run TypeScript, JSX and JavaScript with `bun run`, a Node.js-compatible runtime on JavaScriptCore.", "/docs/runtime")}
-${tile("Package manager", "bun install", "Fast npm-compatible installs, workspaces, lockfile and `bun x`.", "/docs/pm/cli/install")}
-${tile("Bundler", "bun build", "Bundle, minify and compile single-file executables.", "/docs/bundler")}
-${tile("Test runner", "bun test", "Jest-compatible test runner with snapshots, mocks and coverage.", "/docs/test")}
-${tile("Fork", "Windows APIs", "`bun:windows`, `bun:winrt`, `bun:winui` and `bun:dotnet` from JavaScript.", "/docs/runtime/windows")}
-${tile("Fork", "bun msvc", "Find, sync and cross-compile with the MSVC toolchain.", "/docs/runtime/msvc")}
-${tile("Fork", "bun n2b, lint, fmt", "Node.js to Bun migration, linting and formatting built in.", "/docs/runtime/n2b")}
-${tile("Fork", "Module graph", "Inspect the module graph of a project with `bun graph`.", "/docs/runtime/graph")}
-</div>
-<div class="grid">
-${tile("LLMs", "llms.txt", "Index of every documentation page, and llms-full.txt with all of them.", "/llms.txt")}
-${tile("Guides", "Guides", "Code samples and walkthroughs for common tasks.", "/docs/guides")}
-${served.includes("bun/setup.sh") ? tile("Source", "Build from source", "One command: `curl -fsSL " + o.origin + "/bun/setup.sh | bash` or `irm " + o.origin + "/bun/setup.ps1 | iex`.", existsSync(join(o.src, "docs/project/setup.mdx")) ? "/docs/project/setup" : "/bun/setup.sh") : tile("Source", "Build from source", "Build the fork from its repository.", "/docs/project/contributing")}
-${tile("Releases", "Release notes", "Every release of the fork, from GitHub.", "/blog")}
-</div>`;
+<h1>Aphrody</h1>
+${summary ? `<p class="lead">${summary}</p>` : ""}
+${installers.length ? `<div class="cmds">${installers.map(i => cmd(i.label, i.command)).join("")}</div>` : ""}
+<div class="btns"><a class="btn" href="/components">Components</a><a class="btn tonal" href="/downloads">Downloads${release ? ` · ${escapeHtml(release)}` : ""}</a><a class="btn outlined" href="/docs">Runtime docs</a></div>
+</section>`;
+}
+
+/** Pied de page : sources du build et licences, tirées des données. */
+function siteFooter(d: SiteData | null, o: BuildOptions): string {
+  const sources = [
+    `${link(o.repo, `https://github.com/${o.repo}`)}@${escapeHtml(o.commit.slice(0, 12))}`,
+    ...(d?.distribution
+      ? [`${escapeHtml(d.distribution.repo)}@${escapeHtml(d.distribution.commit.slice(0, 12))}`]
+      : []),
+  ];
+  const rt = d?.runtime;
+  const licences = [
+    ...(d?.distribution?.workspace.license
+      ? [
+          `first-party code ${escapeHtml(d.distribution.workspace.license)} (per component on ${link("Components", "/components")})`,
+        ]
+      : []),
+    ...(rt
+      ? [
+          `the runtime is a fork of ${link(rt.upstream.name, rt.upstream.url)}${rt.licenses.length ? ` (${escapeHtml(rt.licenses.join(", "))}, ${link(rt.license, `https://github.com/${rt.repo}/blob/main/${rt.license}`)})` : ""}`,
+        ]
+      : []),
+  ];
+  const links = [
+    ["Docs", "/docs"],
+    ["Downloads", "/downloads"],
+    ["Release notes", "/release-notes"],
+    ...(d
+      ? [
+          ["Components", "/components"],
+          ["Security", "/security"],
+          ["Contributing", "/contributing"],
+          ["About", "/about"],
+        ]
+      : []),
+    ["llms.txt", "/llms.txt"],
+  ];
+  return `<p>Generated from ${sources.join(" and ")}${d ? ` (data collected ${escapeHtml(d.generatedAt.slice(0, 10))})` : ""}.${licences.length ? ` Licences: ${licences.join("; ")}.` : ""}</p>
+<p>${links.map(([label, href]) => link(label!, href!)).join(" · ")}</p>`;
 }
 
 function renderDownloads(
   releases: Release[] | null,
   latest: Release | undefined,
   o: BuildOptions,
+  data: SiteData | null,
 ): string {
-  const head = `<h1>Downloads</h1><p class="lead">Release builds of Bun (Aphrody fork) from <a href="https://github.com/${o.repo}/releases">GitHub releases</a>. Every archive is listed with its SHA-256 from the release <code>SHA256SUMS.txt</code>.</p>
-${installCommands(o.origin)}`;
+  const head = `<h2 id="runtime">Runtime (${escapeHtml(o.repo)})</h2><p>Release builds from <a href="https://github.com/${o.repo}/releases">GitHub releases</a>, each archive with its SHA-256 from the release <code>SHA256SUMS.txt</code>.</p>
+${runtimeInstallCommands(o.origin)}`;
   if (!releases || !latest)
     return `${head}<p class="banner">The release list could not be read when this page was built. See <a href="https://github.com/${o.repo}/releases">GitHub releases</a>.</p>`;
   const osName = { linux: "Linux", darwin: "macOS", windows: "Windows" } as const;
@@ -689,45 +810,51 @@ ${installCommands(o.origin)}`;
     const key = osName[d.os];
     groups.set(key, [...(groups.get(key) ?? []), row]);
   }
-  const sums = latest.assets.find((a) => a.name.startsWith("SHA256SUMS"));
+  const sums = latest.assets.find(a => a.name.startsWith("SHA256SUMS"));
   const tables = ["Linux", "macOS", "Windows"]
-    .filter((k) => groups.has(k))
+    .filter(k => groups.has(k))
     .map(
-      (k) =>
-        `<h3 id="${k.toLowerCase()}">${k}</h3><table><thead><tr><th>Archive</th><th>Target</th><th class="num">Size</th><th>SHA-256</th></tr></thead><tbody>${groups.get(k)!.join("")}</tbody></table>`,
+      k =>
+        `<h4 id="runtime-${k.toLowerCase()}">${k}</h4><table><thead><tr><th>Archive</th><th>Target</th><th class="num">Size</th><th>SHA-256</th></tr></thead><tbody>${groups.get(k)!.join("")}</tbody></table>`,
     )
     .join("");
   const older = releases
-    .filter((r) => r !== latest)
+    .filter(r => r !== latest)
     .map(
-      (r) =>
+      r =>
         `<li><a href="${escapeHtml(r.url)}">${escapeHtml(r.tag)}</a> <span class="muted">${escapeHtml(r.publishedAt.slice(0, 10))}</span></li>`,
     )
     .join("");
+  const base = latest.tag.replace(/^aphrody-v/, "").replace(/-aphrody\.\d+$/, "");
+  const npm = data?.runtime?.npm;
   return `${head}
 <p class="banner" data-latest-tag="${escapeHtml(latest.tag)}" data-repo="${escapeHtml(o.repo)}" hidden></p>
-<h2 id="latest">${escapeHtml(latest.name)}</h2>
+<h3 id="runtime-latest">${escapeHtml(latest.name)}</h3>
 <p class="muted">Tag <a href="${escapeHtml(latest.url)}">${escapeHtml(latest.tag)}</a>, published ${escapeHtml(latest.publishedAt.slice(0, 10))}${sums ? ` · <a href="${escapeHtml(sums.url)}">${escapeHtml(sums.name)}</a>` : ""}.</p>
 ${tables}
-<h2 id="verify">Verify a download</h2>
+<h3 id="runtime-verify">Verify a runtime download</h3>
 <pre><code class="language-bash">curl -fsSLO ${escapeHtml(sums?.url ?? `https://github.com/${o.repo}/releases/download/${latest.tag}/SHA256SUMS.txt`)}
-sha256sum --ignore-missing -c SHA256SUMS.txt</code></pre>
-<p>The install scripts (<a href="/install">/install</a>, <a href="/install.ps1">/install.ps1</a>) pick the right archive, check it against <code>SHA256SUMS.txt</code> and refuse a binary that does not run. They accept a version: <code>curl -fsSL ${escapeHtml(o.origin)}/install | bash -s 1.4.3</code>.</p>
-<h2 id="npm">npm</h2>
-<pre><code class="language-bash">bunx @aphrody/bun-runtime --version
-npm install -g @aphrody/bun-runtime</code></pre>
-${older ? `<h2 id="older">Older releases</h2><ul>${older}</ul>` : ""}
-<p class="muted">Looking for the Aphrody desktop app and CLI? They live at <a href="https://downloads.aphrody.com">downloads.aphrody.com</a>.</p>`;
+sha256sum --ignore-missing -c ${escapeHtml(sums?.name ?? "SHA256SUMS.txt")}</code></pre>
+<p>The runtime install scripts (<a href="/install">/install</a>, <a href="/install.ps1">/install.ps1</a>) pick the archive for the machine, check it against <code>SHA256SUMS.txt</code> and refuse a binary that does not run. They accept a version: <code>curl -fsSL ${escapeHtml(o.origin)}/install | bash -s ${escapeHtml(base)}</code> installs the newest <code>-aphrody.N</code> build of ${escapeHtml(base)}.</p>
+${
+  npm
+    ? `<h3 id="runtime-npm">npm</h3><p><a href="https://www.npmjs.com/package/${escapeHtml(npm.name)}">${escapeHtml(npm.name)}</a>${npm.version ? ` <code>${escapeHtml(npm.version)}</code>` : ""}</p>
+<pre><code class="language-bash">bunx ${escapeHtml(npm.name)} --version
+npm install -g ${escapeHtml(npm.name)}</code></pre>`
+    : ""
+}
+${older ? `<h3 id="runtime-older">Older runtime releases</h3><ul>${older}</ul>` : ""}`;
 }
 
-function renderBlog(releases: Release[] | null, o: BuildOptions): string {
+function renderRuntimeNotes(releases: Release[] | null, o: BuildOptions): string {
+  const head = `<h2 id="runtime">Runtime (${escapeHtml(o.repo)})</h2>`;
   if (!releases?.length)
-    return `<h1>Release notes</h1><p>See <a href="https://github.com/${o.repo}/releases">GitHub releases</a>.</p>`;
-  return `<h1>Release notes</h1><p class="lead">Releases of the aphrody-labs/bun fork. Upstream release notes are on <a href="https://bun.com/blog">bun.com/blog</a>.</p>
+    return `${head}<p>See <a href="https://github.com/${o.repo}/releases">GitHub releases</a>.</p>`;
+  return `${head}<p>Releases of the runtime. Upstream Bun release notes are on <a href="https://bun.com/blog">bun.com/blog</a>.</p>
 ${releases
   .map(
-    (r) =>
-      `<article><h2 id="${escapeHtml(r.tag)}"><a href="${escapeHtml(r.url)}">${escapeHtml(r.name)}</a></h2><p class="muted">${escapeHtml(r.publishedAt.slice(0, 10))} · ${r.assets.length} assets</p>${
+    r =>
+      `<article><h3 id="${escapeHtml(r.tag)}"><a href="${escapeHtml(r.url)}">${escapeHtml(r.name)}</a></h3><p class="muted">${escapeHtml(r.publishedAt.slice(0, 10))} · ${r.assets.length} assets</p>${
         r.body.trim()
           ? Bun.markdown.html(r.body, { headings: { ids: false }, tagFilter: true } as any)
           : '<p class="muted">No notes.</p>'
@@ -736,30 +863,28 @@ ${releases
   .join("\n")}`;
 }
 
-function renderBenchmarks(reports: PerfReport[], o: BuildOptions): string {
+function renderBenchmarks(reports: PerfReport[], o: BuildOptions, latest: Release | undefined): string {
+  const base = latest?.tag.replace(/^aphrody-v/, "").replace(/-aphrody\.\d+$/, "");
   const intro = `<h1>Benchmarks</h1>
-<p class="lead">How the fork compares with upstream Bun of the same base version. Every number on this page comes from a measured run of <code>scripts/aphrody/perf-gate.ts</code>; nothing is estimated.</p>`;
+<p class="lead">The Aphrody runtime against upstream Bun of the same base version. Every number on this page comes from a measured run of <code>scripts/aphrody/perf-gate.ts</code>.</p>`;
   const results = reports.length
     ? `${o.perfRun ? `<p>Source: <a href="${escapeHtml(o.perfRun)}">CI run</a> of the <code>aphrody-perf</code> workflow (artifacts <code>perf-report-*</code>).</p>` : ""}${reports.map(renderPerfTable).join("\n")}`
     : `<p class="banner">No measured report was attached to this build of the site. Run the commands below to measure on your machine.</p>`;
+  const thresholds = existsSync(join(o.src, "bench/aphrody/thresholds.json"))
+    ? `<p>Thresholds live in <a href="https://github.com/${o.repo}/blob/main/bench/aphrody/thresholds.json"><code>bench/aphrody/thresholds.json</code></a>: a case fails when the runtime median exceeds upstream by more than its ratio <em>and</em> its absolute delta.</p>`
+    : "";
   return `${intro}
 ${results}
 <h2 id="what">What is measured</h2>
-<ul>
-<li>Process start: <code>bun --version</code>, <code>bun -e ''</code>, an empty <code>bun run</code> script and a single empty <code>bun test</code>.</li>
-<li>Tooling: <code>bun build</code> of a small project and an offline <code>bun install</code> with a warm cache (<code>bench/aphrody/fixtures</code>).</li>
-<li>Module loading: <code>require</code> and <code>import()</code> of every <code>node:*</code> module, <code>bun:*</code> modules and the modules the fork adds.</li>
-<li>Server and client: <code>Bun.serve</code> hello world plus first request, local <code>fetch</code> latency (p50, p99) and sequential throughput.</li>
-<li>Memory and size: RSS at startup and after loading built-ins, size of the binary.</li>
-</ul>
-<p>Thresholds live in <a href="https://github.com/${o.repo}/blob/main/bench/aphrody/thresholds.json"><code>bench/aphrody/thresholds.json</code></a>: a case fails when the fork median exceeds upstream by more than its ratio <em>and</em> its absolute delta. The arena (<code>bench/aphrody/arena</code>) adds workloads (compute, JSON, gzip, SQLite, FFI, fetch, serve, startup) with a per-process rank-sum test.</p>
+<ul>${Object.values(PERF_LABELS)
+    .map(label => `<li>${inlineCode(label)}</li>`)
+    .join("")}<li>Binary size</li></ul>
+${thresholds}
 <h2 id="run">Run it yourself</h2>
 <pre><code class="language-bash">git clone https://github.com/${o.repo} && cd bun
-# fork binary against the upstream release of the same version
-bun scripts/aphrody/perf-gate.ts --fork ~/.bun/bin/bun --upstream-version 1.4.3 --runs 40 --out tmp/perf
-# with the arena workloads, optionally against Deno
-bun scripts/aphrody/perf-gate.ts --fork ~/.bun/bin/bun --arena --deno "$(which deno)"</code></pre>
-<p>The report is written to <code>tmp/perf/perf-report.md</code> and <code>perf-report.json</code>. The upstream micro-benchmarks of <a href="https://github.com/${o.repo}/tree/main/bench"><code>bench/</code></a> (ffi, gzip, sqlite, http, websocket, install, bundle...) run with <code>cd bench && bun install && bun run &lt;name&gt;</code>.</p>`;
+# runtime binary against the upstream release of the same base version
+bun scripts/aphrody/perf-gate.ts --fork ~/.bun/bin/bun${base ? ` --upstream-version ${escapeHtml(base)}` : ""} --runs 40 --out tmp/perf</code></pre>
+<p>The report is written to <code>tmp/perf/perf-report.md</code> and <code>perf-report.json</code>. The upstream micro-benchmarks of <a href="https://github.com/${o.repo}/tree/main/bench"><code>bench/</code></a> run with <code>cd bench && bun install && bun run &lt;name&gt;</code>.</p>`;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -784,6 +909,7 @@ if (import.meta.main) {
       console.warn(`releases: ${(error as Error).message}`);
     }
   }
+  const dataFile = option("--data");
   const result = await build({
     src,
     out: resolve(out),
@@ -793,9 +919,10 @@ if (import.meta.main) {
     perf: option("--perf"),
     perfRun: option("--perf-run"),
     releases,
+    data: dataFile ? (JSON.parse(readFileSync(dataFile, "utf8")) as SiteData) : null,
   });
   const size = walk(resolve(out)).reduce((n, f) => n + statSync(f).size, 0);
   console.log(
-    `site: ${result.pages} pages, release ${result.latest ?? "none"}, ${result.reports} perf report(s), scripts ${result.scripts.join(", ") || "none"}, ${formatBytes(size)} in ${resolve(out)}`,
+    `site: ${result.pages} docs pages, ${result.generated.length} generated pages, release ${result.latest ?? "none"}, ${result.reports} perf report(s), scripts ${result.scripts.join(", ") || "none"}, ${formatBytes(size)} in ${resolve(out)}`,
   );
 }

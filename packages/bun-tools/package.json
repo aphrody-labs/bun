@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "license": "MIT",
   "description": "rclone (CLI + librclone FFI) et rsync natifs du fork Bun, depuis la release aphrody-tools d'aphrody-labs/bun",
   "exports": {
     ".": "./src/index.ts"
