@@ -481,6 +481,7 @@ pub mod windows_stdio {
 
     #[unsafe(no_mangle)]
     extern "C" fn Bun__restoreWindowsStdio() {
+        crate::terminal::Bun__clearTerminalProgress();
         restore();
     }
 
@@ -654,6 +655,7 @@ pub mod stdio {
     }
 
     pub(crate) fn restore() {
+        crate::terminal::Bun__clearTerminalProgress();
         #[cfg(windows)]
         {
             super::windows_stdio::restore();
@@ -715,6 +717,10 @@ fn compute_color_depth() -> ColorDepth {
                 return ColorDepth::C16m;
             }
         }
+    }
+
+    if crate::terminal::emulator().capabilities.truecolor {
+        return ColorDepth::C16m;
     }
 
     let mut has_color_term_set = false;

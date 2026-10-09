@@ -2419,6 +2419,7 @@ impl TestCommand {
             } else {
                 Self::run_all_tests(&mut reporter, vm, test_files);
             }
+            bun_core::terminal::clear_progress();
         }
 
         // With --changed, only a subset of test files (possibly none) runs,
@@ -2809,6 +2810,7 @@ impl TestCommand {
 
                 if files.len() > 1 {
                     for (i, file_name) in files[0..files.len() - 1].iter().enumerate() {
+                        show_files_progress(reporter.summary().fail, i, files.len());
                         let started = bun::time::milli_timestamp();
                         if let Err(err) = TestCommand::run(
                             reporter,
@@ -2838,6 +2840,7 @@ impl TestCommand {
                 }
 
                 let last = files[files.len() - 1];
+                show_files_progress(reporter.summary().fail, files.len() - 1, files.len());
                 let started = bun::time::milli_timestamp();
                 if let Err(err) = TestCommand::run(
                     reporter,
@@ -3153,6 +3156,23 @@ impl TestCommand {
         }
         Ok(())
     }
+}
+
+/// The terminal's progress indicator at `done` of `total` test files, in the
+/// error color once a test has failed.
+pub(crate) fn show_files_progress(failed: u32, done: usize, total: usize) {
+    use bun_core::terminal::{self, ProgressState};
+    if !terminal::progress() {
+        return;
+    }
+    let state = if failed > 0 {
+        ProgressState::Error
+    } else if total <= 1 {
+        ProgressState::Indeterminate
+    } else {
+        ProgressState::Normal
+    };
+    terminal::set_progress(state, (done * 100 / total.max(1)) as u8);
 }
 
 pub(crate) fn handle_top_level_test_error_before_javascript_start(err: &crate::Error) -> ! {

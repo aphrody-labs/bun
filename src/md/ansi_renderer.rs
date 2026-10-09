@@ -2535,11 +2535,8 @@ fn probe_background_luminance() -> Option<f32> {
 }
 
 /// Detect whether the current terminal likely supports the Kitty
-/// Graphics Protocol. Checked heuristics:
-///   - `KITTY_WINDOW_ID` set (native Kitty)
-///   - `TERM` contains "kitty"
-///   - `TERM_PROGRAM=WezTerm` or `ghostty` (compatible terminals)
-///   - `TERM_PROGRAM=ghostty`
+/// Graphics Protocol: a terminal known for it by its environment
+/// (`bun_core::terminal`), else the answer to a query.
 pub fn detect_kitty_graphics() -> bool {
     // TERM=dumb is the standard opt-out for any ESC handling — bail
     // before any env match or probe runs.
@@ -2548,28 +2545,8 @@ pub fn detect_kitty_graphics() -> bool {
             return false;
         }
     }
-    // Fast path: env vars set by known-compatible terminals.
-    if bun_core::getenv_z(bun_core::zstr!("KITTY_WINDOW_ID")).is_some() {
+    if bun_core::terminal::emulator().capabilities.images.kitty {
         return true;
-    }
-    if bun_core::getenv_z(bun_core::zstr!("GHOSTTY_RESOURCES_DIR")).is_some() {
-        return true;
-    }
-    if let Some(term) = bun_core::getenv_z(bun_core::zstr!("TERM")) {
-        if strings::index_of(term, b"kitty").is_some() {
-            return true;
-        }
-        if strings::index_of(term, b"ghostty").is_some() {
-            return true;
-        }
-    }
-    if let Some(tp) = bun_core::getenv_z(bun_core::zstr!("TERM_PROGRAM")) {
-        if strings::eql_case_insensitive_ascii(tp, b"wezterm", true) {
-            return true;
-        }
-        if strings::eql_case_insensitive_ascii(tp, b"ghostty", true) {
-            return true;
-        }
     }
     // Runtime probe: send a Kitty query to the terminal and wait for a
     // response. Compatible terminals reply within a few ms; others stay

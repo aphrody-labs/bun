@@ -102,6 +102,7 @@ impl ZigStackFrame {
             position: self.position,
             enable_color,
             remapped: self.remapped,
+            hyperlink: false,
         }
     }
 }
@@ -121,18 +122,34 @@ pub struct SourceURLFormatter<'a> {
     pub(crate) line_column: LineColumn,
     pub(crate) remapped: bool,
     pub(crate) root_path: &'a [u8],
+    /// Wraps an absolute file path and its position in an OSC 8 link to the file.
+    pub(crate) hyperlink: bool,
+}
+
+impl<'a> SourceURLFormatter<'a> {
+    pub(crate) fn with_hyperlink(mut self, hyperlink: bool) -> Self {
+        self.hyperlink = hyperlink;
+        self
+    }
 }
 
 impl<'a> fmt::Display for SourceURLFormatter<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let source_slice_ = self.source_url.to_utf8();
+        let mut source_slice: &[u8] = source_slice_.slice();
+
+        let hyperlink = self.hyperlink
+            && self.origin.is_none()
+            && bun_core::terminal::is_absolute_path(source_slice);
+        if hyperlink {
+            write!(f, "{}", bun_core::terminal::HyperlinkStart(source_slice))?;
+        }
+
         // `Output::pretty_fmt!` expands to a `&'static str` literal (substituting `<r>`/`<cyan>`/
         // etc. for ANSI sequences at compile time), so it is usable as a `write!` format string.
         if self.enable_color {
             f.write_str(Output::pretty_fmt!("<r><cyan>", true))?;
         }
-
-        let source_slice_ = self.source_url.to_utf8();
-        let mut source_slice: &[u8] = source_slice_.slice();
 
         if !self.remapped {
             if let Some(origin) = self.origin {
@@ -216,6 +233,10 @@ impl<'a> fmt::Display for SourceURLFormatter<'a> {
                     write!(f, "{}", self.position.line.one_based())?;
                 }
             }
+        }
+
+        if hyperlink {
+            f.write_str(bun_core::terminal::HYPERLINK_END)?;
         }
 
         Ok(())

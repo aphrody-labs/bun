@@ -656,8 +656,10 @@ extern "C" void bun_restore_stdio()
 }
 
 #if !OS(WINDOWS)
+extern "C" void Bun__clearTerminalProgress();
 extern "C" void onExitSignal(int sig)
 {
+    Bun__clearTerminalProgress();
     bun_restore_stdio();
     signal(sig, SIG_DFL);
     raise(sig);

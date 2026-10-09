@@ -217,6 +217,20 @@ Bun reads these environment variables to configure aspects of its behavior.
 | `BUN_CONFIG_NO_CLEAR_TERMINAL_ON_RELOAD` | If `BUN_CONFIG_NO_CLEAR_TERMINAL_ON_RELOAD=true`, then `bun --watch` does not clear the console on reload                                                                                                                                                                                                                                                                     |
 | `DO_NOT_TRACK`                           | Disable uploading crash reports to `bun.report` on crash. On macOS & Windows, crash report uploads are enabled by default. Bun sends no other telemetry, though we plan to add some. If `DO_NOT_TRACK=1`, then auto-uploading crash reports and telemetry are both [disabled](https://do-not-track.dev/).                                                                     |
 | `BUN_OPTIONS`                            | Prepends command-line arguments to any Bun execution. For example, `BUN_OPTIONS="--hot"` makes `bun run dev` behave like `bun --hot run dev`.                                                                                                                                                                                                                                 |
+| `BUN_TERMINAL_FEATURES`                  | If `BUN_TERMINAL_FEATURES=0`, then Bun writes no [terminal hyperlinks, progress or synchronized output](#terminal-features). If `BUN_TERMINAL_FEATURES=1`, then it writes them on any stderr, even outside a terminal.                                                                                                                                                        |
+| `FORCE_HYPERLINK`                        | If `FORCE_HYPERLINK=1`, then file locations in errors are [terminal hyperlinks](#terminal-features) even where Bun would not write them. `FORCE_HYPERLINK=0` turns them off.                                                                                                                                                                                                  |
+
+## Terminal features
+
+When stderr is a terminal that Bun recognizes from its environment variables, Bun writes three escape sequences besides colors:
+
+- **Hyperlinks** (OSC 8): the `file:line:column` locations in stack traces and in transpiler, bundler and `bun test` errors open the file.
+- **Progress** (OSC 9;4): the tab or taskbar shows the progress of `bun install`, `bun test` (the share of test files run, in the error state after a failure) and `bun build`. Bun clears it when it exits or is interrupted.
+- **Synchronized output** (DECSET 2026): each redraw of the `bun install` progress bar appears at once.
+
+The recognized terminals are Windows Terminal, Ghostty, kitty, WezTerm, iTerm2, Rio, Alacritty, COSMIC Terminal, VTE-based terminals such as GNOME Terminal, ConEmu and the VS Code terminal. Progress is reported only where OSC 9;4 is known to mean progress: Windows Terminal, ConEmu, VTE 0.80 and later, Ghostty 1.2 and later, iTerm2 3.6.6 and later and Rio 0.3.11 and later. Elsewhere it may show up as a notification.
+
+Bun writes none of them when stderr is not a terminal, when `CI` is set, inside tmux, screen or Zellij, or when it does not recognize the terminal. The output of `console.log` and `Bun.inspect` never contains them.
 
 ## Runtime transpiler caching
 

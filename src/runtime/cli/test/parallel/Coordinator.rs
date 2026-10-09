@@ -140,11 +140,20 @@ impl<'a> Coordinator<'a> {
     pub(crate) fn drive(&mut self) {
         let _ = self.spawn_worker();
         self.run_pending_reaps();
+        let mut progress_shown = None;
         while !self.is_done() {
             let signal = abort_handler::ABORT_SIGNAL.load(Ordering::Acquire);
             if signal != 0 {
                 self.abort_all(signal);
                 return;
+            }
+            if progress_shown != Some(self.files_done) {
+                progress_shown = Some(self.files_done);
+                crate::test_command::show_files_progress(
+                    self.reporter.summary().fail,
+                    self.files_done as usize,
+                    self.files.len(),
+                );
             }
             self.vm.event_loop_ref().tick();
             self.run_pending_reaps();

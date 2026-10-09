@@ -510,3 +510,128 @@ describe.concurrent("AggregateError whose errors cannot be walked", () => {
     expect(exitCode).toBe(1);
   });
 });
+
+// Imported here: the snapshots at the top of this file print its first lines.
+import { bunEnvWithoutTerminal } from "harness";
+import { realpathSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+// The OSC 8 links in `output`, each as its text with `cwd` replaced by [dir], marked `link` when its URL is the
+// file the text names and `bad link <url>` otherwise.
+function terminalLinks(output, cwd) {
+  const found = [];
+  for (const [, url, text] of output.matchAll(/\x1b\]8;;([^\x1b]*)\x1b\\(.*?)\x1b\]8;;\x1b\\/g)) {
+    const plain = Bun.stripANSI(text);
+    const ok = url.startsWith("file:") && fileURLToPath(url) === resolve(cwd, plain.replace(/(:\d+)+$/, ""));
+    found.push(`${ok ? "link" : `bad link ${url}`} ${plain.replaceAll(cwd, "[dir]").replaceAll("\\", "/")}`);
+  }
+  return found;
+}
+
+// Some sandboxes have no pseudo-terminals.
+const hasTerminal = (() => {
+  try {
+    new Bun.Terminal({}).close();
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+describe.concurrent("OSC 8 links to the files of printed errors", () => {
+  const files = {
+    "main.js": `function f() {\n  throw new Error("boom");\n}\nconsole.log(Bun.inspect(new Error("x")).includes("\\x1b]8;"));\nf();\n`,
+    "syntax.js": "const x = );\n",
+  };
+
+  async function run(file, env) {
+    using dir = tempDir("terminal-links", files);
+    const cwd = realpathSync(String(dir));
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), file],
+      cwd,
+      env: { ...bunEnvWithoutTerminal, ...env },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    return { stdout, links: terminalLinks(stderr, cwd), exitCode };
+  }
+
+  test("FORCE_HYPERLINK=1 links the stack trace, not Bun.inspect", async () => {
+    const { stdout, links, exitCode } = await run("main.js", { FORCE_HYPERLINK: "1" });
+    expect(links).toMatchInlineSnapshot(`
+      [
+        "link [dir]/main.js:2:13",
+        "link [dir]/main.js:5:1",
+      ]
+    `);
+    expect(stdout).toBe("false\n");
+    expect(exitCode).toBe(1);
+  });
+
+  test("FORCE_HYPERLINK=1 links the location of a syntax error", async () => {
+    const { links, exitCode } = await run("syntax.js", { FORCE_HYPERLINK: "1" });
+    expect(links).toMatchInlineSnapshot(`
+      [
+        "link [dir]/syntax.js:1:11",
+      ]
+    `);
+    expect(exitCode).toBe(1);
+  });
+
+  test.each([
+    ["in CI", {}],
+    ["on a pipe", { CI: undefined, TERM_PROGRAM: "ghostty", TERM_PROGRAM_VERSION: "1.2.0" }],
+    ["with BUN_TERMINAL_FEATURES=0", { BUN_TERMINAL_FEATURES: "0", FORCE_HYPERLINK: "1" }],
+    ["with FORCE_HYPERLINK=0", { BUN_TERMINAL_FEATURES: "1", FORCE_HYPERLINK: "0" }],
+  ])("no links %s", async (_, env) => {
+    const { links, exitCode } = await run("main.js", env);
+    expect(links).toEqual([]);
+    expect(exitCode).toBe(1);
+  });
+
+  describe.skipIf(!hasTerminal)("in a terminal", () => {
+    async function inTerminal(env) {
+      using dir = tempDir("terminal-links", files);
+      const cwd = realpathSync(String(dir));
+      const decoder = new TextDecoder();
+      let output = "";
+      await using proc = Bun.spawn({
+        cmd: [bunExe(), "main.js"],
+        cwd,
+        env: { ...bunEnvWithoutTerminal, CI: undefined, NO_COLOR: undefined, TERM: "xterm-256color", ...env },
+        terminal: {
+          cols: 200,
+          rows: 24,
+          data(_terminal, chunk) {
+            output += decoder.decode(chunk, { stream: true });
+          },
+        },
+      });
+      await proc.exited;
+      // Windows' pseudo-console redraws the screen: it adds an id to each link and may break its text across lines.
+      return [...output.matchAll(/\x1b\]8;[^;\x1b]*;(file:[^\x1b]+)\x1b\\/g)].map(([, url]) =>
+        fileURLToPath(url).replace(cwd, "[dir]").replaceAll("\\", "/"),
+      );
+    }
+
+    test("links on a terminal known to support them", async () => {
+      expect(await inTerminal({ TERM_PROGRAM: "ghostty", TERM_PROGRAM_VERSION: "1.2.0" })).toMatchInlineSnapshot(`
+        [
+          "[dir]/main.js",
+          "[dir]/main.js",
+        ]
+      `);
+    });
+
+    test.each([
+      ["on an unknown terminal", {}],
+      ["in CI", { TERM_PROGRAM: "ghostty", CI: "1" }],
+      ["inside tmux", { TERM_PROGRAM: "ghostty", TMUX: "/tmp/tmux-0/default,1,0" }],
+    ])("no links %s", async (_, env) => {
+      expect(await inTerminal(env)).toEqual([]);
+    });
+  });
+});

@@ -4,6 +4,7 @@ import { readFileSync, readlinkSync, realpathSync, statSync } from "fs";
 import { access, cp, exists, mkdir, readlink, rm, stat, writeFile } from "fs/promises";
 import {
   bunEnv,
+  bunEnvWithoutTerminal,
   bunExe,
   bunEnv as env,
   isWindows,
@@ -11932,5 +11933,103 @@ describe.concurrent("registry manifest with an unexpected shape", () => {
       expect(installed).toEqual(["bar", "baz"]);
       expect(exitCode).toBe(0);
     });
+  });
+});
+
+describe.concurrent("install progress in the terminal", () => {
+  const project = {
+    "package.json": JSON.stringify({ name: "foo", version: "0.0.1", dependencies: { dep: "file:./dep" } }),
+    "dep/package.json": JSON.stringify({ name: "dep", version: "1.0.0" }),
+  };
+  const sequences = (output: string) => ({
+    progress: [...output.matchAll(/\x1b\]9;4;(\d);(\d+)\x1b\\/g)].map(([, state, percent]) => `${state};${percent}`),
+    synchronized: [...output.matchAll(/\x1b\[\?2026([hl])/g)].map(([, mode]) => mode),
+  });
+
+  async function install(env: NodeJS.Dict<string>) {
+    using dir = tempDir("install-terminal-progress", project);
+    await using proc = spawn({
+      cmd: [bunExe(), "install"],
+      cwd: String(dir),
+      env: { ...bunEnvWithoutTerminal, BUN_INSTALL_PROGRESS: "1", NO_COLOR: undefined, FORCE_COLOR: "1", ...env },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
+    return { ...sequences(stderr), exitCode };
+  }
+
+  async function installInTerminal(env: NodeJS.Dict<string>) {
+    using dir = tempDir("install-terminal-progress", project);
+    const decoder = new TextDecoder();
+    let output = "";
+    await using proc = spawn({
+      cmd: [bunExe(), "install"],
+      cwd: String(dir),
+      env: { ...bunEnvWithoutTerminal, CI: undefined, NO_COLOR: undefined, TERM: "xterm-256color", ...env },
+      terminal: {
+        cols: 120,
+        rows: 24,
+        data(_terminal, chunk) {
+          output += decoder.decode(chunk, { stream: true });
+        },
+      },
+    });
+    return { ...sequences(output), exitCode: await proc.exited };
+  }
+
+  // Some sandboxes have no pseudo-terminals.
+  const hasTerminal = (() => {
+    try {
+      new Bun.Terminal({}).close();
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
+  test.skipIf(!hasTerminal)("reports progress on a terminal known to show it", async () => {
+    const { progress, synchronized, exitCode } = await installInTerminal({
+      TERM_PROGRAM: "ghostty",
+      TERM_PROGRAM_VERSION: "1.2.0",
+    });
+    expect(progress.slice(-2)).toMatchInlineSnapshot(`
+      [
+        "3;0",
+        "0;0",
+      ]
+    `);
+    expect(synchronized.length).toBeGreaterThan(0);
+    expect(exitCode).toBe(0);
+  });
+
+  test.skipIf(!hasTerminal)("writes neither progress nor synchronized frames on an unknown terminal", async () => {
+    const { progress, synchronized, exitCode } = await installInTerminal({});
+    expect({ progress, synchronized }).toEqual({ progress: [], synchronized: [] });
+    expect(exitCode).toBe(0);
+  });
+
+  // Windows draws the progress bar on a console only, never on a pipe.
+  test.skipIf(isWindows)("reports saving the lockfile (OSC 9;4) in synchronized frames (DECSET 2026)", async () => {
+    const { progress, synchronized, exitCode } = await install({ BUN_TERMINAL_FEATURES: "1" });
+    expect(progress.slice(-2)).toMatchInlineSnapshot(`
+      [
+        "3;0",
+        "0;0",
+      ]
+    `);
+    expect(synchronized.length).toBeGreaterThan(0);
+    expect(synchronized.join("")).toBe(Buffer.alloc(synchronized.length / 2, "hl").toString());
+    expect(exitCode).toBe(0);
+  });
+
+  test.each([
+    ["in CI", {}],
+    ["on a pipe", { CI: undefined, TERM_PROGRAM: "ghostty", TERM_PROGRAM_VERSION: "1.2.0" }],
+    ["with BUN_TERMINAL_FEATURES=0", { BUN_TERMINAL_FEATURES: "0" }],
+  ])("writes neither progress nor synchronized frames %s", async (_, env) => {
+    const { progress, synchronized, exitCode } = await install(env);
+    expect({ progress, synchronized }).toEqual({ progress: [], synchronized: [] });
+    expect(exitCode).toBe(0);
   });
 });

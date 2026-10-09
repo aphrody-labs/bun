@@ -125,6 +125,32 @@ if (isDebug) {
   bunEnv.BUN_DEBUG_NO_DUMP = "1";
 }
 
+/**
+ * `bunEnv` without the variables from which Bun recognizes the terminal the
+ * tests run in or is told what it supports (src/bun_core/terminal.rs), for
+ * tests of OSC 8 links and OSC 9;4 progress.
+ */
+export const bunEnvWithoutTerminal: NodeJS.Dict<string> = { ...bunEnv };
+for (const key of [
+  "TERM",
+  "TERM_PROGRAM",
+  "TERM_PROGRAM_VERSION",
+  "WT_SESSION",
+  "ConEmuANSI",
+  "VTE_VERSION",
+  "GHOSTTY_RESOURCES_DIR",
+  "KITTY_WINDOW_ID",
+  "WEZTERM_EXECUTABLE",
+  "ALACRITTY_WINDOW_ID",
+  "TMUX",
+  "STY",
+  "ZELLIJ",
+  "FORCE_HYPERLINK",
+  "BUN_TERMINAL_FEATURES",
+]) {
+  delete bunEnvWithoutTerminal[key];
+}
+
 export function bunExe() {
   if (isWindows) return process.execPath.replaceAll("\\", "/");
   return process.execPath;

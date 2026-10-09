@@ -5594,6 +5594,7 @@ impl VirtualMachine {
         allow_side_effects: bool,
     ) {
         let mut formatter = crate::console_object::Formatter::new(self.global());
+        formatter.hyperlinks = bun_core::terminal::hyperlinks();
         let colors = bun_core::Output::enable_ansi_colors_stderr();
         self.print_errorlike_object(
             exception.value(),
@@ -6127,7 +6128,12 @@ impl VirtualMachine {
                 let zig_exception: &mut ZigException = holder.zig_exception();
                 exception_.get_stack_trace(global_ref, &mut zig_exception.stack);
                 if zig_exception.stack.frames_len > 0 {
-                    let _ = Self::print_stack_trace(writer, &zig_exception.stack, allow_ansi_color);
+                    let _ = Self::print_stack_trace(
+                        writer,
+                        &zig_exception.stack,
+                        allow_ansi_color,
+                        formatter.hyperlinks,
+                    );
                 }
                 if let Some(list) = exception_list {
                     let origin = self.is_from_devserver.then_some(&self.origin);
@@ -6147,12 +6153,13 @@ impl VirtualMachine {
         allow_ansi_color: bool,
         allow_side_effects: bool,
     ) -> bool {
+        let hyperlinks = formatter.hyperlinks;
         macro_rules! write_msg {
             ($msg:expr, $w:expr, $color:expr) => {
                 if $color {
-                    let _ = $msg.write_format::<true>(&mut bun_io::AsFmt::new($w));
+                    let _ = $msg.write_format_with_hyperlinks::<true>(&mut bun_io::AsFmt::new($w), hyperlinks);
                 } else {
-                    let _ = $msg.write_format::<false>(&mut bun_io::AsFmt::new($w));
+                    let _ = $msg.write_format_with_hyperlinks::<false>(&mut bun_io::AsFmt::new($w), hyperlinks);
                 }
             };
         }
@@ -6240,6 +6247,7 @@ impl VirtualMachine {
         writer: &mut bun_core::io::Writer,
         trace: &crate::ZigStackTrace,
         allow_ansi_colors: bool,
+        hyperlinks: bool,
     ) -> crate::CrateResult<()> {
         use crate::zig_stack_frame::LineColumn;
         let stack = trace.frames();
@@ -6287,12 +6295,16 @@ impl VirtualMachine {
                 pretty_write!(
                     "<r>      <d>at <r>{}<d> (<r>{}<d>)<r>\n",
                     frame.name_formatter(allow_ansi_colors),
-                    frame.source_url_formatter(dir, origin, LineColumn::Include, allow_ansi_colors)
+                    frame
+                        .source_url_formatter(dir, origin, LineColumn::Include, allow_ansi_colors)
+                        .with_hyperlink(hyperlinks)
                 )?;
             } else if !frame.position.is_invalid() {
                 pretty_write!(
                     "<r>      <d>at <r>{}\n",
-                    frame.source_url_formatter(dir, origin, LineColumn::Include, allow_ansi_colors)
+                    frame
+                        .source_url_formatter(dir, origin, LineColumn::Include, allow_ansi_colors)
+                        .with_hyperlink(hyperlinks)
                 )?;
             } else if has_name {
                 pretty_write!(
@@ -6302,7 +6314,9 @@ impl VirtualMachine {
             } else {
                 pretty_write!(
                     "<r>      <d>at <r>{}<d>\n",
-                    frame.source_url_formatter(dir, origin, LineColumn::Include, allow_ansi_colors)
+                    frame
+                        .source_url_formatter(dir, origin, LineColumn::Include, allow_ansi_colors)
+                        .with_hyperlink(hyperlinks)
                 )?;
             }
         }
@@ -7308,7 +7322,7 @@ impl VirtualMachine {
             }
         }
 
-        Self::print_stack_trace(writer, &exception.stack, allow_ansi_color)?;
+        Self::print_stack_trace(writer, &exception.stack, allow_ansi_color, formatter.hyperlinks)?;
 
         if !exception.browser_url.is_empty() {
             pretty_write!(

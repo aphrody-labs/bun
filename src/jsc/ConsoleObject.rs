@@ -1154,6 +1154,7 @@ pub fn write_trace(writer: &mut dyn bun_io::Write, global: &JSGlobalObject) {
         adapter.interface(),
         &holder.zig_exception().stack,
         Output::enable_ansi_colors_stderr(),
+        false,
     );
 
     drop(source_code_slice);
@@ -1615,6 +1616,9 @@ pub mod formatter {
         /// printed as a string. Set true in the error printer so that
         /// `ShellError` prints a more readable message.
         pub(crate) format_buffer_as_text: bool,
+        /// Source locations in error stack traces become OSC 8 links. Only for
+        /// errors printed to stderr, never for `console.log` or `Bun.inspect`.
+        pub hyperlinks: bool,
     }
 
     impl<'a> Formatter<'a> {
@@ -1646,6 +1650,7 @@ pub mod formatter {
                 can_throw_stack_overflow: false,
                 error_display_level: ErrorDisplayLevel::Full,
                 format_buffer_as_text: false,
+                hyperlinks: false,
             }
         }
 
@@ -1682,6 +1687,7 @@ pub mod formatter {
                 can_throw_stack_overflow: self.can_throw_stack_overflow,
                 error_display_level: self.error_display_level,
                 format_buffer_as_text: self.format_buffer_as_text,
+                hyperlinks: self.hyperlinks,
             }
         }
 

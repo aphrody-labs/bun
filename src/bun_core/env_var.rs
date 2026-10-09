@@ -127,6 +127,8 @@ new!(pub BUN_POSTGRES_SOCKET_MONITOR_READER: string, "BUN_POSTGRES_SOCKET_MONITO
 new!(pub BUN_RUNTIME_TRANSPILER_CACHE_PATH: string, "BUN_RUNTIME_TRANSPILER_CACHE_PATH", {});
 new!(pub BUN_SSG_DISABLE_STATIC_ROUTE_VISITOR: boolean, "BUN_SSG_DISABLE_STATIC_ROUTE_VISITOR", { default: false });
 new!(pub BUN_TCC_OPTIONS: string, "BUN_TCC_OPTIONS", {});
+// Unset: OSC 8 / OSC 9;4 / DECSET 2026 on a recognized terminal only. 0 turns them off, 1 forces them on.
+new!(pub BUN_TERMINAL_FEATURES: boolean, "BUN_TERMINAL_FEATURES", {});
 // Standard C compiler environment variable for include paths (colon-separated).
 // Used by bun:ffi's TinyCC integration for systems like NixOS.
 platform_specific_new!(pub C_INCLUDE_PATH: string, posix = "C_INCLUDE_PATH", windows = None, {});

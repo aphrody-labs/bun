@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { bunEnv, bunExe, isWindows, normalizeBunSnapshot, tempDir, tmpdirSync } from "harness";
+import { bunEnv, bunEnvWithoutTerminal, bunExe, isWindows, normalizeBunSnapshot, tempDir, tmpdirSync } from "harness";
 import fs, { mkdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import path, { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 (describe.concurrent as any)(
   "bun build",
@@ -1036,5 +1037,66 @@ describe.concurrent("diagnostic markup", () => {
     expect(stderr).toContain("The value of color in the class foo is undefined.");
     expect(stderr).not.toContain("<b>");
     expect(stderr).not.toContain("\x1b[");
+  });
+});
+
+describe.concurrent("bun build and the terminal", () => {
+  async function build(source: string, env: NodeJS.Dict<string>) {
+    using dir = tempDir("bun-build-terminal", { "index.js": source });
+    const cwd = realpathSync(String(dir));
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "build", "./index.js", "--outdir", "out"],
+      env: { ...bunEnvWithoutTerminal, ...env },
+      cwd,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
+    const url = pathToFileURL(join(cwd, "index.js")).href;
+    return {
+      progress: [...stderr.matchAll(/\x1b\]9;4;(\d);(\d+)\x1b\\/g)].map(([, state, percent]) => `${state};${percent}`),
+      links: [...stderr.matchAll(/\x1b\]8;;([^\x1b]*)\x1b\\(.*?)\x1b\]8;;\x1b\\/g)].map(
+        // The location is absolute on Windows and relative to the working directory elsewhere.
+        ([, href, text]) => `${href === url ? "link" : `bad link ${href}`} ${text.replace(cwd + path.sep, "")}`,
+      ),
+      exitCode,
+    };
+  }
+
+  test("shows indeterminate progress while bundling (OSC 9;4), then clears it", async () => {
+    const { progress, exitCode } = await build("console.log(1);\n", { BUN_TERMINAL_FEATURES: "1" });
+    expect(progress).toMatchInlineSnapshot(`
+      [
+        "3;0",
+        "0;0",
+      ]
+    `);
+    expect(exitCode).toBe(0);
+  });
+
+  test("links the file of a build error (OSC 8)", async () => {
+    const { progress, links, exitCode } = await build("const x = );\n", { BUN_TERMINAL_FEATURES: "1" });
+    expect({ progress, links }).toMatchInlineSnapshot(`
+      {
+        "links": [
+          "link index.js:1:11",
+        ],
+        "progress": [
+          "3;0",
+          "0;0",
+        ],
+      }
+    `);
+    expect(exitCode).toBe(1);
+  });
+
+  test.each([
+    ["in CI", {}],
+    ["on a pipe", { CI: undefined, WT_SESSION: "1", TERM_PROGRAM: "ghostty", TERM_PROGRAM_VERSION: "1.2.0" }],
+    ["with BUN_TERMINAL_FEATURES=0", { BUN_TERMINAL_FEATURES: "0", FORCE_HYPERLINK: "1" }],
+  ])("writes neither progress nor links %s", async (_, env) => {
+    const { progress, links, exitCode } = await build("const x = );\n", env);
+    expect({ progress, links }).toEqual({ progress: [], links: [] });
+    expect(exitCode).toBe(1);
   });
 });

@@ -687,7 +687,8 @@ impl BuildCommand {
             // BACKREF passed to `generate_from_cli`.
             let mut event_loop = bun_event_loop::AnyEventLoop::init();
 
-            let build_result = match BundleV2::generate_from_cli(
+            bun_core::terminal::set_progress(bun_core::terminal::ProgressState::Indeterminate, 0);
+            let generated = BundleV2::generate_from_cli(
                 this_transpiler,
                 arena,
                 Some(core::ptr::NonNull::from(&mut event_loop)),
@@ -696,7 +697,9 @@ impl BuildCommand {
                 &mut minify_duration,
                 &mut input_code_length,
                 fetcher,
-            ) {
+            );
+            bun_core::terminal::clear_progress();
+            let build_result = match generated {
                 Ok(r) => r,
                 Err(err) => {
                     if !log_ref.msgs.is_empty() {

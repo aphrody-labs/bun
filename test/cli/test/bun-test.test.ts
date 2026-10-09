@@ -1,8 +1,18 @@
 import { spawnSync } from "bun";
 import { beforeAll, describe, expect, it, test } from "bun:test";
-import { bunEnv, bunExe, isLinux, isWindows, tempDir, tempDirWithFiles, tmpdirSync } from "harness";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  bunEnv,
+  bunEnvWithoutTerminal,
+  bunExe,
+  isLinux,
+  isWindows,
+  tempDir,
+  tempDirWithFiles,
+  tmpdirSync,
+} from "harness";
+import { mkdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve, sep } from "node:path";
+import { pathToFileURL } from "node:url";
 
 describe("bun test", () => {
   test("running a non-existent absolute file path is a 1 exit code", () => {
@@ -2228,5 +2238,122 @@ describe.concurrent("@jest-environment docblock", () => {
     expect(stderr).toContain(" 1 pass");
     expect(stderr).toContain(" 1 fail");
     expect(exitCode).toBe(1);
+  });
+});
+
+describe.concurrent("terminal progress (OSC 9;4)", () => {
+  const pass = `import { test } from "bun:test";\ntest("pass", () => {});\n`;
+  const fail = `import { expect, test } from "bun:test";\ntest("fail", () => {\n  expect(1).toBe(2);\n});\n`;
+
+  async function bunTest(files: Record<string, string>, env: NodeJS.Dict<string>) {
+    using dir = tempDir("bun-test-progress", files);
+    const cwd = realpathSync(String(dir));
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "test", ...Object.keys(files).map(file => `./${file}`)],
+      env: { ...bunEnvWithoutTerminal, ...env },
+      cwd,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
+    const progress = [...stderr.matchAll(/\x1b\]9;4;(\d);(\d+)\x1b\\/g)].map(
+      ([, state, percent]) => `${state};${percent}`,
+    );
+    return { cwd, stderr, progress, exitCode };
+  }
+
+  test("reports the share of files run, then clears it", async () => {
+    const { progress, exitCode } = await bunTest(
+      { "a.test.ts": pass, "b.test.ts": pass },
+      { BUN_TERMINAL_FEATURES: "1" },
+    );
+    expect(progress).toMatchInlineSnapshot(`
+      [
+        "1;0",
+        "1;50",
+        "0;0",
+      ]
+    `);
+    expect(exitCode).toBe(0);
+  });
+
+  test("turns to the error state once a test failed, and links the failure", async () => {
+    const { cwd, stderr, progress, exitCode } = await bunTest(
+      { "a.test.ts": fail, "b.test.ts": fail },
+      { BUN_TERMINAL_FEATURES: "1" },
+    );
+    expect(progress).toMatchInlineSnapshot(`
+      [
+        "1;0",
+        "2;50",
+        "0;0",
+      ]
+    `);
+    expect(stderr).toContain(`\x1b]8;;${pathToFileURL(join(cwd, "a.test.ts")).href}\x1b\\`);
+    expect(exitCode).toBe(1);
+  });
+
+  test.each([
+    ["in CI", {}],
+    ["on a pipe", { CI: undefined, TERM_PROGRAM: "ghostty", TERM_PROGRAM_VERSION: "1.2.0" }],
+    ["with BUN_TERMINAL_FEATURES=0", { BUN_TERMINAL_FEATURES: "0" }],
+  ])("is not reported %s", async (_, env) => {
+    const { stderr, progress, exitCode } = await bunTest({ "a.test.ts": pass, "b.test.ts": fail }, env);
+    expect(progress).toEqual([]);
+    expect(stderr).not.toContain("\x1b]8;");
+    expect(exitCode).toBe(1);
+  });
+
+  // Some sandboxes have no pseudo-terminals.
+  const hasTerminal = (() => {
+    try {
+      new Bun.Terminal({}).close();
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
+  describe.skipIf(!hasTerminal)("in a terminal", () => {
+    async function inTerminal(env: NodeJS.Dict<string>) {
+      using dir = tempDir("bun-test-progress", { "a.test.ts": pass, "b.test.ts": pass });
+      const decoder = new TextDecoder();
+      let output = "";
+      await using proc = Bun.spawn({
+        cmd: [bunExe(), "test", "./a.test.ts", "./b.test.ts"],
+        cwd: String(dir),
+        env: { ...bunEnvWithoutTerminal, CI: undefined, NO_COLOR: undefined, TERM: "xterm-256color", ...env },
+        terminal: {
+          cols: 120,
+          rows: 24,
+          data(_terminal, chunk) {
+            output += decoder.decode(chunk, { stream: true });
+          },
+        },
+      });
+      await proc.exited;
+      return [...output.matchAll(/\x1b\]9;4;(\d);(\d+)\x1b\\/g)].map(([, state, percent]) => `${state};${percent}`);
+    }
+
+    test("is reported by a terminal known to show it as progress", async () => {
+      expect(await inTerminal({ TERM_PROGRAM: "ghostty", TERM_PROGRAM_VERSION: "1.2.0" })).toMatchInlineSnapshot(`
+        [
+          "1;0",
+          "1;50",
+          "0;0",
+        ]
+      `);
+    });
+
+    test.each([
+      ["on an unknown terminal", {}],
+      [
+        "on a terminal that would show it as a notification",
+        { TERM_PROGRAM: "ghostty", TERM_PROGRAM_VERSION: "1.1.3" },
+      ],
+      ["inside tmux", { TERM_PROGRAM: "ghostty", TERM_PROGRAM_VERSION: "1.2.0", TMUX: "/tmp/tmux-0/default,1,0" }],
+    ])("is not reported %s", async (_, env) => {
+      expect(await inTerminal(env)).toEqual([]);
+    });
   });
 });

@@ -17,7 +17,7 @@ use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 use std::io::Write as _;
 use std::time::Instant;
 
-use crate::Mutex;
+use crate::{Mutex, terminal};
 #[cfg(windows)]
 use crate::windows_sys as windows;
 
@@ -527,6 +527,8 @@ impl Progress {
         let mut end: usize = 0;
         self.clear_with_held_lock(&mut end);
 
+        // Completed and estimated items of the deepest node that has an estimate.
+        let mut fraction: Option<(usize, usize)> = None;
         if !self.done {
             let mut need_ellipse = false;
             let mut maybe_node: *mut Node = &raw mut self.root;
@@ -551,6 +553,9 @@ impl Progress {
                     maybe_node = (*maybe_node).recently_updated_child.load(Ordering::Acquire);
                 }
                 let current_item = completed_items + 1;
+                if eti > 0 {
+                    fraction = Some((completed_items, eti));
+                }
 
                 if need_ellipse {
                     self.buf_write(&mut end, format_args!("... "));
@@ -603,7 +608,40 @@ impl Progress {
             }
         }
 
-        if file.write(&self.output_buffer[0..end]).is_err() {
+        let osc = self.supports_ansi_escape_codes && terminal::progress();
+        let sync = self.supports_ansi_escape_codes && terminal::synchronized_output();
+        let written = if osc || sync {
+            let mut frame = [0u8; 160];
+            let mut len = 0;
+            let mut push = |bytes: &[u8]| {
+                frame[len..len + bytes.len()].copy_from_slice(bytes);
+                len += bytes.len();
+            };
+            if sync {
+                push(crate::output::SYNCHRONIZED_START.as_bytes());
+            }
+            push(&self.output_buffer[0..end]);
+            if osc {
+                let (state, percent) = match (self.done, fraction) {
+                    (true, _) => (terminal::ProgressState::Clear, 0),
+                    (false, Some((completed, total))) => (
+                        terminal::ProgressState::Normal,
+                        (completed.min(total) as u128 * 100 / total as u128) as u8,
+                    ),
+                    (false, None) => (terminal::ProgressState::Indeterminate, 0),
+                };
+                let mut seq = [0u8; 16];
+                let n = terminal::progress_update(&mut seq, state, percent);
+                push(&seq[..n]);
+            }
+            if sync {
+                push(crate::output::SYNCHRONIZED_END.as_bytes());
+            }
+            file.write(&frame[..len])
+        } else {
+            file.write(&self.output_buffer[0..end])
+        };
+        if written.is_err() {
             // stop trying to write to this file
             self.terminal = None;
         }

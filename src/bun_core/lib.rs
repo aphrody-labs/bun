@@ -581,6 +581,7 @@ pub mod Progress;
 pub mod fmt;
 #[path = "output.rs"]
 pub mod output;
+pub mod terminal;
 
 // `bun_core` (T0) cannot name `bun_sys` I/O primitives. Single-variant
 // link-interface (owner is unused / null); `bun_sys` provides the `Sys` arm.

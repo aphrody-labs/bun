@@ -510,6 +510,8 @@ impl IntoText for Box<[u8]> {
 /// `Output::error_writer()` (the dominant call shape across the tree).
 pub trait IntoLogWrite {
     type W: fmt::Write;
+    /// The sink is stderr, where [`Log::print`] may write OSC 8 links.
+    const STDERR: bool = false;
     fn into_log_write(self) -> Self::W;
 }
 impl<'a, W: fmt::Write> IntoLogWrite for &'a mut W {
@@ -534,6 +536,8 @@ impl fmt::Write for IoWriterAdapter {
 }
 impl IntoLogWrite for *mut bun_core::io::Writer {
     type W = IoWriterAdapter;
+    // Every caller passes `Output::error_writer()` or `error_writer_buffered()`.
+    const STDERR: bool = true;
     #[inline]
     fn into_log_write(self) -> IoWriterAdapter {
         IoWriterAdapter(self)
@@ -718,6 +722,27 @@ impl Default for Location {
 }
 
 impl Location {
+    /// `file` as an absolute path: itself, or resolved against the working
+    /// directory in the `file` namespace, where it is printed relative to it.
+    pub fn absolute_file_path(&self) -> Option<Vec<u8>> {
+        let file: &[u8] = &self.file;
+        if bun_core::terminal::is_absolute_path(file) {
+            return Some(file.to_vec());
+        }
+        if !self.namespace.is_empty() && *self.namespace != *b"file" {
+            return None;
+        }
+        let mut buf = bun_paths::path_buffer_pool::get();
+        let cwd = bun_core::getcwd(&mut buf).ok()?;
+        Some(
+            bun_paths::resolve_path::join_abs_string::<bun_paths::platform::Auto>(
+                cwd.as_bytes(),
+                &[file],
+            )
+            .to_vec(),
+        )
+    }
+
     pub(crate) fn memory_cost(&self) -> usize {
         let mut cost: usize = 0;
         cost += self.file.len();
@@ -964,6 +989,7 @@ impl Data {
         to: &mut impl fmt::Write,
         kind: Kind,
         redact_sensitive_information: bool,
+        hyperlinks: bool,
     ) -> fmt::Result {
         if self.text.is_empty() {
             return Ok(());
@@ -1089,7 +1115,16 @@ impl Data {
                 to.write_str("\n")?;
                 write_n_bytes(to, b' ', (kind.string().len() + ": ".len()) - "at ".len())?;
 
-                pretty_write!("<d>at <r><cyan>{}<r>", bstr::BStr::new(&location.file))?;
+                pretty_write!("<d>at <r>")?;
+                let link = if hyperlinks {
+                    location.absolute_file_path()
+                } else {
+                    None
+                };
+                if let Some(path) = &link {
+                    write!(to, "{}", bun_core::terminal::HyperlinkStart(path))?;
+                }
+                pretty_write!("<cyan>{}<r>", bstr::BStr::new(&location.file))?;
 
                 if location.line > 0 && location.column > -1 {
                     pretty_write!(
@@ -1099,6 +1134,9 @@ impl Data {
                     )?;
                 } else if location.line > -1 {
                     pretty_write!("<d>:<r><yellow>{}<r>", location.line)?;
+                }
+                if link.is_some() {
+                    to.write_str(bun_core::terminal::HYPERLINK_END)?;
                 }
             }
         }
@@ -1244,10 +1282,21 @@ impl Msg {
         &self,
         to: &mut impl fmt::Write,
     ) -> fmt::Result {
+        self.write_format_with_hyperlinks::<ENABLE_ANSI_COLORS>(to, false)
+    }
+
+    /// With `hyperlinks`, the file of each location is an OSC 8 link: only for
+    /// a message printed to the terminal.
+    pub fn write_format_with_hyperlinks<const ENABLE_ANSI_COLORS: bool>(
+        &self,
+        to: &mut impl fmt::Write,
+        hyperlinks: bool,
+    ) -> fmt::Result {
         self.data.write_format::<ENABLE_ANSI_COLORS>(
             to,
             self.kind,
             self.redact_sensitive_information,
+            hyperlinks,
         )?;
 
         if !self.notes.is_empty() {
@@ -1260,6 +1309,7 @@ impl Msg {
                 to,
                 Kind::Note,
                 self.redact_sensitive_information,
+                hyperlinks,
             )?;
         }
         Ok(())
@@ -2221,17 +2271,19 @@ impl Log {
     }
 
     pub fn print<W: IntoLogWrite>(&self, to: W) -> fmt::Result {
+        let hyperlinks = W::STDERR && bun_core::terminal::hyperlinks();
         let mut w = to.into_log_write();
         if Output::ENABLE_ANSI_COLORS_STDERR.load(core::sync::atomic::Ordering::Relaxed) {
-            self.print_with_enable_ansi_colors::<true>(&mut w)
+            self.print_with_enable_ansi_colors::<true>(&mut w, hyperlinks)
         } else {
-            self.print_with_enable_ansi_colors::<false>(&mut w)
+            self.print_with_enable_ansi_colors::<false>(&mut w, hyperlinks)
         }
     }
 
-    pub(crate) fn print_with_enable_ansi_colors<const ENABLE_ANSI_COLORS: bool>(
+    fn print_with_enable_ansi_colors<const ENABLE_ANSI_COLORS: bool>(
         &self,
         to: &mut impl fmt::Write,
+        hyperlinks: bool,
     ) -> fmt::Result {
         let mut needs_newline = false;
         if self.warnings > 0 && self.errors > 0 {
@@ -2246,7 +2298,7 @@ impl Log {
                         if needs_newline {
                             to.write_str("\n\n")?;
                         }
-                        msg.write_format::<ENABLE_ANSI_COLORS>(to)?;
+                        msg.write_format_with_hyperlinks::<ENABLE_ANSI_COLORS>(to, hyperlinks)?;
                         needs_newline = true;
                     }
                 }
@@ -2258,7 +2310,7 @@ impl Log {
                         if needs_newline {
                             to.write_str("\n\n")?;
                         }
-                        msg.write_format::<ENABLE_ANSI_COLORS>(to)?;
+                        msg.write_format_with_hyperlinks::<ENABLE_ANSI_COLORS>(to, hyperlinks)?;
                         needs_newline = true;
                     }
                 }
@@ -2269,7 +2321,7 @@ impl Log {
                     if needs_newline {
                         to.write_str("\n\n")?;
                     }
-                    msg.write_format::<ENABLE_ANSI_COLORS>(to)?;
+                    msg.write_format_with_hyperlinks::<ENABLE_ANSI_COLORS>(to, hyperlinks)?;
                     needs_newline = true;
                 }
             }
