@@ -14,16 +14,16 @@ Statuts :
 | Catégorie | Total | règle n2b | natif Bun | absent de Bun | membre d'instance |
 | --- | --- | --- | --- | --- | --- |
 | module | 67 | 5 | 57 | 5 | 0 |
-| export | 590 | 5 | 434 | 151 | 0 |
+| export | 590 | 22 | 417 | 151 | 0 |
 | classe | 212 | 0 | 103 | 21 | 88 |
-| api | 2310 | 6 | 407 | 250 | 1647 |
-| option CLI | 217 | 6 | 53 | 158 | 0 |
+| api | 2310 | 18 | 396 | 250 | 1646 |
+| option CLI | 217 | 1 | 58 | 158 | 0 |
 | variable d'environnement | 31 | 0 | 28 | 3 | 0 |
 | code d'erreur | 470 | 0 | 304 | 166 | 0 |
 | global | 39 | 3 | 25 | 5 | 6 |
 | N-API (C) | 189 | 0 | 189 | 0 | 0 |
-| process | 102 | 4 | 70 | 28 | 0 |
-| **total** | 4227 | 29 | 1670 | 787 | 1741 |
+| process | 102 | 8 | 66 | 28 | 0 |
+| **total** | 4227 | 57 | 1643 | 787 | 1740 |
 
 ## Par document (API, classes, globals, process)
 
@@ -33,7 +33,7 @@ Statuts :
 | doc/api/async_context.md | 19 | 0 | 0 | 0 | 19 |
 | doc/api/async_hooks.md | 11 | 0 | 0 | 8 | 3 |
 | doc/api/bench.md | 22 | 0 | 0 | 10 | 12 |
-| doc/api/buffer.md | 96 | 0 | 18 | 2 | 76 |
+| doc/api/buffer.md | 96 | 4 | 14 | 2 | 76 |
 | doc/api/child_process.md | 24 | 0 | 1 | 2 | 21 |
 | doc/api/cluster.md | 20 | 0 | 11 | 1 | 8 |
 | doc/api/console.md | 23 | 0 | 23 | 0 | 0 |
@@ -48,22 +48,22 @@ Statuts :
 | doc/api/esm.md | 8 | 3 | 0 | 1 | 4 |
 | doc/api/events.md | 63 | 0 | 9 | 2 | 52 |
 | doc/api/ffi.md | 14 | 0 | 0 | 2 | 12 |
-| doc/api/fs.md | 245 | 1 | 132 | 9 | 103 |
+| doc/api/fs.md | 245 | 6 | 127 | 9 | 103 |
 | doc/api/globals.md | 87 | 3 | 69 | 5 | 10 |
 | doc/api/http.md | 130 | 0 | 1 | 2 | 127 |
 | doc/api/http2.md | 70 | 0 | 1 | 0 | 69 |
 | doc/api/https.md | 1 | 0 | 1 | 0 | 0 |
 | doc/api/inspector.md | 19 | 0 | 0 | 15 | 4 |
 | doc/api/module.md | 21 | 0 | 12 | 6 | 3 |
-| doc/api/modules.md | 15 | 1 | 0 | 9 | 5 |
+| doc/api/modules.md | 15 | 2 | 0 | 9 | 4 |
 | doc/api/n-api.md | 189 | 0 | 189 | 0 | 0 |
 | doc/api/net.md | 64 | 0 | 0 | 1 | 63 |
 | doc/api/os.md | 3 | 0 | 3 | 0 | 0 |
 | doc/api/packages.md | 1 | 0 | 0 | 0 | 1 |
-| doc/api/path.md | 16 | 0 | 16 | 0 | 0 |
-| doc/api/perf_hooks.md | 116 | 0 | 18 | 1 | 97 |
+| doc/api/path.md | 16 | 1 | 15 | 0 | 0 |
+| doc/api/perf_hooks.md | 116 | 1 | 17 | 1 | 97 |
 | doc/api/permissions.md | 2 | 0 | 0 | 0 | 2 |
-| doc/api/process.md | 102 | 4 | 70 | 28 | 0 |
+| doc/api/process.md | 102 | 8 | 66 | 28 | 0 |
 | doc/api/punycode.md | 8 | 0 | 8 | 0 | 0 |
 | doc/api/quic.md | 206 | 0 | 9 | 28 | 169 |
 | doc/api/readline.md | 22 | 0 | 3 | 1 | 18 |
@@ -90,7 +90,7 @@ Statuts :
 | lib/async_hooks.js | 7 | 0 | 7 | 0 | 0 |
 | lib/buffer.js | 9 | 0 | 8 | 1 | 0 |
 | lib/child_process.js | 9 | 3 | 5 | 1 | 0 |
-| lib/crypto.js | 69 | 0 | 64 | 5 | 0 |
+| lib/crypto.js | 69 | 3 | 61 | 5 | 0 |
 | lib/dgram.js | 2 | 0 | 2 | 0 | 0 |
 | lib/diagnostics_channel.js | 8 | 0 | 6 | 2 | 0 |
 | lib/dns.js | 33 | 0 | 33 | 0 | 0 |
@@ -98,17 +98,17 @@ Statuts :
 | lib/dtls.js | 6 | 0 | 0 | 6 | 0 |
 | lib/events.js | 6 | 0 | 6 | 0 | 0 |
 | lib/ffi.js | 35 | 0 | 0 | 35 | 0 |
-| lib/http.js | 24 | 1 | 18 | 5 | 0 |
+| lib/http.js | 24 | 2 | 17 | 5 | 0 |
 | lib/http2.js | 11 | 0 | 11 | 0 | 0 |
-| lib/https.js | 5 | 1 | 4 | 0 | 0 |
+| lib/https.js | 5 | 2 | 3 | 0 | 0 |
 | lib/inspector.js | 9 | 0 | 6 | 3 | 0 |
 | lib/inspector/promises.js | 1 | 0 | 1 | 0 | 0 |
-| lib/net.js | 20 | 0 | 16 | 4 | 0 |
-| lib/os.js | 20 | 0 | 20 | 0 | 0 |
+| lib/net.js | 20 | 1 | 15 | 4 | 0 |
+| lib/os.js | 20 | 4 | 16 | 0 | 0 |
 | lib/perf_hooks.js | 15 | 0 | 13 | 2 | 0 |
 | lib/querystring.js | 7 | 0 | 7 | 0 | 0 |
 | lib/quic.js | 8 | 0 | 7 | 1 | 0 |
-| lib/readline.js | 8 | 0 | 8 | 0 | 0 |
+| lib/readline.js | 8 | 1 | 7 | 0 | 0 |
 | lib/readline/promises.js | 3 | 0 | 3 | 0 | 0 |
 | lib/repl.js | 9 | 0 | 9 | 0 | 0 |
 | lib/sea.js | 5 | 0 | 0 | 5 | 0 |
@@ -123,13 +123,13 @@ Statuts :
 | lib/tls.js | 16 | 0 | 15 | 1 | 0 |
 | lib/trace_events.js | 2 | 0 | 2 | 0 | 0 |
 | lib/url.js | 14 | 0 | 14 | 0 | 0 |
-| lib/util.js | 29 | 0 | 24 | 5 | 0 |
+| lib/util.js | 29 | 4 | 20 | 5 | 0 |
 | lib/v8.js | 25 | 0 | 21 | 4 | 0 |
 | lib/vfs.js | 9 | 0 | 0 | 9 | 0 |
 | lib/vm.js | 10 | 0 | 10 | 0 | 0 |
 | lib/wasi.js | 2 | 0 | 0 | 2 | 0 |
 | lib/worker_threads.js | 20 | 0 | 20 | 0 | 0 |
-| lib/zlib.js | 34 | 0 | 34 | 0 | 0 |
+| lib/zlib.js | 34 | 2 | 32 | 0 | 0 |
 | lib/zlib/iter.js | 16 | 0 | 0 | 16 | 0 |
 
 ## API réécrites par une règle n2b
@@ -144,27 +144,55 @@ Statuts :
 | `child_process.exec` | `api/exec` |
 | `child_process.execSync` | `api/execSync` |
 | `child_process.spawnSync` | `api/child-process-spawnSync` |
+| `crypto.createHash` | `api/crypto-createHash` |
+| `crypto.randomBytes` | `api/crypto-randomBytes` |
+| `crypto.hash` | `api/crypto-hash` |
+| `http.createServer` | `api/http-createServer` |
 | `http.request` | `api/http-request` |
+| `https.createServer` | `api/https-createServer` |
 | `https.request` | `api/https-request` |
-| `-` | `cli/vitest-watch`, `cli/vitest-run`, `cli/vitest`, `cli/jest`, `cli/node-ts-loader`, `cli/tsx-watch`, `cli/ts-node`, `cli/pnpm-recursive`, `cli/pnpm-filter`, `cli/npm-install-dev`, `cli/npm-install-D`, `cli/npm-install-save`, `cli/npm-i-dev`, `cli/npm-i-D`, `cli/npm-install`, `cli/npm-init-y`, `cli/pnpm-install-dev`, `cli/pnpm-add-dev`, `cli/pnpm-add-D`, `cli/yarn-install-frozen`, `cli/yarn-add-dev`, `cli/yarn-add-D` |
-| `--` | `cli/vitest-watch`, `cli/vitest-run`, `cli/vitest`, `cli/jest`, `cli/node-ts-loader`, `cli/pnpm-recursive`, `cli/pnpm-filter`, `cli/npm-install-dev`, `cli/npm-install-save`, `cli/npm-i-dev`, `cli/pnpm-install-dev`, `cli/pnpm-add-dev`, `cli/yarn-install-frozen`, `cli/yarn-add-dev` |
-| `-e` | `cli/ts-node` |
+| `net.createServer` | `api/net-createServer` |
+| `os.availableParallelism` | `api/os-availableParallelism` |
+| `os.cpus` | `api/os-cpus-length` |
+| `os.homedir` | `api/os-homedir` |
+| `os.platform` | `api/os-platform` |
+| `readline.createInterface` | `api/readline-createInterface` |
+| `util.inspect` | `api/util-inspect` |
+| `util.isDeepStrictEqual` | `api/util-isDeepStrictEqual` |
+| `util.promisify` | `api/util-promisify` |
+| `util.stripVTControlCharacters` | `api/util-stripVTControlCharacters` |
+| `zlib.gzipSync` | `api/zlib-gzipSync` |
+| `zlib.gunzipSync` | `api/zlib-gunzipSync` |
+| `Buffer.alloc` | `api/buffer-alloc` |
+| `Buffer.byteLength` | `api/buffer-byteLength` |
+| `Buffer.concat` | `api/buffer-concat` |
+| `Buffer.from` | `api/buffer-from-base64`, `api/buffer-from-string` |
 | `--import` | `cli/node-ts-loader` |
-| `-i` | `cli/node-ts-loader` |
-| `-r` | `cli/node-ts-loader`, `cli/pnpm-recursive` |
-| `process.env` | `globals/process-env` |
+| `process.env` | `api/process-env`, `globals/process-env` |
 | `import.meta` | `api/dirname-esm`, `api/filename-esm`, `api/new-url-import-meta` |
 | `import.meta.url` | `api/dirname-esm`, `api/filename-esm`, `api/new-url-import-meta` |
 | `require` | `globals/require-dynamic` |
-| `fs.readFileSync` | `api/json-parse-readFileSync` |
+| `fsPromises.readFile` | `api/fs-readFile-promise` |
+| `fs.readFile` | `api/fs-readFile-utf8` |
+| `fs.existsSync` | `api/fs-existsSync` |
+| `fs.globSync` | `api/fs-globSync` |
+| `fs.readFileSync` | `api/fs-readFileSync`, `api/json-parse-readFileSync` |
+| `fs.writeFileSync` | `api/fs-writeFileSync` |
 | `__dirname` | `globals/__dirname` |
 | `__filename` | `globals/__filename` |
 | `exports` | `globals/exports` |
+| `require.resolve` | `api/require-resolve` |
 | `module.exports` | `globals/module-exports` |
+| `path.join` | `api/path-join-dirname` |
+| `performance.now` | `api/performance-now` |
 | `process.argv` | `globals/process-argv` |
 | `process.cwd` | `globals/process-cwd` |
+| `process.hrtime` | `api/process-hrtime-bigint`, `api/process-hrtime` |
+| `process.hrtime.bigint` | `api/process-hrtime-bigint` |
 | `process.platform` | `globals/process-platform` |
+| `process.stderr` | `api/process-stderr-write` |
 | `process.stdin` | `api/readline-createInterface` |
+| `process.stdout` | `api/process-stdout-write` |
 
 ## Absentes de Bun
 

@@ -729,8 +729,10 @@
    "kind": "export",
    "doc": "lib/crypto.js",
    "symbol": "crypto.createHash",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/crypto-createHash"
+   ]
   },
   {
    "kind": "export",
@@ -939,8 +941,10 @@
    "kind": "export",
    "doc": "lib/crypto.js",
    "symbol": "crypto.randomBytes",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/crypto-randomBytes"
+   ]
   },
   {
    "kind": "export",
@@ -1037,8 +1041,10 @@
    "kind": "export",
    "doc": "lib/crypto.js",
    "symbol": "crypto.hash",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/crypto-hash"
+   ]
   },
   {
    "kind": "export",
@@ -1863,8 +1869,10 @@
    "kind": "export",
    "doc": "lib/http.js",
    "symbol": "http.createServer",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/http-createServer"
+   ]
   },
   {
    "kind": "export",
@@ -2068,8 +2076,10 @@
    "kind": "export",
    "doc": "lib/https.js",
    "symbol": "https.createServer",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/https-createServer"
+   ]
   },
   {
    "kind": "export",
@@ -2210,8 +2220,10 @@
    "kind": "export",
    "doc": "lib/net.js",
    "symbol": "net.createServer",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/net-createServer"
+   ]
   },
   {
    "kind": "export",
@@ -2301,15 +2313,19 @@
    "kind": "export",
    "doc": "lib/os.js",
    "symbol": "os.availableParallelism",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/os-availableParallelism"
+   ]
   },
   {
    "kind": "export",
    "doc": "lib/os.js",
    "symbol": "os.cpus",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/os-cpus-length"
+   ]
   },
   {
    "kind": "export",
@@ -2336,8 +2352,10 @@
    "kind": "export",
    "doc": "lib/os.js",
    "symbol": "os.homedir",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/os-homedir"
+   ]
   },
   {
    "kind": "export",
@@ -2364,8 +2382,10 @@
    "kind": "export",
    "doc": "lib/os.js",
    "symbol": "os.platform",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/os-platform"
+   ]
   },
   {
    "kind": "export",
@@ -2665,8 +2685,10 @@
    "kind": "export",
    "doc": "lib/readline.js",
    "symbol": "readline.createInterface",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/readline-createInterface"
+   ]
   },
   {
    "kind": "export",
@@ -3722,8 +3744,10 @@
    "kind": "export",
    "doc": "lib/util.js",
    "symbol": "util.inspect",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/util-inspect"
+   ]
   },
   {
    "kind": "export",
@@ -3736,8 +3760,10 @@
    "kind": "export",
    "doc": "lib/util.js",
    "symbol": "util.isDeepStrictEqual",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/util-isDeepStrictEqual"
+   ]
   },
   {
    "kind": "export",
@@ -3757,15 +3783,19 @@
    "kind": "export",
    "doc": "lib/util.js",
    "symbol": "util.promisify",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/util-promisify"
+   ]
   },
   {
    "kind": "export",
    "doc": "lib/util.js",
    "symbol": "util.stripVTControlCharacters",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/util-stripVTControlCharacters"
+   ]
   },
   {
    "kind": "export",
@@ -4380,8 +4410,10 @@
    "kind": "export",
    "doc": "lib/zlib.js",
    "symbol": "zlib.gzipSync",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/zlib-gzipSync"
+   ]
   },
   {
    "kind": "export",
@@ -4436,8 +4468,10 @@
    "kind": "export",
    "doc": "lib/zlib.js",
    "symbol": "zlib.gunzipSync",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/zlib-gunzipSync"
+   ]
   },
   {
    "kind": "export",
@@ -5206,8 +5240,10 @@
    "kind": "api",
    "doc": "doc/api/buffer.md",
    "symbol": "Buffer.alloc",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/buffer-alloc"
+   ]
   },
   {
    "kind": "api",
@@ -5227,8 +5263,10 @@
    "kind": "api",
    "doc": "doc/api/buffer.md",
    "symbol": "Buffer.byteLength",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/buffer-byteLength"
+   ]
   },
   {
    "kind": "api",
@@ -5248,8 +5286,10 @@
    "kind": "api",
    "doc": "doc/api/buffer.md",
    "symbol": "Buffer.concat",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/buffer-concat"
+   ]
   },
   {
    "kind": "api",
@@ -5262,8 +5302,11 @@
    "kind": "api",
    "doc": "doc/api/buffer.md",
    "symbol": "Buffer.from",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/buffer-from-base64",
+    "api/buffer-from-string"
+   ]
   },
   {
    "kind": "api",
@@ -5976,53 +6019,15 @@
    "kind": "option CLI",
    "doc": "cli",
    "symbol": "-",
-   "status": "règle n2b",
-   "rules": [
-    "cli/vitest-watch",
-    "cli/vitest-run",
-    "cli/vitest",
-    "cli/jest",
-    "cli/node-ts-loader",
-    "cli/tsx-watch",
-    "cli/ts-node",
-    "cli/pnpm-recursive",
-    "cli/pnpm-filter",
-    "cli/npm-install-dev",
-    "cli/npm-install-D",
-    "cli/npm-install-save",
-    "cli/npm-i-dev",
-    "cli/npm-i-D",
-    "cli/npm-install",
-    "cli/npm-init-y",
-    "cli/pnpm-install-dev",
-    "cli/pnpm-add-dev",
-    "cli/pnpm-add-D",
-    "cli/yarn-install-frozen",
-    "cli/yarn-add-dev",
-    "cli/yarn-add-D"
-   ]
+   "status": "natif Bun",
+   "rules": []
   },
   {
    "kind": "option CLI",
    "doc": "cli",
    "symbol": "--",
-   "status": "règle n2b",
-   "rules": [
-    "cli/vitest-watch",
-    "cli/vitest-run",
-    "cli/vitest",
-    "cli/jest",
-    "cli/node-ts-loader",
-    "cli/pnpm-recursive",
-    "cli/pnpm-filter",
-    "cli/npm-install-dev",
-    "cli/npm-install-save",
-    "cli/npm-i-dev",
-    "cli/pnpm-install-dev",
-    "cli/pnpm-add-dev",
-    "cli/yarn-install-frozen",
-    "cli/yarn-add-dev"
-   ]
+   "status": "natif Bun",
+   "rules": []
   },
   {
    "kind": "option CLI",
@@ -6336,10 +6341,8 @@
    "kind": "option CLI",
    "doc": "cli",
    "symbol": "-e",
-   "status": "règle n2b",
-   "rules": [
-    "cli/ts-node"
-   ]
+   "status": "natif Bun",
+   "rules": []
   },
   {
    "kind": "option CLI",
@@ -6655,10 +6658,8 @@
    "kind": "option CLI",
    "doc": "cli",
    "symbol": "-i",
-   "status": "règle n2b",
-   "rules": [
-    "cli/node-ts-loader"
-   ]
+   "status": "natif Bun",
+   "rules": []
   },
   {
    "kind": "option CLI",
@@ -6979,11 +6980,8 @@
    "kind": "option CLI",
    "doc": "cli",
    "symbol": "-r",
-   "status": "règle n2b",
-   "rules": [
-    "cli/node-ts-loader",
-    "cli/pnpm-recursive"
-   ]
+   "status": "natif Bun",
+   "rules": []
   },
   {
    "kind": "option CLI",
@@ -9917,6 +9915,7 @@
    "symbol": "process.env",
    "status": "règle n2b",
    "rules": [
+    "api/process-env",
     "globals/process-env"
    ]
   },
@@ -14127,8 +14126,10 @@
    "kind": "api",
    "doc": "doc/api/fs.md",
    "symbol": "fsPromises.readFile",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/fs-readFile-promise"
+   ]
   },
   {
    "kind": "api",
@@ -14442,8 +14443,10 @@
    "kind": "api",
    "doc": "doc/api/fs.md",
    "symbol": "fs.readFile",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/fs-readFile-utf8"
+   ]
   },
   {
    "kind": "api",
@@ -14631,8 +14634,10 @@
    "kind": "api",
    "doc": "doc/api/fs.md",
    "symbol": "fs.existsSync",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/fs-existsSync"
+   ]
   },
   {
    "kind": "api",
@@ -14687,8 +14692,10 @@
    "kind": "api",
    "doc": "doc/api/fs.md",
    "symbol": "fs.globSync",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/fs-globSync"
+   ]
   },
   {
    "kind": "api",
@@ -14780,6 +14787,7 @@
    "symbol": "fs.readFileSync",
    "status": "règle n2b",
    "rules": [
+    "api/fs-readFileSync",
     "api/json-parse-readFileSync"
    ]
   },
@@ -14885,8 +14893,10 @@
    "kind": "api",
    "doc": "doc/api/fs.md",
    "symbol": "fs.writeFileSync",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/fs-writeFileSync"
+   ]
   },
   {
    "kind": "api",
@@ -17866,8 +17876,10 @@
    "kind": "api",
    "doc": "doc/api/modules.md",
    "symbol": "require.resolve",
-   "status": "membre d'instance",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/require-resolve"
+   ]
   },
   {
    "kind": "api",
@@ -19800,8 +19812,10 @@
    "kind": "api",
    "doc": "doc/api/path.md",
    "symbol": "path.join",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/path-join-dirname"
+   ]
   },
   {
    "kind": "api",
@@ -19940,8 +19954,10 @@
    "kind": "api",
    "doc": "doc/api/perf_hooks.md",
    "symbol": "performance.now",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/performance-now"
+   ]
   },
   {
    "kind": "api",
@@ -21022,15 +21038,20 @@
    "kind": "process",
    "doc": "doc/api/process.md",
    "symbol": "process.hrtime",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/process-hrtime-bigint",
+    "api/process-hrtime"
+   ]
   },
   {
    "kind": "process",
    "doc": "doc/api/process.md",
    "symbol": "process.hrtime.bigint",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/process-hrtime-bigint"
+   ]
   },
   {
    "kind": "process",
@@ -21297,8 +21318,10 @@
    "kind": "process",
    "doc": "doc/api/process.md",
    "symbol": "process.stderr",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/process-stderr-write"
+   ]
   },
   {
    "kind": "process",
@@ -21327,8 +21350,10 @@
    "kind": "process",
    "doc": "doc/api/process.md",
    "symbol": "process.stdout",
-   "status": "natif Bun",
-   "rules": []
+   "status": "règle n2b",
+   "rules": [
+    "api/process-stdout-write"
+   ]
   },
   {
    "kind": "process",

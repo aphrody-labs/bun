@@ -24,18 +24,16 @@ const require = createRequire(import.meta.path);
 type Status = "règle n2b" | "natif Bun" | "absent de Bun" | "membre d'instance";
 type Entry = { kind: string; doc: string; symbol: string; status: Status; rules: string[] };
 
-const toml = async (name: string) =>
-  Bun.TOML.parse(await Bun.file(join(registryDir, name)).text()) as any;
+const toml = async (name: string) => Bun.TOML.parse(await Bun.file(join(registryDir, name)).text()) as any;
 const [apis, modules, globalsToml, cliToml] = await Promise.all(
   ["apis.toml", "modules.toml", "globals.toml", "cli.toml"].map(toml),
 );
 
 // Symboles `objet.membre` cités par les motifs des règles d'API, et globals traités par globals.toml.
 const rulesBySymbol = new Map<string, string[]>();
-const addRule = (symbol: string, id: string) =>
-  rulesBySymbol.set(symbol, [...(rulesBySymbol.get(symbol) ?? []), id]);
+const addRule = (symbol: string, id: string) => rulesBySymbol.set(symbol, [...(rulesBySymbol.get(symbol) ?? []), id]);
 for (const rule of apis.apis) {
-  for (const m of String(rule.pattern).matchAll(/(\w+)\\\.(\w+)(?:\\\.(\w+))?/g)) {
+  for (const m of String(rule.pattern).matchAll(/(?:\\b)?(\w+)\\\.(\w+)(?:\\\.(\w+))?/g)) {
     addRule(`${m[1]}.${m[2]}`, rule.id);
     if (m[3]) addRule(`${m[1]}.${m[2]}.${m[3]}`, rule.id);
   }
@@ -52,7 +50,7 @@ const moduleCompat = new Map<string, any>(modules.modules.map((m: any) => [m.mod
 const publicModules: string[] = [];
 for await (const file of new Bun.Glob("**/*.js").scan({ cwd: join(nodeRoot, "lib") })) {
   const path = file.replaceAll("\\", "/");
-  if (path.startsWith("internal/") || path.split("/").some((p) => p.startsWith("_"))) continue;
+  if (path.startsWith("internal/") || path.split("/").some(p => p.startsWith("_"))) continue;
   publicModules.push(path.slice(0, -3));
 }
 publicModules.sort();
@@ -95,13 +93,7 @@ const resolveObject = (path: string[]): { found: boolean; value?: any } => {
 };
 
 const entries: Entry[] = [];
-const push = (
-  kind: string,
-  doc: string,
-  symbol: string,
-  present: boolean | undefined,
-  rules: string[] = [],
-) => {
+const push = (kind: string, doc: string, symbol: string, present: boolean | undefined, rules: string[] = []) => {
   const status: Status = rules.length
     ? "règle n2b"
     : present === undefined
@@ -131,8 +123,7 @@ for (const m of publicModules) {
     }
   }
   for (const k of src.matchAll(/^(?:module\.)?exports\.([A-Za-z_$][\w$]*)\s*=/gm)) names.add(k[1]);
-  for (const k of src.matchAll(/ObjectDefinePropert(?:y|ies)\(module\.exports,\s*'([\w$]+)'/g))
-    names.add(k[1]);
+  for (const k of src.matchAll(/ObjectDefinePropert(?:y|ies)\(module\.exports,\s*'([\w$]+)'/g)) names.add(k[1]);
   libExports.set(m, names);
 }
 
@@ -142,13 +133,7 @@ for (const [m, names] of libExports) {
   for (const name of names) {
     const symbol = `${m}.${name}`;
     seen.add(symbol);
-    push(
-      "export",
-      `lib/${m}.js`,
-      symbol,
-      mod !== undefined && name in Object(mod),
-      rulesBySymbol.get(symbol) ?? [],
-    );
+    push("export", `lib/${m}.js`, symbol, mod !== undefined && name in Object(mod), rulesBySymbol.get(symbol) ?? []);
   }
 }
 
@@ -170,11 +155,13 @@ for await (const file of new Bun.Glob("*.md").scan({ cwd: join(nodeRoot, "doc/ap
         if (seen.has(`cli:${flag}`)) continue;
         seen.add(`cli:${flag}`);
         const rules = cliToml.cli
-          .filter(
-            (c: any) =>
-              String(c.pattern).includes(flag.replaceAll("-", "\\-")) ||
-              String(c.pattern).includes(flag),
-          )
+          .filter((c: any) => {
+            // Une règle cli/* ne couvre une option de Node que si elle vise la commande `node`.
+            const pattern = String(c.pattern);
+            if (flag.length < 3 || !/\bnode\b/.test(pattern)) return false;
+            const escaped = flag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replaceAll("-", "\\\\?-");
+            return new RegExp(`${escaped}(?![\\w-])`).test(pattern);
+          })
           .map((c: any) => c.id);
         push("option CLI", "cli", flag, bunAcceptsFlag(flag), rules);
       } else if (/^[A-Z][A-Z0-9_]+/.test(raw) && /environment/i.test(section)) {
@@ -189,12 +176,7 @@ for await (const file of new Bun.Glob("*.md").scan({ cwd: join(nodeRoot, "doc/ap
       const name = raw.replace(/\(.*$/s, "").trim();
       if (!/^[A-Za-z_]\w*$/.test(name) || seen.has(name)) continue;
       seen.add(name);
-      push(
-        doc === "errors" ? "code d'erreur" : "N-API (C)",
-        `doc/api/${file}`,
-        name,
-        corpusWords().has(name),
-      );
+      push(doc === "errors" ? "code d'erreur" : "N-API (C)", `doc/api/${file}`, name, corpusWords().has(name));
       continue;
     }
     const symbol = raw.replace(/\(.*$/s, "").replace(/\[.*$/, "").trim();
@@ -202,43 +184,19 @@ for await (const file of new Bun.Glob("*.md").scan({ cwd: join(nodeRoot, "doc/ap
     seen.add(symbol);
     const path = symbol.split(".");
     const resolved = resolveObject(path);
-    const kind =
-      label === "Class"
-        ? "classe"
-        : doc === "globals"
-          ? "global"
-          : doc === "process"
-            ? "process"
-            : "api";
+    const kind = label === "Class" ? "classe" : doc === "globals" ? "global" : doc === "process" ? "process" : "api";
     if (!resolved.found && label === "Class" && path.length === 1) {
       const docModule = publicModules.includes(doc) ? doc : undefined;
       const mod = docModule && bunModule(docModule);
       const exported = docModule && libExports.get(docModule)?.has(symbol);
-      push(
-        kind,
-        `doc/api/${file}`,
-        symbol,
-        mod && symbol in Object(mod) ? true : exported ? false : undefined,
-      );
+      push(kind, `doc/api/${file}`, symbol, mod && symbol in Object(mod) ? true : exported ? false : undefined);
       continue;
     }
     if (!resolved.found) {
-      push(
-        kind,
-        `doc/api/${file}`,
-        symbol,
-        path.length === 1 ? false : undefined,
-        rulesBySymbol.get(symbol) ?? [],
-      );
+      push(kind, `doc/api/${file}`, symbol, path.length === 1 ? false : undefined, rulesBySymbol.get(symbol) ?? []);
       continue;
     }
-    push(
-      kind,
-      `doc/api/${file}`,
-      symbol,
-      resolved.value !== undefined,
-      rulesBySymbol.get(symbol) ?? [],
-    );
+    push(kind, `doc/api/${file}`, symbol, resolved.value !== undefined, rulesBySymbol.get(symbol) ?? []);
   }
 }
 
@@ -246,14 +204,12 @@ function bunCliSources(): string {
   return ((bunCliSources as any).cache ??= [
     ...new Bun.Glob("src/runtime/cli/**/*.rs").scanSync({ cwd: join(import.meta.dir, "../..") }),
   ]
-    .map((f) => readFileSync(join(import.meta.dir, "../..", f), "utf8"))
+    .map(f => readFileSync(join(import.meta.dir, "../..", f), "utf8"))
     .join("\n"));
 }
 function bunAcceptsFlag(flag: string): boolean {
   if (flag === "-" || flag === "--") return true;
-  return new RegExp(`["\\s,]${flag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w-])`).test(
-    bunCliSources(),
-  );
+  return new RegExp(`["\\s,]${flag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w-])`).test(bunCliSources());
 }
 function bunReadsEnv(name: string): boolean {
   return corpusWords().has(name);
@@ -267,18 +223,14 @@ function bunSourceCorpus(): string {
   return ((bunSourceCorpus as any).cache = parts.join("\n"));
 }
 function corpusWords(): Set<string> {
-  return ((corpusWords as any).cache ??= new Set(
-    bunSourceCorpus().match(/\b[A-Za-z_]\w*\b/g) ?? [],
-  ));
+  return ((corpusWords as any).cache ??= new Set(bunSourceCorpus().match(/\b[A-Za-z_]\w*\b/g) ?? []));
 }
 
 // Rendu.
 const statuses: Status[] = ["règle n2b", "natif Bun", "absent de Bun", "membre d'instance"];
-const byKind = Map.groupBy(entries, (e) => e.kind);
-const count = (list: Entry[], s: Status) => list.filter((e) => e.status === s).length;
-const nodeSha = (
-  await Bun.$`git -C ${nodeRoot} rev-parse --short HEAD`.quiet().nothrow().text()
-).trim();
+const byKind = Map.groupBy(entries, e => e.kind);
+const count = (list: Entry[], s: Status) => list.filter(e => e.status === s).length;
+const nodeSha = (await Bun.$`git -C ${nodeRoot} rev-parse --short HEAD`.quiet().nothrow().text()).trim();
 const md: string[] = [
   "# M-n2b-node : surface publique de Node couverte par n2b",
   "",
@@ -296,10 +248,9 @@ const md: string[] = [
   `| Catégorie | Total | ${statuses.join(" | ")} |`,
   `| --- | --- | ${statuses.map(() => "---").join(" | ")} |`,
   ...[...byKind].map(
-    ([kind, list]) =>
-      `| ${kind} | ${list.length} | ${statuses.map((s) => count(list, s)).join(" | ")} |`,
+    ([kind, list]) => `| ${kind} | ${list.length} | ${statuses.map(s => count(list, s)).join(" | ")} |`,
   ),
-  `| **total** | ${entries.length} | ${statuses.map((s) => count(entries, s)).join(" | ")} |`,
+  `| **total** | ${entries.length} | ${statuses.map(s => count(entries, s)).join(" | ")} |`,
   "",
   "## Par document (API, classes, globals, process)",
   "",
@@ -307,31 +258,26 @@ const md: string[] = [
   `| --- | --- | ${statuses.map(() => "---").join(" | ")} |`,
   ...[
     ...Map.groupBy(
-      entries.filter((e) => !["module", "option CLI", "variable d'environnement"].includes(e.kind)),
-      (e) => e.doc,
+      entries.filter(e => !["module", "option CLI", "variable d'environnement"].includes(e.kind)),
+      e => e.doc,
     ),
   ]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(
-      ([doc, list]) =>
-        `| ${doc} | ${list.length} | ${statuses.map((s) => count(list, s)).join(" | ")} |`,
-    ),
+    .map(([doc, list]) => `| ${doc} | ${list.length} | ${statuses.map(s => count(list, s)).join(" | ")} |`),
   "",
   "## API réécrites par une règle n2b",
   "",
   "| API Node | Règles |",
   "| --- | --- |",
   ...entries
-    .filter((e) => e.status === "règle n2b")
-    .map((e) => `| \`${e.symbol}\` | ${e.rules.map((r) => `\`${r}\``).join(", ")} |`),
+    .filter(e => e.status === "règle n2b")
+    .map(e => `| \`${e.symbol}\` | ${e.rules.map(r => `\`${r}\``).join(", ")} |`),
   "",
   "## Absentes de Bun",
   "",
   "| Catégorie | API Node | Source |",
   "| --- | --- | --- |",
-  ...entries
-    .filter((e) => e.status === "absent de Bun")
-    .map((e) => `| ${e.kind} | \`${e.symbol}\` | ${e.doc} |`),
+  ...entries.filter(e => e.status === "absent de Bun").map(e => `| ${e.kind} | \`${e.symbol}\` | ${e.doc} |`),
   "",
 ];
 await Bun.write(join(outDir, "M-n2b-node.md"), md.join("\n"));
@@ -339,6 +285,4 @@ await Bun.write(
   join(outDir, "M-n2b-node.json"),
   JSON.stringify({ node: nodeSha, bun: Bun.version, entries }, null, 1) + "\n",
 );
-console.log(
-  `${entries.length} entrées ; ${statuses.map((s) => `${s} ${count(entries, s)}`).join(", ")}`,
-);
+console.log(`${entries.length} entrées ; ${statuses.map(s => `${s} ${count(entries, s)}`).join(", ")}`);
