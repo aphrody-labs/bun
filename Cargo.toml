@@ -20,14 +20,11 @@ members = [
   "src/parsers",
   "src/io",
   "src/libarchive",
-  "src/lsp",
   "src/md",
   "src/graph",
   "src/mcp",
   "src/vfs",
   "src/agent_tools",
-  "src/workspace",
-  "src/vfs",
   "src/paths",
   "src/resolver",
   "src/safety",
@@ -116,8 +113,6 @@ members = [
   "src/react_compiler",
   "src/spawn",
   "src/spawn_sys",
-  "src/ssh",
-  "src/git",
   "src/bunfig",
 ]
 # `vendor/lolhtml` (the `lol_html` crate) is a non-member path dependency,
@@ -395,13 +390,11 @@ bun_install = { path = "src/install" }
 bun_parsers = { path = "src/parsers" }
 bun_io = { path = "src/io" }
 bun_libarchive = { path = "src/libarchive" }
-bun_lsp = { path = "src/lsp" }
 bun_md = { path = "src/md" }
 bun_graph = { path = "src/graph" }
 bun_mcp = { path = "src/mcp" }
 bun_vfs = { path = "src/vfs" }
 bun_agent_tools = { path = "src/agent_tools" }
-bun_workspace = { path = "src/workspace" }
 bun_paths = { path = "src/paths" }
 bun_resolver = { path = "src/resolver" }
 bun_safety = { path = "src/safety" }
@@ -477,8 +470,6 @@ bun_output_tags = { path = "src/bun_output_tags" }
 bun_patch_jsc = { path = "src/patch_jsc" }
 bun_router = { path = "src/router" }
 bun_shell_parser = { path = "src/shell_parser" }
-bun_ssh = { path = "src/ssh" }
-bun_git = { path = "src/git" }
 bun_spawn = { path = "src/spawn" }
 bun_spawn_sys = { path = "src/spawn_sys" }
 bun_tcc_sys = { path = "src/tcc_sys" }
