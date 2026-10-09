@@ -1,0 +1,13 @@
+{
+  "name": "@aphrody/bun-python-toolchain",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Demand-loaded discovery and delegation for the pinned Aphrody Python toolchain.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "inspect": "bun scripts/inspect.ts",
+    "run": "bun scripts/run.ts",
+    "test": "bun test scripts"
+  }
+}
