@@ -660,6 +660,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "bun_agent_tools"
+version = "0.0.0"
+dependencies = [
+ "bun_core",
+ "bun_sys",
+ "bun_threading",
+ "ignore",
+ "regex",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "bun_alloc"
 version = "0.0.0"
 dependencies = [

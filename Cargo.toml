@@ -23,6 +23,7 @@ members = [
   "src/md",
   "src/graph",
   "src/mcp",
+  "src/agent_tools",
   "src/paths",
   "src/resolver",
   "src/safety",
@@ -391,6 +392,7 @@ bun_libarchive = { path = "src/libarchive" }
 bun_md = { path = "src/md" }
 bun_graph = { path = "src/graph" }
 bun_mcp = { path = "src/mcp" }
+bun_agent_tools = { path = "src/agent_tools" }
 bun_paths = { path = "src/paths" }
 bun_resolver = { path = "src/resolver" }
 bun_safety = { path = "src/safety" }

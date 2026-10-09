@@ -1,0 +1,30 @@
+[package]
+name = "bun_agent_tools"
+version.workspace = true
+edition.workspace = true
+publish = false
+license = "Apache-2.0"
+
+[lib]
+path = "lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+bun_core.workspace = true
+bun_sys.workspace = true
+bun_threading.workspace = true
+thiserror.workspace = true
+serde_json = "1.0.150"
+ignore = "0.4.25"
+regex = "1.11"
+
+[dev-dependencies]
+tempfile = "3.27.0"
+
+[package.metadata.aphrody-source]
+repository = "https://github.com/aphrody-labs/aphrody"
+revision = "80ffeef210"
+license = "Apache-2.0"
+paths = ["crates/ai/mcp/src/lib.rs", "crates/infra/git/src/ingest.rs", "crates/infra/git/src/upstream.rs"]

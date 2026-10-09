@@ -36,6 +36,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync } from "node:fs";
 import { basename, dirname, relative, resolve } from "node:path";
 import type { Sources } from "../glob-sources.ts";
+import { plan as agentToolsPlan } from "../../src/codegen/generate-agent-tools.ts";
 import { generateBuildOptionsRs } from "./buildOptionsRs.ts";
 import type { CodegenFields } from "./config.ts";
 import { BuildError, assert } from "./error.ts";
@@ -327,6 +328,7 @@ export function emitCodegen(n: Ninja, cfg: CodegenFields, sources: Sources): Cod
 
   emitBunError(ctx);
   emitStringMaps(ctx);
+  emitAgentTools(ctx);
   emitRuntimeJs(ctx);
   emitNodeFallbacks(ctx);
   emitErrorCode(ctx);
@@ -620,6 +622,30 @@ function emitStringMaps({ n, cfg, sources, o, dirStamp }: Ctx): void {
     o.all.push(out);
     o.rustInputs.push(out);
   }
+}
+
+/**
+ * `bun mcp`'s agent tools and the skills derived from the repository: src/agent_tools/{tools,skills}.json
+ * → src/agent_tools/generated/tools.rs, docs/project/agent-tools.mdx and .claude/skills/<name>/SKILL.md.
+ * Outputs are checked in; `bun run codegen:verify` fails when they are stale.
+ */
+function emitAgentTools({ n, cfg, o, dirStamp }: Ctx): void {
+  const { script, inputs, outputs } = agentToolsPlan();
+  const abs = (rel: string) => resolve(cfg.cwd, rel);
+  n.build({
+    outputs: outputs.map(abs),
+    rule: "codegen",
+    inputs: [abs(script)],
+    implicitInputs: inputs.filter(rel => rel !== script).map(abs),
+    orderOnlyInputs: [dirStamp],
+    vars: {
+      cwd: cfg.cwd,
+      desc: "agent tools",
+      args: shJoin(cfg, [abs(script)]),
+    },
+  });
+  o.all.push(...outputs.map(abs));
+  o.rustInputs.push(...outputs.filter(rel => rel.endsWith(".rs")).map(abs));
 }
 
 function emitErrorCode({ n, cfg, o, dirStamp }: Ctx): void {

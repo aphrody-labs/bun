@@ -1,0 +1,253 @@
+{
+  "$comment": "Source of truth for the agent tools of `bun mcp`. src/codegen/generate-agent-tools.ts derives src/agent_tools/generated/tools.rs, docs/project/agent-tools.mdx and the bun-deps skill from this file; lib.rs binds each name to its implementation.",
+  "title": "Agent tools",
+  "description": "Native tools of `bun mcp` for coding agents: digest a directory and read the installed sources and docs of a project's dependencies, offline and at their exact versions.",
+  "tools": [
+    {
+      "name": "git_ingest",
+      "title": "Directory digest",
+      "description": "Turn a local directory or a subpath of it into a prompt-ready digest in the GitIngest layout: a summary, the directory tree and the content of every text file. Honors .gitignore, skips binary files and files over max_file_size.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "Directory to ingest, absolute or relative to the working directory. Defaults to the working directory."
+          },
+          "subpath": {
+            "type": "string",
+            "description": "Subdirectory of source to restrict the digest to."
+          },
+          "include_patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Glob patterns a file must match, e.g. \"*.rs\" or \"src/**/*.ts\"."
+          },
+          "exclude_patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Glob patterns to skip, on top of .gitignore."
+          },
+          "max_file_size": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Largest file to include, in bytes. Default 10485760."
+          },
+          "max_total_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Stop adding file contents past this many bytes. Default 16777216."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "deps_list",
+      "title": "List dependencies",
+      "description": "List the dependencies of a project whose sources are on disk: npm packages from package.json resolved through node_modules, Cargo packages from Cargo.lock resolved in the Cargo registry and git checkouts, and directories under vendor/. Each entry has its ecosystem, version and local path.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "root": {
+            "type": "string",
+            "description": "Project root. Defaults to the working directory."
+          },
+          "ecosystem": {
+            "type": "string",
+            "enum": ["npm", "cargo", "vendor"],
+            "description": "Only list this ecosystem."
+          },
+          "filter": {
+            "type": "string",
+            "description": "Case-insensitive substring the name must contain."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum entries. Default 500."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "deps_info",
+      "title": "Dependency facts",
+      "description": "Facts about one dependency read from its installed manifest: version, local path, license, repository, homepage, description and the documentation files it ships.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Package, crate or vendor directory name."
+          },
+          "root": {
+            "type": "string",
+            "description": "Project root. Defaults to the working directory."
+          },
+          "ecosystem": {
+            "type": "string",
+            "enum": ["npm", "cargo", "vendor"],
+            "description": "Disambiguate when the name exists in several ecosystems."
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "deps_tree",
+      "title": "Dependency tree",
+      "description": "List a directory of a dependency's installed sources.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Package, crate or vendor directory name."
+          },
+          "path": {
+            "type": "string",
+            "description": "Directory inside the dependency. Defaults to its root."
+          },
+          "depth": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 8,
+            "description": "Levels to descend. Default 2."
+          },
+          "root": {
+            "type": "string",
+            "description": "Project root. Defaults to the working directory."
+          },
+          "ecosystem": {
+            "type": "string",
+            "enum": ["npm", "cargo", "vendor"]
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "deps_read",
+      "title": "Read a dependency file",
+      "description": "Read one file of a dependency's installed sources. Text past max_bytes is cut and the result is flagged truncated.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Package, crate or vendor directory name."
+          },
+          "path": {
+            "type": "string",
+            "description": "File inside the dependency, e.g. \"README.md\" or \"src/lib.rs\"."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Byte offset to start at. Default 0."
+          },
+          "max_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Bytes to return. Default 262144."
+          },
+          "root": {
+            "type": "string",
+            "description": "Project root. Defaults to the working directory."
+          },
+          "ecosystem": {
+            "type": "string",
+            "enum": ["npm", "cargo", "vendor"]
+          }
+        },
+        "required": ["name", "path"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "deps_search",
+      "title": "Search dependency sources",
+      "description": "Regular-expression search over the installed sources of one or more dependencies, in parallel. Returns file, line and the matching line.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Regular expression (Rust regex syntax)."
+          },
+          "names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "description": "Dependencies to search."
+          },
+          "glob": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Only search files matching these globs."
+          },
+          "case_insensitive": {
+            "type": "boolean",
+            "description": "Default false."
+          },
+          "max_results": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Default 100."
+          },
+          "root": {
+            "type": "string",
+            "description": "Project root. Defaults to the working directory."
+          }
+        },
+        "required": ["query", "names"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "deps_docs",
+      "title": "Search dependency documentation",
+      "description": "Rank the documentation shipped by installed dependencies (README, *.md, *.mdx, docs/, *.d.ts) against a query and return the best sections. Offline counterpart of a web documentation search, pinned to the installed versions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Words to look for."
+          },
+          "names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Restrict to these dependencies. Defaults to every npm and vendor dependency."
+          },
+          "max_results": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Default 8."
+          },
+          "root": {
+            "type": "string",
+            "description": "Project root. Defaults to the working directory."
+          }
+        },
+        "required": ["query"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}
