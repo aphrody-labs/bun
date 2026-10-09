@@ -256,6 +256,17 @@ declare module "bun:windows" {
     function path(pid: number | { pid: number }): string;
     /** Terminates a process with `exitCode` (default `1`). */
     function terminate(pid: number | { pid: number }, exitCode?: number): void;
+    /** Sets the process affinity within its current processor group. `mask` is a positive safe integer bitmask. */
+    function setAffinity(pid: number | { pid: number }, mask: number): void;
+    /** Sets a documented Windows process priority class. `realtime` usually requires elevation. */
+    function setPriority(
+      pid: number | { pid: number },
+      priority: "idle" | "below-normal" | "normal" | "above-normal" | "high" | "realtime",
+    ): void;
+    /** Enables or disables Windows power throttling for the process. */
+    function setEcoMode(pid: number | { pid: number }, enabled: boolean): void;
+    /** Asks Windows to trim the process working set. */
+    function trimWorkingSet(pid: number | { pid: number }): void;
   }
 
   interface JobLimits {
