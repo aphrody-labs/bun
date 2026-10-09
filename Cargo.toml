@@ -22,6 +22,7 @@ members = [
   "src/libarchive",
   "src/md",
   "src/graph",
+  "src/mcp",
   "src/paths",
   "src/resolver",
   "src/safety",
@@ -163,6 +164,10 @@ panic = "abort"
 # (rustc ignores it); Darwin's `"unpacked"` is the `.o`-is-the-debuginfo mode
 # `dsymutil` already expects.
 split-debuginfo = "unpacked"
+
+# `bun winmd` parses and emits whole Windows metadata files: unoptimized, it takes several seconds.
+[profile.dev.package.windows-bindgen]
+opt-level = 2
 
 # Release with debuginfo retained for `perf record` / flamegraphs. Same opt
 # level as release; binary is large but profilable.
@@ -385,6 +390,7 @@ bun_io = { path = "src/io" }
 bun_libarchive = { path = "src/libarchive" }
 bun_md = { path = "src/md" }
 bun_graph = { path = "src/graph" }
+bun_mcp = { path = "src/mcp" }
 bun_paths = { path = "src/paths" }
 bun_resolver = { path = "src/resolver" }
 bun_safety = { path = "src/safety" }

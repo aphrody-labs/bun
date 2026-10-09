@@ -1,0 +1,28 @@
+[package]
+name = "bun_mcp"
+version.workspace = true
+edition.workspace = true
+publish = false
+license = "MIT"
+build = "build.rs"
+
+[lib]
+path = "lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+bun_core.workspace = true
+bun_graph.workspace = true
+bun_valkey.workspace = true
+bun_zstd.workspace = true
+const_format.workspace = true
+ignore = "0.4.25"
+serde_json = { version = "1.0.150", features = ["preserve_order"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+libc.workspace = true
+
+[build-dependencies]
+zstd = { version = "0.13.3", default-features = false }

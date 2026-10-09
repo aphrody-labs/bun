@@ -1626,6 +1626,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "bun_mcp"
+version = "0.0.0"
+dependencies = [
+ "bun_core",
+ "bun_graph",
+ "bun_valkey",
+ "bun_zstd",
+ "const_format",
+ "ignore",
+ "libc",
+ "serde_json",
+ "zstd 0.13.3",
+]
+
+[[package]]
 name = "bun_md"
 version = "0.0.0"
 dependencies = [
