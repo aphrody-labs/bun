@@ -93,6 +93,7 @@ name = "bun-webview-core"
 version = "0.1.0"
 dependencies = [
  "base64",
+ "gtk4",
  "image",
  "serde_json",
  "webkit6",

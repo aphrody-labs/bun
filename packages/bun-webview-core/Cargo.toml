@@ -27,7 +27,7 @@ path = "src/main.rs"
 [features]
 default = ["gtk4"]
 # Linux: WebKitGTK on GTK4 (webkitgtk-6.0). Never pulls GTK3.
-gtk4 = ["dep:webkit6"]
+gtk4 = ["dep:webkit6", "dep:gtk4"]
 # Linux: WebKitGTK on GTK3 (webkit2gtk-4.1) through the aphrody-labs/wry fork. Exclusive with gtk4 at build time.
 gtk3 = ["wry"]
 # WebView2 (Windows), WKWebView (macOS) and WebKitGTK-GTK3 (Linux) through the aphrody-labs/wry fork.
@@ -40,6 +40,8 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg",
 
 [target.'cfg(target_os = "linux")'.dependencies]
 webkit6 = { version = "0.6", optional = true }
+# webkit6 0.6 names gtk::Accessible, which gtk4 0.11 only exports with v4_10.
+gtk4 = { version = "0.11", optional = true, features = ["v4_10"] }
 
 [target.'cfg(any(windows, target_os = "macos", target_os = "linux"))'.dependencies]
 wry = { git = "https://github.com/aphrody-labs/wry", branch = "dev", optional = true, default-features = false, features = ["os-webview"] }

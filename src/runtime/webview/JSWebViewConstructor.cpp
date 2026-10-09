@@ -118,6 +118,7 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(constructWebView, __attribute__((minsiz
     WTF::String chromeWsUrl;
     bool chromeSkipAutoDetect = false;
     WTF::Vector<WTF::String> chromeArgv;
+    WTF::String coreBackend;
     bool stdoutInherit = false;
     bool stderrInherit = false;
     bool headless = true;
@@ -353,6 +354,15 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(constructWebView, __attribute__((minsiz
         structure = InternalFunction::createSubclassStructure(globalObject, newTarget.getObject(),
             functionGlobalObject->m_JSWebViewClassStructure.get(functionGlobalObject));
         RETURN_IF_EXCEPTION(scope, {});
+    }
+
+    if (!coreBackend.isEmpty()) {
+        if (!chromeWsUrl.isEmpty())
+            return Bun::throwError(globalObject, scope, ErrorCode::ERR_INVALID_ARG_VALUE,
+                "backend.url requires type: \"chrome\""_s);
+        if (chromePath.isEmpty()) chromePath = "bun-webview-host"_s;
+        chromeSkipAutoDetect = true;
+        chromeArgv.insert(0, makeString("--backend="_s, coreBackend));
     }
 
     if (!headless && backend != WebViewBackend::Chrome) {
