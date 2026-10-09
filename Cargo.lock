@@ -1318,6 +1318,7 @@ dependencies = [
  "bun_uws",
  "bun_uws_sys",
  "bun_valkey",
+ "bun_vt",
  "bun_watcher",
  "bun_which",
  "bun_wyhash",
@@ -1763,6 +1764,10 @@ dependencies = [
  "bun_core",
  "strum",
 ]
+
+[[package]]
+name = "bun_vt"
+version = "0.0.0"
 
 [[package]]
 name = "bun_wasm"
