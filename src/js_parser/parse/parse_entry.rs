@@ -1385,6 +1385,8 @@ impl<'a> Parser<'a> {
             }
         }
 
+        p.append_server_reference_clause_part(&mut parts)?;
+
         visit_tracer.end();
 
         // If there were errors while visiting, also halt here

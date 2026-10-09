@@ -464,7 +464,7 @@ devTest("importing html file", {
     `,
   },
   async test(dev) {
-    await using c = await dev.client("/", {
+    await using _c = await dev.client("/", {
       errors: ["index.ts:1:18: error: Browser builds cannot import HTML files."],
     });
   },
@@ -499,7 +499,7 @@ devTest("importing bun on the client", {
     `,
   },
   async test(dev) {
-    await using c = await dev.client("/", {
+    await using _c = await dev.client("/", {
       errors: ['index.ts:1:17: error: Browser build cannot import Bun builtin: "bun"'],
     });
   },
@@ -975,9 +975,58 @@ devTest('inline "use server" functions are a build error', {
     `,
   },
   async test(dev) {
-    await using c = await dev.client("/", {
+    await using _c = await dev.client("/", {
       errors: [
         'routes/index.ts:3:5: error: Inline "use server" functions are not supported yet. Move the function into a separate file that starts with "use server" and import it.',
+      ],
+    });
+  },
+});
+devTest('"use server" export clauses are registered as server references', {
+  framework: minimalFramework,
+  files: {
+    "routes/index.ts": `
+      import { add, minus } from "../actions";
+      export default async function () {
+        return new Response([add.$$id, minus.$$id, await minus(5, 2)].join(" "));
+      }
+    `,
+    "actions.ts": `
+      "use server";
+      async function add(a, b) {
+        return a + b;
+      }
+      export { add, sub as minus };
+      const sub = async (a, b) => a - b;
+    `,
+  },
+  async test(dev) {
+    await dev.fetch("/").equals("actions.ts#add actions.ts#minus 3");
+  },
+});
+devTest('"use server" re-exports are a build error', {
+  framework: minimalFramework,
+  files: {
+    "routes/index.ts": `
+      import { add } from "../actions";
+      export default async function () {
+        return new Response(String(await add(1, 2)));
+      }
+    `,
+    "actions.ts": `
+      "use server";
+      export * from "./other";
+    `,
+    "other.ts": `
+      export async function add(a, b) {
+        return a + b;
+      }
+    `,
+  },
+  async test(dev) {
+    await using _c = await dev.client("/", {
+      errors: [
+        'actions.ts:2:1: error: "use server" modules cannot re-export with "export * from" or "export { ... } from"; import the functions and export them from this module',
       ],
     });
   },

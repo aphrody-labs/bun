@@ -522,6 +522,9 @@ pub struct P<'a, const TYPESCRIPT: bool, const SCAN_ONLY: bool, const SEMA: bool
     /// configured to wrap exports. populated before visit pass starts.
     pub(crate) server_components_wrap_ref: Ref,
     pub(crate) reported_client_reference_without_dev: bool,
+    /// `export { local as alias }` items of a "use server" module, registered
+    /// at the end of the module by `append_server_reference_clause_part`.
+    pub(crate) server_reference_clause_exports: Vec<(Ref, &'a [u8])>,
 
     pub(crate) jest: Jest,
 
@@ -8765,6 +8768,60 @@ impl<'a, const TYPESCRIPT: bool, const SCAN_ONLY: bool, const SEMA: bool>
         self.log().add_error(Some(self.source), loc, msg);
     }
 
+    pub(crate) fn reject_server_reference_reexport(&mut self, loc: bun_ast::Loc) {
+        if self.options.features.server_components
+            == options::ServerComponents::WrapExportsForServerReference
+        {
+            self.log().add_error(
+                Some(self.source),
+                loc,
+                b"\"use server\" modules cannot re-export with \"export * from\" or \"export { ... } from\"; import the functions and export them from this module",
+            );
+        }
+    }
+
+    /// `registerServerReference(local, "src/actions.ts", "alias");` for every
+    /// `export { local as alias }` item, after the rest of the module so a
+    /// declaration that follows the export clause is initialized.
+    pub(crate) fn append_server_reference_clause_part(
+        &mut self,
+        parts: &mut ListManaged<'a, js_ast::Part>,
+    ) -> Result<(), crate::Error> {
+        if self.server_reference_clause_exports.is_empty() {
+            return Ok(());
+        }
+        let exports = core::mem::take(&mut self.server_reference_clause_exports);
+        let mut stmts: Vec<Stmt> = Vec::with_capacity(exports.len());
+        for (ref_, alias) in exports {
+            let module_path = self.new_expr(
+                E::String::init(self.source.path.pretty),
+                bun_ast::Loc::EMPTY,
+            );
+            let name_expr = self.new_expr(E::String::init(alias), bun_ast::Loc::EMPTY);
+            let local = Expr::init_identifier(ref_, bun_ast::Loc::EMPTY);
+            let call = self.new_expr(
+                E::Call {
+                    target: Expr::init_identifier(
+                        self.server_components_wrap_ref,
+                        bun_ast::Loc::EMPTY,
+                    ),
+                    args: ExprNodeList::from_slice(&[local, module_path, name_expr]),
+                    ..Default::default()
+                },
+                bun_ast::Loc::EMPTY,
+            );
+            stmts.push(self.s(
+                S::SExpr {
+                    value: call,
+                    ..Default::default()
+                },
+                bun_ast::Loc::EMPTY,
+            ));
+        }
+        let stmts = self.arena.alloc_slice_copy(&stmts);
+        self.append_part(parts, stmts)
+    }
+
     pub(crate) fn wrap_value_for_server_component_reference(
         &mut self,
         val: Expr,
@@ -10049,6 +10106,7 @@ impl<'a, const TYPESCRIPT: bool, const SCAN_ONLY: bool, const SEMA: bool>
             react_compiler_may_replace_body: false,
             server_components_wrap_ref: Ref::NONE,
             reported_client_reference_without_dev: false,
+            server_reference_clause_exports: Vec::new(),
             jest: Jest::default(),
             import_records_for_current_part: BumpVec::new_in(arena),
             export_star_import_records: BumpVec::new_in(arena),

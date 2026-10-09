@@ -265,6 +265,16 @@ impl<'a, const TYPESCRIPT: bool, const SCAN_ONLY: bool, const SEMA: bool>
         // Truncate `data.items` to `end` by reslicing the arena view.
         data.items.truncate(end);
 
+        if p.options.features.server_components
+            == crate::options::ServerComponents::WrapExportsForServerReference
+        {
+            for item in data.items.slice() {
+                let alias: &'a [u8] = p.arena.alloc_slice_copy(item.alias.slice());
+                p.server_reference_clause_exports
+                    .push((item.name.ref_, alias));
+            }
+        }
+
         if remove_for_tree_shaking {
             return Ok(());
         }
@@ -280,6 +290,7 @@ impl<'a, const TYPESCRIPT: bool, const SCAN_ONLY: bool, const SEMA: bool>
         data: &mut S::ExportFrom,
     ) -> Result<(), Error> {
         // "export {foo} from 'path'"
+        p.reject_server_reference_reexport(stmt.loc);
         let name = p.load_name_from_ref(data.namespace_ref);
 
         data.namespace_ref = p.new_symbol(js_ast::symbol::Kind::Other, name);
@@ -337,6 +348,7 @@ impl<'a, const TYPESCRIPT: bool, const SCAN_ONLY: bool, const SEMA: bool>
         data: &mut S::ExportStar,
     ) -> Result<(), Error> {
         // "export * from 'path'"
+        p.reject_server_reference_reexport(stmt.loc);
         let name = p.load_name_from_ref(data.namespace_ref);
         data.namespace_ref = p.new_symbol(js_ast::symbol::Kind::Other, name);
         VecExt::append(&mut p.cur_scope().generated, data.namespace_ref);
