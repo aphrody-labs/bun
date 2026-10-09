@@ -5,7 +5,7 @@ description: "Image Docker du runtime Aphrody, sonde prod sur dbfr, file de buil
 
 ## Release
 
-`aphrody-v1.4.3-aphrody.3` (commit `d46f0ed6c69`) fournit `bun-linux-x64.zip` (construit sur le VPS), `bun-windows-x64.zip` et `SHA256SUMS.txt`. GitHub Actions est désactivé sur le dépôt : la release est construite à la main puis envoyée avec `gh release create`.
+`aphrody-v1.4.3-aphrody.4` (commit `41211b56872`) fournit `bun-linux-x64.zip` (glibc 2.43 ou plus récent) et `bun-linux-x64-musl.zip`, construits sur le VPS dans `aphrody/build-linux:26.04` et `aphrody/build-alpine:3.24`, `bun-windows-x64.zip`, `aphrody-bun-windows-service.zip` et `SHA256SUMS.txt`. GitHub Actions est désactivé sur le dépôt : la release est construite à la main puis envoyée avec `gh release create`. L'image Docker et la prod dbfr restent sur `aphrody-v1.4.3-aphrody.3`.
 
 ## Image
 

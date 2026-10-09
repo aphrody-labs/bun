@@ -6,15 +6,20 @@ Release notes of the Aphrody runtime component (`aphrody-labs/bun`). Each releas
 
 ## 1.4.3-aphrody.4
 
-- Tag: `aphrody-v1.4.3-aphrody.4`. Base: Bun 1.4.3, upstream `main` merged up to `e655c580329` (2026-10-08).
+- Tag: `aphrody-v1.4.3-aphrody.4`, commit `41211b56872`. Base: Bun 1.4.3, upstream `main` merged up to `e655c580329` (2026-10-08).
 - Build: release profile, LTO off, built by hand (GitHub Actions is disabled on this repository).
 - Targets:
-  - `bun-linux-x64.zip`: glibc, built in `aphrody/build-linux:26.04` (Ubuntu 26.04, glibc 2.43);
-  - `bun-linux-x64-musl.zip`: musl, built in `aphrody/build-alpine:3.24` (Alpine 3.24);
-  - `bun-windows-x64.zip`: built on Windows 11 with MSVC;
+  - `bun-linux-x64.zip`: glibc, built in `aphrody/build-linux:26.04` (Ubuntu 26.04); needs glibc 2.43 or later
+    (`atan2f`, `asinf` and `acosf` are bound to `GLIBC_2.43`);
+  - `bun-linux-x64-musl.zip`: musl, built in `aphrody/build-alpine:3.24` (Alpine 3.24); needs `libstdc++` and
+    `libgcc` (`apk add libstdc++ libgcc`);
+  - `bun-windows-x64.zip`: built on Windows 11 with clang-cl and lld-link against the MSVC libraries;
   - `aphrody-bun-windows-service.zip`: `bun.exe`, the `bun-winsvc.exe` service host
     ([`packages/bun-winsvc`](packages/bun-winsvc)), `service.ts` and `install.ps1`.
 - No macOS or ARM64 binary; `aphrody-v1.4.3-aphrody.2` is the last release with them.
+- Known issue: in the musl build, `bun mcp`, `bun lsp`, `bun ssh`, `bun host`, `bun agent-plugin`, `bun uv` and
+  `bun dotnet` ignore their arguments (`std::env::args_os()` is empty under musl, where Bun defines its own `main`);
+  fixed in the next release.
 - Changes since 1.4.3-aphrody.3:
   - new commands: `bun mcp` (MCP server over stdio and streamable HTTP), `bun host`, `bun lsp`, `bun ssh`, and
     `bun agent-plugin` built into the executable;
