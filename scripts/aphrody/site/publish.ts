@@ -20,7 +20,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-export const DEFAULT_BASE = "/srv/aphrody-downloads/site";
+export const DEFAULT_BASE = "/home/ubuntu/apps/downloads/site";
 const REPO = "aphrody-labs/bun";
 
 export type Target = { kind: "ssh"; host: string; base: string } | { kind: "local"; base: string };

@@ -1,7 +1,7 @@
 {
   "name": "bun-probe",
   "sources": [
-    { "name": "bun", "repo": "aphrody-labs/bun", "branch": "main", "checkout": "~/bun-src" }
+    { "name": "bun", "repo": "aphrody-labs/bun", "branch": "main", "checkout": "~/src/bun" }
   ],
   "build": {
     "cwd": "{src.bun}/scripts/aphrody/deploy",
@@ -11,9 +11,9 @@
   "host": "dbfr",
   "ssh": { "target": "dbfr-wg" },
   "remote": {
-    "root": "/srv/aphrody-bun-app",
-    "unit": "aphrody-bun-probe",
-    "health": "http://127.0.0.1:47661/healthz",
+    "root": "/home/ubuntu/apps/aphrody-bun",
+    "unit": "docker:aphrody-bun-prod-1",
+    "health": "http://127.0.0.1:47660/healthz",
     "keep": 2,
     "bun": "/home/ubuntu/.local/bin/bun"
   },

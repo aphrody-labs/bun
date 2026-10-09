@@ -8,7 +8,7 @@ import { join } from "node:path";
 const dir = import.meta.dir;
 const interval = Number(process.env.APHRODY_DEPLOY_INTERVAL ?? 120) * 1000;
 const stamp = "/tmp/aphrody-pass";
-const appRoot = process.env.APP_ROOT ?? "/srv/app";
+const appRoot = process.env.APP_ROOT ?? "/app";
 
 let stopping = false;
 let child: Bun.Subprocess | undefined;

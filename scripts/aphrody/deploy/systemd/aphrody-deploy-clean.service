@@ -1,5 +1,5 @@
 # Nettoyage disque de l'hôte de prod (dbfr). @BUN@ et @ROOT@ sont remplacés par install-host.ts.
-# Installation (dbfr, root) : sudo -n bun scripts/aphrody/deploy/install-host.ts --role prod --root /srv/shenron-app
+# Installation (dbfr, root) : sudo -n bun scripts/aphrody/deploy/install-host.ts --role prod --root /home/ubuntu/apps/<app>
 [Unit]
 Description=Nettoyage disque aphrody-deploy (hôte de prod)
 

@@ -91,7 +91,7 @@ describe("release id and queue decisions", () => {
       ],
       build: { cwd: ".", cmd: ["true"], artifact: "x" },
       host: "h",
-      remote: { root: "/srv/x", unit: "x", health: "http://127.0.0.1/h" },
+      remote: { root: "/home/ubuntu/apps/x", unit: "x", health: "http://127.0.0.1/h" },
     });
     const releases = async () => [
       { tag_name: "draft-1", draft: true },
@@ -299,6 +299,35 @@ describe.skipIf(isWindows)("activate with a fake systemctl", () => {
     expect(events).toContain("rolled-back");
   });
 
+  test("a docker:<container> unit restarts the container of the host compose project", async () => {
+    using dir = tempDir("deploy-activate-docker", {});
+    const s = await setup(String(dir));
+    const fake = join(String(dir), "fake-docker.ts");
+    writeFileSync(
+      fake,
+      `import { appendFileSync } from "node:fs";\nappendFileSync(${JSON.stringify(s.log)}, "docker " + process.argv.slice(2).join(" ") + "\\n");\nif (process.argv[2] === "inspect") console.log("true");\n`,
+    );
+    const r = await activateRelease({
+      releaseDir: join(s.root, "releases/new"),
+      root: s.root,
+      unit: "docker:aphrody-bun-prod-1",
+      health: "http://x/healthz",
+      systemctl: s.systemctl,
+      docker: [process.execPath, fake],
+      fetchHealth: healthy(s.root),
+      free: () => 100 * 1024 ** 3,
+      coordLog: null,
+      pollMs: 5,
+      log: () => {},
+    });
+    expect(r.ok).toBe(true);
+    expect(readlinkSync(join(s.root, "current"))).toEndWith("new");
+    expect(readFileSync(s.log, "utf8").trim().split("\n")).toEqual([
+      "docker restart aphrody-bun-prod-1",
+      "docker inspect -f {{.State.Running}} aphrody-bun-prod-1",
+    ]);
+  });
+
   test("refuses a corrupted release and a nearly full disk without touching current", async () => {
     using dir = tempDir("deploy-activate-refuse", {});
     const s = await setup(String(dir));
@@ -323,27 +352,32 @@ describe.skipIf(isWindows)("activate with a fake systemctl", () => {
 });
 
 describe("clean", () => {
-  test("protectedReason blocks volumes, postgres, aphrody-root, checkouts and tmux", () => {
+  test("protectedReason blocks volumes, postgres, checkouts, archives, app data and tmux", () => {
     const home = "/home/ubuntu";
     for (const p of [
       "/var/lib/docker/volumes/x/_data",
       "/var/lib/postgresql/16",
-      "/srv/pg_postgres_data/x",
-      "/home/ubuntu/aphrody-root/a",
-      "/home/ubuntu/yolo/src/shenron",
-      "/home/ubuntu/yolo/src/bun/target",
+      "/home/ubuntu/apps/shenron/data/pg_postgres_data/x",
+      "/home/ubuntu/src/aphrody",
+      "/home/ubuntu/src/shenron",
+      "/home/ubuntu/src/bun/target",
+      "/home/ubuntu/archive/dbfr",
+      "/home/ubuntu/apps",
+      "/home/ubuntu/apps/aphrody-bun",
+      "/home/ubuntu/apps/shenron/data/redis",
+      "/home/ubuntu/apps/shenron/shared/uploads",
       "/tmp/tmux-1000/default",
       "/",
       "/home/ubuntu",
     ]) {
       expect(protectedReason(p, home)).not.toBeNull();
     }
-    expect(protectedReason("/srv/shenron-app/releases/old", home)).toBeNull();
+    expect(protectedReason("/home/ubuntu/apps/aphrody-bun/releases/old", home)).toBeNull();
     expect(protectedReason("/home/ubuntu/.bun/install/cache", home)).toBeNull();
   });
 
   function layout(dir: string) {
-    const root = join(dir, "srv/app");
+    const root = join(dir, "apps/app");
     for (const id of ["a", "b", "c"]) {
       mkdirSync(join(root, "releases", id), { recursive: true });
       writeFileSync(join(root, "releases", id, "server"), id.repeat(100));
@@ -358,8 +392,8 @@ describe("clean", () => {
     const home = join(dir, "home");
     mkdirSync(join(home, ".bun/install/cache"), { recursive: true });
     writeFileSync(join(home, ".bun/install/cache/pkg"), "x".repeat(1000));
-    mkdirSync(join(home, "aphrody-root"), { recursive: true });
-    writeFileSync(join(home, "aphrody-root/keep"), "k");
+    mkdirSync(join(home, "src/aphrody"), { recursive: true });
+    writeFileSync(join(home, "src/aphrody/keep"), "k");
     const tmp = join(dir, "tmp");
     mkdirSync(join(tmp, "tmux-1000"), { recursive: true });
     mkdirSync(join(tmp, "old-build"), { recursive: true });
@@ -391,7 +425,7 @@ describe("clean", () => {
       expect(existsSync(join(root, "releases/c"))).toBe(true);
       expect(existsSync(join(root, "releases/d.partial"))).toBe(false);
       expect(existsSync(join(home, ".bun/install/cache"))).toBe(false);
-      expect(existsSync(join(home, "aphrody-root/keep"))).toBe(true);
+      expect(existsSync(join(home, "src/aphrody/keep"))).toBe(true);
       expect(existsSync(join(tmp, "tmux-1000"))).toBe(true);
       expect(existsSync(join(tmp, "old-build"))).toBe(false);
       expect(existsSync(join(tmp, "fresh"))).toBe(true);
@@ -400,7 +434,7 @@ describe("clean", () => {
       expect(cmds).toContain("docker builder prune -f");
       expect(cmds).toContain("journalctl --vacuum-size=200M");
       expect(cmds.some(c => c.includes("volume"))).toBe(false);
-      expect(report.removed.map(r => r.path.replaceAll("\\", "/")).some(p => p.includes("aphrody-root"))).toBe(false);
+      expect(report.removed.map(r => r.path.replaceAll("\\", "/")).some(p => p.includes("/src/"))).toBe(false);
     },
   );
 
@@ -440,12 +474,12 @@ describe("clean", () => {
   test("planInstall stages scripts and units idempotently", () => {
     using dir = tempDir("deploy-install", {});
     const prefix = String(dir);
-    const plan = planInstall({ role: "prod", home: "/home/ubuntu", root: "/srv/shenron-app", prefix });
+    const plan = planInstall({ role: "prod", home: "/home/ubuntu", root: "/home/ubuntu/apps/shenron-app", prefix });
     expect(applyPlan(plan)).toHaveLength(plan.length);
     expect(applyPlan(plan)).toEqual([]);
     const unit = readFileSync(join(prefix, "/etc/systemd/system/aphrody-deploy-clean.service"), "utf8");
     expect(unit).toContain(
-      "ExecStart=/home/ubuntu/.local/bin/bun /usr/local/lib/aphrody-deploy/clean.ts --host-role prod --root /srv/shenron-app",
+      "ExecStart=/home/ubuntu/.local/bin/bun /usr/local/lib/aphrody-deploy/clean.ts --host-role prod --root /home/ubuntu/apps/shenron-app",
     );
     expect(() => planInstall({ role: "prod", home: "/h" })).toThrow("--root");
     const build = planInstall({ role: "build", home: "/home/ubuntu", prefix });

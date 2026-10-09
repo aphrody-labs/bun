@@ -1,9 +1,10 @@
-# Deux services de la même image (voir Dockerfile). Variables : BUN_RELEASE pour construire, IMAGE pour tirer.
-#   build  (VPS)   docker compose --profile build up -d    file de déploiement, config dans ./config/apps.json
-#   prod   (dbfr)  docker compose --profile prod up -d     exécute $APP_BIN de la release courante ou APP_SCRIPT, sinon la sonde probe.ts
-name: aphrody-bun
+# Application aphrody-bun : ~/apps/aphrody-bun/compose.yaml sur les hôtes, inclus par ~/apps/compose.yaml (projet unique
+# « aphrody », disposition tools/config/host/host-policy.toml d'aphrody). Noms de service préfixés : ils partagent le projet.
+#   bun-build (vps)   docker compose -f ~/apps/compose.yaml --profile build up -d bun-build   file de déploiement, ./config/apps.json
+#   bun-prod  (dbfr)  docker compose -f ~/apps/compose.yaml --profile prod up -d bun-prod     $APP_BIN de la release courante
+#                     (APP_ROOT/current, activée par aphrody-deploy), ou APP_SCRIPT ; APP_BIN vide : la sonde probe.ts de l'image
 services:
-  build:
+  bun-build:
     profiles: [build]
     image: ${IMAGE:-ghcr.io/aphrody-labs/bun:1.4.3-aphrody.3}
     build:
@@ -24,20 +25,24 @@ services:
     secrets: [gh_token]
     cpus: "2"
     mem_limit: 8g
-  prod:
+  bun-prod:
     profiles: [prod]
     image: ${IMAGE:-ghcr.io/aphrody-labs/bun:1.4.3-aphrody.3}
+    container_name: aphrody-bun-prod-1
+    pull_policy: never
     command: ["prod"]
     restart: unless-stopped
     network_mode: host
     environment:
       APHRODY_ROLE: prod
-      APP_BIN: ${APP_BIN:-}
+      APP_ROOT: ${APP_ROOT:-/home/ubuntu/apps/aphrody-bun}
+      APP_BIN: ${APP_BIN-bun-probe}
       APP_SCRIPT: ${APP_SCRIPT:-}
       APHRODY_BUN_SERVICE_PORT: ${PORT:-47660}
       HEALTH_URL: ${HEALTH_URL:-http://127.0.0.1:47660/healthz}
+    # Same path inside: releases/current are absolute symlinks written by activate.ts.
     volumes:
-      - ${APP_ROOT:-/srv/app}:/srv/app
+      - ${APP_ROOT:-/home/ubuntu/apps/aphrody-bun}:${APP_ROOT:-/home/ubuntu/apps/aphrody-bun}:ro
 secrets:
   gh_token:
     file: ${GH_TOKEN_FILE:-./config/gh_token}

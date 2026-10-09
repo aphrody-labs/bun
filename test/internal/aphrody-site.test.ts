@@ -400,7 +400,7 @@ describe("site publish", () => {
   });
 
   test("targets and release ids", () => {
-    expect(parseTarget("dbfr")).toEqual({ kind: "ssh", host: "dbfr", base: "/srv/aphrody-downloads/site" });
+    expect(parseTarget("dbfr")).toEqual({ kind: "ssh", host: "dbfr", base: "/home/ubuntu/apps/downloads/site" });
     expect(() => parseTarget("ssh:a;b")).toThrow();
     expect(releaseId("0123456789abcdef", new Date("2026-10-09T12:34:56.789Z"))).toBe("20261009T123456Z-0123456789ab");
   });

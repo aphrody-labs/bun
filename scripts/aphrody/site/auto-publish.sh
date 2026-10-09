@@ -6,13 +6,9 @@
 # Installé en ~/.local/bin/aphrody-site-publish ; unités dans scripts/aphrody/site/systemd/.
 set -euo pipefail
 
-checkout=${APHRODY_SITE_CHECKOUT:-}
-if [ -z "$checkout" ]; then
-  for dir in "$HOME/src/bun" "$HOME/yolo/src/bun"; do
-    [ -d "$dir/.git" ] && { checkout=$dir; break; }
-  done
-fi
-[ -n "$checkout" ] || { echo "checkout du fork introuvable (APHRODY_SITE_CHECKOUT)" >&2; exit 1; }
+# Checkout unique du dépôt sur l'hôte (disposition ~/src/<dépôt>, tools/config/host/host-policy.toml d'aphrody).
+checkout=${APHRODY_SITE_CHECKOUT:-$HOME/src/bun}
+[ -d "$checkout/.git" ] || { echo "checkout du fork introuvable : $checkout (APHRODY_SITE_CHECKOUT)" >&2; exit 1; }
 exec 9>"${XDG_RUNTIME_DIR:-/tmp}/aphrody-site-publish.lock"
 flock -n 9 || { echo "publication déjà en cours"; exit 0; }
 

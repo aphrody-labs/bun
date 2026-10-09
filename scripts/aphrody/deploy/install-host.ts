@@ -1,6 +1,6 @@
 // Idempotent installer of the deploy pipeline on the host it runs on.
 //   bun install-host.ts --role build            (VPS, user units)   queue + lib + activate + clean, launcher, user timer
-//   sudo -n bun install-host.ts --role prod --root /srv/shenron-app   (dbfr, system units)  activate + clean + lib, clean timer
+//   sudo -n bun install-host.ts --role prod --root /home/ubuntu/apps/<app>   (dbfr, system units)  activate + clean + lib, clean timer
 // Options: --dry-run, --no-enable, --prefix DIR (stage everything under DIR, for tests), --bun PATH.
 // Remote use (no checkout on the host): ship scripts/aphrody/deploy with `git archive ... | ssh host tar -x -C /tmp/d`, then
 // run this file from there through `aphrody-infra ssh exec`.

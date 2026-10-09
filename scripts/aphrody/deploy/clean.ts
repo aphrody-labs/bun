@@ -1,7 +1,8 @@
 // Disk hygiene for the deploy hosts (system timer on the prod host, also run after each activation).
 //   bun clean.ts --host-role prod|build [--root R] [--home H] [--state S] [--config apps.json] [--dry-run]
 // Prints one JSON report: what was removed and the space freed. Hard guards: nothing under docker volumes, postgres paths,
-// ~/aphrody-root, ~/yolo/src/* checkouts or tmux sockets is ever removed; prod keeps >= 15 GB free or exits non-zero.
+// ~/src (the one checkout per repository), ~/apps/*/data|shared, ~/archive or tmux sockets is ever removed; prod keeps
+// >= 15 GB free or exits non-zero.
 import { existsSync, lstatSync, readdirSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join, posix, resolve, sep } from "node:path";
@@ -59,8 +60,10 @@ export function protectedReason(path: string, home: string): string | null {
   if (p.includes("postgres")) return "postgres path";
   if (p === "/var/lib/docker/volumes" || p.startsWith("/var/lib/docker/volumes/")) return "docker volumes";
   if (p === "/var/lib/docker" || p === "/var/lib" || p === "/var") return "system path";
-  if (p === `${h}/aphrody-root` || p.startsWith(`${h}/aphrody-root/`)) return "aphrody-root";
-  if (p === `${h}/yolo` || p === `${h}/yolo/src` || p.startsWith(`${h}/yolo/src/`)) return "source checkout";
+  if (p === `${h}/src` || p.startsWith(`${h}/src/`)) return "source checkout";
+  if (p === `${h}/archive` || p.startsWith(`${h}/archive/`)) return "archive";
+  const app = p.startsWith(`${h}/apps/`) ? p.slice(`${h}/apps/`.length).split("/") : null;
+  if (p === `${h}/apps` || (app && (app.length === 1 || app[1] === "data" || app[1] === "shared"))) return "app data";
   if (/(^|\/)tmux[-_.]/.test(p) || /\/(yolo|vps-cargo|aphrody)\.(sock|session)$/.test(p)) return "tmux";
   return null;
 }

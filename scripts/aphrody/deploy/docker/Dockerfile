@@ -23,14 +23,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
     && rm -rf /var/lib/apt/lists/* \
     && (id ubuntu >/dev/null 2>&1 && userdel -r ubuntu || true) \
     && groupadd -g 1000 agent && useradd -m -u 1000 -g agent -s /bin/bash agent \
-    && mkdir -p /srv/app /var/lib/aphrody-deploy /opt/aphrody-deploy && chown -R agent:agent /srv/app /var/lib/aphrody-deploy
+    && mkdir -p /app /var/lib/aphrody-deploy /opt/aphrody-deploy && chown -R agent:agent /app /var/lib/aphrody-deploy
 COPY --from=bun /out/bun /usr/local/bin/bun
 RUN ln -s bun /usr/local/bin/bunx && bun --version
 COPY *.ts apps.example.json /opt/aphrody-deploy/
 COPY docker/entrypoint.ts /opt/aphrody-deploy/entrypoint.ts
-ENV LANG=C.UTF-8 HOME=/home/agent APP_ROOT=/srv/app
+ENV LANG=C.UTF-8 HOME=/home/agent APP_ROOT=/app
 USER agent
-WORKDIR /srv/app
+WORKDIR /app
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s CMD ["bun", "/opt/aphrody-deploy/entrypoint.ts", "health"]
 ENTRYPOINT ["bun", "/opt/aphrody-deploy/entrypoint.ts"]
 CMD ["prod"]

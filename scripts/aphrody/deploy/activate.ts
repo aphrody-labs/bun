@@ -3,6 +3,7 @@
 // current -> release by atomic symlink rename, `systemctl restart <unit>` (the old version is fully stopped before the new
 // one starts: never two versions, never two Discord clients), wait for `active` then GET health = 200. On failure the
 // previous release is restored and the failed one is marked `bad`. APHRODY_DEPLOY_SYSTEMCTL overrides the systemctl command.
+// `--unit docker:<container>` targets a container of the host compose project instead (`docker restart`, running state).
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import {
@@ -27,6 +28,7 @@ export interface ActivateOptions {
   timeoutMs?: number;
   minFreeBytes?: number;
   systemctl?: string[];
+  docker?: string[];
   coordLog?: string | null;
   free?: (path: string) => number;
   fetchHealth?: (url: string) => Promise<number>;
@@ -75,18 +77,25 @@ export async function activateRelease(o: ActivateOptions): Promise<ActivateResul
     JSON.stringify({ ...meta, id, activatedAt: new Date().toISOString() }, null, 2) + "\n",
   );
 
+  const container = o.unit.startsWith("docker:") ? o.unit.slice("docker:".length) : null;
+  const docker = o.docker ?? (process.env.APHRODY_DEPLOY_DOCKER ?? "docker").split(" ");
   const sys = async (...args: string[]) => run([...systemctl, ...args]);
+  const isActive = async () =>
+    container
+      ? (await run([...docker, "inspect", "-f", "{{.State.Running}}", container])).stdout.trim() === "true"
+      : (await sys("is-active", o.unit)).stdout.trim() === "active";
   const waitHealthy = async () => {
     const deadline = Date.now() + timeoutMs;
     let active = false;
     while (Date.now() < deadline) {
-      if (!active) active = (await sys("is-active", o.unit)).stdout.trim() === "active";
+      if (!active) active = await isActive();
       if (active && (await health(o.health)) === 200) return true;
       await Bun.sleep(pollMs);
     }
     return false;
   };
-  const restart = async () => (await sys("restart", o.unit)).code === 0;
+  const restart = async () =>
+    (container ? await run([...docker, "restart", container]) : await sys("restart", o.unit)).code === 0;
 
   const old = readLink(current);
   if (old && old !== releaseDir) swapLink(previous, old);
