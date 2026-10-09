@@ -117,15 +117,18 @@ Aucun lot ne touche `tools/config/container/aphrody-os/Dockerfile`, `rootfs/`, `
      - `bun test test/internal/aphrody-initramfs.test.ts` (script, pas de code natif) ;
      - passe finale V : `bun scripts/aphrody/initramfs.ts --bun build/release/bun --sysroot <rootfs alpine> --bin /usr/bin/coreutils --out build/initramfs.cpio.gz`, puis `qemu-system-x86_64 … -append console=ttyS0`.
    - Allègement aphrody : supprimer `tools/config/container/aphrody-os/vm/**` (398 l., crate `aphrody-init`) et `patches/linux/0001-misc-add-aphrody_runtime-Rust-driver.patch` (225 l.) ; retirer la mention de `docs/reference/workspace/STATE.md`.
+   - Statut : ✅ `067e1af57ab` (côté bun : `--bin`, `hostname`, test 5/5 ; initramfs construit dans `alpine:3.24` et amorcé sous qemu avec `rdinit=/bin/sh`). ⏳ PID 1 `/init` : la release `aphrody-v1.4.3-aphrody.2` n'a pas `bun:linux`, à revérifier à la passe finale avec `build/release/bun`. Suppression de `vm/` : G1.
 2. **A2 — image runtime minimale** (bun).
    - Nouveau `scripts/aphrody/alpine/runtime.Dockerfile` : minirootfs 3.24.2 aux sha256 épinglés, comme `aphrody-alpine.Dockerfile` ; dépôt du fork ; `apk add bun ca-certificates tzdata` ; utilisateur `agent` 1000.
    - Nouveau workflow `.github/workflows/aphrody-alpine-runtime.yml` → `ghcr.io/aphrody-labs/alpine:3.24-runtime` (amd64 + arm64).
    - Gates : `docker buildx build --platform linux/amd64,linux/arm64 -f scripts/aphrody/alpine/runtime.Dockerfile scripts/aphrody/alpine` ; `docker run --rm … bun --version` ; `docker run --rm … bun -e 'console.log(1)'`.
    - Allègement aphrody (fait par **C2**, propriétaire du fichier) : stages `bun` et `runtime` de `aphrody-os/Dockerfile` → `FROM ghcr.io/aphrody-labs/alpine:3.24-runtime AS runtime` (−~30 l.).
+   - Statut : ✅ `7e86bccc862`. Aucun paquet `bun` apk publié (la release `aphrody-3.24-x86_64` d'aports ne porte que cosmic) : l'image prend le Bun musl de la release du fork (sha256 épinglés) et `apk add libstdc++ libgcc`. Gate locale amd64 : `bun --version`, `bun -e`, uid 1000, fetch https, app m3 compilée exécutée. ⏳ publication : `workflow_dispatch` de `aphrody-alpine-runtime.yml` avec `push=true` (non déclenché).
 3. **A3 — sysctl serveur** (aports, avec l'accord d'U3).
    - Fichiers : `aphrody/aphrody-sysctl/APKBUILD` (sous-paquet `-server`, `pkgrel` +1) et nouveau `aphrody-server.sysctl.conf` (seulement les écarts du VPS : `somaxconn`, `tcp_max_syn_backlog`, `swappiness`, `bpf_jit_harden`, `vfs_cache_pressure`, `dirty_*`).
    - Gates : `abuild checksum && abuild -r` dans `alpine:3.24` ; `sysctl -e -p /etc/sysctl.d/91-aphrody-server.conf` en conteneur ; `bun aphrody/kernel/check-config.ts --sysctl` sur VM.
    - Allègement aphrody : §1 de `tools/config/host/aphrody-os/VPS-TUNING.md` (~100 l.) remplacé par un renvoi au fichier du paquet.
+   - Statut : ✅ aports `c9bbb25934f` (`3.24-stable`, `abuild -r` + `sysctl -e -p` en conteneur, code 0) + aphrody `b32e48e339` (renvoi). ⏳ `check-config.ts --sysctl` sur VM ; `docs/reference/workspace/documentation.json` à regénérer (`yolo ops docs generate`).
 4. **A4 — distro WSL depuis Aphrody Alpine** (conditionnel : seulement si l'utilisateur garde la WSL).
    - Bun : nouveaux `scripts/aphrody/alpine/wsl.ts` (rootfs `aphrody-alpine-rootfs-<arch>.tar.gz` + `wsl.conf` + `wsl-distribution.conf` → `.wsl`) et `.github/workflows/aphrody-alpine-wsl.yml`.
    - Gates : `wsl --install --from-file aphrody-alpine-x86_64.wsl --name AphrodyAlpine` ; `wsl -d AphrodyAlpine -- bun --version` ; `wsl -d AphrodyAlpine -- bunsh -c 'exit 0'`.
@@ -144,6 +147,7 @@ Aucun lot ne touche `tools/config/container/aphrody-os/Dockerfile`, `rootfs/`, `
 7. **A7 (optionnel, propriétaire m3)** — `m3/packages/m3-bun/src/targets/linux-image.ts` délègue à `scripts/aphrody/initramfs.ts`.
    - Prérequis : réseau minimal dans `initramfs-init.ts`.
    - Gate : tests `m3/packages/m3-bun` (`targets`, `system`).
+   - Statut : ⏳ non cohérent pour l'instant : `initramfs-init.ts` ne configure pas le réseau (`m3.ip=`), `bun:linux` n'est dans aucune release publiée, et m3-bun s'utilise hors d'un checkout du fork. Piste : réseau rtnetlink via `bun:linux.netlink.request`.
 8. **A8 (optionnel)** — image de build Ubuntu partagée.
    - Bun : publier `scripts/aphrody/linux.Dockerfile` (nouveau workflow `aphrody-build-linux-image.yml`).
    - Aphrody : `tools/config/container/build/Dockerfile` repart de cette image et ne garde que cargo-xwin, wasm-bindgen et uv.

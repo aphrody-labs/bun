@@ -269,6 +269,7 @@ bun run typecheck:packages
 9. **Lot 9. Cibles de déploiement de m3-bun.**
    - Fichiers touchés : supprimer `m3/packages/m3-bun/src/targets/{linux-image.ts, systemd.ts}` ; `docker.ts` construit `FROM ghcr.io/aphrody-labs/alpine:3.24-runtime` (lot A2 de M-alpine) ; `nginx.ts` génère via `aphrody infra nginx` (`crates/infra/infra/src/nginx.rs`).
    - Gates : `bun test m3/packages/m3-bun` + `docker run` de l'app compilée.
+   - Statut : ✅ `docker.ts` (aphrody `7f339f6b8d`) : build et exécution sur `ghcr.io/aphrody-labs/alpine:3.24-runtime`, `ROOTFS_SCRIPT` supprimé ; `targets.test.ts` vert, app compilée exécutée sur l'image locale. ⏳ `systemd.ts` gardé : hôtes de production sous systemd (`service-catalog.json`, VPS Ubuntu). ⏳ `linux-image.ts` gardé (voir A7 de M-alpine). ⏳ `nginx.ts` : `aphrody infra nginx` n'existe pas et `NginxConfig` n'a pas d'autre consommateur que son test. 16 échecs préexistants de `bun test m3/packages/m3-bun` (`m3:theme.css`/`m3:tokens.css` non résolus : le plugin Tailwind résout lui-même les `@import` et court-circuite les `onResolve` `m3:`) : domaine F2.
    - Gain : ≈−450 LOC, plus de PID 1 en C embarqué.
 10. **Lot 10. Navigateur sur Bun.WebView.**
     - Fichiers touchés : `packages/web/agent-browser/src/cdp.ts` remplacé par `Bun.WebView({ backend: { type: "chrome", url } })` et `view.cdp()` ; `packages/web/aphrody-web-test` réduit à un adaptateur au-dessus de `@aphrody/bun-webview-page` ; `scripts/audit/live-audit.ts`.
