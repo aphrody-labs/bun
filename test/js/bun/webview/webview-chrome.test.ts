@@ -379,6 +379,70 @@ it("chrome: cdp() enable + addEventListener receives CDP events", async () => {
   // no accumulation.
 });
 
+it("chrome: concurrent cdp() calls each settle with their own response", async () => {
+  await using view = new Bun.WebView({ backend: chrome, width: 200, height: 200 });
+  await view.navigate(html("<body>x</body>"));
+
+  const results = await Promise.all(
+    Array.from({ length: 8 }, (_, i) =>
+      view.cdp<{ result: { value: number } }>("Runtime.evaluate", { expression: `${i} * 2`, returnByValue: true }),
+    ),
+  );
+  expect(results.map(r => r.result.value)).toEqual([0, 2, 4, 6, 8, 10, 12, 14]);
+
+  // A protocol error rejects only its own promise.
+  const [bad, good] = await Promise.allSettled([
+    view.cdp("NotADomain.nope"),
+    view.cdp("Runtime.evaluate", { expression: "'ok'", returnByValue: true }),
+  ]);
+  expect(bad.status).toBe("rejected");
+  expect(good).toEqual({ status: "fulfilled", value: { result: { type: "string", value: "ok" } } });
+
+  // close() rejects every cdp() still in flight.
+  const never = { expression: "new Promise(() => {})", awaitPromise: true };
+  const pending = [view.cdp("Runtime.evaluate", never), view.cdp("Runtime.evaluate", never)];
+  view.close();
+  for (const p of pending) await expect(p).rejects.toThrow(/closed/i);
+});
+
+it("chrome: events Bun handles internally also reach addEventListener", async () => {
+  const consoleCalls: unknown[][] = [];
+  await using view = new Bun.WebView({
+    backend: chrome,
+    width: 200,
+    height: 200,
+    console: (type: string, ...args: unknown[]) => consoleCalls.push([type, ...args]),
+  });
+  await view.navigate(html("<body>init</body>"));
+
+  const seen: string[] = [];
+  let frameUrl: string | undefined;
+  let viewUrlAtCommit: string | undefined;
+  const logs: unknown[][] = [];
+  view.addEventListener("Page.frameNavigated", (e: MessageEvent<{ frame: { url: string; parentId?: string } }>) => {
+    if (e.data.frame.parentId) return;
+    seen.push("frameNavigated");
+    frameUrl = e.data.frame.url;
+    viewUrlAtCommit = view.url;
+  });
+  view.addEventListener("Page.loadEventFired", (e: MessageEvent<{ timestamp: number }>) => {
+    seen.push("loadEventFired:" + typeof e.data.timestamp);
+  });
+  view.addEventListener("Runtime.consoleAPICalled", (e: MessageEvent<{ type: string; args: { value: unknown }[] }>) =>
+    logs.push([e.data.type, e.data.args[0].value]),
+  );
+
+  // navigate() resolves after Page.loadEventFired, and the inline script's
+  // console call precedes it on the same connection.
+  await view.navigate(html("<body><script>console.log('from-page')</script></body>"));
+
+  expect(seen).toEqual(["frameNavigated", "loadEventFired:number"]);
+  expect(frameUrl).toStartWith("data:text/html");
+  expect(viewUrlAtCommit).toBe(frameUrl);
+  expect(logs).toEqual([["log", "from-page"]]);
+  expect(consoleCalls).toEqual([["log", "from-page"]]);
+});
+
 it("chrome: screenshot quality option affects JPEG size", async () => {
   await using view = new Bun.WebView({ backend: chrome, width: 200, height: 200 });
   // Gradient + text → lossy compression has work to do.

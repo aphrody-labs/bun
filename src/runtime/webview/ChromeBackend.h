@@ -327,16 +327,15 @@ for (;;) {
 //
 // One slot per op type means one pending op of each type per view. Chrome
 // has no intrinsic serialization (every id is independent), so this caps
-// concurrency artificially. Lifting the cap needs a per-view HashMap of
-// barriers on JSWebView with a custom visitChildren — v2.
+// concurrency artificially. view.cdp() already lifts it with a per-view
+// id → promise map (JSWebView::m_pendingCdp).
 enum class PendingSlot : uint8_t {
     Navigate,
     Evaluate,
     Screenshot,
     Misc,
-    // Raw view.cdp() escape hatch. Separate slot so it doesn't block
-    // resize/goBack/etc. Still one-at-a-time (slot model, not id-keyed
-    // promise map) — lift in v2 when/if someone needs burst CDP.
+    // Raw view.cdp(). Not a slot: promises live in JSWebView::m_pendingCdp
+    // keyed by CDP id, so any number can be in flight.
     Cdp,
 };
 

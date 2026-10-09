@@ -172,7 +172,36 @@ void JSWebView::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     visitor.append(thisObject->m_pendingEval);
     visitor.append(thisObject->m_pendingScreenshot);
     visitor.append(thisObject->m_pendingMisc);
-    visitor.append(thisObject->m_pendingCdp);
+    WTF::Locker locker { thisObject->cellLock() };
+    for (auto& entry : thisObject->m_pendingCdp)
+        visitor.append(entry.value);
+}
+
+void JSWebView::addPendingCdp(VM& vm, uint32_t id, JSPromise* promise)
+{
+    WTF::Locker locker { cellLock() };
+    m_pendingCdp.add(id, WriteBarrier<JSPromise>(vm, this, promise));
+}
+
+JSPromise* JSWebView::takePendingCdp(uint32_t id)
+{
+    auto it = m_pendingCdp.find(id);
+    if (it == m_pendingCdp.end()) return nullptr;
+    JSPromise* promise = it->value.get();
+    WTF::Locker locker { cellLock() };
+    m_pendingCdp.remove(it);
+    return promise;
+}
+
+// Only the mutator writes the map, so reading it here needs no lock; the
+// append happens outside cellLock() because an overflowing
+// MarkedArgumentBuffer registers itself with the heap.
+void JSWebView::takeAllPendingCdp(MarkedArgumentBuffer& out)
+{
+    for (auto& entry : m_pendingCdp)
+        out.append(entry.value.get());
+    WTF::Locker locker { cellLock() };
+    m_pendingCdp.clear();
 }
 
 DEFINE_VISIT_CHILDREN(JSWebView);

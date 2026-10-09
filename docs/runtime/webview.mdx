@@ -473,7 +473,7 @@ await view.cdp("DOM.focus", { nodeId });
 
 Commands are scoped to this view's session (they target this tab). You must `await navigate(...)` at least once before calling `cdp()` — the first navigation establishes the session. Calling `cdp()` before that throws `ERR_INVALID_STATE`.
 
-`params` must be a JSON-serializable object; omit it for commands that take no parameters. One `cdp()` call may be in flight at a time per view.
+`params` must be a JSON-serializable object; omit it for commands that take no parameters. Any number of `cdp()` calls can be in flight at once; each promise settles with its own response.
 
 ### Subscribing to events
 
@@ -491,6 +491,8 @@ await view.navigate("https://example.com");
 ```
 
 Bun drops events that have no registered listener before it even parses their JSON `params`, so enabling a chatty domain (like `Network`) is cheap if you only listen for one or two event types.
+
+Events that Bun also handles itself, such as `Page.frameNavigated`, `Page.loadEventFired`, `Runtime.consoleAPICalled` and `Target.detachedFromTarget`, reach your listeners too, after Bun has updated `view.url`, `view.loading` and the `console` handler.
 
 On the WebKit backend, `cdp()` throws `ERR_METHOD_NOT_IMPLEMENTED` — there is no DevTools Protocol bridge. The `EventTarget` interface still works for your own `dispatchEvent()` calls.
 

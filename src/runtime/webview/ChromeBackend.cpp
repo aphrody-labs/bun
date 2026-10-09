@@ -646,7 +646,8 @@ static WriteBarrier<JSPromise>& slotFor(JSWebView* view, PendingSlot s)
     case PendingSlot::Misc:
         return view->m_pendingMisc;
     case PendingSlot::Cdp:
-        return view->m_pendingCdp;
+        // Keyed by CDP id, not a slot: settleCdp / rejectAllCdp.
+        break;
     }
     ASSERT_NOT_REACHED();
     return view->m_pendingMisc;
@@ -656,6 +657,32 @@ static WriteBarrier<JSPromise>& slotFor(JSWebView* view, PendingSlot s)
 static void settle(JSGlobalObject* g, JSWebView* view, PendingSlot slot, bool ok, JSValue v)
 {
     settleSlot(g, view, slotFor(view, slot), ok, v);
+}
+
+static void settleCdp(JSGlobalObject* g, JSWebView* view, uint32_t id, bool ok, JSValue v)
+{
+    JSPromise* p = view->takePendingCdp(id);
+    if (!p) return;
+    view->m_pendingActivityCount.fetch_sub(1, std::memory_order_release);
+    if (ok)
+        p->resolve(g, g->vm(), v);
+    else
+        p->reject(g->vm(), v);
+}
+
+static void rejectAllCdp(JSGlobalObject* g, JSWebView* view, JSValue err, bool asHandled)
+{
+    MarkedArgumentBuffer promises;
+    view->takeAllPendingCdp(promises);
+    if (!promises.size()) return;
+    view->m_pendingActivityCount.fetch_sub(static_cast<uint32_t>(promises.size()), std::memory_order_release);
+    for (unsigned i = 0; i < promises.size(); ++i) {
+        auto* p = uncheckedDowncast<JSPromise>(promises.at(i));
+        if (asHandled)
+            p->rejectAsHandled(g->vm(), err);
+        else
+            p->reject(g->vm(), err);
+    }
 }
 
 // Reject one op's slot on a CDP failure. A Navigate-slot failure also fires
@@ -686,7 +713,7 @@ static void rejectViewSlots(JSGlobalObject* g, JSWebView* view, JSValue err)
     settleSlot(g, view, view->m_pendingEval, false, err);
     settleSlot(g, view, view->m_pendingScreenshot, false, err);
     settleSlot(g, view, view->m_pendingMisc, false, err);
-    settleSlot(g, view, view->m_pendingCdp, false, err);
+    rejectAllCdp(g, view, err, false);
 }
 
 // close() variant of rejectViewSlots: see rejectSlotAsHandled (JSWebView.h).
@@ -697,7 +724,7 @@ static void rejectViewSlotsAsHandled(JSGlobalObject* g, JSWebView* view, JSValue
     rejectSlotAsHandled(g, view, view->m_pendingEval, err);
     rejectSlotAsHandled(g, view, view->m_pendingScreenshot, err);
     rejectSlotAsHandled(g, view, view->m_pendingMisc, err);
-    rejectSlotAsHandled(g, view, view->m_pendingCdp, err);
+    rejectAllCdp(g, view, err, true);
 }
 
 // Build an Error from CDP exceptionDetails. exception.description is V8's
@@ -768,8 +795,11 @@ void Transport::handleResponse(uint32_t id, std::span<const char> result, std::s
         // {"code":-32000,"message":"..."}
         auto msgSlice = jsonString(jsonField(error, { "message", 7 }));
         auto errStr = WTF::String::fromUTF8(std::span<const char>(msgSlice));
-        settleFailure(g, view, entry.slot, entry.method,
-            createError(g, errStr.isEmpty() ? "CDP error"_s : errStr));
+        auto* err = createError(g, errStr.isEmpty() ? "CDP error"_s : errStr);
+        if (entry.slot == PendingSlot::Cdp)
+            settleCdp(g, view, id, false, err);
+        else
+            settleFailure(g, view, entry.slot, entry.method, err);
         return;
     }
 
@@ -1086,10 +1116,146 @@ void Transport::handleResponse(uint32_t id, std::span<const char> result, std::s
         // with createError). Some CDP methods legitimately return `{}`
         // (Input.*, Page.reload) — JSONParse gives an empty JSObject.
         JSValue v = JSONParse(g, WTF::String::fromUTF8(result));
-        settle(g, view, entry.slot, true, v ? v : jsUndefined());
+        settleCdp(g, view, id, true, v ? v : jsUndefined());
         return;
     }
     }
+}
+
+// Runtime.consoleAPICalled — fires for every console.* call in the page.
+// params: {"type":"log","args":[<RemoteObject>,...],"stackTrace":{...}}.
+static void deliverConsole(Zig::GlobalObject* g, JSWebView* view, std::span<const char> params)
+{
+    auto& vm = g->vm();
+    if (!view->m_consoleIsGlobal && !view->m_onConsole) return;
+
+    // WTF::JSON parse — small payload per call, console-path-only.
+    auto root = JSON::Value::parseJSON(WTF::String::fromUTF8(params));
+    auto o = root ? root->asObject() : nullptr;
+    if (!o) return;
+    auto type = o->getString("type"_s);
+    auto argsArr = o->getArray("args"_s);
+
+    // remoteToJS allocates (jsString/JSONParse). Both dispatch paths
+    // re-enter JS — logWithLevel via ConsoleClient, the custom callback
+    // via call() — and each opens its own ThrowScope which asserts
+    // under validateExceptionChecks if a prior simulated throw wasn't
+    // checked. Check after building args; release before dispatch so
+    // the nested scope takes over. Real exceptions propagate to
+    // onData's TopExceptionScope.
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    // RemoteObject → JSValue. Primitives unwrap to raw values (so
+    // console.log("hi") forwards as "hi", not {type:"string",value:"hi"}).
+    // Object/function RemoteObjects JSONParse whole — the user (or
+    // util.inspect) sees {className, description, preview:{properties}}
+    // which is the best we get without a Runtime.getProperties roundtrip.
+    auto remoteToJS = [&](RefPtr<JSON::Object> ao) -> JSValue {
+        auto t = ao->getString("type"_s);
+        if (t == "string"_s) return jsString(vm, ao->getString("value"_s));
+        if (t == "number"_s) return jsNumber(ao->getDouble("value"_s).value_or(0));
+        if (t == "boolean"_s) return jsBoolean(ao->getBoolean("value"_s).value_or(false));
+        if (t == "undefined"_s) return jsUndefined();
+        if (t == "bigint"_s || t == "symbol"_s)
+            // No .value — .description is "42n" / "Symbol(foo)".
+            return jsString(vm, ao->getString("description"_s));
+        // object / function. JSONParse the whole RemoteObject so the
+        // caller can inspect preview.properties. toJSONString round-
+        // trips the WTF::JSON tree back to a string; JSC::JSONParse
+        // builds the JSValue tree.
+        auto s = ao->toJSONString();
+        auto v = JSONParse(g, s);
+        return v ? v : jsNull();
+    };
+
+    MarkedArgumentBuffer args;
+    if (argsArr) {
+        for (auto& a : *argsArr) {
+            auto ao = a->asObject();
+            JSValue v = ao ? remoteToJS(ao) : jsUndefined();
+            RETURN_IF_EXCEPTION(scope, void());
+            args.append(v);
+        }
+    }
+
+    if (view->m_consoleIsGlobal) {
+        // ConsoleClient::logWithLevel — the same path console.log()
+        // takes after argument collection. ScriptArguments holds
+        // Vector<Strong<Unknown>> which GC-roots across the call
+        // (util.format allocates). Inspector forwarding + Bun's
+        // console formatter apply.
+        //
+        // CDP type → MessageLevel. trace/dir/table/assert all render
+        // through Log level with their formatting intact (the args
+        // carry the structure); level distinction matters for
+        // error/warn coloring and stderr routing.
+        using JSC::MessageLevel;
+        MessageLevel ml = MessageLevel::Log;
+        if (type == "error"_s || type == "assert"_s)
+            ml = MessageLevel::Error;
+        else if (type == "warning"_s)
+            ml = MessageLevel::Warning;
+        else if (type == "debug"_s)
+            ml = MessageLevel::Debug;
+        else if (type == "info"_s)
+            ml = MessageLevel::Info;
+
+        WTF::Vector<Strong<Unknown>> strongArgs;
+        strongArgs.reserveInitialCapacity(args.size());
+        for (unsigned i = 0; i < args.size(); ++i)
+            strongArgs.append(Strong<Unknown>(vm, args.at(i)));
+        auto scriptArgs = Inspector::ScriptArguments::create(g, WTF::move(strongArgs));
+        scope.release();
+        if (auto clientRef = g->consoleClient())
+            clientRef->logWithLevel(g, WTF::move(scriptArgs), ml);
+        return;
+    }
+
+    // Custom callback: (type, ...args).
+    JSObject* cb = view->m_onConsole.get();
+    auto callData = getCallData(cb);
+    if (callData.type == CallData::Type::None) return;
+    JSValue typeStr = jsString(vm, type.isEmpty() ? "log"_s : type);
+    RETURN_IF_EXCEPTION(scope, void());
+    MarkedArgumentBuffer cbArgs;
+    cbArgs.append(typeStr);
+    for (unsigned i = 0; i < args.size(); ++i)
+        cbArgs.append(args.at(i));
+    scope.release();
+    call(g, cb, callData, jsUndefined(), cbArgs);
+}
+
+// Every event on a view's session reaches addEventListener(method)
+// listeners, after the internal handling of the events Bun consumes
+// (frameNavigated, loadEventFired, consoleAPICalled, detachedFromTarget).
+static void dispatchCdpEvent(JSGlobalObject* g, JSWebView* view, std::span<const char> method, std::span<const char> params)
+{
+    auto& vm = g->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    // The onConsole callback threw; onData reports it.
+    RETURN_IF_EXCEPTION(scope, void());
+    // A callback (onNavigated) may have closed the view.
+    if (view->m_closed) return;
+    // Check hasEventListeners first: Chrome is chatty
+    // (frameScheduledNavigation, lifecycleEvent, etc.) and most events
+    // won't have listeners; skipping the JSONParse saves an alloc per
+    // unwanted event. The listener was added via
+    // view.addEventListener("Network.responseReceived", e => e.data.response).
+    auto methodAtom = AtomString::fromUTF8(method);
+    if (!view->wrapped().hasEventListeners(methodAtom)) return;
+    JSValue data = JSONParse(g, WTF::String::fromUTF8(params));
+    RETURN_IF_EXCEPTION(scope, void());
+    if (!data) data = jsUndefined();
+    // MessageEvent::m_jsData is a JSValueInWrappedObject (Weak<>). The
+    // wrapper's visitAdditionalChildren roots it AFTER wrapper creation;
+    // dispatchEvent allocates that wrapper which can GC in between. Keep
+    // the parsed object alive across the gap.
+    JSC::EnsureStillAliveScope dataRoot { data };
+    WebCore::MessageEvent::Init init;
+    init.data = data;
+    auto event = WebCore::MessageEvent::create(methodAtom, WTF::move(init), WebCore::Event::IsTrusted::Yes);
+    scope.release();
+    view->wrapped().dispatchEvent(event);
 }
 
 void Transport::handleEvent(std::span<const char> method, std::span<const char> params, std::span<const char> sessionId)
@@ -1117,6 +1283,7 @@ void Transport::handleEvent(std::span<const char> method, std::span<const char> 
         rejectViewSlots(g, view, createError(g, "page detached (crashed or closed)"_s));
         // Erase stale m_pending entries — replies won't come.
         m_pending.removeIf([vid](auto& kv) { return kv.value.viewId == vid; });
+        dispatchCdpEvent(g, view, method, params);
         view->m_closed = true;
         updateKeepAlive();
         return;
@@ -1147,151 +1314,23 @@ void Transport::handleEvent(std::span<const char> method, std::span<const char> 
             Bun__EventLoop__runCallback2(g, JSValue::encode(cb), JSValue::encode(jsUndefined()),
                 JSValue::encode(jsString(vm, urlStr)), JSValue::encode(jsUndefined()));
         }
-        return;
-    }
-
-    // Page.loadEventFired — load complete. Chain a document.title fetch
-    // so view.title is populated when navigate() resolves — matches
-    // WKWebView's NavDone which packs url+title in one reply. One extra
-    // roundtrip (~1ms), but the user-visible guarantee is worth it:
-    // `await view.navigate(); view.title` just works.
-    //
-    // If no navigate is pending (uninitiated navigation, redirect), the
-    // PageTitle handler settles a no-op and m_title still updates.
-    if (method.size() == 19 && memcmp(method.data(), "Page.loadEventFired", 19) == 0) {
+    } else if (method.size() == 19 && memcmp(method.data(), "Page.loadEventFired", 19) == 0) {
+        // Load complete. Chain a document.title fetch so view.title is
+        // populated when navigate() resolves — matches WKWebView's NavDone
+        // which packs url+title in one reply. One extra roundtrip (~1ms),
+        // but `await view.navigate(); view.title` just works.
+        //
+        // If no navigate is pending (uninitiated navigation, redirect), the
+        // PageTitle handler settles a no-op and m_title still updates.
         view->m_loading = false;
         uint32_t tid = nextId();
         m_pending.add(tid, Pending { Method::PageTitle, PendingSlot::Navigate, view->m_viewId });
         send(tid, Command(tid, "Runtime.evaluate"_s, sidSpan(view->m_sessionId)).str("expression"_s, "document.title"_s).boolean("returnByValue"_s, true));
-        return;
+    } else if (method.size() == 24 && memcmp(method.data(), "Runtime.consoleAPICalled", 24) == 0) {
+        deliverConsole(g, view, params);
     }
 
-    // Runtime.consoleAPICalled — fires for every console.* call in the page.
-    // params: {"type":"log","args":[<RemoteObject>,...],"stackTrace":{...}}.
-    if (method.size() == 24 && memcmp(method.data(), "Runtime.consoleAPICalled", 24) == 0) {
-        if (!view->m_consoleIsGlobal && !view->m_onConsole) return;
-
-        // WTF::JSON parse — small payload per call, console-path-only.
-        auto root = JSON::Value::parseJSON(WTF::String::fromUTF8(params));
-        auto o = root ? root->asObject() : nullptr;
-        if (!o) return;
-        auto type = o->getString("type"_s);
-        auto argsArr = o->getArray("args"_s);
-
-        // remoteToJS allocates (jsString/JSONParse). Both dispatch paths
-        // re-enter JS — logWithLevel via ConsoleClient, the custom callback
-        // via call() — and each opens its own ThrowScope which asserts
-        // under validateExceptionChecks if a prior simulated throw wasn't
-        // checked. Check after building args; release before dispatch so
-        // the nested scope takes over. Real exceptions propagate to
-        // onData's TopExceptionScope.
-        auto scope = DECLARE_THROW_SCOPE(vm);
-
-        // RemoteObject → JSValue. Primitives unwrap to raw values (so
-        // console.log("hi") forwards as "hi", not {type:"string",value:"hi"}).
-        // Object/function RemoteObjects JSONParse whole — the user (or
-        // util.inspect) sees {className, description, preview:{properties}}
-        // which is the best we get without a Runtime.getProperties roundtrip.
-        auto remoteToJS = [&](RefPtr<JSON::Object> ao) -> JSValue {
-            auto t = ao->getString("type"_s);
-            if (t == "string"_s) return jsString(vm, ao->getString("value"_s));
-            if (t == "number"_s) return jsNumber(ao->getDouble("value"_s).value_or(0));
-            if (t == "boolean"_s) return jsBoolean(ao->getBoolean("value"_s).value_or(false));
-            if (t == "undefined"_s) return jsUndefined();
-            if (t == "bigint"_s || t == "symbol"_s)
-                // No .value — .description is "42n" / "Symbol(foo)".
-                return jsString(vm, ao->getString("description"_s));
-            // object / function. JSONParse the whole RemoteObject so the
-            // caller can inspect preview.properties. toJSONString round-
-            // trips the WTF::JSON tree back to a string; JSC::JSONParse
-            // builds the JSValue tree.
-            auto s = ao->toJSONString();
-            auto v = JSONParse(g, s);
-            return v ? v : jsNull();
-        };
-
-        MarkedArgumentBuffer args;
-        if (argsArr) {
-            for (auto& a : *argsArr) {
-                auto ao = a->asObject();
-                JSValue v = ao ? remoteToJS(ao) : jsUndefined();
-                RETURN_IF_EXCEPTION(scope, void());
-                args.append(v);
-            }
-        }
-
-        if (view->m_consoleIsGlobal) {
-            // ConsoleClient::logWithLevel — the same path console.log()
-            // takes after argument collection. ScriptArguments holds
-            // Vector<Strong<Unknown>> which GC-roots across the call
-            // (util.format allocates). Inspector forwarding + Bun's
-            // console formatter apply.
-            //
-            // CDP type → MessageLevel. trace/dir/table/assert all render
-            // through Log level with their formatting intact (the args
-            // carry the structure); level distinction matters for
-            // error/warn coloring and stderr routing.
-            using JSC::MessageLevel;
-            MessageLevel ml = MessageLevel::Log;
-            if (type == "error"_s || type == "assert"_s)
-                ml = MessageLevel::Error;
-            else if (type == "warning"_s)
-                ml = MessageLevel::Warning;
-            else if (type == "debug"_s)
-                ml = MessageLevel::Debug;
-            else if (type == "info"_s)
-                ml = MessageLevel::Info;
-
-            WTF::Vector<Strong<Unknown>> strongArgs;
-            strongArgs.reserveInitialCapacity(args.size());
-            for (unsigned i = 0; i < args.size(); ++i)
-                strongArgs.append(Strong<Unknown>(vm, args.at(i)));
-            auto scriptArgs = Inspector::ScriptArguments::create(g, WTF::move(strongArgs));
-            scope.release();
-            if (auto clientRef = g->consoleClient())
-                clientRef->logWithLevel(g, WTF::move(scriptArgs), ml);
-            return;
-        }
-
-        // Custom callback: (type, ...args).
-        JSObject* cb = view->m_onConsole.get();
-        auto callData = getCallData(cb);
-        if (callData.type == CallData::Type::None) return;
-        JSValue typeStr = jsString(vm, type.isEmpty() ? "log"_s : type);
-        RETURN_IF_EXCEPTION(scope, void());
-        MarkedArgumentBuffer cbArgs;
-        cbArgs.append(typeStr);
-        for (unsigned i = 0; i < args.size(); ++i)
-            cbArgs.append(args.at(i));
-        scope.release();
-        call(g, cb, callData, jsUndefined(), cbArgs);
-        return;
-    }
-
-    // Unhandled CDP event — dispatch to the view's EventTarget if it has
-    // a listener for this method name. Check hasEventListeners first:
-    // Chrome is chatty (frameScheduledNavigation, lifecycleEvent, etc.)
-    // and most events won't have listeners; skipping the JSONParse saves
-    // an alloc per unwanted event. The listener was added via
-    // view.addEventListener("Network.responseReceived", e => e.data.response).
-    auto methodAtom = AtomString::fromUTF8(method);
-    if (!view->wrapped().hasEventListeners(methodAtom)) return;
-
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    JSValue data = JSONParse(g, WTF::String::fromUTF8(params));
-    RETURN_IF_EXCEPTION(scope, void());
-    if (!data) data = jsUndefined();
-    // MessageEvent::m_jsData is a JSValueInWrappedObject (Weak<>). The
-    // wrapper's visitAdditionalChildren roots it AFTER wrapper creation;
-    // dispatchEvent allocates that wrapper which can GC in between. Keep
-    // the parsed object alive across the gap.
-    JSC::EnsureStillAliveScope dataRoot { data };
-
-    WebCore::MessageEvent::Init init;
-    init.data = data;
-    auto event = WebCore::MessageEvent::create(methodAtom, WTF::move(init), WebCore::Event::IsTrusted::Yes);
-    scope.release();
-    view->wrapped().dispatchEvent(event);
+    dispatchCdpEvent(g, view, method, params);
 }
 
 void Transport::onClose()
@@ -1493,13 +1532,25 @@ JSPromise* evaluate(JSGlobalObject* g, JSWebView* view, const WTF::String& scrip
 // if m_sessionId is empty (first-navigate chain not yet complete) we send
 // browser-level. For explicit browser-level after attach, the user can
 // construct a second WebView or await Bun-side Target APIs (v2).
+//
+// Any number of cdp() calls may be in flight: each promise is keyed by its
+// CDP id in m_pendingCdp, and Chrome answers ids independently.
 JSPromise* cdp(JSGlobalObject* g, JSWebView* view, const WTF::String& method, const WTF::String& paramsJson)
 {
+    auto& vm = g->vm();
     auto& t = transport();
+    auto* promise = JSPromise::create(vm, g->promiseStructure());
+    if (t.m_dead || t.m_mode == TransportMode::None) {
+        promise->reject(vm, createError(g, "Chrome connection is not available"_s));
+        return promise;
+    }
     uint32_t id = t.nextId();
-    return sendChromeOp(g, view, view->m_pendingCdp, PendingSlot::Cdp,
-        Method::UserRaw, id,
-        Command(Command::RawTag {}, id, method, sidSpan(view->m_sessionId), paramsJson));
+    view->m_pendingActivityCount.fetch_add(1, std::memory_order_release);
+    view->addPendingCdp(vm, id, promise);
+    t.m_pending.add(id, Pending { Method::UserRaw, PendingSlot::Cdp, view->m_viewId });
+    t.send(id, Command(Command::RawTag {}, id, method, sidSpan(view->m_sessionId), paramsJson));
+    t.updateKeepAlive();
+    return promise;
 }
 
 JSPromise* screenshot(JSGlobalObject* g, JSWebView* view, ScreenshotFormat format, uint8_t quality)

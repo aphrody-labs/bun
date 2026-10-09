@@ -397,7 +397,6 @@ JSC_DEFINE_HOST_FUNCTION(jsWebViewProtoFuncCdp, (JSGlobalObject * globalObject, 
     // .toJSON() that closes the view between the earlier guards and send.
     if (thisObject->m_closed)
         return Bun::throwError(globalObject, scope, ErrorCode::ERR_INVALID_STATE, "WebView is closed"_s);
-    if (!checkSlot(globalObject, scope, thisObject->m_pendingCdp, "a cdp()"_s)) return {};
     return JSValue::encode(thisObject->cdp(globalObject, method, paramsJson));
 }
 

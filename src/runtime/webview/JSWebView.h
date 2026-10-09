@@ -7,6 +7,8 @@
 #include <JavaScriptCore/JSGlobalObject.h>
 #include <JavaScriptCore/JSPromise.h>
 #include <JavaScriptCore/LazyClassStructure.h>
+#include <JavaScriptCore/ArgList.h>
+#include <wtf/HashMap.h>
 #include <atomic>
 
 namespace Bun {
@@ -133,13 +135,20 @@ public:
     JSC::WriteBarrier<JSC::JSPromise> m_pendingScreenshot;
     // Resize/Back/Forward/Reload/Close — one at a time, the child is fast.
     JSC::WriteBarrier<JSC::JSPromise> m_pendingMisc;
-    // Chrome-only: raw view.cdp(method, params) escape hatch. Separate
-    // slot so it doesn't block resize/goBack. Still one raw op at a time.
-    JSC::WriteBarrier<JSC::JSPromise> m_pendingCdp;
+    // Chrome-only: raw view.cdp(method, params) promises keyed by CDP id, any
+    // number in flight. visitChildren may run on a GC thread, so every access
+    // holds cellLock().
+    WTF::HashMap<uint32_t, JSC::WriteBarrier<JSC::JSPromise>> m_pendingCdp;
     // Read by isReachableFromOpaqueRoots on the GC thread — the barriers
     // themselves are not safe to read there. Inc BEFORE slot.set(), dec
-    // AFTER slot.clear(), so GC never sees a set slot with count==0.
+    // AFTER slot.clear(), so GC never sees a set slot with count==0. Each
+    // m_pendingCdp entry counts once.
     std::atomic<uint32_t> m_pendingActivityCount { 0 };
+
+    void addPendingCdp(JSC::VM&, uint32_t id, JSC::JSPromise*);
+    JSC::JSPromise* takePendingCdp(uint32_t id);
+    // Moves every pending cdp() promise into `out` (GC-rooted) and clears the map.
+    void takeAllPendingCdp(JSC::MarkedArgumentBuffer& out);
 
     static JSWebView* create(JSC::Structure*, WebCore::JSDOMGlobalObject*, Ref<WebViewEventTarget>&&);
     static void destroy(JSC::JSCell*);

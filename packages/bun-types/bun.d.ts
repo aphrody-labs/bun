@@ -9989,6 +9989,8 @@ declare module "bun" {
      * Call `await view.navigate(...)` at least once before using `cdp()` —
      * the first navigate sets up the CDP session.
      *
+     * Any number of `cdp()` calls can be in flight at once.
+     *
      * @param method Domain-qualified method name, e.g.
      *   `"Runtime.evaluate"`, `"DOM.querySelector"`,
      *   `"Emulation.setUserAgentOverride"`.
@@ -10023,6 +10025,10 @@ declare module "bun" {
      * won't send those events. Events without a registered listener
      * are dropped before JSON parsing (no overhead for domains you
      * enabled but don't fully listen to).
+     *
+     * Events Bun also handles itself (`Page.frameNavigated`,
+     * `Page.loadEventFired`, `Runtime.consoleAPICalled`,
+     * `Target.detachedFromTarget`) are delivered too.
      *
      * @example
      * ```ts
