@@ -142,7 +142,9 @@ where
     let scan = |abs: &Path, rel: &str| -> Result<Option<(String, T)>> {
         let fix = process_file(abs, rel, opts)
             .and_then(|fix| {
-                fix.map(|fix| finalize_file(abs, fix, opts, &overrides)).transpose().map(Option::flatten)
+                fix.map(|fix| finalize_file(abs, fix, opts, &overrides))
+                    .transpose()
+                    .map(Option::flatten)
             })
             .with_context(|| format!("scan {}", abs.display()))?;
         fix.map(|fix| {
@@ -394,7 +396,11 @@ fn process_file(abs: &Path, rel: &str, opts: &RunOptions) -> Result<Option<FileF
 
     let aggressive = opts.mode == Mode::Aggressive;
     let (findings, after) = if is_pkg {
-        scan_package_json_in(rel, &before, PackageJsonContext { root: Some(&opts.root), aggressive })
+        scan_package_json_in(
+            rel,
+            &before,
+            PackageJsonContext { root: Some(&opts.root), aggressive },
+        )
     } else if is_workflow {
         scan_workflow(rel, &before, aggressive)
     } else if is_source {

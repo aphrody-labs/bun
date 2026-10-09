@@ -171,11 +171,16 @@ pub(crate) fn apply_bun_api_rules_with_context(
             // Heuristique préservée (Phase 2 : à supprimer quand l'AST
             // suit le flux du symbole jusqu'à `fs.mkdir`). Aujourd'hui
             // l'AST sait *qui* est `fs`, pas où *son* argument est passé.
-            let skip_autofix = r.id == "api/fs-existsSync"
+            let dir_context = r.id == "api/fs-existsSync"
                 && mat.get(1).is_some_and(|m| {
                     let arg = m.as_str().trim();
                     looks_like_dir_context(source, index, arg)
                 });
+            // A synchronous call rewritten to `await …` only compiles inside an
+            // async function or at the top level of an ES module.
+            let await_invalid = replacement.as_deref().is_some_and(|r| r.starts_with("await "))
+                && !context.await_allowed(index);
+            let skip_autofix = dir_context || await_invalid;
 
             let has_repl = replacement.is_some() && !skip_autofix;
             let replacement_for_edit = if aggressive && r.aggressive && !skip_autofix {
@@ -188,11 +193,17 @@ pub(crate) fn apply_bun_api_rules_with_context(
                 &offsets,
                 index,
                 &r.id,
-                if skip_autofix {
+                if dir_context {
                     "fs.existsSync(path) suivi d'un fs.mkdirSync(path) — chemin probablement un \
                      dossier, Bun.file().exists() inadapté (utiliser fs.mkdirSync(path, { \
                      recursive: true }))"
                         .to_string()
+                } else if await_invalid {
+                    format!(
+                        "{} — non appliqué : `await` invalide ici (fonction synchrone ou \
+                         CommonJS)",
+                        r.message
+                    )
                 } else {
                     r.message.clone()
                 },
@@ -344,5 +355,41 @@ mod tests {
         // import { v4 } from "uuid"
         let g = graph_with("v4", "uuid", BindingKind::Named { imported: "v4".to_string() });
         assert!(binding_resolves(&g, "v4", "uuid"));
+    }
+
+    #[test]
+    fn await_rewrites_only_where_await_is_valid() {
+        let esm = "import fs from 'node:fs'\n\
+                   const top = fs.readFileSync(a, 'utf8')\n\
+                   function sync() { return fs.readFileSync(b, 'utf8') }\n\
+                   async function run() { return fs.readFileSync(c, 'utf8') }\n\
+                   async function outer() { [1].map(() => fs.readFileSync(d, 'utf8')) }\n\
+                   class K { x = fs.readFileSync(e, 'utf8') }\n";
+        let (findings, out) = apply_bun_api_rules("a.mjs", esm, true);
+        assert!(out.contains("const top = await Bun.file(a).text()"), "{out}");
+        assert!(out.contains("return fs.readFileSync(b, 'utf8')"), "{out}");
+        assert!(out.contains("return await Bun.file(c).text()"), "{out}");
+        assert!(out.contains("() => fs.readFileSync(d, 'utf8')"), "{out}");
+        assert!(out.contains("x = fs.readFileSync(e, 'utf8')"), "{out}");
+        let skipped = findings.iter().filter(|f| f.replacement.is_none()).count();
+        assert_eq!(skipped, 3);
+
+        let cjs = "const fs = require('fs')\nconst s = fs.readFileSync(p, 'utf8')\n";
+        let (_, out) = apply_bun_api_rules("a.cjs", cjs, true);
+        assert_eq!(out, cjs);
+        let (_, out) = apply_bun_api_rules("a.js", cjs, true);
+        assert_eq!(out, cjs);
+    }
+
+    #[test]
+    fn write_file_sync_drops_the_encoding_and_keeps_other_options() {
+        let src = "import fs from 'node:fs'\n\
+                   fs.writeFileSync(p, body, 'utf8')\n\
+                   fs.writeFileSync(q, data)\n\
+                   fs.writeFileSync(r, data, { mode: 0o600 })\n";
+        let (_, out) = apply_bun_api_rules("a.mjs", src, true);
+        assert!(out.contains("await Bun.write(p, body)\n"), "{out}");
+        assert!(out.contains("await Bun.write(q, data)\n"), "{out}");
+        assert!(out.contains("fs.writeFileSync(r, data, { mode: 0o600 })"), "{out}");
     }
 }

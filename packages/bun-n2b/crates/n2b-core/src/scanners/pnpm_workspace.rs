@@ -88,7 +88,8 @@ pub fn pnpm_config_findings(path: &str, source: &str, cfg: &PnpmConfig) -> Vec<F
             cfg.overrides.len()
         );
         if !unsupported.is_empty() {
-            message.push_str(&format!(" ; non pris en charge par Bun : {}", unsupported.join(", ")));
+            message
+                .push_str(&format!(" ; non pris en charge par Bun : {}", unsupported.join(", ")));
         }
         findings.push(warn(
             path,
@@ -108,10 +109,7 @@ pub fn pnpm_config_findings(path: &str, source: &str, cfg: &PnpmConfig) -> Vec<F
                 cfg.patched.len()
             ),
             "patchedDependencies",
-            format!(
-                r#""patchedDependencies": {}"#,
-                serde_json::Value::Object(cfg.patched.clone())
-            ),
+            format!(r#""patchedDependencies": {}"#, serde_json::Value::Object(cfg.patched.clone())),
         ));
     }
     if !cfg.only_built.is_empty() {
@@ -137,10 +135,7 @@ pub fn pnpm_config_findings(path: &str, source: &str, cfg: &PnpmConfig) -> Vec<F
             message.push_str(&format!(" → bunfig.toml [install] ({})", bunfig.join(", ")));
         }
         if !cfg.unsupported.is_empty() {
-            message.push_str(&format!(
-                " ; sans équivalent Bun : {}",
-                cfg.unsupported.join(", ")
-            ));
+            message.push_str(&format!(" ; sans équivalent Bun : {}", cfg.unsupported.join(", ")));
         }
         findings.push(make_finding(
             path,

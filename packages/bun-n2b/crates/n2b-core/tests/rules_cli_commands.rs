@@ -109,11 +109,14 @@ fn rewrites_pnpm_recursive_and_filter() {
     assert_eq!(rewrite("pnpm exec tsc"), "bunx tsc");
     assert_eq!(rewrite("pnpm dlx create-vite"), "bunx create-vite");
     // pnpm sub-commands and graph selectors have no `bun run --filter` equivalent.
-    for src in ["pnpm -r exec rm -rf dist", "pnpm --filter web... build", "pnpm --filter web add zod"]
+    for src in
+        ["pnpm -r exec rm -rf dist", "pnpm --filter web... build", "pnpm --filter web add zod"]
     {
         let (findings, _) = apply_cli_rules("a.sh", src, true);
         assert!(
-            !findings.iter().any(|f| f.rule_id == "cli/pnpm-recursive" || f.rule_id == "cli/pnpm-filter"),
+            !findings
+                .iter()
+                .any(|f| f.rule_id == "cli/pnpm-recursive" || f.rule_id == "cli/pnpm-filter"),
             "{src}"
         );
     }

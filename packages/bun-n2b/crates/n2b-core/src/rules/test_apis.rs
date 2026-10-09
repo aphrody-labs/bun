@@ -75,9 +75,7 @@ fn hint(api: &str) -> &'static str {
             "pas d'équivalent : mock.module s'applique au registre de modules global"
         },
         "waitFor" | "waitUntil" => "boucle `await` bornée sur la condition",
-        "setSystemTime" | "getRealSystemTime" => {
-            "jest.setSystemTime / setSystemTime de bun:test"
-        },
+        "setSystemTime" | "getRealSystemTime" => "jest.setSystemTime / setSystemTime de bun:test",
         "replaceProperty" => "spyOn(obj, prop, 'get') ou assignation restaurée en afterEach",
         _ if api.ends_with("Async") => "version synchrone puis `await` explicite",
         _ => "pas d'équivalent dans bun:test",

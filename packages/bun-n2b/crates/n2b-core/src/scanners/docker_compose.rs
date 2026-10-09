@@ -40,11 +40,7 @@ pub fn is_docker_compose(name: &str) -> bool {
     )
 }
 
-pub fn scan_docker_compose(
-    path: &str,
-    content: &str,
-    aggressive: bool,
-) -> (Vec<Finding>, String) {
+pub fn scan_docker_compose(path: &str, content: &str, aggressive: bool) -> (Vec<Finding>, String) {
     let offsets = line_offsets(content);
     let mut findings: Vec<Finding> = Vec::new();
 

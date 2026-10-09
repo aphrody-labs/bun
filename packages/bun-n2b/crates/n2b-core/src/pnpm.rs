@@ -263,7 +263,8 @@ pub fn plan_package_json(pkg: &Value, cfg: &PnpmConfig, lock: Option<&str>) -> P
     }
 
     // overrides
-    let mut overrides = root.get("overrides").and_then(Value::as_object).cloned().unwrap_or_default();
+    let mut overrides =
+        root.get("overrides").and_then(Value::as_object).cloned().unwrap_or_default();
     let mut added = 0usize;
     for (key, value) in &cfg.overrides {
         if let Some(reason) = unsupported_override(key, value) {
@@ -313,8 +314,7 @@ pub fn plan_package_json(pkg: &Value, cfg: &PnpmConfig, lock: Option<&str>) -> P
 
     // trustedDependencies
     if !cfg.only_built.is_empty() {
-        let mut trusted =
-            root.get("trustedDependencies").map(str_list).unwrap_or_default();
+        let mut trusted = root.get("trustedDependencies").map(str_list).unwrap_or_default();
         let before = trusted.len();
         push_unique(&mut trusted, cfg.only_built.iter().cloned());
         if trusted.len() != before {
@@ -404,8 +404,7 @@ mod tests {
         assert!(cfg.install.contains(&("linker".into(), "\"hoisted\"".into())));
         assert!(cfg.install.contains(&("minimumReleaseAge".into(), "86400".into())));
         assert!(
-            cfg.install
-                .contains(&("minimumReleaseAgeExcludes".into(), "[\"typescript\"]".into()))
+            cfg.install.contains(&("minimumReleaseAgeExcludes".into(), "[\"typescript\"]".into()))
         );
         assert_eq!(cfg.unsupported, ["packageExtensions"]);
     }
@@ -430,8 +429,14 @@ mod tests {
         assert_eq!(out["workspaces"]["packages"], json!(["packages/*", "apps/*"]));
         assert_eq!(out["workspaces"]["catalog"]["react"], "^19.0.0");
         assert_eq!(out["workspaces"]["catalogs"]["legacy"]["react"], "^17.0.0");
-        assert_eq!(out["overrides"], json!({ "semver": "7.6.0", "lodash": "4.17.21", "foo>bar": "1.0.0" }));
-        assert_eq!(out["patchedDependencies"], json!({ "left-pad@1.3.0": "patches/left-pad.patch" }));
+        assert_eq!(
+            out["overrides"],
+            json!({ "semver": "7.6.0", "lodash": "4.17.21", "foo>bar": "1.0.0" })
+        );
+        assert_eq!(
+            out["patchedDependencies"],
+            json!({ "left-pad@1.3.0": "patches/left-pad.patch" })
+        );
         assert_eq!(out["trustedDependencies"], json!(["esbuild", "sharp"]));
         assert_eq!(out["dependencies"]["react"], "catalog:");
         assert_eq!(out["dependencies"]["lib"], "workspace:*");
@@ -463,7 +468,10 @@ mod tests {
             "[test]\nroot = \"src\"\n\n[install]\nlinker = \"hoisted\"\nminimumReleaseAge = 60\n"
         );
         assert_eq!(
-            merge_bunfig_install("[install]\nlinker = \"isolated\"\n\n[run]\nbun = true\n", &entries),
+            merge_bunfig_install(
+                "[install]\nlinker = \"isolated\"\n\n[run]\nbun = true\n",
+                &entries
+            ),
             "[install]\nlinker = \"isolated\"\nminimumReleaseAge = 60\n\n[run]\nbun = true\n"
         );
     }

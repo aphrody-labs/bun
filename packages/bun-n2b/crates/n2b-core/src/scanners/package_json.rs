@@ -427,9 +427,7 @@ static NEXT_BUILD_RE: Lazy<Regex> = Lazy::new(|| {
 
 /// Parcourt src/ du package pour détecter un import de "bun" (statique ou dynamique).
 fn package_uses_bun_import(package_json_path: &std::path::Path) -> bool {
-    let pkg_dir = package_json_path
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."));
+    let pkg_dir = package_json_path.parent().unwrap_or_else(|| std::path::Path::new("."));
     let src_dir = pkg_dir.join("src");
     if !src_dir.is_dir() {
         return false;

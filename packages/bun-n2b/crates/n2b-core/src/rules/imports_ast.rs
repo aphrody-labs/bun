@@ -22,6 +22,7 @@
 
 use aphrody_n2b_registry::{BindingKind, ImportBinding, ImportGraph};
 use oxc_allocator::Allocator;
+use oxc_ast::AstKind;
 use oxc_ast::ast::{
     BindingPattern, Declaration, Expression, ImportDeclarationSpecifier, Statement,
     VariableDeclarator,
@@ -217,6 +218,50 @@ pub(crate) struct SourceContext {
     pub imports: ImportGraph,
     pub ignored_starts: Vec<Range<u32>>,
     pub spawn_calls: Vec<usize>,
+    /// Function bodies, static blocks and class field initializers, with
+    /// whether `await` is valid directly inside them.
+    pub await_scopes: Vec<(Range<u32>, bool)>,
+    /// `await` is valid at the top level (ES module with import/export).
+    pub top_level_await: bool,
+}
+
+impl SourceContext {
+    /// Whether an `await` written at byte `index` is valid: the innermost
+    /// enclosing function is async, or there is none and the file is an ES module.
+    pub fn await_allowed(&self, index: usize) -> bool {
+        let index = index as u32;
+        self.await_scopes
+            .iter()
+            .filter(|(span, _)| span.contains(&index))
+            .min_by_key(|(span, _)| span.end - span.start)
+            .map_or(self.top_level_await, |(_, is_async)| *is_async)
+    }
+}
+
+#[derive(Default)]
+struct AwaitScopes(Vec<(Range<u32>, bool)>);
+
+impl<'a> Visit<'a> for AwaitScopes {
+    fn enter_node(&mut self, kind: AstKind<'a>) {
+        match kind {
+            AstKind::Function(f) => {
+                if let Some(body) = &f.body {
+                    self.0.push((body.span.start..body.span.end, f.r#async));
+                }
+            },
+            AstKind::ArrowFunctionExpression(f) => {
+                self.0.push((f.body.span.start..f.body.span.end, f.r#async));
+            },
+            AstKind::StaticBlock(b) => self.0.push((b.span.start..b.span.end, false)),
+            AstKind::PropertyDefinition(p) => {
+                if let Some(value) = &p.value {
+                    let span = value.span();
+                    self.0.push((span.start..span.end, false));
+                }
+            },
+            _ => {},
+        }
+    }
 }
 
 struct GraphCollect {
@@ -447,7 +492,18 @@ pub(crate) fn build_source_context(path: &str, source: &str) -> SourceContext {
             is_spawn.then_some(*start)
         })
         .collect();
-    SourceContext { imports: collect.graph, ignored_starts: collect.ignored_starts, spawn_calls }
+    let mut await_scopes = AwaitScopes::default();
+    await_scopes.visit_program(&ret.program);
+    let top_level_await = !st.is_commonjs()
+        && !st.is_script()
+        && ret.program.body.iter().any(Statement::is_module_declaration);
+    SourceContext {
+        imports: collect.graph,
+        ignored_starts: collect.ignored_starts,
+        spawn_calls,
+        await_scopes: await_scopes.0,
+        top_level_await,
+    }
 }
 
 #[cfg(test)]

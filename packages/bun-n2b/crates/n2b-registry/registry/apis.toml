@@ -16,7 +16,8 @@ aggressive  = true
 
 [[apis]]
 id          = "api/fs-writeFileSync"
-pattern     = '\bfs\.writeFileSync\s*\(\s*([^,]+?)\s*,\s*([^)]+?)\s*\)'
+# A third argument other than a utf-8 encoding (mode, flag...) has no Bun.write equivalent: no match.
+pattern     = "\\bfs\\.writeFileSync\\s*\\(\\s*([^,]+?)\\s*,\\s*([^,]+?)\\s*(?:,\\s*['\"]utf-?8['\"]\\s*)?\\)"
 message     = "remplacer fs.writeFileSync(path, data) par await Bun.write(path, data)"
 severity    = "warn"
 replace     = "template"
