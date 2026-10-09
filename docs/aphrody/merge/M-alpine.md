@@ -137,6 +137,15 @@ Aucun lot ne touche `tools/config/container/aphrody-os/Dockerfile`, `rootfs/`, `
      - retirer la section distro de `tools/config/os/wsl-build.json` ;
      - `crates/infra/aphrody-command/src/wsl/recipes.rs` : `Target::Distro` → import ; tests `aphrody-command` (`wsl`).
    - Kernel, WSLg et WSL : suppression à décider après la validation Windows.
+   - État (WX, 2026-10-09) : WSL gardée.
+     - ✅ bun `cc8a58c309e` `f06c52b5f3c` `76a80f4d74c` `51f53f372e6` `347dcf77355` `f319423ce22` : `wsl.ts`, `wsl.Dockerfile`, `wsl/**` et le workflow ; distro importée sur Windows, `bun --version` OK.
+     - ✅ WSLg : GTK 4, COSMIC, wgpu 30 et WebOS affichés (`docs/aphrody/wsl.md`).
+     - ✅ kernel `aphrody-labs/WSL2-Linux-Kernel@e5043002ed6` (`aphrody_wsl_defconfig`) ; ✅ aports `9b0f7948b54` (`aphrody/mesa` d3d12 + dozen).
+     - ⏳ `bunsh -c 'exit 0'` : la release `aphrody-v1.4.3-aphrody.2` n'a pas bunsh (`b4c195bb7b8`) ; il faut un bun musl plus récent.
+     - ⏳ workflow : GitHub Actions est désactivé sur aphrody-labs/bun (422).
+     - ⏳ d3d12 sous musl : `libd3d12.so` glibc avorte.
+     - ⏳ boot WSL du kernel : nécessite `wsl --shutdown` (Docker Desktop).
+     - ⏳ suppression côté aphrody : codex (canal `handoff-bun.md`).
 5. **A5 — allègement de `crates/os` et de la doc** (aphrody seul).
    - Supprimer `crates/os/kernel/comps/sandbox` et la ligne `aphrody-sandbox` de `Cargo.toml:301`.
    - Corriger le §5 de `docs/architecture/os/research/RUST-OS-ARCHITECTURE-AND-BAREMETAL-ANALYSIS.md`.
