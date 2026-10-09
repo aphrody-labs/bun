@@ -1,0 +1,30 @@
+# WSLg packages of the Aphrody Alpine WSL distribution (wsl.ts without --no-gui).
+# A trailing ? marks a package installed only when a repository has it.
+#
+# Mesa: aphrody-labs/aports aphrody/mesa (26.1.6-r100) adds the Gallium d3d12 driver (GL/GLES
+# on the Windows GPU through /dev/dxg) and dozen (mesa-vulkan-dzn, Vulkan over D3D12). Alpine's
+# main/mesa has neither: until the aphrody repository publishes it, GL falls back to llvmpipe
+# and Vulkan to lavapipe (mesa-vulkan-swrast).
+mesa-dri-gallium
+mesa-egl
+mesa-gl
+mesa-gles
+mesa-gbm
+mesa-vulkan-dzn?
+mesa-vulkan-swrast
+vulkan-loader
+# Wayland clients (winit, wgpu, GTK 4, Qt 6, libcosmic) talk to WSLg's Weston directly;
+# X11 libraries stay for XWayland-only toolkits.
+wayland-libs-client
+wayland-libs-cursor
+wayland-libs-egl
+libxkbcommon
+libx11
+libxcursor
+libxrandr
+libxi
+fontconfig
+font-noto
+# Probes: eglinfo/glxinfo (mesa-utils), vulkaninfo (vulkan-tools).
+mesa-utils
+vulkan-tools

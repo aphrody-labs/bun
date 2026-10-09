@@ -6,7 +6,7 @@
 // next to it.
 //
 //   bun scripts/aphrody/alpine/wsl.ts [--base <image>] [--arch x86_64|aarch64] [--out <file.wsl>]
-//       [--install <Name> [--location <dir>]]
+//       [--no-gui] [--install <Name> [--location <dir>]]
 //
 // --base defaults to ghcr.io/aphrody-labs/alpine:3.24-runtime (a local tag such as
 // aphrody-g4/alpine:3.24-runtime works). --install registers the result on this Windows
@@ -29,6 +29,7 @@ export const REQUIRED = [
   "etc/wsl-distribution.conf",
   "usr/libexec/aphrody/wsl-oobe.sh",
   "usr/libexec/aphrody/wsl-boot.sh",
+  "etc/profile.d/aphrody-wslg.sh",
   "usr/share/aphrody/wsl/aphrody.ico",
   "bin/bunsh",
 ];
@@ -153,6 +154,8 @@ export interface Options {
   out: string;
   install?: string;
   location?: string;
+  /** Install wsl/packages-gui.txt (Mesa d3d12/dozen, Wayland); --no-gui leaves it out. */
+  gui: boolean;
 }
 
 export function parse(argv: string[]): Options {
@@ -164,6 +167,7 @@ export function parse(argv: string[]): Options {
       out: { type: "string" },
       install: { type: "string" },
       location: { type: "string" },
+      "no-gui": { type: "boolean", default: false },
     },
     strict: true,
   });
@@ -175,6 +179,7 @@ export function parse(argv: string[]): Options {
     out: resolve(values.out ?? join(ROOT, "dist", `aphrody-alpine-${arch}.wsl`)),
     install: values.install,
     location: values.location,
+    gui: !values["no-gui"],
   };
 }
 
@@ -203,6 +208,8 @@ export async function build(opts: Options): Promise<{ out: string; sha256: strin
       PLATFORMS[opts.arch],
       "--build-arg",
       `BASE=${opts.base}`,
+      "--build-arg",
+      `GUI=${opts.gui ? 1 : 0}`,
       "-t",
       tag,
       ctx,

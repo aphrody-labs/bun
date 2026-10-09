@@ -126,5 +126,25 @@ test("parse defaults", () => {
   const o = parse(["--arch", "aarch64"]);
   expect(o.base).toBe("ghcr.io/aphrody-labs/alpine:3.24-runtime");
   expect(o.out.endsWith("aphrody-alpine-aarch64.wsl")).toBe(true);
+  expect(o.gui).toBe(true);
+  expect(parse(["--no-gui"]).gui).toBe(false);
   expect(() => parse(["--arch", "riscv64"])).toThrow();
+});
+
+test("package lists: one name per line, ? only as a suffix", () => {
+  for (const name of ["packages.txt", "packages-gui.txt"]) {
+    const lines = readFileSync(join(ALPINE, "wsl", name), "utf8")
+      .split("\n")
+      .map(l => l.replace(/#.*/, "").trim())
+      .filter(Boolean);
+    expect(lines.length).toBeGreaterThan(0);
+    for (const l of lines) expect(l).toMatch(/^[a-z0-9][a-z0-9.+_-]*\??$/);
+  }
+});
+
+test("WSLg profile only exports when /mnt/wslg exists", () => {
+  const sh = readFileSync(join(OVERLAY, "etc", "profile.d", "aphrody-wslg.sh"), "utf8");
+  expect(sh.startsWith("# ")).toBe(true);
+  expect(sh).toContain("if [ -d /mnt/wslg ]; then");
+  expect(sh.trimEnd().endsWith("fi")).toBe(true);
 });

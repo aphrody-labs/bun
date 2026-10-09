@@ -1,20 +1,34 @@
 # Aphrody Alpine for WSL2 (lot A4): the runtime image (Alpine 3.24 + the fork's musl Bun,
 # scripts/aphrody/alpine/runtime.Dockerfile) plus the WSL configuration (wsl/overlay:
 # /etc/wsl.conf, /etc/wsl-distribution.conf, OOBE and boot scripts, WSLg profile), the
-# packages of wsl/packages.txt and, when present, wsl/packages-gui.txt (Mesa d3d12/dozen,
-# Wayland). Built and exported to a .wsl by scripts/aphrody/alpine/wsl.ts, which assembles
-# the build context (this file, wsl/, the icon).
+# packages of wsl/packages.txt and, with GUI=1, wsl/packages-gui.txt (Mesa d3d12/dozen,
+# Wayland). Packages come from Alpine 3.24 plus the signed aphrody-labs/aports repository
+# (aphrody/mesa with the D3D12 drivers). A trailing ? marks a package skipped when absent.
+# Built and exported to a .wsl by scripts/aphrody/alpine/wsl.ts, which assembles the build
+# context (this file, wsl/, the icon).
 #
 #   bun scripts/aphrody/alpine/wsl.ts --base ghcr.io/aphrody-labs/alpine:3.24-runtime
 
 ARG BASE=ghcr.io/aphrody-labs/alpine:3.24-runtime
 FROM ${BASE}
 USER root
+ARG GUI=1
+ARG APHRODY_APORTS_REF=15e5fcd2686d113b0ebc0f356bcb974e1e612d58
 
+ADD https://raw.githubusercontent.com/aphrody-labs/aports/${APHRODY_APORTS_REF}/aphrody/keys/aphrody-labs.rsa.pub /etc/apk/keys/aphrody-labs.rsa.pub
 COPY wsl/packages*.txt /tmp/wsl/
 RUN set -eu; \
-    pkgs=$(cat /tmp/wsl/packages*.txt | sed 's/#.*//' | tr -s ' \n' ' '); \
-    apk add --no-cache $pkgs; \
+    repo="https://github.com/aphrody-labs/aports/releases/download/aphrody-3.24-$(apk --print-arch)"; \
+    grep -qF "$repo" /etc/apk/repositories || echo "$repo" >> /etc/apk/repositories; \
+    chmod 0644 /etc/apk/keys/aphrody-labs.rsa.pub; \
+    lists=/tmp/wsl/packages.txt; \
+    [ "$GUI" = 1 ] && lists="$lists /tmp/wsl/packages-gui.txt"; \
+    pkgs=$(cat $lists | sed 's/#.*//'); \
+    apk update -q; \
+    apk add --no-cache $(echo "$pkgs" | grep -v '?$'); \
+    for p in $(echo "$pkgs" | grep '?$' | tr -d '?'); do \
+      if apk search -q -x "$p" | grep -q .; then apk add --no-cache "$p"; else echo "absent: $p"; fi; \
+    done; \
     rm -rf /tmp/wsl
 
 COPY wsl/overlay/ /
