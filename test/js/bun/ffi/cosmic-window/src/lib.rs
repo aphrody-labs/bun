@@ -6,6 +6,7 @@
 //! another thread the call is deferred until the event loop returns.
 
 use std::ffi::{CStr, c_char};
+use std::panic::AssertUnwindSafe;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 use std::thread::ThreadId;
@@ -107,7 +108,8 @@ impl cosmic::Application for Window {
 /// Opens a libcosmic window and runs its event loop on the calling thread.
 ///
 /// Returns 0 once the window closed (close button or `timeout_ms`), 1 if libcosmic failed to
-/// start, 2 for invalid arguments and 3 if a window is already running in this process.
+/// start or panicked, 2 for invalid arguments and 3 if a window is already running in this
+/// process.
 /// `closed_by` (nullable) receives 0 for the close button and 1 for `timeout_ms`.
 ///
 /// # Safety
@@ -147,13 +149,21 @@ pub unsafe extern "C" fn bun_cosmic_window_run(
         on_created,
         caller: std::thread::current().id(),
     };
-    let settings = Settings::default().size(Size::new(width as f32, height as f32));
-    let status = match cosmic::app::run::<Window>(settings, flags) {
-        Ok(()) => 0,
-        Err(e) => {
+    // An opaque window keeps softbuffer (tiny-skia) on a depth-24 visual; Xvfb's ARGB visual is
+    // rejected with "does not use softbuffer's pixel format".
+    let settings = Settings::default()
+        .size(Size::new(width as f32, height as f32))
+        .transparent(false);
+    // A panic must not unwind into the JIT frames of the bun:ffi caller, which have no unwind info.
+    let status = match std::panic::catch_unwind(AssertUnwindSafe(|| {
+        cosmic::app::run::<Window>(settings, flags)
+    })) {
+        Ok(Ok(())) => 0,
+        Ok(Err(e)) => {
             eprintln!("bun_cosmic_window_run: {e}");
             1
         }
+        Err(_) => 1,
     };
     if DEFERRED_CREATED.swap(false, Ordering::SeqCst) {
         if let Some(on_created) = on_created {
