@@ -11,8 +11,8 @@
 //
 // Scope: Pages Router on the Node.js runtime, global CSS and CSS modules (Bun's
 // CSS bundler, plus the Bun plugins given to `withBun`, e.g. Tailwind CSS).
-// The App Router (Server and Client Components, route handlers) is compiled by
-// build-app.js. Server Actions, middleware/proxy, instrumentation, the edge
+// The App Router (Server and Client Components, Server Actions, route handlers)
+// is compiled by build-app.js. Middleware/proxy, instrumentation, the edge
 // runtime, next/font and next/image static imports are rejected or produce
 // empty manifests. next/dynamic preloads nothing: the chunk of a dynamic import
 // is fetched before hydration, by its id in react-loadable-manifest.json.

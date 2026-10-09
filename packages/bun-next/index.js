@@ -53,7 +53,7 @@ function bunPlugins(options, projectDir) {
  * deployment id its build baked into the client bundles.
  *
  * `bundler: "bun"` (the default) also compiles `next build` with `Bun.build`
- * (Pages Router and App Router without Server Actions, experimental; needs `bun --bun next build`, and `next-bun patch`
+ * (Pages Router and App Router with Server Actions, experimental; needs `bun --bun next build`, and `next-bun patch`
  * unless next is @aphrody/next, which has the Bun bundler built in)
  * unless the command passes `--turbopack` or `--webpack`. `bundler: "turbopack"`
  * leaves the bundler to Next. With Bun.build, `plugins` are added to the client

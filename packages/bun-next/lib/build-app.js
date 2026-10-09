@@ -132,7 +132,13 @@ async function buildApp(state) {
     if (code.includes("private-next-rsc-cache-wrapper"))
       throw new UnsupportedError(`"use cache" (${relativeToDir(file)})`);
     let mod = actionModules.get(file);
-    if (!mod) actionModules.set(file, (mod = { file, ids: info.actionIds, fromServer: false }));
+    if (!mod) {
+      // Newer releases map an id to `{ name, loc }`, older ones to the export name.
+      const ids = Object.fromEntries(
+        Object.entries(info.actionIds).map(([id, action]) => [id, typeof action === "object" ? action.name : action]),
+      );
+      actionModules.set(file, (mod = { file, ids, fromServer: false }));
+    }
     if (layer === "rsc") mod.fromServer = true;
   };
 
