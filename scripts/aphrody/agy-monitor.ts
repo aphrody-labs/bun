@@ -155,7 +155,7 @@ switch (cmd) {
         const names = (await Bun.$`gh api repos/${ORG}/${repo}/branches --paginate -q .[].name`.nothrow().text())
           .trim()
           .split("\n")
-          .filter(b => /bun/i.test(b));
+          .filter(b => /(^|[-_/])bun($|[-_/])/i.test(b));
         if (names.length) console.log(`${repo}: ${names.join(", ")}`);
       }),
     );
