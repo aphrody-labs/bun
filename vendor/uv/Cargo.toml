@@ -16,6 +16,7 @@ authors = ["uv"]
 license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
+lzma-rust2 = { version = "=0.16.5", default-features = false }
 uv = { version = "0.12.24", path = "crates/uv", default-features = false }
 uv-audit = { version = "0.0.91", path = "crates/uv-audit" }
 uv-audit-operations = { version = "0.0.91", path = "crates/uv-audit-operations" }

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "target": "wasm32-wasip1",
+  "sdk": {
+    "version": "34.0",
+    "url": "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-34/wasi-sdk-34.0-x86_64-linux.tar.gz",
+    "sha256": "b761e3a0721dbae9c09a0059e5fdb2bf917d1b4a8a7b430fb3b5aafb0984b2c4",
+    "directory": "wasi-sdk-34.0-x86_64-linux"
+  },
+  "runtime": {
+    "version": "49.0.2",
+    "url": "https://github.com/bytecodealliance/wasmtime/releases/download/v49.0.2/wasmtime-v49.0.2-x86_64-linux.tar.xz",
+    "sha256": "a4d6e9e3a5a60f527cf7793d674c48930c80c2e8977995b8a275cad3254b9322",
+    "directory": "wasmtime-v49.0.2-x86_64-linux"
+  },
+  "provenance": {
+    "sdk": "https://api.github.com/repos/WebAssembly/wasi-sdk/releases/tags/wasi-sdk-34",
+    "runtime": "https://api.github.com/repos/bytecodealliance/wasmtime/releases/tags/v49.0.2",
+    "checkedAt": "2026-10-09"
+  }
+}

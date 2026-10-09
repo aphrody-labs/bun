@@ -47,6 +47,7 @@ tracing = { workspace = true }
 uv-preview = { workspace = true, features = ["testing"] }
 
 anyhow = { workspace = true }
+lzma-rust2 = { workspace = true, features = ["encoder", "lzip", "std"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 

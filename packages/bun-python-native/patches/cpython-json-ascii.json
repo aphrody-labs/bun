@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 1,
+  "component": "cpython",
+  "version": "3.13.16",
+  "upstream": "https://github.com/python/cpython",
+  "revision": "cbc944f4bc59639a444dd971c737788ba2283a91",
+  "license": {
+    "spdx": "Python-2.0",
+    "path": "cpython-LICENSE.txt",
+    "sha256": "78b12c3a81360b357002334f0e70ea0e92eebf7a9b358805c03c48484945f3bb"
+  },
+  "patch": {
+    "path": "cpython-3.13.16-json-ascii.patch",
+    "sha256": "469a493e518619f0002858dba9918ab01d38ee7869d06183368d81987e7663db",
+    "strip": 1
+  },
+  "files": [
+    {
+      "path": "Modules/_json.c",
+      "preimageSHA256": "dae04720c36ec5f857fe8c27995dea0d25757b04b176a38a8430930aac954c3c",
+      "postimageSHA256": "0768e57c044ec41e9e412942fc8f59a7e0c5666257e3a4e2f7002006867ffe67"
+    },
+    {
+      "path": "Lib/test/test_json/test_speedups.py",
+      "preimageSHA256": "5c7447bdfc2f2a43905c7b8e189c1233eec3bfcd2633f5ccd707089511c6da91",
+      "postimageSHA256": "5f329197cca70842422e8ac59c670e4d940bb555f19fcc068956c3989de8a0f3"
+    }
+  ],
+  "purpose": "Write unescaped ASCII JSON strings directly; reuse validated prefix on escaping fallback",
+  "validation": {
+    "status": "passed",
+    "factory": "PCbuild/build.bat",
+    "flags": [
+      "-p",
+      "x64",
+      "-c",
+      "Release",
+      "-e",
+      "-M",
+      "-q"
+    ],
+    "compiler": "MSC v.1944 64 bit AMD64",
+    "pgo": false,
+    "gil": true,
+    "jit": false,
+    "extensions": "full including ctypes/OpenSSL/Tk",
+    "buildWarnings": 0,
+    "buildErrors": 0,
+    "jsonTests": {
+      "patched": 204,
+      "baseline": 201,
+      "skippedEach": 4
+    },
+    "standardExtensions": {
+      "tests": 2371,
+      "skipped": 66,
+      "failures": 0,
+      "run": "0a8dde27-20c8-4159-b426-7a0901a8e1f1",
+      "requiresPatch": "cpython-3.13.16-ssl-winerror.patch"
+    },
+    "gates": [
+      {
+        "id": "5b750b21-3533-427c-9e21-039b7c73ef14",
+        "kind": "cpython-build-full-baseline",
+        "status": "passed",
+        "exit_code": 0,
+        "command": "[\"cmd.exe\",\"/d\",\"/c\",\"C:\\\\bun\\\\.coord\\\\cpython-baseline\\\\PCbuild\\\\build.bat\",\"-p\",\"x64\",\"-c\",\"Release\",\"-e\",\"-M\",\"-q\"]",
+        "cwd": "C:\\bun\\.coord\\cpython-baseline"
+      },
+      {
+        "id": "db170368-ff08-48ff-a252-5aa43bab37d8",
+        "kind": "cpython-build-full-patched",
+        "status": "passed",
+        "exit_code": 0,
+        "command": "[\"cmd.exe\",\"/d\",\"/c\",\"C:\\\\bun\\\\.coord\\\\cpython\\\\PCbuild\\\\build.bat\",\"-p\",\"x64\",\"-c\",\"Release\",\"-e\",\"-M\",\"-q\"]",
+        "cwd": "C:\\bun\\.coord\\cpython"
+      },
+      {
+        "id": "519ed6f1-cbc8-46f6-b765-1d6cf020f2b3",
+        "kind": "cpython-test-json-full-baseline",
+        "status": "passed",
+        "exit_code": 0,
+        "command": "[\"C:/bun/.coord/cpython-baseline/PCbuild/amd64/python.exe\",\"-m\",\"test\",\"-v\",\"test_json\"]",
+        "cwd": "C:\\bun\\.coord\\cpython-baseline"
+      },
+      {
+        "id": "29f8230b-609d-400b-aab8-8910a3c2c5ad",
+        "kind": "cpython-test-json-full-patched",
+        "status": "passed",
+        "exit_code": 0,
+        "command": "[\"C:/bun/.coord/cpython/PCbuild/amd64/python.exe\",\"-m\",\"test\",\"-v\",\"test_json\"]",
+        "cwd": "C:\\bun\\.coord\\cpython"
+      },
+      {
+        "id": "544f2b29-b3c1-4ea5-98ad-edbb0b447ac1",
+        "kind": "cpython-distributable-patches-check",
+        "status": "passed",
+        "exit_code": 0,
+        "command": "[\"git\",\"-C\",\"C:/bun/.coord/cpython-baseline\",\"apply\",\"--check\",\"C:/bun/packages/bun-python-native/patches/cpython-3.13.16-json-ascii.patch\",\"C:/bun/packages/bun-python-native/patches/cpython-3.13.16-ssl-winerror.patch\"]",
+        "cwd": "C:\\bun\\.coord\\cpython-baseline"
+      }
+    ],
+    "benchmark": {
+      "run": "1059c3d7-6fc3-4fca-a8ec-f16c33173e83",
+      "samplesPerImplementationPerCase": 25,
+      "repeatsPerSample": 10,
+      "comparisons": [
+        {
+          "case": "records-10000-ascii",
+          "baselineMs": 2.37671,
+          "patchedMs": 1.7143599999999999,
+          "speedup": 1.3863540913227095,
+          "improvementPercent": 27.86835583642936,
+          "bytes": 267781,
+          "sha256": "61e0d07dc0d966ff94fc19d61d01e933a57a13e2d5cd9b326308930635c6473a"
+        },
+        {
+          "case": "records-10000-escaped",
+          "baselineMs": 2.4213999999999998,
+          "patchedMs": 2.06325,
+          "speedup": 1.17358536289834,
+          "improvementPercent": 14.791029982654658,
+          "bytes": 287781,
+          "sha256": "e0079013c738911eb799b03db18b68a349b2b0cb7fae30b0bb3ff83285fb69b9"
+        },
+        {
+          "case": "records-10000-unicode",
+          "baselineMs": 2.41059,
+          "patchedMs": 2.04669,
+          "speedup": 1.1777992759040208,
+          "improvementPercent": 15.095889388075124,
+          "bytes": 377781,
+          "sha256": "291be530360f2290e7e81418969f0be65e314630d292d3210d6d143e4a7058e6"
+        },
+        {
+          "case": "wide-prefix-ascii",
+          "baselineMs": 3.3272399999999998,
+          "patchedMs": 2.73956,
+          "speedup": 1.2145161996817007,
+          "improvementPercent": 17.66268739255358,
+          "bytes": 267790,
+          "sha256": "c9d9703d9ab7732b2b1a314c34271bb2378a19835db55be836ac5d3696e6d4be"
+        },
+        {
+          "case": "long-ascii",
+          "baselineMs": 1.5211000000000001,
+          "patchedMs": 0.7795,
+          "speedup": 1.951379089159718,
+          "improvementPercent": 48.75419104595359,
+          "bytes": 1000004,
+          "sha256": "e7ed80e479a36dc72d2c598d47c2368e8b5f76ad20078f24c44fd03a6051034b"
+        },
+        {
+          "case": "long-ascii-escaped-tail",
+          "baselineMs": 1.50827,
+          "patchedMs": 1.37729,
+          "speedup": 1.0950997974282832,
+          "improvementPercent": 8.684121543225022,
+          "bytes": 1000006,
+          "sha256": "2355eb9a2ed9def9bb8fee115327120169227581206602ff2ee7e5c0c70f2796"
+        }
+      ],
+      "scope": "Six JSON datasets on one native Windows host; no whole-interpreter parity claim"
+    },
+    "binaries": {
+      "baseline": {
+        "executable": "C:/bun/.coord/cpython-baseline/PCbuild/amd64/python.exe",
+        "library": "C:/bun/.coord/cpython-baseline/PCbuild/amd64/python313.dll",
+        "stdlib": "C:/bun/.coord/cpython-baseline/Lib",
+        "extensions": "C:/bun/.coord/cpython-baseline/PCbuild/amd64",
+        "executableSHA256": "0ba82f8f91be45a8eacdd49214f97a062e22c8dfc6772f319d0fda44c8ae2599",
+        "librarySHA256": "67e4e3a9a5be9e47439d68f6a69f8c4ab9b22b1568fe52d0dcb27ca1bf90bce6"
+      },
+      "patched": {
+        "executable": "C:/bun/.coord/cpython/PCbuild/amd64/python.exe",
+        "library": "C:/bun/.coord/cpython/PCbuild/amd64/python313.dll",
+        "stdlib": "C:/bun/.coord/cpython/Lib",
+        "extensions": "C:/bun/.coord/cpython/PCbuild/amd64",
+        "executableSHA256": "01ba26b7847fbf1dfaed5615afb1bc1ec2c6c49543798036adc41803e1a6a0a7",
+        "librarySHA256": "cec6bc489beca03e828ba45ef0fb1bfec2f8f290cb9747bbec08f5b906dffb73"
+      }
+    }
+  }
+}

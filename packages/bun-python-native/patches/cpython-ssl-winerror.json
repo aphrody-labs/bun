@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "component": "cpython",
+  "version": "3.13.16",
+  "upstream": "https://github.com/python/cpython",
+  "revision": "cbc944f4bc59639a444dd971c737788ba2283a91",
+  "license": {
+    "spdx": "Python-2.0",
+    "path": "cpython-LICENSE.txt",
+    "sha256": "78b12c3a81360b357002334f0e70ea0e92eebf7a9b358805c03c48484945f3bb"
+  },
+  "patch": {
+    "path": "cpython-3.13.16-ssl-winerror.patch",
+    "sha256": "ff3b3b9b6fbc692666c6e9b76d9721039abf5405a531471f21a0f403ce7ef29a",
+    "strip": 1
+  },
+  "files": [
+    {
+      "path": "Lib/test/test_ssl.py",
+      "preimageSHA256": "e86a7fb441edb7ef7fa97781581fa15b1649fc63d80814574729a1e0c4a55750",
+      "postimageSHA256": "c3959ce6e5a60a0f47bd494f1be538d34f6c16ccc689995075f9911c3807ed33"
+    }
+  ],
+  "purpose": "Accept ConnectionResetError.winerror 10054 without depending on English Windows message; retain existing TLS error checks for all other exceptions",
+  "validation": {
+    "status": "passed",
+    "baselineReproduced": {
+      "kind": "cpython-stock-localized-ssl-repro",
+      "command": [
+        "python.exe",
+        "-m",
+        "test",
+        "test_ssl",
+        "-m",
+        "test_pha_required_nocert"
+      ],
+      "failure": "English regex rejected localized WinError10054"
+    },
+    "target": {
+      "id": "7fc03a85-44d3-4ff7-91f0-d875f7be70b8",
+      "kind": "cpython-localized-ssl-fixed-target",
+      "status": "passed",
+      "exit_code": 0,
+      "command": "[\"C:/bun/.coord/cpython/PCbuild/amd64/python.exe\",\"-m\",\"test\",\"test_ssl\",\"-m\",\"test_pha_required_nocert\"]",
+      "cwd": "C:\\bun\\.coord\\cpython"
+    },
+    "standardExtensions": {
+      "id": "0a8dde27-20c8-4159-b426-7a0901a8e1f1",
+      "kind": "cpython-standard-extensions-full-patched-final",
+      "status": "passed",
+      "exit_code": 0,
+      "command": "[\"C:/bun/.coord/cpython/PCbuild/amd64/python.exe\",\"-m\",\"test\",\"test_ctypes\",\"test_ssl\",\"test_sqlite3\",\"test_bz2\",\"test_lzma\",\"test_zlib\",\"test_decimal\",\"test_tcl\"]",
+      "cwd": "C:\\bun\\.coord\\cpython"
+    },
+    "tests": 2371,
+    "skipped": 66,
+    "failures": 0,
+    "runtimeBinaryUnchanged": true
+  }
+}

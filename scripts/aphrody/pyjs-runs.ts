@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir } from "node:fs/promises";
+import { appendFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { BunPython } from "./pyjs-store.ts";
 
@@ -14,6 +14,8 @@ type Receipt = {
   stdout: string;
   stderr: string;
   bun: string;
+  bunRevision?: string;
+  executable?: string;
 };
 const busy = (error: unknown) => error instanceof Error && "code" in error && error.code === "SQLITE_BUSY";
 export const receiptsRoot = (registry: BunPython) => resolve(dirname(registry.path), "tmp/bun-python/runs");
@@ -33,10 +35,19 @@ async function saveRun(registry: BunPython, receipt: Receipt) {
       JSON.stringify(receipt.command),
       receipt.cwd,
       receipt.startedAt,
-      JSON.stringify({ bun: receipt.bun, receipt: true }),
+      JSON.stringify({
+        bun: receipt.bun,
+        bunRevision: receipt.bunRevision,
+        executable: receipt.executable,
+        receipt: true,
+      }),
     );
   const row = registry.db.query<{ status: string }, [string]>("SELECT status FROM runs WHERE id=?").get(receipt.id)!;
-  if (row.status === "running") registry.finishRun(receipt.id, receipt.exitCode, stdout, stderr);
+  if (row.status === "running") {
+    registry.finishRun(receipt.id, receipt.exitCode, stdout, stderr);
+    if (receipt.finishedAt)
+      registry.db.query("UPDATE runs SET finished_at=? WHERE id=?").run(receipt.finishedAt, receipt.id);
+  }
   const existing = registry.db
     .query("SELECT id FROM artifacts WHERE run_id=? AND kind='command-stdout'")
     .get(receipt.id);
@@ -73,6 +84,8 @@ export async function runRecorded(registry: BunPython, kind: string, command: st
     stdout: resolve(directory, `${id}.stdout`),
     stderr: resolve(directory, `${id}.stderr`),
     bun: Bun.version,
+    bunRevision: Bun.revision,
+    executable: process.execPath,
   };
   const receiptPath = resolve(directory, `${id}.receipt.json`);
   await Bun.write(receiptPath, JSON.stringify(receipt));
@@ -85,7 +98,12 @@ export async function runRecorded(registry: BunPython, kind: string, command: st
         JSON.stringify(command),
         cwd,
         receipt.startedAt,
-        JSON.stringify({ bun: Bun.version, receipt: receiptPath }),
+        JSON.stringify({
+          bun: Bun.version,
+          bunRevision: Bun.revision,
+          executable: process.execPath,
+          receipt: receiptPath,
+        }),
       );
   } catch (error) {
     if (!busy(error)) throw error;
@@ -95,7 +113,8 @@ export async function runRecorded(registry: BunPython, kind: string, command: st
     let buffered = 0;
     try {
       for await (const chunk of stream) {
-        writer.write(chunk);
+        const written = writer.write(chunk);
+        if (typeof written !== "number") await written;
         destination?.write(chunk);
         buffered += chunk.length;
         if (buffered >= 65536) {
@@ -109,7 +128,14 @@ export async function runRecorded(registry: BunPython, kind: string, command: st
   };
   let code = 1;
   try {
-    await using child = Bun.spawn({ cmd: command, cwd, stdin: "inherit", stdout: "pipe", stderr: "pipe" });
+    await using child = Bun.spawn({
+      cmd: command,
+      cwd,
+      env: process.env,
+      stdin: "inherit",
+      stdout: "pipe",
+      stderr: "pipe",
+    });
     const results = await Promise.all([
       capture(child.stdout, receipt.stdout, output ? undefined : process.stdout),
       capture(child.stderr, receipt.stderr, process.stderr),
@@ -117,7 +143,7 @@ export async function runRecorded(registry: BunPython, kind: string, command: st
     ]);
     code = results[2];
   } catch (error) {
-    await Bun.write(receipt.stderr, String(error));
+    await appendFile(receipt.stderr, `\n${String(error)}\n`);
     process.stderr.write(`${String(error)}\n`);
   }
   receipt.finishedAt = new Date().toISOString();

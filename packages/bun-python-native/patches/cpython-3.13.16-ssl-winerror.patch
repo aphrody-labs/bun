@@ -1,0 +1,38 @@
+diff --git a/Lib/test/test_ssl.py b/Lib/test/test_ssl.py
+index b4e6e29..7cfe699 100644
+--- a/Lib/test/test_ssl.py
++++ b/Lib/test/test_ssl.py
+@@ -5069,14 +5069,7 @@ def msg_cb(conn, direction, version, content_type, msg_type, data):
+                 s.write(b'PHA')
+                 # test sometimes fails with EOF error. Test passes as long as
+                 # server aborts connection with an error.
+-                with self.assertRaisesRegex(
+-                    OSError,
+-                    ('certificate required'
+-                     '|EOF occurred'
+-                     '|closed by the remote host'
+-                     '|Connection reset by peer'
+-                     '|Broken pipe')
+-                ):
++                with self.assertRaises(OSError) as caught:
+                     # receive CertificateRequest
+                     data = s.recv(1024)
+                     self.assertEqual(data, b'OK\n')
+@@ -5087,6 +5080,17 @@ def msg_cb(conn, direction, version, content_type, msg_type, data):
+                     # receive alert
+                     s.recv(1024)
+ 
++                error = caught.exception
++                if not (isinstance(error, ConnectionResetError)
++                        and getattr(error, 'winerror', None) == 10054):
++                    self.assertRegex(
++                        str(error),
++                        ('certificate required'
++                         '|EOF occurred'
++                         '|closed by the remote host'
++                         '|Connection reset by peer'
++                         '|Broken pipe'))
++
+     def test_pha_optional(self):
+         if support.verbose:
+             sys.stdout.write("\n")

@@ -1,5 +1,4 @@
 import { resolve } from "node:path";
-import { readGraphFile } from "./engine-graph.ts";
 import { indexCargo, indexFiles, parseCsv } from "./pyjs-index.ts";
 import { recoverRuns, runRecorded } from "./pyjs-runs.ts";
 import { BunPython, registryPath } from "./pyjs-store.ts";
@@ -41,7 +40,7 @@ if (command === "recover") {
   const repository = registry.repository(name, "source", resolve(root), flag("--revision") ?? null);
   const data =
     command === "import-graph" && Bun.file(input).size > 64 * 1024 * 1024
-      ? await readGraphFile(input)
+      ? await (await import("./engine-graph.ts")).readGraphFile(input)
       : await Bun.file(input).json();
   const sha256 = await registry.artifact(input, command);
   console.log(

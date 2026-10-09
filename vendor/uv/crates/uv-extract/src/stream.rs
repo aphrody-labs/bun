@@ -2,6 +2,8 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 
+use async_compression::codecs::Xz2Decoder;
+use async_compression::codecs::lzma::params::LzmaDecoderParams;
 use async_zip::base::read::cd::Entry;
 use async_zip::error::ZipError;
 use futures::executor::block_on;
@@ -964,6 +966,23 @@ async fn untar_lzma<R: AsyncRead + Unpin>(
     untar_compressed(decoder, target).await
 }
 
+async fn untar_lzip<R: AsyncRead + Unpin>(
+    reader: R,
+    target: &Path,
+) -> Result<Vec<UnhashedFile>, Error> {
+    let reader = tokio::io::BufReader::with_capacity(DEFAULT_BUF_SIZE, reader);
+    let codec = Xz2Decoder::try_from(LzmaDecoderParams::Lzip {
+        mem_limit: LZMA_MEMORY_LIMIT,
+        flags: 0,
+    })
+    .map_err(io::Error::from)
+    .map_err(Error::Io)?;
+    let mut decoder =
+        async_compression::tokio::bufread::LzmaDecoder::with_codec(reader, codec.into());
+    decoder.multiple_members(true);
+    untar_compressed(decoder, target).await
+}
+
 /// Unpack a `.tar` archive into the target directory, without requiring `Seek`.
 ///
 /// This is useful for unpacking files as they're being downloaded.
@@ -1000,21 +1019,18 @@ pub async fn archive(
         SourceDistExtension::Legacy(LegacySourceDistExtension::TarZst) => {
             untar_zst(reader, target.path()).await
         }
-        SourceDistExtension::Legacy(LegacySourceDistExtension::TarBz2)
-        | SourceDistExtension::Legacy(LegacySourceDistExtension::Tbz) => {
-            untar_bz2(reader, target.path()).await
-        }
-        SourceDistExtension::Legacy(LegacySourceDistExtension::TarXz)
-        | SourceDistExtension::Legacy(LegacySourceDistExtension::Txz) => {
-            untar_xz(reader, target.path()).await
-        }
+        SourceDistExtension::Legacy(
+            LegacySourceDistExtension::TarBz2 | LegacySourceDistExtension::Tbz,
+        ) => untar_bz2(reader, target.path()).await,
+        SourceDistExtension::Legacy(
+            LegacySourceDistExtension::TarXz | LegacySourceDistExtension::Txz,
+        ) => untar_xz(reader, target.path()).await,
         SourceDistExtension::Legacy(LegacySourceDistExtension::TarLzma) => {
             untar_lzma(reader, target.path()).await
         }
-        SourceDistExtension::Legacy(LegacySourceDistExtension::TarLz)
-        | SourceDistExtension::Legacy(LegacySourceDistExtension::Tlz) => {
-            Err(Error::UnsupportedCompression)
-        }
+        SourceDistExtension::Legacy(
+            LegacySourceDistExtension::TarLz | LegacySourceDistExtension::Tlz,
+        ) => untar_lzip(reader, target.path()).await,
     }?;
     Ok((target, files))
 }

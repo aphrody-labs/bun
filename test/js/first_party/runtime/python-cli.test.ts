@@ -22,7 +22,7 @@ writeFileSync(join(root, "cli_module.py"), executableCheck + "assert sys.argv[1]
 
 async function run(args: string[], input?: string, env = environment, argv0?: string) {
   await using child = Bun.spawn({
-    cmd: [bunExe(), ...args],
+    cmd: [bunExe(), ...(args[0] === "-e" ? ["--no-install"] : []), ...args],
     cwd: root,
     env,
     argv0,
@@ -352,3 +352,111 @@ nativeTest.concurrent("missing host fails before Python source evaluation", asyn
   expect(result.code).toBe(1);
   expect(result.err).toContain("cannot load Python host");
 });
+
+test.concurrent("Python compiler help distinguishes native executables, extension ABI and WASI", async () => {
+  const result = await run(["compile", "--help"]);
+  expect(result.out).toContain("--format exe|shared|wasm");
+  expect(result.out).toContain("PyInit_*");
+  expect(result.out).toContain("CPython WASI toolchain");
+  expect(result.code).toBe(0);
+});
+
+nativeTest.concurrent("Python compilation cannot overwrite a source or rename host formats", async () => {
+  using dir = tempDir("buv-compile-validation", { "entry.py": "print('SOURCE_PRESERVED')\n" });
+  const source = join(String(dir), "entry.py");
+  const initial = await Bun.file(source).text();
+  const collision = await run(["compile", source, "--outfile", source, "--force", "--backend-ready"]);
+  expect(collision.err).toContain("output cannot replace Python source");
+  expect(await Bun.file(source).text()).toBe(initial);
+  expect(collision.code).toBe(1);
+  const incompatible = await run([
+    "compile",
+    source,
+    "--format",
+    "shared",
+    "--outfile",
+    join(String(dir), "renamed.wasm"),
+    "--backend-ready",
+  ]);
+  expect(incompatible.err).toContain("shared library suffix is incompatible");
+  expect(await Bun.file(join(String(dir), "renamed.wasm")).exists()).toBe(false);
+  expect(incompatible.code).toBe(1);
+});
+
+nativeTest.concurrent("Python WASM compilation rejects an unavailable real builder without an artifact", async () => {
+  using dir = tempDir("buv-compile-wasi-unavailable", { "entry.py": "print(42)\n" });
+  const output = join(String(dir), "entry.wasm");
+  const result = await run([
+    "build",
+    join(String(dir), "entry.py"),
+    "--compile",
+    "--target=wasm",
+    "--outfile",
+    output,
+    "--wasm-builder",
+    join(String(dir), "missing-builder.ts"),
+  ]);
+  expect(result.err).toContain("WASM builder and native Buv executable must exist");
+  expect(await Bun.file(output).exists()).toBe(false);
+  expect(result.code).toBe(1);
+});
+
+const compilerTest = test.skipIf(
+  !python ||
+    !process.env.BUN_PYTHON_HOST_LIBRARY ||
+    !process.env.BUN_PYTHON_LIBPYTHON ||
+    process.env.BUV_TEST_PYTHON_COMPILER !== "1",
+);
+compilerTest(
+  "offline native Cython produces a loadable Python extension and a real executable",
+  async () => {
+    using dir = tempDir("buv-cython-products", {
+      "calc.py": "def add(a, b):\n    return a + b\n",
+      "app.py": "print('COMPILED_PYTHON_OK')\n",
+    });
+    const library = join(String(dir), process.platform === "win32" ? "calc.pyd" : "calc.so");
+    const module = await run([
+      "build",
+      join(String(dir), "calc.py"),
+      "--compile",
+      "--format",
+      "shared",
+      "--outfile",
+      library,
+      "--offline",
+    ]);
+    expect(module.err).not.toContain("buv compile:");
+    expect(module.code).toBe(0);
+    const moduleReceipt = JSON.parse(module.out.split(/\r?\n/).at(-1)!);
+    expect(moduleReceipt.abi).toBe("PyInit_calc");
+    expect(moduleReceipt.standalone).toBe(false);
+    const loaded = await run([
+      "python",
+      "-c",
+      `import importlib.util; spec=importlib.util.spec_from_file_location('calc',${JSON.stringify(library)}); mod=importlib.util.module_from_spec(spec); spec.loader.exec_module(mod); print(mod.add(19,23))`,
+    ]);
+    expect(loaded.out).toBe("42");
+    expect(loaded.code).toBe(0);
+    const executable = join(String(dir), process.platform === "win32" ? "program.exe" : "program");
+    const built = await run(["compile", join(String(dir), "app.py"), "--outfile", executable, "--offline"]);
+    expect(built.code).toBe(0);
+    const receipt = JSON.parse(built.out.split(/\r?\n/).at(-1)!);
+    expect(receipt.abi).toBe("CPython-embedded-executable");
+    expect(receipt.runtimeDependencies).toContain("CPython standard library");
+    await using child = Bun.spawn({
+      cmd: [executable],
+      cwd: String(dir),
+      env: {
+        ...environment,
+        PYTHONHOME: receipt.python.prefix,
+        PATH: receipt.python.prefix + (process.platform === "win32" ? ";" : ":") + (environment.PATH ?? ""),
+      },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [out, err, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+    expect({ out, err }).toEqual({ out: "COMPILED_PYTHON_OK\n", err: "" });
+    expect(code).toBe(0);
+  },
+  15000,
+);

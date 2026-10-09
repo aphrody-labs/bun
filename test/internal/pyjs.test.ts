@@ -244,3 +244,133 @@ test("file lookup, run filters and streamed artifact hashes preserve exact evide
     sha256: expected,
   });
 });
+
+let nativeGraphBuiltin: typeof import("bun:graph-native") | undefined;
+try {
+  nativeGraphBuiltin = require("bun:graph-native");
+} catch (error) {
+  if (process.env["BUV_TEST_NATIVE_GRAPH"] === "1" || (error as NodeJS.ErrnoException).code !== "MODULE_NOT_FOUND")
+    throw error;
+}
+
+test.skipIf(!nativeGraphBuiltin)(
+  "native Rust extraction preserves Unicode evidence, confidence and directed paths",
+  async () => {
+    const scope = { source: "graph:fixture" as const, profile: "aphrody" };
+    const built = await nativeGraphBuiltin!.executeGraph({
+      op: "build",
+      scope,
+      files: [{ path: "src/été.rs", content: "pub fn café() -> i32 { 42 }\npub fn run() -> i32 { café() }\n" }],
+      packages: { package_of: { "src/été.rs": "fixture" }, package_dir: { fixture: "src" } },
+    });
+    expect(built.scope).toEqual(scope);
+    expect(built.result.parse_errors).toEqual([]);
+    const graph = built.result.graph;
+    const cafe = graph.nodes.find(node => node.label === "café()");
+    const run = graph.nodes.find(node => node.label === "run()");
+    expect(cafe).toMatchObject({ source_file: "src/été.rs", lang: "rust", package: "fixture" });
+    expect(run).toMatchObject({ source_file: "src/été.rs", lang: "rust" });
+    expect(graph.links.find(link => link.source === run!.id && link.target === cafe!.id)).toMatchObject({
+      relation: "calls",
+      confidence: "EXTRACTED",
+      confidence_score: 1,
+      source_file: "src/été.rs",
+    });
+    const path = await nativeGraphBuiltin!.executeGraph({
+      op: "path",
+      scope,
+      graph,
+      from: run!.id,
+      to: cafe!.id,
+      directed: true,
+      relations: ["calls"],
+    });
+    expect(path.result.hops?.map(hop => hop.node)).toEqual([run!.id, cafe!.id]);
+    expect(path.result.hops?.[1]?.forward).toBe(true);
+    const reverse = await nativeGraphBuiltin!.executeGraph({
+      op: "path",
+      scope,
+      graph,
+      from: cafe!.id,
+      to: run!.id,
+      directed: true,
+      relations: ["calls"],
+    });
+    expect(reverse.result.hops).toBeNull();
+  },
+);
+
+test.skipIf(!nativeGraphBuiltin)(
+  "native graph rejects unsafe source paths and invalid domain scopes through worker errors",
+  async () => {
+    const scope = { source: "graph:fixture" as const, profile: "aphrody" };
+    await expect(
+      nativeGraphBuiltin!.executeGraph({
+        op: "build",
+        scope,
+        files: [{ path: "../outside.rs", content: "fn run() {}" }],
+      }),
+    ).rejects.toThrow("relative source path");
+    await expect(
+      nativeGraphBuiltin!.executeGraph({
+        op: "export",
+        scope: { ...scope, profile: "../dbfr" },
+        graph: { nodes: [], links: [] },
+      }),
+    ).rejects.toThrow("profile");
+    await expect(
+      nativeGraphBuiltin!.executeGraph(
+        { op: "export", scope, graph: { nodes: [], links: [] } },
+        { signal: {} as AbortSignal },
+      ),
+    ).rejects.toThrow("AbortSignal");
+  },
+);
+
+test.skipIf(!nativeGraphBuiltin)(
+  "native graph cancellation shares the Rust flag and releases leases idempotently",
+  async () => {
+    const request = {
+      op: "export" as const,
+      scope: { source: "graph:fixture" as const, profile: "aphrody" },
+      graph: { nodes: [], links: [] },
+    };
+    const id = crypto.randomUUID();
+    expect(nativeGraphBuiltin!.__nativeGraph("start", id, "")).toBe(true);
+    try {
+      expect(nativeGraphBuiltin!.__nativeGraph("cancel", id, "")).toBe(true);
+      expect(() => nativeGraphBuiltin!.__nativeGraph("execute", id, JSON.stringify(request))).toThrow(/cancelled/i);
+    } finally {
+      expect(nativeGraphBuiltin!.__nativeGraph("release", id, "")).toBe(true);
+    }
+    expect(nativeGraphBuiltin!.__nativeGraph("release", id, "")).toBe(false);
+    const controller = new AbortController();
+    const reason = new Error("graph request cancelled by owner");
+    const pending = nativeGraphBuiltin!.executeGraph(request, { signal: controller.signal });
+    controller.abort(reason);
+    await expect(pending).rejects.toBe(reason);
+    await expect(nativeGraphBuiltin!.executeGraph(request, { signal: controller.signal })).rejects.toBe(reason);
+  },
+);
+
+test.skipIf(!nativeGraphBuiltin)(
+  "native graph rejects excess jobs instead of queueing and recovers all cancelled capacity",
+  async () => {
+    const request = {
+      op: "export" as const,
+      scope: { source: "graph:fixture" as const, profile: "aphrody" },
+      graph: { nodes: [], links: [] },
+    };
+    const controllers = Array.from({ length: 4 }, () => new AbortController());
+    const pending = controllers.map(controller =>
+      nativeGraphBuiltin!.executeGraph(request, { signal: controller.signal }),
+    );
+    try {
+      await expect(nativeGraphBuiltin!.executeGraph(request)).rejects.toThrow("capacity");
+    } finally {
+      for (const controller of controllers) controller.abort(new Error("capacity test finished"));
+      await Promise.allSettled(pending);
+    }
+    expect((await nativeGraphBuiltin!.executeGraph(request)).result.graph).toMatchObject({ nodes: [], links: [] });
+  },
+);

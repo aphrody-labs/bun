@@ -1,0 +1,236 @@
+diff --git a/Lib/test/test_json/test_speedups.py b/Lib/test/test_json/test_speedups.py
+index 7c2789f..f72e596 100644
+--- a/Lib/test/test_json/test_speedups.py
++++ b/Lib/test/test_json/test_speedups.py
+@@ -1,4 +1,4 @@
+-from test.test_json import CTest
++from test.test_json import CTest, pyjson
+ from test.support import gc_collect
+ 
+ 
+@@ -31,6 +31,49 @@ def test(value):
+ 
+ 
+ class TestEncode(CTest):
++    def test_ascii_string_writer(self):
++        class StringSubclass(str):
++            def __str__(self):
++                raise AssertionError('string conversion must not be called')
++
++        strings = ['', 'plain ASCII', 'item-' * 2048, 'item-' * 2048 + '\n',
++                   StringSubclass('subclass'), '\u00e9', '\u03a9', '\U0001f600']
++        strings.extend('prefix' + chr(code) + 'suffix' for code in range(128))
++        for ensure_ascii in (False, True):
++            for indent in (None, 0, 2):
++                for text in strings:
++                    with self.subTest(ensure_ascii=ensure_ascii,
++                                      indent=indent, text=text):
++                        value = [text, {text: 'ascii', 'key': text},
++                                 {0: text, True: 'true', None: 'none',
++                                  1.5: 'float'}]
++                        options = dict(ensure_ascii=ensure_ascii, indent=indent,
++                                       separators=(',', ':'))
++                        self.assertEqual(self.dumps(value, **options),
++                                         pyjson.dumps(value, **options))
++
++    def test_ascii_string_writer_after_wide_output(self):
++        for prefix in ('\u00e9', '\u03a9', '\U0001f600'):
++            value = [prefix, {'plain': '', 'key': 'item-' * 2048}, 'ascii']
++            for indent in (None, 2):
++                with self.subTest(prefix=prefix, indent=indent):
++                    options = dict(ensure_ascii=False, indent=indent)
++                    self.assertEqual(self.dumps(value, **options),
++                                     pyjson.dumps(value, **options))
++
++    def test_ascii_string_writer_custom_encoder(self):
++        calls = []
++
++        def encode_string(value):
++            calls.append(value)
++            return pyjson.dumps('custom:' + value)
++
++        encoder = self.json.encoder.c_make_encoder(
++            None, None, encode_string, None, ':', ',', False, False, True)
++        result = ''.join(encoder({'key': 'value'}, 0))
++        self.assertEqual(result, '{"custom:key":"custom:value"}')
++        self.assertEqual(calls, ['key', 'value'])
++
+     def test_make_encoder(self):
+         # bpo-6986: The interpreter shouldn't crash in case c_make_encoder()
+         # receives invalid arguments.
+diff --git a/Modules/_json.c b/Modules/_json.c
+index 5558260..d296e35 100644
+--- a/Modules/_json.c
++++ b/Modules/_json.c
+@@ -139,7 +139,7 @@ ascii_escape_unichar(Py_UCS4 c, unsigned char *output, Py_ssize_t chars)
+ }
+ 
+ static PyObject *
+-ascii_escape_unicode(PyObject *pystr)
++ascii_escape_unicode_prefix(PyObject *pystr, Py_ssize_t ascii_prefix)
+ {
+     /* Take a PyUnicode pystr and return a new ASCII-only escaped PyUnicode */
+     Py_ssize_t i;
+@@ -155,8 +155,14 @@ ascii_escape_unicode(PyObject *pystr)
+     input = PyUnicode_DATA(pystr);
+     kind = PyUnicode_KIND(pystr);
+ 
++    assert(0 <= ascii_prefix && ascii_prefix <= input_chars);
++    if (ascii_prefix > PY_SSIZE_T_MAX - 2) {
++        PyErr_SetString(PyExc_OverflowError, "string is too long to escape");
++        return NULL;
++    }
+     /* Compute the output size */
+-    for (i = 0, output_size = 2; i < input_chars; i++) {
++    for (i = ascii_prefix, output_size = ascii_prefix + 2;
++         i < input_chars; i++) {
+         Py_UCS4 c = PyUnicode_READ(kind, input, i);
+         Py_ssize_t d;
+         if (S_CHAR(c)) {
+@@ -202,7 +208,13 @@ ascii_escape_unicode(PyObject *pystr)
+ }
+ 
+ static PyObject *
+-escape_unicode(PyObject *pystr)
++ascii_escape_unicode(PyObject *pystr)
++{
++    return ascii_escape_unicode_prefix(pystr, 0);
++}
++
++static PyObject *
++escape_unicode_prefix(PyObject *pystr, Py_ssize_t ascii_prefix)
+ {
+     /* Take a PyUnicode pystr and return a new escaped PyUnicode */
+     Py_ssize_t i;
+@@ -219,8 +231,14 @@ escape_unicode(PyObject *pystr)
+     input = PyUnicode_DATA(pystr);
+     kind = PyUnicode_KIND(pystr);
+ 
++    assert(0 <= ascii_prefix && ascii_prefix <= input_chars);
++    if (ascii_prefix > PY_SSIZE_T_MAX - 2) {
++        PyErr_SetString(PyExc_OverflowError, "string is too long to escape");
++        return NULL;
++    }
+     /* Compute the output size */
+-    for (i = 0, output_size = 2; i < input_chars; i++) {
++    for (i = ascii_prefix, output_size = ascii_prefix + 2;
++         i < input_chars; i++) {
+         Py_UCS4 c = PyUnicode_READ(kind, input, i);
+         Py_ssize_t d;
+         switch (c) {
+@@ -295,6 +313,12 @@ escape_unicode(PyObject *pystr)
+     return rval;
+ }
+ 
++static PyObject *
++escape_unicode(PyObject *pystr)
++{
++    return escape_unicode_prefix(pystr, 0);
++}
++
+ static void
+ raise_errmsg(const char *msg, PyObject *s, Py_ssize_t end)
+ {
+@@ -1378,6 +1402,66 @@ _steal_accumulate(_PyUnicodeWriter *writer, PyObject *stolen)
+     return rval;
+ }
+ 
++static int
++encoder_write_string(PyEncoderObject *s, _PyUnicodeWriter *writer,
++                     PyObject *obj)
++{
++    PyObject *encoded;
++
++    if (s->fast_encode && PyUnicode_IS_ASCII(obj)) {
++        Py_ssize_t length = PyUnicode_GET_LENGTH(obj);
++        const Py_UCS1 *input = PyUnicode_1BYTE_DATA(obj);
++        Py_ssize_t i;
++
++        for (i = 0; i < length; i++) {
++            if (!S_CHAR(input[i])) {
++                break;
++            }
++        }
++        if (i == length) {
++            if (length > PY_SSIZE_T_MAX - 2) {
++                PyErr_SetString(PyExc_OverflowError,
++                                "string is too long to escape");
++                return -1;
++            }
++            if (_PyUnicodeWriter_Prepare(writer, length + 2, 127) < 0) {
++                return -1;
++            }
++            /* Avoid allocating and copying a quoted temporary string. */
++            if (writer->kind == PyUnicode_1BYTE_KIND) {
++                Py_UCS1 *output = (Py_UCS1 *)writer->data + writer->pos;
++
++                output[0] = '"';
++                memcpy(output + 1, input, length);
++                output[length + 1] = '"';
++                writer->pos += length + 2;
++                return 0;
++            }
++            if (_PyUnicodeWriter_WriteChar(writer, '"') < 0 ||
++                _PyUnicodeWriter_WriteASCIIString(writer,
++                                                 (const char *)input,
++                                                 length) < 0 ||
++                _PyUnicodeWriter_WriteChar(writer, '"') < 0) {
++                return -1;
++            }
++            return 0;
++        }
++        if (s->fast_encode == (PyCFunction)py_encode_basestring_ascii) {
++            encoded = ascii_escape_unicode_prefix(obj, i);
++        }
++        else {
++            encoded = escape_unicode_prefix(obj, i);
++        }
++    }
++    else {
++        encoded = encoder_encode_string(s, obj);
++    }
++    if (encoded == NULL) {
++        return -1;
++    }
++    return _steal_accumulate(writer, encoded);
++}
++
+ static int
+ encoder_listencode_obj(PyEncoderObject *s, _PyUnicodeWriter *writer,
+                        PyObject *obj, PyObject *newline_indent)
+@@ -1396,10 +1480,7 @@ encoder_listencode_obj(PyEncoderObject *s, _PyUnicodeWriter *writer,
+       return _PyUnicodeWriter_WriteASCIIString(writer, "false", 5);
+     }
+     else if (PyUnicode_Check(obj)) {
+-        PyObject *encoded = encoder_encode_string(s, obj);
+-        if (encoded == NULL)
+-            return -1;
+-        return _steal_accumulate(writer, encoded);
++        return encoder_write_string(s, writer, obj);
+     }
+     else if (PyLong_Check(obj)) {
+         PyObject *encoded = PyLong_Type.tp_repr(obj);
+@@ -1483,7 +1564,6 @@ encoder_encode_key_value(PyEncoderObject *s, _PyUnicodeWriter *writer, bool *fir
+                          PyObject *item_separator)
+ {
+     PyObject *keystr = NULL;
+-    PyObject *encoded;
+ 
+     if (PyUnicode_Check(key)) {
+         keystr = Py_NewRef(key);
+@@ -1529,13 +1609,9 @@ encoder_encode_key_value(PyEncoderObject *s, _PyUnicodeWriter *writer, bool *fir
+         }
+     }
+ 
+-    encoded = encoder_encode_string(s, keystr);
++    int result = encoder_write_string(s, writer, keystr);
+     Py_DECREF(keystr);
+-    if (encoded == NULL) {
+-        return -1;
+-    }
+-
+-    if (_steal_accumulate(writer, encoded) < 0) {
++    if (result < 0) {
+         return -1;
+     }
+     if (_PyUnicodeWriter_WriteStr(writer, s->key_separator) < 0) {

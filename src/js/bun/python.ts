@@ -269,6 +269,7 @@ class PythonAsync implements AsyncDisposable {
   readonly #pending = new Map<number, { resolve: (value: string) => void; reject: (error: Error) => void }>();
   #next = 0;
   #closing = false;
+  #closePromise: Promise<void> | null = null;
 
   private constructor(worker: Worker) {
     this.#worker = worker;
@@ -311,19 +312,17 @@ class PythonAsync implements AsyncDisposable {
       };
     `;
     const url = URL.createObjectURL(new Blob([source], { type: "text/javascript" }));
-    let worker: Worker;
+    let worker: Worker | undefined;
     try {
       worker = new Worker(url, { name: "buv-python" });
-    } finally {
-      URL.revokeObjectURL(url);
-    }
-    const python = new PythonAsync(worker);
-    try {
+      const python = new PythonAsync(worker);
       await python.#request("open", [options]);
       return python;
     } catch (error) {
-      worker.terminate();
+      worker?.terminate();
       throw error;
+    } finally {
+      URL.revokeObjectURL(url);
     }
   }
 
@@ -367,15 +366,17 @@ class PythonAsync implements AsyncDisposable {
   call(module: string, fn: string, arg?: string) {
     return this.#request("call", [module, fn, arg]);
   }
-  async close() {
-    if (this.#closing) return;
+  close(): Promise<void> {
+    if (this.#closePromise) return this.#closePromise;
+    if (this.#closing) return Promise.resolve();
     const closed = this.#request("close");
     this.#closing = true;
-    try {
-      await closed;
-    } finally {
-      this.#worker.terminate();
-    }
+    this.#closePromise = closed
+      .then(() => {})
+      .finally(() => {
+        this.#worker.terminate();
+      });
+    return this.#closePromise;
   }
   async [Symbol.asyncDispose]() {
     await this.close();

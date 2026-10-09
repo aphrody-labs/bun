@@ -58,15 +58,16 @@ pub fn insecure_no_validate() -> bool {
 
 #[cfg(test)]
 mod tests {
-    use std::io;
+    use std::io::{self, Write};
     use std::path::Path;
 
     use async_compression::tokio::bufread::{BzEncoder, LzmaEncoder, XzEncoder};
+    use lzma_rust2::{LzipOptions, LzipWriter};
     use tempfile::TempDir;
     use tokio::io::{AsyncReadExt, BufReader};
     use uv_distribution_filename::{LegacySourceDistExtension, SourceDistExtension};
 
-    use crate::{Error, stream};
+    use crate::stream;
 
     async fn tar_fixture(path: &str, content: &[u8]) -> io::Result<Vec<u8>> {
         let mut builder = tokio_tar::Builder::new(Vec::new());
@@ -79,6 +80,7 @@ mod tests {
 
     #[tokio::test]
     async fn extract_tar_bzip2() -> anyhow::Result<()> {
+        let _preview = uv_preview::test::with_features(&[]);
         let bytes = tar_fixture("package/module.py", b"print('bzip2')\n").await?;
         let mut compressed = Vec::new();
         BzEncoder::new(BufReader::new(bytes.as_slice()))
@@ -102,6 +104,7 @@ mod tests {
 
     #[tokio::test]
     async fn extract_concatenated_bzip2_members() -> anyhow::Result<()> {
+        let _preview = uv_preview::test::with_features(&[]);
         let bytes = tar_fixture("package/data", b"concatenated members").await?;
         let split = bytes.len() / 2;
         let mut compressed = Vec::new();
@@ -127,6 +130,7 @@ mod tests {
 
     #[tokio::test]
     async fn extract_tar_xz() -> anyhow::Result<()> {
+        let _preview = uv_preview::test::with_features(&[]);
         let bytes = tar_fixture("package/data", b"xz payload").await?;
         let mut compressed = Vec::new();
         XzEncoder::new(BufReader::new(bytes.as_slice()))
@@ -148,6 +152,7 @@ mod tests {
 
     #[tokio::test]
     async fn extract_tar_lzma() -> anyhow::Result<()> {
+        let _preview = uv_preview::test::with_features(&[]);
         let bytes = tar_fixture("package/data", b"lzma payload").await?;
         let mut compressed = Vec::new();
         LzmaEncoder::new(BufReader::new(bytes.as_slice()))
@@ -169,6 +174,7 @@ mod tests {
 
     #[tokio::test]
     async fn reject_truncated_xz_trailer() -> anyhow::Result<()> {
+        let _preview = uv_preview::test::with_features(&[]);
         let bytes = tar_fixture(
             "package/data",
             b"complete tar with an incomplete compression trailer",
@@ -195,19 +201,60 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn lzip_is_explicitly_unsupported() -> anyhow::Result<()> {
-        let mut bytes = b"LZIP\x01\x14".as_slice();
-        let result = stream::archive(
-            &mut bytes,
+    async fn extract_tar_lzip() -> anyhow::Result<()> {
+        let _preview = uv_preview::test::with_features(&[]);
+        let bytes = tar_fixture("package/data", b"lzip payload").await?;
+        let mut encoder = LzipWriter::new(Vec::new(), LzipOptions::with_preset(1));
+        encoder.write_all(&bytes)?;
+        let compressed = encoder.finish()?;
+        let (target, files) = stream::archive(
+            &mut compressed.as_slice(),
             SourceDistExtension::Legacy(LegacySourceDistExtension::TarLz),
             TempDir::new()?,
         )
-        .await;
-        match result {
-            Err(Error::UnsupportedCompression) => {}
-            Err(error) => return Err(error.into()),
-            Ok(_) => return Err(anyhow::anyhow!("LZIP extraction unexpectedly succeeded")),
-        }
+        .await?;
+        assert_eq!(files.len(), 1);
+        assert_eq!(
+            fs_err::tokio::read(target.path().join("package/data")).await?,
+            b"lzip payload"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn reject_lzip_checksum_mismatch() -> anyhow::Result<()> {
+        let _preview = uv_preview::test::with_features(&[]);
+        let bytes = tar_fixture("package/data", b"lzip checksum").await?;
+        let mut encoder = LzipWriter::new(Vec::new(), LzipOptions::with_preset(1));
+        encoder.write_all(&bytes)?;
+        let mut compressed = encoder.finish()?;
+        let checksum = compressed.len() - 20;
+        compressed[checksum] ^= 1;
+        assert!(
+            stream::archive(
+                &mut compressed.as_slice(),
+                SourceDistExtension::Legacy(LegacySourceDistExtension::TarLz),
+                TempDir::new()?,
+            )
+            .await
+            .is_err()
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn reject_truncated_lzip_header() -> anyhow::Result<()> {
+        let _preview = uv_preview::test::with_features(&[]);
+        let mut bytes = b"LZIP\x01".as_slice();
+        assert!(
+            stream::archive(
+                &mut bytes,
+                SourceDistExtension::Legacy(LegacySourceDistExtension::Tlz),
+                TempDir::new()?,
+            )
+            .await
+            .is_err()
+        );
         Ok(())
     }
 
