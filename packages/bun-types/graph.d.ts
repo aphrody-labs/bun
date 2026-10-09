@@ -1,4 +1,5 @@
 declare module "bun:graph" {
+  export { executeGraph } from "bun:graph-native";
   import { Database } from "bun:sqlite";
 
   export const registryPath: string;

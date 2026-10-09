@@ -7,6 +7,7 @@
 //! Every host function exists on every platform so the generated thunks link.
 //! Outside Windows they throw `ERR_BUN_WINDOWS_UNSUPPORTED`.
 
+pub(crate) mod com;
 pub(crate) mod host;
 #[cfg(windows)]
 pub(crate) mod sys;

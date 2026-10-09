@@ -14,6 +14,7 @@
 /// <reference path="./ffi.d.ts" />
 /// <reference path="./dotnet.d.ts" />
 /// <reference path="./graph.d.ts" />
+/// <reference path="./graph-native.d.ts" />
 /// <reference path="./python.d.ts" />
 /// <reference path="./linux.d.ts" />
 /// <reference path="./html-rewriter.d.ts" />

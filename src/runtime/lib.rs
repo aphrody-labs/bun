@@ -55,6 +55,7 @@ pub(crate) mod cosmic;
 pub(crate) mod dispatch;
 pub(crate) mod dotnet;
 pub(crate) mod elevate;
+pub(crate) mod graph_native;
 pub(crate) mod hw_exports;
 pub(crate) mod ipc;
 pub(crate) mod ipc_host;

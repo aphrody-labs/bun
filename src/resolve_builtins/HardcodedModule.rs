@@ -19,6 +19,8 @@ pub enum HardcodedModule {
     BunDotnet,
     #[strum(serialize = "bun:graph")]
     BunGraph,
+    #[strum(serialize = "bun:graph-native")]
+    BunGraphNative,
     #[strum(serialize = "bun:graphx")]
     BunGraphx,
     #[strum(serialize = "bun:python")]
@@ -242,6 +244,7 @@ bun_core::comptime_string_map! {
         b"bun:ffi" => HardcodedModule::BunFfi,
         b"bun:dotnet" => HardcodedModule::BunDotnet,
         b"bun:graph" => HardcodedModule::BunGraph,
+        b"bun:graph-native" => HardcodedModule::BunGraphNative,
         b"bun:graphx" => HardcodedModule::BunGraphx,
         b"bun:python" => HardcodedModule::BunPython,
         b"bun:jsc" => HardcodedModule::BunJsc,
@@ -769,6 +772,7 @@ const BUN_EXTRA_ALIAS_KVS: &[AliasKv] = &[
         },
     ),
     entry!("bun:graph"),
+    entry!("bun:graph-native"),
     entry!("bun:graphx"),
     entry!("bun:python"),
     (

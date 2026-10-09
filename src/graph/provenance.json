@@ -1,0 +1,227 @@
+{
+  "schema": "aphrody.bun-graph-provenance/1",
+  "repository": "https://github.com/aphrody-labs/aphrody",
+  "revision": "7427aeb990649fd418d619795ff7cf9fe9562fd6",
+  "owner": "crates/ai/code-graph",
+  "license": "Apache-2.0",
+  "notice": "NOTICE",
+  "sourceCargoLockSha256": "b47f0c56532dab1f0818111771e76e6aa36e6f5cc371722017e82527ee1f144b",
+  "pins": {
+    "oxc": "0.153.0",
+    "treeSitter": "0.27.0",
+    "treeSitterRust": "0.24.2"
+  },
+  "alignedBunDependencies": {
+    "serde": "1.0.228",
+    "serdeJson": "1.0.149",
+    "thiserror": "2.0.18"
+  },
+  "adaptations": [
+    "Removed HomeDb persistence and CLI/pipeline dependencies; SQLite remains owned by Bun.",
+    "Added a typed scope-qualified and size-bounded JSON worker API, preserving owner confidence and graph algorithms.",
+    "Added cooperative cancellation to graph traversal, scoring, assembly, adjacency and community passes.",
+    "Guarded Rust cursor and OXC pre-walk depth before recursive owner extraction.",
+    "Reused owner extraction oracle fixtures; removed Agent Home-only persistence tests.",
+    "OXC preflight conservatively bounds raw grouping/operator complexity before parsing; literal contents also count."
+  ],
+  "qualification": {
+    "rustTests": "pending root Cargo gate",
+    "nativeBinding": "pending root Bun gate",
+    "parserCancellation": "between bounded files; source parsers and standard sorting are non-interruptible passes"
+  },
+  "files": [
+    {
+      "source": "crates/ai/code-graph/src/analyze.rs",
+      "target": "analyze.rs",
+      "sourceSha256": "4481adb223e29f22a2423170e3db0d5f0953a4caba0882138bb7f7a7b00918e8",
+      "targetSha256": "4aadb1056812f44e2d344f156e2d004e136fd5a15ad481736aec4c3711e24593",
+      "adapted": true
+    },
+    {
+      "source": "crates/ai/code-graph/src/export.rs",
+      "target": "export.rs",
+      "sourceSha256": "541eac7b4cf00eaa3cdc6e29f53cea2265caf42aa88f8c65f13dc9bb8ad0755b",
+      "targetSha256": "f73ad06ec7eeb70fe108efc568bb9b5a255e86de5a73d50ce7336e1db0794cfa",
+      "adapted": true
+    },
+    {
+      "source": "crates/ai/code-graph/src/extract/ids.rs",
+      "target": "extract/ids.rs",
+      "sourceSha256": "e4d865190ff7e7335eed4c868adf100b098865ed52d81f04d19e8b0a38bc0965",
+      "targetSha256": "0c9541c2a2105881ba7584ccde3efce3280bd731da7a67b47508e24c686ce6b0",
+      "adapted": true
+    },
+    {
+      "source": "crates/ai/code-graph/src/extract/markdown.rs",
+      "target": "extract/markdown.rs",
+      "sourceSha256": "d8b9022842eac8320814c1d27896c2ecb596010ff04aa52b839bae12dbff6e08",
+      "targetSha256": "bedda6d20b4aff84f74d94dd4683df6c075aaa0537a24a7bc3c2e4b818e35363",
+      "adapted": true
+    },
+    {
+      "source": "crates/ai/code-graph/src/extract/mod.rs",
+      "target": "extract/mod.rs",
+      "sourceSha256": "46e4b66f7c8e1af8d0366285974ac7558719cec9d9b7e0cc5356c8c986e05809",
+      "targetSha256": "d8ed0b48d966527be447ecfa6e25c5f0af32d49b5b563923ebfcfbf62ff7a685",
+      "adapted": true
+    },
+    {
+      "source": "crates/ai/code-graph/src/extract/resolve.rs",
+      "target": "extract/resolve.rs",
+      "sourceSha256": "c8c5bd7da82d0d1492c004e78ca4954acb2114609196f2a80434ccfca5bc5543",
+      "targetSha256": "445a411e54e7383ebd94a34f46f0603784cc964b8e935afd55cd2ffc56a2bce4",
+      "adapted": true
+    },
+    {
+      "source": "crates/ai/code-graph/src/extract/rust.rs",
+      "target": "extract/rust.rs",
+      "sourceSha256": "2dd4f0b15e7c2df3a2facb9de4a39b936d60994737a4f6e7d2a26765254347c5",
+      "targetSha256": "288a7c0c56ae8337bf1b4dfa50dc7aac040d1642fc611d7c8032558cb309dbce",
+      "adapted": true
+    },
+    {
+      "source": "crates/ai/code-graph/src/extract/typescript.rs",
+      "target": "extract/typescript.rs",
+      "sourceSha256": "e9dbb8667ebf1bc731c9a3e46cfb75a1eedffb806bb7e0e4d32381a2240aeba3",
+      "targetSha256": "7e3280e0aa1b0f163a01bb32c52e51a6e1b40491dedac6ac98c58c42a5665794",
+      "adapted": true
+    },
+    {
+      "source": "crates/ai/code-graph/src/graph.rs",
+      "target": "graph.rs",
+      "sourceSha256": "ce136080ac661322ba9aeb8058aea10b0af0b1799caebd8324fcc4a525ba3b05",
+      "targetSha256": "f0d53cf43b04ce5c6b75f716aea229f99d216f6895fe7c6ed940067645bf8f1d",
+      "adapted": true
+    },
+    {
+      "source": "crates/ml/LICENSE-APACHE",
+      "target": "LICENSE-APACHE",
+      "sourceSha256": "1eb85fc97224598dad1852b5d6483bbcf0aa8608790dcc657a5a2a761ae9c8c6",
+      "targetSha256": "1eb85fc97224598dad1852b5d6483bbcf0aa8608790dcc657a5a2a761ae9c8c6",
+      "adapted": false
+    },
+    {
+      "source": "crates/ai/code-graph/NOTICE",
+      "target": "NOTICE",
+      "sourceSha256": "ef90772277c753f9fb0c750c02c6681b011f9c36f885a67f054151258944b312",
+      "targetSha256": "ef90772277c753f9fb0c750c02c6681b011f9c36f885a67f054151258944b312",
+      "adapted": false
+    },
+    {
+      "source": "crates/ai/code-graph/src/query.rs",
+      "target": "query.rs",
+      "sourceSha256": "0fa2bd638b1caacdba9fb7024341f8f9741362b40482813ff4f68f2992150c47",
+      "targetSha256": "5fb5f100b8c9533aa396ece567b0b57e8ae3c2e2a01ab05c6026015ecbec978c",
+      "adapted": true
+    },
+    {
+      "source": "crates/ai/code-graph/src/report.rs",
+      "target": "report.rs",
+      "sourceSha256": "609e84cff8ed430d50f243825b1fe123c23ce40becb5735ae6afd011b1dbc1e8",
+      "targetSha256": "20bdaa1865bda137686710600186e96e49288fb9f788b8cb79dda99a5aeaa6da",
+      "adapted": true
+    },
+    {
+      "source": "crates/ai/code-graph/tests/fixtures/rust.oracle.json",
+      "target": "tests/fixtures/rust.oracle.json",
+      "sourceSha256": "de721ec56153073dadee434bff2475b4651cb585f383176afb544a297b6b14b5",
+      "targetSha256": "de721ec56153073dadee434bff2475b4651cb585f383176afb544a297b6b14b5",
+      "adapted": false
+    },
+    {
+      "source": "crates/ai/code-graph/tests/fixtures/rust/Cargo.toml",
+      "target": "tests/fixtures/rust/Cargo.toml",
+      "sourceSha256": "d79797bf9210b7a965d09b430565e09a19a31a04b5ff4a509be83122cbee87e0",
+      "targetSha256": "d79797bf9210b7a965d09b430565e09a19a31a04b5ff4a509be83122cbee87e0",
+      "adapted": false
+    },
+    {
+      "source": "crates/ai/code-graph/tests/fixtures/rust/src/config.rs",
+      "target": "tests/fixtures/rust/src/config.rs",
+      "sourceSha256": "7bf8094516a3aefe03aaf7b38e01c2299fa50d30d88614eb5df6720a5ccc5168",
+      "targetSha256": "7bf8094516a3aefe03aaf7b38e01c2299fa50d30d88614eb5df6720a5ccc5168",
+      "adapted": false
+    },
+    {
+      "source": "crates/ai/code-graph/tests/fixtures/rust/src/lib.rs",
+      "target": "tests/fixtures/rust/src/lib.rs",
+      "sourceSha256": "e21b7e63ec95d65b4735ff80908917f73a87f668c4d76e1edcb70bbf981d4148",
+      "targetSha256": "e21b7e63ec95d65b4735ff80908917f73a87f668c4d76e1edcb70bbf981d4148",
+      "adapted": false
+    },
+    {
+      "source": "crates/ai/code-graph/tests/fixtures/rust/src/net/client.rs",
+      "target": "tests/fixtures/rust/src/net/client.rs",
+      "sourceSha256": "928009bb88989ad1c2fd33b4df80aee26c73cc5c544adfba0b13cfadc7a60037",
+      "targetSha256": "928009bb88989ad1c2fd33b4df80aee26c73cc5c544adfba0b13cfadc7a60037",
+      "adapted": false
+    },
+    {
+      "source": "crates/ai/code-graph/tests/fixtures/rust/src/net/mod.rs",
+      "target": "tests/fixtures/rust/src/net/mod.rs",
+      "sourceSha256": "0db2cbad5c8314dec4a34179ded69c40f85afc823171f4179682ac037dc7754c",
+      "targetSha256": "0db2cbad5c8314dec4a34179ded69c40f85afc823171f4179682ac037dc7754c",
+      "adapted": false
+    },
+    {
+      "source": "crates/ai/code-graph/tests/fixtures/rust/src/store.rs",
+      "target": "tests/fixtures/rust/src/store.rs",
+      "sourceSha256": "39a4a83fb50e9d75d274606cb8a69c136daf8dbc9df8b1ab4c9dc96ff7ec2520",
+      "targetSha256": "39a4a83fb50e9d75d274606cb8a69c136daf8dbc9df8b1ab4c9dc96ff7ec2520",
+      "adapted": false
+    },
+    {
+      "source": "crates/ai/code-graph/tests/fixtures/ts.oracle.json",
+      "target": "tests/fixtures/ts.oracle.json",
+      "sourceSha256": "f2286eaa3c7eb819fe5018ea19c5658ef9b7d019d4988beb58d7c26d4ec3beca",
+      "targetSha256": "f2286eaa3c7eb819fe5018ea19c5658ef9b7d019d4988beb58d7c26d4ec3beca",
+      "adapted": false
+    },
+    {
+      "source": "crates/ai/code-graph/tests/fixtures/ts/main.ts",
+      "target": "tests/fixtures/ts/main.ts",
+      "sourceSha256": "ced5009a4f2581a3765e190ba69096a522da85b0dba231f53dd74f72ef2032bf",
+      "targetSha256": "ced5009a4f2581a3765e190ba69096a522da85b0dba231f53dd74f72ef2032bf",
+      "adapted": false
+    },
+    {
+      "source": "crates/ai/code-graph/tests/fixtures/ts/math.ts",
+      "target": "tests/fixtures/ts/math.ts",
+      "sourceSha256": "04d4a5422d21aec83ae20eb93b9ccb098af8429e593ff4547a458d6d33631b96",
+      "targetSha256": "04d4a5422d21aec83ae20eb93b9ccb098af8429e593ff4547a458d6d33631b96",
+      "adapted": false
+    },
+    {
+      "source": "crates/ai/code-graph/tests/oracle_rust.rs",
+      "target": "tests/oracle_rust.rs",
+      "sourceSha256": "1dea3201640f68dc77add114e99db9ccb1c59d393896d5502337bdfee9a03f2d",
+      "targetSha256": "838fcc20b4dffd0d3f4f1db85194ba8293498a4766ebed78b38c70ceb64cc619",
+      "adapted": true
+    },
+    {
+      "source": "crates/ai/code-graph/tests/oracle_typescript.rs",
+      "target": "tests/oracle_typescript.rs",
+      "sourceSha256": "9e9bb6609d1ce102f4a386a800463e68872a93c2bee2841db93844e56b74e7b8",
+      "targetSha256": "9448fc0af5d894700804ef99a758cf94d36b69da5bbbfe11baba71c1b01efe3a",
+      "adapted": true
+    }
+  ],
+  "integrationFiles": [
+    {
+      "path": "Cargo.toml",
+      "sha256": "eeff0b589acf743b350c756df2ca28a2b4b5e20773bd78a1b1d9f2510b1c6157"
+    },
+    {
+      "path": "lib.rs",
+      "sha256": "70d249b0fe7b0360a465b209986fea4577b30f7f603f571d5e2a8716a33c6ca9"
+    },
+    {
+      "path": "api.rs",
+      "sha256": "c6019abe0c0420d9592ab04b1f6deb8fd31606be5b1cdff3e9e5246cfe6149b6"
+    },
+    {
+      "path": "error.rs",
+      "sha256": "8f7251b74b19863ecc812c7e06495959efa5bb375e557dcac6616ea50b2e4221"
+    }
+  ]
+}

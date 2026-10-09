@@ -765,4 +765,11 @@ class BunPython implements Disposable {
   }
 }
 
-export default { BunPython, PyJS: BunPython, registryPath };
+function executeGraph(
+  request: import("bun:graph-native").GraphRequest,
+  options?: { signal?: AbortSignal | undefined },
+) {
+  return require("bun:graph-native").executeGraph(request, options);
+}
+
+export default { BunPython, PyJS: BunPython, registryPath, executeGraph };
