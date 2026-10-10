@@ -117,3 +117,6 @@
 
 - [x] Owner common-pin internal-fixture correction: Linux 1122 and Windows 893 passing, scoped static gates zero (2026-10-10).
 - [ ] Qualify refreshed stripped Linux artifact and host promotion; close comparable Windows binary-size gate.
+
+- [x] Deliver and verify 988d73 Linux candidate on DBFR; repeat common-pin Windows GPU/PyCUDA/plugin gates (2026-10-10).
+- [ ] Qualify catalog-owned standalone Bun promotion, provider activation and complete multi-platform release.

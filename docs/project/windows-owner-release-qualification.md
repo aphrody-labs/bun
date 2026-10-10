@@ -177,8 +177,8 @@ Windows reports 893 pass, 33 skip, zero failures and 146170 assertions across
 92 internal files. Both use the freshly built release through the owner
 build-then-exec factory with --expose-internals. Scoped TypeScript, Prettier
 and oxlint exit zero. Receipts: tmp/linux-internal-fixtures-plan.json,
-tmp/linux-internal-fixtures-{tsc,format,lint}-final.*, and
-tmp/windows-common-pin-internals.*; Linux native-fixtures.log and
+tmp/linux-internal-fixtures-{tsc,format,lint}-final._, and
+tmp/windows-common-pin-internals._; Linux native-fixtures.log and
 native-complete.log remain in the VPS owner-linux-qualification directory.
 
 The refreshed Linux stripped artifact SHA256 is
@@ -193,3 +193,26 @@ The retained Windows 54619ce executable and PDB share CodeView GUID
 this measures current footprint and does not attribute the size regression.
 Performance size closure, physical Linux NVIDIA qualification and deployment
 remain open.
+
+## Refreshed GPU and plugin qualification (2026-10-10)
+
+The owner Windows release factory at 988d73b430a repeats the physical RTX 4070
+qualification. wgpu selects Dx12 and WGSL returns the 37 expected doubled
+values, exactly matching the CUDA result. NVRTC and the CUDA driver load;
+the device reports compute capability 8.9, 46 SMs and driver API 13.4.
+The independent PyCUDA case passes through the shared Buv/PyJS Python host:
+one test, six assertions, zero failures. This does not prove shared CUDA
+contexts or zero-copy buffers. Receipts: tmp/windows-common-pin-gpu._ and
+tmp/windows-common-pin-pycuda._ (both exit zero).
+
+The same factory's agent-plugin doctor exits zero and reports current: true
+for the installed Codex and Claude payload 1.4.4+2fb86b44ed79, hash
+2fb86b44ed790069182d6cb9920cb9955b59b1305e81aa9829415cdbeec9ba08.
+The installed bun-build skill was read and used for factory routing.
+This proves installation/content compatibility; callable provider MCP tools
+and provider session activation remain separate qualification requirements.
+Receipt: tmp/windows-common-pin-plugin-doctor.\*.
+
+The refreshed stripped Windows executable is 152247296 bytes, SHA256
+2782577addbdd6c51199f9e7e51ffa1645ab0331f6f035f039444e88a1152fe7.
+The existing strict size threshold remains unchanged and unresolved.

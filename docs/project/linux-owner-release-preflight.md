@@ -73,10 +73,10 @@ The current PATH runtime remains /home/ubuntu/.local/bin/bun at
 1.4.3-aphrody.3+d46f0ed6c. Services were not restarted.
 
 Plan: tmp/runtime-candidate-dbfr-plan.json. Receipts:
- tmp/runtime-candidate-download.log/.exit,
- tmp/runtime-candidate-upload.log/.exit,
- tmp/runtime-candidate-dbfr-smoke.log/.exit,
- tmp/runtime-candidate-manifest-upload.log/.exit; all exit 0.
+tmp/runtime-candidate-download.log/.exit,
+tmp/runtime-candidate-upload.log/.exit,
+tmp/runtime-candidate-dbfr-smoke.log/.exit,
+tmp/runtime-candidate-manifest-upload.log/.exit; all exit 0.
 The latest published GitHub runtime release observed in this audit remains
 aphrody-v1.4.3-aphrody.4. Its older release workflow 37859117880 had successful
 build/smoke/release jobs but a failed npm job; this does not qualify the new pin.
@@ -111,3 +111,31 @@ publication, matching platform artifacts/images and consumer activation still
 require their own gates. The newer Windows-only source batches have not changed
 the recorded Linux candidate revision; this proof remains pinned to that exact
 artifact and its two-line qualification test correction.
+
+## Refreshed candidate delivery (2026-10-10)
+
+The owner VPS release at 988d73b430a3c47cd61d6f8d440777407f77555c produces a
+138871072-byte stripped executable, SHA256
+8bb9105153ce3742d14f9c04247782c5013d050813b00eae880d041ae9ceb8e3.
+Independent execution of that stripped artifact passes the established six
+suites: 202 pass, 13 existing skips, zero failures, two snapshots and 1517
+assertions. The full profile-artifact gate additionally passes 1122 tests;
+these scopes are recorded separately rather than inferred from each other.
+
+After the explicit transfer plan, native Infra SFTP downloads the executable
+from VPS, verifies its local checksum, and uploads it to the isolated DBFR
+candidate directory:
+/home/ubuntu/.local/share/aphrody/runtime-candidates/bun-1.4.4-988d73b430a-stripped
+
+DBFR checks the exact checksum before executable permissions are applied.
+The candidate then reports version 1.4.4 and the expected full revision,
+round-trips Zstd bytes, and writes, reads and closes a memfd. The probe exits
+zero. Its plan, manifest, probe and smoke receipts remain with the candidate;
+local receipts are tmp/dbfr-988-runtime-candidate-plan.json and
+tmp/dbfr-988-runtime-smoke.log/.exit. No sources or native builds are sent
+to DBFR. PATH remains Bun 1.4.3-aphrody.3 and no services are restarted.
+
+This is verified candidate delivery, not production activation or complete
+multi-platform publication. The current installed Infra deploy CLI offers
+application-stack adapters, not a standalone Bun promotion adapter; its
+catalog contract must cover runtime promotion before that activation.

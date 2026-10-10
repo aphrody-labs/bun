@@ -221,3 +221,5 @@ chantier touché (`bun-fork-aphrody`, `next-on-bun-plan`, …) à la fin du lot.
 - 2026-10-10: VPS clean owner checkout advanced to 988d73b430a; native release rebuild active under canonical heavy lock, four jobs, explicit measured incremental capacity plan. Windows 40-run strict historical-base comparison passes startup/RSS/throughput thresholds but fails binary size (152247296 vs 96548352 bytes); source versions differ, same-source isolation and size investigation stay open.
 
 Owner internal-fixture lot (2026-10-10): Linux 1122 pass/19 skip/0 fail and Windows 893 pass/33 skip/0 fail at engine 988d73; scoped TS/format/lint zero. See docs/project/windows-owner-release-qualification.md. Full release/deployment remains open.
+
+Owner delivery lot (2026-10-10): common-pin RTX 4070 Dx12/WGSL/CUDA and PyCUDA pass; installed Codex/Claude plugin doctor current=true. Refreshed stripped Linux candidate delivered to DBFR and SHA/Zstd/memfd verified. Production activation and complete publication remain open; see owner qualification documents.
