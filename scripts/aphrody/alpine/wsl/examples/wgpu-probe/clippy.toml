@@ -1,0 +1,3 @@
+# This standalone diagnostic uses std output without linking the Bun engine.
+# Keep strict Clippy warnings; the engine's output macros require bun_core.
+disallowed-macros = []

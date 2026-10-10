@@ -21,7 +21,11 @@ struct Args {
 }
 
 fn args() -> Args {
-    let mut out = Args { headless: false, frames: 120, title: "Aphrody wgpu probe".into() };
+    let mut out = Args {
+        headless: false,
+        frames: 120,
+        title: "Aphrody wgpu probe".into(),
+    };
     let mut it = std::env::args().skip(1);
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -61,7 +65,8 @@ impl App {
     fn render(&mut self, event_loop: &ActiveEventLoop) {
         let Some(gpu) = self.gpu.as_mut() else { return };
         let frame = match gpu.surface.get_current_texture() {
-            wgpu::CurrentSurfaceTexture::Success(frame) | wgpu::CurrentSurfaceTexture::Suboptimal(frame) => frame,
+            wgpu::CurrentSurfaceTexture::Success(frame)
+            | wgpu::CurrentSurfaceTexture::Suboptimal(frame) => frame,
             wgpu::CurrentSurfaceTexture::Timeout | wgpu::CurrentSurfaceTexture::Occluded => {
                 gpu.window.request_redraw();
                 return;
@@ -73,8 +78,12 @@ impl App {
                 return;
             }
         };
-        let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let mut encoder = gpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        let view = frame
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder = gpu
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
         let t = self.frames as f64 / self.args.frames.max(1) as f64;
         {
             let _pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -84,7 +93,12 @@ impl App {
                     depth_slice: None,
                     resolve_target: None,
                     ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color { r: 0.05, g: 0.2 + 0.6 * t, b: 0.45, a: 1.0 }),
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: 0.05,
+                            g: 0.2 + 0.6 * t,
+                            b: 0.45,
+                            a: 1.0,
+                        }),
                         store: wgpu::StoreOp::Store,
                     },
                 })],
@@ -97,7 +111,12 @@ impl App {
         self.frames += 1;
         if self.frames >= self.args.frames {
             let secs = self.start.elapsed().as_secs_f64();
-            println!("frames: {} in {:.2}s ({:.1} fps)", self.frames, secs, self.frames as f64 / secs);
+            println!(
+                "frames: {} in {:.2}s ({:.1} fps)",
+                self.frames,
+                secs,
+                self.frames as f64 / secs
+            );
             event_loop.exit();
         } else {
             gpu.window.request_redraw();
@@ -114,26 +133,40 @@ impl ApplicationHandler for App {
             .with_title(self.args.title.clone())
             .with_inner_size(winit::dpi::LogicalSize::new(640.0, 400.0));
         let window = Arc::new(event_loop.create_window(attrs).expect("create window"));
-        let surface = self.instance.create_surface(window.clone()).expect("create surface");
-        let adapter = pollster::block_on(self.instance.request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::HighPerformance,
-            compatible_surface: Some(&surface),
-            force_fallback_adapter: false,
-            apply_limit_buckets: false,
-        }))
-        .expect("no adapter for the window surface");
+        let surface = self
+            .instance
+            .create_surface(window.clone())
+            .expect("create surface");
+        let adapter =
+            pollster::block_on(self.instance.request_adapter(&wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::HighPerformance,
+                compatible_surface: Some(&surface),
+                force_fallback_adapter: false,
+                apply_limit_buckets: false,
+            }))
+            .expect("no adapter for the window surface");
         println!("surface adapter: {}", describe(&adapter.get_info()));
         let (device, queue) =
-            pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default())).expect("request device");
+            pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
+                .expect("request device");
         let size = window.inner_size();
         let config = surface
             .get_default_config(&adapter, size.width.max(1), size.height.max(1))
             .expect("surface unsupported by adapter");
         surface.configure(&device, &config);
-        println!("window: {}x{} {:?}", config.width, config.height, config.format);
+        println!(
+            "window: {}x{} {:?}",
+            config.width, config.height, config.format
+        );
         self.start = Instant::now();
         window.request_redraw();
-        self.gpu = Some(Gpu { window, surface, device, queue, config });
+        self.gpu = Some(Gpu {
+            window,
+            surface,
+            device,
+            queue,
+            config,
+        });
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
@@ -152,6 +185,82 @@ impl ApplicationHandler for App {
     }
 }
 
+fn verify_compute(device: &wgpu::Device, queue: &wgpu::Queue) {
+    let input: Vec<u8> = (0u32..37).flat_map(u32::to_ne_bytes).collect();
+    let storage = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("compute input"),
+        size: input.len() as u64,
+        usage: wgpu::BufferUsages::STORAGE
+            | wgpu::BufferUsages::COPY_DST
+            | wgpu::BufferUsages::COPY_SRC,
+        mapped_at_creation: false,
+    });
+    let readback = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("compute readback"),
+        size: input.len() as u64,
+        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+    queue.write_buffer(&storage, 0, &input);
+    let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: Some("twice"),
+        source: wgpu::ShaderSource::Wgsl(
+            "@group(0) @binding(0) var<storage, read_write> values: array<u32>;
+             @compute @workgroup_size(32) fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+                 if (id.x < arrayLength(&values)) { values[id.x] *= 2u; }
+             }"
+            .into(),
+        ),
+    });
+    let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        label: Some("twice"),
+        layout: None,
+        module: &shader,
+        entry_point: Some("main"),
+        compilation_options: Default::default(),
+        cache: None,
+    });
+    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: None,
+        layout: &pipeline.get_bind_group_layout(0),
+        entries: &[wgpu::BindGroupEntry {
+            binding: 0,
+            resource: storage.as_entire_binding(),
+        }],
+    });
+    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+    {
+        let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
+        pass.set_pipeline(&pipeline);
+        pass.set_bind_group(0, &bind_group, &[]);
+        pass.dispatch_workgroups(2, 1, 1);
+    }
+    encoder.copy_buffer_to_buffer(&storage, 0, &readback, 0, input.len() as u64);
+    let submission = queue.submit([encoder.finish()]);
+    let (send, receive) = std::sync::mpsc::sync_channel(1);
+    readback.map_async(wgpu::MapMode::Read, .., move |result| {
+        let _ = send.send(result);
+    });
+    device
+        .poll(wgpu::PollType::Wait {
+            submission_index: Some(submission),
+            timeout: Some(std::time::Duration::from_secs(10)),
+        })
+        .expect("GPU computation deadline");
+    receive
+        .recv_timeout(std::time::Duration::from_secs(1))
+        .expect("mapping callback")
+        .expect("map readback");
+    let view = readback.get_mapped_range(..).expect("read mapped buffer");
+    let expected: Vec<u8> = (0u32..37)
+        .flat_map(|value| (value * 2).to_ne_bytes())
+        .collect();
+    assert_eq!(&*view, expected.as_slice(), "GPU compute readback mismatch");
+    drop(view);
+    readback.unmap();
+    println!("compute: 37 exact results verified");
+}
+
 fn main() {
     let args = args();
     // The GL backend (EGL on Wayland) needs the display handle when the instance is created.
@@ -161,7 +270,9 @@ fn main() {
         Some(EventLoop::new().expect("event loop (WAYLAND_DISPLAY/DISPLAY?)"))
     };
     let desc = match &event_loop {
-        Some(el) => wgpu::InstanceDescriptor::new_with_display_handle_from_env(Box::new(el.owned_display_handle())),
+        Some(el) => wgpu::InstanceDescriptor::new_with_display_handle_from_env(Box::new(
+            el.owned_display_handle(),
+        )),
         None => wgpu::InstanceDescriptor::new_without_display_handle_from_env(),
     };
     let instance = wgpu::Instance::new(desc);
@@ -175,12 +286,23 @@ fn main() {
     }
     let Some(event_loop) = event_loop else {
         let adapter = &adapters[0];
-        let (device, _queue) =
-            pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default())).expect("request device");
-        println!("device: ok (max_texture_dimension_2d={})", device.limits().max_texture_dimension_2d);
+        let (device, queue) =
+            pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
+                .expect("request device");
+        println!(
+            "device: ok (max_texture_dimension_2d={})",
+            device.limits().max_texture_dimension_2d
+        );
+        verify_compute(&device, &queue);
         return;
     };
     event_loop.set_control_flow(ControlFlow::Poll);
-    let mut app = App { instance, args, gpu: None, frames: 0, start: Instant::now() };
+    let mut app = App {
+        instance,
+        args,
+        gpu: None,
+        frames: 0,
+        start: Instant::now(),
+    };
     event_loop.run_app(&mut app).expect("run app");
 }
