@@ -10,14 +10,14 @@ pub(crate) fn js_reap_zombie(global: &JSGlobalObject, frame: &CallFrame) -> JsRe
     {
         let pid = super::int_arg(frame, 0) as libc::pid_t;
         if pid <= 0 {
-            return Err(global.throw_invalid_arguments(format_args!(
-                "pid must name one child process"
-            )));
+            return Err(
+                global.throw_invalid_arguments(format_args!("pid must name one child process"))
+            );
         }
         let mut status: libc::c_int = 0;
         loop {
             // SAFETY: `status` is a valid out-pointer; `pid` names a single process.
-            let rc = unsafe { libc::waitpid(pid, &mut status, libc::WNOHANG) };
+            let rc = unsafe { libc::waitpid(pid, &raw mut status, libc::WNOHANG) };
             if rc < 0 && bun_sys::last_errno() == libc::EINTR {
                 continue;
             }

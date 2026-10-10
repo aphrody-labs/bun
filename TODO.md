@@ -17,7 +17,7 @@
 - [x] Fix host collector ARM64/macOS cfg coverage; pass bun_host strict Clippy on all six Windows/Linux/macOS targets, 15 native host tests, 137 rebuilt-Bun tests (4 skips) and real Windows host collection. The rebuilt link still has zero duplicate strong symbols.
 - [x] Balance toast WinRT initialization with RAII, preserving caller MTA/STA apartments; regressions fail on the installed runtime and all five changed-binary WinRT tests pass. Consolidate Windows handle registries with Bun collections/guarded locks; 31 Windows/WinRT tests pass, including actual NTFS and D3D12. Seven owned files have no strict diagnostics on Windows x64/ARM64; whole-runtime Clippy retains 184 diagnostics elsewhere.
 - [x] Qualify DNS pointer/task ownership and unaligned sockaddr reads without another native-query allocation: 43 local changed-binary DNS tests pass (16 platform skips); the DNS file has no strict diagnostics on Windows/Linux GNU x64/ARM64.
-- [ ] Finish compiler strict Rust gates: 43 native Python tests and six provenance tests pass; bun_runtime still reports 166 Windows and 37 Linux GNU diagnostics outside the owned compiler and native safety paths. The sccache command-length opt-out remains process-local.
+- [ ] Finish compiler strict Rust gates: 43 native Python tests and six provenance tests pass; bun_runtime still reports 166 Windows and 27 Linux GNU diagnostics outside the owned compiler and native safety paths. The sccache command-length opt-out remains process-local.
 - [ ] Finish strict validation and delivery for the Node pointer/pool batch. The six-target snapshot passes with the isolated Darwin rootfs patch (`tmp/rootfs-darwin-makedev-owned.patch`); that shared source was restored after discovering the SP wildcard reservation. Integrate the patch after resolving ownership, then rerun current-source gates. bun_install retains 53 strict diagnostics; the rebuilt native Node/build-host suites pass 137 tests with four skips.
 - [x] Pin Alpine packaging to the qualified fork commit and validate 637 effective config values (`aports` commit `f6e5bf63c639`).
 - [x] Port WSL dxgkrnl onto Linux 7.2.9, pass x64/ARM64 compilation and seven x64 QEMU accelerator tests (`d4764f587115`).
@@ -51,3 +51,6 @@
 - [ ] Finish fork-only runtime selection and plugin installation.
 - [ ] Refresh the complete streamed JSON snapshot after the final gates.
 - [ ] Commit and push completed owned batches with source provenance preserved.
+
+- [x] Consolidate Linux syscall output initialization and pointer arguments; strict GNU x64/ARM64 checks have zero diagnostics in the seven owned Linux files. Repair the suite syntax; Windows unsupported-platform test and scoped TypeScript/lint/format gates pass.
+- [ ] Qualify this syscall batch on a changed Linux executable; 32 Linux-only tests remain skipped on Windows.

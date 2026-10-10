@@ -5,7 +5,8 @@ import { bunEnv, bunExe, isLinux, tempDir } from "harness";
 
 const isRoot = isLinux && process.getuid?.() === 0;
 const hasSysAdmin =
-  isLinux && (linux.capabilities.get().effective & (1n << BigInt(linux.constants.CAP_SYS_ADMIN))) !== 0n;
+  isLinux &&
+  (linux.capabilities.get().effective & (1n << BigInt(linux.constants.CAP_SYS_ADMIN))) !== 0n;
 
 function cgroupWritable(): boolean {
   try {
@@ -93,7 +94,15 @@ describe.skipIf(!isLinux)("bun:linux", () => {
   });
 
   test("sysctl rejects bad names", () => {
-    for (const name of ["", "..", "kernel/ostype", "kernel..ostype", ".kernel", "kernel.", "../etc/passwd"]) {
+    for (const name of [
+      "",
+      "..",
+      "kernel/ostype",
+      "kernel..ostype",
+      ".kernel",
+      "kernel.",
+      "../etc/passwd",
+    ]) {
       expect(() => linux.sysctl.get(name)).toThrow();
       expect(() => linux.sysctl.set(name, "1")).toThrow();
     }
@@ -155,11 +164,14 @@ describe.skipIf(!isLinux)("bun:linux", () => {
     expect(() => linux.cgroup.create("ok", { cpuMax: "fast" })).toThrow();
   });
 
-  test.skipIf(isRoot || hasSysAdmin)("mount and pivotRoot fail with EPERM without privileges", () => {
-    using dir = tempDir("bun-linux-eperm", { "a/.keep": "", "b/.keep": "" });
-    expect(errorCode(() => linux.mount("tmpfs", String(dir), "tmpfs"))).toBe("EPERM");
-    expect(errorCode(() => linux.pivotRoot(`${dir}/a`, `${dir}/b`))).toBe("EPERM");
-  });
+  test.skipIf(isRoot || hasSysAdmin)(
+    "mount and pivotRoot fail with EPERM without privileges",
+    () => {
+      using dir = tempDir("bun-linux-eperm", { "a/.keep": "", "b/.keep": "" });
+      expect(errorCode(() => linux.mount("tmpfs", String(dir), "tmpfs"))).toBe("EPERM");
+      expect(errorCode(() => linux.pivotRoot(`${dir}/a`, `${dir}/b`))).toBe("EPERM");
+    },
+  );
 
   test.skipIf(isRoot)("reboot without privileges fails with EPERM", () => {
     expect(errorCode(() => linux.reboot(linux.constants.RB_DISABLE_CAD))).toBe("EPERM");
@@ -189,7 +201,11 @@ describe.skipIf(!isRoot)("bun:linux as root", () => {
       stdout: "pipe",
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    const [stdout, stderr, exitCode] = await Promise.all([
+      proc.stdout.text(),
+      proc.stderr.text(),
+      proc.exited,
+    ]);
     expect(stderr).toBe("");
     expect(stdout).toBe("inside\nfalse\n");
     expect(exitCode).toBe(0);
@@ -257,10 +273,18 @@ function probe(fn: () => unknown): boolean {
 }
 
 const perfAvailable = probe(() =>
-  linux.perfEvent.open({ type: linux.constants.PERF_TYPE_SOFTWARE, config: linux.constants.PERF_COUNT_SW_TASK_CLOCK }),
+  linux.perfEvent.open({
+    type: linux.constants.PERF_TYPE_SOFTWARE,
+    config: linux.constants.PERF_COUNT_SW_TASK_CLOCK,
+  }),
 );
 const bpfAvailable = probe(() =>
-  linux.bpf.mapCreate({ type: linux.constants.BPF_MAP_TYPE_HASH, keySize: 4, valueSize: 8, maxEntries: 4 }),
+  linux.bpf.mapCreate({
+    type: linux.constants.BPF_MAP_TYPE_HASH,
+    keySize: 4,
+    valueSize: 8,
+    maxEntries: 4,
+  }),
 );
 
 describe.skipIf(!isLinux)("bun:linux seccomp", () => {
@@ -279,7 +303,9 @@ describe.skipIf(!isLinux)("bun:linux seccomp", () => {
   });
 
   test("filter and setFilter validate their arguments", () => {
-    expect(errorCode(() => linux.seccomp.filter({ deny: "mkdir" } as never))).toBe("ERR_INVALID_ARG_TYPE");
+    expect(errorCode(() => linux.seccomp.filter({ deny: "mkdir" } as never))).toBe(
+      "ERR_INVALID_ARG_TYPE",
+    );
     expect(errorCode(() => linux.seccomp.filter({ deny: [-1] }))).toBe("ERR_OUT_OF_RANGE");
     expect(errorCode(() => linux.seccomp.setFilter("x" as never))).toBe("ERR_INVALID_ARG_TYPE");
     expect(() => linux.seccomp.setFilter(new Uint8Array(12))).toThrow();
@@ -310,7 +336,11 @@ describe.skipIf(!isLinux)("bun:linux seccomp", () => {
       stdout: "pipe",
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    const [stdout, stderr, exitCode] = await Promise.all([
+      proc.stdout.text(),
+      proc.stderr.text(),
+      proc.exited,
+    ]);
     expect(stderr).toBe("");
     expect(stdout).toBe("EPERM\n1\n");
     expect(fs.existsSync(`${dir}/denied`)).toBe(false);
@@ -321,8 +351,12 @@ describe.skipIf(!isLinux)("bun:linux seccomp", () => {
 describe.skipIf(!isLinux)("bun:linux perfEvent", () => {
   test("open validates its options", () => {
     expect(errorCode(() => linux.perfEvent.open({} as never))).toBe("ERR_INVALID_ARG_TYPE");
-    expect(errorCode(() => linux.perfEvent.open({ type: 1, pid: -1 }))).toBe("ERR_INVALID_ARG_VALUE");
-    expect(errorCode(() => linux.perfEvent.open({ type: 1, disabled: 1 as never }))).toBe("ERR_INVALID_ARG_TYPE");
+    expect(errorCode(() => linux.perfEvent.open({ type: 1, pid: -1 }))).toBe(
+      "ERR_INVALID_ARG_VALUE",
+    );
+    expect(errorCode(() => linux.perfEvent.open({ type: 1, disabled: 1 as never }))).toBe(
+      "ERR_INVALID_ARG_TYPE",
+    );
     expect(() => linux.perfEvent.ioctl(0, 0x80082407)).toThrow();
   });
 
@@ -350,8 +384,12 @@ describe.skipIf(!isLinux)("bun:linux perfEvent", () => {
 describe.skipIf(!isLinux)("bun:linux bpf", () => {
   test("mapCreate and progLoad validate their options", () => {
     expect(errorCode(() => linux.bpf.mapCreate({} as never))).toBe("ERR_INVALID_ARG_TYPE");
-    expect(errorCode(() => linux.bpf.progLoad({ type: 1, insns: [] as never }))).toBe("ERR_INVALID_ARG_TYPE");
-    expect(errorCode(() => linux.bpf.mapLookup(0, "k" as never, new Uint8Array(8)))).toBe("ERR_INVALID_ARG_TYPE");
+    expect(errorCode(() => linux.bpf.progLoad({ type: 1, insns: [] as never }))).toBe(
+      "ERR_INVALID_ARG_TYPE",
+    );
+    expect(errorCode(() => linux.bpf.mapLookup(0, "k" as never, new Uint8Array(8)))).toBe(
+      "ERR_INVALID_ARG_TYPE",
+    );
   });
 
   test.skipIf(!bpfAvailable)("hash map update, lookup, iterate and delete", () => {
@@ -384,25 +422,36 @@ describe.skipIf(!isLinux)("bun:linux bpf", () => {
     }
   });
 
-  test.skipIf(!bpfAvailable)("progLoad accepts a socket filter and reports the verifier log", () => {
-    const { constants } = linux;
-    // r0 = 0; exit
-    const ok = new Uint8Array([0xb7, 0, 0, 0, 0, 0, 0, 0, 0x95, 0, 0, 0, 0, 0, 0, 0]);
-    const fd = linux.bpf.progLoad({ type: constants.BPF_PROG_TYPE_SOCKET_FILTER, insns: ok, name: "bun_ok" });
-    expect(fd).toBeGreaterThan(2);
-    fs.closeSync(fd);
+  test.skipIf(!bpfAvailable)(
+    "progLoad accepts a socket filter and reports the verifier log",
+    () => {
+      const { constants } = linux;
+      // r0 = 0; exit
+      const ok = new Uint8Array([0xb7, 0, 0, 0, 0, 0, 0, 0, 0x95, 0, 0, 0, 0, 0, 0, 0]);
+      const fd = linux.bpf.progLoad({
+        type: constants.BPF_PROG_TYPE_SOCKET_FILTER,
+        insns: ok,
+        name: "bun_ok",
+      });
+      expect(fd).toBeGreaterThan(2);
+      fs.closeSync(fd);
 
-    // exit without setting r0
-    const bad = new Uint8Array([0x95, 0, 0, 0, 0, 0, 0, 0]);
-    let error: { code?: string; log?: string } | undefined;
-    try {
-      linux.bpf.progLoad({ type: constants.BPF_PROG_TYPE_SOCKET_FILTER, insns: bad, logSize: 4096 });
-    } catch (e) {
-      error = e as typeof error;
-    }
-    expect(error?.code).toBe("EACCES");
-    expect(error?.log).toContain("R0");
-  });
+      // exit without setting r0
+      const bad = new Uint8Array([0x95, 0, 0, 0, 0, 0, 0, 0]);
+      let error: { code?: string; log?: string } | undefined;
+      try {
+        linux.bpf.progLoad({
+          type: constants.BPF_PROG_TYPE_SOCKET_FILTER,
+          insns: bad,
+          logSize: 4096,
+        });
+      } catch (e) {
+        error = e as typeof error;
+      }
+      expect(error?.code).toBe("EACCES");
+      expect(error?.log).toContain("R0");
+    },
+  );
 });
 
 describe.skipIf(!isLinux)("bun:linux reapOrphans", () => {
@@ -431,10 +480,13 @@ describe.skipIf(!isLinux)("bun:linux reapOrphans", () => {
       stdout: "pipe",
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    const [stdout, stderr, exitCode] = await Promise.all([
+      proc.stdout.text(),
+      proc.stderr.text(),
+      proc.exited,
+    ]);
     expect(stderr).toBe("");
-    expect(stdout).toBe("1 0
-");
+    expect(stdout).toBe("1 0\n");
     expect(exitCode).toBe(0);
   });
 });
@@ -457,9 +509,11 @@ describe.skipIf(!isLinux)("bun:linux netlink", () => {
       payload: new Uint8Array(16),
     });
     const replies = linux.netlink.request(constants.NETLINK_ROUTE, message);
-    const links = replies.filter(reply => reply.type === constants.RTM_NEWLINK);
+    const links = replies.filter((reply) => reply.type === constants.RTM_NEWLINK);
     expect(links.length).toBeGreaterThan(0);
-    const indexes = links.map(link => new DataView(link.payload.buffer, link.payload.byteOffset).getInt32(4, true));
+    const indexes = links.map((link) =>
+      new DataView(link.payload.buffer, link.payload.byteOffset).getInt32(4, true),
+    );
     expect(indexes).toContain(1);
     expect(replies.at(-1)?.type).toBe(constants.NLMSG_DONE);
   });

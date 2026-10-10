@@ -41,13 +41,7 @@ pub(crate) fn js_capget(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<
         let mut data = [CapData::default(); 2];
         // SAFETY: `header` and `data` are valid for the sizes the v3 ABI reads and writes
         // (a header and two `CapData` entries).
-        let rc = unsafe {
-            libc::syscall(
-                super::nr::CAPGET,
-                &mut header as *mut CapHeader,
-                data.as_mut_ptr(),
-            )
-        };
+        let rc = unsafe { libc::syscall(super::nr::CAPGET, &raw mut header, data.as_mut_ptr()) };
         super::check(global, rc, "capget", None)?;
         let words = [
             data[0].effective,
@@ -93,13 +87,7 @@ pub(crate) fn js_capset(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<
             },
         ];
         // SAFETY: `header` and `data` are valid for the sizes the v3 ABI reads.
-        let rc = unsafe {
-            libc::syscall(
-                super::nr::CAPSET,
-                &header as *const CapHeader,
-                data.as_ptr(),
-            )
-        };
+        let rc = unsafe { libc::syscall(super::nr::CAPSET, &raw const header, data.as_ptr()) };
         super::check(global, rc, "capset", None)?;
         Ok(JSValue::UNDEFINED)
     }
@@ -131,18 +119,13 @@ pub(crate) fn js_prctl(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<J
         }
         // SAFETY: for the two pointer-writing options `a2` points at `out`, which outlives the
         // call; every other option takes plain integers.
-        let rc = unsafe {
-            libc::syscall(
-                super::nr::PRCTL,
-                option as libc::c_long,
-                a2,
-                a3,
-                a4,
-                a5,
-            )
-        };
+        let rc = unsafe { libc::syscall(super::nr::PRCTL, option as libc::c_long, a2, a3, a4, a5) };
         let rc = super::check(global, rc, "prctl", None)?;
-        let value = if writes_out { i64::from(out) } else { rc as i64 };
+        let value = if writes_out {
+            i64::from(out)
+        } else {
+            rc as i64
+        };
         Ok(JSValue::js_number_from_int64(value))
     }
     #[cfg(not(target_os = "linux"))]
