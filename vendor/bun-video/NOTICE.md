@@ -6,6 +6,6 @@ HyperFrames is pinned to `063c2f8d61b4e989274b6526b370edc588b37e4a`, version
 0.8.144. Its license remains [hyperframes/LICENSE](hyperframes/LICENSE).
 
 Their copyright notices, licenses, source histories and individual attribution
-remain authoritative. This private source integration does not relicense either
-upstream or authorize public redistribution. Root integration code is provided
+remain authoritative. This source integration does not relicense either
+upstream. Public repository publication is owner-authorized. Root integration code is provided
 under the Bun fork's existing license; third-party terms continue to apply.

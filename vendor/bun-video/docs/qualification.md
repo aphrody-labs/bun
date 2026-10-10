@@ -43,6 +43,7 @@ prepared without changing the shared dirty worktree. Primary GitHub metadata
 then confirmed that the only owner origin, `aphrody-labs/bun`, is a public fork.
 GitHub rejected new LFS objects with `can not upload new objects to public fork`;
 the upload remained at zero objects and remote main stayed unchanged. No LFS
-hook, permission or visibility setting was bypassed. Private delivery needs an
-owner-authorized destination that accepts these objects; publishing this private
-integration requires an explicit owner decision.
+hook, permission or visibility setting was bypassed. On 2026-10-10 the owner
+explicitly authorized public development and publication and removed the legacy
+private-only rule. Delivery still needs a remote that accepts these LFS objects;
+the public fork restriction is a technical blocker, not an authorization blocker.

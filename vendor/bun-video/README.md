@@ -1,6 +1,6 @@
 # bun-video
 
-Private source monorepo joining Remotion 4.0.534 and HyperFrames 0.8.144 at the
+Source monorepo joining Remotion 4.0.534 and HyperFrames 0.8.144 at the
 commits recorded in their `UPSTREAM.json`. Each upstream source tree, documentation,
 notice and dependency lock remains traceable. The umbrella is a single Bun package;
 the two dependency closures retain their exact locks during migration.
@@ -49,5 +49,5 @@ The sanitized measured samples are retained in
 `plugin/skills/bun-video` supplies unified authoring guidance. The original
 framework skills, MCP sources, infrastructure and docs stay available in their
 source trees; feature dispatch preserves their differing rendering contracts.
-`NOTICE.md` identifies the applicable upstream license files. This private
-integration does not authorize public redistribution under a new license.
+`NOTICE.md` identifies the applicable upstream license files. Public repository
+publication is owner-authorized; the original upstream licenses remain applicable.
