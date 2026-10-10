@@ -96,7 +96,10 @@ describe("bun exec", () => {
   });
 });
 
-async function bunsh(args: string[], opts: { cwd?: string; env?: Record<string, string>; stdin?: string } = {}) {
+async function bunsh(
+  args: string[],
+  opts: { cwd?: string; env?: Record<string, string>; stdin?: string } = {},
+) {
   await using proc = Bun.spawn({
     cmd: [BUN, ...args],
     argv0: "bunsh",
@@ -106,7 +109,11 @@ async function bunsh(args: string[], opts: { cwd?: string; env?: Record<string, 
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  const [stdout, stderr, exitCode] = await Promise.all([
+    proc.stdout.text(),
+    proc.stderr.text(),
+    proc.exited,
+  ]);
   return { stdout, stderr, exitCode };
 }
 
@@ -130,13 +137,19 @@ describe("bunsh", () => {
   });
 
   test.concurrent("a subshell absorbs exit", async () => {
-    const { stdout, exitCode } = await bunsh(["-c", "(exit 2); echo $?; echo $(echo in; exit 5)out"]);
+    const { stdout, exitCode } = await bunsh([
+      "-c",
+      "(exit 2); echo $?; echo $(echo in; exit 5)out",
+    ]);
     expect(stdout).toBe("2\ninout\n");
     expect(exitCode).toBe(0);
   });
 
   test.concurrent("$? is the last exit code", async () => {
-    const { stdout, exitCode } = await bunsh(["-c", "false; echo $?; true; echo $?; false || echo $?"]);
+    const { stdout, exitCode } = await bunsh([
+      "-c",
+      "false; echo $?; true; echo $?; false || echo $?",
+    ]);
     expect(stdout).toBe("1\n0\n1\n");
     expect(exitCode).toBe(0);
   });
@@ -148,7 +161,9 @@ describe("bunsh", () => {
   });
 
   test.concurrent("environment variables and assignments", async () => {
-    const { stdout, exitCode } = await bunsh(["-c", "X=local; echo $FROM_ENV $X"], { env: { FROM_ENV: "inherited" } });
+    const { stdout, exitCode } = await bunsh(["-c", "X=local; echo $FROM_ENV $X"], {
+      env: { FROM_ENV: "inherited" },
+    });
     expect(stdout).toBe("inherited local\n");
     expect(exitCode).toBe(0);
   });
@@ -174,8 +189,8 @@ describe("bunsh", () => {
     expect(exitCode).toBe(7);
   });
 
-  test.concurrent("a parse error exits 2", async () => {
-    const { stdout, stderr, exitCode } = await bunsh(["-c", "echo 'unterminated"]);
+  test.concurrent.each(["'", '"'])("an unclosed %s quote exits 2", async (quote) => {
+    const { stdout, stderr, exitCode } = await bunsh(["-c", `echo ${quote}unterminated`]);
     expect(stdout).toBe("");
     expect(stderr).toContain("error");
     expect(exitCode).toBe(2);
@@ -186,7 +201,8 @@ describe("bunsh", () => {
     const { stdout, exitCode } = await bunsh(["-i"], {
       cwd: String(dir),
       env: { HOME: String(dir), USERPROFILE: String(dir) },
-      stdin: "cd sub\nX=kept\nexport Y=exported\nfalse\necho $? $X $Y\nls\nexit 9\necho unreachable\n",
+      stdin:
+        "cd sub\nX=kept\nexport Y=exported\nfalse\necho $? $X $Y\nls\nexit 9\necho unreachable\n",
     });
     expect(stdout).toContain("1 kept exported");
     expect(stdout).toContain("marker");
@@ -205,11 +221,20 @@ describe("bunsh", () => {
   });
 
   // Unelevated, --root re-executes through sudo -n or UAC, which a test cannot answer.
-  test.skipIf(isWindows || process.getuid?.() !== 0)("--root runs in place when already root", async () => {
-    const { stdout, exitCode } = await bunsh(["--root", "-c", "echo $0 $1; exit 5", "name", "arg"]);
-    expect(stdout).toBe("name arg\n");
-    expect(exitCode).toBe(5);
-  });
+  test.skipIf(isWindows || process.getuid?.() !== 0)(
+    "--root runs in place when already root",
+    async () => {
+      const { stdout, exitCode } = await bunsh([
+        "--root",
+        "-c",
+        "echo $0 $1; exit 5",
+        "name",
+        "arg",
+      ]);
+      expect(stdout).toBe("name arg\n");
+      expect(exitCode).toBe(5);
+    },
+  );
 
   test.concurrent("is also selected by a login argv0", async () => {
     await using proc = Bun.spawn({
@@ -230,7 +255,11 @@ describe("bunsh", () => {
 describe.skipIf(isWindows)("bunsh runs apk install scripts", () => {
   const fixtures = join(import.meta.dir, "fixtures", "apk-scripts");
 
-  async function runScript(name: string, args: string[] = ["1.0.0-r0"], files: Record<string, string> = {}) {
+  async function runScript(
+    name: string,
+    args: string[] = ["1.0.0-r0"],
+    files: Record<string, string> = {},
+  ) {
     using dir = tempDir("bunsh-apk", { "bin/.keep": "", ...files });
     // An empty PATH: the scripts' addgroup/adduser must fail quietly, never touch the host.
     const result = await bunsh([join(fixtures, name), ...args], {
@@ -241,7 +270,10 @@ describe.skipIf(isWindows)("bunsh runs apk install scripts", () => {
       Bun.file(join(String(dir), path))
         .text()
         .catch(() => null);
-    const [version, conf] = await Promise.all([read("var/lib/demo/version"), read("etc/demo.conf")]);
+    const [version, conf] = await Promise.all([
+      read("var/lib/demo/version"),
+      read("etc/demo.conf"),
+    ]);
     return { ...result, version, conf };
   }
 
