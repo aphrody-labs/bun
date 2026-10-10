@@ -223,3 +223,7 @@ chantier touché (`bun-fork-aphrody`, `next-on-bun-plan`, …) à la fin du lot.
 Owner internal-fixture lot (2026-10-10): Linux 1122 pass/19 skip/0 fail and Windows 893 pass/33 skip/0 fail at engine 988d73; scoped TS/format/lint zero. See docs/project/windows-owner-release-qualification.md. Full release/deployment remains open.
 
 Owner delivery lot (2026-10-10): common-pin RTX 4070 Dx12/WGSL/CUDA and PyCUDA pass; installed Codex/Claude plugin doctor current=true. Refreshed stripped Linux candidate delivered to DBFR and SHA/Zstd/memfd verified. Production activation and complete publication remain open; see owner qualification documents.
+
+Owner native linker/FileSink lot (2026-10-10): raw pipe pointer contract removes two Windows Clippy diagnostics (51 unrelated runtime errors remain). Windows debug factory passes 70 tests with DEBUG:FULL; Windows x64/ARM64 linker option coverage passes 14 tests. Native GNU x64 strict runtime gate exits zero on VPS. Source flags and static gates recorded in docs/project/windows-filesink-pointer-qualification.md; GNU ARM64 and full release closure remain open.
+
+Owner final gate (2026-10-10): all internal Windows debug tests pass (895 pass/33 skip/0 fail, 146192 assertions); changed-engine scope check zero.

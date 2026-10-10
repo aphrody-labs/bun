@@ -881,6 +881,11 @@ export const defines: Flag[] = [
 // ═══════════════════════════════════════════════════════════════════════════
 
 export const linkerFlags: Flag[] = [
+  {
+    flag: c => `/threads:${c.linkThreads}`,
+    when: c => c.windows && c.linkThreads !== undefined,
+    desc: "Bound Windows linker workers without changing debug information or optimization",
+  },
   // ─── Sanitizers ───
   {
     flag: "-fsanitize=address",

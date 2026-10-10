@@ -120,3 +120,6 @@
 
 - [x] Deliver and verify 988d73 Linux candidate on DBFR; repeat common-pin Windows GPU/PyCUDA/plugin gates (2026-10-10).
 - [ ] Qualify catalog-owned standalone Bun promotion, provider activation and complete multi-platform release.
+
+- [x] Qualify explicit Windows linker worker limit and FileSink raw pipe pointer with changed debug engine, native GNU x64 and scoped static gates (2026-10-10).
+- [ ] Close remaining 51 Windows runtime lint diagnostics and GNU ARM64 cross-compiler qualification.

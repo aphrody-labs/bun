@@ -44,6 +44,7 @@ test.concurrent("every spelling of a field is accepted", async () => {
     "--freebsd-version=14.3",
     "--nodejsV8Version=13.6.233.10",
     "--android-api-level=28",
+    "--link-threads=1",
     "--lto=off",
     "--help",
   );
