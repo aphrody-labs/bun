@@ -126,3 +126,7 @@
 
 - [x] Deliver runnable Buv/PyJS PyCUDA -> wgpu/D3D12 -> CUDA pipeline, 37 exact hardware results and three existing GPU tests (2026-10-10).
 - [ ] Qualify shared GPU buffers, native Linux RTX 4070 and complete multi-platform promotion.
+
+- [x] Qualify strict GNU ARM64 runtime with a real target sysroot on VPS (2026-10-10).
+- [x] Verify Codex/Claude installed plugin registration and actual PATH MCP calls, 35 tools (2026-10-10).
+- [ ] Finish resumed Windows release, aligned PATH promotion and new-session activation.
