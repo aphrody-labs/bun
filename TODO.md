@@ -70,3 +70,4 @@
 - [x] Consolider le lanceur du plugin ; strict GNU x64/ARM64 passe, fichier sans diagnostic Windows x64/ARM64, 31 tests natifs et extraction a froid qualifies.
 - [x] Qualifier la copie Windows avec libuv et le repli lecture/ecriture ; 195 tests natifs passes sur deux configurations, fichier sans diagnostic strict sur quatre cibles.
 - [x] Verifier les 313 fichiers du plugin installe et les entrees activees Codex/Claude sans modifier les authentifications.
+- [x] Qualifier les callbacks watchers et sockets cluster Windows sur le binaire modifie et quatre cibles strictes.
