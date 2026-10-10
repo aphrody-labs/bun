@@ -3736,18 +3736,10 @@ fn argv_storage() -> &'static [ZBox] {
         // libstd's `args_os()` splits `GetCommandLineW` itself with the MSVC
         // CRT (2008+) rules — the argv every `wmain` program, node included,
         // sees — without loading shell32.dll for `CommandLineToArgvW`.
-        // `into_string()` is an O(1) check that moves the buffer through; only
-        // an arg with an unpaired surrogate takes the lossy copy (→ U+FFFD, as
-        // before).
+        // Preserve Windows OsString's WTF-8 bytes, including unpaired surrogates.
         #[cfg(windows)]
         let args = std::env::args_os()
-            .map(|a| {
-                ZBox::from_vec(
-                    a.into_string()
-                        .unwrap_or_else(|a| a.to_string_lossy().into_owned())
-                        .into_bytes(),
-                )
-            })
+            .map(|a| ZBox::from_vec(a.into_encoded_bytes()))
             .collect();
         #[cfg(not(windows))]
         let args = match raw_os_argv() {

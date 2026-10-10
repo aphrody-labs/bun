@@ -58,16 +58,31 @@ pub(crate) fn is_csharp_source(path: &[u8]) -> bool {
 /// `dotnet run --file <path> -- <args>`: builds (cached by the SDK) and runs the file-based app.
 #[cold]
 pub(crate) fn run_file(path: &[u8], args: &[&[u8]]) -> ! {
-    let os = |bytes: &[u8]| OsString::from(String::from_utf8_lossy(bytes).into_owned());
     let argv = [
         OsString::from("run"),
         OsString::from("--file"),
-        os(path),
+        os_argument(path),
         OsString::from("--"),
     ]
     .into_iter()
-    .chain(args.iter().map(|arg| os(arg)));
+    .chain(args.iter().map(|arg| os_argument(arg)));
     muxer(argv)
+}
+
+fn os_argument(bytes: &[u8]) -> OsString {
+    #[cfg(unix)]
+    {
+        use std::os::unix::ffi::OsStringExt;
+        OsString::from_vec(bytes.to_vec())
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::ffi::OsStringExt;
+        match bun_core::string::immutable::wtf8_to_utf16_alloc(bytes) {
+            Some(wide) => OsString::from_wide(&wide),
+            None => OsString::from(std::str::from_utf8(bytes).expect("ASCII argument")),
+        }
+    }
 }
 
 fn muxer(args: impl IntoIterator<Item = OsString>) -> ! {
@@ -78,7 +93,9 @@ fn muxer(args: impl IntoIterator<Item = OsString>) -> ! {
         Err(err) => {
             bun_core::pretty_errorln!("<r><red>error<r>: bun dotnet: {}", err.message);
             if err.code.is_none() {
-                bun_core::pretty_errorln!("<d>Install .NET with <b>bun dotnet setup<r><d>, or set DOTNET_ROOT.<r>");
+                bun_core::pretty_errorln!(
+                    "<d>Install .NET with <b>bun dotnet setup<r><d>, or set DOTNET_ROOT.<r>"
+                );
             }
             Global::exit(1);
         }

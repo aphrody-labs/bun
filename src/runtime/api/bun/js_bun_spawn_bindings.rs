@@ -236,6 +236,15 @@ fn get_argv(
                 .throw());
         }
 
+        #[cfg(windows)]
+        let owned = if arg.is_utf16() {
+            use std::os::windows::ffi::OsStringExt;
+            // libuv's Windows argv is WTF-8, so retain unpaired UTF-16 code units.
+            ZBox::from_vec(std::ffi::OsString::from_wide(arg.utf16()).into_encoded_bytes())
+        } else {
+            arg.to_owned_slice_z()
+        };
+        #[cfg(not(windows))]
         let owned = arg.to_owned_slice_z();
         if is_batch_file && bun_which::batch_arg_has_cmd_metachars(owned.as_bytes()) {
             return Err(global_this

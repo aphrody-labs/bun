@@ -8,6 +8,32 @@ import { splitWindowsCommandLine } from "./windows-command-line";
 const arg0 = process.argv[0];
 const arg1 = join(import.meta.dir, "print-process-args.js");
 
+test.skipIf(process.platform !== "win32")(
+  "Windows spawn preserves lone surrogates in its native command line",
+  async () => {
+    const script = `
+    const { dlopen, FFIType, toArrayBuffer } = require("bun:ffi");
+    const api = dlopen("kernel32.dll", {
+      GetCommandLineW: { args: [], returns: FFIType.ptr },
+      lstrlenW: { args: [FFIType.ptr], returns: FFIType.i32 },
+    });
+    const pointer = api.symbols.GetCommandLineW();
+    const length = api.symbols.lstrlenW(pointer);
+    const units = new Uint16Array(toArrayBuffer(pointer, 0, length * 2));
+    console.log(JSON.stringify(Array.from(units).filter(unit => unit === 55296 || unit === 56320)));
+    api.close();
+  `;
+    await using proc = spawn([bunExe(), "-e", script, "\ud800", "\udc00"], {
+      env: bunEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, exitCode] = await Promise.all([proc.stdout.text(), proc.exited]);
+    expect(stdout).toBe("[55296,56320]\n");
+    expect(exitCode).toBe(0);
+  },
+);
+
 async function run(args, isRun) {
   const exe = bunExe();
 
@@ -23,8 +49,8 @@ test("args exclude run", async () => {
   const fixture = [["-"], ["a"], ["a", "b"], ["a", "b", "c"], []];
 
   for (let i = 0; i < 10; i++) {
-    const withRun = fixture.map(args => run(args, true));
-    const withoutRun = fixture.map(args => run(args, false));
+    const withRun = fixture.map((args) => run(args, true));
+    const withoutRun = fixture.map((args) => run(args, false));
 
     const all = await Promise.all([...withRun, ...withoutRun]);
     withoutAggressiveGC(() => {
@@ -42,7 +68,17 @@ test("args exclude run", async () => {
 // https://github.com/oven-sh/bun/issues/11610 was the non-ASCII case.
 describe("argv round-trips through spawn", () => {
   const cases = {
-    "non-ASCII": ["🌊 测试", "äöü", "日本語", "Ω≈ç√", "עברית", "e\u0301", "a\u00a0b", "x\u3000y", "\ufeffbom"],
+    "non-ASCII": [
+      "🌊 测试",
+      "äöü",
+      "日本語",
+      "Ω≈ç√",
+      "עברית",
+      "e\u0301",
+      "a\u00a0b",
+      "x\u3000y",
+      "\ufeffbom",
+    ],
     "quotes and backslashes": [
       'q"uote',
       '"quoted"',
@@ -56,7 +92,16 @@ describe("argv round-trips through spawn", () => {
       "C:\\Program Files\\x\\",
       "\\\\server\\share\\",
     ],
-    "whitespace and empties": ["", " ", "  two  spaces  ", "tab\there", "new\nline", "cr\r\nlf", "", "last"],
+    "whitespace and empties": [
+      "",
+      " ",
+      "  two  spaces  ",
+      "tab\there",
+      "new\nline",
+      "cr\r\nlf",
+      "",
+      "last",
+    ],
     // (a `--` directly after the script is consumed by the CLI, so it is not first here)
     "things that look like flags after the script": [
       "-e",
@@ -68,7 +113,18 @@ describe("argv round-trips through spawn", () => {
       "-",
       "--version",
     ],
-    "nothing is expanded": ["%PATH%", "$HOME", "~", "*.*", "`echo x`", "$(echo x)", "!VAR!", "^&|<>()", "a;b", "%"],
+    "nothing is expanded": [
+      "%PATH%",
+      "$HOME",
+      "~",
+      "*.*",
+      "`echo x`",
+      "$(echo x)",
+      "!VAR!",
+      "^&|<>()",
+      "a;b",
+      "%",
+    ],
   };
   for (const [name, args] of Object.entries(cases)) {
     test(name, async () => {
@@ -79,7 +135,9 @@ describe("argv round-trips through spawn", () => {
   }
   test("long and many", async () => {
     const long = Buffer.alloc(8192, "L").toString() + '" \\';
-    const many = Array.from({ length: 300 }, (_, i) => (i % 3 === 0 ? `a${i}` : i % 3 === 1 ? `"${i}"` : `${i}\\`));
+    const many = Array.from({ length: 300 }, (_, i) =>
+      i % 3 === 0 ? `a${i}` : i % 3 === 1 ? `"${i}"` : `${i}\\`,
+    );
     expect(await run([long, ...many], false)).toEqual([arg0, arg1, long, ...many]);
   });
 });
@@ -100,23 +158,26 @@ describe.skipIf(!isWindows)("Windows command line splitting follows the C runtim
         windowsVerbatimArguments: true,
       });
       let out = "";
-      child.stdout.setEncoding("utf8").on("data", d => (out += d));
+      child.stdout.setEncoding("utf8").on("data", (d) => (out += d));
       child.on("error", reject);
-      child.on("close", code => {
+      child.on("close", (code) => {
         let argv;
         try {
           argv = JSON.parse(out).slice(2);
         } catch {
           return reject(
-            new Error(`child exited ${code} and printed ${JSON.stringify(out)} for tail ${JSON.stringify(tail)}`),
+            new Error(
+              `child exited ${code} and printed ${JSON.stringify(out)} for tail ${JSON.stringify(tail)}`,
+            ),
           );
         }
-        if (code !== 0) return reject(new Error(`child exited ${code} for tail ${JSON.stringify(tail)}`));
+        if (code !== 0)
+          return reject(new Error(`child exited ${code} for tail ${JSON.stringify(tail)}`));
         resolve(argv);
       });
     });
   }
-  const expected = tail => splitWindowsCommandLine(`bun.exe "${arg1}"${tail}`).slice(2);
+  const expected = (tail) => splitWindowsCommandLine(`bun.exe "${arg1}"${tail}`).slice(2);
 
   // [raw tail appended after `"<script>"`, expected argv]
   const table = [
@@ -157,14 +218,15 @@ describe.skipIf(!isWindows)("Windows command line splitting follows the C runtim
   test("curated command lines", async () => {
     for (const [tail, want] of table) expect(expected(tail)).toEqual(want); // pins the reference itself
     const got = await Promise.all(table.map(([tail]) => runVerbatim(tail)));
-    for (let i = 0; i < table.length; i++) expect(got[i], `tail ${JSON.stringify(table[i][0])}`).toEqual(table[i][1]);
+    for (let i = 0; i < table.length; i++)
+      expect(got[i], `tail ${JSON.stringify(table[i][0])}`).toEqual(table[i][1]);
   });
 
   test("generated command lines", async () => {
     // Deterministic generator over the characters the rules care about.
     let seed = 0x9e3779b9;
     const next = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32;
-    const pick = s => s[Math.floor(next() * s.length)];
+    const pick = (s) => s[Math.floor(next() * s.length)];
     const alphabet = [
       '"',
       '"',
