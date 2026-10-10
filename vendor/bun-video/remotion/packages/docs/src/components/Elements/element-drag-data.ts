@@ -1,0 +1,104 @@
+import {
+	createElementPayload,
+	installInStudio,
+	type StudioElementPayload,
+} from '@remotion/studio-protocol';
+import type {ElementDefinition} from './element-definitions';
+
+export const createElementPayloadFromDefinition = ({
+	definition,
+	sourceCode,
+	installAssets,
+}: {
+	readonly definition: ElementDefinition;
+	readonly sourceCode: string;
+	readonly installAssets: boolean;
+}): StudioElementPayload => {
+	const dimensions =
+		definition.elementWidth !== null && definition.elementHeight !== null
+			? {
+					width: definition.elementWidth,
+					height: definition.elementHeight,
+				}
+			: null;
+
+	return createElementPayload({
+		assets: installAssets ? definition.assets : [],
+		dependencies: definition.dependencies,
+		dimensions,
+		displayName: definition.displayName,
+		durationInFrames: definition.durationInFrames,
+		initialProps:
+			!installAssets || definition.installationProps === null
+				? definition.initialProps
+				: {...definition.initialProps, ...definition.installationProps},
+		installationMode: definition.installationMode,
+		isCaptionStyle: definition.category === 'captions',
+		slug: definition.slug,
+		sourceCode,
+	});
+};
+
+export const installElementInStudio = ({
+	definition,
+	sourceCode,
+}: {
+	readonly definition: ElementDefinition;
+	readonly sourceCode: string;
+}) => {
+	const elementPayload = createElementPayloadFromDefinition({
+		definition,
+		sourceCode,
+		installAssets: false,
+	});
+	if (definition.assets.length === 0) {
+		return installInStudio({payload: elementPayload});
+	}
+
+	return installInStudio({
+		payload: createElementPayloadFromDefinition({
+			definition,
+			sourceCode,
+			installAssets: true,
+		}),
+		fallbackPayload: elementPayload,
+	});
+};
+
+export const setElementDragImage = (
+	dataTransfer: DataTransfer,
+	poster: HTMLImageElement | null,
+) => {
+	if (
+		!poster?.complete ||
+		poster.naturalWidth === 0 ||
+		poster.naturalHeight === 0
+	) {
+		return;
+	}
+
+	const scale = Math.min(
+		1,
+		132 / poster.naturalWidth,
+		88 / poster.naturalHeight,
+	);
+	const width = poster.naturalWidth * scale;
+	const height = poster.naturalHeight * scale;
+	const wrapper = document.createElement('div');
+	wrapper.style.position = 'fixed';
+	wrapper.style.top = '-1000px';
+	wrapper.style.left = '-1000px';
+	wrapper.style.width = `${width}px`;
+	wrapper.style.height = `${height}px`;
+
+	const image = document.createElement('img');
+	image.src = poster.currentSrc || poster.src;
+	image.style.display = 'block';
+	image.style.width = '100%';
+	image.style.height = '100%';
+	wrapper.appendChild(image);
+
+	document.body.appendChild(wrapper);
+	dataTransfer.setDragImage(wrapper, width / 2, height / 2);
+	requestAnimationFrame(() => wrapper.remove());
+};
