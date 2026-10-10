@@ -92,3 +92,5 @@
 - [x] Windows COM and native query output contracts: seven real native passes; GNU strict runtime zero.
 
 - [x] Stripped Linux candidate independently qualified and delivered to isolated DBFR directory, SHA256 and native smoke verified.
+
+- 2026-10-10: owned Node host consolidation: 137 native tests pass, 4 skips; Windows/Linux x64/ARM64 owned Clippy diagnostics zero. Whole Windows 58 diagnostics and reserved Darwin dependency remain; see docs/project/node-host-consolidation-qualification.md.

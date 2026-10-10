@@ -1358,13 +1358,13 @@ unsafe extern "C" fn Bun__Node__Path_joinWTF(
 ) -> bun_core::String {
     // SAFETY: caller passes a valid slice from C++.
     let rhs = unsafe { bun_core::ffi::slice(rhs_ptr, rhs_len) };
-    let mut buf = [0u8; path_size::<u8>()];
-    let mut buf2 = [0u8; path_size::<u8>()];
+    let mut buf = bun_paths::path_buffer_pool::get();
+    let mut buf2 = bun_paths::path_buffer_pool::get();
     let lhs = lhs.to_utf8();
     #[cfg(windows)]
-    let joined = join_windows_t::<u8>(&[lhs.slice(), rhs], &mut buf, &mut buf2);
+    let joined = join_windows_t::<u8>(&[lhs.slice(), rhs], &mut buf[..], &mut buf2[..]);
     #[cfg(not(windows))]
-    let joined = join_posix_t::<u8>(&[lhs.slice(), rhs], &mut buf, &mut buf2);
+    let joined = join_posix_t::<u8>(&[lhs.slice(), rhs], &mut buf[..], &mut buf2[..]);
     bun_core::String::clone_utf8(joined)
 }
 
