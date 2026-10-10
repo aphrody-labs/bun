@@ -986,7 +986,8 @@ describe("Bun.Image", () => {
       test.each(["heic", "avif"] as const)(".%s() encodes (or rejects ERR_IMAGE_FORMAT_UNSUPPORTED)", async fmt => {
         let out: Uint8Array;
         try {
-          out = await new Bun.Image(cornersPng)[fmt]({ quality: 50 }).bytes();
+          // Windows HEVC codecs can encode tiny images that their decoder cannot read.
+          out = await new Bun.Image(cornersPng).resize(64, 64)[fmt]({ quality: 50 }).bytes();
         } catch (e: any) {
           // Stable code, not message-matching.
           expect(e?.code).toBe("ERR_IMAGE_FORMAT_UNSUPPORTED");
@@ -995,7 +996,9 @@ describe("Bun.Image", () => {
         expect(String.fromCharCode(...out.subarray(4, 8))).toBe("ftyp");
         // ImageIO emits major_brand=mif1 with the codec brand only in
         // compatibles; the sniffer used to misroute that to .heic for AVIF.
-        expect((await new Bun.Image(out).metadata()).format).toBe(fmt);
+        const metadata = await new Bun.Image(out).metadata();
+        expect(metadata.format).toBe(fmt);
+        expect([metadata.width, metadata.height]).toEqual([64, 64]);
       });
     }
   });
