@@ -1,0 +1,165 @@
+import {loadFonts, loadVariableFonts} from './base';
+
+export const getInfo = () => ({
+	fontFamily: 'Instrument Sans',
+	importName: 'InstrumentSans',
+	version: 'v4',
+	url: 'https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700',
+	unicodeRanges: {
+		'latin-ext':
+			'U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF',
+		latin:
+			'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD',
+	},
+	fonts: {
+		italic: {
+			'400': {
+				'latin-ext':
+					'https://fonts.gstatic.com/s/instrumentsans/v4/pxitypc9vsFDm051Uf6KVwgkfoSbSnNPooZAN0lInHGpCWNu2ZGRu3k.woff2',
+				latin:
+					'https://fonts.gstatic.com/s/instrumentsans/v4/pxitypc9vsFDm051Uf6KVwgkfoSbSnNPooZAN0lInHGpCWNu15GR.woff2',
+			},
+			'500': {
+				'latin-ext':
+					'https://fonts.gstatic.com/s/instrumentsans/v4/pxitypc9vsFDm051Uf6KVwgkfoSbSnNPooZAN0lInHGpCWNu2ZGRu3k.woff2',
+				latin:
+					'https://fonts.gstatic.com/s/instrumentsans/v4/pxitypc9vsFDm051Uf6KVwgkfoSbSnNPooZAN0lInHGpCWNu15GR.woff2',
+			},
+			'600': {
+				'latin-ext':
+					'https://fonts.gstatic.com/s/instrumentsans/v4/pxitypc9vsFDm051Uf6KVwgkfoSbSnNPooZAN0lInHGpCWNu2ZGRu3k.woff2',
+				latin:
+					'https://fonts.gstatic.com/s/instrumentsans/v4/pxitypc9vsFDm051Uf6KVwgkfoSbSnNPooZAN0lInHGpCWNu15GR.woff2',
+			},
+			'700': {
+				'latin-ext':
+					'https://fonts.gstatic.com/s/instrumentsans/v4/pxitypc9vsFDm051Uf6KVwgkfoSbSnNPooZAN0lInHGpCWNu2ZGRu3k.woff2',
+				latin:
+					'https://fonts.gstatic.com/s/instrumentsans/v4/pxitypc9vsFDm051Uf6KVwgkfoSbSnNPooZAN0lInHGpCWNu15GR.woff2',
+			},
+		},
+		normal: {
+			'400': {
+				'latin-ext':
+					'https://fonts.gstatic.com/s/instrumentsans/v4/pxiTypc9vsFDm051Uf6KVwgkfoSxQ0GsQv8ToedPibnr0She1YmV.woff2',
+				latin:
+					'https://fonts.gstatic.com/s/instrumentsans/v4/pxiTypc9vsFDm051Uf6KVwgkfoSxQ0GsQv8ToedPibnr0SZe1Q.woff2',
+			},
+			'500': {
+				'latin-ext':
+					'https://fonts.gstatic.com/s/instrumentsans/v4/pxiTypc9vsFDm051Uf6KVwgkfoSxQ0GsQv8ToedPibnr0She1YmV.woff2',
+				latin:
+					'https://fonts.gstatic.com/s/instrumentsans/v4/pxiTypc9vsFDm051Uf6KVwgkfoSxQ0GsQv8ToedPibnr0SZe1Q.woff2',
+			},
+			'600': {
+				'latin-ext':
+					'https://fonts.gstatic.com/s/instrumentsans/v4/pxiTypc9vsFDm051Uf6KVwgkfoSxQ0GsQv8ToedPibnr0She1YmV.woff2',
+				latin:
+					'https://fonts.gstatic.com/s/instrumentsans/v4/pxiTypc9vsFDm051Uf6KVwgkfoSxQ0GsQv8ToedPibnr0SZe1Q.woff2',
+			},
+			'700': {
+				'latin-ext':
+					'https://fonts.gstatic.com/s/instrumentsans/v4/pxiTypc9vsFDm051Uf6KVwgkfoSxQ0GsQv8ToedPibnr0She1YmV.woff2',
+				latin:
+					'https://fonts.gstatic.com/s/instrumentsans/v4/pxiTypc9vsFDm051Uf6KVwgkfoSxQ0GsQv8ToedPibnr0SZe1Q.woff2',
+			},
+		},
+	},
+	subsets: ['latin', 'latin-ext'],
+	variable: {
+		axes: {
+			wdth: {
+				min: 75,
+				max: 100,
+			},
+			wght: {
+				min: 400,
+				max: 700,
+			},
+		},
+		fontFaces: [
+			{
+				style: 'italic',
+				weight: '400 700',
+				stretch: '75% 100%',
+				subset: 'latin-ext',
+				unicodeRange:
+					'U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF',
+				src: 'https://fonts.gstatic.com/s/instrumentsans/v4/pxieypc9vsFDm051Uf6KVwgkfoSbSllNimuQpw.woff2',
+			},
+			{
+				style: 'italic',
+				weight: '400 700',
+				stretch: '75% 100%',
+				subset: 'latin',
+				unicodeRange:
+					'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD',
+				src: 'https://fonts.gstatic.com/s/instrumentsans/v4/pxieypc9vsFDm051Uf6KVwgkfoSbSllDims.woff2',
+			},
+			{
+				style: 'normal',
+				weight: '400 700',
+				stretch: '75% 100%',
+				subset: 'latin-ext',
+				unicodeRange:
+					'U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF',
+				src: 'https://fonts.gstatic.com/s/instrumentsans/v4/pxicypc9vsFDm051Uf6KVwgkfoSbQWlBkm8.woff2',
+			},
+			{
+				style: 'normal',
+				weight: '400 700',
+				stretch: '75% 100%',
+				subset: 'latin',
+				unicodeRange:
+					'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD',
+				src: 'https://fonts.gstatic.com/s/instrumentsans/v4/pxicypc9vsFDm051Uf6KVwgkfoSbT2lB.woff2',
+			},
+		],
+		url: 'https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700',
+	},
+});
+
+export const fontFamily = 'Instrument Sans' as const;
+
+type Variants = {
+	italic: {
+		weights: '400' | '500' | '600' | '700';
+		subsets: 'latin' | 'latin-ext';
+	};
+	normal: {
+		weights: '400' | '500' | '600' | '700';
+		subsets: 'latin' | 'latin-ext';
+	};
+};
+
+export const loadFont = <T extends keyof Variants>(
+	style?: T,
+	options?: {
+		weights?: Variants[T]['weights'][];
+		subsets?: Variants[T]['subsets'][];
+		document?: Document;
+		ignoreTooManyRequestsWarning?: boolean;
+	},
+) => {
+	return loadFonts(getInfo(), style, options);
+};
+
+type VariableVariants = {
+	italic: {
+		subsets: 'latin' | 'latin-ext';
+	};
+	normal: {
+		subsets: 'latin' | 'latin-ext';
+	};
+};
+
+export const loadVariableFont = <T extends keyof VariableVariants>(
+	style: T,
+	options: {
+		subsets: VariableVariants[T]['subsets'][];
+		document?: Document;
+		ignoreTooManyRequestsWarning?: boolean;
+	},
+) => {
+	return loadVariableFonts(getInfo(), style, options);
+};
