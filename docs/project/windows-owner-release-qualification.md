@@ -91,3 +91,34 @@ space rose from 3450236928 to 6331330560 bytes. Its reported 9.87 GiB logical
 reclaim includes tmpfs and is not the actual disk gain. Existing Docker
 containers, production runtime and DBFR services were not activated or changed.
 The next Linux release build still needs its own source/capacity/factory plan.
+
+## Offline real Next applications
+
+BUN_TEST_NEXT_CACHE_DIR selects a preseeded fixture cache. The helper uses
+`--offline --frozen-lockfile --cache-dir <cache> --config=<temporary-config>`;
+the temporary install config prevents the fixtures' cache=false setting from
+disabling the prepared cache. Missing cached packages fail without fetching.
+No global Bun configuration, fixture assertion or test deadline changes.
+Without the variable, the existing fixture behavior is retained.
+
+Provisioning runs explicitly outside the tests: copy each fixture's package.json
+and bun.lock into an isolated preparation directory, then run the owner release
+factory with `install --cwd <preparation-dir> --cache-dir <cache>
+--frozen-lockfile --ignore-scripts`. Prepare the App fixture 16.1.6 and Pages
+overlays 16.4.0 and 16.5.0-canary.4. Set BUN_TEST_NEXT_CACHE_DIR to that cache
+for the application gate. This is preparation, not an internet-dependent test.
+
+The release engine at 54619ce189c, with the owned helper patch, passes all
+12 tests and 251 assertions across the exact Pages and App fixture files,
+zero failures. Pages HTML/API parity passes all three Next versions.
+App Router passes Turbopack, webpack, next-bun without Node on PATH, and
+Bun.build through @aphrody/next-bun. Coverage includes server actions,
+prerendered HTML, RSC payloads, PostCSS execution and client chunk traversal.
+This replaces the earlier interrupted application-gate evidence.
+
+The helper's scoped TypeScript dependency closure, Prettier and oxlint gates
+all exit zero. The initial offline invocation failed before builds because a
+separate --config value became a dependency positional; the supported equals
+form fixes the invocation. No runtime workaround or assertion reduction was
+introduced. Receipts: tmp/next-owner-offline-plan.json,
+next-owner-seed-\*.log and windows-clean-next-offline-apps-final.log/.exit.
