@@ -8,13 +8,17 @@
 - [x] Pass the D3D12 JavaScript gate with the rebuilt Bun executable.
 - [x] Qualify the existing wgpu probe with exact compute readback on hardware.
 - [x] Expose the shared GPU SDK through Buv and pass the six provenance/export gates.
+- [ ] Qualify Buv GpuRuntime WGSL/CUDA calls with canonical aphrody_ffi: NVIDIA NVRTC 13.4.59 is installed with verified hashes; the provider build was stopped at 18 MB free disk, and its cudarc build must target CUDA 13.4. No SDK hardware activation is claimed.
 - [x] Qualify PyCUDA computation through the shared Buv/PyJS CPython host.
 - [x] Port the Aphrody Rust kernel patches onto pinned upstream Linux 7.2.9 (`dc79e99b05799`).
 - [x] Build the new kernel, pass driver Clippy and boot seven accelerator selftests in QEMU.
 - [x] Pass bun_core strict Clippy, six target checks and 43 changed-binary Python tests (`ce143eadb8f`).
-- [ ] Finish compiler strict Rust gates: 43 native Python tests and six provenance tests pass; bun_runtime still reports 380 diagnostics outside the owned compiler path. The sccache command-length opt-out remains process-local.
+- [x] Pass strict GPU/registry pointer checks on Windows x64/ARM64 and seven changed-binary hardware/registry tests (`6ebd6ed3140`).
+- [ ] Finish compiler strict Rust gates: 43 native Python tests and six provenance tests pass; bun_runtime still reports 272 diagnostics outside the owned compiler and native safety paths. The sccache command-length opt-out remains process-local.
+- [ ] Finish six-target validation for the Node pointer/pool batch; 129 native tests pass with four skips, and the module suite passes after updating the fork builtin list.
 - [x] Pin Alpine packaging to the qualified fork commit and validate 637 effective config values (`aports` commit `f6e5bf63c639`).
-- [ ] Port and qualify the WSL dxgkrnl path independently of native NVIDIA modules.
+- [x] Port WSL dxgkrnl onto Linux 7.2.9, pass x64/ARM64 compilation and seven x64 QEMU accelerator tests (`d4764f587115`).
+- [ ] Publish the WSL branch: GitHub rejects a missing history object from the shallow source; a complete-history publication checkout is being fetched. Strict checkpatch retains 13 inherited protocol-array errors, with zero new errors.
 - [ ] Build, boot and measure the new kernel before host activation.
 
 ## Windows version synchronization
@@ -26,6 +30,7 @@
 - [x] Accept plain stable `bun-v1.4.4` tags in publishers, installers, upgrade and site.
 - [x] Pass changed-runtime stable-tag, plugin and Linux deployment helper tests.
 - [ ] Qualify production binaries and execute the complete runtime suite.
+- [ ] Consolidate native Zstd link inputs: the debug linker audit reports 342 duplicate strong symbols from vendored Zstd and zstd-sys; release CI rejects them.
 - [ ] Commit and push the qualified release candidate.
 - [ ] Publish and verify all eligible npm, crates.io, PyPI and vendor products.
 - [ ] Publish release assets, GHCR images and activate qualified host deployments.
