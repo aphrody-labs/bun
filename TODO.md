@@ -160,3 +160,6 @@
 
 - [x] Qualify pooled lockfile iterator: native200/0, four target owned diagnostics zero (2026-10-10).
 - [ ] Close runtime Windows18 and bun_install Windows115/GNU53 diagnostics plus full release/private/hardware delivery.
+
+- [x] Qualify launch/shell pointer contract: four targets and native44/0 (2026-10-10).
+- [ ] Close runtime Windows14, bun_install Windows115/GNU53 and full release/private/hardware delivery.

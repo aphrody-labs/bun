@@ -1049,7 +1049,10 @@ impl Writable {
                     // SAFETY: `old` is Blob (matched above) and ManuallyDrop
                     // prevents its Drop from running, so this is the sole move.
                     let blob = match &*old {
-                        Stdio::Blob(b) => unsafe { core::ptr::read(b) },
+                        Stdio::Blob(b) => {
+                            // SAFETY: ManuallyDrop suppresses the source destructor; this is the sole move.
+                            unsafe { core::ptr::read(b) }
+                        }
                         _ => unreachable!(),
                     };
                     return Ok(Writable::Buffer(StaticPipeWriter::create(
@@ -1102,7 +1105,10 @@ impl Writable {
                     let blob = match &*old {
                         // SAFETY: `old` is Blob (matched above) and ManuallyDrop
                         // prevents its Drop from running, so this is the sole move.
-                        Stdio::Blob(b) => unsafe { core::ptr::read(b) },
+                        Stdio::Blob(b) => {
+                            // SAFETY: ManuallyDrop suppresses the source destructor; this is the sole move.
+                            unsafe { core::ptr::read(b) }
+                        }
                         _ => unreachable!(),
                     };
                     Ok(Writable::Buffer(StaticPipeWriter::create(
