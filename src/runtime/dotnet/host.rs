@@ -13,7 +13,11 @@ fn opt_str_arg(global: &JSGlobalObject, frame: &CallFrame, i: usize) -> JsResult
         return Ok(None);
     }
     let utf8 = value.to_utf8(global)?;
-    Ok(Some(String::from_utf8_lossy(&utf8).into_owned()))
+    std::str::from_utf8(&utf8)
+        .map(|text| Some(text.to_owned()))
+        .map_err(|_| {
+            global.throw_invalid_arguments(format_args!("argument {i} must be valid UTF-8"))
+        })
 }
 
 fn str_arg(global: &JSGlobalObject, frame: &CallFrame, i: usize) -> JsResult<String> {
@@ -50,7 +54,7 @@ pub(crate) fn js_locate(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<
         Some(root) => bun_dotnet_host::locate(Some(Path::new(&root))),
         None => bun_dotnet_host::hostfxr().map(|fxr| fxr.location().clone()),
     }
-    .map_err(|err| dotnet_error(global, err))?;
+    .map_err(|err| dotnet_error(global, &err))?;
     let muxer = location.muxer();
     let json = format!(
         "{{\"dotnetRoot\":{},\"hostfxr\":{},\"source\":{},\"muxer\":{},\"sdks\":{},\"runtimes\":{}}}",
@@ -72,11 +76,11 @@ pub(crate) fn js_locate(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<
 #[bun_jsc::host_fn]
 pub(crate) fn js_initialize(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
     let config = opt_str_arg(global, frame, 0)?;
-    let fxr = bun_dotnet_host::hostfxr().map_err(|err| dotnet_error(global, err))?;
+    let fxr = bun_dotnet_host::hostfxr().map_err(|err| dotnet_error(global, &err))?;
     let running = fxr.started().is_some();
     let runtime = fxr
         .runtime(config.as_deref().map(Path::new))
-        .map_err(|err| dotnet_error(global, err))?;
+        .map_err(|err| dotnet_error(global, &err))?;
     let status = if running {
         bun_dotnet_host::status::SUCCESS_HOST_ALREADY_INITIALIZED
     } else {
@@ -102,7 +106,7 @@ pub(crate) fn js_function_pointer(global: &JSGlobalObject, frame: &CallFrame) ->
                 delegate_type.as_deref(),
             )
         })
-        .map_err(|err| dotnet_error(global, err))?;
+        .map_err(|err| dotnet_error(global, &err))?;
     Ok(JSValue::js_number(pointer as usize as f64))
 }
 
@@ -112,7 +116,7 @@ pub(crate) fn js_load_assembly(global: &JSGlobalObject, frame: &CallFrame) -> Js
     let assembly = str_arg(global, frame, 0)?;
     bun_dotnet_host::hostfxr()
         .and_then(|fxr| fxr.runtime(None)?.load_assembly(fxr, Path::new(&assembly)))
-        .map_err(|err| dotnet_error(global, err))?;
+        .map_err(|err| dotnet_error(global, &err))?;
     Ok(JSValue::UNDEFINED)
 }
 
@@ -133,7 +137,7 @@ pub(crate) fn js_runtime_config(global: &JSGlobalObject, _frame: &CallFrame) -> 
 fn json_result(global: &JSGlobalObject, value: Result<String, String>) -> JsResult<JSValue> {
     match value {
         Ok(json) => bun_jsc::bun_string_jsc::create_utf8_for_js(global, json.as_bytes()),
-        Err(message) => Err(dotnet_error(global, bun_dotnet_host::Error::new(message))),
+        Err(message) => Err(dotnet_error(global, &bun_dotnet_host::Error::new(message))),
     }
 }
 
@@ -149,7 +153,10 @@ fn cwd_arg(global: &JSGlobalObject, frame: &CallFrame, i: usize) -> JsResult<std
 #[bun_jsc::host_fn]
 pub(crate) fn js_info(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
     let cwd = cwd_arg(global, frame, 0)?;
-    json_result(global, Ok(bun_dotnet_host::info::collect(&cwd).to_json().to_string()))
+    json_result(
+        global,
+        Ok(bun_dotnet_host::info::collect(&cwd).to_json().to_string()),
+    )
 }
 
 /// `env(cwd?, refresh?)` → JSON of the cached environment snapshot.
@@ -172,6 +179,7 @@ pub(crate) fn js_resolve(global: &JSGlobalObject, frame: &CallFrame) -> JsResult
     let cwd = cwd_arg(global, frame, 1)?;
     json_result(
         global,
-        super::tools::resolve_json(config.as_deref().map(Path::new), &cwd).map(|value| value.to_string()),
+        super::tools::resolve_json(config.as_deref().map(Path::new), &cwd)
+            .map(|value| value.to_string()),
     )
 }

@@ -8,7 +8,7 @@ pub(crate) mod tools;
 use bun_jsc::{JSGlobalObject, JsError};
 
 /// Throws an `Error` with `code = "ERR_BUN_DOTNET"` and, for .NET failures, `hresult`.
-pub(crate) fn dotnet_error(global: &JSGlobalObject, err: bun_dotnet_host::Error) -> JsError {
+pub(crate) fn dotnet_error(global: &JSGlobalObject, err: &bun_dotnet_host::Error) -> JsError {
     let value = global.create_error_instance(format_args!("{}", err.message));
     if let Ok(code) = bun_jsc::bun_string_jsc::create_utf8_for_js(global, b"ERR_BUN_DOTNET") {
         value.put(global, "code", code);
