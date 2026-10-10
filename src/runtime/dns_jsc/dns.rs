@@ -194,7 +194,7 @@ pub(crate) mod lib_uv_backend {
     }
 
     impl LibuvCompleteHolder {
-        pub(crate) fn run(self: Box<Self>) {
+        pub(crate) fn run(self) {
             GetAddrInfoRequest::on_libuv_complete(self.uv_info);
         }
     }
@@ -236,17 +236,19 @@ pub(crate) mod lib_uv_backend {
 
     pub(crate) fn lookup(
         this: &Resolver,
-        query: GetAddrInfo,
+        query: &GetAddrInfo,
         global_this: &JSGlobalObject,
         context: bun_jsc::ContextId,
     ) -> JsResult<JSValue> {
-        let key = get_addr_info_request::PendingCacheKey::init(&query);
+        let key = get_addr_info_request::PendingCacheKey::init(query);
 
         let cache =
             this.get_or_put_into_pending_cache(&key, PendingCacheField::PendingHostCacheNative);
         if let CacheHit::Inflight(inflight) = cache {
             let dns_lookup = DNSLookup::init(this.as_ctx_ptr(), global_this, context);
+            // SAFETY: the pending cache owns inflight; append links the new heap-owned waiter.
             unsafe { (*inflight).append(dns_lookup) };
+            // SAFETY: the linked waiter remains live until this in-flight lookup completes.
             return Ok(unsafe { (*dns_lookup).promise.value() });
         }
 
@@ -289,7 +291,7 @@ pub(crate) mod lib_uv_backend {
                 port_z.as_ptr().cast::<c_char>(),
                 hints
                     .as_ref()
-                    .map_or(ptr::null(), |h| (h as *const AddrInfo).cast()),
+                    .map_or(ptr::null(), |h| ptr::from_ref(h).cast()),
             );
             if rc.int() < 0 {
                 // uv_getaddrinfo can fail synchronously before it queues any work
@@ -312,7 +314,7 @@ pub(crate) mod lib_uv_backend {
                 // + `heap::take` would double-Drop `DNSLookup` (impls Drop).
                 let owned = *bun_core::heap::take(request);
                 let mut head = owned.head;
-                DNSLookup::process_get_addr_info_native(&mut head, rc.int(), ptr::null_mut());
+                DNSLookup::process_get_addr_info_native(&raw mut head, rc.int(), ptr::null_mut());
                 return Ok(promise);
             }
             promise
@@ -1139,6 +1141,13 @@ pub(crate) mod get_addr_info_request {
             }
         }
     }
+    #[cfg_attr(
+        windows,
+        allow(
+            clippy::large_enum_variant,
+            reason = "Embed the libuv request in its stable heap-owned parent instead of allocating it separately."
+        )
+    )]
     pub(crate) enum Backend {
         CAres,
         #[cfg(target_os = "macos")]
@@ -1354,6 +1363,7 @@ impl GetAddrInfoRequest {
 
     #[cfg(windows)]
     pub(crate) fn on_libuv_complete(uv_info: *mut libuv::uv_getaddrinfo_t) {
+        // SAFETY: libuv completed the embedded request; its data points to the live parent.
         unsafe {
             let retcode = (*uv_info).retcode.int();
             bun_output::scoped_log!(GetAddrInfoRequest, "onLibUVComplete: status={}", retcode);
@@ -2407,7 +2417,10 @@ pub(crate) mod internal {
                 }
                 match (*info).ai_family {
                     netc::AF_INET => {
-                        let octets = (*addr.cast::<netc::sockaddr_in>())
+                        let octets = addr
+                            .cast::<u8>()
+                            .cast::<netc::sockaddr_in>()
+                            .read_unaligned()
                             .sin_addr
                             .s_addr
                             .to_ne_bytes();
@@ -2417,7 +2430,12 @@ pub(crate) mod internal {
                         saw_v4 = true;
                     }
                     netc::AF_INET6 => {
-                        let octets = (*addr.cast::<netc::sockaddr_in6>()).sin6_addr.s6_addr;
+                        let octets = addr
+                            .cast::<u8>()
+                            .cast::<netc::sockaddr_in6>()
+                            .read_unaligned()
+                            .sin6_addr
+                            .s6_addr;
                         if !Ipv6Addr::from(octets).is_loopback() {
                             return false;
                         }
@@ -2564,11 +2582,19 @@ pub(crate) mod internal {
                 if !(*info_).ai_addr.is_null() && (*info_).ai_family == netc::AF_INET {
                     (*entry).addr = bun_core::ffi::zeroed();
                     let addr_in = (&raw mut (*entry).addr).cast::<netc::sockaddr_in>();
-                    *addr_in = *(*info_).ai_addr.cast::<netc::sockaddr_in>();
+                    *addr_in = (*info_)
+                        .ai_addr
+                        .cast::<u8>()
+                        .cast::<netc::sockaddr_in>()
+                        .read_unaligned();
                 } else if !(*info_).ai_addr.is_null() && (*info_).ai_family == netc::AF_INET6 {
                     (*entry).addr = bun_core::ffi::zeroed();
                     let addr_in = (&raw mut (*entry).addr).cast::<netc::sockaddr_in6>();
-                    *addr_in = *(*info_).ai_addr.cast::<netc::sockaddr_in6>();
+                    *addr_in = (*info_)
+                        .ai_addr
+                        .cast::<u8>()
+                        .cast::<netc::sockaddr_in6>()
+                        .read_unaligned();
                 } else {
                     (*entry).addr = bun_core::ffi::zeroed();
                 }
@@ -2675,6 +2701,7 @@ pub(crate) mod internal {
         };
 
         #[cfg(windows)]
+        // SAFETY: req owns the NUL-terminated hostname; hints and output pointer remain live.
         unsafe {
             use bun_sys::windows::ws2_32 as wsa;
             libuv::uv__winsock_ensure();
@@ -2691,8 +2718,8 @@ pub(crate) mod internal {
                     .map(|h| h.as_ptr().cast::<c_char>())
                     .unwrap_or(ptr::null()),
                 service,
-                &wsa_hints,
-                &mut addrinfo,
+                &raw const wsa_hints,
+                &raw mut addrinfo,
             );
             after_result(req, addrinfo.cast(), err);
         }
@@ -3728,6 +3755,7 @@ impl UvDnsPoll {
     }
 
     fn destroy(this: *mut Self) {
+        // SAFETY: callers uniquely own this allocation after failed initialization or uv_close.
         unsafe { drop(bun_core::heap::take(this)) };
     }
 
@@ -4849,7 +4877,11 @@ impl Resolver {
                 // SAFETY: `Loop::get()` is the live per-thread uws loop;
                 // `new_poll` is a fresh heap allocation with a zeroed `uv_poll_t`.
                 if unsafe {
-                    uv::uv_poll_init_socket((*Loop::get()).uv_loop, &mut (*new_poll).poll, fd as _)
+                    uv::uv_poll_init_socket(
+                        (*Loop::get()).uv_loop,
+                        &raw mut (*new_poll).poll,
+                        fd as _,
+                    )
                 } < 0
                 {
                     UvDnsPoll::destroy(new_poll);
@@ -4863,7 +4895,7 @@ impl Resolver {
                 | (if writable { uv::UV_WRITABLE } else { 0 });
             // SAFETY: `poll` is the live entry just inserted/looked up above.
             if unsafe {
-                uv::uv_poll_start(&mut (*poll).poll, uv_events, Some(Self::on_dns_poll_uv))
+                uv::uv_poll_start(&raw mut (*poll).poll, uv_events, Some(Self::on_dns_poll_uv))
             } < 0
             {
                 let _ = polls.swap_remove(&fd);
@@ -5258,7 +5290,7 @@ impl Resolver {
             GetAddrInfoBackend::Libc => {
                 #[cfg(windows)]
                 {
-                    lib_uv_backend::lookup(self, query, global_this, context)?
+                    lib_uv_backend::lookup(self, &query, global_this, context)?
                 }
                 #[cfg(not(windows))]
                 {
@@ -5272,7 +5304,7 @@ impl Resolver {
                 }
                 #[cfg(windows)]
                 {
-                    lib_uv_backend::lookup(self, query, global_this, context)?
+                    lib_uv_backend::lookup(self, &query, global_this, context)?
                 }
                 #[cfg(all(not(target_os = "macos"), not(windows)))]
                 {

@@ -164,3 +164,4 @@ chantier touché (`bun-fork-aphrody`, `next-on-bun-plan`, …) à la fin du lot.
 - Registres des handles Job Object/NTFS et administration des catalogues consolidés sur les primitives Bun. La suite Windows/WinRT passe 31 tests, dont NTFS réel et les lectures D3D12.
 - Aucun diagnostic strict dans les sept fichiers Rust corrigés sur Windows x64/ARM64 ; 184 diagnostics subsistent ailleurs dans `bun_runtime`. Publication de la release et activation des hôtes restent à qualifier.
 - Preuves et limites : [qualification WinRT](docs/project/winrt-apartment-qualification.md).
+- Résolveur DNS : 43 tests locaux réussis sur le binaire modifié ; aucun diagnostic strict dans le fichier corrigé sur Windows/Linux GNU x64/ARM64. Le runtime complet conserve 166 diagnostics Windows et 37 Linux GNU. [Preuves DNS](docs/project/dns-native-qualification.md).
