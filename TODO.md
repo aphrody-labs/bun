@@ -123,3 +123,6 @@
 
 - [x] Qualify explicit Windows linker worker limit and FileSink raw pipe pointer with changed debug engine, native GNU x64 and scoped static gates (2026-10-10).
 - [ ] Close remaining 51 Windows runtime lint diagnostics and GNU ARM64 cross-compiler qualification.
+
+- [x] Deliver runnable Buv/PyJS PyCUDA -> wgpu/D3D12 -> CUDA pipeline, 37 exact hardware results and three existing GPU tests (2026-10-10).
+- [ ] Qualify shared GPU buffers, native Linux RTX 4070 and complete multi-platform promotion.

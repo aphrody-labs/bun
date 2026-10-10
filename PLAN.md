@@ -227,3 +227,5 @@ Owner delivery lot (2026-10-10): common-pin RTX 4070 Dx12/WGSL/CUDA and PyCUDA p
 Owner native linker/FileSink lot (2026-10-10): raw pipe pointer contract removes two Windows Clippy diagnostics (51 unrelated runtime errors remain). Windows debug factory passes 70 tests with DEBUG:FULL; Windows x64/ARM64 linker option coverage passes 14 tests. Native GNU x64 strict runtime gate exits zero on VPS. Source flags and static gates recorded in docs/project/windows-filesink-pointer-qualification.md; GNU ARM64 and full release closure remain open.
 
 Owner final gate (2026-10-10): all internal Windows debug tests pass (895 pass/33 skip/0 fail, 146192 assertions); changed-engine scope check zero.
+
+Owner Buv/PyJS pipeline (2026-10-10): executable PyCUDA -> WGSL/D3D12 -> NVRTC CUDA chain verifies 37 exact results on RTX 4070. Shared Python constructor/PID, native resource cleanup and explicit CPU transfers documented. Existing GPU suite 3 pass/0 fail; SDK TypeScript and strict scoped style gates pass. See docs/aphrody/buv-pyjs-gpu-pipeline.md. Direct GPU buffer sharing and full platform release stay open.
