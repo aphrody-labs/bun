@@ -1,0 +1,438 @@
+import {afterEach, beforeEach, expect, test} from 'bun:test';
+import {cleanup, render, waitFor} from '@testing-library/react';
+import React, {useMemo} from 'react';
+import {Internals} from 'remotion';
+import {Gif, gifSchema} from '../Gif';
+import {manuallyManagedGifCache} from '../gif-cache';
+import type {GifState} from '../props';
+import {getGifCacheKey} from '../request-init';
+import {resolveGifSource} from '../resolve-gif-source';
+
+type RegisteredSequence = {
+	readonly refForOutline: React.RefObject<HTMLElement | null> | null;
+	readonly premountDisplay: number | null;
+	readonly postmountDisplay: number | null;
+};
+
+test('Gif exposes background, border, and crop controls', () => {
+	expect('style.backgroundColor' in gifSchema).toBe(true);
+	expect('style.borderWidth' in gifSchema).toBe(true);
+	expect('style.borderStyle' in gifSchema).toBe(true);
+	expect('style.borderColor' in gifSchema).toBe(true);
+	expect('cropLeft' in gifSchema).toBe(true);
+	expect('cropRight' in gifSchema).toBe(true);
+	expect('cropTop' in gifSchema).toBe(true);
+	expect('cropBottom' in gifSchema).toBe(true);
+	expect(gifSchema.loop).toEqual({
+		type: 'boolean',
+		default: false,
+		description: 'Loop',
+		keyframable: false,
+	});
+});
+
+class MockWorker {
+	public static instances = 0;
+	public constructor() {
+		MockWorker.instances++;
+	}
+
+	public addEventListener = () => undefined;
+	public removeEventListener = () => undefined;
+	public postMessage = () => undefined;
+	public terminate = () => undefined;
+}
+
+const OriginalWorker = globalThis.Worker;
+const originalGetContext = HTMLCanvasElement.prototype.getContext;
+
+const stub2dContext = (canvas: HTMLCanvasElement) => ({
+	canvas,
+	clearRect: () => undefined,
+	drawImage: () => undefined,
+	putImageData: () => undefined,
+});
+
+const gifState: GifState = {
+	delays: [100],
+	frames: [
+		{
+			data: new Uint8ClampedArray(4),
+			width: 1,
+			height: 1,
+			colorSpace: 'srgb',
+		} as ImageData,
+	],
+	width: 1,
+	height: 1,
+};
+
+const studioEnvironment = {
+	isRendering: false,
+	isClientSideRendering: false,
+	isPlayer: false,
+	isStudio: true,
+	isReadOnlyStudio: false,
+};
+
+const compositionContext = {
+	compositions: [
+		{
+			id: 'comp',
+			durationInFrames: 100,
+			component: () => null,
+			defaultProps: {},
+			folderName: null,
+			fps: 30,
+			height: 1080,
+			width: 1920,
+			parentFolderName: null,
+			order: null,
+			calculateMetadata: null,
+			schema: null,
+			stack: null,
+		},
+	],
+	folders: [],
+	canvasContent: {type: 'composition' as const, compositionId: 'comp'},
+	currentAssetMetadata: null,
+	currentCompositionMetadata: {
+		defaultCodec: null,
+		defaultOutName: null,
+		defaultPixelFormat: null,
+		defaultProResProfile: null,
+		defaultSampleRate: null,
+		defaultVideoImageFormat: null,
+		durationInFrames: 100,
+		fps: 30,
+		height: 1080,
+		width: 1920,
+		props: {},
+	},
+} as React.ContextType<typeof Internals.CompositionManager>;
+
+const timelineContext = {
+	frame: {},
+	isPlaying: () => false,
+	isInsideFreeze: false,
+	audioAndVideoTags: {current: []},
+} as React.ContextType<typeof Internals.TimelineContext>;
+
+const playbackRateContext = {
+	playbackRate: 1,
+	setPlaybackRate: () => undefined,
+} as React.ContextType<typeof Internals.PlaybackRateContext>;
+
+const logContext = {
+	logLevel: 'info',
+	mountTime: 0,
+} as React.ContextType<typeof Internals.LogLevelContext>;
+
+const ObserveSequenceRegistrations: React.FC<{
+	readonly onRegisterSequence: (sequence: RegisteredSequence) => void;
+}> = ({onRegisterSequence}) => {
+	const registry = React.useContext(Internals.SequenceRegistryContext);
+	const previous = React.useRef(
+		new Map<
+			string,
+			ReturnType<typeof Internals.useSequenceManagerSequences>[number]
+		>(),
+	);
+	React.useEffect(() => {
+		if (registry === null) throw new Error('Sequence registry has not mounted');
+		const observe = () => {
+			const sequences = registry.getSnapshot();
+			const changed = sequences.filter(
+				(sequence) => previous.current.get(sequence.id) !== sequence,
+			);
+			previous.current = new Map(
+				sequences.map((sequence) => [sequence.id, sequence]),
+			);
+			changed.forEach(onRegisterSequence);
+		};
+
+		const unsubscribe = registry.subscribe(observe);
+		observe();
+		return unsubscribe;
+	}, [onRegisterSequence, registry]);
+	return null;
+};
+
+const SequenceRegistrationWrapper: React.FC<{
+	readonly children: React.ReactNode;
+	readonly onRegisterSequence: (sequence: RegisteredSequence) => void;
+	readonly currentFrame?: number;
+}> = ({children, onRegisterSequence, currentFrame = 0}) => {
+	const currentTimelineContext = useMemo(
+		() => ({...timelineContext, frame: {comp: currentFrame}}),
+		[currentFrame],
+	);
+
+	return (
+		<Internals.LogLevelContext.Provider value={logContext}>
+			<Internals.BufferingProvider>
+				<Internals.CanUseRemotionHooksProvider>
+					<Internals.AbsoluteTimeContext.Provider
+						value={currentTimelineContext}
+					>
+						<Internals.TimelineContext.Provider value={currentTimelineContext}>
+							<Internals.PlaybackRateContext.Provider
+								value={playbackRateContext}
+							>
+								<Internals.RemotionEnvironmentContext.Provider
+									value={studioEnvironment}
+								>
+									<Internals.SequenceManagerProvider>
+										<ObserveSequenceRegistrations
+											onRegisterSequence={onRegisterSequence}
+										/>
+										<Internals.CompositionManager.Provider
+											value={compositionContext}
+										>
+											{children}
+										</Internals.CompositionManager.Provider>
+									</Internals.SequenceManagerProvider>
+								</Internals.RemotionEnvironmentContext.Provider>
+							</Internals.PlaybackRateContext.Provider>
+						</Internals.TimelineContext.Provider>
+					</Internals.AbsoluteTimeContext.Provider>
+				</Internals.CanUseRemotionHooksProvider>
+			</Internals.BufferingProvider>
+		</Internals.LogLevelContext.Provider>
+	);
+};
+
+beforeEach(() => {
+	globalThis.Worker = MockWorker as unknown as typeof Worker;
+	HTMLCanvasElement.prototype.getContext = function (
+		this: HTMLCanvasElement,
+		kind: string,
+	) {
+		if (kind === '2d') {
+			return stub2dContext(this);
+		}
+
+		return null;
+	} as HTMLCanvasElement['getContext'];
+	manuallyManagedGifCache.set('test.gif', gifState);
+});
+
+afterEach(() => {
+	cleanup();
+	globalThis.Worker = OriginalWorker;
+	HTMLCanvasElement.prototype.getContext = originalGetContext;
+	manuallyManagedGifCache.clear();
+	window.origin = 'http://localhost:3000';
+});
+
+test('<Gif> resolves media sources when its origin is opaque', async () => {
+	window.origin = 'null';
+	MockWorker.instances = 0;
+	manuallyManagedGifCache.set(
+		getGifCacheKey({
+			resolvedSrc: 'http://localhost:3000/test.gif',
+			requestInit: undefined,
+		}),
+		gifState,
+	);
+
+	const {container} = render(
+		<SequenceRegistrationWrapper onRegisterSequence={() => undefined}>
+			<Gif src="/test.gif" />
+		</SequenceRegistrationWrapper>,
+	);
+
+	await waitFor(() => {
+		expect(container.querySelector('canvas')).toBeInstanceOf(HTMLCanvasElement);
+	});
+	expect(MockWorker.instances).toBe(0);
+});
+
+test('<Gif> registers an automatic canvas outline', async () => {
+	const registeredSequences: RegisteredSequence[] = [];
+	const ref = React.createRef<HTMLCanvasElement>();
+
+	render(
+		<SequenceRegistrationWrapper
+			onRegisterSequence={(sequence) => {
+				registeredSequences.push(sequence);
+			}}
+		>
+			<Gif ref={ref} src="test.gif" />
+		</SequenceRegistrationWrapper>,
+	);
+
+	await waitFor(() => expect(ref.current).toBeInstanceOf(HTMLCanvasElement));
+	expect(
+		Internals.SequenceOutlineInternals.getNodes(
+			registeredSequences[0].refForOutline!,
+		),
+	).toEqual([]);
+});
+test('<Gif> exposes non-keyframable premounting schema fields', () => {
+	expect(gifSchema.premountFor).toMatchObject({keyframable: false});
+	expect(gifSchema.postmountFor).toMatchObject({keyframable: false});
+});
+
+test('<Gif> applies crop props to its canvas', () => {
+	const {container} = render(
+		<SequenceRegistrationWrapper onRegisterSequence={() => undefined}>
+			<Gif
+				src="test.gif"
+				cropLeft={0.1}
+				cropRight={0.2}
+				cropTop={0.3}
+				cropBottom={0.4}
+			/>
+		</SequenceRegistrationWrapper>,
+	);
+
+	expect(container.querySelector('canvas')?.style.clipPath).toBe(
+		'inset(30% 20% 40% 10%)',
+	);
+});
+
+test('<Gif> hides the canvas while premounted and postmounted', () => {
+	const premounted = render(
+		<SequenceRegistrationWrapper
+			currentFrame={0}
+			onRegisterSequence={() => undefined}
+		>
+			<Gif
+				src="test.gif"
+				from={10}
+				durationInFrames={20}
+				premountFor={10}
+				style={{opacity: 0.5}}
+			/>
+		</SequenceRegistrationWrapper>,
+	);
+	const premountedStyle = premounted.container
+		.querySelector('canvas')
+		?.getAttribute('style');
+	expect(premountedStyle).toContain('display: none');
+	expect(premountedStyle).toContain('pointer-events: none');
+	expect(premountedStyle).toContain('opacity: 0.5');
+	premounted.unmount();
+
+	const postmounted = render(
+		<SequenceRegistrationWrapper
+			currentFrame={35}
+			onRegisterSequence={() => undefined}
+		>
+			<Gif src="test.gif" from={10} durationInFrames={20} postmountFor={10} />
+		</SequenceRegistrationWrapper>,
+	);
+	const postmountedStyle = postmounted.container
+		.querySelector('canvas')
+		?.getAttribute('style');
+	expect(postmountedStyle).toContain('display: none');
+	expect(postmountedStyle).toContain('pointer-events: none');
+});
+
+test('<Gif> allows overriding the premount and postmount styles', () => {
+	const premounted = render(
+		<SequenceRegistrationWrapper
+			currentFrame={0}
+			onRegisterSequence={() => undefined}
+		>
+			<Gif
+				src="test.gif"
+				from={10}
+				durationInFrames={20}
+				premountFor={10}
+				styleWhilePremounted={{display: 'block', opacity: 0.25}}
+			/>
+		</SequenceRegistrationWrapper>,
+	);
+	const premountedStyle = premounted.container
+		.querySelector('canvas')
+		?.getAttribute('style');
+	expect(premountedStyle).toContain('display: block');
+	expect(premountedStyle).toContain('opacity: 0.25');
+	premounted.unmount();
+
+	const postmounted = render(
+		<SequenceRegistrationWrapper
+			currentFrame={35}
+			onRegisterSequence={() => undefined}
+		>
+			<Gif
+				src="test.gif"
+				from={10}
+				durationInFrames={20}
+				postmountFor={10}
+				styleWhilePostmounted={{display: 'block', opacity: 0.75}}
+			/>
+		</SequenceRegistrationWrapper>,
+	);
+	const postmountedStyle = postmounted.container
+		.querySelector('canvas')
+		?.getAttribute('style');
+	expect(postmountedStyle).toContain('display: block');
+	expect(postmountedStyle).toContain('opacity: 0.75');
+});
+
+test('<Gif> registers premount and postmount ranges once', async () => {
+	const registeredSequences: RegisteredSequence[] = [];
+
+	render(
+		<SequenceRegistrationWrapper
+			onRegisterSequence={(sequence) => {
+				registeredSequences.push(sequence);
+			}}
+		>
+			<Gif
+				src="test.gif"
+				from={10}
+				durationInFrames={20}
+				premountFor={10}
+				postmountFor={5}
+			/>
+		</SequenceRegistrationWrapper>,
+	);
+
+	await waitFor(() => {
+		expect(registeredSequences).toHaveLength(1);
+	});
+	expect(registeredSequences[0].premountDisplay).toBe(10);
+	expect(registeredSequences[0].postmountDisplay).toBe(5);
+});
+
+test('<Gif> remains visible with a negative offset', () => {
+	const {container} = render(
+		<SequenceRegistrationWrapper
+			currentFrame={75}
+			onRegisterSequence={() => undefined}
+		>
+			<Gif from={-100} src="test.gif" />
+		</SequenceRegistrationWrapper>,
+	);
+
+	expect(container.querySelector('canvas')).not.toBeNull();
+});
+
+test('reuses a cached GIF without spawning a decode worker', async () => {
+	// The GIF is already decoded and cached, so mounting must reuse it instead of
+	// re-spawning the parse worker. Without this, every remount re-decodes the GIF
+	// (a fresh ImageData per frame); repeated remounts while scrubbing accumulate
+	// memory until the tab runs out of memory.
+	const cacheKey = getGifCacheKey({
+		resolvedSrc: resolveGifSource('test.gif'),
+		requestInit: undefined,
+	});
+	manuallyManagedGifCache.set(cacheKey, gifState);
+	MockWorker.instances = 0;
+
+	render(
+		<SequenceRegistrationWrapper onRegisterSequence={() => undefined}>
+			<Gif src="test.gif" />
+		</SequenceRegistrationWrapper>,
+	);
+
+	await waitFor(() => {
+		expect(document.querySelector('canvas')).toBeInstanceOf(HTMLCanvasElement);
+	});
+
+	expect(MockWorker.instances).toBe(0);
+});
