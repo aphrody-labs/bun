@@ -157,3 +157,10 @@ chantier touché (`bun-fork-aphrody`, `next-on-bun-plan`, …) à la fin du lot.
 - Moteur de graphe Rust : 47 tests réussis. Exports docs/skills : 2 tests, 15 assertions.
 - Indexation `src/<domaine>` et `packages/<paquet>` implémentée ; qualification du nouveau module et Clippy strict en cours.
 - Publier les snapshots par domaine avec leurs SHA immuables, puis renouveler l'export SQLite/JSON après les dernières vérifications.
+
+## 7. Qualification Windows native — 2026-10-10
+
+- Durée de vie des appartements COM des notifications corrigée avec RAII ; les trois régressions couvrent les threads non initialisés et les appartements MTA/STA existants. Les cinq tests WinRT natifs passent.
+- Registres des handles Job Object/NTFS et administration des catalogues consolidés sur les primitives Bun. La suite Windows/WinRT passe 31 tests, dont NTFS réel et les lectures D3D12.
+- Aucun diagnostic strict dans les sept fichiers Rust corrigés sur Windows x64/ARM64 ; 184 diagnostics subsistent ailleurs dans `bun_runtime`. Publication de la release et activation des hôtes restent à qualifier.
+- Preuves et limites : [qualification WinRT](docs/project/winrt-apartment-qualification.md).

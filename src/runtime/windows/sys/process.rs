@@ -55,13 +55,22 @@ pub(crate) fn list_json() -> WinResult<String> {
         return Err(WinErr::last("CreateToolhelp32Snapshot"));
     }
     let snapshot = OwnedHandle(snapshot);
-    // SAFETY: plain-data struct; `size` is set before use.
-    let mut entry: ProcessEntry32W = unsafe { core::mem::zeroed() };
-    entry.size = core::mem::size_of::<ProcessEntry32W>() as u32;
+    let mut entry = ProcessEntry32W {
+        size: core::mem::size_of::<ProcessEntry32W>() as u32,
+        usage: 0,
+        pid: 0,
+        default_heap_id: 0,
+        module_id: 0,
+        threads: 0,
+        parent_pid: 0,
+        pri_class_base: 0,
+        flags: 0,
+        exe_file: [0; 260],
+    };
     let mut j = Json::new();
     j.begin_array();
     // SAFETY: `entry.size` is set; the snapshot is open.
-    let mut ok = unsafe { Process32FirstW(snapshot.0, &mut entry) };
+    let mut ok = unsafe { Process32FirstW(snapshot.0, &raw mut entry) };
     while ok != 0 {
         j.begin_object()
             .field_num("pid", entry.pid as f64)
@@ -70,7 +79,7 @@ pub(crate) fn list_json() -> WinResult<String> {
             .field_num("threads", entry.threads as f64)
             .end_object();
         // SAFETY: as above.
-        ok = unsafe { Process32NextW(snapshot.0, &mut entry) };
+        ok = unsafe { Process32NextW(snapshot.0, &raw mut entry) };
     }
     j.end_array();
     Ok(j.finish())
@@ -92,7 +101,7 @@ pub(crate) fn image_path(pid: u32) -> WinResult<String> {
     let mut buf = vec![0u16; 32768];
     let mut len = buf.len() as u32;
     // SAFETY: `buf` is valid for `len` units.
-    if unsafe { QueryFullProcessImageNameW(h.0, 0, buf.as_mut_ptr(), &mut len) } == 0 {
+    if unsafe { QueryFullProcessImageNameW(h.0, 0, buf.as_mut_ptr(), &raw mut len) } == 0 {
         return Err(WinErr::last("QueryFullProcessImageNameW"));
     }
     Ok(String::from_utf16_lossy(&buf[..len as usize]))
@@ -159,7 +168,7 @@ pub(crate) fn set_eco_mode(pid: u32, enabled: bool) -> WinResult<()> {
         SetProcessInformation(
             h.0,
             PROCESS_POWER_THROTTLING,
-            (&state as *const ProcessPowerThrottlingState).cast(),
+            (&raw const state).cast(),
             core::mem::size_of::<ProcessPowerThrottlingState>() as u32,
         )
     } == 0

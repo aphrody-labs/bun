@@ -1,7 +1,7 @@
 //! Windows version, edition and machine information.
 
 use super::registry::{read_dword, read_string, root};
-use super::{Json, WinErr, WinResult, BOOL, HANDLE};
+use super::{BOOL, HANDLE, Json, WinErr, WinResult};
 
 const CURRENT_VERSION: &str = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion";
 const PERSONALIZE: &str = r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
@@ -70,7 +70,7 @@ pub(crate) fn version_numbers() -> (u32, u32, u32) {
         csd_version: [0; 128],
     };
     // SAFETY: `info.size` is set; RtlGetVersion always succeeds.
-    unsafe { RtlGetVersion(&mut info) };
+    unsafe { RtlGetVersion(&raw mut info) };
     (info.major, info.minor, info.build)
 }
 
@@ -89,7 +89,7 @@ fn architectures() -> (&'static str, &'static str) {
     let mut process = 0u16;
     let mut native = 0u16;
     // SAFETY: pseudo-handle of the current process; both outputs are valid.
-    if unsafe { IsWow64Process2(GetCurrentProcess(), &mut process, &mut native) } == 0 {
+    if unsafe { IsWow64Process2(GetCurrentProcess(), &raw mut process, &raw mut native) } == 0 {
         return ("unknown", "unknown");
     }
     let native_name = machine_name(native);
@@ -113,7 +113,7 @@ fn wide_name(f: unsafe extern "system" fn(*mut u16, *mut u32) -> BOOL) -> String
     let mut buf = [0u16; 257];
     let mut len = buf.len() as u32;
     // SAFETY: `buf` is valid for `len` units.
-    if unsafe { f(buf.as_mut_ptr(), &mut len) } == 0 {
+    if unsafe { f(buf.as_mut_ptr(), &raw mut len) } == 0 {
         return String::new();
     }
     super::from_wide(&buf)
@@ -164,7 +164,7 @@ fn memory_status() -> WinResult<MemoryStatusEx> {
         ..Default::default()
     };
     // SAFETY: `mem.length` is set and Windows writes the documented structure fields.
-    if unsafe { GlobalMemoryStatusEx(&mut mem) } == 0 {
+    if unsafe { GlobalMemoryStatusEx(&raw mut mem) } == 0 {
         return Err(WinErr::last("GlobalMemoryStatusEx"));
     }
     Ok(mem)

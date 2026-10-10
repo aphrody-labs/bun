@@ -35,13 +35,8 @@ unsafe extern "system" {
     ) -> HANDLE;
 }
 
-type AcquireContext2 = unsafe extern "system" fn(
-    *mut HCATADMIN,
-    *const c_void,
-    *const u16,
-    *const c_void,
-    u32,
-) -> i32;
+type AcquireContext2 =
+    unsafe extern "system" fn(*mut HCATADMIN, *const c_void, *const u16, *const c_void, u32) -> i32;
 type CalcHashFromFileHandle2 =
     unsafe extern "system" fn(HCATADMIN, HANDLE, *mut u32, *mut u8, u32) -> i32;
 type EnumCatalogFromHash =
@@ -110,7 +105,7 @@ struct Admins {
 // races, and access is already serialized by `OnceLock`/the mutex it is stored behind.
 unsafe impl Send for Admins {}
 
-static ADMINS: std::sync::Mutex<Option<Admins>> = std::sync::Mutex::new(None);
+static ADMINS: bun_threading::Guarded<Option<Admins>> = bun_threading::Guarded::new(None);
 
 fn acquire(api: &Wintrust, algorithm: &str) -> Option<HCATADMIN> {
     let name = wide(algorithm);
@@ -119,7 +114,7 @@ fn acquire(api: &Wintrust, algorithm: &str) -> Option<HCATADMIN> {
     // default behavior keyed off the hash algorithm name, matching prior Aphrody usage.
     let ok = unsafe {
         (api.acquire_context2)(
-            &mut handle,
+            &raw mut handle,
             core::ptr::null(),
             name.as_ptr(),
             core::ptr::null(),
@@ -131,7 +126,7 @@ fn acquire(api: &Wintrust, algorithm: &str) -> Option<HCATADMIN> {
 
 fn with_admins<T>(f: impl FnOnce(&Wintrust, &Admins) -> T) -> WinResult<Option<T>> {
     let api = wintrust()?;
-    let mut guard = ADMINS.lock().unwrap_or_else(|e| e.into_inner());
+    let mut guard = ADMINS.lock();
     let admins = guard.get_or_insert_with(|| Admins {
         sha256: acquire(&api, "SHA256"),
         sha1: acquire(&api, "SHA1"),
@@ -148,13 +143,12 @@ fn lookup(api: &Wintrust, admin: HCATADMIN, file: HANDLE) -> Option<String> {
     let mut size: u32 = 64;
     let mut hash = [0u8; 64];
     // SAFETY: `hash` and `size` describe a 64-byte buffer, the documented maximum.
-    if unsafe { (api.calc_hash)(admin, file, &mut size, hash.as_mut_ptr(), 0) } == 0 {
+    if unsafe { (api.calc_hash)(admin, file, &raw mut size, hash.as_mut_ptr(), 0) } == 0 {
         return None;
     }
     // SAFETY: `hash[..size]` was just filled in by `CryptCATAdminCalcHashFromFileHandle2`.
-    let info = unsafe {
-        (api.enum_from_hash)(admin, hash.as_ptr(), size, 0, core::ptr::null_mut())
-    };
+    let info =
+        unsafe { (api.enum_from_hash)(admin, hash.as_ptr(), size, 0, core::ptr::null_mut()) };
     if info.is_null() {
         return None;
     }
@@ -166,11 +160,17 @@ fn lookup(api: &Wintrust, admin: HCATADMIN, file: HANDLE) -> Option<String> {
     let ok = unsafe { (api.info_from_context)(info, buf.as_mut_ptr(), 0) };
     let name = if ok != 0 {
         let units: Vec<u16> = buf[4..]
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|b| u16::from_le_bytes([b[0], b[1]]))
             .collect();
         let text = super::from_wide(&units);
-        if text.is_empty() { "catalog".to_owned() } else { text }
+        if text.is_empty() {
+            "catalog".to_owned()
+        } else {
+            text
+        }
     } else {
         "catalog".to_owned()
     };
@@ -217,7 +217,7 @@ pub(crate) fn release_contexts() {
         Ok(api) => api,
         Err(_) => return,
     };
-    let mut guard = ADMINS.lock().unwrap_or_else(|e| e.into_inner());
+    let mut guard = ADMINS.lock();
     if let Some(admins) = guard.take() {
         for admin in [admins.sha256, admins.sha1].into_iter().flatten() {
             // SAFETY: `admin` was returned by `CryptCATAdminAcquireContext2` and is released

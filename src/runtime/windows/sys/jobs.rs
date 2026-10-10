@@ -2,9 +2,9 @@
 //! can never close an unrelated handle of the process.
 
 use super::{BOOL, HANDLE, Json, OwnedHandle, WinErr, WinResult, process};
+use bun_collections::HashMap;
+use bun_threading::Guarded;
 use core::ffi::c_void;
-use std::collections::HashMap;
-use std::sync::Mutex;
 
 const PROCESS_SET_QUOTA: u32 = 0x0100;
 const PROCESS_TERMINATE: u32 = 0x0001;
@@ -99,11 +99,11 @@ struct Registry {
     jobs: HashMap<u32, usize>,
 }
 
-static JOBS: Mutex<Option<Registry>> = Mutex::new(None);
+static JOBS: Guarded<Option<Registry>> = Guarded::new(None);
 
 fn with_job<T>(id: u32, f: impl FnOnce(HANDLE) -> WinResult<T>) -> WinResult<T> {
     let handle = {
-        let guard = JOBS.lock().unwrap_or_else(|e| e.into_inner());
+        let guard = JOBS.lock();
         guard.as_ref().and_then(|r| r.jobs.get(&id).copied())
     };
     match handle {
@@ -128,7 +128,7 @@ pub(crate) fn create(name: Option<&str>) -> WinResult<u32> {
     if h.is_null() {
         return Err(WinErr::last("CreateJobObjectW"));
     }
-    let mut guard = JOBS.lock().unwrap_or_else(|e| e.into_inner());
+    let mut guard = JOBS.lock();
     let registry = guard.get_or_insert_with(|| Registry {
         next: 1,
         jobs: HashMap::new(),
@@ -142,7 +142,7 @@ pub(crate) fn create(name: Option<&str>) -> WinResult<u32> {
 /// Closes the job handle. With kill-on-close set, this terminates its processes.
 pub(crate) fn close(id: u32) -> bool {
     let handle = {
-        let mut guard = JOBS.lock().unwrap_or_else(|e| e.into_inner());
+        let mut guard = JOBS.lock();
         guard.as_mut().and_then(|r| r.jobs.remove(&id))
     };
     match handle {
