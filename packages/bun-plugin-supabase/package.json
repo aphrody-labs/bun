@@ -1,0 +1,31 @@
+{
+  "name": "@aphrody/bun-plugin-supabase",
+  "version": "0.1.0",
+  "description": "Typed Supabase PostgreSQL client and migration runner built on Bun.SQL",
+  "license": "MIT",
+  "type": "module",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./migrations": {
+      "types": "./src/migrations.ts",
+      "import": "./src/migrations.ts",
+      "default": "./src/migrations.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "@aphrody/bun-types": ">=1.4.4"
+  },
+  "engines": {
+    "bun": ">=1.4.4"
+  }
+}

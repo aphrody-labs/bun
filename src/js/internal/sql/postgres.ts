@@ -51,6 +51,7 @@ const POSTGRES_ARRAY_TYPES = {
   1002: "CHAR", // char_array
   1003: "NAME", // name_array
   1009: "TEXT", // text_array
+  2951: "UUID", // uuid_array
   1014: "CHAR", // bpchar_array
   1015: "VARCHAR", // varchar_array
 

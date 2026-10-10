@@ -127,6 +127,7 @@ pg_tags! {
     numeric = 1700,
     uuid = 2950,
 
+    uuid_array = 2951,
     bool_array = 1000,
     bytea_array = 1001,
     char_array = 1002,
