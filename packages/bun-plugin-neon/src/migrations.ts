@@ -1,3 +1,5 @@
+/// <reference types="@aphrody/bun-types" />
+
 import { createHash } from "node:crypto";
 import { basename } from "node:path";
 

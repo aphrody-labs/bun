@@ -1,3 +1,5 @@
+/// <reference types="@aphrody/bun-types" />
+
 import { resolveNeonConnection } from "./connection";
 import { applyMigrations, type MigrationOptions, type MigrationReport } from "./migrations";
 

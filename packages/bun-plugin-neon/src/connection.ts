@@ -1,3 +1,5 @@
+/// <reference types="@aphrody/bun-types" />
+
 export function resolveNeonConnection(value: string | URL | undefined): {
   url: URL;
   pooled: boolean;

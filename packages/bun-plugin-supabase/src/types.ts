@@ -1,4 +1,4 @@
-/// <reference path="../../bun-types/index.d.ts" />
+/// <reference types="@aphrody/bun-types" />
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
