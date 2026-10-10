@@ -82,3 +82,32 @@ aphrody-v1.4.3-aphrody.4. Its older release workflow 37859117880 had successful
 build/smoke/release jobs but a failed npm job; this does not qualify the new pin.
 Full release gates, stripped artifacts/images and production consumer activation
 remain required before the owner's global release/deploy objective is complete.
+
+## Stripped distribution candidate
+
+The same owner release factory also emitted build/release/bun, its stripped
+artifact: 138871072 bytes, SHA-256
+85c8f00b5d4a2f6519850df72aec6f893358894d20663e667a46487bf273ee87.
+An exact installed copy under the isolated VPS receipts directory ran all six
+suites again: 202 pass, 13 existing skips, 0 fail, 2 snapshots, 1517 assertions.
+Its provenance probe confirms version 1.4.4 and revision
+4e3ddd04da10d7db3e8a903ec8d352898094fd58. This independently verifies the stripped
+candidate rather than relying solely on the earlier unstripped run.
+
+Native Infra SFTP delivered the checksum-verified artifact and manifest into:
+/home/ubuntu/.local/share/aphrody/runtime-candidates/bun-1.4.4-4e3ddd04d-stripped/bun
+
+DBFR verified the same checksum before executable mode was applied, then
+successfully executed the candidate, imported bun:linux, round-tripped Zstd,
+and wrote/read/closed a memfd. The active PATH runtime remains
+1.4.3-aphrody.3+d46f0ed6c; no production service restart or activation is claimed.
+The stripped candidate is 175526760 bytes smaller than the unstripped candidate;
+that file-size difference does not establish runtime performance or memory gains.
+
+Plan: tmp/stripped-candidate-plan.json. Remote runner-stripped/native-stripped/
+provenance-stripped exit receipts are 0. Local stripped-candidate download,
+upload, dbfr-smoke and manifest-upload log/exit receipts are all 0. Full release
+publication, matching platform artifacts/images and consumer activation still
+require their own gates. The newer Windows-only source batches have not changed
+the recorded Linux candidate revision; this proof remains pinned to that exact
+artifact and its two-line qualification test correction.

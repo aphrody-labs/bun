@@ -195,3 +195,5 @@ chantier touché (`bun-fork-aphrody`, `next-on-bun-plan`, …) à la fin du lot.
 - 2026-10-10: IPC host cleanup/warning and logical-drive raw output contracts qualified with 36 changed-engine passes / 94 assertions; owned strict diagnostics zero on four targets, Windows whole runtime 65 remaining. See [proof](docs/project/windows-ipc-storage-qualification.md).
 
 - 2026-10-10: COM delegate lifetime and event-log/known-folder pointers qualified with seven native passes / 27 assertions, including real WinRT asynchronous storage operations. Strict owned diagnostics zero on four targets; shared Windows runtime 58 remaining. See [proof](docs/project/windows-com-query-qualification.md).
+
+- 2026-10-10: Stripped Linux artifact at 4e3ddd04da1 independently passed all six suites (202 / 1517 assertions), then native Infra SFTP delivery and DBFR checksum/Linux/Zstd/memfd smoke passed. Compact candidate 138871072 bytes; production activation and full release publication remain pending. See [proof](docs/project/linux-owner-release-preflight.md).

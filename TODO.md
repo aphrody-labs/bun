@@ -90,3 +90,5 @@
 - [x] Windows IPC host and logical drive pointer contracts: 36 native passes; GNU x64/ARM64 strict runtime zero.
 
 - [x] Windows COM and native query output contracts: seven real native passes; GNU strict runtime zero.
+
+- [x] Stripped Linux candidate independently qualified and delivered to isolated DBFR directory, SHA256 and native smoke verified.
