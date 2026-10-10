@@ -338,10 +338,9 @@ describe("bunshell", () => {
   });
 
   test("failing stmt edgecase", async () => {
-    const { stdout } =
-      await $`mkdir foo; touch ./foo/lol ./foo/nice ./foo/lmao; mkdir foo/bar; touch ./foo/bar/great; touch ./foo/bar/wow; ls foo -R`.cwd(
-        temp_dir,
-      );
+    await $`mkdir foo; touch ./foo/lol ./foo/nice ./foo/lmao; mkdir foo/bar; touch ./foo/bar/great; touch ./foo/bar/wow; ls foo -R`.cwd(
+      temp_dir,
+    );
   });
 
   // test("invalid js obj", async () => {
@@ -409,10 +408,7 @@ describe("bunshell", () => {
 
     test("escape unicode", async () => {
       const { stdout } = await $`echo \\弟\\気`;
-      // TODO: Uncomment and replace after unicode in template tags is supported
-      // expect(stdout.toString("utf8")).toEqual(`\弟\気\n`);
-      // Set this here for now, because unicode in template tags while using .raw is broken, but should be fixed
-      expect(stdout.toString("utf8")).toEqual("\\u5F1F\\u6C17\n");
+      expect(stdout.toString("utf8")).toEqual("\\弟\\気\n");
     });
 
     /**
@@ -497,7 +493,7 @@ describe("bunshell", () => {
 
   test("redirect Uint8Array", async () => {
     const buffer = new Uint8Array(1 << 20);
-    const result = await $`cat ${import.meta.path} > ${buffer}`;
+    await $`cat ${import.meta.path} > ${buffer}`;
 
     const sentinel = sentinelByte(buffer);
     const thisFile = Bun.file(import.meta.path);
@@ -507,7 +503,7 @@ describe("bunshell", () => {
 
   test("redirect Buffer", async () => {
     const buffer = Buffer.alloc(1 << 20);
-    const result = await $`cat ${import.meta.path} > ${buffer}`;
+    await $`cat ${import.meta.path} > ${buffer}`;
 
     const thisFile = Bun.file(import.meta.path);
 
@@ -518,7 +514,7 @@ describe("bunshell", () => {
     const filepath = join(temp_dir, "lmao.txt");
     const file = Bun.file(filepath);
     const thisFileText = await Bun.file(import.meta.path).text();
-    const result = await $`cat ${import.meta.path} > ${file}`;
+    await $`cat ${import.meta.path} > ${file}`;
 
     expect(await file.text()).toEqual(thisFileText);
   });
@@ -708,7 +704,6 @@ describe("bunshell", () => {
   });
 
   test("cmd subst", async () => {
-    const haha = "noice";
     const { stdout } = await $`echo $(echo noice)`;
     expect(stdout.toString()).toEqual(`noice\n`);
   });
@@ -720,16 +715,17 @@ describe("bunshell", () => {
   });
 
   describe("tilde_expansion", () => {
+    const home = process.env[isWindows ? "USERPROFILE" : "HOME"];
     describe("with paths", async () => {
-      TestBuilder.command`echo ~/Documents`.stdout(`${process.env.HOME}/Documents\n`).runAsTest("normal");
-      TestBuilder.command`echo ~/Do"cu"me"nts"`.stdout(`${process.env.HOME}/Documents\n`).runAsTest("compound word");
-      TestBuilder.command`echo ~/LOL hi hello`.stdout(`${process.env.HOME}/LOL hi hello\n`).runAsTest("multiple words");
+      TestBuilder.command`echo ~/Documents`.stdout(`${home}/Documents\n`).runAsTest("normal");
+      TestBuilder.command`echo ~/Do"cu"me"nts"`.stdout(`${home}/Documents\n`).runAsTest("compound word");
+      TestBuilder.command`echo ~/LOL hi hello`.stdout(`${home}/LOL hi hello\n`).runAsTest("multiple words");
     });
 
     describe("normal", async () => {
-      TestBuilder.command`echo ~`.stdout(`${process.env.HOME}\n`).runAsTest("lone tilde");
+      TestBuilder.command`echo ~`.stdout(`${home}\n`).runAsTest("lone tilde");
       TestBuilder.command`echo ~~`.stdout(`~~\n`).runAsTest("double tilde");
-      TestBuilder.command`echo ~ hi hello`.stdout(`${process.env.HOME} hi hello\n`).runAsTest("multiple words");
+      TestBuilder.command`echo ~ hi hello`.stdout(`${home} hi hello\n`).runAsTest("multiple words");
     });
 
     TestBuilder.command`HOME="" USERPROFILE="" && echo ~ && echo ~/Documents`
@@ -1219,7 +1215,7 @@ booga"
 
     test("syntax edgecase", async () => {
       const buffer = new Uint8Array(1 << 20);
-      const shellProc = await $`FOO=bar BUN_TEST_VAR=1 ${BUN} -e "console.log(JSON.stringify(process.env))"> ${buffer}`;
+      await $`FOO=bar BUN_TEST_VAR=1 ${BUN} -e "console.log(JSON.stringify(process.env))"> ${buffer}`;
 
       const str = stringifyBuffer(buffer);
 
