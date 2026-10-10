@@ -133,3 +133,7 @@
 
 - [x] Qualify Windows memory-pressure VM borrow: 28 native passes, four target checks and scoped formatting (2026-10-10).
 - [ ] Close remaining 50 Windows runtime lint errors, clean matched release and promotion gates.
+
+- [x] Qualify HTTP stat normalization on four targets and 266 changed-engine tests (2026-10-10).
+- [x] Complete clean d5 Windows release linkage and MCP transport (2026-10-10).
+- [ ] Close 45 remaining Windows runtime diagnostics and MCP installed-plugin skill discovery.

@@ -5,6 +5,19 @@ use bun_collections::VecExt;
 use core::ffi::{c_char, c_int, c_void};
 use core::sync::atomic::Ordering;
 
+// Windows uv_stat_t sizes are unsigned; POSIX stat sizes can be negative.
+#[inline]
+fn nonnegative_stat_size(stat: &bun_sys::Stat) -> u64 {
+    #[cfg(windows)]
+    {
+        stat.st_size
+    }
+    #[cfg(not(windows))]
+    {
+        u64::try_from(stat.st_size.max(0)).expect("int cast")
+    }
+}
+
 /// Codegen `${ServerType}__create(global, ptr)` shim — one extern per
 /// `(SSL, DEBUG)` monomorphization. Routes through the
 /// `crate::generated_classes::js_*Server::to_js` wrappers (which own the
