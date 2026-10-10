@@ -20,6 +20,7 @@ Inventaire initial du 2026-10-09, complété par les qualifications natives du 2
 - Tests : `describe("gpu.d3d12")` dans `test/js/bun/windows/windows.test.ts`.
 - Qualification native ciblée, 2026-10-10 : RTX 4070, niveau 12_0, clear RGBA8 4 × 4 et copie de 37 octets relus exactement. Le module sys compilé seul échoue avant la correction du pointeur de sortie COM et passe après. Le binaire Bun reconstruit passe les cinq tests JavaScript D3D12 (16 assertions).
 - Le probe wgpu 30.0.1 existant exécute désormais un shader WGSL headless et vérifie ses 37 résultats après relecture. Build release, Clippy strict et exécution RTX 4070 / Dx12 réussis ; voir `scripts/aphrody/alpine/wsl/examples/wgpu-probe/README.md`.
+- Le gate Buv/PyJS/PyCUDA a compilé un kernel CUDA sans cache, doublé 37 entiers et vérifié leur relecture dans le processus Bun sur RTX 4070 (capacité 8.9). Qualification du 2026-10-10 : PyCUDA 2026.1, CUDA 13.4.1, CPython 3.12.15 ; les PID Python et Bun sont identiques. Voir `packages/buv/README.md` pour l'environnement explicite du host embarqué.
 - Absent : énumération multi-adaptateurs, D3D11, D2D, swap chain et présentation, shaders et pipelines.
 
 ## Non fait dans cette passe

@@ -8,17 +8,28 @@ const fixture = tempDir("bun-python-cli", {});
 const root = String(fixture);
 afterAll(() => fixture[Symbol.dispose]());
 const python = process.env.BUN_PYTHON_EXECUTABLE;
-const environment: NodeJS.ProcessEnv = { ...bunEnv, ...process.env, PYTHONHOME: "", BUN_DEBUG_QUIET_LOGS: "1" };
+const environment: NodeJS.ProcessEnv = {
+  ...bunEnv,
+  ...process.env,
+  PYTHONHOME: "",
+  BUN_DEBUG_QUIET_LOGS: "1",
+};
 // CPython is an external optional artifact. The native factory supplies all three exact paths.
-const nativeTest = test.skipIf(!python || !process.env.BUN_PYTHON_HOST_LIBRARY || !process.env.BUN_PYTHON_LIBPYTHON);
-const executableCheck = "import os,sys; assert sys.executable == os.environ['BUN_PYTHON_EXECUTABLE']; ";
+const nativeTest = test.skipIf(
+  !python || !process.env.BUN_PYTHON_HOST_LIBRARY || !process.env.BUN_PYTHON_LIBPYTHON,
+);
+const executableCheck =
+  "import os,sys; assert sys.executable == os.environ['BUN_PYTHON_EXECUTABLE']; ";
 const script = join(root, "été script🐍.py");
 writeFileSync(
   script,
   executableCheck +
     "import json,pathlib\nassert sys.argv[1] == 'été🐍'\nassert str(pathlib.Path(__file__).parent) in sys.path\nprint(json.dumps({'argv':sys.argv[1]}, ensure_ascii=False))\n",
 );
-writeFileSync(join(root, "cli_module.py"), executableCheck + "assert sys.argv[1]=='été🐍'; print('MODULE_OK')\n");
+writeFileSync(
+  join(root, "cli_module.py"),
+  executableCheck + "assert sys.argv[1]=='été🐍'; print('MODULE_OK')\n",
+);
 
 async function run(args: string[], input?: string, env = environment, argv0?: string) {
   await using child = Bun.spawn({
@@ -30,7 +41,11 @@ async function run(args: string[], input?: string, env = environment, argv0?: st
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [out, err, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+  const [out, err, code] = await Promise.all([
+    child.stdout.text(),
+    child.stderr.text(),
+    child.exited,
+  ]);
   expect(child.signalCode).toBeNull();
   return { code, out: out.trim(), err: err.trim() };
 }
@@ -96,7 +111,10 @@ test.concurrent("buv dispatches its embedded UV command", async () => {
 });
 
 test.concurrent("pyjs executes JavaScript through the native engine", async () => {
-  success(await run(["-e", "console.log('PYJS_JS_OK')"], undefined, environment, "pyjs"), "PYJS_JS_OK");
+  success(
+    await run(["-e", "console.log('PYJS_JS_OK')"], undefined, environment, "pyjs"),
+    "PYJS_JS_OK",
+  );
 });
 
 for (const [extension, source] of [
@@ -119,17 +137,23 @@ for (const [extension, source] of [
       stdout: "pipe",
       stderr: "pipe",
     });
-    const [out, err, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+    const [out, err, code] = await Promise.all([
+      child.stdout.text(),
+      child.stderr.text(),
+      child.exited,
+    ]);
     expect({ out, err }).toEqual({ out: "42\n", err: "" });
     expect(code).toBe(0);
   });
 }
 
-nativeTest.concurrent("pyjs embeds CPython in the JavaScript process through its native ABI", async () => {
-  success(
-    await run([
-      "-e",
-      `
+nativeTest.concurrent(
+  "pyjs embeds CPython in the JavaScript process through its native ABI",
+  async () => {
+    success(
+      await run([
+        "-e",
+        `
     import { Python, PythonError } from "buv:python";
     using py = Python.open();
     py.exec\`import os; value = {'text': 'café🐍', 'n': 42}\`;
@@ -139,16 +163,19 @@ nativeTest.concurrent("pyjs embeds CPython in the JavaScript process through its
     }
     console.log(JSON.stringify(py.evalJSON("value")));
   `,
-    ]),
-    '{"text":"café🐍","n":42}',
-  );
-});
+      ]),
+      '{"text":"café🐍","n":42}',
+    );
+  },
+);
 
-nativeTest.concurrent("async Python runs in a worker in the same process and serializes dependent calls", async () => {
-  success(
-    await run([
-      "-e",
-      `
+nativeTest.concurrent(
+  "async Python runs in a worker in the same process and serializes dependent calls",
+  async () => {
+    success(
+      await run([
+        "-e",
+        `
     import { Python } from "pyjs:python";
     await using py = await Python.async();
     await py.exec\`import os; value = 40\`;
@@ -156,13 +183,72 @@ nativeTest.concurrent("async Python runs in a worker in the same process and ser
     if (pid !== process.pid) throw new Error("Python worker process mismatch");
     console.log(JSON.stringify([first, second]));
   `,
-    ]),
-    '["42","43"]',
-  );
-});
+      ]),
+      '["42","43"]',
+    );
+  },
+);
+
+test.skipIf(process.env.BUN_TEST_PYCUDA !== "1")(
+  "PyCUDA computes through the shared Buv and PyJS host",
+  async () => {
+    expect(python).toBeTruthy();
+    expect(process.env.BUN_PYTHON_HOST_LIBRARY).toBeTruthy();
+    expect(process.env.BUN_PYTHON_LIBPYTHON).toBeTruthy();
+    const result = await run([
+      "-e",
+      `
+    import { Python } from "buv:python";
+    import { Python as PyJS } from "pyjs:python";
+    if (Python !== PyJS) throw new Error("Python host alias mismatch");
+    using py = Python.open();
+    py.exec\`import os
+import numpy as np
+cuda_dll_directory = None
+if os.name == "nt" and os.environ.get("CUDA_PATH"):
+    cuda_dll_directory = os.add_dll_directory(os.path.join(os.environ["CUDA_PATH"], "bin"))
+import pycuda.driver as cuda
+from pycuda.compiler import SourceModule
+cuda.init()
+device = cuda.Device(0)
+assert device.compute_capability() >= (8, 9)
+context = device.make_context()
+try:
+    source = np.arange(37, dtype=np.int32)
+    allocation = cuda.mem_alloc(source.nbytes)
+    try:
+        cuda.memcpy_htod(allocation, source)
+        module = SourceModule('extern "C" __global__ void twice(int *x, int n) { int i = blockIdx.x * blockDim.x + threadIdx.x; if (i < n) x[i] *= 2; }', no_extern_c=True)
+        module.get_function("twice")(allocation, np.int32(source.size), block=(32, 1, 1), grid=(2, 1, 1))
+        context.synchronize()
+        result = np.empty_like(source)
+        cuda.memcpy_dtoh(result, allocation)
+        assert np.array_equal(result, source * 2)
+        verified = result.tolist()
+    finally:
+        allocation.free()
+finally:
+    context.pop()
+    context.detach()
+    if cuda_dll_directory is not None:
+        cuda_dll_directory.close()\`;
+    if (py.evalJSON("os.getpid()") !== process.pid) throw new Error("Python process mismatch");
+    const result = py.evalJSON("verified");
+    if (JSON.stringify(result) !== JSON.stringify(Array.from({length: 37}, (_, i) => i * 2)))
+      throw new Error("CUDA readback mismatch");
+    console.log("PYCUDA_SHARED_HOST_OK");
+  `,
+    ]);
+    expect(result.out).toBe("PYCUDA_SHARED_HOST_OK");
+    expect(result.code).toBe(0);
+  },
+);
 
 nativeTest.concurrent("pyjs dispatches Python files through the selected host", async () => {
-  success(await run([basename(script), "été🐍"], undefined, environment, "pyjs"), '{"argv": "été🐍"}');
+  success(
+    await run([basename(script), "été🐍"], undefined, environment, "pyjs"),
+    '{"argv": "été🐍"}',
+  );
 });
 
 test.concurrent("Bun help advertises its embedded UV command", async () => {
@@ -193,7 +279,10 @@ test.concurrent("embedded uv runs under its executable alias", async () => {
 
 test.concurrent("embedded uv frees the paths it canonicalizes", async () => {
   using dir = tempDir("uv-canonicalize", {});
-  const result = await run(["uv", "tool", "dir"], undefined, { ...environment, UV_TOOL_DIR: String(dir) });
+  const result = await run(["uv", "tool", "dir"], undefined, {
+    ...environment,
+    UV_TOOL_DIR: String(dir),
+  });
   expect(realpathSync(result.out)).toBe(realpathSync(String(dir)));
   expect(result.code).toBe(0);
 });
@@ -207,7 +296,12 @@ test.concurrent("embedded uvx uses its tool command namespace", async () => {
 });
 
 test.concurrent("embedded uv honors explicit engine dispatch under another name", async () => {
-  const result = await run(["uv", "--version"], undefined, { ...environment, BUN_BE_BUN: "1" }, "custom-runtime");
+  const result = await run(
+    ["uv", "--version"],
+    undefined,
+    { ...environment, BUN_BE_BUN: "1" },
+    "custom-runtime",
+  );
   expect(result.out).toMatch(/^uv 0\.12\.24(?: .*)?$/);
   expect(result.err).toBe("");
   expect(result.code).toBe(0);
@@ -223,7 +317,11 @@ test.concurrent("node alias keeps scripts named uv", async () => {
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [out, err, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+  const [out, err, code] = await Promise.all([
+    child.stdout.text(),
+    child.stderr.text(),
+    child.exited,
+  ]);
   expect({ out, err }).toEqual({ out: "NODE_UV_SCRIPT\n", err: "" });
   expect(code).toBe(0);
 });
@@ -258,17 +356,28 @@ test("optional Python host remains lazy for JavaScript", async () => {
 });
 for (const prefix of [[], ["run"]]) {
   for (const path of [script, basename(script)]) {
-    nativeTest.concurrent("native Python file dispatch " + [...prefix, path].join(" "), async () => {
-      success(await run([...prefix, path, "été🐍"]), '{"argv": "été🐍"}');
-    });
+    nativeTest.concurrent(
+      "native Python file dispatch " + [...prefix, path].join(" "),
+      async () => {
+        success(await run([...prefix, path, "été🐍"]), '{"argv": "été🐍"}');
+      },
+    );
   }
 }
-nativeTest.concurrent("native Python -c preserves Unicode argv and selected interpreter", async () => {
-  success(
-    await run(["python", "-c", executableCheck + "assert sys.argv[1]=='été🐍'; print('CODE_OK')", "été🐍"]),
-    "CODE_OK",
-  );
-});
+nativeTest.concurrent(
+  "native Python -c preserves Unicode argv and selected interpreter",
+  async () => {
+    success(
+      await run([
+        "python",
+        "-c",
+        executableCheck + "assert sys.argv[1]=='été🐍'; print('CODE_OK')",
+        "été🐍",
+      ]),
+      "CODE_OK",
+    );
+  },
+);
 nativeTest.concurrent("native Python -m preserves current module search path", async () => {
   success(await run(["python", "-m", "cli_module", "été🐍"]), "MODULE_OK");
 });
@@ -297,12 +406,19 @@ nativeTest.concurrent("Python honors explicit standard-stream encoding", async (
 });
 
 nativeTest.concurrent("Python honors explicit UTF-8 mode flags", async () => {
-  success(await run(["python", "-X", "utf8=0", "-c", "import sys; print(sys.flags.utf8_mode)"]), "0");
+  success(
+    await run(["python", "-X", "utf8=0", "-c", "import sys; print(sys.flags.utf8_mode)"]),
+    "0",
+  );
   success(await run(["python", "-Xutf8=1", "-c", "import sys; print(sys.flags.utf8_mode)"]), "1");
 });
 nativeTest.concurrent("Python imports the standard native extensions", async () => {
   success(
-    await run(["python", "-c", executableCheck + "import ctypes,ssl,sqlite3,json; print('IMPORTS_OK')"]),
+    await run([
+      "python",
+      "-c",
+      executableCheck + "import ctypes,ssl,sqlite3,json; print('IMPORTS_OK')",
+    ]),
     "IMPORTS_OK",
   );
 });
@@ -316,7 +432,11 @@ for (const [pythonExit, processExit] of [
   });
 }
 nativeTest.concurrent("Python exceptions retain traceback and failing exit status", async () => {
-  const result = await run(["python", "-c", executableCheck + "raise RuntimeError('PYTHON_TRACEBACK')"]);
+  const result = await run([
+    "python",
+    "-c",
+    executableCheck + "raise RuntimeError('PYTHON_TRACEBACK')",
+  ]);
   expect(result.code).toBe(1);
   expect(result.err).toContain("RuntimeError: PYTHON_TRACEBACK");
 });
@@ -361,45 +481,58 @@ test.concurrent("Python compiler help distinguishes native executables, extensio
   expect(result.code).toBe(0);
 });
 
-nativeTest.concurrent("Python compilation cannot overwrite a source or rename host formats", async () => {
-  using dir = tempDir("buv-compile-validation", { "entry.py": "print('SOURCE_PRESERVED')\n" });
-  const source = join(String(dir), "entry.py");
-  const initial = await Bun.file(source).text();
-  const collision = await run(["compile", source, "--outfile", source, "--force", "--backend-ready"]);
-  expect(collision.err).toContain("output cannot replace Python source");
-  expect(await Bun.file(source).text()).toBe(initial);
-  expect(collision.code).toBe(1);
-  const incompatible = await run([
-    "compile",
-    source,
-    "--format",
-    "shared",
-    "--outfile",
-    join(String(dir), "renamed.wasm"),
-    "--backend-ready",
-  ]);
-  expect(incompatible.err).toContain("shared library suffix is incompatible");
-  expect(await Bun.file(join(String(dir), "renamed.wasm")).exists()).toBe(false);
-  expect(incompatible.code).toBe(1);
-});
+nativeTest.concurrent(
+  "Python compilation cannot overwrite a source or rename host formats",
+  async () => {
+    using dir = tempDir("buv-compile-validation", { "entry.py": "print('SOURCE_PRESERVED')\n" });
+    const source = join(String(dir), "entry.py");
+    const initial = await Bun.file(source).text();
+    const collision = await run([
+      "compile",
+      source,
+      "--outfile",
+      source,
+      "--force",
+      "--backend-ready",
+    ]);
+    expect(collision.err).toContain("output cannot replace Python source");
+    expect(await Bun.file(source).text()).toBe(initial);
+    expect(collision.code).toBe(1);
+    const incompatible = await run([
+      "compile",
+      source,
+      "--format",
+      "shared",
+      "--outfile",
+      join(String(dir), "renamed.wasm"),
+      "--backend-ready",
+    ]);
+    expect(incompatible.err).toContain("shared library suffix is incompatible");
+    expect(await Bun.file(join(String(dir), "renamed.wasm")).exists()).toBe(false);
+    expect(incompatible.code).toBe(1);
+  },
+);
 
-nativeTest.concurrent("Python WASM compilation rejects an unavailable real builder without an artifact", async () => {
-  using dir = tempDir("buv-compile-wasi-unavailable", { "entry.py": "print(42)\n" });
-  const output = join(String(dir), "entry.wasm");
-  const result = await run([
-    "build",
-    join(String(dir), "entry.py"),
-    "--compile",
-    "--target=wasm",
-    "--outfile",
-    output,
-    "--wasm-builder",
-    join(String(dir), "missing-builder.ts"),
-  ]);
-  expect(result.err).toContain("WASM builder and native Buv executable must exist");
-  expect(await Bun.file(output).exists()).toBe(false);
-  expect(result.code).toBe(1);
-});
+nativeTest.concurrent(
+  "Python WASM compilation rejects an unavailable real builder without an artifact",
+  async () => {
+    using dir = tempDir("buv-compile-wasi-unavailable", { "entry.py": "print(42)\n" });
+    const output = join(String(dir), "entry.wasm");
+    const result = await run([
+      "build",
+      join(String(dir), "entry.py"),
+      "--compile",
+      "--target=wasm",
+      "--outfile",
+      output,
+      "--wasm-builder",
+      join(String(dir), "missing-builder.ts"),
+    ]);
+    expect(result.err).toContain("WASM builder and native Buv executable must exist");
+    expect(await Bun.file(output).exists()).toBe(false);
+    expect(result.code).toBe(1);
+  },
+);
 
 const compilerTest = test.skipIf(
   !python ||
@@ -438,7 +571,13 @@ compilerTest(
     expect(loaded.out).toBe("42");
     expect(loaded.code).toBe(0);
     const executable = join(String(dir), process.platform === "win32" ? "program.exe" : "program");
-    const built = await run(["compile", join(String(dir), "app.py"), "--outfile", executable, "--offline"]);
+    const built = await run([
+      "compile",
+      join(String(dir), "app.py"),
+      "--outfile",
+      executable,
+      "--offline",
+    ]);
     expect(built.code).toBe(0);
     const receipt = JSON.parse(built.out.split(/\r?\n/).at(-1)!);
     expect(receipt.abi).toBe("CPython-embedded-executable");
@@ -449,12 +588,19 @@ compilerTest(
       env: {
         ...environment,
         PYTHONHOME: receipt.python.prefix,
-        PATH: receipt.python.prefix + (process.platform === "win32" ? ";" : ":") + (environment.PATH ?? ""),
+        PATH:
+          receipt.python.prefix +
+          (process.platform === "win32" ? ";" : ":") +
+          (environment.PATH ?? ""),
       },
       stdout: "pipe",
       stderr: "pipe",
     });
-    const [out, err, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+    const [out, err, code] = await Promise.all([
+      child.stdout.text(),
+      child.stderr.text(),
+      child.exited,
+    ]);
     expect({ out, err }).toEqual({ out: "COMPILED_PYTHON_OK\n", err: "" });
     expect(code).toBe(0);
   },

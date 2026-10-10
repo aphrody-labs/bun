@@ -8,7 +8,7 @@
 - [x] Pass the D3D12 JavaScript gate with the rebuilt Bun executable.
 - [x] Qualify the existing wgpu probe with exact compute readback on hardware.
 - [x] Expose the shared GPU SDK through Buv and pass the six provenance/export gates.
-- [ ] Qualify PyCUDA computation through the shared Buv/PyJS CPython host.
+- [x] Qualify PyCUDA computation through the shared Buv/PyJS CPython host.
 - [ ] Port the Aphrody Rust kernel patches onto pinned upstream Linux 7.2.9.
 - [ ] Pin Alpine packaging to the qualified fork commit and validate effective configs.
 - [ ] Port and qualify the WSL dxgkrnl path independently of native NVIDIA modules.
