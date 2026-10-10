@@ -34,3 +34,15 @@ Automatic review rejected removing two obsolete temporary executables with
 `blocked by policy`. Neither deletion nor a substitute deletion was performed.
 Native NTFS compression instead preserved both artifact paths and verified
 unchanged SHA-256 content, reducing allocated storage by approximately 747 MB.
+
+## Delivery boundary
+
+The source batch was committed locally as
+`6e32b368b4ef2821579bf6e0f3784ead5b1707bb`. A disjoint merge delivery commit was
+prepared without changing the shared dirty worktree. Primary GitHub metadata
+then confirmed that the only owner origin, `aphrody-labs/bun`, is a public fork.
+GitHub rejected new LFS objects with `can not upload new objects to public fork`;
+the upload remained at zero objects and remote main stayed unchanged. No LFS
+hook, permission or visibility setting was bypassed. Private delivery needs an
+owner-authorized destination that accepts these objects; publishing this private
+integration requires an explicit owner decision.
