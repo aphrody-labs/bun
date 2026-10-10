@@ -122,3 +122,41 @@ separate --config value became a dependency positional; the supported equals
 form fixes the invocation. No runtime workaround or assertion reduction was
 introduced. Receipts: tmp/next-owner-offline-plan.json,
 next-owner-seed-\*.log and windows-clean-next-offline-apps-final.log/.exit.
+
+## Strict historical performance comparison
+
+The current Windows release was measured against the retained base executable
+620b50f6abea3413a30235c5885bfe8cbffd592d (1.4.3). The candidate is 54619ce189c
+(1.4.4). Forty measured runs and five warmups use the existing thresholds,
+hyperfine and --strict. No threshold or runtime feature was removed.
+All startup, build/install, RSS, import and local HTTP blocking thresholds pass.
+Startup RSS increases by 816 KiB and builtins RSS by 728 KiB, inside the existing
+1 MiB / 2 MiB limits. The strict gate exits one on binary size alone: 152247296
+versus 96548352 bytes, ratio 1.577 and delta 55698944 bytes.
+
+PE section inspection attributes 44121356 additional bytes to .text and
+10573708 to .rdata. This is executable code/data, not a removable debug section.
+The compared source versions differ: these measurements do not isolate the
+fork delta at an identical upstream source pin. A current comparable baseline
+and the size investigation remain required; no complete performance closure
+or release approval is inferred. Receipts: tmp/perf-owner-latest-plan.json,
+tmp/perf/owner-54619ce-release/perf-report.json and tmp/perf-owner-pe-sections.log.
+
+## Latest Linux release refresh
+
+The VPS owner checkout advances cleanly to published 988d73b430a after checking
+that its sole Linux test modification matches the target blob byte for byte.
+Other worktrees and DBFR candidates remain untouched. The existing release
+uses 4179013632 measured bytes. With manifests, toolchain, build scripts and
+vendor sources unchanged, an incremental plan budgets an entire replacement
+release directory plus 2 GB scratch. Available space at the initial observation
+is 6456922112 bytes; the runner checks the 6179013632-byte minimum before applying.
+
+The tmux owner-linux-latest runner acquires the canonical heavy factory lock
+nonblocking, uses four jobs and nice 10, then invokes the unchanged owner release
+factory and its private populated cache. Its subsequent gate includes all
+internal tests with --expose-internals and the six established Linux suites.
+The runner, Ninja PID, clean source pin and building phase were observed live.
+This is an active build, not a successful artifact or deployment receipt.
+Plan: tmp/vps-owner-latest-release-plan.json. Remote phase/PID/exit receipts are
+in the existing owner-linux-qualification directory; original receipts remain.
