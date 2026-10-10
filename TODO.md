@@ -1,5 +1,10 @@
 # Bun, UV and Python integration
 
+## Native Windows executable installation
+
+- [x] Allow `-BinDir` / `APHRODY_BUN_BIN_DIR` to select System32 while retaining user-owned state and caches.
+- [x] Document the administrator requirement and built-in `bun:windows.win32` API.
+
 ## GPU and Linux 7.2 migration
 
 - [x] Install and enable the Bun fork plugin in Codex and Claude.

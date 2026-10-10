@@ -4,10 +4,12 @@
 #   & ([scriptblock]::Create((irm .../install.ps1))) -Version 1.4.3   # newest aphrody.N build of base 1.4.3
 #   & ([scriptblock]::Create((irm .../install.ps1))) -Version aphrody-v1.4.3-aphrody.1
 #
-# BUN_INSTALL (default ~\.bun) receives bin\bun.exe and bin\bunx.exe. -NoPathUpdate skips the user PATH.
+# BUN_INSTALL (default ~\.bun) keeps user state. -BinDir or APHRODY_BUN_BIN_DIR overrides the executable directory.
+# System32 requires an administrator token. -NoPathUpdate skips the user PATH.
 # APHRODY_BUN_REPO overrides the repository, GITHUB_TOKEN (or GH_TOKEN) authenticates the release lookup.
 param(
   [String]$Version = "latest",
+  [String]$BinDir = "",
   [Switch]$DebugInfo = $false,
   [Switch]$NoPathUpdate = $false
 )
@@ -63,7 +65,7 @@ try {
   Expand-Archive -Force $Zip $Tmp
 
   $Root = if ($env:BUN_INSTALL) { $env:BUN_INSTALL } else { Join-Path $HOME ".bun" }
-  $Bin = Join-Path $Root "bin"
+  $Bin = if ($BinDir) { [System.IO.Path]::GetFullPath($BinDir) } elseif ($env:APHRODY_BUN_BIN_DIR) { [System.IO.Path]::GetFullPath($env:APHRODY_BUN_BIN_DIR) } else { Join-Path $Root "bin" }
   New-Item -ItemType Directory -Force $Bin | Out-Null
   $Bun = Join-Path $Bin "bun.exe"
   Move-Item -Force (Join-Path $Tmp "$Target\$Exe") $Bun
