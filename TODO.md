@@ -69,3 +69,4 @@
 - [ ] Qualify the remaining JavaScript process.argv lone-surrogate projection; the external .NET SDK also normalizes managed arguments, so native transport proof is not a managed round-trip claim.
 - [x] Consolider le lanceur du plugin ; strict GNU x64/ARM64 passe, fichier sans diagnostic Windows x64/ARM64, 31 tests natifs et extraction a froid qualifies.
 - [x] Qualifier la copie Windows avec libuv et le repli lecture/ecriture ; 195 tests natifs passes sur deux configurations, fichier sans diagnostic strict sur quatre cibles.
+- [x] Verifier les 313 fichiers du plugin installe et les entrees activees Codex/Claude sans modifier les authentifications.
