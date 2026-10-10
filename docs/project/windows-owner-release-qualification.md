@@ -69,3 +69,25 @@ performance equivalence, Linux hardware and production activation remain open.
 The separate strict Windows runtime gate retains 53 diagnostics outside the
 last owned batches; GNU x64/ARM64 strict gates pass. This document does not
 close those plans or change the production runtime.
+
+## Next adapter and host readiness follow-up
+
+The clean release scope check exits zero. An exact list of the five files in
+`test/integration/next-bun` passes 82 tests and 319 assertions, zero failures.
+The initial directory prefix also matched next-bun-app and next-bun-pages;
+that pass was explicitly stopped because its dependency installation was
+not yet confined to a local registry. Its partial passes are not counted as
+completion of the application integration gate. Actual Next application and
+Pages Router gates remain open pending a controlled fixture install.
+
+Fresh native Infra observations confirm DBFR still selects 1.4.3-aphrody.3;
+the isolated stripped Linux candidate retains its recorded SHA256. VPS retains
+the owner Linux checkout at 4e3ddd04da1, with only the already published Linux
+test projection changes, whose exact file checksum matches origin/main.
+
+The catalogued VPS reclaim was planned before application, with no active
+Ninja or rustc process. Infra reports exit zero. Measured filesystem available
+space rose from 3450236928 to 6331330560 bytes. Its reported 9.87 GiB logical
+reclaim includes tmpfs and is not the actual disk gain. Existing Docker
+containers, production runtime and DBFR services were not activated or changed.
+The next Linux release build still needs its own source/capacity/factory plan.
