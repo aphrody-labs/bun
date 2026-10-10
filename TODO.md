@@ -96,3 +96,5 @@
 - 2026-10-10: owned Node host consolidation: 137 native tests pass, 4 skips; Windows/Linux x64/ARM64 owned Clippy diagnostics zero. Whole Windows 58 diagnostics and reserved Darwin dependency remain; see docs/project/node-host-consolidation-qualification.md.
 
 - 2026-10-10: Buv/PyJS GPU consolidation refreshed on physical RTX 4070: D3D12 WGSL and CUDA exact 37-element outputs pass; provider checksum unchanged. Published shared-host PyCUDA test retained; native Linux hardware, Alpine ABI and activation still open. See docs/aphrody/buv-pyjs-gpu-consolidation.md.
+
+- 2026-10-10: common native internal gate: 883 pass / 33 skip / 3 fail. Two 5-second failures (src/js lint child, parallel JUnit child) reproduce in isolation (9 pass / 2 fail). Missing published Wintrust Admins Send inventory corrected as native-only catalog handles behind Guarded, without VM state; focused VM-thread gate 48 pass / 0 fail. Generated JSON retains the generator's two-space JSON.stringify style; formatter rewrites unrelated baseline entries and was not applied. Full internal gate remains red.

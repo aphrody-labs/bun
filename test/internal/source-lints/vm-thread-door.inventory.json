@@ -256,6 +256,11 @@
   "src/runtime/webcore/s3/simple_request.rs": {
     "HTTPThread::schedule": 1
   },
+  "src/runtime/windows/sys/wintrust.rs": {
+    "unsafe impl Send": [
+      "Admins"
+    ]
+  },
   "src/sql_jsc/jsc.rs": {
     "unsafe impl Send": [
       "SSLConfig"
