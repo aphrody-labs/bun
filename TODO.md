@@ -154,3 +154,6 @@
 
 - [x] Qualify cache hash and three Win32 output pointers: four targets, native46/0 (2026-10-10).
 - [ ] Close remaining24 Windows diagnostics and full release/private/hardware delivery.
+
+- [x] Qualify route hash and changed-test scratch on four targets and native52/0 (2026-10-10).
+- [ ] Close remaining22 Windows diagnostics and matched release/private/hardware delivery.
