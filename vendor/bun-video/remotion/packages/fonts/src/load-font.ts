@@ -1,0 +1,93 @@
+import {cancelRender, continueRender, delayRender} from 'remotion';
+import {NoReactInternals} from 'remotion/no-react';
+import type {FontFormat} from './get-font-format';
+import {getFontFormat} from './get-font-format';
+
+export type LoadFontOptions = {
+	family: string;
+	url: string;
+	ascentOverride?: string;
+	descentOverride?: string;
+	display?: 'auto' | 'block' | 'fallback' | 'optional' | 'swap';
+	featureSettings?: string;
+	lineGapOverride?: string;
+	stretch?: string;
+	style?: string;
+	unicodeRange?: string;
+	variant?: string;
+	weight?: string;
+	format?: FontFormat;
+};
+
+export const loadFont = async (options: LoadFontOptions): Promise<void> => {
+	if (typeof options !== 'object' || options === null) {
+		throw new TypeError(
+			`loadFont() requires an object as its argument, but received ${typeof options === 'string' ? `"${options}"` : typeof options}. If you want to load a Google Font, use the @remotion/google-fonts package instead. See: https://www.remotion.dev/docs/google-fonts/load-font`,
+		);
+	}
+
+	const {
+		family,
+		url,
+		ascentOverride,
+		descentOverride,
+		display,
+		featureSettings,
+		lineGapOverride,
+		stretch,
+		style,
+		unicodeRange,
+		weight,
+		format,
+		variant,
+	} = options;
+
+	if (typeof url !== 'string') {
+		throw new TypeError(
+			`loadFont() requires a "url" field in the options object, but received ${url === undefined ? 'undefined' : JSON.stringify(url)}. If you want to load a Google Font, use the @remotion/google-fonts package instead. See: https://www.remotion.dev/docs/google-fonts/load-font`,
+		);
+	}
+
+	const waitForFont = delayRender(
+		`Loading font ${family} (url: ${url}, format: ${format}, weight: ${weight}, style: ${style}, variant: ${variant}, ascentOverride: ${ascentOverride}, descentOverride: ${descentOverride}, display: ${display}, featureSettings: ${featureSettings}, lineGapOverride: ${lineGapOverride}, stretch: ${stretch}, unicodeRange: ${unicodeRange})`,
+	);
+	try {
+		const fontFormat = format ?? getFontFormat(url);
+		const fontData = await NoReactInternals.fetchFontData(url);
+		const font = new FontFace(family, fontData, {
+			ascentOverride,
+			descentOverride,
+			display,
+			featureSettings,
+			lineGapOverride,
+			stretch,
+			style,
+			unicodeRange,
+			weight,
+			// eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
+			// @ts-ignore variant is not in the FontFace constructor
+			variant,
+		});
+		await font.load();
+		document.fonts.add(font);
+		NoReactInternals.registerFontFace({
+			ascentOverride: ascentOverride ?? null,
+			descentOverride: descentOverride ?? null,
+			display: display ?? null,
+			featureSettings: featureSettings ?? null,
+			fontFamily: family,
+			fontData,
+			fontUrl: url,
+			format: fontFormat,
+			lineGapOverride: lineGapOverride ?? null,
+			style: style ?? null,
+			weight: weight ?? null,
+			stretch: stretch ?? null,
+			unicodeRange: unicodeRange ?? null,
+			variant: variant ?? null,
+		});
+		continueRender(waitForFont);
+	} catch (err) {
+		cancelRender(err);
+	}
+};
