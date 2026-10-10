@@ -1,7 +1,7 @@
 // Turns a GitHub-hosted runner into the machine upstream compiles every target
 // on: a Debian 13 container set up by the same steps as CI's build image
 // (scripts/build/ci-images/spec.ts), so the fork's release binaries get the
-// same pinned toolchain and sysroots — glibc 2.31 for linux-gnu, Alpine musl,
+// same pinned toolchain and sysroots — focal glibc 2.31 for linux-gnu, Alpine musl,
 // the xwin MSVC/SDK splat for Windows and Apple's SDK for macOS — instead of
 // whatever the runner's own OS links against.
 //
@@ -27,7 +27,7 @@ export type ReleaseTarget = {
   baselineAlias?: string;
   /** A GitHub runner that can execute the binary, for the smoke test. */
   runner: string;
-  /** Container the smoke test runs in, to prove the oldest libc the binary needs. */
+  /** Oldest GNU runtime image in the release smoke matrix; ELF checks enforce the actual symbol-version floor. */
   container?: string;
 };
 

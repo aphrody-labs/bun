@@ -32,7 +32,7 @@ export const NATIVE_PACKAGES: NativePackage[] = [
   { id: "oxc", dir: "packages/bun-oxc" },
 ];
 
-/** GitHub runner per platform; Linux builds run in a container (old glibc, or Alpine for musl). */
+/** GitHub runner per platform; GNU addons build and smoke-test on glibc 2.31, or Alpine for musl. */
 export const RUNNERS: Record<string, { runner: string; container?: string }> = {
   "darwin-arm64": { runner: "macos-15" },
   "darwin-x64": { runner: "macos-15-intel" },

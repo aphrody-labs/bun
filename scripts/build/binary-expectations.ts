@@ -70,7 +70,7 @@ export interface BinaryExpectations {
    * listed here may not appear at all. Undefined = not checked (a local build
    * against the host libc inherits whatever that libc's headers select).
    *
-   * This *is* bun's minimum supported OS release on that platform: GLIBC_2.17
+   * The GLIBC ceiling is the binary's loader ABI floor: GLIBC_2.17
    * = RHEL/CentOS 7, Amazon Linux 2, Debian 8 era. One import of a newer
    * versioned symbol and the loader on those systems refuses the whole binary
    * ("version `GLIBC_2.xx' not found"). Raising it is a release-notes-level

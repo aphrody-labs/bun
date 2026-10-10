@@ -29,7 +29,7 @@ describe("aphrody release targets", () => {
     for (const t of releaseTargets) expect(assets.has(`${t.triplet}.zip`)).toBe(true);
   });
 
-  test("linux binaries are smoke-tested on an old glibc and on musl", () => {
+  test("GNU release binaries get a Bullseye smoke and musl binaries get an Alpine smoke", () => {
     expect(findTarget("linux-x64").container).toBe("debian:bullseye");
     expect(findTarget("linux-aarch64-musl").container).toStartWith("alpine:");
     expect(() => findTarget("linux-riscv64")).toThrow(/unknown target/);
