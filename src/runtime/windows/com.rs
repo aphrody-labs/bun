@@ -18,7 +18,8 @@ mod imp {
 
     #[repr(C)]
     struct Vtbl {
-        query_interface: unsafe extern "system" fn(*mut Delegate, *const [u8; 16], *mut *mut c_void) -> i32,
+        query_interface:
+            unsafe extern "system" fn(*mut Delegate, *const [u8; 16], *mut *mut c_void) -> i32,
         add_ref: unsafe extern "system" fn(*mut Delegate) -> u32,
         release: unsafe extern "system" fn(*mut Delegate) -> u32,
         invoke: unsafe extern "system" fn(*mut Delegate, u64, u64, u64, u64) -> i32,
@@ -39,10 +40,16 @@ mod imp {
     const IID_IUNKNOWN: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 0xc0, 0, 0, 0, 0, 0, 0, 0x46];
     // 94ea2b94-e9cc-49e0-c0ff-ee64ca8f5b90
     const IID_IAGILEOBJECT: [u8; 16] = [
-        0x94, 0x2b, 0xea, 0x94, 0xcc, 0xe9, 0xe0, 0x49, 0xc0, 0xff, 0xee, 0x64, 0xca, 0x8f, 0x5b, 0x90,
+        0x94, 0x2b, 0xea, 0x94, 0xcc, 0xe9, 0xe0, 0x49, 0xc0, 0xff, 0xee, 0x64, 0xca, 0x8f, 0x5b,
+        0x90,
     ];
 
-    static VTBL: Vtbl = Vtbl { query_interface, add_ref, release, invoke };
+    static VTBL: Vtbl = Vtbl {
+        query_interface,
+        add_ref,
+        release,
+        invoke,
+    };
 
     unsafe extern "system" fn query_interface(
         this: *mut Delegate,
@@ -77,6 +84,7 @@ mod imp {
             fence(Ordering::Acquire);
             // SAFETY: last reference; the delegate was created by `create` with `heap::into_raw`.
             let entry = unsafe { (*this).entry };
+            // SAFETY: the final reference owns the allocation created with heap::into_raw.
             unsafe { bun_core::heap::destroy(this) };
             // SAFETY: the JS side keeps the callback open until it receives this null-`this` call.
             unsafe { entry(core::ptr::null_mut(), 0, 0, 0, 0) };
@@ -91,7 +99,8 @@ mod imp {
             for (i, arg) in [a, b, c, d].into_iter().enumerate() {
                 if mask & (1 << i) != 0 && arg != 0 {
                     let vtbl = *(arg as *const *const usize);
-                    let add_ref: unsafe extern "system" fn(u64) -> u32 = core::mem::transmute(*vtbl.add(1));
+                    let add_ref: unsafe extern "system" fn(u64) -> u32 =
+                        core::mem::transmute(*vtbl.add(1));
                     add_ref(arg);
                 }
             }
@@ -104,7 +113,7 @@ mod imp {
     /// A delegate with one reference, owned by the caller.
     pub(super) fn create(iid: [u8; 16], entry: Entry, interfaces: u32) -> *mut Delegate {
         bun_core::heap::into_raw(Box::new(Delegate {
-            vtbl: &VTBL,
+            vtbl: &raw const VTBL,
             refs: AtomicU32::new(1),
             interfaces,
             iid,

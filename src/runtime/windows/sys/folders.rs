@@ -84,8 +84,14 @@ pub(crate) fn known_folder(guid: &str) -> WinResult<String> {
     })?;
     let mut path: *mut u16 = core::ptr::null_mut();
     // SAFETY: `id` is a valid GUID; `path` receives a CoTaskMem string freed below.
-    let hr =
-        unsafe { SHGetKnownFolderPath(&id, KF_FLAG_DONT_VERIFY, core::ptr::null_mut(), &mut path) };
+    let hr = unsafe {
+        SHGetKnownFolderPath(
+            &raw const id,
+            KF_FLAG_DONT_VERIFY,
+            core::ptr::null_mut(),
+            &raw mut path,
+        )
+    };
     let result = if hr < 0 {
         Err(WinErr::status(hr, "SHGetKnownFolderPath"))
     } else {
