@@ -1,0 +1,13 @@
+{
+  "name": "@aphrody/bun-video",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Unified Remotion and HyperFrames library owned by the Bun fork",
+  "exports": {
+    ".": "./src/index.ts",
+    "./mcp": "./src/mcp.ts",
+    "./capabilities": "./src/capabilities.ts"
+  },
+  "license": "SEE LICENSE IN ../../vendor/bun-video/NOTICE.md"
+}
