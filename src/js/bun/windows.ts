@@ -41,7 +41,11 @@ const processTerminateNative = $newRustFunction("windows/host.rs", "jsProcessTer
 const processSetAffinityNative = $newRustFunction("windows/host.rs", "jsProcessSetAffinity", 2);
 const processSetPriorityNative = $newRustFunction("windows/host.rs", "jsProcessSetPriority", 2);
 const processSetEcoModeNative = $newRustFunction("windows/host.rs", "jsProcessSetEcoMode", 2);
-const processTrimWorkingSetNative = $newRustFunction("windows/host.rs", "jsProcessTrimWorkingSet", 1);
+const processTrimWorkingSetNative = $newRustFunction(
+  "windows/host.rs",
+  "jsProcessTrimWorkingSet",
+  1,
+);
 const jobCreateNative = $newRustFunction("windows/host.rs", "jsJobCreate", 1);
 const jobSetLimitsNative = $newRustFunction("windows/host.rs", "jsJobSetLimits", 6);
 const jobAssignNative = $newRustFunction("windows/host.rs", "jsJobAssign", 2);
@@ -60,8 +64,19 @@ const ntfsJournalCreateNative = $newRustFunction("windows/host.rs", "jsNtfsJourn
 const ntfsMftEnumerateNative = $newRustFunction("windows/host.rs", "jsNtfsMftEnumerate", 2);
 const ntfsJournalReadNative = $newRustFunction("windows/host.rs", "jsNtfsJournalRead", 4);
 const wintrustCatalogFileNative = $newRustFunction("windows/host.rs", "jsWintrustCatalogFile", 1);
-const wintrustReleaseCatalogContextsNative = $newRustFunction("windows/host.rs", "jsWintrustReleaseCatalogContexts", 0);
+const wintrustReleaseCatalogContextsNative = $newRustFunction(
+  "windows/host.rs",
+  "jsWintrustReleaseCatalogContexts",
+  0,
+);
 const conptyInfoNative = $newRustFunction("windows/host.rs", "jsConptyInfo", 0);
+const gpuD3d12InfoNative = $newRustFunction("windows/host.rs", "jsGpuD3d12Info", 0);
+const gpuD3d12ClearRenderTargetNative = $newRustFunction(
+  "windows/host.rs",
+  "jsGpuD3d12ClearRenderTarget",
+  6,
+);
+const gpuD3d12CopyBufferNative = $newRustFunction("windows/host.rs", "jsGpuD3d12CopyBuffer", 1);
 
 function unsupportedError() {
   const error = new Error("bun:windows is only available on Windows");
@@ -138,7 +153,11 @@ function parseKeyPath(path) {
   if (rootName.endsWith(":")) rootName = rootName.slice(0, -1);
   const root = registryRoots[rootName];
   if (root === undefined) {
-    throw $ERR_INVALID_ARG_VALUE("path", path, "must start with a registry root such as HKCU or HKLM");
+    throw $ERR_INVALID_ARG_VALUE(
+      "path",
+      path,
+      "must start with a registry root such as HKCU or HKLM",
+    );
   }
   let subKey = sep === -1 ? "" : normalized.slice(sep + 1);
   while (subKey.endsWith("\\")) subKey = subKey.slice(0, -1);
@@ -183,7 +202,12 @@ function encodeValue(value, type) {
     else if (typeof value === "bigint") type = REG_QWORD;
     else if ($isArray(value)) type = REG_MULTI_SZ;
     else if (ArrayBuffer.isView(value) || value instanceof ArrayBuffer) type = REG_BINARY;
-    else throw $ERR_INVALID_ARG_TYPE("value", ["string", "number", "bigint", "string[]", "Uint8Array"], value);
+    else
+      throw $ERR_INVALID_ARG_TYPE(
+        "value",
+        ["string", "number", "bigint", "string[]", "Uint8Array"],
+        value,
+      );
   } else if (typeof type === "string") {
     const resolved = registryTypes[type];
     if (resolved === undefined) throw $ERR_INVALID_ARG_VALUE("type", type);
@@ -201,7 +225,11 @@ function encodeValue(value, type) {
       for (let i = 0; i < value.length; i++) {
         validateString(value[i], `value[${i}]`);
         if (value[i].length === 0 || value[i].includes("\0")) {
-          throw $ERR_INVALID_ARG_VALUE(`value[${i}]`, value[i], "must be non-empty and contain no NUL");
+          throw $ERR_INVALID_ARG_VALUE(
+            `value[${i}]`,
+            value[i],
+            "must be non-empty and contain no NUL",
+          );
         }
       }
       return [type, value.join("\0")];
@@ -209,7 +237,8 @@ function encodeValue(value, type) {
       validateInteger(value, "value", 0, MAX_UINT32);
       return [type, String(value)];
     case REG_QWORD: {
-      const big = typeof value === "bigint" ? value : Number.isInteger(value) ? BigInt(value) : undefined;
+      const big =
+        typeof value === "bigint" ? value : Number.isInteger(value) ? BigInt(value) : undefined;
       if (big === undefined || big < 0n || big > 0xffffffffffffffffn) {
         throw $ERR_OUT_OF_RANGE("value", ">= 0 and <= 2^64 - 1", value);
       }
@@ -223,7 +252,8 @@ function encodeValue(value, type) {
           : ArrayBuffer.isView(value)
             ? new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
             : undefined;
-      if (bytes === undefined) throw $ERR_INVALID_ARG_TYPE("value", ["Uint8Array", "ArrayBuffer"], value);
+      if (bytes === undefined)
+        throw $ERR_INVALID_ARG_TYPE("value", ["Uint8Array", "ArrayBuffer"], value);
       return [type, Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString("hex")];
     }
     default:
@@ -440,6 +470,58 @@ const conpty = Object.freeze({
   },
 });
 
+// gpu
+
+const MAX_RENDER_TARGET_SIDE = 4096;
+const MAX_COPY_BYTES = 64 * 1024 * 1024;
+
+let cachedD3d12Info;
+
+const d3d12 = Object.freeze({
+  info() {
+    ensureSupported();
+    return (cachedD3d12Info ??= Object.freeze(JSON.parse(gpuD3d12InfoNative())));
+  },
+  clearRenderTarget(width, height, color) {
+    ensureSupported();
+    validateInteger(width, "width", 1, MAX_RENDER_TARGET_SIDE);
+    validateInteger(height, "height", 1, MAX_RENDER_TARGET_SIDE);
+    if (!$isArray(color) || color.length !== 4) {
+      throw $ERR_INVALID_ARG_VALUE("color", color, "must be an [r, g, b, a] array");
+    }
+    for (const channel of color) {
+      if (typeof channel !== "number" || !(channel >= 0 && channel <= 1)) {
+        throw $ERR_INVALID_ARG_VALUE("color", color, "must hold channels from 0 to 1");
+      }
+    }
+    const hex = gpuD3d12ClearRenderTargetNative(
+      width,
+      height,
+      color[0],
+      color[1],
+      color[2],
+      color[3],
+    );
+    return new Uint8Array(Buffer.from(hex, "hex"));
+  },
+  copyBuffer(data) {
+    ensureSupported();
+    if (!ArrayBuffer.isView(data) && !(data instanceof ArrayBuffer)) {
+      throw $ERR_INVALID_ARG_TYPE("data", ["ArrayBuffer", "ArrayBufferView"], data);
+    }
+    const bytes = ArrayBuffer.isView(data)
+      ? Buffer.from(data.buffer, data.byteOffset, data.byteLength)
+      : Buffer.from(data);
+    const { length } = bytes;
+    if (length === 0 || length > MAX_COPY_BYTES) {
+      throw $ERR_INVALID_ARG_VALUE("data", length, "must be between 1 byte and 64 MiB");
+    }
+    return new Uint8Array(Buffer.from(gpuD3d12CopyBufferNative(bytes.toString("hex")), "hex"));
+  },
+});
+
+const gpu = Object.freeze({ d3d12 });
+
 // processes
 
 function pidOf(target, name) {
@@ -469,7 +551,14 @@ const processes = Object.freeze({
   },
   setPriority(pid, priority) {
     ensureSupported();
-    validateOneOf(priority, "priority", ["idle", "below-normal", "normal", "above-normal", "high", "realtime"]);
+    validateOneOf(priority, "priority", [
+      "idle",
+      "below-normal",
+      "normal",
+      "above-normal",
+      "high",
+      "realtime",
+    ]);
     const priorityClass = {
       idle: 0x40,
       "below-normal": 0x400,
@@ -493,7 +582,7 @@ const processes = Object.freeze({
 
 // job objects
 
-const jobRegistry = new FinalizationRegistry(id => jobCloseNative(id));
+const jobRegistry = new FinalizationRegistry((id) => jobCloseNative(id));
 
 function limitArgs(limits) {
   validateObject(limits, "limits");
@@ -576,10 +665,11 @@ class Job {
 
 // notifications
 
-const DEFAULT_APP_ID = "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\WindowsPowerShell\\v1.0\\powershell.exe";
+const DEFAULT_APP_ID =
+  "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\WindowsPowerShell\\v1.0\\powershell.exe";
 
 function escapeXml(text) {
-  return text.replace(/[<>&"']/g, c =>
+  return text.replace(/[<>&"']/g, (c) =>
     c === "<" ? "&lt;" : c === ">" ? "&gt;" : c === "&" ? "&amp;" : c === '"' ? "&quot;" : "&apos;",
   );
 }
@@ -618,7 +708,8 @@ const wsl = Object.freeze({
   run(distribution, command, options) {
     ensureSupported();
     validateString(distribution, "distribution");
-    if (!$isArray(command) || command.length === 0) throw $ERR_INVALID_ARG_TYPE("command", "string[]", command);
+    if (!$isArray(command) || command.length === 0)
+      throw $ERR_INVALID_ARG_TYPE("command", "string[]", command);
     for (let i = 0; i < command.length; i++) validateString(command[i], `command[${i}]`);
     const result = Bun.spawnSync({
       cmd: ["wsl.exe", "-d", distribution, "--", ...command],
@@ -690,7 +781,7 @@ function decodeUsnRecord(r) {
   };
 }
 
-const ntfsVolumeRegistry = new FinalizationRegistry(id => ntfsVolumeCloseNative(id));
+const ntfsVolumeRegistry = new FinalizationRegistry((id) => ntfsVolumeCloseNative(id));
 
 /** An open `\\.\<drive>:` volume handle: USN journal and MFT access. */
 class NtfsVolume {
@@ -729,8 +820,11 @@ class NtfsVolume {
     let allocationDelta = 4n * 1024n * 1024n;
     if (options !== undefined) {
       validateObject(options, "options");
-      if (options.maximumSize !== undefined) maximumSize = BigInt(options.maximumSize);
-      if (options.allocationDelta !== undefined) allocationDelta = BigInt(options.allocationDelta);
+      const { maximumSize: requestedMaximumSize, allocationDelta: requestedAllocationDelta } =
+        options;
+      if (requestedMaximumSize !== undefined) maximumSize = BigInt(requestedMaximumSize);
+      if (requestedAllocationDelta !== undefined)
+        allocationDelta = BigInt(requestedAllocationDelta);
     }
     ntfsJournalCreateNative(this.#handle(), maximumSize.toString(), allocationDelta.toString());
   }
@@ -770,7 +864,12 @@ class NtfsVolume {
   readJournal(startUsn, journalId, bufferBytes = 1 << 20) {
     validateInteger(bufferBytes, "bufferBytes", 4096, MAX_UINT32);
     const raw = JSON.parse(
-      ntfsJournalReadNative(this.#handle(), BigInt(startUsn).toString(), BigInt(journalId).toString(), bufferBytes),
+      ntfsJournalReadNative(
+        this.#handle(),
+        BigInt(startUsn).toString(),
+        BigInt(journalId).toString(),
+        bufferBytes,
+      ),
     );
     return { records: raw.records.map(decodeUsnRecord), next: BigInt(raw.next) };
   }
@@ -802,32 +901,47 @@ function parsePe(bytes, fileName = "") {
   if (!ArrayBuffer.isView(bytes)) throw $ERR_INVALID_ARG_TYPE("bytes", "Uint8Array", bytes);
   validateString(fileName, "fileName");
   const pe = require("internal/pe");
-  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const u8 =
+    bytes instanceof Uint8Array
+      ? bytes
+      : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   return pe.parsePe(pe.memorySource(u8), fileName);
 }
 
 function looksLikePe(bytes) {
   if (!ArrayBuffer.isView(bytes)) throw $ERR_INVALID_ARG_TYPE("bytes", "Uint8Array", bytes);
-  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const u8 =
+    bytes instanceof Uint8Array
+      ? bytes
+      : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   return require("internal/pe").looksLikePe(u8);
 }
 
 function parseAuthenticode(bytes) {
   if (!ArrayBuffer.isView(bytes)) throw $ERR_INVALID_ARG_TYPE("bytes", "Uint8Array", bytes);
-  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const u8 =
+    bytes instanceof Uint8Array
+      ? bytes
+      : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   return require("internal/authenticode").parseAuthenticode(u8);
 }
 
 function parseSignedData(bytes) {
   if (!ArrayBuffer.isView(bytes)) throw $ERR_INVALID_ARG_TYPE("bytes", "Uint8Array", bytes);
-  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const u8 =
+    bytes instanceof Uint8Array
+      ? bytes
+      : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   return require("internal/authenticode").parseSignedData(u8);
 }
 
 /** ApiSet schema v6 (Windows 10+, `.apiset` section of apisetschema.dll): contract -> host modules. */
 function parseApiSetSchema(bytes) {
   if (!ArrayBuffer.isView(bytes)) throw $ERR_INVALID_ARG_TYPE("bytes", "Uint8Array", bytes);
-  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const u8 =
+    bytes instanceof Uint8Array
+      ? bytes
+      : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   return require("internal/pe").parseApiSetSchema(u8);
 }
 
@@ -858,11 +972,17 @@ function catalogSigner(file) {
     let parsed = null;
     try {
       const fs = require("node:fs");
-      parsed = require("internal/authenticode").parseSignedData(new Uint8Array(fs.readFileSync(file)));
+      parsed = require("internal/authenticode").parseSignedData(
+        new Uint8Array(fs.readFileSync(file)),
+      );
     } catch {
       parsed = null;
     }
-    signer = { signer: parsed?.signer ?? null, issuer: parsed?.issuer ?? null, digest: parsed?.digest ?? null };
+    signer = {
+      signer: parsed?.signer ?? null,
+      issuer: parsed?.issuer ?? null,
+      digest: parsed?.digest ?? null,
+    };
     catalogSigners.set(file, signer);
   }
   return signer;
@@ -923,7 +1043,9 @@ function toolchain(options) {
       }
     }
   }
-  return deepFreeze(JSON.parse(toolchainNative(selection[0], selection[1], selection[2], selection[3])));
+  return deepFreeze(
+    JSON.parse(toolchainNative(selection[0], selection[1], selection[2], selection[3])),
+  );
 }
 
 // Families
@@ -964,14 +1086,20 @@ function resolveFamily(specifier) {
 function family(name) {
   validateString(name, "name");
   if (!FAMILY_NAME.test(name)) {
-    throw $ERR_INVALID_ARG_VALUE("name", name, 'must be a lowercase family name such as "kernel32"');
+    throw $ERR_INVALID_ARG_VALUE(
+      "name",
+      name,
+      'must be a lowercase family name such as "kernel32"',
+    );
   }
   const cached = familyCache.get(name);
   if (cached !== undefined) return cached;
   const specifier = `@aphrody/bun-windows-${name}`;
   const resolved = resolveFamily(specifier);
   if (resolved === undefined) {
-    const error = new Error(`bun:windows family "${name}" is not installed. Install it with: bun add ${specifier}`);
+    const error = new Error(
+      `bun:windows family "${name}" is not installed. Install it with: bun add ${specifier}`,
+    );
     error.code = "ERR_BUN_WINDOWS_FAMILY_NOT_FOUND";
     throw error;
   }
@@ -1004,6 +1132,7 @@ export default {
   knownFolder,
   processes,
   conpty,
+  gpu,
   Job,
   toast,
   notify,

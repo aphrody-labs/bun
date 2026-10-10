@@ -343,6 +343,35 @@ declare module "bun:windows" {
     function open(options: TerminalOptions): Terminal;
   }
 
+  interface D3d12Info {
+    api: "d3d12";
+    /** Description of DXGI adapter 0. */
+    adapter: string;
+    vendorId: number;
+    deviceId: number;
+    dedicatedVideoMemory: number;
+    /** Feature level the device was created at: `"12_0"` or `"11_0"`. */
+    featureLevel: string;
+  }
+
+  namespace gpu {
+    namespace d3d12 {
+      /** Adapter 0 and the feature level it runs at. Cached after the first call. Throws on non-Windows platforms. */
+      function info(): Readonly<D3d12Info>;
+      /**
+       * Clears a `width` x `height` RGBA8 render target to `color` (channels in `0..1`) on the GPU and returns
+       * its pixels, `width * height * 4` bytes, rows packed.
+       */
+      function clearRenderTarget(
+        width: number,
+        height: number,
+        color: [r: number, g: number, b: number, a: number],
+      ): Uint8Array;
+      /** Uploads `data` to a GPU buffer, copies it on the GPU and returns the bytes read back. Up to 64 MiB. */
+      function copyBuffer(data: ArrayBuffer | ArrayBufferView): Uint8Array;
+    }
+  }
+
   interface NotificationOptions {
     /**
      * App User Model ID the notification is shown under. It must belong to an installed app
