@@ -30,12 +30,10 @@ struct HostApi {
 static HOST: OnceLock<Result<HostApi, String>> = OnceLock::new();
 
 fn host_api() -> Result<&'static HostApi, String> {
-    HOST.get_or_init(|| unsafe { load_host() })
-        .as_ref()
-        .map_err(Clone::clone)
+    HOST.get_or_init(load_host).as_ref().map_err(Clone::clone)
 }
 
-unsafe fn load_host() -> Result<HostApi, String> {
+fn load_host() -> Result<HostApi, String> {
     let host_path = bun_core::getenv_z(bun_core::zstr!("BUN_PYTHON_HOST_LIBRARY"))
         .ok_or_else(|| format!("set {HOST_LIBRARY_ENV} to the installed Python host library"))?;
     let host_path = std::str::from_utf8(host_path)
@@ -43,10 +41,11 @@ unsafe fn load_host() -> Result<HostApi, String> {
     let library = DynLib::open(host_path.as_bytes())
         .map_err(|error| format!("cannot load Python host {host_path}: {error}"))?;
 
-    // SAFETY: each symbol is checked against the declared host ABI.
-    let abi_version: AbiVersion =
-        unsafe { lookup(&library, bun_core::zstr!("bun_py_abi_version")) }
-            .ok_or_else(|| "Python host is missing bun_py_abi_version".to_owned())?;
+    let abi_version: AbiVersion = unsafe {
+        // SAFETY: the selected host exports the version function with the no-argument C ABI.
+        lookup(&library, bun_core::zstr!("bun_py_abi_version"))
+    }
+    .ok_or_else(|| "Python host is missing bun_py_abi_version".to_owned())?;
     // SAFETY: the symbol uses the declared no-argument C ABI.
     let version = unsafe { abi_version() };
     if version != ABI_VERSION {
@@ -55,18 +54,24 @@ unsafe fn load_host() -> Result<HostApi, String> {
         ));
     }
 
-    // SAFETY: the symbols use the signatures from include/bun_python_host.h.
-    let load_python: LoadPython =
-        unsafe { lookup(&library, bun_core::zstr!("aphrody_py_load")) }
-            .ok_or_else(|| "Python host is missing aphrody_py_load".to_owned())?;
+    let load_python: LoadPython = unsafe {
+        // SAFETY: ABI v1 declares this symbol with the LoadPython signature.
+        lookup(&library, bun_core::zstr!("aphrody_py_load"))
+    }
+    .ok_or_else(|| "Python host is missing aphrody_py_load".to_owned())?;
+    // SAFETY: ABI v1 declares this symbol with the PythonMain signature.
     let python_main: PythonMain = unsafe { lookup(&library, bun_core::zstr!("bun_py_main")) }
         .ok_or_else(|| "Python host is missing bun_py_main".to_owned())?;
-    let last_error: LastError =
-        unsafe { lookup(&library, bun_core::zstr!("aphrody_py_last_error")) }
-            .ok_or_else(|| "Python host is missing aphrody_py_last_error".to_owned())?;
-    let free_string: FreeString =
-        unsafe { lookup(&library, bun_core::zstr!("aphrody_py_string_free")) }
-            .ok_or_else(|| "Python host is missing aphrody_py_string_free".to_owned())?;
+    let last_error: LastError = unsafe {
+        // SAFETY: ABI v1 declares this symbol with the LastError signature.
+        lookup(&library, bun_core::zstr!("aphrody_py_last_error"))
+    }
+    .ok_or_else(|| "Python host is missing aphrody_py_last_error".to_owned())?;
+    let free_string: FreeString = unsafe {
+        // SAFETY: ABI v1 declares this symbol with the FreeString signature.
+        lookup(&library, bun_core::zstr!("aphrody_py_string_free"))
+    }
+    .ok_or_else(|| "Python host is missing aphrody_py_string_free".to_owned())?;
 
     Ok(HostApi {
         _library: library,
@@ -263,8 +268,13 @@ fn run(arguments: &[&[u8]]) -> Result<(), String> {
     // SAFETY: argv is a live array of NUL-terminated UTF-8 strings; the host copies it before
     // entering CPython. A SystemExit may terminate the process inside the host before this call
     // returns, so the out parameter is consumed only when control returns successfully here.
-    let status =
-        unsafe { (api.python_main)(pointers.len() as c_int, pointers.as_ptr(), &mut exit_code) };
+    let status = unsafe {
+        (api.python_main)(
+            pointers.len() as c_int,
+            pointers.as_ptr(),
+            &raw mut exit_code,
+        )
+    };
     if status != 0 {
         return Err(host_error(api, "CLI", status));
     }
