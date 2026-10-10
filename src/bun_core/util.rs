@@ -1489,9 +1489,9 @@ pub mod fd {
         unsafe {
             let pp = (*crate::windows_sys::peb()).ProcessParameters;
             ProcessParametersStdio {
-                hStdInput: (*pp).hStdInput as *mut c_void,
-                hStdOutput: (*pp).hStdOutput as *mut c_void,
-                hStdError: (*pp).hStdError as *mut c_void,
+                hStdInput: (*pp).hStdInput.cast::<c_void>(),
+                hStdOutput: (*pp).hStdOutput.cast::<c_void>(),
+                hStdError: (*pp).hStdError.cast::<c_void>(),
             }
         }
     }
@@ -2170,7 +2170,9 @@ mod wasm_stack {
     }
 }
 #[cfg(target_arch = "wasm32")]
-use wasm_stack::{initialize as Bun__StackCheck__initialize, max_stack as Bun__StackCheck__getMaxStack};
+use wasm_stack::{
+    initialize as Bun__StackCheck__initialize, max_stack as Bun__StackCheck__getMaxStack,
+};
 unsafe extern "C" {
     /// No preconditions; initializes thread-local stack bookkeeping.
     #[cfg(not(target_arch = "wasm32"))]
@@ -2771,14 +2773,16 @@ pub fn self_exe_path() -> crate::CrateResult<&'static ZStr> {
             // `process.execPath` is never verbatim-prefixed).
             if let Some(rest) = s.strip_prefix(r"\\?\UNC\") {
                 s = format!(r"\\{}", rest);
-            } else if let Some(rest) = s.strip_prefix(r"\\?\") {
-                s = rest.to_owned();
+            } else if s.starts_with(r"\\?\") {
+                s.drain(..r"\\?\".len());
             }
             Ok(ZBox::from_vec_with_nul(s.into_bytes()))
         }
         #[cfg(not(any(unix, windows)))]
         {
-            Ok(ZBox::from_vec_with_nul(path.into_os_string().into_encoded_bytes()))
+            Ok(ZBox::from_vec_with_nul(
+                path.into_os_string().into_encoded_bytes(),
+            ))
         }
     });
     match r {

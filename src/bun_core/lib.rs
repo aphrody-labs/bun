@@ -215,13 +215,14 @@ pub mod os {
     /// Swap in a new envp slice; returns the previous (ptr, len) pair.
     /// SAFETY: single-threaded startup only.
     pub unsafe fn take_environ() -> (*mut *mut c_char, usize) {
-        // `&raw mut` (no intermediate `&mut`) — `static_mut_refs` is hard-denied
-        // under rust_2024_compatibility, and we never need a borrow here.
+        // SAFETY: the startup-only caller excludes concurrent ENVIRON access;
+        // the raw pointer creates no intermediate mutable reference.
         unsafe { core::ptr::replace(&raw mut ENVIRON, (core::ptr::null_mut(), 0)) }
     }
     /// SAFETY: single-threaded startup only; `ptr` must be valid for `len`
     /// elements for the process lifetime (leaked allocation).
     pub unsafe fn set_environ(ptr: *mut *mut c_char, len: usize) {
+        // SAFETY: the caller provides process-lifetime storage during exclusive startup.
         unsafe {
             core::ptr::write(&raw mut ENVIRON, (ptr, len));
         }
@@ -229,6 +230,7 @@ pub mod os {
     /// Borrowed view of the current envp slice (read side of the `ENVIRON` global).
     /// SAFETY: caller must not race with `set_environ`.
     pub unsafe fn environ() -> &'static [*mut c_char] {
+        // SAFETY: the caller excludes writers; set_environ's storage outlives this view.
         unsafe {
             let (p, n) = core::ptr::read(&raw const ENVIRON);
             if p.is_null() {
@@ -1348,6 +1350,7 @@ pub(crate) mod strings_impl {
         }
         // Windows MSVC libc has no `strncasecmp`; `_strnicmp` is the equivalent.
         #[cfg(all(not(miri), windows))]
+        // SAFETY: both slices contain at least a.len() bytes, the maximum read by _strnicmp.
         unsafe {
             unsafe extern "C" {
                 fn _strnicmp(
@@ -2687,47 +2690,37 @@ pub mod ffi {
     // zero-init before the kernel fills them. All fields are integers / raw
     // pointers / nested POD; audited against the Win32 SDK headers (S016).
     #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::IO_STATUS_BLOCK {}
+    macro_rules! zeroable_windows {
+        ($($t:ty),* $(,)?) => { $(
+            // SAFETY: these audited C structs contain integers, raw pointers and nested
+            // POD only; zero is valid for each field and for their padding.
+            unsafe impl Zeroable for $t {}
+        )* };
+    }
     #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::FILE_BASIC_INFORMATION {}
-    #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::FILE_ALL_INFORMATION {}
-    #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::FILE_FS_DEVICE_INFORMATION {}
-    #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::FILE_FS_VOLUME_INFORMATION {}
-    #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::BY_HANDLE_FILE_INFORMATION {}
-    #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::WIN32_FILE_ATTRIBUTE_DATA {}
-    #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::WIN32_FIND_DATAW {}
-    #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::OBJECT_ATTRIBUTES {}
-    #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::UNICODE_STRING {}
-    #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::SECURITY_ATTRIBUTES {}
-    #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::FILETIME {}
-    #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::ws2_32::sockaddr_storage {}
-    #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::ws2_32::sockaddr_in {}
-    #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::ws2_32::sockaddr_in6 {}
-    #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::ws2_32::addrinfo {}
-    #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::IO_COUNTERS {}
-    #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::JOBOBJECT_BASIC_LIMIT_INFORMATION {}
-    #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::JOBOBJECT_EXTENDED_LIMIT_INFORMATION {}
-    #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::OVERLAPPED {}
-    #[cfg(windows)]
-    unsafe impl Zeroable for bun_windows_sys::externs::PROCESS_INFORMATION {}
+    zeroable_windows!(
+        bun_windows_sys::externs::IO_STATUS_BLOCK,
+        bun_windows_sys::externs::FILE_BASIC_INFORMATION,
+        bun_windows_sys::externs::FILE_ALL_INFORMATION,
+        bun_windows_sys::externs::FILE_FS_DEVICE_INFORMATION,
+        bun_windows_sys::externs::FILE_FS_VOLUME_INFORMATION,
+        bun_windows_sys::externs::BY_HANDLE_FILE_INFORMATION,
+        bun_windows_sys::externs::WIN32_FILE_ATTRIBUTE_DATA,
+        bun_windows_sys::externs::WIN32_FIND_DATAW,
+        bun_windows_sys::externs::OBJECT_ATTRIBUTES,
+        bun_windows_sys::externs::UNICODE_STRING,
+        bun_windows_sys::externs::SECURITY_ATTRIBUTES,
+        bun_windows_sys::externs::FILETIME,
+        bun_windows_sys::externs::ws2_32::sockaddr_storage,
+        bun_windows_sys::externs::ws2_32::sockaddr_in,
+        bun_windows_sys::externs::ws2_32::sockaddr_in6,
+        bun_windows_sys::externs::ws2_32::addrinfo,
+        bun_windows_sys::externs::IO_COUNTERS,
+        bun_windows_sys::externs::JOBOBJECT_BASIC_LIMIT_INFORMATION,
+        bun_windows_sys::externs::JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
+        bun_windows_sys::externs::OVERLAPPED,
+        bun_windows_sys::externs::PROCESS_INFORMATION,
+    );
 
     /// Conjure a value of a zero-sized type without `unsafe` at the call site.
     ///
