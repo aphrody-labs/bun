@@ -145,3 +145,6 @@
 - [x] Qualify clean 8d release:895 internal passes, real installed skills on Codex/Claude and RTX4070 GPU/PyCUDA consumers (2026-10-10).
 - [x] Qualify runtime pointer/predicate ownership and pooled scanner scratch storage:147 native passes, four target scope checks (2026-10-10).
 - [ ] Close remaining35 Windows runtime diagnostics and matched publication/tagging/activation gates.
+
+- [x] Owner Glob/router heap scratch and strict missing-cwd behavior: four compiler targets, native231/0, regression/type/style evidence recorded (2026-10-10).
+- [ ] Continue remaining Windows runtime33, matched release/performance, tagging/PATH/provider-session activation and private/LFS/Linux-GPU delivery.
