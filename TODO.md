@@ -9,8 +9,11 @@
 - [x] Qualify the existing wgpu probe with exact compute readback on hardware.
 - [x] Expose the shared GPU SDK through Buv and pass the six provenance/export gates.
 - [x] Qualify PyCUDA computation through the shared Buv/PyJS CPython host.
-- [ ] Port the Aphrody Rust kernel patches onto pinned upstream Linux 7.2.9.
-- [ ] Pin Alpine packaging to the qualified fork commit and validate effective configs.
+- [x] Port the Aphrody Rust kernel patches onto pinned upstream Linux 7.2.9 (`dc79e99b05799`).
+- [x] Build the new kernel, pass driver Clippy and boot seven accelerator selftests in QEMU.
+- [x] Pass bun_core strict Clippy, six target checks and 43 changed-binary Python tests (`ce143eadb8f`).
+- [ ] Finish compiler strict Rust gates: 43 native Python tests and six provenance tests pass; bun_runtime still reports 380 diagnostics outside the owned compiler path. The sccache command-length opt-out remains process-local.
+- [x] Pin Alpine packaging to the qualified fork commit and validate 637 effective config values (`aports` commit `f6e5bf63c639`).
 - [ ] Port and qualify the WSL dxgkrnl path independently of native NVIDIA modules.
 - [ ] Build, boot and measure the new kernel before host activation.
 
