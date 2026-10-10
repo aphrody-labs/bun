@@ -30,7 +30,7 @@
 - [x] Accept plain stable `bun-v1.4.4` tags in publishers, installers, upgrade and site.
 - [x] Pass changed-runtime stable-tag, plugin and Linux deployment helper tests.
 - [ ] Qualify production binaries and execute the complete runtime suite.
-- [ ] Consolidate native Zstd link inputs: the debug linker audit reports 342 duplicate strong symbols from vendored Zstd and zstd-sys; release CI rejects them.
+- [x] Consolidate native Zstd link inputs: target zstd-sys bindings use Bun's pinned 1.5.7 provider; host tools retain Cargo's archive. Native Windows debug audit: zero duplicate strong symbols. Build-unit tests: 22 pass; Zstd runtime tests: 95 pass, 5 skip. Release and other native targets remain to qualify.
 - [ ] Commit and push the qualified release candidate.
 - [ ] Publish and verify all eligible npm, crates.io, PyPI and vendor products.
 - [ ] Publish release assets, GHCR images and activate qualified host deployments.
