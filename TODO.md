@@ -1,5 +1,19 @@
 # Bun, UV and Python integration
 
+## GPU and Linux 7.2 migration
+
+- [x] Install and enable the Bun fork plugin in Codex and Claude.
+- [x] Publish the RTX 4070 driver, CUDA, Alpine and WSL source audit.
+- [x] Correct the D3D12 descriptor-handle ABI and prove native clear/copy on RTX 4070.
+- [x] Pass the D3D12 JavaScript gate with the rebuilt Bun executable.
+- [x] Qualify the existing wgpu probe with exact compute readback on hardware.
+- [x] Expose the shared GPU SDK through Buv and pass the six provenance/export gates.
+- [ ] Qualify PyCUDA computation through the shared Buv/PyJS CPython host.
+- [ ] Port the Aphrody Rust kernel patches onto pinned upstream Linux 7.2.9.
+- [ ] Pin Alpine packaging to the qualified fork commit and validate effective configs.
+- [ ] Port and qualify the WSL dxgkrnl path independently of native NVIDIA modules.
+- [ ] Build, boot and measure the new kernel before host activation.
+
 ## Windows version synchronization
 
 - [x] Inventory tracked fork scripts and infrastructure version references.
