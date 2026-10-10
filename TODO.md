@@ -14,8 +14,9 @@
 - [x] Build the new kernel, pass driver Clippy and boot seven accelerator selftests in QEMU.
 - [x] Pass bun_core strict Clippy, six target checks and 43 changed-binary Python tests (`ce143eadb8f`).
 - [x] Pass strict GPU/registry pointer checks on Windows x64/ARM64 and seven changed-binary hardware/registry tests (`6ebd6ed3140`).
+- [x] Fix host collector ARM64/macOS cfg coverage; pass bun_host strict Clippy on all six Windows/Linux/macOS targets, 15 native host tests, 137 rebuilt-Bun tests (4 skips) and real Windows host collection. The rebuilt link still has zero duplicate strong symbols.
 - [ ] Finish compiler strict Rust gates: 43 native Python tests and six provenance tests pass; bun_runtime still reports 272 diagnostics outside the owned compiler and native safety paths. The sccache command-length opt-out remains process-local.
-- [ ] Finish six-target validation for the Node pointer/pool batch; 129 native tests pass with four skips, and the module suite passes after updating the fork builtin list.
+- [ ] Finish strict validation and delivery for the Node pointer/pool batch; bun_runtime checks pass on all six targets after local host/rootfs portability fixes. The rootfs Darwin fix remains pending with 53 bun_install strict diagnostics; 129 native Node tests previously pass with four skips.
 - [x] Pin Alpine packaging to the qualified fork commit and validate 637 effective config values (`aports` commit `f6e5bf63c639`).
 - [x] Port WSL dxgkrnl onto Linux 7.2.9, pass x64/ARM64 compilation and seven x64 QEMU accelerator tests (`d4764f587115`).
 - [x] Publish and verify WSL branch `claude/aphrody-wsl-linux-7.2` at `d4764f587115` using complete history; the existing Microsoft 6.18 branch remains unchanged. Strict checkpatch retains 13 inherited protocol-array errors, with zero new errors.

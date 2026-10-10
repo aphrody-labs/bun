@@ -8,7 +8,7 @@ use std::process::{Command, Stdio};
 
 use crate::registry::{Entry, valid_id, write_atomic};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Target {
     Dir(PathBuf),
     Ssh { dest: String, port: Option<u16>, dir: String },

@@ -46,7 +46,7 @@ fn parse(args: &[String]) -> Result<Opts, String> {
     let mut o = Opts::default();
     let mut it = args.iter();
     let num = |flag: &str, v: Option<&String>| -> Result<f64, String> {
-        v.ok_or(format!("{flag} needs a value"))?.parse::<f64>().map_err(|_| format!("{flag} needs a number"))
+        v.ok_or_else(|| format!("{flag} needs a value"))?.parse::<f64>().map_err(|_| format!("{flag} needs a number"))
     };
     while let Some(arg) = it.next() {
         let (flag, inline) = match arg.split_once('=') {
@@ -119,7 +119,7 @@ fn print_rejected(io: &mut Io, rejected: &[String]) {
     }
 }
 
-fn run(io: &mut Io, args: Vec<String>) -> Result<(), String> {
+fn run(io: &mut Io, args: &[String]) -> Result<(), String> {
     let Some((command, rest)) = args.split_first() else {
         outln!(io, "{USAGE}");
         return Ok(());
@@ -182,7 +182,7 @@ fn run(io: &mut Io, args: Vec<String>) -> Result<(), String> {
             let secret = secret(&o)?;
             let loaded = registry::load(&store, secret.as_ref());
             print_rejected(io, &loaded.rejected);
-            let mut query = o.query.clone();
+            let mut query = o.query;
             query.max_age_s.get_or_insert(86_400);
             let hits = registry::find(&loaded.inventory, &query, collect::now_ms());
             outln!(io, "{}", serde_json::to_string_pretty(&hits).map_err(|e| e.to_string())?);
@@ -204,8 +204,8 @@ pub struct Io {
 
 /// Runs `bun host`; returns the exit code.
 pub fn main(args: Vec<OsString>, io: &mut Io) -> i32 {
-    let args = args.into_iter().map(|a| a.to_string_lossy().into_owned()).collect();
-    match run(io, args) {
+    let args: Vec<String> = args.into_iter().map(|a| a.to_string_lossy().into_owned()).collect();
+    match run(io, &args) {
         Ok(()) => 0,
         Err(message) => {
             errln!(io, "bun host: {message}");

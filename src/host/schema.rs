@@ -21,7 +21,7 @@ pub struct HostInfo {
     pub uptime_s: Option<u64>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Os {
     /// `linux`, `windows`, `macos`.
     pub family: String,
@@ -34,7 +34,7 @@ pub struct Os {
     pub libc: String,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Kernel {
     pub release: String,
     pub cgroup_v2: bool,
@@ -42,7 +42,7 @@ pub struct Kernel {
     pub wsl: bool,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Cpu {
     pub model: String,
     pub physical_cores: Option<u32>,
@@ -62,7 +62,7 @@ pub struct Memory {
     pub psi_full_avg10: Option<f64>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Gpu {
     /// `nvidia`, `amd`, `intel`, `other`.
     pub vendor: String,
@@ -74,7 +74,7 @@ pub struct Gpu {
     pub cuda: Option<String>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Disk {
     pub mount: String,
     pub device: String,
@@ -85,12 +85,12 @@ pub struct Disk {
     pub kind: String,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Network {
     pub wireguard: Vec<Address>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Address {
     pub iface: String,
     pub ip: String,
