@@ -49,3 +49,36 @@ Remote receipts:
 runner-test-retry.exit and native-test-retry.exit are 0; provenance-test-retry
 records version/revision/executable and exits 0. native-owned-cache.log retains
 the initial two-test failure; native.log retains the earlier cache failure.
+
+## DBFR isolated candidate delivery
+
+After an explicit plan, the native Infra in-process SFTP command downloaded the
+qualified candidate to the owner workstation and uploaded it into a new,
+private directory on DBFR:
+
+/home/ubuntu/.local/share/aphrody/runtime-candidates/bun-1.4.4-4e3ddd04d/bun
+
+Source, local download and remote upload agree on the 314397832-byte artifact's
+SHA-256 recorded above. Executable mode was applied only after remote checksum
+verification. DBFR x64 (kernel 7.0.0-38-generic) successfully executes the
+candidate, returns Bun.version 1.4.4 and the exact source revision, imports
+bun:linux, round-trips Zstd, and writes/reads/closes a memfd. The manifest beside
+the candidate records pin, checksum, test patch commit, suite evidence and
+remaining qualification. No Cargo or native build ran on DBFR.
+
+The factory's plain release output is bun-profile; this isolated candidate is
+not the stripped distribution artifact. No claim is made about all DBFR
+consumers, GPU hardware, production services or complete release publication.
+The current PATH runtime remains /home/ubuntu/.local/bin/bun at
+1.4.3-aphrody.3+d46f0ed6c. Services were not restarted.
+
+Plan: tmp/runtime-candidate-dbfr-plan.json. Receipts:
+ tmp/runtime-candidate-download.log/.exit,
+ tmp/runtime-candidate-upload.log/.exit,
+ tmp/runtime-candidate-dbfr-smoke.log/.exit,
+ tmp/runtime-candidate-manifest-upload.log/.exit; all exit 0.
+The latest published GitHub runtime release observed in this audit remains
+aphrody-v1.4.3-aphrody.4. Its older release workflow 37859117880 had successful
+build/smoke/release jobs but a failed npm job; this does not qualify the new pin.
+Full release gates, stripped artifacts/images and production consumer activation
+remain required before the owner's global release/deploy objective is complete.

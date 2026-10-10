@@ -84,3 +84,5 @@
 - [x] bunx Win32 pointer contracts and chmod fixture: 9 native passes / 44 assertions, format/lint pass; shared helper type gate remains pending.
 
 - [x] Shared Bun.jest fixture type baseline resolved in test-only declarations; three-suite TypeScript gate passes.
+
+- [x] DBFR isolated Linux candidate delivery and checksum/native smoke verified through Infra; production activation and full release publication pending.

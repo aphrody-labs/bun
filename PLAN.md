@@ -189,3 +189,5 @@ chantier touché (`bun-fork-aphrody`, `next-on-bun-plan`, …) à la fin du lot.
 - 2026-10-10: Windows bunx native output pointers and portable mock-registry fixture: nine changed-engine passes, strict owned file zero on four targets; Windows runtime 72 remaining. Shared dummy.registry Bun.jest type error reproduced on unchanged baseline. See [qualification](docs/project/windows-bunx-pointer-qualification.md).
 
 - 2026-10-10: private Bun.jest test-helper type restored only in internal test declarations; scoped bunx / shell cp / Linux TypeScript gate now zero. Runtime file-bound contract verified in Jest::call; public Bun types unchanged.
+
+- 2026-10-10: Qualified Linux plain-release candidate delivered by native Infra SFTP into DBFR's isolated runtime-candidates directory; SHA256 agrees source/local/target, native DBFR Linux/Zstd/memfd smoke passes. Production PATH remains 1.4.3-aphrody.3; stripped distribution, full release gates and activation pending. See [proof](docs/project/linux-owner-release-preflight.md).
