@@ -137,3 +137,7 @@
 - [x] Qualify HTTP stat normalization on four targets and 266 changed-engine tests (2026-10-10).
 - [x] Complete clean d5 Windows release linkage and MCP transport (2026-10-10).
 - [ ] Close 45 remaining Windows runtime diagnostics and MCP installed-plugin skill discovery.
+
+- [x] Fix installed-plugin MCP discovery and function lookup; 16 native tests, four strict targets and actual Codex/Claude MCP calls pass (2026-10-10).
+- [x] Reverify RTX4070 PyCUDA/wgpu/D3D12/NVRTC chain, GPU SDK and shared Buv/PyJS host on changed engine (2026-10-10).
+- [ ] Close remaining45 Windows runtime diagnostics, matched release/performance and authorized private video delivery.

@@ -1,6 +1,7 @@
 //! `skills_list` / `skill_read`: the repository skills (`.claude/skills`, embedded) plus the skills
 //! installed on this machine: `~/.claude/skills`, `~/.codex/skills`, `~/.bun/agent/skills` (the
-//! agent plugin), `$BUN_MCP_SKILLS_PATH` and the project's `.claude/skills`. A later source
+//! legacy agent store), `~/.bun/agent-plugin/<profile>/skills`, `$BUN_MCP_SKILLS_PATH`
+//! and the project's `.claude/skills`. A later source
 //! replaces an earlier skill of the same name. Skills are also MCP prompts and resources.
 
 use std::fmt::Write as _;
@@ -182,6 +183,18 @@ pub(crate) fn all(ctx: &Context) -> Vec<Skill> {
         ),
         (agent_dir().join("skills"), "~/.bun/agent/skills".into()),
     ];
+    let agent = match ctx.agent() {
+        "claude" => "claude",
+        "agy" => "agy",
+        _ => "codex",
+    };
+    roots.push((
+        agent_dir()
+            .with_file_name("agent-plugin")
+            .join(agent)
+            .join("skills"),
+        format!("installed bun plugin ({agent})"),
+    ));
     if let Some(list) = env("BUN_MCP_SKILLS_PATH") {
         for p in std::env::split_paths(&list) {
             let label = p.display().to_string();
@@ -287,7 +300,7 @@ pub(crate) const TOOLS: &[Tool] = &[
     Tool {
         name: "skills_list",
         title: "List agent skills",
-        description: "List the agent skills available here: Bun repository skills (embedded), user skills (~/.claude/skills, ~/.codex/skills, ~/.bun/agent/skills) and the project's .claude/skills. Filter with `query`.",
+        description: "List the agent skills available here: Bun repository skills (embedded), user skills (~/.claude/skills, ~/.codex/skills, ~/.bun/agent/skills), installed Bun plugin skills and the project's .claude/skills. Filter with `query`.",
         input_schema: r#"{"type":"object","properties":{"query":{"type":"string","description":"Words that must all appear in the name or description"},"limit":{"type":"integer","minimum":1,"maximum":200,"default":50},"offset":{"type":"integer","minimum":0,"default":0}}}"#,
         annotations: Annotations::READ_ONLY,
         call: skills_list,
