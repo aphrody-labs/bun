@@ -82,3 +82,5 @@
 - [x] Linux owner release candidate: six changed-engine suites 202 pass, provenance and SHA256 verified; privileged skips and deployment remain outside this proof.
 
 - [x] bunx Win32 pointer contracts and chmod fixture: 9 native passes / 44 assertions, format/lint pass; shared helper type gate remains pending.
+
+- [x] Shared Bun.jest fixture type baseline resolved in test-only declarations; three-suite TypeScript gate passes.

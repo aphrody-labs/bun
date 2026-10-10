@@ -3,10 +3,23 @@
 // apply to builtins.
 declare function $cpp<T = any>(filename: string, symbol: string): T;
 declare function $rust<T = any>(filename: string, symbol: string): T;
-declare function $newCppFunction<T = (...args: any) => any>(filename: string, symbol: string, argCount: number): T;
-declare function $newRustFunction<T = (...args: any) => any>(filename: string, symbol: string, argCount: number): T;
+declare function $newCppFunction<T = (...args: any) => any>(
+  filename: string,
+  symbol: string,
+  argCount: number,
+): T;
+declare function $newRustFunction<T = (...args: any) => any>(
+  filename: string,
+  symbol: string,
+  argCount: number,
+): T;
 declare function $bindgenFn<T = (...args: any) => any>(filename: string, symbol: string): T;
 declare function $ERR_INVALID_ARG_VALUE(name: string, value: any, reason?: string): TypeError;
 declare function $ERR_IPC_ONE_PIPE(): Error;
 declare function $webStreamClosedPromise(stream: ReadableStream | WritableStream): Promise<void>;
 declare function $inheritsWritableStream(value: unknown): value is WritableStream;
+
+// Bun.jest binds helpers to a test file and is excluded from public runtime types.
+declare module "bun" {
+  export function jest(path: string): typeof import("bun:test");
+}

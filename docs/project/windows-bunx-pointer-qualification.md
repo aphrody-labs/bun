@@ -35,3 +35,15 @@ Receipts: tmp/bunx-pointers-native.log (initial failure),
  tmp/bunx-pointers-types.log/.exit and baseline-types.log/.exit,
  tmp/bunx-pointers-<target>.jsonl/.stderr/.exit.
 Release installation and production activation remain separate gates.
+
+## Test-only helper type follow-up
+
+The runtime implementation (Jest::call and BunObject's private jest binding)
+validates an absolute string file path and returns the test module object.
+The test-only declaration now lives in test/internal-for-testing.d.ts; it is
+not added to published Bun runtime types. Scoped TypeScript including this
+internal declaration passes for bunx, shell cp and Linux tests together.
+The original helper failures above remain preserved as before-change evidence.
+Current receipts: tmp/test-helper-bunx-types.log/.exit and
+ tmp/test-helper-types.log/.exit, both exit 0. oxfmt, oxlint and diff checks pass
+for the internal declaration. This declaration changes no runtime implementation.
