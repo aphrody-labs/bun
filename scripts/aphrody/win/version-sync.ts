@@ -103,12 +103,14 @@ export function applyChanges(root: string, changes: Change[]): void {
       created = true;
       if (readFileSync(path, "utf8") !== change.before) throw new Error(`Concurrent change: ${change.path}`);
       renameSync(temporary, path);
-    } finally {
+    } catch (error) {
       try {
         if (created) unlinkSync(temporary);
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      } catch (cleanupError) {
+        if ((cleanupError as NodeJS.ErrnoException).code !== "ENOENT")
+          console.error(`Temporary file cleanup failed: ${temporary}`);
       }
+      throw error;
     }
   }
 }

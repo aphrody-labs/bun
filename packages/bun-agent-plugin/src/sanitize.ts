@@ -39,15 +39,21 @@ export type SanitizeOptions = {
 
 const SEP = String.raw`(?:\\\\|\\|/)+`;
 
+const WINDOWS_HOME_PATH = new RegExp(String.raw`(?<![\w/])[A-Za-z]:${SEP}Users${SEP}[^\\/\s"'\`)\]]+`, "g");
+
+const WINDOWS_BUN_PATH = new RegExp(String.raw`(?<![\w/])[A-Za-z]:${SEP}bun(?![\w-])`, "gi");
+
+const WINDOWS_ROOT_PATH = new RegExp(String.raw`(?<![\w/])[A-Za-z]:${SEP}([\w.-]+)`, "g");
+
 export function sanitizeText(text: string, options: SanitizeOptions = {}): string {
   const { shipped, drop = true } = options;
   const out: string[] = [];
   for (let line of text.replace(/\r\n/g, "\n").split("\n")) {
     line = line
-      .replace(new RegExp(String.raw`(?<![\w/])[A-Za-z]:${SEP}Users${SEP}[^\\/\s"'\`)\]]+`, "g"), "~")
+      .replace(WINDOWS_HOME_PATH, "~")
       .replace(/\/(?:home|Users)\/[a-z_][\w-]*(?=\/|\b)/g, "~")
-      .replace(new RegExp(String.raw`(?<![\w/])[A-Za-z]:${SEP}bun(?![\w-])`, "gi"), "<bun>")
-      .replace(new RegExp(String.raw`(?<![\w/])[A-Za-z]:${SEP}([\w.-]+)`, "g"), "<$1>");
+      .replace(WINDOWS_BUN_PATH, "<bun>")
+      .replace(WINDOWS_ROOT_PATH, "<$1>");
     if (shipped) {
       line = line.replace(/\[\[([\w.-]+)\]\]/g, (_, name: string) => (shipped(name) ? `\`${name}\`` : ""));
       line = line

@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -12,6 +12,52 @@ test("drives the .NET SDK", async () => {
   const result = await dotnet(["--version"]);
   expect(result.stdout.trim()).toMatch(/^10\./);
   expect(result.exitCode).toBe(0);
+});
+
+test("type generation scopes roll-forward to its child and preserves owner settings", async () => {
+  const originalPolicy = process.env.DOTNET_ROLL_FORWARD;
+  const originalMarker = process.env.BUN_DOTNET_ENV_TEST;
+  const spawn = Bun.spawn.bind(Bun);
+  type SpawnOptions = NonNullable<Parameters<typeof Bun.spawn>[1]>;
+  const replacement = spyOn(Bun, "spawn").mockImplementation(
+    (commandOrOptions: string[] | (SpawnOptions & { cmd: string[] }), options?: SpawnOptions) =>
+      Reflect.apply(spawn, Bun, [
+        [
+          process.execPath,
+          "-e",
+          "console.log(JSON.stringify({ policy: process.env.DOTNET_ROLL_FORWARD, marker: process.env.BUN_DOTNET_ENV_TEST }))",
+        ],
+        Array.isArray(commandOrOptions) ? options : commandOrOptions,
+      ]),
+  );
+  try {
+    delete process.env.DOTNET_ROLL_FORWARD;
+    process.env.BUN_DOTNET_ENV_TEST = "inherited";
+    const defaults = await generateTypes({ assembly, output: "unused.d.ts" });
+    expect(JSON.parse(defaults.stdout)).toEqual({ policy: "Major", marker: "inherited" });
+    expect(defaults.exitCode).toBe(0);
+    expect(process.env.DOTNET_ROLL_FORWARD).toBeUndefined();
+
+    process.env.DOTNET_ROLL_FORWARD = "LatestPatch";
+    const inherited = await generateTypes({ assembly, output: "unused.d.ts" });
+    expect(JSON.parse(inherited.stdout)).toEqual({ policy: "LatestPatch", marker: "inherited" });
+    expect(inherited.exitCode).toBe(0);
+
+    const override = await generateTypes({
+      assembly,
+      output: "unused.d.ts",
+      env: { DOTNET_ROLL_FORWARD: "Disable", BUN_DOTNET_ENV_TEST: "owner" },
+    });
+    expect(JSON.parse(override.stdout)).toEqual({ policy: "Disable", marker: "owner" });
+    expect(override.exitCode).toBe(0);
+    expect(process.env.DOTNET_ROLL_FORWARD).toBe("LatestPatch");
+  } finally {
+    replacement.mockRestore();
+    if (originalPolicy === undefined) delete process.env.DOTNET_ROLL_FORWARD;
+    else process.env.DOTNET_ROLL_FORWARD = originalPolicy;
+    if (originalMarker === undefined) delete process.env.BUN_DOTNET_ENV_TEST;
+    else process.env.BUN_DOTNET_ENV_TEST = originalMarker;
+  }
 });
 
 describe.skipIf(!packed)("CLR hosted in Bun (run `bun run build` first)", () => {

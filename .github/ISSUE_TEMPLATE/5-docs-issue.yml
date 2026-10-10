@@ -7,7 +7,7 @@ body:
       value: |
         Thank you for submitting a documentation request. It helps make Bun better.
 
-        The documentation is built from [`docs/`](https://github.com/aphrody-labs/bun/tree/main/docs) and published at [aphrody.com/docs](https://aphrody.com/docs).
+        The documentation is built from [`docs/`](https://github.com/aphrody-labs/bun/tree/main/docs) and published at [bun.aphrody.com/docs](https://bun.aphrody.com/docs).
   - type: dropdown
     attributes:
       label: What is the type of issue?

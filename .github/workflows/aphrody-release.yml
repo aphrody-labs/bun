@@ -10,9 +10,9 @@ name: Aphrody release
 # platform (linux-gnu in debian:bullseye, glibc 2.31; musl in Alpine).
 # Assets use upstream's names: bun-<os>-<arch>[-musl].zip, x64 also re-zipped
 # as -baseline (upload-release.sh), + SHA256SUMS.txt on the GitHub Release
-# aphrody-v<version>; then @aphrody/bun-runtime and its platform packages go
+# bun-v<version> (legacy aphrody-v tags also accepted); then @aphrody/bun-runtime and its platform packages go
 # to npm (scripts/aphrody/publish-runtime.ts).
-# Version: <package.json version>-aphrody.<n>, which `bun --version` prints.
+# Stable version: package.json version, without a suffix; legacy revisions remain accepted.
 
 permissions:
   contents: read

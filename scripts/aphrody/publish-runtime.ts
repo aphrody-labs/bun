@@ -16,15 +16,7 @@
 // Auth: NPM_TOKEN (written into each staged .npmrc), else the user's ~/.npmrc.
 
 import { spawnSync } from "node:child_process";
-import {
-  chmodSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { platforms as upstreamPlatforms } from "../../packages/bun-release/src/platform";

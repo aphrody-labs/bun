@@ -1,3 +1,4 @@
+/// <reference path="../dotnet/out/pkg/node-api-dotnet/index.d.ts" />
 // .NET 10 in Bun through node-api-dotnet (dotnet/, MIT, Copyright (c) Microsoft Corporation).
 // `bun run build` packs dotnet/ with `dotnet pack`; the npm packages land in dotnet/out/pkg and
 // are loaded from there, so nothing here comes from the npm registry.
@@ -13,7 +14,7 @@ export const packageOutput = join(packageRoot, "dotnet", "out", "pkg");
 export type TargetFramework = "net10.0" | "net9.0" | "net8.0" | "net472";
 
 /** The node-api-dotnet host: `load`, the `resolving` event, and the loaded namespaces as properties. */
-export type DotnetHost = typeof import("../dotnet/src/node-api-dotnet/index") & Record<string, any>;
+export type DotnetHost = typeof import("node-api-dotnet") & Record<string, any>;
 
 export interface DotnetCommandOptions {
   cwd?: string;
@@ -77,7 +78,9 @@ export function generateTypes(options: TypeDefinitionOptions): Promise<DotnetCom
   if (options.references?.length) args.push("-r", options.references.join(";"));
   if (options.module) args.push("-m", options.module);
   const generator = join(packageOutput, "node-api-dotnet-generator", "index.js");
-  return runCommand([process.execPath, generator, ...args], options);
+  const env = { ...process.env, ...options.env };
+  env.DOTNET_ROLL_FORWARD ??= "Major";
+  return runCommand([process.execPath, generator, ...args], { ...options, env });
 }
 
 async function runCommand(cmd: string[], options: DotnetCommandOptions): Promise<DotnetCommandResult> {
@@ -88,7 +91,11 @@ async function runCommand(cmd: string[], options: DotnetCommandOptions): Promise
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  const [stdout, stderr, exitCode] = await Promise.all([
+    Bun.readableStreamToText(proc.stdout),
+    Bun.readableStreamToText(proc.stderr),
+    proc.exited,
+  ]);
   return { stdout, stderr, exitCode };
 }
 

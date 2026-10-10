@@ -30,8 +30,13 @@ It requires a CUDA toolkit and an independently qualified Python extension.
 The opt-in native gate is `BUN_TEST_PYCUDA=1 bun bd test
 test/js/first_party/runtime/python-cli.test.ts -t PyCUDA`, with the factory's
 exact `BUN_PYTHON_EXECUTABLE`, `BUN_PYTHON_HOST_LIBRARY` and
-`BUN_PYTHON_LIBPYTHON` paths. It computes and verifies GPU results in the Bun
-process; a skipped gate does not qualify PyCUDA or shared device buffers.
+`BUN_PYTHON_LIBPYTHON` paths. Embedded Python reads `PYTHONPATH` for packages
+installed in a selected venv; `CUDA_PATH` selects the Windows toolkit and its
+DLL directory. Supply NVCC and MSVC through the qualified native environment.
+It computes and verifies GPU results in the Bun process; a skipped gate does
+not qualify PyCUDA or shared device buffers. On 2026-10-10 the native Windows
+gate passed with PyCUDA 2026.1, CUDA 13.4.1 and CPython 3.12.15, with the CUDA
+compiler cache disabled and all 37 integer results checked.
 
 `bun scripts/install.ts --from <artifact>` computes the install plan. `--apply` verifies the native core before activation and installs under `$BUV_HOME/runtime/<target>/`, default `~/.buv`. `current` activation and `previous` rollback are atomic; existing immutable artifacts are verified before reuse. `--rollback --apply` selects the previous artifact. Receipts use `$BUV_RECEIPT_DIR`, default `~/.buv/receipts`; forging does not activate a runtime.
 

@@ -7,7 +7,8 @@
 // dependencies pinned to the versions published by this run), so the upstream
 // package.json files stay untouched and merge cleanly. Versions follow
 // `<base>-aphrody.<n>`: base is the Bun version from the root package.json for
-// bun-types and the package's own version otherwise. A package whose packed
+// bun-types and the package's own version otherwise; --stable selects plain
+// versions, with runtime-coupled packages fixed to the requested Bun version. A package whose packed
 // content matches the newest published `<base>-aphrody.*` tarball is skipped,
 // so re-running publishes nothing new.
 //

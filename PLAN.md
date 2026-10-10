@@ -10,7 +10,13 @@ chaque lot. Contexte permanent : [APHRODY.md](APHRODY.md) (ce que le fork fourni
 
 ## 1. Cible
 
-- 2026-10-09: native Windows version synchronization is provided by
+- 2026-10-10: the isolated VPS Ubuntu owner factory built the changed debug
+  runtime and passed 122 tests, with one POSIX host skip and zero failures
+  across ten release, installer, plugin, vendor, benchmark and site suites.
+  This is scoped debug qualification; production benchmarks, the complete
+  runtime suite, other platform builds and registry uploads remain open.
+
+- 2026-10-10: native Windows version synchronization is provided by
   `scripts/aphrody/win/version-sync.ts` (`bun run bun:windows`), defaulting to
   stable source version 1.4.4. It audits tracked scripts/infrastructure and
   separates coupled source manifests from checksum-qualified release pins.
@@ -151,3 +157,97 @@ chantier touché (`bun-fork-aphrody`, `next-on-bun-plan`, …) à la fin du lot.
 - Moteur de graphe Rust : 47 tests réussis. Exports docs/skills : 2 tests, 15 assertions.
 - Indexation `src/<domaine>` et `packages/<paquet>` implémentée ; qualification du nouveau module et Clippy strict en cours.
 - Publier les snapshots par domaine avec leurs SHA immuables, puis renouveler l'export SQLite/JSON après les dernières vérifications.
+
+## 7. Qualification Windows native — 2026-10-10
+
+- Durée de vie des appartements COM des notifications corrigée avec RAII ; les trois régressions couvrent les threads non initialisés et les appartements MTA/STA existants. Les cinq tests WinRT natifs passent.
+- Registres des handles Job Object/NTFS et administration des catalogues consolidés sur les primitives Bun. La suite Windows/WinRT passe 31 tests, dont NTFS réel et les lectures D3D12.
+- Aucun diagnostic strict dans les sept fichiers Rust corrigés sur Windows x64/ARM64 ; 184 diagnostics subsistent ailleurs dans `bun_runtime`. Publication de la release et activation des hôtes restent à qualifier.
+- Preuves et limites : [qualification WinRT](docs/project/winrt-apartment-qualification.md).
+- Résolveur DNS : 43 tests locaux réussis sur le binaire modifié ; aucun diagnostic strict dans le fichier corrigé sur Windows/Linux GNU x64/ARM64. Le runtime complet conserve 166 diagnostics Windows et 37 Linux GNU. [Preuves DNS](docs/project/dns-native-qualification.md).
+- Interfaces Linux : initialisation des sorties système et pointeurs consolidés ; zéro diagnostic dans les sept fichiers sur GNU x64/ARM64, 27 diagnostics restent ailleurs. Test Windows de plateforme non prise en charge réussi ; exécution Linux et activation des hôtes restent à qualifier. [Preuves Linux](docs/project/linux-syscall-qualification.md).
+- Graphe natif : registre des tâches sur verrou RAII Bun ; cinq tests natifs réussis (38 assertions), aucune erreur dans le fichier sur Windows/Linux GNU x64/ARM64. Le runtime complet conserve 163 diagnostics Windows et 24 Linux GNU. [Preuves du registre](docs/project/native-graph-lock-qualification.md).
+- Pont Python CLI : contrats FFI locaux vérifiés sur le header ABI v1 et sortie native explicite ; 43 tests natifs passent avec PyCUDA/Buv/PyJS et compilation Cython/Nuitka. Aucun diagnostic dans le fichier sur les quatre cibles ; 158 diagnostics Windows et 19 Linux GNU restent ailleurs. [Preuves Python](docs/project/python-host-ffi-qualification.md).
+- Lanceurs UV/.NET/MSVC/WinMD : enums de sélection Copy qualifiés sur les quatre cibles ; 17 tests natifs réussis (91 assertions). Le runtime complet conserve 154 diagnostics Windows et 15 Linux GNU. [Preuves des lanceurs](docs/project/native-launcher-dispatch-qualification.md).
+- Shell : fin de texte avec quote simple/double ouverte rejetée ; régressions avant/après prouvées. Suites natives : session 34 tests, quotes/substitutions 45, environnement deux. Aucun diagnostic aux sites corrigés sur quatre cibles ; trois diagnostics restent ailleurs dans ces fichiers sur Windows. Runtime complet à 151 diagnostics Windows et 12 Linux GNU. [Preuves shell](docs/project/test-shell-native-qualification.md).
+- Host .NET : conversion UTF-8 vérifiée et traduction des erreurs par emprunt ; cinq tests natifs SDK/CLR/TypeScript réussis. Aucun diagnostic dans les deux fichiers sur quatre cibles ; runtime complet à 149 diagnostics Windows et 10 Linux GNU. [Preuves .NET](docs/project/dotnet-host-qualification.md).
+- Arguments Windows natifs : WTF-8 conservé dans spawn, stockage argv et lanceur .NET ; régression native avant/après prouvée. 58 tests natifs passent, dont Python/PyCUDA/Buv/PyJS ; bun_core strict passe sur six cibles. Runtime complet : 148 diagnostics Windows et neuf Linux GNU. Projections JavaScript/.NET avec surrogate isolé restent limitées. [Preuves des arguments](docs/project/dotnet-cli-argument-qualification.md).
+- Lanceur du plugin : extraction atomique via bun_sys et lancement natif avec environnement possede ; 31 tests Windows passent (810 assertions), extraction a froid qualifiee. Runtime complet strict GNU x64/ARM64 passe ; 139 diagnostics Windows restent ailleurs. [Preuves du plugin](docs/project/agent-plugin-launcher-qualification.md).
+- Copie Windows : pointeurs FFI explicites et erreurs empruntees ; suites natives serialisees normale/repli passent 98/97 tests (1492/1487 assertions), huit skips chacune. Zero diagnostic dans le fichier sur quatre cibles ; runtime GNU strict passe, 126 diagnostics Windows restent ailleurs. [Preuves des copies](docs/project/windows-copy-file-qualification.md).
+- Plugin installe : les 313 fichiers correspondent par SHA-256 a l'archive embarquee ; bun@aphrody-bun est active dans les configurations Codex et Claude. Le diagnostic current=false provient de 1.4.4-debug versus 1.4.4 ; alignement release et activation en session restent distincts. [Preuves du plugin installe](docs/project/installed-fork-plugin-qualification.md).
+- Callbacks Node Windows : snapshots des watchers et sorties FFI cluster qualifies ; 32 tests natifs passent (121 assertions), dix skips existants. Aucun diagnostic dans les deux fichiers sur quatre cibles ; GNU strict passe et 117 diagnostics Windows restent ailleurs. [Preuves Node](docs/project/windows-node-callbacks-qualification.md).
+- I/O Blob Windows : frontiere du pool POSIX, sorties FFI et tailles stat consolidees ; suites natives normale/repli passent 109/108 tests (1550/1545 assertions), onze skips chacune. Aucun diagnostic dans les trois fichiers sur quatre cibles ; GNU strict passe, 98 erreurs Windows restent ailleurs. [Preuves Blob](docs/project/windows-blob-io-qualification.md).
+- Qualification Linux publiee : checkout VPS isole au commit 4e3ddd04da1, metadonnees Cargo verrouillees et dependances Bun gelees passes. Release/test en tmux sous verrou lourd, quatre jobs ; reprise avec cache propre apres EACCES du cache WebKit global. Processus verifie vivant ; build, tests Linux et activation restent ouverts. [Preflight Linux](docs/project/linux-owner-release-preflight.md).
+- Listener Windows : erreurs preservees et binding local transfere aux sockets TCP/TLS sans clone redondant ; 116 tests locaux passent (1513 assertions, dix skips), plus sept tests TLS pipes nommes (809 assertions). Aucun diagnostic dans le fichier sur quatre cibles ; GNU strict passe, 90 diagnostics Windows restent ailleurs. [Preuves listener](docs/project/windows-listener-binding-qualification.md).
+
+- 2026-10-10: Windows IPC exclusive read-buffer borrow and libuv pointer contracts qualified with 40 native passes; strict GNU x64/ARM64 zero, Windows ipc.rs zero with 83 whole-runtime errors remaining. See [qualification](docs/project/windows-ipc-buffer-qualification.md).
+
+- 2026-10-10: Windows shell cp EBUSY state ownership qualified: 30 native passes / 111 assertions; strict four-target cp diagnostics zero, Windows whole-runtime 77 remaining. See [qualification](docs/project/windows-shell-copy-qualification.md).
+
+- 2026-10-10: VPS isolated release completed at 4e3ddd04da1; corrected two CommonJS child-script projections, then all six native suites passed (202 / 1517 assertions). Version/revision/SHA256 recorded in [Linux qualification](docs/project/linux-owner-release-preflight.md). Distribution and DBFR activation remain pending.
+
+- 2026-10-10: Windows bunx native output pointers and portable mock-registry fixture: nine changed-engine passes, strict owned file zero on four targets; Windows runtime 72 remaining. Shared dummy.registry Bun.jest type error reproduced on unchanged baseline. See [qualification](docs/project/windows-bunx-pointer-qualification.md).
+
+- 2026-10-10: private Bun.jest test-helper type restored only in internal test declarations; scoped bunx / shell cp / Linux TypeScript gate now zero. Runtime file-bound contract verified in Jest::call; public Bun types unchanged.
+
+- 2026-10-10: Qualified Linux plain-release candidate delivered by native Infra SFTP into DBFR's isolated runtime-candidates directory; SHA256 agrees source/local/target, native DBFR Linux/Zstd/memfd smoke passes. Production PATH remains 1.4.3-aphrody.3; stripped distribution, full release gates and activation pending. See [proof](docs/project/linux-owner-release-preflight.md).
+
+- 2026-10-10: IPC host cleanup/warning and logical-drive raw output contracts qualified with 36 changed-engine passes / 94 assertions; owned strict diagnostics zero on four targets, Windows whole runtime 65 remaining. See [proof](docs/project/windows-ipc-storage-qualification.md).
+
+- 2026-10-10: COM delegate lifetime and event-log/known-folder pointers qualified with seven native passes / 27 assertions, including real WinRT asynchronous storage operations. Strict owned diagnostics zero on four targets; shared Windows runtime 58 remaining. See [proof](docs/project/windows-com-query-qualification.md).
+
+- 2026-10-10: Stripped Linux artifact at 4e3ddd04da1 independently passed all six suites (202 / 1517 assertions), then native Infra SFTP delivery and DBFR checksum/Linux/Zstd/memfd smoke passed. Compact candidate 138871072 bytes; production activation and full release publication remain pending. See [proof](docs/project/linux-owner-release-preflight.md).
+
+- 2026-10-10: owned Node host consolidation: 137 native tests pass, 4 skips; Windows/Linux x64/ARM64 owned Clippy diagnostics zero. Whole Windows 58 diagnostics and reserved Darwin dependency remain; see docs/project/node-host-consolidation-qualification.md.
+
+- 2026-10-10: Buv/PyJS GPU consolidation refreshed on physical RTX 4070: D3D12 WGSL and CUDA exact 37-element outputs pass; provider checksum unchanged. Published shared-host PyCUDA test retained; native Linux hardware, Alpine ABI and activation still open. See docs/aphrody/buv-pyjs-gpu-consolidation.md.
+
+- 2026-10-10: common native internal gate: 883 pass / 33 skip / 3 fail. Two 5-second failures (src/js lint child, parallel JUnit child) reproduce in isolation (9 pass / 2 fail). Missing published Wintrust Admins Send inventory corrected as native-only catalog handles behind Guarded, without VM state; focused VM-thread gate 48 pass / 0 fail. Generated JSON retains the generator's two-space JSON.stringify style; formatter rewrites unrelated baseline entries and was not applied. Full internal gate remains red.
+
+- 2026-10-10: native src/js lint exposed eight duplicate-property errors in PE parsing; property locals and default-export type corrected. Full src/js native lint now zero warnings/errors (230 files, 5.5 seconds). Its single full-tree test ceiling is 15 seconds, retaining exit/result checks; formatted native gate 8 pass / 1 skip / 36 assertions. Scoped formatter/linter pass. TypeScript's builtin dependency closure remains red outside pe.ts; no pe.ts diagnostics after correction. Parallel JUnit is a real shutdown hang: workers report all cases, but no report/exit within a 15-second diagnostic deadline; investigated separately.
+
+- 2026-10-10: Windows parallel worker shutdown fixed: CDB proves final IPC drain reached JSC finalization outside API lock. Existing JUnit regression now 5 pass, parallel/startup suites 40 pass / 8 skips. Complete native internal suite 886 pass / 33 unchanged skips / 0 fail. Strict GNU x64/ARM64 runtime zero; Windows x64/ARM64 retain 58 unrelated diagnostics, runner file zero on all four. Plugin doctor confirms Codex/Claude assets 1.4.4+2fb86b44ed79; native debug reports 1.4.4-debug, explaining stable-version mismatch without content reinstall. See docs/project/parallel-worker-api-lock-qualification.md.
+
+- 2026-10-10: ConPTY output/timer raw pointer contracts: 140 native passes / 14 skips / 10 inherited todos / 389 assertions, plus final formatted source 16 passes / 5 skips / 50 assertions. Strict GNU x64/ARM64 zero; Windows x64/ARM64 58 -> 55 diagnostics, owned files zero. See docs/project/windows-terminal-timer-qualification.md. Full release and remaining platform/hardware gates remain open.
+
+- 2026-10-10: Windows filesystem watcher now borrows the VM facade shared for task submission, preserving the short event-loop mutation owner. Native watcher/abort/close/race/deadlock suites 49 pass / 11 platform skips / 149 assertions; format pass. Strict GNU x64/ARM64 zero, Windows x64/ARM64 55 -> 53 diagnostics; watcher file zero on all four. See docs/project/windows-fs-watcher-vm-qualification.md.
+
+- 2026-10-10: clean published Windows x64 release at 54619ce189c built with default profile; 995 selected release tests pass / 60 skips / zero failures using supported --expose-internals. Native D3D12/CUDA exact vectors and shared Buv/PyJS PyCUDA pass; plugin Codex/Claude update reports up to date. Source clean, SHA256 and cache/wrapper qualification recorded in docs/project/windows-owner-release-qualification.md. Global release/publication/activation and remaining platform gates stay open.
+
+- 2026-10-10: clean release scope zero and exact Next adapter gate 82 pass / 319 assertions / zero failures. Broad fuzzy test selection stopped before declaring application-gate completion; registry isolation remains required. Infra VPS reclaim plan/apply completed; measured available disk 3.45 -> 6.33 GB. DBFR PATH and isolated Linux checksum unchanged.
+
+- 2026-10-10: real Next applications qualify with an explicitly preseeded offline/frozen cache: 12 native release tests / 251 assertions / zero failures. Pages parity passes 16.1.6, 16.4.0, 16.5.0-canary.4; App Router passes Turbopack/webpack/next-bun without Node/Bun.build, including server actions and client chunks. Owned helper TS/format/lint pass; global config and assertions preserved.
+
+- 2026-10-10: VPS clean owner checkout advanced to 988d73b430a; native release rebuild active under canonical heavy lock, four jobs, explicit measured incremental capacity plan. Windows 40-run strict historical-base comparison passes startup/RSS/throughput thresholds but fails binary size (152247296 vs 96548352 bytes); source versions differ, same-source isolation and size investigation stay open.
+
+Owner internal-fixture lot (2026-10-10): Linux 1122 pass/19 skip/0 fail and Windows 893 pass/33 skip/0 fail at engine 988d73; scoped TS/format/lint zero. See docs/project/windows-owner-release-qualification.md. Full release/deployment remains open.
+
+Owner delivery lot (2026-10-10): common-pin RTX 4070 Dx12/WGSL/CUDA and PyCUDA pass; installed Codex/Claude plugin doctor current=true. Refreshed stripped Linux candidate delivered to DBFR and SHA/Zstd/memfd verified. Production activation and complete publication remain open; see owner qualification documents.
+
+Owner native linker/FileSink lot (2026-10-10): raw pipe pointer contract removes two Windows Clippy diagnostics (51 unrelated runtime errors remain). Windows debug factory passes 70 tests with DEBUG:FULL; Windows x64/ARM64 linker option coverage passes 14 tests. Native GNU x64 strict runtime gate exits zero on VPS. Source flags and static gates recorded in docs/project/windows-filesink-pointer-qualification.md; GNU ARM64 and full release closure remain open.
+
+Owner final gate (2026-10-10): all internal Windows debug tests pass (895 pass/33 skip/0 fail, 146192 assertions); changed-engine scope check zero.
+
+Owner Buv/PyJS pipeline (2026-10-10): executable PyCUDA -> WGSL/D3D12 -> NVRTC CUDA chain verifies 37 exact results on RTX 4070. Shared Python constructor/PID, native resource cleanup and explicit CPU transfers documented. Existing GPU suite 3 pass/0 fail; SDK TypeScript and strict scoped style gates pass. See docs/aphrody/buv-pyjs-gpu-pipeline.md. Direct GPU buffer sharing and full platform release stay open.
+
+Owner cross-target/plugin lot (2026-10-10): native VPS strict GNU ARM64 runtime exits zero with verified official Ubuntu cross headers and LLVM23; no system packages installed. Codex/Claude provider CLIs prove Bun plugin installed/enabled; actual PATH stdio MCP lists 35 tools and successfully calls docs_search/skill_read. PATH still reports 1.4.3; release promotion and live session reload stay open. See docs/project/gnu-arm64-owner-qualification.md and docs/project/plugin-live-server-qualification.md.
+
+Owner Windows memory-pressure lot (2026-10-10): notification worker borrows the closure-owned VmHandle, preserving posting and teardown. Changed debug engine: 28 pass/9 inherited skips/0 fail, 10 snapshots/64 assertions. GNU x64/ARM64 strict zero; owned Windows MSVC x64/ARM64 diagnostics zero, 50 unrelated runtime errors remain. Source formatting passes. See docs/project/windows-memory-pressure-vm-qualification.md; release linkage/performance remains open.
+
+Owner HTTP stat/release lot (2026-10-10): file-size normalization removes five Windows lint errors without extra stat calls. Changed debug suites 266 pass/10 inherited skips/3 TODO/0 fail; GNU x64/ARM64 strict zero, Windows owned zero/global45. Clean d5 release linkage/MCP initialization passes; installed skill discovery has a separately recorded gap. See docs/project/server-stat-size-qualification.md and clean-windows-release-qualification.md.
+
+Owner MCP/consumer lot (2026-10-10): installed profile skills discovered from agent-plugin with BUN_INSTALL preserved; bare and parenthesized graph function names resolve. Full changed MCP suite16/0, four strict bun_mcp targets zero, scoped TS/style zero. Real Codex/Claude MCP reads bun-build without errors; fresh RTX4070 pipeline37 exact results, SDK3/0, shared PyCUDA1/0. See docs/project/mcp-installed-plugin-skills-qualification.md. Shared PATH promotion, runtime45 and private full-delivery destination remain open.
+
+Owner pointer/scanner/clean-release lot (2026-10-10): seven owned runtime files qualify on GNU x64/ARM64 and MSVC x64/ARM64 (owned zero, global Windows35). Existing RAII pool removes scanner/caller large frames; IPC/encoded-backslash platform differences and stdio destructor order preserved. Final changed-engine suites147 pass/17 inherited skips/0 fail; initial local ECONNREFUSED retained with isolated/full rerun and three-family diagnostic. Clean 8d release passes895 internal tests/33 skips/0 fail, both live MCP profiles and exact RTX4070 GPU/PyCUDA consumers. See docs/project/runtime-pointer-safety-qualification.md, test-scanner-path-buffer-qualification.md and clean-windows-release-qualification.md. Global strict35, distribution tagging/performance/PATH and private video delivery remain open.
+
+Owner Glob/router memory lot (2026-10-10): direct initialized heap scratch removes two Windows large frames (35 to 33 remaining). Strict missing-cwd ENOENT is restored for async/sync scans while default empty results and absent absolute prefixes remain intact. GNU x64/ARM64 strict both owner crates zero; Windows owned zero/global33. Changed native engine231 pass/24 inherited skips/0 fail, 136 snapshots/21577 assertions; actual regression controls fail installed Bun, type/style gates zero. See docs/project/glob-router-path-scratch-qualification.md. Global strict, performance/tagging/PATH, private delivery and Linux GPU hardware stay open.
+
+Owner image/shell lot (2026-10-10): stat normalization, unit hash context and Arc pointer spelling remove five Windows diagnostics (33 to 28). GNU x64/ARM64 strict zero; Windows owned zero/global28. Changed native engine246 pass/18 inherited skips/0 fail, 7236 assertions. See docs/project/image-shell-portability-qualification.md. Full release and hardware qualification remain open.
+
+Owner Windows cache/FFI lot (2026-10-10): four output-pointer/hash diagnostics removed (28 to 24). GNU x64/ARM64 strict zero; MSVC owned zero/global24. Changed debug engine46 pass/8 inherited skips/0 fail, two snapshots/288 assertions. See docs/project/windows-ffi-output-qualification.md. Console interactivity/UAC remain compile-only; full delivery stays open.
+
+Owner route/changed-test scratch lot (2026-10-10): heap route serialization and pooled Git executable path remove two Windows large frames (24 to 22). GNU x64/ARM64 strict zero; MSVC owned zero/global22. Changed native engine52 pass/3 inherited watch skips/0 fail, 99 assertions. See docs/project/route-changed-scratch-qualification.md. Allocation throughput and full release/private/hardware delivery remain open.
+
+Owner lockfile iterator lot (2026-10-10): pooled RAII scratch removes four runtime Windows frames (22 to18). Native200/0,40 snapshots/2975 assertions; initial dependency/time failure preserved. Dedicated bun_install reveals115 Windows/53 GNU global diagnostics, owned zero. See docs/project/lockfile-tree-pool-qualification.md. Full strict and delivery gates stay open.
+
+Owner launch/shell pointer lot (2026-10-10): four runtime Windows diagnostics removed (18 to14), GNU strict both targets zero, MSVC owned zero. Changed engine44 pass/14 inherited skips/0 fail,27 snapshots/121 assertions. See docs/project/launch-shell-pointer-qualification.md. Interactive console and full delivery gates remain open.

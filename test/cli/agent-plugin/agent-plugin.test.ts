@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "fs";
-import { bunEnv, bunExe, tempDir } from "harness";
+import { bunEnv, bunExe, isASAN, tempDir } from "harness";
 import { join, relative, resolve } from "path";
 import { lspExtensions, mcpTools } from "../../../packages/bun-agent-plugin/src/catalog.ts";
 import { generate } from "../../../packages/bun-agent-plugin/src/generate.ts";
@@ -87,14 +87,18 @@ describe("generate", () => {
     }
   });
 
-  test("is deterministic and leaks no personal path, address or credential", () => {
-    const again = generate({ root, pkg });
-    expect([...again.keys()]).toEqual([...files.keys()]);
-    for (const [k, v] of files) {
-      expect(again.get(k)).toEqual(v);
-      if (typeof v === "string") expect(forbiddenIn(v)).toBeUndefined();
-    }
-  });
+  test(
+    "is deterministic and leaks no personal path, address or credential",
+    () => {
+      const again = generate({ root, pkg });
+      expect([...again.keys()]).toEqual([...files.keys()]);
+      for (const [k, v] of files) {
+        expect(again.get(k)).toEqual(v);
+        if (typeof v === "string") expect(forbiddenIn(v)).toBeUndefined();
+      }
+    },
+    isASAN ? 15000 : 5000,
+  );
 
   test("declares the tools of `bun mcp` and the languages of `bun lsp` as their sources define them", () => {
     const tools = mcpTools(root).map(t => t.name);
@@ -142,14 +146,18 @@ describe("generate", () => {
     expect(lspExtensions(String(dir))).toEqual({ ".cc": "cpp", ".h": "cpp", ".rs": "rust" });
   });
 
-  test("takes more skill directories", () => {
-    using dir = tempDir("agent-plugin-skills", {
-      "extra-skill/SKILL.md": "---\nname: extra-skill\ndescription: An extra skill\n---\n\nBody\n",
-    });
-    const more = generate({ root, pkg, skillDirs: [String(dir)] });
-    expect(String(more.get("codex/skills/extra-skill/SKILL.md"))).toContain("Body");
-    expect(more.get("claude/meta.json")).not.toEqual(files.get("claude/meta.json"));
-  });
+  test(
+    "takes more skill directories",
+    () => {
+      using dir = tempDir("agent-plugin-skills", {
+        "extra-skill/SKILL.md": "---\nname: extra-skill\ndescription: An extra skill\n---\n\nBody\n",
+      });
+      const more = generate({ root, pkg, skillDirs: [String(dir)] });
+      expect(String(more.get("codex/skills/extra-skill/SKILL.md"))).toContain("Body");
+      expect(more.get("claude/meta.json")).not.toEqual(files.get("claude/meta.json"));
+    },
+    isASAN ? 15000 : 5000,
+  );
 });
 
 describe("rewriteCommand", () => {
