@@ -134,7 +134,7 @@ fn open(root: HKEY, sub_key: &str, sam: u32) -> WinResult<Option<Key>> {
     let sub = wide(sub_key);
     let mut key: HKEY = core::ptr::null_mut();
     // SAFETY: `sub` is NUL-terminated; `key` receives the handle.
-    let rc = unsafe { RegOpenKeyExW(root, sub.as_ptr(), 0, sam, &mut key) };
+    let rc = unsafe { RegOpenKeyExW(root, sub.as_ptr(), 0, sam, &raw mut key) };
     match rc as u32 {
         0 => Ok(Some(Key(key))),
         ERROR_FILE_NOT_FOUND => Ok(None),
@@ -155,7 +155,7 @@ fn create(root: HKEY, sub_key: &str, sam: u32) -> WinResult<Key> {
             REG_OPTION_NON_VOLATILE,
             sam,
             core::ptr::null(),
-            &mut key,
+            &raw mut key,
             core::ptr::null_mut(),
         )
     };
@@ -178,9 +178,9 @@ fn query(key: &Key, name: &str) -> WinResult<Option<(u32, Vec<u8>)>> {
                 key.0,
                 name_w.as_ptr(),
                 core::ptr::null_mut(),
-                &mut ty,
+                &raw mut ty,
                 data.as_mut_ptr(),
-                &mut len,
+                &raw mut len,
             )
         };
         match rc as u32 {
@@ -380,12 +380,12 @@ pub(crate) fn list(root: HKEY, sub_key: &str, view: u32) -> WinResult<Option<Str
             core::ptr::null_mut(),
             core::ptr::null_mut(),
             core::ptr::null_mut(),
-            &mut sub_keys,
-            &mut max_sub,
+            &raw mut sub_keys,
+            &raw mut max_sub,
             core::ptr::null_mut(),
-            &mut values,
-            &mut max_name,
-            &mut max_data,
+            &raw mut values,
+            &raw mut max_name,
+            &raw mut max_data,
             core::ptr::null_mut(),
             core::ptr::null_mut(),
         )
@@ -406,7 +406,7 @@ pub(crate) fn list(root: HKEY, sub_key: &str, view: u32) -> WinResult<Option<Str
                 key.0,
                 index,
                 name.as_mut_ptr(),
-                &mut len,
+                &raw mut len,
                 core::ptr::null_mut(),
                 core::ptr::null_mut(),
                 core::ptr::null_mut(),
@@ -440,11 +440,11 @@ pub(crate) fn list(root: HKEY, sub_key: &str, view: u32) -> WinResult<Option<Str
                 key.0,
                 index,
                 name.as_mut_ptr(),
-                &mut len,
+                &raw mut len,
                 core::ptr::null_mut(),
-                &mut ty,
+                &raw mut ty,
                 data.as_mut_ptr(),
-                &mut data_len,
+                &raw mut data_len,
             )
         };
         match rc as u32 {
@@ -506,7 +506,7 @@ pub(crate) fn subkeys(root: HKEY, sub_key: &str) -> Vec<String> {
                 key.0,
                 index,
                 name.as_mut_ptr(),
-                &mut len,
+                &raw mut len,
                 core::ptr::null_mut(),
                 core::ptr::null_mut(),
                 core::ptr::null_mut(),

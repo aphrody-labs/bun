@@ -314,7 +314,7 @@ fn map(resource: &Com) -> WinResult<*mut u8> {
             fn(u32, *const c_void, *mut *mut c_void) -> HRESULT,
             0,
             null(),
-            &mut data
+            &raw mut data
         )
     };
     check(hr, "ID3D12Resource::Map")?;
@@ -364,7 +364,7 @@ impl Gpu {
             unsafe { core::mem::transmute(create_factory) };
         let mut factory = null_mut();
         // SAFETY: `factory` is a valid out pointer and the IID names the requested interface.
-        let hr = unsafe { create_factory(&IID_DXGI_FACTORY1, &mut factory) };
+        let hr = unsafe { create_factory(&IID_DXGI_FACTORY1, &raw mut factory) };
         let factory = adopt(hr, factory, "CreateDXGIFactory1")?;
 
         let mut adapter = null_mut();
@@ -375,23 +375,24 @@ impl Gpu {
                 SLOT_DXGI_ENUM_ADAPTERS1,
                 fn(u32, *mut *mut c_void) -> HRESULT,
                 0,
-                &mut adapter
+                &raw mut adapter
             )
         };
         let adapter = adopt(hr, adapter, "IDXGIFactory1::EnumAdapters1")?;
 
-        // SAFETY: `AdapterDesc1` is plain old data; all-zero is a valid value.
-        let mut desc: AdapterDesc1 = unsafe { core::mem::zeroed() };
+        let mut desc = core::mem::MaybeUninit::<AdapterDesc1>::uninit();
         // SAFETY: `adapter` is live and `desc` matches DXGI_ADAPTER_DESC1.
         let hr = unsafe {
             com!(
                 adapter.0,
                 SLOT_DXGI_ADAPTER_GET_DESC1,
                 fn(*mut AdapterDesc1) -> HRESULT,
-                &mut desc
+                desc.as_mut_ptr()
             )
         };
         check(hr, "IDXGIAdapter1::GetDesc1")?;
+        // SAFETY: successful GetDesc1 initializes the complete DXGI_ADAPTER_DESC1 output.
+        let desc = unsafe { desc.assume_init() };
 
         let create_device = proc_addr("d3d12.dll", c"D3D12CreateDevice")?;
         // SAFETY: `D3D12CreateDevice` has this signature.
@@ -406,7 +407,7 @@ impl Gpu {
         let mut hr = 0;
         for level in [FEATURE_LEVEL_12_0, FEATURE_LEVEL_11_0] {
             // SAFETY: `adapter` is live; `device` receives an owned ID3D12Device on success.
-            hr = unsafe { create_device(adapter.0, level as i32, &IID_DEVICE, &mut device) };
+            hr = unsafe { create_device(adapter.0, level as i32, &IID_DEVICE, &raw mut device) };
             if hr >= 0 {
                 feature_level = level;
                 break;
@@ -427,9 +428,9 @@ impl Gpu {
                 device.0,
                 SLOT_DEVICE_CREATE_COMMAND_QUEUE,
                 fn(*const QueueDesc, *const Guid, *mut *mut c_void) -> HRESULT,
-                &queue_desc,
+                &raw const queue_desc,
                 &IID_COMMAND_QUEUE,
-                &mut queue
+                &raw mut queue
             )
         };
         let queue = adopt(hr, queue, "ID3D12Device::CreateCommandQueue")?;
@@ -443,7 +444,7 @@ impl Gpu {
                 fn(i32, *const Guid, *mut *mut c_void) -> HRESULT,
                 COMMAND_LIST_TYPE_DIRECT,
                 &IID_COMMAND_ALLOCATOR,
-                &mut allocator
+                &raw mut allocator
             )
         };
         let allocator = adopt(hr, allocator, "ID3D12Device::CreateCommandAllocator")?;
@@ -460,7 +461,7 @@ impl Gpu {
                 allocator.0,
                 null_mut(),
                 &IID_COMMAND_LIST,
-                &mut list
+                &raw mut list
             )
         };
         let list = adopt(hr, list, "ID3D12Device::CreateCommandList")?;
@@ -478,7 +479,7 @@ impl Gpu {
                 0,
                 0,
                 &IID_FENCE,
-                &mut fence
+                &raw mut fence
             )
         };
         let fence = adopt(hr, fence, "ID3D12Device::CreateFence")?;
@@ -511,13 +512,13 @@ impl Gpu {
     /// Records a command list with `record`, executes it and waits for the GPU to finish.
     fn run(&mut self, record: impl FnOnce(*mut c_void)) -> WinResult<()> {
         let list = self.list.0;
-        // SAFETY: the allocator and list are live; the GPU is idle from the previous `run`.
         check(
+            // SAFETY: the allocator and list are live; the GPU is idle from the previous `run`.
             unsafe { com!(self.allocator.0, SLOT_ALLOCATOR_RESET, fn() -> HRESULT) },
             "ID3D12CommandAllocator::Reset",
         )?;
-        // SAFETY: the list is closed and the allocator was reset.
         check(
+            // SAFETY: the list is closed and the allocator was reset.
             unsafe {
                 com!(
                     list,
@@ -530,8 +531,8 @@ impl Gpu {
             "ID3D12GraphicsCommandList::Reset",
         )?;
         record(list);
-        // SAFETY: the list is recording.
         check(
+            // SAFETY: the list is recording.
             unsafe { com!(list, SLOT_LIST_CLOSE, fn() -> HRESULT) },
             "ID3D12GraphicsCommandList::Close",
         )?;
@@ -548,8 +549,8 @@ impl Gpu {
             )
         };
         self.value += 1;
-        // SAFETY: the queue and fence are live.
         check(
+            // SAFETY: the queue and fence are live.
             unsafe {
                 com!(
                     self.queue.0,
@@ -561,8 +562,8 @@ impl Gpu {
             },
             "ID3D12CommandQueue::Signal",
         )?;
-        // SAFETY: the fence is live and the event handle is owned by `self`.
         check(
+            // SAFETY: the fence is live and the event handle is owned by `self`.
             unsafe {
                 com!(
                     self.fence.0,
@@ -604,13 +605,13 @@ impl Gpu {
                     *const Guid,
                     *mut *mut c_void,
                 ) -> HRESULT,
-                &props,
+                &raw const props,
                 0,
                 desc,
                 state,
                 null(),
                 &IID_RESOURCE,
-                &mut out
+                &raw mut out
             )
         };
         adopt(hr, out, "ID3D12Device::CreateCommittedResource")
@@ -670,9 +671,9 @@ impl Gpu {
                 self.device.0,
                 SLOT_DEVICE_CREATE_DESCRIPTOR_HEAP,
                 fn(*const HeapDesc, *const Guid, *mut *mut c_void) -> HRESULT,
-                &desc,
+                &raw const desc,
                 &IID_DESCRIPTOR_HEAP,
-                &mut out
+                &raw mut out
             )
         };
         adopt(hr, out, "ID3D12Device::CreateDescriptorHeap")
@@ -708,7 +709,7 @@ pub(crate) fn clear_render_target(width: u32, height: u32, rgba: [f32; 4]) -> Wi
             heap.0,
             SLOT_HEAP_GET_CPU_DESCRIPTOR_HANDLE_FOR_HEAP_START,
             fn(*mut usize) -> (),
-            &mut rtv
+            &raw mut rtv
         );
     };
     // SAFETY: `texture` is a render target; the descriptor slot is the heap's first.
@@ -747,7 +748,7 @@ pub(crate) fn clear_render_target(width: u32, height: u32, rgba: [f32; 4]) -> Wi
                 SLOT_LIST_RESOURCE_BARRIER,
                 fn(u32, *const ResourceBarrier) -> (),
                 1,
-                &barrier
+                &raw const barrier
             );
             let dst = CopyLocation {
                 resource: readback.0,
@@ -772,11 +773,11 @@ pub(crate) fn clear_render_target(width: u32, height: u32, rgba: [f32; 4]) -> Wi
                 list,
                 SLOT_LIST_COPY_TEXTURE_REGION,
                 fn(*const CopyLocation, u32, u32, u32, *const CopyLocation, *const c_void) -> (),
-                &dst,
+                &raw const dst,
                 0,
                 0,
                 0,
-                &src,
+                &raw const src,
                 null()
             );
         }
@@ -831,7 +832,7 @@ pub(crate) fn copy_buffer(data: &[u8]) -> WinResult<Vec<u8>> {
                 SLOT_LIST_RESOURCE_BARRIER,
                 fn(u32, *const ResourceBarrier) -> (),
                 1,
-                &barrier
+                &raw const barrier
             );
             com!(
                 list,
