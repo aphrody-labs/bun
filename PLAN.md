@@ -185,3 +185,5 @@ chantier touché (`bun-fork-aphrody`, `next-on-bun-plan`, …) à la fin du lot.
 - 2026-10-10: Windows shell cp EBUSY state ownership qualified: 30 native passes / 111 assertions; strict four-target cp diagnostics zero, Windows whole-runtime 77 remaining. See [qualification](docs/project/windows-shell-copy-qualification.md).
 
 - 2026-10-10: VPS isolated release completed at 4e3ddd04da1; corrected two CommonJS child-script projections, then all six native suites passed (202 / 1517 assertions). Version/revision/SHA256 recorded in [Linux qualification](docs/project/linux-owner-release-preflight.md). Distribution and DBFR activation remain pending.
+
+- 2026-10-10: Windows bunx native output pointers and portable mock-registry fixture: nine changed-engine passes, strict owned file zero on four targets; Windows runtime 72 remaining. Shared dummy.registry Bun.jest type error reproduced on unchanged baseline. See [qualification](docs/project/windows-bunx-pointer-qualification.md).

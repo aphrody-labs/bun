@@ -80,3 +80,5 @@
 - [x] Windows shell cp EBUSY state and deferred-task ownership: 30 native passes; GNU strict runtime zero.
 
 - [x] Linux owner release candidate: six changed-engine suites 202 pass, provenance and SHA256 verified; privileged skips and deployment remain outside this proof.
+
+- [x] bunx Win32 pointer contracts and chmod fixture: 9 native passes / 44 assertions, format/lint pass; shared helper type gate remains pending.

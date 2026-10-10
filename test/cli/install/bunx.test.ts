@@ -5,7 +5,14 @@ import { bunEnv, bunExe, isWindows, readdirSorted, tmpdirSync } from "harness";
 import { chmodSync, copyFileSync, readdirSync, symlinkSync } from "node:fs";
 import { tmpdir } from "os";
 import { delimiter, join, resolve } from "path";
-import { dummyAfterAll, dummyBeforeAll, dummyBeforeEach, dummyRegistry, getPort, setHandler } from "./dummy.registry";
+import {
+  dummyAfterAll,
+  dummyBeforeAll,
+  dummyBeforeEach,
+  dummyRegistry,
+  getPort,
+  setHandler,
+} from "./dummy.registry";
 
 setDefaultTimeout(1000 * 60 * 5);
 
@@ -36,7 +43,7 @@ function setup() {
 function pathWithout(name: string, PATH: string | undefined): string {
   return (PATH ?? "")
     .split(delimiter)
-    .filter(dir => dir && !Bun.which(name, { PATH: dir }))
+    .filter((dir) => dir && !Bun.which(name, { PATH: dir }))
     .join(delimiter);
 }
 
@@ -44,7 +51,7 @@ beforeAll(async () => {
   // Clean stale bunx cache dirs from previous runs once up front instead of before every test.
   const tmp = isWindows ? tmpdir() : "/tmp";
   const waiting: Promise<void>[] = [];
-  readdirSync(tmp).forEach(file => {
+  readdirSync(tmp).forEach((file) => {
     if (file.startsWith("bunx-") || file.startsWith("bun-x.test")) {
       waiting.push(rm(join(tmp, file), { recursive: true, force: true }));
     }
@@ -106,12 +113,12 @@ it.concurrent("should choose the tagged versions instead of the PATH versions wh
     });
   });
 
-  const results = await Promise.all(processes.map(p => p.exited));
+  const results = await Promise.all(processes.map((p) => p.exited));
   expect(results).toEqual(semverVersions.map(() => 0));
-  const outputs = (await Promise.all(processes.map(p => new Response(p.stdout).text()))).map(a =>
-    a.substring(0, a.indexOf("\n")),
+  const outputs = (await Promise.all(processes.map((p) => new Response(p.stdout).text()))).map(
+    (a) => a.substring(0, a.indexOf("\n")),
   );
-  expect(outputs).toEqual(semverVersions.map(v => "SemVer " + v));
+  expect(outputs).toEqual(semverVersions.map((v) => "SemVer " + v));
 });
 
 it.concurrent("should install and run default (latest) version", async () => {
@@ -320,23 +327,30 @@ it.concurrent("should work for github repository with committish", async () => {
   expect(exited).toBe(0);
 });
 
-it.concurrent.each(["--version", "-v"])("should print the version using %s and exit", async flag => {
-  const { x_dir, env } = setup();
-  const subprocess = spawn({
-    cmd: [bunExe(), "x", flag],
-    cwd: x_dir,
-    stdout: "pipe",
-    stdin: "inherit",
-    stderr: "pipe",
-    env,
-  });
+it.concurrent.each(["--version", "-v"])(
+  "should print the version using %s and exit",
+  async (flag) => {
+    const { x_dir, env } = setup();
+    const subprocess = spawn({
+      cmd: [bunExe(), "x", flag],
+      cwd: x_dir,
+      stdout: "pipe",
+      stdin: "inherit",
+      stderr: "pipe",
+      env,
+    });
 
-  let [err, out, exited] = await Promise.all([subprocess.stderr.text(), subprocess.stdout.text(), subprocess.exited]);
+    let [err, out, exited] = await Promise.all([
+      subprocess.stderr.text(),
+      subprocess.stdout.text(),
+      subprocess.exited,
+    ]);
 
-  expect(err).not.toContain("error:");
-  expect(out.trim()).toContain(Bun.version);
-  expect(exited).toBe(0);
-});
+    expect(err).not.toContain("error:");
+    expect(out.trim()).toContain(Bun.version);
+    expect(exited).toBe(0);
+  },
+);
 
 it.concurrent("should print the revision and exit", async () => {
   const { x_dir, env } = setup();
@@ -349,7 +363,11 @@ it.concurrent("should print the revision and exit", async () => {
     env,
   });
 
-  let [err, out, exited] = await Promise.all([subprocess.stderr.text(), subprocess.stdout.text(), subprocess.exited]);
+  let [err, out, exited] = await Promise.all([
+    subprocess.stderr.text(),
+    subprocess.stdout.text(),
+    subprocess.exited,
+  ]);
 
   expect(err).not.toContain("error:");
   expect(out.trim()).toContain(Bun.version);
@@ -368,7 +386,11 @@ it.concurrent("should pass --version to the package if specified", async () => {
     env,
   });
 
-  let [err, out, exited] = await Promise.all([subprocess.stderr.text(), subprocess.stdout.text(), subprocess.exited]);
+  let [err, out, exited] = await Promise.all([
+    subprocess.stderr.text(),
+    subprocess.stdout.text(),
+    subprocess.exited,
+  ]);
 
   expect(err).not.toContain("error:");
   expect(out.trim()).not.toContain(Bun.version);
@@ -401,7 +423,11 @@ it.concurrent('should set "npm_config_user_agent" to bun', async () => {
     env,
   });
 
-  const [err, out, exited] = await Promise.all([subprocess.stderr.text(), subprocess.stdout.text(), subprocess.exited]);
+  const [err, out, exited] = await Promise.all([
+    subprocess.stderr.text(),
+    subprocess.stdout.text(),
+    subprocess.exited,
+  ]);
 
   expect(err).not.toContain("error:");
   expect(out.trim()).toContain(`bun/${Bun.version}`);
@@ -425,7 +451,11 @@ describe("bunx --no-install", () => {
       stderr: "pipe",
     });
 
-    return Promise.all([subprocess.stderr.text(), subprocess.stdout.text(), subprocess.exited] as const);
+    return Promise.all([
+      subprocess.stderr.text(),
+      subprocess.stdout.text(),
+      subprocess.exited,
+    ] as const);
   };
 
   it.concurrent("if the package is not installed, it should fail and print an error message", async () => {
@@ -445,7 +475,7 @@ describe("bunx --no-install", () => {
    */
   it.concurrent.each(["typescript", "http-server", "eslint"])(
     "`bunx --no-install %s` should find cached packages",
-    async pkg => {
+    async (pkg) => {
       const ctx = setup();
       // not cached
       {
@@ -503,7 +533,11 @@ it.concurrent("should handle postinstall scripts correctly with symlinked bunx",
     },
   });
 
-  let [err, out, exited] = await Promise.all([subprocess.stderr.text(), subprocess.stdout.text(), subprocess.exited]);
+  let [err, out, exited] = await Promise.all([
+    subprocess.stderr.text(),
+    subprocess.stdout.text(),
+    subprocess.exited,
+  ]);
 
   expect(err).not.toContain("error:");
   expect(err).not.toContain("Cannot find module 'exec'");
@@ -525,7 +559,11 @@ it.concurrent("should handle package that requires node 24", async () => {
     env,
   });
 
-  let [err, out, exited] = await Promise.all([subprocess.stderr.text(), subprocess.stdout.text(), subprocess.exited]);
+  let [err, out, exited] = await Promise.all([
+    subprocess.stderr.text(),
+    subprocess.stdout.text(),
+    subprocess.exited,
+  ]);
   expect(err).not.toContain("error:");
   expect(out.trim()).not.toContain(Bun.version);
   expect(exited).toBe(0);
@@ -642,7 +680,7 @@ describe("--package flag", () => {
         subprocess.exited,
       ]);
 
-      expect(urls.some(url => url.includes("/my-special-pkg"))).toBe(true);
+      expect(urls.some((url) => url.includes("/my-special-pkg"))).toBe(true);
       // The package should install successfully
       expect(err).toContain("Saved lockfile");
     });
@@ -654,7 +692,7 @@ describe("--package flag", () => {
         dummyRegistry(urls, {
           "2.0.0": {
             bin: {
-              "tool": "cli.js",
+              tool: "cli.js",
             },
             as: "2.0.0",
           },
@@ -681,7 +719,7 @@ describe("--package flag", () => {
         subprocess.exited,
       ]);
 
-      expect(urls.some(url => url.includes("/actual-package"))).toBe(true);
+      expect(urls.some((url) => url.includes("/actual-package"))).toBe(true);
     });
 
     it("should support --package=<pkg> syntax with mock registry", async () => {
@@ -691,7 +729,7 @@ describe("--package flag", () => {
         dummyRegistry(urls, {
           "3.0.0": {
             bin: {
-              "runner": "run.js",
+              runner: "run.js",
             },
             as: "3.0.0",
           },
@@ -718,7 +756,7 @@ describe("--package flag", () => {
         subprocess.exited,
       ]);
 
-      expect(urls.some(url => url.includes("/runner-pkg"))).toBe(true);
+      expect(urls.some((url) => url.includes("/runner-pkg"))).toBe(true);
     });
 
     it("should fail to run alternate binary without --package flag", async () => {
@@ -783,8 +821,8 @@ console.log("EXECUTED: multi-tool-alt (alternate binary)");
 `,
       );
 
-      // Make the binaries executable
-      await Bun.$`chmod +x ${packageDir}/bin/multi-tool.js ${packageDir}/bin/multi-tool-alt.js`;
+      chmodSync(join(packageDir, "bin/multi-tool.js"), 0o755);
+      chmodSync(join(packageDir, "bin/multi-tool-alt.js"), 0o755);
 
       // Create the tarball with package/ prefix. It goes to a temp dir the
       // registry is pointed at — writing it under import.meta.dir would
@@ -830,7 +868,7 @@ console.log("EXECUTED: multi-tool-alt (alternate binary)");
       ]);
 
       // Verify the correct package was requested
-      expect(urls.some(url => url.includes("/multi-tool-pkg"))).toBe(true);
+      expect(urls.some((url) => url.includes("/multi-tool-pkg"))).toBe(true);
 
       // Verify the correct binary was executed
       expect(out).toContain("EXECUTED: multi-tool-alt (alternate binary)");
@@ -888,7 +926,10 @@ describe("scoped packages should not match unrelated system binaries", () => {
     // Create a fake "install" binary in $PATH to simulate /usr/bin/install.
     const fakeBinDir = tmpdirSync();
     if (isWindows) {
-      await writeFile(join(fakeBinDir, "install.cmd"), `@echo WRONG: ran a system binary from PATH\r\n`);
+      await writeFile(
+        join(fakeBinDir, "install.cmd"),
+        `@echo WRONG: ran a system binary from PATH\r\n`,
+      );
     } else {
       const fakeBin = join(fakeBinDir, "install");
       await writeFile(fakeBin, `#!/bin/sh\necho "WRONG: ran a system binary from PATH"\n`);
@@ -896,7 +937,14 @@ describe("scoped packages should not match unrelated system binaries", () => {
     }
 
     const urls: string[] = [];
-    setHandler(dummyRegistry(urls, { "1.0.0": { bin: { "scoped-tool": "cli.js" }, as: "1.0.0" } }, 0, tgzDir));
+    setHandler(
+      dummyRegistry(
+        urls,
+        { "1.0.0": { bin: { "scoped-tool": "cli.js" }, as: "1.0.0" } },
+        0,
+        tgzDir,
+      ),
+    );
 
     const subprocess = spawn({
       cmd: [bunExe(), "x", "@scope/install"],
@@ -933,7 +981,11 @@ describe("scoped packages should not match unrelated system binaries", () => {
     await mkdir(join(x_dir, "node_modules", ".bin"), { recursive: true });
     await writeFile(
       join(x_dir, "node_modules", "@myscope", "collide", "package.json"),
-      JSON.stringify({ name: "@myscope/collide", version: "1.0.0", bin: { "real-bin": "./real.js" } }),
+      JSON.stringify({
+        name: "@myscope/collide",
+        version: "1.0.0",
+        bin: { "real-bin": "./real.js" },
+      }),
     );
     await writeFile(
       join(x_dir, "node_modules", "@myscope", "collide", "real.js"),
@@ -1064,7 +1116,10 @@ describe("scoped packages should not match unrelated system binaries", () => {
     // Put a decoy "colliding-tool" (the REAL bin name) in $PATH.
     const fakeBinDir = tmpdirSync();
     if (isWindows) {
-      await writeFile(join(fakeBinDir, "colliding-tool.cmd"), `@echo WRONG: ran a system binary from PATH\r\n`);
+      await writeFile(
+        join(fakeBinDir, "colliding-tool.cmd"),
+        `@echo WRONG: ran a system binary from PATH\r\n`,
+      );
     } else {
       const fakeBin = join(fakeBinDir, "colliding-tool");
       await writeFile(fakeBin, `#!/bin/sh\necho "WRONG: ran a system binary from PATH"\n`);
@@ -1072,7 +1127,14 @@ describe("scoped packages should not match unrelated system binaries", () => {
     }
 
     const urls: string[] = [];
-    setHandler(dummyRegistry(urls, { "1.0.0": { bin: { "colliding-tool": "cli.js" }, as: "1.0.0" } }, 0, tgzDir));
+    setHandler(
+      dummyRegistry(
+        urls,
+        { "1.0.0": { bin: { "colliding-tool": "cli.js" }, as: "1.0.0" } },
+        0,
+        tgzDir,
+      ),
+    );
 
     const runEnv = {
       ...env,
@@ -1147,7 +1209,7 @@ describe("package name aliases", () => {
   // unrelated squatter with no bin, so redirecting is strictly more useful.
   it("`bunx claude` requests @anthropic-ai/claude-code, not the 'claude' squatter", async () => {
     const urls: string[] = [];
-    setHandler(async request => {
+    setHandler(async (request) => {
       urls.push(request.url);
       return new Response("{}", { status: 404 });
     });
@@ -1170,9 +1232,13 @@ describe("package name aliases", () => {
       },
     });
 
-    const [, , exited] = await Promise.all([subprocess.stderr.text(), subprocess.stdout.text(), subprocess.exited]);
+    const [, , exited] = await Promise.all([
+      subprocess.stderr.text(),
+      subprocess.stdout.text(),
+      subprocess.exited,
+    ]);
 
-    const paths = urls.map(u => new URL(u).pathname);
+    const paths = urls.map((u) => new URL(u).pathname);
     // The manifest request must be for the real package, and must never hit
     // the squatter package name.
     expect(paths).toContain("/@anthropic-ai%2fclaude-code");
@@ -1234,7 +1300,15 @@ it.skipIf(!isWindows)("should not crash on corrupted .bunx file with missing quo
   const flags = Buffer.alloc(2);
   flags.writeUInt16LE(0xab37);
 
-  const corruptedData = Buffer.concat([binPath, corruptedQuote, nullChar, shebang, binLen, argsLen, flags]);
+  const corruptedData = Buffer.concat([
+    binPath,
+    corruptedQuote,
+    nullChar,
+    shebang,
+    binLen,
+    argsLen,
+    flags,
+  ]);
   await writeFile(bunxFile, corruptedData);
 
   // Now run bunx - it should NOT crash, but may fail gracefully
@@ -1282,7 +1356,11 @@ it.concurrent.skipIf(isWindows)(
         stderr: "pipe",
         env,
       });
-      return Promise.all([subprocess.stderr.text(), subprocess.stdout.text(), subprocess.exited] as const);
+      return Promise.all([
+        subprocess.stderr.text(),
+        subprocess.stdout.text(),
+        subprocess.exited,
+      ] as const);
     };
 
     // Legitimate case: a pre-existing cache root that is a private directory
@@ -1344,7 +1422,11 @@ it.concurrent.skipIf(isWindows)(
         stderr: "pipe",
         env,
       });
-      return Promise.all([subprocess.stderr.text(), subprocess.stdout.text(), subprocess.exited] as const);
+      return Promise.all([
+        subprocess.stderr.text(),
+        subprocess.stdout.text(),
+        subprocess.exited,
+      ] as const);
     };
 
     await mkdir(scopeDir, { recursive: true });
