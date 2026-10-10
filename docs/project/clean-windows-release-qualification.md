@@ -31,3 +31,37 @@ Receipts: `tmp/clean-d5-windows-release-mcp.jsonl`,
 PATH promotion, provider-session activation, matched-source performance
 and binary-size gates remain open. The executable is retained in the
 isolated owner build checkout; no shared launcher is replaced.
+
+## Clean 8d release with installed skills
+
+The same factory completes from clean source
+`8d20fce4aa955ce17564e0e7074e128f56cbad6d`. Its executable is
+152248832 bytes, SHA256
+`ed8560da686c675c3587754804a3439eca51d1a87ca991f024031ead67222ca3`.
+The release MCP announces `1.4.4 (8d20fce4a)`. Codex and Claude profiles
+each return all four protocol responses, list 35 tools and successfully
+read the actual installed `bun-build` skill with no RPC or tool errors.
+The earlier source-checkout skill-discovery gap is fixed in this artifact.
+
+The clean release passes the entire internal suite: 895 passes, 33
+inherited skips, zero failures, five snapshots and 146192 assertions
+across 92 files (23.53 s). It also verifies 37 exact PyCUDA -> WGSL/D3D12
+-> NVRTC CUDA results on the RTX 4070, with source revision `8d20fce4aa9`
+reported by the executable. The GPU SDK passes three tests and the shared
+Buv/PyJS PyCUDA consumer passes one, both with zero failures. These GPU
+consumers use the previously qualified native provider DLL and explicit
+host transfers; no zero-copy or Linux GPU qualification is inferred.
+
+Receipts: `tmp/clean-8d-windows-release-receipt.json`,
+`tmp/clean-8d-windows-release-mcp.jsonl/.exit`,
+`tmp/clean-8d-release-claude-mcp.jsonl/.exit`,
+`tmp/clean-8d-release-internal.log/.exit`,
+`tmp/clean-8d-release-gpu-pipeline.log/.exit`,
+`tmp/clean-8d-release-gpu-sdk.log/.exit` and
+`tmp/clean-8d-release-pycuda.log/.exit`.
+
+This development release has no distribution `--version-tag`. The
+owner publication factory supplies the Aphrody prerelease tag while
+keeping the base `Bun.version` for semver compatibility. Matched-source
+performance, distribution tagging, PATH promotion and provider-session
+activation remain open. No shared installation is replaced here.

@@ -641,11 +641,9 @@ impl WindowsNamedPipe {
             Some(Self::stop_for_vm_teardown),
         );
 
-        // SAFETY: as above.
-        if let Err(e) = server
-            .accept(unsafe { &mut *pipe })
-            .to_result(bun_sys::Tag::accept)
-        {
+        // SAFETY: `pipe` is initialized and has not been adopted by its writer.
+        let accepted = server.accept(unsafe { &mut *pipe });
+        if let Err(e) = accepted.to_result(bun_sys::Tag::accept) {
             self.discard_unadopted_pipe();
             return Err(e);
         }
@@ -743,10 +741,9 @@ impl WindowsNamedPipe {
         // the connect callback fires (this struct outlives that).
         unsafe { (*req).data = ctx.cast::<c_void>() };
         // SAFETY: `pipe` is live (see above) and `req`/`pipe` are disjoint.
-        if let Some(err) =
-            unsafe { (*pipe).connect(&mut *req, path, ctx.cast::<c_void>(), Self::uv_on_connect) }
-                .to_error(bun_sys::Tag::connect2)
-        {
+        let connected =
+            unsafe { (*pipe).connect(&mut *req, path, ctx.cast::<c_void>(), Self::uv_on_connect) };
+        if let Some(err) = connected.to_error(bun_sys::Tag::connect2) {
             self.discard_unadopted_pipe();
             return Err(err);
         }

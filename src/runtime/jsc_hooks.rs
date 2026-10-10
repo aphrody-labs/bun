@@ -974,7 +974,10 @@ unsafe fn auto_tick(vm: *mut VirtualMachine) {
     // SAFETY: as above.
     let has_yielded_tasks = unsafe { (*el).promote_yield_tasks() };
     #[cfg(windows)]
-    if has_yielded_tasks || !unsafe { &*el }.immediate_tasks.is_empty() {
+    if has_yielded_tasks || {
+        // SAFETY: the event loop belongs to the live per-thread VM; the borrow ends before wakeup.
+        !unsafe { &*el }.immediate_tasks.is_empty()
+    } {
         // SAFETY: `el` is the live per-thread event loop.
         unsafe { (*el).wakeup() };
     }
@@ -1133,7 +1136,10 @@ unsafe fn auto_tick_active(vm: *mut VirtualMachine) {
     // SAFETY: as above.
     let has_yielded_tasks = unsafe { (*el).promote_yield_tasks() };
     #[cfg(windows)]
-    if has_yielded_tasks || !unsafe { &*el }.immediate_tasks.is_empty() {
+    if has_yielded_tasks || {
+        // SAFETY: the event loop belongs to the live per-thread VM; the borrow ends before wakeup.
+        !unsafe { &*el }.immediate_tasks.is_empty()
+    } {
         // SAFETY: `el` is the live per-thread event loop.
         unsafe { (*el).wakeup() };
     }

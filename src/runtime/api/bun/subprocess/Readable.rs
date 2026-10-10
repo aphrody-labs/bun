@@ -106,7 +106,7 @@ impl Readable {
             }
         }
 
-        match &stdio {
+        let readable = match &stdio {
             Stdio::Inherit => Readable::Inherit,
             Stdio::Ignore | Stdio::Ipc | Stdio::Path(..) => Readable::Ignore,
             Stdio::Fd(fd) => {
@@ -145,7 +145,9 @@ impl Readable {
             Stdio::ReadableStream(..) => Readable::Ignore,
             // Rejected at i < 3 in Stdio::extract(); stdout/stderr never see this.
             Stdio::SocketFd => unreachable!("SocketFd at stdout/stderr"),
-        }
+        };
+        drop(stdio);
+        readable
     }
 
     pub(crate) fn close(&mut self) {
