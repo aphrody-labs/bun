@@ -71,3 +71,4 @@
 - [x] Qualifier la copie Windows avec libuv et le repli lecture/ecriture ; 195 tests natifs passes sur deux configurations, fichier sans diagnostic strict sur quatre cibles.
 - [x] Verifier les 313 fichiers du plugin installe et les entrees activees Codex/Claude sans modifier les authentifications.
 - [x] Qualifier les callbacks watchers et sockets cluster Windows sur le binaire modifie et quatre cibles strictes.
+- [x] Qualifier les I/O Blob Windows et conserver les obligations de completion POSIX ; 217 tests natifs passes sur deux configurations, trois fichiers sans diagnostic sur quatre cibles.
