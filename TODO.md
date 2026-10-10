@@ -148,3 +148,6 @@
 
 - [x] Owner Glob/router heap scratch and strict missing-cwd behavior: four compiler targets, native231/0, regression/type/style evidence recorded (2026-10-10).
 - [ ] Continue remaining Windows runtime33, matched release/performance, tagging/PATH/provider-session activation and private/LFS/Linux-GPU delivery.
+
+- [x] Qualify image/shell portability on four compiler targets and seven native suites:246 pass/0 fail (2026-10-10).
+- [ ] Close remaining28 Windows runtime diagnostics and full release/private/hardware delivery gates.
