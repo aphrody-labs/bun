@@ -130,3 +130,6 @@
 - [x] Qualify strict GNU ARM64 runtime with a real target sysroot on VPS (2026-10-10).
 - [x] Verify Codex/Claude installed plugin registration and actual PATH MCP calls, 35 tools (2026-10-10).
 - [ ] Finish resumed Windows release, aligned PATH promotion and new-session activation.
+
+- [x] Qualify Windows memory-pressure VM borrow: 28 native passes, four target checks and scoped formatting (2026-10-10).
+- [ ] Close remaining 50 Windows runtime lint errors, clean matched release and promotion gates.
