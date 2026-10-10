@@ -67,3 +67,4 @@
 
 - [x] Preserve native Windows WTF-8 arguments in spawn/common argv and file-based .NET dispatch. Native surrogate regression fails on installed Bun and passes after the fix; 58 changed-binary argument/.NET/Python GPU tests pass (330 assertions). bun_core strict Clippy passes all six targets.
 - [ ] Qualify the remaining JavaScript process.argv lone-surrogate projection; the external .NET SDK also normalizes managed arguments, so native transport proof is not a managed round-trip claim.
+- [x] Consolider le lanceur du plugin ; strict GNU x64/ARM64 passe, fichier sans diagnostic Windows x64/ARM64, 31 tests natifs et extraction a froid qualifies.
