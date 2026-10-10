@@ -53,6 +53,7 @@ test.skipIf(isWindows)("a file changes when its tool's path resolves to another 
   const clang = join(current, "clang");
   const cfg = {
     buildDir: join(root, "build"),
+    host: { os: "linux" },
     cc: clang,
     cxx: clang,
     hostCc: clang,

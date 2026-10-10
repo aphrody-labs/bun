@@ -257,11 +257,10 @@ function tokCmp(a: Tok, b: Tok): number {
   let x: bigint | number, y: bigint | number;
   switch (a.token) {
     case T.DIGIT:
-      if (a.value[0] === "0" || b.value[0] === "0") return strSort(a.value, b.value);
-    // fallthrough
     case T.INITIAL:
     case T.SUFFIX_NO:
     case T.REV:
+      if (a.token === T.DIGIT && (a.value[0] === "0" || b.value[0] === "0")) return strSort(a.value, b.value);
       x = a.number;
       y = b.number;
       break;

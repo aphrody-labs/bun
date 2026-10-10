@@ -69,7 +69,7 @@ function tar(entries: TarIn[], eof: boolean): Uint8Array {
 }
 
 function gz(b: Uint8Array): Uint8Array {
-  return Bun.gzipSync(b);
+  return Bun.gzipSync(new Uint8Array(b));
 }
 
 interface PkgIn {
@@ -413,7 +413,7 @@ describe("install.ts", () => {
     const frag = JSON.parse(readFileSync(join(terminalDir, "aphrody-win.json"), "utf8"));
     expect(frag.profiles[0]).toMatchObject({
       name: "Aphrody (bunsh)",
-      commandline: `"${bunsh.replace(/\//g, "\\")}" -l`,
+      commandline: `"${join(root, "usr", "bin", "bunsh.exe")}" -l`,
     });
     expect(frag.profiles[0].guid).toMatch(/^\{[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\}$/);
   });

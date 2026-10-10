@@ -160,3 +160,36 @@ The runner, Ninja PID, clean source pin and building phase were observed live.
 This is an active build, not a successful artifact or deployment receipt.
 Plan: tmp/vps-owner-latest-release-plan.json. Remote phase/PID/exit receipts are
 in the existing owner-linux-qualification directory; original receipts remain.
+
+## Common-pin internal qualification (2026-10-10)
+
+Both native owner factories report Bun 1.4.4 at 988d73b430a3c47cd61d6f8d440777407f77555c.
+The Linux gate initially reported 1119 pass, 19 skip and three failures. Four
+scoped corrections complete the fake toolchain host, match the installer's
+Windows Terminal executable name, accept the provenance suffix in the LTO
+cache key, and retain APK numeric comparison behavior without implicit
+fallthrough. The gzip fixture now supplies an owned Uint8Array buffer.
+No assertion, skip policy or runtime feature was removed.
+
+The patched Linux rerun reports 22 pass in the three affected files, then
+1122 pass, 19 skip, zero failures and 147818 assertions across 98 files.
+Windows reports 893 pass, 33 skip, zero failures and 146170 assertions across
+92 internal files. Both use the freshly built release through the owner
+build-then-exec factory with --expose-internals. Scoped TypeScript, Prettier
+and oxlint exit zero. Receipts: tmp/linux-internal-fixtures-plan.json,
+tmp/linux-internal-fixtures-{tsc,format,lint}-final.*, and
+tmp/windows-common-pin-internals.*; Linux native-fixtures.log and
+native-complete.log remain in the VPS owner-linux-qualification directory.
+
+The refreshed Linux stripped artifact SHA256 is
+8bb9105153ce3742d14f9c04247782c5013d050813b00eae880d041ae9ceb8e3;
+the profile artifact is
+12bcb75989497280e3ca2dab3fc51c580dca9965d7bac78317eb6492274365bc.
+These checksums identify build outputs, not an activated deployment.
+
+The retained Windows 54619ce executable and PDB share CodeView GUID
+8EAF22F1-5F73-D4BD-4C4C-44205044422E and age 1. Its PDB attributes
+25021543 text bytes to 79 uv modules. The old baseline PDB is unavailable;
+this measures current footprint and does not attribute the size regression.
+Performance size closure, physical Linux NVIDIA qualification and deployment
+remain open.

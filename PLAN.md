@@ -219,3 +219,5 @@ chantier touché (`bun-fork-aphrody`, `next-on-bun-plan`, …) à la fin du lot.
 - 2026-10-10: real Next applications qualify with an explicitly preseeded offline/frozen cache: 12 native release tests / 251 assertions / zero failures. Pages parity passes 16.1.6, 16.4.0, 16.5.0-canary.4; App Router passes Turbopack/webpack/next-bun without Node/Bun.build, including server actions and client chunks. Owned helper TS/format/lint pass; global config and assertions preserved.
 
 - 2026-10-10: VPS clean owner checkout advanced to 988d73b430a; native release rebuild active under canonical heavy lock, four jobs, explicit measured incremental capacity plan. Windows 40-run strict historical-base comparison passes startup/RSS/throughput thresholds but fails binary size (152247296 vs 96548352 bytes); source versions differ, same-source isolation and size investigation stay open.
+
+Owner internal-fixture lot (2026-10-10): Linux 1122 pass/19 skip/0 fail and Windows 893 pass/33 skip/0 fail at engine 988d73; scoped TS/format/lint zero. See docs/project/windows-owner-release-qualification.md. Full release/deployment remains open.

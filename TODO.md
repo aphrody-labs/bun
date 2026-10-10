@@ -114,3 +114,6 @@
 - 2026-10-10: real Next applications qualify with an explicitly preseeded offline/frozen cache: 12 native release tests / 251 assertions / zero failures. Pages parity passes 16.1.6, 16.4.0, 16.5.0-canary.4; App Router passes Turbopack/webpack/next-bun without Node/Bun.build, including server actions and client chunks. Owned helper TS/format/lint pass; global config and assertions preserved.
 
 - 2026-10-10: VPS clean owner checkout advanced to 988d73b430a; native release rebuild active under canonical heavy lock, four jobs, explicit measured incremental capacity plan. Windows 40-run strict historical-base comparison passes startup/RSS/throughput thresholds but fails binary size (152247296 vs 96548352 bytes); source versions differ, same-source isolation and size investigation stay open.
+
+- [x] Owner common-pin internal-fixture correction: Linux 1122 and Windows 893 passing, scoped static gates zero (2026-10-10).
+- [ ] Qualify refreshed stripped Linux artifact and host promotion; close comparable Windows binary-size gate.

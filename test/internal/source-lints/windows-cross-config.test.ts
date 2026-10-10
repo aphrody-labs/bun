@@ -139,12 +139,12 @@ describe.skipIf(isWindows)("Windows cross-compile LTO config (non-windows host)"
     if (def.kind !== "prebuilt") throw new Error(`expected prebuilt WebKit source, got ${def.kind}`);
     expect(def.url).toContain("bun-webkit-windows-amd64-lto.tar.gz");
     expect(def.destDir).toContain("-windows");
-    expect(def.destDir).toEndWith("-lto");
+    expect(def.destDir).toMatch(/-windows-lto(?:-[\w.]+)?$/);
 
     const plain = webkit.source(resolveWindowsCross({ lto: false }));
     if (plain.kind !== "prebuilt") throw new Error(`expected prebuilt WebKit source, got ${plain.kind}`);
     expect(plain.url).toContain("bun-webkit-windows-amd64.tar.gz");
-    expect(plain.destDir).not.toEndWith("-lto");
+    expect(plain.destDir).not.toMatch(/-windows-lto(?:-[\w.]+)?$/);
 
     const arm64 = webkit.source(resolveWindowsCross({ arch: "aarch64" }));
     if (arm64.kind !== "prebuilt") throw new Error(`expected prebuilt WebKit source, got ${arm64.kind}`);
