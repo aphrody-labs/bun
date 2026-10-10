@@ -43,7 +43,9 @@ impl ElevateError {
                 "elevate: 'sudo -n true' failed: sudo requires a password or denies this user. Add a NOPASSWD rule (Aphrody Alpine: /etc/sudoers.d/aphrody, group 'aphrody') or run as root"
             }
             #[cfg(windows)]
-            ElevateError::NoSelfExe => "elevate: cannot locate the bun executable to run the elevation helper",
+            ElevateError::NoSelfExe => {
+                "elevate: cannot locate the bun executable to run the elevation helper"
+            }
         }
     }
 }
@@ -176,7 +178,9 @@ fn windows_sudo_enabled() -> bool {
     }
     const HKEY_LOCAL_MACHINE: usize = 0x8000_0002;
     const RRF_RT_REG_DWORD: u32 = 0x0000_0010;
-    let key: Vec<u16> = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Sudo\0".encode_utf16().collect();
+    let key: Vec<u16> = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Sudo\0"
+        .encode_utf16()
+        .collect();
     let value: Vec<u16> = "Enabled\0".encode_utf16().collect();
     let mut data: u32 = 0;
     let mut len: u32 = size_of::<u32>() as u32;
@@ -189,7 +193,7 @@ fn windows_sudo_enabled() -> bool {
             RRF_RT_REG_DWORD,
             core::ptr::null_mut(),
             (&raw mut data).cast(),
-            &mut len,
+            &raw mut len,
         )
     };
     status == 0 && data != 0
@@ -201,4 +205,3 @@ pub(crate) fn is_env_name(name: &[u8]) -> bool {
         && !name[0].is_ascii_digit()
         && name.iter().all(|&b| b.is_ascii_alphanumeric() || b == b'_')
 }
-

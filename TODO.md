@@ -151,3 +151,6 @@
 
 - [x] Qualify image/shell portability on four compiler targets and seven native suites:246 pass/0 fail (2026-10-10).
 - [ ] Close remaining28 Windows runtime diagnostics and full release/private/hardware delivery gates.
+
+- [x] Qualify cache hash and three Win32 output pointers: four targets, native46/0 (2026-10-10).
+- [ ] Close remaining24 Windows diagnostics and full release/private/hardware delivery.
