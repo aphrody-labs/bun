@@ -191,3 +191,5 @@ chantier touché (`bun-fork-aphrody`, `next-on-bun-plan`, …) à la fin du lot.
 - 2026-10-10: private Bun.jest test-helper type restored only in internal test declarations; scoped bunx / shell cp / Linux TypeScript gate now zero. Runtime file-bound contract verified in Jest::call; public Bun types unchanged.
 
 - 2026-10-10: Qualified Linux plain-release candidate delivered by native Infra SFTP into DBFR's isolated runtime-candidates directory; SHA256 agrees source/local/target, native DBFR Linux/Zstd/memfd smoke passes. Production PATH remains 1.4.3-aphrody.3; stripped distribution, full release gates and activation pending. See [proof](docs/project/linux-owner-release-preflight.md).
+
+- 2026-10-10: IPC host cleanup/warning and logical-drive raw output contracts qualified with 36 changed-engine passes / 94 assertions; owned strict diagnostics zero on four targets, Windows whole runtime 65 remaining. See [proof](docs/project/windows-ipc-storage-qualification.md).

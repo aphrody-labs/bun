@@ -1,6 +1,6 @@
 //! Logical Windows drives and their capacity.
 
-use super::{Json, WinErr, WinResult, BOOL};
+use super::{BOOL, Json, WinErr, WinResult};
 
 #[link(name = "kernel32")]
 unsafe extern "system" {
@@ -27,7 +27,7 @@ fn drive_type(value: u32) -> &'static str {
 
 /// Returns roots and capacity for every logical drive visible to the process.
 pub(crate) fn drives_json() -> WinResult<String> {
-    // A null buffer asks Windows for the required UTF-16 capacity, including the final NUL.
+    // SAFETY: zero capacity permits a null buffer to query the required UTF-16 size.
     let needed = unsafe { GetLogicalDriveStringsW(0, core::ptr::null_mut()) };
     if needed == 0 {
         return Err(WinErr::last("GetLogicalDriveStringsW"));
@@ -55,8 +55,15 @@ pub(crate) fn drives_json() -> WinResult<String> {
         let mut total = 0u64;
         let mut free = 0u64;
         // SAFETY: `wide` is NUL-terminated and all output pointers refer to initialized storage.
-        if unsafe { GetDiskFreeSpaceExW(wide.as_ptr(), &mut available, &mut total, &mut free) } == 0
-        {
+        let queried = unsafe {
+            GetDiskFreeSpaceExW(
+                wide.as_ptr(),
+                &raw mut available,
+                &raw mut total,
+                &raw mut free,
+            )
+        };
+        if queried == 0 {
             return Err(WinErr::last("GetDiskFreeSpaceExW"));
         }
         // SAFETY: `wide` is NUL-terminated.
