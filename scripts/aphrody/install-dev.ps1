@@ -1,8 +1,8 @@
 # Clones and builds the aphrody-labs/bun fork in one command (Windows 10/11, x64 or arm64):
 #
-#   irm https://aphrody.com/bun/setup.ps1 | iex
+#   irm https://bun.aphrody.com/bun/setup.ps1 | iex
 #   irm https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install-dev.ps1 | iex
-#   & ([scriptblock]::Create((irm https://aphrody.com/bun/setup.ps1))) --dry-run   # any setup.ts option
+#   & ([scriptblock]::Create((irm https://bun.aphrody.com/bun/setup.ps1))) --dry-run   # any setup.ts option
 #
 # Installs the fork's bun when the machine has none (or an upstream one), then runs scripts/aphrody/setup.ts,
 # which clones the repository (default C:\bun, or APHRODY_BUN_CHECKOUT), installs Git, CMake, NASM and

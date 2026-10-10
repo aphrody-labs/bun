@@ -1,10 +1,12 @@
-// Génère le site statique aphrody.com : la distribution Aphrody (accueil produit, /components, /runtime, /m3,
+// Génère un site statique. Sans données de distribution, c'est le site du runtime, bun.aphrody.com (« Aphrody Bun » :
+// accueil depuis APHRODY.md du fork, /runtime, /docs, téléchargements, notes de version, benchmarks, installateurs) ;
+// avec elles (--data d'un collect.ts --distribution), le site de la distribution Aphrody (accueil produit, /components, /runtime, /m3,
 // /security, /contributing, /about, pages générées par pages.ts depuis site-data.json de collect.ts), la doc du
 // runtime aphrody-labs/bun (/docs depuis docs/docs.json + .mdx, pages .md brutes, recherche), /guides,
 // /benchmarks, /downloads, /release-notes, /install (+ .sh, .ps1), /bun/setup.sh|ps1, /llms.txt,
 // /llms-full.txt, sitemap.xml, robots.txt.
 //
-//   bun scripts/aphrody/site/build.ts --out <dir> [--src <arbre du dépôt>] [--origin https://aphrody.com]
+//   bun scripts/aphrody/site/build.ts --out <dir> [--src <arbre du dépôt>] [--origin https://bun.aphrody.com]
 //       [--commit <sha>] [--repo aphrody-labs/bun] [--perf <dossier des perf-report.json>] [--perf-run <url>]
 //       [--releases <releases.json> | --offline] [--data <site-data.json>]
 //
@@ -160,7 +162,7 @@ async function fetchReleases(repo: string): Promise<Release[]> {
   const list = (await res.json()) as any[];
   const releases: Release[] = [];
   for (const r of list) {
-    if (r.draft || !String(r.tag_name).startsWith("aphrody-v")) continue;
+    if (r.draft || !/^(?:bun-v|aphrody-v)/.test(String(r.tag_name))) continue;
     const release: Release = {
       tag: r.tag_name,
       name: r.name || r.tag_name,
@@ -312,6 +314,8 @@ export async function build(o: BuildOptions) {
   const { tabs, pages } = readNavigation(docsJson);
   const now = (o.now ?? new Date()).toISOString();
   const data = o.data ?? null;
+  /** Nom du site : la distribution (aphrody.com) ou le runtime seul (bun.aphrody.com). */
+  const brand = data?.distribution ? "Aphrody" : "Aphrody Bun";
   const readSnippet = (path: string) => {
     const file = join(docs, path);
     return existsSync(file) ? readFileSync(file, "utf8") : undefined;
@@ -394,9 +398,10 @@ export async function build(o: BuildOptions) {
       ...s,
       origin: o.origin,
       footer,
-      github: data?.org ? `https://github.com/${data.org.login}` : `https://github.com/${o.repo}`,
+      github: data?.distribution && data.org ? `https://github.com/${data.org.login}` : `https://github.com/${o.repo}`,
+      brand,
     });
-  const titled = (title: string) => (title === "Aphrody" ? title : `${title} - Aphrody`);
+  const titled = (title: string) => (title === brand ? title : `${title} - ${brand}`);
 
   // Liste des guides (remplace <GuidesList />)
   const guidesTab = tabs.find(t => t.tab === "Guides");
@@ -475,7 +480,7 @@ ${pager}`;
     const mdUrl = g.path === "/" ? "/index.md" : `${g.path}.md`;
     const body =
       g.path === "/"
-        ? `${renderHero(data!)}\n<article>${html}</article>`
+        ? `${data?.distribution ? renderHero(data) : renderRuntimeHero(data!, o)}\n<article>${html}</article>`
         : `<h1>${escapeHtml(g.title)}</h1>
 ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
 <div class="page-actions"><button type="button" data-copy-url="${mdUrl}">Copy page</button><a href="${mdUrl}">View as Markdown</a></div>
@@ -498,7 +503,7 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
       t: g.title,
       d: g.description,
       u: g.path,
-      g: "Aphrody",
+      g: brand,
       h: extractToc(html).map(h => h.text),
       x: textOf(html).slice(0, 240),
     });
@@ -519,14 +524,14 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
   // llms.txt / llms-full.txt (format llmstxt.org)
   const summary = data?.distribution?.summary ? plainText(data.distribution.summary) : "";
   const llms = [
-    "# Aphrody",
+    `# ${brand}`,
     "",
     ...(summary ? [`> ${summary}`, ""] : []),
     `Site built from ${o.repo}@${o.commit.slice(0, 12)}${data?.distribution ? ` and ${data.distribution.repo}@${data.distribution.commit.slice(0, 12)}` : ""}.`,
     "",
     ...(generated.length
       ? [
-          "## Aphrody",
+          `## ${brand}`,
           "",
           ...generated.map(
             g =>
@@ -575,7 +580,7 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
   // Téléchargements et notes de version : la distribution (données), puis le runtime (releases GitHub)
   const releases = o.releases;
   const latest = latestRuntimeRelease(releases);
-  const distDownloads = data ? renderMarkdown(distributionDownloads(data)) : "";
+  const distDownloads = data?.distribution ? renderMarkdown(distributionDownloads(data)) : "";
   write(
     join(o.out, "downloads", "index.html"),
     page({
@@ -587,7 +592,7 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
       toc: extractToc(distDownloads),
     }),
   );
-  const distNotes = data ? renderMarkdown(distributionReleaseNotes(data)) : "";
+  const distNotes = data?.distribution ? renderMarkdown(distributionReleaseNotes(data)) : "";
   write(
     join(o.out, "release-notes", "index.html"),
     page({
@@ -600,13 +605,22 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
   );
 
   // Benchmarks
+  const productsDirectory = join(o.src, "docs/aphrody/benchmarks/latest");
+  for (const name of ["product-benchmarks.json", "README.md", "comparison.png", "comparison.svg", "samples.csv"]) {
+    const source = join(productsDirectory, name);
+    if (existsSync(source)) {
+      mkdirSync(join(o.out, "benchmarks/products"), { recursive: true });
+      cpSync(source, join(o.out, "benchmarks/products", name));
+    }
+  }
   const reports = loadPerfReports(o.perf);
   write(
     join(o.out, "benchmarks", "index.html"),
     page({
       path: "/benchmarks",
       title: titled("Benchmarks"),
-      description: "Measured performance of the Aphrody runtime against upstream Bun, and how to reproduce it.",
+      description:
+        "Measured Bun, Python, .NET, Tailwind CSS and Next.js workloads, raw samples and reproducible methodology.",
       body: highlightHtml(renderBenchmarks(reports, o, latest)),
       tabs: topTabs("Benchmarks"),
       toc: reports.map(r => ({ level: 2, id: r.platform, text: r.platform })),
@@ -635,8 +649,8 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
       join(o.out, "index.html"),
       page({
         path: "/",
-        title: "Aphrody",
-        body: `<section class="hero"><div class="pet" role="img" aria-label="Aphrody"></div><h1>Aphrody</h1>
+        title: brand,
+        body: `<section class="hero"><img class="hero-mark" src="/icon.svg" alt="" width="72" height="72"><h1>${brand}</h1>
 <p class="lead">Runtime ${link(o.repo, `https://github.com/${o.repo}`)}${latest ? `, release ${link(latest.tag, latest.url)}` : ""}.</p>
 ${runtimeInstallCommands(o.origin)}
 <div class="btns"><a class="btn" href="/docs">Runtime docs</a><a class="btn tonal" href="/downloads">Downloads</a></div></section>`,
@@ -749,6 +763,26 @@ ${installers.length ? `<div class="cmds">${installers.map(i => cmd(i.label, i.co
 </section>`;
 }
 
+/** En-tête de l'accueil du site du runtime : ce qu'est le fork, commandes d'installation, liens. */
+export function renderRuntimeHero(d: SiteData, o: BuildOptions): string {
+  const rt = d.runtime!;
+  const latest = latestRuntimeRelease(o.releases);
+  const host = new URL(o.origin).host;
+  const commands = [
+    cmd("Linux and macOS (bash)", `curl -fsSL ${o.origin}/install | bash`),
+    cmd("Windows (PowerShell)", `powershell -c "irm ${host}/install.ps1|iex"`),
+    ...(rt.npm ? [cmd("npm", `npm install -g ${rt.npm.name}`)] : []),
+  ];
+  return `<section class="hero">
+<img class="hero-mark" src="/icon.svg" alt="" width="72" height="72">
+<p class="eyebrow">Aphrody Bun</p>
+<h1>The Bun runtime of Aphrody</h1>
+<p class="lead">${link(rt.repo, `https://github.com/${rt.repo}`)} is a fork of ${link(rt.upstream.name, rt.upstream.url)} ${escapeHtml(rt.upstream.version)}: upstream arrives by merge and the Aphrody patches stay on top${latest ? `. Current release: ${link(latest.tag, latest.url)}` : ""}.</p>
+<div class="cmds">${commands.join("")}</div>
+<div class="btns"><a class="btn" href="/docs">Documentation</a><a class="btn tonal" href="/downloads">Downloads</a><a class="btn outlined" href="https://github.com/${escapeHtml(rt.repo)}">GitHub</a></div>
+</section>`;
+}
+
 /** Pied de page : sources du build et licences, tirées des données. */
 function siteFooter(d: SiteData | null, o: BuildOptions): string {
   const sources = [
@@ -774,7 +808,8 @@ function siteFooter(d: SiteData | null, o: BuildOptions): string {
     ["Docs", "/docs"],
     ["Downloads", "/downloads"],
     ["Release notes", "/release-notes"],
-    ...(d
+    ...(d?.runtime && !d.distribution ? [["Runtime", "/runtime"]] : []),
+    ...(d?.distribution
       ? [
           ["Components", "/components"],
           ["Security", "/security"],
@@ -830,7 +865,7 @@ ${runtimeInstallCommands(o.origin)}`;
         `<li><a href="${escapeHtml(r.url)}">${escapeHtml(r.tag)}</a> <span class="muted">${escapeHtml(r.publishedAt.slice(0, 10))}</span></li>`,
     )
     .join("");
-  const base = latest.tag.replace(/^aphrody-v/, "").replace(/-aphrody\.\d+$/, "");
+  const base = latest.tag.replace(/^(?:bun-v|aphrody-v)/, "").replace(/-aphrody\.\d+$/, "");
   const npm = data?.runtime?.npm;
   return `${head}
 <p class="banner" data-latest-tag="${escapeHtml(latest.tag)}" data-repo="${escapeHtml(o.repo)}" hidden></p>
@@ -868,17 +903,91 @@ ${releases
   .join("\n")}`;
 }
 
+export function renderProductBenchmarks(report: any, hasGraph = false): string {
+  if (!report || report.schema !== 1 || !Array.isArray(report.cases)) return "";
+  const measured = report.cases.filter((entry: any) => entry.status === "measured");
+  const body = report.cases
+    .map((entry: any) => {
+      const row =
+        entry.status === "measured" && Number.isFinite(entry.interval?.ratio)
+          ? "<td>" +
+            escapeHtml(entry.metric) +
+            "</td><td>" +
+            Number(entry.left.median).toFixed(4) +
+            "</td><td>" +
+            Number(entry.right.median).toFixed(4) +
+            "</td><td>" +
+            Number(entry.interval.ratio).toFixed(3) +
+            " [" +
+            Number(entry.interval.low).toFixed(3) +
+            ", " +
+            Number(entry.interval.high).toFixed(3) +
+            "]</td>"
+          : '<td colspan="4">' + escapeHtml(entry.status) + ": " + escapeHtml(entry.reason ?? "") + "</td>";
+      return '<tr><th scope="row">' + escapeHtml(entry.id) + "</th>" + row + "</tr>";
+    })
+    .join("");
+  const details = report.cases
+    .map(
+      (entry: any) =>
+        "<details><summary>" +
+        escapeHtml(entry.id) +
+        "</summary><p>" +
+        escapeHtml(entry.description) +
+        "</p>" +
+        (entry.status === "measured"
+          ? "<p>" +
+            entry.left.n +
+            " samples; p95 Bun " +
+            Number(entry.left.p95).toFixed(4) +
+            " ms, reference " +
+            Number(entry.right.p95).toFixed(4) +
+            " ms.</p>"
+          : "<p>" + escapeHtml(entry.reason ?? entry.status) + "</p>") +
+        "</details>",
+    )
+    .join("");
+  return [
+    '<section id="product-benchmarks"><h2>Bun products against their reference implementations</h2>',
+    "<p>" +
+      escapeHtml(report.generatedAt) +
+      " · SSH VPS · Bun " +
+      escapeHtml(report.environment?.bunVersion ?? "") +
+      " · " +
+      measured.length +
+      " measured cases. Python, .NET, Tailwind CSS and Next.js use checked fixtures and paired samples.</p>",
+    "<p>Reference / Bun above 1 favours Bun for this workload. Intervals are paired bootstrap 95% intervals. Process startup and internal operation timings are reported separately. Unsupported hosts receive no timing.</p>",
+    '<p><a href="/benchmarks/products/README.md">Complete methodology and report</a> · <a href="/benchmarks/products/product-benchmarks.json">Raw paired samples and provenance (JSON)</a></p>',
+    hasGraph
+      ? '<figure><img src="/benchmarks/products/comparison.png" alt="Reference to Bun time ratios with 95 percent paired bootstrap intervals" loading="lazy"><figcaption>Measured workloads only; the dashed reference is parity.</figcaption></figure>'
+      : "",
+    '<div class="table-wrap"><table><thead><tr><th>Workload</th><th>Metric</th><th>Bun median ms</th><th>Reference median ms</th><th>Reference / Bun [95% CI]</th></tr></thead><tbody>' +
+      body +
+      "</tbody></table></div>",
+    details,
+    "</section>",
+  ].join("\n");
+}
+
 function renderBenchmarks(reports: PerfReport[], o: BuildOptions, latest: Release | undefined): string {
-  const base = latest?.tag.replace(/^aphrody-v/, "").replace(/-aphrody\.\d+$/, "");
+  const base = latest?.tag.replace(/^(?:bun-v|aphrody-v)/, "").replace(/-aphrody\.\d+$/, "");
   const intro = `<h1>Benchmarks</h1>
-<p class="lead">The Aphrody runtime against upstream Bun of the same base version. Every number on this page comes from a measured run of <code>scripts/aphrody/perf-gate.ts</code>.</p>`;
+<p class="lead">Measured runtime and product workloads. Each table identifies its binaries, source, measurement method and execution host.</p>`;
   const results = reports.length
     ? `${o.perfRun ? `<p>Source: <a href="${escapeHtml(o.perfRun)}">CI run</a> of the <code>aphrody-perf</code> workflow (artifacts <code>perf-report-*</code>).</p>` : ""}${reports.map(renderPerfTable).join("\n")}`
     : `<p class="banner">No measured report was attached to this build of the site. Run the commands below to measure on your machine.</p>`;
   const thresholds = existsSync(join(o.src, "bench/aphrody/thresholds.json"))
     ? `<p>Thresholds live in <a href="https://github.com/${o.repo}/blob/main/bench/aphrody/thresholds.json"><code>bench/aphrody/thresholds.json</code></a>: a case fails when the runtime median exceeds upstream by more than its ratio <em>and</em> its absolute delta.</p>`
     : "";
+  const productPath = join(o.src, "docs/aphrody/benchmarks/latest/product-benchmarks.json");
+  const products = existsSync(productPath)
+    ? renderProductBenchmarks(
+        JSON.parse(readFileSync(productPath, "utf8")),
+        existsSync(join(dirname(productPath), "comparison.png")),
+      )
+    : "";
   return `${intro}
+${products}
 ${results}
 <h2 id="what">What is measured</h2>
 <ul>${Object.values(PERF_LABELS)
@@ -918,7 +1027,7 @@ if (import.meta.main) {
   const result = await build({
     src,
     out: resolve(out),
-    origin: option("--origin", "https://aphrody.com")!.replace(/\/$/, ""),
+    origin: option("--origin", "https://bun.aphrody.com")!.replace(/\/$/, ""),
     commit,
     repo,
     perf: option("--perf"),

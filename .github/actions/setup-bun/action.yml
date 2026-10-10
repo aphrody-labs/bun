@@ -58,7 +58,7 @@ runs:
         }
         latest() {
           api "releases?per_page=50" |
-            jq -r '[.[] | select((.draft | not) and (.prerelease | not) and (.tag_name | startswith("aphrody-v")))][0].tag_name // empty'
+            jq -r '[.[] | select((.draft | not) and (.prerelease | not) and (.tag_name | test("^(bun-v|aphrody-v)")))][0].tag_name // empty'
         }
 
         version="${BUN_VERSION:-latest}"
@@ -71,10 +71,11 @@ runs:
             if [ -z "$tag" ]; then echo "::notice::$repo has no canary release, installing the latest release"; tag=$(latest); fi;;
           aphrody-v*) tag="$version";;
           [0-9]*.[0-9]*.[0-9]*)
-            tag=$(api "releases?per_page=100" |
+            tag=$(api "releases/tags/bun-v$version" 2>/dev/null | jq -r 'select((.draft | not) and (.prerelease | not)) | .tag_name // empty' || true)
+            if [ -z "$tag" ]; then tag=$(api "releases?per_page=100" |
               jq -r --arg base "$version" '[.[] | select(.draft | not) | .tag_name
                 | select(startswith("aphrody-v" + $base + "-aphrody."))]
-                | sort_by(sub("^.*\\."; "") | tonumber) | last // empty')
+                | sort_by(sub("^.*\\."; "") | tonumber) | last // empty'); fi
             if [ -z "$tag" ]; then echo "::notice::$repo has no build of Bun $version, installing the latest release"; tag=$(latest); fi;;
           *) echo "::error::unsupported bun-version '$BUN_VERSION'"; exit 1;;
         esac

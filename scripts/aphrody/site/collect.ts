@@ -1,10 +1,10 @@
-// Collecte les données du site aphrody.com depuis les dépôts réels : rien de ce qui décrit un produit, un composant,
+// Collecte les données du site bun.aphrody.com (runtime seul) ou de la distribution depuis les dépôts réels : rien de ce qui décrit un produit, un composant,
 // une version ou un chiffre n'est écrit à la main dans les gabarits (pages.ts, build.ts), tout vient d'ici.
 //
 //   bun scripts/aphrody/site/collect.ts --out site-data.json
 //       [--runtime <checkout aphrody-labs/bun>] [--runtime-ref HEAD]
 //       [--distribution <checkout aphrody-labs/aphrody>] [--distribution-ref HEAD]
-//       [--org aphrody-labs] [--fork-author contact@aphrody.com] [--downloads <url de latest.json>] [--offline]
+//       [--org aphrody-labs] [--fork-author contact@aphrody.com] [--downloads <url de latest.json> | none] [--offline]
 //
 // Sources :
 //   runtime       objets Git du fork (git log, ls-tree, cat-file ; jamais le worktree) : commits du fork, pages de
@@ -98,6 +98,8 @@ export type SiteData = {
     } | null;
     npm: { name: string; version?: string } | null;
     image: { name: string; dockerfile: string; release: string; pull: string } | null;
+    /** APHRODY.md du fork (rôle, patches, amont, releases) : sections de l'accueil de bun.aphrody.com. */
+    guide: string;
   } | null;
   distribution: {
     repo: string;
@@ -525,6 +527,7 @@ export function collectRuntime(
       : null,
     npm: npmName ? { name: npmName } : null,
     image: imageName ? { name: imageName, dockerfile, release, pull: "not checked" } : null,
+    guide: tree.text("APHRODY.md") ?? "",
   };
 }
 
@@ -931,7 +934,8 @@ export async function collect(o: CollectOptions): Promise<SiteData> {
   } else if (!o.offline) errors.push("GitHub: no token (GH_TOKEN or GITHUB_TOKEN), organization not collected");
 
   // Artefacts d'un profil privé : servis par downloads.aphrody.com à qui les connaît, pas listés par le site.
-  const downloads = await soft("downloads", () => downloadsManifest(o.downloadsUrl));
+  // Le manifeste est celui de la distribution : le site du runtime seul (`--downloads none`) ne le lit pas.
+  const downloads = o.downloadsUrl ? await soft("downloads", () => downloadsManifest(o.downloadsUrl)) : null;
   if (downloads) {
     const described = new Map((distribution?.catalogue ?? []).map(c => [c.id, c.description]));
     const withheld = new Set(
@@ -973,7 +977,9 @@ if (import.meta.main) {
     author: option("--fork-author", "contact@aphrody.com")!,
     offline: args.includes("--offline"),
     token: process.env.GH_TOKEN || process.env.GITHUB_TOKEN || undefined,
-    downloadsUrl: option("--downloads", "https://downloads.aphrody.com/latest.json")!,
+    downloadsUrl: ((url: string) => (url === "none" ? "" : url))(
+      option("--downloads", "https://downloads.aphrody.com/latest.json")!,
+    ),
   });
   await Bun.write(out, JSON.stringify(data, null, 2) + "\n");
   for (const w of data.warnings) console.warn(`warning: ${w}`);

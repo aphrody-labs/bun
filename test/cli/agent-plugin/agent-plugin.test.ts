@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "fs";
-import { bunEnv, bunExe, tempDir } from "harness";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "fs";
+import { bunEnv, bunExe, isASAN, tempDir } from "harness";
 import { join, relative, resolve } from "path";
 import { lspExtensions, mcpTools } from "../../../packages/bun-agent-plugin/src/catalog.ts";
 import { generate } from "../../../packages/bun-agent-plugin/src/generate.ts";
@@ -87,14 +87,18 @@ describe("generate", () => {
     }
   });
 
-  test("is deterministic and leaks no personal path, address or credential", () => {
-    const again = generate({ root, pkg });
-    expect([...again.keys()]).toEqual([...files.keys()]);
-    for (const [k, v] of files) {
-      expect(again.get(k)).toEqual(v);
-      if (typeof v === "string") expect(forbiddenIn(v)).toBeUndefined();
-    }
-  });
+  test(
+    "is deterministic and leaks no personal path, address or credential",
+    () => {
+      const again = generate({ root, pkg });
+      expect([...again.keys()]).toEqual([...files.keys()]);
+      for (const [k, v] of files) {
+        expect(again.get(k)).toEqual(v);
+        if (typeof v === "string") expect(forbiddenIn(v)).toBeUndefined();
+      }
+    },
+    isASAN ? 15000 : 5000,
+  );
 
   test("declares the tools of `bun mcp` and the languages of `bun lsp` as their sources define them", () => {
     const tools = mcpTools(root).map(t => t.name);
@@ -142,14 +146,18 @@ describe("generate", () => {
     expect(lspExtensions(String(dir))).toEqual({ ".cc": "cpp", ".h": "cpp", ".rs": "rust" });
   });
 
-  test("takes more skill directories", () => {
-    using dir = tempDir("agent-plugin-skills", {
-      "extra-skill/SKILL.md": "---\nname: extra-skill\ndescription: An extra skill\n---\n\nBody\n",
-    });
-    const more = generate({ root, pkg, skillDirs: [String(dir)] });
-    expect(String(more.get("codex/skills/extra-skill/SKILL.md"))).toContain("Body");
-    expect(more.get("claude/meta.json")).not.toEqual(files.get("claude/meta.json"));
-  });
+  test(
+    "takes more skill directories",
+    () => {
+      using dir = tempDir("agent-plugin-skills", {
+        "extra-skill/SKILL.md": "---\nname: extra-skill\ndescription: An extra skill\n---\n\nBody\n",
+      });
+      const more = generate({ root, pkg, skillDirs: [String(dir)] });
+      expect(String(more.get("codex/skills/extra-skill/SKILL.md"))).toContain("Body");
+      expect(more.get("claude/meta.json")).not.toEqual(files.get("claude/meta.json"));
+    },
+    isASAN ? 15000 : 5000,
+  );
 });
 
 describe("rewriteCommand", () => {
@@ -352,6 +360,40 @@ describe("bun agent-plugin", () => {
       expect(a.stderr + b.stderr).toBe("");
       expect(tree(embedded)).toEqual(tree(fromCheckout));
       expect([a.exitCode, b.exitCode]).toEqual([0, 0]);
+    },
+    SPAWN_TIMEOUT,
+  );
+  test.concurrent(
+    "the published package installs from bundled plugins without a checkout",
+    async () => {
+      using directory = tempDir("agent-plugin-published", {});
+      const standalone = join(String(directory), "package");
+      for (const path of ["bin", "src", "package.json"])
+        cpSync(join(pkg, path), join(standalone, path), { recursive: true });
+      for (const [path, contents] of generate({ root, pkg })) {
+        const destination = join(standalone, "plugins", path);
+        mkdirSync(resolve(destination, ".."), { recursive: true });
+        writeFileSync(destination, contents);
+      }
+      const home = join(String(directory), "home");
+      mkdirSync(home);
+      const { stdout, stderr, exitCode } = await run(
+        [
+          bunExe(),
+          join(standalone, "bin/bun-agent-plugin.ts"),
+          "install",
+          "codex",
+          "--home",
+          home,
+          "--dry-run",
+          "--json",
+        ],
+        { cwd: home },
+      );
+      expect(stderr).toBe("");
+      expect(stdout).toContain("codex");
+      expect(existsSync(join(home, ".codex/config.toml"))).toBe(false);
+      expect(exitCode).toBe(0);
     },
     SPAWN_TIMEOUT,
   );

@@ -10,9 +10,9 @@ name: Aphrody release
 # platform (linux-gnu in debian:bullseye, glibc 2.31; musl in Alpine).
 # Assets use upstream's names: bun-<os>-<arch>[-musl].zip, x64 also re-zipped
 # as -baseline (upload-release.sh), + SHA256SUMS.txt on the GitHub Release
-# aphrody-v<version>; then @aphrody/bun-runtime and its platform packages go
+# bun-v<version> (legacy aphrody-v tags also accepted); then @aphrody/bun-runtime and its platform packages go
 # to npm (scripts/aphrody/publish-runtime.ts).
-# Version: <package.json version>-aphrody.<n>, which `bun --version` prints.
+# Stable version: package.json version, without a suffix; legacy revisions remain accepted.
 
 permissions:
   contents: read
@@ -21,10 +21,11 @@ on:
   push:
     tags:
       - "aphrody-v*"
+      - "bun-v*"
   workflow_dispatch:
     inputs:
       version:
-        description: "<X.Y.Z>-aphrody.<n> (empty: package.json version + -aphrody.1)"
+        description: "X.Y.Z (empty: package.json stable version); legacy Aphrody tags remain accepted"
         type: string
         required: false
       targets:
@@ -86,7 +87,7 @@ jobs:
             const env = process.env;
             const version = env.REF_TYPE === "tag" ? m.versionFromTag(env.REF_NAME)
               : env.INPUT_VERSION ? m.versionFromTag(env.INPUT_VERSION)
-              : m.computeRuntimeVersion(m.readBaseVersion(), 1);
+              : m.readBaseVersion();
             const { base, n } = m.parseRuntimeVersion(version);
             if (base !== m.readBaseVersion())
               console.log(`::warning::${version} is not based on package.json ${m.readBaseVersion()}`);
@@ -101,7 +102,7 @@ jobs:
             const out = [
               `version=${version}`,
               `tag=${m.releaseTag(version)}`,
-              `version-tag=aphrody.${n}`,
+              `version-tag=${n ? `aphrody.${n}` : ""}`,
               `matrix=${JSON.stringify({ include })}`,
               `build=${include.length > 0}`,
               `exists=${exists}`,
@@ -386,7 +387,7 @@ jobs:
           cd dist
           ls *.zip >/dev/null 2>&1 || { echo "::error::no target built"; exit 1; }
           # The musl builds are the fork's primary Linux assets (Alpine first): never release without one that was asked for.
-          for t in $(echo "$MATRIX" | jq -r '.include[] | select(.abi == "musl") | .triplet'); do
+          for t in $(echo "$MATRIX" | jq -r '.include[] | .triplet'); do
             [ -f "$t.zip" ] || { echo "::error::$t.zip, a primary Linux asset, failed to build or run"; exit 1; }
           done
           notes="Aphrody fork of Bun, built from ${GITHUB_SHA} like upstream: cross-compiled on linux arm64 against pinned sysroots (musl: Alpine, the primary Linux assets; linux-gnu: glibc 2.31), release profile, LTO ${{ inputs.lto || 'on' }}.

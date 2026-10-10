@@ -10,6 +10,18 @@ chaque lot. Contexte permanent : [APHRODY.md](APHRODY.md) (ce que le fork fourni
 
 ## 1. Cible
 
+- 2026-10-10: the isolated VPS Ubuntu owner factory built the changed debug
+  runtime and passed 122 tests, with one POSIX host skip and zero failures
+  across ten release, installer, plugin, vendor, benchmark and site suites.
+  This is scoped debug qualification; production benchmarks, the complete
+  runtime suite, other platform builds and registry uploads remain open.
+
+- 2026-10-10: native Windows version synchronization is provided by
+  `scripts/aphrody/win/version-sync.ts` (`bun run bun:windows`), defaulting to
+  stable source version 1.4.4. It audits tracked scripts/infrastructure and
+  separates coupled source manifests from checksum-qualified release pins.
+  See `docs/aphrody/windows-version-sync.md` for the plan/apply/check contract.
+
 - **Objectif du fork : étendre Bun (modules, plugins, intégrations) sans rien perdre en vitesse.** Le temps de
   démarrage, la mémoire au repos et le débit du binaire final restent au niveau d'upstream ou meilleurs : toute
   extension est paresseuse (zéro coût tant qu'elle n'est pas importée), pas de travail ajouté au chemin de

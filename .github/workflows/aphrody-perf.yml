@@ -111,7 +111,7 @@ jobs:
             gh run download "$RUN_ID" -R "$GITHUB_REPOSITORY" -n "$TRIPLET" -D .
             src="run $RUN_ID"
           else
-            tag="$(gh release list -R "$GITHUB_REPOSITORY" --limit 30 --json tagName -q '[.[] | select(.tagName | startswith("aphrody-v"))][0].tagName')"
+            tag="$(gh release list -R "$GITHUB_REPOSITORY" --limit 30 --json tagName -q '[.[] | select(.tagName | test("^(bun-v|aphrody-v)"))][0].tagName')"
             [ -n "$tag" ] || { echo "::error::aucune release aphrody-v*"; exit 2; }
             gh release download "$tag" -R "$GITHUB_REPOSITORY" -p "$TRIPLET.zip" -D .
             src="release $tag"

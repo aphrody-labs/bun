@@ -31,7 +31,10 @@ describe("aphrody runtime versions", () => {
     expect(versionFromTag("refs/tags/aphrody-v1.4.3-aphrody.2")).toBe("1.4.3-aphrody.2");
     expect(versionFromTag("1.4.3-aphrody.2")).toBe("1.4.3-aphrody.2");
     expect(parseRuntimeVersion("1.4.3-aphrody.7")).toEqual({ base: "1.4.3", n: 7 });
-    expect(() => versionFromTag("bun-v1.4.3")).toThrow();
+    expect(versionFromTag("bun-v1.4.4")).toBe("1.4.4");
+    expect(versionFromTag("refs/tags/bun-v1.4.4")).toBe("1.4.4");
+    expect(parseRuntimeVersion("1.4.4")).toEqual({ base: "1.4.4", n: 0 });
+    expect(releaseTag("1.4.4")).toBe("bun-v1.4.4");
     expect(() => parseRuntimeVersion("1.4.3-aphrody.01")).toThrow();
   });
 });

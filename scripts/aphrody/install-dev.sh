@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Clones and builds the aphrody-labs/bun fork in one command (Ubuntu/Debian, Alpine, macOS):
 #
-#   curl -fsSL https://aphrody.com/bun/setup.sh | bash
+#   curl -fsSL https://bun.aphrody.com/bun/setup.sh | bash
 #   curl -fsSL https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install-dev.sh | bash
 #   ... | bash -s -- --dry-run          # any scripts/aphrody/setup.ts option (--dir, --ref, --no-build, --packages)
 #

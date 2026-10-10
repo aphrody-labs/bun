@@ -123,7 +123,7 @@ const groupBy = <T>(list: T[], key: (t: T) => string) => {
 export const latestRuntimeRelease = (releases: Release[] | null) => releases?.find(r => !r.prerelease) ?? releases?.[0];
 
 const runtimeVersion = (d: SiteData, ctx: PageContext) =>
-  latestRuntimeRelease(ctx.releases)?.tag.replace(/^aphrody-v/, "") ?? d.runtime?.upstream.version ?? "";
+  latestRuntimeRelease(ctx.releases)?.tag.replace(/^(?:bun-v|aphrody-v)/, "") ?? d.runtime?.upstream.version ?? "";
 
 function sourceLine(d: SiteData): string {
   const parts: string[] = [];
@@ -619,7 +619,75 @@ export function documentPages(d: SiteData, ctx: PageContext): GeneratedPage[] {
   });
 }
 
+// ---------------------------------------------------------------------------------------------------------------
+// Site du runtime seul (bun.aphrody.com) : accueil depuis APHRODY.md du fork, page /runtime
+
+/**
+ * Liens relatifs d'un document du fork : une page de `docs/` devient sa route du site (`/docs/...`), tout autre
+ * chemin pointe sur GitHub au commit publié ; les liens absolus et les ancres restent tels quels.
+ */
+export function forkLinks(markdown: string, repo: string, commit: string): string {
+  return markdown.replace(/(!?)\[([^\]\n]+)\]\(([^)\s]+)\)/g, (all, bang: string, text: string, href: string) => {
+    if (/^(https?:|mailto:|#|\/)/.test(href)) return all;
+    const [path = "", anchor] = href.replace(/^\.\//, "").split("#");
+    const hash = anchor ? `#${anchor}` : "";
+    const page = /^docs\/(.+)\.mdx?$/.exec(path);
+    if (page && !bang && !page[1]!.startsWith("aphrody/"))
+      return `[${text}](${`/docs/${page[1]}`.replace(/\/index$/, "")}${hash})`;
+    const kind = bang ? "raw" : "blob";
+    return `${bang}[${text}](${repoUrl(repo)}/${kind}/${commit}/${path.replace(/\/$/, "")}${hash})`;
+  });
+}
+
+export function runtimeHomePage(d: SiteData, ctx: PageContext): GeneratedPage | null {
+  const rt = d.runtime;
+  if (!rt) return null;
+  const gh = repoUrl(rt.repo);
+  const latest = latestRuntimeRelease(ctx.releases);
+  const rows: string[][] = [
+    [
+      "Runtime",
+      `${code(runtimeVersion(d, ctx))}, based on Bun ${esc(rt.upstream.version)}`,
+      latest ? link(latest.tag, latest.url) : link("Releases", `${gh}/releases`),
+    ],
+    ["Source", `${link(short(rt.commit), `${gh}/commit/${rt.commit}`)} (${day(rt.date)})`, link(rt.repo, gh)],
+    [
+      "Upstream",
+      rt.lastUpstreamMerge
+        ? `last merge ${link(rt.lastUpstreamMerge.sha, `${gh}/commit/${rt.lastUpstreamMerge.sha}`)} (${day(rt.lastUpstreamMerge.date)})`
+        : "",
+      link(rt.upstream.name, rt.upstream.url),
+    ],
+    [
+      "Fork commits",
+      `${rt.commits.count} since ${day(rt.commits.first)} (merge commits excluded)`,
+      link("Runtime", "/runtime"),
+    ],
+  ];
+  if (rt.npm)
+    rows.push([
+      "npm",
+      `${code(rt.npm.name)}${rt.npm.version ? ` ${code(rt.npm.version)}` : ""}`,
+      link("npmjs.com", `https://www.npmjs.com/package/${rt.npm.name}`),
+    ]);
+  const { body } = splitTitle(rt.guide);
+  return {
+    path: "/",
+    title: "Aphrody Bun",
+    description: `The Bun runtime of Aphrody: ${rt.upstream.name} ${rt.upstream.version} with the Aphrody patches, merged from upstream and released as ${rt.repo}.`,
+    tab: "",
+    markdown: [
+      `## Current versions\n\n${table(["Item", "Version", "Source"], rows)}`,
+      publicLinks(forkLinks(body, rt.repo, rt.commit), ctx.origin),
+      sourceLine(d),
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
+  };
+}
+
 export function generatedPages(d: SiteData, ctx: PageContext): GeneratedPage[] {
+  if (!d.distribution) return [runtimeHomePage(d, ctx), runtimePage(d, ctx)].filter((p): p is GeneratedPage => !!p);
   return [homePage(d, ctx), componentsPage(d, ctx), runtimePage(d, ctx), m3Page(d), ...documentPages(d, ctx)].filter(
     (p): p is GeneratedPage => !!p,
   );

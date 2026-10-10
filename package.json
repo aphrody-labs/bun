@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "bun",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "workspaces": [
     "./packages/bun-types"
   ],
@@ -25,6 +25,7 @@
     "@types/node": "26.2.0"
   },
   "scripts": {
+    "bun:windows": "bun scripts/aphrody/win/version-sync.ts",
     "build": "bun --silent run build:debug",
     "ci:find": "bun scripts/find-build.ts",
     "ci:status": "bun scripts/find-build.ts --status",

@@ -3,7 +3,7 @@
   "name": "Aphrody runtime",
   "seo": {
     "metatags": {
-      "canonical": "https://aphrody.com/docs"
+      "canonical": "https://bun.aphrody.com/docs"
     }
   },
   "colors": {
@@ -29,7 +29,7 @@
     "links": [
       {
         "label": "Install",
-        "href": "https://aphrody.com/docs/installation",
+        "href": "https://bun.aphrody.com/docs/installation",
         "icon": "download",
         "primary": true
       }
@@ -680,7 +680,7 @@
       {
         "tab": "Release notes",
         "icon": "newspaper",
-        "href": "https://aphrody.com/blog"
+        "href": "https://bun.aphrody.com/release-notes"
       },
       {
         "tab": "Feedback",

@@ -8,11 +8,11 @@ One command clones `aphrody-labs/bun`, installs everything the build needs and e
 <CodeGroup>
 
 ```bash Linux & macOS
-curl -fsSL https://aphrody.com/bun/setup.sh | bash
+curl -fsSL https://bun.aphrody.com/bun/setup.sh | bash
 ```
 
 ```powershell Windows
-irm https://aphrody.com/bun/setup.ps1 | iex
+irm https://bun.aphrody.com/bun/setup.ps1 | iex
 ```
 
 </CodeGroup>
@@ -51,12 +51,12 @@ Every step checks its own result first. A second run, or a run after a failure, 
 Options go after `bash -s --` on Linux and macOS, or in `APHRODY_BUN_SETUP_ARGS` on Windows. In a checkout, pass them to the script itself:
 
 ```bash
-curl -fsSL https://aphrody.com/bun/setup.sh | bash -s -- --dry-run
+curl -fsSL https://bun.aphrody.com/bun/setup.sh | bash -s -- --dry-run
 bun scripts/aphrody/setup.ts --no-build
 ```
 
 ```powershell
-$env:APHRODY_BUN_SETUP_ARGS = "--dry-run"; irm https://aphrody.com/bun/setup.ps1 | iex
+$env:APHRODY_BUN_SETUP_ARGS = "--dry-run"; irm https://bun.aphrody.com/bun/setup.ps1 | iex
 ```
 
 | Option         | Effect                                                                                                                  |

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   contentHash,
   nextVersion,
+  nextStableVersion,
   npmName,
   PACKAGES,
   publishManifest,
@@ -11,6 +12,11 @@ import {
 const spec = (dir: string) => PACKAGES.find(p => p.dir === dir)!;
 
 describe("nextVersion", () => {
+  test("stable releases have no Aphrody suffix and advance independent occupied versions", () => {
+    expect(nextStableVersion("1.4.4", ["1.4.3", "1.4.4-aphrody.1"])).toEqual({ next: "1.4.4", previous: undefined });
+    expect(nextStableVersion("0.1.0", ["0.1.0", "0.1.2", "0.2.0"])).toEqual({ next: "0.1.3", previous: "0.1.2" });
+    expect(() => nextStableVersion("1.4.4-aphrody.1", [])).toThrow();
+  });
   test("starts at aphrody.1", () => {
     expect(nextVersion("1.4.3", [])).toEqual({ next: "1.4.3-aphrody.1", previous: undefined });
   });
