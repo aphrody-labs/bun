@@ -8,7 +8,7 @@
 - [x] Pass the D3D12 JavaScript gate with the rebuilt Bun executable.
 - [x] Qualify the existing wgpu probe with exact compute readback on hardware.
 - [x] Expose the shared GPU SDK through Buv and pass the six provenance/export gates.
-- [ ] Qualify Buv GpuRuntime WGSL/CUDA calls with canonical aphrody_ffi: NVIDIA NVRTC 13.4.59 is installed with verified hashes; the provider build was stopped at 18 MB free disk, and its cudarc build must target CUDA 13.4. No SDK hardware activation is claimed.
+- [x] Qualify Buv GpuRuntime WGSL/D3D12 and CUDA through canonical aphrody_ffi with CUDA 13.4/NVRTC 13.4.59: exact 37-value readbacks and the combined PyCUDA/Buv/PyJS gate pass; the complete Python suite passes 43 tests.
 - [x] Qualify PyCUDA computation through the shared Buv/PyJS CPython host.
 - [x] Port the Aphrody Rust kernel patches onto pinned upstream Linux 7.2.9 (`dc79e99b05799`).
 - [x] Build the new kernel, pass driver Clippy and boot seven accelerator selftests in QEMU.
@@ -18,7 +18,7 @@
 - [ ] Finish six-target validation for the Node pointer/pool batch; 129 native tests pass with four skips, and the module suite passes after updating the fork builtin list.
 - [x] Pin Alpine packaging to the qualified fork commit and validate 637 effective config values (`aports` commit `f6e5bf63c639`).
 - [x] Port WSL dxgkrnl onto Linux 7.2.9, pass x64/ARM64 compilation and seven x64 QEMU accelerator tests (`d4764f587115`).
-- [ ] Publish the WSL branch: GitHub rejects a missing history object from the shallow source; a complete-history publication checkout is being fetched. Strict checkpatch retains 13 inherited protocol-array errors, with zero new errors.
+- [x] Publish and verify WSL branch `claude/aphrody-wsl-linux-7.2` at `d4764f587115` using complete history; the existing Microsoft 6.18 branch remains unchanged. Strict checkpatch retains 13 inherited protocol-array errors, with zero new errors.
 - [ ] Build, boot and measure the new kernel before host activation.
 
 ## Windows version synchronization

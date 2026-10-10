@@ -189,15 +189,13 @@ nativeTest.concurrent(
   },
 );
 
-test.skipIf(process.env.BUN_TEST_PYCUDA !== "1")(
-  "PyCUDA computes through the shared Buv and PyJS host",
-  async () => {
-    expect(python).toBeTruthy();
-    expect(process.env.BUN_PYTHON_HOST_LIBRARY).toBeTruthy();
-    expect(process.env.BUN_PYTHON_LIBPYTHON).toBeTruthy();
-    const result = await run([
-      "-e",
-      `
+test.skipIf(process.env.BUN_TEST_PYCUDA !== "1")("PyCUDA computes through the shared Buv and PyJS host", async () => {
+  expect(python).toBeTruthy();
+  expect(process.env.BUN_PYTHON_HOST_LIBRARY).toBeTruthy();
+  expect(process.env.BUN_PYTHON_LIBPYTHON).toBeTruthy();
+  const result = await run([
+    "-e",
+    `
     import { Python } from "buv:python";
     import { Python as PyJS } from "pyjs:python";
     if (Python !== PyJS) throw new Error("Python host alias mismatch");
@@ -236,13 +234,36 @@ finally:
     const result = py.evalJSON("verified");
     if (JSON.stringify(result) !== JSON.stringify(Array.from({length: 37}, (_, i) => i * 2)))
       throw new Error("CUDA readback mismatch");
-    console.log("PYCUDA_SHARED_HOST_OK");
+    if (process.env.BUN_TEST_BUV_GPU === "1") {
+      if (!process.env.BUV_RUNTIME_LIB) throw new Error("GPU qualification requires the canonical provider path");
+      const { GpuRuntime } = await import(${JSON.stringify(new URL("../../../../packages/buv/gpu.ts", import.meta.url).href)});
+      using gpu = GpuRuntime.load({ libraryPath: process.env.BUV_RUNTIME_LIB });
+      const report = await gpu.info();
+      if (!report.selected?.nvidia || !report.cuda?.nvrtcLoaded) throw new Error("NVIDIA GPU/NVRTC unavailable");
+      if (process.platform === "win32" && report.selected.backend !== "Dx12") throw new Error("D3D12 backend not selected");
+      const expected = Array.from({length: 37}, (_, i) => i * 2);
+      const wgsl = await gpu.wgsl({
+        shader: "@group(0) @binding(0) var<storage, read_write> data: array<u32>; @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3<u32>) { if (id.x < arrayLength(&data)) { data[id.x] *= 2u; } }",
+        workgroups: [1, 1, 1],
+        data: Uint32Array.from({length: 37}, (_, i) => i),
+      });
+      const wgslValues = new Uint32Array(wgsl.data.buffer, wgsl.data.byteOffset, 37);
+      if (JSON.stringify([...wgslValues]) !== JSON.stringify(expected)) throw new Error("WGSL readback mismatch");
+      const native = await gpu.cuda({
+        source: 'extern "C" __global__ void twice(float *data, unsigned int n) { unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; if (i < n) data[i] *= 2.0f; }',
+        kernel: "twice",
+        data: Float32Array.from({length: 37}, (_, i) => i),
+      });
+      if (JSON.stringify([...native.data]) !== JSON.stringify(expected)) throw new Error("Native CUDA readback mismatch");
+    }
+    console.log(process.env.BUN_TEST_BUV_GPU === "1" ? "PYCUDA_SHARED_HOST_GPU_SDK_OK" : "PYCUDA_SHARED_HOST_OK");
   `,
-    ]);
-    expect(result.out).toBe("PYCUDA_SHARED_HOST_OK");
-    expect(result.code).toBe(0);
-  },
-);
+  ]);
+  expect(result.out).toBe(
+    process.env.BUN_TEST_BUV_GPU === "1" ? "PYCUDA_SHARED_HOST_GPU_SDK_OK" : "PYCUDA_SHARED_HOST_OK",
+  );
+  expect(result.code).toBe(0);
+});
 
 nativeTest.concurrent("pyjs dispatches Python files through the selected host", async () => {
   success(
