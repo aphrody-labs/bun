@@ -1,0 +1,474 @@
+import type {CropRectangle} from 'mediabunny';
+import {captureDragImages} from './drag-image';
+import type {CaptureFormat} from './messages';
+import {
+	assertCanEncodeCapture,
+	CanvasCaptureRecorder,
+	getScaledCanvasSize,
+	type HtmlInCanvasElement,
+	type HtmlInCanvasRenderingContext2D,
+	resetCanvas,
+	syncCanvasSize,
+	syncDisplayCanvasSize,
+} from './recorder';
+
+const maxCanvasDimension = 32_767;
+const maxEncodedDimension = 32_766;
+
+// The capture window in viewport CSS pixels, independent of page scrolling.
+export type CaptureCrop = CropRectangle;
+
+export type CapturePreflight = {
+	readonly sourceSize: {readonly width: number; readonly height: number};
+	readonly outputSize: {readonly width: number; readonly height: number};
+};
+
+type WrappedPage = {
+	readonly canvas: HtmlInCanvasElement;
+	readonly content: HTMLElement;
+	readonly getSize: () => {readonly width: number; readonly height: number};
+	readonly restore: () => void;
+};
+
+const getPageSize = (
+	content: HTMLElement,
+	minimum: {readonly width: number; readonly height: number},
+) => ({
+	width: Math.max(minimum.width, content.scrollWidth, window.innerWidth),
+	height: Math.max(minimum.height, content.scrollHeight, window.innerHeight),
+});
+
+const getWholePageSize = () => ({
+	width: Math.max(
+		document.documentElement.scrollWidth,
+		document.body.scrollWidth,
+		window.innerWidth,
+	),
+	height: Math.max(
+		document.documentElement.scrollHeight,
+		document.body.scrollHeight,
+		window.innerHeight,
+	),
+});
+
+const validateCaptureSize = ({
+	width,
+	height,
+	crop,
+	scale,
+}: {
+	readonly width: number;
+	readonly height: number;
+	readonly crop: CaptureCrop | null;
+	readonly scale: number;
+}) => {
+	const resolvedCrop = crop ?? {
+		left: 0,
+		top: 0,
+		width,
+		height,
+	};
+	const displayDensity = Math.max(window.devicePixelRatio, scale);
+	const displayWidth = Math.max(1, Math.round(width * displayDensity));
+	const displayHeight = Math.max(1, Math.round(height * displayDensity));
+	const outputSize = getScaledCanvasSize(
+		resolvedCrop.width,
+		resolvedCrop.height,
+		scale,
+	);
+	if (displayWidth > maxCanvasDimension || displayHeight > maxCanvasDimension) {
+		throw new Error(
+			`The display canvas would be ${displayWidth}×${displayHeight} pixels; its maximum side is ${maxCanvasDimension.toLocaleString()} pixels. Reduce the scale or page size.`,
+		);
+	}
+
+	if (
+		outputSize.width > maxEncodedDimension ||
+		outputSize.height > maxEncodedDimension
+	) {
+		throw new Error(
+			`The encoded frame would be ${outputSize.width}×${outputSize.height} pixels at ${scale}× scale; its maximum even side is ${maxEncodedDimension.toLocaleString()} pixels. Reduce the scale or select a smaller area.`,
+		);
+	}
+
+	return outputSize;
+};
+
+export const getCapturePreflight = ({
+	scale,
+	crop,
+}: {
+	readonly scale: number;
+	readonly crop: CaptureCrop | null;
+}): CapturePreflight => {
+	const sourceSize = getWholePageSize();
+	return {
+		sourceSize,
+		outputSize: validateCaptureSize({
+			...sourceSize,
+			crop,
+			scale,
+		}),
+	};
+};
+
+const wrapWholePage = (): WrappedPage => {
+	const {body} = document;
+	const minimumSize = getWholePageSize();
+	const canvas = document.createElement('canvas') as HtmlInCanvasElement;
+	const content = document.createElement('div');
+	canvas.setAttribute('content', 'drawable');
+	canvas.layoutSubtree = true;
+	canvas.setAttribute('layoutsubtree', '');
+	content.setAttribute('drawable', '');
+	canvas.style.display = 'block';
+	canvas.style.position = 'relative';
+	content.style.position = 'absolute';
+	content.style.inset = '0';
+	content.style.display = 'block';
+	canvas.style.width = `${minimumSize.width}px`;
+	canvas.style.height = `${minimumSize.height}px`;
+	content.style.width = `${minimumSize.width}px`;
+	content.style.height = `${minimumSize.height}px`;
+
+	const pageNodes = [...body.childNodes];
+	body.appendChild(canvas);
+	canvas.appendChild(content);
+	// Keep both parents connected so moveBefore() preserves scroll positions,
+	// focus, and other DOM state when moving the page into the capture subtree.
+	for (const child of pageNodes) {
+		content.moveBefore(child, null);
+	}
+
+	// Plain nested canvases can be clipped at the origin during HTML-in-canvas
+	// capture. Mark them as drawable to use Chromium's nested canvas paint path.
+	const originalCanvasContent = new Map<HTMLCanvasElement, string | null>();
+	const markCanvasesDrawable = (element: Element) => {
+		const canvases = [
+			...(element instanceof HTMLCanvasElement ? [element] : []),
+			...element.querySelectorAll('canvas'),
+		];
+		for (const nestedCanvas of canvases) {
+			if (nestedCanvas.getAttribute('content') === 'drawable') {
+				continue;
+			}
+
+			if (!originalCanvasContent.has(nestedCanvas)) {
+				originalCanvasContent.set(
+					nestedCanvas,
+					nestedCanvas.getAttribute('content'),
+				);
+			}
+
+			nestedCanvas.setAttribute('content', 'drawable');
+		}
+	};
+
+	markCanvasesDrawable(content);
+	const canvasObserver = new MutationObserver((mutations) => {
+		for (const mutation of mutations) {
+			for (const node of mutation.addedNodes) {
+				if (node instanceof Element) {
+					markCanvasesDrawable(node);
+				}
+			}
+		}
+	});
+	canvasObserver.observe(content, {childList: true, subtree: true});
+
+	const initialSize = getPageSize(content, minimumSize);
+	canvas.style.width = `${initialSize.width}px`;
+	canvas.style.height = `${initialSize.height}px`;
+	content.style.width = `${initialSize.width}px`;
+	content.style.height = `${initialSize.height}px`;
+
+	// Leave nodes which are added to <body> while recording in place. Frameworks
+	// use this pattern for portals and keep <body> as the expected parent. Moving
+	// such a node into `content` makes a later framework-owned removal throw a
+	// NotFoundError because the node is no longer a child of <body>.
+
+	return {
+		canvas,
+		content,
+		getSize: () => {
+			const size = getPageSize(content, minimumSize);
+			const width = `${size.width}px`;
+			const height = `${size.height}px`;
+			if (canvas.style.width !== width) {
+				canvas.style.width = width;
+			}
+
+			if (canvas.style.height !== height) {
+				canvas.style.height = height;
+			}
+
+			if (content.style.width !== width) {
+				content.style.width = width;
+			}
+
+			if (content.style.height !== height) {
+				content.style.height = height;
+			}
+
+			return size;
+		},
+		restore: () => {
+			canvasObserver.disconnect();
+			for (const [nestedCanvas, originalContent] of originalCanvasContent) {
+				if (originalContent === null) {
+					nestedCanvas.removeAttribute('content');
+				} else {
+					nestedCanvas.setAttribute('content', originalContent);
+				}
+			}
+
+			originalCanvasContent.clear();
+
+			while (content.firstChild) {
+				body.moveBefore(content.firstChild, canvas);
+			}
+
+			canvas.remove();
+		},
+	};
+};
+
+const getFilename = (format: CaptureFormat) => {
+	const host = location.hostname.replace(/[^a-z0-9.-]+/gi, '-') || 'page';
+	const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+	return `remotion-capture-${host}-${timestamp}.${format}`;
+};
+
+export class PageCapture {
+	readonly #wrapped: WrappedPage;
+	readonly #scale: number;
+	readonly #format: CaptureFormat;
+	readonly #crop: CaptureCrop | null;
+	readonly #recorder: CanvasCaptureRecorder;
+	readonly #context: HtmlInCanvasRenderingContext2D;
+	readonly #captureCanvas: OffscreenCanvas;
+	readonly #captureContext: OffscreenCanvasRenderingContext2D;
+	readonly #matteColors: readonly string[];
+	readonly #resizeObserver: ResizeObserver;
+	readonly #dragImages: ReturnType<typeof captureDragImages>;
+	#restored = false;
+	#paintError: unknown = null;
+
+	constructor({
+		scale,
+		format,
+		crop,
+	}: {
+		readonly scale: number;
+		readonly format: CaptureFormat;
+		readonly crop: CaptureCrop | null;
+	}) {
+		this.#scale = scale;
+		this.#format = format;
+		this.#crop = crop;
+		this.#matteColors = [
+			'#fff',
+			window.getComputedStyle(document.documentElement).backgroundColor,
+			window.getComputedStyle(document.body).backgroundColor,
+		];
+		this.#wrapped = wrapWholePage();
+		const context = this.#wrapped.canvas.getContext(
+			'2d',
+		) as HtmlInCanvasRenderingContext2D | null;
+		if (!context || typeof context.drawElementImage !== 'function') {
+			this.#wrapped.restore();
+			throw new Error(
+				'The required HTML-in-canvas APIs are unavailable. Open chrome://flags/#canvas-draw-element, set Canvas Draw Element to Enabled, then fully quit and reopen the browser.',
+			);
+		}
+
+		this.#context = context;
+		this.#captureCanvas = new OffscreenCanvas(2, 2);
+		const captureContext = this.#captureCanvas.getContext('2d');
+		if (!captureContext) {
+			this.#wrapped.restore();
+			throw new Error('Could not create an OffscreenCanvas 2D context.');
+		}
+
+		this.#captureContext = captureContext;
+		try {
+			const sourceSize = this.#wrapped.getSize();
+			this.#assertValidSize(sourceSize.width, sourceSize.height);
+			syncDisplayCanvasSize(
+				this.#wrapped.canvas,
+				sourceSize.width,
+				sourceSize.height,
+				Math.max(window.devicePixelRatio, this.#scale),
+			);
+			const initialCrop = this.#crop ?? {left: 0, top: 0, ...sourceSize};
+			syncCanvasSize(
+				this.#captureCanvas,
+				initialCrop.width,
+				initialCrop.height,
+				this.#scale,
+			);
+		} catch (error) {
+			this.#wrapped.restore();
+			throw error;
+		}
+
+		this.#recorder = new CanvasCaptureRecorder({
+			format,
+			getContentRect: this.#getRecordingRect,
+			getDensity: () => this.#scale,
+			getFilename: () => getFilename(format),
+		});
+		this.#wrapped.canvas.addEventListener('paint', this.#onPaint);
+		window.addEventListener('scroll', this.#requestPaint, true);
+		this.#resizeObserver = new ResizeObserver(this.#requestPaint);
+		this.#resizeObserver.observe(this.#wrapped.content);
+		this.#dragImages = captureDragImages({
+			density: Math.max(window.devicePixelRatio, scale),
+			requestPaint: this.#requestPaint,
+		});
+	}
+
+	start = async () => {
+		const {width, height} = this.#wrapped.getSize();
+		const outputSize = this.#assertValidSize(width, height);
+		await assertCanEncodeCapture(this.#format, outputSize);
+		syncDisplayCanvasSize(
+			this.#wrapped.canvas,
+			width,
+			height,
+			Math.max(window.devicePixelRatio, this.#scale),
+		);
+		await this.#recorder.startRecording();
+		this.#requestPaint();
+	};
+
+	stop = async () => {
+		try {
+			if (this.#paintError) {
+				throw this.#paintError;
+			}
+
+			this.#draw();
+			const file = await this.#recorder.stopRecording();
+			if (!file) {
+				throw new Error('No canvas recording was available to open.');
+			}
+
+			return file;
+		} finally {
+			this.restore();
+		}
+	};
+
+	restore = () => {
+		if (this.#restored) {
+			return;
+		}
+
+		this.#restored = true;
+		this.#dragImages.dispose();
+		this.#resizeObserver.disconnect();
+		this.#wrapped.canvas.removeEventListener('paint', this.#onPaint);
+		window.removeEventListener('scroll', this.#requestPaint, true);
+		this.#recorder.dispose();
+		this.#wrapped.restore();
+	};
+
+	#assertValidSize = (width: number, height: number) => {
+		return validateCaptureSize({
+			width,
+			height,
+			crop: this.#crop,
+			scale: this.#scale,
+		});
+	};
+
+	#requestPaint = () => {
+		this.#wrapped.canvas.requestPaint?.();
+	};
+
+	#getRecordingRect = () => {
+		const crop = this.#crop;
+		if (!crop) {
+			return this.#wrapped.content.getBoundingClientRect();
+		}
+
+		return new DOMRect(crop.left, crop.top, crop.width, crop.height);
+	};
+
+	#draw = () => {
+		const {width, height} = this.#wrapped.getSize();
+		if (width <= 0 || height <= 0) {
+			return;
+		}
+
+		this.#assertValidSize(width, height);
+		const contentRect = this.#wrapped.content.getBoundingClientRect();
+		// Follow the viewport without shrinking the output at the page edges.
+		// drawImage clips any missing source pixels, leaving the matte visible.
+		const crop = this.#crop
+			? {
+					...this.#crop,
+					left: this.#crop.left - contentRect.left,
+					top: this.#crop.top - contentRect.top,
+				}
+			: {left: 0, top: 0, width, height};
+		syncDisplayCanvasSize(
+			this.#wrapped.canvas,
+			width,
+			height,
+			Math.max(window.devicePixelRatio, this.#scale),
+		);
+		syncCanvasSize(this.#captureCanvas, crop.width, crop.height, this.#scale);
+		resetCanvas(this.#context, this.#wrapped.canvas);
+		const displayScaleX = this.#wrapped.canvas.width / width;
+		const displayScaleY = this.#wrapped.canvas.height / height;
+		this.#context.scale(displayScaleX, displayScaleY);
+		this.#context.drawElementImage!(this.#wrapped.content, 0, 0, width, height);
+
+		resetCanvas(this.#captureContext, this.#captureCanvas);
+		for (const color of this.#matteColors) {
+			this.#captureContext.fillStyle = color;
+			this.#captureContext.fillRect(
+				0,
+				0,
+				this.#captureCanvas.width,
+				this.#captureCanvas.height,
+			);
+		}
+
+		this.#captureContext.drawImage(
+			this.#wrapped.canvas,
+			crop.left * displayScaleX,
+			crop.top * displayScaleY,
+			crop.width * displayScaleX,
+			crop.height * displayScaleY,
+			0,
+			0,
+			this.#captureCanvas.width,
+			this.#captureCanvas.height,
+		);
+
+		this.#dragImages.draw(this.#captureContext, this.#getRecordingRect(), {
+			canvas: this.#wrapped.canvas,
+			content: this.#wrapped.content,
+			backgroundColors: this.#matteColors,
+		});
+		this.#recorder.addFrame(this.#captureCanvas);
+	};
+
+	#onPaint = () => {
+		try {
+			this.#draw();
+		} catch (error) {
+			if (this.#paintError === null) {
+				// eslint-disable-next-line no-console -- Surface capture failures in the page DevTools console.
+				console.error(
+					'[Remotion Canvas Capture] Failed to paint a frame',
+					error,
+				);
+				this.#paintError = error;
+			}
+		}
+	};
+}
