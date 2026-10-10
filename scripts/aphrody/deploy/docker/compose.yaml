@@ -6,12 +6,12 @@
 services:
   bun-build:
     profiles: [build]
-    image: ${IMAGE:-ghcr.io/aphrody-labs/bun:1.4.3-aphrody.3}
+    image: ${IMAGE:-ghcr.io/aphrody-labs/bun:1.4.4}
     build:
       context: ..
       dockerfile: docker/Dockerfile
       args:
-        BUN_RELEASE: ${BUN_RELEASE:-aphrody-v1.4.3-aphrody.3}
+        BUN_RELEASE: ${BUN_RELEASE:-bun-v1.4.4}
     command: ["build"]
     restart: unless-stopped
     environment:
@@ -27,7 +27,7 @@ services:
     mem_limit: 8g
   bun-prod:
     profiles: [prod]
-    image: ${IMAGE:-ghcr.io/aphrody-labs/bun:1.4.3-aphrody.3}
+    image: ${IMAGE:-ghcr.io/aphrody-labs/bun:1.4.4}
     container_name: aphrody-bun-prod-1
     pull_policy: never
     command: ["prod"]

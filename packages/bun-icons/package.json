@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-icons",
-  "version": "0.1.0",
+  "version": "1.4.4",
   "description": "Bun plugin and helpers for Material Symbols (symbol:home) and ICO imports",
   "module": "index.ts",
   "type": "module",

@@ -1432,7 +1432,7 @@ ${largeArray}
 
         const events: { type: string; data: any }[] = [];
         let adapter: NodeSocketDebugAdapter | null = null;
-        let connectionError: Error | null = null;
+        let _connectionError: Error | null = null;
 
         const connectionPromise = new Promise<void>(resolve => {
           signal.once("Signal.Socket.connect", (socket: net.Socket) => {
@@ -1447,7 +1447,7 @@ ${largeArray}
             });
 
             adapter.on("Inspector.error", data => {
-              connectionError = new Error(data.message);
+              _connectionError = new Error(data.message);
             });
 
             adapter.start().then(() => {
@@ -2333,7 +2333,7 @@ describe("Socket Integration - Error Handling and Edge Cases", () => {
     invalidData.forEach(data => {
       try {
         adapter.emit("TestReporter.found", data as any);
-      } catch (error) {
+      } catch {
         // Some invalid data might throw, which is acceptable
       }
     });

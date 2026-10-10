@@ -174,14 +174,14 @@ async function injectDebugTerminal2() {
 }
 
 class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
-  provideDebugConfigurations(folder?: vscode.WorkspaceFolder): vscode.ProviderResult<vscode.DebugConfiguration[]> {
+  provideDebugConfigurations(_folder?: vscode.WorkspaceFolder): vscode.ProviderResult<vscode.DebugConfiguration[]> {
     return [DEBUG_CONFIGURATION, RUN_CONFIGURATION, ATTACH_CONFIGURATION];
   }
 
   resolveDebugConfiguration(
     folder: vscode.WorkspaceFolder | undefined,
     config: vscode.DebugConfiguration,
-    token?: vscode.CancellationToken,
+    _token?: vscode.CancellationToken,
   ): vscode.ProviderResult<vscode.DebugConfiguration> {
     let target: vscode.DebugConfiguration;
 
@@ -262,7 +262,7 @@ interface DebugProtocolEvent extends DAP.Event {
   };
 }
 
-interface RuntimeConsoleAPICalledEvent {
+interface _RuntimeConsoleAPICalledEvent {
   type: string;
   args: Array<{
     type: string;
@@ -270,7 +270,7 @@ interface RuntimeConsoleAPICalledEvent {
   }>;
 }
 
-interface RuntimeExceptionThrownEvent {
+interface _RuntimeExceptionThrownEvent {
   exceptionDetails: {
     text: string;
     exception?: {

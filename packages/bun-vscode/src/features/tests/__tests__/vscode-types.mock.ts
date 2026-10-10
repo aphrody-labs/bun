@@ -233,7 +233,7 @@ export class MockTestController implements MockTestController {
     return new MockTestRun(name, persist);
   }
 
-  invalidateTestResults(items?: readonly MockTestItem[]): void {
+  invalidateTestResults(_items?: readonly MockTestItem[]): void {
     // Mock implementation - in real VSCode this would invalidate test results
   }
 
@@ -307,7 +307,7 @@ export class MockTestRun implements MockTestRun {
     this.token = new MockCancellationToken();
   }
 
-  appendOutput(output: string, location?: MockLocation, test?: MockTestItem): void {
+  appendOutput(_output: string, _location?: MockLocation, _test?: MockTestItem): void {
     if (this._ended) return;
     // For mock, just store output - in real VS Code this would appear in test output
   }
@@ -316,32 +316,32 @@ export class MockTestRun implements MockTestRun {
     this._ended = true;
   }
 
-  enqueued(test: MockTestItem): void {
+  enqueued(_test: MockTestItem): void {
     if (this._ended) return;
     // Mock implementation
   }
 
-  errored(test: MockTestItem, message: MockTestMessage | readonly MockTestMessage[], duration?: number): void {
+  errored(_test: MockTestItem, _message: MockTestMessage | readonly MockTestMessage[], _duration?: number): void {
     if (this._ended) return;
     // Mock implementation
   }
 
-  failed(test: MockTestItem, message: MockTestMessage | readonly MockTestMessage[], duration?: number): void {
+  failed(_test: MockTestItem, _message: MockTestMessage | readonly MockTestMessage[], _duration?: number): void {
     if (this._ended) return;
     // Mock implementation
   }
 
-  passed(test: MockTestItem, duration?: number): void {
+  passed(_test: MockTestItem, _duration?: number): void {
     if (this._ended) return;
     // Mock implementation
   }
 
-  skipped(test: MockTestItem): void {
+  skipped(_test: MockTestItem): void {
     if (this._ended) return;
     // Mock implementation
   }
 
-  started(test: MockTestItem): void {
+  started(_test: MockTestItem): void {
     if (this._ended) return;
     // Mock implementation
   }
@@ -559,7 +559,7 @@ export class MockConfiguration implements MockConfiguration {
     };
   }
 
-  async update(section: string, value: any, configurationTarget?: MockConfigurationTarget): Promise<void> {
+  async update(section: string, value: any, _configurationTarget?: MockConfigurationTarget): Promise<void> {
     this._values.set(section, value);
   }
 

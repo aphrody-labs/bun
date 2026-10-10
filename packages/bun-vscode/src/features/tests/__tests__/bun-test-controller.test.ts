@@ -589,7 +589,7 @@ describe("BunTestController - Test Discovery and Management", () => {
 
     test("should include common bun test options", () => {
       const config = internal.getBunExecutionConfig();
-      const args = config.testArgs.join(" ");
+      const _args = config.testArgs.join(" ");
       expect(config.bunCommand).toBe("bun");
     });
   });

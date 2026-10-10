@@ -33,6 +33,8 @@ export interface PackageSpec {
   name?: string;
   /** Use the Bun version as the version base instead of the package's own. */
   bunVersion?: boolean;
+  /** Preparation invokes a build; excluded from no-build publication. */
+  requiresBuild?: boolean;
   /** Fork packages imported by the published sources but not listed in the manifest. */
   addDependencies?: string[];
   /** Manifest fields set for publication. */
@@ -52,6 +54,7 @@ export const PACKAGES: PackageSpec[] = [
   {
     dir: "bun-types",
     bunVersion: true,
+    requiresBuild: true,
     fields: { description: "Type definitions and documentation for Bun (Aphrody runtime, based on Bun)" },
     // Generates CLAUDE.md and docs/ next to the .d.ts files, as release.yml does upstream.
     prepare: (staging, { base }) =>
@@ -61,6 +64,7 @@ export const PACKAGES: PackageSpec[] = [
   },
   {
     dir: "bun-inspector-protocol",
+    requiresBuild: true,
     fields: { description: "WebKit Inspector Protocol client for Bun (Aphrody runtime, based on Bun)" },
     // node-socket.ts borrows the framer from the debug adapter, which itself
     // depends on this package: ship a copy instead of a dependency cycle.
@@ -135,6 +139,7 @@ export const PACKAGES: PackageSpec[] = [
   {
     // Fork-only: Tailwind CSS v4 for Bun.build, the HTML dev server and PostCSS.
     dir: "bun-plugin-tailwind",
+    requiresBuild: true,
     fields: { description: "Tailwind CSS v4 plugin for Bun and PostCSS (Aphrody runtime, based on Bun)" },
     // dist/ holds the Node.js build (ES modules and the CommonJS PostCSS plugin).
     prepare: staging => {
@@ -285,10 +290,13 @@ async function packument(registry: string, name: string): Promise<Record<string,
   return res.json();
 }
 
-function pack(staging: string, dest: string): string {
+function pack(staging: string, dest: string, noBuild = false): string {
   rmSync(dest, { recursive: true, force: true });
   mkdirSync(dest, { recursive: true });
-  run([process.execPath, "pm", "pack", "--destination", dest, "--quiet"], staging);
+  run(
+    [process.execPath, "pm", "pack", "--destination", dest, "--quiet", ...(noBuild ? ["--ignore-scripts"] : [])],
+    staging,
+  );
   const [tgz] = readdirSync(dest).filter(f => f.endsWith(".tgz"));
   if (!tgz) throw new Error(`bun pm pack produced no tarball in ${dest}`);
   return join(dest, tgz);
@@ -315,10 +323,22 @@ export interface Result {
 export async function publishAll(opts: {
   dryRun?: boolean;
   stable?: boolean;
+  noBuild?: boolean;
   only?: string[];
   out?: string;
   registry?: string;
 }): Promise<Result[]> {
+  if (opts.only?.some(dir => !PACKAGES.some(spec => spec.dir === dir)))
+    throw new Error("Unknown package directory in --only");
+  if (opts.noBuild) {
+    const building = PACKAGES.filter(
+      spec => spec.requiresBuild && (!opts.only?.length || opts.only.includes(spec.dir)),
+    );
+    if (building.length)
+      throw new Error(
+        `--no-build cannot prepare ${building.map(spec => spec.dir).join(", ")}; select source packages with --only`,
+      );
+  }
   const registry = (opts.registry ?? process.env.NPM_CONFIG_REGISTRY ?? "https://registry.npmjs.org").replace(
     /\/$/,
     "",
@@ -343,14 +363,14 @@ export async function publishAll(opts: {
     const srcPkg = await Bun.file(join(ROOT, "packages", spec.dir, "package.json")).json();
     const base = spec.bunVersion || !srcPkg.version || srcPkg.version === "0.0.0" ? bunVersion : srcPkg.version;
     const { next, previous } = (opts.stable ? nextStableVersion : nextVersion)(base, Object.keys(doc?.versions ?? {}));
-    if (opts.stable && spec.bunVersion && next !== base && previous !== base) {
+    if (opts.stable && next !== base && previous !== base) {
       throw new Error(`${name}: registry stable versions exceed the requested runtime ${base}`);
     }
 
     const staging = await stage(spec, out, base);
     const manifest = publishManifest(srcPkg, spec, next, resolved);
     await Bun.write(join(staging, "package.json"), JSON.stringify(manifest, null, 2) + "\n");
-    const tgz = pack(staging, join(out, "tarballs", spec.dir));
+    const tgz = pack(staging, join(out, "tarballs", spec.dir), opts.noBuild);
     const files = await tarballFiles(await Bun.file(tgz).bytes());
 
     const packed = JSON.parse(new TextDecoder().decode(files.get("package/package.json")!));
@@ -365,14 +385,14 @@ export async function publishAll(opts: {
     if (previous) {
       const tarball = doc!.versions[previous].dist.tarball;
       const prevFiles = await tarballFiles(new Uint8Array(await (await fetch(tarball)).arrayBuffer()));
-      if (contentHash(prevFiles) === contentHash(files)) {
+      if (contentHash(prevFiles) === contentHash(files) && (!opts.stable || previous === base)) {
         resolved.set(spec.dir, previous);
         results.push({ name, version: previous, action: "unchanged" });
         console.log(`= ${name}@${previous} unchanged`);
         continue;
       }
     }
-    if (opts.stable && spec.bunVersion && next !== base) {
+    if (opts.stable && next !== base) {
       throw new Error(`${name}@${base} already exists with different content; runtime versions are immutable`);
     }
 
@@ -382,7 +402,19 @@ export async function publishAll(opts: {
       results.push({ name, version: next, action: "dry-run" });
       continue;
     }
-    run([process.execPath, "publish", tgz, "--access", "public", "--tag", "latest"], staging);
+    run(
+      [
+        process.execPath,
+        "publish",
+        tgz,
+        "--access",
+        "public",
+        "--tag",
+        "latest",
+        ...(opts.noBuild ? ["--ignore-scripts"] : []),
+      ],
+      staging,
+    );
     results.push({ name, version: next, action: "published" });
   }
   return results;
@@ -397,6 +429,7 @@ if (import.meta.main) {
   const results = await publishAll({
     dryRun: args.includes("--dry-run"),
     stable: args.includes("--stable"),
+    noBuild: args.includes("--no-build"),
     only: value("--only")?.split(","),
     out: value("--out"),
     registry: value("--registry"),

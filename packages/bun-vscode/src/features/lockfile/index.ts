@@ -26,7 +26,7 @@ export class BunLockfileEditorProvider implements vscode.CustomReadonlyEditorPro
   async resolveCustomEditor(
     document: BunLockfile,
     webviewPanel: vscode.WebviewPanel,
-    token: vscode.CancellationToken,
+    _token: vscode.CancellationToken,
   ): Promise<void> {
     const { preview } = document;
     webviewPanel.webview.options = {

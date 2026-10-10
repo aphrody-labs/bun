@@ -80,10 +80,10 @@ export function parseGitUrl(url: string | URL): URL | undefined {
   const string = typeof url === "string" ? url : url.toString();
 
   const githubUrl = process.env.GITHUB_SERVER_URL || "https://github.com";
-  if (/^git@github\.com:/.test(string)) {
+  if (string.startsWith("git@github.com:")) {
     return new URL(string.slice(15).replace(/\.git$/, ""), githubUrl);
   }
-  if (/^https:\/\/github\.com\//.test(string)) {
+  if (string.startsWith("https://github.com/")) {
     return new URL(string.slice(19).replace(/\.git$/, ""), githubUrl);
   }
 
@@ -284,7 +284,7 @@ export function isFork(): boolean {
 }
 
 export function isMergeQueue(): boolean {
-  return /^gh-readonly-queue/.test(getBranch() ?? "");
+  return (getBranch() ?? "").startsWith("gh-readonly-queue");
 }
 
 function getGithubToken(): string | undefined {

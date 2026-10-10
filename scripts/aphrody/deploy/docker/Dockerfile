@@ -5,11 +5,11 @@
 #   prod   exécute $APP_BIN de la release courante, ou `bun $APP_SCRIPT`, sinon la sonde probe.ts
 #   health état du conteneur (HEALTHCHECK) ; tout autre argument est passé tel quel à bun
 #
-#   docker build -t ghcr.io/aphrody-labs/bun:1.4.3-aphrody.3 -f docker/Dockerfile .   (contexte : scripts/aphrody/deploy)
+#   docker build -t ghcr.io/aphrody-labs/bun:1.4.4 -f docker/Dockerfile .   (contexte : scripts/aphrody/deploy)
 ARG UBUNTU_TAG=26.04
 
 FROM ubuntu:${UBUNTU_TAG} AS bun
-ARG BUN_RELEASE=aphrody-v1.4.3-aphrody.3
+ARG BUN_RELEASE=bun-v1.4.4
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl unzip && rm -rf /var/lib/apt/lists/*
 RUN set -eu; \
     base="https://github.com/aphrody-labs/bun/releases/download/${BUN_RELEASE}"; \

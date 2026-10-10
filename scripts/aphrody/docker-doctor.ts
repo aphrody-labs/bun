@@ -3,7 +3,7 @@
 //   bun scripts/aphrody/docker-doctor.ts [pc|vps|dbfr ...]
 const HOSTS = ["pc", "vps", "dbfr"] as const;
 type Host = (typeof HOSTS)[number];
-const IMAGE = "ghcr.io/aphrody-labs/bun:1.4.3-aphrody.3";
+const IMAGE = "ghcr.io/aphrody-labs/bun:1.4.4";
 
 const CHECKS: [string, string, (out: string) => boolean][] = [
   ["moteur", `docker info -f '{{.ServerVersion}} {{.DriverStatus}}'`, o => o.includes("containerd.snapshotter")],

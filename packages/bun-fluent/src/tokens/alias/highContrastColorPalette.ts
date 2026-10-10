@@ -1,12 +1,12 @@
-import { hcHighlight, hcCanvas, hcCanvasText } from '../global/colors';
-import { statusSharedColorNames, personaSharedColorNames } from '../sharedColorNames';
+import { hcHighlight, hcCanvas, hcCanvasText } from "../global/colors";
+import { statusSharedColorNames, personaSharedColorNames } from "../sharedColorNames";
 import type {
   ColorPaletteTokens,
   ColorStatusTokens,
   PersonaColorPaletteTokens,
   StatusColorPaletteTokens,
-} from '../types';
-import { statusColorMapping } from '../statusColorMapping';
+} from "../types";
+import { statusColorMapping } from "../statusColorMapping";
 
 const statusColorPaletteTokens = statusSharedColorNames.reduce((acc, sharedColor) => {
   const color = sharedColor.slice(0, 1).toUpperCase() + sharedColor.slice(1);
@@ -43,28 +43,25 @@ const personaColorPaletteTokens = personaSharedColorNames.reduce((acc, sharedCol
 
 export const colorPaletteTokens: ColorPaletteTokens = { ...statusColorPaletteTokens, ...personaColorPaletteTokens };
 
-export const colorStatusTokens: ColorStatusTokens = Object.entries(statusColorMapping).reduce(
-  (acc, [statusColor, sharedColor]) => {
-    const color = statusColor.slice(0, 1).toUpperCase() + statusColor.slice(1);
+export const colorStatusTokens: ColorStatusTokens = Object.entries(statusColorMapping).reduce((acc, [statusColor]) => {
+  const color = statusColor.slice(0, 1).toUpperCase() + statusColor.slice(1);
 
-    // TODO: double check the mapping with design
-    const statusColorTokens = {
-      [`colorStatus${color}Background1`]: hcCanvas,
-      [`colorStatus${color}Background2`]: hcCanvas,
-      [`colorStatus${color}Background3`]: hcCanvasText,
-      [`colorStatus${color}Foreground1`]: hcCanvasText,
-      [`colorStatus${color}Foreground2`]: hcCanvasText,
-      [`colorStatus${color}Foreground3`]: hcCanvasText,
-      [`colorStatus${color}BorderActive`]: hcHighlight,
-      [`colorStatus${color}ForegroundInverted`]: hcCanvasText,
-      [`colorStatus${color}Border1`]: hcCanvasText,
-      [`colorStatus${color}Border2`]: hcCanvasText,
-    };
+  // TODO: double check the mapping with design
+  const statusColorTokens = {
+    [`colorStatus${color}Background1`]: hcCanvas,
+    [`colorStatus${color}Background2`]: hcCanvas,
+    [`colorStatus${color}Background3`]: hcCanvasText,
+    [`colorStatus${color}Foreground1`]: hcCanvasText,
+    [`colorStatus${color}Foreground2`]: hcCanvasText,
+    [`colorStatus${color}Foreground3`]: hcCanvasText,
+    [`colorStatus${color}BorderActive`]: hcHighlight,
+    [`colorStatus${color}ForegroundInverted`]: hcCanvasText,
+    [`colorStatus${color}Border1`]: hcCanvasText,
+    [`colorStatus${color}Border2`]: hcCanvasText,
+  };
 
-    return Object.assign(acc, statusColorTokens);
-  },
-  {} as ColorStatusTokens,
-);
+  return Object.assign(acc, statusColorTokens);
+}, {} as ColorStatusTokens);
 
 // one-off overrides for colorStatus tokens
 colorStatusTokens.colorStatusDangerBackground3Hover = hcHighlight;

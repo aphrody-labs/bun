@@ -1,7 +1,7 @@
 export default {
   async fetch(request: Request): Promise<Response> {
     a(request);
-    const object = {
+    const _object = {
       a: "1",
       b: "2",
       c: new Map([[1, 2]]),

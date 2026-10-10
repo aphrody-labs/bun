@@ -20,7 +20,7 @@ export default {
     });
   },
   websocket: {
-    async open(ws: ServerWebSocket): Promise<void> {
+    async open(_ws: ServerWebSocket): Promise<void> {
       console.log("WebSocket opened");
     },
     async message(ws: ServerWebSocket, message: string): Promise<void> {

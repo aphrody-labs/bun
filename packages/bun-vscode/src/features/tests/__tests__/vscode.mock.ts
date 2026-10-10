@@ -24,11 +24,11 @@ mock.module("vscode", () => ({
     visibleTextEditors: [],
   },
   workspace: {
-    getConfiguration: (section?: string) => new MockConfiguration(),
+    getConfiguration: (_section?: string) => new MockConfiguration(),
     onDidOpenTextDocument: () => new MockDisposable(),
     textDocuments: [],
-    createFileSystemWatcher: (pattern: string | MockRelativePattern) => new MockFileSystemWatcher(),
-    findFiles: async (include: string, exclude?: string, maxResults?: number, token?: any) => {
+    createFileSystemWatcher: (_pattern: string | MockRelativePattern) => new MockFileSystemWatcher(),
+    findFiles: async (_include: string, _exclude?: string, _maxResults?: number, _token?: any) => {
       return []; // Mock implementation
     },
   },

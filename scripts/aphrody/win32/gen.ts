@@ -214,14 +214,14 @@ export function generate(path: string) {
     }
   };
 
-  const fieldToken = (sig: TypeSig, outer: string): string => {
-    if (sig.kind === "const") return fieldToken(sig.inner, outer);
+  const fieldToken = (sig: TypeSig): string => {
+    if (sig.kind === "const") return fieldToken(sig.inner);
     if (sig.kind === "fixed") {
       const elem = sig.elem.kind === "const" ? sig.elem.inner : sig.elem;
       if (elem.kind === "prim" && elem.name === "char16") return `c[${sig.length}]`;
       if (elem.kind === "named" && `${elem.ns}.${elem.name}` === "Windows.Win32.Foundation.CHAR")
         return `ca[${sig.length}]`;
-      return `${fieldToken(elem, outer)}[${sig.length}]`;
+      return `${fieldToken(elem)}[${sig.length}]`;
     }
     const t = token(sig);
     return t.startsWith("*") ? "p" : t === "hr" ? "i32" : t;
@@ -260,7 +260,7 @@ export function generate(path: string) {
         offset += l.size;
       }
       size = Math.max(size, at + l.size);
-      fields.push([md.str(T.Field, f, 1), fieldToken(sig, md.fullName(T.TypeDef, row)), at]);
+      fields.push([md.str(T.Field, f, 1), fieldToken(sig), at]);
     }
     size = Math.max(Math.ceil(size / align) * align, cl?.size ?? 0);
     if (size === 0) size = 1;

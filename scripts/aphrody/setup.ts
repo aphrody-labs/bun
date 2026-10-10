@@ -20,7 +20,7 @@
 // published by GitHub; bun: SHA256SUMS.txt of the fork release, in install.sh/install.ps1) and kept in a cache
 // directory for the next run. The one-liner launchers are install-dev.sh and install-dev.ps1 next to this file.
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 

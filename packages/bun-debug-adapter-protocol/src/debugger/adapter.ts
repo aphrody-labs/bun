@@ -415,15 +415,6 @@ export abstract class BaseDebugAdapter<T extends Inspector = Inspector>
     });
   }
 
-  #reverseRequest<T extends keyof DAP.RequestMap>(command: T, args?: DAP.RequestMap[T]): void {
-    this.emit("Adapter.reverseRequest", {
-      type: "request",
-      seq: 0,
-      command,
-      arguments: args,
-    });
-  }
-
   async ["Adapter.request"](request: DAP.Request): Promise<void> {
     const { command, arguments: args } = request;
 
@@ -675,7 +666,7 @@ export abstract class BaseDebugAdapter<T extends Inspector = Inspector>
     }
 
     const { sourceMap } = source;
-    const { line: oline, column: ocolumn } = sourceMap.originalLocation({ line, column });
+    const { line: oline, column: _ocolumn } = sourceMap.originalLocation({ line, column });
 
     return {
       line: this.#lineFrom0BasedLine(oline),
@@ -879,7 +870,7 @@ export abstract class BaseDebugAdapter<T extends Inspector = Inspector>
     source?: Source;
     notify?: boolean;
   }): Breakpoint {
-    const { breakpointId, location, source, request, notify } = options;
+    const { breakpointId, location, source, request, notify: _notify } = options;
 
     let originalLocation;
     if (source) {
@@ -1178,7 +1169,7 @@ export abstract class BaseDebugAdapter<T extends Inspector = Inspector>
       throw new Error(remoteObjectToString(result));
     }
 
-    const { name, value, ...variable } = this.#addObject(result, { objectGroup });
+    const { name: _name, value, ...variable } = this.#addObject(result, { objectGroup });
     return {
       ...variable,
       result: value,
@@ -1205,7 +1196,7 @@ export abstract class BaseDebugAdapter<T extends Inspector = Inspector>
   }
 
   async completions(request: DAP.CompletionsRequest): Promise<DAP.CompletionsResponse> {
-    const { text, column, frameId } = request;
+    const { text, column: _column, frameId } = request;
     const callFrameId = this.#getCallFrameId(frameId);
 
     const { expression, hint } = completionToExpression(text);
@@ -1461,7 +1452,7 @@ export abstract class BaseDebugAdapter<T extends Inspector = Inspector>
     });
   }
 
-  ["Console.messageAdded"](event: JSC.Console.MessageAddedEvent): void {
+  ["Console.messageAdded"](_event: JSC.Console.MessageAddedEvent): void {
     // const { message } = event;
     // const { type, level, text, parameters, line, column, stackTrace } = message;
     // let output: string;
@@ -1693,7 +1684,7 @@ export abstract class BaseDebugAdapter<T extends Inspector = Inspector>
   }
 
   #addStackFrame(callFrame: JSC.Debugger.CallFrame): StackFrame {
-    const { callFrameId, functionName, location, scopeChain, this: thisObject } = callFrame;
+    const { callFrameId, functionName, location, scopeChain, this: _thisObject } = callFrame;
     const { scriptId } = location;
     const source = this.#getSourceIfPresent(scriptId);
 
@@ -2512,13 +2503,13 @@ function completionToExpression(completion: string): { expression: string; hint?
   const lastIdentifier = Math.max(lastDot, last("[", "]"), last("(", ")"), last("{", "}"));
 
   let expression: string;
-  let remainder: string;
+  let _remainder: string;
   if (lastIdentifier > 0) {
     expression = completion.slice(0, lastIdentifier);
-    remainder = completion.slice(lastIdentifier);
+    _remainder = completion.slice(lastIdentifier);
   } else {
     expression = "";
-    remainder = completion;
+    _remainder = completion;
   }
 
   const [hint] = completion.slice(lastIdentifier).match(/[#$a-z_][0-9a-z_$]*/gi) ?? [];
@@ -2528,7 +2519,7 @@ function completionToExpression(completion: string): { expression: string; hint?
   };
 }
 
-function consoleMessageGroup(type: JSC.Console.ConsoleMessage["type"]): DAP.OutputEvent["group"] {
+function _consoleMessageGroup(type: JSC.Console.ConsoleMessage["type"]): DAP.OutputEvent["group"] {
   switch (type) {
     case "startGroup":
       return "start";
@@ -2551,7 +2542,7 @@ function sourceToId(source?: DAP.Source): string | number {
   throw new Error("No source found.");
 }
 
-function sourceToPath(source?: DAP.Source | string): string {
+function _sourceToPath(source?: DAP.Source | string): string {
   if (typeof source === "string") {
     return source;
   }
@@ -2778,11 +2769,11 @@ function variablesSortBy(a: DAP.Variable, b: DAP.Variable): number {
   return 0;
 }
 
-function isSameLocation(a: { line?: number; column?: number }, b: { line?: number; column?: number }): boolean {
+function _isSameLocation(a: { line?: number; column?: number }, b: { line?: number; column?: number }): boolean {
   return (a.line === b.line || (!a.line && !b.line)) && (a.column === b.column || (!a.column && !b.column));
 }
 
-function consoleLevelToAnsiColor(level: JSC.Console.ConsoleMessage["level"]): string | undefined {
+function _consoleLevelToAnsiColor(level: JSC.Console.ConsoleMessage["level"]): string | undefined {
   switch (level) {
     case "warning":
       return "\u001b[33m";
@@ -2796,7 +2787,7 @@ function numberIsValid(number?: number): number is number {
   return typeof number === "number" && isFinite(number) && number >= 0;
 }
 
-function locationIsSame(a?: JSC.Debugger.Location, b?: JSC.Debugger.Location): boolean {
+function _locationIsSame(a?: JSC.Debugger.Location, b?: JSC.Debugger.Location): boolean {
   return a?.scriptId === b?.scriptId && a?.lineNumber === b?.lineNumber && a?.columnNumber === b?.columnNumber;
 }
 

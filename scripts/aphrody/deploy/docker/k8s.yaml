@@ -10,7 +10,7 @@ spec:
     spec:
       containers:
         - name: probe
-          image: ghcr.io/aphrody-labs/bun:1.4.3-aphrody.3
+          image: ghcr.io/aphrody-labs/bun:1.4.4
           imagePullPolicy: Never
           args: ["prod"]
           env:

@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/next-bun",
-  "version": "0.2.0",
+  "version": "1.4.4",
   "description": "Next.js on Bun: run next with no Node.js (Turbopack workers included), build the Pages Router with Bun.build (experimental), Next 16 / Tailwind 4 codemods, instant navigation testing and a Next-compatible App Router on Bun.build + Bun.serve without Next (`@aphrody/next-bun/app`)",
   "license": "MIT AND Apache-2.0",
   "main": "index.js",
