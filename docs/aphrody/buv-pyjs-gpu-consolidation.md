@@ -17,7 +17,9 @@ Receipt: `tmp/gpu-consolidation-native.log` (exit zero).
 Published test 1dd06393befb15ae9d54f5d188a32fc0c6240e58 combines
 `buv:python` and `pyjs:python` in one process. It verifies their constructor
 identity, CPython's PID, real PyCUDA compilation/launch/readback, then the
-canonical WGSL/CUDA SDK. The existing full Python receipt records 43 passes
+canonical WGSL/CUDA SDK. A fresh GPU-enabled targeted run passes this test
+with six assertions and zero failures (42 other tests filtered out); receipt:
+`tmp/gpu-consolidation-pycuda.log`. The existing full Python receipt records 43 passes
 and 151 assertions with GPU/compiler gates enabled. This earlier receipt is
 not a fresh run of the entire Python suite. See
 [host FFI qualification](../project/python-host-ffi-qualification.md).
