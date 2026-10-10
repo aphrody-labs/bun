@@ -183,3 +183,5 @@ chantier touché (`bun-fork-aphrody`, `next-on-bun-plan`, …) à la fin du lot.
 - 2026-10-10: Windows IPC exclusive read-buffer borrow and libuv pointer contracts qualified with 40 native passes; strict GNU x64/ARM64 zero, Windows ipc.rs zero with 83 whole-runtime errors remaining. See [qualification](docs/project/windows-ipc-buffer-qualification.md).
 
 - 2026-10-10: Windows shell cp EBUSY state ownership qualified: 30 native passes / 111 assertions; strict four-target cp diagnostics zero, Windows whole-runtime 77 remaining. See [qualification](docs/project/windows-shell-copy-qualification.md).
+
+- 2026-10-10: VPS isolated release completed at 4e3ddd04da1; corrected two CommonJS child-script projections, then all six native suites passed (202 / 1517 assertions). Version/revision/SHA256 recorded in [Linux qualification](docs/project/linux-owner-release-preflight.md). Distribution and DBFR activation remain pending.

@@ -317,7 +317,7 @@ describe.skipIf(!isLinux)("bun:linux seccomp", () => {
 
   test("setFilter denies syscalls in a child process", async () => {
     const script = `
-      const linux = require("bun:linux").default;
+      const linux = require("bun:linux");
       const fs = require("node:fs");
       const deny = process.arch === "x64" ? [83, 258] : [34];
       linux.seccomp.setFilter(linux.seccomp.filter({ deny, errno: 1 }));
@@ -462,7 +462,7 @@ describe.skipIf(!isLinux)("bun:linux reapOrphans", () => {
 
   test("a subreaper collects its orphaned grandchildren", async () => {
     const script = `
-      const linux = require("bun:linux").default;
+      const linux = require("bun:linux");
       linux.prctl(linux.constants.PR_SET_CHILD_SUBREAPER, 1);
       const shell = Bun.spawnSync(["/bin/sh", "-c", "sleep 0 & echo $!"]);
       const orphan = Number(shell.stdout.toString().trim());

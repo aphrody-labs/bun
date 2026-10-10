@@ -78,3 +78,5 @@
 - [x] Windows IPC buffer ownership: 40 native passes / 99 assertions; four-target ipc.rs strict diagnostics zero.
 
 - [x] Windows shell cp EBUSY state and deferred-task ownership: 30 native passes; GNU strict runtime zero.
+
+- [x] Linux owner release candidate: six changed-engine suites 202 pass, provenance and SHA256 verified; privileged skips and deployment remain outside this proof.
