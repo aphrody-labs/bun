@@ -1,0 +1,368 @@
+import {readFileSync} from 'node:fs';
+import {
+	CreateLogGroupCommand,
+	PutRetentionPolicyCommand,
+} from '@aws-sdk/client-cloudwatch-logs';
+import type {VpcConfig} from '@aws-sdk/client-lambda';
+import {
+	CreateFunctionCommand,
+	GetFunctionCommand,
+	GetFunctionConfigurationCommand,
+	PutFunctionEventInvokeConfigCommand,
+	PutRuntimeManagementConfigCommand,
+	TagResourceCommand,
+	UpdateFunctionConfigurationCommand,
+} from '@aws-sdk/client-lambda';
+import type {RequestHandler} from '@remotion/lambda-client';
+import {
+	LambdaClientInternals,
+	type AwsRegion,
+	type RuntimePreference,
+} from '@remotion/lambda-client';
+import {LOG_GROUP_PREFIX} from '@remotion/lambda-client/constants';
+import type {LogLevel} from '@remotion/renderer';
+import {RenderInternals} from '@remotion/renderer';
+import {VERSION} from 'remotion/version';
+import {getLayers} from '../shared/get-layers';
+import {lambdaInsightsExtensions} from '../shared/lambda-insights-extensions';
+import {ROLE_NAME} from './iam-validation/suggested-policy';
+
+type CreateFunctionInput = {
+	createCloudWatchLogGroup: boolean;
+	region: AwsRegion;
+	zipFile: string;
+	functionName: string;
+	accountId: string;
+	memorySizeInMb: number;
+	timeoutInSeconds: number;
+	alreadyCreated: boolean;
+	retentionInDays: number;
+	ephemerealStorageInMb: number;
+	customRoleArn: string;
+	customLayerArns: string[] | null;
+	enableLambdaInsights: boolean;
+	logLevel: LogLevel;
+	vpcSubnetIds: string;
+	vpcSecurityGroupIds: string;
+	runtimePreference: RuntimePreference;
+	requestHandler: RequestHandler | null;
+};
+
+export const createFunction = async ({
+	createCloudWatchLogGroup,
+	region,
+	zipFile,
+	functionName,
+	accountId,
+	memorySizeInMb,
+	timeoutInSeconds,
+	alreadyCreated,
+	retentionInDays,
+	ephemerealStorageInMb,
+	customRoleArn,
+	customLayerArns,
+	enableLambdaInsights,
+	logLevel,
+	vpcSubnetIds,
+	vpcSecurityGroupIds,
+	runtimePreference,
+	requestHandler,
+}: CreateFunctionInput): Promise<{FunctionName: string}> => {
+	if (createCloudWatchLogGroup) {
+		RenderInternals.Log.verbose(
+			{indent: false, logLevel},
+			'Creating CloudWatch group',
+		);
+		try {
+			await LambdaClientInternals.getCloudWatchLogsClient(
+				region,
+				requestHandler,
+			).send(
+				new CreateLogGroupCommand({
+					logGroupName: `${LOG_GROUP_PREFIX}${functionName}`,
+				}),
+			);
+			RenderInternals.Log.verbose(
+				{indent: false, logLevel},
+				'CloudWatch group successfully created',
+			);
+		} catch (_err) {
+			const err = _err as Error;
+			if (err.message.includes('log group already exists')) {
+				RenderInternals.Log.verbose(
+					{indent: false, logLevel},
+					'CloudWatch group already existed.',
+				);
+			} else {
+				throw err;
+			}
+		}
+
+		RenderInternals.Log.verbose(
+			{indent: false, logLevel},
+			'Adding retention policy to the CloudWatch group',
+		);
+		await LambdaClientInternals.getCloudWatchLogsClient(
+			region,
+			requestHandler,
+		).send(
+			new PutRetentionPolicyCommand({
+				logGroupName: `${LOG_GROUP_PREFIX}${functionName}`,
+				retentionInDays,
+			}),
+		);
+		RenderInternals.Log.verbose(
+			{indent: false, logLevel},
+			`Set retention to ${retentionInDays} days`,
+		);
+	}
+
+	const insightsLayer = enableLambdaInsights
+		? lambdaInsightsExtensions[region]
+		: null;
+	if (enableLambdaInsights && !insightsLayer) {
+		throw new Error(
+			`Lambda Insights is not supported by AWS in region ${region}. Please disable Lambda Insights. See http://remotion.dev/docs/lambda/insights#unsupported-regions`,
+		);
+	}
+
+	const layers = (
+		customLayerArns ??
+		getLayers({
+			option: runtimePreference,
+			region,
+		}).map(({layerArn, version}) => `${layerArn}:${version}`)
+	).concat(insightsLayer ? [insightsLayer] : []);
+
+	if (alreadyCreated) {
+		RenderInternals.Log.verbose(
+			{indent: false, logLevel},
+			`Function ${functionName} already existed`,
+		);
+
+		if (customLayerArns === null) {
+			return {FunctionName: functionName};
+		}
+
+		const lambdaClient = LambdaClientInternals.getLambdaClient(
+			region,
+			undefined,
+			requestHandler,
+		);
+		const currentConfiguration = await lambdaClient.send(
+			new GetFunctionConfigurationCommand({FunctionName: functionName}),
+		);
+		const currentLayers = (currentConfiguration.Layers ?? []).map(
+			(layer) => layer.Arn as string,
+		);
+		const layersAreEqual =
+			currentLayers.length === layers.length &&
+			currentLayers.every((layer, index) => layer === layers[index]);
+
+		if (layersAreEqual) {
+			return {FunctionName: functionName};
+		}
+
+		RenderInternals.Log.verbose(
+			{indent: false, logLevel},
+			`Updating Layers for function ${functionName}`,
+		);
+		await lambdaClient.send(
+			new UpdateFunctionConfigurationCommand({
+				FunctionName: functionName,
+				Layers: layers,
+			}),
+		);
+
+		while (true) {
+			const configuration = await lambdaClient.send(
+				new GetFunctionConfigurationCommand({FunctionName: functionName}),
+			);
+			if (
+				configuration.State === 'Failed' ||
+				configuration.LastUpdateStatus === 'Failed'
+			) {
+				throw new Error(
+					`Failed to update Layers for function ${functionName}: ${configuration.StateReason ?? configuration.LastUpdateStatusReason ?? 'Unknown reason'}`,
+				);
+			}
+
+			if (
+				configuration.State === 'Active' &&
+				configuration.LastUpdateStatus !== 'InProgress'
+			) {
+				break;
+			}
+
+			await new Promise<void>((resolve) => {
+				setTimeout(resolve, 1000);
+			});
+		}
+
+		return {FunctionName: functionName};
+	}
+
+	const {partition} = LambdaClientInternals.getAwsRegionMetadata(region);
+	const defaultRoleName = `arn:${partition}:iam::${accountId}:role/${ROLE_NAME}`;
+
+	let vpcConfig: VpcConfig | undefined;
+	if (vpcSubnetIds && vpcSecurityGroupIds) {
+		vpcConfig = {
+			SubnetIds: vpcSubnetIds.split(','),
+			SecurityGroupIds: vpcSecurityGroupIds.split(','),
+		};
+	}
+
+	RenderInternals.Log.verbose(
+		{indent: false, logLevel},
+		'Deploying new Lambda function',
+	);
+
+	const {FunctionName, FunctionArn} =
+		await LambdaClientInternals.getLambdaClient(
+			region,
+			undefined,
+			requestHandler,
+		).send(
+			new CreateFunctionCommand({
+				Code: {
+					ZipFile: new Uint8Array(readFileSync(zipFile)),
+				},
+				FunctionName: functionName,
+				Handler: 'index.handler',
+				Role: customRoleArn ?? defaultRoleName,
+				Runtime: 'nodejs24.x',
+				Description: 'Renders a Remotion video.',
+				MemorySize: memorySizeInMb,
+				Timeout: timeoutInSeconds,
+				Layers: layers,
+				Architectures: ['arm64'],
+				EphemeralStorage: {
+					Size: ephemerealStorageInMb,
+				},
+				VpcConfig: vpcConfig,
+			}),
+		);
+
+	RenderInternals.Log.verbose(
+		{indent: false, logLevel},
+		'Function deployed. Adding tags...',
+	);
+
+	try {
+		await LambdaClientInternals.getLambdaClient(
+			region,
+			undefined,
+			requestHandler,
+		).send(
+			new TagResourceCommand({
+				Resource: FunctionArn,
+				Tags: {
+					'remotion-lambda': 'true',
+					'remotion-version': VERSION,
+					'remotion-memory-in-mb': String(memorySizeInMb),
+					'remotion-timeout-in-seconds': String(timeoutInSeconds),
+					'remotion-ephemereal-storage-in-mb': String(ephemerealStorageInMb),
+				},
+			}),
+		);
+	} catch (err) {
+		// Previous Lambda versions had no permission to tag the function
+		if ((err as Error).name.includes('AccessDenied')) {
+			RenderInternals.Log.verbose(
+				{indent: false, logLevel},
+				'Did not have permission to tag the function. Skipping.',
+			);
+		} else {
+			throw err;
+		}
+	}
+
+	RenderInternals.Log.verbose(
+		{indent: false, logLevel},
+		'Disabling function retries (Remotion handles retries itself)...',
+	);
+	await LambdaClientInternals.getLambdaClient(
+		region,
+		undefined,
+		requestHandler,
+	).send(
+		new PutFunctionEventInvokeConfigCommand({
+			MaximumRetryAttempts: 0,
+			FunctionName,
+		}),
+	);
+	RenderInternals.Log.verbose(
+		{indent: false, logLevel},
+		'Set function retries to 0.',
+	);
+	RenderInternals.Log.verbose(
+		{indent: false, logLevel},
+		'Waiting for the function to be ready...',
+	);
+
+	let state = 'Pending';
+	let currentRuntimeVersionArn: string | null = null;
+
+	while (state === 'Pending') {
+		const getFn = await LambdaClientInternals.getLambdaClient(
+			region,
+			undefined,
+			requestHandler,
+		).send(
+			new GetFunctionCommand({
+				FunctionName,
+			}),
+		);
+		await new Promise<void>((resolve) => {
+			setTimeout(() => resolve(), 1000);
+		});
+		state = getFn.Configuration?.State as string;
+		currentRuntimeVersionArn =
+			getFn.Configuration?.RuntimeVersionConfig?.RuntimeVersionArn ?? null;
+	}
+
+	RenderInternals.Log.verbose(
+		{indent: false, logLevel},
+		'Function is now ready.',
+	);
+
+	RenderInternals.Log.verbose(
+		{indent: false, logLevel},
+		'Locking the runtime version of the function...',
+	);
+
+	const runtimeVersionArn =
+		partition === 'aws-cn'
+			? currentRuntimeVersionArn
+			: `arn:aws:lambda:${region}::runtime:58a37e8413ed69058c4ac3b1df642118591f17d40def93d6101f867c72cd03c2`;
+
+	try {
+		if (!runtimeVersionArn) {
+			throw new Error('AWS did not return a runtime version ARN.');
+		}
+
+		await LambdaClientInternals.getLambdaClient(
+			region,
+			undefined,
+			requestHandler,
+		).send(
+			new PutRuntimeManagementConfigCommand({
+				FunctionName,
+				UpdateRuntimeOn: 'Manual',
+				RuntimeVersionArn: runtimeVersionArn,
+			}),
+		);
+
+		RenderInternals.Log.verbose(
+			{indent: false, logLevel},
+			`Function runtime is locked to ${runtimeVersionArn}`,
+		);
+	} catch {
+		console.warn(
+			'⚠️ Could not lock the runtime version. We recommend to update your policies to prevent your functions from breaking in the future in case the AWS runtime changes. See https://remotion.dev/docs/lambda/permissions for the required permissions.',
+		);
+	}
+
+	return {FunctionName: FunctionName as string};
+};

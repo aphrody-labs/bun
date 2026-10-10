@@ -1,0 +1,262 @@
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {build} from 'bun';
+import {browserStudioPackageJsonArtifactFilename} from '../workspace-package-exports';
+import {getBrowserStudioDependencyVersionsForBuild} from './get-dependency-versions-for-build';
+import {getBrowserStudioSetupEnvironmentForBuild} from './get-setup-environment-for-build';
+import {getBrowserStudioWorkspacePackageExportsForBuild} from './get-workspace-package-exports-for-build';
+import {studioRenderEntryExternal} from './studio-render-entry-external';
+
+const port = Number(process.env.PORT ?? 62338);
+const outDir = path.join(import.meta.dir, '..', '..', 'dist', 'dev');
+const repoDir = path.join(import.meta.dir, '..', '..', '..', '..');
+const workspacePackagesDir = path.join(repoDir, 'packages');
+const workspacePackagePath = '/__remotion_browser_studio_workspace__/';
+
+const headers = {
+	'Cross-Origin-Embedder-Policy': 'require-corp',
+	'Cross-Origin-Opener-Policy': 'same-origin',
+};
+
+const contentTypes: Record<string, string> = {
+	'.html': 'text/html; charset=utf-8',
+	'.js': 'text/javascript; charset=utf-8',
+	'.mjs': 'text/javascript; charset=utf-8',
+	'.map': 'application/json; charset=utf-8',
+	'.wasm': 'application/wasm',
+};
+
+const indexHtml = `<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Remotion Browser Studio</title>
+		<style>
+			html,
+			body,
+			#root {
+				height: 100%;
+				margin: 0;
+				width: 100%;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="root"></div>
+		<script type="module" src="/index.mjs"></script>
+	</body>
+</html>`;
+
+const frameHtml = `<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Remotion Studio Frame</title>
+		<style>
+			html,
+			body {
+				background: #111111;
+				height: 100%;
+				margin: 0;
+				overflow: hidden;
+				width: 100%;
+			}
+		</style>
+	</head>
+	<body></body>
+</html>`;
+
+const buildDevAssets = async () => {
+	const dependencyVersions = getBrowserStudioDependencyVersionsForBuild();
+	const setupEnvironment = getBrowserStudioSetupEnvironmentForBuild();
+	const workspacePackageExports =
+		getBrowserStudioWorkspacePackageExportsForBuild();
+	const rspackBrowserEntry = fileURLToPath(
+		import.meta.resolve('@rspack/browser'),
+	);
+	const rspackBrowserDist = path.dirname(rspackBrowserEntry);
+	const vendorOutput = await build({
+		define: {'process.env.NODE_ENV': JSON.stringify('development')},
+		entrypoints: ['src/browser-studio-vendor-entry.ts'],
+		external: ['@huggingface/transformers'],
+		format: 'iife',
+		naming: '[name].mjs',
+		outdir: outDir,
+		sourcemap: 'linked',
+		target: 'browser',
+	});
+
+	if (!vendorOutput.success) {
+		process.stderr.write(`${vendorOutput.logs.join('\n')}\n`);
+		process.exit(1);
+	}
+
+	const vendorEntryArtifact = vendorOutput.outputs.find(
+		(file) => path.basename(file.path) === 'browser-studio-vendor-entry.mjs',
+	);
+	if (!vendorEntryArtifact) {
+		throw new Error('Browser Studio vendor entry was not generated');
+	}
+
+	const transformersOutput = await build({
+		entrypoints: ['src/browser-studio-transformers-entry.ts'],
+		format: 'esm',
+		naming: '[name].mjs',
+		outdir: outDir,
+		sourcemap: 'linked',
+		target: 'browser',
+	});
+
+	if (!transformersOutput.success) {
+		process.stderr.write(`${transformersOutput.logs.join('\n')}\n`);
+		process.exit(1);
+	}
+
+	const browserStudioAssetSizes = {
+		rspackWasm: Bun.file(
+			path.join(rspackBrowserDist, 'rspack.wasm32-wasi.wasm'),
+		).size,
+		vendorBundle: vendorEntryArtifact.size,
+	};
+	const output = await build({
+		entrypoints: ['src/dev/index.tsx', 'src/browser-studio-worker.ts'],
+		define: {
+			__BROWSER_STUDIO_ASSET_SIZES__: JSON.stringify(browserStudioAssetSizes),
+			__BROWSER_STUDIO_DEPENDENCY_VERSIONS__:
+				JSON.stringify(dependencyVersions),
+			__BROWSER_STUDIO_SETUP_ENVIRONMENT__: JSON.stringify(setupEnvironment),
+			__BROWSER_STUDIO_WORKSPACE_PACKAGE_EXPORTS__: JSON.stringify(
+				workspacePackageExports,
+			),
+		},
+		format: 'esm',
+		naming: '[name].mjs',
+		outdir: outDir,
+		sourcemap: 'linked',
+		target: 'browser',
+	});
+
+	if (!output.success) {
+		process.stderr.write(`${output.logs.join('\n')}\n`);
+		process.exit(1);
+	}
+
+	const studioPreviewEntryOutput = await build({
+		entrypoints: ['src/browser-studio-preview-entry.ts'],
+		external: studioRenderEntryExternal,
+		format: 'esm',
+		naming: '[name].mjs',
+		outdir: outDir,
+		sourcemap: 'linked',
+		target: 'browser',
+	});
+
+	if (!studioPreviewEntryOutput.success) {
+		process.stderr.write(`${studioPreviewEntryOutput.logs.join('\n')}\n`);
+		process.exit(1);
+	}
+
+	for (const asset of ['rspack.wasm32-wasi.wasm', 'wasi-worker-browser.mjs']) {
+		await Bun.write(
+			path.join(outDir, asset),
+			Bun.file(path.join(rspackBrowserDist, asset)),
+		);
+	}
+};
+
+const responseWithHeaders = (body: BodyInit, init?: ResponseInit): Response => {
+	const responseHeaders = new Headers(init?.headers);
+	for (const [key, value] of Object.entries(headers)) {
+		responseHeaders.set(key, value);
+	}
+
+	return new Response(body, {
+		...init,
+		headers: responseHeaders,
+	});
+};
+
+const start = async () => {
+	await buildDevAssets();
+
+	Bun.serve({
+		port,
+		async fetch(request) {
+			const url = new URL(request.url);
+
+			if (url.pathname === '/' || url.pathname === '/index.html') {
+				return responseWithHeaders(indexHtml, {
+					headers: {'Content-Type': contentTypes['.html']},
+				});
+			}
+
+			if (url.pathname === '/frame.html') {
+				return responseWithHeaders(frameHtml, {
+					headers: {'Content-Type': contentTypes['.html']},
+				});
+			}
+
+			if (url.pathname.startsWith(workspacePackagePath)) {
+				const requestedRelativePath = url.pathname.slice(
+					workspacePackagePath.length,
+				);
+				const relativePath = requestedRelativePath.endsWith(
+					`/${browserStudioPackageJsonArtifactFilename}`,
+				)
+					? `${requestedRelativePath.slice(0, -browserStudioPackageJsonArtifactFilename.length)}package.json`
+					: requestedRelativePath;
+				const workspaceAssetPath = path.join(
+					repoDir,
+					path.normalize(relativePath),
+				);
+				if (
+					!workspaceAssetPath.startsWith(`${workspacePackagesDir}${path.sep}`)
+				) {
+					return responseWithHeaders('Not found', {status: 404});
+				}
+
+				const workspaceFile = Bun.file(workspaceAssetPath);
+				if (!(await workspaceFile.exists())) {
+					return responseWithHeaders('Not found', {status: 404});
+				}
+
+				const workspaceContentType =
+					contentTypes[path.extname(workspaceAssetPath)];
+				return responseWithHeaders(workspaceFile, {
+					headers: workspaceContentType
+						? {'Content-Type': workspaceContentType}
+						: undefined,
+				});
+			}
+
+			const assetPath = path.join(outDir, path.normalize(url.pathname));
+			if (!assetPath.startsWith(outDir)) {
+				return responseWithHeaders('Not found', {status: 404});
+			}
+
+			const file = Bun.file(assetPath);
+			if (!(await file.exists())) {
+				return responseWithHeaders('Not found', {status: 404});
+			}
+
+			const contentType = contentTypes[path.extname(assetPath)];
+
+			return responseWithHeaders(file, {
+				headers: contentType ? {'Content-Type': contentType} : undefined,
+			});
+		},
+	});
+
+	process.stdout.write(`Browser Studio dev server: http://localhost:${port}\n`);
+	process.stdout.write('Press Ctrl+C to stop.\n');
+};
+
+start().catch((error: unknown) => {
+	process.stderr.write(
+		error instanceof Error ? (error.stack ?? error.message) : `${error}`,
+	);
+	process.stderr.write('\n');
+	process.exit(1);
+});
