@@ -199,3 +199,5 @@ chantier touché (`bun-fork-aphrody`, `next-on-bun-plan`, …) à la fin du lot.
 - 2026-10-10: Stripped Linux artifact at 4e3ddd04da1 independently passed all six suites (202 / 1517 assertions), then native Infra SFTP delivery and DBFR checksum/Linux/Zstd/memfd smoke passed. Compact candidate 138871072 bytes; production activation and full release publication remain pending. See [proof](docs/project/linux-owner-release-preflight.md).
 
 - 2026-10-10: owned Node host consolidation: 137 native tests pass, 4 skips; Windows/Linux x64/ARM64 owned Clippy diagnostics zero. Whole Windows 58 diagnostics and reserved Darwin dependency remain; see docs/project/node-host-consolidation-qualification.md.
+
+- 2026-10-10: Buv/PyJS GPU consolidation refreshed on physical RTX 4070: D3D12 WGSL and CUDA exact 37-element outputs pass; provider checksum unchanged. Published shared-host PyCUDA test retained; native Linux hardware, Alpine ABI and activation still open. See docs/aphrody/buv-pyjs-gpu-consolidation.md.
