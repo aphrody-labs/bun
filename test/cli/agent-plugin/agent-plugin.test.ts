@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "fs";
 import { bunEnv, bunExe, tempDir } from "harness";
 import { join, relative, resolve } from "path";
 import { lspExtensions, mcpTools } from "../../../packages/bun-agent-plugin/src/catalog.ts";
@@ -352,6 +352,40 @@ describe("bun agent-plugin", () => {
       expect(a.stderr + b.stderr).toBe("");
       expect(tree(embedded)).toEqual(tree(fromCheckout));
       expect([a.exitCode, b.exitCode]).toEqual([0, 0]);
+    },
+    SPAWN_TIMEOUT,
+  );
+  test.concurrent(
+    "the published package installs from bundled plugins without a checkout",
+    async () => {
+      using directory = tempDir("agent-plugin-published", {});
+      const standalone = join(String(directory), "package");
+      for (const path of ["bin", "src", "package.json"])
+        cpSync(join(pkg, path), join(standalone, path), { recursive: true });
+      for (const [path, contents] of generate({ root, pkg })) {
+        const destination = join(standalone, "plugins", path);
+        mkdirSync(resolve(destination, ".."), { recursive: true });
+        writeFileSync(destination, contents);
+      }
+      const home = join(String(directory), "home");
+      mkdirSync(home);
+      const { stdout, stderr, exitCode } = await run(
+        [
+          bunExe(),
+          join(standalone, "bin/bun-agent-plugin.ts"),
+          "install",
+          "codex",
+          "--home",
+          home,
+          "--dry-run",
+          "--json",
+        ],
+        { cwd: home },
+      );
+      expect(stderr).toBe("");
+      expect(stdout).toContain("codex");
+      expect(existsSync(join(home, ".codex/config.toml"))).toBe(false);
+      expect(exitCode).toBe(0);
     },
     SPAWN_TIMEOUT,
   );

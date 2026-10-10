@@ -184,8 +184,12 @@ fn compile(argv: &[&ZStr]) -> Result<(), String> {
             )?));
     }
     uv_arguments.push(OsString::from("--backend-ready"));
-    // SAFETY: compilation dispatch runs before JSC or worker threads are initialized.
-    let status = unsafe { uv::main_status(uv_arguments) };
+    // SAFETY: terminal compilation dispatch precedes JSC and worker initialization.
+    // UV selects the compiler venv; --python already pins the base interpreter.
+    let status = unsafe {
+        std::env::remove_var("BUN_PYTHON_EXECUTABLE");
+        uv::main_status(uv_arguments)
+    };
     Global::exit(match status {
         ExitStatus::Success => 0,
         ExitStatus::Failure => 1,

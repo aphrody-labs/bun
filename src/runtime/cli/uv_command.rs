@@ -3,6 +3,7 @@ use std::ffi::OsString;
 use bun_core::Global;
 use uv_command_support::ExitStatus;
 
+#[derive(Clone, Copy)]
 pub(crate) enum Invocation {
     Bun,
     Uv,

@@ -353,8 +353,12 @@ if (isDockerEnabled()) {
 
         const uuids = ["123e4567-e89b-12d3-a456-426614174000", "550e8400-e29b-41d4-a716-446655440000"];
         const [{ x }] = await sql`select ${sql.array(uuids, "UUID")} as x`;
-        // TODO: we should parse it as an array of UUIDs
-        expect(x).toEqual("{123e4567-e89b-12d3-a456-426614174000,550e8400-e29b-41d4-a716-446655440000}");
+        expect(x).toEqual(uuids);
+
+        const [{ ids }] = await sql`
+          select ARRAY[${uuids[0]}::uuid, NULL, ${uuids[1]}::uuid] as ids
+        `;
+        expect(ids).toEqual([uuids[0], null, uuids[1]]);
       });
 
       test("sql.array should support INET arrays", async () => {

@@ -95,7 +95,16 @@ pub(crate) fn query(channel: &str, xpath: &str, max: u32, reverse: bool) -> WinR
         let want = remaining.min(batch.len() as u32);
         let mut got = 0u32;
         // SAFETY: `batch` has room for `want` handles.
-        let ok = unsafe { (api.next)(results.0, want, batch.as_mut_ptr(), INFINITE, 0, &mut got) };
+        let ok = unsafe {
+            (api.next)(
+                results.0,
+                want,
+                batch.as_mut_ptr(),
+                INFINITE,
+                0,
+                &raw mut got,
+            )
+        };
         if ok == 0 {
             let err = WinErr::last("EvtNext");
             if err.code == super::ERROR_NO_MORE_ITEMS {
@@ -119,8 +128,8 @@ pub(crate) fn query(channel: &str, xpath: &str, max: u32, reverse: bool) -> WinR
                         EVT_RENDER_EVENT_XML,
                         (buf.len() * 2) as u32,
                         buf.as_mut_ptr().cast(),
-                        &mut used,
-                        &mut props,
+                        &raw mut used,
+                        &raw mut props,
                     )
                 };
                 if ok != 0 {

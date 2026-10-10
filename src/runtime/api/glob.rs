@@ -59,11 +59,13 @@ impl ScanOpts {
             }
 
             // `cwd_utf8` drops at scope exit.
-            let mut path_buf2 = [0u8; MAX_PATH_BYTES * 2];
+            // SAFETY: zero initializes every element of the u8 scratch array.
+            let mut path_buf2 =
+                unsafe { Box::<[u8; MAX_PATH_BYTES * 2]>::new_zeroed().assume_init() };
 
             if !absolute {
                 let parts: &[&[u8]] = &[cwd_utf8.slice()];
-                let cwd_str = join_string_buf::<platform::Auto>(&mut path_buf2, parts);
+                let cwd_str = join_string_buf::<platform::Auto>(&mut *path_buf2, parts);
                 break 'cwd_str Box::<[u8]>::from(cwd_str);
             }
 
@@ -78,7 +80,7 @@ impl ScanOpts {
             };
 
             let cwd_str = join_string_buf::<platform::Auto>(
-                &mut path_buf2,
+                &mut *path_buf2,
                 &[&path_buf[..cwd_len], cwd_utf8.slice()],
             );
             break 'cwd_str Box::<[u8]>::from(cwd_str);
@@ -497,7 +499,10 @@ impl Glob {
             };
             match result.map_err(crate::Error::from)? {
                 bun_sys::Result::Err(err) => Err(global_this.throw_value(err.to_js(global_this))),
-                bun_sys::Result::Ok(gw) => Ok(Box::new(gw)),
+                bun_sys::Result::Ok(mut gw) => {
+                    gw.error_on_missing_cwd = opts.error_on_broken_symlinks;
+                    Ok(Box::new(gw))
+                }
             }
         }
 

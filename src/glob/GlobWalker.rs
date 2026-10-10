@@ -252,6 +252,8 @@ pub struct GlobWalker<A: Accessor, const SENTINEL: bool> {
     pub(crate) cwd: Box<[u8]>,
     pub(crate) follow_symlinks: bool,
     pub(crate) error_on_broken_symlinks: bool,
+    /// Strict Bun.Glob scans report a missing cwd; defaults match nothing.
+    pub error_on_missing_cwd: bool,
     pub(crate) only_files: bool,
 
     pub(crate) path_buf: bun_paths::path_buffer_pool::Guard,
@@ -480,8 +482,10 @@ impl<'a, A: Accessor, const SENTINEL: bool> Iterator<'a, A, SENTINEL> {
         let root_path_z = ZStr::from_buf(&self.walker.path_buf[..], root_path_len);
         let cwd_fd = match A::open(root_path_z)? {
             Err(err) => {
-                // A missing root matches nothing, like Node's `fs.glob` and fast-glob.
-                if err.get_errno() == E::ENOENT {
+                // Missing absolute pattern prefixes match nothing; Bun.Glob rejects a missing cwd.
+                if err.get_errno() == E::ENOENT
+                    && (was_absolute || !self.walker.error_on_missing_cwd)
+                {
                     self.iter_state = IterState::GetNext;
                     return Ok(Ok(()));
                 }
@@ -1450,6 +1454,7 @@ impl<A: Accessor, const SENTINEL: bool> GlobWalker<A, SENTINEL> {
             error_on_broken_symlinks,
             only_files,
             basename_excluding_special_syntax_component_idx: 0,
+            error_on_missing_cwd: false,
             end_byte_of_basename_excluding_special_syntax: 0,
             pattern_components: Vec::new(),
             matched_paths: MatchedMap::default(),

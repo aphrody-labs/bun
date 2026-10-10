@@ -10,9 +10,9 @@
 //! the same fields.
 
 use super::{HANDLE, Json, OwnedHandle, WinErr, WinResult};
+use bun_collections::HashMap;
+use bun_threading::Guarded;
 use core::ffi::c_void;
-use std::collections::HashMap;
-use std::sync::Mutex;
 
 const FSCTL_ENUM_USN_DATA: u32 = 0x0009_00b3;
 const FSCTL_READ_USN_JOURNAL: u32 = 0x0009_00bb;
@@ -60,11 +60,11 @@ struct Registry {
     volumes: HashMap<u32, usize>,
 }
 
-static VOLUMES: Mutex<Option<Registry>> = Mutex::new(None);
+static VOLUMES: Guarded<Option<Registry>> = Guarded::new(None);
 
 fn with_volume<T>(id: u32, f: impl FnOnce(HANDLE) -> WinResult<T>) -> WinResult<T> {
     let handle = {
-        let guard = VOLUMES.lock().unwrap_or_else(|e| e.into_inner());
+        let guard = VOLUMES.lock();
         guard.as_ref().and_then(|r| r.volumes.get(&id).copied())
     };
     match handle {
@@ -79,7 +79,10 @@ fn with_volume<T>(id: u32, f: impl FnOnce(HANDLE) -> WinResult<T>) -> WinResult<
 /// Opens `\\.\<drive>:` (a single letter, with or without a trailing colon) and returns a
 /// volume id. Requires an administrator token; otherwise `ERROR_ACCESS_DENIED`.
 pub(crate) fn open(drive: &str) -> WinResult<u32> {
-    let letter = drive.trim_end_matches(':').trim_start_matches('\\').to_uppercase();
+    let letter = drive
+        .trim_end_matches(':')
+        .trim_start_matches('\\')
+        .to_uppercase();
     let path = super::wide(&format!("\\\\.\\{letter}:"));
     // SAFETY: `path` is NUL-terminated; no template handle, default security.
     let h = unsafe {
@@ -96,7 +99,7 @@ pub(crate) fn open(drive: &str) -> WinResult<u32> {
     if h.is_null() || h as isize == -1 {
         return Err(WinErr::last("CreateFileW"));
     }
-    let mut guard = VOLUMES.lock().unwrap_or_else(|e| e.into_inner());
+    let mut guard = VOLUMES.lock();
     let registry = guard.get_or_insert_with(|| Registry {
         next: 1,
         volumes: HashMap::new(),
@@ -110,7 +113,7 @@ pub(crate) fn open(drive: &str) -> WinResult<u32> {
 /// Closes the volume handle. Returns `false` for an already-closed or unknown id.
 pub(crate) fn close(id: u32) -> bool {
     let handle = {
-        let mut guard = VOLUMES.lock().unwrap_or_else(|e| e.into_inner());
+        let mut guard = VOLUMES.lock();
         guard.as_mut().and_then(|r| r.volumes.remove(&id))
     };
     match handle {
@@ -122,10 +125,24 @@ pub(crate) fn close(id: u32) -> bool {
     }
 }
 
-fn ioctl(h: HANDLE, code: u32, input: &[u8], output: &mut [u8], call: &'static str) -> WinResult<u32> {
+fn ioctl(
+    h: HANDLE,
+    code: u32,
+    input: &[u8],
+    output: &mut [u8],
+    call: &'static str,
+) -> WinResult<u32> {
     let mut returned = 0u32;
-    let in_ptr = if input.is_empty() { core::ptr::null() } else { input.as_ptr().cast() };
-    let out_ptr = if output.is_empty() { core::ptr::null_mut() } else { output.as_mut_ptr().cast() };
+    let in_ptr = if input.is_empty() {
+        core::ptr::null()
+    } else {
+        input.as_ptr().cast()
+    };
+    let out_ptr = if output.is_empty() {
+        core::ptr::null_mut()
+    } else {
+        output.as_mut_ptr().cast()
+    };
     // SAFETY: `input`/`output` are valid for their given lengths; this is a synchronous,
     // non-overlapped call so no asynchronous completion races the buffers.
     let ok = unsafe {
@@ -136,7 +153,7 @@ fn ioctl(h: HANDLE, code: u32, input: &[u8], output: &mut [u8], call: &'static s
             input.len() as u32,
             out_ptr,
             output.len() as u32,
-            &mut returned,
+            &raw mut returned,
             core::ptr::null_mut(),
         )
     };
@@ -152,7 +169,13 @@ fn ioctl(h: HANDLE, code: u32, input: &[u8], output: &mut [u8], call: &'static s
 pub(crate) fn journal_query(id: u32) -> WinResult<String> {
     with_volume(id, |h| {
         let mut out = [0u8; 80];
-        ioctl(h, FSCTL_QUERY_USN_JOURNAL, &[], &mut out, "FSCTL_QUERY_USN_JOURNAL")?;
+        ioctl(
+            h,
+            FSCTL_QUERY_USN_JOURNAL,
+            &[],
+            &mut out,
+            "FSCTL_QUERY_USN_JOURNAL",
+        )?;
         let journal_id = u64::from_le_bytes(out[0..8].try_into().unwrap());
         let first_usn = i64::from_le_bytes(out[8..16].try_into().unwrap());
         let next_usn = i64::from_le_bytes(out[16..24].try_into().unwrap());
@@ -178,7 +201,13 @@ pub(crate) fn journal_create(id: u32, maximum_size: u64, allocation_delta: u64) 
         let mut input = [0u8; 16];
         input[0..8].copy_from_slice(&maximum_size.to_le_bytes());
         input[8..16].copy_from_slice(&allocation_delta.to_le_bytes());
-        ioctl(h, FSCTL_CREATE_USN_JOURNAL, &input, &mut [], "FSCTL_CREATE_USN_JOURNAL")?;
+        ioctl(
+            h,
+            FSCTL_CREATE_USN_JOURNAL,
+            &input,
+            &mut [],
+            "FSCTL_CREATE_USN_JOURNAL",
+        )?;
         Ok(())
     })
 }
@@ -195,7 +224,13 @@ pub(crate) fn mft_enumerate(id: u32, buffer_bytes: usize) -> WinResult<String> {
         let mut json = Json::new();
         json.begin_array();
         loop {
-            let bytes = match ioctl(h, FSCTL_ENUM_USN_DATA, &input, &mut out, "FSCTL_ENUM_USN_DATA") {
+            let bytes = match ioctl(
+                h,
+                FSCTL_ENUM_USN_DATA,
+                &input,
+                &mut out,
+                "FSCTL_ENUM_USN_DATA",
+            ) {
                 Ok(n) => n as usize,
                 Err(e) if e.code == ERROR_HANDLE_EOF => break,
                 Err(e) => return Err(e),
@@ -212,14 +247,20 @@ pub(crate) fn mft_enumerate(id: u32, buffer_bytes: usize) -> WinResult<String> {
                 if len < 60 || off + len > bytes || major != 2 {
                     break;
                 }
-                let record = u64::from_le_bytes(out[off + 8..off + 16].try_into().unwrap()) & RECORD_MASK;
-                let parent = u64::from_le_bytes(out[off + 16..off + 24].try_into().unwrap()) & RECORD_MASK;
+                let record =
+                    u64::from_le_bytes(out[off + 8..off + 16].try_into().unwrap()) & RECORD_MASK;
+                let parent =
+                    u64::from_le_bytes(out[off + 16..off + 24].try_into().unwrap()) & RECORD_MASK;
                 let attributes = u32::from_le_bytes(out[off + 52..off + 56].try_into().unwrap());
-                let name_len = u16::from_le_bytes(out[off + 56..off + 58].try_into().unwrap()) as usize;
-                let name_off = off + u16::from_le_bytes(out[off + 58..off + 60].try_into().unwrap()) as usize;
+                let name_len =
+                    u16::from_le_bytes(out[off + 56..off + 58].try_into().unwrap()) as usize;
+                let name_off =
+                    off + u16::from_le_bytes(out[off + 58..off + 60].try_into().unwrap()) as usize;
                 let name = if name_off + name_len <= bytes {
                     let units: Vec<u16> = out[name_off..name_off + name_len]
-                        .chunks_exact(2)
+                        .as_chunks::<2>()
+                        .0
+                        .iter()
                         .map(|c| u16::from_le_bytes([c[0], c[1]]))
                         .collect();
                     String::from_utf16_lossy(&units)
@@ -287,7 +328,9 @@ fn parse_usn_record(buf: &[u8], offset: usize) -> Option<UsnRecord> {
         return None;
     }
     let units: Vec<u16> = rest[name_offset..name_offset + name_length]
-        .chunks_exact(2)
+        .as_chunks::<2>()
+        .0
+        .iter()
         .map(|c| u16::from_le_bytes([c[0], c[1]]))
         .collect();
     Some(UsnRecord {
@@ -324,7 +367,12 @@ fn write_usn_record(json: &mut Json, record: &UsnRecord) {
 /// `REG_QWORD` convention) so no 64-bit value round-trips through an IEEE-754 `number`.
 /// `ERROR_JOURNAL_ENTRY_DELETED` (the checkpoint fell out of the journal) and other journal
 /// errors propagate to the caller, which decides to rescan.
-pub(crate) fn journal_read(id: u32, start_usn: i64, journal_id: u64, buffer_bytes: usize) -> WinResult<String> {
+pub(crate) fn journal_read(
+    id: u32,
+    start_usn: i64,
+    journal_id: u64,
+    buffer_bytes: usize,
+) -> WinResult<String> {
     with_volume(id, |h| {
         let mut out = vec![0u8; buffer_bytes.max(4096)];
         // READ_USN_JOURNAL_DATA_V0: StartUsn(8) ReasonMask(4) ReturnOnlyOnClose(4) Timeout(8)
@@ -333,10 +381,21 @@ pub(crate) fn journal_read(id: u32, start_usn: i64, journal_id: u64, buffer_byte
         input[0..8].copy_from_slice(&start_usn.to_le_bytes());
         input[8..12].copy_from_slice(&0xffff_ffffu32.to_le_bytes());
         input[32..40].copy_from_slice(&journal_id.to_le_bytes());
-        let bytes = ioctl(h, FSCTL_READ_USN_JOURNAL, &input, &mut out, "FSCTL_READ_USN_JOURNAL")? as usize;
+        let bytes = ioctl(
+            h,
+            FSCTL_READ_USN_JOURNAL,
+            &input,
+            &mut out,
+            "FSCTL_READ_USN_JOURNAL",
+        )? as usize;
         let mut json = Json::new();
         if bytes < 8 {
-            json.begin_object().key("records").begin_array().end_array().field_str("next", &start_usn.to_string()).end_object();
+            json.begin_object()
+                .key("records")
+                .begin_array()
+                .end_array()
+                .field_str("next", &start_usn.to_string())
+                .end_object();
             return Ok(json.finish());
         }
         let next = i64::from_le_bytes(out[0..8].try_into().unwrap());
@@ -351,7 +410,9 @@ pub(crate) fn journal_read(id: u32, start_usn: i64, journal_id: u64, buffer_byte
                 None => break,
             }
         }
-        json.end_array().field_str("next", &next.to_string()).end_object();
+        json.end_array()
+            .field_str("next", &next.to_string())
+            .end_object();
         Ok(json.finish())
     })
 }

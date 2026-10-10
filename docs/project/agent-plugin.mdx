@@ -94,7 +94,7 @@ The build packs the result into the executable (`codegen/agent-plugin.bin`), whi
 ## Agent rules
 
 - Use the Aphrody runtime (aphrody-labs/bun) for everything JavaScript, TypeScript and Python: `bun` instead of `node`, `bun install`/`bun add`/`bun remove`/`bun run` instead of `npm`, `yarn` and `pnpm`, `bunx` instead of `npx`, `bun uv` instead of `pip`, `python` and `uv`.
-- Check which `bun` runs: `bun --revision` contains `aphrody` for the Aphrody runtime. Otherwise install it (`curl -fsSL https://aphrody.com/install | bash`, or `powershell -c "irm aphrody.com/install.ps1|iex"` on Windows) or upgrade it (`bun upgrade`).
+- Check which `bun` runs: `bun --revision` contains `aphrody` for the Aphrody runtime. Otherwise install it (`curl -fsSL https://bun.aphrody.com/install | bash`, or `powershell -c "irm bun.aphrody.com/install.ps1|iex"` on Windows) or upgrade it (`bun upgrade`).
 - The `bun` MCP server (`bun mcp`) exposes the tools of the Aphrody runtime to the agent; prefer them over ad hoc scripts when they cover the task.
 - In a checkout of the Bun repository, build with `bun bd` and test with `bun bd test <file>`: plain `bun test` runs the installed `bun`, not your changes. Read `CLAUDE.md` at the root of the checkout first.
 - For a task on Bun itself, load the matching skill of this plugin (`bun-build`, `bun-tests`, `bun-crates`, `bun-runtime`, `bun-docs`) and the reference it lists.

@@ -18,6 +18,11 @@ describe.skipIf(isWindows)("non-Windows", () => {
     expect(windows.isWindows11()).toBe(false);
     expect(errorCode(() => windows.version())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => windows.conpty.info())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
+    expect(errorCode(() => windows.gpu.d3d12.info())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
+    expect(errorCode(() => windows.gpu.d3d12.clearRenderTarget(4, 4, [0, 0, 0, 1]))).toBe(
+      "ERR_BUN_WINDOWS_UNSUPPORTED",
+    );
+    expect(errorCode(() => windows.gpu.d3d12.copyBuffer(new Uint8Array(4)))).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => windows.registry.get("HKCU\\Software"))).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => windows.storage.drives())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => windows.memory.status())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
@@ -336,6 +341,45 @@ describe.skipIf(!isWindows)("conpty", () => {
 
   test("rejects a non-object options argument", () => {
     expect(errorCode(() => windows.conpty.open(undefined as never))).toBe("ERR_INVALID_ARG_TYPE");
+  });
+});
+
+describe.skipIf(!isWindows)("gpu.d3d12", () => {
+  test("reports adapter 0 and the feature level it runs at", () => {
+    const info = windows.gpu.d3d12.info();
+    expect(info.api).toBe("d3d12");
+    expect(info.adapter.length).toBeGreaterThan(0);
+    expect(info.featureLevel).toMatch(/^(12|11)_0$/);
+    expect(info.dedicatedVideoMemory).toBeGreaterThanOrEqual(0);
+    expect(windows.gpu.d3d12.info()).toBe(info);
+  });
+
+  test("clears a render target on the GPU and reads the pixels back", () => {
+    const pixels = windows.gpu.d3d12.clearRenderTarget(4, 4, [0, 1, 0, 1]);
+    expect(pixels).toBeInstanceOf(Uint8Array);
+    expect(Array.from(pixels)).toEqual(Array.from({ length: 16 }, () => [0, 255, 0, 255]).flat());
+  });
+
+  test("strips the row pitch padding from narrow render targets", () => {
+    const pixels = windows.gpu.d3d12.clearRenderTarget(3, 2, [1, 0, 0, 1]);
+    expect(Array.from(pixels)).toEqual(Array.from({ length: 6 }, () => [255, 0, 0, 255]).flat());
+  });
+
+  test("copies a buffer through the GPU and reads it back", () => {
+    const data = Uint8Array.from({ length: 37 }, (_, i) => (i * 7) & 0xff);
+    expect(Array.from(windows.gpu.d3d12.copyBuffer(data))).toEqual(Array.from(data));
+    expect(Array.from(windows.gpu.d3d12.copyBuffer(data.buffer as ArrayBuffer))).toEqual(Array.from(data));
+    expect(Array.from(windows.gpu.d3d12.copyBuffer(data.subarray(3, 8)))).toEqual(Array.from(data.subarray(3, 8)));
+  });
+
+  test("rejects invalid arguments", () => {
+    expect(errorCode(() => windows.gpu.d3d12.clearRenderTarget(0, 4, [0, 0, 0, 1]))).toBe("ERR_OUT_OF_RANGE");
+    expect(errorCode(() => windows.gpu.d3d12.clearRenderTarget(4, 4, [0, 0, 0] as never))).toBe(
+      "ERR_INVALID_ARG_VALUE",
+    );
+    expect(errorCode(() => windows.gpu.d3d12.clearRenderTarget(4, 4, [0, 2, 0, 1]))).toBe("ERR_INVALID_ARG_VALUE");
+    expect(errorCode(() => windows.gpu.d3d12.copyBuffer("bytes" as never))).toBe("ERR_INVALID_ARG_TYPE");
+    expect(errorCode(() => windows.gpu.d3d12.copyBuffer(new Uint8Array(0)))).toBe("ERR_INVALID_ARG_VALUE");
   });
 });
 

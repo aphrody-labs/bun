@@ -549,24 +549,33 @@ test.skipIf(process.platform == "win32")("error broken symlinks", async () => {
   expect(err).toBeDefined();
 });
 
-test("error non-existent cwd", async () => {
-  const glob = new Glob("**/*");
-  let err: Error | undefined = undefined;
-  try {
-    const results = await Array.fromAsync(
-      glob.scan({
-        cwd: "alkfjalskdjfoogaboogaalskjflskdjfl",
-        followSymlinks: true,
-        absolute: true,
-        onlyFiles: false,
-        throwErrorOnBrokenSymlink: true,
-      }),
-    );
-  } catch (e) {
-    err = e as any;
-  }
-  expect(err).toBeDefined();
-});
+for (const method of ["scan", "scanSync"] as const) {
+  test(`error non-existent cwd (${method})`, async () => {
+    const glob = new Glob("**/*");
+    let err: (Error & { code?: string }) | undefined;
+    try {
+      await Array.fromAsync(
+        glob[method]({
+          cwd: "alkfjalskdjfoogaboogaalskjflskdjfl",
+          followSymlinks: true,
+          absolute: true,
+          onlyFiles: false,
+          throwErrorOnBrokenSymlink: true,
+        }),
+      );
+    } catch (e) {
+      err = e as Error & { code?: string };
+    }
+    expect(err).toBeInstanceOf(Error);
+    expect(err?.code).toBe("ENOENT");
+  });
+
+  test(`missing absolute pattern root returns no matches (${method})`, async () => {
+    const pattern = path.join(import.meta.dir, "alkfjalskdjfoogaboogaalskjflskdjfl", "**", "*").replaceAll("\\", "/");
+    const glob = new Glob(pattern);
+    expect(await Array.fromAsync(glob[method]({ cwd: import.meta.dir, throwErrorOnBrokenSymlink: true }))).toEqual([]);
+  });
+}
 
 test("glob.scan(string)", async () => {
   const glob = new Glob("*.md");

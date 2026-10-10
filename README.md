@@ -101,7 +101,15 @@ Tests for code that exists only in this component live in [`test/js/first_party/
 
 ## Versioning
 
-- **Component version.** `bun --version` prints `<base>-aphrody.<n>`. `<base>` is the upstream Bun version the
+Native Windows source synchronization defaults to **1.4.4**:
+`bun run bun:windows --apply`, then `bun run bun:windows --check`.
+See [the targeted version and infrastructure audit](docs/aphrody/windows-version-sync.md)
+for planning, checksum-qualified deployment pins and independent package versions.
+
+- **Stable runtime version.** New stable releases use `bun-v1.4.4` and print
+  `1.4.4`, without a suffix. Installers, deployment selection and runtime npm
+  publication accept this tag. Legacy `aphrody-v*` releases remain readable.
+- **Legacy component version.** `bun --version` prints `<base>-aphrody.<n>`. `<base>` is the upstream Bun version the
   component is built from, and `<n>` counts the Aphrody releases of that base. For example, `1.4.3-aphrody.4` is
   the fourth release built on Bun 1.4.3. Release tags are `aphrody-v<component version>`. `Bun.version` and
   `process.versions.bun` keep the upstream base version (`1.4.3`), so packages that check the Bun version see the

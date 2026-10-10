@@ -1590,7 +1590,11 @@ impl PipelineTask {
                 });
                 return;
             }
-            if u64::try_from(st.st_size.max(0)).expect("int cast") > MAX_INPUT_FILE_BYTES {
+            #[cfg(windows)]
+            let file_size = st.st_size;
+            #[cfg(not(windows))]
+            let file_size = u64::try_from(st.st_size.max(0)).expect("int cast");
+            if file_size > MAX_INPUT_FILE_BYTES {
                 self.result = TaskResult::Err(codecs::Error::TooManyPixels);
                 return;
             }

@@ -1,6 +1,70 @@
 import { describe, expect, test } from "bun:test";
-import { isWindows } from "harness";
+import { isWindows, tempDir } from "harness";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { filteredEnv, filterPath } from "../../scripts/aphrody/win/shell/prove.ts";
+import {
+  applyChanges,
+  releaseChanges,
+  sourceChanges,
+  validateVersion,
+} from "../../scripts/aphrody/win/version-sync.ts";
+
+describe("Windows targeted version synchronization", () => {
+  test("refuses concurrent edits before applying any planned file", () => {
+    using directory = tempDir("windows-version-sync", { "a.json": "original", "b.json": "concurrent" });
+    const root = String(directory);
+    const changes = [
+      { path: "a.json", before: "original", after: "updated", reason: "test" },
+      { path: "b.json", before: "original", after: "updated", reason: "test" },
+    ];
+    expect(() => applyChanges(root, changes)).toThrow("Concurrent change: b.json");
+    expect(readFileSync(join(root, "a.json"), "utf8")).toBe("original");
+    writeFileSync(join(root, "b.json"), "original");
+    applyChanges(root, changes);
+    expect(readFileSync(join(root, "a.json"), "utf8")).toBe("updated");
+    expect(readFileSync(join(root, "b.json"), "utf8")).toBe("updated");
+  });
+  test("updates coupled source declarations without changing dependency versions or line endings", () => {
+    const manifests = {
+      "package.json":
+        '{\r\n  "name": "bun",\r\n  "version": "1.4.3",\r\n  "dependencies": { "other": "1.4.3" }\r\n}\r\n',
+      "packages/bun-agent-plugin/package.json":
+        '{\n  "name": "bun-agent-plugin",\n  "version": "1.4.3",\n  "engines": {\n    "bun": ">=1.4.3"\n  }\n}\n',
+    };
+    const changes = sourceChanges(path => manifests[path]);
+    expect(changes).toHaveLength(2);
+    expect(JSON.parse(changes[0].after)).toMatchObject({ version: "1.4.4", dependencies: { other: "1.4.3" } });
+    expect(changes[0].after.split("\r\n")).toHaveLength(6);
+    expect(JSON.parse(changes[1].after)).toMatchObject({ version: "1.4.4", engines: { bun: ">=1.4.4" } });
+    expect(sourceChanges(path => changes.find(change => change.path === path)!.after)).toEqual([]);
+  });
+
+  test("rejects unstable versions and mismatched manifest owners", () => {
+    for (const version of ["1.4.4-aphrody.1", "01.4.4", "1.4", "1.4.4\n"])
+      expect(() => validateVersion(version)).toThrow();
+    expect(() => sourceChanges(() => '{"name":"other","version":"1.4.3"}')).toThrow("owner");
+  });
+
+  test("requires complete release checksums before rewriting artifact pins", () => {
+    expect(() => releaseChanges(() => "", "1.4.4", "bun-v1.4.3", "")).toThrow("tag");
+    expect(() => releaseChanges(() => "", "1.4.4", "bun-v1.4.4", "")).toThrow("checksum");
+    const assets = ["bun-linux-x64", "bun-linux-x64-musl", "bun-linux-x64-musl-baseline", "bun-linux-aarch64-musl"];
+    const sums = assets.map((asset, index) => `${String(index + 1).repeat(64)}  ${asset}.zip`).join("\n");
+    const read = (path: string) =>
+      path.endsWith("alpine/runtime.Dockerfile")
+        ? `ARG BUN_RELEASE=aphrody-v1.4.3-aphrody.2\n${assets
+            .slice(1)
+            .map(asset => `asset=${asset} sum=${"0".repeat(64)} ;;`)
+            .join("\n")}`
+        : "image: ghcr.io/aphrody-labs/bun:1.4.3-aphrody.3\nARG BUN_RELEASE=aphrody-v1.4.3-aphrody.3";
+    const changes = releaseChanges(read, "1.4.4", "bun-v1.4.4", sums);
+    expect(changes).toHaveLength(6);
+    expect(changes[0].after).toContain("ghcr.io/aphrody-labs/bun:1.4.4");
+    expect(changes[5].after).toContain(`asset=bun-linux-x64-musl sum=${"2".repeat(64)}`);
+    expect(changes[5].after).toContain("ARG BUN_RELEASE=bun-v1.4.4");
+  });
+});
 
 const noRuntime = () => false;
 

@@ -83,6 +83,33 @@ function allCompileFlagLists(cfg: Config): string[][] {
 }
 
 describe("debug-info flag order", () => {
+  test.each(["x64", "aarch64"] as const)("Windows %s linker workers preserve debug symbols", arch => {
+    using dir = tempDir("build-link-threads", {});
+    const resolve = (partial: PartialConfig) =>
+      resolveConfig(
+        {
+          os: "windows",
+          arch,
+          buildType: "Debug",
+          winsysroot: "/fake/winsysroot",
+          buildDir: String(dir),
+          ...partial,
+        },
+        mockToolchain(),
+      );
+    const defaults = computeFlags(resolve({})).ldflags;
+    const bounded = computeFlags(resolve({ linkThreads: 1 })).ldflags;
+    expect(defaults.some(flag => flag.startsWith("/threads:"))).toBe(false);
+    expect(bounded).toContain("/threads:1");
+    expect(computeFlags(resolve({ linkThreads: 4 })).ldflags).toContain("/threads:4");
+    expect(bounded).toContain("/DEBUG:FULL");
+    expect(bounded.filter(flag => !flag.startsWith("/threads:"))).toEqual(defaults);
+    for (const linkThreads of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => resolve({ linkThreads })).toThrow("linkThreads must be a positive integer");
+    }
+    const linux = computeFlags(linuxConfig({ linkThreads: 1 }, String(dir))).ldflags;
+    expect(linux.some(flag => flag.startsWith("/threads:"))).toBe(false);
+  });
   test("release + LTO: -g1 is the last -g flag, after -glldb, for bun and for deps", () => {
     using dir = tempDir("build-debug-info", {});
     const cfg = linuxConfig({ buildType: "Release", lto: true }, String(dir));

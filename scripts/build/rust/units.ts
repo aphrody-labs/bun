@@ -340,6 +340,8 @@ export interface RustcUnitManifest extends ManifestCommon {
   depInfo: string;
   /** The package's build-script `output.json`, when the package has one (its directives apply here). */
   buildScriptOutput: string | undefined;
+  /** Static libraries already supplied by Bun's native link, rather than bundled in this target rlib. */
+  providedStaticLibraries?: string[] | undefined;
   /** `output.json` of every transitive same-platform dependency with a build script: their `rustc-link-search` paths apply here too (cargo add_native_deps). */
   depBuildScriptOutputs: string[];
   /** `--time-trace=on`: where run.ts records the passes rustc reports, as timings.ts's `Phase[]`. */
@@ -552,6 +554,22 @@ function rustcUnitManifest(ctx: ManifestContext, unit: RustUnit): RustcUnitManif
   if (unit.buildScript !== undefined) env.OUT_DIR = unit.buildScript.scriptOutDir!;
   if (unit.isStd) env.RUSTC_BOOTSTRAP = "1";
 
+  let providedStaticLibraries: string[] | undefined;
+  if (
+    unit.kind === "lib" &&
+    unit.platform !== "host" &&
+    graph.root.kind === "lib" &&
+    graph.root.pkg.name === "bun_runtime" &&
+    unit.pkg.name === "zstd-sys"
+  ) {
+    assert(unit.pkg.version.endsWith("+zstd.1.5.7"), "Bun's native Zstd provider requires Zstd 1.5.7 bindings");
+    assert(
+      unit.features.every(feature => ["std", "zdict_builder", "zstdmt", "no_asm"].includes(feature)),
+      `Bun's native Zstd provider does not support zstd-sys features: ${unit.features.join(", ")}`,
+    );
+    providedStaticLibraries = ["zstd"];
+  }
+
   return {
     kind: unit.kind,
     crateName: unit.crateName,
@@ -567,6 +585,7 @@ function rustcUnitManifest(ctx: ManifestContext, unit: RustUnit): RustcUnitManif
     depInfo: unit.depInfo,
     depfile: `${unit.depInfo}.ninja`,
     buildScriptOutput: unit.buildScript?.output,
+    providedStaticLibraries,
     // cargo build_scripts.to_link: the package's own script, then those of linkable dependencies on the *same*
     // platform — a proc-macro's (host) subgraph contributes its dylib, not its native search paths.
     depBuildScriptOutputs: transitiveLinkInputs(unit, "same-platform")

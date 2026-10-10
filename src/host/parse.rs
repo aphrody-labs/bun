@@ -54,7 +54,7 @@ pub fn psi(text: &str) -> (Option<f64>, Option<f64>) {
     (avg10("some"), avg10("full"))
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct CpuInfo {
     pub model: String,
     pub logical: u32,

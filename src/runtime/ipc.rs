@@ -1094,6 +1094,7 @@ impl SendQueue {
                     let pipe: *mut uv::Pipe = s;
                     // SAFETY: pipe is a live uv_pipe_t owned until _windowsOnClosed fires.
                     let stream: *mut uv::uv_stream_t = unsafe { (*pipe).as_stream() };
+                    // SAFETY: the pipe remains owned until its close callback runs.
                     unsafe { (*stream).read_stop() };
 
                     let write_pending = self.windows.get().windows_write.is_some();
@@ -1774,10 +1775,9 @@ impl SendQueue {
     fn windows_on_write_complete(write_req: *mut WindowsWrite, status: uv::ReturnCode) {
         log!("SendQueue#_windowsOnWriteComplete");
         // SAFETY: write_req was passed to uv_write as the data ptr; libuv hands it back here.
-        // Explicit `&` so the slice `.len()` autoref doesn't trigger
-        // `dangerous_implicit_autorefs` on the raw-ptr place.
-        let write_len = unsafe { (&(*write_req).write_slice).len() };
+        let write_len = unsafe { &*write_req }.write_slice.len();
         let this: *mut SendQueue = 'blk: {
+            // SAFETY: libuv returned the live request; destroy runs after reading its owner.
             let owner = unsafe { (*write_req).owner };
             WindowsWrite::destroy(write_req);
             match owner {
@@ -1873,9 +1873,8 @@ impl SendQueue {
         let ipc_pipe: *mut uv::Pipe =
             bun_core::heap::into_raw(Box::new(bun_core::ffi::zeroed::<uv::Pipe>()));
         // SAFETY: ipc_pipe just allocated above.
-        if let Some(err) =
-            unsafe { (*ipc_pipe).init(uv::Loop::get(), true) }.to_error(bun_sys::Tag::pipe)
-        {
+        let init_result = unsafe { (*ipc_pipe).init(uv::Loop::get(), true) };
+        if let Some(err) = init_result.to_error(bun_sys::Tag::pipe) {
             // SAFETY: ipc_pipe was heap-allocated above and init failed before libuv took ownership.
             let _ = unsafe { bun_core::heap::take(ipc_pipe) };
             return Err(err.into());
@@ -1903,9 +1902,8 @@ impl SendQueue {
         // SAFETY: stream points to the live uv handle; `this` is the root-raw
         // context pointer (see fn safety contract) so storing it in
         // `handle.data` is sound for the handle's lifetime.
-        if let Some(err) =
-            unsafe { (*stream).read_start_ctx::<SendQueue>(this) }.to_error(bun_sys::Tag::listen)
-        {
+        let read_result = unsafe { (*stream).read_start_ctx::<SendQueue>(this) };
+        if let Some(err) = read_result.to_error(bun_sys::Tag::listen) {
             self_.close_socket(CloseReason::Failure, CloseFrom::User);
             return Err(err.into());
         }
@@ -2025,7 +2023,10 @@ fn import_windows_socket_payload(
     let mut err: c_int = 0;
     // SAFETY: `info` is a live buffer of export_size() bytes holding the
     let sock = unsafe {
-        bun_uws::socket_transfer::bsd_socket_import(info.as_mut_ptr().cast::<c_void>(), &mut err)
+        bun_uws::socket_transfer::bsd_socket_import(
+            info.as_mut_ptr().cast::<c_void>(),
+            &raw mut err,
+        )
     };
     if sock == bun_uws::LIBUS_SOCKET_DESCRIPTOR::MAX {
         log!("importWindowsSocketPayload: WSASocketW failed: {}", err);
@@ -2490,7 +2491,10 @@ pub(crate) mod IPCHandlers {
     pub(crate) mod WindowsNamedPipe {
         use super::*;
 
-        pub(crate) fn on_read_alloc(send_queue: &SendQueue, suggested_size: usize) -> &mut [u8] {
+        pub(crate) fn on_read_alloc(
+            send_queue: &mut SendQueue,
+            suggested_size: usize,
+        ) -> &mut [u8] {
             log!("NewNamedPipeIPCHandler#onReadAlloc {}", suggested_size);
             // SAFETY: the returned region is the buffer's spare capacity,
             // handed to libuv for the pending read; nothing else touches

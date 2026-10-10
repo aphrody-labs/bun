@@ -10,7 +10,11 @@ describe.concurrent("node-module-module", () => {
     expect(Array.isArray(builtinModules)).toBe(true);
     // "bun:wrap" is no longer listed: it is internal transpiler plumbing,
     // not a requireable public module.
-    expect(builtinModules).toHaveLength(76);
+    expect(builtinModules).toHaveLength(80);
+    expect(builtinModules).toEqual(
+      expect.arrayContaining(["bun:cosmic", "bun:linux", "bun:wasm", "bun:windows"]),
+    );
+    expect(builtinModules).not.toContain("bun:wrap");
   });
 
   test("isBuiltin() works", () => {
@@ -47,7 +51,11 @@ describe.concurrent("node-module-module", () => {
       stdout: "pipe",
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    const [stdout, stderr, exitCode] = await Promise.all([
+      proc.stdout.text(),
+      proc.stderr.text(),
+      proc.exited,
+    ]);
     expect(stdout.trim()).toBe("threw onResolve threw");
     expect(stderr).toBe("");
     expect(exitCode).toBe(0);
@@ -102,7 +110,11 @@ describe.concurrent("node-module-module", () => {
       stdout: "pipe",
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    const [stdout, stderr, exitCode] = await Promise.all([
+      proc.stdout.text(),
+      proc.stderr.text(),
+      proc.exited,
+    ]);
     expect(stdout + stderr).toContain("1 pass");
     expect(exitCode).toBe(0);
   });
@@ -183,7 +195,11 @@ describe.concurrent("node-module-module", () => {
       env: bunEnv,
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    const [stdout, stderr, exitCode] = await Promise.all([
+      proc.stdout.text(),
+      proc.stderr.text(),
+      proc.exited,
+    ]);
     expect(stdout.trim()).toBe("shapes-ok");
     expect(stderr).toBe("");
     expect(exitCode).toBe(0);
@@ -207,7 +223,11 @@ console.log("survived", require("./late.js"));`,
         cwd: String(dir),
         stderr: "pipe",
       });
-      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+      const [stdout, stderr, exitCode] = await Promise.all([
+        proc.stdout.text(),
+        proc.stderr.text(),
+        proc.exited,
+      ]);
       expect(stdout.trim()).toBe("survived 42");
       expect(exitCode).toBe(0);
       // Both main.js and late.js are cached; pre-fix only main.js was.
@@ -216,29 +236,36 @@ console.log("survived", require("./late.js"));`,
     },
   );
 
-  test.skipIf(!isWindows)("enableCompileCache default dir prefers TEMP over TMP like os.tmpdir", async () => {
-    using dir = tempDir("compile-cache-tmporder", {});
-    const temp = path.join(String(dir), "from-temp");
-    const tmp = path.join(String(dir), "from-tmp");
-    fs.mkdirSync(temp);
-    fs.mkdirSync(tmp);
-    const env = { ...bunEnv, TEMP: temp, TMP: tmp };
-    delete env.NODE_COMPILE_CACHE;
-    await using proc = Bun.spawn({
-      cmd: [
-        bunExe(),
-        "-e",
-        `const r = require("module").enableCompileCache();
+  test.skipIf(!isWindows)(
+    "enableCompileCache default dir prefers TEMP over TMP like os.tmpdir",
+    async () => {
+      using dir = tempDir("compile-cache-tmporder", {});
+      const temp = path.join(String(dir), "from-temp");
+      const tmp = path.join(String(dir), "from-tmp");
+      fs.mkdirSync(temp);
+      fs.mkdirSync(tmp);
+      const env = { ...bunEnv, TEMP: temp, TMP: tmp };
+      delete env.NODE_COMPILE_CACHE;
+      await using proc = Bun.spawn({
+        cmd: [
+          bunExe(),
+          "-e",
+          `const r = require("module").enableCompileCache();
         console.log(JSON.stringify(r.directory));`,
-      ],
-      env,
-      stderr: "pipe",
-    });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-    expect(stderr).toBe("");
-    expect(JSON.parse(stdout.trim())).toStartWith(path.join(temp, "node-compile-cache"));
-    expect(exitCode).toBe(0);
-  });
+        ],
+        env,
+        stderr: "pipe",
+      });
+      const [stdout, stderr, exitCode] = await Promise.all([
+        proc.stdout.text(),
+        proc.stderr.text(),
+        proc.exited,
+      ]);
+      expect(stderr).toBe("");
+      expect(JSON.parse(stdout.trim())).toStartWith(path.join(temp, "node-compile-cache"));
+      expect(exitCode).toBe(0);
+    },
+  );
 
   test("compile cache entries are keyed by sha256 and accepted on re-run", async () => {
     using dir = tempDir("compile-cache-sha", {
@@ -248,7 +275,12 @@ console.log("survived", require("./late.js"));`,
     const cacheDir = path.join(String(dir), "cc");
     const env = { ...bunEnv, NODE_COMPILE_CACHE: cacheDir, NODE_DEBUG_NATIVE: "COMPILE_CACHE" };
     {
-      await using proc = Bun.spawn({ cmd: [bunExe(), "main.js"], env, cwd: String(dir), stderr: "pipe" });
+      await using proc = Bun.spawn({
+        cmd: [bunExe(), "main.js"],
+        env,
+        cwd: String(dir),
+        stderr: "pipe",
+      });
       const [stdout, exitCode] = await Promise.all([proc.stdout.text(), proc.exited]);
       expect(stdout.trim()).toBe("7");
       expect(exitCode).toBe(0);
@@ -260,8 +292,17 @@ console.log("survived", require("./late.js"));`,
       expect(path.basename(f)).toMatch(/^[0-9a-f]{16}$/);
     }
     {
-      await using proc = Bun.spawn({ cmd: [bunExe(), "main.js"], env, cwd: String(dir), stderr: "pipe" });
-      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+      await using proc = Bun.spawn({
+        cmd: [bunExe(), "main.js"],
+        env,
+        cwd: String(dir),
+        stderr: "pipe",
+      });
+      const [stdout, stderr, exitCode] = await Promise.all([
+        proc.stdout.text(),
+        proc.stderr.text(),
+        proc.exited,
+      ]);
       expect(stdout.trim()).toBe("7");
       // The second run accepts both entries from disk and rewrites nothing.
       expect(stderr).toContain("was accepted");
@@ -277,14 +318,24 @@ require("node:assert").strictEqual(1, 1);
 console.log(internalModulesLoadedFromBytecode());`,
     });
     const cacheDir = path.join(String(dir), "cc");
-    const run = async env => {
-      await using proc = Bun.spawn({ cmd: [bunExe(), "main.js"], env, cwd: String(dir), stderr: "pipe" });
-      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    const run = async (env) => {
+      await using proc = Bun.spawn({
+        cmd: [bunExe(), "main.js"],
+        env,
+        cwd: String(dir),
+        stderr: "pipe",
+      });
+      const [stdout, stderr, exitCode] = await Promise.all([
+        proc.stdout.text(),
+        proc.stderr.text(),
+        proc.exited,
+      ]);
       expect(stderr).toBe("");
       expect(exitCode).toBe(0);
       return Number(stdout.trim());
     };
-    const files = () => [...new Bun.Glob("**/*").scanSync({ cwd: cacheDir, onlyFiles: true })].length;
+    const files = () =>
+      [...new Bun.Glob("**/*").scanSync({ cwd: cacheDir, onlyFiles: true })].length;
 
     // Without the opt-in only main.js is cached, as in node.
     expect(await run({ ...bunEnv, NODE_COMPILE_CACHE: cacheDir })).toBe(0);
@@ -310,12 +361,16 @@ console.log(internalModulesLoadedFromBytecode());`,
       cwd: String(dir),
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    const [stdout, stderr, exitCode] = await Promise.all([
+      proc.stdout.text(),
+      proc.stderr.text(),
+      proc.exited,
+    ]);
     expect(stdout.trim()).toBe("7");
     expect(stderr).toBe("");
     const files = [...new Bun.Glob("**/*").scanSync({ cwd: cacheDir, onlyFiles: true })];
     expect(files.length).toBe(2);
-    const modes = files.map(f => (fs.statSync(path.join(cacheDir, f)).mode & 0o777).toString(8));
+    const modes = files.map((f) => (fs.statSync(path.join(cacheDir, f)).mode & 0o777).toString(8));
     expect(modes).toEqual(["600", "600"]);
     expect(exitCode).toBe(0);
   });
@@ -340,7 +395,11 @@ console.log(internalModulesLoadedFromBytecode());`,
         env: compileCacheEnv,
         stderr: "pipe",
       });
-      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+      const [stdout, stderr, exitCode] = await Promise.all([
+        proc.stdout.text(),
+        proc.stderr.text(),
+        proc.exited,
+      ]);
       expect(stdout, stderr).toMatch(/^v/);
       expect(exitCode).toBe(0);
       return stdout;
@@ -368,7 +427,11 @@ console.log(internalModulesLoadedFromBytecode());`,
         env: compileCacheEnv,
         stderr: "pipe",
       });
-      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+      const [stdout, stderr, exitCode] = await Promise.all([
+        proc.stdout.text(),
+        proc.stderr.text(),
+        proc.exited,
+      ]);
       expect(stdout, stderr).toStartWith("{");
       const { FAILED, ENABLED } = Module.constants.compileCacheStatus;
       expect(JSON.parse(stdout)).toEqual({
@@ -384,39 +447,46 @@ console.log(internalModulesLoadedFromBytecode());`,
     },
   );
 
-  test.skipIf(isWindows)("enableCompileCache does not follow a symlink at the cache directory leaf", async () => {
-    using dir = tempDir("compile-cache-symlink-leaf", {});
-    const base = path.join(String(dir), "cc");
-    const target = path.join(String(dir), "elsewhere");
-    fs.mkdirSync(base, { recursive: true });
-    fs.mkdirSync(target, { recursive: true });
-    fs.chmodSync(target, 0o755);
-    const leaf = path.join(base, await compileCacheTag());
-    fs.symlinkSync(target, leaf);
-    const code = `
+  test.skipIf(isWindows)(
+    "enableCompileCache does not follow a symlink at the cache directory leaf",
+    async () => {
+      using dir = tempDir("compile-cache-symlink-leaf", {});
+      const base = path.join(String(dir), "cc");
+      const target = path.join(String(dir), "elsewhere");
+      fs.mkdirSync(base, { recursive: true });
+      fs.mkdirSync(target, { recursive: true });
+      fs.chmodSync(target, 0o755);
+      const leaf = path.join(base, await compileCacheTag());
+      fs.symlinkSync(target, leaf);
+      const code = `
       const Module = require("module");
       const result = Module.enableCompileCache({ directory: ${JSON.stringify(base)} });
       process.stdout.write(JSON.stringify({ result, dir: String(Module.getCompileCacheDir()) }));
     `;
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "-e", code],
-      env: compileCacheEnv,
-      stderr: "pipe",
-    });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-    expect(stdout, stderr).toStartWith("{");
-    const { FAILED } = Module.constants.compileCacheStatus;
-    expect(JSON.parse(stdout)).toEqual({
-      result: {
-        status: FAILED,
-        message: expect.stringMatching(/^Cannot create cache directory: (ENOTDIR|ELOOP)$/),
-      },
-      dir: "undefined",
-    });
-    expect(fs.readdirSync(target)).toEqual([]);
-    expect(fs.lstatSync(leaf).isSymbolicLink()).toBe(true);
-    expect(exitCode).toBe(0);
-  });
+      await using proc = Bun.spawn({
+        cmd: [bunExe(), "-e", code],
+        env: compileCacheEnv,
+        stderr: "pipe",
+      });
+      const [stdout, stderr, exitCode] = await Promise.all([
+        proc.stdout.text(),
+        proc.stderr.text(),
+        proc.exited,
+      ]);
+      expect(stdout, stderr).toStartWith("{");
+      const { FAILED } = Module.constants.compileCacheStatus;
+      expect(JSON.parse(stdout)).toEqual({
+        result: {
+          status: FAILED,
+          message: expect.stringMatching(/^Cannot create cache directory: (ENOTDIR|ELOOP)$/),
+        },
+        dir: "undefined",
+      });
+      expect(fs.readdirSync(target)).toEqual([]);
+      expect(fs.lstatSync(leaf).isSymbolicLink()).toBe(true);
+      expect(exitCode).toBe(0);
+    },
+  );
 
   test("native module functions are not constructors", () => {
     // Constructing these used to crash instead of throwing.
@@ -537,7 +607,11 @@ console.log(internalModulesLoadedFromBytecode());`,
       stdout: "pipe",
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    const [stdout, stderr, exitCode] = await Promise.all([
+      proc.stdout.text(),
+      proc.stderr.text(),
+      proc.exited,
+    ]);
     expect(stderr).toBe("");
     const { before, empty, dot } = JSON.parse(stdout);
     expect(empty).toEqual(before);
@@ -573,10 +647,16 @@ console.log(internalModulesLoadedFromBytecode());`,
       stdout: "pipe",
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    const [stdout, stderr, exitCode] = await Promise.all([
+      proc.stdout.text(),
+      proc.stderr.text(),
+      proc.exited,
+    ]);
     const growthMB = Number(stdout.trim());
     if (!Number.isFinite(growthMB)) {
-      throw new Error(`subprocess did not report growth\nstdout: ${stdout}\nstderr: ${stderr}\nexit: ${exitCode}`);
+      throw new Error(
+        `subprocess did not report growth\nstdout: ${stdout}\nstderr: ${stderr}\nexit: ${exitCode}`,
+      );
     }
     expect(growthMB).toBeLessThan(25);
     expect(exitCode).toBe(0);
@@ -584,9 +664,12 @@ console.log(internalModulesLoadedFromBytecode());`,
 
   test("Module.wrap", () => {
     var mod = { exports: {} };
-    expect(eval(wrap("exports.foo = 1; return 42"))(mod.exports, mod)).toBe(42);
+    const wrapped = new Function("return " + wrap("exports.foo = 1; return 42"))();
+    expect(wrapped(mod.exports, mod)).toBe(42);
     expect(mod.exports.foo).toBe(1);
-    expect(wrap()).toBe("(function (exports, require, module, __filename, __dirname) { undefined\n});");
+    expect(wrap()).toBe(
+      "(function (exports, require, module, __filename, __dirname) { undefined\n});",
+    );
   });
 
   test("Overwriting _resolveFilename", async () => {
@@ -639,7 +722,11 @@ console.log(internalModulesLoadedFromBytecode());`,
       env: bunEnv,
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    const [stdout, stderr, exitCode] = await Promise.all([
+      proc.stdout.text(),
+      proc.stderr.text(),
+      proc.exited,
+    ]);
     expect(stderr).toBe("");
     expect(JSON.parse(stdout)).toEqual([
       {
@@ -720,13 +807,37 @@ console.log(internalModulesLoadedFromBytecode());`,
       env: bunEnv,
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    const [stdout, stderr, exitCode] = await Promise.all([
+      proc.stdout.text(),
+      proc.stderr.text(),
+      proc.exited,
+    ]);
     expect(stderr).toBe("");
     expect(JSON.parse(stdout)).toEqual({
       rows: [
-        { parentType: "object", parentFilename: "main.mjs", isMain: false, argc: 4, thisIsModule: true },
-        { parentType: "object", parentFilename: "main.mjs", isMain: false, options: {}, argc: 4, thisIsModule: true },
-        { parentType: "object", parentFilename: "main.mjs", isMain: false, options: {}, argc: 4, thisIsModule: true },
+        {
+          parentType: "object",
+          parentFilename: "main.mjs",
+          isMain: false,
+          argc: 4,
+          thisIsModule: true,
+        },
+        {
+          parentType: "object",
+          parentFilename: "main.mjs",
+          isMain: false,
+          options: {},
+          argc: 4,
+          thisIsModule: true,
+        },
+        {
+          parentType: "object",
+          parentFilename: "main.mjs",
+          isMain: false,
+          options: {},
+          argc: 4,
+          thisIsModule: true,
+        },
       ],
       sameParentAcrossRequireAndResolve: true,
     });
@@ -764,7 +875,11 @@ console.log(internalModulesLoadedFromBytecode());`,
       cwd: String(dir),
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    const [stdout, stderr, exitCode] = await Promise.all([
+      proc.stdout.text(),
+      proc.stderr.text(),
+      proc.exited,
+    ]);
     expect(stderr).toBe("");
     expect(JSON.parse(stdout)).toEqual({
       noHook: { req: "ROOT", res: "sib.cjs" },
@@ -822,7 +937,11 @@ console.log(internalModulesLoadedFromBytecode());`,
       cwd: String(dir),
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    const [stdout, stderr, exitCode] = await Promise.all([
+      proc.stdout.text(),
+      proc.stderr.text(),
+      proc.exited,
+    ]);
     expect(stderr).toBe("");
     const notAFunction = {
       readsBack: true,
@@ -843,41 +962,46 @@ console.log(internalModulesLoadedFromBytecode());`,
     expect(exitCode).toBe(0);
   });
 
-  describe.concurrent(
-    "Module._resolveFilename gives an ES module by a path the resolver would spell differently",
-    () => {
-      test.each([
-        ["a . segment", `__dirname + "/./esm.mjs"`],
-        ["a .. segment", `__dirname + "/sub/../esm.mjs"`],
-        ["a doubled separator", `__dirname + "//esm.mjs"`],
-        ["relative to the working directory", `"./esm.mjs"`],
-        ["a symlink to the file", `__dirname + "/link.mjs"`],
-        ["a symlink to its directory", `__dirname + "/linked/esm.mjs"`],
-      ])("%s", async (_, filename) => {
-        using dir = tempDir("resolve-filename-other-spelling", {
-          "esm.mjs": `import { dep } from "./dep.mjs"; export const who = "esm, " + dep;`,
-          "dep.mjs": `export const dep = "dep";`,
-          "sub/empty.txt": "",
-          "main.cjs": `
+  describe.concurrent("Module._resolveFilename gives an ES module by a path the resolver would spell differently", () => {
+    test.each([
+      ["a . segment", `__dirname + "/./esm.mjs"`],
+      ["a .. segment", `__dirname + "/sub/../esm.mjs"`],
+      ["a doubled separator", `__dirname + "//esm.mjs"`],
+      ["relative to the working directory", `"./esm.mjs"`],
+      ["a symlink to the file", `__dirname + "/link.mjs"`],
+      ["a symlink to its directory", `__dirname + "/linked/esm.mjs"`],
+    ])("%s", async (_, filename) => {
+      using dir = tempDir("resolve-filename-other-spelling", {
+        "esm.mjs": `import { dep } from "./dep.mjs"; export const who = "esm, " + dep;`,
+        "dep.mjs": `export const dep = "dep";`,
+        "sub/empty.txt": "",
+        "main.cjs": `
           const Module = require("node:module");
           Module._resolveFilename = () => ${filename};
           console.log(require("anything").who, require("anything") === require("something else"));
         `,
-        });
-        fs.symlinkSync("esm.mjs", path.join(String(dir), "link.mjs"), "file");
-        fs.symlinkSync(".", path.join(String(dir), "linked"), "dir");
-        await using proc = Bun.spawn({
-          cmd: [bunExe(), "main.cjs"],
-          env: bunEnv,
-          cwd: String(dir),
-          stdout: "pipe",
-          stderr: "pipe",
-        });
-        const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-        expect({ stdout, stderr, exitCode }).toEqual({ stdout: "esm, dep true\n", stderr: "", exitCode: 0 });
       });
-    },
-  );
+      fs.symlinkSync("esm.mjs", path.join(String(dir), "link.mjs"), "file");
+      fs.symlinkSync(".", path.join(String(dir), "linked"), "dir");
+      await using proc = Bun.spawn({
+        cmd: [bunExe(), "main.cjs"],
+        env: bunEnv,
+        cwd: String(dir),
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [stdout, stderr, exitCode] = await Promise.all([
+        proc.stdout.text(),
+        proc.stderr.text(),
+        proc.exited,
+      ]);
+      expect({ stdout, stderr, exitCode }).toEqual({
+        stdout: "esm, dep true\n",
+        stderr: "",
+        exitCode: 0,
+      });
+    });
+  });
 
   test("Overwriting Module.prototype.require", async () => {
     await using proc = Bun.spawn({
@@ -899,10 +1023,13 @@ console.log(internalModulesLoadedFromBytecode());`,
     "/file\\here.js",
     "\\file\\here.js",
     "\\file/here.js",
-  ])("Module.prototype._compile", filename => {
+  ])("Module.prototype._compile", (filename) => {
     const module = new Module("module id goes here");
     const starting_exports = module.exports;
-    const r = module._compile("module.exports = { module, exports, require, __filename, __dirname }", filename);
+    const r = module._compile(
+      "module.exports = { module, exports, require, __filename, __dirname }",
+      filename,
+    );
     expect(r).toBe(undefined);
     expect(module.exports).not.toBe(starting_exports);
     const { module: m, exports: e, require: req, __filename: fn, __dirname: dn } = module.exports;
@@ -922,7 +1049,9 @@ console.log(internalModulesLoadedFromBytecode());`,
 
   test("Module._resolveLookupPaths", () => {
     expect(Module._resolveLookupPaths("foo")).toEqual([]);
-    expect(Module._resolveLookupPaths("./bar", { id: "1", filename: "/baz/abc" })).toEqual(["/baz"]);
+    expect(Module._resolveLookupPaths("./bar", { id: "1", filename: "/baz/abc" })).toEqual([
+      "/baz",
+    ]);
     expect(Module._resolveLookupPaths("./bar", {})).toEqual(["."]);
     expect(Module._resolveLookupPaths("./bar", { paths: ["a"] })).toEqual(["."]);
     expect(Module._resolveLookupPaths("bar", { paths: ["a"] })).toEqual(["a"]);
@@ -975,7 +1104,7 @@ console.log(internalModulesLoadedFromBytecode());`,
     expect(require.cache["node:fs"]).toBeUndefined();
     expect("node:fs" in require.cache).toBe(false);
     expect(Object.getOwnPropertyDescriptor(require.cache, "node:fs")).toBeUndefined();
-    expect(Object.keys(require.cache).filter(k => k.startsWith("node:"))).toEqual([]);
+    expect(Object.keys(require.cache).filter((k) => k.startsWith("node:"))).toEqual([]);
     // bun:* builtins have the same frozen-namespace hazard. Other bun: keys
     // can legitimately be in require.cache via require() (for example the
     // harness requires "bun:jsc"), so only assert on the ESM-only import.
@@ -1051,8 +1180,16 @@ console.log(internalModulesLoadedFromBytecode());`,
         stdout: "pipe",
         stderr: "pipe",
       });
-      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-      expect({ stdout, stderr, exitCode }).toEqual({ stdout: expected + "\n", stderr: "", exitCode: 0 });
+      const [stdout, stderr, exitCode] = await Promise.all([
+        proc.stdout.text(),
+        proc.stderr.text(),
+        proc.exited,
+      ]);
+      expect({ stdout, stderr, exitCode }).toEqual({
+        stdout: expected + "\n",
+        stderr: "",
+        exitCode: 0,
+      });
     });
   });
 
@@ -1068,13 +1205,19 @@ console.log(internalModulesLoadedFromBytecode());`,
         "worker.mjs": `new Worker(import.meta.dir + "/main.cjs", { preload: [import.meta.dir + "/preload.cjs"] });`,
       });
       await using proc = Bun.spawn({
-        cmd: inWorker ? [bunExe(), "./worker.mjs"] : [bunExe(), "--require", "./preload.cjs", "./main.cjs"],
+        cmd: inWorker
+          ? [bunExe(), "./worker.mjs"]
+          : [bunExe(), "--require", "./preload.cjs", "./main.cjs"],
         env: bunEnv,
         cwd: String(dir),
         stderr: "pipe",
         stdout: "pipe",
       });
-      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+      const [stdout, stderr, exitCode] = await Promise.all([
+        proc.stdout.text(),
+        proc.stderr.text(),
+        proc.exited,
+      ]);
       return { stdout, stderr: normalizeBunSnapshot(stderr, dir), exitCode };
     }
 
@@ -1137,10 +1280,12 @@ console.log(internalModulesLoadedFromBytecode());`,
     ])("one that %s is reported once", async (_, value, message) => {
       const expected = { stdout: `uncaughtException: ${message}\n`, stderr: "", exitCode: 0 };
       expect(await run(`${handlers} require("module").runMain = ${value};`)).toEqual(expected);
-      expect(await run(`${handlers} require("module").runMain = ${value};`, true)).toEqual(expected);
+      expect(await run(`${handlers} require("module").runMain = ${value};`, true)).toEqual(
+        expected,
+      );
     });
   });
-  test.each(["no args", "--access-early"])("children, %s", async arg => {
+  test.each(["no args", "--access-early"])("children, %s", async (arg) => {
     await using proc = Bun.spawn({
       cmd: [bunExe(), path.join(import.meta.dir, "children-fixture/a.cjs"), arg],
       env: bunEnv,
@@ -1192,7 +1337,11 @@ console.log(internalModulesLoadedFromBytecode());`,
       stdout: "pipe",
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    const [stdout, stderr, exitCode] = await Promise.all([
+      proc.stdout.text(),
+      proc.stderr.text(),
+      proc.exited,
+    ]);
     expect(stdout.trim()).toBe('{"a":1}');
     expect(stderr).toBe("");
     expect(exitCode).toBe(0);

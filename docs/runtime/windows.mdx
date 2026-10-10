@@ -153,6 +153,21 @@ terminal.close();
 
 ---
 
+## Direct3D 12
+
+```ts
+const info = windows.gpu.d3d12.info();
+info.adapter; // description of DXGI adapter 0
+info.featureLevel; // "12_0" or "11_0"
+
+const pixels = windows.gpu.d3d12.clearRenderTarget(4, 4, [0, 1, 0, 1]); // Uint8Array, RGBA8, 64 bytes
+const copy = windows.gpu.d3d12.copyBuffer(new Uint8Array([1, 2, 3])); // upload, GPU copy, readback
+```
+
+Each call creates a D3D12 device on adapter 0, runs its commands and waits on a fence before it returns. Nothing is kept between calls. Limits: render targets up to 4096 x 4096, buffers up to 64 MiB. Not provided: swap chains, presentation, shaders, pipeline states, D3D11 and Direct2D.
+
+---
+
 ## Processes
 
 ```ts

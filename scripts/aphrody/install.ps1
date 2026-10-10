@@ -28,15 +28,20 @@ $Tag = switch -Regex ($Version) {
   # The repository also publishes other releases (tools, n2b): the newest runtime release, not GitHub's "latest".
   "^latest$" {
     (Invoke-RestMethod -Headers $Headers "https://api.github.com/repos/$Repo/releases?per_page=100") |
-      Where-Object { -not $_.draft -and -not $_.prerelease -and $_.tag_name -match '^aphrody-v\d+\.\d+\.\d+-aphrody\.\d+$' } |
+      Where-Object { -not $_.draft -and -not $_.prerelease -and $_.tag_name -match '^(bun-v\d+\.\d+\.\d+|aphrody-v\d+\.\d+\.\d+-aphrody\.\d+)$' } |
       Select-Object -First 1 -ExpandProperty tag_name
   }
   "^aphrody-v" { $Version }
+  "^bun-v\d+\.\d+\.\d+$" { $Version }
   "^(bun-)?v?(\d+\.\d+\.\d+)$" {
     $Base = $Matches[2]
-    (Invoke-RestMethod -Headers $Headers "https://api.github.com/repos/$Repo/releases?per_page=100").tag_name |
-      Where-Object { $_ -match "^aphrody-v$([regex]::Escape($Base))-aphrody\.(\d+)$" } |
-      Sort-Object { [int]($_ -replace '^.*\.', '') } | Select-Object -Last 1
+    $Releases = Invoke-RestMethod -Headers $Headers "https://api.github.com/repos/$Repo/releases?per_page=100"
+    $Stable = $Releases | Where-Object { -not $_.draft -and -not $_.prerelease -and $_.tag_name -eq "bun-v$Base" }
+    if ($Stable) { "bun-v$Base" } else {
+      $Releases | Where-Object { -not $_.draft -and -not $_.prerelease } | Select-Object -ExpandProperty tag_name |
+        Where-Object { $_ -match "^aphrody-v$([regex]::Escape($Base))-aphrody\.(\d+)$" } |
+        Sort-Object { [int]($_ -replace '^.*\.', '') } | Select-Object -Last 1
+    }
   }
   default { throw "Version must be latest, X.Y.Z or aphrody-vX.Y.Z-aphrody.N" }
 }

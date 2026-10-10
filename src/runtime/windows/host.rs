@@ -271,6 +271,37 @@ win_host_fn! {
 }
 
 win_host_fn! {
+    /// `gpuD3d12Info()` → JSON object.
+    js_gpu_d3d12_info(global, frame) {
+        let json = check(global, sys::gpu::info_json())?;
+        string(global, &json)
+    }
+}
+
+win_host_fn! {
+    /// `gpuD3d12ClearRenderTarget(width, height, r, g, b, a)` → hex of the RGBA8 pixels.
+    js_gpu_d3d12_clear_render_target(global, frame) {
+        let width = u32_arg(frame, 0);
+        let height = u32_arg(frame, 1);
+        let rgba = [2, 3, 4, 5].map(|i| frame.argument(i).as_number() as f32);
+        let pixels = check(global, sys::gpu::clear_render_target(width, height, rgba))?;
+        string(global, &sys::registry::hex(&pixels))
+    }
+}
+
+win_host_fn! {
+    /// `gpuD3d12CopyBuffer(hex)` → hex of the bytes read back from the GPU.
+    js_gpu_d3d12_copy_buffer(global, frame) {
+        let input = str_arg(global, frame, 0)?;
+        let Some(data) = hex_decode(&input) else {
+            return Err(global.throw_invalid_arguments(format_args!("data must be hex-encoded")));
+        };
+        let pixels = check(global, sys::gpu::copy_buffer(&data))?;
+        string(global, &sys::registry::hex(&pixels))
+    }
+}
+
+win_host_fn! {
     /// `systemInfo()` → JSON object.
     js_system_info(global, frame) {
         let json = check(global, sys::system::info_json())?;

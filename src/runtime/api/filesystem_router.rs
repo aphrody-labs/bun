@@ -120,7 +120,8 @@ impl FileSystemRouter {
         }
         let vm = global_this.bun_vm().as_mut();
 
-        let mut out_buf = [0u8; MAX_PATH_BYTES * 2];
+        // SAFETY: zero initializes every element of the u8 scratch array.
+        let mut out_buf = unsafe { Box::<[u8; MAX_PATH_BYTES * 2]>::new_zeroed().assume_init() };
         let mut root_dir_path = Utf8Bytes::Borrowed(vm.top_level_dir());
         let mut origin_str = Utf8Bytes::EMPTY;
         let mut asset_prefix_slice = Utf8Bytes::EMPTY;
@@ -151,7 +152,7 @@ impl FileSystemRouter {
                 let Some(joined) =
                     path::resolve_path::join_abs_string_buf_checked::<path::platform::Auto>(
                         Fs::FileSystem::instance().top_level_dir,
-                        &mut out_buf,
+                        &mut *out_buf,
                         &[root_dir_path_.slice()],
                     )
                 else {

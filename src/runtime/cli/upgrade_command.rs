@@ -71,6 +71,12 @@ const DEFAULT_REPO: &str = "aphrody-labs/bun";
 /// (`n2b-v0.7.1`, …) belong to other packages.
 const RELEASE_TAG_PREFIX: &[u8] = b"aphrody-v";
 const UPSTREAM_TAG_PREFIX: &[u8] = b"bun-v";
+const CURRENT_RELEASE_PREFIX: &str =
+    if Global::display_version.len() == Global::package_json_version.len() {
+        "bun-v"
+    } else {
+        "aphrody-v"
+    };
 const SUMS_FILENAME: &[u8] = b"SHA256SUMS.txt";
 
 pub(crate) struct Version {
@@ -196,7 +202,8 @@ static Bun__githubURL: SyncCStr = SyncCStr(
     const_format::concatcp!(
         "https://github.com/",
         DEFAULT_REPO,
-        "/releases/download/aphrody-v",
+        "/releases/download/",
+        CURRENT_RELEASE_PREFIX,
         Global::display_version,
         "/",
         Version::ZIP_FILENAME,
@@ -232,8 +239,7 @@ impl UpgradeCommand {
             !s.is_empty()
                 && s != b"."
                 && s != b".."
-                && s
-                    .iter()
+                && s.iter()
                     .all(|&c| c.is_ascii_alphanumeric() || matches!(c, b'-' | b'_' | b'.'))
         };
         let valid = strings::split_once_char(repo, b'/')
@@ -340,9 +346,9 @@ impl UpgradeCommand {
                 .and_then(|q| q.expr.as_bool())
                 .unwrap_or(false)
         };
-        Self::string_prop(release, b"tag_name")
-            .is_some_and(|tag| tag.starts_with(RELEASE_TAG_PREFIX))
-            && !flag(b"draft")
+        Self::string_prop(release, b"tag_name").is_some_and(|tag| {
+            tag.starts_with(UPSTREAM_TAG_PREFIX) || tag.starts_with(RELEASE_TAG_PREFIX)
+        }) && !flag(b"draft")
             && !flag(b"prerelease")
     }
 
@@ -424,7 +430,13 @@ impl UpgradeCommand {
         };
 
         let release = if let Some(list) = expr.data.e_array() {
-            match list.items.slice().iter().copied().find(Self::is_runtime_release) {
+            match list
+                .items
+                .slice()
+                .iter()
+                .copied()
+                .find(Self::is_runtime_release)
+            {
                 Some(release) => release,
                 None => {
                     fail(progress, refresher);
@@ -553,8 +565,8 @@ impl UpgradeCommand {
             Global::exit(1);
         }
 
-        let target_z: &ZStr = bun_core::self_exe_path()
-            .map_err(|_| crate::Error::UpgradeFailedMissingExecutable)?;
+        let target_z: &ZStr =
+            bun_core::self_exe_path().map_err(|_| crate::Error::UpgradeFailedMissingExecutable)?;
         let target = target_z.as_bytes();
         let same_file = if cfg!(windows) {
             strings::eql_case_insensitive_asciii_check_length(source_z.as_bytes(), target)
@@ -890,7 +902,13 @@ impl UpgradeCommand {
                 let sums_url: &'static [u8] = crate::cli::cli_dupe(&version.sums_url);
                 let sums_body: &'static mut MutableString =
                     crate::cli::cli_arena().alloc(MutableString::init(4096)?);
-                Self::check_status(Self::http_get(&env_loader, sums_url, false, None, sums_body)?)?;
+                Self::check_status(Self::http_get(
+                    &env_loader,
+                    sums_url,
+                    false,
+                    None,
+                    sums_body,
+                )?)?;
                 let filename = if use_profile {
                     Version::PROFILE_ZIP_FILENAME
                 } else {
@@ -1540,8 +1558,13 @@ impl UpgradeCommand {
 
                 // The agent plugin carried by the new executable replaces the installed one, if any
                 // (`bun agent-plugin install --update` does nothing when it was never installed).
-                let agent_plugin_argv: [&[u8]; 5] =
-                    [target_filename.as_bytes(), b"agent-plugin", b"install", b"--update", b"--quiet"];
+                let agent_plugin_argv: [&[u8]; 5] = [
+                    target_filename.as_bytes(),
+                    b"agent-plugin",
+                    b"install",
+                    b"--update",
+                    b"--quiet",
+                ];
                 if let Ok(envp) = env_loader.map.create_null_delimited_env_map() {
                     let _ = spawn_sync::spawn(&spawn_sync::Options {
                         argv: build_argv(&agent_plugin_argv),

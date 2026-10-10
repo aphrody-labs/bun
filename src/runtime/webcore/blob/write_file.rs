@@ -43,6 +43,7 @@ pub(crate) type WriteFileOnWriteFileCallback =
     fn(ctx: *mut c_void, count: WriteFileResultType) -> jsc::JsResult<()>;
 
 /// The completion token a `WriteFile` keeps across its async I/O.
+#[cfg(not(windows))]
 pub(crate) type WriteFileTask = bun_jsc::Completion<WriteFile>;
 
 // SAFETY: the two blobs are native values holding store refs (atomic counts);
@@ -56,6 +57,12 @@ impl bun_jsc::JobContext for WriteFile {
     /// Whom the write is reported to. (Dropped with the job when that is released unrun: the
     /// promise then stays pending.)
     type Js = Box<WriteFilePromise>;
+    // Windows file writes use libuv instead of this work-pool job.
+    #[cfg(windows)]
+    fn run(_: &mut Self, _: bun_jsc::Completion<Self>) -> Option<bun_jsc::Completion<Self>> {
+        unreachable!("WriteFile on the work pool (Windows uses WriteFileWindows)");
+    }
+    #[cfg(not(windows))]
     fn run(this: &mut Self, done: bun_jsc::Completion<Self>) -> Option<bun_jsc::Completion<Self>> {
         // Starts the write; finishes from the io loop via the token.
         this.run(done);
@@ -372,18 +379,10 @@ impl WriteFile {
         Ok(())
     }
 
+    #[cfg(not(windows))]
     pub(crate) fn run(&mut self, task: WriteFileTask) {
-        #[cfg(windows)]
-        {
-            // Windows writes go through WriteFileWindows, never the pool.
-            let _ = task;
-            unreachable!("WriteFile on the work pool (Windows uses WriteFileWindows)");
-        }
-        #[cfg(not(windows))]
-        {
-            self.io_task = Some(task);
-            self.run_async();
-        }
+        self.io_task = Some(task);
+        self.run_async();
     }
 
     #[cfg(not(windows))]
@@ -803,7 +802,7 @@ mod windows_impl {
             let rc = unsafe {
                 uv::uv_fs_open(
                     (*this).loop_(),
-                    &mut (*this).io_request,
+                    &raw mut (*this).io_request,
                     posix_path.as_ptr(),
                     uv::O::CREAT
                         | uv::O::WRONLY
@@ -957,9 +956,7 @@ mod windows_impl {
                 // BORROW: AsyncMkdirp.path is `*const [u8]` (not owned); `path`
                 // points into `self.file_blob.store`, which outlives the mkdirp
                 // task (it's released only in `deinit()`).
-                path: bun_core::dirname(path)
-                    // this shouldn't happen
-                    .unwrap_or(path) as *const [u8],
+                path: core::ptr::from_ref(bun_core::dirname(path).unwrap_or(path)),
                 ticket: bun_jsc::virtual_machine::VirtualMachine::get().ticket(),
                 task: Default::default(),
             });
@@ -1001,10 +998,7 @@ mod windows_impl {
             let this = unsafe { bun_ptr::callback_ctx::<WriteFileWindows>(ctx.cast()) };
             bun_output::scoped_log!(WriteFile, "mkdirp complete");
             debug_assert!(this.err.is_none());
-            this.err = match err_ {
-                bun_sys::Result::Err(e) => Some(e),
-                bun_sys::Result::Ok(()) => None,
-            };
+            this.err = err_.err();
             ticket.post(ConcurrentTask::create_from(
                 std::ptr::from_mut(this).cast::<WriteFileWindowsMkdirp>(),
             ));
@@ -1154,13 +1148,13 @@ mod windows_impl {
 
             // SAFETY: (*this).io_request is a valid uv_fs_t embedded in this Box-allocated struct;
             // cleanup is safe to call between uses of the same req.
-            unsafe { uv::uv_fs_req_cleanup(&mut (*this).io_request) };
+            unsafe { uv::uv_fs_req_cleanup(&raw mut (*this).io_request) };
             // SAFETY: uv_loop is the VM's libuv loop (outlives `*this`); io_request/uv_bufs are
             // embedded in `*this` which stays alive until on_write_complete fires; fd is open.
             let rc = unsafe {
                 uv::uv_fs_write(
                     uv_loop,
-                    &mut (*this).io_request,
+                    &raw mut (*this).io_request,
                     (*this).fd,
                     (*this).uv_bufs.as_mut_ptr(),
                     1,
@@ -1212,7 +1206,7 @@ mod windows_impl {
                 (*this).poll_ref.disable();
                 // (*this).io_request is a valid uv_fs_t embedded in this struct; uv_fs_req_cleanup
                 // is safe on a zeroed or previously-used req.
-                uv::uv_fs_req_cleanup(&mut (*this).io_request);
+                uv::uv_fs_req_cleanup(&raw mut (*this).io_request);
                 // `this` was allocated via Self::new (heap::into_raw); reclaim and drop here.
                 drop(bun_core::heap::take(this));
             }

@@ -81,8 +81,10 @@ service.release();
 - `src/runtime/windows/host.rs`: Host functions of `bun:windows`. Arguments are validated by `windows.ts`; structured results cross as JSON text that `windows.ts` parses.
 - `src/runtime/windows/mod.rs`: `bun:windows` — synchronous bindings to Windows 11 system interfaces.
 - `src/runtime/windows/sys/clipboard.rs`: Clipboard text (`CF_UNICODETEXT`).
+- `src/runtime/windows/sys/conpty.rs`: ConPTY capabilities of the running Windows build. Sessions are created by `Bun.Terminal`.
 - `src/runtime/windows/sys/eventlog.rs`: Event log: query a channel with an XPath filter (wevtapi, loaded on first use) and write an entry with `ReportEventW` (advapi32).
 - `src/runtime/windows/sys/folders.rs`: Known folders (`SHGetKnownFolderPath`). The name → GUID table lives in `windows.ts`.
+- `src/runtime/windows/sys/gpu.rs`: Direct3D 12 slice of `bun:windows.gpu.d3d12`: adapter info, a render-target clear and a buffer copy, each read back after a fence wait. COM methods are called through vtable slots; the indices and struct layouts come from the Windows SDK 10.0.26100.0 `d3d12.h` and `dxgi.h`.
 - `src/runtime/windows/sys/jobs.rs`: Job Objects. JS holds an id; the handles stay in this module so a stale or forged id can never close an unrelated handle of the process.
 - `src/runtime/windows/sys/mod.rs`: Win32 side of `bun:windows`, free of JSC types so it can be exercised on its own.
 - `src/runtime/windows/sys/ntfs.rs`: NTFS volume access: USN journal query/create/read and MFT enumeration through `FSCTL_QUERY_USN_JOURNAL`, `FSCTL_CREATE_USN_JOURNAL`, `FSCTL_READ_USN_JOURNAL` and `FSCTL_ENUM_USN_DATA`.
@@ -100,7 +102,7 @@ service.release();
 ## Read next
 
 - `docs/runtime/windows.mdx`: **Windows**. Call Windows interfaces directly from JavaScript with bun:windows
-  Sections: Errors; System; Registry; Services; Event log; Clipboard; Known folders; Processes; Job Objects; Notifications; WSL; NTFS; PE, Authenticode and catalog signatures; API families.
+  Sections: Errors; System; Registry; Services; Event log; Clipboard; Known folders; ConPTY; Direct3D 12; Processes; Job Objects; Notifications; WSL; NTFS; PE, Authenticode and catalog signatures; API families.
 - `docs/runtime/winrt.mdx`: **Windows Runtime**. Call Windows Runtime (WinRT) APIs from Bun with bun:winrt, with namespaces projected on demand and async operations as Promises
   Sections: Classes and objects; Async operations; Other metadata.
 - `docs/runtime/winui.mdx`: **WinUI 3**. Open native WinUI 3 windows from Bun with bun:winui, load XAML, handle control events on the JS thread, and theme them with Fluent 2 tokens

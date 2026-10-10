@@ -1,8 +1,9 @@
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, LazyLock, Mutex};
+use std::sync::{Arc, LazyLock};
 
 use bun_jsc::{CallFrame, JSGlobalObject, JSValue, JsResult};
+use bun_threading::Guarded;
 
 const MAX_JOBS: usize = 4;
 struct Job {
@@ -11,8 +12,8 @@ struct Job {
     released: AtomicBool,
 }
 
-static JOBS: LazyLock<Mutex<BTreeMap<Vec<u8>, Arc<Job>>>> =
-    LazyLock::new(|| Mutex::new(BTreeMap::new()));
+static JOBS: LazyLock<Guarded<BTreeMap<Vec<u8>, Arc<Job>>>> =
+    LazyLock::new(|| Guarded::new(BTreeMap::new()));
 
 struct ExecuteJob {
     id: Vec<u8>,
@@ -21,15 +22,14 @@ struct ExecuteJob {
 
 impl Drop for ExecuteJob {
     fn drop(&mut self) {
-        if let Ok(mut jobs) = JOBS.lock() {
-            self.job.active.store(false, Ordering::Release);
-            if self.job.released.load(Ordering::Acquire)
-                && jobs
-                    .get(self.id.as_slice())
-                    .is_some_and(|job| Arc::ptr_eq(job, &self.job))
-            {
-                jobs.remove(self.id.as_slice());
-            }
+        let mut jobs = JOBS.lock();
+        self.job.active.store(false, Ordering::Release);
+        if self.job.released.load(Ordering::Acquire)
+            && jobs
+                .get(self.id.as_slice())
+                .is_some_and(|job| Arc::ptr_eq(job, &self.job))
+        {
+            jobs.remove(self.id.as_slice());
         }
     }
 }
@@ -41,9 +41,7 @@ pub(crate) fn js_graph_native(global: &JSGlobalObject, frame: &CallFrame) -> JsR
         return Err(global.throw_invalid_arguments(format_args!("Invalid native graph job id")));
     }
     let cancelled = {
-        let mut jobs = JOBS.lock().map_err(|_| {
-            global.throw_invalid_arguments(format_args!("Native graph job registry is unavailable"))
-        })?;
+        let mut jobs = JOBS.lock();
         match action.as_ref() {
             b"start" => {
                 if jobs.len() >= MAX_JOBS || jobs.contains_key(id.as_ref()) {

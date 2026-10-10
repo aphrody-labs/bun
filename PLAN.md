@@ -10,6 +10,12 @@ chaque lot. Contexte permanent : [APHRODY.md](APHRODY.md) (ce que le fork fourni
 
 ## 1. Cible
 
+- 2026-10-09: native Windows version synchronization is provided by
+  `scripts/aphrody/win/version-sync.ts` (`bun run bun:windows`), defaulting to
+  stable source version 1.4.4. It audits tracked scripts/infrastructure and
+  separates coupled source manifests from checksum-qualified release pins.
+  See `docs/aphrody/windows-version-sync.md` for the plan/apply/check contract.
+
 - **Objectif du fork : étendre Bun (modules, plugins, intégrations) sans rien perdre en vitesse.** Le temps de
   démarrage, la mémoire au repos et le débit du binaire final restent au niveau d'upstream ou meilleurs : toute
   extension est paresseuse (zéro coût tant qu'elle n'est pas importée), pas de travail ajouté au chemin de

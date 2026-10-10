@@ -16,6 +16,7 @@ pub(crate) mod clipboard;
 pub(crate) mod conpty;
 pub(crate) mod eventlog;
 pub(crate) mod folders;
+pub(crate) mod gpu;
 pub(crate) mod jobs;
 pub(crate) mod ntfs;
 pub(crate) mod process;

@@ -770,7 +770,7 @@ impl Interpreter {
         src: &[u8],
         cwd: Option<&[u8]>,
         from_source: bool,
-        mut session: Option<&mut ShellSession>,
+        session: Option<&mut ShellSession>,
     ) -> crate::Result<ExitCode> {
         if from_source {
             bun_analytics::features::standalone_shell.fetch_add(1, Ordering::Relaxed);
@@ -880,7 +880,7 @@ impl Interpreter {
         });
 
         let code = interp.exit_code.get().expect("exit_code set by finish()");
-        if let Some(session) = session.as_deref_mut() {
+        if let Some(session) = session {
             interp.root_shell.with_mut(|rs| session.save_from(rs));
             session.exited = interp.flags.get().exit_requested();
         }

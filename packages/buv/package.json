@@ -15,6 +15,7 @@
   },
   "exports": {
     "./runtime-sdk": "./runtime-sdk.ts",
+    "./gpu": "./gpu.ts",
     "./runtime-artifact": "./runtime-artifact.ts",
     "./runtime-release": "./runtime-release.ts"
   }

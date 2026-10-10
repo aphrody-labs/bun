@@ -219,6 +219,7 @@ pub(crate) enum ReadFileResultType {
 }
 
 /// The completion token a `ReadFile` keeps across its async I/O.
+#[cfg(not(windows))]
 pub(crate) type ReadFileTask = bun_jsc::Completion<ReadFile>;
 
 // SAFETY: file store / byte store / blob store ref (atomic), the read buffer and io-loop
@@ -232,6 +233,12 @@ impl bun_jsc::JobContext for ReadFile {
     /// Where the bytes go: completed by `then`, or cancelled (its `Drop`) when the job comes
     /// back to a VM that is no longer running script and is released unrun.
     type Js = ReadFileCompletionFns;
+    // Windows file reads use libuv instead of this work-pool job.
+    #[cfg(windows)]
+    fn run(_: &mut Self, _: bun_jsc::Completion<Self>) -> Option<bun_jsc::Completion<Self>> {
+        unreachable!("ReadFile on the work pool (Windows uses ReadFileUV)");
+    }
+    #[cfg(not(windows))]
     fn run(this: &mut Self, done: bun_jsc::Completion<Self>) -> Option<bun_jsc::Completion<Self>> {
         // Starts the read; finishes from the io loop via the token.
         this.run(done);
@@ -639,27 +646,18 @@ impl ReadFile {
         }))
     }
 
+    #[cfg(not(windows))]
     pub(crate) fn run(&mut self, task: ReadFileTask) {
         self.run_async(task);
     }
 
+    #[cfg(not(windows))]
     fn run_async(&mut self, task: ReadFileTask) {
-        #[cfg(windows)]
-        {
-            // Windows reads go through ReadFileUV, never the pool.
-            let _ = task;
-            unreachable!("ReadFile on the work pool (Windows uses ReadFileUV)");
+        self.io_task = Some(task);
+        if self.file_store.pathlike.is_fd() {
+            self.opened_fd = self.file_store.pathlike.fd();
         }
-        #[cfg(not(windows))]
-        {
-            self.io_task = Some(task);
-
-            if self.file_store.pathlike.is_fd() {
-                self.opened_fd = self.file_store.pathlike.fd();
-            }
-
-            self.get_fd(Self::run_async_with_fd);
-        }
+        self.get_fd(Self::run_async_with_fd);
     }
 
     #[cfg(not(windows))]
@@ -1171,7 +1169,7 @@ impl<'a> ReadFileUV<'a> {
         let rc = unsafe {
             libuv::uv_fs_fstat(
                 self.loop_,
-                &mut self.req,
+                &raw mut self.req,
                 opened_fd.uv(),
                 Some(Self::on_file_initial_stat),
             )
@@ -1221,15 +1219,14 @@ impl<'a> ReadFileUV<'a> {
         if bun_sys::S::ISDIR(u32::try_from(stat.mode()).expect("int cast")) {
             this.errno = Some(crate::Error::Sys(bun_errno::SystemErrno::EISDIR));
             this.system_error = Some(SystemError {
-                code: BunString::static_("EISDIR").into(),
+                code: BunString::static_("EISDIR"),
                 path: if this.file_store.pathlike.is_path() {
                     BunString::clone_utf8(this.file_store.pathlike.path().slice())
                 } else {
                     BunString::EMPTY
-                }
-                .into(),
-                message: BunString::static_("Directories cannot be read like files").into(),
-                syscall: BunString::static_("read").into(),
+                },
+                message: BunString::static_("Directories cannot be read like files"),
+                syscall: BunString::static_("read"),
                 ..Default::default()
             });
             this.on_finish();
@@ -1357,7 +1354,7 @@ impl<'a> ReadFileUV<'a> {
             let res = unsafe {
                 libuv::uv_fs_read(
                     self.loop_,
-                    &mut self.req,
+                    &raw mut self.req,
                     self.opened_fd.uv(),
                     bufs.as_mut_ptr(),
                     bufs.len() as u32,

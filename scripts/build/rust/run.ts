@@ -61,7 +61,7 @@ function main(): void {
  */
 function emit(fd: 1 | 2, text: string): void {
   const bytes = Buffer.from(text);
-  for (let at = 0; at < bytes.length; ) {
+  for (let at = 0; at < bytes.length;) {
     try {
       at += writeSync(fd, bytes, at);
     } catch (e) {
@@ -123,7 +123,18 @@ export function rustcInvocation(unit: RustcUnitManifest): { argv: string[]; env:
   for (const s of own?.linkSearch ?? []) args.push("-L", s);
   for (const dep of unit.depBuildScriptOutputs) for (const s of readScriptOutput(dep).linkSearch) args.push("-L", s);
   if (own !== undefined) {
-    if (unit.kind !== "build-script") for (const l of own.linkLibs) args.push("-l", l);
+    if (unit.kind !== "build-script") {
+      for (const library of own.linkLibs) {
+        const name = library.slice(library.lastIndexOf("=") + 1);
+        if (unit.providedStaticLibraries?.includes(name)) {
+          if (!/^static(?::[^=]+)?=/.test(library)) {
+            throw new BuildError(`Bun supplies static ${name}, but ${unit.crateName} requests ${library}`);
+          }
+        } else {
+          args.push("-l", library);
+        }
+      }
+    }
     for (const [selector, arg] of own.linkArgs) {
       if (unit.linkArgSelectors.includes(selector)) args.push("-C", `link-arg=${arg}`);
     }

@@ -82,6 +82,8 @@ interface ScanOptions {
 }
 ```
 
+A missing `cwd` returns no matches by default. With `throwErrorOnBrokenSymlink: true`, a relative pattern rejects a missing `cwd` with `ENOENT`. An absent literal prefix in an absolute pattern still returns no matches.
+
 ## Supported Glob Patterns
 
 Bun supports the following glob patterns:

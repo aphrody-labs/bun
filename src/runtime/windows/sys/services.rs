@@ -191,9 +191,9 @@ pub(crate) fn list(kind: u32) -> WinResult<String> {
                 SERVICE_STATE_ALL,
                 buf.as_mut_ptr().cast(),
                 (buf.len() * 8) as u32,
-                &mut needed,
-                &mut returned,
-                &mut resume,
+                &raw mut needed,
+                &raw mut returned,
+                &raw mut resume,
                 core::ptr::null(),
             )
         };
@@ -214,8 +214,10 @@ pub(crate) fn list(kind: u32) -> WinResult<String> {
             let status = rec.ServiceStatusProcess;
             j.begin_object();
             // SAFETY: NUL-terminated strings inside `buf`.
-            j.field_str("name", &unsafe { from_pwstr(rec.lpServiceName) });
-            j.field_str("displayName", &unsafe { from_pwstr(rec.lpDisplayName) });
+            let (name, display_name) =
+                unsafe { (from_pwstr(rec.lpServiceName), from_pwstr(rec.lpDisplayName)) };
+            j.field_str("name", &name);
+            j.field_str("displayName", &display_name);
             j.field_str("state", state_name(status.dwCurrentState));
             j.field_str("type", type_name(status.dwServiceType));
             j.field_num("pid", status.dwProcessId as f64);
@@ -246,7 +248,7 @@ pub(crate) fn query(name: &str) -> WinResult<Option<String>> {
             SC_STATUS_PROCESS_INFO,
             (&raw mut status).cast(),
             size_of::<SERVICE_STATUS_PROCESS>() as u32,
-            &mut needed,
+            &raw mut needed,
         )
     };
     if ok == 0 {
@@ -260,7 +262,7 @@ pub(crate) fn query(name: &str) -> WinResult<Option<String>> {
                 svc.0,
                 cfg.as_mut_ptr().cast(),
                 (cfg.len() * 8) as u32,
-                &mut needed,
+                &raw mut needed,
             )
         };
         if ok != 0 {
@@ -331,7 +333,7 @@ pub(crate) fn stop(name: &str) -> WinResult<()> {
     };
     let mut status = SERVICE_STATUS::default();
     // SAFETY: `status` receives the last reported status.
-    if unsafe { ControlService(svc.0, SERVICE_CONTROL_STOP, &mut status) } == 0 {
+    if unsafe { ControlService(svc.0, SERVICE_CONTROL_STOP, &raw mut status) } == 0 {
         let err = WinErr::last("ControlService");
         if err.code != ERROR_SERVICE_NOT_ACTIVE {
             return Err(err);

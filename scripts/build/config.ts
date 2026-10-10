@@ -211,6 +211,8 @@ export interface Config {
    * it inside the build directory).
    */
   cacheDir: string;
+  /** Windows lld-link worker limit; undefined preserves the hardware default. */
+  linkThreads: number | undefined;
   /** Vendored dependencies (gitignored). */
   vendorDir: string;
 
@@ -399,6 +401,7 @@ export interface PartialConfig {
   packageManager?: PackageManager;
   buildDir?: string;
   cacheDir?: string;
+  linkThreads?: number;
   /** Override NDK location (default: $ANDROID_NDK_ROOT etc). Only used when abi=android. */
   androidNdk?: string;
   /** Override Android API level (default: ANDROID_API_LEVEL_DEFAULT). Only used when abi=android. */
@@ -937,13 +940,28 @@ export function resolveCodegenConfig(partial: PartialConfig, toolchain: JsToolch
   const host = detectHost();
   const os = partial.os ?? host.os;
   const arch = partial.arch ?? host.arch;
-  const { linux, darwin, windows, freebsd, darwinCross, buildType, release, ci, buildkite, asan, ...base } =
-    resolveBase(partial, host, os, arch, toolchain);
+  const {
+    linux: _linux,
+    darwin: _darwin,
+    windows: _windows,
+    freebsd: _freebsd,
+    darwinCross: _darwinCross,
+    buildType: _buildType,
+    release: _release,
+    ci: _ci,
+    buildkite: _buildkite,
+    asan: _asan,
+    ...base
+  } = resolveBase(partial, host, os, arch, toolchain);
   return { ...base, mode: "codegen", host, os, x64: arch === "x64" };
 }
 
 export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Config {
   assert(partial.mode !== "codegen", "mode=codegen resolves a CodegenConfig: resolveCodegenConfig()");
+  const linkThreads = partial.linkThreads;
+  if (linkThreads !== undefined && (!Number.isSafeInteger(linkThreads) || linkThreads <= 0)) {
+    throw new BuildError("linkThreads must be a positive integer");
+  }
   const host = detectHost();
 
   // ─── Target platform ───
@@ -1310,6 +1328,7 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
     os,
     arch,
     abi,
+    linkThreads,
     linux,
     darwin,
     windows,

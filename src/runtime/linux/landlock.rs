@@ -107,9 +107,9 @@ fn path_list(global: &JSGlobalObject, list: JSValue) -> JsResult<Vec<std::ffi::C
         match std::ffi::CString::new(bytes) {
             Ok(c) => out.push(c),
             Err(_) => {
-                return Err(global.throw_type_error(format_args!(
-                    "paths must not contain null bytes"
-                )));
+                return Err(
+                    global.throw_type_error(format_args!("paths must not contain null bytes"))
+                );
             }
         }
     }
@@ -148,10 +148,9 @@ fn add_rule(
     }
     let parent = Fd(raw);
 
-    // SAFETY: all-zero is a valid `stat`.
-    let mut st: libc::stat = unsafe { core::mem::zeroed() };
+    let mut st = core::mem::MaybeUninit::<libc::stat>::uninit();
     // SAFETY: `parent` is open and `st` is a valid out-pointer.
-    if unsafe { libc::fstat(parent.0, &mut st) } != 0 {
+    if unsafe { libc::fstat(parent.0, st.as_mut_ptr()) } != 0 {
         return Err(super::errno_error(
             global,
             bun_sys::last_errno(),
@@ -159,6 +158,8 @@ fn add_rule(
             Some(path.to_bytes()),
         ));
     }
+    // SAFETY: successful `fstat` initialized the output structure.
+    let st = unsafe { st.assume_init() };
     let is_dir = (st.st_mode & libc::S_IFMT) == libc::S_IFDIR;
     let mut allowed = rights & handled;
     if !is_dir {

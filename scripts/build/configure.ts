@@ -222,7 +222,7 @@ export interface ConfigureInput {
  * profiles.ts. Edits to a profile therefore take effect on the next
  * `ninja` in an existing build dir without `rm -rf`.
  */
-function emitGeneratorRule(n: Ninja, cfg: Config | CodegenConfig, input: ConfigureInput): void {
+export function emitGeneratorRule(n: Ninja, cfg: Config | CodegenConfig, input: ConfigureInput): void {
   const configFile = resolve(cfg.buildDir, "configure.json");
   const buildScript = resolve(cfg.cwd, "scripts", "build.ts");
 
@@ -234,7 +234,9 @@ function emitGeneratorRule(n: Ninja, cfg: Config | CodegenConfig, input: Configu
 
   const hostWin = cfg.host.os === "windows";
   n.rule("regen", {
-    command: `${cfg.jsRuntime} ${quote(buildScript, hostWin)} --config-file=$in`,
+    command: hostWin
+      ? `cmd /c "cd /d ${quote(cfg.cwd, true)} && ${cfg.jsRuntime} ${quote(buildScript, true)} --config-file=$in"`
+      : `cd ${quote(cfg.cwd, false)} && ${cfg.jsRuntime} ${quote(buildScript, false)} --config-file=$in`,
     description: "reconfigure",
     // generator = 1: exempt from `ninja -t clean`, triggers manifest restart
     // when the output (build.ninja) is rebuilt.
@@ -303,7 +305,7 @@ function ccacheEnv(cfg: Config): Record<string, string> {
 function partialOf(input: ConfigureInput): PartialConfig {
   return {
     ...(input.profile !== undefined ? getProfile(input.profile) : {}),
-    ...(input.overrides ?? {}),
+    ...input.overrides,
   };
 }
 

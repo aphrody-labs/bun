@@ -10,6 +10,7 @@
 
 use bun_core::Global;
 
+#[derive(Clone, Copy)]
 pub(crate) enum Invocation {
     Bun,
     Msvc,

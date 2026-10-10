@@ -258,44 +258,48 @@ describe.concurrent(() => {
   });
 });
 
-it("completes against a locally-served release with the system temp dir held open without FILE_SHARE_DELETE", async () => {
-  // `--stable` routes through the GitHub releases API (overridable via
-  // GITHUB_API_DOMAIN) instead of the compiled-in canary URL, so the whole
-  // download/unpack/verify path runs against the local server. On non-canary
-  // builds the current-version check short-circuits before the download,
-  // which still produces no `error:` and is fine: canary covers the temp-dir
-  // path on Windows.
-  const version = Bun.version;
-  const cwd = tmpdirSync();
-  const execPath = join(cwd, basename(bunExe()));
-  const zipPath = join(cwd, "release.zip");
-  await Promise.all([copyFile(bunExe(), execPath), writeFakeReleaseZip(zipPath, version)]);
+it(
+  "completes against a locally-served release with the system temp dir held open without FILE_SHARE_DELETE",
+  async () => {
+    // `--stable` routes through the GitHub releases API (overridable via
+    // GITHUB_API_DOMAIN) instead of the compiled-in canary URL, so the whole
+    // download/unpack/verify path runs against the local server. On non-canary
+    // builds the current-version check short-circuits before the download,
+    // which still produces no `error:` and is fine: canary covers the temp-dir
+    // path on Windows.
+    const version = Bun.spawnSync([bunExe(), "--version"], { env }).stdout.toString().trim();
+    const cwd = tmpdirSync();
+    const execPath = join(cwd, basename(bunExe()));
+    const zipPath = join(cwd, "release.zip");
+    await Promise.all([copyFile(bunExe(), execPath), writeFakeReleaseZip(zipPath, version)]);
 
-  using server = startReleaseServer({ tagName: `bun-v${version}`, zipPath });
+    using server = startReleaseServer({ tagName: `bun-v${version}`, zipPath });
 
-  // On Windows, open the temporary directory without FILE_SHARE_DELETE before spawning
-  // the upgrade process. This is to test for EBUSY errors.
-  openTempDirWithoutSharingDelete();
+    // On Windows, open the temporary directory without FILE_SHARE_DELETE before spawning
+    // the upgrade process. This is to test for EBUSY errors.
+    openTempDirWithoutSharingDelete();
+    using tempDirectoryHandle = { [Symbol.dispose]: closeTempDirHandle };
 
-  await using proc = Bun.spawn({
-    cmd: [execPath, "upgrade", "--stable"],
-    cwd,
-    stdout: null,
-    stdin: "pipe",
-    stderr: "pipe",
-    env: server.env,
-  });
+    await using proc = Bun.spawn({
+      cmd: [execPath, "upgrade", "--stable"],
+      cwd,
+      stdout: null,
+      stdin: "pipe",
+      stderr: "pipe",
+      env: server.env,
+    });
 
-  const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
-  closeTempDirHandle();
+    const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
 
-  expect(stderr).not.toContain("error:");
-  // Canary builds always download (the current-version short-circuit is gated
-  // on !IS_CANARY); a non-canary build whose version matches the served tag
-  // takes the "already on the latest" exit instead.
-  expect(stderr).toMatch(/Upgraded\.|already on the latest/);
-  expect(exitCode).toBe(0);
-});
+    expect(stderr).not.toContain("error:");
+    // Canary builds always download (the current-version short-circuit is gated
+    // on !IS_CANARY); a non-canary build whose version matches the served tag
+    // takes the "already on the latest" exit instead.
+    expect(stderr).toMatch(/Upgraded\.|already on the latest/);
+    expect(exitCode).toBe(0);
+  },
+  isWindows ? 60_000 : 5_000,
+);
 
 it("recreates the staging directory in the temp dir instead of reusing a pre-existing one", async () => {
   const tagName = "bun-v9.9.9";
@@ -472,24 +476,24 @@ describe.concurrent("aphrody-labs/bun releases", () => {
   const zipBody = "not a zip";
   const zipSha = new Bun.CryptoHasher("sha256").update(zipBody).digest("hex");
 
-  it("takes the newest aphrody-v release, skipping other packages, drafts and prereleases", async () => {
+  it("takes the newest bun-v stable release, skipping other packages, drafts and prereleases", async () => {
     using fork = startForkServer({
       zipBody,
       sums: `${"0".repeat(64)}  other.zip\n${zipSha}  ${currentZipName()}\n`,
       releases: origin => [
         { tag_name: "n2b-v0.7.1", draft: false, prerelease: false, assets: [] },
-        forkRelease(origin, "aphrody-v9.9.9-aphrody.1", { draft: true }),
+        forkRelease(origin, "bun-v9.9.9", { draft: true }),
         forkRelease(origin, "aphrody-v9.9.9-aphrody.0", { prerelease: true }),
-        forkRelease(origin, "aphrody-v9.9.8-aphrody.3"),
+        forkRelease(origin, "bun-v9.9.8"),
         forkRelease(origin, "aphrody-v9.9.8-aphrody.2"),
       ],
     });
     const { stderr, exitCode } = await runForkUpgrade(["--stable"], fork.env);
     const paths = fork.requests.map(r => r.path);
     expect(paths[0]).toBe("/repos/aphrody-labs/bun/releases?per_page=20");
-    expect(paths).toContain(`/download/aphrody-v9.9.8-aphrody.3/${currentZipName()}`);
-    expect(paths).toContain("/download/aphrody-v9.9.8-aphrody.3/SHA256SUMS.txt");
-    expect(stderr).toContain("9.9.8-aphrody.3");
+    expect(paths).toContain(`/download/bun-v9.9.8/${currentZipName()}`);
+    expect(paths).toContain("/download/bun-v9.9.8/SHA256SUMS.txt");
+    expect(stderr).toContain("9.9.8");
     expect(stderr).not.toContain("SHA256SUMS");
     // The served archive is not a real zip: the upgrade gets past the checksum and fails to unpack.
     expect(exitCode).toBe(1);

@@ -73,7 +73,11 @@ function loadNativeMsvcEnv(): void {
   // Like vs-shell.ps1 did: the x64-hosted tools, also on ARM64 hosts.
   const host = arch === "arm64" ? ["--host", "x64"] : [];
   const toolset = pins.windowsSysroot.crt.split(".").slice(0, 2).join(".");
-  const root = join(process.env.LOCALAPPDATA ?? join(process.env.USERPROFILE ?? "C:\\", "AppData", "Local"), "bun", "msvc");
+  const root = join(
+    process.env.LOCALAPPDATA ?? join(process.env.USERPROFILE ?? "C:\\", "AppData", "Local"),
+    "bun",
+    "msvc",
+  );
   type MsvcEnv = {
     format: number;
     set: Record<string, string>;
@@ -130,9 +134,15 @@ function loadNativeMsvcEnv(): void {
     }
     return undefined;
   };
-  for (const selection of [["--arch", arch, ...host, "--toolset", toolset], ["--arch", arch, ...host]]) {
+  for (const selection of [
+    ["--arch", arch, ...host, "--toolset", toolset],
+    ["--arch", arch, ...host],
+  ]) {
     // The directory name is `cache_key` in vendor/find-msvc-tools/src/sync.rs.
-    const key = selection.join(" ").replace(/--arch (\S+)/, "$1").replace(/ --(host|toolset) /g, "-$1-");
+    const key = selection
+      .join(" ")
+      .replace(/--arch (\S+)/, "$1")
+      .replace(/ --(host|toolset) /g, "-$1-");
     const dir = join(root, key);
     let env = fresh(dir);
     if (env === undefined && sync(selection) !== undefined) env = fresh(dir);
@@ -559,6 +569,7 @@ const configFlags: {
   packageManager: "string",
   buildDir: "string",
   cacheDir: "string",
+  linkThreads: "number",
   androidNdk: "string",
   androidApiLevel: "number",
   freebsdSysroot: "string",

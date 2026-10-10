@@ -121,7 +121,8 @@ pub(crate) fn js_netlink_request(global: &JSGlobalObject, frame: &CallFrame) -> 
             Socket(super::check(global, raw as libc::c_long, "socket", None)? as libc::c_int);
 
         // SAFETY: all-zero is a valid `sockaddr_nl`; the kernel is port 0.
-        let mut kernel: libc::sockaddr_nl = unsafe { core::mem::zeroed() };
+        let mut kernel =
+            unsafe { core::mem::MaybeUninit::<libc::sockaddr_nl>::zeroed().assume_init() };
         kernel.nl_family = libc::AF_NETLINK as libc::sa_family_t;
         let addr_len = core::mem::size_of::<libc::sockaddr_nl>() as libc::socklen_t;
 

@@ -81,6 +81,24 @@ function mcp(cwd: string, home: string, extraEnv: Record<string, string> = {}, a
 }
 
 describe.concurrent("bun mcp", () => {
+  test.each(["generic", "codex", "claude", "agy"])("reads installed plugin skills for %s", async profile => {
+    const target = profile === "generic" ? "codex" : profile;
+    using dir = tempDir("mcp-installed-skills", {
+      "runtime-install/agent/skills/installed-probe/SKILL.md": "# Legacy skill body",
+      [`runtime-install/agent-plugin/${target}/skills/installed-probe/SKILL.md`]:
+        "---\nname: installed-probe\ndescription: Installed plugin probe\n---\n# Installed skill body",
+    });
+    await using server = mcp(String(dir), String(dir), {
+      BUN_INSTALL: join(String(dir), "runtime-install"),
+      BUN_MCP_PROFILE: profile,
+    });
+    await server.initialize();
+    const skill = await server.call("skill_read", { name: "installed-probe" });
+    expect(skill.isError).toBe(false);
+    expect(skill.content[0].text).toContain("Installed skill body");
+    expect(skill.content[0].text).not.toContain("Legacy skill body");
+  });
+
   test("initialize handshake", async () => {
     using dir = tempDir("mcp-init", {});
     await using server = mcp(String(dir), String(dir));
@@ -255,7 +273,7 @@ describe.concurrent("bun mcp", () => {
     );
     expect(hits.matches.length).toBe(3);
     const docs = JSON.parse((await server.call("deps_docs", { query: "usage", names: ["left-pad"] })).content[0].text);
-    expect(docs.results[0].heading).toBe("Usage");
+    expect(docs.results[0].heading).toBe("## Usage");
   });
 
   test("graph_path, graph_impact and graph_community walk the code graph", async () => {
@@ -266,9 +284,12 @@ describe.concurrent("bun mcp", () => {
     });
     await using server = mcp(String(dir), String(dir));
     const path = await server.call("graph_path", { from: "topLevel", to: "lowLevel" });
-    expect(path.isError).toBe(false);
+    expect(path.isError, path.content[0].text).toBe(false);
     expect(path.content[0].text).toContain("middle");
     expect(path.content[0].text).toContain("hops from");
+    const explicitPath = await server.call("graph_path", { from: "topLevel()", to: "lowLevel()" });
+    expect(explicitPath.isError, explicitPath.content[0].text).toBe(false);
+    expect(explicitPath.content[0].text).toContain("middle");
     const impact = await server.call("graph_impact", { symbol: "lowLevel" });
     expect(impact.isError).toBe(false);
     expect(impact.content[0].text).toContain("middle");
@@ -382,7 +403,7 @@ test("bun mcp --http serves streamable HTTP", async () => {
   expect(res.status).toBe(200);
   expect(res.headers.get("mcp-session-id")).toBeTruthy();
   const body = await res.json();
-  expect(body.result.serverInfo.name).toBe("bun");
+  expect(body).toMatchObject({ result: { serverInfo: { name: "bun" } } });
   const note = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },

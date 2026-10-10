@@ -39,6 +39,7 @@ const IID_ITOAST_NOTIFICATION_MANAGER_STATICS: Guid = Guid {
 };
 
 type RoInitializeFn = unsafe extern "system" fn(i32) -> i32;
+type RoUninitializeFn = unsafe extern "system" fn();
 type RoActivateInstanceFn = unsafe extern "system" fn(HSTRING, *mut *mut c_void) -> i32;
 type RoGetActivationFactoryFn =
     unsafe extern "system" fn(HSTRING, *const Guid, *mut *mut c_void) -> i32;
@@ -48,6 +49,7 @@ type WindowsDeleteStringFn = unsafe extern "system" fn(HSTRING) -> i32;
 #[derive(Clone, Copy)]
 struct Combase {
     init: RoInitializeFn,
+    uninit: RoUninitializeFn,
     activate: RoActivateInstanceFn,
     factory: RoGetActivationFactoryFn,
     create_string: WindowsCreateStringFn,
@@ -58,6 +60,7 @@ fn combase() -> WinResult<Combase> {
     static API: OnceLock<Option<Combase>> = OnceLock::new();
     let api = API.get_or_init(|| {
         let init = system_proc("combase.dll", c"RoInitialize")?;
+        let uninit = system_proc("combase.dll", c"RoUninitialize")?;
         let activate = system_proc("combase.dll", c"RoActivateInstance")?;
         let factory = system_proc("combase.dll", c"RoGetActivationFactory")?;
         let create_string = system_proc("combase.dll", c"WindowsCreateString")?;
@@ -66,6 +69,7 @@ fn combase() -> WinResult<Combase> {
         unsafe {
             Some(Combase {
                 init: core::mem::transmute::<*mut c_void, RoInitializeFn>(init),
+                uninit: core::mem::transmute::<*mut c_void, RoUninitializeFn>(uninit),
                 activate: core::mem::transmute::<*mut c_void, RoActivateInstanceFn>(activate),
                 factory: core::mem::transmute::<*mut c_void, RoGetActivationFactoryFn>(factory),
                 create_string: core::mem::transmute::<*mut c_void, WindowsCreateStringFn>(
@@ -97,9 +101,9 @@ impl HString {
     fn new(api: &Combase, s: &str) -> WinResult<HString> {
         let w = wide(s);
         let mut h: HSTRING = core::ptr::null_mut();
-        // SAFETY: `w` holds `len` units plus a NUL.
         check(
-            unsafe { (api.create_string)(w.as_ptr(), (w.len() - 1) as u32, &mut h) },
+            // SAFETY: `w` holds `len` units plus a NUL; h is a writable output pointer.
+            unsafe { (api.create_string)(w.as_ptr(), (w.len() - 1) as u32, &raw mut h) },
             "WindowsCreateString",
         )?;
         Ok(HString(h, api.delete_string))
@@ -130,7 +134,9 @@ impl Com {
         // SAFETY: slot 0 is IUnknown::QueryInterface.
         let hr = unsafe {
             core::mem::transmute::<*const c_void, QueryInterface>(self.slot(0))(
-                self.0, iid, &mut out,
+                self.0,
+                iid,
+                &raw mut out,
             )
         };
         check(hr, call)?;
@@ -156,12 +162,18 @@ pub(crate) fn show(aumid: &str, xml: &str) -> WinResult<()> {
     if hr < 0 && hr != RPC_E_CHANGED_MODE {
         return Err(WinErr::status(hr, "RoInitialize"));
     }
+    scopeguard::defer! {
+        if hr >= 0 {
+            // SAFETY: balances successful initialization after all local COM references drop.
+            unsafe { (api.uninit)() };
+        }
+    }
 
     let class = HString::new(&api, "Windows.Data.Xml.Dom.XmlDocument")?;
     let mut doc: *mut c_void = core::ptr::null_mut();
-    // SAFETY: `class` is a valid HSTRING.
     check(
-        unsafe { (api.activate)(class.0, &mut doc) },
+        // SAFETY: `class` is a valid HSTRING and doc is a writable output pointer.
+        unsafe { (api.activate)(class.0, &raw mut doc) },
         "RoActivateInstance",
     )?;
     let doc = Com(doc);
@@ -169,8 +181,8 @@ pub(crate) fn show(aumid: &str, xml: &str) -> WinResult<()> {
     let io = doc.query(&IID_IXML_DOCUMENT_IO, "QueryInterface(IXmlDocumentIO)")?;
     let content = HString::new(&api, xml)?;
     type LoadXml = unsafe extern "system" fn(*mut c_void, HSTRING) -> i32;
-    // SAFETY: IXmlDocumentIO slot 6 is LoadXml(HSTRING).
     check(
+        // SAFETY: IXmlDocumentIO slot 6 is LoadXml(HSTRING); content remains live.
         unsafe { core::mem::transmute::<*const c_void, LoadXml>(io.slot(6))(io.0, content.0) },
         "IXmlDocumentIO.LoadXml",
     )?;
@@ -178,20 +190,22 @@ pub(crate) fn show(aumid: &str, xml: &str) -> WinResult<()> {
 
     let class = HString::new(&api, "Windows.UI.Notifications.ToastNotification")?;
     let mut factory: *mut c_void = core::ptr::null_mut();
-    // SAFETY: valid HSTRING and IID.
     check(
-        unsafe { (api.factory)(class.0, &IID_ITOAST_NOTIFICATION_FACTORY, &mut factory) },
+        // SAFETY: class and IID remain live; factory is a writable output pointer.
+        unsafe { (api.factory)(class.0, &IID_ITOAST_NOTIFICATION_FACTORY, &raw mut factory) },
         "RoGetActivationFactory(ToastNotification)",
     )?;
     let factory = Com(factory);
     type CreateToastNotification =
         unsafe extern "system" fn(*mut c_void, *mut c_void, *mut *mut c_void) -> i32;
     let mut toast: *mut c_void = core::ptr::null_mut();
-    // SAFETY: IToastNotificationFactory slot 6 is CreateToastNotification(IXmlDocument*, out).
     check(
+        // SAFETY: slot 6 is CreateToastNotification; xml_doc is live and toast is writable.
         unsafe {
             core::mem::transmute::<*const c_void, CreateToastNotification>(factory.slot(6))(
-                factory.0, xml_doc.0, &mut toast,
+                factory.0,
+                xml_doc.0,
+                &raw mut toast,
             )
         },
         "CreateToastNotification",
@@ -200,13 +214,13 @@ pub(crate) fn show(aumid: &str, xml: &str) -> WinResult<()> {
 
     let class = HString::new(&api, "Windows.UI.Notifications.ToastNotificationManager")?;
     let mut statics: *mut c_void = core::ptr::null_mut();
-    // SAFETY: valid HSTRING and IID.
     check(
+        // SAFETY: class and IID remain live; statics is a writable output pointer.
         unsafe {
             (api.factory)(
                 class.0,
                 &IID_ITOAST_NOTIFICATION_MANAGER_STATICS,
-                &mut statics,
+                &raw mut statics,
             )
         },
         "RoGetActivationFactory(ToastNotificationManager)",
@@ -216,13 +230,13 @@ pub(crate) fn show(aumid: &str, xml: &str) -> WinResult<()> {
     type CreateNotifierWithId =
         unsafe extern "system" fn(*mut c_void, HSTRING, *mut *mut c_void) -> i32;
     let mut notifier: *mut c_void = core::ptr::null_mut();
-    // SAFETY: IToastNotificationManagerStatics slot 7 is CreateToastNotifierWithId(HSTRING, out).
     check(
+        // SAFETY: slot 7 is CreateToastNotifierWithId; id is live and notifier is writable.
         unsafe {
             core::mem::transmute::<*const c_void, CreateNotifierWithId>(statics.slot(7))(
                 statics.0,
                 id.0,
-                &mut notifier,
+                &raw mut notifier,
             )
         },
         "CreateToastNotifierWithId",

@@ -19,6 +19,20 @@ The inherited CPython prefix can be included only for its pinned Linux target. A
 
 ## Installation and tests
 
+`@aphrody/buv/gpu` exposes the existing optional `GpuRuntime` SDK for the shared
+Aphrody wgpu/CUDA hub. Importing it does not load or activate a native provider.
+`GpuRuntime.load({ libraryPath })` requires a qualified provider with `gpu.info`
+and `gpu.wgsl`; CUDA additionally requires `gpu.cuda` and working driver/NVRTC
+libraries. This reuses the SDK ABI and its cancellation, bounds and lifecycle.
+PyCUDA uses the separate shared CPython host through `buv:python` / `pyjs:python`.
+It requires a CUDA toolkit and an independently qualified Python extension.
+
+The opt-in native gate is `BUN_TEST_PYCUDA=1 bun bd test
+test/js/first_party/runtime/python-cli.test.ts -t PyCUDA`, with the factory's
+exact `BUN_PYTHON_EXECUTABLE`, `BUN_PYTHON_HOST_LIBRARY` and
+`BUN_PYTHON_LIBPYTHON` paths. It computes and verifies GPU results in the Bun
+process; a skipped gate does not qualify PyCUDA or shared device buffers.
+
 `bun scripts/install.ts --from <artifact>` computes the install plan. `--apply` verifies the native core before activation and installs under `$BUV_HOME/runtime/<target>/`, default `~/.buv`. `current` activation and `previous` rollback are atomic; existing immutable artifacts are verified before reuse. `--rollback --apply` selects the previous artifact. Receipts use `$BUV_RECEIPT_DIR`, default `~/.buv/receipts`; forging does not activate a runtime.
 
 Use the coordinator's single final gate pass for package tests. Set `BUV_TEST_EXECUTABLE` to the owner-built executable to enable the native graph/UV qualification test. Artifact-dependent legacy parity tests require their explicitly configured fixtures and do not establish core qualification when skipped. `scripts/bench.ts` invokes embedded UV asynchronously through `buv uv`, records the actual executables, and accepts explicit baseline `--before-python` / `--before-uv` paths.

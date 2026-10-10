@@ -2999,7 +2999,9 @@ impl TestCommand {
                 let name = bun::String::borrow_utf8(name);
                 let path = bun::String::borrow_utf8(file_path);
                 // SAFETY: `name` and `path` outlive the call.
-                match unsafe { bun_jsc::cpp::Bun__installTestEnvironment(global, &name, &path) } {
+                match unsafe {
+                    bun_jsc::cpp::Bun__installTestEnvironment(global, &raw const name, &raw const path)
+                } {
                     Ok(teardown) if teardown.is_callable() => {
                         environment_teardown = Some(jsc::Strong::create(teardown, global));
                     }

@@ -96,13 +96,13 @@ describe("release id and queue decisions", () => {
     const releases = async () => [
       { tag_name: "draft-1", draft: true },
       { tag_name: "other-v1" },
-      { tag_name: "aphrody-v9" },
-      { tag_name: "aphrody-v8" },
+      { tag_name: "bun-v1.4.4" },
+      { tag_name: "bun-v1.4.3" },
     ];
     const r = await resolveAll(app, { releases });
-    expect(r.id).toBe(`${shaA.slice(0, 7)}-${shaB.slice(0, 7)}-aphrody-v9`);
+    expect(r.id).toBe(`${shaA.slice(0, 7)}-${shaB.slice(0, 7)}-bun-v1.4.4`);
     const shaA2 = await a.push("two");
-    expect((await resolveAll(app, { releases })).id).toBe(`${shaA2.slice(0, 7)}-${shaB.slice(0, 7)}-aphrody-v9`);
+    expect((await resolveAll(app, { releases })).id).toBe(`${shaA2.slice(0, 7)}-${shaB.slice(0, 7)}-bun-v1.4.4`);
   });
 
   test("decide skips the deployed id and known-bad ids", () => {

@@ -3,13 +3,15 @@
 //! section empty; collection never fails.
 
 use std::io::Read;
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "macos")))]
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
 use crate::parse;
-use crate::schema::{Cpu, Gpu, HostInfo, Kernel, Network, Os, SCHEMA};
+use crate::schema::{Cpu, HostInfo, Kernel, Network, Os, SCHEMA};
+#[cfg(not(target_os = "macos"))]
+use crate::schema::Gpu;
 
 const PROBE_TIMEOUT: Duration = Duration::from_secs(15);
 
@@ -70,11 +72,13 @@ pub fn default_id() -> String {
         .unwrap_or_else(|| "unknown".into())
 }
 
+#[cfg(not(target_os = "macos"))]
 fn wg_prefixes() -> Vec<String> {
     let value = std::env::var("BUN_HOST_WG_PREFIXES").unwrap_or_else(|_| "10.200.,10.8.".into());
     value.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect()
 }
 
+#[cfg(not(target_os = "macos"))]
 fn nvidia_smi() -> Option<(Vec<Gpu>, Option<String>)> {
     let query = ["--query-gpu=name,memory.total,memory.free,driver_version", "--format=csv,noheader,nounits"];
     let mut programs = vec!["nvidia-smi"];
@@ -93,7 +97,7 @@ fn nvidia_smi() -> Option<(Vec<Gpu>, Option<String>)> {
     Some((gpus, cuda))
 }
 
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "macos")))]
 fn sysfs_gpus() -> Vec<Gpu> {
     let Ok(entries) = std::fs::read_dir("/sys/class/drm") else {
         return Vec::new();
@@ -135,7 +139,7 @@ fn sysfs_gpus() -> Vec<Gpu> {
 pub fn collect(id: &str) -> HostInfo {
     #[cfg(target_os = "macos")]
     {
-        return collect_macos(id);
+        collect_macos(id)
     }
     #[cfg(not(target_os = "macos"))]
     collect_linux(id)
@@ -287,7 +291,10 @@ pub fn collect(id: &str) -> HostInfo {
     let (model, physical, logical) = cim("Win32_Processor", &["Name", "NumberOfCores", "NumberOfLogicalProcessors"])
         .and_then(|t| parse::windows_cpu(&t))
         .unwrap_or_default();
+    #[cfg(target_arch = "x86_64")]
     let mut flags = Vec::new();
+    #[cfg(not(target_arch = "x86_64"))]
+    let flags = Vec::new();
     #[cfg(target_arch = "x86_64")]
     {
         macro_rules! probe {

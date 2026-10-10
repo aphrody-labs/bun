@@ -303,6 +303,7 @@ fn parse_array(
                 | types::Tag::varchar_array
                 | types::Tag::char_array
                 | types::Tag::text_array
+                | types::Tag::uuid_array
                 | types::Tag::name_array
                 | types::Tag::numeric_array
                 | types::Tag::money_array
@@ -926,6 +927,7 @@ fn from_bytes(
         | T::varchar_array
         | T::char_array
         | T::text_array
+        | T::uuid_array
         | T::name_array
         | T::json_array
         | T::jsonb_array

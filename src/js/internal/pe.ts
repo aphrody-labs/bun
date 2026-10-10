@@ -5,7 +5,8 @@
 // forwarders), VS_VERSIONINFO, the Authenticode certificate table and the CLR header. Pure TypeScript over a
 // random-access byte source, bounded against malformed input; it never executes or maps the image (no
 // `LoadLibrary`, no WinRT activation).
-const { parseAuthenticode } = require("internal/authenticode") as typeof import("./authenticode");
+const { parseAuthenticode } =
+  require("internal/authenticode") as typeof import("./authenticode").default;
 import type { Authenticode } from "./authenticode";
 
 /** Random-access bytes: an in-memory image or positional reads on a file descriptor. */
@@ -203,8 +204,9 @@ function parsePe(src: ByteSource, fileName = ""): PeInfo | null {
     if (rva < headersSize) return rva;
     for (const s of sections) {
       const span = Math.max(s.virtualSize, s.rawSize);
-      if (rva >= s.virtualAddress && rva < s.virtualAddress + span) {
-        const delta = rva - s.virtualAddress;
+      const { virtualAddress } = s;
+      if (rva >= virtualAddress && rva < virtualAddress + span) {
+        const delta = rva - virtualAddress;
         return delta < s.rawSize ? s.rawOffset + delta : -1;
       }
     }
@@ -220,10 +222,14 @@ function parsePe(src: ByteSource, fileName = ""): PeInfo | null {
     warnings.push(`version: ${(e as Error).message}`);
   }
   let authenticode: Authenticode | null = null;
-  const sec = dirs[4]!;
-  if (sec.rva && sec.size >= 8 && sec.rva + sec.size <= src.size) {
+  const { rva: certificateOffset, size: certificateSize } = dirs[4]!;
+  if (
+    certificateOffset &&
+    certificateSize >= 8 &&
+    certificateOffset + certificateSize <= src.size
+  ) {
     // The certificate table entry holds a file offset, not an RVA.
-    const certs = r.bytes(sec.rva, Math.min(sec.size, 1 << 20));
+    const certs = r.bytes(certificateOffset, Math.min(certificateSize, 1 << 20));
     try {
       authenticode = parseAuthenticode(certs);
     } catch (e) {
@@ -307,8 +313,9 @@ function readImports(
   warnings: string[],
 ): PeImport[] {
   const out: PeImport[] = [];
-  if (dir.rva) {
-    const base = rvaToOff(dir.rva);
+  const { rva: importRva } = dir;
+  if (importRva) {
+    const base = rvaToOff(importRva);
     if (base < 0) warnings.push("import directory outside sections");
     for (let i = 0; base >= 0 && i < MAX_IMPORT_DESCRIPTORS; i++) {
       const d = r.view(base + i * 20, 20);
@@ -328,8 +335,9 @@ function readImports(
       });
     }
   }
-  if (delayDir.rva) {
-    const base = rvaToOff(delayDir.rva);
+  const { rva: delayImportRva } = delayDir;
+  if (delayImportRva) {
+    const base = rvaToOff(delayImportRva);
     for (let i = 0; base >= 0 && i < MAX_IMPORT_DESCRIPTORS; i++) {
       const d = r.view(base + i * 32, 32);
       if (!d) break;
@@ -502,14 +510,12 @@ function parseVersionInfo(b: Uint8Array): VersionInfo | null {
   const root = readBlock(b, v, 0);
   if (!root || root.key !== "VS_VERSION_INFO") return null;
   const info: VersionInfo = { strings: {} };
-  if (root.valueBytes >= 52 && v.getUint32(root.valueOff, true) === 0xfeef04bd) {
-    info.fileVersion = verString(
-      v.getUint32(root.valueOff + 8, true),
-      v.getUint32(root.valueOff + 12, true),
-    );
+  const { valueOff } = root;
+  if (root.valueBytes >= 52 && v.getUint32(valueOff, true) === 0xfeef04bd) {
+    info.fileVersion = verString(v.getUint32(valueOff + 8, true), v.getUint32(valueOff + 12, true));
     info.productVersion = verString(
-      v.getUint32(root.valueOff + 16, true),
-      v.getUint32(root.valueOff + 20, true),
+      v.getUint32(valueOff + 16, true),
+      v.getUint32(valueOff + 20, true),
     );
   }
   for (const c of children(b, v, root)) {
@@ -523,7 +529,9 @@ function parseVersionInfo(b: Uint8Array): VersionInfo | null {
           Math.min(s.valueBytes, b.byteLength - s.valueOff),
         );
         const value = raw.toString("utf16le").replace(/\0+$/, "").trim();
-        if (value && !(s.key in info.strings)) info.strings[s.key] = value;
+        const { key } = s;
+        const { strings } = info;
+        if (value && !(key in strings)) strings[key] = value;
       }
       break;
     }

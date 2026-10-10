@@ -27,11 +27,11 @@ pub(crate) mod reap;
 pub(crate) mod seccomp;
 pub(crate) mod sysctl;
 
+use bun_jsc::JSGlobalObject;
 #[cfg(not(target_os = "linux"))]
 use bun_jsc::JsError;
 #[cfg(target_os = "linux")]
 use bun_jsc::{CallFrame, JsError, JsResult};
-use bun_jsc::JSGlobalObject;
 
 /// Error thrown by every host function outside Linux.
 #[cfg(not(target_os = "linux"))]
@@ -164,7 +164,8 @@ pub(crate) fn errno_error(
     };
     if let Some(path) = path {
         message.push_str(" '");
-        message.push_str(&String::from_utf8_lossy(path));
+        use core::fmt::Write;
+        write!(&mut message, "{}", bstr::BStr::new(path)).expect("writing to a String cannot fail");
         message.push('\'');
         err.path = bun_core::String::clone_utf8(path);
     }
@@ -234,10 +235,9 @@ pub(crate) fn cstr_arg(
 ) -> JsResult<std::ffi::CString> {
     match opt_cstr_arg(global, frame, i)? {
         Some(c) => Ok(c),
-        None => Err(global.throw_invalid_arguments(format_args!(
-            "argument {} must be a string",
-            i + 1
-        ))),
+        None => {
+            Err(global.throw_invalid_arguments(format_args!("argument {} must be a string", i + 1)))
+        }
     }
 }
 

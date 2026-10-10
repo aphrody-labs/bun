@@ -107,10 +107,9 @@ pub(crate) fn js_cgroup_mkdir(global: &JSGlobalObject, frame: &CallFrame) -> JsR
         };
 
         let root = to_cstring(global, CGROUP_ROOT.as_bytes().to_vec())?;
-        // SAFETY: all-zero is a valid `statfs`.
-        let mut st: libc::statfs = unsafe { core::mem::zeroed() };
+        let mut st = core::mem::MaybeUninit::<libc::statfs>::uninit();
         // SAFETY: `root` is NUL-terminated and `st` is a valid out-pointer.
-        if unsafe { libc::statfs(root.as_ptr(), &mut st) } != 0 {
+        if unsafe { libc::statfs(root.as_ptr(), st.as_mut_ptr()) } != 0 {
             return Err(super::errno_error(
                 global,
                 bun_sys::last_errno(),
@@ -118,6 +117,8 @@ pub(crate) fn js_cgroup_mkdir(global: &JSGlobalObject, frame: &CallFrame) -> JsR
                 Some(CGROUP_ROOT.as_bytes()),
             ));
         }
+        // SAFETY: successful `statfs` initialized the output structure.
+        let st = unsafe { st.assume_init() };
         if st.f_type as i64 != CGROUP2_SUPER_MAGIC {
             return Err(super::errno_error(
                 global,

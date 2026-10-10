@@ -1873,7 +1873,7 @@ impl RunCommand {
                 runner_arena().alloc_slice_copy(&target_path_buffer[..=total]);
             // SAFETY: `stored[total] == 0` (written above before the copy);
             // arena-backed slice lives for process lifetime.
-            Ok(ZStr::from_buf(&stored[..], total))
+            Ok(ZStr::from_buf(stored, total))
         }
     }
 
@@ -2726,6 +2726,8 @@ impl RunCommand {
             // `\\?\` — `try_launch` hands this to NtCreateFile.
             let root = bun_core::w!("\\??\\");
             buf[..root.len()].copy_from_slice(root);
+            // SAFETY: the prefix occupies four UTF-16 elements; the remaining
+            // buffer holds the capacity passed to GetCurrentDirectoryW.
             let cwd_len = unsafe {
                 sys::windows::kernel32::GetCurrentDirectoryW(
                     (buf.len() - 4) as u32,
@@ -3538,7 +3540,7 @@ impl RunCommand {
                     // is a valid console output HANDLE from GetStdHandle and
                     // `csbi` is a valid mutable CONSOLE_SCREEN_BUFFER_INFO out-ptr.
                     if unsafe {
-                        sys::windows::kernel32::GetConsoleScreenBufferInfo(handle, &mut csbi)
+                        sys::windows::kernel32::GetConsoleScreenBufferInfo(handle, &raw mut csbi)
                     } != sys::windows::FALSE
                     {
                         let w = csbi.srWindow.Right - csbi.srWindow.Left + 1;

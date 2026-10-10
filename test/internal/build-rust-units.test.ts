@@ -230,6 +230,34 @@ describe("timePass", () => {
 });
 
 describe("rustcInvocation", () => {
+  test("Bun supplied Zstd keeps script cfg/env and other libraries without bundling a second C archive", () => {
+    const output = parseBuildScriptOutput(
+      "cargo:rustc-link-lib=static=zstd\ncargo:rustc-link-lib=other\ncargo:rustc-cfg=from_script\ncargo:rustc-env=FROM_SCRIPT=1\n",
+    );
+    using dir = tempDir("rust-native-provider", { "own.json": JSON.stringify(output) });
+    const unit = manifestIn(String(dir), {
+      buildScriptOutput: join(String(dir), "own.json"),
+      providedStaticLibraries: ["zstd"],
+    });
+    const invocation = rustcInvocation(unit);
+    expect(invocation.argv).toEqual(["--crate-name", "demo", "-l", "other", "--cfg", "from_script"]);
+    expect(invocation.env.FROM_SCRIPT).toBe("1");
+    expect(rustcInvocation({ ...unit, providedStaticLibraries: undefined }).argv).toContain("static=zstd");
+  });
+
+  test("a supplied static provider refuses a build script requesting a dynamic library", () => {
+    const output = parseBuildScriptOutput("cargo:rustc-link-lib=dylib=zstd\n");
+    using dir = tempDir("rust-native-provider-kind", { "own.json": JSON.stringify(output) });
+    expect(() =>
+      rustcInvocation(
+        manifestIn(String(dir), {
+          buildScriptOutput: join(String(dir), "own.json"),
+          providedStaticLibraries: ["zstd"],
+        }),
+      ),
+    ).toThrow("Bun supplies static zstd");
+  });
+
   const scriptOutput = {
     ...parseBuildScriptOutput(
       [
@@ -258,7 +286,16 @@ describe("rustcInvocation", () => {
     expect(argv).toEqual([
       "--crate-name",
       "demo",
-      ...["-L", "native=/own", "-L", "/from/dependency", "-l", "foo", "-C", "link-arg=--all", "--cfg", "from_script"],
+      "-L",
+      "native=/own",
+      "-L",
+      "/from/dependency",
+      "-l",
+      "foo",
+      "-C",
+      "link-arg=--all",
+      "--cfg",
+      "from_script",
     ]);
     expect(env.FROM_SCRIPT).toBe("1");
   });
@@ -396,6 +433,24 @@ describe("buildRustGraph + unitManifest", () => {
     binDestination: "/build/codegen/my-bin.exe",
   });
 
+  test("only target Zstd bindings in the native Bun library graph use Bun's provider", () => {
+    const graph = buildRustGraph(planWith([]), "/build/rust-target");
+    const [bindings] = graph.units;
+    graph.root.pkg = { ...graph.root.pkg, name: "bun_runtime" };
+    graph.root.kind = "lib";
+    bindings.pkg = { ...bindings.pkg, name: "zstd-sys", version: "2.1.0+zstd.1.5.7" };
+    bindings.features = ["std"];
+    expect((unitManifest(context(graph), bindings) as RustcUnitManifest).providedStaticLibraries).toEqual(["zstd"]);
+    bindings.platform = "host";
+    expect((unitManifest(context(graph), bindings) as RustcUnitManifest).providedStaticLibraries).toBeUndefined();
+    bindings.platform = triple;
+    bindings.features.push("legacy");
+    expect(() => unitManifest(context(graph), bindings)).toThrow("does not support zstd-sys features");
+    bindings.features = ["std"];
+    bindings.pkg.version = "2.0.10+zstd.1.5.6";
+    expect(() => unitManifest(context(graph), bindings)).toThrow("requires Zstd 1.5.7 bindings");
+  });
+
   // The whole command line, in order: cargo's position for each group of flags is part of what is reproduced
   // (the target rustflags come after everything cargo generates).
   const targetDir = join("/build/rust-target/shim", triple);
@@ -408,31 +463,82 @@ describe("buildRustGraph + unitManifest", () => {
   const diagnostics = ["--error-format=json", "--json=diagnostic-rendered-ansi,artifacts,future-incompat"];
   const checkCfg = ["--check-cfg", "cfg(docsrs,test)", "--check-cfg", "cfg(feature, values())"];
   const BIN_ARGS = (bin: RustUnit, dep: RustUnit) => [
-    ...["--crate-name", "my_bin", "--edition=2024", join("src", "my-bin", "main.rs")],
+    "--crate-name",
+    "my_bin",
+    "--edition=2024",
+    join("src", "my-bin", "main.rs"),
     ...diagnostics,
-    ...["--crate-type", "bin", `--emit=dep-info=${join(targetDir, "my_bin.d")},link`],
-    ...["-C", "opt-level=z", "-C", "panic=abort", "-C", "lto", "-C", "codegen-units=1"],
+    "--crate-type",
+    "bin",
+    `--emit=dep-info=${join(targetDir, "my_bin.d")},link`,
+    "-C",
+    "opt-level=z",
+    "-C",
+    "panic=abort",
+    "-C",
+    "lto",
+    "-C",
+    "codegen-units=1",
     ...checkCfg,
-    ...["-C", `metadata=${bin.symbolHash}`, "--out-dir", targetDir, "--target", triple],
-    ...["-C", "linker=link.exe", "-C", "strip=symbols"],
+    "-C",
+    `metadata=${bin.symbolHash}`,
+    "--out-dir",
+    targetDir,
+    "--target",
+    triple,
+    "-C",
+    "linker=link.exe",
+    "-C",
+    "strip=symbols",
     ...searchPaths,
     // A link reads the dependency's object code from its rlib and, as the rlib does not embed it, its metadata
     // from the rmeta.
-    ...["--extern", `dep_a=${dep.output}`, "--extern", `dep_a=${dep.rmeta}`],
-    ...["-Cpanic=immediate-abort", "-Z", "binary-dep-depinfo"],
+    "--extern",
+    `dep_a=${dep.output}`,
+    "--extern",
+    `dep_a=${dep.rmeta}`,
+    "-Cpanic=immediate-abort",
+    "-Z",
+    "binary-dep-depinfo",
   ];
   const DEP_ARGS = (dep: RustUnit) => [
-    ...["--crate-name", "dep_a", "--edition=2024", "/cargo/registry/dep-a/src/lib.rs"],
+    "--crate-name",
+    "dep_a",
+    "--edition=2024",
+    "/cargo/registry/dep-a/src/lib.rs",
     ...diagnostics,
-    ...["--crate-type", "lib", `--emit=dep-info=${join(targetDir, "deps", `dep_a-${dep.hash}.d`)},metadata,link`],
-    ...["-Z", "embed-metadata=no"],
-    ...["-C", "opt-level=z", "-C", "panic=abort", "-C", "linker-plugin-lto", "-C", "codegen-units=1"],
+    "--crate-type",
+    "lib",
+    `--emit=dep-info=${join(targetDir, "deps", `dep_a-${dep.hash}.d`)},metadata,link`,
+    "-Z",
+    "embed-metadata=no",
+    "-C",
+    "opt-level=z",
+    "-C",
+    "panic=abort",
+    "-C",
+    "linker-plugin-lto",
+    "-C",
+    "codegen-units=1",
     ...checkCfg,
-    ...["-C", `metadata=${dep.symbolHash}`, "-C", `extra-filename=-${dep.hash}`],
-    ...["--out-dir", join(targetDir, "deps"), "--target", triple],
-    ...["-C", "linker=link.exe", "-C", "strip=symbols"],
+    "-C",
+    `metadata=${dep.symbolHash}`,
+    "-C",
+    `extra-filename=-${dep.hash}`,
+    "--out-dir",
+    join(targetDir, "deps"),
+    "--target",
+    triple,
+    "-C",
+    "linker=link.exe",
+    "-C",
+    "strip=symbols",
     ...searchPaths,
-    ...["--cap-lints", "allow", "-Cpanic=immediate-abort", "-Z", "binary-dep-depinfo"],
+    "--cap-lints",
+    "allow",
+    "-Cpanic=immediate-abort",
+    "-Z",
+    "binary-dep-depinfo",
   ];
 
   test("a bin root is named after its crate, runs the LTO, links the rlibs, and is copied under its target's name", () => {

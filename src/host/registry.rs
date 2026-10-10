@@ -15,14 +15,14 @@ use crate::schema::{HostInfo, SCHEMA};
 
 type HmacSha256 = Hmac<Sha256>;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Entry {
     pub info: Value,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sig: Option<String>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Inventory {
     pub schema: u32,
     pub updated_at: u64,
@@ -80,7 +80,13 @@ impl Secret {
 }
 
 fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
+    const DIGITS: &[u8; 16] = b"0123456789abcdef";
+    let mut encoded = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        encoded.push(char::from(DIGITS[usize::from(byte >> 4)]));
+        encoded.push(char::from(DIGITS[usize::from(byte & 0xf)]));
+    }
+    encoded
 }
 
 fn unhex(text: &str) -> Option<Vec<u8>> {
@@ -122,7 +128,7 @@ pub fn card(info: &HostInfo, secret: Option<&Secret>) -> Entry {
     Entry { info, sig }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Outcome {
     Added,
     Updated,

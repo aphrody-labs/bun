@@ -171,7 +171,7 @@ pub enum IteratorPathStyle {
 // iterator without a unified `Lockfile` type (reconciler-6).
 pub struct Iterator<'a, const PATH_STYLE: IteratorPathStyle> {
     pub(crate) tree_id: Id,
-    pub(crate) path_buf: PathBuffer,
+    pub(crate) path_buf: bun_paths::path_buffer_pool::Guard,
 
     trees: &'a [Tree],
     hoisted_dependencies: &'a [DependencyID],
@@ -224,7 +224,7 @@ impl<'a, const PATH_STYLE: IteratorPathStyle> Iterator<'a, PATH_STYLE> {
             hoisted_dependencies,
             dependencies,
             string_bytes,
-            path_buf: PathBuffer::ZEROED,
+            path_buf: bun_paths::path_buffer_pool::get(),
             depth_stack: depth_buf_uninit(),
         };
         if PATH_STYLE == IteratorPathStyle::NodeModules {

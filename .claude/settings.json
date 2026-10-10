@@ -1,4 +1,18 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash",
+      "Read",
+      "Edit",
+      "Write",
+      "NotebookEdit",
+      "WebFetch",
+      "WebSearch",
+      "Agent",
+      "Skill"
+    ],
+    "defaultMode": "bypassPermissions"
+  },
   "hooks": {
     "PostToolUse": [
       {
@@ -30,18 +44,7 @@
       }
     ]
   },
-  "permissions": {
-    "allow": [
-      "Bash",
-      "Read",
-      "Edit",
-      "Write",
-      "NotebookEdit",
-      "WebFetch",
-      "WebSearch",
-      "Agent",
-      "Skill"
-    ],
-    "defaultMode": "bypassPermissions"
+  "enabledPlugins": {
+    "cloudflare@claude-plugins-official": true
   }
 }

@@ -17,7 +17,8 @@
 
 import { cpSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { generate } from "../../packages/bun-agent-plugin/src/generate.ts";
 import { SCOPE } from "./scope.ts";
 
 const ROOT = join(import.meta.dir, "..", "..");
@@ -141,6 +142,22 @@ export const PACKAGES: PackageSpec[] = [
       run([process.execPath, "scripts/build.ts", join(staging, "dist")], dir);
     },
   },
+  { dir: "bun-fluent" },
+  { dir: "bun-icons" },
+  { dir: "bun-runtime-sdk" },
+  {
+    dir: "bun-agent-plugin",
+    bunVersion: true,
+    fields: { files: ["bin", "src", "memory", "plugins", "README.md"] },
+    prepare: async staging => {
+      const files = generate({ root: ROOT, pkg: join(ROOT, "packages/bun-agent-plugin") });
+      for (const [path, contents] of files) {
+        const destination = join(staging, "plugins", path);
+        mkdirSync(dirname(destination), { recursive: true });
+        await Bun.write(destination, contents);
+      }
+    },
+  },
 ];
 
 /** The scoped npm name of a fork package. */
@@ -170,6 +187,21 @@ export function nextVersion(base: string, published: Iterable<string>): { next: 
     if (m) max = Math.max(max, Number(m[1]));
   }
   return { next: `${base}-aphrody.${max + 1}`, previous: max ? `${base}-aphrody.${max}` : undefined };
+}
+
+export function nextStableVersion(base: string, published: Iterable<string>): { next: string; previous?: string } {
+  if (!/^\d+\.\d+\.\d+$/.test(base)) throw new Error(`Stable package base must be X.Y.Z: ${base}`);
+  const [major, minor, patch] = base.split(".").map(Number);
+  let latest = -1;
+  for (const version of published) {
+    if (!/^\d+\.\d+\.\d+$/.test(version)) continue;
+    const [a, b, c] = version.split(".").map(Number);
+    if (a === major && b === minor && c >= patch) latest = Math.max(latest, c);
+  }
+  return {
+    next: `${major}.${minor}.${latest < patch ? patch : latest + 1}`,
+    previous: latest < patch ? undefined : `${major}.${minor}.${latest}`,
+  };
 }
 
 function forkName(dep: string): string | undefined {
@@ -281,6 +313,7 @@ export interface Result {
 
 export async function publishAll(opts: {
   dryRun?: boolean;
+  stable?: boolean;
   only?: string[];
   out?: string;
   registry?: string;
@@ -308,7 +341,10 @@ export async function publishAll(opts: {
 
     const srcPkg = await Bun.file(join(ROOT, "packages", spec.dir, "package.json")).json();
     const base = spec.bunVersion || !srcPkg.version || srcPkg.version === "0.0.0" ? bunVersion : srcPkg.version;
-    const { next, previous } = nextVersion(base, Object.keys(doc?.versions ?? {}));
+    const { next, previous } = (opts.stable ? nextStableVersion : nextVersion)(base, Object.keys(doc?.versions ?? {}));
+    if (opts.stable && spec.bunVersion && next !== base && previous !== base) {
+      throw new Error(`${name}: registry stable versions exceed the requested runtime ${base}`);
+    }
 
     const staging = await stage(spec, out, base);
     const manifest = publishManifest(srcPkg, spec, next, resolved);
@@ -335,6 +371,9 @@ export async function publishAll(opts: {
         continue;
       }
     }
+    if (opts.stable && spec.bunVersion && next !== base) {
+      throw new Error(`${name}@${base} already exists with different content; runtime versions are immutable`);
+    }
 
     resolved.set(spec.dir, next);
     console.log(`${opts.dryRun ? "~" : "+"} ${name}@${next} (${files.size} files) ${tgz}`);
@@ -356,6 +395,7 @@ if (import.meta.main) {
   };
   const results = await publishAll({
     dryRun: args.includes("--dry-run"),
+    stable: args.includes("--stable"),
     only: value("--only")?.split(","),
     out: value("--out"),
     registry: value("--registry"),

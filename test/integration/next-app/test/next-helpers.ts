@@ -1,4 +1,4 @@
-import { cpSync } from "fs";
+import { cpSync, writeFileSync } from "fs";
 import { bunEnv, bunExe, tempDir } from "harness";
 import { delimiter, join } from "path";
 
@@ -16,8 +16,15 @@ export async function installFixture(fixture: string, files: string[], overlay?:
   const dir = tempDir("next-fixture", {});
   for (const file of files) cpSync(join(fixture, file), join(String(dir), file), { recursive: true });
   if (overlay) cpSync(overlay, String(dir), { recursive: true });
+  const installArgs = [bunExe(), "install"];
+  const cacheDir = process.env.BUN_TEST_NEXT_CACHE_DIR;
+  if (cacheDir) {
+    const config = join(String(dir), "offline-install.toml");
+    writeFileSync(config, "[install]\noffline = true\n");
+    installArgs.push("--offline", "--frozen-lockfile", "--cache-dir", cacheDir, `--config=${config}`);
+  }
   await using install = Bun.spawn({
-    cmd: [bunExe(), "install"],
+    cmd: installArgs,
     cwd: String(dir),
     env: nextEnv,
     stdout: "pipe",

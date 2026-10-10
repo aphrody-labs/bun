@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { afterAll, expect, test } from "bun:test";
 import { bunEnv, bunExe, tempDir } from "harness";
+import { Database } from "bun:sqlite";
 import { realpathSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 
@@ -8,7 +9,12 @@ const fixture = tempDir("bun-python-cli", {});
 const root = String(fixture);
 afterAll(() => fixture[Symbol.dispose]());
 const python = process.env.BUN_PYTHON_EXECUTABLE;
-const environment: NodeJS.ProcessEnv = { ...bunEnv, ...process.env, PYTHONHOME: "", BUN_DEBUG_QUIET_LOGS: "1" };
+const environment: NodeJS.ProcessEnv = {
+  ...bunEnv,
+  ...process.env,
+  PYTHONHOME: "",
+  BUN_DEBUG_QUIET_LOGS: "1",
+};
 // CPython is an external optional artifact. The native factory supplies all three exact paths.
 const nativeTest = test.skipIf(!python || !process.env.BUN_PYTHON_HOST_LIBRARY || !process.env.BUN_PYTHON_LIBPYTHON);
 const executableCheck = "import os,sys; assert sys.executable == os.environ['BUN_PYTHON_EXECUTABLE']; ";
@@ -161,6 +167,82 @@ nativeTest.concurrent("async Python runs in a worker in the same process and ser
   );
 });
 
+test.skipIf(process.env.BUN_TEST_PYCUDA !== "1")("PyCUDA computes through the shared Buv and PyJS host", async () => {
+  expect(python).toBeTruthy();
+  expect(process.env.BUN_PYTHON_HOST_LIBRARY).toBeTruthy();
+  expect(process.env.BUN_PYTHON_LIBPYTHON).toBeTruthy();
+  const result = await run([
+    "-e",
+    `
+    import { Python } from "buv:python";
+    import { Python as PyJS } from "pyjs:python";
+    if (Python !== PyJS) throw new Error("Python host alias mismatch");
+    using py = Python.open();
+    py.exec\`import os
+import numpy as np
+cuda_dll_directory = None
+if os.name == "nt" and os.environ.get("CUDA_PATH"):
+    cuda_dll_directory = os.add_dll_directory(os.path.join(os.environ["CUDA_PATH"], "bin"))
+import pycuda.driver as cuda
+from pycuda.compiler import SourceModule
+cuda.init()
+device = cuda.Device(0)
+assert device.compute_capability() >= (8, 9)
+context = device.make_context()
+try:
+    source = np.arange(37, dtype=np.int32)
+    allocation = cuda.mem_alloc(source.nbytes)
+    try:
+        cuda.memcpy_htod(allocation, source)
+        module = SourceModule('extern "C" __global__ void twice(int *x, int n) { int i = blockIdx.x * blockDim.x + threadIdx.x; if (i < n) x[i] *= 2; }', no_extern_c=True)
+        module.get_function("twice")(allocation, np.int32(source.size), block=(32, 1, 1), grid=(2, 1, 1))
+        context.synchronize()
+        result = np.empty_like(source)
+        cuda.memcpy_dtoh(result, allocation)
+        assert np.array_equal(result, source * 2)
+        verified = result.tolist()
+    finally:
+        allocation.free()
+finally:
+    context.pop()
+    context.detach()
+    if cuda_dll_directory is not None:
+        cuda_dll_directory.close()\`;
+    if (py.evalJSON("os.getpid()") !== process.pid) throw new Error("Python process mismatch");
+    const result = py.evalJSON("verified");
+    if (JSON.stringify(result) !== JSON.stringify(Array.from({length: 37}, (_, i) => i * 2)))
+      throw new Error("CUDA readback mismatch");
+    if (process.env.BUN_TEST_BUV_GPU === "1") {
+      if (!process.env.BUV_RUNTIME_LIB) throw new Error("GPU qualification requires the canonical provider path");
+      const { GpuRuntime } = await import(${JSON.stringify(new URL("../../../../packages/buv/gpu.ts", import.meta.url).href)});
+      using gpu = GpuRuntime.load({ libraryPath: process.env.BUV_RUNTIME_LIB });
+      const report = await gpu.info();
+      if (!report.selected?.nvidia || !report.cuda?.nvrtcLoaded) throw new Error("NVIDIA GPU/NVRTC unavailable");
+      if (process.platform === "win32" && report.selected.backend !== "Dx12") throw new Error("D3D12 backend not selected");
+      const expected = Array.from({length: 37}, (_, i) => i * 2);
+      const wgsl = await gpu.wgsl({
+        shader: "@group(0) @binding(0) var<storage, read_write> data: array<u32>; @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3<u32>) { if (id.x < arrayLength(&data)) { data[id.x] *= 2u; } }",
+        workgroups: [1, 1, 1],
+        data: Uint32Array.from({length: 37}, (_, i) => i),
+      });
+      const wgslValues = new Uint32Array(wgsl.data.buffer, wgsl.data.byteOffset, 37);
+      if (JSON.stringify([...wgslValues]) !== JSON.stringify(expected)) throw new Error("WGSL readback mismatch");
+      const native = await gpu.cuda({
+        source: 'extern "C" __global__ void twice(float *data, unsigned int n) { unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; if (i < n) data[i] *= 2.0f; }',
+        kernel: "twice",
+        data: Float32Array.from({length: 37}, (_, i) => i),
+      });
+      if (JSON.stringify([...native.data]) !== JSON.stringify(expected)) throw new Error("Native CUDA readback mismatch");
+    }
+    console.log(process.env.BUN_TEST_BUV_GPU === "1" ? "PYCUDA_SHARED_HOST_GPU_SDK_OK" : "PYCUDA_SHARED_HOST_OK");
+  `,
+  ]);
+  expect(result.out).toBe(
+    process.env.BUN_TEST_BUV_GPU === "1" ? "PYCUDA_SHARED_HOST_GPU_SDK_OK" : "PYCUDA_SHARED_HOST_OK",
+  );
+  expect(result.code).toBe(0);
+});
+
 nativeTest.concurrent("pyjs dispatches Python files through the selected host", async () => {
   success(await run([basename(script), "été🐍"], undefined, environment, "pyjs"), '{"argv": "été🐍"}');
 });
@@ -193,7 +275,10 @@ test.concurrent("embedded uv runs under its executable alias", async () => {
 
 test.concurrent("embedded uv frees the paths it canonicalizes", async () => {
   using dir = tempDir("uv-canonicalize", {});
-  const result = await run(["uv", "tool", "dir"], undefined, { ...environment, UV_TOOL_DIR: String(dir) });
+  const result = await run(["uv", "tool", "dir"], undefined, {
+    ...environment,
+    UV_TOOL_DIR: String(dir),
+  });
   expect(realpathSync(result.out)).toBe(realpathSync(String(dir)));
   expect(result.code).toBe(0);
 });
@@ -407,56 +492,79 @@ const compilerTest = test.skipIf(
     !process.env.BUN_PYTHON_LIBPYTHON ||
     process.env.BUV_TEST_PYTHON_COMPILER !== "1",
 );
-compilerTest(
-  "offline native Cython produces a loadable Python extension and a real executable",
-  async () => {
-    using dir = tempDir("buv-cython-products", {
-      "calc.py": "def add(a, b):\n    return a + b\n",
-      "app.py": "print('COMPILED_PYTHON_OK')\n",
-    });
-    const library = join(String(dir), process.platform === "win32" ? "calc.pyd" : "calc.so");
-    const module = await run([
-      "build",
-      join(String(dir), "calc.py"),
-      "--compile",
-      "--format",
-      "shared",
-      "--outfile",
-      library,
-      "--offline",
-    ]);
-    expect(module.err).not.toContain("buv compile:");
-    expect(module.code).toBe(0);
-    const moduleReceipt = JSON.parse(module.out.split(/\r?\n/).at(-1)!);
-    expect(moduleReceipt.abi).toBe("PyInit_calc");
-    expect(moduleReceipt.standalone).toBe(false);
-    const loaded = await run([
-      "python",
-      "-c",
-      `import importlib.util; spec=importlib.util.spec_from_file_location('calc',${JSON.stringify(library)}); mod=importlib.util.module_from_spec(spec); spec.loader.exec_module(mod); print(mod.add(19,23))`,
-    ]);
-    expect(loaded.out).toBe("42");
-    expect(loaded.code).toBe(0);
-    const executable = join(String(dir), process.platform === "win32" ? "program.exe" : "program");
-    const built = await run(["compile", join(String(dir), "app.py"), "--outfile", executable, "--offline"]);
-    expect(built.code).toBe(0);
-    const receipt = JSON.parse(built.out.split(/\r?\n/).at(-1)!);
-    expect(receipt.abi).toBe("CPython-embedded-executable");
-    expect(receipt.runtimeDependencies).toContain("CPython standard library");
-    await using child = Bun.spawn({
-      cmd: [executable],
-      cwd: String(dir),
-      env: {
-        ...environment,
-        PYTHONHOME: receipt.python.prefix,
-        PATH: receipt.python.prefix + (process.platform === "win32" ? ";" : ":") + (environment.PATH ?? ""),
-      },
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const [out, err, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
-    expect({ out, err }).toEqual({ out: "COMPILED_PYTHON_OK\n", err: "" });
-    expect(code).toBe(0);
-  },
-  15000,
-);
+for (const backend of ["cython", "nuitka"] as const) {
+  compilerTest(
+    `offline native ${backend} produces a loadable Python extension and a real executable`,
+    async () => {
+      using dir = tempDir("buv-cython-products", {
+        "calc.py": "def add(a, b):\n    return a + b\n",
+        "app.py": "print('COMPILED_PYTHON_OK')\n",
+      });
+      const library = join(String(dir), process.platform === "win32" ? "calc.pyd" : "calc.so");
+      const registry = join(String(dir), "compiler.sqlite");
+      const module = await run([
+        "build",
+        join(String(dir), "calc.py"),
+        "--compile",
+        "--backend",
+        backend,
+        "--format",
+        "shared",
+        "--outfile",
+        library,
+        "--db",
+        registry,
+        "--offline",
+      ]);
+      expect(module.err).not.toContain("buv compile:");
+      expect({ code: module.code, err: module.err }).toMatchObject({ code: 0 });
+      const moduleReceipt = JSON.parse(module.out.split(/\r?\n/).at(-1)!);
+      expect(moduleReceipt.abi).toBe("PyInit_calc");
+      expect(moduleReceipt.standalone).toBe(false);
+      using db = new Database(registry, { readonly: true });
+      const recorded = db
+        .query<{ sha256: string }, [string]>("SELECT sha256 FROM artifacts WHERE path = ?")
+        .get(library);
+      expect(recorded?.sha256).toBe(moduleReceipt.sha256);
+      const loaded = await run([
+        "python",
+        "-c",
+        `import importlib.util; spec=importlib.util.spec_from_file_location('calc',${JSON.stringify(library)}); mod=importlib.util.module_from_spec(spec); spec.loader.exec_module(mod); print(mod.add(19,23))`,
+      ]);
+      expect(loaded.out).toBe("42");
+      expect(loaded.code).toBe(0);
+      const executable = join(String(dir), process.platform === "win32" ? "program.exe" : "program");
+      const built = await run([
+        "compile",
+        join(String(dir), "app.py"),
+        "--backend",
+        backend,
+        "--outfile",
+        executable,
+        "--offline",
+      ]);
+      expect({ code: built.code, err: built.err, out: built.out }).toMatchObject({ code: 0 });
+      const receipt = JSON.parse(built.out.split(/\r?\n/).at(-1)!);
+      expect(receipt.abi).toBe("CPython-embedded-executable");
+      expect(receipt.runtimeDependencies).toContain("CPython standard library");
+      await using child = Bun.spawn({
+        cmd: [executable],
+        cwd: String(dir),
+        env: {
+          ...environment,
+          PYTHONHOME: receipt.python.prefix,
+          PATH: receipt.python.prefix + (process.platform === "win32" ? ";" : ":") + (environment.PATH ?? ""),
+        },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [out, err, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+      expect({ out: out.replaceAll("\r\n", "\n"), err }).toEqual({
+        out: "COMPILED_PYTHON_OK\n",
+        err: "",
+      });
+      expect(code).toBe(0);
+    },
+    backend === "nuitka" ? 60000 : 15000,
+  );
+}

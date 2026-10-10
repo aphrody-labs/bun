@@ -283,10 +283,9 @@ impl EncodedPattern {
     }
 
     pub(crate) fn effective_url_hash(&self) -> usize {
-        // The strategy is to write all bytes, then hash them. Avoiding
-        // multiple hash calls on small chunks. Allocation is not needed
-        // since the upper bound is known (file path limits)
-        let mut stack_space = [0u8; MAX_PATH_BYTES * 2];
+        // SAFETY: zero initializes every byte of the fixed-size u8 scratch buffer.
+        let mut stack_space =
+            unsafe { Box::<[u8; MAX_PATH_BYTES * 2]>::new_zeroed().assume_init() };
         let mut pos: usize = 0;
         let mut push = |s: &[u8]| {
             stack_space[pos..pos + s.len()].copy_from_slice(s);

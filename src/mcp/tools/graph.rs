@@ -312,12 +312,16 @@ fn graph_symbols(ctx: &Context, args: &Args<'_>) -> Result<Output, ToolError> {
 
 /// Ids of the nodes named `name`: an exact id, or a label equal to it or ending in `::name` / `.name`.
 fn resolve<'g>(g: &'g GraphDocument, name: &str) -> Vec<&'g str> {
-    let lower = name.to_lowercase();
+    let lower = name.strip_suffix("()").unwrap_or(name).to_lowercase();
     let (colons, dot) = (format!("::{lower}"), format!(".{lower}"));
     g.nodes
         .iter()
         .filter(|n| {
-            let label = n.label.to_lowercase();
+            let label = n
+                .label
+                .strip_suffix("()")
+                .unwrap_or(&n.label)
+                .to_lowercase();
             n.id == name || label == lower || label.ends_with(&colons) || label.ends_with(&dot)
         })
         .map(|n| n.id.as_str())
@@ -370,7 +374,11 @@ fn graph_path(ctx: &Context, args: &Args<'_>) -> Result<Output, ToolError> {
     );
     for hop in &hops {
         if let Some(edge) = &hop.edge {
-            let arrow = if hop.forward == Some(false) { "<-" } else { "->" };
+            let arrow = if hop.forward == Some(false) {
+                "<-"
+            } else {
+                "->"
+            };
             let _ = writeln!(
                 out,
                 "  {arrow} {} ({})",

@@ -58,8 +58,18 @@ pub(crate) fn js_io_uring_probe(global: &JSGlobalObject, frame: &CallFrame) -> J
         }
         let ring = rc as libc::c_int;
 
-        // SAFETY: all-zero is a valid `Probe`.
-        let mut probe: Probe = unsafe { core::mem::zeroed() };
+        let mut probe = Probe {
+            _last_op: 0,
+            ops_len: 0,
+            _resv: 0,
+            _resv2: [0; 3],
+            ops: [ProbeOp {
+                op: 0,
+                _resv: 0,
+                flags: 0,
+                _resv2: 0,
+            }; 256],
+        };
         // SAFETY: `probe` has room for the 256 opcodes passed as the count; `ring` is open.
         let rc = unsafe {
             libc::syscall(
