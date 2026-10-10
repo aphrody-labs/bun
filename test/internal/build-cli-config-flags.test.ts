@@ -3,7 +3,11 @@
  * gives it. Driven through the script itself; each case ends in argument parsing, before anything is configured.
  */
 import { expect, test } from "bun:test";
-import { bunEnv, bunExe } from "harness";
+import { bunEnv, bunExe, isWindows, tempDir } from "harness";
+import type { CodegenConfig } from "../../scripts/build/config.ts";
+import { emitGeneratorRule } from "../../scripts/build/configure.ts";
+import { Ninja } from "../../scripts/build/ninja.ts";
+import { quote } from "../../scripts/build/shell.ts";
 import { join } from "node:path";
 
 const buildScript = join(import.meta.dirname, "..", "..", "scripts", "build.ts");
@@ -49,5 +53,37 @@ test.concurrent("every spelling of a field is accepted", async () => {
     "--help",
   );
   expect(stderr).toStartWith("Usage: bun scripts/build.ts");
+  expect(exitCode).toBe(0);
+});
+
+test("external build directory regeneration discovers the configured source checkout", async () => {
+  const configModule = join(import.meta.dirname, "..", "..", "scripts", "build", "config.ts");
+  using dir = tempDir("external-build-regen", {
+    "source checkout/package.json": JSON.stringify({ name: "bun" }),
+    "source checkout/scripts/build.ts": `import { findRepoRoot } from ${JSON.stringify(configModule)}; console.log(findRepoRoot());`,
+    "outside build/.keep": "",
+  });
+  const source = join(String(dir), "source checkout");
+  const buildDir = join(String(dir), "outside build");
+  const n = new Ninja({ buildDir });
+  emitGeneratorRule(n, {
+    mode: "codegen",
+    cwd: source,
+    buildDir,
+    host: { os: isWindows ? "windows" : "linux" },
+    jsRuntime: quote(bunExe(), isWindows),
+  } as CodegenConfig, { profile: "codegen" });
+  const command = n.toString().match(/rule regen\r?\n\s+command = ([^\r\n]+)/)![1].replace("$in", quote(join(buildDir, "configure.json"), isWindows));
+  await using proc = Bun.spawn({
+    cmd: isWindows ? ["cmd.exe", "/d", "/s", "/c", command.slice("cmd /c ".length)] : ["/bin/sh", "-c", command],
+    windowsVerbatimArguments: isWindows,
+    cwd: buildDir,
+    env: bunEnv,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(stdout.trim(), stderr).toBe(source);
+  expect(stderr).toBe("");
   expect(exitCode).toBe(0);
 });

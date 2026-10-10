@@ -370,7 +370,7 @@ fn bin_path(editor: Editor) -> Option<&'static [&'static ZStr]> {
 // (self-referential) as well as caller-provided/static slices. Reconstructed as slices
 // in `auto_close`.
 pub(super) struct SpawnedEditorContext {
-    pub file_path_buf: [u8; 1024 + MAX_PATH_BYTES],
+    pub file_path_buf: Box<[u8; 1024 + MAX_PATH_BYTES]>,
     pub buf: [(*const u8, usize); 10],
     pub argc: usize,
 }
@@ -378,7 +378,10 @@ pub(super) struct SpawnedEditorContext {
 impl Default for SpawnedEditorContext {
     fn default() -> Self {
         Self {
-            file_path_buf: [0; 1024 + MAX_PATH_BYTES],
+            // SAFETY: the heap buffer is fully zeroed and every u8 bit pattern is valid.
+            file_path_buf: unsafe {
+                Box::<[u8; 1024 + MAX_PATH_BYTES]>::new_zeroed().assume_init()
+            },
             buf: [(core::ptr::null(), 0); 10],
             argc: 0,
         }
