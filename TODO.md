@@ -72,3 +72,4 @@
 - [x] Verifier les 313 fichiers du plugin installe et les entrees activees Codex/Claude sans modifier les authentifications.
 - [x] Qualifier les callbacks watchers et sockets cluster Windows sur le binaire modifie et quatre cibles strictes.
 - [x] Qualifier les I/O Blob Windows et conserver les obligations de completion POSIX ; 217 tests natifs passes sur deux configurations, trois fichiers sans diagnostic sur quatre cibles.
+- [ ] Suivre bun-owner-linux-4e3ddd04da1 et ses recus owned-cache ; qualifier les tests et la provenance du binaire Linux construit depuis le commit publie.
