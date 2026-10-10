@@ -10,6 +10,7 @@ use bun_core::Global;
 
 use super::msvc_command::{fail, is_bun_argv0, out};
 
+#[derive(Clone, Copy)]
 pub(crate) enum Invocation {
     Bun,
     Winmd,

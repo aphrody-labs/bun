@@ -6,6 +6,7 @@ use std::ffi::OsString;
 
 use bun_core::Global;
 
+#[derive(Clone, Copy)]
 pub(crate) enum Invocation {
     Bun,
     Dotnet,
