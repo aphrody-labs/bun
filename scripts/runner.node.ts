@@ -669,7 +669,7 @@ function assertExpectedPlatform() {
     process.exit(1);
   }
 
-  !isQuiet &&
+  if (!isQuiet) {
     console.log(
       "Platform check:",
       checks
@@ -678,6 +678,7 @@ function assertExpectedPlatform() {
         .join(" "),
       "(ok)",
     );
+  }
 }
 
 type Limit = <T>(fn: () => Promise<T>) => Promise<T>;
@@ -716,17 +717,25 @@ async function runTests(): Promise<TestResult[]> {
   } else {
     execPath = getExecPath(options["exec-path"]);
   }
-  !isQuiet && console.log("Bun:", execPath);
+  if (!isQuiet) {
+    console.log("Bun:", execPath);
+  }
 
   const expectations = getTestExpectations();
   const modifiers = getTestModifiers(execPath);
-  !isQuiet && console.log("Modifiers:", modifiers);
+  if (!isQuiet) {
+    console.log("Modifiers:", modifiers);
+  }
 
   const revision = getRevision(execPath);
-  !isQuiet && console.log("Revision:", revision);
+  if (!isQuiet) {
+    console.log("Revision:", revision);
+  }
 
   const tests = getRelevantTests(testsPath, modifiers, expectations);
-  !isQuiet && console.log("Running tests:", tests.length);
+  if (!isQuiet) {
+    console.log("Running tests:", tests.length);
+  }
 
   // Start the docker-service coordinator (test/docker/coordinator.ts). It
   // owns every `docker compose` invocation for this shard — `compose up` is
@@ -796,7 +805,9 @@ async function runTests(): Promise<TestResult[]> {
     vendorTests = await getVendorTests(cwd);
     if (vendorTests.length) {
       vendorTotal = vendorTests.reduce((total, { testPaths }) => total + testPaths.length + 1, 0);
-      !isQuiet && console.log("Running vendor tests:", vendorTotal);
+      if (!isQuiet) {
+        console.log("Running vendor tests:", vendorTotal);
+      }
     }
   }
 
@@ -1419,10 +1430,11 @@ async function runTests(): Promise<TestResult[]> {
     if (nonBunTestResults.length > 0) {
       const nonBunTestJunitPath = join(junitTempDir, "non-bun-test-results.xml");
       generateJUnitReport(nonBunTestJunitPath, nonBunTestResults);
-      !isQuiet &&
+      if (!isQuiet) {
         console.log(
           `Generated JUnit report for ${nonBunTestResults.length} non-bun test results at ${nonBunTestJunitPath}`,
         );
+      }
 
       // Upload this report immediately if we're on BuildKite
       if (isBuildkite && options["junit-upload"]) {
@@ -1431,15 +1443,20 @@ async function runTests(): Promise<TestResult[]> {
           // Delete the file after successful upload to prevent redundant uploads
           try {
             unlinkSync(nonBunTestJunitPath);
-            !isQuiet && console.log(`Uploaded and deleted non-bun test JUnit report`);
+            if (!isQuiet) {
+              console.log(`Uploaded and deleted non-bun test JUnit report`);
+            }
           } catch (unlinkError) {
-            !isQuiet &&
+            if (!isQuiet) {
               console.log(
                 `Uploaded but failed to delete non-bun test JUnit report: ${unlinkError instanceof Error ? unlinkError.message : unlinkError}`,
               );
+            }
           }
         } else {
-          !isQuiet && console.log(`Failed to upload non-bun test JUnit report to BuildKite`);
+          if (!isQuiet) {
+            console.log(`Failed to upload non-bun test JUnit report to BuildKite`);
+          }
         }
       }
     }
@@ -1454,7 +1471,9 @@ async function runTests(): Promise<TestResult[]> {
         );
 
         if (allJunitFiles.length > 0) {
-          !isQuiet && console.log(`Found ${allJunitFiles.length} remaining JUnit reports to upload...`);
+          if (!isQuiet) {
+            console.log(`Found ${allJunitFiles.length} remaining JUnit reports to upload...`);
+          }
 
           // Process each remaining JUnit file - these are files we haven't processed yet
           let uploadedCount = 0;
@@ -1471,10 +1490,11 @@ async function runTests(): Promise<TestResult[]> {
                     unlinkSync(filePath);
                     uploadedCount++;
                   } catch (unlinkError) {
-                    !isQuiet &&
+                    if (!isQuiet) {
                       console.log(
                         `Uploaded but failed to delete ${file}: ${unlinkError instanceof Error ? unlinkError.message : unlinkError}`,
                       );
+                    }
                   }
                 }
               } catch (err) {
@@ -1484,12 +1504,18 @@ async function runTests(): Promise<TestResult[]> {
           }
 
           if (uploadedCount > 0) {
-            !isQuiet && console.log(`Uploaded and deleted ${uploadedCount} remaining JUnit reports`);
+            if (!isQuiet) {
+              console.log(`Uploaded and deleted ${uploadedCount} remaining JUnit reports`);
+            }
           } else {
-            !isQuiet && console.log(`No JUnit reports needed to be uploaded`);
+            if (!isQuiet) {
+              console.log(`No JUnit reports needed to be uploaded`);
+            }
           }
         } else {
-          !isQuiet && console.log(`No remaining JUnit reports found to upload`);
+          if (!isQuiet) {
+            console.log(`No remaining JUnit reports found to upload`);
+          }
         }
       } catch (err) {
         console.error(`Error checking for remaining JUnit reports:`, err);
@@ -1593,7 +1619,9 @@ async function runTests(): Promise<TestResult[]> {
       stdoutPreview: r.stdoutPreview?.slice?.(-4000),
     }));
     writeFileSync(cliOptions["results-json"], JSON.stringify(all, null, 2));
-    !isQuiet && console.log(`Wrote ${all.length} results to ${cliOptions["results-json"]}`);
+    if (!isQuiet) {
+      console.log(`Wrote ${all.length} results to ${cliOptions["results-json"]}`);
+    }
   }
 
   // Exclude flaky tests from the final results
@@ -1876,7 +1904,7 @@ async function spawnWithTimeout(options: SpawnOptions): Promise<SpawnResult> {
       error = "code 1";
     }
     const lines = stripAnsi(buffer).split(/\r?\n/);
-    const failAt = lines.findIndex(line => /^\(fail\) /.test(line.trim()));
+    const failAt = lines.findIndex(line => line.trim().startsWith("(fail) "));
     if (failAt === -1) {
       // k - 1 is an index of `lines` because k > 0, and so is at - 1.
       const at = lines.findIndex(
@@ -1935,7 +1963,7 @@ function getCombinedPath(execPath: string): string {
         // On Windows, we might run into permissions issues with symlinks.
         // If that happens, fall back to a regular hardlink.
         symlinkSync(existingPath, newPath, "file");
-      } catch (error) {
+      } catch {
         try {
           linkSync(existingPath, newPath);
         } catch (error) {
@@ -2494,7 +2522,7 @@ function isTestStrict(path: string): boolean {
 }
 
 function isHidden(path: string): boolean {
-  return /node_modules|node.js/.test(dirname(path)) || /^\./.test(basename(path));
+  return /node_modules|node.js/.test(dirname(path)) || basename(path).startsWith(".");
 }
 
 function getTests(cwd: string): string[] {
@@ -2705,7 +2733,9 @@ function getRelevantTests(cwd: string, testModifiers: string[], testExpectations
   const includes = options.include?.flatMap(getFilter);
   if (includes?.length) {
     availableTests.push(...tests.filter(testPath => includes.some(filter => isMatch(testPath, filter))));
-    !isQuiet && console.log("Including tests:", includes, availableTests.length, "/", tests.length);
+    if (!isQuiet) {
+      console.log("Including tests:", includes, availableTests.length, "/", tests.length);
+    }
   } else {
     availableTests.push(...tests);
   }
@@ -2720,7 +2750,9 @@ function getRelevantTests(cwd: string, testModifiers: string[], testExpectations
           availableTests.splice(index, 1);
         }
       }
-      !isQuiet && console.log("Excluding tests:", excludes, excludedTests.length, "/", availableTests.length);
+      if (!isQuiet) {
+        console.log("Excluding tests:", excludes, excludedTests.length, "/", availableTests.length);
+      }
     }
   }
 
@@ -2736,7 +2768,9 @@ function getRelevantTests(cwd: string, testModifiers: string[], testExpectations
           availableTests.splice(index, 1);
         }
       }
-      !isQuiet && console.log("Skipping tests:", skipExpectations, skippedTests.length, "/", availableTests.length);
+      if (!isQuiet) {
+        console.log("Skipping tests:", skipExpectations, skippedTests.length, "/", availableTests.length);
+      }
     }
   }
 
@@ -2744,7 +2778,9 @@ function getRelevantTests(cwd: string, testModifiers: string[], testExpectations
   const maxShards = parseInt(options["max-shards"]);
   if (filters?.length) {
     filteredTests.push(...availableTests.filter(testPath => filters.some(filter => isMatch(testPath, filter))));
-    !isQuiet && console.log("Filtering tests:", filteredTests.length, "/", availableTests.length);
+    if (!isQuiet) {
+      console.log("Filtering tests:", filteredTests.length, "/", availableTests.length);
+    }
   } else if (options.smoke !== undefined) {
     const smokePercent = parseFloat(options.smoke) || 0.01;
     const smokeCount = Math.ceil(availableTests.length * smokePercent);
@@ -2754,7 +2790,9 @@ function getRelevantTests(cwd: string, testModifiers: string[], testExpectations
       smokeTests.add(availableTests[randomIndex]!); // randomIndex < availableTests.length
     }
     filteredTests.push(...Array.from(smokeTests));
-    !isQuiet && console.log("Smoking tests:", filteredTests.length, "/", availableTests.length);
+    if (!isQuiet) {
+      console.log("Smoking tests:", filteredTests.length, "/", availableTests.length);
+    }
   } else if (maxShards > 1) {
     // Longest-processing-time-first bin packing across shards using the
     // checked-in median wall-clock durations (see scripts/update-test-durations.mjs).
@@ -2786,7 +2824,7 @@ function getRelevantTests(cwd: string, testModifiers: string[], testExpectations
     // --shard is less than --max-shards: Buildkite numbers parallel jobs from 0.
     assigned[shardId]!.sort((a, b) => a.originalIndex - b.originalIndex);
     for (const { testPath } of assigned[shardId]!) filteredTests.push(testPath);
-    !isQuiet &&
+    if (!isQuiet) {
       console.log(
         "Sharding tests (LPT):",
         shardId,
@@ -2801,6 +2839,7 @@ function getRelevantTests(cwd: string, testModifiers: string[], testExpectations
         "of",
         Math.round(Math.max(...load) / 1000) + "s max",
       );
+    }
   } else {
     filteredTests.push(...availableTests);
   }
@@ -3168,7 +3207,9 @@ interface JUnitTestSuite {
 
 /** Generate a JUnit XML report from test results. */
 function generateJUnitReport(outfile: string, results: TestResult[]): void {
-  !isQuiet && console.log(`Generating JUnit XML report: ${outfile}`);
+  if (!isQuiet) {
+    console.log(`Generating JUnit XML report: ${outfile}`);
+  }
 
   // Start the XML document
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
@@ -3322,7 +3363,9 @@ function generateJUnitReport(outfile: string, results: TestResult[]): void {
 
   // Write to file
   writeFileSync(outfile, xml);
-  !isQuiet && console.log(`JUnit XML report written to ${outfile}`);
+  if (!isQuiet) {
+    console.log(`JUnit XML report written to ${outfile}`);
+  }
 }
 
 let isUploadingToBuildkite = false;
@@ -3357,7 +3400,9 @@ async function drainJunitUploadQueue(): Promise<void> {
 /** Upload a JUnit XML report to Buildkite Test Analytics; resolves to whether it was accepted. */
 async function uploadJUnitToBuildkite(junitFile: string): Promise<boolean> {
   const fileName = basename(junitFile);
-  !isQuiet && console.log(`Uploading JUnit file "${fileName}" to BuildKite Test Analytics...`);
+  if (!isQuiet) {
+    console.log(`Uploading JUnit file "${fileName}" to BuildKite Test Analytics...`);
+  }
 
   // Get BuildKite environment variables for run_env fields
   const buildId = process.env.BUILDKITE_BUILD_ID;
@@ -3407,12 +3452,14 @@ async function uploadJUnitToBuildkite(junitFile: string): Promise<boolean> {
     });
 
     if (response.ok) {
-      !isQuiet && console.log(`JUnit file "${fileName}" successfully uploaded to BuildKite Test Analytics`);
+      if (!isQuiet) {
+        console.log(`JUnit file "${fileName}" successfully uploaded to BuildKite Test Analytics`);
+      }
 
       try {
         // Consume the body to ensure Node releases the memory.
         await response.arrayBuffer();
-      } catch (error) {
+      } catch {
         // Don't care if this fails.
       }
 
@@ -3478,7 +3525,9 @@ async function main(): Promise<void> {
     const userCount = getLoggedInUserCountOrDetails();
     if (!userCount) {
       if (waitForUser) {
-        !isQuiet && console.log("No users logged in, exiting runner...");
+        if (!isQuiet) {
+          console.log("No users logged in, exiting runner...");
+        }
       }
       break;
     }

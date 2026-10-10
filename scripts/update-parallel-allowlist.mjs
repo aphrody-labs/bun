@@ -55,7 +55,7 @@ function listBunTestFiles() {
   const walk = rel => {
     for (const entry of readdirSync(join(testDir, rel), { withFileTypes: true })) {
       const path = rel ? `${rel}/${entry.name}` : entry.name;
-      if (/node_modules|node\.js/.test(rel) || /^\./.test(entry.name)) continue;
+      if (/node_modules|node\.js/.test(rel) || entry.name.startsWith(".")) continue;
       if (entry.isDirectory()) walk(path);
       else if (/\.(c|m)?(j|t)sx?$/.test(entry.name) && /\.test|spec\./.test(entry.name) && !isNodeStyle(path)) {
         out.push(path);
