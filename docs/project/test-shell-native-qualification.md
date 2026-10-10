@@ -23,7 +23,7 @@ reproduces that same error in `test_builder.ts:9`; no type declaration was
 changed to suppress it.
 
 Strict Clippy checks both `bun_shell_parser` and `bun_runtime` on Windows/Linux
-GNU x64/ARM64. The three owned Rust files have no diagnostics. The complete
+GNU x64/ARM64. The corrected sites have no diagnostics. GNU Linux has no diagnostics in the three owned Rust files; Windows retains unrelated test-runner question-mark/large-stack-frame diagnostics and a shell identical-branches diagnostic. The complete
 runtime still fails with 151 Windows and 12 GNU Linux diagnostics elsewhere.
 Linux execution, release distribution and host activation remain pending.
 

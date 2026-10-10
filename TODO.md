@@ -61,4 +61,4 @@
 
 - [x] Qualify copyable UV/.NET/MSVC/WinMD terminal invocation enums on four strict targets; 17 rebuilt-Bun native launcher tests pass (91 assertions). The separate .NET path-conversion diagnostic remains.
 
-- [x] Reject unterminated single/double shell quotes; both regressions fail on the installed runtime, native session suite passes 34 tests, valid quote/substitution subset 45 and test-environment subset two. Strict gates have no diagnostics in the three owned Rust files; the existing test helper Bun.jest type error remains.
+- [x] Reject unterminated single/double shell quotes; both regressions fail on the installed runtime, native session suite passes 34 tests, valid quote/substitution subset 45 and test-environment subset two. Strict gates have no diagnostics at the corrected sites; three unrelated diagnostics remain in these files on Windows, and the existing test helper Bun.jest type error remains.
