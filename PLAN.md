@@ -181,3 +181,5 @@ chantier touché (`bun-fork-aphrody`, `next-on-bun-plan`, …) à la fin du lot.
 - Listener Windows : erreurs preservees et binding local transfere aux sockets TCP/TLS sans clone redondant ; 116 tests locaux passent (1513 assertions, dix skips), plus sept tests TLS pipes nommes (809 assertions). Aucun diagnostic dans le fichier sur quatre cibles ; GNU strict passe, 90 diagnostics Windows restent ailleurs. [Preuves listener](docs/project/windows-listener-binding-qualification.md).
 
 - 2026-10-10: Windows IPC exclusive read-buffer borrow and libuv pointer contracts qualified with 40 native passes; strict GNU x64/ARM64 zero, Windows ipc.rs zero with 83 whole-runtime errors remaining. See [qualification](docs/project/windows-ipc-buffer-qualification.md).
+
+- 2026-10-10: Windows shell cp EBUSY state ownership qualified: 30 native passes / 111 assertions; strict four-target cp diagnostics zero, Windows whole-runtime 77 remaining. See [qualification](docs/project/windows-shell-copy-qualification.md).

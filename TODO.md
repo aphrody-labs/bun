@@ -76,3 +76,5 @@
 - [x] Qualifier les bindings des pipes nommes TCP/TLS et les erreurs listener ; 123 tests natifs locaux passes, fichier sans diagnostic strict sur quatre cibles.
 
 - [x] Windows IPC buffer ownership: 40 native passes / 99 assertions; four-target ipc.rs strict diagnostics zero.
+
+- [x] Windows shell cp EBUSY state and deferred-task ownership: 30 native passes; GNU strict runtime zero.
