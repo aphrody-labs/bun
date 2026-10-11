@@ -5,7 +5,8 @@
   "license": "Apache-2.0",
   "repository": "https://github.com/aphrody-labs/bun",
   "bin": {
-    "bun-google": "./src/cli.ts"
+    "bun-google": "./src/cli.ts",
+    "bun-google-index-public": "./src/public-index-cli.ts"
   },
   "files": [
     "src",
@@ -23,6 +24,7 @@
     "./cli": "./src/cli.ts",
     "./search": "./src/search.ts",
     "./public-index": "./src/public-index.ts",
+    "./public-index-cli": "./src/public-index-cli.ts",
     "./password-store": "./src/password-store.ts"
   },
   "scripts": {

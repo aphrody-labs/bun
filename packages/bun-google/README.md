@@ -70,6 +70,47 @@ This is a capability-owner CLI adapter, not an in-process native search binding.
 The Windows anonymous live probe on 2026-10-11 was blocked by Google; fixture
 success does not establish production availability. No auth fallback was attempted.
 
+## Public crawl index and standalone CLI
+
+`@aphrody/bun-google/public-index` exports `createPublicIndexSearch({ root,
+collections })`. It verifies approved public snapshot pointers, SHA-256 content,
+provenance, exact hosts and limits before building one in-memory SQLite FTS5
+projection with isolated collection statistics. Searches return `{ body, etag,
+cache }`; `body` includes `query`, `organic`, `source: "public-crawl-cache"`,
+`collection` and `generatedAt`. The 128-entry query cache invalidates on changed
+snapshots. `close()` releases the projection. No private home index, browser
+profile, credentials or implicit database supplies missing configuration.
+
+The separate `bun-google-index-public` binary and `./public-index-cli` subpath
+delegate to that same SDK. They require an absolute export root and an absolute
+JSON policy file containing the collection configuration map:
+
+```json
+{
+  "google-public": {
+    "pointer": "google-public.pointer.json",
+    "hosts": ["developers.google.com"],
+    "policySha256": "<64-character checksum of the approved crawl policy>",
+    "owner": "aphrody-web-crawl"
+  }
+}
+```
+
+```sh
+bun-google-index-public --help
+bun-google-index-public --root /absolute/public-export --collections-file /absolute/public-policy.json --collection google-public --query "Bun Rust" --num 10 --start 0
+```
+
+Replace the example paths and policy checksum with the qualified producer's
+actual public export/configuration; this example is not a production receipt.
+Policy files are bounded to 64 KiB. Queries, collections and pagination use the
+SDK bounds; SIGINT/SIGTERM cancel the standalone command. Output is JSON with
+results, provenance, ETag and cache status. Errors are redacted. These public
+commands do not acquire Google credentials or contact a live search provider.
+`unicode61` provides Unicode lexical tokenization; comprehensive language-specific
+stemming and Google-scale coverage are not claimed. A verified public snapshot
+must exist before these commands return results.
+
 `createAntigravityServices` implements Cloud Code models/bootstrap, regional Vertex
 generation, Daily Cloud Code SSE decoding and userinfo. `createAntigravityCredentialProvider`
 reads the desktop OAuth envelope by explicit Windows target; it never refreshes or writes.
