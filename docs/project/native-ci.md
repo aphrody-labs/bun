@@ -37,9 +37,13 @@ Infra's build-factory configuration and Bun's fusion-factory configuration must
 declare the same `bun-os` checkout. Both the Bun source and sibling Aphrody Cargo
 wrapper must be provisioned and pinned through their existing source owners.
 Prepare through the owner CLI before execution; preserve foreign dirty files.
-The observed old fusion checkout is absent and the existing VPS Bun checkout is
-dirty, so neither is silently reset or adopted. Deployment remains blocked until
-Infra qualifies a clean declared checkout and the sibling source allocation.
+On 2026-10-11 the declared VPS checkout was reconciled without a reset: eight
+tracked changes were checksum-backed up and retained in a verified stash before
+owner preparation. Generated Cargo caches remain preserved in each standalone
+provider's anchored `target/` exclusion. Source files and other untracked paths
+still participate in the clean-source guard. The first pinned run passed Google
+compilation and tests, then failed Clippy; full Linux qualification remains pending
+until a subsequent immutable run records all thirteen successful gates.
 
 The schedule is deliberately disabled in native-ci.json. Infra can plan and
 activate a timer through its host catalog after qualifying the source allocation;
