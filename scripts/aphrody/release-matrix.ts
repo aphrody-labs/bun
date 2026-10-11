@@ -102,8 +102,61 @@ export function vpsRuntimeReleasePlan(revision: string, targets: string[] = []) 
   };
 }
 
+/** Native Windows workstation plan; it cannot stand in for the VPS release matrix. */
+export function windowsRuntimeReleasePlan(
+  revision: string,
+  targets: string[] = ["windows-x64", "windows-aarch64"],
+) {
+  if (!/^[a-f0-9]{40}$/.test(revision)) throw new Error("Factory source must be an immutable revision");
+  const selected = runtimeReleaseMatrix(targets);
+  if (selected.some(target => target.os !== "windows"))
+    throw new Error("The Omar PC factory accepts Windows targets only");
+  const source = "C:/bun";
+  const artifacts = "C:/bun/artifacts/runtime-release";
+  return {
+    schema: 1,
+    revision,
+    host: "omar-pc",
+    target: "windows-x64",
+    source,
+    executionOwner: "local Windows workstation",
+    lock: "C:/bun/artifacts/locks/heavy.lock",
+    maxJobs: 1,
+    reserveDiskGiB: 20,
+    reserveMemoryGiB: 6,
+    parallelHeavyJobs: 1,
+    requires: [
+      "clean committed source at revision",
+      "MSVC 14.44 and pinned Windows SDK",
+      "at least 20 GiB free disk and 6 GiB available RAM",
+      "recorded toolchain and artifact hashes",
+    ],
+    steps: selected.map(target => ({
+      target,
+      directory: source,
+      command: [
+        "bun",
+        "scripts/build.ts",
+        ...runtimeFlavorArgs(target),
+        "-j4",
+        `--build-dir=${artifacts}/${target.triplet}`,
+      ],
+      qualification:
+        target.target === "windows-x64"
+          ? "Native x64 build; smoke-test and record receipt on omar-pc"
+          : "ARM64 cross-build only; native ARM64 qualification is still required",
+    })),
+    publication: "Candidate artifacts only; combine with required VPS and platform receipts before stable release",
+  };
+}
+
 if (import.meta.main) {
   const revision = process.argv[2];
-  if (!revision) throw new Error("Usage: bun scripts/aphrody/release-matrix.ts <exact-revision> [target ...] (VPS plan only)");
-  console.log(JSON.stringify(vpsRuntimeReleasePlan(revision, process.argv.slice(3)), null, 2));
+  const [host = "vps", ...targets] = process.argv.slice(3);
+  if (!revision) throw new Error("Usage: bun scripts/aphrody/release-matrix.ts <exact-revision> [vps|windows] [target ...]");
+  console.log(JSON.stringify(host === "windows"
+    ? windowsRuntimeReleasePlan(revision, targets.length ? targets : undefined)
+    : host === "vps"
+      ? vpsRuntimeReleasePlan(revision, targets)
+      : (() => { throw new Error(`unknown factory host: ${host}`); })(), null, 2));
 }

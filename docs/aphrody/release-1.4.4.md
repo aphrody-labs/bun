@@ -5,8 +5,14 @@ Release version: `1.4.4`. Source version: `1.4.4`. Release tag: `bun-v1.4.4`.
 The owner requested repository-wide lint corrections, documentation and
 infrastructure alignment, and publication to GitHub, npm, crates.io and the
 production sites. The initial source preparation batch excluded builds and
-tests. The owner's subsequent directive authorizes qualification on the SSH
-VPS factory; heavy work remains excluded from the Windows workstation.
+tests. The owner's subsequent directive establishes the Windows workstation
+(`omar-pc`) as an additional native Windows build factory. The SSH VPS remains
+the Linux and multi-platform factory. The PC is limited to Windows builds,
+packaging and smoke checks, with one heavy build at a time, 6 GiB RAM and 20 GiB
+disk reserved. Windows x64 can be qualified natively; Windows ARM64 is only a
+cross-build from this x64 workstation. Use `bun scripts/aphrody/release-matrix.ts`
+with the exact commit SHA and `windows` as the host for its explicit plan. A
+workstation receipt does not replace required VPS or native ARM64 receipts.
 Existing concurrent changes remain in the original checkout.
 
 ## Delivery checklist
