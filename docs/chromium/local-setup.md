@@ -48,14 +48,19 @@ missing components through the native owner CLI requires an elevated terminal:
 sudo.exe --inline --chdir C:\bun bun msvc setup --add Microsoft.VisualStudio.Component.VC.ATLMFC --add Microsoft.VisualStudio.Component.Windows11SDK.28000
 ```
 
-The non-elevated installation attempt returned installer code 5007; the owner-
-authorized `sudo.exe` retry successfully started the installer with elevation.
-Component installation completion must still be checked against `bun msvc info`.
+The non-elevated installation attempt returned installer code 5007. The owner-
+authorized `sudo.exe` retry completed with exit code zero. `bun msvc info` now
+reports complete SDK `10.0.28000.0`, and the targeted setup dry-run reports
+`nothing to do` for both SDK and ATL/MFC.
 GN is compiled and qualified separately (see [GN](gn.md)).
 depot_tools at `a03dfbf7f2d1cefa2795d81d59ca4f16c8616a8f` bootstrapped successfully
-and `gclient help` ran through the Bun launcher. Chromium source synchronization
-and a working browser artifact must be qualified separately; a `.gclient` file
-or a successful launcher plan does not establish a completed Chromium build.
+and `gclient help` ran through the Bun launcher. Chromium's primary source at
+`e20c553087353010f4b71143841c189447ac1628` was fetched and extracted. The initial
+dependency synchronization failed with `SyntaxError: invalid syntax` while
+`gclient_eval.EvaluateCondition` parsed an empty DEPS variable. Dependency
+synchronization and a working browser artifact remain separate qualification
+steps; a `.gclient` file or a successful launcher plan does not establish a
+completed Chromium build.
 
 The launcher passed nine tests and 70 assertions through `bun bd test
 test/internal/chromium.test.ts`, including a real local Windows batch fixture.
