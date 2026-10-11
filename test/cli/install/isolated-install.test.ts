@@ -3860,3 +3860,65 @@ describe("hoist", () => {
     );
   });
 });
+
+
+test("isolated external workspaces install dependencies and survive a frozen reinstall", async () => {
+  using fixture = tempDir("external-workspace-links-", {
+    "app/package.json": JSON.stringify({
+      name: "external-workspace-app",
+      workspaces: ["packages/*", "../provider/packages/*"],
+      dependencies: { "@external/sdk": "workspace:*" },
+    }),
+    "app/bunfig.toml": '[install]\nlinker = "isolated"\n',
+    "app/packages/host/package.json": JSON.stringify({
+      name: "@external/host",
+      version: "1.0.0",
+      exports: "./index.ts",
+    }),
+    "app/packages/host/index.ts": 'export const value = "application-host";',
+    "provider/packages/sdk/package.json": JSON.stringify({
+      name: "@external/sdk",
+      version: "1.0.0",
+      exports: "./index.ts",
+      peerDependencies: { "@external/host": "1.0.0" },
+      dependencies: { "@external/helper": "workspace:*" },
+    }),
+    "provider/packages/sdk/index.ts":
+      'import { value } from "@external/host"; import { helper } from "@external/helper"; export const result = `${value}:${helper}`;',
+    "provider/packages/helper/package.json": JSON.stringify({
+      name: "@external/helper",
+      version: "1.0.0",
+      exports: "./index.ts",
+    }),
+    "provider/packages/helper/index.ts": 'export const helper = "provider-helper";',
+    "app/index.ts": 'import { result } from "@external/sdk"; console.log(result);',
+  });
+  const cwd = join(String(fixture), "app");
+  const fixtureEnv = { ...bunEnv, BUN_INSTALL_CACHE_DIR: join(String(fixture), "cache") };
+  for (const args of [[], ["--frozen-lockfile"]]) {
+    await using install = spawn({
+      cmd: [bunExe(), "install", "--ignore-scripts", ...args],
+      env: fixtureEnv,
+      cwd,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([
+      install.stdout.text(),
+      install.stderr.text(),
+      install.exited,
+    ]);
+    expect(stderr).not.toContain("failed to symlink dependencies");
+    expect(exitCode, `${stdout}\n${stderr}`).toBe(0);
+    await using consumer = spawn({
+      cmd: [bunExe(), "index.ts"],
+      env: fixtureEnv,
+      cwd,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    expect(await consumer.stdout.text()).toBe("application-host:provider-helper\n");
+    expect(await consumer.stderr.text()).toBe("");
+    expect(await consumer.exited).toBe(0);
+  }
+});

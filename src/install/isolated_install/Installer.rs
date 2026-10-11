@@ -2256,6 +2256,9 @@ impl<'a> Installer<'a> {
 
         let mut dest = AutoPath::init_top_level_dir();
         self.append_real_store_node_modules_path(&mut dest, entry_id, Which::Staging);
+        // External workspaces may contain `..`. Windows extended paths do not
+        // resolve these segments when creating the dependency link or its parent.
+        dest.append_join(b".").assume_ok();
         let base_len = dest.len();
 
         let mut changed = false;
@@ -2277,6 +2280,9 @@ impl<'a> Installer<'a> {
             } else {
                 self.append_store_path(&mut dep_store_path, dep.entry_id);
             }
+            // Normalize the absolute target before deriving its relative link
+            // and before using it as the Windows junction fallback.
+            dep_store_path.append_join(b".").assume_ok();
 
             let dest_len = dest.len();
             dest.undo(1);
