@@ -128,14 +128,16 @@ impl ServerEntryPoint {
 // protected. This is mostly a workaround for being unable to call ESM exported
 // functions from C++. When that is resolved, we should remove this.
 pub struct MacroEntryPoint {
-    pub(crate) code_buffer: [u8; MAX_PATH_BYTES * 2 + 500],
+    // Generated source borrows this buffer for the VM lifetime. Allocate it
+    // directly on the heap instead of materializing a large array on the stack.
+    pub(crate) code_buffer: Box<[u8]>,
     pub source: bun_ast::Source,
 }
 
 impl Default for MacroEntryPoint {
     fn default() -> Self {
         Self {
-            code_buffer: [0u8; MAX_PATH_BYTES * 2 + 500],
+            code_buffer: vec![0u8; MAX_PATH_BYTES * 2 + 500].into_boxed_slice(),
             source: bun_ast::Source::default(),
         }
     }
