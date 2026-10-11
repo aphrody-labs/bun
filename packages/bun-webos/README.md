@@ -70,6 +70,21 @@ hash actually staged and stays under `dist/`.
 
 The explorer was generalized from the Omar integration; see NOTICE for provenance.
 
+The browser desktop starts with browser access controls and the Bun REPL. Browser
+permissions are requested individually after a user action. The WASM REPL keeps
+its files in the origin's private OPFS directory `bun-webos-files`; imported files
+appear under `imports/`. It never sends these files to the server. The native REPL
+is enabled only when the local server explicitly reports host access enabled.
+
+The public search application uses the same-origin `/api/search` endpoint and
+accepts the public crawl cache contract. An unavailable backend is shown as an
+error; personal indexes and generated sample results are never used as fallbacks.
+
+Public deployment separates the desktop and OS APIs on `os.aphrody.com` from
+the homepage, public search, documentation, templates, guides and downloads on
+`aphrody.com`. The OS search route can forward to the same public search backend.
+Private host integrations remain on their authorized private addresses.
+
 To produce a public archive from this checkout, use the exact local Tailwind owner:
 
 ```sh

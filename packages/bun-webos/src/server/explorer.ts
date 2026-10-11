@@ -200,7 +200,7 @@ export function createExplorer(options: ExplorerOptions = {}) {
               ? {
                   complete: manifest.complete,
                   rows: manifest.totalRows,
-                  chunks: manifest.totalChunks,
+                  chunks: manifest.totalChunks ?? manifest.chunks?.length,
                   tables: Object.keys(manifest.tables ?? {}).length,
                   publishedAt: manifest.publishedAt,
                   ttlSeconds: manifest.ttlSeconds,

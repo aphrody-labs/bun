@@ -18,6 +18,13 @@ interface DockProps {
 
 export const DOCK_ITEMS: DockItemConfig[] = [
   {
+    id: "public-search",
+    title: "Recherche publique",
+    icon: "🔎",
+    color: "bg-sky-700",
+    size: { width: 760, height: 580 },
+  },
+  {
     id: "browser-access",
     title: "Permissions navigateur",
     icon: "🔐",

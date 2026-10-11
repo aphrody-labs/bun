@@ -2,7 +2,7 @@
 /** Bun REPL worker: evaluates input on the worker's JS engine with the WebOS `Bun`. */
 import { loadBunWasm } from "./bun-wasm";
 import { createBunApi, type WebBun } from "./bun-api";
-import { serverVfs } from "./vfs-client";
+import { browserVfs } from "./opfs-client";
 import type { ReplRequest, ReplResponse } from "./protocol";
 
 const post = (m: ReplResponse) => (self as unknown as Worker).postMessage(m);
@@ -11,27 +11,30 @@ const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor as new (
 ) => (...a: unknown[]) => Promise<unknown>;
 
 let bun: WebBun | null = null;
+let initialization: Promise<void> | null = null;
 let current = 0;
 
 function show(value: unknown): string {
   if (typeof value === "string") return JSON.stringify(value);
   if (value === undefined) return "undefined";
   try {
-    return JSON.stringify(value, (_k, v) => (typeof v === "bigint" ? `${v}n` : v), 2) ?? String(value);
+    return (
+      JSON.stringify(value, (_k, v) => (typeof v === "bigint" ? `${v}n` : v), 2) ?? String(value)
+    );
   } catch {
     return String(value);
   }
 }
 
 const consoleProxy = Object.fromEntries(
-  (["log", "info", "warn", "error"] as const).map(level => [
+  (["log", "info", "warn", "error"] as const).map((level) => [
     level,
     (...args: unknown[]) =>
       post({
         type: "log",
         id: current,
         level: level === "info" ? "log" : level,
-        text: args.map(a => (typeof a === "string" ? a : show(a))).join(" "),
+        text: args.map((a) => (typeof a === "string" ? a : show(a))).join(" "),
       }),
   ]),
 );
@@ -49,10 +52,13 @@ async function evaluate(code: string): Promise<unknown> {
 self.addEventListener("message", async (event: MessageEvent<ReplRequest>) => {
   const msg = event.data;
   if (msg.type === "init") {
-    try {
+    initialization ??= (async () => {
       const core = await loadBunWasm();
-      bun = createBunApi(core, serverVfs);
+      bun = createBunApi(core, browserVfs);
       post({ type: "ready", bunVersion: core.version });
+    })();
+    try {
+      await initialization;
     } catch (error) {
       post({ type: "failed", error: error instanceof Error ? error.message : String(error) });
     }
@@ -60,6 +66,8 @@ self.addEventListener("message", async (event: MessageEvent<ReplRequest>) => {
   }
   current = msg.id;
   try {
+    if (!initialization) throw new Error("Bun WASM is not initialized");
+    await initialization;
     post({ type: "result", id: msg.id, ok: true, text: show(await evaluate(msg.code)) });
   } catch (error) {
     post({

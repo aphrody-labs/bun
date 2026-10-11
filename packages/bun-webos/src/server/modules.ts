@@ -5,7 +5,14 @@
  * cannot report is kept with its error instead of a placeholder.
  */
 
-export const OS_MODULES = ["bun:linux", "bun:windows", "bun:cosmic", "bun:wasm"] as const;
+export const OS_MODULES = [
+  "bun:linux",
+  "bun:windows",
+  "bun:cosmic",
+  "bun:wasm",
+  "bun:google",
+  "bun:chromium",
+] as const;
 export type OsModuleName = (typeof OS_MODULES)[number];
 
 export interface OsModuleReport {
@@ -24,7 +31,7 @@ export function loadOsModule<T = any>(name: OsModuleName): Promise<T | null> {
   if (!pending) {
     const specifier: string = name;
     pending = import(specifier).then(
-      mod => mod.default ?? mod,
+      (mod) => mod.default ?? mod,
       () => null,
     );
     cache.set(name, pending);
@@ -32,7 +39,12 @@ export function loadOsModule<T = any>(name: OsModuleName): Promise<T | null> {
   return pending;
 }
 
-function collect(facts: Record<string, unknown>, errors: Record<string, string>, key: string, read: () => unknown) {
+function collect(
+  facts: Record<string, unknown>,
+  errors: Record<string, string>,
+  key: string,
+  read: () => unknown,
+) {
   try {
     facts[key] = read();
   } catch (error) {
@@ -42,7 +54,7 @@ function collect(facts: Record<string, unknown>, errors: Record<string, string>,
 
 export async function osModules(): Promise<OsModuleReport[]> {
   return Promise.all(
-    OS_MODULES.map(async name => {
+    OS_MODULES.map(async (name) => {
       const mod = await loadOsModule(name);
       const report: OsModuleReport = {
         name,
@@ -63,6 +75,13 @@ export async function osModules(): Promise<OsModuleReport[]> {
         collect(facts, errors, "systemInfo", () => mod.systemInfo());
       } else if (name === "bun:wasm") {
         facts.init = typeof mod === "function" ? "function" : typeof mod;
+      } else if (name === "bun:google") {
+        facts.authenticatedClient = typeof mod.createClient === "function";
+        facts.chromiumBridge = typeof mod.chromium?.connect === "function";
+        facts.dns = typeof mod.dns?.lookup === "function";
+      } else if (name === "bun:chromium") {
+        facts.cdp = typeof mod.connect === "function";
+        collect(facts, errors, "browserInstalled", () => mod.findExecutable() !== null);
       }
       return report;
     }),

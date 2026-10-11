@@ -3,8 +3,34 @@ import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { hasChrome, waitFor } from "../e2e/harness";
 import { FLUENT_ELEMENTS } from "../src/os/fluent-elements";
+import { readPublicSearch } from "../src/os/apps/PublicSearchApp";
 
 const entry = join(import.meta.dir, "fixtures", "fluent-page.ts");
+
+test("public search refuses unverified sources, unsafe links and oversized replies", async () => {
+  const page = {
+    query: "fixture",
+    source: "public-crawl-cache",
+    collection: "fixture",
+    generatedAt: "2026-10-11T00:00:00Z",
+    organic: [{ title: "Fixture", url: "https://example.com/", snippet: "Fixture" }],
+  };
+  expect(await readPublicSearch(Response.json(page))).toEqual(page);
+  await expect(
+    readPublicSearch(Response.json({ ...page, source: "private-index" })),
+  ).rejects.toThrow("Contrat");
+  await expect(
+    readPublicSearch(
+      Response.json({ ...page, organic: [{ ...page.organic[0], url: "javascript:alert(1)" }] }),
+    ),
+  ).rejects.toThrow("HTTPS");
+  await expect(readPublicSearch(new Response("x".repeat(1024 * 1024 + 1)))).rejects.toThrow(
+    "grande",
+  );
+  await expect(readPublicSearch(new Response("private error", { status: 503 }))).rejects.toThrow(
+    "HTTP 503",
+  );
+});
 
 async function bundle(): Promise<string> {
   const result = await Bun.build({
@@ -45,6 +71,19 @@ describe.skipIf(!hasChrome())("headless render in Bun.WebView (Chrome)", () => {
         "/permissions.js": new Response(await result.outputs[0].text(), {
           headers: { "Content-Type": "text/javascript" },
         }),
+        "/api/search": Response.json({
+          query: "fixture",
+          source: "public-crawl-cache",
+          collection: "fixture",
+          generatedAt: "2026-10-11T00:00:00Z",
+          organic: [
+            {
+              title: "<img src=x onerror=alert(1)>",
+              url: "https://example.com/",
+              snippet: "Browser fixture",
+            },
+          ],
+        }),
       },
     });
     const view = new Bun.WebView({
@@ -62,6 +101,36 @@ describe.skipIf(!hasChrome())("headless render in Bun.WebView (Chrome)", () => {
       expect(
         await view.evaluate('document.querySelector("[data-browser-capability=screen]").disabled'),
       ).toBe(true);
+      const files = await view.evaluate(`(async () => {
+        const fs = window.fixtureBrowserVfs;
+        await fs.write('/imports/test.txt', new TextEncoder().encode('browser only'));
+        let traversalDenied = false;
+        try { await fs.write('/../outside.txt', new Uint8Array([1])); }
+        catch { traversalDenied = true; }
+        return {
+          text: new TextDecoder().decode(await fs.read('/imports/test.txt')),
+          size: await fs.size('/imports/test.txt'),
+          missing: await fs.exists('/missing.txt'),
+          traversalDenied,
+        };
+      })()`);
+      expect(files).toEqual({
+        text: "browser only",
+        size: 12,
+        missing: false,
+        traversalDenied: true,
+      });
+      await view.evaluate(
+        'document.querySelector("[aria-label=\\"Recherche publique\\"]").scrollIntoView({ block: "center" })',
+      );
+      await view.click('[aria-label="Recherche publique"]');
+      await view.type("fixture");
+      await view.click('button[type="submit"]');
+      await waitFor(view, 'document.querySelector("article a") !== null');
+      expect(await view.evaluate('document.querySelector("article a").textContent')).toBe(
+        "<img src=x onerror=alert(1)>",
+      );
+      expect(await view.evaluate('document.querySelectorAll("article img").length')).toBe(0);
     } finally {
       view.close();
     }

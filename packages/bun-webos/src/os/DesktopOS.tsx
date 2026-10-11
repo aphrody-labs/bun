@@ -15,6 +15,7 @@ import { DiagnosticsApp } from "./apps/DiagnosticsApp";
 import { FluentWindowsApp } from "./apps/FluentWindowsApp";
 import { IndexExplorerApp } from "./apps/IndexExplorerApp";
 import { BrowserAccessApp } from "./apps/BrowserAccessApp";
+import { PublicSearchApp } from "./apps/PublicSearchApp";
 import { ArcadeGame } from "../arcade/ArcadeGame";
 import { ApiPlayground } from "../components/ApiPlayground";
 import { BenchmarkSuite } from "../benchmarks/BenchmarkSuite";
@@ -26,7 +27,7 @@ import { applyM3Theme } from "../core/theme";
 import { formatBytes, formatDuration, UNAVAILABLE, useSystemSnapshot } from "./system-client";
 import type { AppId, WindowState } from "./types";
 
-const OPEN_AT_START = new Set<AppId>(["kernel-monitor", "bunsh"]);
+const OPEN_AT_START = new Set<AppId>(["browser-access", "bun-repl"]);
 
 const INITIAL_WINDOWS: WindowState[] = DOCK_ITEMS.map((item, i) => ({
   id: item.id,
@@ -35,9 +36,9 @@ const INITIAL_WINDOWS: WindowState[] = DOCK_ITEMS.map((item, i) => ({
   isOpen: OPEN_AT_START.has(item.id),
   isMinimized: false,
   isMaximized: false,
-  zIndex: item.id === "bunsh" ? 12 : item.id === "kernel-monitor" ? 11 : 10,
+  zIndex: item.id === "bun-repl" ? 12 : item.id === "browser-access" ? 11 : 10,
   position:
-    item.id === "bunsh" ? { x: 260, y: 110 } : { x: 30 + (i % 8) * 30, y: 50 + (i % 8) * 20 },
+    item.id === "bun-repl" ? { x: 260, y: 110 } : { x: 30 + (i % 8) * 30, y: 50 + (i % 8) * 20 },
   size: item.size,
 }));
 
@@ -142,6 +143,8 @@ export const DesktopOS: React.FC = () => {
 
   const renderApp = (id: AppId): React.ReactNode => {
     switch (id) {
+      case "public-search":
+        return <PublicSearchApp />;
       case "browser-access":
         return <BrowserAccessApp />;
       case "index-explorer":

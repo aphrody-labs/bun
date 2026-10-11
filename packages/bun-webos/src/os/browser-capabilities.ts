@@ -100,8 +100,10 @@ export async function requestBrowserCapability(id: BrowserCapability): Promise<s
       const files = await Promise.all(handles.map((handle) => handle.getFile()));
       if (files.reduce((sum, file) => sum + file.size, 0) > 16 * 1024 * 1024)
         throw new Error("Import limité à 16 Mio par opération.");
-      const root = await navigator.storage.getDirectory();
-      const imports = await root.getDirectoryHandle("bun-webos-imports", { create: true });
+      const root = await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle("bun-webos-files", { create: true });
+      const imports = await root.getDirectoryHandle("imports", { create: true });
       const batch = await imports.getDirectoryHandle(crypto.randomUUID(), { create: true });
       for (const file of files) {
         const target = await batch.getFileHandle(file.name, { create: true });

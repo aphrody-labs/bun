@@ -2,7 +2,7 @@
 /**
  * Bun REPL. "natif": the code runs in a child `bun -p` of the WebOS server, in the WebOS home, with
  * every Bun API. "bun_wasm": the code runs on the page's engine with the Bun subset bun_wasm provides
- * (semver, markdown, shell parser; files go to the same home), when the server has bun_wasm.wasm.
+ * (semver, markdown, shell parser; files stay in OPFS), when the server has bun_wasm.wasm.
  */
 import React, { useEffect, useRef, useState } from "react";
 import { api, errorText, type CommandResult } from "../api";
@@ -25,7 +25,8 @@ const COLOR: Record<Line["kind"], string> = {
 
 export const BunReplApp: React.FC = () => {
   const setReady = useWindowReady();
-  const [engine, setEngine] = useState<Engine>("native");
+  const [engine, setEngine] = useState<Engine>("wasm");
+  const [hostAccess, setHostAccess] = useState(false);
   const [lines, setLines] = useState<Line[]>([]);
   const [last, setLast] = useState("");
   const [input, setInput] = useState("");
@@ -35,9 +36,23 @@ export const BunReplApp: React.FC = () => {
   const nextId = useRef(1);
 
   useEffect(() => setReady(true), [setReady]);
+  useEffect(() => {
+    const controller = new AbortController();
+    void api<{ hostAccess: boolean }>("/api/webos/capabilities", { signal: controller.signal })
+      .then((capabilities) => {
+        if (controller.signal.aborted) return;
+        const enabled = capabilities.hostAccess === true;
+        setHostAccess(enabled);
+        setEngine(enabled ? "native" : "wasm");
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setEngine("wasm");
+      });
+    return () => controller.abort();
+  }, []);
   useEffect(() => () => worker.current?.terminate(), []);
 
-  const push = (line: Line) => setLines(l => [...l, line]);
+  const push = (line: Line) => setLines((l) => [...l, line]);
 
   const startWasm = () => {
     if (worker.current) return;
@@ -55,7 +70,10 @@ export const BunReplApp: React.FC = () => {
         setBusy(false);
       }
     };
-    w.onerror = e => setWasmState(`indisponible : ${e.message}`);
+    w.onerror = (e) => {
+      setWasmState(`indisponible : ${e.message}`);
+      setBusy(false);
+    };
     w.postMessage({ type: "init" } satisfies ReplRequest);
   };
 
@@ -67,7 +85,11 @@ export const BunReplApp: React.FC = () => {
     if (engine === "wasm") {
       if (!worker.current) startWasm();
       setBusy(true);
-      worker.current!.postMessage({ type: "eval", id: nextId.current++, code } satisfies ReplRequest);
+      worker.current!.postMessage({
+        type: "eval",
+        id: nextId.current++,
+        code,
+      } satisfies ReplRequest);
       return;
     }
     setBusy(true);
@@ -87,9 +109,10 @@ export const BunReplApp: React.FC = () => {
   return (
     <div className="flex h-full flex-col bg-[#0f1117] font-mono text-xs text-gray-100">
       <div className="flex items-center gap-2 border-b border-gray-800 bg-[#161922] px-3 py-1 text-[11px] text-gray-400">
-        {(["native", "wasm"] as const).map(e => (
+        {(["native", "wasm"] as const).map((e) => (
           <button
             key={e}
+            disabled={e === "native" && !hostAccess}
             className={`rounded-full px-2 py-0.5 ${engine === e ? "bg-amber-600 text-white" : "hover:bg-white/10"}`}
             onClick={() => {
               setEngine(e);
@@ -100,7 +123,9 @@ export const BunReplApp: React.FC = () => {
           </button>
         ))}
         <span className="flex-1 truncate">
-          {engine === "native" ? "Toutes les API Bun, dans le home WebOS" : wasmState}
+          {engine === "native"
+            ? "API Bun de votre agent local"
+            : `${wasmState} · fichiers privés dans ce navigateur`}
         </span>
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-3">
@@ -119,8 +144,8 @@ export const BunReplApp: React.FC = () => {
           className="h-20 flex-1 resize-none bg-transparent p-2 outline-none"
           placeholder={'Bun.semver.satisfies("1.4.0", "^1.2")  (Ctrl+Entrée)'}
           value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => {
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
             if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
               e.preventDefault();
               void submit();

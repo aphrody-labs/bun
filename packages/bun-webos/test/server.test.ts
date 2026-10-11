@@ -578,6 +578,8 @@ describe("system", () => {
       "bun:windows",
       "bun:cosmic",
       "bun:wasm",
+      "bun:google",
+      "bun:chromium",
     ]);
   });
 

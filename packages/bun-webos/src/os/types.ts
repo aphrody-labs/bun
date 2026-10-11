@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 export type AppId =
+  | "public-search"
   | "browser-access"
   | "index-explorer"
   | "bunsh"

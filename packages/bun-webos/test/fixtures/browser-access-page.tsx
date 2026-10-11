@@ -2,6 +2,8 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserAccessApp } from "../../src/os/apps/BrowserAccessApp";
+import { browserVfs } from "../../src/os/wasm/opfs-client";
+import { PublicSearchApp } from "../../src/os/apps/PublicSearchApp";
 
 let permissionCalls = 0;
 Object.defineProperty(navigator, "mediaDevices", {
@@ -14,4 +16,10 @@ Object.defineProperty(navigator, "mediaDevices", {
 });
 Object.defineProperty(navigator, "userActivation", { value: { isActive: false } });
 Object.defineProperty(window, "fixturePermissionCalls", { get: () => permissionCalls });
-createRoot(document.body).render(<BrowserAccessApp />);
+Object.defineProperty(window, "fixtureBrowserVfs", { value: browserVfs });
+createRoot(document.body).render(
+  <>
+    <BrowserAccessApp />
+    <PublicSearchApp />
+  </>,
+);
