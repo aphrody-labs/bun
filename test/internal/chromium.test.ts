@@ -5,6 +5,7 @@ import {
   commandPlan,
   parseArguments,
   withSetupLock,
+  CHROMIUM_REVISION,
 } from "../../scripts/aphrody/chromium";
 import { join, resolve } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
@@ -22,11 +23,56 @@ test("Chromium setup resumes configured sources and avoids history or duplicate 
     "--cache-dir=None",
     "https://chromium.googlesource.com/chromium/src.git",
   ]);
-  expect(fresh.setup[1]!.argv.slice(1)).toEqual(["sync", "--no-history", "--jobs", "4"]);
+  expect(fresh.setup[1]!.argv.slice(1)).toEqual([
+    "sync",
+    "--no-history",
+    "--jobs",
+    "4",
+    "--revision",
+    `src@${CHROMIUM_REVISION}`,
+  ]);
   expect(fresh.setup[0]!.cwd).toBe(join(root, "vendor", "chromium"));
   const resume = commandPlan(options, "linux", true, root);
-  expect(resume.setup[0]!.argv.slice(1)).toEqual(["sync", "--no-history", "--jobs", "4"]);
+  expect(resume.setup[0]!.argv.slice(1)).toEqual([
+    "sync",
+    "--no-history",
+    "--jobs",
+    "4",
+    "--revision",
+    `src@${CHROMIUM_REVISION}`,
+  ]);
   expect(commandPlan(parseArguments(["--depot-tools", "setup"]), "linux", false, root).setup).toEqual([]);
+});
+
+test("Chromium revision overrides remain exact commit pins for setup and sync", () => {
+  const revision = "A".repeat(40);
+  const options = parseArguments(["sync", "--revision", revision]);
+  const plan = commandPlan(options, "linux", true);
+  expect(plan.revision).toBe(revision.toLowerCase());
+  expect(plan.sync[0]!.argv.slice(-2)).toEqual(["--revision", `src@${revision.toLowerCase()}`]);
+  for (const invalid of ["main", "HEAD", "abcd", "g".repeat(40), "a".repeat(41)])
+    expect(() => parseArguments(["setup", "--revision", invalid])).toThrow("40-hex");
+});
+
+test("Chromium restores Windows architecture detection only in the child when host variables are absent", () => {
+  const root = resolve("bun");
+  for (const [arch, expected] of [
+    ["x64", "AMD64"],
+    ["arm64", "ARM64"],
+    ["ia32", "x86"],
+  ]) {
+    const host = { PROCESSOR_ARCHITECTURE: "" };
+    expect(childEnvironment(root, host, "win32", arch).PROCESSOR_ARCHITECTURE).toBe(expected);
+    expect(host.PROCESSOR_ARCHITECTURE).toBe("");
+  }
+  expect(childEnvironment(root, { PROCESSOR_ARCHITECTURE: "AMD64" }, "win32", "arm64").PROCESSOR_ARCHITECTURE).toBe(
+    "AMD64",
+  );
+  expect(childEnvironment(root, { PROCESSOR_ARCHITEW6432: "ARM64" }, "win32", "x64").PROCESSOR_ARCHITECTURE).toBe(
+    "ARM64",
+  );
+  expect(childEnvironment(root, {}, "linux", "x64").PROCESSOR_ARCHITECTURE).toBeUndefined();
+  expect(() => childEnvironment(root, {}, "win32", "unknown")).toThrow("Unsupported Windows processor");
 });
 
 test("Chromium fresh setup clones depot_tools once from the official source inside the checkout", () => {

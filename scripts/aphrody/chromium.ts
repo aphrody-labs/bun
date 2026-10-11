@@ -3,9 +3,10 @@ import { closeSync, existsSync, mkdirSync, openSync, readdirSync, unlinkSync, wr
 import { delimiter, isAbsolute, join, resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dir, "../..");
+export const CHROMIUM_REVISION = "e20c553087353010f4b71143841c189447ac1628";
 const GN_ARGS =
   "is_debug=false is_component_build=true symbol_level=0 blink_symbol_level=0 v8_symbol_level=0 use_remoteexec=false";
-const HELP = `Usage: bun chromium <command> [--jobs 1..64] [--out out/bun] [-- args...]
+const HELP = `Usage: bun chromium <command> [--jobs 1..64] [--out out/bun] [--revision <40-hex SHA>] [-- args...]
   setup    Bootstrap depot_tools and fetch Chromium without Git history; resume existing configuration
   sync     Synchronize the existing Chromium configuration and run dependency hooks
   doctor   Report local source, toolchain, depot_tools and browser artifact readiness
@@ -19,6 +20,7 @@ All sources stay in vendor/depot_tools and vendor/chromium/src in this checkout.
 PATH and toolchain variables apply only to child processes. No global settings change.
 Chromium keeps its dependency pins and WebGPU defaults. Windows SDK and ATL/MFC
 must already satisfy Chromium's current build requirements.
+Setup and sync default to Chromium ${CHROMIUM_REVISION}; --revision selects another exact source commit.
 `;
 
 export interface Options {
@@ -26,6 +28,7 @@ export interface Options {
   depotTools: boolean;
   jobs: number;
   out: string;
+  revision: string;
   rest: string[];
 }
 export interface Command {
@@ -34,7 +37,14 @@ export interface Command {
 }
 
 export function parseArguments(args: string[]): Options {
-  const options: Options = { command: "help", depotTools: false, jobs: 4, out: "out/bun", rest: [] };
+  const options: Options = {
+    command: "help",
+    depotTools: false,
+    jobs: 4,
+    out: "out/bun",
+    revision: CHROMIUM_REVISION,
+    rest: [],
+  };
   let commandSet = false;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
@@ -50,12 +60,15 @@ export function parseArguments(args: string[]): Options {
       options.depotTools = true;
       continue;
     }
-    if (arg === "--jobs" || arg === "--out") {
+    if (arg === "--jobs" || arg === "--out" || arg === "--revision") {
       const value = args[++i];
       if (!value || value.startsWith("--")) throw new Error(`${arg} needs a value`);
       if (arg === "--jobs") {
         if (!/^\d+$/.test(value) || Number(value) < 1 || Number(value) > 64) throw new Error("--jobs must be 1..64");
         options.jobs = Number(value);
+      } else if (arg === "--revision") {
+        if (!/^[0-9a-f]{40}$/i.test(value)) throw new Error("--revision must be an exact 40-hex commit SHA");
+        options.revision = value.toLowerCase();
       } else options.out = value;
     } else if (!commandSet && ["help", "setup", "sync", "doctor", "plan", "gen", "build", "exec"].includes(arg)) {
       options.command = arg as Options["command"];
@@ -89,8 +102,18 @@ export function batchCommand(argv: string[], platform: string, commandProcessor 
   return [commandProcessor, "/d", "/s", "/v:off", "/c", `"${argv.map(value => `"${value}"`).join(" ")}"`];
 }
 
-export function childEnvironment(root: string, current: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+export function childEnvironment(
+  root: string,
+  current: NodeJS.ProcessEnv = process.env,
+  platform: string = process.platform,
+  architecture: string = process.arch,
+): NodeJS.ProcessEnv {
   const env = { ...current };
+  if (platform === "win32" && !env.PROCESSOR_ARCHITECTURE) {
+    const names: Record<string, string> = { x64: "AMD64", arm64: "ARM64", ia32: "x86" };
+    env.PROCESSOR_ARCHITECTURE = env.PROCESSOR_ARCHITEW6432 || names[architecture];
+    if (!env.PROCESSOR_ARCHITECTURE) throw new Error(`Unsupported Windows processor architecture: ${architecture}`);
+  }
   const pathKey = Object.keys(env).find(key => key.toLowerCase() === "path") ?? "PATH";
   env[pathKey] = `${join(root, "vendor", "depot_tools")}${delimiter}${env[pathKey] ?? ""}`;
   env.DEPOT_TOOLS_WIN_TOOLCHAIN = "0";
@@ -145,7 +168,13 @@ export function commandPlan(options: Options, platform: string, configured: bool
       ? [{ cwd: depot, argv: batchCommand([join(depot, "bootstrap", "win_tools.bat")], platform) }]
       : [];
   const sync = [
-    toolCommand("gclient", ["sync", "--no-history", "--jobs", String(options.jobs)], sourceRoot, root, platform),
+    toolCommand(
+      "gclient",
+      ["sync", "--no-history", "--jobs", String(options.jobs), "--revision", `src@${options.revision}`],
+      sourceRoot,
+      root,
+      platform,
+    ),
   ];
   const configure = toolCommand(
     "gclient",
@@ -166,7 +195,20 @@ export function commandPlan(options: Options, platform: string, configured: bool
     options.command === "exec"
       ? [toolCommand(options.rest[0]!, options.rest.slice(1), options.depotTools ? depot : sourceRoot, root, platform)]
       : [];
-  return { source, sourceRoot, depot, configured, jobs: options.jobs, out: options.out, setup, sync, gen, build, exec };
+  return {
+    source,
+    sourceRoot,
+    depot,
+    configured,
+    revision: options.revision,
+    jobs: options.jobs,
+    out: options.out,
+    setup,
+    sync,
+    gen,
+    build,
+    exec,
+  };
 }
 
 async function run(command: Command, env: NodeJS.ProcessEnv) {

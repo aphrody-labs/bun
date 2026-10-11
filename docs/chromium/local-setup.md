@@ -9,7 +9,7 @@ Chromium dependencies and build outputs remain outside the Bun Git index.
 bun gn exec -- --version
 bun depots_tools setup
 bun depots_tools exec -- gclient help
-bun chromium setup
+bun chromium setup --jobs 8
 bun chromium doctor
 bun chromium build --jobs 4
 ```
@@ -19,7 +19,11 @@ scripts; they do not add runtime modules or change the installed Bun executable.
 `plan` prints commands without applying them. Setup clones missing depot_tools
 from its official upstream with shallow history, bootstraps upstream Windows
 tools and creates an unmanaged Chromium solution, then runs
-`gclient sync --no-history --jobs 4`. Existing configurations resume synchronization.
+`gclient sync --no-history --jobs 4 --revision src@<SHA>`. Existing configurations
+resume synchronization. Setup and sync default to the exact source revision
+`e20c553087353010f4b71143841c189447ac1628`; use `--revision <40-hex-SHA>` to change
+it deliberately. The explicit revision avoids gclient's initial discovery of all
+Gerrit references, which took several minutes during the first fetch here.
 It does not create a Git mirror or duplicate Chromium history. A process lock in
 `build/chromium/setup.lock` rejects concurrent mutations; it is removed on normal
 completion and never automatically removes another owner's lock.
@@ -57,14 +61,46 @@ depot_tools at `a03dfbf7f2d1cefa2795d81d59ca4f16c8616a8f` bootstrapped successfu
 and `gclient help` ran through the Bun launcher. Chromium's primary source at
 `e20c553087353010f4b71143841c189447ac1628` was fetched and extracted. The initial
 dependency synchronization failed with `SyntaxError: invalid syntax` while
-`gclient_eval.EvaluateCondition` parsed an empty DEPS variable. Dependency
-synchronization and a working browser artifact remain separate qualification
-steps; a `.gclient` file or a successful launcher plan does not establish a
-completed Chromium build.
+`gclient_eval.EvaluateCondition` parsed an empty DEPS variable. The cause was
+missing Windows architecture variables in this session: Python reported an empty
+machine architecture, causing `host_cpu` evaluation to fail. The launcher now
+restores `PROCESSOR_ARCHITECTURE` only in the child environment, preserving existing
+values and using the native Bun architecture as fallback. Real DEPS parsing passes
+without upstream changes. Dependency synchronization and a working browser
+artifact remain separate qualification steps.
 
-The launcher passed nine tests and 70 assertions through `bun bd test
+The launcher passed eleven tests and 87 assertions through `bun bd -j4 test
 test/internal/chromium.test.ts`, including a real local Windows batch fixture.
 Type checking, oxlint, formatting and scope checks passed. Two existing native
 build blockers were corrected: a duplicate `graph_native` declaration and stale
 Cargo entries after OXC moved to vendored workspace packages. The corrected
 lockfile retains package versions and passes the exact locked build unit graph.
+
+## Local performance settings
+
+This PC has an i7-13700F (16 cores, 24 threads), about 32 GiB RAM and a healthy
+Micron 2400 NVMe. Its high-performance power plan and AC sleep settings already
+satisfy long builds. The pagefile previously peaked near 29 GiB, so maximal CPU
+parallelism alone is not a useful default. Use eight jobs for dependency downloads
+and four for Chromium compilation initially; measure before increasing build jobs.
+`bun bd -j4` bounds the Bun build factory without changing its configuration.
+Preserve existing build outputs and the shared 50 GiB sccache; cleaning these
+caches forces unnecessary recompilation.
+
+The local Bun and Chromium repositories passed
+`git update-index --test-untracked-cache`. Their local Git settings now enable
+`core.fsmonitor`, `core.untrackedCache`, `core.preloadindex` and `core.fscache`.
+Both fsmonitor daemons report that they are watching their own repository.
+These settings do not apply globally. To remove the newly enabled monitors and
+untracked caches, run the following in each repository:
+
+```powershell
+git fsmonitor--daemon stop
+git config --local --unset core.fsmonitor
+git config --local --unset core.untrackedCache
+```
+
+For build measurements, set `NINJA_SUMMARIZE_BUILD=1` in the current terminal
+before `bun chromium build --jobs 4`. Source pins and bounded jobs avoid repeated
+work and excessive memory pressure; no download-rate improvement is claimed
+without comparable transfer measurements.
