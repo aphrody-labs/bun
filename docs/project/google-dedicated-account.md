@@ -9,9 +9,9 @@ application. Elles ne prouvent ni création de compte Gmail ni accès global Goo
 
 | Surface             | Observation                                                                         | Dépendance restante                                                               |
 | ------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| OVH `aphrody.com`   | Domaine `ok`, offre `redirect`, listes de boîtes et redirections vides              | Boîte réceptrice exacte contrôlée par le propriétaire                             |
+| OVH `aphrody.com`   | Domaine `ok`, offre `redirect`, zéro boîte ; une redirection dédiée créée et relue  | Livraison effective non testée                                                    |
 | Workspace Directory | Lectures domaine et utilisateur : HTTP 403, `insufficientPermissions`               | Administrateur qualifié, tenant, domaine vérifié, existence utilisateur, licences |
-| Gmail               | API désactivée au relevé initial ; aucune requête Gmail exécutée                    | Identité, activation et scopes adaptés ; aucun succès ni 403 Gmail observé        |
+| Gmail               | API projet `ENABLED` par GET exact ; profil Gmail propriétaire connecté vérifié     | Utilisateur et accès Gmail dédiés non qualifiés ; aucun 403 Gmail observé         |
 | Google Cloud        | Compte de service dédié créé ; impersonation et permissions IAM testées sur Windows | Aucun déploiement VPS ni appel de modèle qualifié                                 |
 | Antigravity Windows | Présence d'une entrée protégée observée ; identité non qualifiée                    | Qualification OAuth propre au service demandé                                     |
 
@@ -20,9 +20,12 @@ Les reçus privés `.coord/google-dedicated-account-plan.json` et
 plan initial. Le reçu terminal `.coord/google-cloud-automation-apply-receipt.json`
 qualifie ensuite Google Cloud uniquement ; le gate de configuration est dans
 `.coord/google-cloud-automation-configuration-gate.json`. Ne pas publier de
-reçus avec des identités privées. Aucune destination OVH n'est vérifiée : ne pas
-déduire `contact@aphrody.com` de l'identité de commit. Aucun utilisateur Workspace
-ou Gmail n'a été créé.
+reçus avec des identités privées. La destination OVH provient désormais du profil
+Gmail connecté, dont le nom concorde avec le propriétaire ; son adresse exacte
+reste privée. Elle n'a pas été déduite de l'identité de commit. Aucun utilisateur
+Workspace ou Gmail dédié n'a été créé. L'ancienne liste bornée des API activées
+ne prouvait pas la désactivation de Gmail : le GET exact ServiceUsage du
+11 octobre confirme `ENABLED`, sans mutation.
 
 ## Trois identités distinctes
 
@@ -59,9 +62,10 @@ possède les opérations de redirection avec application explicite.
    renvoie seulement `{ planned: true }` : elle ne valide ni permissions serveur
    ni livraison. `from` est l'adresse complète `bun-google@aphrody.com`.
 4. Après revue du plan exact, appeler la même méthode avec `{ apply: true }`.
-   `localCopy: false` ne demande pas de copie locale. Conserver l'identifiant
-   retourné puis relire et comparer les champs exacts. Les lectures IAM ne
-   prouvent pas que l'écriture aboutira.
+   `localCopy: false` ne demande pas de copie locale. Conserver la réponse POST,
+   puis relire et comparer les champs exacts. Retenir l'identifiant de la
+   redirection listée pour le rollback : l'identifiant retourné au POST peut
+   différer. Les lectures IAM ne prouvent pas que l'écriture aboutira.
 5. Qualifier la réception réelle lors de la vérification Google avec le
    propriétaire. La redirection seule ne prouve pas la livraison. Aucun envoi
    de test n'est autorisé par ce lot documentaire.
@@ -76,11 +80,24 @@ trouvé dans cette inspection. `aphrody mail --help` a échoué sur le routage A
 local ; cet échec n'est pas une API de provisionnement. Les adaptateurs Gmail
 de lecture existants ne créent pas de boîtes non plus.
 
+Le 11 octobre, ce plan a été appliqué via le propriétaire SDK : une seule
+invocation de création, `bun-google@aphrody.com` vers la boîte Gmail connectée
+du propriétaire, `localCopy: false`. Le GET indépendant confirme les champs
+exacts et une liste passée de zéro à une redirection. Aucun mail de test ni
+changement DNS n'a été effectué. La première vérification a échoué car l'identifiant
+POST différait de celui de la redirection listée ; aucune création supplémentaire
+n'a été tentée. L'identifiant réel a été relu et conservé pour retrait ciblé.
+Le reçu expurgé `.coord/google-ovh-alias-receipt.json` porte l'état
+`OVH_REDIRECTION_APPLIED_READ_VERIFIED` ; le snapshot et l'identifiant exact de
+rollback sont privés. La livraison reste non testée : cette opération crée une
+redirection, pas une nouvelle boîte Gmail ou une identité Google utilisateur.
+
 ## Identité utilisateur et Workspace
 
 Un administrateur qualifié doit lire domaine, éventuel utilisateur existant,
 unité organisationnelle et licences disponibles avant création. Les 403 actuels
-empêchent de conclure que le compte n'existe pas. Ne pas réinitialiser un compte
+signalent des scopes OAuth insuffisants ; ils ne prouvent ni absence de rôle
+administrateur ni absence du compte. Ne pas réinitialiser un compte
 existant pour contourner le refus. Les
 [scopes Directory](https://developers.google.com/workspace/admin/directory/v1/guides/authorizing)
 et [scopes Gmail](https://developers.google.com/workspace/gmail/api/auth/scopes)
@@ -93,6 +110,16 @@ de réception. Aucun achat Workspace, ajout de licence, changement DNS ou
 contournement de challenge n'est inclus. Cloud Identity sans Gmail ne doit pas
 être présenté comme une boîte Gmail. La délégation à l'échelle du domaine exige
 autorisation administrateur et scopes explicites ; IAM ne les remplace pas.
+
+L'inscription Google grand public avec une adresse existante exige une date de
+naissance réelle, selon le [parcours officiel](https://support.google.com/accounts/answer/27441?hl=fr).
+La date du propriétaire n'est pas disponible dans les métadonnées vérifiées ;
+le fichier propriétaire `USER.md` explicitement référencé est absent. Aucune
+date ne sera inventée et aucun challenge contourné. La possibilité de lancer
+`bun:chromium` avec le runtime debug `1.4.4` a été vérifiée en lecture seule ;
+aucun profil, navigateur ou parcours d'inscription n'a été créé ou modifié pour
+ce lot. Le compte utilisateur dédié n'a donc pas été créé : la redirection OVH
+et le compte de service Cloud ne satisfont pas ces exigences d'inscription.
 
 ## Automatisation keyless et SDK
 

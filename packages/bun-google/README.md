@@ -20,6 +20,8 @@ implicitly. Existing OS credential storage and ADC adapters retain ownership.
 For dedicated email, Google user identity and keyless Cloud automation, follow the
 [dedicated-account runbook](../../docs/project/google-dedicated-account.md).
 OVH forwarding, Workspace/Gmail authorization and Cloud IAM qualify separately.
+The runbook records the verified OVH forwarder and Windows keyless Cloud setup;
+delivery and a dedicated Google user remain unqualified.
 
 | Surface                         | Executable contract                                              |
 | ------------------------------- | ---------------------------------------------------------------- |
