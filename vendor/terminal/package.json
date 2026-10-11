@@ -1,0 +1,14 @@
+{
+  "name": "aphrody-terminal",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "bun tools/aphrody/setup.ts",
+    "build": "bun tools/aphrody/build.ts",
+    "deploy": "bun tools/aphrody/deploy.ts",
+    "clean": "bun tools/aphrody/clean.ts",
+    "sync": "bun tools/aphrody/sync.ts",
+    "bench": "bun tools/aphrody/bench.ts",
+    "check:profiles": "bun tools/aphrody/profiles.ts"
+  }
+}

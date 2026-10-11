@@ -162,6 +162,10 @@ codegen-for-zig-team.tar.gz
 !/vendor/find-msvc-tools/
 !/vendor/windows-rs/
 !/vendor/russh-sftp/
+!/vendor/terminal/
+!/vendor/terminal/**
+!/vendor/powershell/
+!/vendor/powershell/**
 
 # Dependencies (before CMake)
 # These can be removed in the far future
@@ -237,3 +241,7 @@ src/runtime/hawk_root.rs
 
 # Rejected snapshot updates are local review artifacts.
 *.snap.new
+
+# Local authenticated browser/HLS test inputs.
+/cookie.json
+/hls.json
