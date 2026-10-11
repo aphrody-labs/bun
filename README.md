@@ -60,6 +60,12 @@ Dedicated SDK catalogs: [Google REST and Cloud Code](packages/bun-google/README.
 [Chromium and Chrome CDP](packages/bun-chromium/README.md). Their package guides
 record APIs, command routing, credential ownership and release qualification.
 
+The video package [`@aphrody/bun-video`](packages/bun-video/README.md) provides
+HLS, DASH/MPD, HAR and browser adapters plus bounded WebGPU compute through
+`@aphrody/bun-video/webgpu` and the `bun-video-webgpu` CLI. See the [Bun Video
+WebGPU guide](docs/project/bun-video-webgpu.md). WebGPU compute is documented
+separately from DRM playback and frame encoding.
+
 First-party npm packages use the `@aphrody` scope: [`@aphrody/bun-runtime`](https://www.npmjs.com/package/@aphrody/bun-runtime), [`@aphrody/bun-types`](https://www.npmjs.com/package/@aphrody/bun-types) and [`@aphrody/bun-plugin-tailwind`](https://www.npmjs.com/package/@aphrody/bun-plugin-tailwind). Rust plugin crates retain their manifest names: [`aphrody-bun-native-plugin`](https://crates.io/crates/aphrody-bun-native-plugin) and [`aphrody-bun-macro`](https://crates.io/crates/aphrody-bun-macro). Source manifests and registry publication are separate inventories.
 
 Built-in imports keep the Bun ABI and module names:
