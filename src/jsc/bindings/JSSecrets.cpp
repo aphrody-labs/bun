@@ -78,6 +78,7 @@ struct SecretsJobOptions {
     UTF8CString service; // thread-safe
     UTF8CString name; // thread-safe
     UTF8CString password; // thread-safe (only for SET)
+    UTF8CString target; // Windows exact-target read (only for GET)
     bool allowUnrestrictedAccess = false; // Controls security vs headless access (only for SET)
     Secrets::Persist persist; // Windows only (only for SET)
 
@@ -86,11 +87,12 @@ struct SecretsJobOptions {
     std::optional<WTF::Vector<uint8_t>> resultPassword;
     bool deleted = false;
 
-    SecretsJobOptions(Operation op, UTF8CString&& service, UTF8CString&& name, UTF8CString&& password, bool allowUnrestrictedAccess, Secrets::Persist persist)
+    SecretsJobOptions(Operation op, UTF8CString&& service, UTF8CString&& name, UTF8CString&& password, bool allowUnrestrictedAccess, Secrets::Persist persist, UTF8CString&& target)
         : op(op)
         , service(service)
         , name(name)
         , password(password)
+        , target(target)
         , allowUnrestrictedAccess(allowUnrestrictedAccess)
         , persist(persist)
     {
@@ -123,6 +125,7 @@ struct SecretsJobOptions {
         String service;
         String name;
         String password;
+        String target;
         bool allowUnrestrictedAccess = false;
         Secrets::Persist persist = Secrets::Persist::Enterprise;
 
@@ -143,6 +146,30 @@ struct SecretsJobOptions {
 
             JSValue nameValue = getIfPropertyExistsPrototypePollutionMitigation(globalObject, options, vm.propertyNames->name);
             RETURN_IF_EXCEPTION(scope, false);
+
+            JSValue targetValue = getIfPropertyExistsPrototypePollutionMitigation(globalObject, options, Identifier::fromString(vm, "target"_s));
+            RETURN_IF_EXCEPTION(scope, false);
+            if (!targetValue.isUndefined()) {
+                if (operation != GET || !serviceValue.isUndefined() || !nameValue.isUndefined()) {
+                    Bun::ERR::INVALID_ARG_TYPE(scope, globalObject, "Expected target only for get(), without service or name"_s);
+                    return false;
+                }
+                if (!targetValue.isString()) {
+                    Bun::ERR::INVALID_ARG_TYPE(scope, globalObject, "Expected target to be a string"_s);
+                    return false;
+                }
+                target = targetValue.toWTFString(globalObject);
+                RETURN_IF_EXCEPTION(scope, false);
+                if (target.isEmpty() || target.contains(static_cast<char16_t>(0))) {
+                    Bun::throwError(globalObject, scope, Bun::ErrorCode::ERR_INVALID_ARG_VALUE, "Expected target to be non-empty and without null bytes"_s);
+                    return false;
+                }
+#if !OS(WINDOWS)
+                Bun::throwError(globalObject, scope, Bun::ErrorCode::ERR_SECRETS_PLATFORM_ERROR, "Exact credential targets are supported only on Windows"_s);
+                return false;
+#endif
+                return true;
+            }
 
             if (!serviceValue.isString() || !nameValue.isString()) {
                 Bun::ERR::INVALID_ARG_TYPE(scope, globalObject, "Expected service and name to be strings"_s);
@@ -251,7 +278,7 @@ struct SecretsJobOptions {
 
         RETURN_IF_EXCEPTION(scope, nullptr);
 
-        if (service.isEmpty() || name.isEmpty()) {
+        if (target.isEmpty() && (service.isEmpty() || name.isEmpty())) {
             Bun::ERR::INVALID_ARG_TYPE(scope, globalObject, "Expected service and name to not be empty"_s);
             RELEASE_AND_RETURN(scope, nullptr);
         }
@@ -261,7 +288,7 @@ struct SecretsJobOptions {
             RELEASE_AND_RETURN(scope, nullptr);
         }
 
-        RELEASE_AND_RETURN(scope, new SecretsJobOptions(operation, service.utf8(), name.utf8(), password.utf8(), allowUnrestrictedAccess, persist));
+        RELEASE_AND_RETURN(scope, new SecretsJobOptions(operation, service.utf8(), name.utf8(), password.utf8(), allowUnrestrictedAccess, persist, target.utf8()));
     }
 };
 
@@ -274,7 +301,11 @@ void Bun__SecretsJobOptions__runTask(SecretsJobOptions* opts)
     // Already have CString fields, pass them directly to platform APIs
     switch (opts->op) {
     case SecretsJobOptions::GET: {
+#if OS(WINDOWS)
+        auto result = opts->target.length() ? Secrets::getPasswordByTarget(opts->target, opts->error) : Secrets::getPassword(opts->service, opts->name, opts->error);
+#else
         auto result = Secrets::getPassword(opts->service, opts->name, opts->error);
+#endif
         if (result.has_value()) {
             // Store as String for main thread (String is thread-safe to construct from CString)
             opts->resultPassword = WTF::move(result.value());

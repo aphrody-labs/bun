@@ -18,6 +18,7 @@ declare module "bun:google" {
   export interface GoogleClient {
     /**
      * Authenticated in-process fetch. Accepts a relative path and encoded query;
+     * use ./ for a first path segment containing a colon, such as Cloud Code RPCs.
      * rejects raw whitespace, path traversal, caller auth headers and redirects.
      * Non-success HTTP errors report only the status, never response bodies.
      */

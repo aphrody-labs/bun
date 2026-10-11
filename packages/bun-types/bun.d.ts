@@ -4298,7 +4298,16 @@ declare module "bun" {
        * address or URL) that identifies the credential within the service.
        */
       name: string;
+      target?: never;
     }): Promise<string | null>;
+
+    /**
+     * Read an existing Windows Credential Manager generic credential by its exact target.
+     * This read-only form does not prepend `service/name`, discover accounts, or move stores.
+     * Mutually exclusive with service/name. Unsupported platforms reject this form.
+     * The value is returned as a JavaScript string, not an opaque native credential.
+     */
+    get(options: { target: string; service?: never; name?: never }): Promise<string | null>;
 
     /**
      * Store or update a credential in the operating system's secure storage.

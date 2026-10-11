@@ -80,6 +80,9 @@ test("Google authenticates in-process REST fetch and forwards request data", asy
       auth: "Bearer token-2",
       method: "GET",
     });
+    expect(
+      await (await client.request("./v1internal:fetchAvailableModels", { method: "POST" })).json(),
+    ).toEqual({ path: "/v1internal:fetchAvailableModels", auth: "Bearer token-3", method: "POST" });
   } finally {
     await server.stop(true);
   }

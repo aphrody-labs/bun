@@ -53,8 +53,9 @@ function createClient(options: ClientOptions) {
     )
       throw new TypeError("Google request path must be relative");
     const pathname = relativePath.split(/[?#]/, 1)[0];
-    for (const segment of pathname.split("/")) {
+    for (const [index, segment] of pathname.split("/").entries()) {
       const decoded = decodeURIComponent(segment);
+      if (index === 0 && segment === "." && relativePath.startsWith("./")) continue;
       if ([".", ".."].includes(decoded) || decoded.includes("/") || decoded.includes("\\"))
         throw new TypeError("Google request path must not escape its baseURL");
     }

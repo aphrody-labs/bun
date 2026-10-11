@@ -46,6 +46,9 @@ Error setPassword(const WTF::UTF8CString& service, const WTF::UTF8CString& name,
 
 // Use a WTF::Vector here so we can zero out the memory.
 std::optional<WTF::Vector<uint8_t>> getPassword(const WTF::UTF8CString& service, const WTF::UTF8CString& name, Error& error);
+#if OS(WINDOWS)
+std::optional<WTF::Vector<uint8_t>> getPasswordByTarget(const WTF::UTF8CString& target, Error& error);
+#endif
 bool deletePassword(const WTF::UTF8CString& service, const WTF::UTF8CString& name, Error& error);
 
 } // namespace Secrets

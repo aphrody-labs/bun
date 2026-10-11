@@ -203,6 +203,12 @@ Error setPassword(const UTF8CString& service, const UTF8CString& name, UTF8CStri
 
 std::optional<WTF::Vector<uint8_t>> getPassword(const UTF8CString& service, const UTF8CString& name, Error& err)
 {
+    String targetName = makeString(String::fromUTF8(service.span()), "/"_s, String::fromUTF8(name.span()));
+    return getPasswordByTarget(targetName.utf8(), err);
+}
+
+std::optional<WTF::Vector<uint8_t>> getPasswordByTarget(const UTF8CString& target, Error& err)
+{
     err = Error {};
 
     auto* framework = credentialFramework();
@@ -212,9 +218,7 @@ std::optional<WTF::Vector<uint8_t>> getPassword(const UTF8CString& service, cons
         return std::nullopt;
     }
 
-    String targetName = makeString(String::fromUTF8(service.span()), "/"_s, String::fromUTF8(name.span()));
-    auto targetNameUtf8 = targetName.utf8();
-    auto targetNameWide = cstringToWideChar(targetNameUtf8);
+    auto targetNameWide = cstringToWideChar(target);
 
     PCREDENTIALW cred = nullptr;
     if (!framework->CredReadW(targetNameWide.data(), CRED_TYPE_GENERIC, 0, &cred)) {
@@ -231,6 +235,7 @@ std::optional<WTF::Vector<uint8_t>> getPassword(const UTF8CString& service, cons
         result->append(std::span<const uint8_t>(
             reinterpret_cast<const uint8_t*>(cred->CredentialBlob),
             cred->CredentialBlobSize));
+        SecureZeroMemory(cred->CredentialBlob, cred->CredentialBlobSize);
     }
 
     framework->CredFree(cred);
