@@ -32,11 +32,11 @@ pub(super) fn run(shell: &mut LocalShell, line: &str) -> Result<Vec<u8>, String>
                 Ok(bytes) => {
                     output.extend(bytes);
                     succeeded = true;
-                },
+                }
                 Err(error) => {
                     output.extend_from_slice(format!("{error}\n").as_bytes());
                     succeeded = false;
-                },
+                }
             }
         }
         previous = tokens.get(end).cloned();
@@ -85,7 +85,7 @@ fn segment(shell: &mut LocalShell, tokens: &[Token], stdin: &[u8]) -> Result<Vec
                     _ => unreachable!(),
                 }
                 i += 1;
-            },
+            }
             _ => return Err("unexpected shell operator".into()),
         }
         i += 1;
@@ -94,15 +94,22 @@ fn segment(shell: &mut LocalShell, tokens: &[Token], stdin: &[u8]) -> Result<Vec
         return Err("empty command".into());
     }
     let input = if let Some(name) = &input_file {
-        shell.vfs.read(&shell.resolve(name)?).map_err(|e| format!("{name}: {e}"))?
+        shell
+            .vfs
+            .read(&shell.resolve(name)?)
+            .map_err(|e| format!("{name}: {e}"))?
     } else {
         stdin.to_vec()
     };
     let mut output = command(shell, &args, &input)?;
     if let Some((name, append)) = output_file {
         let path = shell.resolve(&name)?;
-        if append { shell.vfs.append(&path, &output) } else { shell.vfs.write(&path, &output) }
-            .map_err(|e| format!("{name}: {e}"))?;
+        if append {
+            shell.vfs.append(&path, &output)
+        } else {
+            shell.vfs.write(&path, &output)
+        }
+        .map_err(|e| format!("{name}: {e}"))?;
         output.clear();
     }
     Ok(output)
@@ -114,12 +121,20 @@ fn expand_word(shell: &mut LocalShell, word: &Word) -> Vec<String> {
         match atom {
             Atom::Literal(ch, eligible) => chars.push((*ch, *eligible)),
             Atom::Variable(name, eligible) => chars.extend(
-                shell.env.get(name).map_or("", String::as_str).chars().map(|ch| (ch, *eligible)),
+                shell
+                    .env
+                    .get(name)
+                    .map_or("", String::as_str)
+                    .chars()
+                    .map(|ch| (ch, *eligible)),
             ),
         }
     }
     let value: String = chars.iter().map(|(ch, _)| ch).collect();
-    if !chars.iter().any(|(ch, eligible)| *eligible && matches!(ch, '*' | '?')) {
+    if !chars
+        .iter()
+        .any(|(ch, eligible)| *eligible && matches!(ch, '*' | '?'))
+    {
         return vec![value];
     }
     let absolute = value.starts_with('/');
@@ -128,10 +143,23 @@ fn expand_word(shell: &mut LocalShell, word: &Word) -> Vec<String> {
         .filter(|component| !component.is_empty())
         .map(<[(char, bool)]>::to_vec)
         .collect();
-    let initial = if absolute { b"/".to_vec() } else { shell.cwd.clone() };
-    let mut paths = vec![(initial, if absolute { "/".to_owned() } else { String::new() })];
+    let initial = if absolute {
+        b"/".to_vec()
+    } else {
+        shell.cwd.clone()
+    };
+    let mut paths = vec![(
+        initial,
+        if absolute {
+            "/".to_owned()
+        } else {
+            String::new()
+        },
+    )];
     for component in components {
-        let wildcard = component.iter().any(|(ch, eligible)| *eligible && matches!(ch, '*' | '?'));
+        let wildcard = component
+            .iter()
+            .any(|(ch, eligible)| *eligible && matches!(ch, '*' | '?'));
         let literal: String = component.iter().map(|(ch, _)| ch).collect();
         let mut next = Vec::new();
         for (base, display) in paths {
@@ -218,7 +246,7 @@ fn command(shell: &mut LocalShell, args: &[String], stdin: &[u8]) -> Result<Vec<
             names.sort_unstable();
             names.dedup();
             format!("commands: {}\n", names.join(" "))
-        },
+        }
         "echo" => format!("{}\n", rest.join(" ")),
         "clear" => return Ok(b"\x1b[2J\x1b[H".to_vec()),
         "version" => format!("{}\n", env!("CARGO_PKG_VERSION")),
@@ -232,23 +260,35 @@ fn command(shell: &mut LocalShell, args: &[String], stdin: &[u8]) -> Result<Vec<
             let (&key, values) = rest.split_first().ok_or("usage: set NAME [VALUE...]")?;
             shell.env.insert(key.to_owned(), values.join(" "));
             String::new()
-        },
-        "env" => shell.env.iter().map(|(k, v)| format!("{k}={v}\n")).collect(),
+        }
+        "env" => shell
+            .env
+            .iter()
+            .map(|(k, v)| format!("{k}={v}\n"))
+            .collect(),
         "pwd" => format!("{}\n", String::from_utf8_lossy(&shell.cwd)),
         "cd" => {
             let target = rest.first().copied().unwrap_or("/");
             let path = shell.resolve(target)?;
-            let stat = shell.vfs.stat(&path).map_err(|e| format!("cd: {target}: {e}"))?;
+            let stat = shell
+                .vfs
+                .stat(&path)
+                .map_err(|e| format!("cd: {target}: {e}"))?;
             if stat.kind != FileKind::Dir {
                 return Err(format!("cd: {target}: not a directory"));
             }
             shell.cwd = path;
             String::new()
-        },
+        }
         "ls" => {
             let target = rest.first().copied().unwrap_or(".");
             let path = shell.resolve(target)?;
-            match shell.vfs.stat(&path).map_err(|e| format!("ls: {target}: {e}"))?.kind {
+            match shell
+                .vfs
+                .stat(&path)
+                .map_err(|e| format!("ls: {target}: {e}"))?
+                .kind
+            {
                 FileKind::File => format!("{target}\n"),
                 FileKind::Dir => shell
                     .vfs
@@ -258,15 +298,20 @@ fn command(shell: &mut LocalShell, args: &[String], stdin: &[u8]) -> Result<Vec<
                     .map(|entry| format!("{}\n", String::from_utf8_lossy(&entry.name)))
                     .collect(),
             }
-        },
+        }
         "cat" if rest.is_empty() => return Ok(stdin.to_vec()),
         "cat" | "mkdir" | "rm" | "touch" | "cp" | "mv" => {
-            return shell.file_command(name, &rest).map_err(|e| format!("{name}: {e}"));
-        },
+            return shell
+                .file_command(name, &rest)
+                .map_err(|e| format!("{name}: {e}"));
+        }
         "wc" => {
             let file = rest.iter().find(|arg| !arg.starts_with('-'));
             let contents = if let Some(file) = file {
-                shell.vfs.read(&shell.resolve(file)?).map_err(|e| format!("wc: {file}: {e}"))?
+                shell
+                    .vfs
+                    .read(&shell.resolve(file)?)
+                    .map_err(|e| format!("wc: {file}: {e}"))?
             } else {
                 stdin.to_vec()
             };
@@ -280,18 +325,18 @@ fn command(shell: &mut LocalShell, args: &[String], stdin: &[u8]) -> Result<Vec<
                     .count();
                 format!("{lines} {words} {}\n", contents.len())
             }
-        },
+        }
         "true" => String::new(),
         "false" => return Err("false".into()),
         "exit" => {
             shell.exited = true;
             "bye\n".to_owned()
-        },
+        }
         other => {
             return Err(format!(
                 "{other}: command not found (local wasm shell; connect a backend for more)"
             ));
-        },
+        }
     };
     Ok(text.into_bytes())
 }

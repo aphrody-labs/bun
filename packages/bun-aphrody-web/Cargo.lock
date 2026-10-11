@@ -405,12 +405,10 @@ dependencies = [
 [[package]]
 name = "aphrody-shell-session"
 version = "1.4.4"
-source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
 
 [[package]]
 name = "aphrody-shell-vfs"
 version = "1.4.4"
-source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
 
 [[package]]
 name = "aphrody-shell-web"
@@ -458,7 +456,6 @@ dependencies = [
 [[package]]
 name = "aphrody-terminal-core"
 version = "1.4.4"
-source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
 dependencies = [
  "rio-vt",
 ]

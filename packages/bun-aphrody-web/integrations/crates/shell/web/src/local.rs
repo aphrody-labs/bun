@@ -56,6 +56,7 @@ impl ShellEngine for LocalEngine {
 /// Line editor plus a small builtin command set.
 pub struct LocalShell {
     line: String,
+    utf8_pending: Vec<u8>,
     history: Vec<String>,
     history_index: Option<usize>,
     escape: String,
@@ -84,6 +85,7 @@ impl LocalShell {
         );
         let mut shell = Self {
             line: String::new(),
+            utf8_pending: Vec::new(),
             history: Vec::new(),
             history_index: None,
             escape: String::new(),
@@ -112,7 +114,10 @@ impl LocalShell {
         check_size(spec.columns, spec.rows)?;
         let (mut shell, greeting) = Self::with_vfs(vfs);
         if let Some(cwd) = &spec.cwd {
-            shell.vfs.mkdir_all(cwd.as_bytes()).map_err(|e| SessionError::Engine(e.to_string()))?;
+            shell
+                .vfs
+                .mkdir_all(cwd.as_bytes())
+                .map_err(|e| SessionError::Engine(e.to_string()))?;
             shell.cwd =
                 path::normalize(cwd.as_bytes()).map_err(|e| SessionError::Engine(e.to_string()))?;
         }
@@ -154,15 +159,35 @@ impl LocalShell {
         if self.exited {
             return Vec::new();
         }
+        self.utf8_pending.extend_from_slice(bytes);
+        let decoded = match std::str::from_utf8(&self.utf8_pending) {
+            Ok(text) => {
+                let text = text.to_owned();
+                self.utf8_pending.clear();
+                text
+            }
+            Err(error) if error.error_len().is_none() => {
+                let valid = error.valid_up_to();
+                let pending = self.utf8_pending.split_off(valid);
+                let text = String::from_utf8_lossy(&self.utf8_pending).into_owned();
+                self.utf8_pending = pending;
+                text
+            }
+            Err(_) => {
+                let text = String::from_utf8_lossy(&self.utf8_pending).into_owned();
+                self.utf8_pending.clear();
+                text
+            }
+        };
         let mut out = String::new();
-        for ch in String::from_utf8_lossy(bytes).chars() {
+        for ch in decoded.chars() {
             if ch == '\u{1b}' || !self.escape.is_empty() {
                 self.escape.push(ch);
                 if self.escape.len() == 3 {
                     match self.escape.as_str() {
                         "\u{1b}[A" => self.recall(true, &mut out),
                         "\u{1b}[B" => self.recall(false, &mut out),
-                        _ => {},
+                        _ => {}
                     }
                     self.escape.clear();
                 }
@@ -177,25 +202,30 @@ impl LocalShell {
                     if !self.exited {
                         out.push_str(PROMPT);
                     }
-                },
+                }
                 '\u{7f}' | '\u{8}' => {
                     if self.line.pop().is_some() {
                         self.history_index = None;
                         out.push_str("\u{8} \u{8}");
                     }
-                },
+                }
+                '\u{0c}' => {
+                    out.push_str("\x1b[2J\x1b[H");
+                    out.push_str(PROMPT);
+                    out.push_str(&self.line);
+                }
                 '\u{3}' => {
                     self.line.clear();
                     self.history_index = None;
                     out.push_str("^C\r\n");
                     out.push_str(PROMPT);
-                },
+                }
                 c if !c.is_control() => {
                     self.line.push(c);
                     self.history_index = None;
                     out.push(c);
-                },
-                _ => {},
+                }
+                _ => {}
             }
         }
         out.into_bytes()
@@ -206,7 +236,8 @@ impl LocalShell {
             return;
         }
         let next = if previous {
-            self.history_index.map_or(self.history.len() - 1, |i| i.saturating_sub(1))
+            self.history_index
+                .map_or(self.history.len() - 1, |i| i.saturating_sub(1))
         } else {
             self.history_index.map_or(self.history.len(), |i| i + 1)
         };
@@ -247,7 +278,9 @@ impl LocalShell {
                 let data = self.vfs.read(&source).map_err(|e| e.to_string())?;
                 self.vfs.write(&target, &data).map_err(|e| e.to_string())?;
             } else {
-                self.vfs.rename(&source, &target).map_err(|e| e.to_string())?;
+                self.vfs
+                    .rename(&source, &target)
+                    .map_err(|e| e.to_string())?;
             }
             return Ok(Vec::new());
         }
@@ -262,7 +295,7 @@ impl LocalShell {
                     if !self.vfs.exists(&p) {
                         self.vfs.write(&p, b"").map_err(|e| format!("{arg}: {e}"))?;
                     }
-                },
+                }
                 _ => unreachable!(),
             }
         }
@@ -346,7 +379,9 @@ mod tests {
     #[test]
     fn quoting_expansion_and_session_contract() {
         let (mut shell, _) = LocalShell::new();
-        shell.write_input(b"set A hello\recho \"$A world\"\r").unwrap();
+        shell
+            .write_input(b"set A hello\recho \"$A world\"\r")
+            .unwrap();
         let output = String::from_utf8(shell.take_output()).unwrap();
         assert!(output.contains("hello world\r\n"), "{output}");
         assert!(shell.take_output().is_empty());
@@ -355,6 +390,18 @@ mod tests {
         shell.write_input(b"exit\r").unwrap();
         assert!(shell.exited());
         assert!(shell.write_input(b"echo no\r").is_err());
+    }
+
+    #[test]
+    fn ctrl_l_clears_screen_and_redraws_prompt_and_input() {
+        let (mut shell, _) = LocalShell::new();
+        shell.input(b"echo retained");
+        let cleared = String::from_utf8(shell.input(b"\x0c")).unwrap();
+        assert!(cleared.starts_with("\x1b[2J\x1b[H"), "{cleared:?}");
+        assert!(cleared.ends_with("aphrody> echo retained"), "{cleared:?}");
+
+        let executed = String::from_utf8(shell.input(b"\r")).unwrap();
+        assert!(executed.contains("retained\r\n"), "{executed:?}");
     }
 
     #[test]
@@ -367,7 +414,11 @@ mod tests {
         };
         let mut shell = LocalEngine.spawn(&spec).unwrap();
         assert_eq!(shell.size(), (100, 40));
-        assert!(String::from_utf8(shell.take_output()).unwrap().contains("aphrody>"));
+        assert!(
+            String::from_utf8(shell.take_output())
+                .unwrap()
+                .contains("aphrody>")
+        );
         shell.write_input(b"pwd\recho $GREETING\r").unwrap();
         let output = String::from_utf8(shell.take_output()).unwrap();
         assert!(output.contains("/work\r\n"), "{output}");
@@ -445,6 +496,17 @@ mod tests {
         let screen = terminal.snapshot().lines.join("\n");
         assert!(screen.contains("1"), "{screen}");
         assert!(!screen.contains("command not found"), "{screen}");
+    }
+
+    #[test]
+    fn utf8_input_survives_transport_chunks_and_multilingual_text() {
+        let (mut shell, _) = LocalShell::new();
+        let input = "echo café 東京 مرحبا 🌍".as_bytes();
+        let split = input.iter().position(|byte| *byte >= 0x80).unwrap() + 1;
+        let mut output = shell.input(&input[..split]);
+        output.extend(shell.input(&input[split..]));
+        let output = String::from_utf8(output).expect("terminal output remains valid UTF-8");
+        assert!(output.contains("café 東京 مرحبا 🌍"), "{output}");
     }
 
     #[test]

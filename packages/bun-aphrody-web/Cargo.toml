@@ -14,7 +14,7 @@ serde_json = { workspace = true }
 
 [workspace]
 resolver = "3"
-members = ["crates/x", "crates/webos-wasm", "crates/web-service", "crates/web-index", "crates/web-frames", "crates/web-extract", "crates/web-engine", "crates/web-detect", "crates/web-crawl", "crates/site", "crates/obscura-ssrf", "crates/obscura-render", "crates/obscura-net", "crates/obscura-mcp", "crates/obscura-js", "crates/obscura-dom", "crates/obscura-cdp", "crates/obscura-browser", "crates/obscura", "integrations/crates/shell/web"]
+members = ["crates/x", "crates/webos-wasm", "crates/web-service", "crates/web-index", "crates/web-frames", "crates/web-extract", "crates/web-engine", "crates/web-detect", "crates/web-crawl", "crates/site", "crates/obscura-ssrf", "crates/obscura-render", "crates/obscura-net", "crates/obscura-mcp", "crates/obscura-js", "crates/obscura-dom", "crates/obscura-cdp", "crates/obscura-browser", "crates/obscura", "integrations/crates/shell/session", "integrations/crates/shell/vfs", "integrations/crates/shell/terminal-core", "integrations/crates/shell/web"]
 exclude = ["crates/dragon-pixel-core", "crates/dragon-pixel-server", "crates/dragon-pixel-wasm"]
 
 [workspace.package]
@@ -77,16 +77,14 @@ version = "=1.0.0-canary"
 features = []
 
 [workspace.dependencies.aphrody-shell-session]
+path = "integrations/crates/shell/session"
 version = "1.4.4"
 features = []
-git = "https://github.com/aphrody-labs/aphrody"
-rev = "4b83ea7f6c2727d67c30d4942501e5b831e559dd"
 
 [workspace.dependencies.aphrody-shell-vfs]
+path = "integrations/crates/shell/vfs"
 version = "1.4.4"
 features = []
-git = "https://github.com/aphrody-labs/aphrody"
-rev = "4b83ea7f6c2727d67c30d4942501e5b831e559dd"
 
 [workspace.dependencies.aphrody-shell-web]
 path = "integrations/crates/shell/web"
@@ -94,10 +92,9 @@ version = "1.4.4"
 features = []
 
 [workspace.dependencies.aphrody-terminal-core]
+path = "integrations/crates/shell/terminal-core"
 version = "1.4.4"
 features = []
-git = "https://github.com/aphrody-labs/aphrody"
-rev = "4b83ea7f6c2727d67c30d4942501e5b831e559dd"
 
 [workspace.dependencies.aphrody-web-crawl]
 path = "crates/web-crawl"
@@ -242,6 +239,10 @@ features = ["crypto", "pem", "ring"]
 [workspace.dependencies.regex]
 version = "=1.13.1"
 features = []
+
+[workspace.dependencies.rio-vt]
+version = "=0.5.28"
+default-features = false
 
 [workspace.dependencies.reqwest]
 version = "=0.13.5"
