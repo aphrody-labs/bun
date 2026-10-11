@@ -4,17 +4,30 @@
   "description": "Google REST services over the Aphrody Bun runtime, with explicit credential ownership.",
   "license": "Apache-2.0",
   "repository": "https://github.com/aphrody-labs/bun",
+  "bin": {
+    "bun-google": "./src/cli.ts"
+  },
   "files": [
     "src",
     "README.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "GEMINI.md",
+    "llms.txt",
     "crates/boq"
   ],
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./services": "./src/services.ts"
+    "./services": "./src/services.ts",
+    "./cli": "./src/cli.ts"
   },
   "scripts": {
+    "config": "bun src/cli.ts config",
+    "authstatus": "bun src/cli.ts authstatus",
+    "models": "bun src/cli.ts models",
+    "generate": "bun src/cli.ts generate",
+    "stream": "bun src/cli.ts stream",
     "test": "cd ../.. && bun bd test ./packages/bun-google/test/services.test.ts"
   },
   "engines": {

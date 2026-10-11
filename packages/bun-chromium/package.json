@@ -1,0 +1,30 @@
+{
+  "name": "@aphrody/bun-chromium",
+  "version": "1.4.4",
+  "description": "Chromium CDP SDK over the existing Aphrody Bun Chromium and Chrome builtins.",
+  "license": "Apache-2.0",
+  "repository": "https://github.com/aphrody-labs/bun",
+  "bin": {
+    "bun-chromium": "./src/cli.ts"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "GEMINI.md",
+    "llms.txt"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./cli": "./src/cli.ts"
+  },
+  "scripts": {
+    "status": "bun src/cli.ts status",
+    "test": "cd ../.. && bun bd test ./packages/bun-chromium/test/sdk.test.ts"
+  },
+  "engines": {
+    "bun": ">=1.4.4"
+  }
+}

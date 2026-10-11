@@ -22,8 +22,11 @@ separate Chromium engines.
 | `obscura-dom`, `obscura-ssrf`                                         | `packages/bun-aphrody-web/crates`    | Compatibility facades depend on the canonical browser crates                                                    |
 | `obscura-browser`, `obscura-cdp`, `aphrody-obscura`, `aphrody-google` | Transferred Rust workspaces          | Full dependency graph and engine qualification required before publication                                      |
 
-No `@aphrody/bun-chrome` or `@aphrody/bun-chromium` manifest exists. The
-`@aphrody/web-source` integration package remains private.
+The subsequent SDK batch adds `@aphrody/bun-chromium` as a real source facade:
+exact builtin reexports, explicit-input commands, types and identity tests. It
+contains no browser executable and qualifies separately from native engine assets.
+No `@aphrody/bun-chrome` package is needed because its builtin shares Chromium's
+identity. The `@aphrody/web-source` integration package remains private.
 
 ## Preparation and gates
 

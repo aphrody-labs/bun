@@ -1,0 +1,13 @@
+# Bun google SDK
+
+Source version 1.4.4; requires the Aphrody Bun native builtins.
+
+- [Complete API, commands, owners and gates](README.md)
+- [Agent rules](AGENTS.md)
+- [Claude rules](CLAUDE.md)
+- [Gemini rules](GEMINI.md)
+- [Exports](src/index.ts)
+- [Commands](src/cli.ts)
+- [Publication boundary](../../docs/project/google-browser-publication.md)
+
+Source SDK, runtime and engine artifacts qualify separately. Graph coverage is explicit.

@@ -136,12 +136,13 @@ test("publication requires matching public package, version and uploaded archive
 });
 
 describe("nextVersion", () => {
-  test("Google services are a runtime-coupled source package, and builtin aliases are not packages", () => {
+  test("Google and Chromium source SDKs retain runtime coupling without a separate Chrome package", () => {
     expect(spec("bun-google").bunVersion).toBe(true);
     expect(spec("bun-google").requiresBuild).toBeUndefined();
     expect(npmName(spec("bun-google"))).toBe("@aphrody/bun-google");
     expect(PACKAGES.some((candidate) => candidate.dir === "bun-chrome")).toBe(false);
-    expect(PACKAGES.some((candidate) => candidate.dir === "bun-chromium")).toBe(false);
+    expect(spec("bun-chromium").bunVersion).toBe(true);
+    expect(spec("bun-chromium").requiresBuild).toBeUndefined();
   });
   test("occupied stable types keep their base and advance the fork suffix", () => {
     expect(nextVersion("1.4.4", ["1.4.4", "1.4.4-aphrody.2", "1.4.5"])).toEqual({

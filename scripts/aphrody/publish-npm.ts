@@ -354,6 +354,7 @@ export const PACKAGES: PackageSpec[] = [
   { dir: "bun-runtime-sdk" },
   // REST services and explicit credential adapters over the qualified bun:google builtin.
   { dir: "bun-google", bunVersion: true },
+  { dir: "bun-chromium", bunVersion: true },
   {
     dir: "bun-agent-plugin",
     buildOutputs: ["plugins/"],

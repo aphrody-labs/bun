@@ -17,14 +17,14 @@ uses Bun fetch in process, enforces Google HTTPS or loopback endpoints, rejects
 redirects, and preserves cancellation. Credentials are never discovered
 implicitly. Existing OS credential storage and ADC adapters retain ownership.
 
-| Surface | Executable contract |
-| --- | --- |
-| `createClient`, `googleRuntime` | Native REST transport and public configuration |
-| `drive` | List/get/export files; bounded page iterator |
-| `docs` | Get document; update with required reviewed revision |
-| `gemini` | JSON generateContent; streaming SSE Response |
-| `chromium`, `obscura`, `dns` | Exact aliases of existing runtime owners |
-| `crates/boq` | Standalone `aphrody-boq` Rust codec, source provenance preserved |
+| Surface                         | Executable contract                                              |
+| ------------------------------- | ---------------------------------------------------------------- |
+| `createClient`, `googleRuntime` | Native REST transport and public configuration                   |
+| `drive`                         | List/get/export files; bounded page iterator                     |
+| `docs`                          | Get document; update with required reviewed revision             |
+| `gemini`                        | JSON generateContent; streaming SSE Response                     |
+| `chromium`, `obscura`, `dns`    | Exact aliases of existing runtime owners                         |
+| `crates/boq`                    | Standalone `aphrody-boq` Rust codec, source provenance preserved |
 
 Windows Credential Manager target reads and Antigravity Cloud Code/Vertex models,
 generation and streaming use the native in-process SDK. The explicit credential
@@ -42,3 +42,39 @@ Contracts follow the official [Drive list](https://developers.google.com/workspa
 [Drive export](https://developers.google.com/workspace/drive/api/reference/rest/v3/files/export),
 [Docs batchUpdate](https://developers.google.com/workspace/docs/api/reference/rest/v1/documents/batchUpdate)
 and [Gemini generateContent](https://ai.google.dev/api/generate-content) references.
+
+## Commands and source catalog
+
+`createAntigravityServices` implements Cloud Code models/bootstrap, regional Vertex
+generation, Daily Cloud Code SSE decoding and userinfo. `createAntigravityCredentialProvider`
+reads the desktop OAuth envelope by explicit Windows target; it never refreshes or writes.
+The `./cli` subpath exports `runGoogleCommand` with provider/transport/runtime/signal injection.
+
+```sh
+bun src/cli.ts config
+bun src/cli.ts authstatus --target gemini:antigravity
+bun src/cli.ts models --target gemini:antigravity
+bun src/cli.ts generate --target gemini:antigravity --model gemini-2.5-flash --prompt "Hello"
+bun src/cli.ts stream --target gemini:antigravity --prompt "Hello"
+```
+
+The npm binary is `bun-google`; package scripts expose the same commands.
+Config and imports never authenticate. Other CLI commands require an explicit
+target. Tokens are not accepted as arguments; no protected store is discovered,
+migrated or written. The provider returns a JS string, not an opaque token.
+Generic Gemini and Antigravity endpoints have separate caller-owned token contracts.
+
+Transferred Rust owners under `aphrody/crates` are antigravity, google, gemini-web,
+gemini-runtime and model-antigravity; `crates/boq` is independent. The npm package
+packs SDK sources and Boq rather than the entire transferred application tree.
+Interactive PKCE login remains with the original process owner; native replacement
+requires faithful callback/refresh qualification.
+
+Run scoped strict TypeScript, oxlint, oxfmt and `bun bd -j1 test ./packages/bun-google/test`
+from the root. Tests use mocked stores and loopback HTTP, never live credentials.
+Source version 1.4.4, registry availability and native release receipts qualify separately;
+see [publication boundary](../../docs/project/google-browser-publication.md).
+Release graph catalogs immutable hashes, symbols and relative references with explicit
+unsupported inputs, truncation and unresolved calls. It is not full dynamic call
+coverage or JSC/V8 parity. [AGENTS.md](AGENTS.md), [CLAUDE.md](CLAUDE.md),
+[GEMINI.md](GEMINI.md), [llms.txt](llms.txt) are dedicated entrypoints.
