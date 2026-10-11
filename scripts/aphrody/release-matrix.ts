@@ -90,6 +90,7 @@ export function vpsRuntimeReleasePlan(revision: string, targets: string[] = [], 
   if (!/^[a-f0-9]{40}$/.test(revision)) throw new Error("Factory source must be an immutable revision");
   const source = "/home/ubuntu/builds/bun-os-factory/sources/bun";
   const artifacts = "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release";
+  const mullvadWork = `/home/ubuntu/builds/bun-os-factory/transient/mullvad-${revision.slice(0, 12)}`;
   const resource = "/home/ubuntu/src/aphrody/packages/infra/workspace/src/build-factory-cleanup.ts";
   const config = source + "/tools/config/fusion-factory.json";
   const selected = runtimeReleaseMatrix(targets);
@@ -160,7 +161,9 @@ export function vpsRuntimeReleasePlan(revision: string, targets: string[] = [], 
           mullvadSidecar: {
             target: mullvad.target,
             asset: mullvad.asset,
-            outputDirectory: `${artifacts}/mullvad`,
+            outputDirectory: artifacts,
+            workDirectory: mullvadWork,
+            log: `${artifacts}/mullvad-linux-x64.log`,
             sourcePath: "vendor/mullvad",
             workingDirectory: `${source}/vendor/mullvad`,
             lock: mullvad.factoryLock,
@@ -172,7 +175,7 @@ export function vpsRuntimeReleasePlan(revision: string, targets: string[] = [], 
               "scripts/aphrody/mullvad-sidecar.ts",
               "relay",
               `${source}/${mullvad.fetchRelayList}`,
-              `${artifacts}/mullvad/relays.json`,
+              `${mullvadWork}/relays.json`,
             ],
             package: [
               "bun",
@@ -180,8 +183,8 @@ export function vpsRuntimeReleasePlan(revision: string, targets: string[] = [], 
               "package",
               revision,
               mullvad.mullvadSource,
-              `${artifacts}/mullvad`,
-              `${artifacts}/mullvad/relays.json`,
+              artifacts,
+              `${mullvadWork}/relays.json`,
             ],
             qualification:
               "Native x86_64 Linux VPS build, daemon/CLI smoke and management-interface tests; no live tunnel activation",
