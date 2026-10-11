@@ -37,6 +37,9 @@ export function registerCompileRules(n: Ninja, cfg: Config): void {
   const cxx = q(cfg.cxx);
   const ar = q(cfg.ar);
   const ccacheLauncher = cfg.ccache !== undefined ? `${q(cfg.ccache)} ` : "";
+  const responseFiles = cfg.host.os === "windows";
+  const cxxFlags = responseFiles ? "@$out.rsp" : "$cxxflags";
+  const cFlags = responseFiles ? "@$out.rsp" : "$cflags";
 
   // Depfile handling differs between clang (gcc-style .d) and clang-cl (/showIncludes)
   const depfileOpts: Pick<Rule, "depfile" | "deps"> = cfg.windows
@@ -50,9 +53,10 @@ export function registerCompileRules(n: Ninja, cfg: Config): void {
   // Note: $cxxflags is set per-build (allows per-file overrides).
   n.rule("cxx", {
     command: cfg.windows
-      ? `${ccacheLauncher}${cxx} /nologo /showIncludes $cxxflags /c $in /Fo$out`
-      : `${ccacheLauncher}${cxx} $cxxflags -MMD -MT $out -MF $out.d -c $in -o $out`,
+      ? `${ccacheLauncher}${cxx} /nologo /showIncludes ${cxxFlags} /c $in /Fo$out`
+      : `${ccacheLauncher}${cxx} ${cxxFlags} -MMD -MT $out -MF $out.d -c $in -o $out`,
     description: "cxx $out",
+    ...(responseFiles ? { rspfile: "$out.rsp", rspfile_content: "$cxxflags" } : {}),
     ...depfileOpts,
     pool: "compile",
   });
@@ -76,9 +80,10 @@ export function registerCompileRules(n: Ninja, cfg: Config): void {
   // seen" on any TU that doesn't itself spell out the wrapper include.
   n.rule("cxx_pch", {
     command: cfg.windows
-      ? `${ccacheLauncher}${cxx} /nologo /showIncludes $cxxflags -Xclang -include-pch -Xclang $pch_file -Xclang -include -Xclang $pch_header /c $in /Fo$out`
-      : `${ccacheLauncher}${cxx} $cxxflags -Winvalid-pch -Xclang -include-pch -Xclang $pch_file -Xclang -include -Xclang $pch_header -MMD -MT $out -MF $out.d -c $in -o $out`,
+      ? `${ccacheLauncher}${cxx} /nologo /showIncludes ${cxxFlags} -Xclang -include-pch -Xclang $pch_file -Xclang -include -Xclang $pch_header /c $in /Fo$out`
+      : `${ccacheLauncher}${cxx} ${cxxFlags} -Winvalid-pch -Xclang -include-pch -Xclang $pch_file -Xclang -include -Xclang $pch_header -MMD -MT $out -MF $out.d -c $in -o $out`,
     description: "cxx $out",
+    ...(responseFiles ? { rspfile: "$out.rsp", rspfile_content: "$cxxflags" } : {}),
     ...depfileOpts,
     pool: "compile",
   });
@@ -86,9 +91,10 @@ export function registerCompileRules(n: Ninja, cfg: Config): void {
   // ─── C compile ───
   n.rule("cc", {
     command: cfg.windows
-      ? `${ccacheLauncher}${cc} /nologo /showIncludes $cflags /c $in /Fo$out`
-      : `${ccacheLauncher}${cc} $cflags -MMD -MT $out -MF $out.d -c $in -o $out`,
+      ? `${ccacheLauncher}${cc} /nologo /showIncludes ${cFlags} /c $in /Fo$out`
+      : `${ccacheLauncher}${cc} ${cFlags} -MMD -MT $out -MF $out.d -c $in -o $out`,
     description: "cc $out",
+    ...(responseFiles ? { rspfile: "$out.rsp", rspfile_content: "$cflags" } : {}),
     ...depfileOpts,
     pool: "compile",
   });
@@ -143,24 +149,26 @@ export function registerCompileRules(n: Ninja, cfg: Config): void {
   // build; the cross-worktree correctness hazard outweighs the cache savings.
   if (cfg.windows) {
     n.rule("pch_msvc", {
-      command: `${cxx} /nologo /showIncludes $cxxflags /clang:-fpch-instantiate-templates -Xclang -fno-pch-timestamp /Yc$pch_header -Xclang -include -Xclang $pch_header /Fp$out /c $in /Fo$pch_stub_obj`,
+      command: `${cxx} /nologo /showIncludes ${cxxFlags} /clang:-fpch-instantiate-templates -Xclang -fno-pch-timestamp /Yc$pch_header -Xclang -include -Xclang $pch_header /Fp$out /c $in /Fo$pch_stub_obj`,
       description: "pch $out",
+      ...(responseFiles ? { rspfile: "$out.rsp", rspfile_content: "$cxxflags" } : {}),
       ...depfileOpts,
       pool: "compile",
     });
   } else {
     n.rule("pch", {
-      command: `${cxx} $cxxflags -Winvalid-pch -fpch-instantiate-templates -Xclang -fno-pch-timestamp -Xclang -emit-pch -Xclang -include -Xclang $pch_header -x c++-header -MD -MT $out -MF $out.d -c $in -o $out`,
+      command: `${cxx} ${cxxFlags} -Winvalid-pch -fpch-instantiate-templates -Xclang -fno-pch-timestamp -Xclang -emit-pch -Xclang -include -Xclang $pch_header -x c++-header -MD -MT $out -MF $out.d -c $in -o $out`,
       description: "pch $out",
+      ...(responseFiles ? { rspfile: "$out.rsp", rspfile_content: "$cxxflags" } : {}),
       ...depfileOpts,
       pool: "compile",
     });
   }
 
   // ─── Link executable ───
-  // Uses response file because object lists get long (>32k args breaks on
-  // windows). Not in the console pool: that pool has depth 1; lld's only
-  // output is diagnostics, which ninja shows when the edge finishes.
+  // Object lists and, on a Windows host, tool flags use response files to
+  // keep Ninja's CreateProcessW command line below the system limit. Not in
+  // the console pool: that pool has depth 1; lld's only output is diagnostics.
   //
   // Windows: -fuse-ld=lld forces lld-link (VS dev shell puts link.exe
   // first in PATH, clang-cl would default to it). /link separator —
@@ -185,13 +193,18 @@ export function registerCompileRules(n: Ninja, cfg: Config): void {
   // empty everywhere else): ninja runs the whole command through `sh -c`,
   // so the fixup runs after the link succeeds and the declared output is
   // already the final, patched, re-signed artifact. See shims.ts.
+  const linkCommand = cfg.windows
+    ? `${cxx} /nologo -fuse-ld=lld ${q(`/clang:-B${dirname(cfg.ld)}`)} ${responseFiles ? "/Fe$out @$out.rsp" : "@$out.rsp $lazy /Fe$out /link $ldflags"}`
+    : `${cxx} @$out.rsp ${responseFiles ? "" : "$lazy $ldflags "}-o $out${machoPostlinkCommand(cfg)}`;
   n.rule("link", {
-    command: cfg.windows
-      ? `${cxx} /nologo -fuse-ld=lld ${q(`/clang:-B${dirname(cfg.ld)}`)} @$out.rsp $lazy /Fe$out /link $ldflags`
-      : `${cxx} @$out.rsp $lazy $ldflags -o $out${machoPostlinkCommand(cfg)}`,
+    command: linkCommand,
     description: "link $out",
     rspfile: "$out.rsp",
-    rspfile_content: "$in_newline",
+    rspfile_content: responseFiles
+      ? cfg.windows
+        ? "$in_newline $lazy /link $ldflags"
+        : "$in_newline $lazy $ldflags"
+      : "$in_newline",
   });
 
   // ─── Static library archive ───
