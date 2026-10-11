@@ -1,4 +1,5 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Sources upstream, CEF et maintenance des forks
 
 Collecte et vérification : 2026-10-11.
@@ -20,9 +21,9 @@ Ne pas transférer une preuve obtenue sur un projet à un autre.
 
 ## Deux voies d'intégration
 
-| Voie | Usage | Surface à maintenir |
-| --- | --- | --- |
-| CEF | Application embarquant Chromium | API CEF, ressources et packaging |
+| Voie          | Usage                                   | Surface à maintenir                    |
+| ------------- | --------------------------------------- | -------------------------------------- |
+| CEF           | Application embarquant Chromium         | API CEF, ressources et packaging       |
 | Fork Chromium | Modifications du navigateur ou de Blink | Source, toolchain et patches du moteur |
 
 CEF vise les applications qui embarquent un navigateur.
@@ -78,9 +79,10 @@ Ce document ne modifie ni branches ni configuration Git.
 ## Réutiliser le travail Obscura
 
 La ref observée `obscura` est `c82e6a6e3bd90511d44ada44819bbeda31ebaa76`.
-Le moteur transféré vit dans `packages/bun-obscura`, workspace Rust autonome.
-Le README cite la source Aphrody `2d66be8fcd84a87b4ca73124023881ca9d0c204f`.
-Référence : [provenance du transfert](../../packages/bun-obscura/README.md).
+Le moteur transféré vit désormais dans `src/browser`, membre du workspace Cargo racine de Bun.
+Le transfert initial cite la source Aphrody `2d66be8fcd84a87b4ca73124023881ca9d0c204f`.
+Références : [propriétaire actuel](../../src/browser/README.md),
+[provenance du transfert](../../src/browser/docs/browser-migration.md).
 
 Réutiliser API Rust, DOM, CDP, cookies, réseau/SSRF et rendu existants.
 Le catalogue `profiles.rs` définit des empreintes de navigateur, pas une synchronisation de comptes.
@@ -90,7 +92,7 @@ La synchronisation de stores n'est pas autorisée implicitement par un transfert
 Le plan du transfert rapporte 2 247 tests natifs réussis et sept ignorés.
 Il rapporte aussi un passage strict Clippy sur son périmètre.
 Ces preuves datées ne qualifient ni l'API nouvellement intégrée ni une distribution Chromium.
-Référence : [preuves Obscura](../../packages/bun-obscura/PLAN.md).
+Référence : [preuves Obscura](../../src/browser/PLAN.md).
 
 ## Gates de mise à jour proposées
 

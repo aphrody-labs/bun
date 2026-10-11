@@ -1,4 +1,5 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # V8, JavaScriptCore et moteur de page
 
 Collecte et vérification : 2026-10-11.
@@ -7,11 +8,11 @@ Elle ne déclare pas un port Blink/JSC achevé.
 
 ## Trois contrats différents
 
-| Contrat | Exemple local | Ce qu'il établit |
-| --- | --- | --- |
-| API native V8 | `src/jsc/bindings/v8` | Compatibilité de certaines extensions Node |
-| Protocole inspecteur | `src/js/internal/inspector/cdp.ts` | Traduction de commandes CDP vers JSC |
-| Moteur de page | Obscura V8 ou Chromium/Blink | DOM, JavaScript et navigateur effectifs |
+| Contrat              | Exemple local                      | Ce qu'il établit                           |
+| -------------------- | ---------------------------------- | ------------------------------------------ |
+| API native V8        | `src/jsc/bindings/v8`              | Compatibilité de certaines extensions Node |
+| Protocole inspecteur | `src/js/internal/inspector/cdp.ts` | Traduction de commandes CDP vers JSC       |
+| Moteur de page       | Obscura V8 ou Chromium/Blink       | DOM, JavaScript et navigateur effectifs    |
 
 Une extension native compatible ne prouve pas que Blink accepte le même heap.
 Une commande CDP reconnue ne prouve pas une implémentation équivalente de sa sémantique.
@@ -28,8 +29,8 @@ Source : [embedding V8](https://v8.dev/docs/embed).
 Le code Obscura actuel utilise `deno_core::JsRuntime` et les types V8 associés.
 Son manifeste fixe `deno_core` à la famille `0.412`.
 Le runtime crée des isolates, charge un snapshot et installe ses opérations DOM.
-Références : [manifeste JS](../../packages/bun-obscura/crates/obscura-js/Cargo.toml),
-[runtime JS](../../packages/bun-obscura/crates/obscura-js/src/runtime.rs).
+Références : [manifeste JS](../../src/browser/crates/js/Cargo.toml),
+[runtime JS](../../src/browser/crates/js/src/runtime.rs).
 
 L'exécution Bun appelante reste sur JavaScriptCore.
 Lancer Obscura dans un processus natif préserve cette séparation.
@@ -80,24 +81,24 @@ Une qualification DevTools doit exercer scripts, breakpoints, exceptions et tear
 
 ## Gates d'un port JSC
 
-| Domaine | Preuve attendue |
-| --- | --- |
-| DOM | Identité des wrappers, mutations et événements |
-| Realms | Contexts de page, frames et mondes isolés |
-| GC | Références entre heaps, finalisation et absence de fuite |
-| Exceptions | Propagation et erreurs observables par le script |
-| Scheduling | Promises, microtasks, timers et interruption |
-| Modules | Résolution, chargement et cycles |
-| Workers | Isolation, messages, arrêt et threads |
-| Teardown | Destruction répétée des pages et runtime |
-| Debug | Mapping des scripts et comportement des commandes |
+| Domaine    | Preuve attendue                                          |
+| ---------- | -------------------------------------------------------- |
+| DOM        | Identité des wrappers, mutations et événements           |
+| Realms     | Contexts de page, frames et mondes isolés                |
+| GC         | Références entre heaps, finalisation et absence de fuite |
+| Exceptions | Propagation et erreurs observables par le script         |
+| Scheduling | Promises, microtasks, timers et interruption             |
+| Modules    | Résolution, chargement et cycles                         |
+| Workers    | Isolation, messages, arrêt et threads                    |
+| Teardown   | Destruction répétée des pages et runtime                 |
+| Debug      | Mapping des scripts et comportement des commandes        |
 
 Cette grille est une proposition de qualification du projet, pas une certification upstream.
 Les tests différentiels doivent comparer le même scénario dans chaque moteur.
 Un cas ignoré reste hors de la couverture annoncée.
 Conserver V8 tant que les cas requis par le produit ne passent pas sur JSC.
 Le plan transféré conserve explicitement cette frontière.
-Référence : [plan Obscura](../../packages/bun-obscura/PLAN.md).
+Référence : [plan Obscura](../../src/browser/PLAN.md).
 
 ## GPU et navigateur complet
 

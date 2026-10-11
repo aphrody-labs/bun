@@ -1,4 +1,5 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Architecture Chromium et frontières Bun
 
 Collecte et vérification : 2026-10-11.
@@ -53,14 +54,14 @@ Une option de lancement ou un indicateur déclaré ne prouve pas l'activation ef
 
 ## Capacités présentes dans le dépôt
 
-| Surface | Propriétaire observé | Contrat actuel |
-| --- | --- | --- |
-| Runtime Bun | `src/jsc` | JavaScriptCore |
-| Automatisation Chromium | `src/js/bun/chromium.ts` | Connexion CDP à un navigateur externe |
-| Chrome WebView | `src/runtime/webview` | Processus Chrome, pipe CDP ou WebSocket |
-| Obscura | `packages/bun-obscura` | Workspace Rust autonome, DOM et V8 |
-| Application CEF | `packages/bun-tauri/crates/aphrody-tauri-runtime-cef` | Runtime Tauri sur CEF |
-| GPU Windows | `src/runtime/windows/sys/gpu.rs` | Opérations et sondes D3D12 natives |
+| Surface                 | Propriétaire observé                                  | Contrat actuel                                                      |
+| ----------------------- | ----------------------------------------------------- | ------------------------------------------------------------------- |
+| Runtime Bun             | `src/jsc`                                             | JavaScriptCore                                                      |
+| Automatisation Chromium | `src/js/bun/chromium.ts`                              | Connexion CDP à un navigateur externe                               |
+| Chrome WebView          | `src/runtime/webview`                                 | Processus Chrome, pipe CDP ou WebSocket                             |
+| Obscura                 | `src/browser`                                         | Bibliothèques du workspace Rust Bun, DOM et fournisseur V8 conservé |
+| Application CEF         | `packages/bun-tauri/crates/aphrody-tauri-runtime-cef` | Runtime Tauri sur CEF                                               |
+| GPU Windows             | `src/runtime/windows/sys/gpu.rs`                      | Opérations et sondes D3D12 natives                                  |
 
 Ces surfaces existent avec des niveaux de qualification distincts.
 La présence de code et les tests unitaires ne prouvent pas une installation desktop complète.
@@ -73,9 +74,10 @@ Références locales : [module Chromium](../../src/js/bun/chromium.ts),
 La branche `obscura` observée pointe sur `c82e6a6e3bd90511d44ada44819bbeda31ebaa76`.
 Le transfert conserve API Rust, navigateur, DOM, réseau, CDP, MCP et rendu optionnel.
 L'extraction et Taffy modifié appartiennent aussi au workspace transféré.
-Le workspace est exclu de celui du binaire Bun ; cela ne lie pas V8 dans Bun.
-Références : [README](../../packages/bun-obscura/README.md),
-[plan et preuves datées](../../packages/bun-obscura/PLAN.md).
+Les bibliothèques navigateur appartiennent désormais au workspace Cargo racine de Bun.
+Cette intégration des sources ne qualifie pas à elle seule le fournisseur de page V8/JSC.
+Références : [README](../../src/browser/README.md),
+[plan et preuves datées](../../src/browser/PLAN.md).
 
 Obscura utilise `deno_core` ; son rendu optionnel repose sur Taffy et Tiny Skia.
 Ce rendu CPU ne constitue pas un pipeline Blink complet.

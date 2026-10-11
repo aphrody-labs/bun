@@ -1,7 +1,13 @@
 # Google and browser publication boundary
 
-Inventory verified on 2026-10-11. Registry state must be checked again immediately
-before uploading. This document records preparation, not publication.
+Historical preparation inventory, verified on 2026-10-11 before the SDK upload.
+The registry observations and dependency blockers below describe that earlier
+snapshot, not the current registry state. The subsequent
+[Google and Chromium SDK 1.4.4 release](google-chromium-release-1.4.4.md)
+records the published packages, source revision and qualification boundaries.
+On 2026-10-11, the three npm versions in that release were verified again against
+their uploaded archives: all registry SHA-512 integrities matched.
+Registry state must still be checked immediately before any new upload.
 
 ## Public interfaces and owners
 
