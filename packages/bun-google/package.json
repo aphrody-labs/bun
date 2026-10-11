@@ -22,6 +22,7 @@
     "./services": "./src/services.ts",
     "./cli": "./src/cli.ts",
     "./search": "./src/search.ts",
+    "./public-index": "./src/public-index.ts",
     "./password-store": "./src/password-store.ts"
   },
   "scripts": {

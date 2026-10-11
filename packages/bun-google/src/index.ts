@@ -2,6 +2,15 @@
 export { default, createClient, googleRuntime, chromium, obscura, dns } from "bun:google";
 export type { GoogleClient, GoogleClientOptions, GoogleRuntime } from "bun:google";
 export * from "./services.ts";
+export { createPublicIndexSearch } from "./public-index.ts";
+export type {
+  PublicIndexInput,
+  PublicIndexBody,
+  PublicIndexCollection,
+  PublicIndexSdkOptions,
+  PublicIndexResult,
+  PublicIndexSearch,
+} from "./public-index.ts";
 export {
   createAntigravityCredentialProvider,
   type AntigravityCredentialOptions,
