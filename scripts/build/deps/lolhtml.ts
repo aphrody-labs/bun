@@ -25,18 +25,19 @@ import type { Dependency } from "../source.ts";
 // base commit is recorded here so a rebase onto a new upstream tag is
 // `git rebase --onto <new-tag> <LOLHTML_UPSTREAM_BASE> bun` in the fork.
 const LOLHTML_UPSTREAM_BASE = "77127cd2b8545998756e8d64e36ee2313c4bb312"; // v2.7.2
-const LOLHTML_COMMIT = "725ce499aa9b71e38b7a2d0a9fbb6d7294a4079e";
+export const LOLHTML_COMMIT = "725ce499aa9b71e38b7a2d0a9fbb6d7294a4079e";
+export const LOLHTML_SOURCE = {
+  kind: "github-archive",
+  repo: "oven-sh/lol-html",
+  commit: LOLHTML_COMMIT,
+} as const;
 void LOLHTML_UPSTREAM_BASE;
 
 export const lolhtml: Dependency = {
   name: "lolhtml",
   versionMacro: "LOLHTML",
 
-  source: () => ({
-    kind: "github-archive",
-    repo: "oven-sh/lol-html",
-    commit: LOLHTML_COMMIT,
-  }),
+  source: () => LOLHTML_SOURCE,
 
   // No separate build — compiled as part of the workspace cargo build via
   // `bun_runtime`/`bun_bundler`'s path dep on `vendor/lolhtml`.

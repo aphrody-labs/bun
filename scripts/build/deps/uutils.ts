@@ -11,18 +11,20 @@
 
 import type { Dependency } from "../source.ts";
 
-const UUTILS_COMMIT = "ca3e965d688739916016d4fe1a277701b44f3445"; // 0.13.0
+export const UUTILS_COMMIT = "ca3e965d688739916016d4fe1a277701b44f3445"; // 0.13.0
+export const UUTILS_SOURCE = {
+  kind: "github-archive",
+  repo: "aphrody-labs/uutils-coreutils",
+  commit: UUTILS_COMMIT,
+} as const;
+export const UUTILS_PATCHES = ["patches/uutils/lazy-startup.patch"];
 
 export const uutils: Dependency = {
   name: "uutils",
 
-  source: () => ({
-    kind: "github-archive",
-    repo: "aphrody-labs/uutils-coreutils",
-    commit: UUTILS_COMMIT,
-  }),
+  source: () => UUTILS_SOURCE,
 
-  patches: ["patches/uutils/lazy-startup.patch"],
+  patches: UUTILS_PATCHES,
 
   build: () => ({ kind: "none" }),
 

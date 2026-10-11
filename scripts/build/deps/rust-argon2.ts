@@ -6,18 +6,20 @@
 
 import type { Dependency } from "../source.ts";
 
-const RUST_ARGON2_COMMIT = "ed81866f163f0c7026aa6fd8388adf37242eb32a"; // 3.0.0
+export const RUST_ARGON2_COMMIT = "ed81866f163f0c7026aa6fd8388adf37242eb32a"; // 3.0.0
+export const RUST_ARGON2_SOURCE = {
+  kind: "github-archive",
+  repo: "sru-systems/rust-argon2",
+  commit: RUST_ARGON2_COMMIT,
+} as const;
+export const RUST_ARGON2_PATCHES = ["patches/rust-argon2/legacy-low-memory.patch"];
 
 export const rustArgon2: Dependency = {
   name: "rust-argon2",
 
-  source: () => ({
-    kind: "github-archive",
-    repo: "sru-systems/rust-argon2",
-    commit: RUST_ARGON2_COMMIT,
-  }),
+  source: () => RUST_ARGON2_SOURCE,
 
-  patches: ["patches/rust-argon2/legacy-low-memory.patch"],
+  patches: RUST_ARGON2_PATCHES,
 
   build: () => ({ kind: "none" }),
 

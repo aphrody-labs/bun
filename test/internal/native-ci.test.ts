@@ -1,13 +1,39 @@
 // SPDX-License-Identifier: Apache-2.0
 import { expect, test } from "bun:test";
-import { resolve } from "node:path";
+import { mkdir, symlink } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
+import { tempDir } from "../harness";
 import {
   gateEnvironment,
   gates,
   main,
+  provisionRustDependencies,
   qualification,
+  rustDependencyPlan,
   validateIdentity,
 } from "../../scripts/aphrody/native-ci.ts";
+
+async function dependencyFixture() {
+  const checkout = resolve(import.meta.dir, "../..");
+  return tempDir("native-ci-dependencies", {
+    "Cargo.toml":
+      '[workspace]\n[workspace.dependencies]\nfixture = { path = "src/fixture" }\nuu_cat = { path = "vendor/uutils/src/uu/cat" }\n',
+    vendor: { ".keep": "" },
+    src: { fixture: { "Cargo.toml": '[package]\nname = "fixture"\nversion = "0.0.0"\n' } },
+    patches: {
+      "rust-argon2": {
+        "legacy-low-memory.patch": await Bun.file(
+          join(checkout, "patches/rust-argon2/legacy-low-memory.patch"),
+        ).text(),
+      },
+      uutils: {
+        "lazy-startup.patch": await Bun.file(
+          join(checkout, "patches/uutils/lazy-startup.patch"),
+        ).text(),
+      },
+    },
+  });
+}
 
 test("native CI rejects symbolic revisions and unsafe job identifiers", () => {
   expect(() => validateIdentity("main", "job")).toThrow();
@@ -67,4 +93,169 @@ test("Clippy selects each source owner's configuration without changing strict w
     "rust-web-clippy",
   ]);
   expect(gateEnvironment(gates[0]!, checkout, inherited)).toEqual(inherited);
+});
+
+test("all dependency destinations preflight before a fetch and preserve unknown sources", async () => {
+  using directory = await dependencyFixture();
+  const foreign = join(directory, "vendor/uutils");
+  await mkdir(foreign);
+  await Bun.write(join(foreign, ".ref"), "foreign-source\n");
+  let calls = 0;
+  await expect(
+    provisionRustDependencies(String(directory), async () => {
+      calls++;
+      return 0;
+    }),
+  ).rejects.toThrow("preserved");
+  expect(calls).toBe(0);
+  expect(await Bun.file(join(foreign, ".ref")).text()).toBe("foreign-source\n");
+  expect(await Bun.file(join(directory, "vendor/lolhtml/.ref")).exists()).toBe(false);
+});
+
+test("the pinned fetch owner receives all three sources and stamps are checked after fetch", async () => {
+  using directory = await dependencyFixture();
+  const plans = await rustDependencyPlan(String(directory));
+  const commands: string[][] = [];
+  await provisionRustDependencies(String(directory), async (command) => {
+    commands.push(command);
+    const plan = plans.find((dependency) => dependency.name === command[3])!;
+    await mkdir(dirname(join(plan.destination, plan.manifest)), { recursive: true });
+    await Bun.write(join(plan.destination, ".ref"), plan.identity + "\n");
+    await Bun.write(
+      join(plan.destination, plan.manifest),
+      `[package]\nname = "${plan.package}"\nversion = "0.0.0"\n`,
+    );
+    if (plan.name === "uutils") {
+      const secondary = join(plan.destination, "src/uu/cat/Cargo.toml");
+      await mkdir(dirname(secondary), { recursive: true });
+      await Bun.write(secondary, '[package]\nname = "uu_cat"\nversion = "0.0.0"\n');
+    }
+    return 0;
+  });
+  expect(commands.map((command) => command[3])).toEqual(["lolhtml", "rust-argon2", "uutils"]);
+  for (const [index, plan] of plans.entries()) {
+    expect(commands[index]).toEqual([
+      "bun",
+      join(String(directory), "scripts/build/fetch-cli.ts"),
+      "dep",
+      plan.name,
+      plan.source.repo,
+      plan.source.commit,
+      plan.destination,
+      join(String(directory), "build/native-ci-downloads"),
+      ...plan.patches,
+    ]);
+  }
+  expect(
+    (await rustDependencyPlan(String(directory))).every((dependency) => dependency.present),
+  ).toBe(true);
+  expect(gates.findIndex((gate) => gate.id === "rust-dependencies")).toBeLessThan(
+    gates.findIndex((gate) => gate.id === "rust-install-check"),
+  );
+  expect(gates).toHaveLength(14);
+});
+
+test("a missing first-party Cargo prerequisite fails before any source fetch", async () => {
+  using directory = await dependencyFixture();
+  await Bun.write(
+    join(directory, "Cargo.toml"),
+    '[workspace]\n[workspace.dependencies]\nmissing = { path = "packages/missing" }\n',
+  );
+  let calls = 0;
+  await expect(
+    provisionRustDependencies(String(directory), async () => {
+      calls++;
+      return 0;
+    }),
+  ).rejects.toThrow();
+  expect(calls).toBe(0);
+});
+
+test("dependency junctions and failed fetch stamps cannot overwrite foreign sources", async () => {
+  using directory = await dependencyFixture();
+  using foreign = tempDir("native-ci-foreign-source", { ".ref": "foreign-source" });
+  await symlink(
+    String(foreign),
+    join(directory, "vendor/lolhtml"),
+    process.platform === "win32" ? "junction" : "dir",
+  );
+  let calls = 0;
+  await expect(
+    provisionRustDependencies(String(directory), async () => {
+      calls++;
+      return 0;
+    }),
+  ).rejects.toThrow("canonical");
+  expect(calls).toBe(0);
+  expect(await Bun.file(join(String(foreign), ".ref")).text()).toBe("foreign-source");
+  using incomplete = await dependencyFixture();
+  await expect(
+    provisionRustDependencies(String(incomplete), async () => {
+      calls++;
+      return 0;
+    }),
+  ).rejects.toThrow();
+  expect(calls).toBe(1);
+});
+
+test("present stamped sources preflight secondary manifests before any fetch", async () => {
+  using directory = await dependencyFixture();
+  const plan = (await rustDependencyPlan(String(directory))).find(
+    (dependency) => dependency.name === "uutils",
+  )!;
+  await mkdir(dirname(join(plan.destination, plan.manifest)), { recursive: true });
+  await Bun.write(join(plan.destination, ".ref"), plan.identity);
+  await Bun.write(
+    join(plan.destination, plan.manifest),
+    '[package]\nname = "uucore"\nversion = "0.0.0"\n',
+  );
+  let calls = 0;
+  const fetch = async () => {
+    calls++;
+    return 0;
+  };
+  await expect(provisionRustDependencies(String(directory), fetch)).rejects.toThrow();
+  expect(calls).toBe(0);
+  using foreign = tempDir("native-ci-secondary-source", {
+    "Cargo.toml": '[package]\nname = "uu_cat"\nversion = "0.0.0"\n',
+  });
+  await mkdir(join(plan.destination, "src/uu"), { recursive: true });
+  await symlink(
+    String(foreign),
+    join(plan.destination, "src/uu/cat"),
+    process.platform === "win32" ? "junction" : "dir",
+  );
+  await expect(provisionRustDependencies(String(directory), fetch)).rejects.toThrow("canonical");
+  expect(calls).toBe(0);
+  expect(await Bun.file(join(String(foreign), "Cargo.toml")).exists()).toBe(true);
+});
+
+test("post-fetch qualification checks every generated Cargo path without exemptions", async () => {
+  using directory = await dependencyFixture();
+  const plans = await rustDependencyPlan(String(directory));
+  const commands: string[][] = [];
+  await expect(
+    provisionRustDependencies(String(directory), async (command) => {
+      commands.push(command);
+      const plan = plans.find((dependency) => dependency.name === command[3])!;
+      await mkdir(dirname(join(plan.destination, plan.manifest)), { recursive: true });
+      await Bun.write(join(plan.destination, ".ref"), plan.identity);
+      await Bun.write(
+        join(plan.destination, plan.manifest),
+        `[package]\nname = "${plan.package}"\nversion = "0.0.0"\n`,
+      );
+      return 0;
+    }),
+  ).rejects.toThrow();
+  expect(commands.map((command) => command[3])).toEqual(["lolhtml", "rust-argon2", "uutils"]);
+  const secondary = join(String(directory), "vendor/uutils/src/uu/cat/Cargo.toml");
+  await mkdir(dirname(secondary), { recursive: true });
+  await Bun.write(secondary, '[package]\nname = "wrong_package"\nversion = "0.0.0"\n');
+  await expect(
+    provisionRustDependencies(String(directory), async (command) => {
+      commands.push(command);
+      return 0;
+    }),
+  ).rejects.toThrow("package differs");
+  expect(commands).toHaveLength(3);
 });

@@ -43,7 +43,19 @@ owner preparation. Generated Cargo caches remain preserved in each standalone
 provider's anchored `target/` exclusion. Source files and other untracked paths
 still participate in the clean-source guard. The first pinned run passed Google
 compilation and tests, then failed Clippy; full Linux qualification remains pending
-until a subsequent immutable run records all thirteen successful gates.
+until a subsequent immutable run records all fourteen successful gates.
+
+The `rust-dependencies` gate runs before installer Cargo gates. It preflights all
+root and `src/` Cargo path dependencies, then provisions only the missing pinned
+`lolhtml`, `rust-argon2` and `uutils` sources through the existing build fetcher.
+Pins and patches come from their build dependency owners. All three destinations
+are checked before any download; unknown or mismatched existing sources and
+escaping symlinks are preserved and rejected. Downloads stay in the checkout's
+`build/native-ci-downloads` cache under the existing factory locks. Post-fetch
+source stamps and Cargo package manifests must match. A matching `.ref` records
+the source identity and patch contract, not proof that every vendor byte is clean;
+the fetch owner preserves edits at a matching identity. This gate fetches source
+without compiling an engine or configuring unrelated vendored dependencies.
 
 The schedule is deliberately disabled in native-ci.json. Infra can plan and
 activate a timer through its host catalog after qualifying the source allocation;
