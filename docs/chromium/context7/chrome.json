@@ -1,0 +1,33 @@
+{
+  "collectedOn": "2026-10-11",
+  "provider": "Context7",
+  "resolve": {
+    "status": "fulfilled",
+    "value": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Available Libraries:\n\n- Title: Chrome for Developers\n- Context7-compatible library ID: /websites/developer_chrome_google_cn\n- Description: Official documentation for developers building for the Google Chrome browser and the web platform. It provides guides, tools, and resources to create, optimize, and extend web experiences.\n- Code Snippets: 1040\n- Source Reputation: High\n- Benchmark Score: 6.2\n----------\n- Title: Chrome Extensions\n- Context7-compatible library ID: /websites/developer_chrome_google_cn_extensions\n- Description: Chrome Extensions enable developers to customize and extend the functionality of the Chrome browser. They allow users to personalize their browsing experience by adding new features, modifying web pages, and interacting with browser APIs.\n- Code Snippets: 6729\n- Source Reputation: High\n- Benchmark Score: 77.49\n----------\n- Title: Chrome Extensions\n- Context7-compatible library ID: /websites/developer_chrome_extensions\n- Description: Chrome Extensions is a platform for building powerful browser customizations that extend Chrome's functionality through APIs for UI customization, browser modification, and web page manipulation.\n- Code Snippets: 7817\n- Source Reputation: High\n- Benchmark Score: 77.77\n----------\n- Title: Chrome for Developers\n- Context7-compatible library ID: /websites/developer_chrome\n- Description: Learn how Chrome works, participate in origin trials, and build with Chrome everywhere. Discover tools, libraries, and capabilities to create the best web experiences.\n- Code Snippets: 15747\n- Source Reputation: High\n- Benchmark Score: 55.81\n----------\n- Title: Chrome for Developers\n- Context7-compatible library ID: /llmstxt/developer_chrome_llms_txt\n- Description: Chrome developer guides, code samples, and API references for web applications, browser features, accessibility, and built-in AI.\n- Code Snippets: 9538\n- Source Reputation: High\n- Benchmark Score: 56.06"
+        }
+      ],
+      "isError": false
+    }
+  },
+  "query": {
+    "status": "fulfilled",
+    "value": {
+      "name": "chrome",
+      "libraryId": "/websites/developer_chrome",
+      "query": "How Chrome extensions, DevTools CDP, PWAs and WebGPU interact with an embedded Chromium browser",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "### chrome.appviewTag.connect()\n\nSource: https://developer.chrome.com/docs/apps/reference/appviewTag\n\nRequests another app to be embedded into the current Chrome App.\n\n```APIDOC\n## chrome.appviewTag.connect()\n\n### Description\nRequests another app to be embedded. Returns a Promise that resolves to a boolean indicating success.\n\n### Syntax\n`chrome.appviewTag.connect(app: string, data?: any, callback?: function): Promise<boolean>`\n\n### Parameters\n- **app** (string) - Required - The extension id of the app to be embedded.\n- **data** (any) - Optional - Optional developer specified data that the app to be embedded can use when making an embedding decision.\n- **callback** (function) - Optional - A callback function that receives a boolean indicating if the embedding request succeeded.\n\n### Returns\n- **Promise<boolean>** - A promise that resolves to true if the embedding request succeeded.\n```\n\n--------------------------------\n\n### Configure Chrome DevTools MCP Server\n\nSource: https://developer.chrome.com/docs/extensions/ai/build-with-ai\n\nAdd this configuration to your MCP server settings to enable extension tools and automatic profile connection.\n\n```json\n{\n \"mcpServers\": {\n   \"chrome-devtools-mcp\": {\n     \"args\": [\n       \"-y\",\n       \"chrome-devtools-mcp@latest\",\n       \"--categoryExtensions\",\n       \"--autoConnect\"\n     ],\n     \"command\": \"npx\"\n   }\n }\n}\n```\n\n--------------------------------\n\n### Forward CDP socket to local port\n\nSource: https://developer.chrome.com/docs/devtools/remote-debugging\n\nMaps the remote Chrome DevTools Protocol socket on the Android device to a local port on the development machine.\n\n```bash\nadb forward tcp:9222 localabstract:chrome_devtools_remote\n```\n\n### Concepts and usage > Targets\n\nSource: https://developer.chrome.com/docs/extensions/reference/debugger\n\nThe chrome.debugger API allows extensions to send Chrome DevTools Protocol (CDP) commands to specific targets, such as tabs, iframes, or workers. Each target is identified by a unique UUID and type. Within a single target, multiple execution contexts may exist, particularly for same-process iframes.\n\n--------------------------------\n\n### WebGPU > Prerequisite\n\nSource: https://developer.chrome.com/docs/web-platform/webgpu/developer-features\n\nChrome provides specific WebGPU features designed exclusively for development and testing that fall outside the standard WebGPU specification. These features should never be used in production environments. To access them, users must enable the WebGPU Developer Features flag in Chrome and restart the browser."
+          }
+        ],
+        "isError": false
+      }
+    }
+  }
+}
