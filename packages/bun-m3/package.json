@@ -1,0 +1,15 @@
+{
+  "name": "@aphrody/bun-m3",
+  "version": "1.4.4",
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "Bun HTTP adapter for the canonical M3 app-ui artifact and explicit public capability owners.",
+  "exports": {
+    "./site": "./src/site.ts"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "repository": "https://github.com/aphrody-labs/bun"
+}

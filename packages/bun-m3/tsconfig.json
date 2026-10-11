@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "types": ["node"],
+    "paths": { "harness": ["../../test/harness.ts"], "_util/*": ["../../test/_util/*"] },
+    "typeRoots": ["../../node_modules/@types", "../bun-types/node_modules/@types"]
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts", "../bun-types/index.d.ts"]
+}
