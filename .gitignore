@@ -241,3 +241,8 @@ src/runtime/hawk_root.rs
 
 # Rejected snapshot updates are local review artifacts.
 *.snap.new
+
+# Local authenticated browser/HLS test inputs.
+/cookie.json
+/hls.json
+
