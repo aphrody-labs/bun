@@ -1,15 +1,14 @@
 #!/usr/bin/env bun
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, mkdirSync, statfsSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, realpathSync, statfsSync } from "node:fs";
 import { freemem } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { realpathSync } from "node:fs";
 import { parseArgs } from "node:util";
+import type { FactoryHostProfile } from "./build-host.ts";
+import { CRATES, WORKSPACES } from "./publish-crates.ts";
 import { npmName, PACKAGES } from "./publish-npm.ts";
-import { CRATES } from "./publish-crates.ts";
 import { VENDORS } from "./publish-vendors.ts";
 import { git, GitTree } from "./site/collect.ts";
-import type { FactoryHostProfile } from "./build-host.ts";
 
 type Manifest = Record<string, any>;
 export type Product = {
@@ -80,12 +79,22 @@ export type ExecutionReceipt = {
 };
 const sha256 = (text: string | Uint8Array) => createHash("sha256").update(text).digest("hex");
 
+export function cargoPublishAdapter(manifest: string, name: string): string | null {
+  if (CRATES.some(crate => `${crate.dir}/Cargo.toml` === manifest)) return "publish-crates";
+  return WORKSPACES.some(workspace => manifest.startsWith(`${workspace.dir}/`) && workspace.crates.includes(name))
+    ? "publish-crates"
+    : null;
+}
+
+function cargoPublishedName(manifest: string, name: string): string | null {
+  const renamed = CRATES.find(crate => `${crate.dir}/Cargo.toml` === manifest)?.name;
+  if (renamed) return renamed;
+  return cargoPublishAdapter(manifest, name) ? name : null;
+}
+
 export function validateExecutionBudget(
   budget: ExecutionBudget,
-  profile: Pick<
-    FactoryHostProfile,
-    "host" | "target" | "cpu" | "memoryMiB" | "diskMiB" | "lockPath"
-  >,
+  profile: Pick<FactoryHostProfile, "host" | "target" | "cpu" | "memoryMiB" | "diskMiB" | "lockPath">,
 ) {
   if (budget.host !== profile.host || budget.target !== profile.target)
     throw new Error("Execution host or target differs from the qualified profile");
@@ -114,9 +123,7 @@ export function boundedExecutionCommand(command: string[], cpu: number) {
     const argument = command[index]!;
     const match = /^(?:-j|--jobs=|--parallel=)(.*)$/.exec(argument);
     if (match || ["-j", "--jobs", "--parallel"].includes(argument)) {
-      const jobs = Number(
-        ["-j", "--jobs", "--parallel"].includes(argument) ? command[++index] : match?.[1],
-      );
+      const jobs = Number(["-j", "--jobs", "--parallel"].includes(argument) ? command[++index] : match?.[1]);
       if (!Number.isSafeInteger(jobs) || jobs < 1 || jobs > cpu)
         throw new Error("Command jobs exceed the execution CPU budget");
       explicitJobs = true;
@@ -126,11 +133,7 @@ export function boundedExecutionCommand(command: string[], cpu: number) {
   return runtimeBuild && !explicitJobs ? [...command, `-j${cpu}`] : command;
 }
 
-export async function validateExecutionReceiptPath(
-  root: string,
-  factoryRoot: string,
-  input: string,
-) {
+export async function validateExecutionReceiptPath(root: string, factoryRoot: string, input: string) {
   const canonical = (path: string): string => {
     let ancestor = resolve(path);
     const suffix: string[] = [];
@@ -151,12 +154,7 @@ export async function validateExecutionReceiptPath(
   };
   const inside = (base: string, path: string) => {
     const scoped = relative(base, path);
-    return (
-      !isAbsolute(scoped) &&
-      scoped !== ".." &&
-      !scoped.startsWith("../") &&
-      !scoped.startsWith("..\\")
-    );
+    return !isAbsolute(scoped) && scoped !== ".." && !scoped.startsWith("../") && !scoped.startsWith("..\\");
   };
   const destination = canonical(input);
   const checkout = canonical(root);
@@ -171,7 +169,7 @@ export async function validateExecutionReceiptPath(
     resolve(input)
       .split(/[\\/]/)
       .some(
-        (part) =>
+        part =>
           [".ssh", ".codex", ".claude", ".aphrody", "cookies", "sessions"].includes(part) ||
           part === ".env" ||
           part.startsWith(".env.") ||
@@ -183,12 +181,12 @@ export async function validateExecutionReceiptPath(
   if (existsSync(input) && lstatSync(input).isSymbolicLink())
     throw new Error("Execution receipt must not be a symlink");
   if (inside(checkout, destination) && existsSync(join(root, ".git"))) {
-    const tracked = Bun.spawnSync(
-      ["git", "ls-files", "--error-unmatch", "--", relative(checkout, destination)],
-      { cwd: root, stdout: "pipe", stderr: "pipe" },
-    );
-    if (tracked.exitCode === 0)
-      throw new Error("Execution receipt must not overwrite tracked source");
+    const tracked = Bun.spawnSync(["git", "ls-files", "--error-unmatch", "--", relative(checkout, destination)], {
+      cwd: root,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    if (tracked.exitCode === 0) throw new Error("Execution receipt must not overwrite tracked source");
   }
   if (existsSync(destination)) {
     const previous = await Bun.file(destination)
@@ -209,7 +207,7 @@ export async function canResumeStep(
   receipt: ExecutionReceipt,
 ) {
   if (!receipt?.source || !Array.isArray(receipt.steps)) return false;
-  const entry = receipt.steps.find((item) => item.id === step.id);
+  const entry = receipt.steps.find(item => item.id === step.id);
   if (
     receipt.schema !== 1 ||
     !/^[a-f0-9]{64}$/.test(snapshotHash) ||
@@ -230,21 +228,12 @@ export async function canResumeStep(
     const checkout = realpathSync(root);
     const seen = new Set<string>();
     for (const output of entry.outputs) {
-      if (isAbsolute(output.path) || seen.has(output.path) || !/^[a-f0-9]{64}$/.test(output.sha256))
-        return false;
+      if (isAbsolute(output.path) || seen.has(output.path) || !/^[a-f0-9]{64}$/.test(output.sha256)) return false;
       seen.add(output.path);
       const file = realpathSync(resolve(root, output.path));
       const path = relative(checkout, file);
-      if (
-        !path ||
-        isAbsolute(path) ||
-        path === ".." ||
-        path.startsWith("../") ||
-        path.startsWith("..\\")
-      )
-        return false;
-      if (sha256(new Uint8Array(await Bun.file(file).arrayBuffer())) !== output.sha256)
-        return false;
+      if (!path || isAbsolute(path) || path === ".." || path.startsWith("../") || path.startsWith("..\\")) return false;
+      if (sha256(new Uint8Array(await Bun.file(file).arrayBuffer())) !== output.sha256) return false;
     }
     return true;
   } catch {
@@ -276,13 +265,9 @@ export async function executeDeliveryPlan(
     profile.sourceTree !== source.rootTree ||
     !isAbsolute(profile.lockPath) ||
     !/^[a-f0-9]{64}$/.test(options.snapshotHash) ||
-    [
-      profile.cpu,
-      profile.memoryMiB,
-      profile.diskMiB,
-      profile.reserveMemoryMiB,
-      profile.reserveDiskMiB,
-    ].some((value) => !Number.isSafeInteger(value) || value <= 0)
+    [profile.cpu, profile.memoryMiB, profile.diskMiB, profile.reserveMemoryMiB, profile.reserveDiskMiB].some(
+      value => !Number.isSafeInteger(value) || value <= 0,
+    )
   )
     throw new Error("Invalid factory capacity, source tree or canonical lock");
   const receipt: ExecutionReceipt = {
@@ -298,17 +283,9 @@ export async function executeDeliveryPlan(
       ? ((await Bun.file(options.receiptPath).json()) as ExecutionReceipt)
       : undefined;
   const pending = new Map(
-    steps.map((original) => {
-      const directory = relative(
-        realpathSync(root),
-        realpathSync(resolve(root, original.directory)),
-      );
-      if (
-        isAbsolute(directory) ||
-        directory === ".." ||
-        directory.startsWith("../") ||
-        directory.startsWith("..\\")
-      )
+    steps.map(original => {
+      const directory = relative(realpathSync(root), realpathSync(resolve(root, original.directory)));
+      if (isAbsolute(directory) || directory === ".." || directory.startsWith("../") || directory.startsWith("..\\"))
         throw new Error(`Delivery step directory escapes checkout: ${original.id}`);
       const heavy = /runtime|native-|cargo|crate|vendor/.test(original.id);
       const execution: ExecutionBudget = original.execution ?? {
@@ -316,9 +293,7 @@ export async function executeDeliveryPlan(
         target: profile.target,
         resourceClass: heavy ? "heavy" : "light",
         cpu: heavy ? profile.heavySlots : 1,
-        memoryMiB: heavy
-          ? profile.heavySlots * (profile.heavyMemoryMiB ?? 2048)
-          : (profile.lightMemoryMiB ?? 512),
+        memoryMiB: heavy ? profile.heavySlots * (profile.heavyMemoryMiB ?? 2048) : (profile.lightMemoryMiB ?? 512),
         diskMiB: 1024,
         ...(heavy ? { lockKey: profile.lockPath } : {}),
       };
@@ -411,28 +386,24 @@ export async function executeDeliveryPlan(
   while (pending.size || active.size) {
     if (!failure)
       for (const [id, original] of pending) {
-        if (!original.requires.every((required) => completed.has(required))) continue;
+        if (!original.requires.every(required => completed.has(required))) continue;
         const budget = original.execution;
         const step = { ...original, execution: budget };
-        const prerequisites = step.requires.map((required) => completed.get(required)!);
-        if (
-          previous &&
-          (await canResumeStep(root, source, step, options.snapshotHash, prerequisites, previous))
-        ) {
-          const entry = previous.steps.find((item) => item.id === id)!;
+        const prerequisites = step.requires.map(required => completed.get(required)!);
+        if (previous && (await canResumeStep(root, source, step, options.snapshotHash, prerequisites, previous))) {
+          const entry = previous.steps.find(item => item.id === id)!;
           receipt.steps.push(entry);
           completed.set(id, entry.inputHash);
           pending.delete(id);
           await save();
           continue;
         }
-        const running = [...active.values()].map((item) => item.budget);
+        const running = [...active.values()].map(item => item.budget);
         const disk = statfsSync(root);
         const availableDiskMiB = Math.floor((Number(disk.bavail) * Number(disk.bsize)) / 1048576);
         if (
-          (running.some((item) => item.resourceClass === "heavy") &&
-            budget.resourceClass === "heavy") ||
-          (running.filter((item) => item.resourceClass === "light").length >= profile.lightSlots &&
+          (running.some(item => item.resourceClass === "heavy") && budget.resourceClass === "heavy") ||
+          (running.filter(item => item.resourceClass === "light").length >= profile.lightSlots &&
             budget.resourceClass === "light") ||
           running.reduce((total, item) => total + item.cpu, budget.cpu) > profile.cpu ||
           running.reduce((total, item) => total + item.memoryMiB, budget.memoryMiB) >
@@ -451,11 +422,10 @@ export async function executeDeliveryPlan(
       }
     if (!active.size) {
       if (failure) break;
-      if (pending.size)
-        throw new Error("Delivery dependencies or live resource capacity prevent progress");
+      if (pending.size) throw new Error("Delivery dependencies or live resource capacity prevent progress");
     } else {
       try {
-        await Promise.race([...active.values()].map((item) => item.promise));
+        await Promise.race([...active.values()].map(item => item.promise));
       } catch (error) {
         failure ??= error instanceof Error ? error : new Error(String(error));
       }
@@ -466,19 +436,15 @@ export async function executeDeliveryPlan(
   return receipt;
 }
 
-export function dependencyOrder<T extends { name: string; dependencies: string[] }>(
-  products: T[],
-): T[] {
-  if (new Set(products.map((p) => p.name)).size !== products.length)
-    throw new Error("Duplicate product names");
-  const pending = new Map(products.map((p) => [p.name, p]));
+export function dependencyOrder<T extends { name: string; dependencies: string[] }>(products: T[]): T[] {
+  if (new Set(products.map(p => p.name)).size !== products.length) throw new Error("Duplicate product names");
+  const pending = new Map(products.map(p => [p.name, p]));
   const ordered: T[] = [];
   while (pending.size) {
     const ready = [...pending.values()]
-      .filter((p) => p.dependencies.every((d) => !pending.has(d)))
+      .filter(p => p.dependencies.every(d => !pending.has(d)))
       .sort((a, b) => a.name.localeCompare(b.name));
-    if (!ready.length)
-      throw new Error(`Dependency cycle: ${[...pending.keys()].sort().join(", ")}`);
+    if (!ready.length) throw new Error(`Dependency cycle: ${[...pending.keys()].sort().join(", ")}`);
     for (const p of ready) {
       ordered.push(p);
       pending.delete(p.name);
@@ -489,7 +455,7 @@ export function dependencyOrder<T extends { name: string; dependencies: string[]
 
 export function inventory(root: string, ref = "HEAD"): Inventory {
   const tree = new GitTree(root, ref);
-  const paths = [...tree.files.keys()].filter((p) => {
+  const paths = [...tree.files.keys()].filter(p => {
     if (
       !/(^|\/)(package\.json|Cargo\.toml|Cargo\.lock|bun\.lockb?|package-lock\.json|pnpm-lock\.yaml|yarn\.lock)$/.test(
         p,
@@ -499,28 +465,21 @@ export function inventory(root: string, ref = "HEAD"): Inventory {
     if (!p.includes("/")) return true;
     if (/(?:^|\/)(?:test|tests|fixtures|examples|benches|benchmark)(?:\/|$)/.test(p)) return false;
     if (p.endsWith("package.json"))
-      return (
-        /^packages\/[^/]+\/package\.json$/.test(p) ||
-        /^packages\/[^/]+\/npm\/[^/]+\/package\.json$/.test(p)
-      );
+      return /^packages\/[^/]+\/package\.json$/.test(p) || /^packages\/[^/]+\/npm\/[^/]+\/package\.json$/.test(p);
     return /^(?:packages|vendor|src)\//.test(p);
   });
-  const texts = tree.read(paths.filter((p) => !p.endsWith("bun.lockb")));
+  const texts = tree.read(paths.filter(p => !p.endsWith("bun.lockb")));
   const products: Product[] = [];
   const npmDependencies: Inventory["npmDependencies"] = [];
   const repositories = new Map<string, Set<string>>();
   const external: Inventory["external"] = [];
-  const npmAdapters = new Map(
-    PACKAGES.map((p) => [`packages/${p.dir}/package.json`, "publish-npm"]),
-  );
-  const npmNames = new Map(PACKAGES.map((p) => [`packages/${p.dir}/package.json`, npmName(p)]));
-  const cargoAdapters = new Map(CRATES.map((p) => [`${p.dir}/Cargo.toml`, "publish-crates"]));
+  const npmAdapters = new Map(PACKAGES.map(p => [`packages/${p.dir}/package.json`, "publish-npm"]));
+  const npmNames = new Map(PACKAGES.map(p => [`packages/${p.dir}/package.json`, npmName(p)]));
   const workspaces = new Map<string, Manifest>();
   for (const [path, text] of texts) {
     if (path.endsWith("Cargo.toml")) {
       const document = Bun.TOML.parse(text) as Manifest;
-      if (document.workspace)
-        workspaces.set(dirname(path).replaceAll("\\", "/"), document.workspace);
+      if (document.workspace) workspaces.set(dirname(path).replaceAll("\\", "/"), document.workspace);
     }
   }
   const workspaceFor = (path: string): Manifest => {
@@ -550,19 +509,12 @@ export function inventory(root: string, ref = "HEAD"): Inventory {
       continue;
     }
     if (!path.endsWith("package.json") && !path.endsWith("Cargo.toml")) continue;
-    const document = path.endsWith("package.json")
-      ? JSON.parse(text)
-      : (Bun.TOML.parse(text) as Manifest);
+    const document = path.endsWith("package.json") ? JSON.parse(text) : (Bun.TOML.parse(text) as Manifest);
     const cargo = path.endsWith("Cargo.toml");
     const workspace = cargo ? workspaceFor(path) : {};
     const pkg = cargo ? document.package : document;
     if (!cargo)
-      for (const section of [
-        "dependencies",
-        "devDependencies",
-        "peerDependencies",
-        "optionalDependencies",
-      ]) {
+      for (const section of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"]) {
         for (const [name, specification] of Object.entries(document[section] ?? {})) {
           npmDependencies.push({
             manifest: path,
@@ -596,11 +548,7 @@ export function inventory(root: string, ref = "HEAD"): Inventory {
     const dependencyNames = Object.entries(deps).map(([name, spec]) => {
       if (cargo && spec && typeof spec === "object") {
         const dependency = spec as Manifest;
-        return (
-          dependency.package ??
-          (dependency.workspace ? workspace.dependencies?.[name]?.package : null) ??
-          name
-        );
+        return dependency.package ?? (dependency.workspace ? workspace.dependencies?.[name]?.package : null) ?? name;
       }
       return name;
     });
@@ -617,46 +565,34 @@ export function inventory(root: string, ref = "HEAD"): Inventory {
       kind: cargo ? "cargo" : "npm",
       private: cargo ? pkg.publish === false : pkg.private === true,
       dependencies: dependencyNames.sort(),
-      adapter: cargo ? (cargoAdapters.get(path) ?? null) : (npmAdapters.get(path) ?? null),
+      adapter: cargo ? cargoPublishAdapter(path, pkg.name) : (npmAdapters.get(path) ?? null),
       build: !cargo && typeof document.scripts?.build === "string" ? document.scripts.build : null,
-      publishedName: cargo
-        ? (CRATES.find((p) => `${p.dir}/Cargo.toml` === path)?.name ?? null)
-        : (npmNames.get(path) ?? null),
+      publishedName: cargo ? cargoPublishedName(path, pkg.name) : (npmNames.get(path) ?? null),
     });
   }
   const vendors = [
-    ...new Set(
-      [...tree.files.keys()]
-        .map((p) => /^vendor\/[^/]+/.exec(p)?.[0])
-        .filter((p): p is string => !!p),
-    ),
+    ...new Set([...tree.files.keys()].map(p => /^vendor\/[^/]+/.exec(p)?.[0]).filter((p): p is string => !!p)),
   ]
     .sort()
-    .map((path) => ({
+    .map(path => ({
       path,
       tree: git(root, ["rev-parse", `${tree.sha}:${path}`]).trim(),
       repositories: [...(repositories.get(path) ?? [])].sort(),
-      adapter: VENDORS.includes(path.slice(7) as (typeof VENDORS)[number])
-        ? "publish-vendors"
-        : null,
+      adapter: VENDORS.includes(path.slice(7) as (typeof VENDORS)[number]) ? "publish-vendors" : null,
     }));
-  const nativeRecipes = [...tree.read(tree.list("scripts/build/deps/*.ts"))].map(
-    ([path, text]) => ({
-      path,
-      sha256: sha256(text),
-      repositories: [
-        ...new Set(
-          [
-            ...text.matchAll(/https:\/\/github\.com\/([\w.-]+\/[\w.-]+)/g),
-            ...text.matchAll(/\b\w*REPO\w*\s*=\s*["']([\w.-]+\/[\w.-]+)["']/g),
-          ].map((m) => `https://github.com/${m[1]}`),
-        ),
-      ].sort(),
-      commitPins: [
-        ...new Set([...text.matchAll(/["']([a-f0-9]{40})["']/g)].map((m) => m[1]!)),
-      ].sort(),
-    }),
-  );
+  const nativeRecipes = [...tree.read(tree.list("scripts/build/deps/*.ts"))].map(([path, text]) => ({
+    path,
+    sha256: sha256(text),
+    repositories: [
+      ...new Set(
+        [
+          ...text.matchAll(/https:\/\/github\.com\/([\w.-]+\/[\w.-]+)/g),
+          ...text.matchAll(/\b\w*REPO\w*\s*=\s*["']([\w.-]+\/[\w.-]+)["']/g),
+        ].map(m => `https://github.com/${m[1]}`),
+      ),
+    ].sort(),
+    commitPins: [...new Set([...text.matchAll(/["']([a-f0-9]{40})["']/g)].map(m => m[1]!))].sort(),
+  }));
   return {
     schema: 1,
     source: {
@@ -666,8 +602,8 @@ export function inventory(root: string, ref = "HEAD"): Inventory {
       rootTree: git(root, ["rev-parse", `${tree.sha}^{tree}`]).trim(),
     },
     locks: paths
-      .filter((p) => /(?:lock|lockb|lock\.json|lock\.yaml)$/.test(p))
-      .map((path) => ({
+      .filter(p => /(?:lock|lockb|lock\.json|lock\.yaml)$/.test(p))
+      .map(path => ({
         path,
         blob: tree.files.get(path)!,
         sha256: texts.has(path)
@@ -681,10 +617,8 @@ export function inventory(root: string, ref = "HEAD"): Inventory {
     nativeRecipes,
     artifactPipelines: tree
       .list(".github/workflows/aphrody-*.yml")
-      .filter((path) =>
-        /(?:release|publish-native|publish-mdx-rs|publish-web-inspector)\.yml$/.test(path),
-      )
-      .map((workflow) => ({
+      .filter(path => /(?:release|publish-native|publish-mdx-rs|publish-web-inspector)\.yml$/.test(path))
+      .map(workflow => ({
         workflow,
         blob: tree.files.get(workflow)!,
         status: "requires-qualified-platform-artifacts",
@@ -728,28 +662,17 @@ export function plan(
       requires: ["native-targets"],
     });
     const npm = data.products.filter(
-      (p) =>
-        p.kind === "npm" &&
-        !p.manifest.startsWith("vendor/") &&
-        p.build &&
-        p.manifest !== "package.json",
+      p => p.kind === "npm" && !p.manifest.startsWith("vendor/") && p.build && p.manifest !== "package.json",
     );
     for (const p of dependencyOrder(npm))
       steps.push({
         id: `npm:${p.name}`,
         command: ["bun", "run", "build"],
         directory: dirname(p.manifest),
-        requires: [
-          "dependencies",
-          ...p.dependencies.filter((d) => npm.some((q) => q.name === d)).map((d) => `npm:${d}`),
-        ],
+        requires: ["dependencies", ...p.dependencies.filter(d => npm.some(q => q.name === d)).map(d => `npm:${d}`)],
       });
     for (const p of data.products.filter(
-      (p) =>
-        p.kind === "npm" &&
-        !p.private &&
-        p.manifest !== "package.json" &&
-        !needsPlatformArtifacts(p),
+      p => p.kind === "npm" && !p.private && p.manifest !== "package.json" && !needsPlatformArtifacts(p),
     )) {
       steps.push({
         id: `pack:${p.name}`,
@@ -762,14 +685,11 @@ export function plan(
           resolve(root, "tmp/monorepo-delivery-packages"),
         ],
         directory: dirname(p.manifest),
-        requires: [
-          "native-clippy",
-          ...npm.filter((q) => q.name === p.name).map((q) => `npm:${q.name}`),
-        ],
+        requires: ["native-clippy", ...npm.filter(q => q.name === p.name).map(q => `npm:${q.name}`)],
       });
     }
   } else {
-    for (const vendor of data.vendors.filter((v) => v.adapter))
+    for (const vendor of data.vendors.filter(v => v.adapter))
       steps.push({
         id: vendor.path,
         command: [
@@ -784,13 +704,9 @@ export function plan(
       });
     steps.push({
       id: "crates",
-      command: [
-        "bun",
-        "scripts/aphrody/publish-crates.ts",
-        ...(operation === "release-publish" ? ["--publish"] : []),
-      ],
+      command: ["bun", "scripts/aphrody/publish-crates.ts", ...(operation === "release-publish" ? ["--publish"] : [])],
       directory: ".",
-      requires: steps.filter((s) => s.id.startsWith("vendor/")).map((s) => s.id),
+      requires: steps.filter(s => s.id.startsWith("vendor/")).map(s => s.id),
     });
     steps.push({
       id: "npm",
@@ -809,10 +725,7 @@ export function plan(
   return {
     steps,
     unsupported: data.products.filter(
-      (p) =>
-        !p.private &&
-        !p.adapter &&
-        (operation !== "build" || (p.kind === "npm" && needsPlatformArtifacts(p))),
+      p => !p.private && !p.adapter && (operation !== "build" || (p.kind === "npm" && needsPlatformArtifacts(p))),
     ),
   };
 }
@@ -845,7 +758,7 @@ export function sourceQualified(
   return (
     receipt?.sourceRevision === revision &&
     !!receipt.packages?.some(
-      (p) =>
+      p =>
         p.name === record.name &&
         p.version === record.version &&
         p.sourceRevision === revision &&
@@ -857,7 +770,7 @@ export function sourceQualified(
   );
 }
 export function verifyIntegrity(bytes: Uint8Array, integrity: string): void {
-  const matches = integrity.split(/\s+/).some((entry) => {
+  const matches = integrity.split(/\s+/).some(entry => {
     const match = /^(sha256|sha384|sha512)-([A-Za-z0-9+/=]+)$/.exec(entry);
     return !!match && createHash(match[1]!).update(bytes).digest("base64") === match[2];
   });
@@ -873,13 +786,12 @@ export async function publishedPackages(
 }> {
   const packages: PublishedPackage[] = [];
   const unavailable: { name: string; version: string | null; reason: string }[] = [];
-  const npm = data.products.filter((p) => p.kind === "npm" && !p.private && p.adapter);
-  for (const product of data.products.filter((p) => p.kind === "npm" && !p.private && !p.adapter))
+  const npm = data.products.filter(p => p.kind === "npm" && !p.private && p.adapter);
+  for (const product of data.products.filter(p => p.kind === "npm" && !p.private && !p.adapter))
     unavailable.push({
       name: product.name,
       version: product.version,
-      reason:
-        "No qualified publication adapter in this pipeline; source declarations are not release artifacts",
+      reason: "No qualified publication adapter in this pipeline; source declarations are not release artifacts",
     });
   for (const product of npm) {
     if (!product.version) {
@@ -900,20 +812,9 @@ export async function publishedPackages(
     }
     if (!response.ok) throw new Error(`Registry ${product.name}: HTTP ${response.status}`);
     const record = (await response.json()) as Manifest;
-    if (
-      record.name !== name ||
-      record.version !== product.version ||
-      !record.dist?.integrity ||
-      !record.dist?.tarball
-    )
+    if (record.name !== name || record.version !== product.version || !record.dist?.integrity || !record.dist?.tarball)
       throw new Error(`Incomplete registry provenance: ${name}`);
-    if (
-      !sourceQualified(
-        data.source.revision,
-        record as Parameters<typeof sourceQualified>[1],
-        qualification,
-      )
-    ) {
+    if (!sourceQualified(data.source.revision, record as Parameters<typeof sourceQualified>[1], qualification)) {
       unavailable.push({
         name,
         version: product.version,
@@ -937,10 +838,10 @@ export async function upstreamReport(data: Inventory, root: string) {
   const urls = [
     ...new Set([
       upstream,
-      ...data.vendors.flatMap((v) => v.repositories),
-      ...data.nativeRecipes.flatMap((r) => r.repositories),
+      ...data.vendors.flatMap(v => v.repositories),
+      ...data.nativeRecipes.flatMap(r => r.repositories),
     ]),
-  ].filter((url) => /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+(?:\.git)?\/?$/.test(url));
+  ].filter(url => /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+(?:\.git)?\/?$/.test(url));
   const entries: { url: string; observedHead: string | null; error: string | null }[] = [];
   for (const url of urls) {
     const process = Bun.spawnSync(["git", "ls-remote", url, "HEAD"], {
@@ -950,9 +851,7 @@ export async function upstreamReport(data: Inventory, root: string) {
     });
     entries.push({
       url,
-      observedHead: process.success
-        ? (process.stdout.toString().trim().split(/\s+/)[0] ?? null)
-        : null,
+      observedHead: process.success ? (process.stdout.toString().trim().split(/\s+/)[0] ?? null) : null,
       error: process.success ? null : process.stderr.toString().trim(),
     });
   }
@@ -1014,26 +913,17 @@ export async function main(args = Bun.argv.slice(2)) {
         if (!values["snapshot-hash"] || !/^[a-f0-9]{64}$/.test(values["snapshot-hash"]))
           throw new Error("Factory execution requires --snapshot-hash SHA256");
         const profile = (await Bun.file(resolve(values.profile)).json()) as FactoryHostProfile;
-        report.execution = await executeDeliveryPlan(
-          root,
-          data.source,
-          report.plan.steps,
-          profile,
-          {
-            receiptPath: resolve(
-              values["execution-receipt"] ?? join(root, "tmp/delivery-execution.json"),
-            ),
-            snapshotHash: values["snapshot-hash"],
-            resume: values.resume ?? false,
-          },
-        );
+        report.execution = await executeDeliveryPlan(root, data.source, report.plan.steps, profile, {
+          receiptPath: resolve(values["execution-receipt"] ?? join(root, "tmp/delivery-execution.json")),
+          snapshotHash: values["snapshot-hash"],
+          resume: values.resume ?? false,
+        });
       } else {
         if (values.resume) throw new Error("Resume requires a qualified factory profile");
         for (const step of report.plan.steps as Step[]) {
           if (step.id.startsWith("pack:"))
             mkdirSync(resolve(root, "tmp/monorepo-delivery-packages"), { recursive: true });
-          const command =
-            step.command[0] === "bun" ? [process.execPath, ...step.command.slice(1)] : step.command;
+          const command = step.command[0] === "bun" ? [process.execPath, ...step.command.slice(1)] : step.command;
           const child = Bun.spawn(command, {
             cwd: resolve(root, step.directory),
             stdout: "inherit",
@@ -1046,32 +936,25 @@ export async function main(args = Bun.argv.slice(2)) {
   }
   if (operation === "install") {
     if (!values.manifest || !values.target)
-      throw new Error(
-        "Install requires --manifest qualified registry report and --target exact consumer directory",
-      );
+      throw new Error("Install requires --manifest qualified registry report and --target exact consumer directory");
     const lock = (await Bun.file(resolve(values.manifest)).json()) as Manifest;
     const selected = lock.installation as Awaited<ReturnType<typeof publishedPackages>>;
     if (!selected || lock.inventory?.source?.revision !== data.source.revision)
       throw new Error("Installation manifest source revision mismatch");
     if (selected.unavailable.length && !values["allow-partial"])
-      throw new Error(
-        "Unavailable exact-version artifacts; --allow-partial explicitly selects published subset",
-      );
+      throw new Error("Unavailable exact-version artifacts; --allow-partial explicitly selects published subset");
     if (!selected.packages.length) throw new Error("No published packages selected");
     const target = resolve(values.target);
     report.install = {
       target,
-      packages: selected.packages.map((p) => `${p.name}@${p.version}`),
+      packages: selected.packages.map(p => `${p.name}@${p.version}`),
       unavailable: selected.unavailable,
     };
     if (values.apply) {
       mkdirSync(target, { recursive: true });
       const artifacts: string[] = [];
       for (const p of selected.packages) {
-        if (
-          p.sourceRevision !== data.source.revision ||
-          !p.tarball.startsWith("https://registry.npmjs.org/")
-        )
+        if (p.sourceRevision !== data.source.revision || !p.tarball.startsWith("https://registry.npmjs.org/"))
           throw new Error(`Unqualified artifact: ${p.name}`);
         const response = await fetch(p.tarball);
         if (!response.ok) throw new Error(`Artifact ${p.name}: HTTP ${response.status}`);

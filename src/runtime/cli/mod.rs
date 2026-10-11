@@ -332,6 +332,8 @@ pub(crate) mod python_compile;
 pub(crate) mod run_command;
 #[path = "ssh_command.rs"]
 pub(crate) mod ssh_command;
+#[path = "vpn_command.rs"]
+pub(crate) mod vpn_command;
 #[path = "uv_command.rs"]
 pub(crate) mod uv_command;
 #[path = "winmd_command.rs"]
@@ -1369,6 +1371,11 @@ pub(crate) mod command {
                 super::ssh_command::Invocation::from_argv(argv0, first, be_bun)
             {
                 super::ssh_command::exec(invocation);
+            }
+            if let Some(invocation) =
+                super::vpn_command::Invocation::from_argv(argv0, first, be_bun)
+            {
+                super::vpn_command::exec(invocation);
             }
             if let Some(invocation) = super::host_command::Invocation::from_argv(argv0, first)
                 .or_else(|| {

@@ -13,6 +13,7 @@ test("staged crates are renamed but keep their library names", () => {
   expect(plugin.package.name).toBe("aphrody-bun-native-plugin");
   expect(plugin.package.repository).toBe("https://github.com/aphrody-labs/bun");
   expect(plugin.lib.name).toBe("bun_native_plugin");
+  expect(plugin.workspace).toBeUndefined();
 
   const macro = Bun.TOML.parse(readFileSync(join(out, "aphrody-bun-macro", "Cargo.toml"), "utf8")) as any;
   expect(macro.package.name).toBe("aphrody-bun-macro");

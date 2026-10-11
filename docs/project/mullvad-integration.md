@@ -1,13 +1,15 @@
 # Mullvad native integration inventory
 
-This inventory records the official upstream source on 2026-10-11. It proposes
-component boundaries for Bun VPN, its CLI and the Aphrody desktop. It does not
-qualify a compiled VPN engine or an active Mullvad connection.
+This inventory records the official upstream source on 2026-10-11 and the
+integration into Bun's single Cargo workspace. The native `bun_vpn` client and
+`bun vpn status|connect|disconnect` use Mullvad's management IPC and data types.
+It does not compile or qualify
+the privileged daemon, desktop, or an active Mullvad connection.
 
 The upstream is [mullvad/mullvadvpn-app](https://github.com/mullvad/mullvadvpn-app).
 Live `git ls-remote` resolves `refs/heads/main` to
-`493198790be1ec34b5cc3cfbfb50d02197264463`. The Aphrody Labs fork was created
-from upstream, and this checkout pins its commit without initializing nested components.
+`493198790be1ec34b5cc3cfbfb50d02197264463`. The Aphrody Labs fork adds the
+third-party notice at `464d28812ac863ef75362b8fb85bcbdff961b9f9`.
 
 ## Source and license pins
 
@@ -32,12 +34,13 @@ requirement remains a compilation gate. This inventory changes neither toolchain
 
 ## Candidate components and consumers
 
-The classifications below are integration proposals derived from the manifests.
-They do not establish stable library APIs or tested Bun compatibility.
+The Bun `bun_vpn` crate depends on Mullvad's management interface and types.
+The following platform crates remain part of the vendored upstream workspace;
+they are not yet linked into Bun's runtime.
 
 | Component | Concrete consumer | Dependencies and boundary |
 | --- | --- | --- |
-| [mullvad-management-interface](https://github.com/mullvad/mullvadvpn-app/blob/493198790be1ec34b5cc3cfbfb50d02197264463/mullvad-management-interface/Cargo.toml) | A native Bun VPN owner communicates with an existing daemon; CLI and desktop call that owner | Generated Protobuf/Tonic interface, Mullvad paths/types and Talpid types. Keep daemon access local and preserve its IPC authorization. |
+| [mullvad-management-interface](https://github.com/mullvad/mullvadvpn-app/blob/493198790be1ec34b5cc3cfbfb50d02197264463/mullvad-management-interface/Cargo.toml) | `bun_vpn::VpnClient` reads state and requests connect/disconnect through the installed daemon | Generated Protobuf/Tonic interface, Mullvad paths/types and Talpid types. Keep daemon access local and preserve its IPC authorization. |
 | [talpid-types](https://github.com/mullvad/mullvadvpn-app/blob/493198790be1ec34b5cc3cfbfb50d02197264463/talpid-types/Cargo.toml) | Tunnel/network DTO conversion at the native boundary | Includes X25519 secret-key types. Keep key material in the existing protected native store; expose status DTOs separately. |
 | [talpid-net](https://github.com/mullvad/mullvadvpn-app/blob/493198790be1ec34b5cc3cfbfb50d02197264463/talpid-net/Cargo.toml) | Native socket bypass helpers where the existing owner needs them | Socket2, Unix libc/nix and native error helpers. Reuse existing Bun networking for ordinary fetch and DNS. |
 | [talpid-routing](https://github.com/mullvad/mullvadvpn-app/blob/493198790be1ec34b5cc3cfbfb50d02197264463/talpid-routing/Cargo.toml) | Privileged platform tunnel owner | OS-specific routing backends and Windows Talpid helpers. Route changes require restoration and failure tests. |
@@ -56,22 +59,23 @@ and the canonical Aphrody UI rather than adding an Electron application to Bun.
 Windows packaging and signed drivers remain platform artifacts, not ordinary
 Rust dependencies. Android and iOS frontends are outside this desktop inventory.
 
-## Ordered qualification plan
+## Remaining integration gates
 
-1. Record the authorized fork URL, exact gitlink, upstream notices and local
-   patches. Keep vendor source out of format sweeps. Use the upstream lockfile.
-2. Inventory required nested components before initialization. Upstream advises
+1. The native client uses the platform's installed Mullvad daemon. Build and
+   qualify the daemon and CLI through the existing native owner on Windows and
+   Linux. Upstream advises
    one-level submodule initialization because deeper trees can be large and
    unnecessary. The pinned `.gitmodules` lists binaries, libwfp,
    windows-libraries and wireguard-apple; initialize only the target's needs.
-3. Select a concrete native consumer and resolve its dependency closure,
-   licensing and Rust toolchain. Build selected components through the existing
-   serialized factory; run scoped checks, tests and strict Clippy.
-4. Test local IPC, cancellation, tunnel teardown, DNS restoration, firewall
+2. `bun vpn status|connect|disconnect` is implemented through this native
+   client. The Rust API is available to Bun's native runtime; a JavaScript
+   binding and the canonical Aphrody desktop integration still need their
+   existing shared FFI/UI paths wired to these same operations.
+3. Test local IPC, cancellation, tunnel teardown, DNS restoration, firewall
    restoration, route leakage and privilege boundaries on each supported OS.
-5. Publish exact artifact hashes and connection evidence before claiming an
-   internal Bun VPN implementation. Separate source availability, daemon
-   connectivity, UI status and actual egress qualification.
+4. Publish exact artifact hashes and connection evidence before claiming an
+   active native VPN implementation. Source integration alone does not prove
+   daemon connectivity or actual egress.
 
 A Google crawl also needs an independent per-hop destination allowlist. A VPN
 or HTTP CONNECT relay changes egress; it does not enforce the crawl's logical

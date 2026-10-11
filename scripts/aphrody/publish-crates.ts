@@ -146,8 +146,16 @@ function manifest(c: Crate): string {
     }
     out.push(table(section, deps));
   }
+  const supportedSections = [
+    "package",
+    "lib",
+    "dependencies",
+    "build-dependencies",
+    "dev-dependencies",
+    "workspace",
+  ];
   for (const k of Object.keys(src))
-    if (!["package", "lib", "dependencies", "build-dependencies", "dev-dependencies"].includes(k))
+    if (!supportedSections.includes(k))
       throw new Error(`${c.dir}/Cargo.toml: section [${k}] is not handled by publish-crates.ts`);
   return out.join("\n");
 }

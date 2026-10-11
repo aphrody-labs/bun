@@ -20,6 +20,86 @@ import net from "node:net";
 import { join } from "node:path";
 import { Duplex } from "node:stream";
 import { createSecureContext, connect as tlsConnect, createServer as tlsCreateServer, type TlsOptions } from "node:tls";
+
+it("write-side FIN preserves a large response from a still-writing TCP peer", async () => {
+  const payload = Buffer.alloc(2 * 1024 * 1024);
+  for (let index = 0; index < payload.length; index++) payload[index] = index % 251;
+  const sockets = new Set<Socket>();
+  const done = Promise.withResolvers<Buffer>();
+  const chunks: Buffer[] = [];
+  let sent = 0;
+  let responding = false;
+  const pump = (socket: Socket) => {
+    if (!responding) return;
+    while (sent < payload.length) {
+      const written = socket.write(payload.subarray(sent));
+      if (written < 0) return done.reject(new Error("Peer write failed"));
+      sent += written;
+      if (!written) return;
+    }
+    socket.shutdown();
+  };
+  using server = Bun.listen({
+    hostname: "127.0.0.1",
+    port: 0,
+    allowHalfOpen: true,
+    socket: {
+      open(socket) {
+        sockets.add(socket);
+        socket.timeout(5);
+      },
+      data() {},
+      end(socket) {
+        responding = true;
+        pump(socket);
+      },
+      drain: pump,
+      error(_socket, error) {
+        done.reject(error);
+      },
+      timeout() {
+        done.reject(new Error("Peer timed out"));
+      },
+    },
+  });
+  try {
+    const client = await Bun.connect({
+      hostname: "127.0.0.1",
+      port: server.port,
+      allowHalfOpen: true,
+      socket: {
+        open(socket) {
+          sockets.add(socket);
+          socket.timeout(5);
+          socket.shutdown();
+        },
+        data(_socket, chunk) {
+          chunks.push(Buffer.from(chunk));
+        },
+        end() {
+          done.resolve(Buffer.concat(chunks));
+        },
+        close() {
+          done.resolve(Buffer.concat(chunks));
+        },
+        error(_socket, error) {
+          done.reject(error);
+        },
+        timeout() {
+          done.reject(new Error("Client timed out"));
+        },
+      },
+    });
+    sockets.add(client);
+    const received = await done.promise;
+    expect(sent).toBe(payload.length);
+    expect(received.length).toBe(payload.length);
+    expect(received.equals(payload)).toBe(true);
+  } finally {
+    for (const socket of sockets) socket.terminate();
+  }
+});
+
 describe.concurrent("socket", () => {
   it("should throw when a socket from a file descriptor has a bad file descriptor", async () => {
     const open = jest.fn();

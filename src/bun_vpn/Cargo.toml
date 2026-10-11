@@ -1,0 +1,14 @@
+[package]
+name = "bun_vpn"
+version.workspace = true
+edition.workspace = true
+license = "GPL-3.0-or-later"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+mullvad-management-interface = { path = "../../vendor/mullvad/mullvad-management-interface" }
+mullvad-types = { path = "../../vendor/mullvad/mullvad-types" }
+tokio.workspace = true
