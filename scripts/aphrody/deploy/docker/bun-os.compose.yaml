@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: Apache-2.0
+services:
+  bun-os:
+    image: ${BUN_OS_IMAGE:?verified built image digest required}
+    pull_policy: never
+    restart: unless-stopped
+    init: true
+    read_only: true
+    user: '1000:1000'
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    ports: ['127.0.0.1:${BUN_OS_PORT:-18804}:3000']
+    tmpfs: ['/tmp:rw,nosuid,nodev,size=128m,mode=1777']
+    environment:
+      NODE_ENV: production
+      WEBOS_PORT: '3000'
+    healthcheck:
+      test: [CMD, /usr/local/bin/bun, -e, 'const r=await fetch("http://127.0.0.1:3000/api/webos/capabilities");const c=await r.json();if(!r.ok||c.hostAccess!==false)process.exit(1)']
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
