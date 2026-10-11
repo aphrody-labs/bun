@@ -7,13 +7,14 @@ application. Elles ne prouvent ni création de compte Gmail ni accès global Goo
 
 ## État vérifié
 
-| Surface             | Observation                                                                         | Dépendance restante                                                               |
-| ------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| OVH `aphrody.com`   | Domaine `ok`, offre `redirect`, zéro boîte ; une redirection dédiée créée et relue  | Livraison effective non testée                                                    |
-| Workspace Directory | Lectures domaine et utilisateur : HTTP 403, `insufficientPermissions`               | Administrateur qualifié, tenant, domaine vérifié, existence utilisateur, licences |
-| Gmail               | API projet `ENABLED` par GET exact ; profil Gmail propriétaire connecté vérifié     | Utilisateur et accès Gmail dédiés non qualifiés ; aucun 403 Gmail observé         |
-| Google Cloud        | Compte de service dédié créé ; impersonation et permissions IAM testées sur Windows | Aucun déploiement VPS ni appel de modèle qualifié                                 |
-| Antigravity Windows | Présence d'une entrée protégée observée ; identité non qualifiée                    | Qualification OAuth propre au service demandé                                     |
+| Surface             | Observation                                                                                  | Dépendance restante                                                               |
+| ------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| OVH `aphrody.com`   | Domaine `ok`, offre `redirect`, zéro boîte ; redirection créée, message de vérification reçu | Aucun changement DNS ou création de boîte                                         |
+| Workspace Directory | Lectures domaine et utilisateur : HTTP 403, `insufficientPermissions`                        | Administrateur qualifié, tenant, domaine vérifié, existence utilisateur, licences |
+| Gmail               | API projet `ENABLED` par GET exact ; profil Gmail propriétaire connecté vérifié              | Utilisateur et accès Gmail dédiés non qualifiés ; aucun 403 Gmail observé         |
+| Google Cloud        | Compte de service dédié créé ; impersonation et permissions IAM testées sur Windows          | Aucun déploiement VPS ni appel de modèle qualifié                                 |
+| Antigravity Windows | Présence d'une entrée protégée observée ; identité non qualifiée                             | Qualification OAuth propre au service demandé                                     |
+| Inscription Google  | Données réelles acceptées ; parcours officiel sur profil isolé, étape verify-email           | Code de validation retenu par le connecteur ; compte dédié non créé               |
 
 Les reçus privés `.coord/google-dedicated-account-plan.json` et
 `.coord/google-cloud-automation-principal-plan.json` décrivent les lectures et le
@@ -89,8 +90,10 @@ POST différait de celui de la redirection listée ; aucune création supplémen
 n'a été tentée. L'identifiant réel a été relu et conservé pour retrait ciblé.
 Le reçu expurgé `.coord/google-ovh-alias-receipt.json` porte l'état
 `OVH_REDIRECTION_APPLIED_READ_VERIFIED` ; le snapshot et l'identifiant exact de
-rollback sont privés. La livraison reste non testée : cette opération crée une
-redirection, pas une nouvelle boîte Gmail ou une identité Google utilisateur.
+rollback sont privés. La livraison a ensuite été qualifiée par le message de
+vérification Google reçu, avec expéditeur et destinataire exacts concordants.
+Cette opération crée une redirection, pas une nouvelle boîte Gmail ou une
+identité Google utilisateur.
 
 ## Identité utilisateur et Workspace
 
@@ -113,13 +116,21 @@ autorisation administrateur et scopes explicites ; IAM ne les remplace pas.
 
 L'inscription Google grand public avec une adresse existante exige une date de
 naissance réelle, selon le [parcours officiel](https://support.google.com/accounts/answer/27441?hl=fr).
-La date du propriétaire n'est pas disponible dans les métadonnées vérifiées ;
-le fichier propriétaire `USER.md` explicitement référencé est absent. Aucune
-date ne sera inventée et aucun challenge contourné. La possibilité de lancer
-`bun:chromium` avec le runtime debug `1.4.4` a été vérifiée en lecture seule ;
-aucun profil, navigateur ou parcours d'inscription n'a été créé ou modifié pour
-ce lot. Le compte utilisateur dédié n'a donc pas été créé : la redirection OVH
-et le compte de service Cloud ne satisfont pas ces exigences d'inscription.
+Le propriétaire a désormais fourni les données requises en privé ; elles ont été
+acceptées par le formulaire officiel. Le propriétaire navigateur a lancé le
+parcours via `bun:chromium` sur un profil dédié isolé, sans réutiliser le profil
+personnel. La page est arrivée à l'étape verify-email et le message de validation
+a été effectivement reçu via la redirection OVH.
+
+Le connecteur Gmail retient délibérément le code d'authentification. C'est la
+frontière actuelle : aucune donnée personnelle supplémentaire n'est manquante
+à cette étape. Aucun accès raw/HTML de contournement, aucune autre tentative
+d'authentification ou modification OAuth n'a été entrepris. L'état du navigateur
+est conservé chez son propriétaire. Aucun compte Google grand public, aucune
+boîte Gmail dédiée et aucun mot de passe dédié n'ont été créés. Le reçu privé
+`.coord/google-consumer-registration-receipt.json` porte l'état
+`EMAIL_VERIFICATION_CODE_UNAVAILABLE_CONNECTOR_REDACTED` ; il ne faut publier
+ni données personnelles, ni adresse de réception, ni code, ni cookies.
 
 ## Automatisation keyless et SDK
 

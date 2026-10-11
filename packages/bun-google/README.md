@@ -21,7 +21,9 @@ For dedicated email, Google user identity and keyless Cloud automation, follow t
 [dedicated-account runbook](../../docs/project/google-dedicated-account.md).
 OVH forwarding, Workspace/Gmail authorization and Cloud IAM qualify separately.
 The runbook records the verified OVH forwarder and Windows keyless Cloud setup;
-delivery and a dedicated Google user remain unqualified.
+the official verification email was delivered. Signup awaits an authentication
+code deliberately withheld by the connector; no dedicated Google user, Gmail
+mailbox or password has been created.
 
 | Surface                         | Executable contract                                              |
 | ------------------------------- | ---------------------------------------------------------------- |
