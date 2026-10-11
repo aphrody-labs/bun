@@ -12,7 +12,7 @@ const { randomUUID }: typeof import("node:crypto") = require("node:crypto");
 const { scheduler }: typeof import("node:timers/promises") = require("node:timers/promises");
 const { Buffer }: typeof import("node:buffer") = require("node:buffer");
 
-const FORMAT_VERSION = 1;
+const FORMAT_VERSION = 2;
 const nativeExtensions = new Set(["rs", "js", "jsx", "mjs", "cjs", "ts", "tsx", "mts", "cts", "md", "mdx"]);
 const textExtensions = new Set([
   ...nativeExtensions,
@@ -85,7 +85,7 @@ type FileRecord = {
   readable: boolean;
   reason: string | null;
 };
-type Domain = { name: string; root: string; surface: "src" | "package"; files: FileRecord[] };
+type Domain = { name: string; root: string; surface: string; files: FileRecord[] };
 type RecordNode = Record<string, unknown> & { id: string };
 type RecordEdge = Record<string, unknown> & { source: string; target: string };
 
@@ -110,6 +110,20 @@ function normalized(path: string) {
     .join("")
     .replace(/[^\p{Alphabetic}\p{Number}]+/gu, "_")
     .replace(/^_+|_+$/g, "");
+}
+
+function validateRelativePath(value: string, name: string) {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    value.length > 512 ||
+    value.startsWith("/") ||
+    value.includes("\\") ||
+    value.includes(":") ||
+    value.split("/").some(part => part === "" || part === "." || part === "..")
+  )
+    throw new TypeError(`${name} must be a normalized relative path`);
+  return value;
 }
 
 async function hashFile(
@@ -157,10 +171,10 @@ async function revisionAt(root: string, signal?: AbortSignal) {
   return code === 0 && /^[a-f\d]{40,64}$/i.test(text.trim()) ? text.trim() : null;
 }
 
-async function dirtyAt(root: string, signal?: AbortSignal): Promise<boolean | null> {
+async function dirtyAt(root: string, surfaces: string[], signal?: AbortSignal): Promise<boolean | null> {
   signal?.throwIfAborted();
   await using child = Bun.spawn({
-    cmd: ["git", "-C", root, "status", "--porcelain=v1", "--untracked-files=normal", "--", "src", "packages"],
+    cmd: ["git", "-C", root, "status", "--porcelain=v1", "--untracked-files=normal", "--", ...surfaces],
     stdout: "pipe",
     stderr: "ignore",
     ...(signal ? { signal } : {}),
@@ -279,9 +293,22 @@ async function writeGraph(
 async function scan(root: string, options: IndexOptions, maxFiles: number, maxReadBytes: number) {
   const domains = new Map<string, Domain>();
   const requested = options.domains ? new Set(options.domains) : undefined;
+  const surfaces = options.surfaces ?? ["src", "packages"];
+  if (!Array.isArray(surfaces) || surfaces.length === 0 || surfaces.length > 1024)
+    throw new TypeError("surfaces must contain between 1 and 1024 relative directory paths");
+  for (const surface of surfaces) validateRelativePath(surface, "surface");
+  if (new Set(surfaces).size !== surfaces.length)
+    throw new TypeError("surfaces cannot contain duplicates");
+  for (const left of surfaces)
+    for (const right of surfaces)
+      if (left !== right && right.startsWith(`${left}/`))
+        throw new TypeError(`Overlapping source surfaces: ${left} and ${right}`);
+  const excluded = (options.excludePaths ?? []).map(path => validateRelativePath(path, "excludePath"));
+  if (excluded.length > 4096 || new Set(excluded).size !== excluded.length)
+    throw new TypeError("excludePaths must contain unique paths (maximum 4096)");
   let scanned = 0;
-  for (const surface of ["src", "packages"] as const) {
-    const directory = join(root, surface);
+  for (const surface of surfaces) {
+    const directory = resolve(root, ...surface.split("/"));
     const info = await lstat(directory).catch(error => {
       if (error?.code === "ENOENT") return null;
       throw error;
@@ -289,6 +316,8 @@ async function scan(root: string, options: IndexOptions, maxFiles: number, maxRe
     if (!info) continue;
     if (!info.isDirectory() || info.isSymbolicLink())
       throw new Error(`Index surface must be a real directory: ${surface}`);
+    if (!contained(root, await realpath(directory)))
+      throw new Error(`Index surface escapes repository root: ${surface}`);
     for await (const path of new Bun.Glob("**/*").scan({
       cwd: directory,
       onlyFiles: true,
@@ -297,17 +326,19 @@ async function scan(root: string, options: IndexOptions, maxFiles: number, maxRe
     })) {
       options.signal?.throwIfAborted();
       const parts = canonical(path).split("/");
+      const absolute = resolve(directory, path);
+      const relativePath = canonical(relative(root, absolute));
+      if (excluded.some(exclude => relativePath === exclude || relativePath.startsWith(`${exclude}/`))) continue;
       const name = parts.length > 1 ? `${surface}/${parts[0]}` : surface;
       if (requested && !requested.has(name)) continue;
       if (++scanned > maxFiles) throw new RangeError("Source index exceeds maxFiles");
-      const absolute = resolve(directory, path);
       if (!contained(root, absolute)) throw new Error("Source index path escapes root");
       const stat = await lstat(absolute);
       const domainRoot = parts.length > 1 ? join(directory, parts[0]!) : directory;
       const filePath = canonical(relative(domainRoot, absolute));
       const extension = extname(filePath).slice(1).toLowerCase();
       const protectedPath =
-        parts.some(part => protectedParts.has(part.toLowerCase())) ||
+        relativePath.split("/").some(part => protectedParts.has(part.toLowerCase())) ||
         /(^|\/)(?:\.env(?:\.|$)|.*\.(?:pem|key|pfx|p12)$)/i.test(filePath);
       const readable =
         !protectedPath &&
@@ -335,7 +366,7 @@ async function scan(root: string, options: IndexOptions, maxFiles: number, maxRe
       if (!domain)
         domains.set(
           name,
-          (domain = { name, root: domainRoot, surface: surface === "src" ? "src" : "package", files: [] }),
+          (domain = { name, root: domainRoot, surface, files: [] }),
         );
       domain.files.push({
         absolute,
@@ -378,7 +409,8 @@ async function indexDomain(
   const maxNodes = bound(options.maxNodes, 250_000, 2_000_000, "maxNodes");
   const maxEdges = bound(options.maxEdges, 1_000_000, 4_000_000, "maxEdges");
   const maxSnapshotBytes = bound(options.maxSnapshotBytes, 512 * 1024 * 1024, 512 * 1024 * 1024, "maxSnapshotBytes");
-  const scope = { profile: "bun", source: `graph:bun:${domain.name.replaceAll("/", ":")}` as `graph:${string}` };
+  const namespace = options.namespace ?? "bun";
+  const scope = { profile: "bun", source: `graph:${namespace}:${domain.name.replaceAll("/", ":")}` as `graph:${string}` };
   const coverage: Coverage = {
     files: domain.files.length,
     nativeFiles: 0,
@@ -386,6 +418,7 @@ async function indexDomain(
     metadataOnlyFiles: 0,
     chunks: 0,
     parseErrors: 0,
+    symbolIdCollisions: 0,
     calls: 0,
     unresolvedCalls: 0,
     sourceBytes: 0,
@@ -452,7 +485,7 @@ async function indexDomain(
       JSON.stringify([file.path, file.sha256, file.bytes, file.sha256 ? null : file.mtime, file.reason]) + "\n",
     );
   const inputSHA256 = digest.digest("hex");
-  const repository = registry.repository(`bun/${domain.name}`, "source", domain.root, revision, {
+  const repository = registry.repository(`${namespace}/${domain.name}`, "source", domain.root, revision, {
     domain: domain.name,
     profile: "bun",
     source: scope.source,
@@ -486,12 +519,13 @@ async function indexDomain(
     .get(repository, inputSHA256);
   if (cached) {
     const previous = JSON.parse(cached.metadata);
-    registry.repository(`bun/${domain.name}`, "source", domain.root, revision, {
+    registry.repository(`${namespace}/${domain.name}`, "source", domain.root, revision, {
       coverage: previous.graph.coverage,
       dirty,
     });
     return {
       domain: domain.name,
+      surface: domain.surface,
       repository,
       source: scope.source,
       snapshot: cached.id,
@@ -567,9 +601,23 @@ async function indexDomain(
         if (!fileId) {
           const record = { ...node, id, provenance: file ? "EXTRACTED" : "UNRESOLVED" };
           const existing = nodes.get(id);
-          if (existing && JSON.stringify(existing) !== JSON.stringify(record))
-            throw new Error(`Native symbol ID collision: ${id}`);
-          nodes.set(id, record);
+          if (existing && JSON.stringify(existing) !== JSON.stringify(record)) {
+            coverage.symbolIdCollisions++;
+            existing.provenance = "UNRESOLVED";
+            existing.unresolvedReason = "native-symbol-id-collision";
+            const conflicts = Array.isArray(existing.conflicts) ? existing.conflicts as unknown[] : [];
+            const conflict = {
+              source_file: node.source_file ?? null,
+              source_location: node.source_location ?? null,
+              kind: node.kind ?? null,
+              label: node.label ?? null,
+            };
+            if (conflicts.length < 8 && !conflicts.some(value => JSON.stringify(value) === JSON.stringify(conflict)))
+              conflicts.push(conflict);
+            existing.conflicts = conflicts;
+          } else if (!existing) {
+            nodes.set(id, record);
+          }
         }
       }
       for (const error of result.parse_errors) {
@@ -680,7 +728,7 @@ async function indexDomain(
     inputSHA256,
     producerSHA256,
   });
-  registry.repository(`bun/${domain.name}`, "source", domain.root, revision, { coverage });
+  registry.repository(`${namespace}/${domain.name}`, "source", domain.root, revision, { coverage });
   registry.event("bun-native-source-index", {
     repository,
     domain: domain.name,
@@ -692,6 +740,7 @@ async function indexDomain(
   });
   return {
     domain: domain.name,
+    surface: domain.surface,
     repository,
     source: scope.source,
     snapshot: `${repository}:graph:${artifact.sha256}`,
@@ -708,32 +757,47 @@ async function indexDomain(
 async function indexCodebase(registry: Registry, root: string, options: IndexOptions): Promise<IndexResult> {
   if (!options || options.profile !== "bun") throw new TypeError("Source indexing requires explicit profile 'bun'");
   if (typeof root !== "string" || !isAbsolute(root)) throw new TypeError("Source index root must be absolute");
+  const namespace = options.namespace ?? "bun";
+  if (typeof namespace !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/.test(namespace))
+    throw new TypeError("namespace must be a short identifier (letters, numbers, dot, underscore, hyphen)");
   options.signal?.throwIfAborted();
   const sourceRoot = await realpath(root);
+  const surfaces = options.surfaces ?? ["src", "packages"];
+  if (!Array.isArray(surfaces) || surfaces.length === 0 || surfaces.length > 1024)
+    throw new TypeError("surfaces must contain between 1 and 1024 relative directory paths");
+  for (const surface of surfaces) validateRelativePath(surface, "surface");
   const concurrency = bound(options.concurrency, 2, 4, "concurrency");
   const maxFiles = bound(options.maxFiles, 100_000, 1_000_000, "maxFiles");
   const maxReadBytes = bound(options.maxReadBytes, 16 * 1024 * 1024, 16 * 1024 * 1024, "maxReadBytes");
   if (
     options.domains &&
-    (options.domains.length > 1024 || options.domains.some(domain => !/^(?:src|packages)(?:\/[^/\\:]+)?$/.test(domain)))
+    (options.domains.length > 1024 || options.domains.some(domain => {
+      try { validateRelativePath(domain, "domain"); return false; } catch { return true; }
+    }))
   )
     throw new TypeError("Invalid source domain selection");
   const [actualRevision, dirty] = await Promise.all([
     revisionAt(sourceRoot, options.signal),
-    dirtyAt(sourceRoot, options.signal),
+    dirtyAt(sourceRoot, surfaces, options.signal),
   ]);
   if (options.revision && actualRevision && options.revision !== actualRevision)
     throw new Error("Explicit source revision differs from Git HEAD");
   const revision = options.revision ?? actualRevision;
   if (!revision || typeof revision !== "string" || revision.length > 128)
     throw new Error("Source requires Git HEAD or an explicit fixture revision");
+  const excluded = (options.excludePaths ?? []).map(path => validateRelativePath(path, "excludePath"));
   const artifactDirectory = resolve(
     options.artifactDirectory ??
       (registry.path === ":memory:"
         ? join(sourceRoot, ".graph-artifacts")
-        : join(dirname(registry.path), "tmp", "bun-python", "graphs")),
+        : join(dirname(registry.path), "tmp", "bun-python", "graphs", namespace)),
   );
-  if (["src", "packages"].some(surface => contained(join(sourceRoot, surface), artifactDirectory)))
+  const artifactRelativePath = canonical(relative(sourceRoot, artifactDirectory));
+  const artifactExcluded = excluded.some(path => artifactRelativePath === path || artifactRelativePath.startsWith(`${path}/`));
+  if (
+    !artifactExcluded &&
+    surfaces.some(surface => contained(resolve(sourceRoot, ...surface.split("/")), artifactDirectory))
+  )
     throw new Error("Graph artifacts cannot be written inside indexed source surfaces");
   producer ??= hashFile(process.execPath);
   const [domains, producerSHA256] = await Promise.all([scan(sourceRoot, options, maxFiles, maxReadBytes), producer]);
@@ -743,7 +807,7 @@ async function indexCodebase(registry: Registry, root: string, options: IndexOpt
   const finishedRevision = actualRevision ? await revisionAt(sourceRoot, options.signal) : revision;
   if (finishedRevision !== revision)
     throw new Error("Git HEAD changed during source indexing; inspect exact published domain snapshots");
-  return { root: sourceRoot, profile: "bun", revision, dirty, producerSHA256, domains: results };
+  return { root: sourceRoot, profile: "bun", namespace, surfaces, revision, dirty, producerSHA256, domains: results };
 }
 
 export default { indexCodebase };

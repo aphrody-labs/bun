@@ -45,6 +45,7 @@ const planScriptDeps = [
   resolve(here, "toml.ts"),
   resolve(here, "..", "fs.ts"),
   resolve(here, "..", "error.ts"),
+  resolve(here, "..", "patches", "aws-lc-sys", "windows-no-jitterentropy-dllexport.patch"),
 ];
 
 export function registerRustUnitRules(n: Ninja, cfg: Config): void {

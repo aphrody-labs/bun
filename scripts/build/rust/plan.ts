@@ -22,8 +22,20 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { createHash } from "node:crypto";
+import {
+  copyFileSync,
+  existsSync,
+  lstatSync,
+  linkSync,
+  mkdirSync,
+  realpathSync,
+  readFileSync,
+  readdirSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
 import { BuildError } from "../error.ts";
 import { writeIfChanged } from "../fs.ts";
 import { parseToml, type TomlTable, type TomlValue } from "./toml.ts";
@@ -135,6 +147,8 @@ export interface PlanInput {
   host: string;
   sysroot: string;
   triple: string;
+  /** Build-local source overlay for pinned dependency patches; absent outside supported targets. */
+  sourceStageDir?: string;
   /** rust.ts's target rustflags (the `rustc --print cfg` probe applies them, as cargo does) */
   rustflags: string[];
   /**
@@ -173,7 +187,7 @@ export interface RustPlan {
   target: RustcTargetInfo;
 }
 
-export const PLAN_VERSION = 5;
+export const PLAN_VERSION = 6;
 
 /** `dir`: the graph's directory under the build directory — `rust-target/` for bun_runtime, `rust-target/shim/` for the Windows shim. */
 export function planPath(dir: string): string {
@@ -227,6 +241,142 @@ function run(
     throw new BuildError(`${cmd} ${args.slice(0, 4).join(" ")} … exited with ${r.status ?? r.signal}`);
   }
   return r.stdout;
+}
+
+const AWS_LC_SYS_VERSION = "0.45.0";
+const AWS_LC_JITTERENTROPY_HEADER_SHA256 = "064ef5cf5d8920d538f9b2afbfadc14f388077a8f369bf551efa9fdceaa04f2e";
+
+/** Hard-link an immutable dependency tree into the build directory; only patched files are detached copies. */
+function linkTree(source: string, destination: string): void {
+  mkdirSync(destination, { recursive: true });
+  for (const entry of readdirSync(source, { withFileTypes: true })) {
+    const from = join(source, entry.name);
+    const to = join(destination, entry.name);
+    if (entry.isDirectory()) {
+      linkTree(from, to);
+    } else if (entry.isFile()) {
+      try {
+        linkSync(from, to);
+      } catch {
+        // Hard links can be unavailable on some build volumes; an ordinary
+        // copy keeps the overlay safe and makes the build slower only once.
+        copyFileSync(from, to);
+      }
+    } else {
+      throw new BuildError(`unsupported symlink/special file in aws-lc-sys source: ${from}`);
+    }
+  }
+}
+
+/** Stage aws-lc-sys without touching CARGO_HOME, patch its private Windows visibility macro, and use the staged path. */
+function stageAwsLcWindowsJitterentropy(
+  packages: MetadataPackage[],
+  units: UnitGraphUnit[],
+  stageDir: string | undefined,
+  args: string[],
+): void {
+  if (stageDir === undefined) return;
+  const pkg = packages.find(p => p.name === "aws-lc-sys" && p.version === AWS_LC_SYS_VERSION);
+  if (!pkg) return;
+  const targetDirFlag = args.indexOf("--target-dir");
+  if (targetDirFlag < 0 || args[targetDirFlag + 1] === undefined) {
+    throw new BuildError("aws-lc-sys staging requires Cargo's explicit --target-dir");
+  }
+  const targetDir = resolve(args[targetDirFlag + 1]!);
+  const expectedStageDir = resolve(targetDir, "source-patches");
+  if (resolve(stageDir) !== expectedStageDir) {
+    throw new BuildError(`refusing aws-lc-sys stage outside build target directory: ${stageDir}`);
+  }
+  if (realpathSync(targetDir) !== targetDir) {
+    throw new BuildError(`refusing aws-lc-sys stage through a redirected target directory: ${targetDir}`);
+  }
+  if (existsSync(stageDir) && (lstatSync(stageDir).isSymbolicLink() || realpathSync(stageDir) !== expectedStageDir)) {
+    throw new BuildError(`refusing redirected or linked aws-lc-sys stage directory: ${stageDir}`);
+  }
+  const sourceDir = dirname(pkg.manifest_path);
+  const stagedDir = join(stageDir, `aws-lc-sys-${AWS_LC_SYS_VERSION}`);
+  const relativeHeader = join(
+    "aws-lc",
+    "third_party",
+    "jitterentropy",
+    "jitterentropy-library",
+    "jitterentropy.h",
+  );
+  const sourceHeader = join(sourceDir, relativeHeader);
+  const stagedHeader = join(stagedDir, relativeHeader);
+  const sourceBytes = readFileSync(sourceHeader);
+  const sourceHash = createHash("sha256").update(sourceBytes).digest("hex");
+  if (sourceHash !== AWS_LC_JITTERENTROPY_HEADER_SHA256) {
+    throw new BuildError(
+      `aws-lc-sys ${AWS_LC_SYS_VERSION} jitterentropy header hash changed: expected ${AWS_LC_JITTERENTROPY_HEADER_SHA256}, got ${sourceHash}`,
+    );
+  }
+  if (existsSync(stagedDir) && (lstatSync(stagedDir).isSymbolicLink() || realpathSync(stagedDir) !== resolve(stagedDir))) {
+    throw new BuildError(`refusing redirected or linked aws-lc-sys staged source: ${stagedDir}`);
+  }
+  const stagedHeaderParent = dirname(stagedHeader);
+  if (existsSync(stagedHeaderParent) && realpathSync(stagedHeaderParent) !== resolve(stagedHeaderParent)) {
+    throw new BuildError(`refusing redirected aws-lc-sys staged header directory: ${stagedHeaderParent}`);
+  }
+  if (existsSync(stagedHeader) && (lstatSync(stagedHeader).isSymbolicLink() || realpathSync(stagedHeader) !== resolve(stagedHeader))) {
+    throw new BuildError(`refusing linked aws-lc-sys staged header: ${stagedHeader}`);
+  }
+
+  const patchedMarker = "#elif defined(JENT_PRIVATE_NO_EXPORT)";
+  if (!existsSync(stagedHeader)) {
+    if (existsSync(stagedDir)) throw new BuildError(`incomplete aws-lc-sys staging directory: ${stagedDir}`);
+    linkTree(sourceDir, stagedDir);
+  }
+  let stagedContents = readFileSync(stagedHeader, "utf8").replace(/\r\n/g, "\n");
+  if (!stagedContents.includes(patchedMarker)) {
+    const original = "# define JENT_PRIVATE_STATIC static\n#else /* JENT_PRIVATE_COMPILE */";
+    if (!stagedContents.includes(original)) {
+      throw new BuildError(`staged aws-lc-sys header has unexpected contents: ${stagedHeader}`);
+    }
+    const patchPath = join(process.cwd(), "scripts", "build", "patches", "aws-lc-sys", "windows-no-jitterentropy-dllexport.patch");
+    const patch = readFileSync(patchPath, "utf8").replace(/\r\n/g, "\n");
+    const expectedPatch = `diff --git a/${relativeHeader.replace(/\\/g, "/")} b/${relativeHeader.replace(/\\/g, "/")}\nindex 0000000..0000000 100644\n--- a/${relativeHeader.replace(/\\/g, "/")}\n+++ b/${relativeHeader.replace(/\\/g, "/")}\n@@ -412,3 +412,5 @@\n #ifdef JENT_PRIVATE_COMPILE\n # define JENT_PRIVATE_STATIC static\n+#elif defined(JENT_PRIVATE_NO_EXPORT)\n+# define JENT_PRIVATE_STATIC\n #else /* JENT_PRIVATE_COMPILE */\n #if defined(_WIN32)\n #define JENT_PRIVATE_STATIC __declspec(dllexport)\n`;
+    if (patch !== expectedPatch) throw new BuildError(`aws-lc-sys patch file differs from the pinned one-line visibility patch: ${patchPath}`);
+    // Detach the hard-linked source before writing the exact pinned replacement.
+    unlinkSync(stagedHeader);
+    const patchedBytes = Buffer.from(
+      sourceBytes
+        .toString("utf8")
+        .replace(original, `# define JENT_PRIVATE_STATIC static\n#elif defined(JENT_PRIVATE_NO_EXPORT)\n# define JENT_PRIVATE_STATIC\n#else /* JENT_PRIVATE_COMPILE */`),
+      "utf8",
+    );
+    writeFileSync(stagedHeader, patchedBytes);
+    stagedContents = patchedBytes.toString("utf8");
+    if (!stagedContents.includes(patchedMarker)) {
+      throw new BuildError(`aws-lc-sys source patch did not update ${stagedHeader}`);
+    }
+  }
+
+  // The source tree is hard-linked for speed. Replace the one staged header
+  // independently before any write, so the Cargo registry remains pristine.
+  const stagedHash = createHash("sha256").update(stagedContents).digest("hex");
+  const inputHeader = "# define JENT_PRIVATE_STATIC static\n#else /* JENT_PRIVATE_COMPILE */";
+  const expectedOutput = sourceBytes
+    .toString("utf8")
+    .replace(inputHeader, `# define JENT_PRIVATE_STATIC static\n#elif defined(JENT_PRIVATE_NO_EXPORT)\n# define JENT_PRIVATE_STATIC\n#else /* JENT_PRIVATE_COMPILE */`);
+  const expectedHash = createHash("sha256").update(expectedOutput).digest("hex");
+  if (stagedHash !== expectedHash) throw new BuildError(`staged aws-lc-sys patch output hash mismatch: ${stagedHeader}`);
+  // Replace the staged file itself with a byte-verified independent copy. This
+  // also prevents Windows text-mode newline conversion from changing the pin.
+  unlinkSync(stagedHeader);
+  writeFileSync(stagedHeader, Buffer.from(stagedContents, "utf8"));
+  if (createHash("sha256").update(readFileSync(stagedHeader)).digest("hex") !== expectedHash) {
+    throw new BuildError(`staged aws-lc-sys header write verification failed: ${stagedHeader}`);
+  }
+  for (const unit of units) {
+    if (unit.pkg_id !== pkg.id) continue;
+    const sourceRelative = relative(sourceDir, unit.target.src_path);
+    if (sourceRelative.startsWith("..") || sourceRelative.includes(":")) {
+      throw new BuildError(`aws-lc-sys unit source escapes its pinned crate root: ${unit.target.src_path}`);
+    }
+    unit.target.src_path = join(stagedDir, sourceRelative);
+  }
+  pkg.manifest_path = join(stagedDir, "Cargo.toml");
 }
 
 /**
@@ -368,6 +518,7 @@ function main(): void {
     packages: MetadataPackage[];
     workspace_root: string;
   };
+  stageAwsLcWindowsJitterentropy(meta.packages, unitGraph.units, input.sourceStageDir, input.args);
   // Only what is read (the `MetadataPackage` fields): dependency lists, test targets and `[package.metadata]` would
   // otherwise make an edit to any of them a new plan, and a reconfigure, for nothing.
   const facts = (p: MetadataPackage): MetadataPackage => ({

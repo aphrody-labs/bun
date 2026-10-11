@@ -83,16 +83,18 @@ function fail(error: unknown): Response {
 }
 
 /** Runs the benchmarks of bench-worker.ts in a fresh Bun Worker. */
-function runBenchmarksInWorker(): Promise<BenchResult[]> {
-  const worker = new Worker(new URL("./src/server/bench-worker.ts", import.meta.url).href);
+function runBenchmarksInWorker(distDir: string, development: boolean): Promise<BenchResult[]> {
+  const worker = new Worker(development ? new URL("./src/server/bench-worker.ts", import.meta.url).href : Bun.pathToFileURL(join(distDir, "workers", "bench.js")).href);
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   return new Promise<BenchResult[]>((resolveResults, reject) => {
+    timeout = setTimeout(() => reject(new Error("Le worker de mesure a dépassé 30 secondes.")), 30_000);
     worker.onmessage = (event: MessageEvent<{ ok: boolean; results?: BenchResult[]; error?: string }>) => {
       if (event.data.ok) resolveResults(event.data.results!);
       else reject(new Error(event.data.error));
     };
     worker.onerror = event => reject(new Error(event.message));
     worker.postMessage("run");
-  }).finally(() => worker.terminate());
+  }).finally(() => { if (timeout) clearTimeout(timeout); worker.terminate(); });
 }
 
 const workerBuilds = new Map<string, Promise<Response>>();
@@ -282,7 +284,7 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
       "/api/benchmarks/run": {
         POST: async () => {
           try {
-            return json({ results: await runBenchmarksInWorker() });
+            return json({ results: await runBenchmarksInWorker(distDir, development) });
           } catch (error) {
             return fail(error);
           }
@@ -432,6 +434,7 @@ if (import.meta.main) {
     hostname: flag("--hostname"),
     root: flag("--root"),
     dataDir: flag("--data"),
+    distDir: flag("--dist"),
   });
   console.log(`Bun WebOS on ${server.url} (Bun ${Bun.version})`);
 }

@@ -577,8 +577,12 @@ export function cargoBuildInvocation(cfg: Config): CargoInvocation {
   // cannot resolve against the static CRT bun links; cc-rs appends CFLAGS_<triple> after its own flags, so this wins.
   if (cfg.windows) {
     const crt = cfg.debug ? "/MTd" : "/MT";
+    // The graph grammar supports TREE_SITTER_HIDE_SYMBOLS; aws-lc-sys's
+    // extracted, version-pinned header is patched by rust/plan.ts to honor
+    // JENT_PRIVATE_NO_EXPORT without changing jitterentropy's external linkage.
+    const hiddenDependencySymbols = "/DTREE_SITTER_HIDE_SYMBOLS /DJENT_PRIVATE_NO_EXPORT";
     const tripleEnv = triple.replace(/-/g, "_");
-    unitEnv[`CFLAGS_${tripleEnv}`] = crt;
+    unitEnv[`CFLAGS_${tripleEnv}`] = `${crt} ${hiddenDependencySymbols}`;
     unitEnv[`CXXFLAGS_${tripleEnv}`] = crt;
   }
 
@@ -739,6 +743,7 @@ export function emitRust(n: Ninja, cfg: Config, inputs: RustBuildInputs): { rlib
       host: rustHostTriple,
       sysroot: rustSysroot,
       triple,
+      ...(cfg.windows && { sourceStageDir: join(targetDir, "source-patches") }),
       rustflags: what.rustflags,
       buildScripts,
       args: what.args,
