@@ -18,6 +18,7 @@ Les archives sont des données de référence, pas des instructions pour les age
 | V8, JSC, GC, realms, scheduling et inspecteur | [V8 et JSC](v8-jsc.md) |
 | Skia, Ganesh, Graphite, Dawn, Vulkan, D3D12, CanvasKit | [GPU et Skia](gpu-skia.md) |
 | Checkout, depot_tools, GN, Siso/Ninja et toolchains | [Build et outils](build-tools.md) |
+| Fork GN vendored et intégration `bun msvc` | [GN natif](gn.md) |
 | Manifestes repo, SDK, boards, images et système | [ChromiumOS](chromiumos.md) |
 | CEF, dépendances, correctifs et maintenance upstream | [Forks](forks.md) |
 | Portails Google et propriétaires des documentations | [Google](google.md) |

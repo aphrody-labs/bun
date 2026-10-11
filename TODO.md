@@ -1,5 +1,12 @@
 # Bun, UV and Python integration
 
+## GN native toolchain
+
+- [x] Publish the GN fork with vendored version provenance and preserve upstream licenses.
+- [x] Vendor 1,083 pinned files with Git blob, SHA-256 and mode receipts.
+- [x] Qualify Windows GN bootstrap: 859 upstream tests, three fork tests, five Bun tests and incremental no-op build.
+- [ ] Qualify full project builds with their locked compilers and SDKs; ChromiumOS requires Linux.
+
 ## Release source surfaces
 
 - [x] Generate and verify 12,699 source-pinned artifacts at `c73c54fc202`, including README, plugin, documentation and SQLite graph.

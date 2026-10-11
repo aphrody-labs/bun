@@ -1,5 +1,16 @@
 # Plan — aphrody-labs/bun, noyau d'Aphrody
 
+## GN fork and native toolchain integration — 2026-10-11
+
+Vendor the complete aphrody-labs/gn fork at `3f99f58c2568dd267952dcd80696406474f7e2ea`,
+based on upstream `0035961837fbcfe875d855744b3eda4fd2eefb43`, with BSD notices
+and per-file Git blob/SHA-256 receipts. The fork preserves the pinned GN version
+in source archives without nested Git metadata. `bun run gn` routes the bootstrap
+and project GN/Ninja commands through existing `bun msvc exec` on Windows.
+Qualify incremental native GN and upstream tests separately from full browser
+builds; Chromium retains its clang-cl/SDK pins, ChromiumOS needs a Linux board SDK.
+See [GN integration](docs/chromium/gn.md) for commands and qualification.
+
 ## Obscura/JSC and full Chromium/V8 owner batch — 2026-10-11
 
 Requested modes: reuse native Obscura with the ongoing JSC port for serverless
