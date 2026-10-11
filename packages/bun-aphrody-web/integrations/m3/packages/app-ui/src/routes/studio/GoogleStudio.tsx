@@ -7,26 +7,78 @@ import {
   type SearchVertical,
 } from "../../google-search";
 
-export function GoogleStudio() {
+export interface GoogleStudioMessages {
+  title: string;
+  intro: string;
+  query: string;
+  resultsType: string;
+  web: string;
+  images: string;
+  news: string;
+  videos: string;
+  books: string;
+  language: string;
+  french: string;
+  english: string;
+  safe: string;
+  search: string;
+  searching: string;
+  unavailable: string;
+  results: string;
+  correction: string;
+  empty: string;
+  pages: string;
+  previous: string;
+  next: string;
+}
+const defaultMessages: GoogleStudioMessages = {
+  title: "Recherche Aphrody",
+  intro: "Recherche web, sans cookies de compte.",
+  query: "Votre recherche",
+  resultsType: "Résultats",
+  web: "Web",
+  images: "Images",
+  news: "Actualités",
+  videos: "Vidéos",
+  books: "Livres",
+  language: "Langue",
+  french: "Français",
+  english: "English",
+  safe: "SafeSearch",
+  search: "Rechercher",
+  searching: "Recherche…",
+  unavailable: "La recherche est indisponible. Veuillez réessayer.",
+  results: "Résultats pour",
+  correction: "Correction suggérée :",
+  empty: "Aucun résultat retourné.",
+  pages: "Pages de résultats",
+  previous: "Précédente",
+  next: "Suivante",
+};
+export function GoogleStudio({
+  messages = defaultMessages,
+  language = "fr",
+}: { messages?: GoogleStudioMessages; language?: "fr" | "en" } = {}) {
   const [query, setQuery] = useState("");
   const [vertical, setVertical] = useState<SearchVertical>("web");
-  const [hl, setLanguage] = useState("fr");
+  const [preferredLanguage, setLanguage] = useState<"fr" | "en" | null>(null);
+  const hl = preferredLanguage ?? language;
   const [safe, setSafe] = useState<"active" | "off">("active");
   const [page, setPage] = useState<GoogleSearchPage | null>(null);
   const [request, setRequest] = useState<GoogleSearchRequest | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(false);
 
   async function run(next: GoogleSearchRequest) {
     if (busy) return;
     setBusy(true);
-    setError("");
+    setError(false);
     setPage(null);
     try {
       setPage(await searchGoogle(next));
       setRequest(next);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "La recherche a échoué.");
+    } catch {
+      setError(true);
     } finally {
       setBusy(false);
     }
@@ -37,16 +89,14 @@ export function GoogleStudio() {
   }
 
   return (
-    <div className="flex max-w-4xl flex-col gap-6">
+    <div lang={language} className="flex max-w-4xl flex-col gap-6">
       <header>
-        <h2 className="text-headline-small">Recherche Google</h2>
-        <p className="text-body-medium text-on-surface-variant">
-          Recherche via le moteur natif Aphrody, sans cookies de compte Google.
-        </p>
+        <h2 className="text-headline-small">{messages.title}</h2>
+        <p className="text-body-medium text-on-surface-variant">{messages.intro}</p>
       </header>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-2">
-          Votre recherche
+          {messages.query}
           <input
             type="search"
             required
@@ -57,28 +107,28 @@ export function GoogleStudio() {
         </label>
         <div className="flex flex-wrap gap-4">
           <label>
-            Résultats{" "}
+            {messages.resultsType}{" "}
             <select
               value={vertical}
               onChange={(event) => setVertical(event.target.value as SearchVertical)}
               className="rounded-lg bg-surface-container p-2"
             >
-              <option value="web">Web</option>
-              <option value="images">Images</option>
-              <option value="news">Actualités</option>
-              <option value="videos">Vidéos</option>
-              <option value="books">Livres</option>
+              <option value="web">{messages.web}</option>
+              <option value="images">{messages.images}</option>
+              <option value="news">{messages.news}</option>
+              <option value="videos">{messages.videos}</option>
+              <option value="books">{messages.books}</option>
             </select>
           </label>
           <label>
-            Langue{" "}
+            {messages.language}{" "}
             <select
               value={hl}
-              onChange={(event) => setLanguage(event.target.value)}
+              onChange={(event) => setLanguage(event.target.value === "en" ? "en" : "fr")}
               className="rounded-lg bg-surface-container p-2"
             >
-              <option value="fr">Français</option>
-              <option value="en">English</option>
+              <option value="fr">{messages.french}</option>
+              <option value="en">{messages.english}</option>
             </select>
           </label>
           <label className="flex items-center gap-2">
@@ -87,7 +137,7 @@ export function GoogleStudio() {
               checked={safe === "active"}
               onChange={(event) => setSafe(event.target.checked ? "active" : "off")}
             />
-            SafeSearch
+            {messages.safe}
           </label>
         </div>
         <button
@@ -95,20 +145,26 @@ export function GoogleStudio() {
           type="submit"
           className="min-h-12 self-start rounded-full bg-primary px-6 text-on-primary disabled:opacity-50"
         >
-          {busy ? "Recherche…" : "Rechercher"}
+          {busy ? messages.searching : messages.search}
         </button>
       </form>
       <div aria-live="polite" aria-busy={busy}>
         {error && (
           <p role="alert" className="text-error">
-            {error}
+            {messages.unavailable}
           </p>
         )}
         {page && (
           <>
-            <h3 className="text-title-medium">Résultats pour {page.query}</h3>
-            {page.correctedQuery && <p>Correction suggérée : {page.correctedQuery}</p>}
-            {page.organic.length === 0 && <p>Aucun résultat exploitable retourné par le moteur.</p>}
+            <h3 className="text-title-medium">
+              {messages.results} {page.query}
+            </h3>
+            {page.correctedQuery && (
+              <p>
+                {messages.correction} {page.correctedQuery}
+              </p>
+            )}
+            {page.organic.length === 0 && <p>{messages.empty}</p>}
             <ol className="mt-4 flex flex-col gap-5" start={(request?.start ?? 0) + 1}>
               {page.organic.map((hit) => (
                 <li key={hit.url + hit.title} className="rounded-xl bg-surface-container p-4">
@@ -126,20 +182,20 @@ export function GoogleStudio() {
               ))}
             </ol>
             {request && (
-              <nav aria-label="Pages de résultats" className="mt-4 flex gap-4">
+              <nav aria-label={messages.pages} className="mt-4 flex gap-4">
                 <button
                   type="button"
                   disabled={busy || request.start === 0}
                   onClick={() => void run({ ...request, start: Math.max(0, request.start - 10) })}
                 >
-                  Précédente
+                  {messages.previous}
                 </button>
                 <button
                   type="button"
                   disabled={busy || page.organic.length === 0 || request.start >= 1000}
                   onClick={() => void run({ ...request, start: request.start + 10 })}
                 >
-                  Suivante
+                  {messages.next}
                 </button>
               </nav>
             )}
