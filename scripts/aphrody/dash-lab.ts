@@ -3,6 +3,15 @@
 import { resolve } from "node:path";
 import { getDashBrowserAssetPath, inspectDashManifest } from "../../packages/bun-video/src/dash";
 import { loadHarCapture } from "../../packages/bun-video/src/har";
+import { createDashLiveTransport, validateDashLiveConfig } from "./dash-live-core";
+
+async function readPrivateLiveConfig(inputPath: string) {
+  try {
+    return validateDashLiveConfig(await Bun.file(resolve(inputPath)).json());
+  } catch {
+    throw new Error("Unable to read a valid private live DASH configuration.");
+  }
+}
 
 export function prepareCapturedDash(xml: string, baseURL: string, localRoot: string) {
   const summary = inspectDashManifest(xml);
@@ -55,10 +64,13 @@ export function prepareCapturedDash(xml: string, baseURL: string, localRoot: str
   return { manifest: rewritten, resources, summary };
 }
 
-export async function startDashLab(harPath: string) {
-  const capture = await loadHarCapture(resolve(harPath));
-  const descriptor = capture.selectManifest({ kind: "dash" });
-  if (!descriptor) throw new Error("No captured DASH manifest is available.");
+export async function startDashLab(inputPath: string, mode: "capture" | "live" = "capture") {
+  const capture = mode === "capture" ? await loadHarCapture(resolve(inputPath)) : null;
+  const descriptor = capture?.selectManifest({ kind: "dash" });
+  if (capture && !descriptor) throw new Error("No captured DASH manifest is available.");
+  const live =
+    mode === "live" ? createDashLiveTransport(await readPrivateLiveConfig(inputPath)) : null;
+  const source = live ? await live.fetchSource() : null;
   const capability = crypto.randomUUID();
   const route = `/lab/${capability}/`;
   const browser = await Bun.build({
@@ -69,7 +81,11 @@ export async function startDashLab(harPath: string) {
   });
   if (!browser.success) throw new Error("DASH browser adapter build failed.");
   const html = await Bun.file(resolve(import.meta.dir, "dash-lab.html")).text();
-  let prepared: ReturnType<typeof prepareCapturedDash>;
+  let prepared: {
+    manifest: string;
+    summary: ReturnType<typeof inspectDashManifest>;
+    resources: string[];
+  };
   let serverOrigin = "";
   const server = Bun.serve({
     hostname: "127.0.0.1",
@@ -80,6 +96,11 @@ export async function startDashLab(harPath: string) {
         return new Response(null, { status: 404 });
       const relative = url.pathname.slice(route.length);
       const headers = { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" };
+      if (
+        request.method !== "GET" &&
+        !(live && relative.startsWith("live/") && request.method === "HEAD")
+      )
+        return new Response(null, { status: 405 });
       if (!relative)
         return new Response(html, {
           headers: {
@@ -104,10 +125,21 @@ export async function startDashLab(harPath: string) {
       if (relative === "summary")
         return Response.json({
           ...prepared.summary,
-          capturedOnly: true,
+          capturedOnly: !live,
+          liveManifestConfigured: !!live,
           playbackValidated: false,
           drmLicenseValidated: false,
         });
+      if (live && /^live\/[\da-f-]{36}$/.test(relative)) {
+        try {
+          const response = await live.fetchResource(relative.slice(5), request);
+          response.headers.set("Cache-Control", "no-store");
+          response.headers.set("Referrer-Policy", "no-referrer");
+          return response;
+        } catch {
+          return new Response("Authorized upstream DASH request failed.", { status: 502, headers });
+        }
+      }
       if (relative === "manifest.mpd")
         return new Response(prepared.manifest, {
           headers: { ...headers, "Content-Type": "application/dash+xml" },
@@ -116,9 +148,9 @@ export async function startDashLab(harPath: string) {
       if (match) {
         const remoteURL = prepared.resources[Number(match[1])];
         if (!remoteURL) return new Response(null, { status: 404 });
-        const resource = capture.resourceForUrl(remoteURL);
+        const resource = capture?.resourceForUrl(remoteURL);
         const response = resource
-          ? capture.replayResource(resource.entryIndex, request.headers.get("Range") ?? undefined)
+          ? capture!.replayResource(resource.entryIndex, request.headers.get("Range") ?? undefined)
           : null;
         return (
           response ??
@@ -133,12 +165,21 @@ export async function startDashLab(harPath: string) {
   });
   serverOrigin = server.url.origin;
   try {
-    // Only the server sees captured URLs; the browser receives capability routes.
-    prepared = prepareCapturedDash(
-      capture.readManifest(descriptor.entryIndex),
-      "https://offline.invalid/",
-      `${server.url.origin}${route}`,
-    );
+    const localRoot = `${server.url.origin}${route}`;
+    if (live && source) {
+      const urlForToken = (token: string) => `${localRoot}live/${token}`;
+      prepared = {
+        manifest: await live.rewriteDashManifest(source.text, source.baseURL, urlForToken),
+        summary: inspectDashManifest(source.text),
+        resources: [],
+      };
+    } else {
+      prepared = prepareCapturedDash(
+        capture!.readManifest(descriptor!.entryIndex),
+        "https://offline.invalid/",
+        localRoot,
+      );
+    }
   } catch (error) {
     server.stop(true);
     throw error;
@@ -152,56 +193,114 @@ const status = document.querySelector('#status');
 const result = document.querySelector('#result');
 const summary = await (await fetch('./summary')).json();
 result.textContent = JSON.stringify(summary, null, 2);
-status.textContent = summary.encrypted ? 'Capture chiffrée : aucune licence DRM fournie. La lecture reste non validée.' : 'Capture DASH claire. Lance la lecture pour tester les octets capturés.';
+status.textContent = summary.encrypted ? 'DASH chiffré : la licence reste au lecteur officiel. Lecture Bun non validée.' : 'DASH clair. Lance la lecture pour tester le navigateur.';
+document.querySelector('#mode').textContent = summary.capturedOnly ? 'Rejeu des réponses capturées localement.' : 'Requêtes MPD et vidéo autorisées via le transport natif Bun.';
+let playback;
 document.querySelector('button').onclick = async () => {
   try {
-    await attachDashPlayback(video, { src: new URL('./manifest.mpd', location.href).href, autoplay: true,
+    playback?.destroy();
+    playback = await attachDashPlayback(video, { src: new URL('./manifest.mpd', location.href).href, autoplay: true,
       createPlayer: () => dashjs.MediaPlayer().create(),
       beforeStart(player) { player.on(dashjs.MediaPlayer.events.ERROR, event => { status.textContent = 'Erreur DASH locale (code ' + (Number(event.error?.code) || 0) + '). Plage absente ou licence requise ; lecture non validée.'; }); }
     });
   } catch { status.textContent = 'Initialisation DASH impossible ; lecture non validée.'; }
 };
 video.addEventListener('playing', () => { status.textContent = 'Le navigateur a commencé la lecture. Le test complet reste à qualifier.'; });
+addEventListener('pagehide', () => playback?.destroy());
 `;
 
 if (import.meta.main) {
   const args = Bun.argv.slice(2);
-  const index = args.indexOf("--har");
-  const input =
-    index < 0
-      ? resolve(import.meta.dir, "../../tmp/test/www.crunchyroll.com.har")
-      : args[index + 1];
-  if (!input) throw new Error("--har requires a file path.");
-  if (args.includes("--check")) {
-    const capture = await loadHarCapture(resolve(input));
-    const descriptor = capture.selectManifest({ kind: "dash" });
-    if (!descriptor) throw new Error("No captured DASH manifest is available.");
-    const prepared = prepareCapturedDash(
-      capture.readManifest(descriptor.entryIndex),
-      "https://offline.invalid/",
-      "http://127.0.0.1/lab/check/",
-    );
+  const liveIndex = args.indexOf("--live-config");
+  if (args.includes("--help")) {
     console.log(
-      JSON.stringify({
-        capture: capture.summary,
-        manifest: prepared.summary,
-        localMediaResourceCount: prepared.resources.length,
-        playbackValidated: false,
-        drmLicenseValidated: false,
-      }),
+      "bun bd run scripts/aphrody/dash-lab.ts [--har <absolute HAR>] [--check] [--open]\nbun bd run scripts/aphrody/dash-lab.ts --live-config <protected JSON outside repository> [--check] [--open]\nLive mode fetches an explicitly authorized MPD and GET/HEAD media. DRM remains with the official player. --check prints metadata without source URLs or headers.",
     );
-  } else {
-    const lab = await startDashLab(input);
-    console.log(JSON.stringify({ url: lab.url, summary: lab.summary, playbackValidated: false }));
-    if (args.includes("--open")) {
-      const chrome = resolve(
-        process.env.PROGRAMFILES ?? "C:/Program Files",
-        "Google/Chrome/Application/chrome.exe",
+  } else if (liveIndex >= 0) {
+    const configPath = args[liveIndex + 1];
+    if (!configPath) throw new Error("--live-config requires a protected configuration path.");
+    const path = resolve(configPath);
+    const root = resolve(import.meta.dir, "../..");
+    if (
+      path.toLowerCase().startsWith(root.toLowerCase() + "/") ||
+      path.toLowerCase().startsWith(root.toLowerCase() + "\\")
+    )
+      throw new Error("Private live configuration must be stored outside the repository.");
+    if (args.includes("--check")) {
+      const live = createDashLiveTransport(await readPrivateLiveConfig(path));
+      const source = await live.fetchSource();
+      const manifest = await live.rewriteDashManifest(
+        source.text,
+        source.baseURL,
+        (token) => `http://127.0.0.1/lab/check/live/${token}`,
       );
-      if (await Bun.file(chrome).exists())
-        Bun.spawn([chrome, lab.url], { stdout: "ignore", stderr: "ignore" }).unref();
+      console.log(
+        JSON.stringify({
+          manifest: inspectDashManifest(manifest),
+          mode: "live",
+          playbackValidated: false,
+          drmLicenseValidated: false,
+        }),
+      );
+    } else {
+      const lab = await startDashLab(path, "live");
+      console.log(
+        JSON.stringify({
+          url: lab.url,
+          summary: lab.summary,
+          mode: "live",
+          playbackValidated: false,
+        }),
+      );
+      if (args.includes("--open")) {
+        const chrome = resolve(
+          process.env.PROGRAMFILES ?? "C:/Program Files",
+          "Google/Chrome/Application/chrome.exe",
+        );
+        if (await Bun.file(chrome).exists())
+          Bun.spawn([chrome, lab.url], { stdout: "ignore", stderr: "ignore" }).unref();
+      }
+      process.on("SIGINT", () => lab.server.stop(true));
+      process.on("SIGTERM", () => lab.server.stop(true));
     }
-    process.on("SIGINT", () => lab.server.stop(true));
-    process.on("SIGTERM", () => lab.server.stop(true));
+  } else {
+    const index = args.indexOf("--har");
+    const input =
+      index < 0
+        ? resolve(import.meta.dir, "../../tmp/test/www.crunchyroll.com.har")
+        : args[index + 1];
+    if (!input) throw new Error("--har requires a file path.");
+    if (args.includes("--check")) {
+      const capture = await loadHarCapture(resolve(input));
+      const descriptor = capture.selectManifest({ kind: "dash" });
+      if (!descriptor) throw new Error("No captured DASH manifest is available.");
+      const prepared = prepareCapturedDash(
+        capture.readManifest(descriptor.entryIndex),
+        "https://offline.invalid/",
+        "http://127.0.0.1/lab/check/",
+      );
+      console.log(
+        JSON.stringify({
+          capture: capture.summary,
+          manifest: prepared.summary,
+          localMediaResourceCount: prepared.resources.length,
+          playbackValidated: false,
+          drmLicenseValidated: false,
+        }),
+      );
+    } else {
+      const lab = await startDashLab(input);
+      console.log(JSON.stringify({ url: lab.url, summary: lab.summary, playbackValidated: false }));
+      if (args.includes("--open")) {
+        const chrome = resolve(
+          process.env.PROGRAMFILES ?? "C:/Program Files",
+          "Google/Chrome/Application/chrome.exe",
+        );
+        if (await Bun.file(chrome).exists())
+          Bun.spawn([chrome, lab.url], { stdout: "ignore", stderr: "ignore" }).unref();
+      }
+      process.on("SIGINT", () => lab.server.stop(true));
+      process.on("SIGTERM", () => lab.server.stop(true));
+    }
   }
 }

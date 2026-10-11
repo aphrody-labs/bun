@@ -172,7 +172,7 @@ export class CrunchyrollClient {
     await this.#authenticate();
   }
 
-  async login(email: string, password: string, locale = "en-US"): Promise<LoginResult> {
+  async login(email: string, password: string, locale = this.#locale): Promise<LoginResult> {
     this.#locale = locale;
     this.#cms = undefined;
     this.#credentials = undefined;

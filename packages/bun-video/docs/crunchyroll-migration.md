@@ -30,6 +30,14 @@ upstream password grant. This is a client API migration, not the official Crunch
 SDK, and does not promise that historical beta API endpoints currently support that
 grant or those content routes.
 
+For French requests, construct the client with `locale: "fr-FR"`. Password login
+without a locale argument preserves this configured locale; an explicit third
+argument overrides it. Clients without locale configuration retain `en-US`.
+Search encodes accented and multilingual text without changing its value, and
+paginated catalog requests retain the selected locale. This is verified on a
+loopback API fixture; availability on current Crunchyroll endpoints remains a
+separate live gate.
+
 The local-server test covers all public operations, OAuth form requests, pagination,
 query encoding, isolated credentials, refresh, HTTP/API/JSON errors, redirects,
 cancellation and deadlines. It neither uses the user's cookies nor contacts the

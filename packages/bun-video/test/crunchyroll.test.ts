@@ -47,6 +47,27 @@ async function withAPI(
 }
 
 describe("native Crunchyroll migration", () => {
+  test("configured French locale survives default password login, search and paginated catalog calls", async () => {
+    await withAPI(async (baseURL, calls) => {
+      const api = createCrunchyrollClient({
+        baseURL,
+        basicAuthorization: "Basic local-app",
+        locale: "fr-FR",
+      });
+      expect((await api.login("local@example.test", "local-password")).client.locale).toBe("fr-FR");
+      await api.search("déesse & dieu 日本語");
+      await api.getAllAnimes(20, 5);
+      const search = calls.find((call) => call.url.pathname.endsWith("/search"))!.url;
+      const catalog = calls.find((call) => call.url.pathname.endsWith("/browse"))!.url;
+      expect(search.searchParams.get("locale")).toBe("fr-FR");
+      expect(search.searchParams.get("q")).toBe("déesse & dieu 日本語");
+      expect(catalog.searchParams.get("locale")).toBe("fr-FR");
+      expect(catalog.searchParams.get("start")).toBe("20");
+      expect(catalog.searchParams.get("n")).toBe("5");
+      expect(calls.filter((call) => call.url.pathname === "/auth/v1/token")).toHaveLength(1);
+    });
+  });
+
   test("password login uses explicit authorization, form body, private state and preserves locale", async () => {
     await withAPI(async (baseURL, calls) => {
       const api = createCrunchyrollClient({ baseURL, basicAuthorization: "Basic local-app" });
