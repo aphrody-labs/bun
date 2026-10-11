@@ -1,0 +1,15 @@
+{
+  "name": "google",
+  "version": "1.4.4",
+  "description": "Google integration contracts, native Bun REST services and migration guidance.",
+  "author": { "name": "aphrody-labs", "url": "https://github.com/aphrody-labs" },
+  "repository": "https://github.com/aphrody-labs/bun",
+  "license": "Apache-2.0",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Google for Aphrody Bun",
+    "shortDescription": "Google REST and browser contracts",
+    "developerName": "aphrody-labs",
+    "category": "Developer Tools"
+  }
+}

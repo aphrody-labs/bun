@@ -9,6 +9,7 @@
 /// <reference path="./fetch.d.ts" />
 /// <reference path="./bun.d.ts" />
 /// <reference path="./chromium.d.ts" />
+/// <reference path="./google.d.ts" />
 /// <reference path="./obscura.d.ts" />
 /// <reference path="./extensions.d.ts" />
 /// <reference path="./devserver.d.ts" />

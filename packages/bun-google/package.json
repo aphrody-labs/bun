@@ -1,0 +1,23 @@
+{
+  "name": "@aphrody/bun-google",
+  "version": "1.4.4",
+  "description": "Google REST services over the Aphrody Bun runtime, with explicit credential ownership.",
+  "license": "Apache-2.0",
+  "repository": "https://github.com/aphrody-labs/bun",
+  "files": [
+    "src",
+    "README.md",
+    "crates/boq"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./services": "./src/services.ts"
+  },
+  "scripts": {
+    "test": "bun bd test packages/bun-google/test"
+  },
+  "engines": {
+    "bun": ">=1.4.4"
+  }
+}
