@@ -30,7 +30,7 @@ export const gates: Gate[] = [
   })),
   { id: "install", command: ["bun", "install", "--frozen-lockfile", "--ignore-scripts"] },
   { id: "rust-dependencies", command: ["bun", "scripts/aphrody/native-ci.ts", "dependencies"] },
-  ...["check", "test", "clippy"].map((action) => ({
+  ...["check", "clippy"].map((action) => ({
     id: `rust-install-${action}`,
     ...(action === "clippy" ? { env: { CLIPPY_CONF_DIR: "." } } : {}),
     command: [
@@ -72,6 +72,17 @@ export const gates: Gate[] = [
       "test/js/bun/chrome/chrome.test.ts",
       "test/internal/chromium.test.ts",
       "test/internal/google-chromium-graph.test.ts",
+    ],
+  },
+  {
+    id: "native-install-test",
+    command: [
+      "bun",
+      "bd",
+      "-j1",
+      "test",
+      "test/cli/install/bun-install-patch.test.ts",
+      "test/cli/install/bun-install-streaming-extract.test.ts",
     ],
   },
   { id: "docs", command: ["bun", "scripts/aphrody/verify-fusion.ts", "--docs-only"] },

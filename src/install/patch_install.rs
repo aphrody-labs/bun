@@ -650,7 +650,20 @@ impl PatchTask {
             }
             sys::Result::Ok(s) => s,
         };
+        #[cfg(windows)]
         let size: u64 = stat.st_size;
+        #[cfg(not(windows))]
+        let size = match u64::try_from(stat.st_size) {
+            Ok(size) => size,
+            Err(_) => {
+                log.add_error_fmt(
+                    None,
+                    Loc::EMPTY,
+                    format_args!("failed to read patch file: negative file size"),
+                );
+                return None;
+            }
+        };
         if size == 0 {
             bun_ast::add_error_pretty!(
                 log,

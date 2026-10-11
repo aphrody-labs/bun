@@ -24,6 +24,17 @@ pipeline. Strict Clippy failures remain failures. The installer source batch
 tests, with two platform-dependent skips. The complete Linux pipeline still
 requires its own successful receipt.
 
+Installer Rust check and strict Clippy remain serialized Cargo gates. Its tests
+run through `native-install-test`, immediately after the existing Google/Chromium
+native build and tests: `bun bd -j1 test test/cli/install/bun-install-patch.test.ts
+test/cli/install/bun-install-streaming-extract.test.ts`. These existing suites use
+the native binary through `bunExe()` and local test registries to exercise patch
+installation, tarball extraction and integrity. Bare `cargo test -p bun_install
+--lib` cannot link Bun's native Highway objects; `scripts/rust-nextest.ts` already
+excludes such crates. No stub, extra archive or test skip replaces that dependency.
+The pipeline still requires fourteen successful gates and rejects skipped native
+tests; the existing native build phase supplies the linked binary.
+
 Each Clippy gate explicitly selects its source owner's `CLIPPY_CONF_DIR`.
 Google and Web are standalone provider workspaces: their checked-in `clippy.toml`
 files preserve Aphrody's default configuration, while their Cargo workspace lints

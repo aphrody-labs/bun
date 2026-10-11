@@ -62,6 +62,26 @@ test("native CI only accepts its explicit owner operations", async () => {
   ).toBe(true);
 });
 
+test("installer tests use the linked native binary after its existing build phase", async () => {
+  const native = gates.findIndex((gate) => gate.id === "google-chromium");
+  const installer = gates.findIndex((gate) => gate.id === "native-install-test");
+  expect(native).toBeGreaterThan(-1);
+  expect(installer).toBe(native + 1);
+  expect(gates).toHaveLength(14);
+  expect(gates.some((gate) => gate.id === "rust-install-test")).toBe(false);
+  expect(gates[installer]!.command.slice(0, 4)).toEqual(["bun", "bd", "-j1", "test"]);
+  for (const file of gates[installer]!.command.slice(4)) {
+    const source = await Bun.file(resolve(import.meta.dir, "../..", file)).text();
+    expect(source).toContain("bunExe()");
+    expect(source).not.toMatch(/\b(?:test|it)\.(?:skip|todo|skipIf)\b/);
+  }
+  expect(
+    qualification(
+      gates.map((gate) => ({ id: gate.id, exitCode: gate.id === "native-install-test" ? 1 : 0 })),
+    ),
+  ).toBe(false);
+});
+
 test("Clippy selects each source owner's configuration without changing strict warnings", async () => {
   const checkout = resolve(import.meta.dir, "../..");
   const inherited = { CLIPPY_CONF_DIR: "/foreign/config", CARGO_BUILD_JOBS: "1" };
