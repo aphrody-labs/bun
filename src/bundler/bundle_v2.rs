@@ -2931,6 +2931,16 @@ pub mod bv2_impl {
                 path.pretty =
                     unsafe { bun_ptr::detach_lifetime(self.arena().alloc_slice_copy(rel)) };
             }
+            // Canonical paths returned through plugins/symlinks can already
+            // have a distinct display slice. Normalize that slice as well as
+            // the relative path above, without changing the native FS path.
+            #[cfg(windows)]
+            if bun_core::strings::contains_char(path.pretty, b'\\') {
+                let pretty = self.arena().alloc_slice_copy(path.pretty);
+                bun_paths::resolve_path::platform_to_posix_in_place::<u8>(pretty);
+                // SAFETY: this arena outlives every queued parse task in the bundle pass.
+                path.pretty = unsafe { bun_ptr::detach_lifetime(pretty) };
+            }
             path.assert_pretty_is_valid();
             path.assert_file_path_is_absolute();
 
