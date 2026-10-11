@@ -1,5 +1,11 @@
 # Plan — aphrody-labs/bun, noyau d'Aphrody
 
+## Owner execution constraint — 2026-10-11
+
+Keep this work in the existing `C:/bun` directory. Do not create additional
+checkouts or worktrees. Preserve existing concurrent work and reuse validated
+build outputs. External host work needs an explicit current task scope.
+
 ## GN fork and native toolchain integration — 2026-10-11
 
 Vendor the complete aphrody-labs/gn fork at `3f99f58c2568dd267952dcd80696406474f7e2ea`,
@@ -12,8 +18,10 @@ builds; Chromium retains its clang-cl/SDK pins, ChromiumOS needs a Linux board S
 See [GN integration](docs/chromium/gn.md) for commands and qualification.
 Owner directive: use only the existing `C:/bun` directory. Do not create
 isolated checkouts or worktrees. Native GN outputs remain under `build/gn`.
-The temporary GN import clone and archive are redundant after publication;
-automatic policy review blocked their requested removal.
+The temporary GN import clone, tar archive, failed-build logs and compiler
+probes were removed with the native Aphrody file tool after publication and
+source integrity verification. The qualified GN binaries and incremental
+build cache remain in `C:/bun/build/gn`.
 
 ## Obscura/JSC and full Chromium/V8 owner batch — 2026-10-11
 

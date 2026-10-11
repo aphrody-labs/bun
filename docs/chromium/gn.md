@@ -8,9 +8,10 @@ The upstream base is `0035961837fbcfe875d855744b3eda4fd2eefb43`.
 
 `vendor/gn/.bun-vendor.json` records every source file's Git blob, SHA-256,
 size and mode, plus the source archive hash. Validate the copy with
-`bun run gn:vendor`. To reproduce it from an existing fork checkout, use
-`bun run gn:vendor --source=C:/path/to/gn-fork`. Existing differing files
-cause a failure rather than an overwrite.
+`bun run gn:vendor`. The retained vendor and its receipts are canonical in
+`C:/bun`. Do not create a separate checkout or save a duplicate source archive
+for this work. Existing differing files cause import verification to fail
+rather than an overwrite.
 
 The fork adds `GN_BUILD_LAST_COMMIT_POSITION` to the bootstrap generator.
 It accepts an explicit numeric commit position and hexadecimal revision,
@@ -57,8 +58,9 @@ on its root filesystem. DBFR has Ninja and 25 GiB free. GN was absent from
 both hosts' PATH at preflight. No remote checkout or build was created.
 The owner requires all work in the existing `C:/bun` directory, with no
 additional checkout or worktree. The temporary GN import clone and tar archive
-remain outside this directory because automatic policy review rejected their
-removal. Their contents are already published and verified against the vendor.
+were removed using the native Aphrody file tool after verifying that their
+contents are published and match the vendor. Failed-build logs and temporary
+compiler probes were removed; qualified GN outputs and its build cache remain.
 
 GN generates build graphs. It does not supply the C++ compiler, operating
 system SDK, project dependencies or ChromiumOS board toolchain.
