@@ -55,7 +55,21 @@ escaping symlinks are preserved and rejected. Downloads stay in the checkout's
 source stamps and Cargo package manifests must match. A matching `.ref` records
 the source identity and patch contract, not proof that every vendor byte is clean;
 the fetch owner preserves edits at a matching identity. This gate fetches source
-without compiling an engine or configuring unrelated vendored dependencies.
+without compiling an engine. It then derives every enabled archive source and patch identity from the native debug
+build configuration and preflights those destinations before calling
+`bun bd -j1 --profile=debug --ci=true --cache-dir=build/native-ci-downloads --configure-only`.
+This owner command emits the build graph and Rust options without running Ninja
+compilation. Resolving the owner's toolchain can install its pinned Rust channel
+and rust-src component; this preflight is not a read-only tool probe.
+The pinned Ninja tool may be acquired in the same scoped cache;
+cross-target SDK provisioning is rejected. Unknown archive directories block
+configuration instead of reaching the build owner's stale-source invalidation.
+The resulting `build_options.rs` must be canonical, contain the immutable source
+SHA and have its content hash recorded in the gate log.
+The generated Cargo configuration must be absent or match the hash previously
+recorded by this gate. Unknown operator configuration is backed up privately and
+preserved without invoking configure. Git-tracked configuration is never replaced;
+the Bun source pin and clean status are checked again after generation.
 
 The schedule is deliberately disabled in native-ci.json. Infra can plan and
 activate a timer through its host catalog after qualifying the source allocation;

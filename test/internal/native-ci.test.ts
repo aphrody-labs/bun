@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { tempDir } from "../harness";
 import {
   gateEnvironment,
+  configureRustDependencies,
   gates,
   main,
   provisionRustDependencies,
@@ -12,6 +13,7 @@ import {
   rustDependencyPlan,
   validateIdentity,
 } from "../../scripts/aphrody/native-ci.ts";
+import { computeSourceIdentity } from "../../scripts/build/fetch-cli.ts";
 
 async function dependencyFixture() {
   const checkout = resolve(import.meta.dir, "../..");
@@ -258,4 +260,159 @@ test("post-fetch qualification checks every generated Cargo path without exempti
     }),
   ).rejects.toThrow("package differs");
   expect(commands).toHaveLength(3);
+});
+
+test("configure refuses foreign archive identities and unknown Cargo config before invoking the owner", async () => {
+  using directory = tempDir("native-ci-configure-foreign", {
+    vendor: { foreign: { ".ref": "foreign" } },
+  });
+  const checkout = String(directory);
+  const revision = "a".repeat(40);
+  let calls = 0;
+  const invoke = async () => {
+    calls++;
+    return 0;
+  };
+  await expect(
+    configureRustDependencies(
+      checkout,
+      revision,
+      [
+        {
+          name: "foreign",
+          destination: join(checkout, "vendor/foreign"),
+          commit: revision,
+          patches: [],
+        },
+      ],
+      invoke,
+    ),
+  ).rejects.toThrow("identity differs");
+  await mkdir(join(checkout, ".cargo"));
+  await Bun.write(join(checkout, ".cargo/config.toml"), "operator-owned");
+  using backup = tempDir("native-ci-configure-backup", {});
+  await expect(
+    configureRustDependencies(checkout, revision, [], invoke, String(backup)),
+  ).rejects.toThrow("Unknown Cargo");
+  expect(calls).toBe(0);
+  expect(await Bun.file(join(checkout, ".cargo/config.toml")).text()).toBe("operator-owned");
+  expect(await Array.fromAsync(new Bun.Glob("*.toml").scan(String(backup)))).toHaveLength(1);
+});
+
+test("configure pins the native debug owner command and rejects stale generated options", async () => {
+  using directory = tempDir("native-ci-configure", {
+    vendor: { matched: { ".ref": computeSourceIdentity("a".repeat(40), []) } },
+  });
+  const checkout = String(directory);
+  const revision = "a".repeat(40);
+  const sources = [
+    {
+      name: "matched",
+      destination: join(checkout, "vendor/matched"),
+      commit: revision,
+      patches: [],
+    },
+  ];
+  let calls = 0;
+  const invoke = async (command: string[], env: Record<string, string>) => {
+    calls++;
+    expect(command).toEqual([
+      "bun",
+      "bd",
+      "-j1",
+      "--profile=debug",
+      "--ci=true",
+      "--cache-dir=build/native-ci-downloads",
+      "--configure-only",
+    ]);
+    expect(env).toEqual({ BUILDKITE_COMMIT: revision, GITHUB_SHA: revision, GIT_SHA: revision });
+    await mkdir(join(checkout, "build/debug/codegen"), { recursive: true });
+    await mkdir(join(checkout, ".cargo"), { recursive: true });
+    await Bun.write(join(checkout, ".cargo/config.toml"), "fixture-owner-config");
+    await Bun.write(
+      join(checkout, "build/debug/codegen/build_options.rs"),
+      `pub const SHA: &str = "${calls === 1 ? revision : "b".repeat(40)}";`,
+    );
+    return 0;
+  };
+  await configureRustDependencies(checkout, revision, sources, invoke);
+  await expect(configureRustDependencies(checkout, revision, sources, invoke)).rejects.toThrow(
+    "immutable source pin",
+  );
+  expect(calls).toBe(2);
+});
+
+test("configure rejects escaping vendor allocation and missing patches even for absent archives", async () => {
+  using directory = tempDir("native-ci-configure-escape", {});
+  using foreign = tempDir("native-ci-configure-external", {});
+  const checkout = String(directory);
+  await symlink(
+    String(foreign),
+    join(checkout, "vendor"),
+    process.platform === "win32" ? "junction" : "dir",
+  );
+  let calls = 0;
+  const invoke = async () => {
+    calls++;
+    return 0;
+  };
+  await expect(configureRustDependencies(checkout, "a".repeat(40), [], invoke)).rejects.toThrow(
+    "canonical",
+  );
+  using missing = tempDir("native-ci-configure-patch", { vendor: { ".keep": "" } });
+  await expect(
+    configureRustDependencies(
+      String(missing),
+      "a".repeat(40),
+      [
+        {
+          name: "absent",
+          destination: join(String(missing), "vendor/absent"),
+          commit: "a".repeat(40),
+          patches: [join(String(missing), "missing.patch")],
+        },
+      ],
+      invoke,
+    ),
+  ).rejects.toThrow();
+  expect(calls).toBe(0);
+});
+
+test("configure guards generated output and identity paths before any owner writes", async () => {
+  using foreign = tempDir("native-ci-configure-protected", { protected: "preserve" });
+  let calls = 0;
+  const invoke = async () => {
+    calls++;
+    return 0;
+  };
+  for (const relative of ["build/debug", "build/debug/codegen"]) {
+    using directory = tempDir("native-ci-configure-parent", { vendor: { ".keep": "" } });
+    await mkdir(dirname(join(String(directory), relative)), { recursive: true });
+    await symlink(
+      String(foreign),
+      join(String(directory), relative),
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    await expect(
+      configureRustDependencies(String(directory), "a".repeat(40), [], invoke),
+    ).rejects.toThrow("canonical");
+  }
+  for (const relative of [
+    "build/debug/codegen/build_options.rs",
+    "build/native-ci-downloads/cargo-config.sha256",
+  ]) {
+    using directory = tempDir("native-ci-configure-output", { vendor: { ".keep": "" } });
+    // A junction is also an invalid output file, without needing Windows symlink privilege.
+    await mkdir(dirname(join(String(directory), relative)), { recursive: true });
+    await symlink(
+      String(foreign),
+      join(String(directory), relative),
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    await expect(
+      configureRustDependencies(String(directory), "a".repeat(40), [], invoke),
+    ).rejects.toThrow("canonical");
+  }
+  expect(calls).toBe(0);
+  expect(await Bun.file(join(String(foreign), "protected")).text()).toBe("preserve");
 });
