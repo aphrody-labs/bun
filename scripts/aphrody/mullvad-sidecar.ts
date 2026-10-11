@@ -94,7 +94,6 @@ export function createMullvadBuildPlan(source: string, mullvadSource: string): M
       ["mullvad-daemon", "--version"],
       ["mullvad", "--version"],
       ["mullvad-setup", "--help"],
-      ["mullvad-exclude", "--help"],
       ["mullvad-problem-report", "--help"],
     ],
     files: [

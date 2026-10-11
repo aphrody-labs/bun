@@ -14,6 +14,7 @@ test("Mullvad VPS release plan keeps the daemon in its own Linux sidecar", () =>
   expect(plan.cargo[0]?.[1]).toBe("+1.97.1");
   expect(plan.runtimeLinked).toBe(false);
   expect(plan.performanceQualified).toBe(false);
+  expect(plan.smoke.some(([binary]) => binary === "mullvad-exclude")).toBe(false);
   expect(plan.cargo[0]).toContain("mullvad-daemon/cgroup2");
   expect(plan.files).toContain("usr/bin/mullvad-daemon");
   expect(plan.files).toContain("usr/lib/systemd/system/mullvad-early-boot-blocking.service");
