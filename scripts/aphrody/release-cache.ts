@@ -8,6 +8,9 @@ export function cacheKey(source: string, surface: string, path: string): string 
   return `bun:release:${source}:${surface}:${encodeURIComponent(path)}`;
 }
 
+export const CHUNK_BYTES = 2 * 1024 * 1024;
+export const artifactCachePath = (path: string, hash: string) => `${path}@${hash}`;
+
 export async function warmCache(out: string, url: string) {
   const manifest = JSON.parse(readFileSync(join(out, "manifest.json"), "utf8"));
   const redis = new RedisClient(url, { connectionTimeout: 10000, autoReconnect: false });
@@ -31,9 +34,20 @@ export async function warmCache(out: string, url: string) {
     }
     for (const path of Object.keys(manifest.artifacts).sort()) {
       if (!/\.(?:html|md|mdx|json|css|js|txt)$/.test(path)) continue;
+      const file = Bun.file(join(out, path));
+      const key = artifactCachePath(path, manifest.artifacts[path]);
+      if (file.size > 16 * 1024 * 1024) {
+        for (let offset = 0; offset < file.size; offset += CHUNK_BYTES) {
+          await put(
+            "artifact-chunk",
+            `${key}:${offset / CHUNK_BYTES}`,
+            Buffer.from(await file.slice(offset, offset + CHUNK_BYTES).bytes()).toString("base64"),
+          );
+        }
+        continue;
+      }
       const value = readFileSync(join(out, path), "utf8");
-      if (Buffer.byteLength(value) > 16 * 1024 * 1024) continue;
-      await put("artifact", path, value);
+      await put("artifact", key, value);
     }
     await put("manifest", "manifest.json", JSON.stringify(manifest));
     return { source: manifest.source, entries, bytes, ttlSeconds: 604800 };

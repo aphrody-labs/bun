@@ -8,6 +8,8 @@ import { moduleNames } from "./fork-capabilities.ts";
 import { build, type Release } from "./site/build.ts";
 import { collect, GitTree } from "./site/collect.ts";
 import { buildReleaseGraph } from "./release-graph.ts";
+import { completeReleaseKnowledge } from "./release-knowledge.ts";
+import { generateSourceMarkdown } from "./source-markdown.ts";
 
 export function releaseReadme(version: string, sha: string, repo: string, modules: string[]): string {
   const source = `https://github.com/${repo}/tree/${sha}`;
@@ -37,6 +39,9 @@ ${modules.map(name => "- " + String.fromCharCode(96) + name + String.fromCharCod
 - [Contribution guidance](${source}/CONTRIBUTING.md)
 - [Security policy](${source}/SECURITY.md)
 - [Upstream contributors](https://github.com/oven-sh/bun/graphs/contributors)
+- [Generated monorepo graph](https://bun.aphrody.com/graph/) and [complete source knowledge](https://bun.aphrody.com/knowledge/)
+- [LLM index](https://bun.aphrody.com/llms.txt) and [full documentation text](https://bun.aphrody.com/llms-full.txt)
+- [Benchmarks and measurement coverage](https://bun.aphrody.com/benchmarks/)
 
 ## Release surfaces
 
@@ -50,6 +55,45 @@ Bun retains its upstream notices and [license](${source}/LICENSE.md). JavaScript
 
 export function digest(data: string | Uint8Array): string {
   return createHash("sha256").update(data).digest("hex");
+}
+
+export function artifactPaths(out: string): string[] {
+  return [...new Bun.Glob("**/*").scanSync({ cwd: out, onlyFiles: true })]
+    .map(path => path.replaceAll(String.fromCharCode(92), "/"))
+    .filter(
+      path =>
+        path !== "source.tar" &&
+        path !== "manifest.json" &&
+        !path.startsWith("source/") &&
+        !/\.sqlite-(?:wal|shm)$/.test(path),
+    )
+    .sort();
+}
+
+export function refreshManifest(out: string) {
+  const manifest = JSON.parse(readFileSync(join(out, "manifest.json"), "utf8"));
+  const graph = JSON.parse(readFileSync(join(out, "graph.json"), "utf8"));
+  if (graph.source !== manifest.source) throw new Error("Graph and artifact source revisions differ");
+  const supplemented = new Set<string>();
+  if (existsSync(join(out, "knowledge-coverage.json"))) {
+    const knowledge = JSON.parse(readFileSync(join(out, "knowledge-coverage.json"), "utf8"));
+    if (
+      knowledge.source !== manifest.source ||
+      knowledge.generatorSha256 !== digest(readFileSync(join(import.meta.dir, "release-knowledge.ts")))
+    )
+      throw new Error("Supplemental generation provenance differs");
+    for (const path of knowledge.changed) supplemented.add(path);
+  }
+  const artifacts: Record<string, string> = {};
+  for (const path of artifactPaths(out)) {
+    const hash = digest(readFileSync(join(out, path)));
+    const expected = manifest.artifacts[path] ?? manifest.artifacts[path.replaceAll("/", String.fromCharCode(92))];
+    if (hash !== expected && !supplemented.has(path)) throw new Error(`Existing artifact changed: ${path}`);
+    artifacts[path] = hash;
+  }
+  const updated = { ...manifest, artifacts };
+  writeFileSync(join(out, "manifest.json"), `${JSON.stringify(updated, null, 2)}\n`);
+  return updated;
 }
 
 export async function regenerate(root: string, ref: string, out: string, repo: string, offline: boolean) {
@@ -139,8 +183,16 @@ export async function regenerate(root: string, ref: string, out: string, repo: s
     `<!doctype html><html lang="en"><meta charset="utf-8"><title>Bun monorepo graph</title><h1>Bun monorepo graph</h1><p>Source ${tree.sha}. ${graph.files} tracked files; ${graph.readableFiles} readable source files.</p><p>${Bun.escapeHTML(graph.coverage)}</p><a href="graph.json">Domain network and coverage</a><ul>${graph.documents.map(doc => `<li><a href="domains/${doc.directory.split("/").at(-1)}/graph.html">${Bun.escapeHTML(doc.domain)}</a></li>`).join("")}</ul></html>`,
   );
   const hashes: Record<string, string> = {};
-  for (const path of [...new Bun.Glob("**/*").scanSync({ cwd: out, onlyFiles: true })].sort()) {
-    if (path === "source.tar" || path.startsWith("source/")) continue;
+  completeReleaseKnowledge(out);
+  await generateSourceMarkdown(root, tree.sha, join(out, "site", "knowledge", "markdown"));
+  for (const name of ["release-server.ts", "release-cache.ts", "release-verify.ts", "release-knowledge-bench.ts"]) {
+    mkdirSync(join(out, "runtime"), { recursive: true });
+    writeFileSync(join(out, "runtime", name), sourceText(`scripts/aphrody/${name}`));
+  }
+  for (const name of ["release-nginx.ts", "release-surfaces.sh"]) {
+    writeFileSync(join(out, "runtime", name), sourceText(`scripts/aphrody/deploy/${name}`));
+  }
+  for (const path of artifactPaths(out)) {
     hashes[path] = digest(readFileSync(join(out, path)));
   }
   const manifest = {
@@ -161,23 +213,32 @@ if (import.meta.main) {
   const option = (flag: string, fallback: string) => (args.includes(flag) ? args[args.indexOf(flag) + 1]! : fallback);
   const root = resolve(import.meta.dir, "../..");
   const out = resolve(option("--out", join(root, "tmp", `release-surfaces-${Date.now()}`)));
-  const result = await regenerate(
-    root,
-    option("--ref", "HEAD"),
-    out,
-    option("--repo", "aphrody-labs/bun-os"),
-    args.includes("--offline"),
-  );
-  if (args.includes("--apply")) {
-    writeFileSync(join(root, "README.md"), result.readme);
-    writeFileSync(join(root, ".github", "release-source.json"), `${JSON.stringify(result.metadata, null, 2)}\n`);
-  }
-  console.log(
-    JSON.stringify({
-      source: result.manifest.source,
-      version: result.manifest.version,
+  if (args.includes("--refresh-manifest")) {
+    const manifest = refreshManifest(out);
+    console.log(JSON.stringify({ source: manifest.source, out, artifacts: Object.keys(manifest.artifacts).length }));
+  } else {
+    const result = await regenerate(
+      root,
+      option("--ref", "HEAD"),
       out,
-      artifacts: Object.keys(result.manifest.artifacts).length,
-    }),
-  );
+      option("--repo", "aphrody-labs/bun-os"),
+      args.includes("--offline"),
+    );
+    if (args.includes("--apply")) {
+      writeFileSync(join(root, "README.md"), result.readme);
+      writeFileSync(
+        join(root, "packages", "bun-agent-plugin", "README.md"),
+        readFileSync(join(out, "package-README.md")),
+      );
+      writeFileSync(join(root, ".github", "release-source.json"), `${JSON.stringify(result.metadata, null, 2)}\n`);
+    }
+    console.log(
+      JSON.stringify({
+        source: result.manifest.source,
+        version: result.manifest.version,
+        out,
+        artifacts: Object.keys(result.manifest.artifacts).length,
+      }),
+    );
+  }
 }

@@ -13,6 +13,59 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
+import {
+  markdownInventory,
+  renderRootMarkdown,
+  reviewedReplacement,
+  selectRustComments,
+} from "../../../scripts/aphrody/source-markdown.ts";
+
+describe("source Markdown and Rust comment selection", () => {
+  test("ignores comment markers in strings, raw strings, characters and lifetimes", () => {
+    const source = `let url = "https://host/pour";\nlet raw = br###"// pour ceci /* les */"###;\nlet c = '/';\nfn borrowed<'a>(x: &'a str) {}\n// pour cette fonction\n/* outer /* nested */ dans ceci */\n`;
+    const comments = selectRustComments("src/example.rs", source, "abc");
+    expect(comments.map(c => c.text)).toEqual(["// pour cette fonction", "/* outer /* nested */ dans ceci */"]);
+    expect(comments[0]!.line).toBe(5);
+    expect(reviewedReplacement(source, comments[0]!, "// Reviewed function contract")).toContain(
+      "// Reviewed function contract",
+    );
+    expect(() => reviewedReplacement(source + " ", comments[0]!, "// Changed")).toThrow("Source changed");
+    expect(() => reviewedReplacement(source, comments[0]!, "// Changed\nunsafe();")).toThrow("boundaries");
+    expect(() => reviewedReplacement(source, comments[1]!, "/* nested /* unclosed */")).toThrow("boundaries");
+  });
+
+  test("protects legal and safety notices", () => {
+    const source = "// Copyright example\n// SAFETY: valid pointer\n";
+    const comments = selectRustComments("src/example.rs", source, "abc");
+    expect(comments).toHaveLength(2);
+    expect(comments.every(c => c.protected)).toBe(true);
+    expect(() => reviewedReplacement(source, comments[0]!, "// Reworded")).toThrow("Protected");
+  });
+
+  test("renders only declared source facts and preserves source licenses", () => {
+    const texts = new Map([
+      ["package.json", JSON.stringify({ version: "9.1.0", scripts: { bd: "bun scripts/build.ts" } })],
+      ["packages/a/package.json", JSON.stringify({ name: "@example/a", version: "2", private: true })],
+      ["src/resolve_builtins/HardcodedModule.rs", '#[strum(serialize = "bun:actual")]'],
+      ["LICENSE", "Copyright example\nPermission is hereby granted"],
+    ]);
+    const tree = {
+      sha: "immutable-sha",
+      files: new Map([...texts.keys()].map(p => [p, "blob"])),
+      read: (paths: string[]) => new Map(paths.map(p => [p, texts.get(p)!])),
+    };
+    const inventory = markdownInventory(tree);
+    const output = renderRootMarkdown(inventory);
+    expect(output.get("SOURCE-INDEX.md")).toContain("bun:actual");
+    expect(output.get("SOURCE-INDEX.md")).toContain("[LICENSE](LICENSE)");
+    expect(output.get("SOURCE-INDEX.md")).toContain("immutable-sha");
+    expect(output.get("BUILD-COMMANDS.md")).toContain("bun scripts/build.ts");
+    expect(inventory.modules).toEqual(["bun:actual"]);
+    expect(inventory.inputs.find(p => p.path === "LICENSE")!.sha256).toHaveLength(64);
+    expect([...renderRootMarkdown(markdownInventory(tree))]).toEqual([...output]);
+    expect(texts.get("LICENSE")).toBe("Copyright example\nPermission is hereby granted");
+  });
+});
 
 const repoRoot = join(import.meta.dir, "..", "..", "..");
 

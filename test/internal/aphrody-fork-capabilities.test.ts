@@ -2,6 +2,58 @@ import { expect, test } from "bun:test";
 import { tempDir, isASAN } from "harness";
 import { exportForkCapabilities, moduleNames, parseDelta } from "../../scripts/aphrody/fork-capabilities.ts";
 import { exportForkGraphDocs } from "../../scripts/aphrody/fork-graph-docs.ts";
+import { completeReleaseKnowledge } from "../../scripts/aphrody/release-knowledge.ts";
+import { Database } from "bun:sqlite";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { measureReleaseGateway } from "../../scripts/aphrody/release-knowledge-bench.ts";
+
+test("gateway measurements record real responses and reject mismatched source pins", async () => {
+  const server = Bun.serve({
+    port: 0,
+    fetch: () => new Response("measured", { headers: { "x-bun-source": "fixture" } }),
+  });
+  try {
+    const report = await measureReleaseGateway(server.url.toString(), "fixture", 2);
+    expect(report.measurements).toHaveLength(5);
+    expect(report.measurements[0]!.runs).toHaveLength(2);
+    expect(report.measurements[0]!.runs[0]!.bytes).toBe(8);
+    expect(report.measurements[0]!.runs[0]!.status).toBe(200);
+    await expect(measureReleaseGateway(server.url.toString(), "different", 2)).rejects.toThrow("source pin mismatch");
+  } finally {
+    await server.stop(true);
+  }
+});
+
+test("release knowledge includes unlisted guides and graph domains deterministically without inventing measurements", () => {
+  using dir = tempDir("release-knowledge", {});
+  const root = String(dir);
+  for (const path of ["site", "plugin/codex/skills/new", "graph-docs/domain", "source"])
+    mkdirSync(join(root, path), { recursive: true });
+  writeFileSync(
+    join(root, "graph.json"),
+    JSON.stringify({ source: "immutable", documents: [{ domain: "src/new", directory: "graph-docs/domain" }] }),
+  );
+  writeFileSync(join(root, "graph-docs/domain/graph.md"), "# New graph\n");
+  writeFileSync(join(root, "site/llms.txt"), "# Existing\n");
+  writeFileSync(join(root, "site/llms-full.txt"), "Existing\n");
+  writeFileSync(join(root, "plugin/codex/skills/new/SKILL.md"), "# New skill\n");
+  using db = new Database(join(root, "monorepo.sqlite"));
+  db.exec("CREATE TABLE release_files(path TEXT, content TEXT, sha256 TEXT)");
+  db.query("INSERT INTO release_files VALUES(?,?,?)").run("docs/guides/new.mdx", "# New guide\n", "digest");
+  db.query("INSERT INTO release_files VALUES(?,?,?)").run("bench/new.ts", "benchmark code", "benchmark-digest");
+  const report = completeReleaseKnowledge(root);
+  expect(report.guides).toBe(1);
+  expect(report.graphDocuments).toBe(1);
+  expect(report.committedMeasurementReports).toBe(0);
+  expect(readFileSync(join(root, "site/llms-full.txt"), "utf8")).toContain("# New graph");
+  expect(readFileSync(join(root, "site/llms.txt"), "utf8")).toContain("knowledge/source/docs/guides/new.mdx");
+  const first = readFileSync(join(root, "site/llms-full.txt"), "utf8");
+  const plugin = readFileSync(join(root, "bun-agent-plugin.bin"));
+  completeReleaseKnowledge(root);
+  expect(readFileSync(join(root, "site/llms-full.txt"), "utf8")).toBe(first);
+  expect(readFileSync(join(root, "bun-agent-plugin.bin"))).toEqual(plugin);
+});
 
 test("module inventory includes newly registered modules without a maintained allowlist", () => {
   expect(

@@ -2,11 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { isWindows, tempDir } from "harness";
 import { existsSync, readFileSync, readlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { digest, releaseReadme } from "../../scripts/aphrody/release-surfaces.ts";
+import { artifactPaths, digest, releaseReadme } from "../../scripts/aphrody/release-surfaces.ts";
 import { sourceDomain, sourceReadable, resolvedImport } from "../../scripts/aphrody/release-graph.ts";
 import { cacheKey } from "../../scripts/aphrody/release-cache.ts";
 import { createReleaseHandler } from "../../scripts/aphrody/release-server.ts";
 import { Database } from "bun:sqlite";
+import { releaseProxyConfig } from "../../scripts/aphrody/deploy/release-nginx.ts";
 import {
   DOCS_LOGO_FILES,
   SITE_ROOT_FILES as SYNCED_ROOT_FILES,
@@ -35,6 +36,30 @@ test("release README reflects source inventory and does not assert binary public
   expect(readme).toContain(`https://github.com/owner/source/tree/${"a".repeat(40)}`);
   expect(readme).toContain("does not establish availability");
   expect(digest(readme)).toBe(digest(releaseReadme("9.8.7", "a".repeat(40), "owner/source", ["bun:future"])));
+});
+
+test("artifact inventory is portable and excludes staging sources and SQLite journals", () => {
+  using dir = tempDir("release-artifacts", {
+    "site/docs/a.html": "page",
+    "source/secret.txt": "source staging",
+    "monorepo.sqlite-wal": "journal",
+    "monorepo.sqlite-shm": "shared memory",
+    "manifest.json": "previous",
+    "source.tar": "archive",
+  });
+  expect(artifactPaths(String(dir))).toEqual(["site/docs/a.html"]);
+});
+
+test("release proxy keeps installer rules and has a static rollback fallback", () => {
+  const config =
+    "server {\n location = /install { try_files $uri =404; }\n location / { try_files $uri $uri.html $uri/index.html =404; }\n}\n";
+  const result = releaseProxyConfig(config);
+  expect(result).toContain("location = /install { try_files $uri =404; }");
+  expect(result).toContain("proxy_pass http://127.0.0.1:8798");
+  expect(result).toContain("location @bun_release_static");
+  expect(result).toContain("location ^~ /docs/");
+  expect(releaseProxyConfig(result)).toBe(result);
+  expect(() => releaseProxyConfig("unexpected host config")).toThrow("Expected one existing site fallback");
 });
 
 test("monorepo subgraphs resolve relative references and keep protected stores out", () => {

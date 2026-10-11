@@ -2,7 +2,7 @@ import { RedisClient } from "bun";
 import { Database } from "bun:sqlite";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { cacheKey } from "./release-cache.ts";
+import { artifactCachePath, cacheKey, CHUNK_BYTES } from "./release-cache.ts";
 
 export function createReleaseHandler(out: string, db: Database, redis?: Pick<RedisClient, "get" | "send">) {
   const manifest = JSON.parse(readFileSync(join(out, "manifest.json"), "utf8"));
@@ -50,9 +50,29 @@ export function createReleaseHandler(out: string, db: Database, redis?: Pick<Red
     const path = candidates.find(candidate => candidate in manifest.artifacts);
     if (!path) return new Response("Not found", { status: 404 });
     const file = Bun.file(join(out, path));
-    if (!/\.(?:html|md|mdx|json|css|js|txt|svg)$/.test(path) || file.size > 16 * 1024 * 1024)
+    const key = artifactCachePath(path, manifest.artifacts[path]);
+    if (!/\.(?:html|md|mdx|json|css|js|txt|svg)$/.test(path))
       return new Response(request.method === "HEAD" ? null : file, { headers: { "content-type": file.type } });
-    const value = await cached("artifact", path, () => file.text());
+    if (file.size > 16 * 1024 * 1024) {
+      let offset = 0;
+      const body = new ReadableStream<Uint8Array>({
+        async pull(controller) {
+          if (offset >= file.size) {
+            controller.close();
+            return;
+          }
+          const chunk = await cached("artifact-chunk", `${key}:${offset / CHUNK_BYTES}`, async () =>
+            Buffer.from(await file.slice(offset, offset + CHUNK_BYTES).bytes()).toString("base64"),
+          );
+          controller.enqueue(Buffer.from(chunk, "base64"));
+          offset += CHUNK_BYTES;
+        },
+      });
+      return new Response(request.method === "HEAD" ? null : body, {
+        headers: { "content-type": file.type, "content-length": String(file.size), "x-bun-source": manifest.source },
+      });
+    }
+    const value = await cached("artifact", key, () => file.text());
     return new Response(request.method === "HEAD" ? null : value, {
       headers: { "content-type": file.type, "x-bun-source": manifest.source },
     });

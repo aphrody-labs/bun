@@ -4,6 +4,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { apply, rewrite } from "../../scripts/aphrody/scope.ts";
 import { sync } from "../../scripts/aphrody/sync-upstream.ts";
+import { dependencyOrder, inventory, plan, verifyIntegrity } from "../../scripts/aphrody/monorepo-delivery.ts";
+import { createHash } from "node:crypto";
 
 describe("scope rewrite", () => {
   test("a manifest renames itself and local dependencies, not registry ones", () => {
@@ -98,6 +100,63 @@ const options = (root: string) => ({
   dryRun: false,
   keepConflicts: false,
   index: false,
+});
+
+describe("monorepo delivery", () => {
+  test("inventory reads immutable Git manifests, excludes regression fixtures, and retains lock checksums", () => {
+    using dir = tempDir("delivery-pins", {
+      "package.json": JSON.stringify({ name: "bun", private: true, version: "1.4.4" }),
+      "Cargo.toml": "[workspace]\nresolver = '3'\n",
+      "Cargo.lock":
+        "version = 4\n[[package]]\nname = 'external'\nversion = '1.2.3'\nsource = 'registry+https://github.com/rust-lang/crates.io-index'\nchecksum = 'abc'\n",
+      "packages/bun-types/package.json": JSON.stringify({ name: "@aphrody/bun-types", version: "1.4.4" }),
+      "test/fixtures/package.json": "invalid syntax intentionally",
+      "vendor/native/LICENSE": "License notice retained",
+      "scripts/build/deps/native.ts":
+        "const pin = '1234567890123456789012345678901234567890'; const source = 'https://github.com/owner/native'; const file = 'lib/native';\n",
+    });
+    const root = String(dir);
+    git(root, "init", "--quiet", "--initial-branch=main");
+    git(root, "config", "user.email", "test@example.com");
+    git(root, "config", "user.name", "test");
+    git(root, "add", "-A");
+    git(root, "commit", "--quiet", "-m", "source");
+    const first = inventory(root);
+    writeFileSync(join(root, "packages/bun-types/package.json"), JSON.stringify({ name: "wrong", version: "99" }));
+    expect(inventory(root)).toEqual(first);
+    expect(first.products.map(p => p.name)).toEqual(["bun", "@aphrody/bun-types"]);
+    expect(first.external[0]).toMatchObject({ name: "external", checksum: "abc" });
+    expect(first.vendors[0]?.tree).toMatch(/^[0-9a-f]{40}$/);
+    expect(first.nativeRecipes[0]?.repositories).toEqual(["https://github.com/owner/native"]);
+    expect(plan(first, "release-check").steps.find(s => s.id === "npm")?.command).toContain("--dry-run");
+    expect(plan(first, "release-check").steps.some(s => s.command.includes("--publish"))).toBe(false);
+    const build = plan(first, "build", root);
+    expect(build.steps.find(s => s.id === "pack:@aphrody/bun-types")?.command).toContain("--ignore-scripts");
+    expect(build.unsupported).toEqual([]);
+  });
+
+  test("dependency ordering rejects cycles instead of publishing partially ordered products", () => {
+    expect(
+      dependencyOrder([
+        { name: "consumer", dependencies: ["base"] },
+        { name: "base", dependencies: [] },
+      ]).map(p => p.name),
+    ).toEqual(["base", "consumer"]);
+    expect(() =>
+      dependencyOrder([
+        { name: "a", dependencies: ["b"] },
+        { name: "b", dependencies: ["a"] },
+      ]),
+    ).toThrow("Dependency cycle");
+  });
+
+  test("one-click installation refuses changed archive bytes", () => {
+    const original = new TextEncoder().encode("qualified tarball");
+    const integrity = `sha512-${createHash("sha512").update(original).digest("base64")}`;
+    expect(() => verifyIntegrity(original, integrity)).not.toThrow();
+    expect(() => verifyIntegrity(new TextEncoder().encode("changed tarball"), integrity)).toThrow("integrity mismatch");
+    expect(() => verifyIntegrity(original, "sha1-legacy")).toThrow("unsupported digest");
+  });
 });
 
 describe("sync-upstream", () => {
