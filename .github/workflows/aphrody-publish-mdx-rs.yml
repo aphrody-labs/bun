@@ -136,7 +136,7 @@ jobs:
           script: smoke.ts
           libc: ${{ matrix.libc }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: mdx-${{ matrix.key }}
           path: dist/${{ matrix.file }}
@@ -154,7 +154,7 @@ jobs:
       - uses: ./.github/actions/setup-bun
         with:
           bun-version: ${{ env.BUN_HOST_VERSION }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: ${{ runner.temp }}/artifacts
           pattern: mdx-*
