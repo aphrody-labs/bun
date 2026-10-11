@@ -10,6 +10,9 @@
   "scripts": {
     "gn": "bun scripts/aphrody/gn.ts",
     "gn:vendor": "bun scripts/aphrody/vendor-gn.ts",
+    "depots_tools": "bun scripts/aphrody/chromium.ts --depot-tools",
+    "depot_tools": "bun scripts/aphrody/chromium.ts --depot-tools",
+    "chromium": "bun scripts/aphrody/chromium.ts",
     "bun:windows": "bun scripts/aphrody/win/version-sync.ts",
     "build": "bun --silent run build:debug",
     "ci:find": "bun scripts/find-build.ts",
