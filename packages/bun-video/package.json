@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-video",
-  "version": "1.4.4-video.0",
+  "version": "1.4.4-video.1",
   "description": "Bun video protocols, native capture adapters, and official Remotion and HyperFrames integrations",
   "license": "SEE LICENSE IN LICENSE",
   "bin": {
@@ -9,7 +9,8 @@
     "bun-video-har": "./labs/hls-lab-har.ts",
     "bun-video-hls": "./labs/hls-lab.ts",
     "bun-video-keychain": "./labs/hls-keychain.ts",
-    "bun-video-shortcuts": "./labs/crunchyroll-shortcuts.ts"
+    "bun-video-shortcuts": "./labs/crunchyroll-shortcuts.ts",
+    "bun-video-webgpu": "./labs/webgpu.ts"
   },
   "files": [
     "src",
@@ -32,7 +33,8 @@
     "./bitmovin": "./src/bitmovin.ts",
     "./crunchyroll": "./src/crunchyroll.ts",
     "./oauth": "./src/oauth.ts",
-    "./secrets": "./src/secrets.ts"
+    "./secrets": "./src/secrets.ts",
+    "./webgpu": "./src/webgpu.ts"
   },
   "publishConfig": {
     "access": "public",

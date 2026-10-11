@@ -10,21 +10,25 @@ bun add @aphrody/bun-video@next
 ```
 
 ```ts
-import { interpolate, loadRemotionCore, loadHyperframesCore } from "@aphrody/bun-video";
+import {
+  interpolate,
+  loadRemotionCore,
+  loadHyperframesCore,
+} from "@aphrody/bun-video";
 import { attachVideoHlsPlayback } from "@aphrody/bun-video/hls";
 import { createCrunchyrollClient } from "@aphrody/bun-video/crunchyroll";
 ```
 
-Additional exports: `/dash` (also `/mpd`), `/har`, `/bitmovin`, `/oauth`,
+Additional exports: `/dash` (also `/mpd`), `/har`, `/bitmovin`, `/oauth`, `/webgpu`,
 `/secrets`, `/mcp`, and `/capabilities`. See the corresponding guides in docs.
 Loading a library is lazy; native browser capture requires a separately
 qualified provider and explicitly authorized URLs. Native encoding requires
 an explicit media executable. The MCP media tool additionally expects the
 runtime-provided `bun-video:media-runtime` module.
 
-The package ships six Bun CLI entry points: `bun-video-hls`, `bun-video-dash`,
-`bun-video-har`, `bun-video-keychain`, `bun-video-chrome`, and
-`bun-video-shortcuts`. Their sources and local browser assets are in labs
+The package ships seven Bun CLI entry points: `bun-video-hls`, `bun-video-dash`,
+`bun-video-har`, `bun-video-keychain`, `bun-video-chrome`, `bun-video-shortcuts`,
+and `bun-video-webgpu`. Their sources and local browser assets are in labs
 and assets. Use each CLI's `--help` for its configuration. Session cookies,
 HAR recordings, signed media URLs and OAuth client secrets are local inputs;
 they are not shipped in the npm artifact.
@@ -35,6 +39,12 @@ valid Bitmovin license and supported browser/DRM environment remain caller
 requirements. A blob video URL cannot establish the underlying media
 protocol. No successful authenticated Crunchyroll playback is claimed by
 package publication. See THIRD_PARTY_NOTICES.md for dependency terms.
+
+`/webgpu` runs WGSL compute through either Bun-launched Chromium WebGPU or the precompiled native
+wgpu/CUDA provider. The `bun-video-webgpu` CLI supports Linux serverless jobs when a GPU-enabled
+ABI 1.5 runtime artifact is installed, and can open the native Windows CEF desktop adapter probe.
+This compute interface does not yet route Remotion/HyperFrames WebGPU compositions through the
+video frame encoder; see [the WebGPU guide](docs/webgpu.md) for runtime requirements and limits.
 
 The official Remotion renderer 4.0.534 rejects Bun prerelease versions such as
 1.4.4-debug and 1.4.3-aphrody.4 at import: its minimum-version check excludes

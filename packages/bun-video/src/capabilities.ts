@@ -9,6 +9,21 @@ export async function capabilities() {
   } catch (error) {
     nativeBrowser = { providerLoaded: false, renderingQualified: false, error: String(error) };
   }
+  let chromiumWebGpu: { apiAvailable: boolean; error?: string };
+  try {
+    await import("bun:chromium");
+    chromiumWebGpu = { apiAvailable: true };
+  } catch (error) {
+    chromiumWebGpu = { apiAvailable: false, error: String(error) };
+  }
+  let nativeWebGpu: { providerLoaded: boolean; wgsl: boolean; error?: string };
+  try {
+    const { GPU_CAPABILITIES, GpuRuntime } = await import("@aphrody/bun-runtime-sdk/gpu");
+    using runtime = GpuRuntime.load();
+    nativeWebGpu = { providerLoaded: !runtime.closed, wgsl: GPU_CAPABILITIES.includes("gpu.wgsl") };
+  } catch (error) {
+    nativeWebGpu = { providerLoaded: false, wgsl: false, error: String(error) };
+  }
   return {
     name: "bun-video",
     runtime: {
@@ -19,11 +34,11 @@ export async function capabilities() {
     },
     upstream: { remotion, hyperframes },
     nativeBrowser,
+    webgpu: { chromium: chromiumWebGpu, native: nativeWebGpu },
     backends: {
       remotion: "Official upstream library; renderer dependencies must be available",
       hyperframes: "Official upstream library; renderer dependencies must be available",
-      native:
-        "Explicit served-composition PNG capture; requires a qualified browser-enabled provider",
+      native: "Explicit served-composition PNG capture; requires a qualified browser-enabled provider",
     },
   };
 }

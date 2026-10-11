@@ -3,11 +3,7 @@ export { generateSpringEaseData, SPRING_PRESETS } from "@hyperframes/parsers/spr
 export { captureNativeRemotionFrame } from "./remotion-frame";
 export type { NativeFrameOptions } from "./remotion-frame";
 export { captureNativeWebViewFrames } from "./hyperframes-native";
-export type {
-  NativeWebViewContext,
-  NativeFrameCaptureOptions,
-  NativeCapturedFrame,
-} from "./hyperframes-native";
+export type { NativeWebViewContext, NativeFrameCaptureOptions, NativeCapturedFrame } from "./hyperframes-native";
 export { captureParallelFrames } from "./parallel-capture";
 export { validateFramePlan, partitionFrames } from "./frame-plan";
 export type { FramePlan } from "./frame-plan";
@@ -23,6 +19,7 @@ export * from "./crunchyroll";
 export * from "./oauth";
 export * from "./secrets";
 export { capabilities } from "./capabilities";
+export * from "./webgpu";
 
 export const loadRemotionCore = () => import("remotion");
 export const loadRemotionRenderer = () => import("@remotion/renderer");
