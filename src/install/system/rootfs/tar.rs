@@ -36,13 +36,17 @@ pub struct Entry<'a> {
 
 impl Entry<'_> {
     pub fn pax_value(&self, key: &[u8]) -> Option<&[u8]> {
-        self.pax.iter().find(|(k, _)| k.as_slice() == key).map(|(_, v)| v.as_slice())
+        self.pax
+            .iter()
+            .find(|(k, _)| k.as_slice() == key)
+            .map(|(_, v)| v.as_slice())
     }
 
     /// `SCHILY.xattr.<name>` records as `(name, value)`.
     pub fn xattrs(&self) -> impl Iterator<Item = (&[u8], &[u8])> {
         self.pax.iter().filter_map(|(k, v)| {
-            k.strip_prefix(b"SCHILY.xattr.".as_slice()).map(|name| (name, v.as_slice()))
+            k.strip_prefix(b"SCHILY.xattr.".as_slice())
+                .map(|name| (name, v.as_slice()))
         })
     }
 }
@@ -114,7 +118,11 @@ pub struct Reader<'a> {
 
 impl<'a> Reader<'a> {
     pub fn new(buf: &'a [u8]) -> Reader<'a> {
-        Reader { buf, pos: 0, global: Vec::new() }
+        Reader {
+            buf,
+            pos: 0,
+            global: Vec::new(),
+        }
     }
 
     /// Byte offset of the next header (the end of the last returned entry's data).
@@ -137,7 +145,11 @@ impl<'a> Reader<'a> {
             let stored = octal(&h[148..156]);
             let mut sum: u64 = 0;
             for (i, &b) in h.iter().enumerate() {
-                sum += if (148..156).contains(&i) { 32 } else { u64::from(b) };
+                sum += if (148..156).contains(&i) {
+                    32
+                } else {
+                    u64::from(b)
+                };
             }
             if stored != sum {
                 return Err(Error::Parse("tar: header checksum mismatch".to_owned()));
@@ -184,7 +196,10 @@ impl<'a> Reader<'a> {
                 b'5' => Kind::Dir,
                 b'6' => Kind::Fifo,
                 other => {
-                    return Err(Error::Parse(format!("tar: unsupported entry type {:?}", other as char)));
+                    return Err(Error::Parse(format!(
+                        "tar: unsupported entry type {:?}",
+                        other as char
+                    )));
                 }
             };
             let lookup = |key: &[u8]| -> Option<Vec<u8>> {
@@ -194,11 +209,16 @@ impl<'a> Reader<'a> {
                     .find(|(k, _)| k.as_slice() == key)
                     .map(|(_, v)| v.clone())
             };
-            let path = match lookup(b"path").or(long_name.take()) {
+            let previous_long_name = long_name.take();
+            let path = match lookup(b"path").or(previous_long_name) {
                 Some(p) => p,
                 None => {
                     let name = cstr(&h[0..100]);
-                    let prefix = if &h[257..262] == b"ustar" { cstr(&h[345..500]) } else { b"" };
+                    let prefix = if &h[257..262] == b"ustar" {
+                        cstr(&h[345..500])
+                    } else {
+                        b""
+                    };
                     if prefix.is_empty() {
                         name.to_vec()
                     } else {
@@ -209,8 +229,9 @@ impl<'a> Reader<'a> {
                     }
                 }
             };
+            let previous_long_link = long_link.take();
             let link = lookup(b"linkpath")
-                .or(long_link.take())
+                .or(previous_long_link)
                 .unwrap_or_else(|| cstr(&h[157..257]).to_vec());
             let num = |key: &[u8], field: &[u8]| -> u64 {
                 lookup(key)
@@ -219,7 +240,9 @@ impl<'a> Reader<'a> {
                             Some(dot) => v[..dot].to_vec(),
                             None => v,
                         };
-                        core::str::from_utf8(&v).ok().and_then(|s| s.parse::<u64>().ok())
+                        core::str::from_utf8(&v)
+                            .ok()
+                            .and_then(|s| s.parse::<u64>().ok())
                     })
                     .unwrap_or_else(|| octal(field))
             };

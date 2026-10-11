@@ -121,7 +121,7 @@ pub fn unxz(input: &[u8], what: &str) -> Result<Vec<u8>> {
             std::io::Read::read_to_end(&mut reader, &mut out).map_err(|e| bad(&e.to_string()))?;
             drop(reader);
             pos = input.len() - rest.len();
-            while pos % 4 != 0 {
+            while !pos.is_multiple_of(4) {
                 pos += 1;
             }
             pos += check_len;
@@ -133,7 +133,7 @@ pub fn unxz(input: &[u8], what: &str) -> Result<Vec<u8>> {
             read_vli(input, &mut i).ok_or_else(|| bad("index"))?;
             read_vli(input, &mut i).ok_or_else(|| bad("index"))?;
         }
-        while i % 4 != 0 {
+        while !i.is_multiple_of(4) {
             i += 1;
         }
         pos = i + 4 + 12;

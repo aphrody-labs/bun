@@ -77,7 +77,11 @@ impl Pkg {
         let mut out = Vec::new();
         for d in &self.dirs {
             for f in &d.files {
-                out.push(if d.name.is_empty() { f.name.clone() } else { format!("{}/{}", d.name, f.name) });
+                out.push(if d.name.is_empty() {
+                    f.name.clone()
+                } else {
+                    format!("{}/{}", d.name, f.name)
+                });
             }
         }
         out
@@ -91,12 +95,24 @@ const B64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz012
 pub fn base64_encode(bytes: &[u8]) -> String {
     let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for chunk in bytes.chunks(3) {
-        let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
+        let b = [
+            chunk[0],
+            *chunk.get(1).unwrap_or(&0),
+            *chunk.get(2).unwrap_or(&0),
+        ];
         let n = (u32::from(b[0]) << 16) | (u32::from(b[1]) << 8) | u32::from(b[2]);
         out.push(B64[(n >> 18) as usize & 63] as char);
         out.push(B64[(n >> 12) as usize & 63] as char);
-        out.push(if chunk.len() > 1 { B64[(n >> 6) as usize & 63] as char } else { '=' });
-        out.push(if chunk.len() > 2 { B64[n as usize & 63] as char } else { '=' });
+        out.push(if chunk.len() > 1 {
+            B64[(n >> 6) as usize & 63] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            B64[n as usize & 63] as char
+        } else {
+            '='
+        });
     }
     out
 }
@@ -112,8 +128,12 @@ pub fn base64_decode(text: &[u8]) -> Option<Vec<u8>> {
             _ => return None,
         } as u32)
     };
-    let text: Vec<u8> = text.iter().copied().filter(|c| !c.is_ascii_whitespace()).collect();
-    if text.len() % 4 != 0 {
+    let text: Vec<u8> = text
+        .iter()
+        .copied()
+        .filter(|c| !c.is_ascii_whitespace())
+        .collect();
+    if !text.len().is_multiple_of(4) {
         return None;
     }
     let mut out = Vec::with_capacity(text.len() / 4 * 3);
@@ -180,19 +200,36 @@ fn parse_acl(v: &[u8]) -> Option<Acl> {
     let gid = super::super::rootfs::parse_u32(it.next()?)?;
     let mode = u32::from_str_radix(core::str::from_utf8(it.next()?).ok()?, 8).ok()?;
     let xattr_digest = it.next().and_then(decode_digest);
-    Some(Acl { uid, gid, mode, xattr_digest })
+    Some(Acl {
+        uid,
+        gid,
+        mode,
+        xattr_digest,
+    })
 }
 
 /// Parses an `APKINDEX` or `installed` database. `repo` is stored on every record.
 pub fn parse(data: &[u8], repo: Option<usize>) -> Vec<Pkg> {
     let mut out = Vec::new();
-    let mut cur = Pkg { repo, ..Pkg::default() };
+    let mut cur = Pkg {
+        repo,
+        ..Pkg::default()
+    };
     let mut started = false;
     let flush = |cur: &mut Pkg, started: &mut bool, out: &mut Vec<Pkg>| {
         if *started && !cur.name.is_empty() {
-            out.push(core::mem::replace(cur, Pkg { repo, ..Pkg::default() }));
+            out.push(core::mem::replace(
+                cur,
+                Pkg {
+                    repo,
+                    ..Pkg::default()
+                },
+            ));
         } else {
-            *cur = Pkg { repo, ..Pkg::default() };
+            *cur = Pkg {
+                repo,
+                ..Pkg::default()
+            };
         }
         *started = false;
     };
@@ -230,7 +267,11 @@ pub fn parse(data: &[u8], repo: Option<usize>) -> Vec<Pkg> {
             b's' => cur.repo_tag = text(v),
             b'f' => cur.broken = text(v),
             b'g' => cur.tags.extend(strings::tokenize_any(v, b" ").map(text)),
-            b'F' => cur.dirs.push(DirRec { name: text(v), acl: None, files: Vec::new() }),
+            b'F' => cur.dirs.push(DirRec {
+                name: text(v),
+                acl: None,
+                files: Vec::new(),
+            }),
             b'M' => {
                 if let Some(d) = cur.dirs.last_mut() {
                     d.acl = parse_acl(v);
@@ -241,7 +282,11 @@ pub fn parse(data: &[u8], repo: Option<usize>) -> Vec<Pkg> {
                     cur.dirs.push(DirRec::default());
                 }
                 if let Some(d) = cur.dirs.last_mut() {
-                    d.files.push(FileRec { name: text(v), acl: None, digest: None });
+                    d.files.push(FileRec {
+                        name: text(v),
+                        acl: None,
+                        digest: None,
+                    });
                 }
             }
             b'a' => {
@@ -273,7 +318,13 @@ fn push_deps(out: &mut String, field: &str, deps: &[Dep]) {
 /// `apk_pkg_write_index_header`.
 pub fn write_header(p: &Pkg, out: &mut String) {
     use core::fmt::Write as _;
-    let _ = write!(out, "C:{}\nP:{}\nV:{}\n", encode_digest(&p.identity), p.name, p.version);
+    let _ = write!(
+        out,
+        "C:{}\nP:{}\nV:{}\n",
+        encode_digest(&p.identity),
+        p.name,
+        p.version
+    );
     if !p.arch.is_empty() {
         let _ = writeln!(out, "A:{}", p.arch);
     }
@@ -328,8 +379,18 @@ pub fn write_installed(p: &Pkg, out: &mut String) {
     if !p.broken.is_empty() {
         let _ = writeln!(out, "f:{}", p.broken);
     }
-    let default_dir = Acl { uid: 0, gid: 0, mode: 0o755, xattr_digest: None };
-    let default_file = Acl { uid: 0, gid: 0, mode: 0o644, xattr_digest: None };
+    let default_dir = Acl {
+        uid: 0,
+        gid: 0,
+        mode: 0o755,
+        xattr_digest: None,
+    };
+    let default_file = Acl {
+        uid: 0,
+        gid: 0,
+        mode: 0o644,
+        xattr_digest: None,
+    };
     for d in &p.dirs {
         let _ = writeln!(out, "F:{}", d.name);
         if let Some(acl) = &d.acl {

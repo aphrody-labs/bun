@@ -526,12 +526,13 @@ impl HardLinkWindowsInstallTask {
         // never changes, so a fresh write would be a no-op anyway.
         static INITIALIZED: core::sync::atomic::AtomicBool =
             core::sync::atomic::AtomicBool::new(false);
+        // SAFETY: Only the main thread initializes this cell; scheduling publishes it to workers, and subsequent calls only update the mutex-protected error slot.
         unsafe {
             if INITIALIZED.swap(true, Ordering::Relaxed) {
                 let q = (*HARDLINK_QUEUE.get()).assume_init_ref();
                 *q.errored_task.lock() = None;
                 debug_assert_eq!(
-                    q.thread_pool as *const ThreadPool,
+                    std::ptr::from_ref::<ThreadPool>(q.thread_pool),
                     core::ptr::from_ref(&PackageManager::get().thread_pool),
                     "PackageManager singleton changed between install batches",
                 );
@@ -577,6 +578,7 @@ impl HardLinkWindowsInstallTask {
 
         // SAFETY: self_ is valid until we reclaim the Box below.
         if let Some(err) = unsafe { (*self_).run() } {
+            // SAFETY: self_ is this worker's live uniquely owned task allocation, reclaimed only after storing the error.
             unsafe { (*self_).err = Some(err) };
             // SAFETY: self_ was heap-allocated in init(); reclaim ownership now.
             let boxed = unsafe { bun_core::heap::take(self_) };

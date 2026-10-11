@@ -3,7 +3,7 @@
 //! layout of apk-tools `database.c` (GPL-2.0-only, aphrody-labs/apk-tools@44dcdfc,
 //! apk-tools 3.0.8) so the real `apk` can manage a root built by Bun.
 
-use std::collections::HashMap;
+use super::HashMap;
 
 use super::super::rootfs::compress;
 use super::super::rootfs::fsops::Root;
@@ -41,7 +41,10 @@ fn is_url(word: &str) -> bool {
     let b = word.as_bytes();
     b.first() == Some(&b'/')
         || strings::index_of(b, b"://").is_some()
-        || (b.len() > 2 && b[1] == b':' && matches!(b[2], b'/' | b'\\') && b[0].is_ascii_alphabetic())
+        || (b.len() > 2
+            && b[1] == b':'
+            && matches!(b[2], b'/' | b'\\')
+            && b[0].is_ascii_alphabetic())
 }
 
 impl Repo {
@@ -72,7 +75,7 @@ impl Repo {
         }
         let components: Vec<String> = words.collect();
         let base = if components.is_empty() {
-            url.clone()
+            url
         } else {
             // `url comp1 comp2` expands to one repository per component; the
             // caller only keeps the first, the others come from `expand`.
@@ -87,7 +90,12 @@ impl Repo {
                 Some(i) => base[..i].to_owned(),
                 None => ".".to_owned(),
             };
-            return Repo { url: base.to_owned(), tag, index_url: base.to_owned(), flat_base: Some(dir) };
+            return Repo {
+                url: base.to_owned(),
+                tag,
+                index_url: base.to_owned(),
+                flat_base: Some(dir),
+            };
         }
         Repo {
             url: base.to_owned(),
@@ -102,7 +110,9 @@ impl Repo {
         let Some(first) = Repo::parse_line(line, arch) else {
             return Vec::new();
         };
-        let words: Vec<String> = strings::tokenize_any(line.as_bytes(), b" \t").map(lossy).collect();
+        let words: Vec<String> = strings::tokenize_any(line.as_bytes(), b" \t")
+            .map(lossy)
+            .collect();
         let url_at = words.iter().position(|w| is_url(w));
         let Some(url_at) = url_at else {
             return vec![first];
@@ -112,7 +122,10 @@ impl Repo {
             return vec![first];
         }
         let url = words[url_at].trim_end_matches('/');
-        comps.iter().map(|c| Repo::from_base(&format!("{url}/{c}"), first.tag.clone(), arch)).collect()
+        comps
+            .iter()
+            .map(|c| Repo::from_base(&format!("{url}/{c}"), first.tag.clone(), arch))
+            .collect()
     }
 
     /// Download URL of `pkg` (`${arch}/${name}-${version}.apk`).
@@ -120,7 +133,11 @@ impl Repo {
         match &self.flat_base {
             Some(dir) => format!("{dir}/{}", pkg.file_name()),
             None => {
-                let arch = if pkg.arch.is_empty() { default_arch } else { pkg.arch.as_str() };
+                let arch = if pkg.arch.is_empty() {
+                    default_arch
+                } else {
+                    pkg.arch.as_str()
+                };
                 format!("{}/{arch}/{}", self.url, pkg.file_name())
             }
         }
@@ -168,14 +185,23 @@ impl Db {
             }
         }
         if arches.is_empty() {
-            arches.push(super::super::rootfs::host_arch(super::super::rootfs::ArchStyle::Apk).to_owned());
+            arches.push(
+                super::super::rootfs::host_arch(super::super::rootfs::ArchStyle::Apk).to_owned(),
+            );
             write_arch = true;
         }
-        let world = root.read(WORLD).map(|t| Dep::parse_list(&lossy(&t))).unwrap_or_default();
-        let installed = root.read(INSTALLED).map(|t| index::parse(&t, None)).unwrap_or_default();
-        let by_identity: HashMap<Vec<u8>, ()> = installed.iter().map(|p| (p.identity.clone(), ())).collect();
+        let world = root
+            .read(WORLD)
+            .map(|t| Dep::parse_list(&lossy(&t)))
+            .unwrap_or_default();
+        let installed = root
+            .read(INSTALLED)
+            .map(|t| index::parse(&t, None))
+            .unwrap_or_default();
+        let by_identity: HashMap<Vec<u8>, ()> =
+            installed.iter().map(|p| (p.identity.clone(), ())).collect();
 
-        let mut triggers = HashMap::new();
+        let mut triggers = HashMap::default();
         if let Some(text) = root.read(TRIGGERS) {
             for line in strings::split(&text, b"\n") {
                 let mut words = strings::tokenize_any(line, b" \t\r");
@@ -188,10 +214,14 @@ impl Db {
             }
         }
 
-        let mut scripts: HashMap<Vec<u8>, Vec<(&'static str, Vec<u8>)>> = HashMap::new();
+        let mut scripts: HashMap<Vec<u8>, Vec<(&'static str, Vec<u8>)>> = HashMap::default();
         let (tarball, scripts_plain_tar) = match root.read(SCRIPTS_TAR) {
             Some(t) => (Some(t), true),
-            None => (root.read(SCRIPTS_TAR_GZ).and_then(|gz| compress::gunzip(&gz, "scripts.tar.gz").ok()), false),
+            None => (
+                root.read(SCRIPTS_TAR_GZ)
+                    .and_then(|gz| compress::gunzip(&gz, "scripts.tar.gz").ok()),
+                false,
+            ),
         };
         if let Some(tarball) = tarball {
             for e in tar::entries(&tarball)? {
@@ -216,7 +246,10 @@ impl Db {
                     continue;
                 };
                 if by_identity.contains_key(&id) {
-                    scripts.entry(id).or_default().push((*kind, e.data.to_vec()));
+                    scripts
+                        .entry(id)
+                        .or_default()
+                        .push((*kind, e.data.to_vec()));
                 }
             }
         }
@@ -269,7 +302,10 @@ impl Db {
 
     /// Host directories holding trusted keys (`etc/apk/keys`, `lib/apk/keys`).
     pub fn key_dirs(&self) -> Vec<Vec<u8>> {
-        vec![self.root.resolved_host(b"etc/apk/keys"), self.root.resolved_host(b"lib/apk/keys")]
+        vec![
+            self.root.resolved_host(b"etc/apk/keys"),
+            self.root.resolved_host(b"lib/apk/keys"),
+        ]
     }
 
     /// `apk_db_write_config`: arch, world, installed, triggers and scripts.
@@ -281,7 +317,11 @@ impl Db {
             text.push('\n');
             self.root.write_atomic(ARCH, text.as_bytes(), 0o644)?;
         }
-        let mut world = self.world.iter().map(ToString::to_string).collect::<Vec<_>>();
+        let mut world = self
+            .world
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>();
         world.sort();
         world.dedup();
         let mut text = world.join("\n");
@@ -322,12 +362,15 @@ impl Db {
             }
         }
         tar::write_end(&mut scripts);
-        self.root.write_atomic(INSTALLED, installed.as_bytes(), 0o644)?;
-        self.root.write_atomic(TRIGGERS, triggers.as_bytes(), 0o644)?;
+        self.root
+            .write_atomic(INSTALLED, installed.as_bytes(), 0o644)?;
+        self.root
+            .write_atomic(TRIGGERS, triggers.as_bytes(), 0o644)?;
         if self.scripts_plain_tar {
             self.root.write_atomic(SCRIPTS_TAR, &scripts, 0o644)?;
         } else {
-            self.root.write_atomic(SCRIPTS_TAR_GZ, &compress::gzip(&scripts), 0o644)?;
+            self.root
+                .write_atomic(SCRIPTS_TAR_GZ, &compress::gzip(&scripts), 0o644)?;
         }
         if !self.root.exists(LOCK) {
             self.root.write_atomic(LOCK, b"", 0o600)?;

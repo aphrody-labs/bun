@@ -84,6 +84,7 @@ impl Hardlinker {
                 // — otherwise E0502 on x86_64-pc-windows-msvc.
                 let len = dest_cwd.len();
                 let dest_ptr = dest_cwd.as_ptr();
+                // SAFETY: dest_ptr and cwd_buf.as_ptr() address the same cwd_buf allocation; the mutable sub-slice borrow ended after dest_ptr was captured.
                 let off = unsafe { dest_ptr.offset_from(cwd_buf.as_ptr()) } as usize;
                 (off, len)
             };

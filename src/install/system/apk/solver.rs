@@ -8,7 +8,7 @@
 //! apk-tools it does not backtrack: an unsatisfiable choice is reported.
 //! Pure: no I/O.
 
-use std::collections::HashMap;
+use super::HashMap;
 
 use super::index::Pkg;
 use super::version::{self, CONFLICT, Dep};
@@ -31,16 +31,27 @@ pub struct Solver<'a> {
 
 impl<'a> Solver<'a> {
     /// `installed` lists pool indices of the currently installed packages.
-    pub fn new(pool: &'a [Pkg], installed: &[usize], repo_tags: &'a [Option<String>], upgrade: bool) -> Self {
-        let mut by_name: HashMap<&str, Vec<usize>> = HashMap::new();
-        let mut providers: HashMap<&str, Vec<(usize, Option<&str>)>> = HashMap::new();
+    pub fn new(
+        pool: &'a [Pkg],
+        installed: &[usize],
+        repo_tags: &'a [Option<String>],
+        upgrade: bool,
+    ) -> Self {
+        let mut by_name: HashMap<&str, Vec<usize>> = HashMap::default();
+        let mut providers: HashMap<&str, Vec<(usize, Option<&str>)>> = HashMap::default();
         for (i, p) in pool.iter().enumerate() {
             by_name.entry(p.name.as_str()).or_default().push(i);
             for prov in &p.provides {
-                providers.entry(prov.name.as_str()).or_default().push((i, prov.version.as_deref()));
+                providers
+                    .entry(prov.name.as_str())
+                    .or_default()
+                    .push((i, prov.version.as_deref()));
             }
         }
-        let installed = installed.iter().map(|&i| (pool[i].name.as_str(), i)).collect();
+        let installed = installed
+            .iter()
+            .map(|&i| (pool[i].name.as_str(), i))
+            .collect();
         Solver {
             pool,
             repo_tags,
@@ -48,7 +59,7 @@ impl<'a> Solver<'a> {
             by_name,
             providers,
             installed,
-            chosen_by_name: HashMap::new(),
+            chosen_by_name: HashMap::default(),
             chosen: Vec::new(),
             conflicts: Vec::new(),
         }
@@ -75,7 +86,10 @@ impl<'a> Solver<'a> {
         }
         if let Some(list) = self.providers.get(dep.name.as_str()) {
             for &(i, v) in list {
-                if dep.matches_version(v) && self.tag_allows(dep, i) && !out.iter().any(|&(j, _)| j == i) {
+                if dep.matches_version(v)
+                    && self.tag_allows(dep, i)
+                    && !out.iter().any(|&(j, _)| j == i)
+                {
                     out.push((i, false));
                 }
             }
@@ -117,13 +131,17 @@ impl<'a> Solver<'a> {
         }
         let mut cands = self.candidates(dep);
         // A name can only be installed once: drop other versions of a chosen name.
-        cands.retain(|&(i, _)| match self.chosen_by_name.get(self.pool[i].name.as_str()) {
-            Some(&c) => c == i,
-            None => true,
-        });
+        cands.retain(
+            |&(i, _)| match self.chosen_by_name.get(self.pool[i].name.as_str()) {
+                Some(&c) => c == i,
+                None => true,
+            },
+        );
         let Some(&best) = cands.iter().max_by(|&&a, &&b| self.better(a, b)) else {
             let who = from.map_or_else(|| "world".to_owned(), |i| self.pool[i].name_version());
-            let reason = if self.by_name.contains_key(dep.name.as_str()) || self.providers.contains_key(dep.name.as_str()) {
+            let reason = if self.by_name.contains_key(dep.name.as_str())
+                || self.providers.contains_key(dep.name.as_str())
+            {
                 "no candidate satisfies the constraint (or another version is already selected)"
             } else {
                 "no such package"
@@ -151,7 +169,9 @@ impl<'a> Solver<'a> {
         self.chosen.iter().any(|&i| {
             let p = &self.pool[i];
             (p.name == dep.name && dep.matches_version(Some(&p.version)))
-                || p.provides.iter().any(|v| v.name == dep.name && dep.matches_version(v.version.as_deref()))
+                || p.provides
+                    .iter()
+                    .any(|v| v.name == dep.name && dep.matches_version(v.version.as_deref()))
         })
     }
 
@@ -185,17 +205,26 @@ impl<'a> Solver<'a> {
             }
         }
         for (dep, from) in &self.conflicts {
-            let positive = Dep { op: dep.op & !CONFLICT, ..dep.clone() };
+            let positive = Dep {
+                op: dep.op & !CONFLICT,
+                ..dep.clone()
+            };
             for &i in &self.chosen {
                 if Some(i) == *from {
                     continue;
                 }
                 let p = &self.pool[i];
                 let hit = (p.name == dep.name && positive.matches_version(Some(&p.version)))
-                    || p.provides.iter().any(|v| v.name == dep.name && positive.matches_version(v.version.as_deref()));
+                    || p.provides.iter().any(|v| {
+                        v.name == dep.name && positive.matches_version(v.version.as_deref())
+                    });
                 if hit {
-                    let who = from.map_or_else(|| "world".to_owned(), |f| self.pool[f].name_version());
-                    return Err(Problem(format!("{} conflicts with {dep} (from {who})", p.name_version())));
+                    let who =
+                        from.map_or_else(|| "world".to_owned(), |f| self.pool[f].name_version());
+                    return Err(Problem(format!(
+                        "{} conflicts with {dep} (from {who})",
+                        p.name_version()
+                    )));
                 }
             }
         }
@@ -204,7 +233,7 @@ impl<'a> Solver<'a> {
 
     fn order(&self) -> Vec<usize> {
         let mut out = Vec::with_capacity(self.chosen.len());
-        let mut state: HashMap<usize, u8> = HashMap::new();
+        let mut state: HashMap<usize, u8> = HashMap::default();
         let mut sorted = self.chosen.clone();
         sorted.sort_by(|&a, &b| self.pool[a].name.cmp(&self.pool[b].name));
         for &i in &sorted {

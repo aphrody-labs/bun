@@ -82,7 +82,7 @@ pub fn digest(alg: Alg, data: &[u8]) -> Vec<u8> {
 }
 
 pub fn hex_decode(hex: &[u8]) -> Option<Vec<u8>> {
-    if hex.len() % 2 != 0 {
+    if !hex.len().is_multiple_of(2) {
         return None;
     }
     let nib = |c: u8| -> Option<u8> {

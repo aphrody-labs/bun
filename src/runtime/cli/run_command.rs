@@ -165,17 +165,23 @@ Full documentation is available at <magenta>https://bun.com/docs/cli/run<r>
             // SAFETY: the pooled UTF-16 buffer is writable for its full length.
             let length = unsafe {
                 sys::windows::kernel32::GetSystemDirectoryW(
-                    system_directory.0.as_mut_ptr(), system_directory.0.len() as u32,
+                    system_directory.0.as_mut_ptr(),
+                    system_directory.0.len() as u32,
                 )
             } as usize;
             const SUFFIX: &[u8] = b"\\cmd.exe";
             // Each UTF-16 code unit needs at most three UTF-8 bytes; reserve
             // the suffix and terminator before invoking the checked converter.
-            if length == 0 || length >= system_directory.0.len()
-                || length * 3 + SUFFIX.len() + 1 > path_buf.len() {
+            if length == 0
+                || length >= system_directory.0.len()
+                || length * 3 + SUFFIX.len() + 1 > path_buf.len()
+            {
                 return None;
             }
-            let directory = strings::convert_utf16_to_utf8_in_buffer(&mut path_buf[..], &system_directory.0[..length]);
+            let directory = strings::convert_utf16_to_utf8_in_buffer(
+                &mut path_buf[..],
+                &system_directory.0[..length],
+            );
             let length = directory.len();
             if length + SUFFIX.len() >= path_buf.len() {
                 return None;
@@ -388,7 +394,8 @@ Full documentation is available at <magenta>https://bun.com/docs/cli/run<r>
         // Bun's interpreter has no external-shell prerequisite, including in
         // minimal root filesystems. Resolve only the requested system shell.
         let shell_search_path = shell_path.unwrap_or_else(|| env.get(b"PATH").unwrap_or(b""));
-        let shell_bin = Self::find_shell(shell_search_path, cwd).ok_or(crate::Error::MissingShell)?;
+        let shell_bin =
+            Self::find_shell(shell_search_path, cwd).ok_or(crate::Error::MissingShell)?;
 
         use crate::api::bun_process::{Status as SpawnStatus, sync};
 
@@ -4175,7 +4182,7 @@ impl BunXFastPath {
             run_ctx.force_use_bun
         );
 
-        bun_install::windows_shim::bun_shim_impl::try_startup_from_bun_js(run_ctx);
+        bun_install::windows_shim::bun_shim_impl::try_startup_from_bun_js(&run_ctx);
 
         bun_core::scoped_log!(BUNX_FAST_PATH_LOG, "did not start via shim");
     }

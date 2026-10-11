@@ -36,11 +36,17 @@ impl Trust {
                 }
             }
         }
-        Trust { keys, allow_untrusted }
+        Trust {
+            keys,
+            allow_untrusted,
+        }
     }
 
     fn key(&self, name: &[u8]) -> Option<&PublicKey> {
-        self.keys.iter().find(|(n, _)| n.as_bytes() == name).map(|(_, k)| k)
+        self.keys
+            .iter()
+            .find(|(n, _)| n.as_bytes() == name)
+            .map(|(_, k)| k)
     }
 }
 
@@ -51,8 +57,13 @@ struct Signature<'t> {
 }
 
 /// Index of the first non-signature member and the trusted signature found in it.
-fn split_signature<'t>(members: &[GzMember], trust: &'t Trust) -> Result<(usize, Option<Signature<'t>>, bool)> {
-    let first = members.first().ok_or_else(|| Error::Parse("empty archive".to_owned()))?;
+fn split_signature<'t>(
+    members: &[GzMember],
+    trust: &'t Trust,
+) -> Result<(usize, Option<Signature<'t>>, bool)> {
+    let first = members
+        .first()
+        .ok_or_else(|| Error::Parse("empty archive".to_owned()))?;
     let entries = tar::entries(&first.data)?;
     let is_sig = !entries.is_empty() && entries.iter().all(|e| e.path.starts_with(b".SIGN."));
     if !is_sig {
@@ -74,14 +85,23 @@ fn split_signature<'t>(members: &[GzMember], trust: &'t Trust) -> Result<(usize,
             continue;
         }
         if let Some(key) = trust.key(name) {
-            found = Some(Signature { alg, key, sig: e.data.to_vec() });
+            found = Some(Signature {
+                alg,
+                key,
+                sig: e.data.to_vec(),
+            });
             break;
         }
     }
     Ok((1, found, true))
 }
 
-fn verify_signature(sig: Option<&Signature<'_>>, signed: &[u8], trust: &Trust, what: &str) -> Result<()> {
+fn verify_signature(
+    sig: Option<&Signature<'_>>,
+    signed: &[u8],
+    trust: &Trust,
+    what: &str,
+) -> Result<()> {
     match sig {
         Some(s) => {
             if s.key.verify_digest(s.alg, &digest(s.alg, signed), &s.sig) {
@@ -123,13 +143,16 @@ pub fn read_index(bytes: &[u8], trust: &Trust, repo: usize, what: &str) -> Resul
     let mut packages = None;
     for e in tar::entries(&tarball)? {
         match e.path.as_slice() {
-            b"DESCRIPTION" => description = lossy(e.data).trim().to_owned(),
+            b"DESCRIPTION" => lossy(e.data).trim().clone_into(&mut description),
             b"APKINDEX" => packages = Some(super::index::parse(e.data, Some(repo))),
             _ => {}
         }
     }
     let packages = packages.ok_or_else(|| Error::Parse(format!("{what}: no APKINDEX inside")))?;
-    Ok(Index { description, packages })
+    Ok(Index {
+        description,
+        packages,
+    })
 }
 
 pub const SCRIPT_TYPES: [&str; 7] = [
@@ -153,13 +176,21 @@ pub struct ApkFile {
 
 impl ApkFile {
     pub fn script(&self, kind: &str) -> Option<&[u8]> {
-        self.scripts.iter().find(|(k, _)| *k == kind).map(|(_, s)| s.as_slice())
+        self.scripts
+            .iter()
+            .find(|(k, _)| *k == kind)
+            .map(|(_, s)| s.as_slice())
     }
 }
 
 /// Reads a v2 `.apk`. With `identity` (from a verified index) the control
 /// digest must match it; otherwise the embedded signature must be trusted.
-pub fn read_package(bytes: &[u8], identity: Option<&[u8]>, trust: &Trust, what: &str) -> Result<ApkFile> {
+pub fn read_package(
+    bytes: &[u8],
+    identity: Option<&[u8]>,
+    trust: &Trust,
+    what: &str,
+) -> Result<ApkFile> {
     let members = compress::gunzip_members(bytes, what)?;
     let (control_ix, sig, _) = split_signature(&members, trust)?;
     let control = members
@@ -178,7 +209,9 @@ pub fn read_package(bytes: &[u8], identity: Option<&[u8]>, trust: &Trust, what: 
             if let Some(t) = SCRIPT_TYPES.iter().find(|t| t.as_bytes() == kind) {
                 scripts.push((*t, e.data.to_vec()));
             } else if kind == b"INSTALL" {
-                return Err(Error::Parse(format!("{what}: .INSTALL scripts are not supported by apk v2")));
+                return Err(Error::Parse(format!(
+                    "{what}: .INSTALL scripts are not supported by apk v2"
+                )));
             }
         }
     }
@@ -211,7 +244,11 @@ pub fn read_package(bytes: &[u8], identity: Option<&[u8]>, trust: &Trust, what: 
             }
         }
         _ => {
-            let signed_end = if datahash.is_some() { control.end } else { data_end };
+            let signed_end = if datahash.is_some() {
+                control.end
+            } else {
+                data_end
+            };
             verify_signature(sig.as_ref(), &bytes[control.start..signed_end], trust, what)?;
         }
     }
@@ -231,10 +268,20 @@ pub fn read_package(bytes: &[u8], identity: Option<&[u8]>, trust: &Trust, what: 
     for m in &members[(control_ix + 1).min(members.len())..] {
         data.extend_from_slice(&m.data);
     }
-    Ok(ApkFile { info, scripts, triggers, data })
+    Ok(ApkFile {
+        info,
+        scripts,
+        triggers,
+        data,
+    })
 }
 
-fn parse_pkginfo(text: &[u8], info: &mut Pkg, triggers: &mut Vec<String>, datahash: &mut Option<Vec<u8>>) {
+fn parse_pkginfo(
+    text: &[u8],
+    info: &mut Pkg,
+    triggers: &mut Vec<String>,
+    datahash: &mut Option<Vec<u8>>,
+) {
     for line in strings::split(text, b"\n") {
         if line.first() == Some(&b'#') {
             continue;

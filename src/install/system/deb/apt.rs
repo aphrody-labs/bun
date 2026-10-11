@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //! APT/dpkg own signature verification, dependency solving and transactions.
-use super::{field, hash, paragraphs, version};
+use super::{AsciiFields, field, hash, paragraphs, version};
 use crate::system::{
     Ctx, Error, InstallKind, InstallRoot, InstalledRecord, LockEntry, PackageInfo, Result,
     SearchHit, Source, SourceKind, fs, join, lossy,
@@ -14,10 +14,10 @@ fn invalid(message: impl Into<String>) -> Error {
 
 fn selector(value: &str) -> bool {
     let (name, v) = value
-        .split_once('=')
+        .split_ascii_once("=")
         .map_or((value, None), |(name, v)| (name, Some(v)));
     let (name, arch) = name
-        .split_once(':')
+        .split_ascii_once(":")
         .map_or((name, None), |(name, arch)| (name, Some(arch)));
     super::package_name(name)
         && arch.is_none_or(|a| {
@@ -40,8 +40,8 @@ fn host() -> Result<()> {
 fn root(value: &[u8]) -> Result<String> {
     let value = std::str::from_utf8(value).map_err(|_| invalid("APT root must be UTF-8"))?;
     if !value.starts_with('/')
-        || value.contains(['\0', '\n', '\r'])
-        || value.split('/').any(|p| p == ".." || p == ".")
+        || bun_core::strings::index_of_any(value.as_bytes(), b"\0\n\r").is_some()
+        || value.split_ascii("/").any(|p| p == ".." || p == ".")
     {
         return Err(invalid(
             "APT root must be an absolute Linux directory without dot components",
@@ -181,16 +181,16 @@ impl Source for Deb {
     }
 
     fn search(&mut self, ctx: &Ctx<'_>, query: &str, limit: usize) -> Result<Vec<SearchHit>> {
-        if query.starts_with('-') || query.contains('\0') {
+        if query.starts_with('-') || bun_core::strings::contains_char(query.as_bytes(), 0) {
             return Err(invalid("invalid APT search query"));
         }
         let mut args = options(&ctx_root(ctx)?);
         args.extend(["search".into(), "--names-only".into(), query.into()]);
         let output = capture("/usr/bin/apt-cache", &args)?;
         Ok(lossy(&output)
-            .lines()
+            .ascii_lines()
             .take(limit)
-            .filter_map(|line| line.split_once(" - "))
+            .filter_map(|line| line.split_ascii_once(" - "))
             .map(|(name, description)| SearchHit {
                 id: name.into(),
                 name: name.into(),
@@ -252,10 +252,10 @@ impl Source for Deb {
         ]);
         let output = lossy(&capture("/usr/bin/apt-get", &args)?);
         let uri = output
-            .lines()
+            .ascii_lines()
             .find_map(|line| {
                 line.strip_prefix('\'')
-                    .and_then(|s| s.split_once('\'').map(|(uri, _)| uri))
+                    .and_then(|s| s.split_ascii_once("'").map(|(uri, _)| uri))
             })
             .ok_or_else(|| invalid("APT did not return an archive URI"))?;
         let mut entry = LockEntry::new(SourceKind::Deb, id);
@@ -434,8 +434,8 @@ pub fn run(args: &[&[u8]]) -> Result<i32> {
         let local = command == "install"
             && package.starts_with('/')
             && package.ends_with(".deb")
-            && !package.contains(['\0', '\n', '\r']);
-        let query = command == "search" && !package.starts_with('-') && !package.contains('\0');
+            && !bun_core::strings::index_of_any(package.as_bytes(), b"\0\n\r").is_some();
+        let query = command == "search" && !package.starts_with('-') && !bun_core::strings::contains_char(package.as_bytes(), 0);
         if !selector(package) && !local && !query {
             return Err(invalid(format!(
                 "invalid Debian package selector {package}"

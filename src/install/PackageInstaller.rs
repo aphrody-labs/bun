@@ -88,8 +88,8 @@ pub struct PackageInstaller<'a> {
     pub(crate) bins: bun_ptr::RawSlice<Bin>,
     pub(crate) resolutions: bun_ptr::RawSlice<Resolution>,
     pub(crate) node: &'a mut ProgressNode,
-    pub(crate) destination_dir_subpath_buf: PathBuffer,
-    pub(crate) folder_path_buf: PathBuffer,
+    pub(crate) destination_dir_subpath_buf: Box<PathBuffer>,
+    pub(crate) folder_path_buf: Box<PathBuffer>,
     pub(crate) successfully_installed: Bitset,
     pub(crate) command_ctx: Command::Context<'a>,
     pub(crate) current_tree_id: lockfile::tree::Id,
@@ -1271,7 +1271,7 @@ impl<'a> PackageInstaller<'a> {
         // and `destination_dir_subpath_buf: &mut [u8]` aliasing the same bytes.
         // Derive BOTH from a single `*mut PathBuffer`
         // so neither `&mut` invalidates the other under stacked-borrows.
-        let subpath_buf_ptr: *mut PathBuffer = &raw mut self.destination_dir_subpath_buf;
+        let subpath_buf_ptr: *mut PathBuffer = &raw mut *self.destination_dir_subpath_buf;
         let destination_dir_subpath: &mut ZStr = {
             let alias_slice = alias.slice(string_buf!());
             // SAFETY: `subpath_buf_ptr` is the unique borrow of the field; valid for

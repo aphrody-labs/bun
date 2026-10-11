@@ -171,11 +171,10 @@ struct TlBufs {
 thread_local! {
     // bun.ThreadlocalBuffers: lazily heap-allocate so only a Box pointer lives in TLS
     // (keeps PT_TLS MemSiz small — see test/js/bun/binary/tls-segment-size).
-    static TL_BUFS: RefCell<Box<TlBufs>> = RefCell::new(Box::new(TlBufs {
-        final_path_buf: PathBuffer::ZEROED,
-        folder_name_buf: PathBuffer::ZEROED,
-        json_path_buf: PathBuffer::ZEROED,
-    }));
+    static TL_BUFS: RefCell<Box<TlBufs>> = RefCell::new({
+        // SAFETY: TlBufs contains only PathBuffer byte arrays; all-zero bytes are their valid ZEROED representation.
+        unsafe { Box::<TlBufs>::new_zeroed().assume_init() }
+    });
 }
 
 pub(crate) fn uses_streaming_extraction() -> bool {

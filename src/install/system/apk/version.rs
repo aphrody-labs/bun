@@ -56,7 +56,13 @@ struct State<'a> {
 
 impl<'a> State<'a> {
     fn first(v: &'a [u8]) -> State<'a> {
-        let mut s = State { token: Tok::InitialDigit, suffix: 0, number: 0, value: b"", rest: v };
+        let mut s = State {
+            token: Tok::InitialDigit,
+            suffix: 0,
+            number: 0,
+            value: b"",
+            rest: v,
+        };
         s.parse_digits();
         s
     }
@@ -64,7 +70,9 @@ impl<'a> State<'a> {
     fn parse_digits(&mut self) {
         let n = self.rest.iter().take_while(|b| b.is_ascii_digit()).count();
         self.value = &self.rest[..n];
-        self.number = self.value.iter().fold(0u64, |acc, &d| acc.wrapping_mul(10).wrapping_add(u64::from(d - b'0')));
+        self.number = self.value.iter().fold(0u64, |acc, &d| {
+            acc.wrapping_mul(10).wrapping_add(u64::from(d - b'0'))
+        });
         self.rest = &self.rest[n..];
         if n == 0 {
             self.token = Tok::Invalid;
@@ -110,11 +118,19 @@ impl<'a> State<'a> {
                     return;
                 }
                 self.rest = &self.rest[1..];
-                let n = self.rest.iter().take_while(|b| b.is_ascii_lowercase()).count();
+                let n = self
+                    .rest
+                    .iter()
+                    .take_while(|b| b.is_ascii_lowercase())
+                    .count();
                 self.value = &self.rest[..n];
                 self.rest = &self.rest[n..];
                 self.suffix = suffix_value(self.value);
-                self.token = if self.suffix == 0 { Tok::Invalid } else { Tok::Suffix };
+                self.token = if self.suffix == 0 {
+                    Tok::Invalid
+                } else {
+                    Tok::Suffix
+                };
             }
             b'~' => {
                 if self.token >= Tok::CommitHash {
@@ -122,10 +138,18 @@ impl<'a> State<'a> {
                     return;
                 }
                 self.rest = &self.rest[1..];
-                let n = self.rest.iter().take_while(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')).count();
+                let n = self
+                    .rest
+                    .iter()
+                    .take_while(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+                    .count();
                 self.value = &self.rest[..n];
                 self.rest = &self.rest[n..];
-                self.token = if n == 0 { Tok::Invalid } else { Tok::CommitHash };
+                self.token = if n == 0 {
+                    Tok::Invalid
+                } else {
+                    Tok::CommitHash
+                };
             }
             b'-' => {
                 if self.token >= Tok::RevisionNo || !self.rest.starts_with(b"-r") {
@@ -273,7 +297,12 @@ pub struct Dep {
 
 impl Dep {
     pub fn any(name: &str) -> Dep {
-        Dep { name: name.to_owned(), op: ANY, version: None, tag: None }
+        Dep {
+            name: name.to_owned(),
+            op: ANY,
+            version: None,
+            tag: None,
+        }
     }
 
     pub fn is_conflict(&self) -> bool {
@@ -292,7 +321,10 @@ impl Dep {
         let (name, version) = match cmp_at {
             Some(i) => {
                 let tail = &s[i..];
-                let n = tail.iter().take_while(|b| matches!(b, b'<' | b'>' | b'=' | b'~')).count();
+                let n = tail
+                    .iter()
+                    .take_while(|b| matches!(b, b'<' | b'>' | b'=' | b'~'))
+                    .count();
                 let mask = op_mask(&tail[..n]);
                 if mask == 0 {
                     return None;

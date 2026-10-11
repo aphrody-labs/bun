@@ -403,8 +403,14 @@ pub(crate) fn install_hoisted_packages(
                 },
                 trusted_dependencies_from_update_requests: trusted_deps,
                 seen_bin_links: StringHashMap::<()>::default(),
-                destination_dir_subpath_buf: bun_paths::PathBuffer::ZEROED,
-                folder_path_buf: bun_paths::PathBuffer::ZEROED,
+                // SAFETY: PathBuffer is a byte array; zero initializes its complete valid ZEROED representation on the heap.
+                destination_dir_subpath_buf: unsafe {
+                    Box::<bun_paths::PathBuffer>::new_zeroed().assume_init()
+                },
+                // SAFETY: PathBuffer is a byte array; zero initializes its complete valid ZEROED representation on the heap.
+                folder_path_buf: unsafe {
+                    Box::<bun_paths::PathBuffer>::new_zeroed().assume_init()
+                },
                 current_tree_id: tree::INVALID_ID,
                 pending_lifecycle_scripts: Vec::new(),
                 copy_trees: {

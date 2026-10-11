@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Debian version ordering, deliberately distinct from npm semantic versions.
 use std::cmp::Ordering;
+use super::AsciiFields;
 
 fn integer(a: &[u8], b: &[u8]) -> Ordering {
     let a = &a[a.iter().position(|c| *c != b'0').unwrap_or(a.len())..];
@@ -54,8 +55,8 @@ fn part(mut a: &[u8], mut b: &[u8]) -> Ordering {
 }
 
 pub fn valid(s: &str) -> bool {
-    let (_, rest) = s.split_once(':').unwrap_or(("0", s));
-    let epoch = s.split_once(':').map(|(e, _)| e).unwrap_or("0");
+    let (_, rest) = s.split_ascii_once(":").unwrap_or(("0", s));
+    let epoch = s.split_ascii_once(":").map(|(e, _)| e).unwrap_or("0");
     !epoch.is_empty()
         && epoch.bytes().all(|c| c.is_ascii_digit())
         && rest.as_bytes().first().is_some_and(u8::is_ascii_digit)
@@ -66,10 +67,10 @@ pub fn valid(s: &str) -> bool {
 }
 
 pub fn compare(a: &str, b: &str) -> Ordering {
-    let (ea, a) = a.split_once(':').unwrap_or(("0", a));
-    let (eb, b) = b.split_once(':').unwrap_or(("0", b));
-    let (ua, ra) = a.rsplit_once('-').unwrap_or((a, "0"));
-    let (ub, rb) = b.rsplit_once('-').unwrap_or((b, "0"));
+    let (ea, a) = a.split_ascii_once(":").unwrap_or(("0", a));
+    let (eb, b) = b.split_ascii_once(":").unwrap_or(("0", b));
+    let (ua, ra) = a.rsplit_ascii_once("-").unwrap_or((a, "0"));
+    let (ub, rb) = b.rsplit_ascii_once("-").unwrap_or((b, "0"));
     integer(ea.as_bytes(), eb.as_bytes())
         .then_with(|| part(ua.as_bytes(), ub.as_bytes()))
         .then_with(|| part(ra.as_bytes(), rb.as_bytes()))

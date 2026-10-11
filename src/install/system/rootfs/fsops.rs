@@ -4,8 +4,8 @@
 //! package cannot write outside it.
 
 use super::super::{Error, Result, fs, lossy};
-use super::tar::{Entry, Kind};
 use super::crypto::{Alg, digest};
+use super::tar::{Entry, Kind};
 use bun_core::strings;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -112,8 +112,7 @@ impl Root {
             if target.first() == Some(&b'/') {
                 done.clear();
             }
-            let parts: Vec<&[u8]> = strings::split(&target, b"/").collect();
-            for p in parts.into_iter().rev() {
+            for p in target.split(|byte| *byte == b'/').rev() {
                 if p != b"" && p != b"." {
                     queue.push_front(p.to_vec());
                 }
@@ -155,7 +154,10 @@ impl Root {
                 Some(m) if m.kind == FileType::Dir => {}
                 Some(m) if m.kind == FileType::Symlink => {}
                 Some(_) => {
-                    return Err(Error::Io(format!("{} exists and is not a directory", lossy(&host))));
+                    return Err(Error::Io(format!(
+                        "{} exists and is not a directory",
+                        lossy(&host)
+                    )));
                 }
                 None => sys::mkdir(&host, mode)?,
             }
@@ -198,7 +200,13 @@ impl Root {
     /// Writes one archive entry at `rel`, with `owner` applied when running as root.
     /// Regular files are written next to the target and renamed over it, so a
     /// running binary (busybox during its own upgrade) is replaced, not truncated.
-    pub fn apply(&self, entry: &Entry<'_>, rel: &[u8], owner: (u32, u32), data: &[u8]) -> Result<Applied> {
+    pub fn apply(
+        &self,
+        entry: &Entry<'_>,
+        rel: &[u8],
+        owner: (u32, u32),
+        data: &[u8],
+    ) -> Result<Applied> {
         let rel = self.resolve_parents(rel);
         if rel.is_empty() {
             return Ok(Applied::Done);
@@ -257,7 +265,10 @@ impl Root {
                     sys::unlink(&host);
                 }
                 if !sys::symlink(&entry.link, &host) {
-                    return Ok(Applied::Skipped(format!("cannot create symlink {}", lossy(&rel))));
+                    return Ok(Applied::Skipped(format!(
+                        "cannot create symlink {}",
+                        lossy(&rel)
+                    )));
                 }
                 if superuser {
                     sys::lchown(&host, owner.0, owner.1);
@@ -403,10 +414,20 @@ mod sys {
 
     pub(super) fn set_mtime(path: &[u8], mtime: i64) {
         let p = c(path);
-        let t = libc::timespec { tv_sec: mtime as _, tv_nsec: 0 };
+        let t = libc::timespec {
+            tv_sec: mtime as _,
+            tv_nsec: 0,
+        };
         let times = [t, t];
         // SAFETY: `p` is NUL-terminated and `times` holds two timespecs.
-        unsafe { libc::utimensat(libc::AT_FDCWD, ptr(&p), times.as_ptr(), libc::AT_SYMLINK_NOFOLLOW) };
+        unsafe {
+            libc::utimensat(
+                libc::AT_FDCWD,
+                ptr(&p),
+                times.as_ptr(),
+                libc::AT_SYMLINK_NOFOLLOW,
+            )
+        };
     }
 
     pub(super) fn set_xattr(path: &[u8], name: &[u8], value: &[u8]) {
@@ -426,7 +447,11 @@ mod sys {
         // SAFETY: both paths are NUL-terminated.
         if unsafe { libc::rename(ptr(&f), ptr(&t)) } != 0 {
             let err = std::io::Error::last_os_error();
-            return Err(Error::Io(format!("rename {} -> {}: {err}", lossy(from), lossy(to))));
+            return Err(Error::Io(format!(
+                "rename {} -> {}: {err}",
+                lossy(from),
+                lossy(to)
+            )));
         }
         Ok(())
     }
@@ -488,7 +513,13 @@ mod sys {
             0o120000 => FileType::Symlink,
             _ => FileType::Other,
         };
-        Some(Meta { kind, mode: mode & 0o7777, uid: 0, gid: 0, size: st.st_size as u64 })
+        Some(Meta {
+            kind,
+            mode: mode & 0o7777,
+            uid: 0,
+            gid: 0,
+            size: st.st_size as u64,
+        })
     }
 
     pub(super) fn read_link(path: &[u8]) -> Option<Vec<u8>> {
@@ -518,8 +549,11 @@ mod sys {
 
     pub(super) fn rename(from: &[u8], to: &[u8]) -> Result<()> {
         let (f, t) = (z(from), z(to));
-        bun_sys::rename(bun_core::ZStr::from_buf(&f, from.len()), bun_core::ZStr::from_buf(&t, to.len()))
-            .map_err(|e| Error::Io(format!("rename {} -> {}: {e}", lossy(from), lossy(to))))
+        bun_sys::rename(
+            bun_core::ZStr::from_buf(&f, from.len()),
+            bun_core::ZStr::from_buf(&t, to.len()),
+        )
+        .map_err(|e| Error::Io(format!("rename {} -> {}: {e}", lossy(from), lossy(to))))
     }
 
     pub(super) fn unlink(path: &[u8]) -> bool {
@@ -534,8 +568,11 @@ mod sys {
 
     pub(super) fn symlink(target: &[u8], path: &[u8]) -> bool {
         let (t, p) = (z(target), z(path));
-        bun_sys::symlink(bun_core::ZStr::from_buf(&t, target.len()), bun_core::ZStr::from_buf(&p, path.len()))
-            .is_ok()
+        bun_sys::symlink(
+            bun_core::ZStr::from_buf(&t, target.len()),
+            bun_core::ZStr::from_buf(&p, path.len()),
+        )
+        .is_ok()
     }
 
     pub(super) fn hardlink(_target: &[u8], _path: &[u8]) -> bool {

@@ -28,14 +28,29 @@ impl Runner {
         if need_unshare && !usermode && !imp::unshare_check() {
             need_unshare = false;
         }
-        Runner { root: root.clone(), usermode, need_unshare, proc_ok, dev_ok, prepared: false }
+        Runner {
+            root: root.clone(),
+            usermode,
+            need_unshare,
+            proc_ok,
+            dev_ok,
+            prepared: false,
+        }
     }
 
     /// Writes `script` to `exec_rel` inside the root and runs it with `args`.
     /// Returns the exit code.
-    pub fn run(&mut self, exec_rel: &[u8], script: &[u8], args: &[&[u8]], env: &[(&[u8], &[u8])]) -> Result<i32> {
+    pub fn run(
+        &mut self,
+        exec_rel: &[u8],
+        script: &[u8],
+        args: &[&[u8]],
+        env: &[(&[u8], &[u8])],
+    ) -> Result<i32> {
         if !SUPPORTED {
-            return Err(Error::Unsupported("maintainer scripts only run on Linux".to_owned()));
+            return Err(Error::Unsupported(
+                "maintainer scripts only run on Linux".to_owned(),
+            ));
         }
         if !self.prepared {
             if !self.dev_ok && !self.need_unshare {
@@ -59,7 +74,7 @@ impl Runner {
             &self.root.dir,
             &argv,
             &envp,
-            imp::Namespaces {
+            &imp::Namespaces {
                 unshare: self.need_unshare,
                 usermode: self.usermode,
                 proc_ok: self.proc_ok,
@@ -73,7 +88,9 @@ impl Runner {
     /// Runs an already-present program of the root (`/sbin/ldconfig`, hooks).
     pub fn run_program(&mut self, argv: &[&[u8]], env: &[(&[u8], &[u8])]) -> Result<i32> {
         if !SUPPORTED {
-            return Err(Error::Unsupported("programs inside the root only run on Linux".to_owned()));
+            return Err(Error::Unsupported(
+                "programs inside the root only run on Linux".to_owned(),
+            ));
         }
         let mut envp: Vec<Vec<u8>> = vec![b"PATH=/usr/sbin:/usr/bin:/sbin:/bin".to_vec()];
         for (k, v) in env {
@@ -86,7 +103,7 @@ impl Runner {
             &self.root.dir,
             argv,
             &envp,
-            imp::Namespaces {
+            &imp::Namespaces {
                 unshare: self.need_unshare,
                 usermode: self.usermode,
                 proc_ok: self.proc_ok,
@@ -120,7 +137,11 @@ mod imp {
                 return false;
             }
             if pid == 0 {
-                libc::_exit(if libc::unshare(libc::CLONE_NEWNS) < 0 { 1 } else { 0 });
+                libc::_exit(if libc::unshare(libc::CLONE_NEWNS) < 0 {
+                    1
+                } else {
+                    0
+                });
             }
             wait(pid) == 0
         }
@@ -170,14 +191,21 @@ mod imp {
         }
     }
 
-    pub(super) fn spawn_chrooted(root: &[u8], argv: &[&[u8]], envp: &[Vec<u8>], ns: Namespaces) -> Result<i32> {
+    pub(super) fn spawn_chrooted(
+        root: &[u8],
+        argv: &[&[u8]],
+        envp: &[Vec<u8>],
+        ns: &Namespaces,
+    ) -> Result<i32> {
         // Everything the child needs is built before fork(): it must not allocate.
         let root_c = fs::zpath(root);
         let argv_c: Vec<Vec<u8>> = argv.iter().map(|a| fs::zpath(a)).collect();
-        let mut argv_p: Vec<*const c_char> = argv_c.iter().map(|a| a.as_ptr().cast::<c_char>()).collect();
+        let mut argv_p: Vec<*const c_char> =
+            argv_c.iter().map(|a| a.as_ptr().cast::<c_char>()).collect();
         argv_p.push(core::ptr::null());
         let envp_c: Vec<Vec<u8>> = envp.iter().map(|e| fs::zpath(e)).collect();
-        let mut envp_p: Vec<*const c_char> = envp_c.iter().map(|e| e.as_ptr().cast::<c_char>()).collect();
+        let mut envp_p: Vec<*const c_char> =
+            envp_c.iter().map(|e| e.as_ptr().cast::<c_char>()).collect();
         envp_p.push(core::ptr::null());
         // SAFETY: getuid/getgid have no preconditions.
         let (uid, gid) = unsafe { (libc::getuid(), libc::getgid()) };
@@ -188,7 +216,10 @@ mod imp {
         // on buffers prepared above, then execve or _exit.
         let pid = unsafe { libc::fork() };
         if pid == -1 {
-            return Err(Error::Io(format!("fork: {}", std::io::Error::last_os_error())));
+            return Err(Error::Io(format!(
+                "fork: {}",
+                std::io::Error::last_os_error()
+            )));
         }
         if pid == 0 {
             // SAFETY: see above; every pointer refers to NUL-terminated data owned by the parent frame.
@@ -226,7 +257,13 @@ mod imp {
                             core::ptr::null(),
                         ) < 0
                         {
-                            libc::mount(c"proc".as_ptr(), c"proc".as_ptr(), c"proc".as_ptr(), 0, core::ptr::null());
+                            libc::mount(
+                                c"proc".as_ptr(),
+                                c"proc".as_ptr(),
+                                c"proc".as_ptr(),
+                                0,
+                                core::ptr::null(),
+                            );
                         }
                     }
                     if !ns.dev_ok {
@@ -267,8 +304,15 @@ mod imp {
         false
     }
 
-    pub(super) fn spawn_chrooted(_root: &[u8], _argv: &[&[u8]], _envp: &[Vec<u8>], ns: Namespaces) -> Result<i32> {
+    pub(super) fn spawn_chrooted(
+        _root: &[u8],
+        _argv: &[&[u8]],
+        _envp: &[Vec<u8>],
+        ns: &Namespaces,
+    ) -> Result<i32> {
         let _ = (ns.unshare, ns.usermode, ns.proc_ok, ns.dev_ok);
-        Err(Error::Unsupported("chroot is only available on Linux".to_owned()))
+        Err(Error::Unsupported(
+            "chroot is only available on Linux".to_owned(),
+        ))
     }
 }

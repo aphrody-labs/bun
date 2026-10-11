@@ -8,6 +8,47 @@ use super::value::json_string;
 use super::{Error, Result, lossy};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
+// Debian's delimiters are ASCII, so SIMD byte boundaries preserve valid UTF-8.
+trait AsciiFields {
+    fn split_ascii_once(&self, delimiter: &str) -> Option<(&str, &str)>;
+    fn rsplit_ascii_once(&self, delimiter: &str) -> Option<(&str, &str)>;
+    fn split_ascii(&self, delimiter: &'static str) -> impl Iterator<Item = &str>;
+    fn ascii_lines(&self) -> impl Iterator<Item = &str>;
+}
+
+impl AsciiFields for str {
+    fn split_ascii_once(&self, delimiter: &str) -> Option<(&str, &str)> {
+        debug_assert!(!delimiter.is_empty() && delimiter.is_ascii());
+        let index = bun_core::strings::index_of(self.as_bytes(), delimiter.as_bytes())?;
+        Some((&self[..index], &self[index + delimiter.len()..]))
+    }
+
+    fn rsplit_ascii_once(&self, delimiter: &str) -> Option<(&str, &str)> {
+        debug_assert!(!delimiter.is_empty() && delimiter.is_ascii());
+        let index = bun_core::strings::last_index_of(self.as_bytes(), delimiter.as_bytes())?;
+        Some((&self[..index], &self[index + delimiter.len()..]))
+    }
+
+    fn split_ascii(&self, delimiter: &'static str) -> impl Iterator<Item = &str> {
+        debug_assert!(!delimiter.is_empty() && delimiter.is_ascii());
+        bun_core::strings::split(self.as_bytes(), delimiter.as_bytes())
+            .map(|bytes| std::str::from_utf8(bytes).expect("ASCII delimiter preserves UTF-8"))
+    }
+
+    fn ascii_lines(&self) -> impl Iterator<Item = &str> {
+        let empty = self.is_empty();
+        let terminated = self.ends_with('\n');
+        let mut lines = self.strip_suffix('\n').unwrap_or(self).split_ascii("\n").peekable();
+        std::iter::from_fn(move || {
+            if empty { return None; }
+            let line = lines.next()?;
+            Some(if terminated || lines.peek().is_some() {
+                line.strip_suffix('\r').unwrap_or(line)
+            } else { line })
+        })
+    }
+}
+
 const USAGE: &str = "usage: bun pm apt plan --packages-file FILE --release-file FILE --index-path main/binary-amd64/Packages --arch amd64 PACKAGE...\nLocal metadata only; no network, installation, lock or database writes. Release signatures are NOT verified.";
 type Fields = BTreeMap<String, String>;
 
@@ -39,7 +80,7 @@ fn paragraphs(data: &[u8]) -> Result<Vec<Fields>> {
     let mut rows = Vec::new();
     let mut row = Fields::new();
     let mut previous = String::new();
-    for line in text.lines().chain(std::iter::once("")) {
+    for line in text.ascii_lines().chain(std::iter::once("")) {
         if line.len() > 65536 {
             return Err(invalid("Debian metadata line exceeds limit"));
         }
@@ -62,7 +103,7 @@ fn paragraphs(data: &[u8]) -> Result<Vec<Fields>> {
             value.push_str(line.trim_start());
         } else {
             let (name, value) = line
-                .split_once(':')
+                .split_ascii_once(":")
                 .ok_or_else(|| invalid("invalid Debian field"))?;
             if name.is_empty() || !name.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-') {
                 return Err(invalid("invalid Debian field name"));
@@ -85,9 +126,9 @@ fn field<'a>(row: &'a Fields, name: &str) -> Result<&'a str> {
 }
 fn relative(path: &str) -> bool {
     !path.is_empty()
-        && !path.contains(['\\', ':', '\0'])
+        && !bun_core::strings::index_of_any(path.as_bytes(), b"\\:\0").is_some()
         && path
-            .split('/')
+            .split_ascii("/")
             .all(|p| !p.is_empty() && p != "." && p != "..")
 }
 fn hash(s: &str) -> bool {
@@ -111,7 +152,7 @@ fn integrity(release: &[u8], packages: &[u8], path: &str) -> Result<()> {
     }
     let checksums = field(&rows[0], "sha256")?;
     let mut expected = None;
-    for line in checksums.lines().filter(|l| !l.is_empty()) {
+    for line in checksums.ascii_lines().filter(|l| !l.is_empty()) {
         let parts: Vec<_> = line.split_whitespace().collect();
         if parts.len() != 3 || !hash(parts[0]) || !relative(parts[2]) {
             return Err(invalid("invalid Release SHA256 entry"));
@@ -142,7 +183,7 @@ struct Requirement {
 }
 fn requirement(text: &str) -> Result<Requirement> {
     let text = text.trim();
-    let (name, constraint) = if let Some((name, rest)) = text.split_once('(') {
+    let (name, constraint) = if let Some((name, rest)) = text.split_ascii_once("(") {
         let rest = rest
             .strip_suffix(')')
             .ok_or_else(|| invalid("unsupported Debian dependency syntax"))?;
@@ -311,9 +352,9 @@ fn run_plan(args: &[&[u8]]) -> Result<i32> {
         }
         for kind in ["pre-depends", "depends"] {
             if let Some(deps) = row.get(kind) {
-                for group in deps.split(',') {
+                for group in deps.split_ascii(",") {
                     match group
-                        .split('|')
+                        .split_ascii("|")
                         .map(requirement)
                         .collect::<Result<Vec<_>>>()
                     {

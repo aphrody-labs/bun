@@ -1117,7 +1117,8 @@ impl<'a> Linker<'a> {
         // `*mut u16` slice construction in `encode_into` is provably sound.
         #[repr(align(2))]
         struct ShimBuf([u8; 65536]);
-        let mut shim_buf = ShimBuf([0u8; 65536]);
+        // SAFETY: ShimBuf wraps only bytes; zero is valid for every element, and Box preserves its explicit 2-byte alignment.
+        let mut shim_buf = unsafe { Box::<ShimBuf>::new_zeroed().assume_init() };
         let shim_buf = &mut shim_buf.0;
         let mut read_in_buf = [0u8; WinShimShebang::MAX_SHEBANG_INPUT_LENGTH];
         let mut dest_buf = bun_paths::w_path_buffer_pool::get();

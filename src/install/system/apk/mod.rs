@@ -10,7 +10,11 @@ pub mod pkg;
 pub mod solver;
 pub mod version;
 
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::BTreeSet;
+
+// Reuse Bun's collection owner and wyhash strategy for the APK metadata tables.
+type HashMap<K, V> = bun_collections::hashbrown::HashMap<K, V, bun_wyhash::BuildHasher>;
+type HashSet<K> = bun_collections::hashbrown::HashSet<K, bun_wyhash::BuildHasher>;
 
 use super::db::{InstallKind, InstalledRecord};
 use super::lock::LockEntry;
@@ -19,7 +23,10 @@ use super::rootfs::fsops::{Applied, Root};
 use super::rootfs::scripts::{self as rscripts, Runner};
 use super::rootfs::tar::{self, Entry, Kind};
 use super::rootfs::{ArchStyle, IdCache, fnmatch_pathname, list_dir, normalize_arch};
-use super::{Ctx, Error, InstallRoot, PackageInfo, Result, SearchHit, Source, SourceKind, fs, hex, join, lossy};
+use super::{
+    Ctx, Error, InstallRoot, PackageInfo, Result, SearchHit, Source, SourceKind, fs, hex, join,
+    lossy,
+};
 use bun_core::strings;
 use db::{Db, Repo};
 use index::{Acl, DirRec, FileRec, Pkg};
@@ -165,14 +172,21 @@ impl<'a, 'e> Engine<'a, 'e> {
             root.mkdirs(b"lib/apk/db", 0o755)?;
             root.mkdirs(b"etc/apk", 0o755)?;
         }
-        let arch = settings.arch.as_deref().map(|a| normalize_arch(ArchStyle::Apk, a));
+        let arch = settings
+            .arch
+            .as_deref()
+            .map(|a| normalize_arch(ArchStyle::Apk, a));
         let db = Db::open(&root, settings.initdb, arch.as_deref())?;
         let key_dirs = match &settings.keys_dir {
             Some(d) => vec![d.clone()],
             None => db.key_dirs(),
         };
         let trust = Trust::load(&key_dirs, settings.allow_untrusted);
-        let mut repos = if settings.no_system_repositories { Vec::new() } else { db.repositories() };
+        let mut repos = if settings.no_system_repositories {
+            Vec::new()
+        } else {
+            db.repositories()
+        };
         for line in &settings.repositories {
             for r in Repo::expand(line, db.arch()) {
                 if !repos.iter().any(|x: &Repo| x.index_url == r.index_url) {
@@ -181,7 +195,7 @@ impl<'a, 'e> Engine<'a, 'e> {
             }
         }
         let ids = IdCache::load(&root);
-        let mut owners = HashMap::new();
+        let mut owners = HashMap::default();
         for p in &db.installed {
             for path in p.file_paths() {
                 owners.insert(path, p.name.clone());
@@ -202,10 +216,10 @@ impl<'a, 'e> Engine<'a, 'e> {
             warned_scripts: false,
             errors: 0,
             owners,
-            modified_dirs: HashSet::new(),
-            run_all: HashSet::new(),
+            modified_dirs: HashSet::default(),
+            run_all: HashSet::default(),
             changed: Vec::new(),
-            to_be_removed: HashSet::new(),
+            to_be_removed: HashSet::default(),
             skipped: 0,
         })
     }
@@ -227,12 +241,18 @@ impl<'a, 'e> Engine<'a, 'e> {
 
     fn fetch_index(&self, repo: &Repo) -> Result<Vec<u8>> {
         if let Some(path) = local_path(&repo.index_url) {
-            return fs::read(path.as_bytes()).ok_or_else(|| Error::NotFound(repo.index_url.clone()));
+            return fs::read(path.as_bytes())
+                .ok_or_else(|| Error::NotFound(repo.index_url.clone()));
         }
         let hash = hex(&digest(Alg::Sha256, repo.index_url.as_bytes()));
         let name = format!("APKINDEX.{}.tar.gz", &hash[..8]);
-        let max_age = if self.settings.update_cache { 0 } else { INDEX_MAX_AGE };
-        self.ctx.fetch_cached(SourceKind::Apk, &name, &repo.index_url, max_age)
+        let max_age = if self.settings.update_cache {
+            0
+        } else {
+            INDEX_MAX_AGE
+        };
+        self.ctx
+            .fetch_cached(SourceKind::Apk, &name, &repo.index_url, max_age)
     }
 
     /// Loads every repository index (once); unavailable ones are warnings, like apk.
@@ -252,7 +272,12 @@ impl<'a, 'e> Engine<'a, 'e> {
                     if self.settings.update_cache && !self.settings.quiet {
                         self.msg(&format!("{} [{}]", index.description, repo.url));
                     }
-                    self.pool.extend(index.packages.into_iter().filter(|p| arch_ok(&arches, &p.arch)));
+                    self.pool.extend(
+                        index
+                            .packages
+                            .into_iter()
+                            .filter(|p| arch_ok(&arches, &p.arch)),
+                    );
                 }
                 Err(err) => self.warning(&format!("opening {}: {err}", repo.url)),
             }
@@ -266,12 +291,17 @@ impl<'a, 'e> Engine<'a, 'e> {
         let mut out = Vec::with_capacity(self.db.installed.len());
         for p in &self.db.installed {
             let found = self.pool[..self.repo_pool_len].iter().position(|q| {
-                q.name == p.name && q.version == p.version && (p.identity.is_empty() || q.identity == p.identity)
+                q.name == p.name
+                    && q.version == p.version
+                    && (p.identity.is_empty() || q.identity == p.identity)
             });
             match found {
                 Some(j) => out.push(j),
                 None => {
-                    self.pool.push(Pkg { repo: None, ..p.clone() });
+                    self.pool.push(Pkg {
+                        repo: None,
+                        ..p.clone()
+                    });
                     out.push(self.pool.len() - 1);
                 }
             }
@@ -300,8 +330,16 @@ impl<'a, 'e> Engine<'a, 'e> {
             return pkg::read_package(&bytes, identity, &self.trust, &what);
         }
         let id_hex = hex(&p.identity);
-        let cache_name = format!("{}-{}.{}.apk", p.name, p.version, &id_hex[..id_hex.len().min(8)]);
-        let cache = join(&self.ctx.source_cache_dir(SourceKind::Apk), &[b"pkgs", cache_name.as_bytes()]);
+        let cache_name = format!(
+            "{}-{}.{}.apk",
+            p.name,
+            p.version,
+            &id_hex[..id_hex.len().min(8)]
+        );
+        let cache = join(
+            &self.ctx.source_cache_dir(SourceKind::Apk),
+            &[b"pkgs", cache_name.as_bytes()],
+        );
         if let Some(bytes) = fs::read(&cache) {
             if let Ok(file) = pkg::read_package(&bytes, identity, &self.trust, &what) {
                 return Ok(file);
@@ -313,7 +351,14 @@ impl<'a, 'e> Engine<'a, 'e> {
         Ok(file)
     }
 
-    fn run_script(&mut self, name: &str, version: &str, kind: &str, body: &[u8], args: &[String]) -> bool {
+    fn run_script(
+        &mut self,
+        name: &str,
+        version: &str,
+        kind: &str,
+        body: &[u8],
+        args: &[String],
+    ) -> bool {
         if self.settings.no_scripts {
             return true;
         }
@@ -329,13 +374,18 @@ impl<'a, 'e> Engine<'a, 'e> {
         let runner = self.runner.get_or_insert_with(|| Runner::new(root));
         let exec = format!("lib/apk/exec/{name}-{version}.{kind}");
         let argv: Vec<&[u8]> = args.iter().map(String::as_bytes).collect();
-        let env: [(&[u8], &[u8]); 2] = [(b"APK_SCRIPT", kind.as_bytes()), (b"APK_PACKAGE", name.as_bytes())];
+        let env: [(&[u8], &[u8]); 2] = [
+            (b"APK_SCRIPT", kind.as_bytes()),
+            (b"APK_PACKAGE", name.as_bytes()),
+        ];
         let result = runner.run(exec.as_bytes(), body, &argv, &env);
         self.ids = IdCache::load(&self.root);
         match result {
             Ok(0) => true,
             Ok(code) => {
-                self.error(&format!("{name}-{version}.{kind}: script exited with error {code}"));
+                self.error(&format!(
+                    "{name}-{version}.{kind}: script exited with error {code}"
+                ));
                 false
             }
             Err(err) => {
@@ -376,7 +426,11 @@ impl<'a, 'e> Engine<'a, 'e> {
             return Replaces::Yes;
         }
         let prio = |by: &Pkg, of: &Pkg| -> i64 {
-            if by.replaces.iter().any(|d| d.name == of.name && d.matches_version(Some(&of.version))) {
+            if by
+                .replaces
+                .iter()
+                .any(|d| d.name == of.name && d.matches_version(Some(&of.version)))
+            {
                 i64::from(by.replaces_priority)
             } else {
                 -1
@@ -422,11 +476,20 @@ impl<'a, 'e> Engine<'a, 'e> {
                 continue;
             }
             let owner = self.ids.resolve(&e.uname, &e.gname, e.uid, e.gid);
-            let acl = Acl { uid: owner.0, gid: owner.1, mode: e.mode & 0o7777, xattr_digest: xattr_digest(&e) };
+            let acl = Acl {
+                uid: owner.0,
+                gid: owner.1,
+                mode: e.mode & 0o7777,
+                xattr_digest: xattr_digest(&e),
+            };
             if e.kind == Kind::Dir {
                 match rec.dirs.iter_mut().find(|d| d.name == path) {
                     Some(d) => d.acl = Some(acl),
-                    None => rec.dirs.push(DirRec { name: path.clone(), acl: Some(acl), files: Vec::new() }),
+                    None => rec.dirs.push(DirRec {
+                        name: path.clone(),
+                        acl: Some(acl),
+                        files: Vec::new(),
+                    }),
                 }
                 self.apply(&e, &path, owner, &[])?;
                 continue;
@@ -434,7 +497,11 @@ impl<'a, 'e> Engine<'a, 'e> {
             let (dir, base) = split_path(&path);
             let (dir, base) = (dir.to_owned(), base.to_owned());
             if !rec.dirs.iter().any(|d| d.name == dir) {
-                rec.dirs.push(DirRec { name: dir.clone(), acl: None, files: Vec::new() });
+                rec.dirs.push(DirRec {
+                    name: dir.clone(),
+                    acl: None,
+                    files: Vec::new(),
+                });
             }
             if let Some(current) = self.owners.get(&path).cloned() {
                 if current != rec.name {
@@ -442,12 +509,21 @@ impl<'a, 'e> Engine<'a, 'e> {
                         Replaces::Yes => self.disown(&current, &path),
                         Replaces::No => continue,
                         Replaces::Conflict if self.settings.force_overwrite => {
-                            self.warning(&format!("{}: overwriting {path} owned by {current}.", rec.name_version()));
+                            self.warning(&format!(
+                                "{}: overwriting {path} owned by {current}.",
+                                rec.name_version()
+                            ));
                             self.disown(&current, &path);
                         }
                         Replaces::Conflict => {
-                            let who = self.db.installed_by_name(&current).map_or(current.clone(), Pkg::name_version);
-                            self.error(&format!("{}: trying to overwrite {path} owned by {who}.", rec.name_version()));
+                            let who = self
+                                .db
+                                .installed_by_name(&current)
+                                .map_or_else(|| current.clone(), Pkg::name_version);
+                            self.error(&format!(
+                                "{}: trying to overwrite {path} owned by {who}.",
+                                rec.name_version()
+                            ));
                             if !strings::contains_char(rec.broken.as_bytes(), b'f') {
                                 rec.broken.push('f');
                             }
@@ -482,14 +558,19 @@ impl<'a, 'e> Engine<'a, 'e> {
             if e.kind == Kind::File && is_protected(&path) {
                 if let Some(existing) = self.root.digest(path.as_bytes(), Alg::Sha1) {
                     let recorded = old.and_then(|o| file_digest(o, &path));
-                    if file_sum.as_ref() != Some(&existing) && recorded.as_ref() != Some(&existing) {
+                    if file_sum.as_ref() != Some(&existing) && recorded.as_ref() != Some(&existing)
+                    {
                         target = format!("{path}.apk-new");
                     }
                 }
             }
             self.apply(&e, &target, owner, e.data)?;
             if let Some(d) = rec.dirs.iter_mut().find(|d| d.name == dir) {
-                d.files.push(FileRec { name: base, acl: Some(acl), digest: file_sum });
+                d.files.push(FileRec {
+                    name: base,
+                    acl: Some(acl),
+                    digest: file_sum,
+                });
             }
             self.owners.insert(path, rec.name.clone());
             self.modified_dirs.insert(dir);
@@ -498,7 +579,10 @@ impl<'a, 'e> Engine<'a, 'e> {
     }
 
     fn dir_used_by_others(&self, dir: &str, except: &str) -> bool {
-        self.db.installed.iter().any(|p| p.name != except && p.dirs.iter().any(|d| d.name == dir))
+        self.db
+            .installed
+            .iter()
+            .any(|p| p.name != except && p.dirs.iter().any(|d| d.name == dir))
     }
 
     fn remove_file(&mut self, path: &str, recorded: Option<&Vec<u8>>) {
@@ -515,10 +599,18 @@ impl<'a, 'e> Engine<'a, 'e> {
 
     /// Removes the files and directories of `old` that `keep` (its replacement) no longer ships.
     fn purge(&mut self, old: &Pkg, keep: Option<&Pkg>) {
-        let kept: HashSet<String> = keep.map(Pkg::file_paths).unwrap_or_default().into_iter().collect();
+        let kept: HashSet<String> = keep
+            .map(Pkg::file_paths)
+            .unwrap_or_default()
+            .into_iter()
+            .collect();
         for d in &old.dirs {
             for f in &d.files {
-                let path = if d.name.is_empty() { f.name.clone() } else { format!("{}/{}", d.name, f.name) };
+                let path = if d.name.is_empty() {
+                    f.name.clone()
+                } else {
+                    format!("{}/{}", d.name, f.name)
+                };
                 if kept.contains(&path) {
                     continue;
                 }
@@ -529,9 +621,14 @@ impl<'a, 'e> Engine<'a, 'e> {
                 self.owners.remove(&path);
             }
         }
-        let kept_dirs: HashSet<&str> = keep.map(|k| k.dirs.iter().map(|d| d.name.as_str()).collect()).unwrap_or_default();
+        let kept_dirs: HashSet<&str> = keep
+            .map(|k| k.dirs.iter().map(|d| d.name.as_str()).collect())
+            .unwrap_or_default();
         for d in old.dirs.iter().rev() {
-            if d.name.is_empty() || kept_dirs.contains(d.name.as_str()) || self.dir_used_by_others(&d.name, &old.name) {
+            if d.name.is_empty()
+                || kept_dirs.contains(d.name.as_str())
+                || self.dir_used_by_others(&d.name, &old.name)
+            {
                 continue;
             }
             self.root.remove(d.name.as_bytes());
@@ -540,8 +637,18 @@ impl<'a, 'e> Engine<'a, 'e> {
 
     fn uninstall(&mut self, old: &Pkg) {
         let args = vec![old.version.clone()];
-        let scripts = self.db.scripts.get(&old.identity).cloned().unwrap_or_default();
-        let script = |kind: &str| scripts.iter().find(|(k, _)| *k == kind).map(|(_, b)| b.clone());
+        let scripts = self
+            .db
+            .scripts
+            .get(&old.identity)
+            .cloned()
+            .unwrap_or_default();
+        let script = |kind: &str| {
+            scripts
+                .iter()
+                .find(|(k, _)| *k == kind)
+                .map(|(_, b)| b.clone())
+        };
         if let Some(body) = script("pre-deinstall") {
             self.run_script(&old.name, &old.version, "pre-deinstall", &body, &args);
         }
@@ -556,14 +663,23 @@ impl<'a, 'e> Engine<'a, 'e> {
 
     fn install(&mut self, p: &Pkg, old: Option<&Pkg>) -> Result<()> {
         let file = self.fetch_package(p)?;
-        let mut rec = Pkg { repo: None, dirs: Vec::new(), broken: String::new(), ..p.clone() };
+        let mut rec = Pkg {
+            repo: None,
+            dirs: Vec::new(),
+            broken: String::new(),
+            ..p.clone()
+        };
         rec.replaces.clone_from(&file.info.replaces);
         rec.replaces_priority = file.info.replaces_priority;
         if rec.identity.is_empty() {
             rec.identity.clone_from(&file.info.identity);
         }
         let (pre, post, args) = match old {
-            Some(o) => ("pre-upgrade", "post-upgrade", vec![p.version.clone(), o.version.clone()]),
+            Some(o) => (
+                "pre-upgrade",
+                "post-upgrade",
+                vec![p.version.clone(), o.version.clone()],
+            ),
             None => ("pre-install", "post-install", vec![p.version.clone()]),
         };
         if let Some(body) = file.script(pre) {
@@ -573,22 +689,32 @@ impl<'a, 'e> Engine<'a, 'e> {
         }
         self.extract(&file.data, &mut rec, old)?;
         if let Some(o) = old {
-            let current = self.db.installed_by_name(&o.name).cloned().unwrap_or_else(|| o.clone());
+            let current = self
+                .db
+                .installed_by_name(&o.name)
+                .cloned()
+                .unwrap_or_else(|| o.clone());
             self.purge(&current, Some(&rec));
             self.db.scripts.remove(&o.identity);
             self.db.triggers.remove(&o.identity);
             self.db.installed.retain(|x| x.name != o.name);
         }
         if let Some(body) = file.script(post) {
-            if !self.run_script(&p.name, &p.version, post, body, &args) && !strings::contains_char(rec.broken.as_bytes(), b's') {
+            if !self.run_script(&p.name, &p.version, post, body, &args)
+                && !strings::contains_char(rec.broken.as_bytes(), b's')
+            {
                 rec.broken.push('s');
             }
         }
         if !file.scripts.is_empty() {
-            self.db.scripts.insert(rec.identity.clone(), file.scripts.clone());
+            self.db
+                .scripts
+                .insert(rec.identity.clone(), file.scripts.clone());
         }
         if !file.triggers.is_empty() {
-            self.db.triggers.insert(rec.identity.clone(), file.triggers.clone());
+            self.db
+                .triggers
+                .insert(rec.identity.clone(), file.triggers.clone());
         }
         self.run_all.insert(rec.name.clone());
         self.changed.push(rec.name.clone());
@@ -597,8 +723,12 @@ impl<'a, 'e> Engine<'a, 'e> {
     }
 
     fn run_triggers(&mut self) {
-        let dirs: BTreeSet<String> =
-            self.db.installed.iter().flat_map(|p| p.dirs.iter().map(|d| d.name.clone())).collect();
+        let dirs: BTreeSet<String> = self
+            .db
+            .installed
+            .iter()
+            .flat_map(|p| p.dirs.iter().map(|d| d.name.clone()))
+            .collect();
         let changed = core::mem::take(&mut self.changed);
         for name in changed {
             let Some(p) = self.db.installed_by_name(&name) else {
@@ -631,12 +761,14 @@ impl<'a, 'e> Engine<'a, 'e> {
                         Some(rest) => (true, rest),
                         None => (false, t.as_str()),
                     };
-                    if !pattern.starts_with('/') || !fnmatch_pathname(pattern.as_bytes(), rooted.as_bytes()) {
+                    if !pattern.starts_with('/')
+                        || !fnmatch_pathname(pattern.as_bytes(), rooted.as_bytes())
+                    {
                         continue;
                     }
                     pending = true;
                     if !only_changed || modified {
-                        args.push(rooted.clone());
+                        args.push(rooted);
                     }
                     break;
                 }
@@ -649,16 +781,31 @@ impl<'a, 'e> Engine<'a, 'e> {
 
     /// Applies the solver result: removals, then installs/upgrades in
     /// dependency order, triggers, and the database.
-    pub fn commit(&mut self, world: Vec<Dep>, order: &[usize], reinstall: &HashSet<String>) -> Result<()> {
-        let new_names: HashSet<&str> = order.iter().map(|&i| self.pool[i].name.as_str()).collect();
-        let removals: Vec<Pkg> =
-            self.db.installed.iter().filter(|p| !new_names.contains(p.name.as_str())).cloned().collect();
+    pub fn commit(
+        &mut self,
+        world: Vec<Dep>,
+        order: &[usize],
+        reinstall: &HashSet<String>,
+    ) -> Result<()> {
+        let removals: Vec<Pkg> = {
+            let new_names: HashSet<&str> =
+                order.iter().map(|&i| self.pool[i].name.as_str()).collect();
+            self.db
+                .installed
+                .iter()
+                .filter(|p| !new_names.contains(p.name.as_str()))
+                .cloned()
+                .collect()
+        };
         let mut installs: Vec<(Pkg, Option<Pkg>)> = Vec::new();
         for &i in order {
             let p = &self.pool[i];
             let old = self.db.installed_by_name(&p.name).cloned();
             if let Some(o) = &old {
-                if o.version == p.version && o.identity == p.identity && !reinstall.contains(&p.name) {
+                if o.version == p.version
+                    && o.identity == p.identity
+                    && !reinstall.contains(&p.name)
+                {
                     continue;
                 }
             }
@@ -667,7 +814,11 @@ impl<'a, 'e> Engine<'a, 'e> {
         self.to_be_removed = removals
             .iter()
             .map(|p| p.name.clone())
-            .chain(installs.iter().filter_map(|(_, o)| o.as_ref().map(|o| o.name.clone())))
+            .chain(
+                installs
+                    .iter()
+                    .filter_map(|(_, o)| o.as_ref().map(|o| o.name.clone())),
+            )
             .collect();
         let total = removals.len() + installs.len();
         if total > 0 {
@@ -677,7 +828,10 @@ impl<'a, 'e> Engine<'a, 'e> {
         let mut n = 0usize;
         for old in &removals {
             n += 1;
-            self.msg(&format!("({n:>width$}/{total}) Purging {} ({})", old.name, old.version));
+            self.msg(&format!(
+                "({n:>width$}/{total}) Purging {} ({})",
+                old.name, old.version
+            ));
             self.uninstall(old);
         }
         for (p, old) in &installs {
@@ -685,9 +839,15 @@ impl<'a, 'e> Engine<'a, 'e> {
             let line = match old {
                 None => format!("Installing {} ({})", p.name, p.version),
                 Some(o) => match version::compare(&p.version, &o.version) {
-                    core::cmp::Ordering::Greater => format!("Upgrading {} ({} -> {})", p.name, o.version, p.version),
-                    core::cmp::Ordering::Less => format!("Downgrading {} ({} -> {})", p.name, o.version, p.version),
-                    core::cmp::Ordering::Equal => format!("Reinstalling {} ({})", p.name, p.version),
+                    core::cmp::Ordering::Greater => {
+                        format!("Upgrading {} ({} -> {})", p.name, o.version, p.version)
+                    }
+                    core::cmp::Ordering::Less => {
+                        format!("Downgrading {} ({} -> {})", p.name, o.version, p.version)
+                    }
+                    core::cmp::Ordering::Equal => {
+                        format!("Reinstalling {} ({})", p.name, p.version)
+                    }
                 },
             };
             self.msg(&format!("({n:>width$}/{total}) {line}"));
@@ -708,11 +868,18 @@ impl<'a, 'e> Engine<'a, 'e> {
             ));
         }
         let bytes: u64 = self.db.installed.iter().map(|p| p.installed_size).sum();
-        let summary = format!("{} MiB in {} packages", bytes.div_ceil(1024 * 1024), self.db.installed.len());
+        let summary = format!(
+            "{} MiB in {} packages",
+            bytes.div_ceil(1024 * 1024),
+            self.db.installed.len()
+        );
         if self.errors > 0 {
             let s = if self.errors > 1 { "s" } else { "" };
             self.msg(&format!("{} error{s}; {summary}", self.errors));
-            return Err(Error::Io(format!("{} error{s} while committing changes", self.errors)));
+            return Err(Error::Io(format!(
+                "{} error{s} while committing changes",
+                self.errors
+            )));
         }
         self.msg(&format!("OK: {summary}"));
         Ok(())
@@ -723,12 +890,16 @@ impl<'a, 'e> Engine<'a, 'e> {
     pub fn add(&mut self, specs: &[String]) -> Result<()> {
         let mut world = self.db.world.clone();
         for s in specs {
-            let dep = Dep::parse(s).ok_or_else(|| Error::Parse(format!("'{s}' is not a correctly formatted world dependency")))?;
+            let dep = Dep::parse(s).ok_or_else(|| {
+                Error::Parse(format!(
+                    "'{s}' is not a correctly formatted world dependency"
+                ))
+            })?;
             world.retain(|d| d.name != dep.name);
             world.push(dep);
         }
         let order = self.solve(&world)?;
-        self.commit(world, &order, &HashSet::new())
+        self.commit(world, &order, &HashSet::default())
     }
 
     pub fn del(&mut self, names: &[String]) -> Result<()> {
@@ -741,14 +912,14 @@ impl<'a, 'e> Engine<'a, 'e> {
             }
         }
         let order = self.solve(&world)?;
-        self.commit(world, &order, &HashSet::new())
+        self.commit(world, &order, &HashSet::default())
     }
 
     pub fn upgrade(&mut self) -> Result<()> {
         self.settings.upgrade = true;
         let world = self.db.world.clone();
         let order = self.solve(&world)?;
-        self.commit(world, &order, &HashSet::new())
+        self.commit(world, &order, &HashSet::default())
     }
 
     /// Reinstalls `names` (every installed package when empty).
@@ -773,7 +944,7 @@ impl<'a, 'e> Engine<'a, 'e> {
     /// Newest package per name whose name (or description with `descriptions`) matches.
     pub fn search(&mut self, patterns: &[String], descriptions: bool) -> Result<Vec<Pkg>> {
         self.load_indexes()?;
-        let mut best: HashMap<&str, &Pkg> = HashMap::new();
+        let mut best: HashMap<&str, &Pkg> = HashMap::default();
         for p in &self.pool[..self.repo_pool_len] {
             let hit = patterns.is_empty()
                 || patterns.iter().any(|pat| {
@@ -791,7 +962,8 @@ impl<'a, 'e> Engine<'a, 'e> {
                 continue;
             }
             match best.get(p.name.as_str()) {
-                Some(q) if version::compare(&q.version, &p.version) != core::cmp::Ordering::Less => {}
+                Some(q)
+                    if version::compare(&q.version, &p.version) != core::cmp::Ordering::Less => {}
                 _ => {
                     best.insert(p.name.as_str(), p);
                 }
@@ -808,10 +980,18 @@ impl<'a, 'e> Engine<'a, 'e> {
         for p in &self.db.installed {
             for d in &p.dirs {
                 for f in &d.files {
-                    let path = if d.name.is_empty() { f.name.clone() } else { format!("{}/{}", d.name, f.name) };
+                    let path = if d.name.is_empty() {
+                        f.name.clone()
+                    } else {
+                        format!("{}/{}", d.name, f.name)
+                    };
                     match self.root.digest(path.as_bytes(), Alg::Sha1) {
                         None if !self.root.exists(path.as_bytes()) => out.push(('X', path)),
-                        Some(actual) if f.digest.as_ref().is_some_and(|d| d.len() == 20 && *d != actual) => {
+                        Some(actual)
+                            if f.digest
+                                .as_ref()
+                                .is_some_and(|d| d.len() == 20 && *d != actual) =>
+                        {
                             out.push(('U', path));
                         }
                         _ => {}
@@ -868,8 +1048,14 @@ fn project_settings(ctx: &Ctx<'_>, root: &[u8]) -> Settings {
         repositories,
         no_system_repositories: true,
         keys_dir,
-        allow_untrusted: matches!(ctx.env_var(b"BUN_SYSTEM_APK_ALLOW_UNTRUSTED").as_deref(), Some("1" | "true")),
-        no_scripts: !matches!(ctx.env_var(b"BUN_SYSTEM_APK_SCRIPTS").as_deref(), Some("1" | "true")),
+        allow_untrusted: matches!(
+            ctx.env_var(b"BUN_SYSTEM_APK_ALLOW_UNTRUSTED").as_deref(),
+            Some("1" | "true")
+        ),
+        no_scripts: !matches!(
+            ctx.env_var(b"BUN_SYSTEM_APK_SCRIPTS").as_deref(),
+            Some("1" | "true")
+        ),
         upgrade: false,
         update_cache: ctx.options.refresh,
         force_overwrite: false,
@@ -890,7 +1076,8 @@ fn parse_range(id: &str, range: &str) -> Result<Dep> {
     } else {
         format!("{id}={r}")
     };
-    Dep::parse(&text).ok_or_else(|| Error::Parse(format!("invalid apk version range \"{range}\" for {id}")))
+    Dep::parse(&text)
+        .ok_or_else(|| Error::Parse(format!("invalid apk version range \"{range}\" for {id}")))
 }
 
 fn shim_target_dirs() -> [&'static str; 4] {
@@ -973,10 +1160,13 @@ impl Source for Apk {
     fn resolve(&mut self, ctx: &Ctx<'_>, id: &str, range: &str) -> Result<LockEntry> {
         let dep = parse_range(id, range)?;
         let mut engine = Engine::open(ctx, project_settings(ctx, &resolve_root(ctx)))?;
-        let order = engine.solve(core::slice::from_ref(&dep)).map_err(|_| Error::NoMatchingVersion {
-            id: id.to_owned(),
-            range: range.to_owned(),
-        })?;
+        let order =
+            engine
+                .solve(core::slice::from_ref(&dep))
+                .map_err(|_| Error::NoMatchingVersion {
+                    id: id.to_owned(),
+                    range: range.to_owned(),
+                })?;
         let chosen = order
             .iter()
             .map(|&i| &engine.pool[i])
@@ -989,16 +1179,32 @@ impl Source for Apk {
             entry.url = repo.package_url(chosen, engine.db.arch());
             entry.meta.insert("repository".to_owned(), repo.url.clone());
         }
-        entry.deps = chosen.depends.iter().filter(|d| !d.is_conflict()).map(|d| d.name.clone()).collect();
-        entry.meta.insert("arch".to_owned(), engine.db.arch().to_owned());
+        entry.deps = chosen
+            .depends
+            .iter()
+            .filter(|d| !d.is_conflict())
+            .map(|d| d.name.clone())
+            .collect();
+        entry
+            .meta
+            .insert("arch".to_owned(), engine.db.arch().to_owned());
         entry.meta.insert("name".to_owned(), chosen.name.clone());
         Ok(entry)
     }
 
-    fn install(&mut self, ctx: &Ctx<'_>, entry: &LockEntry, root: &InstallRoot) -> Result<InstalledRecord> {
+    fn install(
+        &mut self,
+        ctx: &Ctx<'_>,
+        entry: &LockEntry,
+        root: &InstallRoot,
+    ) -> Result<InstalledRecord> {
         let apk_root = join(&root.dir, &[b"apk"]);
         let mut engine = Engine::open(ctx, project_settings(ctx, &apk_root))?;
-        let name = entry.meta.get("name").cloned().unwrap_or_else(|| entry.id.clone());
+        let name = entry
+            .meta
+            .get("name")
+            .cloned()
+            .unwrap_or_else(|| entry.id.clone());
         engine.add(&[format!("{name}={}", entry.version)])?;
         let pkg = engine
             .db
@@ -1007,22 +1213,45 @@ impl Source for Apk {
             .ok_or_else(|| Error::NotFound(format!("apk package \"{name}\" after install")))?;
         let hash = format!("sha1:{}", hex(&pkg.identity));
         if !entry.hash.is_empty() && entry.hash != hash {
-            return Err(Error::Integrity { what: entry.id.clone(), expected: entry.hash.clone(), actual: hash });
+            return Err(Error::Integrity {
+                what: entry.id.clone(),
+                expected: entry.hash.clone(),
+                actual: hash,
+            });
         }
-        let mut rec = InstalledRecord::new(SourceKind::Apk, &entry.id, &pkg.version, &entry.hash, InstallKind::Files);
-        rec.files = pkg.file_paths().iter().map(|p| lossy(&join(&apk_root, &[p.as_bytes()]))).collect();
+        let mut rec = InstalledRecord::new(
+            SourceKind::Apk,
+            &entry.id,
+            &pkg.version,
+            &entry.hash,
+            InstallKind::Files,
+        );
+        rec.files = pkg
+            .file_paths()
+            .iter()
+            .map(|p| lossy(&join(&apk_root, &[p.as_bytes()])))
+            .collect();
         rec.bins = write_shims(root, &apk_root, &pkg, engine.db.arch())?;
         rec.meta.insert("name".to_owned(), name);
         Ok(rec)
     }
 
-    fn remove(&mut self, ctx: &Ctx<'_>, record: &InstalledRecord, root: &InstallRoot) -> Result<()> {
+    fn remove(
+        &mut self,
+        ctx: &Ctx<'_>,
+        record: &InstalledRecord,
+        root: &InstallRoot,
+    ) -> Result<()> {
         for bin in &record.bins {
             fs::remove_file(bin.as_bytes());
         }
         let apk_root = join(&root.dir, &[b"apk"]);
         let mut engine = Engine::open(ctx, project_settings(ctx, &apk_root))?;
-        let name = record.meta.get("name").cloned().unwrap_or_else(|| record.id.clone());
+        let name = record
+            .meta
+            .get("name")
+            .cloned()
+            .unwrap_or_else(|| record.id.clone());
         engine.del(&[name])
     }
 
