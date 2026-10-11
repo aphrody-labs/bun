@@ -93,6 +93,7 @@ use crate::api::bun_subprocess::Subprocess;
 use crate::api::bun_terminal_body::Poll as TerminalPoll;
 use crate::api::cron::CronJob;
 use crate::api::native_promise_context::DeferredDerefTask as NativePromiseContextDeferredDerefTask;
+use crate::api::browser_realm::ReleaseTask as BrowserRealmReleaseTask;
 #[cfg(not(windows))]
 use bun_spawn::static_pipe_writer::Poll as StaticPipeWriterPoll;
 
@@ -594,6 +595,9 @@ pub(crate) fn run_task(
             // `ptr` packs an int, not a pointer.
             NativePromiseContextDeferredDerefTask::run_from_js_thread(task.ptr as usize);
         }
+        task_tag::BrowserRealmRelease => unsafe {
+            BrowserRealmReleaseTask::run_from_js_thread(cast_ptr!(BrowserRealmReleaseTask));
+        },
 
         // ── server / bundler / streams ───────────────────────────────────
         task_tag::ServerAllConnectionsClosedTask => {
@@ -727,7 +731,7 @@ fn run_task_cold(task: Task) {
 /// `release_task_unrun` track `bun_event_loop::task_tag::COUNT`. Bump when
 /// adding a variant — and give it an arm in both.
 const _: () = assert!(
-    task_tag::COUNT == 83,
+    task_tag::COUNT == 84,
     "dispatch::run_task / release_task_unrun arm count out of sync with bun_event_loop::task_tag",
 );
 
@@ -1479,6 +1483,7 @@ fn __bun_release_task_unrun(task: bun_event_loop::Task) {
         task_tag::AsyncCpTask => release!(crate::node::fs::AsyncCpTask),
         task_tag::ShellAsyncCpTask => release!(crate::node::fs::ShellAsyncCpTask),
         task_tag::StreamPending => release!(StreamPending),
+        task_tag::BrowserRealmRelease => release!(BrowserRealmReleaseTask),
         task_tag::ThreadSafeFunction => release!(ThreadSafeFunction),
         task_tag::ValkeyDeferredClose => {
             release!(crate::valkey_jsc::js_valkey::ValkeyDeferredClose)

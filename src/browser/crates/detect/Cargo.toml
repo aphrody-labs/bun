@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: Apache-2.0
+[package]
+name = "bun_browser_detect"
+repository.workspace = true
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "Apache-2.0"
+description = "Native technology and challenge detection for Bun"
+
+[dependencies]
+reqwest.workspace = true
+rustls.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+serde_json = { workspace = true, features = ["std"] }

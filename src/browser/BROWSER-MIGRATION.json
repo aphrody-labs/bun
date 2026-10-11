@@ -1,0 +1,555 @@
+{
+  "schema": "bun-os.browser-migration/1",
+  "sourceRepository": "https://github.com/aphrody-labs/aphrody",
+  "sourceRevision": "2d66be8fcd84a87b4ca73124023881ca9d0c204f",
+  "date": "2026-10-11",
+  "files": [
+    {
+      "sourcePath": "crates/web/web-crawl/Cargo.toml",
+      "targetPath": "src/browser/crates/crawl/Cargo.toml",
+      "bytes": 836,
+      "sha256": "eb25ecd1c620c67401ef28507d8bd2182ce09555f2a58bb322c8beb822d5239b",
+      "targetSha256": "eb25ecd1c620c67401ef28507d8bd2182ce09555f2a58bb322c8beb822d5239b",
+      "integratedBytes": 1156,
+      "integratedSha256": "2e68e8bc7a611daca0e5a51dbccb2489d5dbb247a4da9427f527b20c3867ad91"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/blocking.rs",
+      "targetPath": "src/browser/crates/crawl/src/blocking.rs",
+      "bytes": 4969,
+      "sha256": "8eb63c45238212911cf60ca9189c7734339ae34b00f8f2ae0153b819d932c065",
+      "targetSha256": "8eb63c45238212911cf60ca9189c7734339ae34b00f8f2ae0153b819d932c065",
+      "integratedBytes": 4999,
+      "integratedSha256": "38ddb3c7fe4c05364b2d2d6a26f56d8e6e24b7fe63d3f6d39205c7d34ce21f01"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/design.rs",
+      "targetPath": "src/browser/crates/crawl/src/design.rs",
+      "bytes": 33482,
+      "sha256": "e502972f3a08e7454d68f9e2557ba2d357f7502efd3a31f0db63b05fad490bfa",
+      "targetSha256": "e502972f3a08e7454d68f9e2557ba2d357f7502efd3a31f0db63b05fad490bfa",
+      "integratedBytes": 33505,
+      "integratedSha256": "bc87ca2d1673511c179f2ed5c6dcb0b907946e7215b9f7857be34df9ddf0b655"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/design_google.rs",
+      "targetPath": "src/browser/crates/crawl/src/design_google.rs",
+      "bytes": 20436,
+      "sha256": "b82385c9d2bf510be3a1ff19f2ac86c4f5184ede44b7bc71f369e2d108f4a4fb",
+      "targetSha256": "b82385c9d2bf510be3a1ff19f2ac86c4f5184ede44b7bc71f369e2d108f4a4fb",
+      "integratedBytes": 20436,
+      "integratedSha256": "0a3e39dde0d2f6d0f3cba8169554deaa026d4044feef4b2cb5b49e6fbdfd82ce"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/dragon_ball/README.md",
+      "targetPath": "src/browser/crates/crawl/src/dragon_ball/README.md",
+      "bytes": 7041,
+      "sha256": "f58b0e61881f3964836b0c3a38a47c22cf0dd4e7f6f5b3bfa9839bb295090f21",
+      "targetSha256": "f58b0e61881f3964836b0c3a38a47c22cf0dd4e7f6f5b3bfa9839bb295090f21",
+      "integratedBytes": 7036,
+      "integratedSha256": "5be649d39446d8bb1540d053ee753c0500a2f2528998ea6a60c76d4c00af64f7"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/dragon_ball/assets.rs",
+      "targetPath": "src/browser/crates/crawl/src/dragon_ball/assets.rs",
+      "bytes": 35509,
+      "sha256": "1b2d91732eab5aaf10cb02c2f618afe5d1d135e6fedc2e8f79abab2c73629635",
+      "targetSha256": "1b2d91732eab5aaf10cb02c2f618afe5d1d135e6fedc2e8f79abab2c73629635",
+      "integratedBytes": 35525,
+      "integratedSha256": "ac3b976fe24789d374a3221119ec4ef6f6180ff290085635b1e06080e80f07f2"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/dragon_ball/consolidation.rs",
+      "targetPath": "src/browser/crates/crawl/src/dragon_ball/consolidation.rs",
+      "bytes": 9175,
+      "sha256": "37917a210c0cfc4ad808fc338550637c5a09de3984a0192e87ae70c57b51ced5",
+      "targetSha256": "37917a210c0cfc4ad808fc338550637c5a09de3984a0192e87ae70c57b51ced5",
+      "integratedBytes": 9183,
+      "integratedSha256": "895cf37fe93ebd9ac9f292d48c0cbe9a11ccf73160f5fff023313ffa4dac9c7d",
+      "adaptation": "Bun product labels/user agent/thread/test names; persisted formats and FFI contracts retained."
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/dragon_ball/documents.rs",
+      "targetPath": "src/browser/crates/crawl/src/dragon_ball/documents.rs",
+      "bytes": 20055,
+      "sha256": "18b681aea7607154e065446866608a6a37c8563a59bef4e5fd44dc60ef538670",
+      "targetSha256": "18b681aea7607154e065446866608a6a37c8563a59bef4e5fd44dc60ef538670",
+      "integratedBytes": 20059,
+      "integratedSha256": "280e7a87e002198072a9ed71b13b268a91130c49e5d4d2a933195769c5b12879"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/dragon_ball/mod.rs",
+      "targetPath": "src/browser/crates/crawl/src/dragon_ball/mod.rs",
+      "bytes": 1734,
+      "sha256": "4d2d26836fd2493330237b8339c544c09aacddbb51aa5d4e8f950418357ed12a",
+      "targetSha256": "4d2d26836fd2493330237b8339c544c09aacddbb51aa5d4e8f950418357ed12a",
+      "integratedBytes": 1726,
+      "integratedSha256": "3f0d36ad75ad63f832a72f2700a315c2e5589e6b606472cbbc94b25186762c73"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/dragon_ball/plan.json",
+      "targetPath": "src/browser/crates/crawl/src/dragon_ball/plan.json",
+      "bytes": 21681,
+      "sha256": "d9e01acc8ddc61feaee8126a5b112f6ba6668236f48aa78ad289dbee7a8617e7",
+      "targetSha256": "d9e01acc8ddc61feaee8126a5b112f6ba6668236f48aa78ad289dbee7a8617e7",
+      "integratedBytes": 21681,
+      "integratedSha256": "d9e01acc8ddc61feaee8126a5b112f6ba6668236f48aa78ad289dbee7a8617e7"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/dragon_ball/registry.json",
+      "targetPath": "src/browser/crates/crawl/src/dragon_ball/registry.json",
+      "bytes": 9906,
+      "sha256": "2ec2a44e9de2ea0721b008e5adc23239588f00c8684feb000d160459583bead6",
+      "targetSha256": "2ec2a44e9de2ea0721b008e5adc23239588f00c8684feb000d160459583bead6",
+      "integratedBytes": 9906,
+      "integratedSha256": "2ec2a44e9de2ea0721b008e5adc23239588f00c8684feb000d160459583bead6"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/dragon_ball/runner.rs",
+      "targetPath": "src/browser/crates/crawl/src/dragon_ball/runner.rs",
+      "bytes": 55337,
+      "sha256": "56132ee330f50c446732668f17820d7622a5c3a25e0605076981d638b2353be8",
+      "targetSha256": "56132ee330f50c446732668f17820d7622a5c3a25e0605076981d638b2353be8",
+      "integratedBytes": 55341,
+      "integratedSha256": "4ccc5cf48feec78919a4be1a49538f49fbb748e87b0a1f722b09028247658a9f",
+      "adaptation": "Bun product labels/user agent/thread/test names; persisted formats and FFI contracts retained."
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/dragon_ball/sources.rs",
+      "targetPath": "src/browser/crates/crawl/src/dragon_ball/sources.rs",
+      "bytes": 8929,
+      "sha256": "9c0cb59d58708dd13ecb8069f190a4b5334b247c63cff81cdb7a812e9a41a2e4",
+      "targetSha256": "9c0cb59d58708dd13ecb8069f190a4b5334b247c63cff81cdb7a812e9a41a2e4",
+      "integratedBytes": 8929,
+      "integratedSha256": "9c0cb59d58708dd13ecb8069f190a4b5334b247c63cff81cdb7a812e9a41a2e4"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/frontier.rs",
+      "targetPath": "src/browser/crates/crawl/src/frontier.rs",
+      "bytes": 37134,
+      "sha256": "60369df8e0f04656db1f1f421cc7111a5a1ac6dbb884ee5349055041a82ac570",
+      "targetSha256": "60369df8e0f04656db1f1f421cc7111a5a1ac6dbb884ee5349055041a82ac570",
+      "integratedBytes": 37134,
+      "integratedSha256": "f4ed89736eb531474bcdda5129963cb8c7e343676c03ea5141d7c4c411435258"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/lib.rs",
+      "targetPath": "src/browser/crates/crawl/src/lib.rs",
+      "bytes": 1480,
+      "sha256": "6d36c60017b6f43a6058fdcf24caa17abc79dd9f4ecb07c316ab1dc8f39d49ee",
+      "targetSha256": "6d36c60017b6f43a6058fdcf24caa17abc79dd9f4ecb07c316ab1dc8f39d49ee",
+      "integratedBytes": 1483,
+      "integratedSha256": "cdbfe85b993b04ba3e2f92a79b49e8b8dbe5992de8fa1e4e98e0465e5bc8db89"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/mediawiki.rs",
+      "targetPath": "src/browser/crates/crawl/src/mediawiki.rs",
+      "bytes": 13044,
+      "sha256": "06ddb483c96e7b7d31348269c6a266c6a093b2196fce5665c181cb1fe972226e",
+      "targetSha256": "06ddb483c96e7b7d31348269c6a266c6a093b2196fce5665c181cb1fe972226e",
+      "integratedBytes": 13055,
+      "integratedSha256": "0325a335a8b50e1f545681119e5532f214b4643b7c67dee7edb8720240237310"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/mirror.rs",
+      "targetPath": "src/browser/crates/crawl/src/mirror.rs",
+      "bytes": 35773,
+      "sha256": "209fb0e93eb5351085eb53ed7b48d2a400a0083d950f55b05531330882c83aa1",
+      "targetSha256": "209fb0e93eb5351085eb53ed7b48d2a400a0083d950f55b05531330882c83aa1",
+      "integratedBytes": 35796,
+      "integratedSha256": "928e5fc1de51cab0576cc8841e4fd1682cb3f2439bddeda96587f0a8affb58a5"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/revisit.rs",
+      "targetPath": "src/browser/crates/crawl/src/revisit.rs",
+      "bytes": 3239,
+      "sha256": "c11713e6b90d94bbd05e6b36a3349a020790c359c4e28f55eb9b674484ff4775",
+      "targetSha256": "c11713e6b90d94bbd05e6b36a3349a020790c359c4e28f55eb9b674484ff4775",
+      "integratedBytes": 3239,
+      "integratedSha256": "c11713e6b90d94bbd05e6b36a3349a020790c359c4e28f55eb9b674484ff4775"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/robots.rs",
+      "targetPath": "src/browser/crates/crawl/src/robots.rs",
+      "bytes": 6349,
+      "sha256": "e24abb45d1d6939d4d2b3299ddf41a850ac61444aa66efbcdaa06f08b3d40816",
+      "targetSha256": "e24abb45d1d6939d4d2b3299ddf41a850ac61444aa66efbcdaa06f08b3d40816",
+      "integratedBytes": 6349,
+      "integratedSha256": "e24abb45d1d6939d4d2b3299ddf41a850ac61444aa66efbcdaa06f08b3d40816"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/runner.rs",
+      "targetPath": "src/browser/crates/crawl/src/runner.rs",
+      "bytes": 24111,
+      "sha256": "84c1e219ef41fd3c523d9f5df2b208a552b457eec23452eec89da78fb7a37a50",
+      "targetSha256": "84c1e219ef41fd3c523d9f5df2b208a552b457eec23452eec89da78fb7a37a50",
+      "integratedBytes": 24138,
+      "integratedSha256": "a3e9a4e47f55bb1faedae07526ea1926c027290a7e0ff3dc77e00f7c226fb3d8",
+      "adaptation": "Bun product labels/user agent/thread/test names; persisted formats and FFI contracts retained."
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/scoring.rs",
+      "targetPath": "src/browser/crates/crawl/src/scoring.rs",
+      "bytes": 4196,
+      "sha256": "a4236f483c092a00986267a5ce810025dc9f52d13c3542973ea9645c365b5e84",
+      "targetSha256": "a4236f483c092a00986267a5ce810025dc9f52d13c3542973ea9645c365b5e84",
+      "integratedBytes": 4196,
+      "integratedSha256": "a4236f483c092a00986267a5ce810025dc9f52d13c3542973ea9645c365b5e84"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/sitemap.rs",
+      "targetPath": "src/browser/crates/crawl/src/sitemap.rs",
+      "bytes": 7721,
+      "sha256": "668613acdd0e07f6837824de8d488d114f2e53ce6c0935e654ce1f2e7eacad66",
+      "targetSha256": "668613acdd0e07f6837824de8d488d114f2e53ce6c0935e654ce1f2e7eacad66",
+      "integratedBytes": 7721,
+      "integratedSha256": "668613acdd0e07f6837824de8d488d114f2e53ce6c0935e654ce1f2e7eacad66"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/wiki.rs",
+      "targetPath": "src/browser/crates/crawl/src/wiki.rs",
+      "bytes": 8174,
+      "sha256": "0d42415d309db33abdb7f7a24d4d882fd0d0bb380ed26fd8fc4961d3bff895f2",
+      "targetSha256": "0d42415d309db33abdb7f7a24d4d882fd0d0bb380ed26fd8fc4961d3bff895f2",
+      "integratedBytes": 8187,
+      "integratedSha256": "64bea09068074c513ab3bead8200cb92445c42d2970b830b1805b7a6074de821"
+    },
+    {
+      "sourcePath": "crates/web/web-crawl/src/wiki_page.rs",
+      "targetPath": "src/browser/crates/crawl/src/wiki_page.rs",
+      "bytes": 42165,
+      "sha256": "6503bb5aa7b157639c4686198a53a98219e033e1ad20524360269d77e629ef3b",
+      "targetSha256": "6503bb5aa7b157639c4686198a53a98219e033e1ad20524360269d77e629ef3b",
+      "integratedBytes": 42208,
+      "integratedSha256": "695093692a930bd038af508653d2ca2948ce2d0cd93ef356de293fd24f8a94e0"
+    },
+    {
+      "sourcePath": "crates/web/web-detect/Cargo.toml",
+      "targetPath": "src/browser/crates/detect/Cargo.toml",
+      "bytes": 516,
+      "sha256": "d82e973f7987b3e150335e374594f158e7116fb8857bc29b968a1c79344087f3",
+      "targetSha256": "d82e973f7987b3e150335e374594f158e7116fb8857bc29b968a1c79344087f3",
+      "integratedBytes": 506,
+      "integratedSha256": "5630d112a874b5e58e36f2c9f7f0f5ab903834131f92f694a17d6de1c60675dd"
+    },
+    {
+      "sourcePath": "crates/web/web-detect/src/challenge.rs",
+      "targetPath": "src/browser/crates/detect/src/challenge.rs",
+      "bytes": 9358,
+      "sha256": "523fab4c6b477f21fb792f95bf9e0ea7ba7514201933deef006ab4d67d30cc99",
+      "targetSha256": "523fab4c6b477f21fb792f95bf9e0ea7ba7514201933deef006ab4d67d30cc99",
+      "integratedBytes": 9358,
+      "integratedSha256": "523fab4c6b477f21fb792f95bf9e0ea7ba7514201933deef006ab4d67d30cc99"
+    },
+    {
+      "sourcePath": "crates/web/web-detect/src/lib.rs",
+      "targetPath": "src/browser/crates/detect/src/lib.rs",
+      "bytes": 9268,
+      "sha256": "16853b1566ede7706fe7ebd922245b4e465e24c77405578adb133ad87b5f880b",
+      "targetSha256": "16853b1566ede7706fe7ebd922245b4e465e24c77405578adb133ad87b5f880b",
+      "integratedBytes": 9270,
+      "integratedSha256": "8ff3ef8ca7e1cda749e45663f1fc8e0f36b3098e7b67c5c4fffd8409a0ed25bb",
+      "adaptation": "Bun product labels/user agent/thread/test names; persisted formats and FFI contracts retained."
+    },
+    {
+      "sourcePath": "crates/web/web-detect/src/rules.rs",
+      "targetPath": "src/browser/crates/detect/src/rules.rs",
+      "bytes": 13206,
+      "sha256": "ab23e5362f0bc2ef0ef2f761d2991d45cedb1358c7c2f424743e1eda6803cf83",
+      "targetSha256": "ab23e5362f0bc2ef0ef2f761d2991d45cedb1358c7c2f424743e1eda6803cf83",
+      "integratedBytes": 13206,
+      "integratedSha256": "ab23e5362f0bc2ef0ef2f761d2991d45cedb1358c7c2f424743e1eda6803cf83"
+    },
+    {
+      "sourcePath": "crates/web/web-detect/src/strategy.rs",
+      "targetPath": "src/browser/crates/detect/src/strategy.rs",
+      "bytes": 5102,
+      "sha256": "c9d1055eabd99c9c7a08e1d938078841e2b7d3030a2794f2ed33fb149bea6054",
+      "targetSha256": "c9d1055eabd99c9c7a08e1d938078841e2b7d3030a2794f2ed33fb149bea6054",
+      "integratedBytes": 5102,
+      "integratedSha256": "c9d1055eabd99c9c7a08e1d938078841e2b7d3030a2794f2ed33fb149bea6054"
+    },
+    {
+      "sourcePath": "crates/web/web-index/BENCHMARKS.md",
+      "targetPath": "src/browser/crates/index/BENCHMARKS.md",
+      "bytes": 10976,
+      "sha256": "a9a446dcef4b22e9ac3dd57c51c8056656bf53555671ae76f26653a8fd70cec3",
+      "targetSha256": "a9a446dcef4b22e9ac3dd57c51c8056656bf53555671ae76f26653a8fd70cec3",
+      "integratedBytes": 10976,
+      "integratedSha256": "a9a446dcef4b22e9ac3dd57c51c8056656bf53555671ae76f26653a8fd70cec3"
+    },
+    {
+      "sourcePath": "crates/web/web-index/Cargo.toml",
+      "targetPath": "src/browser/crates/index/Cargo.toml",
+      "bytes": 484,
+      "sha256": "6a282753774d1391831307af567c00181243b1c4be36c72ab1137a39f001062d",
+      "targetSha256": "6a282753774d1391831307af567c00181243b1c4be36c72ab1137a39f001062d",
+      "integratedBytes": 806,
+      "integratedSha256": "5eb085addd1c8e7fa0ff0a5233e518b39ac0bd661dcd8521a44b01322355e04b"
+    },
+    {
+      "sourcePath": "crates/web/web-index/README.md",
+      "targetPath": "src/browser/crates/index/README.md",
+      "bytes": 1015,
+      "sha256": "10ab126f37f2a49b71ff04a7ba28b66048188b228de959c8a2e171110526a50d",
+      "targetSha256": "10ab126f37f2a49b71ff04a7ba28b66048188b228de959c8a2e171110526a50d",
+      "integratedBytes": 1139,
+      "integratedSha256": "947ca40ccc821d575ea5dd79f7ed54076fe2093a31de6bb26c1f48cdea1d04c9",
+      "adaptation": "Bun browser library README with exact import ledger and retained persisted-format compatibility; historical benchmark facts remain in BENCHMARKS.md."
+    },
+    {
+      "sourcePath": "crates/web/web-index/examples/index_bench.rs",
+      "targetPath": "src/browser/crates/index/examples/index_bench.rs",
+      "bytes": 11219,
+      "sha256": "c75ca715ae1a44110c84e53e03d22fc0658979ae409f56fc50828e43b886c1af",
+      "targetSha256": "c75ca715ae1a44110c84e53e03d22fc0658979ae409f56fc50828e43b886c1af",
+      "integratedBytes": 11227,
+      "integratedSha256": "c01334ed4f99d9f49a2caf5eefe7cdc8f4a7abd29d184e75dff59699400cb05c",
+      "adaptation": "Bun product labels/user agent/thread/test names; persisted formats and FFI contracts retained."
+    },
+    {
+      "sourcePath": "crates/web/web-index/src/buf.rs",
+      "targetPath": "src/browser/crates/index/src/buf.rs",
+      "bytes": 4004,
+      "sha256": "8741385539bd20e210c43df41cb88cf06f2a7181f2a78a9ea292435f99219577",
+      "targetSha256": "8741385539bd20e210c43df41cb88cf06f2a7181f2a78a9ea292435f99219577",
+      "integratedBytes": 4004,
+      "integratedSha256": "8741385539bd20e210c43df41cb88cf06f2a7181f2a78a9ea292435f99219577"
+    },
+    {
+      "sourcePath": "crates/web/web-index/src/error.rs",
+      "targetPath": "src/browser/crates/index/src/error.rs",
+      "bytes": 1920,
+      "sha256": "32cf26bef04feaf98415165a72ee3d8a4dedb4d8a0e164f72319b6a50deaad83",
+      "targetSha256": "32cf26bef04feaf98415165a72ee3d8a4dedb4d8a0e164f72319b6a50deaad83",
+      "integratedBytes": 1928,
+      "integratedSha256": "b6f2118b37bb9494b9de307cf2c3d0d8d63f9bce19ef1b2ec3b418959119f641",
+      "adaptation": "Bun product labels/user agent/thread/test names; persisted formats and FFI contracts retained."
+    },
+    {
+      "sourcePath": "crates/web/web-index/src/ffi_api.rs",
+      "targetPath": "src/browser/crates/index/src/ffi_api.rs",
+      "bytes": 6330,
+      "sha256": "4cf553bb7cc474d808a5eb5f02efd8ce43159e97f284712ebdf8f6f633202352",
+      "targetSha256": "4cf553bb7cc474d808a5eb5f02efd8ce43159e97f284712ebdf8f6f633202352",
+      "integratedBytes": 6338,
+      "integratedSha256": "850e96c6792072be3bec524f72492c082e25a2b1d4e33851fd8ebba4ad5feb58",
+      "adaptation": "Bun product labels/user agent/thread/test names; persisted formats and FFI contracts retained."
+    },
+    {
+      "sourcePath": "crates/web/web-index/src/graph.rs",
+      "targetPath": "src/browser/crates/index/src/graph.rs",
+      "bytes": 15963,
+      "sha256": "a4069b55011109c9a53f600c8763a32ec343ca6190bab73d31fc7877666e2019",
+      "targetSha256": "a4069b55011109c9a53f600c8763a32ec343ca6190bab73d31fc7877666e2019",
+      "integratedBytes": 15963,
+      "integratedSha256": "a4069b55011109c9a53f600c8763a32ec343ca6190bab73d31fc7877666e2019"
+    },
+    {
+      "sourcePath": "crates/web/web-index/src/index.rs",
+      "targetPath": "src/browser/crates/index/src/index.rs",
+      "bytes": 27364,
+      "sha256": "f910b228e81b78dd3dae46afead2d6b998511b59412014cb20c698c2b4876014",
+      "targetSha256": "f910b228e81b78dd3dae46afead2d6b998511b59412014cb20c698c2b4876014",
+      "integratedBytes": 27364,
+      "integratedSha256": "f910b228e81b78dd3dae46afead2d6b998511b59412014cb20c698c2b4876014"
+    },
+    {
+      "sourcePath": "crates/web/web-index/src/kernels.rs",
+      "targetPath": "src/browser/crates/index/src/kernels.rs",
+      "bytes": 10647,
+      "sha256": "cf90da607690e5644d5154e9ddc278eba3aaeb4f3abd6b094804a37fbbead756",
+      "targetSha256": "cf90da607690e5644d5154e9ddc278eba3aaeb4f3abd6b094804a37fbbead756",
+      "integratedBytes": 10647,
+      "integratedSha256": "cf90da607690e5644d5154e9ddc278eba3aaeb4f3abd6b094804a37fbbead756"
+    },
+    {
+      "sourcePath": "crates/web/web-index/src/lib.rs",
+      "targetPath": "src/browser/crates/index/src/lib.rs",
+      "bytes": 1753,
+      "sha256": "0996035a2acd73051be570837cef12d6367c0ad5e9a6dfb396b4715145cafcaa",
+      "targetSha256": "0996035a2acd73051be570837cef12d6367c0ad5e9a6dfb396b4715145cafcaa",
+      "integratedBytes": 1761,
+      "integratedSha256": "99846a9259c364316d0edbef88c41104ff8ffb37cf9e3b4283d1ed21baf39a09",
+      "adaptation": "Bun product labels/user agent/thread/test names; persisted formats and FFI contracts retained."
+    },
+    {
+      "sourcePath": "crates/web/web-index/src/params.rs",
+      "targetPath": "src/browser/crates/index/src/params.rs",
+      "bytes": 6137,
+      "sha256": "23cd3bacc41bd82310e2f7404c3854f387d428f30741c0a21d790bc896c08982",
+      "targetSha256": "23cd3bacc41bd82310e2f7404c3854f387d428f30741c0a21d790bc896c08982",
+      "integratedBytes": 6137,
+      "integratedSha256": "23cd3bacc41bd82310e2f7404c3854f387d428f30741c0a21d790bc896c08982"
+    },
+    {
+      "sourcePath": "crates/web/web-index/src/persist.rs",
+      "targetPath": "src/browser/crates/index/src/persist.rs",
+      "bytes": 20453,
+      "sha256": "e1f66b154e782ce9d7c347fad8d2bb48d481c12a729f6cf9787d21eb5d5a2c43",
+      "targetSha256": "e1f66b154e782ce9d7c347fad8d2bb48d481c12a729f6cf9787d21eb5d5a2c43",
+      "integratedBytes": 20453,
+      "integratedSha256": "e1f66b154e782ce9d7c347fad8d2bb48d481c12a729f6cf9787d21eb5d5a2c43"
+    },
+    {
+      "sourcePath": "crates/web/web-index/src/rng.rs",
+      "targetPath": "src/browser/crates/index/src/rng.rs",
+      "bytes": 1949,
+      "sha256": "b43901b37fbc623c77f886b970ee143be1806eccd8a1e0c4baefe0832fa1e6f9",
+      "targetSha256": "b43901b37fbc623c77f886b970ee143be1806eccd8a1e0c4baefe0832fa1e6f9",
+      "integratedBytes": 1949,
+      "integratedSha256": "b43901b37fbc623c77f886b970ee143be1806eccd8a1e0c4baefe0832fa1e6f9"
+    },
+    {
+      "sourcePath": "crates/web/web-index/src/space.rs",
+      "targetPath": "src/browser/crates/index/src/space.rs",
+      "bytes": 7100,
+      "sha256": "2246a098e6687ae718d91b7e0e7f9f49f0d8917192928b3bf3f6de98deeb3b4d",
+      "targetSha256": "2246a098e6687ae718d91b7e0e7f9f49f0d8917192928b3bf3f6de98deeb3b4d",
+      "integratedBytes": 7100,
+      "integratedSha256": "2246a098e6687ae718d91b7e0e7f9f49f0d8917192928b3bf3f6de98deeb3b4d"
+    },
+    {
+      "sourcePath": "crates/web/web-index/src/synth.rs",
+      "targetPath": "src/browser/crates/index/src/synth.rs",
+      "bytes": 7621,
+      "sha256": "fe4fcf5869b4e5d33df6764aadd38db29fb7447cbb28a2c357c32727df5cf826",
+      "targetSha256": "fe4fcf5869b4e5d33df6764aadd38db29fb7447cbb28a2c357c32727df5cf826",
+      "integratedBytes": 7621,
+      "integratedSha256": "fe4fcf5869b4e5d33df6764aadd38db29fb7447cbb28a2c357c32727df5cf826"
+    },
+    {
+      "sourcePath": "crates/web/web-index/src/visited.rs",
+      "targetPath": "src/browser/crates/index/src/visited.rs",
+      "bytes": 1881,
+      "sha256": "e2b153e2180f03e577b582d0430247eefad52738a94aca4317b81fa045edf978",
+      "targetSha256": "e2b153e2180f03e577b582d0430247eefad52738a94aca4317b81fa045edf978",
+      "integratedBytes": 1881,
+      "integratedSha256": "e2b153e2180f03e577b582d0430247eefad52738a94aca4317b81fa045edf978"
+    },
+    {
+      "sourcePath": "crates/web/web-index/tests/api.rs",
+      "targetPath": "src/browser/crates/index/tests/api.rs",
+      "bytes": 16375,
+      "sha256": "f1fdfb8ba4f5bb513ba69dcc0e86b8df9b5d95056965595d2535f37544246eb2",
+      "targetSha256": "f1fdfb8ba4f5bb513ba69dcc0e86b8df9b5d95056965595d2535f37544246eb2",
+      "integratedBytes": 16383,
+      "integratedSha256": "43d069250dbd3e6410f358c4ad0df262790130cbdd88a1d0bed6d2af32729f29",
+      "adaptation": "Bun product labels/user agent/thread/test names; persisted formats and FFI contracts retained."
+    },
+    {
+      "sourcePath": "crates/web/web-index/tests/recall.rs",
+      "targetPath": "src/browser/crates/index/tests/recall.rs",
+      "bytes": 2501,
+      "sha256": "166c1a41c322c62df2eb0c88cfdaecc1800039e3c346012b8715566bbc7ce74c",
+      "targetSha256": "166c1a41c322c62df2eb0c88cfdaecc1800039e3c346012b8715566bbc7ce74c",
+      "integratedBytes": 2501,
+      "integratedSha256": "06166f7549c099c32c2c57cb93628ce1faf2b958ebfbbb4892f926d665f584b7"
+    },
+    {
+      "sourcePath": "crates/web/web-service/Cargo.toml",
+      "targetPath": "src/browser/crates/service/Cargo.toml",
+      "bytes": 1012,
+      "sha256": "4ca154c541a6a3f1f0439ce79c67cd10fe908fd50890153ad16cf0b802a49d88",
+      "targetSha256": "4ca154c541a6a3f1f0439ce79c67cd10fe908fd50890153ad16cf0b802a49d88",
+      "integratedBytes": 1361,
+      "integratedSha256": "9dbbd78e3d79e352088c10bb76dd583aa90f377d5441b518d87e4207306ff9c1"
+    },
+    {
+      "sourcePath": "crates/web/web-service/src/error.rs",
+      "targetPath": "src/browser/crates/service/src/error.rs",
+      "bytes": 2439,
+      "sha256": "61f7209e436804b79f425d7aa8a3ac91cb3c7cfee9fca05412fc443b6ba1ae47",
+      "targetSha256": "61f7209e436804b79f425d7aa8a3ac91cb3c7cfee9fca05412fc443b6ba1ae47",
+      "integratedBytes": 2442,
+      "integratedSha256": "d2992f3c8697a11697cccc9760d9843259432ede01a6ce2a724c60997019c549"
+    },
+    {
+      "sourcePath": "crates/web/web-service/src/fetch.rs",
+      "targetPath": "src/browser/crates/service/src/fetch.rs",
+      "bytes": 29502,
+      "sha256": "99e6059ecf2a60c7aecb2df3e98dfa42342708db80f9c833396c751e8607a971",
+      "targetSha256": "99e6059ecf2a60c7aecb2df3e98dfa42342708db80f9c833396c751e8607a971",
+      "integratedBytes": 29514,
+      "integratedSha256": "fe6fbe5ba2c59e959a7c57582269dfdf8bff3c7658df7bed49f5471b68fa4230",
+      "adaptation": "Bun product labels/user agent/thread/test names; persisted formats and FFI contracts retained."
+    },
+    {
+      "sourcePath": "crates/web/web-service/src/lib.rs",
+      "targetPath": "src/browser/crates/service/src/lib.rs",
+      "bytes": 10946,
+      "sha256": "a4071c1b2c4a46e11d24c3c6b5f3d2e2f1c32fa79b6039583bd72e9c929e6a53",
+      "targetSha256": "a4071c1b2c4a46e11d24c3c6b5f3d2e2f1c32fa79b6039583bd72e9c929e6a53",
+      "integratedBytes": 10937,
+      "integratedSha256": "753179f2a9e81f7a712b7fa2e9b551f20b121ad0e0d5548cc7483fd0369c8844",
+      "adaptation": "Bun product labels/user agent/thread/test names; persisted formats and FFI contracts retained."
+    },
+    {
+      "sourcePath": "crates/web/web-service/src/session.rs",
+      "targetPath": "src/browser/crates/service/src/session.rs",
+      "bytes": 10833,
+      "sha256": "0489e1487ee67b2a2091f685cab11afab2cf5d16b0ab215d88b962b43cb044c9",
+      "targetSha256": "0489e1487ee67b2a2091f685cab11afab2cf5d16b0ab215d88b962b43cb044c9",
+      "integratedBytes": 11398,
+      "integratedSha256": "504859a396892654a69dcb1d49ef4881f5a50ac274d2802d3e30e9406dd81851",
+      "adaptation": "Bun product labels/user agent/thread/test names; persisted formats and FFI contracts retained."
+    },
+    {
+      "sourcePath": "crates/web/web-service/tests/native_profiles.rs",
+      "targetPath": "src/browser/crates/service/tests/native_profiles.rs",
+      "bytes": 2720,
+      "sha256": "b716c7aba0523c7fe69688854ce44013905d7b655e697cf15674d9efffa5762b",
+      "targetSha256": "b716c7aba0523c7fe69688854ce44013905d7b655e697cf15674d9efffa5762b",
+      "integratedBytes": 2727,
+      "integratedSha256": "b593b67217fa863e5047c93e4cdfc667e28920e0849e58bff676900d6994c340"
+    },
+    {
+      "sourcePath": "packages/web/agent-browser/src/cdp.ts",
+      "targetPath": "packages/bun-web/src/cdp.ts",
+      "bytes": 6779,
+      "sha256": "fa040b8ad45a0e4f39652b45b1f61e297c68bd9a30595e332381c828045ab89f",
+      "targetSha256": "36f0a4abbf893719a9146426f01647d14c65c71a51662375a357e881c260c689",
+      "adaptation": "Rename BrowserPage, DEFAULT_BUN_CDP_URL and browser error messages to Bun; original transport unchanged.",
+      "integratedBytes": 6806,
+      "integratedSha256": "36f0a4abbf893719a9146426f01647d14c65c71a51662375a357e881c260c689"
+    },
+    {
+      "sourcePath": "packages/web/agent-browser/src/types.ts",
+      "targetPath": "packages/bun-web/src/types.ts",
+      "bytes": 1221,
+      "sha256": "908865c931b534c9fbb23e94199f4e4bebb3a423acdb5f403ab6d6a5484758a4",
+      "targetSha256": "908865c931b534c9fbb23e94199f4e4bebb3a423acdb5f403ab6d6a5484758a4",
+      "integratedBytes": 1265,
+      "integratedSha256": "129398015ebc8847ef341e29211cc4c037058c25e0e2f2294b9cc9fbd1df60a4"
+    },
+    {
+      "sourcePath": "packages/web/aphrody-web-test/src/locator.ts",
+      "targetPath": "packages/bun-web/src/locator.ts",
+      "bytes": 10750,
+      "sha256": "724616161b2dcf0b33d4c161e189c873597cc6fa08bac2c6079c4d79aaac9980",
+      "targetSha256": "724616161b2dcf0b33d4c161e189c873597cc6fa08bac2c6079c4d79aaac9980",
+      "integratedBytes": 10750,
+      "integratedSha256": "724616161b2dcf0b33d4c161e189c873597cc6fa08bac2c6079c4d79aaac9980"
+    },
+    {
+      "sourcePath": "packages/web/aphrody-web-test/src/selectors.ts",
+      "targetPath": "packages/bun-web/src/selectors.ts",
+      "bytes": 5897,
+      "sha256": "ef30aa078d6f725626b4b33a225df992b1a3ce4e485badc379029fc82a6614ca",
+      "targetSha256": "ef30aa078d6f725626b4b33a225df992b1a3ce4e485badc379029fc82a6614ca",
+      "integratedBytes": 5897,
+      "integratedSha256": "ef30aa078d6f725626b4b33a225df992b1a3ce4e485badc379029fc82a6614ca"
+    }
+  ],
+  "integration": {
+    "date": "2026-10-11",
+    "owner": "bun",
+    "initialImport": "e4bcb7dc4d89304c1689222fd0af3cb07c5e4ee8",
+    "changes": [
+      "Relocate engine to src/browser and rename library identities",
+      "Share native HTML DOM with Bun runtime",
+      "Project CSS rules from Bun parser when bun-css enabled",
+      "Move service/crawl/detection/index to internal libraries"
+    ]
+  }
+}

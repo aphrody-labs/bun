@@ -6,6 +6,7 @@
 use core::cell::Cell;
 use core::ffi::{c_int, c_void};
 use core::ptr::NonNull;
+use std::any::Any;
 
 use bun_bundler::Transpiler;
 use bun_io as Async;
@@ -140,6 +141,11 @@ pub struct VirtualMachine {
     /// hot reload is disabled. Read via [`Self::bun_watcher_ptr`].
     pub bun_watcher: *mut crate::hot_reloader::ImportWatcher,
     pub(crate) console: *mut crate::console_object::ConsoleObject,
+    /// Opaque native resources that must be released on this VM's JS thread
+    /// before its JSC heap is destroyed (currently page BrowserRealms).
+    /// Type erasure keeps bun_jsc independent of bun_runtime.
+    browser_realms: bun_collections::ArrayHashMap<u64, Box<dyn Any>>,
+    next_browser_realm_id: u64,
     // BORROW_PARAM (`&'a mut bun_ast::Log` per LIFETIMES.tsv) — raw NonNull
     // used because VM is self-referential and cannot carry `<'a>`.
     pub log: Option<NonNull<bun_ast::Log>>,
@@ -904,6 +910,31 @@ const _: () = {
 };
 
 impl VirtualMachine {
+    /// Register a JS-thread-owned native realm/resource and return a
+    /// VM-local ID plus the weak poster used by its GC finalizer.
+    pub fn register_browser_realm<T: Any>(&mut self, resource: T) -> (u64, bun_event_loop::JsPoster) {
+        let id = self.next_browser_realm_id;
+        self.next_browser_realm_id = self.next_browser_realm_id.checked_add(1)
+            .expect("BrowserRealm ID space exhausted");
+        let previous = self.browser_realms.insert(id, Box::new(resource));
+        debug_assert!(previous.is_none());
+        (id, self.js_poster())
+    }
+
+    /// Access a registered resource on its owner JS thread.
+    pub fn browser_realm_mut<T: Any>(&mut self, id: u64) -> Option<&mut T> {
+        self.browser_realms.get_mut(&id)?.downcast_mut()
+    }
+
+    /// Remove exactly once; `Drop` releases the native context.
+    pub fn release_browser_realm(&mut self, id: u64) {
+        drop(self.browser_realms.remove(&id));
+    }
+
+    fn release_all_browser_realms(&mut self) {
+        drop(core::mem::take(&mut self.browser_realms));
+    }
+
     /// Safe `&'static` accessor for the current thread's VM. The VM is a
     /// per-thread singleton allocated once in [`init`] and never freed until
     /// thread teardown, so the `'static` lifetime is sound. Mutation goes
@@ -2474,6 +2505,10 @@ impl VirtualMachine {
             if let Some(rare) = (*this).rare_data.as_deref_mut() {
                 rare.release_js_handles();
             }
+            // Weak finalizer posts have been drained/refused above. This
+            // registry is the final authority for contexts whose wrappers
+            // were collected while the loop was closed.
+            (*this).release_all_browser_realms();
         }
         teardown_log!("teardown: script forbidden, resources cancelled, off-thread work back");
 
@@ -3163,6 +3198,8 @@ impl VirtualMachine {
             use core::ptr::addr_of_mut;
             addr_of_mut!((*vm).global).write(core::ptr::null_mut());
             addr_of_mut!((*vm).console).write(console);
+            addr_of_mut!((*vm).browser_realms).write(bun_collections::ArrayHashMap::new());
+            addr_of_mut!((*vm).next_browser_realm_id).write(1);
             // `log` is a fresh leaked Box; outlives the VM.
             addr_of_mut!((*vm).log).write(NonNull::new(log));
             addr_of_mut!((*vm).main).write(bun_ptr::RawSlice::EMPTY);
@@ -5512,6 +5549,9 @@ impl VirtualMachine {
     }
     /// Worker-thread teardown.
     pub fn destroy(&mut self) {
+        // Also covers short-lived build VMs that use destroy() without the
+        // worker/main teardown funnel.
+        self.release_all_browser_realms();
         self.regular_event_loop.deinit();
         self.macro_event_loop.deinit();
         // The VM's own clone of its handle; the shared inner is freed when the

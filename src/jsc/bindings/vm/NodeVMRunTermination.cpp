@@ -4,6 +4,7 @@
 #include "ErrorCode.h"
 #include "SigintWatcher.h"
 
+#include <JavaScriptCore/ErrorInstance.h>
 #include <JavaScriptCore/TopExceptionScope.h>
 #include <JavaScriptCore/VM.h>
 
@@ -13,10 +14,17 @@ using namespace JSC;
 
 static thread_local NodeVMRunTermination* s_innermostRunOnThisThread = nullptr;
 
-NodeVMRunTermination::NodeVMRunTermination(JSGlobalObject* realm, std::optional<Seconds> timeout, bool breakOnSigint)
+static JSObject* createBareRealmError(VM& vm, JSGlobalObject* realm, const String& message)
+{
+    return ErrorInstance::create(vm, realm->errorStructure(ErrorType::Error), message, JSValue(), nullptr,
+        RuntimeType::TypeNothing, ErrorType::Error);
+}
+
+NodeVMRunTermination::NodeVMRunTermination(JSGlobalObject* realm, std::optional<Seconds> timeout, bool breakOnSigint, bool bareRealm)
     : m_vm(realm->vm())
     , m_realm(realm)
     , m_timeout(timeout)
+    , m_bareRealm(bareRealm)
     , m_enclosing(std::exchange(s_innermostRunOnThisThread, this))
 {
     if (breakOnSigint) {
@@ -45,7 +53,7 @@ void NodeVMRunTermination::disarm()
     // From here m_sigintReceived and didFire() are final.
 }
 
-void NodeVMRunTermination::finish(ThrowScope& scope)
+bool NodeVMRunTermination::finish(ThrowScope& scope)
 {
     ASSERT(!std::exchange(m_finished, true));
     // The caller has observed whatever the run left on `scope` (this satisfies the exception-check validator
@@ -53,17 +61,17 @@ void NodeVMRunTermination::finish(ThrowScope& scope)
     std::ignore = scope.exception();
     disarm();
     if (!wasCutShort())
-        return;
+        return false;
     VM& vm = m_vm;
     // The VM has been asked to stop as a whole meanwhile: that request is indistinguishable from ours and wins.
     if (!WebCore::clientData(vm)->scriptAllowed())
-        return;
+        return false;
 
     vm.cancelTermination();
     // A stop requested between the check above and the withdrawal went with it: re-request, the stop wins.
     if (!WebCore::clientData(vm)->scriptAllowed()) [[unlikely]] {
         vm.notifyNeedTermination();
-        return;
+        return false;
     }
     {
         // Whatever else the cut-short run may have left pending: the timeout / interrupt error replaces it.
@@ -72,16 +80,25 @@ void NodeVMRunTermination::finish(ThrowScope& scope)
             top.clearException();
     }
 
+    String message;
     if (timedOut())
-        throwError(m_realm, scope, ErrorCode::ERR_SCRIPT_EXECUTION_TIMEOUT, makeString("Script execution timed out after "_s, m_timeout->milliseconds(), "ms"_s));
+        message = makeString("Script execution timed out after "_s, m_timeout->milliseconds(), "ms"_s);
     else
-        throwError(m_realm, scope, ErrorCode::ERR_SCRIPT_EXECUTION_INTERRUPTED, "Script execution was interrupted by `SIGINT`"_s);
+        message = "Script execution was interrupted by `SIGINT`"_s;
+    if (m_bareRealm) {
+        // Avoid Bun's Zig-global ErrorCode cache and create an ordinary page Error.
+        scope.throwException(m_realm, createBareRealmError(m_vm, m_realm, message));
+    } else {
+        auto code = timedOut() ? ErrorCode::ERR_SCRIPT_EXECUTION_TIMEOUT : ErrorCode::ERR_SCRIPT_EXECUTION_INTERRUPTED;
+        throwError(m_realm, scope, code, message);
+    }
 
     // A run this one is nested in may have been cut short as well by now (its own deadline); its request went
     // with ours, so make it again — after building the error above, which a pending trap would have cut short.
     // That error is then just what the enclosing script sees while it unwinds.
     if (enclosingRunCutShort())
         vm.notifyNeedTermination();
+    return true;
 }
 
 const NodeVMRunTermination* NodeVMRunTermination::enclosingRunCutShort() const
@@ -101,9 +118,15 @@ JSObject* NodeVMRunTermination::errorForEnclosingRunCutShort() const
     const auto* run = enclosingRunCutShort();
     if (!run)
         return nullptr;
+    String message;
     if (run->timedOut())
-        return createError(m_realm, ErrorCode::ERR_SCRIPT_EXECUTION_TIMEOUT, makeString("Script execution timed out after "_s, run->m_timeout->milliseconds(), "ms"_s));
-    return createError(m_realm, ErrorCode::ERR_SCRIPT_EXECUTION_INTERRUPTED, "Script execution was interrupted by `SIGINT`"_s);
+        message = makeString("Script execution timed out after "_s, run->m_timeout->milliseconds(), "ms"_s);
+    else
+        message = "Script execution was interrupted by `SIGINT`"_s;
+    if (m_bareRealm)
+        return createBareRealmError(m_vm, m_realm, message);
+    auto code = run->timedOut() ? ErrorCode::ERR_SCRIPT_EXECUTION_TIMEOUT : ErrorCode::ERR_SCRIPT_EXECUTION_INTERRUPTED;
+    return createError(m_realm, code, message);
 }
 
 } // namespace Bun

@@ -3,6 +3,22 @@
 # toolchain can build); feature unification is unchanged.
 resolver = "3"
 members = [
+  "src/browser/crates/api",
+  "src/browser/crates/browser",
+  "src/browser/crates/cdp",
+  "src/browser/crates/dom",
+  "src/browser/crates/js",
+  "src/browser/crates/mcp",
+  "src/browser/crates/net",
+  "src/browser/crates/render",
+  "src/browser/crates/ssrf",
+  "src/browser/crates/extract",
+  "src/browser/crates/layout",
+  "src/browser/crates/service",
+  "src/browser/crates/crawl",
+  "src/browser/crates/detect",
+  "src/browser/crates/index",
+
   "src/opaque",
   "src/analytics",
   "src/api",
@@ -128,9 +144,14 @@ members = [
 # heavy dev-dependencies (criterion, html5ever) never enter `Cargo.lock`.
 # `packages/bun-cosmic` is the libcosmic window helper of `bun:cosmic`: its own
 # workspace and lockfile, because libcosmic is a git dependency.
-exclude = ["packages/bun-obscura", "packages/bun-oxc", "vendor", "packages/bun-cosmic", "packages/bun-dotnet-native", "packages/bun-re", "packages/bun-native-plugin-rs"]
+exclude = ["packages/bun-oxc", "vendor", "packages/bun-cosmic", "packages/bun-dotnet-native", "packages/bun-re", "packages/bun-native-plugin-rs"]
 
 [workspace.package]
+"repository" = "https://github.com/aphrody-labs/bun-os"
+"homepage" = "https://github.com/aphrody-labs/bun-os"
+"authors" = ["aphrody-dev <contact@aphrody.com>"]
+"rust-version" = "1.97"
+"license" = "MIT"
 version = "1.4.4"
 edition = "2024"
 
@@ -163,6 +184,12 @@ lto = "fat"
 codegen-units = 1
 panic = "abort"
 strip = true
+
+[profile.browser-tests]
+inherits = "dev"
+debug = 0
+incremental = false
+split-debuginfo = "off"
 
 [profile.dev]
 panic = "abort"
@@ -354,6 +381,56 @@ new_ret_no_self = "allow"
 map_identity = "allow"
 
 [workspace.dependencies]
+# Shared browser dependencies; existing Bun declarations/pins remain authoritative.
+"ab_glyph" = "0.2.32"
+"aes" = { "version" = "0.9.3" }
+"aes-gcm" = { "version" = "0.11", "features" = [] }
+"anyhow" = "1.0.104"
+"bun_browser_extract" = { "path" = "src/browser/crates/extract", "version" = "1.4.4", "features" = [] }
+"async-trait" = "0.1.92"
+"base64" = "0.23.1"
+"chrono" = { "version" = "0.4", "features" = ["serde"] }
+"cookie" = "=0.18.2"
+"futures" = "0.3.34"
+"futures-util" = { "version" = "0.3", "features" = [] }
+"html5ever" = { "version" = "0.40", "features" = [] }
+"log" = "0.4.34"
+"bun_browser_browser" = { "path" = "src/browser/crates/browser", "version" = "1.4.4", "features" = [] }
+"bun_browser_dom" = { "path" = "src/browser/crates/dom", "version" = "1.4.4", "features" = [] }
+"bun_browser_js" = { "path" = "src/browser/crates/js", "version" = "1.4.4", "features" = [] }
+"bun_browser_net" = { "path" = "src/browser/crates/net", "version" = "1.4.4", "features" = [] }
+"bun_browser_render" = { "path" = "src/browser/crates/render", "version" = "1.4.4", "features" = [] }
+"bun_browser_ssrf" = { "path" = "src/browser/crates/ssrf", "version" = "1.4.4", "features" = [] }
+"bun_browser" = { "path" = "src/browser/crates/api", "version" = "1.4.4" }
+"bun_browser_mcp" = { "path" = "src/browser/crates/mcp", "version" = "1.4.4" }
+"bun_browser_cdp" = { "path" = "src/browser/crates/cdp", "version" = "1.4.4" }
+"rcgen" = { "version" = "0.14", "default-features" = false, "features" = ["crypto","pem","ring"] }
+"regex" = { "version" = "1.11", "features" = [] }
+"reqwest" = { "version" = "0.13.5", "features" = ["rustls-no-provider","json","stream","form","query","charset","http2","system-proxy","blocking","cookies","gzip","brotli","deflate","socks","multipart"], "default-features" = false }
+"rustls" = { "version" = "0.23", "default-features" = false, "features" = ["ring","std","tls12"] }
+"serde" = { "version" = "=1.0.228", "features" = ["derive"] }
+"serde_json" = "1.0.151"
+"sha1" = { "version" = "0.11.0" }
+"sha2" = "0.11.0"
+"tempfile" = "3.27.0"
+"tokio" = { "version" = "1.53.1", "features" = ["process","rt-multi-thread","macros","time","signal","sync","fs","io-util","full"] }
+"tokio-tungstenite" = { "version" = "0.30", "features" = [] }
+"tracing" = "0.1.44"
+"ureq" = { "version" = "3", "default-features" = false, "features" = ["rustls"] }
+"url" = { "version" = "2.5.8", "features" = ["serde"] }
+"uuid" = { "version" = "1.26.0", "features" = ["v4","v7","serde"] }
+"blake3" = "1.8.7"
+"image" = "0.25.10"
+"memmap2" = "0.9.11"
+"parking_lot" = "0.12.5"
+"rusqlite" = { "version" = "0.40", "features" = ["bundled"] }
+"webp" = { "version" = "0.3.1" }
+"fs4" = "1.1.0"
+"bun_browser_service" = { "path" = "src/browser/crates/service", "version" = "1.4.4" }
+"bun_browser_crawl" = { "path" = "src/browser/crates/crawl", "version" = "1.4.4" }
+"bun_browser_detect" = { "path" = "src/browser/crates/detect", "version" = "1.4.4" }
+"bun_browser_index" = { "path" = "src/browser/crates/index", "version" = "1.4.4" }
+
 rust-argon2 = { path = "vendor/rust-argon2" }
 bcrypt = "0.19"
 getrandom = "0.4"
