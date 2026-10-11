@@ -10,6 +10,10 @@ and project GN/Ninja commands through existing `bun msvc exec` on Windows.
 Qualify incremental native GN and upstream tests separately from full browser
 builds; Chromium retains its clang-cl/SDK pins, ChromiumOS needs a Linux board SDK.
 See [GN integration](docs/chromium/gn.md) for commands and qualification.
+Owner directive: use only the existing `C:/bun` directory. Do not create
+isolated checkouts or worktrees. Native GN outputs remain under `build/gn`.
+The temporary GN import clone and archive are redundant after publication;
+automatic policy review blocked their requested removal.
 
 ## Obscura/JSC and full Chromium/V8 owner batch — 2026-10-11
 

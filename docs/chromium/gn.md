@@ -54,8 +54,11 @@ These results qualify GN and its launcher, not Chromium, V8, Skia or ChromiumOS.
 
 Host preflight: the VPS has Clang 21, Ninja and Python 3.12, with 52 GiB free
 on its root filesystem. DBFR has Ninja and 25 GiB free. GN was absent from
-both hosts' PATH at preflight. The Linux qualification plan uses an isolated
-VPS checkout and four jobs; it does not replace production binaries or services.
+both hosts' PATH at preflight. No remote checkout or build was created.
+The owner requires all work in the existing `C:/bun` directory, with no
+additional checkout or worktree. The temporary GN import clone and tar archive
+remain outside this directory because automatic policy review rejected their
+removal. Their contents are already published and verified against the vendor.
 
 GN generates build graphs. It does not supply the C++ compiler, operating
 system SDK, project dependencies or ChromiumOS board toolchain.
