@@ -5,6 +5,13 @@
 #include <stdio.h>
 #include <wchar.h>
 
+static int has_profile(int count, const wchar_t* const* args) {
+    for (int i = 1; i < count; ++i) {
+        if (!wcscmp(args[i], L"--user-data-dir") || !wcsncmp(args[i], L"--user-data-dir=", 16)) return 1;
+    }
+    return 0;
+}
+
 static int append(wchar_t* output, size_t* used, wchar_t value) {
     if (*used >= 32766) return 0;
     output[(*used)++] = value;
@@ -43,6 +50,10 @@ int wmain(void) {
     }
     size_t used = 32766;
     if (append(line, &used, L'x')) return 3;
+    const wchar_t* equals[] = { L"launcher.exe", L"--user-data-dir=C:\\fresh" };
+    const wchar_t* separate[] = { L"launcher.exe", L"--user-data-dir", L"C:\\fresh" };
+    const wchar_t* other[] = { L"launcher.exe", L"--user-data-directory=C:\\fresh" };
+    if (!has_profile(2, equals) || !has_profile(3, separate) || has_profile(2, other)) return 4;
     puts("9 Windows argument round trips and command length boundary passed");
     return 0;
 }
@@ -52,7 +63,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR command, int s
     wchar_t browser[MAX_PATH], profile[32768];
     wchar_t* line = NULL;
     wchar_t** args = NULL;
-    int count = 0, result = 1;
+    int count = 0, result = 1, explicitProfile = 0;
     size_t used = 0;
     STARTUPINFOW startup = {0};
     PROCESS_INFORMATION process = {0};
@@ -63,8 +74,9 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR command, int s
         swprintf_s(profile, 32768, L"--user-data-dir=%ls\\Chromium\\User Data", local) < 0) goto done;
     if (GetFileAttributesW(browser) == INVALID_FILE_ATTRIBUTES) { result = 2; goto done; }
     args = CommandLineToArgvW(GetCommandLineW(), &count);
+    if (args) explicitProfile = has_profile(count, (const wchar_t* const*)args);
     line = (wchar_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 32768 * sizeof(wchar_t));
-    if (!args || !line || !argument(line, &used, browser) || !argument(line, &used, profile) ||
+    if (!args || !line || !argument(line, &used, browser) || (!explicitProfile && !argument(line, &used, profile)) ||
         !argument(line, &used, L"--enable-features=WebGPUService")) goto done;
     for (int i = 1; i < count; ++i) if (!argument(line, &used, args[i])) { result = 64; goto done; }
     startup.cb = sizeof(startup);

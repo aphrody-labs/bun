@@ -13,7 +13,7 @@ variables for executable selection. Its default profile is
 WebGPUService is enabled by default, matching `bun:chromium`; later user flags
 can override the default. Additional arguments use Windows quoting rules, including empty strings,
 backslashes before quotes, Unicode and URLs. An explicit trailing
-`--user-data-dir` permits isolated qualification without touching the imported
+`--user-data-dir` suppresses the default profile argument and permits isolated qualification without touching the imported
 profile. The launcher forwards arguments to the installed `chrome.exe` using
 `CreateProcessW`; it adds no remote debugging listener or sandbox bypass.
 
@@ -195,9 +195,21 @@ does not qualify this Chromium fork, imported account sessions or native AI
 backends. Google account login still requires the registered OAuth callback to
 match the deployed callback.
 
-The original Chromium compilation remains in its retained source/output tree.
-The compiled-browser qualification receipt, complete Program Files payload,
-actual installed-process launch and System32 installation remain pending.
-Installation refuses to proceed without the executable hash and successful
-isolated page/WebGPU qualification. Omar import remains blocked by the existing
-SSH route; DBFR's second independent Chrome copy remains blocked by capacity.
+The compiled Chromium 157.0.8099.0 is installed in Program Files with 5,106
+verified runtime files, including its license, and the native System32 launcher.
+The browser SHA-256 is `8e40f755b04cbaf123920466322131e9276219cf2440480bfd491457616ab147`.
+Both source and installed-browser qualification passed local fetch, canvas,
+Wasm and WebGPU compute `[10,11,12,13]` on NVIDIA Lovelace without a fallback
+adapter. Receipts are retained under `build/chromium/qualification.json` and
+`build/chromium/installed-qualification.json`; the payload inventory is installed
+as `Application/bun-chromium-install.json`.
+
+Actual System32 launch returned zero and exposed Chrome 157.0.8099.0 over CDP
+1.3 using a fresh explicit profile. Process inspection confirmed the installed
+Program Files executable. The launcher omits its default profile argument when
+an explicit `--user-data-dir` is present, avoiding duplicate switches; native
+tests cover both supported switch forms and a similar unrelated switch.
+The initial launcher probe exposed this duplicate-switch bug and could open the
+imported Chromium profile; the source Google Chrome profile was not edited.
+Account authentication transfer remains unqualified. Omar import remains blocked
+by the existing SSH route; DBFR's second Chrome copy remains blocked by capacity.
