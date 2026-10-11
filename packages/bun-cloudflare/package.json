@@ -1,0 +1,80 @@
+{
+  "name": "@aphrody/bun-cloudflare",
+  "version": "1.4.4",
+  "description": "Cloudflare developer platform on the Aphrody Bun runtime: official Cloudflare packages, local Workers with bindings, REST API and Wrangler.",
+  "license": "Apache-2.0",
+  "repository": "https://github.com/aphrody-labs/bun",
+  "type": "module",
+  "bin": {
+    "bun-cloudflare": "./src/cli.ts"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./catalog": "./src/catalog.ts",
+    "./worker": "./src/worker.ts",
+    "./api": "./src/api.ts",
+    "./wrangler": "./src/wrangler.ts",
+    "./cli": "./src/cli.ts"
+  },
+  "scripts": {
+    "packages": "bun src/cli.ts packages",
+    "test": "bun test ./test"
+  },
+  "dependencies": {
+    "@cloudflare/actors": "0.0.1-beta.6",
+    "@cloudflare/ai-chat": "^0.12.1",
+    "@cloudflare/ai-gateway": "^0.0.6",
+    "@cloudflare/autoconfig": "^0.7.7",
+    "@cloudflare/blindrsa-ts": "^0.4.6",
+    "@cloudflare/build-output-utils": "^0.9.0",
+    "@cloudflare/cabidela": "^0.2.4",
+    "@cloudflare/codemode": "^0.5.3",
+    "@cloudflare/codemods": "^0.4.2",
+    "@cloudflare/computer": "^0.5.0",
+    "@cloudflare/config": "^0.24.1",
+    "@cloudflare/containers": "^0.3.7",
+    "@cloudflare/dynamic-workflows": "^0.1.1",
+    "@cloudflare/flagship": "^0.6.0",
+    "@cloudflare/kv-asset-handler": "^0.5.0",
+    "@cloudflare/pages-functions": "^0.1.1",
+    "@cloudflare/playwright": "^1.3.6",
+    "@cloudflare/privacypass-ts": "^0.9.0",
+    "@cloudflare/puppeteer": "^1.4.0",
+    "@cloudflare/realtimekit": "^2.0.2",
+    "@cloudflare/runtime-types": "^0.1.9",
+    "@cloudflare/sandbox": "^1.0.0",
+    "@cloudflare/shell": "^0.4.3",
+    "@cloudflare/speedtest": "^1.14.1",
+    "@cloudflare/streamline": "^0.1.1",
+    "@cloudflare/tanstack-ai": "^0.2.1",
+    "@cloudflare/think": "^0.20.2",
+    "@cloudflare/types": "^7.0.1",
+    "@cloudflare/unenv-preset": "^2.16.2",
+    "@cloudflare/vite-plugin": "^1.63.1",
+    "@cloudflare/vitest-plugin": "^1.4.0",
+    "@cloudflare/voprf-ts": "^1.0.0",
+    "@cloudflare/worker-bundler": "^0.2.6",
+    "@cloudflare/workers-oauth-provider": "^1.2.3",
+    "@cloudflare/workers-response-store": "^1.1.0",
+    "@cloudflare/workers-types": "^5.20261011.1",
+    "@opennextjs/cloudflare": "^1.20.10",
+    "agents": "^0.28.0",
+    "chanfana": "^3.4.0",
+    "cloudflare": "^7.3.0",
+    "create-cloudflare": "^2.73.4",
+    "miniflare": "5.20261006.1-alpha",
+    "partyserver": "^0.5.10",
+    "partysocket": "^1.3.0",
+    "vinext": "^1.1.0",
+    "workerd": "1.20261006.1",
+    "workers-ai-provider": "^4.0.0",
+    "wrangler": "^4.149.0"
+  },
+  "engines": {
+    "bun": ">=1.4.4"
+  }
+}
