@@ -21,7 +21,8 @@
     ".": "./src/index.ts",
     "./services": "./src/services.ts",
     "./cli": "./src/cli.ts",
-    "./search": "./src/search.ts"
+    "./search": "./src/search.ts",
+    "./password-store": "./src/password-store.ts"
   },
   "scripts": {
     "config": "bun src/cli.ts config",

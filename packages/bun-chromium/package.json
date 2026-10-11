@@ -18,7 +18,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./cli": "./src/cli.ts"
+    "./cli": "./src/cli.ts",
+    "./passwords": "./src/passwords.ts"
   },
   "scripts": {
     "status": "bun src/cli.ts status",
