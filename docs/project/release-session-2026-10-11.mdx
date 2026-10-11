@@ -1,0 +1,50 @@
+---
+title: Cross-repository release session status (2026-10-11)
+description: Evidence, release gates, host capacity and deployment boundaries for the Bun, Aphrody and Shenron work coordinated on 2026-10-11.
+---
+
+# Release session status — 2026-10-11
+
+This page records verified source, build, publication and deployment evidence from the coordinated release work. A source commit, compiled executable, registry package, GitHub release and production deployment are separate deliverables. Update each row only with a receipt from its owning repository or release system.
+
+## Bun OS
+
+The local checkout is now `main` at `d3e4490dc5824d9c34e702d5ac6f1a83e12cd046`, pushed to `origin/main`. The release build below used the earlier pinned source `f655e0ca8dc88767c4c3736affaa4cbb694c0afd`, which records the Mullvad factory artifact in [PLAN.md](../../PLAN.md). The current main has moved on; the f655 build is not a build of current main and cannot qualify it.
+
+On the VPS factory, both Linux x64 variants were built from that pinned source: performance (`coreutils:off`) and full (`coreutils:on`). Both `bun-profile` binaries reported version `1.4.4`, passed a JavaScript evaluation smoke test and had no missing `ldd` dependencies. Their SHA-256 values are `981b4d0662116aa63ed2c609099b9e4a817a6bb032c1c369bafd148a9ffe0fe2` (performance) and `87b6f45f82b6434d5d3b0b38ae34ebaa6ae79006241cf1dfbe26700aa458e479` (full). Factory output lives outside the repository under `/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/`; it is not a published asset.
+
+The binary verification report for the full variant returns exit code 1: it finds an unapproved `liblzma.so.5` runtime dependency and the unapproved static initializer `do_library_init`. The build system runs those scans warn-only outside release CI, so the successful build and smoke test do not clear the release gate. Resolve those two findings at their source and rerun strict release verification. No release qualification receipt, checksum set, release tag, runtime package upload or production runtime activation has been recorded by this session.
+
+The full integration policy in [`scripts/aphrody/release-matrix.ts`](../../scripts/aphrody/release-matrix.ts) still blocks the stable channel pending `portable-paint`, `shared-css-paint` and `browser-render-stealth` qualification. A successful local build or smoke test does not satisfy those owner gates. See [`scripts/aphrody/release-factory.ts`](../../scripts/aphrody/release-factory.ts) for the required factory receipts and asset checks.
+
+The separately built Mullvad sidecar is an internal candidate at `/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/bun-vpn-linux-x86_64.tar.gz`, SHA-256 `c9ad54e83f1cb7b3cc834be2fb1cdaf03c84ca5a823925a3445b10bee1d9c8a7`. It contains the Mullvad source pinned at `464d28812ac863ef75362b8fb85bcbdff961b9f9` and passed archive, hash and CLI smoke checks. Its recorded Bun parent source is `080955ba6d3394ff92d0813c9cceb73d30a83b36`, so it is not receipt-compatible with the runtime build from `f655e0ca8dc88767c4c3736affaa4cbb694c0afd` until repackaged and reverified. No VPN tunnel was activated.
+
+The VPS had 71 GiB free disk and about 29 GiB available RAM during the full build/link. The Bun factory held its heavy-build lock. VPS services were all running with no failed systemd units; SSH, networking, Docker/Kubernetes, the Aphrody services and VPN namespace endpoints remain in use. None were stopped. Omar had about 5.64 GiB free RAM, below the Windows release plan's 6 GiB floor, and a local `.claude/skills/cpp-bun/SKILL.md` edit prevented a safe fast-forward to the current source; no Windows runtime build was launched there.
+
+## Chromium
+
+The local Chromium source build is owned and monitored by its build agent. Its latest checkpoint was 10,333 of 14,027 Siso tasks, with 3,694 remaining and no reported build errors. That checkpoint proves neither a completed executable nor a browser launch, WebGPU qualification, package publication or deployment. No second native build was started on that PC.
+
+## Aphrody and Shenron
+
+Aphrody and Shenron have independent repositories, active file claims, release manifests and deployment owners. Their agents must update those repositories' documentation and provide their own exact commits, checks and receipts; this page does not substitute for their source-of-truth records.
+
+The available Shenron audit confirmed 12 npm packages visible at the registry (11 at `1.4.4`, `@aphrody/shenron-pipeline` at `1.4.5`) and 9 crates at `1.4.4`, with matching registry/download/local hashes and a clean consumer install. The GitHub binary release is absent (`releases/latest` returned `404`); CDN cutover still lacks DNSSEC/DS, TTL, delegation and TLS proof. A `200` health response alone does not identify the active image digest. Those gates prevent claiming complete Shenron release or deployment.
+
+The available Aphrody session evidence includes Google/Chromium/M3 capability graph commits `99191a2701c` and `8e96fabf861`, plus a focused test result of 3/3 tests and 12 assertions. Further Google work, full UI checks and active claims remained open at the last handoff. These commit prefixes and test counts are session evidence, not a complete Aphrody publish or production receipt.
+
+## Pipeline and deployment rules
+
+Build and publication work must be dispatched through each product's owner workflow. Independent targets may run concurrently only when they have separate factory locks, sufficient measured capacity and disjoint source/output ownership. Jobs that share a host-wide heavy-build lock remain serialized.
+
+Current asynchronous support is partial. Aphrody Infra's factory accepts `run --detach --job <stable-id>` and exposes durable `status --job`; an ambiguous SSH result requires reconciliation rather than blind resubmission. Its `--detach --install` path still waits for the build. Bun's [`scripts/aphrody/monorepo-delivery.ts`](../../scripts/aphrody/monorepo-delivery.ts) now supports detached profile-qualified build/release jobs with stable input-derived IDs, durable status/log/report/step receipts and `--status --job <id>`. Repeated submission of the same ID and inputs does not relaunch it; input collisions fail. Its scheduler runs dependency-ready steps concurrently only with a fresh qualified factory-capacity profile; without one, attached `--apply` awaits steps sequentially. Consumer install remains synchronous locally because it lacks a durable target lock/reconciliation contract; route detached install through Aphrody Infra. The current [GitHub delivery workflow](../../.github/workflows/aphrody-monorepo-delivery.yml) remains sequential and exposes inventory, build and release-check only. NPM, Cargo and runtime publishers still serialize their dependency-ordered mutations. This is a partial foundation, not an end-to-end nonblocking publish/install/update/deploy pipeline.
+
+The safe next step is a durable submit/status/receipt interface for the whole release DAG, reusing the existing Infra factory and capacity scheduler. It must preserve dependency waves, immutable source and input hashes, package/version idempotency, the canonical heavy lock and deployment plan/health/rollback gates. Independent builds, package staging and read-only registry checks can run concurrently within observed CPU, RAM and disk limits; mutations against the same version or production host remain serialized. A nonblocking dispatcher must return a stable job identity and durable state, keep logs and receipts, reconcile uncertain submissions and never mark a publish/deploy successful before read-back and health checks pass.
+
+Production apply requires a current deployment plan, explicit target and revision, health validation, and a tested rollback path. Active services are not classified as unused from process age or idle CPU alone. This session did not issue a production apply on VPS, DBFR, Omar or the local PC.
+
+## Documentation refresh
+
+The Bun MCP tool catalog is generated from `bun mcp tools --markdown` by [`scripts/aphrody/mcp-docs.ts`](../../scripts/aphrody/mcp-docs.ts); regenerate it with the exact qualified runtime binary and run `--check` against that same binary. The release README, agent-plugin README and GitHub release-source metadata are generated by [`scripts/aphrody/release-surfaces.ts`](../../scripts/aphrody/release-surfaces.ts). Use `--offline` when GitHub's published-release inventory is not being verified. Do not publish its generated site or plugin artifact until their source SHA and release receipts match.
+
+The final refresh status belongs in this section after the MCP catalog and release surfaces have been regenerated and checked. Until then, generated tool/plugin inventories should be treated as potentially stale.

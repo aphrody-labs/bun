@@ -39,12 +39,35 @@ are reported explicitly. The runtime factory builds its native dependency graph;
 an npm package without a build script is not thereby a qualified release.
 
 All operations plan by default. Applying a build or release requires a clean
-checkout at the selected revision. Execution is sequential, retaining the
-configured Cargo wrapper and factory locks. Select a qualified build host and
-its resource permissions before applying; DBFR production is not a compiler
-host. This tool neither provisions hosts nor copies credentials. A partial
-pipeline requires explicit `--allow-partial`; it never proves the entire monorepo
-has built or every source package has been published.
+checkout at the selected revision. Without a qualified factory profile, execution
+is sequential. With a fresh profile, dependency-ready light steps overlap within
+the measured CPU, RAM and disk budget; heavy steps use the shared factory lock.
+Select a qualified build host and its resource permissions before applying;
+DBFR production is not a compiler host. This tool neither provisions hosts nor
+copies credentials. A partial pipeline requires explicit `--allow-partial`; it
+never proves the entire monorepo has built or every source package has been
+published.
+
+Profile-qualified build and release operations can be submitted as detached
+jobs. Submission writes an input-hashed receipt under the ignored local
+`tmp/monorepo-delivery-jobs/<id>/` directory and returns without waiting for the
+factory work. Repeating the same submission ID with the same inputs is
+idempotent; reusing it for different inputs fails. The worker stores its report,
+execution receipt and separate stdout/stderr logs beside the job record:
+
+```sh
+bun scripts/aphrody/monorepo-delivery.ts --operation release-check --profile factory.json --snapshot-hash <sha256> --apply --detach
+bun scripts/aphrody/monorepo-delivery.ts --status --job <job-id>
+```
+
+The status command reports `launching`, `running`, `succeeded` or `failed`;
+`launching` means the submitting process handed off the worker but its first
+status write has not yet been observed. A detached worker still requires a
+clean checkout at the exact source revision, a fresh capacity profile, and the
+normal release gates. Detached install remains owned by the durable Aphrody
+factory because consumer-directory mutations need its target lock and receipt
+reconciliation. GitHub Actions workflow runs likewise use GitHub's run identity
+and logs; they are not local Bun delivery job records.
 
 ## One-click consumer installation
 

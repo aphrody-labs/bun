@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, mkdirSync, realpathSync, statfsSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, realpathSync, renameSync, statfsSync, writeFileSync } from "node:fs";
 import { freemem } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
@@ -77,7 +77,177 @@ export type ExecutionReceipt = {
     endedAt: string;
   }[];
 };
+export type DeliveryJob = {
+  schema: 1;
+  id: string;
+  inputHash: string;
+  sourceRevision: string;
+  operation: string;
+  state: "launching" | "running" | "succeeded" | "failed";
+  requestArgs: string[];
+  args: string[];
+  submittedAt: string;
+  startedAt?: string;
+  endedAt?: string;
+  exitCode?: number;
+  error?: string;
+};
 const sha256 = (text: string | Uint8Array) => createHash("sha256").update(text).digest("hex");
+
+function deliveryJobPath(root: string, id: string) {
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,95}$/.test(id)) throw new Error("Invalid delivery job ID");
+  return join(root, "tmp", "monorepo-delivery-jobs", id, "job.json");
+}
+
+export async function readDeliveryJob(root: string, id: string): Promise<DeliveryJob> {
+  const path = deliveryJobPath(root, id);
+  await validateExecutionReceiptPath(root, root, path, { allowJobId: id });
+  if (!(await Bun.file(path).exists())) throw new Error(`Unknown delivery job: ${id}`);
+  const job = (await Bun.file(path).json()) as DeliveryJob;
+  if (
+    job.schema !== 1 ||
+    job.id !== id ||
+    !Array.isArray(job.args) ||
+    !Array.isArray(job.requestArgs) ||
+    !/^[a-f0-9]{40}$/.test(job.sourceRevision) ||
+    !/^[a-f0-9]{64}$/.test(job.inputHash) ||
+    sha256(JSON.stringify({ revision: job.sourceRevision, operation: job.operation, args: job.requestArgs })) !==
+      job.inputHash
+  )
+    throw new Error(`Invalid delivery job receipt: ${id}`);
+  const directory = dirname(path);
+  if (
+    JSON.stringify(job.args) !==
+    JSON.stringify([
+      ...job.requestArgs,
+      "--out",
+      join(directory, "report.json"),
+      "--execution-receipt",
+      join(directory, "execution.json"),
+    ])
+  )
+    throw new Error(`Delivery job arguments do not match their immutable request: ${id}`);
+  return job;
+}
+
+async function writeDeliveryJob(root: string, job: DeliveryJob) {
+  const path = deliveryJobPath(root, job.id);
+  const temporary = `${path}.${process.pid}.pending`;
+  await validateExecutionReceiptPath(root, root, path, { allowJobId: job.id });
+  await validateExecutionReceiptPath(root, root, temporary);
+  await Bun.write(temporary, `${JSON.stringify(job, null, 2)}\n`);
+  renameSync(temporary, path);
+}
+
+export async function submitDeliveryJob(
+  root: string,
+  source: Inventory["source"],
+  operation: string,
+  args: string[],
+  requestedId?: string,
+  options: {
+    launch?: boolean;
+    spawn?: (
+      command: string[],
+      options: Parameters<typeof Bun.spawn>[1],
+    ) => Pick<ReturnType<typeof Bun.spawn>, "unref">;
+  } = {},
+) {
+  const inputHash = sha256(JSON.stringify({ revision: source.revision, operation, args }));
+  const id =
+    requestedId ??
+    `${operation.replaceAll(/[^a-zA-Z0-9._-]/g, "-")}-${source.revision.slice(0, 12)}-${inputHash.slice(0, 12)}`;
+  const path = deliveryJobPath(root, id);
+  const stdoutPath = join(dirname(path), "stdout.log");
+  const stderrPath = join(dirname(path), "stderr.log");
+  const jobArgs = [
+    ...args,
+    "--out",
+    join(dirname(path), "report.json"),
+    "--execution-receipt",
+    join(dirname(path), "execution.json"),
+  ];
+  await Promise.all([
+    validateExecutionReceiptPath(root, root, path, { allowJobId: id }),
+    validateExecutionReceiptPath(root, root, stdoutPath, { allowPlainFile: true }),
+    validateExecutionReceiptPath(root, root, stderrPath, { allowPlainFile: true }),
+  ]);
+  mkdirSync(dirname(path), { recursive: true });
+  let existing: DeliveryJob | undefined;
+  let created = false;
+  if (existsSync(path)) existing = await readDeliveryJob(root, id);
+  else {
+    const job: DeliveryJob = {
+      schema: 1,
+      id,
+      inputHash,
+      sourceRevision: source.revision,
+      operation,
+      state: "launching",
+      requestArgs: args,
+      args: jobArgs,
+      submittedAt: new Date().toISOString(),
+    };
+    try {
+      writeFileSync(path, `${JSON.stringify(job, null, 2)}\n`, { flag: "wx" });
+      existing = job;
+      created = true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      existing = await readDeliveryJob(root, id);
+    }
+  }
+  if (existing.inputHash !== inputHash) throw new Error(`Delivery job ID already belongs to different inputs: ${id}`);
+  if (!created) return { id, state: existing.state, inputHash, statusPath: path, stdoutPath, stderrPath };
+  if (options.launch === false)
+    return { id, state: existing.state, inputHash, statusPath: path, stdoutPath, stderrPath };
+  try {
+    await Promise.all([Bun.write(stdoutPath, ""), Bun.write(stderrPath, "")]);
+    const spawn = options.spawn ?? Bun.spawn;
+    const child = spawn([process.execPath, import.meta.path, "--root", root, "--run-job", id], {
+      cwd: root,
+      stdin: "ignore",
+      stdout: Bun.file(stdoutPath),
+      stderr: Bun.file(stderrPath),
+      windowsHide: true,
+    });
+    child.unref();
+  } catch (error) {
+    await writeDeliveryJob(root, {
+      ...existing,
+      state: "failed",
+      endedAt: new Date().toISOString(),
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+  return { id, state: "launching", inputHash, statusPath: path, stdoutPath, stderrPath };
+}
+
+export async function runDeliveryJob(root: string, id: string) {
+  const job = await readDeliveryJob(root, id);
+  if (job.state !== "launching") return job;
+  if (git(root, ["rev-parse", "HEAD"]).trim() !== job.sourceRevision)
+    throw new Error("Delivery job source revision changed before worker start");
+  const running = { ...job, state: "running" as const, startedAt: new Date().toISOString() };
+  await writeDeliveryJob(root, running);
+  try {
+    await main(job.args);
+    const completed = { ...running, state: "succeeded" as const, endedAt: new Date().toISOString(), exitCode: 0 };
+    await writeDeliveryJob(root, completed);
+    return completed;
+  } catch (error) {
+    const failed = {
+      ...running,
+      state: "failed" as const,
+      endedAt: new Date().toISOString(),
+      exitCode: 1,
+      error: error instanceof Error ? error.message : String(error),
+    };
+    await writeDeliveryJob(root, failed);
+    throw error;
+  }
+}
 
 export function cargoPublishAdapter(manifest: string, name: string): string | null {
   if (CRATES.some(crate => `${crate.dir}/Cargo.toml` === manifest)) return "publish-crates";
@@ -133,7 +303,12 @@ export function boundedExecutionCommand(command: string[], cpu: number) {
   return runtimeBuild && !explicitJobs ? [...command, `-j${cpu}`] : command;
 }
 
-export async function validateExecutionReceiptPath(root: string, factoryRoot: string, input: string) {
+export async function validateExecutionReceiptPath(
+  root: string,
+  factoryRoot: string,
+  input: string,
+  options: { allowJobId?: string; allowPlainFile?: boolean } = {},
+) {
   const canonical = (path: string): string => {
     let ancestor = resolve(path);
     const suffix: string[] = [];
@@ -189,10 +364,19 @@ export async function validateExecutionReceiptPath(root: string, factoryRoot: st
     if (tracked.exitCode === 0) throw new Error("Execution receipt must not overwrite tracked source");
   }
   if (existsSync(destination)) {
+    if (options.allowPlainFile) return destination;
     const previous = await Bun.file(destination)
       .json()
       .catch(() => undefined);
-    if (previous?.schema !== 1 || !previous.source || !Array.isArray(previous.steps))
+    const validExecutionReceipt = previous?.schema === 1 && previous.source && Array.isArray(previous.steps);
+    const validJobReceipt =
+      previous?.schema === 1 &&
+      options.allowJobId === previous.id &&
+      typeof previous.id === "string" &&
+      /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,95}$/.test(previous.id) &&
+      /^[a-f0-9]{64}$/.test(previous.inputHash) &&
+      Array.isArray(previous.args);
+    if (!validExecutionReceipt && !validJobReceipt)
       throw new Error("Execution receipt must not overwrite unrelated data");
   }
   return destination;
@@ -883,13 +1067,34 @@ export async function main(args = Bun.argv.slice(2)) {
       resume: { type: "boolean" },
       "execution-receipt": { type: "string" },
       "snapshot-hash": { type: "string" },
+      "profile-hash": { type: "string" },
+      detach: { type: "boolean" },
+      status: { type: "boolean" },
+      job: { type: "string" },
+      "run-job": { type: "string" },
     },
   });
   const root = resolve(values.root!);
+  if (values["run-job"]) {
+    await runDeliveryJob(root, values["run-job"]);
+    return;
+  }
+  if (values.status) {
+    if (!values.job) throw new Error("Status requires --job ID");
+    const job = await readDeliveryJob(root, values.job);
+    const output = JSON.stringify(job, null, 2) + "\n";
+    if (values.out) await Bun.write(resolve(values.out), output);
+    else console.log(output);
+    return job;
+  }
   const data = inventory(root, values.ref);
   const operation = values.operation!;
   if (!["inventory", "build", "release-check", "release-publish", "install"].includes(operation))
     throw new Error(`Unknown operation: ${operation}`);
+  if (values.detach && (!values.apply || operation === "inventory"))
+    throw new Error("Detached delivery requires --apply and a mutating build or release operation");
+  if (values.detach && operation === "install")
+    throw new Error("Detached install requires the durable owner factory; submit it through Aphrody Infra");
   const report: Manifest = { inventory: data };
   if (values["check-upstream"]) report.upstreams = await upstreamReport(data, root);
   if (values["check-registry"])
@@ -913,12 +1118,38 @@ export async function main(args = Bun.argv.slice(2)) {
         if (!values["snapshot-hash"] || !/^[a-f0-9]{64}$/.test(values["snapshot-hash"]))
           throw new Error("Factory execution requires --snapshot-hash SHA256");
         const profile = (await Bun.file(resolve(values.profile)).json()) as FactoryHostProfile;
-        report.execution = await executeDeliveryPlan(root, data.source, report.plan.steps, profile, {
-          receiptPath: resolve(values["execution-receipt"] ?? join(root, "tmp/delivery-execution.json")),
-          snapshotHash: values["snapshot-hash"],
-          resume: values.resume ?? false,
-        });
+        if (
+          values["profile-hash"] &&
+          sha256(new Uint8Array(await Bun.file(resolve(values.profile)).arrayBuffer())) !== values["profile-hash"]
+        )
+          throw new Error("Factory profile changed after detached job submission");
+        if (values.detach) {
+          const jobArgs: string[] = [
+            "--root",
+            root,
+            "--operation",
+            operation,
+            "--apply",
+            "--profile",
+            resolve(values.profile),
+            "--snapshot-hash",
+            values["snapshot-hash"]!,
+            "--profile-hash",
+            sha256(new Uint8Array(await Bun.file(resolve(values.profile)).arrayBuffer())),
+          ];
+          if (values["allow-partial"]) jobArgs.push("--allow-partial");
+          if (values.resume) jobArgs.push("--resume");
+          if (values.qualification) jobArgs.push("--qualification", resolve(values.qualification));
+          report.job = await submitDeliveryJob(root, data.source, operation, jobArgs, values.job);
+        } else {
+          report.execution = await executeDeliveryPlan(root, data.source, report.plan.steps, profile, {
+            receiptPath: resolve(values["execution-receipt"] ?? join(root, "tmp/delivery-execution.json")),
+            snapshotHash: values["snapshot-hash"],
+            resume: values.resume ?? false,
+          });
+        }
       } else {
+        if (values.detach) throw new Error("Detached factory work requires --profile and --snapshot-hash");
         if (values.resume) throw new Error("Resume requires a qualified factory profile");
         for (const step of report.plan.steps as Step[]) {
           if (step.id.startsWith("pack:"))

@@ -15,7 +15,10 @@ import {
   executionInputHash,
   inventory,
   plan,
+  readDeliveryJob,
+  runDeliveryJob,
   sourceQualified,
+  submitDeliveryJob,
   validateExecutionBudget,
   validateExecutionReceiptPath,
   verifyIntegrity,
@@ -197,6 +200,65 @@ test("delivery runner executes real artifacts and resumes only verified output b
   await executeDeliveryPlan(root, { ...source, revision: "d".repeat(40) }, [step], profile, options);
   expect(await Bun.file(join(root, "counter")).text()).toBe("3");
 }, 10000);
+
+test("delivery jobs hand off once and keep durable idempotent receipts", async () => {
+  using directory = tempDir("delivery-jobs", {
+    "package.json": JSON.stringify({ name: "delivery-jobs-fixture", version: "1.0.0" }),
+  });
+  const root = String(directory);
+  const git = (...args: string[]) => {
+    const result = Bun.spawnSync(["git", ...args], { cwd: root, stdout: "pipe", stderr: "pipe" });
+    if (result.exitCode) throw new Error(result.stderr.toString());
+    return result.stdout.toString().trim();
+  };
+  git("init", "--quiet");
+  git("add", "package.json");
+  git("-c", "user.name=fixture", "-c", "user.email=fixture@example.com", "commit", "--quiet", "-m", "fixture");
+  const source = {
+    revision: git("rev-parse", "HEAD"),
+    rootTree: git("rev-parse", "HEAD^{tree}"),
+    date: "2026-10-11",
+    version: "1.4.4",
+  };
+  let spawnCalls = 0;
+  let unrefCalls = 0;
+  const spawn: NonNullable<Parameters<typeof submitDeliveryJob>[5]>["spawn"] = () => {
+    spawnCalls++;
+    return { unref: () => unrefCalls++ };
+  };
+  const submitted = await submitDeliveryJob(
+    root,
+    source,
+    "inventory",
+    ["--root", root, "--operation", "inventory"],
+    "inventory-fixture",
+    { spawn },
+  );
+  expect(submitted.state).toBe("launching");
+  expect(spawnCalls).toBe(1);
+  expect(unrefCalls).toBe(1);
+  const persisted = await readDeliveryJob(root, submitted.id);
+  expect(persisted.sourceRevision).toBe(source.revision);
+  expect(persisted.args).toContain(join(root, "tmp", "monorepo-delivery-jobs", submitted.id, "execution.json"));
+  const jobPath = join(root, "tmp", "monorepo-delivery-jobs", submitted.id, "job.json");
+  await Bun.write(
+    jobPath,
+    JSON.stringify({ ...persisted, requestArgs: [...persisted.requestArgs, "--allow-partial"] }),
+  );
+  await expect(readDeliveryJob(root, submitted.id)).rejects.toThrow("Invalid delivery job receipt");
+  await Bun.write(jobPath, `${JSON.stringify(persisted, null, 2)}\n`);
+  expect(await runDeliveryJob(root, submitted.id)).toMatchObject({ state: "succeeded", exitCode: 0 });
+  expect(await Bun.file(join(root, "tmp", "monorepo-delivery-jobs", submitted.id, "report.json")).exists()).toBe(true);
+  expect(
+    await submitDeliveryJob(root, source, "inventory", ["--root", root, "--operation", "inventory"], submitted.id, {
+      launch: false,
+    }),
+  ).toMatchObject({ id: submitted.id, state: "succeeded" });
+  await expect(
+    submitDeliveryJob(root, source, "inventory", ["--operation", "different"], submitted.id, { launch: false }),
+  ).rejects.toThrow("different inputs");
+  await expect(readDeliveryJob(root, "../protected")).rejects.toThrow("Invalid delivery job ID");
+});
 
 test("delivery scheduler overlaps independent light commands and waits for DAG prerequisites", async () => {
   using directory = tempDir("delivery-scheduler", {});
