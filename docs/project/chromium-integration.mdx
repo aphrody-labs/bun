@@ -87,8 +87,11 @@ upstream `LICENSE` file.
 
 `bun --help` has no `systemdeps` command. This fork's system package manager is
 the `systemDependencies` package.json/lockfile mechanism, with `apt` accepted
-as an alias for the `deb` source; it is not a general apt provisioning
-command. `bun uv python` exposes uv-managed Python discovery and installation.
+as an alias for the `deb` source. The integrated Linux adapter invokes trusted
+APT/dpkg through `bun pm apt`, with an explicit initialized root for transactions;
+candidate CLI qualification remains required. See the [Debian owner](../pm/deb.mdx)
+and [Ubuntu source receipt](./ubuntu-apt-sources.mdx).
+`bun uv python` exposes uv-managed Python discovery and installation.
 The repository's `scripts/aphrody/buv.ts` is a project workflow wrapper, not a
 separate installed `buv` executable. `bun:python` embeds an explicitly selected
 CPython library through its host ABI. These interfaces do not establish that

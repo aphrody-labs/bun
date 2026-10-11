@@ -1,0 +1,63 @@
+---
+name: Host environment capabilities
+---
+
+# Host environment capabilities
+
+`bun host collect` and the existing `host_inventory` MCP tool add an optional
+`environment` object to the schema-1 host card. Older cards without this object
+remain readable. Collection runs on explicit inventory requests; it adds no
+processes or cloud requests to JavaScript VM startup.
+
+Provider hints use a fixed whitelist of public deployment flags for Vercel,
+AWS Lambda, Cloud Run, Azure Functions, Netlify, Codespaces, Gitpod, Fly.io and
+Railway. Values such as function names and workspace identifiers are never
+copied into output. Linux DMI identifies common EC2, Google Compute, OpenStack
+and DigitalOcean hosts. Docker/OCI marker files and Kubernetes environment hints
+are recorded as hints. Unrecognized deployments remain unknown.
+
+Linux device-tree model data identifies Raspberry Pi and other boards. CPU
+vendor and GPU vendors reuse the existing host inventory, including Intel, AMD,
+NVIDIA and Apple. Windows build and product-name evidence distinguish Windows
+11 desktop hints from Windows Server. Hardware identity does not qualify CUDA,
+Metal, WebGPU, display connectivity or a workload's performance.
+
+POSIX identity accessors and Linux `/proc/self/status` supply real and effective UIDs; effective UID controls
+the `root`/`user` classification. `SUDO_UID` records a context hint, never an
+elevation grant. Parent process names come from bounded `/proc/<pid>/comm`
+reads, without command-line arguments. macOS uses bounded `proc_name` for the
+parent name. Windows reads its own token's elevation through `TOKEN_QUERY`;
+the result is `administrator`, `user` or `unknown` without a child process.
+Windows parent process fields remain unknown here; its runtime owner handles
+process launch and parent-shell routing separately.
+The collector does not invoke `sudo`.
+
+Display variables advertise X11, Wayland or a Windows session. Their absence
+does not prove that a machine has no screen. Terminal status is measured from
+the current standard handles. Linux default-route evidence comes from the
+local IPv4 and IPv6 routing tables, excluding reject routes; outbound internet access remains unknown without a real
+authorized operation. No metadata endpoint or arbitrary website is probed.
+
+The advisory worker recommendation is bounded by the already constrained CPU
+count and available RAM, allowing at most one worker per 256 MiB and serializing
+unknown or smaller budgets. It does not allocate memory, change the operating
+system, select a privileged plugin, set affinity or prove a speed improvement.
+Consumers must retain workload-specific memory and capability checks.
+The `available_parallelism` estimate further caps recommendations using std's
+process-visible estimate (including supported affinity/cgroup restrictions),
+without rewriting `cpu.logical_cores`. An unavailable estimate remains null.
+
+Reads are bounded to 8 KiB per fixed local probe. Fixture tests cover public
+flag redaction, absent hints, RAM ceilings, effective UID, Raspberry Pi/cloud
+classification, Windows Server, GPU/display hints and local routing evidence:
+
+```sh
+cargo test -p bun_host environment::tests
+cargo clippy -p bun_host --all-targets -- -D warnings
+```
+
+Run through the serialized SSH factory. These gates establish the host leaf
+crate, while complete runtime and platform qualification remains separate.
+
+Native contracts: [Microsoft token information classes](https://learn.microsoft.com/windows/win32/api/winnt/ne-winnt-token_information_class)
+and [Apple's libproc declarations](https://github.com/apple-oss-distributions/xnu/blob/main/libsyscall/wrappers/libproc/libproc.h).

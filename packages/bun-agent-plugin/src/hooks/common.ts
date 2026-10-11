@@ -25,16 +25,28 @@ export function reply(value: unknown): void {
   if (value !== undefined) process.stdout.write(JSON.stringify(value));
 }
 
-/** The bun running this hook is the Aphrody runtime (the bun on PATH, since hooks run `bun <hook>.ts`). */
-export function isAphrodyBun(): boolean {
-  if (Bun.version_with_sha.includes("aphrody")) return true;
-  try {
-    // The Aphrody runtime serves these npm names from built-in modules (src/js/thirdparty); upstream Bun resolves
-    // files or fails.
-    return Bun.resolveSync("picocolors", import.meta.dir) === "picocolors";
-  } catch {
+/** Runtime provenance and commit identity, independent of the generated plugin's content hash. */
+export function isAphrodyRuntime(revision: string, sourceUrl?: string, commit?: string): boolean {
+  if (/^v?\d+\.\d+\.\d+-aphrody\.\d+(?:\+[a-f0-9]{7,40}| \([a-f0-9]{7,40}\))?$/.test(revision))
+    return true;
+  const parsed = /^v?(\d+\.\d+\.\d+)(?:\+([a-f0-9]{7,40})| \(([a-f0-9]{7,40})\))$/.exec(revision);
+  if (
+    !parsed ||
+    !commit ||
+    !/^[a-f0-9]{40}$/.test(commit) ||
+    !commit.startsWith(parsed[2] ?? parsed[3])
+  )
     return false;
-  }
+  const release =
+    /^https:\/\/github\.com\/aphrody-labs\/bun\/releases\/download\/bun-v(\d+\.\d+\.\d+)(?:-debug)?\/bun-[a-z0-9]+(?:-[a-z0-9]+)*\.zip$/.exec(
+      sourceUrl ?? "",
+    );
+  return release?.[1] === parsed[1];
+}
+
+/** The bun running this hook is the Aphrody runtime (hooks run `bun <hook>.ts`). */
+export function isAphrodyBun(): boolean {
+  return isAphrodyRuntime(Bun.version_with_sha, process.release.sourceUrl, Bun.revision);
 }
 
 /** The root of the Bun checkout containing `dir`, if any. */
@@ -42,7 +54,8 @@ export function bunCheckout(dir: string | undefined): string | undefined {
   if (!dir) return undefined;
   let d = resolve(dir);
   for (let i = 0; i < 64; i++) {
-    if (existsSync(join(d, "scripts", "build.ts")) && existsSync(join(d, "src", "runtime", "cli"))) return d;
+    if (existsSync(join(d, "scripts", "build.ts")) && existsSync(join(d, "src", "runtime", "cli")))
+      return d;
     const up = dirname(d);
     if (up === d) return undefined;
     d = up;
@@ -77,8 +90,13 @@ type ToolsFile = {
  * The `bun mcp` tools to suggest instead of the built-in tool `toolName` (or the shell `command`), once per
  * session and kind: `tools.json` is generated from the server's sources, so only tools it has are named.
  */
-export function preferHint(t: Target, event: Record<string, any>, command: string | undefined): string | undefined {
-  const session = typeof event.session_id === "string" ? event.session_id.replace(/[^\w-]/g, "") : "";
+export function preferHint(
+  t: Target,
+  event: Record<string, any>,
+  command: string | undefined,
+): string | undefined {
+  const session =
+    typeof event.session_id === "string" ? event.session_id.replace(/[^\w-]/g, "") : "";
   if (!session) return undefined;
   let file: ToolsFile;
   try {
@@ -86,13 +104,16 @@ export function preferHint(t: Target, event: Record<string, any>, command: strin
   } catch {
     return undefined;
   }
-  const rule = file.prefer.find(p => p.instead === event.tool_name || (command && new RegExp(p.bash).test(command)));
+  const rule = file.prefer.find(
+    (p) => p.instead === event.tool_name || (command && new RegExp(p.bash).test(command)),
+  );
   if (!rule) return undefined;
   const stamp = join(tmpdir(), `bun-agent-plugin-${session}-${rule.instead}`);
   if (existsSync(stamp)) return undefined;
   try {
     writeFileSync(stamp, "");
   } catch {}
-  const name = (n: string) => (t === "claude" ? `mcp__plugin_${file.plugin}_${file.server}__${n}` : n);
+  const name = (n: string) =>
+    t === "claude" ? `mcp__plugin_${file.plugin}_${file.server}__${n}` : n;
   return `For code, the ${file.server} MCP server (bun mcp) has ${rule.use.map(name).join(", ")}: prefer them over ${rule.instead} when they fit.`;
 }

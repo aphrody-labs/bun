@@ -14,12 +14,14 @@ path = "lib.rs"
 workspace = true
 
 [dependencies]
+bun_browser_dom.workspace = true
 aphrody-oxc-tools = { path = "../../packages/bun-oxc/crates/oxc-tools" }
 aphrody-oxc-bridge = { path = "../../packages/bun-oxc/crates/oxc-bridge" }
 oxc_linter = { path = "../../vendor/oxc/crates/oxc_linter", features = ["ruledocs"] }
 serde_json = "=1.0.151"
 globset = "=0.4.20"
 ignore = "=0.4.33"
+bun_graph.workspace = true
 bun_opaque.workspace = true
 rust-argon2.workspace = true
 bcrypt.workspace = true
@@ -86,7 +88,6 @@ lol_html.workspace = true
 bun_lsp.workspace = true
 bun_md.workspace = true
 bun_no_window.workspace = true
-bun_graph.workspace = true
 bun_host.workspace = true
 bun_mcp.workspace = true
 bun_options_types.workspace = true

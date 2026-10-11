@@ -65,7 +65,7 @@ function tar(entries: Entry[], end: boolean, checksums = false): Buffer {
   return Buffer.concat(parts);
 }
 
-const gz = (b: Buffer) => Buffer.from(Bun.gzipSync(b));
+const gz = (b: Buffer) => Buffer.from(Bun.gzipSync(Uint8Array.from(b)));
 const sha1 = (b: Buffer) => createHash("sha1").update(b).digest();
 
 function signed(body: Buffer): Buffer {
@@ -73,7 +73,13 @@ function signed(body: Buffer): Buffer {
   return gz(tar([{ name: `.SIGN.RSA.${KEY_NAME}`, data: sig }], false));
 }
 
-type Pkg = { name: string; version: string; depends?: string[]; provides?: string[]; files: Entry[] };
+type Pkg = {
+  name: string;
+  version: string;
+  depends?: string[];
+  provides?: string[];
+  files: Entry[];
+};
 
 function buildApk(p: Pkg): { bytes: Buffer; identity: Buffer; size: number } {
   const data = gz(tar(p.files, true, true));
@@ -88,8 +94,8 @@ function buildApk(p: Pkg): { bytes: Buffer; identity: Buffer; size: number } {
     `arch = x86_64`,
     `origin = ${p.name}`,
     `license = MIT`,
-    ...(p.depends ?? []).map(d => `depend = ${d}`),
-    ...(p.provides ?? []).map(d => `provides = ${d}`),
+    ...(p.depends ?? []).map((d) => `depend = ${d}`),
+    ...(p.provides ?? []).map((d) => `provides = ${d}`),
     `datahash = ${datahash}`,
     "",
   ].join("\n");
@@ -194,13 +200,19 @@ async function apk(dir: string, args: string[], keys = true) {
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  const [stdout, stderr, exitCode] = await Promise.all([
+    proc.stdout.text(),
+    proc.stderr.text(),
+    proc.exited,
+  ]);
   return { stdout, stderr, exitCode };
 }
 
 describe("bun pm apk", () => {
   test("add --initdb resolves so: provides, verifies signatures and writes the apk database", async () => {
-    using dir = tempDir("pm-apk", { [`keys/${KEY_NAME}`]: publicKey.export({ type: "spki", format: "pem" }) });
+    using dir = tempDir("pm-apk", {
+      [`keys/${KEY_NAME}`]: publicKey.export({ type: "spki", format: "pem" }),
+    });
     const root = join(String(dir), "root");
 
     const add = await apk(String(dir), ["--initdb", "add", "hello"]);
@@ -251,7 +263,9 @@ describe("bun pm apk", () => {
   });
 
   test("search and info read the repository index", async () => {
-    using dir = tempDir("pm-apk-search", { [`keys/${KEY_NAME}`]: publicKey.export({ type: "spki", format: "pem" }) });
+    using dir = tempDir("pm-apk-search", {
+      [`keys/${KEY_NAME}`]: publicKey.export({ type: "spki", format: "pem" }),
+    });
     expect((await apk(String(dir), ["--initdb", "update"])).exitCode).toBe(0);
     const search = await apk(String(dir), ["search", "hello"]);
     expect(search.stdout).toBe("hello-1.0-r0\nlibhello-1.0-r0\n");

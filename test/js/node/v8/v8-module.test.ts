@@ -132,7 +132,7 @@ describe("v8.GCProfiler", () => {
   });
 });
 
-describe.concurrent("--max-old-space-size", () => {
+describe("--max-old-space-size", () => {
   test("is the heap_size_limit node:v8 reports", async () => {
     await using proc = Bun.spawn({
       cmd: [
@@ -149,7 +149,7 @@ describe.concurrent("--max-old-space-size", () => {
     expect({ stdout, stderr, exitCode }).toEqual({ stdout: `${48 * 1024 * 1024}\n`, stderr: "", exitCode: 0 });
   });
 
-  test("ends the process like node's fatal out-of-memory error", async () => {
+  test.serialIf(true)("ends the process like node's fatal out-of-memory error", async () => {
     await using proc = Bun.spawn({
       cmd: [
         bunExe(),
@@ -160,11 +160,38 @@ describe.concurrent("--max-old-space-size", () => {
       env: bunEnv,
       stdout: "pipe",
       stderr: "pipe",
+      timeout: 25_000,
     });
     const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
     expect(stderr).toContain("FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory");
     expect(exitCode).toBe(134);
-  });
+  }, 30_000);
+
+  test.serialIf(true)("a pending near-heap snapshot cannot defer fatal OOM indefinitely", async () => {
+    using dir = tempDir("v8-near-heap-limit-no-yield", {});
+    await using proc = Bun.spawn({
+      cmd: [
+        bunExe(),
+        "--max-old-space-size=8",
+        "-e",
+        `require("node:v8").setHeapSnapshotNearHeapLimit(1);
+         const keep = [];
+         for (let i = 0; ; i++) {
+           keep.push({ i, s: "x" + i });
+           if (i % 10000 === 0) Bun.gc(true);
+         }`,
+      ],
+      env: bunEnv,
+      cwd: String(dir),
+      stdout: "pipe",
+      stderr: "pipe",
+      timeout: 20_000,
+    });
+    const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
+    expect(stderr).toContain("FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory");
+    expect(exitCode).toBe(134);
+    expect((await Array.fromAsync(new Bun.Glob("*.heapsnapshot").scan(String(dir)))).length).toBe(0);
+  }, 30_000);
 
   test("rejects a value that is not a number of MiB", async () => {
     await using proc = Bun.spawn({
@@ -178,7 +205,7 @@ describe.concurrent("--max-old-space-size", () => {
     expect(exitCode).toBe(1);
   });
 
-  test("v8.setHeapSnapshotNearHeapLimit writes a snapshot before the limit", async () => {
+  test.serialIf(true)("v8.setHeapSnapshotNearHeapLimit writes a snapshot before the limit", async () => {
     using dir = tempDir("v8-near-heap-limit", {});
     await using proc = Bun.spawn({
       cmd: [
@@ -197,7 +224,7 @@ describe.concurrent("--max-old-space-size", () => {
               await new Promise(resolve => setImmediate(resolve));
             }
             keep.length = 0;
-            console.log(JSON.stringify(written().map(f => /^Heap\.\d{8}\.\d{6}\.\d+\.0\.001\.heapsnapshot$/.test(f))));
+            console.log(JSON.stringify(written().map(f => /^Heap\\.\\d{8}\\.\\d{6}\\.\\d+\\.0\\.001\\.heapsnapshot$/.test(f))));
           })();
         `,
       ],
@@ -205,6 +232,7 @@ describe.concurrent("--max-old-space-size", () => {
       cwd: String(dir),
       stdout: "pipe",
       stderr: "pipe",
+      timeout: 4_000,
     });
     const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
     expect({ stdout, stderr, exitCode }).toEqual({ stdout: "[true]\n", stderr: "", exitCode: 0 });
@@ -247,6 +275,10 @@ describe("--expose-gc", () => {
         test("gc", () => {
           expect(typeof gc).toBe("function");
           expect(typeof require("node:vm").runInNewContext("gc")).toBe("function");
+          gc();
+          for (let i = 0; i < 3; i++) {
+            expect(require("node:vm").runInNewContext("gc(); typeof gc")).toBe("function");
+          }
         });`,
     });
     await using run = Bun.spawn({

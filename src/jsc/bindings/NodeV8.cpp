@@ -17,6 +17,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <limits>
 
 namespace Bun {
 
@@ -128,6 +129,8 @@ void HeapLimitObserver::updateAttachment()
 
 void HeapLimitObserver::setLimit(size_t bytes)
 {
+    m_nearEpoch.fetch_add(1, std::memory_order_relaxed);
+    m_nearReserveLimit.store(0, std::memory_order_relaxed);
     m_limit.store(bytes, std::memory_order_relaxed);
     m_nearArmed.store(true, std::memory_order_relaxed);
     updateAttachment();
@@ -140,6 +143,10 @@ void HeapLimitObserver::setNearLimitCallback(VM& vm, JSObject* callback)
     else
         m_nearCallback.clear();
     m_hasNearCallback.store(callback != nullptr, std::memory_order_relaxed);
+    if (!callback) {
+        m_nearEpoch.fetch_add(1, std::memory_order_relaxed);
+        m_nearReserveLimit.store(0, std::memory_order_relaxed);
+    }
 }
 
 void HeapLimitObserver::didGarbageCollect(CollectionScope collectionScope)
@@ -151,8 +158,31 @@ void HeapLimitObserver::didGarbageCollect(CollectionScope collectionScope)
     bool isFull = collectionScope == CollectionScope::Full;
     size_t used = isFull ? m_vm->heap.sizeAfterLastFullCollection() : m_vm->heap.sizeAfterLastCollection();
 
+    size_t nearThreshold = limit / 10 * 9;
+    if (used >= nearThreshold) {
+        if (m_hasNearCallback.load(std::memory_order_relaxed) && m_nearArmed.exchange(false, std::memory_order_relaxed)) {
+            // A collection can cross both thresholds at once. Give the queued
+            // notification room to generate a snapshot, which can itself collect.
+            // The reserve is fixed here, not grown by subsequent collections.
+            size_t extra = std::max(used, limit);
+            size_t reserve = extra <= std::numeric_limits<size_t>::max() - used ? used + extra : used;
+            uint64_t epoch = m_nearEpoch.fetch_add(1, std::memory_order_relaxed) + 1;
+            m_nearReserveLimit.store(reserve, std::memory_order_relaxed);
+            bool posted = WebCore::ScriptExecutionContext::postTaskTo(m_contextIdentifier, BunLoopKind::Regular, [used, epoch](WebCore::ScriptExecutionContext& context) {
+                auto* global = defaultGlobalObject(context.jsGlobalObject());
+                if (auto& observer = global->m_heapLimitObserver)
+                    observer->runNearLimitCallback(global, used, epoch);
+            });
+            if (!posted)
+                m_nearReserveLimit.store(0, std::memory_order_relaxed);
+        }
+    } else if (isFull && used < limit / 10 * 8 && !m_nearReserveLimit.load(std::memory_order_relaxed)) {
+        m_nearArmed.store(true, std::memory_order_relaxed);
+    }
+
     // Only a full collection says what is really live; an eden figure still counts old garbage.
-    if (isFull && used > limit) {
+    size_t effectiveLimit = std::max(limit, m_nearReserveLimit.load(std::memory_order_relaxed));
+    if (isFull && used > effectiveLimit) {
         if (m_isMainThread) {
             static constexpr char message[] = "\nFATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory\n";
             fwrite(message, 1, sizeof(message) - 1, stderr);
@@ -163,32 +193,25 @@ void HeapLimitObserver::didGarbageCollect(CollectionScope collectionScope)
             m_vm->notifyNeedTermination();
         return;
     }
-
-    size_t nearThreshold = limit / 10 * 9;
-    if (used >= nearThreshold) {
-        if (m_hasNearCallback.load(std::memory_order_relaxed) && m_nearArmed.exchange(false, std::memory_order_relaxed)) {
-            WebCore::ScriptExecutionContext::postTaskTo(m_contextIdentifier, BunLoopKind::Regular, [used](WebCore::ScriptExecutionContext& context) {
-                auto* global = defaultGlobalObject(context.jsGlobalObject());
-                if (auto& observer = global->m_heapLimitObserver)
-                    observer->runNearLimitCallback(global, used);
-            });
-        }
-    } else if (isFull && used < limit / 10 * 8) {
-        m_nearArmed.store(true, std::memory_order_relaxed);
-    }
 }
 
-void HeapLimitObserver::runNearLimitCallback(JSGlobalObject* globalObject, size_t used)
+void HeapLimitObserver::runNearLimitCallback(JSGlobalObject* globalObject, size_t used, uint64_t epoch)
 {
-    JSObject* callback = m_nearCallback.get();
-    if (!callback)
+    if (epoch != m_nearEpoch.load(std::memory_order_relaxed))
         return;
+    JSObject* callback = m_nearCallback.get();
+    if (!callback) {
+        m_nearReserveLimit.store(0, std::memory_order_relaxed);
+        return;
+    }
     auto& vm = globalObject->vm();
     auto scope = DECLARE_TOP_EXCEPTION_SCOPE(vm);
     MarkedArgumentBuffer args;
     args.append(jsNumber(used));
     args.append(jsNumber(limit()));
     JSC::profiledCall(globalObject, ProfilingReason::API, callback, JSC::getCallData(callback), jsUndefined(), args);
+    if (epoch == m_nearEpoch.load(std::memory_order_relaxed))
+        m_nearReserveLimit.store(0, std::memory_order_relaxed);
     if (auto* exception = scope.exception()) [[unlikely]] {
         (void)scope.tryClearException();
         Zig::GlobalObject::reportUncaughtExceptionAtEventLoop(globalObject, exception);

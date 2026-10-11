@@ -8,7 +8,7 @@
 // A COM parameter token prefixed with @ is the [retval] out pointer: omit it and the method returns it.
 const ffi = require("bun:ffi");
 const { CFunction, JSCallback, read, toArrayBuffer, CString } = ffi;
-const ptrOf = ffi.ptr;
+const ptrOf: typeof import("bun:ffi").ptr = ffi.ptr;
 
 const kBuf = Symbol("win32.buffer");
 const kView = Symbol("win32.view");
@@ -36,7 +36,11 @@ function getMetadata(): Metadata {
   return metadata!;
 }
 
-class Win32Error extends Error {
+// The Node error augmentation reserves a string code; this public Win32 error carries the numeric HRESULT.
+// The constructor remains the native Error object, preserving instanceof and the existing numeric contract.
+const Win32ErrorBase: new (message?: string) => Omit<Error, "code"> = Error;
+
+class Win32Error extends Win32ErrorBase {
   code: number;
   constructor(code: number, where: string, kind = "HRESULT") {
     const hex = "0x" + (code >>> 0).toString(16).padStart(8, "0");
@@ -96,7 +100,9 @@ function loadModule(dll: string) {
     // LOAD_LIBRARY_SEARCH_SYSTEM32 first: never pick up a same-named DLL from the working directory.
     handle = k32.LoadLibraryExW(name, null, 0x800) || k32.LoadLibraryExW(name, null, 0) || 0;
     if (!handle) {
-      const error = new Error(`${dll} could not be loaded (error ${k32.GetLastError()})`) as Error & { code: string };
+      const error = new Error(
+        `${dll} could not be loaded (error ${k32.GetLastError()})`,
+      ) as Error & { code: string };
       error.code = "ERR_WIN32_DLL_NOT_FOUND";
       throw error;
     }
@@ -113,7 +119,9 @@ function procAddress(dll: string, symbol: string) {
       ? k32.GetProcAddress(handle, Number(symbol.slice(1)))
       : k32.GetProcAddress(handle, Buffer.from(symbol + "\0", "latin1"));
   if (!address) {
-    const error = new Error(`${dll}!${symbol} is not exported on this system`) as Error & { code: string };
+    const error = new Error(`${dll}!${symbol} is not exported on this system`) as Error & {
+      code: string;
+    };
     error.code = "ERR_WIN32_PROC_NOT_FOUND";
     throw error;
   }
@@ -267,7 +275,9 @@ function lookup(kind: "structs" | "callbacks" | "interfaces" | "enums", type: st
   const data = ns ? md.namespace(ns) : undefined;
   const entry = data?.[kind]?.[name];
   if (entry === undefined) {
-    const error = new Error(`Win32 ${kind.slice(0, -1)} ${type} not found in the metadata`) as Error & {
+    const error = new Error(
+      `Win32 ${kind.slice(0, -1)} ${type} not found in the metadata`,
+    ) as Error & {
       code: string;
     };
     error.code = "ERR_WIN32_TYPE_NOT_FOUND";
@@ -298,12 +308,18 @@ function toPointer(value: any, keep: any[]): number | null {
       if (ArrayBuffer.isView(value) || value instanceof ArrayBuffer) {
         if ((value as ArrayBufferView).byteLength === 0) return null;
         keep.push(value);
-        return ptrOf(value);
+        // ArrayBuffer.isView narrows to the generic view interface, while ffi.ptr's public API
+        // lists concrete views. Address the same backing bytes at the view's offset.
+        return ArrayBuffer.isView(value) ? ptrOf(value.buffer, value.byteOffset) : ptrOf(value);
       }
       const { ptr } = value;
       if (typeof ptr === "number") return ptr;
   }
-  throw $ERR_INVALID_ARG_TYPE("pointer", ["number", "bigint", "TypedArray", "Win32Struct", "ComObject"], value);
+  throw $ERR_INVALID_ARG_TYPE(
+    "pointer",
+    ["number", "bigint", "TypedArray", "Win32Struct", "ComObject"],
+    value,
+  );
 }
 
 // ---- structs ----
@@ -320,7 +336,15 @@ type StructType = {
 };
 
 const structTypes = new Map<string, StructType>();
-const SIZE_FIELDS = new Set(["cbSize", "dwSize", "cb", "dwLength", "nLength", "cbStruct", "dwOSVersionInfoSize"]);
+const SIZE_FIELDS = new Set([
+  "cbSize",
+  "dwSize",
+  "cb",
+  "dwLength",
+  "nLength",
+  "cbStruct",
+  "dwOSVersionInfoSize",
+]);
 
 function structType(type: string): StructType {
   let st = structTypes.get(type);
@@ -330,14 +354,18 @@ function structType(type: string): StructType {
   const { full, entry } = lookup("structs", type);
   st = structTypes.get(full);
   if (st === undefined) {
-    const fields: FieldInfo[] = entry.f.map(([name, tok, off]: [string, string, number]) => ({ name, tok, off }));
+    const fields: FieldInfo[] = entry.f.map(([name, tok, off]: [string, string, number]) => ({
+      name,
+      tok,
+      off,
+    }));
     st = {
       full,
       size: entry.s,
       align: entry.a,
       union: !!entry.u,
       fields,
-      byName: new Map(fields.map(f => [f.name, f])),
+      byName: new Map(fields.map((f) => [f.name, f])),
       proto: undefined,
     };
     structTypes.set(full, st);
@@ -456,7 +484,9 @@ function defineField(proto: any, st: StructType, field: FieldInfo) {
       let end = 0;
       if (wide) while (end < arr.length && (bytes[end * 2] | bytes[end * 2 + 1]) !== 0) end++;
       else while (end < arr.length && bytes[end] !== 0) end++;
-      return Buffer.from(bytes.buffer, bytes.byteOffset, end * unit).toString(wide ? "utf16le" : "latin1");
+      return Buffer.from(bytes.buffer, bytes.byteOffset, end * unit).toString(
+        wide ? "utf16le" : "latin1",
+      );
     };
     set = function (value) {
       const buf: Uint8Array = this[kBuf];
@@ -475,7 +505,8 @@ function defineField(proto: any, st: StructType, field: FieldInfo) {
       if (isStructToken(elem)) {
         const inner = structType(structToken(elem).name);
         out = [];
-        for (let i = 0; i < arr.length; i++) out.push(viewStruct(inner, this[kBuf], off + i * size, this));
+        for (let i = 0; i < arr.length; i++)
+          out.push(viewStruct(inner, this[kBuf], off + i * size, this));
       } else {
         const view: DataView = this[kView];
         out = new Proxy([] as any[], {
@@ -490,7 +521,8 @@ function defineField(proto: any, st: StructType, field: FieldInfo) {
             return undefined;
           },
           set: (_t, key, value) => {
-            if (typeof key !== "string" || !/^\d+$/.test(key) || Number(key) >= arr.length) return false;
+            if (typeof key !== "string" || !/^\d+$/.test(key) || Number(key) >= arr.length)
+              return false;
             writeScalar(view, off + Number(key) * size, elem, value, this[kKeep]);
             return true;
           },
@@ -545,7 +577,8 @@ function buildProto(st: StructType) {
     const names = new Set<string>();
     const collect = (t: StructType) => {
       for (const { name, tok } of t.fields) {
-        if (/^Anonymous\d*$/.test(name) && isStructToken(tok)) collect(structType(structToken(tok).name));
+        if (/^Anonymous\d*$/.test(name) && isStructToken(tok))
+          collect(structType(structToken(tok).name));
         names.add(name);
       }
     };
@@ -585,7 +618,7 @@ class StructBase {
         value instanceof StructBase
           ? value.toJSON()
           : Array.isArray(value)
-            ? value.map(v => (v instanceof StructBase ? v.toJSON() : v))
+            ? value.map((v) => (v instanceof StructBase ? v.toJSON() : v))
             : value?.[Symbol.iterator] && typeof value !== "string"
               ? [...value]
               : value;
@@ -610,11 +643,14 @@ function assign(target: any, init: any) {
     return target;
   }
   if (ArrayBuffer.isView(init)) {
-    target[kBuf].set(new Uint8Array(init.buffer, init.byteOffset, Math.min(init.byteLength, target[kBuf].length)));
+    target[kBuf].set(
+      new Uint8Array(init.buffer, init.byteOffset, Math.min(init.byteLength, target[kBuf].length)),
+    );
     return target;
   }
   for (const key of Object.keys(init)) {
-    if (!(key in target)) throw $ERR_INVALID_ARG_VALUE(key, init[key], `is not a field of ${target["$type"]}`);
+    if (!(key in target))
+      throw $ERR_INVALID_ARG_VALUE(key, init[key], `is not a field of ${target["$type"]}`);
     target[key] = init[key];
   }
   return target;
@@ -769,7 +805,11 @@ function convertArg(tok: string, value: any, keep: any[], cleanup: any[]): any {
     case "i32":
     case "u32":
     case "hr":
-      return typeof value === "boolean" ? +value : value === undefined || value === null ? 0 : Number(value);
+      return typeof value === "boolean"
+        ? +value
+        : value === undefined || value === null
+          ? 0
+          : Number(value);
     case "f32":
     case "f64":
       return value === undefined ? 0 : Number(value);
@@ -833,10 +873,14 @@ function convertArg(tok: string, value: any, keep: any[], cleanup: any[]): any {
     let s: any;
     if (
       name === "System.Variant.VARIANT" &&
-      (value === undefined || value === null || typeof value !== "object" || value[kPtr] !== undefined)
+      (value === undefined ||
+        value === null ||
+        typeof value !== "object" ||
+        value[kPtr] !== undefined)
     )
       s = variantFrom(value, keep, cleanup);
-    else if (name === "Foundation.GUID" && typeof value === "string") s = assign(struct(name), guid(value));
+    else if (name === "Foundation.GUID" && typeof value === "string")
+      s = assign(struct(name), guid(value));
     else s = value && value[kBuf] !== undefined ? value : struct(name, value);
     const view: DataView = s[kView];
     switch (size) {
@@ -895,7 +939,10 @@ function bindFunction(dll: string, name: string, entry: FunctionEntry) {
   if (hidden) args.unshift("ptr");
   const fn = CFunction({ ptr: address, args, returns: hidden ? "ptr" : ffiType(ret) } as any);
   const count = argToks.length;
-  const simple = !hidden && sret === undefined && argToks.every(t => /^(?:[iu](?:8|16|32)|f32|f64|bool|p)$/.test(t));
+  const simple =
+    !hidden &&
+    sret === undefined &&
+    argToks.every((t) => /^(?:[iu](?:8|16|32)|f32|f64|bool|p)$/.test(t));
   const getLastError = setLastError ? sys().k32.GetLastError : undefined;
   let wrapper: (...a: any[]) => any;
   if (simple) {
@@ -917,7 +964,8 @@ function bindFunction(dll: string, name: string, entry: FunctionEntry) {
         native.push(ptrOf(out[kBuf]));
       }
       try {
-        for (let i = 0; i < count; i++) native.push(convertArg(argToks[i], input[i], keep, cleanup));
+        for (let i = 0; i < count; i++)
+          native.push(convertArg(argToks[i], input[i], keep, cleanup));
         let result = fn(...native);
         if (getLastError) lastErrorValue = getLastError();
         if (hidden) return out;
@@ -942,7 +990,12 @@ function defineFamily(json: any, md?: Metadata) {
       enumerable: true,
       get() {
         const fn = bindFunction(dll, entryName, functions[entryName]);
-        Object.defineProperty(target, key, { value: fn, enumerable: true, configurable: true, writable: false });
+        Object.defineProperty(target, key, {
+          value: fn,
+          enumerable: true,
+          configurable: true,
+          writable: false,
+        });
         return fn;
       },
     });
@@ -963,9 +1016,11 @@ function defineFamily(json: any, md?: Metadata) {
       for (const ns of namespaces as string[]) {
         const data = getMetadata().namespace(ns);
         if (!data) continue;
-        for (const [k, v] of Object.entries(data.consts ?? {})) if (!(k in constants!)) constants![k] = constValue(v);
+        for (const [k, v] of Object.entries(data.consts ?? {}))
+          if (!(k in constants!)) constants![k] = constValue(v);
         for (const e of Object.values(data.enums ?? {}) as any[])
-          for (const [k, v] of Object.entries(e.v)) if (!(k in constants!)) constants![k] = constValue(v);
+          for (const [k, v] of Object.entries(e.v))
+            if (!(k in constants!)) constants![k] = constValue(v);
       }
     }
     return constants!;
@@ -993,7 +1048,8 @@ function constant(name: string, ns?: string) {
     if (!data) continue;
     const { consts } = data;
     if (consts && name in consts) return constValue(consts[name]);
-    for (const { v } of Object.values(data.enums ?? {}) as any[]) if (name in v) return constValue(v[name]);
+    for (const { v } of Object.values(data.enums ?? {}) as any[])
+      if (name in v) return constValue(v[name]);
   }
   return undefined;
 }
@@ -1045,7 +1101,8 @@ function comFunction(address: number, args: string[], returns: string) {
 
 function comMethod(iface: string, slot: number, sig: any[]) {
   const [name, ret, ...rawArgs] = sig;
-  const retvalAt = rawArgs.length && rawArgs[rawArgs.length - 1][0] === "@" ? rawArgs.length - 1 : -1;
+  const retvalAt =
+    rawArgs.length && rawArgs[rawArgs.length - 1][0] === "@" ? rawArgs.length - 1 : -1;
   const argToks: string[] = rawArgs.map((t: string) => (t[0] === "@" ? t.slice(1) : t));
   const sret = structReturn(ret);
   // C++ member functions always return structs through a hidden pointer placed after `this`.
@@ -1114,7 +1171,7 @@ function retvalValue(tok: string, buf: Uint8Array) {
   return readScalar(view, 0, tok);
 }
 
-const released = new FinalizationRegistry<number>(p => comRelease(p));
+const released = new FinalizationRegistry<number>((p) => comRelease(p));
 
 function comAddRef(p: number) {
   const vtbl = read.ptr(p, 0);
@@ -1135,7 +1192,11 @@ class ComObject {
     if (!info.iid) throw new Error(`${info.full} has no IID`);
     const out = new BigUint64Array(1);
     const vtbl = read.ptr(this[kPtr], 0);
-    const hr = comFunction(read.ptr(vtbl, 0), ["ptr", "ptr", "ptr"], "i32")(this[kPtr], guid(info.iid), out);
+    const hr = comFunction(read.ptr(vtbl, 0), ["ptr", "ptr", "ptr"], "i32")(
+      this[kPtr],
+      guid(info.iid),
+      out,
+    );
     if (hr < 0) throw new Win32Error(hr, `QueryInterface(${info.full})`);
     return wrapCom(Number(out[0]), info.full);
   }
@@ -1206,7 +1267,11 @@ let delegateKeepAlive: any;
 // thread. `handler(a, b, c, d)` runs on the JS thread with the raw Invoke arguments; those flagged in
 // `interfaces` are owned references released after the handler returns. Returns the address of the
 // delegate with one reference owned by the caller.
-function comDelegate(iid: string | Uint8Array, handler: (...args: number[]) => unknown, interfaces = 0) {
+function comDelegate(
+  iid: string | Uint8Array,
+  handler: (...args: number[]) => unknown,
+  interfaces = 0,
+) {
   if (!$isCallable(handler)) throw $ERR_INVALID_ARG_TYPE("handler", "function", handler);
   const iidBytes = typeof iid === "string" ? guid(iid) : iid;
   let cb: any;
@@ -1232,7 +1297,11 @@ function comDelegate(iid: string | Uint8Array, handler: (...args: number[]) => u
       }
       return 0;
     },
-    { args: ["ptr", "u64_fast", "u64_fast", "u64_fast", "u64_fast"], returns: "i32", threadsafe: true },
+    {
+      args: ["ptr", "u64_fast", "u64_fast", "u64_fast", "u64_fast"],
+      returns: "i32",
+      threadsafe: true,
+    },
   );
   const address = comDelegateNative(ptrOf(iidBytes), cb.ptr, interfaces);
   if (liveDelegates++ === 0) delegateKeepAlive = setInterval(() => {}, 0x7fffffff);

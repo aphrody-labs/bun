@@ -51,6 +51,40 @@ fn read(path: &str) -> Option<String> {
     std::fs::read_to_string(path).ok()
 }
 
+/// Live process memory ceiling/headroom in bytes, from visible kernel cgroups.
+/// `None` means no finite ceiling was observed; it does not promise free RAM.
+#[cfg(all(unix, not(target_os = "macos")))]
+pub fn cgroup_memory_budget() -> Option<(u64, u64)> {
+    let membership = read("/proc/self/cgroup")?;
+    let mountinfo = read("/proc/self/mountinfo")?;
+    let mut budget: Option<(u64, u64)> = None;
+    for hierarchy in parse::memory_cgroups(&membership, &mountinfo) {
+        let root = Path::new(&hierarchy.mount);
+        let mut directory = Path::new(&hierarchy.path);
+        // Parents include sibling allocations in their current usage.
+        while directory.starts_with(root) {
+            let (limit_file, usage_file) = if hierarchy.unified {
+                ("memory.max", "memory.current")
+            } else {
+                ("memory.limit_in_bytes", "memory.usage_in_bytes")
+            };
+            if let Some(ceiling) = read(&directory.join(limit_file).to_string_lossy()) {
+                let usage = read(&directory.join(usage_file).to_string_lossy());
+                if let Some((ceiling, available)) = parse::memory_budget(&ceiling, usage.as_deref()) {
+                    budget = Some(match budget {
+                        Some((previous_limit, previous_available)) => (previous_limit.min(ceiling), previous_available.min(available)),
+                        None => (ceiling, available),
+                    });
+                }
+            }
+            if directory == root { break; }
+            let Some(parent) = directory.parent() else { break };
+            directory = parent;
+        }
+    }
+    budget
+}
+
 pub fn now_ms() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -166,6 +200,10 @@ fn collect_linux(id: &str) -> HostInfo {
         .any(|e| e.file_name().to_string_lossy().starts_with("ld-musl-"));
     let cpu = read("/proc/cpuinfo").map(|t| parse::cpuinfo(&t)).unwrap_or_default();
     let mut memory = read("/proc/meminfo").map(|t| parse::meminfo(&t)).unwrap_or_default();
+    if let Some((ceiling, available)) = cgroup_memory_budget() {
+        memory.total_mib = memory.total_mib.min(ceiling / parse::MIB);
+        memory.available_mib = memory.available_mib.min(available / parse::MIB).min(memory.total_mib);
+    }
     if let Some((some, full)) = read("/proc/pressure/memory").map(|t| parse::psi(&t)) {
         memory.psi_some_avg10 = some;
         memory.psi_full_avg10 = full;
@@ -192,7 +230,8 @@ fn collect_linux(id: &str) -> HostInfo {
     };
     let uptime_s = read("/proc/uptime").and_then(|t| t.split_whitespace().next()?.split('.').next()?.parse().ok());
 
-    HostInfo {
+    let mut info = HostInfo {
+        environment: None,
         schema: SCHEMA,
         id: id.to_string(),
         collected_at: now_ms(),
@@ -221,7 +260,9 @@ fn collect_linux(id: &str) -> HostInfo {
         disks,
         network,
         uptime_s,
-    }
+    };
+    info.environment = Some(crate::environment::collect(&info));
+    info
 }
 
 #[cfg(target_os = "macos")]
@@ -249,7 +290,8 @@ fn collect_macos(id: &str) -> HostInfo {
         })
         .unwrap_or_default();
     let boot = sysctl("kern.boottime").and_then(|s| s.split("sec = ").nth(1)?.split(',').next()?.trim().parse::<u64>().ok());
-    HostInfo {
+    let mut info = HostInfo {
+        environment: None,
         schema: SCHEMA,
         id: id.to_string(),
         collected_at: now_ms(),
@@ -266,7 +308,9 @@ fn collect_macos(id: &str) -> HostInfo {
         disks,
         network: Network::default(),
         uptime_s: boot.map(|b| (now_ms() / 1000).saturating_sub(b)),
-    }
+    };
+    info.environment = Some(crate::environment::collect(&info));
+    info
 }
 
 /// PowerShell, else `wmic`, for a CIM class: CSV with a header line.
@@ -329,7 +373,8 @@ pub fn collect(id: &str) -> HostInfo {
         .and_then(|t| t.trim().parse::<u64>().ok());
 
     let build: Option<String> = Some(system.build.clone()).filter(|b| !b.is_empty());
-    HostInfo {
+    let mut info = HostInfo {
+        environment: None,
         schema: SCHEMA,
         id: id.to_string(),
         collected_at: now_ms(),
@@ -353,7 +398,9 @@ pub fn collect(id: &str) -> HostInfo {
         disks,
         network: Network { wireguard },
         uptime_s,
-    }
+    };
+    info.environment = Some(crate::environment::collect(&info));
+    info
 }
 
 #[cfg(not(any(unix, windows)))]

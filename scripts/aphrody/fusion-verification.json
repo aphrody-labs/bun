@@ -1,0 +1,816 @@
+{
+  "schema": 1,
+  "vpsHostnames": ["vps-203bea89"],
+  "factory": {
+    "resource": "/home/ubuntu/src/aphrody/packages/infra/workspace/src/build-factory-cleanup.ts",
+    "config": "/home/ubuntu/builds/bun-browser-fusion/tools/config/fusion-factory.json",
+    "cargoWrapper": "/home/ubuntu/src/aphrody/scripts/build/rust/cargo-serial.sh"
+  },
+  "execution": {
+    "maxCpu": 6,
+    "cargoTargetDir": "/home/ubuntu/builds/bun-os-factory/cache/cargo"
+  },
+  "research": ["https://bun.sh/blog/bun-v1.4.3", "https://bun.sh", "https://bun.sh/docs"],
+  "pipeline": ".buildkite/ci.ts",
+  "steps": [
+    {
+      "id": "migration",
+      "requires": [],
+      "scope": ["src/browser", "src/css", "src/runtime", "Cargo.toml"],
+      "command": ["bun", "src/browser/scripts/verify-migration.ts"],
+      "kind": "light",
+      "required": true
+    },
+    {
+      "id": "script-lint",
+      "requires": [],
+      "scope": [
+        "scripts/aphrody/verify-fusion.ts",
+        "scripts/aphrody/verify-fusion.test.ts",
+        "scripts/aphrody/fusion-verification.json",
+        "scripts/aphrody/fusion-sources.ts",
+        "scripts/aphrody/fusion-sources.test.ts",
+        "scripts/aphrody/fusion-features.ts",
+        "scripts/aphrody/fusion-features.test.ts"
+      ],
+      "command": [
+        "bun",
+        "node_modules/oxlint/bin/oxlint",
+        "--config=oxlint.json",
+        "scripts/aphrody/verify-fusion.ts",
+        "scripts/aphrody/verify-fusion.test.ts",
+        "scripts/aphrody/fusion-sources.ts",
+        "scripts/aphrody/fusion-sources.test.ts",
+        "scripts/aphrody/fusion-features.ts",
+        "scripts/aphrody/fusion-features.test.ts"
+      ],
+      "kind": "light",
+      "required": true
+    },
+    {
+      "id": "script-format",
+      "requires": ["native-build"],
+      "scope": [
+        "scripts/aphrody/verify-fusion.ts",
+        "scripts/aphrody/verify-fusion.test.ts",
+        "scripts/aphrody/fusion-verification.json",
+        "docs/project/fusion-verification.mdx",
+        "scripts/aphrody/fusion-sources.ts",
+        "scripts/aphrody/fusion-sources.test.ts",
+        "scripts/aphrody/fusion-features.ts",
+        "scripts/aphrody/fusion-features.test.ts"
+      ],
+      "command": [
+        "bun",
+        "bd",
+        "-j6",
+        "fmt",
+        "--check",
+        "scripts/aphrody/verify-fusion.ts",
+        "scripts/aphrody/verify-fusion.test.ts",
+        "scripts/aphrody/fusion-verification.json",
+        "scripts/aphrody/fusion-sources.ts",
+        "scripts/aphrody/fusion-sources.test.ts",
+        "scripts/aphrody/fusion-features.ts",
+        "scripts/aphrody/fusion-features.test.ts"
+      ],
+      "kind": "heavy",
+      "required": true
+    },
+    {
+      "id": "typecheck",
+      "requires": ["script-lint"],
+      "scope": ["scripts", "src/js", "test", "tsconfig.json", "package.json", "bun.lock"],
+      "command": ["bun", "run", "typecheck"],
+      "kind": "heavy",
+      "required": true
+    },
+    {
+      "id": "native-configure",
+      "requires": ["migration"],
+      "scope": [
+        "src",
+        "scripts/build",
+        "Cargo.toml",
+        "Cargo.lock",
+        "rust-toolchain.toml",
+        "cmake",
+        "vendor"
+      ],
+      "command": ["bun", "bd", "-j6", "--configure-only"],
+      "kind": "heavy",
+      "required": true
+    },
+    {
+      "id": "browser-check",
+      "requires": ["migration", "native-configure"],
+      "scope": [
+        "src/browser",
+        "src/css",
+        "src/ast",
+        "src/bun_alloc",
+        "Cargo.toml",
+        "Cargo.lock",
+        "rust-toolchain.toml"
+      ],
+      "command": [
+        "cargo",
+        "+nightly-2026-09-15",
+        "check",
+        "--profile",
+        "browser-tests",
+        "--locked",
+        "-p",
+        "bun_browser",
+        "-p",
+        "bun_browser_browser",
+        "-p",
+        "bun_browser_cdp",
+        "-p",
+        "bun_browser_dom",
+        "-p",
+        "bun_browser_js",
+        "-p",
+        "bun_browser_mcp",
+        "-p",
+        "bun_browser_net",
+        "-p",
+        "bun_browser_render",
+        "-p",
+        "bun_browser_ssrf",
+        "-p",
+        "bun_browser_extract",
+        "-p",
+        "bun_browser_layout",
+        "-p",
+        "bun_browser_service",
+        "-p",
+        "bun_browser_crawl",
+        "-p",
+        "bun_browser_detect",
+        "-p",
+        "bun_browser_index",
+        "--all-targets",
+        "--features",
+        "bun_browser/render,bun_browser_cdp/render,bun_browser_mcp/render,bun_browser_render/bun-css"
+      ],
+      "kind": "heavy",
+      "required": true
+    },
+    {
+      "id": "browser-tests",
+      "requires": ["browser-check"],
+      "scope": ["src/browser", "src/css", "Cargo.lock"],
+      "command": [
+        "cargo",
+        "+nightly-2026-09-15",
+        "nextest",
+        "run",
+        "--test-threads",
+        "6",
+        "--no-fail-fast",
+        "--cargo-profile",
+        "browser-tests",
+        "--locked",
+        "-p",
+        "bun_browser",
+        "-p",
+        "bun_browser_browser",
+        "-p",
+        "bun_browser_cdp",
+        "-p",
+        "bun_browser_dom",
+        "-p",
+        "bun_browser_js",
+        "-p",
+        "bun_browser_mcp",
+        "-p",
+        "bun_browser_net",
+        "-p",
+        "bun_browser_render",
+        "-p",
+        "bun_browser_ssrf",
+        "-p",
+        "bun_browser_extract",
+        "-p",
+        "bun_browser_layout",
+        "-p",
+        "bun_browser_service",
+        "-p",
+        "bun_browser_crawl",
+        "-p",
+        "bun_browser_detect",
+        "-p",
+        "bun_browser_index",
+        "--features",
+        "bun_browser/render,bun_browser_cdp/render,bun_browser_mcp/render",
+        "--status-level",
+        "fail",
+        "--final-status-level",
+        "fail"
+      ],
+      "kind": "heavy",
+      "required": true
+    },
+    {
+      "id": "browser-clippy",
+      "requires": ["browser-tests"],
+      "scope": ["src/browser", "src/css", "Cargo.lock"],
+      "command": [
+        "cargo",
+        "+nightly-2026-09-15",
+        "clippy",
+        "--profile",
+        "browser-tests",
+        "--locked",
+        "-p",
+        "bun_browser",
+        "-p",
+        "bun_browser_browser",
+        "-p",
+        "bun_browser_cdp",
+        "-p",
+        "bun_browser_dom",
+        "-p",
+        "bun_browser_js",
+        "-p",
+        "bun_browser_mcp",
+        "-p",
+        "bun_browser_net",
+        "-p",
+        "bun_browser_render",
+        "-p",
+        "bun_browser_ssrf",
+        "-p",
+        "bun_browser_extract",
+        "-p",
+        "bun_browser_layout",
+        "-p",
+        "bun_browser_service",
+        "-p",
+        "bun_browser_crawl",
+        "-p",
+        "bun_browser_detect",
+        "-p",
+        "bun_browser_index",
+        "--all-targets",
+        "--features",
+        "bun_browser/render,bun_browser_cdp/render,bun_browser_mcp/render,bun_browser_render/bun-css",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "kind": "heavy",
+      "required": true
+    },
+    {
+      "id": "css-tests",
+      "requires": ["native-build"],
+      "scope": [
+        "src/css",
+        "src/browser/crates/render",
+        "src/runtime/api/HTMLObject.rs",
+        "test/js/web/html/html-rewriter-doctype.test.ts"
+      ],
+      "command": [
+        "bun",
+        "bd",
+        "-j6",
+        "test",
+        "test/js/web/html/html-rewriter-doctype.test.ts",
+        "--test-name-pattern",
+        "CSS"
+      ],
+      "kind": "heavy",
+      "required": true,
+      "minimumPasses": 1,
+      "maximumSkips": 0
+    },
+    {
+      "id": "native-build",
+      "requires": ["browser-check", "script-lint"],
+      "scope": [
+        "src",
+        "scripts/build",
+        "Cargo.toml",
+        "Cargo.lock",
+        "rust-toolchain.toml",
+        "cmake",
+        "vendor"
+      ],
+      "command": ["bun", "bd", "-j6", "--version"],
+      "kind": "heavy",
+      "required": true
+    },
+    {
+      "id": "orchestrator-tests",
+      "requires": ["native-build", "script-lint"],
+      "scope": [
+        "scripts/aphrody/verify-fusion.ts",
+        "scripts/aphrody/verify-fusion.test.ts",
+        "scripts/aphrody/fusion-verification.json",
+        "scripts/aphrody/fusion-features.ts",
+        "scripts/aphrody/fusion-features.test.ts",
+        "tools/config/fusion-features.json"
+      ],
+      "command": [
+        "bun",
+        "bd",
+        "-j6",
+        "test",
+        "--config=scripts/aphrody/fusion-test.bunfig.toml",
+        "scripts/aphrody/verify-fusion.test.ts",
+        "scripts/aphrody/fusion-sources.test.ts",
+        "scripts/aphrody/fusion-features.test.ts"
+      ],
+      "kind": "heavy",
+      "required": true,
+      "minimumPasses": 37,
+      "maximumSkips": 0
+    },
+    {
+      "id": "html-tests",
+      "requires": ["native-build"],
+      "scope": [
+        "src/browser/crates/dom",
+        "src/runtime/api/HTMLObject.rs",
+        "src/runtime/api/HTMLDocument.classes.ts",
+        "src/runtime/api/BunObject.rs",
+        "src/css",
+        "test/js/web/html"
+      ],
+      "command": ["bun", "bd", "-j6", "test", "test/js/web/html/html-rewriter-doctype.test.ts"],
+      "kind": "heavy",
+      "required": true,
+      "minimumPasses": 1,
+      "env": {
+        "BUN_LIVE_WEBSITE_TEST": "1"
+      }
+    },
+    {
+      "id": "live-site-tests",
+      "requires": ["html-tests"],
+      "scope": [
+        "src/browser/crates/dom",
+        "src/runtime/api/HTMLObject.rs",
+        "src/runtime/api/HTMLDocument.classes.ts",
+        "src/runtime/api/BunObject.rs",
+        "src/css",
+        "test/js/web/html"
+      ],
+      "command": [
+        "env",
+        "BUN_LIVE_WEBSITE_TEST=1",
+        "bun",
+        "bd",
+        "-j6",
+        "test",
+        "test/js/web/html/html-rewriter-doctype.test.ts",
+        "--test-name-pattern",
+        "parses the requested Bun pages over HTTPS"
+      ],
+      "kind": "heavy",
+      "required": true,
+      "minimumPasses": 1,
+      "maximumSkips": 0
+    },
+    {
+      "id": "native-suite",
+      "requires": [
+        "native-build",
+        "browser-tests",
+        "css-tests",
+        "html-tests",
+        "orchestrator-tests"
+      ],
+      "scope": ["src", "test", "scripts/runner.node.ts", "scripts/aphrody/verify-fusion.ts"],
+      "command": ["bun", "run", "test"],
+      "kind": "heavy",
+      "required": true,
+      "allOnly": true
+    },
+    {
+      "id": "root-lint",
+      "requires": ["native-build"],
+      "scope": ["src/js", "oxlint.json"],
+      "command": ["bun", "run", "lint"],
+      "kind": "light",
+      "required": true,
+      "allOnly": true
+    },
+    {
+      "id": "root-format",
+      "requires": ["native-build"],
+      "scope": ["scripts", "packages", "src/js", "test"],
+      "command": [
+        "bun",
+        "bd",
+        "-j6",
+        "fmt",
+        "--check",
+        "--ignore-pattern",
+        "**/*fixture*.*",
+        "scripts",
+        "packages",
+        "src/js",
+        "test"
+      ],
+      "kind": "heavy",
+      "required": true,
+      "allOnly": true
+    },
+    {
+      "id": "root-cpp-format",
+      "requires": [],
+      "scope": ["src", "scripts/run-clang-format.sh"],
+      "command": ["bun", "run", "clang-format:check"],
+      "kind": "light",
+      "required": true,
+      "allOnly": true
+    },
+    {
+      "id": "root-rust-format",
+      "requires": [],
+      "scope": ["src", "Cargo.toml"],
+      "command": ["cargo", "+nightly-2026-09-15", "fmt", "--all", "--", "--check"],
+      "kind": "light",
+      "required": true,
+      "allOnly": true
+    },
+    {
+      "id": "root-rust-check",
+      "requires": ["native-build"],
+      "scope": ["src", "Cargo.toml", "Cargo.lock"],
+      "command": [
+        "cargo",
+        "+nightly-2026-09-15",
+        "check",
+        "--profile",
+        "browser-tests",
+        "--locked",
+        "--workspace",
+        "--keep-going"
+      ],
+      "kind": "heavy",
+      "required": true,
+      "allOnly": true
+    },
+    {
+      "id": "root-rust-clippy",
+      "requires": ["root-rust-check"],
+      "scope": ["src", "Cargo.toml", "Cargo.lock"],
+      "command": [
+        "cargo",
+        "+nightly-2026-09-15",
+        "clippy",
+        "--profile",
+        "browser-tests",
+        "--locked",
+        "--workspace",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "kind": "heavy",
+      "required": true,
+      "allOnly": true
+    },
+    {
+      "id": "docs-content",
+      "requires": [],
+      "scope": ["docs", "scripts/aphrody/verify-fusion.ts"],
+      "command": ["bun", "scripts/aphrody/verify-fusion.ts", "--docs-only"],
+      "kind": "light",
+      "required": true,
+      "allOnly": true
+    },
+    {
+      "id": "jsc-realm-tests",
+      "requires": ["native-build"],
+      "scope": [
+        "src/runtime/api/BrowserRealm.rs",
+        "src/jsc",
+        "src/runtime/dispatch.rs",
+        "src/event_loop",
+        "test/js/bun/browser-realm.test.ts"
+      ],
+      "command": ["bun", "bd", "-j6", "test", "test/js/bun/browser-realm.test.ts"],
+      "kind": "heavy",
+      "required": true,
+      "minimumPasses": 6,
+      "maximumSkips": 0,
+      "env": {
+        "BUN_JSC_validateExceptionChecks": "1"
+      }
+    },
+    {
+      "id": "browser-mcp-tests",
+      "requires": ["native-build"],
+      "scope": ["src/mcp", "src/browser/crates/dom", "src/css", "test/cli/mcp"],
+      "command": [
+        "bun",
+        "bd",
+        "-j6",
+        "test",
+        "test/cli/mcp/mcp.test.ts",
+        "--test-name-pattern",
+        "native browser MCP"
+      ],
+      "kind": "heavy",
+      "required": true,
+      "minimumPasses": 4,
+      "maximumSkips": 0
+    },
+    {
+      "id": "feature-inventory",
+      "requires": [],
+      "scope": [
+        "Cargo.toml",
+        "src/browser",
+        "src/runtime/Cargo.toml",
+        "scripts/build/config.ts",
+        "scripts/build/rust.ts",
+        "scripts/aphrody/fusion-features.ts",
+        "scripts/aphrody/fusion-features.test.ts",
+        "tools/config/fusion-features.json"
+      ],
+      "command": ["bun", "scripts/aphrody/fusion-features.ts"],
+      "kind": "light",
+      "required": true
+    },
+    {
+      "id": "native-build-feature-tests",
+      "requires": ["native-build"],
+      "scope": [
+        "scripts/build/config.ts",
+        "scripts/build/rust.ts",
+        "test/internal/source-lints/build-rust.test.ts",
+        "test/internal/build-rust-units.test.ts",
+        "test/internal/build-cli-config-flags.test.ts",
+        "scripts/build.ts",
+        "scripts/build/rust/units.ts"
+      ],
+      "command": [
+        "bun",
+        "bd",
+        "-j6",
+        "test",
+        "test/internal/source-lints/build-rust.test.ts",
+        "test/internal/build-rust-units.test.ts",
+        "test/internal/build-cli-config-flags.test.ts"
+      ],
+      "kind": "heavy",
+      "required": true,
+      "minimumPasses": 2,
+      "maximumSkips": 0
+    },
+    {
+      "id": "candidate-script-lint",
+      "requires": ["native-build"],
+      "scope": [
+        "scripts/aphrody/verify-fusion.ts",
+        "scripts/aphrody/fusion-sources.ts",
+        "scripts/aphrody/fusion-features.ts"
+      ],
+      "command": [
+        "bun",
+        "bd",
+        "-j6",
+        "lint",
+        "--config=oxlint.json",
+        "scripts/aphrody/verify-fusion.ts",
+        "scripts/aphrody/verify-fusion.test.ts",
+        "scripts/aphrody/fusion-sources.ts",
+        "scripts/aphrody/fusion-sources.test.ts",
+        "scripts/aphrody/fusion-features.ts",
+        "scripts/aphrody/fusion-features.test.ts"
+      ],
+      "kind": "heavy",
+      "required": true
+    },
+    {
+      "id": "apt-check",
+      "requires": ["native-configure"],
+      "scope": [
+        "src/install/system/deb",
+        "src/install/system/mod.rs",
+        "src/install/system/cli.rs",
+        "src/install/Cargo.toml",
+        "Cargo.lock"
+      ],
+      "command": [
+        "cargo",
+        "+nightly-2026-09-15",
+        "check",
+        "--profile",
+        "browser-tests",
+        "--locked",
+        "-p",
+        "bun_install",
+        "--lib"
+      ],
+      "kind": "heavy",
+      "required": true
+    },
+    {
+      "id": "apt-clippy",
+      "requires": ["apt-check"],
+      "scope": ["src/install/system/deb", "src/install/system/mod.rs", "src/install/system/cli.rs"],
+      "command": [
+        "cargo",
+        "+nightly-2026-09-15",
+        "clippy",
+        "--profile",
+        "browser-tests",
+        "--locked",
+        "-p",
+        "bun_install",
+        "--lib",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "kind": "heavy",
+      "required": true
+    },
+    {
+      "id": "apt-cli-tests",
+      "requires": ["native-build", "apt-clippy"],
+      "scope": [
+        "src/install/system/deb",
+        "src/install/system/cli.rs",
+        "test/cli/install/system-deb.test.ts"
+      ],
+      "command": ["bun", "bd", "-j6", "test", "test/cli/install/system-deb.test.ts"],
+      "kind": "heavy",
+      "required": true,
+      "minimumPasses": 5,
+      "maximumSkips": 0,
+      "env": {
+        "BUN_SYSTEM_DEB_TEST_ROOT": "1"
+      }
+    },
+    {
+      "id": "host-check",
+      "requires": ["native-configure"],
+      "scope": [
+        "src/host",
+        "src/runtime/node/node_os.rs",
+        "src/jsc/bindings/BunProcess.cpp",
+        "src/jsc/bindings/c-bindings.cpp"
+      ],
+      "command": [
+        "cargo",
+        "+nightly-2026-09-15",
+        "check",
+        "--profile",
+        "browser-tests",
+        "--locked",
+        "-p",
+        "bun_host"
+      ],
+      "kind": "heavy",
+      "required": true
+    },
+    {
+      "id": "host-tests",
+      "requires": ["host-check"],
+      "scope": [
+        "src/host",
+        "src/runtime/node/node_os.rs",
+        "src/jsc/bindings/BunProcess.cpp",
+        "src/jsc/bindings/c-bindings.cpp"
+      ],
+      "command": [
+        "cargo",
+        "+nightly-2026-09-15",
+        "test",
+        "--profile",
+        "browser-tests",
+        "--locked",
+        "-p",
+        "bun_host",
+        "--lib"
+      ],
+      "kind": "heavy",
+      "required": true
+    },
+    {
+      "id": "host-clippy",
+      "requires": ["host-tests"],
+      "scope": [
+        "src/host",
+        "src/runtime/node/node_os.rs",
+        "src/jsc/bindings/BunProcess.cpp",
+        "src/jsc/bindings/c-bindings.cpp"
+      ],
+      "command": [
+        "cargo",
+        "+nightly-2026-09-15",
+        "clippy",
+        "--profile",
+        "browser-tests",
+        "--locked",
+        "-p",
+        "bun_host",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "kind": "heavy",
+      "required": true
+    },
+    {
+      "id": "process-memory-tests",
+      "requires": ["native-build", "host-tests"],
+      "scope": [
+        "src/host",
+        "src/runtime/node/node_os.rs",
+        "src/jsc/bindings/BunProcess.cpp",
+        "src/jsc/bindings/c-bindings.cpp",
+        "test/js/node/process/process.test.js"
+      ],
+      "command": [
+        "bun",
+        "bd",
+        "-j6",
+        "test",
+        "test/js/node/process/process.test.js",
+        "--test-name-pattern",
+        "process.constrainedMemory|process.availableMemory|process memory budgets"
+      ],
+      "kind": "heavy",
+      "required": true,
+      "minimumPasses": 3,
+      "maximumSkips": 0
+    },
+    {
+      "id": "release-profile-tests",
+      "requires": ["native-build"],
+      "scope": [
+        "scripts/aphrody/release-matrix.ts",
+        "scripts/aphrody/release-matrix.test.ts",
+        ".github/workflows/aphrody-release.yml",
+        "scripts/aphrody/deploy/docker/Dockerfile.runtime",
+        "scripts/aphrody/install.sh",
+        "scripts/aphrody/install.ps1",
+        "test/internal/aphrody-install-flavors.test.ts",
+        "src/cli/upgrade_command.rs"
+      ],
+      "command": [
+        "bun",
+        "bd",
+        "-j6",
+        "test",
+        "--config=scripts/aphrody/fusion-test.bunfig.toml",
+        "scripts/aphrody/release-matrix.test.ts",
+        "test/internal/aphrody-install-flavors.test.ts"
+      ],
+      "kind": "heavy",
+      "required": true,
+      "minimumPasses": 8,
+      "maximumSkips": 0
+    },
+    {
+      "id": "site-fusion-tests",
+      "requires": ["native-build"],
+      "scope": [
+        "scripts/aphrody/site",
+        "scripts/aphrody/site-mirror",
+        "scripts/aphrody/release-surfaces.ts",
+        "test/internal/aphrody-site.test.ts",
+        "test/internal/aphrody-site-fusion.test.ts",
+        "README.md"
+      ],
+      "command": [
+        "bun",
+        "bd",
+        "-j6",
+        "test",
+        "test/internal/aphrody-site.test.ts",
+        "test/internal/aphrody-site-fusion.test.ts"
+      ],
+      "kind": "heavy",
+      "required": true,
+      "minimumPasses": 31,
+      "maximumSkips": 0
+    },
+    {
+      "id": "public-upstream-tests",
+      "requires": ["native-build"],
+      "scope": [
+        "scripts/aphrody/sync-upstream.ts",
+        "scripts/aphrody/sync-public-upstream.ts",
+        "scripts/aphrody/scope.ts",
+        "test/internal/aphrody-upstream-sync.test.ts"
+      ],
+      "command": ["bun", "bd", "-j6", "test", "test/internal/aphrody-upstream-sync.test.ts"],
+      "kind": "heavy",
+      "required": true,
+      "minimumPasses": 26,
+      "maximumSkips": 0
+    }
+  ]
+}

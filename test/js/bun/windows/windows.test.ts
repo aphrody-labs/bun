@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import windows from "bun:windows";
-import { readFileSync } from "node:fs";
 import { bunEnv, bunExe, isWindows, tempDir } from "harness";
+import { readFileSync } from "node:fs";
+import { win32 as windowsPath } from "node:path";
 
 function errorCode(fn: () => unknown): string | undefined {
   try {
@@ -229,7 +230,7 @@ describe.skipIf(!isWindows)("bun:windows", () => {
     }
   });
 
-  test.skipIf(!windows.isElevated())(
+  test.skipIf(!isWindows || !windows.isElevated())(
     "ntfs: USN journal and MFT enumeration",
     () => {
       using vol = new windows.ntfs.Volume("C");
@@ -301,7 +302,7 @@ describe.skipIf(!isWindows)("bun:windows", () => {
     if (catalog !== null) {
       const signature = windows.pe.catalogSignature(path);
       expect(signature).not.toBeNull();
-      expect(signature!.catalog).toBe(catalog.split("\\").pop());
+      expect(signature!.catalog).toBe(windowsPath.basename(catalog));
     }
     windows.pe.releaseCatalogContexts();
   });
@@ -407,6 +408,7 @@ describe("families", () => {
       "ERR_BUN_WINDOWS_FAMILY_NOT_FOUND",
       "ERR_INVALID_ARG_VALUE",
     ]);
+    expect(stderr).toBe("");
     expect(exitCode).toBe(0);
   });
 });

@@ -1,0 +1,72 @@
+---
+title: Fusion source planning
+description: Inspect exact Bun source ancestry, original migration provenance and upstream conflicts before integration.
+---
+
+# Fusion source planning
+
+Run the source plan without synchronizing or changing the checkout:
+
+```sh
+bun scripts/aphrody/fusion-sources.ts --root /path/to/bun-os
+```
+
+The JSON receipt uses schema `bun.fusion-source-plan/1`. It records the existing
+`HEAD`, `bun-os/main`, `origin/main` and `upstream/main` commit SHAs. Each available
+comparison includes the exact merge base and counts: `ahead` counts commits only
+in HEAD; `behind` counts commits only in the selected reference. A missing ref,
+unrelated history or shallow checkout is reported unavailable. The planner
+never fetches to hide that missing evidence.
+
+The upstream preview uses those exact commits with
+`git merge-tree --write-tree --name-only --no-messages -z`. A successful preview
+records its tree; exit code 1 records all conflict paths. Other failures are
+unavailable, never clean. This command may create unreferenced tree objects in
+the Git object database. It does not run checkout, merge, staging or push and
+does not modify the index or working files. Partial-clone lazy fetching and
+interactive authentication are disabled during inspection.
+
+## Integration with the verifier
+
+```ts
+import { collectFusionSources, summarizeOfficialHtml } from "./fusion-sources.ts";
+
+const sources = await collectFusionSources(root);
+// Attach sources to the verification journal. Conflicts require the owner's
+// explicit integration batch; an unavailable source does not prove ancestry.
+const navigation = await summarizeOfficialHtml(officialUrl, alreadyBoundedHtml);
+```
+
+`collectFusionSources` reads `src/browser/MIGRATION.json` and
+`src/browser/BROWSER-MIGRATION.json` with native Bun file APIs. Their original
+source repository, exact original commit, original byte count and original
+SHA256 coverage remain distinct from integrated-source hashes. The receipt also
+records whether the original commit exists in this object store; a recorded
+commit does not imply that its repository is locally available. Remote URLs
+are redacted to omit credentials, login names and query parameters.
+
+## Bounded primary-source research
+
+`summarizeOfficialHtml(url, html)` extracts metadata with native HTMLRewriter
+and decodes character references with the shared `Bun.HTML` DOM parser. Its
+behavior gate therefore requires the newly built candidate, not an older Bun.
+It accepts HTTPS pages on the declared official Bun, Deno, V8 and WebKit hosts.
+It returns only the title, at most 24 headings and 32 deduplicated links to
+those official hosts. Each text field is limited to 200 characters and parsed
+input to 512 KiB; a truncated page is labeled explicitly. Relative links are
+resolved against the supplied page URL. The helper performs no network calls,
+follows no links and executes no script or code example. Extracted text is
+untrusted source data, not agent instructions or proof of implemented parity.
+
+HTTP fetching, status/redirect validation and full-response acquisition budgets
+remain with the verifier's research owner. Reject redirects to unapproved
+origins before passing HTML to the summary helper. Do not copy complete articles
+or turn documentation examples into shell commands.
+
+## Qualification
+
+The companion tests exercise refs/counts, missing and shallow history, merge
+conflicts, original ledger provenance, credential redaction and bounded HTML
+metadata. Execute them in the declared SSH VPS factory as part of the
+verification batch. This plan is source evidence; it does not establish build,
+runtime behavior, performance, installation or complete engine parity.

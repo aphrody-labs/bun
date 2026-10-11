@@ -4,7 +4,12 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import { resolveConfig, type Config, type PartialConfig, type Toolchain } from "../../scripts/build/config.ts";
+import {
+  resolveConfig,
+  type Config,
+  type PartialConfig,
+  type Toolchain,
+} from "../../scripts/build/config.ts";
 import {
   APHRODY_WEBKIT_PREBUILTS,
   WEBKIT_APHRODY_REPO,
@@ -19,6 +24,8 @@ function mockToolchain(): Toolchain {
   return {
     cc: "/fake/llvm/bin/clang",
     cxx: "/fake/llvm/bin/clang++",
+    hostCc: "/fake/llvm/bin/clang",
+    hostCxx: "/fake/llvm/bin/clang++",
     clangVersion: "23.1.1",
     clangResourceDir: "/fake/llvm/lib/clang/23",
     ar: "/fake/llvm/bin/llvm-ar",
@@ -51,7 +58,10 @@ function mockToolchain(): Toolchain {
 }
 
 function resolveDarwin(partial: PartialConfig = {}): Config {
-  return resolveConfig({ os: "darwin", arch: "aarch64", buildType: "Release", ...partial }, mockToolchain());
+  return resolveConfig(
+    { os: "darwin", arch: "aarch64", buildType: "Release", ...partial },
+    mockToolchain(),
+  );
 }
 
 describe("webkitPrebuiltRepo", () => {
@@ -67,7 +77,9 @@ describe("webkitPrebuiltRepo", () => {
   test("uses aphrody-labs for an archive listed in APHRODY_WEBKIT_PREBUILTS", () => {
     expect(APHRODY_WEBKIT_PREBUILTS[WEBKIT_VERSION]).toContain(name);
     expect(webkitPrebuiltRepo(name, WEBKIT_VERSION, undefined)).toBe(WEBKIT_APHRODY_REPO);
-    expect(webkitPrebuiltRepo(name, `autobuild-${WEBKIT_VERSION}`, undefined)).toBe(WEBKIT_APHRODY_REPO);
+    expect(webkitPrebuiltRepo(name, `autobuild-${WEBKIT_VERSION}`, undefined)).toBe(
+      WEBKIT_APHRODY_REPO,
+    );
   });
 
   test("$BUN_WEBKIT_REPO forces aphrody, oven or an explicit repo", () => {

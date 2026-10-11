@@ -68,20 +68,65 @@ export function isManaged(path: string): boolean {
 // own name and dependencies resolved from this checkout follow the rename.
 // Lockfiles are left to `bun install`.
 function rewriteManifest(text: string): string {
-  const pkg = JSON.parse(text);
-  let out = text;
-  const rename = (key: string, value: string) => {
-    out = out.replace(`${JSON.stringify(key)}: ${JSON.stringify(value)}`, () => {
-      return `${JSON.stringify(key === "name" ? key : scopedName(key))}: ${JSON.stringify(key === "name" ? scopedName(value) : value)}`;
-    });
+  JSON.parse(text); // Reject invalid input before considering edits.
+  const edits: { start: number; end: number; value: string }[] = [];
+  let depth = 0;
+  let dependenciesDepth: number | undefined;
+  const skipSpace = (offset: number) => {
+    while (/\s/.test(text[offset] ?? "") && offset < text.length) offset++;
+    return offset;
   };
-  if (typeof pkg.name === "string" && scopedName(pkg.name) !== pkg.name) rename("name", pkg.name);
-  for (const field of DEP_FIELDS) {
-    for (const [dep, spec] of Object.entries(pkg[field] ?? {})) {
-      if (typeof spec === "string" && LOCAL_SPEC.test(spec) && scopedName(dep) !== dep)
-        rename(dep, spec);
+  const stringEnd = (start: number) => {
+    let offset = start + 1;
+    while (offset < text.length) {
+      if (text[offset] === "\\") offset += 2;
+      else if (text[offset++] === '"') return offset;
     }
+    throw new Error("Unterminated manifest string");
+  };
+  for (let offset = 0; offset < text.length; offset++) {
+    const character = text[offset];
+    if (character === "{" || character === "[") {
+      depth++;
+      continue;
+    }
+    if (character === "}" || character === "]") {
+      depth--;
+      if (dependenciesDepth !== undefined && depth < dependenciesDepth)
+        dependenciesDepth = undefined;
+      continue;
+    }
+    if (character !== '"') continue;
+    const end = stringEnd(offset);
+    const key = JSON.parse(text.slice(offset, end)) as string;
+    const colon = skipSpace(end);
+    if (text[colon] === ":") {
+      const valueStart = skipSpace(colon + 1);
+      if (depth === 1 && DEP_FIELDS.includes(key) && text[valueStart] === "{")
+        dependenciesDepth = 2;
+      if (text[valueStart] === '"') {
+        const valueEnd = stringEnd(valueStart);
+        const value = JSON.parse(text.slice(valueStart, valueEnd)) as string;
+        if (depth === 1 && key === "name" && scopedName(value) !== value) {
+          edits.push({
+            start: valueStart,
+            end: valueEnd,
+            value: JSON.stringify(scopedName(value)),
+          });
+        } else if (
+          depth === dependenciesDepth &&
+          LOCAL_SPEC.test(value) &&
+          scopedName(key) !== key
+        ) {
+          edits.push({ start: offset, end, value: JSON.stringify(scopedName(key)) });
+        }
+      }
+    }
+    offset = end - 1;
   }
+  let out = text;
+  for (const edit of edits.reverse())
+    out = out.slice(0, edit.start) + edit.value + out.slice(edit.end);
   return out;
 }
 

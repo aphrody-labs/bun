@@ -59,6 +59,7 @@ pub(crate) mod graph_native;
 pub(crate) mod hw_exports;
 pub(crate) mod ipc;
 pub(crate) mod ipc_host;
+pub(crate) mod graph_native;
 pub(crate) mod jsc_hooks;
 pub(crate) mod linux;
 pub(crate) mod windows;

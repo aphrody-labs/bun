@@ -1,0 +1,3 @@
+[test]
+# Source verification helpers live outside the runtime test directory.
+root = "."

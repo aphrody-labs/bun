@@ -1,14 +1,28 @@
 import { describe, expect, test } from "bun:test";
 import winrt from "bun:winrt";
-import windows from "bun:windows";
 import { bunEnv, bunExe, isWindows, tempDir } from "harness";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
+test("WinRT metadata projects enum and interface identities without OS activation", () => {
+  const iid = "00112233-4455-6677-8899-aabbccddeeff";
+  const projection = winrt.defineNamespace({
+    namespace: "Bun.Test.MetadataProjection",
+    interfaces: { "Bun.Test.MetadataProjection.IMarker": { iid, methods: [] } },
+    classes: {},
+    enums: { "Bun.Test.MetadataProjection.Mode": { Off: 0, On: 1 } },
+  });
+  expect(Object.keys(projection)).toEqual(["namespace", "Mode", "interfaces"]);
+  expect(projection.Mode).toEqual({ Off: 0, On: 1 });
+  expect(projection.interfaces).toEqual({ "Bun.Test.MetadataProjection.IMarker": iid });
+  expect(Object.isFrozen(projection.Mode)).toBe(true);
+  expect(Object.isFrozen(projection.interfaces)).toBe(true);
+});
+
 describe.skipIf(!isWindows)("bun:winrt", () => {
   test.each(["uninitialized", "mta", "sta"] as const)(
     "toast releases its WinRT apartment after invalid XML (%s)",
-    async mode => {
+    async (mode) => {
       await using child = Bun.spawn({
         cmd: [
           bunExe(),
@@ -47,7 +61,11 @@ describe.skipIf(!isWindows)("bun:winrt", () => {
         stdout: "pipe",
         stderr: "pipe",
       });
-      const [stdout, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+      const [stdout, stderr, code] = await Promise.all([
+        child.stdout.text(),
+        child.stderr.text(),
+        child.exited,
+      ]);
       expect(JSON.parse(stdout)).toEqual({
         rejected: true,
         before: -2147221008,
@@ -80,7 +98,7 @@ describe.skipIf(!isWindows)("bun:winrt", () => {
 
     const files = await folder.GetFilesAsyncOverloadDefaultOptionsStartAndCount();
     expect(files.Size).toBe(2);
-    expect([...files].map(file => file.Name).sort()).toEqual(["a.txt", "b.txt"]);
+    expect([...files].map((file) => file.Name).sort()).toEqual(["a.txt", "b.txt"]);
 
     const file = await folder.GetFileAsync("a.txt");
     expect(await file.DeleteAsyncOverloadDefaultOptions()).toBeUndefined();

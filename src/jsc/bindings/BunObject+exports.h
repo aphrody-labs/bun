@@ -25,6 +25,8 @@
     macro(SHA512_256) \
     macro(TOML) \
     macro(XML) \
+    macro(HTML) \
+    macro(BrowserRealm) \
     macro(YAML) \
     macro(Terminal) \
     macro(TerminalScreen) \

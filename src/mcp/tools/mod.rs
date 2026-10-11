@@ -4,6 +4,7 @@
 use crate::registry::Tool;
 
 pub(crate) mod agent;
+pub(crate) mod browser;
 pub(crate) mod docs;
 pub(crate) mod graph;
 pub(crate) mod host;
@@ -23,5 +24,6 @@ pub(crate) const BUILTIN: &[&[Tool]] = &[
     vfs::TOOLS,
     lsp::TOOLS,
     run::TOOLS,
+    browser::TOOLS,
     agent::TOOLS,
 ];

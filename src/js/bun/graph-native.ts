@@ -22,7 +22,7 @@ const __nativeGraph = $newRustFunction("graph_native.rs", "jsGraphNative", 3) as
   id: string,
   input: string,
 ) => boolean | string;
-let addAbortListener: typeof import("node:events").addAbortListener;
+let addAbortListener: typeof import("internal/abort_listener").default.addAbortListener;
 
 const workerSource = `
 import { __nativeGraph } from "bun:graph-native";
@@ -153,8 +153,12 @@ async function executeGraph<R extends GraphRequest>(
       if (signal.aborted) abort();
     }
     if (!finished) {
-      url = createObjectURL.$call(NativeURL, new NativeBlob([workerSource], { type: "text/javascript" }));
-      worker = new NativeWorker(url, { name: "bun-graph-native" });
+      const workerURL: string = createObjectURL.$call(
+        NativeURL,
+        new NativeBlob([workerSource], { type: "text/javascript" }),
+      );
+      url = workerURL;
+      worker = new NativeWorker(workerURL, { name: "bun-graph-native" });
       worker.onmessage = message;
       worker.onmessageerror = messageFailed;
       worker.onerror = failed;

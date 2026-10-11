@@ -2905,7 +2905,8 @@ extern "C" fn __wrap_gettid() -> libc::pid_t {
 }
 
 /// `bun.getTotalMemorySize()` — process-wide RAM budget,
-/// cgroup/jetsam-aware. Backed by the linked C++ `Bun__ramSize()`
+/// Linux cgroup capacity budget; other targets use the linked WTF RAM estimate.
+/// Backed by the linked C++ `Bun__ramSize()`
 /// (src/jsc/bindings/c-bindings.cpp). Lives in `bun_core` so both
 /// `bun_runtime` (node:fs preallocation guard) and the binary root can
 /// call it without re-declaring the C ABI.

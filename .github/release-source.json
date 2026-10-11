@@ -1,14 +1,8 @@
 {
-  "source": "c73c54fc20222be4f873f90106c49eebad3c7d08",
+  "source": "c82e6a6e3bd90511d44ada44819bbeda31ebaa76",
   "version": "1.4.4",
-  "repository": "aphrody-labs/bun-os",
-  "description": "Aphrody Bun 1.4.4: JavaScript and TypeScript runtime, bundler, test runner and package manager",
+  "repository": "aphrody-labs/bun",
+  "description": "Bun OS by Aphrody Labs: JavaScript and TypeScript runtime, package manager, test runner and bundler with native system integrations",
   "homepage": "https://bun.aphrody.com",
-  "topics": [
-    "bun",
-    "javascript",
-    "typescript",
-    "runtime",
-    "windows"
-  ]
+  "topics": ["bun", "javascript", "typescript", "runtime", "windows"]
 }

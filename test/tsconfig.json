@@ -5,6 +5,8 @@
     "composite": false,
     "lib": ["ESNext"],
     "paths": {
+      // M3 owns its DOM implementation; this project consumes its emitted public API.
+      "@aphrody/m3-tokens/dynamic-color": ["../build/types/m3-tokens/dynamic-color.d.ts"],
       "harness": ["./harness.ts"],
       "mkfifo": ["./mkfifo.ts"],
       "node-harness": ["./js/node/harness.ts"],

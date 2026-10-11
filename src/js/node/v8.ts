@@ -17,12 +17,14 @@ const {
 
 const DateNow = Date.now;
 const FunctionPrototypeCall = Function.prototype.call;
-const uncurryThis = func => FunctionPrototypeCall.bind(func);
+const uncurryThis = (func) => FunctionPrototypeCall.bind(func);
 const ObjectGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
 const Uint8ArrayCtor = Uint8Array;
 const BufferAllocUnsafe = Buffer.allocUnsafe;
 const TypedArrayProto = Object.getPrototypeOf(Uint8ArrayCtor.prototype);
-const TypedArrayPrototypeGetBuffer = uncurryThis(ObjectGetOwnPropertyDescriptor(TypedArrayProto, "buffer")!.get);
+const TypedArrayPrototypeGetBuffer = uncurryThis(
+  ObjectGetOwnPropertyDescriptor(TypedArrayProto, "buffer")!.get,
+);
 const TypedArrayPrototypeGetByteOffset = uncurryThis(
   ObjectGetOwnPropertyDescriptor(TypedArrayProto, "byteOffset")!.get,
 );
@@ -30,7 +32,9 @@ const TypedArrayPrototypeGetByteLength = uncurryThis(
   ObjectGetOwnPropertyDescriptor(TypedArrayProto, "byteLength")!.get,
 );
 const TypedArrayPrototypeSet = uncurryThis(TypedArrayProto.set);
-const DataViewPrototypeGetBuffer = uncurryThis(ObjectGetOwnPropertyDescriptor(DataView.prototype, "buffer")!.get);
+const DataViewPrototypeGetBuffer = uncurryThis(
+  ObjectGetOwnPropertyDescriptor(DataView.prototype, "buffer")!.get,
+);
 const DataViewPrototypeGetByteOffset = uncurryThis(
   ObjectGetOwnPropertyDescriptor(DataView.prototype, "byteOffset")!.get,
 );
@@ -319,7 +323,9 @@ function deserialize(value) {
     return jsc.deserialize(value);
   }
   if (hasBufferEnvelopeMagic(view)) {
-    const envelope = jsc.deserialize(Uint8ArrayPrototypeSubarray(view, kBufferEnvelopeMagic.length));
+    const envelope = jsc.deserialize(
+      Uint8ArrayPrototypeSubarray(view, kBufferEnvelopeMagic.length),
+    );
     return require("internal/serialization_buffers").restoreBuffers(envelope);
   }
   return jsc.deserialize(value);
@@ -336,7 +342,9 @@ function serialize(arg1) {
     return jsc.serialize(arg1, { binaryType: "nodebuffer" });
   }
   const payload = jsc.serialize(tagged, { binaryType: "nodebuffer" });
-  const framed = BufferAllocUnsafe(kBufferEnvelopeMagic.length + TypedArrayPrototypeGetByteLength(payload));
+  const framed = BufferAllocUnsafe(
+    kBufferEnvelopeMagic.length + TypedArrayPrototypeGetByteLength(payload),
+  );
   for (let i = 0; i < kBufferEnvelopeMagic.length; i++) framed[i] = kBufferEnvelopeMagic[i];
   TypedArrayPrototypeSet(framed, payload, kBufferEnvelopeMagic.length);
   return framed;
@@ -361,7 +369,7 @@ function getDefaultHeapSnapshotPath() {
 
 let fs;
 
-function writeHeapSnapshot(path, _options) {
+function writeHeapSnapshot(path, _options?: import("node:v8").HeapSnapshotOptions) {
   if (path !== undefined) {
     if (typeof path !== "string") {
       throw $ERR_INVALID_ARG_TYPE("path", "string", path);
@@ -395,12 +403,16 @@ function setHeapSnapshotNearHeapLimit(limit) {
   setNearHeapLimitCallback(() => {
     // node names these Heap.${yyyymmdd}.${hhmmss}.${pid}.${thread_id}.${seq}.heapsnapshot
     const [, ymd, hms, pid, tid] = getDefaultHeapSnapshotPath().split(/[-.]/);
-    writeHeapSnapshot(`Heap.${ymd}.${hms}.${pid}.${tid}.${String(written + 1).padStart(3, "0")}.heapsnapshot`);
+    writeHeapSnapshot(
+      `Heap.${ymd}.${hms}.${pid}.${tid}.${String(written + 1).padStart(3, "0")}.heapsnapshot`,
+    );
     if (++written >= limit) setNearHeapLimitCallback(undefined);
   });
 }
 function throwNotBuildingSnapshot() {
-  throw $ERR_NOT_BUILDING_SNAPSHOT("Operation cannot be invoked when not building startup snapshot");
+  throw $ERR_NOT_BUILDING_SNAPSHOT(
+    "Operation cannot be invoked when not building startup snapshot",
+  );
 }
 
 const promiseHooks = {

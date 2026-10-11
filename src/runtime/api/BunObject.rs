@@ -312,6 +312,8 @@ pub(crate) mod bun_object {
         BunObject_lazyPropCb_TOML => super::get_toml_object,
         BunObject_lazyPropCb_JSON5 => super::get_json5_object,
         BunObject_lazyPropCb_XML => super::get_xml_object,
+        BunObject_lazyPropCb_HTML => super::get_html_object,
+        BunObject_lazyPropCb_BrowserRealm => super::get_browser_realm,
         BunObject_lazyPropCb_YAML => super::get_yaml_object,
         BunObject_lazyPropCb_Transpiler => super::get_transpiler_constructor,
         BunObject_lazyPropCb_argv => super::get_argv,
@@ -1728,6 +1730,14 @@ fn get_json5_object(global_this: &JSGlobalObject, _: &JSObject) -> JSValue {
 
 fn get_xml_object(global_this: &JSGlobalObject, _: &JSObject) -> JSValue {
     XMLObject::create(global_this)
+}
+
+fn get_html_object(global_this: &JSGlobalObject, _: &JSObject) -> JSValue {
+    crate::api::html_object::create(global_this)
+}
+
+fn get_browser_realm(global_this: &JSGlobalObject, _: &JSObject) -> JSValue {
+    crate::api::browser_realm::create(global_this)
 }
 
 fn get_yaml_object(global_this: &JSGlobalObject, _: &JSObject) -> JSValue {

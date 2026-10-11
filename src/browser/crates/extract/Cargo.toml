@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: Apache-2.0
+[package]
+name = "bun_browser_extract"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license = "Apache-2.0"
+description = "Bun content extraction, Markdown, chunking, SimHash, URL metadata, media and embed resolution."
+
+# Retained library lint baseline during native graph integration.
+[lints.rust]
+"unsafe_op_in_unsafe_fn" = "deny"
+"unused_must_use" = "deny"
+"non_ascii_idents" = "deny"
+
+[lints.clippy]
+"todo" = "deny"
+"unimplemented" = "deny"
+"dbg_macro" = "deny"
+"correctness" = { "level" = "warn", "priority" = -1 }
+"perf" = { "level" = "warn", "priority" = -1 }
+
+[dependencies]
+async-trait = { workspace = true }
+base64 = { workspace = true }
+bun_browser_dom = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true, features = ["std"] }
+thiserror = { workspace = true }
+url = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+
+[features]
+profiling = []

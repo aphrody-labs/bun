@@ -79,183 +79,188 @@ function makeBitMapDescriptor(bit) {
     },
   };
 }
-WritableState.prototype = {};
-ObjectDefineProperties(WritableState.prototype, {
-  // Object stream flag to indicate whether or not this stream
-  // contains buffers or objects.
-  objectMode: makeBitMapDescriptor(kObjectMode),
+WritableState.prototype = Object.assign(
+  ObjectDefineProperties(
+    {},
+    {
+      // Object stream flag to indicate whether or not this stream
+      // contains buffers or objects.
+      objectMode: makeBitMapDescriptor(kObjectMode),
 
-  // if _final has been called.
-  finalCalled: makeBitMapDescriptor(kFinalCalled),
+      // if _final has been called.
+      finalCalled: makeBitMapDescriptor(kFinalCalled),
 
-  // drain event flag.
-  needDrain: makeBitMapDescriptor(kNeedDrain),
+      // drain event flag.
+      needDrain: makeBitMapDescriptor(kNeedDrain),
 
-  // At the start of calling end()
-  ending: makeBitMapDescriptor(kEnding),
+      // At the start of calling end()
+      ending: makeBitMapDescriptor(kEnding),
 
-  // When end() has been called, and returned.
-  ended: makeBitMapDescriptor(kEnded),
+      // When end() has been called, and returned.
+      ended: makeBitMapDescriptor(kEnded),
 
-  // When 'finish' is emitted.
-  finished: makeBitMapDescriptor(kFinished),
+      // When 'finish' is emitted.
+      finished: makeBitMapDescriptor(kFinished),
 
-  // Has it been destroyed.
-  destroyed: makeBitMapDescriptor(kDestroyed),
+      // Has it been destroyed.
+      destroyed: makeBitMapDescriptor(kDestroyed),
 
-  // Should we decode strings into buffers before passing to _write?
-  // this is here so that some node-core streams can optimize string
-  // handling at a lower level.
-  decodeStrings: makeBitMapDescriptor(kDecodeStrings),
+      // Should we decode strings into buffers before passing to _write?
+      // this is here so that some node-core streams can optimize string
+      // handling at a lower level.
+      decodeStrings: makeBitMapDescriptor(kDecodeStrings),
 
-  // A flag to see when we're in the middle of a write.
-  writing: makeBitMapDescriptor(kWriting),
+      // A flag to see when we're in the middle of a write.
+      writing: makeBitMapDescriptor(kWriting),
 
-  // A flag to be able to tell if the onwrite cb is called immediately,
-  // or on a later tick.  We set this to true at first, because any
-  // actions that shouldn't happen until "later" should generally also
-  // not happen before the first write call.
-  sync: makeBitMapDescriptor(kSync),
+      // A flag to be able to tell if the onwrite cb is called immediately,
+      // or on a later tick.  We set this to true at first, because any
+      // actions that shouldn't happen until "later" should generally also
+      // not happen before the first write call.
+      sync: makeBitMapDescriptor(kSync),
 
-  // A flag to know if we're processing previously buffered items, which
-  // may call the _write() callback in the same tick, so that we don't
-  // end up in an overlapped onwrite situation.
-  bufferProcessing: makeBitMapDescriptor(kBufferProcessing),
+      // A flag to know if we're processing previously buffered items, which
+      // may call the _write() callback in the same tick, so that we don't
+      // end up in an overlapped onwrite situation.
+      bufferProcessing: makeBitMapDescriptor(kBufferProcessing),
 
-  // Stream is still being constructed and cannot be
-  // destroyed until construction finished or failed.
-  // Async construction is opt in, therefore we start as
-  // constructed.
-  constructed: makeBitMapDescriptor(kConstructed),
+      // Stream is still being constructed and cannot be
+      // destroyed until construction finished or failed.
+      // Async construction is opt in, therefore we start as
+      // constructed.
+      constructed: makeBitMapDescriptor(kConstructed),
 
-  // Emit prefinish if the only thing we're waiting for is _write cbs
-  // This is relevant for synchronous Transform streams.
-  prefinished: makeBitMapDescriptor(kPrefinished),
+      // Emit prefinish if the only thing we're waiting for is _write cbs
+      // This is relevant for synchronous Transform streams.
+      prefinished: makeBitMapDescriptor(kPrefinished),
 
-  // True if the error was already emitted and should not be thrown again.
-  errorEmitted: makeBitMapDescriptor(kErrorEmitted),
+      // True if the error was already emitted and should not be thrown again.
+      errorEmitted: makeBitMapDescriptor(kErrorEmitted),
 
-  // Should close be emitted on destroy. Defaults to true.
-  emitClose: makeBitMapDescriptor(kEmitClose),
+      // Should close be emitted on destroy. Defaults to true.
+      emitClose: makeBitMapDescriptor(kEmitClose),
 
-  // Should .destroy() be called after 'finish' (and potentially 'end').
-  autoDestroy: makeBitMapDescriptor(kAutoDestroy),
+      // Should .destroy() be called after 'finish' (and potentially 'end').
+      autoDestroy: makeBitMapDescriptor(kAutoDestroy),
 
-  // Indicates whether the stream has finished destroying.
-  closed: makeBitMapDescriptor(kClosed),
+      // Indicates whether the stream has finished destroying.
+      closed: makeBitMapDescriptor(kClosed),
 
-  // True if close has been emitted or would have been emitted
-  // depending on emitClose.
-  closeEmitted: makeBitMapDescriptor(kCloseEmitted),
+      // True if close has been emitted or would have been emitted
+      // depending on emitClose.
+      closeEmitted: makeBitMapDescriptor(kCloseEmitted),
 
-  allBuffers: makeBitMapDescriptor(kAllBuffers),
-  allNoop: makeBitMapDescriptor(kAllNoop),
+      allBuffers: makeBitMapDescriptor(kAllBuffers),
+      allNoop: makeBitMapDescriptor(kAllNoop),
 
-  // Indicates whether the stream has errored. When true all write() calls
-  // should return false. This is needed since when autoDestroy
-  // is disabled we need a way to tell whether the stream has failed.
-  // This is/should be a cold path.
-  errored: {
-    __proto__: null,
-    enumerable: false,
-    get() {
-      return (this[kState] & kErrored) !== 0 ? this[kErroredValue] : null;
+      // Indicates whether the stream has errored. When true all write() calls
+      // should return false. This is needed since when autoDestroy
+      // is disabled we need a way to tell whether the stream has failed.
+      // This is/should be a cold path.
+      errored: {
+        __proto__: null,
+        enumerable: false,
+        get() {
+          return (this[kState] & kErrored) !== 0 ? this[kErroredValue] : null;
+        },
+        set(value) {
+          if (value) {
+            this[kErroredValue] = value;
+            this[kState] |= kErrored;
+          } else {
+            this[kState] &= ~kErrored;
+          }
+        },
+      },
+
+      writable: {
+        __proto__: null,
+        enumerable: false,
+        get() {
+          return (this[kState] & kHasWritable) !== 0 ? (this[kState] & kWritable) !== 0 : undefined;
+        },
+        set(value) {
+          if (value == null) {
+            this[kState] &= ~(kHasWritable | kWritable);
+          } else if (value) {
+            this[kState] |= kHasWritable | kWritable;
+          } else {
+            this[kState] |= kHasWritable;
+            this[kState] &= ~kWritable;
+          }
+        },
+      },
+
+      defaultEncoding: {
+        __proto__: null,
+        enumerable: false,
+        get() {
+          return (this[kState] & kDefaultUTF8Encoding) !== 0 ? "utf8" : this[kDefaultEncodingValue];
+        },
+        set(value) {
+          if (value === "utf8" || value === "utf-8") {
+            this[kState] |= kDefaultUTF8Encoding;
+          } else {
+            this[kState] &= ~kDefaultUTF8Encoding;
+            this[kDefaultEncodingValue] = value;
+          }
+        },
+      },
+
+      // The callback that the user supplies to write(chunk, encoding, cb).
+      writecb: {
+        __proto__: null,
+        enumerable: false,
+        get() {
+          return (this[kState] & kWriteCb) !== 0 ? this[kWriteCbValue] : nop;
+        },
+        set(value) {
+          this[kWriteCbValue] = value;
+          if (value) {
+            this[kState] |= kWriteCb;
+          } else {
+            this[kState] &= ~kWriteCb;
+          }
+        },
+      },
+
+      // Storage for data passed to the afterWrite() callback in case of
+      // synchronous _write() completion.
+      afterWriteTickInfo: {
+        __proto__: null,
+        enumerable: false,
+        get() {
+          return (this[kState] & kAfterWriteTickInfo) !== 0 ? this[kAfterWriteTickInfoValue] : null;
+        },
+        set(value) {
+          this[kAfterWriteTickInfoValue] = value;
+          if (value) {
+            this[kState] |= kAfterWriteTickInfo;
+          } else {
+            this[kState] &= ~kAfterWriteTickInfo;
+          }
+        },
+      },
+
+      buffered: {
+        __proto__: null,
+        enumerable: false,
+        get() {
+          return (this[kState] & kBuffered) !== 0 ? this[kBufferedValue] : [];
+        },
+        set(value) {
+          this[kBufferedValue] = value;
+          if (value) {
+            this[kState] |= kBuffered;
+          } else {
+            this[kState] &= ~kBuffered;
+          }
+        },
+      },
     },
-    set(value) {
-      if (value) {
-        this[kErroredValue] = value;
-        this[kState] |= kErrored;
-      } else {
-        this[kState] &= ~kErrored;
-      }
-    },
-  },
-
-  writable: {
-    __proto__: null,
-    enumerable: false,
-    get() {
-      return (this[kState] & kHasWritable) !== 0 ? (this[kState] & kWritable) !== 0 : undefined;
-    },
-    set(value) {
-      if (value == null) {
-        this[kState] &= ~(kHasWritable | kWritable);
-      } else if (value) {
-        this[kState] |= kHasWritable | kWritable;
-      } else {
-        this[kState] |= kHasWritable;
-        this[kState] &= ~kWritable;
-      }
-    },
-  },
-
-  defaultEncoding: {
-    __proto__: null,
-    enumerable: false,
-    get() {
-      return (this[kState] & kDefaultUTF8Encoding) !== 0 ? "utf8" : this[kDefaultEncodingValue];
-    },
-    set(value) {
-      if (value === "utf8" || value === "utf-8") {
-        this[kState] |= kDefaultUTF8Encoding;
-      } else {
-        this[kState] &= ~kDefaultUTF8Encoding;
-        this[kDefaultEncodingValue] = value;
-      }
-    },
-  },
-
-  // The callback that the user supplies to write(chunk, encoding, cb).
-  writecb: {
-    __proto__: null,
-    enumerable: false,
-    get() {
-      return (this[kState] & kWriteCb) !== 0 ? this[kWriteCbValue] : nop;
-    },
-    set(value) {
-      this[kWriteCbValue] = value;
-      if (value) {
-        this[kState] |= kWriteCb;
-      } else {
-        this[kState] &= ~kWriteCb;
-      }
-    },
-  },
-
-  // Storage for data passed to the afterWrite() callback in case of
-  // synchronous _write() completion.
-  afterWriteTickInfo: {
-    __proto__: null,
-    enumerable: false,
-    get() {
-      return (this[kState] & kAfterWriteTickInfo) !== 0 ? this[kAfterWriteTickInfoValue] : null;
-    },
-    set(value) {
-      this[kAfterWriteTickInfoValue] = value;
-      if (value) {
-        this[kState] |= kAfterWriteTickInfo;
-      } else {
-        this[kState] &= ~kAfterWriteTickInfo;
-      }
-    },
-  },
-
-  buffered: {
-    __proto__: null,
-    enumerable: false,
-    get() {
-      return (this[kState] & kBuffered) !== 0 ? this[kBufferedValue] : [];
-    },
-    set(value) {
-      this[kBufferedValue] = value;
-      if (value) {
-        this[kState] |= kBuffered;
-      } else {
-        this[kState] &= ~kBuffered;
-      }
-    },
-  },
-});
+  ),
+  { getBuffer },
+);
 
 function WritableState(options, stream, isDuplex) {
   // Bit map field to store WritableState more efficiently with 1 bit per field
@@ -322,9 +327,11 @@ function resetBuffer(state) {
   state[kState] &= ~kBuffered;
 }
 
-WritableState.prototype.getBuffer = function getBuffer() {
-  return (this[kState] & kBuffered) === 0 ? [] : ArrayPrototypeSlice.$call(this.buffered, this.bufferedIndex);
-};
+function getBuffer() {
+  return (this[kState] & kBuffered) === 0
+    ? []
+    : ArrayPrototypeSlice.$call(this.buffered, this.bufferedIndex);
+}
 
 ObjectDefineProperty(WritableState.prototype, "bufferedRequestCount", {
   __proto__: null,
@@ -619,7 +626,10 @@ function onwrite(stream, er) {
             finishMaybe(stream, state, true);
           }
         }
-      } else if ((state[kState] & kAfterWriteTickInfo) !== 0 && state[kAfterWriteTickInfoValue].cb === cb) {
+      } else if (
+        (state[kState] & kAfterWriteTickInfo) !== 0 &&
+        state[kAfterWriteTickInfoValue].cb === cb
+      ) {
         state[kAfterWriteTickInfoValue].count++;
       } else if (needTick) {
         state[kAfterWriteTickInfoValue] = { count: 1, cb, stream, state };
@@ -646,7 +656,8 @@ function afterWriteTick({ stream, state, count, cb }) {
 function afterWrite(stream, state, count, cb) {
   state[kState] &= ~kAfterWritePending;
 
-  const needDrain = (state[kState] & (kEnding | kNeedDrain | kDestroyed)) === kNeedDrain && state.length === 0;
+  const needDrain =
+    (state[kState] & (kEnding | kNeedDrain | kDestroyed)) === kNeedDrain && state.length === 0;
   if (needDrain) {
     state[kState] &= ~kNeedDrain;
     stream.emit("drain");
@@ -712,14 +723,17 @@ function clearBuffer(stream, state) {
     const callback =
       (state[kState] & kAllNoop) !== 0
         ? nop
-        : err => {
+        : (err) => {
             for (let n = i; n < buffered.length; ++n) {
               buffered[n].callback(err);
             }
           };
     // Make a copy of `buffered` if it's going to be used by `callback` above,
     // since `doWrite` will mutate the array.
-    const chunks = (state[kState] & kAllNoop) !== 0 && i === 0 ? buffered : ArrayPrototypeSlice.$call(buffered, i);
+    const chunks =
+      (state[kState] & kAllNoop) !== 0 && i === 0
+        ? buffered
+        : ArrayPrototypeSlice.$call(buffered, i);
     chunks.allBuffers = (state[kState] & kAllBuffers) !== 0;
 
     doWrite(stream, state, true, state.length, chunks, "", callback);
@@ -864,7 +878,7 @@ function prefinish(stream, state) {
     state.pendingcb++;
 
     try {
-      stream._final(err => onFinish(stream, state, err));
+      stream._final((err) => onFinish(stream, state, err));
     } catch (err) {
       onFinish(stream, state, err);
     }
@@ -968,7 +982,11 @@ ObjectDefineProperties(Writable.prototype, {
       // where the writable side was disabled upon construction.
       // Compat. The user might manually disable writable side through
       // deprecated setter.
-      return !!w && w.writable !== false && (w[kState] & (kEnding | kEnded | kDestroyed | kErrored)) === 0;
+      return (
+        !!w &&
+        w.writable !== false &&
+        (w[kState] & (kEnding | kEnded | kDestroyed | kErrored)) === 0
+      );
     },
     set(val) {
       // Backwards compatible.
@@ -1090,7 +1108,8 @@ Writable.prototype[EE.captureRejectionSymbol] = function (err) {
 // Lazy to avoid circular references
 let webStreamsAdapters;
 function lazyWebStreams() {
-  if (webStreamsAdapters === undefined) webStreamsAdapters = require("internal/webstreams_adapters");
+  if (webStreamsAdapters === undefined)
+    webStreamsAdapters = require("internal/webstreams_adapters");
   return webStreamsAdapters;
 }
 
@@ -1109,7 +1128,7 @@ Writable.prototype[SymbolAsyncDispose] = function () {
     this.destroy(error);
   }
   return new Promise((resolve, reject) =>
-    eos(this, err => (err && err.name !== "AbortError" ? reject(err) : resolve(null))),
+    eos(this, (err) => (err && err.name !== "AbortError" ? reject(err) : resolve(null))),
   );
 };
 

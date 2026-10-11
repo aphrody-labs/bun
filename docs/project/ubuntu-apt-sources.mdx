@@ -1,0 +1,59 @@
+---
+name: Ubuntu APT source acquisition
+description: Scoped VPS deb-src setup and pinned APT/dpkg source provenance.
+---
+
+# Ubuntu APT source acquisition
+
+Owner-authorized setup executed on 2026-10-11 via
+`aphrody infra ssh exec --host vps --cmd`. Host identity: Ubuntu 26.04.1 LTS,
+codename `resolute`, user `ubuntu`, native APT 3.2.0 and dpkg 1.23.7ubuntu1.
+
+The plan was to enable source acquisition only for the existing Ubuntu origins:
+`nova.clouds.archive.ubuntu.com/ubuntu`, `security.ubuntu.com/ubuntu` and
+`archive.ubuntu.com/ubuntu`. No repository or key was added. Each existing
+Ubuntu stanza keeps its suites, components and
+`Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg`.
+
+## Applied change and rollback
+
+The three exact `Types: deb` fields in
+`/etc/apt/sources.list.d/ubuntu.sources` became `Types: deb deb-src`.
+The original file was copied with its metadata and compared byte for byte
+before apply. Only these three lines differ afterward. Docker, LLVM and Google
+sources were preserved.
+
+Backup:
+`/home/ubuntu/builds/bun-os-factory/sources/debian-20261011/backup/ubuntu.sources`.
+
+SHA-256 before:
+`da98c6792c4c19d39969052a80c5ff335bbd9af71d6a8dccd83a2e42f5bd77b6`.
+
+SHA-256 after:
+`379208e857b2b09579deff8bb24e63e4615853127f205354a6022593be84f794`.
+
+Rollback restores the checksum-verified backup with `sudo -n cp -p` to the
+original path. Before rollback, inspect the live file for later owner changes.
+The cloud-init note in the source file warns that re-bundling may regenerate it;
+cloud-init configuration was not changed by this scoped setup.
+
+## Acquisition and license boundary
+
+APT update and `apt-get --download-only source apt=3.2.0 dpkg=1.23.7ubuntu1`
+completed with isolated lists, selecting only `ubuntu.sources` and disabling
+host APT configuration parts for this acquisition. Archives and extracted sources
+are under `/home/ubuntu/builds/bun-os-factory/sources/debian-20261011`, on the root
+partition. Preflight measured about 99 GiB available and 38 GiB available RAM.
+The shared `/home/ubuntu/build` mount had only 237 MiB available and was preserved.
+
+The archive SHA-256 values are recorded in
+`tools/config/debian-sources.json`. APT authenticated the Ubuntu repository
+metadata and verified downloaded source archive checksums. dpkg-source emitted
+a warning that the dpkg `.dsc` uploader signature had no matching public key;
+that individual uploader signature is not independently qualified. No new key
+was imported to bypass this warning.
+
+APT and dpkg are GPL projects; upstream COPYING, component notices and Debian
+copyright files remain intact in their extracted source trees. Their code is
+not copied into Bun's Apache-licensed adapter and is not relabeled MIT.
+Source acquisition does not qualify the changed Bun installer or a Bun build.

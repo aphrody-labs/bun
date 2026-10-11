@@ -559,6 +559,7 @@ const configFlags: {
   socketFaultInjection: "boolean",
   codeGenerationFromStrings: "boolean",
   webAssembly: "boolean",
+  coreutils: "boolean",
   unifiedSources: "boolean",
   archiveDeps: "boolean",
   timeTrace: "boolean",

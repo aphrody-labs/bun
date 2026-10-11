@@ -1,11 +1,61 @@
+import { CFunction, read } from "bun:ffi";
 import { describe, expect, test } from "bun:test";
 import windows from "bun:windows";
-import { CFunction, read } from "bun:ffi";
-import { isWindows } from "harness";
+import { bunEnv, bunExe, isWindows } from "harness";
 import { join } from "node:path";
 
 // The generated families live unpacked in packages/bun-windows-<dll> of this checkout.
 process.env.BUN_WINDOWS_FAMILY_PATH = join(import.meta.dir, "..", "..", "..", "..", "packages");
+
+test("Win32 errors preserve numeric HRESULTs without loading a DLL", () => {
+  const code = -2147024891;
+  let error: unknown;
+  try {
+    windows.win32.check(code, "Fixture");
+  } catch (caught) {
+    error = caught;
+  }
+  expect(error).toBeInstanceOf(Error);
+  if (!(error instanceof windows.win32.Win32Error)) throw new Error("Expected a Win32 error");
+  expect(error.name).toBe("Win32Error");
+  expect(error.code).toBe(code);
+  expect(error.message).toBe("Fixture failed: HRESULT 0x80070005");
+  expect(Object.getPrototypeOf(windows.win32.Win32Error)).toBe(Error);
+});
+
+test("Win32 pointer fields preserve sliced view byte offsets without DLL loading", async () => {
+  await using child = Bun.spawn({
+    cmd: [
+      bunExe(),
+      "-e",
+      `
+const win32 = require("bun:windows").win32;
+const { ptr } = require("bun:ffi");
+win32.setMetadata({
+  namespaceOf: () => "Fixture",
+  namespace: () => ({ structs: { Holder: { s: 8, a: 8, f: [["address", "p", 0]] } } }),
+});
+const holder = win32.struct("Fixture.Holder");
+const backing = new Uint8Array([90, 10, 11, 90]);
+const views = [backing.subarray(1, 3), new DataView(backing.buffer, 2, 1), backing.buffer];
+console.log(JSON.stringify(views.map(view => {
+  holder.address = view;
+  return holder.address === ptr(view);
+})));`,
+    ],
+    env: bunEnv,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, code] = await Promise.all([
+    child.stdout.text(),
+    child.stderr.text(),
+    child.exited,
+  ]);
+  expect(JSON.parse(stdout)).toEqual([true, true, true]);
+  expect(stderr).toBe("");
+  expect(code).toBe(0);
+});
 
 describe.skipIf(!isWindows)("windows.win32", () => {
   const { win32 } = windows;
@@ -38,7 +88,11 @@ describe.skipIf(!isWindows)("windows.win32", () => {
     const entry = win32.struct("PROCESSENTRY32W");
     expect(entry.dwSize).toBe(568);
     let self: string | undefined;
-    for (let ok = kernel32.Process32FirstW(snapshot, entry); ok; ok = kernel32.Process32NextW(snapshot, entry))
+    for (
+      let ok = kernel32.Process32FirstW(snapshot, entry);
+      ok;
+      ok = kernel32.Process32NextW(snapshot, entry)
+    )
       if (entry.th32ProcessID === process.pid) self = entry.szExeFile;
     expect(kernel32.CloseHandle(snapshot)).toBe(1);
     expect(self!.toLowerCase()).toBe(process.execPath.split("\\").pop()!.toLowerCase());
@@ -96,12 +150,18 @@ describe.skipIf(!isWindows)("windows.win32", () => {
     const delegate = win32.com.delegate(iid, () => resolve(kernel32.GetCurrentThreadId()));
 
     const vtbl = read.ptr(delegate, 0);
-    const queryInterface = new CFunction({ ptr: read.ptr(vtbl, 0), args: ["ptr", "ptr", "ptr"], returns: "i32" });
+    const queryInterface = new CFunction({
+      ptr: read.ptr(vtbl, 0),
+      args: ["ptr", "ptr", "ptr"],
+      returns: "i32",
+    });
     const out = new BigUint64Array(1);
     expect(queryInterface(delegate, win32.guid(iid), out)).toBe(0);
     expect(Number(out[0])).toBe(delegate);
     expect(win32.com.release(delegate)).toBe(1);
-    expect(queryInterface(delegate, win32.guid("94ea2b94-e9cc-49e0-c0ff-ee64ca8f5b90"), out)).toBe(0);
+    expect(queryInterface(delegate, win32.guid("94ea2b94-e9cc-49e0-c0ff-ee64ca8f5b90"), out)).toBe(
+      0,
+    );
     expect(win32.com.release(delegate)).toBe(1);
 
     // A native thread whose start routine is Invoke(this = delegate).

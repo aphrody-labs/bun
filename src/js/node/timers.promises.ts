@@ -1,7 +1,12 @@
 // Hardcoded module "node:timers/promises"
 // https://github.com/niksy/isomorphic-timers-promises/blob/master/index.js
 
-const { validateBoolean, validateAbortSignal, validateObject, validateNumber } = require("internal/validators");
+const {
+  validateBoolean,
+  validateAbortSignal,
+  validateObject,
+  validateNumber,
+} = require("internal/validators");
 const { resistStopPropagation } = require("internal/shared");
 
 const symbolAsyncIterator = Symbol.asyncIterator;
@@ -35,8 +40,9 @@ function asyncIterator({ next: nextFunction, return: returnFunction }: TimerAsyn
   return result;
 }
 
-function setTimeout(after = 1, value?, options: TimerOptions = {}) {
-  const arguments_ = [].concat(value ?? []);
+function setTimeout<T = void>(after?: number, value?: T, options?: TimerOptions): Promise<T>;
+function setTimeout<T>(after = 1, value?: T, options: TimerOptions = {}) {
+  const arguments_ = Array<unknown>().concat(value ?? []);
   try {
     // If after is a number, but an invalid one (too big, Infinity, NaN), we only want to emit a
     // warning, not throw an error. So we can't call validateNumber as that will throw if the number
@@ -67,7 +73,7 @@ function setTimeout(after = 1, value?, options: TimerOptions = {}) {
     return Promise.$reject($makeAbortError(undefined, { cause: signal.reason }));
   }
   let onCancel;
-  const returnValue = new Promise((resolve, reject) => {
+  const returnValue = new Promise<T | undefined>((resolve, reject) => {
     const timeout = setTimeoutGlobal(() => resolve(value), after, ...arguments_);
     if (!reference) {
       timeout?.unref?.();
@@ -85,7 +91,8 @@ function setTimeout(after = 1, value?, options: TimerOptions = {}) {
     : returnValue;
 }
 
-function setImmediate(value?, options: TimerOptions = {}) {
+function setImmediate<T = void>(value?: T, options?: TimerOptions): Promise<T>;
+function setImmediate<T>(value?: T, options: TimerOptions = {}) {
   try {
     validateObject(options, "options");
   } catch (error) {
@@ -106,7 +113,7 @@ function setImmediate(value?, options: TimerOptions = {}) {
     return Promise.$reject($makeAbortError(undefined, { cause: signal.reason }));
   }
   let onCancel;
-  const returnValue = new Promise((resolve, reject) => {
+  const returnValue = new Promise<T | undefined>((resolve, reject) => {
     const immediate = setImmediateGlobal(() => resolve(value));
     if (!reference) {
       immediate?.unref?.();
@@ -199,7 +206,11 @@ function setInterval(after = 1, value?, options: TimerOptions = {}) {
           callback = undefined;
         }
       };
-      signal.addEventListener("abort", onCancel, resistStopPropagation({ __proto__: null, once: true }));
+      signal.addEventListener(
+        "abort",
+        onCancel,
+        resistStopPropagation({ __proto__: null, once: true }),
+      );
     }
 
     return asyncIterator({
@@ -247,7 +258,7 @@ export default {
   setImmediate,
   setInterval,
   scheduler: {
-    wait: (delay, options) => setTimeout(delay, undefined, options),
+    wait: (delay: number, options?: TimerOptions) => setTimeout<void>(delay, undefined, options),
     yield: setImmediate,
   },
 };

@@ -677,7 +677,7 @@ impl<'a, 'e> Engine<'a, 'e> {
         let mut n = 0usize;
         for old in &removals {
             n += 1;
-            self.msg(&format!("({n:>width$}/{total}) Purging {}", old.name_version()));
+            self.msg(&format!("({n:>width$}/{total}) Purging {} ({})", old.name, old.version));
             self.uninstall(old);
         }
         for (p, old) in &installs {

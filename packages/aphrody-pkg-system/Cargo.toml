@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Standalone manifest (no workspace inheritance): the Bun fork mirrors this
-# crate verbatim under packages/aphrody-pkg-system as a non-member path dependency.
+# I/O-free system-package owner using the Bun workspace's shared byte primitives.
 [package]
 name = "aphrody-pkg-system"
 version = "1.4.4"
@@ -10,3 +9,16 @@ repository = "https://github.com/aphrody-labs/aphrody"
 description = "I/O-free models and parsers for system package sources (winget, apk, deb, pacman)"
 
 [dependencies]
+bun_core = { path = "../../src/bun_core" }
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+unused_must_use = "deny"
+non_ascii_idents = "deny"
+
+[lints.clippy]
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+correctness = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -1 }

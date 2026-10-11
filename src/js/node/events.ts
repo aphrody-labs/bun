@@ -36,7 +36,7 @@ const { addAbortListener } = require("internal/abort_listener");
 const { resistStopPropagation } = require("internal/shared");
 
 const types = require("node:util/types");
-let inspect: ((value: unknown, opts?: object) => string) | undefined;
+let inspect: typeof import("internal/util/inspect").default.inspect | undefined;
 
 const SymbolFor = Symbol.for;
 const ArrayPrototypeUnshift = Array.prototype.unshift;
@@ -170,7 +170,7 @@ function emitError(emitter, args) {
   let stringifiedEr;
   try {
     if (!inspect) inspect = require("internal/util/inspect").inspect;
-    stringifiedEr = inspect!(er);
+    stringifiedEr = inspect!(er, {});
   } catch {
     stringifiedEr = er;
   }

@@ -2,9 +2,13 @@ import { existsSync, statSync } from "node:fs";
 import { resolve, sep } from "node:path";
 const root = resolve(process.argv[2] ?? "");
 if (!process.argv[2] || !existsSync(root)) throw new Error("Usage: serve-preview.ts <preview-dir>");
+const overlay = process.argv[3] ? resolve(process.argv[3]) : null;
+if (overlay && !existsSync(overlay)) throw new Error("Fusion overlay directory is missing");
+const port = Number(process.argv[4] ?? 8799);
+if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error("Invalid preview port");
 const server = Bun.serve({
   hostname: "127.0.0.1",
-  port: 8799,
+  port,
   async fetch(request) {
     if (!["GET", "HEAD"].includes(request.method)) return new Response(null, { status: 405 });
     let path: string;
@@ -17,6 +21,12 @@ const server = Bun.serve({
     let file = resolve(root, "." + path);
     if (file !== root && !file.startsWith(root + sep)) return new Response(null, { status: 404 });
     if (existsSync(file) && statSync(file).isDirectory()) file = resolve(file, "index.html");
+    if (overlay) {
+      let candidate = resolve(overlay, "." + path);
+      if (candidate !== overlay && !candidate.startsWith(overlay + sep)) return new Response(null, { status: 404 });
+      if (existsSync(candidate) && statSync(candidate).isDirectory()) candidate = resolve(candidate, "index.html");
+      if (existsSync(candidate)) file = candidate;
+    }
     if (!existsSync(file)) return new Response(null, { status: 404 });
     return new Response(request.method === "HEAD" ? null : Bun.file(file), {
       headers: {

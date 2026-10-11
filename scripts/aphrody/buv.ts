@@ -11,7 +11,7 @@ const actions = {
   fmt: ["fmt", "--all", "--check"],
   metadata: ["metadata", "--format-version=1", "--locked"],
   docs: ["doc", "--workspace", "--locked", "--no-default-features", "--no-deps"],
-  embedded: ["run", "bd", "test", "test/js/first_party/runtime/python-cli.test.ts"],
+  embedded: ["scripts/build.ts", "--profile=debug", "test", "test/js/first_party/runtime/python-cli.test.ts"],
 } satisfies Record<string, string[]>;
 const action = process.argv[2] as keyof typeof actions;
 if (!Object.hasOwn(actions, action))

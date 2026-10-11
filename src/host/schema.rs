@@ -19,6 +19,74 @@ pub struct HostInfo {
     pub disks: Vec<Disk>,
     pub network: Network,
     pub uptime_s: Option<u64>,
+    /// Optional additive inventory; old schema-1 cards remain readable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub environment: Option<EnvironmentInfo>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct EnvironmentInfo {
+    /// Provider hints, not an assertion of credentials or service access.
+    pub providers: Vec<String>,
+    pub serverless: Option<bool>,
+    pub container: Option<String>,
+    pub virtualization: Option<String>,
+    pub device: Option<String>,
+    pub cpu_vendor: Option<String>,
+    pub gpu_vendors: Vec<String>,
+    pub windows_11: Option<bool>,
+    pub display_protocol: Option<String>,
+    /// Environment advertises a display; its connectivity is not probed.
+    pub display_advertised: bool,
+    pub stdin_terminal: bool,
+    pub stdout_terminal: bool,
+    pub real_uid: Option<u32>,
+    pub effective_uid: Option<u32>,
+    pub elevation: String,
+    pub sudo_context: bool,
+    pub parent_pid: Option<u32>,
+    pub parent_name: Option<String>,
+    pub parent_shell: Option<String>,
+    pub default_ipv4_route: Option<bool>,
+    pub default_ipv6_route: Option<bool>,
+    /// No arbitrary internet request is made to establish this capability.
+    pub outbound_network: Option<bool>,
+    /// std's process-visible parallelism estimate, separate from hardware cores.
+    pub available_parallelism: Option<u32>,
+    /// Advisory concurrency bounded by already collected CPU and RAM budgets.
+    pub recommended_workers: u32,
+}
+
+impl Default for EnvironmentInfo {
+    fn default() -> Self {
+        Self {
+            providers: Vec::new(),
+            serverless: None,
+            container: None,
+            virtualization: None,
+            device: None,
+            cpu_vendor: None,
+            gpu_vendors: Vec::new(),
+            windows_11: None,
+            display_protocol: None,
+            display_advertised: false,
+            stdin_terminal: false,
+            stdout_terminal: false,
+            real_uid: None,
+            effective_uid: None,
+            elevation: "unknown".into(),
+            sudo_context: false,
+            parent_pid: None,
+            parent_name: None,
+            parent_shell: None,
+            default_ipv4_route: None,
+            default_ipv6_route: None,
+            outbound_network: None,
+            available_parallelism: None,
+            recommended_workers: 1,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -161,7 +229,7 @@ const SCHEMA_JSON: &str = r##"{
         "type": "object",
         "required": ["vendor", "name", "vram_total_mib"],
         "properties": {
-          "vendor": { "enum": ["nvidia", "amd", "intel", "other"] },
+          "vendor": { "enum": ["nvidia", "amd", "intel", "apple", "other"] },
           "name": { "type": "string" },
           "vram_total_mib": { "type": "integer" },
           "vram_free_mib": { "type": ["integer", "null"] },
@@ -199,6 +267,35 @@ const SCHEMA_JSON: &str = r##"{
         }
       }
     },
-    "uptime_s": { "type": ["integer", "null"] }
+    "uptime_s": { "type": ["integer", "null"] },
+    "environment": {
+      "type": ["object", "null"],
+      "properties": {
+        "providers": { "type": "array", "items": { "type": "string" } },
+        "serverless": { "type": ["boolean", "null"] },
+        "container": { "type": ["string", "null"] },
+        "virtualization": { "type": ["string", "null"] },
+        "device": { "type": ["string", "null"] },
+        "cpu_vendor": { "type": ["string", "null"] },
+        "gpu_vendors": { "type": "array", "items": { "type": "string" } },
+        "windows_11": { "type": ["boolean", "null"] },
+        "display_protocol": { "type": ["string", "null"] },
+        "display_advertised": { "type": "boolean" },
+        "stdin_terminal": { "type": "boolean" },
+        "stdout_terminal": { "type": "boolean" },
+        "real_uid": { "type": ["integer", "null"] },
+        "effective_uid": { "type": ["integer", "null"] },
+        "elevation": { "enum": ["root", "administrator", "user", "unknown"] },
+        "sudo_context": { "type": "boolean" },
+        "parent_pid": { "type": ["integer", "null"] },
+        "parent_name": { "type": ["string", "null"] },
+        "parent_shell": { "type": ["string", "null"] },
+        "default_ipv4_route": { "type": ["boolean", "null"] },
+        "default_ipv6_route": { "type": ["boolean", "null"] },
+        "outbound_network": { "type": ["boolean", "null"] },
+        "available_parallelism": { "type": ["integer", "null"], "minimum": 1 },
+        "recommended_workers": { "type": "integer", "minimum": 1 }
+      }
+    }
   }
 }"##;

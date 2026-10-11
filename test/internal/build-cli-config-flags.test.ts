@@ -31,18 +31,18 @@ async function build(...args: string[]): Promise<{ stderr: string; exitCode: num
   return { stderr, exitCode };
 }
 
-test.concurrent.each(["abc", "", "-1", "0x1c", "1e1", "2.5"])(
+// Each case starts a debug runtime and imports the build graph. Serialize those
+// processes so parsing assertions do not compete for the factory CPU budget.
+test.each(["abc", "", "-1", "0x1c", "1e1", "2.5"])(
   "a number field takes a non-negative decimal integer, not %j",
-  async (value) => {
+  async value => {
     const { stderr, exitCode } = await build(`--android-api-level=${value}`);
-    expect(stderr).toBe(
-      `error: --android-api-level takes a non-negative integer, got: ${JSON.stringify(value)}\n`,
-    );
+    expect(stderr).toBe(`error: --android-api-level takes a non-negative integer, got: ${JSON.stringify(value)}\n`);
     expect(exitCode).toBe(1);
   },
 );
 
-test.concurrent("an unknown field is an error that lists the fields", async () => {
+test("an unknown field is an error that lists the fields", async () => {
   const { stderr, exitCode } = await build("--ltoo=on");
   expect(stderr).toContain("Unknown config field: --ltoo");
   expect(stderr).toContain("hint: Known fields: ");
@@ -52,7 +52,7 @@ test.concurrent("an unknown field is an error that lists the fields", async () =
   expect(exitCode).toBe(1);
 });
 
-test.concurrent("every spelling of a field is accepted", async () => {
+test("every spelling of a field is accepted", async () => {
   // Flags are parsed left to right; `--help` prints the usage and exits 0 once everything before it parsed.
   const { stderr, exitCode } = await build(
     "--freebsd-version=14.3",
@@ -60,6 +60,7 @@ test.concurrent("every spelling of a field is accepted", async () => {
     "--android-api-level=28",
     "--link-threads=1",
     "--lto=off",
+    "--coreutils=off",
     "--help",
   );
   expect(stderr).toStartWith("Usage: bun scripts/build.ts");
@@ -92,20 +93,14 @@ test("external build directory regeneration discovers the configured source chec
     .match(/rule regen\r?\n\s+command = ([^\r\n]+)/)![1]
     .replace("$in", quote("configure.json", isWindows));
   await using proc = Bun.spawn({
-    cmd: isWindows
-      ? ["cmd.exe", "/d", "/s", "/c", command.slice("cmd /c ".length)]
-      : ["/bin/sh", "-c", command],
+    cmd: isWindows ? ["cmd.exe", "/d", "/s", "/c", command.slice("cmd /c ".length)] : ["/bin/sh", "-c", command],
     windowsVerbatimArguments: isWindows,
     cwd: buildDir,
     env: bunEnv,
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
   expect(stdout.trim(), stderr).toBe(source);
   expect(stderr).toBe("");
   expect(exitCode).toBe(0);

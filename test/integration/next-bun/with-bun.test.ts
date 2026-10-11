@@ -16,13 +16,19 @@ const {
 } = require(join(nextBun, "lib", "config.js"));
 const { flattenStandalone } = require(join(nextBun, "lib", "standalone.js"));
 
-const pkg = (name: string, extra: Record<string, unknown> = {}) => JSON.stringify({ name, version: "1.0.0", ...extra });
+const pkg = (name: string, extra: Record<string, unknown> = {}) =>
+  JSON.stringify({ name, version: "1.0.0", ...extra });
 
 function workspace() {
   return tempDir("next-bun-ws", {
     "package.json": JSON.stringify({ name: "root", workspaces: ["apps/*", "packages/*"] }),
     "apps/site/package.json": pkg("site", {
-      dependencies: { "@ws/ui": "workspace:*", "plain-js": "1.0.0", "custom-cond": "1.0.0", "server-ts": "1.0.0" },
+      dependencies: {
+        "@ws/ui": "workspace:*",
+        "plain-js": "1.0.0",
+        "custom-cond": "1.0.0",
+        "server-ts": "1.0.0",
+      },
       devDependencies: { "dev-ts": "1.0.0" },
     }),
     "apps/site/src/i18n/request.ts": "export default {};",
@@ -31,11 +37,22 @@ function workspace() {
       dependencies: { "nested-ts": "1.0.0" },
     }),
     "node_modules/nested-ts/package.json": pkg("nested-ts", {
-      exports: { ".": { bun: "./src/index.ts", import: "./src/index.ts", default: "./dist/index.js" } },
+      exports: {
+        ".": { bun: "./src/index.ts", import: "./src/index.ts", default: "./dist/index.js" },
+      },
     }),
-    "node_modules/plain-js/package.json": pkg("plain-js", { main: "index.js", types: "index.d.ts" }),
+    "node_modules/plain-js/package.json": pkg("plain-js", {
+      main: "index.js",
+      types: "index.d.ts",
+    }),
     "node_modules/custom-cond/package.json": pkg("custom-cond", {
-      exports: { ".": { "@zod/source": "./src/index.ts", types: "./src/index.ts", import: "./dist/index.js" } },
+      exports: {
+        ".": {
+          "@zod/source": "./src/index.ts",
+          types: "./src/index.ts",
+          import: "./dist/index.js",
+        },
+      },
     }),
     "node_modules/server-ts/package.json": pkg("server-ts", { exports: "./index.ts" }),
     "node_modules/dev-ts/package.json": pkg("dev-ts", { module: "./src/index.tsx" }),
@@ -93,7 +110,12 @@ describe("config rewrites", () => {
         turbopack: { resolveAlias: { dup: "./mine" } },
         webpack: userWebpack,
       },
-      { phase: "phase-production-build", projectDir: site, alias: { x: "./src/i18n/request.ts" }, dedupe: ["dup"] },
+      {
+        phase: "phase-production-build",
+        projectDir: site,
+        alias: { x: "./src/i18n/request.ts" },
+        dedupe: ["dup"],
+      },
     );
     expect(out.turbopack.root).toBe(String(dir));
     expect(out.outputFileTracingRoot).toBe(String(dir));
@@ -114,7 +136,9 @@ describe("config rewrites", () => {
     );
     expect(explicit.turbopack.root).toBe(site);
     expect(explicit.transpilePackages).toBeUndefined();
-    expect(applyBunConfig({}, { phase: "x", projectDir: site, root: false }).turbopack).toBeUndefined();
+    expect(
+      applyBunConfig({}, { phase: "x", projectDir: site, root: false }).turbopack,
+    ).toBeUndefined();
   });
 
   test("next start keeps the asset prefix and deployment id of its build", () => {
@@ -132,21 +156,37 @@ describe("config rewrites", () => {
     expect(served.deploymentId).toBe("abc123");
     const building = applyBunConfig(config, { ...options, phase: "phase-production-build" });
     expect(building.assetPrefix).toBe("https://other.example");
-    const unfrozen = applyBunConfig(config, { ...options, phase: "phase-production-server", freezeBuildConfig: false });
+    const unfrozen = applyBunConfig(config, {
+      ...options,
+      phase: "phase-production-server",
+      freezeBuildConfig: false,
+    });
     expect(unfrozen.assetPrefix).toBe("https://other.example");
   });
 
-  const base = { phase: "phase-production-build", projectDir: "/", root: false, transpileSources: false } as const;
+  const base = {
+    phase: "phase-production-build",
+    projectDir: "/",
+    root: false,
+    transpileSources: false,
+  } as const;
 
   test("reactCompiler, typedRoutes and cacheComponents fill only unset Next keys", () => {
-    const set = applyBunConfig({}, { ...base, reactCompiler: true, typedRoutes: true, cacheComponents: true });
+    const set = applyBunConfig(
+      {},
+      { ...base, reactCompiler: true, typedRoutes: true, cacheComponents: true },
+    );
     expect([set.reactCompiler, set.typedRoutes, set.cacheComponents]).toEqual([true, true, true]);
     expect(applyBunConfig({}, base).reactCompiler).toBeUndefined();
     const kept = applyBunConfig(
       { reactCompiler: false, typedRoutes: false, cacheComponents: false },
       { ...base, reactCompiler: true, typedRoutes: true, cacheComponents: true },
     );
-    expect([kept.reactCompiler, kept.typedRoutes, kept.cacheComponents]).toEqual([false, false, false]);
+    expect([kept.reactCompiler, kept.typedRoutes, kept.cacheComponents]).toEqual([
+      false,
+      false,
+      false,
+    ]);
   });
 
   test("tauri makes a static export a webview loads; config keys win", () => {
@@ -164,7 +204,12 @@ describe("config rewrites", () => {
     });
     expect(exported.assetPrefix).toBeUndefined();
     const user = applyBunConfig(
-      { output: "standalone", trailingSlash: false, images: { formats: ["image/avif"] }, env: { A: "1" } },
+      {
+        output: "standalone",
+        trailingSlash: false,
+        images: { formats: ["image/avif"] },
+        env: { A: "1" },
+      },
       { ...base, env, tauri: { env: { NEXT_PUBLIC_STATIC: "1", A: "0" } } },
     );
     expect(user).toMatchObject({
@@ -173,20 +218,25 @@ describe("config rewrites", () => {
       images: { unoptimized: true, formats: ["image/avif"] },
       env: { NEXT_PUBLIC_STATIC: "1", A: "1" },
     });
-    for (const tauri of [undefined, false]) expect(applyBunConfig({}, { ...base, env, tauri }).output).toBeUndefined();
+    for (const tauri of [undefined, false])
+      expect(applyBunConfig({}, { ...base, env, tauri }).output).toBeUndefined();
   });
 
   test('tauri "auto" follows the Tauri CLI and the dev asset prefix never reaches production', () => {
     expect(isTauriBuild({})).toBe(false);
     expect(isTauriBuild({ TAURI_ENV_ARCH: "x86_64" })).toBe(true);
     expect(applyBunConfig({}, { ...base, env: {}, tauri: "auto" }).output).toBeUndefined();
-    expect(applyBunConfig({}, { ...base, env: { TAURI_ENV_PLATFORM: "linux" }, tauri: "auto" }).output).toBe("export");
+    expect(
+      applyBunConfig({}, { ...base, env: { TAURI_ENV_PLATFORM: "linux" }, tauri: "auto" }).output,
+    ).toBe("export");
     const prefix = (env: Record<string, string>, tauri: unknown) =>
       applyBunConfig({}, { ...base, env, tauri }).assetPrefix;
     expect(prefix({ NODE_ENV: "development" }, { devHost: "192.168.1.5", devPort: 3100 })).toBe(
       "http://192.168.1.5:3100",
     );
-    expect(prefix({ NODE_ENV: "development", TAURI_DEV_HOST: "10.0.0.2" }, true)).toBe("http://10.0.0.2:3000");
+    expect(prefix({ NODE_ENV: "development", TAURI_DEV_HOST: "10.0.0.2" }, true)).toBe(
+      "http://10.0.0.2:3000",
+    );
     expect(prefix({ NODE_ENV: "production", TAURI_DEV_HOST: "10.0.0.2" }, true)).toBeUndefined();
   });
 });
@@ -195,10 +245,13 @@ describe("withBun", () => {
   test('bundler "turbopack" never selects Bun.build and keeps a function config', async () => {
     using dir = workspace();
     const site = join(String(dir), "apps", "site");
-    const wrapped = withBun(async (phase: string) => ({ reactStrictMode: phase === "phase-production-build" }), {
-      bundler: "turbopack",
-      projectDir: site,
-    });
+    const wrapped = withBun(
+      async (phase: string) => ({ reactStrictMode: phase === "phase-production-build" }),
+      {
+        bundler: "turbopack",
+        projectDir: site,
+      },
+    );
     const previous = process.env.NEXT_BUN;
     delete process.env.NEXT_BUN;
     try {
@@ -225,11 +278,15 @@ describe("withBun", () => {
     delete process.env.NEXT_BUN;
     delete process.env.TURBOPACK;
     try {
-      await withBun({}, { projectDir: String(dir), root: false, plugins: [plugin] })("phase-production-build", {});
-      expect(process.env.NEXT_BUN).toBe("1");
-      expect(require(join(String(dir), "node_modules/next/dist/build/bun-build/index.js")).configured).toEqual([
-        ["probe"],
-      ]);
+      await withBun({}, { projectDir: String(dir), root: false, plugins: [plugin] })(
+        "phase-production-build",
+        {},
+      );
+      const nextBun = () => process.env.NEXT_BUN;
+      expect(nextBun()).toBe("1");
+      expect(
+        require(join(String(dir), "node_modules/next/dist/build/bun-build/index.js")).configured,
+      ).toEqual([["probe"]]);
     } finally {
       for (const [key, value] of Object.entries(previous)) {
         if (value === undefined) delete process.env[key];
@@ -239,9 +296,9 @@ describe("withBun", () => {
   });
 
   test("an unknown bundler is refused", async () => {
-    await expect(withBun({}, { bundler: "rspack", root: false })("phase-production-build", {})).rejects.toThrow(
-      'bundler must be "bun" or "turbopack"',
-    );
+    await expect(
+      withBun({}, { bundler: "rspack", root: false })("phase-production-build", {}),
+    ).rejects.toThrow('bundler must be "bun" or "turbopack"');
   });
 });
 
@@ -256,8 +313,16 @@ describe("flattenStandalone", () => {
     const root = String(dir);
     const type = process.platform === "win32" ? "junction" : "dir";
     mkdirSync(join(root, "node_modules", "@s"), { recursive: true });
-    symlinkSync(join(root, "node_modules/.bun/a@1.0.0/node_modules/a"), join(root, "node_modules/a"), type);
-    symlinkSync(join(root, "node_modules/.bun/@s+b@2.0.0/node_modules/@s/b"), join(root, "node_modules/@s/b"), type);
+    symlinkSync(
+      join(root, "node_modules/.bun/a@1.0.0/node_modules/a"),
+      join(root, "node_modules/a"),
+      type,
+    );
+    symlinkSync(
+      join(root, "node_modules/.bun/@s+b@2.0.0/node_modules/@s/b"),
+      join(root, "node_modules/@s/b"),
+      type,
+    );
     // b's dependency on a, as the isolated linker writes it.
     symlinkSync(
       join(root, "node_modules/.bun/a@1.0.0/node_modules/a"),
@@ -272,8 +337,12 @@ describe("flattenStandalone", () => {
     for (const path of ["node_modules/a", "node_modules/@s/b", "apps/site/node_modules/ui"]) {
       expect(lstatSync(join(root, path)).isSymbolicLink()).toBe(false);
     }
-    expect(JSON.parse(readFileSync(join(root, "node_modules/@s/b/package.json"), "utf8")).name).toBe("@s/b");
-    expect(JSON.parse(readFileSync(join(root, "apps/site/node_modules/ui/package.json"), "utf8")).name).toBe("ui");
+    expect(
+      JSON.parse(readFileSync(join(root, "node_modules/@s/b/package.json"), "utf8")).name,
+    ).toBe("@s/b");
+    expect(
+      JSON.parse(readFileSync(join(root, "apps/site/node_modules/ui/package.json"), "utf8")).name,
+    ).toBe("ui");
   });
 
   test("two versions of one package are refused", () => {
