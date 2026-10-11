@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-video",
-  "version": "1.4.4-video.1",
+  "version": "1.4.4",
   "description": "Bun video protocols, native capture adapters, and official Remotion and HyperFrames integrations",
   "license": "SEE LICENSE IN LICENSE",
   "bin": {
@@ -41,7 +41,7 @@
     "tag": "next"
   },
   "dependencies": {
-    "@aphrody/bun-runtime-sdk": "1.4.5",
+    "@aphrody/bun-runtime-sdk": "1.4.4",
     "@hyperframes/core": "0.8.144",
     "@hyperframes/engine": "0.8.144",
     "@hyperframes/parsers": "0.8.144",
