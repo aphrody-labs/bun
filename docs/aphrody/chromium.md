@@ -108,4 +108,6 @@ The Windows factory's changed Bun binary passes 20 browser/codegen tests and fiv
 
 Scoped TypeScript, pinned oxlint, source scope checks, serialized Rust check and crate-only strict Clippy pass. Dependency-wide strict Clippy fails on 68 existing undocumented unsafe blocks in `bun_libuv_sys`. No engine speed or cross-engine parity is inferred from these tests.
 
-Live host inventory finds `aphrody-web` and depot_tools on the VPS, with 52 GiB available; DBFR has neither Chromium nor Obscura on PATH, with 25 GiB available. Neither host has been deployed or qualified with these new built-ins. Source delivery and Windows debug qualification do not establish a production release.
+Live host inventory finds `aphrody-web` and depot_tools on the VPS, with 52 GiB available; DBFR has neither Chromium nor Obscura on PATH, with 25 GiB available. Post-publication probes on both hosts report installed Bun revision `1.4.3-aphrody.4+41211b568` and both new built-ins unavailable. Neither host has been deployed or qualified with these new built-ins. Source delivery and Windows debug qualification do not establish a production release.
+
+Source implementation `74bf6caa6e29fae0fe36d34ed1bc2054c6e3c27c` is published on `aphrody-labs/bun` main, rebased onto the committed Obscura checkpoint. Concurrent worktree files and protected browser stores were preserved.

@@ -21,6 +21,9 @@ Lovelace without a fallback adapter. Scoped TypeScript, oxlint, Rust check and
 strict crate-only Clippy pass. Dependency-wide Clippy remains blocked by 68
 existing undocumented unsafe blocks in bun_libuv_sys. Browser, GPU, cookie and engine behavior
 must be qualified separately for each mode; bridge tests do not prove parity.
+Source implementation `74bf6caa6e2` is verified on origin/main. Post-publication
+VPS/DBFR probes still run installed `1.4.3-aphrody.4+41211b568`, without the new
+built-ins; Linux artifact delivery and native JSC backend qualification remain open.
 
 > Correction propriétaire du 2026-10-09 : Aphrody et Bun peuvent être développés et construits sur tout hôte qualifié. Sélectionner checkout, cible, outils, ressources et droits selon le contexte ; les chemins Windows ci-dessous sont des exemples du poste courant. Yoyo / aphrody-dev administre tout Aphrody Labs ; Omar administre DBFR. WSL est retiré du workflow du poste actuel.
 
