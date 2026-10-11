@@ -1,9 +1,25 @@
 {
   "name": "@aphrody/bun-video",
-  "version": "1.4.4",
-  "private": true,
-  "description": "Unified Remotion and HyperFrames library owned by the Bun fork",
-  "license": "SEE LICENSE IN ../../vendor/bun-video/NOTICE.md",
+  "version": "1.4.4-video.0",
+  "description": "Bun video protocols, native capture adapters, and official Remotion and HyperFrames integrations",
+  "license": "SEE LICENSE IN LICENSE",
+  "bin": {
+    "bun-video-chrome": "./labs/crunchyroll-app.ts",
+    "bun-video-dash": "./labs/dash-lab.ts",
+    "bun-video-har": "./labs/hls-lab-har.ts",
+    "bun-video-hls": "./labs/hls-lab.ts",
+    "bun-video-keychain": "./labs/hls-keychain.ts",
+    "bun-video-shortcuts": "./labs/crunchyroll-shortcuts.ts"
+  },
+  "files": [
+    "src",
+    "docs",
+    "labs",
+    "assets",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
@@ -18,11 +34,33 @@
     "./oauth": "./src/oauth.ts",
     "./secrets": "./src/secrets.ts"
   },
+  "publishConfig": {
+    "access": "public",
+    "tag": "next"
+  },
   "dependencies": {
-    "@aphrody/bun-runtime-sdk": "file:../bun-runtime-sdk",
+    "@aphrody/bun-runtime-sdk": "1.4.5",
+    "@hyperframes/core": "0.8.144",
+    "@hyperframes/engine": "0.8.144",
+    "@hyperframes/parsers": "0.8.144",
+    "@remotion/renderer": "4.0.534",
     "bitmovin-player": "8.279.0",
     "dashjs": "5.2.1",
     "fast-xml-parser": "5.11.2",
-    "hls.js": "1.7.3"
+    "hls.js": "1.7.3",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.534"
+  },
+  "engines": {
+    "bun": ">=1.4.3"
+  },
+  "repository": {
+    "type": "git",
+    "directory": "packages/bun-video",
+    "url": "git+https://github.com/aphrody-labs/bun.git"
+  },
+  "bugs": {
+    "url": "https://github.com/aphrody-labs/bun/issues"
   }
 }

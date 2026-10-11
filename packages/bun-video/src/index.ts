@@ -1,1 +1,30 @@
-export * from "../../../vendor/bun-video/src/index";
+export { interpolate, Easing } from "remotion";
+export { generateSpringEaseData, SPRING_PRESETS } from "@hyperframes/parsers/spring-ease";
+export { captureNativeRemotionFrame } from "./remotion-frame";
+export type { NativeFrameOptions } from "./remotion-frame";
+export { captureNativeWebViewFrames } from "./hyperframes-native";
+export type {
+  NativeWebViewContext,
+  NativeFrameCaptureOptions,
+  NativeCapturedFrame,
+} from "./hyperframes-native";
+export { captureParallelFrames } from "./parallel-capture";
+export { validateFramePlan, partitionFrames } from "./frame-plan";
+export type { FramePlan } from "./frame-plan";
+export { encodeVideo } from "./encode";
+export type { EncodeVideoOptions } from "./encode";
+export { runBrowserTask } from "./computer";
+export type { BrowserTask } from "./computer";
+export * from "./hls";
+export * from "./dash";
+export * from "./har";
+export * from "./bitmovin";
+export * from "./crunchyroll";
+export * from "./oauth";
+export * from "./secrets";
+export { capabilities } from "./capabilities";
+
+export const loadRemotionCore = () => import("remotion");
+export const loadRemotionRenderer = () => import("@remotion/renderer");
+export const loadHyperframesCore = () => import("@hyperframes/core");
+export const loadHyperframesEngine = () => import("@hyperframes/engine");

@@ -1,0 +1,48 @@
+# Bun Video source and dependency notices
+
+The native HyperFrames capture adapter is retained from the Apache-2.0 source
+integration at heygen-com/hyperframes commit
+`063c2f8d61b4e989274b6526b370edc588b37e4a`. The complete Apache-2.0 text is
+included in LICENSE. The native Remotion adapter and frame orchestration are
+integration code from the Bun fork, whose original source is MIT licensed.
+
+MIT permission notice for that original integration code:
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+The package's protocol adapters retain their individual SPDX notices. The
+Crunchyroll adapter reimplements the exported API of community package
+crunchyroll.js 1.1.1 (MIT), without its embedded application credentials. It
+does not represent an official Crunchyroll SDK or grant access to content.
+
+Official external dependencies retain their own terms:
+
+| Dependency | Version | Terms/source |
+| --- | --- | --- |
+| remotion, @remotion/renderer | 4.0.534 | [Remotion license](https://github.com/remotion-dev/remotion/blob/32af7e8f8ac67493ef81498d311af3dc9ca953a6/LICENSE.md), including applicable company licensing; no modified Remotion engine source is bundled here |
+| @hyperframes/core, @hyperframes/engine, @hyperframes/parsers | 0.8.144 | [Apache-2.0](https://github.com/heygen-com/hyperframes/blob/063c2f8d61b4e989274b6526b370edc588b37e4a/LICENSE) |
+| hls.js | 1.7.3 | Apache-2.0, upstream package notices |
+| dashjs | 5.2.1 | BSD-3-Clause, upstream package notices |
+| fast-xml-parser | 5.11.2 | MIT, upstream package notices |
+| bitmovin-player | 8.279.0 | [Bitmovin licensing](https://developer.bitmovin.com/playback/docs), requires the caller's valid player license and permitted deployment domain; upstream third-party notices apply |
+| react, react-dom | 19.2.0 | MIT, upstream package notices |
+| @aphrody/bun-runtime-sdk | 1.4.5 | Published package notices; native providers are distributed and qualified separately |
+
+Native Bun, JavaScriptCore, browser providers and media executables are not
+included in this source package. Their distribution licenses remain separate.

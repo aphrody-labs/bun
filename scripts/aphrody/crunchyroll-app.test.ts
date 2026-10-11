@@ -4,7 +4,12 @@ import {
   CRUNCHYROLL_WATCH_URL,
   planChromeSiteApp,
   selectActiveGoogleChromeRoot,
-} from "./crunchyroll-app";
+} from "../../packages/bun-video/labs/crunchyroll-app";
+import { planChromeSiteApp as compatibilityPlan } from "./crunchyroll-app";
+
+test("legacy app entry forwards to the canonical package launcher", () => {
+  expect(compatibilityPlan).toBe(planChromeSiteApp);
+});
 
 const profile = {
   pid: 123,

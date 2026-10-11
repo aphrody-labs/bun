@@ -1,18 +1,20 @@
 # Bun extension and installable local shortcut
 
-The static applications are `C:/bun/crunchyroll-extension` and `C:/bun/crunchyroll-pwa`. They share the same eleven complete UI catalogs: English, French, Spanish, Portuguese, German, Italian, Arabic, Japanese, Korean, Hindi and Russian. Arabic uses RTL layout; language variants fall back to their base language and unknown languages to English. Language preferences stay in each local application. The official watch URL remains the supplied French episode page.
+The canonical static applications are `assets/crunchyroll-extension` and `assets/crunchyroll-pwa` inside `@aphrody/bun-video`. They share the same eleven complete UI catalogs: English, French, Spanish, Portuguese, German, Italian, Arabic, Japanese, Korean, Hindi and Russian. Arabic uses RTL layout; language variants fall back to their base language and unknown languages to English. Language preferences stay in each local application. The official watch URL remains the supplied French episode page.
 
 The extension uses Manifest V3 and an external module popup script with no permissions, host permissions, injected code or background process. Chrome’s built-in i18n localizes the manifest from `_locales`; the popup can switch languages independently. Install it from `chrome://extensions` using **Load unpacked** and the extension folder once local validation is complete. No automatic extension installation is claimed.
 
 The PWA entry is `/pwa/`, with `index.html`, `app.js`, `styles.css`, `locales.js`, `manifest.webmanifest`, `sw.js` and real `icons/icon192.png`/`icon512.png`. Serve those files with Bun on a stable localhost origin. The manifest uses `/pwa/` for its ID, scope and start URL and defines standalone display. The install button waits for Chrome’s real install event. A manifest and icons establish installable application assets; actual Chrome installation must be separately observed.
 
-From `C:/bun`, start the native server:
+From the installed package directory, start the Bun server:
 
 ```powershell
-bun bd -j2 run ./scripts/aphrody/crunchyroll-shortcuts.ts --port 8000
+bun run ./labs/crunchyroll-shortcuts.ts --port 8000
 ```
 
 Open `http://127.0.0.1:8000/pwa/`. Keep this origin stable for subsequent launches. `--check` validates the manifests and native browser-module availability on an ephemeral port; `--open` selects the existing active Chrome profile through the native launcher without restarting Chrome. It does not install the PWA or the extension. The server exposes only the listed static assets and GET/HEAD, binds to loopback, and stops on SIGINT/SIGTERM. A busy port fails without terminating another service.
+
+The canonical server and Windows launcher are `labs/crunchyroll-shortcuts.ts` and `labs/crunchyroll-app.ts`; their exported `crunchyrollShortcutsMain` and `crunchyrollAppMain` functions support embedding. Asset paths resolve relative to the package, including from a standalone npm installation. The old `scripts/aphrody` entries are repository compatibility wrappers. In the Bun source checkout, use `bun bd -j2 run ./scripts/aphrody/crunchyroll-shortcuts.ts` to qualify the changed binary. The Windows shortcut targets the canonical launcher file, not a repository script outside the package.
 
 Native OAuth is exported separately through `@aphrody/bun-video/oauth`; see [OAuth configuration and qualification](oauth.md). These shortcuts use the official site’s existing login. Creating an OAuth client requires authorized provider endpoints, a client ID and a registered callback; the local launcher does not invent those settings or turn a user account into an application registration.
 

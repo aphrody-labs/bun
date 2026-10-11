@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 import { expect, test } from "bun:test";
 import { Script } from "node:vm";
-import { startCrunchyrollShortcuts } from "./crunchyroll-shortcuts";
+import { startCrunchyrollShortcuts } from "../../packages/bun-video/labs/crunchyroll-shortcuts";
+import { startCrunchyrollShortcuts as compatibilityServer } from "./crunchyroll-shortcuts";
+
+test("legacy shortcut entry forwards to the canonical package server", () => {
+  expect(compatibilityServer).toBe(startCrunchyrollShortcuts);
+});
 
 async function withServer(run: (origin: URL) => Promise<void>) {
   const server = await startCrunchyrollShortcuts({ port: 0, hostname: "127.0.0.1" });
