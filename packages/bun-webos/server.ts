@@ -34,8 +34,12 @@ import { resolvePublicAsset } from "./src/server/public-assets";
 import { evalJs, runShell, terminalShell } from "./src/server/shell";
 import { WebOSStore } from "./src/server/store";
 import { systemSnapshot } from "./src/server/system-metrics";
+import { createExplorer, type ExplorerOptions } from "./src/server/explorer";
+export type { ExplorerOptions } from "./src/server/explorer";
 
 export interface WebOSOptions {
+  /** Optional metadata index, service health and assistant endpoints. Disabled by default. */
+  explorer?: ExplorerOptions;
   /** 0 picks a free port. Default: $PORT or 3000. */
   port?: number;
   /** Default 127.0.0.1; host routes refuse to answer on a non-loopback listener. */
@@ -46,6 +50,8 @@ export interface WebOSOptions {
   dataDir?: string;
   /** false turns every host route into a 403. Default true. */
   hostAccess?: boolean;
+  /** Exact HTTP(S) origins forwarded by a trusted loopback reverse proxy. */
+  trustedOrigins?: readonly string[];
   /** HMR and unminified bundles. Default: NODE_ENV !== "production". */
   development?: boolean;
   /** Output of build.ts (page workers in workers/). Default: <package>/dist. */
@@ -83,16 +89,31 @@ function fail(error: unknown): Response {
 }
 
 /** Runs the benchmarks of bench-worker.ts in a fresh Bun Worker. */
-function runBenchmarksInWorker(): Promise<BenchResult[]> {
-  const worker = new Worker(new URL("./src/server/bench-worker.ts", import.meta.url).href);
+async function runBenchmarksInWorker(
+  distDir: string,
+  development: boolean,
+): Promise<BenchResult[]> {
+  const artifact = join(distDir, "workers", "bench.js");
+  const worker = new Worker(
+    !development && (await Bun.file(artifact).exists())
+      ? Bun.pathToFileURL(artifact).href
+      : new URL("./src/server/bench-worker.ts", import.meta.url).href,
+  );
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   return new Promise<BenchResult[]>((resolveResults, reject) => {
-    worker.onmessage = (event: MessageEvent<{ ok: boolean; results?: BenchResult[]; error?: string }>) => {
+    timeout = setTimeout(() => reject(new Error("Benchmark worker exceeded 30 seconds")), 30_000);
+    worker.onmessage = (
+      event: MessageEvent<{ ok: boolean; results?: BenchResult[]; error?: string }>,
+    ) => {
       if (event.data.ok) resolveResults(event.data.results!);
       else reject(new Error(event.data.error));
     };
-    worker.onerror = event => reject(new Error(event.message));
+    worker.onerror = (event) => reject(new Error(event.message));
     worker.postMessage("run");
-  }).finally(() => worker.terminate());
+  }).finally(() => {
+    if (timeout) clearTimeout(timeout);
+    worker.terminate();
+  });
 }
 
 const workerBuilds = new Map<string, Promise<Response>>();
@@ -111,27 +132,44 @@ async function pageWorker(name: string, development: boolean, distDir: string): 
     return new Response(prebuilt, { headers: { "Content-Type": "text/javascript" } });
   let pending = workerBuilds.get(name);
   if (!pending) {
-    pending = Bun.build({ entrypoints: [entry], target: "browser", format: "esm", minify: !development }).then(
-      async result => {
-        if (!result.success) return new Response(result.logs.map(String).join("\n"), { status: 500 });
-        return new Response(await result.outputs[0].text(), { headers: { "Content-Type": "text/javascript" } });
+    pending = Bun.build({
+      entrypoints: [entry],
+      target: "browser",
+      format: "esm",
+      minify: !development,
+    }).then(
+      async (result) => {
+        if (!result.success)
+          return new Response(result.logs.map(String).join("\n"), { status: 500 });
+        return new Response(await result.outputs[0].text(), {
+          headers: { "Content-Type": "text/javascript" },
+        });
       },
-      error => new Response(`worker build failed: ${(error as Error).message}`, { status: 500 }),
+      (error) => new Response(`worker build failed: ${(error as Error).message}`, { status: 500 }),
     );
     if (!development) workerBuilds.set(name, pending);
   }
-  return pending.then(res => res.clone());
+  return pending.then((res) => res.clone());
 }
 
 export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServer> {
-  const dataDir = resolve(options.dataDir ?? process.env.BUN_WEBOS_DATA ?? join(homedir(), ".bun-webos"));
+  const dataDir = resolve(
+    options.dataDir ?? process.env.BUN_WEBOS_DATA ?? join(homedir(), ".bun-webos"),
+  );
   const root = resolve(options.root ?? join(dataDir, "home"));
   mkdirSync(root, { recursive: true });
   const development = options.development ?? process.env.NODE_ENV !== "production";
   const distDir = resolve(options.distDir ?? join(import.meta.dir, "dist"));
   const wasmDir = resolve(options.wasmDir ?? join(distDir, "wasm"));
-  const policy: HostAccessPolicy = { enabled: options.hostAccess ?? true };
+  const trustedOrigins = options.trustedOrigins?.map((origin) => {
+    const parsed = new URL(origin);
+    if (!["http:", "https:"].includes(parsed.protocol) || parsed.origin !== origin)
+      throw new TypeError("trustedOrigins must contain exact HTTP(S) origins");
+    return origin;
+  });
+  const policy: HostAccessPolicy = { enabled: options.hostAccess ?? true, trustedOrigins };
   const store = new WebOSStore(join(dataDir, "webos.sqlite"));
+  const explorer = createExplorer(options.explorer);
   const children = new Map<number, Subprocess>();
   const track = (proc: Subprocess) => {
     children.set(proc.pid, proc);
@@ -150,7 +188,8 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
         return fail(error);
       }
     };
-  const query = (req: Request, key: string, fallback = "/") => new URL(req.url).searchParams.get(key) ?? fallback;
+  const query = (req: Request, key: string, fallback = "/") =>
+    new URL(req.url).searchParams.get(key) ?? fallback;
   const startedAt = Date.now();
 
   const server: WebOSServer = Bun.serve<PtyData>({
@@ -159,10 +198,20 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
     development: development ? { hmr: true, console: true } : false,
     routes: {
       "/": index,
+      "/api/explorer/:action": {
+        GET: host((req) => explorer.handle(new URL(req.url).pathname.split("/").at(-1)!, req)),
+      },
+      "/api/explorer/chat": { POST: host((req) => explorer.handle("chat", req)) },
 
-      "/api/webos/system": { GET: async () => json(await systemSnapshot()) },
+      "/api/webos/system": { GET: host(async () => json(await systemSnapshot())) },
       "/api/webos/capabilities": {
         GET: async (req: Request, srv: WebOSServer) => {
+          if (denyHostAccess(req, srv, policy) !== null)
+            return json({
+              hostAccess: false,
+              terminal: null,
+              bunWasm: await Bun.file(join(wasmDir, "bun", "bun_wasm.wasm")).exists(),
+            });
           const shell = await terminalShell();
           return json({
             hostAccess: denyHostAccess(req, srv, policy) === null,
@@ -173,7 +222,7 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
         },
       },
       "/api/metrics": {
-        GET: () => {
+        GET: host(() => {
           const memory = process.memoryUsage();
           return json({
             bunVersion: Bun.version,
@@ -184,11 +233,11 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
             arch: process.arch,
             cpus: navigator.hardwareConcurrency,
           });
-        },
+        }),
       },
 
       "/api/os/exec": {
-        POST: host(async req => {
+        POST: host(async (req) => {
           const { command } = await body<{ command?: string }>(req);
           if (!command?.trim()) return json({ error: "command is required" }, 400);
           const result = await runShell(command, root);
@@ -197,7 +246,7 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
         }),
       },
       "/api/os/eval": {
-        POST: host(async req => {
+        POST: host(async (req) => {
           const { code } = await body<{ code?: string }>(req);
           if (!code?.trim()) return json({ error: "code is required" }, 400);
           const result = await evalJs(code, root, track);
@@ -213,46 +262,57 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
           return json({ error: "WebSocket upgrade expected" }, 426);
         }),
       },
-      "/api/os/history": { GET: host(req => json(store.history(Number(query(req, "limit", "100"))))) },
+      "/api/os/history": {
+        GET: host((req) => json(store.history(Number(query(req, "limit", "100"))))),
+      },
 
-      "/api/os/vfs/list": { GET: host(async req => json(await listDir(root, query(req, "path")))) },
-      "/api/os/vfs/read": { GET: host(async req => json(await readFile(root, query(req, "path")))) },
+      "/api/os/vfs/list": {
+        GET: host(async (req) => json(await listDir(root, query(req, "path")))),
+      },
+      "/api/os/vfs/read": {
+        GET: host(async (req) => json(await readFile(root, query(req, "path")))),
+      },
       "/api/os/vfs/raw": {
-        GET: host(async req => {
+        GET: host(async (req) => {
           return new Response(Bun.file(await resolveInRoot(root, query(req, "path"))));
         }),
       },
       "/api/os/vfs/search": {
-        GET: host(async req => json(await search(root, query(req, "path"), query(req, "pattern", "**/*")))),
+        GET: host(async (req) =>
+          json(await search(root, query(req, "path"), query(req, "pattern", "**/*"))),
+        ),
       },
       "/api/os/vfs/archive": {
-        GET: host(async req => {
+        GET: host(async (req) => {
           const { name, blob } = await archiveDir(root, query(req, "path"));
           return new Response(blob, {
-            headers: { "Content-Type": "application/gzip", "Content-Disposition": `attachment; filename="${name}"` },
+            headers: {
+              "Content-Type": "application/gzip",
+              "Content-Disposition": `attachment; filename="${name}"`,
+            },
           });
         }),
       },
       "/api/os/vfs/write": {
-        POST: host(async req => {
+        POST: host(async (req) => {
           const { path, text } = await body<{ path: string; text: string }>(req);
           return json({ written: await writeFile(root, path, text ?? "") });
         }),
       },
       "/api/os/vfs/mkdir": {
-        POST: host(async req => {
+        POST: host(async (req) => {
           await makeDir(root, (await body<{ path: string }>(req)).path);
           return json({ ok: true });
         }),
       },
       "/api/os/vfs/remove": {
-        POST: host(async req => {
+        POST: host(async (req) => {
           await remove(root, (await body<{ path: string }>(req)).path);
           return json({ ok: true });
         }),
       },
       "/api/os/vfs/move": {
-        POST: host(async req => {
+        POST: host(async (req) => {
           const { from, to } = await body<{ from: string; to: string }>(req);
           await move(root, from, to);
           return json({ ok: true });
@@ -260,11 +320,13 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
       },
 
       "/api/os/processes": {
-        GET: host(async () => json({ ...(await listProcesses(new Set(children.keys()))), serverPid: process.pid })),
+        GET: host(async () =>
+          json({ ...(await listProcesses(new Set(children.keys()))), serverPid: process.pid }),
+        ),
       },
       "/api/os/apk/packages": { GET: host(async () => json(await listSystemPackages(root))) },
       "/api/os/apk/install": {
-        POST: host(async req => {
+        POST: host(async (req) => {
           const { name } = await body<{ name: string }>(req);
           const result = installSystemPackage(name);
           return json(result, result.ok ? 200 : 501);
@@ -274,15 +336,19 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
       "/api/ffi/probe": { GET: () => json(probeDlopen()) },
       "/api/ffi/cc": {
         POST: async (req: Request) => {
-          const { pairs } = await body<{ pairs?: [number, number][] }>(req).catch(() => ({ pairs: undefined }));
-          return json(await runCc((pairs ?? [[84, 36]]).slice(0, 16).map(([a, b]) => [a | 0, b | 0])));
+          const { pairs } = await body<{ pairs?: [number, number][] }>(req).catch(() => ({
+            pairs: undefined,
+          }));
+          return json(
+            await runCc((pairs ?? [[84, 36]]).slice(0, 16).map(([a, b]) => [a | 0, b | 0])),
+          );
         },
       },
 
       "/api/benchmarks/run": {
         POST: async () => {
           try {
-            return json({ results: await runBenchmarksInWorker() });
+            return json({ results: await runBenchmarksInWorker(distDir, development) });
           } catch (error) {
             return fail(error);
           }
@@ -290,9 +356,14 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
       },
       "/api/transpile": {
         POST: async (req: Request) => {
-          const { code, loader } = await body<{ code?: string; loader?: "tsx" | "ts" | "jsx" | "js" }>(req);
+          const { code, loader } = await body<{
+            code?: string;
+            loader?: "tsx" | "ts" | "jsx" | "js";
+          }>(req);
           try {
-            return json({ code: new Bun.Transpiler({ loader: loader ?? "tsx" }).transformSync(code ?? "") });
+            return json({
+              code: new Bun.Transpiler({ loader: loader ?? "tsx" }).transformSync(code ?? ""),
+            });
           } catch (error) {
             return json({ error: (error as Error).message }, 400);
           }
@@ -300,7 +371,9 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
       },
       "/api/password/hash": {
         POST: async (req: Request) => {
-          const { password, algorithm } = await body<{ password?: string; algorithm?: string }>(req);
+          const { password, algorithm } = await body<{ password?: string; algorithm?: string }>(
+            req,
+          );
           const hash = await Bun.password.hash(password ?? "", {
             algorithm: algorithm === "bcrypt" ? "bcrypt" : "argon2id",
           });
@@ -311,7 +384,9 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
         POST: async (req: Request) => {
           const raw = new TextEncoder().encode((await body<{ text?: string }>(req)).text ?? "");
           const compressed = Bun.deflateSync(raw);
-          const pct = raw.byteLength ? ((compressed.byteLength / raw.byteLength) * 100).toFixed(1) : "0";
+          const pct = raw.byteLength
+            ? ((compressed.byteLength / raw.byteLength) * 100).toFixed(1)
+            : "0";
           return json({
             ratio: `${raw.byteLength} bytes -> ${compressed.byteLength} bytes (${pct}%)`,
             compressedSize: compressed.byteLength,
@@ -330,9 +405,12 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
             })
             .on("p", {
               element(el) {
-                el.after(`<footer class="m3-footer"><small>Rewritten at ${new Date().toISOString()}</small></footer>`, {
-                  html: true,
-                });
+                el.after(
+                  `<footer class="m3-footer"><small>Rewritten at ${new Date().toISOString()}</small></footer>`,
+                  {
+                    html: true,
+                  },
+                );
               },
             })
             .transform(new Response(html))
@@ -342,7 +420,8 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
       },
 
       "/dist/workers/:name": {
-        GET: (req: Bun.BunRequest<"/dist/workers/:name">) => pageWorker(req.params.name, development, distDir),
+        GET: (req: Bun.BunRequest<"/dist/workers/:name">) =>
+          pageWorker(req.params.name, development, distDir),
       },
       "/dist/wasm/*": {
         GET: async (req: Request) => {
@@ -366,7 +445,12 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
           const proc = Bun.spawn(shell.cmd, {
             argv0: shell.argv0,
             cwd: ws.data.cwd,
-            env: { ...shell.env, TERM: "xterm-256color", COLUMNS: String(ws.data.cols), LINES: String(ws.data.rows) },
+            env: {
+              ...shell.env,
+              TERM: "xterm-256color",
+              COLUMNS: String(ws.data.cols),
+              LINES: String(ws.data.rows),
+            },
             terminal: {
               cols: ws.data.cols,
               rows: ws.data.rows,
@@ -378,8 +462,15 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
           ws.data.proc = proc;
           track(proc);
           store.record("pty", shell.name, null, null);
-          ws.send(JSON.stringify({ type: "started", shell: shell.name, bunsh: shell.bunsh, pid: proc.pid }));
-          void proc.exited.then(code => {
+          ws.send(
+            JSON.stringify({
+              type: "started",
+              shell: shell.name,
+              bunsh: shell.bunsh,
+              pid: proc.pid,
+            }),
+          );
+          void proc.exited.then((code) => {
             if (ws.readyState === 1) {
               ws.send(JSON.stringify({ type: "exit", code }));
               ws.close(1000, "shell exited");
@@ -414,8 +505,9 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
     try {
       await stop(closeActiveConnections);
     } finally {
-      await Promise.allSettled(running.map(proc => proc.exited));
+      await Promise.allSettled(running.map((proc) => proc.exited));
       store.close();
+      explorer.close();
     }
   };
   return server;
@@ -432,6 +524,10 @@ if (import.meta.main) {
     hostname: flag("--hostname"),
     root: flag("--root"),
     dataDir: flag("--data"),
+    distDir: flag("--dist"),
+    explorer: flag("--index")
+      ? { databasePath: flag("--index"), volume: flag("--volume") }
+      : undefined,
   });
   console.log(`Bun WebOS on ${server.url} (Bun ${Bun.version})`);
 }

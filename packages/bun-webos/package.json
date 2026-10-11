@@ -1,16 +1,33 @@
 {
   "name": "@aphrody/bun-webos",
   "version": "1.4.4",
-  "private": true,
   "description": "WebOS served by Bun: every app calls a native Bun API (Bun.serve, Bun Shell, Bun.Terminal, bun:sqlite, bun:ffi, Bun.Archive, Bun.Glob, Bun.markdown, workers)",
   "license": "Apache-2.0",
+  "bin": {
+    "bun-webos": "./server.ts"
+  },
+  "files": [
+    "src",
+    "server.ts",
+    "build.ts",
+    "scripts",
+    "bunfig.toml",
+    "index.html",
+    "desktop",
+    "examples",
+    "public-site",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
   "type": "module",
   "module": "server.ts",
   "exports": {
-    ".": "./server.ts"
+    ".": "./server.ts",
+    "./tailwind": "./src/tailwind.ts"
   },
-  "bin": {
-    "bun-webos": "./server.ts"
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "dev": "bun --hot server.ts",
@@ -19,6 +36,7 @@
     "test": "bun test ./test"
   },
   "dependencies": {
+    "@aphrody/bun-plugin-tailwind": "file:../bun-plugin-tailwind",
     "@aphrody/m3-tokens": "^3.3.7",
     "@bjorn3/browser_wasi_shim": "^0.4.2",
     "@fluentui/tokens": "1.0.0-alpha.24",
@@ -29,10 +47,12 @@
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
-    "@aphrody/bun-plugin-tailwind": "file:../bun-plugin-tailwind",
     "@aphrody/bun-types": "file:../bun-types",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "tailwindcss": "^4.3.3"
-  }
+  },
+  "bundledDependencies": [
+    "@aphrody/bun-plugin-tailwind"
+  ]
 }

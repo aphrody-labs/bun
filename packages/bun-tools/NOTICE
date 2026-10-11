@@ -1,0 +1,7 @@
+Host orchestration, metadata index/cache and proxy capabilities adapted from
+aphrody-labs/omar at d565a5a67d570e3648c091c351698781fb24bf54,
+on the owner's explicit request to migrate them into public Bun interfaces.
+The upstream root has no tracked LICENSE file. This notice records provenance;
+it does not assign a license to the preserved upstream snapshot.
+The destination package retains its existing MIT license declaration.
+Personal deployment manifests and private stores remain outside public APIs.

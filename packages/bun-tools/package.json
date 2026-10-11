@@ -1,11 +1,29 @@
 {
   "name": "@aphrody/bun-tools",
   "version": "1.4.4",
-  "private": true,
-  "type": "module",
+  "private": false,
+  "description": "Native Bun tools, configurable host metadata indexing, cache publication, event streams and CONNECT proxy",
   "license": "MIT",
-  "description": "rclone (CLI + librclone FFI) et rsync natifs du fork Bun, depuis la release aphrody-tools d'aphrody-labs/bun",
+  "bin": {
+    "bun-host": "./src/cli.ts"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "NOTICE"
+  ],
+  "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./indexing": "./src/indexing/index.ts",
+    "./connect-proxy": "./src/connect-proxy.ts",
+    "./system-stream": "./src/system-stream.ts",
+    "./task-service": "./src/task-service.ts"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "bun": ">=1.4.4"
   }
 }

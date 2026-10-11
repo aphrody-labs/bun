@@ -1,0 +1,3 @@
+# Tailwind (Material 3 tokens) for the HTML import served by startWebOS() in development.
+[serve.static]
+plugins = ["@aphrody/bun-plugin-tailwind"]

@@ -17,7 +17,20 @@ interface DockProps {
 }
 
 export const DOCK_ITEMS: DockItemConfig[] = [
-  { id: "bunsh", title: "Terminal (bunsh)", icon: "💻", color: "bg-zinc-800", size: { width: 760, height: 460 } },
+  {
+    id: "index-explorer",
+    title: "Index explorer",
+    icon: "✦",
+    color: "bg-indigo-700",
+    size: { width: 920, height: 600 },
+  },
+  {
+    id: "bunsh",
+    title: "Terminal (bunsh)",
+    icon: "💻",
+    color: "bg-zinc-800",
+    size: { width: 760, height: 460 },
+  },
   {
     id: "kernel-monitor",
     title: "Moniteur système",
@@ -25,11 +38,41 @@ export const DOCK_ITEMS: DockItemConfig[] = [
     color: "bg-gradient-to-tr from-purple-700 to-indigo-600",
     size: { width: 780, height: 490 },
   },
-  { id: "files", title: "Fichiers", icon: "🗂️", color: "bg-sky-600", size: { width: 860, height: 520 } },
-  { id: "processes", title: "Processus", icon: "⚙️", color: "bg-zinc-700", size: { width: 640, height: 440 } },
-  { id: "bun-repl", title: "Bun REPL", icon: "🥟", color: "bg-amber-600", size: { width: 700, height: 460 } },
-  { id: "apk-manager", title: "Paquets système", icon: "📦", color: "bg-blue-500", size: { width: 760, height: 500 } },
-  { id: "diagnostics", title: "Diagnostics", icon: "📊", color: "bg-indigo-600", size: { width: 820, height: 510 } },
+  {
+    id: "files",
+    title: "Fichiers",
+    icon: "🗂️",
+    color: "bg-sky-600",
+    size: { width: 860, height: 520 },
+  },
+  {
+    id: "processes",
+    title: "Processus",
+    icon: "⚙️",
+    color: "bg-zinc-700",
+    size: { width: 640, height: 440 },
+  },
+  {
+    id: "bun-repl",
+    title: "Bun REPL",
+    icon: "🥟",
+    color: "bg-amber-600",
+    size: { width: 700, height: 460 },
+  },
+  {
+    id: "apk-manager",
+    title: "Paquets système",
+    icon: "📦",
+    color: "bg-blue-500",
+    size: { width: 760, height: 500 },
+  },
+  {
+    id: "diagnostics",
+    title: "Diagnostics",
+    icon: "📊",
+    color: "bg-indigo-600",
+    size: { width: 820, height: 510 },
+  },
   {
     id: "fluent-windows",
     title: "Windows 11 (Fluent 2)",
@@ -37,7 +80,13 @@ export const DOCK_ITEMS: DockItemConfig[] = [
     color: "bg-sky-700",
     size: { width: 720, height: 460 },
   },
-  { id: "ffi", title: "bun:ffi", icon: "🔌", color: "bg-slate-600", size: { width: 720, height: 480 } },
+  {
+    id: "ffi",
+    title: "bun:ffi",
+    icon: "🔌",
+    color: "bg-slate-600",
+    size: { width: 720, height: 480 },
+  },
   {
     id: "bun-apis",
     title: "Bun API Playground",
@@ -45,7 +94,13 @@ export const DOCK_ITEMS: DockItemConfig[] = [
     color: "bg-orange-600",
     size: { width: 900, height: 580 },
   },
-  { id: "benchmarks", title: "Bun Benchmarks", icon: "⏱️", color: "bg-teal-600", size: { width: 900, height: 580 } },
+  {
+    id: "benchmarks",
+    title: "Bun Benchmarks",
+    icon: "⏱️",
+    color: "bg-teal-600",
+    size: { width: 900, height: 580 },
+  },
   {
     id: "m3-fusion",
     title: "Material 3 Theme Studio",
@@ -53,10 +108,16 @@ export const DOCK_ITEMS: DockItemConfig[] = [
     color: "bg-purple-600",
     size: { width: 860, height: 540 },
   },
-  { id: "arcade", title: "Dragon Pixel", icon: "🎮", color: "bg-amber-500", size: { width: 940, height: 600 } },
+  {
+    id: "arcade",
+    title: "Dragon Pixel",
+    icon: "🎮",
+    color: "bg-amber-500",
+    size: { width: 940, height: 600 },
+  },
 ];
 
-const APP_IDS = new Set<string>(DOCK_ITEMS.map(item => item.id));
+const APP_IDS = new Set<string>(DOCK_ITEMS.map((item) => item.id));
 
 export function isAppId(id: string): id is AppId {
   return APP_IDS.has(id);
@@ -78,8 +139,8 @@ export const Dock: React.FC<DockProps> = ({ windows, onToggleApp, onOpenCommandP
         <div className="w-px h-8 shrink-0 bg-[var(--md-sys-color-outline-variant)] my-auto mx-1" />
 
         {/* Application Dock Icons */}
-        {DOCK_ITEMS.map(item => {
-          const win = windows.find(w => w.id === item.id);
+        {DOCK_ITEMS.map((item) => {
+          const win = windows.find((w) => w.id === item.id);
           const isOpen = Boolean(win?.isOpen);
           const isMinimized = Boolean(win?.isMinimized);
 
@@ -103,7 +164,9 @@ export const Dock: React.FC<DockProps> = ({ windows, onToggleApp, onOpenCommandP
                 {isOpen && (
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${
-                      isMinimized ? "bg-[var(--md-sys-color-outline)]" : "bg-[var(--md-sys-color-primary)]"
+                      isMinimized
+                        ? "bg-[var(--md-sys-color-outline)]"
+                        : "bg-[var(--md-sys-color-primary)]"
                     }`}
                   />
                 )}

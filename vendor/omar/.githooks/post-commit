@@ -1,0 +1,6 @@
+#!/bin/sh
+
+branch=$(git symbolic-ref --quiet --short HEAD) || exit 0
+[ "$branch" = "main" ] || exit 0
+
+git push --quiet origin HEAD:main

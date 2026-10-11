@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
-import { isLinux, tempDir } from "harness";
+import { bunEnv, bunExe, isLinux, tempDir } from "harness";
 import { join } from "node:path";
 import { Budget, Supervisor } from "../../../../packages/bun-supervisor/src";
+import { ServiceSupervisor } from "../../../../packages/bun-supervisor/src/services";
+import { planWindowsService } from "../../../../packages/bun-supervisor/src/windows-service-plan";
 
 const src = join(import.meta.dir, "../../../../packages/bun-supervisor/src").replaceAll("\\", "/");
 
@@ -38,6 +40,231 @@ function make(extra: Record<string, unknown> = {}) {
   });
   return { sup, logs };
 }
+
+describe("Windows service plan", () => {
+  test("quotes argv for NSSM without applying a service or starting it", () => {
+    const plan = planWindowsService({
+      name: "BunWorker",
+      nssmPath: "C:\\tools\\nssm.exe",
+      executable: "C:\\tools\\bun.exe",
+      directory: "C:\\apps\\worker",
+      existing: true,
+      start: "manual",
+      args: ["run", "C:\\Program Files\\worker.ts", "", 'a"b', "C:\\trailing path\\"],
+    });
+    expect(plan.commands.some((command) => command[1] === "install")).toBe(false);
+    expect(plan.commands.some((command) => command[1] === "start")).toBe(false);
+    expect(plan.startsService).toBe(false);
+    expect(plan.commands.find((command) => command[3] === "AppParameters")?.[4]).toBe(
+      'run "C:\\Program Files\\worker.ts" "" "a\\"b" "C:\\trailing path\\\\"',
+    );
+    expect(plan.commands.find((command) => command[3] === "Start")?.[4]).toBe(
+      "SERVICE_DEMAND_START",
+    );
+  });
+
+  test("rejects relative executables and control characters", () => {
+    const options = {
+      name: "BunWorker",
+      nssmPath: "C:\\tools\\nssm.exe",
+      executable: "C:\\tools\\bun.exe",
+      directory: "C:\\apps",
+    };
+    expect(() => planWindowsService({ ...options, executable: "bun.exe" })).toThrow("absolute");
+    expect(() => planWindowsService({ ...options, args: ["bad\nargument"] })).toThrow("argument");
+    expect(() => planWindowsService({ ...options, name: "worker/other" })).toThrow("name");
+  });
+});
+
+describe("ServiceSupervisor", () => {
+  test("rejects duplicate IDs, traversal, reserved filenames and invalid commands", () => {
+    const service = { id: "worker", command: [bunExe(), "-e", idle] };
+    expect(
+      () => new ServiceSupervisor({ services: [service, { ...service, id: "WORKER" }] }),
+    ).toThrow("duplicate");
+    for (const id of ["../outside", "a/b", "a\\b", "CON", "nul", ""]) {
+      expect(() => new ServiceSupervisor({ services: [{ ...service, id }] })).toThrow("Invalid");
+    }
+    expect(() => new ServiceSupervisor({ services: [{ ...service, command: [] }] })).toThrow(
+      "command",
+    );
+    expect(() => new ServiceSupervisor({ services: [service], probeTimeoutMs: 0 })).toThrow(
+      "probeTimeoutMs",
+    );
+  });
+
+  test("uses configured cwd/env/logs and writes the final stopped snapshot", async () => {
+    using dir = tempDir("service-supervisor", {});
+    const logDirectory = join(String(dir), "logs");
+    const statusFile = join(String(dir), "status.json");
+    const sup = new ServiceSupervisor({
+      cwd: String(dir),
+      env: { ...bunEnv, SERVICE_TEST_VALUE: "shared" },
+      logDirectory,
+      statusFile,
+      healthPort: 0,
+      signals: false,
+      services: [
+        {
+          id: "worker",
+          env: { SERVICE_TEST_VALUE: "override" },
+          command: [
+            bunExe(),
+            "-e",
+            `console.log(JSON.stringify({cwd:process.cwd(),value:process.env.SERVICE_TEST_VALUE})); ${idle}`,
+          ],
+        },
+      ],
+    });
+    let pid: number | null = null;
+    try {
+      await sup.start();
+      const line = await waitFor(() => {
+        const file = join(logDirectory, "worker.log");
+        return existsSync(file) && readFileSync(file, "utf8").trim();
+      });
+      expect(JSON.parse(line)).toEqual({ cwd: String(dir), value: "override" });
+      const response = await fetch(sup.healthUrl!);
+      expect(response.status).toBe(200);
+      expect((await response.json()).ok).toBe(true);
+      const rebound = await fetch(sup.healthUrl!, {
+        headers: { Host: "evil.example", Origin: "http://evil.example" },
+      });
+      expect(rebound.status).toBe(403);
+      await rebound.body?.cancel();
+      pid = sup.status().services[0]!.pid;
+    } finally {
+      await sup.stop();
+    }
+    expect(pid).not.toBeNull();
+    expect(alive(pid!)).toBe(false);
+    expect(JSON.parse(readFileSync(statusFile, "utf8")).services[0].state).toBe("stopped");
+    expect(sup.healthUrl).toBeUndefined();
+    await expect(sup.start()).rejects.toThrow("stopped");
+  });
+
+  test("health follows HTTP probe results", async () => {
+    let ready = false;
+    const health = Bun.serve({
+      port: 0,
+      hostname: "127.0.0.1",
+      fetch: () => new Response("health", { status: ready ? 200 : 503 }),
+    });
+    const sup = new ServiceSupervisor({
+      signals: false,
+      healthPort: 0,
+      env: bunEnv,
+      services: [
+        {
+          id: "worker",
+          command: [bunExe(), "-e", idle],
+          health: `http://127.0.0.1:${health.port}`,
+        },
+      ],
+    });
+    try {
+      await sup.start();
+      const bad = await fetch(sup.healthUrl!);
+      expect(bad.status).toBe(503);
+      await bad.body?.cancel();
+      ready = true;
+      await sup.probe();
+      expect(sup.status().services[0]!.healthy).toBe(true);
+      const good = await fetch(sup.healthUrl!);
+      expect(good.status).toBe(200);
+      await good.body?.cancel();
+    } finally {
+      await sup.stop();
+      await health.stop(true);
+    }
+  });
+
+  test("cancels restart backoff on stop and honors clean on-failure exits", async () => {
+    const sup = new ServiceSupervisor({
+      signals: false,
+      env: bunEnv,
+      backoff: { baseMs: 60_000, maxMs: 60_000 },
+      services: [
+        { id: "crash", command: [bunExe(), "-e", "process.exit(3)"] },
+        { id: "clean", command: [bunExe(), "-e", "process.exit(0)"], restart: "on-failure" },
+      ],
+    });
+    try {
+      await sup.start();
+      await waitFor(
+        () =>
+          sup.status().services[0]!.state === "backoff" &&
+          sup.status().services[1]!.state === "exited",
+      );
+      expect(sup.status().services.map((service) => service.restarts)).toEqual([1, 0]);
+    } finally {
+      await sup.stop();
+    }
+    expect(sup.status().services.map((service) => [service.state, service.pid])).toEqual([
+      ["stopped", null],
+      ["stopped", null],
+    ]);
+  });
+
+  test("failed initial snapshot releases children and health server", async () => {
+    using dir = tempDir("service-supervisor-failure", {});
+    let pid: number | undefined;
+    const sup = new ServiceSupervisor({
+      signals: false,
+      healthPort: 0,
+      statusFile: String(dir),
+      env: bunEnv,
+      services: [{ id: "worker", command: [bunExe(), "-e", idle] }],
+      log: (event) => {
+        if (event.event === "started") pid = event.pid;
+      },
+    });
+    try {
+      await expect(sup.start()).rejects.toThrow();
+    } finally {
+      await sup.stop().catch(() => {});
+    }
+    expect(pid).toBeDefined();
+    expect(alive(pid!)).toBe(false);
+    expect(sup.healthUrl).toBeUndefined();
+  });
+
+  test.skipIf(process.platform !== "win32")(
+    "Windows Job closes descendants during stop",
+    async () => {
+      using dir = tempDir("service-supervisor-job", {});
+      const sup = new ServiceSupervisor({
+        signals: false,
+        logDirectory: String(dir),
+        env: bunEnv,
+        services: [
+          {
+            id: "parent",
+            command: [
+              bunExe(),
+              "-e",
+              `const child=Bun.spawn({cmd:[process.execPath,"-e",${JSON.stringify(idle)}],stdin:"ignore",stdout:"ignore",stderr:"ignore"}); console.log(child.pid); ${idle}`,
+            ],
+          },
+        ],
+      });
+      let descendant: number | undefined;
+      try {
+        await sup.start();
+        descendant = await waitFor(() => {
+          const file = join(String(dir), "parent.log");
+          return existsSync(file) && Number(readFileSync(file, "utf8").trim());
+        });
+        expect(alive(descendant)).toBe(true);
+        await sup.stop();
+        await waitFor(() => !alive(descendant!));
+      } finally {
+        await sup.stop();
+        if (descendant && alive(descendant)) process.kill(descendant, "SIGKILL");
+      }
+    },
+  );
+});
 
 describe("Supervisor", () => {
   test("restarts a crashing child with exponential backoff", async () => {
