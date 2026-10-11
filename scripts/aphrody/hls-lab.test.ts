@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import { cookieHeader, normalizeCookieExport, rewritePlaylist } from "./hls-lab-core";
+import {
+  cookieHeader,
+  normalizeCookieExport,
+  parseCookieBundle,
+  rewritePlaylist,
+} from "./hls-lab-core";
 
 const cookie = {
   name: "session",
@@ -66,4 +71,35 @@ test("HLS maps, variants and media retain base URL resolution", () => {
     "https://example.com/vod/variant.m3u8?token=synthetic",
     "https://example.com/vod/part.m4s",
   ]);
+});
+
+test("credential JSON round-trip keeps native Bun and Chromium cookie projections consistent", () => {
+  const bundle = normalizeCookieExport([
+    cookie,
+    { ...cookie, name: "host", domain: "www.example.com", hostOnly: true },
+  ]);
+  const restored = parseCookieBundle(JSON.parse(JSON.stringify(bundle)));
+  expect(restored).toEqual(bundle);
+  expect(new Bun.Cookie(restored.bun[0]!).httpOnly).toBe(true);
+  expect(cookieHeader(restored.chromium, new URL("https://www.example.com/watch/episode"))).toBe(
+    "session=synthetic; host=synthetic",
+  );
+  expect(cookieHeader(restored.chromium, new URL("https://foreign.example.test/watch"))).toBe("");
+});
+
+test("inconsistent credential projections and malformed source URLs do not appear in errors", () => {
+  const bundle = normalizeCookieExport([cookie]);
+  bundle.bun[0]!.value = "private-fixture-secret";
+  expect(() => parseCookieBundle(bundle)).toThrow("Invalid or inconsistent");
+  const invalid = {
+    schemaVersion: 1,
+    bun: [],
+    chromium: [{ name: "x", value: "private-fixture-secret", url: "private-fixture-secret" }],
+  };
+  try {
+    parseCookieBundle(invalid);
+    throw new Error("Expected invalid credential");
+  } catch (error) {
+    expect((error as Error).message).toBe("Invalid or inconsistent Bun/Chromium cookie bundle.");
+  }
 });

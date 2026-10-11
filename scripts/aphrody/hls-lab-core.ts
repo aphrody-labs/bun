@@ -150,6 +150,27 @@ export function normalizeCookieExport(input: unknown): CookieBundle {
   return bundle;
 }
 
+export function parseCookieBundle(input: unknown): CookieBundle {
+  try {
+    const raw = input as CookieBundle;
+    if (raw?.schemaVersion !== 1 || !Array.isArray(raw.chromium) || !Array.isArray(raw.bun))
+      throw new Error();
+    const normalized = normalizeCookieExport(
+      raw.chromium.map((cookie) => ({
+        ...cookie,
+        domain: cookie.domain ?? new URL(String(cookie.url)).hostname,
+        hostOnly: !cookie.domain,
+        expirationDate: cookie.expires,
+        session: cookie.expires === undefined,
+      })),
+    );
+    if (JSON.stringify(normalized.bun) !== JSON.stringify(raw.bun)) throw new Error();
+    return normalized;
+  } catch {
+    throw new Error("Invalid or inconsistent Bun/Chromium cookie bundle.");
+  }
+}
+
 export function cookieHeader(
   cookies: readonly ChromiumCookie[],
   url: URL,

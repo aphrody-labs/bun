@@ -11,6 +11,7 @@ entry points are explicit so importing a server API does not initialize a player
 | `@aphrody/bun-video/bitmovin` | Official player loading and Bun browser bundling |
 | `@aphrody/bun-video/crunchyroll` | Migrated native fetch client |
 | `@aphrody/bun-video/oauth` | Owner-configured authorization-code PKCE, refresh and revocation |
+| `@aphrody/bun-video/secrets` | Native OS JSON credential storage with bounded Windows entries |
 
 HLS reuses `@aphrody/bun-runtime-sdk/video/hls`, including synchronous listener
 registration, URL validation, explicit worker origin checks and cleanup. The
@@ -37,7 +38,9 @@ The [multilingual shortcuts](shortcuts.md) provide an MV3 extension and a Bun-se
 local PWA shell; installation remains a separate Chrome gate. The launcher selects
 the unique Google Chrome process and excludes concurrently running BunChromium
 test browsers. Multiple Google Chrome roots still fail as ambiguous.
-Private cookies remain in the owner's protected cookie store; the ignored
-checkout `cookie.json` is a link. HAR files and signed manifests stay ignored.
+Active lab cookies are read from Bun.secrets and Windows Credential Manager;
+the ignored checkout `cookie.json` is a link to a non-secret reference descriptor.
+The original protected input remains available for rollback. See the
+[native credential workflow](secrets.md). HAR files and signed manifests stay ignored.
 Publication of npm packages or crates remains conditional on complete real
 playback and release gates; `bun-video` remains private.

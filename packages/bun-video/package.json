@@ -15,7 +15,8 @@
     "./har": "./src/har.ts",
     "./bitmovin": "./src/bitmovin.ts",
     "./crunchyroll": "./src/crunchyroll.ts",
-    "./oauth": "./src/oauth.ts"
+    "./oauth": "./src/oauth.ts",
+    "./secrets": "./src/secrets.ts"
   },
   "dependencies": {
     "@aphrody/bun-runtime-sdk": "file:../bun-runtime-sdk",

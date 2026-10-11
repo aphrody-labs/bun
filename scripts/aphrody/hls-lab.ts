@@ -3,6 +3,7 @@
 import { join, resolve } from "node:path";
 import { mkdir, symlink } from "node:fs/promises";
 import { getHlsBrowserAssetPath } from "../../packages/bun-video/src/hls";
+import { loadJsonSecret } from "../../packages/bun-video/src/secrets";
 import {
   normalizeCookieExport,
   cookieHeader,
@@ -10,6 +11,7 @@ import {
   validateHlsConfig,
   redactUrl,
   type CookieBundle,
+  parseCookieBundle,
 } from "./hls-lab-core";
 
 const root = resolve(import.meta.dir, "../..");
@@ -57,21 +59,18 @@ async function prepare() {
 }
 
 async function loadCookies(): Promise<CookieBundle> {
-  const raw = await Bun.file(cookieFile).json();
-  if (raw?.schemaVersion !== 1 || !Array.isArray(raw.chromium) || !Array.isArray(raw.bun))
-    throw new Error("Invalid cookie.json schema.");
-  const normalized = normalizeCookieExport(
-    raw.chromium.map((c: Record<string, unknown>) => ({
-      ...c,
-      domain: c.domain ?? new URL(String(c.url)).hostname,
-      hostOnly: !c.domain,
-      expirationDate: c.expires,
-      session: c.expires === undefined,
-    })),
-  );
-  if (JSON.stringify(normalized.bun) !== JSON.stringify(raw.bun))
-    throw new Error("Bun and Chromium cookie projections disagree.");
-  return normalized;
+  let raw;
+  try {
+    raw = await Bun.file(cookieFile).json();
+  } catch {
+    throw new Error("Cookie input is unreadable.");
+  }
+  if (raw?.provider === "bun.secrets") {
+    raw = await loadJsonSecret({ service: raw.service, name: raw.name });
+    if (raw === null)
+      throw new Error("Configured cookie credential is missing from the OS trousseau.");
+  }
+  return parseCookieBundle(raw);
 }
 
 async function selfCheck() {
@@ -162,7 +161,7 @@ async function selfCheck() {
 async function main() {
   if (args.includes("--help")) {
     console.log(
-      "bun run scripts/aphrody/hls-lab.ts [--prepare --cookies-from <export.json> --page <watch URL> --src <m3u8>] [--check] [--probe] [--open] [--endpoint <loopback CDP websocket>]\nPrivate inputs: C:/bun/cookie.json and C:/bun/hls.json. --check runs synthetic gates and exits. --probe performs the configured page request and exits. Default serves the local player. Chrome cookies are imported only when --import-chrome and --endpoint are both supplied.",
+      "bun bd run ./scripts/aphrody/hls-lab.ts [--prepare --cookies-from <export.json> --page <watch URL> --src <m3u8>] [--check] [--probe] [--open] [--endpoint <loopback CDP websocket>]\nPrivate inputs: C:/bun/cookie.json and C:/bun/hls.json. cookie.json may contain a bun.secrets reference instead of cookies; no plaintext fallback is used for that reference. --check runs synthetic gates and exits. --probe performs the configured page request and exits. Default serves the local player. Chrome cookies are imported only when --import-chrome and --endpoint are both supplied.",
     );
     return;
   }
