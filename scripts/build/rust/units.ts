@@ -24,7 +24,13 @@ import { dirname, isAbsolute, join, relative } from "node:path";
 import type { Config } from "../config.ts";
 import { assert } from "../error.ts";
 import { dylibPathVar, envify } from "./cargo-env.ts";
-import type { ManifestLints, MetadataPackage, RustPlan, RustcTargetInfo, UnitGraphUnit } from "./plan.ts";
+import type {
+  ManifestLints,
+  MetadataPackage,
+  RustPlan,
+  RustcTargetInfo,
+  UnitGraphUnit,
+} from "./plan.ts";
 
 export type UnitKind = "lib" | "proc-macro" | "bin" | "build-script" | "build-script-run";
 
@@ -129,8 +135,8 @@ export function buildRustGraph(plan: RustPlan, dir: string): RustGraph {
               : "lib";
     if (kind === "lib") {
       assert(
-        u.target.crate_types.some(t => t === "lib" || t === "rlib") &&
-          u.target.crate_types.every(t => t === "lib" || t === "rlib" || t === "cdylib"),
+        u.target.crate_types.some((t) => t === "lib" || t === "rlib") &&
+          u.target.crate_types.every((t) => t === "lib" || t === "rlib" || t === "cdylib"),
         `rust plan: unit ${u.target.name} has crate types ${u.target.crate_types}; only rlib libraries, proc-macros and a bin root are supported: the build links the rlibs itself, so no crate is a staticlib or cdylib`,
       );
     }
@@ -173,7 +179,10 @@ export function buildRustGraph(plan: RustPlan, dir: string): RustGraph {
     for (const d of u.dependencies) {
       const dep = units[d.index]!;
       if (dep.kind === "build-script-run" && unit.kind !== "build-script-run") {
-        assert(unit.buildScript === undefined, `rust plan: ${unit.crateName} has two build scripts`);
+        assert(
+          unit.buildScript === undefined,
+          `rust plan: ${unit.crateName} has two build scripts`,
+        );
         unit.buildScript = dep;
       } else {
         unit.deps.push({
@@ -226,13 +235,15 @@ export function buildRustGraph(plan: RustPlan, dir: string): RustGraph {
     if (unit.buildScript !== undefined) hashesOf(unit.buildScript);
     unit.symbolHash = digest([
       ...identity(unit),
-      unit.deps.map(d => [d.externName, d.unit.symbolHash]),
+      unit.deps.map((d) => [d.externName, d.unit.symbolHash]),
       unit.buildScript?.symbolHash ?? null,
     ]);
     unit.hash = digest([
       ...identity(unit),
-      unit.platform === "host" ? [] : targetRustflags.filter(f => !f.startsWith("--remap-path-prefix")),
-      unit.deps.map(d => [d.externName, d.unit.hash]),
+      unit.platform === "host"
+        ? []
+        : targetRustflags.filter((f) => !f.startsWith("--remap-path-prefix")),
+      unit.deps.map((d) => [d.externName, d.unit.hash]),
       unit.buildScript?.hash ?? null,
     ]);
   };
@@ -445,7 +456,10 @@ function rustcUnitManifest(ctx: ManifestContext, unit: RustUnit): RustcUnitManif
       : unit.isStd
         ? plan.workspaceRoot
         : dirname(unit.pkg.manifest_path);
-  const src = cwd === plan.workspaceRoot && inWorkspace ? relative(plan.workspaceRoot, unit.srcPath) : unit.srcPath;
+  const src =
+    cwd === plan.workspaceRoot && inWorkspace
+      ? relative(plan.workspaceRoot, unit.srcPath)
+      : unit.srcPath;
 
   args.push("--crate-name", unit.crateName, `--edition=${unit.edition}`, src);
   // cargo's own choice for every unit: run.ts renders the diagnostics, and a library's metadata artifact message is
@@ -454,7 +468,9 @@ function rustcUnitManifest(ctx: ManifestContext, unit: RustUnit): RustcUnitManif
   for (const t of unit.crateTypes) args.push("--crate-type", t);
   // cargo: dep-info,metadata,link for rlib-only libs (pipelining), dep-info,link for everything that links.
   args.push(
-    unit.kind === "lib" ? `--emit=dep-info=${unit.depInfo},metadata,link` : `--emit=dep-info=${unit.depInfo},link`,
+    unit.kind === "lib"
+      ? `--emit=dep-info=${unit.depInfo},metadata,link`
+      : `--emit=dep-info=${unit.depInfo},link`,
     // A library's metadata lives in its `.rmeta` alone, not a second time inside the `.rlib` (cargo does the same
     // on nightly): less to write and keep. What links the `.rlib` is given the `.rmeta` beside it (externPaths).
     ...(unit.kind === "lib" ? ["-Z", "embed-metadata=no"] : []),
@@ -477,7 +493,8 @@ function rustcUnitManifest(ctx: ManifestContext, unit: RustUnit): RustcUnitManif
   }
   // [lints] (local packages only), then `--check-cfg` from `unexpected_cfgs.check-cfg`.
   const lintSet = plan.lints[unit.pkg.id];
-  const lints: ManifestLints | undefined = lintSet === undefined ? undefined : plan.lintSets[lintSet];
+  const lints: ManifestLints | undefined =
+    lintSet === undefined ? undefined : plan.lintSets[lintSet];
   if (local && lints !== undefined) {
     args.push(...lints.flags);
     for (const c of lints.checkCfg) args.push("--check-cfg", c);
@@ -501,7 +518,7 @@ function rustcUnitManifest(ctx: ManifestContext, unit: RustUnit): RustcUnitManif
   args.push(
     "--check-cfg",
     declared.length > 0
-      ? `cfg(feature, values(${declared.map(f => JSON.stringify(f)).join(", ")}))`
+      ? `cfg(feature, values(${declared.map((f) => JSON.stringify(f)).join(", ")}))`
       : "cfg(feature, values())",
   );
   args.push("-C", `metadata=${unit.symbolHash}`);
@@ -527,12 +544,17 @@ function rustcUnitManifest(ctx: ManifestContext, unit: RustUnit): RustcUnitManif
     // `priv`: packages using cargo's `public-dependency` feature (the std crates) mark non-public deps so rustc's
     // exported_private_dependencies lint can see them.
     const priv = unit.kind === "lib" && !d.public && plan.publicDependency.includes(unit.pkg.id);
-    const opts = [priv ? "priv" : "", d.noprelude ? "noprelude" : "", d.nounused ? "nounused" : ""].filter(
-      o => o !== "",
-    );
+    const opts = [
+      priv ? "priv" : "",
+      d.noprelude ? "noprelude" : "",
+      d.nounused ? "nounused" : "",
+    ].filter((o) => o !== "");
     if (opts.length > 0) externOpts = true;
     for (const path of externPaths(unit, d.unit)) {
-      args.push("--extern", `${opts.length > 0 ? opts.join(",") + ":" : ""}${d.externName}=${path}`);
+      args.push(
+        "--extern",
+        `${opts.length > 0 ? opts.join(",") + ":" : ""}${d.externName}=${path}`,
+      );
     }
   }
   if (unit.kind === "proc-macro") args.push("--extern", "proc_macro");
@@ -568,9 +590,14 @@ function rustcUnitManifest(ctx: ManifestContext, unit: RustUnit): RustcUnitManif
     graph.root.pkg.name === "bun_runtime" &&
     unit.pkg.name === "zstd-sys"
   ) {
-    assert(unit.pkg.version.endsWith("+zstd.1.5.7"), "Bun's native Zstd provider requires Zstd 1.5.7 bindings");
     assert(
-      unit.features.every(feature => ["std", "zdict_builder", "zstdmt", "no_asm"].includes(feature)),
+      unit.pkg.version.endsWith("+zstd.1.5.7"),
+      "Bun's native Zstd provider requires Zstd 1.5.7 bindings",
+    );
+    assert(
+      unit.features.every((feature) =>
+        ["std", "zdict_builder", "zstdmt", "no_asm"].includes(feature),
+      ),
       `Bun's native Zstd provider does not support zstd-sys features: ${unit.features.join(", ")}`,
     );
     providedStaticLibraries = ["zstd"];
@@ -595,7 +622,7 @@ function rustcUnitManifest(ctx: ManifestContext, unit: RustUnit): RustcUnitManif
     // cargo build_scripts.to_link: the package's own script, then those of linkable dependencies on the *same*
     // platform — a proc-macro's (host) subgraph contributes its dylib, not its native search paths.
     depBuildScriptOutputs: transitiveLinkInputs(unit, "same-platform")
-      .map(d => d.buildScript?.output)
+      .map((d) => d.buildScript?.output)
       .filter((o): o is string => o !== undefined),
     phases: cfg.timeTrace ? rustcPhasesPath(unit.output) : undefined,
     libraryPath: libraryPath(ctx),
@@ -606,7 +633,7 @@ function buildScriptRunManifest(ctx: ManifestContext, unit: RustUnit): BuildScri
   const { graph } = ctx;
   const plan = graph.plan;
   const isHost = unit.platform === "host";
-  const compiled = unit.deps.find(d => d.unit.kind === "build-script");
+  const compiled = unit.deps.find((d) => d.unit.kind === "build-script");
   assert(
     compiled !== undefined,
     `rust plan: build-script run for ${unit.pkg.name} has no compiled build script among its dependencies`,
@@ -631,6 +658,24 @@ function buildScriptRunManifest(ctx: ManifestContext, unit: RustUnit): BuildScri
     // What the library will be compiled with (target units only get rustflags); RUSTFLAGS itself is removed by cargo.
     CARGO_ENCODED_RUSTFLAGS: isHost ? "" : plan.plannedWith.rustflags.join("\x1f"),
   };
+  if (
+    !isHost &&
+    info.triple.endsWith("-windows-msvc") &&
+    graph.root.pkg.name === "bun_runtime" &&
+    graph.root.kind === "lib" &&
+    ((unit.pkg.name === "aws-lc-sys" && unit.pkg.version === "0.45.0") ||
+      (unit.pkg.name === "tree-sitter-rust" && unit.pkg.version === "0.24.2"))
+  ) {
+    // These static C dependencies declare dllexport; retain external linkage without adding Bun addon ABI.
+    const key = `CFLAGS_${info.triple.replace(/-/g, "_")}`;
+    env[key] = [
+      env[key],
+      "/clang:-fvisibility-from-dllstorageclass",
+      "/clang:-fvisibility-dllexport=hidden",
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
   const linker = isHost ? ctx.linker.host : ctx.linker.target;
   if (linker !== undefined) env.RUSTC_LINKER = linker;
   if (unit.pkg.links !== null) env.CARGO_MANIFEST_LINKS = unit.pkg.links;
@@ -661,8 +706,8 @@ function buildScriptRunManifest(ctx: ManifestContext, unit: RustUnit): BuildScri
     }
   }
   const linksDeps = unit.deps
-    .filter(d => d.unit.kind === "build-script-run")
-    .map(d => {
+    .filter((d) => d.unit.kind === "build-script-run")
+    .map((d) => {
       assert(
         d.unit.pkg.links !== null,
         `rust plan: ${unit.pkg.name}'s build script depends on ${d.unit.pkg.name}'s, which has no links key`,
@@ -694,8 +739,14 @@ function buildScriptRunManifest(ctx: ManifestContext, unit: RustUnit): BuildScri
  */
 export function externDeps(unit: RustUnit): UnitDep[] {
   return unit.deps
-    .filter(d => d.unit.kind === "lib" || d.unit.kind === "proc-macro")
-    .sort((a, b) => (a.externName < b.externName ? -1 : a.externName > b.externName ? 1 : a.unit.index - b.unit.index));
+    .filter((d) => d.unit.kind === "lib" || d.unit.kind === "proc-macro")
+    .sort((a, b) =>
+      a.externName < b.externName
+        ? -1
+        : a.externName > b.externName
+          ? 1
+          : a.unit.index - b.unit.index,
+    );
 }
 
 /**
@@ -760,7 +811,7 @@ function stripArg(s: UnitGraphUnit["profile"]["strip"]): string | undefined {
 export function linkedRlibs(graph: RustGraph): RustUnit[] {
   const otherPanicRuntime = graph.root.profile.panic === "abort" ? "panic_unwind" : "panic_abort";
   return [graph.root, ...transitiveLinkInputs(graph.root, "same-platform")].filter(
-    unit => unit.crateName !== otherPanicRuntime,
+    (unit) => unit.crateName !== otherPanicRuntime,
   );
 }
 
@@ -770,7 +821,10 @@ export function linkedRlibs(graph: RustGraph): RustUnit[] {
  * for the other platform (a target unit's proc-macros and everything beneath them): that is cargo's
  * `build_scripts.to_link`, the set whose native search paths apply.
  */
-export function transitiveLinkInputs(unit: RustUnit, scope: "all" | "same-platform" = "all"): RustUnit[] {
+export function transitiveLinkInputs(
+  unit: RustUnit,
+  scope: "all" | "same-platform" = "all",
+): RustUnit[] {
   const seen = new Set<RustUnit>();
   const walk = (u: RustUnit) => {
     for (const d of externDeps(u)) {
