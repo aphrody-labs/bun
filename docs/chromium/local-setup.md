@@ -148,3 +148,36 @@ layout and avoids duplicate dependency management.
 The shared ignore file excludes local coordination, build outputs, depot_tools
 bootstrap state and ignored vendor downloads. It does not untrack the existing
 vendored GN source. GitHub authentication secrets remain in the credential store.
+
+## Persistent Windows command paths
+
+The local PC's machine and user PATH values were updated through `bun:windows`
+registry calls under `sudo.exe`, preserving their original registry types
+(`REG_EXPAND_SZ` and `REG_SZ`). Windows system directories take precedence.
+Duplicate entries, including the user's repeated System32 entry, were removed.
+The selected SDK 28000, Visual Studio CMake and Ninja directories are available
+system-wide; MSVC's include and library environment remains scoped to
+`bun msvc exec`. Existing unrelated tools and paths are retained.
+
+The user PATH includes `C:\bun\build\cli`, the qualified fork GN directory,
+Chromium's `out\bun`, Aphrody's installed binaries, Bun and Cargo. Local command
+wrappers route `chromium`, `depot_tools`, `depots_tools` and `gclient` through Bun
+with the correct checkout. Mutating depot_tools commands retain the setup lock;
+wait for the active browser build before running them. Chromium compilation
+continues to select its pinned tools in its child environment.
+
+The original PATH values, types, plan and readback receipt are saved locally in
+`C:\bun\build\windows-path`. The receipt records successful notification through
+Win32 `WM_SETTINGCHANGE` and `SendMessageTimeoutW`; see
+[Microsoft's notification contract](https://learn.microsoft.com/en-us/windows/win32/winmsg/wm-settingchange).
+New terminals receive the persistent configuration. Existing processes keep
+their inherited environment; reload PATH from the machine and user environment
+values when checking from an already open shell.
+
+Qualification resolved all configured command paths and ran GN 2599, Ninja
+1.13.2 and CMake 4.3.1-msvc1. `bun msvc doctor` and `sync --check` passed. A C
+program including `windows.h` compiled with `/W4 /WX` through `bun msvc exec` and
+executed successfully. The installed runtime remains
+`1.4.3-aphrody.4+41211b568`; source builds are qualified separately. Chromium's
+doctor confirms sources, depot_tools and clang, while its browser artifact is
+still pending completion of the full build.
