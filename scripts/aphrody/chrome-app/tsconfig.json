@@ -1,0 +1,18 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "typeRoots": ["../../../node_modules/@types", "../../../packages/bun-types/node_modules/@types"]
+  },
+  "include": [
+    "generate.ts",
+    "projection.ts",
+    "browser-api.ts",
+    "popup.ts",
+    "worker.ts",
+    "qualify.ts",
+    "../../../packages/bun-types/index.d.ts"
+  ]
+}
