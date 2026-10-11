@@ -1,14 +1,18 @@
 # `@aphrody/bun-plugin-supabase`
 
-A typed PostgreSQL data client for Supabase projects, implemented directly on Bun's native `Bun.SQL` pool. It provides a small `from()` query builder, PostgreSQL function calls, and a transaction-based SQL migration runner.
+A typed, server-side PostgreSQL client for Supabase projects, built on Bun's native `Bun.SQL`. It provides a small fluent query builder for tables/views, typed RPC calls, and checksum-verified SQL migrations.
 
-## Install and connect
+This package is **not** the Supabase JavaScript client, a `Bun.plugin()` module loader, or a replacement for Supabase Auth, Storage, Realtime, Edge Functions, or the PostgREST Data API. It opens a direct PostgreSQL connection. Queries therefore use the PostgreSQL role and privileges in the connection string. PostgREST JWT claims and policies such as `auth.uid()` are not automatically set for a direct connection. Use a least-privilege database role and enforce application authorization on the server; never expose the connection string in browser code.
+
+## Install
 
 ```sh
-bun add @aphrody/bun-plugin-supabase
+bun add @aphrody/bun-plugin-supabase @aphrody/bun-types
 ```
 
-Use a PostgreSQL connection string from the Supabase dashboard (direct or pooler connection):
+## Connect
+
+Use a Supabase PostgreSQL connection string from the project's database settings. The project URL and `anon`/`service_role` API keys are not PostgreSQL credentials.
 
 ```ts
 import { createClient } from "@aphrody/bun-plugin-supabase";
@@ -16,86 +20,47 @@ import { createClient } from "@aphrody/bun-plugin-supabase";
 type Database = {
   public: {
     Tables: {
-      todos: {
-        Row: { id: number; title: string; done: boolean };
-        Insert: { id?: number; title: string; done?: boolean };
-        Update: { title?: string; done?: boolean };
+      items: {
+        Row: { id: number; name: string };
+        Insert: { name: string };
+        Update: { name?: string };
       };
     };
-    Views: {};
-    Functions: {};
+    Functions: {
+      item_count: { Args: { category: string }; Returns: number };
+    };
   };
 };
 
-const supabase = createClient<Database>({
-  connectionString: process.env.SUPABASE_DB_URL!,
-  schema: "public",
+const db = createClient<Database>({
+  connectionString: Bun.env.SUPABASE_DB_URL,
 });
 
-const { data, error } = await supabase
-  .from("todos")
-  .select("id, title, done")
-  .eq("done", false)
+const { data, error } = await db
+  .from("items")
+  .select("id, name")
+  .eq("name", "example")
   .order("id")
-  .limit(50);
+  .limit(20);
 
-if (error) throw new Error(error.message);
-await supabase.close();
+await db.close();
 ```
 
-`SUPABASE_DB_URL` may be set instead of passing `connectionString`. The Supabase project URL, anon key, and service-role key are not PostgreSQL credentials and are not accepted as a database connection. Keep connection strings in the application's secret store or environment; never commit them.
+`SUPABASE_DB_URL` is the only implicit environment variable. `DATABASE_URL` is intentionally not read, which avoids accidentally connecting this client to a different provider. TLS uses certificate and hostname verification (`sslmode=verify-full`). Supabase pooler connections default to `prepare: false`; prepared statements are rejected when explicitly enabled with a pooler URL.
 
-## Supported database operations
+The result shape (`{ data, error, count, status, statusText }`) is intentionally familiar to Supabase users. It does not imply PostgREST behavior or support every PostgREST filter/representation option. Filters and values are parameterized; table, column, schema, and RPC identifiers are validated and quoted.
 
-`from(table)` supports `select`, `insert`, `upsert`, `update`, `delete`, `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `like`, `ilike`, `is`, `in`, `order`, `limit`, `range`, `single`, and `maybeSingle`. Values are sent as bound parameters. Table, schema, selected-column, filter, ordering, conflict, and RPC identifiers are validated before SQL is generated. Since generated database types do not carry PostgreSQL primary-key metadata, `upsert` requires an explicit `onConflict` column list.
-
-```ts
-const inserted = await supabase
-  .from("todos")
-  .insert({ title: "Review release" })
-  .select("id, title")
-  .single();
-const updated = await supabase
-  .from("todos")
-  .update({ done: true })
-  .eq("id", 3)
-  .select()
-  .maybeSingle();
-const removed = await supabase.from("todos").delete().in("id", [7, 8]).select();
-```
-
-Results use `{ data, error, count, status, statusText }`; `count` is `null` because this client does not issue a separate exact-count query. Call `.throwOnError()` when a rejected promise is preferred.
-
-RPC calls execute a PostgreSQL function by name with bound named arguments:
-
-```ts
-const { data, error } = await supabase.rpc("complete_todo", { todo_id: 3 });
-```
-
-For a set-returning function, pass `{ setof: true }` as the third argument so the result is returned as an array:
-
-```ts
-const { data } = await supabase.rpc("open_todos", {}, { setof: true });
-```
-
-## SQL migrations
-
-Name files `YYYYMMDDHHMMSS_description.sql`; the runner sorts them, hashes their contents, and records versions in a schema-qualified ledger. Each migration and its ledger entry run in one PostgreSQL transaction under a transaction-scoped advisory lock. Applied files are checked for name and checksum drift.
+## Migrations
 
 ```ts
 import { applyMigrations } from "@aphrody/bun-plugin-supabase/migrations";
 
-const report = await applyMigrations(supabase.sql, {
-  directory: `${import.meta.dir}/migrations`,
-  schema: "public",
-});
+const report = await applyMigrations(db.sql, { directory: "./supabase/migrations" });
 console.log(`Applied ${report.applied.length} migrations`);
 ```
 
-Use a database role with migration privileges for this runner. Store migrations as source controlled SQL and review them as database changes.
+Files must use `YYYYMMDDHHMMSS_name.sql`. Each migration and its ledger update run in a transaction under a PostgreSQL advisory lock. A checksum mismatch for an already applied version fails closed. Review migration SQL before running it against a production database.
 
-## Compatibility boundary
+## Validation
 
-This package talks PostgreSQL directly. It does not implement the Supabase REST/PostgREST protocol, auth, storage, realtime, edge functions, generated REST filters, or Supabase client session behavior. A direct database role does not inherit the JWT claims or role switching that Supabase's API applies to requests; configure PostgreSQL roles and row-level security for the actual direct connection. This package deliberately does not accept or store provider keys.
-
-The package uses Bun's native PostgreSQL SQL client and requires Bun 1.4 or newer. It is not a drop-in replacement for `@supabase/supabase-js`.
+The test suite uses a fake SQL executor and temporary local migration files; it does not connect to a Supabase project or require credentials.

@@ -78,8 +78,14 @@ export type NativeSql = {
 };
 
 export type SupabaseClientOptions = {
+  pool?: Bun.SQL.PostgresOrMySQLOptions;
   connectionString?: string | URL;
   schema?: string;
-  pool?: Omit<Bun.SQL.Options, "url" | "filename">;
+  max?: number;
+  idleTimeout?: number;
+  connectionTimeout?: number;
+  prepare?: boolean;
+  onconnect?: Bun.SQL.Options["onconnect"];
+  onclose?: Bun.SQL.Options["onclose"];
   sql?: NativeSql;
 };

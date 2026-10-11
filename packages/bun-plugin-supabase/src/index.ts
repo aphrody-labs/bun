@@ -13,6 +13,7 @@ import type {
   SupabaseResult,
   UpdateOf,
 } from "./types";
+import { resolveSupabaseConnection } from "./connection";
 
 export type {
   Database,
@@ -36,6 +37,7 @@ export type {
   ViewName,
 } from "./types";
 export { applyMigrations, type MigrationOptions, type MigrationReport } from "./migrations";
+export { resolveSupabaseConnection, type SupabaseConnection } from "./connection";
 
 type Operation =
   | { kind: "select"; columns: string }
@@ -129,7 +131,11 @@ class Builder<Row extends Record<string, unknown>, Insert = Partial<Row>, Update
   }
 
   update(values: Update): this {
-    this.operation = { kind: "update", values: values as Record<string, unknown>, returning: false };
+    this.operation = {
+      kind: "update",
+      values: values as Record<string, unknown>,
+      returning: false,
+    };
     return this;
   }
 
@@ -256,7 +262,13 @@ class Builder<Row extends Record<string, unknown>, Insert = Partial<Row>, Update
       }
       return { data, error: null, count: null, status, statusText: "OK" };
     } catch (error) {
-      return { data: null, error: errorFrom(error), count: null, status: 400, statusText: "Bad Request" };
+      return {
+        data: null,
+        error: errorFrom(error),
+        count: null,
+        status: 400,
+        statusText: "Bad Request",
+      };
     }
   }
 
@@ -335,15 +347,21 @@ export class SupabaseClient<DB extends Database = Database, Schema extends strin
     quoteIdentifier(this.schema);
     if (options.sql) this.sql = options.sql;
     else {
-      const connectionString = options.connectionString ?? process.env.SUPABASE_DB_URL;
-      if (!connectionString) throw new TypeError("Provide a PostgreSQL connectionString or SUPABASE_DB_URL");
-      const parsed = new URL(connectionString);
-      if (parsed.protocol !== "postgres:" && parsed.protocol !== "postgresql:") {
-        throw new TypeError(
-          "connectionString must be a PostgreSQL URL; the Supabase project URL and API keys are not SQL credentials",
-        );
+      const connection = resolveSupabaseConnection(options.connectionString);
+      if (connection.pooled && (options.prepare ?? options.pool?.prepare) === true) {
+        throw new TypeError("Prepared statements must be disabled with Supabase connection poolers");
       }
-      const native = options.pool ? new Bun.SQL(connectionString, options.pool) : new Bun.SQL(connectionString);
+      const pool: Bun.SQL.Options = {
+        ...options.pool,
+        tls: "verify-full",
+        max: options.max ?? options.pool?.max ?? 1,
+        idleTimeout: options.idleTimeout ?? options.pool?.idleTimeout,
+        connectionTimeout: options.connectionTimeout ?? options.pool?.connectionTimeout,
+        prepare: options.prepare ?? options.pool?.prepare ?? false,
+        onconnect: options.onconnect ?? options.pool?.onconnect,
+        onclose: options.onclose ?? options.pool?.onclose,
+      };
+      const native = new Bun.SQL(connection.url, pool);
       this.sql = native as unknown as NativeSql;
     }
   }
@@ -382,7 +400,13 @@ export class SupabaseClient<DB extends Database = Database, Schema extends strin
           status: 200,
           statusText: "OK",
         }),
-        error => ({ data: null, error: errorFrom(error), count: null, status: 400, statusText: "Bad Request" }),
+        error => ({
+          data: null,
+          error: errorFrom(error),
+          count: null,
+          status: 400,
+          statusText: "Bad Request",
+        }),
       );
     return result as unknown as QueryResult<
       FunctionReturns<DB, Schema, Name> extends unknown[]
