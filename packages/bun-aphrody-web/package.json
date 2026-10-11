@@ -9,21 +9,24 @@
     "./packages/*": "./packages/*"
   },
   "dependencies": {
-    "@aphrody/agent-browser": "file:./packages/agent-browser",
-    "@aphrody/bun": "file:../../../aphrody/packages/interop/native",
+    "@aphrody/agent-browser": "workspace:*",
     "@aphrody/bun-webview-page": "file:../bun-webview-page",
-    "@aphrody/drive-client": "file:../../../aphrody/packages/os/drive-client",
-    "@aphrody/m3-primitives": "file:../../../aphrody/m3/packages/m3-primitives",
     "@aphrody/material-web": "3.3.3",
-    "@aphrody/runtime-sdk": "file:../../../aphrody/packages/engine/runtime",
-    "@aphrody/scaffold": "file:../../../aphrody/m3/packages/scaffold",
-    "@aphrody/shell-web": "file:../../../aphrody/packages/shell/web",
-    "@aphrody/update": "file:../../../aphrody/packages/infra/update",
-    "@aphrody/webos-wasm": "file:../../../aphrody/packages/web/webos-wasm",
     "@lit/react": "^1.0.8",
     "@phosphor-icons/react": "^2.1.0",
     "clsx": "^2.1.1",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "react-hook-form": "^7.89.0"
+  },
+  "peerDependencies": {
+    "@aphrody/bun": "1.4.4",
+    "@aphrody/drive-client": "1.4.4",
+    "@aphrody/m3-primitives": "1.4.4",
+    "@aphrody/runtime-sdk": "1.4.4",
+    "@aphrody/scaffold": "1.4.4",
+    "@aphrody/shell-web": "1.4.4",
+    "@aphrody/update": "1.4.4",
+    "@aphrody/webos-wasm": "1.4.4"
   }
 }

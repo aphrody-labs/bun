@@ -8,6 +8,7 @@
  */
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { homedir } from "node:os";
+import { fileURLToPath } from "node:url";
 import { join, resolve } from "node:path";
 
 export interface WebEngineConfig {
@@ -105,9 +106,12 @@ export const DEFAULT_WEB_CONFIG: Omit<WebConfig, "root" | "source"> = {
   },
 };
 
-/** Repository root: `APHRODY_ROOT` when set, otherwise four levels above this file. */
+/** Repository root: `APHRODY_ROOT` when set, otherwise the application workspace owning the native SDK. */
 export function repositoryRoot(env: Record<string, string | undefined> = process.env): string {
-  return resolve(env.APHRODY_ROOT ?? join(import.meta.dir, "../../../.."));
+  return resolve(
+    env.APHRODY_ROOT ??
+      resolve(fileURLToPath(import.meta.resolve("@aphrody/bun/package.json")), "../../../.."),
+  );
 }
 
 export function expandHome(path: string, home = homedir()): string {

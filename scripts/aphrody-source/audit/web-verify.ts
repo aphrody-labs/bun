@@ -11,7 +11,10 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { repositoryRoot, validateWebConfig } from "../../packages/web/agent-browser/src/config.ts";
+import {
+  repositoryRoot,
+  validateWebConfig,
+} from "../../../packages/bun-aphrody-web/packages/agent-browser/src/config.ts";
 
 export const WEB_CRATES = [
   "aphrody-obscura",
@@ -77,7 +80,13 @@ export function planStages(options: {
         ...["@aphrody/agent-browser", "@aphrody/web-test"].flatMap((pkg) =>
           ["typecheck", "lint", "test"].map((script) => ({
             name: `${pkg} ${script}`,
-            command: ["bun", "run", "--filter", pkg, script],
+            command: [
+              "bun",
+              "run",
+              "--cwd",
+              `../bun/packages/bun-aphrody-web/packages/${pkg === "@aphrody/web-test" ? "aphrody-web-test" : "agent-browser"}`,
+              script,
+            ],
             timeoutMs: 10 * MINUTE,
           })),
         ),
@@ -86,9 +95,9 @@ export function planStages(options: {
           command: [
             "bun",
             "test",
-            "scripts/audit/web-smoke.test.ts",
-            "scripts/audit/web-verify.test.ts",
-            "scripts/tools/web/web-crawl.test.ts",
+            "../bun/scripts/aphrody-source/audit/web-smoke.test.ts",
+            "../bun/scripts/aphrody-source/audit/web-verify.test.ts",
+            "../bun/scripts/aphrody-source/tools/web/web-crawl.test.ts",
           ],
           timeoutMs: 5 * MINUTE,
         },
@@ -116,7 +125,7 @@ export function planStages(options: {
       steps: [
         {
           name: "loopback smoke",
-          command: ["bun", "scripts/audit/web-smoke.ts"],
+          command: ["bun", "../bun/scripts/aphrody-source/audit/web-smoke.ts"],
           timeoutMs: 5 * MINUTE,
         },
       ],
@@ -129,7 +138,7 @@ export function planStages(options: {
             steps: [
               {
                 name: "UI crawlability gate",
-                command: ["bun", "scripts/audit/web-crawlability.ts"],
+                command: ["bun", "../bun/scripts/aphrody-source/audit/web-crawlability.ts"],
                 timeoutMs: 10 * MINUTE,
               },
             ],
@@ -236,13 +245,7 @@ export function checkConfigFile(root: string): string[] {
 export function executionCommand(command: string[], platform = process.platform): string[] {
   if (command[0] === "bun") return [process.execPath, ...command.slice(1)];
   if (platform === "win32" && command[0] === "scripts/build/rust/cargo-serial.sh")
-    return [
-      "pwsh.exe",
-      "-NoProfile",
-      "-File",
-      "scripts/dev/windows-cargo.ps1",
-      ...command.slice(1),
-    ];
+    return [process.execPath, "scripts/build/rust/cargo-serial.ts", "--msvc", ...command.slice(1)];
   return command;
 }
 
@@ -313,7 +316,9 @@ export async function runStages(stages: Stage[], root: string): Promise<StepResu
 if (import.meta.main) {
   const options = parseArgs(process.argv.slice(2));
   const root = repositoryRoot();
-  const crawlabilityAvailable = existsSync(join(root, "scripts/audit/web-crawlability.ts"));
+  const crawlabilityAvailable = existsSync(
+    join(root, "../bun/scripts/aphrody-source/audit/web-crawlability.ts"),
+  );
   const stages = planStages({ ...options, crawlabilityAvailable });
   const results = await runStages(stages, root);
   const failed = results.filter((result) => !result.ok);

@@ -4,7 +4,7 @@
 import {
   DEFAULT_CATALOG_PATH,
   syncCatalogFromBundles,
-} from "../../../packages/web/x/src/tools/bundle-catalog.ts";
+} from "../../../../packages/x/src/tools/bundle-catalog.ts";
 
 function pathArg(flag: string, fallback: string): string {
   const index = process.argv.indexOf(flag);

@@ -11,14 +11,17 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { AgentBrowser } from "../../packages/web/agent-browser/src/client.ts";
-import { loadWebConfig, repositoryRoot } from "../../packages/web/agent-browser/src/config.ts";
+import { AgentBrowser } from "../../../packages/bun-aphrody-web/packages/agent-browser/src/client.ts";
+import {
+  loadWebConfig,
+  repositoryRoot,
+} from "../../../packages/bun-aphrody-web/packages/agent-browser/src/config.ts";
 import {
   installEngineCleanup,
   startEngine,
   stopAllEngines,
-} from "../../packages/web/agent-browser/src/engine.ts";
-import { WebService } from "../../packages/web/agent-browser/src/service.ts";
+} from "../../../packages/bun-aphrody-web/packages/agent-browser/src/engine.ts";
+import { WebService } from "../../../packages/bun-aphrody-web/packages/agent-browser/src/service.ts";
 
 export interface Check {
   name: string;

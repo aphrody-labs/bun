@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 // SPDX-License-Identifier: Apache-2.0
-import { XClient, XSession, buildCoverageReport } from "../../../packages/web/x/src/index.ts";
+import { XClient, XSession, buildCoverageReport } from "../../../../packages/x/src/index.ts";
 
 const probe = process.argv.includes("--probe");
 const client = probe ? new XClient(XSession.loadOrEnv()) : undefined;

@@ -14,8 +14,8 @@ import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { XClient, XSession } from "../../../packages/web/x/src/index.ts";
-import { DEFAULT_CATALOG_PATH as CATALOG_PATH } from "../../../packages/web/x/src/tools/bundle-catalog.ts";
+import { XClient, XSession } from "../../../../packages/x/src/index.ts";
+import { DEFAULT_CATALOG_PATH as CATALOG_PATH } from "../../../../packages/x/src/tools/bundle-catalog.ts";
 
 /** GraphQL ops tied to x.com/i/premium, subscriptions, or Blue Verified (2026 catalog). */
 const PREMIUM_OPS = [

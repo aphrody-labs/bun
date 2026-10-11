@@ -46,7 +46,7 @@
     "test": "bun test test/"
   },
   "dependencies": {
-    "@aphrody/agent-browser": "file:../agent-browser",
+    "@aphrody/agent-browser": "workspace:*",
     "@aphrody/bun-webview-page": "file:../../../bun-webview-page",
     "@aphrody/next-bun": "file:../../../bun-next"
   },

@@ -27,12 +27,13 @@
     "typecheck": "bun check --noEmit",
     "test": "bun test"
   },
-  "dependencies": {
-    "@aphrody/webos-wasm": "file:../../../../../aphrody/packages/web/webos-wasm"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/bun": "npm:@aphrody/bun-types@1.4.3-aphrody.4",
     "typescript": "7.0.2"
+  },
+  "peerDependencies": {
+    "@aphrody/webos-wasm": "1.4.4"
   },
   "engines": {
     "bun": ">=1.4.4"

@@ -47,11 +47,12 @@
     "coverage": "bun ../../../scripts/tools/web/x-coverage.ts"
   },
   "dependencies": {
-    "@aphrody/bun": "file:../../../../../aphrody/packages/interop/native",
-    "@aphrody/paths": "file:../../../../../aphrody/packages/infra/paths",
     "zod": "^4.6.5"
   },
-  "peerDependencies": {},
+  "peerDependencies": {
+    "@aphrody/bun": "1.4.4",
+    "@aphrody/paths": "1.4.4"
+  },
   "engines": {
     "bun": ">=1.4.3"
   }

@@ -1327,7 +1327,7 @@ if (import.meta.main) {
   const value = (flag: string) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : undefined);
   const flag = (name: string) => args.includes(name);
   const { loadWebConfig, expandHome, repositoryRoot } =
-    await import("../../packages/web/agent-browser/src/config.ts");
+    await import("../../../packages/bun-aphrody-web/packages/agent-browser/src/config.ts");
   const root = repositoryRoot();
   const config = loadWebConfig();
   const baselinePath = resolve(
@@ -1357,7 +1357,8 @@ if (import.meta.main) {
     }
 
     if (!flag("--no-crawl")) {
-      const { WebService } = await import("../../packages/web/agent-browser/src/service.ts");
+      const { WebService } =
+        await import("../../../packages/bun-aphrody-web/packages/agent-browser/src/service.ts");
       const service = new WebService({ config, binary: value("--bin") });
       if (!(await service.supports("crawl"))) {
         console.error(

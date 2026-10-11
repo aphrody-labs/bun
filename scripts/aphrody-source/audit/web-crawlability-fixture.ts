@@ -8,14 +8,21 @@
 
 import { plugin } from "bun";
 import { resolve } from "node:path";
-import { m3LlmsTxt, m3RobotsTxt, m3SitemapXml } from "../../m3/packages/m3-next/src/crawl.ts";
+import {
+  m3LlmsTxt,
+  m3RobotsTxt,
+  m3SitemapXml,
+} from "../../../../aphrody/m3/packages/m3-next/src/crawl.ts";
 import type { PageKind, SitePage } from "./web-crawlability.ts";
 
 /** Origin written into the pages; the CLI swaps it for the loopback origin when it serves them. */
 export const FIXTURE_ORIGIN = "http://fixture.invalid";
 
-const UI = resolve(import.meta.dir, "../../m3/packages");
-const PAGES_MODULE = resolve(import.meta.dir, "web-crawlability-pages.tsx");
+const UI = resolve(import.meta.dir, "../../../../aphrody/m3/packages");
+const PAGES_MODULE = resolve(
+  import.meta.dir,
+  "../../../packages/bun-aphrody-web/integrations/scripts/audit/web-crawlability-pages.tsx",
+);
 let installed = false;
 
 /**

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { describe, expect, test } from "bun:test";
-import { repositoryRoot } from "../../packages/web/agent-browser/src/config.ts";
+import { repositoryRoot } from "../../../packages/bun-aphrody-web/packages/agent-browser/src/config.ts";
 import {
   checkConfigFile,
   executionCommand,
@@ -15,10 +15,9 @@ describe("native gate execution", () => {
     expect(
       executionCommand(["scripts/build/rust/cargo-serial.sh", "check", "--locked"], "win32"),
     ).toEqual([
-      "pwsh.exe",
-      "-NoProfile",
-      "-File",
-      "scripts/dev/windows-cargo.ps1",
+      process.execPath,
+      "scripts/build/rust/cargo-serial.ts",
+      "--msvc",
       "check",
       "--locked",
     ]);
@@ -95,7 +94,7 @@ describe("web verify planning", () => {
     expect(planStages({ stages: ["crawlability"], crawlabilityAvailable: false })).toEqual([]);
     expect(
       planStages({ stages: ["crawlability"], crawlabilityAvailable: true })[0]?.steps[0]?.command,
-    ).toEqual(["bun", "scripts/audit/web-crawlability.ts"]);
+    ).toEqual(["bun", "../bun/scripts/aphrody-source/audit/web-crawlability.ts"]);
   });
 
   test("the rust stage names every web crate and uses locked, warning-free clippy", () => {

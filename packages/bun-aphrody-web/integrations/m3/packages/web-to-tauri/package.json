@@ -41,12 +41,14 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@aphrody/agent-browser": "file:../../../../packages/agent-browser",
-    "@aphrody/scaffold": "file:../../../../../../../aphrody/m3/packages/scaffold"
+    "@aphrody/agent-browser": "workspace:*"
   },
   "devDependencies": {
     "@aphrody/m3-config": "file:../../../../../../../aphrody/m3/packages/m3-config",
     "typescript": "7.0.2"
+  },
+  "peerDependencies": {
+    "@aphrody/scaffold": "1.4.4"
   },
   "engines": {
     "bun": ">=1.4.3"
