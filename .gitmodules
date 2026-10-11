@@ -1,3 +1,7 @@
 [submodule "vendor/mullvad"]
 	path = vendor/mullvad
 	url = https://github.com/aphrody-labs/mullvadvpn-app.git
+[submodule "vendor/rio"]
+	path = vendor/rio
+	url = https://github.com/aphrody-labs/rio.git
+	branch = main
