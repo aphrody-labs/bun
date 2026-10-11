@@ -16,8 +16,11 @@ const WEB_QUERIES: [&str; 3] = [
     "site:lineup.toei-anim.co.jp ドラゴンボール",
     "site:kanzenshuu.com Toriyama interview",
 ];
-const QUERIES: [&str; 3] =
-    ["Dragon Ball Akira Toriyama", "ドラゴンボール 鳥山明", "Dragon Ball officiel Toei"];
+const QUERIES: [&str; 3] = [
+    "Dragon Ball Akira Toriyama",
+    "ドラゴンボール 鳥山明",
+    "Dragon Ball officiel Toei",
+];
 
 #[derive(Debug, Args)]
 pub(crate) struct DiscoveryArgs {
@@ -53,7 +56,8 @@ impl Budget {
         empty: Value,
     ) -> Value {
         if self.used >= self.limit {
-            self.errors.insert(name.into(), json!("discovery operation budget exhausted"));
+            self.errors
+                .insert(name.into(), json!("discovery operation budget exhausted"));
             return empty;
         }
         self.used += 1;
@@ -63,12 +67,12 @@ impl Budget {
                 Err(error) => {
                     self.errors.insert(name.into(), json!(error.to_string()));
                     empty
-                },
+                }
             },
             Err(error) => {
                 self.errors.insert(name.into(), json!(error));
                 empty
-            },
+            }
         }
     }
     fn envelope(&self, name: &str, data: &Value) -> Value {
@@ -171,12 +175,20 @@ pub(super) async fn run(args: DiscoveryArgs) -> miette::Result<Value> {
         web.push(report);
     }
     let books = budget
-        .recover("books", aphrody_google::search::search_books(QUERIES[0], 40, &search), json!({}))
+        .recover(
+            "books",
+            aphrody_google::search::search_books(QUERIES[0], 40, &search),
+            json!({}),
+        )
         .await;
     if let Some(error) = books.get("apiError") {
         budget.errors.insert("books-api".into(), error.clone());
     }
-    save(&output, "google-books.json", &budget.envelope("books", &books))?;
+    save(
+        &output,
+        "google-books.json",
+        &budget.envelope("books", &books),
+    )?;
     let mut suggestions = BTreeSet::new();
     for (index, query) in QUERIES.iter().enumerate() {
         let result = budget
@@ -187,7 +199,12 @@ pub(super) async fn run(args: DiscoveryArgs) -> miette::Result<Value> {
             )
             .await;
         suggestions.extend(
-            result.as_array().into_iter().flatten().filter_map(Value::as_str).map(str::to_owned),
+            result
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .map(str::to_owned),
         );
     }
     let suggestions = json!(suggestions);
@@ -267,7 +284,9 @@ pub(super) async fn run(args: DiscoveryArgs) -> miette::Result<Value> {
                 .recover(
                     &name,
                     async {
-                        aphrody_web_detect::detect_url(url).await.map_err(|error| error.to_string())
+                        aphrody_web_detect::detect_url(url)
+                            .await
+                            .map_err(|error| error.to_string())
                     },
                     Value::Null,
                 )
@@ -279,10 +298,18 @@ pub(super) async fn run(args: DiscoveryArgs) -> miette::Result<Value> {
             }
         }
     }
-    save(&output, "frameworks.json", &json!({"status":"ok","data":frameworks}))?;
+    save(
+        &output,
+        "frameworks.json",
+        &json!({"status":"ok","data":frameworks}),
+    )?;
     let urls = seeds(candidates.into_iter(), &allowed);
     let discovery = json!({"queries":QUERIES,"books":books,"suggestions":suggestions,"news":news,"videos":videos,"scholar":scholar,"dns":dns,"errors":budget.errors,"web":web,"images":images});
-    save(&output, "google-discovery.json", &json!({"status":"ok","data":discovery}))?;
+    save(
+        &output,
+        "google-discovery.json",
+        &json!({"status":"ok","data":discovery}),
+    )?;
     let modules = [
         "google-books.json",
         "google-suggest.json",
@@ -313,7 +340,9 @@ pub(super) fn extend_plan(plan: &mut DragonBallPlan, path: &Path) -> miette::Res
         .ok_or_else(|| miette!("discovery plan has no googleUrls"))?;
     let mut added = 0;
     for raw in urls {
-        let raw = raw.as_str().ok_or_else(|| miette!("discovered URL must be text"))?;
+        let raw = raw
+            .as_str()
+            .ok_or_else(|| miette!("discovered URL must be text"))?;
         let url =
             validate_source_url(raw).map_err(|error| miette!("invalid discovered URL: {error}"))?;
         for target in &mut plan.targets {
@@ -355,7 +384,11 @@ mod tests {
     }
     #[tokio::test]
     async fn operation_budget_never_polls_an_unaccepted_operation() {
-        let mut budget = Budget { used: 0, limit: 0, errors: Map::new() };
+        let mut budget = Budget {
+            used: 0,
+            limit: 0,
+            errors: Map::new(),
+        };
         let result = budget
             .recover(
                 "late",

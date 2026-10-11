@@ -27,7 +27,9 @@ fn requires_http_body(url: &reqwest::Url) -> bool {
         || path.ends_with(".json")
         || path.ends_with("/api.php")
         || path.ends_with("/advancedsearch.php")
-        || path.split('/').any(|segment| matches!(segment, "api" | "metadata"))
+        || path
+            .split('/')
+            .any(|segment| matches!(segment, "api" | "metadata"))
 }
 
 impl aphrody_web_crawl::CrawlTransport for RenderedTransport {
@@ -57,7 +59,10 @@ impl aphrody_web_crawl::CrawlTransport for RenderedTransport {
             .iter()
             .find(|(name, _)| name.eq_ignore_ascii_case("content-type"))
             .map(|(_, value)| value.clone());
-        let url = page.url.clone().ok_or_else(|| "rendered source has no final URL".to_owned())?;
+        let url = page
+            .url
+            .clone()
+            .ok_or_else(|| "rendered source has no final URL".to_owned())?;
         let body = page
             .evaluate("document.documentElement.outerHTML")
             .as_str()
@@ -66,7 +71,12 @@ impl aphrody_web_crawl::CrawlTransport for RenderedTransport {
         if body.len() > 8 * 1024 * 1024 {
             return Err("rendered source exceeded 8 MiB".into());
         }
-        Ok(aphrody_web_crawl::FetchResult { url, status, content_type, body })
+        Ok(aphrody_web_crawl::FetchResult {
+            url,
+            status,
+            content_type,
+            body,
+        })
     }
 }
 
@@ -219,7 +229,9 @@ fn layout(args: &CorpusArgs) -> miette::Result<HomeLayout> {
 }
 
 fn output(args: &CorpusArgs, layout: &HomeLayout) -> PathBuf {
-    args.output.clone().unwrap_or_else(|| layout.home.join("private/web/dragon-ball"))
+    args.output
+        .clone()
+        .unwrap_or_else(|| layout.home.join("private/web/dragon-ball"))
 }
 
 fn campaign(
@@ -229,7 +241,7 @@ fn campaign(
     let mut plan = match &args.config {
         Some(path) => {
             serde_json::from_slice(&std::fs::read(path).into_diagnostic()?).into_diagnostic()?
-        },
+        }
         None => DragonBallPlan::default(),
     };
     if let Some(path) = &args.discovery_plan {
@@ -240,7 +252,11 @@ fn campaign(
     let options = DragonBallRunOptions {
         output,
         sources: args.sources.clone(),
-        max_requests: args.max_requests.map(usize::try_from).transpose().into_diagnostic()?,
+        max_requests: args
+            .max_requests
+            .map(usize::try_from)
+            .transpose()
+            .into_diagnostic()?,
         max_depth: args.max_depth,
         with_gallery: args.with_gallery,
         force: args.force,
@@ -324,7 +340,9 @@ async fn run_assets(args: AssetArgs, mode: AssetMode) -> miette::Result<Value> {
         let probes = probe_assets(&client, &options)
             .await
             .map_err(|error| miette!("asset probe failed: {error}"))?;
-        let completed = probes.iter().all(|probe| probe.valid_image && probe.error.is_none());
+        let completed = probes
+            .iter()
+            .all(|probe| probe.valid_image && probe.error.is_none());
         return Ok(
             json!({"mode":"asset-probe","profile":args.corpus.profile,"completed":completed,"probes":probes}),
         );
@@ -340,7 +358,7 @@ async fn run_assets(args: AssetArgs, mode: AssetMode) -> miette::Result<Value> {
                 http: aphrody_web_crawl::ObscuraTransport::default(),
             };
             acquire_manga_volume(&pages, &client, volume, &options).await
-        },
+        }
         AssetMode::Manga(volume) => {
             acquire_manga_volume(
                 &aphrody_web_crawl::ObscuraTransport::default(),
@@ -349,7 +367,7 @@ async fn run_assets(args: AssetArgs, mode: AssetMode) -> miette::Result<Value> {
                 &options,
             )
             .await
-        },
+        }
         _ => sync_assets(&client, &options).await,
     }
     .map_err(|error| miette!("Dragon Ball acquisition failed: {error}"))?;
@@ -374,7 +392,7 @@ pub(super) async fn run(action: DragonBallAction) -> miette::Result<Value> {
                 "maxRequests": options.max_requests, "maxDepth": options.max_depth,
                 "withGallery": options.with_gallery, "force": options.force, "render": args.render}}),
             )
-        },
+        }
         DragonBallAction::Status(args) => {
             let layout = layout(&args)?;
             let output = output(&args, &layout);
@@ -388,12 +406,17 @@ pub(super) async fn run(action: DragonBallAction) -> miette::Result<Value> {
                     reports.insert(name.to_owned(), report);
                 }
             }
-            Ok(json!({"mode": "status", "profile": args.profile, "output": output,
+            Ok(
+                json!({"mode": "status", "profile": args.profile, "output": output,
                 "exists": output.is_dir(), "documentsExist": output.join("documents").is_dir(),
-                "reports": reports}))
-        },
+                "reports": reports}),
+            )
+        }
         DragonBallAction::Index(args) => index_existing(&args).await,
-        DragonBallAction::Crawl { campaign: args, index } => {
+        DragonBallAction::Crawl {
+            campaign: args,
+            index,
+        } => {
             let layout = layout(&args.corpus)?;
             let output = output(&args.corpus, &layout);
             let (plan, options) = campaign(&args, output.clone())?;
@@ -426,23 +449,32 @@ pub(super) async fn run(action: DragonBallAction) -> miette::Result<Value> {
                 value["index"] = index_existing(&args.corpus).await?;
             }
             Ok(value)
-        },
+        }
         DragonBallAction::Assets(args) => run_assets(args, AssetMode::Acquire).await,
         DragonBallAction::AssetPlan(args) => run_assets(args, AssetMode::Plan).await,
         DragonBallAction::AssetProbe(args) => run_assets(args, AssetMode::Probe).await,
-        DragonBallAction::MangaVolume { volume, acquisition } => {
-            run_assets(acquisition, AssetMode::Manga(volume)).await
-        },
-        DragonBallAction::ConsolidateBxc { databases, output, json: _ } => {
+        DragonBallAction::MangaVolume {
+            volume,
+            acquisition,
+        } => run_assets(acquisition, AssetMode::Manga(volume)).await,
+        DragonBallAction::ConsolidateBxc {
+            databases,
+            output,
+            json: _,
+        } => {
             let report = aphrody_web_crawl::dragon_ball::consolidate_bxc(&databases, &output)
                 .map_err(|error| miette!("BXC consolidation failed: {error}"))?;
             serde_json::to_value(report).into_diagnostic()
-        },
-        DragonBallAction::ExportBxc { databases, output, json: _ } => {
+        }
+        DragonBallAction::ExportBxc {
+            databases,
+            output,
+            json: _,
+        } => {
             let documents = export_bxc(&databases, &output)
                 .map_err(|error| miette!("BXC projection failed: {error}"))?;
             Ok(json!({"output": output, "documents": documents}))
-        },
+        }
     }
 }
 
@@ -458,7 +490,10 @@ mod tests {
             "https://kanzenshuu.com/wiki/api.php?action=query&format=json",
             "https://example.org/catalogue.json",
         ] {
-            assert!(requires_http_body(&reqwest::Url::parse(source).unwrap()), "{source}");
+            assert!(
+                requires_http_body(&reqwest::Url::parse(source).unwrap()),
+                "{source}"
+            );
         }
         assert!(!requires_http_body(
             &reqwest::Url::parse("https://dragon-ball-official.com/news/01_1.html").unwrap()

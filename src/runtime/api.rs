@@ -45,6 +45,8 @@ pub(crate) mod filesystem_router;
 pub(crate) mod glob;
 #[path = "api/terminal_screen.rs"]
 pub(crate) mod terminal_screen;
+#[path = "api/rio.rs"]
+pub(crate) mod rio;
 #[path = "api/HashObject.rs"]
 pub(crate) mod hash_object;
 #[path = "api/html_rewriter.rs"]

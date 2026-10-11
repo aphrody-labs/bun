@@ -149,6 +149,7 @@
               "/runtime/buv",
               "/runtime/python",
               "/runtime/cuda-torch",
+              "/runtime/terminal",
               "/runtime/child-process",
               "/runtime/webview",
               "/runtime/cron"

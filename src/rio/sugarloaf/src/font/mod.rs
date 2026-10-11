@@ -1,0 +1,2845 @@
+pub mod constants;
+pub mod fonts;
+// The glyph-protocol decoder + registry moved to the `rio-graphics` leaf
+// crate so the terminal core can use them without depending on sugarloaf.
+// Re-exported here so `sugarloaf::font::glyf_decode` /
+// `sugarloaf::font::glyph_registry` keep resolving.
+pub use rio_graphics::glyph::{glyf_decode, glyph_registry};
+#[cfg(all(unix, not(target_os = "macos"), not(target_os = "android")))]
+pub mod linux;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod loader;
+#[cfg(target_os = "macos")]
+pub mod macos;
+pub mod metrics;
+// Lives in rio-fonts so librio's CPU renderers share the same table;
+// re-exported here to keep the sugarloaf-internal path stable.
+pub use rio_fonts::nerd_font as nerd_font_attributes;
+pub mod text_run_cache;
+#[cfg(target_os = "windows")]
+pub mod windows;
+
+#[cfg(test)]
+mod cjk_metrics_tests;
+
+pub const FONT_ID_REGULAR: usize = 0;
+// Style slot ids fixed by `FontLibraryData::load`'s insertion order.
+pub const FONT_ID_ITALIC: usize = 1;
+pub const FONT_ID_BOLD: usize = 2;
+pub const FONT_ID_BOLD_ITALIC: usize = 3;
+
+use crate::font::constants::*;
+use crate::font::fonts::{parse_unicode, FontStyle};
+use crate::font::metrics::{FaceMetrics, Metrics};
+use crate::layout::SpanStyle;
+use crate::SugarloafErrors;
+use dashmap::DashMap;
+use parking_lot::RwLock;
+use rustc_hash::FxHashMap;
+use std::ops::Range;
+use std::path::PathBuf;
+use std::sync::{Arc, OnceLock};
+use swash::text::cluster::Parser;
+use swash::text::cluster::Token;
+use swash::text::cluster::{CharCluster, Status};
+use swash::text::Codepoint;
+use swash::text::Script;
+use swash::{tag_from_bytes, CacheKey, FontRef, Synthesis};
+
+pub use swash::{Style, Weight};
+
+/// Which font face slot a spec is being resolved for. Drives bold/italic
+/// trait selection, so the user's spec doesn't need to
+/// carry a CSS weight number — the slot itself encodes intent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Slot {
+    Regular,
+    Bold,
+    Italic,
+    BoldItalic,
+}
+
+impl Slot {
+    #[inline]
+    pub fn is_bold(self) -> bool {
+        matches!(self, Slot::Bold | Slot::BoldItalic)
+    }
+    #[inline]
+    pub fn is_italic(self) -> bool {
+        matches!(self, Slot::Italic | Slot::BoldItalic)
+    }
+}
+
+// Type alias for the font data cache to improve readability
+type FontDataCache = Arc<DashMap<PathBuf, SharedData>>;
+
+// Global font data cache to avoid reloading fonts from disk
+// This cache stores font file data indexed by path, so fonts are only loaded once
+// and shared across all font library instances. This significantly improves
+// performance when the same font is referenced multiple times.
+static FONT_DATA_CACHE: OnceLock<FontDataCache> = OnceLock::new();
+
+fn get_font_data_cache() -> &'static FontDataCache {
+    FONT_DATA_CACHE.get_or_init(|| Arc::new(DashMap::default()))
+}
+
+/// Clears the global font data cache, forcing fonts to be reloaded from disk
+/// on next access. This should be called when font configuration changes.
+pub fn clear_font_data_cache() {
+    if let Some(cache) = FONT_DATA_CACHE.get() {
+        cache.clear();
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct LookupAttrs {
+    pub italic: bool,
+    pub bold: bool,
+}
+
+/// Whether the font registered under `font_id` carries a glyph for
+/// every codepoint in `cluster`.
+fn cluster_covered(
+    cluster: &mut CharCluster,
+    library: &FontLibraryData,
+    font_id: usize,
+    font: &FontData,
+) -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        // Ask the CTFont directly whether it carries a glyph for each
+        // codepoint. Avoids the `get_data` byte load, so the fallback
+        // walk no longer touches the font file(s) at all.
+        let _ = (library, font_id);
+        let handle_opt = if let Some(handle) = font.handle() {
+            Some(handle.clone())
+        } else if let Some(path) = &font.path {
+            crate::font::macos::FontHandle::from_path(path)
+        } else if let Some(bytes) = &font.data {
+            crate::font::macos::FontHandle::from_bytes(bytes.as_ref())
+        } else {
+            None
+        };
+        if let Some(handle) = handle_opt {
+            let status = cluster.map(|ch| {
+                // Non-zero u16 == "has glyph"; swash's cluster.map only
+                // distinguishes zero vs non-zero, so `1` is fine as a
+                // placeholder when CTFont carries the codepoint.
+                if crate::font::macos::font_has_char(&handle, ch) {
+                    1
+                } else {
+                    0
+                }
+            });
+            status != Status::Discard
+        } else {
+            false
+        }
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = font;
+        if let Some((shared_data, offset, key)) = library.get_data(&font_id) {
+            let font_ref = FontRef {
+                data: shared_data.as_ref(),
+                offset,
+                key,
+            };
+            let charmap = font_ref.charmap();
+            let status = cluster.map(|ch| charmap.map(ch));
+            status != Status::Discard
+        } else {
+            false
+        }
+    }
+}
+
+pub fn lookup_for_font_match(
+    cluster: &mut CharCluster,
+    synth: &mut Synthesis,
+    library: &FontLibraryData,
+    spec: Option<LookupAttrs>,
+) -> Option<(usize, bool)> {
+    // The configured slot for the requested style is authoritative
+    // whenever it covers the cluster. Fonts routinely ship bold as
+    // 600 or report styles the weight-based walk rejects, which used
+    // to send bold/italic cells to the regular face (#1110).
+    if let Some(spec) = spec {
+        let slot = match (spec.bold, spec.italic) {
+            (false, true) => FONT_ID_ITALIC,
+            (true, false) => FONT_ID_BOLD,
+            (true, true) => FONT_ID_BOLD_ITALIC,
+            (false, false) => FONT_ID_REGULAR,
+        };
+        let slot = library.resolve_id(slot);
+        if let Some(FontEntry::Owned(font)) = library.inner.get(&slot) {
+            if cluster_covered(cluster, library, slot, font) {
+                *synth = font.synth;
+                return Some((slot, font.is_emoji));
+            }
+        }
+    }
+
+    let mut search_result = None;
+
+    let fonts_len: usize = library.inner.len();
+    for font_id in 0..fonts_len {
+        // Skip alias slots — their charmap is identical to the
+        // owning entry which we already walk under its own id.
+        let font = match library.inner.get(&font_id) {
+            Some(FontEntry::Owned(d)) => d,
+            Some(FontEntry::Alias(_)) | None => continue,
+        };
+        let is_emoji = font.is_emoji;
+        let font_synth = font.synth;
+
+        if let Some(spec) = spec {
+            if spec.italic && !font.is_italic() && !font.should_italicize {
+                continue;
+            }
+            if spec.bold && !font.is_bold() && !font.should_embolden {
+                continue;
+            }
+        }
+
+        if cluster_covered(cluster, library, font_id, font) {
+            *synth = font_synth;
+            search_result = Some((font_id, is_emoji));
+            break;
+        }
+    }
+
+    if search_result.is_none() && spec.is_some() {
+        return lookup_for_font_match(cluster, synth, library, None);
+    }
+
+    search_result
+}
+
+#[derive(Clone)]
+pub struct FontLibrary {
+    pub inner: Arc<RwLock<FontLibraryData>>,
+}
+
+impl FontLibrary {
+    pub fn new(spec: SugarloafFonts) -> (Self, Option<SugarloafErrors>) {
+        let mut font_library = FontLibraryData::default();
+
+        let mut sugarloaf_errors = None;
+
+        let fonts_not_found = font_library.load(spec);
+        if !fonts_not_found.is_empty() {
+            sugarloaf_errors = Some(SugarloafErrors { fonts_not_found });
+        }
+
+        (
+            Self {
+                inner: Arc::new(RwLock::new(font_library)),
+            },
+            sugarloaf_errors,
+        )
+    }
+
+    /// Parsed CoreText font for `font_id` — a direct read of the handle
+    /// stored on the corresponding `FontData` (per-font pointer rather
+    /// than a library-global cache).
+    ///
+    /// Clone is a cheap CF retain; callers clone out to escape the read
+    /// lock scope. Returns `None` for unknown font ids or for fonts that
+    /// weren't eagerly given a handle at construction (non-macOS test
+    /// fonts loaded via `from_slice`).
+    ///
+    /// parking_lot's `RwLock` supports recursive reads, so calling this
+    /// from code that already holds a read lock on `inner` is safe.
+    #[cfg(target_os = "macos")]
+    pub fn ct_font(&self, font_id: usize) -> Option<crate::font::macos::FontHandle> {
+        self.inner
+            .read()
+            .try_get(&font_id)
+            .and_then(|f| f.handle().cloned())
+    }
+
+    /// Resolve a PostScript name back to Rio's `font_id`. Returns
+    /// `None` when the library doesn't hold a font with that name.
+    pub fn font_id_for_postscript_name(&self, name: &str) -> Option<usize> {
+        self.inner.read().font_id_for_postscript_name(name)
+    }
+
+    /// Resolve `ch` to a Rio `(font_id, is_emoji)`, walking the
+    /// registered fonts first and falling back to CoreText's cascade
+    /// via `CTFontCreateForString` when no registered font carries
+    /// the glyph. Discovered fonts are registered in-place so
+    /// subsequent queries for the same codepoint (or any codepoint
+    /// the discovered font covers) hit the registered-font walk
+    /// without re-invoking CoreText.
+    ///
+    /// Pre-shaping resolution with lazy discovery: the shaper
+    /// operates on a single font per call, and this method
+    /// guarantees that font covers the codepoint, so `CTLine` never
+    /// has to cascade-substitute at shape time.
+    ///
+    /// Returns `(0, false)` only when the platform discovery layer
+    /// can't find any font for the codepoint (truly unsupported by
+    /// the system) or when the library is empty. Both cases render
+    /// as tofu.
+    pub fn resolve_font_for_char(
+        &self,
+        ch: char,
+        fragment_style: &SpanStyle,
+        route_id: Option<usize>,
+    ) -> (usize, bool) {
+        // Fast path: codepoint is covered by an already-registered
+        // font. No locks upgraded, no FFI call. Shared across all
+        // platforms — only the cascade-discovery slow path differs.
+        if let Some(found) =
+            self.inner
+                .read()
+                .find_best_font_match_strict(ch, fragment_style, route_id)
+        {
+            return found;
+        }
+
+        self.cascade_discover(ch, fragment_style)
+            .unwrap_or((0, false))
+    }
+
+    /// Slow-path cascade discovery — register a fallback font on
+    /// first hit so future queries land in the fast path. Per-platform
+    /// because the underlying API differs (CoreText `CTFontCreateForString`
+    /// on macOS, fontconfig `FcFontSort` on Linux, font-kit walk on
+    /// Windows). Returns `None` when no system font covers `ch`.
+    #[cfg(target_os = "macos")]
+    fn cascade_discover(
+        &self,
+        ch: char,
+        _fragment_style: &SpanStyle,
+    ) -> Option<(usize, bool)> {
+        let primary = self.ct_font(FONT_ID_REGULAR)?;
+        let discovered = crate::font::macos::discover_fallback(&primary, ch)?;
+        let ps_name = discovered.postscript_name();
+
+        if let Some(found) = self.dedupe_existing(&ps_name) {
+            return Some(found);
+        }
+
+        let mut lib = self.inner.write();
+        if let Some(existing) = lib.font_id_for_postscript_name(&ps_name) {
+            let is_emoji = lib
+                .try_get(&existing)
+                .map(|fd| fd.is_emoji)
+                .unwrap_or(false);
+            return Some((existing, is_emoji));
+        }
+        let font_data = FontData::from_ctfont_macos(discovered);
+        let is_emoji = font_data.is_emoji;
+        let new_id = lib.inner.len();
+        lib.insert(font_data);
+        tracing::debug!(
+            "CoreText cascade discovered {} for U+{:04X}, registered as font_id {}",
+            ps_name,
+            ch as u32,
+            new_id
+        );
+        Some((new_id, is_emoji))
+    }
+
+    #[cfg(any(
+        all(unix, not(target_os = "macos"), not(target_os = "android")),
+        target_os = "windows"
+    ))]
+    fn cascade_discover(
+        &self,
+        ch: char,
+        fragment_style: &SpanStyle,
+    ) -> Option<(usize, bool)> {
+        let primary_family = self.primary_family_name()?;
+        let want_bold = fragment_style.font_attrs.weight() == swash::Weight::BOLD;
+        let want_italic = fragment_style.font_attrs.style() == swash::Style::Italic;
+        // Terminal — always bias toward monospace for consistent cell
+        // widths, even for fallback glyphs.
+        let want_mono = true;
+
+        #[cfg(all(unix, not(target_os = "macos"), not(target_os = "android")))]
+        let discovered = crate::font::linux::discover_fallback(
+            &primary_family,
+            ch,
+            want_mono,
+            want_bold,
+            want_italic,
+        )?;
+
+        #[cfg(target_os = "windows")]
+        let discovered = crate::font::windows::discover_fallback(
+            &primary_family,
+            ch,
+            want_mono,
+            want_bold,
+            want_italic,
+        )?;
+
+        let (path, face_index) = discovered;
+        let font_data = FontData::from_discovered_path(path, face_index).ok()?;
+        let ps_name = font_data.postscript_name()?.to_string();
+
+        if let Some(found) = self.dedupe_existing(&ps_name) {
+            return Some(found);
+        }
+
+        let mut lib = self.inner.write();
+        if let Some(existing) = lib.font_id_for_postscript_name(&ps_name) {
+            let is_emoji = lib
+                .try_get(&existing)
+                .map(|fd| fd.is_emoji)
+                .unwrap_or(false);
+            return Some((existing, is_emoji));
+        }
+        let is_emoji = font_data.is_emoji;
+        let new_id = lib.inner.len();
+        lib.insert(font_data);
+        tracing::debug!(
+            "system cascade discovered {} for U+{:04X}, registered as font_id {}",
+            ps_name,
+            ch as u32,
+            new_id
+        );
+        Some((new_id, is_emoji))
+    }
+
+    /// Read-lock-only check whether a font with this PostScript name
+    /// is already registered (e.g. by a concurrent cascade resolver).
+    /// Lets the slow path skip the upgrade-to-write-lock when there's
+    /// nothing to register.
+    fn dedupe_existing(&self, ps_name: &str) -> Option<(usize, bool)> {
+        let lib = self.inner.read();
+        let existing = lib.font_id_for_postscript_name(ps_name)?;
+        let is_emoji = lib
+            .try_get(&existing)
+            .map(|fd| fd.is_emoji)
+            .unwrap_or(false);
+        Some((existing, is_emoji))
+    }
+
+    /// Family name of the primary font (`FONT_ID_REGULAR`) used as a
+    /// hint to the platform cascade resolver. fontconfig prefers
+    /// fonts matching this family when ranking codepoint-coverage
+    /// candidates. Falls back to `"monospace"` when the primary
+    /// hasn't been loaded yet — fontconfig's generic family alias
+    /// covers the usual case.
+    #[cfg(any(
+        all(unix, not(target_os = "macos"), not(target_os = "android")),
+        target_os = "windows"
+    ))]
+    fn primary_family_name(&self) -> Option<String> {
+        let lib = self.inner.read();
+        let primary = lib.try_get(&FONT_ID_REGULAR)?;
+        primary
+            .postscript_name()
+            .map(|s| s.to_string())
+            .or_else(|| Some(String::from("monospace")))
+    }
+
+    /// Sorted, deduplicated list of every font family name the host
+    /// system exposes. On macOS this goes straight through CoreText; on
+    /// Linux and Windows it uses `font-kit`'s `SystemSource` (fontconfig
+    /// on Linux, DirectWrite on Windows). `wasm32` has no system font
+    /// enumeration.
+    ///
+    /// Intended for the command-palette "List Fonts" browser, so users
+    /// can see what's installed without leaving the terminal. Does NOT
+    /// currently include fonts registered through rio's
+    /// `fonts.additional_dirs` config — those aren't retained on the
+    /// `FontLibrary` past load, and walking the dirs again would
+    /// duplicate I/O. A follow-up can widen this once `FontLibrary`
+    /// keeps a `Database` alive.
+    #[cfg(target_os = "macos")]
+    pub fn family_names(&self) -> Vec<String> {
+        crate::font::macos::all_families()
+    }
+
+    #[cfg(all(not(target_os = "macos"), not(target_arch = "wasm32")))]
+    pub fn family_names(&self) -> Vec<String> {
+        let source = font_kit::source::SystemSource::new();
+        let mut families = source.all_families().unwrap_or_default();
+        families.sort_unstable();
+        families.dedup();
+        families
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn family_names(&self) -> Vec<String> {
+        Vec::new()
+    }
+
+    /// Install a Glyph Protocol registry under `route_id`. Called once
+    /// per terminal session at context creation; the route_id is the
+    /// monotonic counter from `ROUTE_ID_COUNTER`, never reused, so the
+    /// installed entry's lifetime ends only when the session is
+    /// explicitly removed via [`Self::remove_glyph_registry`].
+    ///
+    /// Re-installing the same `route_id` overwrites the previous
+    /// registry. The registry itself is Arc-shared, so subsequent
+    /// `register`/`clear` mutations made through the same handle are
+    /// visible to the renderer without re-installing.
+    pub fn install_glyph_registry(
+        &self,
+        route_id: usize,
+        registry: glyph_registry::GlyphRegistry,
+    ) {
+        self.inner
+            .write()
+            .glyph_registries
+            .insert(route_id, registry);
+    }
+
+    /// Drop the registry for `route_id`. Called when a terminal
+    /// session is closed. No-op if there's no entry; safe to call
+    /// even from sessions that never used Glyph Protocol.
+    pub fn remove_glyph_registry(&self, route_id: usize) {
+        self.inner.write().glyph_registries.remove(&route_id);
+    }
+
+    /// Read-side access for the renderer: clone the Arc handle for the
+    /// pane currently being drawn. Returns `None` when no program in
+    /// that session has touched Glyph Protocol.
+    #[inline]
+    pub fn glyph_registry_for(
+        &self,
+        route_id: usize,
+    ) -> Option<glyph_registry::GlyphRegistry> {
+        self.inner.read().glyph_registries.get(&route_id).cloned()
+    }
+
+    /// Does any *already-loaded* font in the library cover this
+    /// codepoint? Used by Glyph Protocol's `q` verb to report system
+    /// coverage alongside session-glossary coverage. Stays in the
+    /// fast path — the strict variant doesn't fire platform cascade
+    /// discovery, so a query never perturbs library state. Returns
+    /// `false` for invalid codepoints (>= 0x110000 or surrogates).
+    pub fn covers_codepoint(&self, cp: u32) -> bool {
+        let Some(ch) = char::from_u32(cp) else {
+            return false;
+        };
+        self.inner
+            .read()
+            .find_best_font_match_strict(ch, &SpanStyle::default(), None)
+            .is_some_and(|(font_id, _)| font_id != glyph_registry::CUSTOM_GLYPH_FONT_ID)
+    }
+}
+
+impl Default for FontLibrary {
+    fn default() -> Self {
+        let mut font_library = FontLibraryData::default();
+        let _fonts_not_found = font_library.load(SugarloafFonts::default());
+
+        Self {
+            inner: Arc::new(RwLock::new(font_library)),
+        }
+    }
+}
+
+pub struct SymbolMap {
+    pub font_index: usize,
+    pub range: Range<char>,
+}
+
+/// Per-slot entry in the font library. `Owned` holds an actual
+/// `FontData`; `Alias` redirects to another id whose `Owned` entry
+/// the slot should reuse, so that a
+/// missing italic/bold variant doesn't have to clone the regular
+/// face — the `metrics_cache`, `path`, `postscript_name`, etc. all
+/// stay single-instance.
+#[derive(Clone)]
+pub enum FontEntry {
+    Owned(FontData),
+    /// Single-hop indirection. `insert_alias` collapses any
+    /// alias-of-alias at insert time so resolution is always one
+    /// hop.
+    Alias(usize),
+}
+
+impl FontEntry {
+    /// `&FontData` only when this entry is owned. Alias slots resolve
+    /// through `FontLibraryData::get`/`try_get`/`get_mut` instead.
+    #[inline]
+    pub fn as_owned(&self) -> Option<&FontData> {
+        match self {
+            FontEntry::Owned(d) => Some(d),
+            FontEntry::Alias(_) => None,
+        }
+    }
+}
+
+pub struct FontLibraryData {
+    // Standard is fallback for everything, it is also the inner number 0
+    pub inner: FxHashMap<usize, FontEntry>,
+    pub symbol_maps: Option<Vec<SymbolMap>>,
+    pub hinting: bool,
+    /// Parsed `fonts.features` entries, applied at shape time on every
+    /// platform. Empty when the user set none.
+    pub features: Arc<Vec<swash::Setting<u16>>>,
+    // Cache primary font metrics for consistent cell dimensions (consistent metrics approach)
+    primary_metrics_cache: FxHashMap<u32, Metrics>,
+    /// PostScript-name → `font_id` lookup, populated on `insert`. Used
+    /// by the cascade resolver on every platform: macOS maps CoreText's
+    /// per-CTRun font back to a Rio `font_id` when the cascade-list
+    /// substitution kicks in; Linux and Windows use it to dedupe a
+    /// fontconfig-/font-kit-discovered fallback against fonts already
+    /// in the registry.
+    postscript_to_id: FxHashMap<String, usize>,
+    /// Per-route Glyph Protocol registries, keyed by `route_id` (the
+    /// process-wide monotonic counter from `ROUTE_ID_COUNTER`). Each
+    /// terminal session installs its registry on context creation
+    /// and removes it on close; route_ids are never reused so a
+    /// stale entry can never alias a new context. Empty for windows
+    /// that have never seen a Glyph Protocol APC, so most callers
+    /// pay nothing.
+    glyph_registries: FxHashMap<usize, glyph_registry::GlyphRegistry>,
+}
+
+impl Default for FontLibraryData {
+    fn default() -> Self {
+        Self {
+            inner: FxHashMap::default(),
+            hinting: true,
+            features: Arc::new(Vec::new()),
+            symbol_maps: None,
+            primary_metrics_cache: FxHashMap::default(),
+            postscript_to_id: FxHashMap::default(),
+            glyph_registries: FxHashMap::default(),
+        }
+    }
+}
+
+impl FontLibraryData {
+    #[inline]
+    pub fn find_best_font_match(
+        &self,
+        ch: char,
+        fragment_style: &SpanStyle,
+        route_id: Option<usize>,
+    ) -> Option<(usize, bool)> {
+        // Glyph Protocol override takes precedence over everything
+        // else — if an application has registered this codepoint in
+        // *this pane's* registry, the registration is what the user
+        // is asking to see. Each pane consults its own registry via
+        // route_id, so two panes can host different programs with
+        // overlapping PUA registrations without interfering. Checked
+        // before symbol maps and the font fallback chain because
+        // neither of those should "beat" an explicit registration.
+        if let Some(route_id) = route_id {
+            if let Some(registry) = self.glyph_registries.get(&route_id) {
+                if registry.contains(ch as u32) {
+                    return Some((glyph_registry::CUSTOM_GLYPH_FONT_ID, false));
+                }
+            }
+        }
+
+        let mut synth = Synthesis::default();
+        let mut char_cluster = CharCluster::new();
+        let mut parser = Parser::new(
+            Script::Latin,
+            std::iter::once(Token {
+                ch,
+                offset: 0,
+                len: ch.len_utf8() as u8,
+                info: ch.properties().into(),
+                data: 0,
+            }),
+        );
+        if !parser.next(&mut char_cluster) {
+            return Some((0, false));
+        }
+
+        // First check symbol map before lookup_for_font_match
+        if let Some(symbol_maps) = &self.symbol_maps {
+            for symbol_map in symbol_maps {
+                if symbol_map.range.contains(&ch) {
+                    return Some((symbol_map.font_index, false));
+                }
+            }
+        }
+
+        let italic = fragment_style.font_attrs.style() == Style::Italic;
+        let bold = fragment_style.font_attrs.weight() == Weight::BOLD;
+        let spec = (italic || bold).then_some(LookupAttrs { italic, bold });
+
+        if let Some(result) =
+            lookup_for_font_match(&mut char_cluster, &mut synth, self, spec)
+        {
+            return Some(result);
+        }
+
+        Some((0, false))
+    }
+
+    /// Like [`find_best_font_match`](Self::find_best_font_match) but
+    /// returns `None` on a true miss instead of the `(0, false)`
+    /// last-resort fallback. Enables callers (the lazy-discovery path
+    /// on [`FontLibrary`], on every platform) to distinguish "primary
+    /// font is the answer" from "nothing in the library covers this
+    /// codepoint" so discovery can fire on the latter.
+    #[inline]
+    pub fn find_best_font_match_strict(
+        &self,
+        ch: char,
+        fragment_style: &SpanStyle,
+        route_id: Option<usize>,
+    ) -> Option<(usize, bool)> {
+        // Glyph Protocol short-circuit, same precedence as
+        // find_best_font_match — the strict variant is the fast-path
+        // entry point used by `resolve_font_for_char` so it must also
+        // honour registrations or codepoints that match a registered
+        // glyph would briefly fall through to system font discovery.
+        if let Some(route_id) = route_id {
+            if let Some(registry) = self.glyph_registries.get(&route_id) {
+                if registry.contains(ch as u32) {
+                    return Some((glyph_registry::CUSTOM_GLYPH_FONT_ID, false));
+                }
+            }
+        }
+
+        let mut synth = Synthesis::default();
+        let mut char_cluster = CharCluster::new();
+        let mut parser = Parser::new(
+            Script::Latin,
+            std::iter::once(Token {
+                ch,
+                offset: 0,
+                len: ch.len_utf8() as u8,
+                info: ch.properties().into(),
+                data: 0,
+            }),
+        );
+        if !parser.next(&mut char_cluster) {
+            return None;
+        }
+
+        if let Some(symbol_maps) = &self.symbol_maps {
+            for symbol_map in symbol_maps {
+                if symbol_map.range.contains(&ch) {
+                    return Some((symbol_map.font_index, false));
+                }
+            }
+        }
+
+        let italic = fragment_style.font_attrs.style() == Style::Italic;
+        let bold = fragment_style.font_attrs.weight() == Weight::BOLD;
+        let spec = (italic || bold).then_some(LookupAttrs { italic, bold });
+
+        lookup_for_font_match(&mut char_cluster, &mut synth, self, spec)
+    }
+
+    #[inline]
+    pub fn insert(&mut self, font_data: FontData) {
+        let id = self.inner.len();
+        // Index by PS name so the cascade resolver (CoreText on macOS,
+        // fontconfig on Linux, font-kit walk on Windows) can map a
+        // discovered font back to a Rio `font_id`. Only paid at load
+        // time. Duplicate names (same face loaded twice) resolve to
+        // the first-inserted id, which is the entry the rest of the
+        // library already points at — good enough for cascade mapping.
+        if let Some(ps_name) = font_data.postscript_name() {
+            self.postscript_to_id
+                .entry(ps_name.to_string())
+                .or_insert(id);
+        }
+        self.inner.insert(id, FontEntry::Owned(font_data));
+    }
+
+    /// Register a new id that aliases an existing slot. Used when a
+    /// bold/italic/bold-italic variant isn't available so the slot can
+    /// reuse the regular face without cloning. Any alias-of-alias is
+    /// collapsed at insert time so `resolve_id` is always single-hop.
+    #[inline]
+    pub fn insert_alias(&mut self, target: usize) {
+        let id = self.inner.len();
+        let target = self.resolve_id(target);
+        self.inner.insert(id, FontEntry::Alias(target));
+    }
+
+    /// Follow an alias one hop. Aliases always point at an `Owned`
+    /// entry (enforced by `insert_alias`), so a single resolution is
+    /// enough.
+    #[inline]
+    pub fn resolve_id(&self, font_id: usize) -> usize {
+        match self.inner.get(&font_id) {
+            Some(FontEntry::Alias(target)) => *target,
+            _ => font_id,
+        }
+    }
+
+    /// Rio `font_id` registered for the given PostScript name, or
+    /// `None` when no loaded font reports that name. Used by the
+    /// cascade resolver to dedupe a discovered font against ones
+    /// already in the registry.
+    pub fn font_id_for_postscript_name(&self, name: &str) -> Option<usize> {
+        self.postscript_to_id.get(name).copied()
+    }
+
+    #[inline]
+    pub fn get(&self, font_id: &usize) -> &FontData {
+        let id = self.resolve_id(*font_id);
+        match &self.inner[&id] {
+            FontEntry::Owned(d) => d,
+            FontEntry::Alias(_) => {
+                unreachable!("alias must resolve to Owned in single hop")
+            }
+        }
+    }
+
+    /// Like [`get`](Self::get) but returns `None` instead of panicking
+    /// when the id is unknown. Use when the call site can't guarantee
+    /// the slot is populated.
+    #[inline]
+    pub fn try_get(&self, font_id: &usize) -> Option<&FontData> {
+        let id = self.resolve_id(*font_id);
+        self.inner.get(&id).and_then(FontEntry::as_owned)
+    }
+
+    pub fn get_data(&self, font_id: &usize) -> Option<(SharedData, u32, CacheKey)> {
+        if let Some(font) = self.try_get(font_id) {
+            if let Some(data) = &font.data {
+                return Some((data.clone(), font.offset, font.key));
+            } else if let Some(path) = &font.path {
+                // Load font data from cache or disk
+                if let Some(raw_data) = load_from_font_source(path) {
+                    return Some((raw_data, font.offset, font.key));
+                }
+            }
+        }
+
+        None
+    }
+
+    #[inline]
+    pub fn get_mut(&mut self, font_id: &usize) -> Option<&mut FontData> {
+        let id = self.resolve_id(*font_id);
+        match self.inner.get_mut(&id)? {
+            FontEntry::Owned(d) => Some(d),
+            FontEntry::Alias(_) => None,
+        }
+    }
+
+    /// Get font metrics for rich text rendering (consistent metrics approach)
+    ///
+    /// Primary font determines cell dimensions for all fonts to ensure consistent
+    /// baseline alignment across different scripts (Latin, CJK, emoji, etc.).
+    ///
+    /// # Arguments
+    /// * `font_id` - The font to get metrics for
+    /// * `font_size` - The font size in pixels
+    ///
+    /// # Returns
+    /// A tuple of (width, height, line_height) for the font, or None if the font
+    /// cannot be found or metrics cannot be calculated.
+    ///
+    /// # Implementation Notes
+    /// - Primary font metrics are cached for performance
+    /// - Secondary fonts inherit cell dimensions from primary font
+    /// - This ensures CJK characters don't appear "higher" than Latin text
+    pub fn get_font_metrics(
+        &mut self,
+        font_id: &usize,
+        font_size: f32,
+    ) -> Option<(f32, f32, f32)> {
+        let size_key = (font_size * 100.0) as u32;
+
+        // First, ensure we have primary font metrics
+        let primary_metrics =
+            if let Some(cached) = self.primary_metrics_cache.get(&size_key) {
+                *cached
+            } else {
+                let primary_font = self.get_mut(&FONT_ID_REGULAR)?;
+                let primary_metrics = primary_font.get_metrics(font_size, None)?;
+                self.primary_metrics_cache.insert(size_key, primary_metrics);
+                primary_metrics
+            };
+
+        // Resolve aliases up front: a slot aliased to regular shares the
+        // owned entry, so it must take the primary branch (its metrics
+        // ARE the primary's).
+        let resolved = self.resolve_id(*font_id);
+        match resolved {
+            FONT_ID_REGULAR => {
+                // Primary font uses its own metrics
+                Some(primary_metrics.for_rich_text())
+            }
+            _ => {
+                // Secondary fonts use primary font's cell dimensions
+                let font = self.get_mut(&resolved)?;
+                font.get_rich_text_metrics(font_size, Some(&primary_metrics))
+            }
+        }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn load(&mut self, mut spec: SugarloafFonts) -> Vec<SugarloafFont> {
+        // Configure hinting through spec
+        self.hinting = spec.hinting;
+        self.features = Arc::new(
+            spec.features
+                .as_deref()
+                .map(parse_font_features)
+                .unwrap_or_default(),
+        );
+
+        let mut fonts_not_fount: Vec<SugarloafFont> = vec![];
+
+        // If fonts.family does exist it will overwrite all families
+        if let Some(font_family_overwrite) = spec.family {
+            font_family_overwrite.clone_into(&mut spec.regular.family);
+            font_family_overwrite.clone_into(&mut spec.bold.family);
+            font_family_overwrite.clone_into(&mut spec.bold_italic.family);
+            font_family_overwrite.clone_into(&mut spec.italic.family);
+        }
+
+        // On macOS we resolve fonts through CoreText (see `find_font` below)
+        // and never touch `loader::Database`, so skip its construction entirely
+        // — `SystemSource::new` walks the full CoreText font list on init, which
+        // is wasted work when we're about to do the same thing ourselves.
+        #[cfg(not(target_os = "macos"))]
+        let mut db = loader::Database::new();
+
+        let additional_dirs = spec.additional_dirs.unwrap_or_default();
+        for dir in additional_dirs.into_iter().map(PathBuf::from) {
+            #[cfg(target_os = "macos")]
+            crate::font::macos::register_fonts_in_dir(&dir);
+            #[cfg(not(target_os = "macos"))]
+            db.load_fonts_dir(dir);
+        }
+
+        #[cfg(target_os = "macos")]
+        let resolve = |spec: SugarloafFont, slot: Slot, evictable: bool| {
+            find_font(spec, slot, evictable)
+        };
+        #[cfg(not(target_os = "macos"))]
+        let resolve = |spec: SugarloafFont, slot: Slot, evictable: bool| {
+            find_font(&db, spec, slot, evictable)
+        };
+
+        let regular_index = self.len();
+        match resolve(spec.regular, Slot::Regular, false) {
+            FindResult::Found(data) => {
+                self.insert(data);
+            }
+            FindResult::NotFound(spec) => {
+                if !spec.is_default_family() {
+                    fonts_not_fount.push(spec.to_owned());
+                }
+
+                self.insert(load_fallback_from_memory(Slot::Regular));
+            }
+        }
+
+        for (slot, slot_spec, evictable) in [
+            (Slot::Italic, spec.italic, false),
+            (Slot::Bold, spec.bold, false),
+            (Slot::BoldItalic, spec.bold_italic, true),
+        ] {
+            if slot_spec.style.is_disabled() {
+                self.insert_alias(regular_index);
+                continue;
+            }
+
+            match resolve(slot_spec, slot, evictable) {
+                FindResult::Found(data) => {
+                    self.insert(data);
+                }
+                FindResult::NotFound(spec) => {
+                    if spec.is_default_family() {
+                        // Default family: the user didn't ask for a custom
+                        // family, so load the bundled Cascadia Code variant
+                        // for this slot rather than aliasing back to the
+                        // regular face. Aliasing leaves bold/italic
+                        // attributes invisible in the lookup walk and
+                        // forces a cascade-discovery fallback at shape
+                        // time — which can resolve bold to a system font
+                        // with mismatched metrics.
+                        self.insert(load_fallback_from_memory(slot));
+                    } else {
+                        // Family resolved but the requested style/weight
+                        // didn't — log-only, no UI warning. Alias to the
+                        // regular slot so the position stays populated
+                        // without cloning the face.
+                        warn!(
+                            "Font family '{}' has no {:?} variant; falling back to regular",
+                            spec.family, slot
+                        );
+                        self.insert_alias(regular_index);
+                    }
+                }
+            }
+        }
+
+        // On macOS, append CoreText's default cascade list for the primary
+        // font. Dynamic fallback: we let CoreText name every font it would
+        // normally fall back to (emoji, CJK, symbols, script typefaces) so
+        // users get the same coverage as any other macOS app.
+        //
+        // Critically, each cascade entry is constructed via `from_path_macos`
+        // — CoreText opens the file on demand, Rio never reads the bytes.
+        // This keeps us from pulling the 200 MB Apple Color Emoji file into
+        // `FONT_DATA_CACHE`.
+        #[cfg(target_os = "macos")]
+        {
+            let primary_handle = self.try_get(&FONT_ID_REGULAR).and_then(|f| {
+                if let Some(handle) = f.handle() {
+                    Some(handle.clone())
+                } else if let Some(path) = &f.path {
+                    crate::font::macos::FontHandle::from_path(path)
+                } else if let Some(bytes) = &f.data {
+                    crate::font::macos::FontHandle::from_bytes(bytes.as_ref())
+                } else {
+                    None
+                }
+            });
+            if let Some(primary_handle) = primary_handle {
+                let default_spec = SugarloafFont::default();
+                for path in crate::font::macos::default_cascade_list(&primary_handle) {
+                    if let Ok(font_data) =
+                        FontData::from_path_macos(path, Slot::Regular, &default_spec)
+                    {
+                        self.insert(font_data);
+                    }
+                }
+            }
+        }
+
+        // TODO: Currently, it will naively just extend fonts from symbol_map
+        // without even look if the font has been loaded before.
+        // Considering that we drop the font data that's inactive should be ok but
+        // it will cost a bit more time to initialize.
+        //
+        // Considering we receive via config
+        // [{ start = "2297", end = "2299", font-family = "Cascadia Code NF" },
+        //  { start = "2296", end = "2297", font-family = "Cascadia Code NF" }]
+        //
+        // Will become:
+        // [{ start = "2297", end = "2299", font_index = Some(1) },
+        //  { start = "2296", end = "2297", font_index = Some(1) }]
+        //
+        // TODO: We should have a new symbol map internally
+        // { range = '2296'..'2297', font_index = Some(1) }]
+        if let Some(symbol_map) = spec.symbol_map {
+            let mut symbol_maps = Vec::default();
+            for extra_font_from_symbol_map in symbol_map {
+                match resolve(
+                    SugarloafFont {
+                        family: extra_font_from_symbol_map.font_family,
+                        ..SugarloafFont::default()
+                    },
+                    Slot::Regular,
+                    true,
+                ) {
+                    FindResult::Found(data) => {
+                        if let Some(start) =
+                            parse_unicode(&extra_font_from_symbol_map.start)
+                        {
+                            if let Some(end) =
+                                parse_unicode(&extra_font_from_symbol_map.end)
+                            {
+                                self.insert(data);
+
+                                symbol_maps.push(SymbolMap {
+                                    range: start..end,
+                                    font_index: self.len() - 1,
+                                });
+
+                                continue;
+                            }
+                        }
+
+                        warn!("symbol-map: Failed to parse start and end values");
+                    }
+                    FindResult::NotFound(spec) => {
+                        fonts_not_fount.push(spec);
+                    }
+                }
+            }
+
+            self.symbol_maps = Some(symbol_maps);
+        }
+
+        if spec.disable_warnings_not_found {
+            vec![]
+        } else {
+            fonts_not_fount
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn load(&mut self, _font_spec: SugarloafFonts) -> Vec<SugarloafFont> {
+        self.insert(FontData::from_slice(FONT_CASCADIA_CODE_NF).unwrap());
+
+        vec![]
+    }
+}
+
+/// Font byte storage. Three variants so each load path pays the smallest
+/// cost it can:
+///
+/// - [`Heap`](Self::Heap): Arc-shared `[u8]` on the heap. Fallback path
+///   for bytes we genuinely own (tests, `from_slice`).
+/// - [`Static`](Self::Static): a reference into `'static` data. Bundled
+///   fonts use this so their bytes stay in the binary's `.rodata` instead
+///   of being copied.
+/// - [`Mmap`](Self::Mmap): memory-mapped file. Non-mac file reads use this
+///   so the kernel backs the bytes with the font file and only pages in
+///   what's actually touched. A 100 MB emoji font costs maybe 1 MB of
+///   resident RAM instead of 100.
+///
+/// Clone is atomic-refcount on [`Heap`]/[`Mmap`] and a pointer copy on
+/// [`Static`]; all three are effectively free.
+#[derive(Clone, Debug)]
+pub enum SharedData {
+    Heap(Arc<[u8]>),
+    Static(&'static [u8]),
+    #[cfg(not(target_arch = "wasm32"))]
+    Mmap(Arc<memmap2::Mmap>),
+}
+
+impl SharedData {
+    /// Wrap an owned byte buffer. Used for ad-hoc / test loads; production
+    /// font paths prefer [`from_static`](Self::from_static) or
+    /// [`from_mmap`](Self::from_mmap).
+    pub fn new(data: Vec<u8>) -> Self {
+        Self::Heap(Arc::from(data))
+    }
+
+    /// Reference `'static` bytes. Zero-copy — bytes stay wherever they are
+    /// (typically the binary's `.rodata` for bundled fonts).
+    pub const fn from_static(data: &'static [u8]) -> Self {
+        Self::Static(data)
+    }
+
+    /// Wrap a memory-mapped file. The `Arc<Mmap>` keeps the mapping alive
+    /// until every `SharedData` referencing it drops.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn from_mmap(mmap: memmap2::Mmap) -> Self {
+        Self::Mmap(Arc::new(mmap))
+    }
+
+    /// `true` when this `SharedData` references the binary's `.rodata`.
+    /// Callers (the CoreText path) use this to pick a no-copy
+    /// `CFDataCreateWithBytesNoCopy` when true.
+    pub const fn is_static(&self) -> bool {
+        matches!(self, Self::Static(_))
+    }
+}
+
+impl std::ops::Deref for SharedData {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Self::Heap(a) => a,
+            Self::Static(s) => s,
+            #[cfg(not(target_arch = "wasm32"))]
+            Self::Mmap(m) => m.as_ref(),
+        }
+    }
+}
+
+impl AsRef<[u8]> for SharedData {
+    fn as_ref(&self) -> &[u8] {
+        match self {
+            Self::Heap(a) => a,
+            Self::Static(s) => s,
+            #[cfg(not(target_arch = "wasm32"))]
+            Self::Mmap(m) => m.as_ref(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct FontData {
+    // Full content of the font file
+    data: Option<SharedData>,
+    path: Option<PathBuf>,
+    // Offset to the table directory
+    offset: u32,
+    // Cache key
+    pub key: CacheKey,
+    pub weight: swash::Weight,
+    pub style: swash::Style,
+    pub stretch: swash::Stretch,
+    pub synth: Synthesis,
+    pub should_embolden: bool,
+    pub should_italicize: bool,
+    /// `wght` axis value to apply when this `FontData` is backed by a
+    /// variable font (currently set only for the bundled Cascadia Code
+    /// fallback faces). On macOS the value is baked into `handle` via
+    /// `CTFontCreateCopyWithAttributes`; on Linux/Windows it's applied
+    /// to swash's shaper/scaler at render time.
+    pub wght_variation: Option<f32>,
+    pub is_emoji: bool,
+    // Cached metrics per font size (per-font caching)
+    metrics_cache: FxHashMap<u32, Metrics>,
+    /// Parsed CoreText handle, constructed once at `FontData` creation
+    /// and cloned out via CF refcount on every access. Per-font pointer
+    /// rather than a library-global cache. `Clone` of `FontHandle` is an
+    /// atomic retain, so handing it out to the shape/raster/charmap paths
+    /// is effectively free.
+    #[cfg(target_os = "macos")]
+    handle: Option<crate::font::macos::FontHandle>,
+    /// PostScript name extracted at construction so the cross-platform
+    /// `font_id_for_postscript_name` lookup can avoid reparsing the
+    /// font file. Used by both the macOS CoreText cascade resolver and
+    /// the Linux/Windows fontconfig/font-kit cascade resolver to map
+    /// a discovered font back to a Rio `font_id`. `None` only for
+    /// fonts where the PS name couldn't be parsed (rare — corrupt
+    /// font, or zero-name TTF).
+    postscript_name: Option<String>,
+}
+
+impl PartialEq for FontData {
+    fn eq(&self, other: &Self) -> bool {
+        // self.data == other.data &&
+        self.key == other.key
+        // self.offset == other.offset && self.key == other.key
+    }
+}
+
+impl FontData {
+    #[inline]
+    pub fn is_bold(&self) -> bool {
+        self.weight >= Weight(700)
+    }
+
+    #[inline]
+    pub fn is_italic(&self) -> bool {
+        self.style == Style::Italic
+    }
+
+    /// Get font data reference
+    pub fn data(&self) -> &Option<SharedData> {
+        &self.data
+    }
+
+    /// On-disk path the font was loaded from, if any. Embedded fonts
+    /// (bundled `&[u8]` constants) have no path.
+    pub fn path(&self) -> Option<&PathBuf> {
+        self.path.as_ref()
+    }
+
+    /// The parsed CoreText handle, or `None` if this font was constructed
+    /// via a path that doesn't run on macOS. Access is a direct field read
+    /// (no map lookup); callers clone the handle (cheap CF retain) to
+    /// escape the lock scope.
+    #[cfg(target_os = "macos")]
+    pub fn handle(&self) -> Option<&crate::font::macos::FontHandle> {
+        self.handle.as_ref()
+    }
+
+    /// PostScript name extracted at load time (`name` table ID 6).
+    /// `None` only for fonts whose name table couldn't be parsed.
+    /// Used to map a discovered font path back to a Rio `font_id` in
+    /// the cross-platform cascade resolver.
+    pub fn postscript_name(&self) -> Option<&str> {
+        self.postscript_name.as_deref()
+    }
+
+    /// Get font offset
+    pub fn offset(&self) -> u32 {
+        self.offset
+    }
+
+    /// Get or calculate metrics for a given font size (consistent metrics approach)
+    /// For primary font: calculate natural metrics with CJK measurement
+    /// For secondary fonts: use primary font's cell dimensions with CJK measurement
+    pub fn get_metrics(
+        &mut self,
+        font_size: f32,
+        primary_metrics: Option<&Metrics>,
+    ) -> Option<Metrics> {
+        let size_key = (font_size * 100.0) as u32; // Use scaled int as key
+
+        if let Some(cached) = self.metrics_cache.get(&size_key) {
+            return Some(*cached);
+        }
+
+        // macOS path-only (or handle-only) fonts: metrics come straight
+        // from CoreText. This fires for every cascade-list fallback, any
+        // user font discovered through `find_font_path`, AND any font
+        // registered at runtime via `from_ctfont_macos` (lazy cascade
+        // discovery) — none of which have `data` set. Prefer the stored
+        // CTFont handle when present (cheap CF retain); otherwise
+        // rebuild it from the path.
+        #[cfg(target_os = "macos")]
+        if self.data.is_none() {
+            let handle = if let Some(h) = self.handle.as_ref() {
+                h.clone()
+            } else {
+                self.path
+                    .as_ref()
+                    .and_then(|p| crate::font::macos::FontHandle::from_path(p))?
+            };
+            let font_metrics = crate::font::macos::design_unit_metrics(&handle);
+            let scaled_metrics = font_metrics.scale(font_size);
+            let face_metrics = FaceMetrics {
+                cell_width: scaled_metrics.max_width as f64,
+                ascent: scaled_metrics.ascent as f64,
+                descent: scaled_metrics.descent as f64,
+                line_gap: scaled_metrics.leading as f64,
+                underline_position: Some(scaled_metrics.underline_offset as f64),
+                underline_thickness: Some(scaled_metrics.stroke_size as f64),
+                strikethrough_position: Some(scaled_metrics.strikeout_offset as f64),
+                strikethrough_thickness: Some(scaled_metrics.stroke_size as f64),
+                cap_height: Some(scaled_metrics.cap_height as f64),
+                ex_height: Some(scaled_metrics.x_height as f64),
+                ic_width: crate::font::macos::cjk_ic_width(&handle).map(|u| {
+                    // design units → pixels at font_size
+                    u * font_size as f64 / scaled_metrics.units_per_em as f64
+                }),
+            };
+            let metrics = if let Some(primary) = primary_metrics {
+                Metrics::calc_with_primary_cell_dimensions(face_metrics, primary)
+            } else {
+                Metrics::calc(face_metrics)
+            };
+            self.metrics_cache.insert(size_key, metrics);
+            return Some(metrics);
+        }
+
+        // Calculate metrics if not cached
+        if let Some(ref data) = self.data {
+            let font_ref = swash::FontRef {
+                data: data.as_ref(),
+                offset: self.offset,
+                key: self.key,
+            };
+
+            let scaled_metrics = font_ref.metrics(&[]).scale(font_size);
+
+            // Use the unified method that always includes CJK measurement
+            let face_metrics = FaceMetrics::from_font(&font_ref, &scaled_metrics);
+
+            // Calculate metrics using consistent approach
+            let metrics = if let Some(primary) = primary_metrics {
+                // Secondary font: use primary font's cell dimensions
+                Metrics::calc_with_primary_cell_dimensions(face_metrics, primary)
+            } else {
+                // Primary font: calculate natural metrics
+                Metrics::calc(face_metrics)
+            };
+
+            // Cache the result
+            self.metrics_cache.insert(size_key, metrics);
+            Some(metrics)
+        } else {
+            None
+        }
+    }
+
+    /// Get metrics for rich text rendering
+    pub fn get_rich_text_metrics(
+        &mut self,
+        font_size: f32,
+        primary_metrics: Option<&Metrics>,
+    ) -> Option<(f32, f32, f32)> {
+        self.get_metrics(font_size, primary_metrics)
+            .map(|m| m.for_rich_text())
+    }
+
+    /// `face_index` addresses a face inside a TTC/OTC collection;
+    /// parsing index 0 would load whichever face sits first.
+    #[inline]
+    pub fn from_data(
+        data: SharedData,
+        path: PathBuf,
+        evictable: bool,
+        slot: Slot,
+        font_spec: &SugarloafFont,
+        face_index: u32,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        let font = FontRef::from_index(&data, face_index as usize)
+            .ok_or_else(|| format!("Failed to load font from path: {:?}", path))?;
+        let (offset, key) = (font.offset, font.key);
+
+        let attributes = font.attributes();
+        let style = attributes.style();
+        // An explicit user weight pins the `wght` axis and overrides the
+        // face's reported weight so lookup and synthesis match intent.
+        let weight = match font_spec.weight {
+            Some(w) => Weight(w),
+            None => attributes.weight(),
+        };
+
+        // Semibold threshold: families shipping bold at 600 must not
+        // get faux-bold stacked on the real bold face.
+        let (should_embolden, should_italicize) = synth_decisions(
+            slot,
+            font_spec,
+            font_spec.weight.is_some() || weight >= Weight(600),
+            style == Style::Italic,
+        );
+
+        let stretch = attributes.stretch();
+        let synth = attributes.synthesize(attributes);
+        let is_emoji = has_color_tables(&font);
+        let postscript_name = parse_postscript_name(&data, face_index);
+
+        let data = (!evictable).then_some(data);
+
+        Ok(Self {
+            data,
+            offset,
+            should_italicize,
+            should_embolden,
+            wght_variation: font_spec.weight.map(f32::from),
+            key,
+            synth,
+            style,
+            weight,
+            stretch,
+            path: Some(path),
+            is_emoji,
+            metrics_cache: FxHashMap::default(),
+            // `from_data` is the non-macOS code path — macOS goes through
+            // `from_path_macos` or `from_static_slice`, both of which
+            // populate `handle` themselves. Leave it unset here; if
+            // anything on mac does route through here, the `ct_font()`
+            // fallback rebuilds from bytes/path on demand.
+            #[cfg(target_os = "macos")]
+            handle: None,
+            postscript_name,
+        })
+    }
+
+    /// macOS-only: construct a `FontData` straight from a file path, with
+    /// attributes read through CoreText. Never loads the font bytes.
+    ///
+    /// CoreText reads the file itself, so Rio's `FONT_DATA_CACHE` never
+    /// ends up holding hundreds of MB of Apple Color Emoji / CJK font
+    /// bytes.
+    /// macOS-only: wrap a CTFont discovered at runtime (e.g. via
+    /// `CTFontCreateForString` lazy cascade) into a `FontData` with no
+    /// backing path or bytes. Metrics, rasterization and PS-name
+    /// lookups all go through the handle directly — there's nothing
+    /// for `get_data` / `get_metrics` to fall back to besides the
+    /// stored CTFont.
+    ///
+    /// Weight/italic/stretch are left at defaults because lazy-cascade
+    /// fonts are picked by CoreText based on script coverage rather
+    /// than style matching; the primary font's style already dictated
+    /// what was searched. Callers should not treat these fields as
+    /// authoritative.
+    #[cfg(target_os = "macos")]
+    pub fn from_ctfont_macos(handle: crate::font::macos::FontHandle) -> Self {
+        let attrs = crate::font::macos::font_attributes(&handle);
+        let style = if attrs.is_italic {
+            swash::Style::Italic
+        } else {
+            swash::Style::Normal
+        };
+        let weight = swash::Weight(attrs.weight);
+        let postscript_name = Some(handle.postscript_name());
+        Self {
+            data: None,
+            path: None,
+            offset: 0,
+            key: CacheKey::new(),
+            weight,
+            style,
+            stretch: swash::Stretch::NORMAL,
+            synth: Synthesis::default(),
+            should_embolden: false,
+            should_italicize: false,
+            wght_variation: None,
+            is_emoji: attrs.is_color,
+            metrics_cache: FxHashMap::default(),
+            handle: Some(handle),
+            postscript_name,
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    pub fn from_path_macos(
+        path: PathBuf,
+        slot: Slot,
+        font_spec: &SugarloafFont,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        let handle = crate::font::macos::FontHandle::from_path(&path)
+            .ok_or_else(|| format!("CoreText refused {}", path.display()))?;
+        Ok(Self::from_handle_macos(handle, Some(path), slot, font_spec))
+    }
+
+    #[cfg(target_os = "macos")]
+    fn from_handle_macos(
+        handle: crate::font::macos::FontHandle,
+        path: Option<PathBuf>,
+        slot: Slot,
+        font_spec: &SugarloafFont,
+    ) -> Self {
+        // Pin the `wght` axis when the user configured a weight so the
+        // stored CTFont shapes and rasterizes at that weight.
+        let handle = match font_spec.weight {
+            Some(w) => handle
+                .clone()
+                .with_wght_variation(f32::from(w))
+                .unwrap_or(handle),
+            None => handle,
+        };
+        let attrs = crate::font::macos::font_attributes(&handle);
+
+        let style = if attrs.is_italic {
+            swash::Style::Italic
+        } else {
+            swash::Style::Normal
+        };
+        let weight = match font_spec.weight {
+            Some(w) => swash::Weight(w),
+            None => swash::Weight(attrs.weight),
+        };
+
+        let (should_embolden, should_italicize) = synth_decisions(
+            slot,
+            font_spec,
+            font_spec.weight.is_some() || attrs.is_bold,
+            attrs.is_italic,
+        );
+
+        let postscript_name = Some(handle.postscript_name());
+        Self {
+            data: None,
+            path,
+            offset: 0,
+            key: CacheKey::new(),
+            weight,
+            style,
+            stretch: swash::Stretch::NORMAL,
+            synth: Synthesis::default(),
+            should_embolden,
+            should_italicize,
+            wght_variation: font_spec.weight.map(f32::from),
+            is_emoji: attrs.is_color,
+            metrics_cache: FxHashMap::default(),
+            handle: Some(handle),
+            postscript_name,
+        }
+    }
+
+    /// Load a bundled font whose bytes live in `.rodata` (anything from
+    /// `include_bytes!` / `font!`).
+    ///
+    /// The bytes stay where they already are — no `.to_vec()` copy onto
+    /// the heap, no second copy into a CoreFoundation buffer. On macOS we
+    /// also eagerly construct the CTFont via `CFDataCreateWithBytesNoCopy`
+    /// + `kCFAllocatorNull` and cache it on `FontData.handle`.
+    #[inline]
+    pub fn from_static_slice(
+        data: &'static [u8],
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        Self::from_static_slice_with_wght(data, None)
+    }
+
+    /// Like [`from_static_slice`] but optionally bakes a `wght` axis
+    /// value into the loaded face: load the same variable-font bytes
+    /// for every weight slot,
+    /// then set the `wght` axis post-construction so the rasterizer pulls
+    /// the right outlines (regular vs. bold) from a single source file.
+    ///
+    /// `wght = None` leaves the font at its default instance. Pass
+    /// `Some(700.0)` for the bold slot, etc.
+    pub fn from_static_slice_with_wght(
+        data: &'static [u8],
+        wght: Option<f32>,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        let font = FontRef::from_index(data, 0).unwrap();
+        let (offset, key) = (font.offset, font.key);
+        let attributes = font.attributes();
+        let style = attributes.style();
+        // The default instance of a variable font reports the regular
+        // weight (e.g. 400). When the caller asks for a specific `wght`
+        // value we override the reported weight so `is_bold()` and the
+        // bold-spec lookup walk match the slot's intent.
+        let weight = match wght {
+            Some(v) => swash::Weight(v.round().clamp(0.0, u16::MAX as f32) as u16),
+            None => attributes.weight(),
+        };
+        let stretch = attributes.stretch();
+        let synth = attributes.synthesize(attributes);
+        let is_emoji = has_color_tables(&font);
+        let postscript_name = parse_postscript_name(data, 0);
+
+        #[cfg(target_os = "macos")]
+        let handle = {
+            let base = crate::font::macos::FontHandle::from_static_bytes(data);
+            // Bake the `wght` variation into the CTFont via
+            // `CTFontCreateCopyWithAttributes` so shape_text /
+            // font_metrics / rasterize_glyph all pull the right outlines
+            // without per-call setup.
+            match (base, wght) {
+                (Some(h), Some(v)) => Some(h.clone().with_wght_variation(v).unwrap_or(h)),
+                (h, _) => h,
+            }
+        };
+
+        Ok(Self {
+            data: Some(SharedData::from_static(data)),
+            offset,
+            key,
+            synth,
+            style,
+            should_embolden: false,
+            should_italicize: false,
+            wght_variation: wght,
+            weight,
+            stretch,
+            path: None,
+            is_emoji,
+            metrics_cache: FxHashMap::default(),
+            #[cfg(target_os = "macos")]
+            handle,
+            postscript_name,
+        })
+    }
+
+    /// Legacy constructor kept for tests and any caller that only has a
+    /// non-static slice — copies the bytes into an owned `Vec<u8>`.
+    /// Production code should use [`from_static_slice`] for bundled fonts
+    /// and [`from_data`] for path-loaded ones.
+    #[inline]
+    pub fn from_slice(data: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
+        let font = FontRef::from_index(data, 0).unwrap();
+        let (offset, key) = (font.offset, font.key);
+        let attributes = font.attributes();
+        let style = attributes.style();
+        let weight = attributes.weight();
+        let stretch = attributes.stretch();
+        let synth = attributes.synthesize(attributes);
+        let is_emoji = has_color_tables(&font);
+
+        let postscript_name = parse_postscript_name(data, 0);
+        Ok(Self {
+            data: Some(SharedData::new(data.to_vec())),
+            offset,
+            key,
+            synth,
+            style,
+            should_embolden: false,
+            should_italicize: false,
+            wght_variation: None,
+            weight,
+            stretch,
+            path: None,
+            is_emoji,
+            metrics_cache: FxHashMap::default(),
+            #[cfg(target_os = "macos")]
+            handle: None,
+            postscript_name,
+        })
+    }
+
+    /// Build a `FontData` from a path discovered at runtime by the
+    /// Linux/Windows cascade resolver. The font bytes are mmapped (cached
+    /// in `FONT_DATA_CACHE`), parsed via swash to extract attributes,
+    /// and `is_emoji` is auto-detected from color tables. Mirrors
+    /// `from_path_macos` in shape but uses the cross-platform swash/
+    /// ttf-parser stack instead of CoreText.
+    ///
+    /// `face_index` lets us address fonts inside a TTC/OTC collection
+    /// (Noto Sans CJK ships as a single .ttc with separate faces for
+    /// SC/TC/JP/KR — fontconfig returns the right index per language tag).
+    #[cfg(any(
+        all(unix, not(target_os = "macos"), not(target_os = "android")),
+        target_os = "windows"
+    ))]
+    pub fn from_discovered_path(
+        path: PathBuf,
+        face_index: u32,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        let data = load_from_font_source(&path).ok_or_else(|| {
+            format!("failed to load discovered font: {}", path.display())
+        })?;
+        let font = FontRef::from_index(&data, face_index as usize).ok_or_else(|| {
+            format!(
+                "failed to parse discovered font {} face {}",
+                path.display(),
+                face_index
+            )
+        })?;
+        let (offset, key) = (font.offset, font.key);
+        let attributes = font.attributes();
+        let style = attributes.style();
+        let weight = attributes.weight();
+        let stretch = attributes.stretch();
+        let synth = attributes.synthesize(attributes);
+        let is_emoji = has_color_tables(&font);
+        let postscript_name = parse_postscript_name(&data, face_index);
+
+        Ok(Self {
+            data: Some(data),
+            offset,
+            should_italicize: false,
+            should_embolden: false,
+            wght_variation: None,
+            key,
+            synth,
+            style,
+            weight,
+            stretch,
+            path: Some(path),
+            is_emoji,
+            metrics_cache: FxHashMap::default(),
+            postscript_name,
+        })
+    }
+}
+
+/// Extract the PostScript name (`name` table ID 6) from font bytes.
+/// Used to populate `FontData.postscript_name` so the cross-platform
+/// resolver can map a discovered font path back to a Rio `font_id`
+/// without re-parsing. Falls back to the family name (ID 1) if the
+/// PS name is missing — a font without a usable name can't participate
+/// in the cascade-mapping anyway, so `None` is fine.
+fn parse_postscript_name(data: &[u8], face_index: u32) -> Option<String> {
+    let face = ttf_parser::Face::parse(data, face_index).ok()?;
+    face.names()
+        .into_iter()
+        .find(|n| n.name_id == ttf_parser::name_id::POST_SCRIPT_NAME && n.is_unicode())
+        .and_then(|n| n.to_string())
+        .or_else(|| {
+            face.names()
+                .into_iter()
+                .find(|n| n.name_id == ttf_parser::name_id::FAMILY && n.is_unicode())
+                .and_then(|n| n.to_string())
+        })
+}
+
+/// Auto-detect emoji-ness from SFNT color tables (COLR, CBDT, CBLC, SBIX).
+/// Used to guard against Nerd Font families being mis-flagged as emoji,
+/// so a real emoji font gets the wide-cell/color-atlas treatment while
+/// icon fonts stay single-cell.
+fn has_color_tables(font: &FontRef<'_>) -> bool {
+    font.table(tag_from_bytes(b"COLR")).is_some()
+        || font.table(tag_from_bytes(b"CBDT")).is_some()
+        || font.table(tag_from_bytes(b"CBLC")).is_some()
+        || font.table(tag_from_bytes(b"sbix")).is_some()
+}
+
+pub type SugarloafFont = fonts::SugarloafFont;
+pub type SugarloafFonts = fonts::SugarloafFonts;
+
+#[cfg(not(target_arch = "wasm32"))]
+use tracing::{info, warn};
+
+enum FindResult {
+    Found(FontData),
+    NotFound(SugarloafFont),
+}
+
+/// Select a color bitmap that Swash can safely render for Rio's premultiplied
+/// RGBA atlas. Raw premultiplied strikes cannot pass through Swash's resampler.
+/// Only the non-macOS rasterizers call this, but it is compiled everywhere so
+/// its tests run on every platform.
+pub fn select_color_bitmap(
+    font: swash::FontRef<'_>,
+    glyph_id: u16,
+    size: f32,
+) -> Option<swash::scale::Source> {
+    use swash::scale::{Source, StrikeWith};
+    use swash::tag_from_bytes;
+
+    if font.table(tag_from_bytes(b"sbix")).is_some() {
+        return Some(Source::ColorBitmap(StrikeWith::BestFit));
+    }
+
+    // Follow Swash's strike and glyph-range selection exactly. Packed 32-bit
+    // CBDT records must be skipped: Swash allocates them as one-channel data
+    // and panics while decoding their four-byte pixels.
+    //
+    // Swash only activates these strikes when the data table is present
+    // too, so a CBLC-only font must not report a bitmap here.
+    font.table(tag_from_bytes(b"CBDT"))?;
+    let table = font.table(tag_from_bytes(b"CBLC"))?;
+    let read_u16 = |offset| {
+        table
+            .get(offset..)?
+            .get(..2)
+            .map(|bytes| u16::from_be_bytes(bytes.try_into().unwrap()))
+    };
+    let read_u32 = |offset| {
+        table
+            .get(offset..)?
+            .get(..4)
+            .map(|bytes| u32::from_be_bytes(bytes.try_into().unwrap()) as usize)
+    };
+    let mut selected = None;
+    for index in 0..read_u32(4)? {
+        let strike = 8usize.checked_add(index.checked_mul(48)?)?;
+        let first_glyph = read_u16(strike.checked_add(40)?)?;
+        let last_glyph = read_u16(strike.checked_add(42)?)?;
+        if !(first_glyph..=last_glyph).contains(&glyph_id) {
+            continue;
+        }
+        let array = read_u32(strike)?;
+        for subtable in 0..read_u32(strike.checked_add(8)?)? {
+            let entry = array.checked_add(subtable.checked_mul(8)?)?;
+            let first_glyph = read_u16(entry)?;
+            // Swash assumes subtable ranges are sorted and stops at the
+            // first one starting past the glyph. Mirror it, or a font with
+            // out-of-order ranges makes this guard approve a strike Swash
+            // skips — and render whatever unvetted strike Swash picks next.
+            if glyph_id < first_glyph {
+                break;
+            }
+            if (first_glyph..=read_u16(entry.checked_add(2)?)?).contains(&glyph_id) {
+                let subtable = array.checked_add(read_u32(entry.checked_add(4)?)?)?;
+                selected = Some((
+                    table.get(strike.checked_add(45)?).copied()?,
+                    table.get(strike.checked_add(46)?).copied()?,
+                    read_u16(subtable.checked_add(2)?)?,
+                ));
+                break;
+            }
+        }
+        if selected.is_some_and(|(ppem, _, _)| u16::from(ppem) >= size as u16) {
+            break;
+        }
+    }
+
+    match selected? {
+        (_, _, 17..=19) => Some(Source::ColorBitmap(StrikeWith::BestFit)),
+        (ppem, 32, 1 | 6) if size == f32::from(ppem) => {
+            Some(Source::ColorBitmap(StrikeWith::ExactSize))
+        }
+        (_, 32, 2 | 5 | 7) => None,
+        (_, bit_depth, format) => {
+            tracing::warn!(glyph_id, bit_depth, format, "unsupported color strike");
+            None
+        }
+    }
+}
+
+/// Normalize a bitmap selected by [`select_color_bitmap`] after Swash renders
+/// it. Color outlines are already premultiplied RGBA and remain unchanged.
+pub fn normalize_color_bitmap(image: &mut swash::scale::image::Image) {
+    use swash::scale::{Source, StrikeWith};
+
+    let png = match image.source {
+        Source::ColorBitmap(StrikeWith::BestFit) => true,
+        Source::ColorBitmap(StrikeWith::ExactSize) => false,
+        Source::ColorBitmap(mode) => {
+            tracing::error!(?mode, "unexpected Swash color bitmap selection mode");
+            return;
+        }
+        _ => return,
+    };
+    let byte_len = image.data.len();
+    let (pixels, remainder) = image.data.as_chunks_mut::<4>();
+    if !remainder.is_empty() {
+        tracing::error!(byte_len, "Swash color bitmap is not RGBA-aligned");
+        return;
+    }
+    for pixel in pixels {
+        if png {
+            let alpha = pixel[3] as u16;
+            for channel in &mut pixel[..3] {
+                *channel = ((*channel as u16 * alpha + 127) / 255) as u8;
+            }
+        } else {
+            pixel.swap(0, 2);
+        }
+    }
+}
+
+#[cfg(test)]
+mod color_bitmap_tests {
+    use super::{normalize_color_bitmap, select_color_bitmap};
+    use swash::scale::{image::Image, Source, StrikeWith};
+
+    #[test]
+    fn normalizes_png_and_raw_color_bitmaps() {
+        let mut png = Image::new();
+        png.source = Source::ColorBitmap(StrikeWith::BestFit);
+        png.data = vec![71, 112, 76, 0, 200, 100, 50, 128, 9, 8, 7, 255];
+        let mut bgra = png.clone();
+        bgra.source = Source::ColorBitmap(StrikeWith::ExactSize);
+        bgra.data = vec![25, 50, 100, 128, 7, 8, 9, 255];
+        let mut outline = bgra.clone();
+        outline.source = Source::ColorOutline(0);
+
+        normalize_color_bitmap(&mut png);
+        normalize_color_bitmap(&mut bgra);
+        normalize_color_bitmap(&mut outline);
+
+        assert_eq!(png.data, [0, 0, 0, 0, 100, 50, 25, 128, 9, 8, 7, 255]);
+        assert_eq!(bgra.data, [100, 50, 25, 128, 9, 8, 7, 255]);
+        assert_eq!(outline.data, [25, 50, 100, 128, 7, 8, 9, 255]);
+    }
+
+    #[test]
+    fn normalize_rejects_unaligned_data_untouched() {
+        let mut image = Image::new();
+        image.source = Source::ColorBitmap(StrikeWith::BestFit);
+        image.data = vec![10, 20, 30, 128, 40];
+        normalize_color_bitmap(&mut image);
+        assert_eq!(image.data, [10, 20, 30, 128, 40]);
+
+        let mut empty = Image::new();
+        empty.source = Source::ColorBitmap(StrikeWith::ExactSize);
+        normalize_color_bitmap(&mut empty);
+        assert!(empty.data.is_empty());
+    }
+
+    /// Assemble a minimal sfnt: magic + table directory (records must be
+    /// pre-sorted by tag; Swash binary-searches them) + table data.
+    fn build_font(tables: &[(&[u8; 4], Vec<u8>)]) -> Vec<u8> {
+        let mut out = Vec::new();
+        out.extend_from_slice(&0x00010000u32.to_be_bytes());
+        out.extend_from_slice(&(tables.len() as u16).to_be_bytes());
+        out.extend_from_slice(&[0u8; 6]);
+        let mut offset = 12 + tables.len() * 16;
+        for (tag, data) in tables {
+            out.extend_from_slice(*tag);
+            out.extend_from_slice(&0u32.to_be_bytes());
+            out.extend_from_slice(&(offset as u32).to_be_bytes());
+            out.extend_from_slice(&(data.len() as u32).to_be_bytes());
+            offset += data.len();
+        }
+        for (_, data) in tables {
+            out.extend_from_slice(data);
+        }
+        out
+    }
+
+    /// Assemble a CBLC table: one index subtable per strike, laid out
+    /// after the strike records. `strikes` entries are
+    /// `(ppem, bit_depth, image_format, first_glyph..=last_glyph)`.
+    fn build_cblc(strikes: &[(u8, u8, u16, std::ops::RangeInclusive<u16>)]) -> Vec<u8> {
+        let mut out = vec![0u8; 8 + strikes.len() * 48];
+        out[1] = 3; // majorVersion = 3
+        out[4..8].copy_from_slice(&(strikes.len() as u32).to_be_bytes());
+        for (i, (ppem, depth, format, glyphs)) in strikes.iter().enumerate() {
+            let strike = 8 + i * 48;
+            let array = out.len() as u32;
+            out[strike..strike + 4].copy_from_slice(&array.to_be_bytes());
+            out[strike + 8..strike + 12].copy_from_slice(&1u32.to_be_bytes());
+            out[strike + 40..strike + 42].copy_from_slice(&glyphs.start().to_be_bytes());
+            out[strike + 42..strike + 44].copy_from_slice(&glyphs.end().to_be_bytes());
+            out[strike + 44] = *ppem;
+            out[strike + 45] = *ppem;
+            out[strike + 46] = *depth;
+            // One indexSubTableArray entry, its subtable right behind it.
+            out.extend_from_slice(&glyphs.start().to_be_bytes());
+            out.extend_from_slice(&glyphs.end().to_be_bytes());
+            out.extend_from_slice(&8u32.to_be_bytes());
+            out.extend_from_slice(&1u16.to_be_bytes()); // indexFormat
+            out.extend_from_slice(&format.to_be_bytes()); // imageFormat
+            out.extend_from_slice(&0u32.to_be_bytes()); // imageDataOffset
+        }
+        out
+    }
+
+    /// Like [`build_cblc`], but each strike carries an explicit subtable
+    /// list `(first..=last, image_format)` in the given order, so tests can
+    /// model fonts whose subtable ranges are not sorted.
+    #[allow(clippy::type_complexity)]
+    fn build_cblc_multi(
+        strikes: &[(
+            u8,
+            u8,
+            std::ops::RangeInclusive<u16>,
+            &[(std::ops::RangeInclusive<u16>, u16)],
+        )],
+    ) -> Vec<u8> {
+        let mut out = vec![0u8; 8 + strikes.len() * 48];
+        out[1] = 3; // majorVersion = 3
+        out[4..8].copy_from_slice(&(strikes.len() as u32).to_be_bytes());
+        for (i, (ppem, depth, header, subtables)) in strikes.iter().enumerate() {
+            let strike = 8 + i * 48;
+            let array = out.len() as u32;
+            out[strike..strike + 4].copy_from_slice(&array.to_be_bytes());
+            out[strike + 8..strike + 12]
+                .copy_from_slice(&(subtables.len() as u32).to_be_bytes());
+            out[strike + 40..strike + 42].copy_from_slice(&header.start().to_be_bytes());
+            out[strike + 42..strike + 44].copy_from_slice(&header.end().to_be_bytes());
+            out[strike + 44] = *ppem;
+            out[strike + 45] = *ppem;
+            out[strike + 46] = *depth;
+            // All array entries first, their subheaders behind them.
+            let entries_len = (subtables.len() * 8) as u32;
+            for (j, (glyphs, _)) in subtables.iter().enumerate() {
+                out.extend_from_slice(&glyphs.start().to_be_bytes());
+                out.extend_from_slice(&glyphs.end().to_be_bytes());
+                out.extend_from_slice(&(entries_len + (j as u32) * 8).to_be_bytes());
+            }
+            for (_, format) in subtables.iter() {
+                out.extend_from_slice(&1u16.to_be_bytes()); // indexFormat
+                out.extend_from_slice(&format.to_be_bytes()); // imageFormat
+                out.extend_from_slice(&0u32.to_be_bytes()); // imageDataOffset
+            }
+        }
+        out
+    }
+
+    /// Wrap a CBLC table into a font that also carries the (empty) CBDT
+    /// data table Swash requires before it activates color strikes.
+    fn color_font(cblc: Vec<u8>) -> Vec<u8> {
+        build_font(&[(b"CBDT", vec![0u8; 4]), (b"CBLC", cblc)])
+    }
+
+    fn select(data: &[u8], glyph_id: u16, size: f32) -> Option<Source> {
+        let font = swash::FontRef::from_index(data, 0).expect("synthetic font parses");
+        select_color_bitmap(font, glyph_id, size)
+    }
+
+    #[test]
+    fn png_strikes_use_best_fit() {
+        let font = color_font(build_cblc(&[(128, 32, 17, 0..=10)]));
+        for size in [16.0, 128.0, 200.0] {
+            assert!(matches!(
+                select(&font, 5, size),
+                Some(Source::ColorBitmap(StrikeWith::BestFit))
+            ));
+        }
+    }
+
+    #[test]
+    fn raw_strikes_only_at_exact_size() {
+        let font = color_font(build_cblc(&[(64, 32, 1, 0..=10)]));
+        assert!(matches!(
+            select(&font, 5, 64.0),
+            Some(Source::ColorBitmap(StrikeWith::ExactSize))
+        ));
+        // Any other size would resample premultiplied BGRA; skip the bitmap.
+        assert!(select(&font, 5, 32.0).is_none());
+        assert!(select(&font, 5, 65.0).is_none());
+    }
+
+    #[test]
+    fn packed_strikes_are_skipped() {
+        // Formats 2, 5 and 7 make Swash under-allocate and panic on decode.
+        for format in [2u16, 5, 7] {
+            let font = color_font(build_cblc(&[(64, 32, format, 0..=10)]));
+            assert!(select(&font, 5, 64.0).is_none());
+        }
+    }
+
+    #[test]
+    fn glyph_outside_strike_range_finds_nothing() {
+        let font = color_font(build_cblc(&[(64, 32, 17, 4..=10)]));
+        assert!(select(&font, 3, 64.0).is_none());
+        assert!(select(&font, 11, 64.0).is_none());
+    }
+
+    #[test]
+    fn sbix_fonts_use_best_fit_without_cblc() {
+        let font = build_font(&[(b"sbix", vec![0u8; 8])]);
+        assert!(matches!(
+            select(&font, 5, 20.0),
+            Some(Source::ColorBitmap(StrikeWith::BestFit))
+        ));
+    }
+
+    /// Mirrors Swash's nearest-ppem walk: strikes are scanned in order and
+    /// the first one at or above the requested size wins, so the packed
+    /// small strike must not veto the PNG strike that Swash will render.
+    #[test]
+    fn nearest_strike_decides_the_format() {
+        let font = color_font(build_cblc(&[(32, 32, 5, 0..=10), (128, 32, 17, 0..=10)]));
+        assert!(matches!(
+            select(&font, 5, 40.0),
+            Some(Source::ColorBitmap(StrikeWith::BestFit))
+        ));
+        // At size <= 32 the packed strike is nearest: skip the bitmap.
+        assert!(select(&font, 5, 32.0).is_none());
+    }
+
+    #[test]
+    fn truncated_cblc_is_rejected_without_panicking() {
+        let mut cblc = build_cblc(&[(64, 32, 17, 0..=10)]);
+        for len in [0, 4, 8, 20, 50] {
+            cblc.truncate(len);
+            let font = color_font(cblc.clone());
+            assert!(select(&font, 5, 64.0).is_none());
+        }
+        // numSizes claiming more strikes than the data holds.
+        let mut lying = build_cblc(&[(64, 32, 17, 0..=10)]);
+        lying[4..8].copy_from_slice(&9u32.to_be_bytes());
+        let font = color_font(lying);
+        assert!(matches!(
+            select(&font, 5, 64.0),
+            Some(Source::ColorBitmap(StrikeWith::BestFit))
+        ));
+    }
+
+    /// Swash only activates CBLC strikes when CBDT is present too; a
+    /// CBLC-only font must not report a bitmap the renderer will never load.
+    #[test]
+    fn cblc_without_cbdt_is_ignored() {
+        let font = build_font(&[(b"CBLC", build_cblc(&[(64, 32, 17, 0..=10)]))]);
+        assert!(select(&font, 5, 64.0).is_none());
+    }
+
+    /// Swash assumes subtable ranges are sorted and treats a strike as not
+    /// covering a glyph the moment a range starts past it. A font with
+    /// out-of-order ranges must get the same answer here, or the guard
+    /// approves a PNG strike while Swash renders the packed strike behind
+    /// it — the exact panic this module exists to prevent.
+    #[test]
+    fn out_of_order_subtables_match_swash() {
+        let font = color_font(build_cblc_multi(&[
+            // Header covers 0..=10, but the subtable holding glyph 5 sits
+            // behind one starting at 8: Swash stops at 8 > 5 and skips
+            // this strike entirely.
+            (64, 32, 0..=10, &[(8..=10, 17), (0..=5, 17)]),
+            // ...falling through to this packed strike, which panics
+            // Swash's decoder if it is ever selected as a source.
+            (64, 32, 0..=10, &[(0..=10, 2)]),
+        ]));
+        assert!(select(&font, 5, 64.0).is_none());
+
+        // Sorted subtables keep working, including later entries.
+        let sorted = color_font(build_cblc_multi(&[(
+            64,
+            32,
+            0..=10,
+            &[(0..=3, 17), (4..=10, 17)],
+        )]));
+        assert!(matches!(
+            select(&sorted, 5, 64.0),
+            Some(Source::ColorBitmap(StrikeWith::BestFit))
+        ));
+    }
+}
+
+/// Parse `fonts.features` entries into OpenType feature settings.
+/// Accepts `"ss01"`, `"+ss01"`, `"-liga"` and `"cv01=2"` forms.
+pub fn parse_font_features(entries: &[String]) -> Vec<swash::Setting<u16>> {
+    let mut out: Vec<swash::Setting<u16>> = Vec::with_capacity(entries.len());
+    for raw in entries {
+        let s = raw.trim();
+        let (name, value) = if let Some(rest) = s.strip_prefix('-') {
+            (rest.trim(), 0u16)
+        } else if let Some(rest) = s.strip_prefix('+') {
+            (rest.trim(), 1u16)
+        } else if let Some((name, v)) = s.split_once('=') {
+            match v.trim().parse::<u16>() {
+                Ok(v) => (name.trim(), v),
+                Err(_) => {
+                    warn!("ignoring invalid font feature '{raw}'");
+                    continue;
+                }
+            }
+        } else {
+            (s, 1u16)
+        };
+        if name.is_empty() || name.len() > 4 || !name.is_ascii() {
+            warn!("ignoring invalid font feature '{raw}'");
+            continue;
+        }
+        let mut tag = [b' '; 4];
+        tag[..name.len()].copy_from_slice(name.as_bytes());
+        out.push(swash::Setting {
+            tag: u32::from_be_bytes(tag),
+            value,
+        });
+    }
+    out
+}
+
+/// Whether to apply faux-bold / faux-italic on top of the matched face.
+/// Synth fires only when the slot's bold/italic intent isn't already
+/// satisfied by the matched face, and never when the user pinned an
+/// explicit `style = "..."` Named override (an exact face was asked for).
+#[inline]
+fn synth_decisions(
+    slot: Slot,
+    font_spec: &SugarloafFont,
+    matched_is_bold: bool,
+    matched_is_italic: bool,
+) -> (bool, bool) {
+    let allowed = !matches!(font_spec.style, FontStyle::Named(_));
+    let embolden = allowed && slot.is_bold() && !matched_is_bold;
+    let italicize = allowed && slot.is_italic() && !matched_is_italic;
+    (embolden, italicize)
+}
+
+#[cfg(target_os = "macos")]
+#[inline]
+fn find_font(font_spec: SugarloafFont, slot: Slot, evictable: bool) -> FindResult {
+    if font_spec.is_default_family() {
+        return FindResult::NotFound(font_spec);
+    }
+
+    let family = font_spec.family.to_string();
+    let style_name = font_spec.style.name();
+    let bold = slot.is_bold();
+    let italic = slot.is_italic();
+
+    info!(
+        "Font search (CoreText): family='{family}' bold={bold} italic={italic} style={:?}",
+        style_name
+    );
+
+    let Some((path, handle)) =
+        crate::font::macos::find_font(&family, bold, italic, style_name)
+    else {
+        warn!("CoreText found no match for family='{family}'");
+        return FindResult::NotFound(font_spec);
+    };
+
+    // Retain the matched face; reopening its file loses named variable styles.
+    // CoreText owns the font data, so there are no bytes to evict here.
+    let _ = evictable;
+    match &path {
+        Some(p) => info!("Font '{family}' matched via CoreText at {}", p.display()),
+        None => info!("Font '{family}' matched via CoreText (no file path)"),
+    }
+    FindResult::Found(FontData::from_handle_macos(handle, path, slot, &font_spec))
+}
+
+#[cfg(all(not(target_os = "macos"), not(target_arch = "wasm32")))]
+#[inline]
+fn find_font(
+    db: &crate::font::loader::Database,
+    font_spec: SugarloafFont,
+    slot: Slot,
+    evictable: bool,
+) -> FindResult {
+    if !font_spec.is_default_family() {
+        let family = font_spec.family.to_string();
+        let mut query = crate::font::loader::Query {
+            families: &[crate::font::loader::Family::Name(&family)],
+            ..crate::font::loader::Query::default()
+        };
+
+        query.weight = match font_spec.weight {
+            Some(w) => crate::font::loader::Weight(w),
+            None if slot.is_bold() => crate::font::loader::Weight::BOLD,
+            None => crate::font::loader::Weight::NORMAL,
+        };
+
+        query.style = if slot.is_italic() {
+            crate::font::loader::Style::Italic
+        } else {
+            crate::font::loader::Style::Normal
+        };
+
+        info!(
+            "Font search: '{query:?}' style_override={:?}",
+            font_spec.style.name()
+        );
+
+        match db.query(&query) {
+            Some(id) => {
+                match db.face_source(id) {
+                    Some((crate::font::loader::Source::File(ref path), index)) => {
+                        // File source - load from path
+                        if let Some(font_data_arc) =
+                            load_from_font_source(&path.to_path_buf())
+                        {
+                            match FontData::from_data(
+                                font_data_arc,
+                                path.to_path_buf(),
+                                evictable,
+                                slot,
+                                &font_spec,
+                                index,
+                            ) {
+                                Ok(d) => {
+                                    tracing::info!(
+                                        "Font '{}' found in {}",
+                                        family,
+                                        path.display()
+                                    );
+                                    return FindResult::Found(d);
+                                }
+                                Err(err_message) => {
+                                    tracing::info!(
+                                        "Failed to load font '{query:?}', {err_message}"
+                                    );
+                                    return FindResult::NotFound(font_spec);
+                                }
+                            }
+                        }
+                    }
+                    Some((crate::font::loader::Source::Binary(font_data), index)) => {
+                        // Binary source - use data directly
+                        tracing::debug!(
+                            "Using binary font data, {} bytes",
+                            font_data.len()
+                        );
+                        // Convert Arc<Vec<u8>> to SharedData
+                        match FontData::from_data(
+                            font_data,
+                            std::path::PathBuf::from(&family),
+                            evictable,
+                            slot,
+                            &font_spec,
+                            index,
+                        ) {
+                            Ok(d) => {
+                                tracing::info!("Font '{}' loaded from memory", family);
+                                return FindResult::Found(d);
+                            }
+                            Err(err_message) => {
+                                tracing::info!(
+                                    "Failed to load font '{query:?}' from memory, {err_message}"
+                                );
+                                return FindResult::NotFound(font_spec);
+                            }
+                        }
+                    }
+                    None => {
+                        tracing::warn!("face_source returned None for font ID");
+                    }
+                }
+            }
+            None => {
+                warn!("Failed to find font '{query:?}'");
+            }
+        }
+    }
+
+    FindResult::NotFound(font_spec)
+}
+
+/// Load a bundled fallback face for `slot` from the embedded Cascadia Code
+/// variable font: regular and bold load
+/// the same upright variable file, italic and bold-italic load the same
+/// italic variable file, and the bold slots set the `wght` axis to 700.
+fn load_fallback_from_memory(slot: Slot) -> FontData {
+    use constants::{FONT_CASCADIA_CODE_NF, FONT_CASCADIA_CODE_NF_ITALIC, WGHT_BOLD};
+
+    let (data, wght) = match slot {
+        Slot::Regular => (FONT_CASCADIA_CODE_NF, None),
+        Slot::Bold => (FONT_CASCADIA_CODE_NF, Some(WGHT_BOLD)),
+        Slot::Italic => (FONT_CASCADIA_CODE_NF_ITALIC, None),
+        Slot::BoldItalic => (FONT_CASCADIA_CODE_NF_ITALIC, Some(WGHT_BOLD)),
+    };
+
+    FontData::from_static_slice_with_wght(data, wght).unwrap()
+}
+
+#[cfg(test)]
+mod alias_tests {
+    use super::*;
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn collection_face_coverage_and_advance_use_matched_handle() {
+        use crate::font::macos::{advance_units_for_char, font_has_char, FontHandle};
+        use crate::font_cache::compute_advance;
+
+        // Each table offset in a TTC is relative to the collection, not its face.
+        let mut collection = Vec::from(&b"ttcf\0\x01\0\0\0\0\0\x02"[..]);
+        collection.resize(20, 0);
+        for (index, bytes) in [
+            &include_bytes!(
+                "../../../rio-fonts/resources/SymbolsNerdFontMono/SymbolsNerdFontMono-Regular.ttf"
+            )[..],
+            constants::FONT_CASCADIA_CODE_NF,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            collection.resize((collection.len() + 3) & !3, 0);
+            let start = collection.len();
+            collection[12 + index * 4..16 + index * 4]
+                .copy_from_slice(&(start as u32).to_be_bytes());
+            collection.extend_from_slice(bytes);
+            let table_count = u16::from_be_bytes([bytes[4], bytes[5]]) as usize;
+            for table in 0..table_count {
+                let offset = start + 12 + table * 16 + 8;
+                let original = u32::from_be_bytes(
+                    collection[offset..offset + 4].try_into().unwrap(),
+                );
+                collection[offset..offset + 4]
+                    .copy_from_slice(&(original + start as u32).to_be_bytes());
+            }
+        }
+        let first = FontHandle::from_bytes_index(&collection, 0).expect("first face");
+        let matched = FontHandle::from_bytes_index(&collection, 1).expect("second face");
+        assert!(
+            !font_has_char(&first, 'M'),
+            "symbols face has no Latin glyph"
+        );
+        assert!(
+            font_has_char(&matched, 'M'),
+            "matched face has a Latin glyph"
+        );
+        let expected = advance_units_for_char(&matched, 'M').expect("matched advance");
+
+        // No file path: the handle alone must serve coverage and advances,
+        // like a matched system face without an accessible file URL.
+        let mut library = FontLibraryData::default();
+        library.insert(FontData::from_handle_macos(
+            matched,
+            None,
+            Slot::Regular,
+            &SugarloafFont::default(),
+        ));
+        let coverage =
+            library.find_best_font_match_strict('M', &SpanStyle::default(), None);
+        let advance = compute_advance(&library, FONT_ID_REGULAR, 'M');
+
+        assert_eq!(coverage, Some((FONT_ID_REGULAR, false)));
+        let advance = advance.expect("advance from the matched collection face");
+        assert_eq!(advance.advance_units, expected.0);
+        assert_eq!(advance.units_per_em, expected.1);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn named_variable_font_styles_survive_loading() {
+        use crate::font::macos::{rasterize_glyph, register_fonts_in_dir, shape_text};
+
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("src/font/resources/CascadiaCode");
+        register_fonts_in_dir(&dir);
+
+        let mut masks = Vec::new();
+        for (slot, name, weight) in [
+            (Slot::Regular, "Regular", None),
+            (Slot::Bold, "Bold", None),
+            (Slot::Italic, "Italic", None),
+            (Slot::BoldItalic, "Bold Italic", None),
+            (Slot::Bold, "Bold", Some(400)),
+        ] {
+            let spec = SugarloafFont {
+                family: "Cascadia Code NF".to_string(),
+                style: FontStyle::Named(name.to_string()),
+                weight,
+            };
+            let FindResult::Found(font) = find_font(spec, slot, false) else {
+                panic!("bundled {name} face must resolve");
+            };
+            assert_eq!(font.is_bold(), slot.is_bold() && weight.is_none());
+            assert_eq!(font.is_italic(), slot.is_italic());
+            assert!(!font.should_embolden);
+            assert!(!font.should_italicize);
+
+            let handle = font.handle.as_ref().expect("CoreText handle");
+            let glyphs = shape_text(handle, "M", 24.0);
+            let mask = rasterize_glyph(handle, glyphs[0].id, 24.0, false, false, false)
+                .expect("rasterized glyph");
+            assert!(mask.bytes.iter().any(|&b| b != 0));
+            masks.push((mask.width, mask.height, mask.bytes));
+        }
+        assert_ne!(masks[0], masks[1], "regular and bold must differ");
+        assert_ne!(masks[2], masks[3], "italic and bold italic must differ");
+        assert_eq!(
+            masks[0], masks[4],
+            "explicit weight must override the style"
+        );
+    }
+
+    /// `insert_alias` registers a new id that resolves back to the
+    /// target's `FontData` through `get`/`try_get`. Slot 0 is owned;
+    /// slot 1 (the alias) returns the same face without a clone.
+    #[test]
+    fn insert_alias_resolves_to_target() {
+        let mut lib = FontLibraryData::default();
+        lib.insert(
+            FontData::from_static_slice(constants::FONT_CASCADIA_CODE_NF)
+                .expect("load regular"),
+        );
+        lib.insert_alias(0);
+
+        assert_eq!(lib.len(), 2, "alias takes a slot");
+        assert_eq!(lib.resolve_id(1), 0, "alias resolves to its target");
+        let owned_key = lib.get(&0).key;
+        let aliased_key = lib.get(&1).key;
+        assert_eq!(
+            owned_key, aliased_key,
+            "aliased slot must surface the target FontData"
+        );
+    }
+
+    /// Alias-of-alias is collapsed at insert time so resolution stays
+    /// single-hop. Used to keep the lookup cost bounded — chasing
+    /// arbitrary chains would slow the per-codepoint walk.
+    #[test]
+    fn alias_of_alias_collapses_to_root() {
+        let mut lib = FontLibraryData::default();
+        lib.insert(
+            FontData::from_static_slice(constants::FONT_CASCADIA_CODE_NF)
+                .expect("load regular"),
+        );
+        lib.insert_alias(0);
+        lib.insert_alias(1);
+        assert_eq!(
+            lib.resolve_id(2),
+            0,
+            "alias pointing at an alias must collapse to the owning id"
+        );
+        assert!(matches!(lib.inner.get(&2), Some(FontEntry::Alias(0))));
+    }
+
+    /// Default-family fallback loading produces an actual bold face
+    /// (not an alias) when the regular slot uses the bundled Cascadia
+    /// Code variable font. Guards against the alias-everywhere
+    /// regression introduced in commit `e82299705f` that left the
+    /// embedded bold slot unloaded with default config.
+    #[test]
+    fn fallback_bold_slot_reports_is_bold() {
+        let regular = load_fallback_from_memory(Slot::Regular);
+        let bold = load_fallback_from_memory(Slot::Bold);
+        let italic = load_fallback_from_memory(Slot::Italic);
+        let bold_italic = load_fallback_from_memory(Slot::BoldItalic);
+
+        assert!(!regular.is_bold(), "regular slot must not be bold");
+        assert!(bold.is_bold(), "bold slot must report is_bold");
+        assert!(!italic.is_bold(), "italic slot must not be bold");
+        assert!(
+            bold_italic.is_bold(),
+            "bold-italic slot must report is_bold"
+        );
+
+        assert!(!regular.is_italic(), "regular slot must not be italic");
+        assert!(!bold.is_italic(), "bold slot must not be italic");
+        assert!(italic.is_italic(), "italic slot must report is_italic");
+        assert!(
+            bold_italic.is_italic(),
+            "bold-italic slot must report is_italic"
+        );
+
+        assert_eq!(bold.wght_variation, Some(constants::WGHT_BOLD));
+        assert_eq!(bold_italic.wght_variation, Some(constants::WGHT_BOLD));
+        assert_eq!(regular.wght_variation, None);
+        assert_eq!(italic.wght_variation, None);
+    }
+
+    /// The user-configured bold slot must win for bold cells even when
+    /// the face reports a sub-700 weight (families shipping bold at
+    /// 600, Nerd Font patches). Regression test for #1110: the
+    /// weight-based walk used to reject the slot and send bold text
+    /// to the regular face.
+    #[test]
+    fn bold_slot_wins_regardless_of_weight_metadata() {
+        use std::sync::Arc;
+
+        let mut data = FontLibraryData::default();
+        data.insert(
+            FontData::from_static_slice(constants::FONT_CASCADIA_CODE_NF)
+                .expect("load regular"),
+        );
+        data.insert(
+            FontData::from_static_slice(constants::FONT_CASCADIA_CODE_NF_ITALIC)
+                .expect("load italic"),
+        );
+        // Simulate a family whose bold face reports weight 600.
+        let bold = FontData::from_static_slice_with_wght(
+            constants::FONT_CASCADIA_CODE_NF,
+            Some(600.0),
+        )
+        .expect("load bold");
+        assert!(!bold.is_bold(), "test premise: bold face under 700");
+        data.insert(bold);
+        data.insert_alias(FONT_ID_REGULAR);
+
+        let lib = FontLibrary {
+            inner: Arc::new(parking_lot::RwLock::new(data)),
+        };
+
+        let style = crate::SpanStyle {
+            font_attrs: swash::Attributes::new(
+                swash::Stretch::NORMAL,
+                swash::Weight::BOLD,
+                swash::Style::Normal,
+            ),
+            ..Default::default()
+        };
+        let (font_id, _) = lib
+            .inner
+            .read()
+            .find_best_font_match_strict('A', &style, None)
+            .expect("cluster must resolve");
+        assert_eq!(
+            font_id, FONT_ID_BOLD,
+            "bold cells must use the configured bold slot"
+        );
+    }
+
+    #[test]
+    fn parse_font_features_forms() {
+        let entries: Vec<String> = ["ss01", "+dlig", "-liga", "cv01=2", "bogus_tag", ""]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let parsed = parse_font_features(&entries);
+        let tag = |s: &str| {
+            let mut t = [b' '; 4];
+            t[..s.len()].copy_from_slice(s.as_bytes());
+            u32::from_be_bytes(t)
+        };
+        assert_eq!(parsed.len(), 4);
+        assert_eq!((parsed[0].tag, parsed[0].value), (tag("ss01"), 1));
+        assert_eq!((parsed[1].tag, parsed[1].value), (tag("dlig"), 1));
+        assert_eq!((parsed[2].tag, parsed[2].value), (tag("liga"), 0));
+        assert_eq!((parsed[3].tag, parsed[3].value), (tag("cv01"), 2));
+    }
+
+    /// Aliases share the target's `metrics_cache`, so requesting
+    /// metrics through the alias returns the same numbers as the
+    /// target without populating a duplicate cache.
+    #[test]
+    fn alias_shares_metrics_with_target() {
+        let mut lib = FontLibraryData::default();
+        lib.insert(
+            FontData::from_static_slice(constants::FONT_CASCADIA_CODE_NF)
+                .expect("load regular"),
+        );
+        lib.insert_alias(0);
+
+        let from_regular = lib.get_font_metrics(&0, 14.0).expect("regular metrics");
+        let from_alias = lib.get_font_metrics(&1, 14.0).expect("alias metrics");
+        assert_eq!(from_regular, from_alias);
+    }
+}
+
+#[allow(dead_code)]
+fn find_font_path(
+    db: &crate::font::loader::Database,
+    font_family: String,
+) -> Option<PathBuf> {
+    info!("Font path search: family '{font_family}'");
+
+    let query = crate::font::loader::Query {
+        families: &[crate::font::loader::Family::Name(&font_family)],
+        ..crate::font::loader::Query::default()
+    };
+
+    if let Some(id) = db.query(&query) {
+        if let Some((crate::font::loader::Source::File(ref path), _index)) =
+            db.face_source(id)
+        {
+            return Some(path.to_path_buf());
+        }
+    }
+
+    None
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn load_from_font_source(path: &PathBuf) -> Option<SharedData> {
+    let cache = get_font_data_cache();
+
+    // Check if already cached - DashMap handles concurrent access efficiently
+    if let Some(cached_data) = cache.get(path) {
+        return Some(cached_data.clone());
+    }
+
+    // Memory-map the file rather than reading it into a `Vec<u8>`. The
+    // kernel backs the bytes with the font file and only pages in what
+    // swash's charmap / metrics queries actually touch, so a
+    // large fallback (e.g. a CJK font, an emoji file) costs negligible
+    // resident RAM instead of its full on-disk size. Mmap is unsafe
+    // because the file can change underneath us or the mapping can fault;
+    // for read-only font files this is the universally-accepted trade-off
+    // (same as font-kit and FreeType).
+    let file = std::fs::File::open(path).ok()?;
+    let mmap = unsafe { memmap2::Mmap::map(&file).ok()? };
+    let shared_data = SharedData::from_mmap(mmap);
+    let entry = cache
+        .entry(path.clone())
+        .or_insert_with(|| shared_data.clone());
+    Some(entry.clone())
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod postscript_resolver_tests {
+    use super::*;
+
+    /// End-to-end: insert a bundled font into a bare `FontLibraryData`
+    /// and verify the PostScript-name resolver returns the font_id we
+    /// just assigned. This is the bridge the macOS shaper's cascade-run
+    /// resolver walks over — if `insert` stops populating the map (e.g.
+    /// `handle()` returns `None` on a refactor), the shape path
+    /// silently falls back to primary instead of returning the right
+    /// font for a substituted run.
+    #[test]
+    fn insert_populates_postscript_lookup() {
+        // Read the PS name straight from the handle so the test doesn't
+        // hardcode a value that changes if the bundled font is updated.
+        let handle =
+            crate::font::macos::FontHandle::from_static_bytes(FONT_CASCADIA_CODE_NF)
+                .expect("parse CascadiaMono");
+        let ps_name = handle.postscript_name();
+
+        let mut lib = FontLibraryData::default();
+        let font_data = FontData::from_static_slice(FONT_CASCADIA_CODE_NF)
+            .expect("load CascadiaMono");
+        lib.insert(font_data);
+
+        assert_eq!(
+            lib.font_id_for_postscript_name(&ps_name),
+            Some(0),
+            "inserted PS name '{ps_name}' should resolve to font_id 0"
+        );
+        assert_eq!(
+            lib.font_id_for_postscript_name("not-a-real-font"),
+            None,
+            "unknown PS names must return None, not a stale hit"
+        );
+    }
+
+    /// `insert` keys on the handle's current PS name, so a second
+    /// insert of the same face must not overwrite the first's id —
+    /// otherwise later lookups would return a stale id pointing at a
+    /// now-shifted slot. The rest of the library keys on the first
+    /// id, so first-wins is the correct policy.
+    #[test]
+    fn duplicate_insert_keeps_first_id() {
+        let handle =
+            crate::font::macos::FontHandle::from_static_bytes(FONT_CASCADIA_CODE_NF)
+                .expect("parse CascadiaMono");
+        let ps_name = handle.postscript_name();
+
+        let mut lib = FontLibraryData::default();
+        lib.insert(FontData::from_static_slice(FONT_CASCADIA_CODE_NF).expect("load a"));
+        lib.insert(FontData::from_static_slice(FONT_CASCADIA_CODE_NF).expect("load b"));
+        assert_eq!(
+            lib.font_id_for_postscript_name(&ps_name),
+            Some(0),
+            "second insert of same face must not clobber the first's font_id"
+        );
+    }
+
+    /// Build a tiny `FontLibrary` that contains only CascadiaMono as
+    /// font_id=0 — i.e. no cascade fallbacks registered. Then ask it to
+    /// resolve a CJK codepoint CascadiaMono can't render. The lazy-
+    /// discovery path should call `CTFontCreateForString`, register the
+    /// discovered font under a new id, and return that id.
+    #[test]
+    fn resolve_font_for_char_lazy_discovers_cascade_font() {
+        use crate::SpanStyle;
+        use std::sync::Arc;
+
+        let mut data = FontLibraryData::default();
+        data.insert(FontData::from_static_slice(FONT_CASCADIA_CODE_NF).expect("load"));
+        let lib = FontLibrary {
+            inner: Arc::new(parking_lot::RwLock::new(data)),
+        };
+        let starting_len = lib.inner.read().inner.len();
+
+        let style = SpanStyle::default();
+        // U+6C34 ('水') — not in CascadiaMono. Library has no fallback
+        // registered, so the pre-resolve walk returns None and the
+        // discovery path has to fire.
+        let (font_id, _is_emoji) = lib.resolve_font_for_char('\u{6C34}', &style, None);
+
+        assert_ne!(
+            font_id, 0,
+            "lazy discovery should register a new font_id distinct from primary"
+        );
+        assert!(
+            font_id < lib.inner.read().inner.len(),
+            "returned font_id should index into the library"
+        );
+        assert_eq!(
+            lib.inner.read().inner.len(),
+            starting_len + 1,
+            "lazy discovery should have registered exactly one new font"
+        );
+    }
+
+    /// Two queries for codepoints that cascade to the same system font
+    /// (both CJK ideographs) must reuse the same `font_id` — the
+    /// postscript-name check under the write lock prevents double
+    /// registration so each face is stored at most once.
+    #[test]
+    fn resolve_font_for_char_reuses_discovered_font() {
+        use crate::SpanStyle;
+        use std::sync::Arc;
+
+        let mut data = FontLibraryData::default();
+        data.insert(FontData::from_static_slice(FONT_CASCADIA_CODE_NF).expect("load"));
+        let lib = FontLibrary {
+            inner: Arc::new(parking_lot::RwLock::new(data)),
+        };
+        let style = SpanStyle::default();
+
+        // Both codepoints should cascade to the same system CJK font on
+        // any stock macOS install.
+        let (id_a, _) = lib.resolve_font_for_char('\u{6C34}', &style, None);
+        let len_after_first = lib.inner.read().inner.len();
+        let (id_b, _) = lib.resolve_font_for_char('\u{6728}', &style, None);
+        let len_after_second = lib.inner.read().inner.len();
+
+        assert_eq!(
+            id_a, id_b,
+            "two CJK codepoints from the same cascade font should reuse the same font_id"
+        );
+        assert_eq!(
+            len_after_first, len_after_second,
+            "the second resolve must not register a duplicate font"
+        );
+    }
+}
+
+#[cfg(test)]
+mod glyph_registry_install_tests {
+    use super::*;
+    use crate::font::glyph_registry::GlyphRegistry;
+
+    #[test]
+    fn install_then_lookup_returns_same_arc() {
+        let library = FontLibrary::default();
+        let registry = GlyphRegistry::new();
+        library.install_glyph_registry(42, registry.clone());
+
+        let fetched = library
+            .glyph_registry_for(42)
+            .expect("entry installed at 42");
+        assert!(fetched.ptr_eq(&registry));
+    }
+
+    #[test]
+    fn lookup_returns_none_for_unknown_route() {
+        let library = FontLibrary::default();
+        assert!(library.glyph_registry_for(999).is_none());
+    }
+
+    #[test]
+    fn install_overwrites_same_route() {
+        let library = FontLibrary::default();
+        let first = GlyphRegistry::new();
+        let second = GlyphRegistry::new();
+        assert!(!first.ptr_eq(&second));
+
+        library.install_glyph_registry(7, first.clone());
+        library.install_glyph_registry(7, second.clone());
+
+        let fetched = library.glyph_registry_for(7).expect("entry at 7");
+        assert!(fetched.ptr_eq(&second));
+        assert!(!fetched.ptr_eq(&first));
+    }
+
+    #[test]
+    fn remove_drops_the_entry() {
+        let library = FontLibrary::default();
+        let registry = GlyphRegistry::new();
+        library.install_glyph_registry(3, registry);
+        assert!(library.glyph_registry_for(3).is_some());
+
+        library.remove_glyph_registry(3);
+        assert!(library.glyph_registry_for(3).is_none());
+    }
+
+    #[test]
+    fn distinct_routes_hold_distinct_registries() {
+        let library = FontLibrary::default();
+        let a = GlyphRegistry::new();
+        let b = GlyphRegistry::new();
+        library.install_glyph_registry(1, a.clone());
+        library.install_glyph_registry(2, b.clone());
+
+        assert!(library.glyph_registry_for(1).unwrap().ptr_eq(&a));
+        assert!(library.glyph_registry_for(2).unwrap().ptr_eq(&b));
+    }
+}

@@ -241,7 +241,7 @@ version = "=1.13.1"
 features = []
 
 [workspace.dependencies.rio-vt]
-version = "=0.5.28"
+path = "../../src/rio/rio-vt"
 default-features = false
 
 [workspace.dependencies.reqwest]

@@ -1,0 +1,39 @@
+[package]
+name = "corcovado"
+version = { workspace = true }
+license = "MIT"
+edition = "2021"
+authors = ["Raphael Amorim <rapha850@gmail.com>"]
+description = "Non-blocking IO library"
+documentation = "https://raphamorim.io/rio/docs"
+homepage = "https://github.com/raphamorim/rio"
+repository = "https://github.com/raphamorim/rio"
+readme = "README.md"
+keywords = ["io", "async", "non-blocking"]
+categories = ["asynchronous"]
+include = [
+  "Cargo.toml",
+  "src/**/*.rs"
+]
+
+[dependencies]
+tracing = { workspace = true }
+
+[target.'cfg(unix)'.dependencies]
+libc = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = "0.42.0"
+miow = "0.5.0"
+
+[dev-dependencies]
+criterion = { workspace = true }
+
+[[test]]
+name = "test"
+path = "test/mod.rs"
+
+[[bench]]
+name = "bench_poll"
+path = "benches/bench_poll.rs"
+harness = false

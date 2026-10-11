@@ -16,7 +16,7 @@ _From `CLAUDE.md`._
   - **CRITICAL**: Never use `bun test` directly - it won't include your changes
 - **Run any command with debug build**: `bun bd <command>`
 - **Run with JavaScript exception scope verification**: `BUN_JSC_validateExceptionChecks=1
-  BUN_JSC_dumpSimulatedThrows=1 bun bd <command>`
+BUN_JSC_dumpSimulatedThrows=1 bun bd <command>`
 
 Tip: Bun is already installed and in $PATH. The `bd` subcommand is a package.json script.
 
@@ -125,7 +125,7 @@ structured-clone object fast paths.
 
 ## Class definitions (`*.classes.ts`)
 
-34 files match `src/**/*.classes.ts`, in `src/jsc` (1), `src/runtime/api` (21), `src/runtime/crypto` (1), `src/runtime/ffi` (1), `src/runtime/image` (1), `src/runtime/node` (1), `src/runtime/node/quic` (1), `src/runtime/server` (1), `src/runtime/socket` (1), `src/runtime/test_runner` (1), `src/runtime/valkey_jsc` (1), `src/runtime/webcore` (3).
+35 files match `src/**/*.classes.ts`, in `src/jsc` (1), `src/runtime/api` (22), `src/runtime/crypto` (1), `src/runtime/ffi` (1), `src/runtime/image` (1), `src/runtime/node` (1), `src/runtime/node/quic` (1), `src/runtime/server` (1), `src/runtime/socket` (1), `src/runtime/test_runner` (1), `src/runtime/valkey_jsc` (1), `src/runtime/webcore` (3).
 
 ## Read next
 
@@ -204,15 +204,15 @@ BUN_LSP_AI="claude -p" names the command that fixes code: it reads a prompt on s
 
 _From `package.json`._
 
-| Script                       | Runs                                                                                                                                                                                                                                              |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bun run bd`                 | `BUN_DEBUG_QUIET_LOGS=1 bun scripts/build.ts --profile=debug --quiet`                                                                                                                                                                             |
-| `bun run build:debug`        | `bun scripts/build.ts --profile=debug`                                                                                                                                                                                                            |
-| `bun run build:asan`         | `bun scripts/build.ts --profile=release-asan --build-dir=build/release-asan`                                                                                                                                                                      |
-| `bun run build:local`        | `bun scripts/build.ts --profile=debug-local --build-dir=build/debug-local`                                                                                                                                                                        |
-| `bun run fmt:cpp`            | `bun run clang-format`                                                                                                                                                                                                                            |
-| `bun run clang-format:check` | `./scripts/run-clang-format.sh check`                                                                                                                                                                                                             |
-| `bun run codegen:verify`     | `bun src/codegen/generate-agent-tools.ts --check && (bun run codegen:string-maps && git diff --exit-code 'src/**/*.generated.rs' \|\| (echo '\n*.generated.rs is stale — run `bun run codegen:string-maps` and commit the result.' >&2; exit 1))` |
-| `bun run rust:check-all`     | `bun scripts/rust-check-all.ts`                                                                                                                                                                                                                   |
-| `bun run rust:clippy`        | `cargo clippy --workspace --no-deps --keep-going`                                                                                                                                                                                                 |
-| `bun run test`               | `bun scripts/runner.node.ts --exec-path ./build/debug/bun-debug`                                                                                                                                                                                  |
+| Script | Runs |
+| --- | --- |
+| `bun run bd` | `BUN_DEBUG_QUIET_LOGS=1 bun scripts/build.ts --profile=debug --quiet` |
+| `bun run build:debug` | `bun scripts/build.ts --profile=debug` |
+| `bun run build:asan` | `bun scripts/build.ts --profile=release-asan --build-dir=build/release-asan` |
+| `bun run build:local` | `bun scripts/build.ts --profile=debug-local --build-dir=build/debug-local` |
+| `bun run fmt:cpp` | `bun run clang-format` |
+| `bun run clang-format:check` | `./scripts/run-clang-format.sh check` |
+| `bun run codegen:verify` | `bun src/codegen/generate-agent-tools.ts --check && (bun run codegen:string-maps && git diff --exit-code 'src/**/*.generated.rs' \|\| (echo '\n*.generated.rs is stale — run `bun run codegen:string-maps` and commit the result.' >&2; exit 1))` |
+| `bun run rust:check-all` | `bun scripts/rust-check-all.ts` |
+| `bun run rust:clippy` | `cargo clippy --workspace --no-deps --keep-going` |
+| `bun run test` | `bun scripts/runner.node.ts --exec-path ./build/debug/bun-debug` |

@@ -54,6 +54,7 @@ static constexpr ASCIILiteral builtinModuleNamesSortedLength[] = {
     "bun:chrome"_s,
     "bun:google"_s,
     "bun:obscura"_s,
+    "bun:rio"_s,
     "bun:sqlite"_s,
     "path/posix"_s,
     "path/win32"_s,

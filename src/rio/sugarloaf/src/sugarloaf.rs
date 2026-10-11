@@ -1,0 +1,1259 @@
+pub mod graphics;
+pub mod primitives;
+pub mod state;
+
+use crate::components::core::image::Handle;
+#[cfg(feature = "wgpu")]
+use crate::components::filters::{Filter, FiltersBrush};
+use crate::font::{fonts::SugarloafFont, FontLibrary};
+use crate::font_cache::{compute_advance, resolve_with, FontCache, ResolvedGlyph};
+use crate::layout::RootStyle;
+use crate::renderer::Renderer;
+use crate::sugarloaf::graphics::{image_key_route, GraphicDataEntry, Graphics};
+use swash::Attributes;
+
+use crate::context::Context;
+use core::fmt::{Debug, Formatter};
+use primitives::ImageProperties;
+use raw_window_handle::{
+    DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle, WindowHandle,
+};
+use state::SugarState;
+
+pub struct Sugarloaf<'a> {
+    // NOTE: field order is load-bearing for the Vulkan backend. Rust
+    // drops struct fields in declaration order, and any field that
+    // owns Vulkan handles (renderer, text, eventually grids) must drop
+    // BEFORE `ctx` — destroying handles after the device has been
+    // torn down would crash the driver. `ctx` is therefore last.
+    renderer: Renderer,
+    state: state::SugarState,
+    /// Input colorspace configured at construction. Exposed via
+    /// `input_colorspace()` so the grid renderer can feed the same
+    /// value into its own uniform — keeps grid + quad-fill pipelines
+    /// producing byte-identical framebuffer colors.
+    colorspace: Colorspace,
+    pub background_color: Option<Color>,
+    pub background_image: Option<ImageProperties>,
+    pub graphics: Graphics,
+    #[cfg(feature = "wgpu")]
+    filters_brush: Option<FiltersBrush>,
+    /// One-shot notice that active filters defeat `window.opacity`.
+    #[cfg(feature = "wgpu")]
+    warned_filters_opacity: bool,
+    /// Pixel data for standalone image textures, keyed by image key
+    /// (`graphics::kitty_image_key` / `graphics::atlas_image_key`).
+    pub image_data: rustc_hash::FxHashMap<u64, GraphicDataEntry>,
+    /// Persistent state for the CPU rasterizer (glyph cache + frame hash).
+    /// Unused on GPU backends.
+    cpu_cache: crate::renderer::cpu::CpuCache,
+    /// Memo of `(char, attrs) -> ResolvedGlyph`. Owned here (next to
+    /// the FontLibrary it caches) so frontends never have to track
+    /// their own font cache. Each entry carries both terminal-cell
+    /// width (for the grid) and unscaled glyph advance (for
+    /// proportional UI via `char_advance`).
+    font_cache: FontCache,
+    /// Immediate-mode UI-text recorder. Overlays (tab titles, search
+    /// overlay, command palette, etc.) drive this instead of the
+    /// `Content`/`BuilderState` pipeline. See `sugarloaf::text` and
+    /// `memory/project_sugarloaf_content_drop.md`. Phase 1a: scaffold
+    /// only — holds no atlases or GPU state yet.
+    text: crate::text::Text,
+    /// Per-panel (rich_text_id) image overlays. Driven by the kitty
+    /// graphics frontend path; read by the renderer's image pass.
+    /// Rebuilt by `Renderer::run` for dirty panels each frame.
+    pub image_overlays:
+        rustc_hash::FxHashMap<usize, Vec<crate::sugarloaf::graphics::GraphicOverlay>>,
+    /// Owned context (device + swapchain + queue). Last so the device
+    /// outlives every Vulkan-handle-owning field above. See note at
+    /// the top of the struct.
+    pub ctx: Context<'a>,
+}
+
+#[derive(Debug)]
+pub struct SugarloafErrors {
+    pub fonts_not_found: Vec<SugarloafFont>,
+}
+
+pub struct SugarloafWithErrors<'a> {
+    pub instance: Sugarloaf<'a>,
+    pub errors: SugarloafErrors,
+}
+
+impl Debug for SugarloafWithErrors<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.errors)
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct SugarloafWindowSize {
+    pub width: f32,
+    pub height: f32,
+}
+
+pub struct SugarloafWindow {
+    pub handle: raw_window_handle::RawWindowHandle,
+    pub display: raw_window_handle::RawDisplayHandle,
+    pub size: SugarloafWindowSize,
+    pub scale: f32,
+}
+
+pub enum SugarloafBackend {
+    /// `wgpu` umbrella backend (Vulkan / Metal / DX12 / GL / WebGPU,
+    /// whichever wgpu picks). Only available when sugarloaf is built
+    /// with the `wgpu` feature; on Linux/macOS the native `Vulkan`
+    /// and `Metal` variants are preferred and wgpu can be omitted
+    /// entirely from the dep tree. Always available on Windows and
+    /// WASM (the native backends don't cover those yet).
+    #[cfg(feature = "wgpu")]
+    Wgpu(wgpu::Backends),
+    #[cfg(target_os = "macos")]
+    Metal,
+    /// Native Vulkan via `ash`. Linux only for now (Windows would need a
+    /// `khr::win32_surface` branch in `context::vulkan::create_surface`).
+    /// Mirrors the Metal backend in scope: no librashader filters.
+    #[cfg(target_os = "linux")]
+    Vulkan,
+    /// CPU rendering via tiny-skia + softbuffer.
+    Cpu,
+}
+
+// `Color` (the trivial `{r,g,b,a: f64}` POD) now lives in `rio-graphics`
+// so config/color code can use it without depending on sugarloaf. The
+// wgpu `From` conversions live alongside it there under the crate's
+// `wgpu` feature (orphan rule: both sides would be foreign here).
+pub use rio_graphics::Color;
+
+pub struct SugarloafRenderer {
+    pub backend: SugarloafBackend,
+    pub font_features: Option<Vec<String>>,
+    pub colorspace: Colorspace,
+    /// The window wants per-pixel alpha (`window.opacity < 1`). On wgpu
+    /// this prefers an adapter whose surface offers an alpha-carrying
+    /// composite mode: on Windows, DX12 HWND swapchains expose only
+    /// `Opaque`, while Vulkan exposes `PreMultiplied`, so which adapter
+    /// wgpu happens to pick decides whether transparency works at all.
+    pub prefer_alpha_capable_adapter: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Colorspace {
+    Srgb,
+    DisplayP3,
+    Rec2020,
+}
+
+#[allow(clippy::derivable_impls)]
+impl Default for Colorspace {
+    fn default() -> Colorspace {
+        // See `rio-backend::config::window::Colorspace::default` — the
+        // config field drives how input colors are interpreted, and the
+        // shader/surface always target a wide-gamut output. Default sRGB
+        // keeps theme bytes visually consistent with the rest of the OS.
+        Colorspace::Srgb
+    }
+}
+
+impl Default for SugarloafRenderer {
+    fn default() -> SugarloafRenderer {
+        #[cfg(all(target_arch = "wasm32", feature = "wgpu"))]
+        let default_backend =
+            SugarloafBackend::Wgpu(wgpu::Backends::BROWSER_WEBGPU | wgpu::Backends::GL);
+
+        // Linux defaults to the native Vulkan backend (ash). Mirrors the
+        // macOS default to native Metal — both skip the wgpu translation
+        // layer and the librashader filter chain. Other non-macOS desktop
+        // targets (Windows, BSDs) need the `wgpu` feature enabled and
+        // fall back to the wgpu umbrella backend.
+        #[cfg(all(target_os = "linux", not(target_arch = "wasm32")))]
+        let default_backend = SugarloafBackend::Vulkan;
+
+        #[cfg(all(
+            not(target_arch = "wasm32"),
+            not(target_os = "macos"),
+            not(target_os = "linux"),
+            feature = "wgpu",
+        ))]
+        let default_backend = SugarloafBackend::Wgpu(wgpu::Backends::all());
+
+        #[cfg(all(
+            not(target_arch = "wasm32"),
+            not(target_os = "macos"),
+            not(target_os = "linux"),
+            not(feature = "wgpu"),
+        ))]
+        let default_backend = SugarloafBackend::Cpu;
+
+        #[cfg(all(target_os = "macos", not(target_arch = "wasm32")))]
+        let default_backend = SugarloafBackend::Metal;
+
+        SugarloafRenderer {
+            backend: default_backend,
+            font_features: None,
+            colorspace: Colorspace::default(),
+            prefer_alpha_capable_adapter: false,
+        }
+    }
+}
+
+impl SugarloafWindow {
+    fn raw_window_handle(&self) -> raw_window_handle::RawWindowHandle {
+        self.handle
+    }
+
+    fn raw_display_handle(&self) -> raw_window_handle::RawDisplayHandle {
+        self.display
+    }
+}
+
+impl HasWindowHandle for SugarloafWindow {
+    fn window_handle(&self) -> std::result::Result<WindowHandle<'_>, HandleError> {
+        let raw = self.raw_window_handle();
+        Ok(unsafe { WindowHandle::borrow_raw(raw) })
+    }
+}
+
+impl HasDisplayHandle for SugarloafWindow {
+    fn display_handle(&self) -> Result<DisplayHandle<'_>, HandleError> {
+        let raw = self.raw_display_handle();
+        Ok(unsafe { DisplayHandle::borrow_raw(raw) })
+    }
+}
+
+unsafe impl Send for SugarloafWindow {}
+unsafe impl Sync for SugarloafWindow {}
+
+impl Sugarloaf<'_> {
+    pub fn new<'a>(
+        window: SugarloafWindow,
+        renderer: SugarloafRenderer,
+        font_library: &FontLibrary,
+        layout: RootStyle,
+    ) -> Result<Sugarloaf<'a>, Box<SugarloafWithErrors<'a>>> {
+        let font_features = renderer.font_features.to_owned();
+        let colorspace = renderer.colorspace;
+        let ctx = Context::new(window, renderer);
+
+        let renderer = Renderer::new(&ctx, colorspace);
+        let state = SugarState::new(layout, font_library, &font_features);
+
+        let font_cache = FontCache::new();
+
+        let mut text = crate::text::Text::new(font_library);
+        text.set_scale_factor(state.style.scale_factor);
+        if matches!(ctx.inner, crate::context::ContextType::Cpu(_)) {
+            text.init_cpu();
+        }
+
+        let instance = Sugarloaf {
+            state,
+            ctx,
+            colorspace,
+            background_color: Some(Color::BLACK),
+            background_image: None,
+            renderer,
+            graphics: Graphics::default(),
+            #[cfg(feature = "wgpu")]
+            filters_brush: None,
+            #[cfg(feature = "wgpu")]
+            warned_filters_opacity: false,
+            image_data: rustc_hash::FxHashMap::default(),
+            cpu_cache: crate::renderer::cpu::CpuCache::new(),
+            font_cache,
+            text,
+            image_overlays: rustc_hash::FxHashMap::default(),
+        };
+
+        Ok(instance)
+    }
+
+    /// Encoding for `GridUniforms.input_colorspace` — same mapping
+    /// the Metal quad pipeline uses:
+    ///   0 = sRGB, 1 = DisplayP3, 2 = Rec.2020.
+    #[inline]
+    pub fn input_colorspace(&self) -> u32 {
+        match self.colorspace {
+            Colorspace::Srgb => 0,
+            Colorspace::DisplayP3 => 1,
+            Colorspace::Rec2020 => 2,
+        }
+    }
+
+    #[inline]
+    pub fn update_font(&mut self, font_library: &FontLibrary) {
+        tracing::info!("requested a font change");
+
+        // Clear the global font data cache to ensure fonts are reloaded
+        crate::font::clear_font_data_cache();
+
+        // Clear the atlas to remove old font glyphs
+        self.renderer.clear_atlas();
+        // Cached tinted glyphs alias the old atlas coordinates — drop them.
+        self.cpu_cache.clear();
+        // Glyph resolutions point at the old font ids — drop them.
+        self.font_cache.clear();
+
+        self.state.reset();
+        self.state.set_fonts(font_library, &mut self.renderer);
+    }
+
+    /// Look up a single glyph in the font cache without performing
+    /// a fallback walk. Returns `None` if the entry is missing.
+    /// Use this in the first pass of a multi-cell layout to identify
+    /// cells that still need resolution.
+    #[inline]
+    pub fn try_glyph_cached(&self, ch: char, attrs: Attributes) -> Option<ResolvedGlyph> {
+        self.font_cache.get(&(ch, attrs)).copied()
+    }
+
+    /// Resolve a single glyph, filling the cache on miss. Acquires
+    /// the FontLibrary read lock once if needed.
+    #[inline]
+    pub fn resolve_glyph(&mut self, ch: char, attrs: Attributes) -> ResolvedGlyph {
+        if let Some(cached) = self.font_cache.get(&(ch, attrs)) {
+            return *cached;
+        }
+        let font_lib = self.state.fonts.clone();
+        resolve_with(&mut self.font_cache, &font_lib, ch, attrs)
+    }
+
+    /// Horizontal advance in pixels for a single char rendered with
+    /// `attrs` at `font_size`, using the same font fallback as
+    /// `resolve_glyph`. Answered from the `FontCache` entry — no
+    /// `content().build()` round trip.
+    ///
+    /// Returns `0.0` when the font library can't produce an advance
+    /// (font id unregistered or SFNT parse failure) — the same shape
+    /// an OS text engine returns for an unmapped glyph, so callers
+    /// can sum widths without branching. The failure is cached as an
+    /// `AdvanceInfo` with `units_per_em = 0` (which `scaled` already
+    /// treats as 0), so repeated queries for the same char don't
+    /// re-walk the font data on every frame.
+    ///
+    /// Lazy: the glyph cache keeps the advance `None` until the first
+    /// `char_advance` call for this `(char, attrs)`, then fills it for
+    /// the rest of the session (or until `update_font` swaps the font
+    /// library and clears the cache). The terminal grid path only
+    /// writes/reads `ResolvedGlyph::width` (cell count), so it never
+    /// pays for the hmtx / upem lookup that `char_advance` performs
+    /// on first sighting.
+    ///
+    /// Intended for proportional UI labels (tab titles, palette,
+    /// hints). Per-char isolated advance: does NOT account for
+    /// kerning, ligatures, or emoji cluster formation. Callers that
+    /// need those must build the full text span and measure via
+    /// `get_text_rendered_width`.
+    pub fn char_advance(&mut self, ch: char, attrs: Attributes, font_size: f32) -> f32 {
+        let resolved = self.resolve_glyph(ch, attrs);
+        if let Some(advance) = resolved.advance {
+            return advance.scaled(font_size);
+        }
+
+        let computed = {
+            let font_ctx = self.state.fonts.inner.read();
+            compute_advance(&font_ctx, resolved.font_id, ch)
+        };
+        // Cache both hits AND misses — misses become a zero-advance
+        // sentinel (`units_per_em = 0`) so `scaled()` returns 0 and
+        // next frame short-circuits instead of re-walking font data.
+        let info = computed.unwrap_or(crate::font_cache::AdvanceInfo {
+            advance_units: 0.0,
+            units_per_em: 0,
+        });
+        self.font_cache.set_advance((ch, attrs), info);
+        info.scaled(font_size)
+    }
+
+    /// Sorted, deduplicated family names of every font the host system
+    /// exposes via `font-kit`'s `SystemSource`. Intended for UI listings
+    /// (the command palette's "List Fonts" browser). Not cached — the
+    /// set changes rarely, and the one-off cost of walking the library
+    /// is fine for a human-triggered lookup.
+    pub fn font_family_names(&self) -> Vec<String> {
+        self.state.fonts.family_names()
+    }
+
+    /// Borrow the font library. Used by the grid emission path to
+    /// resolve per-codepoint fonts before rasterizing into the grid's
+    /// own atlas.
+    #[inline]
+    pub fn font_library(&self) -> &crate::font::FontLibrary {
+        &self.state.fonts
+    }
+
+    /// Stateless cell-metrics computation. Callers (rioterm's
+    /// `ContextDimension`) recompute on font / size / scale change
+    /// and store the result themselves — sugarloaf no longer keeps
+    /// per-panel dimensions. Returns `(TextDimensions, CellMetrics)`
+    /// for `font_size` (in logical points) at `line_height` and
+    /// `scale_factor`.
+    #[inline]
+    pub fn compute_cell_metrics(
+        &self,
+        font_size: f32,
+        line_height: f32,
+        scale_factor: f32,
+    ) -> (crate::layout::TextDimensions, crate::layout::CellMetrics) {
+        crate::layout::compute_cell_metrics(
+            &self.state.fonts,
+            font_size,
+            line_height,
+            scale_factor,
+        )
+    }
+
+    /// Resolve a batch of glyph queries with a single FontLibrary
+    /// read lock acquisition. Cache hits short-circuit; misses are
+    /// walked under the lock and stored back in the cache. Returned
+    /// vector is parallel to `queries`.
+    #[inline]
+    pub fn resolve_glyphs_batch(
+        &mut self,
+        queries: &[(char, Attributes)],
+    ) -> Vec<ResolvedGlyph> {
+        if queries.is_empty() {
+            return Vec::new();
+        }
+        let font_lib = self.state.fonts.clone();
+        let mut out = Vec::with_capacity(queries.len());
+        for &(ch, attrs) in queries {
+            out.push(resolve_with(&mut self.font_cache, &font_lib, ch, attrs));
+        }
+        out
+    }
+
+    #[inline]
+    pub fn get_context(&self) -> &Context<'_> {
+        &self.ctx
+    }
+
+    #[inline]
+    pub fn get_scale(&self) -> f32 {
+        self.ctx.scale()
+    }
+
+    #[inline]
+    pub fn style(&self) -> RootStyle {
+        self.state.style
+    }
+
+    #[inline]
+    pub fn style_mut(&mut self) -> &mut RootStyle {
+        &mut self.state.style
+    }
+
+    #[inline]
+    /// Install librashader CRT/scanline filters. Only available with
+    /// the `wgpu` feature — librashader's runtime is wgpu-only
+    /// upstream, and the native Metal/Vulkan backends ignore filter
+    /// requests entirely.
+    #[cfg(feature = "wgpu")]
+    pub fn update_filters(&mut self, filters: &[Filter]) {
+        if filters.is_empty() {
+            self.filters_brush = None;
+        } else {
+            if self.filters_brush.is_none() {
+                self.filters_brush = Some(FiltersBrush::default());
+            }
+            if let Some(ref mut brush) = self.filters_brush {
+                if let crate::context::ContextType::Wgpu(ctx) = &self.ctx.inner {
+                    brush.update_filters(ctx, filters);
+                }
+            }
+        }
+    }
+
+    #[inline]
+    pub fn set_background_color(&mut self, color: Option<Color>) -> &mut Self {
+        self.background_color = color;
+        self
+    }
+
+    /// Mark the window's render surface opaque (`true`, default — fast
+    /// macOS compositor path) or non-opaque (`false`, required for
+    /// `window.opacity < 1` and macOS-glass background blur). Safe to
+    /// call every config reload; underlying call is a single Cocoa
+    /// property write on macOS, no-op on other backends until they
+    /// grow their own transparency story.
+    #[inline]
+    pub fn set_window_opaque(&self, opaque: bool) {
+        match &self.ctx.inner {
+            #[cfg(target_os = "macos")]
+            crate::context::ContextType::Metal(ctx) => ctx.set_layer_opaque(opaque),
+            _ => {
+                let _ = opaque;
+            }
+        }
+    }
+
+    /// Try to load and install a window background image. Returns `Err`
+    /// with a human-readable message on failure (file missing, decode
+    /// failed, decoded image is empty, etc.) so callers can surface the
+    /// message in a UI overlay. The decoded pixels are uploaded to a
+    /// dedicated GPU texture sized to the image — the glyph atlas is not
+    /// touched, so a 4K wallpaper does not push glyphs out of cache.
+    #[inline]
+    pub fn set_background_image(
+        &mut self,
+        image: &ImageProperties,
+    ) -> Result<(), String> {
+        // Skip if the same image is already configured. Both the path and
+        // the opacity must match — opacity is baked into the alpha channel
+        // at upload time, so an opacity change requires a reload.
+        if let Some(current) = &self.background_image {
+            if current.path == image.path && current.opacity == image.opacity {
+                return Ok(());
+            }
+        }
+
+        // Decode the file synchronously.
+        let mut decoded = match image_rs::open(&image.path) {
+            Ok(img) => img.to_rgba8(),
+            Err(e) => {
+                let msg = format!("'{}': {}", image.path, e);
+                tracing::warn!("failed to load background image {}", msg);
+                return Err(msg);
+            }
+        };
+        let (img_w, img_h) = decoded.dimensions();
+        if img_w == 0 || img_h == 0 {
+            let msg = format!("'{}' decoded to a {}x{} image", image.path, img_w, img_h);
+            tracing::warn!("background image {}", msg);
+            return Err(msg);
+        }
+
+        // Apply per-image opacity by scaling the alpha channel before
+        // upload. The image fragment shader premultiplies alpha at sample
+        // time, so the GPU does the right thing for both fully-opaque and
+        // partially-translucent source images.
+        let opacity = image.opacity.clamp(0.0, 1.0);
+        if opacity < 1.0 {
+            let opacity_byte = (opacity * 255.0).round() as u16;
+            for pixel in decoded.pixels_mut() {
+                pixel[3] = ((pixel[3] as u16 * opacity_byte) / 255) as u8;
+            }
+        }
+
+        self.renderer.set_background_image_pixels(Some(
+            crate::renderer::BackgroundImagePixels {
+                width: img_w,
+                height: img_h,
+                pixels: decoded.into_raw(),
+            },
+        ));
+        self.background_image = Some(image.clone());
+        Ok(())
+    }
+
+    /// Drop the current background image, if any.
+    #[inline]
+    pub fn clear_background_image(&mut self) {
+        if self.background_image.is_none() {
+            return;
+        }
+        self.renderer.set_background_image_pixels(None);
+        self.background_image = None;
+    }
+
+    /// Add a rectangle to content system
+    /// - `id: None` - not cached, rendered immediately
+    /// - `id: Some(n)` - cached with id n, overwrites existing content
+    /// - `order` - draw order (higher values render on top)
+    #[inline]
+    #[allow(clippy::too_many_arguments)]
+    pub fn rect(
+        &mut self,
+        _id: Option<usize>,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        color: [f32; 4],
+        depth: f32,
+        order: u8,
+    ) {
+        let scaled_x = x * self.state.style.scale_factor;
+        let scaled_y = y * self.state.style.scale_factor;
+        let scaled_width = width * self.state.style.scale_factor;
+        let scaled_height = height * self.state.style.scale_factor;
+        // The `Some(id)` cached arm has no rio caller — every
+        // ephemeral rect goes through `Renderer.batches`. Argument
+        // kept for API stability with the other primitive helpers.
+        self.renderer.rect(
+            scaled_x,
+            scaled_y,
+            scaled_width,
+            scaled_height,
+            color,
+            depth,
+            order,
+        );
+    }
+
+    /// Add a rounded rectangle. Always immediate-mode now — see `rect`.
+    #[inline]
+    #[allow(clippy::too_many_arguments)]
+    pub fn rounded_rect(
+        &mut self,
+        _id: Option<usize>,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        color: [f32; 4],
+        depth: f32,
+        border_radius: f32,
+        order: u8,
+    ) {
+        let scaled_x = x * self.state.style.scale_factor;
+        let scaled_y = y * self.state.style.scale_factor;
+        let scaled_width = width * self.state.style.scale_factor;
+        let scaled_height = height * self.state.style.scale_factor;
+        let scaled_border_radius = border_radius * self.state.style.scale_factor;
+        self.renderer.rounded_rect(
+            scaled_x,
+            scaled_y,
+            scaled_width,
+            scaled_height,
+            color,
+            depth,
+            scaled_border_radius,
+            order,
+        );
+    }
+
+    /// Add a quad with per-corner radii and per-edge border widths
+    /// - `id: None` - not cached, rendered immediately
+    /// - `id: Some(n)` - cached with id n, overwrites existing content
+    #[inline]
+    #[allow(clippy::too_many_arguments)]
+    pub fn quad(
+        &mut self,
+        _id: Option<usize>,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        background_color: [f32; 4],
+        corner_radii: [f32; 4],
+        depth: f32,
+        order: u8,
+    ) {
+        let scale = self.state.style.scale_factor;
+        let scaled_x = x * scale;
+        let scaled_y = y * scale;
+        let scaled_width = width * scale;
+        let scaled_height = height * scale;
+        let scaled_corner_radii = [
+            corner_radii[0] * scale,
+            corner_radii[1] * scale,
+            corner_radii[2] * scale,
+            corner_radii[3] * scale,
+        ];
+
+        // For now, quad is always rendered immediately (no caching support yet)
+        self.renderer.quad(
+            scaled_x,
+            scaled_y,
+            scaled_width,
+            scaled_height,
+            background_color,
+            scaled_corner_radii,
+            depth,
+            order,
+        );
+    }
+
+    /// Add an image rectangle. Always immediate-mode now — see `rect`.
+    #[inline]
+    #[allow(clippy::too_many_arguments)]
+    pub fn image_rect(
+        &mut self,
+        _id: Option<usize>,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        color: [f32; 4],
+        coords: [f32; 4],
+        depth: f32,
+        atlas_layer: i32,
+    ) {
+        let scaled_x = x * self.state.style.scale_factor;
+        let scaled_y = y * self.state.style.scale_factor;
+        let scaled_width = width * self.state.style.scale_factor;
+        let scaled_height = height * self.state.style.scale_factor;
+
+        self.renderer.add_image_rect(
+            scaled_x,
+            scaled_y,
+            scaled_width,
+            scaled_height,
+            color,
+            coords,
+            depth,
+            atlas_layer,
+        );
+    }
+
+    /// Draw an anti-aliased polygon from a list of points.
+    /// Coordinates are in logical pixels (scaled internally).
+    #[inline]
+    pub fn polygon(&mut self, points: &[(f32, f32)], depth: f32, color: [f32; 4]) {
+        let scale = self.state.style.scale_factor;
+        let scaled: Vec<(f32, f32)> =
+            points.iter().map(|(x, y)| (x * scale, y * scale)).collect();
+        self.renderer.polygon(&scaled, depth, color);
+    }
+
+    /// Draw a triangle.
+    /// Coordinates are in logical pixels (scaled internally).
+    #[inline]
+    #[allow(clippy::too_many_arguments)]
+    pub fn triangle(
+        &mut self,
+        x1: f32,
+        y1: f32,
+        x2: f32,
+        y2: f32,
+        x3: f32,
+        y3: f32,
+        depth: f32,
+        color: [f32; 4],
+    ) {
+        let s = self.state.style.scale_factor;
+        self.renderer.triangle(
+            x1 * s,
+            y1 * s,
+            x2 * s,
+            y2 * s,
+            x3 * s,
+            y3 * s,
+            depth,
+            color,
+        );
+    }
+
+    /// Draw a line between two points.
+    /// Coordinates and width are in logical pixels (scaled internally).
+    #[inline]
+    #[allow(clippy::too_many_arguments)]
+    pub fn line(
+        &mut self,
+        x1: f32,
+        y1: f32,
+        x2: f32,
+        y2: f32,
+        width: f32,
+        depth: f32,
+        color: [f32; 4],
+        order: u8,
+    ) {
+        let s = self.state.style.scale_factor;
+        self.renderer.line(
+            x1 * s,
+            y1 * s,
+            x2 * s,
+            y2 * s,
+            width * s,
+            depth,
+            color,
+            order,
+        );
+    }
+
+    /// Draw an arc (stroke only).
+    /// Coordinates, radius, and stroke width are in logical pixels (scaled internally).
+    #[inline]
+    #[allow(clippy::too_many_arguments)]
+    pub fn arc(
+        &mut self,
+        center_x: f32,
+        center_y: f32,
+        radius: f32,
+        start_angle_deg: f32,
+        end_angle_deg: f32,
+        stroke_width: f32,
+        depth: f32,
+        color: [f32; 4],
+    ) {
+        let s = self.state.style.scale_factor;
+        self.renderer.arc(
+            center_x * s,
+            center_y * s,
+            radius * s,
+            start_angle_deg,
+            end_angle_deg,
+            stroke_width * s,
+            depth,
+            color,
+        );
+    }
+
+    /// Immediate-mode text recorder for UI overlays. The per-sugarloaf
+    /// `Text` instance. Overlays call `draw` / `measure` via this
+    /// handle; sugarloaf flushes the recorded instances at render
+    /// time (Phase 1c; currently a no-op).
+    #[inline]
+    pub fn text_mut(&mut self) -> &mut crate::text::Text {
+        &mut self.text
+    }
+
+    /// Register an image overlay anchored to `panel_id` (a
+    /// `rich_text_id`). Driven by the kitty graphics frontend; read
+    /// by the renderer's image pass.
+    #[inline]
+    pub fn push_image_overlay(
+        &mut self,
+        panel_id: usize,
+        overlay: crate::sugarloaf::graphics::GraphicOverlay,
+    ) {
+        self.image_overlays
+            .entry(panel_id)
+            .or_default()
+            .push(overlay);
+    }
+
+    /// Drop all overlays for `panel_id`. Called by the frontend when
+    /// placements are removed or the kitty graphics cache clears.
+    #[inline]
+    pub fn clear_image_overlays_for(&mut self, panel_id: usize) {
+        if let Some(v) = self.image_overlays.get_mut(&panel_id) {
+            v.clear();
+        }
+    }
+
+    #[inline]
+    pub fn clear(&mut self) {
+        self.state.clean_screen();
+    }
+
+    #[inline]
+    pub fn window_size(&self) -> SugarloafWindowSize {
+        self.ctx.size()
+    }
+
+    #[inline]
+    pub fn scale_factor(&self) -> f32 {
+        self.state.style.scale_factor
+    }
+
+    #[inline]
+    pub fn resize(&mut self, width: u32, height: u32) {
+        self.ctx.resize(width, height);
+        self.renderer.resize(&mut self.ctx);
+        // No content-state refresh needed for the background image — the
+        // dedicated draw call reads `ctx.size` directly each frame.
+    }
+
+    #[inline]
+    pub fn rescale(&mut self, scale: f32) {
+        self.ctx.set_scale(scale);
+        self.state.compute_layout_rescale(scale);
+        self.text.set_scale_factor(scale);
+    }
+
+    #[inline]
+    pub fn add_layers(&mut self, _quantity: usize) {}
+
+    #[inline]
+    pub fn reset(&mut self) {
+        self.state.reset();
+        // Drop this frame's UI text instances — overlays re-record
+        // next frame (immediate mode).
+        self.text.clear();
+    }
+
+    /// Remove an image's pixel data and its cached GPU texture.
+    /// `key` is a `graphics::kitty_image_key` / `graphics::atlas_image_key`.
+    #[inline]
+    pub fn remove_image(&mut self, key: u64) {
+        self.image_data.remove(&key);
+        self.renderer.evict_image_texture(key);
+    }
+
+    /// Drop every image a closed terminal uploaded (keys namespaced
+    /// with `graphics::route_image_key`), pixel store and GPU textures.
+    pub fn remove_route_images(&mut self, route_id: usize) {
+        self.image_data
+            .retain(|key, _| image_key_route(*key) != route_id);
+        self.renderer.evict_route_textures(route_id);
+    }
+
+    /// Drop everything this frame's immediate-mode producers pushed
+    /// without submitting a draw. Callers use this when they
+    /// decided mid-frame to skip `render` / `render_with_grids`
+    /// (e.g. "no panel is dirty, nothing to present") — without
+    /// this, the `rect` / `quad` / `text_mut().draw` calls made
+    /// earlier in the frame stay queued in `comp.batches` /
+    /// `self.text` and stack into the next real present,
+    /// producing doubled overlays.
+    #[inline]
+    pub fn discard_frame(&mut self) {
+        self.renderer.discard_frame_batches();
+        self.state.reset();
+        self.text.clear();
+    }
+
+    #[inline]
+    /// Whether the last frame failed to present (drawable acquisition
+    /// failure, common right after sleep/wake). Reading clears the flag.
+    /// Embedders should mark content dirty and schedule another frame,
+    /// since the dropped frame's damage was already consumed.
+    pub fn take_frame_dropped(&mut self) -> bool {
+        std::mem::take(&mut self.renderer.frame_dropped)
+    }
+
+    pub fn render(&mut self) {
+        self.render_with_grids(&mut []);
+    }
+
+    /// Render variant that takes terminal grid renderers. Each grid's
+    /// cell draws land inside the same render pass as sugarloaf's own
+    /// UI overlays, so grid cells composite under island / assistant /
+    /// etc. with a single drawable acquisition + present.
+    ///
+    /// Pass `&mut []` to skip (equivalent to `render()`). Phase 2 call
+    /// sites in rioterm build the slice with one entry per panel.
+    #[inline]
+    pub fn render_with_grids(
+        &mut self,
+        grids: &mut [(&mut crate::grid::GridRenderer, crate::grid::GridUniforms)],
+    ) {
+        self.state.compute_dimensions();
+        self.state.compute_updates(
+            &mut self.renderer,
+            &mut self.ctx,
+            &mut self.graphics,
+            &mut self.image_data,
+            &self.image_overlays,
+        );
+
+        match self.ctx.inner {
+            #[cfg(feature = "wgpu")]
+            crate::context::ContextType::Wgpu(_) => {
+                self.render_wgpu(grids);
+            }
+            #[cfg(target_os = "macos")]
+            crate::context::ContextType::Metal(_) => {
+                self.render_metal(grids);
+            }
+            #[cfg(target_os = "linux")]
+            crate::context::ContextType::Vulkan(_) => {
+                self.render_vulkan(grids);
+            }
+            crate::context::ContextType::Cpu(_) => {
+                self.render_cpu(grids);
+            }
+            #[cfg(not(feature = "wgpu"))]
+            crate::context::ContextType::_Phantom(_) => unreachable!(),
+        }
+    }
+
+    #[inline]
+    pub fn render_cpu(
+        &mut self,
+        grids: &mut [(&mut crate::grid::GridRenderer, crate::grid::GridUniforms)],
+    ) {
+        let bg = self.background_color;
+        let cpu_ctx = match &mut self.ctx.inner {
+            crate::context::ContextType::Cpu(c) => c,
+            _ => return,
+        };
+
+        crate::renderer::cpu::render_cpu(
+            cpu_ctx,
+            &self.renderer,
+            &mut self.cpu_cache,
+            bg,
+            grids,
+            &self.text,
+            &crate::renderer::cpu::ImageLayers {
+                overlays: &self.image_overlays,
+                data: &self.image_data,
+            },
+        );
+
+        self.reset();
+    }
+
+    /// Drive a Metal frame. All command-buffer / encoder / drawable
+    /// orchestration now lives inside `Renderer::render_metal` so the
+    /// triple-buffered pool's acquire / completion-handler / retry-on-
+    /// overflow loop can see them all (mirrors zed's `MetalRenderer::draw`).
+    #[inline]
+    #[cfg(target_os = "macos")]
+    pub fn render_metal(
+        &mut self,
+        grids: &mut [(&mut crate::grid::GridRenderer, crate::grid::GridUniforms)],
+    ) {
+        let ctx = match &mut self.ctx.inner {
+            crate::context::ContextType::Metal(metal) => metal,
+            _ => return,
+        };
+
+        let bg_color = self
+            .background_color
+            .map(|c| [c.r as f32, c.g as f32, c.b as f32, c.a as f32]);
+        self.renderer
+            .render_metal(ctx, bg_color, grids, &mut self.text);
+
+        self.reset();
+    }
+
+    /// Drive a native Vulkan frame. Drives the entire frame from the
+    /// outside so grid passes, the optional bootstrap rect, and (later)
+    /// rich-text / images / UI text overlays all share one
+    /// dynamic-rendering pass and one swapchain present.
+    ///
+    /// Order of operations inside the pass:
+    ///   1. swapchain image barrier `UNDEFINED → COLOR_ATTACHMENT_OPTIMAL`
+    ///   2. `cmd_begin_rendering` with `LOAD_OP_CLEAR(bg)`
+    ///   3. set viewport + scissor
+    ///   4. per-panel `GridRenderer::render_vulkan` (Phase 3+)
+    ///   5. `VulkanRenderer::draw_bootstrap` (debug rect, gated by env)
+    ///   6. `cmd_end_rendering`
+    ///   7. swapchain image barrier `COLOR_ATTACHMENT_OPTIMAL → PRESENT_SRC_KHR`
+    ///   8. `present_frame` (queue submit + present)
+    #[inline]
+    #[cfg(target_os = "linux")]
+    pub fn render_vulkan(
+        &mut self,
+        grids: &mut [(&mut crate::grid::GridRenderer, crate::grid::GridUniforms)],
+    ) {
+        use crate::renderer::vulkan as vkr;
+
+        let ctx = match &mut self.ctx.inner {
+            crate::context::ContextType::Vulkan(v) => v,
+            _ => return,
+        };
+
+        let frame = match ctx.acquire_frame() {
+            Some(f) => f,
+            None => {
+                // Swapchain was recreated this turn — skip drawing,
+                // try again next frame.
+                self.reset();
+                return;
+            }
+        };
+
+        let bg = self
+            .background_color
+            .map(|c| [c.r as f32, c.g as f32, c.b as f32, c.a as f32])
+            .unwrap_or([0.0, 0.0, 0.0, 1.0]);
+
+        let device = ctx.device().clone();
+        let cmd = frame.cmd_buffer;
+
+        // Pre-pass: per-panel grid atlas uploads + UI text overlay
+        // atlas uploads. MUST happen before `cmd_begin_rendering` —
+        // `vkCmdCopyBufferToImage` is invalid inside a render pass.
+        self.text.init_vulkan(ctx);
+        for (grid, _) in grids.iter_mut() {
+            grid.prepare_vulkan(ctx, cmd, frame.slot);
+        }
+        self.text.prepare_vulkan(ctx, cmd, frame.slot);
+
+        vkr::cmd_acquire_image_for_rendering(&device, cmd, frame.image);
+
+        let color_attachment = vkr::build_color_attachment(&frame, bg);
+        let color_attachments = [color_attachment];
+        let rendering_info = vkr::build_rendering_info(&frame, &color_attachments);
+
+        // Negative viewport height: Vulkan's NDC has y pointing DOWN
+        // (-1 = top, +1 = bottom), but `orthographic_projection` is
+        // written for the OpenGL/Metal convention (y up). Without the
+        // flip, the text vertex shader would map pixel-y=0 to NDC y=+1
+        // (bottom in Vulkan), and the whole grid would render
+        // upside-down with row 0 at the bottom. Negative height tells
+        // the rasterizer to invert y, making the matrix work
+        // unchanged. Requires Vulkan 1.1+ (core, no extension).
+        //
+        // The bg pipeline is unaffected — its fragment shader uses
+        // `gl_FragCoord`, which is always in framebuffer pixel
+        // coordinates with top-left origin regardless of viewport.
+        let viewport = ash::vk::Viewport {
+            x: 0.0,
+            y: frame.extent.height as f32,
+            width: frame.extent.width as f32,
+            height: -(frame.extent.height as f32),
+            min_depth: 0.0,
+            max_depth: 1.0,
+        };
+        let scissor = ash::vk::Rect2D {
+            offset: ash::vk::Offset2D { x: 0, y: 0 },
+            extent: frame.extent,
+        };
+        unsafe {
+            device.cmd_begin_rendering(cmd, &rendering_info);
+            device.cmd_set_viewport(cmd, 0, &[viewport]);
+            device.cmd_set_scissor(cmd, 0, &[scissor]);
+        }
+
+        // Per-panel grid passes — draw cell backgrounds + grid text
+        // underneath everything else. Vulkan doesn't yet interleave
+        // kitty image layers around the bg/text split — same as the
+        // wgpu path; follow-up.
+        for (grid, uniforms) in grids.iter_mut() {
+            grid.render_bg_vulkan(ctx, cmd, frame.slot, uniforms);
+            grid.render_text_vulkan(ctx, cmd, frame.slot, uniforms);
+        }
+
+        // Rich-text quad pass — `Sugarloaf::quad()` / `rect()` calls
+        // (command palette background, search overlay panel,
+        // assistant frame, etc.). Drawn AFTER grid so panel chrome
+        // covers cells underneath, BEFORE the text overlay so labels
+        // sit on top.
+        self.renderer.render_vulkan(cmd, &frame);
+
+        // UI text overlay (tab titles, search overlay labels,
+        // command palette items, etc.). Drawn last so labels sit on
+        // top of the panel chrome.
+        self.text.render_vulkan(
+            cmd,
+            frame.slot,
+            [frame.extent.width as f32, frame.extent.height as f32],
+        );
+
+        unsafe {
+            device.cmd_end_rendering(cmd);
+        }
+        vkr::cmd_release_image_to_present(&device, cmd, frame.image);
+
+        ctx.present_frame(frame);
+
+        self.reset();
+    }
+
+    #[inline]
+    #[cfg(feature = "wgpu")]
+    pub fn render_wgpu(
+        &mut self,
+        grids: &mut [(&mut crate::grid::GridRenderer, crate::grid::GridUniforms)],
+    ) {
+        let ctx = match &mut self.ctx.inner {
+            crate::context::ContextType::Wgpu(wgpu) => wgpu,
+            _ => return,
+        };
+
+        let frame = match ctx.surface.get_current_texture() {
+            wgpu::CurrentSurfaceTexture::Success(frame)
+            | wgpu::CurrentSurfaceTexture::Suboptimal(frame) => frame,
+            _ => {
+                self.reset();
+                return;
+            }
+        };
+        let mut encoder = ctx
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+
+        let view = frame
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+
+        {
+            let load = if let Some(background_color) = self.background_color {
+                // The grid bg pass emits `(0,0,0,0)` for default-bg cells (see
+                // `cell_bg` in `frontends/rioterm/src/grid_emit.rs`) and blends
+                // premultiplied-over the cleared color, so the framebuffer alpha
+                // for any cell that didn't get an explicit bg ends up = the clear
+                // alpha. When the user sets `window.opacity < 1` we want the
+                // compositor to treat that cleared color as a translucent overlay
+                // over the desktop.
+                //
+                // Only a surface in `PreMultiplied` mode (DWM via the Windows
+                // wgpu Vulkan path, Wayland) reads the RGB as already
+                // multiplied by alpha, so only there may the clear be
+                // premultiplied. `PostMultiplied` wants the straight value,
+                // and everything else (`Opaque`, and `Auto` resolving to it)
+                // ignores the alpha byte entirely: premultiplying would just
+                // darken the window with no transparency in return.
+                let clear = match ctx.alpha_mode {
+                    wgpu::CompositeAlphaMode::PreMultiplied => wgpu::Color {
+                        r: background_color.r * background_color.a,
+                        g: background_color.g * background_color.a,
+                        b: background_color.b * background_color.a,
+                        a: background_color.a,
+                    },
+                    _ => background_color.into(),
+                };
+                wgpu::LoadOp::Clear(clear)
+            } else {
+                wgpu::LoadOp::Load
+            };
+
+            let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                label: None,
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    depth_slice: None,
+                    ops: wgpu::Operations {
+                        load,
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                multiview_mask: None,
+            });
+
+            // Grid passes first — cell bg/text composite under
+            // the rich-text UI overlays drawn below. Wgpu
+            // doesn't yet interleave kitty image layers with
+            // the grid bg/text split (BrushRenderer::render
+            // owns kitty image draws inline), so for now the
+            // bg+text passes run back-to-back per panel —
+            // same visual result as the prior single render
+            // call. Re-ordering kitty layers around the
+            // bg/text split would require pulling image
+            // draws out of BrushRenderer::render — Metal
+            // already does that; wgpu follow-up.
+            for (grid, uniforms) in grids.iter_mut() {
+                grid.render_bg_wgpu(&mut rpass, uniforms);
+                grid.render_text_wgpu(&mut rpass, uniforms);
+            }
+
+            self.renderer.render(ctx, &mut rpass);
+
+            // UI text pass (swash-backed). Lazy-init the
+            // wgpu pipeline + atlases on the first frame.
+            // The wgpu text backend is compiled only on
+            // non-macOS; macOS uses Metal. If a wgpu context
+            // is ever selected on macOS, text renders via
+            // the Metal path from a different sugarloaf
+            // call instead (today macOS always takes the
+            // Metal branch).
+            #[cfg(not(target_os = "macos"))]
+            {
+                self.text.init_wgpu(&ctx.device, &ctx.queue, ctx.format);
+                self.text
+                    .render_wgpu(&mut rpass, [ctx.size.width, ctx.size.height]);
+            }
+        }
+
+        if let Some(ref mut filters_brush) = self.filters_brush {
+            // The filter chain's final pass writes with blending disabled,
+            // so whatever alpha the shader outputs (1.0 for CRT shaders)
+            // replaces the frame's: the window snaps back to opaque. Say
+            // so once instead of letting the two settings cancel silently.
+            if !self.warned_filters_opacity
+                && self.background_color.is_some_and(|c| c.a < 1.0)
+            {
+                self.warned_filters_opacity = true;
+                tracing::warn!(
+                    "[renderer] filters overwrite the frame's alpha channel; \
+                     window.opacity < 1 has no effect while filters are active"
+                );
+            }
+            filters_brush.render(ctx, &mut encoder, &frame.texture, &frame.texture);
+        }
+        ctx.queue.submit(Some(encoder.finish()));
+        ctx.queue.present(frame);
+        self.reset();
+    }
+}

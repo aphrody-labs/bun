@@ -1,0 +1,1248 @@
+// Copyright (c) 2023-present, Raphael Amorim.
+//
+// CPU rasterization pipeline.
+//
+// Writes directly into softbuffer's `&mut [u32]` (0x00RRGGBB) — no
+// intermediate pixmap, no pixel format conversion at present time.
+//
+// v1 limitations: monochrome glyphs only (color-atlas glyphs not
+// implemented), no per-corner radii / borders / advanced underlines.
+// Kitty image overlays composite via `draw_image_overlay`.
+
+use crate::context::cpu::CpuContext;
+use crate::premul::{pack_opaque, pack_premul};
+use crate::renderer::compositor::Vertex;
+use crate::renderer::image_cache::ImageCache;
+use crate::renderer::Renderer;
+use crate::sugarloaf::graphics::{GraphicDataEntry, GraphicOverlay};
+use rustc_hash::FxHashMap;
+use std::hash::Hasher;
+use wide::{u32x4, u32x8};
+
+/// Image overlays and their pixel stores for a CPU frame.
+pub struct ImageLayers<'a> {
+    pub overlays: &'a FxHashMap<usize, Vec<GraphicOverlay>>,
+    pub data: &'a FxHashMap<u64, GraphicDataEntry>,
+}
+
+#[derive(Default)]
+pub struct CpuCache {
+    glyphs: FxHashMap<GlyphKey, CachedGlyph>,
+    last_frame_hash: u64,
+    has_last: bool,
+}
+
+impl CpuCache {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn clear(&mut self) {
+        self.glyphs.clear();
+        self.has_last = false;
+    }
+}
+
+#[derive(Hash, Eq, PartialEq, Clone, Copy)]
+struct GlyphKey {
+    atlas_x: u16,
+    atlas_y: u16,
+    w: u16,
+    h: u16,
+    color: u32,
+}
+
+struct CachedGlyph {
+    /// Length = w * h. Premultiplied (a<<24)|(r<<16)|(g<<8)|b.
+    pixels: Vec<u32>,
+    w: u16,
+    h: u16,
+}
+
+/// Scalar SWAR premultiplied source-over for all four channels (RGBA).
+/// Pairs R+B in one u32 lane pair (`00RR00BB`) and A+G in the other
+/// (`00AA00GG`), so the fourth channel costs no extra multiply over the
+/// old opaque three-channel form. Result preserves the premultiplied
+/// invariant so chained blends stay valid, which lets
+/// `window.opacity < 1` survive into the final framebuffer instead of
+/// getting masked back to alpha = 0.
+#[inline(always)]
+fn blend_over_swar(src_premul: u32, dst: u32) -> u32 {
+    let sa = (src_premul >> 24) & 0xff;
+    if sa == 0 {
+        return dst;
+    }
+    if sa == 255 {
+        return src_premul;
+    }
+    let inv = 255 - sa;
+    // R and B share a u32: 00RR00BB.
+    let rb = (dst & 0x00ff_00ff) * inv;
+    let rb = ((rb + 0x0080_0080 + ((rb >> 8) & 0x00ff_00ff)) >> 8) & 0x00ff_00ff;
+    // A and G share the other pair: 00AA00GG.
+    let ag = ((dst >> 8) & 0x00ff_00ff) * inv;
+    let ag = ((ag + 0x0080_0080 + ((ag >> 8) & 0x00ff_00ff)) >> 8) & 0x00ff_00ff;
+    let dst_blended = rb | (ag << 8);
+    // Premultiplied src guarantees src.rgb <= src.a (and src.a <= 0xff),
+    // so adding to the attenuated dst can't carry into the next channel.
+    let out_rb = ((src_premul & 0x00ff_00ff) + (dst_blended & 0x00ff_00ff)) & 0x00ff_00ff;
+    let out_ag = (((src_premul >> 8) & 0x00ff_00ff) + ((dst_blended >> 8) & 0x00ff_00ff))
+        & 0x00ff_00ff;
+    out_rb | (out_ag << 8)
+}
+
+/// SWAR source-over with constant src across all lanes (translucent rect).
+/// `src_v` is splat of the full premultiplied src (RGBA, alpha in upper
+/// byte); `inv_v` is splat of `(255 - src.a)`. 4 dst pixels per call.
+#[inline(always)]
+fn blend_over_simd_const_src_x4(src_v: u32x4, inv_v: u32x4, dst: u32x4) -> u32x4 {
+    let mask_rb = u32x4::splat(0x00ff_00ff);
+    let half_rb = u32x4::splat(0x0080_0080);
+
+    let drb = (dst & mask_rb) * inv_v;
+    let drb = ((drb + half_rb + ((drb >> 8) & mask_rb)) >> 8) & mask_rb;
+
+    // A and G pair as 00AA00GG, mirroring the R+B pair: four channels
+    // for the same two multiplies as the old opaque three-channel form.
+    let dag = ((dst >> 8) & mask_rb) * inv_v;
+    let dag = ((dag + half_rb + ((dag >> 8) & mask_rb)) >> 8) & mask_rb;
+
+    src_v + drb + (dag << 8)
+}
+
+/// 256-bit version of `blend_over_simd_const_src_x4` — 8 dst pixels per call.
+/// Lights up on AVX2 (~all x86_64 since 2013). Falls back gracefully on
+/// older hardware via wide's runtime detection.
+#[inline(always)]
+fn blend_over_simd_const_src_x8(src_v: u32x8, inv_v: u32x8, dst: u32x8) -> u32x8 {
+    let mask_rb = u32x8::splat(0x00ff_00ff);
+    let half_rb = u32x8::splat(0x0080_0080);
+
+    let drb = (dst & mask_rb) * inv_v;
+    let drb = ((drb + half_rb + ((drb >> 8) & mask_rb)) >> 8) & mask_rb;
+
+    // A and G pair as 00AA00GG, mirroring the R+B pair.
+    let dag = ((dst >> 8) & mask_rb) * inv_v;
+    let dag = ((dag + half_rb + ((dag >> 8) & mask_rb)) >> 8) & mask_rb;
+
+    src_v + drb + (dag << 8)
+}
+
+/// SWAR source-over with **per-lane** src and inv_a — used by glyph blit
+/// where each cached glyph pixel has its own premultiplied (a,r,g,b).
+/// Branchless: produces correct result for sa==0 (returns dst) and sa==255
+/// (returns src) without any conditional, so the loop fully vectorizes.
+#[inline(always)]
+fn blend_over_simd_var_src_x4(src: u32x4, dst: u32x4) -> u32x4 {
+    let mask_byte = u32x4::splat(0xff);
+    let mask_rb = u32x4::splat(0x00ff_00ff);
+    let half_rb = u32x4::splat(0x0080_0080);
+
+    let sa = (src >> 24) & mask_byte;
+    let inv_v = u32x4::splat(255) - sa;
+
+    let drb = (dst & mask_rb) * inv_v;
+    let drb = ((drb + half_rb + ((drb >> 8) & mask_rb)) >> 8) & mask_rb;
+
+    // A and G pair as 00AA00GG, mirroring the R+B pair.
+    let dag = ((dst >> 8) & mask_rb) * inv_v;
+    let dag = ((dag + half_rb + ((dag >> 8) & mask_rb)) >> 8) & mask_rb;
+
+    src + drb + (dag << 8)
+}
+
+#[derive(Clone, Copy)]
+struct ParsedQuad {
+    min_x: f32,
+    min_y: f32,
+    max_x: f32,
+    max_y: f32,
+    min_u: f32,
+    min_v: f32,
+    color: [f32; 4],
+    color_layer: i32,
+    mask_layer: i32,
+    clip: [f32; 4],
+}
+
+#[inline(always)]
+fn parse_quad(chunk: &[Vertex]) -> ParsedQuad {
+    let mut min_x = f32::INFINITY;
+    let mut min_y = f32::INFINITY;
+    let mut max_x = f32::NEG_INFINITY;
+    let mut max_y = f32::NEG_INFINITY;
+    let mut min_u = f32::INFINITY;
+    let mut min_v = f32::INFINITY;
+    for v in chunk {
+        if v.pos[0] < min_x {
+            min_x = v.pos[0];
+        }
+        if v.pos[1] < min_y {
+            min_y = v.pos[1];
+        }
+        if v.pos[0] > max_x {
+            max_x = v.pos[0];
+        }
+        if v.pos[1] > max_y {
+            max_y = v.pos[1];
+        }
+        if v.uv[0] < min_u {
+            min_u = v.uv[0];
+        }
+        if v.uv[1] < min_v {
+            min_v = v.uv[1];
+        }
+    }
+    let v0 = chunk[0];
+    ParsedQuad {
+        min_x,
+        min_y,
+        max_x,
+        max_y,
+        min_u,
+        min_v,
+        color: v0.color,
+        color_layer: v0.layers[0],
+        mask_layer: v0.layers[1],
+        clip: v0.clip_rect,
+    }
+}
+
+/// Snap quad bounds to integer pixels and clip to (clip_rect ∩ buffer).
+/// Returns Some((x0,y0,x1,y1)) or None if fully clipped.
+#[inline(always)]
+fn snap_and_clip(q: &ParsedQuad, buf_w: i32, buf_h: i32) -> Option<(i32, i32, i32, i32)> {
+    let mut x0 = q.min_x.round() as i32;
+    let mut y0 = q.min_y.round() as i32;
+    let mut x1 = q.max_x.round() as i32;
+    let mut y1 = q.max_y.round() as i32;
+
+    if q.clip[2] > 0.0 && q.clip[3] > 0.0 {
+        let cx0 = q.clip[0].round() as i32;
+        let cy0 = q.clip[1].round() as i32;
+        let cx1 = (q.clip[0] + q.clip[2]).round() as i32;
+        let cy1 = (q.clip[1] + q.clip[3]).round() as i32;
+        if x0 < cx0 {
+            x0 = cx0;
+        }
+        if y0 < cy0 {
+            y0 = cy0;
+        }
+        if x1 > cx1 {
+            x1 = cx1;
+        }
+        if y1 > cy1 {
+            y1 = cy1;
+        }
+    }
+    if x0 < 0 {
+        x0 = 0;
+    }
+    if y0 < 0 {
+        y0 = 0;
+    }
+    if x1 > buf_w {
+        x1 = buf_w;
+    }
+    if y1 > buf_h {
+        y1 = buf_h;
+    }
+    if x1 <= x0 || y1 <= y0 {
+        return None;
+    }
+    Some((x0, y0, x1, y1))
+}
+
+#[derive(Clone, Copy)]
+struct PendingFill {
+    x0: i32,
+    y0: i32,
+    x1: i32,
+    y1: i32,
+    packed: u32,
+}
+
+impl PendingFill {
+    #[inline(always)]
+    fn try_extend(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, packed: u32) -> bool {
+        if self.packed == packed && self.y0 == y0 && self.y1 == y1 && self.x1 == x0 {
+            self.x1 = x1;
+            return true;
+        }
+        false
+    }
+}
+
+#[inline]
+fn flush_fill(buf: &mut [u32], buf_w: i32, p: &PendingFill) {
+    let buf_w_us = buf_w as usize;
+    for y in p.y0..p.y1 {
+        let row_start = (y as usize) * buf_w_us + (p.x0 as usize);
+        let row_end = (y as usize) * buf_w_us + (p.x1 as usize);
+        buf[row_start..row_end].fill(p.packed);
+    }
+}
+
+pub fn render_cpu(
+    ctx: &mut CpuContext,
+    renderer: &Renderer,
+    cache: &mut CpuCache,
+    background: Option<crate::sugarloaf::Color>,
+    grids: &mut [(&mut crate::grid::GridRenderer, crate::grid::GridUniforms)],
+    text: &crate::text::Text,
+    images: &ImageLayers,
+) {
+    // Flatten and z-sort image overlays once. The sort is stable and
+    // each panel's vec arrives ordered (z, image_id, placement_id)
+    // from the frontend, so equal keys keep their per-panel paint
+    // order. Never key on screen position: it changes with scroll,
+    // and f32 bit patterns don't order correctly once negative.
+    let mut image_overlays: Vec<&GraphicOverlay> =
+        images.overlays.values().flatten().collect();
+    image_overlays.sort_by_key(|o| (o.z_index, o.image_id));
+
+    let vertices = renderer.vertices();
+    let quad_instances = renderer.instances();
+    let text_instances = text.instances();
+
+    // Frame skip.
+    //
+    // Hash includes the bg color, the overlay vertex stream, and each
+    // grid's uniforms + bg cells. Per-glyph fg state is hashed by
+    // length only — full fg-row hashing is too expensive on large
+    // panels (and a column of glyphs that swap colors will still
+    // change `cell_size` / `cursor_pos` / something downstream that's
+    // covered here). If you see stale text on the CPU backend after a
+    // pure-fg-color edit, expand this to hash bytemuck::cast_slice of
+    // each row.
+    let frame_hash = {
+        let mut h = rustc_hash::FxHasher::default();
+        if let Some(c) = background {
+            h.write_u64(c.r.to_bits());
+            h.write_u64(c.g.to_bits());
+            h.write_u64(c.b.to_bits());
+            h.write_u64(c.a.to_bits());
+        } else {
+            h.write_u8(0);
+        }
+        let bytes: &[u8] = bytemuck::cast_slice(vertices);
+        h.write(bytes);
+        let inst_bytes: &[u8] = bytemuck::cast_slice(quad_instances);
+        h.write(inst_bytes);
+        for (grid, uniforms) in grids.iter() {
+            h.write(bytemuck::bytes_of(uniforms));
+            if let crate::grid::GridRenderer::Cpu(cpu_grid) = &**grid {
+                cpu_grid.hash_state(&mut h);
+            }
+        }
+        // Image overlays: geometry plus the pixel store identity (a
+        // retransmitted image gets a fresh handle id).
+        h.write_usize(image_overlays.len());
+        for overlay in &image_overlays {
+            h.write_u64(overlay.image_id);
+            h.write_u32(overlay.x.to_bits());
+            h.write_u32(overlay.y.to_bits());
+            h.write_u32(overlay.width.to_bits());
+            h.write_u32(overlay.height.to_bits());
+            h.write_i32(overlay.z_index);
+            for v in overlay.source_rect {
+                h.write_u32(v.to_bits());
+            }
+            if let Some(entry) = images.data.get(&overlay.image_id) {
+                h.write_u64(entry.handle.id());
+            }
+        }
+        // Text instances change per frame for any UI overlay
+        // animation (search bar typing, command palette filter,
+        // tab title rename, etc.). Hash by length + bytes — same
+        // approach as the vertex stream.
+        h.write_usize(text_instances.len());
+        if !text_instances.is_empty() {
+            // Safety: TextInstance is repr(C) with all-primitive
+            // fields and explicit padding; cast as raw bytes.
+            let bytes = unsafe {
+                std::slice::from_raw_parts(
+                    text_instances.as_ptr() as *const u8,
+                    std::mem::size_of_val(text_instances),
+                )
+            };
+            h.write(bytes);
+        }
+        h.finish()
+    };
+
+    if cache.has_last && cache.last_frame_hash == frame_hash {
+        return;
+    }
+    cache.last_frame_hash = frame_hash;
+    cache.has_last = true;
+
+    let buf_w = ctx.width_px as i32;
+    let buf_h = ctx.height_px as i32;
+    if buf_w == 0 || buf_h == 0 {
+        return;
+    }
+
+    let mut buffer = match ctx.surface.buffer_mut() {
+        Ok(b) => b,
+        Err(e) => {
+            tracing::error!("softbuffer buffer_mut failed: {e}");
+            return;
+        }
+    };
+
+    // Bg fill writes premultiplied RGBA on Windows only: softbuffer's GDI
+    // path copies the alpha byte through to the DWM redirection surface,
+    // where `DwmEnableBlurBehindWindow` makes `window.opacity` real. Its
+    // other presenters drop the byte (macOS `NoneSkipFirst`, Wayland
+    // `Xrgb8888`), so premultiplying there would darken the window with
+    // no transparency in return; those keep the full-brightness opaque
+    // fill and opacity stays a no-op on the CPU backend, as before.
+    let bg_u32 = match background {
+        Some(c) => {
+            #[cfg(target_os = "windows")]
+            {
+                let a = c.a.clamp(0.0, 1.0);
+                pack_premul(
+                    (c.r.clamp(0.0, 1.0) * a * 255.0) as u8,
+                    (c.g.clamp(0.0, 1.0) * a * 255.0) as u8,
+                    (c.b.clamp(0.0, 1.0) * a * 255.0) as u8,
+                    (a * 255.0) as u8,
+                )
+            }
+            #[cfg(not(target_os = "windows"))]
+            pack_opaque(
+                (c.r.clamp(0.0, 1.0) * 255.0) as u8,
+                (c.g.clamp(0.0, 1.0) * 255.0) as u8,
+                (c.b.clamp(0.0, 1.0) * 255.0) as u8,
+            )
+        }
+        None => 0,
+    };
+    buffer.fill(bg_u32);
+
+    // Grid passes: paint each panel's terminal cells (bg + glyphs)
+    // into the buffer before overlay vertices, so UI overlays
+    // composite on top. Image overlays interleave with the passes the
+    // same way the GPU backends layer them: below-bg images first,
+    // then cell backgrounds, below-text images, glyphs, above-text
+    // images.
+    {
+        use crate::renderer::IMAGE_BG_LIMIT;
+        let buf_slice: &mut [u32] = &mut buffer;
+        let split_below_bg =
+            image_overlays.partition_point(|o| o.z_index < IMAGE_BG_LIMIT);
+        let split_below_text = image_overlays.partition_point(|o| o.z_index < 0);
+        let (below_bg, rest) = image_overlays.split_at(split_below_bg);
+        let (below_text, above_text) = rest.split_at(split_below_text - split_below_bg);
+
+        draw_image_overlays(buf_slice, buf_w, buf_h, below_bg, images.data);
+        for (grid, uniforms) in grids.iter() {
+            grid.render_bg_cpu(buf_slice, ctx.width_px, ctx.height_px, uniforms);
+        }
+        draw_image_overlays(buf_slice, buf_w, buf_h, below_text, images.data);
+        for (grid, uniforms) in grids.iter() {
+            grid.render_text_cpu(buf_slice, ctx.width_px, ctx.height_px, uniforms);
+        }
+        draw_image_overlays(buf_slice, buf_w, buf_h, above_text, images.data);
+    }
+
+    // QuadInstance pass: split borders, panel rects, scrollbar, dim
+    // overlays — anything queued via `sugarloaf.rect/quad/rounded_rect`.
+    // Image / mask layers (subpixel text, image atlas) are not handled
+    // here; sub-pixel UI text already lives in `text.render_cpu`, and
+    // the grid path owns terminal glyphs.
+    if !quad_instances.is_empty() {
+        let buf_slice: &mut [u32] = &mut buffer;
+        for inst in quad_instances {
+            // Image / mask atlas layers — skip on CPU (handled by
+            // grid + text passes for the use cases that matter).
+            if inst.layers[0] != 0 || inst.layers[1] != 0 {
+                continue;
+            }
+            // Underline pattern shaders — TODO: implement on CPU.
+            // For now drop straight underlines to a flat fill (style
+            // == 1) and skip styled variants.
+            if inst.underline_style > 1 {
+                continue;
+            }
+            draw_quad_instance(buf_slice, buf_w, buf_h, inst);
+        }
+    }
+
+    if !vertices.is_empty() {
+        let images = renderer.image_cache();
+        let atlas_size = images.cpu_max_texture_size();
+        let buf_slice: &mut [u32] = &mut buffer;
+
+        let mut pending: Option<PendingFill> = None;
+
+        let mut i = 0usize;
+        while i + 5 < vertices.len() {
+            let chunk = &vertices[i..i + 6];
+            i += 6;
+
+            let q = parse_quad(chunk);
+            if q.max_x - q.min_x <= 0.0 || q.max_y - q.min_y <= 0.0 {
+                continue;
+            }
+
+            let snapped = match snap_and_clip(&q, buf_w, buf_h) {
+                Some(r) => r,
+                None => continue,
+            };
+            let (x0, y0, x1, y1) = snapped;
+
+            // Glyph?
+            if q.mask_layer > 0 {
+                if let Some(p) = pending.take() {
+                    flush_fill(buf_slice, buf_w, &p);
+                }
+                draw_glyph(
+                    buf_slice, buf_w, x0, y0, x1, y1, q.min_x, q.min_y, q.min_u, q.min_v,
+                    q.color, images, atlas_size, cache,
+                );
+                continue;
+            }
+
+            // Color-atlas (image / color glyph): not implemented.
+            if q.color_layer > 0 {
+                if let Some(p) = pending.take() {
+                    flush_fill(buf_slice, buf_w, &p);
+                }
+                continue;
+            }
+
+            // Solid quad.
+            let r = (q.color[0].clamp(0.0, 1.0) * 255.0) as u8;
+            let g = (q.color[1].clamp(0.0, 1.0) * 255.0) as u8;
+            let b = (q.color[2].clamp(0.0, 1.0) * 255.0) as u8;
+            let a = (q.color[3].clamp(0.0, 1.0) * 255.0) as u8;
+            if a == 0 {
+                continue;
+            }
+
+            if a == 255 {
+                let packed = pack_opaque(r, g, b);
+                if let Some(p) = pending.as_mut() {
+                    if p.try_extend(x0, y0, x1, y1, packed) {
+                        continue;
+                    }
+                    flush_fill(buf_slice, buf_w, p);
+                }
+                pending = Some(PendingFill {
+                    x0,
+                    y0,
+                    x1,
+                    y1,
+                    packed,
+                });
+            } else {
+                if let Some(p) = pending.take() {
+                    flush_fill(buf_slice, buf_w, &p);
+                }
+                fill_translucent_simd(buf_slice, buf_w, x0, y0, x1, y1, r, g, b, a);
+            }
+        }
+
+        if let Some(p) = pending.take() {
+            flush_fill(buf_slice, buf_w, &p);
+        }
+    }
+
+    // UI text pass — tab labels, search, command palette, assistant,
+    // island, etc. Sits on top of grids + UI quads so labels never
+    // get hidden by panel borders or the cursor.
+    text.render_cpu(&mut buffer, ctx.width_px, ctx.height_px);
+
+    if let Err(e) = buffer.present() {
+        tracing::error!("softbuffer present failed: {e}");
+    }
+}
+
+/// Draw a batch of image overlays into the buffer.
+fn draw_image_overlays(
+    buf: &mut [u32],
+    buf_w: i32,
+    buf_h: i32,
+    overlays: &[&GraphicOverlay],
+    data: &FxHashMap<u64, GraphicDataEntry>,
+) {
+    for overlay in overlays {
+        let entry = match data.get(&overlay.image_id) {
+            Some(e) => e,
+            None => continue,
+        };
+        let (width, height, pixels) = match &entry.handle.data {
+            crate::components::core::image::Data::Rgba {
+                width,
+                height,
+                pixels,
+            } => (*width, *height, pixels.as_ref()),
+            _ => continue,
+        };
+        draw_image_overlay(buf, buf_w, buf_h, overlay, width, height, pixels);
+    }
+}
+
+/// Nearest-neighbor, alpha-blended blit of one image overlay.
+///
+/// `source_rect` follows the shared shader convention: normalized
+/// `[u0, v0, u1, v1]` (origin, end) within the source image. Sample
+/// positions sit at destination pixel centers like the GPU quad
+/// rasterization; the filter is nearest rather than the GPU sampler's
+/// bilinear, so scaled images are blockier here but land on exactly
+/// the same pixels (and identical ones at 1:1).
+#[allow(clippy::too_many_arguments)]
+pub fn draw_image_overlay(
+    buf: &mut [u32],
+    buf_w: i32,
+    buf_h: i32,
+    overlay: &GraphicOverlay,
+    image_width: u32,
+    image_height: u32,
+    rgba: &[u8],
+) {
+    if image_width == 0 || image_height == 0 {
+        return;
+    }
+    if rgba.len() < (image_width as usize) * (image_height as usize) * 4 {
+        return;
+    }
+    if overlay.width <= 0.0 || overlay.height <= 0.0 {
+        return;
+    }
+
+    let x0 = overlay.x.round() as i32;
+    let y0 = overlay.y.round() as i32;
+    let x1 = (overlay.x + overlay.width).round() as i32;
+    let y1 = (overlay.y + overlay.height).round() as i32;
+    let span_x = (x1 - x0) as f32;
+    let span_y = (y1 - y0) as f32;
+    if span_x <= 0.0 || span_y <= 0.0 {
+        return;
+    }
+
+    let cx0 = x0.max(0);
+    let cy0 = y0.max(0);
+    let cx1 = x1.min(buf_w);
+    let cy1 = y1.min(buf_h);
+    if cx1 <= cx0 || cy1 <= cy0 {
+        return;
+    }
+
+    let [u0, v0, u1, v1] = overlay.source_rect;
+    let iw = image_width as f32;
+    let ih = image_height as f32;
+    let max_sx = image_width as i32 - 1;
+    let max_sy = image_height as i32 - 1;
+
+    for py in cy0..cy1 {
+        let t_y = ((py - y0) as f32 + 0.5) / span_y;
+        let v = v0 + (v1 - v0) * t_y;
+        let sy = ((v * ih) as i32).clamp(0, max_sy) as usize;
+        let src_row = sy * image_width as usize;
+        let dst_row = (py * buf_w) as usize;
+        for px in cx0..cx1 {
+            let t_x = ((px - x0) as f32 + 0.5) / span_x;
+            let u = u0 + (u1 - u0) * t_x;
+            let sx = ((u * iw) as i32).clamp(0, max_sx) as usize;
+            let idx = (src_row + sx) * 4;
+            let a = rgba[idx + 3];
+            if a == 0 {
+                continue;
+            }
+            let premul = |c: u8| ((c as u32 * a as u32 + 127) / 255) as u8;
+            let src = pack_premul(
+                premul(rgba[idx]),
+                premul(rgba[idx + 1]),
+                premul(rgba[idx + 2]),
+                a,
+            );
+            let dst = &mut buf[dst_row + px as usize];
+            *dst = blend_over_swar(src, *dst);
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+#[inline]
+fn fill_translucent_simd(
+    buf: &mut [u32],
+    buf_w: i32,
+    x0: i32,
+    y0: i32,
+    x1: i32,
+    y1: i32,
+    r: u8,
+    g: u8,
+    b: u8,
+    a: u8,
+) {
+    let a_u = a as u32;
+    let pr = (r as u32 * a_u + 127) / 255;
+    let pg = (g as u32 * a_u + 127) / 255;
+    let pb = (b as u32 * a_u + 127) / 255;
+    let src_premul = pack_premul(pr as u8, pg as u8, pb as u8, a);
+    let inv = 255 - a_u;
+    let src_v8 = u32x8::splat(src_premul);
+    let inv_v8 = u32x8::splat(inv);
+    let src_v4 = u32x4::splat(src_premul);
+    let inv_v4 = u32x4::splat(inv);
+
+    let buf_w_us = buf_w as usize;
+    for y in y0..y1 {
+        let row_start = (y as usize) * buf_w_us + (x0 as usize);
+        let row_end = (y as usize) * buf_w_us + (x1 as usize);
+        let row = &mut buf[row_start..row_end];
+
+        // 256-bit chunks first.
+        let mut chunks8 = row.chunks_exact_mut(8);
+        for chunk in &mut chunks8 {
+            let dst = u32x8::new([
+                chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6],
+                chunk[7],
+            ]);
+            let out = blend_over_simd_const_src_x8(src_v8, inv_v8, dst);
+            let arr = out.to_array();
+            chunk.copy_from_slice(&arr);
+        }
+        let tail = chunks8.into_remainder();
+
+        // 128-bit tail.
+        let mut chunks4 = tail.chunks_exact_mut(4);
+        for chunk in &mut chunks4 {
+            let dst = u32x4::new([chunk[0], chunk[1], chunk[2], chunk[3]]);
+            let out = blend_over_simd_const_src_x4(src_v4, inv_v4, dst);
+            let arr = out.to_array();
+            chunk.copy_from_slice(&arr);
+        }
+        // Scalar tail.
+        for px in chunks4.into_remainder() {
+            *px = blend_over_swar(src_premul, *px);
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+#[inline]
+fn draw_glyph(
+    buf: &mut [u32],
+    buf_w: i32,
+    x0: i32,
+    y0: i32,
+    x1: i32,
+    y1: i32,
+    quad_min_x: f32,
+    quad_min_y: f32,
+    min_u: f32,
+    min_v: f32,
+    color: [f32; 4],
+    images: &ImageCache,
+    atlas_size: u16,
+    cache: &mut CpuCache,
+) {
+    if atlas_size == 0 {
+        return;
+    }
+    let atlas_size_f = atlas_size as f32;
+    let u0_px = (min_u * atlas_size_f) as i32;
+    let v0_px = (min_v * atlas_size_f) as i32;
+    let q_x0 = quad_min_x.round() as i32;
+    let q_y0 = quad_min_y.round() as i32;
+
+    let g_w = (x1 - x0).max(0) as u16;
+    let g_h = (y1 - y0).max(0) as u16;
+    if g_w == 0 || g_h == 0 {
+        return;
+    }
+
+    let r = (color[0].clamp(0.0, 1.0) * 255.0) as u8;
+    let g = (color[1].clamp(0.0, 1.0) * 255.0) as u8;
+    let b = (color[2].clamp(0.0, 1.0) * 255.0) as u8;
+    let a = (color[3].clamp(0.0, 1.0) * 255.0) as u8;
+    let color_packed = u32::from_le_bytes([r, g, b, a]);
+
+    let atlas_x = (u0_px + (x0 - q_x0)).max(0) as u16;
+    let atlas_y = (v0_px + (y0 - q_y0)).max(0) as u16;
+
+    let key = GlyphKey {
+        atlas_x,
+        atlas_y,
+        w: g_w,
+        h: g_h,
+        color: color_packed,
+    };
+
+    if let std::collections::hash_map::Entry::Vacant(e) = cache.glyphs.entry(key) {
+        let mask = images.cpu_mask_atlas_buffer();
+        if mask.is_empty() {
+            return;
+        }
+        let atlas_w_us = atlas_size as usize;
+        let r_u = r as u32;
+        let g_u = g as u32;
+        let b_u = b as u32;
+        let a_u = a as u32;
+
+        let mut pixels = vec![0u32; (g_w as usize) * (g_h as usize)];
+        for yy in 0..g_h as usize {
+            let src_y = (atlas_y as usize + yy).min(atlas_w_us - 1);
+            let src_row = src_y * atlas_w_us;
+            let dst_row = yy * (g_w as usize);
+            for xx in 0..g_w as usize {
+                let src_x = (atlas_x as usize + xx).min(atlas_w_us - 1);
+                let m = mask[src_row + src_x] as u32;
+                let pa = (m * a_u + 127) / 255;
+                if pa == 0 {
+                    continue;
+                }
+                let pr = (r_u * pa + 127) / 255;
+                let pg = (g_u * pa + 127) / 255;
+                let pb = (b_u * pa + 127) / 255;
+                pixels[dst_row + xx] =
+                    pack_premul(pr as u8, pg as u8, pb as u8, pa as u8);
+            }
+        }
+
+        e.insert(CachedGlyph {
+            pixels,
+            w: g_w,
+            h: g_h,
+        });
+    }
+
+    let glyph = cache.glyphs.get(&key).unwrap();
+    let buf_w_us = buf_w as usize;
+    let g_w_us = glyph.w as usize;
+
+    for yy in 0..glyph.h as usize {
+        let dst_y = y0 as usize + yy;
+        let dst_row_off = dst_y * buf_w_us + x0 as usize;
+        let src_row_off = yy * g_w_us;
+        let dst_row = &mut buf[dst_row_off..dst_row_off + g_w_us];
+        let src_row = &glyph.pixels[src_row_off..src_row_off + g_w_us];
+
+        // SIMD: 4 pixels at a time, branchless blend (handles sa==0/255
+        // correctly as a side effect of the formula).
+        let mut dst_chunks = dst_row.chunks_exact_mut(4);
+        let mut src_chunks = src_row.chunks_exact(4);
+        for (dchunk, schunk) in (&mut dst_chunks).zip(&mut src_chunks) {
+            let dst = u32x4::new([dchunk[0], dchunk[1], dchunk[2], dchunk[3]]);
+            let src = u32x4::new([schunk[0], schunk[1], schunk[2], schunk[3]]);
+            let out = blend_over_simd_var_src_x4(src, dst);
+            let arr = out.to_array();
+            dchunk.copy_from_slice(&arr);
+        }
+        // Scalar tail keeps the early-out branches.
+        let dst_tail = dst_chunks.into_remainder();
+        let src_tail = src_chunks.remainder();
+        for (d, &s) in dst_tail.iter_mut().zip(src_tail) {
+            *d = blend_over_swar(s, *d);
+        }
+    }
+}
+
+/// Rasterize one `QuadInstance` (rect / quad / rounded_rect /
+/// underline-style 1) into the softbuffer pixel buffer. Honors
+/// `clip_rect` (interpreted the same as the GPU shader: zero w/h
+/// means "no clip"). Rounded corners use a square-distance test
+/// against each corner center.
+fn draw_quad_instance(
+    buf: &mut [u32],
+    buf_w: i32,
+    buf_h: i32,
+    inst: &crate::renderer::batch::QuadInstance,
+) {
+    let r = (inst.color[0].clamp(0.0, 1.0) * 255.0) as u8;
+    let g = (inst.color[1].clamp(0.0, 1.0) * 255.0) as u8;
+    let b = (inst.color[2].clamp(0.0, 1.0) * 255.0) as u8;
+    let a = (inst.color[3].clamp(0.0, 1.0) * 255.0) as u8;
+    if a == 0 {
+        return;
+    }
+
+    let qx0 = inst.pos[0];
+    let qy0 = inst.pos[1];
+    let qx1 = qx0 + inst.size[0];
+    let qy1 = qy0 + inst.size[1];
+
+    let mut x0 = qx0.round() as i32;
+    let mut y0 = qy0.round() as i32;
+    let mut x1 = qx1.round() as i32;
+    let mut y1 = qy1.round() as i32;
+
+    // Apply clip_rect when w & h are both > 0 (matches the shader's
+    // convention that an all-zero clip means "unclipped").
+    let cw = inst.clip_rect[2];
+    let ch = inst.clip_rect[3];
+    if cw > 0.0 && ch > 0.0 {
+        let cx0 = inst.clip_rect[0].round() as i32;
+        let cy0 = inst.clip_rect[1].round() as i32;
+        let cx1 = (inst.clip_rect[0] + cw).round() as i32;
+        let cy1 = (inst.clip_rect[1] + ch).round() as i32;
+        if x0 < cx0 {
+            x0 = cx0;
+        }
+        if y0 < cy0 {
+            y0 = cy0;
+        }
+        if x1 > cx1 {
+            x1 = cx1;
+        }
+        if y1 > cy1 {
+            y1 = cy1;
+        }
+    }
+
+    if x0 < 0 {
+        x0 = 0;
+    }
+    if y0 < 0 {
+        y0 = 0;
+    }
+    if x1 > buf_w {
+        x1 = buf_w;
+    }
+    if y1 > buf_h {
+        y1 = buf_h;
+    }
+    if x1 <= x0 || y1 <= y0 {
+        return;
+    }
+
+    let any_radii = inst.corner_radii.iter().any(|&r| r > 0.0);
+    let stride = buf_w as usize;
+
+    if !any_radii {
+        // Solid fill — fast path.
+        if a == 255 {
+            let opaque = pack_opaque(r, g, b);
+            for y in y0..y1 {
+                let row_start = (y as usize) * stride + (x0 as usize);
+                let row_end = (y as usize) * stride + (x1 as usize);
+                buf[row_start..row_end].fill(opaque);
+            }
+        } else {
+            // Translucent — premultiply once, blend per pixel.
+            let pa = a as u32;
+            let pr = ((r as u32) * pa + 127) / 255;
+            let pg = ((g as u32) * pa + 127) / 255;
+            let pb = ((b as u32) * pa + 127) / 255;
+            let src_premul = ((a as u32) << 24) | (pr << 16) | (pg << 8) | pb;
+            for y in y0..y1 {
+                for x in x0..x1 {
+                    let idx = (y as usize) * stride + (x as usize);
+                    buf[idx] = blend_over_swar(src_premul, buf[idx]);
+                }
+            }
+        }
+        return;
+    }
+
+    // Rounded corners. corner_radii = [tl, tr, br, bl]. For every
+    // pixel that falls inside a corner's bounding square but outside
+    // the radius circle, skip it. AA is single-step (no subpixel
+    // coverage) — fine for terminal-style 1px borders.
+    let r_tl = inst.corner_radii[0].max(0.0);
+    let r_tr = inst.corner_radii[1].max(0.0);
+    let r_br = inst.corner_radii[2].max(0.0);
+    let r_bl = inst.corner_radii[3].max(0.0);
+
+    let pa = a as u32;
+    let pr = ((r as u32) * pa + 127) / 255;
+    let pg = ((g as u32) * pa + 127) / 255;
+    let pb = ((b as u32) * pa + 127) / 255;
+    let src_premul = ((a as u32) << 24) | (pr << 16) | (pg << 8) | pb;
+
+    for y in y0..y1 {
+        let yc = y as f32 + 0.5 - qy0;
+        for x in x0..x1 {
+            let xc = x as f32 + 0.5 - qx0;
+            let mut keep = true;
+            // Top-left
+            if r_tl > 0.0 && xc < r_tl && yc < r_tl {
+                let dx = r_tl - xc;
+                let dy = r_tl - yc;
+                if dx * dx + dy * dy > r_tl * r_tl {
+                    keep = false;
+                }
+            }
+            // Top-right
+            let w = inst.size[0];
+            if keep && r_tr > 0.0 && xc > w - r_tr && yc < r_tr {
+                let dx = xc - (w - r_tr);
+                let dy = r_tr - yc;
+                if dx * dx + dy * dy > r_tr * r_tr {
+                    keep = false;
+                }
+            }
+            let h = inst.size[1];
+            if keep && r_br > 0.0 && xc > w - r_br && yc > h - r_br {
+                let dx = xc - (w - r_br);
+                let dy = yc - (h - r_br);
+                if dx * dx + dy * dy > r_br * r_br {
+                    keep = false;
+                }
+            }
+            if keep && r_bl > 0.0 && xc < r_bl && yc > h - r_bl {
+                let dx = r_bl - xc;
+                let dy = yc - (h - r_bl);
+                if dx * dx + dy * dy > r_bl * r_bl {
+                    keep = false;
+                }
+            }
+            if !keep {
+                continue;
+            }
+            let idx = (y as usize) * stride + (x as usize);
+            buf[idx] = blend_over_swar(src_premul, buf[idx]);
+        }
+    }
+}
+
+#[cfg(test)]
+mod blend_alpha_tests {
+    use super::*;
+
+    // Deterministic pseudo-random u32s, no rand dependency.
+    fn lcg(seed: &mut u64) -> u32 {
+        *seed = seed
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        (*seed >> 32) as u32
+    }
+
+    // Force a value into a valid premultiplied pixel: rgb <= a.
+    fn valid_premul(raw: u32) -> u32 {
+        let a = (raw >> 24) & 0xff;
+        let clamp = |c: u32| c.min(a);
+        (a << 24)
+            | (clamp((raw >> 16) & 0xff) << 16)
+            | (clamp((raw >> 8) & 0xff) << 8)
+            | clamp(raw & 0xff)
+    }
+
+    /// Blending anything over an opaque destination must stay opaque:
+    /// this is what keeps `opacity = 1.0` windows fully solid now that
+    /// the framebuffer carries real alpha. Exhaustive over source alpha.
+    #[test]
+    fn opaque_dst_stays_opaque_for_every_src_alpha() {
+        for sa in 0..=255u32 {
+            let src = valid_premul((sa << 24) | 0x0020_4060);
+            let dst = 0xff31_4159;
+            let out = blend_over_swar(src, dst);
+            assert_eq!(out >> 24, 0xff, "sa={sa}");
+        }
+    }
+
+    /// Transparent source leaves the destination untouched, alpha
+    /// included, so the cleared window-opacity alpha bleeds through
+    /// default-bg cells.
+    #[test]
+    fn zero_alpha_src_is_identity() {
+        let dst = 0x9912_3456;
+        assert_eq!(blend_over_swar(0, dst), dst);
+    }
+
+    /// Destination alpha follows Porter-Duff source-over, so stacked
+    /// translucent paints converge toward opaque instead of resetting.
+    #[test]
+    fn alpha_composes_source_over() {
+        let sa = 0x80u32;
+        let src = valid_premul((sa << 24) | 0x0040_2010);
+        let da = 0x99u32;
+        let dst = (da << 24) | 0x0030_5070;
+        let out = blend_over_swar(src, dst);
+        let oa = out >> 24;
+        let expected = sa as f64 + da as f64 * (255.0 - sa as f64) / 255.0;
+        assert!(
+            (oa as f64 - expected).abs() <= 1.0,
+            "oa={oa} expected~{expected}"
+        );
+        assert!(oa >= sa.max(da));
+    }
+
+    /// The three SIMD kernels must agree with the scalar SWAR blend bit
+    /// for bit, per lane: the A+G pairing may not change any rounding.
+    #[test]
+    fn simd_kernels_match_scalar_exactly() {
+        let mut seed = 0x5eed_cafe_f00d_u64;
+        for _ in 0..2000 {
+            let src = valid_premul(lcg(&mut seed));
+            let dst: Vec<u32> = (0..8).map(|_| lcg(&mut seed)).collect();
+            let scalar: Vec<u32> = dst.iter().map(|&d| blend_over_swar(src, d)).collect();
+
+            // The var-src kernel is documented branchless-correct for the
+            // extreme alphas too, so it is checked before the early-out
+            // skip the const-src kernels rely on their fill paths for.
+            let var = blend_over_simd_var_src_x4(
+                u32x4::splat(src),
+                u32x4::new(dst[..4].try_into().unwrap()),
+            )
+            .to_array();
+            assert_eq!(
+                &var[..],
+                &scalar[..4],
+                "var_src disagrees for src={src:08x}"
+            );
+
+            let sa = (src >> 24) & 0xff;
+            // The const-src kernels skip the scalar early-outs; those
+            // alphas are handled before dispatch in the fill paths.
+            if sa == 0 || sa == 255 {
+                continue;
+            }
+            let inv = 255 - sa;
+
+            let x8 = blend_over_simd_const_src_x8(
+                u32x8::splat(src),
+                u32x8::splat(inv),
+                u32x8::new(dst[..8].try_into().unwrap()),
+            )
+            .to_array();
+            assert_eq!(&x8[..], &scalar[..], "x8 disagrees for src={src:08x}");
+
+            let x4 = blend_over_simd_const_src_x4(
+                u32x4::splat(src),
+                u32x4::splat(inv),
+                u32x4::new(dst[..4].try_into().unwrap()),
+            )
+            .to_array();
+            assert_eq!(&x4[..], &scalar[..4], "x4 disagrees for src={src:08x}");
+        }
+    }
+
+    /// The premultiplied invariant survives the blend: output rgb never
+    /// exceeds output alpha, so chained blends stay valid premul colors.
+    #[test]
+    fn output_stays_valid_premul() {
+        let mut seed = 0xabcd_ef01_2345_u64;
+        for _ in 0..2000 {
+            let src = valid_premul(lcg(&mut seed));
+            let dst = valid_premul(lcg(&mut seed));
+            let out = blend_over_swar(src, dst);
+            let oa = out >> 24;
+            for shift in [16u32, 8, 0] {
+                let c = (out >> shift) & 0xff;
+                assert!(
+                    c <= oa,
+                    "channel {c:02x} > alpha {oa:02x} for src={src:08x} dst={dst:08x}"
+                );
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod image_overlay_tests {
+    use super::*;
+
+    const RED: [u8; 4] = [255, 0, 0, 255];
+    const BLUE: [u8; 4] = [0, 0, 255, 255];
+
+    fn overlay(x: f32, y: f32, width: f32, height: f32) -> GraphicOverlay {
+        GraphicOverlay {
+            image_id: 1,
+            x,
+            y,
+            width,
+            height,
+            z_index: 0,
+            source_rect: [0.0, 0.0, 1.0, 1.0],
+        }
+    }
+
+    /// 2x2 image: left column red, right column blue.
+    fn red_blue_image() -> Vec<u8> {
+        [RED, BLUE, RED, BLUE].concat()
+    }
+
+    fn buffer(w: usize, h: usize) -> Vec<u32> {
+        vec![0u32; w * h]
+    }
+
+    // Opaque source pixels land premultiplied with alpha = 0xff: the
+    // framebuffer carries per-pixel alpha so `window.opacity` survives
+    // to the compositor.
+    const RED_PX: u32 = 0xffff_0000;
+    const BLUE_PX: u32 = 0xff00_00ff;
+
+    #[test]
+    fn one_to_one_blit_lands_on_exact_pixels() {
+        let mut buf = buffer(6, 6);
+        let image = red_blue_image();
+        draw_image_overlay(&mut buf, 6, 6, &overlay(1.0, 2.0, 2.0, 2.0), 2, 2, &image);
+
+        for y in 0..6usize {
+            for x in 0..6usize {
+                let expected = match (x, y) {
+                    (1, 2) | (1, 3) => RED_PX,
+                    (2, 2) | (2, 3) => BLUE_PX,
+                    _ => 0,
+                };
+                assert_eq!(buf[y * 6 + x], expected, "pixel ({x}, {y})");
+            }
+        }
+    }
+
+    #[test]
+    fn source_rect_selects_the_crop() {
+        let mut buf = buffer(4, 4);
+        let image = red_blue_image();
+        // Right half only: everything drawn must be blue.
+        let mut o = overlay(0.0, 0.0, 1.0, 2.0);
+        o.source_rect = [0.5, 0.0, 1.0, 1.0];
+        draw_image_overlay(&mut buf, 4, 4, &o, 2, 2, &image);
+
+        assert_eq!(buf[0], BLUE_PX);
+        assert_eq!(buf[4], BLUE_PX);
+        assert_eq!(buf[1], 0, "outside the quad stays untouched");
+    }
+
+    #[test]
+    fn nearest_neighbor_upscale() {
+        let mut buf = buffer(4, 2);
+        let image = red_blue_image();
+        // 2x2 image scaled to 4x2: two red columns then two blue.
+        draw_image_overlay(&mut buf, 4, 2, &overlay(0.0, 0.0, 4.0, 2.0), 2, 2, &image);
+
+        assert_eq!(&buf[0..4], &[RED_PX, RED_PX, BLUE_PX, BLUE_PX]);
+        assert_eq!(&buf[4..8], &[RED_PX, RED_PX, BLUE_PX, BLUE_PX]);
+    }
+
+    #[test]
+    fn alpha_blends_over_background() {
+        let mut buf = vec![0x0000_00ff_u32; 1]; // blue background
+                                                // Single half-transparent red pixel.
+        let image = vec![255, 0, 0, 128];
+        draw_image_overlay(&mut buf, 1, 1, &overlay(0.0, 0.0, 1.0, 1.0), 1, 1, &image);
+
+        let r = (buf[0] >> 16) & 0xff;
+        let b = buf[0] & 0xff;
+        assert!((127..=129).contains(&r), "red ~50%: {r}");
+        assert!((126..=128).contains(&b), "blue ~50%: {b}");
+    }
+
+    #[test]
+    fn clips_at_buffer_edges() {
+        let mut buf = buffer(2, 2);
+        let image = red_blue_image();
+        // Overlay hangs off the top-left corner; only the bottom-right
+        // quarter (blue column, bottom row) is inside the buffer.
+        draw_image_overlay(&mut buf, 2, 2, &overlay(-1.0, -1.0, 2.0, 2.0), 2, 2, &image);
+
+        assert_eq!(buf[0], BLUE_PX, "visible slice of the image");
+        assert_eq!(buf[1], 0);
+        assert_eq!(buf[2], 0);
+        assert_eq!(buf[3], 0);
+    }
+
+    #[test]
+    fn fully_transparent_pixels_leave_dst_untouched() {
+        let mut buf = vec![0x0012_3456_u32; 4];
+        let image = vec![0u8; 2 * 2 * 4]; // all alpha 0
+        draw_image_overlay(&mut buf, 2, 2, &overlay(0.0, 0.0, 2.0, 2.0), 2, 2, &image);
+        assert!(buf.iter().all(|&px| px == 0x0012_3456));
+    }
+}

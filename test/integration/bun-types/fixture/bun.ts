@@ -1,5 +1,11 @@
 import type { BunFile, BunPlugin, FileBlob } from "bun";
+import { Terminal as RioTerminal, type TerminalOptions as RioTerminalOptions } from "bun:rio";
 import * as tsd from "./utilities";
+
+const rioTerminalOptions: RioTerminalOptions = { cols: 80, rows: 24, scrollback: 1000 };
+const rioTerminal: Bun.RioTerminal = new RioTerminal(rioTerminalOptions);
+rioTerminal.takeReplies();
+tsd.expectType<Bun.RioTerminal>(rioTerminal);
 {
   const _plugin: BunPlugin = {
     name: "asdf",

@@ -42,6 +42,18 @@ unsafe extern "C" {
         len: usize,
         utf16_output: *mut u16,
     ) -> SIMDUTFResult;
+    pub fn simdutf__convert_utf8_to_utf32_with_errors(
+        buf: *const u8,
+        len: usize,
+        utf32_output: *mut u32,
+    ) -> SIMDUTFResult;
+    pub fn simdutf__base64_decode_loose(
+        input: *const u8,
+        length: usize,
+        output: *mut u8,
+        outlen: usize,
+        no_padding: i32,
+    ) -> SIMDUTFResult;
     pub fn simdutf__convert_utf16le_to_utf8_with_errors(
         buf: *const u16,
         len: usize,
@@ -97,6 +109,26 @@ pub mod convert {
         use super::*;
         pub mod to {
             use super::*;
+            #[cfg(not(target_arch = "wasm32"))]
+            pub mod utf32 {
+                pub mod with_errors {
+                    use crate::simdutf::{
+                        simdutf__convert_utf8_to_utf32_with_errors, SIMDUTFResult,
+                    };
+
+                    pub fn le(input: &[u8], output: &mut [u32]) -> SIMDUTFResult {
+                        // SAFETY: input and output are valid slices and output capacity is sufficient.
+                        unsafe {
+                            simdutf__convert_utf8_to_utf32_with_errors(
+                                input.as_ptr(),
+                                input.len(),
+                                output.as_mut_ptr(),
+                            )
+                        }
+                    }
+                }
+            }
+
             pub mod utf16 {
                 use super::*;
                 pub mod with_errors {
@@ -199,12 +231,38 @@ pub mod length {
 
 pub mod base64 {
     use super::SIMDUTFResult;
-    use core::ffi::c_int;
     #[cfg(target_arch = "wasm32")]
     use crate::wasm_fallback::{
         simdutf__base64_decode_from_binary, simdutf__base64_decode_from_binary_lenient,
         simdutf__base64_encode, simdutf__base64_length_from_binary,
     };
+    use core::ffi::c_int;
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn maximal_binary_length(input_len: usize) -> usize {
+        input_len / 4 * 3 + (input_len % 4 * 3 + 3) / 4
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn decode_loose_vec(input: &[u8], no_padding: bool) -> Option<Vec<u8>> {
+        let mut output = Vec::with_capacity(maximal_binary_length(input.len()));
+        // SAFETY: capacity was computed for the maximum output and set_len follows only success.
+        let result = unsafe {
+            super::simdutf__base64_decode_loose(
+                input.as_ptr(),
+                input.len(),
+                output.as_mut_ptr(),
+                output.capacity(),
+                i32::from(no_padding),
+            )
+        };
+        if result.status != super::Status::SUCCESS {
+            return None;
+        }
+        // SAFETY: SIMDUTF returned the number of initialized bytes written.
+        unsafe { output.set_len(result.count) };
+        Some(output)
+    }
 
     #[cfg(not(target_arch = "wasm32"))]
     unsafe extern "C" {

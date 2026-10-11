@@ -20,7 +20,10 @@ async fn upstream_releases(
     std::fs::create_dir_all(&directory).into_diagnostic()?;
     let mut records = Vec::new();
     for (name, source) in [
-        ("angular-material-latest.json", "https://registry.npmjs.org/@angular/material/latest"),
+        (
+            "angular-material-latest.json",
+            "https://registry.npmjs.org/@angular/material/latest",
+        ),
         (
             "android-compose-material3.xml",
             "https://dl.google.com/dl/android/maven2/androidx/compose/material3/material3/maven-metadata.xml",
@@ -41,15 +44,25 @@ async fn upstream_releases(
             .await
             .into_diagnostic()?;
         if !(200..300).contains(&response.status) {
-            return Err(miette!("official release metadata {source}: HTTP {}", response.status));
+            return Err(miette!(
+                "official release metadata {source}: HTTP {}",
+                response.status
+            ));
         }
         std::fs::write(directory.join(name), &response.body).into_diagnostic()?;
-        let digest: String =
-            Sha256::digest(&response.body).iter().map(|byte| format!("{byte:02x}")).collect();
+        let digest: String = Sha256::digest(&response.body)
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect();
         let version = if name.ends_with(".json") {
             serde_json::from_slice::<Value>(&response.body)
                 .ok()
-                .and_then(|value| value.get("version").and_then(Value::as_str).map(str::to_owned))
+                .and_then(|value| {
+                    value
+                        .get("version")
+                        .and_then(Value::as_str)
+                        .map(str::to_owned)
+                })
         } else {
             let text = response.text();
             text.split("<release>")
@@ -105,7 +118,9 @@ fn output_directory(workspace: &Path) -> miette::Result<PathBuf> {
         if directory.exists() {
             let canonical = directory.canonicalize().into_diagnostic()?;
             if !canonical.starts_with(workspace) {
-                return Err(miette!("design corpus directory escapes the selected workspace"));
+                return Err(miette!(
+                    "design corpus directory escapes the selected workspace"
+                ));
             }
         } else {
             std::fs::create_dir(&directory).into_diagnostic()?;
@@ -154,8 +169,10 @@ fn verify_material(root: &Path, report: &Value) -> miette::Result<()> {
             return Err(miette!("Material source path escapes its corpus"));
         }
         let bytes = std::fs::read(&target).into_diagnostic()?;
-        let actual: String =
-            Sha256::digest(&bytes).iter().map(|byte| format!("{byte:02x}")).collect();
+        let actual: String = Sha256::digest(&bytes)
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect();
         if actual != expected {
             return Err(miette!("Material source checksum mismatch: {relative}"));
         }
@@ -165,7 +182,10 @@ fn verify_material(root: &Path, report: &Value) -> miette::Result<()> {
 
 fn package_commands(output: &Path) -> Vec<Vec<String>> {
     let native = output.join("tokens.json").to_string_lossy().into_owned();
-    let high = output.join("tokens-high-contrast.json").to_string_lossy().into_owned();
+    let high = output
+        .join("tokens-high-contrast.json")
+        .to_string_lossy()
+        .into_owned();
     let cli = "m3/packages/m3/src/cli.ts";
     vec![
         vec![cli.into(), "update".into(), "--apply".into()],
@@ -196,7 +216,10 @@ fn package_commands(output: &Path) -> Vec<Vec<String>> {
             "--native-theme".into(),
             high,
             "--out".into(),
-            output.join("os-themes-high-contrast").to_string_lossy().into_owned(),
+            output
+                .join("os-themes-high-contrast")
+                .to_string_lossy()
+                .into_owned(),
         ],
         vec![cli.into(), "check".into()],
     ]
@@ -205,8 +228,12 @@ fn package_commands(output: &Path) -> Vec<Vec<String>> {
 async fn apply_packages(workspace: &Path, output: &Path) -> miette::Result<Vec<Value>> {
     let mut steps = Vec::new();
     for arguments in package_commands(output) {
-        let mut child = tokio::process::Command::new(if cfg!(windows) { "bun.exe" } else { "bun" }).no_window();
-        child.args(&arguments).current_dir(workspace).kill_on_drop(true);
+        let mut child =
+            tokio::process::Command::new(if cfg!(windows) { "bun.exe" } else { "bun" }).no_window();
+        child
+            .args(&arguments)
+            .current_dir(workspace)
+            .kill_on_drop(true);
         let result = tokio::time::timeout(Duration::from_secs(900), child.output()).await;
         let (ok, code, detail) = match result {
             Ok(Ok(result)) => (
@@ -219,7 +246,11 @@ async fn apply_packages(workspace: &Path, output: &Path) -> miette::Result<Vec<V
                 ),
             ),
             Ok(Err(error)) => (false, None, error.to_string()),
-            Err(_) => (false, None, "M3 step exceeded its 900 second deadline".to_owned()),
+            Err(_) => (
+                false,
+                None,
+                "M3 step exceeded its 900 second deadline".to_owned(),
+            ),
         };
         steps.push(json!({"arguments": arguments, "ok": ok, "exitCode": code, "detail": detail}));
         write_json(&output.join("package-gates.json"), &steps)?;
@@ -248,10 +279,16 @@ pub(super) async fn run(args: DesignSyncArgs) -> miette::Result<Value> {
     )
     .map_err(|error| miette!("native M3 theme: {error}"))?;
     write_json(&output.join("tokens.json"), &request.export())?;
-    write_json(&output.join("tokens-high-contrast.json"), &request.high_contrast().export())?;
+    write_json(
+        &output.join("tokens-high-contrast.json"),
+        &request.high_contrast().export(),
+    )?;
     std::fs::write(output.join("tokens.css"), request.css()).into_diagnostic()?;
-    std::fs::write(output.join("tokens-high-contrast.css"), request.high_contrast().css())
-        .into_diagnostic()?;
+    std::fs::write(
+        output.join("tokens-high-contrast.css"),
+        request.high_contrast().css(),
+    )
+    .into_diagnostic()?;
     write_json(
         &output.join("design-tokens.json"),
         &aphrody_m3_tokens::theme::export_token_tables(),
@@ -278,7 +315,9 @@ pub(super) async fn run(args: DesignSyncArgs) -> miette::Result<Value> {
             .map_err(|error| miette!("Google mirror verification failed: {error}"))?;
         if !material_root.join("AI_READY.md").is_file() || !material_root.join("documents").is_dir()
         {
-            return Err(miette!("incomplete Material reference corpus; run acquisition first"));
+            return Err(miette!(
+                "incomplete Material reference corpus; run acquisition first"
+            ));
         }
         (material, google)
     } else {
@@ -375,7 +414,12 @@ mod tests {
     #[test]
     fn generation_never_installs_or_applies_os_settings() {
         let commands = package_commands(Path::new("corpus"));
-        assert!(commands.iter().flatten().all(|argument| argument != "install"));
+        assert!(
+            commands
+                .iter()
+                .flatten()
+                .all(|argument| argument != "install")
+        );
         assert_eq!(
             commands
                 .iter()

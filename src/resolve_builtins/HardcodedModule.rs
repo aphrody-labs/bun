@@ -19,6 +19,8 @@ pub enum HardcodedModule {
     BunGoogle,
     #[strum(serialize = "bun:obscura")]
     BunObscura,
+    #[strum(serialize = "bun:rio")]
+    BunRio,
     #[strum(serialize = "bun:ffi")]
     BunFfi,
     #[strum(serialize = "bun:dotnet")]
@@ -258,6 +260,7 @@ bun_core::comptime_string_map! {
         b"bun:chromium" => HardcodedModule::BunChromium,
         b"bun:google" => HardcodedModule::BunGoogle,
         b"bun:obscura" => HardcodedModule::BunObscura,
+        b"bun:rio" => HardcodedModule::BunRio,
         b"bun:ffi" => HardcodedModule::BunFfi,
         b"bun:dotnet" => HardcodedModule::BunDotnet,
         b"bun:graph" => HardcodedModule::BunGraph,
@@ -793,6 +796,7 @@ const BUN_EXTRA_ALIAS_KVS: &[AliasKv] = &[
     ),
     entry!("bun:google"),
     entry!("bun:obscura"),
+    entry!("bun:rio"),
     entry!("bun:ffi"),
     entry!("bun:dotnet"),
     (

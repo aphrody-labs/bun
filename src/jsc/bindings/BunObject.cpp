@@ -1023,6 +1023,7 @@ JSC_DEFINE_HOST_FUNCTION(functionFileURLToPath, (JSC::JSGlobalObject * globalObj
     wrapAnsi                                       jsFunctionBunWrapAnsi                                               DontDelete|Function 3
     Terminal                                       BunObject_lazyPropCb_wrap_Terminal                                  DontDelete|PropertyCallback
     TerminalScreen                                 BunObject_lazyPropCb_wrap_TerminalScreen                            DontDelete|PropertyCallback
+    RioTerminal                                    BunObject_lazyPropCb_wrap_RioTerminal                               DontDelete|PropertyCallback
     unsafe                                         BunObject_lazyPropCb_wrap_unsafe                                    DontDelete|PropertyCallback
     version                                        constructBunVersion                                                 ReadOnly|DontDelete|PropertyCallback
     WebView                                        constructWebViewObject                                              ReadOnly|DontDelete|PropertyCallback

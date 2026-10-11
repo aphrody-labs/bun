@@ -12,6 +12,7 @@
 /// <reference path="./chrome.d.ts" />
 /// <reference path="./google.d.ts" />
 /// <reference path="./obscura.d.ts" />
+/// <reference path="./rio.d.ts" />
 /// <reference path="./extensions.d.ts" />
 /// <reference path="./devserver.d.ts" />
 /// <reference path="./cosmic.d.ts" />

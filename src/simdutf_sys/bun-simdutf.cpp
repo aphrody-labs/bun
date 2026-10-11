@@ -42,6 +42,24 @@ simdutf__convert_utf8_to_utf16le_with_errors(const char* buf, size_t len,
     return { res.error, res.count };
 }
 
+SIMDUTFResult simdutf__convert_utf8_to_utf32_with_errors(const char* buf, size_t len,
+    char32_t* utf32_output)
+{
+    auto res = simdutf::convert_utf8_to_utf32_with_errors(buf, len, utf32_output);
+    return { res.error, res.count };
+}
+
+SIMDUTFResult simdutf__base64_decode_loose(const char* input, size_t length, char* output,
+    size_t outlen, int no_padding)
+{
+    auto options = no_padding ? simdutf::base64_default_no_padding : simdutf::base64_default;
+    auto res = simdutf::base64_to_binary_safe(input, length, output, outlen, options,
+        simdutf::last_chunk_handling_options::loose);
+    if (res.error == simdutf::error_code::SUCCESS)
+        return { 0, outlen };
+    return { res.error, res.count };
+}
+
 SIMDUTFResult simdutf__convert_utf16le_to_utf8_with_errors(const char16_t* buf,
     size_t len,
     char* utf8_buffer)

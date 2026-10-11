@@ -30,6 +30,7 @@
     macro(YAML) \
     macro(Terminal) \
     macro(TerminalScreen) \
+    macro(RioTerminal) \
     macro(Transpiler) \
     macro(ValkeyClient) \
     macro(argv) \
