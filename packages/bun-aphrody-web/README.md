@@ -26,3 +26,5 @@ tested engine and its API contracts. The separate Chromium build stays active.
 Protected sessions, credentials, cookies, datasets, databases, model weights,
 assets, build outputs and the pinned upstream reference mirror remain in their
 existing stores. No authentication was copied or changed.
+
+The DOM and SSRF compatibility packages now reexport the canonical Bun browser owners. Native DOM qualification passes 93 tests and strict Clippy; two compatibility tests preserve old selector/element names and type identity. Chrome aliases Chromium; Obscura shares its CDP transport. This unifies these qualified owners while the remaining V8/render engine migration retains its compatibility sources.

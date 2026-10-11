@@ -782,6 +782,15 @@ const BUN_EXTRA_ALIAS_KVS: &[AliasKv] = &[
     entry!("bun:app"),
     entry!("bun:cosmic"),
     entry!("bun:chromium"),
+    (
+        b"bun:chrome",
+        Alias {
+            path: zstr!("bun:chromium"),
+            tag: import_record::Tag::Builtin,
+            node_builtin: false,
+            node_only_prefix: false,
+        },
+    ),
     entry!("bun:google"),
     entry!("bun:obscura"),
     entry!("bun:ffi"),

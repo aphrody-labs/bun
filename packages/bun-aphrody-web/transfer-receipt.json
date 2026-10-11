@@ -871,45 +871,80 @@
     },
     {
       "source": "crates/web/obscura-dom/src/lib.rs",
-      "destination": "packages/bun-aphrody-web/crates/obscura-dom/src/lib.rs",
+      "destination": "src/browser/crates/dom/src/lib.rs",
       "bytes": 301,
-      "sha256": "fda2269e341782e1427182fa96e691726ad183b7ad69af3d326da8e1baae584b"
+      "sha256": "fda2269e341782e1427182fa96e691726ad183b7ad69af3d326da8e1baae584b",
+      "initialTransferDestination": "packages/bun-aphrody-web/crates/obscura-dom/src/lib.rs",
+      "canonicalSHA256": "fda2269e341782e1427182fa96e691726ad183b7ad69af3d326da8e1baae584b",
+      "replacedBy": "packages/bun-aphrody-web/crates/obscura-dom/src/lib.rs",
+      "unificationReason": "Single canonical Bun DOM owner; former public package reexports native types with legacy aliases",
+      "normalizedIdentical": true
     },
     {
       "source": "crates/web/obscura-dom/src/selector.rs",
-      "destination": "packages/bun-aphrody-web/crates/obscura-dom/src/selector.rs",
+      "destination": "src/browser/crates/dom/src/selector.rs",
       "bytes": 71244,
-      "sha256": "c967ee47a988ae448147f58650c9d2cba91184d5e1645eb496f5e1cf6ce39d29"
+      "sha256": "c967ee47a988ae448147f58650c9d2cba91184d5e1645eb496f5e1cf6ce39d29",
+      "initialTransferDestination": "packages/bun-aphrody-web/crates/obscura-dom/src/selector.rs",
+      "canonicalSHA256": "b046831213a6b29e0aa8e4310cc91e1ba311667325cfeb20e2e5ccf9a13f2c29",
+      "replacedBy": "src/browser/crates/dom/src/selector.rs",
+      "unificationReason": "Single canonical Bun DOM owner; former public package reexports native types with legacy aliases",
+      "normalizedIdentical": true
     },
     {
       "source": "crates/web/obscura-dom/src/serialize.rs",
-      "destination": "packages/bun-aphrody-web/crates/obscura-dom/src/serialize.rs",
+      "destination": "src/browser/crates/dom/src/serialize.rs",
       "bytes": 14986,
-      "sha256": "ca87fd969714cec7a8b1718f509f4da750e09b1d59c985aa6c644930f1a5acb0"
+      "sha256": "ca87fd969714cec7a8b1718f509f4da750e09b1d59c985aa6c644930f1a5acb0",
+      "initialTransferDestination": "packages/bun-aphrody-web/crates/obscura-dom/src/serialize.rs",
+      "canonicalSHA256": "26d6cdd5622026ed7bfda5c2a6e7b6bcec9eeb50c31cfb99c47737679b1c331e",
+      "replacedBy": "src/browser/crates/dom/src/serialize.rs",
+      "unificationReason": "Single canonical Bun DOM owner; former public package reexports native types with legacy aliases",
+      "normalizedIdentical": true
     },
     {
       "source": "crates/web/obscura-dom/src/tree.rs",
-      "destination": "packages/bun-aphrody-web/crates/obscura-dom/src/tree.rs",
+      "destination": "src/browser/crates/dom/src/tree.rs",
       "bytes": 106907,
-      "sha256": "4627657c4427ab1a5a3de77da0f3e3fca6e4c6fdf993df59d25e6e5bfe0ff990"
+      "sha256": "4627657c4427ab1a5a3de77da0f3e3fca6e4c6fdf993df59d25e6e5bfe0ff990",
+      "initialTransferDestination": "packages/bun-aphrody-web/crates/obscura-dom/src/tree.rs",
+      "canonicalSHA256": "ed8a7cee45d26379f00da6724869087bc5eddf6c67cc402aa9ac82d933c790f8",
+      "replacedBy": "src/browser/crates/dom/src/tree.rs",
+      "unificationReason": "Single canonical Bun DOM owner; former public package reexports native types with legacy aliases",
+      "normalizedIdentical": true
     },
     {
       "source": "crates/web/obscura-dom/src/tree_sink.rs",
-      "destination": "packages/bun-aphrody-web/crates/obscura-dom/src/tree_sink.rs",
+      "destination": "src/browser/crates/dom/src/tree_sink.rs",
       "bytes": 24121,
-      "sha256": "4722ef6446d3e6a89952d34e8358bdf6afc5e424093d29ba8ad21b95c6a697f3"
+      "sha256": "4722ef6446d3e6a89952d34e8358bdf6afc5e424093d29ba8ad21b95c6a697f3",
+      "initialTransferDestination": "packages/bun-aphrody-web/crates/obscura-dom/src/tree_sink.rs",
+      "canonicalSHA256": "2f90f0317f71235d56ce567e3058e113b2d72d765196b7e526eebef24f6f1462",
+      "replacedBy": "src/browser/crates/dom/src/tree_sink.rs",
+      "unificationReason": "Single canonical Bun DOM owner; former public package reexports native types with legacy aliases",
+      "normalizedIdentical": true
     },
     {
       "source": "crates/web/obscura-dom/tests/slot_query_allocations.rs",
-      "destination": "packages/bun-aphrody-web/crates/obscura-dom/tests/slot_query_allocations.rs",
+      "destination": "src/browser/crates/dom/tests/slot_query_allocations.rs",
       "bytes": 2915,
-      "sha256": "8c523261ba3d8adc8aedc2bee6be1b894dc6b871f6d9695056d15defb2ecedcc"
+      "sha256": "8c523261ba3d8adc8aedc2bee6be1b894dc6b871f6d9695056d15defb2ecedcc",
+      "initialTransferDestination": "packages/bun-aphrody-web/crates/obscura-dom/tests/slot_query_allocations.rs",
+      "canonicalSHA256": "b3bc94fce3f12ac5b4f44c4d27f48fbc9a4a2588944d5b9d1b5604f455a565ae",
+      "replacedBy": "src/browser/crates/dom/tests/slot_query_allocations.rs",
+      "unificationReason": "Single canonical Bun DOM owner; former public package reexports native types with legacy aliases",
+      "normalizedIdentical": true
     },
     {
       "source": "crates/web/obscura-dom/tests/support/allocations.rs",
-      "destination": "packages/bun-aphrody-web/crates/obscura-dom/tests/support/allocations.rs",
+      "destination": "src/browser/crates/dom/tests/support/allocations.rs",
       "bytes": 1196,
-      "sha256": "6eeaa445a0a1e2d3766e6d8719829555f105a73a4b6e7537af109dad61e0e031"
+      "sha256": "6eeaa445a0a1e2d3766e6d8719829555f105a73a4b6e7537af109dad61e0e031",
+      "initialTransferDestination": "packages/bun-aphrody-web/crates/obscura-dom/tests/support/allocations.rs",
+      "canonicalSHA256": "6eeaa445a0a1e2d3766e6d8719829555f105a73a4b6e7537af109dad61e0e031",
+      "replacedBy": "src/browser/crates/dom/tests/support/allocations.rs",
+      "unificationReason": "Single canonical Bun DOM owner; former public package reexports native types with legacy aliases",
+      "normalizedIdentical": true
     },
     {
       "source": "crates/web/obscura-js/Cargo.toml",

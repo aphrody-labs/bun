@@ -1100,6 +1100,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bun_browser_dom"
+version = "1.4.4"
+dependencies = [
+ "cssparser",
+ "html5ever",
+ "precomputed-hash",
+ "selectors",
+]
+
+[[package]]
 name = "bun_browser_layout"
 version = "1.4.4"
 dependencies = [
@@ -3531,10 +3541,7 @@ dependencies = [
 name = "obscura-dom"
 version = "1.4.4"
 dependencies = [
- "cssparser",
- "html5ever",
- "precomputed-hash",
- "selectors",
+ "bun_browser_dom",
 ]
 
 [[package]]

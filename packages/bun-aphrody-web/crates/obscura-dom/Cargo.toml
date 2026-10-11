@@ -7,10 +7,7 @@ license = "Apache-2.0"
 repository = "https://github.com/aphrody-labs/obscura"
 
 [dependencies]
-html5ever = { workspace = true }
-selectors = "0.38"
-cssparser = "0.37"
-precomputed-hash = "0.1"
+bun_browser_dom = { version = "1.4.4", path = "../../../../src/browser/crates/dom" }
 
 [dev-dependencies]
 

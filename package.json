@@ -13,6 +13,8 @@
     "depots_tools": "bun scripts/aphrody/chromium.ts --depot-tools",
     "depot_tools": "bun scripts/aphrody/chromium.ts --depot-tools",
     "chromium": "bun scripts/aphrody/chromium.ts",
+    "chrome": "bun scripts/aphrody/browser.ts chrome",
+    "obscura": "bun scripts/aphrody/browser.ts obscura",
     "bun:windows": "bun scripts/aphrody/win/version-sync.ts",
     "build": "bun --silent run build:debug",
     "ci:find": "bun scripts/find-build.ts",
