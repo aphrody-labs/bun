@@ -1,10 +1,23 @@
 // SPDX-License-Identifier: Apache-2.0
 import { launch } from "bun:chromium";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 
 const root = join(import.meta.dir, "../..");
-const executable = join(root, "vendor/chromium/src/out/bun", process.platform === "win32" ? "chrome.exe" : "chrome");
-const receiptPath = join(root, "build/chromium/qualification.json");
+const args = process.argv.slice(2);
+if (args.some(arg => arg !== "--installed") || args.length > 1)
+  throw new Error("Usage: chromium-qualify.ts [--installed]");
+const installed = args.includes("--installed");
+if (installed && process.platform !== "win32") throw new Error("Installed browser qualification requires Windows");
+const programFiles = process.env.ProgramFiles;
+if (installed && (!programFiles || !isAbsolute(programFiles)))
+  throw new Error("Missing absolute ProgramFiles directory");
+const executable = installed
+  ? join(programFiles!, "BunChromium/Application/chrome.exe")
+  : join(root, "vendor/chromium/src/out/bun", process.platform === "win32" ? "chrome.exe" : "chrome");
+const receiptPath = join(
+  root,
+  installed ? "build/chromium/installed-qualification.json" : "build/chromium/qualification.json",
+);
 
 async function closeBrowser(browser: Awaited<ReturnType<typeof launch>>) {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -40,7 +53,7 @@ async function qualify() {
   try {
     browser = await launch({
       executable,
-      userDataDir: join(root, "build/chromium/qualification-profile"),
+      userDataDir: join(root, "build/chromium/qualification-profile", crypto.randomUUID()),
       headless: true,
       timeout: 60000,
     });
@@ -52,22 +65,34 @@ async function qualify() {
       flatten: true,
     });
     await connection.send("Page.enable", {}, sessionId);
-    const loaded = new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        remove();
-        reject(new Error("Local page load timed out"));
-      }, 30000);
-      const remove = connection.on("Page.loadEventFired", (_, sourceSession) => {
-        if (sourceSession !== sessionId) return;
-        clearTimeout(timer);
-        remove();
-        resolve();
-      });
+    await connection.send("Page.setLifecycleEventsEnabled", { enabled: true }, sessionId);
+    const loadedIds = new Set<string>();
+    let resolveLoaded: (() => void) | undefined;
+    let navigationLoader: string | undefined;
+    const remove = connection.on("Page.lifecycleEvent", (event, sourceSession) => {
+      if (sourceSession !== sessionId || event.name !== "load" || typeof event.loaderId !== "string") return;
+      loadedIds.add(event.loaderId);
+      if (event.loaderId === navigationLoader) resolveLoaded?.();
     });
-    await Promise.all([
-      connection.send("Page.navigate", { url: `http://127.0.0.1:${server.port}/` }, sessionId),
-      loaded,
-    ]);
+    let loadTimer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const navigation = await connection.send<{ loaderId?: string; errorText?: string }>(
+        "Page.navigate",
+        { url: `http://127.0.0.1:${server.port}/` },
+        sessionId,
+      );
+      if (navigation.errorText || !navigation.loaderId) throw new Error("Local page navigation failed");
+      navigationLoader = navigation.loaderId;
+      if (!loadedIds.has(navigationLoader)) {
+        await new Promise<void>((resolve, reject) => {
+          resolveLoaded = resolve;
+          loadTimer = setTimeout(() => reject(new Error("Local page load timed out")), 30000);
+        });
+      }
+    } finally {
+      clearTimeout(loadTimer);
+      remove();
+    }
     const probe = await connection.send<{ result: { value?: Record<string, unknown> }; exceptionDetails?: unknown }>(
       "Runtime.evaluate",
       {
@@ -132,6 +157,7 @@ async function qualify() {
     const receipt = {
       date: new Date().toISOString(),
       executable,
+      artifact: installed ? "installed-browser" : "compiled-browser",
       executableSha256: new Bun.CryptoHasher("sha256").update(await Bun.file(executable).arrayBuffer()).digest("hex"),
       bun: Bun.version,
       revision: Bun.revision,

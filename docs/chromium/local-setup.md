@@ -71,7 +71,8 @@ restores `PROCESSOR_ARCHITECTURE` only in the child environment, preserving exis
 values and using the native Bun architecture as fallback. Real DEPS parsing passes
 without upstream changes. Dependency synchronization and every hook subsequently
 completed successfully. Chromium's pinned GN generated 36,511 targets from 5,086
-files. A working browser artifact still requires completing the `chrome` build.
+files. The full `chrome` target subsequently completed on this PC; the artifact
+qualification below records the actual browser and GPU evidence.
 
 The launcher passed fourteen tests and 103 assertions through `bun bd -j4 test
 test/internal/chromium.test.ts`, including a real local Windows batch fixture.
@@ -179,5 +180,51 @@ Qualification resolved all configured command paths and ran GN 2599, Ninja
 program including `windows.h` compiled with `/W4 /WX` through `bun msvc exec` and
 executed successfully. The installed runtime remains
 `1.4.3-aphrody.4+41211b568`; source builds are qualified separately. Chromium's
-doctor confirms sources, depot_tools and clang, while its browser artifact is
-still pending completion of the full build.
+doctor confirms sources, depot_tools and clang. The browser artifact completed
+and passed the dedicated qualification below.
+
+## Compiled browser qualification
+
+On 2026-10-11 at 19:19 local time, the original retained-object Chromium build
+completed with exit code zero. Its initial six-worker phase and subsequent
+eight- and twelve-worker phases reused the same `out/bun` sources and outputs.
+Intentional pauses serialized large Bun links with Chromium compilation; no
+build cache was cleaned. The final command was `bun chromium build --jobs 12`.
+Siso reported no failed commands, and the setup lock was removed on completion.
+
+The actual output is `C:/bun/vendor/chromium/src/out/bun/chrome.exe`, accompanied
+by the component `chrome.dll` and generated runtime dependencies. The executable
+SHA-256 is
+`8e40f755b04cbaf123920466322131e9276219cf2440480bfd491457616ab147`.
+CDP reports `Chrome/157.0.8099.0`, protocol `1.3` and V8 `15.7.108`. Its CDP
+revision field is all zeroes, so source provenance uses the explicit checkout
+pin above rather than that field.
+
+`bun bd -j2 -n scripts/aphrody/chromium-qualify.ts` executed the existing qualified
+debug runtime `1.4.4-debug+4b7c53fb290409f026e628e09b5d2b80cdb76d32`. In this
+factory, `-n` lists pending native steps and then executes the existing binary;
+those listed steps were not compiled. This qualifies the new browser through
+that runtime and does not qualify newer pending Bun source inputs.
+
+The qualifier uses a new synthetic profile beneath
+`build/chromium/qualification-profile` and waits for the navigation's exact CDP
+loader. It does not access the copied user profile or the original Chrome
+profile. The local page passed fetch/readback of value `42`, canvas 2D,
+arithmetic, Wasm validation and secure-context checks. WebGPU reported an
+available NVIDIA Lovelace adapter with `fallback: false`; a real WGSL compute
+dispatch and buffer readback returned exactly `[10, 11, 12, 13]`.
+
+The ignored receipt `build/chromium/qualification.json` records the executable
+hash, browser version, runtime revision and GPU results. This is a separate
+Chromium process controlled through native `bun:chromium` CDP. It does not prove
+embedded Bun, V8/JSC engine parity, performance gains or an installed System32
+launcher. Installation is qualified separately by the installer owner.
+
+After the installer copied the payload, the same qualifier passed again with
+`--installed`. That mode selects only
+`C:/Program Files/BunChromium/Application/chrome.exe` and writes the separate
+`build/chromium/installed-qualification.json` receipt. The installed executable
+hash matched the compiled artifact; browser version, local web probes, NVIDIA
+non-fallback WebGPU and the exact WGSL readback all passed. This direct installed
+browser test is separate from the installer's System32 launcher and profile
+checks.
