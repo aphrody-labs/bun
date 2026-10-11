@@ -72,6 +72,8 @@ test("VPS release plan keeps execution with the serialized Infra resource owner"
   }
   expect(plan.wasm.runtimeQualified).toBe(false);
   expect(plan.mullvadSidecar.target).toBe("x86_64-unknown-linux-gnu");
+  expect(plan.mullvadSidecar.workingDirectory).toBe(`${plan.source}/vendor/mullvad`);
+  expect(plan.mullvadSidecar.lock).toBe("/home/ubuntu/build/locks/heavy.lock");
   expect(plan.mullvadSidecar.runtimeLinked).toBe(false);
   expect(plan.mullvadSidecar.performanceQualified).toBe(false);
   expect(plan.mullvadSidecar.relayList).toEqual([

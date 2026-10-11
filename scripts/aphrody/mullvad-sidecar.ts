@@ -14,6 +14,8 @@ export interface MullvadBuildPlan {
   mullvadSource: string;
   target: typeof MULLVAD_LINUX_TARGET;
   asset: typeof MULLVAD_ASSET;
+  workingDirectory: "vendor/mullvad";
+  factoryLock: "/home/ubuntu/build/locks/heavy.lock";
   cargo: string[][];
   fetchRelayList: string;
   smoke: string[][];
@@ -32,16 +34,19 @@ export function createMullvadBuildPlan(source: string, mullvadSource: string): M
     mullvadSource,
     target: MULLVAD_LINUX_TARGET,
     asset: MULLVAD_ASSET,
+    workingDirectory: "vendor/mullvad",
+    factoryLock: "/home/ubuntu/build/locks/heavy.lock",
     cargo: [
       [
-        "cargo",
+        "/home/ubuntu/src/aphrody/scripts/build/rust/cargo-serial.sh",
+        "+1.97.1",
         "build",
         "--locked",
         "--release",
         "--target",
         MULLVAD_LINUX_TARGET,
         "--manifest-path",
-        "vendor/mullvad/Cargo.toml",
+        "Cargo.toml",
         "-p",
         "mullvad-daemon",
         "-p",
@@ -56,28 +61,30 @@ export function createMullvadBuildPlan(source: string, mullvadSource: string): M
         "mullvad-daemon/cgroup2",
       ],
       [
-        "cargo",
+        "/home/ubuntu/src/aphrody/scripts/build/rust/cargo-serial.sh",
+        "+1.97.1",
         "build",
         "--locked",
         "--release",
         "--target",
         MULLVAD_LINUX_TARGET,
         "--manifest-path",
-        "vendor/mullvad/Cargo.toml",
+        "Cargo.toml",
         "-p",
         "mullvad-api",
         "--bin",
         "relay-list",
       ],
       [
-        "cargo",
+        "/home/ubuntu/src/aphrody/scripts/build/rust/cargo-serial.sh",
+        "+1.97.1",
         "test",
         "--locked",
         "--release",
         "--target",
         MULLVAD_LINUX_TARGET,
         "--manifest-path",
-        "vendor/mullvad/Cargo.toml",
+        "Cargo.toml",
         "-p",
         "mullvad-management-interface",
       ],
