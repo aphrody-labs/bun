@@ -14,7 +14,7 @@ import {
 import { gatewayReleaseConfig, releaseProxyConfig } from "../../scripts/aphrody/deploy/release-nginx.ts";
 import { cacheKey } from "../../scripts/aphrody/release-cache.ts";
 import { decodeSourceText, resolvedImport, sourceDomain, sourceReadable } from "../../scripts/aphrody/release-graph.ts";
-import { packageRelease } from "../../scripts/aphrody/release-package.ts";
+import { packageRelease, tar } from "../../scripts/aphrody/release-package.ts";
 import { createReleaseHandler } from "../../scripts/aphrody/release-server.ts";
 import { artifactPaths, digest, releaseReadme } from "../../scripts/aphrody/release-surfaces.ts";
 import { BRAND, SITE_ROOT_FILES } from "../../scripts/aphrody/site/brand.ts";
@@ -801,7 +801,7 @@ test("release packages preserve manifest-listed source documentation", async () 
   });
   const archive = join(String(root), "release.tar.gz");
   const result = await packageRelease(join(String(root), "artifact"), archive);
-  const listing = Bun.spawnSync(["tar", "-tzf", archive]);
+  const listing = Bun.spawnSync([tar, "-tzf", archive]);
   expect(listing.stdout.toString()).toContain("./site/knowledge/source/docs/guide.md");
   expect(listing.stdout.toString()).not.toContain("unlisted.txt");
   expect(listing.exitCode).toBe(0);

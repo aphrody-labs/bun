@@ -54,7 +54,7 @@
     "jsc:build:debug": "bun scripts/build.ts --profile=debug-local --build-dir=build/debug-local --target=WebKit",
     "jsc:build:lto": "bun scripts/build.ts --profile=release-local --lto=on --build-dir=build/release-local-lto --target=WebKit",
     "typecheck": "bun run typecheck:prepare && bun check --noEmit && bun check --noEmit --project test/tsconfig.json",
-    "fmt": "bun fmt --write --ignore-pattern '**/*fixture*.*' scripts packages src/js test",
+    "fmt": "bun fmt --write scripts packages src/js test '!**/*fixture*.*'",
     "fmt:cpp": "bun run clang-format",
     "fmt:rust": "cargo fmt --all",
     "lint": "bun lint --config=oxlint.json --format=github src/js",
