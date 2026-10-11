@@ -1,0 +1,14 @@
+services:
+  release-cache:
+    image: redis:8-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6388:6379"
+    mem_limit: 10g
+    command:
+      ["redis-server", "--maxmemory", "8gb", "--maxmemory-policy", "allkeys-lfu", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3

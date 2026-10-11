@@ -406,7 +406,7 @@ export async function writeGraphDocs(registry: Registry, options: GraphDocsOptio
       maxBytes,
       options.signal,
     );
-    const artifacts = [];
+    const artifacts: { file: string; sha256: string; bytes: number }[] = [];
     for (const file of [
       "graph.md",
       "graph.mdx",

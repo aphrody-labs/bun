@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { isWindows, tempDir } from "harness";
-import { existsSync, readFileSync, readlinkSync } from "node:fs";
+import { existsSync, readFileSync, readlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { digest, releaseReadme } from "../../scripts/aphrody/release-surfaces.ts";
+import { sourceDomain, sourceReadable, resolvedImport } from "../../scripts/aphrody/release-graph.ts";
+import { cacheKey } from "../../scripts/aphrody/release-cache.ts";
+import { createReleaseHandler } from "../../scripts/aphrody/release-server.ts";
+import { Database } from "bun:sqlite";
 import {
   DOCS_LOGO_FILES,
   SITE_ROOT_FILES as SYNCED_ROOT_FILES,
@@ -18,8 +23,92 @@ import {
   conventional,
   declaredLicenses,
   installerUsage,
+  collectRuntime,
+  GitTree,
   type SiteData,
 } from "../../scripts/aphrody/site/collect.ts";
+
+test("release README reflects source inventory and does not assert binary publication", () => {
+  const readme = releaseReadme("9.8.7", "a".repeat(40), "owner/source", ["bun:future"]);
+  expect(readme).toContain("**9.8.7**");
+  expect(readme).toContain("`bun:future`");
+  expect(readme).toContain(`https://github.com/owner/source/tree/${"a".repeat(40)}`);
+  expect(readme).toContain("does not establish availability");
+  expect(digest(readme)).toBe(digest(releaseReadme("9.8.7", "a".repeat(40), "owner/source", ["bun:future"])));
+});
+
+test("monorepo subgraphs resolve relative references and keep protected stores out", () => {
+  expect(sourceDomain("src/runtime/cli/main.rs")).toBe("src/runtime");
+  expect(sourceDomain("packages/buv/src/a.ts")).toBe("packages/buv");
+  expect(sourceDomain("docs/project/a.mdx")).toBe("docs");
+  expect(sourceReadable("vendor/lib/source.cpp")).toBe(true);
+  expect(sourceReadable("credentials/token.json")).toBe(false);
+  expect(sourceReadable("cookies/session.json")).toBe(false);
+  expect(resolvedImport("scripts/site/a.ts", "../../packages/sdk", new Set(["packages/sdk/index.ts"]))).toBe(
+    "packages/sdk/index.ts",
+  );
+  expect(resolvedImport("scripts/site/a.ts", "not-a-relative-reference", new Set())).toBe(null);
+  expect(cacheKey("a".repeat(40), "site", "docs/a.html")).not.toBe(cacheKey("b".repeat(40), "site", "docs/a.html"));
+  expect(() => cacheKey("main", "site", "index.html")).toThrow("immutable Git SHA");
+});
+
+test("release serving uses Redis, falls back to SQLite and rejects escaping paths", async () => {
+  using dir = tempDir("release-handler", {
+    "manifest.json": JSON.stringify({ source: "a".repeat(40), version: "1", artifacts: { "site/index.html": "hash" } }),
+    "site/index.html": "<h1>Source</h1>",
+  });
+  using db = new Database(":memory:");
+  db.exec(
+    "CREATE TABLE release_files(path,domain,sha256); INSERT INTO release_files VALUES('src/first.rs','src','hash')",
+  );
+  const values = new Map<string, string>();
+  const handler = createReleaseHandler(String(dir), db, {
+    get: async (key: string) => values.get(key) ?? null,
+    send: async (_command: string, args: string[]) => {
+      values.set(args[0]!, args[1]!);
+      return "OK";
+    },
+  } as any);
+  const request = (path: string) => handler(new Request(`http://localhost${path}`));
+  expect(await (await request("/")).text()).toBe("<h1>Source</h1>");
+  writeFileSync(join(String(dir), "site/index.html"), "changed disk");
+  expect(await (await request("/")).text()).toBe("<h1>Source</h1>");
+  expect(await (await request("/graph/api/search?q=first")).json()).toEqual([
+    { path: "src/first.rs", domain: "src", sha256: "hash" },
+  ]);
+  expect((await request("/%2e%2e%2fcredentials")).status).toBe(400);
+  const fallback = createReleaseHandler(String(dir), db, {
+    get: async () => {
+      throw new Error("offline");
+    },
+    send: async () => {
+      throw new Error("offline");
+    },
+  } as any);
+  expect(await (await fallback(new Request("http://localhost/"))).text()).toBe("changed disk");
+});
+
+test("site module inventory uses committed registry instead of author history or dirty files", () => {
+  using dir = tempDir("release-registry", {
+    "package.json": '{"version":"9.8.7"}',
+    "src/resolve_builtins/HardcodedModule.rs": '#[strum(serialize = "bun:future")]\n',
+    "src/js/bun/obsolete.ts": "export {};",
+  });
+  const root = String(dir);
+  for (const args of [
+    ["init"],
+    ["add", "."],
+    ["-c", "user.name=fixture", "-c", "user.email=fixture@example.test", "commit", "-m", "fixture"],
+  ]) {
+    const result = Bun.spawnSync(["git", "-C", root, ...args], { stdout: "pipe", stderr: "pipe" });
+    expect(result.exitCode).toBe(0);
+  }
+  const tree = new GitTree(root, "HEAD");
+  writeFileSync(join(root, "src/resolve_builtins/HardcodedModule.rs"), '#[strum(serialize = "bun:dirty")]');
+  const runtime = collectRuntime(tree, "owner/source", "contact@aphrody.com", [])!;
+  expect(runtime.modules).toEqual(["bun:future"]);
+  expect(runtime.upstream.version).toBe("9.8.7");
+});
 import { highlight, highlightHtml } from "../../scripts/aphrody/site/highlight.ts";
 import {
   absolutizeMarkdownLinks,

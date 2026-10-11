@@ -1,5 +1,11 @@
 # Bun, UV and Python integration
 
+## Release source surfaces
+
+- [ ] Generate README, GitHub metadata, plugin bundles and site from one immutable source revision.
+- [ ] Validate source inventories, generated artifacts and targeted tests; commit and push bun-os.
+- [ ] Plan and deploy through the configured native Infra hosts when reachable.
+
 ## Native Windows executable installation
 
 - [x] Allow `-BinDir` / `APHRODY_BUN_BIN_DIR` to select System32 while retaining user-owned state and caches.

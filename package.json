@@ -41,6 +41,7 @@
     "bd:v": "bun scripts/build.ts --profile=debug",
     "bd": "BUN_DEBUG_QUIET_LOGS=1 bun scripts/build.ts --profile=debug --quiet",
     "agent-plugin": "bun scripts/aphrody/agent-plugin.ts",
+    "release:surfaces": "bun scripts/aphrody/release-surfaces.ts",
     "build:debug": "bun scripts/build.ts --profile=debug",
     "build:debug:fuzzilli": "bun scripts/build.ts --profile=debug --fuzzilli=on --build-dir=build/debug-fuzz",
     "build:debug:noasan": "bun scripts/build.ts --profile=debug-no-asan",

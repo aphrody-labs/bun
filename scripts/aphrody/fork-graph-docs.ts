@@ -21,7 +21,7 @@ export async function exportForkGraphDocs(
     ...(options.domains ? { domains: options.domains } : {}),
     ...(options.signal ? { signal: options.signal } : {}),
   });
-  const documents = [];
+  const documents: { domain: string; source: string; snapshot: string; out: string }[] = [];
   for (const domain of index.domains) {
     options.signal?.throwIfAborted();
     const docs = await writeGraphDocs(registry, {
