@@ -1,7 +1,10 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { bunEnv, bunExe, tempDir } from "harness";
+
+// Windows inventory uses several PowerShell/CIM probes; allow the real collector to finish.
+setDefaultTimeout(20_000);
 
 const SECRET = "0123456789abcdef-test-secret";
 
