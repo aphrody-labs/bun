@@ -258,4 +258,4 @@ _From `package.json`._
 | `bun run watch-windows` | `cargo watch -x "check --workspace --target x86_64-pc-windows-msvc --message-format=short"` |
 | `bun run rust:check-all` | `bun scripts/rust-check-all.ts` |
 | `bun run rust:clippy` | `cargo clippy --workspace --no-deps --keep-going` |
-| `bun run test` | `node scripts/runner.node.ts --exec-path ./build/debug/bun-debug` |
+| `bun run test` | `bun scripts/runner.node.ts --exec-path ./build/debug/bun-debug` |

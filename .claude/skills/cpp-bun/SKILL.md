@@ -215,4 +215,4 @@ _From `package.json`._
 | `bun run codegen:verify` | `bun src/codegen/generate-agent-tools.ts --check && (bun run codegen:string-maps && git diff --exit-code 'src/**/*.generated.rs' \|\| (echo '\n*.generated.rs is stale — run `bun run codegen:string-maps` and commit the result.' >&2; exit 1))` |
 | `bun run rust:check-all` | `bun scripts/rust-check-all.ts` |
 | `bun run rust:clippy` | `cargo clippy --workspace --no-deps --keep-going` |
-| `bun run test` | `node scripts/runner.node.ts --exec-path ./build/debug/bun-debug` |
+| `bun run test` | `bun scripts/runner.node.ts --exec-path ./build/debug/bun-debug` |
