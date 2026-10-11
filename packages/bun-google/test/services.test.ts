@@ -88,6 +88,30 @@ test("Drive bounded pagination rejects cycles and hidden pagination fields", asy
   }
 });
 
+test("Drive and Docs reject malformed resource envelopes without echoing response data", async () => {
+  let body: unknown;
+  const server = Bun.serve({
+    port: 0,
+    fetch() {
+      return Response.json(body);
+    },
+  });
+  try {
+    const api = createGoogleServices({
+      credentialProvider: () => "fixture-token",
+      endpoints: { drive: String(server.url), docs: String(server.url) },
+    });
+    body = { files: [{ id: "file-1", name: 42, secret: "do not expose" }] };
+    await expect(api.drive.listFiles()).rejects.toThrow("Google Drive file response is invalid");
+    body = { documentId: ["private"] };
+    await expect(api.docs.get("doc")).rejects.toThrow("Google Docs document response is invalid");
+    body = "private response body";
+    await expect(api.drive.listFiles()).rejects.toThrow("Google Drive list response is invalid");
+  } finally {
+    await server.stop(true);
+  }
+});
+
 test("Gemini JSON and SSE retain request body and signal", async () => {
   const bodies: unknown[] = [];
   const server = Bun.serve({

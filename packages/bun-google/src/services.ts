@@ -43,6 +43,47 @@ function query(values: Record<string, string | number | boolean | undefined>): s
   return params.size ? `?${params}` : "";
 }
 
+function record(value: unknown, resource: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error(`Google ${resource} response is invalid`);
+  return value as Record<string, unknown>;
+}
+
+function driveFile(value: unknown): DriveFile {
+  const file = record(value, "Drive file");
+  for (const field of ["id", "name", "mimeType", "modifiedTime", "md5Checksum", "size"])
+    if (file[field] !== undefined && file[field] !== null && typeof file[field] !== "string")
+      throw new Error("Google Drive file response is invalid");
+  return file as DriveFile;
+}
+
+async function drivePage(response: Response): Promise<DrivePage> {
+  const page = record(await response.json(), "Drive list");
+  if (page.files !== undefined && !Array.isArray(page.files))
+    throw new Error("Google Drive list response is invalid");
+  if (page.nextPageToken !== undefined && typeof page.nextPageToken !== "string")
+    throw new Error("Google Drive list response is invalid");
+  if (page.incompleteSearch !== undefined && typeof page.incompleteSearch !== "boolean")
+    throw new Error("Google Drive list response is invalid");
+  return {
+    files: page.files?.map(driveFile),
+    nextPageToken: page.nextPageToken as string | undefined,
+    incompleteSearch: page.incompleteSearch as boolean | undefined,
+  };
+}
+
+async function googleDocument(response: Response): Promise<GoogleDocument> {
+  const document = record(await response.json(), "Docs document");
+  for (const field of ["documentId", "title", "revisionId"])
+    if (
+      document[field] !== undefined &&
+      document[field] !== null &&
+      typeof document[field] !== "string"
+    )
+      throw new Error("Google Docs document response is invalid");
+  return document as GoogleDocument;
+}
+
 export function createGoogleServices(options: ServiceOptions) {
   const shared = { credentialProvider: options.credentialProvider, fetch: options.fetch };
   const drive = createClient({
@@ -76,10 +117,12 @@ export function createGoogleServices(options: ServiceOptions) {
         )
           throw new RangeError("Drive pageSize must be an integer from 1 through 1000");
         const response = await drive.request(`files${query(params)}`, { signal });
-        return response.json();
+        return drivePage(response);
       },
       async getFile(fileId: string, fields?: string, signal?: AbortSignal): Promise<DriveFile> {
-        return (await drive.request(`files/${id(fileId)}${query({ fields })}`, { signal })).json();
+        return driveFile(
+          await (await drive.request(`files/${id(fileId)}${query({ fields })}`, { signal })).json(),
+        );
       },
       async exportFile(fileId: string, mimeType: string, signal?: AbortSignal): Promise<Response> {
         if (!mimeType) throw new TypeError("Drive export requires a MIME type");
@@ -110,7 +153,7 @@ export function createGoogleServices(options: ServiceOptions) {
     },
     docs: {
       async get(documentId: string, signal?: AbortSignal): Promise<GoogleDocument> {
-        return (await docs.request(`documents/${id(documentId)}`, { signal })).json();
+        return googleDocument(await docs.request(`documents/${id(documentId)}`, { signal }));
       },
       async batchUpdate(
         documentId: string,
