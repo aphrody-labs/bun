@@ -41,6 +41,7 @@ try {
   await Bun.write(join(staged, "bun.lock"), Bun.file(join(source, "bun.lock")));
   await run(staged, ["install", "--backend=copyfile", "--ignore-scripts"]);
   const published = JSON.parse(original);
+  delete published.devDependencies;
   published.dependencies["@aphrody/bun-plugin-tailwind"] = ">=0.1.0 <2";
   await Bun.write(manifestPath, JSON.stringify(published, null, 2) + "\n");
   await run(staged, ["pm", "pack", "--ignore-scripts", "--quiet", "--filename", output]);

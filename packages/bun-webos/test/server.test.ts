@@ -46,10 +46,12 @@ describe("generic index explorer", () => {
     const publicServer = await startWebOS({
       port: 0,
       dataDir: join(dataDir, "public-mode"),
+      root: join(dataDir, "separate-public-home"),
       hostAccess: false,
       development: false,
     });
     try {
+      expect(await Bun.file(join(dataDir, "public-mode", "webos.sqlite")).exists()).toBe(true);
       expect((await fetch(new URL("/api/webos/system", publicServer.url))).status).toBe(403);
       expect((await fetch(new URL("/api/metrics", publicServer.url))).status).toBe(403);
       const capabilities = await (

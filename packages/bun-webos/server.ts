@@ -157,6 +157,7 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
     options.dataDir ?? process.env.BUN_WEBOS_DATA ?? join(homedir(), ".bun-webos"),
   );
   const root = resolve(options.root ?? join(dataDir, "home"));
+  mkdirSync(dataDir, { recursive: true });
   mkdirSync(root, { recursive: true });
   const development = options.development ?? process.env.NODE_ENV !== "production";
   const distDir = resolve(options.distDir ?? join(import.meta.dir, "dist"));
