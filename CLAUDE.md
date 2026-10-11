@@ -38,6 +38,14 @@ This is an explicit exception to the "never use `bun test` directly" rule. There
 
 ## Testing
 
+## Bun Video documentation
+
+The first-party video package is in `packages/bun-video`. Its WebGPU compute
+API is documented in `packages/bun-video/docs/webgpu.md` and exposed through
+the `bun-video-webgpu` CLI. Keep WebGPU compute, browser probing, and native
+runtime-provider requirements distinct from DRM playback and video encoding.
+Agent guidance for this package is in `.claude/skills/bun-video/SKILL.md`.
+
 ### Running Tests
 
 - **Single test file**: `bun bd test test/js/bun/http/serve.test.ts`
