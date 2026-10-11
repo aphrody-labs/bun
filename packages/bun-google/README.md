@@ -17,6 +17,10 @@ uses Bun fetch in process, enforces Google HTTPS or loopback endpoints, rejects
 redirects, and preserves cancellation. Credentials are never discovered
 implicitly. Existing OS credential storage and ADC adapters retain ownership.
 
+For dedicated email, Google user identity and keyless Cloud automation, follow the
+[dedicated-account runbook](../../docs/project/google-dedicated-account.md).
+OVH forwarding, Workspace/Gmail authorization and Cloud IAM qualify separately.
+
 | Surface                         | Executable contract                                              |
 | ------------------------------- | ---------------------------------------------------------------- |
 | `createClient`, `googleRuntime` | Native REST transport and public configuration                   |
