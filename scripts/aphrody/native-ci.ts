@@ -13,6 +13,8 @@ export const gates: Gate[] = [
       "bash",
       "../aphrody/scripts/build/rust/cargo-serial.sh",
       action,
+      "--config",
+      "packages/bun-google/aphrody/.cargo/config.toml",
       "--manifest-path",
       "packages/bun-google/aphrody/Cargo.toml",
       "-p",

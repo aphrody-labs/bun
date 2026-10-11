@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: Apache-2.0
+# Application contracts retain one source owner in the sibling Aphrody checkout.
+# Cargo resolves these paths from the provider workspace, above this .cargo directory.
+# From another working directory, pass --config packages/bun-google/aphrody/.cargo/config.toml.
+# The checkout layout is <parent>/{bun,aphrody}; credentials and stores stay external.
+
+[patch."https://github.com/aphrody-labs/aphrody"]
+aphrody-config = { path = "../../../../aphrody/crates/ai/config" }
+aphrody-m3-tokens = { path = "../../../../aphrody/crates/ui/m3-tokens" }
+aphrody-mcp-client = { path = "../../../../aphrody/crates/ai/mcp-client" }
+aphrody-model-client = { path = "../../../../aphrody/crates/ai/model-client" }
+aphrody-patch = { path = "../../../../aphrody/crates/ai/patch" }
+aphrody-proc = { path = "../../../../aphrody/crates/os/ostd/proc" }
+aphrody-rag-core = { path = "../../../../aphrody/crates/ai/rag-core" }
+aphrody-shell-session = { path = "../../../../aphrody/crates/shell/session" }
+aphrody-shell-vfs = { path = "../../../../aphrody/crates/shell/vfs" }
+aphrody-terminal-core = { path = "../../../../aphrody/crates/shell/terminal-core" }
+aphrody-toolcall = { path = "../../../../aphrody/crates/ai/toolcall" }
