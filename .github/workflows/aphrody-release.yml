@@ -51,11 +51,11 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  BUN_HOST_VERSION: "1.4.2"
+  BUN_HOST_VERSION: "aphrody-v1.4.3-aphrody.4"
 
 jobs:
   prepare:
-    if: github.repository == 'aphrody-labs/bun'
+    if: github.repository == 'aphrody-labs/bun' || github.repository == 'aphrody-labs/bun-os'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:

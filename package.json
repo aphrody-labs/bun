@@ -43,6 +43,7 @@
     "agent-plugin": "bun scripts/aphrody/agent-plugin.ts",
     "release:surfaces": "bun scripts/aphrody/release-surfaces.ts",
     "delivery": "bun scripts/aphrody/monorepo-delivery.ts",
+    "delivery:native": "bun scripts/aphrody/delivery-native.ts",
     "build:debug": "bun scripts/build.ts --profile=debug",
     "build:debug:fuzzilli": "bun scripts/build.ts --profile=debug --fuzzilli=on --build-dir=build/debug-fuzz",
     "build:debug:noasan": "bun scripts/build.ts --profile=debug-no-asan",

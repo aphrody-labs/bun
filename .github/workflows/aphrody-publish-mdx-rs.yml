@@ -20,18 +20,22 @@ on:
         description: "Stage and pack without publishing"
         type: boolean
         default: false
+      platforms:
+        description: "Comma-separated matrix keys (empty: all); only smoke-qualified runtime platforms may run"
+        type: string
+        default: ""
 
 concurrency:
   group: aphrody-publish-mdx-rs
   cancel-in-progress: false
 
 env:
-  BUN_HOST_VERSION: "1.4.2"
+  BUN_HOST_VERSION: "aphrody-v1.4.3-aphrody.4"
   CARGO_TERM_COLOR: always
 
 jobs:
   plan:
-    if: github.repository == 'aphrody-labs/bun'
+    if: github.repository == 'aphrody-labs/bun' || github.repository == 'aphrody-labs/bun-os'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -44,7 +48,16 @@ jobs:
         with:
           bun-version: ${{ env.BUN_HOST_VERSION }}
       - id: m
-        run: echo "matrix=$(bun scripts/aphrody/publish-mdx-rs.ts matrix)" >> "$GITHUB_OUTPUT"
+        env:
+          PLATFORMS: ${{ inputs.platforms }}
+        run: |
+          echo "matrix=$(bun scripts/aphrody/publish-mdx-rs.ts matrix | bun -e '
+            const platforms = (process.env.PLATFORMS ?? "").split(",").map(x => x.trim()).filter(Boolean);
+            const m = await Bun.stdin.json();
+            if (platforms.length) m.include = m.include.filter(x => platforms.includes(x.key));
+            if (!m.include.length) throw new Error("No qualified matrix targets selected");
+            console.log(JSON.stringify(m));
+          ')" >> "$GITHUB_OUTPUT"
 
   build:
     needs: plan
@@ -135,6 +148,7 @@ jobs:
         with:
           script: smoke.ts
           libc: ${{ matrix.libc }}
+          version: ${{ env.BUN_HOST_VERSION }}
 
       - uses: actions/upload-artifact@v4
         with:

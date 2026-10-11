@@ -6,6 +6,7 @@ import { apply, rewrite } from "../../scripts/aphrody/scope.ts";
 import { sync } from "../../scripts/aphrody/sync-upstream.ts";
 import { dependencyOrder, inventory, plan, verifyIntegrity } from "../../scripts/aphrody/monorepo-delivery.ts";
 import { createHash } from "node:crypto";
+import { nativePlan } from "../../scripts/aphrody/delivery-native.ts";
 
 describe("scope rewrite", () => {
   test("a manifest renames itself and local dependencies, not registry ones", () => {
@@ -103,6 +104,33 @@ const options = (root: string) => ({
 });
 
 describe("monorepo delivery", () => {
+  test("native plans preserve dry-run semantics and reject source version drift", () => {
+    const common =
+      "name: fixture\non:\n  workflow_dispatch:\n    inputs:\n      version:\n        type: string\n      dry-run:\n        type: boolean\n        default: false\n      publish-npm:\n        type: boolean\n        default: true\nenv:\n  BUN_HOST_VERSION: aphrody-v1.4.3-aphrody.4\njobs:\n  plan:\n    if: github.repository == 'aphrody-labs/bun' || github.repository == 'aphrody-labs/bun-os'\n    runs-on: ubuntu-latest\n";
+    using dir = tempDir("native-delivery-plan", {
+      "package.json": JSON.stringify({ name: "bun", version: "1.4.4" }),
+      ".github/workflows/aphrody-publish-native.yml": common,
+      ".github/workflows/aphrody-release.yml": common,
+    });
+    const root = String(dir);
+    git(root, "init", "--quiet", "--initial-branch=main");
+    git(root, "config", "user.email", "test@example.com");
+    git(root, "config", "user.name", "test");
+    git(root, "remote", "add", "bun-os", "https://github.com/aphrody-labs/bun-os.git");
+    git(root, "add", "-A");
+    git(root, "commit", "--quiet", "-m", "workflow");
+    const plugin = nativePlan(root, "aphrody-labs/bun-os", "main", "native");
+    expect(plugin.inputs["dry-run"]).toBe("true");
+    expect(plugin.blockers).toEqual([]);
+    expect(plugin.source.workflowSha256).toMatch(/^[a-f0-9]{64}$/);
+    const runtime = nativePlan(root, "aphrody-labs/bun-os", "main", "runtime");
+    expect(runtime.inputs["publish-npm"]).toBe("false");
+    expect(runtime.blockers[0]).toContain("publishes GitHub release assets");
+    expect(nativePlan(root, "aphrody-labs/bun-os", "main", "runtime", true, "1.4.5").blockers[0]).toContain(
+      "differs from source",
+    );
+  });
+
   test("inventory reads immutable Git manifests, excludes regression fixtures, and retains lock checksums", () => {
     using dir = tempDir("delivery-pins", {
       "package.json": JSON.stringify({ name: "bun", private: true, version: "1.4.4" }),
