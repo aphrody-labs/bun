@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "owner": "bun-os-browser",
+  "observedAt": "2026-10-11",
+  "purpose": "Pinned source and documentation inventory for Chromium-family integration research. This file does not declare an integrated Blink/JSC engine.",
+  "sources": {
+    "chromium": {
+      "repository": "https://chromium.googlesource.com/chromium/src.git",
+      "ref": "refs/heads/main",
+      "observedRevision": "76befca8d3e15a2ba603d7499c376c00c0d0f3a8",
+      "checkout": false,
+      "reason": "Read primary source documentation through Gitiles; full checkout/build is outside this research lot."
+    },
+    "chromiumosManifest": {
+      "repository": "https://chromium.googlesource.com/chromiumos/manifest.git",
+      "ref": "refs/heads/main",
+      "observedRevision": "883dcbc0ccf362da627f5c227969e2da88864a01",
+      "checkout": false,
+      "reason": "Record public manifest head only; no ChromiumOS source sync or SDK setup was performed."
+    },
+    "depotTools": {
+      "repository": "https://chromium.googlesource.com/chromium/tools/depot_tools.git",
+      "ref": "refs/heads/main",
+      "observedRevision": "a03dfbf7f2d1cefa2795d81d59ca4f16c8616a8f",
+      "checkout": "/home/ubuntu/builds/bun-os-factory/sources/depot_tools",
+      "host": "vps",
+      "detached": true,
+      "clean": true,
+      "autoUpdate": "disabled per invocation with DEPOT_TOOLS_UPDATE=0; no global PATH or shell profile changes",
+      "license": "LICENSE retained in the checkout"
+    }
+  },
+  "hostPreflight": {
+    "host": "vps",
+    "targetDirectory": "/home/ubuntu/builds/bun-os-factory/sources/depot_tools",
+    "availableDiskBytesBeforeClone": 106470572032,
+    "availableMemoryBytesAtCheck": 38857883648,
+    "minimumDiskHeadroomBytes": 8589934592,
+    "minimumMemoryBytes": 2147483648,
+    "checkoutSizeBytes": 87737768,
+    "fullChromiumCheckout": false,
+    "buildPerformed": false,
+    "bootstrapExecuted": false
+  },
+  "sourceInventory": {
+    "coverage": "Scoped to official architecture, source checkout, toolchain and ChromiumOS setup documents consulted on 2026-10-11; not an inventory of every Chromium or ChromiumOS document.",
+    "documents": [
+      "https://chromium.googlesource.com/chromium/src/+/main/third_party/blink/renderer/bindings/README.md",
+      "https://chromium.googlesource.com/chromium/src/+/main/third_party/blink/renderer/bindings/core/v8/V8BindingDesign.md",
+      "https://chromium.googlesource.com/chromium/src/+/main/docs/linux/build_instructions.md",
+      "https://chromium.googlesource.com/chromium/src/+/main/tools/gn/README.md",
+      "https://chromium.googlesource.com/chromium/tools/depot_tools/+/main/README.md",
+      "https://www.chromium.org/developers/how-tos/install-depot-tools/",
+      "https://www.chromium.org/chromium-os/developer-library/guides/development/developer-guide/",
+      "https://chromium.googlesource.com/chromiumos/manifest/+/main/README.md"
+    ]
+  }
+}
