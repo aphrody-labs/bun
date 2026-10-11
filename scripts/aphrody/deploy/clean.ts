@@ -3,7 +3,7 @@
 // Prints one JSON report: what was removed and the space freed. Hard guards: nothing under docker volumes, postgres paths,
 // ~/src (the one checkout per repository), ~/apps/*/data|shared, ~/archive or tmux sockets is ever removed; prod keeps
 // >= 15 GB free or exits non-zero.
-import { existsSync, lstatSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync, rmSync, type Stats } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join, posix, resolve, sep } from "node:path";
 import {
@@ -27,7 +27,11 @@ export interface CleanContext {
   home: string;
   root?: string;
   stateBase?: string;
-  app?: { name: string; clean?: { cacheDirs?: string[]; cacheDays?: number }; remote?: { keep?: number } };
+  app?: {
+    name: string;
+    clean?: { cacheDirs?: string[]; cacheDays?: number };
+    remote?: { keep?: number };
+  };
   dryRun: boolean;
   now?: number;
   free?: (p: string) => number;
@@ -49,7 +53,8 @@ export interface CleanReport {
   ok: boolean;
 }
 
-const norm = (p: string) => (p.startsWith("/") ? posix.resolve(p) : resolve(p).split(sep).join("/")).toLowerCase();
+const norm = (p: string) =>
+  (p.startsWith("/") ? posix.resolve(p) : resolve(p).split(sep).join("/")).toLowerCase();
 
 /** Returns the reason a path must never be removed, or null when removal is allowed. */
 export function protectedReason(path: string, home: string): string | null {
@@ -58,13 +63,16 @@ export function protectedReason(path: string, home: string): string | null {
   if (p === "/" || /^[a-z]:\/?$/.test(p)) return "filesystem root";
   if (p === h) return "home directory";
   if (p.includes("postgres")) return "postgres path";
-  if (p === "/var/lib/docker/volumes" || p.startsWith("/var/lib/docker/volumes/")) return "docker volumes";
+  if (p === "/var/lib/docker/volumes" || p.startsWith("/var/lib/docker/volumes/"))
+    return "docker volumes";
   if (p === "/var/lib/docker" || p === "/var/lib" || p === "/var") return "system path";
   if (p === `${h}/src` || p.startsWith(`${h}/src/`)) return "source checkout";
   if (p === `${h}/archive` || p.startsWith(`${h}/archive/`)) return "archive";
   const app = p.startsWith(`${h}/apps/`) ? p.slice(`${h}/apps/`.length).split("/") : null;
-  if (p === `${h}/apps` || (app && (app.length === 1 || app[1] === "data" || app[1] === "shared"))) return "app data";
-  if (/(^|\/)tmux[-_.]/.test(p) || /\/(yolo|vps-cargo|aphrody)\.(sock|session)$/.test(p)) return "tmux";
+  if (p === `${h}/apps` || (app && (app.length === 1 || app[1] === "data" || app[1] === "shared")))
+    return "app data";
+  if (/(^|\/)tmux[-_.]/.test(p) || /\/(yolo|vps-cargo|aphrody)\.(sock|session)$/.test(p))
+    return "tmux";
   return null;
 }
 
@@ -117,7 +125,11 @@ export async function runClean(ctx: CleanContext): Promise<CleanReport> {
   };
   const entries = (dir: string) => {
     try {
-      return readdirSync(dir).map(name => ({ name, path: join(dir, name), st: lstatSync(join(dir, name)) }));
+      return readdirSync(dir).map((name) => ({
+        name,
+        path: join(dir, name),
+        st: lstatSync(join(dir, name)),
+      }));
     } catch {
       return [];
     }
@@ -127,7 +139,8 @@ export async function runClean(ctx: CleanContext): Promise<CleanReport> {
     const walk = (dir: string, d: number) => {
       for (const e of entries(dir)) {
         if (!e.st.isDirectory() || e.name === "node_modules" || e.name === ".git") continue;
-        if (e.name === ".next" && existsSync(join(e.path, "cache"))) found.push(join(e.path, "cache"));
+        if (e.name === ".next" && existsSync(join(e.path, "cache")))
+          found.push(join(e.path, "cache"));
         else if (d < depth) walk(e.path, d + 1);
       }
     };
@@ -153,19 +166,25 @@ export async function runClean(ctx: CleanContext): Promise<CleanReport> {
   if (ctx.role === "prod") {
     if (ctx.root) {
       const releasesDir = join(ctx.root, "releases");
-      const pins = [readLink(join(ctx.root, "current"))].map(p => (p ? basename(p) : null));
+      const pins = [readLink(join(ctx.root, "current"))].map((p) => (p ? basename(p) : null));
       const previousLink = join(ctx.root, "previous");
       if (readLink(previousLink) !== null) {
         if (!ctx.dryRun) rmSync(previousLink, { force: true });
-        report.removed.push({ path: previousLink, bytes: 0, why: "rollback = rebuild from git or a tag" });
+        report.removed.push({
+          path: previousLink,
+          bytes: 0,
+          why: "rollback = rebuild from git or a tag",
+        });
       }
       const all = entries(releasesDir);
-      for (const e of all.filter(e => e.name.endsWith(".partial") && olderThan(e.st.mtimeMs, 1 / 24, now))) {
+      for (const e of all.filter(
+        (e) => e.name.endsWith(".partial") && olderThan(e.st.mtimeMs, 1 / 24, now),
+      )) {
         remove(e.path, "stale partial transfer");
       }
-      const rel = all.filter(e => e.st.isDirectory() && !e.name.endsWith(".partial"));
+      const rel = all.filter((e) => e.st.isDirectory() && !e.name.endsWith(".partial"));
       const { remove: drop } = selectReleasesToKeep(
-        rel.map(e => ({ name: e.name, mtimeMs: e.st.mtimeMs })),
+        rel.map((e) => ({ name: e.name, mtimeMs: e.st.mtimeMs })),
         pins,
         0,
       );
@@ -185,11 +204,11 @@ export async function runClean(ctx: CleanContext): Promise<CleanReport> {
         if (olderThan(e.st.mtimeMs, 2 / 24, now)) remove(e.path, "orphan worktree");
       }
       const relDir = join(base, "releases");
-      const rel = entries(relDir).filter(e => e.st.isDirectory());
+      const rel = entries(relDir).filter((e) => e.st.isDirectory());
       const pendingId = new QueueState(base).readPending()?.id;
-      const pending = rel.some(e => e.name === pendingId) ? pendingId : null;
+      const pending = rel.some((e) => e.name === pendingId) ? pendingId : null;
       const { remove: drop } = selectReleasesToKeep(
-        rel.map(e => ({ name: e.name, mtimeMs: e.st.mtimeMs })),
+        rel.map((e) => ({ name: e.name, mtimeMs: e.st.mtimeMs })),
         [pending],
         2,
       );
@@ -217,7 +236,7 @@ export async function runClean(ctx: CleanContext): Promise<CleanReport> {
 
 function sweepTmp(
   ctx: CleanContext,
-  entries: (d: string) => { name: string; path: string; st: ReturnType<typeof lstatSync> }[],
+  entries: (d: string) => { name: string; path: string; st: Stats }[],
   remove: (p: string, why: string) => void,
   days: number,
   now: number,
@@ -235,14 +254,25 @@ async function removeUnusedShenronImages(
   report: CleanReport,
 ) {
   if (ctx.dryRun) return;
-  const images = await exec(["docker", "images", "--format", "{{.Repository}}:{{.Tag}} {{.ID}}"]).catch(() => null);
+  const images = await exec([
+    "docker",
+    "images",
+    "--format",
+    "{{.Repository}}:{{.Tag}} {{.ID}}",
+  ]).catch(() => null);
   const used = await exec(["docker", "ps", "-a", "--format", "{{.Image}}"]).catch(() => null);
   if (!images || !used || images.code !== 0 || used.code !== 0) return;
   const inUse = new Set(used.stdout.split("\n").filter(Boolean));
   for (const line of images.stdout.split("\n").filter(Boolean)) {
-    const [ref, id] = line.split(" ");
+    const [ref, id, extra] = line.trim().split(/\s+/);
+    if (!ref || !id || extra !== undefined || !/^(?:sha256:)?[0-9a-f]{12,64}$/i.test(id)) continue;
     if (!ref.startsWith("shenron-") || /postgres|redis|chat/i.test(ref)) continue;
-    if (inUse.has(ref) || inUse.has(id) || [...inUse].some(u => id.startsWith(u) || u.startsWith(id))) continue;
+    if (
+      inUse.has(ref) ||
+      inUse.has(id) ||
+      [...inUse].some((u) => id.startsWith(u) || u.startsWith(id))
+    )
+      continue;
     await command("docker", "image", "rm", id);
   }
   void report;
@@ -250,7 +280,10 @@ async function removeUnusedShenronImages(
 
 function arg(args: string[], name: string) {
   const i = args.indexOf(name);
-  return i >= 0 ? args[i + 1] : undefined;
+  if (i < 0) return undefined;
+  const value = args[i + 1];
+  if (!value || value.startsWith("--")) throw new Error(`Missing value for ${name}`);
+  return value;
 }
 
 if (import.meta.main) {
@@ -261,16 +294,20 @@ if (import.meta.main) {
     process.exit(EXIT.config);
   }
   const dryRun = args.includes("--dry-run");
-  if (!dryRun) await ensureFlock(join(process.env.XDG_RUNTIME_DIR ?? "/tmp", "aphrody-deploy-clean.lock"));
-  const home = arg(args, "--home") ?? (process.env.SUDO_USER ? `/home/${process.env.SUDO_USER}` : homedir());
+  const root = arg(args, "--root");
+  const stateBase = arg(args, "--state");
+  const home =
+    arg(args, "--home") ?? (process.env.SUDO_USER ? `/home/${process.env.SUDO_USER}` : homedir());
   const configPath = arg(args, "--config");
   const app = configPath ? validateApp(readJson(configPath)) : undefined;
+  if (!dryRun)
+    await ensureFlock(join(process.env.XDG_RUNTIME_DIR ?? "/tmp", "aphrody-deploy-clean.lock"));
   const report = await runClean({
     role,
     home,
-    root: arg(args, "--root"),
-    stateBase: arg(args, "--state"),
-    app,
+    ...(root === undefined ? {} : { root }),
+    ...(stateBase === undefined ? {} : { stateBase }),
+    ...(app === undefined ? {} : { app }),
     dryRun,
   });
   console.log(JSON.stringify(report));

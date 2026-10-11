@@ -1,8 +1,8 @@
 // Entry script for `bun lint`, `bun fmt`, `bun n2b`, `bun migrate`, `bun wasm` and
 // `bun build --target=wasm` (src/runtime/cli/toolchain_command.rs boots it like `bun -e`).
 //
-// oxlint and oxfmt are not linked into Bun (+20 MB, more than the fork's size budget): the project's
-// own copy is used when it has one, else the pinned version through `bun x`, which caches it.
+// lint/fmt reach this legacy adapter only with explicit --external-backend opt-in.
+// The project's copy is used when present, otherwise the pinned backend is fetched through bun x.
 // n2b (Node.js to Bun rules) is @aphrody/bun-plugin-n2b the same way. Rust to wasm is `bun:wasm`.
 const fs = require("node:fs");
 const path = require("node:path");
@@ -805,7 +805,7 @@ async function main(): Promise<number> {
   const at = argv.findIndex(a => COMMANDS.includes(a));
   if (at === -1) throw new UsageError(`Expected one of ${COMMANDS.join(", ")}`);
   const command = argv[at];
-  const args = argv.slice(at + 1);
+  const args = argv.slice(at + 1).filter(arg => arg !== "--external-backend");
   const cwd = process.cwd();
   switch (command) {
     case "lint":

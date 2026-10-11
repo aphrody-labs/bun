@@ -2,7 +2,7 @@
 # Absorbed from aphrody-labs/aphrody@5e55f4615a7d (crates/os/kernel/comps/re, aphrody-re 1.0.0-canary).
 [package]
 name = "bun-re"
-version = "1.0.0-canary"
+version = "1.4.4"
 edition = "2024"
 rust-version = "1.97"
 license = "Apache-2.0"

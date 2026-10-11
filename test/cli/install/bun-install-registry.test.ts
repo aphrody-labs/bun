@@ -895,17 +895,15 @@ describe("text lockfile", () => {
 
   for (const omit of ["dev", "peer", "optional"]) {
     test(`resolvable lockfile with ${omit} dependencies disabled`, async () => {
-      await Promise.all([
-        write(
-          join(packageDir, "package.json"),
-          JSON.stringify({
-            name: "foo",
-            peerDependencies: { "no-deps": "1.0.0" },
-            devDependencies: { "a-dep": "1.0.1" },
-            optionalDependencies: { "basic-1": "1.0.0" },
-          }),
-        ),
-      ]);
+      await write(
+        join(packageDir, "package.json"),
+        JSON.stringify({
+          name: "foo",
+          peerDependencies: { "no-deps": "1.0.0" },
+          devDependencies: { "a-dep": "1.0.1" },
+          optionalDependencies: { "basic-1": "1.0.0" },
+        }),
+      );
 
       let { stdout, stderr, exited } = spawn({
         cmd: [bunExe(), "install", "--save-text-lockfile", `--omit=${omit}`],
@@ -1190,18 +1188,16 @@ describe("frozen lockfile", () => {
 describe("bundledDependencies", () => {
   for (const textLockfile of [true, false]) {
     test(`(${textLockfile ? "bun.lock" : "bun.lockb"}) basic`, async () => {
-      await Promise.all([
-        write(
-          packageJson,
-          JSON.stringify({
-            name: "bundled-basic",
-            version: "1.1.1",
-            dependencies: {
-              "bundled-1": "1.0.0",
-            },
-          }),
-        ),
-      ]);
+      await write(
+        packageJson,
+        JSON.stringify({
+          name: "bundled-basic",
+          version: "1.1.1",
+          dependencies: {
+            "bundled-1": "1.0.0",
+          },
+        }),
+      );
 
       const cmd = textLockfile ? [bunExe(), "install", "--save-text-lockfile"] : [bunExe(), "install"];
       let { exited } = spawn({
@@ -1240,18 +1236,16 @@ describe("bundledDependencies", () => {
     });
 
     test(`(${textLockfile ? "bun.lock" : "bun.lockb"}) bundledDependencies === true`, async () => {
-      await Promise.all([
-        write(
-          packageJson,
-          JSON.stringify({
-            name: "bundled-true",
-            version: "1.1.1",
-            dependencies: {
-              "bundled-true": "1.0.0",
-            },
-          }),
-        ),
-      ]);
+      await write(
+        packageJson,
+        JSON.stringify({
+          name: "bundled-true",
+          version: "1.1.1",
+          dependencies: {
+            "bundled-true": "1.0.0",
+          },
+        }),
+      );
 
       const cmd = textLockfile ? [bunExe(), "install", "--save-text-lockfile"] : [bunExe(), "install"];
       let { exited } = spawn({
@@ -1306,20 +1300,18 @@ describe("bundledDependencies", () => {
       // but at a different version. Test that the regular dependency does not replace the
       // other version (both should exist).
 
-      await Promise.all([
-        write(
-          packageJson,
-          JSON.stringify({
-            name: "bundled-collision",
-            dependencies: {
-              "bundled-transitive": "1.0.0",
-              // prevent both transitive dependencies from hoisting
-              "no-deps": "npm:a-dep@1.0.2",
-              "one-dep": "npm:a-dep@1.0.3",
-            },
-          }),
-        ),
-      ]);
+      await write(
+        packageJson,
+        JSON.stringify({
+          name: "bundled-collision",
+          dependencies: {
+            "bundled-transitive": "1.0.0",
+            // prevent both transitive dependencies from hoisting
+            "no-deps": "npm:a-dep@1.0.2",
+            "one-dep": "npm:a-dep@1.0.3",
+          },
+        }),
+      );
 
       const cmd = textLockfile ? [bunExe(), "install", "--save-text-lockfile"] : [bunExe(), "install"];
       let { exited } = spawn({
@@ -2044,22 +2036,20 @@ test("it should ignore peerDependencies within workspaces", async () => {
 });
 
 test("disabled dev/peer/optional dependencies are still included in the lockfile", async () => {
-  await Promise.all([
-    write(
-      packageJson,
-      JSON.stringify({
-        devDependencies: {
-          "no-deps": "1.0.0",
-        },
-        peerDependencies: {
-          "a-dep": "1.0.1",
-        },
-        optionalDependencies: {
-          "basic-1": "1.0.0",
-        },
-      }),
-    ),
-  ]);
+  await write(
+    packageJson,
+    JSON.stringify({
+      devDependencies: {
+        "no-deps": "1.0.0",
+      },
+      peerDependencies: {
+        "a-dep": "1.0.1",
+      },
+      optionalDependencies: {
+        "basic-1": "1.0.0",
+      },
+    }),
+  );
 
   await runBunInstall;
 });
@@ -4052,17 +4042,15 @@ test("--config cli flag works", async () => {
 });
 
 test("it should invalid cached package if package.json is missing", async () => {
-  await Promise.all([
-    write(
-      packageJson,
-      JSON.stringify({
-        name: "foo",
-        dependencies: {
-          "no-deps": "2.0.0",
-        },
-      }),
-    ),
-  ]);
+  await write(
+    packageJson,
+    JSON.stringify({
+      name: "foo",
+      dependencies: {
+        "no-deps": "2.0.0",
+      },
+    }),
+  );
 
   let { out } = await runBunInstall(env, packageDir);
   expect(out).toContain("+ no-deps@2.0.0");

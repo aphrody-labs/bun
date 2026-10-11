@@ -151,7 +151,12 @@ jobs:
 
       - name: Plan
         run: |
-          bun scripts/aphrody/build-host.ts provision --target "$TARGET" --out "$RUNNER_TEMP/provision.sh"
+          bootstrap="$(command -v bun)"
+          cp -- "$bootstrap" "$RUNNER_TEMP/fork-bootstrap-bun"
+          bootstrap_sha="$(sha256sum "$RUNNER_TEMP/fork-bootstrap-bun" | cut -d ' ' -f 1)"
+          bootstrap_version="$("$RUNNER_TEMP/fork-bootstrap-bun" --version)"
+          bun scripts/aphrody/build-host.ts provision --target "$TARGET" --out "$RUNNER_TEMP/provision.sh" \
+            --bootstrap-path /opt/fork-bootstrap/bun --bootstrap-sha256 "$bootstrap_sha" --bootstrap-version "$bootstrap_version"
           args="$(bun scripts/aphrody/build-host.ts args --target "$TARGET" --lto "$LTO" --version-tag "$VERSION_TAG")"
           echo "BUILD_ARGS=$args --build-dir=build/out" >> "$GITHUB_ENV"
           echo "$args"
@@ -195,12 +200,13 @@ jobs:
           . /etc/profile.d/bun-ci.sh
           git config --global --add safe.directory '*'
           cd /src
-          clang --version | head -1; rustc --version; bun --version; node --version
+          clang --version | head -1; rustc --version; bun --revision
           # shellcheck disable=SC2086
           bun scripts/build.ts $BUILD_ARGS
           EOF
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/src" -v "$RUNNER_TEMP:/work" \
+            -v "$RUNNER_TEMP/fork-bootstrap-bun:/opt/fork-bootstrap/bun:ro" \
             -e BUILD_ARGS -e BUN_BUILD_CACHE_DIR=/work/cache -e BUN_DEBUG_QUIET_LOGS=1 -e CI=true \
             debian:13 sh /work/build.sh
           sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE" "$RUNNER_TEMP"

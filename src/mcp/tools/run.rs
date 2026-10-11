@@ -11,6 +11,57 @@ use crate::registry::{Annotations, Args, Context, Output, Tool, ToolError};
 
 const MAX_CAPTURE: usize = 32 * 1024 * 1024;
 
+#[cfg(windows)]
+struct ChildJob(*mut core::ffi::c_void);
+
+#[cfg(windows)]
+impl ChildJob {
+    fn new() -> Result<Self, ToolError> {
+        use bun_sys::windows as win;
+        // SAFETY: Null attributes and name create an unnamed job owned by this call.
+        let handle = unsafe { win::CreateJobObjectA(core::ptr::null_mut(), core::ptr::null()) };
+        if handle.is_null() {
+            return Err(std::io::Error::last_os_error().into());
+        }
+        let job = Self(handle);
+        let mut limits: win::JOBOBJECT_EXTENDED_LIMIT_INFORMATION = bun_core::ffi::zeroed();
+        limits.BasicLimitInformation.LimitFlags = win::JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        // SAFETY: The job and POD buffer remain live for this call.
+        if unsafe {
+            win::SetInformationJobObject(
+                handle,
+                win::JobObjectExtendedLimitInformation,
+                core::ptr::from_mut(&mut limits).cast(),
+                core::mem::size_of_val(&limits) as u32,
+            )
+        } == 0
+        {
+            return Err(std::io::Error::last_os_error().into());
+        }
+        Ok(job)
+    }
+
+    fn assign(&self, child: &std::process::Child) -> Result<(), ToolError> {
+        use std::os::windows::io::AsRawHandle;
+        // SAFETY: Both handles belong to live owners for the duration of assignment.
+        if unsafe { bun_sys::windows::AssignProcessToJobObject(self.0, child.as_raw_handle()) } == 0
+        {
+            return Err(std::io::Error::last_os_error().into());
+        }
+        Ok(())
+    }
+}
+
+#[cfg(windows)]
+impl Drop for ChildJob {
+    fn drop(&mut self) {
+        // SAFETY: Closing our final job handle terminates its remaining descendants.
+        unsafe {
+            bun_sys::windows::CloseHandle(self.0);
+        }
+    }
+}
+
 fn strip_ansi(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     let mut chars = s.chars().peekable();
@@ -118,6 +169,11 @@ fn exec(ctx: &Context, args: &Args<'_>, argv: &[String]) -> Result<Output, ToolE
     let timeout = Duration::from_millis(args.uint("timeout_ms", 120_000, 600_000).max(1000));
     let exe: PathBuf = std::env::current_exe()?;
     let mut cmd = bun_no_window::command(&exe);
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        cmd.process_group(0);
+    }
     cmd.args(argv)
         .current_dir(&cwd)
         .stdin(Stdio::null())
@@ -134,7 +190,15 @@ fn exec(ctx: &Context, args: &Args<'_>, argv: &[String]) -> Result<Output, ToolE
         }
     }
     let started = Instant::now();
+    #[cfg(windows)]
+    let job = ChildJob::new()?;
     let mut child = cmd.spawn()?;
+    #[cfg(windows)]
+    if let Err(error) = job.assign(&child) {
+        let _ = child.kill();
+        let _ = child.wait();
+        return Err(error);
+    }
     let stdout = child
         .stdout
         .take()
@@ -156,10 +220,20 @@ fn exec(ctx: &Context, args: &Args<'_>, argv: &[String]) -> Result<Output, ToolE
         std::thread::sleep(Duration::from_millis(15));
     };
     let elapsed = started.elapsed();
+    #[cfg(unix)]
+    if let Ok(pid) = i32::try_from(child.id()) {
+        let _ = bun_sys::kill_process_group(pid);
+    }
+    #[cfg(windows)]
+    drop(job);
     let stdout = stdout.and_then(|h| h.join().ok()).unwrap_or_default();
     let stderr = stderr.and_then(|h| h.join().ok()).unwrap_or_default();
     let code = status.and_then(|s| s.code());
-    let mut out = format!("$ bun {}\n", argv.join(" "));
+    let mut out = if argv.first().is_some_and(|arg| arg == "-e") {
+        String::from("$ bun:shell\n")
+    } else {
+        format!("$ bun {}\n", argv.join(" "))
+    };
     let _ = write!(
         out,
         "exit: {} in {:.2}s",
@@ -211,7 +285,31 @@ fn test(ctx: &Context, args: &Args<'_>) -> Result<Output, ToolError> {
     exec(ctx, args, &argv)
 }
 
+fn shell(ctx: &Context, args: &Args<'_>) -> Result<Output, ToolError> {
+    let command = args.str("command")?;
+    if command.len() > 64 * 1024 {
+        return Err(ToolError::InvalidArgs(
+            "shell command exceeds 64 KiB".into(),
+        ));
+    }
+    let argv = vec![
+        "-e".to_owned(),
+        "import { $ } from 'bun'; const result = await $`${{ raw: process.argv.at(-1) }}`.nothrow(); process.exitCode = result.exitCode;".to_owned(),
+        "--".to_owned(),
+        command.to_owned(),
+    ];
+    exec(ctx, args, &argv)
+}
+
 pub(crate) const TOOLS: &[Tool] = &[
+    Tool {
+        name: "shell",
+        title: "Native Bun Shell",
+        description: "Execute command text with the current Bun binary's embedded bun:shell. Supports cwd and environment, bounded stdout/stderr and exit status. Does not launch PowerShell, WSH, Bash or Node as the command interpreter.",
+        input_schema: r#"{"type":"object","properties":{"command":{"type":"string","maxLength":65536},"cwd":{"type":"string"},"env":{"type":"object","additionalProperties":{"type":"string"}},"timeout_ms":{"type":"integer","minimum":1000,"maximum":600000,"default":120000},"max_lines":{"type":"integer","minimum":20,"maximum":5000,"default":200}},"required":["command"]}"#,
+        annotations: Annotations::DESTRUCTIVE,
+        call: shell,
+    },
     Tool {
         name: "run",
         title: "bun run",

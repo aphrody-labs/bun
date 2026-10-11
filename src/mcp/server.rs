@@ -124,6 +124,11 @@ impl Server {
             let p = self.ctx.profile.lock().unwrap_or_else(|e| e.into_inner());
             (p.name(), p.max_tokens)
         };
+        let native_tools = if self.registry.get("read_file").is_some() {
+            " Experimental native tools enabled: read_file returns a revision; write_file/edit_file preview guarded changes, then vfs_apply commits the returned plan. shell uses embedded Bun Shell."
+        } else {
+            " Experimental native file and shell tools are disabled."
+        };
         json!({
             "protocolVersion": version,
             "capabilities": {
@@ -134,7 +139,7 @@ impl Server {
             },
             "serverInfo": {"name": "bun", "title": "Bun", "version": crate::cli::version()},
             "instructions": format!(
-                "Bun's built-in MCP server (profile {agent}). Each tool result is capped at about {tokens} tokens; a truncated result ends with a cursor: call the same tool with {{\"cursor\": ...}} for the rest. Bun questions: docs_search then docs_read. Conventions: skills_list/skill_read, memory_search. Code: graph_symbols, graph_callers, graph_query. Verification: test, run."
+                "Bun's built-in MCP server (profile {agent}).{native_tools} test and run use this fork. Each tool result is capped at about {tokens} tokens; a truncated result ends with a cursor: call the same tool with {{\"cursor\": ...}} for the rest. Bun questions: docs_search then docs_read. Conventions: skills_list/skill_read, memory_search. Code: graph_symbols, graph_callers, graph_query."
             ),
         })
     }

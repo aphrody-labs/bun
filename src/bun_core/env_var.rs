@@ -227,6 +227,9 @@ new!(pub ZDOTDIR: string, "ZDOTDIR", {});
 pub mod feature_flag {
     use super::*;
 
+    new_feature_flag!(pub BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS, "BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS", {});
+    new_feature_flag!(pub BUN_FEATURE_FLAG_EXPERIMENTAL_DOCKER_MUTATIONS, "BUN_FEATURE_FLAG_EXPERIMENTAL_DOCKER_MUTATIONS", {});
+
     new_feature_flag!(pub BUN_ASSUME_PERFECT_INCREMENTAL, "BUN_ASSUME_PERFECT_INCREMENTAL", { default: None });
     new_feature_flag!(pub BUN_BE_BUN, "BUN_BE_BUN", {});
     new_feature_flag!(pub BUN_DEBUG_NO_DUMP, "BUN_DEBUG_NO_DUMP", {});

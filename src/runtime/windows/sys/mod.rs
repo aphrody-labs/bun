@@ -43,8 +43,8 @@ pub(crate) struct WinErr {
 
 impl WinErr {
     pub(crate) fn last(call: &'static str) -> WinErr {
-        // SAFETY: no preconditions.
         WinErr {
+            // SAFETY: no preconditions.
             code: unsafe { GetLastError() },
             call,
         }
@@ -84,10 +84,6 @@ unsafe extern "system" {
 /// NUL-terminated UTF-16 copy of `s`.
 pub(crate) fn wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain(core::iter::once(0)).collect()
-}
-
-pub(crate) fn is_nul(c: &u16) -> bool {
-    *c == 0
 }
 
 /// `s` up to its first NUL, lossily decoded.

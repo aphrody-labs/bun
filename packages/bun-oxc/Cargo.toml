@@ -4,14 +4,14 @@
 #
 # Oxc is pinned to the aphrody-labs/oxc fork, branch `aphrody`: tag oxlint_v1.87.0 (crates 0.153.0,
 # oxlint 1.87.0, oxfmt 0.72.0) plus the patch exposing oxfmt's core API. oxc_linter and oxfmt are not on
-# crates.io, so they come from git, and [patch.crates-io] points every published oxc_* crate at the same
-# revision: one copy of the AST, allocator and semantic crates is linked.
+# crates.io; local paths and [patch.crates-io] use the exact vendor/oxc source receipt.
+# One copy of the AST, allocator and semantic crates is linked.
 [workspace]
 resolver = "3"
 members = ["crates/oxc-bridge", "crates/oxc-tools", "crates/napi"]
 
 [workspace.package]
-version = "0.3.0"
+version = "1.4.4"
 edition = "2024"
 rust-version = "1.97"
 license = "MIT"
@@ -20,7 +20,7 @@ repository = "https://github.com/aphrody-labs/bun"
 homepage = "https://github.com/aphrody-labs/bun/tree/main/packages/bun-oxc"
 
 [workspace.dependencies]
-aphrody-oxc-bridge = { path = "crates/oxc-bridge", version = "=0.3.0" }
+aphrody-oxc-bridge = { path = "crates/oxc-bridge", version = "=1.4.4" }
 aphrody-oxc-tools = { path = "crates/oxc-tools" }
 
 oxc_allocator = "0.153.0"
@@ -39,41 +39,41 @@ oxc_resolver = "11.24.3"
 oxc_parser_napi = "0.153.0"
 oxc_transform_napi = "0.153.0"
 oxc_minify_napi = "0.153.0"
-oxc_linter = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624", features = ["ruledocs"] }
-oxfmt = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624", default-features = false }
+oxc_linter = { path = "../../vendor/oxc/crates/oxc_linter", features = ["ruledocs"] }
+oxfmt = { path = "../../vendor/oxc/apps/oxfmt", default-features = false }
 serde_json = "1.0.151"
 
 [patch.crates-io]
-oxc = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_allocator = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_ast = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_ast_macros = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_ast_visit = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_cfg = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_codegen = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_compat = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_data_structures = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_diagnostics = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_ecmascript = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_estree = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_estree_tokens = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_isolated_declarations = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_jsdoc = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_mangler = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_minifier = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_minify_napi = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_napi = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_parser = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_parser_napi = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_regular_expression = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_semantic = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_span = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_str = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_syntax = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_transform_napi = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_transformer = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_transformer_plugins = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
-oxc_traverse = { git = "https://github.com/aphrody-labs/oxc", rev = "b25696441c80fd580c35d671797f1940c642a624" }
+oxc = { path = "../../vendor/oxc/crates/oxc" }
+oxc_allocator = { path = "../../vendor/oxc/crates/oxc_allocator" }
+oxc_ast = { path = "../../vendor/oxc/crates/oxc_ast" }
+oxc_ast_macros = { path = "../../vendor/oxc/crates/oxc_ast_macros" }
+oxc_ast_visit = { path = "../../vendor/oxc/crates/oxc_ast_visit" }
+oxc_cfg = { path = "../../vendor/oxc/crates/oxc_cfg" }
+oxc_codegen = { path = "../../vendor/oxc/crates/oxc_codegen" }
+oxc_compat = { path = "../../vendor/oxc/crates/oxc_compat" }
+oxc_data_structures = { path = "../../vendor/oxc/crates/oxc_data_structures" }
+oxc_diagnostics = { path = "../../vendor/oxc/crates/oxc_diagnostics" }
+oxc_ecmascript = { path = "../../vendor/oxc/crates/oxc_ecmascript" }
+oxc_estree = { path = "../../vendor/oxc/crates/oxc_estree" }
+oxc_estree_tokens = { path = "../../vendor/oxc/crates/oxc_estree_tokens" }
+oxc_isolated_declarations = { path = "../../vendor/oxc/crates/oxc_isolated_declarations" }
+oxc_jsdoc = { path = "../../vendor/oxc/crates/oxc_jsdoc" }
+oxc_mangler = { path = "../../vendor/oxc/crates/oxc_mangler" }
+oxc_minifier = { path = "../../vendor/oxc/crates/oxc_minifier" }
+oxc_minify_napi = { path = "../../vendor/oxc/napi/minify" }
+oxc_napi = { path = "../../vendor/oxc/crates/oxc_napi" }
+oxc_parser = { path = "../../vendor/oxc/crates/oxc_parser" }
+oxc_parser_napi = { path = "../../vendor/oxc/napi/parser" }
+oxc_regular_expression = { path = "../../vendor/oxc/crates/oxc_regular_expression" }
+oxc_semantic = { path = "../../vendor/oxc/crates/oxc_semantic" }
+oxc_span = { path = "../../vendor/oxc/crates/oxc_span" }
+oxc_str = { path = "../../vendor/oxc/crates/oxc_str" }
+oxc_syntax = { path = "../../vendor/oxc/crates/oxc_syntax" }
+oxc_transform_napi = { path = "../../vendor/oxc/napi/transform" }
+oxc_transformer = { path = "../../vendor/oxc/crates/oxc_transformer" }
+oxc_transformer_plugins = { path = "../../vendor/oxc/crates/oxc_transformer_plugins" }
+oxc_traverse = { path = "../../vendor/oxc/crates/oxc_traverse" }
 
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "deny"

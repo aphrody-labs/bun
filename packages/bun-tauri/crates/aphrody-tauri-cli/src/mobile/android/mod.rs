@@ -1039,7 +1039,7 @@ fn restart_emulator(env: &Env, serial_no: &str, emulator: &emulator::Emulator) -
     );
   }
 
-  adb::adb(env, &["-s", serial_no, "emu", "kill"])
+  adb::adb(env, ["-s", serial_no, "emu", "kill"])
     .run()
     .context("failed to reboot emulator")?;
 

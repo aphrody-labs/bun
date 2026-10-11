@@ -439,7 +439,7 @@ export function emptyProcessMaxRSS() {
 // we must ensure that finalizers are run
 // so that the reference-counting logic is exercised
 export function gcTick(traceForDebugging = false) {
-  traceForDebugging && console.trace("");
+  if (traceForDebugging) console.trace("");
   gc();
   return Bun.sleep(0);
 }

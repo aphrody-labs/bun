@@ -74,7 +74,7 @@ function generateGraph(seed: number): Graph {
   }
 
   // several call sites for one target
-  for (const { target } of [...loaders]) {
+  for (const { target } of loaders.slice()) {
     if (chance(0.3)) {
       const file = int(n);
       if (file !== target && !loaders.some(l => l.file === file && l.target === target)) loaders.push({ file, target });

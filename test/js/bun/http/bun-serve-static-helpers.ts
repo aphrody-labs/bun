@@ -74,7 +74,7 @@ export async function runStress(
           expect(res.url).toBe(route);
           expect(res.headers.get("Content-Length")).toBe(expectedLength);
           if (accessBody) {
-            res.body;
+            void res.body;
           }
           return res[method]();
         })

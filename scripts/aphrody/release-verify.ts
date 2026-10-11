@@ -8,7 +8,11 @@ export async function verifyRelease(out: string) {
     throw new Error("Release graph source mismatch");
   let files = 0;
   for (const [path, expected] of Object.entries(manifest.artifacts)) {
-    if (path.startsWith("/") || path.includes("\\") || path.split("/").includes(".."))
+    if (
+      /[:\\\x00-\x1f\x7f]/.test(path) ||
+      path.startsWith("/") ||
+      path.split("/").some((part) => !part || part === "." || part === "..")
+    )
       throw new Error(`Unsafe artifact path: ${path}`);
     const hash = new Bun.CryptoHasher("sha256");
     for await (const bytes of Bun.file(join(out, path)).stream()) hash.update(bytes);

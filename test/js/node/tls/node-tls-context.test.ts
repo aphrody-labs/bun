@@ -178,7 +178,7 @@ describe("tls.Server", () => {
 
       server.listen(0, () => {
         const options = {
-          port: (server?.address() as AddressInfo).port,
+          port: (server.address() as AddressInfo).port,
           host: "127.0.0.1",
           key: agent1Key,
           cert: agent1Cert,

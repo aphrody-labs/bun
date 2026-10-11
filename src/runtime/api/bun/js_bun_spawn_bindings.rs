@@ -293,7 +293,10 @@ fn elevate_argv(
         }) => (prefix, env_as_args),
         Err(e) => {
             return Err(global_this
-                .err(jsc::ErrorCode::ERR_ACCESS_DENIED, format_args!("{}", e.message()))
+                .err(
+                    jsc::ErrorCode::ERR_ACCESS_DENIED,
+                    format_args!("{}", e.message()),
+                )
                 .throw());
         }
     };
@@ -305,7 +308,8 @@ fn elevate_argv(
     let Some(target) = *argv0 else {
         return Err(global_this.throw_invalid_arguments(format_args!("cmd must not be empty")));
     };
-    let mut new_argv: Vec<CStrPtr> = Vec::with_capacity(prefix.len() + env_array.len() + argv.len());
+    let mut new_argv: Vec<CStrPtr> =
+        Vec::with_capacity(prefix.len() + env_array.len() + argv.len());
     for word in &prefix {
         let z = ZBox::from_bytes(word);
         new_argv.push(z.as_ptr());
@@ -1641,9 +1645,10 @@ fn spawn_maybe_sync(
             // for the pipe's lifetime, so it must be the allocation root
             // (write provenance), never one re-derived from `&SendQueue`.
             // SAFETY: `ipc_data` is the live SendQueue owned by `subprocess`.
-            if let Err(err) =
-                unsafe { IPC::SendQueue::windows_configure_server(ipc_data.as_ctx_ptr(), ipc_pipe) }
-            {
+            let configure_result = unsafe {
+                IPC::SendQueue::windows_configure_server(ipc_data.as_ctx_ptr(), ipc_pipe)
+            };
+            if let Err(err) = configure_result {
                 let err_js = err.to_js(cx.global());
                 subprocess.deref();
                 return Err(cx.global().throw_value(err_js));

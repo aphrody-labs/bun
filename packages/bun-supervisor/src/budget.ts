@@ -127,7 +127,7 @@ export class Budget {
     if (opts.weight !== undefined) this.weight = opts.weight;
     if (opts.min !== undefined) this.min = opts.min;
     if (opts.max !== undefined) this.max = opts.max;
-    this.parent?.#layout("rebalance");
+    if (this.parent) this.parent.#layout("rebalance");
   }
 
   /** Gives the share back to the siblings. */
@@ -135,9 +135,9 @@ export class Budget {
     if (this.#released) return;
     this.#released = true;
     const p = this.parent;
-    p?.#children.delete(this);
+    if (p) p.#children.delete(this);
     this.#set(0, 0, "release");
-    p?.#layout("release");
+    if (p) p.#layout("release");
   }
 
   /** Root: new total. Child: pins the share to `bytes` (min = max = bytes). */

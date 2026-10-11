@@ -241,7 +241,7 @@ fn write_value(j: &mut Json, ty: u32, data: &[u8]) {
         REG_MULTI_SZ => {
             let units = utf16_units(data);
             j.begin_array();
-            for part in units.split(super::is_nul) {
+            for part in units.split(|&c| c == 0) {
                 if !part.is_empty() {
                     j.str(&String::from_utf16_lossy(part));
                 }

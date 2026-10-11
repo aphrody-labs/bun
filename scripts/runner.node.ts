@@ -1,10 +1,10 @@
-#! /usr/bin/env node
+#! /usr/bin/env bun
 
 // This is a script that runs `bun test` to test Bun itself.
 // It is not intended to be used as a test runner for other projects.
 //
 // - It runs each `bun test` in a separate process, to catch crashes.
-// - It cannot use Bun APIs, since it is run using Node.js.
+// - It runs under the Aphrody Bun fork and launches the selected test binary.
 // - It does not import dependencies, so it's faster to start.
 
 import { spawn, spawnSync, type ChildProcessByStdio } from "node:child_process";
@@ -151,7 +151,8 @@ function createLiveOutputFilter({
   const holdBack = (line: string) => {
     const visible = stripAnsi(line);
     return (
-      visible.startsWith("::") || markers.some(marker => marker.length > visible.length && marker.startsWith(visible))
+      visible.startsWith("::") ||
+      markers.some((marker) => marker.length > visible.length && marker.startsWith(visible))
     );
   };
 
@@ -165,7 +166,8 @@ function createLiveOutputFilter({
     // Once written, the next chunk starts a line either way: the \n of a \r\n is an empty one.
     const endsWithCR = text.endsWith("\r");
     const searchEnd = endsWithCR ? text.length - 2 : text.length - 1;
-    const lastLineStart = Math.max(text.lastIndexOf("\n", searchEnd), text.lastIndexOf("\r", searchEnd)) + 1;
+    const lastLineStart =
+      Math.max(text.lastIndexOf("\n", searchEnd), text.lastIndexOf("\r", searchEnd)) + 1;
     const lastLine = text.slice(lastLineStart);
     if (lastLine && (lastLineStart > 0 || startsLine) && holdBack(lastLine)) {
       pending = lastLine;
@@ -220,13 +222,13 @@ function getLoggedInUserCountOrDetails(): number | string | undefined {
   if (status === 0) {
     const users = stdout
       .split("\n")
-      .filter(line => /tty|pts/i.test(line))
+      .filter((line) => /tty|pts/i.test(line))
       // Only count REMOTE logins (have an `(ip)` suffix from sshd). A local
       // console/auto-login (e.g. cirruslabs CI VM images log the admin user in
       // on ttys000 at boot) has no source host and isn't a human debugging the
       // job — waiting for it would hang the runner forever.
-      .filter(line => /\([^)]+\)\s*$/.test(line))
-      .map(line => {
+      .filter((line) => /\([^)]+\)\s*$/.test(line))
+      .map((line) => {
         // `who` output: `username terminal date time (host)`. The date/time
         // field has spaces, so a plain split() can't slice it cleanly — take
         // the first two tokens and pull the host from the trailing `(...)`.
@@ -387,7 +389,9 @@ if (cliOptions.junit) {
     cliOptions["junit-temp-dir"] = mkdtempSync(join(tmpdir(), cliOptions["junit-temp-dir"]));
   } catch (err) {
     cliOptions.junit = false;
-    console.error(`Error creating JUnit temp directory: ${err instanceof Error ? err.message : err}`);
+    console.error(
+      `Error creating JUnit temp directory: ${err instanceof Error ? err.message : err}`,
+    );
   }
 }
 
@@ -408,7 +412,9 @@ if (isBuildkite) {
     try {
       allFiles = JSON.parse(cachedAll) as string[];
       newFiles = cachedNew ? (JSON.parse(cachedNew) as string[]) : [];
-      console.log(`- PR file list from build meta-data: ${allFiles.length} files, ${newFiles.length} new files`);
+      console.log(
+        `- PR file list from build meta-data: ${allFiles.length} files, ${newFiles.length} new files`,
+      );
     } catch (e) {
       console.error("Failed to parse pr-*-files meta-data:", e);
       allFiles = [];
@@ -512,8 +518,8 @@ const skipsForExceptionValidation = (() => {
   }
   return readFileSync(path, "utf-8")
     .split("\n")
-    .map(line => line.trim())
-    .filter(line => !line.startsWith("#") && line.length > 0);
+    .map((line) => line.trim())
+    .filter((line) => !line.startsWith("#") && line.length > 0);
 })();
 
 const skipsForLeaksan = (() => {
@@ -523,8 +529,8 @@ const skipsForLeaksan = (() => {
   }
   return readFileSync(path, "utf-8")
     .split("\n")
-    .map(line => line.trim())
-    .filter(line => !line.startsWith("#") && line.length > 0);
+    .map((line) => line.trim())
+    .filter((line) => !line.startsWith("#") && line.length > 0);
 })();
 
 // Informational: a file that passes only on a retry and is not listed here is annotated as a new flake.
@@ -534,8 +540,8 @@ const flakyTests = (() => {
   return new Set(
     readFileSync(path, "utf-8")
       .split("\n")
-      .map(line => line.split("#")[0]!.trim())
-      .filter(line => line.length > 0),
+      .map((line) => line.split("#")[0]!.trim())
+      .filter((line) => line.length > 0),
   );
 })();
 const isKnownFlakyTest = (title: string) => flakyTests.has(title.replaceAll("\\", "/"));
@@ -553,7 +559,10 @@ const parallelAllowlist = (() => {
     ) as ParallelAllowlist;
     return { dirs: new Set(dirs), excludeFiles: new Set(excludeFiles) };
   } catch (error) {
-    console.warn("test/parallel-allowlist.json not loaded:", (error instanceof Error && error.message) || error);
+    console.warn(
+      "test/parallel-allowlist.json not loaded:",
+      (error instanceof Error && error.message) || error,
+    );
     return { dirs: new Set<string>(), excludeFiles: new Set<string>() };
   }
 })();
@@ -562,14 +571,15 @@ const isParallelAllowlisted = (testPath: string) => {
   const path = testPath.replaceAll("\\", "/");
   const slash = path.lastIndexOf("/");
   return (
-    parallelAllowlist.dirs.has(slash === -1 ? "" : path.slice(0, slash)) && !parallelAllowlist.excludeFiles.has(path)
+    parallelAllowlist.dirs.has(slash === -1 ? "" : path.slice(0, slash)) &&
+    !parallelAllowlist.excludeFiles.has(path)
   );
 };
 
 const dockerServicePrefixes = Object.keys(dockerPrestartMap);
 const needsDockerService = (testPath: string) => {
   const path = testPath.replaceAll("\\", "/");
-  return dockerServicePrefixes.some(prefix => path.startsWith(prefix));
+  return dockerServicePrefixes.some((prefix) => path.startsWith(prefix));
 };
 
 /**
@@ -579,7 +589,9 @@ const shouldValidateExceptions = (test: string): boolean => {
   // Skip-list entries use `/`; on Windows callers pass `\`-separated paths
   // (path.relative) which never match. Normalize before lookup.
   const t = test.replaceAll(sep, "/");
-  return !(skipsForExceptionValidation.includes(t) || skipsForExceptionValidation.includes("test/" + t));
+  return !(
+    skipsForExceptionValidation.includes(t) || skipsForExceptionValidation.includes("test/" + t)
+  );
 };
 
 /**
@@ -592,7 +604,7 @@ const shouldValidateLeakSan = (test: string): boolean => {
 function getTestModifiers(testPath: string): string[] {
   const ext = extname(testPath);
   const filename = basename(testPath, ext);
-  const modifiers = filename.split("-").filter(value => value !== "bun");
+  const modifiers = filename.split("-").filter((value) => value !== "bun");
 
   const os = getOs();
   const arch = getArch();
@@ -626,7 +638,7 @@ function getTestModifiers(testPath: string): string[] {
     }
   }
 
-  return modifiers.map(value => value.toUpperCase());
+  return modifiers.map((value) => value.toUpperCase());
 }
 
 /**
@@ -654,7 +666,8 @@ function assertExpectedPlatform() {
   if (expectedRelease) {
     // Major-version prefix match: "26" accepts "26.4", "25.04" accepts "25.04.1".
     const actualRelease = getDistroVersion();
-    const ok = actualRelease === expectedRelease || `${actualRelease}.`.startsWith(`${expectedRelease}.`);
+    const ok =
+      actualRelease === expectedRelease || `${actualRelease}.`.startsWith(`${expectedRelease}.`);
     checks.push(["release", expectedRelease, ok ? expectedRelease : actualRelease]);
   }
 
@@ -691,11 +704,11 @@ type Limit = <T>(fn: () => Promise<T>) => Promise<T>;
 function createLimit(concurrency: number): Limit {
   const waiting: (() => void)[] = [];
   let running = 0;
-  return async fn => {
+  return async (fn) => {
     if (running < concurrency) {
       running++;
     } else {
-      await new Promise<void>(resolve => waiting.push(resolve));
+      await new Promise<void>((resolve) => waiting.push(resolve));
     }
     try {
       return await fn();
@@ -748,18 +761,22 @@ async function runTests(): Promise<TestResult[]> {
   // falls back to running compose directly. Linux-only — macOS / Windows CI
   // don't run docker tests. Lifetime is tied to this process via the stdin
   // pipe.
-  if (isCI && isLinux && spawnSync("docker", ["compose", "version"], { stdio: "ignore" }).status === 0) {
+  if (
+    isCI &&
+    isLinux &&
+    spawnSync("docker", ["compose", "version"], { stdio: "ignore" }).status === 0
+  ) {
     const coordinatorSocket = join(tmpdir(), `bun-docker-${process.pid}.sock`);
     const coordinator = spawn(execPath, [join(cwd, "test", "docker", "coordinator.ts"), ...tests], {
       stdio: ["pipe", "pipe", "inherit"],
       env: { ...process.env, BUN_DOCKER_COORDINATOR_SOCKET: coordinatorSocket },
     }) as ChildProcessByStdio<Socket, Socket, null>; // see SpawnedProcess
-    coordinator.on("error", err => console.warn("docker coordinator spawn failed:", err.message));
+    coordinator.on("error", (err) => console.warn("docker coordinator spawn failed:", err.message));
     process.once("exit", () => coordinator.kill());
 
     // Don't point tests at the socket until it's actually listening; if the
     // coordinator never gets there, tests use the direct-compose fallback.
-    const ready = await new Promise<boolean>(resolve => {
+    const ready = await new Promise<boolean>((resolve) => {
       const timer = setTimeout(() => resolve(false), 15_000);
       timer.unref?.();
       let buffered: string | null = "";
@@ -838,7 +855,9 @@ async function runTests(): Promise<TestResult[]> {
   // cores when both are busy); both hit the 45-minute job timeout uncapped.
   const parallelSafeCap = isMacOS ? 4 : Infinity;
   const parallelSafeWidth =
-    parallelism > 1 ? parallelism : Math.min(parallelSafeCap, Math.max(availableParallelism() - 1, 1));
+    parallelism > 1
+      ? parallelism
+      : Math.min(parallelSafeCap, Math.max(availableParallelism() - 1, 1));
   const parallelSafeLimit = parallelism > 1 ? limit : createLimit(parallelSafeWidth);
   const isParallelSafeTest = (testPath: string) => {
     const p = testPath.replaceAll("\\", "/");
@@ -868,7 +887,7 @@ async function runTests(): Promise<TestResult[]> {
     let attempt = 1;
     for (; attempt <= maxAttempts; attempt++) {
       if (attempt > 1) {
-        await new Promise(resolve => setTimeout(resolve, 5000 + Math.random() * 10_000));
+        await new Promise((resolve) => setTimeout(resolve, 5000 + Math.random() * 10_000));
       }
 
       let grouptitle = `${getAnsi("gray")}[${index}/${total}]${getAnsi("reset")} ${title}`;
@@ -960,10 +979,17 @@ async function runTests(): Promise<TestResult[]> {
     }
   }
 
-  const isNapiAddonTest = (t: string) => /napi[\\/]node-napi-tests[\\/].*[\\/]do\.test\.ts$/.test(t);
-  const napiAddonDirs = [...new Set(tests.filter(isNapiAddonTest).map(t => dirname(join(testsPath, t))))];
-  let napiPrebuild: Promise<{ ok: boolean; error: SpawnResult["error"]; output: string; seconds: number }> | null =
-    null;
+  const isNapiAddonTest = (t: string) =>
+    /napi[\\/]node-napi-tests[\\/].*[\\/]do\.test\.ts$/.test(t);
+  const napiAddonDirs = [
+    ...new Set(tests.filter(isNapiAddonTest).map((t) => dirname(join(testsPath, t)))),
+  ];
+  let napiPrebuild: Promise<{
+    ok: boolean;
+    error: SpawnResult["error"];
+    output: string;
+    seconds: number;
+  }> | null = null;
   if (napiAddonDirs.length) {
     let output = "";
     const started = Date.now();
@@ -971,8 +997,8 @@ async function runTests(): Promise<TestResult[]> {
       args: [join(testsPath, "napi/node-napi-tests/prebuild.ts"), ...napiAddonDirs],
       cwd,
       timeout: integrationTimeout,
-      stdout: chunk => (output += chunk),
-      stderr: chunk => (output += chunk),
+      stdout: (chunk) => (output += chunk),
+      stderr: (chunk) => (output += chunk),
     }).then(({ ok, error }) => ({ ok, error, output, seconds: (Date.now() - started) / 1000 }));
   }
   const awaitNapiPrebuild = async (testPath: string) => {
@@ -988,19 +1014,28 @@ async function runTests(): Promise<TestResult[]> {
   if (!failedResults.length) {
     // TODO: remove windows exclusion here
     if (isCI && !isWindows && (await installCiRemapServer(execPath))) {
-      const { promise: portPromise, resolve: portResolve } = Promise.withResolvers<{ port: number }>();
-      const { promise: errorPromise, resolve: errorResolve } = Promise.withResolvers<Error | string>();
+      const { promise: portPromise, resolve: portResolve } = Promise.withResolvers<{
+        port: number;
+      }>();
+      const { promise: errorPromise, resolve: errorResolve } = Promise.withResolvers<
+        Error | string
+      >();
       let exiting = false;
 
-      const server = spawn(execPath, ["run", "--silent", "ci-remap-server", execPath, cwd, String(getCommit())], {
-        stdio: ["ignore", "pipe", "inherit"],
-        cwd: ciRemapServerPath,
-        env: { ...process.env, BUN_DEBUG_QUIET_LOGS: "1", NO_COLOR: "1" },
-      });
+      const server = spawn(
+        execPath,
+        ["run", "--silent", "ci-remap-server", execPath, cwd, String(getCommit())],
+        {
+          stdio: ["ignore", "pipe", "inherit"],
+          cwd: ciRemapServerPath,
+          env: { ...process.env, BUN_DEBUG_QUIET_LOGS: "1", NO_COLOR: "1" },
+        },
+      );
       server.unref();
       server.on("error", errorResolve);
       server.on("exit", (code, signal) => {
-        if (!exiting && (code !== 0 || signal !== null)) errorResolve(signal ? signal : "code " + code);
+        if (!exiting && (code !== 0 || signal !== null))
+          errorResolve(signal ? signal : "code " + code);
       });
       function onBeforeExit() {
         exiting = true;
@@ -1010,7 +1045,7 @@ async function runTests(): Promise<TestResult[]> {
       }
       process.once("beforeExit", onBeforeExit);
       const lines = createInterface(server.stdout);
-      lines.on("line", line => {
+      lines.on("line", (line) => {
         portResolve({ port: parseInt(line) });
       });
 
@@ -1019,7 +1054,12 @@ async function runTests(): Promise<TestResult[]> {
         errorPromise.catch((e: unknown) => e),
         setTimeoutPromise(5000, "timeout"),
       ]);
-      if (typeof result !== "object" || result === null || !("port" in result) || typeof result.port != "number") {
+      if (
+        typeof result !== "object" ||
+        result === null ||
+        !("port" in result) ||
+        typeof result.port != "number"
+      ) {
         process.off("beforeExit", onBeforeExit);
         server.kill?.();
         console.warn("ci-remap server did not start:", result);
@@ -1038,7 +1078,9 @@ async function runTests(): Promise<TestResult[]> {
         const flagsMatch = /^\/\/ Flags:[^\S\r\n]+(--[^\r\n]*)$/m.exec(testContent);
         const testFlags = flagsMatch
           ? // The group of the pattern is not optional, and split() returns at least one element.
-            flagsMatch[1]!.split(/\s+/).filter(flag => resolutionGatingFlags.has(flag.split("=")[0]!))
+            flagsMatch[1]!
+              .split(/\s+/)
+              .filter((flag) => resolutionGatingFlags.has(flag.split("=")[0]!))
           : [];
         let runWithBunTest = title.includes("needs-test") || testContent.includes("node:test");
         // don't wanna have a filter for includes("bun:test") but these need our mocks
@@ -1064,7 +1106,8 @@ async function runTests(): Promise<TestResult[]> {
         const registersAtColumnZero = /^(?:test|it|describe|suite)\s*[.(]/m.test(testContent);
         const registersTests = /(?:^|[^.\w])(?:test|it|describe|suite)\s*[.(]/m.test(testContent);
         const guardsOnTestContext = testContent.includes("NODE_TEST_CONTEXT");
-        const isRunDriver = importsRun && !registersAtColumnZero && (!registersTests || guardsOnTestContext);
+        const isRunDriver =
+          importsRun && !registersAtColumnZero && (!registersTests || guardsOnTestContext);
         // The needs-test filename opt-in wins over this heuristic.
         if (isRunDriver && !title.includes("needs-test")) runWithBunTest = false;
         const subcommand = runWithBunTest ? "test" : "run";
@@ -1104,32 +1147,36 @@ async function runTests(): Promise<TestResult[]> {
         }
         if ((basename(execPath).includes("asan") || !isCI) && shouldValidateLeakSan(testPath)) {
           env.BUN_DESTRUCT_VM_ON_EXIT = "1";
-          env.ASAN_OPTIONS = "allow_user_segv_handler=1:disable_coredump=0:detect_leaks=1:abort_on_error=1";
+          env.ASAN_OPTIONS =
+            "allow_user_segv_handler=1:disable_coredump=0:detect_leaks=1:abort_on_error=1";
           // prettier-ignore
           env.LSAN_OPTIONS = `malloc_context_size=30:print_suppressions=0:suppressions=${process.cwd()}/test/leaksan.supp`;
         }
         return runTest(
           title,
-          async index => {
-            const { ok, error, stdout, crashes, exitCode, signalCode, duration } = await spawnBun(execPath, {
-              cwd: cwd,
-              args: [
-                subcommand,
-                "--config=" + join(import.meta.dirname, "../bunfig.node-test.toml"),
-                ...(subcommand === "run" ? testFlags : []),
-                absoluteTestPath,
-              ],
-              timeout: getNodeParallelTestTimeout(title),
-              env: {
-                ...env,
-                // test/common/tmpdir.js derives `.tmp.${TEST_SERIAL_ID}` from this;
-                // a unique value per test file keeps concurrent tmpdir.refresh()
-                // calls from wiping each other when parallelSafeWidth > 1.
-                TEST_SERIAL_ID: String(index),
+          async (index) => {
+            const { ok, error, stdout, crashes, exitCode, signalCode, duration } = await spawnBun(
+              execPath,
+              {
+                cwd: cwd,
+                args: [
+                  subcommand,
+                  "--config=" + join(import.meta.dirname, "../bunfig.node-test.toml"),
+                  ...(subcommand === "run" ? testFlags : []),
+                  absoluteTestPath,
+                ],
+                timeout: getNodeParallelTestTimeout(title),
+                env: {
+                  ...env,
+                  // test/common/tmpdir.js derives `.tmp.${TEST_SERIAL_ID}` from this;
+                  // a unique value per test file keeps concurrent tmpdir.refresh()
+                  // calls from wiping each other when parallelSafeWidth > 1.
+                  TEST_SERIAL_ID: String(index),
+                },
+                stdout: concurrent ? () => {} : pipeTestStdout(process.stdout),
+                stderr: concurrent ? () => {} : pipeTestStdout(process.stderr),
               },
-              stdout: concurrent ? () => {} : pipeTestStdout(process.stdout),
-              stderr: concurrent ? () => {} : pipeTestStdout(process.stderr),
-            });
+            );
             const mb = 1024 ** 3;
             let stdoutPreview = stdout.slice(0, mb).split("\n").slice(0, 50).join("\n");
             if (crashes) stdoutPreview += crashes;
@@ -1179,12 +1226,13 @@ async function runTests(): Promise<TestResult[]> {
         env.BUN_JSC_validateExceptionChecks = "1";
         env.BUN_JSC_dumpSimulatedThrows = "1";
         env.BUN_DESTRUCT_VM_ON_EXIT = "1";
-        env.ASAN_OPTIONS = "allow_user_segv_handler=1:disable_coredump=0:detect_leaks=1:abort_on_error=1";
+        env.ASAN_OPTIONS =
+          "allow_user_segv_handler=1:disable_coredump=0:detect_leaks=1:abort_on_error=1";
         env.LSAN_OPTIONS = `malloc_context_size=30:print_suppressions=0:suppressions=${process.cwd()}/test/leaksan.supp`;
       }
       if (isAsan) env.BUN_FEATURE_FLAG_NO_ORPHANS = "1";
 
-      const byPath = new Map(bucketFiles.map(t => [join("test", t).replaceAll("\\", "/"), t]));
+      const byPath = new Map(bucketFiles.map((t) => [join("test", t).replaceAll("\\", "/"), t]));
       const norm = (p: string) =>
         byPath.get(
           p
@@ -1203,7 +1251,7 @@ async function runTests(): Promise<TestResult[]> {
             "--dots",
             "--reporter=junit",
             `--reporter-outfile=${junitPath}`,
-            ...bucketFiles.map(t => join(testsPath, t)),
+            ...bucketFiles.map((t) => join(testsPath, t)),
           ],
           cwd,
           timeout: Math.max(
@@ -1266,7 +1314,10 @@ async function runTests(): Promise<TestResult[]> {
         if (rerunSet.has(t)) continue;
         const title = join("test", t).replaceAll("\\", "/");
         const seconds = suites.get(title)?.seconds;
-        const timing = seconds === undefined ? "" : ` ${getAnsi("gray")}(${seconds.toFixed(2)}s)${getAnsi("reset")}`;
+        const timing =
+          seconds === undefined
+            ? ""
+            : ` ${getAnsi("gray")}(${seconds.toFixed(2)}s)${getAnsi("reset")}`;
         console.log(`${getAnsi("gray")}[${++i}/${total}]${getAnsi("reset")} ${title}${timing}`);
         okResults.push({
           testPath: title,
@@ -1324,7 +1375,9 @@ async function runTests(): Promise<TestResult[]> {
     };
 
     const modifiedTests = new Set(
-      allFiles.filter(filename => filename.startsWith("test/")).map(filename => filename.slice("test/".length)),
+      allFiles
+        .filter((filename) => filename.startsWith("test/"))
+        .map((filename) => filename.slice("test/".length)),
     );
     const isModified = (t: string) => modifiedTests.has(t.replaceAll("\\", "/"));
     const isBucketCandidate = (t: string) =>
@@ -1336,23 +1389,27 @@ async function runTests(): Promise<TestResult[]> {
       !needsDockerService(t) &&
       (!validationApplies || (shouldValidateExceptions(t) && shouldValidateLeakSan(t)));
 
-    const serialTests = tests.filter(t => !isParallelSafeTest(t));
-    const parallelSafeTests = tests.filter(t => isParallelSafeTest(t));
-    const modifiedSerialTests = serialTests.filter(t => isModified(t));
-    const bucketCandidates = serialTests.filter(t => !isModified(t) && isBucketCandidate(t));
+    const serialTests = tests.filter((t) => !isParallelSafeTest(t));
+    const parallelSafeTests = tests.filter((t) => isParallelSafeTest(t));
+    const modifiedSerialTests = serialTests.filter((t) => isModified(t));
+    const bucketCandidates = serialTests.filter((t) => !isModified(t) && isBucketCandidate(t));
     const bucketable = bucketCandidates.length >= 8 ? new Set(bucketCandidates) : new Set<string>();
-    const restSerialTests = serialTests.filter(t => !isModified(t) && !bucketable.has(t));
+    const restSerialTests = serialTests.filter((t) => !isModified(t) && !bucketable.has(t));
 
-    await Promise.all(modifiedSerialTests.map(t => limit(() => runOneTest(t, parallelism > 1))));
-    await Promise.all(restSerialTests.map(t => limit(() => runOneTest(t, parallelism > 1))));
+    await Promise.all(modifiedSerialTests.map((t) => limit(() => runOneTest(t, parallelism > 1))));
+    await Promise.all(restSerialTests.map((t) => limit(() => runOneTest(t, parallelism > 1))));
     if (bucketable.size) await runParallelBucket(bucketCandidates);
     // Concurrent tests log their title without opening a group (interleaved
     // output can't nest), so give the phase its own group instead of letting
     // the log viewer fold every line under the last serial test's group.
     if (parallelSafeTests.length && parallelSafeWidth > 1) {
-      startGroup(`Running ${parallelSafeTests.length} parallel-safe tests (${parallelSafeWidth}-wide)`);
+      startGroup(
+        `Running ${parallelSafeTests.length} parallel-safe tests (${parallelSafeWidth}-wide)`,
+      );
     }
-    await Promise.all(parallelSafeTests.map(t => parallelSafeLimit(() => runOneTest(t, parallelSafeWidth > 1))));
+    await Promise.all(
+      parallelSafeTests.map((t) => parallelSafeLimit(() => runOneTest(t, parallelSafeWidth > 1))),
+    );
   }
 
   if (vendorTests?.length) {
@@ -1363,7 +1420,9 @@ async function runTests(): Promise<TestResult[]> {
 
       const packageJson = join(relative(cwd, vendorPath), "package.json").replace(/\\/g, "/");
       if (packageManager === "bun") {
-        const installResult = await runTest(packageJson, () => spawnBunInstall(execPath, { cwd: vendorPath }));
+        const installResult = await runTest(packageJson, () =>
+          spawnBunInstall(execPath, { cwd: vendorPath }),
+        );
         if (!installResult?.ok) {
           continue;
         }
@@ -1385,8 +1444,11 @@ async function runTests(): Promise<TestResult[]> {
         const title = join(relative(cwd, vendorPath), testPath).replace(/\\/g, "/");
 
         if (testRunner === "bun") {
-          await runTest(title, index =>
-            spawnBunTest(execPath, testPath, { cwd: vendorPath, env: { TEST_SERIAL_ID: String(index) } }),
+          await runTest(title, (index) =>
+            spawnBunTest(execPath, testPath, {
+              cwd: vendorPath,
+              env: { TEST_SERIAL_ID: String(index) },
+            }),
           );
         } else {
           const testRunnerPath = join(cwd, "test", "runners", `${testRunner}.ts`);
@@ -1419,10 +1481,12 @@ async function runTests(): Promise<TestResult[]> {
     mkdirSync(junitTempDir, { recursive: true });
 
     // Generate JUnit reports for tests that don't use bun test
-    const nonBunTestResults = [...okResults, ...flakyResults, ...failedResults].filter(result => {
+    const nonBunTestResults = [...okResults, ...flakyResults, ...failedResults].filter((result) => {
       // Check if this is a test that wasn't run with bun test
       const isNodeTest =
-        isJavaScript(result.testPath) && !isTestStrict(result.testPath) && !result.testPath.includes("vendor");
+        isJavaScript(result.testPath) &&
+        !isTestStrict(result.testPath) &&
+        !result.testPath.includes("vendor");
       return isNodeTest;
     });
 
@@ -1467,7 +1531,7 @@ async function runTests(): Promise<TestResult[]> {
       try {
         // Only process XML files and skip the non-bun test results which we've already uploaded
         const allJunitFiles = readdirSync(junitTempDir).filter(
-          file => file.endsWith(".xml") && file !== "non-bun-test-results.xml",
+          (file) => file.endsWith(".xml") && file !== "non-bun-test-results.xml",
         );
 
         if (allJunitFiles.length > 0) {
@@ -1572,7 +1636,9 @@ async function runTests(): Promise<TestResult[]> {
         if (!zipAndEncrypt.ok) {
           throw new Error(zipAndEncrypt.error);
         }
-        console.log(`saved core dumps to ${outfileAbs} (${statSync(outfileAbs).size} bytes) in ${elapsed} ms`);
+        console.log(
+          `saved core dumps to ${outfileAbs} (${statSync(outfileAbs).size} bytes) in ${elapsed} ms`,
+        );
         await uploadArtifact(outfileAbs);
       } else {
         console.log(`no cores found in ${coresDir}`);
@@ -1608,7 +1674,7 @@ async function runTests(): Promise<TestResult[]> {
   // Dump per-file results as JSON for post-processing (test-fix workflows
   // shard from this). Opt-in via --results-json so CI output is unchanged.
   if (cliOptions["results-json"]) {
-    const all = [...okResults, ...flakyResults, ...failedResults].map(r => ({
+    const all = [...okResults, ...flakyResults, ...failedResults].map((r) => ({
       testPath: r.testPath,
       ok: r.ok,
       status: r.status,
@@ -1714,7 +1780,7 @@ async function spawnWithTimeout(options: SpawnOptions): Promise<SpawnResult> {
     }
     resolve();
   };
-  await new Promise<void>(resolve => {
+  await new Promise<void>((resolve) => {
     try {
       function unsafeBashEscape(str: string | undefined) {
         if (!str) return "";
@@ -1768,7 +1834,7 @@ async function spawnWithTimeout(options: SpawnOptions): Promise<SpawnResult> {
           armIdleTimer();
         }
       });
-      subprocess.on("error", error => {
+      subprocess.on("error", (error) => {
         spawnError = error;
         done(resolve);
       });
@@ -1808,7 +1874,7 @@ async function spawnWithTimeout(options: SpawnOptions): Promise<SpawnResult> {
   if (spawnError && retries < 5) {
     const { code } = spawnError;
     if (code === "EBUSY" || code === "UNKNOWN") {
-      await new Promise(resolve => setTimeout(resolve, 1000 * (retries + 1)));
+      await new Promise((resolve) => setTimeout(resolve, 1000 * (retries + 1)));
       return spawnWithTimeout({
         ...options,
         retries: retries + 1,
@@ -1834,7 +1900,9 @@ async function spawnWithTimeout(options: SpawnOptions): Promise<SpawnResult> {
     const count = error.length;
     const repoRel = (p: string | undefined) => p?.replace(/^(?:\.\.?[\\/])+/, "");
     const thrown = /This scope can throw a JS exception: (\S+) @ (\S+)/.exec(buffer);
-    const unchecked = /But the exception was unchecked as of this scope: (\S+) @ (\S+)/.exec(buffer);
+    const unchecked = /But the exception was unchecked as of this scope: (\S+) @ (\S+)/.exec(
+      buffer,
+    );
     error = "unchecked exception";
     if (unchecked) {
       error += ` at ${unchecked[1]} @ ${repoRel(unchecked[2])}`;
@@ -1854,7 +1922,7 @@ async function spawnWithTimeout(options: SpawnOptions): Promise<SpawnResult> {
       error = `${kind!.toLowerCase()} leak of ${bytes}b${objects === "1" ? "" : ` in ${objects} objects`}`;
       const frames = stack!
         .split("\n")
-        .map(line => /#\d+ 0x[0-9a-f]+ in ([^\n]+)/i.exec(line)?.[1]?.trim())
+        .map((line) => /#\d+ 0x[0-9a-f]+ in ([^\n]+)/i.exec(line)?.[1]?.trim())
         .filter((frame): frame is string => Boolean(frame));
       const isAlloc = (f: string) =>
         /^(?:__interceptor_|__sanitizer|_?malloc\b|_?malloc_zone|calloc|realloc|posix_memalign|operator new|mi_|bmalloc|bun_alloc|WTF::fast(?:Zeroed)?Malloc|WTF::Malloc)/i.test(
@@ -1864,7 +1932,8 @@ async function spawnWithTimeout(options: SpawnOptions): Promise<SpawnResult> {
         const loc = /(\S+):\d+$/.exec(f)?.[1];
         return !!loc && loc.replace(/^(?:\.\.?[\\/])+/, "").startsWith("src/");
       };
-      const where = frames.find(f => !isAlloc(f) && ownTree(f)) ?? frames.find(f => !isAlloc(f));
+      const where =
+        frames.find((f) => !isAlloc(f) && ownTree(f)) ?? frames.find((f) => !isAlloc(f));
       if (where) {
         // Neither group of the pattern is optional, and the fallback has both elements.
         const [, symbol, loc] = /^(.*?)\s+(\S+:\d+)$/.exec(where) ?? [null, where, ""];
@@ -1904,11 +1973,12 @@ async function spawnWithTimeout(options: SpawnOptions): Promise<SpawnResult> {
       error = "code 1";
     }
     const lines = stripAnsi(buffer).split(/\r?\n/);
-    const failAt = lines.findIndex(line => line.trim().startsWith("(fail) "));
+    const failAt = lines.findIndex((line) => line.trim().startsWith("(fail) "));
     if (failAt === -1) {
       // k - 1 is an index of `lines` because k > 0, and so is at - 1.
       const at = lines.findIndex(
-        (line, k) => k > 0 && /^\s+at /.test(line) && lines[k - 1]!.trim() && !/^\s+at /.test(lines[k - 1]!),
+        (line, k) =>
+          k > 0 && /^\s+at /.test(line) && lines[k - 1]!.trim() && !/^\s+at /.test(lines[k - 1]!),
       );
       if (at !== -1) {
         const message = lines[at - 1]!.trim();
@@ -2050,11 +2120,13 @@ async function spawnBun(
       stdout,
       stderr,
     });
-    const newCores = options["coredump-upload"] ? readdirSync(coresDir!).filter(c => !existingCores.includes(c)) : [];
+    const newCores = options["coredump-upload"]
+      ? readdirSync(coresDir!).filter((c) => !existingCores.includes(c))
+      : [];
     let crashes = "";
     if (options["coredump-upload"] && (result.signalCode !== null || newCores.length > 0)) {
       // warn if the main PID crashed and we don't have a core
-      if (result.signalCode !== null && !newCores.some(c => c.endsWith(`${result.pid}.core`))) {
+      if (result.signalCode !== null && !newCores.some((c) => c.endsWith(`${result.pid}.core`))) {
         crashes += `main process killed by ${result.signalCode} but no core file found\n`;
       }
 
@@ -2105,7 +2177,8 @@ async function spawnBun(
         // all tests (which would slow down CI a lot).
         await setTimeoutPromise(500);
         const response = await fetch(`http://localhost:${remapPort}/traces`);
-        if (!response.ok || response.status !== 200) throw new Error(`server responded with code ${response.status}`);
+        if (!response.ok || response.status !== 200)
+          throw new Error(`server responded with code ${response.status}`);
         const traces = (await response.json()) as RemappedTrace[];
         if (traces.length > 0) {
           result.ok = false;
@@ -2222,13 +2295,20 @@ async function spawnBunTest(
     GITHUB_ACTIONS: "true", // always true so annotations are parsed
     ...opts.env,
   };
-  if ((basename(execPath).includes("asan") || !isCI) && shouldValidateExceptions(relative(cwd, absPath))) {
+  if (
+    (basename(execPath).includes("asan") || !isCI) &&
+    shouldValidateExceptions(relative(cwd, absPath))
+  ) {
     env.BUN_JSC_validateExceptionChecks = "1";
     env.BUN_JSC_dumpSimulatedThrows = "1";
   }
-  if ((basename(execPath).includes("asan") || !isCI) && shouldValidateLeakSan(relative(cwd, absPath))) {
+  if (
+    (basename(execPath).includes("asan") || !isCI) &&
+    shouldValidateLeakSan(relative(cwd, absPath))
+  ) {
     env.BUN_DESTRUCT_VM_ON_EXIT = "1";
-    env.ASAN_OPTIONS = "allow_user_segv_handler=1:disable_coredump=0:detect_leaks=1:abort_on_error=1";
+    env.ASAN_OPTIONS =
+      "allow_user_segv_handler=1:disable_coredump=0:detect_leaks=1:abort_on_error=1";
     // prettier-ignore
     env.LSAN_OPTIONS = `malloc_context_size=30:print_suppressions=0:suppressions=${process.cwd()}/test/leaksan.supp`;
   }
@@ -2295,7 +2375,9 @@ function getTestTimeout(testPath: string): number {
  * commands bun test prints because GITHUB_ACTIONS is set (see createLiveOutputFilter).
  * spawnWithTimeout calls `end()` when the stream closes.
  */
-function pipeTestStdout(io: NodeJS.WritableStream): ((chunk: string) => void) & { end: () => void } {
+function pipeTestStdout(
+  io: NodeJS.WritableStream,
+): ((chunk: string) => void) & { end: () => void } {
   const filter = createLiveOutputFilter();
   const write = (chunk: string) => {
     const text = filter(chunk);
@@ -2357,7 +2439,7 @@ function parseTestStdout(stdout: string, testPath?: string): TestOutput {
         string
           .substring(8, eol)
           .split(",")
-          .map(entry => entry.split("=")),
+          .map((entry) => entry.split("=")),
       );
 
       const errorPath = file || testPath;
@@ -2479,8 +2561,13 @@ async function spawnBunInstall(
  */
 async function installCiRemapServer(execPath: string): Promise<boolean> {
   const title = relative(cwd, join(ciRemapServerPath, "package.json")).replaceAll(sep, "/");
-  const { ok, error } = await startGroup(title, () => spawnBunInstall(execPath, { cwd: ciRemapServerPath }));
-  if (!ok) console.warn(`ci-remap server not installed (${title}: ${error}), crash reports will not be remapped`);
+  const { ok, error } = await startGroup(title, () =>
+    spawnBunInstall(execPath, { cwd: ciRemapServerPath }),
+  );
+  if (!ok)
+    console.warn(
+      `ci-remap server not installed (${title}: ${error}), crash reports will not be remapped`,
+    );
   return ok;
 }
 
@@ -2591,7 +2678,16 @@ async function getVendorTests(cwd: string): Promise<VendorTest[]> {
 
   return Promise.all(
     relevantVendors.map(
-      async ({ package: name, repository, tag, testPath, testExtensions, testRunner, packageManager, skipTests }) => {
+      async ({
+        package: name,
+        repository,
+        tag,
+        testPath,
+        testExtensions,
+        testRunner,
+        packageManager,
+        skipTests,
+      }) => {
         const vendorPath = join(cwd, "vendor", name);
 
         if (!existsSync(vendorPath)) {
@@ -2653,14 +2749,18 @@ async function getVendorTests(cwd: string): Promise<VendorTest[]> {
         };
 
         const testPaths = readdirSync(testParentPath, { encoding: "utf-8", recursive: true })
-          .filter(filename =>
-            testExtensions ? testExtensions.some(ext => filename.endsWith(`.${ext}`)) : isTest(filename),
+          .filter((filename) =>
+            testExtensions
+              ? testExtensions.some((ext) => filename.endsWith(`.${ext}`))
+              : isTest(filename),
           )
-          .map(filename => join(testPathPrefix, filename))
+          .map((filename) => join(testPathPrefix, filename))
           .filter(
-            filename =>
+            (filename) =>
               !filters?.length ||
-              filters.some(filter => join(vendorPath, filename).replace(/\\/g, "/").includes(filter)),
+              filters.some((filter) =>
+                join(vendorPath, filename).replace(/\\/g, "/").includes(filter),
+              ),
           );
 
         return {
@@ -2699,7 +2799,7 @@ function loadExpectedDurations(cwd: string): Record<string, number> {
     columns.push("default", "asan", "musl", "windows", "windows-aarch64");
     for (const [path, entry] of Object.entries(raw)) {
       if (path === "_meta") continue;
-      const ms = columns.map(column => entry[column]).find(value => typeof value === "number");
+      const ms = columns.map((column) => entry[column]).find((value) => typeof value === "number");
       if (typeof ms === "number") durations[path] = ms;
     }
   } catch (e) {
@@ -2708,7 +2808,11 @@ function loadExpectedDurations(cwd: string): Record<string, number> {
   return durations;
 }
 
-function getRelevantTests(cwd: string, testModifiers: string[], testExpectations: TestExpectation[]): string[] {
+function getRelevantTests(
+  cwd: string,
+  testModifiers: string[],
+  testExpectations: TestExpectation[],
+): string[] {
   let tests = getTests(cwd);
   const availableTests: string[] = [];
   const filteredTests: string[] = [];
@@ -2725,14 +2829,16 @@ function getRelevantTests(cwd: string, testModifiers: string[], testExpectations
     return (
       filter
         ?.split(",")
-        .map(part => part.trim())
+        .map((part) => part.trim())
         .filter(Boolean) ?? []
     );
   };
 
   const includes = options.include?.flatMap(getFilter);
   if (includes?.length) {
-    availableTests.push(...tests.filter(testPath => includes.some(filter => isMatch(testPath, filter))));
+    availableTests.push(
+      ...tests.filter((testPath) => includes.some((filter) => isMatch(testPath, filter))),
+    );
     if (!isQuiet) {
       console.log("Including tests:", includes, availableTests.length, "/", tests.length);
     }
@@ -2742,7 +2848,9 @@ function getRelevantTests(cwd: string, testModifiers: string[], testExpectations
 
   const excludes = options.exclude?.flatMap(getFilter);
   if (excludes?.length) {
-    const excludedTests = availableTests.filter(testPath => excludes.some(filter => isMatch(testPath, filter)));
+    const excludedTests = availableTests.filter((testPath) =>
+      excludes.some((filter) => isMatch(testPath, filter)),
+    );
     if (excludedTests.length) {
       for (const testPath of excludedTests) {
         const index = availableTests.indexOf(testPath);
@@ -2757,10 +2865,15 @@ function getRelevantTests(cwd: string, testModifiers: string[], testExpectations
   }
 
   const skipExpectations = testExpectations
-    .filter(({ modifiers }) => !modifiers?.length || testModifiers.some(modifier => modifiers?.includes(modifier)))
+    .filter(
+      ({ modifiers }) =>
+        !modifiers?.length || testModifiers.some((modifier) => modifiers?.includes(modifier)),
+    )
     .map(({ filename }) => filename.replace("test/", ""));
   if (skipExpectations.length) {
-    const skippedTests = availableTests.filter(testPath => skipExpectations.some(filter => isMatch(testPath, filter)));
+    const skippedTests = availableTests.filter((testPath) =>
+      skipExpectations.some((filter) => isMatch(testPath, filter)),
+    );
     if (skippedTests.length) {
       for (const testPath of skippedTests) {
         const index = availableTests.indexOf(testPath);
@@ -2769,7 +2882,13 @@ function getRelevantTests(cwd: string, testModifiers: string[], testExpectations
         }
       }
       if (!isQuiet) {
-        console.log("Skipping tests:", skipExpectations, skippedTests.length, "/", availableTests.length);
+        console.log(
+          "Skipping tests:",
+          skipExpectations,
+          skippedTests.length,
+          "/",
+          availableTests.length,
+        );
       }
     }
   }
@@ -2777,7 +2896,9 @@ function getRelevantTests(cwd: string, testModifiers: string[], testExpectations
   const shardId = parseInt(options.shard);
   const maxShards = parseInt(options["max-shards"]);
   if (filters?.length) {
-    filteredTests.push(...availableTests.filter(testPath => filters.some(filter => isMatch(testPath, filter))));
+    filteredTests.push(
+      ...availableTests.filter((testPath) => filters.some((filter) => isMatch(testPath, filter))),
+    );
     if (!isQuiet) {
       console.log("Filtering tests:", filteredTests.length, "/", availableTests.length);
     }
@@ -2811,7 +2932,10 @@ function getRelevantTests(cwd: string, testModifiers: string[], testExpectations
       .map((testPath, originalIndex) => ({ testPath, originalIndex, cost: costOf(testPath) }))
       .sort((a, b) => b.cost - a.cost || a.originalIndex - b.originalIndex);
     const load = new Float64Array(maxShards);
-    const assigned = Array.from({ length: maxShards }, (): { testPath: string; originalIndex: number }[] => []);
+    const assigned = Array.from(
+      { length: maxShards },
+      (): { testPath: string; originalIndex: number }[] => [],
+    );
     for (const { testPath, originalIndex, cost } of order) {
       // `load` and `assigned` have maxShards elements, and s and bin are less than that.
       let bin = 0;
@@ -2857,13 +2981,13 @@ function getRelevantTests(cwd: string, testModifiers: string[], testExpectations
   if (allFiles.length > 0) {
     const modifiedTests = new Set(
       allFiles
-        .filter(filename => filename.startsWith("test/") && isTest(filename))
-        .map(filename => filename.slice("test/".length)),
+        .filter((filename) => filename.startsWith("test/") && isTest(filename))
+        .map((filename) => filename.slice("test/".length)),
     );
 
     if (modifiedTests.size > 0) {
       return filteredTests
-        .map(testPath => testPath.replaceAll("\\", "/"))
+        .map((testPath) => testPath.replaceAll("\\", "/"))
         .sort((a, b) => {
           const aModified = modifiedTests.has(a);
           const bModified = modifiedTests.has(b);
@@ -2935,8 +3059,8 @@ async function getExecPathFromBuildkite(target: string, buildId?: string): Promi
     }
 
     zipPath = readdirSync(releasePath, { recursive: true, encoding: "utf-8" })
-      .filter(filename => /^bun.*\.zip$/i.test(filename))
-      .map(filename => join(releasePath, filename))
+      .filter((filename) => /^bun.*\.zip$/i.test(filename))
+      .map((filename) => join(releasePath, filename))
       .sort((a, b) => Number(b.includes("profile")) - Number(a.includes("profile")))
       .at(0);
 
@@ -2945,7 +3069,7 @@ async function getExecPathFromBuildkite(target: string, buildId?: string): Promi
     }
 
     console.warn(`Waiting for ${target}.zip to be available...`);
-    await new Promise(resolve => setTimeout(resolve, i * 1000));
+    await new Promise((resolve) => setTimeout(resolve, i * 1000));
   }
 
   if (!zipPath) {
@@ -3216,7 +3340,7 @@ function generateJUnitReport(outfile: string, results: TestResult[]): void {
 
   // Add an overall testsuite container with metadata
   const totalTests = results.length;
-  const totalFailures = results.filter(r => r.status === "fail").length;
+  const totalFailures = results.filter((r) => r.status === "fail").length;
   const timestamp = new Date().toISOString();
 
   // Calculate total time
@@ -3255,7 +3379,12 @@ function generateJUnitReport(outfile: string, results: TestResult[]): void {
     // For test suites with granular test information
     if (tests.length > 0) {
       for (const test of tests) {
-        const { test: testName, status: testStatus, duration: testDuration = 0, errors: testErrors = [] } = test;
+        const {
+          test: testName,
+          status: testStatus,
+          duration: testDuration = 0,
+          errors: testErrors = [],
+        } = test;
 
         suite.time += testDuration / 1000; // Convert to seconds
 
@@ -3284,7 +3413,7 @@ function generateJUnitReport(outfile: string, results: TestResult[]): void {
                 "\n\nAdditional errors:\n" +
                 testErrors
                   .slice(1)
-                  .map(e => e.stack || e.name)
+                  .map((e) => e.stack || e.name)
                   .join("\n");
             }
           } else {
@@ -3383,14 +3512,14 @@ async function drainJunitUploadQueue(): Promise<void> {
   while (junitUploadQueue.length > 0) {
     const testPath = junitUploadQueue.shift()!; // junitUploadQueue.length > 0
     await uploadJUnitToBuildkite(testPath)
-      .then(uploadSuccess => {
+      .then((uploadSuccess) => {
         unlink(testPath, () => {
           if (!uploadSuccess) {
             console.error(`Failed to upload JUnit report for ${testPath}`);
           }
         });
       })
-      .catch(err => {
+      .catch((err) => {
         console.error(`Error uploading JUnit report for ${testPath}:`, err);
       });
   }
@@ -3446,7 +3575,7 @@ async function uploadJUnitToBuildkite(junitFile: string): Promise<boolean> {
     const response = await fetch(url, {
       method: "POST",
       headers: {
-        "Authorization": `Token token="${getBuildkiteAnalyticsToken()}"`,
+        Authorization: `Token token="${getBuildkiteAnalyticsToken()}"`,
       },
       body: formData,
     });
@@ -3466,7 +3595,10 @@ async function uploadJUnitToBuildkite(junitFile: string): Promise<boolean> {
       return true;
     } else {
       const errorText = await response.text();
-      console.error(`Failed to upload JUnit file "${fileName}": HTTP ${response.status}`, errorText);
+      console.error(
+        `Failed to upload JUnit file "${fileName}": HTTP ${response.status}`,
+        errorText,
+      );
       return false;
     }
   } catch (error) {
@@ -3509,7 +3641,7 @@ async function main(): Promise<void> {
     // limit, non-PR build). [].every() is vacuously true, which would skip the
     // entire suite and exit 0 — so require at least one file before treating
     // the change set as docs-only.
-    if (allFiles.length > 0 && allFiles.every(filename => filename.startsWith("docs/"))) {
+    if (allFiles.length > 0 && allFiles.every((filename) => filename.startsWith("docs/"))) {
       doRunTests = false;
     }
   }
@@ -3535,14 +3667,16 @@ async function main(): Promise<void> {
     if (!waitForUser) {
       startGroup("Summary");
       if (typeof userCount === "number") {
-        console.warn(`Found ${userCount} users logged in, keeping the runner alive until logout...`);
+        console.warn(
+          `Found ${userCount} users logged in, keeping the runner alive until logout...`,
+        );
       } else {
         console.warn(userCount);
       }
       waitForUser = true;
     }
 
-    await new Promise(resolve => setTimeout(resolve, 60_000));
+    await new Promise((resolve) => setTimeout(resolve, 60_000));
   }
 
   markBuildkiteStepReported();

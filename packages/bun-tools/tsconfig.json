@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "types": ["node"],
+    "paths": {
+      "harness": ["../../test/harness.ts"],
+      "_util/*": ["../../test/_util/*"],
+      "bun": ["../bun-types/bun.d.ts"],
+      "bun:internal-for-testing": ["../../src/js/internal-for-testing.ts"]
+    },
+    "typeRoots": ["../../test/node_modules/@types", "../bun-types/node_modules/@types"]
+  },
+  "include": ["src/**/*.ts", "../bun-types/index.d.ts"]
+}

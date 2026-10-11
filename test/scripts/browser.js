@@ -41,7 +41,7 @@ if (!USE_EXISTING_PROCESS) {
     });
   }
   process.on("beforeExit", () => {
-    bunProcess && bunProcess.kill(0);
+    if (bunProcess) bunProcess.kill(0);
   });
 }
 const isDebug = bunExec.endsWith("-debug");
@@ -155,14 +155,14 @@ async function main() {
   }
 
   if (!USE_EXISTING_PROCESS || (USE_EXISTING_PROCESS && allTestsPassed)) {
-    bunProcess && bunProcess.kill(0);
+    if (bunProcess) bunProcess.kill(0);
 
     if (!allTestsPassed) {
       console.error(`❌ browser test failed`);
       process.exit(1);
     } else {
       console.log(`✅ browser test passed`);
-      bunProcess && bunProcess.kill(0);
+      if (bunProcess) bunProcess.kill(0);
       process.exit(0);
     }
     await browser.close();

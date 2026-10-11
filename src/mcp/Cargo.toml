@@ -18,6 +18,7 @@ bun_core.workspace = true
 bun_graph.workspace = true
 bun_host.workspace = true
 bun_no_window.workspace = true
+bun_sys.workspace = true
 bun_lsp.workspace = true
 bun_valkey.workspace = true
 bun_vfs.workspace = true

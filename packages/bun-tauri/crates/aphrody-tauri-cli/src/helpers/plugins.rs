@@ -85,14 +85,15 @@ pub fn known_plugins() -> HashMap<&'static str, PluginMetadata> {
 }
 
 fn version_req() -> String {
-  let pre = env!("CARGO_PKG_VERSION_PRE");
-  if pre.is_empty() {
-    env!("CARGO_PKG_VERSION_MAJOR").to_string()
-  } else {
-    format!(
-      "{}.0.0-{}",
-      env!("CARGO_PKG_VERSION_MAJOR"),
-      pre.split('.').next().unwrap()
-    )
+  env!("CARGO_PKG_VERSION").to_string()
+}
+
+#[cfg(test)]
+mod tests {
+  #[test]
+  fn owned_plugin_requirements_use_the_complete_product_release() {
+    let plugins = super::known_plugins();
+    assert_eq!(plugins["fs"].version_req.as_deref(), Some("1.4.4"));
+    assert_eq!(plugins["shell"].version_req.as_deref(), Some("1.4.4"));
   }
 }

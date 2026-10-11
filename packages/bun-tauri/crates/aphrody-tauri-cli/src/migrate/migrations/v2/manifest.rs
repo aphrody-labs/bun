@@ -139,9 +139,7 @@ fn migrate_tauri_dependency(
     default_features,
     features: features
       .into_iter()
-      .filter(|f| {
-        RUNTIME_FEATURES.contains(&f.as_str())
-      })
+      .filter(|f| RUNTIME_FEATURES.contains(&f.as_str()))
       .collect(),
   })
 }
@@ -172,9 +170,13 @@ fn add_runtime_dependency(table: &mut Table, runtime: RuntimeDependency, version
   }
 
   let item = if runtime.default_features && runtime.features.is_empty() {
-    Item::Value(version.into())
+    let mut dependency = InlineTable::new();
+    dependency.insert("package", "aphrody-tauri-runtime-cef".into());
+    dependency.insert("version", version.into());
+    Item::Value(Value::InlineTable(dependency))
   } else {
     let mut dependency = InlineTable::new();
+    dependency.insert("package", "aphrody-tauri-runtime-cef".into());
     dependency.insert("version", version.into());
     if !runtime.default_features {
       dependency.insert("default-features", false.into());
@@ -296,6 +298,8 @@ fn migrate_dependency_item(
       for key in ["git", "branch", "tag", "rev"] {
         dependency.remove(key);
       }
+      *dependency.entry("package").or_insert(Item::None) =
+        Item::Value(format!("aphrody-{name}").into());
       let version_item = dependency.entry("version").or_insert(Item::None);
       let decor = version_item.as_value().map(|v| v.decor().clone());
       let mut value = Value::from(version);
@@ -308,7 +312,10 @@ fn migrate_dependency_item(
     && value.is_str()
   {
     let decor = value.decor().clone();
-    *value = version.into();
+    let mut dependency = InlineTable::new();
+    dependency.insert("package", format!("aphrody-{name}").into());
+    dependency.insert("version", version.into());
+    *value = Value::InlineTable(dependency);
     *value.decor_mut() = decor;
   }
 }

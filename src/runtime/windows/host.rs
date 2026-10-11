@@ -33,7 +33,9 @@ fn check<T>(global: &JSGlobalObject, result: WinResult<T>) -> JsResult<T> {
 #[cfg(windows)]
 fn str_arg(global: &JSGlobalObject, frame: &CallFrame, i: usize) -> JsResult<String> {
     let utf8 = frame.argument(i).to_utf8(global)?;
-    Ok(String::from_utf8_lossy(&utf8).into_owned())
+    std::str::from_utf8(&utf8).map(str::to_owned).map_err(|_| {
+        global.throw_invalid_arguments(format_args!("Windows string argument must be valid UTF-8"))
+    })
 }
 
 #[cfg(windows)]
@@ -80,12 +82,14 @@ fn reg_root(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<sys::registr
 #[cfg(windows)]
 fn hex_decode(s: &str) -> Option<Vec<u8>> {
     let bytes = s.as_bytes();
-    if bytes.len() % 2 != 0 {
+    if !bytes.len().is_multiple_of(2) {
         return None;
     }
     let digit = |c: u8| (c as char).to_digit(16).map(|d| d as u8);
     bytes
-        .chunks_exact(2)
+        .as_chunks::<2>()
+        .0
+        .iter()
         .map(|pair| Some(digit(pair[0])? << 4 | digit(pair[1])?))
         .collect()
 }
@@ -480,15 +484,17 @@ win_host_fn! {
 #[cfg(windows)]
 fn i64_str_arg(global: &JSGlobalObject, frame: &CallFrame, i: usize, name: &str) -> JsResult<i64> {
     let text = str_arg(global, frame, i)?;
-    text.parse::<i64>()
-        .map_err(|_| global.throw_invalid_arguments(format_args!("{name} must be a decimal integer string")))
+    text.parse::<i64>().map_err(|_| {
+        global.throw_invalid_arguments(format_args!("{name} must be a decimal integer string"))
+    })
 }
 
 #[cfg(windows)]
 fn u64_str_arg(global: &JSGlobalObject, frame: &CallFrame, i: usize, name: &str) -> JsResult<u64> {
     let text = str_arg(global, frame, i)?;
-    text.parse::<u64>()
-        .map_err(|_| global.throw_invalid_arguments(format_args!("{name} must be a decimal integer string")))
+    text.parse::<u64>().map_err(|_| {
+        global.throw_invalid_arguments(format_args!("{name} must be a decimal integer string"))
+    })
 }
 
 win_host_fn! {

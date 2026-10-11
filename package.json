@@ -1,29 +1,10 @@
 {
-  "private": true,
   "name": "bun",
   "version": "1.4.4",
+  "private": true,
   "workspaces": [
     "./packages/bun-types"
   ],
-  "devDependencies": {
-    "@lezer/common": "1.5.2",
-    "@lezer/cpp": "1.1.6",
-    "@types/react": "18.3.31",
-    "@types/react-dom": "18.3.7",
-    "esbuild": "0.21.5",
-    "oxlint": "1.70.0",
-    "prettier": "3.6.2",
-    "prettier-plugin-organize-imports": "4.3.0",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "source-map-js": "1.2.1",
-    "typescript": "6.0.2",
-    "undici-types": "8.3.0"
-  },
-  "resolutions": {
-    "bun-types": "workspace:packages/bun-types",
-    "@types/node": "26.2.0"
-  },
   "scripts": {
     "bun:windows": "bun scripts/aphrody/win/version-sync.ts",
     "build": "bun --silent run build:debug",
@@ -32,9 +13,9 @@
     "ci:errors": "bun scripts/find-build.ts --errors",
     "ci:logs": "bun scripts/find-build.ts --logs",
     "ci:watch": "bun scripts/find-build.ts --watch",
-    "ci:images": "node scripts/build/ci-images/spec.ts",
+    "ci:images": "bun scripts/build/ci-images/spec.ts",
     "ci:slowest": "bun scripts/ci-slowest-tests.ts",
-    "ci:parallel-allowlist": "node scripts/update-parallel-allowlist.mjs",
+    "ci:parallel-allowlist": "bun scripts/update-parallel-allowlist.mjs",
     "pr:comments": "bun scripts/pr-comments.ts",
     "watch": "cargo watch -x 'check --workspace --message-format=short'",
     "watch-windows": "cargo watch -x \"check --workspace --target x86_64-pc-windows-msvc --message-format=short\"",
@@ -62,15 +43,15 @@
     "jsc:build": "bun scripts/build.ts --profile=release-local --build-dir=build/release-local --target=WebKit",
     "jsc:build:debug": "bun scripts/build.ts --profile=debug-local --build-dir=build/debug-local --target=WebKit",
     "jsc:build:lto": "bun scripts/build.ts --profile=release-local --lto=on --build-dir=build/release-local-lto --target=WebKit",
-    "typecheck": "tsc --noEmit && cd test && bun run typecheck",
-    "fmt": "bun run prettier",
+    "typecheck": "bun check --noEmit && bun check --noEmit --project test/tsconfig.json",
+    "fmt": "bun fmt --write --ignore-pattern '**/*fixture*.*' scripts packages src/js test",
     "fmt:cpp": "bun run clang-format",
     "fmt:rust": "cargo fmt --all",
-    "lint": "oxlint --config=oxlint.json --format=github src/js",
-    "lint:fix": "oxlint --config oxlint.json --fix",
-    "test": "node scripts/runner.node.ts --exec-path ./build/debug/bun-debug",
+    "lint": "bun lint --config=oxlint.json --format=github src/js",
+    "lint:fix": "bun lint --config oxlint.json --fix src/js",
+    "test": "bun scripts/runner.node.ts --exec-path ./build/debug/bun-debug",
     "testleak": "BUN_DESTRUCT_VM_ON_EXIT=1 ASAN_OPTIONS=detect_leaks=1 LSAN_OPTIONS=malloc_context_size=100:print_suppressions=1:suppressions=$npm_config_local_prefix/test/leaksan.supp ./build/debug/bun-debug",
-    "test:release": "node scripts/runner.node.ts --exec-path ./build/release/bun",
+    "test:release": "bun scripts/runner.node.ts --exec-path ./build/release/bun",
     "rust:check": "cargo check --workspace --keep-going",
     "rust:check-all": "bun scripts/rust-check-all.ts",
     "rust:check-wasm": "cargo check --target wasm32-wasip1-threads -p bun_wasm --profile wasm",
@@ -87,7 +68,7 @@
     "clang-format:check": "./scripts/run-clang-format.sh check",
     "clang-format:diff": "./scripts/run-clang-format.sh diff",
     "prettier": "bun --bun ./node_modules/.bin/prettier --plugin=prettier-plugin-organize-imports --config .prettierrc --write scripts packages src docs 'test/**/*.{test,spec}.{ts,tsx,js,jsx,mts,mjs,cjs,cts}' '!test/**/*fixture*.*'",
-    "node:test": "node ./scripts/runner.node.ts --quiet --exec-path=$npm_execpath --node-tests ",
+    "node:test": "bun ./scripts/runner.node.ts --quiet --exec-path=$npm_execpath --node-tests ",
     "node:test:cp": "bun ./scripts/fetch-node-test.ts ",
     "clean": "bun scripts/build/clean.ts",
     "sync-webkit-source": "bun ./scripts/sync-webkit-source.ts",
@@ -101,5 +82,24 @@
     "buv:embedded": "bun scripts/aphrody/buv.ts embedded",
     "buv:bench": "bun scripts/aphrody/bench.ts",
     "buv:formats": "bun scripts/aphrody/formats.ts"
+  },
+  "devDependencies": {
+    "@lezer/common": "1.5.2",
+    "@lezer/cpp": "1.1.6",
+    "@types/react": "18.3.31",
+    "@types/react-dom": "18.3.7",
+    "esbuild": "0.21.5",
+    "oxlint": "1.70.0",
+    "prettier": "3.6.2",
+    "prettier-plugin-organize-imports": "4.3.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "source-map-js": "1.2.1",
+    "typescript": "6.0.2",
+    "undici-types": "8.3.0"
+  },
+  "resolutions": {
+    "@types/node": "26.2.0",
+    "bun-types": "workspace:packages/bun-types"
   }
 }

@@ -40,7 +40,14 @@ export interface App {
   build: { cwd: string; cmd: string[]; artifact: string; env?: Record<string, string> };
   host: string;
   ssh?: { target?: string; identity?: string; port?: number };
-  remote: { root: string; unit: string; health: string; keep?: number; bun?: string; libDir?: string };
+  remote: {
+    root: string;
+    unit: string;
+    health: string;
+    keep?: number;
+    bun?: string;
+    libDir?: string;
+  };
   clean?: { cacheDirs?: string[]; cacheDays?: number };
 }
 
@@ -63,13 +70,17 @@ export type Run = (
 export const run: Run = async (cmd, opts = {}) => {
   const proc = Bun.spawn({
     cmd,
-    cwd: opts.cwd,
-    env: { ...process.env, ...opts.env } as Record<string, string>,
+    ...(opts.cwd === undefined ? {} : { cwd: opts.cwd }),
+    env: { ...process.env, ...opts.env },
     stdin: opts.input === undefined ? "ignore" : new Blob([opts.input]),
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, code] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  const [stdout, stderr, code] = await Promise.all([
+    Bun.readableStreamToText(proc.stdout),
+    Bun.readableStreamToText(proc.stderr),
+    proc.exited,
+  ]);
   return { code, stdout, stderr };
 };
 
@@ -85,7 +96,7 @@ export function shq(s: string): string {
 export function logEvent(
   event: string,
   fields: Record<string, unknown> = {},
-  out: (line: string) => void = l => console.log(l),
+  out: (line: string) => void = (l) => console.log(l),
 ) {
   out(JSON.stringify({ t: new Date().toISOString(), event, ...fields }));
 }
@@ -110,7 +121,10 @@ export function validateApp(raw: any): App {
   need(typeof raw.build?.artifact === "string", "build.artifact");
   need(typeof raw.build?.cwd === "string", "build.cwd");
   need(typeof raw.host === "string" && raw.host, "host");
-  need(typeof raw.remote?.root === "string" && raw.remote.root.startsWith("/"), "remote.root must be absolute");
+  need(
+    typeof raw.remote?.root === "string" && raw.remote.root.startsWith("/"),
+    "remote.root must be absolute",
+  );
   need(/^[A-Za-z0-9@._:-]+$/.test(raw.remote?.unit ?? ""), "remote.unit");
   need(typeof raw.remote?.health === "string", "remote.health");
   return raw as App;
@@ -129,7 +143,7 @@ const sanitize = (s: string) => s.replace(/[^A-Za-z0-9._-]/g, "_");
 
 /** `<sha7>-<sha7>-<tag>` in source order; git sources contribute sha7, release sources their tag. */
 export function computeReleaseId(sources: ResolvedSource[]): string {
-  return sources.map(s => (s.sha ? s.sha.slice(0, 7) : sanitize(s.tag ?? "none"))).join("-");
+  return sources.map((s) => (s.sha ? s.sha.slice(0, 7) : sanitize(s.tag ?? "none"))).join("-");
 }
 
 /** Token goes through the environment only (git config env), never argv. */
@@ -147,40 +161,70 @@ export const sourceUrl = (s: Source) => s.url ?? `https://github.com/${s.repo}.g
 
 export async function resolveSource(
   s: Source,
-  io: { run?: Run; releases?: (repo: string) => Promise<{ tag_name: string; draft?: boolean }[]> } = {},
+  io: {
+    run?: Run;
+    releases?: (repo: string) => Promise<{ tag_name: string; draft?: boolean }[]>;
+  } = {},
 ): Promise<ResolvedSource> {
   const exec = io.run ?? run;
   if (s.kind === "release") {
     const releases = await (io.releases ?? ghReleases)(s.repo);
     const prefix = s.tagPrefix ?? "bun-v";
-    const hit = releases.find(r => !r.draft && r.tag_name.startsWith(prefix));
+    const hit = releases.find((r) => !r.draft && r.tag_name.startsWith(prefix));
     if (!hit) throw new Error(`${s.name}: no release tag starting with ${prefix}`);
     return { name: s.name, tag: hit.tag_name };
   }
   const branch = s.branch ?? "main";
-  const r = await exec(["git", "ls-remote", sourceUrl(s), `refs/heads/${branch}`], { env: gitEnv() });
+  const r = await exec(["git", "ls-remote", sourceUrl(s), `refs/heads/${branch}`], {
+    env: gitEnv(),
+  });
   const sha = r.stdout.split(/\s+/)[0];
-  if (r.code !== 0 || !/^[0-9a-f]{40}$/.test(sha)) {
+  if (r.code !== 0 || sha === undefined || !/^[0-9a-f]{40}$/.test(sha)) {
     throw new Error(`${s.name}: ls-remote ${branch} failed: ${r.stderr.trim()}`);
   }
   return { name: s.name, sha };
 }
 
-async function ghReleases(repo: string) {
+async function ghReleases(repo: string): Promise<{ tag_name: string; draft?: boolean }[]> {
   const r = await run(["gh", "api", `repos/${repo}/releases?per_page=30`]);
   if (r.code !== 0) throw new Error(`gh api releases ${repo}: ${r.stderr.trim()}`);
-  return JSON.parse(r.stdout);
+  const payload: unknown = JSON.parse(r.stdout);
+  if (!Array.isArray(payload)) throw new Error(`gh api releases ${repo}: expected an array`);
+  const rows: unknown[] = payload;
+  const releases: { tag_name: string; draft?: boolean }[] = [];
+  for (const row of rows) {
+    if (
+      typeof row !== "object" ||
+      row === null ||
+      !("tag_name" in row) ||
+      typeof row.tag_name !== "string" ||
+      row.tag_name.length === 0 ||
+      ("draft" in row && typeof row.draft !== "boolean")
+    )
+      throw new Error(`gh api releases ${repo}: invalid release entry`);
+    releases.push({
+      tag_name: row.tag_name,
+      ...("draft" in row && typeof row.draft === "boolean" ? { draft: row.draft } : {}),
+    });
+  }
+  return releases;
 }
 
-export async function resolveAll(app: App, io: Parameters<typeof resolveSource>[1] = {}): Promise<Resolved> {
-  const sources = await Promise.all(app.sources.map(s => resolveSource(s, io)));
+export async function resolveAll(
+  app: App,
+  io: Parameters<typeof resolveSource>[1] = {},
+): Promise<Resolved> {
+  const sources = await Promise.all(app.sources.map((s) => resolveSource(s, io)));
   return { id: computeReleaseId(sources), sources };
 }
 
 // ---------- queue state ----------
 
 export class QueueState {
-  constructor(readonly dir: string) {}
+  readonly dir: string;
+  constructor(dir: string) {
+    this.dir = dir;
+  }
   private pendingPath = () => join(this.dir, "pending.json");
   readPending(): { id: string; observedAt: string } | null {
     return readJson(this.pendingPath());
@@ -195,7 +239,10 @@ export class QueueState {
   }
   markBad(id: string, reason: string) {
     mkdirSync(join(this.dir, "bad"), { recursive: true });
-    writeFileSync(join(this.dir, "bad", id), JSON.stringify({ reason, at: new Date().toISOString() }) + "\n");
+    writeFileSync(
+      join(this.dir, "bad", id),
+      JSON.stringify({ reason, at: new Date().toISOString() }) + "\n",
+    );
   }
   badIds() {
     try {
@@ -210,7 +257,11 @@ export type Decision =
   | { action: "build"; id: string }
   | { action: "noop"; reason: "deployed" | "known-bad"; id: string };
 
-export function decide(id: string, deployed: string | null, state: Pick<QueueState, "isBad">): Decision {
+export function decide(
+  id: string,
+  deployed: string | null,
+  state: Pick<QueueState, "isBad">,
+): Decision {
   if (id === deployed) return { action: "noop", reason: "deployed", id };
   if (state.isBad(id)) return { action: "noop", reason: "known-bad", id };
   return { action: "build", id };
@@ -293,13 +344,16 @@ export const sha256File = (p: string) => createHash("sha256").update(readFileSyn
 
 export function listReleaseFiles(dir: string) {
   return readdirSync(dir)
-    .filter(f => f !== "SHA256SUMS" && f !== "bad" && statSync(join(dir, f)).isFile())
+    .filter((f) => f !== "SHA256SUMS" && f !== "bad" && statSync(join(dir, f)).isFile())
     .sort();
 }
 
 export function writeSums(dir: string): string[] {
   const files = listReleaseFiles(dir);
-  writeFileSync(join(dir, "SHA256SUMS"), files.map(f => `${sha256File(join(dir, f))}  ${f}`).join("\n") + "\n");
+  writeFileSync(
+    join(dir, "SHA256SUMS"),
+    files.map((f) => `${sha256File(join(dir, f))}  ${f}`).join("\n") + "\n",
+  );
   return files;
 }
 
@@ -316,12 +370,20 @@ export function verifySums(dir: string): string[] {
   const bad: string[] = [];
   for (const line of lines) {
     const m = /^([0-9a-f]{64})  (.+)$/.exec(line);
-    if (!m || m[2].includes("/") || m[2].includes("..")) {
+    const hash = m?.[1];
+    const name = m?.[2];
+    if (
+      hash === undefined ||
+      name === undefined ||
+      name.includes("/") ||
+      name.includes("\\") ||
+      name.includes("..")
+    ) {
       bad.push(line);
       continue;
     }
-    const p = join(dir, m[2]);
-    if (!existsSync(p) || sha256File(p) !== m[1]) bad.push(m[2]);
+    const p = join(dir, name);
+    if (!existsSync(p) || sha256File(p) !== hash) bad.push(name);
   }
   return bad;
 }
@@ -341,8 +403,8 @@ export function selectReleasesToKeep(
     kept.add(r.name);
   }
   return {
-    keep: releases.filter(r => kept.has(r.name)).map(r => r.name),
-    remove: releases.filter(r => !kept.has(r.name)).map(r => r.name),
+    keep: releases.filter((r) => kept.has(r.name)).map((r) => r.name),
+    remove: releases.filter((r) => !kept.has(r.name)).map((r) => r.name),
   };
 }
 
@@ -408,7 +470,7 @@ export async function ensureFlock(lockPath: string, argv = process.argv.slice(1)
   mkdirSync(dirname(lockPath), { recursive: true });
   const proc = Bun.spawn({
     cmd: ["flock", "-n", "-E", String(EXIT.busy), lockPath, process.execPath, ...argv],
-    env: { ...process.env, APHRODY_DEPLOY_FLOCKED: "1" } as Record<string, string>,
+    env: { ...process.env, APHRODY_DEPLOY_FLOCKED: "1" },
     stdin: "inherit",
     stdout: "inherit",
     stderr: "inherit",

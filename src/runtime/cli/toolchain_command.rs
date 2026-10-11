@@ -1,8 +1,7 @@
 //! `bun lint`, `bun fmt`, `bun n2b`, `bun migrate`, `bun wasm` and `bun build --target=wasm`.
 //!
-//! The commands live in the embedded `src/js/eval/toolchain.ts`, booted like `bun -e`: oxlint and
-//! oxfmt are fetched on first use (pinned, cached by `bun x`) instead of linked, which keeps the
-//! binary size unchanged; the Rust to wasm pipeline is `bun:wasm`.
+//! Lint and format use the linked OXC owner by default. Explicit external-backend opt-in and
+//! other toolchain commands use embedded `src/js/eval/toolchain.ts`; Rust to wasm is `bun:wasm`.
 
 use bun_core::{ZStr, env_var};
 
@@ -15,6 +14,15 @@ pub(crate) struct ToolchainCommand;
 impl ToolchainCommand {
     #[cold]
     pub(crate) fn exec(ctx: Command::Context) -> crate::Result<()> {
+        if !bun_core::argv()
+            .into_iter()
+            .any(|arg| arg == b"--external-backend")
+        {
+            if let Some(code) = super::native_quality_command::exec_if_selected() {
+                bun_core::Output::flush();
+                bun_core::Global::exit(u32::from(code));
+            }
+        }
         let script = if super::devtools_command::is_devtools_invocation() {
             bun_core::runtime_embed_file!(Codegen, "eval/devtools.ts").as_bytes()
         } else {
@@ -27,7 +35,10 @@ impl ToolchainCommand {
 
 /// Command names `eval/toolchain.ts` dispatches on (its `COMMANDS`).
 pub(crate) fn is_toolchain_name(arg: &[u8]) -> bool {
-    matches!(arg, b"lint" | b"fmt" | b"n2b" | b"migrate" | b"wasm" | b"build" | b"create" | b"c")
+    matches!(
+        arg,
+        b"lint" | b"fmt" | b"n2b" | b"migrate" | b"wasm" | b"build" | b"create" | b"c"
+    )
 }
 
 /// Whether `bun <name>` is `bun run <name>`: `scripts.<name>` of the nearest `package.json`, which

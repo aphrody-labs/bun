@@ -79,7 +79,7 @@ fn migrate_tauri_dir(tauri_dir: &Path) -> Result<()> {
 
 fn migrate_npm_dependencies(frontend_dir: &Path) -> Result<()> {
   let pm = PackageManager::from_project(frontend_dir);
-  let npm_version = format!("^{}.0", generic_dependency_version());
+  let npm_version = format!("^{}", generic_dependency_version());
 
   let packages = ["@aphrody/cli".to_string(), "@aphrody/api".to_string()]
     .into_iter()
@@ -112,18 +112,8 @@ fn version_metadata() -> Result<VersionMetadata> {
     .context("failed to parse version metadata")
 }
 
-/// The version requirement matching any release of this major (and pre-release channel), e.g. `3.0.0-alpha`.
 fn generic_dependency_version() -> String {
-  let pre = env!("CARGO_PKG_VERSION_PRE");
-  if pre.is_empty() {
-    format!("{}.0.0", env!("CARGO_PKG_VERSION_MAJOR"))
-  } else {
-    format!(
-      "{}.0.0-{}",
-      env!("CARGO_PKG_VERSION_MAJOR"),
-      pre.split('.').next().unwrap()
-    )
-  }
+  env!("CARGO_PKG_VERSION").to_string()
 }
 
 #[cfg(test)]
@@ -178,6 +168,31 @@ mod tests {
     // migrating again is a no-op
     super::migrate_tauri_dir(temp_dir.path()).expect("failed to migrate again");
     pretty_assertions::assert_eq!(read_files(temp_dir.path()), migrated);
+  }
+
+  #[test]
+  fn migration_targets_owned_release_and_remains_idempotent() {
+    let mut manifest: toml_edit::DocumentMut = "[package]\nname = \"app\"\nversion = \"1.0.0\"\n[dependencies]\ntauri = \"2.0.0\"\n[build-dependencies]\ntauri-build = \"2.0.0\"\n".parse().unwrap();
+    super::manifest::migrate_manifest(&mut manifest, &super::version_metadata().unwrap());
+    assert_eq!(
+      manifest["dependencies"]["tauri"]["package"].as_str(),
+      Some("aphrody-tauri")
+    );
+    assert_eq!(
+      manifest["dependencies"]["tauri"]["version"].as_str(),
+      Some("1.4.4")
+    );
+    assert_eq!(
+      manifest["dependencies"]["tauri-runtime-cef"]["package"].as_str(),
+      Some("aphrody-tauri-runtime-cef")
+    );
+    assert_eq!(
+      manifest["build-dependencies"]["tauri-build"]["package"].as_str(),
+      Some("aphrody-tauri-build")
+    );
+    let before = manifest.to_string();
+    super::manifest::migrate_manifest(&mut manifest, &super::version_metadata().unwrap());
+    assert_eq!(manifest.to_string(), before);
   }
 
   #[test]

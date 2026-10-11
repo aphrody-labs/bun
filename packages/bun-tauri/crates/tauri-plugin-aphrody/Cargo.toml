@@ -1,6 +1,6 @@
 [package]
 name = "tauri-plugin-aphrody"
-version = "3.0.0-alpha.4"
+version = "1.4.4"
 description = "Every Tauri plugin of the aphrody fork in one crate, with Bun as a first-class runtime."
 edition.workspace = true
 rust-version.workspace = true

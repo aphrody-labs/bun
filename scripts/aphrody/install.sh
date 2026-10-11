@@ -2,11 +2,11 @@
 # Installs the aphrody-labs/bun runtime from its GitHub releases.
 #
 #   curl -fsSL https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install.sh | bash
-#   ... | bash -s 1.4.3                       # newest aphrody.N build of upstream base 1.4.3
+#   ... | bash -s 1.4.4                       # exact stable release
 #   ... | bash -s aphrody-v1.4.3-aphrody.1    # exact release tag
 #
 # BUN_INSTALL (default ~/.bun) receives bin/bun and bin/bunx. APHRODY_BUN_REPO overrides the repository,
-# GITHUB_TOKEN (or GH_TOKEN) authenticates the release lookup.
+# GITHUB_TOKEN (or GH_TOKEN) enables authenticated downloads through an installed GitHub CLI.
 set -euo pipefail
 
 die() { echo "error: $*" >&2; exit 1; }
@@ -41,6 +41,21 @@ api() {
   curl "${args[@]}" "https://api.github.com/repos/$repo/$1"
 }
 
+download() {
+  local destination=$1 url=$2 asset=${2##*/} args=(-fsSL --retry 3)
+  if [[ -n $token ]]; then
+    command -v gh >/dev/null || die "authenticated release downloads require the GitHub CLI"
+    [[ $asset =~ ^[a-zA-Z0-9.-]+$ ]] || die "invalid release asset name"
+    url=$(GH_TOKEN="$token" gh api --hostname github.com "repos/$repo/releases/tags/$tag" --jq \
+      "[.assets[] | select(.name == \"$asset\") | .url] | if length == 1 then .[0] else error(\"release asset must be unique\") end") \
+      || die "release must contain exactly one asset named $asset"
+    [[ $url == "https://api.github.com/repos/$repo/releases/assets/"* ]] || die "release asset URL does not belong to the selected repository"
+    [[ ${url#"https://api.github.com/repos/$repo/releases/assets/"} =~ ^[0-9]+$ ]] || die "invalid release asset id"
+    args+=(-H "Authorization: Bearer $token" -H 'Accept: application/octet-stream')
+  fi
+  curl "${args[@]}" -o "$destination" "$url"
+}
+
 case "$version" in
   # The repository also publishes other releases (tools, n2b): the newest runtime release, not GitHub's "latest".
   latest)
@@ -63,19 +78,36 @@ esac
 base="https://github.com/$repo/releases/download/$tag"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-curl -fsSL --retry 3 -o "$tmp/bun.zip" "$base/bun-$target.zip" || die "download failed: $base/bun-$target.zip"
-if curl -fsSL --retry 3 -o "$tmp/SHA256SUMS.txt" "$base/SHA256SUMS.txt"; then
-  want=$(grep " bun-$target.zip\$" "$tmp/SHA256SUMS.txt" | cut -d' ' -f1)
-  if command -v sha256sum >/dev/null; then got=$(sha256sum "$tmp/bun.zip" | cut -d' ' -f1)
-  else got=$(shasum -a 256 "$tmp/bun.zip" | cut -d' ' -f1); fi
-  [[ -n $want && $want = "$got" ]] || die "checksum mismatch for bun-$target.zip (SHA256SUMS.txt: ${want:-none}, downloaded: $got)"
-fi
+download "$tmp/bun.zip" "$base/bun-$target.zip" || die "download failed: $base/bun-$target.zip"
+download "$tmp/SHA256SUMS.txt" "$base/SHA256SUMS.txt" || die "release checksums are required"
+want=$(awk -v asset="bun-$target.zip" '$2 == asset { print $1 }' "$tmp/SHA256SUMS.txt")
+[[ $want =~ ^[[:xdigit:]]{64}$ ]] || die "release checksum must name the archive exactly once"
+want=$(printf "%s" "$want" | tr '[:upper:]' '[:lower:]')
+if command -v sha256sum >/dev/null; then got=$(sha256sum "$tmp/bun.zip" | cut -d' ' -f1)
+else got=$(shasum -a 256 "$tmp/bun.zip" | cut -d' ' -f1); fi
+[[ $want = "$got" ]] || die "checksum mismatch for bun-$target.zip (SHA256SUMS.txt: $want, downloaded: $got)"
 
 unzip -oqd "$tmp" "$tmp/bun.zip"
+candidate="$tmp/bun-$target/$exe"
+chmod +x "$candidate"
+revision=$("$candidate" --revision) || die "downloaded runtime does not run on this system"
+"$candidate" -e 'if (Bun.resolveSync("picocolors", ".") !== "picocolors") process.exit(1)' || die "downloaded runtime is not the Aphrody fork"
+expected_version=${tag#bun-v}
+expected_version=${expected_version#aphrody-v}
+actual_version=$("$candidate" --version) || die "downloaded runtime version could not be read"
+[[ $actual_version = "$expected_version" ]] || die "downloaded runtime version does not match the selected release"
 mkdir -p "$install_dir/bin"
-mv -f "$tmp/bun-$target/$exe" "$install_dir/bin/bun"
-chmod +x "$install_dir/bin/bun"
-ln -sf bun "$install_dir/bin/bunx"
-revision=$("$install_dir/bin/bun" --revision) || die "$install_dir/bin/bun does not run on this system (glibc $(ldd --version 2>/dev/null | head -1 | grep -o '[0-9.]*$'))"
+stage="$install_dir/bin/.bun-stage-$$"
+backup="$install_dir/bin/.bun-backup-$$"
+[[ ! -d "$install_dir/bin/bun" && ! -d "$install_dir/bin/bunx" ]] || die "runtime paths must not be directories"
+[[ ! -e $stage && ! -L $stage && ! -e $backup && ! -L $backup ]] || die "installation staging paths already exist"
+cp "$candidate" "$stage"
+if [[ -e "$install_dir/bin/bun" || -L "$install_dir/bin/bun" ]]; then cp -Pp "$install_dir/bin/bun" "$backup"; fi
+if ! mv -f "$stage" "$install_dir/bin/bun" || ! ln -sf bun "$install_dir/bin/bunx"; then
+  if [[ -e $backup || -L $backup ]]; then mv -f "$backup" "$install_dir/bin/bun"; else rm -f "$install_dir/bin/bun"; fi
+  rm -f "$stage"
+  die "installation failed; the previous runtime was retained"
+fi
+rm -f "$backup"
 echo "Installed $tag ($revision) to $install_dir/bin/bun"
 case ":$PATH:" in *":$install_dir/bin:"*) ;; *) echo "Add $install_dir/bin to PATH" ;; esac

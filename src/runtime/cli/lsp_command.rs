@@ -23,7 +23,12 @@ fn path_of(bytes: &[u8]) -> PathBuf {
 }
 
 impl NativeChecker for BunCheck {
-    fn check(&self, root: &Path, files: &[PathBuf], texts: &[(PathBuf, String)]) -> Result<Vec<NativeDiagnostic>, String> {
+    fn check(
+        &self,
+        root: &Path,
+        files: &[PathBuf],
+        texts: &[(PathBuf, String)],
+    ) -> Result<Vec<NativeDiagnostic>, String> {
         let _turn = self.turn.lock();
         let cwd = native_bytes(root);
         let paths: Vec<Vec<u8>> = files.iter().map(|it| native_bytes(it)).collect();
@@ -31,7 +36,10 @@ impl NativeChecker for BunCheck {
             .map(|(path, text)| (native_bytes(path), text.as_bytes().to_vec()))
             .collect();
         let report = super::check_command::check_for_language_server(&cwd, &paths, &texts);
-        let wanted: Vec<String> = files.iter().map(|it| bun_lsp::protocol::path_key(it)).collect();
+        let wanted: Vec<String> = files
+            .iter()
+            .map(|it| bun_lsp::protocol::path_key(it))
+            .collect();
         let mut diagnostics = Vec::new();
         for diagnostic in &report.diagnostics {
             let path = match diagnostic.path.is_empty() {
@@ -48,11 +56,15 @@ impl NativeChecker for BunCheck {
                 Category::Message => 3,
                 Category::Suggestion => 4,
             };
-            let position = |line: u32, column: u32| (line.saturating_sub(1), column.saturating_sub(1));
+            let position =
+                |line: u32, column: u32| (line.saturating_sub(1), column.saturating_sub(1));
             diagnostics.push(NativeDiagnostic {
                 path,
                 start: position(diagnostic.line, diagnostic.column),
-                end: position(diagnostic.end_line.max(diagnostic.line), diagnostic.end_column),
+                end: position(
+                    diagnostic.end_line.max(diagnostic.line),
+                    diagnostic.end_column,
+                ),
                 severity,
                 code: (diagnostic.code != 0).then(|| diagnostic.code.to_string()),
                 message: BStr::new(&diagnostic.text).to_string(),
@@ -66,7 +78,8 @@ struct Stdin;
 
 impl std::io::Read for Stdin {
     fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
-        bun_sys::read(bun_sys::Fd::stdin(), buffer).map_err(|err| std::io::Error::from_raw_os_error(err.errno as i32))
+        bun_sys::read(bun_sys::Fd::stdin(), buffer)
+            .map_err(|err| std::io::Error::from_raw_os_error(err.errno as i32))
     }
 }
 

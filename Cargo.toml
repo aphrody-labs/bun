@@ -118,6 +118,7 @@ members = [
   "src/spawn_sys",
   "src/no_window",
   "src/ssh",
+  "src/docker",
   "src/git",
   "src/bunfig",
 ]
@@ -127,10 +128,10 @@ members = [
 # heavy dev-dependencies (criterion, html5ever) never enter `Cargo.lock`.
 # `packages/bun-cosmic` is the libcosmic window helper of `bun:cosmic`: its own
 # workspace and lockfile, because libcosmic is a git dependency.
-exclude = ["vendor", "packages/bun-cosmic", "packages/bun-dotnet-native", "packages/bun-re"]
+exclude = ["packages/bun-oxc", "vendor", "packages/bun-cosmic", "packages/bun-dotnet-native", "packages/bun-re", "packages/bun-native-plugin-rs"]
 
 [workspace.package]
-version = "0.0.0"
+version = "1.4.4"
 edition = "2024"
 
 # ─── Release optimization ───────────────────────────────────────────────────
@@ -478,6 +479,7 @@ bun_patch_jsc = { path = "src/patch_jsc" }
 bun_router = { path = "src/router" }
 bun_shell_parser = { path = "src/shell_parser" }
 bun_ssh = { path = "src/ssh" }
+bun_docker = { path = "src/docker" }
 bun_spawn = { path = "src/spawn" }
 bun_spawn_sys = { path = "src/spawn_sys" }
 bun_no_window = { path = "src/no_window" }
@@ -494,3 +496,36 @@ bun_transpiler = { path = "src/transpiler" }
 
 [profile.release.package.bun_react_compiler]
 opt-level = "s"
+
+[patch.crates-io]
+oxc = { path = "vendor/oxc/crates/oxc" }
+oxc_allocator = { path = "vendor/oxc/crates/oxc_allocator" }
+oxc_ast = { path = "vendor/oxc/crates/oxc_ast" }
+oxc_ast_macros = { path = "vendor/oxc/crates/oxc_ast_macros" }
+oxc_ast_visit = { path = "vendor/oxc/crates/oxc_ast_visit" }
+oxc_cfg = { path = "vendor/oxc/crates/oxc_cfg" }
+oxc_codegen = { path = "vendor/oxc/crates/oxc_codegen" }
+oxc_compat = { path = "vendor/oxc/crates/oxc_compat" }
+oxc_data_structures = { path = "vendor/oxc/crates/oxc_data_structures" }
+oxc_diagnostics = { path = "vendor/oxc/crates/oxc_diagnostics" }
+oxc_ecmascript = { path = "vendor/oxc/crates/oxc_ecmascript" }
+oxc_estree = { path = "vendor/oxc/crates/oxc_estree" }
+oxc_estree_tokens = { path = "vendor/oxc/crates/oxc_estree_tokens" }
+oxc_isolated_declarations = { path = "vendor/oxc/crates/oxc_isolated_declarations" }
+oxc_jsdoc = { path = "vendor/oxc/crates/oxc_jsdoc" }
+oxc_mangler = { path = "vendor/oxc/crates/oxc_mangler" }
+oxc_minifier = { path = "vendor/oxc/crates/oxc_minifier" }
+oxc_minify_napi = { path = "vendor/oxc/napi/minify" }
+oxc_napi = { path = "vendor/oxc/crates/oxc_napi" }
+oxc_parser = { path = "vendor/oxc/crates/oxc_parser" }
+oxc_parser_napi = { path = "vendor/oxc/napi/parser" }
+oxc_regular_expression = { path = "vendor/oxc/crates/oxc_regular_expression" }
+oxc_semantic = { path = "vendor/oxc/crates/oxc_semantic" }
+oxc_span = { path = "vendor/oxc/crates/oxc_span" }
+oxc_str = { path = "vendor/oxc/crates/oxc_str" }
+oxc_syntax = { path = "vendor/oxc/crates/oxc_syntax" }
+oxc_transform_napi = { path = "vendor/oxc/napi/transform" }
+oxc_transformer = { path = "vendor/oxc/crates/oxc_transformer" }
+oxc_transformer_plugins = { path = "vendor/oxc/crates/oxc_transformer_plugins" }
+oxc_traverse = { path = "vendor/oxc/crates/oxc_traverse" }
+

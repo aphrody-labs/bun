@@ -28,7 +28,7 @@ checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
 
 [[package]]
 name = "bun-capture"
-version = "1.0.0-canary"
+version = "1.4.4"
 dependencies = [
  "image",
  "thiserror",
@@ -37,7 +37,7 @@ dependencies = [
 
 [[package]]
 name = "bun-fsindex"
-version = "1.0.0-canary"
+version = "1.4.4"
 dependencies = [
  "rusqlite",
  "serde",
@@ -49,7 +49,7 @@ dependencies = [
 
 [[package]]
 name = "bun-guard"
-version = "1.0.0-canary"
+version = "1.4.4"
 dependencies = [
  "libc",
  "pretty_assertions",
@@ -57,7 +57,7 @@ dependencies = [
 
 [[package]]
 name = "bun-proc"
-version = "1.0.0-canary"
+version = "1.4.4"
 dependencies = [
  "pretty_assertions",
  "rustix",

@@ -36,6 +36,10 @@ runs:
       run: |
         set -euo pipefail
         repo="${APHRODY_BUN_REPO:-aphrody-labs/bun}"
+        case "$repo" in
+          aphrody-labs/bun | aphrody-labs/bun-os) ;;
+          *) echo "::error::only an owner Bun fork may bootstrap this toolchain"; exit 1;;
+        esac
         case "$(uname -s)" in
           Linux*)  os=linux;;
           Darwin*) os=darwin;;
@@ -98,5 +102,10 @@ runs:
           chmod +x "$RUNNER_TEMP"/.bun/bin/*
           ln -fs "$RUNNER_TEMP/.bun/bin/bun" "$RUNNER_TEMP/.bun/bin/bunx"
         fi
+        revision=$("$RUNNER_TEMP/.bun/bin/bun" --revision)
+        case "$revision" in
+          *aphrody*) ;;
+          *) echo "::error::bootstrap runtime is not the Aphrody fork"; exit 1;;
+        esac
         echo "$RUNNER_TEMP/.bun/bin" >> "$GITHUB_PATH"
-        echo "Installed $repo $tag ($target): $("$RUNNER_TEMP/.bun/bin/bun" --revision)"
+        echo "Installed $repo $tag ($target): $revision"

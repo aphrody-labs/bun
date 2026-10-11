@@ -1,45 +1,360 @@
-# bun-agent-plugin
+# Bun agent plugin
 
-The Aphrody runtime ([aphrody-labs/bun](https://github.com/aphrody-labs/bun)) as a plugin for Claude Code, Codex and Antigravity/Gemini CLI: its MCP server (`bun mcp`), hooks that run `bun`, `bunx` and `bun uv` instead of `node`, `npm`, `npx`, `yarn`, `pnpm`, `pip` and `python`, and skills for building, testing and navigating Bun.
+Generated from source c73c54fc20222be4f873f90106c49eebad3c7d08.
+
+Providers: Claude, Codex and Antigravity. This bundle is generated source material; installation does not qualify a newer native runtime.
+
+## Installation and checkout generation
+
+Use a qualified Aphrody Bun runtime to install its embedded plugin. Select one or more provider targets (`claude`, `codex`, `agy`); reload the provider session after installation. Checkout generation reads the selected checkout sources.
 
 ```sh
-bun agent-plugin install            # the copy carried by the bun executable, into every agent found
-bun agent-plugin install claude     # one agent
-bun agent-plugin uninstall
+bun agent-plugin install claude codex agy
+bun agent-plugin install --update
 bun agent-plugin doctor
+bun run agent-plugin generate --out tmp/agent-plugin
 ```
 
-From a checkout of the repository (generates from the checkout first):
+Commands registered in the pinned package CLI: `doctor`, `generate`, `help`, `inputs`, `install`, `memory`, `pack`, `uninstall`.
 
-```sh
-bun scripts/aphrody/agent-plugin.ts install
-bun run agent-plugin install        # same, through the package.json script
-```
+## Native MCP tools
 
-## Commands
+- docs_search: Search Bun docs
+- docs_read: Read a Bun docs page
+- skills_list: List agent skills
+- skill_read: Read an agent skill
+- memory_search: Search project memory
+- memory_read: Read a memory
+- memory_write: Save a memory
+- memory_import: Import Markdown memories
+- graph_query: Query the code graph
+- graph_symbols: Find symbols
+- graph_callers: Find callers or callees
+- graph_path: Path between symbols
+- graph_community: Code communities
+- graph_impact: Change impact
+- host_inventory: Host inventory
+- host_find: Find a host
+- vfs_find: Find files
+- vfs_grep: Search file contents
+- vfs_edit: Preview a bulk edit
+- vfs_apply: Apply a bulk edit
+- lsp_diagnostics: Diagnostics
+- lsp_definition: Go to definition
+- lsp_references: Find references
+- lsp_hover: Hover
+- lsp_rename: Rename symbol
+- lsp_symbols: Symbols
+- run: bun run
+- test: bun test
+- git_ingest: Directory digest
+- deps_list: List dependencies
+- deps_info: Dependency facts
+- deps_tree: Dependency tree
+- deps_read: Read a dependency file
+- deps_search: Search dependency sources
+- deps_docs: Search dependency documentation
 
-| Command                                                                                  | Does                                                                                             |
-| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `install [claude\|codex\|agy]... [--home DIR] [--dry-run] [--update] [--quiet] [--json]` | install for the agents named, or every agent found                                               |
-| `uninstall [claude\|codex\|agy]... [--home DIR] [--dry-run]`                             | take back exactly what `install` added                                                           |
-| `generate [--out DIR] [--check]`                                                         | write the three plugins (default `dist/`); `--check` fails when `dist/` is stale                 |
-| `pack --out FILE`                                                                        | the archive the build embeds in the executable (`codegen/agent-plugin.bin`)                      |
-| `inputs`                                                                                 | every file `generate` reads                                                                      |
-| `memory --from DIR`                                                                      | import notes (`bun-*.md`) into `memory/`, without personal paths, hosts, accounts or credentials |
-| `doctor`                                                                                 | whether the `bun` on `PATH` is the Aphrody runtime, and which plugin is installed                |
+## Native LSP extensions
 
-Common options: `--root DIR` (the checkout; default: the one this package is in), `--skills DIR` (more skill directories, `<dir>/<name>/SKILL.md`), `--from DIR` (install an already generated tree).
+- .c: c
+- .c++: cpp
+- .cc: cpp
+- .cjs: javascript
+- .cpp: cpp
+- .cts: typescript
+- .cxx: cpp
+- .h: cpp
+- .h++: cpp
+- .hh: cpp
+- .hpp: cpp
+- .hxx: cpp
+- .inl: cpp
+- .ipp: cpp
+- .js: javascript
+- .jsx: javascriptreact
+- .m: objective-c
+- .mjs: javascript
+- .mm: objective-cpp
+- .mts: typescript
+- .py: python
+- .pyi: python
+- .rs: rust
+- .ts: typescript
+- .tsx: typescriptreact
 
-## Layout
+## Skills and references
 
-| Path              | What                                                                                                                                                                                                |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/generate.ts` | the generator: repository skills and commands, docs, `CLAUDE.md`, `package.json` scripts, crates, `test/harness.ts` exports and `memory/` into `claude/`, `codex/`, `agy/` and the two marketplaces |
-| `src/install.ts`  | the installer: `~/.bun/agent-plugin`, merged into `~/.claude/settings.json`, `~/.codex/config.toml` and `AGENTS.md`, `~/.gemini/config/plugins/bun`                                                 |
-| `src/hooks/`      | the hook scripts, shipped as is in every target                                                                                                                                                     |
-| `src/catalog.ts`  | the tools of `bun mcp` and the languages of `bun lsp`, read from their sources                                                                                                                      |
-| `src/sanitize.ts` | what a note may not contain once shipped                                                                                                                                                            |
-| `src/archive.ts`  | the archive format read by `src/runtime/cli/agent_plugin_command.rs`                                                                                                                                |
-| `memory/`         | the notes the skills reference                                                                                                                                                                      |
-
-The plugins are generated, never edited: change the sources, then `generate`. Documentation: `docs/project/agent-plugin.mdx`.
+- [agy/skills/bun-aphrody/references/bun-aphrody-graph-memory.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-aphrody/references/bun-aphrody-graph-memory.md)
+- [agy/skills/bun-aphrody/references/bun-fork-aphrody.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-aphrody/references/bun-fork-aphrody.md)
+- [agy/skills/bun-aphrody/references/bun-graph-hotspots.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-aphrody/references/bun-graph-hotspots.md)
+- [agy/skills/bun-aphrody/references/bun-graph-structure.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-aphrody/references/bun-graph-structure.md)
+- [agy/skills/bun-aphrody/references/bun-mcp-tools.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-aphrody/references/bun-mcp-tools.md)
+- [agy/skills/bun-aphrody/references/bun-skills-catalog.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-aphrody/references/bun-skills-catalog.md)
+- [agy/skills/bun-aphrody/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-aphrody/SKILL.md)
+- [agy/skills/bun-apis/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-apis/SKILL.md)
+- [agy/skills/bun-build/references/bun-build-alpine.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-build/references/bun-build-alpine.md)
+- [agy/skills/bun-build/references/bun-build-ci.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-build/references/bun-build-ci.md)
+- [agy/skills/bun-build/references/bun-build-codegen.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-build/references/bun-build-codegen.md)
+- [agy/skills/bun-build/references/bun-build-commands.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-build/references/bun-build-commands.md)
+- [agy/skills/bun-build/references/bun-build-deps-vendor.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-build/references/bun-build-deps-vendor.md)
+- [agy/skills/bun-build/references/bun-build-lint-format.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-build/references/bun-build-lint-format.md)
+- [agy/skills/bun-build/references/bun-build-system-internals.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-build/references/bun-build-system-internals.md)
+- [agy/skills/bun-build/references/bun-build-tooling-misc.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-build/references/bun-build-tooling-misc.md)
+- [agy/skills/bun-build/references/bun-build-windows.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-build/references/bun-build-windows.md)
+- [agy/skills/bun-build/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-build/SKILL.md)
+- [agy/skills/bun-crates/references/bun-core-classes-ts-bindings.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-crates/references/bun-core-classes-ts-bindings.md)
+- [agy/skills/bun-crates/references/bun-core-crate-map.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-crates/references/bun-core-crate-map.md)
+- [agy/skills/bun-crates/references/bun-core-event-loop.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-crates/references/bun-core-event-loop.md)
+- [agy/skills/bun-crates/references/bun-core-gc-lifetimes.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-crates/references/bun-core-gc-lifetimes.md)
+- [agy/skills/bun-crates/references/bun-core-idioms.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-crates/references/bun-core-idioms.md)
+- [agy/skills/bun-crates/references/bun-core-jsc-rust-api.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-crates/references/bun-core-jsc-rust-api.md)
+- [agy/skills/bun-crates/references/bun-core-strings-fmt-output.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-crates/references/bun-core-strings-fmt-output.md)
+- [agy/skills/bun-crates/references/bun-core-sys-syscalls.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-crates/references/bun-core-sys-syscalls.md)
+- [agy/skills/bun-crates/references/bun-toolchain-bake.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-crates/references/bun-toolchain-bake.md)
+- [agy/skills/bun-crates/references/bun-toolchain-bundler.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-crates/references/bun-toolchain-bundler.md)
+- [agy/skills/bun-crates/references/bun-toolchain-check-sema.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-crates/references/bun-toolchain-check-sema.md)
+- [agy/skills/bun-crates/references/bun-toolchain-css-parsers.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-crates/references/bun-toolchain-css-parsers.md)
+- [agy/skills/bun-crates/references/bun-toolchain-parser.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-crates/references/bun-toolchain-parser.md)
+- [agy/skills/bun-crates/references/bun-toolchain-printer-ast.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-crates/references/bun-toolchain-printer-ast.md)
+- [agy/skills/bun-crates/references/bun-toolchain-transpiler-resolver.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-crates/references/bun-toolchain-transpiler-resolver.md)
+- [agy/skills/bun-crates/references/src-guide.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-crates/references/src-guide.md)
+- [agy/skills/bun-crates/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-crates/SKILL.md)
+- [agy/skills/bun-deps/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-deps/SKILL.md)
+- [agy/skills/bun-docs/references/bun-docs-bundler.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-docs/references/bun-docs-bundler.md)
+- [agy/skills/bun-docs/references/bun-docs-bunfig-env.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-docs/references/bun-docs-bunfig-env.md)
+- [agy/skills/bun-docs/references/bun-docs-http-networking.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-docs/references/bun-docs-http-networking.md)
+- [agy/skills/bun-docs/references/bun-docs-map.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-docs/references/bun-docs-map.md)
+- [agy/skills/bun-docs/references/bun-docs-pm.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-docs/references/bun-docs-pm.md)
+- [agy/skills/bun-docs/references/bun-docs-runtime-apis-a-m.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-docs/references/bun-docs-runtime-apis-a-m.md)
+- [agy/skills/bun-docs/references/bun-docs-runtime-apis-n-z.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-docs/references/bun-docs-runtime-apis-n-z.md)
+- [agy/skills/bun-docs/references/bun-docs-test.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-docs/references/bun-docs-test.md)
+- [agy/skills/bun-docs/references/bun-docs-voice-contributing.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-docs/references/bun-docs-voice-contributing.md)
+- [agy/skills/bun-docs/references/bun-packages.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-docs/references/bun-packages.md)
+- [agy/skills/bun-docs/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-docs/SKILL.md)
+- [agy/skills/bun-graph/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-graph/SKILL.md)
+- [agy/skills/bun-runtime/references/bun-graph-call-paths.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-runtime/references/bun-graph-call-paths.md)
+- [agy/skills/bun-runtime/references/bun-install-architecture.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-runtime/references/bun-install-architecture.md)
+- [agy/skills/bun-runtime/references/bun-install-cli-map.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-runtime/references/bun-install-cli-map.md)
+- [agy/skills/bun-runtime/references/bun-install-linkers-workspaces.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-runtime/references/bun-install-linkers-workspaces.md)
+- [agy/skills/bun-runtime/references/bun-install-lockfile.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-runtime/references/bun-install-lockfile.md)
+- [agy/skills/bun-runtime/references/bun-runtime-builtin-js-modules.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-runtime/references/bun-runtime-builtin-js-modules.md)
+- [agy/skills/bun-runtime/references/bun-runtime-bun-apis.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-runtime/references/bun-runtime-bun-apis.md)
+- [agy/skills/bun-runtime/references/bun-runtime-cli-commands.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-runtime/references/bun-runtime-cli-commands.md)
+- [agy/skills/bun-runtime/references/bun-runtime-http-sql-valkey.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-runtime/references/bun-runtime-http-sql-valkey.md)
+- [agy/skills/bun-runtime/references/bun-runtime-node-compat.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-runtime/references/bun-runtime-node-compat.md)
+- [agy/skills/bun-runtime/references/bun-runtime-server.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-runtime/references/bun-runtime-server.md)
+- [agy/skills/bun-runtime/references/bun-runtime-shell.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-runtime/references/bun-runtime-shell.md)
+- [agy/skills/bun-runtime/references/bun-runtime-test-runner.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-runtime/references/bun-runtime-test-runner.md)
+- [agy/skills/bun-runtime/references/bun-runtime-webcore-fetch-streams.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-runtime/references/bun-runtime-webcore-fetch-streams.md)
+- [agy/skills/bun-runtime/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-runtime/SKILL.md)
+- [agy/skills/bun-tests/references/bun-review-rules.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-tests/references/bun-review-rules.md)
+- [agy/skills/bun-tests/references/bun-tests-harness.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-tests/references/bun-tests-harness.md)
+- [agy/skills/bun-tests/references/bun-tests-layout.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-tests/references/bun-tests-layout.md)
+- [agy/skills/bun-tests/references/bun-tests-patterns.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-tests/references/bun-tests-patterns.md)
+- [agy/skills/bun-tests/references/bun-tests-runner-ci.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-tests/references/bun-tests-runner-ci.md)
+- [agy/skills/bun-tests/references/bun-toolchain-bundler-tests.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-tests/references/bun-toolchain-bundler-tests.md)
+- [agy/skills/bun-tests/references/test-guide.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-tests/references/test-guide.md)
+- [agy/skills/bun-tests/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/bun-tests/SKILL.md)
+- [agy/skills/cpp-bun/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/cpp-bun/SKILL.md)
+- [agy/skills/implementing-jsc-classes-cpp/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/implementing-jsc-classes-cpp/SKILL.md)
+- [agy/skills/implementing-jsc-classes-rust/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/implementing-jsc-classes-rust/SKILL.md)
+- [agy/skills/javascriptcore-garbage-collector/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/javascriptcore-garbage-collector/SKILL.md)
+- [agy/skills/linux-kernel/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/linux-kernel/SKILL.md)
+- [agy/skills/n2b/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/n2b/SKILL.md)
+- [agy/skills/rust-system-calls/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/rust-system-calls/SKILL.md)
+- [agy/skills/slowest-tests/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/slowest-tests/SKILL.md)
+- [agy/skills/source-command-dedupe/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/source-command-dedupe/SKILL.md)
+- [agy/skills/source-command-find-duplicate-prs/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/source-command-find-duplicate-prs/SKILL.md)
+- [agy/skills/source-command-find-issues/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/source-command-find-issues/SKILL.md)
+- [agy/skills/source-command-upgrade-boringssl/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/source-command-upgrade-boringssl/SKILL.md)
+- [agy/skills/source-command-upgrade-nodejs/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/source-command-upgrade-nodejs/SKILL.md)
+- [agy/skills/source-command-upgrade-webkit/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/source-command-upgrade-webkit/SKILL.md)
+- [agy/skills/verify/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/verify/SKILL.md)
+- [agy/skills/webkit/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/webkit/SKILL.md)
+- [agy/skills/win32/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/win32/SKILL.md)
+- [agy/skills/work/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/work/SKILL.md)
+- [agy/skills/writing-bundler-tests/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/writing-bundler-tests/SKILL.md)
+- [agy/skills/writing-dev-server-tests/SKILL.md](https://bun.aphrody.com/knowledge/plugin/agy/skills/writing-dev-server-tests/SKILL.md)
+- [claude/skills/bun-aphrody/references/bun-aphrody-graph-memory.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-aphrody/references/bun-aphrody-graph-memory.md)
+- [claude/skills/bun-aphrody/references/bun-fork-aphrody.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-aphrody/references/bun-fork-aphrody.md)
+- [claude/skills/bun-aphrody/references/bun-graph-hotspots.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-aphrody/references/bun-graph-hotspots.md)
+- [claude/skills/bun-aphrody/references/bun-graph-structure.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-aphrody/references/bun-graph-structure.md)
+- [claude/skills/bun-aphrody/references/bun-mcp-tools.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-aphrody/references/bun-mcp-tools.md)
+- [claude/skills/bun-aphrody/references/bun-skills-catalog.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-aphrody/references/bun-skills-catalog.md)
+- [claude/skills/bun-aphrody/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-aphrody/SKILL.md)
+- [claude/skills/bun-apis/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-apis/SKILL.md)
+- [claude/skills/bun-build/references/bun-build-alpine.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-build/references/bun-build-alpine.md)
+- [claude/skills/bun-build/references/bun-build-ci.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-build/references/bun-build-ci.md)
+- [claude/skills/bun-build/references/bun-build-codegen.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-build/references/bun-build-codegen.md)
+- [claude/skills/bun-build/references/bun-build-commands.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-build/references/bun-build-commands.md)
+- [claude/skills/bun-build/references/bun-build-deps-vendor.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-build/references/bun-build-deps-vendor.md)
+- [claude/skills/bun-build/references/bun-build-lint-format.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-build/references/bun-build-lint-format.md)
+- [claude/skills/bun-build/references/bun-build-system-internals.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-build/references/bun-build-system-internals.md)
+- [claude/skills/bun-build/references/bun-build-tooling-misc.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-build/references/bun-build-tooling-misc.md)
+- [claude/skills/bun-build/references/bun-build-windows.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-build/references/bun-build-windows.md)
+- [claude/skills/bun-build/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-build/SKILL.md)
+- [claude/skills/bun-crates/references/bun-core-classes-ts-bindings.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-crates/references/bun-core-classes-ts-bindings.md)
+- [claude/skills/bun-crates/references/bun-core-crate-map.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-crates/references/bun-core-crate-map.md)
+- [claude/skills/bun-crates/references/bun-core-event-loop.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-crates/references/bun-core-event-loop.md)
+- [claude/skills/bun-crates/references/bun-core-gc-lifetimes.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-crates/references/bun-core-gc-lifetimes.md)
+- [claude/skills/bun-crates/references/bun-core-idioms.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-crates/references/bun-core-idioms.md)
+- [claude/skills/bun-crates/references/bun-core-jsc-rust-api.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-crates/references/bun-core-jsc-rust-api.md)
+- [claude/skills/bun-crates/references/bun-core-strings-fmt-output.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-crates/references/bun-core-strings-fmt-output.md)
+- [claude/skills/bun-crates/references/bun-core-sys-syscalls.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-crates/references/bun-core-sys-syscalls.md)
+- [claude/skills/bun-crates/references/bun-toolchain-bake.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-crates/references/bun-toolchain-bake.md)
+- [claude/skills/bun-crates/references/bun-toolchain-bundler.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-crates/references/bun-toolchain-bundler.md)
+- [claude/skills/bun-crates/references/bun-toolchain-check-sema.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-crates/references/bun-toolchain-check-sema.md)
+- [claude/skills/bun-crates/references/bun-toolchain-css-parsers.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-crates/references/bun-toolchain-css-parsers.md)
+- [claude/skills/bun-crates/references/bun-toolchain-parser.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-crates/references/bun-toolchain-parser.md)
+- [claude/skills/bun-crates/references/bun-toolchain-printer-ast.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-crates/references/bun-toolchain-printer-ast.md)
+- [claude/skills/bun-crates/references/bun-toolchain-transpiler-resolver.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-crates/references/bun-toolchain-transpiler-resolver.md)
+- [claude/skills/bun-crates/references/src-guide.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-crates/references/src-guide.md)
+- [claude/skills/bun-crates/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-crates/SKILL.md)
+- [claude/skills/bun-deps/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-deps/SKILL.md)
+- [claude/skills/bun-docs/references/bun-docs-bundler.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-docs/references/bun-docs-bundler.md)
+- [claude/skills/bun-docs/references/bun-docs-bunfig-env.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-docs/references/bun-docs-bunfig-env.md)
+- [claude/skills/bun-docs/references/bun-docs-http-networking.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-docs/references/bun-docs-http-networking.md)
+- [claude/skills/bun-docs/references/bun-docs-map.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-docs/references/bun-docs-map.md)
+- [claude/skills/bun-docs/references/bun-docs-pm.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-docs/references/bun-docs-pm.md)
+- [claude/skills/bun-docs/references/bun-docs-runtime-apis-a-m.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-docs/references/bun-docs-runtime-apis-a-m.md)
+- [claude/skills/bun-docs/references/bun-docs-runtime-apis-n-z.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-docs/references/bun-docs-runtime-apis-n-z.md)
+- [claude/skills/bun-docs/references/bun-docs-test.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-docs/references/bun-docs-test.md)
+- [claude/skills/bun-docs/references/bun-docs-voice-contributing.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-docs/references/bun-docs-voice-contributing.md)
+- [claude/skills/bun-docs/references/bun-packages.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-docs/references/bun-packages.md)
+- [claude/skills/bun-docs/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-docs/SKILL.md)
+- [claude/skills/bun-graph/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-graph/SKILL.md)
+- [claude/skills/bun-runtime/references/bun-graph-call-paths.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-runtime/references/bun-graph-call-paths.md)
+- [claude/skills/bun-runtime/references/bun-install-architecture.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-runtime/references/bun-install-architecture.md)
+- [claude/skills/bun-runtime/references/bun-install-cli-map.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-runtime/references/bun-install-cli-map.md)
+- [claude/skills/bun-runtime/references/bun-install-linkers-workspaces.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-runtime/references/bun-install-linkers-workspaces.md)
+- [claude/skills/bun-runtime/references/bun-install-lockfile.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-runtime/references/bun-install-lockfile.md)
+- [claude/skills/bun-runtime/references/bun-runtime-builtin-js-modules.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-runtime/references/bun-runtime-builtin-js-modules.md)
+- [claude/skills/bun-runtime/references/bun-runtime-bun-apis.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-runtime/references/bun-runtime-bun-apis.md)
+- [claude/skills/bun-runtime/references/bun-runtime-cli-commands.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-runtime/references/bun-runtime-cli-commands.md)
+- [claude/skills/bun-runtime/references/bun-runtime-http-sql-valkey.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-runtime/references/bun-runtime-http-sql-valkey.md)
+- [claude/skills/bun-runtime/references/bun-runtime-node-compat.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-runtime/references/bun-runtime-node-compat.md)
+- [claude/skills/bun-runtime/references/bun-runtime-server.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-runtime/references/bun-runtime-server.md)
+- [claude/skills/bun-runtime/references/bun-runtime-shell.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-runtime/references/bun-runtime-shell.md)
+- [claude/skills/bun-runtime/references/bun-runtime-test-runner.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-runtime/references/bun-runtime-test-runner.md)
+- [claude/skills/bun-runtime/references/bun-runtime-webcore-fetch-streams.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-runtime/references/bun-runtime-webcore-fetch-streams.md)
+- [claude/skills/bun-runtime/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-runtime/SKILL.md)
+- [claude/skills/bun-tests/references/bun-review-rules.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-tests/references/bun-review-rules.md)
+- [claude/skills/bun-tests/references/bun-tests-harness.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-tests/references/bun-tests-harness.md)
+- [claude/skills/bun-tests/references/bun-tests-layout.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-tests/references/bun-tests-layout.md)
+- [claude/skills/bun-tests/references/bun-tests-patterns.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-tests/references/bun-tests-patterns.md)
+- [claude/skills/bun-tests/references/bun-tests-runner-ci.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-tests/references/bun-tests-runner-ci.md)
+- [claude/skills/bun-tests/references/bun-toolchain-bundler-tests.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-tests/references/bun-toolchain-bundler-tests.md)
+- [claude/skills/bun-tests/references/test-guide.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-tests/references/test-guide.md)
+- [claude/skills/bun-tests/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/bun-tests/SKILL.md)
+- [claude/skills/cpp-bun/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/cpp-bun/SKILL.md)
+- [claude/skills/implementing-jsc-classes-cpp/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/implementing-jsc-classes-cpp/SKILL.md)
+- [claude/skills/implementing-jsc-classes-rust/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/implementing-jsc-classes-rust/SKILL.md)
+- [claude/skills/javascriptcore-garbage-collector/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/javascriptcore-garbage-collector/SKILL.md)
+- [claude/skills/linux-kernel/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/linux-kernel/SKILL.md)
+- [claude/skills/n2b/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/n2b/SKILL.md)
+- [claude/skills/rust-system-calls/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/rust-system-calls/SKILL.md)
+- [claude/skills/slowest-tests/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/slowest-tests/SKILL.md)
+- [claude/skills/source-command-dedupe/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/source-command-dedupe/SKILL.md)
+- [claude/skills/source-command-find-duplicate-prs/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/source-command-find-duplicate-prs/SKILL.md)
+- [claude/skills/source-command-find-issues/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/source-command-find-issues/SKILL.md)
+- [claude/skills/source-command-upgrade-boringssl/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/source-command-upgrade-boringssl/SKILL.md)
+- [claude/skills/source-command-upgrade-nodejs/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/source-command-upgrade-nodejs/SKILL.md)
+- [claude/skills/source-command-upgrade-webkit/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/source-command-upgrade-webkit/SKILL.md)
+- [claude/skills/verify/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/verify/SKILL.md)
+- [claude/skills/webkit/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/webkit/SKILL.md)
+- [claude/skills/win32/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/win32/SKILL.md)
+- [claude/skills/work/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/work/SKILL.md)
+- [claude/skills/writing-bundler-tests/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/writing-bundler-tests/SKILL.md)
+- [claude/skills/writing-dev-server-tests/SKILL.md](https://bun.aphrody.com/knowledge/plugin/claude/skills/writing-dev-server-tests/SKILL.md)
+- [codex/skills/bun-aphrody/references/bun-aphrody-graph-memory.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-aphrody/references/bun-aphrody-graph-memory.md)
+- [codex/skills/bun-aphrody/references/bun-fork-aphrody.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-aphrody/references/bun-fork-aphrody.md)
+- [codex/skills/bun-aphrody/references/bun-graph-hotspots.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-aphrody/references/bun-graph-hotspots.md)
+- [codex/skills/bun-aphrody/references/bun-graph-structure.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-aphrody/references/bun-graph-structure.md)
+- [codex/skills/bun-aphrody/references/bun-mcp-tools.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-aphrody/references/bun-mcp-tools.md)
+- [codex/skills/bun-aphrody/references/bun-skills-catalog.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-aphrody/references/bun-skills-catalog.md)
+- [codex/skills/bun-aphrody/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-aphrody/SKILL.md)
+- [codex/skills/bun-apis/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-apis/SKILL.md)
+- [codex/skills/bun-build/references/bun-build-alpine.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-build/references/bun-build-alpine.md)
+- [codex/skills/bun-build/references/bun-build-ci.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-build/references/bun-build-ci.md)
+- [codex/skills/bun-build/references/bun-build-codegen.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-build/references/bun-build-codegen.md)
+- [codex/skills/bun-build/references/bun-build-commands.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-build/references/bun-build-commands.md)
+- [codex/skills/bun-build/references/bun-build-deps-vendor.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-build/references/bun-build-deps-vendor.md)
+- [codex/skills/bun-build/references/bun-build-lint-format.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-build/references/bun-build-lint-format.md)
+- [codex/skills/bun-build/references/bun-build-system-internals.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-build/references/bun-build-system-internals.md)
+- [codex/skills/bun-build/references/bun-build-tooling-misc.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-build/references/bun-build-tooling-misc.md)
+- [codex/skills/bun-build/references/bun-build-windows.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-build/references/bun-build-windows.md)
+- [codex/skills/bun-build/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-build/SKILL.md)
+- [codex/skills/bun-crates/references/bun-core-classes-ts-bindings.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-crates/references/bun-core-classes-ts-bindings.md)
+- [codex/skills/bun-crates/references/bun-core-crate-map.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-crates/references/bun-core-crate-map.md)
+- [codex/skills/bun-crates/references/bun-core-event-loop.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-crates/references/bun-core-event-loop.md)
+- [codex/skills/bun-crates/references/bun-core-gc-lifetimes.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-crates/references/bun-core-gc-lifetimes.md)
+- [codex/skills/bun-crates/references/bun-core-idioms.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-crates/references/bun-core-idioms.md)
+- [codex/skills/bun-crates/references/bun-core-jsc-rust-api.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-crates/references/bun-core-jsc-rust-api.md)
+- [codex/skills/bun-crates/references/bun-core-strings-fmt-output.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-crates/references/bun-core-strings-fmt-output.md)
+- [codex/skills/bun-crates/references/bun-core-sys-syscalls.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-crates/references/bun-core-sys-syscalls.md)
+- [codex/skills/bun-crates/references/bun-toolchain-bake.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-crates/references/bun-toolchain-bake.md)
+- [codex/skills/bun-crates/references/bun-toolchain-bundler.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-crates/references/bun-toolchain-bundler.md)
+- [codex/skills/bun-crates/references/bun-toolchain-check-sema.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-crates/references/bun-toolchain-check-sema.md)
+- [codex/skills/bun-crates/references/bun-toolchain-css-parsers.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-crates/references/bun-toolchain-css-parsers.md)
+- [codex/skills/bun-crates/references/bun-toolchain-parser.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-crates/references/bun-toolchain-parser.md)
+- [codex/skills/bun-crates/references/bun-toolchain-printer-ast.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-crates/references/bun-toolchain-printer-ast.md)
+- [codex/skills/bun-crates/references/bun-toolchain-transpiler-resolver.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-crates/references/bun-toolchain-transpiler-resolver.md)
+- [codex/skills/bun-crates/references/src-guide.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-crates/references/src-guide.md)
+- [codex/skills/bun-crates/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-crates/SKILL.md)
+- [codex/skills/bun-deps/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-deps/SKILL.md)
+- [codex/skills/bun-docs/references/bun-docs-bundler.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-docs/references/bun-docs-bundler.md)
+- [codex/skills/bun-docs/references/bun-docs-bunfig-env.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-docs/references/bun-docs-bunfig-env.md)
+- [codex/skills/bun-docs/references/bun-docs-http-networking.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-docs/references/bun-docs-http-networking.md)
+- [codex/skills/bun-docs/references/bun-docs-map.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-docs/references/bun-docs-map.md)
+- [codex/skills/bun-docs/references/bun-docs-pm.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-docs/references/bun-docs-pm.md)
+- [codex/skills/bun-docs/references/bun-docs-runtime-apis-a-m.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-docs/references/bun-docs-runtime-apis-a-m.md)
+- [codex/skills/bun-docs/references/bun-docs-runtime-apis-n-z.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-docs/references/bun-docs-runtime-apis-n-z.md)
+- [codex/skills/bun-docs/references/bun-docs-test.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-docs/references/bun-docs-test.md)
+- [codex/skills/bun-docs/references/bun-docs-voice-contributing.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-docs/references/bun-docs-voice-contributing.md)
+- [codex/skills/bun-docs/references/bun-packages.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-docs/references/bun-packages.md)
+- [codex/skills/bun-docs/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-docs/SKILL.md)
+- [codex/skills/bun-graph/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-graph/SKILL.md)
+- [codex/skills/bun-runtime/references/bun-graph-call-paths.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-runtime/references/bun-graph-call-paths.md)
+- [codex/skills/bun-runtime/references/bun-install-architecture.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-runtime/references/bun-install-architecture.md)
+- [codex/skills/bun-runtime/references/bun-install-cli-map.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-runtime/references/bun-install-cli-map.md)
+- [codex/skills/bun-runtime/references/bun-install-linkers-workspaces.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-runtime/references/bun-install-linkers-workspaces.md)
+- [codex/skills/bun-runtime/references/bun-install-lockfile.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-runtime/references/bun-install-lockfile.md)
+- [codex/skills/bun-runtime/references/bun-runtime-builtin-js-modules.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-runtime/references/bun-runtime-builtin-js-modules.md)
+- [codex/skills/bun-runtime/references/bun-runtime-bun-apis.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-runtime/references/bun-runtime-bun-apis.md)
+- [codex/skills/bun-runtime/references/bun-runtime-cli-commands.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-runtime/references/bun-runtime-cli-commands.md)
+- [codex/skills/bun-runtime/references/bun-runtime-http-sql-valkey.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-runtime/references/bun-runtime-http-sql-valkey.md)
+- [codex/skills/bun-runtime/references/bun-runtime-node-compat.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-runtime/references/bun-runtime-node-compat.md)
+- [codex/skills/bun-runtime/references/bun-runtime-server.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-runtime/references/bun-runtime-server.md)
+- [codex/skills/bun-runtime/references/bun-runtime-shell.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-runtime/references/bun-runtime-shell.md)
+- [codex/skills/bun-runtime/references/bun-runtime-test-runner.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-runtime/references/bun-runtime-test-runner.md)
+- [codex/skills/bun-runtime/references/bun-runtime-webcore-fetch-streams.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-runtime/references/bun-runtime-webcore-fetch-streams.md)
+- [codex/skills/bun-runtime/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-runtime/SKILL.md)
+- [codex/skills/bun-tests/references/bun-review-rules.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-tests/references/bun-review-rules.md)
+- [codex/skills/bun-tests/references/bun-tests-harness.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-tests/references/bun-tests-harness.md)
+- [codex/skills/bun-tests/references/bun-tests-layout.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-tests/references/bun-tests-layout.md)
+- [codex/skills/bun-tests/references/bun-tests-patterns.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-tests/references/bun-tests-patterns.md)
+- [codex/skills/bun-tests/references/bun-tests-runner-ci.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-tests/references/bun-tests-runner-ci.md)
+- [codex/skills/bun-tests/references/bun-toolchain-bundler-tests.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-tests/references/bun-toolchain-bundler-tests.md)
+- [codex/skills/bun-tests/references/test-guide.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-tests/references/test-guide.md)
+- [codex/skills/bun-tests/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/bun-tests/SKILL.md)
+- [codex/skills/cpp-bun/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/cpp-bun/SKILL.md)
+- [codex/skills/implementing-jsc-classes-cpp/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/implementing-jsc-classes-cpp/SKILL.md)
+- [codex/skills/implementing-jsc-classes-rust/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/implementing-jsc-classes-rust/SKILL.md)
+- [codex/skills/javascriptcore-garbage-collector/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/javascriptcore-garbage-collector/SKILL.md)
+- [codex/skills/linux-kernel/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/linux-kernel/SKILL.md)
+- [codex/skills/n2b/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/n2b/SKILL.md)
+- [codex/skills/rust-system-calls/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/rust-system-calls/SKILL.md)
+- [codex/skills/slowest-tests/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/slowest-tests/SKILL.md)
+- [codex/skills/source-command-dedupe/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/source-command-dedupe/SKILL.md)
+- [codex/skills/source-command-find-duplicate-prs/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/source-command-find-duplicate-prs/SKILL.md)
+- [codex/skills/source-command-find-issues/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/source-command-find-issues/SKILL.md)
+- [codex/skills/source-command-upgrade-boringssl/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/source-command-upgrade-boringssl/SKILL.md)
+- [codex/skills/source-command-upgrade-nodejs/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/source-command-upgrade-nodejs/SKILL.md)
+- [codex/skills/source-command-upgrade-webkit/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/source-command-upgrade-webkit/SKILL.md)
+- [codex/skills/verify/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/verify/SKILL.md)
+- [codex/skills/webkit/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/webkit/SKILL.md)
+- [codex/skills/win32/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/win32/SKILL.md)
+- [codex/skills/work/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/work/SKILL.md)
+- [codex/skills/writing-bundler-tests/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/writing-bundler-tests/SKILL.md)
+- [codex/skills/writing-dev-server-tests/SKILL.md](https://bun.aphrody.com/knowledge/plugin/codex/skills/writing-dev-server-tests/SKILL.md)

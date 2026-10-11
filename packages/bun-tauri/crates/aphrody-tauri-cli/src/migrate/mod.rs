@@ -5,7 +5,7 @@
 use crate::{
   Result,
   error::{Context, ErrorExt, bail},
-  helpers::cargo_manifest::{CargoLock, CargoManifest, crate_version},
+  helpers::cargo_manifest::{CargoLock, CargoManifest, crate_version, tauri_api_generation},
   interface::rust::get_workspace_dir,
 };
 
@@ -45,7 +45,8 @@ pub fn command() -> Result<()> {
   let tauri_version = semver::Version::from_str(&tauri_version)
     .with_context(|| format!("failed to parse tauri version {tauri_version}"))?;
 
-  match tauri_version.major {
+  let api_generation = tauri_api_generation(&manifest, lock.as_ref(), &tauri_version);
+  match api_generation {
     1 => {
       migrations::v1::run(&dirs).context("failed to migrate from v1")?;
       migrations::v2::run(&dirs).context("failed to migrate from v2")?;
@@ -71,7 +72,7 @@ pub fn command() -> Result<()> {
     _ => {
       log::info!(
         "Nothing to do, the tauri version is already at v{}",
-        tauri_version.major
+        api_generation
       );
     }
   }

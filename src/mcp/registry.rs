@@ -208,6 +208,14 @@ impl Registry {
     /// Adds `tools`; a later tool replaces an earlier one with the same name.
     pub fn register_all(&mut self, tools: &'static [Tool]) {
         for tool in tools {
+            if matches!(
+                tool.name,
+                "read_file" | "write_file" | "edit_file" | "shell"
+            ) && bun_core::feature_flag::BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS.get()
+                != Some(true)
+            {
+                continue;
+            }
             match self.tools.iter().position(|t| t.name == tool.name) {
                 Some(i) => self.tools[i] = tool,
                 None => self.tools.push(tool),

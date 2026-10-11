@@ -5,12 +5,9 @@ import { chmodSync, existsSync, rmSync, writeFileSync } from "fs";
 import { bunEnv, bunExe, bunRun, isWindows, tempDir } from "harness";
 import { join } from "path";
 
-let cwd: string | undefined;
-
 describe("bun", () => {
   test("should error with missing script", () => {
     const { exitCode, stdout, stderr } = spawnSync({
-      cwd,
       cmd: [bunExe(), "run", "dev"],
       env: bunEnv,
       stdout: "pipe",

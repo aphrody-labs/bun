@@ -147,8 +147,9 @@ unsafe fn options_json(pointer: *const c_char) -> Result<serde_json::Value, Erro
         return Ok(serde_json::Value::Null);
     }
     // SAFETY: Caller contract.
-    let text =
-        unsafe { CStr::from_ptr(pointer) }.to_str().map_err(|error| Error::input(error.to_string()))?;
+    let text = unsafe { CStr::from_ptr(pointer) }
+        .to_str()
+        .map_err(|error| Error::input(error.to_string()))?;
     if text.trim().is_empty() {
         return Ok(serde_json::Value::Null);
     }
@@ -285,9 +286,7 @@ pub unsafe extern "C" fn aphrody_oxc_resolve(
         guarded(
             from,
             specifier,
-            move |from, specifier| {
-                crate::resolve(from, specifier, &options?)
-            },
+            move |from, specifier| crate::resolve(from, specifier, &options?),
             "Oxc resolver panicked",
         )
     })

@@ -79,7 +79,7 @@ mod tests;
 
 pub use edit::{
     EditFile, EditOp, EditPlan, EditReport, EditStatus, EditSummary, MatchKind, RenameReport,
-    SpanProvider, edit,
+    SpanProvider, edit, edit_guarded,
 };
 pub use grep::{GrepHit, GrepOptions, GrepPage, grep};
 pub use index::{Index, IndexOptions, IndexStats, LoadReport, RefreshStats, SourceChoice};

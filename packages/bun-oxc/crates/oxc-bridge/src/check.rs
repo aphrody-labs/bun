@@ -59,10 +59,7 @@ pub fn check(source: &str, filename: &str) -> Result<serde_json::Value, Error> {
     let mut diagnostics = parsed.diagnostics;
     if !parsed.fatal_error {
         diagnostics.extend(
-            SemanticBuilder::new()
-                .with_check_syntax_error(true)
-                .build(&parsed.program)
-                .diagnostics,
+            SemanticBuilder::new().with_check_syntax_error(true).build(&parsed.program).diagnostics,
         );
     }
     let list = diagnostics.iter().map(|d| diagnostic_json(source, d)).collect::<Vec<_>>();

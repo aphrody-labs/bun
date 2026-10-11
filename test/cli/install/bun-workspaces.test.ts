@@ -1750,18 +1750,16 @@ describe("install --filter", () => {
   test.concurrent("basic", async () => {
     using ctx = await setupTest();
     const { packageDir, packageJson, env } = ctx;
-    await Promise.all([
-      write(
-        packageJson,
-        JSON.stringify({
-          name: "root",
-          workspaces: ["packages/*"],
-          dependencies: {
-            "a-dep": "1.0.1",
-          },
-        }),
-      ),
-    ]);
+    await write(
+      packageJson,
+      JSON.stringify({
+        name: "root",
+        workspaces: ["packages/*"],
+        dependencies: {
+          "a-dep": "1.0.1",
+        },
+      }),
+    );
 
     var { exited } = spawn({
       cmd: [bunExe(), "install", "--filter", "pkg1"],

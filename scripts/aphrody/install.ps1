@@ -1,12 +1,12 @@
 # Installs the aphrody-labs/bun runtime from its GitHub releases.
 #
 #   irm https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install.ps1 | iex
-#   & ([scriptblock]::Create((irm .../install.ps1))) -Version 1.4.3   # newest aphrody.N build of base 1.4.3
+#   & ([scriptblock]::Create((irm .../install.ps1))) -Version 1.4.4   # exact stable release
 #   & ([scriptblock]::Create((irm .../install.ps1))) -Version aphrody-v1.4.3-aphrody.1
 #
 # BUN_INSTALL (default ~\.bun) keeps user state. -BinDir or APHRODY_BUN_BIN_DIR overrides the executable directory.
 # System32 requires an administrator token. -NoPathUpdate skips the user PATH.
-# APHRODY_BUN_REPO overrides the repository, GITHUB_TOKEN (or GH_TOKEN) authenticates the release lookup.
+# APHRODY_BUN_REPO selects the repository; GITHUB_TOKEN (or GH_TOKEN) authenticates metadata and assets.
 param(
   [String]$Version = "latest",
   [String]$BinDir = "",
@@ -34,7 +34,7 @@ $Tag = switch -Regex ($Version) {
       Select-Object -First 1 -ExpandProperty tag_name
   }
   "^aphrody-v" { $Version }
-  "^bun-v\d+\.\d+\.\d+$" { $Version }
+  "^bun-v\d+\.\d+\.\d+$" { $Version; break }
   "^(bun-)?v?(\d+\.\d+\.\d+)$" {
     $Base = $Matches[2]
     $Releases = Invoke-RestMethod -Headers $Headers "https://api.github.com/repos/$Repo/releases?per_page=100"
@@ -50,41 +50,95 @@ $Tag = switch -Regex ($Version) {
 if (-not $Tag) { throw "no $Repo release for $Version" }
 
 $BaseUrl = "https://github.com/$Repo/releases/download/$Tag"
+$ReleaseAssets = $null
+if ($Token) {
+  $Release = Invoke-RestMethod -Headers $Headers "https://api.github.com/repos/$Repo/releases/tags/$Tag"
+  $ReleaseAssets = @($Release.assets)
+}
+function Get-ReleaseArchive {
+  param([string]$Name, [string]$Destination)
+  if ($Token) {
+    $Assets = @($ReleaseAssets | Where-Object { $_.name -ceq $Name })
+    if ($Assets.Count -ne 1) { throw "release must contain exactly one asset named $Name" }
+    $AssetUrl = [string]$Assets[0].url
+    $Expected = "^https://api\.github\.com/repos/" + [regex]::Escape($Repo) + "/releases/assets/[0-9]+$"
+    if ($AssetUrl -notmatch $Expected) { throw "release asset URL does not belong to the selected repository" }
+    $AssetHeaders = @{ Accept = "application/octet-stream"; Authorization = "Bearer $Token" }
+    Invoke-WebRequest $AssetUrl -Headers $AssetHeaders -OutFile $Destination
+  } else {
+    Invoke-WebRequest "$BaseUrl/$Name" -OutFile $Destination
+  }
+}
 $Tmp = Join-Path ([System.IO.Path]::GetTempPath()) "aphrody-bun-$([guid]::NewGuid())"
 New-Item -ItemType Directory -Force $Tmp | Out-Null
 try {
   $Zip = Join-Path $Tmp "$Target.zip"
-  Invoke-WebRequest "$BaseUrl/$Target.zip" -OutFile $Zip
+  Get-ReleaseArchive "$Target.zip" $Zip
   $SumsFile = Join-Path $Tmp "SHA256SUMS.txt"
-  try { Invoke-WebRequest "$BaseUrl/SHA256SUMS.txt" -OutFile $SumsFile; $Sums = Get-Content $SumsFile } catch { $Sums = $null }
-  if ($Sums) {
-    $Want = ($Sums | Where-Object { $_ -match " $Target\.zip\s*$" } | Select-Object -First 1) -replace '\s.*$', ''
-    $Got = (Get-FileHash -Algorithm SHA256 $Zip).Hash.ToLower()
-    if (-not $Want -or $Want.ToLower() -ne $Got) { throw "checksum mismatch for $Target.zip" }
-  }
+  try { Get-ReleaseArchive "SHA256SUMS.txt" $SumsFile } catch { throw "release checksums are required" }
+  $ChecksumPattern = "^([a-fA-F0-9]{64})\s+" + [regex]::Escape("$Target.zip") + "\s*$"
+  $Rows = @(Get-Content $SumsFile | Where-Object { $_ -match $ChecksumPattern })
+  if ($Rows.Count -ne 1) { throw "release checksum must name the archive exactly once" }
+  $Want = ($Rows[0] -split "\s+")[0].ToLower()
+  $Got = (Get-FileHash -Algorithm SHA256 $Zip).Hash.ToLower()
+  if ($Want -ne $Got) { throw "checksum mismatch for $Target.zip" }
   Expand-Archive -Force $Zip $Tmp
+  $Candidate = Join-Path $Tmp "$Target\$Exe"
+  $Revision = & $Candidate --revision
+  if ($LASTEXITCODE -ne 0) { throw "downloaded runtime does not run on this system" }
+  & $Candidate -e 'if (Bun.resolveSync("picocolors", ".") !== "picocolors") process.exit(1)'
+  if ($LASTEXITCODE -ne 0) { throw "downloaded runtime is not the Aphrody fork" }
+  $ExpectedVersion = $Tag -replace "^(bun-v|aphrody-v)", ""
+  $ActualVersion = & $Candidate --version
+  if ($LASTEXITCODE -ne 0 -or $ActualVersion -cne $ExpectedVersion) { throw "downloaded runtime version does not match the selected release ($ActualVersion != $ExpectedVersion)" }
 
   $Root = if ($env:BUN_INSTALL) { $env:BUN_INSTALL } else { Join-Path $HOME ".bun" }
   $Bin = if ($BinDir) { [System.IO.Path]::GetFullPath($BinDir) } elseif ($env:APHRODY_BUN_BIN_DIR) { [System.IO.Path]::GetFullPath($env:APHRODY_BUN_BIN_DIR) } else { Join-Path $Root "bin" }
   New-Item -ItemType Directory -Force $Bin | Out-Null
   $Bun = Join-Path $Bin "bun.exe"
-  Move-Item -Force (Join-Path $Tmp "$Target\$Exe") $Bun
-  $env:IS_BUN_AUTO_UPDATE = "1"
-  & $Bun completions *> $null
-  $env:IS_BUN_AUTO_UPDATE = $null
-  # bun picks its mode from argv0; existing node/npm/npx aliases are relinked so they never keep an older build.
-  foreach ($Alias in "bunx.exe", "node.exe", "npm.exe", "npx.exe") {
-    $Link = Join-Path $Bin $Alias
-    if ($Alias -ne "bunx.exe" -and -not (Test-Path $Link)) { continue }
-    if (Test-Path $Link) {
-      $Old = "$Link.old"
-      Remove-Item -Force $Old -ErrorAction SilentlyContinue
-      Move-Item -Force $Link $Old
-      Remove-Item -Force $Old -ErrorAction SilentlyContinue
+  $Stage = Join-Path $Bin ".bun-stage-$([guid]::NewGuid()).exe"
+  $Changes = [Collections.Generic.List[object]]::new()
+  $Committed = $false
+  try {
+    Copy-Item -LiteralPath $Candidate -Destination $Stage
+    foreach ($Alias in "bun.exe", "bunx.exe", "node.exe", "npm.exe", "npx.exe") {
+      $Path = Join-Path $Bin $Alias
+      $Exists = Test-Path -LiteralPath $Path
+      if ($Alias -notin "bun.exe", "bunx.exe" -and -not $Exists) { continue }
+      if ($Exists -and (Get-Item -LiteralPath $Path).PSIsContainer) { throw "runtime paths must not be directories" }
+      $Change = @{ Path = $Path; Backup = $null; Created = $false }
+      $Changes.Add($Change)
+      if ($Exists) {
+        $Change.Backup = "$Path.backup-$([guid]::NewGuid())"
+        Move-Item -LiteralPath $Path -Destination $Change.Backup
+      }
+      if ($Alias -eq "bun.exe") { Move-Item -LiteralPath $Stage -Destination $Path }
+      else { New-Item -ItemType HardLink -Path $Path -Target $Bun | Out-Null }
+      $Change.Created = $true
     }
-    New-Item -ItemType HardLink -Path $Link -Target $Bun | Out-Null
+    $Committed = $true
+  } catch {
+    $Failure = $_
+    for ($Index = $Changes.Count - 1; $Index -ge 0; $Index--) {
+      $Change = $Changes[$Index]
+      if ($Change.Created) { Remove-Item -LiteralPath $Change.Path -Force }
+      if ($Change.Backup -and (Test-Path -LiteralPath $Change.Backup)) {
+        Move-Item -LiteralPath $Change.Backup -Destination $Change.Path
+      }
+    }
+    throw $Failure
+  } finally {
+    if (Test-Path -LiteralPath $Stage) { Remove-Item -LiteralPath $Stage -Force }
+    if ($Committed) {
+      foreach ($Change in $Changes) {
+        if ($Change.Backup) { Remove-Item -LiteralPath $Change.Backup -Force }
+      }
+    }
   }
-  Write-Output "Installed $Tag ($(& $Bun --revision)) to $Bun"
+  $PreviousAutoUpdate = $env:IS_BUN_AUTO_UPDATE
+  try { $env:IS_BUN_AUTO_UPDATE = "1"; & $Bun completions *> $null }
+  finally { $env:IS_BUN_AUTO_UPDATE = $PreviousAutoUpdate }
+  Write-Output "Installed $Tag ($Revision) to $Bun"
 
   if (-not $NoPathUpdate) {
     $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")

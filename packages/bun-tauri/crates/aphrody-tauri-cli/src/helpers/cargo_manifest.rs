@@ -26,6 +26,7 @@ pub struct CargoLock {
 
 #[derive(Clone, Deserialize)]
 pub struct CargoManifestDependencyPackage {
+  pub package: Option<String>,
   pub version: Option<String>,
   pub git: Option<String>,
   pub branch: Option<String>,
@@ -223,6 +224,37 @@ pub fn crate_version(
   version
 }
 
+pub(crate) const UPSTREAM_API_GENERATION: u64 = 3;
+
+pub(crate) fn tauri_api_generation(
+  manifest: &CargoManifest,
+  lock: Option<&CargoLock>,
+  version: &semver::Version,
+) -> u64 {
+  let renamed = match manifest.dependencies.get("tauri") {
+    Some(CargoManifestDependency::Package(package)) => {
+      package.package.as_deref() == Some("aphrody-tauri")
+    }
+    Some(_) => false,
+    None => manifest.dependencies.contains_key("aphrody-tauri"),
+  };
+  let locked_fork = lock.is_some_and(|lock| {
+    lock
+      .package
+      .iter()
+      .any(|package| package.name == "aphrody-tauri" && package.version == version.to_string())
+      && !lock
+        .package
+        .iter()
+        .any(|package| package.name == "tauri" && package.version == version.to_string())
+  });
+  if renamed || locked_fork {
+    UPSTREAM_API_GENERATION
+  } else {
+    version.major
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -233,6 +265,56 @@ mod tests {
       version: version.into(),
       source: None,
     }
+  }
+
+  #[test]
+  fn fork_release_does_not_select_legacy_api_migrations() {
+    let fork: CargoManifest = toml::from_str(
+      r#"[package]
+version = "1.0.0"
+[dependencies]
+tauri = { package = "aphrody-tauri", version = "1.4.4" }
+"#,
+    )
+    .unwrap();
+    let upstream: CargoManifest = toml::from_str(
+      r#"[package]
+version = "1.0.0"
+[dependencies]
+tauri = "1.4.4"
+"#,
+    )
+    .unwrap();
+    let metadata: serde_json::Value =
+      serde_json::from_str(include_str!("../../metadata-v2.json")).unwrap();
+    assert_eq!(metadata["upstream-api-generation"], UPSTREAM_API_GENERATION);
+    assert_eq!(metadata["tauri"], "1.4.4");
+    let version = semver::Version::parse("1.4.4").unwrap();
+    assert_eq!(tauri_api_generation(&fork, None, &version), 3);
+    assert_eq!(tauri_api_generation(&upstream, None, &version), 1);
+    let mut mixed: CargoManifest = toml::from_str(
+      "[package]\nversion = \"1.0.0\"\n[dependencies]\ntauri = \"1.4.4\"\naphrody-tauri = \"1.4.4\"\n",
+    )
+    .unwrap();
+    assert_eq!(tauri_api_generation(&mixed, None, &version), 1);
+    mixed.dependencies.remove("tauri");
+    assert_eq!(tauri_api_generation(&mixed, None, &version), 3);
+    let lock = CargoLock {
+      package: vec![CargoLockPackage {
+        name: "aphrody-tauri".into(),
+        version: "1.4.4".into(),
+        source: None,
+      }],
+    };
+    assert_eq!(tauri_api_generation(&upstream, Some(&lock), &version), 3);
+    let ambiguous = CargoLock {
+      package: vec![lock.package[0].clone(), lock_package("1.4.4")],
+    };
+    assert_eq!(
+      tauri_api_generation(&upstream, Some(&ambiguous), &version),
+      1
+    );
+    assert_eq!(tauri_api_generation(&fork, Some(&ambiguous), &version), 3);
   }
 
   #[test]

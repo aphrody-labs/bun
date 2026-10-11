@@ -13,7 +13,9 @@ pub(crate) fn is_project_entry(name: &[u8]) -> bool {
     if super::toolchain_command::is_package_script(name) {
         return true;
     }
-    const EXTENSIONS: [&[u8]; 8] = [b".ts", b".tsx", b".js", b".jsx", b".mjs", b".cjs", b".mts", b".cts"];
+    const EXTENSIONS: [&[u8]; 8] = [
+        b".ts", b".tsx", b".js", b".jsx", b".mjs", b".cjs", b".mts", b".cts",
+    ];
     let cwd = super::check_command::working_directory();
     let mut stems: [Vec<u8>; 2] = [name.to_vec(), name.to_vec()];
     stems[1].extend_from_slice(b"/index");

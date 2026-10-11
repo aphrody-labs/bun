@@ -8,4 +8,4 @@ globalThis.counter ??= 0;
 // an incomplete write. This fails our tests even though the behavior is correct.
 // To fix this we use console.write, which (apparently) performs the write in a single chunk.
 console.write(`[${Date.now()}] [#!root] Reloaded: ${++globalThis.counter}\n`);
-!setTimeout(() => {}, 9999999);
+setTimeout(() => {}, 9999999);

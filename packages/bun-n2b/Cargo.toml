@@ -6,7 +6,7 @@ resolver = "3"
 members = ["crates/n2b-types", "crates/n2b-registry", "crates/n2b-core", "crates/n2b", "crates/napi"]
 
 [workspace.package]
-version = "0.7.1"
+version = "1.4.4"
 edition = "2024"
 rust-version = "1.97"
 license = "Apache-2.0"
@@ -15,10 +15,10 @@ repository = "https://github.com/aphrody-labs/bun"
 homepage = "https://github.com/aphrody-labs/bun/tree/main/packages/bun-n2b"
 
 [workspace.dependencies]
-aphrody-n2b = { path = "crates/n2b", version = "=0.7.1" }
-aphrody-n2b-core = { path = "crates/n2b-core", version = "=0.7.1" }
-aphrody-n2b-registry = { path = "crates/n2b-registry", version = "=0.7.1" }
-aphrody-n2b-types = { path = "crates/n2b-types", version = "=0.7.1" }
+aphrody-n2b = { path = "crates/n2b", version = "=1.4.4" }
+aphrody-n2b-core = { path = "crates/n2b-core", version = "=1.4.4" }
+aphrody-n2b-registry = { path = "crates/n2b-registry", version = "=1.4.4" }
+aphrody-n2b-types = { path = "crates/n2b-types", version = "=1.4.4" }
 
 anyhow = "1.0.104"
 clap = { version = "4.6.6", features = ["derive", "env", "color"] }

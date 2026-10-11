@@ -77,8 +77,6 @@ export function decodeSourceMappingsLine(line: string) {
   return segs;
 }
 
-let currentFile: string | undefined;
-
 function errorOrWarnParser(isError = true) {
   const prefix = isError ? "error: " : "warn: ";
   return function (text: string) {
@@ -484,7 +482,7 @@ function expectBundled(
     );
   }
 
-  var { expect, it, test } = testForFile(currentFile ?? callerSourceOrigin()!);
+  var { expect, it, test } = testForFile(callerSourceOrigin()!);
   if (!ignoreFilter && FILTER && !filterMatches(id)) return testRef(id, opts);
 
   let {
@@ -1824,7 +1822,7 @@ for (const [key, blob] of build.outputs) {
           cmd: args,
           env: {
             ...bunEnv,
-            ...(run.env || {}),
+            ...run.env,
             FORCE_COLOR: "0",
             IS_TEST_RUNNER: "1",
           },
@@ -1979,7 +1977,7 @@ export function itBundled(
     opts._referenceFn = fn;
   }
   const ref = testRef(id, opts);
-  const { it } = testForFile(currentFile ?? callerSourceOrigin()!) as any;
+  const { it } = testForFile(callerSourceOrigin()!) as any;
 
   if (FILTER && !filterMatches(id)) {
     return ref;
@@ -2012,7 +2010,7 @@ export function itBundled(
 }
 
 itBundled.only = (id: string, opts: BundlerTestInput) => {
-  const { it } = testForFile(currentFile ?? callerSourceOrigin()!);
+  const { it } = testForFile(callerSourceOrigin()!);
 
   it.only(
     id,
@@ -2026,7 +2024,7 @@ itBundled.skip = (id: string, opts: BundlerTestInput) => {
   if (FILTER && !filterMatches(id)) {
     return testRef(id, opts);
   }
-  const { it } = testForFile(currentFile ?? callerSourceOrigin()!);
+  const { it } = testForFile(callerSourceOrigin()!);
   if (!HIDE_SKIP) it.skip(id, () => expectBundled(id, opts) as Promise<BundlerTestRef>);
   return testRef(id, opts);
 };

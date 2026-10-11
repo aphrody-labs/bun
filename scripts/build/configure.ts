@@ -44,7 +44,6 @@ import {
   findBun,
   findCargo,
   findMsvcLinker,
-  findNpm,
   findSystemTool,
   resolveLlvmToolchain,
   writeToolIdentities,
@@ -54,6 +53,14 @@ import { checkWorkarounds } from "./workarounds.ts";
 
 /** The JavaScript tools: what the code generators run with, and all that `mode: "codegen"` looks for. */
 export function resolveJsToolchain(packageManager: PackageManager = "bun"): JsToolchain {
+  if (process.versions.bun === undefined || packageManager !== "bun") {
+    throw new BuildError(
+      "The owner factory requires the Aphrody Bun fork and Bun package manager",
+      {
+        hint: "Run the build with the qualified fork using bun bd.",
+      },
+    );
+  }
   const host = detectHost();
   // esbuild path is relative to REPO ROOT, not process.cwd() — when
   // ninja's generator rule invokes reconfigure, cwd is the build dir.
@@ -63,41 +70,17 @@ export function resolveJsToolchain(packageManager: PackageManager = "bun"): JsTo
   // If not present, the first codegen build will fail with a clear error
   // (and the build itself runs the install first via the root install
   // stamp, so this path will exist by the time esbuild rules fire).
-  // On Windows, bun writes `.bin/esbuild.exe` and npm writes `.bin/esbuild.cmd`.
-  const windowsBin = packageManager === "npm" ? "esbuild.cmd" : "esbuild.exe";
-  const esbuild = resolve(repoRoot, "node_modules", ".bin", host.os === "windows" ? windowsBin : "esbuild");
+  const windowsBin = "esbuild.exe";
+  const esbuild = resolve(
+    repoRoot,
+    "node_modules",
+    ".bin",
+    host.os === "windows" ? windowsBin : "esbuild",
+  );
 
   const bun = findBun(host.os);
-  const npm = packageManager === "npm" ? findNpm() : undefined;
-
-  // jsRuntime: shell-ready prefix for running .ts subprocesses. Propagate
-  // whatever's running us — if node, the strip-types flag comes along; if
-  // bun, it's just the path. process.versions.bun distinguishes (undefined
-  // in node). Pre-quoted so rule commands can splice it directly.
-  //
-  // The codegen scripts are ES modules under the root package.json, which
-  // has no "type" field. Node detects the module syntax and prints
-  // MODULE_TYPELESS_PACKAGE_JSON once per process, so the flag hides it.
-  //
-  // A codegen script that a module can also import runs its command line
-  // only when import.meta.main is true. Node 24.2 added import.meta.main.
-  // Before that it is undefined, and the script would write nothing. CI
-  // installs Node 26 (scripts/build/ci-images/spec.ts), so the minimum is 25.
-  if (process.versions.bun === undefined) {
-    const major = Number(process.versions.node.split(".")[0]);
-    if (major < 25) {
-      throw new BuildError(`Node ${process.versions.node} cannot run the codegen scripts`, {
-        hint: "Install Node 25 or later, or run the build with bun.",
-      });
-    }
-  }
   const q = (p: string) => quote(p, host.os === "windows");
-  const jsRuntime =
-    process.versions.bun !== undefined
-      ? q(process.execPath)
-      : `${q(process.execPath)} --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON`;
-
-  return { bun, npm, jsRuntime, esbuild };
+  return { bun, npm: undefined, jsRuntime: q(process.execPath), esbuild };
 }
 
 /**
@@ -116,7 +99,8 @@ export function resolveToolchain(targetOs?: OS, packageManager: PackageManager =
 
   // cmake — required for nested dep builds.
   const cmake = findSystemTool("cmake", { required: true, hint: "Install cmake (>= 3.24)" });
-  if (cmake === undefined) throw new BuildError("unreachable: findSystemTool required=true returned undefined");
+  if (cmake === undefined)
+    throw new BuildError("unreachable: findSystemTool required=true returned undefined");
 
   // cargo — required for lolhtml. Not found → build will fail at that dep
   // with a clear "install rust" hint. We don't hard-fail here because
@@ -171,12 +155,12 @@ function configureInputs(cwd: string): string[] {
   const excluded = new Set(["ci.ts", "stream.ts", "npm-ci.ts"]);
 
   const scripts = globSync("*.ts", { cwd: buildDir })
-    .filter(f => !excluded.has(f))
-    .map(f => resolve(buildDir, f));
-  const deps = globSync("deps/*.ts", { cwd: buildDir }).map(f => resolve(buildDir, f));
+    .filter((f) => !excluded.has(f))
+    .map((f) => resolve(buildDir, f));
+  const deps = globSync("deps/*.ts", { cwd: buildDir }).map((f) => resolve(buildDir, f));
   // rust/: units.ts/emit.ts/plan.ts shape the per-crate edges and manifests at configure time (run.ts is build-time
   // only, but one glob keeps the rule simple).
-  const rust = globSync("rust/*.ts", { cwd: buildDir }).map(f => resolve(buildDir, f));
+  const rust = globSync("rust/*.ts", { cwd: buildDir }).map((f) => resolve(buildDir, f));
 
   // Versions the build uses (LLVM, Node.js, the sysroots) are written here.
   const pins = resolve(buildDir, "ci-images", "spec.ts");
@@ -222,7 +206,11 @@ export interface ConfigureInput {
  * profiles.ts. Edits to a profile therefore take effect on the next
  * `ninja` in an existing build dir without `rm -rf`.
  */
-export function emitGeneratorRule(n: Ninja, cfg: Config | CodegenConfig, input: ConfigureInput): void {
+export function emitGeneratorRule(
+  n: Ninja,
+  cfg: Config | CodegenConfig,
+  input: ConfigureInput,
+): void {
   const configFile = resolve(cfg.buildDir, "configure.json");
   const buildScript = resolve(cfg.cwd, "scripts", "build.ts");
 
@@ -235,8 +223,8 @@ export function emitGeneratorRule(n: Ninja, cfg: Config | CodegenConfig, input: 
   const hostWin = cfg.host.os === "windows";
   n.rule("regen", {
     command: hostWin
-      ? `cmd /c "cd /d ${quote(cfg.cwd, true)} && ${cfg.jsRuntime} ${quote(buildScript, true)} --config-file=$in"`
-      : `cd ${quote(cfg.cwd, false)} && ${cfg.jsRuntime} ${quote(buildScript, false)} --config-file=$in`,
+      ? `cmd /c "cd /d ${quote(cfg.cwd, true)} && ${cfg.jsRuntime} ${quote(buildScript, true)} --config-file=${quote(configFile, true)}"`
+      : `cd ${quote(cfg.cwd, false)} && ${cfg.jsRuntime} ${quote(buildScript, false)} --config-file=${quote(configFile, false)}`,
     description: "reconfigure",
     // generator = 1: exempt from `ninja -t clean`, triggers manifest restart
     // when the output (build.ninja) is rebuilt.
@@ -530,7 +518,10 @@ async function generate<N extends string | undefined>(
   // (linkDepends lists it). Never clobber an existing one — that would throw
   // away the file CI just inherited.
   if (usesOrderFile(cfg) && !existsSync(orderFilePath(cfg))) {
-    writeIfChanged(orderFilePath(cfg), "# no order file yet — an empty file is a no-op for the linker\n");
+    writeIfChanged(
+      orderFilePath(cfg),
+      "# no order file yet — an empty file is a no-op for the linker\n",
+    );
   }
   mark("orderFile");
 

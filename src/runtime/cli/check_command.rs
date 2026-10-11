@@ -190,65 +190,6 @@ pub(crate) fn working_directory() -> Vec<u8> {
     }
 }
 
-/// Whether `check` is a script of the project: `scripts.check` of the nearest `package.json`, which
-/// is where `bun run` looks. `bun check` ran it before there was a type checker, so it still does.
-/// The type checker is also `bun --check`.
-#[cold]
-#[inline(never)]
-pub(crate) fn is_package_script() -> bool {
-    use bun_paths::platform::Auto;
-    use bun_paths::resolve_path::join_abs_string;
-    let mut cwd = working_directory();
-    let mut args = bun_core::argv().into_iter();
-    while let Some(arg) = args.next() {
-        // What follows the name of a script is for the script.
-        if arg == b"check" {
-            break;
-        }
-        // These are about scripts: those of several packages, whatever this one has, or none.
-        if matches!(
-            arg,
-            b"--workspaces" | b"--parallel" | b"--sequential" | b"--if-present"
-        ) || arg.starts_with(b"--filter")
-            || arg.starts_with(b"-F")
-        {
-            return true;
-        }
-        let given = match arg.strip_prefix(b"--cwd") {
-            Some(b"") => args.next(),
-            Some(rest) => rest.strip_prefix(b"="),
-            None => None,
-        };
-        if let Some(given) = given {
-            cwd = join_abs_string::<Auto>(&cwd, &[given]).to_vec();
-        }
-    }
-    let Some((dir, path, contents)) = nearest_package_json(&cwd) else {
-        return false;
-    };
-    // In that script, and in what it runs, it is the type checker: `"check": "bun check"`.
-    let running = env_var::BUN_INTERNAL_CHECK_SCRIPTS::get();
-    if running.is_some_and(|running| running_package_scripts(running).any(|it| it == dir)) {
-        return false;
-    }
-    if package_of_inherited_check_script().is_some_and(|it| it == dir) {
-        return false;
-    }
-    // Most have no such word in them.
-    if !bun_core::strings::contains(&contents, b"\"check\"") {
-        return false;
-    }
-    bun_ast::initialize_store();
-    let source = bun_ast::Source::init_path_string(&path[..], &contents[..]);
-    let (mut log, bump) = (bun_ast::Log::init(), bun_alloc::Arena::new());
-    let Ok(json) = bun_parsers::json::parse_package_json_utf8(&source, &mut log, &bump) else {
-        return false;
-    };
-    (json.as_property(b"scripts"))
-        .and_then(|scripts| scripts.expr.as_property(b"check"))
-        .is_some_and(|script| matches!(script.expr.data, bun_ast::ExprData::EString(_)))
-}
-
 /// The `package.json` nearest to `dir`, which is where `bun run` looks: its directory, its path and
 /// its text.
 pub(crate) fn nearest_package_json(mut dir: &[u8]) -> Option<(&[u8], Vec<u8>, Vec<u8>)> {
@@ -261,7 +202,7 @@ pub(crate) fn nearest_package_json(mut dir: &[u8]) -> Option<(&[u8], Vec<u8>, Ve
             return Some((dir, path, contents));
         }
         let parent = dirname::<Auto>(dir);
-        if parent.is_empty() || parent.len() >= dir.len() {
+        if !bun_paths::is_absolute(parent) || parent.len() >= dir.len() {
             return None;
         }
         dir = parent;
@@ -1015,7 +956,11 @@ fn check_and_report(paths: &Paths, provided: Provided) -> bool {
 
 /// The diagnostics of `files` and of what they import, in the project of `cwd`, for `bun lsp`.
 /// `texts` are read in place of the files at those paths. All paths are absolute and native.
-pub(crate) fn check_for_language_server(cwd: &[u8], files: &[Vec<u8>], texts: &[(Vec<u8>, Vec<u8>)]) -> Report {
+pub(crate) fn check_for_language_server(
+    cwd: &[u8],
+    files: &[Vec<u8>],
+    texts: &[(Vec<u8>, Vec<u8>)],
+) -> Report {
     let mut sources = texts.iter().map(|(path, text)| (&path[..], &text[..]));
     let provided = Provided {
         already_read: already_read(cwd, &mut sources),

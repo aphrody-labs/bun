@@ -43,7 +43,7 @@ function scopedName(name: string): string {
 // In code only exact string literals are package names (`"bun-types"`,
 // `"bun-types/x"`); paths like "../bun-types" and file names like
 // "bun-mdx-rs.linux-x64-gnu.node" are not.
-const CODE_RULES = RENAMED.map(name => ({
+const CODE_RULES = RENAMED.map((name) => ({
   re: new RegExp(`(["'])${escape(name)}(?=["'/]|${PLATFORM_SUFFIX})`, "g"),
   to: `$1${SCOPE}/${name}`,
 }));
@@ -52,7 +52,7 @@ const CODE_RULES = RENAMED.map(name => ({
 // identifier.
 const PROSE_RULES = [
   { re: /(?<![\w@/.-])@types\/bun(?![\w/-])/g, to: `${SCOPE}/bun-types` },
-  ...RENAMED.map(name => ({
+  ...RENAMED.map((name) => ({
     re: new RegExp(`(?<![\\w@/.-])${escape(name)}(?!\\w|\\.\\w)`, "g"),
     to: `${SCOPE}/${name}`,
   })),
@@ -78,7 +78,8 @@ function rewriteManifest(text: string): string {
   if (typeof pkg.name === "string" && scopedName(pkg.name) !== pkg.name) rename("name", pkg.name);
   for (const field of DEP_FIELDS) {
     for (const [dep, spec] of Object.entries(pkg[field] ?? {})) {
-      if (typeof spec === "string" && LOCAL_SPEC.test(spec) && scopedName(dep) !== dep) rename(dep, spec);
+      if (typeof spec === "string" && LOCAL_SPEC.test(spec) && scopedName(dep) !== dep)
+        rename(dep, spec);
     }
   }
   return out;
@@ -92,7 +93,11 @@ export function rewrite(path: string, text: string): string {
   // Lines that mention "upstream" describe the upstream names on purpose.
   return text
     .split("\n")
-    .map(line => (/upstream/i.test(line) ? line : PROSE_RULES.reduce((l, { re, to }) => l.replace(re, to), line)))
+    .map((line) =>
+      /upstream/i.test(line)
+        ? line
+        : PROSE_RULES.reduce((l, { re, to }) => l.replace(re, to), line),
+    )
     .join("\n");
 }
 
@@ -100,11 +105,14 @@ export function rewrite(path: string, text: string): string {
 // mention one of the names, so JS never reads the whole tree.
 export function candidates(root: string): string[] {
   const pattern = ["@types/bun", ...RENAMED].map(escape).join("|");
-  const proc = Bun.spawnSync(["rg", "--files-with-matches", "--no-messages", "-e", pattern, "packages"], {
-    cwd: root,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+  const proc = Bun.spawnSync(
+    ["rg", "--files-with-matches", "--no-messages", "-e", pattern, "packages"],
+    {
+      cwd: root,
+      stdout: "pipe",
+      stderr: "pipe",
+    },
+  );
   if (proc.exitCode !== 0 && proc.exitCode !== 1) {
     throw new Error(`rg failed with exit code ${proc.exitCode}: ${proc.stderr.toString()}`);
   }
@@ -112,7 +120,7 @@ export function candidates(root: string): string[] {
     .toString()
     .split(/\r?\n/)
     .filter(Boolean)
-    .map(f => f.replaceAll("\\", "/"))
+    .map((f) => f.replaceAll("\\", "/"))
     .filter(isManaged)
     .sort();
 }
@@ -135,6 +143,7 @@ if (import.meta.main) {
   const write = args.includes("--write");
   const rootIdx = args.indexOf("--root");
   const root = rootIdx >= 0 ? args[rootIdx + 1] : join(import.meta.dir, "..", "..");
+  if (!root || root.startsWith("--")) throw new Error("--root requires a directory");
   const changed = await apply(root, write);
   for (const f of changed) console.log(`${write ? "rewrote" : "unscoped"} ${f}`);
   if (!write && changed.length) {

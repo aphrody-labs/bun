@@ -9,6 +9,7 @@ import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+import { isAphrodyBun } from "./hooks/common.ts";
 import { MARKETPLACE, PLUGIN } from "./spec.ts";
 
 export type Target = "claude" | "codex" | "agy";
@@ -108,18 +109,30 @@ export function install(files: Map<string, string | Uint8Array>, options: Instal
   const p = paths(home, real);
   const meta = JSON.parse(str(files.get("claude/meta.json")));
   const previous = readJson(join(p.root, "install.json"));
+  const executable = typeof Bun !== "undefined" && isAphrodyBun() ? process.execPath : undefined;
+  if (executable) {
+    files = new Map(files);
+    for (const path of ["claude/.mcp.json", "codex/.mcp.json", "agy/mcp_config.json", "agy/gemini-extension.json"]) {
+      if (!files.has(path)) continue;
+      const config = JSON.parse(str(files.get(path)));
+      if (config.mcpServers?.bun) config.mcpServers.bun.command = executable;
+      files.set(path, JSON.stringify(config, null, 2) + "\n");
+    }
+    const config = files.get("codex/config.toml");
+    if (config) files.set("codex/config.toml", str(config).replace(/^command = "bun"$/m, `command = ${JSON.stringify(executable)}`));
+  }
   const actions: string[] = [];
   let targets = options.targets ?? (options.update && previous.targets ? previous.targets : detected(home, real));
   const record = (targets: Target[]) =>
     JSON.stringify(
-      { version: meta.version, bunVersion: meta.bunVersion, hash: meta.hash, bun: bunRevision(), targets },
+      { version: meta.version, bunVersion: meta.bunVersion, hash: meta.hash, bun: bunRevision(), executable, targets },
       null,
       2,
     ) + "\n";
   if (options.update && !previous.hash) {
     return { root: p.root, version: meta.version, targets: [], actions, skipped: "not installed" };
   }
-  if (options.update && previous.hash === meta.hash) {
+  if (options.update && previous.hash === meta.hash && previous.executable === executable) {
     if (!options.dryRun && previous.bun !== bunRevision()) writeFileSync(join(p.root, "install.json"), record(targets));
     return { root: p.root, version: meta.version, targets, actions, skipped: "up to date" };
   }

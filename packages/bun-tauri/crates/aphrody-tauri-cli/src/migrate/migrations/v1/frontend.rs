@@ -73,16 +73,7 @@ pub fn migrate(frontend_dir: &Path) -> Result<Vec<String>> {
   let mut new_plugins = Vec::new();
   let mut npm_packages_to_remove = Vec::new();
 
-  let pre = env!("CARGO_PKG_VERSION_PRE");
-  let npm_version = if pre.is_empty() {
-    format!("{}.0.0", env!("CARGO_PKG_VERSION_MAJOR"))
-  } else {
-    format!(
-      "{}.0.0-{}.0",
-      env!("CARGO_PKG_VERSION_MAJOR"),
-      pre.split('.').next().unwrap()
-    )
-  };
+  let npm_version = env!("CARGO_PKG_VERSION");
 
   let pm = PackageManager::from_project(frontend_dir);
 

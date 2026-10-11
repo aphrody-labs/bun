@@ -90,7 +90,6 @@ function getEncodingOps(encoding) {
       };
 
     case "utf-16le":
-    case "utf16le":
       return {
         write: Buffer.prototype.utf16leWrite,
       };

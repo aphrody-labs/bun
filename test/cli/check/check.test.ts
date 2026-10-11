@@ -56,13 +56,14 @@ function project(files: Record<string, string>) {
 
 // Whether the file system takes `A` for `a`, where the projects of these tests are.
 const foldsCase = (() => {
-  using dir = tempDir("bun-check", { "probe": "" });
+  using dir = tempDir("bun-check", { probe: "" });
   return existsSync(join(String(dir), "PROBE"));
 })();
 
 // Disable AI agent and CI detection regardless of the environment the tests run in.
 const env = {
   ...bunEnv,
+  UV_THREADPOOL_SIZE: "2",
   AGENT: "0",
   CLAUDECODE: undefined,
   REPL_ID: undefined,
@@ -83,7 +84,11 @@ async function run(cwd: string, cmd: string[], extra: Record<string, string | un
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  const [stdout, stderr, exitCode] = await Promise.all([
+    proc.stdout.text(),
+    proc.stderr.text(),
+    proc.exited,
+  ]);
   const clean = (text: string) =>
     text
       .replaceAll("\\", "/")
@@ -113,7 +118,12 @@ async function inTerminal(cwd: string, cmd: string[]) {
   await using child = Bun.spawn({
     cmd: [bunExe(), ...cmd],
     cwd,
-    env: { ...env, NO_COLOR: undefined, FORCE_COLOR: "1", BUN_DEBUG_TEST_CHECK_PROGRESS_DELAY_MS: "0" },
+    env: {
+      ...env,
+      NO_COLOR: undefined,
+      FORCE_COLOR: "1",
+      BUN_DEBUG_TEST_CHECK_PROGRESS_DELAY_MS: "0",
+    },
     terminal: {
       cols: 80,
       rows: 24,
@@ -159,25 +169,43 @@ describe.concurrent("bun check", () => {
       dependencies: { react: "1", "@scope/a": "1", installed: "1", unused: "1" },
       devDependencies: { "@types/typed": "1" },
     };
-    const note = (text: string) => text.split("\n").filter(line => line.startsWith("note: "));
-    const stopped = "note: Stopped before type checking 1 file. Fix the errors above to see the rest.";
+    const note = (text: string) => text.split("\n").filter((line) => line.startsWith("note: "));
+    const stopped =
+      "note: Stopped before type checking 1 file. Fix the errors above to see the rest.";
     using none = project({ "a.ts": source, "package.json": JSON.stringify(manifest) });
     using one = project({
       "a.ts": `import "react";\nimport "installed";\n`,
       "package.json": JSON.stringify(manifest),
       "node_modules/installed/package.json": `{ "name": "installed", "version": "1.0.0" }`,
     });
-    using unlisted = project({ "a.ts": `import "unlisted";\n`, "package.json": JSON.stringify(manifest) });
-    using plugAndPlay = project({ "a.ts": source, "package.json": JSON.stringify(manifest), ".pnp.cjs": "" });
-    using olderPlugAndPlay = project({ "a.ts": source, "package.json": JSON.stringify(manifest), ".pnp.js": "" });
+    using unlisted = project({
+      "a.ts": `import "unlisted";\n`,
+      "package.json": JSON.stringify(manifest),
+    });
+    using plugAndPlay = project({
+      "a.ts": source,
+      "package.json": JSON.stringify(manifest),
+      ".pnp.cjs": "",
+    });
+    using olderPlugAndPlay = project({
+      "a.ts": source,
+      "package.json": JSON.stringify(manifest),
+      ".pnp.js": "",
+    });
     // In a workspace, what a package lists may be installed at the root.
     using workspace = project({
       "packages/a/a.ts": `import "react";\nimport "@scope/a";\n`,
       "packages/a/package.json": JSON.stringify(manifest),
       "node_modules/react/package.json": `{ "name": "react", "version": "1.0.0" }`,
     });
-    const bun = { "tsconfig.json": JSON.stringify({ compilerOptions: { ...options, types: ["bun"] } }), "a.ts": "" };
-    using listed = project({ ...bun, "package.json": `{ "devDependencies": { "@types/bun": "1" } }` });
+    const bun = {
+      "tsconfig.json": JSON.stringify({ compilerOptions: { ...options, types: ["bun"] } }),
+      "a.ts": "",
+    };
+    using listed = project({
+      ...bun,
+      "package.json": `{ "devDependencies": { "@types/bun": "1" } }`,
+    });
     using notListed = project({ ...bun, "package.json": `{}` });
     // What it declares is used, and `types` does not ask for it.
     using used = project({
@@ -206,10 +234,12 @@ describe.concurrent("bun check", () => {
       "node_modules/installed/package.json": `{ "name": "installed", "version": "1.0.0" }`,
       ...application("a"),
     });
-    using many = project({
-      ...["a", "b", "c", "d", "e"].reduce((all, name) => ({ ...all, ...application(name) }), {}),
-    });
-    using four = project({ ...["a", "b", "c", "d"].reduce((all, name) => ({ ...all, ...application(name) }), {}) });
+    using many = project(
+      ["a", "b", "c", "d", "e"].reduce((all, name) => ({ ...all, ...application(name) }), {}),
+    );
+    using four = project(
+      ["a", "b", "c", "d"].reduce((all, name) => ({ ...all, ...application(name) }), {}),
+    );
     using deeper = project({ ...application("a"), "apps/a/src/empty.txt": "" });
     const projects = [
       none,
@@ -227,14 +257,16 @@ describe.concurrent("bun check", () => {
       many,
       four,
     ];
-    const results = await Promise.all(projects.map(dir => check(dir)));
-    expect(results.map(it => note(it.stderr))).toEqual([
+    const results = await Promise.all(projects.map((dir) => check(dir)));
+    expect(results.map((it) => note(it.stderr))).toEqual([
       ["note: 3 dependencies in package.json are not installed. Run: bun install"],
       ["note: 1 dependency in package.json is not installed. Run: bun install"],
       [],
       [],
       [],
-      ["note: 1 dependency in packages/a/package.json is not installed. Run: bun install --cwd=packages/a"],
+      [
+        "note: 1 dependency in packages/a/package.json is not installed. Run: bun install --cwd=packages/a",
+      ],
       // What `types` asks for is missing: that is an error in the options.
       ["note: 1 dependency in package.json is not installed. Run: bun install", stopped],
       [
@@ -244,7 +276,9 @@ describe.concurrent("bun check", () => {
       ["note: 1 dependency in package.json is not installed. Run: bun install"],
       [],
       [],
-      ["note: 2 dependencies in apps/a/package.json are not installed. Run: bun install --cwd=apps/a"],
+      [
+        "note: 2 dependencies in apps/a/package.json are not installed. Run: bun install --cwd=apps/a",
+      ],
       [
         "note: 2 dependencies in apps/a/package.json are not installed. Run: bun install --cwd=apps/a",
         "note: 2 dependencies in apps/b/package.json are not installed. Run: bun install --cwd=apps/b",
@@ -262,9 +296,11 @@ describe.concurrent("bun check", () => {
     expect(results[10].stdout).toContain("TS2584: Cannot find name 'document'.");
     // Where `bun install` reads that `package.json`, from the directory itself and from below it.
     const inside = await Promise.all(
-      ["apps/a", "apps/a/src"].map(cwd => run(join(String(deeper), cwd), ["check", "-p", String(deeper)])),
+      ["apps/a", "apps/a/src"].map((cwd) =>
+        run(join(String(deeper), cwd), ["check", "-p", String(deeper)]),
+      ),
     );
-    expect(inside.map(it => note(it.stderr))).toEqual([
+    expect(inside.map((it) => note(it.stderr))).toEqual([
       ["note: 2 dependencies in package.json are not installed. Run: bun install"],
       ["note: 2 dependencies in ../package.json are not installed. Run: bun install"],
     ]);
@@ -274,7 +310,7 @@ describe.concurrent("bun check", () => {
   test("what stops the type check says how many files it leaves", async () => {
     const options = JSON.parse(tsconfig).compilerOptions;
     const config = (more: object) => JSON.stringify({ compilerOptions: { ...options, ...more } });
-    const note = (text: string) => text.split("\n").filter(line => line.startsWith("note: "));
+    const note = (text: string) => text.split("\n").filter((line) => line.startsWith("note: "));
     const stoppedBefore = (files: string) => [
       `note: Stopped before type checking ${files}. Fix the errors above to see the rest.`,
     ];
@@ -290,15 +326,15 @@ describe.concurrent("bun check", () => {
     expect(note(whole.stderr)).toEqual([]);
     const [, left] = /, checked (\d+ files)/.exec(whole.stderr)!;
     const stopped = await Promise.all(
-      [
+      Array.of<Record<string, string>>(
         { "b.ts": `const = 1;\n` },
         { "b.ts": `import a from "./a" assert { type: "json" };\nexport { a };\n` },
         { "tsconfig.json": config({ baseUrl: "." }) },
         { "tsconfig.json": config({ noLib: true }) },
-      ].map(more => checkedWith(more)),
+      ).map((more) => checkedWith(more)),
     );
     expect(
-      stopped.map(it => ({
+      stopped.map((it) => ({
         code: /error (TS\d+)/.exec(it.stdout)?.[1],
         hidden: !it.stdout.includes("TS2322"),
         note: note(it.stderr),
@@ -306,7 +342,7 @@ describe.concurrent("bun check", () => {
         exitCode: it.exitCode,
       })),
     ).toEqual(
-      ["TS1134", "TS2880", "TS5102", "TS2318"].map(code => ({
+      ["TS1134", "TS2880", "TS5102", "TS2318"].map((code) => ({
         code,
         hidden: true,
         note: stoppedBefore(left),
@@ -316,14 +352,22 @@ describe.concurrent("bun check", () => {
     );
 
     // Nothing is left where nothing is wrong, and where there is no program.
-    const others = await Promise.all([checkedWith({ "a.ts": "" }), checkedWith({}, ["-p", "nowhere"])]);
-    expect(others.map(it => [note(it.stderr), it.exitCode])).toEqual([
+    const others = await Promise.all([
+      checkedWith({ "a.ts": "" }),
+      checkedWith({}, ["-p", "nowhere"]),
+    ]);
+    expect(others.map((it) => [note(it.stderr), it.exitCode])).toEqual([
       [[], 0],
       [[], 1],
     ]);
 
     // Each project stops by itself, and so does what a file imports.
-    const composite = config({ composite: true, noEmit: false, emitDeclarationOnly: true, outDir: "out" });
+    const composite = config({
+      composite: true,
+      noEmit: false,
+      emitDeclarationOnly: true,
+      outDir: "out",
+    });
     using solution = project({
       "tsconfig.json": `{ "files": [], "references": [{ "path": "./one" }, { "path": "./two" }] }`,
       "one/tsconfig.json": composite,
@@ -347,7 +391,10 @@ describe.concurrent("bun check", () => {
   test.skipIf(!foldsCase)(
     "an entry point that is only in memory, and a file that is imported in two cases",
     async () => {
-      const options = { ...JSON.parse(tsconfig).compilerOptions, forceConsistentCasingInFileNames: false };
+      const options = {
+        ...JSON.parse(tsconfig).compilerOptions,
+        forceConsistentCasingInFileNames: false,
+      };
       const main = `import "./src/Button";\nimport "./src/other";\n`;
       using dir = project({
         "tsconfig.json": JSON.stringify({ compilerOptions: options }),
@@ -365,8 +412,8 @@ describe.concurrent("bun check", () => {
         stderr: "pipe",
       });
       const results = await Promise.all([
-        run(String(dir), ["--check", "main.ts"]).then(it => [it.stderr, it.exitCode]),
-        run(String(dir), ["--check", "-e", main]).then(it => [it.stderr, it.exitCode]),
+        run(String(dir), ["--check", "main.ts"]).then((it) => [it.stderr, it.exitCode]),
+        run(String(dir), ["--check", "-e", main]).then((it) => [it.stderr, it.exitCode]),
         Promise.all([piped.stderr.text(), piped.exited]),
       ]);
       expect(results).toEqual([
@@ -398,7 +445,9 @@ describe.concurrent("bun check", () => {
         "bunfig.toml": `[install]\nglobalDir = 1\n`,
       });
       const { stdout, exitCode } = await check(dir);
-      expect(stdout).toBe(`index.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'.`);
+      expect(stdout).toBe(
+        `index.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'.`,
+      );
       expect(exitCode).toBe(1);
     });
 
@@ -416,21 +465,29 @@ describe.concurrent("bun check", () => {
     });
 
     // The default `target` needs the newest of them, with the DOM.
-    test("without `target` and `lib`", async () => {
-      using dir = project({
-        "tsconfig.json": `{ "compilerOptions": { "noEmit": true, "types": [] } }`,
-        "console.d.ts": "",
-        "index.ts": `export const wrong: number = document.title;\nconsole.log(new Set([1]).union(new Set([2])));\n`,
-      });
-      const { stdout, exitCode } = await check(dir);
-      expect(stdout).toBe(`index.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'.`);
-      expect(exitCode).toBe(1);
-    });
+    test(
+      "without `target` and `lib`",
+      async () => {
+        using dir = project({
+          "tsconfig.json": `{ "compilerOptions": { "noEmit": true, "types": [] } }`,
+          "console.d.ts": "",
+          "index.ts": `export const wrong: number = document.title;\nconsole.log(new Set([1]).union(new Set([2])));\n`,
+        });
+        const { stdout, exitCode } = await check(dir);
+        expect(stdout).toBe(
+          `index.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'.`,
+        );
+        expect(exitCode).toBe(1);
+      },
+      isDebug || isASAN ? 10_000 : 5_000,
+    );
 
     test("a declaration in one of them is shown where it is", async () => {
       using dir = project({ "index.ts": `export const a = [1].lenght;\n` });
       const { stdout } = await check(dir, ["--pretty"]);
-      expect(stdout).toContain("TS2551: Property 'lenght' does not exist on type 'number[]'. Did you mean 'length'?");
+      expect(stdout).toContain(
+        "TS2551: Property 'lenght' does not exist on type 'number[]'. Did you mean 'length'?",
+      );
       expect(stdout).toMatch(/at bundled:\/\/\/libs\/lib\.es5\.d\.ts:\d+:\d+/);
     });
 
@@ -446,7 +503,9 @@ describe.concurrent("bun check", () => {
         "index.ts": `export const wrong: number = self.name;\nexport const missing = document;\nimportScripts("a.js");\n`,
       });
       const { stdout } = await check(dir, ["--listFiles"]);
-      expect(stdout).toContain(`index.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'.`);
+      expect(stdout).toContain(
+        `index.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'.`,
+      );
       expect(stdout).toContain(`index.ts(2,24): error TS2584: Cannot find name 'document'.`);
       expect(stdout).toContain("bundled:///libs/lib.webworker.d.ts");
       expect(stdout).not.toContain("bundled:///libs/lib.dom.d.ts");
@@ -454,20 +513,28 @@ describe.concurrent("bun check", () => {
 
     // scripts/update-typescript-libs.ts writes the file.
     test.skipIf(!typescript7)("are those of TypeScript 7, byte for byte", () => {
-      const bundle = readFileSync(join(import.meta.dir, "../../../src/runtime/cli/typescript_libs.bin"));
-      const dictionaries = [undefined, "lib.es5.d.ts", "lib.dom.d.ts"].map(
-        name => name && readFileSync(join(typescript7!, name)),
+      const bundle = readFileSync(
+        join(import.meta.dir, "../../../src/runtime/cli/typescript_libs.bin"),
+      );
+      const dictionaries = [undefined, "lib.es5.d.ts", "lib.dom.d.ts"].map((name) =>
+        name === undefined ? undefined : readFileSync(join(typescript7!, name)),
       );
       const bundled = Array.from({ length: bundle.readUInt32LE(0) }, (_, i) => {
         const record = bundle.subarray(4 + i * 52);
-        const [at, length, dictionary] = [40, 44, 48].map(field => record.readUInt32LE(field));
-        const text = zstdDecompressSync(bundle.subarray(at, at + length), { dictionary: dictionaries[dictionary] });
+        const [at, length, dictionary] = [40, 44, 48].map((field) => record.readUInt32LE(field));
+        const text = zstdDecompressSync(bundle.subarray(at, at + length), {
+          dictionary: dictionaries[dictionary],
+        });
         return [record.toString("latin1", 1, 1 + record[0]), text] as const;
       });
-      const published = readdirSync(typescript7!).filter(name => /^lib(\..+)?\.d\.ts$/.test(name));
-      expect(bundled.map(it => it[0])).toEqual(published.sort());
+      const published = readdirSync(typescript7!).filter((name) =>
+        /^lib(\..+)?\.d\.ts$/.test(name),
+      );
+      expect(bundled.map((it) => it[0])).toEqual(published.sort());
       expect(
-        bundled.filter(([name, text]) => !readFileSync(join(typescript7!, name)).equals(text)).map(it => it[0]),
+        bundled
+          .filter(([name, text]) => !readFileSync(join(typescript7!, name)).equals(text))
+          .map((it) => it[0]),
       ).toEqual([]);
     });
   });
@@ -550,7 +617,11 @@ describe.concurrent("bun check", () => {
     using dir = project({
       "index.ts": `export function f(a: number) {\n  return a.lenght;\n}\n`,
     });
-    const { stdout, exitCode } = await check(dir, [], { AGENT: "1", NO_COLOR: undefined, FORCE_COLOR: "1" });
+    const { stdout, exitCode } = await check(dir, [], {
+      AGENT: "1",
+      NO_COLOR: undefined,
+      FORCE_COLOR: "1",
+    });
     expect(stdout).toMatchInlineSnapshot(`
       "<error file="index.ts" line="2" column="12" code="TS2339">
       Property 'lenght' does not exist on type 'number'.
@@ -614,8 +685,12 @@ describe.concurrent("bun check", () => {
     const lines = stdout.split("\n");
     expect(lines).toHaveLength(120);
     expect(lines).toEqual(lines.toSorted());
-    expect(lines[0]).toBe(`src/m00.ts(1,14): error TS2322: Type 'number' is not assignable to type 'string'.`);
-    expect(lines[119]).toBe(`src/m59.ts(2,14): error TS2322: Type 'string' is not assignable to type 'number'.`);
+    expect(lines[0]).toBe(
+      `src/m00.ts(1,14): error TS2322: Type 'number' is not assignable to type 'string'.`,
+    );
+    expect(lines[119]).toBe(
+      `src/m59.ts(2,14): error TS2322: Type 'string' is not assignable to type 'number'.`,
+    );
     expect(exitCode).toBe(1);
   });
 
@@ -641,8 +716,10 @@ describe.concurrent("bun check", () => {
       const [a, b, d] = [(i + 1) % n, (i + 7) % n, (i * 3 + 2) % n];
       files[`m${i}.ts`] = [
         ...[...new Set([a, b, d])]
-          .filter(j => j !== i)
-          .map(j => `import { f${j}, g${j}, C${j}, v${j}, type T${j}, type R${j} } from "./m${j}";`),
+          .filter((j) => j !== i)
+          .map(
+            (j) => `import { f${j}, g${j}, C${j}, v${j}, type T${j}, type R${j} } from "./m${j}";`,
+          ),
         `export interface T${i}<A> { a: A; next: T${a}<A[]> | null; take(x: T${b}<A>): void; give(): T${d}<A> }`,
         `export type R${i}<X, N extends unknown[] = []> = N["length"] extends 6 ? X : R${a}<{ m${i}: X }, [...N, 1]>;`,
         `export function f${i}(x: number) { return x > 0 ? { k: "m${i}" as const, inner: f${a}(x - 1) } : null; }`,
@@ -661,7 +738,7 @@ describe.concurrent("bun check", () => {
     }
     using dir = project(files);
     const [one, ...others] = await Promise.all(
-      [1, 2, 3, 8, 16].map(threads => check(dir, ["--threads", String(threads)])),
+      [1, 2, 3, 8, 16].map((threads) => check(dir, ["--threads", String(threads)])),
     );
     expect(one.stdout.split("\n").length).toBeGreaterThan(n * 6);
     for (const { stdout, exitCode } of others) {
@@ -738,7 +815,8 @@ describe.concurrent("bun check", () => {
   describe("many errors", () => {
     const files = {
       // One error repeated 60 times across two files, a second one 3 times, and a third one once.
-      "a.ts": Array.from({ length: 40 }, (_, i) => `console.lgo(${i});`).join("\n") + `\nexport {};\n`,
+      "a.ts":
+        Array.from({ length: 40 }, (_, i) => `console.lgo(${i});`).join("\n") + `\nexport {};\n`,
       "b.ts":
         Array.from({ length: 20 }, (_, i) => `console.lgo(${i});`).join("\n") +
         `\nconst a: string = 1, b: string = 2, c: string = 3;\nmissing;\nexport {};\n`,
@@ -831,7 +909,9 @@ describe.concurrent("bun check", () => {
     test("file lists are never truncated", async () => {
       // The same error in 60 files, so it is grouped.
       using dir = project(
-        Object.fromEntries(Array.from({ length: 60 }, (_, i) => [`f${i}.ts`, `console.lgo(${i});\nexport {};\n`])),
+        Object.fromEntries(
+          Array.from({ length: 60 }, (_, i) => [`f${i}.ts`, `console.lgo(${i});\nexport {};\n`]),
+        ),
       );
       const { stdout, stderr } = await check(dir, ["--pretty"]);
       expect(stdout).toContain("60 times in 60 files");
@@ -843,7 +923,11 @@ describe.concurrent("bun check", () => {
     test("an error that two projects report is printed for each, in build order, as by tsc -b", async () => {
       const compilerOptions = {
         ...JSON.parse(tsconfig).compilerOptions,
-        ...{ composite: true, noEmit: false, emitDeclarationOnly: true, outDir: "out", rootDir: ".." },
+        composite: true,
+        noEmit: false,
+        emitDeclarationOnly: true,
+        outDir: "out",
+        rootDir: "..",
       };
       const wrong = `export const wrong: number = "";\n`;
       const files = (types: string[]) => {
@@ -867,7 +951,7 @@ describe.concurrent("bun check", () => {
         check(withoutAFile),
         check(inAFile, ["shared"]),
       ]);
-      expect(located.stdout.split("\n").map(line => line.split("(")[0])).toEqual([
+      expect(located.stdout.split("\n").map((line) => line.split("(")[0])).toEqual([
         "shared/s.ts",
         "two/a.ts",
         "one/a.ts",
@@ -875,19 +959,22 @@ describe.concurrent("bun check", () => {
       ]);
       // `tsc -b --pretty`: "Found 4 errors in 4 files.", and the files by name.
       expect(located.stderr).toContain("Found 4 errors in 4 files");
-      expect(located.stderr.split("\n").filter(line => /^ +\d+ {2}/.test(line))).toEqual([
+      expect(located.stderr.split("\n").filter((line) => /^ +\d+ {2}/.test(line))).toEqual([
         "  1  one/a.ts:1",
         "  1  shared/s.ts:1",
         "  1  shared/s.ts:1",
         "  1  two/a.ts:1",
       ]);
-      expect(global.stdout.split("\n").filter(line => line.includes("error TS"))).toEqual([
+      expect(global.stdout.split("\n").filter((line) => line.includes("error TS"))).toEqual([
         "error TS2688: Cannot find type definition file for 'missing'.",
         "error TS2688: Cannot find type definition file for 'missing'.",
       ]);
       expect(global.stderr).toContain("Found 2 errors,");
       // A directory that is named has what `bun check` says about its files.
-      expect(named.stdout.split("\n").map(line => line.split("(")[0])).toEqual(["shared/s.ts", "shared/s.ts"]);
+      expect(named.stdout.split("\n").map((line) => line.split("(")[0])).toEqual([
+        "shared/s.ts",
+        "shared/s.ts",
+      ]);
     });
 
     test("an error without a file has no place", async () => {
@@ -896,14 +983,16 @@ describe.concurrent("bun check", () => {
       const compilerOptions = { ...JSON.parse(tsconfig).compilerOptions, types };
       using dir = project({ "tsconfig.json": JSON.stringify({ compilerOptions }), "a.ts": "" });
       const results = await Promise.all([check(dir, ["--pretty"]), check(dir, [], { AGENT: "1" })]);
-      const [inATerminal, forAgents] = results.map(it => it.stdout.split("\n"));
-      expect(inATerminal.filter(line => /^ +1 {2}TS2688 /.test(line)).slice(0, 2)).toEqual([
+      const [inATerminal, forAgents] = results.map((it) => it.stdout.split("\n"));
+      expect(inATerminal.filter((line) => /^ +1 {2}TS2688 /.test(line)).slice(0, 2)).toEqual([
         "  1  TS2688  Cannot find type definition file for 'missing2'.",
         "  1  TS2688  Cannot find type definition file for 'missing20'.",
       ]);
       expect(forAgents[0]).toBe(`<error code="TS2688">`);
       // Nothing like `:0`.
-      expect([...inATerminal, ...forAgents].filter(line => /(^|[\s>]):\d/.test(line))).toEqual([]);
+      expect([...inATerminal, ...forAgents].filter((line) => /(^|[\s>]):\d/.test(line))).toEqual(
+        [],
+      );
 
       // Two projects say the same, so each kind is there twice.
       const config = JSON.stringify({
@@ -917,25 +1006,34 @@ describe.concurrent("bun check", () => {
       });
       using build = project({
         "tsconfig.json": `{ "files": [], "references": [{ "path": "./one" }, { "path": "./two" }] }`,
-        ...{ "one/tsconfig.json": config, "one/a.ts": "", "two/tsconfig.json": config, "two/a.ts": "" },
+        "one/tsconfig.json": config,
+        "one/a.ts": "",
+        "two/tsconfig.json": config,
+        "two/a.ts": "",
       });
-      const ofBuild = await Promise.all([check(build, ["--pretty"]), check(build, [], { AGENT: "1" })]);
-      const [twiceInATerminal, twiceForAgents] = ofBuild.map(it => it.stdout.split("\n"));
-      expect(twiceInATerminal.filter(line => line.includes(" times")).slice(0, 2)).toEqual([
+      const ofBuild = await Promise.all([
+        check(build, ["--pretty"]),
+        check(build, [], { AGENT: "1" }),
+      ]);
+      const [twiceInATerminal, twiceForAgents] = ofBuild.map((it) => it.stdout.split("\n"));
+      expect(twiceInATerminal.filter((line) => line.includes(" times")).slice(0, 2)).toEqual([
         "    2 times",
         "    2 times",
       ]);
-      expect(twiceInATerminal.filter(line => /^ +2 {2}TS2688 /.test(line))[0]).toBe(
+      expect(twiceInATerminal.filter((line) => /^ +2 {2}TS2688 /.test(line))[0]).toBe(
         "  2  TS2688  Cannot find type definition file for 'missing2'.",
       );
       expect(twiceForAgents[0]).toBe(`<error code="TS2688" times="2">`);
-      expect(twiceForAgents.filter(line => line.includes("<also>"))).toEqual([]);
-      expect([...twiceInATerminal, ...twiceForAgents].filter(line => /(^|[\s>]):\d/.test(line))).toEqual([]);
+      expect(twiceForAgents.filter((line) => line.includes("<also>"))).toEqual([]);
+      expect(
+        [...twiceInATerminal, ...twiceForAgents].filter((line) => /(^|[\s>]):\d/.test(line)),
+      ).toEqual([]);
     });
 
     test("50 errors are not grouped", async () => {
       using dir = project({
-        "a.ts": Array.from({ length: 50 }, (_, i) => `console.lgo(${i});`).join("\n") + `\nexport {};\n`,
+        "a.ts":
+          Array.from({ length: 50 }, (_, i) => `console.lgo(${i});`).join("\n") + `\nexport {};\n`,
       });
       const { stdout } = await check(dir, ["--pretty"]);
       expect(stdout.match(/error: TS/g)).toHaveLength(50);
@@ -998,7 +1096,8 @@ describe.concurrent("bun check", () => {
         "other/tsconfig.json": tsconfig,
         "other/b.ts": `export const b: string = 1;\n`,
       });
-      const error = (file: string) => `${file}(1,14): error TS2322: Type 'number' is not assignable to type 'string'.`;
+      const error = (file: string) =>
+        `${file}(1,14): error TS2322: Type 'number' is not assignable to type 'string'.`;
       const whole = `${error("a.ts")}\n${error("other/b.ts")}`;
       const cases: [string[], string][] = [
         [[], whole],
@@ -1049,7 +1148,10 @@ describe.concurrent("bun check", () => {
       expect(
         results
           .slice(1)
-          .map((it, i) => [it.stderr.includes(cases[i + 1][1]) && it.exitCode === 1 ? "" : it.stderr, it.stdout]),
+          .map((it, i) => [
+            it.stderr.includes(cases[i + 1][1]) && it.exitCode === 1 ? "" : it.stderr,
+            it.stdout,
+          ]),
       ).toEqual(cases.slice(1).map(() => ["", ""]));
     });
 
@@ -1067,7 +1169,8 @@ describe.concurrent("bun check", () => {
         "b/b.ts": `export const b: string = 1;\n`,
         "c/c.ts": `export const c: string = 1;\n`,
       });
-      const error = (file: string) => `${file}(1,14): error TS2322: Type 'number' is not assignable to type 'string'.`;
+      const error = (file: string) =>
+        `${file}(1,14): error TS2322: Type 'number' is not assignable to type 'string'.`;
       const { stdout } = await check(dir, ["a", "b"]);
       expect(stdout).toBe(`${error("a/a.ts")}\n${error("b/b.ts")}`);
     });
@@ -1086,7 +1189,7 @@ describe.concurrent("bun check", () => {
         check(dir, ["--strict", "--pretty=false"]),
         check(dir, ["--strict", "false", "--pretty", "false"]),
       ]);
-      expect(results.map(it => it.stdout)).toEqual([error, error, error, ""]);
+      expect(results.map((it) => it.stdout)).toEqual([error, error, error, ""]);
     });
 
     // `subst` gives the directory a drive letter.
@@ -1095,10 +1198,11 @@ describe.concurrent("bun check", () => {
         "a.ts": `export const a: string = 1;\n`,
         "sub/b.ts": `export const b: string = 1;\n`,
       });
-      const subst = (...args: string[]) => Bun.spawnSync({ cmd: ["subst", ...args] }).exitCode === 0;
+      const subst = (...args: string[]) =>
+        Bun.spawnSync({ cmd: ["subst", ...args] }).exitCode === 0;
       const drive = [..."ZYXWVUTSRQ"]
-        .map(letter => `${letter}:`)
-        .find(drive => !existsSync(`${drive}\\`) && subst(drive, realpathSync(String(dir))));
+        .map((letter) => `${letter}:`)
+        .find((drive) => !existsSync(`${drive}\\`) && subst(drive, realpathSync(String(dir))));
       expect(drive).toBeDefined();
       try {
         const [from, byProject, directory, file] = await Promise.all([
@@ -1112,12 +1216,12 @@ describe.concurrent("bun check", () => {
         expect(from.stdout).toBe(`${error("a.ts")}\n${error("sub/b.ts")}`);
         // In one assertion, so that a failure shows all of them.
         const named = [byProject, directory, file];
-        expect(named.map(it => [it.stdout, it.exitCode])).toEqual([
+        expect(named.map((it) => [it.stdout, it.exitCode])).toEqual([
           [expect.stringContaining(error("a.ts")), 1],
           [expect.stringContaining(error("sub/b.ts")), 1],
           [expect.stringContaining(error("a.ts")), 1],
         ]);
-        expect(named.map(it => it.stdout).join("\n")).not.toContain("TS6053");
+        expect(named.map((it) => it.stdout).join("\n")).not.toContain("TS6053");
       } finally {
         subst(drive!, "/D");
       }
@@ -1136,8 +1240,10 @@ describe.concurrent("bun check", () => {
       ]);
       expect(all.stdout).toBe("");
       expect(named.stdout).toBe(`a.ts(2,18): error TS2304: Cannot find name 'elsewhere'.`);
-      const own = listed.stdout.split("\n").filter(line => !line.startsWith("bundled:///libs/lib."));
-      expect(own.map(line => line.replace(/^\S*\//, ""))).toEqual(["imported.ts", "a.ts"]);
+      const own = listed.stdout
+        .split("\n")
+        .filter((line) => !line.startsWith("bundled:///libs/lib."));
+      expect(own.map((line) => line.replace(/^\S*\//, ""))).toEqual(["imported.ts", "a.ts"]);
     });
 
     // Not that of the file system that has `bun`.
@@ -1158,7 +1264,9 @@ describe.concurrent("bun check", () => {
         "packages/lib/b.ts": `export const b: string = 1;\n`,
       });
       const { stdout } = await check(join(String(dir), "packages", "my-application"), ["../lib"]);
-      expect(stdout).toBe(`../lib/b.ts(1,14): error TS2322: Type 'number' is not assignable to type 'string'.`);
+      expect(stdout).toBe(
+        `../lib/b.ts(1,14): error TS2322: Type 'number' is not assignable to type 'string'.`,
+      );
     });
 
     test("a directory with a link that leads back up", async () => {
@@ -1169,12 +1277,17 @@ describe.concurrent("bun check", () => {
       });
       symlinkSync(String(dir), join(String(dir), "pkg", "up"), "junction");
       const { stdout } = await check(dir, ["."]);
-      expect(stdout).toBe(`pkg/a.ts(1,14): error TS2322: Type 'number' is not assignable to type 'string'.`);
+      expect(stdout).toBe(
+        `pkg/a.ts(1,14): error TS2322: Type 'number' is not assignable to type 'string'.`,
+      );
     });
 
     test("a path on the command line is relative to the working directory, as in tsc", async () => {
       using dir = project({
-        "packages/server/tsconfig.json": JSON.stringify({ ...JSON.parse(tsconfig), include: ["src"] }),
+        "packages/server/tsconfig.json": JSON.stringify({
+          ...JSON.parse(tsconfig),
+          include: ["src"],
+        }),
         "packages/server/src/a.ts": `export const a: number = 1;\n`,
       });
       const [fromHere, fromTheConfig] = await Promise.all([
@@ -1195,8 +1308,12 @@ describe.concurrent("bun check", () => {
       const real = realpathSync(String(dir));
       const share = `\\\\localhost\\${real[0]}$\\${real.slice(3)}`;
       const [from, named] = await Promise.all([run(share, ["check"]), check(dir, ["-p", share])]);
-      expect(from.stdout).toBe(`a.ts(1,14): error TS2322: Type 'number' is not assignable to type 'string'.`);
-      expect(named.stdout).toEndWith(`/a.ts(1,14): error TS2322: Type 'number' is not assignable to type 'string'.`);
+      expect(from.stdout).toBe(
+        `a.ts(1,14): error TS2322: Type 'number' is not assignable to type 'string'.`,
+      );
+      expect(named.stdout).toEndWith(
+        `/a.ts(1,14): error TS2322: Type 'number' is not assignable to type 'string'.`,
+      );
       expect(named.stdout).toStartWith("//localhost/");
     });
 
@@ -1280,7 +1397,8 @@ describe.concurrent("bun check", () => {
         "src/a.ts": `export const a: string = 1;\n`,
         "src/written/w.ts": `export const w: string = 1;\n`,
       });
-      const error = (file: string) => `${file}(1,14): error TS2322: Type 'number' is not assignable to type 'string'.`;
+      const error = (file: string) =>
+        `${file}(1,14): error TS2322: Type 'number' is not assignable to type 'string'.`;
       const excluding = join(String(dir), "excluding");
       const [excluded, notIncluded, named, written] = await Promise.all([
         check(excluding, ["src"]),
@@ -1299,17 +1417,25 @@ describe.concurrent("bun check", () => {
         "a.ts": `import "./b";\nexport const a: string = 1;\n`,
         "b.ts": `export {};\n`,
       });
-      const [after, only] = await Promise.all([check(dir, ["--listFiles"]), check(dir, ["--listFilesOnly"])]);
+      const [after, only] = await Promise.all([
+        check(dir, ["--listFiles"]),
+        check(dir, ["--listFilesOnly"]),
+      ]);
       // Lib files are listed first. A file is listed after its imports.
-      const listed = (stdout: string) => stdout.split("\n").filter(line => !line.startsWith("bundled:///libs/lib."));
+      const listed = (stdout: string) =>
+        stdout.split("\n").filter((line) => !line.startsWith("bundled:///libs/lib."));
       expect(after.stdout.split("\n")).toContain("bundled:///libs/lib.es5.d.ts");
-      expect(listed(after.stdout).map(line => line.replace(/^\S*\//, ""))).toEqual([
+      expect(listed(after.stdout).map((line) => line.replace(/^\S*\//, ""))).toEqual([
         "a.ts(2,14): error TS2322: Type 'number' is not assignable to type 'string'.",
         "b.ts",
         "a.ts",
         "console.d.ts",
       ]);
-      expect(listed(only.stdout).map(line => line.replace(/^\S*\//, ""))).toEqual(["b.ts", "a.ts", "console.d.ts"]);
+      expect(listed(only.stdout).map((line) => line.replace(/^\S*\//, ""))).toEqual([
+        "b.ts",
+        "a.ts",
+        "console.d.ts",
+      ]);
       expect(after.exitCode).toBe(1);
       expect(only.exitCode).toBe(0);
     });
@@ -1322,10 +1448,14 @@ describe.concurrent("bun check", () => {
         "node_modules/pkg/index.d.ts": `export declare const c: number;\n`,
       });
       const { stdout, exitCode } = await check(dir, ["--traceResolution"]);
-      const lines = stdout.replaceAll(realpathSync(String(dir)).replaceAll("\\", "/"), "<dir>").split("\n");
+      const lines = stdout
+        .replaceAll(realpathSync(String(dir)).replaceAll("\\", "/"), "<dir>")
+        .split("\n");
       // What is above the project depends on the machine.
-      const inProject = lines.filter(line => !/^(File|Found 'package\.json' at|Directory) '(?!<dir>)/.test(line));
-      expect(inProject.map(line => line.replaceAll("<dir>", ""))).toEqual([
+      const inProject = lines.filter(
+        (line) => !/^(File|Found 'package\.json' at|Directory) '(?!<dir>)/.test(line),
+      );
+      expect(inProject.map((line) => line.replaceAll("<dir>", ""))).toEqual([
         "======== Resolving module './b' from '/a.ts'. ========",
         "Explicitly specified module resolution kind: 'Bundler'.",
         "Resolving in CJS mode with conditions 'import', 'types'.",
@@ -1363,7 +1493,11 @@ describe.concurrent("bun check", () => {
         "import-import.ts": `export {};\n`,
       });
       const { stdout, exitCode } = await check(dir, ["--traceResolution"]);
-      expect(stdout.split("\n").flatMap(line => line.match(/^======== Resolving module '(.*?)'/)?.[1] ?? [])).toEqual([
+      expect(
+        stdout
+          .split("\n")
+          .flatMap((line) => line.match(/^======== Resolving module '(.*?)'/)?.[1] ?? []),
+      ).toEqual([
         "./plain",
         "./require-me",
         "./require-me",
@@ -1396,36 +1530,47 @@ describe.concurrent("bun check", () => {
       expect(exitCode).toBe(1);
     });
 
-    test.skipIf(process.platform === "win32")("a named pipe in the project directory is ignored", async () => {
-      using dir = project({ "a.ts": `export const a: string = 1;\n` });
-      // Reading a pipe that nobody writes to blocks forever.
-      expect(Bun.spawnSync(["mkfifo", join(String(dir), "pipe.ts")]).exitCode).toBe(0);
-      const { stdout, exitCode } = await check(dir);
-      expect(stdout).toMatchInlineSnapshot(
-        `"a.ts(1,14): error TS2322: Type 'number' is not assignable to type 'string'."`,
-      );
-      expect(exitCode).toBe(1);
-    });
+    test.skipIf(process.platform === "win32")(
+      "a named pipe in the project directory is ignored",
+      async () => {
+        using dir = project({ "a.ts": `export const a: string = 1;\n` });
+        // Reading a pipe that nobody writes to blocks forever.
+        expect(Bun.spawnSync(["mkfifo", join(String(dir), "pipe.ts")]).exitCode).toBe(0);
+        const { stdout, exitCode } = await check(dir);
+        expect(stdout).toMatchInlineSnapshot(
+          `"a.ts(1,14): error TS2322: Type 'number' is not assignable to type 'string'."`,
+        );
+        expect(exitCode).toBe(1);
+      },
+    );
 
     test("without a tsconfig.json at the root: each file has the options nearest to it, or else the default ones", async () => {
       const implicitAny = `export function f(x) {\n  return x;\n}\n`;
-      const loose = JSON.stringify({ compilerOptions: { ...JSON.parse(tsconfig).compilerOptions, strict: false } });
+      const loose = JSON.stringify({
+        compilerOptions: { ...JSON.parse(tsconfig).compilerOptions, strict: false },
+      });
       using dir = tempDir("bun-check", {
         // It has no say in this.
-        "package.json": JSON.stringify({ workspaces: ["packages/*", "!packages/left-out", "tools"] }),
+        "package.json": JSON.stringify({
+          workspaces: ["packages/*", "!packages/left-out", "tools"],
+        }),
         "packages/loose/tsconfig.json": loose,
         "packages/loose/index.ts": implicitAny,
         "packages/strict/tsconfig.json": tsconfig,
         // A file imported from another package is checked by that package's project.
         "packages/strict/index.ts":
-          `import { f as loose } from "../loose/index";\nexport const a: string = loose(1);\n` + implicitAny,
+          `import { f as loose } from "../loose/index";\nexport const a: string = loose(1);\n` +
+          implicitAny,
         "packages/left-out/tsconfig.json": loose,
         "packages/left-out/index.ts": implicitAny,
         "tools/tsconfig.json": loose,
         "tools/index.ts": implicitAny,
         "scripts/build.ts": implicitAny,
       });
-      const [{ stdout, stderr, exitCode }, packages] = await Promise.all([check(dir, ["."]), check(dir, ["packages"])]);
+      const [{ stdout, stderr, exitCode }, packages] = await Promise.all([
+        check(dir, ["."]),
+        check(dir, ["packages"]),
+      ]);
       expect(stdout).toMatchInlineSnapshot(`
         "packages/strict/index.ts(3,19): error TS7006: Parameter 'x' implicitly has an 'any' type.
         scripts/build.ts(1,19): error TS7006: Parameter 'x' implicitly has an 'any' type."
@@ -1443,7 +1588,10 @@ describe.concurrent("bun check", () => {
     });
 
     test("declaration files are checked unless skipLibCheck is set", async () => {
-      const files = { "types.d.ts": `declare const a: Missing;\n`, "a.ts": `export const b = a;\n` };
+      const files = {
+        "types.d.ts": `declare const a: Missing;\n`,
+        "a.ts": `export const b = a;\n`,
+      };
       using skipping = project(files);
       using looking = project({
         ...files,
@@ -1453,7 +1601,9 @@ describe.concurrent("bun check", () => {
       });
       const [skipped, looked] = await Promise.all([check(skipping), check(looking)]);
       expect(skipped.stdout).toBe("");
-      expect(looked.stdout).toMatchInlineSnapshot(`"types.d.ts(1,18): error TS2304: Cannot find name 'Missing'."`);
+      expect(looked.stdout).toMatchInlineSnapshot(
+        `"types.d.ts(1,18): error TS2304: Cannot find name 'Missing'."`,
+      );
     });
   });
 
@@ -1461,9 +1611,19 @@ describe.concurrent("bun check", () => {
     test("a type parameter that shadows another keeps its name in the declaration file", async () => {
       const compilerOptions = JSON.parse(tsconfig).compilerOptions;
       using dir = project({
-        "tsconfig.json": JSON.stringify({ compilerOptions, files: ["b.ts"], references: [{ path: "./a" }] }),
+        "tsconfig.json": JSON.stringify({
+          compilerOptions,
+          files: ["b.ts"],
+          references: [{ path: "./a" }],
+        }),
         "a/tsconfig.json": JSON.stringify({
-          compilerOptions: { ...compilerOptions, noEmit: false, composite: true, outDir: "dist", rootDir: "src" },
+          compilerOptions: {
+            ...compilerOptions,
+            noEmit: false,
+            composite: true,
+            outDir: "dist",
+            rootDir: "src",
+          },
           include: ["src"],
         }),
         "a/src/x.ts": `export interface Box<A> {\n  readonly map: <A>(value: A) => A;\n}\n`,
@@ -1490,7 +1650,10 @@ describe.concurrent("bun check", () => {
         // A solution-style tsconfig.json: only `references`, no files.
         "tsconfig.json": JSON.stringify({ files: [], references: [{ path: "packages/app" }] }),
         "console.d.ts": "",
-        "packages/lib/tsconfig.json": JSON.stringify({ compilerOptions: options, include: ["src"] }),
+        "packages/lib/tsconfig.json": JSON.stringify({
+          compilerOptions: options,
+          include: ["src"],
+        }),
         "packages/lib/src/index.ts": `export const double = (n: number) => n * 2;\n`,
         "packages/app/tsconfig.json": JSON.stringify({
           compilerOptions: { ...options, noImplicitAny: false },
@@ -1504,9 +1667,19 @@ describe.concurrent("bun check", () => {
     test("a `this` parameter in the declaration file of a referenced project", async () => {
       const compilerOptions = JSON.parse(tsconfig).compilerOptions;
       using dir = project({
-        "tsconfig.json": JSON.stringify({ compilerOptions, files: ["b.ts"], references: [{ path: "./a" }] }),
+        "tsconfig.json": JSON.stringify({
+          compilerOptions,
+          files: ["b.ts"],
+          references: [{ path: "./a" }],
+        }),
         "a/tsconfig.json": JSON.stringify({
-          compilerOptions: { ...compilerOptions, noEmit: false, composite: true, outDir: "dist", rootDir: "src" },
+          compilerOptions: {
+            ...compilerOptions,
+            noEmit: false,
+            composite: true,
+            outDir: "dist",
+            rootDir: "src",
+          },
           include: ["src"],
         }),
         "a/src/x.ts": `export function f(this: { a: 1 }, b: number, c = 1) {\n  return [this.a, b, c];\n}\n`,
@@ -1529,7 +1702,10 @@ describe.concurrent("bun check", () => {
       const config = (references: { path: string }[]) =>
         JSON.stringify({ compilerOptions, include: ["*.ts"], references });
       using dir = project({
-        "tsconfig.json": JSON.stringify({ files: [], references: [{ path: "./a" }, { path: "./b" }, { path: "./c" }] }),
+        "tsconfig.json": JSON.stringify({
+          files: [],
+          references: [{ path: "./a" }, { path: "./b" }, { path: "./c" }],
+        }),
         "a/tsconfig.json": config([]),
         "a/index.ts": `export const a = 1;\n`,
         "b/tsconfig.json": config([{ path: "../a" }]),
@@ -1652,11 +1828,19 @@ c/index.ts(2,14): error TS2322: Type 'number' is not assignable to type 'string'
           ],
         }),
         "tsconfig.app.json": JSON.stringify({
-          compilerOptions: { ...options, jsx: "preserve", allowImportingTsExtensions: true, emitDeclarationOnly: true },
+          compilerOptions: {
+            ...options,
+            jsx: "preserve",
+            allowImportingTsExtensions: true,
+            emitDeclarationOnly: true,
+          },
           include: ["src", "test"],
         }),
         "test/t.ts": `export const t: number = "1";\n`,
-        "tsconfig.node.json": JSON.stringify({ compilerOptions: options, include: ["vite.config.ts"] }),
+        "tsconfig.node.json": JSON.stringify({
+          compilerOptions: options,
+          include: ["vite.config.ts"],
+        }),
         "src/jsx.d.ts": `declare namespace JSX {\n  interface Element {}\n  interface IntrinsicElements {\n    div: {};\n  }\n}\n`,
         "src/App.tsx": `export const App: number = 1;\n`,
         "src/main.tsx": `import { App } from "./App.tsx";\nexport const element = <div />;\nexport const a: string = App;\n`,
@@ -1670,11 +1854,14 @@ c/index.ts(2,14): error TS2322: Type 'number' is not assignable to type 'string'
         }),
         "worker.js": `/** @type {number} */\nexport const w = "1";\n`,
         // A project of its own, which the solution does not reference: `bun check` leaves it alone.
-        "examples/x/tsconfig.json": JSON.stringify({ compilerOptions: { ...options, composite: false } }),
+        "examples/x/tsconfig.json": JSON.stringify({
+          compilerOptions: { ...options, composite: false },
+        }),
         "examples/x/e.ts": `export const e: number = "1";\n`,
       });
       const main = `src/main.tsx(3,14): error TS2322: Type 'number' is not assignable to type 'string'.`;
-      const other = (file: string) => `${file}(1,14): error TS2322: Type 'string' is not assignable to type 'number'.`;
+      const other = (file: string) =>
+        `${file}(1,14): error TS2322: Type 'string' is not assignable to type 'number'.`;
       const results = await Promise.all([
         check(dir),
         check(dir, ["."]),
@@ -1691,7 +1878,7 @@ c/index.ts(2,14): error TS2322: Type 'number' is not assignable to type 'string'
       const some = `${main}\n${other("vite.config.ts")}`;
       const worker = `worker.js(2,14): error TS2322: Type 'string' is not assignable to type 'number'.`;
       const whole = `${main}\n${other("test/t.ts")}\n${other("vite.config.ts")}\n${worker}`;
-      expect(results.slice(0, 10).map(it => it.stdout)).toEqual([
+      expect(results.slice(0, 10).map((it) => it.stdout)).toEqual([
         whole,
         whole,
         main,
@@ -1704,7 +1891,9 @@ c/index.ts(2,14): error TS2322: Type 'number' is not assignable to type 'string'
         main,
       ]);
       // As much work, too. Nothing is to be said about a directory that was named.
-      expect(results[1].stderr).toBe(results[0].stderr.replace(/^note: tsconfig.json has no files .*\n/, ""));
+      expect(results[1].stderr).toBe(
+        results[0].stderr.replace(/^note: tsconfig.json has no files .*\n/, ""),
+      );
       expect(results[9].stderr).toBe(results[3].stderr);
       expect(results[10].stderr).toContain("TS2322");
       expect(results[10].stderr).not.toMatch(/TS17004|TS5097|TS6142/);
@@ -1713,9 +1902,13 @@ c/index.ts(2,14): error TS2322: Type 'number' is not assignable to type 'string'
     test("path arguments: each is checked with the compiler options of its own project", async () => {
       using dir = project({
         "console.d.ts": "",
-        "strict/tsconfig.json": JSON.stringify({ compilerOptions: { ...options, composite: false, strict: true } }),
+        "strict/tsconfig.json": JSON.stringify({
+          compilerOptions: { ...options, composite: false, strict: true },
+        }),
         "strict/a.ts": `export function f(x) {\n  return x;\n}\n`,
-        "loose/tsconfig.json": JSON.stringify({ compilerOptions: { ...options, composite: false, strict: false } }),
+        "loose/tsconfig.json": JSON.stringify({
+          compilerOptions: { ...options, composite: false, strict: false },
+        }),
         "loose/a.ts": `export function f(x) {\n  return x;\n}\n`,
       });
       const error = `strict/a.ts(1,19): error TS7006: Parameter 'x' implicitly has an 'any' type.`;
@@ -1728,7 +1921,10 @@ c/index.ts(2,14): error TS2322: Type 'number' is not assignable to type 'string'
 
     test("does not generate build output for a project that is not referenced", async () => {
       using dir = project({
-        "tsconfig.json": JSON.stringify({ compilerOptions: { ...options, composite: false }, include: ["app"] }),
+        "tsconfig.json": JSON.stringify({
+          compilerOptions: { ...options, composite: false },
+          include: ["app"],
+        }),
         "console.d.ts": "",
         "lib/package.json": JSON.stringify({ name: "lib", types: "./dist/index.d.ts" }),
         "lib/tsconfig.json": JSON.stringify({
@@ -1754,7 +1950,9 @@ c/index.ts(2,14): error TS2322: Type 'number' is not assignable to type 'string'
         }),
       });
       const { stdout, exitCode } = await check(dir);
-      expect(stdout).toMatchInlineSnapshot(`"error TS6053: File '<dir>/packages/gone/tsconfig.json' not found."`);
+      expect(stdout).toMatchInlineSnapshot(
+        `"error TS6053: File '<dir>/packages/gone/tsconfig.json' not found."`,
+      );
       expect(exitCode).toBe(1);
     });
 
@@ -1878,7 +2076,10 @@ export const c: 1 = handler;
 
     test("a type of a referenced package whose exports point at its sources can be named", async () => {
       using dir = monorepo({
-        "packages/lib/package.json": JSON.stringify({ name: "lib", exports: { "./*": "./src/*.ts" } }),
+        "packages/lib/package.json": JSON.stringify({
+          name: "lib",
+          exports: { "./*": "./src/*.ts" },
+        }),
         "packages/lib/tsconfig.json": JSON.stringify({
           compilerOptions: { ...options, rootDir: "src", outDir: "dist" },
           include: ["src"],
@@ -1889,7 +2090,11 @@ export const c: 1 = handler;
         "packages/app/src/index.ts": `import { make } from "lib/Make";\nexport const made = make(1);\nexport const wrong: string = made.value;\n`,
       });
       mkdirSync(join(String(dir), "packages/app/node_modules"), { recursive: true });
-      symlinkSync(join(String(dir), "packages/lib"), join(String(dir), "packages/app/node_modules/lib"), "junction");
+      symlinkSync(
+        join(String(dir), "packages/lib"),
+        join(String(dir), "packages/app/node_modules/lib"),
+        "junction",
+      );
       const { stdout } = await check(dir);
       expect(stdout).toMatchInlineSnapshot(
         `"packages/app/src/index.ts(3,14): error TS2322: Type 'number' is not assignable to type 'string'."`,
@@ -1899,10 +2104,18 @@ export const c: 1 = handler;
     test("a generated declaration file names a dependency by its package name in a project with paths", async () => {
       using dir = monorepo({
         "packages/lib/tsconfig.json": JSON.stringify({
-          compilerOptions: { ...options, rootDir: "src", outDir: "dist", paths: { "@/*": ["./src/client/*"] } },
+          compilerOptions: {
+            ...options,
+            rootDir: "src",
+            outDir: "dist",
+            paths: { "@/*": ["./src/client/*"] },
+          },
           include: ["src"],
         }),
-        "packages/lib/node_modules/dep/package.json": JSON.stringify({ name: "dep", types: "index.d.ts" }),
+        "packages/lib/node_modules/dep/package.json": JSON.stringify({
+          name: "dep",
+          types: "index.d.ts",
+        }),
         "packages/lib/node_modules/dep/index.d.ts": `export { make } from "./make";\n`,
         "packages/lib/node_modules/dep/make.d.ts": `import type { Box } from "./box";\nexport declare function make<T>(value: T): Box<T>;\n`,
         "packages/lib/node_modules/dep/box.d.ts": `export interface Box<T> {\n  value: T;\n}\n`,
@@ -2000,7 +2213,12 @@ const kind: number = Shape.kind;
       };
       const app = (compilerOptions: object) =>
         JSON.stringify({
-          compilerOptions: { ...options, module: "nodenext", moduleResolution: "nodenext", ...compilerOptions },
+          compilerOptions: {
+            ...options,
+            module: "nodenext",
+            moduleResolution: "nodenext",
+            ...compilerOptions,
+          },
           include: ["src"],
           references: [{ path: "../lib" }],
         });
@@ -2033,7 +2251,8 @@ const kind: number = Shape.kind;
           checkJs: true,
           noEmit: true,
         };
-        const index = (name: string) => `const { help } = require("../helpers");\nexports.${name} = help();\n`;
+        const index = (name: string) =>
+          `const { help } = require("../helpers");\nexports.${name} = help();\n`;
         using dir = project({
           "tsconfig.json": JSON.stringify({
             compilerOptions,
@@ -2051,21 +2270,29 @@ const kind: number = Shape.kind;
         expect(
           stdout
             .split("\n")
-            .filter(line => line.includes("TS6307"))
-            .map(line => line.slice(0, 40)),
-        ).toEqual(["one/index.js(1,26): error TS6307: File '", "two/index.js(1,26): error TS6307: File '"]);
+            .filter((line) => line.includes("TS6307"))
+            .map((line) => line.slice(0, 40)),
+        ).toEqual([
+          "one/index.js(1,26): error TS6307: File '",
+          "two/index.js(1,26): error TS6307: File '",
+        ]);
       });
 
       test("is imported without allowJs where an untyped import is no error", async () => {
-        using dir = monorepo({ ...library, "packages/app/tsconfig.json": app({ noImplicitAny: false }) });
+        using dir = monorepo({
+          ...library,
+          "packages/app/tsconfig.json": app({ noImplicitAny: false }),
+        });
         const { stdout } = await check(dir);
-        expect(stdout.split("\n").filter(line => line.includes("error TS")).length).toBe(9);
+        expect(stdout.split("\n").filter((line) => line.includes("error TS")).length).toBe(9);
       });
 
       test("cannot be imported by a project that does not allow JavaScript", async () => {
         using dir = monorepo({ ...library, "packages/app/tsconfig.json": app({}) });
         const { stdout } = await check(dir);
-        expect(stdout.split("\n").map(line => line.slice(0, line.indexOf(":", line.indexOf("TS"))))).toEqual([
+        expect(
+          stdout.split("\n").map((line) => line.slice(0, line.indexOf(":", line.indexOf("TS")))),
+        ).toEqual([
           "packages/app/src/index.ts(1,22): error TS7016",
           "packages/app/src/index.ts(2,23): error TS7016",
           "packages/app/src/index.ts(3,29): error TS7016",
@@ -2145,7 +2372,10 @@ const kind: number = Shape.kind;
         "packages/pkg/package.json": JSON.stringify({
           name: "@scope/pkg",
           version: "1.0.0",
-          exports: { ".": { types: "./index.d.ts", default: "./index.js" }, "./untyped": "./untyped.js" },
+          exports: {
+            ".": { types: "./index.d.ts", default: "./index.js" },
+            "./untyped": "./untyped.js",
+          },
         }),
         "packages/pkg/index.d.ts": `export declare const typed: number;\n`,
         "packages/pkg/index.js": `export const typed = 1;\n`,
@@ -2153,7 +2383,11 @@ const kind: number = Shape.kind;
         "a.ts": `import { typed } from "@scope/pkg";\nimport { untyped } from "@scope/pkg/untyped";\nexport const both = [typed, untyped];\n`,
       });
       mkdirSync(join(String(dir), "node_modules/@scope"), { recursive: true });
-      symlinkSync(join(String(dir), "packages/pkg"), join(String(dir), "node_modules/@scope/pkg"), "junction");
+      symlinkSync(
+        join(String(dir), "packages/pkg"),
+        join(String(dir), "node_modules/@scope/pkg"),
+        "junction",
+      );
       const { stdout } = await check(dir);
       expect(stdout).toMatchInlineSnapshot(`
         "a.ts(2,25): error TS7016: Could not find a declaration file for module '@scope/pkg/untyped'. '<dir>/packages/pkg/untyped.js' implicitly has an 'any' type.
@@ -2210,7 +2444,9 @@ const kind: number = Shape.kind;
         "b.ts": `// @ts-nocheck\nexport const d: string = 3;\n`,
       });
       const { stdout } = await check(dir);
-      expect(stdout).toMatchInlineSnapshot(`"a.ts(5,1): error TS2578: Unused '@ts-expect-error' directive."`);
+      expect(stdout).toMatchInlineSnapshot(
+        `"a.ts(5,1): error TS2578: Unused '@ts-expect-error' directive."`,
+      );
     });
 
     test("syntax errors", async () => {
@@ -2223,7 +2459,11 @@ const kind: number = Shape.kind;
     test("checkJs uses JSDoc types", async () => {
       using dir = project({
         "tsconfig.json": JSON.stringify({
-          compilerOptions: { ...JSON.parse(tsconfig).compilerOptions, allowJs: true, checkJs: true },
+          compilerOptions: {
+            ...JSON.parse(tsconfig).compilerOptions,
+            allowJs: true,
+            checkJs: true,
+          },
         }),
         "a.js": `/**\n * @param {number} n\n * @returns {string}\n */\nexport function f(n) {\n  return n;\n}\nf("1");\n/** @type {{ a: number }} */\nexport const o = { a: "x" };\n`,
       });
@@ -2700,7 +2940,7 @@ dynamic.getSSRProps = binding => {
 `,
       };
 
-      test.each([1, 8])("with the earlier file, on %d threads", async threads => {
+      test.each([1, 8])("with the earlier file, on %d threads", async (threads) => {
         using dir = project(files);
         const { stdout } = await check(dir, ["--threads", String(threads)]);
         expect(stdout).toMatchInlineSnapshot(`
@@ -2810,7 +3050,7 @@ export const wrong: number = x;
       "@param {object[]} a",
       "@template T @param {Object} a",
       "@callback @param {Object} a",
-    ])("a JSDoc comment of 20,000 times %j, each nested in the last", async tags => {
+    ])("a JSDoc comment of 20,000 times %j, each nested in the last", async (tags) => {
       using dir = project({
         "a.ts": `/** {@link f} ${repeat(`${tags} `, 20_000)}*/
 export function f() {}
@@ -2913,7 +3153,8 @@ a.js(6,32): error TS2339: Property 'nope' does not exist on type 'number'.`,
       [
         "a JSDoc @param with properties",
         "a.js",
-        (run: string) => `/**\n * @param {Object${run}} a\n * @param {number} a.b\n */\nexport function f(a) {}`,
+        (run: string) =>
+          `/**\n * @param {Object${run}} a\n * @param {number} a.b\n */\nexport function f(a) {}`,
         `a.js(7,14): error TS2322: Type 'string' is not assignable to type 'number'.
 a.js(8,32): error TS2339: Property 'nope' does not exist on type 'number'.`,
       ],
@@ -2934,15 +3175,22 @@ export const alsoWrong = wrong.nope;
     // parameter its members meet in one intersection. Whether that is `never` is decided name by name, and
     // comparing every pair of members for every name took minutes here.
     test("a polymorphic component over 2,000 element types", async () => {
-      const kinds = ["string", "number", "boolean | undefined", "(event: { target: T }) => void", "T | undefined"];
-      const lines = (count: number, line: (i: number) => string) => Array.from({ length: count }, (_, i) => line(i));
+      const kinds = [
+        "string",
+        "number",
+        "boolean | undefined",
+        "(event: { target: T }) => void",
+        "T | undefined",
+      ];
+      const lines = (count: number, line: (i: number) => string) =>
+        Array.from({ length: count }, (_, i) => line(i));
       const source = [
         "interface Attributes<T> {",
-        ...lines(100, i => `  p${i}?: ${kinds[i % kinds.length]};`),
+        ...lines(100, (i) => `  p${i}?: ${kinds[i % kinds.length]};`),
         "}",
-        ...lines(2_000, i => `interface E${i} { kind: "e${i}" }`),
+        ...lines(2_000, (i) => `interface E${i} { kind: "e${i}" }`),
         "interface Elements {",
-        ...lines(2_000, i => `  e${i}: Attributes<E${i}>;`),
+        ...lines(2_000, (i) => `  e${i}: Attributes<E${i}>;`),
         "}",
         `type Component<P> = (props: P) => unknown;
 type ValidComponent = keyof Elements | Component<any> | (string & {});
@@ -3147,8 +3395,16 @@ export default defineConfig({});
 `,
       });
       mkdirSync(join(String(dir), "kit/node_modules"), { recursive: true });
-      symlinkSync(join(String(dir), store("a")), join(String(dir), "node_modules/tsup"), "junction");
-      symlinkSync(join(String(dir), store("b")), join(String(dir), "kit/node_modules/tsup"), "junction");
+      symlinkSync(
+        join(String(dir), store("a")),
+        join(String(dir), "node_modules/tsup"),
+        "junction",
+      );
+      symlinkSync(
+        join(String(dir), store("b")),
+        join(String(dir), "kit/node_modules/tsup"),
+        "junction",
+      );
       const { stdout, exitCode } = await check(dir);
       expect(stdout).toMatchInlineSnapshot(
         `"orm/b.ts(2,1): error TS2883: The inferred type of 'default' cannot be named without a reference to 'Options' from '../kit/node_modules/tsup/dist'. This is likely not portable. A type annotation is necessary."`,
@@ -3507,7 +3763,10 @@ export const r6 = q[sym];
 export const b: number = big.versions[0][0];
 `,
         "big.json": JSON.stringify({
-          versions: Array.from({ length: 60 }, (_, i) => [`v${i}`, { chrome: `${i}`, firefox: "x" }]),
+          versions: Array.from({ length: 60 }, (_, i) => [
+            `v${i}`,
+            { chrome: `${i}`, firefox: "x" },
+          ]),
         }),
       });
       const { stdout, exitCode } = await check(dir);
@@ -3526,7 +3785,9 @@ export const a: number = big;
 `,
         "big.json": JSON.stringify({
           env: { builtin: true },
-          globals: Object.fromEntries(Array.from({ length: 40 }, (_, i) => [`global${i}`, "readonly"])),
+          globals: Object.fromEntries(
+            Array.from({ length: 40 }, (_, i) => [`global${i}`, "readonly"]),
+          ),
           rules: { r1: "off" },
         }),
       });
@@ -3779,9 +4040,11 @@ export const r: A1<[Z, Z]> = [{ v: 1 }, { v: 1 }];
       expect(exitCode).toBe(0);
     });
 
-    test("an unknown option that is `null` is not reported", async () => {
-      using dir = project({
-        "tsconfig.json": `{
+    test(
+      "an unknown option that is `null` is not reported",
+      async () => {
+        using dir = project({
+          "tsconfig.json": `{
   "compilerOptions": {
     "noEmit": true,
     "types": [],
@@ -3796,17 +4059,19 @@ export const r: A1<[Z, Z]> = [{ v: 1 }, { v: 1 }];
   "typeAcquisition": { "bogus": null }
 }
 `,
-        "a.ts": `export const a = 1;
+          "a.ts": `export const a = 1;
 `,
-      });
-      const { stdout, exitCode } = await check(dir);
-      expect(stdout).toMatchInlineSnapshot(`
+        });
+        const { stdout, exitCode } = await check(dir);
+        expect(stdout).toMatchInlineSnapshot(`
         "console.d.ts(1,13): error TS2403: Subsequent variable declarations must have the same type.  Variable 'console' must be of type 'Console', but here has type '{ log(...args: unknown[]): void; }'.
         tsconfig.json(7,5): error TS5023: Unknown compiler option 'other'.
         tsconfig.json(8,5): error TS5023: Unknown compiler option 'out'."
       `);
-      expect(exitCode).toBe(1);
-    });
+        expect(exitCode).toBe(1);
+      },
+      isDebug || isASAN ? 10_000 : 5_000,
+    );
 
     test("a protected member is accessible through `this` narrowed by `this is X`", async () => {
       using dir = project({
@@ -5289,10 +5554,12 @@ export function l5() {
       expect(exitCode).toBe(1);
     });
 
-    test("a function in a JSX attribute of a JavaScript file has a minimum argument count", async () => {
-      using dir = project({
-        "tsconfig.json": `{"compilerOptions": {"noEmit": true, "allowJs": true, "checkJs": true, "strict": true, "noImplicitAny": false, "target": "esnext", "module": "preserve", "moduleResolution": "bundler", "moduleDetection": "force", "jsx": "preserve", "types": []}, "files": ["d.d.ts", "a.js", "b.jsx", "c.tsx"]}`,
-        "a.js": `take(async (v) => v * 2);
+    test(
+      "a function in a JSX attribute of a JavaScript file has a minimum argument count",
+      async () => {
+        using dir = project({
+          "tsconfig.json": `{"compilerOptions": {"noEmit": true, "allowJs": true, "checkJs": true, "strict": true, "noImplicitAny": false, "target": "esnext", "module": "preserve", "moduleResolution": "bundler", "moduleDetection": "force", "jsx": "preserve", "types": []}, "files": ["d.d.ts", "a.js", "b.jsx", "c.tsx"]}`,
+          "a.js": `take(async (v) => v * 2);
 take(async function (v) { return v; });
 /** @type {() => Promise<any>} */
 export const f = async (v) => v;
@@ -5301,23 +5568,23 @@ export const o = { action: async (v) => v };
 async function named(v) { return v; }
 take(named);
 `,
-        "b.jsx": `export const x = <Button action={async (v) => v * 2}>a</Button>;
+          "b.jsx": `export const x = <Button action={async (v) => v * 2}>a</Button>;
 export const x2 = <Button action={async (v) => v * 2} />;
 export const x3 = <Button action={(v) => Promise.resolve(v)} />;
 export const x4 = <Button action={async function (v) { return v; }} />;
 export const x5 = <Button action={1} />;
 `,
-        "c.tsx": `export const x2 = <Button action={async (v) => v * 2} />;
+          "c.tsx": `export const x2 = <Button action={async (v) => v * 2} />;
 export const x3 = <Button action={(v) => Promise.resolve(v)} />;
 export const x4 = <Button action={async function (v) { return v; }} />;
 `,
-        "d.d.ts": `declare namespace JSX { interface Element {} interface IntrinsicElements { div: {} } interface ElementChildrenAttribute { children: {} } }
+          "d.d.ts": `declare namespace JSX { interface Element {} interface IntrinsicElements { div: {} } interface ElementChildrenAttribute { children: {} } }
 declare function take(action: () => Promise<any>): void;
 declare function Button(props: { action: () => Promise<any>; children?: any }): JSX.Element;
 `,
-      });
-      const { stdout, exitCode } = await check(dir);
-      expect(stdout).toMatchInlineSnapshot(`
+        });
+        const { stdout, exitCode } = await check(dir);
+        expect(stdout).toMatchInlineSnapshot(`
         "a.js(1,6): error TS2345: Argument of type '(v: any) => Promise<number>' is not assignable to parameter of type '() => Promise<any>'.
           Target signature provides too few arguments. Expected 1 or more, but got 0.
         a.js(2,6): error TS2345: Argument of type '(v: any) => Promise<any>' is not assignable to parameter of type '() => Promise<any>'.
@@ -5342,8 +5609,10 @@ declare function Button(props: { action: () => Promise<any>; children?: any }): 
         c.tsx(3,27): error TS2322: Type '(v: any) => Promise<any>' is not assignable to type '() => Promise<any>'.
           Target signature provides too few arguments. Expected 1 or more, but got 0."
       `);
-      expect(exitCode).toBe(1);
-    });
+        expect(exitCode).toBe(1);
+      },
+      isDebug || isASAN ? 10_000 : 5_000,
+    );
 
     test("a variable initialized by a call in a loop that assigns it back: the quick type, overloads and a second constant", async () => {
       using dir = project({
@@ -6569,7 +6838,9 @@ export const u = b2.a;
 `,
       });
       const { stdout, exitCode } = await check(dir);
-      expect(stdout).toMatchInlineSnapshot(`"u.ts(2,21): error TS2339: Property 'a' does not exist on type 'B2'."`);
+      expect(stdout).toMatchInlineSnapshot(
+        `"u.ts(2,21): error TS2339: Property 'a' does not exist on type 'B2'."`,
+      );
       expect(exitCode).toBe(1);
     });
 
@@ -7126,9 +7397,14 @@ export { linked, inLinked, ownName, ownImports, relative };
         "packages/pkg/sub.js": `exports.a = 1;\n`,
       });
       mkdirSync(join(String(dir), "node_modules"));
-      symlinkSync(join(String(dir), "packages", "pkg"), join(String(dir), "node_modules", "pkg"), "junction");
+      symlinkSync(
+        join(String(dir), "packages", "pkg"),
+        join(String(dir), "node_modules", "pkg"),
+        "junction",
+      );
       const { stdout, exitCode } = await check(dir);
-      expect(stdout.replace(/\. '[^']*' implicitly/g, ". '<file>' implicitly")).toMatchInlineSnapshot(`
+      expect(stdout.replace(/\. '[^']*' implicitly/g, ". '<file>' implicitly"))
+        .toMatchInlineSnapshot(`
         "a.ts(1,20): error TS7016: Could not find a declaration file for module 'pkg'. '<file>' implicitly has an 'any' type.
           Try \`bun add -d @types/pkg\` if it exists or add a new declaration (.d.ts) file containing \`declare module 'pkg';\`
         a.ts(2,22): error TS7016: Could not find a declaration file for module 'pkg/sub'. '<file>' implicitly has an 'any' type.
@@ -7407,7 +7683,7 @@ export type C<T> = { [K in keyof T as C<T[]> & string]: 1 };
 `,
       });
       const { stdout, exitCode } = await check(dir);
-      expect(stdout.split("\n").filter(line => line.includes("TS2322"))).toEqual([
+      expect(stdout.split("\n").filter((line) => line.includes("TS2322"))).toEqual([
         "a.ts(2,35): error TS2322: Type 'A<T[]>' is not assignable to type 'string | number | symbol'.",
         "a.ts(4,35): error TS2322: Type 'B<Box<T>>' is not assignable to type 'string | number | symbol'.",
       ]);
@@ -13470,7 +13746,9 @@ export const s_escape: string = escape;
     // conditional types over the type of the app.
     test("the client that Eden Treaty infers from an Elysia app", async () => {
       // Elysia is a peer dependency of Eden, so it is next to it in the store.
-      const eden = realpathSync(join(import.meta.dir, "..", "..", "node_modules", "@elysia", "eden"));
+      const eden = realpathSync(
+        join(import.meta.dir, "..", "..", "node_modules", "@elysia", "eden"),
+      );
       const elysia = join(eden, "..", "..", "elysia");
       using dir = project({
         "tsconfig.json": JSON.stringify({
@@ -13479,7 +13757,7 @@ export const s_escape: string = escape;
             lib: ["esnext", "dom"],
             paths: {
               "@elysia/eden": [join(eden, "dist", "index.d.ts")],
-              "elysia": [join(elysia, "dist", "index.d.ts")],
+              elysia: [join(elysia, "dist", "index.d.ts")],
               "elysia/*": [join(elysia, "dist", "*")],
             },
           },
@@ -14204,7 +14482,9 @@ export const t = copy.n && copy.n.length;
 `,
       });
       const { stdout, exitCode } = await check(dir);
-      expect(stdout).toMatchInlineSnapshot(`"a.ts(3,28): error TS18048: 'copy.n' is possibly 'undefined'."`);
+      expect(stdout).toMatchInlineSnapshot(
+        `"a.ts(3,28): error TS18048: 'copy.n' is possibly 'undefined'."`,
+      );
       expect(exitCode).toBe(1);
     });
 
@@ -14369,7 +14649,9 @@ export function f<T>(rest: T) {
 `,
       });
       const { stdout, exitCode } = await check(dir);
-      expect(stdout).toBe(`a.ts(8,9): error TS2540: Cannot assign to 'model' because it is a read-only property.`);
+      expect(stdout).toBe(
+        `a.ts(8,9): error TS2540: Cannot assign to 'model' because it is a read-only property.`,
+      );
       expect(exitCode).toBe(1);
     });
   });
@@ -14377,7 +14659,13 @@ export function f<T>(rest: T) {
   describe("compiler options as flags", () => {
     const files = {
       "tsconfig.json": JSON.stringify({
-        compilerOptions: { strict: false, noEmit: true, target: "esnext", lib: ["esnext"], types: [] },
+        compilerOptions: {
+          strict: false,
+          noEmit: true,
+          target: "esnext",
+          lib: ["esnext"],
+          types: [],
+        },
       }),
       "a.ts": `export function f(x) {\n  return x;\n}\nexport const first = [1][0].toFixed();\n`,
     };
@@ -14396,13 +14684,17 @@ export function f<T>(rest: T) {
         `"a.ts(1,19): error TS7006: Parameter 'x' implicitly has an 'any' type."`,
       );
       expect(off.stdout).toBe("");
-      expect(indexed.stdout).toMatchInlineSnapshot(`"a.ts(4,22): error TS2532: Object is possibly 'undefined'."`);
+      expect(indexed.stdout).toMatchInlineSnapshot(
+        `"a.ts(4,22): error TS2532: Object is possibly 'undefined'."`,
+      );
     });
 
     test("a boolean flag does not consume the next argument", async () => {
       using dir = project(files);
       const { stdout } = await check(dir, ["--strict", "a.ts"]);
-      expect(stdout).toMatchInlineSnapshot(`"a.ts(1,19): error TS7006: Parameter 'x' implicitly has an 'any' type."`);
+      expect(stdout).toMatchInlineSnapshot(
+        `"a.ts(1,19): error TS7006: Parameter 'x' implicitly has an 'any' type."`,
+      );
     });
 
     test("--noEmit accepts a value and no files are emitted either way", async () => {
@@ -14500,7 +14792,9 @@ export function f<T>(rest: T) {
       using dir = tempDir("bun-check", { "README.md": "", "empty/README.md": "" });
       for (const args of [[], ["empty"]]) {
         const { stdout, stderr, exitCode } = await check(dir, args);
-        expect(stdout).toBe(`error: Nothing to check: no TypeScript files in '${["<dir>", ...args].join("/")}'`);
+        expect(stdout).toBe(
+          `error: Nothing to check: no TypeScript files in '${["<dir>", ...args].join("/")}'`,
+        );
         expect(stderr).toMatchInlineSnapshot(`"Found 1 error, checked 0 files [time]"`);
         expect(exitCode).toBe(1);
       }
@@ -14537,30 +14831,53 @@ export function f<T>(rest: T) {
     });
 
     // The projects of a build are read at the same time.
-    test.skipIf(canReadEverything)("a source file that cannot be read is reported by its project", async () => {
-      const names = ["a", "b", "c", "d", "e", "f"];
-      const config = JSON.stringify({
-        compilerOptions: { composite: true, emitDeclarationOnly: true, outDir: "out", lib: ["es5"], types: [] },
-        include: ["*.ts"],
-      });
-      using dir = project({
-        "tsconfig.json": JSON.stringify({ files: [], references: names.map(name => ({ path: `./${name}` })) }),
-        ...Object.fromEntries(
-          names.flatMap(name => [
-            [`${name}/tsconfig.json`, config],
-            [`${name}/${name}.ts`, `export const wrong: number = "";\n`],
+    test.skipIf(canReadEverything)(
+      "a source file that cannot be read is reported by its project",
+      async () => {
+        const names = ["a", "b", "c", "d", "e", "f"];
+        const config = JSON.stringify({
+          compilerOptions: {
+            composite: true,
+            emitDeclarationOnly: true,
+            outDir: "out",
+            lib: ["es5"],
+            types: [],
+          },
+          include: ["*.ts"],
+        });
+        using dir = project({
+          "tsconfig.json": JSON.stringify({
+            files: [],
+            references: names.map((name) => ({ path: `./${name}` })),
+          }),
+          ...Object.fromEntries(
+            names.flatMap((name) => [
+              [`${name}/tsconfig.json`, config],
+              [`${name}/${name}.ts`, `export const wrong: number = "";\n`],
+            ]),
+          ),
+          "b/secret.ts": `export {};\n`,
+          "e/secret.ts": `export {};\n`,
+        });
+        for (const name of ["b", "e"]) chmodSync(join(String(dir), name, "secret.ts"), 0o000);
+        const runs = await Promise.all(Array.from({ length: 6 }, () => check(dir)));
+        const places = runs.map(({ stdout }) =>
+          stdout.split("\n").map((line) => /[a-f]\/\w+\.ts/.exec(line)?.[0]),
+        );
+        expect(places).toEqual(
+          runs.map(() => [
+            "a/a.ts",
+            "b/secret.ts",
+            "b/b.ts",
+            "c/c.ts",
+            "d/d.ts",
+            "e/secret.ts",
+            "e/e.ts",
+            "f/f.ts",
           ]),
-        ),
-        "b/secret.ts": `export {};\n`,
-        "e/secret.ts": `export {};\n`,
-      });
-      for (const name of ["b", "e"]) chmodSync(join(String(dir), name, "secret.ts"), 0o000);
-      const runs = await Promise.all(Array.from({ length: 6 }, () => check(dir)));
-      const places = runs.map(({ stdout }) => stdout.split("\n").map(line => /[a-f]\/\w+\.ts/.exec(line)?.[0]));
-      expect(places).toEqual(
-        runs.map(() => ["a/a.ts", "b/secret.ts", "b/b.ts", "c/c.ts", "d/d.ts", "e/secret.ts", "e/e.ts", "f/f.ts"]),
-      );
-    });
+        );
+      },
+    );
 
     // As in tsc: without its options nothing can be checked. To a build the file is not there.
     test.skipIf(canReadEverything).each([
@@ -14579,16 +14896,28 @@ export function f<T>(rest: T) {
       [[], []],
       [["-b"], ["error TS6053: File '<dir>/lib/tsconfig.json' not found."]],
     ])("a referenced tsconfig.json that cannot be read is not found: %j", async (args, first) => {
-      const compilerOptions = { composite: true, emitDeclarationOnly: true, outDir: "out", lib: ["es5"], types: [] };
+      const compilerOptions = {
+        composite: true,
+        emitDeclarationOnly: true,
+        outDir: "out",
+        lib: ["es5"],
+        types: [],
+      };
       using dir = project({
-        "tsconfig.json": JSON.stringify({ compilerOptions, files: ["a.ts"], references: [{ path: "./lib" }] }),
+        "tsconfig.json": JSON.stringify({
+          compilerOptions,
+          files: ["a.ts"],
+          references: [{ path: "./lib" }],
+        }),
         "a.ts": `export const a = 1;\n`,
         "lib/tsconfig.json": JSON.stringify({ compilerOptions }),
         "lib/l.ts": `export const wrong: number = "";\n`,
       });
       chmodSync(join(String(dir), "lib/tsconfig.json"), 0o000);
       const { stdout, exitCode } = await check(dir, args);
-      const lines = stdout.split("\n").map(line => line.replace(/^tsconfig\.json\(\d+,\d+\): /, "tsconfig.json: "));
+      const lines = stdout
+        .split("\n")
+        .map((line) => line.replace(/^tsconfig\.json\(\d+,\d+\): /, "tsconfig.json: "));
       expect(lines).toEqual([...first, "tsconfig.json: error TS6053: File '<dir>/lib' not found."]);
       expect(exitCode).toBe(1);
     });
@@ -14596,17 +14925,20 @@ export function f<T>(rest: T) {
     // How deep the parser goes depends on the stack of the platform. Whatever it says, the file can be read.
     test.each([[[]], [["-b"]]])(
       "the files of a tsconfig.json that is nested too deeply are checked: %j",
-      async args => {
+      async (args) => {
         const depth = 100_000;
         using dir = project({
           "tsconfig.json": `{ "a": ${repeat("[", depth)}${repeat("]", depth)} }`,
           "a.ts": `export const wrong: number = "";\n`,
         });
         const { stdout, exitCode } = await check(dir, args);
-        expect(stdout).toContain("a.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'.");
+        expect(stdout).toContain(
+          "a.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'.",
+        );
         expect(stdout).not.toContain("not found");
         expect(exitCode).toBe(1);
       },
+      isDebug || isASAN ? 10_000 : 5_000,
     );
 
     test("-p with a path that does not exist", async () => {
@@ -14634,18 +14966,26 @@ export function f<T>(rest: T) {
         "sub/a.ts": `export const a: number = "1";\n`,
         "--b.ts": `export const b: string = 1;\n`,
       });
-      const [attached, equals, afterDashes, notPretty, likeTsc, short, valueless] = await Promise.all([
-        check(dir, ["-psub"]),
-        check(dir, ["-p=sub"]),
-        check(dir, ["--", "--b.ts"]),
-        check(dir, ["--pretty=false", "-p", "sub"]),
-        check(dir, ["--pretty", "false", "-p", "sub"]),
-        check(dir, ["-x"]),
-        check(dir, ["--threads"]),
-      ]);
+      const [attached, equals, afterDashes, notPretty, likeTsc, short, valueless] =
+        await Promise.all([
+          check(dir, ["-psub"]),
+          check(dir, ["-p=sub"]),
+          check(dir, ["--", "--b.ts"]),
+          check(dir, ["--pretty=false", "-p", "sub"]),
+          check(dir, ["--pretty", "false", "-p", "sub"]),
+          check(dir, ["-x"]),
+          check(dir, ["--threads"]),
+        ]);
       const a = `sub/a.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'.`;
-      expect([attached.stdout, equals.stdout, notPretty.stdout, likeTsc.stdout]).toEqual([a, a, a, a]);
-      expect(afterDashes.stdout).toBe(`--b.ts(1,14): error TS2322: Type 'number' is not assignable to type 'string'.`);
+      expect([attached.stdout, equals.stdout, notPretty.stdout, likeTsc.stdout]).toEqual([
+        a,
+        a,
+        a,
+        a,
+      ]);
+      expect(afterDashes.stdout).toBe(
+        `--b.ts(1,14): error TS2322: Type 'number' is not assignable to type 'string'.`,
+      );
       expect(short.stderr).toMatchInlineSnapshot(`
         "error: Invalid Argument '-x'
         note: run 'bun check --help' for more information"
@@ -14669,7 +15009,10 @@ export function f<T>(rest: T) {
       emitDeclarationOnly: true,
     };
     const config = (more: object) => JSON.stringify({ compilerOptions: options, ...more });
-    const layouts: Record<string, { files: Record<string, string>; file: string; directory: string }> = {
+    const layouts: Record<
+      string,
+      { files: Record<string, string>; file: string; directory: string }
+    > = {
       "one project": {
         files: { "src/a.ts": bad, "src/deep/b.ts": bad, "other/c.ts": bad },
         file: "src/deep/b.ts",
@@ -14734,7 +15077,7 @@ export function f<T>(rest: T) {
     };
 
     // Each starts up to 29 processes at once.
-    test.serial.each(Object.keys(layouts))("%s", async layout => {
+    const checkLayout = async (layout: string) => {
       const { files, file, directory } = layouts[layout];
       using dir = project(files);
       const root = String(dir);
@@ -14754,7 +15097,7 @@ export function f<T>(rest: T) {
         [
           ...text.matchAll(/^(.+?)\((\d+),(\d+)\): error TS(\d+):/gm),
           // As the bundler prints it.
-          ...[...text.matchAll(/^error: TS(\d+):.*\n\s+at (.+?):(\d+):(\d+)$/gm)].map(it => [
+          ...[...text.matchAll(/^error: TS(\d+):.*\n\s+at (.+?):(\d+):(\d+)$/gm)].map((it) => [
             it[0],
             it[2],
             it[3],
@@ -14762,7 +15105,7 @@ export function f<T>(rest: T) {
             it[1],
           ]),
         ]
-          .map(it => `${inRoot(cwd, it[1])}:${it[2]}:${it[3]} TS${it[4]}`)
+          .map((it) => `${inRoot(cwd, it[1])}:${it[2]}:${it[3]} TS${it[4]}`)
           .sort();
 
       const below = join(root, dirname(file));
@@ -14812,8 +15155,8 @@ export function f<T>(rest: T) {
       ]);
       const all = reported(root, whole.stdout);
       const expected = {
-        file: all.filter(it => it.startsWith(`${file}:`)),
-        directory: all.filter(it => it.startsWith(`${directory}/`)),
+        file: all.filter((it) => it.startsWith(`${file}:`)),
+        directory: all.filter((it) => it.startsWith(`${directory}/`)),
       };
       expect(expected.file).toHaveLength(1);
       expect(expected.directory.length).toBeGreaterThan(1);
@@ -14826,29 +15169,42 @@ export function f<T>(rest: T) {
           reported(commands[i][3] ?? commands[i][1], `${it.stdout}\n${it.stderr}`),
           it.exitCode,
         ]),
-      ).toEqual(commands.map(command => [name(command), expected[command[0]], 1]));
+      ).toEqual(commands.map((command) => [name(command), expected[command[0]], 1]));
       // As it is printed: from the working directory, however that is spelled.
       for (const [i, [kind, cwd, cmd]] of commands.entries()) {
         if (cwd.startsWith(root) || cmd[0] !== "check") continue;
         const above = cmd[1] === "." ? `${directory}/` : "";
         expect({
           cmd,
-          printed: [...results[i].stdout.matchAll(/^(.+?)\(\d+,\d+\): error/gm)].map(it => it[1]),
+          printed: [...results[i].stdout.matchAll(/^(.+?)\(\d+,\d+\): error/gm)].map((it) => it[1]),
         }).toEqual({
           cmd,
-          printed: expected[kind].map(it => it.split(":")[0].slice(above.length)),
+          printed: expected[kind].map((it) => it.split(":")[0].slice(above.length)),
         });
       }
 
       // The bundler names a file as its entry point is spelled, in its own errors too.
       if (foldsCase) {
-        const built = await run(root, ["build", "--check", inUpperCaseDirectories, "--outdir", "out"]);
+        const built = await run(root, [
+          "build",
+          "--check",
+          inUpperCaseDirectories,
+          "--outdir",
+          "out",
+        ]);
         expect([reported(root, built.stderr), built.exitCode]).toEqual([
-          expected.file.map(it => it.replace(file, inUpperCaseDirectories)),
+          expected.file.map((it) => it.replace(file, inUpperCaseDirectories)),
           1,
         ]);
       }
-    });
+    };
+    for (const layout of Object.keys(layouts)) {
+      test.serial(
+        layout,
+        () => checkLayout(layout),
+        (isDebug || isASAN) && layout === "a project that references another" ? 10_000 : 5_000,
+      );
+    }
 
     // The name in `files` is the name of the file in the program. The argument is spelled as the directory has it.
     test.skipIf(!foldsCase)("a file that the configuration file spells differently", async () => {
@@ -14892,7 +15248,12 @@ const bunTypes = {
   "index.ts": `import { test } from "bun:test";\ntest(Bun.version, () => {});\n`,
 };
 const withoutTypes = JSON.stringify({
-  compilerOptions: { strict: true, lib: ["esnext"], moduleResolution: "bundler", skipLibCheck: true },
+  compilerOptions: {
+    strict: true,
+    lib: ["esnext"],
+    moduleResolution: "bundler",
+    skipLibCheck: true,
+  },
 });
 
 describe.concurrent("@types/bun", () => {
@@ -14911,7 +15272,9 @@ describe.concurrent("@types/bun", () => {
   ])("is not included when tsconfig.json %s, and the hint explains the fix", async (_, config) => {
     using dir = project({ ...bunTypes, "tsconfig.json": config });
     const { stdout, stderr, exitCode } = await check(dir);
-    expect(stdout).toContain("error TS2307: Cannot find module 'bun:test' or its corresponding type declarations.");
+    expect(stdout).toContain(
+      "error TS2307: Cannot find module 'bun:test' or its corresponding type declarations.",
+    );
     expect(stderr).toMatchInlineSnapshot(`
       "note: Bun's type definitions (console, fetch, Bun, bun:test) are installed, but tsconfig.json does not include them. Add to compilerOptions: "types": ["bun"]
       Found 2 errors in 1 file, checked 1 file [time]"
@@ -14921,7 +15284,7 @@ describe.concurrent("@types/bun", () => {
 });
 
 describe.concurrent("--check", () => {
-  test("a `check` script keeps `bun check`, and `bun --check` is the type checker everywhere", async () => {
+  test("native check reserves its name and package scripts require explicit run", async () => {
     const files = { "a.ts": `export const a: number = "1";\n`, "src/empty.txt": "" };
     using scripted = project({
       ...files,
@@ -14930,7 +15293,10 @@ describe.concurrent("--check", () => {
     // The word is there, the script is not.
     using unscripted = project({
       ...files,
-      "package.json": JSON.stringify({ description: "check", scripts: { "check:all": "echo no", lint: "check" } }),
+      "package.json": JSON.stringify({
+        description: "check",
+        scripts: { "check:all": "echo no", lint: "check" },
+      }),
     });
     const bun = `"${bunExe().replaceAll("\\", "/")}"`;
     // The script is the type checker, with an option.
@@ -14942,13 +15308,15 @@ describe.concurrent("--check", () => {
     using aggregate = project({
       ...files,
       "package.json": JSON.stringify({
-        scripts: { "check": `${bun} run check:types`, "check:types": `${bun} check --pretty false` },
+        scripts: { check: `${bun} run check:types`, "check:types": `${bun} check --pretty false` },
       }),
     });
     // Before the script, which is part of running it.
     using before = project({
       ...files,
-      "package.json": JSON.stringify({ scripts: { precheck: `${bun} check --pretty false`, check: "echo no" } }),
+      "package.json": JSON.stringify({
+        scripts: { precheck: `${bun} check --pretty false`, check: "echo no" },
+      }),
     });
     // The script of another package is a script all the same.
     using nested = project({
@@ -14957,35 +15325,46 @@ describe.concurrent("--check", () => {
       "sub/package.json": JSON.stringify({ scripts: { check: "echo the script of sub ran" } }),
     });
     const error = `a.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'.`;
-    const inScripts = await Promise.all([wrapped, aggregate, before, nested].map(dir => run(String(dir), ["check"])));
-    expect(inScripts.map(it => [it.stdout, it.exitCode])).toEqual([
+    const inScripts = await Promise.all(
+      [wrapped, aggregate, before, nested].map((dir) => run(String(dir), ["check"])),
+    );
+    expect(inScripts.map((it) => [it.stdout, it.exitCode])).toEqual([
       [error, 1],
       [error, 1],
       [error, 1],
-      ["the script of sub ran", 0],
+      [error, 1],
     ]);
-    const [script, below, elsewhere, flag, command, sameFlag, flagElsewhere, withOthers, after] = await Promise.all([
-      run(String(scripted), ["check"]),
-      run(join(String(scripted), "src"), ["check"]),
-      run(String(unscripted), ["--cwd", String(scripted), "check"]),
-      run(String(scripted), ["--check"]),
-      run(String(unscripted), ["check"]),
-      run(String(unscripted), ["--check"]),
-      // The arguments are those of `bun`.
-      run(join(String(scripted), "src"), ["--cwd", "..", "--check"]),
-      run(String(scripted), ["--silent", "--check", "--no-install"]),
-      // `bun run` looks for the script where it is, since what follows the name is for the script.
-      run(String(unscripted), ["check", "--cwd", String(scripted)]),
-    ]);
+    const [script, below, elsewhere, flag, command, sameFlag, flagElsewhere, withOthers, after] =
+      await Promise.all([
+        run(String(scripted), ["check"]),
+        run(join(String(scripted), "src"), ["check"]),
+        run(String(unscripted), ["--cwd", String(scripted), "check"]),
+        run(String(scripted), ["--check"]),
+        run(String(unscripted), ["check"]),
+        run(String(unscripted), ["--check"]),
+        // The arguments are those of `bun`.
+        run(join(String(scripted), "src"), ["--cwd", "..", "--check"]),
+        run(String(scripted), ["--silent", "--check", "--no-install"]),
+        // `bun run` looks for the script where it is, since what follows the name is for the script.
+        run(String(unscripted), ["check", "--cwd", String(scripted)]),
+      ]);
     // It is about scripts, and there is none.
-    const ifPresent = await run(String(unscripted), ["--if-present", "check"]);
+    const ifPresent = await run(String(unscripted), ["run", "--if-present", "check"]);
     expect([ifPresent.stdout, ifPresent.exitCode]).toEqual(["", 0]);
-    expect([script, below, elsewhere].map(it => [it.stdout, it.exitCode])).toEqual([
-      ["the script ran", 0],
-      ["the script ran", 0],
-      ["the script ran", 0],
+    expect([script, below, elsewhere].map((it) => [it.stdout, it.exitCode])).toEqual([
+      [error, 1],
+      [`../${error}`, 1],
+      [error, 1],
     ]);
-    expect([flag, command, sameFlag, flagElsewhere, withOthers, after].map(it => [it.stdout, it.exitCode])).toEqual([
+    const explicit = await run(String(scripted), ["run", "check"]);
+    expect(explicit.stdout).toBe("the script ran");
+    expect(explicit.exitCode).toBe(0);
+    expect(
+      [flag, command, sameFlag, flagElsewhere, withOthers, after].map((it) => [
+        it.stdout,
+        it.exitCode,
+      ]),
+    ).toEqual([
       [error, 1],
       [error, 1],
       [error, 1],
@@ -15000,9 +15379,14 @@ describe.concurrent("--check", () => {
     const files = { "a.ts": `export const a: number = "1";\n`, "src/empty.txt": "" };
     using scripted = project({
       ...files,
-      "package.json": JSON.stringify({ scripts: { check: "echo the script ran", run: "echo the script ran" } }),
+      "package.json": JSON.stringify({
+        scripts: { check: "echo the script ran", run: "echo the script ran" },
+      }),
     });
-    using unscripted = project({ ...files, "package.json": JSON.stringify({ scripts: { lint: "echo no" } }) });
+    using unscripted = project({
+      ...files,
+      "package.json": JSON.stringify({ scripts: { lint: "echo no" } }),
+    });
     using bare = project(files);
     const spellings = [
       ["run", "--check"],
@@ -15015,15 +15399,17 @@ describe.concurrent("--check", () => {
     const error = `a.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'.`;
     const dirs = [scripted, unscripted, bare].map(String);
     const command = await run(String(bare), ["check"]);
-    const results = await Promise.all(dirs.flatMap(dir => spellings.map(spelling => run(dir, spelling))));
-    expect(results.map(it => [it.stdout, it.stderr, it.exitCode])).toEqual(
+    const results = await Promise.all(
+      dirs.flatMap((dir) => spellings.map((spelling) => run(dir, spelling))),
+    );
+    expect(results.map((it) => [it.stdout, it.stderr, it.exitCode])).toEqual(
       results.map(() => [error, command.stderr, 1]),
     );
     const [below, elsewhere] = await Promise.all([
       run(join(String(scripted), "src"), ["run", "--check"]),
       run(String(bare), ["run", "--cwd", String(scripted), "--check"]),
     ]);
-    expect([below, elsewhere].map(it => [it.stdout, it.exitCode])).toEqual([
+    expect([below, elsewhere].map((it) => [it.stdout, it.exitCode])).toEqual([
       [`../${error}`, 1],
       [error, 1],
     ]);
@@ -15033,11 +15419,11 @@ describe.concurrent("--check", () => {
       run(String(unscripted), ["run"]),
       run(String(unscripted), ["run", "--check", "lint"]),
     ]);
-    expect([list.stdout.includes("Usage: bun run"), list.stdout.includes("TS2322"), list.exitCode]).toEqual([
-      true,
-      false,
-      0,
-    ]);
+    expect([
+      list.stdout.includes("Usage: bun run"),
+      list.stdout.includes("TS2322"),
+      list.exitCode,
+    ]).toEqual([true, false, 0]);
     // The output of a script is its own, so the errors are not in it.
     expect([named.stdout, named.stderr.includes(error), named.exitCode]).toEqual(["", true, 1]);
   });
@@ -15046,8 +15432,18 @@ describe.concurrent("--check", () => {
   // file that is written again and again would start the check again and again.
   // `printed` is called at once with all that it has printed.
   type Output = { stdout: string; stderr: string };
-  const watching = (dir: { toString(): string }, cmd: readonly string[], printed = (_: Output) => {}) => {
-    const proc = Bun.spawn({ cmd: [bunExe(), ...cmd], cwd: String(dir), env, stdout: "pipe", stderr: "pipe" });
+  const watching = (
+    dir: { toString(): string },
+    cmd: readonly string[],
+    printed = (_output: Output) => {},
+  ) => {
+    const proc = Bun.spawn({
+      cmd: [bunExe(), ...cmd],
+      cwd: String(dir),
+      env,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
     const output: Output = { stdout: "", stderr: "" };
     const read = async (name: "stdout" | "stderr") => {
       for await (const chunk of proc[name]) {
@@ -15097,36 +15493,42 @@ describe.concurrent("--check", () => {
   test.each([
     [["--watch", "--check", "a.ts"], "stdout", "ran 1"],
     [["test", "--watch", "--check", "a.test.ts"], "stderr", "1 pass"],
-  ] as const)("bun %j sees a fix that is saved as soon as the errors are printed", async (cmd, stream, expected) => {
-    using dir = project({
-      "bun-test.d.ts": `declare module "bun:test" {\n  export function test(name: string, fn: () => void): void;\n}\n`,
-      "imported.ts": `export const n: number = "1";\n`,
-      "a.ts": `import { n } from "./imported";\nconsole.log("ran", n);\n`,
-      "a.test.ts": `import { test } from "bun:test";\nimport { n } from "./imported";\ntest("a", () => void n);\n`,
-    });
-    let isFixed = false;
-    await using bun = watching(dir, cmd, output => {
-      if (isFixed || !output.stderr.includes("Found 1 error")) return;
-      isFixed = true;
-      writeFileSync(join(String(dir), "imported.ts"), `export const n: number = 1;\n`);
-    });
-    await bun.until(() => bun.output[stream].includes(expected));
-  });
+  ] as const)(
+    "bun %j sees a fix that is saved as soon as the errors are printed",
+    async (cmd, stream, expected) => {
+      using dir = project({
+        "bun-test.d.ts": `declare module "bun:test" {\n  export function test(name: string, fn: () => void): void;\n}\n`,
+        "imported.ts": `export const n: number = "1";\n`,
+        "a.ts": `import { n } from "./imported";\nconsole.log("ran", n);\n`,
+        "a.test.ts": `import { test } from "bun:test";\nimport { n } from "./imported";\ntest("a", () => void n);\n`,
+      });
+      let isFixed = false;
+      await using bun = watching(dir, cmd, (output) => {
+        if (isFixed || !output.stderr.includes("Found 1 error")) return;
+        isFixed = true;
+        writeFileSync(join(String(dir), "imported.ts"), `export const n: number = 1;\n`);
+      });
+      await bun.until(() => bun.output[stream].includes(expected));
+    },
+  );
 
   // The file that changes only has types, so nothing loads it when the program runs.
-  test.each(["--watch", "--hot"])("bun %s --check checks again before it runs again", async flag => {
-    using dir = project({
-      "types.ts": `export type N = number;\n`,
-      "a.ts": `import type { N } from "./types";\nconst n: N = 1;\nconsole.log("ran", n);\n`,
-    });
-    await using bun = watching(dir, [flag, "--check", "a.ts"]);
-    await bun.until(() => bun.output.stdout.includes("ran 1"));
-    await bun.until(
-      () => bun.output.stderr.includes("TS2322"),
-      () => Bun.write(join(String(dir), "types.ts"), `export type N = string;\n`),
-    );
-    expect(bun.output.stdout.match(/ran/g)).toHaveLength(1);
-  });
+  test.each(["--watch", "--hot"])(
+    "bun %s --check checks again before it runs again",
+    async (flag) => {
+      using dir = project({
+        "types.ts": `export type N = number;\n`,
+        "a.ts": `import type { N } from "./types";\nconst n: N = 1;\nconsole.log("ran", n);\n`,
+      });
+      await using bun = watching(dir, [flag, "--check", "a.ts"]);
+      await bun.until(() => bun.output.stdout.includes("ran 1"));
+      await bun.until(
+        () => bun.output.stderr.includes("TS2322"),
+        () => Bun.write(join(String(dir), "types.ts"), `export type N = string;\n`),
+      );
+      expect(bun.output.stdout.match(/ran/g)).toHaveLength(1);
+    },
+  );
 
   // Nothing is emitted for a file that is only named, so where the project emits from is not about it.
   test.each([
@@ -15152,7 +15554,7 @@ describe.concurrent("--check", () => {
       run(String(dir), ["test", "--check"]),
       run(String(dir), ["build", "--check", "scripts/x.ts", "--outdir", "out"]),
     ]);
-    expect(results.map(it => [/TS\d+/.exec(it.stdout + it.stderr)?.[0], it.exitCode])).toEqual(
+    expect(results.map((it) => [/TS\d+/.exec(it.stdout + it.stderr)?.[0], it.exitCode])).toEqual(
       results.map(() => [undefined, 0]),
     );
     expect(results[3].stdout).toBe("ran 2");
@@ -15168,7 +15570,10 @@ describe.concurrent("--check", () => {
       "outside.ts": `export const outside: number = 1;\n`,
       "scripts/x.ts": `import { a } from "../src/a";\nconsole.log("ran", a);\n`,
     });
-    const [plain, named] = await Promise.all([check(dir), run(String(dir), ["--check", "scripts/x.ts"])]);
+    const [plain, named] = await Promise.all([
+      check(dir),
+      run(String(dir), ["--check", "scripts/x.ts"]),
+    ]);
     expect(plain.stdout).toContain("TS6059");
     expect([
       named.stderr.includes("TS6059"),
@@ -15205,7 +15610,11 @@ describe.concurrent("--check", () => {
   test("a JavaScript entry point leaves the options of the project as they are", async () => {
     const files = (n: string) => ({
       "tsconfig.json": JSON.stringify({
-        compilerOptions: { ...JSON.parse(tsconfig).compilerOptions, declaration: true, isolatedDeclarations: true },
+        compilerOptions: {
+          ...JSON.parse(tsconfig).compilerOptions,
+          declaration: true,
+          isolatedDeclarations: true,
+        },
       }),
       "app.js": `import { n } from "./n";\nconsole.log("ran", n);\n`,
       "app.test.js": `import { n } from "./n";\nimport { test } from "bun:test";\ntest("t", () => void n);\n`,
@@ -15219,16 +15628,16 @@ describe.concurrent("--check", () => {
       ["test", "--check", "app.test.js"],
     ];
     const [passed, failed, plain] = await Promise.all([
-      Promise.all(commands.map(cmd => run(String(good), cmd))),
-      Promise.all(commands.map(cmd => run(String(bad), cmd))),
+      Promise.all(commands.map((cmd) => run(String(good), cmd))),
+      Promise.all(commands.map((cmd) => run(String(bad), cmd))),
       check(good),
     ]);
     expect([plain.stdout, plain.exitCode]).toEqual(["", 0]);
-    expect(passed.map(it => [/TS\d+/.exec(it.stdout + it.stderr)?.[0], it.exitCode])).toEqual(
+    expect(passed.map((it) => [/TS\d+/.exec(it.stdout + it.stderr)?.[0], it.exitCode])).toEqual(
       commands.map(() => [undefined, 0]),
     );
     expect(passed[0].stdout).toBe("ran 1");
-    expect(failed.map(it => [/TS\d+/.exec(it.stdout + it.stderr)?.[0], it.exitCode])).toEqual(
+    expect(failed.map((it) => [/TS\d+/.exec(it.stdout + it.stderr)?.[0], it.exitCode])).toEqual(
       commands.map(() => ["TS2322", 1]),
     );
   });
@@ -15250,9 +15659,12 @@ describe.concurrent("--check", () => {
       run(root, ["check", "--build", "."]),
     ]);
     const error = `a.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'.`;
-    expect(results.map(it => [it.stdout, it.exitCode])).toEqual(results.map(() => [error, 1]));
+    expect(results.map((it) => [it.stdout, it.exitCode])).toEqual(results.map(() => [error, 1]));
     const after = await run(root, ["check", "--smol"]);
-    expect([after.stderr.split("\n")[0], after.exitCode]).toEqual([`error: Unknown flag "--smol"`, 1]);
+    expect([after.stderr.split("\n")[0], after.exitCode]).toEqual([
+      `error: Unknown flag "--smol"`,
+      1,
+    ]);
   });
 
   describe("`--build` is what follows `check`, in every spelling", () => {
@@ -15277,7 +15689,7 @@ describe.concurrent("--check", () => {
         [["-b", "check", "-bp", "tsconfig.json"], "TS5096"],
       ],
     };
-    test.each(Object.keys(expected))("%s", async kind => {
+    test.each(Object.keys(expected))("%s", async (kind) => {
       // Only a build minds that nothing may be emitted: TS5096.
       using dir = tempDir("bun-check-build-flag", {
         "tsconfig.json": `{ "compilerOptions": { "strict": true, "types": [], "allowImportingTsExtensions": true } }`,
@@ -15285,7 +15697,10 @@ describe.concurrent("--check", () => {
       });
       const results = await Promise.all(expected[kind].map(([args]) => run(String(dir), args)));
       expect(
-        results.map((it, index) => [expected[kind][index][0].join(" "), /TS\d+/.exec(it.stdout + it.stderr)?.[0]]),
+        results.map((it, index) => [
+          expected[kind][index][0].join(" "),
+          /TS\d+/.exec(it.stdout + it.stderr)?.[0],
+        ]),
       ).toEqual(expected[kind].map(([args, code]) => [args.join(" "), code]));
     });
   });
@@ -15305,22 +15720,28 @@ describe.concurrent("--check", () => {
       [["--noEmit"], [error("src/main.ts", 2)]],
       [["src/main.ts"], [error("src/main.ts", 2)]],
       [["-b"], [error("../lib/src/index.ts"), error("src/main.ts", 2)]],
-    ])("in a project with files and references, which are not built: %j", async (args, expected) => {
-      using dir = project({
-        "app/tsconfig.json": JSON.stringify({
-          compilerOptions: composite,
-          include: ["src"],
-          references: [{ path: "../lib" }],
-        }),
-        "app/src/main.ts": `import { lib } from "../../lib/src/index";\n${wrong("app")}export const used = lib;\n`,
-        "lib/tsconfig.json": JSON.stringify({ compilerOptions: composite, include: ["src"] }),
-        "lib/src/index.ts": wrong("lib"),
-      });
-      const { stdout, stderr, exitCode } = await run(join(String(dir), "app"), ["check", ...args]);
-      expect(stdout.split("\n")).toEqual(expected);
-      expect(stderr).not.toContain("note:");
-      expect(exitCode).toBe(1);
-    });
+    ])(
+      "in a project with files and references, which are not built: %j",
+      async (args, expected) => {
+        using dir = project({
+          "app/tsconfig.json": JSON.stringify({
+            compilerOptions: composite,
+            include: ["src"],
+            references: [{ path: "../lib" }],
+          }),
+          "app/src/main.ts": `import { lib } from "../../lib/src/index";\n${wrong("app")}export const used = lib;\n`,
+          "lib/tsconfig.json": JSON.stringify({ compilerOptions: composite, include: ["src"] }),
+          "lib/src/index.ts": wrong("lib"),
+        });
+        const { stdout, stderr, exitCode } = await run(join(String(dir), "app"), [
+          "check",
+          ...args,
+        ]);
+        expect(stdout.split("\n")).toEqual(expected);
+        expect(stderr).not.toContain("note:");
+        expect(exitCode).toBe(1);
+      },
+    );
 
     // A flag is for the projects that are reported.
     test.concurrent.each([
@@ -15349,7 +15770,9 @@ describe.concurrent("--check", () => {
       });
       const { stdout } = await check(dir, args);
       expect(stdout.split("\n").filter(Boolean)).toEqual(
-        files.map(file => `${file}(1,19): error TS7006: Parameter 'x' implicitly has an 'any' type.`),
+        files.map(
+          (file) => `${file}(1,19): error TS7006: Parameter 'x' implicitly has an 'any' type.`,
+        ),
       );
     });
 
@@ -15383,7 +15806,8 @@ describe.concurrent("--check", () => {
       });
       const { stdout, stderr, exitCode } = await check(dir, args);
       expect(stdout.split("\n")).toEqual([error("a/a.ts"), error("b/b.ts")]);
-      const note = "note: tsconfig.json has no files of its own. Checked the projects it references, like tsc -b.";
+      const note =
+        "note: tsconfig.json has no files of its own. Checked the projects it references, like tsc -b.";
       expect(stderr.includes(note)).toBe(says);
       expect(exitCode).toBe(1);
     });
@@ -15400,39 +15824,39 @@ describe.concurrent("--check", () => {
       return dir;
     };
 
-    test.concurrent(
-      "without a tsconfig.json here or above, those below are listed and nothing is checked",
-      async () => {
-        using dir = below();
-        const { stdout, exitCode } = await check(dir);
-        expect(stdout).toMatchInlineSnapshot(`
+    test.concurrent("without a tsconfig.json here or above, those below are listed and nothing is checked", async () => {
+      using dir = below();
+      const { stdout, exitCode } = await check(dir);
+      expect(stdout).toMatchInlineSnapshot(`
         "error: No tsconfig.json in '<dir>' or above it. Below it:
           packages/server/tsconfig.json
           packages/web/tsconfig.json
         To check one: bun check -p packages/server/tsconfig.json
         To check everything below this directory: bun check ."
       `);
-        expect(exitCode).toBe(1);
-      },
-    );
+      expect(exitCode).toBe(1);
+    });
 
     // The list proposes commands that run nothing.
     test.concurrent.each([
       ["export const s = 1;\n", 0],
       [wrong("s"), 1],
-    ])("there, `bun run --check` checks what is below and then runs the script: %j", async (source, code) => {
-      using dir = project({
-        "package.json": JSON.stringify({ scripts: { build: "echo the script ran" } }),
-        "packages/server/tsconfig.json": tsconfig,
-        "packages/server/s.ts": source,
-      });
-      rmSync(join(String(dir), "tsconfig.json"));
-      const { stdout, stderr, exitCode } = await run(String(dir), ["run", "--check", "build"]);
-      expect(stderr).not.toContain("No tsconfig.json");
-      expect(stderr.includes(error("packages/server/s.ts"))).toBe(code === 1);
-      expect(stdout.includes("the script ran")).toBe(code === 0);
-      expect(exitCode).toBe(code);
-    });
+    ])(
+      "there, `bun run --check` checks what is below and then runs the script: %j",
+      async (source, code) => {
+        using dir = project({
+          "package.json": JSON.stringify({ scripts: { build: "echo the script ran" } }),
+          "packages/server/tsconfig.json": tsconfig,
+          "packages/server/s.ts": source,
+        });
+        rmSync(join(String(dir), "tsconfig.json"));
+        const { stdout, stderr, exitCode } = await run(String(dir), ["run", "--check", "build"]);
+        expect(stderr).not.toContain("No tsconfig.json");
+        expect(stderr.includes(error("packages/server/s.ts"))).toBe(code === 1);
+        expect(stdout.includes("the script ran")).toBe(code === 0);
+        expect(exitCode).toBe(code);
+      },
+    );
 
     test.concurrent.each([
       [["."], [error("loose.ts"), error("packages/server/s.ts"), error("packages/web/w.ts")]],
@@ -15457,7 +15881,10 @@ describe.concurrent("--check", () => {
         [["@outer.txt"], assignment],
         [["@args.txt", "--strict"], strict],
         [["@missing.txt"], `error TS5083: Cannot read file '<dir>/missing.txt'.`],
-        [["@open.txt"], `error TS6045: Unterminated quoted string in response file '<dir>/open.txt'.`],
+        [
+          ["@open.txt"],
+          `error TS6045: Unterminated quoted string in response file '<dir>/open.txt'.`,
+        ],
         // tsc reads past the end of a file that does not end in white space, and crashes.
         [["@lines.txt"], assignment],
         // tsc reads these until its stack overflows.
@@ -15485,7 +15912,7 @@ describe.concurrent("--check", () => {
         ],
       ],
     };
-    test.concurrent.each(Object.keys(expected))("%s", async kind => {
+    test.concurrent.each(Object.keys(expected))("%s", async (kind) => {
       using dir = project({
         "a.ts": `export const a: number = "";\nexport function f(x) {\n  return x;\n}\n`,
         "args.txt": `--strict false\n`,
@@ -15499,15 +15926,15 @@ describe.concurrent("--check", () => {
         "empty/not-a-tsconfig.json": `{}\n`,
       });
       const results = await Promise.all(expected[kind].map(([args]) => check(dir, args)));
-      expect(results.map((it, index) => [expected[kind][index][0].join(" "), it.stdout, it.exitCode])).toEqual(
-        expected[kind].map(([args, stdout]) => [args.join(" "), stdout, 1]),
-      );
+      expect(
+        results.map((it, index) => [expected[kind][index][0].join(" "), it.stdout, it.exitCode]),
+      ).toEqual(expected[kind].map(([args, stdout]) => [args.join(" "), stdout, 1]));
     });
 
     test("`--quiet` leaves the list of files", async () => {
       using dir = project({ "a.ts": `export const a: number = "";\n` });
       const { stdout, exitCode } = await check(dir, ["--quiet", "--listFilesOnly"]);
-      expect(stdout.split("\n").filter(line => !/\/lib\.[\w.]+\.d\.ts$/.test(line))).toEqual([
+      expect(stdout.split("\n").filter((line) => !/\/lib\.[\w.]+\.d\.ts$/.test(line))).toEqual([
         "<dir>/a.ts",
         "<dir>/console.d.ts",
       ]);
@@ -15538,9 +15965,14 @@ describe.concurrent("--check", () => {
     });
     // The page is not in the project of the server. In its own, a parameter needs no type, and there is a `document`.
     using separate = project({
-      "tsconfig.json": JSON.stringify({ compilerOptions: options, include: ["server.ts", "*.d.ts"] }),
+      "tsconfig.json": JSON.stringify({
+        compilerOptions: options,
+        include: ["server.ts", "*.d.ts"],
+      }),
       "html.d.ts": html,
-      "web/tsconfig.json": JSON.stringify({ compilerOptions: { ...options, strict: false, lib: ["esnext", "dom"] } }),
+      "web/tsconfig.json": JSON.stringify({
+        compilerOptions: { ...options, strict: false, lib: ["esnext", "dom"] },
+      }),
       "web/index.html": page("./app.ts"),
       "web/app.ts": `function f(x) {\n  return x;\n}\nexport const c: number = f(document.title) + "";\n`,
       "server.ts": server("./web/index.html"),
@@ -15553,7 +15985,7 @@ describe.concurrent("--check", () => {
       "unrelated.ts": wrong,
     });
     const errors = (text: string) =>
-      [...text.matchAll(/^(\S+\(\d+,\d+\)): error (TS\d+)/gm)].map(it => `${it[1]} ${it[2]}`);
+      [...text.matchAll(/^(\S+\(\d+,\d+\)): error (TS\d+)/gm)].map((it) => `${it[1]} ${it[2]}`);
     const commands: [{ toString(): string }, string[], string[]][] = [
       [direct, ["--check", "server.ts"], ["deep.ts(1,14) TS2322"]],
       [direct, ["check", "server.ts"], ["deep.ts(1,14) TS2322"]],
@@ -15562,10 +15994,21 @@ describe.concurrent("--check", () => {
       [fine, ["--check", "server.ts"], []],
     ];
     const results = await Promise.all(commands.map(([dir, cmd]) => run(String(dir), cmd)));
-    expect(results.map(it => [errors(it.stdout + "\n" + it.stderr), it.stdout.includes("ran"), it.exitCode])).toEqual(
-      commands.map(([, , found]) => [found, !found.length, found.length ? 1 : 0]),
-    );
-    const built = await run(String(direct), ["build", "--check", "--target=bun", "server.ts", "--outdir", "out"]);
+    expect(
+      results.map((it) => [
+        errors(it.stdout + "\n" + it.stderr),
+        it.stdout.includes("ran"),
+        it.exitCode,
+      ]),
+    ).toEqual(commands.map(([, , found]) => [found, !found.length, found.length ? 1 : 0]));
+    const built = await run(String(direct), [
+      "build",
+      "--check",
+      "--target=bun",
+      "server.ts",
+      "--outdir",
+      "out",
+    ]);
     expect(built.stderr).toContain("TS2322");
     expect(built.stderr).toContain("deep.ts:1:14");
     expect(built.stderr).not.toContain("unrelated.ts");
@@ -15596,10 +16039,10 @@ describe.concurrent("--check", () => {
   test("an entry point whose name does not say what it is: no extension, -e, -p, stdin", async () => {
     const wrong = `const n: number = "1";\nconsole.log("ran", n);\nexport {};\n`;
     using dir = project({
-      "own": `#!/usr/bin/env bun\n${wrong}`,
-      "importing": `import { b } from "./wrong";\nconsole.log("ran", b);\n`,
+      own: `#!/usr/bin/env bun\n${wrong}`,
+      importing: `import { b } from "./wrong";\nconsole.log("ran", b);\n`,
       "wrong.ts": `export const b: number = "1";\n`,
-      "fine": `import { g } from "./right";\nconsole.log("ran", g);\n`,
+      fine: `import { g } from "./right";\nconsole.log("ran", g);\n`,
       "right.ts": `export const g: number = 1;\n`,
       "odd.extension": wrong,
       // Not a type assertion.
@@ -15608,7 +16051,7 @@ describe.concurrent("--check", () => {
     });
     const root = String(dir);
     const errors = (stderr: string) =>
-      [...stderr.matchAll(/^(\S+\(\d+,\d+\)): error (TS\d+)/gm)].map(it => `${it[1]} ${it[2]}`);
+      [...stderr.matchAll(/^(\S+\(\d+,\d+\)): error (TS\d+)/gm)].map((it) => `${it[1]} ${it[2]}`);
     const commands: [string[], string, string[]][] = [
       [["--check", "own"], "", ["own(2,7) TS2322"]],
       [["--check", "./own"], "", ["own(2,7) TS2322"]],
@@ -15622,14 +16065,18 @@ describe.concurrent("--check", () => {
       [["--check", "--loader", ".script:ts", "mapped.script"], "", ["mapped.script(2,3) TS2339"]],
       [["--check", "-e", wrong], "", ["[eval](1,7) TS2322"]],
       [["--check", "-e", `const n: number = 1; console.log("ran", n)`], "ran 1", []],
-      [["--check", "-e", `import { b } from "./wrong"; console.log("ran", b)`], "", ["wrong.ts(1,14) TS2322"]],
+      [
+        ["--check", "-e", `import { b } from "./wrong"; console.log("ran", b)`],
+        "",
+        ["wrong.ts(1,14) TS2322"],
+      ],
       [["--check", "-p", "1 + 1"], "2", []],
       [["--check", "-p", "(1 as number).nope"], "", ["[eval](1,15) TS2339"]],
     ];
     const results = await Promise.all(commands.map(([cmd]) => run(root, cmd)));
-    expect(results.map((it, i) => [commands[i][0], it.stdout, errors(it.stderr), it.exitCode])).toEqual(
-      commands.map(([cmd, stdout, found]) => [cmd, stdout, found, found.length ? 1 : 0]),
-    );
+    expect(
+      results.map((it, i) => [commands[i][0], it.stdout, errors(it.stderr), it.exitCode]),
+    ).toEqual(commands.map(([cmd, stdout, found]) => [cmd, stdout, found, found.length ? 1 : 0]));
 
     const piped = async (text: string) => {
       await using proc = Bun.spawn({
@@ -15640,7 +16087,11 @@ describe.concurrent("--check", () => {
         stdout: "pipe",
         stderr: "pipe",
       });
-      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+      const [stdout, stderr, exitCode] = await Promise.all([
+        proc.stdout.text(),
+        proc.stderr.text(),
+        proc.exited,
+      ]);
       return [stdout.trim(), errors(stderr), exitCode];
     };
     expect(await Promise.all([piped(wrong), piped(`console.log("ran");\n`)])).toEqual([
@@ -15656,11 +16107,17 @@ describe.concurrent("--check", () => {
       "bad.ts": `export const n: number = "1";\nconsole.log("ran", n);\n`,
     });
     const results = await Promise.all(
-      ["./good.ts", join(String(dir), "good.ts"), "./bad.ts", join(String(dir), "bad.ts")].map(entry =>
-        run(String(dir), ["--check", entry]),
+      ["./good.ts", join(String(dir), "good.ts"), "./bad.ts", join(String(dir), "bad.ts")].map(
+        (entry) => run(String(dir), ["--check", entry]),
       ),
     );
-    expect(results.map(it => [it.stdout, it.stderr.includes("bad.ts(1,14): error TS2322"), it.exitCode])).toEqual([
+    expect(
+      results.map((it) => [
+        it.stdout,
+        it.stderr.includes("bad.ts(1,14): error TS2322"),
+        it.exitCode,
+      ]),
+    ).toEqual([
       ["ran 1", false, 0],
       ["ran 1", false, 0],
       ["", true, 1],
@@ -15671,13 +16128,15 @@ describe.concurrent("--check", () => {
   // `./` takes a shorter way to the page, on which less is set up.
   test.each(["index.html", "./index.html"])(
     "bun --check %s: a script that the page names from its root",
-    async page => {
+    async (page) => {
       using dir = project({
         "index.html": `<!doctype html>\n<script type="module" src="/src/main.ts"></script>\n`,
         "src/main.ts": `export const a: number = "1";\n`,
       });
       const { stderr, exitCode } = await run(String(dir), ["--check", page]);
-      expect(stderr).toContain(`src/main.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'.`);
+      expect(stderr).toContain(
+        `src/main.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'.`,
+      );
       expect(stderr).not.toContain("TS6053");
       expect(exitCode).toBe(1);
     },
@@ -15692,8 +16151,9 @@ describe.concurrent("--check", () => {
     // Not the first: `bun` looks for a file with that name.
     [["index.html", "{about,none}.html"]],
     [["index.html", "./pages/*.html"]],
-  ])("bun --check %j: the scripts of every page", async pages => {
-    const page = (script: string) => `<!doctype html>\n<script type="module" src="${script}"></script>\n`;
+  ])("bun --check %j: the scripts of every page", async (pages) => {
+    const page = (script: string) =>
+      `<!doctype html>\n<script type="module" src="${script}"></script>\n`;
     using dir = project({
       "index.html": page("./src/index.ts"),
       "about.html": page("./src/about.ts"),
@@ -15705,7 +16165,7 @@ describe.concurrent("--check", () => {
       "src/contact.ts": `export const contact: number = "1";\n`,
     });
     const { stderr, exitCode } = await run(String(dir), ["--check", ...pages]);
-    const served = (name: string) => pages.some(it => it.includes(name) || it.includes("**"));
+    const served = (name: string) => pages.some((it) => it.includes(name) || it.includes("**"));
     expect({
       about: stderr.includes("src/about.ts(1,14): error TS2322"),
       contact: stderr.includes("src/contact.ts(1,14): error TS2322"),
@@ -15727,7 +16187,10 @@ describe.concurrent("--check", () => {
   ])("--tsconfig-override %s is the tsconfig.json of the check too", async (named, file, root) => {
     using dir = project({
       [file]: JSON.stringify({
-        compilerOptions: { ...JSON.parse(tsconfig).compilerOptions, paths: { "@/*": [`${root}/src/*`] } },
+        compilerOptions: {
+          ...JSON.parse(tsconfig).compilerOptions,
+          paths: { "@/*": [`${root}/src/*`] },
+        },
         include: [root],
       }),
       "src/lib.ts": `export const a: number = 1;\n`,
@@ -15756,16 +16219,22 @@ describe.concurrent("--check", () => {
     const other = join(String(dir), "other", "package.json");
     const error = `a.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'.`;
     const cases: [Record<string, string>, string][] = [
-      [{}, "the script ran"],
-      [{ npm_lifecycle_event: "lint" }, "the script ran"],
+      [{}, error],
+      [{ npm_lifecycle_event: "lint" }, error],
       // In the script, `bun check` is the type checker.
       [{ npm_lifecycle_event: "check" }, error],
       [{ npm_lifecycle_event: "check", npm_package_json: own }, error],
       // The script of another package is running.
-      [{ npm_lifecycle_event: "check", npm_package_json: other }, "the script ran"],
+      [{ npm_lifecycle_event: "check", npm_package_json: other }, error],
     ];
     const results = await Promise.all(cases.map(([extra]) => check(dir, [], extra)));
-    expect(results.map(it => it.stdout)).toEqual(cases.map(it => it[1]));
+    expect(results.map((it) => it.stdout)).toEqual(cases.map((it) => it[1]));
+    expect(results.map((it) => it.exitCode)).toEqual(cases.map(() => 1));
+    const explicit = await Promise.all(
+      cases.map(([extra]) => run(String(dir), ["run", "check"], extra)),
+    );
+    expect(explicit.map((it) => it.stdout)).toEqual(cases.map(() => "the script ran"));
+    expect(explicit.map((it) => it.exitCode)).toEqual(cases.map(() => 0));
   });
 
   // `bun run` says which script it runs in the place of what the other package manager has said.
@@ -15789,20 +16258,31 @@ describe.concurrent("--check", () => {
       [{ npm_lifecycle_event: "check" }, false],
       [{ npm_lifecycle_event: "check", npm_package_json: own }, false],
       [{ npm_lifecycle_event: "precheck", npm_package_json: own }, false],
-      // Nobody runs the `check` script of this package: `bun check` does.
-      [{ npm_lifecycle_event: "check", npm_package_json: other }, true],
-      [{ npm_lifecycle_event: "lint", npm_package_json: own }, true],
-      [{}, true],
+      [{ npm_lifecycle_event: "check", npm_package_json: other }, false],
+      [{ npm_lifecycle_event: "lint", npm_package_json: own }, false],
+      [{}, false],
     ];
-    const results = await Promise.all(cases.map(([extra]) => run(String(dir), ["run", "types"], extra)));
+    const results = await Promise.all(
+      cases.map(([extra]) => run(String(dir), ["run", "types"], extra)),
+    );
     expect(
-      results.map(it => ({
+      results.map((it) => ({
         // Once, where it does.
         ranTheScript: it.stdout.split("the script ran").length - 1,
         reported: it.stdout.split("a.ts(1,14): error TS2322").length - 1,
         exitCode: it.exitCode,
       })),
     ).toEqual(cases.map(([, runs]) => ({ ranTheScript: Number(runs), reported: 1, exitCode: 1 })));
+    const explicit = await Promise.all(
+      cases.map(([extra]) => run(String(dir), ["run", "check"], extra)),
+    );
+    expect(
+      explicit.map((it) => ({
+        ranTheScript: it.stdout.split("the script ran").length - 1,
+        reported: it.stdout.split("a.ts(1,14): error TS2322").length - 1,
+        exitCode: it.exitCode,
+      })),
+    ).toEqual(cases.map(() => ({ ranTheScript: 1, reported: 1, exitCode: 1 })));
   });
 
   // yarn does not say of which package the script is: of the one that `bun` is started in, not of
@@ -15813,17 +16293,20 @@ describe.concurrent("--check", () => {
       "package.json": JSON.stringify({ workspaces: ["packages/*"], scripts: { check: "echo no" } }),
       "packages/a/package.json": JSON.stringify({
         name: "a",
-        scripts: { types: `${bun} check`, check: "echo the script of the package ran" },
+        scripts: { types: `${bun} run check`, check: "echo the script of the package ran" },
       }),
       "packages/a/a.ts": `export const a: number = "1";\n`,
     });
     const own = join(String(dir), "package.json");
     const results = await Promise.all(
-      [{ npm_lifecycle_event: "check" }, { npm_lifecycle_event: "check", npm_package_json: own }].map(extra =>
-        run(String(dir), ["--filter", "*", "types"], extra),
-      ),
+      [
+        { npm_lifecycle_event: "check" },
+        { npm_lifecycle_event: "check", npm_package_json: own },
+      ].map((extra) => run(String(dir), ["--filter", "*", "types"], extra)),
     );
-    expect(results.map(it => [it.stdout.includes("the script of the package ran"), it.exitCode])).toEqual([
+    expect(
+      results.map((it) => [it.stdout.includes("the script of the package ran"), it.exitCode]),
+    ).toEqual([
       [true, 0],
       [true, 0],
     ]);
@@ -15842,21 +16325,25 @@ describe.concurrent("--check", () => {
     };
     // Where `bun` is started, and where the script then runs.
     const cases = [
-      [".", "packages/a", ["--workspaces", "check"]],
-      [".", "packages/a", ["--filter=*", "check"]],
-      [".", "packages/a", ["-F", "*", "check"]],
+      [".", "packages/a", ["run", "--workspaces", "check"]],
+      [".", "packages/a", ["run", "--filter=*", "check"]],
+      [".", "packages/a", ["run", "-F", "*", "check"]],
       ["packages/a", "packages/a", ["run", "--parallel", "check", "other"]],
       ["packages/a", "packages/a", ["run", "--sequential", "check", "other"]],
       ["packages/a/src", "packages/a/src", ["run", "--parallel", "check", "other"]],
       ["packages/a/src", "packages/a/src", ["run", "--sequential", "check", "other"]],
-      ["packages/a/src", "packages/a", ["check"]],
+      ["packages/a/src", "packages/a", ["run", "check"]],
     ] as const;
     const seen = await Promise.all(
       cases.map(async ([cwd, where, cmd]) => {
         using dir = project(files);
         const { exitCode, stderr } = await run(join(String(dir), cwd), [...cmd]);
         const ran = join(String(dir), where, "ran.txt");
-        return [exitCode, stderr.includes("Unknown flag"), existsSync(ran) ? readFileSync(ran, "utf8").trim() : ""];
+        return [
+          exitCode,
+          stderr.includes("Unknown flag"),
+          existsSync(ran) ? readFileSync(ran, "utf8").trim() : "",
+        ];
       }),
     );
     expect(seen).toEqual(cases.map(() => [0, false, "ran"]));
@@ -15867,7 +16354,9 @@ describe.concurrent("--check", () => {
     const bun = `"${bunExe().replaceAll("\\", "/")}"`;
     const name = `a${delimiter}b`;
     using dir = project({
-      [`${name}/package.json`]: JSON.stringify({ scripts: { check: `${bun} check --pretty false` } }),
+      [`${name}/package.json`]: JSON.stringify({
+        scripts: { check: `${bun} check --pretty false` },
+      }),
       [`${name}/tsconfig.json`]: tsconfig,
       [`${name}/a.ts`]: `export const a: number = "1";\n`,
     });
@@ -15892,7 +16381,7 @@ describe.concurrent("--check", () => {
       run(String(dir), ["run", "--check", "--parallel", "one", "two"]),
       run(String(dir), ["run", "--check", "--sequential", "one", "two"]),
     ]);
-    const seen = results.map(it => [
+    const seen = results.map((it) => [
       it.exitCode,
       it.stderr.includes("TS2322"),
       (it.stdout + it.stderr).includes("ran"),
@@ -15907,7 +16396,9 @@ describe.concurrent("--check", () => {
   test("bun test --watch --check watches the tsconfig.json of every project", async () => {
     const declared = `declare module "bun:test" {\n  export function test(name: string, fn: () => void): void;\n}\n`;
     const tests = `import { test } from "bun:test";\nfunction f(x) {\n  return x;\n}\ntest("t", () => void f(1));\n`;
-    const loose = JSON.stringify({ compilerOptions: { ...JSON.parse(tsconfig).compilerOptions, strict: false } });
+    const loose = JSON.stringify({
+      compilerOptions: { ...JSON.parse(tsconfig).compilerOptions, strict: false },
+    });
     using dir = project({
       "a/tsconfig.json": loose,
       "a/bun-test.d.ts": declared,
@@ -15937,7 +16428,11 @@ describe.concurrent("--check", () => {
     await bun.until(() => bun.output.stdout.includes("ran 1"));
     await bun.until(
       () => bun.output.stderr.includes("a.ts(1,12): error TS7006"),
-      () => Bun.write(join(String(dir), "configs", "base.json"), JSON.stringify({ compilerOptions: options })),
+      () =>
+        Bun.write(
+          join(String(dir), "configs", "base.json"),
+          JSON.stringify({ compilerOptions: options }),
+        ),
     );
   });
 
@@ -15967,7 +16462,10 @@ describe.concurrent("--check", () => {
 
     test("errors are shown with the source and in color", async () => {
       using dir = project(files(`"1"`));
-      const { output, hasColors, exitCode, signalCode } = await inTerminal(String(dir), ["--check", "a.ts"]);
+      const { output, hasColors, exitCode, signalCode } = await inTerminal(String(dir), [
+        "--check",
+        "a.ts",
+      ]);
       expect(output).toContain(`1 | const n: number = "1";`);
       expect(output).toContain("error: TS2322: Type 'string' is not assignable to type 'number'.");
       expect(output).not.toContain("ran 1");
@@ -15992,7 +16490,9 @@ describe.concurrent("--check", () => {
     expect(good.stdout).toBe("ran 1");
     expect(good.exitCode).toBe(0);
     expect(bad.stdout).toBe("");
-    expect(bad.stderr).toContain("s.ts(1,14): error TS2322: Type 'number' is not assignable to type 'string'.");
+    expect(bad.stderr).toContain(
+      "s.ts(1,14): error TS2322: Type 'number' is not assignable to type 'string'.",
+    );
     expect(bad.exitCode).toBe(1);
   });
 
@@ -16037,7 +16537,8 @@ describe.concurrent("--check", () => {
       const files = { "tool.sh": `echo ran\n`, "node_modules/.bin/tool": `#!/bin/sh\necho ran\n` };
       using good = project({ ...files, "a.ts": `export const a: number = 1;\n` });
       using bad = project({ ...files, "a.ts": `export const a: number = "1";\n` });
-      for (const dir of [good, bad]) chmodSync(join(String(dir), "node_modules", ".bin", "tool"), 0o755);
+      for (const dir of [good, bad])
+        chmodSync(join(String(dir), "node_modules", ".bin", "tool"), 0o755);
       const [ran, stopped] = await Promise.all([run(String(good), cmd), run(String(bad), cmd)]);
       expect([ran.stdout, ran.exitCode]).toEqual(["ran", 0]);
       expect(stopped.stderr).toContain("a.ts(1,14): error TS2322");
@@ -16074,7 +16575,9 @@ describe.concurrent("--check", () => {
   });
 
   test("without --check the same file runs", async () => {
-    using dir = project({ "a.ts": `const s: string = 1 as any as number;\nconsole.log("ran", s);\n` });
+    using dir = project({
+      "a.ts": `const s: string = 1 as any as number;\nconsole.log("ran", s);\n`,
+    });
     const { stdout, exitCode } = await run(String(dir), ["a.ts"]);
     expect(stdout).toBe("ran 1");
     expect(exitCode).toBe(0);
@@ -16170,7 +16673,10 @@ describe.concurrent("--check", () => {
     }
   `;
   const build = async (dir: { toString(): string }, options: object) => {
-    const { stdout, stderr, exitCode } = await run(String(dir), ["build.mjs", JSON.stringify(options)]);
+    const { stdout, stderr, exitCode } = await run(String(dir), [
+      "build.mjs",
+      JSON.stringify(options),
+    ]);
     return { stderr, exitCode, result: JSON.parse(stdout || "null") };
   };
   const ts2322 = (file: string, lineText: string) => ({
@@ -16203,7 +16709,8 @@ describe.concurrent("--check", () => {
     expect(unchecked.result).toEqual({ success: true, outputs: 1, logs: [] });
     // Nothing is printed: the errors are values.
     expect([good.stderr, bad.stderr, thrown.stderr]).toEqual(["", "", ""]);
-    const written = (outdir: string, file: string) => Bun.file(join(String(dir), outdir, file)).exists();
+    const written = (outdir: string, file: string) =>
+      Bun.file(join(String(dir), outdir, file)).exists();
     expect(await written("out-good", "good.js")).toBe(true);
     expect(await written("out-bad", "bad.js")).toBe(false);
     expect(await written("out-thrown", "bad.js")).toBe(false);
@@ -16220,7 +16727,10 @@ describe.concurrent("--check", () => {
     });
     const { stdout, exitCode } = await run(String(dir), ["build.mjs"]);
     expect(JSON.parse(stdout)).toEqual([
-      ["TS2554: Expected 1 arguments, but got 0.", ["TS6210: An argument for 'wanted' was not provided."]],
+      [
+        "TS2554: Expected 1 arguments, but got 0.",
+        ["TS6210: An argument for 'wanted' was not provided."],
+      ],
     ]);
     expect(exitCode).toBe(0);
   });
@@ -16253,7 +16763,10 @@ describe.concurrent("--check", () => {
   test("a file that is only in memory is checked like one on the disk", async () => {
     using dir = project({
       "tsconfig.json": JSON.stringify({
-        compilerOptions: { ...JSON.parse(tsconfig).compilerOptions, allowImportingTsExtensions: true },
+        compilerOptions: {
+          ...JSON.parse(tsconfig).compilerOptions,
+          allowImportingTsExtensions: true,
+        },
       }),
       "build.mjs": buildScript,
       // The bundler finds such a file by its whole name.
@@ -16261,7 +16774,10 @@ describe.concurrent("--check", () => {
     });
     const at = (file: string) => join(String(dir), file);
     const [entryPoint, imported, wrong] = await Promise.all([
-      build(dir, { entrypoints: [at("entry.ts")], files: { [at("entry.ts")]: `export const a: number = 1;\n` } }),
+      build(dir, {
+        entrypoints: [at("entry.ts")],
+        files: { [at("entry.ts")]: `export const a: number = 1;\n` },
+      }),
       build(dir, {
         entrypoints: ["on-disk.ts"],
         files: { [at("in/memory/imported.ts")]: `export const value: number = 1;\n` },
@@ -16297,7 +16813,8 @@ describe.concurrent("--check", () => {
       "right.ts": `export const a: number = 1;\n`,
       "wrong.ts": `export const a: number = '1';\n`,
     });
-    const build = async (...args: string[]) => JSON.parse((await run(String(dir), ["build.mjs", ...args])).stdout);
+    const build = async (...args: string[]) =>
+      JSON.parse((await run(String(dir), ["build.mjs", ...args])).stdout);
     const [right, wrong] = await Promise.all([
       build("right.ts", `\n\n\nexport const generated: number = '1';\n`),
       build("wrong.ts", `\n\n\nexport const generated: number = 1;\n`),
@@ -16329,10 +16846,15 @@ describe.concurrent("--check", () => {
       "Outer.svelte": `<script lang='ts'></script>\n`,
       "store.ts": `export const n: number = '1';\n`,
       "uses.ts": `import { value } from './generated';\nexport const own: number = value;\n`,
-      "node_modules/runtime/package.json": JSON.stringify({ name: "runtime", version: "1.0.0", main: "index.js" }),
+      "node_modules/runtime/package.json": JSON.stringify({
+        name: "runtime",
+        version: "1.0.0",
+        main: "index.js",
+      }),
       "node_modules/runtime/index.js": `// @ts-check\n/** @type {number} */\nexport const runtime = '1';\n`,
     });
-    const build = async (...args: string[]) => JSON.parse((await run(String(dir), ["build.mjs", ...args])).stdout);
+    const build = async (...args: string[]) =>
+      JSON.parse((await run(String(dir), ["build.mjs", ...args])).stdout);
     // It cannot be named, so what it imports is.
     const importsStore = `import { n } from './store';\nexport const a: number = n;\n`;
     const [imported, throughAnother, installed] = await Promise.all([
@@ -16363,7 +16885,10 @@ describe.concurrent("--check", () => {
 
   test("a file that is only in memory can be in two programs", async () => {
     const config = JSON.stringify({
-      compilerOptions: { ...JSON.parse(tsconfig).compilerOptions, allowImportingTsExtensions: true },
+      compilerOptions: {
+        ...JSON.parse(tsconfig).compilerOptions,
+        allowImportingTsExtensions: true,
+      },
     });
     const entry = `import { value } from '../shared/generated.ts';\nexport const own: number = value;\n`;
     using dir = project({
@@ -16382,19 +16907,22 @@ describe.concurrent("--check", () => {
   });
 
   // The bundler asserts that the path of an entry point is absolute.
-  test.skipIf(isDebug || isASAN)("a file that is only in memory can have a relative name", async () => {
-    using dir = project({ "build.mjs": buildScript });
-    const { result } = await build(dir, {
-      entrypoints: ["./entry.ts"],
-      files: { "./entry.ts": `export const a: number = '1';\n` },
-      throw: false,
-    });
-    expect(result).toEqual({
-      success: false,
-      outputs: 0,
-      logs: [ts2322("entry.ts", `export const a: number = '1';`)],
-    });
-  });
+  test.skipIf(isDebug || isASAN)(
+    "a file that is only in memory can have a relative name",
+    async () => {
+      using dir = project({ "build.mjs": buildScript });
+      const { result } = await build(dir, {
+        entrypoints: ["./entry.ts"],
+        files: { "./entry.ts": `export const a: number = '1';\n` },
+        throw: false,
+      });
+      expect(result).toEqual({
+        success: false,
+        outputs: 0,
+        logs: [ts2322("entry.ts", `export const a: number = '1';`)],
+      });
+    },
+  );
 
   test("bun build --check: an error of the bundler comes first", async () => {
     using dir = project({
@@ -16435,9 +16963,11 @@ describe.concurrent("--check", () => {
 
   // Each check loads TypeScript's library, some 40 MB. All of it is in the arenas of the check's session.
   // A debug build takes a second per check, and a sanitizer keeps freed memory for a while.
-  test.skipIf(isDebug || isASAN)("repeated builds with `check: true` in one process do not grow", async () => {
-    using dir = project({
-      "build.mjs": `
+  test.skipIf(isDebug || isASAN)(
+    "repeated builds with `check: true` in one process do not grow",
+    async () => {
+      using dir = project({
+        "build.mjs": `
         const once = () => Bun.build({ entrypoints: ["a.ts"], check: true });
         for (let i = 0; i < 4; i++) await once();
         Bun.gc(true);
@@ -16446,13 +16976,14 @@ describe.concurrent("--check", () => {
         Bun.gc(true);
         console.log(Math.round((process.memoryUsage.rss() - before) / 1024 / 1024));
       `,
-      "a.ts": `export const a: number = [1, 2, 3].map(n => n * 2).length;\n`,
-    });
-    const { stdout, exitCode } = await run(String(dir), ["build.mjs"]);
-    // 16 leaked programs would be more than 600 MB.
-    expect(Number(stdout)).toBeLessThan(150);
-    expect(exitCode).toBe(0);
-  });
+        "a.ts": `export const a: number = [1, 2, 3].map(n => n * 2).length;\n`,
+      });
+      const { stdout, exitCode } = await run(String(dir), ["build.mjs"]);
+      // 16 leaked programs would be more than 600 MB.
+      expect(Number(stdout)).toBeLessThan(150);
+      expect(exitCode).toBe(0);
+    },
+  );
 
   test("bun test --check", async () => {
     using dir = project({
@@ -16473,111 +17004,123 @@ describe.concurrent("--check", () => {
 
   // A file that the parser gives up on must not disappear from the result. Each file here ends with a type error, so
   // each has to report something: a syntax error, or that type error.
-  test("half-written code is never reported as clean", async () => {
-    // What once made a file disappear.
-    const cases = [
-      "type T = { (x: number, : string): void };",
-      "<T extends(T,",
-      "var c: { new?(: any; }",
-      "const x = [[[[[[[[[[[[[[[[[[",
-      "declare function f(a: any): any;\nconst x = f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(",
-      "declare function f(a: any): any;\nconst x = (f([(f([(f([(f([(f([(f([",
-      `const x = ${repeat("{ a: ", 18)}`,
-      "const x = ((((((((((((((((((",
-      "interface I { m(export= x: string): any; }",
-      "interface I { n(,): any; }",
-      "interface I { m(: string): any; }",
-      "interface Base{(",
-      "<TOwnProps>(mapStateToProps:<(",
-      "var o:(boolean,",
-      "():{(",
-      "declare function f<T>(): void; f<{ a b: any }>();",
-      "type T = { m(: string): any };",
-    ];
-    const files: Record<string, string> = {};
-    const add = (name: string, text: string) => (files[`${name}.ts`] = `${text}\nconst canary_${name}: string = 1;\n`);
-    cases.forEach((text, index) => add(`c${index}`, text));
+  test(
+    "half-written code is never reported as clean",
+    async () => {
+      // What once made a file disappear.
+      const cases = [
+        "type T = { (x: number, : string): void };",
+        "<T extends(T,",
+        "var c: { new?(: any; }",
+        "const x = [[[[[[[[[[[[[[[[[[",
+        "declare function f(a: any): any;\nconst x = f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(",
+        "declare function f(a: any): any;\nconst x = (f([(f([(f([(f([(f([(f([",
+        `const x = ${repeat("{ a: ", 18)}`,
+        "const x = ((((((((((((((((((",
+        "interface I { m(export= x: string): any; }",
+        "interface I { n(,): any; }",
+        "interface I { m(: string): any; }",
+        "interface Base{(",
+        "<TOwnProps>(mapStateToProps:<(",
+        "var o:(boolean,",
+        "():{(",
+        "declare function f<T>(): void; f<{ a b: any }>();",
+        "type T = { m(: string): any };",
+      ];
+      const files: Record<string, string> = {};
+      const add = (name: string, text: string) =>
+        (files[`${name}.ts`] = `${text}\nconst canary_${name}: string = 1;\n`);
+      cases.forEach((text, index) => add(`c${index}`, text));
 
-    // Valid programs from TypeScript's tests, each damaged in one place. The damage is the same in every run.
-    const bundle = Buffer.from(
-      Bun.zstdDecompressSync(readFileSync(join(import.meta.dir, "typescript-go", "bundle.zst"))),
-    );
-    const entries: [path: string, start: number, length: number][] = [];
-    for (let at = 0; at < bundle.length; ) {
-      const end = bundle.indexOf(10, at);
-      const [, path, length] = /^=== (.*) (\d+)$/.exec(bundle.toString("latin1", at, end))!;
-      entries.push([path, end + 1, +length]);
-      at = end + 1 + +length + 1;
-    }
-    const withErrors = new Set(entries.map(([path]) => /\/([^/(]+)(\(.*\))?\.errors\.txt$/.exec(path)?.[1]));
-    const valid = entries.filter(
-      ([path, , length]) =>
-        /\/tests\/cases\/.*(?<!\.d)\.ts$/.test(path) &&
-        length >= 200 &&
-        length <= 8000 &&
-        !withErrors.has(path.slice(path.lastIndexOf("/") + 1, -3)),
-    );
-    const token =
-      /\s+|\/\/[^\n]*|\/\*[^]*?\*\/|`(?:\\[^]|[^`\\])*`|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|[A-Za-z_$][\w$]*|\d[\w.]*|>>>=|\.\.\.|===|!==|\*\*=|<<=|>>=|>>>|&&=|\|\|=|\?\?=|=>|==|!=|<=|>=|&&|\|\||\?\?|\?\.|\+\+|--|[-+*\/%&|^]=|\*\*|<<|>>|[^]/g;
-    const stray =
-      "< > { } ( ) [ ] => : ? . ... , ; = | & @ # ` \" ' /* // / * ! ~ async await class function extends implements import export from type interface enum namespace module declare abstract static get set new typeof keyof infer in of is as satisfies return yield case default if else for while do try catch finally throw this super null void const let var using accessor override readonly unique asserts out <T </ /> ${ ?. ?? ** 0x 1e 1n \\u \\ import( import. new. <> </> {{ }} (( )) [[ ]] <<< >>> =>=> ::: ??? @@ ## export= export* import* default: case: function* async* get# set#".split(
-        " ",
+      // Valid programs from TypeScript's tests, each damaged in one place. The damage is the same in every run.
+      const bundle = Buffer.from(
+        Bun.zstdDecompressSync(readFileSync(join(import.meta.dir, "typescript-go", "bundle.zst"))),
       );
-    // mulberry32
-    let state = 1;
-    const below = (n: number) => {
-      state = (state + 0x6d2b79f5) | 0;
-      let t = Math.imul(state ^ (state >>> 15), 1 | state);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return Math.floor((((t ^ (t >>> 14)) >>> 0) / 4294967296) * n);
-    };
-    const count = isDebug || isASAN ? 50 : 400;
-    for (let seed = 0; seed < count; seed++) {
-      const [, start, length] = valid[seed * Math.floor(valid.length / count)];
-      const text = bundle.toString("utf8", start, start + length);
-      // Several files in one, or comments that silence errors.
-      if (/@filename|@ts-|@nocheck|@jsx|@checkjs|@allowjs/i.test(text)) continue;
-      const tokens = text.match(token)!;
-      const free = tokens.flatMap((t, i) => (/^\s|^\/\/ ?@/.test(t) ? [] : [i]));
-      if (free.length < 8) continue;
-      for (const kind of ["truncate", "delete", "insert", "swap", "replace", "cut", "line"]) {
-        const at = below(free.length);
-        const i = free[at];
-        const edited = [...tokens];
-        if (kind === "truncate") edited.length = i;
-        else if (kind === "delete") edited.splice(i, 1);
-        else if (kind === "insert") edited.splice(i, 0, stray[below(stray.length)], " ");
-        else if (kind === "replace") edited[i] = tokens[free[below(free.length)]];
-        else if (kind === "swap") {
-          const j = free[Math.min(at + 1, free.length - 1)];
-          [edited[i], edited[j]] = [edited[j], edited[i]];
-        }
-        let damaged = edited.join("");
-        if (kind === "cut") damaged = text.slice(0, 1 + below(text.length - 1));
-        else if (kind === "line")
-          damaged = text
-            .split("\n")
-            .toSpliced(below(text.split("\n").length), 1)
-            .join("\n");
-        add(`m${seed}_${kind}`, damaged);
+      const entries: [path: string, start: number, length: number][] = [];
+      for (let at = 0; at < bundle.length;) {
+        const end = bundle.indexOf(10, at);
+        const [, path, length] = /^=== (.*) (\d+)$/.exec(bundle.toString("latin1", at, end))!;
+        entries.push([path, end + 1, +length]);
+        at = end + 1 + +length + 1;
       }
-    }
+      const withErrors = new Set(
+        entries.map(([path]) => /\/([^/(]+)(\(.*\))?\.errors\.txt$/.exec(path)?.[1]),
+      );
+      const valid = entries.filter(
+        ([path, , length]) =>
+          /\/tests\/cases\/.*(?<!\.d)\.ts$/.test(path) &&
+          length >= 200 &&
+          length <= 8000 &&
+          !withErrors.has(path.slice(path.lastIndexOf("/") + 1, -3)),
+      );
+      const token =
+        /\s+|\/\/[^\n]*|\/\*[^]*?\*\/|`(?:\\[^]|[^`\\])*`|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|[A-Za-z_$][\w$]*|\d[\w.]*|>>>=|\.\.\.|===|!==|\*\*=|<<=|>>=|>>>|&&=|\|\|=|\?\?=|=>|==|!=|<=|>=|&&|\|\||\?\?|\?\.|\+\+|--|[-+*\/%&|^]=|\*\*|<<|>>|[^]/g;
+      const stray =
+        "< > { } ( ) [ ] => : ? . ... , ; = | & @ # ` \" ' /* // / * ! ~ async await class function extends implements import export from type interface enum namespace module declare abstract static get set new typeof keyof infer in of is as satisfies return yield case default if else for while do try catch finally throw this super null void const let var using accessor override readonly unique asserts out <T </ /> ${ ?. ?? ** 0x 1e 1n \\u \\ import( import. new. <> </> {{ }} (( )) [[ ]] <<< >>> =>=> ::: ??? @@ ## export= export* import* default: case: function* async* get# set#".split(
+          " ",
+        );
+      // mulberry32
+      let state = 1;
+      const below = (n: number) => {
+        state = (state + 0x6d2b79f5) | 0;
+        let t = Math.imul(state ^ (state >>> 15), 1 | state);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return Math.floor((((t ^ (t >>> 14)) >>> 0) / 4294967296) * n);
+      };
+      const count = isDebug || isASAN ? 50 : 400;
+      for (let seed = 0; seed < count; seed++) {
+        const [, start, length] = valid[seed * Math.floor(valid.length / count)];
+        const text = bundle.toString("utf8", start, start + length);
+        // Several files in one, or comments that silence errors.
+        if (/@filename|@ts-|@nocheck|@jsx|@checkjs|@allowjs/i.test(text)) continue;
+        const tokens = text.match(token)!;
+        const free = tokens.flatMap((t, i) => (/^\s|^\/\/ ?@/.test(t) ? [] : [i]));
+        if (free.length < 8) continue;
+        for (const kind of ["truncate", "delete", "insert", "swap", "replace", "cut", "line"]) {
+          const at = below(free.length);
+          const i = free[at];
+          const edited = [...tokens];
+          if (kind === "truncate") edited.length = i;
+          else if (kind === "delete") edited.splice(i, 1);
+          else if (kind === "insert") edited.splice(i, 0, stray[below(stray.length)], " ");
+          else if (kind === "replace") edited[i] = tokens[free[below(free.length)]];
+          else if (kind === "swap") {
+            const j = free[Math.min(at + 1, free.length - 1)];
+            [edited[i], edited[j]] = [edited[j], edited[i]];
+          }
+          let damaged = edited.join("");
+          if (kind === "cut") damaged = text.slice(0, 1 + below(text.length - 1));
+          else if (kind === "line")
+            damaged = text
+              .split("\n")
+              .toSpliced(below(text.split("\n").length), 1)
+              .join("\n");
+          add(`m${seed}_${kind}`, damaged);
+        }
+      }
 
-    using dir = project(files);
-    const names = Object.keys(files);
-    const withoutErrors = async (among: string[]) => {
-      const { stdout, exitCode } = await check(dir);
-      expect(exitCode).toBe(1);
-      const reported = new Set([...stdout.matchAll(/^(\w+\.ts)\(\d+,\d+\): error TS/gm)].map(match => match[1]));
-      return among.filter(name => !reported.has(name));
-    };
-    // Syntax errors end the run before anything is checked, as in tsc. What has none is checked on its own.
-    const parsed = await withoutErrors(names);
-    expect(parsed.length).toBeGreaterThan(names.length / 8);
-    expect(parsed.length).toBeLessThan(names.length / 2);
-    writeFileSync(join(String(dir), "tsconfig.json"), JSON.stringify({ ...JSON.parse(tsconfig), files: parsed }));
-    expect(await withoutErrors(parsed)).toEqual([]);
-  });
+      using dir = project(files);
+      const names = Object.keys(files);
+      const withoutErrors = async (among: string[]) => {
+        const { stdout, exitCode } = await check(dir);
+        expect(exitCode).toBe(1);
+        const reported = new Set(
+          [...stdout.matchAll(/^(\w+\.ts)\(\d+,\d+\): error TS/gm)].map((match) => match[1]),
+        );
+        return among.filter((name) => !reported.has(name));
+      };
+      // Syntax errors end the run before anything is checked, as in tsc. What has none is checked on its own.
+      const parsed = await withoutErrors(names);
+      expect(parsed.length).toBeGreaterThan(names.length / 8);
+      expect(parsed.length).toBeLessThan(names.length / 2);
+      writeFileSync(
+        join(String(dir), "tsconfig.json"),
+        JSON.stringify({ ...JSON.parse(tsconfig), files: parsed }),
+      );
+      expect(await withoutErrors(parsed)).toEqual([]);
+    },
+    isDebug || isASAN ? 15_000 : 5_000,
+  );
 
   // Nothing here is slow or deep unless the cost of a construct grows faster than its size. An exponential walk does not
   // finish at these sizes, and one that gives up at a limit loses a narrowing and reports a false error, as happened
@@ -16592,7 +17135,7 @@ describe.concurrent("--check", () => {
       [
         "a sequence of `if` statements in a `finally` block",
         size,
-        n =>
+        (n) =>
           `declare const c: boolean; declare function f(): string | undefined;\nexport function g() { const d = f(); if (!d) return; try { c; } finally { ${range(
             n,
           )
@@ -16602,15 +17145,17 @@ describe.concurrent("--check", () => {
       [
         "a sequence of `if` statements that assign in a loop",
         size,
-        n =>
-          `declare const c: boolean;\nexport function g() { let x: string | number | null = null; while (c) { ${range(n)
-            .map(i => `if (c) { x = ${i % 2 ? '"a"' : "1"}; }`)
+        (n) =>
+          `declare const c: boolean;\nexport function g() { let x: string | number | null = null; while (c) { ${range(
+            n,
+          )
+            .map((i) => `if (c) { x = ${i % 2 ? '"a"' : "1"}; }`)
             .join(" ")} } return x; }`,
       ],
       [
         "nested loops that assign the same variable",
         size,
-        n =>
+        (n) =>
           `declare const c: boolean; declare function h(v: unknown): string | number;\nexport function g() { let x: string | number = 1; ${range(
             n,
           )
@@ -16620,7 +17165,7 @@ describe.concurrent("--check", () => {
       [
         "a chain of `&&`",
         size,
-        n =>
+        (n) =>
           `declare const a: { p?: number };\nexport const r = ${range(n)
             .map(() => "a.p")
             .join(" && ")};`,
@@ -16628,7 +17173,7 @@ describe.concurrent("--check", () => {
       [
         "a chain of `+`",
         size,
-        n =>
+        (n) =>
           `declare const a: number;\nexport const r = ${range(n)
             .map(() => "a")
             .join(" + ")};`,
@@ -16636,81 +17181,86 @@ describe.concurrent("--check", () => {
       [
         "a chain of method calls",
         size,
-        n => `declare const a: { m(): typeof a };\nexport const r = a${repeat(".m()", n)};`,
+        (n) => `declare const a: { m(): typeof a };\nexport const r = a${repeat(".m()", n)};`,
       ],
       [
         // TypeScript needs seconds for 400 members too.
         "a discriminated union narrowed member by member",
         size / 4,
-        n =>
+        (n) =>
           `type U = ${range(n)
-            .map(i => `{ k: "k${i}"; v${i}: number }`)
+            .map((i) => `{ k: "k${i}"; v${i}: number }`)
             .join(" | ")};\nexport function g(u: U) { ${range(n)
-            .map(i => `if (u.k === "k${i}") return u.v${i};`)
+            .map((i) => `if (u.k === "k${i}") return u.v${i};`)
             .join(" ")} return u; }`,
       ],
       [
         "a `switch` over a union of literals",
         size,
-        n =>
+        (n) =>
           `type U = ${range(n)
-            .map(i => `"k${i}"`)
+            .map((i) => `"k${i}"`)
             .join(" | ")};\nexport function g(u: U) { switch (u) { ${range(n)
-            .map(i => `case "k${i}": return ${i};`)
+            .map((i) => `case "k${i}": return ${i};`)
             .join(" ")} } }`,
       ],
       [
         "constants that each refer to the one before",
         size,
-        n =>
+        (n) =>
           `export const v0 = 1;\n${range(n)
-            .map(i => `export const v${i + 1} = v${i} + 1;`)
+            .map((i) => `export const v${i + 1} = v${i} + 1;`)
             .join("\n")}`,
       ],
       [
         "functions that each return what the next returns",
         size / 2,
-        n =>
+        (n) =>
           `${range(n)
-            .map(i => `export function f${i}() { return f${i + 1}(); }`)
+            .map((i) => `export function f${i}() { return f${i + 1}(); }`)
             .join("\n")}\nexport function f${n}() { return 1; }`,
       ],
-      ["nested object literals", size, n => `export const r = ${repeat("{ a: ", n)}1${repeat(" }", n)};`],
+      [
+        "nested object literals",
+        size,
+        (n) => `export const r = ${repeat("{ a: ", n)}1${repeat(" }", n)};`,
+      ],
       [
         "nested array types",
         size,
-        n => `export type T = ${repeat("Array<", n)}number${repeat(">", n)};\nexport declare const t: T;`,
+        (n) =>
+          `export type T = ${repeat("Array<", n)}number${repeat(">", n)};\nexport declare const t: T;`,
       ],
       [
         "a recursive conditional type",
         size,
-        n =>
+        (n) =>
           `type Build<N extends number, A extends unknown[] = []> = A["length"] extends N ? A : Build<N, [...A, 1]>;\nexport type R = Build<${n}>["length"];\nexport const r: R = ${n};`,
       ],
       [
         "overloads",
         size,
-        n =>
+        (n) =>
           `${range(n)
-            .map(i => `declare function f(a: "k${i}"): ${i};`)
+            .map((i) => `declare function f(a: "k${i}"): ${i};`)
             .join("\n")}\nexport const r = [${range(n)
-            .map(i => `f("k${i}")`)
+            .map((i) => `f("k${i}")`)
             .join(", ")}];`,
       ],
       [
         "an interface with many members compared with another",
         size,
-        n =>
+        (n) =>
           `interface A { ${range(n)
-            .map(i => `p${i}: { q: A };`)
+            .map((i) => `p${i}: { q: A };`)
             .join(" ")} }\ninterface B { ${range(n)
-            .map(i => `p${i}: { q: B };`)
+            .map((i) => `p${i}: { q: B };`)
             .join(" ")} }\ndeclare const a: A;\nexport const b: B = a;`,
       ],
       [
         "a parameter of a callback after many conditions at the top level",
         1100,
-        n =>
+        (n) =>
           `declare function on(f: (a: number, b: string) => number): void;\n${range(n)
             .map(() => `if (typeof on === "function") { on; }`)
             .join("\n")}\non((a, b) => a + b.length);\nexport {};`,
@@ -16718,31 +17268,31 @@ describe.concurrent("--check", () => {
       [
         "call statements with callbacks",
         long,
-        n =>
+        (n) =>
           `declare function on(f: (a: number, b: string) => number): void; declare function on2(f: (a: number) => (b: string) => number): void;\n${range(
             n,
           )
-            .map(i => `on((a, b) => a + b.length + ${i}); on2(a => b => a + b.length);`)
+            .map((i) => `on((a, b) => a + b.length + ${i}); on2(a => b => a + b.length);`)
             .join("\n")}`,
       ],
       [
         "constants that read properties of ambient constants",
         long,
-        n =>
+        (n) =>
           `declare const o: { a: { b: { c: number } }; d: string[] }; declare class K { x: number; y: K; z(): K }\ndeclare const k: K;\n${range(
             n,
           )
-            .map(i => `export const v${i} = o.a.b.c + k.y.y.x + k.z().y.x + o.d.length + ${i};`)
+            .map((i) => `export const v${i} = o.a.b.c + k.y.y.x + k.z().y.x + o.d.length + ${i};`)
             .join("\n")}`,
       ],
       [
         "constants with template expressions over ambient constants",
         long,
-        n =>
+        (n) =>
           `declare const n: number; declare const s: string; declare const o: { a: 1 }; declare const u: string | number | undefined;\n${range(
             n,
           )
-            .map(i => `export const t${i} = \`a\${n}b\${s}c\${u}d\${${i}}\` + \`\${o}\`;`)
+            .map((i) => `export const t${i} = \`a\${n}b\${s}c\${u}d\${${i}}\` + \`\${o}\`;`)
             .join("\n")}`,
       ],
     ];
@@ -16760,14 +17310,17 @@ describe.concurrent("--check", () => {
     // which anything is assignable.
     test.skipIf(isDebug || isASAN).each([130])(
       "%i comparisons that reach the depth limit do not hide the next error",
-      async n => {
+      async (n) => {
         using dir = project({
           "tsconfig.json": JSON.stringify({
-            compilerOptions: { ...JSON.parse(tsconfig).compilerOptions, exactOptionalPropertyTypes: true },
+            compilerOptions: {
+              ...JSON.parse(tsconfig).compilerOptions,
+              exactOptionalPropertyTypes: true,
+            },
           }),
           "index.ts": `interface Sub { a: 1; b: 2 } interface Sup { a: 1 }\n${range(n)
             .map(
-              i =>
+              (i) =>
                 `export function f${i}() { interface G<in out T> { r: G<T[]> | null } let s!: G<Sub>, S!: G<Sup>; S = s; }`,
             )
             .join(
@@ -16777,8 +17330,11 @@ describe.concurrent("--check", () => {
         const { stdout, exitCode } = await check(dir);
         const errors = stdout
           .split("\n")
-          .flatMap(line => /^index\.ts\((\d+),\d+\): error (TS\d+)/.exec(line)?.slice(1, 3).join(" ") ?? []);
-        expect(errors).toEqual([...range(n).map(i => `${i + 2} TS2321`), `${n + 2} TS2322`]);
+          .flatMap(
+            (line) =>
+              /^index\.ts\((\d+),\d+\): error (TS\d+)/.exec(line)?.slice(1, 3).join(" ") ?? [],
+          );
+        expect(errors).toEqual([...range(n).map((i) => `${i + 2} TS2321`), `${n + 2} TS2322`]);
         expect(exitCode).toBe(1);
       },
     );
@@ -16789,14 +17345,16 @@ describe.concurrent("--check", () => {
         "index.ts": `interface S { nxt: S | null }\ndeclare function mk(): S;\nexport function g() { let s: S | null = mk(); while (s) { const c0 = s.nxt; ${range(
           n,
         )
-          .map(i => `const c${i + 1} = c${i};`)
+          .map((i) => `const c${i + 1} = c${i};`)
           .join(" ")} s = c${n}; } }\n`,
       });
       const { stdout, exitCode } = await check(dir);
       // Each of them is circular through the back edge of the loop.
       expect(
-        stdout.split("\n").map(line => /error TS7022: '(c\d+)' implicitly has type 'any'/.exec(line)?.[1]),
-      ).toEqual(range(n + 1).map(i => `c${i}`));
+        stdout
+          .split("\n")
+          .map((line) => /error TS7022: '(c\d+)' implicitly has type 'any'/.exec(line)?.[1]),
+      ).toEqual(range(n + 1).map((i) => `c${i}`));
       expect(exitCode).toBe(1);
     });
   });

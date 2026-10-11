@@ -1,5 +1,6 @@
 ---
-source: crates/tauri-cli/src/migrate/migrations/v2/mod.rs
+source: crates/aphrody-tauri-cli/src/migrate/migrations/v2/mod.rs
+assertion_line: 165
 expression: contents
 ---
 [package]
@@ -8,14 +9,17 @@ version = "0.1.0"
 edition = "2021"
 
 [build-dependencies.tauri-build]
-version = "3.0.0-alpha.3"
+version = "1.4.4"
+package = "aphrody-tauri-build"
 
 [dependencies.tauri]
-version = "3.0.0-alpha.4"
+version = "1.4.4"
 default-features = false
 features = [
   "compression",
 ]
+package = "aphrody-tauri"
 
 [dependencies]
-tauri-runtime-cef = { version = "3.0.0-alpha.5", features = ["unstable"] }
+tauri-runtime-cef = { package = "aphrody-tauri-runtime-cef", version = "1.4.4", default-features = false, features = ["unstable"] }
+tauri-runtime-wry = "2.0.0"

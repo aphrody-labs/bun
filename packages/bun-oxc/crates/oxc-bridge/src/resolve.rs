@@ -15,10 +15,9 @@ fn string_list(value: &Value, key: &str) -> Result<Vec<String>, Error> {
     let invalid = || Error::input(format!("{key} must be an array of strings"));
     match value {
         Value::String(item) => Ok(vec![item.clone()]),
-        Value::Array(items) => items
-            .iter()
-            .map(|item| item.as_str().map(str::to_owned).ok_or_else(invalid))
-            .collect(),
+        Value::Array(items) => {
+            items.iter().map(|item| item.as_str().map(str::to_owned).ok_or_else(invalid)).collect()
+        },
         _ => Err(invalid()),
     }
 }

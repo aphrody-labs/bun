@@ -31,7 +31,7 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
 name = "aphrody-oxc-bridge"
-version = "0.3.0"
+version = "1.4.4"
 dependencies = [
  "oxc_allocator",
  "oxc_ast",
@@ -51,7 +51,7 @@ dependencies = [
 
 [[package]]
 name = "aphrody-oxc-tools"
-version = "0.3.0"
+version = "1.4.4"
 dependencies = [
  "aphrody-oxc-bridge",
  "oxc_allocator",
@@ -144,7 +144,7 @@ checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
 
 [[package]]
 name = "bun-macro"
-version = "0.1.0"
+version = "1.4.4"
 dependencies = [
  "anyhow",
  "napi 2.16.17",
@@ -154,7 +154,7 @@ dependencies = [
 
 [[package]]
 name = "bun-native-plugin"
-version = "0.2.0"
+version = "1.4.4"
 dependencies = [
  "anyhow",
  "bun-macro",
@@ -162,7 +162,7 @@ dependencies = [
 
 [[package]]
 name = "bun-plugin-oxc-napi"
-version = "0.3.0"
+version = "1.4.4"
 dependencies = [
  "aphrody-oxc-bridge",
  "aphrody-oxc-tools",
@@ -1153,7 +1153,6 @@ checksum = "13c45bb4a6ae1280ec0803b1ef9d3455eb50f01efbbe1447ab020f1d54fba9d8"
 [[package]]
 name = "oxc"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "oxc_allocator",
  "oxc_ast",
@@ -1249,7 +1248,6 @@ dependencies = [
 [[package]]
 name = "oxc_allocator"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "allocator-api2",
  "hashbrown 0.17.1",
@@ -1264,7 +1262,6 @@ dependencies = [
 [[package]]
 name = "oxc_ast"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "bitflags",
  "oxc_allocator",
@@ -1281,7 +1278,6 @@ dependencies = [
 [[package]]
 name = "oxc_ast_macros"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "phf",
  "proc-macro2",
@@ -1292,7 +1288,6 @@ dependencies = [
 [[package]]
 name = "oxc_ast_visit"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "oxc_allocator",
  "oxc_ast",
@@ -1303,7 +1298,6 @@ dependencies = [
 [[package]]
 name = "oxc_cfg"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "bitflags",
  "itertools",
@@ -1316,7 +1310,6 @@ dependencies = [
 [[package]]
 name = "oxc_codegen"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "bitflags",
  "cow-utils",
@@ -1337,7 +1330,6 @@ dependencies = [
 [[package]]
 name = "oxc_compat"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "cow-utils",
  "oxc-browserslist",
@@ -1349,7 +1341,6 @@ dependencies = [
 [[package]]
 name = "oxc_config"
 version = "0.0.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "fast-glob",
  "ignore",
@@ -1362,7 +1353,6 @@ dependencies = [
 [[package]]
 name = "oxc_data_structures"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "ropey",
 ]
@@ -1370,7 +1360,6 @@ dependencies = [
 [[package]]
 name = "oxc_diagnostics"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "bytecount",
  "cow-utils",
@@ -1387,7 +1376,6 @@ dependencies = [
 [[package]]
 name = "oxc_ecmascript"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "cow-utils",
  "dragonbox_ecma",
@@ -1407,7 +1395,6 @@ dependencies = [
 [[package]]
 name = "oxc_estree"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "dragonbox_ecma",
  "itoa",
@@ -1417,7 +1404,6 @@ dependencies = [
 [[package]]
 name = "oxc_estree_tokens"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "itoa",
  "oxc_ast",
@@ -1431,7 +1417,6 @@ dependencies = [
 [[package]]
 name = "oxc_formatter"
 version = "0.72.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "cow-utils",
  "fast-glob",
@@ -1458,7 +1443,6 @@ dependencies = [
 [[package]]
 name = "oxc_formatter_core"
 version = "0.72.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "cow-utils",
  "oxc_allocator",
@@ -1471,7 +1455,6 @@ dependencies = [
 [[package]]
 name = "oxc_formatter_css"
 version = "0.72.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "cow-utils",
  "oxc-css-parser",
@@ -1486,7 +1469,6 @@ dependencies = [
 [[package]]
 name = "oxc_formatter_graphql"
 version = "0.72.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "cow-utils",
  "oxc-graphql-parser",
@@ -1500,7 +1482,6 @@ dependencies = [
 [[package]]
 name = "oxc_formatter_json"
 version = "0.72.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "dragonbox_ecma",
  "oxc_allocator",
@@ -1516,7 +1497,6 @@ dependencies = [
 [[package]]
 name = "oxc_formatter_markdown"
 version = "0.72.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "cow-utils",
  "oxc-markdown-parser",
@@ -1531,7 +1511,6 @@ dependencies = [
 [[package]]
 name = "oxc_formatter_tests"
 version = "0.62.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "oxc_formatter_core",
  "serde_json",
@@ -1540,7 +1519,6 @@ dependencies = [
 [[package]]
 name = "oxc_formatter_yaml"
 version = "0.72.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "cow-utils",
  "oxc-yaml-parser",
@@ -1564,7 +1542,6 @@ dependencies = [
 [[package]]
 name = "oxc_isolated_declarations"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "bitflags",
  "oxc_allocator",
@@ -1581,7 +1558,6 @@ dependencies = [
 [[package]]
 name = "oxc_jsdoc"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "oxc_ast",
  "oxc_span",
@@ -1591,7 +1567,6 @@ dependencies = [
 [[package]]
 name = "oxc_language_server"
 version = "1.41.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "cow-utils",
  "futures-util",
@@ -1608,7 +1583,6 @@ dependencies = [
 [[package]]
 name = "oxc_linter"
 version = "1.87.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "bitflags",
  "constcat",
@@ -1663,7 +1637,6 @@ dependencies = [
 [[package]]
 name = "oxc_macros"
 version = "0.0.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "convert_case 0.12.0",
  "itertools",
@@ -1675,7 +1648,6 @@ dependencies = [
 [[package]]
 name = "oxc_mangler"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "itertools",
  "oxc_allocator",
@@ -1693,7 +1665,6 @@ dependencies = [
 [[package]]
 name = "oxc_minifier"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "cow-utils",
  "itoa",
@@ -1718,7 +1689,6 @@ dependencies = [
 [[package]]
 name = "oxc_minify_napi"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "lazy-regex",
  "napi 3.14.2",
@@ -1740,7 +1710,6 @@ dependencies = [
 [[package]]
 name = "oxc_napi"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "napi 3.14.2",
  "napi-build",
@@ -1755,7 +1724,6 @@ dependencies = [
 [[package]]
 name = "oxc_parser"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "bitflags",
  "cow-utils",
@@ -1778,7 +1746,6 @@ dependencies = [
 [[package]]
 name = "oxc_parser_napi"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "napi 3.14.2",
  "napi-build",
@@ -1794,7 +1761,6 @@ dependencies = [
 [[package]]
 name = "oxc_react_compiler"
 version = "0.143.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "cow-utils",
  "indexmap",
@@ -1815,7 +1781,6 @@ dependencies = [
 [[package]]
 name = "oxc_regular_expression"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "bitflags",
  "oxc_allocator",
@@ -1870,7 +1835,6 @@ dependencies = [
 [[package]]
 name = "oxc_semantic"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "itertools",
  "memchr",
@@ -1910,7 +1874,6 @@ dependencies = [
 [[package]]
 name = "oxc_span"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "compact_str",
  "oxc-schemars",
@@ -1924,7 +1887,6 @@ dependencies = [
 [[package]]
 name = "oxc_str"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "compact_str",
  "hashbrown 0.17.1",
@@ -1937,7 +1899,6 @@ dependencies = [
 [[package]]
 name = "oxc_syntax"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "bitflags",
  "cow-utils",
@@ -1957,7 +1918,6 @@ dependencies = [
 [[package]]
 name = "oxc_transform_napi"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "napi 3.14.2",
  "napi-build",
@@ -1971,7 +1931,6 @@ dependencies = [
 [[package]]
 name = "oxc_transformer"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "base64",
  "compact_str",
@@ -2000,7 +1959,6 @@ dependencies = [
 [[package]]
 name = "oxc_transformer_plugins"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "cow-utils",
  "itoa",
@@ -2022,7 +1980,6 @@ dependencies = [
 [[package]]
 name = "oxc_traverse"
 version = "0.153.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "itoa",
  "oxc_allocator",
@@ -2040,7 +1997,6 @@ dependencies = [
 [[package]]
 name = "oxfmt"
 version = "0.72.0"
-source = "git+https://github.com/aphrody-labs/oxc?rev=b25696441c80fd580c35d671797f1940c642a624#b25696441c80fd580c35d671797f1940c642a624"
 dependencies = [
  "bpaf",
  "cow-utils",

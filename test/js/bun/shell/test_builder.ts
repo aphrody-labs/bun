@@ -314,7 +314,7 @@ export function createTestBuilder(path: string) {
               }
               const joinedstr = tb.joinTemplate();
               await Bun.$`echo ${joinedstr} > script.bun.sh`.cwd(cwd);
-              ((script: TemplateStringsArray, ...exprs: any[]) => {
+              void ((script: TemplateStringsArray, ...exprs: any[]) => {
                 tb._scriptStr = script;
                 tb._expresssions = exprs;
               })`${bunExe()} run script.bun.sh`;

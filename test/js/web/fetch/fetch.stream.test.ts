@@ -281,7 +281,7 @@ describe.concurrent("fetch() with streaming", () => {
       });
 
       async function getReader() {
-        return (await fetch(`http://${server.hostname}:${server.port}`, {})).body?.getReader();
+        return (await fetch(`http://${server.hostname}:${server.port}`, {})).body!.getReader();
       }
       gcTick(false);
       const reader = await getReader();
@@ -290,7 +290,7 @@ describe.concurrent("fetch() with streaming", () => {
       while (true) {
         gcTick(false);
 
-        const { done, value } = (await reader?.read()) as Bun.ReadableStreamDefaultReadResult<any>;
+        const { done, value } = (await reader.read()) as Bun.ReadableStreamDefaultReadResult<any>;
         if (value) {
           chunks.push(value);
         }
@@ -349,13 +349,13 @@ describe.concurrent("fetch() with streaming", () => {
 
       const res = await fetch(`http://${server.hostname}:${server.port}`, {});
       gcTick(false);
-      const reader = res.body?.getReader();
+      const reader = res.body!.getReader();
       gcTick(false);
       let size = 0;
       while (true) {
         gcTick(false);
 
-        const { done, value } = (await reader?.read()) as Bun.ReadableStreamDefaultReadResult<any>;
+        const { done, value } = (await reader.read()) as Bun.ReadableStreamDefaultReadResult<any>;
         if (value) {
           size += value.length;
         }
@@ -410,11 +410,11 @@ describe.concurrent("fetch() with streaming", () => {
       async function doRequest() {
         await Bun.sleep(10);
         const res = await fetch(server_url);
-        const reader = res.body?.getReader();
+        const reader = res.body!.getReader();
         let buffer = Buffer.alloc(0);
         let parts = 0;
         while (true) {
-          const { done, value } = (await reader?.read()) as Bun.ReadableStreamDefaultReadResult<any>;
+          const { done, value } = (await reader.read()) as Bun.ReadableStreamDefaultReadResult<any>;
           if (value) {
             buffer = Buffer.concat([buffer, value]);
             parts++;
@@ -479,11 +479,11 @@ describe.concurrent("fetch() with streaming", () => {
         },
       });
 
-      const reader = res.body?.pipeThrough(transform).getReader();
+      const reader = res.body!.pipeThrough(transform).getReader();
 
       let result = "";
       while (true) {
-        const { done, value } = (await reader?.read()) as Bun.ReadableStreamDefaultReadResult<any>;
+        const { done, value } = (await reader.read()) as Bun.ReadableStreamDefaultReadResult<any>;
         if (value) {
           result += value;
         }
@@ -516,11 +516,11 @@ describe.concurrent("fetch() with streaming", () => {
       const server_url = `http://${server.hostname}:${server.port}`;
       const res = await fetch(server_url);
 
-      const reader = res.body?.getReader();
+      const reader = res.body!.getReader();
 
       let buffer = Buffer.alloc(0);
       while (true) {
-        const { done, value } = (await reader?.read()) as Bun.ReadableStreamDefaultReadResult<any>;
+        const { done, value } = (await reader.read()) as Bun.ReadableStreamDefaultReadResult<any>;
         if (value) {
           buffer = Buffer.concat([buffer, value]);
         }
@@ -588,14 +588,14 @@ describe.concurrent("fetch() with streaming", () => {
 
       let res = await fetch(`http://${server.hostname}:${server.port}`, {});
       gcTick(false);
-      const reader = res.body?.getReader();
+      const reader = res.body!.getReader();
 
       let buffer = Buffer.alloc(0);
       let parts = 0;
       while (true) {
         gcTick(false);
 
-        const { done, value } = (await reader?.read()) as Bun.ReadableStreamDefaultReadResult<any>;
+        const { done, value } = (await reader.read()) as Bun.ReadableStreamDefaultReadResult<any>;
         if (value) {
           buffer = Buffer.concat([buffer, value]);
           parts++;
@@ -655,10 +655,10 @@ describe.concurrent("fetch() with streaming", () => {
 
           const server_url = `http://${server.hostname}:${server.port}`;
           const res = await fetch(server_url);
-          const reader = res.body?.getReader();
+          const reader = res.body!.getReader();
           let buffer = Buffer.alloc(0);
           while (true) {
-            const { done, value } = (await reader?.read()) as Bun.ReadableStreamDefaultReadResult<any>;
+            const { done, value } = (await reader.read()) as Bun.ReadableStreamDefaultReadResult<any>;
             if (value) {
               buffer = Buffer.concat([buffer, value]);
             }
@@ -759,13 +759,13 @@ describe.concurrent("fetch() with streaming", () => {
 
       let res = await fetch(`http://${server.hostname}:${server.port}`, {});
       gcTick(false);
-      const reader = res.body?.getReader();
+      const reader = res.body!.getReader();
 
       let buffer = Buffer.alloc(0);
       while (true) {
         gcTick(false);
 
-        const { done, value } = (await reader?.read()) as Bun.ReadableStreamDefaultReadResult<any>;
+        const { done, value } = (await reader.read()) as Bun.ReadableStreamDefaultReadResult<any>;
         if (value) {
           buffer = Buffer.concat([buffer, value]);
         }
@@ -811,14 +811,14 @@ describe.concurrent("fetch() with streaming", () => {
 
       res = await fetch(`http://${server.hostname}:${server.port}`, {});
       gcTick(false);
-      const reader = res.body?.getReader();
+      const reader = res.body!.getReader();
 
       let buffer = Buffer.alloc(0);
       let parts = 0;
       while (true) {
         gcTick(false);
 
-        const { done, value } = (await reader?.read()) as Bun.ReadableStreamDefaultReadResult<any>;
+        const { done, value } = (await reader.read()) as Bun.ReadableStreamDefaultReadResult<any>;
         if (value) {
           buffer = Buffer.concat([buffer, value]);
           parts++;
@@ -877,14 +877,14 @@ describe.concurrent("fetch() with streaming", () => {
 
       res = await fetch(`http://${server.hostname}:${server.port}`, {});
       gcTick(false);
-      const reader = res.body?.getReader();
+      const reader = res.body!.getReader();
 
       let buffer = Buffer.alloc(0);
       let parts = 0;
       while (true) {
         gcTick(false);
 
-        const { done, value } = (await reader?.read()) as Bun.ReadableStreamDefaultReadResult<any>;
+        const { done, value } = (await reader.read()) as Bun.ReadableStreamDefaultReadResult<any>;
         if (value) {
           buffer = Buffer.concat([buffer, value]);
         }
@@ -921,14 +921,14 @@ describe.concurrent("fetch() with streaming", () => {
 
       res = await fetch(`http://${server.hostname}:${server.port}`, {});
       gcTick(false);
-      const reader = res.body?.getReader();
+      const reader = res.body!.getReader();
 
       let buffer = Buffer.alloc(0);
       let parts = 0;
       while (true) {
         gcTick(false);
 
-        const { done, value } = (await reader?.read()) as Bun.ReadableStreamDefaultReadResult<any>;
+        const { done, value } = (await reader.read()) as Bun.ReadableStreamDefaultReadResult<any>;
         if (value) {
           buffer = Buffer.concat([buffer, value]);
           parts++;
@@ -999,14 +999,14 @@ describe.concurrent("fetch() with streaming", () => {
       onReceiveHeadersResolve();
 
       gcTick(false);
-      const reader = res.body?.getReader();
+      const reader = res.body!.getReader();
 
       let chunks: Uint8Array[] = [];
       let currentRange = 0;
       while (true) {
         gcTick(false);
 
-        const { done, value } = (await reader?.read()) as Bun.ReadableStreamDefaultReadResult<any>;
+        const { done, value } = (await reader.read()) as Bun.ReadableStreamDefaultReadResult<any>;
         if (value) {
           chunks.push(value);
 
@@ -1090,13 +1090,13 @@ describe.concurrent("fetch() with streaming", () => {
 
       const res = await fetch(`http://${server.hostname}:${server.port}`, {});
       gcTick(false);
-      const reader = res.body?.getReader();
+      const reader = res.body!.getReader();
 
       let buffer = Buffer.alloc(0);
       while (true) {
         gcTick(false);
 
-        const { done, value } = (await reader?.read()) as Bun.ReadableStreamDefaultReadResult<any>;
+        const { done, value } = (await reader.read()) as Bun.ReadableStreamDefaultReadResult<any>;
         if (value) {
           buffer = Buffer.concat([buffer, value]);
         }
@@ -1163,13 +1163,13 @@ describe.concurrent("fetch() with streaming", () => {
           signal: AbortSignal.timeout(1000),
         });
         gcTick(false);
-        const reader = res.body?.getReader();
+        const reader = res.body!.getReader();
 
         let buffer = Buffer.alloc(0);
         while (true) {
           gcTick(false);
 
-          const { done, value } = (await reader?.read()) as Bun.ReadableStreamDefaultReadResult<any>;
+          const { done, value } = (await reader.read()) as Bun.ReadableStreamDefaultReadResult<any>;
           if (value) {
             buffer = Buffer.concat([buffer, value]);
           }
@@ -1243,7 +1243,7 @@ describe.concurrent("fetch() with streaming", () => {
             const res = await fetch(`http://${server.hostname}:${server.port}`, {});
             gcTick(false);
 
-            const reader = res.body?.getReader();
+            const reader = res.body!.getReader();
 
             let buffer = Buffer.alloc(0);
 
@@ -1340,7 +1340,7 @@ describe.concurrent("fetch() with streaming", () => {
         socket = await promise;
         gcTick(false);
 
-        const reader = res.body?.getReader();
+        const reader = res.body!.getReader();
 
         let buffer = Buffer.alloc(0);
 

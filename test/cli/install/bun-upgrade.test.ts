@@ -5,6 +5,200 @@ import { bunExe, bunEnv as env, isMusl, isWindows, tempDir, tls, tmpdirSync } fr
 import { existsSync, statSync } from "node:fs";
 import { copyFile, writeFile } from "node:fs/promises";
 import { basename, join } from "path";
+describe.skipIf(!isWindows)("Aphrody bootstrap integrity", () => {
+  for (const mode of [
+    "missing",
+    "mismatch",
+    "duplicate",
+    "wrong-name",
+    "invalid-runtime",
+    "wrong-version",
+    "alias-failure",
+    "valid",
+    "private-valid",
+    "private-missing",
+    "private-duplicate",
+    "private-url",
+  ]) {
+    it(
+      mode,
+      async () => {
+        const candidate = process.env.BUN_TEST_BOOTSTRAP_RELEASE_PATH ?? Bun.which("bun");
+        if (!candidate)
+          throw new Error("A qualified release runtime is required for installer fixtures");
+        const versionProbe = Bun.spawnSync([candidate, "--version"], {
+          env,
+          stdout: "pipe",
+          stderr: "pipe",
+        });
+        const candidateVersion = versionProbe.stdout.toString().trim();
+        expect(versionProbe.exitCode).toBe(0);
+        expect(candidateVersion).toMatch(/^\d+\.\d+\.\d+(?:-aphrody\.\d+)?$/);
+        const selectedTag = `${candidateVersion.includes("-aphrody.") ? "aphrody-v" : "bun-v"}${candidateVersion}`;
+        using directory = tempDir("fork-bootstrap", {
+          "bin/bun.exe": "previous runtime",
+          "bin/bunx.exe": "previous alias",
+          "bootstrap.ps1": `param([string]$Installer, [string]$Root, [string]$Candidate, [string]$Mode, [string]$ReleaseTag)
+$ErrorActionPreference = "Stop"
+function Get-CimInstance { @{ OSArchitecture = "x64" } }
+function Invoke-RestMethod {
+  param($Headers, [string]$Uri)
+  $Assets = @(
+    @{ name = "bun-windows-x64.zip"; url = "https://api.github.com/repos/aphrody-labs/bun/releases/assets/1" },
+    @{ name = "SHA256SUMS.txt"; url = "https://api.github.com/repos/aphrody-labs/bun/releases/assets/2" }
+  )
+  if ($Mode -eq "private-missing") { $Assets = @($Assets[1]) }
+  if ($Mode -eq "private-duplicate") { $Assets += $Assets[0] }
+  if ($Mode -eq "private-url") { $Assets[0].url = "https://foreign.invalid/releases/assets/1" }
+  @{ assets = $Assets }
+}
+function Invoke-WebRequest {
+  param([string]$Uri, [string]$OutFile, $Headers)
+  if ($Mode.StartsWith("private-")) {
+    if ($Headers.Accept -ne "application/octet-stream" -or $Headers.Authorization -ne "Bearer fixture-token") { throw "invalid authenticated asset headers" }
+    if (-not $Uri.StartsWith("https://api.github.com/repos/aphrody-labs/bun/releases/assets/")) { throw "foreign asset request" }
+    Set-Content -LiteralPath (Join-Path $Root "requested") -Value "yes"
+  }
+  if ($Uri.EndsWith("SHA256SUMS.txt") -or $Uri.EndsWith("/2")) {
+    if ($Mode -eq "missing") { throw "missing fixture" }
+    $Hash = (Get-FileHash -Algorithm SHA256 (Join-Path (Split-Path $OutFile) "bun-windows-x64.zip")).Hash
+    if ($Mode -eq "mismatch") { $Hash = "0" * 64 }
+    $Name = if ($Mode -eq "wrong-name") { "bun-windows-x64azip" } else { "bun-windows-x64.zip" }
+    $Rows = "$Hash  $Name"
+    if ($Mode -eq "duplicate") { $Rows += "\n$Rows" }
+    Set-Content -LiteralPath $OutFile -Value $Rows
+  } else { Set-Content -LiteralPath $OutFile -Value "fixture archive" }
+}
+function Expand-Archive {
+  param([switch]$Force, [string]$Path, [string]$DestinationPath)
+  Set-Content -LiteralPath (Join-Path $Root "expanded") -Value "yes"
+  $Directory = Join-Path $DestinationPath "bun-windows-x64"
+  Microsoft.PowerShell.Management\\New-Item -ItemType Directory -Path $Directory | Out-Null
+  if ($Mode -eq "invalid-runtime") { Set-Content -LiteralPath (Join-Path $Directory "bun.exe") -Value "invalid executable" }
+  else { Copy-Item -LiteralPath $Candidate -Destination (Join-Path $Directory "bun.exe") }
+}
+function New-Item {
+  [CmdletBinding()] param([string]$ItemType, [string]$Path, [switch]$Force, [string]$Target)
+  if ($ItemType -eq "HardLink" -and $Mode -eq "alias-failure") { throw "fixture alias failure" }
+  Microsoft.PowerShell.Management\\New-Item @PSBoundParameters
+}
+$SelectedTag = if ($Mode -eq "wrong-version") { "bun-v1.4.5" } else { $ReleaseTag }
+& $Installer -Version $SelectedTag -BinDir (Join-Path $Root "bin") -NoPathUpdate
+`,
+        });
+        const root = String(directory);
+        const shell =
+          Bun.which("pwsh") ??
+          join(process.env.SystemRoot!, "System32/WindowsPowerShell/v1.0/powershell.exe");
+        await using child = spawn({
+          cmd: [
+            shell,
+            "-NoProfile",
+            "-NonInteractive",
+            "-File",
+            join(root, "bootstrap.ps1"),
+            "-Installer",
+            join(import.meta.dir, "../../../scripts/aphrody/install.ps1"),
+            "-Root",
+            root,
+            "-Candidate",
+            candidate,
+            "-Mode",
+            mode,
+            "-ReleaseTag",
+            selectedTag,
+          ],
+          env: {
+            ...env,
+            APHRODY_BUN_REPO: "aphrody-labs/bun",
+            GITHUB_TOKEN: mode.startsWith("private-") ? "fixture-token" : undefined,
+            GH_TOKEN: undefined,
+          },
+          stdout: "pipe",
+          stderr: "pipe",
+        });
+        const [stdout, stderr, exitCode] = await Promise.all([
+          child.stdout.text(),
+          child.stderr.text(),
+          child.exited,
+        ]);
+        if (mode === "valid" || mode === "private-valid") {
+          expect({ stdout, stderr }).toEqual({
+            stdout: expect.stringContaining(`Installed ${selectedTag}`),
+            stderr: "",
+          });
+          expect(Bun.file(join(root, "bin/bun.exe")).size).toBe(Bun.file(candidate).size);
+          expect(Bun.file(join(root, "bin/bunx.exe")).size).toBe(Bun.file(candidate).size);
+          expect(exitCode).toBe(0);
+        } else {
+          expect(stderr).not.toBe("");
+          if (mode === "wrong-version")
+            expect(stderr).toContain("version does not match the selected release");
+          expect(await Bun.file(join(root, "bin/bun.exe")).text()).toBe("previous runtime");
+          expect(await Bun.file(join(root, "bin/bunx.exe")).text()).toBe("previous alias");
+          if (["missing", "mismatch", "duplicate", "wrong-name"].includes(mode)) {
+            expect(existsSync(join(root, "expanded"))).toBe(false);
+            expect(stderr).toMatch(/checksums are required|checksum mismatch|exactly once/);
+          }
+          if (["private-missing", "private-duplicate", "private-url"].includes(mode)) {
+            expect(existsSync(join(root, "expanded"))).toBe(false);
+            expect(existsSync(join(root, "requested"))).toBe(false);
+            expect(stderr).toMatch(/exactly one asset|selected repository/);
+          }
+          expect(exitCode).not.toBe(0);
+        }
+      },
+      15000,
+    );
+  }
+  it("authenticated bootstrap transport drops credentials on redirects", async () => {
+    const authorization: (string | null)[] = [];
+    const destination = Bun.serve({
+      port: 0,
+      fetch(request) {
+        authorization.push(request.headers.get("authorization"));
+        return new Response("asset");
+      },
+    });
+    const origin = Bun.serve({
+      port: 0,
+      fetch(request) {
+        authorization.push(request.headers.get("authorization"));
+        return Response.redirect(destination.url.toString(), 302);
+      },
+    });
+    try {
+      const shell =
+        Bun.which("pwsh") ??
+        join(process.env.SystemRoot!, "System32/WindowsPowerShell/v1.0/powershell.exe");
+      await using child = spawn({
+        cmd: [
+          shell,
+          "-NoProfile",
+          "-NonInteractive",
+          "-Command",
+          `$ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Invoke-WebRequest -UseBasicParsing -Uri "${origin.url}" -Headers @{ Authorization = "Bearer fixture-token"; Accept = "application/octet-stream" } | Out-Null`,
+        ],
+        env,
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [stdout, stderr, exitCode] = await Promise.all([
+        child.stdout.text(),
+        child.stderr.text(),
+        child.exited,
+      ]);
+      expect(stdout).toBe("");
+      expect(stderr).toBe("");
+      expect(authorization).toEqual(["Bearer fixture-token", null]);
+      expect(exitCode).toBe(0);
+    } finally {
+      await origin.stop(true);
+      await destination.stop(true);
+    }
+  });
+});
+
 const { openTempDirWithoutSharingDelete, closeTempDirHandle } = upgrade_test_helpers;
 
 // Cover every platform/arch/abi/cpu combination so the asset list matches
@@ -103,7 +297,8 @@ function makeZipStored(entryName: string, data: Buffer, unixMode: number): Buffe
 // enough because `unzip` preserves the mode bits; on Windows the verify step
 // spawns `bun.exe` directly, so the archive has to carry a real PE image.
 async function writeFakeReleaseZip(outPath: string, version: string): Promise<void> {
-  const os = process.platform === "win32" ? "windows" : process.platform === "darwin" ? "darwin" : "linux";
+  const os =
+    process.platform === "win32" ? "windows" : process.platform === "darwin" ? "darwin" : "linux";
   const arch = process.arch === "arm64" ? "aarch64" : "x64";
   const abi = isMusl ? "-musl" : "";
   const folder = `bun-${os}-${arch}${abi}`;
@@ -138,7 +333,7 @@ function startReleaseServer(opts: {
       return new Response(
         JSON.stringify({
           tag_name: opts.tagName,
-          assets: assetNames.map(name => ({
+          assets: assetNames.map((name) => ({
             url: "foo",
             content_type: "application/zip",
             name,
@@ -176,7 +371,9 @@ describe.concurrent(() => {
     });
 
     const err = await proc.stderr.text();
-    expect(err.split(/\r?\n/)).toContain("error: This command updates Bun itself, and does not take package names.");
+    expect(err.split(/\r?\n/)).toContain(
+      "error: This command updates Bun itself, and does not take package names.",
+    );
     expect(err.split(/\r?\n/)).toContain("note: Use `bun update bun-types --dev` instead.");
   });
 
@@ -192,7 +389,9 @@ describe.concurrent(() => {
     });
 
     const err = await proc.stderr.text();
-    expect(err.split(/\r?\n/)).toContain("error: This command updates Bun itself, and does not take package names.");
+    expect(err.split(/\r?\n/)).toContain(
+      "error: This command updates Bun itself, and does not take package names.",
+    );
     expect(err.split(/\r?\n/)).toContain("note: Use `bun update --dev bun-types` instead.");
   });
 
@@ -208,7 +407,9 @@ describe.concurrent(() => {
     });
 
     const err = await proc.stderr.text();
-    expect(err.split(/\r?\n/)).toContain("error: This command updates Bun itself, and does not take package names.");
+    expect(err.split(/\r?\n/)).toContain(
+      "error: This command updates Bun itself, and does not take package names.",
+    );
     expect(err.split(/\r?\n/)).toContain("note: Use `bun update bun-types` instead.");
   });
 
@@ -278,7 +479,7 @@ it(
     // On Windows, open the temporary directory without FILE_SHARE_DELETE before spawning
     // the upgrade process. This is to test for EBUSY errors.
     openTempDirWithoutSharingDelete();
-    using tempDirectoryHandle = { [Symbol.dispose]: closeTempDirHandle };
+    using _tempDirectoryHandle = { [Symbol.dispose]: closeTempDirHandle };
 
     await using proc = Bun.spawn({
       cmd: [execPath, "upgrade", "--stable"],
@@ -309,7 +510,7 @@ it("recreates the staging directory in the temp dir instead of reusing a pre-exi
     "9.9.9": {
       "planted-before-upgrade.txt": "planted",
       "planted-subdir": {
-        "bun": "#!/bin/sh\necho 9.9.9\n",
+        bun: "#!/bin/sh\necho 9.9.9\n",
       },
     },
   });
@@ -380,12 +581,16 @@ it("verifies the downloaded release archive against the digest reported by the r
   };
 
   const mismatched = await runUpgrade("bun-v9.9.7", wrongDigest);
-  expect(mismatched.stderr).toContain("did not match the checksum reported by the GitHub API for this release");
+  expect(mismatched.stderr).toContain(
+    "did not match the checksum reported by the GitHub API for this release",
+  );
   expect(mismatched.exitCode).toBe(1);
 
   const matched = await runUpgrade("bun-v9.9.8", correctDigest);
   expect(matched.stderr).toContain("9.9.8");
-  expect(matched.stderr).not.toContain("did not match the checksum reported by the GitHub API for this release");
+  expect(matched.stderr).not.toContain(
+    "did not match the checksum reported by the GitHub API for this release",
+  );
   expect(matched.exitCode).toBe(1);
 });
 
@@ -403,18 +608,29 @@ function startForkServer(opts: {
     port: 0,
     fetch(req) {
       const url = new URL(req.url);
-      requests.push({ path: url.pathname + url.search, authorization: req.headers.get("authorization") });
+      requests.push({
+        path: url.pathname + url.search,
+        authorization: req.headers.get("authorization"),
+      });
       const origin = `https://${server.hostname}:${server.port}`;
       if (url.pathname.endsWith("/SHA256SUMS.txt")) return new Response(opts.sums ?? "");
       if (url.pathname.startsWith("/download/")) return new Response(opts.zipBody ?? "not a zip");
       if (url.pathname.endsWith("/releases/tags/canary")) {
-        return opts.canary ? Response.json(opts.canary(origin)) : new Response("Not Found", { status: 404 });
+        return opts.canary
+          ? Response.json(opts.canary(origin))
+          : new Response("Not Found", { status: 404 });
       }
       if (url.pathname.endsWith("/releases")) return Response.json(opts.releases?.(origin) ?? []);
       return new Response("Not Found", { status: 404 });
     },
   });
-  const { GITHUB_TOKEN, GH_TOKEN, GITHUB_ACCESS_TOKEN, APHRODY_BUN_REPO, ...rest } = env;
+  const {
+    GITHUB_TOKEN: _githubToken,
+    GH_TOKEN: _ghToken,
+    GITHUB_ACCESS_TOKEN: _githubAccessToken,
+    APHRODY_BUN_REPO: _bunRepo,
+    ...rest
+  } = env;
   return {
     requests,
     env: {
@@ -435,7 +651,7 @@ function forkRelease(origin: string, tag: string, extra: Record<string, unknown>
     draft: false,
     prerelease: false,
     assets: [
-      ...allAssetNames().map(name => ({
+      ...allAssetNames().map((name) => ({
         name,
         content_type: "application/zip",
         browser_download_url: `${origin}/download/${tag}/${name}`,
@@ -451,7 +667,8 @@ function forkRelease(origin: string, tag: string, extra: Record<string, unknown>
 }
 
 function currentZipName() {
-  const os = process.platform === "win32" ? "windows" : process.platform === "darwin" ? "darwin" : "linux";
+  const os =
+    process.platform === "win32" ? "windows" : process.platform === "darwin" ? "darwin" : "linux";
   const arch = process.arch === "arm64" ? "aarch64" : "x64";
   return `bun-${os}-${arch}${isMusl ? "-musl" : ""}.zip`;
 }
@@ -468,7 +685,11 @@ async function runForkUpgrade(args: string[], upgradeEnv: Record<string, string>
     stderr: "pipe",
     env: upgradeEnv,
   });
-  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  const [stdout, stderr, exitCode] = await Promise.all([
+    proc.stdout.text(),
+    proc.stderr.text(),
+    proc.exited,
+  ]);
   return { stdout, stderr, exitCode };
 }
 
@@ -480,7 +701,7 @@ describe.concurrent("aphrody-labs/bun releases", () => {
     using fork = startForkServer({
       zipBody,
       sums: `${"0".repeat(64)}  other.zip\n${zipSha}  ${currentZipName()}\n`,
-      releases: origin => [
+      releases: (origin) => [
         { tag_name: "n2b-v0.7.1", draft: false, prerelease: false, assets: [] },
         forkRelease(origin, "bun-v9.9.9", { draft: true }),
         forkRelease(origin, "aphrody-v9.9.9-aphrody.0", { prerelease: true }),
@@ -489,7 +710,7 @@ describe.concurrent("aphrody-labs/bun releases", () => {
       ],
     });
     const { stderr, exitCode } = await runForkUpgrade(["--stable"], fork.env);
-    const paths = fork.requests.map(r => r.path);
+    const paths = fork.requests.map((r) => r.path);
     expect(paths[0]).toBe("/repos/aphrody-labs/bun/releases?per_page=20");
     expect(paths).toContain(`/download/bun-v9.9.8/${currentZipName()}`);
     expect(paths).toContain("/download/bun-v9.9.8/SHA256SUMS.txt");
@@ -503,7 +724,7 @@ describe.concurrent("aphrody-labs/bun releases", () => {
     using fork = startForkServer({
       zipBody,
       sums: `${"ab".repeat(32)}  ${currentZipName()}\n`,
-      releases: origin => [forkRelease(origin, "aphrody-v9.9.8-aphrody.3")],
+      releases: (origin) => [forkRelease(origin, "aphrody-v9.9.8-aphrody.3")],
     });
     const { stderr, exitCode } = await runForkUpgrade(["--stable"], fork.env);
     expect(stderr).toContain("does not match its SHA256SUMS.txt entry");
@@ -514,10 +735,12 @@ describe.concurrent("aphrody-labs/bun releases", () => {
     using fork = startForkServer({
       zipBody,
       sums: `${zipSha}  bun-other-target.zip\n`,
-      releases: origin => [forkRelease(origin, "aphrody-v9.9.8-aphrody.3")],
+      releases: (origin) => [forkRelease(origin, "aphrody-v9.9.8-aphrody.3")],
     });
     const { stderr, exitCode } = await runForkUpgrade(["--stable"], fork.env);
-    expect(stderr).toContain(`SHA256SUMS.txt of release aphrody-v9.9.8-aphrody.3 has no entry for ${currentZipName()}`);
+    expect(stderr).toContain(
+      `SHA256SUMS.txt of release aphrody-v9.9.8-aphrody.3 has no entry for ${currentZipName()}`,
+    );
     expect(exitCode).toBe(1);
   });
 
@@ -526,7 +749,7 @@ describe.concurrent("aphrody-labs/bun releases", () => {
     using fork = startForkServer({
       zipBody,
       sums: `${zipSha}  ${currentZipName()}\n`,
-      releases: origin => [forkRelease(origin, "aphrody-v9.9.8-aphrody.3")],
+      releases: (origin) => [forkRelease(origin, "aphrody-v9.9.8-aphrody.3")],
     });
     const { stdout, stderr, exitCode } = await runForkUpgrade(["--stable"], {
       ...fork.env,
@@ -538,14 +761,17 @@ describe.concurrent("aphrody-labs/bun releases", () => {
       authorization: `Bearer ${token}`,
     });
     expect(fork.requests.length).toBeGreaterThan(1);
-    expect(fork.requests.slice(1).every(r => r.authorization === null)).toBe(true);
+    expect(fork.requests.slice(1).every((r) => r.authorization === null)).toBe(true);
     expect(stdout + stderr).not.toContain(token);
     expect(exitCode).toBe(1);
   });
 
   it("rejects a malformed APHRODY_BUN_REPO", async () => {
     using fork = startForkServer({});
-    const { stderr, exitCode } = await runForkUpgrade(["--stable"], { ...fork.env, APHRODY_BUN_REPO: "../etc" });
+    const { stderr, exitCode } = await runForkUpgrade(["--stable"], {
+      ...fork.env,
+      APHRODY_BUN_REPO: "../etc",
+    });
     expect(stderr).toContain("APHRODY_BUN_REPO must look like owner/name");
     expect(fork.requests).toEqual([]);
     expect(exitCode).toBe(1);
@@ -554,7 +780,9 @@ describe.concurrent("aphrody-labs/bun releases", () => {
   it("--canary explains that the repository has no canary build", async () => {
     using fork = startForkServer({});
     const { stderr, exitCode } = await runForkUpgrade(["--canary"], fork.env);
-    expect(fork.requests.map(r => r.path)).toEqual(["/repos/aphrody-labs/bun/releases/tags/canary"]);
+    expect(fork.requests.map((r) => r.path)).toEqual([
+      "/repos/aphrody-labs/bun/releases/tags/canary",
+    ]);
     expect(stderr).toContain("aphrody-labs/bun has no canary build of Bun");
     expect(stderr).toContain("bun upgrade --stable");
     expect(exitCode).toBe(1);
@@ -564,10 +792,10 @@ describe.concurrent("aphrody-labs/bun releases", () => {
     using fork = startForkServer({
       zipBody,
       sums: `${zipSha}  ${currentZipName()}\n`,
-      canary: origin => forkRelease(origin, "canary"),
+      canary: (origin) => forkRelease(origin, "canary"),
     });
     const { exitCode } = await runForkUpgrade(["--canary"], fork.env);
-    expect(fork.requests.map(r => r.path)).toEqual([
+    expect(fork.requests.map((r) => r.path)).toEqual([
       "/repos/aphrody-labs/bun/releases/tags/canary",
       `/download/canary/${currentZipName()}`,
       "/download/canary/SHA256SUMS.txt",
@@ -583,7 +811,10 @@ describe("bun upgrade --local", () => {
   // build is this bun followed by bytes the loader ignores, which identify the copy.
   async function writeLocalBuild(path: string) {
     if (isWindows) {
-      await writeFile(path, Buffer.concat([Buffer.from(await Bun.file(bunExe()).arrayBuffer()), marker]));
+      await writeFile(
+        path,
+        Buffer.concat([Buffer.from(await Bun.file(bunExe()).arrayBuffer()), marker]),
+      );
     } else {
       await writeFile(path, `#!/bin/sh\nprintf '%s\\n' 9.9.9-local\n`, { mode: 0o755 });
     }
@@ -603,7 +834,10 @@ describe("bun upgrade --local", () => {
   }
 
   it("installs build/release/bun of the current directory over the running bun", async () => {
-    using dir = tempDir("bun-upgrade-local", { "install/.keep": "", "checkout/build/release/.keep": "" });
+    using dir = tempDir("bun-upgrade-local", {
+      "install/.keep": "",
+      "checkout/build/release/.keep": "",
+    });
     const installed = join(String(dir), "install", basename(bunExe()));
     await copyFile(bunExe(), installed);
     const build = await writeLocalBuild(
@@ -619,7 +853,12 @@ describe("bun upgrade --local", () => {
     if (isWindows) {
       // The running executable was renamed aside; the next launch removes it.
       expect(existsSync(installed + ".old")).toBe(true);
-      await using next = Bun.spawn({ cmd: [installed, "--version"], env, stdout: "pipe", stderr: "pipe" });
+      await using next = Bun.spawn({
+        cmd: [installed, "--version"],
+        env,
+        stdout: "pipe",
+        stderr: "pipe",
+      });
       expect(await next.exited).toBe(0);
       expect(existsSync(installed + ".old")).toBe(false);
     }

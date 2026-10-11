@@ -14,6 +14,12 @@ path = "lib.rs"
 workspace = true
 
 [dependencies]
+aphrody-oxc-tools = { path = "../../packages/bun-oxc/crates/oxc-tools" }
+aphrody-oxc-bridge = { path = "../../packages/bun-oxc/crates/oxc-bridge" }
+oxc_linter = { path = "../../vendor/oxc/crates/oxc_linter", features = ["ruledocs"] }
+serde_json = "=1.0.151"
+globset = "=0.4.20"
+ignore = "=0.4.33"
 bun_opaque.workspace = true
 rust-argon2.workspace = true
 bcrypt.workspace = true
@@ -64,6 +70,7 @@ bun_install.workspace = true
 bun_install_types.workspace = true
 bun_parsers.workspace = true
 bun_ssh.workspace = true
+bun_docker.workspace = true
 bun_io.workspace = true
 bun_js_parser.workspace = true
 bun_js_parser_jsc.workspace = true

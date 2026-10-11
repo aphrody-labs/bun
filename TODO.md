@@ -2,9 +2,43 @@
 
 ## Release source surfaces
 
-- [ ] Generate README, GitHub metadata, plugin bundles and site from one immutable source revision.
-- [ ] Validate source inventories, generated artifacts and targeted tests; commit and push bun-os.
-- [ ] Plan and deploy through the configured native Infra hosts when reachable.
+- [x] Generate and verify 12,699 source-pinned artifacts at `c73c54fc202`, including README, plugin, documentation and SQLite graph.
+- [x] Consolidate the eleven owned local branch tips and push `bun-os/main` through `65f3fa168c0` without rewriting history.
+- [x] Deploy the verified graph/documentation service to DBFR with an isolated 2 GiB Redis cache; warm 57,087 entries.
+- [x] Inventory upstreams, vendoring, locked dependencies and source-pinned native workflow dispatch.
+- [ ] Qualify compiled native lint/fmt, custom Bun rules and reserved check/lint/fmt dispatch; finish changed-binary and strict Rust gates.
+- [ ] Regenerate all release surfaces from the final qualified code revision, package only manifest entries, and promote the qualified mirrored site.
+- [ ] Qualify complete public site coverage and browser behavior/rendering; the reference frontier has 17,538 captured routes, one upstream 404 and one canonical redirect (2026-10-11).
+- [ ] Run qualified native delivery workflows and prove publication/installation of each eligible product; source packages alone are insufficient.
+
+## Autonomous Bun toolchain
+
+- [x] Qualify reserved native check/lint/fmt dispatch and embedded OXC CLI behavior: 23 tests pass, five terminal skips; scoped strict Clippy passes.
+- [ ] Preserve builtin compiler directives and parsed inline suppression in native lint; qualify the full source lint gate.
+- [ ] Finish the Bun-only factory, CI bootstrap and delivery executable propagation gates.
+- [x] Vendor pinned OXC source with licenses and local Cargo paths: 14,777 exact files, two symlinks, immutable blob/mode receipt and native source tests verified (2026-10-11).
+- [ ] Qualify native TypeScript declaration emission and API consumers before retiring their external SDK producers.
+- [ ] Add native Docker Engine transport, readonly commands and reviewed mutation plans; Bun SSH is already integrated.
+- [ ] Move required fork build/deployment orchestration into Bun; Aphrody consumes Bun and is not a required backend.
+
+## Production qualification
+
+- [x] Measure VPS capacity and route new factory ingress to root ext4; 12 CPUs, 46 GiB physical RAM and about 137 GiB free, with no held Bun/Cargo build locks (2026-10-11).
+- [x] Launch isolated native Codex VPS workers for capacity and public mirror audits; keep raw provider logs in their provider store.
+- [ ] Requalify corrected strict TS, source checker and Windows bootstrap failures; prior cohort remains red despite 89 passing source tests and green Rust gates.
+- [ ] Run remote Tauri tests/strict Clippy on a fully hash-verified export, then qualify the final source snapshot and fresh Linux release.
+
+- [ ] Resolve every failure in changed-runtime gates, including Windows Job process accounting.
+- [ ] Qualify supported platform builds and real release artifacts with source, toolchain and checksum receipts.
+- [ ] Verify production health, isolation, resource limits and rollback on each selected deployment host.
+- [ ] Publish only qualified capabilities and artifacts; retain explicit errors for unsupported operations.
+
+## Coordinated 1.4.4 release
+
+- [ ] Align owned product and plugin release versions to 1.4.4; retain dependency versions, ABI contracts and historical receipts.
+- [ ] Build and qualify fresh 1.4.4 Windows/Linux artifacts, then update System32 and host consumers using verified hashes.
+- [x] Refresh the installed Codex source plugin and bind its MCP server to the qualified System32 executable.
+- [ ] Refresh the final 1.4.4 plugin and reconnect fresh clients after runtime installation; verify native file and shell tools.
 
 ## Native Windows executable installation
 

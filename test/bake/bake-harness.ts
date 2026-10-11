@@ -330,7 +330,7 @@ export class Dev extends EventEmitter {
         if (wantsHmrEvent && interactive) {
           await seenFiles.promise;
         } else if (wantsHmrEvent) {
-          await Promise.race([seenFiles.promise]);
+          await seenFiles.promise;
         }
         // One Bun.write can surface as several watcher events (notably on
         // Windows); let them coalesce so releasing the batch bundles once.
@@ -456,7 +456,7 @@ export class Dev extends EventEmitter {
       let clientWaits = 0;
       let seenMainEvent = false;
       function cleanup() {
-        timer !== null && clearTimeout(timer);
+        if (timer !== null) clearTimeout(timer);
         dev.off("watch_synchronization", onEvent);
         dev.output.off("panic", onPanic);
         for (const dispose of disposes) {
@@ -2128,7 +2128,8 @@ function testImpl<T extends DevServerTest>(
 
     try {
       await options.test(dev);
-    } catch (err: any) {
+    } catch (caught: any) {
+      let err = caught;
       while (err instanceof SuppressedError) {
         logErr(err.suppressed);
         err = err.error;

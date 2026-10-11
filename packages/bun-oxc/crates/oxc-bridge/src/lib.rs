@@ -41,8 +41,16 @@ pub fn parse(source: &str, filename: &str) -> Result<serde_json::Value, Error> {
     analysis::module_info(source, filename, true)
 }
 
+/// ESTree program and parser-recognized comments, with UTF-16 spans.
+pub fn parse_with_comments(source: &str, filename: &str) -> Result<serde_json::Value, Error> {
+    analysis::program_with_comments(source, filename)
+}
+
 /// Converts the diagnostics of another Oxc crate (same AST revision) to the JSON shape of [`check`].
-pub fn diagnostic_json(source: &str, diagnostic: &oxc_diagnostics::OxcDiagnostic) -> serde_json::Value {
+pub fn diagnostic_json(
+    source: &str,
+    diagnostic: &oxc_diagnostics::OxcDiagnostic,
+) -> serde_json::Value {
     check::diagnostic_json(source, diagnostic)
 }
 

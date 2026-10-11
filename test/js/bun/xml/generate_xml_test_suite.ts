@@ -147,7 +147,7 @@ for (const { describe, catalog, base } of COLLECTIONS) {
       skippedEdition++;
       continue;
     }
-    if (base === "japanese/" && /^pr-xml-/.test(attrs.ID)) {
+    if (base === "japanese/" && attrs.ID.startsWith("pr-xml-")) {
       skippedBig++;
       continue;
     }

@@ -359,6 +359,16 @@ pub fn edit(
     spans: Option<&dyn SpanProvider>,
     cancel: &AtomicBool,
 ) -> Result<EditReport> {
+    edit_guarded(plan, spans, cancel, &[])
+}
+
+/// Compare caller snapshots with transaction originals before committing any changes.
+pub fn edit_guarded(
+    plan: &EditPlan,
+    spans: Option<&dyn SpanProvider>,
+    cancel: &AtomicBool,
+    expected: &[(PathBuf, Option<Vec<u8>>)],
+) -> Result<EditReport> {
     let root = std::path::absolute(&plan.root).map_err(|error| io_at(&plan.root, error))?;
     if !root.is_dir() {
         return Err(VfsError::Invalid(format!(
@@ -599,6 +609,17 @@ pub fn edit(
                 }
                 renames.push((from_rel, to_rel, from_abs, to_abs));
             }
+        }
+    }
+    for (path, original) in expected {
+        let state = states
+            .values()
+            .find(|state| state.absolute == *path)
+            .ok_or_else(|| VfsError::Invalid("guarded path was not included in the edit".into()))?;
+        if state.original != *original {
+            return Err(VfsError::Invalid(
+                "file changed since preview; read and preview again".into(),
+            ));
         }
     }
     validate_renames(&root, &renames, &states)?;

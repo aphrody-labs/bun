@@ -69,6 +69,31 @@ beforeEach(() => {
 });
 
 describe("transpiler cache", () => {
+  for (const [name, source, entry] of [
+    ["ESM", "console.log(String.raw`café🐍`);", "module.mjs"],
+    ["CommonJS", "console.log(String.raw`café🐍`); module.exports = 42;", "require.cjs"],
+  ] as const) {
+    test(`preserves raw template UTF-8 on ${name} cache misses and hits`, async () => {
+      const moduleFile = name === "ESM" ? "module.mjs" : "module.cjs";
+      writeFileSync(join(temp_dir, moduleFile), source + "\n//" + "x".repeat(5 * 1024));
+      if (name === "CommonJS") writeFileSync(join(temp_dir, entry), "require('./module.cjs');");
+
+      expect(await bunRun(join(temp_dir, entry), env)).toSpawn("café🐍");
+      expect(newCacheCount()).toBe(1);
+      const cacheFile = join(cache_dir, readdirSync(cache_dir)[0]);
+      const cacheBytes = readFileSync(cacheFile);
+      // Metadata stores the output encoding after its u32 version and u8 module type.
+      expect(cacheBytes[5]).toBe(1);
+      const outputOffset = Number(cacheBytes.readBigUInt64LE(30));
+      const outputLength = Number(cacheBytes.readBigUInt64LE(38));
+      expect(cacheBytes.subarray(outputOffset, outputOffset + outputLength).toString("utf8")).toContain("`café🐍`");
+
+      expect(await bunRun(join(temp_dir, entry), env)).toSpawn("café🐍");
+      expect(newCacheCount()).toBe(0);
+      expect(readFileSync(cacheFile).equals(cacheBytes)).toBeTrue();
+    });
+  }
+
   test("works", async () => {
     writeFileSync(join(temp_dir, "a.js"), dummyFile((50 * 1024 * 1.5) | 0, "1", "a"));
     expect(await bunRun(join(temp_dir, "a.js"), env)).toSpawn("a");

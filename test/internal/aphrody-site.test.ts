@@ -3,11 +3,20 @@ import { isWindows, tempDir } from "harness";
 import { existsSync, readFileSync, readlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { artifactPaths, digest, releaseReadme } from "../../scripts/aphrody/release-surfaces.ts";
-import { sourceDomain, sourceReadable, resolvedImport } from "../../scripts/aphrody/release-graph.ts";
+import {
+  decodeSourceText,
+  sourceDomain,
+  sourceReadable,
+  resolvedImport,
+} from "../../scripts/aphrody/release-graph.ts";
 import { cacheKey } from "../../scripts/aphrody/release-cache.ts";
 import { createReleaseHandler } from "../../scripts/aphrody/release-server.ts";
 import { Database } from "bun:sqlite";
-import { releaseProxyConfig } from "../../scripts/aphrody/deploy/release-nginx.ts";
+import {
+  gatewayReleaseConfig,
+  releaseProxyConfig,
+} from "../../scripts/aphrody/deploy/release-nginx.ts";
+import { packageRelease } from "../../scripts/aphrody/release-package.ts";
 import {
   DOCS_LOGO_FILES,
   SITE_ROOT_FILES as SYNCED_ROOT_FILES,
@@ -17,7 +26,13 @@ import {
   sync,
 } from "../../scripts/aphrody/brand-sync.ts";
 import { BRAND, SITE_ROOT_FILES } from "../../scripts/aphrody/site/brand.ts";
-import { build, describeAsset, pageUrl, parseSums, readNavigation } from "../../scripts/aphrody/site/build.ts";
+import {
+  build,
+  describeAsset,
+  pageUrl,
+  parseSums,
+  readNavigation,
+} from "../../scripts/aphrody/site/build.ts";
 import {
   PRIVATE_TERMS,
   cargoPackage,
@@ -35,7 +50,9 @@ test("release README reflects source inventory and does not assert binary public
   expect(readme).toContain("`bun:future`");
   expect(readme).toContain(`https://github.com/owner/source/tree/${"a".repeat(40)}`);
   expect(readme).toContain("does not establish availability");
-  expect(digest(readme)).toBe(digest(releaseReadme("9.8.7", "a".repeat(40), "owner/source", ["bun:future"])));
+  expect(digest(readme)).toBe(
+    digest(releaseReadme("9.8.7", "a".repeat(40), "owner/source", ["bun:future"])),
+  );
 });
 
 test("artifact inventory is portable and excludes staging sources and SQLite journals", () => {
@@ -59,7 +76,9 @@ test("release proxy keeps installer rules and has a static rollback fallback", (
   expect(result).toContain("location @bun_release_static");
   expect(result).toContain("location ^~ /docs/");
   expect(releaseProxyConfig(result)).toBe(result);
-  expect(() => releaseProxyConfig("unexpected host config")).toThrow("Expected one existing site fallback");
+  expect(() => releaseProxyConfig("unexpected host config")).toThrow(
+    "Expected one existing site fallback",
+  );
 });
 
 test("monorepo subgraphs resolve relative references and keep protected stores out", () => {
@@ -69,17 +88,56 @@ test("monorepo subgraphs resolve relative references and keep protected stores o
   expect(sourceReadable("vendor/lib/source.cpp")).toBe(true);
   expect(sourceReadable("credentials/token.json")).toBe(false);
   expect(sourceReadable("cookies/session.json")).toBe(false);
-  expect(resolvedImport("scripts/site/a.ts", "../../packages/sdk", new Set(["packages/sdk/index.ts"]))).toBe(
-    "packages/sdk/index.ts",
-  );
+  expect(
+    resolvedImport("scripts/site/a.ts", "../../packages/sdk", new Set(["packages/sdk/index.ts"])),
+  ).toBe("packages/sdk/index.ts");
   expect(resolvedImport("scripts/site/a.ts", "not-a-relative-reference", new Set())).toBe(null);
-  expect(cacheKey("a".repeat(40), "site", "docs/a.html")).not.toBe(cacheKey("b".repeat(40), "site", "docs/a.html"));
+  expect(cacheKey("a".repeat(40), "site", "docs/a.html")).not.toBe(
+    cacheKey("b".repeat(40), "site", "docs/a.html"),
+  );
   expect(() => cacheKey("main", "site", "index.html")).toThrow("immutable Git SHA");
+});
+
+test("committed source bytes retain BOMs and exclude invalid UTF-8 despite dirty files", () => {
+  using dir = tempDir("release-source-bytes", { ".gitattributes": "* -text\n" });
+  const root = String(dir);
+  const original = new Map([
+    ["bom.ts", new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode("export {};\n")])],
+    ["invalid.ts", new Uint8Array([0x61, 0xff, 0x62])],
+    ["empty.ts", new Uint8Array()],
+  ]);
+  for (const [path, bytes] of original) writeFileSync(join(root, path), bytes);
+  for (const args of [
+    ["init"],
+    ["add", "."],
+    ["-c", "user.name=fixture", "-c", "user.email=fixture@example.test", "commit", "-m", "fixture"],
+  ]) {
+    const result = Bun.spawnSync(["git", "-C", root, ...args], { stdout: "pipe", stderr: "pipe" });
+    expect(result.exitCode).toBe(0);
+  }
+  const tree = new GitTree(root, "HEAD");
+  for (const path of original.keys()) writeFileSync(join(root, path), "dirty worktree");
+  const blobs = tree.readBytes([...original.keys(), "missing.ts", "bom.ts"]);
+  expect(blobs.size).toBe(original.size);
+  for (const [path, bytes] of original) {
+    expect(blobs.get(path)).toEqual(bytes);
+    expect(digest(blobs.get(path)!)).toBe(digest(bytes));
+  }
+  const bom = decodeSourceText(blobs.get("bom.ts")!);
+  expect(bom).toBe("\uFEFFexport {};\n");
+  expect(new TextEncoder().encode(bom!)).toEqual(original.get("bom.ts")!);
+  expect(decodeSourceText(blobs.get("invalid.ts")!)).toBe(null);
+  expect(decodeSourceText(blobs.get("empty.ts")!)).toBe("");
+  expect(tree.text("bom.ts")).toBe("export {};\n");
 });
 
 test("release serving uses Redis, falls back to SQLite and rejects escaping paths", async () => {
   using dir = tempDir("release-handler", {
-    "manifest.json": JSON.stringify({ source: "a".repeat(40), version: "1", artifacts: { "site/index.html": "hash" } }),
+    "manifest.json": JSON.stringify({
+      source: "a".repeat(40),
+      version: "1",
+      artifacts: { "site/index.html": "hash" },
+    }),
     "site/index.html": "<h1>Source</h1>",
   });
   using db = new Database(":memory:");
@@ -129,7 +187,10 @@ test("site module inventory uses committed registry instead of author history or
     expect(result.exitCode).toBe(0);
   }
   const tree = new GitTree(root, "HEAD");
-  writeFileSync(join(root, "src/resolve_builtins/HardcodedModule.rs"), '#[strum(serialize = "bun:dirty")]');
+  writeFileSync(
+    join(root, "src/resolve_builtins/HardcodedModule.rs"),
+    '#[strum(serialize = "bun:dirty")]',
+  );
   const runtime = collectRuntime(tree, "owner/source", "contact@aphrody.com", [])!;
   expect(runtime.modules).toEqual(["bun:future"]);
   expect(runtime.upstream.version).toBe("9.8.7");
@@ -141,7 +202,13 @@ import {
   parseFenceInfo,
   rewriteUpstreamUrls,
 } from "../../scripts/aphrody/site/mdx.ts";
-import { esc, forkLinks, generatedPages, publicLinks, table } from "../../scripts/aphrody/site/pages.ts";
+import {
+  esc,
+  forkLinks,
+  generatedPages,
+  publicLinks,
+  table,
+} from "../../scripts/aphrody/site/pages.ts";
 import { brandHtml } from "../../scripts/aphrody/site/layout.ts";
 import {
   DEFAULT_BASE,
@@ -187,11 +254,14 @@ describe("site mdx", () => {
   });
 
   test("fence info, upstream URLs and markdown links", () => {
-    expect(parseFenceInfo('ts title="server.ts" lines')).toEqual({ lang: "ts", title: "server.ts" });
+    expect(parseFenceInfo('ts title="server.ts" lines')).toEqual({
+      lang: "ts",
+      title: "server.ts",
+    });
     expect(parseFenceInfo("sh terminal")).toEqual({ lang: "sh" });
-    expect(rewriteUpstreamUrls("curl -fsSL https://bun.sh/install | bash", "https://aphrody.test")).toBe(
-      "curl -fsSL https://aphrody.test/install | bash",
-    );
+    expect(
+      rewriteUpstreamUrls("curl -fsSL https://bun.sh/install | bash", "https://aphrody.test"),
+    ).toBe("curl -fsSL https://aphrody.test/install | bash");
     expect(absolutizeMarkdownLinks("[x](/runtime/http)", "https://aphrody.test")).toBe(
       "[x](https://aphrody.test/docs/runtime/http)",
     );
@@ -205,10 +275,15 @@ describe("site build helpers", () => {
     expect(pageUrl("runtime/http/server")).toBe("/docs/runtime/http/server");
     const nav = readNavigation({
       navigation: {
-        tabs: [{ tab: "Runtime", groups: [{ group: "Start", pages: ["index", { group: "Sub", pages: ["a/b"] }] }] }],
+        tabs: [
+          {
+            tab: "Runtime",
+            groups: [{ group: "Start", pages: ["index", { group: "Sub", pages: ["a/b"] }] }],
+          },
+        ],
       },
     });
-    expect(nav.pages.map(p => p.slug)).toEqual(["index", "a/b"]);
+    expect(nav.pages.map((p) => p.slug)).toEqual(["index", "a/b"]);
   });
 
   test("release assets and checksums", () => {
@@ -222,7 +297,9 @@ describe("site build helpers", () => {
     expect(describeAsset("SHA256SUMS.txt")).toBeNull();
     const sum = "a".repeat(64);
     expect(
-      parseSums(`${sum}  bun-windows-x64.zip\n${sum} *bun-darwin-aarch64.zip\n`).get("bun-darwin-aarch64.zip"),
+      parseSums(`${sum}  bun-windows-x64.zip\n${sum} *bun-darwin-aarch64.zip\n`).get(
+        "bun-darwin-aarch64.zip",
+      ),
     ).toBe(sum);
   });
 
@@ -230,12 +307,18 @@ describe("site build helpers", () => {
     using dir = tempDir("aphrody-site", {
       "docs/docs.json": JSON.stringify({
         navigation: {
-          tabs: [{ tab: "Runtime", groups: [{ group: "Get started", pages: ["index", "runtime/index"] }] }],
+          tabs: [
+            {
+              tab: "Runtime",
+              groups: [{ group: "Get started", pages: ["index", "runtime/index"] }],
+            },
+          ],
         },
       }),
       "docs/index.mdx":
         "---\ntitle: Welcome\ndescription: Intro\n---\n\n<Tip>Install with `curl -fsSL https://bun.sh/install | bash`.</Tip>\n\nSee [runtime](/runtime).\n",
-      "docs/runtime/index.mdx": "---\ntitle: Runtime\n---\n\n## Section\n\n| a | b |\n| - | - |\n| 1 | 2 |\n",
+      "docs/runtime/index.mdx":
+        "---\ntitle: Runtime\n---\n\n## Section\n\n| a | b |\n| - | - |\n| 1 | 2 |\n",
       "docs/logo/favicon.ico": "ico",
       "docs/logo/site.webmanifest": "{}",
       "docs/logo/logo-wordmark-light.svg": "<svg/>",
@@ -299,15 +382,21 @@ describe("brand sync", () => {
   test("a brand directory lands in docs/logo, src/bun.ico and site/brand.ts", () => {
     const tokens = { seed: "#e2dbad", light: { surface: "#fef9eb" }, dark: { surface: "#15140c" } };
     using brand = tempDir("aphrody-brand", {
-      ...Object.fromEntries(DOCS_LOGO_FILES.map(name => [name, name])),
+      ...Object.fromEntries(DOCS_LOGO_FILES.map((name) => [name, name])),
       "m3-tokens.css": ":root{}",
       "aphrody-fonts.css": "@font-face{}",
       "m3-tokens.json": JSON.stringify(tokens),
     });
-    using repo = tempDir("aphrody-brand-repo", { "docs/logo/bun.png": "old", "docs/logo/icon.svg": "icon.svg" });
+    using repo = tempDir("aphrody-brand-repo", {
+      "docs/logo/bun.png": "old",
+      "docs/logo/icon.svg": "icon.svg",
+    });
     const files = plan(fromDir(String(brand)), "https://cdn.test");
-    const changed = [...files.keys()].filter(p => p !== "docs/logo/icon.svg");
-    expect(sync(String(repo), files, { check: true })).toEqual({ changed, removed: ["docs/logo/bun.png"] });
+    const changed = [...files.keys()].filter((p) => p !== "docs/logo/icon.svg");
+    expect(sync(String(repo), files, { check: true })).toEqual({
+      changed,
+      removed: ["docs/logo/bun.png"],
+    });
     expect(existsSync(join(String(repo), "src/bun.ico"))).toBe(false);
 
     sync(String(repo), files);
@@ -325,8 +414,11 @@ describe("brand sync", () => {
   test("the committed brand is the one brand-sync writes", () => {
     const root = join(import.meta.dir, "../..");
     expect([...SITE_ROOT_FILES]).toEqual([...SYNCED_ROOT_FILES]);
-    expect(readFileSync(join(root, "src/bun.ico"))).toEqual(readFileSync(join(root, "docs/logo/favicon.ico")));
-    for (const name of DOCS_LOGO_FILES) expect(existsSync(join(root, "docs/logo", name))).toBe(true);
+    expect(readFileSync(join(root, "src/bun.ico"))).toEqual(
+      readFileSync(join(root, "docs/logo/favicon.ico")),
+    );
+    for (const name of DOCS_LOGO_FILES)
+      expect(existsSync(join(root, "docs/logo", name))).toBe(true);
     const docs = JSON.parse(readFileSync(join(root, "docs/docs.json"), "utf8"));
     for (const path of [docs.favicon, docs.logo.light, docs.logo.dark])
       expect(existsSync(join(root, "docs", path))).toBe(true);
@@ -357,10 +449,19 @@ function fixtureData(): SiteData {
           ["fix", 1],
         ],
         scopes: [["site", 1]],
-        recent: [{ sha: sha("b").slice(0, 11), date: "2026-10-08T00:00:00Z", subject: "feat(site): pages" }],
+        recent: [
+          {
+            sha: sha("b").slice(0, 11),
+            date: "2026-10-08T00:00:00Z",
+            subject: "feat(site): pages",
+          },
+        ],
       },
       lastUpstreamMerge: null,
-      docs: { added: [{ slug: "runtime/windows", title: "Windows", description: "bun:windows" }], modified: [] },
+      docs: {
+        added: [{ slug: "runtime/windows", title: "Windows", description: "bun:windows" }],
+        modified: [],
+      },
       modules: ["bun:windows"],
       commands: ["src/runtime/cli/msvc_command.rs"],
       packages: [
@@ -386,9 +487,16 @@ function fixtureData(): SiteData {
       date: "2026-10-09T00:00:00Z",
       summary: "Aphrody is a user-space operating system (`crates/`).",
       sections: [
-        { id: "security", title: "Security", markdown: "See [SECURITY.md](SECURITY.md) and [notes](docs/x.md)." },
+        {
+          id: "security",
+          title: "Security",
+          markdown: "See [SECURITY.md](SECURITY.md) and [notes](docs/x.md).",
+        },
       ],
-      documents: { security: "# Security policy\n\nReport privately.\n", contributing: "# Contributing\n\nRules.\n" },
+      documents: {
+        security: "# Security policy\n\nReport privately.\n",
+        contributing: "# Contributing\n\nRules.\n",
+      },
       workspace: { version: "1.0.0", license: "Apache-2.0", rust: "1.97" },
       crates: [
         {
@@ -471,7 +579,9 @@ function fixtureData(): SiteData {
 describe("site pages", () => {
   test("markdown escaping, tables and public links", () => {
     expect(esc("a|b *c* `x|y` <t>")).toBe("a\\|b \\*c\\* `x\\|y` &lt;t&gt;");
-    expect(table(["A", "B"], [["1", "two\nlines"]])).toBe("| A | B |\n| --- | --- |\n| 1 | two lines |");
+    expect(table(["A", "B"], [["1", "two\nlines"]])).toBe(
+      "| A | B |\n| --- | --- |\n| 1 | two lines |",
+    );
     expect(
       publicLinks(
         "[s](SECURITY.md#report) [d](docs/a.md) [o](https://aphrody.test/components) [e](https://x.test)",
@@ -482,17 +592,28 @@ describe("site pages", () => {
 
   test("pages come from the data", () => {
     const pages = generatedPages(fixtureData(), { origin: "https://aphrody.test", releases: null });
-    expect(pages.map(p => p.path)).toEqual(["/", "/components", "/runtime", "/m3", "/security", "/contributing"]);
-    const page = (path: string) => pages.find(p => p.path === path)!.markdown;
+    expect(pages.map((p) => p.path)).toEqual([
+      "/",
+      "/components",
+      "/runtime",
+      "/m3",
+      "/security",
+      "/contributing",
+    ]);
+    const page = (path: string) => pages.find((p) => p.path === path)!.markdown;
     expect(page("/")).toContain("| Cargo workspace | `1.0.0`, Rust 1.97 | `Cargo.toml` |");
     expect(page("/")).toContain("See [SECURITY.md](/security) and notes.");
-    expect(page("/components")).toContain("| `aphrody-shell` | 1.0.0 | Apache-2.0 |  | Terminal \\| PTY |");
-    expect(page("/components")).toContain("[h4ckf0r0day/obscura](https://github.com/h4ckf0r0day/obscura)");
+    expect(page("/components")).toContain(
+      "| `aphrody-shell` | 1.0.0 | Apache-2.0 |  | Terminal \\| PTY |",
+    );
+    expect(page("/components")).toContain(
+      "[h4ckf0r0day/obscura](https://github.com/h4ckf0r0day/obscura)",
+    );
     expect(page("/components")).toContain("3 private repositories are not listed");
     expect(page("/runtime")).toContain(
       "MIT, LGPL-2, [LICENSE.md](https://github.com/aphrody-labs/bun/blob/main/LICENSE.md)",
     );
-    expect(pages.find(p => p.path === "/security")!.title).toBe("Security policy");
+    expect(pages.find((p) => p.path === "/security")!.title).toBe("Security policy");
   });
 
   test("build renders the generated pages, downloads and release notes", async () => {
@@ -513,11 +634,22 @@ describe("site pages", () => {
       data: fixtureData(),
       now: new Date("2026-10-09T00:00:00Z"),
     });
-    expect(result.generated).toEqual(["/", "/components", "/runtime", "/m3", "/security", "/contributing"]);
+    expect(result.generated).toEqual([
+      "/",
+      "/components",
+      "/runtime",
+      "/m3",
+      "/security",
+      "/contributing",
+    ]);
     const read = (p: string) => readFileSync(join(out, p), "utf8");
-    expect(read("index.html")).toContain("curl -fsSL https://downloads.aphrody.test/install.sh | sh");
+    expect(read("index.html")).toContain(
+      "curl -fsSL https://downloads.aphrody.test/install.sh | sh",
+    );
     expect(read("index.html")).toContain('<a href="/components">Components</a>');
-    expect(read("components/index.html")).toContain('<a href="/components" aria-current="page">Components</a>');
+    expect(read("components/index.html")).toContain(
+      '<a href="/components" aria-current="page">Components</a>',
+    );
     expect(read("components/index.html")).toContain("<table>");
     expect(read("components.md")).toContain("(https://aphrody.test/m3)");
     expect(JSON.parse(read("components.json")).distribution.crates).toHaveLength(2);
@@ -527,7 +659,9 @@ describe("site pages", () => {
     expect(read("release-notes/index.html")).toContain("<code>v1</code>");
     expect(read("llms.txt")).toContain("- [Components](https://aphrody.test/components.md)");
     expect(read("sitemap.xml")).toContain("<loc>https://aphrody.test/security</loc>");
-    expect(JSON.parse(read("docs/search.json")).map((e: { u: string }) => e.u)).toContain("/runtime");
+    expect(JSON.parse(read("docs/search.json")).map((e: { u: string }) => e.u)).toContain(
+      "/runtime",
+    );
     expect(read("404.html")).toContain("aphrody-labs/aphrody@cccccccccccc");
   });
 });
@@ -550,12 +684,17 @@ describe("runtime site", () => {
   });
 
   test("without a distribution the pages are the runtime home and /runtime", () => {
-    const pages = generatedPages(runtimeData(), { origin: "https://bun.aphrody.test", releases: null });
-    expect(pages.map(p => p.path)).toEqual(["/", "/runtime"]);
+    const pages = generatedPages(runtimeData(), {
+      origin: "https://bun.aphrody.test",
+      releases: null,
+    });
+    expect(pages.map((p) => p.path)).toEqual(["/", "/runtime"]);
     const home = pages[0]!;
     expect(home.title).toBe("Aphrody Bun");
     expect(home.markdown).toContain("## Patches");
-    expect(home.markdown).toContain("(https://github.com/aphrody-labs/bun/blob/" + sha("a") + "/src/js/dotenv.ts)");
+    expect(home.markdown).toContain(
+      "(https://github.com/aphrody-labs/bun/blob/" + sha("a") + "/src/js/dotenv.ts)",
+    );
     expect(home.markdown).toContain("[install](/docs/installation)");
     expect(home.markdown).toContain("@aphrody/bun-runtime");
     expect(home.markdown).not.toContain("Cargo workspace");
@@ -598,19 +737,21 @@ describe("runtime site", () => {
 
 describe("site collect", () => {
   test("licences, private terms, installers, manifests and commit types", () => {
-    expect(declaredLicenses("Bun itself is MIT-licensed.\n\nJavaScriptCore is LGPL-2 licensed.")).toEqual([
-      "MIT",
-      "LGPL-2",
-    ]);
+    expect(
+      declaredLicenses("Bun itself is MIT-licensed.\n\nJavaScriptCore is LGPL-2 licensed."),
+    ).toEqual(["MIT", "LGPL-2"]);
     expect(PRIVATE_TERMS.test("profile for dbfr")).toBe(true);
     expect(PRIVATE_TERMS.test("database driver")).toBe(false);
-    expect(installerUsage("#!/bin/sh\n# Usage:\n#   curl -fsSL https://x.test/i.sh | sh\nset -e\n")).toEqual([
-      "curl -fsSL https://x.test/i.sh | sh",
-    ]);
     expect(
-      cargoPackage('[package]\nname = "a"\nversion.workspace = true\nlicense = "MIT"\npublish = false\n', {
-        version: "2.0.0",
-      }),
+      installerUsage("#!/bin/sh\n# Usage:\n#   curl -fsSL https://x.test/i.sh | sh\nset -e\n"),
+    ).toEqual(["curl -fsSL https://x.test/i.sh | sh"]);
+    expect(
+      cargoPackage(
+        '[package]\nname = "a"\nversion.workspace = true\nlicense = "MIT"\npublish = false\n',
+        {
+          version: "2.0.0",
+        },
+      ),
     ).toEqual({ name: "a", version: "2.0.0", description: "", license: "MIT", private: true });
     expect(conventional("feat(Site)!: x")).toEqual({ type: "feat", scope: "site" });
     expect(conventional("Merge branch main")).toBeNull();
@@ -660,7 +801,9 @@ describe("site publish", () => {
     expect(DEFAULT_TARGET).toBe("local:/var/www/bun.aphrody.com");
     expect(parseTarget("dbfr")).toEqual({ kind: "ssh", host: "dbfr", base: DEFAULT_BASE });
     expect(() => parseTarget("ssh:a;b")).toThrow();
-    expect(releaseId("0123456789abcdef", new Date("2026-10-09T12:34:56.789Z"))).toBe("20261009T123456Z-0123456789ab");
+    expect(releaseId("0123456789abcdef", new Date("2026-10-09T12:34:56.789Z"))).toBe(
+      "20261009T123456Z-0123456789ab",
+    );
   });
 
   test.skipIf(isWindows)("flip keeps the newest releases and the current one", async () => {
@@ -671,17 +814,63 @@ describe("site publish", () => {
     });
     const base = String(dir);
     const flip = async (id: string, keep: number) => {
-      await using proc = Bun.spawn({ cmd: ["sh", "-c", flipScript(base, id, keep, "test", false)], stderr: "pipe" });
-      const [stdout, stderr, code] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+      await using proc = Bun.spawn({
+        cmd: ["sh", "-c", flipScript(base, id, keep, "test", false)],
+        stderr: "pipe",
+      });
+      const [stdout, stderr, code] = await Promise.all([
+        proc.stdout.text(),
+        proc.stderr.text(),
+        proc.exited,
+      ]);
       return { stdout: stdout.trim(), stderr, code };
     };
-    expect(await flip("20261003T000000Z-c", 2)).toEqual({ stdout: "releases/20261003T000000Z-c", stderr: "", code: 0 });
+    expect(await flip("20261003T000000Z-c", 2)).toEqual({
+      stdout: "releases/20261003T000000Z-c",
+      stderr: "",
+      code: 0,
+    });
     expect(existsSync(join(base, "releases/20261001T000000Z-a"))).toBe(false);
     expect(await flip("20261002T000000Z-b", 1)).toMatchObject({ code: 0 });
     expect(readlinkSync(join(base, "current"))).toBe("releases/20261002T000000Z-b");
     expect(existsSync(join(base, "releases/20261002T000000Z-b"))).toBe(true);
     expect((await flip("missing", 5)).code).not.toBe(0);
   });
+});
+
+test("release packages preserve manifest-listed source documentation", async () => {
+  const source = "a".repeat(40);
+  const graph = JSON.stringify({ source });
+  const document = "# Verified source documentation\n";
+  const manifest = JSON.stringify({
+    source,
+    artifacts: {
+      "graph.json": digest(graph),
+      "site/knowledge/source/docs/guide.md": digest(document),
+    },
+  });
+  using root = tempDir("release-manifest-package", {
+    "artifact/manifest.json": manifest,
+    "artifact/graph.json": graph,
+    "artifact/site/knowledge/source/docs/guide.md": document,
+    "artifact/unlisted.txt": "excluded",
+  });
+  const archive = join(String(root), "release.tar.gz");
+  const result = await packageRelease(join(String(root), "artifact"), archive);
+  const listing = Bun.spawnSync(["tar", "-tzf", archive]);
+  expect(listing.stdout.toString()).toContain("./site/knowledge/source/docs/guide.md");
+  expect(listing.stdout.toString()).not.toContain("unlisted.txt");
+  expect(listing.exitCode).toBe(0);
+  expect(result.files).toBe(2);
+});
+
+test("gateway release routing retains existing configuration and rejects ambiguous includes", () => {
+  const original = "http {\n    include /etc/nginx/conf.d/*.conf;\n}\n";
+  const planned = gatewayReleaseConfig(original);
+  expect(planned).toContain("    include /etc/nginx/conf.d/*.conf;");
+  expect(planned).toContain("    include /etc/aphrody-bun-release/bun-release.conf;");
+  expect(gatewayReleaseConfig(planned)).toBe(planned);
+  expect(() => gatewayReleaseConfig(original + original)).toThrow("Unexpected gateway");
 });
 
 test("product benchmark page escapes labels and leaves unsupported cases unmeasured", async () => {

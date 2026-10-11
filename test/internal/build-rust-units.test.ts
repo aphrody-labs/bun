@@ -433,6 +433,22 @@ describe("buildRustGraph + unitManifest", () => {
     binDestination: "/build/codegen/my-bin.exe",
   });
 
+  test("native library dependencies offering a cdylib compile only their rlib", () => {
+    const plan = planWith([]);
+    plan.unitGraph.units[0].target.crate_types = ["lib", "cdylib"];
+    const graph = buildRustGraph(plan, "/build/rust-target");
+    const library = graph.units[0];
+    expect(library.crateTypes).toEqual(["rlib"]);
+    const manifest = unitManifest(context(graph), library) as RustcUnitManifest;
+    expect(manifest.args).toContain("rlib");
+    expect(manifest.args).not.toContain("cdylib");
+    expect(library.output).toEndWith(".rlib");
+    for (const unsupported of [["cdylib"], ["staticlib"], ["lib", "staticlib"]]) {
+      plan.unitGraph.units[0].target.crate_types = unsupported;
+      expect(() => buildRustGraph(plan, "/build/rust-target")).toThrow("only rlib libraries");
+    }
+  });
+
   test("only target Zstd bindings in the native Bun library graph use Bun's provider", () => {
     const graph = buildRustGraph(planWith([]), "/build/rust-target");
     const [bindings] = graph.units;

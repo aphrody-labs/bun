@@ -1,6 +1,6 @@
 [package]
 name = "aphrody-tauri-utils"
-version = "3.0.0-alpha.3"
+version = "1.4.4"
 description = "Utilities for Tauri"
 exclude = ["CHANGELOG.md", "/target"]
 authors = ["Tauri Programme within The Commons Conservancy"]
@@ -62,7 +62,7 @@ swift-rs = { workspace = true, optional = true, features = ["build"] }
 getrandom = { version = "0.3", features = ["std"] }
 serial_test = "3.5"
 # For doc tests
-tauri = { path = "../aphrody-tauri", package = "aphrody-tauri", version = "3.0.0-alpha.4" }
+tauri = { path = "../aphrody-tauri", package = "aphrody-tauri", version = "1.4.4" }
 tempfile = { workspace = true }
 
 [features]

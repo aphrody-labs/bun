@@ -138,9 +138,10 @@ it("should be the default save format", async () => {
 
 it("should save the lockfile if --save-text-lockfile and --frozen-lockfile are used", async () => {
   const { packageDir, packageJson } = await registry.createTestDir({ bunfigOpts: { saveTextLockfile: false } });
-  await Promise.all([
-    write(packageJson, JSON.stringify({ name: "test-pkg", version: "1.0.0", dependencies: { "no-deps": "1.0.0" } })),
-  ]);
+  await write(
+    packageJson,
+    JSON.stringify({ name: "test-pkg", version: "1.0.0", dependencies: { "no-deps": "1.0.0" } }),
+  );
 
   async function checkLockfiles() {
     return await Promise.all([exists(join(packageDir, "bun.lock")), exists(join(packageDir, "bun.lockb"))]);
@@ -201,7 +202,7 @@ it("should convert a binary lockfile with invalid optional peers", async () => {
   expect(await exited).toBe(0);
 
   const [firstLockfile, lockbExists] = await Promise.all([
-    await file(join(packageDir, "bun.lock")).text(),
+    file(join(packageDir, "bun.lock")).text(),
     exists(join(packageDir, "bun.lockb")),
   ]);
 
@@ -228,18 +229,16 @@ it("should convert a binary lockfile with invalid optional peers", async () => {
 it("should not deduplicate bundled packages with un-bundled packages", async () => {
   const { packageDir, packageJson } = await registry.createTestDir();
 
-  await Promise.all([
-    write(
-      packageJson,
-      JSON.stringify({
-        name: "bundled-deps",
-        dependencies: {
-          "debug-1": "4.4.0",
-          "npm-1": "10.9.2",
-        },
-      }),
-    ),
-  ]);
+  await write(
+    packageJson,
+    JSON.stringify({
+      name: "bundled-deps",
+      dependencies: {
+        "debug-1": "4.4.0",
+        "npm-1": "10.9.2",
+      },
+    }),
+  );
 
   let { exited, stdout } = spawn({
     cmd: [bunExe(), "install"],

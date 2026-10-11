@@ -20,6 +20,20 @@ pub use fd::{ErrorCase, FdExt, MakeLibUvOwnedError, RawFd};
 #[path = "Error.rs"]
 mod error;
 pub use error::Error;
+
+/// Terminate a process group created explicitly for a bounded child command.
+#[cfg(unix)]
+pub fn kill_process_group(pid: i32) -> Maybe<()> {
+    if pid <= 0 {
+        return Err(Error::from_code_int(libc::EINVAL, Tag::kill));
+    }
+    // SAFETY: a negative nonzero PID addresses only the caller-selected group.
+    if unsafe { libc::kill(-pid, libc::SIGKILL) } == 0 {
+        Ok(())
+    } else {
+        Err(Error::from_code_int(last_errno(), Tag::kill))
+    }
+}
 #[cfg(windows)]
 pub use error::ReturnCodeExt;
 impl From<Error> for bun_errno::SystemErrno {

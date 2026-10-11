@@ -454,7 +454,8 @@ export function generate(options: GenerateOptions): Files {
   const rules = agentRules(root);
   const lspExt = hasCommand(root, "lsp") ? lspExtensions(root) : {};
   const lsp = Object.keys(lspExt).length > 0;
-  const tools = mcpTools(root);
+  const experimentalTools = new Set(["read_file", "write_file", "edit_file", "shell"]);
+  const tools = mcpTools(root).filter(tool => !experimentalTools.has(tool.name));
   const has = new Set(tools.map(t => t.name));
   const prefer = PREFER.map(p => ({ ...p, use: p.use.filter(n => has.has(n)) })).filter(p => p.use.length);
   const code = (s: string) => "`" + s + "`";
@@ -467,6 +468,7 @@ export function generate(options: GenerateOptions): Files {
         )
       : `This checkout has no ${code("bun mcp")} tools.`,
     ...prefer.map(p => `Prefer ${p.use.map(code).join(", ")} over ${p.instead} for code in a project.`),
+    "Experimental native file and shell tools require `BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS=1` on the MCP server and a fresh client connection. When tools/list exposes them, use read_file to obtain a revision, write_file/edit_file to preview changes, vfs_apply to commit, and shell for embedded Bun Shell. Host built-in tools remain available.",
     lsp
       ? `${code("bun lsp")} is one language server for ${[...new Set(Object.values(lspExt))].join(", ")} (${Object.keys(lspExt).join(" ")}).`
       : "",

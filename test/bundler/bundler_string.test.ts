@@ -89,6 +89,21 @@ const templateStringTests: Record<string, TemplateStringTest> = {
 };
 
 describe("bundler", () => {
+  itBundled("string/TaggedTemplateRawUnicode", {
+    files: {
+      "entry.js": `
+        function tag(strings, value) {
+          console.log(JSON.stringify([strings.raw[0], value, strings.raw[1]]));
+        }
+        tag\`café🐍\${42}été\\u0061\`;
+        console.log(String.raw\`café🐍\`);
+      `,
+    },
+    run: {
+      stdout: '["café🐍",42,"été\\\\u0061"]\ncafé🐍',
+    },
+  });
+
   for (const key in templateStringTests) {
     const test = templateStringTests[key];
     if ([test.capture, test.captureRaw, test.print].filter(x => x !== undefined).length !== 1) {

@@ -103,7 +103,10 @@ describe("generate", () => {
   test("declares the tools of `bun mcp` and the languages of `bun lsp` as their sources define them", () => {
     const tools = mcpTools(root).map(t => t.name);
     expect(tools).toEqual(expect.arrayContaining(["graph_symbols", "docs_search", "git_ingest"]));
-    expect(json("claude/hooks/tools.json").tools).toEqual(tools);
+    expect(json("claude/hooks/tools.json").tools).toEqual(
+      tools.filter(name => !["read_file", "write_file", "edit_file", "shell"].includes(name)),
+    );
+    expect(String(files.get("codex/AGENTS.md"))).toContain("BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS=1");
     const lsp = lspExtensions(root);
     const declared = json("claude/.claude-plugin/plugin.json").lspServers;
     if (Object.keys(lsp).length)
@@ -315,6 +318,11 @@ describe("bun agent-plugin", () => {
       expect(readFileSync(join(h, ".codex/AGENTS.md"), "utf8")).toContain("aphrody-labs/bun");
       const plugin = tree(join(h, ".bun/agent-plugin"));
       expect(JSON.parse(plugin["claude/.claude-plugin/plugin.json"]).name).toBe("bun");
+      for (const target of ["claude", "codex"]) {
+        expect(resolve(JSON.parse(plugin[`${target}/.mcp.json`]).mcpServers.bun.command)).toBe(resolve(bunExe()));
+      }
+      expect(resolve(JSON.parse(plugin["agy/mcp_config.json"]).mcpServers.bun.command)).toBe(resolve(bunExe()));
+      expect(resolve(JSON.parse(plugin["install.json"]).executable)).toBe(resolve(bunExe()));
       expect(existsSync(join(h, ".gemini/config/plugins/bun/hooks.json"))).toBe(true);
 
       const again = await run([bunExe(), "agent-plugin", "install", "--update", "--home", h, "--json"], { cwd: h });

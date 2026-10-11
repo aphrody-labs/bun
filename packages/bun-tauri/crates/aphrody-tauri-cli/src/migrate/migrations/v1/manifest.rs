@@ -194,16 +194,7 @@ fn features_to_remove() -> Vec<&'static str> {
 }
 
 fn dependency_version() -> String {
-  let pre = env!("CARGO_PKG_VERSION_PRE");
-  if pre.is_empty() {
-    env!("CARGO_PKG_VERSION_MAJOR").to_string()
-  } else {
-    format!(
-      "{}.0.0-{}",
-      env!("CARGO_PKG_VERSION_MAJOR"),
-      pre.split('.').next().unwrap()
-    )
-  }
+  env!("CARGO_PKG_VERSION").to_string()
 }
 
 fn migrate_dependency(item: &mut Item, version: &str, remove: &[&str], rename: &[(&str, &str)]) {

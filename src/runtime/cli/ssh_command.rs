@@ -7,7 +7,11 @@ pub(crate) struct Invocation;
 
 impl Invocation {
     #[inline]
-    pub(crate) fn from_argv(argv0: &[u8], first_arg: Option<&[u8]>, be_bun: impl FnOnce() -> bool) -> Option<Self> {
+    pub(crate) fn from_argv(
+        argv0: &[u8],
+        first_arg: Option<&[u8]>,
+        be_bun: impl FnOnce() -> bool,
+    ) -> Option<Self> {
         if first_arg != Some(b"ssh") {
             return None;
         }

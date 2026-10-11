@@ -313,7 +313,7 @@ fn render_tauri_config(
 /// When `tauri_path` is provided the dependencies point to the crates inside that directory
 /// (`<tauri_path>/crates/tauri/aphrody-*`, the monorepo layout).
 /// Version of `aphrody-tauri-plugin-log` the app template depends on when no `--tauri-path` is given.
-const TAURI_PLUGIN_LOG_VERSION: &str = "3.0.0-alpha.2";
+const TAURI_PLUGIN_LOG_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn tauri_dependencies_data(
   tauri_path: Option<&Path>,

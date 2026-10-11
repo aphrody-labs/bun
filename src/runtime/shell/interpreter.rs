@@ -346,21 +346,33 @@ impl InterpreterFlags {
         self.0 & 0b1000 != 0
     }
     pub(crate) fn set_posix_exit(&mut self, v: bool) {
-        if v { self.0 |= 0b1000 } else { self.0 &= !0b1000 }
+        if v {
+            self.0 |= 0b1000
+        } else {
+            self.0 &= !0b1000
+        }
     }
     /// A `posix_exit` script ran `exit`: every state unwinds to the nearest subshell or the root.
     pub(crate) const fn exit_requested(self) -> bool {
         self.0 & 0b10000 != 0
     }
     pub(crate) fn set_exit_requested(&mut self, v: bool) {
-        if v { self.0 |= 0b10000 } else { self.0 &= !0b10000 }
+        if v {
+            self.0 |= 0b10000
+        } else {
+            self.0 &= !0b10000
+        }
     }
     /// A glob with no match stays the literal word, as in POSIX sh (`bun run` scripts, `bun exec`).
     pub(crate) const fn literal_unmatched_glob(self) -> bool {
         self.0 & 0b100000 != 0
     }
     pub(crate) fn set_literal_unmatched_glob(&mut self, v: bool) {
-        if v { self.0 |= 0b100000 } else { self.0 &= !0b100000 }
+        if v {
+            self.0 |= 0b100000
+        } else {
+            self.0 &= !0b100000
+        }
     }
 }
 
@@ -2209,9 +2221,7 @@ impl ShellExecEnv {
             // remove trailing separator (Windows checks `\\` first then falls
             // through to `/`; POSIX only `/`).
             #[cfg(windows)]
-            if n > 1 && buf[n - 1] == b'\\' {
-                n -= 1;
-            } else if n > 1 && buf[n - 1] == b'/' {
+            if n > 1 && matches!(buf[n - 1], b'\\' | b'/') {
                 n -= 1;
             }
             #[cfg(not(windows))]

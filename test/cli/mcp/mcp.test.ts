@@ -15,6 +15,7 @@ function mcp(cwd: string, home: string, extraEnv: Record<string, string> = {}, a
     CODEX_HOME: join(home, ".codex"),
     BUN_MCP_MEMORY_DB: join(home, "memory.db"),
     BUN_MCP_PROFILE: "generic",
+    BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS: "0",
     ...extraEnv,
   };
   for (const k of ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "REDIS_URL", "VALKEY_URL", "BUN_MCP_MAX_TOKENS"])
@@ -108,6 +109,11 @@ describe.concurrent("bun mcp", () => {
     expect(reply.result.serverInfo.version).toStartWith(Bun.version);
     expect(Object.keys(reply.result.capabilities).sort()).toEqual(["logging", "prompts", "resources", "tools"]);
     expect(reply.result.instructions).toContain("profile generic");
+    expect(reply.result.instructions).toContain("Experimental native file and shell tools are disabled");
+    for (const name of ["read_file", "write_file", "edit_file", "shell"]) {
+      const reply = await server.request("tools/call", { name, arguments: {} });
+      expect(reply.error.code).toBe(-32602);
+    }
     expect((await server.request("ping")).result).toEqual({});
     expect((await server.request("no/such/method")).error.code).toBe(-32601);
   });
@@ -162,6 +168,7 @@ describe.concurrent("bun mcp", () => {
       "test",
     ])
       expect(names).toContain(name);
+    for (const name of ["read_file", "write_file", "edit_file", "shell"]) expect(names).not.toContain(name);
   });
 
   test("docs_search finds Bun.serve, docs_read pages with a cursor", async () => {
@@ -236,6 +243,76 @@ describe.concurrent("bun mcp", () => {
 
     const find = await server.call("vfs_find", { query: "b.ts" });
     expect(find.content[0].text).toContain("src/b.ts");
+  });
+
+  test("native file revisions reject stale writes and apply exact previews", async () => {
+    using dir = tempDir("mcp-native-files", { "a.txt": "one\ntwo\nthree\n" });
+    await using server = mcp(String(dir), String(dir), { BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS: "1" });
+    await server.initialize();
+    const read = await server.call("read_file", { path: "a.txt", start_line: 2, line_count: 1 });
+    expect(read.content[0].text).toContain("2: two\n");
+    expect(read.content[0].text).not.toContain("three");
+    const revision = Number(read.content[0].text.match(/revision: (\d+)/)![1]);
+    const preview = await server.call("edit_file", { path: "a.txt", revision, find: "two", replace: "second" });
+    expect(preview.isError).toBe(false);
+    expect(await Bun.file(join(String(dir), "a.txt")).text()).toContain("two");
+    const plan = Number(preview.content[0].text.match(/"plan": (\d+)/)![1]);
+    await Bun.write(join(String(dir), "a.txt"), "concurrent owner edit\n");
+    expect((await server.call("vfs_apply", { plan })).isError).toBe(true);
+    expect(await Bun.file(join(String(dir), "a.txt")).text()).toBe("concurrent owner edit\n");
+    expect((await server.call("write_file", { path: "a.txt", revision, content: "lost edit" })).isError).toBe(true);
+    const fresh = await server.call("read_file", { path: "a.txt" });
+    const freshRevision = Number(fresh.content[0].text.match(/revision: (\d+)/)![1]);
+    const guarded = await server.call("write_file", { path: "a.txt", revision: freshRevision, content: "reviewed update\n" });
+    const guardedPlan = Number(guarded.content[0].text.match(/"plan": (\d+)/)![1]);
+    expect((await server.call("vfs_apply", { plan: guardedPlan })).isError).toBe(false);
+    expect(await Bun.file(join(String(dir), "a.txt")).text()).toBe("reviewed update\n");
+    const create = await server.call("write_file", { path: "new.txt", create_only: true, content: "created\n" });
+    const createPlan = Number(create.content[0].text.match(/"plan": (\d+)/)![1]);
+    expect((await server.call("vfs_apply", { plan: createPlan })).isError).toBe(false);
+    expect(await Bun.file(join(String(dir), "new.txt")).text()).toBe("created\n");
+    expect((await server.call("write_file", { path: "new.txt", create_only: true, content: "overwrite" })).isError).toBe(true);
+  });
+
+  test("native file tools reject protected paths and workspace escapes", async () => {
+    using dir = tempDir("mcp-native-paths", { "workspace/.env": "protected", "workspace/binary.txt": "a\0b", "escape.txt": "outside" });
+    const workspace = join(String(dir), "workspace");
+    await using server = mcp(workspace, String(dir), { BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS: "1" });
+    await server.initialize();
+    for (const [path, message] of [[".env", "protected"], ["../escape.txt", "working directory"], ["binary.txt", "binary"]]) {
+      const result = await server.call("read_file", { path });
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain(message);
+    }
+    expect(await Bun.file(join(workspace, ".env")).text()).toBe("protected");
+    expect(await Bun.file(join(String(dir), "escape.txt")).text()).toBe("outside");
+  });
+
+  test("shell executes embedded Bun builtins with environment and exit status", async () => {
+    using dir = tempDir("mcp-native-shell", {});
+    await using server = mcp(String(dir), String(dir), { BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS: "1" });
+    await server.initialize();
+    const success = await server.call("shell", { command: "echo $BUN_NATIVE_PROBE > result.txt && cat result.txt", env: { BUN_NATIVE_PROBE: "native shell" } });
+    expect(success.content[0].text).toContain("native shell");
+    expect(success.content[0].text).toContain("exit: 0");
+    expect(success.isError).toBe(false);
+    expect(await Bun.file(join(String(dir), "result.txt")).text()).toBe("native shell\n");
+    const failure = await server.call("shell", { command: "false" });
+    expect(failure.content[0].text).toContain("exit: 1");
+    expect(failure.isError).toBe(true);
+  });
+
+  test("shell terminates an owned command at its timeout", async () => {
+    using dir = tempDir("mcp-native-shell-timeout", {});
+    await using server = mcp(String(dir), String(dir), { BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS: "1" });
+    await server.initialize();
+    const result = await server.call("shell", {
+      command: '"$BUN_MCP_PROBE_EXE" -e "for (;;) {}"',
+      env: { BUN_MCP_PROBE_EXE: bunExe() },
+      timeout_ms: 1000,
+    });
+    expect(result.content[0].text).toContain("killed after the 1000 ms timeout");
+    expect(result.isError).toBe(true);
   });
 
   test("git_ingest and deps_* read the project and its installed dependencies", async () => {

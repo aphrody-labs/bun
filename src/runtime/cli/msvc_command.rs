@@ -45,7 +45,10 @@ pub(crate) fn is_bun_argv0(name: &[u8]) -> bool {
 
 pub(crate) fn fail(message: core::fmt::Arguments<'_>) -> ! {
     use std::io::Write;
-    let _ = writeln!(bun_sys::FileWriter(bun_sys::Fd::stderr()), "error: {message}");
+    let _ = writeln!(
+        bun_sys::FileWriter(bun_sys::Fd::stderr()),
+        "error: {message}"
+    );
     Global::exit(1);
 }
 
@@ -65,7 +68,11 @@ pub(crate) fn exec(invocation: Invocation) -> ! {
     let code = find_msvc_tools::cli::main_with(args, self_args, &BunFetch::new());
     #[cfg(not(windows))]
     let code = {
-        let prog = if self_args.is_empty() { "msvc" } else { "bun msvc" };
+        let prog = if self_args.is_empty() {
+            "msvc"
+        } else {
+            "bun msvc"
+        };
         find_msvc_tools::cross::cli::main(args, prog, &BunFetch::new())
     };
     Global::exit(code as u32);
@@ -78,7 +85,9 @@ struct BunFetch {
 
 impl BunFetch {
     fn new() -> Self {
-        Self { env: std::cell::OnceCell::new() }
+        Self {
+            env: std::cell::OnceCell::new(),
+        }
     }
 
     fn env(&self) -> &bun_dotenv::Loader {
@@ -99,7 +108,8 @@ impl find_msvc_tools::cross::Fetch for BunFetch {
         let env = self.env();
         let parsed = bun_url::URL::parse(url.as_bytes());
         let proxy = env.get_http_proxy_for(&parsed);
-        let mut body = bun_core::MutableString::init(64 * 1024).map_err(|_| "out of memory".to_owned())?;
+        let mut body =
+            bun_core::MutableString::init(64 * 1024).map_err(|_| "out of memory".to_owned())?;
         let mut request = bun_http::AsyncHTTP::init_sync(
             bun_http::Method::GET,
             parsed,
@@ -110,7 +120,9 @@ impl find_msvc_tools::cross::Fetch for BunFetch {
             bun_http::FetchRedirect::Follow,
         );
         request.client.flags.reject_unauthorized = env.get_tls_reject_unauthorized();
-        let response = request.send_sync(&mut body).map_err(|e| format!("GET {url}: {}", e.name()))?;
+        let response = request
+            .send_sync(&mut body)
+            .map_err(|e| format!("GET {url}: {}", e.name()))?;
         match response.status_code() {
             200..=299 => Ok(core::mem::take(&mut body.list)),
             code => Err(format!("GET {url}: HTTP {code}")),

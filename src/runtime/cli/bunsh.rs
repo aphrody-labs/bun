@@ -210,7 +210,11 @@ fn elevate_self(argv0: &[u8], args: &[&[u8]]) {
     let name = argv0.strip_prefix(b"-").unwrap_or(argv0);
     let mut exe_buf = bun_paths::path_buffer_pool::get();
     let exe: Vec<u8> = if bun_core::strings::index_of_any(name, b"/\\").is_some() {
-        bun_paths::resolve_path::join_abs_string::<bun_paths::resolve_path::platform::Auto>(cwd, &[name]).to_vec()
+        bun_paths::resolve_path::join_abs_string::<bun_paths::resolve_path::platform::Auto>(
+            cwd,
+            &[name],
+        )
+        .to_vec()
     } else {
         match bun_which::which(&mut exe_buf, path_env, cwd, name) {
             Some(z) => z.as_bytes().to_vec(),
@@ -246,7 +250,10 @@ fn elevate_self(argv0: &[u8], args: &[&[u8]]) {
         match bun_core::spawn_sync_inherit(&command) {
             Ok(status) => Global::exit(status.code() as u32),
             Err(_) => {
-                bun_core::pretty_errorln!("bunsh: --root: cannot execute {}", BStr::new(command[0]));
+                bun_core::pretty_errorln!(
+                    "bunsh: --root: cannot execute {}",
+                    BStr::new(command[0])
+                );
                 Output::flush();
                 Global::exit(126);
             }
@@ -372,7 +379,10 @@ fn prompt(session: &ShellSession) -> Vec<u8> {
     let mut out = Vec::new();
     let cwd = session.cwd.as_deref().unwrap_or(b"");
     let home = bun_core::env_var::HOME.get().unwrap_or(b"");
-    if !home.is_empty() && cwd.starts_with(home) && (cwd.len() == home.len() || cwd[home.len()] == b'/') {
+    if !home.is_empty()
+        && cwd.starts_with(home)
+        && (cwd.len() == home.len() || cwd[home.len()] == b'/')
+    {
         out.push(b'~');
         out.extend_from_slice(&cwd[home.len()..]);
     } else {

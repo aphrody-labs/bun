@@ -1524,10 +1524,12 @@ pub(crate) fn parse(cmd: CommandTag, ctx: Context<'_>) -> crate::Result<api::Tra
             *cli::Bun__Node__ProcessTitle.lock() = Some(title.into());
         }
         if let Some(value) = args.option(b"--max-old-space-size") {
-            match core::str::from_utf8(value).ok().and_then(|v| v.trim().parse::<u64>().ok()) {
-                Some(megabytes) => {
-                    Bun__Node__MaxOldSpaceSizeMB.store(megabytes, core::sync::atomic::Ordering::Relaxed)
-                }
+            match core::str::from_utf8(value)
+                .ok()
+                .and_then(|v| v.trim().parse::<u64>().ok())
+            {
+                Some(megabytes) => Bun__Node__MaxOldSpaceSizeMB
+                    .store(megabytes, core::sync::atomic::Ordering::Relaxed),
                 None => {
                     bun_core::pretty_errorln!(
                         "<r><red>error<r>: --max-old-space-size expects a whole number of MiB"

@@ -14,7 +14,14 @@ const env = {
   BUN_CREATE_APHRODY_DIR: undefined,
 };
 
-async function run(args: string[], cwd?: string, extraEnv: Record<string, string | undefined> = {}) {
+async function run(
+  args: string[],
+  cwd?: string,
+  extraEnv: Record<string, string | undefined> = {},
+) {
+  if ((extraEnv.BUN_OXLINT || extraEnv.BUN_OXFMT) && (args[0] === "lint" || args[0] === "fmt")) {
+    args = [args[0], "--external-backend", ...args.slice(1)];
+  }
   await using proc = Bun.spawn({
     cmd: [bunExe(), ...args],
     env: { ...env, ...extraEnv },
@@ -22,9 +29,165 @@ async function run(args: string[], cwd?: string, extraEnv: Record<string, string
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  const [stdout, stderr, exitCode] = await Promise.all([
+    proc.stdout.text(),
+    proc.stderr.text(),
+    proc.exited,
+  ]);
   return { stdout, stderr, exitCode };
 }
+
+describe("embedded quality backend", () => {
+  test("native rule options preserve objects and reject invalid nested arrays", async () => {
+    using dir = tempDir("native-rule-options", {
+      "a.ts": "const _unused = 1; export {};\n",
+      "lint.json": JSON.stringify({
+        rules: {
+          "no-unused-vars": ["error", { varsIgnorePattern: "^_", argsIgnorePattern: "^_" }],
+        },
+      }),
+      "invalid.json": JSON.stringify({
+        rules: { "no-unused-vars": ["error", [{ varsIgnorePattern: "^_" }]] },
+      }),
+    });
+    const valid = await run(["lint", "--config", "lint.json", "a.ts"], String(dir));
+    expect(valid.stderr).toBe("");
+    expect(valid.stdout).toBe("");
+    expect(valid.exitCode).toBe(0);
+    const invalid = await run(["lint", "--config", "invalid.json", "a.ts"], String(dir));
+    expect(invalid.stderr).toContain("Invalid 'vars' option for no-unused-vars");
+    expect(invalid.exitCode).toBe(2);
+  });
+
+  test("compiler markers remain source protocol only inside builtin functions", async () => {
+    const source =
+      "$getter; export function a() {}\n$constructor; export function b() {}\n$linkTimeConstant; export function c() {}\n1 + 2;\n";
+    using dir = tempDir("native-compiler-directives", {
+      "src/js/builtins/markers.ts": source,
+      "ordinary.ts": source,
+      "lint.json": JSON.stringify({ rules: { "no-unused-expressions": "error" } }),
+    });
+    const builtin = await run(
+      ["lint", "--config", "lint.json", "--format=json", "src/js/builtins/markers.ts"],
+      String(dir),
+    );
+    expect(builtin.stderr).toBe("");
+    expect(
+      JSON.parse(builtin.stdout).diagnostics.filter(
+        (item: any) => item.code === "eslint(no-unused-expressions)",
+      ),
+    ).toHaveLength(1);
+    expect(builtin.exitCode).toBe(1);
+    const ordinary = await run(
+      ["lint", "--config", "lint.json", "--format=json", "ordinary.ts"],
+      String(dir),
+    );
+    expect(ordinary.stderr).toBe("");
+    expect(
+      JSON.parse(ordinary.stdout).diagnostics.filter(
+        (item: any) => item.code === "eslint(no-unused-expressions)",
+      ),
+    ).toHaveLength(4);
+    expect(ordinary.exitCode).toBe(1);
+  });
+
+  test("custom rule respects parsed comment scopes and ignores strings or unrelated rules", async () => {
+    const rule = "bun/no-duplicate-conditional-property-access";
+    const plugin = await Bun.file(
+      new URL("../../../scripts/oxlint-plugins/bun.js", import.meta.url),
+    ).text();
+    using dir = tempDir("native-rule-comments", {
+      "plugin.js": plugin,
+      "lint.json": JSON.stringify({ jsPlugins: ["./plugin.js"], rules: { [rule]: "error" } }),
+      "a.ts": `// oxlint-disable-next-line ${rule}\nif (obj.a) use(obj.a);\n/* oxlint-disable-next-line ${rule} */\nif (obj.b) use(obj.b);\nif (obj.c) use(obj.c); // oxlint-disable-line ${rule}\n/* oxlint-disable ${rule} */\nif (obj.d) use(obj.d);\n/* oxlint-enable ${rule} */\nif (obj.e) use(obj.e);\n// oxlint-disable-next-line no-debugger\nif (obj.f) use(obj.f);\nconst text = "oxlint-disable-next-line ${rule}";\nif (obj.g) use(obj.g);\n`,
+    });
+    const result = await run(
+      ["lint", "--config", "lint.json", "--format=json", "a.ts"],
+      String(dir),
+    );
+    expect(result.stderr).toBe("");
+    expect(
+      JSON.parse(result.stdout).diagnostics.filter((item: any) => item.code === rule),
+    ).toHaveLength(3);
+    expect(result.exitCode).toBe(1);
+  });
+  test("compiled Bun getter rule preserves caching, writes and receiver semantics", async () => {
+    const plugin = await Bun.file(
+      new URL("../../../scripts/oxlint-plugins/bun.js", import.meta.url),
+    ).text();
+    using dir = tempDir("native-bun-rule", {
+      "plugin.js": plugin,
+      "a.ts":
+        "if (obj.x) use(obj.x);\nif (obj.x) obj.x++;\nif (obj.x) obj.x();\nif (local = obj.x) use(obj.x);\n",
+      "lint.json": JSON.stringify({
+        jsPlugins: ["./plugin.js"],
+        rules: { "bun/no-duplicate-conditional-property-access": "error" },
+      }),
+    });
+    const checked = await run(
+      ["lint", "--config", "lint.json", "--format=json", "a.ts"],
+      String(dir),
+    );
+    expect(checked.stderr).toBe("");
+    const findings = JSON.parse(checked.stdout).diagnostics.filter(
+      (diagnostic: any) => diagnostic.code === "bun/no-duplicate-conditional-property-access",
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0].message).toContain("`obj.x` is read");
+    expect(checked.exitCode).toBe(1);
+  });
+  test("lint uses native configuration and never invokes an external override by default", async () => {
+    using dir = tempDir("native-lint", {
+      "a.ts": "debugger;\n",
+      "lint.json": JSON.stringify({ rules: { "no-debugger": "error" } }),
+      "external.ts": "throw new Error('external backend was invoked');",
+    });
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "lint", "--no-n2b", "--config", "lint.json", "--format=json", "a.ts"],
+      cwd: String(dir),
+      env: { ...env, BUN_OXLINT: join(String(dir), "external.ts") },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const stdout = await proc.stdout.text();
+    expect(await proc.stderr.text()).toBe("");
+    const result = JSON.parse(stdout);
+    expect(result.diagnostics.some((diagnostic: any) => diagnostic.severity === "error")).toBe(
+      true,
+    );
+    expect(await proc.exited).toBe(1);
+  });
+
+  test("fmt checks, writes and then accepts native formatted source", async () => {
+    using dir = tempDir("native-fmt", {
+      "a.ts": "const x={a:1};",
+      "format.json": JSON.stringify({ printWidth: 120 }),
+    });
+    const checked = await run(["fmt", "--check", "--config", "format.json", "a.ts"], String(dir));
+    expect(checked.stdout).toContain("formatting differs");
+    expect(checked.exitCode).toBe(1);
+    const written = await run(["fmt", "--write", "--config", "format.json", "a.ts"], String(dir));
+    expect(written.stdout).toBe("");
+    expect(written.exitCode).toBe(0);
+    const clean = await run(["fmt", "--check", "--config", "format.json", "a.ts"], String(dir));
+    expect(clean.stdout).toBe("");
+    expect(clean.exitCode).toBe(0);
+  });
+
+  test("native lint respects Gitignore and rejects unsupported flags", async () => {
+    using dir = tempDir("native-ignore", {
+      "a.ts": "debugger;",
+      ".gitignore": "a.ts\n",
+      "lint.json": JSON.stringify({ rules: { "no-debugger": "error" } }),
+    });
+    const ignored = await run(["lint", "--config", "lint.json", "--format=json", "."], String(dir));
+    expect(JSON.parse(ignored.stdout).diagnostics).toEqual([]);
+    expect(ignored.exitCode).toBe(0);
+    const unsupported = await run(["lint", "--unknown-native-option"], String(dir));
+    expect(unsupported.stderr).toContain("unsupported native option");
+    expect(unsupported.exitCode).toBe(2);
+  });
+});
 
 // Prints its arguments in the shape oxlint uses for --format=json.
 const fakeOxlint = `
@@ -58,15 +221,27 @@ function tools(dir: string) {
   };
 }
 
-const toolFiles = { "tools/oxlint.ts": fakeOxlint, "tools/oxfmt.ts": fakeOxfmt, "tools/n2b.ts": fakeN2b };
+const toolFiles = {
+  "tools/oxlint.ts": fakeOxlint,
+  "tools/oxfmt.ts": fakeOxfmt,
+  "tools/n2b.ts": fakeN2b,
+};
 
 describe("routing", () => {
-  test.concurrent("a package.json script with the same name keeps priority", async () => {
+  test.concurrent("native commands reserve their names; explicit run executes package scripts", async () => {
     using dir = tempDir("toolchain-script", {
-      "package.json": JSON.stringify({ scripts: { lint: "echo the lint script ran", fmt: "echo the fmt script ran" } }),
+      "package.json": JSON.stringify({
+        scripts: { lint: "echo the lint script ran", fmt: "echo the fmt script ran" },
+      }),
     });
-    const lint = await run(["lint"], String(dir));
-    const fmt = await run(["fmt"], String(dir));
+    const nativeLint = await run(["lint", "--help"], String(dir));
+    const nativeFmt = await run(["fmt", "--help"], String(dir));
+    expect(nativeLint.stdout).toContain("Embedded OXC");
+    expect(nativeFmt.stdout).toContain("Embedded OXC");
+    expect(nativeLint.exitCode).toBe(0);
+    expect(nativeFmt.exitCode).toBe(0);
+    const lint = await run(["run", "lint"], String(dir));
+    const fmt = await run(["run", "fmt"], String(dir));
     expect(lint.stdout.trim()).toBe("the lint script ran");
     expect(fmt.stdout.trim()).toBe("the fmt script ran");
     expect(lint.exitCode).toBe(0);
@@ -77,8 +252,8 @@ describe("routing", () => {
     using dir = tempDir("toolchain-script-self", {
       "package.json": JSON.stringify({ scripts: { lint: `${bunExe()} lint --help` } }),
     });
-    const { stdout, exitCode } = await run(["lint"], String(dir));
-    expect(stdout).toContain("Usage: bun lint [flags] [...paths]");
+    const { stdout, exitCode } = await run(["run", "lint"], String(dir));
+    expect(stdout).toContain("Usage: bun lint");
     expect(exitCode).toBe(0);
   });
 
@@ -89,7 +264,8 @@ describe("routing", () => {
     ["wasm", "Usage: bun wasm <command>"],
   ])("bun %s --help", async (command, usage) => {
     using dir = tempDir("toolchain-help", {});
-    const { stdout, exitCode } = await run([command, "--help"], String(dir));
+    const { stdout, stderr, exitCode } = await run([command, "--help"], String(dir));
+    expect(stderr).toBe("");
     expect(stdout).toContain(usage);
     expect(exitCode).toBe(0);
   });
@@ -118,7 +294,11 @@ describe("bun lint", () => {
       "a.ts": `readFileSync("x");\n`,
       "bunfig.toml": `[lint]\nconfig = "lint.json"\nignore = ["dist/**"]\nargs = ["-D", "correctness"]\n`,
     });
-    const { stdout, exitCode } = await run(["lint", "-A", "no-console", "src"], String(dir), tools(String(dir)));
+    const { stdout, exitCode } = await run(
+      ["lint", "-A", "no-console", "src"],
+      String(dir),
+      tools(String(dir)),
+    );
     expect(normalizeBunSnapshot(stdout, dir)).toMatchInlineSnapshot(`
       "oxlint ["--config","lint.json","--ignore-pattern","dist/**","-D","correctness","-A","no-console","src"]
       a.ts:1:1 warning n2b(node-fs-readfile) Use Bun.file().text()
@@ -132,7 +312,11 @@ describe("bun lint", () => {
 
   test.concurrent("--format=json merges the n2b findings into oxlint's diagnostics", async () => {
     using dir = tempDir("toolchain-lint-json", { ...toolFiles, "a.ts": `readFileSync("x");\n` });
-    const { stdout, exitCode } = await run(["lint", "--format=json", "--fix"], String(dir), tools(String(dir)));
+    const { stdout, exitCode } = await run(
+      ["lint", "--format=json", "--fix"],
+      String(dir),
+      tools(String(dir)),
+    );
     const out = JSON.parse(stdout);
     expect(out.args).toEqual(["--fix", "--format=json"]);
     expect(out.diagnostics).toEqual([
@@ -148,7 +332,11 @@ describe("bun lint", () => {
 
   test.concurrent("--format=sarif adds an n2b run", async () => {
     using dir = tempDir("toolchain-lint-sarif", { ...toolFiles, "a.ts": `readFileSync("x");\n` });
-    const { stdout, exitCode } = await run(["lint", "--format=sarif", "--n2b-only"], String(dir), tools(String(dir)));
+    const { stdout, exitCode } = await run(
+      ["lint", "--format=sarif", "--n2b-only"],
+      String(dir),
+      tools(String(dir)),
+    );
     const out = JSON.parse(stdout);
     expect(out.version).toBe("2.1.0");
     expect(out.runs.map((r: any) => r.tool.driver.name)).toEqual(["n2b"]);
@@ -158,7 +346,11 @@ describe("bun lint", () => {
 
   test.concurrent("--deny-warnings fails on n2b warnings", async () => {
     using dir = tempDir("toolchain-lint-deny", { ...toolFiles, "a.ts": `readFileSync("x");\n` });
-    const { stdout, exitCode } = await run(["lint", "--deny-warnings", "--n2b-only"], String(dir), tools(String(dir)));
+    const { stdout, exitCode } = await run(
+      ["lint", "--deny-warnings", "--n2b-only"],
+      String(dir),
+      tools(String(dir)),
+    );
     expect(stdout).toContain("n2b: 0 error(s), 1 warning(s)");
     expect(exitCode).toBe(1);
   });
@@ -235,13 +427,18 @@ describe("bun create aphrody/<template>", () => {
     expect(await Bun.file(join(app, ".gitignore")).text()).toBe("node_modules\n");
     const pkg = await Bun.file(join(app, "package.json")).json();
     expect(pkg.name).toBe("my-app");
-    expect(pkg.dependencies["@aphrody/runtime-sdk"]).toMatch(/^file:.*\/aphrody\/packages\/engine\/runtime$/);
+    expect(pkg.dependencies["@aphrody/runtime-sdk"]).toMatch(
+      /^file:.*\/aphrody\/packages\/engine\/runtime$/,
+    );
     expect(exitCode).toBe(0);
   });
 
   test.concurrent("finds the templates of the checkout around the working directory", async () => {
     using dir = tempDir("toolchain-create-checkout", stack);
-    const { stdout, exitCode } = await run(["create", "aphrody/react", "app"], join(String(dir), "aphrody"));
+    const { stdout, exitCode } = await run(
+      ["create", "aphrody/react", "app"],
+      join(String(dir), "aphrody"),
+    );
     expect(stdout).toContain("Created app (4 files: base, react)");
     const pkg = await Bun.file(join(String(dir), "aphrody", "app", "package.json")).json();
     expect(pkg.dependencies.react).toBe("19.3.0");
@@ -250,14 +447,20 @@ describe("bun create aphrody/<template>", () => {
 
   test.concurrent("rejects two templates of one exclusive group", async () => {
     using dir = tempDir("toolchain-create-exclusive", stack);
-    const { stderr, exitCode } = await run(["create", "aphrody/web+react", "app"], join(String(dir), "aphrody"));
+    const { stderr, exitCode } = await run(
+      ["create", "aphrody/web+react", "app"],
+      join(String(dir), "aphrody"),
+    );
     expect(stderr).toContain("Choose one frontend template: web or react");
     expect(exitCode).toBe(1);
   });
 
   test.concurrent("bun create aphrody --list lists the templates", async () => {
     using dir = tempDir("toolchain-create-list", stack);
-    const { stdout, exitCode } = await run(["create", "aphrody", "--list"], join(String(dir), "aphrody"));
+    const { stdout, exitCode } = await run(
+      ["create", "aphrody", "--list"],
+      join(String(dir), "aphrody"),
+    );
     const row = (id: string, always: boolean, description: string) =>
       `  ${id.padEnd(8)} ${always ? "(always) " : "         "}${description}`;
     expect(stdout.split("\n").slice(1)).toEqual([
@@ -314,7 +517,10 @@ console.log(bytes);
 `,
     });
     const fake = join(String(dir), "fake-cargo.js");
-    const cli = await run(["wasm", "build", "add", "--no-opt", `--cargo="${bunExe()}" "${fake}"`], String(dir));
+    const cli = await run(
+      ["wasm", "build", "add", "--no-opt", `--cargo="${bunExe()}" "${fake}"`],
+      String(dir),
+    );
     expect(cli.stdout).toContain("built add");
     expect(cli.exitCode).toBe(0);
     const api = await run(["api.ts"], String(dir));

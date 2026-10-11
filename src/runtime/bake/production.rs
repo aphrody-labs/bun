@@ -977,7 +977,7 @@ fn build_with_vm(ctx: Context, cwd: &[u8], pt: &mut PerThread) -> crate::Result<
         let mut params_guard = scopeguard::guard(&mut params_buf, |b| b.clear());
         let params_buf = &mut **params_guard;
 
-        let mut pattern = PatternBuffer::EMPTY;
+        let mut pattern = PatternBuffer::new();
 
         let route = router.route_ptr(route_index);
         let main_file_route_index = route.file_page.unwrap();

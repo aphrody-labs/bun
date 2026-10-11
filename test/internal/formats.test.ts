@@ -8,6 +8,7 @@ import {
   markdown,
   pool,
   sourceEvidence,
+  vendorRevision,
   type Capability,
   type ComponentInfo,
 } from "../../scripts/aphrody/formats.ts";
@@ -18,8 +19,8 @@ test("format catalogue separates interpreters, byte codecs and filename recognit
     operations: ["execute"],
   });
   expect(capabilities.find(item => item.component === "uv" && item.format === "tar-xz")).toMatchObject({
-    boundary: "recognition-only",
-    operations: ["recognize"],
+    boundary: "core",
+    operations: ["recognize", "read", "decompress", "extract"],
   });
   expect(capabilities.find(item => item.component === "cpython" && item.format === "toml")?.operations).toEqual([
     "read",
@@ -35,6 +36,35 @@ test("format catalogue separates interpreters, byte codecs and filename recognit
     "copy",
   ]);
   expect(capabilities.some(item => item.component === "jsc" && item.format === "typescript")).toBe(false);
+});
+
+test("compressed UV catalogue retains decoder and memory-limit evidence", () => {
+  for (const format of ["tar-bzip2", "tar-xz", "tar-lzip", "tar-lzma"]) {
+    const capability = capabilities.find(item => item.component === "uv" && item.format === format)!;
+    expect(capability.boundary).toBe("core");
+    expect(capability.references.map(item => item.marker)).toContain("async fn untar_compressed<");
+    if (format !== "tar-bzip2")
+      expect(capability.references.map(item => item.marker)).toContain(
+        "const LZMA_MEMORY_LIMIT: u64 = 256 * 1024 * 1024;",
+      );
+  }
+});
+
+test("vendor provenance separates immutable upstream revision from owner checkout", () => {
+  const revision = "0123456789ABCDEF0123456789ABCDEF01234567";
+  expect(vendorRevision({ sources: [{ name: "uv", ref: revision }] }, "uv")).toBe(revision.toLowerCase());
+  expect(() => vendorRevision({ sources: [{ name: "uv", ref: "main" }] }, "uv")).toThrow("complete 40-character");
+  expect(() =>
+    vendorRevision(
+      {
+        sources: [
+          { name: "uv", ref: revision },
+          { name: "uv", ref: revision },
+        ],
+      },
+      "uv",
+    ),
+  ).toThrow("exactly one");
 });
 
 test.concurrent("format evidence includes source hashes and rejects missing anchors", async () => {
@@ -130,7 +160,7 @@ test("format comparisons preserve capability boundaries and mark uncovered cells
   expect(rows.find(row => row.format === "typescript")).toMatchObject({ cpython: null, jsc: null });
   const table = markdown(capabilities);
   expect(table).toContain("| Format | Bun | UV | CPython | JSC |");
-  expect(table).toContain("recognition-only: recognize");
+  expect(table).toContain("| tar-lzip | — | core: recognize, read, decompress, extract | — | — |");
   expect(table).toContain("no capability indexed");
 });
 
@@ -180,16 +210,18 @@ test("native source index preserves domain snapshots, file hashes and unresolved
     surface: "src",
   });
   const rows = registry.db
-    .query<{ file: string; provenance: string; metadata: string }, [string, string]>(
-      "SELECT file,provenance,metadata FROM nodes WHERE repository_id=? AND id GLOB ? AND kind='file' ORDER BY file",
-    )
+    .query<
+      { file: string; provenance: string; metadata: string },
+      [string, string]
+    >("SELECT file,provenance,metadata FROM nodes WHERE repository_id=? AND id GLOB ? AND kind='file' ORDER BY file")
     .all(runtime.repository, `${runtime.snapshot}:*`);
   expect(rows).toHaveLength(5);
   expect(
     registry.db
-      .query<{ count: number }, [string, string]>(
-        "SELECT COUNT(*) AS count FROM nodes WHERE repository_id=? AND file=? AND kind='file'",
-      )
+      .query<
+        { count: number },
+        [string, string]
+      >("SELECT COUNT(*) AS count FROM nodes WHERE repository_id=? AND file=? AND kind='file'")
       .get(runtime.repository, "ΣΟΣ.rs")!.count,
   ).toBe(1);
   const file = rows.find(row => row.file === "lib.rs")!;

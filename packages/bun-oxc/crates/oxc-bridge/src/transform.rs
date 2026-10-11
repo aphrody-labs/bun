@@ -204,7 +204,8 @@ pub fn minify_with(
         .then(|| MangleOptions { top_level: Some(options.top_level), ..MangleOptions::default() });
     let result = Minifier::new(MinifierOptions { mangle, compress, ..MinifierOptions::default() })
         .minify(&allocator, &mut program);
-    let base = if options.whitespace { CodegenOptions::minify() } else { CodegenOptions::default() };
+    let base =
+        if options.whitespace { CodegenOptions::minify() } else { CodegenOptions::default() };
     let printed = Codegen::new()
         .with_options(CodegenOptions {
             source_map_path: options.sourcemap.then(|| Path::new(filename).to_path_buf()),

@@ -15,6 +15,22 @@ pub(crate) fn module_info(
     filename: &str,
     include_program: bool,
 ) -> Result<serde_json::Value, Error> {
+    module_info_with_comments(source, filename, include_program, false)
+}
+
+pub(crate) fn program_with_comments(
+    source: &str,
+    filename: &str,
+) -> Result<serde_json::Value, Error> {
+    module_info_with_comments(source, filename, true, true)
+}
+
+fn module_info_with_comments(
+    source: &str,
+    filename: &str,
+    include_program: bool,
+    include_comments: bool,
+) -> Result<serde_json::Value, Error> {
     let source_type =
         SourceType::from_path(filename).map_err(|error| Error::input(error.to_string()))?;
     let allocator = Allocator::default();
@@ -37,11 +53,29 @@ pub(crate) fn module_info(
     let converter = Utf8ToUtf16::new(source);
     converter.convert_module_record(&mut parsed.module_record);
     if include_program {
+        let comments = include_comments.then(|| {
+            parsed
+                .program
+                .comments
+                .iter()
+                .map(|comment| {
+                    serde_json::json!({
+                        "start": crate::utf16_offset(source, comment.span.start as usize),
+                        "end": crate::utf16_offset(source, comment.span.end as usize),
+                        "value": comment.content_span().source_text(source),
+                    })
+                })
+                .collect::<Vec<_>>()
+        });
         converter.convert_program_and_comments(&mut parsed.program);
-        return serde_json::from_str(
+        let program = serde_json::from_str(
             &parsed.program.to_estree_json(source_type.is_typescript(), false),
         )
-        .map_err(|error| Error::input(error.to_string()));
+        .map_err(|error| Error::input(error.to_string()))?;
+        return Ok(match comments {
+            Some(comments) => serde_json::json!({ "program": program, "comments": comments }),
+            None => program,
+        });
     }
 
     // requested_modules records physical declarations, unlike indirect exports

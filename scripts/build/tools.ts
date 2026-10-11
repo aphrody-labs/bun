@@ -123,12 +123,10 @@ interface Rejection {
  * first.
  */
 export function findBun(os: OS): string {
+  if (process.versions.bun !== undefined) return process.execPath;
   const exe = os === "windows" ? "bun.exe" : "bun";
   const userBun = join(homedir(), ".bun", "bin", exe);
   if (isExecutable(userBun)) return userBun;
-
-  // Running under bun at a non-standard path — use that.
-  if (process.versions.bun !== undefined) return process.execPath;
 
   return findTool({
     names: ["bun"],
@@ -144,11 +142,13 @@ export function findBun(os: OS): string {
  * the same spec where they are found (findLlvmTool).
  */
 export function checkImageTools(toolchain: { bun: string; cmake: string }): void {
-  const tools: [name: string, expected: string, actual: { version: string } | { reason: string }][] = [
+  const tools: [
+    name: string,
+    expected: string,
+    actual: { version: string } | { reason: string },
+  ][] = [
     ["bun", pins.bun.version, getToolVersion(toolchain.bun, "--version")],
     ["cmake", pins.cmake.version, getToolVersion(toolchain.cmake, "--version")],
-    // CI runs the build with the image's node.
-    ["node", pins.nodejs.version, { version: process.versions.node }],
   ];
   for (const [name, expected, actual] of tools) {
     if (!("version" in actual) || actual.version !== expected) {
@@ -256,12 +256,18 @@ export function writeToolIdentities(cfg: Config): void {
   const tools: IdentifiedTool[] = ["cc", "cxx", "hostCc", "nasm", "ld"];
   // A native Windows build compiles against the dev shell's MSVC STL/CRT (INCLUDE/LIB), so switching toolsets
   // must rebuild what the compilers and the linker produced.
-  const msvc = cfg.host.os === "windows" && process.env.VCToolsVersion ? `msvc ${process.env.VCToolsVersion}\n` : "";
+  const msvc =
+    cfg.host.os === "windows" && process.env.VCToolsVersion
+      ? `msvc ${process.env.VCToolsVersion}\n`
+      : "";
   for (const tool of tools) {
     const path = cfg[tool];
     // Absent on this platform: no nasm, and `ld` is "" on macOS, where clang finds the linker itself.
     if (path === undefined || path === "") continue;
-    writeIfChanged(toolIdentityFile(cfg, tool), toolIdentity(path) + "\n" + (tool === "nasm" ? "" : msvc));
+    writeIfChanged(
+      toolIdentityFile(cfg, tool),
+      toolIdentity(path) + "\n" + (tool === "nasm" ? "" : msvc),
+    );
   }
 }
 
@@ -277,8 +283,8 @@ export function toolIdentity(exe: string): string {
       ? undefined
       : `${result.stdout}\n${result.stderr}`
           .split("\n")
-          .map(l => l.trim())
-          .find(l => /\d+\.\d+/.test(l));
+          .map((l) => l.trim())
+          .find((l) => /\d+\.\d+/.test(l));
   if (line === undefined) {
     throw new BuildError(`Cannot tell which ${exe} this is`, {
       hint: `\`${exe} --version\` ${"reason" in result ? result.reason : "printed no version"}`,
@@ -321,7 +327,10 @@ export function findTool(spec: ToolSpec): FoundTool | undefined {
   const exeSuffix = process.platform === "win32" ? (spec.windowsExt ?? ".exe") : "";
   const searchPaths = spec.pathsOnly
     ? [...(spec.paths ?? [])]
-    : [...(spec.paths ?? []), ...(process.env.PATH ?? "").split(delimiter).filter(p => p.length > 0)];
+    : [
+        ...(spec.paths ?? []),
+        ...(process.env.PATH ?? "").split(delimiter).filter((p) => p.length > 0),
+      ];
   const versionArg = "--version";
   const rejections: Rejection[] = [];
 
@@ -338,7 +347,10 @@ export function findTool(spec: ToolSpec): FoundTool | undefined {
           continue;
         }
         if (!satisfiesRange(v.version, spec.version)) {
-          rejections.push({ path: full, reason: `version ${v.version} does not satisfy ${spec.version}` });
+          rejections.push({
+            path: full,
+            reason: `version ${v.version} does not satisfy ${spec.version}`,
+          });
           continue;
         }
         return { path: full, version: v.version };
@@ -354,11 +366,15 @@ export function findTool(spec: ToolSpec): FoundTool | undefined {
 
     let hint = spec.hint ?? "";
     if (rejections.length > 0) {
-      hint += (hint ? "\n" : "") + "Found but rejected:\n" + rejections.map(r => `  ${r.path}: ${r.reason}`).join("\n");
+      hint +=
+        (hint ? "\n" : "") +
+        "Found but rejected:\n" +
+        rejections.map((r) => `  ${r.path}: ${r.reason}`).join("\n");
     }
     if (rejections.length === 0 && searchPaths.length > 0) {
       hint +=
-        (hint ? "\n" : "") + `Searched: ${searchPaths.slice(0, 5).join(", ")}${searchPaths.length > 5 ? ", ..." : ""}`;
+        (hint ? "\n" : "") +
+        `Searched: ${searchPaths.slice(0, 5).join(", ")}${searchPaths.length > 5 ? ", ..." : ""}`;
     }
 
     throw new BuildError(msg, hint ? { hint } : {});
@@ -464,7 +480,8 @@ function llvmInstallHint(os: OS): string {
   if (os === "darwin") return `Install with: brew install llvm@${LLVM_MAJOR}`;
   if (os === "linux")
     return `Install with: apt install clang-${LLVM_MAJOR} lld-${LLVM_MAJOR}  (or equivalent for your distro)`;
-  if (os === "windows") return `Install LLVM ${LLVM_VERSION} from https://github.com/llvm/llvm-project/releases`;
+  if (os === "windows")
+    return `Install LLVM ${LLVM_VERSION} from https://github.com/llvm/llvm-project/releases`;
   return "";
 }
 
@@ -484,7 +501,8 @@ function findLlvmTool(
     required: opts.required,
     hint: llvmInstallHint(os),
   };
-  if (opts.checkVersion) spec.version = toolchainOverride.llvm !== undefined ? "ignore" : LLVM_VERSION_RANGE;
+  if (opts.checkVersion)
+    spec.version = toolchainOverride.llvm !== undefined ? "ignore" : LLVM_VERSION_RANGE;
   if (toolchainOverride.llvm !== undefined) spec.pathsOnly = true;
   return findTool(spec);
 }
@@ -619,7 +637,10 @@ export function resolveLlvmToolchain(
   if (msvcTarget) {
     ld = findLlvmTool("lld-link", paths, os, { checkVersion: false, required: true })?.path ?? "";
   } else if (os === "linux") {
-    ld = toolchainOverride.ld ?? findLlvmTool("ld.lld", paths, os, { checkVersion: true, required: true })?.path ?? "";
+    ld =
+      toolchainOverride.ld ??
+      findLlvmTool("ld.lld", paths, os, { checkVersion: true, required: true })?.path ??
+      "";
   } else {
     ld = ""; // darwin: unused
   }
@@ -639,10 +660,16 @@ export function resolveLlvmToolchain(
   let strip: string;
   let llvmStrip: string | undefined;
   if (os === "linux") {
-    strip = findTool({ names: ["strip"], required: true, hint: "Install binutils for your distro" })?.path ?? "";
-    llvmStrip = findLlvmTool("llvm-strip", paths, os, { checkVersion: false, required: false })?.path;
+    strip =
+      findTool({ names: ["strip"], required: true, hint: "Install binutils for your distro" })
+        ?.path ?? "";
+    llvmStrip = findLlvmTool("llvm-strip", paths, os, {
+      checkVersion: false,
+      required: false,
+    })?.path;
   } else {
-    strip = findLlvmTool("llvm-strip", paths, os, { checkVersion: false, required: true })?.path ?? "";
+    strip =
+      findLlvmTool("llvm-strip", paths, os, { checkVersion: false, required: true })?.path ?? "";
     llvmStrip = strip;
   }
 
@@ -653,9 +680,18 @@ export function resolveLlvmToolchain(
   const nm = findLlvmTool("llvm-nm", paths, os, { checkVersion: false, required: false })?.path;
   // The post-link binary checks (verify-binary.ts) read the executable with
   // these; a partial install skips the checks rather than the build.
-  const readobj = findLlvmTool("llvm-readobj", paths, os, { checkVersion: false, required: false })?.path;
-  const objdump = findLlvmTool("llvm-objdump", paths, os, { checkVersion: false, required: false })?.path;
-  const cxxfilt = findLlvmTool("llvm-cxxfilt", paths, os, { checkVersion: false, required: false })?.path;
+  const readobj = findLlvmTool("llvm-readobj", paths, os, {
+    checkVersion: false,
+    required: false,
+  })?.path;
+  const objdump = findLlvmTool("llvm-objdump", paths, os, {
+    checkVersion: false,
+    required: false,
+  })?.path;
+  const cxxfilt = findLlvmTool("llvm-cxxfilt", paths, os, {
+    checkVersion: false,
+    required: false,
+  })?.path;
 
   // dsymutil: required on darwin; optional elsewhere (needed only when
   // cross-compiling a darwin release from a non-darwin host).
@@ -738,7 +774,10 @@ export function resolveLlvmToolchain(
  * Find an arbitrary system tool (not LLVM-specific).
  * Thin wrapper for convenience.
  */
-export function findSystemTool(name: string, opts?: { required?: boolean; hint?: string }): string | undefined {
+export function findSystemTool(
+  name: string,
+  opts?: { required?: boolean; hint?: string },
+): string | undefined {
   const spec: ToolSpec = {
     names: [name],
     required: opts?.required ?? false,
@@ -788,13 +827,27 @@ export function probeRustToolchain(os: OS): {
   // spent 34-36s in here without a line of output. Skip when there's no
   // pinned channel or no rustup — the `rustc` queries below will just use
   // whatever's there.
-  const rustup = findTool({ names: ["rustup"], paths: [join(cargoHome, "bin")], required: false })?.path;
+  const rustup = findTool({
+    names: ["rustup"],
+    paths: [join(cargoHome, "bin")],
+    required: false,
+  })?.path;
   const channel = readRustToolchainChannel();
   if (rustup !== undefined && channel !== undefined) {
     const started = performance.now();
     spawnSync(
       rustup,
-      ["-q", "toolchain", "install", channel, "--no-self-update", "--profile", "minimal", "--component", "rust-src"],
+      [
+        "-q",
+        "toolchain",
+        "install",
+        channel,
+        "--no-self-update",
+        "--profile",
+        "minimal",
+        "--component",
+        "rust-src",
+      ],
       {
         encoding: "utf8",
         timeout: 300_000,

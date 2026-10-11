@@ -5,6 +5,55 @@
 // parses a module or a @-intrinsic builtin function from the blob.
 import { expect, test } from "bun:test";
 import { bunEnv, bunExe } from "harness";
+import { sliceSourceCode } from "../../src/codegen/builtin-parser.ts";
+
+test("module preprocessing extracts declarations without changing embedded worker sources", () => {
+  const declarations = [
+    'import type { WorkerOptions } from "worker-types";',
+    'import value, { named as alias } from "values";',
+    'import * as namespace from "namespace";',
+    'import "side-effects";',
+  ];
+  const body = [
+    'const worker = `import { parentPort } from "node:worker_threads"; export {};`;',
+    "const quoted = \"import { value } from 'strings'; export {};\";",
+    "const expression = /import { value } from 'regex'; export {};/;",
+    '// import { value } from "line-comment"; export {};',
+    '/* import { value } from "block-comment"; export {}; */',
+    'const escaped = `\\` import { value } from "escaped"; \\${notAnInterpolation}`;',
+    'const nested = `outer ${`import { value } from "nested"; export {};`}`;',
+    'const dynamic = import("dynamic-module");',
+    "export default worker;",
+  ].join("\n");
+  const imports: string[] = [];
+  const { result, rest } = sliceSourceCode(
+    "{" + declarations.join("\n") + "\n" + body + "\nexport {};\n}",
+    false,
+    undefined,
+    false,
+    imports,
+  );
+  expect(imports).toEqual(declarations);
+  expect(result).toBe("{" + "\n".repeat(declarations.length) + body + "\n\n}");
+  expect(rest).toBe("");
+});
+
+test("module preprocessing retains import attributes and rewrites executable requires", () => {
+  const declaration = 'import /* type owner */ type { Options }\nfrom /* source */ "types";';
+  const attributed = 'import data from "data.json" with { type: "json", note: "export {};" };';
+  const imports: string[] = [];
+  const { result, rest } = sliceSourceCode(
+    "{" + declaration + "\n" + attributed + '\nconst value = `${require("node:path")}`;\nexport default value;\n}',
+    true,
+    specifier => `load(${JSON.stringify(specifier)})`,
+    false,
+    imports,
+  );
+  expect(imports).toEqual([declaration, attributed]);
+  expect(result).toContain('const value = `${load("node:path")}`;');
+  expect(result).toContain("__intrinsic__exports = value;");
+  expect(rest).toBe("");
+});
 
 test("internal JS builtin function and module sources parse from the linked blob", async () => {
   await using proc = Bun.spawn({

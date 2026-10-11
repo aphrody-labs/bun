@@ -117,7 +117,10 @@ fn inputs(json: bool) -> ! {
             if i > 0 {
                 text.push(',');
             }
-            text.push_str(&format!("{{\"name\":\"{name}\",\"compressedSize\":{}}}", bytes.len()));
+            text.push_str(&format!(
+                "{{\"name\":\"{name}\",\"compressedSize\":{}}}",
+                bytes.len()
+            ));
         }
         text.push_str(&format!(
             "],\"sdk\":{},\"win32\":{}}}\n",
@@ -126,7 +129,10 @@ fn inputs(json: bool) -> ! {
         ));
     } else {
         for (name, bytes) in EMBEDDED {
-            text.push_str(&format!("default  {name} (embedded, {} bytes compressed)\n", bytes.len()));
+            text.push_str(&format!(
+                "default  {name} (embedded, {} bytes compressed)\n",
+                bytes.len()
+            ));
         }
         match &sdk {
             Some(path) => text.push_str(&format!("sdk      {}\n", path.display())),
@@ -134,7 +140,9 @@ fn inputs(json: bool) -> ! {
         }
         match &win32 {
             Some(path) => text.push_str(&format!("win32    {}\n", path.display())),
-            None => text.push_str("win32    (no Microsoft.Windows.SDK.Win32Metadata NuGet package)\n"),
+            None => {
+                text.push_str("win32    (no Microsoft.Windows.SDK.Win32Metadata NuGet package)\n")
+            }
         }
     }
     out(text.as_bytes());
@@ -182,7 +190,11 @@ pub(crate) fn exec(invocation: Invocation) -> ! {
     let mut needs_default = true;
     let mut previous = "";
     for arg in &raw {
-        let option = if arg.starts_with('-') { arg.as_str() } else { previous };
+        let option = if arg.starts_with('-') {
+            arg.as_str()
+        } else {
+            previous
+        };
         match (option, arg.as_str()) {
             ("--lang", "--lang") => has_lang = true,
             ("--in", "sdk") => match sdk_winmd() {
