@@ -1,0 +1,4 @@
+# The public Bun fork uses the independent Bun OS repository for LFS storage.
+# Keep this endpoint shared so fresh clones can retrieve historical vendor assets.
+[lfs]
+	url = https://github.com/aphrody-labs/bun-os.git/info/lfs
