@@ -189,7 +189,13 @@ export function commandPlan(options: Options, platform: string, configured: bool
   const gen = [toolCommand("gn", ["gen", options.out, `--args=${GN_ARGS}`], source, root, platform)];
   const build = [
     ...gen,
-    toolCommand("autoninja", ["-C", options.out, "-j", String(options.jobs), "chrome"], source, root, platform),
+    toolCommand(
+      "autoninja",
+      ["-C", options.out, "-j", String(options.jobs), "--quiet", "--heartbeat_period", "30s", "chrome"],
+      source,
+      root,
+      platform,
+    ),
   ];
   const exec =
     options.command === "exec"
@@ -242,6 +248,74 @@ export async function withSetupLock<T>(output: string, callback: () => Promise<T
     closeSync(fd);
     unlinkSync(lock);
   }
+}
+
+export async function repairUndiciTypes(
+  source: string,
+  fetchPackage: (url: string) => Promise<Response> = url => fetch(url, { redirect: "error" }),
+) {
+  const node = join(source, "third_party", "node");
+  const lock = await Bun.file(join(node, "package-lock.json")).json();
+  const pin = lock.packages?.["node_modules/undici-types"];
+  if (
+    !pin ||
+    !/^\d+\.\d+\.\d+$/.test(pin.version ?? "") ||
+    pin.resolved !== `https://registry.npmjs.org/undici-types/-/undici-types-${pin.version}.tgz` ||
+    !/^sha512-[A-Za-z0-9+/]{86}==$/.test(pin.integrity ?? "")
+  ) {
+    throw new Error("Chromium undici-types lock entry must pin an official registry tarball and SHA512 integrity");
+  }
+  const target = join(node, "node_modules", "undici-types");
+  const metadata = await Bun.file(join(target, "package.json")).json();
+  if (metadata.name !== "undici-types" || metadata.version !== pin.version)
+    throw new Error("Chromium undici-types metadata does not match its dependency lock");
+  if (existsSync(join(target, "index.d.ts"))) return { version: pin.version as string, restoredFiles: 0 };
+  const response = await fetchPackage(pin.resolved);
+  if (!response.ok) throw new Error(`Chromium undici-types download failed (${response.status})`);
+  if (Number(response.headers.get("content-length") ?? "0") > 5 * 1024 * 1024)
+    throw new Error("Chromium undici-types archive exceeds budget");
+  const archive = new Uint8Array(await response.arrayBuffer());
+  if (archive.length > 5 * 1024 * 1024) throw new Error("Chromium undici-types archive exceeds budget");
+  const integrity = `sha512-${new Bun.CryptoHasher("sha512").update(archive).digest("base64")}`;
+  if (integrity !== pin.integrity) throw new Error("Chromium undici-types archive integrity mismatch");
+  const declarations: { path: string; bytes: Uint8Array }[] = [];
+  let total = 0;
+  for (const [path, file] of await new Bun.Archive(archive).files()) {
+    if (!path.endsWith(".d.ts")) continue;
+    const parts = path.split("/");
+    if (
+      parts[0] !== "package" ||
+      parts.length < 2 ||
+      parts.slice(1).some(part => !/^[A-Za-z0-9._-]+$/.test(part) || part === "." || part === "..")
+    ) {
+      throw new Error(`Unsafe Chromium undici-types declaration path: ${path}`);
+    }
+    const bytes = await file.bytes();
+    total += bytes.length;
+    if (total > 10 * 1024 * 1024) throw new Error("Chromium undici-types declarations exceed budget");
+    declarations.push({ path: parts.slice(1).join("/"), bytes });
+  }
+  if (!declarations.some(file => file.path === "index.d.ts"))
+    throw new Error("Chromium undici-types archive lacks index.d.ts");
+  for (const declaration of declarations) {
+    const output = Bun.file(join(target, declaration.path));
+    if (await output.exists()) {
+      const existing = await output.bytes();
+      if (!Buffer.from(existing).equals(Buffer.from(declaration.bytes)))
+        throw new Error(`Refusing to overwrite Chromium undici-types declaration: ${declaration.path}`);
+    }
+  }
+  let restoredFiles = 0;
+  for (const declaration of declarations
+    .filter(file => file.path !== "index.d.ts")
+    .concat(declarations.filter(file => file.path === "index.d.ts"))) {
+    const output = Bun.file(join(target, declaration.path));
+    if (!(await output.exists())) {
+      await Bun.write(output, declaration.bytes);
+      restoredFiles++;
+    }
+  }
+  return { version: pin.version as string, restoredFiles };
 }
 
 export async function main(args = process.argv.slice(2)) {
@@ -347,7 +421,21 @@ export async function main(args = process.argv.slice(2)) {
       if (!options.depotTools) mkdirSync(plan.sourceRoot, { recursive: true });
       ownedCommands = commandPlan(options, process.platform, currentConfigured, ROOT, depotPresent).setup;
     }
+    if (options.command === "gen" || options.command === "build") {
+      const repair = await repairUndiciTypes(plan.source);
+      if (repair.restoredFiles)
+        console.log(
+          `Restored ${repair.restoredFiles} Chromium undici-types ${repair.version} declarations from its verified lock`,
+        );
+    }
     for (const command of ownedCommands) await run(command, env);
+    if (!options.depotTools && (options.command === "setup" || options.command === "sync")) {
+      const repair = await repairUndiciTypes(plan.source);
+      if (repair.restoredFiles)
+        console.log(
+          `Restored ${repair.restoredFiles} Chromium undici-types ${repair.version} declarations from its verified lock`,
+        );
+    }
   });
 }
 

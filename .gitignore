@@ -68,6 +68,14 @@ Library/Caches
 /test.ts
 /testdir
 /build/
+# Local agent coordination and depot_tools bootstrap state stay outside source commits.
+/.coord/
+/.gclient
+/.gclient_entries
+/.gclient_previous_sync_commits
+/.gclient_last_sync_revision
+/.cipd/
+/.cipd_client
 cmake/sources
 build.ninja
 bun-binary

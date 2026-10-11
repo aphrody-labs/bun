@@ -33,8 +33,11 @@ Child processes receive depot_tools first in PATH, local Visual Studio selection
 path/line-ending settings. Existing host environment and Git configuration remain
 unchanged. depot_tools updates are explicit Git operations in its existing folder.
 Builds use Chromium's pinned GN, clang-cl and local Siso/autoninja, with the full
-`chrome` target. The default component build has debug symbols disabled to reduce
-disk use; upstream WebGPU settings are preserved.
+`chrome` target. Siso uses `--quiet --heartbeat_period 30s` to retain command
+errors and periodic progress without printing every build step. Its full logs
+remain in `out/bun/siso_output`, `siso_metrics.json` and `siso_trace.json`.
+The default component build has debug symbols disabled to reduce disk use;
+upstream WebGPU settings are preserved.
 
 ## Windows prerequisites and qualification
 
@@ -66,10 +69,11 @@ missing Windows architecture variables in this session: Python reported an empty
 machine architecture, causing `host_cpu` evaluation to fail. The launcher now
 restores `PROCESSOR_ARCHITECTURE` only in the child environment, preserving existing
 values and using the native Bun architecture as fallback. Real DEPS parsing passes
-without upstream changes. Dependency synchronization and a working browser
-artifact remain separate qualification steps.
+without upstream changes. Dependency synchronization and every hook subsequently
+completed successfully. Chromium's pinned GN generated 36,511 targets from 5,086
+files. A working browser artifact still requires completing the `chrome` build.
 
-The launcher passed eleven tests and 87 assertions through `bun bd -j4 test
+The launcher passed fourteen tests and 103 assertions through `bun bd -j4 test
 test/internal/chromium.test.ts`, including a real local Windows batch fixture.
 Type checking, oxlint, formatting and scope checks passed. Two existing native
 build blockers were corrected: a duplicate `graph_native` declaration and stale
@@ -82,7 +86,8 @@ This PC has an i7-13700F (16 cores, 24 threads), about 32 GiB RAM and a healthy
 Micron 2400 NVMe. Its high-performance power plan and AC sleep settings already
 satisfy long builds. The pagefile previously peaked near 29 GiB, so maximal CPU
 parallelism alone is not a useful default. Use eight jobs for dependency downloads
-and four for Chromium compilation initially; measure before increasing build jobs.
+and four for Chromium compilation initially; six were selected here after
+measuring about 15 GiB of free physical memory. Measure before increasing jobs.
 `bun bd -j4` bounds the Bun build factory without changing its configuration.
 Preserve existing build outputs and the shared 50 GiB sccache; cleaning these
 caches forces unnecessary recompilation.
@@ -104,3 +109,42 @@ For build measurements, set `NINJA_SUMMARIZE_BUILD=1` in the current terminal
 before `bun chromium build --jobs 4`. Source pins and bounded jobs avoid repeated
 work and excessive memory pressure; no download-rate improvement is claimed
 without comparable transfer measurements.
+
+During dependency synchronization, the physical Ethernet interface received
+654,501,746 bytes in 54.294 seconds (about 12.05 MB/s). This measures the entire
+interface, not an isolated Chromium transfer or a before/after speed increase.
+The first browser build reached 1,074 completed steps before encountering missing
+declarations in Chromium's filtered `undici-types` dependency. Preserve the build
+outputs when repairing dependencies so completed work can be reused.
+The preflight now restores only missing declarations from the exact
+`undici-types` version in Chromium's lockfile, checking its official tarball URL,
+SHA512 integrity and declaration paths before writing. Existing metadata and
+different local declarations are preserved. On this PC it restored 43 declarations
+for version 7.18.2; generation passed and the full browser build resumed.
+
+Chromium's Siso build currently keeps its upstream compiler command. Adding a
+`cc_wrapper` for sccache changes Siso's Windows command matching and disables
+precompiled headers; no full-build benefit has been qualified here. The existing
+Bun cache remains available. Siso's throughput-oriented batch mode is retained;
+`--fast_local` has no measured benefit for this full browser build.
+
+## Git and GitHub configuration
+
+The local `main` branch now tracks `origin/main` at `aphrody-labs/bun`, correcting
+its previous `bun-os/main` tracking. Local pushes default to `origin` with
+`push.default=simple`; pulls require fast-forward history. Fetch prunes stale
+remote refs and permits eight independent fetch workers. Local commit identity
+is `aphrody-dev <contact@aphrody.com>`. GitHub CLI's active `aphrody-dev` account
+has administrator access to this repository; existing Windows credential
+management is retained.
+
+There are currently no Git submodules or gitlinks in Bun. Recursive submodule
+fetch/update is disabled locally; explicit submodule operations permit eight
+fetch workers. Do not create a `.gitmodules` entry without an actual pinned
+gitlink. GN is vendored as tracked source with its provenance receipt; Chromium
+uses its own pinned DEPS and gclient solution. This preserves the one-folder
+layout and avoids duplicate dependency management.
+
+The shared ignore file excludes local coordination, build outputs, depot_tools
+bootstrap state and ignored vendor downloads. It does not untrack the existing
+vendored GN source. GitHub authentication secrets remain in the credential store.

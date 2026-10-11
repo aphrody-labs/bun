@@ -6,6 +6,7 @@ import {
   parseArguments,
   withSetupLock,
   CHROMIUM_REVISION,
+  repairUndiciTypes,
 } from "../../scripts/aphrody/chromium";
 import { join, resolve } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
@@ -42,6 +43,98 @@ test("Chromium setup resumes configured sources and avoids history or duplicate 
     `src@${CHROMIUM_REVISION}`,
   ]);
   expect(commandPlan(parseArguments(["--depot-tools", "setup"]), "linux", false, root).setup).toEqual([]);
+});
+
+async function undiciFixture(archiveFiles: Record<string, string>) {
+  const bytes = await new Bun.Archive(archiveFiles, { compress: "gzip" }).bytes();
+  const pin = {
+    version: "7.18.2",
+    resolved: "https://registry.npmjs.org/undici-types/-/undici-types-7.18.2.tgz",
+    integrity: `sha512-${new Bun.CryptoHasher("sha512").update(bytes).digest("base64")}`,
+  };
+  return {
+    bytes,
+    pin,
+    files: {
+      "third_party/node/package-lock.json": JSON.stringify({ packages: { "node_modules/undici-types": pin } }),
+      "third_party/node/node_modules/undici-types/package.json": JSON.stringify({
+        name: "undici-types",
+        version: "7.18.2",
+      }),
+      "third_party/node/node_modules/undici-types/LICENSE": "retained license",
+    },
+  };
+}
+
+test("Chromium repairs only missing locked declarations from a verified local archive and keeps metadata", async () => {
+  const fixture = await undiciFixture({
+    "package/index.d.ts": "export * from './client';",
+    "package/client.d.ts": "export interface Client {}",
+    "package/LICENSE": "archive license",
+    "package/package.json": "unwanted metadata",
+    "package/README.md": "unwanted readme",
+  });
+  using dir = tempDir("chromium-undici-repair", fixture.files);
+  using server = Bun.serve({ port: 0, fetch: () => new Response(fixture.bytes) });
+  let requested = "";
+  const result = await repairUndiciTypes(String(dir), url => {
+    requested = url;
+    return fetch(server.url);
+  });
+  const target = join(String(dir), "third_party/node/node_modules/undici-types");
+  expect(requested).toBe(fixture.pin.resolved);
+  expect(result).toEqual({ version: "7.18.2", restoredFiles: 2 });
+  expect(readFileSync(join(target, "index.d.ts"), "utf8")).toBe("export * from './client';");
+  expect(readFileSync(join(target, "client.d.ts"), "utf8")).toBe("export interface Client {}");
+  expect(readFileSync(join(target, "LICENSE"), "utf8")).toBe("retained license");
+  expect(readFileSync(join(target, "package.json"), "utf8")).toBe(
+    fixture.files["third_party/node/node_modules/undici-types/package.json"],
+  );
+  expect(existsSync(join(target, "README.md"))).toBe(false);
+  expect(
+    await repairUndiciTypes(String(dir), () => {
+      throw new Error("Should not fetch twice");
+    }),
+  ).toEqual({ version: "7.18.2", restoredFiles: 0 });
+});
+
+test("Chromium rejects mismatched undici archives and unsafe declarations before writing", async () => {
+  const fixture = await undiciFixture({ "package/index.d.ts": "export {};" });
+  using dir = tempDir("chromium-undici-integrity", fixture.files);
+  await expect(repairUndiciTypes(String(dir), async () => new Response("tampered archive"))).rejects.toThrow(
+    "integrity mismatch",
+  );
+  expect(existsSync(join(String(dir), "third_party/node/node_modules/undici-types/index.d.ts"))).toBe(false);
+  const malicious = await undiciFixture({ "package/index.d.ts": "export {};", "outside.d.ts": "unsafe" });
+  using unsafe = tempDir("chromium-undici-unsafe", malicious.files);
+  await expect(repairUndiciTypes(String(unsafe), async () => new Response(malicious.bytes))).rejects.toThrow(
+    "Unsafe Chromium",
+  );
+  expect(existsSync(join(String(unsafe), "third_party/node/node_modules/undici-types/index.d.ts"))).toBe(false);
+});
+
+test("Chromium declaration repair preserves existing differences and rejects untrusted lock URLs", async () => {
+  const fixture = await undiciFixture({ "package/index.d.ts": "export {};", "package/client.d.ts": "archive client" });
+  using dir = tempDir("chromium-undici-preserve", {
+    ...fixture.files,
+    "third_party/node/node_modules/undici-types/client.d.ts": "owner client",
+  });
+  await expect(repairUndiciTypes(String(dir), async () => new Response(fixture.bytes))).rejects.toThrow(
+    "Refusing to overwrite",
+  );
+  expect(readFileSync(join(String(dir), "third_party/node/node_modules/undici-types/client.d.ts"), "utf8")).toBe(
+    "owner client",
+  );
+  expect(existsSync(join(String(dir), "third_party/node/node_modules/undici-types/index.d.ts"))).toBe(false);
+  const lock = JSON.stringify({
+    packages: { "node_modules/undici-types": { ...fixture.pin, resolved: "https://other.invalid/package.tgz" } },
+  });
+  using invalid = tempDir("chromium-undici-lock", { ...fixture.files, "third_party/node/package-lock.json": lock });
+  await expect(
+    repairUndiciTypes(String(invalid), () => {
+      throw new Error("Must not fetch");
+    }),
+  ).rejects.toThrow("official registry tarball");
 });
 
 test("Chromium revision overrides remain exact commit pins for setup and sync", () => {
@@ -146,6 +239,9 @@ test("Chromium uses depot GN and autotools for the full local chrome target with
     "out/bun",
     "-j",
     "2",
+    "--quiet",
+    "--heartbeat_period",
+    "30s",
     "chrome",
   ]);
   expect(plan.build[1]!.cwd).toBe(join(root, "vendor", "chromium", "src"));
