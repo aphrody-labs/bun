@@ -602,8 +602,11 @@ describe("clean", () => {
 
 describe("upstream interface mirror", () => {
   test("adapts only the proven root-relative Pagefind dynamic loader", () => {
-    const loader = 'let c=["","_pagefind","pagefind.js"].join("/");Z=Function("u","return import(u)")(c)';
-    expect(rewritePagefindLoader(loader)).toBe('let c=["","_pagefind","pagefind.js"].join("/");Z=import(c)');
+    const loader =
+      'let c=["","_pagefind","pagefind.js"].join("/");Z=Function("u","return import(u)")(c)';
+    expect(rewritePagefindLoader(loader)).toBe(
+      'let c=["","_pagefind","pagefind.js"].join("/");Z=import(c)',
+    );
     expect(rewritePagefindLoader('import("./ordinary.js")')).toBe('import("./ordinary.js")');
     const backend = 'function init_pagefind(){};const file="pagefind.js";';
     expect(rewritePagefindLoader(backend)).toBe(backend);
@@ -612,8 +615,9 @@ describe("upstream interface mirror", () => {
       loader.replaceAll('"', "'"),
       loader.replace('["","_pagefind"', '["https://example.com","_pagefind"'),
       loader.replace("let c=", "let d="),
-      loader.replace('return import(u)', 'return import(u + "/other")'),
-    ]) expect(() => rewritePagefindLoader(malformed)).toThrow("Unsupported Pagefind loader");
+      loader.replace("return import(u)", 'return import(u + "/other")'),
+    ])
+      expect(() => rewritePagefindLoader(malformed)).toThrow("Unsupported Pagefind loader");
   });
   test("preserves upstream interaction code and reports fork provenance", () => {
     const source = "a".repeat(40);

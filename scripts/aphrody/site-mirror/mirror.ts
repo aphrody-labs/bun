@@ -266,7 +266,9 @@ export function buildMirror(
       } else if (path.endsWith(".js"))
         writeFileSync(
           join(root, path),
-          rewritePagefindLoader(rewriteInstallers(bytes.toString("utf8"), "https://bun.aphrody.com")),
+          rewritePagefindLoader(
+            rewriteInstallers(bytes.toString("utf8"), "https://bun.aphrody.com"),
+          ),
         );
       else writeFileSync(join(root, path), bytes);
       return {
