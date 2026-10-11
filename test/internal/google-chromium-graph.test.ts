@@ -11,10 +11,17 @@ import {
 } from "../../scripts/aphrody/google-chromium-graph";
 
 test("graph plan covers the owned domains and separates runtime from source tools", () => {
-  expect(DOMAINS).toEqual(["packages/bun-google", "packages/bun-aphrody-web", "src/browser"]);
+  expect(DOMAINS).toEqual([
+    "packages/bun-google",
+    "packages/bun-chromium",
+    "packages/bun-m3",
+    "packages/bun-aphrody-web",
+    "src/browser",
+  ]);
   expect(SURFACE_FILES).toContain("src/js/bun/google.ts");
   expect(SURFACE_FILES).toContain("scripts/aphrody/browser.ts");
   expect(SURFACE_FILES).toContain("scripts/aphrody/gn.ts");
+  expect(SURFACE_FILES).toContain("packages/bun-types/chrome.d.ts");
   expect(plan("checkout", "checkout/tmp/evidence").excluded).toContain(
     "vendor/chromium/src full source",
   );

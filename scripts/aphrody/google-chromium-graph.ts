@@ -8,7 +8,13 @@ import type { IndexResult } from "bun:graph-index";
 import { exportForkCapabilities } from "./fork-capabilities";
 import { writeGraphDocs } from "./graph-docs";
 
-export const DOMAINS = ["packages/bun-google", "packages/bun-aphrody-web", "src/browser"];
+export const DOMAINS = [
+  "packages/bun-google",
+  "packages/bun-chromium",
+  "packages/bun-m3",
+  "packages/bun-aphrody-web",
+  "src/browser",
+];
 export const SURFACE_FILES = [
   "src/js/bun/google.ts",
   "src/js/bun/chromium.ts",
@@ -17,6 +23,7 @@ export const SURFACE_FILES = [
   "src/resolve_builtins/HardcodedModule.rs",
   "packages/bun-types/google.d.ts",
   "packages/bun-types/chromium.d.ts",
+  "packages/bun-types/chrome.d.ts",
   "packages/bun-types/obscura.d.ts",
   "scripts/aphrody/browser.ts",
   "scripts/aphrody/chromium.ts",
@@ -223,8 +230,8 @@ export async function index(root: string, out: string) {
     concurrency: 1,
     artifactDirectory: join(selected.out, "snapshots"),
     maxFiles: 10000,
-    maxReadBytes: 2 * 1024 * 1024,
-    maxFileBytes: 512 * 1024,
+    maxReadBytes: 16 * 1024 * 1024,
+    maxFileBytes: 16 * 1024 * 1024,
   });
   const surface = await indexSurface(
     registry,

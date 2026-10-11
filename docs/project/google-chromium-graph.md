@@ -1,4 +1,5 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Google and browser source graph
 
 [google-chromium-graph.ts](../../scripts/aphrody/google-chromium-graph.ts) dispatches
@@ -11,10 +12,15 @@ bun scripts/aphrody/google-chromium-graph.ts export
 ```
 
 `index` reuses the fork capability catalog, pins the selected checkout HEAD and
-records its dirty state. `bun:graph-index` extracts the Google package, transferred
-web package and native browser source domains. `bun:graph-native` extracts an
+records its dirty state. `bun:graph-index` extracts the Google and Chromium SDKs,
+Bun M3 adapter, transferred web package and native browser source domains.
+Source reads and native file parsing use the owner's 16 MiB per-file limit,
+including files that exceeded the previous 512 KiB parsing limit. Larger files
+remain explicitly unqualified; size limits never become fabricated hashes or ASTs.
+`bun:graph-native` extracts an
 explicit supplementary file list for the Google/Chromium/Obscura builtins, SDK
-declarations, shared browser CLI, Chromium source commands and GN entry points.
+declarations (including the Chrome compatibility alias), shared browser CLI,
+Chromium source commands and GN entry points.
 JSON manifests and GN provenance are hashed file facts with unresolved AST coverage.
 
 The source HEAD and each observed source hash are separate evidence. A dirty
