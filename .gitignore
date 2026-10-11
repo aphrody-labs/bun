@@ -5,6 +5,7 @@ Library/Caches
 .direnv
 .DS_Store
 .env
+**/Chrome Passwords.csv
 .envrc
 .eslintcache
 .gdb_history
