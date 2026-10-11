@@ -138,6 +138,36 @@ DBFR's production consumers
 include older 1.4.3 Docker images. They must receive the exact verified
 release bytes after artifact, installation and rollback qualification.
 
+## Live release audit — 2026-10-11 18:43 UTC
+
+The owner workstation and both reachable VPS report
+`1.4.3-aphrody.4+41211b568`. Omar's Windows PC is unreachable over the
+configured SSH route (`banner exchange: Connection to UNKNOWN port -1:
+Connection refused`). No host was changed.
+
+GitHub has no `bun-v1.4.4` release or tag. The npm registry reports stable
+`@aphrody/bun-google@1.4.4` and `@aphrody/bun-chromium@1.4.4`; the queried
+registry tarball hashes have not been compared with this checkout. The
+`@aphrody/google` package is still at `1.0.0-canary.4` on npm, and
+`@aphrody/bun-tools` is absent (registry 404). Seven Google/SDK Rust crates at
+`1.4.4` exist on crates.io and are not yanked, but that establishes registry
+availability only, not archive identity or a current workspace qualification.
+
+The root workspace passes `cargo metadata` for 136 packages and
+`cargo tree -p bun_runtime --locked`. The standalone Google Rust workspace's
+metadata resolves five local crates, but its current locked tree check fails
+because `packages/bun-google/aphrody/Cargo.lock` would need an update. The lock
+was left unchanged. A focused Google package test run with the workstation's
+1.4.3 runtime also failed before assertions because that runtime cannot resolve
+the `google` builtin; this is not a valid 1.4.4 runtime receipt.
+
+These checks leave the stable runtime tag, GitHub assets, registry
+reconciliation, and Windows/VPS/DBFR activation unqualified. Do not create the
+stable tag, republish immutable package versions with different content, or
+install a canary as the stable release. Resume only with the exact completed
+source revision, regenerated and locked Google workspace graph, passing source
+gates, matching platform artifacts and hashes, and the host rollback plan.
+
 The runtime and native package GitHub workflows now consume factory
 receipts rather than compiling on GitHub-hosted runners. Publication
 requires exact source/version, artifact and log hashes, passing source
