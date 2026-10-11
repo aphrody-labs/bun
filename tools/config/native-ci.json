@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "repository": "bun-os",
+  "factoryRoot": "../aphrody",
+  "factoryModule": "packages/infra/workspace/src/build-factory.ts",
+  "factoryConfig": "tools/config/build-factory.json",
+  "fusionConfig": "tools/config/fusion-factory.json",
+  "sourceAllocation": {
+    "bun": "/home/ubuntu/builds/bun-os-factory/sources/bun",
+    "aphrody": "/home/ubuntu/builds/bun-os-factory/sources/aphrody",
+    "aphrodyRevision": "ef120352b87440ed278149039d7fd7551cb430cb"
+  },
+  "publication": "blocked-until-existing-release-owner-qualifies-artifacts",
+  "requiredPlatforms": ["windows-x64", "linux-x64", "darwin-arm64"],
+  "schedule": {
+    "owner": "aphrody-infra",
+    "enabled": false,
+    "reason": "Infra must qualify the declared clean checkout and sibling Aphrody source before activation"
+  }
+}

@@ -4,7 +4,7 @@
   "enabled": true,
   "target": "vps",
   "executionOnlyTargets": [],
-  "workspaceRoot": "/home/ubuntu/builds/bun-browser-fusion",
+  "workspaceRoot": "/home/ubuntu/builds/bun-os-factory/sources/bun",
   "cacheRoot": "/home/ubuntu/builds/bun-os-factory/cache",
   "artifactRoot": "/home/ubuntu/builds/bun-os-factory/artifacts",
   "lockPath": "/home/ubuntu/build/locks/heavy.lock",
@@ -53,7 +53,7 @@
     "cleanup": "existing-infra-allowlist-only"
   },
   "repositories": {
-    "bun-os": "/home/ubuntu/builds/bun-browser-fusion"
+    "bun-os": "/home/ubuntu/builds/bun-os-factory/sources/bun"
   },
   "cleanup": {
     "transientRoot": "/home/ubuntu/builds/bun-os-factory/transient",
