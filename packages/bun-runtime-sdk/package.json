@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-runtime-sdk",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "description": "SDK of the buv native runtime: versioned buv C ABI with compatible yolo exports and Bun, .NET and Python bindings",
   "license": "MIT AND Apache-2.0",
   "repository": {
@@ -31,6 +31,7 @@
     "./tooling-schema": "./src/tooling-schema.ts",
     "./desktop": "./src/desktop.ts",
     "./browser": "./src/browser.ts",
+    "./video/hls": "./src/video/hls.ts",
     "./gpu": "./src/gpu.ts",
     "./python": "./src/python.ts",
     "./dotnet": "./src/dotnet.ts",

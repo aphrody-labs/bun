@@ -7,7 +7,11 @@
   "exports": {
     ".": "./src/index.ts",
     "./mcp": "./src/mcp.ts",
-    "./capabilities": "./src/capabilities.ts"
+    "./capabilities": "./src/capabilities.ts",
+    "./hls": "./src/hls.ts"
   },
-  "license": "SEE LICENSE IN ../../vendor/bun-video/NOTICE.md"
+  "license": "SEE LICENSE IN ../../vendor/bun-video/NOTICE.md",
+  "dependencies": {
+    "@aphrody/bun-runtime-sdk": "file:../bun-runtime-sdk"
+  }
 }

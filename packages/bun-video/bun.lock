@@ -1,0 +1,15 @@
+{
+  "lockfileVersion": 2,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "@aphrody/bun-video",
+      "dependencies": {
+        "@aphrody/bun-runtime-sdk": "file:../bun-runtime-sdk",
+      },
+    },
+  },
+  "packages": {
+    "@aphrody/bun-runtime-sdk": ["@aphrody/bun-runtime-sdk@file:../bun-runtime-sdk", {}],
+  }
+}

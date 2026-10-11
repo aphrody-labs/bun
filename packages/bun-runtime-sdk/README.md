@@ -1,14 +1,44 @@
 # @aphrody/bun-runtime-sdk
 
+## Browser HLS lifecycle
+
+The pure `@aphrody/bun-runtime-sdk/video/hls` export does not load a native library or bundle a
+decoder. Supply a qualified HLS constructor and an explicit same-origin worker path:
+
+```ts
+import { attachHlsPlayback } from "@aphrody/bun-runtime-sdk/video/hls";
+
+const playback = attachHlsPlayback(video, Hls, {
+  src: "https://media.example/master.m3u8",
+  config: { workerPath: "/assets/vendor/hls/hls.worker.js" },
+  beforeStart(instance) {
+    instance.on(Hls.Events.ERROR, handlePlaybackError);
+  },
+});
+// Release this owned HLS instance when the source or component changes.
+playback.destroy();
+```
+
+Register listeners synchronously in `beforeStart`, before `attachMedia` or `loadSource` can emit
+events. Cleanup is idempotent, and startup failures destroy the owned instance without pausing
+or resetting unrelated media. This helper does not call `play`, implement native fallback or
+promise playback: the caller owns browser capability detection, recovery and media controls.
+Sources use HTTP(S) without embedded URL credentials. Workers must share the document origin;
+`ownerDocument.URL` supplies the page origin, independently of a document's `<base>` element;
+`pageUrl` supplies it when no document URL is available. The worker path is normalized to an
+absolute URL so a foreign `<base>` cannot redirect its resolution. Set `enableWorker:
+false` explicitly for a worker-free configuration. Worker validation does not prove worker
+execution or successful media decoding.
+
 SDK of the YOLO native runtime. One library, `yolo_runtime` (`crates/yolo-runtime`, C ABI in
 `include/yolo_runtime.h`, contract in `docs/RUNTIME-ABI.md`), with three bindings:
 
-| Consumer   | Binding                                              | Test                                     |
-| ---------- | ---------------------------------------------------- | ---------------------------------------- |
-| Bun        | `src/` through `bun:ffi`                             | `bun test test`                          |
-| .NET 10    | `dotnet/YoloRuntime` (`LibraryImport`, AOT-compatible) | `dotnet test dotnet/YoloRuntime.slnx`    |
-| Python     | `python/ctypes` (verified artifact), `python/pyo3` (`crates/yolo-pyo3`, maturin) | `bun run stage && bun run test:python` |
-| C, C++, Rust | `include/yolo_runtime.h`, `crates/yolo-core`       | `cargo test`                             |
+| Consumer     | Binding                                                                          | Test                                   |
+| ------------ | -------------------------------------------------------------------------------- | -------------------------------------- |
+| Bun          | `src/` through `bun:ffi`                                                         | `bun test test`                        |
+| .NET 10      | `dotnet/YoloRuntime` (`LibraryImport`, AOT-compatible)                           | `dotnet test dotnet/YoloRuntime.slnx`  |
+| Python       | `python/ctypes` (verified artifact), `python/pyo3` (`crates/yolo-pyo3`, maturin) | `bun run stage && bun run test:python` |
+| C, C++, Rust | `include/yolo_runtime.h`, `crates/yolo-core`                                     | `cargo test`                           |
 
 ```sh
 cargo build --profile runtime -p yolo-runtime   # target/runtime/yolo_runtime.{dll,so,dylib}, panic=unwind
@@ -22,7 +52,11 @@ Supervised children run in their own process group on Unix and in a Job Object o
 import { Runtime } from "@aphrody/bun-runtime-sdk";
 
 using runtime = Runtime.load(); // verified artifact, ABI negotiated first
-using child = runtime.spawn({ program: "server", args: ["--port", "8080"], stdio: "capture" });
+using child = runtime.spawn({
+  program: "server",
+  args: ["--port", "8080"],
+  stdio: "capture",
+});
 await child.waitForHttp({ port: 8080, path: "/health" });
 await child.stopAsync(2000);
 ```
@@ -43,7 +77,9 @@ using child = runtime.spawn({
   stdio: "capture-lossless",
   maxOutputBytes: 8 * 1024 * 1024, // per stream, total across all drains
 });
-const { stdout, stderr, status } = await child.collectOutput({ timeoutMs: 30_000 });
+const { stdout, stderr, status } = await child.collectOutput({
+  timeoutMs: 30_000,
+});
 // stdout/stderr are owned Uint8Arrays; arbitrary bytes survive without UTF-8 decoding.
 ```
 
