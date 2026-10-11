@@ -138,6 +138,7 @@ pub mod task_tag {
         AsyncCpTask,
         ShellAsyncCpTask,
         StreamPending,
+        BrowserRealmRelease,      // bun_runtime::api::BrowserRealm::ReleaseTask
         ThreadSafeFunction,
         ValkeyDeferredClose,
         ValkeyDeferredFailure,

@@ -2,8 +2,10 @@
   "name": "bun",
   "version": "1.4.4",
   "private": true,
+  "repository": "github:aphrody-labs/bun-os",
   "workspaces": [
-    "./packages/bun-types"
+    "./packages/bun-types",
+    "./packages/bun-web"
   ],
   "scripts": {
     "bun:windows": "bun scripts/aphrody/win/version-sync.ts",
@@ -24,6 +26,7 @@
     "agent-plugin": "bun scripts/aphrody/agent-plugin.ts",
     "release:surfaces": "bun scripts/aphrody/release-surfaces.ts",
     "delivery": "bun scripts/aphrody/monorepo-delivery.ts",
+    "verify:fusion": "bun scripts/aphrody/verify-fusion.ts",
     "delivery:native": "bun scripts/aphrody/delivery-native.ts",
     "build:debug": "bun scripts/build.ts --profile=debug",
     "build:debug:fuzzilli": "bun scripts/build.ts --profile=debug --fuzzilli=on --build-dir=build/debug-fuzz",

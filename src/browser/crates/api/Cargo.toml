@@ -1,0 +1,47 @@
+[package]
+name = "bun_browser"
+version = "1.4.4"
+edition = "2021"
+description = "Rust API for the BunBrowser headless browser"
+readme = "README.md"
+repository = "https://github.com/aphrody-labs/bun-os"
+license = "Apache-2.0"
+[features]
+default = ["api"]
+api = ["bun_browser_browser", "bun_browser_net", "tokio"]
+stealth = ["api", "bun_browser_browser/stealth"]
+render = ["api", "bun_browser_browser/render"]
+
+[dependencies]
+bun_browser_browser = { workspace = true, optional = true }
+bun_browser_net = { workspace = true, optional = true }
+anyhow = { workspace = true }
+tokio = { workspace = true, optional = true }
+thiserror = { workspace = true }
+serde_json = { workspace = true }
+serde = { workspace = true }
+url = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+
+[[example]]
+name = "basic"
+required-features = ["stealth"]
+
+# Vendored upstream code (h4ckf0r0day/obscura): not held to the aphrody lint
+# set, so the workspace -D warnings gate does not rewrite upstream style.
+[lints.rust]
+warnings = "allow"
+unexpected_cfgs = "allow"
+# `-D warnings` on the command line outranks the group above; name the groups
+# upstream code actually trips so the vendored tree stays out of the gate.
+unused = { level = "allow", priority = -1 }
+deprecated = "allow"
+
+[lints.clippy]
+all = { level = "allow", priority = -1 }
+pedantic = { level = "allow", priority = -1 }
+
+[lib]
+name = "bun_browser"

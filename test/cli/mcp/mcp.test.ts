@@ -159,6 +159,8 @@ describe.concurrent("bun mcp", () => {
       "graph_path",
       "graph_community",
       "graph_impact",
+      "html_parse",
+      "css_parse",
       "vfs_find",
       "vfs_grep",
       "vfs_edit",
@@ -169,6 +171,94 @@ describe.concurrent("bun mcp", () => {
     ])
       expect(names).toContain(name);
     for (const name of ["read_file", "write_file", "edit_file", "shell"]) expect(names).not.toContain(name);
+  });
+
+  test("native browser MCP parses inert HTML using the shared browser DOM", async () => {
+    using dir = tempDir("mcp-browser-html", {});
+    await using server = mcp(String(dir), String(dir));
+    await server.initialize();
+    const reply = await server.call("html_parse", {
+      html: "<!doctype html><script>process.exit(99)</script><table><tr><td>A &amp; B</table><p id='first'>one<p>two",
+      selector: "table > tbody > tr > td, p", include_html: true, limit: 10,
+    });
+    expect(reply.isError).toBe(false);
+    const result = JSON.parse(reply.content[0].text);
+    expect(result.engine).toBe("bun_browser_dom");
+    expect(result.inert).toBe(true);
+    expect(result.matches).toBe(3);
+    expect(result.nodes.map((node: Json) => node.text)).toEqual(["A & B", "one", "two"]);
+    expect(result.nodes[0].html).toBe("<td>A &amp; B</td>");
+    const other = await server.call("html_parse", { html: "<p>independent</p>", selector: "#first" });
+    expect(JSON.parse(other.content[0].text).matches).toBe(0);
+  });
+
+  test("native browser MCP CSS uses shared AST recovery and preserves URLs and rule order", async () => {
+    using dir = tempDir("mcp-browser-css", {});
+    await using server = mcp(String(dir), String(dir));
+    await server.initialize();
+    const reply = await server.call("css_parse", {
+      css: '@layer reset, app; .a { width: ; height: 7px; background-image: url(../asset.svg#icon) } .a { height: 9px !important }',
+    });
+    expect(reply.isError).toBe(false);
+    const result = JSON.parse(reply.content[0].text);
+    expect(result.engine).toBe("bun_css");
+    expect(result.recovery).toBe(true);
+    expect(result.rules_total).toBe(3);
+    expect(result.rules[0].prelude).toStartWith("@layer");
+    expect(result.rules[0].body).toBeNull();
+    expect(result.rules[1].body).toContain("height: 7px");
+    expect(result.rules[1].body).toContain("../asset.svg#icon");
+    expect(result.rules[2].body).toContain("!important");
+  });
+
+  test("native browser MCP uses existing tool-error results for selectors, types and limits", async () => {
+    using dir = tempDir("mcp-browser-invalid", {});
+    await using server = mcp(String(dir), String(dir));
+    await server.initialize();
+    for (const [name, args] of [
+      ["html_parse", { html: "<p>x</p>", selector: "[" }],
+      ["html_parse", { html: "<p>x</p>", selector: 9 }],
+      ["html_parse", { html: "<p>x</p>", include_html: "yes" }],
+      ["html_parse", { html: null }],
+      ["css_parse", { css: ".a{}", limit: 101 }],
+      ["css_parse", { css: ".a{}", limit: 1.5 }],
+      ["css_parse", { css: ".a{}", limit: 0 }],
+      ["css_parse", { css: 1 }],
+    ] as const) {
+      const reply = await server.request("tools/call", { name, arguments: args });
+      expect(reply.result.isError).toBe(true);
+      expect(reply.result.content[0].text).toContain(`Invalid arguments for ${name}`);
+    }
+    for (const name of ["html_parse", "css_parse"]) {
+      const key = name === "html_parse" ? "html" : "css";
+      const reply = await server.request("tools/call", { name, arguments: { [key]: "a".repeat(2 * 1024 * 1024 + 1) } });
+      expect(reply.result.isError).toBe(true);
+      expect(reply.result.content[0].text).toContain("2 MiB");
+    }
+  });
+
+  test("native browser MCP bounds UTF-8 previews, node counts and JSON output", async () => {
+    using dir = tempDir("mcp-browser-budget", {});
+    await using server = mcp(String(dir), String(dir));
+    await server.initialize();
+    const reply = await server.call("html_parse", {
+      html: `<p>${"日".repeat(400)}</p>`.repeat(150), selector: "p", limit: 100,
+      include_html: true, max_tokens: 50000,
+    });
+    expect(reply.isError).toBe(false);
+    expect(new TextEncoder().encode(reply.content[0].text).byteLength).toBeLessThanOrEqual(48 * 1024);
+    const result = JSON.parse(reply.content[0].text);
+    expect(result.matches).toBe(150);
+    expect(result.returned).toBeGreaterThan(0);
+    expect(result.returned).toBeLessThanOrEqual(100);
+    expect(result.truncated).toBe(true);
+    expect(result.nodes[0].text_truncated).toBe(true);
+    expect(result.nodes[0].text).toMatch(/^日+$/);
+    const css = await server.call("css_parse", { css: ".a{height:3px}.b{width:4px}", limit: 1 });
+    const projected = JSON.parse(css.content[0].text);
+    expect(projected.rules_total).toBe(2);
+    expect(projected.returned).toBe(1);
+    expect(projected.truncated).toBe(true);
   });
 
   test("docs_search finds Bun.serve, docs_read pages with a cursor", async () => {

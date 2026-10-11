@@ -1,0 +1,2 @@
+# Preserve the exact imported bytes used by MIGRATION.json on every host.
+* -text whitespace=cr-at-eol

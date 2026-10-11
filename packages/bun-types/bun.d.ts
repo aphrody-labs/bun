@@ -1128,9 +1128,44 @@ declare module "bun" {
     ): T extends Function | symbol | undefined ? undefined : T extends object ? string : string | undefined;
   }
 
-  /**
-   * XML related APIs
+  /** Persistent HTML5 DOM backed by the same tree as the native browser engine. */
+  namespace HTML {
+    /** Parse inert markup. Scripts and network resources are never executed. */
+    function parse(markup: string): HTMLDocument;
+    /** Project top-level rules using Bun's CSS AST with browser error recovery.
+     * Does not fetch resources, minify, or apply a DOM cascade.
+     */
+    function parseCSS(source: string): Array<{ prelude: string; body: string | null }>;
+  }
+
+  interface HTMLDocument {
+    /** Return numeric node identifiers scoped to this document. */
+    select(selector: string): number[];
+    /** Serialize a node, or the complete document when omitted. */
+    html(node?: number): string;
+    /** Return descendant text, or document text when omitted. */
+    text(node?: number): string;
+    attribute(node: number, name: string): string | null;
+    setAttribute(node: number, name: string, value: string): void;
+  }
+
+  /** A bare ECMAScript realm sharing this runtime's JSC VM and a native DOM.
+   * Origin/frame strings are metadata, not permission grants. Creation is a
+   * privileged host operation; do not expose it to remote page scripts.
    */
+  namespace BrowserRealm {
+    function create(document: HTMLDocument, origin: string, frameId: string): BrowserRealm;
+  }
+  interface BrowserRealm {
+    /** Evaluate synchronously and return a string; values never cross realms.
+     * No modules, host globals, network, or asynchronous tasks are granted.
+     */
+    evaluate(source: string, sourceURL?: string, timeoutMs?: number): string;
+    /** Release native context resources. Calling again is harmless. */
+    destroy(): void;
+  }
+
+  /** XML related APIs */
   namespace XML {
     // ── compact shape ──────────────────────────────────────────────────────
 

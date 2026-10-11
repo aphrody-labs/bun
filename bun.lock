@@ -22,10 +22,15 @@
     },
     "packages/bun-types": {
       "name": "@aphrody/bun-types",
+      "version": "1.4.4",
       "dependencies": {
         "@types/node": "*",
         "undici-types": "*",
       },
+    },
+    "packages/bun-web": {
+      "name": "@aphrody/bun-web",
+      "version": "1.4.4",
     },
   },
   "overrides": {
@@ -34,6 +39,8 @@
   },
   "packages": {
     "@aphrody/bun-types": ["@aphrody/bun-types@workspace:packages/bun-types"],
+
+    "@aphrody/bun-web": ["@aphrody/bun-web@workspace:packages/bun-web"],
 
     "@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.21.5", "", { "os": "aix", "cpu": "ppc64" }, "sha512-1SDgH6ZSPTlggy1yI6+Dbkiz8xzpHJEVAlF/AM1tHPLsf5STom9rwtjE4hKAF20FfXXNTFqEYXyJNWh1GiZedQ=="],
 

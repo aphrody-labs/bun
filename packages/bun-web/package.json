@@ -1,0 +1,16 @@
+{
+  "name": "@aphrody/bun-web",
+  "version": "1.4.4",
+  "private": true,
+  "type": "module",
+  "description": "Internal browser SDK modules using Bun.WebView and the Bun browser provider.",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/index.ts",
+    "./cdp": "./src/cdp.ts",
+    "./locator": "./src/locator.ts",
+    "./selectors": "./src/selectors.ts",
+    "./types": "./src/types.ts"
+  },
+  "engines": { "bun": ">=1.4.3" }
+}

@@ -14,6 +14,7 @@ path = "lib.rs"
 workspace = true
 
 [dependencies]
+bun_browser_dom.workspace = true
 aphrody-oxc-tools = { path = "../../packages/bun-oxc/crates/oxc-tools" }
 aphrody-oxc-bridge = { path = "../../packages/bun-oxc/crates/oxc-bridge" }
 oxc_linter = { path = "../../vendor/oxc/crates/oxc_linter", features = ["ruledocs"] }
