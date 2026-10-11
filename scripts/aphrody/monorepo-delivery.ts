@@ -1,6 +1,15 @@
 #!/usr/bin/env bun
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, mkdirSync, realpathSync, renameSync, statfsSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  realpathSync,
+  renameSync,
+  statfsSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { freemem } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
@@ -99,6 +108,21 @@ function deliveryJobPath(root: string, id: string) {
   return join(root, "tmp", "monorepo-delivery-jobs", id, "job.json");
 }
 
+export async function installTargetSnapshotHash(target: string) {
+  if (existsSync(target) && (!lstatSync(target).isDirectory() || lstatSync(target).isSymbolicLink()))
+    throw new Error("Install target must be a real directory");
+  const manifests = await Promise.all(
+    ["package.json", "bun.lock", "bun.lockb"].map(async name => {
+      const path = join(target, name);
+      if (!existsSync(path)) return [name, null] as const;
+      if (!lstatSync(path).isFile() || lstatSync(path).isSymbolicLink())
+        throw new Error(`Install target manifest must be a regular file: ${name}`);
+      return [name, sha256(new Uint8Array(await Bun.file(path).arrayBuffer()))] as const;
+    }),
+  );
+  return sha256(JSON.stringify(manifests));
+}
+
 export async function readDeliveryJob(root: string, id: string): Promise<DeliveryJob> {
   const path = deliveryJobPath(root, id);
   await validateExecutionReceiptPath(root, root, path, { allowJobId: id });
@@ -107,8 +131,12 @@ export async function readDeliveryJob(root: string, id: string): Promise<Deliver
   if (
     job.schema !== 1 ||
     job.id !== id ||
+    !["launching", "running", "succeeded", "failed"].includes(job.state) ||
+    typeof job.operation !== "string" ||
     !Array.isArray(job.args) ||
     !Array.isArray(job.requestArgs) ||
+    !job.args.every(argument => typeof argument === "string") ||
+    !job.requestArgs.every(argument => typeof argument === "string") ||
     !/^[a-f0-9]{40}$/.test(job.sourceRevision) ||
     !/^[a-f0-9]{64}$/.test(job.inputHash) ||
     sha256(JSON.stringify({ revision: job.sourceRevision, operation: job.operation, args: job.requestArgs })) !==
@@ -120,6 +148,8 @@ export async function readDeliveryJob(root: string, id: string): Promise<Deliver
     JSON.stringify(job.args) !==
     JSON.stringify([
       ...job.requestArgs,
+      "--job",
+      id,
       "--out",
       join(directory, "report.json"),
       "--execution-receipt",
@@ -162,6 +192,8 @@ export async function submitDeliveryJob(
   const stderrPath = join(dirname(path), "stderr.log");
   const jobArgs = [
     ...args,
+    "--job",
+    id,
     "--out",
     join(dirname(path), "report.json"),
     "--execution-receipt",
@@ -1068,6 +1100,8 @@ export async function main(args = Bun.argv.slice(2)) {
       "execution-receipt": { type: "string" },
       "snapshot-hash": { type: "string" },
       "profile-hash": { type: "string" },
+      "manifest-hash": { type: "string" },
+      "target-hash": { type: "string" },
       detach: { type: "boolean" },
       status: { type: "boolean" },
       job: { type: "string" },
@@ -1092,9 +1126,7 @@ export async function main(args = Bun.argv.slice(2)) {
   if (!["inventory", "build", "release-check", "release-publish", "install"].includes(operation))
     throw new Error(`Unknown operation: ${operation}`);
   if (values.detach && (!values.apply || operation === "inventory"))
-    throw new Error("Detached delivery requires --apply and a mutating build or release operation");
-  if (values.detach && operation === "install")
-    throw new Error("Detached install requires the durable owner factory; submit it through Aphrody Infra");
+    throw new Error("Detached delivery requires --apply and a mutating operation");
   const report: Manifest = { inventory: data };
   if (values["check-upstream"]) report.upstreams = await upstreamReport(data, root);
   if (values["check-registry"])
@@ -1168,7 +1200,12 @@ export async function main(args = Bun.argv.slice(2)) {
   if (operation === "install") {
     if (!values.manifest || !values.target)
       throw new Error("Install requires --manifest qualified registry report and --target exact consumer directory");
-    const lock = (await Bun.file(resolve(values.manifest)).json()) as Manifest;
+    const manifestPath = resolve(values.manifest);
+    const manifestBytes = new Uint8Array(await Bun.file(manifestPath).arrayBuffer());
+    const manifestHash = sha256(manifestBytes);
+    if (values["manifest-hash"] && manifestHash !== values["manifest-hash"])
+      throw new Error("Installation manifest changed after detached job submission");
+    const lock = JSON.parse(new TextDecoder().decode(manifestBytes)) as Manifest;
     const selected = lock.installation as Awaited<ReturnType<typeof publishedPackages>>;
     if (!selected || lock.inventory?.source?.revision !== data.source.revision)
       throw new Error("Installation manifest source revision mismatch");
@@ -1181,26 +1218,65 @@ export async function main(args = Bun.argv.slice(2)) {
       packages: selected.packages.map(p => `${p.name}@${p.version}`),
       unavailable: selected.unavailable,
     };
-    if (values.apply) {
+    if (values.detach) {
+      const targetHash = await installTargetSnapshotHash(target);
+      if (values["target-hash"] && targetHash !== values["target-hash"])
+        throw new Error("Install target manifests changed after detached job submission");
+      const jobArgs = [
+        "--root",
+        root,
+        "--operation",
+        "install",
+        "--manifest",
+        manifestPath,
+        "--manifest-hash",
+        manifestHash,
+        "--target",
+        target,
+        "--target-hash",
+        targetHash,
+        "--apply",
+      ];
+      if (values["allow-partial"]) jobArgs.push("--allow-partial");
+      report.job = await submitDeliveryJob(root, data.source, operation, jobArgs, values.job);
+    } else if (values.apply) {
       mkdirSync(target, { recursive: true });
-      const artifacts: string[] = [];
-      for (const p of selected.packages) {
-        if (p.sourceRevision !== data.source.revision || !p.tarball.startsWith("https://registry.npmjs.org/"))
-          throw new Error(`Unqualified artifact: ${p.name}`);
-        const response = await fetch(p.tarball);
-        if (!response.ok) throw new Error(`Artifact ${p.name}: HTTP ${response.status}`);
-        const bytes = new Uint8Array(await response.arrayBuffer());
-        verifyIntegrity(bytes, p.integrity);
-        const file = join(target, ".bun-delivery", `${sha256(bytes)}.tgz`);
-        await Bun.write(file, bytes);
-        artifacts.push(file);
+      const artifactDirectory = join(target, ".bun-delivery");
+      mkdirSync(artifactDirectory, { recursive: true });
+      if (!lstatSync(artifactDirectory).isDirectory() || lstatSync(artifactDirectory).isSymbolicLink())
+        throw new Error("Install artifact directory must be a real directory");
+      const installLock = join(artifactDirectory, "install.lock");
+      try {
+        writeFileSync(installLock, `${values.job ?? `pid-${process.pid}`}\n`, { flag: "wx" });
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "EEXIST")
+          throw new Error("Install target is locked by another or unreconciled delivery job");
+        throw error;
       }
-      const child = Bun.spawn([process.execPath, "add", "--exact", ...artifacts], {
-        cwd: target,
-        stdout: "inherit",
-        stderr: "inherit",
-      });
-      if (await child.exited) throw new Error("Consumer installation failed");
+      try {
+        if (values["target-hash"] && (await installTargetSnapshotHash(target)) !== values["target-hash"])
+          throw new Error("Install target manifests changed before the worker acquired its lock");
+        const artifacts: string[] = [];
+        for (const p of selected.packages) {
+          if (p.sourceRevision !== data.source.revision || !p.tarball.startsWith("https://registry.npmjs.org/"))
+            throw new Error(`Unqualified artifact: ${p.name}`);
+          const response = await fetch(p.tarball);
+          if (!response.ok) throw new Error(`Artifact ${p.name}: HTTP ${response.status}`);
+          const bytes = new Uint8Array(await response.arrayBuffer());
+          verifyIntegrity(bytes, p.integrity);
+          const file = join(artifactDirectory, `${sha256(bytes)}.tgz`);
+          await Bun.write(file, bytes);
+          artifacts.push(file);
+        }
+        const child = Bun.spawn([process.execPath, "add", "--exact", ...artifacts], {
+          cwd: target,
+          stdout: "inherit",
+          stderr: "inherit",
+        });
+        if (await child.exited) throw new Error("Consumer installation failed");
+      } finally {
+        unlinkSync(installLock);
+      }
     }
   }
   const output = JSON.stringify(report, null, 2) + "\n";

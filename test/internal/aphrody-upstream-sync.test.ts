@@ -13,6 +13,7 @@ import {
   dependencyOrder,
   executeDeliveryPlan,
   executionInputHash,
+  installTargetSnapshotHash,
   inventory,
   plan,
   readDeliveryJob,
@@ -258,6 +259,18 @@ test("delivery jobs hand off once and keep durable idempotent receipts", async (
     submitDeliveryJob(root, source, "inventory", ["--operation", "different"], submitted.id, { launch: false }),
   ).rejects.toThrow("different inputs");
   await expect(readDeliveryJob(root, "../protected")).rejects.toThrow("Invalid delivery job ID");
+}, 15000);
+
+test("detached install target fingerprints track manifests and reject symlink roots", async () => {
+  using directory = tempDir("delivery-install-target", { "package.json": JSON.stringify({ name: "consumer" }) });
+  const target = String(directory);
+  const initial = await installTargetSnapshotHash(target);
+  await Bun.write(join(target, "bun.lock"), "lock-v1");
+  const withLock = await installTargetSnapshotHash(target);
+  expect(withLock).not.toBe(initial);
+  await Bun.write(join(target, "package.json"), JSON.stringify({ name: "changed-consumer" }));
+  expect(await installTargetSnapshotHash(target)).not.toBe(withLock);
+  await expect(installTargetSnapshotHash(join(target, "package.json"))).rejects.toThrow("real directory");
 });
 
 test("delivery scheduler overlaps independent light commands and waits for DAG prerequisites", async () => {

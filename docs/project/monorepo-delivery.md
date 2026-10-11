@@ -64,10 +64,19 @@ The status command reports `launching`, `running`, `succeeded` or `failed`;
 `launching` means the submitting process handed off the worker but its first
 status write has not yet been observed. A detached worker still requires a
 clean checkout at the exact source revision, a fresh capacity profile, and the
-normal release gates. Detached install remains owned by the durable Aphrody
-factory because consumer-directory mutations need its target lock and receipt
-reconciliation. GitHub Actions workflow runs likewise use GitHub's run identity
-and logs; they are not local Bun delivery job records.
+normal release gates. Install jobs can also be detached once their exact
+registry report, target manifests and target directory are qualified:
+
+```sh
+bun scripts/aphrody/monorepo-delivery.ts --operation install --manifest delivery-qualified.json --target /absolute/consumer --allow-partial --apply --detach
+```
+
+The worker rechecks the report and target hashes after handoff, then holds a
+per-target install lock while downloading and applying exact artifacts. A
+crashed worker can leave that lock behind; inspect its job receipt and target
+before clearing it. Reconciliation never replays the install automatically.
+GitHub Actions workflow runs likewise use GitHub's run identity and logs; they
+are not local Bun delivery job records.
 
 ## One-click consumer installation
 
