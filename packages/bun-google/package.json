@@ -20,7 +20,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./services": "./src/services.ts",
-    "./cli": "./src/cli.ts"
+    "./cli": "./src/cli.ts",
+    "./search": "./src/search.ts"
   },
   "scripts": {
     "config": "bun src/cli.ts config",

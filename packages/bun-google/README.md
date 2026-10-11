@@ -45,6 +45,23 @@ and [Gemini generateContent](https://ai.google.dev/api/generate-content) referen
 
 ## Commands and source catalog
 
+The `./search` subpath exports `createGooglePublicSearch`. This bounded anonymous
+adapter calls the existing `aphrody web search` Rust SERP owner with `--no-auth`,
+`--safe`, fixed google.com and `--transport fetch`. It never falls back to a
+browser or loads account cookies. The existing owner may send its constant SOCS
+consent preference cookie; there are no user/session cookies. Bounds: four jobs,
+20-second cancellation deadline, 1 MiB output, 1–20 results and offset at most 1000. Query/organic output preserves the M3 search response contract. It does not
+extend the authenticated `bun:google` endpoint allowlist or copy a SERP parser.
+
+The public Bun download/site server routes `/api/search` only for declared site
+hosts. It forces web SafeSearch, rejects privileged parameters, drops incoming
+auth/cookie headers and returns a redacted 503 when Google blocks the request.
+Deployments install `@aphrody/bun-google/search` or explicitly configure its source
+module via `GOOGLE_SEARCH_SDK_MODULE`, and qualify `GOOGLE_SEARCH_OWNER`/aphrody.
+This is a capability-owner CLI adapter, not an in-process native search binding.
+The Windows anonymous live probe on 2026-10-11 was blocked by Google; fixture
+success does not establish production availability. No auth fallback was attempted.
+
 `createAntigravityServices` implements Cloud Code models/bootstrap, regional Vertex
 generation, Daily Cloud Code SSE decoding and userinfo. `createAntigravityCredentialProvider`
 reads the desktop OAuth envelope by explicit Windows target; it never refreshes or writes.
