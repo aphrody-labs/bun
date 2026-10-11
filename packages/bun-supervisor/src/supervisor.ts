@@ -89,7 +89,7 @@ export class Supervisor {
     this.name = opts.name;
     this.budget = opts.budget;
     this.#opts = opts;
-    this.#log = opts.log ?? ((m) => console.error(`[supervisor ${opts.name}] ${m}`));
+    this.#log = opts.log ?? (m => console.error(`[supervisor ${opts.name}] ${m}`));
   }
 
   get children(): readonly SupervisedChild[] {
@@ -107,7 +107,6 @@ export class Supervisor {
   spawnSelf(name: string, args: string[], spec: SpawnSelfOptions = {}): SupervisedChild {
     if (this.#draining) throw new Error("supervisor is draining");
     const budget = this.budget.child(name, { weight: spec.weight, min: spec.min, max: spec.max });
-    let markReady!: () => void;
     const e: Entry = {
       name,
       args,
@@ -118,17 +117,17 @@ export class Supervisor {
       failures: 0,
       timer: undefined,
       readyP: undefined as unknown as Promise<void>,
-      markReady,
+      markReady: () => {},
       offs: [],
       pid: undefined,
       state: "starting",
       restarts: 0,
       lastMem: undefined,
-      send: (msg) => this.#send(e, msg),
+      send: msg => this.#send(e, msg),
     };
     e.offs.push(
-      budget.onResize((bytes) => void e.send({ type: "budget", bytes })),
-      budget.onShrink((level) => void e.send({ type: "shrink", level })),
+      budget.onResize(bytes => void e.send({ type: "budget", bytes })),
+      budget.onShrink(level => void e.send({ type: "shrink", level })),
       budget.onIdle(() => void e.send({ type: "idle" })),
     );
     this.#entries.push(e);
@@ -139,7 +138,7 @@ export class Supervisor {
   /** Tells systemd the service is ready once every child is ready. */
   async ready(status = "ready"): Promise<void> {
     for (;;) {
-      const waiting = this.#entries.map((e) => e.readyP);
+      const waiting = this.#entries.map(e => e.readyP);
       await Promise.all(waiting);
       if (this.#entries.every((e, i) => e.readyP === waiting[i])) break;
     }
@@ -152,9 +151,8 @@ export class Supervisor {
       this.#server = Bun.serve({
         hostname: "127.0.0.1",
         port: this.#opts.healthPort,
-        fetch: async (req) => {
-          if (new URL(req.url).pathname !== "/healthz")
-            return new Response("not found", { status: 404 });
+        fetch: async req => {
+          if (new URL(req.url).pathname !== "/healthz") return new Response("not found", { status: 404 });
           const healthy = await this.healthy();
           return Response.json(await this.status(healthy), { status: healthy ? 200 : 503 });
         },
@@ -176,9 +174,7 @@ export class Supervisor {
     if (!this.#draining) {
       for (const e of this.#entries) {
         const ok =
-          e.state === "starting" ||
-          e.state === "ready" ||
-          (e.state === "exited" && e.spec.restart === "never");
+          e.state === "starting" || e.state === "ready" || (e.state === "exited" && e.spec.restart === "never");
         if (!ok) return false;
       }
     }
@@ -198,7 +194,7 @@ export class Supervisor {
       pid: process.pid,
       rss: process.memoryUsage().rss,
       pressure: this.#opts.pressure?.level(),
-      children: this.#entries.map((e) => ({
+      children: this.#entries.map(e => ({
         name: e.name,
         state: e.state,
         pid: e.pid,
@@ -244,17 +240,15 @@ export class Supervisor {
     }
     const live = [...this.#entries]
       .reverse()
-      .filter((e) => e.proc)
-      .map((e) => ({ e, proc: e.proc! }));
+      .filter(e => e.proc)
+      .map(e => ({ e, proc: e.proc! }));
     for (const { proc } of live) {
       try {
         proc.kill("SIGTERM");
       } catch {}
     }
     let deadline: ReturnType<typeof setTimeout> | undefined;
-    const timeout = new Promise<"timeout">(
-      (r) => (deadline = setTimeout(() => r("timeout"), drainMs)),
-    );
+    const timeout = new Promise<"timeout">(r => (deadline = setTimeout(() => r("timeout"), drainMs)));
     for (const { e, proc } of live) {
       if ((await Promise.race([proc.exited, timeout])) === "timeout") {
         this.#log(`${e.name} ignored SIGTERM for ${drainMs} ms, sending SIGKILL`);
@@ -295,7 +289,7 @@ export class Supervisor {
   #launch(e: Entry): void {
     e.timer = undefined;
     e.state = "starting";
-    e.readyP = new Promise<void>((r) => (e.markReady = r));
+    e.readyP = new Promise<void>(r => (e.markReady = r));
     const bytes = e.budget.bytes;
     const env: Record<string, string | undefined> = { ...process.env };
     for (const k of STRIPPED) delete env[k];
@@ -319,8 +313,7 @@ export class Supervisor {
         e.spec.ipc === false
           ? undefined
           : (msg: ChildMessage) => {
-              if (msg?.type === "mem")
-                e.lastMem = { rss: msg.rss, heapUsed: msg.heapUsed, at: Date.now() };
+              if (msg?.type === "mem") e.lastMem = { rss: msg.rss, heapUsed: msg.heapUsed, at: Date.now() };
               else if (msg?.type === "ready") this.#markReady(e, proc);
             },
       onExit: (p, code, signal) => this.#exited(e, p, code, signal),
@@ -331,7 +324,7 @@ export class Supervisor {
     if (e.spec.ready) {
       e.spec.ready(e).then(
         () => this.#markReady(e, proc),
-        (err) => {
+        err => {
           this.#log(`${e.name} readiness failed: ${err}`);
           try {
             proc.kill("SIGKILL");

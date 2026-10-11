@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-inspector-protocol",
-  "version": "0.0.2",
+  "version": "1.4.4",
   "scripts": {
     "build": "bun build --target=node --outfile=index.js --minify-syntax ./index.ts --external=ws"
   },

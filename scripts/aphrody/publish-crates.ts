@@ -117,7 +117,7 @@ function manifest(c: Crate): string {
     "",
     table("package", pkg),
   ];
-  out.push(table("lib", { ...(src.lib ?? {}), name: c.lib }));
+  out.push(table("lib", { ...src.lib, name: c.lib }));
   for (const section of ["dependencies", "build-dependencies", "dev-dependencies"]) {
     if (!src[section]) continue;
     const deps: Toml = {};

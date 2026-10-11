@@ -32,7 +32,7 @@ function colorsOf(theme: Theme) {
 
 function constantsOf(theme: Theme) {
   return Object.fromEntries(
-    Object.entries(theme).filter(([name]) => !name.startsWith("color") && !/^shadow/.test(name)),
+    Object.entries(theme).filter(([name]) => !name.startsWith("color") && !name.startsWith("shadow")),
   );
 }
 

@@ -80,7 +80,7 @@ export function makeDeps(
       const work = join(state, "work", r.id);
       const out = join(state, "releases", r.id);
       const vars: Record<string, string> = { id: r.id, work, out };
-      const env: Record<string, string> = { ...(app.build.env ?? {}) };
+      const env: Record<string, string> = { ...app.build.env };
       const worktrees: { checkout: string; dir: string }[] = [];
       rmSync(work, { recursive: true, force: true });
       mkdirSync(work, { recursive: true });

@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-plugin-tailwind",
-  "version": "0.1.0",
+  "version": "1.4.4",
   "description": "Tailwind CSS v4 for Bun: Bun.build, the HTML dev server and Bun.serve, a PostCSS plugin on the same engine, and a Material 3 preset",
   "keywords": [
     "bun",

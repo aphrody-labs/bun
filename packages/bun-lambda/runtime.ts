@@ -438,7 +438,6 @@ function formatWebSocketUpgrade(event: WebSocketEvent): Request {
   const url = new URL(`${proto}://${hostname}/${request.stage}`);
   return new Request(url.toString(), {
     headers,
-    body: formatBody(event.body, event.isBase64Encoded),
   });
 }
 
@@ -691,7 +690,7 @@ class LambdaWebSocket implements ServerWebSocket {
     return this.sendBinary(buffer, compress);
   }
 
-  sendText(data: string, compress?: boolean): number {
+  sendText(data: string, _compress?: boolean): number {
     fetchAws(this.#url, {
       method: "POST",
       body: data,
@@ -752,7 +751,7 @@ class LambdaWebSocket implements ServerWebSocket {
     return -1;
   }
 
-  close(code?: number, reason?: string): void {
+  close(_code?: number, _reason?: string): void {
     // TODO: code? reason?
     fetchAws(this.#url, {
       method: "DELETE",

@@ -169,7 +169,7 @@ export function SourceMap(url?: string): SourceMap {
     const schema = JSON.parse(decoded);
     const sourceMap = new SourceMapConsumer(schema);
     return new ActualSourceMap(sourceMap);
-  } catch (error) {
+  } catch {
     console.warn("Failed to parse source map URL", url);
   }
   return defaultSourceMap;

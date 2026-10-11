@@ -123,7 +123,7 @@ function exceptionToMarkdown(exception: JSException): string {
       for (let frame of framesToDisplay) {
         const {
           function_name = "",
-          position: { line = -1, column = -1 } = { line: -1, column: -1 },
+          position: { line: _line = -1, column: _column = -1 } = { line: -1, column: -1 },
           scope = 0 as any,
         } = frame;
         padding = Math.max(
@@ -336,7 +336,7 @@ function getBunInfo() {
         bunInfoMemoized = JSON.parse(bunInfoMemoized);
         return bunInfoMemoized;
       }
-    } catch (exception) {}
+    } catch {}
   }
   const controller = new AbortController();
   const timeout = 1000;
@@ -354,7 +354,7 @@ function getBunInfo() {
       if ("sessionStorage" in globalThis) {
         try {
           sessionStorage.setItem("__bunInfo", JSON.stringify(bunInfo));
-        } catch (exception) {}
+        } catch {}
       }
 
       return bunInfo;

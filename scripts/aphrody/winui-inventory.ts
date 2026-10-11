@@ -108,11 +108,11 @@ function parseIdl(file: string, text: string): { classes: Klass[]; enums: string
       }
       const pm = stmt.match(/^(static )?([\w.<>, ]+?) (\w+)\s*(\{\})?$/);
       if (!pm) continue;
-      if (pm[1] && /DependencyProperty$/.test(pm[2]) && pm[3].endsWith("Property")) {
+      if (pm[1] && pm[2].endsWith("DependencyProperty") && pm[3].endsWith("Property")) {
         k.dependencyProperties.push(pm[3].slice(0, -"Property".length));
         continue;
       }
-      const readonly = /\{\}$/.test(stmt) && /\bget\b/.test(stmt) && !/\bset\b/.test(stmt);
+      const readonly = stmt.endsWith("{}") && /\bget\b/.test(stmt) && !/\bset\b/.test(stmt);
       k.properties.push({
         name: pm[3],
         type: pm[2],

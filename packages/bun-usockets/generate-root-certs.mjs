@@ -31,7 +31,7 @@ const normalizeTD = (text = "") => {
   // Remove whitespace and any HTML tags.
   return text?.trim().replace(/<.*?>/g, "");
 };
-const getReleases = text => {
+const _getReleases = text => {
   const releases = [];
   const tableRE = /<table [^>]+>([\S\s]*?)<\/table>/g;
   const tableRowRE = /<tr ?[^>]*>([\S\s]*?)<\/tr>/g;
@@ -82,7 +82,7 @@ const getReleases = text => {
   return releases;
 };
 
-const getLatestVersion = async releases => {
+const _getLatestVersion = async releases => {
   const arrayNumberSortDescending = (x, y, i) => {
     if (x[i] === undefined && y[i] === undefined) {
       return 0;
@@ -128,7 +128,7 @@ const options = {
     type: "boolean",
   },
 };
-const { positionals, values } = parseArgs({
+const { values } = parseArgs({
   allowPositionals: true,
   options,
 });

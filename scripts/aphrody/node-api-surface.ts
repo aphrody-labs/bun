@@ -144,13 +144,13 @@ for await (const file of new Bun.Glob("*.md").scan({ cwd: join(nodeRoot, "doc/ap
   const text = await Bun.file(join(nodeRoot, "doc/api", file)).text();
   let section = "";
   for (const line of text.split("\n")) {
-    if (/^## /.test(line)) section = line.slice(3).trim();
+    if (line.startsWith("## ")) section = line.slice(3).trim();
     const h = line.match(heading);
     if (!h) continue;
     const [, label, raw] = h;
     if (label === "Event") continue;
     if (doc === "cli") {
-      if (/^-/.test(raw)) {
+      if (raw.startsWith("-")) {
         const flag = raw.split(/[=\s,]/)[0];
         if (seen.has(`cli:${flag}`)) continue;
         seen.add(`cli:${flag}`);

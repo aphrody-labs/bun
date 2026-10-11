@@ -26,7 +26,7 @@ export async function bake({ base, ref }: BakeOptions): Promise<void> {
   const ip = (await tart.waitForSsh(staging, 60)) ?? fail(`${staging} never came up; see /tmp/bake-${staging}.log`);
   log(`guest up at ${ip}`);
 
-  (await tart.waitForAgent(staging)) ?? fail("tart guest agent not responding");
+  if ((await tart.waitForAgent(staging)) == null) fail("tart guest agent not responding");
   await tart.exec(
     staging,
     `mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo ${shellQuote(publicKey)} > ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`,

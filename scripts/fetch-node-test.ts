@@ -48,7 +48,7 @@ async function fetchNodeTest(testName: string) {
             );
             return localPath;
           }
-        } catch (error) {
+        } catch {
           // Continue to next variation
         }
       }
@@ -77,7 +77,7 @@ async function fetchNodeTest(testName: string) {
           );
           return localPath;
         }
-      } catch (error) {
+      } catch {
         // Continue to next variation
       }
     }
@@ -106,7 +106,7 @@ if (!testName) {
 
 try {
   await fetchNodeTest(testName);
-} catch (error) {
+} catch {
   console.error(error.message);
   process.exit(1);
 }

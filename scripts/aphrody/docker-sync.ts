@@ -6,7 +6,7 @@ const HOSTS = ["pc", "vps", "dbfr"] as const;
 type Host = (typeof HOSTS)[number];
 
 const PROFILES: { hosts: Host[]; images: string[] }[] = [
-  { hosts: ["pc", "vps", "dbfr"], images: ["ghcr.io/aphrody-labs/bun:1.4.3-aphrody.3", "aphrody:runtime"] },
+  { hosts: ["pc", "vps", "dbfr"], images: ["ghcr.io/aphrody-labs/bun:1.4.4", "aphrody:runtime"] },
   { hosts: ["pc", "vps"], images: ["aphrody/build-linux:26.04", "aphrody/build-alpine:3.24"] },
 ];
 

@@ -48,9 +48,9 @@ try {
     );
   writeNativeFunctionParameters(basePath);
   const scriptsToBundle = [];
-  const stylesToBundle = [];
+  const _stylesToBundle = [];
   const jsReplacementId = crypto.randomUUID() + ".js";
-  const cssReplacementId = crypto.randomUUID() + ".css";
+  const _cssReplacementId = crypto.randomUUID() + ".css";
   const html = new HTMLRewriter()
     .on("script", {
       element(element) {

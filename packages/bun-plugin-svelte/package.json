@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-plugin-svelte",
-  "version": "0.0.6",
+  "version": "1.4.4",
   "description": "Official Svelte plugin for Bun",
   "repository": {
     "type": "git",

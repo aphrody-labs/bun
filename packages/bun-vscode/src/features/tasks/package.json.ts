@@ -176,12 +176,15 @@ function registerHoverProvider(context: vscode.ExtensionContext) {
         };
       },
     }),
-    vscode.commands.registerCommand("extension.bun.codelens.debug.task", async ({ script, name }: CommandArgs) => {
-      if (script.startsWith("bun run ")) script = script.slice(8);
-      if (script.startsWith("bun ")) script = script.slice(4);
+    vscode.commands.registerCommand(
+      "extension.bun.codelens.debug.task",
+      async ({ script, name: _name }: CommandArgs) => {
+        if (script.startsWith("bun run ")) script = script.slice(8);
+        if (script.startsWith("bun ")) script = script.slice(4);
 
-      debugCommand(script);
-    }),
+        debugCommand(script);
+      },
+    ),
     vscode.commands.registerCommand("extension.bun.codelens.run.task", async ({ script, name }: CommandArgs) => {
       if (script.startsWith("bun run ")) script = script.slice(8);
 

@@ -29,7 +29,7 @@ export enum JSErrorCode {
   UserErrorCode = 254,
 }
 
-const JSErrorCodeLabel = {
+const _JSErrorCodeLabel = {
   0: "Error",
   1: "EvalError",
   2: "RangeError",
@@ -185,7 +185,7 @@ const openWithoutFlashOfNewTab: JSX.MouseEventHandler<HTMLAnchorElement> = event
     })
     .then(
       () => {},
-      er => {},
+      _er => {},
     );
   return false;
 };
@@ -414,7 +414,7 @@ const SourceLines = ({
   sourceLines,
   highlight = -1,
   highlightColumnStart = 0,
-  highlightColumnEnd = Infinity,
+  highlightColumnEnd: _highlightColumnEnd = Infinity,
   children,
   buildURL,
 }: {
@@ -573,7 +573,7 @@ export const StackFrameIdentifier = ({
 };
 
 const getNativeStackFrameIdentifier = frame => {
-  const { file, function_name: functionName, scope } = frame;
+  const { file: _file, function_name: functionName, scope } = frame;
 
   return StackFrameIdentifier({
     functionName,
@@ -594,7 +594,7 @@ const NativeStackFrame = ({
   const { cwd } = useContext(ErrorGroupContext);
   const {
     file,
-    function_name: functionName,
+    function_name: _functionName,
     position: { line, column },
     scope,
   } = frame;
@@ -885,7 +885,7 @@ const BuildError = ({ message }: { message: Message }) => {
 };
 
 const ResolveError = ({ message }: { message: Message }) => {
-  const { cwd } = useContext(ErrorGroupContext);
+  const { cwd: _cwd } = useContext(ErrorGroupContext);
   let title = (message.data.text || "").trim();
   const newline = title.indexOf("\n");
   let subtitle: string | null = null;
