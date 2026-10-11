@@ -53,7 +53,77 @@ test("Bun.build bundles Fluent UI web components v3 and the Fluent 2 tokens", as
 });
 
 describe.skipIf(!hasChrome())("headless render in Bun.WebView (Chrome)", () => {
+  test.skipIf(!Bun.file(join(import.meta.dir, "../dist/wasm/bun/bun_wasm.wasm")).size)(
+    "WASM worker awaits initialization before its first evaluation and keeps files in OPFS",
+    async () => {
+      const bundled = await Bun.build({
+        entrypoints: [join(import.meta.dir, "../src/os/wasm/repl-worker.ts")],
+        target: "browser",
+        format: "esm",
+      });
+      expect(bundled.success).toBe(true);
+      const isolated = {
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+      };
+      using server = Bun.serve({
+        hostname: "127.0.0.1",
+        port: 0,
+        routes: {
+          "/": new Response("<!doctype html><title>WASM qualification</title><body></body>", {
+            headers: { ...isolated, "Content-Type": "text/html" },
+          }),
+          "/worker.js": new Response(await bundled.outputs[0].text(), {
+            headers: { ...isolated, "Content-Type": "text/javascript" },
+          }),
+          "/dist/wasm/bun/bun_wasm.wasm": new Response(
+            Bun.file(join(import.meta.dir, "../dist/wasm/bun/bun_wasm.wasm")),
+            { headers: { ...isolated, "Content-Type": "application/wasm" } },
+          ),
+        },
+      });
+      const view = new Bun.WebView({ backend: { type: "chrome", url: false } });
+      try {
+        await view.navigate(server.url.href);
+        expect(await view.evaluate("crossOriginIsolated")).toBe(true);
+        await view.evaluate(`(() => {
+          window.wasmReplies = [];
+          window.wasmWorker = new Worker('/worker.js', { type: 'module' });
+          window.wasmWorker.onmessage = event => {
+            window.wasmReplies.push(event.data);
+            document.body.dataset.wasmState = event.data.type;
+          };
+          window.wasmWorker.onerror = event => {
+            window.wasmReplies.push({ type: 'failed', error: event.message, event: event.type });
+            document.body.dataset.wasmState = 'failed';
+          };
+          window.wasmWorker.postMessage({ type: 'init' });
+          window.wasmWorker.postMessage({ type: 'eval', id: 1, code: ${JSON.stringify("(async () => { await Bun.write('first-evaluation.txt', 'private browser file'); return { order: Bun.semver.order('1.4.4', '1.10.0'), satisfies: Bun.semver.satisfies('1.4.4', '^1.4.0'), markdown: Bun.markdown.html('# Bun WASM'), shell: JSON.stringify(Bun.shellParse('echo bun | wc -c')).includes('echo'), file: await Bun.file('first-evaluation.txt').text() }; })()")} });
+        })()`);
+        await waitFor(view, "['result', 'failed'].includes(document.body.dataset.wasmState)");
+        const replies = await view.evaluate("window.wasmReplies");
+        expect(replies.find((reply: any) => reply.type === "failed")).toBeUndefined();
+        expect(replies.find((reply: any) => reply.type === "ready")).toMatchObject({
+          bunVersion: "1.4.4",
+        });
+        const result = replies.find((reply: any) => reply.type === "result");
+        expect(result.ok).toBe(true);
+        expect(JSON.parse(result.text)).toEqual({
+          order: -1,
+          satisfies: true,
+          markdown: "<h1>Bun WASM</h1>\n",
+          shell: true,
+          file: "private browser file",
+        });
+      } finally {
+        await view.evaluate("window.wasmWorker?.terminate()").catch(() => {});
+        view.close();
+      }
+    },
+    60_000,
+  );
   test("browser permissions wait for a user gesture and make no automatic host requests", async () => {
+    let hostReads = 0;
     const result = await Bun.build({
       entrypoints: [join(import.meta.dir, "fixtures", "browser-access-page.tsx")],
       target: "browser",
@@ -65,6 +135,11 @@ describe.skipIf(!hasChrome())("headless render in Bun.WebView (Chrome)", () => {
       port: 0,
       hostname: "127.0.0.1",
       routes: {
+        "/api/webos/capabilities": Response.json({ hostAccess: false }),
+        "/api/webos/system": () => {
+          hostReads++;
+          return Response.json({});
+        },
         "/": new Response('<!doctype html><script type="module" src="/permissions.js"></script>', {
           headers: { "Content-Type": "text/html" },
         }),
@@ -94,6 +169,11 @@ describe.skipIf(!hasChrome())("headless render in Bun.WebView (Chrome)", () => {
     try {
       await view.navigate(server.url.href);
       await waitFor(view, 'document.querySelectorAll("[data-browser-capability]").length === 15');
+      await waitFor(
+        view,
+        'document.querySelector("[data-host-status]").textContent.includes("Agent local non connecté")',
+      );
+      expect(hostReads).toBe(0);
       expect(await view.evaluate("window.fixturePermissionCalls")).toBe(0);
       await view.evaluate('document.querySelector("[data-browser-capability=camera]").click()');
       await waitFor(view, 'document.body.textContent.includes("Cliquez sur la capacité")');

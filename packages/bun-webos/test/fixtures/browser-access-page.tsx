@@ -4,6 +4,12 @@ import { createRoot } from "react-dom/client";
 import { BrowserAccessApp } from "../../src/os/apps/BrowserAccessApp";
 import { browserVfs } from "../../src/os/wasm/opfs-client";
 import { PublicSearchApp } from "../../src/os/apps/PublicSearchApp";
+import { useSystemSnapshot } from "../../src/os/system-client";
+
+function HostStatus() {
+  const state = useSystemSnapshot();
+  return <output data-host-status>{state.error}</output>;
+}
 
 let permissionCalls = 0;
 Object.defineProperty(navigator, "mediaDevices", {
@@ -21,5 +27,6 @@ createRoot(document.body).render(
   <>
     <BrowserAccessApp />
     <PublicSearchApp />
+    <HostStatus />
   </>,
 );

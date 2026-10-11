@@ -3851,9 +3851,9 @@ pub fn argv() -> Argv {
 /// subcommands dispatched before the runtime that parse their own arguments. `std::env::args_os()` is empty
 /// on musl ([`init_argv`]).
 pub fn os_args() -> Vec<std::ffi::OsString> {
-    #[cfg(windows)]
+    #[cfg(not(unix))]
     return std::env::args_os().collect();
-    #[cfg(not(windows))]
+    #[cfg(unix)]
     {
         use std::os::unix::ffi::OsStrExt;
         argv_storage()

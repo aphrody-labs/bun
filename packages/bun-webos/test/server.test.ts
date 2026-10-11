@@ -48,6 +48,7 @@ describe("generic index explorer", () => {
       port: 0,
       dataDir: join(dataDir, "public-mode"),
       root: join(dataDir, "separate-public-home"),
+      wasmDir: join(dataDir, "unbuilt-public-wasm"),
       hostAccess: false,
       development: false,
     });

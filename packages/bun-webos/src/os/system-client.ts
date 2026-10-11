@@ -15,20 +15,45 @@ export function useSystemSnapshot(intervalMs = 5000): SystemState {
   const [state, setState] = useState<SystemState>({ snapshot: null, error: null });
   useEffect(() => {
     let alive = true;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setInterval> | undefined;
     const load = async () => {
       try {
-        const res = await fetch("/api/webos/system");
+        const res = await fetch("/api/webos/system", { signal: controller.signal });
         if (!res.ok) throw new Error(`GET /api/webos/system: HTTP ${res.status}`);
         const snapshot = (await res.json()) as SystemSnapshot;
         if (alive) setState({ snapshot, error: null });
       } catch (error) {
-        if (alive) setState(prev => ({ ...prev, error: error instanceof Error ? error.message : String(error) }));
+        if (alive)
+          setState((prev) => ({
+            ...prev,
+            error: error instanceof Error ? error.message : String(error),
+          }));
       }
     };
-    void load();
-    const timer = setInterval(load, intervalMs);
+    void (async () => {
+      try {
+        const response = await fetch("/api/webos/capabilities", { signal: controller.signal });
+        if (!response.ok) throw new Error(`Agent local indisponible (HTTP ${response.status}).`);
+        const capabilities = await response.json();
+        if (!alive) return;
+        if (capabilities.hostAccess !== true) {
+          setState({ snapshot: null, error: "Agent local non connecté." });
+          return;
+        }
+        await load();
+        if (alive) timer = setInterval(load, intervalMs);
+      } catch (error) {
+        if (alive)
+          setState({
+            snapshot: null,
+            error: error instanceof Error ? error.message : String(error),
+          });
+      }
+    })();
     return () => {
       alive = false;
+      controller.abort();
       clearInterval(timer);
     };
   }, [intervalMs]);

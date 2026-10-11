@@ -69,6 +69,28 @@ impl QuietWriter {
     /// rejected them, so the caller can stop trying.
     #[inline]
     pub(crate) fn write_all(&mut self, bytes: &[u8]) -> bool {
+        #[cfg(target_os = "wasi")]
+        {
+            let fd = self._opaque[0] as usize as i32;
+            let mut remaining = bytes;
+            while !remaining.is_empty() {
+                // SAFETY: remaining is a live byte slice; WASI validates the descriptor.
+                let written =
+                    unsafe { libc::write(fd, remaining.as_ptr().cast(), remaining.len()) };
+                if written < 0 {
+                    if std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted {
+                        continue;
+                    }
+                    return false;
+                }
+                if written == 0 {
+                    return false;
+                }
+                remaining = &remaining[written as usize..];
+            }
+            true
+        }
+        #[cfg(not(target_os = "wasi"))]
         output_sink().quiet_writer_write_all(self, bytes)
     }
 }
@@ -114,10 +136,23 @@ impl File {
     /// `bun_sys::File::stderr()` via the sink (T0-safe).
     #[inline]
     pub fn stderr() -> Self {
+        #[cfg(target_os = "wasi")]
+        return Self(Fd::stderr());
+        #[cfg(not(target_os = "wasi"))]
         output_sink().stderr()
     }
     #[inline]
     pub fn quiet_writer(self) -> QuietWriter {
+        #[cfg(target_os = "wasi")]
+        return QuietWriter {
+            _opaque: [
+                self.0.0 as usize as *mut (),
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+            ],
+        };
+        #[cfg(not(target_os = "wasi"))]
         output_sink().quiet_writer_from_fd(self.0)
     }
     /// Write all bytes (best-effort; routes through QuietWriter so errors are
@@ -125,7 +160,7 @@ impl File {
     #[inline]
     pub(crate) fn write_all(self, bytes: &[u8]) -> crate::CrateResult<()> {
         let mut qw = self.quiet_writer();
-        let _ = output_sink().quiet_writer_write_all(&mut qw, bytes);
+        let _ = qw.write_all(bytes);
         Ok(())
     }
     #[inline]
