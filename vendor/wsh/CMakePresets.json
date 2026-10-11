@@ -1,0 +1,155 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "tinycc-wcrt-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "toolchainFile": "${sourceDir}/cmake/tinycc-wcrt-toolchain.cmake",
+      "cacheVariables": {
+        "WSH_ENABLE_SOURCE_QUALITY_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "x64-debug",
+      "displayName": "x64 TinyCC/WCRT Debug",
+      "description": "Debug build with x64 TinyCC and statically linked WCRT.",
+      "inherits": "tinycc-wcrt-base",
+      "binaryDir": "${sourceDir}/out/build/x64-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "WSH_TARGET_ARCHITECTURE": "x64"
+      }
+    },
+    {
+      "name": "x64-release",
+      "displayName": "x64 TinyCC/WCRT Release",
+      "description": "Release build with x64 TinyCC and statically linked WCRT.",
+      "inherits": "tinycc-wcrt-base",
+      "binaryDir": "${sourceDir}/out/build/x64-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "WSH_TARGET_ARCHITECTURE": "x64"
+      }
+    },
+    {
+      "name": "x86-debug",
+      "displayName": "x86 TinyCC/WCRT Debug",
+      "description": "Debug build with x86 TinyCC and statically linked WCRT.",
+      "inherits": "tinycc-wcrt-base",
+      "binaryDir": "${sourceDir}/out/build/x86-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "WSH_TARGET_ARCHITECTURE": "x86"
+      }
+    },
+    {
+      "name": "x86-release",
+      "displayName": "x86 TinyCC/WCRT Release",
+      "description": "Release build with x86 TinyCC and statically linked WCRT.",
+      "inherits": "tinycc-wcrt-base",
+      "binaryDir": "${sourceDir}/out/build/x86-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "WSH_TARGET_ARCHITECTURE": "x86"
+      }
+    },
+    {
+      "name": "arm64-debug",
+      "displayName": "ARM64 TinyCC/WCRT Debug",
+      "description": "Debug cross-build with ARM64 TinyCC and statically linked WCRT.",
+      "inherits": "tinycc-wcrt-base",
+      "binaryDir": "${sourceDir}/out/build/arm64-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "WSH_TARGET_ARCHITECTURE": "arm64"
+      }
+    },
+    {
+      "name": "arm64-release",
+      "displayName": "ARM64 TinyCC/WCRT Release",
+      "description": "Release cross-build with ARM64 TinyCC and statically linked WCRT.",
+      "inherits": "tinycc-wcrt-base",
+      "binaryDir": "${sourceDir}/out/build/arm64-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "WSH_TARGET_ARCHITECTURE": "arm64"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "x64-debug",
+      "configurePreset": "x64-debug"
+    },
+    {
+      "name": "x64-release",
+      "configurePreset": "x64-release"
+    },
+    {
+      "name": "x86-debug",
+      "configurePreset": "x86-debug"
+    },
+    {
+      "name": "x86-release",
+      "configurePreset": "x86-release"
+    },
+    {
+      "name": "arm64-debug",
+      "configurePreset": "arm64-debug"
+    },
+    {
+      "name": "arm64-release",
+      "configurePreset": "arm64-release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "x64-debug",
+      "configurePreset": "x64-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "x64-release",
+      "configurePreset": "x64-release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "x86-debug",
+      "configurePreset": "x86-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "x86-release",
+      "configurePreset": "x86-release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "arm64-debug",
+      "configurePreset": "arm64-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "arm64-release",
+      "configurePreset": "arm64-release",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}
