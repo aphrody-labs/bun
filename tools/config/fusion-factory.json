@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "owner": "aphrody-infra",
+  "enabled": true,
+  "target": "vps",
+  "executionOnlyTargets": [],
+  "workspaceRoot": "/home/ubuntu/builds/bun-browser-fusion",
+  "cacheRoot": "/home/ubuntu/builds/bun-os-factory/cache",
+  "artifactRoot": "/home/ubuntu/builds/bun-os-factory/artifacts",
+  "lockPath": "/home/ubuntu/build/locks/heavy.lock",
+  "hostEnvironment": {
+    "name": "APHRODY_BUILD_HOST",
+    "value": "vps"
+  },
+  "rust": {
+    "maxJobs": 6,
+    "serialized": true,
+    "wrapper": "scripts/build/rust/cargo-serial.sh",
+    "incremental": false,
+    "cache": "sccache"
+  },
+  "bun": {
+    "heavyJobs": 1,
+    "frozenLockfile": true
+  },
+  "local": {
+    "allowed": [
+      "help",
+      "plan",
+      "inventory",
+      "source-edit",
+      "scoped-static-check"
+    ],
+    "heavyExecution": "remote"
+  },
+  "transport": {
+    "owner": "aphrody-infra ssh",
+    "sync": "sync",
+    "exec": "exec",
+    "sourcePolicy": "clean-pinned-first-party-source",
+    "secrets": "host-local-private-files-only"
+  },
+  "retention": {
+    "preserve": [
+      "active-releases",
+      "rollback-releases",
+      "primary-data",
+      "source-patches",
+      "cargo-cache",
+      "sccache",
+      "bun-cache"
+    ],
+    "cleanup": "existing-infra-allowlist-only"
+  },
+  "repositories": {
+    "bun-os": "/home/ubuntu/builds/bun-browser-fusion"
+  },
+  "cleanup": {
+    "transientRoot": "/home/ubuntu/builds/bun-os-factory/transient",
+    "privilegeBinary": "/usr/bin/sudo-rs",
+    "retiredOutputs": []
+  }
+}

@@ -27,6 +27,33 @@ pub(crate) fn freemem() -> u64 {
     Bun__Os__getFreeMemory()
 }
 
+/// Process allocation headroom differs from the host's os.freemem() on Linux.
+#[cfg(target_os = "linux")]
+#[unsafe(no_mangle)]
+pub(crate) extern "C" fn Bun__Os__getAvailableMemory() -> u64 {
+    let physical = freemem();
+    bun_host::collect::cgroup_memory_budget()
+        .map_or(physical, |(_, available)| physical.min(available))
+}
+
+/// Dynamic kernel capacity ceiling; zero means unconstrained or unknown.
+/// Unlike available memory, this does not subtract current cgroup usage.
+#[cfg(target_os = "linux")]
+#[unsafe(no_mangle)]
+pub(crate) extern "C" fn Bun__Os__getConstrainedMemory() -> u64 {
+    bun_host::collect::cgroup_memory_budget().map_or(0, |(ceiling, _)| ceiling)
+}
+
+/// Internal capacity budget, preserving a known zero-byte kernel ceiling.
+/// The caller supplies its physical RAM estimate; absent constraints preserve it.
+/// This separate ABI avoids treating the public Node API's zero as an Option tag.
+#[cfg(target_os = "linux")]
+#[unsafe(no_mangle)]
+pub(crate) extern "C" fn Bun__Os__getMemoryCapacity(physical: u64) -> u64 {
+    bun_host::collect::cgroup_memory_budget()
+        .map_or(physical, |(ceiling, _)| physical.min(ceiling))
+}
+
 mod _impl {
     use super::*;
     use bun_core::EncodedSlice;

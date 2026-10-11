@@ -520,6 +520,23 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
     const from = join(docs, "logo", name);
     if (existsSync(from)) cpSync(from, join(o.out, name));
   }
+  const webmanifest = join(o.out, "site.webmanifest");
+  if (!data?.distribution && existsSync(webmanifest)) {
+    const manifest = JSON.parse(readFileSync(webmanifest, "utf8"));
+    write(
+      webmanifest,
+      JSON.stringify(
+        {
+          ...manifest,
+          name: "Bun OS · Aphrody Labs",
+          short_name: "Bun OS",
+          description: "The Bun runtime and toolkit of Aphrody Labs.",
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+  }
 
   // llms.txt / llms-full.txt (format llmstxt.org)
   const summary = data?.distribution?.summary ? plainText(data.distribution.summary) : "";
@@ -774,12 +791,27 @@ export function renderRuntimeHero(d: SiteData, o: BuildOptions): string {
     ...(rt.npm ? [cmd("npm", `npm install -g ${rt.npm.name}`)] : []),
   ];
   return `<section class="hero">
-<img class="hero-mark" src="/icon.svg" alt="" width="72" height="72">
-<p class="eyebrow">Aphrody Bun</p>
-<h1>The Bun runtime of Aphrody</h1>
-<p class="lead">${link(rt.repo, `https://github.com/${rt.repo}`)} is a fork of ${link(rt.upstream.name, rt.upstream.url)} ${escapeHtml(rt.upstream.version)}: upstream arrives by merge and the Aphrody patches stay on top${latest ? `. Current release: ${link(latest.tag, latest.url)}` : ""}.</p>
+<img class="hero-mark" src="/icon.svg" alt="Aphrody" width="96" height="96">
+<p class="eyebrow">Aphrody Labs</p>
+<h1>Bun OS</h1>
+<p class="lead">The Bun runtime of Aphrody. JavaScript and TypeScript runtime, package manager, test runner and bundler in one executable, with Aphrody's native system integrations.</p>
+<p>${link(rt.repo, `https://github.com/${rt.repo}`)} builds on ${link(rt.upstream.name, rt.upstream.url)} ${escapeHtml(rt.upstream.version)}. Source version and published executables are tracked separately${latest ? `; published release: ${link(latest.tag, latest.url)}` : "; see downloads for available published executables"}.</p>
+<p>Install a published runtime:</p>
 <div class="cmds">${commands.join("")}</div>
 <div class="btns"><a class="btn" href="/docs">Documentation</a><a class="btn tonal" href="/downloads">Downloads</a><a class="btn outlined" href="https://github.com/${escapeHtml(rt.repo)}">GitHub</a></div>
+</section>
+<section aria-labelledby="runtime-toolkit"><h2 id="runtime-toolkit">One executable for your workflow</h2>
+<p>Use the tools individually in an existing project, or build your application around Bun.</p>
+<div class="card-group">
+<div class="card"><h3>Runtime</h3><p>Run JavaScript, TypeScript and JSX on JavaScriptCore. Explore the documented Node.js and Web APIs.</p><pre><code>bun run index.tsx</code></pre><a href="/docs/runtime">Runtime docs</a></div>
+<div class="card"><h3>Package manager</h3><p>Install npm packages, manage workspaces and keep dependencies in a Bun lockfile.</p><pre><code>bun install</code></pre><a href="/docs/pm/cli/install">Package manager docs</a></div>
+<div class="card"><h3>Test runner</h3><p>Write tests with assertions, mocks and snapshots from <code>bun:test</code>.</p><pre><code>bun test</code></pre><a href="/docs/test">Test runner docs</a></div>
+<div class="card"><h3>Bundler</h3><p>Bundle JavaScript, TypeScript, JSX and CSS for browser or runtime targets.</p><pre><code>bun build ./app.tsx --outdir dist</code></pre><a href="/docs/bundler">Bundler docs</a></div>
+</div></section>
+<section aria-labelledby="native-integrations"><h2 id="native-integrations">Native integrations from Aphrody Labs</h2>
+<p>System modules, Python and .NET hosting, graph APIs and desktop integration live alongside the Bun toolkit. Platform requirements and source inventory are documented in the <a href="/runtime">runtime reference</a>.</p>
+<p>Packages use the <code>@aphrody</code> npm scope. Built-in imports keep their identities: <code>bun</code>, <code>bun:sqlite</code>, <code>bun:test</code> and platform modules. Rust crates retain their manifest and ABI names.</p>
+<p>The Bun OS stable release is pending native factory build and test qualification. See <a href="/downloads">published releases and checksums</a> for the executables currently available.</p>
 </section>`;
 }
 

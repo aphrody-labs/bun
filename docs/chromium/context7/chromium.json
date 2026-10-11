@@ -1,0 +1,33 @@
+{
+  "collectedOn": "2026-10-11",
+  "provider": "Context7",
+  "resolve": {
+    "status": "fulfilled",
+    "value": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Available Libraries:\n\n- Title: Chromium Developers\n- Context7-compatible library ID: /websites/chromium_developers\n- Description: Comprehensive developer documentation for the Chromium browser project, covering architecture, design decisions, development processes, testing, and build systems.\n- Code Snippets: 6783\n- Source Reputation: High\n- Benchmark Score: 36.2\n----------\n- Title: ChromiumOS\n- Context7-compatible library ID: /git_chromium_googlesource_com/chromiumos_platform2\n- Description: ChromiumOS is the open-source platform that powers Chrome OS, containing custom daemons, programs, and libraries that provide core functionality for Chromebooks.\n- Code Snippets: 5804\n- Source Reputation: High\n----------\n- Title: Sparticuz Chromium\n- Context7-compatible library ID: /sparticuz/chromium\n- Description: Sparticuz Chromium is a lightweight Chromium binary optimized for serverless platforms, enabling web automation with Puppeteer or Playwright on AWS Lambda and other restricted environments.\n- Code Snippets: 499\n- Source Reputation: High\n- Benchmark Score: 84.62\n----------\n- Title: Chromium Embedded Framework\n- Context7-compatible library ID: /chromiumembedded/cef\n- Description: Chromium Embedded Framework (CEF) is a simple framework for embedding Chromium-based browsers in other applications with production-quality stable APIs and rich functionality.\n- Code Snippets: 2496\n- Source Reputation: Medium\n- Benchmark Score: 63.2\n----------\n- Title: Electron\n- Context7-compatible library ID: /electron/electron\n- Description: Electron is a framework for creating cross-platform desktop applications using web technologies like JavaScript, HTML, and CSS, built upon Node.js and Chromium.\n- Code Snippets: 4974\n- Source Reputation: High\n- Benchmark Score: 84.61"
+        }
+      ],
+      "isError": false
+    }
+  },
+  "query": {
+    "status": "fulfilled",
+    "value": {
+      "name": "chromium",
+      "libraryId": "/websites/chromium_developers",
+      "query": "How Chromium architecture and process boundaries affect maintaining a fork with an embedded runtime",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "### Run Chromium in Single-Process Mode\n\nSource: https://www.chromium.org/developers/how-tos/debugging-on-windows\n\nAdd this command-line flag to run Chromium in single-process mode for easier debugging. Note that some issues may not manifest in this mode.\n\n```shell\n--single-process\n```\n\n### Multi-process Architecture\n\nSource: https://www.chromium.org/developers/design-documents/multi-process-architecture\n\nChromium's multi-process architecture aims to provide robustness and security by isolating web content rendering into separate processes. This design prevents a single misbehaving web page or plugin from crashing the entire browser, similar to how modern operating systems isolate applications.\n\n--------------------------------\n\n### Inter-process Communication (IPC) > Overview\n\nSource: https://www.chromium.org/developers/design-documents/inter-process-communication\n\nChromium employs a multi-process architecture where various processes communicate using named pipes as the primary inter-process communication (IPC) primitive. On Linux and OS X, socket pairs are utilized. Each renderer process is allocated a named pipe for communication with the browser process, and these pipes operate in asynchronous mode to prevent blocking.\n\n--------------------------------\n\n### Multi-process Resource Loading > Background\n\nSource: https://www.chromium.org/developers/design-documents/multi-process-resource-loading\n\nIn Chromium's multi-process architecture, the main browser process manages all network communication. This central control ensures that the browser process can regulate network access for each renderer, maintain consistent session state (like cookies and cached data) across all processes, and adhere to connection limits per host as an HTTP/1.1 user-agent.\n\n--------------------------------\n\n### Architecture Overview > Frame Representation > Proxies\n\nSource: https://www.chromium.org/developers/design-documents/oop-iframes\n\nTo enable cross-process communication like postMessage, Chromium maintains proxy DOMWindows in renderer processes for all reachable frames. These proxies allow a document in one process to route messages to a document in another process via the browser, without requiring a full document or V8 context for the proxy itself."
+          }
+        ],
+        "isError": false
+      }
+    }
+  }
+}

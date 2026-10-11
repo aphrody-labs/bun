@@ -154,7 +154,8 @@ private:
 // Zig::GlobalObject. didGarbageCollect() can run on the collector thread with
 // the mutator stopped, so it never runs JS: the near-limit callback is posted
 // to the context's event loop, and the hard limit ends the process (main
-// thread, like node's fatal OOM) or terminates the worker's VM.
+// thread, like node's fatal OOM) or terminates the worker's VM. A queued
+// near-limit snapshot gets one finite reserve until the callback completes.
 class HeapLimitObserver final : public JSC::HeapObserver {
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED(HeapLimitObserver);
 
@@ -171,7 +172,7 @@ public:
 
     // Null clears it. Called on the JS thread.
     void setNearLimitCallback(JSC::VM&, JSC::JSObject*);
-    void runNearLimitCallback(JSC::JSGlobalObject*, size_t used);
+    void runNearLimitCallback(JSC::JSGlobalObject*, size_t used, uint64_t epoch);
 
 private:
     void updateAttachment();
@@ -183,6 +184,10 @@ private:
     std::atomic<size_t> m_limit { 0 };
     std::atomic<bool> m_hasNearCallback { false };
     std::atomic<bool> m_nearArmed { true };
+    // One finite reserve while the posted callback takes its snapshot. It is
+    // never extended by subsequent collections, even if the mutator cannot yield.
+    std::atomic<size_t> m_nearReserveLimit { 0 };
+    std::atomic<uint64_t> m_nearEpoch { 0 };
     JSC::Strong<JSC::JSObject> m_nearCallback;
 };
 

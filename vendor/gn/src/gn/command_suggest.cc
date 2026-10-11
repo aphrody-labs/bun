@@ -1,0 +1,1182 @@
+// Copyright 2026 The GN Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <stddef.h>
+
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <mutex>
+#include <tuple>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
+#include "base/command_line.h"
+#include "base/files/file_util.h"
+#include "base/strings/string_split.h"
+#include "gn/build_file_editor.h"
+#include "gn/commands.h"
+#include "gn/config_values_extractors.h"
+#include "gn/edit_command.h"
+#include "gn/filesystem_utils.h"
+#include "gn/item.h"
+#include "gn/setup.h"
+#include "gn/standard_out.h"
+#include "gn/target.h"
+
+namespace commands {
+
+const char kSuggest[] = "suggest";
+const char kSuggest_HelpShort[] =
+    "suggest: Suggest fixes to build graph based on includes.";
+const char kSuggest_Help[] =
+    R"(suggest: Suggest fixes to build graph based on includes.
+
+  gn suggest [--apply] <out_dir> includer1=included1 includer2=included2...
+
+  Where each includer or included is either:
+  * A label
+  * A module name (usually the same as the label)
+  * A file path relative to the build directory
+  * An absolute file path (eg. "//foo/bar.txt")
+  * A file path relative to the include directories of the includer target (treated as a #include)
+
+  Eg. gn suggest out_dir path/to/target.cc=foo/bar.h
+
+  Will print a suggestion like:
+  Request: path/to/target.cc wants to depend on foo/bar.h
+  Suggestion: Add deps = [ "//foo:bar" ] to //path/to:target (defined in //path/to/BUILD.gn:1234)
+    (`gn edit "add deps //foo:bar" //path/to:target`)
+
+Options:
+  --apply
+      Automatically applies the suggested edits to the respective BUILD.gn
+      files.
+)";
+
+constexpr std::string_view kPrivateSuffix = "_Private";
+
+namespace {
+
+struct EditCommand {
+  std::vector<std::string> command;
+  std::string target;
+
+  std::string SubcommandString() const {
+    std::string result;
+    for (size_t i = 0; i < command.size(); ++i) {
+      if (i > 0)
+        result += " ";
+      if (command[i].contains(' ')) {
+        result += "\"" + command[i] + "\"";
+      } else {
+        result += command[i];
+      }
+    }
+    return result;
+  }
+
+  std::vector<std::string> Args() const { return {SubcommandString(), target}; }
+
+  std::string ToString() const {
+    return "gn edit \"" + SubcommandString() + "\" " + target;
+  }
+};
+
+enum class ApplyResult {
+  // --apply was not specified; only output suggested edit commands.
+  kNoApply,
+  // The suggestion was automatically applied to the BUILD file cleanly.
+  kSuccess,
+  // Failed to automatically apply the suggestion or the edit generated
+  // warnings.
+  kFailure,
+  // The suggestion is not one concrete suggestion, but rather a generalization.
+  // Eg:
+  // * Suggestion has a placeholder.
+  // * We propose several solutions and tell them to pick one.
+  kAmbiguous,
+  // The suggestion was applied, but added TODO comments requiring manual
+  // review.
+  kAddedTodos,
+};
+
+// Finds all targets that use a file as a source from a specific toolchain and
+// adds them to results. Checks every toolchain if current_toolchain is null.
+bool AddToolchainSources(const std::vector<const Target*>& all_targets,
+                         const Label* current_toolchain,
+                         const SourceFile& file,
+                         const BuildSettings* build_settings,
+                         TargetResolutionCache& cache,
+                         std::vector<ResolvedTarget>& results) {
+  for (const auto& [target, scope] :
+       cache.GetTargetsForFile(file, all_targets)) {
+    if (!current_toolchain ||
+        target->label().GetToolchainLabel() == *current_toolchain) {
+      // Gracefully fall back to assuming it's unconditional if the build file
+      // is badly formatted or the source was added via a .gni file, for
+      // example.
+      std::optional<StringAtom> condition;
+      Err err;
+      SourceFile build_file = target->label().dir().ResolveRelativeFile(
+          Value(nullptr, "BUILD.gn"), &err);
+      if (!err.has_error() && !build_file.is_null()) {
+        if (const auto* sources_map =
+                cache.GetSourcesForBuildFile(build_file, build_settings)) {
+          auto target_it = sources_map->find(target->label().name_atom());
+          if (target_it != sources_map->end()) {
+            auto source_it = target_it->second.find(file);
+            if (source_it != target_it->second.end()) {
+              condition = source_it->second;
+            }
+          }
+        }
+      }
+      results.push_back(ResolvedTarget{
+          .target = target,
+          .scope = scope,
+          .conditional = std::move(condition),
+      });
+    }
+  }
+  return !results.empty();
+}
+
+bool FileExists(const std::vector<const Target*>& all_targets,
+                const SourceFile& file,
+                const BuildSettings* build_settings,
+                TargetResolutionCache& cache) {
+  base::FilePath build_dir_path =
+      build_settings->GetFullPath(build_settings->build_dir());
+  base::FilePath file_path = build_settings->GetFullPath(file);
+
+  if (build_dir_path.IsParent(file_path)) {
+    // It's in the output directory, so check if it was generated by a target.
+    for (const auto& [target, scope] :
+         cache.GetTargetsForFile(file, all_targets)) {
+      if (scope == commands::ApiScope::kOutput) {
+        return true;
+      }
+    }
+    return false;
+  } else {
+    // It's a source file, so check if it exists on disk.
+    return base::PathExists(file_path);
+  }
+}
+
+SourceFile ResolveFilePath(const BuildSettings* build_settings,
+                           const std::vector<const Target*>& all_targets,
+                           std::string_view input,
+                           TargetResolutionCache& cache,
+                           const Target* includer = nullptr) {
+  if (input.starts_with("//")) {
+    SourceFile file = SourceFile(input);
+    if (FileExists(all_targets, file, build_settings, cache)) {
+      return file;
+    }
+    return SourceFile();
+  }
+  Value input_value(nullptr, std::string(input));
+
+  // Resolve relative to the output directory.
+  // This is because the user is most likely running this based on an error
+  // message from clang, which gives paths relative to the output directory to
+  // be unambiguous.
+  Err err;
+  SourceFile file =
+      build_settings->build_dir().ResolveRelativeFile(input_value, &err);
+  if (!err.has_error() &&
+      FileExists(all_targets, file, build_settings, cache)) {
+    return file;
+  }
+  // If we are unable to resolve the file, we should treat it as a #include.
+  // Thus, iterate through the include directories of the includer target to
+  // attempt to find a source file that exists relative to those include dirs.
+  if (includer) {
+    for (ConfigValuesIterator iter(includer); !iter.done(); iter.Next()) {
+      for (const SourceDir& dir : iter.cur().include_dirs()) {
+        Err resolve_err;
+        SourceFile resolved_file =
+            dir.ResolveRelativeFile(input_value, &resolve_err);
+        if (!resolve_err.has_error() &&
+            FileExists(all_targets, resolved_file, build_settings, cache)) {
+          return resolved_file;
+        }
+      }
+    }
+  }
+  return SourceFile();
+}
+
+}  // namespace
+
+TargetResolutionCache::TargetResolutionCache() = default;
+TargetResolutionCache::~TargetResolutionCache() = default;
+
+const std::vector<std::pair<const Target*, ApiScope>>&
+TargetResolutionCache::GetTargetsForFile(
+    const SourceFile& file,
+    const std::vector<const Target*>& all_targets) {
+  std::call_once(file_to_target_initialized_, [&]() {
+    for (const Target* target : all_targets) {
+      for (const auto& output : target->computed_outputs()) {
+        SourceFile source =
+            output.AsSourceFile(target->settings()->build_settings());
+        file_to_targets_[source].emplace_back(target, ApiScope::kOutput);
+      }
+      for (const auto& header : target->public_headers()) {
+        file_to_targets_[header].emplace_back(target, ApiScope::kPublic);
+      }
+      for (const auto& source : target->sources()) {
+        // Some files are mis-declared as both sources and public.
+        if (std::ranges::find(target->public_headers(), source) !=
+            target->public_headers().end()) {
+          continue;
+        }
+
+        if (target->all_headers_public() &&
+            source.GetType() == SourceFile::SOURCE_H) {
+          file_to_targets_[source].emplace_back(target, ApiScope::kPublic);
+        } else {
+          file_to_targets_[source].emplace_back(target, ApiScope::kPrivate);
+        }
+      }
+    }
+  });
+
+  auto it = file_to_targets_.find(file);
+  if (it == file_to_targets_.end()) {
+    return empty_targets_;
+  }
+  return it->second;
+}
+
+// Returns targets that directly expose a given target
+// (all targets that forward target through groups or header-less source sets).
+std::vector<const Target*> TargetResolutionCache::GetTargetsExposing(
+    const Target& target,
+    const std::vector<const Target*>& all_targets) {
+  std::call_once(forwarding_parents_initialized_, [&]() {
+    for (const Target* t : all_targets) {
+      // If we have no headers and no sources, then the only use of depending
+      // on this target is to gain access to its dependencies.
+      if (t->sources().empty() && t->public_headers().empty()) {
+        for (const auto& dep : t->public_deps()) {
+          if (dep.ptr) {
+            forwarding_parents_[dep.ptr].push_back(t);
+          }
+        }
+        // If you declare `public_deps = ...` on a group, it shows up as a
+        // private dep. Probably because groups don't distinguish between
+        // public and private deps.
+        if (t->output_type() == Target::GROUP) {
+          for (const auto& dep : t->private_deps()) {
+            if (dep.ptr) {
+              forwarding_parents_[dep.ptr].push_back(t);
+            }
+          }
+        }
+      }
+    }
+  });
+
+  if (!forwarding_parents_.contains(&target)) {
+    return {};
+  }
+
+  std::vector<const Target*> results;
+  std::vector<const Target*> stack = {&target};
+  std::unordered_set<const Target*> visited = {&target};
+
+  while (!stack.empty()) {
+    const Target* cur = stack.back();
+    stack.pop_back();
+
+    auto parent_it = forwarding_parents_.find(cur);
+    if (parent_it != forwarding_parents_.end()) {
+      for (const Target* parent : parent_it->second) {
+        if (visited.insert(parent).second) {
+          results.push_back(parent);
+          stack.push_back(parent);
+        }
+      }
+    }
+  }
+
+  std::sort(
+      results.begin(), results.end(),
+      [](const Target* a, const Target* b) { return a->label() < b->label(); });
+
+  return results;
+}
+
+HeaderChecker::ReachabilityCache& TargetResolutionCache::GetReachabilityCache(
+    const Target* target) {
+  std::lock_guard<std::mutex> lock(reachability_cache_lock_);
+  auto it = reachability_cache_.find(target);
+  if (it == reachability_cache_.end()) {
+    it =
+        reachability_cache_
+            .emplace(target,
+                     std::make_unique<HeaderChecker::ReachabilityCache>(target))
+            .first;
+  }
+  return *it->second;
+}
+
+const TargetSourcesMap* TargetResolutionCache::GetSourcesForBuildFile(
+    const SourceFile& build_file,
+    const BuildSettings* build_settings) {
+  std::lock_guard<std::mutex> lock(sources_cache_lock_);
+  auto it = build_file_sources_cache_.find(build_file);
+  if (it != build_file_sources_cache_.end()) {
+    return &it->second;
+  }
+  auto parsed = BuildFile::Create(build_settings, build_file, {});
+  if (parsed.has_error()) {
+    return nullptr;
+  }
+  auto [inserted, _] = build_file_sources_cache_.emplace(
+      build_file, GetSourcesForTargets(*parsed));
+  return &inserted->second;
+}
+
+// Resolves an input to a list of targets, and whether each are private.
+// The input can be:
+// * A module name for a target
+// * A target label
+// * A file path, which attempts to resolve to:
+//   * Targets defined in the current toolchain that contain the file
+//   * Targets defined in the default toolchain that contain the file
+//   * Targets defined in any toolchain that contain the file
+std::pair<std::vector<ResolvedTarget>, bool> ResolveSuggestionToTarget(
+    const BuildSettings* build_settings,
+    const std::vector<const Target*>& all_targets,
+    const Label& current_toolchain,
+    std::string_view input,
+    bool must_be_file,
+    TargetResolutionCache& cache,
+    const Target* includer) {
+  auto sort_results = [](auto& vec) {
+    std::sort(vec.begin(), vec.end(), [](const auto& lhs, const auto& rhs) {
+      return lhs.target->label() < rhs.target->label();
+    });
+  };
+  std::vector<ResolvedTarget> results;
+  if (!must_be_file) {
+    std::string_view module_name = input;
+    commands::ApiScope is_private = commands::ApiScope::kPublic;
+    if (module_name.ends_with(kPrivateSuffix)) {
+      is_private = commands::ApiScope::kPrivate;
+      module_name.remove_suffix(kPrivateSuffix.size());
+    }
+
+    // Try to resolve as a module name.
+    for (const Target* target : all_targets) {
+      if (target->module_name() == module_name) {
+        results.push_back(ResolvedTarget{target, is_private, std::nullopt});
+      }
+    }
+    if (!results.empty()) {
+      sort_results(results);
+      return {results, true};
+    }
+
+    // If that doesn't work, try to resolve as an absolute target label.
+    if (input.starts_with("//") && input.find(':') != std::string_view::npos) {
+      Err err;
+      Label want;
+      Value input_value(nullptr, std::string(input));
+      want = Label::Resolve(SourceDir("//"), build_settings->root_path_utf8(),
+                            current_toolchain, input_value, &err);
+      if (!err.has_error()) {
+        for (const Target* target : all_targets) {
+          if (target->label() == want) {
+            results.push_back(ResolvedTarget{target, is_private, std::nullopt});
+            // We know each label corresponds to exactly one target, so we don't
+            // need to keep going.
+            return {results, true};
+          }
+        }
+      }
+    }
+  }
+
+  // If that doesn't work, try to resolve as a file path.
+  SourceFile file =
+      ResolveFilePath(build_settings, all_targets, input, cache, includer);
+  if (file.is_null()) {
+    return {results, false};
+  }
+
+  // If we see //foo(:toolchain) request bar.h, prefer //:bar(:toolchain)
+  // over other toolchains.
+  if (!AddToolchainSources(all_targets, &current_toolchain, file,
+                           build_settings, cache, results)) {
+    AddToolchainSources(all_targets, nullptr, file, build_settings, cache,
+                        results);
+  }
+  // If we have an action that generates "gen/foo.h", we should prefer
+  // depending on the source set that declares it as a header.
+  if (std::ranges::all_of(results, [](const auto& result) {
+        return result.scope == commands::ApiScope::kOutput;
+      })) {
+    for (auto& result : results) {
+      result.scope = commands::ApiScope::kPublic;
+    }
+  } else {
+    std::erase_if(results, [](const auto& result) {
+      return result.scope == commands::ApiScope::kOutput;
+    });
+  }
+  sort_results(results);
+  return {results, true};
+}
+
+SuggestResult OutputSuggestions(const std::vector<const Target*>& all_targets,
+                                const BuildSettings* build_settings,
+                                const Label& default_toolchain,
+                                std::string_view includer_name,
+                                const Target* includer_target,
+                                std::string_view included_name,
+                                OutputStringFunc output_fn,
+                                TargetResolutionCache& cache,
+                                bool must_be_file,
+                                bool apply,
+                                Setup* setup) {
+  if (apply) {
+    CHECK(setup);
+  }
+
+  SuggestResult result = SuggestResult::kSuccess;
+
+  auto OutputString =
+      [&](std::string_view str, TextDecoration dec = DECORATION_NONE,
+          HtmlEscaping esc = DEFAULT_ESCAPING) { output_fn(str, dec, esc); };
+
+  constexpr auto kLabelLike = TextDecoration::DECORATION_GREEN;
+
+  auto StartSuggestion = [&]() {
+    OutputString("Suggestion: ", TextDecoration::DECORATION_BLUE);
+  };
+  auto StartWarning = [&]() {
+    OutputString("Warning: ", TextDecoration::DECORATION_YELLOW);
+  };
+  auto StartError = [&]() {
+    OutputString("Error: ", TextDecoration::DECORATION_RED);
+  };
+
+  auto OutputQuoted = [&](std::string_view message) {
+    OutputString("\"", kLabelLike);
+    OutputString(message, kLabelLike);
+    OutputString("\"", kLabelLike);
+  };
+
+  Label current_toolchain = includer_target
+                                ? includer_target->label().GetToolchainLabel()
+                                : default_toolchain;
+
+  auto OutputDefinition = [&](const Target* target) {
+    OutputString(":", kLabelLike);
+    OutputString(target->label().name(), kLabelLike);
+    OutputString(" (defined at ");
+    OutputString(target->user_friendly_location().Describe(false), kLabelLike);
+    OutputString(")");
+    if (current_toolchain != default_toolchain) {
+      OutputString(" for toolchain ");
+      OutputString(
+          target->label().GetToolchainLabel().GetUserVisibleName(false),
+          kLabelLike);
+    }
+  };
+
+  auto OutputTarget = [&current_toolchain,
+                       &OutputString](const Target* target) {
+    OutputString(target->label().GetUserVisibleName(current_toolchain),
+                 kLabelLike);
+  };
+
+  auto SetAmbiguous = [&]() {
+    if (apply) {
+      result = SuggestResult::kUnapplied;
+      OutputString("[AMBIGUOUS] ", TextDecoration::DECORATION_YELLOW);
+    }
+  };
+
+  auto OutputEditCommand = [&](const EditCommand& edit, const Target* target) {
+    ApplyResult res = ApplyResult::kNoApply;
+    if (apply) {
+      // If an argument begins with '$' (such as "$HEADER" when a unique header
+      // file could not be resolved), the suggestion is a placeholder that
+      // requires manual disambiguation and cannot be automatically applied.
+      for (const auto& arg : edit.command) {
+        if (arg.starts_with('$')) {
+          res = ApplyResult::kAmbiguous;
+          break;
+        }
+      }
+      if (res != ApplyResult::kAmbiguous) {
+        std::vector<BuildFile> build_files;
+        auto edit_result = RunEditImpl(edit.Args(), *setup, build_files);
+        if (!edit_result.has_value() ||
+            !edit_result.value().second.warnings.empty()) {
+          // Warnings should be treated as errors.
+          res = ApplyResult::kFailure;
+        } else if (edit_result.value().second.needs_manual_review.empty()) {
+          res = ApplyResult::kSuccess;
+        } else {
+          res = ApplyResult::kAddedTodos;
+        }
+      }
+    }
+
+    switch (res) {
+      case ApplyResult::kSuccess:
+        OutputString("[APPLIED] ", TextDecoration::DECORATION_GREEN);
+        break;
+      case ApplyResult::kAmbiguous:
+        SetAmbiguous();
+        break;
+      case ApplyResult::kAddedTodos:
+        OutputString("[PARTIALLY APPLIED, TODOS ADDED] ",
+                     TextDecoration::DECORATION_YELLOW);
+        break;
+      case ApplyResult::kFailure:
+        OutputString("[FAILED TO AUTOMATICALLY APPLY] ",
+                     TextDecoration::DECORATION_RED);
+        break;
+      case ApplyResult::kNoApply:
+        break;
+    }
+    StartSuggestion();
+    if (edit.command.size() >= 4 && edit.command[0] == "move") {
+      OutputString("Move ");
+      OutputQuoted(edit.command[3]);
+      OutputString(" from `");
+      OutputString(edit.command[1]);
+      OutputString("` to `");
+      OutputString(edit.command[2]);
+      OutputString("` in ");
+      OutputDefinition(target);
+    } else if (edit.command.size() >= 3 && edit.command[0] == "add") {
+      OutputString("Add ");
+      OutputString(edit.command[1]);
+      OutputString(" = [ ");
+      OutputQuoted(edit.command[2]);
+      OutputString(" ] to ");
+      OutputDefinition(target);
+    } else {
+      CHECK(false) << "Not implemented: " << edit.command[0];
+    }
+    OutputString("\n");
+
+    switch (res) {
+      case ApplyResult::kNoApply:
+      case ApplyResult::kAmbiguous:
+        OutputString("  (`" + edit.ToString() + "`)\n");
+        break;
+      case ApplyResult::kAddedTodos:
+      case ApplyResult::kFailure:
+        // A failure to automatically apply a suggestion is not failure to
+        // create suggestions, so this should not return
+        // SuggestResult::kFailure.
+        result = SuggestResult::kUnapplied;
+        break;
+      case ApplyResult::kSuccess:
+        break;
+    }
+  };
+
+  auto ResolveSuggestion = [&](std::string_view value,
+                               const Target* target_context = nullptr) {
+    const auto& [targets, ok] = ResolveSuggestionToTarget(
+        build_settings, all_targets, current_toolchain, value, must_be_file,
+        cache, target_context);
+    if (!ok) {
+      StartError();
+      if (value.starts_with("//")) {
+        OutputString("Could not find target or file ");
+        OutputQuoted(value);
+      } else {
+        OutputString("Unable to find ");
+        OutputQuoted(value);
+        if (target_context) {
+          OutputString(" in the output, source root, or include directories\n");
+        } else {
+          OutputString(" in either the output or source root directories\n");
+        }
+      }
+    }
+    return std::make_pair(targets, ok);
+  };
+
+  auto [includer_targets, includer_ok] = ResolveSuggestion(includer_name);
+  if (!includer_ok)
+    return SuggestResult::kFailure;
+
+  if (includer_target) {
+    std::erase_if(includer_targets, [&](const auto& match) {
+      return match.target != includer_target;
+    });
+  }
+
+  if (includer_targets.empty()) {
+    StartError();
+    OutputQuoted(includer_name);
+    OutputString(" did not resolve to any targets\n");
+    return SuggestResult::kFailure;
+  } else if (includer_targets.size() > 1) {
+    StartError();
+    OutputQuoted(includer_name);
+    OutputString(" resolved to multiple targets\n");
+    for (const auto& match : includer_targets) {
+      OutputString("* ");
+      OutputTarget(match.target);
+      OutputString("\n");
+    }
+    return SuggestResult::kFailure;
+  }
+  const auto& includer_match = includer_targets.front();
+  const Target* includer = includer_match.target;
+  commands::ApiScope dep_kind = includer_match.scope;
+  current_toolchain = includer->label().GetToolchainLabel();
+
+  std::string_view dep_field =
+      (dep_kind == commands::ApiScope::kPrivate) ? "deps" : "public_deps";
+
+  const auto& [targets, ok] = ResolveSuggestion(included_name, includer);
+  if (!ok)
+    return SuggestResult::kFailure;
+
+  // We've passed the errors phase. At this point, everything is valid input.
+  // Includer is a single target, and included is a valid target, or a file
+  // that exists on disk.
+
+  if (targets.empty()) {
+    OutputQuoted(included_name);
+    OutputString(" is not in the headers of any targets.\n");
+    SetAmbiguous();
+    StartSuggestion();
+    OutputString("Add ");
+    OutputQuoted(included_name);
+    OutputString(" to a target's public headers\n");
+    return result;
+  }
+
+  std::set<Label> labels_without_toolchain;
+  for (const auto& match : targets) {
+    labels_without_toolchain.insert(match.target->label().GetWithNoToolchain());
+  }
+  if (labels_without_toolchain.size() == 1 &&
+      targets.front().target->label().GetToolchainLabel() !=
+          current_toolchain) {
+    // The resolution requires that if //:bar(:toolchain1) contained bar.h, we
+    // would have returned no targets from any other toolchain. Thus, we now
+    // have:
+    // //:foo(:toolchain1) including bar.h -> //:bar(:toolchain2),
+    // //:bar(:toolchain3)
+    OutputQuoted(included_name);
+    OutputString(" is defined in ");
+    OutputString(labels_without_toolchain.begin()->GetUserVisibleName(false),
+                 kLabelLike);
+    OutputString(", but not in the toolchain ");
+    OutputString(current_toolchain.GetUserVisibleName(false), kLabelLike);
+    OutputString("\n");
+    SourceFile file = ResolveFilePath(build_settings, all_targets,
+                                      included_name, cache, includer);
+    const Target* target = targets.front().target;
+    std::string path = file.is_null()
+                           ? std::string(included_name)
+                           : RebasePath(file.value(), target->label().dir(),
+                                        build_settings->root_path_utf8());
+    EditCommand edit{
+        .command = {"add", "public", std::move(path)},
+        .target = target->label().GetUserVisibleName(current_toolchain),
+    };
+    OutputEditCommand(edit, target);
+    return result;
+  }
+
+  if (targets.size() > 1) {
+    StartWarning();
+    OutputQuoted(included_name);
+    OutputString(" is ambiguous because it belongs to multiple targets:\n");
+    for (const auto& match : targets) {
+      OutputString("* ");
+      OutputTarget(match.target);
+      OutputString("\n");
+    }
+    StartSuggestion();
+    OutputString(
+        "Create a source_set target for the common headers and sources and "
+        "have all of the above targets depend on that.\n");
+    EditCommand edit{
+        .command = {"add", std::string(dep_field), "$NEW_SOURCE_SET"},
+        .target = includer->label().GetUserVisibleName(current_toolchain),
+    };
+    OutputEditCommand(edit, includer);
+    return result;
+  }
+
+  const Target* included = targets.front().target;
+  commands::ApiScope included_dep_kind = targets.front().scope;
+  if (included_dep_kind == commands::ApiScope::kPrivate) {
+    StartWarning();
+    OutputQuoted(included_name);
+    OutputString(" is in the private API of ");
+    OutputTarget(included);
+    OutputString("\n");
+    SourceFile file = ResolveFilePath(build_settings, all_targets,
+                                      included_name, cache, includer);
+    if (file.is_null()) {
+      // We tried to do `gn suggest out //:includer=//:included_Private`
+      std::vector<SourceFile> candidates;
+      for (const auto& source : included->sources()) {
+        if (source.GetType() == SourceFile::SOURCE_H) {
+          candidates.push_back(source);
+        }
+      }
+      if (candidates.size() == 1) {
+        file = candidates.front();
+      }
+    }
+    std::string path = file.is_null()
+                           ? "$HEADER"
+                           : RebasePath(file.value(), included->label().dir(),
+                                        build_settings->root_path_utf8());
+
+    // A public header attempted to include a private header.
+    if (includer == included) {
+      SourceFile includer_file = ResolveFilePath(
+          build_settings, all_targets, includer_name, cache, includer);
+      std::string includer_path =
+          includer_file.is_null()
+              ? "$HEADER"
+              : RebasePath(includer_file.value(), included->label().dir(),
+                           build_settings->root_path_utf8());
+
+      SetAmbiguous();
+      StartSuggestion();
+      OutputString(
+          "Choose one of the following to resolve the intra-target include:\n");
+      OutputString("* Create a new source_set for ");
+      OutputQuoted(path);
+      OutputString(" and add it to public_deps in ");
+      OutputTarget(included);
+      OutputString(" (preferred)\n");
+
+      EditCommand move_to_public{
+          .command = {"move", "sources", "public", path},
+          .target = included->label().GetUserVisibleName(current_toolchain),
+      };
+      OutputString("* Move ");
+      OutputQuoted(path);
+      OutputString(" from `sources` to `public` in ");
+      OutputDefinition(included);
+      OutputString("\n");
+      OutputString("  (`" + move_to_public.ToString() + "`)\n");
+
+      OutputString("* Move ");
+      OutputQuoted(includer_path);
+      OutputString(" from `public` to `sources` in ");
+      OutputDefinition(included);
+      OutputString("\n");
+      EditCommand move_to_sources{
+          .command = {"move", "public", "sources", std::move(includer_path)},
+          .target = included->label().GetUserVisibleName(current_toolchain),
+      };
+      OutputString("  (`" + move_to_sources.ToString() + "`)\n");
+      return result;
+    }
+
+    EditCommand edit{
+        .command = {"move", "sources", "public", std::move(path)},
+        .target = included->label().GetUserVisibleName(current_toolchain),
+    };
+    OutputEditCommand(edit, included);
+  }
+
+  // If a public header attempts to include a private header, we output "suggest
+  // making private header public". We also suggest depending on the target that
+  // declares the private header. If it's all within the same target though, we
+  // should stop here and not suggest adding the dependency.
+  if (includer == included) {
+    return result;
+  }
+
+  // TODO: There are a bunch of optimizations we can perform here to make better
+  // suggestions. They may be considered in the future. Some initial thoughts
+  // include:
+  // * Check if included transitively depends on includer. Suggest ways to break
+  // the loop.
+
+  auto OutputDepSuggestion = [&](const std::vector<const Target*>& candidates) {
+    struct CandidateDep {
+      const Target* target;
+      std::string label;
+      EditCommand edit;
+    };
+    std::vector<CandidateDep> candidate_deps;
+    for (const auto& target : candidates) {
+      Label label = target->label();
+      HeaderChecker::Chain cycle;
+      if (cache.GetReachabilityCache(target).SearchForDependencyTo(
+              includer, /*permitted=*/false, &cycle)) {
+        std::reverse(cycle.begin(), cycle.end());
+        StartWarning();
+        OutputTarget(target);
+        OutputString(" depends on ");
+        OutputTarget(includer);
+        OutputString(
+            ", so adding this dependency will create a dependency loop:\n");
+
+        OutputString("  ");
+        OutputTarget(includer);
+        OutputString(" ->\n");
+
+        for (size_t i = 0; i < cycle.size(); i++) {
+          OutputString("  ");
+          OutputTarget(cycle[i].target);
+          if (i + 1 < cycle.size()) {
+            OutputString(" ->");
+          }
+          OutputString("\n");
+        }
+
+        bool has_allow_circular_includes_from = false;
+        for (const auto& link : cycle) {
+          const Target* t = link.target;
+          if (!t->allow_circular_includes_from().empty()) {
+            has_allow_circular_includes_from = true;
+            SetAmbiguous();
+            StartSuggestion();
+            OutputString(":", kLabelLike);
+            OutputString(t->label().name(), kLabelLike);
+            OutputString(" (defined at ");
+            OutputString(t->user_friendly_location().Describe(false),
+                         kLabelLike);
+            OutputString(
+                ") declares allow_circular_includes_from, which is bad style. "
+                "Instead, you should remove allow_circular_includes_from by "
+                "doing the following:\n");
+
+            OutputString("source_set(\"");
+            OutputString(t->label().name());
+            OutputString("_sources\") {\n");
+            OutputString("  # All attributes from :");
+            OutputString(t->label().name());
+            OutputString(" except public_deps, and any link options\n");
+            OutputString(
+                "  # Note that some public_deps may need to be added back "
+                "based on #includes of headers.\n");
+            OutputString("}\n\n");
+
+            OutputString(Target::GetStringForOutputType(t->output_type()));
+            OutputString("(\"");
+            OutputString(t->label().name());
+            OutputString("\") {\n");
+            OutputString("  public_deps = [ \":");
+            OutputString(t->label().name());
+            OutputString("_sources\" ]\n");
+            OutputString("  # public_deps, and any link variables from :");
+            OutputString(t->label().name());
+            OutputString("\n");
+            OutputString("}\n");
+
+            if (t == target) {
+              label = Label(label.dir(), label.name() + "_sources",
+                            label.toolchain_dir(), label.toolchain_name());
+            }
+            break;
+          }
+        }
+        if (!has_allow_circular_includes_from) {
+          SetAmbiguous();
+          StartSuggestion();
+          OutputString(
+              "Find the part of the dependency chain where there is no "
+              "#include "
+              "and remove that dependency.\n");
+        }
+      }
+      std::string label_str = label.dir() == includer->label().dir()
+                                  ? ":" + label.name()
+                                  : label.GetUserVisibleName(current_toolchain);
+      EditCommand edit{
+          .command = {"add", std::string(dep_field), label_str},
+          .target = includer->label().GetUserVisibleName(current_toolchain),
+      };
+      candidate_deps.push_back({target, std::move(label_str), std::move(edit)});
+    }
+
+    std::sort(candidate_deps.begin(), candidate_deps.end(),
+              [](const CandidateDep& lhs, const CandidateDep& rhs) {
+                // Ensure relative labels come before absolute labels.
+                bool lhs_abs = !lhs.label.starts_with(':');
+                bool rhs_abs = !rhs.label.starts_with(':');
+                return std::tie(lhs_abs, lhs.label) <
+                       std::tie(rhs_abs, rhs.label);
+              });
+    if (includer_match.conditional) {
+      if (apply) {
+        result = SuggestResult::kUnapplied;
+      }
+      StartSuggestion();
+      if (candidate_deps.size() == 1) {
+        OutputString("Under ");
+        OutputString(includer_match.conditional->str());
+        OutputString(", add ");
+        OutputString(dep_field);
+        OutputString(" = [ ");
+        OutputQuoted(candidate_deps.front().label);
+        OutputString(" ] to ");
+        OutputDefinition(includer);
+        OutputString("\n");
+      } else {
+        SetAmbiguous();
+        OutputString("Under ");
+        OutputString(includer_match.conditional->str());
+        OutputString(", add one of the following to ");
+        OutputString(dep_field);
+        OutputString(" in ");
+        OutputDefinition(includer);
+        OutputString(":\n");
+        for (const auto& c : candidate_deps) {
+          OutputString("* " + c.label + "\n");
+        }
+      }
+      return;
+    }
+
+    if (candidate_deps.size() == 1) {
+      OutputEditCommand(candidate_deps.front().edit, includer);
+      return;
+    }
+
+    SetAmbiguous();
+    StartSuggestion();
+    OutputString("Add one of the following to ");
+    OutputString(dep_field);
+    OutputString(" in ");
+    OutputDefinition(includer);
+    OutputString(":\n");
+    for (const auto& c : candidate_deps) {
+      OutputString("* " + c.label + " (`" + c.edit.ToString() + "`)\n");
+    }
+  };
+
+  if (included->visibility().CanSeeMe(includer->label())) {
+    OutputDepSuggestion({included});
+    return result;
+  }
+
+  // Now we need to look for things that expose it.
+  std::vector<const Target*> visible_candidates;
+  std::vector<const Target*> nonpublic_candidates;
+  std::vector<const Target*> all_candidates;
+  for (const Target* candidate :
+       cache.GetTargetsExposing(*included, all_targets)) {
+    if (candidate == included)
+      continue;
+    // Check that the toolchains are the same to avoid picking up both //:foo
+    // and //:foo(other_toolchain).
+    if (candidate->label().ToolchainsEqual(includer->label())) {
+      all_candidates.push_back(candidate);
+      if (candidate->visibility().CanSeeMe(includer->label())) {
+        visible_candidates.push_back(candidate);
+        // Check if candidate is public by checking if the empty label can see
+        // it.
+        if (!candidate->visibility().CanSeeMe(Label())) {
+          nonpublic_candidates.push_back(candidate);
+        }
+      }
+    }
+  }
+
+  // If, for example, we have //third_party/abseil-cpp:absl and
+  // //v8:v8_abseil, and we learn that v8_abseil is not public, but we can
+  // depend on it, then we are probably in the //v8 directory, and thus
+  // should prefer v8_abseil.
+  if (!nonpublic_candidates.empty()) {
+    visible_candidates = nonpublic_candidates;
+  }
+
+  if (visible_candidates.size() > 1) {
+    auto ClosenessHeuristic =
+        [&](const Target* candidate) -> std::pair<int, size_t> {
+      // Consider the following example:
+      // * We attempted to include a file from //absl:strings.
+      // * //absl:strings is private, but is part of a group //absl:absl.
+      // * //angle:absl re-exports //absl:absl. It should ideally only be
+      //   visible to //angle/..., but may not be.
+      //
+      // Then:
+      // * If we include it from //angle:foo or //angle/subdir:foo, we should
+      //   get //angle:absl.
+      // * If we include it from outside, we should get the canonical one
+      //   (//absl:absl).
+      std::string_view cand_dir = candidate->label().dir().value();
+      std::string_view includer_dir = includer->label().dir().value();
+      std::string_view included_dir = included->label().dir().value();
+      // SourceDir always ends with "/", so string starts_with is ok.
+      if (includer_dir.starts_with(cand_dir) &&
+          !included_dir.starts_with(cand_dir)) {
+        // Our highest priority match is a local alias for something defined
+        // elsewhere. We specifically exclude things in the common ancestors
+        // because we're not sure if that is an alias or not.
+        return {2, cand_dir.size()};
+      } else if (included_dir.starts_with(cand_dir)) {
+        // If no option is more specific, we should prefer the "canonical" one.
+        // We assume it to be canonical if it's defined in the tree of the
+        // original target. (Eg. //absl re-exporting //absl/subdir:foo)
+        //
+        // We intentionally make no decision on whether //absl:exporter or
+        // //absl/subdir:exporter would be "more canonical" - we can change this
+        // later if we'd like, but for now we'd treat this as ambiguous.
+        //
+        // We do, however, assume that //:foo is less canonical, mainly because
+        // we're quite likely to see //:all re-export everything.
+        return {1, cand_dir == "//" ? 0 : 1};
+      }
+      return {0, 0};
+    };
+
+    std::ranges::stable_sort(
+        visible_candidates, [&](const Target* lhs, const Target* rhs) {
+          return ClosenessHeuristic(lhs) > ClosenessHeuristic(rhs);
+        });
+    if (ClosenessHeuristic(visible_candidates[0]) !=
+        ClosenessHeuristic(visible_candidates[1])) {
+      visible_candidates.resize(1);
+    }
+  }
+
+  if (visible_candidates.size() == 1) {
+    OutputDepSuggestion(visible_candidates);
+  } else if (visible_candidates.size() > 1) {
+    StartWarning();
+    OutputTarget(included);
+    OutputString(" is exposed via multiple targets\n");
+    SetAmbiguous();
+    StartSuggestion();
+    OutputString(
+        "Clean up the visibility so that only one of the below targets is "
+        "visible to ");
+    OutputTarget(includer);
+    OutputString("\n");
+    OutputDepSuggestion(visible_candidates);
+  } else if (all_candidates.empty()) {
+    StartWarning();
+    OutputTarget(included);
+    OutputString(" is not visible to ");
+    OutputTarget(includer);
+    OutputString("\n");
+    SetAmbiguous();
+    StartSuggestion();
+    OutputString(
+        "Carefully consider whether you want to change the visibility so that "
+        "you can depend on it\n");
+    OutputDepSuggestion({included});
+  } else {
+    StartWarning();
+    OutputTarget(included);
+    OutputString(
+        " is exposed via the following targets, but none are visible to ");
+    OutputTarget(includer);
+    OutputString("\n");
+    SetAmbiguous();
+    StartSuggestion();
+    OutputString(
+        "Carefully consider whether you want to change the visibility so that "
+        "you can depend on one of them\n");
+    all_candidates.push_back(included);
+    OutputDepSuggestion(all_candidates);
+  }
+  return result;
+}
+
+int RunSuggest(const std::vector<std::string>& args) {
+  constexpr auto kLabelLike = TextDecoration::DECORATION_GREEN;
+
+  auto OutputError = [](std::string_view message) {
+    OutputString("Error: ", TextDecoration::DECORATION_RED);
+    OutputString(message);
+  };
+
+  auto OutputQuoted = [](std::string_view message) {
+    OutputString("\"", kLabelLike);
+    OutputString(message, kLabelLike);
+    OutputString("\"", kLabelLike);
+  };
+
+  if (args.size() <= 1) {
+    OutputError("gn suggest requires arguments. See \"gn help suggest\"\n");
+    return 1;
+  }
+
+  bool apply = base::CommandLine::ForCurrentProcess()->HasSwitch("apply");
+
+  // Deliberately leaked to avoid expensive process teardown.
+  Setup* setup = new Setup;
+  if (!setup->DoSetup(args[0], false) || !setup->Run())
+    return 1;
+
+  std::vector<const Target*> all_targets =
+      setup->builder().GetAllResolvedTargets();
+
+  SuggestResult exit_status = SuggestResult::kSuccess;
+  bool has_suggestions = false;
+  TargetResolutionCache cache;
+  for (size_t i = 1; i < args.size(); i++) {
+    if (i != 1) {
+      OutputString("\n");
+    }
+    std::vector<std::string_view> pair = base::SplitStringPiece(
+        args[i], "=", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
+    if (pair.size() != 2) {
+      OutputError("Invalid pair: " + args[i] + "\n");
+      return 1;
+    }
+    const auto& includer = pair[0];
+    const auto& included = pair[1];
+
+    // args[0] = output directory.
+    // If there's only one request, don't print which request this corresponds
+    // to.
+    if (args.size() > 2) {
+      OutputString("Request: ", TextDecoration::DECORATION_MAGENTA);
+      OutputQuoted(includer);
+      OutputString(" wants to depend on ");
+      OutputQuoted(included);
+      OutputString(":\n");
+    }
+
+    SuggestResult res = OutputSuggestions(
+        all_targets, &setup->build_settings(),
+        setup->loader()->default_toolchain_label(), includer,
+        /*includer_target=*/nullptr, included,
+        [&](std::string_view str, TextDecoration dec, HtmlEscaping esc) {
+          has_suggestions = true;
+          ::OutputString(str, dec, esc);
+        },
+        cache, /*must_be_file=*/false, apply, setup);
+    if (res == SuggestResult::kFailure) {
+      exit_status = SuggestResult::kFailure;
+    } else if (res == SuggestResult::kUnapplied &&
+               exit_status == SuggestResult::kSuccess) {
+      exit_status = SuggestResult::kUnapplied;
+    }
+  }
+
+  if (!apply && has_suggestions && exit_status != SuggestResult::kFailure) {
+    OutputString("\nTo automatically apply suggestions, add --apply.\n",
+                 DECORATION_DIM);
+  }
+
+  return static_cast<int>(exit_status);
+}
+
+}  // namespace commands

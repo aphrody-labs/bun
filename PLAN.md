@@ -1,5 +1,53 @@
 # Plan — aphrody-labs/bun, noyau d'Aphrody
 
+## Owner execution constraint — 2026-10-11
+
+Keep this work in the existing `C:/bun` directory. Do not create additional
+checkouts or worktrees. Preserve existing concurrent work and reuse validated
+build outputs. External host work needs an explicit current task scope.
+
+## GN fork and native toolchain integration — 2026-10-11
+
+Vendor the complete aphrody-labs/gn fork at `3f99f58c2568dd267952dcd80696406474f7e2ea`,
+based on upstream `0035961837fbcfe875d855744b3eda4fd2eefb43`, with BSD notices
+and per-file Git blob/SHA-256 receipts. The fork preserves the pinned GN version
+in source archives without nested Git metadata. `bun run gn` routes the bootstrap
+and project GN/Ninja commands through existing `bun msvc exec` on Windows.
+Qualify incremental native GN and upstream tests separately from full browser
+builds; Chromium retains its clang-cl/SDK pins, ChromiumOS needs a Linux board SDK.
+See [GN integration](docs/chromium/gn.md) for commands and qualification.
+Owner directive: use only the existing `C:/bun` directory. Do not create
+isolated checkouts or worktrees. Native GN outputs remain under `build/gn`.
+The temporary GN import clone, tar archive, failed-build logs and compiler
+probes were removed with the native Aphrody file tool after publication and
+source integrity verification. The qualified GN binaries and incremental
+build cache remain in `C:/bun/build/gn`.
+
+## Obscura/JSC and full Chromium/V8 owner batch — 2026-10-11
+
+Requested modes: reuse native Obscura with the ongoing JSC port for serverless
+browser execution, alongside full Chromium/V8 with WebGPU enabled by default.
+Chromium launches a visible browser by default (`headless: false`). The built-in
+bridges reuse Bun's WebSocket, process and file primitives for browser-scope CDP,
+isolated launches, MV3/theme/PWA helpers and explicit bookmark JSON import.
+The `obscura` branch checkpoint `c82e6a6e3bd` contains the standalone
+`packages/bun-obscura` workspace. Its concurrent uncommitted `src/browser` and
+JSC integration in the Obscura worktree remain owned by that workstream; do not
+copy them or claim the native JSC port complete.
+Reuse `bun:windows.gpu.d3d12`, bun-cosmic's tiny-skia/optional wgpu rendering,
+the existing Tauri CEF runtime's CDP/cookie facilities and Obscura CookieJar.
+No new GPU stack or dependencies are needed for the bridge batch.
+Qualification and delivery evidence: [Chromium](docs/aphrody/chromium.md).
+Windows changed-binary qualification: 20 browser/codegen tests pass, plus five
+existing D3D12 tests. Chromium 154 executes WGSL compute/readback on NVIDIA
+Lovelace without a fallback adapter. Scoped TypeScript, oxlint, Rust check and
+strict crate-only Clippy pass. Dependency-wide Clippy remains blocked by 68
+existing undocumented unsafe blocks in bun_libuv_sys. Browser, GPU, cookie and engine behavior
+must be qualified separately for each mode; bridge tests do not prove parity.
+Source implementation `74bf6caa6e2` is verified on origin/main. Post-publication
+VPS/DBFR probes still run installed `1.4.3-aphrody.4+41211b568`, without the new
+built-ins; Linux artifact delivery and native JSC backend qualification remain open.
+
 > Correction propriétaire du 2026-10-09 : Aphrody et Bun peuvent être développés et construits sur tout hôte qualifié. Sélectionner checkout, cible, outils, ressources et droits selon le contexte ; les chemins Windows ci-dessous sont des exemples du poste courant. Yoyo / aphrody-dev administre tout Aphrody Labs ; Omar administre DBFR. WSL est retiré du workflow du poste actuel.
 
 Plan commun à tous les agents qui travaillent sur ce fork (C:\bun), sur le monorepo Aphrody (C:\aphrody) et sur
@@ -251,3 +299,5 @@ Owner route/changed-test scratch lot (2026-10-10): heap route serialization and 
 Owner lockfile iterator lot (2026-10-10): pooled RAII scratch removes four runtime Windows frames (22 to18). Native200/0,40 snapshots/2975 assertions; initial dependency/time failure preserved. Dedicated bun_install reveals115 Windows/53 GNU global diagnostics, owned zero. See docs/project/lockfile-tree-pool-qualification.md. Full strict and delivery gates stay open.
 
 Owner launch/shell pointer lot (2026-10-10): four runtime Windows diagnostics removed (18 to14), GNU strict both targets zero, MSVC owned zero. Changed engine44 pass/14 inherited skips/0 fail,27 snapshots/121 assertions. See docs/project/launch-shell-pointer-qualification.md. Interactive console and full delivery gates remain open.
+
+Owner directive (2026-10-11): Obscura engine source moves from Aphrody into `packages/bun-obscura`, a standalone workspace on the `obscura` branch of `aphrody-labs/bun-os`. Product adapters remain in Aphrody and consume exact provider revisions. See [transfer plan](packages/bun-obscura/PLAN.md). V8, local patches and permission boundaries stay intact; no native Bun binding is implied by the source transfer.

@@ -39,7 +39,10 @@ const user32 = dlopen("user32.dll", {
   ShowWindow: { args: [FFIType.ptr, FFIType.i32], returns: FFIType.bool },
   UpdateWindow: { args: [FFIType.ptr], returns: FFIType.bool },
   DestroyWindow: { args: [FFIType.ptr], returns: FFIType.bool },
-  DefWindowProcW: { args: [FFIType.ptr, FFIType.u32, FFIType.u64, FFIType.i64], returns: FFIType.i64 },
+  DefWindowProcW: {
+    args: [FFIType.ptr, FFIType.u32, FFIType.u64, FFIType.i64],
+    returns: FFIType.i64,
+  },
   GetMessageW: { args: [FFIType.ptr, FFIType.ptr, FFIType.u32, FFIType.u32], returns: FFIType.i32 },
   TranslateMessage: { args: [FFIType.ptr], returns: FFIType.bool },
   DispatchMessageW: { args: [FFIType.ptr], returns: FFIType.i64 },
@@ -48,7 +51,10 @@ const user32 = dlopen("user32.dll", {
   GetClientRect: { args: [FFIType.ptr, FFIType.ptr], returns: FFIType.bool },
   BeginPaint: { args: [FFIType.ptr, FFIType.ptr], returns: FFIType.ptr },
   EndPaint: { args: [FFIType.ptr, FFIType.ptr], returns: FFIType.bool },
-  DrawTextW: { args: [FFIType.ptr, FFIType.ptr, FFIType.i32, FFIType.ptr, FFIType.u32], returns: FFIType.i32 },
+  DrawTextW: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.i32, FFIType.ptr, FFIType.u32],
+    returns: FFIType.i32,
+  },
   SetTimer: { args: [FFIType.ptr, FFIType.u64, FFIType.u32, FFIType.ptr], returns: FFIType.u64 },
 });
 
@@ -148,7 +154,7 @@ const wndProc = new JSCallback(
 );
 
 const hInstance = kernel32.symbols.GetModuleHandleW(null);
-const hCursor = user32.symbols.LoadCursorW(null, IDC_ARROW);
+const hCursor = user32.symbols.LoadCursorW(null, BigInt(IDC_ARROW));
 
 // WNDCLASSEXW, 80 bytes on 64-bit Windows.
 const wndClass = Buffer.alloc(80);
@@ -199,4 +205,6 @@ while (user32.symbols.GetMessageW(msg, null, 0, 0) > 0) {
 
 user32.symbols.UnregisterClassW(className, hInstance);
 wndProc.close();
-console.log(`window closed: message=0x${msg.readUInt32LE(8).toString(16)} wParam=${msg.readBigUInt64LE(16)}`);
+console.log(
+  `window closed: message=0x${msg.readUInt32LE(8).toString(16)} wParam=${msg.readBigUInt64LE(16)}`,
+);

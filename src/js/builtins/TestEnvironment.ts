@@ -2,8 +2,21 @@
 // file's own dependencies. Jest runs such a file with the window as its global; here the window's members are
 // installed on globalThis instead, and the returned function puts the previous ones back. The jsdom options are
 // the ones of jest-environment-jsdom (MIT, Copyright Meta Platforms, Inc. and affiliates).
-export function installTestEnvironment(name: string, requireFromTest: Function) {
-  const tryRequire = (from: Function, id: string) => {
+export function installTestEnvironment(name: string, requireFromTest: NodeJS.Require) {
+  // Only the constructor and cleanup contract of these dynamically resolved dependencies is used here.
+  type EnvironmentWindow = Record<string, unknown> & {
+    close?: () => void;
+    happyDOM?: { close: () => void };
+  };
+  type JsdomModule = {
+    JSDOM: new (
+      html: string,
+      options: { pretendToBeVisual: boolean; runScripts: string; url: string },
+    ) => { window: EnvironmentWindow };
+  };
+  type HappyDomModule = { Window: new (options: { url: string }) => EnvironmentWindow };
+
+  const tryRequire = (from: NodeJS.Require, id: string): unknown => {
     let resolved;
     try {
       resolved = from.resolve(id);
@@ -30,8 +43,12 @@ export function installTestEnvironment(name: string, requireFromTest: Function) 
       return undefined;
     case "jsdom":
     case "jest-environment-jsdom": {
-      const jsdom = tryRequire(requireFromTest, "jsdom") ?? requireBeside("jest-environment-jsdom", "jsdom");
-      if (!jsdom) throw new Error(`Test environment "${name}" needs "jsdom" or "jest-environment-jsdom" installed`);
+      const jsdom = (tryRequire(requireFromTest, "jsdom") ??
+        requireBeside("jest-environment-jsdom", "jsdom")) as JsdomModule | undefined;
+      if (!jsdom)
+        throw new Error(
+          `Test environment "${name}" needs "jsdom" or "jest-environment-jsdom" installed`,
+        );
       window = new jsdom.JSDOM("<!DOCTYPE html>", {
         pretendToBeVisual: true,
         runScripts: "dangerously",
@@ -41,15 +58,19 @@ export function installTestEnvironment(name: string, requireFromTest: Function) 
     }
     case "happy-dom":
     case "@happy-dom/jest-environment": {
-      const happyDOM =
-        tryRequire(requireFromTest, "happy-dom") ?? requireBeside("@happy-dom/jest-environment", "happy-dom");
+      const happyDOM = (tryRequire(requireFromTest, "happy-dom") ??
+        requireBeside("@happy-dom/jest-environment", "happy-dom")) as HappyDomModule | undefined;
       if (!happyDOM)
-        throw new Error(`Test environment "${name}" needs "happy-dom" or "@happy-dom/jest-environment" installed`);
+        throw new Error(
+          `Test environment "${name}" needs "happy-dom" or "@happy-dom/jest-environment" installed`,
+        );
       window = new happyDOM.Window({ url: "http://localhost/" });
       break;
     }
     default:
-      throw new Error(`Test environment "${name}" is not supported; use "node", "jsdom" or "happy-dom"`);
+      throw new Error(
+        `Test environment "${name}" is not supported; use "node", "jsdom" or "happy-dom"`,
+      );
   }
 
   // The window's own copy of the language globals stays out, and so do the timers (jest.useFakeTimers() fakes
@@ -152,7 +173,7 @@ export function installTestEnvironment(name: string, requireFromTest: Function) 
     if (key === "window" || key === "top" || key === "parent" || key === "frames") continue;
     install(key, {
       get: () => window[key],
-      set: value => {
+      set: (value) => {
         window[key] = value;
       },
       enumerable: false,
@@ -162,7 +183,8 @@ export function installTestEnvironment(name: string, requireFromTest: Function) 
   // Events dispatched in the document bubble up to the window, so listeners added on globalThis go on the window.
   for (const key of ["addEventListener", "removeEventListener", "dispatchEvent"]) {
     const method = window[key];
-    if (typeof method === "function") install(key, { value: method.bind(window), writable: true, enumerable: false });
+    if (typeof method === "function")
+      install(key, { value: method.bind(window), writable: true, enumerable: false });
   }
 
   return function uninstallTestEnvironment() {

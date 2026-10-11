@@ -11,6 +11,7 @@
 // (exit 2) with the merge aborted, unless --keep-conflicts.
 
 import { join } from "node:path";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { apply, rewrite } from "./scope.ts";
 
 type Options = {
@@ -36,7 +37,14 @@ export const OWNED: readonly string[] = [
 
 export type SyncResult =
   | { status: "up-to-date"; behind: 0 }
-  | { status: "merged"; behind: number; commit: string; renameResolved: string[]; kept: string[]; pushed: boolean }
+  | {
+      status: "merged";
+      behind: number;
+      commit: string;
+      renameResolved: string[];
+      kept: string[];
+      pushed: boolean;
+    }
   | { status: "dry-run"; behind: number; conflicts: string[] }
   | { status: "conflicts"; behind: number; conflicts: string[] };
 
@@ -71,7 +79,8 @@ function git(root: string, args: string[], input?: string) {
 
 function gitOk(root: string, args: string[]): string {
   const r = git(root, args);
-  if (r.code !== 0) throw new Error(`git ${args.join(" ")} failed (exit ${r.code}): ${r.err.trim()}`);
+  if (r.code !== 0)
+    throw new Error(`git ${args.join(" ")} failed (exit ${r.code}): ${r.err.trim()}`);
   return r.out.trim();
 }
 
@@ -95,26 +104,44 @@ async function resolveWithRename(root: string, path: string): Promise<boolean> {
   const ours = stage(root, 2, path);
   const theirs = stage(root, 3, path);
   if (base === null || ours === null || theirs === null) return false;
-  const tmp = join(root, ".git", "aphrody-sync");
-  const files = { ours: join(tmp, "ours"), base: join(tmp, "base"), theirs: join(tmp, "theirs") };
-  await Bun.write(files.ours, ours);
-  await Bun.write(files.base, rewrite(path, base));
-  await Bun.write(files.theirs, rewrite(path, theirs));
-  const merged = Bun.spawnSync(["git", "merge-file", "-p", files.ours, files.base, files.theirs], {
-    cwd: root,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  if (merged.exitCode !== 0) return false;
-  await Bun.write(join(root, path), merged.stdout);
-  gitOk(root, ["add", "--", path]);
-  return true;
+  // A linked worktree has a .git file, and each worktree has its own Git
+  // directory. Never write into the checkout or share merge scratch files.
+  const scratchRoot = gitOk(root, [
+    "rev-parse",
+    "--path-format=absolute",
+    "--git-path",
+    "aphrody-sync",
+  ]);
+  await mkdir(scratchRoot, { recursive: true });
+  const tmp = await mkdtemp(join(scratchRoot, "merge-"));
+  try {
+    const files = { ours: join(tmp, "ours"), base: join(tmp, "base"), theirs: join(tmp, "theirs") };
+    await Bun.write(files.ours, ours);
+    await Bun.write(files.base, rewrite(path, base));
+    await Bun.write(files.theirs, rewrite(path, theirs));
+    const merged = Bun.spawnSync(
+      ["git", "merge-file", "-p", files.ours, files.base, files.theirs],
+      {
+        cwd: root,
+        stdout: "pipe",
+        stderr: "pipe",
+      },
+    );
+    if (merged.exitCode !== 0) return false;
+    await Bun.write(join(root, path), merged.stdout);
+    gitOk(root, ["add", "--", path]);
+    return true;
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
 }
 
 export async function sync(opts: Options): Promise<SyncResult> {
   const { root } = opts;
   if (gitOk(root, ["status", "--porcelain", "--untracked-files=no"]) !== "") {
-    throw new Error("working tree has uncommitted changes to tracked files; commit or stash them first");
+    throw new Error(
+      "working tree has uncommitted changes to tracked files; commit or stash them first",
+    );
   }
   const current = gitOk(root, ["rev-parse", "--abbrev-ref", "HEAD"]);
   if (current !== opts.branch) throw new Error(`on branch "${current}", expected "${opts.branch}"`);
@@ -125,7 +152,9 @@ export async function sync(opts: Options): Promise<SyncResult> {
 
   const upstreamHead = gitOk(root, ["rev-parse", "--short", opts.ref]);
   const merge = git(root, ["merge", "--no-ff", "--no-commit", opts.ref]);
-  const conflicted = gitOk(root, ["diff", "--name-only", "--diff-filter=U"]).split("\n").filter(Boolean);
+  const conflicted = gitOk(root, ["diff", "--name-only", "--diff-filter=U"])
+    .split("\n")
+    .filter(Boolean);
   if (merge.code !== 0 && conflicted.length === 0) {
     git(root, ["merge", "--abort"]);
     throw new Error(`git merge ${opts.ref} failed: ${merge.err.trim() || merge.out.trim()}`);

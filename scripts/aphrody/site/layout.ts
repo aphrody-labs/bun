@@ -209,3 +209,15 @@ document.addEventListener("keydown",e=>{if((e.key==="k"&&(e.metaKey||e.ctrlKey))
 const latest=$("[data-latest-tag]");if(latest)fetch("https://api.github.com/repos/"+latest.dataset.repo+"/releases?per_page=10").then(r=>r.ok?r.json():[]).then(rs=>{const r=rs.find(x=>!x.draft&&!x.prerelease&&/^(bun-v|aphrody-v)/.test(x.tag_name));if(r&&r.tag_name!==latest.dataset.latestTag){latest.hidden=false;latest.innerHTML='A newer release is available: <a href="'+r.html_url+'">'+r.tag_name.replace(/</g,"")+'</a>.'}}).catch(()=>{});
 })();
 `;
+
+/** Reuse the documentation search implementation in captured upstream layouts. */
+export function docsSearchScript() {
+  const start = JS.indexOf('const q=$("#q"),box=$("#results");');
+  const end = JS.indexOf('const latest=$("[data-latest-tag]");');
+  if (start < 0 || end <= start) throw new Error("Canonical documentation search block is missing");
+  return (
+    "(()=>{const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];" +
+    JS.slice(start, end) +
+    "})();"
+  );
+}

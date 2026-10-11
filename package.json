@@ -2,10 +2,14 @@
   "name": "bun",
   "version": "1.4.4",
   "private": true,
+  "repository": "github:aphrody-labs/bun",
   "workspaces": [
-    "./packages/bun-types"
+    "./packages/bun-types",
+    "./packages/bun-web"
   ],
   "scripts": {
+    "gn": "bun scripts/aphrody/gn.ts",
+    "gn:vendor": "bun scripts/aphrody/vendor-gn.ts",
     "bun:windows": "bun scripts/aphrody/win/version-sync.ts",
     "build": "bun --silent run build:debug",
     "ci:find": "bun scripts/find-build.ts",
@@ -24,6 +28,7 @@
     "agent-plugin": "bun scripts/aphrody/agent-plugin.ts",
     "release:surfaces": "bun scripts/aphrody/release-surfaces.ts",
     "delivery": "bun scripts/aphrody/monorepo-delivery.ts",
+    "verify:fusion": "bun scripts/aphrody/verify-fusion.ts",
     "delivery:native": "bun scripts/aphrody/delivery-native.ts",
     "build:debug": "bun scripts/build.ts --profile=debug",
     "build:debug:fuzzilli": "bun scripts/build.ts --profile=debug --fuzzilli=on --build-dir=build/debug-fuzz",
@@ -43,7 +48,7 @@
     "jsc:build": "bun scripts/build.ts --profile=release-local --build-dir=build/release-local --target=WebKit",
     "jsc:build:debug": "bun scripts/build.ts --profile=debug-local --build-dir=build/debug-local --target=WebKit",
     "jsc:build:lto": "bun scripts/build.ts --profile=release-local --lto=on --build-dir=build/release-local-lto --target=WebKit",
-    "typecheck": "bun check --noEmit && bun check --noEmit --project test/tsconfig.json",
+    "typecheck": "bun run typecheck:prepare && bun check --noEmit && bun check --noEmit --project test/tsconfig.json",
     "fmt": "bun fmt --write --ignore-pattern '**/*fixture*.*' scripts packages src/js test",
     "fmt:cpp": "bun run clang-format",
     "fmt:rust": "cargo fmt --all",
@@ -81,7 +86,8 @@
     "buv:docs": "bun scripts/aphrody/buv.ts docs",
     "buv:embedded": "bun scripts/aphrody/buv.ts embedded",
     "buv:bench": "bun scripts/aphrody/bench.ts",
-    "buv:formats": "bun scripts/aphrody/formats.ts"
+    "buv:formats": "bun scripts/aphrody/formats.ts",
+    "typecheck:prepare": "bun run --cwd packages/bun-plugin-tailwind types:prepare"
   },
   "devDependencies": {
     "@lezer/common": "1.5.2",

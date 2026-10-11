@@ -1,0 +1,128 @@
+---
+title: Chromium family and native Bun owners
+description: Reuse existing Python, system package, browser transport and toolchain owners for the Bun and JSC browser integration.
+---
+
+# Chromium family and native Bun owners
+
+Owner directive, 2026-10-11: support Chromium-family browsers across qualified
+platforms and converge browser JavaScript on Bun's JavaScriptCore. Reuse native
+Bun owners for Python, dependencies, toolchains and browser lifecycle. The
+delivery product remains one Bun CLI, runtime, FFI, MCP registry and agent
+plugin. This inventory describes actual source and installed help, not a
+qualified Chromium build or replacement of Chromium's V8 internals.
+
+## Existing owners to reuse
+
+| Capability | Source owner | Reuse and qualification boundary |
+| --- | --- | --- |
+| Embedded UV, Python project/interpreter acquisition | `vendor/uv`, `scripts/aphrody/buv.ts`, `packages/buv` | `bun uv` dispatch already exists. Preserve UV resolution, lock, caches, interpreter selection and child exit codes. Artifact receipts identify UV/Bun/JSC/CPython pins. |
+| Python command dispatch | `src/runtime/cli/python_command.rs` | Python source/CLI uses the lazy ABI-versioned host; no second command parser. Keep argv, Unicode paths, environment, cwd, exit status and subprocess behavior. |
+| In-process Python API | `src/js/bun/python.ts`, `packages/bun-python-native/crates/bun-python-host` | `bun:python` reuses the host through Bun FFI. Host ABI 1 and explicit CPython library selection precede execution. A successful embedded evaluator is not depot_tools CLI parity. |
+| Python build/conformance | `src/runtime/cli/python_compile.rs`, `packages/bun-python-conformance`, `packages/bun-python-toolchain` | Reuse target/host provenance, codec/CLI conformance and compiler owner. Do not install a parallel Python launcher to hide a missing native contract. |
+| System dependency resolution/install | `src/install/system`, `packages/aphrody-pkg-system`, `src/install/PackageManager/install_with_manager.rs` | `systemDependencies` feeds the existing lock/install owner; APK, winget and the Linux Debian/APT adapter are implemented in source. Candidate native APT CLI execution remains unqualified; pacman is unsupported. |
+| Factory/bootstrap dependency setup | `scripts/aphrody/setup.ts`, `scripts/aphrody/deps.json` | Existing dry-run/dependency inventory and platform bootstrap can use apt-get/apk/brew/winget explicitly. This is not proof that `bun pm apt` exists. Execute approved host changes through Infra; no global workstation install. |
+| Windows native toolchain | `bun msvc`, `scripts/build/tools.ts` | Existing discovery resolves MSVC/SDK/LLVM/CMake/Ninja. Reuse its explicit setup plan and exec environment rather than manually modifying PATH or registry. |
+| Browser detection/lifecycle/CDP pipe | `src/runtime/webview/ChromeProcess.rs`, `ChromeBackend.cpp`, `JSWebViewConstructor.cpp` | Native Bun.WebView owner finds Chrome/Chromium/Brave/Edge and manages pipe lifecycle. Respect explicit backend path and isolation; a CDP connection to Chromium still executes Chromium's current V8. |
+| Platform WebView transport | `src/runtime/webview/HostProcess.rs`, `WebKitBackend.cpp`, `packages/bun-webview-core` | Existing macOS WKWebView and optional host source use platform engines. The package has a historical `bun-webview-host` helper; it is not an authorization to create another product or claim all backends qualified. |
+| CEF acquisition/bundling | `packages/bun-tauri/crates/aphrody-tauri-cli/src/runtime/cef.rs`, `aphrody-tauri-runtime-cef`, `aphrody-tauri-bundler` | Existing owner resolves CEF version/target/cache and bundles resources. CEF is a desktop boundary; do not make it a competing crawler or claim its V8 was replaced. |
+| Browser SDK/automation | `packages/bun-webview-page`, `packages/bun-web`, `src/browser` | Reuse existing Bun.WebView CDP adapter and imported DOM/layout/network/automation. The page adapter explicitly documents simplified accessibility, first-match locators and viewport screenshots. Keep corresponding parity work open. |
+
+## Live help inspected without installation
+
+The installed workstation runtime reports
+`1.4.3-aphrody.4+41211b568`. Its help was read on 2026-10-11; this runtime is
+distinct from the unbuilt 1.4.4 manifests and candidate source.
+
+- `bun --help` advertises native `uv`, `install`, `msvc`, `ssh`, `mcp` and
+  `agent-plugin` commands. It does not prove candidate engine behavior.
+- `bun uv --help` exposes `run`, `sync`, `python`, `pip`, `venv`, `build` and
+  `tool`; `--no-python-downloads` permits inspection without acquisition.
+- `bun install --help` exposes frozen lockfile and lifecycle-script controls.
+  Source and `docs/pm/winget.mdx` establish the system-dependency contract.
+- `bun msvc --help` exposes `doctor`, `info`, `which`, `env`, `exec` and
+  `setup --dry-run`. Reading help does not run setup or edit configuration.
+
+No build, test, package install, toolchain setup or global configuration change
+was performed to create this inventory.
+
+## System packages: implemented and missing
+
+`src/install/system/mod.rs::source_for` returns APK, winget and
+`deb::apt::Deb` providers. `cli.rs::run` dispatches `apt` and `deb` to the
+existing Debian owner. Pacman still has no provider and returns an explicit
+unsupported error. Candidate native CLI execution requires its own receipt.
+
+Winget resolves its index/manifests directly, validates hashes, selects the
+host installer and refuses unsupported elevation. APK owns repository/rootfs
+transactions and script policy. Retain those owners and exact lock provenance.
+The Linux adapter in `src/install/system/deb/apt.rs` delegates signature checks,
+dependency solving and transactions to existing APT/dpkg executables. It keeps
+authentication checks enabled, records exact package metadata and requires an
+explicit initialized Debian root for transactions. Its separate `apt plan`
+command handles local metadata only and does not verify Release signatures.
+Qualify candidate CLI dispatch, root isolation, offline/elevation behavior and
+real signed-repository transactions before declaring delivery. Factory bootstrap
+may use its declared apt-get path and must report that execution explicitly.
+
+## Python and depot_tools compatibility
+
+Reuse embedded UV for interpreter/project acquisition and Bun's CPython host
+for Python execution only where its native contract matches the invoked tool.
+depot_tools and Chromium tooling can inspect `sys.executable`, launch child
+Python interpreters and depend on filesystem/environment/exit semantics.
+An in-process `Python.eval` call does not replace those executable contracts.
+
+Preserve `BUN_PYTHON_HOST_LIBRARY`, `BUN_PYTHON_LIBPYTHON`, explicit
+`BUN_PYTHON_EXECUTABLE`/virtual-environment selection, host ABI and interpreter
+revision. Keep protected auth/caches outside source. The dedicated toolchain
+integration lot owns depot_tools pins and qualification; this document creates
+no alternate launcher, global install or substitute dependency manager.
+
+## Chromium and JSC are separate qualification decisions
+
+The current native detection order is explicit `backend.path`,
+`BUN_CHROME_PATH`, PATH, platform application locations and historical browser
+caches. `BUN_WEBVIEW_HOST` selects the existing optional platform host. Browser
+reuse is process-owned; independently isolated profiles/contexts require
+qualification, not inference from multiple JavaScript wrapper instances.
+
+Retain Chromium-family acquisition/CDP compatibility while implementing a
+separate remote-page realm in Bun JSC. The realm must not expose Bun, Node,
+Python, FFI, filesystem, process, environment or system installers to remote
+content. Qualify DOM/GC handles, modules, promises/microtasks, timers, workers,
+interrupts, exceptions and teardown with identical fixtures before retiring the
+legacy page V8 provider. Supporting CDP clients is not replacement of Chromium
+or CEF's internal JavaScript engine. A Chromium-internals JSC replacement needs
+its own explicit embedding, build and behavior proof.
+
+The feature inventory hashes `ChromeProcess.rs` and the page JavaScript build
+script alongside workspace manifests. The page build's cross-target snapshot
+path now rejects a missing target `cross-mksnapshot` instead of embedding a
+host architecture snapshot. Cross-target execution still requires a matching
+snapshot producer and actual target fixture receipt before packaging or activation.
+The native Bun/JSC candidate and existing Chromium CDP process require their
+own source-matched runtime receipts.
+
+## Execution and dependency order
+
+All compilation, tests, Clippy and benchmarks run on the allocated SSH VPS
+factory. The latest requested disk envelope is 108 GB; prior browser receipts
+recorded a 107 GiB allocation and 45 GiB RAM. These reported units are not
+interchangeable. Record current free bytes, memory, source/artifact sizes,
+resource lease and target before source sync, dependency acquisition or build.
+The current factory root is `/home/ubuntu/builds/bun-os-factory`.
+
+1. Inspect source/toolchain pins and native owner help, then plan dependency
+   acquisition without applying global workstation changes.
+2. Qualify host Python/depot_tools execution, toolchain and package dependency
+   closure on the VPS, including the candidate native APT adapter.
+3. Build the Bun candidate and qualify native HTML/CSS/JSC browser bindings.
+4. Run real Chromium-family CDP fixtures and remote-page JSC parity separately,
+   then Linux/Windows/macOS target/build/installation gates.
+5. Record artifact/checksum/host/target/fixture pins, failures and skips;
+   measure comparable performance and switch consumers only after stability.
+
+The actionable queue is [TODO-BUN](../../TODO-BUN.md). Existing compatibility
+paths remain until their replacements are qualified; no new independent
+browser executable, FFI server, MCP server or plugin is a delivery step.

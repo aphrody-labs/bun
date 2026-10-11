@@ -1,5 +1,12 @@
 # Bun, UV and Python integration
 
+## GN native toolchain
+
+- [x] Publish the GN fork with vendored version provenance and preserve upstream licenses.
+- [x] Vendor 1,083 pinned files with Git blob, SHA-256 and mode receipts.
+- [x] Qualify Windows GN bootstrap: 859 upstream tests, three fork tests, five Bun tests and incremental no-op build.
+- [ ] Qualify full project builds with their locked compilers and SDKs; ChromiumOS requires Linux.
+
 ## Release source surfaces
 
 - [x] Generate and verify 12,699 source-pinned artifacts at `c73c54fc202`, including README, plugin, documentation and SQLite graph.
@@ -208,3 +215,14 @@
 
 - [x] Qualify launch/shell pointer contract: four targets and native44/0 (2026-10-10).
 - [ ] Close runtime Windows14, bun_install Windows115/GNU53 and full release/private/hardware delivery.
+# Obscura/JSC and full Chromium/V8 integration (2026-10-11)
+
+- [x] Qualify `bun:chromium` browser CDP, isolated launch, manifests and explicit bookmark import on the changed Bun binary (20 browser/codegen tests pass on Windows).
+- [ ] Qualify full Chromium/V8 with visible-browser default (`headless: false`) and WebGPU enabled by default; prove actual WGSL execution and readback.
+- [x] Qualify `bun:obscura` single-worker Windows launch, session evaluation and cleanup on the changed Bun binary.
+- [ ] Reuse the concurrent native Obscura/JSC port after its owning workstream completes its gates; qualify worker process-tree cleanup on Windows.
+- [ ] Reuse existing `bun:windows.gpu.d3d12`, bun-cosmic tiny-skia/optional wgpu, Tauri CEF CDP/cookies and Obscura CookieJar; add no duplicate GPU stack or dependencies.
+- [ ] Implement browser extension/native messaging and PWA lifecycle coverage on a pinned Chromium build.
+- [ ] Preserve the committed `obscura` checkpoint `c82e6a6e3bd` (`packages/bun-obscura`) and concurrent uncommitted `src/browser`/JSC work; qualify serverless Obscura/JSC separately from full Chromium/V8.
+- [ ] Prove browser conformance, extensions, themes, PWA, explicit protected-profile integration and DevTools for each changed backend before claiming delivery or publishing a Chromium fork.
+

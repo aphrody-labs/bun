@@ -128,7 +128,10 @@ impl Version {
     } else {
         ""
     };
-    const SUFFIX: &'static str = Version::SUFFIX_ABI;
+    // Keep a full runtime on its compiled feature channel during upgrades.
+    // Both variants expose the same executable and ABI identities.
+    const SUFFIX_FLAVOR: &'static str = if cfg!(feature = "coreutils") { "-full" } else { "" };
+    const SUFFIX: &'static str = const_format::concatcp!(Version::SUFFIX_ABI, Version::SUFFIX_FLAVOR);
     pub(crate) const FOLDER_NAME: &'static str =
         const_format::concatcp!("bun-", Version::TRIPLET, Version::SUFFIX);
     pub(crate) const ZIP_FILENAME: &'static str =

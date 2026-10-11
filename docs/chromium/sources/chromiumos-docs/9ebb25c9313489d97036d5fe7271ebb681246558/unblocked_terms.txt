@@ -1,0 +1,12 @@
+# TODO(*): We should try and remove these from our docs.
+
+black.?list
+native
+sanity
+slave
+white.?label
+white.?list
+
+# We still use "master" in a few places, but block its usage in URIs as people
+# can use HEAD instead.  That's the only time that "master/" shows up.
+master($|[^/])

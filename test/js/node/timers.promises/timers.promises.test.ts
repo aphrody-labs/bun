@@ -1,5 +1,22 @@
 import { describe, expect, it } from "bun:test";
-import { setImmediate, setInterval, setTimeout } from "node:timers/promises";
+import { scheduler, setImmediate, setInterval, setTimeout } from "node:timers/promises";
+
+describe("promise results", () => {
+  it("preserves provided values and resolves omitted values as undefined", async () => {
+    const value = { timer: true };
+    expect(await setTimeout(1, value)).toBe(value);
+    expect(await setImmediate(value)).toBe(value);
+    expect(await setTimeout(1)).toBeUndefined();
+    expect(await setImmediate()).toBeUndefined();
+    expect(await setTimeout(1, undefined)).toBeUndefined();
+    expect(await setImmediate(undefined)).toBeUndefined();
+  });
+
+  it("scheduler methods resolve without a value", async () => {
+    expect(await scheduler.wait(1)).toBeUndefined();
+    expect(await scheduler.yield()).toBeUndefined();
+  });
+});
 
 describe("setTimeout", () => {
   it("abort() does not emit global error", async () => {
@@ -43,7 +60,7 @@ describe("setTimeout", () => {
   // assertion rather than leaving the promise pending forever.
   it("rejects even when another listener stopped propagation", async () => {
     const abortController = new AbortController();
-    abortController.signal.addEventListener("abort", e => e.stopImmediatePropagation());
+    abortController.signal.addEventListener("abort", (e) => e.stopImmediatePropagation());
 
     const promise = setTimeout(1, "not-aborted", { signal: abortController.signal });
     abortController.abort();
@@ -78,7 +95,7 @@ describe("setImmediate", () => {
 
   it("rejects even when another listener stopped propagation", async () => {
     const abortController = new AbortController();
-    abortController.signal.addEventListener("abort", e => e.stopImmediatePropagation());
+    abortController.signal.addEventListener("abort", (e) => e.stopImmediatePropagation());
 
     const promise = setImmediate("not-aborted", { signal: abortController.signal });
     abortController.abort();
@@ -105,7 +122,7 @@ describe("AbortError shape matches node", () => {
       () => {
         throw new Error("expected a rejection");
       },
-      e => e,
+      (e) => e,
     );
     expect(err).toBeInstanceOf(Error);
     expect(err).not.toBeInstanceOf(DOMException);
@@ -128,7 +145,10 @@ describe("AbortError shape matches node", () => {
   it("setTimeout aborted with a custom reason", async () => {
     const reason = new Error("custom reason");
     const signal = AbortSignal.abort(reason);
-    expect(await shapeOf(setTimeout(10, undefined, { signal }))).toEqual({ ...nodeAbortError(signal), cause: reason });
+    expect(await shapeOf(setTimeout(10, undefined, { signal }))).toEqual({
+      ...nodeAbortError(signal),
+      cause: reason,
+    });
   });
 
   it("setImmediate with an already aborted signal", async () => {
@@ -148,9 +168,11 @@ describe("AbortError shape matches node", () => {
 describe("setInterval", () => {
   it("ends the iterator even when another listener stopped propagation", async () => {
     const abortController = new AbortController();
-    abortController.signal.addEventListener("abort", e => e.stopImmediatePropagation());
+    abortController.signal.addEventListener("abort", (e) => e.stopImmediatePropagation());
 
-    const iterator = setInterval(1, "tick", { signal: abortController.signal })[Symbol.asyncIterator]();
+    const iterator = setInterval(1, "tick", { signal: abortController.signal })[
+      Symbol.asyncIterator
+    ]();
     try {
       const next = iterator.next();
       abortController.abort();

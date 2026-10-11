@@ -49,6 +49,10 @@ pub(crate) mod terminal_screen;
 pub(crate) mod hash_object;
 #[path = "api/html_rewriter.rs"]
 pub(crate) mod html_rewriter;
+#[path = "api/HTMLObject.rs"]
+pub(crate) mod html_object;
+#[path = "api/BrowserRealm.rs"]
+pub(crate) mod browser_realm;
 #[path = "api/js_bundle_completion_task.rs"]
 pub(crate) mod js_bundle_completion_task;
 #[path = "api/JSBundler.rs"]

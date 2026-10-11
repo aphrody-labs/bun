@@ -646,11 +646,15 @@ export function runtimeHomePage(d: SiteData, ctx: PageContext): GeneratedPage | 
   const latest = latestRuntimeRelease(ctx.releases);
   const rows: string[][] = [
     [
-      "Runtime",
-      `${code(runtimeVersion(d, ctx))}, based on Bun ${esc(rt.upstream.version)}`,
+      "Published runtime",
+      latest ? code(runtimeVersion(d, ctx)) : "Release inventory unavailable",
       latest ? link(latest.tag, latest.url) : link("Releases", `${gh}/releases`),
     ],
-    ["Source", `${link(short(rt.commit), `${gh}/commit/${rt.commit}`)} (${day(rt.date)})`, link(rt.repo, gh)],
+    [
+      "Source",
+      `${code(rt.upstream.version)} · ${link(short(rt.commit), `${gh}/commit/${rt.commit}`)} (${day(rt.date)})`,
+      link(rt.repo, gh),
+    ],
     [
       "Upstream",
       rt.lastUpstreamMerge
@@ -671,14 +675,17 @@ export function runtimeHomePage(d: SiteData, ctx: PageContext): GeneratedPage | 
       link("npmjs.com", `https://www.npmjs.com/package/${rt.npm.name}`),
     ]);
   const { body } = splitTitle(rt.guide);
+  const productIntroduction = body.indexOf("## What is Bun OS?");
+  const guide = productIntroduction === -1 ? body : body.slice(productIntroduction);
   return {
     path: "/",
     title: "Aphrody Bun",
-    description: `The Bun runtime of Aphrody: ${rt.upstream.name} ${rt.upstream.version} with the Aphrody patches, merged from upstream and released as ${rt.repo}.`,
+    description:
+      "Bun OS by Aphrody Labs: JavaScript and TypeScript runtime, package manager, test runner and bundler with native system integrations.",
     tab: "",
     markdown: [
       `## Current versions\n\n${table(["Item", "Version", "Source"], rows)}`,
-      publicLinks(forkLinks(body, rt.repo, rt.commit), ctx.origin),
+      publicLinks(forkLinks(guide, rt.repo, rt.commit), ctx.origin),
       sourceLine(d),
     ]
       .filter(Boolean)

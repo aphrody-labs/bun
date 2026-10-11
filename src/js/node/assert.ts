@@ -30,7 +30,11 @@ const ArrayPrototypeJoin = Array.prototype.join;
 const ArrayPrototypePush = Array.prototype.push;
 const ArrayPrototypeSlice = Array.prototype.slice;
 // node's kPartial comparison, fully native (NodeUtilTypesModule.cpp).
-const nodePartialDeepStrictEqual = $newCppFunction("NodeUtilTypesModule.cpp", "jsFunctionPartialDeepStrictEqual", 2);
+const nodePartialDeepStrictEqual = $newCppFunction(
+  "NodeUtilTypesModule.cpp",
+  "jsFunctionPartialDeepStrictEqual",
+  2,
+);
 const NumberIsNaN = Number.isNaN;
 const ObjectAssign = Object.assign;
 const ObjectDefineProperty = Object.defineProperty;
@@ -120,17 +124,6 @@ function Assert(options) {
   }
 }
 
-// Functions compiled as builtins have no automatic `.prototype`; assign one
-// explicitly (same pattern as EventEmitter in node/events.ts).
-Assert.prototype = {};
-ObjectDefineProperty(Assert.prototype, "constructor", {
-  __proto__: null,
-  value: Assert,
-  writable: true,
-  enumerable: false,
-  configurable: true,
-});
-
 // All of the following functions must throw an AssertionError
 // when a corresponding condition is not met, with a message that
 // may be undefined if not provided. All assertion methods provide
@@ -159,7 +152,13 @@ function fail(
   // eslint-disable-next-line @typescript-eslint/ban-types
   stackStartFn?: Function,
 ): never;
-function fail(actual?: unknown, expected?: unknown, message?: unknown, operator?: string, stackStartFn?: Function) {
+function fail(
+  actual?: unknown,
+  expected?: unknown,
+  message?: unknown,
+  operator?: string,
+  stackStartFn?: Function,
+) {
   const argsLen = arguments.length;
 
   let internalMessage = false;
@@ -200,8 +199,6 @@ function fail(actual?: unknown, expected?: unknown, message?: unknown, operator?
   throw err;
 }
 
-Assert.prototype.fail = fail;
-
 // The AssertionError is defined in internal/error.
 Object.defineProperty(assert, "AssertionError", {
   get() {
@@ -209,7 +206,12 @@ Object.defineProperty(assert, "AssertionError", {
     return AssertionError;
   },
   set(value) {
-    Object.defineProperty(this, "AssertionError", { value, writable: true, enumerable: true, configurable: true });
+    Object.defineProperty(this, "AssertionError", {
+      value,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
   },
   configurable: true,
   enumerable: true,
@@ -227,7 +229,7 @@ function ok(...args: unknown[]): void {
   innerOk(ok, args.length, ...args);
 }
 
-Assert.prototype.ok = function ok(...args) {
+const prototypeOk = function ok(...args) {
   innerOk(ok, args.length, ...args);
 };
 
@@ -239,7 +241,11 @@ Assert.prototype.ok = function ok(...args) {
  * @returns {void}
  */
 /* eslint-disable no-restricted-properties */
-Assert.prototype.equal = function equal(actual: unknown, expected: unknown, message?: string | Error) {
+const prototypeEqual = function equal(
+  actual: unknown,
+  expected: unknown,
+  message?: string | Error,
+) {
   if (arguments.length < 2) {
     throw $ERR_MISSING_ARGS("actual", "expected");
   }
@@ -264,7 +270,7 @@ Assert.prototype.equal = function equal(actual: unknown, expected: unknown, mess
  * @param {string | Error} [message]
  * @returns {void}
  */
-Assert.prototype.notEqual = function notEqual(actual, expected, message) {
+const prototypeNotEqual = function notEqual(actual, expected, message) {
   if (arguments.length < 2) {
     throw $ERR_MISSING_ARGS("actual", "expected");
   }
@@ -288,7 +294,7 @@ Assert.prototype.notEqual = function notEqual(actual, expected, message) {
  * @param {string | Error} [message]
  * @returns {void}
  */
-Assert.prototype.deepEqual = function deepEqual(actual, expected, message) {
+const prototypeDeepEqual = function deepEqual(actual, expected, message) {
   if (arguments.length < 2) {
     throw $ERR_MISSING_ARGS("actual", "expected");
   }
@@ -311,7 +317,7 @@ Assert.prototype.deepEqual = function deepEqual(actual, expected, message) {
  * @param {string | Error} [message]
  * @returns {void}
  */
-Assert.prototype.notDeepEqual = function notDeepEqual(actual, expected, message) {
+const prototypeNotDeepEqual = function notDeepEqual(actual, expected, message) {
   if (arguments.length < 2) {
     throw $ERR_MISSING_ARGS("actual", "expected");
   }
@@ -336,7 +342,7 @@ Assert.prototype.notDeepEqual = function notDeepEqual(actual, expected, message)
  * @param {string | Error} [message]
  * @returns {void}
  */
-Assert.prototype.deepStrictEqual = function deepStrictEqual(actual, expected, message) {
+const prototypeDeepStrictEqual = function deepStrictEqual(actual, expected, message) {
   if (arguments.length < 2) {
     throw $ERR_MISSING_ARGS("actual", "expected");
   }
@@ -360,7 +366,6 @@ Assert.prototype.deepStrictEqual = function deepStrictEqual(actual, expected, me
  * @param {string | Error} [message]
  * @returns {void}
  */
-Assert.prototype.notDeepStrictEqual = notDeepStrictEqual;
 function notDeepStrictEqual(actual, expected, message) {
   if (arguments.length < 2) {
     throw $ERR_MISSING_ARGS("actual", "expected");
@@ -384,7 +389,7 @@ function notDeepStrictEqual(actual, expected, message) {
  * @param {string | Error} [message]
  * @returns {void}
  */
-Assert.prototype.strictEqual = function strictEqual(actual, expected, message) {
+const prototypeStrictEqual = function strictEqual(actual, expected, message) {
   if (arguments.length < 2) {
     throw $ERR_MISSING_ARGS("actual", "expected");
   }
@@ -407,7 +412,7 @@ Assert.prototype.strictEqual = function strictEqual(actual, expected, message) {
  * @param {string | Error} [message]
  * @returns {void}
  */
-Assert.prototype.notStrictEqual = function notStrictEqual(actual, expected, message) {
+const prototypeNotStrictEqual = function notStrictEqual(actual, expected, message) {
   if (arguments.length < 2) {
     throw $ERR_MISSING_ARGS("actual", "expected");
   }
@@ -430,7 +435,7 @@ Assert.prototype.notStrictEqual = function notStrictEqual(actual, expected, mess
  * @param {string | Error} [message]
  * @returns {void}
  */
-Assert.prototype.partialDeepStrictEqual = function partialDeepStrictEqual(actual, expected, message) {
+const prototypePartialDeepStrictEqual = function partialDeepStrictEqual(actual, expected, message) {
   // emitExperimentalWarning("assert.partialDeepStrictEqual");
   if (arguments.length < 2) {
     throw $ERR_MISSING_ARGS("actual", "expected");
@@ -510,7 +515,8 @@ function expectedException(actual, expected, message, fn) {
       if (!message) {
         generatedMessage = true;
         message =
-          "The input did not match the regular expression " + `${inspect(expected)}. Input:\n\n${inspect(str)}\n`;
+          "The input did not match the regular expression " +
+          `${inspect(expected)}. Input:\n\n${inspect(str)}\n`;
       }
       throwError = true;
       // Handle primitives properly.
@@ -579,7 +585,9 @@ function expectedException(actual, expected, message, fn) {
         generatedMessage = true;
         const name = expected.name ? `"${expected.name}" ` : "";
         const inspect = lazyInspect();
-        message = `The ${name}validation function is expected to return` + ` "true". Received ${inspect(res)}`;
+        message =
+          `The ${name}validation function is expected to return` +
+          ` "true". Received ${inspect(res)}`;
 
         if (Error.isError(actual)) {
           message += `\n\nCaught error:\n\n${actual}`;
@@ -619,7 +627,10 @@ function checkIsPromise(obj): obj is Promise<unknown> {
   // `catch` handler.
   return (
     isPromise(obj) ||
-    (obj !== null && typeof obj === "object" && typeof obj.then === "function" && typeof obj.catch === "function")
+    (obj !== null &&
+      typeof obj === "object" &&
+      typeof obj.then === "function" &&
+      typeof obj.catch === "function")
   );
 }
 
@@ -646,7 +657,12 @@ async function waitForActual(promiseFn) {
   return NO_EXCEPTION_SENTINEL;
 }
 
-function expectsError(stackStartFn: Function, actual: unknown, error?: unknown, message?: string | Error) {
+function expectsError(
+  stackStartFn: Function,
+  actual: unknown,
+  error?: unknown,
+  message?: string | Error,
+) {
   if (typeof error === "string") {
     if (arguments.length === 4) {
       throw $ERR_INVALID_ARG_TYPE("error", ["Object", "Error", "Function", "RegExp"], error);
@@ -659,7 +675,10 @@ function expectsError(stackStartFn: Function, actual: unknown, error?: unknown, 
         throw $ERR_INVALID_ARG_VALUE("error", error, "may not be an empty object");
       }
     } else if (actual === error) {
-      throw $ERR_AMBIGUOUS_ARGUMENT("error/message", `The error "${actual}" is identical to the message.`);
+      throw $ERR_AMBIGUOUS_ARGUMENT(
+        "error/message",
+        `The error "${actual}" is identical to the message.`,
+      );
     }
     message = error;
     error = undefined;
@@ -673,7 +692,8 @@ function expectsError(stackStartFn: Function, actual: unknown, error?: unknown, 
       details += ` (${(error as Error).name})`;
     }
     details += message ? `: ${message}` : ".";
-    const fnType = stackStartFn === kQualifiedStackNames["assert.rejects"] ? "rejection" : "exception";
+    const fnType =
+      stackStartFn === kQualifiedStackNames["assert.rejects"] ? "rejection" : "exception";
     innerFail({
       actual: undefined,
       expected: error,
@@ -716,7 +736,8 @@ function expectsNoError(stackStartFn, actual, error?, message?) {
 
   if (!error || hasMatchingError(actual, error)) {
     const details = message ? `: ${message}` : ".";
-    const fnType = stackStartFn === kQualifiedStackNames["assert.doesNotReject"] ? "rejection" : "exception";
+    const fnType =
+      stackStartFn === kQualifiedStackNames["assert.doesNotReject"] ? "rejection" : "exception";
     innerFail({
       actual,
       expected: error,
@@ -734,7 +755,7 @@ function expectsNoError(stackStartFn, actual, error?, message?) {
  * @param {...any} [args]
  * @returns {void}
  */
-Assert.prototype.throws = function throws(
+const prototypeThrows = function throws(
   promiseFn: () => Promise<unknown> | Promise<unknown>,
   ...args: [error?: unknown, message?: string | Error]
 ): void {
@@ -768,16 +789,13 @@ const kQualifiedStackNames = {
     expectsNoError(kQualifiedStackNames["assert.doesNotReject"], await waitForActual(fn), ...args);
   },
 };
-Assert.prototype.rejects = kQualifiedStackNames["assert.rejects"];
-Object.defineProperty(Assert.prototype.rejects, "name", { value: "rejects", configurable: true });
-
 /**
  * Asserts that the function `fn` does not throw an error.
  * @param {() => any} fn
  * @param {...any} [args]
  * @returns {void}
  */
-Assert.prototype.doesNotThrow = function doesNotThrow(
+const prototypeDoesNotThrow = function doesNotThrow(
   fn: () => Promise<unknown>,
   ...args: [error?: unknown, message?: unknown]
 ): void {
@@ -790,15 +808,12 @@ Assert.prototype.doesNotThrow = function doesNotThrow(
  * @param {...any} [args]
  * @returns {Promise<void>}
  */
-Assert.prototype.doesNotReject = kQualifiedStackNames["assert.doesNotReject"];
-Object.defineProperty(Assert.prototype.doesNotReject, "name", { value: "doesNotReject", configurable: true });
-
 /**
  * Throws `value` if the value is not `null` or `undefined`.
  * @param {any} err
  * @returns {void}
  */
-Assert.prototype.ifError = function ifError(err: ErrorLike | null | undefined): void {
+const prototypeIfError = function ifError(err: ErrorLike | null | undefined): void {
   if (err !== null && err !== undefined) {
     let message = "ifError got unwanted exception: ";
     const errMessage = typeof err === "object" ? err.message : undefined;
@@ -864,7 +879,10 @@ function internalMatch(string, regexp, message, fn) {
     throw $ERR_INVALID_ARG_TYPE("regexp", ["RegExp"], regexp);
   }
   const match = fn === Assert.prototype.match;
-  if (typeof string !== "string" || (RegExpPrototypeExec.$call(regexp, string) !== null) !== match) {
+  if (
+    typeof string !== "string" ||
+    (RegExpPrototypeExec.$call(regexp, string) !== null) !== match
+  ) {
     if (message instanceof Error) {
       throw message;
     }
@@ -875,7 +893,8 @@ function internalMatch(string, regexp, message, fn) {
     // 'The input was expected to not match the regular expression ' +
     message ||=
       typeof string !== "string"
-        ? 'The "string" argument must be of type string. Received type ' + `${typeof string} (${inspect(string)})`
+        ? 'The "string" argument must be of type string. Received type ' +
+          `${typeof string} (${inspect(string)})`
         : (match
             ? "The input did not match the regular expression "
             : "The input was expected to not match the regular expression ") +
@@ -900,7 +919,7 @@ function internalMatch(string, regexp, message, fn) {
  * @param {string | Error} [message]
  * @returns {void}
  */
-Assert.prototype.match = function match(string, regexp, message) {
+const prototypeMatch = function match(string, regexp, message) {
   internalMatch(string, regexp, message, match);
 };
 
@@ -911,7 +930,7 @@ Assert.prototype.match = function match(string, regexp, message) {
  * @param {string | Error} [message]
  * @returns {void}
  */
-Assert.prototype.doesNotMatch = function doesNotMatch(string, regexp, message) {
+const prototypeDoesNotMatch = function doesNotMatch(string, regexp, message) {
   internalMatch(string, regexp, message, doesNotMatch);
 };
 
@@ -920,12 +939,21 @@ Object.defineProperty(assert, "CallTracker", {
   get() {
     if (CallTracker === undefined) {
       const { deprecate } = require("internal/util/deprecate");
-      CallTracker = deprecate(require("internal/assert/calltracker"), "assert.CallTracker is deprecated.", "DEP0173");
+      CallTracker = deprecate(
+        require("internal/assert/calltracker"),
+        "assert.CallTracker is deprecated.",
+        "DEP0173",
+      );
     }
     return CallTracker;
   },
   set(value) {
-    Object.defineProperty(this, "CallTracker", { value, writable: true, enumerable: true, configurable: true });
+    Object.defineProperty(this, "CallTracker", {
+      value,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
   },
   configurable: true,
   enumerable: true,
@@ -940,6 +968,42 @@ Object.defineProperty(assert, "CallTracker", {
 function strict(...args) {
   innerOk(strict, args.length, ...args);
 }
+
+// Builtins have no automatic `.prototype`. Construct the complete method table
+// so its type and runtime contents agree, including each function's own name.
+Assert.prototype = {
+  constructor: Assert,
+  fail,
+  ok: prototypeOk,
+  equal: prototypeEqual,
+  notEqual: prototypeNotEqual,
+  deepEqual: prototypeDeepEqual,
+  notDeepEqual: prototypeNotDeepEqual,
+  deepStrictEqual: prototypeDeepStrictEqual,
+  notDeepStrictEqual,
+  strictEqual: prototypeStrictEqual,
+  notStrictEqual: prototypeNotStrictEqual,
+  partialDeepStrictEqual: prototypePartialDeepStrictEqual,
+  throws: prototypeThrows,
+  rejects: kQualifiedStackNames["assert.rejects"],
+  doesNotThrow: prototypeDoesNotThrow,
+  doesNotReject: kQualifiedStackNames["assert.doesNotReject"],
+  ifError: prototypeIfError,
+  match: prototypeMatch,
+  doesNotMatch: prototypeDoesNotMatch,
+};
+ObjectDefineProperty(Assert.prototype, "constructor", {
+  __proto__: null,
+  value: Assert,
+  writable: true,
+  enumerable: false,
+  configurable: true,
+});
+Object.defineProperty(Assert.prototype.rejects, "name", { value: "rejects", configurable: true });
+Object.defineProperty(Assert.prototype.doesNotReject, "name", {
+  value: "doesNotReject",
+  configurable: true,
+});
 
 for (const name of [
   "ok",

@@ -1,0 +1,140 @@
+---
+title: "Bun OS fusion verification"
+description: "Recursive source-scoped gates on the declared SSH VPS, with explicit native and cross-platform coverage."
+---
+
+# Bun OS fusion verification
+
+`scripts/aphrody/verify-fusion.ts` traverses the dependency DAG defined in
+`scripts/aphrody/fusion-verification.json`. It records source and configuration
+hashes, prerequisites, exit codes, diagnostic source paths and log locations.
+Native gate output streams into a file rather than accumulating in memory;
+diagnostic extraction reads a bounded 64 KiB tail and evidence hashes cover the
+entire log. Bootstrap lint invokes the repository's pinned oxlint launcher.
+After the native build, scoped lint and format execute the candidate's embedded
+OXC owner through `bun bd`, avoiding older runtime package-script routing.
+Typecheck executes the repository toolchain; native feature tests
+execute the freshly built candidate through `bun bd`.
+The source helper suite passes `--config=scripts/aphrody/fusion-test.bunfig.toml`
+because the runtime suite's root configuration only searches `test/`.
+Its research metadata decoder uses the same native `Bun.HTML` DOM parser.
+Only the declared qualification flags can be set by a step: live HTTPS,
+isolated Debian-root fixtures and JSC exception checks. Step flags cannot
+override PATH, factory resources or privileged MCP feature exposure.
+It does not merge repositories or execute snippets downloaded from websites.
+
+## Plan locally
+
+```sh
+bun scripts/aphrody/verify-fusion.ts --mode changed --base bun-os/main
+bun scripts/aphrody/verify-fusion.ts --mode all
+```
+
+Plan mode reads Git/configuration only and writes its plan to stdout. Changed
+mode selects changed scopes, prerequisites and affected dependents recursively.
+It lists omitted gates and makes no full-workspace or cross-platform claim.
+All mode schedules every configured gate, including the existing full native
+runner (`bun run test`) and requires a source-matched CI matrix receipt.
+
+## Execute on the SSH VPS
+
+Execution requires Linux, the explicitly declared hostname `vps-203bea89`, a
+fresh factory-owner profile for `host=vps`, and a checkout inside its declared
+factory root. It rejects native Windows execution. Every command runs through
+the existing Aphrody factory resource owner. Cargo also runs through the
+declared `cargo-serial.sh` wrapper; this is the same lease-recursion routing
+used by the browser fusion gate runner. No substitute build service is created.
+
+The declared fusion allocation uses the VPS root filesystem, with Cargo output
+at `/home/ubuntu/builds/bun-os-factory/cache/cargo`. Both `CARGO_TARGET_DIR` and
+`APHRODY_CARGO_TARGET_DIR` point there. The older `/home/ubuntu/build` output
+mount exhausted its space and is not the output destination for this task.
+The allocation observation on 2026-10-11 reported approximately 107 GiB of free
+root-filesystem disk and 45 GiB of physical RAM; these are dated observations,
+not permanent capacity guarantees. A fresh owner profile is still required.
+
+Resource CPU requests, `APHRODY_CARGO_JOBS` and `CARGO_BUILD_JOBS` are capped at
+six or the smaller qualified profile CPU allocation. Native `bun bd` recipes
+also pass `-j6` to Ninja, reduced to the profile allocation when smaller.
+The existing factory lease and serialized Cargo wrapper
+remain in force; changing the output directory does not create another lease.
+
+Before each gate starts and before acquiring the owner lease, a new resource
+preflight inspects the dedicated Cargo cache filesystem and reads a bounded
+`/proc/meminfo` buffer. It requires persistent storage, at least 8192 MiB of
+available disk and at least 2048 MiB of `MemAvailable`. An inspection failure,
+ephemeral filesystem or insufficient capacity records a blocked gate with its
+reason. It performs no cleanup. These thresholds are admission checks, not
+an applied RAM limit or a promise that a full build will fit; the current owner
+profile and resource lease still govern execution.
+
+Obtain a live `FactoryHostProfile` through the existing factory-owner workflow
+before running. The existing profile CLI consumes a fresh resource observation;
+use the factory's actual root and canonical heavy lock, not a new lock:
+
+```sh
+bun scripts/aphrody/build-host.ts profile \
+  --observation /absolute/factory/live-observation.json \
+  --host vps --target linux-x64 \
+  --factory-root /absolute/factory \
+  --heavy-lock /absolute/factory/existing-owner-heavy.lock \
+  --source-tree "$(git rev-parse HEAD^{tree})" \
+  > /absolute/factory/profile.json
+```
+
+The observation fields are `cpu`, `memoryMiB`, `availableMemoryMiB`,
+`freeDiskMiB`, `filesystem` and `observedAt`. The owner must supply real current
+measurements; the profile generator rejects stale observations and temporary
+memory filesystems. Execution then uses:
+
+```sh
+bun scripts/aphrody/verify-fusion.ts --mode changed --base bun-os/main \
+  --execute --profile /absolute/factory/profile.json
+bun scripts/aphrody/verify-fusion.ts --mode all --execute \
+  --profile /absolute/factory/profile.json \
+  --ci-receipt /absolute/factory/ci-matrix-receipt.json
+```
+
+Default evidence lives in ignored `tmp/fusion/verification.json` and adjacent
+logs. Tracked destinations are rejected. Passed and failed gates with unchanged
+input hashes are reused; retry requires a source, configuration or prerequisite
+change. There is no unbounded loop. Required failures and blocked prerequisites
+produce exit code 1. Failed official-source requests also fail the run.
+
+## Coverage and research
+
+All mode also schedules root formatting, strict Rust Clippy and documentation
+content/explicit-relative-link checks. Existing failures remain failed evidence;
+none are silently exempted. The documentation content gate is not an MDX build.
+All 15 browser crates belong to the root Cargo workspace and use its single
+lockfile, dependency declarations and nightly toolchain. Browser check/Clippy
+select these packages explicitly with `-p`; Nextest uses the same package set.
+The root `browser-tests` Cargo profile disables debuginfo and incremental
+outputs for this factory qualification batch. There is no standalone browser
+workspace, separate lockfile or separate `.cargo` configuration.
+
+Browser tests exercise the portable render feature without `bun-css`:
+that dependency requires Bun's native symbols and cannot be qualified by an
+unlinked Cargo test executable. Shared CSS projection tests run through the
+candidate's `Bun.HTML.parseCSS` native API instead. Browser check/Clippy retain
+`bun-css`; runtime renderer integration still requires its native linkage gate.
+
+The existing `.buildkite/ci.ts` remains the native cross-platform pipeline. An
+all-mode receipt must report the matching revision, complete source hash,
+pipeline identity, passed status, Buildkite URL and Linux/Windows/macOS
+platforms. Supplying a receipt does not independently authenticate it; retain
+the actual CI link and its original result as supporting evidence. A successful
+Linux VPS run alone cannot satisfy the missing platform matrix.
+
+Research retrieves `https://bun.sh/blog/bun-v1.4.3`, `https://bun.sh` and `https://bun.sh/docs`,
+records request time, HTTP status and content SHA256, and executes no downloaded
+code. Requests run alongside the DAG gates. An opt-in live native website test
+also parses the requested HTTPS pages using the candidate's fused HTML API.
+Retrieval failures remain explicit. Previously recorded research is reused
+when source/configuration are unchanged, with its original observation date.
+
+For upstream integration use the existing
+`scripts/aphrody/sync-upstream.ts --dry-run` workflow in a clean isolated tree.
+Its rename-aware three-way conflict strategy remains separate from verification.
+Inspect conflicts and implement the desired fused semantics before running the
+gates; a successful source merge is not runtime qualification.

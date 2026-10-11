@@ -6,6 +6,20 @@ import { join } from "node:path";
 import { apply, rewrite } from "../../scripts/aphrody/scope.ts";
 import { sync } from "../../scripts/aphrody/sync-upstream.ts";
 import {
+  nextPage,
+  nextCommentWindow,
+  publicPageEntries,
+  commentUpdateTimestamp,
+  consumeRequestBudget,
+  PUBLIC_API_REQUEST_BUDGET,
+  graphqlRequest,
+  writePublicCache,
+  verifiedPublicCache,
+  createSnapshotWriter,
+  outsideCheckout,
+  publicRepository,
+} from "../../scripts/aphrody/sync-public-upstream.ts";
+import {
   canResumeStep,
   boundedExecutionCommand,
   executeDeliveryPlan,
@@ -23,6 +37,79 @@ import {
 import { createHash } from "node:crypto";
 import { nativePlan } from "../../scripts/aphrody/delivery-native.ts";
 import type { FactoryHostProfile } from "../../scripts/aphrody/build-host.ts";
+
+test("public snapshot reconstruction truncates stale trailing rows", async () => {
+  using directory = tempDir("public-snapshot-rebuild", {});
+  const path = join(String(directory), "snapshot.partial");
+  await Bun.write(path, '{"id":1}\n{"id":99999}\n');
+  const writer = await createSnapshotWriter(path);
+  writer.write('{"id":2}\n');
+  await writer.end();
+  expect(await Bun.file(path).text()).toBe('{"id":2}\n');
+});
+
+test("public cache commits complete checksum records and rejects altered responses", async () => {
+  using directory = tempDir("public-response-cache", {});
+  const path = join(String(directory), "page.json");
+  const value = { data: [{ id: 1 }], next: null };
+  await writePublicCache(path, value);
+  const record = await Bun.file(path).json();
+  expect(verifiedPublicCache(record)).toEqual(value);
+  expect(() =>
+    verifiedPublicCache({ ...record, value: { data: [{ id: 2 }], next: null } }),
+  ).toThrow("Corrupt");
+  expect(() => verifiedPublicCache({ sha256: record.sha256 })).toThrow("Corrupt");
+  // An interrupted temporary write cannot replace the last committed cache record.
+  await Bun.write(`${path}.interrupted.pending`, "{");
+  expect(verifiedPublicCache(await Bun.file(path).json())).toEqual(value);
+});
+
+test("public GraphQL input preserves variables and continuation cursors in the request body", () => {
+  const query = "query($id:ID!,$cursor:String){node(id:$id){id}}";
+  expect(graphqlRequest({ query, id: "D_public_fixture", cursor: "next-page" })).toEqual({
+    query,
+    variables: { id: "D_public_fixture", cursor: "next-page" },
+  });
+  expect(graphqlRequest({ query, cursor: null }).variables).toEqual({ cursor: null });
+  expect(() => graphqlRequest({ id: "D_public_fixture" })).toThrow("GraphQL query");
+});
+
+test("public comments advance bounded overlapping timestamp windows", () => {
+  const initial = "2024-01-01T00:00:00Z";
+  expect(nextCommentWindow(initial, "2024-02-01T00:00:00Z", 30000, 30000)).toBe(
+    "2024-01-31T23:59:59.000Z",
+  );
+  expect(nextCommentWindow(initial, undefined, 0, 0)).toBeNull();
+  expect(nextCommentWindow(initial, "2024-02-01T00:00:00Z", 12, 0)).toBe(
+    "2024-01-31T23:59:59.000Z",
+  );
+  expect(nextCommentWindow(initial, "2024-01-01T00:00:01Z", 12, 0)).toBeNull();
+  expect(() => nextCommentWindow(initial, "2024-01-01T00:00:01Z", 30000, 30000)).toThrow(
+    "saturated",
+  );
+  expect(() => nextCommentWindow(initial, "invalid", 1, 1)).toThrow("timestamp");
+  expect(() => nextCommentWindow(initial, undefined, 1, 2)).toThrow("counts");
+});
+
+test("public comment pagination validates monotone updates and stable id overlap", () => {
+  const previous = Date.parse("2024-01-01T00:00:00Z");
+  expect(commentUpdateTimestamp("2024-01-01T00:00:00Z", previous)).toBe(previous);
+  expect(commentUpdateTimestamp("2024-01-02T00:00:00Z", previous)).toBeGreaterThan(previous);
+  expect(() => commentUpdateTimestamp("2023-12-31T23:59:59Z", previous)).toThrow("monotone");
+  expect(() => commentUpdateTimestamp(undefined, previous)).toThrow("timestamp");
+  const seen = new Set<number>();
+  expect(publicPageEntries([{ id: 1 }, { id: 2 }], seen)).toEqual([{ id: 1 }, { id: 2 }]);
+  expect(publicPageEntries([{ id: 2 }, { id: 3 }], seen)).toEqual([{ id: 3 }]);
+  expect(publicPageEntries([{ id: 3 }], seen)).toEqual([]);
+  expect(() => publicPageEntries([{ id: -1 }], seen)).toThrow("stable id");
+});
+
+test("public export uncached request budget has a hard boundary", () => {
+  expect(consumeRequestBudget(0)).toBe(1);
+  expect(consumeRequestBudget(PUBLIC_API_REQUEST_BUDGET - 1)).toBe(PUBLIC_API_REQUEST_BUDGET);
+  expect(() => consumeRequestBudget(PUBLIC_API_REQUEST_BUDGET)).toThrow("budget reached");
+  expect(() => consumeRequestBudget(-1)).toThrow("request count");
+});
 
 test("execution receipts refuse tracked source, protected data and escaping symlinks", async () => {
   using directory = tempDir("delivery-receipt-path", {
@@ -448,6 +535,18 @@ describe("immutable OXC vendoring", () => {
 });
 
 describe("scope rewrite", () => {
+  test("compact manifests preserve whitespace and only rename root package fields", () => {
+    const text =
+      '{"metadata":{"name":"bun-plugin-yaml"},"name":"bun-plugin-yaml","dependencies":{"bun-types":"workspace:*"},"nested":{"dependencies":{"bun-types":"workspace:*"}}}\n';
+    const expected =
+      '{"metadata":{"name":"bun-plugin-yaml"},"name":"@aphrody/bun-plugin-yaml","dependencies":{"@aphrody/bun-types":"workspace:*"},"nested":{"dependencies":{"bun-types":"workspace:*"}}}\n';
+    expect(rewrite("packages/fixture/package.json", text)).toBe(expected);
+    expect(rewrite("packages/fixture/package.json", expected)).toBe(expected);
+    expect(rewrite("packages/fixture/package.json", '{"name"\t:\n"bun-types"}')).toBe(
+      '{"name"\t:\n"@aphrody/bun-types"}',
+    );
+  });
+
   test("a manifest renames itself and local dependencies, not registry ones", () => {
     const manifest = JSON.stringify(
       {
@@ -647,6 +746,73 @@ describe("monorepo delivery", () => {
 });
 
 describe("sync-upstream", () => {
+  test("public export follows server cursors and rejects foreign pagination links", () => {
+    expect(
+      nextPage(
+        'Link: <https://api.github.com/repositories/357728969/issues?after=cursor&page=100>; rel="next"',
+        357728969,
+      ),
+    ).toBe("repositories/357728969/issues?after=cursor");
+    expect(() =>
+      nextPage(
+        'Link: <https://api.github.com/repositories/123/issues?after=cursor>; rel="next"',
+        357728969,
+      ),
+    ).toThrow("Unexpected public");
+    expect(
+      nextPage(
+        'HTTP/2.0 200 OK\nLink: <https://api.github.com/repos/oven-sh/bun/issues?after=Y3Vyc29y&per_page=100>; rel="next", <https://api.github.com/repos/oven-sh/bun/issues?before=end>; rel="prev"',
+      ),
+    ).toBe("repos/oven-sh/bun/issues?after=Y3Vyc29y&per_page=100");
+    expect(nextPage("HTTP/2.0 200 OK")).toBeNull();
+    expect(() => nextPage('Link: <https://evil.example/data>; rel="next"')).toThrow(
+      "Unexpected public",
+    );
+    expect(() =>
+      nextPage('Link: <https://api.github.com/repos/private/data/issues>; rel="next"'),
+    ).toThrow("Unexpected public");
+  });
+
+  test("public collaboration sync rejects private repositories and checkout output", () => {
+    expect(() => publicRepository({ full_name: "oven-sh/bun", private: false })).not.toThrow();
+    expect(() => publicRepository({ full_name: "oven-sh/bun", private: true })).toThrow(
+      "verified public",
+    );
+    expect(() => publicRepository({ full_name: "aphrody-labs/bun-os", private: false })).toThrow(
+      "verified public",
+    );
+    expect(() => publicRepository({ full_name: "oven-sh/bun" })).toThrow("verified public");
+    const root = join(process.cwd(), "source-fixture");
+    expect(outsideCheckout(root, root)).toBe(false);
+    expect(outsideCheckout(root, join(root, "docs"))).toBe(false);
+    expect(outsideCheckout(root, join(process.cwd(), "source-fixture-other"))).toBe(true);
+  });
+
+  test("rename resolution uses the linked worktree Git directory", async () => {
+    const { dir, root } = forkRepo("aphrody-sync-worktree");
+    using _ = dir;
+    git(root, "checkout", "--quiet", "upstream");
+    writeFileSync(join(root, MANIFEST), '{"name":"bun-plugin-yaml","version":"2.0.0"}\n');
+    git(root, "commit", "--quiet", "-am", "upstream version");
+    git(root, "checkout", "--quiet", "main");
+    const worktree = join(root, "linked");
+    git(root, "worktree", "add", "--quiet", "-b", "fork-linked", worktree, "main");
+    try {
+      await apply(worktree, true);
+      git(worktree, "commit", "--quiet", "-am", "fork scope");
+      const result = await sync({ ...options(worktree), branch: "fork-linked" });
+      expect(result).toMatchObject({ status: "merged", behind: 1, pushed: false });
+      expect(JSON.parse(readFileSync(join(worktree, MANIFEST), "utf8"))).toEqual({
+        name: "@aphrody/bun-plugin-yaml",
+        version: "2.0.0",
+      });
+      expect(git(worktree, "status", "--porcelain")).toBe("");
+      expect(readFileSync(join(worktree, ".git"), "utf8")).toStartWith("gitdir: ");
+    } finally {
+      git(root, "worktree", "remove", "--force", worktree);
+    }
+  }, 30000);
+
   test("conflicts that only differ by the rename merge, upstream changes are kept", async () => {
     const { dir, root } = forkRepo("aphrody-sync-clean");
     using _ = dir;

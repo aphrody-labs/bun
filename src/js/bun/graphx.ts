@@ -6,9 +6,13 @@ type JSONOptions = { maxRowBytes?: number; maxBytes?: number; maxRows?: number; 
 type CacheOptions = { url?: string; prefix?: string; ttlSeconds?: number; maxBytes?: number; timeoutMs?: number };
 type MarkdownOptions = { repository?: string; runId?: string; limit?: number };
 const { randomUUID }: typeof import("node:crypto") = require("node:crypto");
-const { mkdirSync, renameSync, rmSync }: typeof import("node:fs") = require("node:fs");
+const {
+  mkdirSync,
+  renameSync,
+  rmSync,
+}: Pick<typeof import("node:fs"), "mkdirSync" | "renameSync" | "rmSync"> = require("node:fs");
 const { dirname, resolve }: typeof import("node:path") = require("node:path");
-const { scheduler }: typeof import("node:timers/promises") = require("node:timers/promises");
+const { scheduler } = require("node:timers/promises");
 
 function integer(value: number, name: string, min: number, max: number) {
   if (!Number.isSafeInteger(value) || value < min || value > max) throw new RangeError(`Invalid ${name}`);

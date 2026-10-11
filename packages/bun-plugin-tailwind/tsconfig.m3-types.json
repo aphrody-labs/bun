@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": [],
+    "strict": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "noEmitOnError": true,
+    "rootDir": "./node_modules/@aphrody/m3-tokens/src",
+    "outDir": "../../build/types/m3-tokens"
+  },
+  "files": ["./node_modules/@aphrody/m3-tokens/src/dynamic-color.ts"]
+}

@@ -597,7 +597,11 @@ declare module "bun:ffi" {
     close(): void;
   }
 
-  type ToFFIType<T extends FFITypeOrString> = T extends FFIType ? T : T extends string ? FFITypeStringToType[T] : never;
+  type ToFFIType<T extends FFITypeOrString> = T extends FFIType
+    ? T
+    : T extends string
+      ? FFITypeStringToType[T]
+      : never;
 
   type FFIArgValue<T> = T extends FFIAggregateType
     ? FFIStructValue
@@ -706,80 +710,81 @@ declare module "bun:ffi" {
    * }
    * ```
    */
-  function cc<Fns extends Record<string, FFIFunction>>(options: CcSource & {
+  function cc<Fns extends Record<string, FFIFunction>>(
+    options: CcSource & {
+      /**
+       * Library names to link against
+       *
+       * Equivalent to `-l` option in gcc/clang.
+       */
+      library?: string[] | string;
 
-    /**
-     * Library names to link against
-     *
-     * Equivalent to `-l` option in gcc/clang.
-     */
-    library?: string[] | string;
+      /**
+       * Include directories to pass to the compiler
+       *
+       * Equivalent to `-I` option in gcc/clang.
+       */
+      include?: string[] | string;
 
-    /**
-     * Include directories to pass to the compiler
-     *
-     * Equivalent to `-I` option in gcc/clang.
-     */
-    include?: string[] | string;
+      /**
+       * Map of symbols to load where the key is the symbol name and the value is the {@link FFIFunction}
+       */
+      symbols: Fns;
 
-    /**
-     * Map of symbols to load where the key is the symbol name and the value is the {@link FFIFunction}
-     */
-    symbols: Fns;
+      /**
+       * Map of symbols to define where the key is the symbol name and the value is the symbol value
+       *
+       * Equivalent to `-D` option in gcc/clang.
+       *
+       * @example
+       * ```js
+       * import { cc } from "bun:ffi";
+       * import source from "./hello.c" with {type: "file"};
+       * const {symbols: {hello}} = cc({
+       *   source,
+       *   define: {
+       *     "NDEBUG": "1",
+       *   },
+       *   symbols: {
+       *     hello: {
+       *       returns: "cstring",
+       *       args: [],
+       *     },
+       *   },
+       * });
+       * ```
+       */
+      define?: Record<string, string>;
 
-    /**
-     * Map of symbols to define where the key is the symbol name and the value is the symbol value
-     *
-     * Equivalent to `-D` option in gcc/clang.
-     *
-     * @example
-     * ```js
-     * import { cc } from "bun:ffi";
-     * import source from "./hello.c" with {type: "file"};
-     * const {symbols: {hello}} = cc({
-     *   source,
-     *   define: {
-     *     "NDEBUG": "1",
-     *   },
-     *   symbols: {
-     *     hello: {
-     *       returns: "cstring",
-     *       args: [],
-     *     },
-     *   },
-     * });
-     * ```
-     */
-    define?: Record<string, string>;
-
-    /**
-     * Flags to pass to the compiler, for example to link against macOS
-     * frameworks. Bun makes no guarantees about which compiler version is
-     * used.
-     *
-     * Appended after the defaults, so a later `-std=c23` or `-O0` wins.
-     * `-std` accepts c99, c11, c17 and c23 (and their gnu variants).
-     *
-     * @default "-std=c11 -Wl,--export-all-symbols -g -O2"
-     *
-     * @example
-     * ```js
-     * import { cc } from "bun:ffi";
-     * import source from "./hello.c" with {type: "file"};
-     * const {symbols: {hello}} = cc({
-     *   source,
-     *   flags: ["-framework CoreFoundation", "-framework Security"],
-     *   symbols: {
-     *     hello: {
-     *       returns: "cstring",
-     *       args: [],
-     *     },
-     *   },
-     * });
-     * ```
-     */
-    flags?: string | string[];
-  }): Library<Fns>;
+      /**
+       * Flags to pass to the compiler, for example to link against macOS
+       * frameworks. Bun makes no guarantees about which compiler version is
+       * used.
+       *
+       * Appended after the defaults, so a later `-std=c23` or `-O0` wins.
+       * `-std` accepts c99, c11, c17 and c23 (and their gnu variants).
+       *
+       * @default "-std=c11 -Wl,--export-all-symbols -g -O2"
+       *
+       * @example
+       * ```js
+       * import { cc } from "bun:ffi";
+       * import source from "./hello.c" with {type: "file"};
+       * const {symbols: {hello}} = cc({
+       *   source,
+       *   flags: ["-framework CoreFoundation", "-framework Security"],
+       *   symbols: {
+       *     hello: {
+       *       returns: "cstring",
+       *       args: [],
+       *     },
+       *   },
+       * });
+       * ```
+       */
+      flags?: string | string[];
+    },
+  ): Library<Fns>;
 
   /**
    * What {@link cc} compiles: a file (`source`) or a string of C (`code`).
@@ -792,7 +797,11 @@ declare module "bun:ffi" {
         /**
          * File path to an ISO C source file to compile and link, or several
          */
-        source: string | import("bun").BunFile | URL | readonly (string | import("bun").BunFile | URL)[];
+        source:
+          | string
+          | import("bun").BunFile
+          | URL
+          | readonly (string | import("bun").BunFile | URL)[];
         code?: never;
       }
     | {
@@ -835,11 +844,15 @@ declare module "bun:ffi" {
    * ```
    *
    */
-  function CFunction(fn: FFIFunction & { ptr: Pointer | number | bigint }): CallableFunction & {
-    /**
-     * Free the memory allocated by the wrapping function
-     */
-    close(): void;
+  const CFunction: {
+    (fn: Omit<FFIFunction, "ptr"> & { ptr: Pointer | number | bigint }): CallableFunction & {
+      /** Free the memory allocated by the wrapping function */
+      close(): void;
+    };
+    new (fn: Omit<FFIFunction, "ptr"> & { ptr: Pointer | number | bigint }): CallableFunction & {
+      /** Free the memory allocated by the wrapping function */
+      close(): void;
+    };
   };
 
   /**
@@ -904,7 +917,11 @@ declare module "bun:ffi" {
    * @param byteOffset bytes to skip before reading
    * @param byteLength bytes to read
    */
-  function toBuffer(ptr: Pointer | number | bigint, byteOffset?: number, byteLength?: number): Buffer;
+  function toBuffer(
+    ptr: Pointer | number | bigint,
+    byteOffset?: number,
+    byteLength?: number,
+  ): Buffer;
   /**
    * Wrap a pointer in a {@link Buffer} that calls `deallocator` once the
    * garbage collector frees it. `deallocator` is a C function pointer with the
@@ -954,7 +971,11 @@ declare module "bun:ffi" {
    * @param byteOffset bytes to skip before reading
    * @param byteLength bytes to read
    */
-  function toArrayBuffer(ptr: Pointer | number | bigint, byteOffset?: number, byteLength?: number): ArrayBuffer;
+  function toArrayBuffer(
+    ptr: Pointer | number | bigint,
+    byteOffset?: number,
+    byteLength?: number,
+  ): ArrayBuffer;
   /**
    * Wrap a pointer in an {@link ArrayBuffer} that calls `deallocator` once
    * the garbage collector frees it, so native memory can be handed to

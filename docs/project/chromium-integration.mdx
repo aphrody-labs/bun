@@ -1,0 +1,115 @@
+---
+title: Chromium-family integration and Bun/JSC boundary
+description: Source-backed Chromium and ChromiumOS integration status, tool setup, and engine compatibility gates.
+---
+
+# Chromium-family integration
+
+Research snapshot: 2026-10-11. The scoped source and documentation inventory is
+[`tools/config/chromium-sources.json`](../../tools/config/chromium-sources.json).
+It records public refs observed that day and the exact `depot_tools` checkout.
+It is deliberately not a claim that every Chromium or ChromiumOS document was
+read, or that Chromium/Blink is integrated with Bun/JSC.
+
+## What is present in Bun today
+
+- The integrated browser crates are in `src/browser`; the JavaScript crate
+  [`src/browser/crates/js/Cargo.toml`](../../src/browser/crates/js/Cargo.toml)
+  depends on `deno_core`, so its current page runtime remains V8-backed.
+- Bun's native engine is JavaScriptCore under `src/jsc`. The separate native
+  [`Bun.WebView` Chrome backend](../../src/runtime/webview/ChromeProcess.rs)
+  launches or connects to a Chrome-family executable and speaks CDP. That is a
+  useful browser-provider boundary, not an in-process Blink/JSC port.
+- The current browser plan calls for page JSC qualification and preserves the
+  V8 source until the replacement passes the required behavior gates. See
+  [`src/browser/PLAN.md`](../../src/browser/PLAN.md) and
+  [`src/browser/docs/browser-migration.md`](../../src/browser/docs/browser-migration.md).
+
+## Chromium and Blink engine boundary
+
+Chromium's Blink bindings layer is explicitly a V8-DOM bindings subsystem. Its
+IDL compiler generates C++ glue; the binding utilities handle V8 contexts,
+wrappers and exceptions. Blink's design specifies a V8 isolate per renderer
+thread, multiple contexts/worlds per isolate, and separate DOM wrappers per
+world over shared native DOM objects. These are engine and lifetime contracts,
+not a replaceable linker flag. Bun's JSC API cannot consume those V8 binding
+objects or their V8/Oilpan wrapper tracing as-is.
+
+The owner direction is Bun/JSC, so the honest path is an explicit Blink
+embedding/binding port or a new adapter layer whose DOM identity, realms,
+threading, exception flow and cross-heap lifetime are specified and tested.
+Recompiling Chromium with the existing generated V8 bindings while labeling the
+result JSC would be false compatibility. Keep current V8-backed browser source
+until an alternative qualifies differential DOM/script behavior, wrapper
+identity and GC, exceptions, workers/frames, scheduling and teardown.
+
+Primary architecture references:
+
+- [Blink bindings README](https://chromium.googlesource.com/chromium/src/+/main/third_party/blink/renderer/bindings/README.md)
+- [Blink V8 Binding Design](https://chromium.googlesource.com/chromium/src/+/main/third_party/blink/renderer/bindings/core/v8/V8BindingDesign.md)
+- [Blink renderer overview](https://chromium.googlesource.com/chromium/src/+/main/third_party/blink/renderer/README.md)
+
+## Build and ChromiumOS toolchains
+
+Chromium's documented source workflow uses `depot_tools` (`fetch`/`gclient`),
+GN to generate Ninja build files, and Ninja/autoninja (the current depot_tools
+also includes Siso). This checkout only installed and pinned `depot_tools`;
+it did not run the self-updating/bootstrap wrappers, alter PATH, fetch Chromium,
+generate GN files, or build an engine. Invoke it later with an explicit scoped
+PATH and `DEPOT_TOOLS_UPDATE=0`; do not rely on a globally installed moving
+checkout.
+
+ChromiumOS has an additional `repo` manifest/source workflow and an SDK chroot
+(`cros_sdk`) with board-targeted package/image steps. The current official
+developer guide requires Linux and documents substantially more host, memory,
+disk and privilege setup for development/building. The VPS preflight passed the
+requested minimums for this small tooling checkout (100 GiB free disk reported,
+36 GiB memory available); it does **not** qualify a Chromium or ChromiumOS
+source sync/build. The current 107 GiB factory allocation is not treated as
+proof that a full Chromium checkout plus build is feasible, and no such clone
+was attempted.
+
+Primary setup/toolchain references:
+
+- [Install depot_tools](https://www.chromium.org/developers/how-tos/install-depot-tools/)
+- [Chromium Linux build instructions](https://chromium.googlesource.com/chromium/src/+/main/docs/linux/build_instructions.md)
+- [GN README](https://chromium.googlesource.com/chromium/src/+/main/tools/gn/README.md)
+- [depot_tools README](https://chromium.googlesource.com/chromium/tools/depot_tools/+/main/README.md)
+- [ChromiumOS Developer Guide](https://www.chromium.org/chromium-os/developer-library/guides/development/developer-guide/)
+- [ChromiumOS public source manifest](https://chromium.googlesource.com/chromiumos/manifest/+/main/README.md)
+
+ChromiumOS image work carries attribution requirements; any later source,
+binary or image distribution must preserve upstream licenses, notices and the
+official attribution rules. The pinned `depot_tools` checkout retains its
+upstream `LICENSE` file.
+
+## Python and system dependencies
+
+`bun --help` has no `systemdeps` command. This fork's system package manager is
+the `systemDependencies` package.json/lockfile mechanism, with `apt` accepted
+as an alias for the `deb` source. The integrated Linux adapter invokes trusted
+APT/dpkg through `bun pm apt`, with an explicit initialized root for transactions;
+candidate CLI qualification remains required. See the [Debian owner](../pm/deb.mdx)
+and [Ubuntu source receipt](./ubuntu-apt-sources.mdx).
+`bun uv python` exposes uv-managed Python discovery and installation.
+The repository's `scripts/aphrody/buv.ts` is a project workflow wrapper, not a
+separate installed `buv` executable. `bun:python` embeds an explicitly selected
+CPython library through its host ABI. These interfaces do not establish that
+`depot_tools` scripts can use them: `gclient` and related tools expect a
+compatible CPython executable and may inspect `sys.executable` or spawn other
+tools. That command-line compatibility remains an explicit qualification gate.
+No apt/winget packages or Python versions were installed for this setup.
+
+## Qualification gates
+
+- Qualify the pinned depot_tools entrypoints in an isolated environment without
+  allowing self-update; record the interpreter and subprocess behavior.
+- Choose whether the first Chromium integration uses the already-existing CDP
+  provider or a separately qualified in-process embedder. Keep the JSC engine
+  direction explicit in either case.
+- Design Blink bindings and cross-heap DOM wrapper lifetime for JSC; do not
+  share V8 objects or claim Blink/JSC parity before differential tests.
+- Plan ChromiumOS source/SDK storage, host package provisioning, board scope,
+  image attribution and artifact policy independently from depot_tools setup.
+- Run all native engine and SDK gates on the declared factory, not on this
+  source-only research checkout.

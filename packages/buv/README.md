@@ -42,6 +42,17 @@ compiler cache disabled and all 37 integer results checked.
 
 Use the coordinator's single final gate pass for package tests. Set `BUV_TEST_EXECUTABLE` to the owner-built executable to enable the native graph/UV qualification test. Artifact-dependent legacy parity tests require their explicitly configured fixtures and do not establish core qualification when skipped. `scripts/bench.ts` invokes embedded UV asynchronously through `buv uv`, records the actual executables, and accepts explicit baseline `--before-python` / `--before-uv` paths.
 
+## Native Python compiler qualification
+
+The selected native core dispatches Cython and Nuitka through isolated,
+pinned UV environments. Products are genuine loadable Python extensions or
+native executables; receipts record source, helper, compiler and artifact
+hashes. Executables require their declared CPython environment unless a
+separately qualified standalone mode is requested. On 2026-10-10 the rebuilt
+Windows core passed all 43 Python CLI tests (151 assertions), including both
+compiler backends, extension imports, executable runs, SQLite artifact records
+and PyCUDA compute. Linux, macOS, Nuitka onefile and WASI remain separate gates.
+
 ## Preserved predecessor sources
 
 The complete former `packages/bun-vu` tree now lives here, including standalone parity source crates `crates/buv` and `crates/buv-runtime`, Python compile/Hugging Face helpers, installer, manifests and benchmarks. These crates preserve functionality for porting; they are outside Bun's default workspace and are not the canonical core built by forge.

@@ -1,0 +1,103 @@
+---
+name: Runtime release matrix
+description: Two compiled Bun flavors, qualified native assets and runtime containers.
+---
+
+# Runtime release matrix
+
+The existing `aphrody-release.yml` factory produces two compiled flavors for
+every upstream release target: Linux x64 and arm64 with GNU and musl, Windows
+x64 and arm64, and macOS x64 and arm64. Both use the native release build owner,
+pinned toolchain and sysroots, ThinLTO by default, and at most six build jobs.
+
+| Flavor | Compiled coreutils | Release asset names |
+| --- | --- | --- |
+| `perf` | Disabled | Upstream-compatible `bun-<platform>.zip` |
+| `full` | Enabled | `bun-<platform>-full.zip` |
+
+The performance flavor removes the optional applet dispatcher. The full flavor
+adds the existing uutils owner to the same Bun executable. Each archive includes
+`release-flavor.json` with its immutable Git revision and compiled selection.
+The full smoke test invokes the actual `factor` applet through `argv0` on every
+release operating system, using a hardlink without Windows symlink privileges.
+Neither flavor changes module names, adds a public CLI, or enables host mutation
+authority through environment flags. Browser renderer combinations and other
+experimental integrations require their own feature and behavior qualification;
+the full flavor does not establish that every unfinished integration is stable.
+
+`fullIntegrationPolicy` accounts for every combination in the existing
+`tools/config/fusion-features.json` inventory. Native HTML/CSS are linked by
+the runtime owners; coreutils is forwarded through the build owner's existing
+compile flag. Portable paint still needs native binary dispatch and screenshot
+qualification. Shared CSS paint needs renderer feature forwarding, native
+linkage and cascade qualification. Browser render/stealth additionally requires
+replacement of its remaining deno_core/V8 owner with the qualified JSC page
+engine, DOM/event-loop/GC parity and platform TLS/rendering qualification.
+The archive manifest reports `completeIntegrationQualified: false` while those
+owners remain pending. Enabling all Cargo flags blindly, enabling diagnostics,
+or granting Docker/MCP host authority cannot qualify those missing integrations.
+This initial full archive is a compiled candidate for that target, rather than
+evidence of a complete stable integration.
+
+The name `perf` describes an optimization configuration. A faster-than-upstream
+claim requires comparable startup, throughput and memory benchmark receipts on
+the same hardware, workload, toolchain and published binaries. PGO instrumentation
+and consumption remain mutually exclusive build options; no fabricated profile
+or synthetic performance result is included.
+
+## Publication
+
+The active owner directive routes every heavy build to the SSH VPS. Generate a
+bounded plan after the source commit; the planner performs no build or dispatch:
+
+```sh
+bun scripts/aphrody/release-matrix.ts <exact-40-character-source-revision>
+```
+
+Do not replace an already published immutable package version with changed
+source. Choose the next owner release version if that version already exists.
+Leave `targets` empty for the complete matrix. Selecting targets creates only
+that explicit subset and cannot establish a complete stable release.
+
+Execute each planned command through `aphrody infra ssh exec --host vps`, from
+the immutable clean source, using the existing Infra resource owner and shared
+heavy lock. Refresh the live factory profile first. The plan serializes heavy
+steps, bounds native jobs to six and retains 8 GiB disk and 2 GiB RAM. The
+existing GitHub workflow is retained as a platform recipe and publication
+contract, but its hosted native builds must not be dispatched under this VPS-only
+directive. Native Windows, arm64 and macOS smoke execution needs a qualified
+remote platform host; this VPS cannot establish Windows runtime qualification
+through compilation or local Windows workstation tests.
+
+The workflow defaults to a candidate prerelease, without npm publication to the
+`latest` channel. `release-channel=stable` refuses the pending full integration
+owners. Stable source, platform receipts and complete integration qualification
+must precede release promotion and registry publication. The existing
+`publish-runtime.ts publish --version <version> --assets <qualified-zips>` is
+the npm publication owner; its `latest` tag is reserved here for qualified stable
+artifacts. The installer/updater and registry pipeline must retain their own
+checksum-qualified published pins.
+
+The release job requires success of all requested builds and platform smoke jobs.
+The unchanged default assets feed `@aphrody/bun-runtime`, its platform packages,
+existing installers and `bun upgrade`. Full archives are explicitly selectable
+release downloads; they are not silently substituted by the existing updater.
+Updating the full flavor through a dedicated installation channel remains open.
+
+After qualified native publication, the same workflow builds and smoke tests
+versioned Alpine 3.24 and Ubuntu 26.04 runtime images from checksum-authenticated
+release archives, for x64 and arm64 and both flavors. Images use
+`ghcr.io/aphrody-labs/bun-os:<version>-<flavor>-<alpine|ubuntu26>` with native
+architecture tags `-amd64` and `-arm64`. Multi-architecture manifests require the
+complete matrix. Image builds compile no engine and preserve separate existing
+deployment images and their contracts.
+
+## WebAssembly boundary
+
+`bun_wasm` provides the existing C ABI over engine-free Rust owners: semver,
+shell parsing and Markdown. Its `wasm32-wasip1-threads` build uses the `wasm`
+Cargo profile. It is not a JavaScriptCore executable and cannot run the Bun CLI,
+JavaScript, Python, native host plugins or a Chromium page engine. A complete
+Bun runtime release for WASM remains blocked on that engine port, host contracts,
+memory/threading support and real integration tests. This native release matrix
+rejects a `wasm` runtime target instead of publishing a mislabeled executable.

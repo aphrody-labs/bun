@@ -5,9 +5,14 @@
 // the WinRT core (bun:winrt), and XAML runs on the JS thread as a
 // single-threaded apartment. Window messages are pumped from a timer, so JS keeps running between frames and
 // XAML callbacks (events, the Application's metadata provider) run synchronously on the JS thread.
-const { dlopen, ptr, read, toArrayBuffer }: typeof import("bun:ffi") = require("bun:ffi");
+const {
+  dlopen,
+  ptr,
+  read,
+  toArrayBuffer,
+}: Pick<typeof import("bun:ffi"), "dlopen" | "ptr" | "read" | "toArrayBuffer"> = require("bun:ffi");
 const { dirname, isAbsolute, join }: typeof import("node:path") = require("node:path");
-const { existsSync }: typeof import("node:fs") = require("node:fs");
+const { existsSync } = require("node:fs");
 
 const PUBLISHER_ID = "8wekyb3d8bbwe";
 const DEFAULT_VERSIONS = ["1.8", "1.7", "1.6", "1.5", "1.4"];
@@ -25,7 +30,8 @@ function winuiError(code: string, message: string) {
 }
 
 function ensureWindows() {
-  if (process.platform !== "win32") throw winuiError("ERR_WINUI_UNSUPPORTED", "bun:winui is only available on Windows");
+  if (process.platform !== "win32")
+    throw winuiError("ERR_WINUI_UNSUPPORTED", "bun:winui is only available on Windows");
 }
 
 function wide(value: string) {
@@ -57,7 +63,10 @@ function native() {
   try {
     // Windows 11 (22000+) adds framework packages to an unpackaged process without the Bootstrap DLL.
     dynamicDependencies = dlopen("kernelbase.dll", {
-      TryCreatePackageDependency: { args: ["ptr", "ptr", "u64", "u32", "u32", "ptr", "u32", "ptr"], returns: "i32" },
+      TryCreatePackageDependency: {
+        args: ["ptr", "ptr", "u64", "u32", "u32", "ptr", "u32", "ptr"],
+        returns: "i32",
+      },
       AddPackageDependency: { args: ["ptr", "i32", "u32", "ptr", "ptr"], returns: "i32" },
     }).symbols;
   } catch {}
@@ -85,7 +94,9 @@ function frameworkPath() {
   if (!module) return undefined;
   const buffer = new Uint16Array(32768);
   const length = kernel32.GetModuleFileNameW(module, buffer, buffer.length);
-  return length ? dirname(Buffer.from(buffer.buffer, 0, length * 2).toString("utf16le")) : undefined;
+  return length
+    ? dirname(Buffer.from(buffer.buffer, 0, length * 2).toString("utf16le"))
+    : undefined;
 }
 
 function bootstrapDllCandidates(options: any) {
@@ -95,7 +106,7 @@ function bootstrapDllCandidates(options: any) {
   candidates.push(join(dirname(process.execPath), name), join(process.cwd(), name));
   const { main } = Bun;
   if (typeof main === "string" && isAbsolute(main)) candidates.push(join(dirname(main), name));
-  return candidates.filter(path => existsSync(path));
+  return candidates.filter((path) => existsSync(path));
 }
 
 function bootstrap(options: any): Runtime {
@@ -108,7 +119,8 @@ function bootstrap(options: any): Runtime {
   const { dynamicDependencies } = native();
   const failures: string[] = [];
   for (const version of versions) {
-    if (!/^\d+(\.\d+)?$/.test(version)) throw new TypeError(`bun:winui: invalid Windows App SDK version "${version}"`);
+    if (!/^\d+(\.\d+)?$/.test(version))
+      throw new TypeError(`bun:winui: invalid Windows App SDK version "${version}"`);
     const packageFamilyName = `Microsoft.WindowsAppRuntime.${version}_${PUBLISHER_ID}`;
     if (dynamicDependencies) {
       const id = new BigUint64Array(1);
@@ -125,7 +137,13 @@ function bootstrap(options: any): Runtime {
       if (hr >= 0) {
         const context = new BigUint64Array(1);
         const fullName = new BigUint64Array(1);
-        hr = dynamicDependencies.AddPackageDependency(Number(id[0]), 0, 0, ptr(context), ptr(fullName));
+        hr = dynamicDependencies.AddPackageDependency(
+          Number(id[0]),
+          0,
+          0,
+          ptr(context),
+          ptr(fullName),
+        );
         if (hr >= 0) {
           const path = frameworkPath();
           if (path) {
@@ -147,7 +165,12 @@ function bootstrap(options: any): Runtime {
       const symbols = dlopen(dll, {
         MddBootstrapInitialize2: { args: ["u32", "ptr", "u64", "u32"], returns: "i32" },
       }).symbols;
-      const hr = symbols.MddBootstrapInitialize2((Number(major) << 16) | Number(minor), wide(""), 0n, 0);
+      const hr = symbols.MddBootstrapInitialize2(
+        (Number(major) << 16) | Number(minor),
+        wide(""),
+        0n,
+        0,
+      );
       const path = hr >= 0 ? frameworkPath() : undefined;
       if (path) {
         runtimeInfo = { version, packageFamilyName, packageFullName: null, path, via: "bootstrap" };
@@ -172,7 +195,9 @@ function loadCore(options: any) {
 
 // XAML fragments without a default namespace get the WinUI ones, so `<Button Content="OK"/>` loads.
 function withNamespaces(xaml: string) {
-  const match = /<([A-Za-z_][\w.:]*)/.exec(xaml.replace(/<\?xml[^>]*\?>/, "").replace(/<!--[\s\S]*?-->/g, ""));
+  const match = /<([A-Za-z_][\w.:]*)/.exec(
+    xaml.replace(/<\?xml[^>]*\?>/, "").replace(/<!--[\s\S]*?-->/g, ""),
+  );
   if (!match) throw new TypeError("bun:winui: the XAML has no root element");
   const rootStart = xaml.indexOf(match[0]);
   const rootEnd = xaml.indexOf(">", rootStart);
@@ -222,7 +247,9 @@ class Element {
 
   has(member: string) {
     const core = this.#app.winrt;
-    return !!(core.findMethod(this.className, `get_${member}`) ?? core.findMethod(this.className, member));
+    return !!(
+      core.findMethod(this.className, `get_${member}`) ?? core.findMethod(this.className, member)
+    );
   }
 
   get(property: string) {
@@ -240,7 +267,8 @@ class Element {
   }
 
   on(event: string, listener: (sender: Element | null, args: Element | null) => unknown) {
-    if (typeof listener !== "function") throw new TypeError("bun:winui: listener must be a function");
+    if (typeof listener !== "function")
+      throw new TypeError("bun:winui: listener must be a function");
     const core = this.#app.winrt;
     const found = core.findMethod(this.className, `add_${event}`);
     if (!found) throw new TypeError(`bun:winui: ${this.className} has no event ${event}`);
@@ -286,7 +314,9 @@ class Element {
     const core = this.#app.winrt;
     if (core.findMethod(this.className, "get_Children")) {
       const collection = core.callMethod(this.winrt, "get_Children");
-      return [...core.vector(collection, "Microsoft.UI.Xaml.UIElement")].map(child => new Element(this.#app, child));
+      return [...core.vector(collection, "Microsoft.UI.Xaml.UIElement")].map(
+        (child) => new Element(this.#app, child),
+      );
     }
     for (const property of ["Child", "Content"]) {
       if (core.findMethod(this.className, `get_${property}`)) {
@@ -301,7 +331,7 @@ class Element {
     const node: WinUITreeNode = { type: this.type };
     const name = this.name;
     if (name) node.name = name;
-    const children = this.children.map(child => child.tree());
+    const children = this.children.map((child) => child.tree());
     if (children.length) node.children = children;
     return node;
   }
@@ -309,7 +339,9 @@ class Element {
   // The automation peer's Invoke pattern: what a click from a screen reader or UI test does.
   invoke() {
     const ns = this.#app.namespaces;
-    const peer = ns["Microsoft.UI.Xaml.Automation.Peers"].FrameworkElementAutomationPeer.CreatePeerForElement(
+    const peer = ns[
+      "Microsoft.UI.Xaml.Automation.Peers"
+    ].FrameworkElementAutomationPeer.CreatePeerForElement(
       this.winrt.as("Microsoft.UI.Xaml.IUIElement"),
     );
     const pattern = peer?.GetPattern(0); // PatternInterface.Invoke
@@ -324,9 +356,14 @@ class Element {
   #invoke(name: string, values: unknown[]) {
     const core = this.#app.winrt;
     const found = core.findMethod(this.className, name);
-    if (!found) throw new TypeError(`bun:winui: ${this.className} has no member ${name.replace(/^(get|put)_/, "")}`);
+    if (!found)
+      throw new TypeError(
+        `bun:winui: ${this.className} has no member ${name.replace(/^(get|put)_/, "")}`,
+      );
     const inputs = found.method[2].filter((p: any) => p[0] === "in");
-    const converted = values.map((value, i) => this.#app.toWinRT(value, inputs[i]?.[1], inputs[i]?.[2]));
+    const converted = values.map((value, i) =>
+      this.#app.toWinRT(value, inputs[i]?.[1], inputs[i]?.[2]),
+    );
     return core.callMethod(this.winrt, name, ...converted);
   }
 
@@ -352,10 +389,11 @@ class Window {
     const [win] = ns["Microsoft.UI.Xaml"].Window.CreateInstance(null);
     win.className = "Microsoft.UI.Xaml.Window";
     this.winrt = win;
-    this.closed = new Promise(resolve => (this.#resolveClosed = resolve));
+    this.closed = new Promise((resolve) => (this.#resolveClosed = resolve));
     const core = app.winrt;
-    const handler = core.delegate(["TypedEventHandler", "Object", "Microsoft.UI.Xaml.WindowEventArgs"], () =>
-      this.#onClosed(),
+    const handler = core.delegate(
+      ["TypedEventHandler", "Object", "Microsoft.UI.Xaml.WindowEventArgs"],
+      () => this.#onClosed(),
     );
     const token = win.add_Closed(handler);
     this.#off = () => {
@@ -396,7 +434,8 @@ class Window {
 
   set content(value: Element | string) {
     const element = typeof value === "string" ? this.#app.load(value) : value;
-    if (!(element instanceof Element)) throw new TypeError("bun:winui: content must be XAML or an Element");
+    if (!(element instanceof Element))
+      throw new TypeError("bun:winui: content must be XAML or an Element");
     this.winrt.put_Content(element.winrt.as("Microsoft.UI.Xaml.IUIElement"));
   }
 
@@ -409,7 +448,15 @@ class Window {
     const { user32 } = native();
     const scale = (user32.GetDpiForWindow(this.hwnd) || 96) / 96;
     // SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE
-    user32.SetWindowPos(this.hwnd, null, 0, 0, Math.round(width * scale), Math.round(height * scale), 0x2 | 0x4 | 0x10);
+    user32.SetWindowPos(
+      this.hwnd,
+      null,
+      0,
+      0,
+      Math.round(width * scale),
+      Math.round(height * scale),
+      0x2 | 0x4 | 0x10,
+    );
     return this;
   }
 
@@ -455,12 +502,16 @@ class Application {
 
   constructor(options: any) {
     this.#options = options ?? {};
-    this.exited = new Promise(resolve => (this.#resolveExited = resolve));
+    this.exited = new Promise((resolve) => (this.#resolveExited = resolve));
     this.runtime = bootstrap(options);
     const core = (this.winrt = loadCore(options));
     core.init({ singleThreaded: true });
     const namespaces: Record<string, any> = {};
-    for (const file of ["Microsoft.UI.Xaml.winmd", "Microsoft.UI.winmd", "Microsoft.UI.Text.winmd"]) {
+    for (const file of [
+      "Microsoft.UI.Xaml.winmd",
+      "Microsoft.UI.winmd",
+      "Microsoft.UI.Text.winmd",
+    ]) {
       const path = join(this.runtime.path, file);
       if (existsSync(path)) Object.assign(namespaces, core.loadMetadata(path));
     }
@@ -472,14 +523,16 @@ class Application {
     namespaces["Windows.Foundation"] = core.systemMetadata("Windows.Foundation");
     this.namespaces = namespaces;
     const keep = this.#keep;
-    keep.controller = namespaces["Microsoft.UI.Dispatching"].DispatcherQueueController.CreateOnCurrentThread();
+    keep.controller =
+      namespaces["Microsoft.UI.Dispatching"].DispatcherQueueController.CreateOnCurrentThread();
     // The Application is composed with a JS outer object implementing IXamlMetadataProvider, which XAML
     // queries to resolve WinUI control types (XamlControlsResources, NumberBox, InfoBar...).
     const provider = (keep.provider =
       namespaces["Microsoft.UI.Xaml.XamlTypeInfo"].XamlControlsXamlMetaDataProvider.activate());
     const forward = (slot: number) => ({
       args: ["ptr", "ptr"],
-      fn: (a: number, b: number) => core.vfunc(provider.ptr, slot, ["ptr", "ptr"])(provider.ptr, a, b),
+      fn: (a: number, b: number) =>
+        core.vfunc(provider.ptr, slot, ["ptr", "ptr"])(provider.ptr, a, b),
     });
     const outer = (keep.outer = core.comObject([
       { iids: [], methods: [] },
@@ -489,11 +542,14 @@ class Application {
       },
     ]));
     outer.keep(provider);
-    const [application, inner] = namespaces["Microsoft.UI.Xaml"].Application.CreateInstance(outer.ptr);
+    const [application, inner] = namespaces["Microsoft.UI.Xaml"].Application.CreateInstance(
+      outer.ptr,
+    );
     outer.setInner(inner);
     keep.application = application;
     keep.inner = inner;
-    keep.manager = namespaces["Microsoft.UI.Xaml.Hosting"].WindowsXamlManager.InitializeForCurrentThread();
+    keep.manager =
+      namespaces["Microsoft.UI.Xaml.Hosting"].WindowsXamlManager.InitializeForCurrentThread();
     // DispatcherShutdownMode.OnExplicitShutdown: closing the last window does not stop the XAML dispatcher
     // under JS; exit() shuts it down.
     application.as("Microsoft.UI.Xaml.IApplication3").put_DispatcherShutdownMode(1);
@@ -503,7 +559,9 @@ class Application {
       application.put_RequestedTheme(theme);
     }
     if (this.#options.resources !== false) {
-      const resources = this.load(`<XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls"/>`);
+      const resources = this.load(
+        `<XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls"/>`,
+      );
       application.put_Resources(resources.winrt.as("Microsoft.UI.Xaml.IResourceDictionary"));
     }
   }
@@ -514,7 +572,9 @@ class Application {
 
   load(xaml: string): Element {
     if (typeof xaml !== "string") throw new TypeError("bun:winui: xaml must be a string");
-    const object = this.namespaces["Microsoft.UI.Xaml.Markup"].XamlReader.Load(withNamespaces(xaml));
+    const object = this.namespaces["Microsoft.UI.Xaml.Markup"].XamlReader.Load(
+      withNamespaces(xaml),
+    );
     return new Element(this, object);
   }
 
@@ -564,7 +624,8 @@ class Application {
 
   windowClosed() {
     if (this.windows.size !== 0) return;
-    if (this.#options.exitOnLastWindowClosed !== false) setImmediate(() => this.windows.size === 0 && this.exit());
+    if (this.#options.exitOnLastWindowClosed !== false)
+      setImmediate(() => this.windows.size === 0 && this.exit());
     else this.#timer?.unref?.();
   }
 

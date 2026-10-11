@@ -60,7 +60,11 @@ const patterns = {
   bakeRuntime: {
     // dev_server/mod.rs is read by bake-codegen.ts to derive the
     // MessageId/IncomingMessageId const-enums in generated.ts.
-    paths: ["src/runtime/bake/*.ts", "src/runtime/bake/*/*.{ts,css}", "src/runtime/bake/dev_server/mod.rs"],
+    paths: [
+      "src/runtime/bake/*.ts",
+      "src/runtime/bake/*/*.{ts,css}",
+      "src/runtime/bake/dev_server/mod.rs",
+    ],
     exclude: ["src/runtime/bake/generated.ts"],
   },
   /** legacy bindgen input */
@@ -85,6 +89,10 @@ const patterns = {
     paths: [
       "src/**/*.rs",
       "src/**/Cargo.toml",
+      // This first-party path dependency is outside src/. Its manifest changes
+      // the native Rust unit graph; its sources also belong to Rust inputs.
+      "packages/aphrody-pkg-system/**/*.rs",
+      "packages/aphrody-pkg-system/Cargo.toml",
       "src/runtime/**/*.html",
       "Cargo.toml",
       "Cargo.lock",
@@ -143,8 +151,7 @@ export function globAllSources(): Sources {
     const excludeExact = new Set<string>();
     const excludePrefix: string[] = [];
     for (const ex of (spec.exclude ?? []).map(normalize)) {
-      if (ex.endsWith("/**"))
-        excludePrefix.push(ex.slice(0, -2)); // keep trailing '/'
+      if (ex.endsWith("/**")) excludePrefix.push(ex.slice(0, -2)); // keep trailing '/'
       else excludeExact.add(ex);
     }
     const files: string[] = [];
@@ -152,7 +159,7 @@ export function globAllSources(): Sources {
       for (const rel of globSync(pattern, { cwd: root })) {
         const normalized = normalize(rel);
         if (excludeExact.has(normalized)) continue;
-        if (excludePrefix.some(p => normalized.startsWith(p))) continue;
+        if (excludePrefix.some((p) => normalized.startsWith(p))) continue;
         files.push(resolve(root, normalized));
       }
     }

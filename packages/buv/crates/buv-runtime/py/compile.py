@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """Python compiler products governed by packages/buv/PLAN.md.
 
-Two products, both deterministic and both run by the embedded CPython of the runtime:
+Explicit bytecode/archive products retain the embedded CPython contract:
 
-    buv compile <dir|file> [-O|-OO]
+    buv compile <dir|file> --bytecode [-O|-OO]
         byte-compiles every .py into `__pycache__` as unchecked-hash pycs (no timestamp, no source stat at import time:
         the cache is reproducible and is never rewritten by a later run);
     buv compile <dir> --zipapp -m <module:function> -o <app.pyz> [-O|-OO]
@@ -14,14 +14,22 @@ passes --buv-executable and selects native Cython/Nuitka or a real WASI builder.
 Compiler packages remain lazy, pinned UV dependencies outside the runtime binary.
 """
 
+import argparse
 import compileall
+import contextlib
+import hashlib
+import json
 import os
 import py_compile
+import runpy
+import shlex
 import shutil
 import subprocess
 import sys
+import sysconfig
 import tempfile
 import zipapp
+from pathlib import Path
 
 SHEBANG = "/usr/bin/env -S buv python"
 
@@ -81,7 +89,7 @@ def build_zipapp(source, main, output, level):
         shutil.rmtree(work, ignore_errors=True)
 
 
-def main(argv):
+def legacy_main(argv):
     args = list(argv)
     level = optimize_level(args)
     use_zipapp = "--zipapp" in args

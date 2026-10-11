@@ -533,15 +533,22 @@ describe("buildRustGraph + unitManifest", () => {
 
   test("native library dependencies offering a cdylib compile only their rlib", () => {
     const plan = planWith([]);
-    plan.unitGraph.units[0].target.crate_types = ["lib", "cdylib"];
-    const graph = buildRustGraph(plan, "/build/rust-target");
-    const library = graph.units[0];
-    expect(library.crateTypes).toEqual(["rlib"]);
-    const manifest = unitManifest(context(graph), library) as RustcUnitManifest;
-    expect(manifest.args).toContain("rlib");
-    expect(manifest.args).not.toContain("cdylib");
-    expect(library.output).toEndWith(".rlib");
-    for (const unsupported of [["cdylib"], ["staticlib"], ["lib", "staticlib"]]) {
+    for (const offered of [
+      ["lib", "cdylib"],
+      ["lib", "staticlib"],
+      ["lib", "cdylib", "staticlib"],
+    ]) {
+      plan.unitGraph.units[0].target.crate_types = offered;
+      const graph = buildRustGraph(plan, "/build/rust-target");
+      const library = graph.units[0];
+      expect(library.crateTypes).toEqual(["rlib"]);
+      const manifest = unitManifest(context(graph), library) as RustcUnitManifest;
+      expect(manifest.args).toContain("rlib");
+      expect(manifest.args).not.toContain("cdylib");
+      expect(manifest.args).not.toContain("staticlib");
+      expect(library.output).toEndWith(".rlib");
+    }
+    for (const unsupported of [["cdylib"], ["staticlib"], ["cdylib", "staticlib"]]) {
       plan.unitGraph.units[0].target.crate_types = unsupported;
       expect(() => buildRustGraph(plan, "/build/rust-target")).toThrow("only rlib libraries");
     }

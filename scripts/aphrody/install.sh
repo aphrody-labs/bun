@@ -12,7 +12,7 @@ set -euo pipefail
 die() { echo "error: $*" >&2; exit 1; }
 
 version=${1:-latest}
-variant=${2:-}
+variant=${2:-${APHRODY_BUN_FLAVOR:-perf}}
 repo=${APHRODY_BUN_REPO:-aphrody-labs/bun}
 install_dir=${BUN_INSTALL:-$HOME/.bun}
 token=${GITHUB_TOKEN:-${GH_TOKEN:-}}
@@ -33,7 +33,12 @@ if [[ $target = linux-* ]] && { [[ -f /etc/alpine-release ]] || ldd --version 2>
   target=$target-musl
 fi
 exe=bun
-if [[ $variant = debug-info || $variant = profile ]]; then target=$target-profile; exe=bun-profile; fi
+case "$variant" in
+  perf) ;;
+  full) target=$target-full ;;
+  debug-info | profile) target=$target-profile; exe=bun-profile ;;
+  *) die "variant must be perf, full, debug-info or profile" ;;
+esac
 
 api() {
   local args=(-fsSL -H 'Accept: application/vnd.github+json')
@@ -96,6 +101,10 @@ expected_version=${tag#bun-v}
 expected_version=${expected_version#aphrody-v}
 actual_version=$("$candidate" --version) || die "downloaded runtime version could not be read"
 [[ $actual_version = "$expected_version" ]] || die "downloaded runtime version does not match the selected release"
+if [[ $variant = full ]]; then
+  "$candidate" -e 'const m = await Bun.file(process.argv[1]).json(); if (m.flavor !== "full" || m.compiledFeatures?.coreutils !== true) process.exit(1)' "$tmp/bun-$target/release-flavor.json" \
+    || die "full archive must contain its compiled feature manifest"
+fi
 mkdir -p "$install_dir/bin"
 stage="$install_dir/bin/.bun-stage-$$"
 backup="$install_dir/bin/.bun-backup-$$"

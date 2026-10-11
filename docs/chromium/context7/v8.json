@@ -1,0 +1,33 @@
+{
+  "collectedOn": "2026-10-11",
+  "provider": "Context7",
+  "resolve": {
+    "status": "fulfilled",
+    "value": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Available Libraries:\n\n- Title: V8\n- Context7-compatible library ID: /v8/v8\n- Description: V8 is Google's open source JavaScript engine that implements ECMAScript and can be embedded into any C++ application.\n- Code Snippets: 6280\n- Source Reputation: High\n- Benchmark Score: 55.41\n----------\n- Title: V8\n- Context7-compatible library ID: /v8/v8.dev\n- Description: V8 is Google's high-performance JavaScript and WebAssembly engine that powers Chrome and Node.js.\n- Code Snippets: 3501\n- Source Reputation: High\n- Benchmark Score: 60.89\n----------\n- Title: V8\n- Context7-compatible library ID: /websites/v8_dev\n- Description: V8 is Google's open-source high-performance JavaScript and WebAssembly engine written in C++ that compiles and executes code, manages memory, and powers Chrome and Node.js.\n- Code Snippets: 669\n- Source Reputation: High\n----------\n- Title: Rusty V8 Binding\n- Context7-compatible library ID: /denoland/rusty_v8\n- Description: Rusty V8 Binding provides high-quality Rust bindings to V8's C++ API, designed to build V8 from source during `cargo build` to ensure robust integration without relying on pre-built binaries.\n- Code Snippets: 445\n- Source Reputation: High\n- Benchmark Score: 63\n----------\n- Title: V8 Tools\n- Context7-compatible library ID: /v8/tools\n- Description: V8 Tools provides scripts for importing and generating sources for the V8 tools page, facilitating deployment of these tools.\n- Code Snippets: 2\n- Source Reputation: High"
+        }
+      ],
+      "isError": false
+    }
+  },
+  "query": {
+    "status": "fulfilled",
+    "value": {
+      "name": "v8",
+      "libraryId": "/v8/v8.dev",
+      "query": "How to embed V8 using isolates contexts handles garbage collection and compare engine boundary requirements with JavaScriptCore",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "### Configure Isolate with Custom Startup Snapshot\n\nSource: https://github.com/v8/v8.dev/blob/main/src/blog/custom-startup-snapshots.md\n\nInitialize a new V8 isolate to use a custom startup snapshot. Contexts created within this isolate will be exact copies of the snapshot, providing immediate access to its defined functions.\n\n```c++\nv8::Isolate::CreateParams params;\nparams.snapshot_blob = snapshot_blob;\nv8::Isolate* isolate = v8::Isolate::New(params);\n```\n\n--------------------------------\n\n### Create Global Object Template and Context\n\nSource: https://github.com/v8/v8.dev/blob/main/src/docs/embed.md\n\nThis snippet demonstrates creating a template for the global object and setting built-in global functions like 'log'. It then creates a new V8 context using this template, ensuring each processor has an isolated JavaScript environment.\n\n```cpp\n// Create a template for the global object and set the\n// built-in global functions.\nv8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate);\nglobal->Set(v8::String::NewFromUtf8(isolate, \"log\"),\n            v8::FunctionTemplate::New(isolate, LogCallback));\n\n// Each processor gets its own context so different processors\n// do not affect each other.\nv8::Persistent<v8::Context> context =\n    v8::Context::New(isolate, nullptr, global);\n```\n\n### Hello world\n\nSource: https://github.com/v8/v8.dev/blob/main/src/docs/embed.md\n\nAn isolate is a VM instance with its own heap. A local handle is a pointer to an object, necessary due to V8's garbage collector. A handle scope acts as a container for handles, allowing for their collective deletion. A context is an execution environment for separate JavaScript code within a single V8 instance, and must be explicitly specified.\n\n--------------------------------\n\n### About V8\n\nSource: https://github.com/v8/v8.dev/blob/main/src/docs/index.md\n\nV8 implements ECMAScript and WebAssembly, and runs on Windows, macOS, and Linux systems that use x64, IA-32, or ARM processors. V8 can be embedded into any C++ application. It compiles and executes JavaScript source code, handles memory allocation for objects, and garbage collects objects it no longer needs. V8’s stop-the-world, generational, accurate garbage collector is one of the keys to V8’s performance.\n\n--------------------------------\n\n### Handles and garbage collection\n\nSource: https://github.com/v8/v8.dev/blob/main/src/docs/embed.md\n\nA handle provides a reference to a JavaScript object's location in the heap. The V8 garbage collector reclaims memory used by objects that can no longer be accessed. When the garbage collector moves an object, it updates all handles referring to it with the object's new location. An object is considered garbage if it is inaccessible from JavaScript and has no handles referring to it."
+          }
+        ],
+        "isError": false
+      }
+    }
+  }
+}

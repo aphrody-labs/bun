@@ -1,8 +1,10 @@
 import {
   cc,
+  CFunction,
   dlopen,
   FFIType,
   JSCallback,
+  ptr as pointerOf,
   read,
   suffix,
   toArrayBuffer,
@@ -74,6 +76,19 @@ const lib = dlopen(
 );
 
 declare const ptr: Pointer;
+
+const functionOptions = { ptr, returns: FFIType.bool } as const;
+tsd.expectType<void>(CFunction(functionOptions).close());
+tsd.expectType<void>(new CFunction(functionOptions).close());
+tsd.expectType<void>(CFunction({ ptr: 1, returns: FFIType.bool }).close());
+tsd.expectType<void>(new CFunction({ ptr: 1n, returns: FFIType.bool }).close());
+tsd.expectTypeEquals<ConstructorParameters<typeof CFunction>[0], Parameters<typeof CFunction>[0]>(
+  true,
+);
+const pointerBytes = new Uint8Array(8);
+tsd.expectType<Pointer>(pointerOf(pointerBytes));
+tsd.expectType<Pointer>(pointerOf(pointerBytes, undefined));
+tsd.expectType<Pointer>(pointerOf(pointerBytes, 4));
 
 tsd.expectType<string | null>(lib.symbols.sqlite3_libversion());
 tsd.expectType<number>(lib.symbols.add(1, 2));

@@ -891,10 +891,21 @@ extern "C" int32_t open_as_nonblocking_tty(int32_t fd, int32_t mode)
 
 #endif
 
+#if OS(LINUX)
+extern "C" uint64_t Bun__Os__getMemoryCapacity(uint64_t physical);
+#endif
+
 extern "C" [[ZIG_EXPORT(nothrow)]] size_t Bun__ramSize()
 {
-    // This value is cached internally.
-    return WTF::ramSize();
+    // WTF caches its physical RAM estimate. Bun's callers use a capacity budget,
+    // so refresh the Linux kernel ceiling, without subtracting transient usage.
+    // This does not alter the separately linked JSC allocator's RAM estimate.
+    size_t physical = WTF::ramSize();
+#if OS(LINUX)
+    return static_cast<size_t>(Bun__Os__getMemoryCapacity(physical));
+#else
+    return physical;
+#endif
 }
 
 #if !OS(WINDOWS)

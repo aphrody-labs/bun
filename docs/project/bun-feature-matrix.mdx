@@ -1,0 +1,123 @@
+---
+title: "Bun OS feature qualification matrix"
+description: "Source inventory and platform constraints for the fused HTML, CSS and browser engines."
+---
+
+# Bun OS feature qualification matrix
+
+The source inventory is `scripts/aphrody/fusion-features.ts`, with declared
+qualification combinations in `tools/config/fusion-features.json`. It reads
+every explicit root Cargo workspace member, records declared feature edges,
+optional dependencies, dependency aliases and target expressions, and hashes
+the inspected manifests and build/runtime sources. It performs no build,
+network request, host mutation or feature activation.
+
+```sh
+bun scripts/aphrody/fusion-features.ts --root .
+bun scripts/aphrody/fusion-features.ts --root . --strict
+bun scripts/aphrody/fusion-features.ts --strict --build-selection pgoGenerate --build-selection pgoUse
+```
+
+`--strict` exits nonzero for unsupported selections. `supported` means the
+declaration exists and passes the configured static constraints.
+`requiring-dependencies` identifies native linkage, tooling or behavior gates
+that remain necessary. Every row reports `qualified: false`; source analysis
+cannot establish stability. Undeclared features, absent root packages and a
+JSC-only selection that still reaches V8 produce `unsupported`.
+
+## Linux, Windows and macOS
+
+| Combination | Source path | Qualification needed on each target |
+| --- | --- | --- |
+| Native HTML and CSS | `bun_runtime`, `bun_css`, `bun_browser_dom` | Complete Bun/JSC native link; candidate HTML/CSS and MCP parser tests |
+| Portable paint | `bun_browser_render/paint` | Pinned font/text/image libraries; deterministic screenshots |
+| Shared CSS and paint | `bun_browser_render/paint,bun_browser_render/bun-css` | Bun native symbols plus renderer cascade/layout/screenshots |
+| Page render and stealth | browser/CDP/MCP/service `render,stealth`, renderer `bun-css` | Page engine migration and full browser behavior; pinned TLS stack |
+| Coreutils | `bun_runtime/coreutils` | Runtime build-planner unit graph, native applet/platform tests |
+
+The page engine's current `bun_browser_js` manifest depends on `deno_core`
+in both normal and build dependencies. Activating `render` or `stealth` does
+not change its JavaScript engine. The inventory checks the current source
+dependency graph for this blocker rather than marking a JSC migration complete.
+The page build rejects cross-compilation when a matching `cross-mksnapshot`
+producer is absent. That rejection prevents embedding a host architecture V8
+snapshot; successful cross-target build and execution receipts remain required.
+Native `Bun.HTML` and the inert MCP HTML/CSS parsers already use Bun's shared
+libraries; this does not establish an interactive page runtime or Chromium
+compatibility. Chromium-level browser support requires DOM APIs, navigation,
+events, CSS/layout/paint, networking and web-platform behavior qualification.
+
+`wreq` has target-specific dependency declarations: Linux/Android enable
+`prefix-symbols`; Windows and macOS omit it. Preserve these platform guards.
+Rendering uses the existing pinned text stack and font policy. Shared CSS
+requires Bun's native symbols, so a standalone Cargo test link is insufficient.
+The factory's portable browser Nextest suite excludes `bun-css`; candidate
+native CSS tests and the full renderer linkage gate provide separate evidence.
+
+## Build flags and runtime toggles
+
+Cargo features, `bun bd` profiles and runtime environment flags are separate
+controls. The inventory lists build profiles from `scripts/build/profiles.ts`
+and build option declarations from `PartialConfig`, plus runtime feature
+declarations from `src/bun_core/env_var.rs`, including ordinary boolean/string
+`BUN_FEATURE_FLAG_*` declarations and `new_feature_flag!`; source hashes
+also cover `scripts/build/config.ts`, `scripts/build/rust.ts` and compile-time
+`src/bun_core/feature_flags.rs`. Target-dependent constants are not switches
+that can safely be enabled universally.
+
+Cargo's unit graph, produced by the existing native build planner, decides
+which features reach the final executable. The static traversal preserves
+weak optional dependency edges and target expressions; it does not replace
+Cargo resolution or evaluate all target `cfg` expressions. Mandatory edges and
+defaults and dependency feature requests are traversed. Disabled dependency
+defaults stay disabled; weak child features are followed only after their own
+alias is active. Optional aliases are not activated by another owner's selection
+of the same package. Target-dependent exclusions, development-only feature
+unification and resolver behavior require review in Cargo's actual unit graph.
+Review the emitted
+unit graph on the qualified factory for each native build. A `cargo check`
+selection is a proposed source gate, not evidence that `bun bd` forwards it.
+
+`buildFeatureForwarding` audits the runtime invocation separately from the
+Windows shim invocation. It reports whether `--features` and `coreutils` occur
+in that source and whether configuration rejects concurrent PGO generation/use.
+Those source observations require actual unit-graph and final-binary checks;
+a `shim_standalone` flag cannot establish runtime feature forwarding.
+
+The native build owner exposes `coreutils` through its existing configuration,
+enables it by default and permits `--coreutils=off`. Its Cargo runtime invocation
+forwards `--features coreutils` when enabled. Source forwarding does not establish
+that every applet executes correctly on each platform.
+
+Do not select `--all-features` blindly. PGO generation and PGO use are different
+build operations; local and prebuilt WebKit are alternative dependency modes.
+The configuration records incompatible selections explicitly; repeated
+`--build-selection` arguments audit the proposed selection and report conflicts.
+ASAN, assertions,
+exception verification, optimization and architecture settings retain their
+existing target/toolchain validation in the build owner.
+
+`BUN_LIVE_WEBSITE_TEST=1` enables only the explicit HTTPS qualification fixture.
+`BUN_JSC_validateExceptionChecks` and `BUN_JSC_dumpSimulatedThrows` are debug
+verification controls. Docker mutation and native MCP host capability flags
+require an explicit owner policy. Unclassified runtime flags preserve their
+defaults until reviewed. No matrix selection grants remote pages Bun or host
+privileges, bypasses SSRF/origin rules or disables a security check.
+
+## Evidence required for stable delivery
+
+The source-only tests in `scripts/aphrody/fusion-features.test.ts` cover aliases,
+target guards, disabled defaults, dependency requests, alias activation, weak
+edges, cycles, missing features, V8 blockers, the missing cross-snapshot rejection
+and incompatible
+selections. Run them on the SSH VPS through the existing factory resource
+owner. No test or build for this matrix has been executed locally.
+
+Use the root Cargo workspace, `browser-tests` profile, serialized Cargo wrapper,
+existing native build lock and declared factory cache. Linux VPS gates require
+live resource admission and a maximum of six build jobs. Native Windows and
+macOS packaging and runtime results require their respective qualified runners;
+a Linux pass cannot qualify them. Stable status requires actual source-matched
+check/test/Clippy, native runtime, renderer and platform CI receipts. See
+[fusion verification](./fusion-verification.mdx) for the orchestrator and
+coverage contract.

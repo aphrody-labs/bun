@@ -339,10 +339,12 @@ impl<'a> ZlibReaderArrayList<'a> {
 
                 match rc {
                     ReturnCode::StreamEnd => {
-                        // SAFETY: avail_in > 0, so next_in points at an unread input byte.
                         if self.multi_member
                             && self.zlib.avail_in > 0
-                            && unsafe { *self.zlib.next_in } == 0x1f
+                            && {
+                                // SAFETY: the preceding avail_in > 0 guard makes next_in an unread input byte.
+                                unsafe { *self.zlib.next_in == 0x1f }
+                            }
                         {
                             // inflateReset zeroes total_out, which the epilogue uses as the list length.
                             let total_out = self.zlib.total_out;

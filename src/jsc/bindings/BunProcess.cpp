@@ -3635,9 +3635,17 @@ JSC_DEFINE_HOST_FUNCTION(Process_functionAssert, (JSGlobalObject * globalObject,
 }
 
 extern "C" uint64_t Bun__Os__getFreeMemory(void);
+#if OS(LINUX)
+extern "C" uint64_t Bun__Os__getAvailableMemory(void);
+extern "C" uint64_t Bun__Os__getConstrainedMemory(void);
+#endif
 JSC_DEFINE_HOST_FUNCTION(Process_availableMemory, (JSGlobalObject * globalObject, CallFrame* callFrame))
 {
+#if OS(LINUX)
+    return JSValue::encode(jsNumber(Bun__Os__getAvailableMemory()));
+#else
     return JSValue::encode(jsNumber(Bun__Os__getFreeMemory()));
+#endif
 }
 
 #define PROCESS_BINDING_NOT_IMPLEMENTED_ISSUE(str, issue)                                                                                                                                                                                \
@@ -3878,7 +3886,14 @@ static Process* getProcessObject(JSC::JSGlobalObject* lexicalGlobalObject, JSVal
 
 JSC_DEFINE_HOST_FUNCTION(Process_functionConstrainedMemory, (JSC::JSGlobalObject * globalObject, JSC::CallFrame* callFrame))
 {
-    return JSValue::encode(jsNumber(WTF::ramSize()));
+#if OS(LINUX)
+    return JSValue::encode(jsNumber(Bun__Os__getConstrainedMemory()));
+#elif OS(WINDOWS)
+    return JSValue::encode(jsNumber(uv_get_constrained_memory()));
+#else
+    // POSIX libuv exports here are compatibility stubs, not OS memory probes.
+    return JSValue::encode(jsNumber(0));
+#endif
 }
 
 JSC_DEFINE_HOST_FUNCTION(Process_functionResourceUsage, (JSC::JSGlobalObject * globalObject, JSC::CallFrame* callFrame))

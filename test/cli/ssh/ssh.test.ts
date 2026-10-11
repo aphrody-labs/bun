@@ -5,7 +5,7 @@ import { bunEnv, bunExe, tempDir } from "harness";
 
 // Every test talks to the embedded russh server of `bun ssh server --embedded` on 127.0.0.1 with
 // the in-process client, so it neither needs nor touches the user's OpenSSH, agent or ~/.ssh.
-const dir = tempDir("bun-ssh", { "ssh_config": "", "upload.txt": "uploaded through sftp\n" });
+const dir = tempDir("bun-ssh", { ssh_config: "", "upload.txt": "uploaded through sftp\n" });
 const root = String(dir);
 const key = join(root, "id_ed25519");
 const knownHosts = join(root, "known_hosts");
@@ -18,7 +18,7 @@ const env = {
   SSH_ASKPASS: undefined,
 };
 
-let server: ReturnType<typeof Bun.spawn> | undefined;
+let server: Bun.Subprocess<"ignore", "pipe", "inherit"> | undefined;
 let port = 0;
 let hostKey = "";
 
@@ -31,7 +31,11 @@ async function bunSsh(args: string[], options: { stdin?: string } = {}) {
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  const [stdout, stderr, exitCode] = await Promise.all([
+    proc.stdout.text(),
+    proc.stderr.text(),
+    proc.exited,
+  ]);
   return { stdout: stdout.replaceAll("\r\n", "\n"), stderr, exitCode };
 }
 
@@ -55,9 +59,19 @@ beforeAll(async () => {
   expect(JSON.parse(made.stdout).algorithm).toBe("ssh-ed25519");
 
   server = Bun.spawn({
-    cmd: [bunExe(), "ssh", "server", "--embedded", "--port", "0", "--authorized-keys", `${key}.pub`],
+    cmd: [
+      bunExe(),
+      "ssh",
+      "server",
+      "--embedded",
+      "--port",
+      "0",
+      "--authorized-keys",
+      `${key}.pub`,
+    ],
     env,
     cwd: root,
+    stdin: "ignore",
     stdout: "pipe",
     stderr: "inherit",
   });
@@ -81,7 +95,12 @@ afterAll(() => {
 
 describe("bun ssh (in-process client, embedded server)", () => {
   test("exec streams output and records the host key on first use", async () => {
-    const { stdout, stderr, exitCode } = await bunSsh(["exec", ...conn(), "127.0.0.1", "echo hello-from-ssh"]);
+    const { stdout, stderr, exitCode } = await bunSsh([
+      "exec",
+      ...conn(),
+      "127.0.0.1",
+      "echo hello-from-ssh",
+    ]);
     expect(stderr).toBe("");
     expect(stdout.trim()).toBe("hello-from-ssh");
     expect(exitCode).toBe(0);
@@ -92,7 +111,13 @@ describe("bun ssh (in-process client, embedded server)", () => {
     const failed = await bunSsh(["exec", ...conn(), "127.0.0.1", "exit 3"]);
     expect(failed.exitCode).toBe(3);
 
-    const { stdout, exitCode } = await bunSsh(["exec", "--json", ...conn(), "127.0.0.1", "echo json-out"]);
+    const { stdout, exitCode } = await bunSsh([
+      "exec",
+      "--json",
+      ...conn(),
+      "127.0.0.1",
+      "echo json-out",
+    ]);
     const result = JSON.parse(stdout);
     expect(result.stdout.replaceAll("\r\n", "\n").trim()).toBe("json-out");
     expect(result.code).toBe(0);
@@ -101,20 +126,28 @@ describe("bun ssh (in-process client, embedded server)", () => {
 
   test("exec forwards stdin", async () => {
     const command = process.platform === "win32" ? "findstr x" : "cat";
-    const { stdout, exitCode } = await bunSsh(["exec", ...conn(), "127.0.0.1", command], { stdin: "x-from-stdin\n" });
+    const { stdout, exitCode } = await bunSsh(["exec", ...conn(), "127.0.0.1", command], {
+      stdin: "x-from-stdin\n",
+    });
     expect(stdout.trim()).toBe("x-from-stdin");
     expect(exitCode).toBe(0);
   });
 
   test("an unknown host key is refused with StrictHostKeyChecking=yes", async () => {
-    const args = conn().map(a => (a === "StrictHostKeyChecking=accept-new" ? "StrictHostKeyChecking=yes" : a));
+    const args = conn().map((a) =>
+      a === "StrictHostKeyChecking=accept-new" ? "StrictHostKeyChecking=yes" : a,
+    );
     await using proc = Bun.spawn({
       cmd: [bunExe(), "ssh", "exec", ...args, "127.0.0.1", "echo never"],
       env: { ...env, BUN_SSH_KNOWN_HOSTS: join(root, "empty_known_hosts") },
       stdout: "pipe",
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    const [stdout, stderr, exitCode] = await Promise.all([
+      proc.stdout.text(),
+      proc.stderr.text(),
+      proc.exited,
+    ]);
     expect(stdout).toBe("");
     expect(stderr).toContain("host key verification failed");
     expect(exitCode).toBe(255);
@@ -131,7 +164,14 @@ describe("bun ssh (in-process client, embedded server)", () => {
   test("sftp put, ls, cat and cp in both directions", async () => {
     const remoteDir = join(root, "remote").replaceAll("\\", "/");
     expect((await bunSsh(["sftp", ...conn(), "mkdir", "127.0.0.1", remoteDir])).exitCode).toBe(0);
-    const put = await bunSsh(["sftp", ...conn(), "put", "127.0.0.1", `${remoteDir}/a.txt`, join(root, "upload.txt")]);
+    const put = await bunSsh([
+      "sftp",
+      ...conn(),
+      "put",
+      "127.0.0.1",
+      `${remoteDir}/a.txt`,
+      join(root, "upload.txt"),
+    ]);
     expect(put.stderr).toBe("");
 
     const ls = await bunSsh(["sftp", ...conn(), "ls", "127.0.0.1", remoteDir]);
@@ -140,11 +180,22 @@ describe("bun ssh (in-process client, embedded server)", () => {
     const cat = await bunSsh(["sftp", ...conn(), "cat", "127.0.0.1", `${remoteDir}/a.txt`]);
     expect(cat.stdout).toBe("uploaded through sftp\n");
 
-    const down = await bunSsh(["cp", ...conn(), `127.0.0.1:${remoteDir}/a.txt`, join(root, "downloaded.txt")]);
+    const down = await bunSsh([
+      "cp",
+      ...conn(),
+      `127.0.0.1:${remoteDir}/a.txt`,
+      join(root, "downloaded.txt"),
+    ]);
     expect(down.stderr).toBe("");
     expect(readFileSync(join(root, "downloaded.txt"), "utf8")).toBe("uploaded through sftp\n");
 
-    const up = await bunSsh(["cp", "--delta", ...conn(), join(root, "upload.txt"), `127.0.0.1:${remoteDir}/b.txt`]);
+    const up = await bunSsh([
+      "cp",
+      "--delta",
+      ...conn(),
+      join(root, "upload.txt"),
+      `127.0.0.1:${remoteDir}/b.txt`,
+    ]);
     expect(up.stderr).toBe("");
     expect(readFileSync(join(remoteDir, "b.txt"), "utf8")).toBe("uploaded through sftp\n");
   });

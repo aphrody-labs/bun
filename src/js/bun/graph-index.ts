@@ -6,10 +6,29 @@ type DomainResult = import("bun:graph-index").DomainResult;
 type Coverage = import("bun:graph-index").IndexCoverage;
 type SourceFile = import("bun:graph-native").GraphSourceFile;
 type BuildResponse = import("bun:graph-native").GraphResultMap["build"];
-const { lstat, realpath, mkdir, rename, unlink }: typeof import("node:fs/promises") = require("node:fs/promises");
-const { dirname, extname, isAbsolute, join, relative, resolve, sep }: typeof import("node:path") = require("node:path");
+const {
+  lstat,
+  realpath,
+  mkdir,
+  rename,
+  unlink,
+}: Pick<
+  typeof import("node:fs/promises"),
+  "lstat" | "realpath" | "mkdir" | "rename" | "unlink"
+> = require("node:fs/promises");
+const {
+  dirname,
+  extname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+  sep,
+}: typeof import("node:path") = require("node:path");
 const { randomUUID }: typeof import("node:crypto") = require("node:crypto");
-const { scheduler }: typeof import("node:timers/promises") = require("node:timers/promises");
+const {
+  scheduler,
+}: Pick<typeof import("node:timers/promises"), "scheduler"> = require("node:timers/promises");
 const { Buffer }: typeof import("node:buffer") = require("node:buffer");
 
 const FORMAT_VERSION = 2;
@@ -106,7 +125,7 @@ function canonical(path: string) {
 }
 
 function normalized(path: string) {
-  return Array.from(path, character => character.toLowerCase())
+  return Array.from(path, (character) => character.toLowerCase())
     .join("")
     .replace(/[^\p{Alphabetic}\p{Number}]+/gu, "_")
     .replace(/^_+|_+$/g, "");
@@ -382,7 +401,8 @@ async function scan(root: string, options: IndexOptions, maxFiles: number, maxRe
     }
   }
   if (requested)
-    for (const name of requested) if (!domains.has(name)) throw new Error(`Unknown or empty source domain ${name}`);
+    for (const name of requested)
+      if (!domains.has(name)) throw new Error(`Unknown or empty source domain ${name}`);
   return [...domains.values()].sort((a, b) => a.name.localeCompare(b.name, "en"));
 }
 
@@ -431,10 +451,19 @@ async function indexDomain(
     signal?.throwIfAborted();
     if (file.readable) {
       const before = await lstat(file.absolute);
-      if (before.isSymbolicLink() || !before.isFile() || !contained(sourceRoot, await realpath(file.absolute)))
+      if (
+        before.isSymbolicLink() ||
+        !before.isFile() ||
+        !contained(sourceRoot, await realpath(file.absolute))
+      )
         throw new Error(`Source path changed before hashing: ${file.path}`);
       const text = { valid: true };
-      file.sha256 = await hashFile(file.absolute, signal, options.maxReadBytes ?? 16 * 1024 * 1024, text);
+      file.sha256 = await hashFile(
+        file.absolute,
+        signal,
+        options.maxReadBytes ?? 16 * 1024 * 1024,
+        text,
+      );
       const after = await lstat(file.absolute);
       if (after.isSymbolicLink() || after.size !== file.bytes || after.mtimeMs !== file.mtime)
         throw new Error(`Source changed while hashing: ${file.path}`);
@@ -482,7 +511,13 @@ async function indexDomain(
   );
   for (const file of domain.files)
     digest.update(
-      JSON.stringify([file.path, file.sha256, file.bytes, file.sha256 ? null : file.mtime, file.reason]) + "\n",
+      JSON.stringify([
+        file.path,
+        file.sha256,
+        file.bytes,
+        file.sha256 ? null : file.mtime,
+        file.reason,
+      ]) + "\n",
     );
   const inputSHA256 = digest.digest("hex");
   const repository = registry.repository(`${namespace}/${domain.name}`, "source", domain.root, revision, {
@@ -507,7 +542,11 @@ async function indexDomain(
           file.sha256 ?? "metadata-only",
           extname(file.path).slice(1) || "text",
           file.bytes,
-          JSON.stringify({ revision, hashKind: file.sha256 ? "content-sha256" : "metadata-only", reason: file.reason }),
+          JSON.stringify({
+            revision,
+            hashKind: file.sha256 ? "content-sha256" : "metadata-only",
+            reason: file.reason,
+          }),
         );
     })();
     await scheduler.yield();
@@ -537,14 +576,18 @@ async function indexDomain(
       coverage: previous.graph.coverage,
     };
   }
-  const nodes = new Map<string, RecordNode>(domain.files.map(file => [`file:${file.path}`, metadataNode(file)]));
+  const nodes = new Map<string, RecordNode>(
+    domain.files.map((file) => [`file:${file.path}`, metadataNode(file)]),
+  );
   const edges: RecordEdge[] = [];
   const edgeKeys = new Set<string>();
   let chunk: SourceFile[] = [],
     chunkBytes = 0;
   async function extract(files: SourceFile[]): Promise<BuildResponse[]> {
     signal?.throwIfAborted();
-    const { executeGraph }: typeof import("bun:graph-native") = require("bun:graph-native");
+    const {
+      executeGraph,
+    }: Pick<typeof import("bun:graph-native"), "executeGraph"> = require("bun:graph-native");
     try {
       const response = await executeGraph(
         {
@@ -575,7 +618,10 @@ async function indexDomain(
       const fileCount = files.length;
       if (fileCount > 1) {
         const middle = Math.floor(fileCount / 2);
-        return [...(await extract(files.slice(0, middle))), ...(await extract(files.slice(middle)))];
+        return [
+          ...(await extract(files.slice(0, middle))),
+          ...(await extract(files.slice(middle))),
+        ];
       }
       const node = nodes.get(`file:${files[0]!.path}`)!;
       node.provenance = "UNRESOLVED";
@@ -589,7 +635,7 @@ async function indexDomain(
     if (!chunk.length) return;
     for (const result of await extract(chunk)) {
       coverage.chunks++;
-      coverage.calls += result.graph.links.filter(edge => edge.relation === "calls").length;
+      coverage.calls += result.graph.links.filter((edge) => edge.relation === "calls").length;
       coverage.unresolvedCalls += result.stats.unresolved;
       coverage.parseErrors += result.parse_errors.length;
       const ids = new Map<string, string>();
@@ -655,14 +701,22 @@ async function indexDomain(
   for (const file of domain.files) {
     signal?.throwIfAborted();
     if (!file.native) continue;
-    if (chunk.length >= filesPerChunk || chunkBytes + file.bytes > sourceBytesPerChunk) await flush();
+    if (chunk.length >= filesPerChunk || chunkBytes + file.bytes > sourceBytesPerChunk)
+      await flush();
     const stat = await lstat(file.absolute);
-    if (stat.isSymbolicLink() || stat.size !== file.bytes || !contained(sourceRoot, await realpath(file.absolute)))
+    if (
+      stat.isSymbolicLink() ||
+      stat.size !== file.bytes ||
+      !contained(sourceRoot, await realpath(file.absolute))
+    )
       throw new Error(`Source path changed before extraction: ${file.path}`);
     const bytes = await Bun.file(file.absolute)
       .slice(0, file.bytes + 1)
       .bytes();
-    if (bytes.length !== file.bytes || new Bun.CryptoHasher("sha256").update(bytes).digest("hex") !== file.sha256)
+    if (
+      bytes.length !== file.bytes ||
+      new Bun.CryptoHasher("sha256").update(bytes).digest("hex") !== file.sha256
+    )
       throw new Error(`Source changed before extraction: ${file.path}`);
     let content: string;
     try {
@@ -768,7 +822,12 @@ async function indexCodebase(registry: Registry, root: string, options: IndexOpt
   for (const surface of surfaces) validateRelativePath(surface, "surface");
   const concurrency = bound(options.concurrency, 2, 4, "concurrency");
   const maxFiles = bound(options.maxFiles, 100_000, 1_000_000, "maxFiles");
-  const maxReadBytes = bound(options.maxReadBytes, 16 * 1024 * 1024, 16 * 1024 * 1024, "maxReadBytes");
+  const maxReadBytes = bound(
+    options.maxReadBytes,
+    16 * 1024 * 1024,
+    16 * 1024 * 1024,
+    "maxReadBytes",
+  );
   if (
     options.domains &&
     (options.domains.length > 1024 || options.domains.some(domain => {
@@ -800,9 +859,21 @@ async function indexCodebase(registry: Registry, root: string, options: IndexOpt
   )
     throw new Error("Graph artifacts cannot be written inside indexed source surfaces");
   producer ??= hashFile(process.execPath);
-  const [domains, producerSHA256] = await Promise.all([scan(sourceRoot, options, maxFiles, maxReadBytes), producer]);
-  const results = await parallel(domains, concurrency, options.signal, domain =>
-    indexDomain(registry, domain, revision, options, producerSHA256, artifactDirectory, dirty, sourceRoot),
+  const [domains, producerSHA256] = await Promise.all([
+    scan(sourceRoot, options, maxFiles, maxReadBytes),
+    producer,
+  ]);
+  const results = await parallel(domains, concurrency, options.signal, (domain) =>
+    indexDomain(
+      registry,
+      domain,
+      revision,
+      options,
+      producerSHA256,
+      artifactDirectory,
+      dirty,
+      sourceRoot,
+    ),
   );
   const finishedRevision = actualRevision ? await revisionAt(sourceRoot, options.signal) : revision;
   if (finishedRevision !== revision)
