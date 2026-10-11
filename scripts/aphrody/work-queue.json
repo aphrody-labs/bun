@@ -67,7 +67,7 @@
       "test/js/first_party/erlpack",
       "test/js/first_party/zlib-sync"
     ],
-    "status": "active"
+    "status": "done"
   },
   {
     "id": "K-host",
