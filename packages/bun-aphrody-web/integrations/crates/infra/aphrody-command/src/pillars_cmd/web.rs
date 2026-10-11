@@ -512,6 +512,7 @@ pub(crate) async fn handle_web(action: WebAction) -> miette::Result<()> {
                 "native-browser-snapshot",
                 "bounded-crawl",
                 "persistent-crawl-index",
+                "crawl-redirect-allowlist-before-network",
                 "dragon-ball-campaign",
                 "dragon-ball-assets",
                 "dragon-ball-bxc-migration",
@@ -1506,6 +1507,10 @@ async fn handle_web_crawl(request: WebCrawlRequest) -> miette::Result<()> {
         ..CrawlOptions::default()
     };
     obscura_net::ensure_rustls_crypto_provider();
+    let transport =
+        ObscuraTransport::scoped(obscura_net::ObscuraHttpClient::new(), &options.allowed_domains)
+            .await
+            .map_err(|error| miette!("crawl transport scope: {error}"))?;
     let report = if request.daemon {
         let daemon_opts = aphrody_web_crawl::CrawlDaemonOptions {
             base: options,
@@ -1515,14 +1520,14 @@ async fn handle_web_crawl(request: WebCrawlRequest) -> miette::Result<()> {
         };
         aphrody_web_crawl::crawl_daemon(
             &mut frontier,
-            &ObscuraTransport::default(),
+            &transport,
             &daemon_opts,
             None,
         )
         .await
         .into_diagnostic()?
     } else {
-        aphrody_web_crawl::crawl_bounded(&mut frontier, &ObscuraTransport::default(), &options)
+        aphrody_web_crawl::crawl_bounded(&mut frontier, &transport, &options)
             .await
             .into_diagnostic()?
     };

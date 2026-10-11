@@ -76,9 +76,13 @@ fn validate(args: &CrawlIndexArgs) -> miette::Result<Vec<String>> {
     if label.is_empty()
         || label.len() > 64
         || !label[0].is_ascii_alphanumeric()
-        || !label.iter().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == b'-')
+        || !label
+            .iter()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == b'-')
     {
-        return Err(miette!("--label must be a lowercase slug of 1..64 characters"));
+        return Err(miette!(
+            "--label must be a lowercase slug of 1..64 characters"
+        ));
     }
     if args.urls.is_empty() || args.urls.len() > 25 {
         return Err(miette!("provide 1..25 seed URLs"));
@@ -92,7 +96,9 @@ fn validate(args: &CrawlIndexArgs) -> miette::Result<Vec<String>> {
         {
             return Err(miette!("seed URLs must be HTTP(S) without credentials"));
         }
-        let domain = url.host_str().ok_or_else(|| miette!("seed URL has no host"))?;
+        let domain = url
+            .host_str()
+            .ok_or_else(|| miette!("seed URL has no host"))?;
         if !domains.iter().any(|known| known == domain) {
             domains.push(domain.to_owned());
         }
@@ -102,8 +108,14 @@ fn validate(args: &CrawlIndexArgs) -> miette::Result<Vec<String>> {
 
 pub(super) fn private_directory(path: &Path) -> miette::Result<()> {
     std::fs::create_dir_all(path).into_diagnostic()?;
-    if std::fs::symlink_metadata(path).into_diagnostic()?.file_type().is_symlink() {
-        return Err(miette!("private job directories must not be symbolic links"));
+    if std::fs::symlink_metadata(path)
+        .into_diagnostic()?
+        .file_type()
+        .is_symlink()
+    {
+        return Err(miette!(
+            "private job directories must not be symbolic links"
+        ));
     }
     #[cfg(unix)]
     {
@@ -142,14 +154,70 @@ pub(super) fn job_lock(root: &Path) -> miette::Result<File> {
         options.mode(0o600);
     }
     let file = options.open(root.join("job.lock")).into_diagnostic()?;
-    file.try_lock().map_err(|error| miette!("crawl job is already locked: {error}"))?;
+    file.try_lock()
+        .map_err(|error| miette!("crawl job is already locked: {error}"))?;
     // The operating system releases the lock on exit, including a crash; no stale PID recovery.
     Ok(file)
 }
 
 pub(super) async fn run(args: CrawlIndexArgs) -> miette::Result<CrawlIndexReport> {
     obscura_net::ensure_rustls_crypto_provider();
-    run_with_transport(args, &ObscuraTransport::default()).await
+    let transport =
+        ObscuraTransport::scoped(obscura_net::ObscuraHttpClient::new(), &validate(&args)?)
+            .await
+            .map_err(|error| miette!("crawl transport scope: {error}"))?;
+    run_with_transport(args, &transport).await
+}
+
+fn document_name(url: &str) -> miette::Result<String> {
+    let mut digest = String::with_capacity(64);
+    for byte in Sha256::digest(url.as_bytes()) {
+        write!(&mut digest, "{byte:02x}").into_diagnostic()?;
+    }
+    Ok(format!("{digest}.md"))
+}
+
+fn validate_persisted_scope(
+    frontier: &Frontier,
+    documents: &Path,
+    domains: &[String],
+) -> miette::Result<()> {
+    let policy = obscura_net::interceptor::DomainAllowlistInterceptor::new(domains)
+        .map_err(|error| miette!("invalid persisted crawl scope: {error}"))?;
+    let mut documents_by_name = std::collections::HashMap::new();
+    for raw in frontier.known_urls().into_diagnostic()? {
+        let url = reqwest::Url::parse(&raw).into_diagnostic()?;
+        if !policy.allows(&url) {
+            return Err(miette!(
+                "persisted crawl URL is outside the requested domain scope"
+            ));
+        }
+        if let Some((title, markdown)) = frontier.page(&raw).into_diagnostic()?
+            && !markdown.trim().is_empty()
+        {
+            documents_by_name.insert(
+                document_name(&raw)?,
+                format!("# {title}\nSource: {raw}\n\n{markdown}"),
+            );
+        }
+    }
+    for entry in std::fs::read_dir(documents).into_diagnostic()? {
+        let entry = entry.into_diagnostic()?;
+        if !entry.file_type().into_diagnostic()?.is_file()
+            || !documents_by_name.contains_key(&entry.file_name().to_string_lossy().into_owned())
+        {
+            return Err(miette!(
+                "unrecognized persisted crawl document preserved; index refused"
+            ));
+        }
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if std::fs::read(entry.path()).into_diagnostic()? != documents_by_name[&name].as_bytes() {
+            return Err(miette!(
+                "modified persisted crawl document preserved; index refused"
+            ));
+        }
+    }
+    Ok(())
 }
 
 async fn run_with_transport(
@@ -163,16 +231,63 @@ async fn run_with_transport(
         None => HomeLayout::resolve(&scope),
     }
     .into_diagnostic()?;
-    let root =
-        args.job_dir.unwrap_or_else(|| layout.home.join("private/web/jobs").join(&args.label));
+    let root = args
+        .job_dir
+        .unwrap_or_else(|| layout.home.join("private/web/jobs").join(&args.label));
     private_directory(&root)?;
     let _lock = job_lock(&root)?;
     let documents = root.join("documents");
     private_directory(&documents)?;
-    let now_ms =
-        i64::try_from(SystemTime::now().duration_since(UNIX_EPOCH).into_diagnostic()?.as_millis())
-            .unwrap_or(i64::MAX);
+    let now_ms = i64::try_from(
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .into_diagnostic()?
+            .as_millis(),
+    )
+    .unwrap_or(i64::MAX);
     let frontier_path = root.join("frontier.sqlite");
+    let mut policy_domains = domains.clone();
+    policy_domains.sort();
+    let policy = serde_json::to_vec(&serde_json::json!({
+        "schemaVersion": 1,
+        "profile": args.profile,
+        "label": args.label,
+        "allowedDomains": policy_domains,
+        "anonymous": true,
+    }))
+    .into_diagnostic()?;
+    let policy_path = root.join("crawl-policy.json");
+    match std::fs::symlink_metadata(&policy_path) {
+        Ok(metadata) => {
+            if !metadata.is_file()
+                || metadata.file_type().is_symlink()
+                || std::fs::read(&policy_path).into_diagnostic()? != policy
+            {
+                return Err(miette!("persisted crawl policy differs; state preserved"));
+            }
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            // Legacy pages do not retain final redirect URLs or the transport policy.
+            // Refuse before opening SQLite, which can recover leases and change state.
+            let persisted_frontier = match std::fs::symlink_metadata(&frontier_path) {
+                Ok(_) => true,
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => false,
+                Err(error) => return Err(error).into_diagnostic(),
+            };
+            if persisted_frontier
+                || std::fs::read_dir(&documents)
+                    .into_diagnostic()?
+                    .next()
+                    .is_some()
+            {
+                return Err(miette!(
+                    "legacy crawl state has no transport policy; state preserved"
+                ));
+            }
+            write_private(&policy_path, &policy)?;
+        }
+        Err(error) => return Err(error).into_diagnostic(),
+    }
     let mut frontier = Frontier::open(
         &frontier_path,
         FrontierOptions {
@@ -184,6 +299,7 @@ async fn run_with_transport(
         now_ms,
     )
     .into_diagnostic()?;
+    validate_persisted_scope(&frontier, &documents, &domains)?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -191,7 +307,9 @@ async fn run_with_transport(
             .into_diagnostic()?;
     }
     for seed in &args.urls {
-        frontier.enqueue(AddRequest::seed(seed), now_ms).into_diagnostic()?;
+        frontier
+            .enqueue(AddRequest::seed(seed), now_ms)
+            .into_diagnostic()?;
     }
     let options = CrawlOptions {
         max_requests: usize::try_from(args.max_requests).into_diagnostic()?,
@@ -211,23 +329,21 @@ async fn run_with_transport(
         Ok(result) => {
             let report = result.into_diagnostic()?;
             (Some(report.attempts), Some(report.errors.len()), false)
-        },
+        }
         Err(_) => (None, None, true),
     };
     // Read persisted pages, not just the latest report: a crash between crawl and index resumes.
     let mut written = 0;
     let mut pages = 0;
     for url in frontier.known_urls().into_diagnostic()? {
-        let Some((title, markdown)) = frontier.page(&url).into_diagnostic()? else { continue };
+        let Some((title, markdown)) = frontier.page(&url).into_diagnostic()? else {
+            continue;
+        };
         if markdown.trim().is_empty() {
             continue;
         }
         pages += 1;
-        let mut digest = String::with_capacity(64);
-        for byte in Sha256::digest(url.as_bytes()) {
-            write!(&mut digest, "{byte:02x}").into_diagnostic()?;
-        }
-        let name = format!("{digest}.md");
+        let name = document_name(&url)?;
         let content = format!("# {title}\nSource: {url}\n\n{markdown}");
         let path = documents.join(name);
         if std::fs::read(&path).ok().as_deref() != Some(content.as_bytes()) {
@@ -238,14 +354,19 @@ async fn run_with_transport(
     let stats = frontier.stats().into_diagnostic()?;
     if stats.done == 0
         && written == 0
-        && std::fs::read_dir(&documents).into_diagnostic()?.next().is_none()
+        && std::fs::read_dir(&documents)
+            .into_diagnostic()?
+            .next()
+            .is_none()
     {
         return Err(miette!("crawl yielded no indexable pages"));
     }
-    let index =
+    let index = {
+        validate_persisted_scope(&frontier, &documents, &options.allowed_domains)?;
         aphrody_rag::pipeline::run_pipeline(&layout, &format!("web:{}", args.label), &documents)
             .await
-            .into_diagnostic()?;
+            .into_diagnostic()?
+    };
     let report = CrawlIndexReport {
         profile: args.profile,
         label: args.label,
@@ -273,7 +394,9 @@ async fn run_with_transport(
         &serde_json::to_vec_pretty(&report).into_diagnostic()?,
     )?;
     if !report.index.errors.is_empty() {
-        return Err(miette!("home indexing reported errors; inspect the private summary"));
+        return Err(miette!(
+            "home indexing reported errors; inspect the private summary"
+        ));
     }
     if report.timed_out {
         return Err(miette!(
@@ -363,7 +486,12 @@ mod tests {
         let layout =
             HomeLayout::in_state(state.path(), &HomeScope::Profile("aphrody".into())).unwrap();
         let summary: serde_json::Value = serde_json::from_slice(
-            &std::fs::read(layout.home.join("private/web/jobs/native-test/summary.json")).unwrap(),
+            &std::fs::read(
+                layout
+                    .home
+                    .join("private/web/jobs/native-test/summary.json"),
+            )
+            .unwrap(),
         )
         .unwrap();
         assert_eq!(summary["timed_out"], true);
@@ -371,15 +499,91 @@ mod tests {
         assert_eq!(summary["attempts"], serde_json::Value::Null);
     }
     #[tokio::test]
-    async fn crawls_indexes_and_recovers_documents_from_persisted_frontier() {
+    async fn refuses_modified_documents_and_changed_scope_without_indexing() {
+        let state = tempfile::tempdir().unwrap();
+        run_with_transport(args(state.path()), &Fixture)
+            .await
+            .unwrap();
+        let layout =
+            HomeLayout::in_state(state.path(), &HomeScope::Profile("aphrody".into())).unwrap();
+        let root = layout.home.join("private/web/jobs/native-test");
+        let documents = root.join("documents");
+        let document = std::fs::read_dir(&documents)
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
+        let original = std::fs::read(&document).unwrap();
+        let summary = std::fs::read(root.join("summary.json")).unwrap();
+        std::fs::write(&document, b"foreign document preserved").unwrap();
+        let error = run_with_transport(args(state.path()), &Fixture)
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("modified persisted"));
+        assert_eq!(
+            std::fs::read(&document).unwrap(),
+            b"foreign document preserved"
+        );
+        assert_eq!(std::fs::read(root.join("summary.json")).unwrap(), summary);
+        std::fs::write(&document, original).unwrap();
+        let mut changed = args(state.path());
+        changed.urls = vec!["https://other.test/".into()];
+        let error = run_with_transport(changed, &Fixture).await.unwrap_err();
+        assert!(error.to_string().contains("persisted crawl policy differs"));
+        assert_eq!(std::fs::read(root.join("summary.json")).unwrap(), summary);
+        let foreign = documents.join("foreign.md");
+        std::fs::write(&foreign, b"preserved").unwrap();
+        let error = run_with_transport(args(state.path()), &Fixture)
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("unrecognized persisted"));
+        assert_eq!(std::fs::read(foreign).unwrap(), b"preserved");
+    }
+
+    #[tokio::test]
+    async fn legacy_frontier_is_preserved_without_implicit_policy_certification() {
         let state = tempfile::tempdir().unwrap();
         let layout =
             HomeLayout::in_state(state.path(), &HomeScope::Profile("aphrody".into())).unwrap();
         let root = layout.home.join("private/web/jobs/native-test");
         private_directory(&root).unwrap();
+        let path = root.join("frontier.sqlite");
+        let mut frontier = Frontier::open(&path, FrontierOptions::default(), 0).unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://example.test/"), 0)
+            .unwrap();
+        drop(frontier);
+        let original = std::fs::read(&path).unwrap();
+        let error = run_with_transport(args(state.path()), &Fixture)
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("legacy crawl state"));
+        assert_eq!(std::fs::read(&path).unwrap(), original);
+        assert!(!root.join("crawl-policy.json").exists());
+        assert!(!layout.db_path.exists());
+    }
+
+    #[tokio::test]
+    async fn crawls_indexes_and_recovers_documents_from_persisted_frontier() {
+        let state = tempfile::tempdir().unwrap();
+        let layout =
+            HomeLayout::in_state(state.path(), &HomeScope::Profile("aphrody".into())).unwrap();
+        let root = layout.home.join("private/web/jobs/native-test");
+        // Establish the native owner's policy and index, then simulate missing
+        // materialized documents without changing the indexed page content.
+        run_with_transport(args(state.path()), &Fixture)
+            .await
+            .unwrap();
+        let documents = root.join("documents");
+        for entry in std::fs::read_dir(&documents).unwrap() {
+            std::fs::remove_file(entry.unwrap().path()).unwrap();
+        }
         let mut frontier =
             Frontier::open(root.join("frontier.sqlite"), FrontierOptions::default(), 0).unwrap();
-        frontier.enqueue(AddRequest::seed("https://example.test/"), 0).unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://example.test/"), 0)
+            .unwrap();
         aphrody_web_crawl::crawl_bounded(
             &mut frontier,
             &Fixture,
@@ -394,18 +598,26 @@ mod tests {
         .await
         .unwrap();
         drop(frontier);
-        // The process could have stopped here before producing documents or indexing.
-        let first = run_with_transport(args(state.path()), &Fixture).await.unwrap();
+        let first = run_with_transport(args(state.path()), &Fixture)
+            .await
+            .unwrap();
         assert_eq!(first.attempts, Some(0));
-        assert_eq!(first.index.indexed, 1);
+        assert_eq!(first.written, 1);
+        assert_eq!(first.index.indexed, 0); // Existing home pipeline skips unchanged content.
         assert_eq!(first.frontier.done, 1);
         let layout =
             HomeLayout::in_state(state.path(), &HomeScope::Profile("aphrody".into())).unwrap();
         let root = layout.home.join("private/web/jobs/native-test");
-        let document =
-            std::fs::read_dir(root.join("documents")).unwrap().next().unwrap().unwrap().path();
+        let document = std::fs::read_dir(root.join("documents"))
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
         std::fs::remove_file(document).unwrap();
-        let second = run_with_transport(args(state.path()), &Fixture).await.unwrap();
+        let second = run_with_transport(args(state.path()), &Fixture)
+            .await
+            .unwrap();
         assert_eq!(second.attempts, Some(0));
         assert_eq!(second.written, 1);
         let db = aphrody_rag::home::HomeDb::open_read_only(&layout.db_path).unwrap();

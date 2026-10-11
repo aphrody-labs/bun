@@ -37,7 +37,9 @@ pub struct ObscuraTransport {
 
 impl Default for ObscuraTransport {
     fn default() -> Self {
-        Self { client: ObscuraHttpClient::new() }
+        Self {
+            client: ObscuraHttpClient::new(),
+        }
     }
 }
 
@@ -46,11 +48,29 @@ impl ObscuraTransport {
     pub fn new(client: ObscuraHttpClient) -> Self {
         Self { client }
     }
+
+    /// Scope a dedicated client before use; never replace an existing owner's interceptor.
+    pub async fn scoped(client: ObscuraHttpClient, domains: &[String]) -> Result<Self, String> {
+        let policy = obscura_net::interceptor::DomainAllowlistInterceptor::new(domains)
+            .map_err(str::to_owned)?;
+        {
+            let mut interceptor = client.interceptor.write().await;
+            if interceptor.is_some() {
+                return Err("crawl scope cannot replace an existing request interceptor".into());
+            }
+            *interceptor = Some(Box::new(policy));
+        }
+        Ok(Self { client })
+    }
 }
 
 impl CrawlTransport for ObscuraTransport {
     async fn fetch(&self, url: &Url) -> Result<FetchResult, String> {
-        let response = self.client.fetch(url).await.map_err(|error| error.to_string())?;
+        let response = self
+            .client
+            .fetch(url)
+            .await
+            .map_err(|error| error.to_string())?;
         Ok(FetchResult {
             url: response.url.clone(),
             status: response.status,
@@ -130,37 +150,50 @@ pub async fn crawl_bounded<T: CrawlTransport>(
     let mut report = CrawlReport::default();
     let mut active = FuturesUnordered::new();
     let concurrency = options.max_concurrency.clamp(1, 128);
-    let allowed: HashSet<String> =
-        options.allowed_domains.iter().map(|s| s.to_ascii_lowercase()).collect();
+    let allowed: HashSet<String> = options
+        .allowed_domains
+        .iter()
+        .map(|s| s.to_ascii_lowercase())
+        .collect();
     let include_url_regex = match compile_url_patterns(&options.include_url_regex, "include") {
         Ok(patterns) => patterns,
         Err(error) => {
             report.errors.push(("include-url-regex".into(), error));
             return Ok(report);
-        },
+        }
     };
     let exclude_url_regex = match compile_url_patterns(&options.exclude_url_regex, "exclude") {
         Ok(patterns) => patterns,
         Err(error) => {
             report.errors.push(("exclude-url-regex".into(), error));
             return Ok(report);
-        },
+        }
     };
     let mut robots = HashMap::<String, RobotsFile>::new();
     if options.ingest_sitemaps {
-        ingest_seed_sitemaps(frontier, transport, options, &allowed, &mut robots, &mut report)
-            .await?;
+        ingest_seed_sitemaps(
+            frontier,
+            transport,
+            options,
+            &allowed,
+            &mut robots,
+            &mut report,
+        )
+        .await?;
     }
 
     loop {
         while active.len() < concurrency && report.attempts < options.max_requests {
-            let Some(lease) = frontier.lease_next(now_ms())? else { break };
+            let Some(lease) = frontier.lease_next(now_ms())? else {
+                break;
+            };
             report.attempts += 1;
             if !domain_allowed(&lease.url, &allowed) {
                 frontier.mark_rejected(&lease, "URL is outside allowed_domains")?;
-                report
-                    .errors
-                    .push((lease.url.to_string(), "URL is outside allowed_domains".into()));
+                report.errors.push((
+                    lease.url.to_string(),
+                    "URL is outside allowed_domains".into(),
+                ));
                 continue;
             }
             if !url_matches_filters(&lease.url, &include_url_regex, &exclude_url_regex) {
@@ -168,7 +201,18 @@ pub async fn crawl_bounded<T: CrawlTransport>(
                 continue;
             }
             if options.obey_robots {
-                let policy = load_robots(&lease.url, transport, &mut robots, &mut report).await;
+                let policy =
+                    match load_robots(&lease.url, transport, &allowed, &mut robots, &mut report)
+                        .await
+                    {
+                        Ok(policy) => policy,
+                        Err(error) => {
+                            frontier.mark_rejected(&lease, &error)?;
+                            report.errors.push((lease.url.to_string(), error));
+                            report.robots_blocked += 1;
+                            continue;
+                        }
+                    };
                 if let Some(delay) = policy.crawl_delay_ms(&options.user_agent) {
                     frontier.set_host_delay(lease.url.host_str().unwrap_or_default(), delay)?;
                 }
@@ -199,12 +243,16 @@ pub async fn crawl_bounded<T: CrawlTransport>(
             };
             let Some(next) = next else { break };
             let delay = next.saturating_sub(now_ms());
-            tokio::time::sleep(std::time::Duration::from_millis(delay.clamp(1, 1_000) as u64))
-                .await;
+            tokio::time::sleep(std::time::Duration::from_millis(
+                delay.clamp(1, 1_000) as u64
+            ))
+            .await;
             continue;
         }
 
-        let Some((lease, result)) = active.next().await else { break };
+        let Some((lease, result)) = active.next().await else {
+            break;
+        };
         match result {
             Ok(response) if (200..400).contains(&response.status) => {
                 let response_url = normalize_page_url(
@@ -215,10 +263,42 @@ pub async fn crawl_bounded<T: CrawlTransport>(
                 .unwrap_or_else(|_| lease.url.clone());
                 if !domain_allowed(&response_url, &allowed) {
                     frontier.mark_rejected(&lease, "redirect left allowed_domains")?;
-                    report
-                        .errors
-                        .push((lease.url.to_string(), "redirect left allowed_domains".into()));
+                    report.errors.push((
+                        lease.url.to_string(),
+                        "redirect left allowed_domains".into(),
+                    ));
                     continue;
+                }
+                // The domain interceptor guards network hops. Robots rules for the final
+                // URL are checked here before extracting or persisting redirected content.
+                if options.obey_robots {
+                    let policy = match load_robots(
+                        &response_url,
+                        transport,
+                        &allowed,
+                        &mut robots,
+                        &mut report,
+                    )
+                    .await
+                    {
+                        Ok(policy) => policy,
+                        Err(error) => {
+                            frontier.mark_rejected(&lease, &error)?;
+                            report.errors.push((lease.url.to_string(), error));
+                            report.robots_blocked += 1;
+                            continue;
+                        }
+                    };
+                    if !policy.allows(&response_url, &options.user_agent) {
+                        frontier
+                            .mark_rejected(&lease, "robots.txt disallows redirect destination")?;
+                        report.errors.push((
+                            lease.url.to_string(),
+                            "robots.txt disallows redirect destination".into(),
+                        ));
+                        report.robots_blocked += 1;
+                        continue;
+                    }
                 }
                 let is_html = response
                     .content_type
@@ -229,8 +309,11 @@ pub async fn crawl_bounded<T: CrawlTransport>(
                 } else {
                     Extracted::default()
                 };
-                let hash_text =
-                    if extracted.text.trim().is_empty() { &response.body } else { &extracted.text };
+                let hash_text = if extracted.text.trim().is_empty() {
+                    &response.body
+                } else {
+                    &extracted.text
+                };
                 let record = PageRecord {
                     title: extracted.title.clone(),
                     markdown: extracted.markdown.clone(),
@@ -252,7 +335,7 @@ pub async fn crawl_bounded<T: CrawlTransport>(
                 match status {
                     StoredPage::ExactDuplicate => report.exact_duplicates += 1,
                     StoredPage::NearDuplicate => report.near_duplicates += 1,
-                    StoredPage::New => {},
+                    StoredPage::New => {}
                 }
                 report.pages.push(CrawlPage {
                     url: response_url,
@@ -262,16 +345,16 @@ pub async fn crawl_bounded<T: CrawlTransport>(
                     duplicate: status != StoredPage::New,
                     discovered_links,
                 });
-            },
+            }
             Ok(response) => {
                 let error = format!("HTTP {}", response.status);
                 frontier.mark_failed(&lease, &error)?;
                 report.errors.push((lease.url.to_string(), error));
-            },
+            }
             Err(error) => {
                 frontier.mark_failed(&lease, &error)?;
                 report.errors.push((lease.url.to_string(), error));
-            },
+            }
         }
     }
     report.frontier = frontier.stats()?;
@@ -294,7 +377,10 @@ pub struct CrawlDaemonOptions {
 impl Default for CrawlDaemonOptions {
     fn default() -> Self {
         Self {
-            base: CrawlOptions { wait_for_revisits: true, ..CrawlOptions::default() },
+            base: CrawlOptions {
+                wait_for_revisits: true,
+                ..CrawlOptions::default()
+            },
             idle_poll_ms: 1_000,
             maintenance_interval_ms: 10_000,
             max_iterations: None,
@@ -355,7 +441,7 @@ pub async fn crawl_daemon<T: CrawlTransport>(
                     Some(due) if due > current_time => {
                         let diff = (due - current_time) as u64;
                         diff.min(options.idle_poll_ms)
-                    },
+                    }
                     _ => options.idle_poll_ms,
                 };
                 tokio::time::sleep(std::time::Duration::from_millis(sleep_duration)).await;
@@ -368,14 +454,19 @@ pub async fn crawl_daemon<T: CrawlTransport>(
 }
 
 fn now_ms() -> i64 {
-    let millis = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis();
+    let millis = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
     i64::try_from(millis).unwrap_or(i64::MAX)
 }
 
 fn domain_allowed(url: &Url, allowed: &HashSet<String>) -> bool {
     let host = url.host_str().unwrap_or_default().to_ascii_lowercase();
     allowed.is_empty()
-        || allowed.iter().any(|domain| host == *domain || host.ends_with(&format!(".{domain}")))
+        || allowed
+            .iter()
+            .any(|domain| host == *domain || host.ends_with(&format!(".{domain}")))
 }
 
 fn url_matches_filters(url: &Url, include: &[Regex], exclude: &[Regex]) -> bool {
@@ -397,22 +488,32 @@ fn compile_url_patterns(patterns: &[String], kind: &str) -> Result<Vec<Regex>, S
 async fn load_robots<'a, T: CrawlTransport>(
     page_url: &Url,
     transport: &T,
+    allowed: &HashSet<String>,
     cache: &'a mut HashMap<String, RobotsFile>,
     report: &mut CrawlReport,
-) -> &'a RobotsFile {
+) -> Result<&'a RobotsFile, String> {
     let origin = page_url.origin().ascii_serialization();
     if !cache.contains_key(&origin) {
-        let robots_url = page_url.join("/robots.txt").expect("HTTP page URL has an origin");
+        let robots_url = page_url
+            .join("/robots.txt")
+            .expect("HTTP page URL has an origin");
         let content = match transport.fetch(&robots_url).await {
-            Ok(response) if response.status < 400 && response.body.len() <= 1024 * 1024 => {
+            Ok(response) if !domain_allowed(&response.url, allowed) => {
+                return Err("robots redirect left allowed_domains".into());
+            }
+            Ok(response)
+                if (200..300).contains(&response.status) && response.body.len() <= 1024 * 1024 =>
+            {
                 report.robots_fetched += 1;
                 response.body
-            },
-            _ => String::new(),
+            }
+            // A missing robots document is distinct from a network failure or server rejection.
+            Ok(response) if matches!(response.status, 404 | 410) => String::new(),
+            _ => return Err("robots policy unavailable; crawl refused".into()),
         };
         cache.insert(origin.clone(), RobotsFile::parse(&robots_url, &content));
     }
-    &cache[&origin]
+    Ok(&cache[&origin])
 }
 
 async fn ingest_seed_sitemaps<T: CrawlTransport>(
@@ -430,7 +531,13 @@ async fn ingest_seed_sitemaps<T: CrawlTransport>(
         if !domain_allowed(&url, allowed) || !origins.insert(url.origin().ascii_serialization()) {
             continue;
         }
-        let policy = load_robots(&url, transport, robots, report).await;
+        let policy = match load_robots(&url, transport, allowed, robots, report).await {
+            Ok(policy) => policy,
+            Err(error) => {
+                report.errors.push((url.to_string(), error));
+                continue;
+            }
+        };
         if options.obey_robots
             && let Some(delay) = policy.crawl_delay_ms(&options.user_agent)
         {
@@ -451,13 +558,28 @@ async fn ingest_seed_sitemaps<T: CrawlTransport>(
     let limit = options.max_sitemaps.min(100);
     let mut attempts = 0;
     while attempts < limit {
-        let Some(url) = sitemap_queue.pop_front() else { break };
+        let Some(url) = sitemap_queue.pop_front() else {
+            break;
+        };
         if !domain_allowed(&url, allowed) || !seen.insert(url.as_str().to_owned()) {
             continue;
         }
         attempts += 1;
-        let Ok(response) = transport.fetch(&url).await else { continue };
-        if !(200..400).contains(&response.status) || response.body.len() > 16 * 1024 * 1024 {
+        let response = match transport.fetch(&url).await {
+            Ok(response) => response,
+            Err(error) => {
+                report.errors.push((url.to_string(), error));
+                continue;
+            }
+        };
+        if !domain_allowed(&response.url, allowed)
+            || !(200..300).contains(&response.status)
+            || response.body.len() > 16 * 1024 * 1024
+        {
+            report.errors.push((
+                url.to_string(),
+                "sitemap response rejected by crawl policy".into(),
+            ));
             continue;
         }
         report.sitemaps_fetched += 1;
@@ -499,7 +621,8 @@ pub fn extract_links_opts(html: &str, page_url: &Url, skip_nofollow: bool) -> Ve
             (
                 node.get_attribute("href").map(str::to_owned),
                 node.get_attribute("rel").is_some_and(|rel| {
-                    rel.split_ascii_whitespace().any(|part| part.eq_ignore_ascii_case("nofollow"))
+                    rel.split_ascii_whitespace()
+                        .any(|part| part.eq_ignore_ascii_case("nofollow"))
                 }),
             )
         }) else {
@@ -530,6 +653,161 @@ mod tests {
     use crate::FrontierOptions;
     use std::collections::HashMap;
 
+    async fn http_fixture(
+        response: String,
+    ) -> (
+        Url,
+        std::sync::Arc<std::sync::atomic::AtomicUsize>,
+        tokio::task::JoinHandle<()>,
+    ) {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = Url::parse(&format!(
+            "http://localhost:{}/",
+            listener.local_addr().unwrap().port()
+        ))
+        .unwrap();
+        let requests = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let count = std::sync::Arc::clone(&requests);
+        let server = tokio::spawn(async move {
+            loop {
+                let Ok((mut stream, _)) = listener.accept().await else {
+                    break;
+                };
+                count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                let mut bytes = [0; 4096];
+                if stream.read(&mut bytes).await.unwrap_or(0) == 0 {
+                    continue;
+                }
+                stream.write_all(response.as_bytes()).await.unwrap();
+            }
+        });
+        (url, requests, server)
+    }
+
+    #[tokio::test]
+    async fn scoped_transport_blocks_page_robots_and_sitemap_redirects_before_target_contact() {
+        use std::sync::{Arc, atomic::Ordering};
+        let (mut forbidden, contacted, target_server) = http_fixture(
+            "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".into(),
+        )
+        .await;
+        forbidden.set_host(Some("127.0.0.1")).unwrap();
+        let (initial, requested, source_server) = http_fixture(format!(
+            "HTTP/1.1 302 Found\r\nLocation: {forbidden}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+        )).await;
+        let client = ObscuraHttpClient::with_full_options(
+            Arc::new(obscura_net::CookieJar::new()),
+            None,
+            true,
+        );
+        let transport = ObscuraTransport::scoped(client, &["localhost".into()])
+            .await
+            .unwrap();
+        for path in ["/page", "/robots.txt", "/sitemap.xml"] {
+            let error = transport
+                .fetch(&initial.join(path).unwrap())
+                .await
+                .err()
+                .unwrap();
+            assert!(
+                error.contains("blocked"),
+                "the scope interceptor must reject the redirect"
+            );
+        }
+        tokio::task::yield_now().await;
+        assert_eq!(requested.load(Ordering::SeqCst), 3);
+        assert_eq!(contacted.load(Ordering::SeqCst), 0);
+        source_server.abort();
+        target_server.abort();
+    }
+
+    #[tokio::test]
+    async fn scoped_transport_follows_allowed_redirects_and_refuses_unknown_robot_policy() {
+        use std::sync::{Arc, atomic::Ordering};
+        let (allowed, contacted, target_server) = http_fixture(
+            "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 9\r\nConnection: close\r\n\r\npermitted".into(),
+        ).await;
+        let (initial, _, source_server) = http_fixture(format!(
+            "HTTP/1.1 302 Found\r\nLocation: {allowed}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+        )).await;
+        let client = ObscuraHttpClient::with_full_options(
+            Arc::new(obscura_net::CookieJar::new()),
+            None,
+            true,
+        );
+        let transport = ObscuraTransport::scoped(client, &["localhost".into()])
+            .await
+            .unwrap();
+        assert_eq!(transport.fetch(&initial).await.unwrap().body, "permitted");
+        assert_eq!(contacted.load(Ordering::SeqCst), 1);
+        let mut frontier = Frontier::memory(FrontierOptions::default()).unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://example.test/"), now_ms())
+            .unwrap();
+        let report = crawl_bounded(
+            &mut frontier,
+            &Fixture(HashMap::new()),
+            &CrawlOptions {
+                allowed_domains: vec!["example.test".into()],
+                obey_robots: true,
+                ..CrawlOptions::default()
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(report.pages.len(), 0);
+        assert_eq!(report.robots_blocked, 1);
+        assert_eq!(report.frontier.failed, 1);
+        source_server.abort();
+        target_server.abort();
+    }
+
+    #[tokio::test]
+    async fn redirected_robot_disallowed_content_is_not_persisted() {
+        struct RedirectFixture;
+        impl CrawlTransport for RedirectFixture {
+            async fn fetch(&self, url: &Url) -> Result<FetchResult, String> {
+                let robots = url.path() == "/robots.txt";
+                Ok(FetchResult {
+                    url: if robots {
+                        url.clone()
+                    } else {
+                        url.join("/private").unwrap()
+                    },
+                    status: 200,
+                    content_type: Some("text/html".into()),
+                    body: if robots {
+                        "User-agent: *\nDisallow: /private".into()
+                    } else {
+                        "<main><h1>Forbidden content</h1></main>".into()
+                    },
+                })
+            }
+        }
+        let mut frontier = Frontier::memory(FrontierOptions::default()).unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://example.test/"), now_ms())
+            .unwrap();
+        let report = crawl_bounded(
+            &mut frontier,
+            &RedirectFixture,
+            &CrawlOptions {
+                allowed_domains: vec!["example.test".into()],
+                obey_robots: true,
+                ..CrawlOptions::default()
+            },
+        )
+        .await
+        .unwrap();
+        assert!(report.pages.is_empty());
+        assert_eq!(report.robots_fetched, 1);
+        assert_eq!(report.robots_blocked, 1);
+        assert_eq!(report.frontier.done, 0);
+        assert_eq!(report.frontier.failed, 1);
+        assert!(frontier.page("https://example.test/").unwrap().is_none());
+    }
+
     struct Fixture(HashMap<String, String>);
     impl CrawlTransport for Fixture {
         async fn fetch(&self, url: &Url) -> Result<FetchResult, String> {
@@ -546,7 +824,9 @@ mod tests {
     #[tokio::test]
     async fn bounded_crawl_follows_links_and_respects_host_scope() {
         let mut frontier = Frontier::memory(FrontierOptions::default()).unwrap();
-        frontier.enqueue(AddRequest::seed("https://example.test/"), now_ms()).unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://example.test/"), now_ms())
+            .unwrap();
         let pages = HashMap::from([
             ("https://example.test/".into(), "<main><h1>Home</h1><p>A useful page with enough content for extraction.</p><a href='/next#part'>Next</a><a href='https://elsewhere.test/'>Elsewhere</a></main>".into()),
             ("https://example.test/next".into(), "<main><h1>Next</h1><p>Another useful page with different content for extraction.</p></main>".into()),
@@ -555,7 +835,9 @@ mod tests {
             allowed_domains: vec!["example.test".into()],
             ..CrawlOptions::default()
         };
-        let report = crawl_bounded(&mut frontier, &Fixture(pages), &options).await.unwrap();
+        let report = crawl_bounded(&mut frontier, &Fixture(pages), &options)
+            .await
+            .unwrap();
         assert_eq!(report.pages.len(), 2);
         assert_eq!(report.frontier.done, 2);
         assert_eq!(report.pages[0].discovered_links, 1);
@@ -564,7 +846,9 @@ mod tests {
     #[tokio::test]
     async fn robots_and_nested_sitemaps_seed_allowed_pages() {
         let mut frontier = Frontier::memory(FrontierOptions::default()).unwrap();
-        frontier.enqueue(AddRequest::seed("https://example.test/private"), now_ms()).unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://example.test/private"), now_ms())
+            .unwrap();
         let pages = HashMap::from([
             ("https://example.test/robots.txt".into(), "User-agent: *\nDisallow: /private\nCrawl-delay: 0.001\nSitemap: /sitemap.xml".into()),
             ("https://example.test/sitemap.xml".into(), "<sitemapindex><sitemap><loc>https://example.test/more.xml</loc></sitemap></sitemapindex>".into()),
@@ -577,7 +861,9 @@ mod tests {
             allowed_domains: vec!["example.test".into()],
             ..CrawlOptions::default()
         };
-        let report = crawl_bounded(&mut frontier, &Fixture(pages), &options).await.unwrap();
+        let report = crawl_bounded(&mut frontier, &Fixture(pages), &options)
+            .await
+            .unwrap();
         assert_eq!(report.robots_fetched, 1);
         assert_eq!(report.sitemaps_fetched, 2);
         assert_eq!(report.sitemap_urls_enqueued, 1);
@@ -598,7 +884,9 @@ mod tests {
     #[tokio::test]
     async fn daemon_crawl_terminates_at_max_iterations_and_accumulates_results() {
         let mut frontier = Frontier::memory(FrontierOptions::default()).unwrap();
-        frontier.enqueue(AddRequest::seed("https://daemon.test/"), now_ms()).unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://daemon.test/"), now_ms())
+            .unwrap();
         let pages = HashMap::from([(
             "https://daemon.test/".into(),
             "<main><h1>Daemon Home</h1><p>Daemon content is long enough to extract.</p></main>"
@@ -613,7 +901,9 @@ mod tests {
             idle_poll_ms: 10,
             maintenance_interval_ms: 100,
         };
-        let report = crawl_daemon(&mut frontier, &Fixture(pages), &options, None).await.unwrap();
+        let report = crawl_daemon(&mut frontier, &Fixture(pages), &options, None)
+            .await
+            .unwrap();
         assert_eq!(report.pages.len(), 1);
         assert_eq!(report.frontier.done, 1);
     }

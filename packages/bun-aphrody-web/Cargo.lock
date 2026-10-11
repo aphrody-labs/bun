@@ -220,6 +220,7 @@ dependencies = [
 [[package]]
 name = "aphrody-config"
 version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
 dependencies = [
  "serde",
  "serde_json",
@@ -270,11 +271,11 @@ dependencies = [
  "aphrody-gemini-runtime",
  "aphrody-gemini-web",
  "aphrody-model-client",
- "aphrody-obscura",
+ "aphrody-obscura 1.4.4",
  "chrono",
  "clap",
  "futures",
- "obscura-dom",
+ "obscura-dom 1.4.4",
  "regex",
  "reqwest",
  "rusqlite",
@@ -288,20 +289,20 @@ dependencies = [
 [[package]]
 name = "aphrody-m3-tokens"
 version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
 dependencies = [
- "aphrody-web-source",
  "base64 0.23.1",
 ]
 
 [[package]]
 name = "aphrody-mcp-client"
 version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
 dependencies = [
  "aphrody-config",
  "aphrody-proc",
  "aphrody-toolcall",
- "aphrody-web-service",
- "aphrody-web-source",
+ "aphrody-web-service 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
  "async-trait",
  "base64 0.23.1",
  "futures-util",
@@ -316,6 +317,7 @@ dependencies = [
 [[package]]
 name = "aphrody-model-client"
 version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
 dependencies = [
  "aphrody-toolcall",
  "async-trait",
@@ -334,8 +336,23 @@ name = "aphrody-obscura"
 version = "1.4.4"
 dependencies = [
  "anyhow",
- "obscura-browser",
- "obscura-net",
+ "obscura-browser 1.4.4",
+ "obscura-net 1.4.4",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "url",
+]
+
+[[package]]
+name = "aphrody-obscura"
+version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
+dependencies = [
+ "anyhow",
+ "obscura-browser 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
+ "obscura-net 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
@@ -346,6 +363,7 @@ dependencies = [
 [[package]]
 name = "aphrody-patch"
 version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
 dependencies = [
  "similar",
  "thiserror 2.0.21",
@@ -354,6 +372,7 @@ dependencies = [
 [[package]]
 name = "aphrody-proc"
 version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
 dependencies = [
  "rustix 1.1.5",
  "serde",
@@ -367,6 +386,7 @@ dependencies = [
 [[package]]
 name = "aphrody-rag-core"
 version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
 dependencies = [
  "blake3",
  "ndarray",
@@ -385,10 +405,12 @@ dependencies = [
 [[package]]
 name = "aphrody-shell-session"
 version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
 
 [[package]]
 name = "aphrody-shell-vfs"
 version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
 
 [[package]]
 name = "aphrody-shell-web"
@@ -423,8 +445,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "aphrody-taffy"
+version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
+dependencies = [
+ "arrayvec",
+ "grid",
+ "serde",
+ "slotmap",
+]
+
+[[package]]
 name = "aphrody-terminal-core"
 version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
 dependencies = [
  "rio-vt",
 ]
@@ -432,6 +466,7 @@ dependencies = [
 [[package]]
 name = "aphrody-toolcall"
 version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
 dependencies = [
  "async-trait",
  "schemars",
@@ -444,14 +479,14 @@ dependencies = [
 name = "aphrody-web-crawl"
 version = "1.4.4"
 dependencies = [
- "aphrody-web-extract",
+ "aphrody-web-extract 1.4.4",
  "blake3",
  "chrono",
  "fs4",
  "futures",
  "image",
- "obscura-dom",
- "obscura-net",
+ "obscura-dom 1.4.4",
+ "obscura-net 1.4.4",
  "regex",
  "rusqlite",
  "serde",
@@ -482,14 +517,14 @@ dependencies = [
  "anyhow",
  "aphrody-proc",
  "aphrody-web-crawl",
- "aphrody-web-extract",
- "aphrody-web-service",
+ "aphrody-web-extract 1.4.4",
+ "aphrody-web-service 1.4.4",
  "clap",
- "obscura-browser",
+ "obscura-browser 1.4.4",
  "obscura-cdp",
- "obscura-dom",
- "obscura-js",
- "obscura-net",
+ "obscura-dom 1.4.4",
+ "obscura-js 1.4.4",
+ "obscura-net 1.4.4",
  "serde",
  "serde_json",
  "tokio",
@@ -504,12 +539,27 @@ version = "1.4.4"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
- "obscura-dom",
+ "obscura-dom 1.4.4",
  "regex",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
  "tokio",
+ "url",
+]
+
+[[package]]
+name = "aphrody-web-extract"
+version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
+dependencies = [
+ "async-trait",
+ "base64 0.23.1",
+ "obscura-dom 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
  "url",
 ]
 
@@ -543,10 +593,28 @@ dependencies = [
 name = "aphrody-web-service"
 version = "1.4.4"
 dependencies = [
- "aphrody-obscura",
- "aphrody-web-extract",
- "obscura-dom",
- "obscura-mcp",
+ "aphrody-obscura 1.4.4",
+ "aphrody-web-extract 1.4.4",
+ "obscura-dom 1.4.4",
+ "obscura-mcp 1.4.4",
+ "reqwest",
+ "rustls",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "url",
+]
+
+[[package]]
+name = "aphrody-web-service"
+version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
+dependencies = [
+ "aphrody-obscura 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
+ "aphrody-web-extract 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
+ "obscura-dom 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
+ "obscura-mcp 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
  "reqwest",
  "rustls",
  "serde",
@@ -3502,9 +3570,27 @@ dependencies = [
  "base64 0.23.1",
  "futures",
  "image",
- "obscura-dom",
- "obscura-js",
- "obscura-net",
+ "obscura-dom 1.4.4",
+ "obscura-js 1.4.4",
+ "obscura-net 1.4.4",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "obscura-browser"
+version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
+dependencies = [
+ "base64 0.23.1",
+ "futures",
+ "image",
+ "obscura-dom 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
+ "obscura-js 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
+ "obscura-net 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
  "serde_json",
  "thiserror 2.0.21",
  "tokio",
@@ -3523,10 +3609,10 @@ dependencies = [
  "image",
  "jpeg-encoder",
  "libc",
- "obscura-browser",
- "obscura-dom",
- "obscura-js",
- "obscura-net",
+ "obscura-browser 1.4.4",
+ "obscura-dom 1.4.4",
+ "obscura-js 1.4.4",
+ "obscura-net 1.4.4",
  "png",
  "serde",
  "serde_json",
@@ -3545,6 +3631,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "obscura-dom"
+version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
+dependencies = [
+ "cssparser",
+ "html5ever",
+ "precomputed-hash",
+ "selectors",
+]
+
+[[package]]
 name = "obscura-js"
 version = "1.4.4"
 dependencies = [
@@ -3560,9 +3657,42 @@ dependencies = [
  "hkdf",
  "hmac",
  "html5ever",
- "obscura-dom",
- "obscura-net",
- "obscura-render",
+ "obscura-dom 1.4.4",
+ "obscura-net 1.4.4",
+ "obscura-render 1.4.4",
+ "pbkdf2",
+ "psl",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha1",
+ "sha2",
+ "tokio",
+ "tokio-tungstenite",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "obscura-js"
+version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
+dependencies = [
+ "aes",
+ "aes-gcm",
+ "base64 0.23.1",
+ "cbc",
+ "ctr",
+ "deno_core",
+ "deno_error",
+ "futures-util",
+ "getrandom 0.4.3",
+ "hkdf",
+ "hmac",
+ "html5ever",
+ "obscura-dom 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
+ "obscura-net 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
+ "obscura-render 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
  "pbkdf2",
  "psl",
  "reqwest",
@@ -3581,11 +3711,29 @@ name = "obscura-mcp"
 version = "1.4.4"
 dependencies = [
  "anyhow",
- "aphrody-web-extract",
+ "aphrody-web-extract 1.4.4",
  "base64 0.23.1",
- "obscura-browser",
- "obscura-dom",
- "obscura-net",
+ "obscura-browser 1.4.4",
+ "obscura-dom 1.4.4",
+ "obscura-net 1.4.4",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "obscura-mcp"
+version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
+dependencies = [
+ "anyhow",
+ "aphrody-web-extract 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
+ "base64 0.23.1",
+ "obscura-browser 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
+ "obscura-dom 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
+ "obscura-net 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
  "serde",
  "serde_json",
  "tokio",
@@ -3603,7 +3751,7 @@ dependencies = [
  "cookie",
  "encoding_rs",
  "futures-util",
- "obscura-ssrf",
+ "obscura-ssrf 1.4.4",
  "psl",
  "rcgen",
  "reqwest",
@@ -3622,6 +3770,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "obscura-net"
+version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "cookie",
+ "encoding_rs",
+ "obscura-ssrf 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
+ "psl",
+ "reqwest",
+ "rustls",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "obscura-render"
 version = "1.4.4"
 dependencies = [
@@ -3632,8 +3803,30 @@ dependencies = [
  "cssparser",
  "image",
  "log",
- "obscura-dom",
- "obscura-ssrf",
+ "obscura-dom 1.4.4",
+ "obscura-ssrf 1.4.4",
+ "resvg",
+ "swash",
+ "tiny-skia",
+ "ureq",
+ "url",
+ "usvg",
+ "wuff",
+]
+
+[[package]]
+name = "obscura-render"
+version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
+dependencies = [
+ "ab_glyph",
+ "aphrody-taffy",
+ "athena-text",
+ "base64 0.23.1",
+ "cssparser",
+ "image",
+ "obscura-dom 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
+ "obscura-ssrf 1.4.4 (git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd)",
  "resvg",
  "swash",
  "tiny-skia",
@@ -3649,6 +3842,11 @@ version = "1.4.4"
 dependencies = [
  "bun_browser_ssrf",
 ]
+
+[[package]]
+name = "obscura-ssrf"
+version = "1.4.4"
+source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
 
 [[package]]
 name = "oid-registry"
