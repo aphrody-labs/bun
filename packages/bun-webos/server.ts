@@ -34,6 +34,7 @@ import { resolvePublicAsset } from "./src/server/public-assets";
 import { evalJs, runShell, terminalShell } from "./src/server/shell";
 import { WebOSStore } from "./src/server/store";
 import { systemSnapshot } from "./src/server/system-metrics";
+import { pageRoutes } from "./src/server/page-manifest";
 import { createExplorer, type ExplorerOptions } from "./src/server/explorer";
 export type { ExplorerOptions } from "./src/server/explorer";
 
@@ -160,7 +161,9 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
   mkdirSync(dataDir, { recursive: true });
   mkdirSync(root, { recursive: true });
   const development = options.development ?? process.env.NODE_ENV !== "production";
-  const distDir = resolve(options.distDir ?? join(import.meta.dir, "dist"));
+  const distDir = resolve(
+    options.distDir ?? (index.files ? import.meta.dir : join(import.meta.dir, "dist")),
+  );
   const wasmDir = resolve(options.wasmDir ?? join(distDir, "wasm"));
   const trustedOrigins = options.trustedOrigins?.map((origin) => {
     const parsed = new URL(origin);
@@ -198,7 +201,7 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
     hostname: options.hostname ?? "127.0.0.1",
     development: development ? { hmr: true, console: true } : false,
     routes: {
-      "/": index,
+      ...pageRoutes(index, import.meta.dir),
       "/api/explorer/:action": {
         GET: host((req) => explorer.handle(new URL(req.url).pathname.split("/").at(-1)!, req)),
       },

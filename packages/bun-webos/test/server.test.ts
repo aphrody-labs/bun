@@ -8,6 +8,7 @@ import { startWebOS, type WebOSServer } from "../server";
 import { Database } from "bun:sqlite";
 import { createExplorer } from "../src/server/explorer";
 import { hostAccessProblem } from "../src/server/guard";
+import { bunEnv, bunExe, tempDir } from "../../../test/harness";
 
 let dataDir: string;
 let distDir: string;
@@ -301,6 +302,51 @@ describe("generic index explorer", () => {
       upstream.stop(true);
     }
   });
+});
+
+test("compiled page routes serve assets from an unrelated working directory", async () => {
+  const helper = fileURLToPath(
+    new URL("../src/server/page-manifest.ts", import.meta.url),
+  ).replaceAll("\\", "/");
+  using fixture = tempDir("webos-portable-page", {
+    "index.html":
+      '<!doctype html><html><body>portable-page<script type="module" src="./entry.js"></script></body></html>',
+    "entry.js": 'console.log("portable-browser")',
+    "main.ts": `import page from './index.html';
+import { pageRoutes } from ${JSON.stringify(helper)};
+const s = Bun.serve({port:0,hostname:'127.0.0.1',routes:pageRoutes(page,import.meta.dir),fetch:()=>new Response('missing',{status:404})});
+try {
+  const r=await fetch(s.url);const html=await r.text();
+  const paths=[...html.matchAll(/(?:src|href)="([^"]+)"/g)].map(match=>match[1]);
+  const assets=await Promise.all(paths.map(async path => (await fetch(new URL(path,s.url))).status));
+  console.log(JSON.stringify({page:r.status,marker:html.includes('portable-page'),assets}));
+} finally {await s.stop(true);}`,
+  });
+  const outdir = join(String(fixture), "dist");
+  const built = await Bun.build({
+    entrypoints: [join(String(fixture), "main.ts")],
+    outdir,
+    target: "bun",
+  });
+  expect(built.success).toBe(true);
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), join(outdir, "main.js")],
+    cwd: dataDir,
+    env: bunEnv,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([
+    proc.stdout.text(),
+    proc.stderr.text(),
+    proc.exited,
+  ]);
+  expect(stderr).toBe("");
+  const result = JSON.parse(stdout);
+  expect(result).toMatchObject({ page: 200, marker: true });
+  expect(result.assets.length).toBeGreaterThan(0);
+  expect(result.assets.every((status: number) => status === 200)).toBe(true);
+  expect(exitCode).toBe(0);
 });
 
 test("serves the desktop page as an HTML import", async () => {
