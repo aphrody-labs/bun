@@ -7,7 +7,12 @@ import { FLUENT_ELEMENTS } from "../src/os/fluent-elements";
 const entry = join(import.meta.dir, "fixtures", "fluent-page.ts");
 
 async function bundle(): Promise<string> {
-  const result = await Bun.build({ entrypoints: [entry], target: "browser", format: "esm", minify: true });
+  const result = await Bun.build({
+    entrypoints: [entry],
+    target: "browser",
+    format: "esm",
+    minify: true,
+  });
   expect(result.logs.map(String)).toEqual([]);
   expect(result.success).toBe(true);
   return result.outputs[0].text();
@@ -22,19 +27,65 @@ test("Bun.build bundles Fluent UI web components v3 and the Fluent 2 tokens", as
 });
 
 describe.skipIf(!hasChrome())("headless render in Bun.WebView (Chrome)", () => {
+  test("browser permissions wait for a user gesture and make no automatic host requests", async () => {
+    const result = await Bun.build({
+      entrypoints: [join(import.meta.dir, "fixtures", "browser-access-page.tsx")],
+      target: "browser",
+      format: "esm",
+      minify: true,
+    });
+    expect(result.success).toBe(true);
+    using server = Bun.serve({
+      port: 0,
+      hostname: "127.0.0.1",
+      routes: {
+        "/": new Response('<!doctype html><script type="module" src="/permissions.js"></script>', {
+          headers: { "Content-Type": "text/html" },
+        }),
+        "/permissions.js": new Response(await result.outputs[0].text(), {
+          headers: { "Content-Type": "text/javascript" },
+        }),
+      },
+    });
+    const view = new Bun.WebView({
+      backend: { type: "chrome", url: false },
+      width: 800,
+      height: 600,
+    });
+    try {
+      await view.navigate(server.url.href);
+      await waitFor(view, 'document.querySelectorAll("[data-browser-capability]").length === 15');
+      expect(await view.evaluate("window.fixturePermissionCalls")).toBe(0);
+      await view.evaluate('document.querySelector("[data-browser-capability=camera]").click()');
+      await waitFor(view, 'document.body.textContent.includes("Cliquez sur la capacité")');
+      expect(await view.evaluate("window.fixturePermissionCalls")).toBe(0);
+      expect(
+        await view.evaluate('document.querySelector("[data-browser-capability=screen]").disabled'),
+      ).toBe(true);
+    } finally {
+      view.close();
+    }
+  }, 60_000);
   test("Fluent controls upgrade with a shadow root and themed tokens", async () => {
     const js = await bundle();
     using server = Bun.serve({
       port: 0,
       hostname: "127.0.0.1",
       routes: {
-        "/": new Response(`<!doctype html><html><body><script type="module" src="/fluent.js"></script></body></html>`, {
-          headers: { "Content-Type": "text/html" },
-        }),
+        "/": new Response(
+          `<!doctype html><html><body><script type="module" src="/fluent.js"></script></body></html>`,
+          {
+            headers: { "Content-Type": "text/html" },
+          },
+        ),
         "/fluent.js": new Response(js, { headers: { "Content-Type": "text/javascript" } }),
       },
     });
-    const view = new Bun.WebView({ backend: { type: "chrome", url: false }, width: 800, height: 600 });
+    const view = new Bun.WebView({
+      backend: { type: "chrome", url: false },
+      width: 800,
+      height: 600,
+    });
     try {
       await view.navigate(server.url.href);
       await waitFor(view, `document.getElementById("progress") !== null`);
@@ -46,7 +97,11 @@ describe.skipIf(!hasChrome())("headless render in Bun.WebView (Chrome)", () => {
           checked: document.getElementById("dark").checked,
         };
       })()`);
-      expect(state).toEqual({ upgraded: [true, true, true, true, true], brand: "#0f6cbd", checked: true });
+      expect(state).toEqual({
+        upgraded: [true, true, true, true, true],
+        brand: "#0f6cbd",
+        checked: true,
+      });
     } finally {
       view.close();
     }

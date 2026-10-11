@@ -1,5 +1,19 @@
 # Bun WebOS
 
+The desktop includes **Permissions navigateur**. Each button invokes a specific
+browser capability after a click: files and read-only directory selection, camera,
+microphone, screen, location, notifications, clipboard, USB, HID, serial, Bluetooth,
+fullscreen, persistent storage and WebGPU. Unsupported capabilities stay disabled;
+denial is displayed without granting any other capability. Media probes stop their
+tracks immediately. File imports copy at most eight files / 16 MiB into a new OPFS
+batch on the visitor's device and send no file contents to the server.
+
+Browser permission does not grant shell, SSH, FFI or arbitrary Windows/Linux access.
+Those applications use the installed local Bun server, whose host routes remain
+restricted to loopback and the authorized origin. Browser WebAssembly currently
+provides the shipped parser, semver, markdown and app modules; it does not emulate
+the Windows/Linux kernel or provide the entire native Bun runtime.
+
 An optional browser desktop served by Bun. Install `@aphrody/bun-webos` and run
 `bun-webos --port 3000`. The server listens on loopback. Host commands, files,
 metadata and assistant routes require a loopback listener and same-origin requests.

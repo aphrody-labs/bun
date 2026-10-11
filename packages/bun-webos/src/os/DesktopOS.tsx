@@ -14,6 +14,7 @@ import { M3FusionStudioApp } from "./apps/M3FusionStudioApp";
 import { DiagnosticsApp } from "./apps/DiagnosticsApp";
 import { FluentWindowsApp } from "./apps/FluentWindowsApp";
 import { IndexExplorerApp } from "./apps/IndexExplorerApp";
+import { BrowserAccessApp } from "./apps/BrowserAccessApp";
 import { ArcadeGame } from "../arcade/ArcadeGame";
 import { ApiPlayground } from "../components/ApiPlayground";
 import { BenchmarkSuite } from "../benchmarks/BenchmarkSuite";
@@ -141,6 +142,8 @@ export const DesktopOS: React.FC = () => {
 
   const renderApp = (id: AppId): React.ReactNode => {
     switch (id) {
+      case "browser-access":
+        return <BrowserAccessApp />;
       case "index-explorer":
         return <IndexExplorerApp />;
       case "kernel-monitor":

@@ -18,6 +18,13 @@ interface DockProps {
 
 export const DOCK_ITEMS: DockItemConfig[] = [
   {
+    id: "browser-access",
+    title: "Permissions navigateur",
+    icon: "🔐",
+    color: "bg-indigo-700",
+    size: { width: 720, height: 580 },
+  },
+  {
     id: "index-explorer",
     title: "Index explorer",
     icon: "✦",
