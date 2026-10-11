@@ -136,7 +136,9 @@ export function buildRustGraph(plan: RustPlan, dir: string): RustGraph {
     if (kind === "lib") {
       assert(
         u.target.crate_types.some((t) => t === "lib" || t === "rlib") &&
-          u.target.crate_types.every((t) => t === "lib" || t === "rlib" || t === "cdylib"),
+          u.target.crate_types.every(
+            (t) => t === "lib" || t === "rlib" || t === "cdylib" || t === "staticlib",
+          ),
         `rust plan: unit ${u.target.name} has crate types ${u.target.crate_types}; only rlib libraries, proc-macros and a bin root are supported: the build links the rlibs itself, so no crate is a staticlib or cdylib`,
       );
     }
@@ -155,7 +157,7 @@ export function buildRustGraph(plan: RustPlan, dir: string): RustGraph {
       crateTypes:
         kind === "build-script"
           ? ["bin"]
-          : kind === "lib" && u.target.crate_types.includes("cdylib")
+          : kind === "lib" && u.target.crate_types.some((t) => t === "cdylib" || t === "staticlib")
             ? ["rlib"]
             : u.target.crate_types,
       srcPath: u.target.src_path,

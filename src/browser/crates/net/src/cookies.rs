@@ -290,7 +290,7 @@ impl CookieJar {
         result
     }
 
-    /// Export a Cookie-Editor compatible array without changing Obscura's
+    /// Export a Cookie-Editor compatible array without changing BunBrowser's
     /// persisted cookie format or exposing its internal storage representation.
     pub fn to_cookie_editor_json(&self) -> Result<String, serde_json::Error> {
         let cookies = self.cookies.read().unwrap();
@@ -648,7 +648,7 @@ struct PersistedCookie {
     #[serde(flatten)]
     cookie: CookieInfo,
     /// Absent in older/third-party cookie files, whose Domain field has always
-    /// meant a domain-scoped cookie. Files written by Obscura preserve the
+    /// meant a domain-scoped cookie. Files written by BunBrowser preserve the
     /// distinction explicitly.
     #[serde(default, rename = "hostOnly", skip_serializing_if = "Option::is_none")]
     host_only: Option<bool>,
