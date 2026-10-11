@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Standalone Web providers retain Aphrody's default Clippy configuration.
+# Cargo workspace lints and the CI command's -D warnings still apply.
+# Bun runtime API substitutions belong to the root runtime workspace;
+# these providers expose independent Rust contracts without Bun engine dependencies.
+# An explicit CLIPPY_CONF_DIR selects this file instead of an ancestor's policy.

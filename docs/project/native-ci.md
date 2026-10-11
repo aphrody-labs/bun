@@ -19,8 +19,19 @@ Plan exposes every fixed command. Run dispatches one detached owner job. Status
 reconciles that job without replay. The worker records gate exit codes, log
 hashes, source revision and pipeline hash under the factory artifact allocation.
 An existing run directory is never overwritten. The first failed gate stops the
-pipeline. Strict Clippy failures remain failures; the installer currently has
-preexisting diagnostics that must qualify before this complete pipeline passes.
+pipeline. Strict Clippy failures remain failures. The installer source batch
+`5d3b1e47` passed Windows check, strict Clippy with zero diagnostics and 25 native
+tests, with two platform-dependent skips. The complete Linux pipeline still
+requires its own successful receipt.
+
+Each Clippy gate explicitly selects its source owner's `CLIPPY_CONF_DIR`.
+Google and Web are standalone provider workspaces: their checked-in `clippy.toml`
+files preserve Aphrody's default configuration, while their Cargo workspace lints
+and `-D warnings` remain enforced. The installer selects the Bun root configuration,
+including its runtime API restrictions. Inherited process configuration cannot
+replace these selections. The plan and gate hash include these relative paths;
+the worker resolves them within the pinned checkout. No lint allowance or warning
+suppression is introduced, and no Bun engine dependency is added to providers.
 
 Infra's build-factory configuration and Bun's fusion-factory configuration must
 declare the same `bun-os` checkout. Both the Bun source and sibling Aphrody Cargo

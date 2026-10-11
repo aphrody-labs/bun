@@ -5,10 +5,11 @@ import { mkdir } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
-export type Gate = { id: string; command: string[] };
+export type Gate = { id: string; command: string[]; env?: { CLIPPY_CONF_DIR: string } };
 export const gates: Gate[] = [
   ...["check", "test", "clippy"].map((action) => ({
     id: `rust-google-${action}`,
+    ...(action === "clippy" ? { env: { CLIPPY_CONF_DIR: "packages/bun-google/aphrody" } } : {}),
     command: [
       "bash",
       "../aphrody/scripts/build/rust/cargo-serial.sh",
@@ -26,6 +27,7 @@ export const gates: Gate[] = [
   { id: "install", command: ["bun", "install", "--frozen-lockfile", "--ignore-scripts"] },
   ...["check", "test", "clippy"].map((action) => ({
     id: `rust-install-${action}`,
+    ...(action === "clippy" ? { env: { CLIPPY_CONF_DIR: "." } } : {}),
     command: [
       "bash",
       "../aphrody/scripts/build/rust/cargo-serial.sh",
@@ -39,6 +41,7 @@ export const gates: Gate[] = [
   })),
   ...["check", "test", "clippy"].map((action) => ({
     id: `rust-web-${action}`,
+    ...(action === "clippy" ? { env: { CLIPPY_CONF_DIR: "packages/bun-aphrody-web" } } : {}),
     command: [
       "bash",
       "../aphrody/scripts/build/rust/cargo-serial.sh",
@@ -72,6 +75,15 @@ export const gates: Gate[] = [
     command: ["bun", "bd", "-j1", "test", "scripts/aphrody/fusion-sources.test.ts"],
   },
 ];
+export function gateEnvironment(
+  gate: Gate,
+  checkout: string,
+  inherited: Record<string, string | undefined>,
+): Record<string, string | undefined> {
+  return gate.env
+    ? { ...inherited, CLIPPY_CONF_DIR: resolve(checkout, gate.env.CLIPPY_CONF_DIR) }
+    : { ...inherited };
+}
 export function validateIdentity(revision: string, id: string): void {
   if (!/^[a-f0-9]{40}$/.test(revision)) throw Error("Full immutable Git revision required");
   if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(id)) throw Error("Stable lowercase job identity required");
@@ -154,7 +166,12 @@ async function worker(revision: string, id: string): Promise<number> {
   try {
     for (const gate of gates) {
       verifySibling();
-      const child = Bun.spawn(gate.command, { cwd: root, stdout: "pipe", stderr: "pipe" });
+      const child = Bun.spawn(gate.command, {
+        cwd: root,
+        env: gateEnvironment(gate, root, process.env),
+        stdout: "pipe",
+        stderr: "pipe",
+      });
       const [stdout, stderr, exitCode] = await Promise.all([
         new Response(child.stdout).text(),
         new Response(child.stderr).text(),
