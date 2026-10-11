@@ -57,9 +57,18 @@ built-ins; Linux artifact delivery and native JSC backend qualification remain o
   Linux x64 runtime release verification.
 - [x] Pass scoped changed-binary tests, formatting and oxlint; the repository-wide
   TypeScript gate retains unrelated existing errors.
-- [ ] Build the GPL-licensed sidecar on the serialized VPS factory, fetch and
-  verify the relay list, validate the payload and attach its receipt to a
-  candidate release before publication.
+- [x] Build the GPL-licensed sidecar on the serialized VPS factory, fetch and
+      verify the relay list, validate the payload and record the artifact receipt.
+      On 2026-10-11, commit `080955ba6d3394ff92d0813c9cceb73d30a83b36` and Mullvad
+      source `464d28812ac863ef75362b8fb85bcbdff961b9f9` produced
+      `bun-vpn-linux-x86_64.tar.gz` (14,409,665 bytes, SHA-256
+      `c9ad54e83f1cb7b3cc834be2fb1cdaf03c84ca5a823925a3445b10bee1d9c8a7`) on the
+      VPS factory. Locked release builds and the management-interface test command
+      passed; CLI/daemon smoke checks, ELF dependency checks, archive inventory and
+      checksum verification passed. No live tunnel was activated.
+- [ ] Add the qualified sidecar receipt to a complete runtime candidate after
+      its platform artifacts and release gates are available; do not treat the
+      standalone sidecar archive as a Bun runtime release.
 - [ ] Qualify tunnel activation separately on a host that grants `/dev/net/tun`,
   network administration and systemd; serverless platforms without those
   privileges remain unsupported.
