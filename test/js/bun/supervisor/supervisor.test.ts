@@ -266,6 +266,160 @@ describe("ServiceSupervisor", () => {
   );
 });
 
+describe("ServiceSupervisor pause leases", () => {
+  test("rejects unknown IDs before start and rejects an exited service", async () => {
+    let starts = 0;
+    const sup = new ServiceSupervisor({
+      signals: false,
+      env: bunEnv,
+      services: [{ id: "done", command: [bunExe(), "-e", "process.exit(0)"], restart: "never" }],
+      log: (event) => {
+        if (event.event === "started") starts++;
+      },
+    });
+    try {
+      await expect(sup.pause("missing")).rejects.toThrow("Unknown service");
+      await expect(sup.resume("missing")).rejects.toThrow("Unknown service");
+      expect(starts).toBe(0);
+      await sup.start();
+      await waitFor(() => sup.status().services[0]!.state === "exited");
+      await expect(sup.pause("done")).rejects.toThrow("not supervised");
+    } finally {
+      await sup.stop();
+    }
+  });
+
+  test("pause owns child termination without restarting it, and leaves peers running", async () => {
+    const sup = new ServiceSupervisor({
+      signals: false,
+      env: bunEnv,
+      services: [
+        { id: "worker", command: [bunExe(), "-e", idle] },
+        { id: "peer", command: [bunExe(), "-e", idle] },
+      ],
+    });
+    try {
+      await sup.start();
+      const initial = sup.status().services;
+      await sup.pause("worker");
+      const paused = sup.status().services;
+      expect(paused[0]).toMatchObject({ state: "paused", pid: null, healthy: false, restarts: 0 });
+      expect(alive(initial[0]!.pid!)).toBe(false);
+      expect(paused[1]!.pid).toBe(initial[1]!.pid);
+      expect(alive(paused[1]!.pid!)).toBe(true);
+      await sup.probe();
+      expect(sup.status().services[0]!.state).toBe("paused");
+      await sup.resume("worker");
+      const resumed = await waitFor(() => {
+        const status = sup.status().services[0]!;
+        return status.state === "running" && status;
+      });
+      expect(resumed.restarts).toBe(0);
+      expect(resumed.pid).not.toBe(initial[0]!.pid);
+    } finally {
+      await sup.stop();
+    }
+  });
+
+  test("lease finally restores its own pause but preserves a caller's existing pause", async () => {
+    const sup = new ServiceSupervisor({
+      signals: false,
+      env: bunEnv,
+      services: [{ id: "worker", command: [bunExe(), "-e", idle] }],
+    });
+    try {
+      await expect(
+        sup.withPaused("worker", async (signal) => {
+          expect(signal.aborted).toBe(false);
+          expect(sup.status().services[0]!.state).toBe("paused");
+          throw new Error("lease failure");
+        }),
+      ).rejects.toThrow("lease failure");
+      await waitFor(() => sup.status().services[0]!.state === "running");
+      await sup.pause("worker");
+      expect(await sup.withPaused("worker", async () => 42)).toBe(42);
+      expect(sup.status().services[0]).toMatchObject({ state: "paused", restarts: 0 });
+      await sup.stop();
+      await expect(sup.resume("worker")).rejects.toThrow("stopped");
+      await expect(sup.pause("missing")).rejects.toThrow("Unknown service");
+    } finally {
+      await sup.stop();
+    }
+  });
+
+  test("pause cancels backoff and global stop overrides a pending lease resume", async () => {
+    const sup = new ServiceSupervisor({
+      signals: false,
+      env: bunEnv,
+      backoff: { baseMs: 60_000 },
+      services: [{ id: "crash", command: [bunExe(), "-e", "process.exit(1)"] }],
+    });
+    try {
+      await sup.start();
+      await waitFor(() => sup.status().services[0]!.state === "backoff");
+      await sup.pause("crash");
+      const restarts = sup.status().services[0]!.restarts;
+      let enter!: () => void;
+      let release!: () => void;
+      const entered = new Promise<void>((done) => {
+        enter = done;
+      });
+      const gate = new Promise<void>((done) => {
+        release = done;
+      });
+      const lease = sup.withPaused("crash", async (signal) => {
+        enter();
+        await gate;
+        expect(signal.aborted).toBe(true);
+      });
+      await entered;
+      await sup.stop();
+      release();
+      await lease;
+      expect(sup.status().services[0]).toMatchObject({ state: "stopped", restarts, pid: null });
+    } finally {
+      await sup.stop();
+    }
+  });
+
+  test.skipIf(process.platform !== "win32")(
+    "pause closes the Windows Job containing descendants",
+    async () => {
+      using dir = tempDir("service-supervisor-pause-job", {});
+      const sup = new ServiceSupervisor({
+        signals: false,
+        logDirectory: String(dir),
+        env: bunEnv,
+        services: [
+          {
+            id: "parent",
+            command: [
+              bunExe(),
+              "-e",
+              `const child=Bun.spawn({cmd:[process.execPath,"-e",${JSON.stringify(idle)}],stdin:"ignore",stdout:"ignore",stderr:"ignore"}); console.log(child.pid); ${idle}`,
+            ],
+          },
+        ],
+      });
+      let descendant: number | undefined;
+      try {
+        await sup.start();
+        descendant = await waitFor(() => {
+          const path = join(String(dir), "parent.log");
+          return existsSync(path) && Number(readFileSync(path, "utf8").trim());
+        });
+        expect(alive(descendant)).toBe(true);
+        await sup.pause("parent");
+        await waitFor(() => !alive(descendant!));
+        expect(sup.status().services[0]).toMatchObject({ state: "paused", restarts: 0 });
+      } finally {
+        await sup.stop();
+        if (descendant && alive(descendant)) process.kill(descendant, "SIGKILL");
+      }
+    },
+  );
+});
+
 describe("Supervisor", () => {
   test("restarts a crashing child with exponential backoff", async () => {
     const { sup, logs } = make({ backoff: { baseMs: 20, maxMs: 80 } });

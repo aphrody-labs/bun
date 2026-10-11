@@ -10,12 +10,16 @@ import { ServiceSupervisor } from "@aphrody/supervisor/services";
 
 const supervisor = new ServiceSupervisor({
   services: [
-    { id: "worker", command: [process.execPath, "run", "worker.ts"],
-      cwd: process.cwd(), restart: "on-failure" },
+    {
+      id: "worker",
+      command: [process.execPath, "run", "worker.ts"],
+      cwd: process.cwd(),
+      restart: "on-failure",
+    },
   ],
   healthPort: 0,
   signals: true,
-  log: event => console.error(JSON.stringify(event)),
+  log: (event) => console.error(JSON.stringify(event)),
 });
 await supervisor.start();
 console.log(supervisor.healthUrl);
@@ -45,6 +49,22 @@ must arrange descendant cleanup themselves. Signal handling does not exit the
 parent application; disable it with `signals: false` to use your own lifecycle.
 Instances cannot be restarted after stopping. Log callbacks are observers;
 their exceptions do not interrupt cleanup.
+
+`await supervisor.pause(id)` terminates that service, closes its Windows Job,
+and waits for cleanup while peers continue running. Its status becomes `paused`
+and health reports it unavailable. `await supervisor.resume(id)` starts it again
+without counting the intentional pause as a restart. Pausing cancels pending
+backoff and health probes; stopping the supervisor always overrides resumption.
+Unknown IDs and services that have already exited are rejected. Calling these
+methods before `start()` starts the supervisor first.
+
+For a temporary resource lease, use `await supervisor.withPaused(id, async signal =>
+{ /* use the resource */ })`. Operations for the same service are serialized.
+The lease restores its own pause in `finally`, including when the operation
+throws, but preserves a service paused before the lease. The signal aborts when
+the supervisor stops. Do not call pause/resume or acquire another lease for the
+same service from inside the lease callback. These are in-process APIs; no HTTP
+control endpoint or machine-specific resource policy is supplied.
 
 `planWindowsService` from `@aphrody/supervisor/windows-service-plan` returns
 NSSM command argv arrays for a supplied service name, executable, arguments,
