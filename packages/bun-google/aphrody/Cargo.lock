@@ -705,6 +705,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
 
 [[package]]
+name = "bun_browser_dom"
+version = "1.4.4"
+dependencies = [
+ "cssparser",
+ "html5ever",
+ "precomputed-hash",
+ "selectors",
+]
+
+[[package]]
 name = "bun_browser_layout"
 version = "1.4.4"
 dependencies = [
@@ -2635,10 +2645,7 @@ dependencies = [
 name = "obscura-dom"
 version = "1.4.4"
 dependencies = [
- "cssparser",
- "html5ever",
- "precomputed-hash",
- "selectors",
+ "bun_browser_dom",
 ]
 
 [[package]]
@@ -5578,3 +5585,27 @@ checksum = "27bc9d5b815bc103f142aa054f561d9187d191692ec7c2d1e2b4737f8dbd7296"
 dependencies = [
  "zune-core",
 ]
+
+[[patch.unused]]
+name = "aphrody-m3-tokens"
+version = "1.4.4"
+
+[[patch.unused]]
+name = "aphrody-patch"
+version = "1.4.4"
+
+[[patch.unused]]
+name = "aphrody-rag-core"
+version = "1.4.4"
+
+[[patch.unused]]
+name = "aphrody-shell-session"
+version = "1.4.4"
+
+[[patch.unused]]
+name = "aphrody-shell-vfs"
+version = "1.4.4"
+
+[[patch.unused]]
+name = "aphrody-terminal-core"
+version = "1.4.4"
