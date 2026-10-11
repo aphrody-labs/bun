@@ -310,6 +310,12 @@ export class ServiceSupervisor {
               return new Response("Host access refused", { status: 403 });
             }
             if (url.pathname !== "/health") return new Response("Not found", { status: 404 });
+            if (request.method !== "GET" && request.method !== "HEAD") {
+              return new Response("Method not allowed", {
+                status: 405,
+                headers: { Allow: "GET, HEAD" },
+              });
+            }
             const status = this.status();
             return Response.json(status, {
               status: status.ok ? 200 : 503,

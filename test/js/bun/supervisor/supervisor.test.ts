@@ -127,6 +127,13 @@ describe("ServiceSupervisor", () => {
       const response = await fetch(sup.healthUrl!);
       expect(response.status).toBe(200);
       expect((await response.json()).ok).toBe(true);
+      const head = await fetch(sup.healthUrl!, { method: "HEAD" });
+      expect(head.status).toBe(200);
+      expect(await head.text()).toBe("");
+      const post = await fetch(sup.healthUrl!, { method: "POST" });
+      expect(post.status).toBe(405);
+      expect(post.headers.get("allow")).toBe("GET, HEAD");
+      await post.body?.cancel();
       const rebound = await fetch(sup.healthUrl!, {
         headers: { Host: "evil.example", Origin: "http://evil.example" },
       });
