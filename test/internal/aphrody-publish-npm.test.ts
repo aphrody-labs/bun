@@ -5,16 +5,146 @@ import {
   nextStableVersion,
   npmName,
   PACKAGES,
+  publicationStatus,
   publishManifest,
   rewriteSiblingImports,
+  validateOutputDirectory,
+  exportTrackedPackage,
+  verifyPreparedPackage,
 } from "../../scripts/aphrody/publish-npm.ts";
+import { tempDir } from "harness";
+import { join } from "node:path";
 
-const spec = (dir: string) => PACKAGES.find(p => p.dir === dir)!;
+test("publication exports immutable tracked blobs and excludes ignored protected files", async () => {
+  using directory = tempDir("publication-git-source", {
+    "packages/fixture/package.json": "{}",
+    "packages/fixture/index.ts": "export const value = 1;\n",
+    "packages/fixture/.env": "protected-fixture",
+    "packages/fixture/cache.bin": "ignored-fixture",
+    ".gitignore": ".env\ncache.bin\n",
+  });
+  const root = String(directory);
+  const git = (...args: string[]) => {
+    const result = Bun.spawnSync(["git", ...args], { cwd: root, stdout: "pipe", stderr: "pipe" });
+    if (result.exitCode) throw new Error(result.stderr.toString());
+    return result.stdout.toString().trim();
+  };
+  git("init", "--quiet");
+  git("add", ".");
+  git(
+    "-c",
+    "user.name=Fixture",
+    "-c",
+    "user.email=fixture@example.invalid",
+    "commit",
+    "--quiet",
+    "-m",
+    "fixture",
+  );
+  const revision = git("rev-parse", "HEAD");
+  await Bun.write(join(root, "packages/fixture/index.ts"), "dirty working copy");
+  const output = join(root, "tmp", "export");
+  const receipt = await exportTrackedPackage(root, revision, "packages/fixture", output);
+  expect(await Bun.file(join(output, "index.ts")).text()).toBe("export const value = 1;\n");
+  expect(await Bun.file(join(output, ".env")).exists()).toBe(false);
+  expect(await Bun.file(join(output, "cache.bin")).exists()).toBe(false);
+  expect(receipt.files.map((file) => file.path).sort()).toEqual(["index.ts", "package.json"]);
+  await Bun.write(join(output, "unexpected.js"), "generated");
+  await expect(verifyPreparedPackage(output, receipt.files, [])).rejects.toThrow("Undeclared");
+  expect(await verifyPreparedPackage(output, receipt.files, ["unexpected.js"])).toHaveLength(1);
+  await expect(exportTrackedPackage(root, revision, "packages/fixture", output)).rejects.toThrow(
+    "must not exist",
+  );
+  const hashed = Bun.spawnSync(["git", "hash-object", "-w", "--stdin"], {
+    cwd: root,
+    stdin: new TextEncoder().encode("../../outside"),
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  expect(hashed.exitCode).toBe(0);
+  git(
+    "update-index",
+    "--add",
+    "--cacheinfo",
+    `120000,${hashed.stdout.toString().trim()},packages/fixture/escape`,
+  );
+  git(
+    "-c",
+    "user.name=Fixture",
+    "-c",
+    "user.email=fixture@example.invalid",
+    "commit",
+    "--quiet",
+    "-m",
+    "escaping symlink",
+  );
+  await expect(
+    exportTrackedPackage(
+      root,
+      git("rev-parse", "HEAD"),
+      "packages/fixture",
+      join(root, "tmp", "rejected"),
+    ),
+  ).rejects.toThrow("Escaping");
+}, 10000);
+
+test("publication staging rejects checkout roots, ancestors and tracked source directories", () => {
+  using directory = tempDir("publication-staging", {
+    "repository/package.json": "{}",
+    "temporary/keep": "",
+  });
+  const root = join(String(directory), "repository");
+  const temporary = join(String(directory), "temporary");
+  for (const target of [root, String(directory), join(root, "packages", "bun-types")])
+    expect(() => validateOutputDirectory(target, root, temporary)).toThrow("checkout");
+  expect(validateOutputDirectory(join(root, "tmp", "packages"), root, temporary)).toBe(
+    join(root, "tmp", "packages"),
+  );
+  expect(validateOutputDirectory(join(temporary, "packages"), root, temporary)).toBe(
+    join(temporary, "packages"),
+  );
+});
+
+const spec = (dir: string) => PACKAGES.find((p) => p.dir === dir)!;
+
+test("publication requires matching public package, version and uploaded archive integrity", async () => {
+  const expected = { name: "@aphrody/fixture", version: "1.2.3", integrity: "sha512-qualified" };
+  await expect(publicationStatus(new Response(null, { status: 404 }), expected)).resolves.toBe(
+    "pending",
+  );
+  await expect(
+    publicationStatus(
+      Response.json({ ...expected, dist: { integrity: expected.integrity } }),
+      expected,
+    ),
+  ).resolves.toBe("published");
+  await expect(
+    publicationStatus(
+      Response.json({ ...expected, version: "1.2.4", dist: { integrity: expected.integrity } }),
+      expected,
+    ),
+  ).rejects.toThrow("different package or version");
+  await expect(
+    publicationStatus(
+      Response.json({ ...expected, dist: { integrity: "sha512-other" } }),
+      expected,
+    ),
+  ).rejects.toThrow("integrity differs");
+  await expect(publicationStatus(new Response(null, { status: 503 }), expected)).rejects.toThrow(
+    "HTTP 503",
+  );
+});
 
 describe("nextVersion", () => {
   test("stable releases have no Aphrody suffix and advance independent occupied versions", () => {
-    expect(nextStableVersion("1.4.4", ["1.4.3", "1.4.4-aphrody.1"])).toEqual({ next: "1.4.4", previous: undefined });
-    expect(nextStableVersion("0.1.0", ["0.1.0", "0.1.2", "0.2.0"])).toEqual({ next: "0.1.3", previous: "0.1.2" });
+    expect(nextStableVersion("1.4.4", ["1.4.3", "1.4.4-aphrody.1"])).toEqual({
+      next: "1.4.4",
+      previous: undefined,
+    });
+    expect(nextStableVersion("0.1.0", ["0.1.0", "0.1.2", "0.2.0"])).toEqual({
+      next: "0.1.3",
+      previous: "0.1.2",
+    });
     expect(() => nextStableVersion("1.4.4-aphrody.1", [])).toThrow();
   });
   test("starts at aphrody.1", () => {
@@ -22,8 +152,17 @@ describe("nextVersion", () => {
   });
 
   test("increments the highest number for the same base only", () => {
-    const published = ["1.4.3-aphrody.1", "1.4.3-aphrody.10", "1.4.3-aphrody.2", "1.4.2-aphrody.40", "1.4.3"];
-    expect(nextVersion("1.4.3", published)).toEqual({ next: "1.4.3-aphrody.11", previous: "1.4.3-aphrody.10" });
+    const published = [
+      "1.4.3-aphrody.1",
+      "1.4.3-aphrody.10",
+      "1.4.3-aphrody.2",
+      "1.4.2-aphrody.40",
+      "1.4.3",
+    ];
+    expect(nextVersion("1.4.3", published)).toEqual({
+      next: "1.4.3-aphrody.11",
+      previous: "1.4.3-aphrody.10",
+    });
   });
 
   test("dots in the base are literal", () => {
@@ -32,6 +171,34 @@ describe("nextVersion", () => {
 });
 
 describe("publishManifest", () => {
+  test("rejects private products instead of converting them into public packages", () => {
+    expect(() =>
+      publishManifest(
+        { name: "private", version: "1.4.4", private: true },
+        spec("bun-agent-plugin"),
+        "1.4.4",
+        new Map(),
+      ),
+    ).toThrow("private packages cannot be published");
+  });
+
+  test("Windows projections have a platform qualification contract and metadata dependency pin", () => {
+    expect(spec("bun-windows-win32").platform).toBe("win32");
+    expect(spec("bun-windows-advapi32").platform).toBe("win32");
+    const out = publishManifest(
+      {
+        name: "@aphrody/bun-windows-advapi32",
+        version: "1.4.4",
+        dependencies: { "@aphrody/bun-windows-win32": "1.4.4" },
+      },
+      spec("bun-windows-advapi32"),
+      "1.4.4",
+      new Map([["bun-windows-win32", "1.4.4"]]),
+    );
+    expect(out.dependencies).toEqual({ "@aphrody/bun-windows-win32": "1.4.4" });
+    expect(PACKAGES.some((candidate) => candidate.dir === "bun-dotnet")).toBe(false);
+    expect(PACKAGES.some((candidate) => candidate.dir === "bun-vscode")).toBe(false);
+  });
   const resolved = new Map([
     ["bun-types", "1.4.3-aphrody.2"],
     ["bun-inspector-protocol", "0.0.2-aphrody.1"],
@@ -42,8 +209,8 @@ describe("publishManifest", () => {
       {
         name: "@aphrody/bun-plugin-svelte",
         version: "0.0.6",
-        devDependencies: { "@types/bun": "../bun-types", "svelte": "^5.20.4" },
-        dependencies: { "bun-inspector-protocol": "workspace:*", "ws": "^8" },
+        devDependencies: { "@types/bun": "../bun-types", svelte: "^5.20.4" },
+        dependencies: { "bun-inspector-protocol": "workspace:*", ws: "^8" },
         peerDependencies: { "@aphrody/bun-types": "file:../bun-types" },
       },
       spec("bun-plugin-svelte"),
@@ -51,15 +218,23 @@ describe("publishManifest", () => {
       resolved,
     );
     expect(out.version).toBe("0.0.6-aphrody.3");
-    expect(out.devDependencies).toEqual({ "@aphrody/bun-types": "1.4.3-aphrody.2", "svelte": "^5.20.4" });
-    expect(out.dependencies).toEqual({ "@aphrody/bun-inspector-protocol": "0.0.2-aphrody.1", "ws": "^8" });
+    expect(out.devDependencies).toEqual({
+      "@aphrody/bun-types": "1.4.3-aphrody.2",
+      svelte: "^5.20.4",
+    });
+    expect(out.dependencies).toEqual({
+      "@aphrody/bun-inspector-protocol": "0.0.2-aphrody.1",
+      ws: "^8",
+    });
     expect(out.peerDependencies).toEqual({ "@aphrody/bun-types": "1.4.3-aphrody.2" });
     expect(out.repository).toEqual({
       type: "git",
       url: "git+https://github.com/aphrody-labs/bun.git",
       directory: "packages/bun-plugin-svelte",
     });
-    expect(out.homepage).toBe("https://github.com/aphrody-labs/bun/tree/main/packages/bun-plugin-svelte#readme");
+    expect(out.homepage).toBe(
+      "https://github.com/aphrody-labs/bun/tree/main/packages/bun-plugin-svelte#readme",
+    );
     expect(out.bugs).toEqual({ url: "https://github.com/aphrody-labs/bun/issues" });
     expect(out.license).toBe("MIT");
     expect(out.description).toContain("Aphrody runtime, based on Bun");
@@ -75,14 +250,34 @@ describe("publishManifest", () => {
     expect(out.devDependencies).toEqual({ "@aphrody/bun-types": "1.4.3-aphrody.2" });
   });
 
+  test("pins renamed product dependencies using their public package identity", () => {
+    const out = publishManifest(
+      { dependencies: { "@aphrody/next-bun": "workspace:*" } },
+      spec("bun-agent-plugin"),
+      "1.4.4",
+      new Map([["bun-next", "1.4.4"]]),
+    );
+    expect(out.dependencies).toEqual({ "@aphrody/next-bun": "1.4.4" });
+    expect(rewriteSiblingImports('import "../bun-next/index.ts";')).toBe(
+      'import "@aphrody/next-bun";',
+    );
+  });
+
   test("debug adapter gains a pinned dependency on the inspector protocol", () => {
     const out = publishManifest(
-      { name: "@aphrody/bun-debug-adapter-protocol", version: "0.0.1", dependencies: { semver: "^7.5.4" } },
+      {
+        name: "@aphrody/bun-debug-adapter-protocol",
+        version: "0.0.1",
+        dependencies: { semver: "^7.5.4" },
+      },
       spec("bun-debug-adapter-protocol"),
       "0.0.1-aphrody.1",
       resolved,
     );
-    expect(out.dependencies).toEqual({ "semver": "^7.5.4", "@aphrody/bun-inspector-protocol": "0.0.2-aphrody.1" });
+    expect(out.dependencies).toEqual({
+      semver: "^7.5.4",
+      "@aphrody/bun-inspector-protocol": "0.0.2-aphrody.1",
+    });
   });
 
   test("a fork-only package keeps its own npm name and license", () => {
@@ -113,7 +308,9 @@ describe("publishManifest", () => {
       {
         name: "@aphrody/bun-plugin-tailwind",
         version: "0.1.0",
-        exports: { "./postcss": { require: { bun: "./src/postcss.cjs", default: "./dist/postcss.cjs" } } },
+        exports: {
+          "./postcss": { require: { bun: "./src/postcss.cjs", default: "./dist/postcss.cjs" } },
+        },
         dependencies: { "@tailwindcss/node": "^4.3.3" },
         devDependencies: { "@types/bun": "../bun-types" },
       },
@@ -173,7 +370,9 @@ describe("contentHash", () => {
   });
 
   test("changes with the content", () => {
-    expect(contentHash(files("1.0.0-aphrody.1"))).not.toBe(contentHash(files("1.0.0-aphrody.1", "export {};")));
+    expect(contentHash(files("1.0.0-aphrody.1"))).not.toBe(
+      contentHash(files("1.0.0-aphrody.1", "export {};")),
+    );
   });
 
   test("does not depend on entry order", () => {

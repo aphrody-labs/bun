@@ -1,12 +1,451 @@
 import { describe, expect, test } from "bun:test";
 import { tempDir } from "harness";
 import { readFileSync, writeFileSync } from "node:fs";
+import { lstat, readlink, symlink } from "node:fs/promises";
 import { join } from "node:path";
 import { apply, rewrite } from "../../scripts/aphrody/scope.ts";
 import { sync } from "../../scripts/aphrody/sync-upstream.ts";
-import { dependencyOrder, inventory, plan, verifyIntegrity } from "../../scripts/aphrody/monorepo-delivery.ts";
+import {
+  canResumeStep,
+  boundedExecutionCommand,
+  executeDeliveryPlan,
+  executionInputHash,
+  validateExecutionBudget,
+  validateExecutionReceiptPath,
+  dependencyOrder,
+  inventory,
+  plan,
+  sourceQualified,
+  verifyIntegrity,
+  type ExecutionReceipt,
+  type Step,
+} from "../../scripts/aphrody/monorepo-delivery.ts";
 import { createHash } from "node:crypto";
 import { nativePlan } from "../../scripts/aphrody/delivery-native.ts";
+import type { FactoryHostProfile } from "../../scripts/aphrody/build-host.ts";
+
+test("execution receipts refuse tracked source, protected data and escaping symlinks", async () => {
+  using directory = tempDir("delivery-receipt-path", {
+    "source/package.json": "{}",
+    "outside/keep": "protected fixture",
+  });
+  const root = join(String(directory), "source");
+  const git = (...args: string[]) => {
+    const result = Bun.spawnSync(["git", ...args], { cwd: root, stdout: "pipe", stderr: "pipe" });
+    if (result.exitCode) throw new Error(result.stderr.toString());
+  };
+  git("init", "--quiet");
+  git("add", "package.json");
+  await expect(
+    validateExecutionReceiptPath(root, root, join(root, "package.json")),
+  ).rejects.toThrow("tracked");
+  await expect(
+    validateExecutionReceiptPath(root, root, join(root, ".codex", "receipt.json")),
+  ).rejects.toThrow("Protected");
+  await expect(
+    validateExecutionReceiptPath(root, root, join(String(directory), "outside", "receipt.json")),
+  ).rejects.toThrow("isolated");
+  await symlink(
+    join(String(directory), "outside", "keep"),
+    join(root, "receipt-link.json"),
+    "file",
+  );
+  await expect(
+    validateExecutionReceiptPath(root, String(directory), join(root, "receipt-link.json")),
+  ).rejects.toThrow("symlink");
+  expect(await Bun.file(join(String(directory), "outside", "keep")).text()).toBe(
+    "protected fixture",
+  );
+  expect(await validateExecutionReceiptPath(root, root, join(root, "tmp", "receipt.json"))).toBe(
+    join(root, "tmp", "receipt.json"),
+  );
+});
+
+test("delivery bounds real compiler parallelism and refuses unlimited or excessive jobs", () => {
+  expect(boundedExecutionCommand(["bun", "run", "build:release"], 8)).toEqual([
+    "bun",
+    "run",
+    "build:release",
+    "-j8",
+  ]);
+  expect(boundedExecutionCommand(["bun", "run", "build:release", "-j4"], 8)).toEqual([
+    "bun",
+    "run",
+    "build:release",
+    "-j4",
+  ]);
+  for (const flag of [["-j0"], ["-j", "9"], ["--jobs=16"], ["--parallel", "-1"]])
+    expect(() => boundedExecutionCommand(["cargo", "check", ...flag], 8)).toThrow("CPU budget");
+});
+
+test("delivery runner executes real artifacts and resumes only verified output bytes", async () => {
+  using directory = tempDir("delivery-runner", {});
+  const root = String(directory);
+  const source = {
+    revision: "a".repeat(40),
+    rootTree: "b".repeat(40),
+    date: "2026-10-11",
+    version: "1.4.4",
+  };
+  const profile: FactoryHostProfile = {
+    schema: 1,
+    host: "fixture",
+    target: process.platform === "win32" ? "windows-x64" : "linux-x64",
+    factoryRoot: root,
+    sourceTree: source.rootTree,
+    cpu: 2,
+    memoryMiB: 4096,
+    diskMiB: 65536,
+    heavySlots: 1,
+    lightSlots: 1,
+    lockPath: join(root, "heavy.lock"),
+    reserveMemoryMiB: 512,
+    reserveDiskMiB: 8192,
+    observedAt: new Date().toISOString(),
+  };
+  const step: Step = {
+    id: "fixture",
+    command: [
+      "bun",
+      "-e",
+      "const f=Bun.file('counter');const n=await f.exists()?Number(await f.text())+1:1;await Bun.write('counter',String(n));await Bun.write('artifact','qualified-'+n)",
+    ],
+    directory: ".",
+    requires: [],
+    outputs: ["artifact"],
+  };
+  const options = {
+    receiptPath: join(root, "receipt.json"),
+    snapshotHash: "c".repeat(64),
+    resume: true,
+  };
+  await executeDeliveryPlan(root, source, [step], profile, options);
+  expect(await Bun.file(join(root, "counter")).text()).toBe("1");
+  await executeDeliveryPlan(root, source, [step], profile, options);
+  expect(await Bun.file(join(root, "counter")).text()).toBe("1");
+  await Bun.write(join(root, "artifact"), "tampered");
+  await executeDeliveryPlan(root, source, [step], profile, options);
+  expect(await Bun.file(join(root, "counter")).text()).toBe("2");
+  await executeDeliveryPlan(
+    root,
+    { ...source, revision: "d".repeat(40) },
+    [step],
+    profile,
+    options,
+  );
+  expect(await Bun.file(join(root, "counter")).text()).toBe("3");
+}, 10000);
+
+test("delivery scheduler overlaps independent light commands and waits for DAG prerequisites", async () => {
+  using directory = tempDir("delivery-scheduler", {});
+  const root = String(directory);
+  const source = {
+    revision: "a".repeat(40),
+    rootTree: "b".repeat(40),
+    date: "2026-10-11",
+    version: "1.4.4",
+  };
+  const profile: FactoryHostProfile = {
+    schema: 1,
+    host: "fixture",
+    target: process.platform === "win32" ? "windows-x64" : "linux-x64",
+    factoryRoot: root,
+    sourceTree: source.rootTree,
+    cpu: 2,
+    memoryMiB: 4096,
+    diskMiB: 65536,
+    heavySlots: 1,
+    lightSlots: 2,
+    lockPath: join(root, "heavy.lock"),
+    reserveMemoryMiB: 512,
+    reserveDiskMiB: 1024,
+    observedAt: new Date().toISOString(),
+  };
+  let requests = 0;
+  let release!: () => void;
+  const barrier = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const server = Bun.serve({
+    port: 0,
+    async fetch() {
+      if (++requests === 2) release();
+      await barrier;
+      return new Response("ready");
+    },
+  });
+  try {
+    const steps: Step[] = ["first", "second"].map((id) => ({
+      id,
+      directory: ".",
+      requires: [],
+      outputs: [id],
+      command: [
+        "bun",
+        "-e",
+        `const r=await fetch(${JSON.stringify(server.url.href)});await Bun.write(${JSON.stringify(id)},await r.text())`,
+      ],
+    }));
+    steps.push({
+      id: "joined",
+      directory: ".",
+      requires: ["first", "second"],
+      outputs: ["joined"],
+      command: [
+        "bun",
+        "-e",
+        "await Bun.write('joined',await Bun.file('first').text()+'-'+await Bun.file('second').text())",
+      ],
+    });
+    const receipt = await executeDeliveryPlan(root, source, steps, profile, {
+      receiptPath: join(root, "receipt.json"),
+      snapshotHash: "c".repeat(64),
+    });
+    expect(requests).toBe(2);
+    expect(await Bun.file(join(root, "joined")).text()).toBe("ready-ready");
+    expect(receipt.steps.map((step) => step.id).sort()).toEqual(["first", "joined", "second"]);
+    expect(
+      receipt.steps.every(
+        (step) => step.state === "completed" && step.exitCode === 0 && step.outputs.length === 1,
+      ),
+    ).toBe(true);
+  } finally {
+    server.stop(true);
+  }
+}, 10000);
+
+test("delivery budgets remain within the observed host and heavy shared lock", () => {
+  const profile = {
+    host: "vps",
+    target: "linux-x64",
+    cpu: 12,
+    memoryMiB: 46080,
+    diskMiB: 140288,
+    lockPath: "/tmp/factory.lock",
+  };
+  const budget = {
+    host: profile.host,
+    target: profile.target,
+    resourceClass: "heavy" as const,
+    cpu: 8,
+    memoryMiB: 32768,
+    diskMiB: 40960,
+    lockKey: profile.lockPath,
+  };
+  expect(validateExecutionBudget(budget, profile)).toEqual(budget);
+  for (const patch of [
+    { cpu: 0 },
+    { cpu: 13 },
+    { memoryMiB: 46081 },
+    { diskMiB: -1 },
+    { host: "dbfr" },
+    { lockKey: "/tmp/other.lock" },
+  ])
+    expect(() => validateExecutionBudget({ ...budget, ...patch }, profile)).toThrow();
+});
+
+test("delivery resume requires unchanged source, inputs and actual artifact bytes", async () => {
+  using directory = tempDir("delivery-resume", { "output/artifact": "qualified fixture" });
+  const source = {
+    revision: "a".repeat(40),
+    rootTree: "b".repeat(40),
+    date: "2026-10-11",
+    version: "1.4.4",
+  };
+  const snapshotHash = "c".repeat(64);
+  const step: Step = {
+    id: "fixture",
+    command: ["bun", "build"],
+    directory: ".",
+    requires: [],
+    execution: {
+      host: "vps",
+      target: "linux-x64",
+      resourceClass: "light",
+      cpu: 1,
+      memoryMiB: 512,
+      diskMiB: 1024,
+    },
+  };
+  const receipt: ExecutionReceipt = {
+    schema: 1,
+    source,
+    host: "vps",
+    target: "linux-x64",
+    snapshotHash,
+    steps: [
+      {
+        id: step.id,
+        inputHash: executionInputHash(source, step, snapshotHash, []),
+        state: "completed",
+        exitCode: 0,
+        outputs: [
+          {
+            path: "output/artifact",
+            sha256: createHash("sha256").update("qualified fixture").digest("hex"),
+          },
+        ],
+        startedAt: "2026-10-11T00:00:00Z",
+        endedAt: "2026-10-11T00:00:01Z",
+      },
+    ],
+  };
+  expect(await canResumeStep(String(directory), source, step, snapshotHash, [], receipt)).toBe(
+    true,
+  );
+  expect(
+    await canResumeStep(
+      String(directory),
+      { ...source, revision: "d".repeat(40) },
+      step,
+      snapshotHash,
+      [],
+      receipt,
+    ),
+  ).toBe(false);
+  expect(
+    await canResumeStep(
+      String(directory),
+      source,
+      { ...step, command: ["bun", "test"] },
+      snapshotHash,
+      [],
+      receipt,
+    ),
+  ).toBe(false);
+  expect(
+    await canResumeStep(
+      String(directory),
+      source,
+      step,
+      snapshotHash,
+      ["changed dependency"],
+      receipt,
+    ),
+  ).toBe(false);
+  receipt.steps[0].exitCode = 1;
+  expect(await canResumeStep(String(directory), source, step, snapshotHash, [], receipt)).toBe(
+    false,
+  );
+  receipt.steps[0].exitCode = 0;
+  await Bun.write(join(String(directory), "output/artifact"), "tampered artifact");
+  expect(await canResumeStep(String(directory), source, step, snapshotHash, [], receipt)).toBe(
+    false,
+  );
+});
+
+test("registry existence does not qualify source provenance or a dry-run receipt", () => {
+  const revision = "a".repeat(40);
+  const record = {
+    name: "@aphrody/fixture",
+    version: "1.4.4",
+    dist: { integrity: "sha512-pinned" },
+  };
+  const entry = {
+    name: record.name,
+    version: record.version,
+    sourceRevision: revision,
+    sourceVerified: true,
+    integrity: record.dist.integrity,
+    contentHash: "b".repeat(64),
+    action: "unchanged",
+  };
+  expect(sourceQualified(revision, record)).toBe(false);
+  expect(sourceQualified(revision, { ...record, gitHead: revision })).toBe(true);
+  expect(sourceQualified(revision, record, { sourceRevision: revision, packages: [entry] })).toBe(
+    true,
+  );
+  for (const patch of [
+    { sourceRevision: "c".repeat(40) },
+    { sourceVerified: false },
+    { integrity: "sha512-changed" },
+    { action: "dry-run" },
+    { contentHash: "unqualified" },
+  ])
+    expect(
+      sourceQualified(revision, record, {
+        sourceRevision: revision,
+        packages: [{ ...entry, ...patch }],
+      }),
+    ).toBe(false);
+});
+import { vendorApply, vendorPlan } from "../../scripts/aphrody/vendor-oxc.ts";
+
+describe("immutable OXC vendoring", () => {
+  test("local tracked-source export preserves hashes and refuses drift or an unrelated target", async () => {
+    using source = tempDir("vendor-source", {
+      LICENSE: "MIT\n",
+      "Cargo.toml": "[workspace]\n",
+      "source.rs": "pub fn owner() {}\n",
+      "fixtures/node_modules/example/index.js": "export default 1;\n",
+      ".gitattributes": "source.rs text eol=crlf\n",
+      "ignored.cache": "not source",
+    });
+    using workspace = tempDir("vendor-workspace", {});
+    async function git(args: string[]) {
+      const proc = Bun.spawn(["git", "-C", String(source), ...args], {
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [stdout, stderr, code] = await Promise.all([
+        Bun.readableStreamToText(proc.stdout),
+        Bun.readableStreamToText(proc.stderr),
+        proc.exited,
+      ]);
+      if (code !== 0) throw new Error(stderr);
+      expect(code).toBe(0);
+      return stdout.trim();
+    }
+    await git(["init", "--quiet"]);
+    await symlink("source.rs", join(String(source), "link.rs"), "file");
+    await git([
+      "add",
+      "LICENSE",
+      "Cargo.toml",
+      "source.rs",
+      "fixtures/node_modules/example/index.js",
+      ".gitattributes",
+      "link.rs",
+    ]);
+    await git([
+      "-c",
+      "user.name=aphrody-dev",
+      "-c",
+      "user.email=contact@aphrody.com",
+      "commit",
+      "--quiet",
+      "-m",
+      "source fixture",
+    ]);
+    const revision = await git(["rev-parse", "HEAD"]);
+    const options = {
+      workspace: String(workspace),
+      source: String(source),
+      target: join(String(workspace), "vendor/oxc"),
+      revision,
+    };
+    const plan = await vendorPlan(options);
+    expect(plan.trackedFiles).toBe(6);
+    expect(plan.symlinks).toBe(1);
+    expect(await Bun.file(join(options.target, "source.rs")).exists()).toBe(false);
+    await expect(
+      vendorPlan({ ...options, target: join(String(workspace), "unrelated") }),
+    ).rejects.toThrow("vendor/oxc");
+    const applied = await vendorApply(options);
+    expect(applied.archiveSha256).toMatch(/^[a-f0-9]{64}$/);
+    expect((await lstat(join(options.target, "link.rs"))).isSymbolicLink()).toBe(true);
+    expect(await readlink(join(options.target, "link.rs"))).toBe("source.rs");
+    expect(await Bun.file(join(options.target, "source.rs")).text()).toBe("pub fn owner() {}\n");
+    expect(await Bun.file(join(options.target, "ignored.cache")).exists()).toBe(false);
+    expect((await vendorApply(options)).unchanged).toBe(true);
+    expect(
+      await Bun.file(join(options.target, "fixtures/node_modules/example/index.js")).text(),
+    ).toBe("export default 1;\n");
+    await Bun.write(join(options.target, "source.rs"), "changed\n");
+    await expect(vendorApply(options)).rejects.toThrow("integrity differs");
+    expect(await Bun.file(join(options.target, "source.rs")).text()).toBe("changed\n");
+  });
+});
 
 describe("scope rewrite", () => {
   test("a manifest renames itself and local dependencies, not registry ones", () => {
@@ -126,9 +565,9 @@ describe("monorepo delivery", () => {
     const runtime = nativePlan(root, "aphrody-labs/bun-os", "main", "runtime");
     expect(runtime.inputs["publish-npm"]).toBe("false");
     expect(runtime.blockers[0]).toContain("publishes GitHub release assets");
-    expect(nativePlan(root, "aphrody-labs/bun-os", "main", "runtime", true, "1.4.5").blockers[0]).toContain(
-      "differs from source",
-    );
+    expect(
+      nativePlan(root, "aphrody-labs/bun-os", "main", "runtime", true, "1.4.5").blockers[0],
+    ).toContain("differs from source");
   });
 
   test("inventory reads immutable Git manifests, excludes regression fixtures, and retains lock checksums", () => {
@@ -137,7 +576,10 @@ describe("monorepo delivery", () => {
       "Cargo.toml": "[workspace]\nresolver = '3'\n",
       "Cargo.lock":
         "version = 4\n[[package]]\nname = 'external'\nversion = '1.2.3'\nsource = 'registry+https://github.com/rust-lang/crates.io-index'\nchecksum = 'abc'\n",
-      "packages/bun-types/package.json": JSON.stringify({ name: "@aphrody/bun-types", version: "1.4.4" }),
+      "packages/bun-types/package.json": JSON.stringify({
+        name: "@aphrody/bun-types",
+        version: "1.4.4",
+      }),
       "test/fixtures/package.json": "invalid syntax intentionally",
       "vendor/native/LICENSE": "License notice retained",
       "scripts/build/deps/native.ts":
@@ -150,16 +592,31 @@ describe("monorepo delivery", () => {
     git(root, "add", "-A");
     git(root, "commit", "--quiet", "-m", "source");
     const first = inventory(root);
-    writeFileSync(join(root, "packages/bun-types/package.json"), JSON.stringify({ name: "wrong", version: "99" }));
+    writeFileSync(
+      join(root, "packages/bun-types/package.json"),
+      JSON.stringify({ name: "wrong", version: "99" }),
+    );
     expect(inventory(root)).toEqual(first);
-    expect(first.products.map(p => p.name)).toEqual(["bun", "@aphrody/bun-types"]);
+    expect(first.products.map((p) => p.name)).toEqual(["bun", "@aphrody/bun-types"]);
     expect(first.external[0]).toMatchObject({ name: "external", checksum: "abc" });
     expect(first.vendors[0]?.tree).toMatch(/^[0-9a-f]{40}$/);
     expect(first.nativeRecipes[0]?.repositories).toEqual(["https://github.com/owner/native"]);
-    expect(plan(first, "release-check").steps.find(s => s.id === "npm")?.command).toContain("--dry-run");
-    expect(plan(first, "release-check").steps.some(s => s.command.includes("--publish"))).toBe(false);
+    expect(plan(first, "release-check").steps.find((s) => s.id === "npm")?.command).toContain(
+      "--dry-run",
+    );
+    expect(plan(first, "release-check").steps.find((s) => s.id === "npm")?.command).toContain(
+      "--stable",
+    );
+    expect(plan(first, "release-publish").steps.find((s) => s.id === "npm")?.command).toContain(
+      "--stable",
+    );
+    expect(plan(first, "release-check").steps.some((s) => s.command.includes("--publish"))).toBe(
+      false,
+    );
     const build = plan(first, "build", root);
-    expect(build.steps.find(s => s.id === "pack:@aphrody/bun-types")?.command).toContain("--ignore-scripts");
+    expect(build.steps.find((s) => s.id === "pack:@aphrody/bun-types")?.command).toContain(
+      "--ignore-scripts",
+    );
     expect(build.unsupported).toEqual([]);
   });
 
@@ -168,7 +625,7 @@ describe("monorepo delivery", () => {
       dependencyOrder([
         { name: "consumer", dependencies: ["base"] },
         { name: "base", dependencies: [] },
-      ]).map(p => p.name),
+      ]).map((p) => p.name),
     ).toEqual(["base", "consumer"]);
     expect(() =>
       dependencyOrder([
@@ -182,7 +639,9 @@ describe("monorepo delivery", () => {
     const original = new TextEncoder().encode("qualified tarball");
     const integrity = `sha512-${createHash("sha512").update(original).digest("base64")}`;
     expect(() => verifyIntegrity(original, integrity)).not.toThrow();
-    expect(() => verifyIntegrity(new TextEncoder().encode("changed tarball"), integrity)).toThrow("integrity mismatch");
+    expect(() => verifyIntegrity(new TextEncoder().encode("changed tarball"), integrity)).toThrow(
+      "integrity mismatch",
+    );
     expect(() => verifyIntegrity(original, "sha1-legacy")).toThrow("unsupported digest");
   });
 });
@@ -194,8 +653,14 @@ describe("sync-upstream", () => {
 
     git(root, "checkout", "--quiet", "upstream");
     writeFileSync(join(root, README), "# bun-plugin-yaml\n\nbun add bun-plugin-yaml@2\n\nUsage.\n");
-    writeFileSync(join(root, MANIFEST), `{\n  "name": "bun-plugin-yaml",\n  "version": "2.0.0"\n}\n`);
-    writeFileSync(join(root, "packages/bun-plugin-yaml/index.ts"), `export const name = "bun-plugin-yaml";\n`);
+    writeFileSync(
+      join(root, MANIFEST),
+      `{\n  "name": "bun-plugin-yaml",\n  "version": "2.0.0"\n}\n`,
+    );
+    writeFileSync(
+      join(root, "packages/bun-plugin-yaml/index.ts"),
+      `export const name = "bun-plugin-yaml";\n`,
+    );
     git(root, "add", "-A");
     git(root, "commit", "--quiet", "-m", "upstream: v2");
 
@@ -226,15 +691,25 @@ describe("sync-upstream", () => {
     using _ = dir;
 
     git(root, "checkout", "--quiet", "upstream");
-    writeFileSync(join(root, README), "# bun-plugin-yaml\n\nbun add bun-plugin-yaml\n\nUpstream usage.\n");
+    writeFileSync(
+      join(root, README),
+      "# bun-plugin-yaml\n\nbun add bun-plugin-yaml\n\nUpstream usage.\n",
+    );
     git(root, "commit", "--quiet", "-am", "upstream: usage");
 
     git(root, "checkout", "--quiet", "main");
-    writeFileSync(join(root, README), "# bun-plugin-yaml\n\nbun add bun-plugin-yaml\n\nFork usage.\n");
+    writeFileSync(
+      join(root, README),
+      "# bun-plugin-yaml\n\nbun add bun-plugin-yaml\n\nFork usage.\n",
+    );
     git(root, "commit", "--quiet", "-am", "fork: usage");
     const before = git(root, "rev-parse", "HEAD");
 
-    expect(await sync(options(root))).toEqual({ status: "conflicts", behind: 1, conflicts: [README] });
+    expect(await sync(options(root))).toEqual({
+      status: "conflicts",
+      behind: 1,
+      conflicts: [README],
+    });
     expect(git(root, "rev-parse", "HEAD")).toBe(before);
     expect(git(root, "status", "--porcelain")).toBe("");
   }, 30000);
@@ -249,7 +724,10 @@ describe("sync-upstream", () => {
 
     git(root, "checkout", "--quiet", "upstream");
     writeFileSync(join(root, "README.md"), "# Bun\n\nNew upstream intro.\n");
-    writeFileSync(join(root, README), "# bun-plugin-yaml\n\nbun add bun-plugin-yaml\n\nUpstream usage.\n");
+    writeFileSync(
+      join(root, README),
+      "# bun-plugin-yaml\n\nbun add bun-plugin-yaml\n\nUpstream usage.\n",
+    );
     git(root, "commit", "--quiet", "-am", "upstream: readme");
 
     git(root, "checkout", "--quiet", "main");
@@ -259,13 +737,19 @@ describe("sync-upstream", () => {
 
     const result = await sync(options(root));
 
-    expect(result).toMatchObject({ status: "merged", behind: 1, kept: ["README.md"], pushed: false });
+    expect(result).toMatchObject({
+      status: "merged",
+      behind: 1,
+      kept: ["README.md"],
+      pushed: false,
+    });
     expect({
       readme: readFileSync(join(root, "README.md"), "utf8"),
       package: readFileSync(join(root, README), "utf8"),
     }).toEqual({
       readme: "# Aphrody runtime\n\nComponent intro.\n",
-      package: "# @aphrody/bun-plugin-yaml\n\nbun add @aphrody/bun-plugin-yaml\n\nUpstream usage.\n",
+      package:
+        "# @aphrody/bun-plugin-yaml\n\nbun add @aphrody/bun-plugin-yaml\n\nUpstream usage.\n",
     });
     expect(git(root, "status", "--porcelain")).toBe("");
   }, 30000);

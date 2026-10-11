@@ -1,6 +1,6 @@
 // Generates the bun:windows WinRT families from the local Windows SDK metadata:
 //   bun scripts/aphrody/winrt/gen.ts [--sdk 10.0.26100.0] [--all] Windows.System.Profile Windows.Storage ...
-//   bun scripts/aphrody/winrt/gen.ts --winmd <framework>/Microsoft.UI.Xaml.winmd --version 1.8 Microsoft.UI.Xaml ...
+//   bun scripts/aphrody/winrt/gen.ts --winmd <framework>/Microsoft.UI.Xaml.winmd Microsoft.UI.Xaml ...
 // Each namespace becomes packages/bun-windows-winrt-<namespace>, loaded by windows.family("winrt-<namespace>").
 // Only data derived from Windows.winmd is written; SDK headers are never copied.
 import { readFileSync } from "node:fs";
@@ -18,10 +18,10 @@ const versionArg = versionIndex >= 0 ? args.splice(versionIndex, 2)[1] : undefin
 const kits = process.env.WindowsSdkDir ?? "C:/Program Files (x86)/Windows Kits/10";
 const winmdPath = winmdArg ?? join(kits, "UnionMetadata", sdk, "Windows.winmd");
 const source = winmdArg ? require("node:path").basename(winmdArg) : `UnionMetadata\\${sdk}\\Windows.winmd`;
-// The Windows SDK folder name has 4 dot-separated numbers ("10.0.26100.0"); npm requires strict
-// semver (3 numbers, optional prerelease) and `npm publish` rejects a 4th component outright.
-const packageVersion = versionArg ?? sdk.replace(/^(\d+\.\d+\.\d+)\.0$/, "$1");
 const repo = join(import.meta.dir, "..", "..", "..");
+const packageVersion = JSON.parse(readFileSync(join(repo, "package.json"), "utf8")).version;
+if (versionArg !== undefined && versionArg !== packageVersion)
+  throw new Error(`--version must match the Bun product release ${packageVersion}`);
 
 export function familyName(ns: string) {
   return `winrt-${ns.toLowerCase().replaceAll(".", "-")}`;

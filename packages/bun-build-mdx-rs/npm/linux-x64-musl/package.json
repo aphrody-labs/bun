@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-mdx-rs-linux-x64-musl",
-  "version": "0.0.0",
+  "version": "1.4.4",
   "os": [
     "linux"
   ],

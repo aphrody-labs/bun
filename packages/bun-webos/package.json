@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-webos",
-  "version": "0.1.0",
+  "version": "1.4.4",
   "private": true,
   "description": "WebOS served by Bun: every app calls a native Bun API (Bun.serve, Bun Shell, Bun.Terminal, bun:sqlite, bun:ffi, Bun.Archive, Bun.Glob, Bun.markdown, workers)",
   "license": "Apache-2.0",

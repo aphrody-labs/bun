@@ -16,15 +16,185 @@
 // platform, publish-mdx-rs.ts) and @aphrody/web-inspector-bun (built from a
 // WebKit checkout, publish-web-inspector.ts).
 
-import { cpSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import {
+  chmodSync,
+  cpSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  readlinkSync,
+  realpathSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 import { generate } from "../../packages/bun-agent-plugin/src/generate.ts";
 import { SCOPE } from "./scope.ts";
 
 const ROOT = join(import.meta.dir, "..", "..");
 const REPO = "aphrody-labs/bun";
-const DEP_FIELDS = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"] as const;
+const DEP_FIELDS = [
+  "dependencies",
+  "devDependencies",
+  "peerDependencies",
+  "optionalDependencies",
+] as const;
+
+export function validateOutputDirectory(output: string, root = ROOT, temporary = tmpdir()): string {
+  const canonical = (input: string): string => {
+    let existing = resolve(input);
+    const suffix: string[] = [];
+    while (!existsSync(existing)) {
+      const parent = dirname(existing);
+      if (parent === existing) throw new Error(`Output has no existing ancestor: ${input}`);
+      suffix.unshift(basename(existing));
+      existing = parent;
+    }
+    return resolve(realpathSync(existing), ...suffix);
+  };
+  const inside = (parent: string, child: string) => {
+    const path = relative(parent, child);
+    return (
+      path === "" ||
+      (!isAbsolute(path) &&
+        path !== ".." &&
+        !path.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`))
+    );
+  };
+  const checkout = canonical(root);
+  const destination = canonical(output);
+  const workspaceOutput = canonical(join(root, "tmp"));
+  if (
+    inside(destination, checkout) ||
+    (inside(checkout, destination) && !inside(workspaceOutput, destination))
+  )
+    throw new Error("Output must not overwrite the checkout or its tracked package sources");
+  const allowed = [
+    workspaceOutput,
+    canonical(temporary),
+    ...(process.env.RUNNER_TEMP ? [canonical(process.env.RUNNER_TEMP)] : []),
+  ];
+  if (!allowed.some((directory) => inside(directory, destination)))
+    throw new Error(
+      "Output must remain inside checkout tmp, the host temporary directory or RUNNER_TEMP",
+    );
+  return destination;
+}
+
+export async function exportTrackedPackage(
+  root: string,
+  revision: string,
+  directory: string,
+  destination: string,
+) {
+  if (!/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(revision) || !/^packages\/[^/\\:]+$/.test(directory))
+    throw new Error("Expected an immutable source revision and one package directory");
+  validateOutputDirectory(destination, root);
+  if (existsSync(destination)) throw new Error("Package export destination must not exist");
+  const listing = run(
+    ["git", "ls-tree", "-rz", "--long", "--full-tree", revision, "--", directory],
+    root,
+  );
+  const entries = listing
+    .split("\0")
+    .filter(Boolean)
+    .map((line) => {
+      const match = /^(100644|100755|120000) blob ([a-f0-9]+)\s+(\d+)\t(.+)$/.exec(line);
+      if (!match) throw new Error("Unsupported package source entry");
+      const [, mode, blob, size, sourcePath] = match;
+      if (!mode || !blob || !size || !sourcePath || !sourcePath.startsWith(directory + "/"))
+        throw new Error("Unsupported package source entry");
+      const path = sourcePath.slice(directory.length + 1);
+      if (
+        path
+          .split("/")
+          .some(
+            (part) =>
+              ["..", ".ssh", ".codex", ".claude", ".aphrody", "cookies", "sessions"].includes(
+                part,
+              ) ||
+              part === ".env" ||
+              part.startsWith(".env.") ||
+              /\.(?:pem|key|p12|sqlite|safetensors|gguf)$/i.test(part),
+          )
+      )
+        throw new Error(`Protected package source: ${path}`);
+      return { path, mode, blob, size: Number(size) };
+    });
+  if (!entries.length) throw new Error(`No tracked package sources: ${directory}`);
+  const child = Bun.spawn(["git", "-C", root, "cat-file", "--batch"], {
+    stdin: new Blob([entries.map((entry) => entry.blob + "\n").join("")]),
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [buffer, stderr, code] = await Promise.all([
+    new Response(child.stdout).arrayBuffer(),
+    Bun.readableStreamToText(child.stderr),
+    child.exited,
+  ]);
+  if (code) throw new Error(`Package blob export failed: ${stderr.trim()}`);
+  const bytes = new Uint8Array(buffer);
+  let offset = 0;
+  const files = entries.map((entry) => {
+    const end = bytes.indexOf(10, offset);
+    const header = new TextDecoder().decode(bytes.subarray(offset, end));
+    if (end < offset || header !== `${entry.blob} blob ${entry.size}`)
+      throw new Error(`Package blob header differs: ${entry.path}`);
+    offset = end + 1;
+    const data = bytes.subarray(offset, offset + entry.size);
+    const hash = new Bun.CryptoHasher(entry.blob.length === 64 ? "sha256" : "sha1")
+      .update(`blob ${data.length}\0`)
+      .update(data)
+      .digest("hex");
+    if (data.length !== entry.size || hash !== entry.blob)
+      throw new Error(`Package blob hash differs: ${entry.path}`);
+    offset += entry.size;
+    if (bytes[offset++] !== 10) throw new Error(`Package blob separator differs: ${entry.path}`);
+    return { ...entry, data, sha256: new Bun.CryptoHasher("sha256").update(data).digest("hex") };
+  });
+  if (offset !== bytes.length) throw new Error("Unexpected package blob trailing bytes");
+  const byPath = new Map(files.map((file) => [file.path, file]));
+  for (const file of files.filter((file) => file.mode === "120000")) {
+    let current = file;
+    const seen = new Set<string>();
+    while (current.mode === "120000") {
+      if (seen.has(current.path)) throw new Error(`Cyclic package symlink: ${file.path}`);
+      seen.add(current.path);
+      const link = new TextDecoder("utf-8", { fatal: true }).decode(current.data);
+      if (posix.isAbsolute(link) || /[\\:\0]/.test(link))
+        throw new Error(`Escaping package symlink: ${file.path}`);
+      const target = posix.normalize(posix.join(posix.dirname(current.path), link));
+      if (target === ".." || target.startsWith("../") || !byPath.has(target))
+        throw new Error(`Escaping or untracked package symlink: ${file.path}`);
+      current = byPath.get(target)!;
+    }
+  }
+  for (const file of files.filter((file) => file.mode !== "120000")) {
+    const target = join(destination, file.path);
+    mkdirSync(dirname(target), { recursive: true });
+    await Bun.write(target, file.data);
+    chmodSync(target, file.mode === "100755" ? 0o755 : 0o644);
+  }
+  for (const file of files.filter((file) => file.mode === "120000")) {
+    const target = join(destination, file.path);
+    mkdirSync(dirname(target), { recursive: true });
+    symlinkSync(new TextDecoder("utf-8", { fatal: true }).decode(file.data), target, "file");
+  }
+  return {
+    sourceRevision: revision,
+    directory,
+    files: files.map((file) => ({
+      path: file.path,
+      mode: file.mode,
+      blob: file.blob,
+      size: file.size,
+      sha256: file.sha256,
+    })),
+  };
+}
 
 export interface PackageSpec {
   /** Directory under packages/, also the upstream npm name. */
@@ -35,6 +205,9 @@ export interface PackageSpec {
   bunVersion?: boolean;
   /** Preparation invokes a build; excluded from no-build publication. */
   requiresBuild?: boolean;
+  buildOutputs?: string[];
+  /** Read-only projections qualified by importing them on native Windows. */
+  platform?: "win32";
   /** Fork packages imported by the published sources but not listed in the manifest. */
   addDependencies?: string[];
   /** Manifest fields set for publication. */
@@ -43,7 +216,12 @@ export interface PackageSpec {
 }
 
 function run(cmd: string[], cwd: string, env: Record<string, string> = {}) {
-  const proc = Bun.spawnSync(cmd, { cwd, env: { ...process.env, ...env }, stdout: "pipe", stderr: "pipe" });
+  const proc = Bun.spawnSync(cmd, {
+    cwd,
+    env: { ...process.env, ...env },
+    stdout: "pipe",
+    stderr: "pipe",
+  });
   if (proc.exitCode !== 0) {
     throw new Error(`${cmd.join(" ")} failed (${proc.exitCode}):\n${proc.stdout}\n${proc.stderr}`);
   }
@@ -53,22 +231,36 @@ function run(cmd: string[], cwd: string, env: Record<string, string> = {}) {
 export const PACKAGES: PackageSpec[] = [
   {
     dir: "bun-types",
+    buildOutputs: ["package.json", "CLAUDE.md", "docs/"],
     bunVersion: true,
     requiresBuild: true,
-    fields: { description: "Type definitions and documentation for Bun (Aphrody runtime, based on Bun)" },
+    fields: {
+      description: "Type definitions and documentation for Bun (Aphrody runtime, based on Bun)",
+    },
     // Generates CLAUDE.md and docs/ next to the .d.ts files, as release.yml does upstream.
     prepare: (staging, { base }) =>
-      void run([process.execPath, "scripts/build.ts", staging], join(ROOT, "packages", "bun-types"), {
-        BUN_VERSION: base,
-      }),
+      void run(
+        [process.execPath, "scripts/build.ts", staging],
+        join(ROOT, "packages", "bun-types"),
+        {
+          BUN_VERSION: base,
+        },
+      ),
   },
   {
     dir: "bun-inspector-protocol",
+    buildOutputs: [
+      "src/inspector/node-socket-framer.ts",
+      "src/inspector/node-socket.ts",
+      "index.js",
+    ],
     requiresBuild: true,
-    fields: { description: "WebKit Inspector Protocol client for Bun (Aphrody runtime, based on Bun)" },
+    fields: {
+      description: "WebKit Inspector Protocol client for Bun (Aphrody runtime, based on Bun)",
+    },
     // node-socket.ts borrows the framer from the debug adapter, which itself
     // depends on this package: ship a copy instead of a dependency cycle.
-    prepare: async staging => {
+    prepare: async (staging) => {
       const framer = "src/debugger/node-socket-framer.ts";
       cpSync(
         join(ROOT, "packages", "bun-debug-adapter-protocol", framer),
@@ -80,7 +272,8 @@ export const PACKAGES: PackageSpec[] = [
         /(["'])(?:\.\.\/)+bun-debug-adapter-protocol\/src\/debugger\/node-socket-framer\.js\1/,
         "$1./node-socket-framer.js$1",
       );
-      if (next === text) throw new Error("bun-inspector-protocol: node-socket.ts no longer imports the framer");
+      if (next === text)
+        throw new Error("bun-inspector-protocol: node-socket.ts no longer imports the framer");
       await Bun.write(socket, next);
       run(
         [
@@ -98,6 +291,7 @@ export const PACKAGES: PackageSpec[] = [
   },
   {
     dir: "bun-debug-adapter-protocol",
+    buildOutputs: ["src/"],
     addDependencies: ["bun-inspector-protocol"],
     fields: {
       description: "Debug Adapter Protocol implementation for Bun (Aphrody runtime, based on Bun)",
@@ -107,7 +301,7 @@ export const PACKAGES: PackageSpec[] = [
     },
     // The sources reach into the inspector package through the monorepo; once
     // published they import it from npm instead.
-    prepare: async staging => {
+    prepare: async (staging) => {
       for (const file of new Bun.Glob("src/**/*.ts").scanSync({ cwd: staging })) {
         const path = join(staging, file);
         const text = await Bun.file(path).text();
@@ -133,16 +327,20 @@ export const PACKAGES: PackageSpec[] = [
     // Fork-only: Playwright-shaped page over Bun.WebView (moved from the aphrody monorepo).
     dir: "bun-webview-page",
     fields: {
-      description: "Playwright-shaped page, locators and routing over Bun.WebView (Aphrody runtime, based on Bun)",
+      description:
+        "Playwright-shaped page, locators and routing over Bun.WebView (Aphrody runtime, based on Bun)",
     },
   },
   {
     // Fork-only: Tailwind CSS v4 for Bun.build, the HTML dev server and PostCSS.
     dir: "bun-plugin-tailwind",
+    buildOutputs: ["dist/"],
     requiresBuild: true,
-    fields: { description: "Tailwind CSS v4 plugin for Bun and PostCSS (Aphrody runtime, based on Bun)" },
+    fields: {
+      description: "Tailwind CSS v4 plugin for Bun and PostCSS (Aphrody runtime, based on Bun)",
+    },
     // dist/ holds the Node.js build (ES modules and the CommonJS PostCSS plugin).
-    prepare: staging => {
+    prepare: (staging) => {
       const dir = join(ROOT, "packages", "bun-plugin-tailwind");
       run([process.execPath, "install", "--frozen-lockfile"], dir);
       run([process.execPath, "scripts/build.ts", join(staging, "dist")], dir);
@@ -150,12 +348,15 @@ export const PACKAGES: PackageSpec[] = [
   },
   { dir: "bun-fluent" },
   { dir: "bun-icons" },
+  { dir: "bun-plugin-neon" },
+  { dir: "bun-plugin-supabase" },
   { dir: "bun-runtime-sdk" },
   {
     dir: "bun-agent-plugin",
+    buildOutputs: ["plugins/"],
     bunVersion: true,
     fields: { files: ["bin", "src", "memory", "plugins", "README.md"] },
-    prepare: async staging => {
+    prepare: async (staging) => {
       const files = generate({ root: ROOT, pkg: join(ROOT, "packages/bun-agent-plugin") });
       for (const [path, contents] of files) {
         const destination = join(staging, "plugins", path);
@@ -166,12 +367,23 @@ export const PACKAGES: PackageSpec[] = [
   },
 ];
 
+for (const dir of readdirSync(join(ROOT, "packages"))
+  .filter((name) => name.startsWith("bun-windows-"))
+  .sort((a, b) =>
+    a === "bun-windows-win32" ? -1 : b === "bun-windows-win32" ? 1 : a.localeCompare(b),
+  )) {
+  const manifest = JSON.parse(readFileSync(join(ROOT, "packages", dir, "package.json"), "utf8"));
+  if (manifest.name !== `${SCOPE}/${dir}` || manifest.private === true)
+    throw new Error(`Windows projection owner mismatch: ${dir}`);
+  PACKAGES.push({ dir, platform: "win32" });
+}
+
 /** The scoped npm name of a fork package. */
 export function npmName(spec: PackageSpec): string {
   return `${SCOPE}/${spec.name ?? spec.dir}`;
 }
 
-const FORK_NAMES = new Set(PACKAGES.map(p => p.dir));
+const FORK_NAMES = new Set(PACKAGES.map((p) => p.dir));
 
 /** Replaces relative imports of sibling fork packages with their scoped npm name. */
 export function rewriteSiblingImports(code: string): string {
@@ -179,29 +391,39 @@ export function rewriteSiblingImports(code: string): string {
     /(["'])(?:\.\.\/)+([\w-]+)\/(index\.ts["']|[^"']*)/g,
     (match, quote: string, dir: string, rest: string) => {
       if (!FORK_NAMES.has(dir)) return match;
-      return rest.startsWith("index.ts") ? `${quote}${SCOPE}/${dir}${quote}` : `${quote}${SCOPE}/${dir}/${rest}`;
+      const name = npmName(PACKAGES.find((spec) => spec.dir === dir)!);
+      return rest.startsWith("index.ts") ? `${quote}${name}${quote}` : `${quote}${name}/${rest}`;
     },
   );
 }
 
 /** Next `<base>-aphrody.<n>` version and the newest existing one for that base. */
-export function nextVersion(base: string, published: Iterable<string>): { next: string; previous?: string } {
+export function nextVersion(
+  base: string,
+  published: Iterable<string>,
+): { next: string; previous: string | undefined } {
   const re = new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}-aphrody\\.(\\d+)$`);
   let max = 0;
   for (const v of published) {
     const m = re.exec(v);
     if (m) max = Math.max(max, Number(m[1]));
   }
-  return { next: `${base}-aphrody.${max + 1}`, previous: max ? `${base}-aphrody.${max}` : undefined };
+  return {
+    next: `${base}-aphrody.${max + 1}`,
+    previous: max ? `${base}-aphrody.${max}` : undefined,
+  };
 }
 
-export function nextStableVersion(base: string, published: Iterable<string>): { next: string; previous?: string } {
+export function nextStableVersion(
+  base: string,
+  published: Iterable<string>,
+): { next: string; previous: string | undefined } {
   if (!/^\d+\.\d+\.\d+$/.test(base)) throw new Error(`Stable package base must be X.Y.Z: ${base}`);
-  const [major, minor, patch] = base.split(".").map(Number);
+  const [major = 0, minor = 0, patch = 0] = base.split(".").map(Number);
   let latest = -1;
   for (const version of published) {
     if (!/^\d+\.\d+\.\d+$/.test(version)) continue;
-    const [a, b, c] = version.split(".").map(Number);
+    const [a, b, c = 0] = version.split(".").map(Number);
     if (a === major && b === minor && c >= patch) latest = Math.max(latest, c);
   }
   return {
@@ -211,8 +433,13 @@ export function nextStableVersion(base: string, published: Iterable<string>): { 
 }
 
 function forkName(dep: string): string | undefined {
-  const short = dep === "@types/bun" ? "bun-types" : dep.startsWith(`${SCOPE}/`) ? dep.slice(SCOPE.length + 1) : dep;
-  return FORK_NAMES.has(short) ? short : undefined;
+  const short =
+    dep === "@types/bun"
+      ? "bun-types"
+      : dep.startsWith(`${SCOPE}/`)
+        ? dep.slice(SCOPE.length + 1)
+        : dep;
+  return PACKAGES.find((spec) => spec.dir === short || spec.name === short)?.dir;
 }
 
 /**
@@ -226,6 +453,7 @@ export function publishManifest(
   version: string,
   resolved: ReadonlyMap<string, string>,
 ): Record<string, any> {
+  if (pkg.private === true) throw new Error(`${spec.dir}: private packages cannot be published`);
   const out: Record<string, any> = { ...pkg, name: npmName(spec), version };
   for (const field of DEP_FIELDS) {
     const deps = pkg[field];
@@ -238,8 +466,9 @@ export function publishManifest(
         continue;
       }
       const pinned = resolved.get(fork);
-      if (!pinned) throw new Error(`${spec.dir}: ${field}.${dep} needs ${fork}, which is not published yet`);
-      next[`${SCOPE}/${fork}`] = pinned;
+      if (!pinned)
+        throw new Error(`${spec.dir}: ${field}.${dep} needs ${fork}, which is not published yet`);
+      next[npmName(PACKAGES.find((candidate) => candidate.dir === fork)!)] = pinned;
     }
     out[field] = next;
   }
@@ -251,10 +480,13 @@ export function publishManifest(
   Object.assign(out, spec.fields);
   out.license ??= "MIT";
   out.homepage = `https://github.com/${REPO}/tree/main/packages/${spec.dir}#readme`;
-  out.repository = { type: "git", url: `git+https://github.com/${REPO}.git`, directory: `packages/${spec.dir}` };
+  out.repository = {
+    type: "git",
+    url: `git+https://github.com/${REPO}.git`,
+    directory: `packages/${spec.dir}`,
+  };
   out.bugs = { url: `https://github.com/${REPO}/issues` };
   out.publishConfig = { access: "public" };
-  delete out.private;
   return out;
 }
 
@@ -277,7 +509,8 @@ export function contentHash(files: ReadonlyMap<string, string | Uint8Array>): st
 
 async function tarballFiles(bytes: Uint8Array): Promise<Map<string, Uint8Array>> {
   const out = new Map<string, Uint8Array>();
-  for (const [name, file] of await new Bun.Archive(bytes).files()) out.set(name, await file.bytes());
+  for (const [name, file] of await new Bun.Archive(bytes).files())
+    out.set(name, await file.bytes());
   return out;
 }
 
@@ -291,33 +524,153 @@ async function packument(registry: string, name: string): Promise<Record<string,
 }
 
 function pack(staging: string, dest: string, noBuild = false): string {
+  validateOutputDirectory(staging);
+  validateOutputDirectory(dest);
   rmSync(dest, { recursive: true, force: true });
   mkdirSync(dest, { recursive: true });
   run(
-    [process.execPath, "pm", "pack", "--destination", dest, "--quiet", ...(noBuild ? ["--ignore-scripts"] : [])],
+    [
+      process.execPath,
+      "pm",
+      "pack",
+      "--destination",
+      dest,
+      "--quiet",
+      ...(noBuild ? ["--ignore-scripts"] : []),
+    ],
     staging,
   );
-  const [tgz] = readdirSync(dest).filter(f => f.endsWith(".tgz"));
+  const [tgz] = readdirSync(dest).filter((f) => f.endsWith(".tgz"));
   if (!tgz) throw new Error(`bun pm pack produced no tarball in ${dest}`);
   return join(dest, tgz);
 }
 
-async function stage(spec: PackageSpec, out: string, base: string): Promise<string> {
-  const src = join(ROOT, "packages", spec.dir);
-  const staging = join(out, spec.dir);
-  rmSync(staging, { recursive: true, force: true });
-  cpSync(src, staging, { recursive: true, filter: s => !/[\\/]node_modules$/.test(s) });
-  await spec.prepare?.(staging, { base });
-  if (!readdirSync(staging).some(f => /^licen[cs]e/i.test(f))) {
-    cpSync(join(ROOT, "LICENSE.md"), join(staging, "LICENSE.md"));
+export async function verifyPreparedPackage(
+  staging: string,
+  files: { path: string; mode: string; sha256: string }[],
+  allowed: string[],
+) {
+  const expected = new Map(files.map((file) => [file.path, file]));
+  const outputs: { path: string; sha256: string; mode: string; removed?: boolean }[] = [];
+  const declared = (path: string) =>
+    allowed.some((output) => (output.endsWith("/") ? path.startsWith(output) : path === output));
+  const walk = (directory: string): string[] =>
+    readdirSync(join(staging, directory), { withFileTypes: true }).flatMap((entry) => {
+      const path = join(directory, entry.name);
+      return entry.isDirectory() ? walk(path) : [path];
+    });
+  for (const path of walk("")) {
+    const portable = path.replaceAll("\\", "/");
+    if (
+      portable
+        .split("/")
+        .some(
+          (part) =>
+            [".ssh", ".codex", ".claude", ".aphrody", "cookies", "sessions"].includes(part) ||
+            part === ".env" ||
+            part.startsWith(".env.") ||
+            /\.(?:pem|key|p12|sqlite|safetensors|gguf)$/i.test(part),
+        )
+    )
+      throw new Error(`Protected package build output: ${portable}`);
+    const original = expected.get(portable);
+    const stat = lstatSync(join(staging, path));
+    if (stat.isSymbolicLink()) {
+      const link = readlinkSync(join(staging, path));
+      const target = relative(realpathSync(staging), realpathSync(join(staging, path)));
+      if (
+        isAbsolute(target) ||
+        target === ".." ||
+        target.startsWith("../") ||
+        target.startsWith("..\\")
+      )
+        throw new Error(`Escaping package build symlink: ${portable}`);
+      const hash = new Bun.CryptoHasher("sha256").update(link).digest("hex");
+      if (original?.mode !== "120000" || original.sha256 !== hash)
+        throw new Error(`Changed package symlink: ${portable}`);
+      expected.delete(portable);
+      continue;
+    }
+    if (
+      original &&
+      process.platform !== "win32" &&
+      Boolean(stat.mode & 0o111) !== (original.mode === "100755")
+    )
+      throw new Error(`Changed package source mode: ${portable}`);
+    const sha256 = new Bun.CryptoHasher("sha256")
+      .update(await Bun.file(join(staging, path)).arrayBuffer())
+      .digest("hex");
+    expected.delete(portable);
+    if (original?.sha256 === sha256) continue;
+    if (!declared(portable)) throw new Error(`Undeclared package build output: ${portable}`);
+    outputs.push({ path: portable, sha256, mode: stat.mode & 0o111 ? "100755" : "100644" });
   }
+  for (const file of expected.values()) {
+    if (!declared(file.path)) throw new Error(`Undeclared removed package source: ${file.path}`);
+    outputs.push({ path: file.path, sha256: file.sha256, mode: file.mode, removed: true });
+  }
+  return outputs;
+}
+
+async function stage(
+  spec: PackageSpec,
+  out: string,
+  base: string,
+  sourceRevision: string,
+): Promise<string> {
+  const staging = join(out, spec.dir);
+  validateOutputDirectory(staging);
+  rmSync(staging, { recursive: true, force: true });
+  const receipt = await exportTrackedPackage(ROOT, sourceRevision, `packages/${spec.dir}`, staging);
+  await spec.prepare?.(staging, { base });
+  const outputs = await verifyPreparedPackage(staging, receipt.files, spec.buildOutputs ?? []);
+  if (!readdirSync(staging).some((f) => /^licen[cs]e/i.test(f))) {
+    const license = run(["git", "show", `${sourceRevision}:LICENSE.md`], ROOT);
+    await Bun.write(join(staging, "LICENSE.md"), license);
+    outputs.push({
+      path: "LICENSE.md",
+      mode: "100644",
+      sha256: new Bun.CryptoHasher("sha256").update(license).digest("hex"),
+    });
+  }
+  await Bun.write(
+    join(out, `${spec.dir}.source.json`),
+    JSON.stringify({ ...receipt, outputs }, null, 2) + "\n",
+  );
   return staging;
 }
 
 export interface Result {
   name: string;
   version: string;
-  action: "published" | "unchanged" | "dry-run";
+  action: "published" | "pending" | "unchanged" | "dry-run";
+  sourceRevision: string;
+  sourceVerified: boolean;
+  integrity?: string;
+  contentHash: string;
+}
+
+export async function publicationStatus(
+  response: Response,
+  expected: { name: string; version: string; integrity: string },
+): Promise<"published" | "pending"> {
+  if (response.status === 404) return "pending";
+  if (!response.ok)
+    throw new Error(
+      `${expected.name}@${expected.version}: public verification HTTP ${response.status}`,
+    );
+  const record = await response.json();
+  if (record.name !== expected.name || record.version !== expected.version) {
+    throw new Error(
+      `${expected.name}@${expected.version}: registry returned a different package or version`,
+    );
+  }
+  if (!record.dist?.integrity?.split(/\s+/).includes(expected.integrity)) {
+    throw new Error(
+      `${expected.name}@${expected.version}: registry integrity differs from the uploaded tarball`,
+    );
+  }
+  return "published";
 }
 
 export async function publishAll(opts: {
@@ -328,28 +681,60 @@ export async function publishAll(opts: {
   out?: string;
   registry?: string;
 }): Promise<Result[]> {
-  if (opts.only?.some(dir => !PACKAGES.some(spec => spec.dir === dir)))
+  if (opts.only?.some((dir) => !PACKAGES.some((spec) => spec.dir === dir)))
     throw new Error("Unknown package directory in --only");
   if (opts.noBuild) {
     const building = PACKAGES.filter(
-      spec => spec.requiresBuild && (!opts.only?.length || opts.only.includes(spec.dir)),
+      (spec) => spec.requiresBuild && (!opts.only?.length || opts.only.includes(spec.dir)),
     );
     if (building.length)
       throw new Error(
-        `--no-build cannot prepare ${building.map(spec => spec.dir).join(", ")}; select source packages with --only`,
+        `--no-build cannot prepare ${building.map((spec) => spec.dir).join(", ")}; select source packages with --only`,
       );
   }
-  const registry = (opts.registry ?? process.env.NPM_CONFIG_REGISTRY ?? "https://registry.npmjs.org").replace(
-    /\/$/,
-    "",
-  );
-  const out = resolve(opts.out ?? join(tmpdir(), "aphrody-npm"));
+  const registry = (
+    opts.registry ??
+    process.env.NPM_CONFIG_REGISTRY ??
+    "https://registry.npmjs.org"
+  ).replace(/\/$/, "");
+  const out = validateOutputDirectory(opts.out ?? join(tmpdir(), "aphrody-npm"));
   mkdirSync(out, { recursive: true });
   const bunVersion: string = (await Bun.file(join(ROOT, "package.json")).json()).version;
+  const sourceRevision = run(["git", "rev-parse", "HEAD"], ROOT).trim();
+  if (!opts.dryRun) {
+    const revision = run([process.execPath, "--revision"], ROOT).trim();
+    if (!revision.includes("aphrody") || Bun.version.split("-")[0] !== bunVersion)
+      throw new Error(`Publication requires the qualified Aphrody runtime ${bunVersion}`);
+    if (run(["git", "status", "--porcelain"], ROOT).trim())
+      throw new Error("Publication requires a clean source-pinned checkout");
+  }
+  const selectedSpecs = PACKAGES.filter(
+    (spec) => !opts.only?.length || opts.only.includes(spec.dir),
+  );
+  const needed = new Set(selectedSpecs.map((spec) => spec.dir));
+  const visit = (spec: PackageSpec) => {
+    const manifest = JSON.parse(
+      readFileSync(join(ROOT, "packages", spec.dir, "package.json"), "utf8"),
+    );
+    if (manifest.private === true)
+      throw new Error(`${spec.dir}: private packages cannot be published`);
+    for (const name of [
+      ...DEP_FIELDS.flatMap((field) => Object.keys(manifest[field] ?? {})),
+      ...(spec.addDependencies ?? []),
+    ]) {
+      const fork = forkName(name);
+      if (fork && !needed.has(fork)) {
+        needed.add(fork);
+        visit(PACKAGES.find((candidate) => candidate.dir === fork)!);
+      }
+    }
+  };
+  for (const spec of selectedSpecs) visit(spec);
   const resolved = new Map<string, string>();
   const results: Result[] = [];
 
   for (const spec of PACKAGES) {
+    if (!needed.has(spec.dir)) continue;
     const name = npmName(spec);
     const selected = !opts.only?.length || opts.only.includes(spec.dir);
     const doc = await packument(registry, name);
@@ -361,13 +746,22 @@ export async function publishAll(opts: {
     }
 
     const srcPkg = await Bun.file(join(ROOT, "packages", spec.dir, "package.json")).json();
-    const base = spec.bunVersion || !srcPkg.version || srcPkg.version === "0.0.0" ? bunVersion : srcPkg.version;
-    const { next, previous } = (opts.stable ? nextStableVersion : nextVersion)(base, Object.keys(doc?.versions ?? {}));
+    if (spec.platform && process.platform !== spec.platform)
+      throw new Error(`${name}: qualification requires native ${spec.platform}`);
+    if (spec.platform) require(join(ROOT, "packages", spec.dir, srcPkg.main));
+    const base =
+      spec.bunVersion || !srcPkg.version || srcPkg.version === "0.0.0"
+        ? bunVersion
+        : srcPkg.version;
+    const { next, previous } = (opts.stable ? nextStableVersion : nextVersion)(
+      base,
+      Object.keys(doc?.versions ?? {}),
+    );
     if (opts.stable && next !== base && previous !== base) {
       throw new Error(`${name}: registry stable versions exceed the requested runtime ${base}`);
     }
 
-    const staging = await stage(spec, out, base);
+    const staging = await stage(spec, out, base, sourceRevision);
     const manifest = publishManifest(srcPkg, spec, next, resolved);
     await Bun.write(join(staging, "package.json"), JSON.stringify(manifest, null, 2) + "\n");
     const tgz = pack(staging, join(out, "tarballs", spec.dir), opts.noBuild);
@@ -377,29 +771,50 @@ export async function publishAll(opts: {
     for (const field of DEP_FIELDS) {
       for (const [dep, range] of Object.entries<string>(packed[field] ?? {})) {
         if (/^(?:workspace|file|link):|^\.{0,2}\//.test(range)) {
-          throw new Error(`${name}: ${field}.${dep} is still local (${range}) in the packed tarball`);
+          throw new Error(
+            `${name}: ${field}.${dep} is still local (${range}) in the packed tarball`,
+          );
         }
       }
     }
 
     if (previous) {
       const tarball = doc!.versions[previous].dist.tarball;
-      const prevFiles = await tarballFiles(new Uint8Array(await (await fetch(tarball)).arrayBuffer()));
+      const prevFiles = await tarballFiles(
+        new Uint8Array(await (await fetch(tarball)).arrayBuffer()),
+      );
       if (contentHash(prevFiles) === contentHash(files) && (!opts.stable || previous === base)) {
         resolved.set(spec.dir, previous);
-        results.push({ name, version: previous, action: "unchanged" });
+        results.push({
+          name,
+          version: previous,
+          action: "unchanged",
+          sourceRevision,
+          sourceVerified: !opts.dryRun,
+          integrity: doc!.versions[previous].dist.integrity,
+          contentHash: contentHash(files),
+        });
         console.log(`= ${name}@${previous} unchanged`);
         continue;
       }
     }
     if (opts.stable && next !== base) {
-      throw new Error(`${name}@${base} already exists with different content; runtime versions are immutable`);
+      throw new Error(
+        `${name}@${base} already exists with different content; runtime versions are immutable`,
+      );
     }
 
     resolved.set(spec.dir, next);
     console.log(`${opts.dryRun ? "~" : "+"} ${name}@${next} (${files.size} files) ${tgz}`);
     if (opts.dryRun) {
-      results.push({ name, version: next, action: "dry-run" });
+      results.push({
+        name,
+        version: next,
+        action: "dry-run",
+        sourceRevision,
+        sourceVerified: false,
+        contentHash: contentHash(files),
+      });
       continue;
     }
     run(
@@ -415,7 +830,24 @@ export async function publishAll(opts: {
       ],
       staging,
     );
-    results.push({ name, version: next, action: "published" });
+    const response = await fetch(`${registry}/${name.replace("/", "%2f")}/${next}`, {
+      headers: { "cache-control": "no-cache" },
+    });
+    const integrity = `sha512-${new Bun.CryptoHasher("sha512").update(await Bun.file(tgz).bytes()).digest("base64")}`;
+    const action = await publicationStatus(response, { name, version: next, integrity });
+    if (action === "pending")
+      console.log(
+        `? ${name}@${next}: upload accepted; exact version is not publicly available yet`,
+      );
+    results.push({
+      name,
+      version: next,
+      action,
+      sourceRevision,
+      sourceVerified: action === "published",
+      integrity,
+      contentHash: contentHash(files),
+    });
   }
   return results;
 }
@@ -430,12 +862,29 @@ if (import.meta.main) {
     dryRun: args.includes("--dry-run"),
     stable: args.includes("--stable"),
     noBuild: args.includes("--no-build"),
-    only: value("--only")?.split(","),
-    out: value("--out"),
-    registry: value("--registry"),
+    ...(value("--only") ? { only: value("--only")!.split(",") } : {}),
+    ...(value("--out") ? { out: value("--out")! } : {}),
+    ...(value("--registry") ? { registry: value("--registry")! } : {}),
   });
+  const reportPath = value("--report");
+  if (reportPath) {
+    validateOutputDirectory(dirname(resolve(reportPath)));
+    await Bun.write(
+      resolve(reportPath),
+      JSON.stringify(
+        { schema: 1, sourceRevision: results[0]?.sourceRevision, packages: results },
+        null,
+        2,
+      ) + "\n",
+    );
+  }
   if (process.env.GITHUB_STEP_SUMMARY) {
-    const rows = results.map(r => `| \`${r.name}\` | \`${r.version}\` | ${r.action} |`).join("\n");
-    await Bun.write(process.env.GITHUB_STEP_SUMMARY, `| package | version | result |\n| --- | --- | --- |\n${rows}\n`);
+    const rows = results
+      .map((r) => `| \`${r.name}\` | \`${r.version}\` | ${r.action} |`)
+      .join("\n");
+    await Bun.write(
+      process.env.GITHUB_STEP_SUMMARY,
+      `| package | version | result |\n| --- | --- | --- |\n${rows}\n`,
+    );
   }
 }

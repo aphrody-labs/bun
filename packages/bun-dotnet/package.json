@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-dotnet",
-  "version": "0.1.0",
+  "version": "1.4.4",
   "description": ".NET 10 hosted in Bun: node-api-dotnet (MIT) absorbed in dotnet/, built by dotnet pack with Bun as the JS runtime",
   "license": "MIT",
   "type": "module",

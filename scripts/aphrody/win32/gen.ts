@@ -456,7 +456,7 @@ const RESERVED = new Set(
 // npm (and crates.io) require strict semver: a "-preview" suffix is a valid prerelease
 // identifier, but a fourth ".0" component (what this used to append) is not — `npm publish`
 // rejects it outright ("New versions must be valid semver"). Keep the metadata version as-is.
-const PACKAGE_VERSION = METADATA_VERSION;
+const PACKAGE_VERSION = JSON.parse(readFileSync(join(import.meta.dir, "../../..", "package.json"), "utf8")).version;
 
 const sharedPackage = {
   name: "@aphrody/bun-windows-win32",

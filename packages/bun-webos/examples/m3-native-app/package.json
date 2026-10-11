@@ -1,5 +1,6 @@
 {
   "name": "@aphrody/bun-webos-m3-native-app",
+  "version": "1.4.4",
   "private": true,
   "type": "module",
   "license": "Apache-2.0",

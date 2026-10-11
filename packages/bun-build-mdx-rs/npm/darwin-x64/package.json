@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-mdx-rs-darwin-x64",
-  "version": "0.0.0",
+  "version": "1.4.4",
   "os": [
     "darwin"
   ],
