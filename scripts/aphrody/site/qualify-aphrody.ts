@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import { launch, connect } from "bun:chromium";
+import { connect } from "bun:chromium";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { startQualificationProxy } from "./qualify-tls-proxy";
@@ -14,14 +14,7 @@ if (!["http:", "https:"].includes(url.protocol) || url.username || url.password)
 const output = join(import.meta.dir, "../../../build/site-qualification");
 async function canonicalBrowser() {
   const pin = process.env.SITE_QUALIFY_TLS_PIN;
-  if (!pin)
-    return launch({
-      executable,
-      userDataDir: join(output, "profile"),
-      headless: true,
-      timeout: 60000,
-    });
-  if (url.origin !== "https://aphrody.com" || !/^[A-Za-z0-9+/]{43}=$/.test(pin))
+  if (pin && (url.origin !== "https://aphrody.com" || !/^[A-Za-z0-9+/]{43}=$/.test(pin)))
     throw new Error("Qualification requires the exact canonical origin and certificate pin");
   const profile = join(output, "tls-profile-" + crypto.randomUUID());
   await mkdir(profile, { recursive: true });
@@ -34,9 +27,13 @@ async function canonicalBrowser() {
       "--remote-debugging-address=127.0.0.1",
       "--remote-debugging-port=0",
       "--user-data-dir=" + profile,
-      "--host-resolver-rules=MAP aphrody.com 127.0.0.1",
-      "--no-proxy-server",
-      "--ignore-certificate-errors-spki-list=" + pin,
+      ...(pin
+        ? [
+            "--host-resolver-rules=MAP aphrody.com 127.0.0.1",
+            "--no-proxy-server",
+            "--ignore-certificate-errors-spki-list=" + pin,
+          ]
+        : []),
       "about:blank",
     ],
     stdout: "ignore",
