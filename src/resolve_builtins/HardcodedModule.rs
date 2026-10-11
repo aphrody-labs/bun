@@ -13,6 +13,10 @@ pub enum HardcodedModule {
     BunApp,
     #[strum(serialize = "bun:cosmic")]
     BunCosmic,
+    #[strum(serialize = "bun:chromium")]
+    BunChromium,
+    #[strum(serialize = "bun:obscura")]
+    BunObscura,
     #[strum(serialize = "bun:ffi")]
     BunFfi,
     #[strum(serialize = "bun:dotnet")]
@@ -249,6 +253,8 @@ bun_core::comptime_string_map! {
         b"bun" => HardcodedModule::Bun,
         b"bun:app" => HardcodedModule::BunApp,
         b"bun:cosmic" => HardcodedModule::BunCosmic,
+        b"bun:chromium" => HardcodedModule::BunChromium,
+        b"bun:obscura" => HardcodedModule::BunObscura,
         b"bun:ffi" => HardcodedModule::BunFfi,
         b"bun:dotnet" => HardcodedModule::BunDotnet,
         b"bun:graph" => HardcodedModule::BunGraph,
@@ -772,6 +778,8 @@ const BUN_EXTRA_ALIAS_KVS: &[AliasKv] = &[
     entry!("bun:test"),
     entry!("bun:app"),
     entry!("bun:cosmic"),
+    entry!("bun:chromium"),
+    entry!("bun:obscura"),
     entry!("bun:ffi"),
     entry!("bun:dotnet"),
     (

@@ -1,5 +1,27 @@
 # Plan — aphrody-labs/bun, noyau d'Aphrody
 
+## Obscura/JSC and full Chromium/V8 owner batch — 2026-10-11
+
+Requested modes: reuse native Obscura with the ongoing JSC port for serverless
+browser execution, alongside full Chromium/V8 with WebGPU enabled by default.
+Chromium launches a visible browser by default (`headless: false`). The built-in
+bridges reuse Bun's WebSocket, process and file primitives for browser-scope CDP,
+isolated launches, MV3/theme/PWA helpers and explicit bookmark JSON import.
+The `obscura` branch checkpoint `c82e6a6e3bd` contains the standalone
+`packages/bun-obscura` workspace. Its concurrent uncommitted `src/browser` and
+JSC integration in the Obscura worktree remain owned by that workstream; do not
+copy them or claim the native JSC port complete.
+Reuse `bun:windows.gpu.d3d12`, bun-cosmic's tiny-skia/optional wgpu rendering,
+the existing Tauri CEF runtime's CDP/cookie facilities and Obscura CookieJar.
+No new GPU stack or dependencies are needed for the bridge batch.
+Qualification and delivery evidence: [Chromium](docs/aphrody/chromium.md).
+Windows changed-binary qualification: 20 browser/codegen tests pass, plus five
+existing D3D12 tests. Chromium 154 executes WGSL compute/readback on NVIDIA
+Lovelace without a fallback adapter. Scoped TypeScript, oxlint, Rust check and
+strict crate-only Clippy pass. Dependency-wide Clippy remains blocked by 68
+existing undocumented unsafe blocks in bun_libuv_sys. Browser, GPU, cookie and engine behavior
+must be qualified separately for each mode; bridge tests do not prove parity.
+
 > Correction propriétaire du 2026-10-09 : Aphrody et Bun peuvent être développés et construits sur tout hôte qualifié. Sélectionner checkout, cible, outils, ressources et droits selon le contexte ; les chemins Windows ci-dessous sont des exemples du poste courant. Yoyo / aphrody-dev administre tout Aphrody Labs ; Omar administre DBFR. WSL est retiré du workflow du poste actuel.
 
 Plan commun à tous les agents qui travaillent sur ce fork (C:\bun), sur le monorepo Aphrody (C:\aphrody) et sur

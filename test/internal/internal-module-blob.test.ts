@@ -4,8 +4,25 @@
 // offsets. A wrong offset or length here surfaces as a SyntaxError when JSC
 // parses a module or a @-intrinsic builtin function from the blob.
 import { expect, test } from "bun:test";
-import { bunEnv, bunExe } from "harness";
+import { bunEnv, bunExe, tempDir } from "harness";
+import { join } from "node:path";
 import { sliceSourceCode } from "../../src/codegen/builtin-parser.ts";
+import { createInternalModuleRegistry } from "../../src/codegen/internal-module-registry-scanner.ts";
+
+test("builtin requires resolve the module at registry index zero", () => {
+  using dir = tempDir("internal-module-zero", {
+    "src/js/bun/a.ts": "export default {};",
+    "src/js/node/a.ts": "export default {};",
+    "src/js/internal/a.ts": "export default {};",
+    "src/js/thirdparty/a.ts": "export default {};",
+    "src/jsc/modules/NativeModuleList.h": 'macro("node:buffer"_s, Buffer)',
+  });
+  const registry = createInternalModuleRegistry(join(String(dir), "src/js"));
+  expect(registry.moduleList[0]).toBe("bun/a.ts");
+  expect(registry.requireTransformer("bun:a", "bun/consumer.ts")).toBe(
+    "(__intrinsic__getInternalField(__intrinsic__internalModuleRegistry, 0/*bun:a*/) || __intrinsic__createInternalModuleById(0/*bun:a*/))",
+  );
+});
 
 test("module preprocessing extracts declarations without changing embedded worker sources", () => {
   const declarations = [

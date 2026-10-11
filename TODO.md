@@ -208,3 +208,14 @@
 
 - [x] Qualify launch/shell pointer contract: four targets and native44/0 (2026-10-10).
 - [ ] Close runtime Windows14, bun_install Windows115/GNU53 and full release/private/hardware delivery.
+# Obscura/JSC and full Chromium/V8 integration (2026-10-11)
+
+- [x] Qualify `bun:chromium` browser CDP, isolated launch, manifests and explicit bookmark import on the changed Bun binary (20 browser/codegen tests pass on Windows).
+- [ ] Qualify full Chromium/V8 with visible-browser default (`headless: false`) and WebGPU enabled by default; prove actual WGSL execution and readback.
+- [x] Qualify `bun:obscura` single-worker Windows launch, session evaluation and cleanup on the changed Bun binary.
+- [ ] Reuse the concurrent native Obscura/JSC port after its owning workstream completes its gates; qualify worker process-tree cleanup on Windows.
+- [ ] Reuse existing `bun:windows.gpu.d3d12`, bun-cosmic tiny-skia/optional wgpu, Tauri CEF CDP/cookies and Obscura CookieJar; add no duplicate GPU stack or dependencies.
+- [ ] Implement browser extension/native messaging and PWA lifecycle coverage on a pinned Chromium build.
+- [ ] Preserve the committed `obscura` checkpoint `c82e6a6e3bd` (`packages/bun-obscura`) and concurrent uncommitted `src/browser`/JSC work; qualify serverless Obscura/JSC separately from full Chromium/V8.
+- [ ] Prove browser conformance, extensions, themes, PWA, explicit protected-profile integration and DevTools for each changed backend before claiming delivery or publishing a Chromium fork.
+
