@@ -10,6 +10,7 @@ entry points are explicit so importing a server API does not initialize a player
 | `@aphrody/bun-video/har` | Private HAR inspection and captured response replay |
 | `@aphrody/bun-video/bitmovin` | Official player loading and Bun browser bundling |
 | `@aphrody/bun-video/crunchyroll` | Migrated native fetch client |
+| `@aphrody/bun-video/oauth` | Owner-configured authorization-code PKCE, refresh and revocation |
 
 HLS reuses `@aphrody/bun-runtime-sdk/video/hls`, including synchronous listener
 registration, URL validation, explicit worker origin checks and cleanup. The
@@ -30,8 +31,12 @@ on 2026-10-11. Current OAuth credentials and an authorized license configuration
 are still required to qualify Crunchyroll playback. Local lifecycle and transport
 tests do not establish live service compatibility.
 
-Run from the checkout with `bun bd test packages/bun-video/test` and
-`bun bd run scripts/aphrody/dash-lab.ts --check` or `--open`.
+Run from the checkout with `bun bd test ./packages/bun-video/test` and
+`bun bd run ./scripts/aphrody/dash-lab.ts --check` or `--open`.
+The [multilingual shortcuts](shortcuts.md) provide an MV3 extension and a Bun-served
+local PWA shell; installation remains a separate Chrome gate. The launcher selects
+the unique Google Chrome process and excludes concurrently running BunChromium
+test browsers. Multiple Google Chrome roots still fail as ambiguous.
 Private cookies remain in the owner's protected cookie store; the ignored
 checkout `cookie.json` is a link. HAR files and signed manifests stay ignored.
 Publication of npm packages or crates remains conditional on complete real

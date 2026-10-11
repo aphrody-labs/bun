@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 import { expect, test } from "bun:test";
-import { CRUNCHYROLL_WATCH_URL, planChromeSiteApp } from "./crunchyroll-app";
+import {
+  CRUNCHYROLL_WATCH_URL,
+  planChromeSiteApp,
+  selectActiveGoogleChromeRoot,
+} from "./crunchyroll-app";
 
 const profile = {
   pid: 123,
@@ -32,4 +36,25 @@ test("invalid profile paths are rejected before any process launch", () => {
   expect(() => planChromeSiteApp({ ...profile, executable: "chrome.exe" })).toThrow(
     "absolute paths",
   );
+});
+
+test("Google Chrome selection ignores concurrent BunChromium and refuses ambiguous Google roots", () => {
+  const chromium = {
+    ...profile,
+    pid: 456,
+    executable: "C:/Program Files/BunChromium/Application/chrome.exe",
+  };
+  expect(selectActiveGoogleChromeRoot([chromium, profile, { ...chromium, pid: 789 }])).toBe(
+    profile,
+  );
+  const windows = {
+    ...profile,
+    executable: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  };
+  expect(selectActiveGoogleChromeRoot([windows, chromium])).toBe(windows);
+  expect(() => selectActiveGoogleChromeRoot([profile, { ...profile, pid: 321 }, chromium])).toThrow(
+    "Exactly one",
+  );
+  expect(() => selectActiveGoogleChromeRoot([chromium])).toThrow("Exactly one");
+  expect(() => selectActiveGoogleChromeRoot([])).toThrow("Exactly one");
 });

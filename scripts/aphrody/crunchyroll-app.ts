@@ -12,6 +12,20 @@ export interface ActiveChromeProfile {
   profileDirectory: string;
 }
 
+export function selectActiveGoogleChromeRoot(processes: Array<Partial<ActiveChromeProfile>>) {
+  const candidates = processes.filter((process) =>
+    process.executable
+      ?.replaceAll("\\", "/")
+      .toLowerCase()
+      .endsWith("/google/chrome/application/chrome.exe"),
+  );
+  if (candidates.length !== 1)
+    throw new Error(
+      "Exactly one running Google Chrome browser process is required to select the active profile safely.",
+    );
+  return candidates[0]!;
+}
+
 export function planChromeSiteApp(profile: ActiveChromeProfile) {
   if (!isAbsolute(profile.executable) || !isAbsolute(profile.userDataDir))
     throw new Error("Chrome executable and user data directory must be absolute paths.");
@@ -82,11 +96,8 @@ $chromeRoots = @(Get-CimInstance Win32_Process -Filter "name='chrome.exe'" | Whe
 })
 ConvertTo-Json -InputObject $chromeRoots -Compress
 `)) as Array<Partial<ActiveChromeProfile>>;
-  if (!Array.isArray(processes) || processes.length !== 1)
-    throw new Error(
-      "Exactly one running Chrome browser process is required to select the active profile safely.",
-    );
-  const active = processes[0]!;
+  if (!Array.isArray(processes)) throw new Error("Chrome process metadata is unavailable.");
+  const active = selectActiveGoogleChromeRoot(processes);
   if (!active.executable || !active.pid)
     throw new Error("Running Chrome executable metadata is unavailable.");
   const userDataDir =
