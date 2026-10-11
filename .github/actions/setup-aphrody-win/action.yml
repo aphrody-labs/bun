@@ -70,7 +70,7 @@ runs:
 
     - name: Cache de la racine
       if: inputs.cache == 'true'
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ${{ steps.prep.outputs.root }}
         key: ${{ steps.prep.outputs.key }}

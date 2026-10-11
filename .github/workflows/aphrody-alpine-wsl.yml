@@ -76,7 +76,7 @@ jobs:
           done
           if grep -qxE '(\./)?etc/resolv\.conf' list.txt; then echo "resolv.conf must not ship"; exit 1; fi
           docker run --rm --platform "linux/${{ matrix.platform }}" "aphrody-alpine-wsl:${{ matrix.arch }}" sh -c 'bun --version && cat /etc/ld-musl-*.path && grep -x /bin/bunsh /etc/shells'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: aphrody-alpine-${{ matrix.arch }}-wsl
           path: |

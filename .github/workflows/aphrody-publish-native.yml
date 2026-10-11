@@ -149,7 +149,7 @@ jobs:
           libc: ${{ matrix.libc }}
           version: ${{ env.BUN_HOST_VERSION }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: native-${{ matrix.id }}-${{ matrix.key }}
           path: dist/${{ matrix.file }}
@@ -167,7 +167,7 @@ jobs:
       - uses: ./.github/actions/setup-bun
         with:
           bun-version: ${{ env.BUN_HOST_VERSION }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: ${{ runner.temp }}/artifacts
           pattern: native-*
