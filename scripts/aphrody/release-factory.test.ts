@@ -5,7 +5,12 @@ import { join } from "node:path";
 import { nativePlan } from "./delivery-native.ts";
 import { verifyFactoryArtifacts, verifyFactoryRelease, type FactoryQualification } from "./release-factory.ts";
 
-const source = "a".repeat(40);
+const sourceResult = Bun.spawnSync(["git", "rev-parse", "HEAD"], { stdout: "pipe", stderr: "pipe" });
+if (sourceResult.exitCode !== 0) throw new Error("Unable to resolve the current Bun source commit");
+const source = sourceResult.stdout.toString().trim();
+const mullvadLink = Bun.spawnSync(["git", "ls-tree", source, "vendor/mullvad"], { stdout: "pipe", stderr: "pipe" });
+const mullvadSource = mullvadLink.stdout.toString().match(/^160000 commit ([a-f0-9]{40})\s+vendor\/mullvad$/m)?.[1];
+if (!mullvadSource) throw new Error("Unable to resolve the pinned Mullvad source commit");
 async function fixture(run: (directory: string, receipt: FactoryQualification) => Promise<void>) {
   const directory = mkdtempSync(join(tmpdir(), "factory-release-test-"));
   try {
@@ -26,12 +31,23 @@ async function fixture(run: (directory: string, receipt: FactoryQualification) =
         passed: true,
         log: `${triplet}.log`,
       })),
+      mullvad: {
+        source,
+        mullvadSource,
+        target: "x86_64-unknown-linux-gnu",
+        native: true,
+        passed: true,
+        log: "mullvad-linux-x64.log",
+        asset: "bun-vpn-linux-x86_64.tar.gz",
+      },
     };
     for (const name of [
       ...receipt.gates.map(gate => gate.log),
       ...receipt.platforms.flatMap(p => [p.log, `${p.triplet}.zip`]),
       "bun-linux-x64-baseline.zip",
       "bun-linux-x64-baseline-full.zip",
+      receipt.mullvad!.log,
+      receipt.mullvad!.asset,
     ]) {
       const bytes = `validator fixture ${name}`;
       await Bun.write(join(directory, name), bytes);
@@ -40,7 +56,7 @@ async function fixture(run: (directory: string, receipt: FactoryQualification) =
     await Bun.write(
       join(directory, "SHA256SUMS.txt"),
       Object.entries(receipt.assets)
-        .filter(([name]) => name.endsWith(".zip"))
+        .filter(([name]) => /\.(?:zip|tar\.gz)$/.test(name))
         .map(([name, hash]) => `${hash}  ${name}`)
         .join("\n") + "\n",
     );
@@ -76,6 +92,23 @@ test("factory publication rejects missing gates, source drift and cross compilat
     await Bun.write(join(directory, "factory-qualification.json"), JSON.stringify(receipt));
     await expect(verifyFactoryRelease(directory, source, "1.4.4", "candidate", ["linux-x64"])).rejects.toThrow(
       "Native platform",
+    );
+  });
+});
+
+test("Linux VPS release requires its pinned, native Mullvad sidecar receipt", async () => {
+  await fixture(async (directory, receipt) => {
+    delete receipt.mullvad;
+    await Bun.write(join(directory, "factory-qualification.json"), JSON.stringify(receipt));
+    await expect(verifyFactoryRelease(directory, source, "1.4.4", "candidate", ["linux-x64"])).rejects.toThrow(
+      "Native Mullvad VPS sidecar qualification missing",
+    );
+  });
+  await fixture(async (directory, receipt) => {
+    receipt.mullvad!.mullvadSource = "c".repeat(40);
+    await Bun.write(join(directory, "factory-qualification.json"), JSON.stringify(receipt));
+    await expect(verifyFactoryRelease(directory, source, "1.4.4", "candidate", ["linux-x64"])).rejects.toThrow(
+      "Mullvad sidecar source does not match the Bun source gitlink",
     );
   });
 });
@@ -125,7 +158,7 @@ test("current delivery workflows default to factory plans and require a native d
 
 test("native addons reuse factory receipts and reject unselected binaries", async () => {
   await fixture(async (directory, receipt) => {
-    for (const name of Object.keys(receipt.assets).filter(name => name.endsWith(".zip"))) {
+    for (const name of Object.keys(receipt.assets).filter(name => /\.(?:zip|tar\.gz)$/.test(name))) {
       unlinkSync(join(directory, name));
       delete receipt.assets[name];
     }

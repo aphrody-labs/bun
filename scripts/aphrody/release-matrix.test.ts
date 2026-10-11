@@ -1,6 +1,12 @@
 import { expect, test } from "bun:test";
 import { releaseTargets } from "./build-host.ts";
-import { fullIntegrationPolicy, runtimeFlavorArgs, runtimeFlavorManifest, runtimeReleaseMatrix, vpsRuntimeReleasePlan } from "./release-matrix.ts";
+import {
+  fullIntegrationPolicy,
+  runtimeFlavorArgs,
+  runtimeFlavorManifest,
+  runtimeReleaseMatrix,
+  vpsRuntimeReleasePlan,
+} from "./release-matrix.ts";
 
 test("both compiled flavors preserve every upstream release target", () => {
   const matrix = runtimeReleaseMatrix();
@@ -35,23 +41,44 @@ test("matrix validates targets, duplicates and immutable source provenance", () 
 
 test("full integration policy accounts for every requested feature combination", async () => {
   const config = await Bun.file(new URL("../../tools/config/fusion-features.json", import.meta.url)).json();
-  const described = [...fullIntegrationPolicy.alwaysLinkedOwners, ...fullIntegrationPolicy.optionalLinkedOwners,
-    ...fullIntegrationPolicy.pendingOwners.map(owner => owner.id)].sort();
+  const described = [
+    ...fullIntegrationPolicy.alwaysLinkedOwners,
+    ...fullIntegrationPolicy.optionalLinkedOwners,
+    ...fullIntegrationPolicy.pendingOwners.map(owner => owner.id),
+  ].sort();
   expect(described).toEqual(config.combinations.map((owner: { id: string }) => owner.id).sort());
   expect(fullIntegrationPolicy.pendingOwners.every(owner => owner.blockers.length > 0)).toBe(true);
   expect(runtimeFlavorArgs(runtimeReleaseMatrix(["linux-x64"])[1]!)).not.toContain("--all-features");
 });
 
 test("VPS release plan keeps execution with the serialized Infra resource owner", () => {
-  const plan = vpsRuntimeReleasePlan("a".repeat(40), ["linux-x64", "windows-x64"]);
+  const plan = vpsRuntimeReleasePlan("a".repeat(40), ["linux-x64", "windows-x64"], "b".repeat(40));
   expect(plan.steps).toHaveLength(4);
   expect(plan.host).toBe("vps");
   expect(plan.parallelHeavyJobs).toBe(1);
   expect(plan.reserveDiskGiB).toBe(8);
   for (const step of plan.steps) {
-    expect(step.command.slice(0, 3)).toEqual(["bun", "/home/ubuntu/src/aphrody/packages/infra/workspace/src/build-factory-cleanup.ts", plan.source + "/tools/config/fusion-factory.json"]);
+    expect(step.command.slice(0, 3)).toEqual([
+      "bun",
+      "/home/ubuntu/src/aphrody/packages/infra/workspace/src/build-factory-cleanup.ts",
+      "/home/ubuntu/builds/bun-os-factory/sources/bun/tools/config/fusion-factory.json",
+    ]);
     expect(step.command).toContain("-j6");
-    expect(step.command.some(arg => arg.startsWith("--build-dir=/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/"))).toBe(true);
+    expect(
+      step.command.some(arg =>
+        arg.startsWith("--build-dir=/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/"),
+      ),
+    ).toBe(true);
   }
   expect(plan.wasm.runtimeQualified).toBe(false);
+  expect(plan.mullvadSidecar.target).toBe("x86_64-unknown-linux-gnu");
+  expect(plan.mullvadSidecar.runtimeLinked).toBe(false);
+  expect(plan.mullvadSidecar.performanceQualified).toBe(false);
+  expect(plan.mullvadSidecar.relayList).toEqual([
+    "bun",
+    "scripts/aphrody/mullvad-sidecar.ts",
+    "relay",
+    `${plan.source}/vendor/mullvad/target/x86_64-unknown-linux-gnu/release/relay-list`,
+    "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/mullvad/relays.json",
+  ]);
 });

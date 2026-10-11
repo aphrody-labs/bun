@@ -11,6 +11,24 @@ Live `git ls-remote` resolves `refs/heads/main` to
 `493198790be1ec34b5cc3cfbfb50d02197264463`. The Aphrody Labs fork adds the
 third-party notice at `464d28812ac863ef75362b8fb85bcbdff961b9f9`.
 
+The VPS release plan now builds a separate `bun-vpn-linux-x86_64.tar.gz`
+sidecar from the pinned Mullvad submodule. It packages the headless daemon,
+CLI, setup/exclude/problem-report helpers, relay and CA resources, both
+upstream systemd units, the Mullvad license and third-party notices, plus an
+exact source-revision pointer. The release verifier requires a native sidecar
+receipt whenever the Linux x86_64 Bun release is selected. This sidecar is not
+linked into `bun` and is not yet a claim that a public release asset has been
+built or published.
+
+This profile uses Mullvad's optimized upstream release settings with cgroup v2
+support enabled. No comparative benchmark or memory qualification has been
+recorded. It targets x86_64 Linux/glibc only. A working tunnel still needs
+`/dev/net/tun`, network-administration privileges (normally root), suitable
+firewall/routing access and, for boot-time blocking, systemd. Serverless
+platforms that withhold those privileges cannot run a Mullvad tunnel. The
+archive includes service files but does not install or enable them; review the
+host's policy before installing the payload at filesystem root.
+
 ## Source and license pins
 
 The pinned [workspace manifest](https://github.com/mullvad/mullvadvpn-app/blob/493198790be1ec34b5cc3cfbfb50d02197264463/Cargo.toml)

@@ -9,6 +9,15 @@ export interface FactoryQualification {
   assets: Record<string, string>;
   gates: { id: string; passed: boolean; log: string }[];
   platforms: { triplet: string; native: boolean; passed: boolean; log: string }[];
+  mullvad?: {
+    source: string;
+    mullvadSource: string;
+    target: "x86_64-unknown-linux-gnu";
+    native: boolean;
+    passed: boolean;
+    log: string;
+    asset: "bun-vpn-linux-x86_64.tar.gz";
+  };
 }
 
 const requiredGates = ["runtime", "site", "source-lint", "native-types", "native-test-types"];
@@ -59,15 +68,39 @@ export async function verifyFactoryArtifacts(
       throw new Error(`Native platform qualification missing: ${target.triplet}`);
     assertAsset(matches[0]!.log);
   }
+  const needsMullvad = platforms.some(platform => /^bun-linux-x64(?:-full)?$/.test(platform.triplet));
+  if (needsMullvad) {
+    const sidecar = receipt.mullvad;
+    if (
+      !sidecar ||
+      sidecar.source !== source ||
+      !/^[a-f0-9]{40}$/.test(sidecar.mullvadSource) ||
+      sidecar.target !== "x86_64-unknown-linux-gnu" ||
+      sidecar.native !== true ||
+      sidecar.passed !== true ||
+      sidecar.asset !== "bun-vpn-linux-x86_64.tar.gz"
+    )
+      throw new Error("Native Mullvad VPS sidecar qualification missing");
+    const link = Bun.spawnSync(["git", "ls-tree", source, "vendor/mullvad"], { stdout: "pipe", stderr: "pipe" });
+    const linkedSource =
+      link.exitCode === 0
+        ? link.stdout.toString().match(/^160000 commit ([a-f0-9]{40})\s+vendor\/mullvad$/m)?.[1]
+        : undefined;
+    if (!linkedSource || sidecar.mullvadSource !== linkedSource)
+      throw new Error("Mullvad sidecar source does not match the Bun source gitlink");
+    assertAsset(sidecar.asset);
+    assertAsset(sidecar.log);
+  }
   const sums = await Bun.file(join(directory, "SHA256SUMS.txt")).text();
   const checksums = new Map<string, string>();
   for (const line of sums.trim().split("\n")) {
-    const match = /^([a-f0-9]{64})  ([A-Za-z0-9][A-Za-z0-9_.-]*\.(?:zip|node))$/.exec(line);
+    const match = /^([a-f0-9]{64})  ([A-Za-z0-9][A-Za-z0-9_.-]*\.(?:zip|node|tar\.gz))$/.exec(line);
     if (!match || checksums.has(match[2]!)) throw new Error("Invalid or duplicate release checksum");
     checksums.set(match[2]!, match[1]!);
   }
-  const archives = Object.keys(receipt.assets).filter(name => /\.(?:zip|node)$/.test(name));
+  const archives = Object.keys(receipt.assets).filter(name => /\.(?:zip|node|tar\.gz)$/.test(name));
   const selectedAssets = new Set(platforms.flatMap(platform => platform.assets));
+  if (needsMullvad) selectedAssets.add(receipt.mullvad!.asset);
   if (archives.some(name => !selectedAssets.has(name))) throw new Error("Unselected binary factory asset");
   if (checksums.size !== archives.length || archives.some(name => checksums.get(name) !== receipt.assets[name]))
     throw new Error("Release checksum inventory differs from factory receipt");

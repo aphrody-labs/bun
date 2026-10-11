@@ -48,6 +48,22 @@ Source implementation `74bf6caa6e2` is verified on origin/main. Post-publication
 VPS/DBFR probes still run installed `1.4.3-aphrody.4+41211b568`, without the new
 built-ins; Linux artifact delivery and native JSC backend qualification remain open.
 
+## Mullvad standalone VPS release sidecar — 2026-10-11
+
+- [x] Define a separate x86_64 Linux/glibc daemon payload with Mullvad CLI,
+  setup/exclude/problem-report helpers, systemd units, public signed relay data,
+  license notices and exact fork source provenance; keep it outside `bun`.
+- [x] Add the VPS release plan and require a matching native sidecar receipt for
+  Linux x64 runtime release verification.
+- [x] Pass scoped changed-binary tests, formatting and oxlint; the repository-wide
+  TypeScript gate retains unrelated existing errors.
+- [ ] Build the GPL-licensed sidecar on the serialized VPS factory, fetch and
+  verify the relay list, validate the payload and attach its receipt to a
+  candidate release before publication.
+- [ ] Qualify tunnel activation separately on a host that grants `/dev/net/tun`,
+  network administration and systemd; serverless platforms without those
+  privileges remain unsupported.
+
 > Correction propriétaire du 2026-10-09 : Aphrody et Bun peuvent être développés et construits sur tout hôte qualifié. Sélectionner checkout, cible, outils, ressources et droits selon le contexte ; les chemins Windows ci-dessous sont des exemples du poste courant. Yoyo / aphrody-dev administre tout Aphrody Labs ; Omar administre DBFR. WSL est retiré du workflow du poste actuel.
 
 Plan commun à tous les agents qui travaillent sur ce fork (C:\bun), sur le monorepo Aphrody (C:\aphrody) et sur

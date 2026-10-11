@@ -1,4 +1,5 @@
 import { buildArgs, findTarget, releaseTargets, type ReleaseTarget } from "./build-host.ts";
+import { createMullvadBuildPlan } from "./mullvad-sidecar.ts";
 
 export type RuntimeFlavor = "perf" | "full";
 export type RuntimeReleaseTarget = ReleaseTarget & {
@@ -14,10 +15,26 @@ export const fullIntegrationPolicy = {
   optionalLinkedOwners: ["native-coreutils"],
   pendingOwners: [
     { id: "portable-paint", blockers: ["Native binary renderer dispatch and platform screenshot qualification"] },
-    { id: "shared-css-paint", blockers: ["Renderer feature forwarding through the existing native unit graph", "Native Bun CSS renderer linkage and cascade qualification"] },
-    { id: "browser-render-stealth", blockers: ["Remaining deno_core/V8 engine ownership", "JSC DOM, event-loop and GC parity", "Platform-specific TLS and rendering qualification"] },
+    {
+      id: "shared-css-paint",
+      blockers: [
+        "Renderer feature forwarding through the existing native unit graph",
+        "Native Bun CSS renderer linkage and cascade qualification",
+      ],
+    },
+    {
+      id: "browser-render-stealth",
+      blockers: [
+        "Remaining deno_core/V8 engine ownership",
+        "JSC DOM, event-loop and GC parity",
+        "Platform-specific TLS and rendering qualification",
+      ],
+    },
   ],
-  incompatibleSelections: [["pgoGenerate", "pgoUse"], ["webkit=local", "webkit=prebuilt"]],
+  incompatibleSelections: [
+    ["pgoGenerate", "pgoUse"],
+    ["webkit=local", "webkit=prebuilt"],
+  ],
   excludedRuntimeFlags: [
     "BUN_JSC_validateExceptionChecks",
     "BUN_JSC_dumpSimulatedThrows",
@@ -31,17 +48,19 @@ export function runtimeReleaseMatrix(targets: string[] = []): RuntimeReleaseTarg
   const selected = targets.length ? targets.map(findTarget) : releaseTargets;
   if (new Set(selected.map(target => target.target)).size !== selected.length)
     throw new Error("Duplicate release target");
-  return selected.flatMap(target => (["perf", "full"] as const).map(flavor => {
-    const suffix = flavor === "full" ? "-full" : "";
-    return {
-      ...target,
-      flavor,
-      coreutils: flavor === "full",
-      sourceTriplet: target.triplet,
-      triplet: target.triplet + suffix,
-      ...(target.baselineAlias ? { baselineAlias: target.baselineAlias + suffix } : {}),
-    };
-  }));
+  return selected.flatMap(target =>
+    (["perf", "full"] as const).map(flavor => {
+      const suffix = flavor === "full" ? "-full" : "";
+      return {
+        ...target,
+        flavor,
+        coreutils: flavor === "full",
+        sourceTriplet: target.triplet,
+        triplet: target.triplet + suffix,
+        ...(target.baselineAlias ? { baselineAlias: target.baselineAlias + suffix } : {}),
+      };
+    }),
+  );
 }
 
 export function runtimeFlavorArgs(target: RuntimeReleaseTarget, lto = true, versionTag?: string): string[] {
@@ -57,7 +76,9 @@ export function runtimeFlavorManifest(target: RuntimeReleaseTarget, revision: st
     target: target.target,
     asset: `${target.triplet}.zip`,
     compiledFeatures: { coreutils: target.coreutils },
-    ...(target.flavor === "full" ? { integrationPolicy: fullIntegrationPolicy, completeIntegrationQualified: false } : {}),
+    ...(target.flavor === "full"
+      ? { integrationPolicy: fullIntegrationPolicy, completeIntegrationQualified: false }
+      : {}),
     runtimeFeaturePolicy: "existing-defaults-explicit-opt-in",
     performanceQualified: false,
     note: "perf names the release optimization profile; faster-than-upstream requires comparative benchmark receipts",
@@ -65,12 +86,30 @@ export function runtimeFlavorManifest(target: RuntimeReleaseTarget, revision: st
 }
 
 /** Plan only: execution and live resources remain owned by the Infra factory. */
-export function vpsRuntimeReleasePlan(revision: string, targets: string[] = []) {
+export function vpsRuntimeReleasePlan(revision: string, targets: string[] = [], mullvadSource?: string) {
   if (!/^[a-f0-9]{40}$/.test(revision)) throw new Error("Factory source must be an immutable revision");
-  const source = "/home/ubuntu/builds/bun-browser-fusion";
+  const source = "/home/ubuntu/builds/bun-os-factory/sources/bun";
   const artifacts = "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release";
   const resource = "/home/ubuntu/src/aphrody/packages/infra/workspace/src/build-factory-cleanup.ts";
   const config = source + "/tools/config/fusion-factory.json";
+  const selected = runtimeReleaseMatrix(targets);
+  const needsMullvad = selected.some(target => target.target === "linux-x64");
+  const mullvad = needsMullvad
+    ? createMullvadBuildPlan(
+        revision,
+        mullvadSource ??
+          (() => {
+            const result = Bun.spawnSync(["git", "ls-tree", revision, "vendor/mullvad"], {
+              stdout: "pipe",
+              stderr: "pipe",
+            });
+            const match = result.stdout.toString().match(/^160000 commit ([a-f0-9]{40})\s+vendor\/mullvad$/m);
+            if (result.exitCode !== 0 || !match)
+              throw new Error(`Cannot resolve vendor/mullvad gitlink at ${revision}`);
+            return match[1]!;
+          })(),
+      )
+    : undefined;
   return {
     schema: 1,
     revision,
@@ -82,31 +121,80 @@ export function vpsRuntimeReleasePlan(revision: string, targets: string[] = []) 
     reserveDiskGiB: 8,
     reserveMemoryGiB: 2,
     parallelHeavyJobs: 1,
-    requires: ["clean committed source at revision", "fresh owner factory capacity profile", "pinned sysroots and target toolchain", "native platform test receipts before stable publication"],
-    steps: runtimeReleaseMatrix(targets).map(target => ({
+    requires: [
+      "clean committed source at revision",
+      "fresh owner factory capacity profile",
+      "pinned sysroots and target toolchain",
+      "native platform test receipts before stable publication",
+    ],
+    steps: selected.map(target => ({
       target,
       directory: source,
-      command: ["bun", resource, config, "bun", "scripts/build.ts", ...runtimeFlavorArgs(target),
-        "-j6", `--build-dir=${artifacts}/${target.triplet}`],
-      qualification: target.os === "linux" && target.arch === "x64"
-        ? "Native VPS and ABI container qualification required"
-        : "Qualified remote platform execution required; cross compilation is insufficient",
+      command: [
+        "bun",
+        resource,
+        config,
+        "bun",
+        "scripts/build.ts",
+        ...runtimeFlavorArgs(target),
+        "-j6",
+        `--build-dir=${artifacts}/${target.triplet}`,
+      ],
+      qualification:
+        target.os === "linux" && target.arch === "x64"
+          ? "Native VPS and ABI container qualification required"
+          : "Qualified remote platform execution required; cross compilation is insufficient",
     })),
     wasm: {
       product: "bun_wasm engine-free C ABI",
       runtimeQualified: false,
       requiredTarget: "wasm32-wasip1-threads",
       compileOwner: "serialized Cargo factory",
-      blockers: ["Full Bun JavaScriptCore runtime WASM port absent", "WASI ABI integration tests and release packaging not qualified"],
+      blockers: [
+        "Full Bun JavaScriptCore runtime WASM port absent",
+        "WASI ABI integration tests and release packaging not qualified",
+      ],
     },
+    ...(mullvad
+      ? {
+          mullvadSidecar: {
+            target: mullvad.target,
+            asset: mullvad.asset,
+            outputDirectory: `${artifacts}/mullvad`,
+            sourcePath: "vendor/mullvad",
+            mullvadSource: mullvad.mullvadSource,
+            build: mullvad.cargo,
+            smoke: mullvad.smoke,
+            relayList: [
+              "bun",
+              "scripts/aphrody/mullvad-sidecar.ts",
+              "relay",
+              `${source}/${mullvad.fetchRelayList}`,
+              `${artifacts}/mullvad/relays.json`,
+            ],
+            package: [
+              "bun",
+              "scripts/aphrody/mullvad-sidecar.ts",
+              "package",
+              revision,
+              mullvad.mullvadSource,
+              `${artifacts}/mullvad`,
+              `${artifacts}/mullvad/relays.json`,
+            ],
+            qualification:
+              "Native x86_64 Linux VPS build, daemon/CLI smoke and management-interface tests; no live tunnel activation",
+            archiveContents: mullvad.files,
+            deploymentRequirements: mullvad.requirements,
+            runtimeLinked: false,
+            performanceQualified: false,
+          },
+        }
+      : {}),
   };
 }
 
 /** Native Windows workstation plan; it cannot stand in for the VPS release matrix. */
-export function windowsRuntimeReleasePlan(
-  revision: string,
-  targets: string[] = ["windows-x64", "windows-aarch64"],
-) {
+export function windowsRuntimeReleasePlan(revision: string, targets: string[] = ["windows-x64", "windows-aarch64"]) {
   if (!/^[a-f0-9]{40}$/.test(revision)) throw new Error("Factory source must be an immutable revision");
   const selected = runtimeReleaseMatrix(targets);
   if (selected.some(target => target.os !== "windows"))
@@ -153,10 +241,19 @@ export function windowsRuntimeReleasePlan(
 if (import.meta.main) {
   const revision = process.argv[2];
   const [host = "vps", ...targets] = process.argv.slice(3);
-  if (!revision) throw new Error("Usage: bun scripts/aphrody/release-matrix.ts <exact-revision> [vps|windows] [target ...]");
-  console.log(JSON.stringify(host === "windows"
-    ? windowsRuntimeReleasePlan(revision, targets.length ? targets : undefined)
-    : host === "vps"
-      ? vpsRuntimeReleasePlan(revision, targets)
-      : (() => { throw new Error(`unknown factory host: ${host}`); })(), null, 2));
+  if (!revision)
+    throw new Error("Usage: bun scripts/aphrody/release-matrix.ts <exact-revision> [vps|windows] [target ...]");
+  console.log(
+    JSON.stringify(
+      host === "windows"
+        ? windowsRuntimeReleasePlan(revision, targets.length ? targets : undefined)
+        : host === "vps"
+          ? vpsRuntimeReleasePlan(revision, targets)
+          : (() => {
+              throw new Error(`unknown factory host: ${host}`);
+            })(),
+      null,
+      2,
+    ),
+  );
 }
