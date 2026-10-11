@@ -1,0 +1,2092 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-11",
+  "sourceRepository": "https://github.com/aphrody-labs/aphrody",
+  "sourceCommit": "2d66be8fcd84a87b4ca73124023881ca9d0c204f",
+  "targetRepository": "https://github.com/aphrody-labs/bun-os",
+  "targetBranch": "obscura",
+  "files": [
+    {
+      "source": "crates/ui/taffy/Cargo.toml",
+      "destination": "crates/taffy/Cargo.toml",
+      "sha256": "5648d66ff39959b35c559940f0dce041827306adb8ddb3dbb9248141ae035d04",
+      "bytes": 2960
+    },
+    {
+      "source": "crates/ui/taffy/LICENSE",
+      "destination": "crates/taffy/LICENSE",
+      "sha256": "f97daf1a0124413dccf399a4e6626b4b74acd05282f80b6d64ac82225650b77a",
+      "bytes": 1100
+    },
+    {
+      "source": "crates/ui/taffy/LOCAL-PATCHES.md",
+      "destination": "crates/taffy/LOCAL-PATCHES.md",
+      "sha256": "dfa0a3e397f98c2ad47b3a0626e68e367fedaad70ba6139f90ec1ca79495be30",
+      "bytes": 1604
+    },
+    {
+      "source": "crates/ui/taffy/MIGRATION.json",
+      "destination": "crates/taffy/MIGRATION.json",
+      "sha256": "0be353ed0ce61300a2a06f7865ab7b5d34eeeeae7f829b56efa8cf5d80b50617",
+      "bytes": 12367
+    },
+    {
+      "source": "crates/ui/taffy/README.md",
+      "destination": "crates/taffy/README.md",
+      "sha256": "36caad1776b821d6a2f3d5b5485ea037d65b9368a84d5bbb6506e715544cc932",
+      "bytes": 7433
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/block.rs",
+      "destination": "crates/taffy/src/compute/block.rs",
+      "sha256": "7d8569e647bb0739f59403357bac2e550da53e0c26d05657b95e216143abc9e6",
+      "bytes": 67016
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/common/alignment.rs",
+      "destination": "crates/taffy/src/compute/common/alignment.rs",
+      "sha256": "ac260ac03fc81f9ebd43660c0d677d3c74f26ea63fa14439a6cf61e612ce8cb5",
+      "bytes": 4923
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/common/content_size.rs",
+      "destination": "crates/taffy/src/compute/common/content_size.rs",
+      "sha256": "459787b1f3f1862724a6eed13e5bca94ee1b3fc7f14fe9545bac79ef7d3ff191",
+      "bytes": 1285
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/common/mod.rs",
+      "destination": "crates/taffy/src/compute/common/mod.rs",
+      "sha256": "5a0246358ab19aea76f245af9f45aac945b1a5f66320e2a1906ba70ca0f3e845",
+      "bytes": 156
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/flexbox.rs",
+      "destination": "crates/taffy/src/compute/flexbox.rs",
+      "sha256": "eda98870876a4244508808a81769be758f25f24ffbb3076ce35e908cf02d2ab1",
+      "bytes": 130421
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/float.rs",
+      "destination": "crates/taffy/src/compute/float.rs",
+      "sha256": "f2ec4241e39cf01d42c11e8f9bc654ec82c493a3a376ef7a7c5cdac8abb9f466",
+      "bytes": 24747
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/alignment.rs",
+      "destination": "crates/taffy/src/compute/grid/alignment.rs",
+      "sha256": "6a2099c5e33946c98fd44c77cfad8f9baad7da80af837292ae184e63f3e4949a",
+      "bytes": 33664
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/explicit_grid.rs",
+      "destination": "crates/taffy/src/compute/grid/explicit_grid.rs",
+      "sha256": "272832152df1d27d783996d80b8e96171393f0bf347356f8f4ce866926611cd6",
+      "bytes": 35116
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/implicit_grid.rs",
+      "destination": "crates/taffy/src/compute/grid/implicit_grid.rs",
+      "sha256": "37e0797529193c6bc0906c8afe221413e733ea2e2360843d3b2cd6821a8c7a4a",
+      "bytes": 11647
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/mod.rs",
+      "destination": "crates/taffy/src/compute/grid/mod.rs",
+      "sha256": "36d54ad77636b20031c2a27823174fa07a8498a6a5f4f4b1b0bf7b14c6aaf828",
+      "bytes": 43418
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/placement.rs",
+      "destination": "crates/taffy/src/compute/grid/placement.rs",
+      "sha256": "c980b111d052bb15cd8bb2a06759c5a9260722ed269793792c713fa3fcfe9f5a",
+      "bytes": 36628
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/track_sizing.rs",
+      "destination": "crates/taffy/src/compute/grid/track_sizing.rs",
+      "sha256": "e2f20c1cc98adc3a94fa270b98c7c1b15b4d5080e02ca262a589c526465c3346",
+      "bytes": 71431
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/types/cell_occupancy.rs",
+      "destination": "crates/taffy/src/compute/grid/types/cell_occupancy.rs",
+      "sha256": "594ad332c770621f5f97bfc26b0875e7ad3cb2c05f71ef1a8c1ed88f457709ca",
+      "bytes": 12971
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/types/coordinates.rs",
+      "destination": "crates/taffy/src/compute/grid/types/coordinates.rs",
+      "sha256": "cb821731336187de9dbcf0b5af2d75f0d92916eb21d5476e12ce9114095e4809",
+      "bytes": 5522
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/types/grid_item.rs",
+      "destination": "crates/taffy/src/compute/grid/types/grid_item.rs",
+      "sha256": "469a4bf61e29626be4920bbbc45b51509360defe88fed58d3ee88d5c9ccef3b0",
+      "bytes": 29061
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/types/grid_track.rs",
+      "destination": "crates/taffy/src/compute/grid/types/grid_track.rs",
+      "sha256": "8f2d80274d946497d17885b9538950b8e863e48fd15b3535b5b382e55cbbdf4f",
+      "bytes": 6299
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/types/grid_track_counts.rs",
+      "destination": "crates/taffy/src/compute/grid/types/grid_track_counts.rs",
+      "sha256": "58d92718927dbebe30e0f9634ac309002e9b5a774e3e6fb67150f2b8341f036d",
+      "bytes": 4863
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/types/mod.rs",
+      "destination": "crates/taffy/src/compute/grid/types/mod.rs",
+      "sha256": "c929f94d660ee3bab39e5b0110b17a570cf9657e0067fd2d595847663fd4f04f",
+      "bytes": 581
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/types/named.rs",
+      "destination": "crates/taffy/src/compute/grid/types/named.rs",
+      "sha256": "89346e8f3d26697081efeb6ed42f8717f726f20a7d768e0ca38774ad0c83e658",
+      "bytes": 18633
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/util/mod.rs",
+      "destination": "crates/taffy/src/compute/grid/util/mod.rs",
+      "sha256": "3302f73c3f2fd98db32297a6e9d71a0646269c248d825d1cc92d17ecec93adbf",
+      "bytes": 205
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/util/test_helpers.rs",
+      "destination": "crates/taffy/src/compute/grid/util/test_helpers.rs",
+      "sha256": "ab6992b6fa8251e1913acf645c98060f4b9794292f65c8641f6b3b17c1b0da0f",
+      "bytes": 1548
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/leaf.rs",
+      "destination": "crates/taffy/src/compute/leaf.rs",
+      "sha256": "502dc3db0a3e67edd50843cdaee8a294db7deac6152e0131c3f89458a6eafb7b",
+      "bytes": 7651
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/mod.rs",
+      "destination": "crates/taffy/src/compute/mod.rs",
+      "sha256": "e218317f03348e08ce2b6e6393d55dfa6141c5aa642ddb6c78cdfeda1b3f27c1",
+      "bytes": 16952
+    },
+    {
+      "source": "crates/ui/taffy/src/geometry.rs",
+      "destination": "crates/taffy/src/geometry.rs",
+      "sha256": "15ceb9918eab3813e7c5f7e8c1488599c95772636ac33b6bdf824779796de7d5",
+      "bytes": 24227
+    },
+    {
+      "source": "crates/ui/taffy/src/lib.rs",
+      "destination": "crates/taffy/src/lib.rs",
+      "sha256": "1ba5e86ae42f5a423798813899ac9ca3fdafa3d03cb5aad9d62a70ee21d1793c",
+      "bytes": 7002
+    },
+    {
+      "source": "crates/ui/taffy/src/prelude.rs",
+      "destination": "crates/taffy/src/prelude.rs",
+      "sha256": "892bc57c2dca1fde7ade48c33affb0f2cc81e27ae91c927ca756b639b56633d2",
+      "bytes": 1189
+    },
+    {
+      "source": "crates/ui/taffy/src/style/alignment.rs",
+      "destination": "crates/taffy/src/style/alignment.rs",
+      "sha256": "73730b7792cac699e4d559c7bd365e5c7d8039c258a74e6bca0662c381adb08a",
+      "bytes": 35652
+    },
+    {
+      "source": "crates/ui/taffy/src/style/available_space.rs",
+      "destination": "crates/taffy/src/style/available_space.rs",
+      "sha256": "fa8f82cd64cb1055f01a77ef7dcabdf661df718560346188fa2eabf10d5e77c1",
+      "bytes": 5804
+    },
+    {
+      "source": "crates/ui/taffy/src/style/block.rs",
+      "destination": "crates/taffy/src/style/block.rs",
+      "sha256": "ee7d80e4d203115a0e43a99b8b2d2f78b0ebd26862a40ed02c833031f32cc59a",
+      "bytes": 2048
+    },
+    {
+      "source": "crates/ui/taffy/src/style/compact_length.rs",
+      "destination": "crates/taffy/src/style/compact_length.rs",
+      "sha256": "e946a35341806298e4c5f62739004f78ccd6a9cca666a9d9de805610b1fc4ecf",
+      "bytes": 19058
+    },
+    {
+      "source": "crates/ui/taffy/src/style/dimension.rs",
+      "destination": "crates/taffy/src/style/dimension.rs",
+      "sha256": "af6cfbcebe17c14a4dbf4b4b2f57ba1379988b07cdf5e8da66bfe3e610d4bebb",
+      "bytes": 13531
+    },
+    {
+      "source": "crates/ui/taffy/src/style/flex.rs",
+      "destination": "crates/taffy/src/style/flex.rs",
+      "sha256": "5b6b67a9557bc0df32df57cde4524ef8ae825056e2835c509eb4382b2cbb980c",
+      "bytes": 7007
+    },
+    {
+      "source": "crates/ui/taffy/src/style/float.rs",
+      "destination": "crates/taffy/src/style/float.rs",
+      "sha256": "884a69bb999dae5172fb88805e7a0ed30fc3ef6a6d0b5340ff56045d45a5cb6c",
+      "bytes": 2213
+    },
+    {
+      "source": "crates/ui/taffy/src/style/grid.rs",
+      "destination": "crates/taffy/src/style/grid.rs",
+      "sha256": "da9341bd31620e04c707aaf9e05ea244d7e74cf77638c1400577713a7e2da7bc",
+      "bytes": 64208
+    },
+    {
+      "source": "crates/ui/taffy/src/style/mod.rs",
+      "destination": "crates/taffy/src/style/mod.rs",
+      "sha256": "7c3d81c8220b9783b34ab995a6e5eb07c653799b7576e9dc1e3b0a2604295f94",
+      "bytes": 48663
+    },
+    {
+      "source": "crates/ui/taffy/src/style_helpers.rs",
+      "destination": "crates/taffy/src/style_helpers.rs",
+      "sha256": "1c3ee1f7c4b5a9ec34b2ac9bc087a91c4953acca62fda6594f1dc3d4c28ddc7d",
+      "bytes": 20618
+    },
+    {
+      "source": "crates/ui/taffy/src/test.rs",
+      "destination": "crates/taffy/src/test.rs",
+      "sha256": "de5df121ffb5da7b1866379b73366d793083a5e4b5279d8702559beb1ee1729e",
+      "bytes": 6217
+    },
+    {
+      "source": "crates/ui/taffy/src/tree/cache.rs",
+      "destination": "crates/taffy/src/tree/cache.rs",
+      "sha256": "9962ef511b5aebab7b275d5fa34eef0ad115d16d540ad9c014966de75fec28a2",
+      "bytes": 13950
+    },
+    {
+      "source": "crates/ui/taffy/src/tree/layout.rs",
+      "destination": "crates/taffy/src/tree/layout.rs",
+      "sha256": "03c32a7220c6f39a68f7e86ec0ef60f6cf6f318bd6c0c09cfc3fd32d3ec55564",
+      "bytes": 13808
+    },
+    {
+      "source": "crates/ui/taffy/src/tree/mod.rs",
+      "destination": "crates/taffy/src/tree/mod.rs",
+      "sha256": "62c1acb00720263d6aa9fb4a1321f4fd1c2a10c4f2b3a19fed27f9b27b64e52d",
+      "bytes": 1090
+    },
+    {
+      "source": "crates/ui/taffy/src/tree/node.rs",
+      "destination": "crates/taffy/src/tree/node.rs",
+      "sha256": "b027062338f4d2dcea8c7c4200c7bc0d109c2e33dfa955b25079bb1d7b0537ba",
+      "bytes": 1337
+    },
+    {
+      "source": "crates/ui/taffy/src/tree/taffy_tree.rs",
+      "destination": "crates/taffy/src/tree/taffy_tree.rs",
+      "sha256": "6920f3570655a431e32b8e925c0d6f4ee968c0f53f053b2712baee19c8d4204c",
+      "bytes": 54881
+    },
+    {
+      "source": "crates/ui/taffy/src/tree/traits.rs",
+      "destination": "crates/taffy/src/tree/traits.rs",
+      "sha256": "456ae6981c69509a246ab369698bd17999681880ae2e150b6a114de1dc59e2b2",
+      "bytes": 19168
+    },
+    {
+      "source": "crates/ui/taffy/src/util/debug.rs",
+      "destination": "crates/taffy/src/util/debug.rs",
+      "sha256": "ab44f98e28e041006cd14e645e0b4bc970633c8da2d493856658ef2f2355d439",
+      "bytes": 4402
+    },
+    {
+      "source": "crates/ui/taffy/src/util/math.rs",
+      "destination": "crates/taffy/src/util/math.rs",
+      "sha256": "ee37a509ac3eef3581571a27b167c03fc65c37ee4110cbbd4c89f7cdc149f920",
+      "bytes": 12709
+    },
+    {
+      "source": "crates/ui/taffy/src/util/mod.rs",
+      "destination": "crates/taffy/src/util/mod.rs",
+      "sha256": "8703f6f3908328410b681e3b7d7eb9ab843d4c1b973c0b1eb858c3263c262b7d",
+      "bytes": 952
+    },
+    {
+      "source": "crates/ui/taffy/src/util/parse.rs",
+      "destination": "crates/taffy/src/util/parse.rs",
+      "sha256": "25144731b4d5de634b223ed3e81d1dd5b4c2b93635a30e0bccd8fd1b238bb47f",
+      "bytes": 4301
+    },
+    {
+      "source": "crates/ui/taffy/src/util/print.rs",
+      "destination": "crates/taffy/src/util/print.rs",
+      "sha256": "bd82cc0a7f0f8fd172a6e569216dfe9edecc34110835cc56342c87a7945d978b",
+      "bytes": 3329
+    },
+    {
+      "source": "crates/ui/taffy/src/util/resolve.rs",
+      "destination": "crates/taffy/src/util/resolve.rs",
+      "sha256": "8499dfe57dcf255639048d2196cb130e774e297e1362c487c7e1683d06161901",
+      "bytes": 15917
+    },
+    {
+      "source": "crates/ui/taffy/src/util/sys.rs",
+      "destination": "crates/taffy/src/util/sys.rs",
+      "sha256": "cb35902c534b63fec27301a3055caa9a0cc987a67e0dc40022d07d13bb3e0b35",
+      "bytes": 8913
+    },
+    {
+      "source": "crates/web/obscura-browser/Cargo.toml",
+      "destination": "crates/obscura-browser/Cargo.toml",
+      "sha256": "7ad6ff325b402db8b5326f7b17d88cfe949d8a7ce66eb8f8ac95675824e87850",
+      "bytes": 1370
+    },
+    {
+      "source": "crates/web/obscura-browser/src/context.rs",
+      "destination": "crates/obscura-browser/src/context.rs",
+      "sha256": "48f47bffa241631c34514264394eee9118bf21987eec15e5935e6ab9b2b9a8e9",
+      "bytes": 10495
+    },
+    {
+      "source": "crates/web/obscura-browser/src/fork_virtual_url.rs",
+      "destination": "crates/obscura-browser/src/fork_virtual_url.rs",
+      "sha256": "498645f60896c313dc871f9a5021dff9a8a454f8f5ecf3c6f3cb469492e532e8",
+      "bytes": 1863
+    },
+    {
+      "source": "crates/web/obscura-browser/src/idle_deadline.rs",
+      "destination": "crates/obscura-browser/src/idle_deadline.rs",
+      "sha256": "28d7675d235ef38a66c3a432a65809fc2c7e38dd37a38625cb05b8bde4b3b16a",
+      "bytes": 15149
+    },
+    {
+      "source": "crates/web/obscura-browser/src/lib.rs",
+      "destination": "crates/obscura-browser/src/lib.rs",
+      "sha256": "9dfbba27ee5ce237891aaaedc908704a908c78ad3eb0820b9ccd40f7aa45cbb6",
+      "bytes": 828
+    },
+    {
+      "source": "crates/web/obscura-browser/src/lifecycle.rs",
+      "destination": "crates/obscura-browser/src/lifecycle.rs",
+      "sha256": "e82e1fa7b806c7640c8df5cb14783c353b7886964e1424fbedef0371ffb9063d",
+      "bytes": 971
+    },
+    {
+      "source": "crates/web/obscura-browser/src/page.rs",
+      "destination": "crates/obscura-browser/src/page.rs",
+      "sha256": "93c3b5bb626a8a88212d6ab3f97bfb8546b9f4aa695f0cb4df11d0567a5ca3b5",
+      "bytes": 430518
+    },
+    {
+      "source": "crates/web/obscura-browser/src/pdf.rs",
+      "destination": "crates/obscura-browser/src/pdf.rs",
+      "sha256": "575cb58d05d85b8664c60d1a409ce7dc9f32743a4bc9c7d5dced6463eb2e43f5",
+      "bytes": 37083
+    },
+    {
+      "source": "crates/web/obscura-browser/src/profiles.rs",
+      "destination": "crates/obscura-browser/src/profiles.rs",
+      "sha256": "5987b51920c47a21a29ae603f6d6b6011da391ca90e4bea9fb373d300fbda9ca",
+      "bytes": 3882
+    },
+    {
+      "source": "crates/web/obscura-browser/tests/binary_fetch_body.rs",
+      "destination": "crates/obscura-browser/tests/binary_fetch_body.rs",
+      "sha256": "738d3fa3fdb30757d841dfa2e14f456250184e90255e0a8a780e642207a9b628",
+      "bytes": 4981
+    },
+    {
+      "source": "crates/web/obscura-browser/tests/input_accept.rs",
+      "destination": "crates/obscura-browser/tests/input_accept.rs",
+      "sha256": "8335bdbc5d97add5a947884c4d9624bd115e67b9df378fa2ca608f4d6efe66d8",
+      "bytes": 1175
+    },
+    {
+      "source": "crates/web/obscura-browser/tests/unhandled_rejection.rs",
+      "destination": "crates/obscura-browser/tests/unhandled_rejection.rs",
+      "sha256": "7f4fac54dfbbcfde82efaa9c7ec2062dfe41c435b6abc6cdcc1aa67cdfc328c5",
+      "bytes": 2027
+    },
+    {
+      "source": "crates/web/obscura-cdp/Cargo.toml",
+      "destination": "crates/obscura-cdp/Cargo.toml",
+      "sha256": "2e077e499ffcfb8cd163b6eff0172997c071772cc09eb742e3fc78fcea5f4240",
+      "bytes": 2056
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/cookie_params.rs",
+      "destination": "crates/obscura-cdp/src/cookie_params.rs",
+      "sha256": "34c6ca8c31afe3feb905293d855d1df6697cc04ced0accc4d3624c613029ad1d",
+      "bytes": 6024
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/dispatch.rs",
+      "destination": "crates/obscura-cdp/src/dispatch.rs",
+      "sha256": "dcb74612fa0f50fa765b01b8bdb6d3611bd0def411b3ddf16e1ae954e8e8541e",
+      "bytes": 59251
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/accessibility.rs",
+      "destination": "crates/obscura-cdp/src/domains/accessibility.rs",
+      "sha256": "d9451a6a385475689ef29ac29213f3ccf15a122f7b214dcacc8b115fd095ca34",
+      "bytes": 34099
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/browser.rs",
+      "destination": "crates/obscura-cdp/src/domains/browser.rs",
+      "sha256": "850ace231ec1fd74569e9a8510f4afb5c668b0170a245628e8e5892295fbb1ea",
+      "bytes": 1815
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/dom.rs",
+      "destination": "crates/obscura-cdp/src/domains/dom.rs",
+      "sha256": "b3d8fd62a2521763c5f18c902e4fdc984cb65953b8e4c29848998a4f1198f624",
+      "bytes": 41747
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/domsnapshot.rs",
+      "destination": "crates/obscura-cdp/src/domains/domsnapshot.rs",
+      "sha256": "4799394906df1b4fd4dec85a76912c68e9b90323e6fb05f0343a3ba30569e16f",
+      "bytes": 16089
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/emulation.rs",
+      "destination": "crates/obscura-cdp/src/domains/emulation.rs",
+      "sha256": "197f7439a4c34297654cf51307872b6604fabb6a3db8d67b827609cef61ed747",
+      "bytes": 19050
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/fetch.rs",
+      "destination": "crates/obscura-cdp/src/domains/fetch.rs",
+      "sha256": "ef00d81b16cc3c7bc18f3b9b9941594e81dfcd8f53d01d1cdc6f2d107ed9cd8a",
+      "bytes": 10264
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/input.rs",
+      "destination": "crates/obscura-cdp/src/domains/input.rs",
+      "sha256": "0c4eb5de7bccbb1ffa1f6ba317a5931cc32efc20db5a12253b5f98616dbb5d28",
+      "bytes": 36195
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/io.rs",
+      "destination": "crates/obscura-cdp/src/domains/io.rs",
+      "sha256": "afbebf319c857582bd9796f1c257f448b227e846289df8a3bf785ed3acb7a3d1",
+      "bytes": 10172
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/lp.rs",
+      "destination": "crates/obscura-cdp/src/domains/lp.rs",
+      "sha256": "c15736cc855922df66595543f3b15161e2a16aa1441e05c4227a633686ffd9df",
+      "bytes": 639
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/mod.rs",
+      "destination": "crates/obscura-cdp/src/domains/mod.rs",
+      "sha256": "71b15eeeffb266b502feea676001347c22aed67cf7a730016f52f0729032b1ac",
+      "bytes": 241
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/network.rs",
+      "destination": "crates/obscura-cdp/src/domains/network.rs",
+      "sha256": "ff9a7db9a307c661efb7de3cb0af288f34666e84c27ae8aae67f333953f82c89",
+      "bytes": 15166
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/page.rs",
+      "destination": "crates/obscura-cdp/src/domains/page.rs",
+      "sha256": "e2657b05ad313bf0cfa71952601184ff1377afc5dd02f80329d526c146f3a9d6",
+      "bytes": 166682
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/pdf.rs",
+      "destination": "crates/obscura-cdp/src/domains/pdf.rs",
+      "sha256": "2edd557438d684eedd5b249a7fd6aa8b52eee155b979b1ae8a56a0dc8ef6759b",
+      "bytes": 20163
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/runtime.rs",
+      "destination": "crates/obscura-cdp/src/domains/runtime.rs",
+      "sha256": "4f2543fc4817a1b6733f6e58fb5e16df240ec332cc0aec483e8a59622caab8a0",
+      "bytes": 37075
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/storage.rs",
+      "destination": "crates/obscura-cdp/src/domains/storage.rs",
+      "sha256": "6d749760cf4adb531e29396fc55be522d286ddcee685f751204993cc26a0da23",
+      "bytes": 4010
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/target.rs",
+      "destination": "crates/obscura-cdp/src/domains/target.rs",
+      "sha256": "00ec09530b842cc958e1bd3a75a51d6a171e3fb6446e80bdcb80dc921868bcd4",
+      "bytes": 22897
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/lib.rs",
+      "destination": "crates/obscura-cdp/src/lib.rs",
+      "sha256": "a3852e27bd01aedcfa42afca457c493c0763ce5acf76a8e446b246684d2c65da",
+      "bytes": 382
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/server.rs",
+      "destination": "crates/obscura-cdp/src/server.rs",
+      "sha256": "1fae4895cbc0055af279b1b6ee1b3695bdab5d074e4b19e5c8ff93cca206dbf6",
+      "bytes": 173769
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/types.rs",
+      "destination": "crates/obscura-cdp/src/types.rs",
+      "sha256": "3025773bd6f49ebd26152532eaf65972c5fcdc7e241b952544fce3927144786a",
+      "bytes": 1694
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/util.rs",
+      "destination": "crates/obscura-cdp/src/util.rs",
+      "sha256": "3431017b5f86408186a0d432e0e51d29c60427db9d37ede8efbce3f57ff1d275",
+      "bytes": 7951
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/accept_thread_survives_silent_connections.rs",
+      "destination": "crates/obscura-cdp/tests/accept_thread_survives_silent_connections.rs",
+      "sha256": "46f7a251ea90b9680783ab0166c54497b04363d33448b5869d025f6551afd736",
+      "bytes": 5174
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/accessibility_names.rs",
+      "destination": "crates/obscura-cdp/tests/accessibility_names.rs",
+      "sha256": "e6ce85d49b896fc818eb380256b2795b56b6aae73f35c71a3c420582b87946a3",
+      "bytes": 5700
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/backspace_surrogate.rs",
+      "destination": "crates/obscura-cdp/tests/backspace_surrogate.rs",
+      "sha256": "99213b12554de8f7438ffd66d2d94309ede1d816b94a4bacbe87dc18111b5361",
+      "bytes": 2209
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/binding_called_session.rs",
+      "destination": "crates/obscura-cdp/tests/binding_called_session.rs",
+      "sha256": "d00f6f3164d17a1d876703560804f3287ed7515bb0557aa44f8fcefdd3ecca51",
+      "bytes": 5684
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/cdp_click_submit_parity.rs",
+      "destination": "crates/obscura-cdp/tests/cdp_click_submit_parity.rs",
+      "sha256": "a206ace1fec2cb18623771f6b916c4ebc1d833eee91902ef8caa0842c0cfc9d3",
+      "bytes": 4532
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/child_frame_tree.rs",
+      "destination": "crates/obscura-cdp/tests/child_frame_tree.rs",
+      "sha256": "974186a97eecea570a2217506ae1fae673f1a15c9f5789cfc77d4ade739bac3f",
+      "bytes": 15385
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/concurrent_connections_heavy_page.rs",
+      "destination": "crates/obscura-cdp/tests/concurrent_connections_heavy_page.rs",
+      "sha256": "2acf989ac2e7338d3995a8af460d5a9445d4668cde26ae0b8cc3b046d52cd253",
+      "bytes": 11362
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/concurrent_navigations.rs",
+      "destination": "crates/obscura-cdp/tests/concurrent_navigations.rs",
+      "sha256": "8cb1f358d9c69c4171f67061b91dee7e9af0e937a40c8eeb7c329fb78ca2cafa",
+      "bytes": 5566
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/concurrent_navigations_with_fetch.rs",
+      "destination": "crates/obscura-cdp/tests/concurrent_navigations_with_fetch.rs",
+      "sha256": "0f989c992745af2838b00c1325155d2e2e6264cdcfaa8f1271680a5b6d5d2865",
+      "bytes": 9240
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/concurrent_page_isolation.rs",
+      "destination": "crates/obscura-cdp/tests/concurrent_page_isolation.rs",
+      "sha256": "d3daec7fda972e87dd877ab5afaec822e5a76c81b306a91bc534c2b8a4d4a985",
+      "bytes": 7462
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/control_plane_unblocked.rs",
+      "destination": "crates/obscura-cdp/tests/control_plane_unblocked.rs",
+      "sha256": "fb79c7ec9e6d565610c6e836c3207917700ce01770e1e15d6f4906a90a15083a",
+      "bytes": 5430
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/document_write_lifecycle.rs",
+      "destination": "crates/obscura-cdp/tests/document_write_lifecycle.rs",
+      "sha256": "bc03185a31a6c1d47d3a2d991c662bd5ee47646e9602d503d3e430ff36a1d191",
+      "bytes": 6200
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/dynamic_script_onload_fires.rs",
+      "destination": "crates/obscura-cdp/tests/dynamic_script_onload_fires.rs",
+      "sha256": "5e5773118761306708b81064acfb5d6b79ee48fa3dc227b8041a1c70a9cb9ddc",
+      "bytes": 13472
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/dynamic_stylesheet_onload_fires.rs",
+      "destination": "crates/obscura-cdp/tests/dynamic_stylesheet_onload_fires.rs",
+      "sha256": "adc55940730da1192ef19fc9f45e7e784ad50c2c2d04bfbd01f9db463224fd11",
+      "bytes": 4260
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/execution_context_ownership.rs",
+      "destination": "crates/obscura-cdp/tests/execution_context_ownership.rs",
+      "sha256": "5e79aea90e9f21c3bc9daac93ec5a987b33fd034189e42bc8c9815c50213bf43",
+      "bytes": 12131
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/execution_context_pruned_on_navigation.rs",
+      "destination": "crates/obscura-cdp/tests/execution_context_pruned_on_navigation.rs",
+      "sha256": "c493679113ac7c872a6a1ea86ec9f6ce2114a627bc1d75819e8e49704c358b36",
+      "bytes": 2175
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/file_navigation_gate.rs",
+      "destination": "crates/obscura-cdp/tests/file_navigation_gate.rs",
+      "sha256": "2cef6b863cc2ac3410721be58c3d38ac135c23430f974d45d8a69b085a41fecc",
+      "bytes": 4809
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/form_submit_method_bypasses_listener.rs",
+      "destination": "crates/obscura-cdp/tests/form_submit_method_bypasses_listener.rs",
+      "sha256": "5b666a7bfde2cf4f49ca88cd04c7c2e2b5992d83aa952787d089edb60d1c5163",
+      "bytes": 11807
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/fragment_navigation.rs",
+      "destination": "crates/obscura-cdp/tests/fragment_navigation.rs",
+      "sha256": "3fb45df7c4ceee77215bb80463466677e8955a8e18d9bf4b6a82ee2011777610",
+      "bytes": 3985
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/iframe_event_dispatch.rs",
+      "destination": "crates/obscura-cdp/tests/iframe_event_dispatch.rs",
+      "sha256": "bed4462c780f7d8add428eff4bbde583147d96ff819d47223f8172cb60bb328c",
+      "bytes": 8994
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/input_activation_author_accessors.rs",
+      "destination": "crates/obscura-cdp/tests/input_activation_author_accessors.rs",
+      "sha256": "6bcb93b911c8025a0632efe2fa07b3439144c2b80eaefe2ec00fab3580751c25",
+      "bytes": 8770
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/input_key_event_escaping.rs",
+      "destination": "crates/obscura-cdp/tests/input_key_event_escaping.rs",
+      "sha256": "256a30241d54d8d34c3293dbf478861355bfb060da164e2fdc1330a820d956b6",
+      "bytes": 12172
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/input_mouse_event_parity.rs",
+      "destination": "crates/obscura-cdp/tests/input_mouse_event_parity.rs",
+      "sha256": "b864f4f6d74d96bd54ef028fc8e2360167e6b707951718347e4a4ae7340895cc",
+      "bytes": 27817
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/input_mouse_label_activation.rs",
+      "destination": "crates/obscura-cdp/tests/input_mouse_label_activation.rs",
+      "sha256": "4a0d43497e46c9446dd4ee53fab5dac653cdc13803bbe890af383a02f61c8bb3",
+      "bytes": 6019
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/integration.rs",
+      "destination": "crates/obscura-cdp/tests/integration.rs",
+      "sha256": "4ab7e1b801353d389487d258919114bccd88cb82643b16b83c35bad04611aa96",
+      "bytes": 2144
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/js_fetch_emits_network_events.rs",
+      "destination": "crates/obscura-cdp/tests/js_fetch_emits_network_events.rs",
+      "sha256": "359a24f08b0613bbde8dd2cebec93d200a1c067c735d9b99378e129857efd59c",
+      "bytes": 14021
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/max_connections_cap.rs",
+      "destination": "crates/obscura-cdp/tests/max_connections_cap.rs",
+      "sha256": "13b23a2da5afeb3eeafedd873e6efc838d79d017318df7293706689f4d75c74c",
+      "bytes": 5989
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/nodefilter_constants.rs",
+      "destination": "crates/obscura-cdp/tests/nodefilter_constants.rs",
+      "sha256": "8319a0c3668578069115b32e2cd3686863d5b2b47d2fbe5db07dcd6c309f6db1",
+      "bytes": 4832
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/page_frame_contract.rs",
+      "destination": "crates/obscura-cdp/tests/page_frame_contract.rs",
+      "sha256": "38210c7d36bcbd23899cfef3e32a6309d9811eadfe55b406fc58bbc38f36d794",
+      "bytes": 10281
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/runtime_by_value_undefined.rs",
+      "destination": "crates/obscura-cdp/tests/runtime_by_value_undefined.rs",
+      "sha256": "2a8d76a4190a64b14451cd0d0a07929de08f238e9a89c440a88d0defa21d8bba",
+      "bytes": 2864
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/runtime_console_events.rs",
+      "destination": "crates/obscura-cdp/tests/runtime_console_events.rs",
+      "sha256": "4af7acef4d8d4d921bbb442e6dd6a4d66972b91994055691f4ae5f4c2bce982f",
+      "bytes": 7622
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/runtime_get_properties_objectid_escaping.rs",
+      "destination": "crates/obscura-cdp/tests/runtime_get_properties_objectid_escaping.rs",
+      "sha256": "a57598425acccb7b2dbc5fcf537e34eed908fafa470529953ffee4dfc1ca342b",
+      "bytes": 7718
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/runtime_primitives.rs",
+      "destination": "crates/obscura-cdp/tests/runtime_primitives.rs",
+      "sha256": "492e63a5825c79cb42e39cf665531a14816df9b61f4378ead2db45bda98a8c1d",
+      "bytes": 3775
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/scroll_event_on_assignment.rs",
+      "destination": "crates/obscura-cdp/tests/scroll_event_on_assignment.rs",
+      "sha256": "50289db7de398bd30bb519bfaa9a48cc444c1f0987b00a687f272b42481cb909",
+      "bytes": 6863
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/structured_clone_crypto_parity.rs",
+      "destination": "crates/obscura-cdp/tests/structured_clone_crypto_parity.rs",
+      "sha256": "95e751c671e78db5a23a43a71276416b051231d5ed62be5e7e8a1aa70ec69121",
+      "bytes": 12230
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/textarea_enter_selection.rs",
+      "destination": "crates/obscura-cdp/tests/textarea_enter_selection.rs",
+      "sha256": "dda0509ccd511b7ef62b74713f99bf160ee884c59ca6ba11c22e685fef27540e",
+      "bytes": 12658
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/treewalker_document_order.rs",
+      "destination": "crates/obscura-cdp/tests/treewalker_document_order.rs",
+      "sha256": "a79397813acd51d46b9b77d9da9a9a11cbeee4b3290bdfa7d7913eb50703145b",
+      "bytes": 4809
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/window_conformance_parity.rs",
+      "destination": "crates/obscura-cdp/tests/window_conformance_parity.rs",
+      "sha256": "5aa6aa0f8bf45b0e8cfb3dd7713ed87fca8758df9a07a7049b471c3c57fef520",
+      "bytes": 5649
+    },
+    {
+      "source": "crates/web/obscura-dom/Cargo.toml",
+      "destination": "crates/obscura-dom/Cargo.toml",
+      "sha256": "ae2e922fa55f7cfcfc20ea99a0c68010d930d3b110a699e362eddf69dc082791",
+      "bytes": 859
+    },
+    {
+      "source": "crates/web/obscura-dom/LICENSE",
+      "destination": "crates/obscura-dom/LICENSE",
+      "sha256": "313605fbac6945e9324d4825470796b5b7dbc012f523fdc181f6e6fd234eb88f",
+      "bytes": 11525
+    },
+    {
+      "source": "crates/web/obscura-dom/README.md",
+      "destination": "crates/obscura-dom/README.md",
+      "sha256": "be976a0a586290ee47b63825aea90f087661ee54f89699eb48bcd3e0c5071a40",
+      "bytes": 593
+    },
+    {
+      "source": "crates/web/obscura-dom/src/lib.rs",
+      "destination": "crates/obscura-dom/src/lib.rs",
+      "sha256": "fda2269e341782e1427182fa96e691726ad183b7ad69af3d326da8e1baae584b",
+      "bytes": 301
+    },
+    {
+      "source": "crates/web/obscura-dom/src/selector.rs",
+      "destination": "crates/obscura-dom/src/selector.rs",
+      "sha256": "c967ee47a988ae448147f58650c9d2cba91184d5e1645eb496f5e1cf6ce39d29",
+      "bytes": 71244
+    },
+    {
+      "source": "crates/web/obscura-dom/src/serialize.rs",
+      "destination": "crates/obscura-dom/src/serialize.rs",
+      "sha256": "ca87fd969714cec7a8b1718f509f4da750e09b1d59c985aa6c644930f1a5acb0",
+      "bytes": 14986
+    },
+    {
+      "source": "crates/web/obscura-dom/src/tree.rs",
+      "destination": "crates/obscura-dom/src/tree.rs",
+      "sha256": "4627657c4427ab1a5a3de77da0f3e3fca6e4c6fdf993df59d25e6e5bfe0ff990",
+      "bytes": 106907
+    },
+    {
+      "source": "crates/web/obscura-dom/src/tree_sink.rs",
+      "destination": "crates/obscura-dom/src/tree_sink.rs",
+      "sha256": "4722ef6446d3e6a89952d34e8358bdf6afc5e424093d29ba8ad21b95c6a697f3",
+      "bytes": 24121
+    },
+    {
+      "source": "crates/web/obscura-dom/tests/slot_query_allocations.rs",
+      "destination": "crates/obscura-dom/tests/slot_query_allocations.rs",
+      "sha256": "8c523261ba3d8adc8aedc2bee6be1b894dc6b871f6d9695056d15defb2ecedcc",
+      "bytes": 2915
+    },
+    {
+      "source": "crates/web/obscura-dom/tests/support/allocations.rs",
+      "destination": "crates/obscura-dom/tests/support/allocations.rs",
+      "sha256": "6eeaa445a0a1e2d3766e6d8719829555f105a73a4b6e7537af109dad61e0e031",
+      "bytes": 1196
+    },
+    {
+      "source": "crates/web/obscura-js/Cargo.toml",
+      "destination": "crates/obscura-js/Cargo.toml",
+      "sha256": "039d3249be947ca1650b8462196ea52f17f9747595b91ab19af33558bfbbc380",
+      "bytes": 2596
+    },
+    {
+      "source": "crates/web/obscura-js/build.rs",
+      "destination": "crates/obscura-js/build.rs",
+      "sha256": "9382630e41e41f7efb9c4841609ebe2db7a65d1690dbaaba0af3d147f3a2f2a2",
+      "bytes": 9919
+    },
+    {
+      "source": "crates/web/obscura-js/examples/bench_v8.rs",
+      "destination": "crates/obscura-js/examples/bench_v8.rs",
+      "sha256": "92ec14bf410a81e97f5565ae64f8c5aa1cee92665905b5f63fa916c9d53d372a",
+      "bytes": 4231
+    },
+    {
+      "source": "crates/web/obscura-js/js/bootstrap.js",
+      "destination": "crates/obscura-js/js/bootstrap.js",
+      "sha256": "f84b9f091110101acf0b0683b1404adc4eeb4a1f25a731267f724c8c7f07ab4a",
+      "bytes": 819685
+    },
+    {
+      "source": "crates/web/obscura-js/src/cdp_watchdog.rs",
+      "destination": "crates/obscura-js/src/cdp_watchdog.rs",
+      "sha256": "4d365fb819793784eca0b81fa342415e28c6ac167319bc558964d24ff1ec80dc",
+      "bytes": 4064
+    },
+    {
+      "source": "crates/web/obscura-js/src/frame.rs",
+      "destination": "crates/obscura-js/src/frame.rs",
+      "sha256": "1497eea4575398bfc06a90d20631ef1ff49ad1c94f724dc4b0ced2cf6dcab6e3",
+      "bytes": 67002
+    },
+    {
+      "source": "crates/web/obscura-js/src/import_map.rs",
+      "destination": "crates/obscura-js/src/import_map.rs",
+      "sha256": "1ea3d64c8416c92af6f21d30e1241d94c2d10f5dfbd80c89ee3dab4a0d1b992c",
+      "bytes": 15458
+    },
+    {
+      "source": "crates/web/obscura-js/src/lib.rs",
+      "destination": "crates/obscura-js/src/lib.rs",
+      "sha256": "3e90637c2bf27cfcd2b083b7bea3c5841f2ca3313c19ccb88239f4a190feb0f7",
+      "bytes": 946
+    },
+    {
+      "source": "crates/web/obscura-js/src/markdown.rs",
+      "destination": "crates/obscura-js/src/markdown.rs",
+      "sha256": "1b10a0fadad34e7c6b5acb1b0e3dd2697ae877e966173a89a4cae85d1d80d371",
+      "bytes": 3553
+    },
+    {
+      "source": "crates/web/obscura-js/src/module_loader.rs",
+      "destination": "crates/obscura-js/src/module_loader.rs",
+      "sha256": "6afccd4a0751fadaab6e3b96caf7135479c22d6746bfe0d73b55d5fcb1000ed0",
+      "bytes": 13525
+    },
+    {
+      "source": "crates/web/obscura-js/src/ops.rs",
+      "destination": "crates/obscura-js/src/ops.rs",
+      "sha256": "104beaca7bae0615d29d4e6575d1010749485dd8d0e0eb27c5d5da44666c478d",
+      "bytes": 338730
+    },
+    {
+      "source": "crates/web/obscura-js/src/runtime.rs",
+      "destination": "crates/obscura-js/src/runtime.rs",
+      "sha256": "ac346199648f18d62f3f45ef579401f51de1a340d3ba24ec6661f75e315cbef0",
+      "bytes": 1060817
+    },
+    {
+      "source": "crates/web/obscura-js/src/v8_flags.rs",
+      "destination": "crates/obscura-js/src/v8_flags.rs",
+      "sha256": "4a336130daa4aa273044bb8b041376627f3062d38e191766b61ca49334abdd94",
+      "bytes": 2953
+    },
+    {
+      "source": "crates/web/obscura-js/src/websocket.rs",
+      "destination": "crates/obscura-js/src/websocket.rs",
+      "sha256": "807a40ccbc2bb9a8e16a6022b6ca46ce77fdfb15f93de9cdbe02a12258a22193",
+      "bytes": 18718
+    },
+    {
+      "source": "crates/web/obscura-js/src/write_stream.rs",
+      "destination": "crates/obscura-js/src/write_stream.rs",
+      "sha256": "a9b51f5bda4a48aaac88a8ba496c4c233fad06cd168958e78685de54a34a6d9c",
+      "bytes": 9604
+    },
+    {
+      "source": "crates/web/obscura-js/tests/media_query_events.rs",
+      "destination": "crates/obscura-js/tests/media_query_events.rs",
+      "sha256": "984596667f40d4f6cf8ff81ee824f8f4755f8c2288f823d6ee9f4323d4eff8d1",
+      "bytes": 3043
+    },
+    {
+      "source": "crates/web/obscura-js/tests/multi_isolate_teardown.rs",
+      "destination": "crates/obscura-js/tests/multi_isolate_teardown.rs",
+      "sha256": "b557e0e88fcbbf5a8bb410720c486ea7d289e9d19cba9b82c83be12a3121e743",
+      "bytes": 1934
+    },
+    {
+      "source": "crates/web/obscura-js/tests/reduced_motion.rs",
+      "destination": "crates/obscura-js/tests/reduced_motion.rs",
+      "sha256": "d6c835a4f298d4dd4b86fd88d5be5e29f9db64563aa300fb3715a376db32b0b2",
+      "bytes": 2239
+    },
+    {
+      "source": "crates/web/obscura-mcp/Cargo.toml",
+      "destination": "crates/obscura-mcp/Cargo.toml",
+      "sha256": "5ccd396dff59afded35f2bd804937d8c5613a26b253991093ef69157ee1ea513",
+      "bytes": 1258
+    },
+    {
+      "source": "crates/web/obscura-mcp/src/aphrody.rs",
+      "destination": "crates/obscura-mcp/src/aphrody.rs",
+      "sha256": "143975b9b606da4946459e6dd152663dbe6a17ceaa4007bece05801cfad5a24f",
+      "bytes": 1476
+    },
+    {
+      "source": "crates/web/obscura-mcp/src/lib.rs",
+      "destination": "crates/obscura-mcp/src/lib.rs",
+      "sha256": "adc503d9fa0bf42b15f3ab0fed7b3fc74e6f6645fe9b8ae948fa0b40c554e4d9",
+      "bytes": 122446
+    },
+    {
+      "source": "crates/web/obscura-net/Cargo.toml",
+      "destination": "crates/obscura-net/Cargo.toml",
+      "sha256": "fe50a99817b48d3c95c01580fa4c6f92e8eead084f7cb209d50f95f3b527d451",
+      "bytes": 3310
+    },
+    {
+      "source": "crates/web/obscura-net/src/blocklist.rs",
+      "destination": "crates/obscura-net/src/blocklist.rs",
+      "sha256": "720fc7cc2ae887506ceb458ef9c4b0f723ada2eccdfdf294f9f943b7d6b3f2e3",
+      "bytes": 1730
+    },
+    {
+      "source": "crates/web/obscura-net/src/client.rs",
+      "destination": "crates/obscura-net/src/client.rs",
+      "sha256": "47423a1ec7063dabd18cce1aa80e25b42abc83576fc65d608944ec22d09105d2",
+      "bytes": 126626
+    },
+    {
+      "source": "crates/web/obscura-net/src/cookies.rs",
+      "destination": "crates/obscura-net/src/cookies.rs",
+      "sha256": "9ab82488f8ae8eef062d6afb1d56f217f75f3e08ca54e760958c26ff94381699",
+      "bytes": 81447
+    },
+    {
+      "source": "crates/web/obscura-net/src/dns.rs",
+      "destination": "crates/obscura-net/src/dns.rs",
+      "sha256": "09dbd22cac49dfec6805efd9ae81cabc9002f490506ad8430859bacacf91815a",
+      "bytes": 2151
+    },
+    {
+      "source": "crates/web/obscura-net/src/encoding.rs",
+      "destination": "crates/obscura-net/src/encoding.rs",
+      "sha256": "c2466bf47c17f0248a37133d98b45f3559755b1ae1b153193ebfea5c2aa8b13e",
+      "bytes": 18831
+    },
+    {
+      "source": "crates/web/obscura-net/src/har.rs",
+      "destination": "crates/obscura-net/src/har.rs",
+      "sha256": "e93abdd19b18f2287c822a489cc69d81a085a5e0a092a9288e051515e8a33ebe",
+      "bytes": 13372
+    },
+    {
+      "source": "crates/web/obscura-net/src/interceptor.rs",
+      "destination": "crates/obscura-net/src/interceptor.rs",
+      "sha256": "85afb86f48b7749aaf8a9a821089ae4b77eaa8b9fda2212873fa2b9b83b770bf",
+      "bytes": 333
+    },
+    {
+      "source": "crates/web/obscura-net/src/lib.rs",
+      "destination": "crates/obscura-net/src/lib.rs",
+      "sha256": "4f403638e98a7703f3eed4af3cc519f2a758f51a193681e39dc47648df2cc075",
+      "bytes": 1634
+    },
+    {
+      "source": "crates/web/obscura-net/src/operator_hint.rs",
+      "destination": "crates/obscura-net/src/operator_hint.rs",
+      "sha256": "4e41066c5f71335db0dbc7a7d607654463bbb80e17ec018b4c2a96bf914c0a67",
+      "bytes": 4062
+    },
+    {
+      "source": "crates/web/obscura-net/src/pgl_domains.txt",
+      "destination": "crates/obscura-net/src/pgl_domains.txt",
+      "sha256": "04a12c559c538d2da4f89312a1c5804f40b2e682ffd66748751c79fba3846037",
+      "bytes": 58256
+    },
+    {
+      "source": "crates/web/obscura-net/src/robots.rs",
+      "destination": "crates/obscura-net/src/robots.rs",
+      "sha256": "9716f64a6ea0ec0d4a20c186469bdef65e2147e2bb976892998c684df30cf95c",
+      "bytes": 10146
+    },
+    {
+      "source": "crates/web/obscura-net/src/wreq_client.rs",
+      "destination": "crates/obscura-net/src/wreq_client.rs",
+      "sha256": "a31d5500c1c96a68ddb29cf9344f086261c526422c361e76e496fc57e43857f8",
+      "bytes": 36901
+    },
+    {
+      "source": "crates/web/obscura-render/Cargo.toml",
+      "destination": "crates/obscura-render/Cargo.toml",
+      "sha256": "808b5eab74705597b5da4207bf77e368a0f6f5233e46a90a6828b18e482da6c6",
+      "bytes": 4199
+    },
+    {
+      "source": "crates/web/obscura-render/assets/FONT-PROVENANCE.md",
+      "destination": "crates/obscura-render/assets/FONT-PROVENANCE.md",
+      "sha256": "973a9f0783a068088c169905cb4b3776935569a784f10234b6a0baab355c7ee3",
+      "bytes": 370
+    },
+    {
+      "source": "crates/web/obscura-render/assets/LICENSE-NOTO-COLOR-EMOJI.txt",
+      "destination": "crates/obscura-render/assets/LICENSE-NOTO-COLOR-EMOJI.txt",
+      "sha256": "88f117575237307bdd86a17ef15e21790fc9a662fe4dfb103ca1ca077f0d9982",
+      "bytes": 4393
+    },
+    {
+      "source": "crates/web/obscura-render/assets/dejavu-sans-bold.ttf",
+      "destination": "crates/obscura-render/assets/dejavu-sans-bold.ttf",
+      "sha256": "5c1247acef7f2b8522a31742c76d6adcb5569bacc0be7ceaa4dc39dd252ce895",
+      "bytes": 708920
+    },
+    {
+      "source": "crates/web/obscura-render/assets/dejavu-sans-boldoblique.ttf",
+      "destination": "crates/obscura-render/assets/dejavu-sans-boldoblique.ttf",
+      "sha256": "6edf0283160186af451cbee71e7b845f2e4cabf264bb992ce668c83c25465e6f",
+      "bytes": 641720
+    },
+    {
+      "source": "crates/web/obscura-render/assets/dejavu-sans-oblique.ttf",
+      "destination": "crates/obscura-render/assets/dejavu-sans-oblique.ttf",
+      "sha256": "ccdf74b350f11fd3dd5774de50e5e6346a1a5da1f5b7d5fb83590665e97a5213",
+      "bytes": 633840
+    },
+    {
+      "source": "crates/web/obscura-render/assets/dejavu-sans.ttf",
+      "destination": "crates/obscura-render/assets/dejavu-sans.ttf",
+      "sha256": "690243adfefe0ce154b547db6205794bd30ac4277275179517a90994f4980648",
+      "bytes": 757076
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-mono-bold.ttf",
+      "destination": "crates/obscura-render/assets/liberation-mono-bold.ttf",
+      "sha256": "410af69b6297b7cf6d20dd004004bd1bdb46460a60f9fef69b04169f4ff09660",
+      "bytes": 105460
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-mono-boldoblique.ttf",
+      "destination": "crates/obscura-render/assets/liberation-mono-boldoblique.ttf",
+      "sha256": "a2ab7fe6f5bd7c2bc59ca7f5f4212f165dc174cbbab366cab171df4e73939aa2",
+      "bytes": 118296
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-mono-oblique.ttf",
+      "destination": "crates/obscura-render/assets/liberation-mono-oblique.ttf",
+      "sha256": "1b09e2a1d70adf339048943b21037462c56108411817bf6988c86cb88289fc34",
+      "bytes": 124012
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-mono.ttf",
+      "destination": "crates/obscura-render/assets/liberation-mono.ttf",
+      "sha256": "babd36837e644f08e6ba09b69feb770fbeba9e4611a619e5471fb8dbc132d42c",
+      "bytes": 108172
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-sans-bold.ttf",
+      "destination": "crates/obscura-render/assets/liberation-sans-bold.ttf",
+      "sha256": "c2d334cafbd28522007cc16970db8db4a75256123594a43fe07f89cfceb5bacc",
+      "bytes": 137052
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-sans-boldoblique.ttf",
+      "destination": "crates/obscura-render/assets/liberation-sans-boldoblique.ttf",
+      "sha256": "2e5f6a48571d50f277598c533dea4f659abce53335fb475aa2bc45bd2527f1d0",
+      "bytes": 135124
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-sans-oblique.ttf",
+      "destination": "crates/obscura-render/assets/liberation-sans-oblique.ttf",
+      "sha256": "f71f02009bd7320571db05b7459c7db92a1f5f68ac619009a2f637e18c7a93f9",
+      "bytes": 162036
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-sans.ttf",
+      "destination": "crates/obscura-render/assets/liberation-sans.ttf",
+      "sha256": "36efda825bcd7d1de846204c3adad51ced9d9b5cb7df571fb33edc21207e324a",
+      "bytes": 139512
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-serif-bold.ttf",
+      "destination": "crates/obscura-render/assets/liberation-serif-bold.ttf",
+      "sha256": "cfbe3d2edd46ae844b7eb95012f9274776801873e27b2230bbf751645f011888",
+      "bytes": 147132
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-serif-boldoblique.ttf",
+      "destination": "crates/obscura-render/assets/liberation-serif-boldoblique.ttf",
+      "sha256": "23d013c7c9708b09be7517ddc3bff8322c5dfa16c629a68f6be2a860e2693698",
+      "bytes": 151452
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-serif-oblique.ttf",
+      "destination": "crates/obscura-render/assets/liberation-serif-oblique.ttf",
+      "sha256": "2d826fdde37518f7393052764703fc8ec120ef1e19ba49b50fcc6b6186b8aa78",
+      "bytes": 145028
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-serif.ttf",
+      "destination": "crates/obscura-render/assets/liberation-serif.ttf",
+      "sha256": "8d6951ea5fc4a9656df4802227292c7943186364929f00b97629e70daf228439",
+      "bytes": 152408
+    },
+    {
+      "source": "crates/web/obscura-render/assets/noto-color-emoji.ttf",
+      "destination": "crates/obscura-render/assets/noto-color-emoji.ttf",
+      "sha256": "72a635cb3d2f3524c51620cdde406b217204e8a6a06c6a096ff8ed4b5fd6e27b",
+      "bytes": 10673480
+    },
+    {
+      "source": "crates/web/obscura-render/examples/paint_file.rs",
+      "destination": "crates/obscura-render/examples/paint_file.rs",
+      "sha256": "01a71e4e5cad5d39393c83614d1e946a22e5f266ee8112473964a16c91866bf0",
+      "bytes": 978
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/abs-fill.html",
+      "destination": "crates/obscura-render/render-repros/abs-fill.html",
+      "sha256": "91ad3e2d04445f0242be1b15969d8bad90236d01f956328d15fb7cf576511134",
+      "bytes": 1292
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/absolute-containing-block.html",
+      "destination": "crates/obscura-render/render-repros/absolute-containing-block.html",
+      "sha256": "12204d45b0a8a84d5cf4b82e76b7667c4c4a9de5bc85316ac163d08657557f71",
+      "bytes": 915
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/absolute-static-position.html",
+      "destination": "crates/obscura-render/render-repros/absolute-static-position.html",
+      "sha256": "7bb8c884d894ac0f44e6a72854e7d7c3535117135f5d5183c4ebc2a6aa03f5b0",
+      "bytes": 2385
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/animation-fill-forwards.html",
+      "destination": "crates/obscura-render/render-repros/animation-fill-forwards.html",
+      "sha256": "66a0f93faba5791677925117697bd3f1a7947b9da950e6dfac0778a4f326d80b",
+      "bytes": 738
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/background-shorthand-reset.html",
+      "destination": "crates/obscura-render/render-repros/background-shorthand-reset.html",
+      "sha256": "9eca72a2357ecc5019f05a366fed8836e5d1108c3aaa1c9c214bff43b47af454",
+      "bytes": 682
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/block-auto-margins.html",
+      "destination": "crates/obscura-render/render-repros/block-auto-margins.html",
+      "sha256": "12f80973b931c2b8be462aaf5ec95f7fa820ef3034439d9f630faeac87fe30f4",
+      "bytes": 1083
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/block-whitespace-margin-collapse.html",
+      "destination": "crates/obscura-render/render-repros/block-whitespace-margin-collapse.html",
+      "sha256": "24d672e7f9f1539e46ccb31dfc3690b65d4e6a8582fdecd9370aba83e905b56c",
+      "bytes": 459
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/bootstrap-float-clearfix.html",
+      "destination": "crates/obscura-render/render-repros/bootstrap-float-clearfix.html",
+      "sha256": "e757e2550ffcf0fed7ac295a5b8e7b1d8b4c6fb01dbba5a8d557637fa80fa603",
+      "bytes": 744
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/box-shadow-outset.html",
+      "destination": "crates/obscura-render/render-repros/box-shadow-outset.html",
+      "sha256": "931a530c34c49f2feaceac3bd8a44e0ac18b5d4a9ae759d7be66482f5b5997ce",
+      "bytes": 622
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/box-sizing.html",
+      "destination": "crates/obscura-render/render-repros/box-sizing.html",
+      "sha256": "b1f73731de8e070ecc9490a0957604b0798205999596a8091a81e0d5a447a4d0",
+      "bytes": 1206
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/capture-media-emulation.py",
+      "destination": "crates/obscura-render/render-repros/capture-media-emulation.py",
+      "sha256": "3357a9ccdc978c82734503503df50f16d3887f9a6743f75fe3f8307cf6ff5715",
+      "bytes": 4226
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/capture_chromium.py",
+      "destination": "crates/obscura-render/render-repros/capture_chromium.py",
+      "sha256": "3273b45174bdcbe91dc7a43d0d3ea46842e431f5739fe1bd872ce9ed33fcb90f",
+      "bytes": 1648
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/carousel-clip.html",
+      "destination": "crates/obscura-render/render-repros/carousel-clip.html",
+      "sha256": "5f05d7ff7c99dea9426e61e2f486a0715409994b1b73e1750253bbc95b697bf1",
+      "bytes": 944
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/cascade-priority.html",
+      "destination": "crates/obscura-render/render-repros/cascade-priority.html",
+      "sha256": "5ad261c2e156ada829e415e76c3049b9213126ff830717f6650cf94aaee6108b",
+      "bytes": 1272
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/check.py",
+      "destination": "crates/obscura-render/render-repros/check.py",
+      "sha256": "c565321b69494245511b02e1d977aea4c5439a249112d01b05e364c4578f87db",
+      "bytes": 10549
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/checks.json",
+      "destination": "crates/obscura-render/render-repros/checks.json",
+      "sha256": "0fd94beb0d67db9a7eaedef24d62f9e26f763138d0e88097b66c75debf087fdb",
+      "bytes": 34593
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/clear-float.html",
+      "destination": "crates/obscura-render/render-repros/clear-float.html",
+      "sha256": "c9b4aa58910ce431f8b72ab125ff270b939dbfcadba37bdd0452cc918e767073",
+      "bytes": 536
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/contained-flex-grid.html",
+      "destination": "crates/obscura-render/render-repros/contained-flex-grid.html",
+      "sha256": "017c40a3ed92a32da7377f0de07558369b7ca7c266498f50f345106448fe7f15",
+      "bytes": 742
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/contextual-css-math.html",
+      "destination": "crates/obscura-render/render-repros/contextual-css-math.html",
+      "sha256": "a13bd4b6f2c8f50308d3482c264f261bef955ee725a113021c8c94743ec9fe06",
+      "bytes": 1300
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/contextual-grid-gap.html",
+      "destination": "crates/obscura-render/render-repros/contextual-grid-gap.html",
+      "sha256": "0611d80ad4cdd0e38c545c2ef1b8796713bda8055b0ed79760f348517db0e2a2",
+      "bytes": 621
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/cssom-rule-ownership.html",
+      "destination": "crates/obscura-render/render-repros/cssom-rule-ownership.html",
+      "sha256": "e29bab8d8a136f89e1db8acc9751a676ff582405ffac6f54efd33e63f7b37dbb",
+      "bytes": 2233
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/direction-rtl.html",
+      "destination": "crates/obscura-render/render-repros/direction-rtl.html",
+      "sha256": "2ade3f4a51a875150daacc4a90616a0775227f4728c2274ea777580048e93367",
+      "bytes": 678
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/display-contents-cascade.html",
+      "destination": "crates/obscura-render/render-repros/display-contents-cascade.html",
+      "sha256": "dd4277bf194e8e7eb8f29566a4f04f87cb7820207ddee9eee91747aa005d4c67",
+      "bytes": 632
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/eventtarget-lifecycle.html",
+      "destination": "crates/obscura-render/render-repros/eventtarget-lifecycle.html",
+      "sha256": "4e97225c35ebd3bd7347e93927a69e6bf1a730c6f3427f48f78b3e7fb4619d3a",
+      "bytes": 1063
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/fixed-table-layout.html",
+      "destination": "crates/obscura-render/render-repros/fixed-table-layout.html",
+      "sha256": "2bdd3f165f6601dbae05cbdc9778a644c9520abd96b80c4bf73c39d6cf2e9802",
+      "bytes": 1066
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/flex-flow.html",
+      "destination": "crates/obscura-render/render-repros/flex-flow.html",
+      "sha256": "9ff069ade2ba0282bb766c0873f78b24cfae1dac938ea3a14822342ef8d8585a",
+      "bytes": 2113
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/flex-post-ratio-cross-size.html",
+      "destination": "crates/obscura-render/render-repros/flex-post-ratio-cross-size.html",
+      "sha256": "d4d9e92578c47e173e32b63ffed79a70ee9d7fdb232e03a8d5532354883e46f0",
+      "bytes": 1067
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/flex-whitespace-items.html",
+      "destination": "crates/obscura-render/render-repros/flex-whitespace-items.html",
+      "sha256": "970bd33aea52f5ec10d1864f8296008acc7bddcfbd3616cbba5fa5cdd8734e66",
+      "bytes": 1367
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/float-bfc-continuation.html",
+      "destination": "crates/obscura-render/render-repros/float-bfc-continuation.html",
+      "sha256": "568da4dbdc61f39042316e025cd1f876247379c7a645dcd833d891fdcc516f4b",
+      "bytes": 955
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/float-flow-bands.html",
+      "destination": "crates/obscura-render/render-repros/float-flow-bands.html",
+      "sha256": "c4b32b993ca9c2e46e152304ba71b9274c3cb1e7d8e118a63998ccc15d590652",
+      "bytes": 1447
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/font-metric-line-height.html",
+      "destination": "crates/obscura-render/render-repros/font-metric-line-height.html",
+      "sha256": "df7589211cab52b040508211fa3bfa5ecf56d171377afe688f10aa275a59c48a",
+      "bytes": 2699
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/font-shorthand.html",
+      "destination": "crates/obscura-render/render-repros/font-shorthand.html",
+      "sha256": "5b433c6e1cf6918bd3365ba5c6ee8ef17c65813fe44547628000ff81b071d30f",
+      "bytes": 599
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/forced-line-breaks.html",
+      "destination": "crates/obscura-render/render-repros/forced-line-breaks.html",
+      "sha256": "ab4117b4d4eec1d6454a5092894657e49f6a33ad03d9e6d1fe5cd25996714cdd",
+      "bytes": 1439
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/form-control-geometry.html",
+      "destination": "crates/obscura-render/render-repros/form-control-geometry.html",
+      "sha256": "0967bd8961024ea2cc9c1fa3ffb903464bb648ddeef2f3cc23408b6301bbe1ee",
+      "bytes": 2060
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/form-control-quirks.html",
+      "destination": "crates/obscura-render/render-repros/form-control-quirks.html",
+      "sha256": "03e0c36a3cb47d1f5a5bac9bfab579f5847af3c5e85ccb349100f871cd74b460",
+      "bytes": 702
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/grid-auto-repeat.html",
+      "destination": "crates/obscura-render/render-repros/grid-auto-repeat.html",
+      "sha256": "3fa6eee736d67ef7c1de386f95573301ba1c2ed2440f0d1f464240c9c15cb2ab",
+      "bytes": 642
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/grid-shorthand.html",
+      "destination": "crates/obscura-render/render-repros/grid-shorthand.html",
+      "sha256": "71b4cfb10409c81f31806c278ca1469654c3080a9a50952d23207b1d8b44ee13",
+      "bytes": 630
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/img-density-and-alt.html",
+      "destination": "crates/obscura-render/render-repros/img-density-and-alt.html",
+      "sha256": "1c5625d42e4a2dccc804c03d94416c7b79e56ca9e032bf800feaee3032eca4dd",
+      "bytes": 2821
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/inline-block-flex-items.html",
+      "destination": "crates/obscura-render/render-repros/inline-block-flex-items.html",
+      "sha256": "e0e45ae333692ea6c902f9be9724df61796ed4cdff403865ef3ac66485919db7",
+      "bytes": 1580
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/inline-replaced-flow.html",
+      "destination": "crates/obscura-render/render-repros/inline-replaced-flow.html",
+      "sha256": "8624f1502345afd80e61724adf9d2f49dc201a7e3520e9a62c0e9ee34d3754fe",
+      "bytes": 2286
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/item-self-alignment.html",
+      "destination": "crates/obscura-render/render-repros/item-self-alignment.html",
+      "sha256": "6c079bfc76ca13bacd97f5f4120f2f96a51fbf1fbb59d780144b16421b868db3",
+      "bytes": 2897
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/legacy-center.html",
+      "destination": "crates/obscura-render/render-repros/legacy-center.html",
+      "sha256": "01ce0551756516ed619d45260887ca6c76576f1af7ee379211c116d2d6629d5c",
+      "bytes": 2134
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/list-indentation.html",
+      "destination": "crates/obscura-render/render-repros/list-indentation.html",
+      "sha256": "cb7194b8e0817c4384977a6eb918923b055de9896ff9d5dd28e807ed901adde2",
+      "bytes": 1243
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/live-form-state.html",
+      "destination": "crates/obscura-render/render-repros/live-form-state.html",
+      "sha256": "421204366a51c49f96e1b7c83b79c864b5466effddd8b8ec717baf98d2db78ff",
+      "bytes": 1381
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/logical-borders.html",
+      "destination": "crates/obscura-render/render-repros/logical-borders.html",
+      "sha256": "e1ead77bfffbe41c930e4d8e9fa30275c4ce5a6e2410ae860af9df40db527f56",
+      "bytes": 680
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/long-full-page-capture.html",
+      "destination": "crates/obscura-render/render-repros/long-full-page-capture.html",
+      "sha256": "8a182b6b5c32a77f9bd313d7ec2a3e93388b81710977311d4203d26bb160a6e9",
+      "bytes": 722
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/max-height-replaced.html",
+      "destination": "crates/obscura-render/render-repros/max-height-replaced.html",
+      "sha256": "e5d67f8674ef3ecf1d9e4232566d5d76865b2a37b116e78401fc3e6d69b4d1c6",
+      "bytes": 908
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/media-emulation.md",
+      "destination": "crates/obscura-render/render-repros/media-emulation.md",
+      "sha256": "7aca45c90631d2ebd2e136c93c98a70e3743fc2afdd7400929be52baa52926fe",
+      "bytes": 1365
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/media-text-track.html",
+      "destination": "crates/obscura-render/render-repros/media-text-track.html",
+      "sha256": "4d2b5caa783237c82a51f4effb548c02bd2c471c8d383c5aa2852746201798e4",
+      "bytes": 1282
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/mixed-content-block.html",
+      "destination": "crates/obscura-render/render-repros/mixed-content-block.html",
+      "sha256": "011c4427143a06b1a26b2b142ba52d9992c8afc18e6a1faf3c923e26d12b37cd",
+      "bytes": 774
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/mixed-float-run.html",
+      "destination": "crates/obscura-render/render-repros/mixed-float-run.html",
+      "sha256": "ac383a638cdf5fdd0556ca89300eeadff183fc760455cd6ef763db8a8339a438",
+      "bytes": 726
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/modern-containing-block-triggers.html",
+      "destination": "crates/obscura-render/render-repros/modern-containing-block-triggers.html",
+      "sha256": "e685a475d3746fa0bd3a9bebaa4fb8d1db9fc9aff4a42f97eb24db1b2aca94ee",
+      "bytes": 1836
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/modern-hydration-contracts.html",
+      "destination": "crates/obscura-render/render-repros/modern-hydration-contracts.html",
+      "sha256": "cfc6f90598d5df29ea30482a978af7c1c525b497ddef755708cc462c9319a9eb",
+      "bytes": 2552
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/modern-streams.html",
+      "destination": "crates/obscura-render/render-repros/modern-streams.html",
+      "sha256": "10c793f1c570a6e910c022738a3e44dfa8942b8539fb3e29899f5ad9d58d3aa6",
+      "bytes": 1833
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/nested-float-clearance.html",
+      "destination": "crates/obscura-render/render-repros/nested-float-clearance.html",
+      "sha256": "6f5fe747b2d6ef9aeec9adf214f05657732c70cb4c596624395ccddde54adf2c",
+      "bytes": 847
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/opposing-header-floats.html",
+      "destination": "crates/obscura-render/render-repros/opposing-header-floats.html",
+      "sha256": "c1a2d069de1b39980e960cfe2c7e01bf7d6c0cba25c633df640edf70e8702696",
+      "bytes": 737
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/paired-corpus.py",
+      "destination": "crates/obscura-render/render-repros/paired-corpus.py",
+      "sha256": "abc3063d0aeb2510c3d25cc12f03160ef9e29dc869c25506d586abff7454685c",
+      "bytes": 128981
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/pdf-print-import.css",
+      "destination": "crates/obscura-render/render-repros/pdf-print-import.css",
+      "sha256": "17c8bc28cac15d8641f3b9d1b894aef70f093d79b3dcb5afadcd8341e481bfd5",
+      "bytes": 163
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/pdf-print-media.html",
+      "destination": "crates/obscura-render/render-repros/pdf-print-media.html",
+      "sha256": "e5a3846b61a5a584f00686bcad719243fc2dd4a2f0b34934ca16299c6387b431",
+      "bytes": 1353
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/percentage-height-indefinite-parent.html",
+      "destination": "crates/obscura-render/render-repros/percentage-height-indefinite-parent.html",
+      "sha256": "ce713b3c09706b077cd3ddb32842258bf579929775fa4f1a20077cce2e19faec",
+      "bytes": 703
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/ratio-only-inline-images.html",
+      "destination": "crates/obscura-render/render-repros/ratio-only-inline-images.html",
+      "sha256": "2d43270942c6dfc43eea32af5dae258963fd63a0280f2c95dd32293fcf827c25",
+      "bytes": 1804
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/reduced-motion-emulation.html",
+      "destination": "crates/obscura-render/render-repros/reduced-motion-emulation.html",
+      "sha256": "0981f4d437c108a4718808b3dc9633be09e8329575e1e874807655737c836a9f",
+      "bytes": 478
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/relative-box-edges.html",
+      "destination": "crates/obscura-render/render-repros/relative-box-edges.html",
+      "sha256": "43e36ea00089a046087b584db7130dcbdce5928b8d34ede83bc6c840bd43888a",
+      "bytes": 1369
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/replaced-block-wrapper.html",
+      "destination": "crates/obscura-render/render-repros/replaced-block-wrapper.html",
+      "sha256": "ef9d72e623ee421dd1ad6f824f1fbbfcf0026b7422b4edc50e590340f95677d5",
+      "bytes": 1272
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/replaced-grid-order.html",
+      "destination": "crates/obscura-render/render-repros/replaced-grid-order.html",
+      "sha256": "97b928a52ec9697e73613854e2c9697aad644b9e72f623048aa377b642d25c5d",
+      "bytes": 1002
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/representative-suite/run.sh",
+      "destination": "crates/obscura-render/render-repros/representative-suite/run.sh",
+      "sha256": "5a37fba26e963d23695f65fd26c60208d4c25ddc0f637271a8272fa87d53e421",
+      "bytes": 3040
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/representative-suite/sites.txt",
+      "destination": "crates/obscura-render/render-repros/representative-suite/sites.txt",
+      "sha256": "53c7a4cfce6820335783a90da0a8650c966b75ad55a49be73254cb737ce667d3",
+      "bytes": 547
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/representative-suite/test_suite.py",
+      "destination": "crates/obscura-render/render-repros/representative-suite/test_suite.py",
+      "sha256": "343d4d4e5e418931d5d35322a35024fc8c6ff03d52172a1ab06affa3d6bd40e4",
+      "bytes": 6736
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/retained-cssom-raster.html",
+      "destination": "crates/obscura-render/render-repros/retained-cssom-raster.html",
+      "sha256": "01dbaea70bfc16c3b29911498b716986a38d6c6a48bd5ed7b86de9667389891e",
+      "bytes": 2732
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/right-float-navigation.html",
+      "destination": "crates/obscura-render/render-repros/right-float-navigation.html",
+      "sha256": "3845aafb0433bf948cbaf8a48c58ab58351cbf57c02a499bd330626b9d93843d",
+      "bytes": 1061
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/run.sh",
+      "destination": "crates/obscura-render/render-repros/run.sh",
+      "sha256": "9b8a7c20dbdb45b2c72a28c6630c867fe1706e265dd97af2f623b1643bb1a3bb",
+      "bytes": 1470
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/scroll-into-view.html",
+      "destination": "crates/obscura-render/render-repros/scroll-into-view.html",
+      "sha256": "65cbdbd1242b78f894184daae3f5f6d9d619c4c191df42ff368c4cd1017b6cff",
+      "bytes": 898
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/sparse-grid-scroll.html",
+      "destination": "crates/obscura-render/render-repros/sparse-grid-scroll.html",
+      "sha256": "cee9c40ab99dccb43d78082843a5e688a8927608eefab14eeaf635e29eda83b4",
+      "bytes": 736
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/spot-sites.txt",
+      "destination": "crates/obscura-render/render-repros/spot-sites.txt",
+      "sha256": "d409fd835cb21352d4f6d9b63215ebb726637c9cfe726997d94b0541f194b4cd",
+      "bytes": 295
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/supports-var-feature-query.html",
+      "destination": "crates/obscura-render/render-repros/supports-var-feature-query.html",
+      "sha256": "5283f04d50ec2cc3e16ac6cb1aacceb8d08f5a3560030d8fe7d989c8639c25d2",
+      "bytes": 278
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/table-row-geometry.html",
+      "destination": "crates/obscura-render/render-repros/table-row-geometry.html",
+      "sha256": "0c479495b638ff59397005ba169dd7aab501a5935aa6a51af75401b355ecc99e",
+      "bytes": 2898
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/table-track-geometry.html",
+      "destination": "crates/obscura-render/render-repros/table-track-geometry.html",
+      "sha256": "61163e1a38226a7811017b93ecbdee74af93b23497fb5bfb0e0802f22c2e6032",
+      "bytes": 3104
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/tables.html",
+      "destination": "crates/obscura-render/render-repros/tables.html",
+      "sha256": "95d36e09ae1d44f56a089f438adb8d61b0904080a9f1af2a1be6b99d5b42ebe8",
+      "bytes": 1325
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/test_check.py",
+      "destination": "crates/obscura-render/render-repros/test_check.py",
+      "sha256": "667d2ceadc21a330f824d656bea555bcbdabd5075683c764ead84a5821ba37a5",
+      "bytes": 1617
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/test_paired_corpus.py",
+      "destination": "crates/obscura-render/render-repros/test_paired_corpus.py",
+      "sha256": "60ce5bb4df52d66df1bb122813cea89f145f9c7fccab66c5ccbb0fdb0f12b454",
+      "bytes": 49014
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/text-align-flex-items.html",
+      "destination": "crates/obscura-render/render-repros/text-align-flex-items.html",
+      "sha256": "b699bd768fc4c2ef5a14c50941846cb48ef1ea7fc5437f49250161d8a6109256",
+      "bytes": 819
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/text-decoration-lines.html",
+      "destination": "crates/obscura-render/render-repros/text-decoration-lines.html",
+      "sha256": "e2223dda266382ac8fa26d4a58ae08a31c7ecaf42e564e0b8b37fd0825602d52",
+      "bytes": 893
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/transform-containing-block.html",
+      "destination": "crates/obscura-render/render-repros/transform-containing-block.html",
+      "sha256": "5d9d0cd7cd837de5ee92c5351d96563bc43299659260e69dbc983b5f663a719d",
+      "bytes": 1293
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/video-poster.html",
+      "destination": "crates/obscura-render/render-repros/video-poster.html",
+      "sha256": "a938968365170dcddbd5d1183ce38d733cc68c810bbdb48643058de8343f9777",
+      "bytes": 1591
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/viewport-consistency.html",
+      "destination": "crates/obscura-render/render-repros/viewport-consistency.html",
+      "sha256": "d86eae40b1ff428e619741e5eb763d7fa3b1ad991099008af23ae0643c20ce57",
+      "bytes": 895
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/z-index.html",
+      "destination": "crates/obscura-render/render-repros/z-index.html",
+      "sha256": "1ca1039fe1f59873a34de8149a850c3e236e79e3cc8ea283254d0ae692d53004",
+      "bytes": 803
+    },
+    {
+      "source": "crates/web/obscura-render/src/border.rs",
+      "destination": "crates/obscura-render/src/border.rs",
+      "sha256": "38d809cebdfe10083bc88813bdfa5cc5829c06ff349a8c86fd1d384d93429596",
+      "bytes": 12773
+    },
+    {
+      "source": "crates/web/obscura-render/src/css.rs",
+      "destination": "crates/obscura-render/src/css.rs",
+      "sha256": "9361ad3f5e5bb338eb21f46626cf1112862feedd993288392c31a541d944d37e",
+      "bytes": 375749
+    },
+    {
+      "source": "crates/web/obscura-render/src/dom.rs",
+      "destination": "crates/obscura-render/src/dom.rs",
+      "sha256": "8f79c4e6ae94a04ece64e4be713d762d7bd05c626052eb61edfe7840cfd3f1b6",
+      "bytes": 920381
+    },
+    {
+      "source": "crates/web/obscura-render/src/inline.rs",
+      "destination": "crates/obscura-render/src/inline.rs",
+      "sha256": "a570d012441e60be87eea4f8aa3af8fab82558930cf5751001512fe1a31fc4a7",
+      "bytes": 219134
+    },
+    {
+      "source": "crates/web/obscura-render/src/lib.rs",
+      "destination": "crates/obscura-render/src/lib.rs",
+      "sha256": "1e4723b29061b3b317e47d475fca88318bf876dee849d022b249b61ce28e14a5",
+      "bytes": 119480
+    },
+    {
+      "source": "crates/web/obscura-render/src/paint.rs",
+      "destination": "crates/obscura-render/src/paint.rs",
+      "sha256": "63564aaedafd34cb9b1842702ec5ba92bb8c9390e4bc58a821825e2d0801e685",
+      "bytes": 798456
+    },
+    {
+      "source": "crates/web/obscura-render/src/style.rs",
+      "destination": "crates/obscura-render/src/style.rs",
+      "sha256": "2c774662a655fd7512d9fe33475dbdbc12ffad879d62e923ff43062a56c648e3",
+      "bytes": 410532
+    },
+    {
+      "source": "crates/web/obscura-render/tests/flat_tree_allocations.rs",
+      "destination": "crates/obscura-render/tests/flat_tree_allocations.rs",
+      "sha256": "8f9c6b8983586ccf0412ad04ca10eb789f5f0e02219b89ee233e112f4b80b293",
+      "bytes": 2405
+    },
+    {
+      "source": "crates/web/obscura-render/tests/fonts/LICENSE-OFL-1.1.txt",
+      "destination": "crates/obscura-render/tests/fonts/LICENSE-OFL-1.1.txt",
+      "sha256": "b3195af0fb14368d1b3b10fb9d3fe503b7163ea083859d2ee553bc74da07c320",
+      "bytes": 4472
+    },
+    {
+      "source": "crates/web/obscura-render/tests/fonts/NotoSans-LICENSE",
+      "destination": "crates/obscura-render/tests/fonts/NotoSans-LICENSE",
+      "sha256": "9dcf4c49c17873ab93ee242ca9c5ca4f28a39e4bf17061cac8d63ad004c09744",
+      "bytes": 4350
+    },
+    {
+      "source": "crates/web/obscura-render/tests/fonts/NotoSansArabic.ttf",
+      "destination": "crates/obscura-render/tests/fonts/NotoSansArabic.ttf",
+      "sha256": "ee489b994b3e62def9874c918145e32b133b625abaf98cec60502bdb40102c56",
+      "bytes": 765740
+    },
+    {
+      "source": "crates/web/obscura-render/tests/fonts/PROVENANCE.txt",
+      "destination": "crates/obscura-render/tests/fonts/PROVENANCE.txt",
+      "sha256": "e61bdde47144f7c6a9458b182e51ebcd0560384bd7e574686510d0635354a464",
+      "bytes": 1224
+    },
+    {
+      "source": "crates/web/obscura-render/tests/fonts/obscura-vf-test.woff2.b64",
+      "destination": "crates/obscura-render/tests/fonts/obscura-vf-test.woff2.b64",
+      "sha256": "631a3e5208116da145dd7cf24faa672f563cd0ea009a3fc1ff4bfe0f054ae401",
+      "bytes": 5054
+    },
+    {
+      "source": "crates/web/obscura-render/tests/layout_test.rs",
+      "destination": "crates/obscura-render/tests/layout_test.rs",
+      "sha256": "ff65b60ffb05298e64586129aeec68d6ed00e1dc835098c7bce9b9760c1df208",
+      "bytes": 187636
+    },
+    {
+      "source": "crates/web/obscura-render/tests/text_decoration.rs",
+      "destination": "crates/obscura-render/tests/text_decoration.rs",
+      "sha256": "c978b590c6d5c97407f99892d535cf43137187f3295d9e5796a9c0ec6b131f70",
+      "bytes": 4039
+    },
+    {
+      "source": "crates/web/obscura-ssrf/Cargo.toml",
+      "destination": "crates/obscura-ssrf/Cargo.toml",
+      "sha256": "8dbc5e272023f6bf7a112489945fded15d515099d17f0fac835439aaa470bdbc",
+      "bytes": 801
+    },
+    {
+      "source": "crates/web/obscura-ssrf/src/lib.rs",
+      "destination": "crates/obscura-ssrf/src/lib.rs",
+      "sha256": "d2ebdad709a2eb195eca2251791eacf90c23a3333cdcd4727e3ba4caf725b57b",
+      "bytes": 5820
+    },
+    {
+      "source": "crates/web/obscura/Cargo.toml",
+      "destination": "crates/obscura/Cargo.toml",
+      "sha256": "485f9f01a4481870dffe243ecf1e2da0e961d1bc8136971f4169151e151de16f",
+      "bytes": 1381
+    },
+    {
+      "source": "crates/web/obscura/README.md",
+      "destination": "crates/obscura/README.md",
+      "sha256": "8717c0943ee3b2b6efa9f2dd7e926062d2342e2e63bf11d49cec7d52f3b82d2e",
+      "bytes": 1287
+    },
+    {
+      "source": "crates/web/obscura/examples/basic.rs",
+      "destination": "crates/obscura/examples/basic.rs",
+      "sha256": "034256eb895a08cf6708156132ae3900888f3186abbbd658eccbeaa28cce92db",
+      "bytes": 635
+    },
+    {
+      "source": "crates/web/obscura/src/browser.rs",
+      "destination": "crates/obscura/src/browser.rs",
+      "sha256": "ce3abda280af0df2a983eb1bbed1a019369e8f08cff5c31d1a8ab59f1de18244",
+      "bytes": 2351
+    },
+    {
+      "source": "crates/web/obscura/src/config.rs",
+      "destination": "crates/obscura/src/config.rs",
+      "sha256": "ea37ef5cb7a8405b6a75858f4356ff3eaacf896624cb20de7fe73dbd34be1a85",
+      "bytes": 1728
+    },
+    {
+      "source": "crates/web/obscura/src/cookie.rs",
+      "destination": "crates/obscura/src/cookie.rs",
+      "sha256": "396dee830c52bdeb5a6d01893c449364743e0b5a5e1064400303fc41c608adb9",
+      "bytes": 3123
+    },
+    {
+      "source": "crates/web/obscura/src/error.rs",
+      "destination": "crates/obscura/src/error.rs",
+      "sha256": "560f65c3934b0065bf248efa35bd8d2878a3ed8400a182293e0ebc7282c03069",
+      "bytes": 419
+    },
+    {
+      "source": "crates/web/obscura/src/lib.rs",
+      "destination": "crates/obscura/src/lib.rs",
+      "sha256": "8643aafde4a7a37246f9a26afa5c534f81eb65b755aed7bbc6b135661c0e94bb",
+      "bytes": 831
+    },
+    {
+      "source": "crates/web/obscura/src/page.rs",
+      "destination": "crates/obscura/src/page.rs",
+      "sha256": "dea2724594f6c06d4e19b63d05c7b2e1843d537b5b1304724c950f573f895475",
+      "bytes": 9001
+    },
+    {
+      "source": "crates/web/obscura/tests/attribute_injection.rs",
+      "destination": "crates/obscura/tests/attribute_injection.rs",
+      "sha256": "b42aadc8f5513cc63219f2e9a8bf7f289bdf8f029fa8f713fc36073cb9d44a82",
+      "bytes": 1818
+    },
+    {
+      "source": "crates/web/obscura/tests/child_frame_scripts.rs",
+      "destination": "crates/obscura/tests/child_frame_scripts.rs",
+      "sha256": "130e1cf5460d5ed66db3651c9532492eee71db8993c22e53b75623897ac84793",
+      "bytes": 13709
+    },
+    {
+      "source": "crates/web/obscura/tests/concurrent_isolate_teardown.rs",
+      "destination": "crates/obscura/tests/concurrent_isolate_teardown.rs",
+      "sha256": "b6c48690dac6723ce6fb22033c057ed0c89299039e78f28089eb9f281513dff4",
+      "bytes": 6473
+    },
+    {
+      "source": "crates/web/obscura/tests/fetch_relative_url_resolution.rs",
+      "destination": "crates/obscura/tests/fetch_relative_url_resolution.rs",
+      "sha256": "b6e13980be003201dd1d3430a2873d7eeb4ddb5354bfb24a53f09c19eee891fd",
+      "bytes": 6423
+    },
+    {
+      "source": "crates/web/obscura/tests/image_shim.rs",
+      "destination": "crates/obscura/tests/image_shim.rs",
+      "sha256": "285665c2682db11a174ea1171571b1e70748ed49e1e3f55b9e5fea35e079f442",
+      "bytes": 5429
+    },
+    {
+      "source": "crates/web/obscura/tests/interception.rs",
+      "destination": "crates/obscura/tests/interception.rs",
+      "sha256": "424267db54e2032b16f617bd7ed7eb8eccf09461784dec4e603f762d97935f6e",
+      "bytes": 10887
+    },
+    {
+      "source": "crates/web/obscura/tests/select_semantics.rs",
+      "destination": "crates/obscura/tests/select_semantics.rs",
+      "sha256": "b935b7b94eaedc4f342a9f9edb5b1c37e9e7019dcade30b1332493690e511dd9",
+      "bytes": 3995
+    },
+    {
+      "source": "crates/web/obscura/tests/sequential_runtime_fetch.rs",
+      "destination": "crates/obscura/tests/sequential_runtime_fetch.rs",
+      "sha256": "025da12bb37d7b3f2d7bcc7fbe59a366b7cbe10132e88955f78d259e0469fe9f",
+      "bytes": 3132
+    },
+    {
+      "source": "crates/web/obscura/tests/stealth_transport.rs",
+      "destination": "crates/obscura/tests/stealth_transport.rs",
+      "sha256": "15b839c095d116534b77ce41294657af3106b8a03693afe8417c80478ea5d436",
+      "bytes": 2672
+    },
+    {
+      "source": "crates/web/obscura/tests/textarea_semantics.rs",
+      "destination": "crates/obscura/tests/textarea_semantics.rs",
+      "sha256": "1ead0d02e485ac9823cd841ba445da1d0da2f79648e31a503ebd99f230fbe2de",
+      "bytes": 4743
+    },
+    {
+      "source": "crates/web/obscura/tests/xhr_binary_response.rs",
+      "destination": "crates/obscura/tests/xhr_binary_response.rs",
+      "sha256": "5941509ee898a14aebaa8298d84b21897c8614b278ec551b4b00a17a3811b673",
+      "bytes": 5015
+    },
+    {
+      "source": "crates/web/web-extract/Cargo.toml",
+      "destination": "crates/web-extract/Cargo.toml",
+      "sha256": "9ae9ca8766d37aa79ab61594e13f8a7207de79c8c1bf9b369fd47070b27a523a",
+      "bytes": 770
+    },
+    {
+      "source": "crates/web/web-extract/README.md",
+      "destination": "crates/web-extract/README.md",
+      "sha256": "f63d142da40c1cc9d6e8246a98bed6a999992deab435d1eebc0e2fa281aaa78f",
+      "bytes": 1342
+    },
+    {
+      "source": "crates/web/web-extract/src/canonical.rs",
+      "destination": "crates/web-extract/src/canonical.rs",
+      "sha256": "d9a35fb5537cc988f2e42afea8a472b45b38628181de947a6f101e6c60fbab38",
+      "bytes": 5883
+    },
+    {
+      "source": "crates/web/web-extract/src/chunk.rs",
+      "destination": "crates/web-extract/src/chunk.rs",
+      "sha256": "a87f8c5ca9bb52f910ff733aee523b1115f49ffd87e559af925f47956fa3837a",
+      "bytes": 12621
+    },
+    {
+      "source": "crates/web/web-extract/src/date.rs",
+      "destination": "crates/web-extract/src/date.rs",
+      "sha256": "6b29bdc61019b0c3a5ad53ca9b03717a7c9c3a35c03ff233b31bb0da76d0d7de",
+      "bytes": 9645
+    },
+    {
+      "source": "crates/web/web-extract/src/dom.rs",
+      "destination": "crates/web-extract/src/dom.rs",
+      "sha256": "4dc4131d09b79f4bde634d036983c175921e6111202bd117754b70429d8fe2ab",
+      "bytes": 22998
+    },
+    {
+      "source": "crates/web/web-extract/src/dragon_ball/archive.rs",
+      "destination": "crates/web-extract/src/dragon_ball/archive.rs",
+      "sha256": "9b3eac0b9b4380b8732edd09a185a7998d6000a6eed9f68c039a95da99bb0d2f",
+      "bytes": 4562
+    },
+    {
+      "source": "crates/web/web-extract/src/dragon_ball/catalogue.rs",
+      "destination": "crates/web-extract/src/dragon_ball/catalogue.rs",
+      "sha256": "a1897a52360b4fb17c9c6f8b0465e90ff37a0e808d0ec110963396213e7a7ca7",
+      "bytes": 11847
+    },
+    {
+      "source": "crates/web/web-extract/src/dragon_ball/gallery.rs",
+      "destination": "crates/web-extract/src/dragon_ball/gallery.rs",
+      "sha256": "7361f43eb9758aba36c6d26a0a0a423def6b00523a95758d2ac8a1e344eaef8f",
+      "bytes": 7186
+    },
+    {
+      "source": "crates/web/web-extract/src/dragon_ball/mod.rs",
+      "destination": "crates/web-extract/src/dragon_ball/mod.rs",
+      "sha256": "6d889d73b5b5bb13f07ac26282eea77434d915a337f24cf227f60cd0d9ff83ff",
+      "bytes": 2139
+    },
+    {
+      "source": "crates/web/web-extract/src/dragon_ball/official.rs",
+      "destination": "crates/web-extract/src/dragon_ball/official.rs",
+      "sha256": "5b61b2306a431d4a1d15abca54ae9d11b3479fc034965df9b876a8add92e218c",
+      "bytes": 5696
+    },
+    {
+      "source": "crates/web/web-extract/src/dragon_ball/reader.rs",
+      "destination": "crates/web-extract/src/dragon_ball/reader.rs",
+      "sha256": "cce0c539c6bb86146cfa0e35f9f87ee74b4e4beac151a2866f8508f62c2098da",
+      "bytes": 1649
+    },
+    {
+      "source": "crates/web/web-extract/src/dragon_ball/structured.rs",
+      "destination": "crates/web-extract/src/dragon_ball/structured.rs",
+      "sha256": "8d66b0dafbe2d7b068c981100e19f43cd80842b9b332448882d7d16024e197f2",
+      "bytes": 11871
+    },
+    {
+      "source": "crates/web/web-extract/src/extract.rs",
+      "destination": "crates/web-extract/src/extract.rs",
+      "sha256": "51aa2a7f9548eb808a5bf673da51081a85a7d031feadc6f9f09b83c3cab71c83",
+      "bytes": 50622
+    },
+    {
+      "source": "crates/web/web-extract/src/lib.rs",
+      "destination": "crates/web-extract/src/lib.rs",
+      "sha256": "a6b8ec8379d65caca52948c3c7178de60c6407319ab8e044b1b04afa43670c31",
+      "bytes": 4851
+    },
+    {
+      "source": "crates/web/web-extract/src/media/extract.rs",
+      "destination": "crates/web-extract/src/media/extract.rs",
+      "sha256": "f408a7294affd179f44e02df9ea5bca73b3ac86ce68cf11393d8f5358c564dc5",
+      "bytes": 7145
+    },
+    {
+      "source": "crates/web/web-extract/src/media/hls.rs",
+      "destination": "crates/web-extract/src/media/hls.rs",
+      "sha256": "9dc1451d8b24df94f634997ef89b48e860d33f75cca5162349a198b1b076dc0c",
+      "bytes": 5408
+    },
+    {
+      "source": "crates/web/web-extract/src/media/hosts.rs",
+      "destination": "crates/web-extract/src/media/hosts.rs",
+      "sha256": "a416a9cf8bb5740bda571d45d4ae4aab852022c9e15d3189aefb1c1c1778c192",
+      "bytes": 4681
+    },
+    {
+      "source": "crates/web/web-extract/src/media/mod.rs",
+      "destination": "crates/web-extract/src/media/mod.rs",
+      "sha256": "10a37c5a027c7e74a180ad75d0839039d6cca57b0cc470af56c14460a188c067",
+      "bytes": 2434
+    },
+    {
+      "source": "crates/web/web-extract/src/media/resolver.rs",
+      "destination": "crates/web-extract/src/media/resolver.rs",
+      "sha256": "07a5bfdefcacb360615805c6b2cf2acb0ad8c4ffc86987f5d84f40ba92df0df3",
+      "bytes": 13228
+    },
+    {
+      "source": "crates/web/web-extract/src/media/streaming.rs",
+      "destination": "crates/web-extract/src/media/streaming.rs",
+      "sha256": "7c3b99b54fe77e4420f5338317887a8cc41a8838dbfdd9a51177a569df9fce2a",
+      "bytes": 4593
+    },
+    {
+      "source": "crates/web/web-extract/src/media/unpack.rs",
+      "destination": "crates/web-extract/src/media/unpack.rs",
+      "sha256": "9964c1839df94c6968c47c9fe4d4de30464341191377c0d40ab0deef75751083",
+      "bytes": 4980
+    },
+    {
+      "source": "crates/web/web-extract/src/meta.rs",
+      "destination": "crates/web-extract/src/meta.rs",
+      "sha256": "f63233cbdb573c2dca19f6556bce4418673438933eae72f04adae2f9894dd642",
+      "bytes": 9084
+    },
+    {
+      "source": "crates/web/web-extract/src/patterns.rs",
+      "destination": "crates/web-extract/src/patterns.rs",
+      "sha256": "4af54d7d93c405e9da2733b14f9d979559a214c9a98f37b5eaac8bda9f0bdafa",
+      "bytes": 5140
+    },
+    {
+      "source": "crates/web/web-extract/src/render.rs",
+      "destination": "crates/web-extract/src/render.rs",
+      "sha256": "142b5a642f423817fa0f28720edd389851b1dacdcdccf7ace6fdd40a5d2d65de",
+      "bytes": 35188
+    },
+    {
+      "source": "crates/web/web-extract/src/simhash.rs",
+      "destination": "crates/web-extract/src/simhash.rs",
+      "sha256": "7329f1a5bd2a7ae256951e3518c1905cde2f6b5064db41e1da9a69fe84415feb",
+      "bytes": 9420
+    },
+    {
+      "source": "crates/web/web-extract/src/types.rs",
+      "destination": "crates/web-extract/src/types.rs",
+      "sha256": "9515b55b0fd31f04730c066a7316e7c069ae6c401b6bb2da6d0a2c62fa0abb34",
+      "bytes": 2108
+    },
+    {
+      "source": "crates/web/web-extract/src/url_metadata.rs",
+      "destination": "crates/web-extract/src/url_metadata.rs",
+      "sha256": "f2aa29528c8b51333754ceb1a89b57fff46d3b1ad6f11b18429b04e2f911915b",
+      "bytes": 7733
+    },
+    {
+      "source": "crates/web/web-extract/tests/extract.rs",
+      "destination": "crates/web-extract/tests/extract.rs",
+      "sha256": "ee5fc38a6488458b00979f67e5d22cc58711275774336277777b074a01cf74eb",
+      "bytes": 13258
+    },
+    {
+      "source": "crates/web/web-extract/tests/markdown.rs",
+      "destination": "crates/web-extract/tests/markdown.rs",
+      "sha256": "fe0b4d5c12113b29be1a67f826f9fdacd6375c42036e6cddc8146155433a0e9c",
+      "bytes": 8333
+    }
+  ],
+  "manifestAdaptations": [
+    "Standalone workspace inheritance preserves original requirements and features",
+    "Renderer Taffy path relocated to ../taffy"
+  ],
+  "engineSwap": false,
+  "runtimeBinding": false
+}

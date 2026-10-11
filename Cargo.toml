@@ -128,7 +128,7 @@ members = [
 # heavy dev-dependencies (criterion, html5ever) never enter `Cargo.lock`.
 # `packages/bun-cosmic` is the libcosmic window helper of `bun:cosmic`: its own
 # workspace and lockfile, because libcosmic is a git dependency.
-exclude = ["packages/bun-oxc", "vendor", "packages/bun-cosmic", "packages/bun-dotnet-native", "packages/bun-re", "packages/bun-native-plugin-rs"]
+exclude = ["packages/bun-obscura", "packages/bun-oxc", "vendor", "packages/bun-cosmic", "packages/bun-dotnet-native", "packages/bun-re", "packages/bun-native-plugin-rs"]
 
 [workspace.package]
 version = "1.4.4"

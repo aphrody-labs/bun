@@ -1,0 +1,3 @@
+# SPDX-License-Identifier: Apache-2.0
+# Standalone engine policy. Do not inherit the parent Bun executable's bans on
+# standard collections and output: this engine has no bun_core dependency.
