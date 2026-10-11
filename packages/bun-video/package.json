@@ -14,7 +14,8 @@
     "./mpd": "./src/dash.ts",
     "./har": "./src/har.ts",
     "./bitmovin": "./src/bitmovin.ts",
-    "./crunchyroll": "./src/crunchyroll.ts"
+    "./crunchyroll": "./src/crunchyroll.ts",
+    "./oauth": "./src/oauth.ts"
   },
   "dependencies": {
     "@aphrody/bun-runtime-sdk": "file:../bun-runtime-sdk",
