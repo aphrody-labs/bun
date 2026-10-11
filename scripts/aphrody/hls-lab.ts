@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
 // SPDX-License-Identifier: Apache-2.0
 import { join, resolve } from "node:path";
-import { mkdir } from "node:fs/promises";
+import { mkdir, symlink } from "node:fs/promises";
+import { getHlsBrowserAssetPath } from "../../packages/bun-video/src/hls";
 import {
   normalizeCookieExport,
   cookieHeader,
@@ -12,7 +13,6 @@ import {
 } from "./hls-lab-core";
 
 const root = resolve(import.meta.dir, "../..");
-const deps = join(root, ".coord/browser-lab-deps");
 const cookieFile = join(root, "cookie.json");
 const hlsFile = join(root, "hls.json");
 const args = Bun.argv.slice(2);
@@ -27,7 +27,15 @@ async function prepare() {
     if (await Bun.file(cookieFile).exists())
       throw new Error("cookie.json already exists; preserve the existing input.");
     const bundle = normalizeCookieExport(await Bun.file(resolve(source)).json());
-    await Bun.write(cookieFile, JSON.stringify(bundle, null, 2) + "\n");
+    const home = Bun.env.USERPROFILE ?? Bun.env.HOME;
+    if (!home) throw new Error("The protected owner cookie store is unavailable.");
+    const store = join(home, ".aphrody/cookies/bun-video");
+    const protectedFile = join(store, "cookie.json");
+    if (await Bun.file(protectedFile).exists())
+      throw new Error("Protected cookie input already exists; preserve it.");
+    await mkdir(store, { recursive: true });
+    await Bun.write(protectedFile, JSON.stringify(bundle, null, 2) + "\n");
+    await symlink(protectedFile, cookieFile, "file");
     console.log(JSON.stringify({ importedCookies: bundle.chromium.length, valuesLogged: false }));
   }
   if (!(await Bun.file(hlsFile).exists())) {
@@ -44,18 +52,8 @@ async function prepare() {
       ) + "\n",
     );
   }
-  if (!(await Bun.file(join(deps, "node_modules/hls.js/dist/hls.min.js")).exists())) {
-    await mkdir(deps, { recursive: true });
-    await Bun.write(
-      join(deps, "package.json"),
-      JSON.stringify({ private: true, dependencies: { "hls.js": "1.7.3" } }),
-    );
-    const child = Bun.spawn([process.execPath, "install", "--cwd", deps], {
-      stdout: "inherit",
-      stderr: "inherit",
-    });
-    if (await child.exited) throw new Error("HLS dependency preparation failed.");
-  }
+  if (!(await Bun.file(getHlsBrowserAssetPath()).exists()))
+    throw new Error("Install the pinned bun-video dependencies before preparing the lab.");
 }
 
 async function loadCookies(): Promise<CookieBundle> {
@@ -206,7 +204,7 @@ async function main() {
     }),
   );
   if (args.includes("--probe")) return;
-  const hls = Bun.file(join(deps, "node_modules/hls.js/dist/hls.min.js"));
+  const hls = Bun.file(getHlsBrowserAssetPath());
   if (!(await hls.exists())) throw new Error("Run --prepare first to preload HLS.js.");
   const adapterBuild = await Bun.build({
     entrypoints: [join(root, "packages/bun-runtime-sdk/src/video/hls.ts")],
