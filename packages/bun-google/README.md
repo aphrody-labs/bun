@@ -26,9 +26,14 @@ implicitly. Existing OS credential storage and ADC adapters retain ownership.
 | `chromium`, `obscura`, `dns` | Exact aliases of existing runtime owners |
 | `crates/boq` | Standalone `aphrody-boq` Rust codec, source provenance preserved |
 
-Drive reconciliation, resumable model uploads, Fonts proxy, PKCE/Credential
-Manager, Gemini Web adapters and provider-specific model routing were transferred
-under `aphrody/`; their consumer and native runtime integration remains pending.
+Windows Credential Manager target reads and Antigravity Cloud Code/Vertex models,
+generation and streaming use the native in-process SDK. The explicit credential
+provider returns token strings to JavaScript; the desktop owner retains refresh
+and store writes. Interactive PKCE login keeps the existing CLI owner.
+
+Drive reconciliation, resumable model uploads, Fonts proxy and Gemini Web
+adapters were transferred under `aphrody/`. Their complete engine and release
+qualification remains separate from this REST SDK.
 Protected credentials and cookie stores retain their original locations.
 This package does not claim complete
 Google API or JSC/V8 compatibility. It performs no automatic retries of writes.

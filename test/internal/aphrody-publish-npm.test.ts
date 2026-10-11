@@ -136,6 +136,19 @@ test("publication requires matching public package, version and uploaded archive
 });
 
 describe("nextVersion", () => {
+  test("Google services are a runtime-coupled source package, and builtin aliases are not packages", () => {
+    expect(spec("bun-google").bunVersion).toBe(true);
+    expect(spec("bun-google").requiresBuild).toBeUndefined();
+    expect(npmName(spec("bun-google"))).toBe("@aphrody/bun-google");
+    expect(PACKAGES.some((candidate) => candidate.dir === "bun-chrome")).toBe(false);
+    expect(PACKAGES.some((candidate) => candidate.dir === "bun-chromium")).toBe(false);
+  });
+  test("occupied stable types keep their base and advance the fork suffix", () => {
+    expect(nextVersion("1.4.4", ["1.4.4", "1.4.4-aphrody.2", "1.4.5"])).toEqual({
+      next: "1.4.4-aphrody.3",
+      previous: "1.4.4-aphrody.2",
+    });
+  });
   test("stable releases have no Aphrody suffix and advance independent occupied versions", () => {
     expect(nextStableVersion("1.4.4", ["1.4.3", "1.4.4-aphrody.1"])).toEqual({
       next: "1.4.4",

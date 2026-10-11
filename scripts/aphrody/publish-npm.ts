@@ -352,6 +352,8 @@ export const PACKAGES: PackageSpec[] = [
   { dir: "bun-plugin-neon" },
   { dir: "bun-plugin-supabase" },
   { dir: "bun-runtime-sdk" },
+  // REST services and explicit credential adapters over the qualified bun:google builtin.
+  { dir: "bun-google", bunVersion: true },
   {
     dir: "bun-agent-plugin",
     buildOutputs: ["plugins/"],
@@ -425,21 +427,6 @@ export function nextStableVersion(
   for (const version of published) {
     if (!/^\d+\.\d+\.\d+$/.test(version)) continue;
     const [a, b, c = 0] = version.split(".").map(Number);
-    if (a === major && b === minor && c >= patch) latest = Math.max(latest, c);
-  }
-  return {
-    next: `${major}.${minor}.${latest < patch ? patch : latest + 1}`,
-    previous: latest < patch ? undefined : `${major}.${minor}.${latest}`,
-  };
-}
-
-export function nextStableVersion(base: string, published: Iterable<string>): { next: string; previous?: string } {
-  if (!/^\d+\.\d+\.\d+$/.test(base)) throw new Error(`Stable package base must be X.Y.Z: ${base}`);
-  const [major, minor, patch] = base.split(".").map(Number);
-  let latest = -1;
-  for (const version of published) {
-    if (!/^\d+\.\d+\.\d+$/.test(version)) continue;
-    const [a, b, c] = version.split(".").map(Number);
     if (a === major && b === minor && c >= patch) latest = Math.max(latest, c);
   }
   return {
