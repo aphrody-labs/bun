@@ -25,6 +25,62 @@ pub fn env_allows_private_network() -> bool {
     )
 }
 
+#[cfg(test)]
+mod tests {
+    use super::is_forbidden_ip;
+
+    #[test]
+    fn blocks_local_metadata_and_reserved_ipv4() {
+        for address in [
+            "0.0.0.0",
+            "127.0.0.1",
+            "10.1.2.3",
+            "172.16.0.1",
+            "192.168.1.1",
+            "169.254.169.254",
+            "100.100.100.200",
+            "198.18.0.1",
+            "192.0.2.1",
+            "224.0.0.1",
+            "240.0.0.1",
+            "255.255.255.255",
+        ] {
+            assert!(is_forbidden_ip(address.parse().unwrap()), "{address}");
+        }
+    }
+
+    #[test]
+    fn blocks_private_ipv4_embedded_in_ipv6() {
+        for address in [
+            "::1",
+            "fc00::1",
+            "fe80::1",
+            "2001:db8::1",
+            "::ffff:127.0.0.1",
+            "::ffff:169.254.169.254",
+            "64:ff9b::7f00:1",
+            "2002:7f00:1::",
+        ] {
+            assert!(is_forbidden_ip(address.parse().unwrap()), "{address}");
+        }
+    }
+
+    #[test]
+    fn preserves_public_endpoints_and_policy_exceptions() {
+        for address in [
+            "1.1.1.1",
+            "8.8.8.8",
+            "192.0.0.9",
+            "192.0.0.10",
+            "2606:4700:4700::1111",
+            "::ffff:1.1.1.1",
+            "64:ff9b::101:101",
+        ] {
+            assert!(!is_forbidden_ip(address.parse().unwrap()), "{address}");
+        }
+    }
+}
+
 /// True when `ip` must never be the target of an outbound request from the
 /// engine: loopback, RFC1918 private, link-local (incl. the 169.254.169.254
 /// cloud-metadata endpoint), broadcast, documentation, the unspecified address
@@ -65,7 +121,7 @@ pub fn is_forbidden_ip(ip: IpAddr) -> bool {
                 // 240.0.0.0/4 is reserved (255.255.255.255 was already
                 // covered by is_broadcast()).
                 || o[0] >= 240
-        },
+        }
         IpAddr::V6(v6) => {
             if v6.is_loopback()
                 || v6.is_unspecified()
@@ -110,8 +166,12 @@ pub fn is_forbidden_ip(ip: IpAddr) -> bool {
             if s[0] == 0x2001 && s[1] == 0 {
                 let server =
                     Ipv4Addr::new((s[2] >> 8) as u8, s[2] as u8, (s[3] >> 8) as u8, s[3] as u8);
-                let client =
-                    Ipv4Addr::new(!(s[6] >> 8) as u8, !s[6] as u8, !(s[7] >> 8) as u8, !s[7] as u8);
+                let client = Ipv4Addr::new(
+                    !(s[6] >> 8) as u8,
+                    !s[6] as u8,
+                    !(s[7] >> 8) as u8,
+                    !s[7] as u8,
+                );
                 return is_forbidden_ip(IpAddr::V4(server)) || is_forbidden_ip(IpAddr::V4(client));
             }
 
@@ -120,6 +180,6 @@ pub fn is_forbidden_ip(ip: IpAddr) -> bool {
                 || (s[0] == 0x64 && s[1] == 0xff9b && s[2] == 1)
                 || (s[0] == 0x2001 && s[1] == 0x0db8)
                 || (s[0] == 0x3fff && s[1] & 0xf000 == 0)
-        },
+        }
     }
 }

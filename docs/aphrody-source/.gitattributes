@@ -1,0 +1,2 @@
+# Imported Markdown preserves intentional hard breaks and source examples.
+* whitespace=-blank-at-eol,blank-at-eof,cr-at-eol,-tab-in-indent
