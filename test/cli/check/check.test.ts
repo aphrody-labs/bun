@@ -13,6 +13,7 @@ import {
 } from "node:fs";
 import { basename, delimiter, dirname, isAbsolute, join } from "node:path";
 import { zstdDecompressSync } from "node:zlib";
+import { modulesInRings } from "./differential";
 
 // The directory of the `lib.*.d.ts` files of the `typescript7` package, which has them in a package for the platform.
 const typescript7 = (() => {
@@ -707,45 +708,199 @@ describe.concurrent("bun check", () => {
     `);
   });
 
-  test("modules that enter the same cycles produce the same output on any number of threads", async () => {
-    // Whichever file is checked first enters each cycle: the variances of type parameters, recursive aliases, and
-    // functions and constants without annotations, each through a ring of modules.
-    const n = isDebug || isASAN ? 24 : 60;
-    const files: Record<string, string> = {};
-    for (let i = 0; i < n; i++) {
-      const [a, b, d] = [(i + 1) % n, (i + 7) % n, (i * 3 + 2) % n];
-      files[`m${i}.ts`] = [
-        ...[...new Set([a, b, d])]
-          .filter((j) => j !== i)
-          .map(
-            (j) => `import { f${j}, g${j}, C${j}, v${j}, type T${j}, type R${j} } from "./m${j}";`,
-          ),
-        `export interface T${i}<A> { a: A; next: T${a}<A[]> | null; take(x: T${b}<A>): void; give(): T${d}<A> }`,
-        `export type R${i}<X, N extends unknown[] = []> = N["length"] extends 6 ? X : R${a}<{ m${i}: X }, [...N, 1]>;`,
-        `export function f${i}(x: number) { return x > 0 ? { k: "m${i}" as const, inner: f${a}(x - 1) } : null; }`,
-        `export function g${i}(x: number) { return ${i === 0 ? "x" : `{ k: ${i}, inner: g${Math.floor(i / 2)}(x) }`}; }`,
-        `export class C${i}<A> { constructor(public v: A) {} map<B>(h: (a: A) => B): C${b}<B> { return new C${b}(h(this.v)); } }`,
-        `export const v${i} = new C${a}(${i}).map(x => [x, v${d}] as const);`,
-        // `never` puts the types in the messages.
-        `const r${i}: never = f${d}(1);`,
-        `const s${i}: never = g${b}(1);`,
-        `const t${i}: T${a}<string> = null! as T${a}<unknown>;`,
-        `const u${i}: T${b}<unknown> = null! as T${b}<string>;`,
-        `const w${i}: never = null! as R${d}<${i}>;`,
-        `const y${i}: never = v${b};`,
-        `r${i}; s${i}; t${i}; u${i}; w${i}; y${i};\n`,
-      ].join("\n");
-    }
-    using dir = project(files);
-    const [one, ...others] = await Promise.all(
-      [1, 2, 3, 8, 16].map((threads) => check(dir, ["--threads", String(threads)])),
+  describe("a file that is too long for control flow analysis takes no error from another file", () => {
+    const long = (end: string) => "const data = [];\n" + repeat("data[0] = 0;\n", 3000) + end;
+    const right = `type S = { k: "a" } | { k: "b" };\ndeclare function assertNever(x: never): never;\nexport function f(s: S) {\n  switch (s.k) {\n    case "a":\n      return 1;\n    case "b":\n      return 2;\n    default:\n      return assertNever(s);\n  }\n}\n`;
+    const wrong = `declare let s: string;\nexport const a: number = s;\nexport function f(x: string): number {\n  return x;\n}\nexport const b = s.nope;\n`;
+    const errors = [
+      "wrong.ts(2,14): error TS2322: Type 'string' is not assignable to type 'number'.",
+      "wrong.ts(4,3): error TS2322: Type 'string' is not assignable to type 'number'.",
+      "wrong.ts(6,20): error TS2339: Property 'nope' does not exist on type 'string'.",
+    ];
+    test.each([
+      ["it is checked", "a-generated.ts", {}, [], long("export default data;\n"), wrong, errors],
+      // 2563 is not among the errors of a JavaScript file that is not checked.
+      [
+        "it is JavaScript that is not checked, as with the tsconfig.json of bun init",
+        "a-generated.js",
+        { allowJs: true },
+        ["--checkJs"],
+        long("export default data;\n"),
+        wrong,
+        errors,
+      ],
+      [
+        "it reads a variable of the other file behind its limit",
+        "a-generated.ts",
+        {},
+        [],
+        long("data[0] = b;\n"),
+        `declare let s: string;\nconst b = s.nope;\nconst c: number = s;\n`,
+        [
+          "wrong.ts(2,13): error TS2339: Property 'nope' does not exist on type 'string'.",
+          "wrong.ts(3,7): error TS2322: Type 'string' is not assignable to type 'number'.",
+        ],
+      ],
+    ] as const)(
+      "%s",
+      async (_, generated, options, shows, text, other, expected) => {
+        using dir = project({
+          [generated]: text,
+          "wrong.ts": other,
+          "right.ts": right,
+          "tsconfig.json": JSON.stringify({
+            compilerOptions: { ...JSON.parse(tsconfig).compilerOptions, ...options },
+            files: [generated, "right.ts", "wrong.ts"],
+          }),
+        });
+        const [control, ...runs] = await Promise.all([
+          check(dir, [...shows]),
+          ...[1, 2, 8].map((threads) => check(dir, ["--threads", String(threads)])),
+        ]);
+        // In a debug build the stack can run out before the 2,000 levels of TS2563.
+        if (!isDebug && !isASAN)
+          expect(control.stdout).toContain(`${generated}(1,1): error TS2563:`);
+        for (const { stdout, exitCode } of runs) {
+          const others = stdout.split("\n").filter((line) => !line.startsWith("a-generated."));
+          expect(others.join("\n")).toBe(expected.join("\n"));
+          expect(exitCode).toBe(1);
+        }
+      },
+      isDebug || isASAN ? 10_000 : 5_000,
     );
-    expect(one.stdout.split("\n").length).toBeGreaterThan(n * 6);
+
+    test(
+      "nor does another file that is too long switch it on again",
+      async () => {
+        using dir = project({
+          "a-generated.ts":
+            `import { last } from "./c-generated";\n` +
+            long(
+              `data[0] = last;\nexport const f = (p: string | number) => {\n  const n: number = p;\n  return [n, data];\n};\n`,
+            ),
+          "c-generated.ts":
+            "const rows = [];\n" + repeat("rows[0] = 0;\n", 3000) + "export const last = rows;\n",
+          "wrong.ts": wrong,
+        });
+        const tooLong = (file: string) =>
+          `${file}(1,1): error TS2563: The containing function or module body is too large for control flow analysis.`;
+        for (const { stdout, exitCode } of await Promise.all(
+          [1, 2, 8].map((threads) => check(dir, ["--threads", String(threads)])),
+        )) {
+          // In a debug build the stack can run out before the 2,000 levels of TS2563.
+          if (isDebug || isASAN) {
+            expect(stdout.split("\n").filter((line) => line.startsWith("wrong.ts"))).toEqual(
+              errors,
+            );
+          } else {
+            expect(stdout).toBe(
+              [tooLong("a-generated.ts"), tooLong("c-generated.ts"), ...errors].join("\n"),
+            );
+          }
+          expect(exitCode).toBe(1);
+        }
+      },
+      isDebug || isASAN ? 15_000 : 5_000,
+    );
+  });
+
+  // The time was cubic and worse: 16 s for 1,000 lines in a release build, where it now takes 0.2 s.
+  test("an array without a type that is filled line by line", async () => {
+    const n = isDebug || isASAN ? 200 : 1000;
+    const lines = (line: (i: number) => string, count = n) =>
+      Array.from({ length: count }, (_, i) => line(i)).join("");
+    const end = "export const probe: never = rows;\n";
+    using dir = project({
+      "assigned.ts": "const rows = [];\n" + lines((i) => `rows[${i}] = { id: ${i} };\n`) + end,
+      "pushed.ts": "const rows = [];\n" + lines((i) => `rows.push({ id: ${i} });\n`) + end,
+      // Half as many: each line has three flow nodes, and 2,000 levels are the limit of TS2563.
+      "pushed-if.ts":
+        "declare const c: boolean;\nconst rows = [];\n" +
+        lines((i) => `if (c) rows.push({ id: ${i} });\n`, n / 2) +
+        end,
+    });
+    const { stdout, exitCode } = await check(dir);
+    expect(stdout).toBe(
+      [
+        `assigned.ts(${n + 2},14): error TS2322: Type '{ id: number; }[]' is not assignable to type 'never'.`,
+        `pushed-if.ts(${n / 2 + 3},14): error TS2322: Type '{ id: number; }[]' is not assignable to type 'never'.`,
+        `pushed.ts(${n + 2},14): error TS2322: Type '{ id: number; }[]' is not assignable to type 'never'.`,
+      ].join("\n"),
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  // The time was cubic: 16 s for 2,000 interfaces in a release build, where it now takes 0.7 s.
+  test("a long chain of interfaces, each of which extends the last", async () => {
+    const n = isDebug || isASAN ? 300 : 2000;
+    const chain = (member: (i: number) => string) =>
+      `interface I0 { ${member(0)} }\n` +
+      Array.from(
+        { length: n - 1 },
+        (_, i) => `interface I${i + 1} extends I${i} { ${member(i + 1)} }\n`,
+      ).join("") +
+      `declare const last: I${n - 1};\n`;
+    using dir = project({
+      "fields.ts":
+        chain((i) => `k${i}: number`) + `export const probe: never = [last.k0, last.k${n - 1}];\n`,
+      "methods.ts":
+        chain((i) => `m${i}(x: number): string`) + `export const probe: never = last.m0;\n`,
+    });
+    const { stdout, exitCode } = await check(dir);
+    expect(stdout).toBe(
+      [
+        `fields.ts(${n + 2},14): error TS2322: Type 'number[]' is not assignable to type 'never'.`,
+        `methods.ts(${n + 2},14): error TS2322: Type '(x: number) => string' is not assignable to type 'never'.`,
+      ].join("\n"),
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  // Cubic too: over 25 s for 1,000 generic interfaces in a release build, where it now takes 0.5 s.
+  test("a long chain whose members mention `this` or a type parameter, or have no annotation", async () => {
+    const n = isDebug || isASAN ? 150 : 1000;
+    const chain = (kind: string, member: (i: number) => string, parameters = "", argument = "") =>
+      `${kind} I0${parameters} { ${member(0)} }\n` +
+      Array.from(
+        { length: n - 1 },
+        (_, i) =>
+          `${kind} I${i + 1}${parameters} extends I${i}${parameters} { ${member(i + 1)} }\n`,
+      ).join("") +
+      `declare const last: I${n - 1}${argument};\n`;
+    using dir = project({
+      "classes.ts":
+        chain("class", (i) => `m${i}() { return ${i}; }`) +
+        `export const probe: never = last.m0;\n`,
+      "generic.ts":
+        chain("interface", (i) => `k${i}: T`, "<T>", "<string>") +
+        `export const probe: never = last.k0;\n`,
+      "this.ts":
+        chain("interface", (i) => `k${i}: this`) + `export const probe: never = last.k0;\n`,
+    });
+    const { stdout, exitCode } = await check(dir);
+    expect(stdout).toBe(
+      [
+        `classes.ts(${n + 2},14): error TS2322: Type '() => number' is not assignable to type 'never'.`,
+        `generic.ts(${n + 2},14): error TS2322: Type 'string' is not assignable to type 'never'.`,
+        `this.ts(${n + 2},14): error TS2322: Type 'I${n - 1}' is not assignable to type 'never'.`,
+      ].join("\n"),
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  // One thread checks the files in program order, like `tsc --singleThreaded`: see differential.test.ts.
+  test("modules that enter the same cycles produce the same output on any number of threads above one", async () => {
+    const n = isDebug || isASAN ? 24 : 60;
+    using dir = project(modulesInRings(n));
+    const [two, ...others] = await Promise.all(
+      [2, 3, 8, 16].map((threads) => check(dir, ["--threads", String(threads)])),
+    );
+    expect(two.stdout.split("\n").length).toBeGreaterThan(n * 6);
     for (const { stdout, exitCode } of others) {
-      expect(stdout).toBe(one.stdout);
+      expect(stdout).toBe(two.stdout);
       expect(exitCode).toBe(1);
     }
-    expect(one.exitCode).toBe(1);
+    expect(two.exitCode).toBe(1);
   });
 
   test("prints related information under an error", async () => {
@@ -1691,36 +1846,96 @@ describe.concurrent("bun check", () => {
       );
     });
 
-    test("a project sees the declaration files of the projects before it, whether it references them or not", async () => {
-      const compilerOptions = {
-        ...options,
-        module: "nodenext",
-        moduleResolution: "nodenext",
-        outDir: "dist",
-        rootDir: ".",
-      };
-      const config = (references: { path: string }[]) =>
-        JSON.stringify({ compilerOptions, include: ["*.ts"], references });
-      using dir = project({
-        "tsconfig.json": JSON.stringify({
-          files: [],
-          references: [{ path: "./a" }, { path: "./b" }, { path: "./c" }],
-        }),
-        "a/tsconfig.json": config([]),
-        "a/index.ts": `export const a = 1;\n`,
-        "b/tsconfig.json": config([{ path: "../a" }]),
-        "b/index.ts": `import { a } from "../a/index.js";\nexport const b: string = a;\n`,
-        "c/tsconfig.json": config([]),
-        "c/index.ts": `import { a } from "../a/dist/index.js";\nexport const c: string = a;\n`,
-      });
-      const expected = `b/index.ts(2,14): error TS2322: Type 'number' is not assignable to type 'string'.
+    test(
+      "a project sees the declaration files of the projects before it, whether it references them or not",
+      async () => {
+        const compilerOptions = {
+          ...options,
+          module: "nodenext",
+          moduleResolution: "nodenext",
+          outDir: "dist",
+          rootDir: ".",
+        };
+        const config = (references: { path: string }[]) =>
+          JSON.stringify({ compilerOptions, include: ["*.ts"], references });
+        using dir = project({
+          "tsconfig.json": JSON.stringify({
+            files: [],
+            references: [{ path: "./a" }, { path: "./b" }, { path: "./c" }],
+          }),
+          "a/tsconfig.json": config([]),
+          "a/index.ts": `export const a = 1;\n`,
+          "b/tsconfig.json": config([{ path: "../a" }]),
+          "b/index.ts": `import { a } from "../a/index.js";\nexport const b: string = a;\n`,
+          "c/tsconfig.json": config([]),
+          "c/index.ts": `import { a } from "../a/dist/index.js";\nexport const c: string = a;\n`,
+        });
+        const expected = `b/index.ts(2,14): error TS2322: Type 'number' is not assignable to type 'string'.
 c/index.ts(2,14): error TS2322: Type 'number' is not assignable to type 'string'.`;
-      // Whichever of them are built at the same time.
-      for (const threads of ["1", "8"]) {
-        const { stdout } = await check(dir, ["--threads", threads]);
-        expect(stdout).toBe(expected);
-      }
-    });
+        // Whichever of them are built at the same time.
+        for (const threads of ["1", "8"]) {
+          const { stdout } = await check(dir, ["--threads", threads]);
+          expect(stdout).toBe(expected);
+        }
+      },
+      isDebug || isASAN ? 10_000 : 5_000,
+    );
+
+    // The projects of one check share what they read. `tsc -b` shares it by path alone, so there `late` and `later`
+    // get the old file too, although it has written the new one by then, and the next `tsc -b` finds the new one in all.
+    test(
+      "an old declaration file on the disk is what a project before the one that emits it sees, and no other",
+      async () => {
+        const compilerOptions = { ...options, outDir: "dist", rootDir: "src" };
+        const config = (references: { path: string }[]) =>
+          JSON.stringify({ compilerOptions, files: ["src/index.ts"], references });
+        const names = (path: string) =>
+          `import * as lib from "${path}";\nexport const names: never = null! as keyof typeof lib;\nexport const keys: never = null! as keyof lib.Shape;\n`;
+        using dir = project({
+          "tsconfig.json": JSON.stringify({
+            files: [],
+            references: [
+              { path: "./early" },
+              { path: "./lib" },
+              { path: "./late" },
+              { path: "./later" },
+            ],
+          }),
+          "lib/tsconfig.json": config([]),
+          "lib/src/index.ts": `export const fresh = "fresh" as const;\nexport interface Shape { fresh: 1 }\n`,
+          "lib/dist/index.d.ts": `export declare const stale: "stale";\nexport interface Shape { stale: 1 }\n`,
+          "early/tsconfig.json": config([]),
+          "early/src/index.ts": names("../../lib/dist/index"),
+          "late/tsconfig.json": config([{ path: "../lib" }]),
+          "late/src/index.ts": names("../../lib/src/index"),
+          "later/tsconfig.json": config([]),
+          "later/src/index.ts": names("../../lib/dist/index"),
+        });
+        const expected = `early/src/index.ts(2,14): error TS2322: Type '"stale"' is not assignable to type 'never'.
+early/src/index.ts(3,14): error TS2322: Type '"stale"' is not assignable to type 'never'.
+late/src/index.ts(2,14): error TS2322: Type '"fresh"' is not assignable to type 'never'.
+late/src/index.ts(3,14): error TS2322: Type '"fresh"' is not assignable to type 'never'.
+later/src/index.ts(2,14): error TS2322: Type '"fresh"' is not assignable to type 'never'.
+later/src/index.ts(3,14): error TS2322: Type '"fresh"' is not assignable to type 'never'.`;
+        for (const threads of ["1", "8"]) {
+          const { stdout, exitCode } = await check(dir, ["--threads", threads]);
+          expect({ stdout, exitCode }).toEqual({ stdout: expected, exitCode: 1 });
+        }
+        // Each directory is a build of its own. What `lib` emits for `late` is not on the disk, where `later` looks.
+        const separately = `late/src/index.ts(2,14): error TS2322: Type '"fresh"' is not assignable to type 'never'.
+late/src/index.ts(3,14): error TS2322: Type '"fresh"' is not assignable to type 'never'.
+later/src/index.ts(2,14): error TS2322: Type '"stale"' is not assignable to type 'never'.
+later/src/index.ts(3,14): error TS2322: Type '"stale"' is not assignable to type 'never'.`;
+        for (const directories of [
+          ["late", "later"],
+          ["later", "late"],
+        ]) {
+          const { stdout, exitCode } = await check(dir, directories);
+          expect({ stdout, exitCode }).toEqual({ stdout: separately, exitCode: 1 });
+        }
+      },
+      isDebug || isASAN ? 15_000 : 5_000,
+    );
 
     test("checks every referenced project without a build", async () => {
       using dir = monorepo();
@@ -3170,6 +3385,37 @@ export const alsoWrong = wrong.nope;
       expect(stdout.slice(-errorsAfterIt.length)).toBe(errorsAfterIt);
       expect(exitCode).toBe(1);
     });
+
+    // The literal has its members when the properties that assignments declare are added, and above eight properties
+    // a name is looked up in an index.
+    test.each([
+      ["allowJs alone", [], "", 0],
+      [
+        "checkJs",
+        ["--checkJs"],
+        `a.js(5,5): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ a(): void; b(): void; c(): void; d(): void; e(): void; f(): void; g(): void; h(): void; i(): void; }'.
+a.js(5,10): error TS2304: Cannot find name 'k'.`,
+        1,
+      ],
+    ])(
+      "an object literal of nine methods in JavaScript, one of which assigns to this[k], %s",
+      async (_, flags, expected, code) => {
+        using dir = project({
+          "a.js": `const o = {
+  a() {}, b() {}, c() {}, d() {},
+  e() {}, f() {}, g() {},
+  h() {
+    this[k] = 1;
+  },
+  i() {},
+};
+`,
+        });
+        const { stdout, exitCode } = await check(dir, ["--allowJs", ...flags]);
+        expect(stdout).toBe(expected);
+        expect(exitCode).toBe(code);
+      },
+    );
 
     // The way Kobalte types a component that renders as any element. Where `Elements[keyof Elements]` is a
     // parameter its members meet in one intersection. Whether that is `never` is decided name by name, and
@@ -15206,7 +15452,15 @@ export function f<T>(rest: T) {
       test.serial(
         layout,
         () => checkLayout(layout),
-        (isDebug || isASAN) && layout === "a project that references another" ? 10_000 : 5_000,
+        isDebug || isASAN
+          ? layout === "a project that references another"
+            ? 25_000
+            : layout === "a solution" ||
+                layout === "no tsconfig.json at the root" ||
+                layout === "a tsconfig.json below that of the project"
+              ? 10_000
+              : 5_000
+          : 5_000,
       );
     }
 
@@ -16403,28 +16657,32 @@ describe.concurrent("--check", () => {
     ]);
   });
 
-  test("bun test --watch --check watches the tsconfig.json of every project", async () => {
-    const declared = `declare module "bun:test" {\n  export function test(name: string, fn: () => void): void;\n}\n`;
-    const tests = `import { test } from "bun:test";\nfunction f(x) {\n  return x;\n}\ntest("t", () => void f(1));\n`;
-    const loose = JSON.stringify({
-      compilerOptions: { ...JSON.parse(tsconfig).compilerOptions, strict: false },
-    });
-    using dir = project({
-      "a/tsconfig.json": loose,
-      "a/bun-test.d.ts": declared,
-      "a/a.test.ts": tests,
-      "b/tsconfig.json": loose,
-      "b/bun-test.d.ts": declared,
-      "b/b.test.ts": tests,
-    });
-    await using bun = watching(dir, ["test", "--watch", "--check"]);
-    await bun.until(() => bun.output.stderr.includes("2 pass"));
-    await bun.until(
-      () => bun.output.stderr.includes("b/b.test.ts(2,12): error TS7006"),
-      () => Bun.write(join(String(dir), "b", "tsconfig.json"), tsconfig),
-    );
-    expect(bun.output.stderr).not.toContain("a/a.test.ts(2,12)");
-  });
+  test(
+    "bun test --watch --check watches the tsconfig.json of every project",
+    async () => {
+      const declared = `declare module "bun:test" {\n  export function test(name: string, fn: () => void): void;\n}\n`;
+      const tests = `import { test } from "bun:test";\nfunction f(x) {\n  return x;\n}\ntest("t", () => void f(1));\n`;
+      const loose = JSON.stringify({
+        compilerOptions: { ...JSON.parse(tsconfig).compilerOptions, strict: false },
+      });
+      using dir = project({
+        "a/tsconfig.json": loose,
+        "a/bun-test.d.ts": declared,
+        "a/a.test.ts": tests,
+        "b/tsconfig.json": loose,
+        "b/bun-test.d.ts": declared,
+        "b/b.test.ts": tests,
+      });
+      await using bun = watching(dir, ["test", "--watch", "--check"]);
+      await bun.until(() => bun.output.stderr.includes("2 pass"));
+      await bun.until(
+        () => bun.output.stderr.includes("b/b.test.ts(2,12): error TS7006"),
+        () => Bun.write(join(String(dir), "b", "tsconfig.json"), tsconfig),
+      );
+      expect(bun.output.stderr).not.toContain("a/a.test.ts(2,12)");
+    },
+    isDebug || isASAN ? 10_000 : 5_000,
+  );
 
   test("bun --watch --check watches the configuration files that tsconfig.json extends", async () => {
     const options = JSON.parse(tsconfig).compilerOptions;
