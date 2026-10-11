@@ -1,0 +1,20 @@
+[
+  { "args": ["--check", "!**/err.js"] },
+  { "args": ["--check", "--ignore-path", "ignore1"] },
+  { "args": ["--check", "--ignore-path", "ignore1", "should_format/ok.js"] },
+  {
+    "args": [
+      "--check",
+      "--ignore-path",
+      "ignore1",
+      "should_format/ok.js",
+      "--no-error-on-unmatched-pattern"
+    ]
+  },
+  { "args": ["--check", "--ignore-path", "ignore2"] },
+  { "args": ["--check", "--ignore-path", "ignore2", "should_format/ok.js"] },
+  {
+    "args": ["--ignore-path", "ignore2", "--stdin-filepath", "should_format/ok.js"],
+    "stdin": "should_format/ok.js"
+  }
+]

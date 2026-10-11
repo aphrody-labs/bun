@@ -1,0 +1,249 @@
+---
+source: crates/oxc_linter/src/tester.rs
+---
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:13]
+ 1 │ const bar = [[1],[2],[3]].map(i => [i]).flat()
+   ·             ──────────────────────────────────
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:13]
+ 1 │ const bar = [[1],[2],[3]].map(i => [i]).flat(1)
+   ·             ───────────────────────────────────
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:13]
+ 1 │ const bar = [[1],[2],[3]].map(i => [i]).flat(1.0)
+   ·             ─────────────────────────────────────
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:13]
+ 1 │ const bar = [[1],[2],[3]].map(i => [i]).flat(1.00)
+   ·             ──────────────────────────────────────
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:13]
+ 1 │ const bar = [[1],[2],[3]].map(i => [i]).flat(0.99999999999999995)
+   ·             ─────────────────────────────────────────────────────
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:13]
+ 1 │ const bar = [[1],[2],[3]].map(i => [i]).flat(1.99999999999999988)
+   ·             ─────────────────────────────────────────────────────
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:13]
+ 1 │ const bar = [[1],[2],[3]].map(i => [i]).flat(1,)
+   ·             ────────────────────────────────────
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:13]
+ 1 │ const bar = [1,2,3].map(i => [i]).flat()
+   ·             ────────────────────────────
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:13]
+ 1 │ const bar = [1,2,3].map((i) => [i]).flat()
+   ·             ──────────────────────────────
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:13]
+ 1 │ const bar = [1,2,3].map((i) => { return [i]; }).flat()
+   ·             ──────────────────────────────────────────
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:13]
+ 1 │ const bar = [1,2,3].map(foo).flat()
+   ·             ───────────────────────
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:13]
+ 1 │ const bar = foo.map(i => [i]).flat()
+   ·             ────────────────────────
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:13]
+ 1 │ const bar = foo?.map(i => [i]).flat()
+   ·             ─────────────────────────
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:13]
+ 1 │ const bar = { map: () => {} }.map(i => [i]).flat()
+   ·             ──────────────────────────────────────
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:13]
+ 1 │ const bar = [1,2,3].map(i => i).map(i => [i]).flat()
+   ·             ────────────────────────────────────────
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:13]
+ 1 │ const bar = [1,2,3].sort().map(i => [i]).flat()
+   ·             ───────────────────────────────────
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:13]
+ 1 │ const bar = (([1,2,3].map(i => [i]))).flat()
+   ·             ────────────────────────────────
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:11]
+ 1 │ ╭─▶ let bar = [1,2,3].map(i => {
+ 2 │ │                   return [i];
+ 3 │ ╰─▶             }).flat();
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:11]
+ 1 │ ╭─▶ let bar = [1,2,3].map(i => {
+ 2 │ │                   return [i];
+ 3 │ │               })
+ 4 │ ╰─▶             .flat();
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:11]
+ 1 │ ╭─▶ let bar = [1,2,3].map(i => {
+ 2 │ │                   return [i];
+ 3 │ │               }) // comment
+ 4 │ ╰─▶             .flat();
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:11]
+ 1 │ ╭─▶ let bar = [1,2,3].map(i => {
+ 2 │ │                   return [i];
+ 3 │ │               }) // comment
+ 4 │ ╰─▶             .flat(); // other
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:11]
+ 1 │ ╭─▶ let bar = [1,2,3]
+ 2 │ │                   .map(i => { return [i]; })
+ 3 │ ╰─▶                 .flat();
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:11]
+ 1 │ ╭─▶ let bar = [1,2,3].map(i => { return [i]; })
+ 2 │ ╰─▶                 .flat();
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:11]
+ 1 │ let bar = [1,2,3] . map( x => y ) . flat () // 🤪
+   ·           ─────────────────────────────────
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): `Array.flatMap` performs `Array.map` and `Array.flat` in one step.
+   ╭─[prefer_array_flat_map.tsx:1:13]
+ 1 │ const bar = [1,2,3].map(i => [i]).flat(1);
+   ·             ─────────────────────────────
+   ╰────
+  help: Prefer `.flatMap(…)` over `.map(…).flat()`.
+
+  ⚠ unicorn(prefer-array-flat-map): Prefer a single `.flatMap(…)` over `.filter(…).flatMap(…)`.
+   ╭─[prefer_array_flat_map.tsx:1:52]
+ 1 │ const result = values.filter((value) => value > 0).flatMap((value) => [value, value]);
+   ·                                                    ───────
+   ╰────
+  help: Replace `.filter(…).flatMap(…)` with a single `.flatMap(…)`.
+
+  ⚠ unicorn(prefer-array-flat-map): Prefer a single `.flatMap(…)` over `.filter(…).flatMap(…)`.
+   ╭─[prefer_array_flat_map.tsx:1:33]
+ 1 │ (array).filter(x => (x.active)).flatMap(x => ([x.id, x.slug]));
+   ·                                 ───────
+   ╰────
+  help: Replace `.filter(…).flatMap(…)` with a single `.flatMap(…)`.
+
+  ⚠ unicorn(prefer-array-flat-map): Prefer a single `.flatMap(…)` over `.filter(…).flatMap(…)`.
+   ╭─[prefer_array_flat_map.tsx:1:42]
+ 1 │ array.filter(x => x.active && x.visible).flatMap(x => [x, ...x.children]);
+   ·                                          ───────
+   ╰────
+  help: Replace `.filter(…).flatMap(…)` with a single `.flatMap(…)`.
+
+  ⚠ unicorn(prefer-array-flat-map): Prefer a single `.flatMap(…)` over `.filter(…).flatMap(…)`.
+   ╭─[prefer_array_flat_map.tsx:1:36]
+ 1 │ array.filter(x => x.a ? x.b : x.c).flatMap(x => [x, x]);
+   ·                                    ───────
+   ╰────
+  help: Replace `.filter(…).flatMap(…)` with a single `.flatMap(…)`.
+
+  ⚠ unicorn(prefer-array-flat-map): Prefer a single `.flatMap(…)` over `.filter(…).flatMap(…)`.
+   ╭─[prefer_array_flat_map.tsx:1:31]
+ 1 │ array.filter(x => x.a = true).flatMap(x => [x, x]);
+   ·                               ───────
+   ╰────
+  help: Replace `.filter(…).flatMap(…)` with a single `.flatMap(…)`.
+
+  ⚠ unicorn(prefer-array-flat-map): Prefer a single `.flatMap(…)` over `.filter(…).flatMap(…)`.
+   ╭─[prefer_array_flat_map.tsx:1:33]
+ 1 │ array.filter(x => x as boolean).flatMap(x => [x, x]);
+   ·                                 ───────
+   ╰────
+  help: Replace `.filter(…).flatMap(…)` with a single `.flatMap(…)`.
+
+  ⚠ unicorn(prefer-array-flat-map): Prefer a single `.flatMap(…)` over `.filter(…).flatMap(…)`.
+   ╭─[prefer_array_flat_map.tsx:1:26]
+ 1 │ ((array.filter(x => x))).flatMap(x => [x, x]);
+   ·                          ───────
+   ╰────
+  help: Replace `.filter(…).flatMap(…)` with a single `.flatMap(…)`.
+
+  ⚠ unicorn(prefer-array-flat-map): Prefer a single `.flatMap(…)` over `.filter(…).flatMap(…)`.
+   ╭─[prefer_array_flat_map.tsx:1:28]
+ 1 │ (a ? b : c).filter(x => x).flatMap(x => [x, x]);
+   ·                            ───────
+   ╰────
+  help: Replace `.filter(…).flatMap(…)` with a single `.flatMap(…)`.
+
+  ⚠ unicorn(prefer-array-flat-map): Prefer a single `.flatMap(…)` over `.filter(…).flatMap(…)`.
+   ╭─[prefer_array_flat_map.tsx:1:31]
+ 1 │ array.filter(x => (x.a, x.b)).flatMap(x => [x, x]);
+   ·                               ───────
+   ╰────
+  help: Replace `.filter(…).flatMap(…)` with a single `.flatMap(…)`.
