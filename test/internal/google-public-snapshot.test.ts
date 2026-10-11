@@ -3,6 +3,7 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createPublicIndexSearch } from "../../packages/bun-google/src/public-index.ts";
 import {
   buildPublicSnapshot,
   canonicalPublicJson,
@@ -13,8 +14,8 @@ import {
 
 const policy = {
   collection: "public-docs",
-  seeds: ["https://example.test/"],
-  hosts: ["example.test"],
+  seeds: ["https://example.com/"],
+  hosts: ["example.com"],
   maxRequests: 10,
   maxDepth: 2,
   obeyRobots: true,
@@ -27,7 +28,7 @@ const report = () => ({
   attempts: 1,
   pages: [
     {
-      url: "https://example.test/",
+      url: "https://example.com/",
       depth: 0,
       status: 200,
       title: "Français",
@@ -63,7 +64,7 @@ test("projects actual CLI fields and hashes exact exported UTF8, not markdown/pr
   const snapshot = buildPublicSnapshot(report(), mutablePolicy(), revision, context);
   expect(snapshot.documents).toEqual([
     {
-      url: "https://example.test/",
+      url: "https://example.com/",
       title: "Français",
       text: "Été 日本語",
       contentBytes: 15,
@@ -81,12 +82,59 @@ test("projects actual CLI fields and hashes exact exported UTF8, not markdown/pr
     exported: 1,
   });
   expect(snapshot.provenance.policySha256).toBe(publicSha256(canonicalPublicJson(mutablePolicy())));
-  const originalPolicy = { ...mutablePolicy(), seeds: ["https://example.test"] };
+  const originalPolicy = { ...mutablePolicy(), seeds: ["https://example.com"] };
   expect(
     buildPublicSnapshot(report(), originalPolicy, revision, context).provenance.policySha256,
   ).toBe(publicSha256(canonicalPublicJson(originalPolicy)));
   expect(canonicalPublicJson({ z: 1, a: { z: 2, a: 3 } })).toBe('{"a":{"a":3,"z":2},"z":1}');
   expect(JSON.stringify(snapshot)).not.toContain("markdown");
+});
+
+test("producer snapshots are consumed by the canonical SDK with matching public policy", async () => {
+  const root = await directory();
+  const snapshot = buildPublicSnapshot(report(), mutablePolicy(), revision, context);
+  await publishPublicSnapshot(root, report(), mutablePolicy(), revision, context);
+  const search = createPublicIndexSearch({
+    root,
+    collections: {
+      "public-docs": {
+        pointer: "public-docs.pointer.json",
+        hosts: [...policy.hosts],
+        owner: "aphrody-web-crawl",
+        policySha256: snapshot.provenance.policySha256,
+      },
+    },
+  });
+  try {
+    const result = await search({ query: "Été", collection: "public-docs", num: 10, start: 0 });
+    expect(result.body.organic[0]?.url).toBe("https://example.com/");
+    expect(result.body.source).toBe("public-crawl-cache");
+    expect(result.cache).toBe("miss");
+  } finally {
+    search.close();
+  }
+});
+
+test("producer rejects nonpublic suffixes and title controls required by the SDK contract", () => {
+  for (const suffix of ["test", "invalid", "localhost", "internal"]) {
+    expect(() =>
+      buildPublicSnapshot(
+        report(),
+        {
+          ...mutablePolicy(),
+          hosts: [`example.${suffix}`],
+          seeds: [`https://example.${suffix}/`],
+        },
+        revision,
+        context,
+      ),
+    ).toThrow();
+  }
+  for (const control of ["\n", "\r", "\t"]) {
+    const changed = report();
+    changed.pages[0]!.title += control;
+    expect(() => buildPublicSnapshot(changed, mutablePolicy(), revision, context)).toThrow();
+  }
 });
 
 test("retains incomplete coverage and rejects persisted frontier counters", () => {
@@ -129,13 +177,13 @@ test("retains incomplete coverage and rejects persisted frontier counters", () =
 
 test("rejects private/credentialed/foreign URLs even on unsuccessful pages", () => {
   for (const url of [
-    "http://example.test/",
+    "http://example.com/",
     "https://localhost/",
     "https://127.0.0.1/",
-    "https://user:password@example.test/",
-    "https://example.test:8443/",
+    "https://user:password@example.com/",
+    "https://example.com:8443/",
     "https://other.test/",
-    "https://example.test/#session",
+    "https://example.com/#session",
   ]) {
     const input = report();
     input.pages[0]!.url = url;
@@ -171,7 +219,7 @@ test("enforces requests, depth, text, UTF8, document and total-byte budgets", ()
   oversized.frontier.done = 1001;
   oversized.pages = Array.from({ length: 1001 }, (_, index) => ({
     ...report().pages[0]!,
-    url: `https://example.test/${index}`,
+    url: `https://example.com/${index}`,
   }));
   const largerPolicy = { ...mutablePolicy(), maxRequests: 2000 };
   expect(() => buildPublicSnapshot(oversized, largerPolicy, revision, context)).toThrow();

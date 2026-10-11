@@ -105,9 +105,9 @@ function publicHost(value: unknown): string {
     value.length > 253 ||
     value.split(".").some((label) => label.length > 63) ||
     value !== value.toLowerCase() ||
-    !/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z][a-z0-9-]*$/.test(value) ||
+    !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(value) ||
     isIP(value) ||
-    /(?:^|\.)(?:localhost|local|internal|home|lan|onion)$/.test(value)
+    /(?:^|\.)(?:localhost|local|internal|invalid|test|home|lan|onion)$/.test(value)
   )
     fail();
   return value;
@@ -267,9 +267,12 @@ export function buildPublicSnapshot(
     seen.add(url);
     if (status < 200 || status >= 300) continue;
     const content = text(page.text, 32768);
+    const title = text(page.title, 2048);
+    if (Array.from(title).some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127))
+      fail();
     documents.push({
       url,
-      title: text(page.title, 2048),
+      title,
       text: content,
       contentBytes: Buffer.byteLength(content),
       contentSha256: publicSha256(content),
