@@ -23,7 +23,7 @@ The VPS had 71 GiB free disk and about 29 GiB available RAM during the full buil
 
 ## Chromium
 
-The local Chromium source build is owned and monitored by its build agent. Its latest checkpoint was 10,333 of 14,027 Siso tasks, with 3,694 remaining and no reported build errors. That checkpoint proves neither a completed executable nor a browser launch, WebGPU qualification, package publication or deployment. No second native build was started on that PC.
+The local Chromium source build completed with Siso exit code 0. Its final `siso_result.json` was empty and `siso_failed_commands.bat` contained only the `cd out\bun` setup line. It produced `chrome.exe` (SHA-256 `8e40f755b04cbaf123920466322131e9276219cf2440480bfd491457616ab147`) and `chrome.dll`; the source VERSION is `157.0.8099.0`. This proves compilation only: no browser launch, WebGPU qualification, installation, package publication or deployment receipt has been recorded. No second native build was started on that PC.
 
 ## Aphrody and Shenron
 
