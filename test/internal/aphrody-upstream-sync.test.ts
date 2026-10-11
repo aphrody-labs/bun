@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { tempDir } from "harness";
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { lstat, readlink, symlink } from "node:fs/promises";
 import { join } from "node:path";
 import type { FactoryHostProfile } from "../../scripts/aphrody/build-host.ts";
@@ -248,7 +248,13 @@ test("delivery jobs hand off once and keep durable idempotent receipts", async (
   );
   await expect(readDeliveryJob(root, submitted.id)).rejects.toThrow("Invalid delivery job receipt");
   await Bun.write(jobPath, `${JSON.stringify(persisted, null, 2)}\n`);
+  const workerLock = join(root, "tmp", "monorepo-delivery-jobs", submitted.id, "worker.lock");
+  await Bun.write(workerLock, JSON.stringify({ pid: process.pid, inputHash: persisted.inputHash }));
+  await expect(runDeliveryJob(root, submitted.id)).rejects.toThrow("already claimed");
+  expect((await readDeliveryJob(root, submitted.id)).state).toBe("launching");
+  unlinkSync(workerLock);
   expect(await runDeliveryJob(root, submitted.id)).toMatchObject({ state: "succeeded", exitCode: 0 });
+  expect(await Bun.file(workerLock).exists()).toBe(false);
   expect(await Bun.file(join(root, "tmp", "monorepo-delivery-jobs", submitted.id, "report.json")).exists()).toBe(true);
   expect(
     await submitDeliveryJob(root, source, "inventory", ["--root", root, "--operation", "inventory"], submitted.id, {
@@ -259,6 +265,16 @@ test("delivery jobs hand off once and keep durable idempotent receipts", async (
     submitDeliveryJob(root, source, "inventory", ["--operation", "different"], submitted.id, { launch: false }),
   ).rejects.toThrow("different inputs");
   await expect(readDeliveryJob(root, "../protected")).rejects.toThrow("Invalid delivery job ID");
+  const drifted = await submitDeliveryJob(
+    root,
+    { ...source, revision: "f".repeat(40) },
+    "inventory",
+    ["--root", root, "--operation", "inventory"],
+    "source-drift",
+    { launch: false },
+  );
+  await expect(runDeliveryJob(root, drifted.id)).rejects.toThrow("source revision changed");
+  expect(await readDeliveryJob(root, drifted.id)).toMatchObject({ state: "failed", exitCode: 1 });
 }, 15000);
 
 test("detached install target fingerprints track manifests and reject symlink roots", async () => {

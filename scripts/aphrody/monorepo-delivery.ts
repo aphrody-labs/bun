@@ -257,27 +257,46 @@ export async function submitDeliveryJob(
 }
 
 export async function runDeliveryJob(root: string, id: string) {
-  const job = await readDeliveryJob(root, id);
+  let job = await readDeliveryJob(root, id);
   if (job.state !== "launching") return job;
-  if (git(root, ["rev-parse", "HEAD"]).trim() !== job.sourceRevision)
-    throw new Error("Delivery job source revision changed before worker start");
-  const running = { ...job, state: "running" as const, startedAt: new Date().toISOString() };
-  await writeDeliveryJob(root, running);
+  const lockPath = join(dirname(deliveryJobPath(root, id)), "worker.lock");
+  await validateExecutionReceiptPath(root, root, lockPath, { allowPlainFile: true });
   try {
-    await main(job.args);
-    const completed = { ...running, state: "succeeded" as const, endedAt: new Date().toISOString(), exitCode: 0 };
-    await writeDeliveryJob(root, completed);
-    return completed;
+    writeFileSync(
+      lockPath,
+      `${JSON.stringify({ pid: process.pid, inputHash: job.inputHash, claimedAt: new Date().toISOString() })}\n`,
+      { flag: "wx" },
+    );
   } catch (error) {
-    const failed = {
-      ...running,
-      state: "failed" as const,
-      endedAt: new Date().toISOString(),
-      exitCode: 1,
-      error: error instanceof Error ? error.message : String(error),
-    };
-    await writeDeliveryJob(root, failed);
+    if ((error as NodeJS.ErrnoException).code === "EEXIST")
+      throw new Error(`Delivery job worker is already claimed: ${id}`);
     throw error;
+  }
+  try {
+    job = await readDeliveryJob(root, id);
+    if (job.state !== "launching") return job;
+    const running = { ...job, state: "running" as const, startedAt: new Date().toISOString() };
+    await writeDeliveryJob(root, running);
+    try {
+      if (git(root, ["rev-parse", "HEAD"]).trim() !== job.sourceRevision)
+        throw new Error("Delivery job source revision changed before worker start");
+      await main(job.args);
+      const completed = { ...running, state: "succeeded" as const, endedAt: new Date().toISOString(), exitCode: 0 };
+      await writeDeliveryJob(root, completed);
+      return completed;
+    } catch (error) {
+      const failed = {
+        ...running,
+        state: "failed" as const,
+        endedAt: new Date().toISOString(),
+        exitCode: 1,
+        error: error instanceof Error ? error.message : String(error),
+      };
+      await writeDeliveryJob(root, failed);
+      throw error;
+    }
+  } finally {
+    unlinkSync(lockPath);
   }
 }
 

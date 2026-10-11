@@ -63,6 +63,12 @@ bun scripts/aphrody/monorepo-delivery.ts --status --job <job-id>
 The status command reports `launching`, `running`, `succeeded` or `failed`;
 `launching` means the submitting process handed off the worker but its first
 status write has not yet been observed. A detached worker still requires a
+worker claim created exclusively before execution. Duplicate workers fail
+without running adapters. A worker interrupted before its final cleanup leaves
+`worker.lock` beside its receipt; inspect the claim, source and logs before
+clearing it. The recorded PID is diagnostic and never authorizes automatic
+replay or terminating a process. Source drift becomes a failed job receipt.
+A detached worker also requires a
 clean checkout at the exact source revision, a fresh capacity profile, and the
 normal release gates. Install jobs can also be detached once their exact
 registry report, target manifests and target directory are qualified:
@@ -77,6 +83,14 @@ crashed worker can leave that lock behind; inspect its job receipt and target
 before clearing it. Reconciliation never replays the install automatically.
 GitHub Actions workflow runs likewise use GitHub's run identity and logs; they
 are not local Bun delivery job records.
+
+The CI factory observes free RAM, disk and filesystem inside its CPU- and
+memory-limited container, derives a fresh owner factory profile, and hashes
+its immutable inventory. The existing scheduler can then overlap independent
+light steps while retaining dependency order and the heavy factory lock.
+Inventory, profile, execution and final reports are retained as workflow
+artifacts even when a gate fails. A workflow change is not evidence that its
+remote build or publication has run.
 
 ## One-click consumer installation
 

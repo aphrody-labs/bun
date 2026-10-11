@@ -40,7 +40,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup-bun
-      - name: Execute sequential owner factory and gates
+      - name: Execute capacity-qualified dependency graph and owner gates
         env:
           DELIVERY_OPERATION: ${{ inputs.operation }}
         run: |
@@ -48,5 +48,20 @@ jobs:
             -v "$GITHUB_WORKSPACE:/work" -w /work \
             -v bun-delivery-cargo-registry:/root/.cargo/registry \
             -v bun-delivery-target:/work/target \
-            ghcr.io/aphrody-labs/alpine:3.24 \
-            bun run delivery --operation "$DELIVERY_OPERATION" --out /tmp/factory.json --apply
+            -e DELIVERY_OPERATION \
+            ghcr.io/aphrody-labs/alpine:3.24 sh -eu -c '
+              mkdir -p /work/tmp/delivery-ci
+              bun run delivery --out /work/tmp/delivery-ci/inventory.json
+              DELIVERY_FILESYSTEM=$(stat -f -c %T /work)
+              export DELIVERY_FILESYSTEM
+              bun -e '\''import { freemem } from "node:os"; import { statfsSync } from "node:fs"; const disk = statfsSync("/work"); console.log(JSON.stringify({cpu:6,memoryMiB:10240,availableMemoryMiB:Math.min(10240,Math.floor(freemem()/1048576)),freeDiskMiB:Math.floor(disk.bavail*disk.bsize/1048576),filesystem:process.env.DELIVERY_FILESYSTEM,observedAt:new Date().toISOString()}))'\'' > /work/tmp/delivery-ci/observation.json
+              tree=$(git rev-parse HEAD^{tree})
+              bun scripts/aphrody/build-host.ts profile --observation /work/tmp/delivery-ci/observation.json --host github-actions --target linux-x64-musl --factory-root /work --heavy-lock /work/tmp/delivery-ci/heavy.lock --source-tree "$tree" > /work/tmp/delivery-ci/profile.json
+              snapshot=$(sha256sum /work/tmp/delivery-ci/inventory.json | cut -d " " -f 1)
+              bun run delivery --operation "$DELIVERY_OPERATION" --profile /work/tmp/delivery-ci/profile.json --snapshot-hash "$snapshot" --execution-receipt /work/tmp/delivery-ci/execution.json --out /work/tmp/delivery-ci/factory.json --apply
+            '
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: monorepo-factory-${{ github.sha }}
+          path: tmp/delivery-ci/*.json
