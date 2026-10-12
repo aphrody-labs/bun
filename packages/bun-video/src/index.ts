@@ -22,6 +22,7 @@ export { capabilities } from "./capabilities";
 export * from "./webgpu";
 export * from "./ytdlp";
 export * from "./mpv";
+export * from "./pipeline";
 
 export const loadRemotionCore = () => import("remotion");
 export const loadRemotionRenderer = () => import("@remotion/renderer");
