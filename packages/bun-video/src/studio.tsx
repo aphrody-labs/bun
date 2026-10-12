@@ -5,10 +5,10 @@ import type { CrawlerCache } from "./cache";
 export interface StudioSubtitle { readonly src: string; readonly srclang: string; readonly label: string; readonly default?: boolean; }
 export interface StudioVariant { readonly label: string; readonly src: string; }
 export interface StudioAsset { readonly id: string; readonly title: string; readonly src: string; readonly type?: string; readonly subtitles?: readonly StudioSubtitle[]; readonly variants?: readonly StudioVariant[]; }
-export interface VideoStudioProps { readonly assets: readonly StudioAsset[]; readonly initialAssetId?: string; readonly className?: string; readonly cache?: CrawlerCache; readonly storageKey?: string; readonly autoPlay?: boolean; readonly loop?: boolean; readonly muted?: boolean; readonly onAssetSelect?: (asset: StudioAsset) => void; }
+export interface VideoStudioProps { readonly assets: readonly StudioAsset[]; readonly initialAssetId?: string; readonly className?: string; readonly cache?: CrawlerCache; readonly storageKey?: string; readonly autoPlay?: boolean; readonly loop?: boolean; readonly muted?: boolean; readonly onAssetSelect?: (asset: StudioAsset) => void; readonly onPlayback?: (state: { currentTime: number; duration: number; paused: boolean }) => void; }
 
 /** Compact React studio surface for browsing assets and driving the Bun Video pipeline. */
-export function VideoStudio({ assets, initialAssetId, className, cache, storageKey, autoPlay = false, loop = false, muted = false, onAssetSelect }: VideoStudioProps) {
+export function VideoStudio({ assets, initialAssetId, className, cache, storageKey, autoPlay = false, loop = false, muted = false, onAssetSelect, onPlayback }: VideoStudioProps) {
   const [localAssets, setLocalAssets] = useState<readonly StudioAsset[]>(() => {
     if (!storageKey || typeof localStorage === "undefined") return assets;
     try { return JSON.parse(localStorage.getItem(storageKey) ?? "null") ?? assets; } catch { return assets; }
@@ -20,6 +20,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
   const [metadata, setMetadata] = useState<YtDlpResult | null>(null);
   const [loadingMetadata, setLoadingMetadata] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [progress, setProgress] = useState({ currentTime: 0, duration: 0 });
   const videoRef = useRef<HTMLVideoElement>(null);
   const selected = useMemo(() => localAssets.find(asset => asset.id === selectedId) ?? localAssets[0], [localAssets, selectedId]);
   useEffect(() => {
@@ -78,6 +79,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
       event.preventDefault(); void (video.paused ? video.play() : video.pause());
     }
   };
+  const reportPlayback = () => { const video = videoRef.current; if (!video) return; const state = { currentTime: video.currentTime, duration: Number.isFinite(video.duration) ? video.duration : 0, paused: video.paused }; setProgress(state); onPlayback?.(state); };
   const fullscreen = () => { void videoRef.current?.requestFullscreen?.(); };
   const pictureInPicture = () => { const video = videoRef.current; if (video && "requestPictureInPicture" in video) void (video as HTMLVideoElement & { requestPictureInPicture(): Promise<unknown> }).requestPictureInPicture(); };
   return (
@@ -97,12 +99,13 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
       </aside>
       <main>
         {selected ? (
-          <video ref={videoRef} key={selected.id} controls playsInline preload="metadata" autoPlay={autoPlay} loop={loop} muted={muted} src={selected.src} onEnded={() => selectRelative(1)} onError={() => setError(`Lecture impossible : ${selected.title}`)}>
+          <video ref={videoRef} key={selected.id} controls playsInline preload="metadata" autoPlay={autoPlay} loop={loop} muted={muted} src={selected.src} onLoadedMetadata={reportPlayback} onTimeUpdate={reportPlayback} onPlay={reportPlayback} onPause={reportPlayback} onEnded={() => selectRelative(1)} onError={() => setError(`Lecture impossible : ${selected.title}`)}>
             {selected.variants?.map(variant => <source key={variant.src} src={variant.src} type={variant.label} />)}
             {selected.subtitles?.map(track => <track key={`${track.srclang}-${track.src}`} kind="subtitles" src={track.src} srcLang={track.srclang} label={track.label} default={track.default} />)}
           </video>
         ) : <p>Aucun média sélectionné.</p>}
         {selected && <p>{selected.title}{selected.type ? ` · ${selected.type}` : ""}</p>}
+        {selected && <progress max={progress.duration || 1} value={progress.currentTime} aria-label="Progression" />}
         {selected && <nav aria-label="Contrôles de file"><button type="button" onClick={() => selectRelative(-1)}>Précédent</button><button type="button" onClick={() => selectRelative(1)}>Suivant</button></nav>}
         {selected && <nav aria-label="Affichage"><button type="button" onClick={fullscreen}>Plein écran</button><button type="button" onClick={pictureInPicture}>Picture-in-Picture</button></nav>}
         {selected && <label>Vitesse <select value={playbackRate} onChange={event => setPlaybackRate(Number(event.target.value))}><option value="0.5">0,5×</option><option value="0.75">0,75×</option><option value="1">1×</option><option value="1.25">1,25×</option><option value="1.5">1,5×</option><option value="2">2×</option></select></label>}
