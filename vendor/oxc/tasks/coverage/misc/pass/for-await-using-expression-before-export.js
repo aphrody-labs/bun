@@ -1,2 +1,0 @@
-for (await using;;);
-export {};

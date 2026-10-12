@@ -1,5 +1,0 @@
-/* DIVERGENCES.md#combinator-spacing */
-col.selected||td {}
-col.selected || td {}
-.a^b {}
-.a^^b {}

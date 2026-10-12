@@ -1,9 +1,0 @@
-{
-  "jsPlugins": ["./plugin.ts"],
-  "categories": {
-    "correctness": "off"
-  },
-  "rules": {
-    "tokens-unambiguous-await/check": "error"
-  }
-}

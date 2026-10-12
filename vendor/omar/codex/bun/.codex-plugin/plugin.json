@@ -1,6 +1,0 @@
-{
-  "version": "1.0.0",
-  "skills": "./skills/",
-  "name": "bun",
-  "description": "Conventions du runtime Bun maison 1.4.4 d'Aphrody Labs."
-}

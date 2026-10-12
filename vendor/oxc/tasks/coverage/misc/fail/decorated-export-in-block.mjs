@@ -1,3 +1,0 @@
-{
-  @dec export class C {}
-}
