@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dir, "../..");
@@ -18,8 +18,19 @@ async function git(args: string[]) {
 
 async function references(name: string): Promise<number> {
   const patterns = [`vendor/${name}`, `vendor\\${name}`];
-  const output = await git(["grep", "-l", "-I", ...patterns.flatMap(pattern => ["-e", pattern]), "--", ".", ":!vendor/**"]).catch(() => "");
-  return output.split(/\r?\n/).filter(Boolean).filter(path => !path.startsWith("vendor/")).length;
+  const output = await git([
+    "grep",
+    "-l",
+    "-I",
+    ...patterns.flatMap(pattern => ["-e", pattern]),
+    "--",
+    ".",
+    ":!vendor/**",
+  ]).catch(() => "");
+  return output
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .filter(path => !path.startsWith("vendor/")).length;
 }
 
 async function main() {
@@ -35,6 +46,9 @@ async function main() {
       bytes += stat.size;
     }
     const receipt = join(path, ".bun-vendor.json");
+    const refFile = join(path, ".ref");
+    const buildDefinition = join(ROOT, "scripts", "build", "deps", `${entry}.ts`);
+    const linkedEntries = readdirSync(path, { withFileTypes: true }).filter(entry => entry.isSymbolicLink()).length;
     const tracked = (await git(["ls-files", "--", `vendor/${entry}`])).split(/\r?\n/).filter(Boolean).length;
     entries.push({
       name: entry,
@@ -43,11 +57,27 @@ async function main() {
       tracked,
       gitCheckout: existsSync(join(path, ".git")),
       receipt: existsSync(receipt),
+      ref: existsSync(refFile) ? readFileSync(refFile, "utf8").trim() : null,
+      buildDefinition: existsSync(buildDefinition),
+      state:
+        files === 0
+          ? linkedEntries > 0
+            ? "linked"
+            : "empty"
+          : existsSync(buildDefinition) || existsSync(receipt) || existsSync(refFile)
+            ? "managed"
+            : "manual",
       references: await references(entry),
     });
   }
   entries.sort((a, b) => b.bytes - a.bytes);
-  console.log(JSON.stringify({ schema: 1, root: ROOT, generatedAt: new Date().toISOString(), vendors: entries }, null, 2));
+  console.log(
+    JSON.stringify({ schema: 1, root: ROOT, generatedAt: new Date().toISOString(), vendors: entries }, null, 2),
+  );
 }
 
-if (import.meta.main) main().catch(error => { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; });
+if (import.meta.main)
+  main().catch(error => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
