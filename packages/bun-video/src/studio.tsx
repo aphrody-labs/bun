@@ -100,7 +100,8 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
       event.preventDefault(); void (video.paused ? video.play() : video.pause());
     }
   };
-  const reportPlayback = () => { const video = videoRef.current; if (!video) return; const state = { currentTime: video.currentTime, duration: Number.isFinite(video.duration) ? video.duration : 0, paused: video.paused }; setProgress(state); onPlayback?.(state); };
+  const reportPlayback = () => { const video = videoRef.current; if (!video) return; const state = { currentTime: video.currentTime, duration: Number.isFinite(video.duration) ? video.duration : 0, paused: video.paused }; setProgress(state); if (storageKey && selected) localStorage.setItem(`${storageKey}:position:${selected.id}`, String(state.currentTime)); onPlayback?.(state); };
+  const restorePosition = () => { const video = videoRef.current; if (!video || !storageKey || !selected) return; const value = Number(localStorage.getItem(`${storageKey}:position:${selected.id}`)); if (Number.isFinite(value) && value > 0 && value < video.duration) video.currentTime = value; reportPlayback(); };
   const fullscreen = () => { void videoRef.current?.requestFullscreen?.(); };
   const pictureInPicture = () => { const video = videoRef.current; if (video && "requestPictureInPicture" in video) void (video as HTMLVideoElement & { requestPictureInPicture(): Promise<unknown> }).requestPictureInPicture(); };
   return (
@@ -120,7 +121,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
       </aside>
       <main>
         {selected ? (
-          <video ref={videoRef} key={`${selected.id}-${variantSrc ?? selected.src}`} controls playsInline preload="metadata" autoPlay={autoPlay} loop={loop} muted={muted} poster={selected.poster} aria-label={selected.alt ?? selected.title} src={variantSrc ?? selected.src} onLoadedMetadata={reportPlayback} onTimeUpdate={reportPlayback} onPlay={reportPlayback} onPause={reportPlayback} onEnded={() => selectRelative(1)} onError={() => setError(`Lecture impossible : ${selected.title}`)}>
+          <video ref={videoRef} key={`${selected.id}-${variantSrc ?? selected.src}`} controls playsInline preload="metadata" autoPlay={autoPlay} loop={loop} muted={muted} poster={selected.poster} aria-label={selected.alt ?? selected.title} src={variantSrc ?? selected.src} onLoadedMetadata={restorePosition} onTimeUpdate={reportPlayback} onPlay={reportPlayback} onPause={reportPlayback} onEnded={() => selectRelative(1)} onError={() => setError(`Lecture impossible : ${selected.title}`)}>
             {selected.subtitles?.map(track => <track key={`${track.srclang}-${track.src}`} kind="subtitles" src={track.src} srcLang={track.srclang} label={track.label} default={track.default} />)}
           </video>
         ) : <p>Aucun média sélectionné.</p>}
