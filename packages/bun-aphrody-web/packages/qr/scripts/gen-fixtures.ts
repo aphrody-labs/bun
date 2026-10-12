@@ -34,8 +34,7 @@ const pick = (alphabet: string) => {
   const chars = Array.from(alphabet);
   return chars[Math.floor(random() * chars.length)]!;
 };
-const text = (alphabet: string, length: number) =>
-  Array.from({ length }, () => pick(alphabet)).join("");
+const text = (alphabet: string, length: number) => Array.from({ length }, () => pick(alphabet)).join("");
 
 const DIGITS = "0123456789";
 const UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:0123456789";
@@ -80,8 +79,7 @@ for (let i = 0; i < 60; i += 1) {
     options: { errorCorrectionLevel: pick("LMQH") },
   });
 }
-for (const level of levels.slice(4))
-  cases.push({ text: "named level", options: { errorCorrectionLevel: level } });
+for (const level of levels.slice(4)) cases.push({ text: "named level", options: { errorCorrectionLevel: level } });
 for (const mask of [0, 1, 2, 3, 4, 5, 6, 7]) {
   cases.push({ text: "mask me", options: { maskPattern: mask, errorCorrectionLevel: "Q" } });
 }

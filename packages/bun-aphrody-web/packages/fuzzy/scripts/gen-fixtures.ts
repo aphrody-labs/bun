@@ -87,7 +87,7 @@ const docs: Doc[] = Array.from({ length: 50 }, (_, i) => ({
   tags: Array.from({ length: int(4) }, () => phrase(1, 2)),
   nested: { names: Array.from({ length: 1 + int(3) }, () => phrase(1, 3)) },
 }));
-const strings = docs.map((doc) => doc.title);
+const strings = docs.map(doc => doc.title);
 
 const typo = (text: string) => {
   const chars = Array.from(text);

@@ -22,20 +22,12 @@ test("public search refuses unverified sources, unsafe links and oversized repli
     organic: [{ title: "Fixture", url: "https://example.com/", snippet: "Fixture" }],
   };
   expect(await readPublicSearch(Response.json(page))).toEqual(page);
+  await expect(readPublicSearch(Response.json({ ...page, source: "private-index" }))).rejects.toThrow("Contrat");
   await expect(
-    readPublicSearch(Response.json({ ...page, source: "private-index" })),
-  ).rejects.toThrow("Contrat");
-  await expect(
-    readPublicSearch(
-      Response.json({ ...page, organic: [{ ...page.organic[0], url: "javascript:alert(1)" }] }),
-    ),
+    readPublicSearch(Response.json({ ...page, organic: [{ ...page.organic[0], url: "javascript:alert(1)" }] })),
   ).rejects.toThrow("HTTPS");
-  await expect(readPublicSearch(new Response("x".repeat(1024 * 1024 + 1)))).rejects.toThrow(
-    "grande",
-  );
-  await expect(readPublicSearch(new Response("private error", { status: 503 }))).rejects.toThrow(
-    "HTTP 503",
-  );
+  await expect(readPublicSearch(new Response("x".repeat(1024 * 1024 + 1)))).rejects.toThrow("grande");
+  await expect(readPublicSearch(new Response("private error", { status: 503 }))).rejects.toThrow("HTTP 503");
 });
 
 async function bundle(): Promise<string> {
@@ -184,9 +176,7 @@ describe.skipIf(!hasChrome())("headless render in Bun.WebView (Chrome)", () => {
       await view.evaluate('document.querySelector("[data-browser-capability=camera]").click()');
       await waitFor(view, 'document.body.textContent.includes("Cliquez sur la capacité")');
       expect(await view.evaluate("window.fixturePermissionCalls")).toBe(0);
-      expect(
-        await view.evaluate('document.querySelector("[data-browser-capability=screen]").disabled'),
-      ).toBe(true);
+      expect(await view.evaluate('document.querySelector("[data-browser-capability=screen]").disabled')).toBe(true);
       const files = await view.evaluate(`(async () => {
         const fs = window.fixtureBrowserVfs;
         await fs.write('/imports/test.txt', new TextEncoder().encode('browser only'));
@@ -227,12 +217,9 @@ describe.skipIf(!hasChrome())("headless render in Bun.WebView (Chrome)", () => {
       port: 0,
       hostname: "127.0.0.1",
       routes: {
-        "/": new Response(
-          `<!doctype html><html><body><script type="module" src="/fluent.js"></script></body></html>`,
-          {
-            headers: { "Content-Type": "text/html" },
-          },
-        ),
+        "/": new Response(`<!doctype html><html><body><script type="module" src="/fluent.js"></script></body></html>`, {
+          headers: { "Content-Type": "text/html" },
+        }),
         "/fluent.js": new Response(js, { headers: { "Content-Type": "text/javascript" } }),
       },
     });
