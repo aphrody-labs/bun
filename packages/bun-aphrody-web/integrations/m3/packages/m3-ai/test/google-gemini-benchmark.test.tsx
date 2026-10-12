@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // oxlint-disable-next-line import/no-unassigned-import -- the source package bunfig preload: registers the DOM before UI imports
 import "../../../../../../../../aphrody/m3/packages/m3-config/test/dom.ts";
-import { afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { GlobalRegistrator } from "../../../../../../../../aphrody/node_modules/@happy-dom/global-registrator";
 import type { ReactNode } from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -37,6 +38,8 @@ beforeAll(() => {
   document.body.innerHTML = "";
 });
 
+// The DOM preload replaces WebSocket and other globals; later test files in the same run need the native ones.
+afterAll(() => GlobalRegistrator.unregister());
 afterEach(async () => {
   await act(async () => {
     root?.unmount();

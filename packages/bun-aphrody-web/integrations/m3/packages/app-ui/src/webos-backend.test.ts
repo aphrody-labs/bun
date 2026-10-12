@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // oxlint-disable-next-line import/no-unassigned-import -- the source package bunfig preload: registers the DOM before UI imports
 import "../../../../../../../../aphrody/m3/packages/app-ui/test-preload.ts";
-import { afterEach, beforeEach, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeEach, expect, test } from "bun:test";
+import { GlobalRegistrator } from "../../../../../../../../aphrody/node_modules/@happy-dom/global-registrator";
 import { fileURLToPath } from "node:url";
 import { memoryImageStore, openWebOs } from "@aphrody/webos-wasm";
 import { SpacedriveClient } from "@aphrody/drive-client";
@@ -30,6 +31,8 @@ beforeEach(() => {
   setWebOsForTesting(openWebOs({ store: memoryImageStore(), wasm, flushDelayMs: 1 }));
 });
 afterEach(() => setWebOsForTesting(undefined));
+// The DOM preload replaces WebSocket and other globals; later test files in the same run need the native ones.
+afterAll(() => GlobalRegistrator.unregister());
 
 const setUrl = (path: string) =>
   (window as unknown as { happyDOM: { setURL(url: string): void } }).happyDOM.setURL(
