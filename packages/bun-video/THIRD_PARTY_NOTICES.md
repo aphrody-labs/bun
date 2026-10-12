@@ -45,6 +45,7 @@ Official external dependencies retain their own terms:
 | @aphrody/bun-runtime-sdk                                     | 1.4.5   | Published package notices; native providers are distributed and qualified separately                                                                                                                              |
 | mediabunny                                                   | 1.9.3   | [MPL-2.0](vendor/mediabunny/LICENSE), vendored from [Vanilagy/mediabunny](https://github.com/Vanilagy/mediabunny/tree/v1.9.3) |
 | yt-dlp                                                       | 2026.08.19 | [Unlicense](vendor/yt-dlp/LICENSE), vendored from [yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp/tree/2026.08.19); executed through `bun:python`/BUV |
+| mpv                                                           | git 88eb9f2 | [GPL-2.0-or-later/LGPL-2.1-or-later](vendor/mpv/LICENSE.GPL), vendored from [mpv-player/mpv](https://github.com/mpv-player/mpv/tree/88eb9f2e73945d8bc9c133a2f67babaa9af34680); native shared-library FFI only |
 | gpu-video                                                    | 0.4.0      | [MIT](https://github.com/software-mansion/smelter/blob/6637f3df71282c816140cd3bb9821d69b30be2ba/LICENSE), pinned from [software-mansion/smelter](https://github.com/software-mansion/smelter/tree/6637f3df71282c816140cd3bb9821d69b30be2ba/gpu-video); wgpu 30 hardware decode/encode |
 
 Native Bun, JavaScriptCore, browser providers and media executables are not

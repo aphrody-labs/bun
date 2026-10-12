@@ -38,6 +38,7 @@
     "assets",
     "vendor/mediabunny",
     "vendor/yt-dlp",
+    "vendor/mpv",
     "README.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
