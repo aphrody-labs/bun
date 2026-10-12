@@ -1,5 +1,5 @@
-import remotion from "../remotion/UPSTREAM.json";
-import hyperframes from "../hyperframes/UPSTREAM.json";
+import remotion from "../packages/remotion/UPSTREAM.json";
+import hyperframes from "../packages/hyperframes/UPSTREAM.json";
 
 export async function capabilities() {
   const { BrowserRuntime } = await import("../../../packages/bun-runtime-sdk/src/browser");
@@ -23,8 +23,7 @@ export async function capabilities() {
     backends: {
       remotion: "Complete upstream CLI with its renderer requirements",
       hyperframes: "Complete upstream CLI with its renderer requirements",
-      native:
-        "Explicit served-composition PNG capture; requires a qualified browser-enabled provider",
+      native: "Explicit served-composition PNG capture; requires a qualified browser-enabled provider",
     },
   };
 }

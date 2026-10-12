@@ -15,10 +15,7 @@ export async function runBrowserTask(task: BrowserTask, cancellation?: AbortSign
   const timeoutMs = task.timeoutMs ?? 30000;
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 300000)
     throw new RangeError("timeoutMs must be 1..300000");
-  if (
-    task.expression !== undefined &&
-    (typeof task.expression !== "string" || task.expression.length > 32768)
-  )
+  if (task.expression !== undefined && (typeof task.expression !== "string" || task.expression.length > 32768))
     throw new TypeError("expression must contain at most 32768 characters");
   const signal = cancellation
     ? AbortSignal.any([cancellation, AbortSignal.timeout(timeoutMs)])
@@ -27,8 +24,7 @@ export async function runBrowserTask(task: BrowserTask, cancellation?: AbortSign
   using runtime = BrowserRuntime.load({ libraryPath: task.libraryPath });
   using context = runtime.createContext({ allowedOrigins: [url.origin], timeoutMs });
   await context.navigate(url.href, { signal });
-  const value =
-    task.expression === undefined ? undefined : await context.evaluate(task.expression, { signal });
+  const value = task.expression === undefined ? undefined : await context.evaluate(task.expression, { signal });
   const snapshot = await context.snapshot({ signal });
   const png = task.screenshot ? await context.screenshot({ signal }) : undefined;
   return { snapshot, value, ...(png ? { pngBase64: Buffer.from(png).toString("base64") } : {}) };

@@ -3,21 +3,18 @@ import { join, resolve } from "node:path";
 import {
   prepareHyperframesStandalone,
   hyperframesStandaloneConfig,
-} from "../hyperframes/aphrody/standalone-build";
-import { remotionSourcePlugin } from "../remotion/.aphrody/standalone-build";
-import { sharpNativePlugin } from "../hyperframes/aphrody/sharp-native-plugin";
-import { remotionModuleAssetsPlugin } from "../remotion/.aphrody/module-assets";
+} from "../packages/hyperframes/aphrody/standalone-build";
+import { remotionSourcePlugin } from "../packages/remotion/.aphrody/standalone-build";
+import { sharpNativePlugin } from "../packages/hyperframes/aphrody/sharp-native-plugin";
+import { remotionModuleAssetsPlugin } from "../packages/remotion/.aphrody/module-assets";
 import { mediaPlugin } from "./media-plugin";
-import { hyperframesRuntimeAssetsPlugin } from "../hyperframes/aphrody/runtime-assets-plugin";
+import { hyperframesRuntimeAssetsPlugin } from "../packages/hyperframes/aphrody/runtime-assets-plugin";
 
 const root = resolve(import.meta.dir, "..");
 const library = Bun.argv[2] === "--library";
 const outfile = resolve(
   Bun.argv[library ? 3 : 2] ??
-    join(
-      root,
-      library ? "../../tmp/bun-video-build/library" : "../../tmp/bun-video-build/bun-video.exe",
-    ),
+    join(root, library ? "../../tmp/bun-video-build/library" : "../../tmp/bun-video-build/bun-video.exe"),
 );
 await prepareHyperframesStandalone();
 const hyperframes = await hyperframesStandaloneConfig({
@@ -26,10 +23,7 @@ const hyperframes = await hyperframesStandaloneConfig({
 });
 const result = await Bun.build({
   ...hyperframes,
-  entrypoints: [
-    join(root, library ? "src/index.ts" : "src/cli.ts"),
-    join(root, "src/frame-worker.ts"),
-  ],
+  entrypoints: [join(root, library ? "src/index.ts" : "src/cli.ts"), join(root, "src/frame-worker.ts")],
   plugins: [
     await remotionSourcePlugin(),
     await sharpNativePlugin(),
@@ -43,8 +37,7 @@ const result = await Bun.build({
 });
 if (!result.success) throw new AggregateError(result.logs, "Unified bun-video compilation failed");
 const artifact = await stat(library ? join(outfile, "index.ts") : outfile);
-if (!artifact.isFile() || artifact.size === 0)
-  throw new Error(`Compiler did not write executable ${outfile}`);
+if (!artifact.isFile() || artifact.size === 0) throw new Error(`Compiler did not write executable ${outfile}`);
 console.log(
   JSON.stringify({
     outfile,

@@ -43,8 +43,8 @@ test("stdio protocol answers independent requests while an earlier tool awaits",
   const replies = (await output)
     .trim()
     .split("\n")
-    .map((line) => JSON.parse(line));
-  expect(replies.map((reply) => reply.id)).toEqual([1, 3, 2]);
+    .map(line => JSON.parse(line));
+  expect(replies.map(reply => reply.id)).toEqual([1, 3, 2]);
   expect(replies[2].result.isError).toBe(true);
   expect(await errors).toBe("");
   expect(await child.exited).toBe(0);
@@ -76,5 +76,5 @@ test("canonical registration preserves all handlers and schemas", () => {
     registered.push(tool.name);
     expect(typeof handler).toBe("function");
   });
-  expect(registered).toEqual(videoTools.map((tool) => tool.name));
+  expect(registered).toEqual(videoTools.map(tool => tool.name));
 });

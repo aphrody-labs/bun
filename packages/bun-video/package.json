@@ -26,8 +26,8 @@
   "files": [
     "src",
     "umbrella-src",
-    "remotion",
-    "hyperframes",
+    "packages/remotion",
+    "packages/hyperframes",
     "native",
     "infra",
     "plugin",
@@ -45,8 +45,8 @@
   ],
   "type": "module",
   "workspaces": [
-    "remotion/packages/*",
-    "hyperframes/packages/*"
+    "packages/remotion/packages/*",
+    "packages/hyperframes/packages/*"
   ],
   "exports": {
     ".": "./src/index.ts",

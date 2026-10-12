@@ -4,9 +4,9 @@ switch (command) {
   case "remotion": {
     process.argv = [process.argv[0]!, process.argv[1]!, ...args];
     const { default: dotenv } =
-      await import("../remotion/.aphrody/build-deps/node_modules/dotenv/lib/main.js");
+      await import("../packages/remotion/.aphrody/build-deps/node_modules/dotenv/lib/main.js");
     dotenv.config({ quiet: true });
-    const { cli } = await import("../remotion/packages/cli/src/index");
+    const { cli } = await import("../packages/remotion/packages/cli/src/index");
     await cli();
     break;
   }
@@ -16,17 +16,14 @@ switch (command) {
     const { mediaAssets } = await import("bun-video:media-runtime");
     process.env.HYPERFRAMES_FFMPEG_PATH ??= mediaAssets.ffmpegExecutable;
     process.env.HYPERFRAMES_FFPROBE_PATH ??= mediaAssets.ffprobeExecutable;
-    await import("../hyperframes/packages/cli/src/cli");
+    await import("../packages/hyperframes/packages/cli/src/cli");
     break;
   }
   case "capabilities":
-    console.log(
-      JSON.stringify(await import("./capabilities").then((mod) => mod.capabilities()), null, 2),
-    );
+    console.log(JSON.stringify(await import("./capabilities").then(mod => mod.capabilities()), null, 2));
     break;
   case "encode": {
-    if (args.length !== 2)
-      throw new Error("Usage: bun-video encode <frame-plan.json> <absolute-output.mkv>");
+    if (args.length !== 2) throw new Error("Usage: bun-video encode <frame-plan.json> <absolute-output.mkv>");
     const { mediaAssets } = await import("bun-video:media-runtime");
     const plan = await Bun.file(args[0]!).json();
     const { encodeVideo } = await import("./encode");
@@ -44,7 +41,7 @@ switch (command) {
     break;
   }
   case "mcp":
-    await import("./mcp").then((mod) => mod.serveMcp());
+    await import("./mcp").then(mod => mod.serveMcp());
     break;
   case undefined:
   case "help":

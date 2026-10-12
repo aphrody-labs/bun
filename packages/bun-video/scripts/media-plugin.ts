@@ -17,9 +17,7 @@ export function mediaPlugin(): BunPlugin {
         };
         for (const [name, path] of Object.entries(assets))
           if (!path || !isAbsolute(path) || !(await Bun.file(path).exists()))
-            throw new Error(
-              `Set ${name} to an existing qualified absolute media asset before compilation`,
-            );
+            throw new Error(`Set ${name} to an existing qualified absolute media asset before compilation`);
         const extension = process.platform === "win32" ? ".exe" : "";
         const entries = Object.entries(assets);
         const imports = entries

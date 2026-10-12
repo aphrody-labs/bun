@@ -1,9 +1,5 @@
 import { expect, test } from "bun:test";
-import {
-  captureParallelFrames,
-  type CaptureWorker,
-  type CaptureWorkerFactory,
-} from "./parallel-capture";
+import { captureParallelFrames, type CaptureWorker, type CaptureWorkerFactory } from "./parallel-capture";
 import type { FramePlan } from "./frame-plan";
 import { validateFramePlan } from "./frame-plan";
 
@@ -59,8 +55,7 @@ class FakeWorker implements CaptureWorker {
       },
     });
     if (this.mode === "close") this.emit("close");
-    if (this.mode === "duplicate")
-      this.emit("message", { data: { type: "frame", frame: this.frame, png: png() } });
+    if (this.mode === "duplicate") this.emit("message", { data: { type: "frame", frame: this.frame, png: png() } });
   }
   terminate() {
     this.terminated = true;
@@ -80,33 +75,33 @@ test("strided capture remains parallel with one outstanding frame per worker", a
   const { workers, create } = factory();
   const iterator = captureParallelFrames(plan, undefined, create);
   expect((await iterator.next()).value?.frame).toBe(0);
-  expect(workers.map((worker) => worker.emitted)).toEqual([[0], [1]]);
+  expect(workers.map(worker => worker.emitted)).toEqual([[0], [1]]);
   expect((await iterator.next()).value?.frame).toBe(1);
-  expect(workers.map((worker) => worker.emitted)).toEqual([[0, 2], [1]]);
+  expect(workers.map(worker => worker.emitted)).toEqual([[0, 2], [1]]);
   const remaining: number[] = [];
   for await (const item of iterator) remaining.push(item.frame);
   expect(remaining).toEqual([2, 3, 4, 5]);
-  expect(workers.map((worker) => worker.emitted)).toEqual([
+  expect(workers.map(worker => worker.emitted)).toEqual([
     [0, 2, 4],
     [1, 3, 5],
   ]);
-  expect(workers.every((worker) => worker.terminated)).toBe(true);
+  expect(workers.every(worker => worker.terminated)).toBe(true);
 });
 
 for (const mode of ["close", "duplicate", "badPng"] as const) {
   test(`capture rejects ${mode} without waiting for missing frames`, async () => {
     const { workers, create } = factory(mode);
     await expect(captureParallelFrames(plan, undefined, create).next()).rejects.toThrow();
-    expect(workers.every((worker) => worker.terminated)).toBe(true);
+    expect(workers.every(worker => worker.terminated)).toBe(true);
   });
 }
 
 test("stalled worker times out per operation and terminates", async () => {
   const { workers, create } = factory("stall");
-  await expect(
-    captureParallelFrames({ ...plan, timeoutMs: 10 }, undefined, create).next(),
-  ).rejects.toThrow("Capture operation timed out");
-  expect(workers.every((worker) => worker.terminated)).toBe(true);
+  await expect(captureParallelFrames({ ...plan, timeoutMs: 10 }, undefined, create).next()).rejects.toThrow(
+    "Capture operation timed out",
+  );
+  expect(workers.every(worker => worker.terminated)).toBe(true);
 });
 
 test("aborting a pending operation wakes scheduler and releases workers", async () => {
@@ -115,7 +110,7 @@ test("aborting a pending operation wakes scheduler and releases workers", async 
   const next = captureParallelFrames(plan, controller.signal, create).next();
   controller.abort("cancel render");
   await expect(next).rejects.toThrow("Video capture aborted");
-  expect(workers.every((worker) => worker.terminated)).toBe(true);
+  expect(workers.every(worker => worker.terminated)).toBe(true);
 });
 
 test("frame rate validation rejects overflow and over240fps but accepts exact NTSC", () => {
