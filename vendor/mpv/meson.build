@@ -1381,7 +1381,7 @@ if features['vulkan'] or (features['gl'] and features['egl'])
     sources += files('video/filter/vf_gpu.c')
 endif
 
-if features['d3d11'] or features['egl-angle-win32'] or (features['vulkan'] and win32)
+if win32
     sources += files('video/out/gpu/d3d11_helpers.c')
     features += {'dxgi-debug-d3d11': cc.has_header_symbol('d3d11sdklayers.h', 'DXGI_DEBUG_D3D11')}
 endif
@@ -1812,7 +1812,7 @@ features += {'libmpv-' + get_option('default_library'): get_option('libmpv')}
 # build targets
 if win32
     windows = import('windows')
-    res_flags = ['--codepage=65001']
+    res_flags = cc.get_argument_syntax() == 'msvc' ? ['/c65001'] : ['--codepage=65001']
 
     # Unintuitively, this compile operates out of the osdep subdirectory.
     # Hence, these includes are needed.

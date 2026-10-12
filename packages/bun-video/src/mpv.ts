@@ -52,7 +52,7 @@ export class MpvClient {
       join(
         dirname(process.execPath),
         process.platform === "win32"
-          ? "libmpv-2.dll"
+        ? "mpv-2.dll"
           : process.platform === "darwin"
             ? "libmpv.2.dylib"
             : "libmpv.so.2",
