@@ -5,10 +5,10 @@ import type { CrawlerCache } from "./cache";
 export interface StudioSubtitle { readonly src: string; readonly srclang: string; readonly label: string; readonly default?: boolean; }
 export interface StudioVariant { readonly label: string; readonly src: string; }
 export interface StudioAsset { readonly id: string; readonly title: string; readonly src: string; readonly type?: string; readonly subtitles?: readonly StudioSubtitle[]; readonly variants?: readonly StudioVariant[]; }
-export interface VideoStudioProps { readonly assets: readonly StudioAsset[]; readonly initialAssetId?: string; readonly className?: string; readonly cache?: CrawlerCache; readonly storageKey?: string; readonly autoPlay?: boolean; readonly loop?: boolean; readonly muted?: boolean; }
+export interface VideoStudioProps { readonly assets: readonly StudioAsset[]; readonly initialAssetId?: string; readonly className?: string; readonly cache?: CrawlerCache; readonly storageKey?: string; readonly autoPlay?: boolean; readonly loop?: boolean; readonly muted?: boolean; readonly onAssetSelect?: (asset: StudioAsset) => void; }
 
 /** Compact React studio surface for browsing assets and driving the Bun Video pipeline. */
-export function VideoStudio({ assets, initialAssetId, className, cache, storageKey, autoPlay = false, loop = false, muted = false }: VideoStudioProps) {
+export function VideoStudio({ assets, initialAssetId, className, cache, storageKey, autoPlay = false, loop = false, muted = false, onAssetSelect }: VideoStudioProps) {
   const [localAssets, setLocalAssets] = useState<readonly StudioAsset[]>(() => {
     if (!storageKey || typeof localStorage === "undefined") return assets;
     try { return JSON.parse(localStorage.getItem(storageKey) ?? "null") ?? assets; } catch { return assets; }
@@ -28,6 +28,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
   }, [localAssets, storageKey]);
   useEffect(() => { if (videoRef.current) videoRef.current.playbackRate = playbackRate; }, [selectedId, playbackRate]);
   const selectedIndex = selected ? localAssets.findIndex(asset => asset.id === selected.id) : -1;
+  useEffect(() => { if (selected) onAssetSelect?.(selected); }, [onAssetSelect, selected]);
   const selectRelative = (delta: number) => {
     if (selectedIndex < 0 || localAssets.length === 0) return;
     const next = localAssets[(selectedIndex + delta + localAssets.length) % localAssets.length];
