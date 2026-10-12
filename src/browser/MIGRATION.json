@@ -1,0 +1,2795 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-11",
+  "sourceRepository": "https://github.com/aphrody-labs/aphrody",
+  "sourceCommit": "2d66be8fcd84a87b4ca73124023881ca9d0c204f",
+  "targetRepository": "https://github.com/aphrody-labs/bun-os",
+  "targetBranch": "obscura",
+  "files": [
+    {
+      "source": "crates/ui/taffy/Cargo.toml",
+      "destination": "crates/layout/Cargo.toml",
+      "sha256": "5648d66ff39959b35c559940f0dce041827306adb8ddb3dbb9248141ae035d04",
+      "bytes": 2960,
+      "integratedBytes": 2965,
+      "integratedSha256": "4686de22493572021e4a2d31167fe15707649dd288a5c513b870e107328db285"
+    },
+    {
+      "source": "crates/ui/taffy/LICENSE",
+      "destination": "crates/layout/LICENSE",
+      "sha256": "f97daf1a0124413dccf399a4e6626b4b74acd05282f80b6d64ac82225650b77a",
+      "bytes": 1100,
+      "integratedBytes": 1100,
+      "integratedSha256": "f97daf1a0124413dccf399a4e6626b4b74acd05282f80b6d64ac82225650b77a"
+    },
+    {
+      "source": "crates/ui/taffy/LOCAL-PATCHES.md",
+      "destination": "crates/layout/LOCAL-PATCHES.md",
+      "sha256": "dfa0a3e397f98c2ad47b3a0626e68e367fedaad70ba6139f90ec1ca79495be30",
+      "bytes": 1604,
+      "integratedBytes": 1604,
+      "integratedSha256": "dfa0a3e397f98c2ad47b3a0626e68e367fedaad70ba6139f90ec1ca79495be30"
+    },
+    {
+      "source": "crates/ui/taffy/MIGRATION.json",
+      "destination": "crates/layout/MIGRATION.json",
+      "sha256": "0be353ed0ce61300a2a06f7865ab7b5d34eeeeae7f829b56efa8cf5d80b50617",
+      "bytes": 12367,
+      "integratedBytes": 12367,
+      "integratedSha256": "0be353ed0ce61300a2a06f7865ab7b5d34eeeeae7f829b56efa8cf5d80b50617"
+    },
+    {
+      "source": "crates/ui/taffy/README.md",
+      "destination": "crates/layout/README.md",
+      "sha256": "36caad1776b821d6a2f3d5b5485ea037d65b9368a84d5bbb6506e715544cc932",
+      "bytes": 7433,
+      "integratedBytes": 7433,
+      "integratedSha256": "36caad1776b821d6a2f3d5b5485ea037d65b9368a84d5bbb6506e715544cc932"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/block.rs",
+      "destination": "crates/layout/src/compute/block.rs",
+      "sha256": "7d8569e647bb0739f59403357bac2e550da53e0c26d05657b95e216143abc9e6",
+      "bytes": 67016,
+      "integratedBytes": 67016,
+      "integratedSha256": "7d8569e647bb0739f59403357bac2e550da53e0c26d05657b95e216143abc9e6"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/common/alignment.rs",
+      "destination": "crates/layout/src/compute/common/alignment.rs",
+      "sha256": "ac260ac03fc81f9ebd43660c0d677d3c74f26ea63fa14439a6cf61e612ce8cb5",
+      "bytes": 4923,
+      "integratedBytes": 4923,
+      "integratedSha256": "ac260ac03fc81f9ebd43660c0d677d3c74f26ea63fa14439a6cf61e612ce8cb5"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/common/content_size.rs",
+      "destination": "crates/layout/src/compute/common/content_size.rs",
+      "sha256": "459787b1f3f1862724a6eed13e5bca94ee1b3fc7f14fe9545bac79ef7d3ff191",
+      "bytes": 1285,
+      "integratedBytes": 1285,
+      "integratedSha256": "459787b1f3f1862724a6eed13e5bca94ee1b3fc7f14fe9545bac79ef7d3ff191"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/common/mod.rs",
+      "destination": "crates/layout/src/compute/common/mod.rs",
+      "sha256": "5a0246358ab19aea76f245af9f45aac945b1a5f66320e2a1906ba70ca0f3e845",
+      "bytes": 156,
+      "integratedBytes": 156,
+      "integratedSha256": "5a0246358ab19aea76f245af9f45aac945b1a5f66320e2a1906ba70ca0f3e845"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/flexbox.rs",
+      "destination": "crates/layout/src/compute/flexbox.rs",
+      "sha256": "eda98870876a4244508808a81769be758f25f24ffbb3076ce35e908cf02d2ab1",
+      "bytes": 130421,
+      "integratedBytes": 130421,
+      "integratedSha256": "eda98870876a4244508808a81769be758f25f24ffbb3076ce35e908cf02d2ab1"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/float.rs",
+      "destination": "crates/layout/src/compute/float.rs",
+      "sha256": "f2ec4241e39cf01d42c11e8f9bc654ec82c493a3a376ef7a7c5cdac8abb9f466",
+      "bytes": 24747,
+      "integratedBytes": 24747,
+      "integratedSha256": "f2ec4241e39cf01d42c11e8f9bc654ec82c493a3a376ef7a7c5cdac8abb9f466"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/alignment.rs",
+      "destination": "crates/layout/src/compute/grid/alignment.rs",
+      "sha256": "6a2099c5e33946c98fd44c77cfad8f9baad7da80af837292ae184e63f3e4949a",
+      "bytes": 33664,
+      "integratedBytes": 33664,
+      "integratedSha256": "6a2099c5e33946c98fd44c77cfad8f9baad7da80af837292ae184e63f3e4949a"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/explicit_grid.rs",
+      "destination": "crates/layout/src/compute/grid/explicit_grid.rs",
+      "sha256": "272832152df1d27d783996d80b8e96171393f0bf347356f8f4ce866926611cd6",
+      "bytes": 35116,
+      "integratedBytes": 35116,
+      "integratedSha256": "272832152df1d27d783996d80b8e96171393f0bf347356f8f4ce866926611cd6"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/implicit_grid.rs",
+      "destination": "crates/layout/src/compute/grid/implicit_grid.rs",
+      "sha256": "37e0797529193c6bc0906c8afe221413e733ea2e2360843d3b2cd6821a8c7a4a",
+      "bytes": 11647,
+      "integratedBytes": 11647,
+      "integratedSha256": "37e0797529193c6bc0906c8afe221413e733ea2e2360843d3b2cd6821a8c7a4a"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/mod.rs",
+      "destination": "crates/layout/src/compute/grid/mod.rs",
+      "sha256": "36d54ad77636b20031c2a27823174fa07a8498a6a5f4f4b1b0bf7b14c6aaf828",
+      "bytes": 43418,
+      "integratedBytes": 43418,
+      "integratedSha256": "36d54ad77636b20031c2a27823174fa07a8498a6a5f4f4b1b0bf7b14c6aaf828"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/placement.rs",
+      "destination": "crates/layout/src/compute/grid/placement.rs",
+      "sha256": "c980b111d052bb15cd8bb2a06759c5a9260722ed269793792c713fa3fcfe9f5a",
+      "bytes": 36628,
+      "integratedBytes": 36628,
+      "integratedSha256": "c980b111d052bb15cd8bb2a06759c5a9260722ed269793792c713fa3fcfe9f5a"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/track_sizing.rs",
+      "destination": "crates/layout/src/compute/grid/track_sizing.rs",
+      "sha256": "e2f20c1cc98adc3a94fa270b98c7c1b15b4d5080e02ca262a589c526465c3346",
+      "bytes": 71431,
+      "integratedBytes": 71431,
+      "integratedSha256": "e2f20c1cc98adc3a94fa270b98c7c1b15b4d5080e02ca262a589c526465c3346"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/types/cell_occupancy.rs",
+      "destination": "crates/layout/src/compute/grid/types/cell_occupancy.rs",
+      "sha256": "594ad332c770621f5f97bfc26b0875e7ad3cb2c05f71ef1a8c1ed88f457709ca",
+      "bytes": 12971,
+      "integratedBytes": 12971,
+      "integratedSha256": "594ad332c770621f5f97bfc26b0875e7ad3cb2c05f71ef1a8c1ed88f457709ca"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/types/coordinates.rs",
+      "destination": "crates/layout/src/compute/grid/types/coordinates.rs",
+      "sha256": "cb821731336187de9dbcf0b5af2d75f0d92916eb21d5476e12ce9114095e4809",
+      "bytes": 5522,
+      "integratedBytes": 5522,
+      "integratedSha256": "cb821731336187de9dbcf0b5af2d75f0d92916eb21d5476e12ce9114095e4809"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/types/grid_item.rs",
+      "destination": "crates/layout/src/compute/grid/types/grid_item.rs",
+      "sha256": "469a4bf61e29626be4920bbbc45b51509360defe88fed58d3ee88d5c9ccef3b0",
+      "bytes": 29061,
+      "integratedBytes": 29061,
+      "integratedSha256": "469a4bf61e29626be4920bbbc45b51509360defe88fed58d3ee88d5c9ccef3b0"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/types/grid_track.rs",
+      "destination": "crates/layout/src/compute/grid/types/grid_track.rs",
+      "sha256": "8f2d80274d946497d17885b9538950b8e863e48fd15b3535b5b382e55cbbdf4f",
+      "bytes": 6299,
+      "integratedBytes": 6299,
+      "integratedSha256": "8f2d80274d946497d17885b9538950b8e863e48fd15b3535b5b382e55cbbdf4f"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/types/grid_track_counts.rs",
+      "destination": "crates/layout/src/compute/grid/types/grid_track_counts.rs",
+      "sha256": "58d92718927dbebe30e0f9634ac309002e9b5a774e3e6fb67150f2b8341f036d",
+      "bytes": 4863,
+      "integratedBytes": 4863,
+      "integratedSha256": "58d92718927dbebe30e0f9634ac309002e9b5a774e3e6fb67150f2b8341f036d"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/types/mod.rs",
+      "destination": "crates/layout/src/compute/grid/types/mod.rs",
+      "sha256": "c929f94d660ee3bab39e5b0110b17a570cf9657e0067fd2d595847663fd4f04f",
+      "bytes": 581,
+      "integratedBytes": 581,
+      "integratedSha256": "c929f94d660ee3bab39e5b0110b17a570cf9657e0067fd2d595847663fd4f04f"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/types/named.rs",
+      "destination": "crates/layout/src/compute/grid/types/named.rs",
+      "sha256": "89346e8f3d26697081efeb6ed42f8717f726f20a7d768e0ca38774ad0c83e658",
+      "bytes": 18633,
+      "integratedBytes": 18633,
+      "integratedSha256": "89346e8f3d26697081efeb6ed42f8717f726f20a7d768e0ca38774ad0c83e658"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/util/mod.rs",
+      "destination": "crates/layout/src/compute/grid/util/mod.rs",
+      "sha256": "3302f73c3f2fd98db32297a6e9d71a0646269c248d825d1cc92d17ecec93adbf",
+      "bytes": 205,
+      "integratedBytes": 205,
+      "integratedSha256": "3302f73c3f2fd98db32297a6e9d71a0646269c248d825d1cc92d17ecec93adbf"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/grid/util/test_helpers.rs",
+      "destination": "crates/layout/src/compute/grid/util/test_helpers.rs",
+      "sha256": "ab6992b6fa8251e1913acf645c98060f4b9794292f65c8641f6b3b17c1b0da0f",
+      "bytes": 1548,
+      "integratedBytes": 1548,
+      "integratedSha256": "ab6992b6fa8251e1913acf645c98060f4b9794292f65c8641f6b3b17c1b0da0f"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/leaf.rs",
+      "destination": "crates/layout/src/compute/leaf.rs",
+      "sha256": "502dc3db0a3e67edd50843cdaee8a294db7deac6152e0131c3f89458a6eafb7b",
+      "bytes": 7651,
+      "integratedBytes": 7651,
+      "integratedSha256": "502dc3db0a3e67edd50843cdaee8a294db7deac6152e0131c3f89458a6eafb7b"
+    },
+    {
+      "source": "crates/ui/taffy/src/compute/mod.rs",
+      "destination": "crates/layout/src/compute/mod.rs",
+      "sha256": "e218317f03348e08ce2b6e6393d55dfa6141c5aa642ddb6c78cdfeda1b3f27c1",
+      "bytes": 16952,
+      "integratedBytes": 16952,
+      "integratedSha256": "e218317f03348e08ce2b6e6393d55dfa6141c5aa642ddb6c78cdfeda1b3f27c1"
+    },
+    {
+      "source": "crates/ui/taffy/src/geometry.rs",
+      "destination": "crates/layout/src/geometry.rs",
+      "sha256": "15ceb9918eab3813e7c5f7e8c1488599c95772636ac33b6bdf824779796de7d5",
+      "bytes": 24227,
+      "integratedBytes": 24227,
+      "integratedSha256": "15ceb9918eab3813e7c5f7e8c1488599c95772636ac33b6bdf824779796de7d5"
+    },
+    {
+      "source": "crates/ui/taffy/src/lib.rs",
+      "destination": "crates/layout/src/lib.rs",
+      "sha256": "1ba5e86ae42f5a423798813899ac9ca3fdafa3d03cb5aad9d62a70ee21d1793c",
+      "bytes": 7002,
+      "integratedBytes": 7002,
+      "integratedSha256": "1ba5e86ae42f5a423798813899ac9ca3fdafa3d03cb5aad9d62a70ee21d1793c"
+    },
+    {
+      "source": "crates/ui/taffy/src/prelude.rs",
+      "destination": "crates/layout/src/prelude.rs",
+      "sha256": "892bc57c2dca1fde7ade48c33affb0f2cc81e27ae91c927ca756b639b56633d2",
+      "bytes": 1189,
+      "integratedBytes": 1189,
+      "integratedSha256": "892bc57c2dca1fde7ade48c33affb0f2cc81e27ae91c927ca756b639b56633d2"
+    },
+    {
+      "source": "crates/ui/taffy/src/style/alignment.rs",
+      "destination": "crates/layout/src/style/alignment.rs",
+      "sha256": "73730b7792cac699e4d559c7bd365e5c7d8039c258a74e6bca0662c381adb08a",
+      "bytes": 35652,
+      "integratedBytes": 35652,
+      "integratedSha256": "73730b7792cac699e4d559c7bd365e5c7d8039c258a74e6bca0662c381adb08a"
+    },
+    {
+      "source": "crates/ui/taffy/src/style/available_space.rs",
+      "destination": "crates/layout/src/style/available_space.rs",
+      "sha256": "fa8f82cd64cb1055f01a77ef7dcabdf661df718560346188fa2eabf10d5e77c1",
+      "bytes": 5804,
+      "integratedBytes": 5804,
+      "integratedSha256": "fa8f82cd64cb1055f01a77ef7dcabdf661df718560346188fa2eabf10d5e77c1"
+    },
+    {
+      "source": "crates/ui/taffy/src/style/block.rs",
+      "destination": "crates/layout/src/style/block.rs",
+      "sha256": "ee7d80e4d203115a0e43a99b8b2d2f78b0ebd26862a40ed02c833031f32cc59a",
+      "bytes": 2048,
+      "integratedBytes": 2048,
+      "integratedSha256": "ee7d80e4d203115a0e43a99b8b2d2f78b0ebd26862a40ed02c833031f32cc59a"
+    },
+    {
+      "source": "crates/ui/taffy/src/style/compact_length.rs",
+      "destination": "crates/layout/src/style/compact_length.rs",
+      "sha256": "e946a35341806298e4c5f62739004f78ccd6a9cca666a9d9de805610b1fc4ecf",
+      "bytes": 19058,
+      "integratedBytes": 19058,
+      "integratedSha256": "e946a35341806298e4c5f62739004f78ccd6a9cca666a9d9de805610b1fc4ecf"
+    },
+    {
+      "source": "crates/ui/taffy/src/style/dimension.rs",
+      "destination": "crates/layout/src/style/dimension.rs",
+      "sha256": "af6cfbcebe17c14a4dbf4b4b2f57ba1379988b07cdf5e8da66bfe3e610d4bebb",
+      "bytes": 13531,
+      "integratedBytes": 13531,
+      "integratedSha256": "af6cfbcebe17c14a4dbf4b4b2f57ba1379988b07cdf5e8da66bfe3e610d4bebb"
+    },
+    {
+      "source": "crates/ui/taffy/src/style/flex.rs",
+      "destination": "crates/layout/src/style/flex.rs",
+      "sha256": "5b6b67a9557bc0df32df57cde4524ef8ae825056e2835c509eb4382b2cbb980c",
+      "bytes": 7007,
+      "integratedBytes": 7007,
+      "integratedSha256": "5b6b67a9557bc0df32df57cde4524ef8ae825056e2835c509eb4382b2cbb980c"
+    },
+    {
+      "source": "crates/ui/taffy/src/style/float.rs",
+      "destination": "crates/layout/src/style/float.rs",
+      "sha256": "884a69bb999dae5172fb88805e7a0ed30fc3ef6a6d0b5340ff56045d45a5cb6c",
+      "bytes": 2213,
+      "integratedBytes": 2213,
+      "integratedSha256": "884a69bb999dae5172fb88805e7a0ed30fc3ef6a6d0b5340ff56045d45a5cb6c"
+    },
+    {
+      "source": "crates/ui/taffy/src/style/grid.rs",
+      "destination": "crates/layout/src/style/grid.rs",
+      "sha256": "da9341bd31620e04c707aaf9e05ea244d7e74cf77638c1400577713a7e2da7bc",
+      "bytes": 64208,
+      "integratedBytes": 64208,
+      "integratedSha256": "da9341bd31620e04c707aaf9e05ea244d7e74cf77638c1400577713a7e2da7bc"
+    },
+    {
+      "source": "crates/ui/taffy/src/style/mod.rs",
+      "destination": "crates/layout/src/style/mod.rs",
+      "sha256": "7c3d81c8220b9783b34ab995a6e5eb07c653799b7576e9dc1e3b0a2604295f94",
+      "bytes": 48663,
+      "integratedBytes": 48663,
+      "integratedSha256": "7c3d81c8220b9783b34ab995a6e5eb07c653799b7576e9dc1e3b0a2604295f94"
+    },
+    {
+      "source": "crates/ui/taffy/src/style_helpers.rs",
+      "destination": "crates/layout/src/style_helpers.rs",
+      "sha256": "1c3ee1f7c4b5a9ec34b2ac9bc087a91c4953acca62fda6594f1dc3d4c28ddc7d",
+      "bytes": 20618,
+      "integratedBytes": 20618,
+      "integratedSha256": "1c3ee1f7c4b5a9ec34b2ac9bc087a91c4953acca62fda6594f1dc3d4c28ddc7d"
+    },
+    {
+      "source": "crates/ui/taffy/src/test.rs",
+      "destination": "crates/layout/src/test.rs",
+      "sha256": "de5df121ffb5da7b1866379b73366d793083a5e4b5279d8702559beb1ee1729e",
+      "bytes": 6217,
+      "integratedBytes": 6217,
+      "integratedSha256": "de5df121ffb5da7b1866379b73366d793083a5e4b5279d8702559beb1ee1729e"
+    },
+    {
+      "source": "crates/ui/taffy/src/tree/cache.rs",
+      "destination": "crates/layout/src/tree/cache.rs",
+      "sha256": "9962ef511b5aebab7b275d5fa34eef0ad115d16d540ad9c014966de75fec28a2",
+      "bytes": 13950,
+      "integratedBytes": 13950,
+      "integratedSha256": "9962ef511b5aebab7b275d5fa34eef0ad115d16d540ad9c014966de75fec28a2"
+    },
+    {
+      "source": "crates/ui/taffy/src/tree/layout.rs",
+      "destination": "crates/layout/src/tree/layout.rs",
+      "sha256": "03c32a7220c6f39a68f7e86ec0ef60f6cf6f318bd6c0c09cfc3fd32d3ec55564",
+      "bytes": 13808,
+      "integratedBytes": 13808,
+      "integratedSha256": "03c32a7220c6f39a68f7e86ec0ef60f6cf6f318bd6c0c09cfc3fd32d3ec55564"
+    },
+    {
+      "source": "crates/ui/taffy/src/tree/mod.rs",
+      "destination": "crates/layout/src/tree/mod.rs",
+      "sha256": "62c1acb00720263d6aa9fb4a1321f4fd1c2a10c4f2b3a19fed27f9b27b64e52d",
+      "bytes": 1090,
+      "integratedBytes": 1090,
+      "integratedSha256": "62c1acb00720263d6aa9fb4a1321f4fd1c2a10c4f2b3a19fed27f9b27b64e52d"
+    },
+    {
+      "source": "crates/ui/taffy/src/tree/node.rs",
+      "destination": "crates/layout/src/tree/node.rs",
+      "sha256": "b027062338f4d2dcea8c7c4200c7bc0d109c2e33dfa955b25079bb1d7b0537ba",
+      "bytes": 1337,
+      "integratedBytes": 1337,
+      "integratedSha256": "b027062338f4d2dcea8c7c4200c7bc0d109c2e33dfa955b25079bb1d7b0537ba"
+    },
+    {
+      "source": "crates/ui/taffy/src/tree/taffy_tree.rs",
+      "destination": "crates/layout/src/tree/taffy_tree.rs",
+      "sha256": "6920f3570655a431e32b8e925c0d6f4ee968c0f53f053b2712baee19c8d4204c",
+      "bytes": 54881,
+      "integratedBytes": 54881,
+      "integratedSha256": "6920f3570655a431e32b8e925c0d6f4ee968c0f53f053b2712baee19c8d4204c"
+    },
+    {
+      "source": "crates/ui/taffy/src/tree/traits.rs",
+      "destination": "crates/layout/src/tree/traits.rs",
+      "sha256": "456ae6981c69509a246ab369698bd17999681880ae2e150b6a114de1dc59e2b2",
+      "bytes": 19168,
+      "integratedBytes": 19168,
+      "integratedSha256": "456ae6981c69509a246ab369698bd17999681880ae2e150b6a114de1dc59e2b2"
+    },
+    {
+      "source": "crates/ui/taffy/src/util/debug.rs",
+      "destination": "crates/layout/src/util/debug.rs",
+      "sha256": "ab44f98e28e041006cd14e645e0b4bc970633c8da2d493856658ef2f2355d439",
+      "bytes": 4402,
+      "integratedBytes": 4402,
+      "integratedSha256": "ab44f98e28e041006cd14e645e0b4bc970633c8da2d493856658ef2f2355d439"
+    },
+    {
+      "source": "crates/ui/taffy/src/util/math.rs",
+      "destination": "crates/layout/src/util/math.rs",
+      "sha256": "ee37a509ac3eef3581571a27b167c03fc65c37ee4110cbbd4c89f7cdc149f920",
+      "bytes": 12709,
+      "integratedBytes": 12709,
+      "integratedSha256": "ee37a509ac3eef3581571a27b167c03fc65c37ee4110cbbd4c89f7cdc149f920"
+    },
+    {
+      "source": "crates/ui/taffy/src/util/mod.rs",
+      "destination": "crates/layout/src/util/mod.rs",
+      "sha256": "8703f6f3908328410b681e3b7d7eb9ab843d4c1b973c0b1eb858c3263c262b7d",
+      "bytes": 952,
+      "integratedBytes": 952,
+      "integratedSha256": "8703f6f3908328410b681e3b7d7eb9ab843d4c1b973c0b1eb858c3263c262b7d"
+    },
+    {
+      "source": "crates/ui/taffy/src/util/parse.rs",
+      "destination": "crates/layout/src/util/parse.rs",
+      "sha256": "25144731b4d5de634b223ed3e81d1dd5b4c2b93635a30e0bccd8fd1b238bb47f",
+      "bytes": 4301,
+      "integratedBytes": 4301,
+      "integratedSha256": "25144731b4d5de634b223ed3e81d1dd5b4c2b93635a30e0bccd8fd1b238bb47f"
+    },
+    {
+      "source": "crates/ui/taffy/src/util/print.rs",
+      "destination": "crates/layout/src/util/print.rs",
+      "sha256": "bd82cc0a7f0f8fd172a6e569216dfe9edecc34110835cc56342c87a7945d978b",
+      "bytes": 3329,
+      "integratedBytes": 3329,
+      "integratedSha256": "bd82cc0a7f0f8fd172a6e569216dfe9edecc34110835cc56342c87a7945d978b"
+    },
+    {
+      "source": "crates/ui/taffy/src/util/resolve.rs",
+      "destination": "crates/layout/src/util/resolve.rs",
+      "sha256": "8499dfe57dcf255639048d2196cb130e774e297e1362c487c7e1683d06161901",
+      "bytes": 15917,
+      "integratedBytes": 15917,
+      "integratedSha256": "8499dfe57dcf255639048d2196cb130e774e297e1362c487c7e1683d06161901"
+    },
+    {
+      "source": "crates/ui/taffy/src/util/sys.rs",
+      "destination": "crates/layout/src/util/sys.rs",
+      "sha256": "cb35902c534b63fec27301a3055caa9a0cc987a67e0dc40022d07d13bb3e0b35",
+      "bytes": 8913,
+      "integratedBytes": 8913,
+      "integratedSha256": "cb35902c534b63fec27301a3055caa9a0cc987a67e0dc40022d07d13bb3e0b35"
+    },
+    {
+      "source": "crates/web/obscura-browser/Cargo.toml",
+      "destination": "crates/browser/Cargo.toml",
+      "sha256": "7ad6ff325b402db8b5326f7b17d88cfe949d8a7ce66eb8f8ac95675824e87850",
+      "bytes": 1370,
+      "integratedBytes": 1397,
+      "integratedSha256": "46252e4741190fd81d706e149806386e375c2b0f6f1d5eaed5243b2d438d29c4"
+    },
+    {
+      "source": "crates/web/obscura-browser/src/context.rs",
+      "destination": "crates/browser/src/context.rs",
+      "sha256": "48f47bffa241631c34514264394eee9118bf21987eec15e5935e6ab9b2b9a8e9",
+      "bytes": 10495,
+      "integratedBytes": 10522,
+      "integratedSha256": "79b4b30a8f4f0b828a133b1a515f14431dc7efe4db10de1796ea367ab4d80580"
+    },
+    {
+      "source": "crates/web/obscura-browser/src/fork_virtual_url.rs",
+      "destination": "crates/browser/src/fork_virtual_url.rs",
+      "sha256": "498645f60896c313dc871f9a5021dff9a8a454f8f5ecf3c6f3cb469492e532e8",
+      "bytes": 1863,
+      "integratedBytes": 1863,
+      "integratedSha256": "498645f60896c313dc871f9a5021dff9a8a454f8f5ecf3c6f3cb469492e532e8"
+    },
+    {
+      "source": "crates/web/obscura-browser/src/idle_deadline.rs",
+      "destination": "crates/browser/src/idle_deadline.rs",
+      "sha256": "28d7675d235ef38a66c3a432a65809fc2c7e38dd37a38625cb05b8bde4b3b16a",
+      "bytes": 15149,
+      "integratedBytes": 15149,
+      "integratedSha256": "28d7675d235ef38a66c3a432a65809fc2c7e38dd37a38625cb05b8bde4b3b16a"
+    },
+    {
+      "source": "crates/web/obscura-browser/src/lib.rs",
+      "destination": "crates/browser/src/lib.rs",
+      "sha256": "9dfbba27ee5ce237891aaaedc908704a908c78ad3eb0820b9ccd40f7aa45cbb6",
+      "bytes": 828,
+      "integratedBytes": 852,
+      "integratedSha256": "164fe9b7eb4adb87f26c8d7b16dd9f8200b5d233a4dc5469fe38622004a554a3"
+    },
+    {
+      "source": "crates/web/obscura-browser/src/lifecycle.rs",
+      "destination": "crates/browser/src/lifecycle.rs",
+      "sha256": "e82e1fa7b806c7640c8df5cb14783c353b7886964e1424fbedef0371ffb9063d",
+      "bytes": 971,
+      "integratedBytes": 971,
+      "integratedSha256": "e82e1fa7b806c7640c8df5cb14783c353b7886964e1424fbedef0371ffb9063d"
+    },
+    {
+      "source": "crates/web/obscura-browser/src/page.rs",
+      "destination": "crates/browser/src/page.rs",
+      "sha256": "93c3b5bb626a8a88212d6ab3f97bfb8546b9f4aa695f0cb4df11d0567a5ca3b5",
+      "bytes": 430518,
+      "integratedBytes": 431094,
+      "integratedSha256": "6c513f177adb34c5615a1f9ee483df3479b423ca4c80d1561f38a149a6b60839"
+    },
+    {
+      "source": "crates/web/obscura-browser/src/pdf.rs",
+      "destination": "crates/browser/src/pdf.rs",
+      "sha256": "575cb58d05d85b8664c60d1a409ce7dc9f32743a4bc9c7d5dced6463eb2e43f5",
+      "bytes": 37083,
+      "integratedBytes": 37137,
+      "integratedSha256": "da447d43e070505b622d1b5a5025d6242feca5d0596302a22ddc1026dd98ce11"
+    },
+    {
+      "source": "crates/web/obscura-browser/src/profiles.rs",
+      "destination": "crates/browser/src/profiles.rs",
+      "sha256": "5987b51920c47a21a29ae603f6d6b6011da391ca90e4bea9fb373d300fbda9ca",
+      "bytes": 3882,
+      "integratedBytes": 3882,
+      "integratedSha256": "5987b51920c47a21a29ae603f6d6b6011da391ca90e4bea9fb373d300fbda9ca"
+    },
+    {
+      "source": "crates/web/obscura-browser/tests/binary_fetch_body.rs",
+      "destination": "crates/browser/tests/binary_fetch_body.rs",
+      "sha256": "738d3fa3fdb30757d841dfa2e14f456250184e90255e0a8a780e642207a9b628",
+      "bytes": 4981,
+      "integratedBytes": 4985,
+      "integratedSha256": "2947131455976d3bea11fc37856f72dbc4c3df0340651f58d7ce1b1a925a689b"
+    },
+    {
+      "source": "crates/web/obscura-browser/tests/input_accept.rs",
+      "destination": "crates/browser/tests/input_accept.rs",
+      "sha256": "8335bdbc5d97add5a947884c4d9624bd115e67b9df378fa2ca608f4d6efe66d8",
+      "bytes": 1175,
+      "integratedBytes": 1179,
+      "integratedSha256": "45ea7ec176d755d696a939cf8df10211b5a0b986c26b6c8d9cc28f0eac934c06"
+    },
+    {
+      "source": "crates/web/obscura-browser/tests/unhandled_rejection.rs",
+      "destination": "crates/browser/tests/unhandled_rejection.rs",
+      "sha256": "7f4fac54dfbbcfde82efaa9c7ec2062dfe41c435b6abc6cdcc1aa67cdfc328c5",
+      "bytes": 2027,
+      "integratedBytes": 2031,
+      "integratedSha256": "0992b91f34b151a2f716a43e7f02dfd360faa013c26f0ca3026eb646a050041e"
+    },
+    {
+      "source": "crates/web/obscura-cdp/Cargo.toml",
+      "destination": "crates/cdp/Cargo.toml",
+      "sha256": "2e077e499ffcfb8cd163b6eff0172997c071772cc09eb742e3fc78fcea5f4240",
+      "bytes": 2056,
+      "integratedBytes": 2091,
+      "integratedSha256": "976200f2293f0d87c3cba6031fe152dc584c31e8fed5552255c69bf32c13b2ed"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/cookie_params.rs",
+      "destination": "crates/cdp/src/cookie_params.rs",
+      "sha256": "34c6ca8c31afe3feb905293d855d1df6697cc04ced0accc4d3624c613029ad1d",
+      "bytes": 6024,
+      "integratedBytes": 6036,
+      "integratedSha256": "ce1a812454f4a50f9432c76ec7ea101f58e0f53d66d48b1a8e427415c1fe85b6"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/dispatch.rs",
+      "destination": "crates/cdp/src/dispatch.rs",
+      "sha256": "dcb74612fa0f50fa765b01b8bdb6d3611bd0def411b3ddf16e1ae954e8e8541e",
+      "bytes": 59251,
+      "integratedBytes": 59287,
+      "integratedSha256": "53c01a7f4ba3ce126502af1796de982e1c969991ce151dcee401a73c19e237ff"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/accessibility.rs",
+      "destination": "crates/cdp/src/domains/accessibility.rs",
+      "sha256": "d9451a6a385475689ef29ac29213f3ccf15a122f7b214dcacc8b115fd095ca34",
+      "bytes": 34099,
+      "integratedBytes": 34151,
+      "integratedSha256": "a5a412dd4ddf8d3ce6b7090cdbd71374ecbe526279fce73d8d358bf070bd53c5"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/browser.rs",
+      "destination": "crates/cdp/src/domains/browser.rs",
+      "sha256": "850ace231ec1fd74569e9a8510f4afb5c668b0170a245628e8e5892295fbb1ea",
+      "bytes": 1815,
+      "integratedBytes": 1819,
+      "integratedSha256": "71c532537edb3d97ab101a144136e127bba0529f72a9c2ec3e9ce1e6cae5b478"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/dom.rs",
+      "destination": "crates/cdp/src/domains/dom.rs",
+      "sha256": "b3d8fd62a2521763c5f18c902e4fdc984cb65953b8e4c29848998a4f1198f624",
+      "bytes": 41747,
+      "integratedBytes": 41811,
+      "integratedSha256": "fd5823243161da19fe846ebf59ce75ca8a48f3a04352b9b85a93022a4cb81901"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/domsnapshot.rs",
+      "destination": "crates/cdp/src/domains/domsnapshot.rs",
+      "sha256": "4799394906df1b4fd4dec85a76912c68e9b90323e6fb05f0343a3ba30569e16f",
+      "bytes": 16089,
+      "integratedBytes": 16096,
+      "integratedSha256": "7c077ea4c4ee7442cbca018bc4a23c3f3b35a42536a52e5b264a4037bbcdff84"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/emulation.rs",
+      "destination": "crates/cdp/src/domains/emulation.rs",
+      "sha256": "197f7439a4c34297654cf51307872b6604fabb6a3db8d67b827609cef61ed747",
+      "bytes": 19050,
+      "integratedBytes": 19050,
+      "integratedSha256": "197f7439a4c34297654cf51307872b6604fabb6a3db8d67b827609cef61ed747"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/fetch.rs",
+      "destination": "crates/cdp/src/domains/fetch.rs",
+      "sha256": "ef00d81b16cc3c7bc18f3b9b9941594e81dfcd8f53d01d1cdc6f2d107ed9cd8a",
+      "bytes": 10264,
+      "integratedBytes": 10264,
+      "integratedSha256": "ef00d81b16cc3c7bc18f3b9b9941594e81dfcd8f53d01d1cdc6f2d107ed9cd8a"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/input.rs",
+      "destination": "crates/cdp/src/domains/input.rs",
+      "sha256": "0c4eb5de7bccbb1ffa1f6ba317a5931cc32efc20db5a12253b5f98616dbb5d28",
+      "bytes": 36195,
+      "integratedBytes": 36447,
+      "integratedSha256": "6fe370402a58dc49b4d1bb711c9421e0ea07fe0721d4fc6a44d4fea3526b5c8c"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/io.rs",
+      "destination": "crates/cdp/src/domains/io.rs",
+      "sha256": "afbebf319c857582bd9796f1c257f448b227e846289df8a3bf785ed3acb7a3d1",
+      "bytes": 10172,
+      "integratedBytes": 10172,
+      "integratedSha256": "afbebf319c857582bd9796f1c257f448b227e846289df8a3bf785ed3acb7a3d1"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/lp.rs",
+      "destination": "crates/cdp/src/domains/lp.rs",
+      "sha256": "c15736cc855922df66595543f3b15161e2a16aa1441e05c4227a633686ffd9df",
+      "bytes": 639,
+      "integratedBytes": 643,
+      "integratedSha256": "20f75e265c213d9086de1a33e89df97b693dd9d549e8cf6a5e073b7dc5efe8b8"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/mod.rs",
+      "destination": "crates/cdp/src/domains/mod.rs",
+      "sha256": "71b15eeeffb266b502feea676001347c22aed67cf7a730016f52f0729032b1ac",
+      "bytes": 241,
+      "integratedBytes": 241,
+      "integratedSha256": "71b15eeeffb266b502feea676001347c22aed67cf7a730016f52f0729032b1ac"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/network.rs",
+      "destination": "crates/cdp/src/domains/network.rs",
+      "sha256": "ff9a7db9a307c661efb7de3cb0af288f34666e84c27ae8aae67f333953f82c89",
+      "bytes": 15166,
+      "integratedBytes": 15178,
+      "integratedSha256": "4b545f655b733b7a9e2111f7afd39600cfbe4b9d8c50ca46c605a9da079c7b69"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/page.rs",
+      "destination": "crates/cdp/src/domains/page.rs",
+      "sha256": "e2657b05ad313bf0cfa71952601184ff1377afc5dd02f80329d526c146f3a9d6",
+      "bytes": 166682,
+      "integratedBytes": 166916,
+      "integratedSha256": "a23adde1ee3a1016fce8e02246fd8f188ef4ae41c1bf8aba2f6bc3c3504eb2d5"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/pdf.rs",
+      "destination": "crates/cdp/src/domains/pdf.rs",
+      "sha256": "2edd557438d684eedd5b249a7fd6aa8b52eee155b979b1ae8a56a0dc8ef6759b",
+      "bytes": 20163,
+      "integratedBytes": 20283,
+      "integratedSha256": "91be4a3c2c50431c34d680b9965e70e2d393b7746f8783de72d6d50b7c72756c"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/runtime.rs",
+      "destination": "crates/cdp/src/domains/runtime.rs",
+      "sha256": "4f2543fc4817a1b6733f6e58fb5e16df240ec332cc0aec483e8a59622caab8a0",
+      "bytes": 37075,
+      "integratedBytes": 37113,
+      "integratedSha256": "4cd809eba9fec1defbbf07e2cfbed9c5de2aae7ba67120c067673027a61c840c"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/storage.rs",
+      "destination": "crates/cdp/src/domains/storage.rs",
+      "sha256": "6d749760cf4adb531e29396fc55be522d286ddcee685f751204993cc26a0da23",
+      "bytes": 4010,
+      "integratedBytes": 4018,
+      "integratedSha256": "74028612f2e4561f56efb36320404b809d9780fd904556657b4b5bd16bd96835"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/domains/target.rs",
+      "destination": "crates/cdp/src/domains/target.rs",
+      "sha256": "00ec09530b842cc958e1bd3a75a51d6a171e3fb6446e80bdcb80dc921868bcd4",
+      "bytes": 22897,
+      "integratedBytes": 22901,
+      "integratedSha256": "5d077cbc9c5c532aa971f21173c9117bf224cbe52a4837ef3b0ad6c8898720ae"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/lib.rs",
+      "destination": "crates/cdp/src/lib.rs",
+      "sha256": "a3852e27bd01aedcfa42afca457c493c0763ce5acf76a8e446b246684d2c65da",
+      "bytes": 382,
+      "integratedBytes": 382,
+      "integratedSha256": "a3852e27bd01aedcfa42afca457c493c0763ce5acf76a8e446b246684d2c65da"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/server.rs",
+      "destination": "crates/cdp/src/server.rs",
+      "sha256": "1fae4895cbc0055af279b1b6ee1b3695bdab5d074e4b19e5c8ff93cca206dbf6",
+      "bytes": 173769,
+      "integratedBytes": 173948,
+      "integratedSha256": "2f805795e7b0eac3ca8a2163a9b450cfd91854064dda7e8bf510423675a7e90d"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/types.rs",
+      "destination": "crates/cdp/src/types.rs",
+      "sha256": "3025773bd6f49ebd26152532eaf65972c5fcdc7e241b952544fce3927144786a",
+      "bytes": 1694,
+      "integratedBytes": 1694,
+      "integratedSha256": "3025773bd6f49ebd26152532eaf65972c5fcdc7e241b952544fce3927144786a"
+    },
+    {
+      "source": "crates/web/obscura-cdp/src/util.rs",
+      "destination": "crates/cdp/src/util.rs",
+      "sha256": "3431017b5f86408186a0d432e0e51d29c60427db9d37ede8efbce3f57ff1d275",
+      "bytes": 7951,
+      "integratedBytes": 7955,
+      "integratedSha256": "d235f51eba38b51b1581579f55c1d333e28e827f26253d988dd00ccf8948a5ba"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/accept_thread_survives_silent_connections.rs",
+      "destination": "crates/cdp/tests/accept_thread_survives_silent_connections.rs",
+      "sha256": "46f7a251ea90b9680783ab0166c54497b04363d33448b5869d025f6551afd736",
+      "bytes": 5174,
+      "integratedBytes": 5182,
+      "integratedSha256": "a15a649c6d1460f92175d372cea76626bafb5909a113982d941a90057659349a"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/accessibility_names.rs",
+      "destination": "crates/cdp/tests/accessibility_names.rs",
+      "sha256": "e6ce85d49b896fc818eb380256b2795b56b6aae73f35c71a3c420582b87946a3",
+      "bytes": 5700,
+      "integratedBytes": 5704,
+      "integratedSha256": "fd9c302e2a092a946f890315b50b224b8583f3eb7eab729914ec4c8828ec80ce"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/backspace_surrogate.rs",
+      "destination": "crates/cdp/tests/backspace_surrogate.rs",
+      "sha256": "99213b12554de8f7438ffd66d2d94309ede1d816b94a4bacbe87dc18111b5361",
+      "bytes": 2209,
+      "integratedBytes": 2213,
+      "integratedSha256": "b754cf7afb0bb88ddd06e8850777932c862ac963dddce0c51cd2bf851f4f095f"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/binding_called_session.rs",
+      "destination": "crates/cdp/tests/binding_called_session.rs",
+      "sha256": "d00f6f3164d17a1d876703560804f3287ed7515bb0557aa44f8fcefdd3ecca51",
+      "bytes": 5684,
+      "integratedBytes": 5720,
+      "integratedSha256": "4c157db3ffc97a27559cfad11f30a78d4ea8fccd4a9aeb17e015ee084c3ed16c"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/cdp_click_submit_parity.rs",
+      "destination": "crates/cdp/tests/cdp_click_submit_parity.rs",
+      "sha256": "a206ace1fec2cb18623771f6b916c4ebc1d833eee91902ef8caa0842c0cfc9d3",
+      "bytes": 4532,
+      "integratedBytes": 4536,
+      "integratedSha256": "db456b7a36ede22210dcbd6e45c0bc26c0c8373a7f2495ad7f4e2e692c46b4bb"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/child_frame_tree.rs",
+      "destination": "crates/cdp/tests/child_frame_tree.rs",
+      "sha256": "974186a97eecea570a2217506ae1fae673f1a15c9f5789cfc77d4ade739bac3f",
+      "bytes": 15385,
+      "integratedBytes": 15393,
+      "integratedSha256": "2c2ffb33dbb73ddd3a2608fa5214c7ce4af22d0e29401fc94b16e335630ff432"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/concurrent_connections_heavy_page.rs",
+      "destination": "crates/cdp/tests/concurrent_connections_heavy_page.rs",
+      "sha256": "2acf989ac2e7338d3995a8af460d5a9445d4668cde26ae0b8cc3b046d52cd253",
+      "bytes": 11362,
+      "integratedBytes": 11370,
+      "integratedSha256": "43f30907c632451d6342d313a5cae8c81b8cb4cee8217924db1c37be87ba5a26"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/concurrent_navigations.rs",
+      "destination": "crates/cdp/tests/concurrent_navigations.rs",
+      "sha256": "8cb1f358d9c69c4171f67061b91dee7e9af0e937a40c8eeb7c329fb78ca2cafa",
+      "bytes": 5566,
+      "integratedBytes": 5574,
+      "integratedSha256": "b000207e1ef8c38154df3b938cc4b7b69e6c4b83c1ba7436f94381fcfc4d0be3"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/concurrent_navigations_with_fetch.rs",
+      "destination": "crates/cdp/tests/concurrent_navigations_with_fetch.rs",
+      "sha256": "0f989c992745af2838b00c1325155d2e2e6264cdcfaa8f1271680a5b6d5d2865",
+      "bytes": 9240,
+      "integratedBytes": 9248,
+      "integratedSha256": "84629d5782e83c8bc590cff743d1e477499d010532f13dc01275b42e04048f0c"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/concurrent_page_isolation.rs",
+      "destination": "crates/cdp/tests/concurrent_page_isolation.rs",
+      "sha256": "d3daec7fda972e87dd877ab5afaec822e5a76c81b306a91bc534c2b8a4d4a985",
+      "bytes": 7462,
+      "integratedBytes": 7470,
+      "integratedSha256": "b50f74c5599842029d59a5ba705f7456f57c2203778c0fcb4088fe978791f833"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/control_plane_unblocked.rs",
+      "destination": "crates/cdp/tests/control_plane_unblocked.rs",
+      "sha256": "fb79c7ec9e6d565610c6e836c3207917700ce01770e1e15d6f4906a90a15083a",
+      "bytes": 5430,
+      "integratedBytes": 5438,
+      "integratedSha256": "921b962622caac6abc2f3e302d0de04d84d67d086b3933ad8364389ad81db641"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/document_write_lifecycle.rs",
+      "destination": "crates/cdp/tests/document_write_lifecycle.rs",
+      "sha256": "bc03185a31a6c1d47d3a2d991c662bd5ee47646e9602d503d3e430ff36a1d191",
+      "bytes": 6200,
+      "integratedBytes": 6204,
+      "integratedSha256": "ba1a0fc073f05ed3f8d757db2a9d778ba7f50025f194e4cad77025b42b311ccd"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/dynamic_script_onload_fires.rs",
+      "destination": "crates/cdp/tests/dynamic_script_onload_fires.rs",
+      "sha256": "5e5773118761306708b81064acfb5d6b79ee48fa3dc227b8041a1c70a9cb9ddc",
+      "bytes": 13472,
+      "integratedBytes": 13476,
+      "integratedSha256": "7e312658f64de61940b32e041698e0eb12ff30832850c382da58aefc050541aa"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/dynamic_stylesheet_onload_fires.rs",
+      "destination": "crates/cdp/tests/dynamic_stylesheet_onload_fires.rs",
+      "sha256": "adc55940730da1192ef19fc9f45e7e784ad50c2c2d04bfbd01f9db463224fd11",
+      "bytes": 4260,
+      "integratedBytes": 4264,
+      "integratedSha256": "81d1f079fa859d649cb9307a6307d98af094a400b7fede9313125f18ef0a454f"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/execution_context_ownership.rs",
+      "destination": "crates/cdp/tests/execution_context_ownership.rs",
+      "sha256": "5e79aea90e9f21c3bc9daac93ec5a987b33fd034189e42bc8c9815c50213bf43",
+      "bytes": 12131,
+      "integratedBytes": 12139,
+      "integratedSha256": "c417202963675685a7de519fde5b91c9b2ed68b20ab20e41172720f47c940016"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/execution_context_pruned_on_navigation.rs",
+      "destination": "crates/cdp/tests/execution_context_pruned_on_navigation.rs",
+      "sha256": "c493679113ac7c872a6a1ea86ec9f6ce2114a627bc1d75819e8e49704c358b36",
+      "bytes": 2175,
+      "integratedBytes": 2183,
+      "integratedSha256": "d10f2447b1b3cea419393f789c594038edc8d23ed6584ee6caab50c8db26e154"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/file_navigation_gate.rs",
+      "destination": "crates/cdp/tests/file_navigation_gate.rs",
+      "sha256": "2cef6b863cc2ac3410721be58c3d38ac135c23430f974d45d8a69b085a41fecc",
+      "bytes": 4809,
+      "integratedBytes": 4817,
+      "integratedSha256": "0ed45118a0aec10e5641acf69c2cf8fa63c3aa937c0111ec67147d2b37e19ccd"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/form_submit_method_bypasses_listener.rs",
+      "destination": "crates/cdp/tests/form_submit_method_bypasses_listener.rs",
+      "sha256": "5b666a7bfde2cf4f49ca88cd04c7c2e2b5992d83aa952787d089edb60d1c5163",
+      "bytes": 11807,
+      "integratedBytes": 11819,
+      "integratedSha256": "3d368bd6d54f8814cc967e499d00e24066ea9b2c9085fad5fddec2efd32f57a1"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/fragment_navigation.rs",
+      "destination": "crates/cdp/tests/fragment_navigation.rs",
+      "sha256": "3fb45df7c4ceee77215bb80463466677e8955a8e18d9bf4b6a82ee2011777610",
+      "bytes": 3985,
+      "integratedBytes": 3989,
+      "integratedSha256": "2a35b45bf4eaeeb7d8e47afb1329a7a207252124d0e79bebad607aa58a585fc4"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/iframe_event_dispatch.rs",
+      "destination": "crates/cdp/tests/iframe_event_dispatch.rs",
+      "sha256": "bed4462c780f7d8add428eff4bbde583147d96ff819d47223f8172cb60bb328c",
+      "bytes": 8994,
+      "integratedBytes": 8998,
+      "integratedSha256": "2dfceb0e248cc473b8824e090a1c67d2983ad80d11f019c62c0bd7087ec61fe0"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/input_activation_author_accessors.rs",
+      "destination": "crates/cdp/tests/input_activation_author_accessors.rs",
+      "sha256": "6bcb93b911c8025a0632efe2fa07b3439144c2b80eaefe2ec00fab3580751c25",
+      "bytes": 8770,
+      "integratedBytes": 8774,
+      "integratedSha256": "d1c702725f4f6f9ea14736db1c7ba1745ed9998f144cb87b954d861b14258545"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/input_key_event_escaping.rs",
+      "destination": "crates/cdp/tests/input_key_event_escaping.rs",
+      "sha256": "256a30241d54d8d34c3293dbf478861355bfb060da164e2fdc1330a820d956b6",
+      "bytes": 12172,
+      "integratedBytes": 12176,
+      "integratedSha256": "60a13e2de5d17bc2a8400044a76af17449b3761056052d2300f43c5a7708ebdb"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/input_mouse_event_parity.rs",
+      "destination": "crates/cdp/tests/input_mouse_event_parity.rs",
+      "sha256": "b864f4f6d74d96bd54ef028fc8e2360167e6b707951718347e4a4ae7340895cc",
+      "bytes": 27817,
+      "integratedBytes": 27821,
+      "integratedSha256": "19a6b846c80adc3228a8520d7d1ef37468447c824cf254cdb595d3de696773fa"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/input_mouse_label_activation.rs",
+      "destination": "crates/cdp/tests/input_mouse_label_activation.rs",
+      "sha256": "4a0d43497e46c9446dd4ee53fab5dac653cdc13803bbe890af383a02f61c8bb3",
+      "bytes": 6019,
+      "integratedBytes": 6023,
+      "integratedSha256": "64fc15d32e69f4fb0cc25ba9f2b41db36b7e19b7bd25402a60d412b38175413b"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/integration.rs",
+      "destination": "crates/cdp/tests/integration.rs",
+      "sha256": "4ab7e1b801353d389487d258919114bccd88cb82643b16b83c35bad04611aa96",
+      "bytes": 2144,
+      "integratedBytes": 2144,
+      "integratedSha256": "4ab7e1b801353d389487d258919114bccd88cb82643b16b83c35bad04611aa96"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/js_fetch_emits_network_events.rs",
+      "destination": "crates/cdp/tests/js_fetch_emits_network_events.rs",
+      "sha256": "359a24f08b0613bbde8dd2cebec93d200a1c067c735d9b99378e129857efd59c",
+      "bytes": 14021,
+      "integratedBytes": 14029,
+      "integratedSha256": "c13821e3f4dd79b9e9b18491ae9e8f32c580883968ab4fad3eb289e1ccb37946"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/max_connections_cap.rs",
+      "destination": "crates/cdp/tests/max_connections_cap.rs",
+      "sha256": "13b23a2da5afeb3eeafedd873e6efc838d79d017318df7293706689f4d75c74c",
+      "bytes": 5989,
+      "integratedBytes": 6003,
+      "integratedSha256": "686e35fae20eb7ac9ce2dbe82b6c5457ebae57aceba01082a6ece6e6e7dbfc96"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/nodefilter_constants.rs",
+      "destination": "crates/cdp/tests/nodefilter_constants.rs",
+      "sha256": "8319a0c3668578069115b32e2cd3686863d5b2b47d2fbe5db07dcd6c309f6db1",
+      "bytes": 4832,
+      "integratedBytes": 4836,
+      "integratedSha256": "02e2094e3e7ab03cd430f0fc18f9a00899ebb90002006d28dee69910479f1832"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/page_frame_contract.rs",
+      "destination": "crates/cdp/tests/page_frame_contract.rs",
+      "sha256": "38210c7d36bcbd23899cfef3e32a6309d9811eadfe55b406fc58bbc38f36d794",
+      "bytes": 10281,
+      "integratedBytes": 10285,
+      "integratedSha256": "47ea27b2236fcc150ac92b38617352a743b5b02bacfd00d40d6a9cf0cf25a38e"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/runtime_by_value_undefined.rs",
+      "destination": "crates/cdp/tests/runtime_by_value_undefined.rs",
+      "sha256": "2a8d76a4190a64b14451cd0d0a07929de08f238e9a89c440a88d0defa21d8bba",
+      "bytes": 2864,
+      "integratedBytes": 2868,
+      "integratedSha256": "ce26510f7d1c853ec41c6ac4fd7fdf635e04aa84d8b5582273869f56477b9372"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/runtime_console_events.rs",
+      "destination": "crates/cdp/tests/runtime_console_events.rs",
+      "sha256": "4af7acef4d8d4d921bbb442e6dd6a4d66972b91994055691f4ae5f4c2bce982f",
+      "bytes": 7622,
+      "integratedBytes": 7630,
+      "integratedSha256": "c1dda0ee9e4a38d49d6df5bd6698776f12196195fa1faf15ad3776c1c0ab3d2c"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/runtime_get_properties_objectid_escaping.rs",
+      "destination": "crates/cdp/tests/runtime_get_properties_objectid_escaping.rs",
+      "sha256": "a57598425acccb7b2dbc5fcf537e34eed908fafa470529953ffee4dfc1ca342b",
+      "bytes": 7718,
+      "integratedBytes": 7726,
+      "integratedSha256": "99c33557fc3f13e6a1cba0c4612f3164713304ffe052292d46fb580c9e0d1c36"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/runtime_primitives.rs",
+      "destination": "crates/cdp/tests/runtime_primitives.rs",
+      "sha256": "492e63a5825c79cb42e39cf665531a14816df9b61f4378ead2db45bda98a8c1d",
+      "bytes": 3775,
+      "integratedBytes": 3783,
+      "integratedSha256": "dd551844c317045b14530247eb91788c4d8dccc48fc5244bafbe10d3e2381829"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/scroll_event_on_assignment.rs",
+      "destination": "crates/cdp/tests/scroll_event_on_assignment.rs",
+      "sha256": "50289db7de398bd30bb519bfaa9a48cc444c1f0987b00a687f272b42481cb909",
+      "bytes": 6863,
+      "integratedBytes": 6867,
+      "integratedSha256": "c8e34c38bbd0252200d69bf8e6993c2b18165eec5e6dee8a9ae061b2b19799ae"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/structured_clone_crypto_parity.rs",
+      "destination": "crates/cdp/tests/structured_clone_crypto_parity.rs",
+      "sha256": "95e751c671e78db5a23a43a71276416b051231d5ed62be5e7e8a1aa70ec69121",
+      "bytes": 12230,
+      "integratedBytes": 12234,
+      "integratedSha256": "f13172904493e2a00f42272840b0f9a7e507c5727e0c82ce2722914e1be25201"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/textarea_enter_selection.rs",
+      "destination": "crates/cdp/tests/textarea_enter_selection.rs",
+      "sha256": "dda0509ccd511b7ef62b74713f99bf160ee884c59ca6ba11c22e685fef27540e",
+      "bytes": 12658,
+      "integratedBytes": 12662,
+      "integratedSha256": "687a566c906cca50ecd37f1d48387021d54517ba5cbefabd2ac817bca8721885"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/treewalker_document_order.rs",
+      "destination": "crates/cdp/tests/treewalker_document_order.rs",
+      "sha256": "a79397813acd51d46b9b77d9da9a9a11cbeee4b3290bdfa7d7913eb50703145b",
+      "bytes": 4809,
+      "integratedBytes": 4813,
+      "integratedSha256": "781fb70024e7bf407516065cf2298581e97dfeadacdc28cb5d0c3a60a3cda169"
+    },
+    {
+      "source": "crates/web/obscura-cdp/tests/window_conformance_parity.rs",
+      "destination": "crates/cdp/tests/window_conformance_parity.rs",
+      "sha256": "5aa6aa0f8bf45b0e8cfb3dd7713ed87fca8758df9a07a7049b471c3c57fef520",
+      "bytes": 5649,
+      "integratedBytes": 5653,
+      "integratedSha256": "0dae6930f961a735ca7eabe6f741b13d5b74d271be5c62a83a452dc5e5bd173f"
+    },
+    {
+      "source": "crates/web/obscura-dom/Cargo.toml",
+      "destination": "crates/dom/Cargo.toml",
+      "sha256": "ae2e922fa55f7cfcfc20ea99a0c68010d930d3b110a699e362eddf69dc082791",
+      "bytes": 859,
+      "integratedBytes": 862,
+      "integratedSha256": "2cf3b8c66d08a46db94d710e9e622ae2483c90d5496576db5e4531898cf06134"
+    },
+    {
+      "source": "crates/web/obscura-dom/LICENSE",
+      "destination": "crates/dom/LICENSE",
+      "sha256": "313605fbac6945e9324d4825470796b5b7dbc012f523fdc181f6e6fd234eb88f",
+      "bytes": 11525,
+      "integratedBytes": 11525,
+      "integratedSha256": "313605fbac6945e9324d4825470796b5b7dbc012f523fdc181f6e6fd234eb88f"
+    },
+    {
+      "source": "crates/web/obscura-dom/README.md",
+      "destination": "crates/dom/README.md",
+      "sha256": "be976a0a586290ee47b63825aea90f087661ee54f89699eb48bcd3e0c5071a40",
+      "bytes": 593,
+      "integratedBytes": 579,
+      "integratedSha256": "45878841fac03fe11b51120be1373e6d235cc9257b1b9666502319baa6b2ab19"
+    },
+    {
+      "source": "crates/web/obscura-dom/src/lib.rs",
+      "destination": "crates/dom/src/lib.rs",
+      "sha256": "fda2269e341782e1427182fa96e691726ad183b7ad69af3d326da8e1baae584b",
+      "bytes": 301,
+      "integratedBytes": 301,
+      "integratedSha256": "fda2269e341782e1427182fa96e691726ad183b7ad69af3d326da8e1baae584b"
+    },
+    {
+      "source": "crates/web/obscura-dom/src/selector.rs",
+      "destination": "crates/dom/src/selector.rs",
+      "sha256": "c967ee47a988ae448147f58650c9d2cba91184d5e1645eb496f5e1cf6ce39d29",
+      "bytes": 71244,
+      "integratedBytes": 71286,
+      "integratedSha256": "b046831213a6b29e0aa8e4310cc91e1ba311667325cfeb20e2e5ccf9a13f2c29"
+    },
+    {
+      "source": "crates/web/obscura-dom/src/serialize.rs",
+      "destination": "crates/dom/src/serialize.rs",
+      "sha256": "ca87fd969714cec7a8b1718f509f4da750e09b1d59c985aa6c644930f1a5acb0",
+      "bytes": 14986,
+      "integratedBytes": 14990,
+      "integratedSha256": "26d6cdd5622026ed7bfda5c2a6e7b6bcec9eeb50c31cfb99c47737679b1c331e"
+    },
+    {
+      "source": "crates/web/obscura-dom/src/tree.rs",
+      "destination": "crates/dom/src/tree.rs",
+      "sha256": "4627657c4427ab1a5a3de77da0f3e3fca6e4c6fdf993df59d25e6e5bfe0ff990",
+      "bytes": 106907,
+      "integratedBytes": 106935,
+      "integratedSha256": "ed8a7cee45d26379f00da6724869087bc5eddf6c67cc402aa9ac82d933c790f8"
+    },
+    {
+      "source": "crates/web/obscura-dom/src/tree_sink.rs",
+      "destination": "crates/dom/src/tree_sink.rs",
+      "sha256": "4722ef6446d3e6a89952d34e8358bdf6afc5e424093d29ba8ad21b95c6a697f3",
+      "bytes": 24121,
+      "integratedBytes": 24142,
+      "integratedSha256": "2f90f0317f71235d56ce567e3058e113b2d72d765196b7e526eebef24f6f1462"
+    },
+    {
+      "source": "crates/web/obscura-dom/tests/slot_query_allocations.rs",
+      "destination": "crates/dom/tests/slot_query_allocations.rs",
+      "sha256": "8c523261ba3d8adc8aedc2bee6be1b894dc6b871f6d9695056d15defb2ecedcc",
+      "bytes": 2915,
+      "integratedBytes": 2919,
+      "integratedSha256": "b3bc94fce3f12ac5b4f44c4d27f48fbc9a4a2588944d5b9d1b5604f455a565ae"
+    },
+    {
+      "source": "crates/web/obscura-dom/tests/support/allocations.rs",
+      "destination": "crates/dom/tests/support/allocations.rs",
+      "sha256": "6eeaa445a0a1e2d3766e6d8719829555f105a73a4b6e7537af109dad61e0e031",
+      "bytes": 1196,
+      "integratedBytes": 1196,
+      "integratedSha256": "6eeaa445a0a1e2d3766e6d8719829555f105a73a4b6e7537af109dad61e0e031"
+    },
+    {
+      "source": "crates/web/obscura-js/Cargo.toml",
+      "destination": "crates/js/Cargo.toml",
+      "sha256": "039d3249be947ca1650b8462196ea52f17f9747595b91ab19af33558bfbbc380",
+      "bytes": 2596,
+      "integratedBytes": 2631,
+      "integratedSha256": "e9f31843a364d0e5f1540e92c249f0e2fa7ce5cd8326205e34a24c926bf15d42"
+    },
+    {
+      "source": "crates/web/obscura-js/build.rs",
+      "destination": "crates/js/build.rs",
+      "sha256": "9382630e41e41f7efb9c4841609ebe2db7a65d1690dbaaba0af3d147f3a2f2a2",
+      "bytes": 9919,
+      "integratedBytes": 9971,
+      "integratedSha256": "f8ed76dacd01895d7126332e1ba4f8590840997322f3a2a6bda6bec9884e0c25"
+    },
+    {
+      "source": "crates/web/obscura-js/examples/bench_v8.rs",
+      "destination": "crates/js/examples/bench_v8.rs",
+      "sha256": "92ec14bf410a81e97f5565ae64f8c5aa1cee92665905b5f63fa916c9d53d372a",
+      "bytes": 4231,
+      "integratedBytes": 4268,
+      "integratedSha256": "a18cbcdf1bfba45d4670c3d3ce91de296752f13bed2fc0b623478da311c1001f"
+    },
+    {
+      "source": "crates/web/obscura-js/js/bootstrap.js",
+      "destination": "crates/js/js/bootstrap.js",
+      "sha256": "f84b9f091110101acf0b0683b1404adc4eeb4a1f25a731267f724c8c7f07ab4a",
+      "bytes": 819685,
+      "integratedBytes": 821338,
+      "integratedSha256": "018468e908d85068eb0952356f6798ed91245a4aef03b8052ef4fc8c17e8bc5c"
+    },
+    {
+      "source": "crates/web/obscura-js/src/cdp_watchdog.rs",
+      "destination": "crates/js/src/cdp_watchdog.rs",
+      "sha256": "4d365fb819793784eca0b81fa342415e28c6ac167319bc558964d24ff1ec80dc",
+      "bytes": 4064,
+      "integratedBytes": 4064,
+      "integratedSha256": "4d365fb819793784eca0b81fa342415e28c6ac167319bc558964d24ff1ec80dc"
+    },
+    {
+      "source": "crates/web/obscura-js/src/frame.rs",
+      "destination": "crates/js/src/frame.rs",
+      "sha256": "1497eea4575398bfc06a90d20631ef1ff49ad1c94f724dc4b0ced2cf6dcab6e3",
+      "bytes": 67002,
+      "integratedBytes": 67125,
+      "integratedSha256": "7e8bc5eb5844a1786a0c8e5b2f128031e5ea6019819e02b1935a65a08e38afb7"
+    },
+    {
+      "source": "crates/web/obscura-js/src/import_map.rs",
+      "destination": "crates/js/src/import_map.rs",
+      "sha256": "1ea3d64c8416c92af6f21d30e1241d94c2d10f5dfbd80c89ee3dab4a0d1b992c",
+      "bytes": 15458,
+      "integratedBytes": 15458,
+      "integratedSha256": "1ea3d64c8416c92af6f21d30e1241d94c2d10f5dfbd80c89ee3dab4a0d1b992c"
+    },
+    {
+      "source": "crates/web/obscura-js/src/lib.rs",
+      "destination": "crates/js/src/lib.rs",
+      "sha256": "3e90637c2bf27cfcd2b083b7bea3c5841f2ca3313c19ccb88239f4a190feb0f7",
+      "bytes": 946,
+      "integratedBytes": 954,
+      "integratedSha256": "a8403d4255950bcc3d07e346704b136382637a3b19cb76d6e53f46762896f901"
+    },
+    {
+      "source": "crates/web/obscura-js/src/markdown.rs",
+      "destination": "crates/js/src/markdown.rs",
+      "sha256": "1b10a0fadad34e7c6b5acb1b0e3dd2697ae877e966173a89a4cae85d1d80d371",
+      "bytes": 3553,
+      "integratedBytes": 3565,
+      "integratedSha256": "5b7e35c61ac17075900f470f1670843e1a7e90e7550d14fdceb5784f96ccec6e"
+    },
+    {
+      "source": "crates/web/obscura-js/src/module_loader.rs",
+      "destination": "crates/js/src/module_loader.rs",
+      "sha256": "6afccd4a0751fadaab6e3b96caf7135479c22d6746bfe0d73b55d5fcb1000ed0",
+      "bytes": 13525,
+      "integratedBytes": 13578,
+      "integratedSha256": "53660555eb1c1c4c82e9860d8ea431d6e42de1cbb2a914da7b3ecf27db8870a9"
+    },
+    {
+      "source": "crates/web/obscura-js/src/ops.rs",
+      "destination": "crates/js/src/ops.rs",
+      "sha256": "104beaca7bae0615d29d4e6575d1010749485dd8d0e0eb27c5d5da44666c478d",
+      "bytes": 338730,
+      "integratedBytes": 339498,
+      "integratedSha256": "7212f20e2e6e01a96a1a09b45ae0dc045bdf50014ca2dc4910dca0744d562e91"
+    },
+    {
+      "source": "crates/web/obscura-js/src/runtime.rs",
+      "destination": "crates/js/src/runtime.rs",
+      "sha256": "ac346199648f18d62f3f45ef579401f51de1a340d3ba24ec6661f75e315cbef0",
+      "bytes": 1060817,
+      "integratedBytes": 1063952,
+      "integratedSha256": "4948025f6e006272f21ec093b35083282e778e952ea6f09c5adf46203f0182a6"
+    },
+    {
+      "source": "crates/web/obscura-js/src/v8_flags.rs",
+      "destination": "crates/js/src/v8_flags.rs",
+      "sha256": "4a336130daa4aa273044bb8b041376627f3062d38e191766b61ca49334abdd94",
+      "bytes": 2953,
+      "integratedBytes": 2965,
+      "integratedSha256": "952f576e2e0483eb6ec4390e4568496e0596d51d180401ec6de78525900184ce"
+    },
+    {
+      "source": "crates/web/obscura-js/src/websocket.rs",
+      "destination": "crates/js/src/websocket.rs",
+      "sha256": "807a40ccbc2bb9a8e16a6022b6ca46ce77fdfb15f93de9cdbe02a12258a22193",
+      "bytes": 18718,
+      "integratedBytes": 18745,
+      "integratedSha256": "5c9c41f304cba0b4d1304eadac49bcf4b77bae6deaf1cf2496f8c32ea9c07187"
+    },
+    {
+      "source": "crates/web/obscura-js/src/write_stream.rs",
+      "destination": "crates/js/src/write_stream.rs",
+      "sha256": "a9b51f5bda4a48aaac88a8ba496c4c233fad06cd168958e78685de54a34a6d9c",
+      "bytes": 9604,
+      "integratedBytes": 9608,
+      "integratedSha256": "d985377c6b2b3e05329a63cd9628362b8634af5c62435681a1395178f4c06466"
+    },
+    {
+      "source": "crates/web/obscura-js/tests/media_query_events.rs",
+      "destination": "crates/js/tests/media_query_events.rs",
+      "sha256": "984596667f40d4f6cf8ff81ee824f8f4755f8c2288f823d6ee9f4323d4eff8d1",
+      "bytes": 3043,
+      "integratedBytes": 3064,
+      "integratedSha256": "780367319d986a2d006ec6c0418db82364939bb856e1aa409174e21f8777ae59"
+    },
+    {
+      "source": "crates/web/obscura-js/tests/multi_isolate_teardown.rs",
+      "destination": "crates/js/tests/multi_isolate_teardown.rs",
+      "sha256": "b557e0e88fcbbf5a8bb410720c486ea7d289e9d19cba9b82c83be12a3121e743",
+      "bytes": 1934,
+      "integratedBytes": 1959,
+      "integratedSha256": "562f4a653a0acd5ae1847a011aa4929c062c665dec86582d902e29300651c253"
+    },
+    {
+      "source": "crates/web/obscura-js/tests/reduced_motion.rs",
+      "destination": "crates/js/tests/reduced_motion.rs",
+      "sha256": "d6c835a4f298d4dd4b86fd88d5be5e29f9db64563aa300fb3715a376db32b0b2",
+      "bytes": 2239,
+      "integratedBytes": 2267,
+      "integratedSha256": "0f4931f27df2341789a0d2667aa25c87a2fd91e4f4270338e903a411998d79e5"
+    },
+    {
+      "source": "crates/web/obscura-mcp/Cargo.toml",
+      "destination": "crates/mcp/Cargo.toml",
+      "sha256": "5ccd396dff59afded35f2bd804937d8c5613a26b253991093ef69157ee1ea513",
+      "bytes": 1258,
+      "integratedBytes": 1285,
+      "integratedSha256": "550199c86d7daf71771046b5d6d77f7573b0c547abc8bd9cb78332776dcfe60a"
+    },
+    {
+      "source": "crates/web/obscura-mcp/src/aphrody.rs",
+      "destination": "crates/mcp/src/bun.rs",
+      "sha256": "143975b9b606da4946459e6dd152663dbe6a17ceaa4007bece05801cfad5a24f",
+      "bytes": 1476,
+      "integratedBytes": 1408,
+      "integratedSha256": "fd0d59b5e0432c7639c79bdaf296f8fcd667b1dc745ad5f24c9f365100cf3984"
+    },
+    {
+      "source": "crates/web/obscura-mcp/src/lib.rs",
+      "destination": "crates/mcp/src/lib.rs",
+      "sha256": "adc503d9fa0bf42b15f3ab0fed7b3fc74e6f6645fe9b8ae948fa0b40c554e4d9",
+      "bytes": 122446,
+      "integratedBytes": 122646,
+      "integratedSha256": "73d0f6a0da94949e288f541f15ae19ac916fa07c6c827ff1e3a32857892ccb6a"
+    },
+    {
+      "source": "crates/web/obscura-net/Cargo.toml",
+      "destination": "crates/net/Cargo.toml",
+      "sha256": "fe50a99817b48d3c95c01580fa4c6f92e8eead084f7cb209d50f95f3b527d451",
+      "bytes": 3310,
+      "integratedBytes": 3317,
+      "integratedSha256": "eab98246c9483af236c031111b187d137c3144a1394a2f04b8e49f449b6bb87f"
+    },
+    {
+      "source": "crates/web/obscura-net/src/blocklist.rs",
+      "destination": "crates/net/src/blocklist.rs",
+      "sha256": "720fc7cc2ae887506ceb458ef9c4b0f723ada2eccdfdf294f9f943b7d6b3f2e3",
+      "bytes": 1730,
+      "integratedBytes": 1730,
+      "integratedSha256": "720fc7cc2ae887506ceb458ef9c4b0f723ada2eccdfdf294f9f943b7d6b3f2e3"
+    },
+    {
+      "source": "crates/web/obscura-net/src/client.rs",
+      "destination": "crates/net/src/client.rs",
+      "sha256": "47423a1ec7063dabd18cce1aa80e25b42abc83576fc65d608944ec22d09105d2",
+      "bytes": 126626,
+      "integratedBytes": 126886,
+      "integratedSha256": "a17f530f24a4f3a8a6749b55090f5cfe22fa77458f0956ebe1c21f967607f7e8"
+    },
+    {
+      "source": "crates/web/obscura-net/src/cookies.rs",
+      "destination": "crates/net/src/cookies.rs",
+      "sha256": "9ab82488f8ae8eef062d6afb1d56f217f75f3e08ca54e760958c26ff94381699",
+      "bytes": 81447,
+      "integratedBytes": 81453,
+      "integratedSha256": "42cc52d5cc7b61b7fae3d4baf822a46f844b82573ef9ae940edd1d2c6d28d3fc"
+    },
+    {
+      "source": "crates/web/obscura-net/src/dns.rs",
+      "destination": "crates/net/src/dns.rs",
+      "sha256": "09dbd22cac49dfec6805efd9ae81cabc9002f490506ad8430859bacacf91815a",
+      "bytes": 2151,
+      "integratedBytes": 2151,
+      "integratedSha256": "09dbd22cac49dfec6805efd9ae81cabc9002f490506ad8430859bacacf91815a"
+    },
+    {
+      "source": "crates/web/obscura-net/src/encoding.rs",
+      "destination": "crates/net/src/encoding.rs",
+      "sha256": "c2466bf47c17f0248a37133d98b45f3559755b1ae1b153193ebfea5c2aa8b13e",
+      "bytes": 18831,
+      "integratedBytes": 18835,
+      "integratedSha256": "43ed6469d3686b5235779c08f476482161ec0e3c3142f8adea4fb1a14c22f261"
+    },
+    {
+      "source": "crates/web/obscura-net/src/har.rs",
+      "destination": "crates/net/src/har.rs",
+      "sha256": "e93abdd19b18f2287c822a489cc69d81a085a5e0a092a9288e051515e8a33ebe",
+      "bytes": 13372,
+      "integratedBytes": 13375,
+      "integratedSha256": "a570aaf1be04cc42edfa4c82c62b1c6be7f74461aa07af701646be259f4bda28"
+    },
+    {
+      "source": "crates/web/obscura-net/src/interceptor.rs",
+      "destination": "crates/net/src/interceptor.rs",
+      "sha256": "85afb86f48b7749aaf8a9a821089ae4b77eaa8b9fda2212873fa2b9b83b770bf",
+      "bytes": 333,
+      "integratedBytes": 333,
+      "integratedSha256": "85afb86f48b7749aaf8a9a821089ae4b77eaa8b9fda2212873fa2b9b83b770bf"
+    },
+    {
+      "source": "crates/web/obscura-net/src/lib.rs",
+      "destination": "crates/net/src/lib.rs",
+      "sha256": "4f403638e98a7703f3eed4af3cc519f2a758f51a193681e39dc47648df2cc075",
+      "bytes": 1634,
+      "integratedBytes": 1640,
+      "integratedSha256": "31e9ca9d64011345d9003d552805d7f066187ff06eb0f9b3bc3a838599905d91"
+    },
+    {
+      "source": "crates/web/obscura-net/src/operator_hint.rs",
+      "destination": "crates/net/src/operator_hint.rs",
+      "sha256": "4e41066c5f71335db0dbc7a7d607654463bbb80e17ec018b4c2a96bf914c0a67",
+      "bytes": 4062,
+      "integratedBytes": 4065,
+      "integratedSha256": "84ec065b50dff0a04eabe9b8585cede144be35d3eeb82ea6753cf030ba8090f3"
+    },
+    {
+      "source": "crates/web/obscura-net/src/pgl_domains.txt",
+      "destination": "crates/net/src/pgl_domains.txt",
+      "sha256": "04a12c559c538d2da4f89312a1c5804f40b2e682ffd66748751c79fba3846037",
+      "bytes": 58256,
+      "integratedBytes": 58256,
+      "integratedSha256": "04a12c559c538d2da4f89312a1c5804f40b2e682ffd66748751c79fba3846037"
+    },
+    {
+      "source": "crates/web/obscura-net/src/robots.rs",
+      "destination": "crates/net/src/robots.rs",
+      "sha256": "9716f64a6ea0ec0d4a20c186469bdef65e2147e2bb976892998c684df30cf95c",
+      "bytes": 10146,
+      "integratedBytes": 10188,
+      "integratedSha256": "f29a3eac89d9fa52e9091b50ba28eb695e62fa6520277401c266d1777f542eab"
+    },
+    {
+      "source": "crates/web/obscura-net/src/wreq_client.rs",
+      "destination": "crates/net/src/wreq_client.rs",
+      "sha256": "a31d5500c1c96a68ddb29cf9344f086261c526422c361e76e496fc57e43857f8",
+      "bytes": 36901,
+      "integratedBytes": 36970,
+      "integratedSha256": "d5b554ca45ac36052bd42041ccbe11feec972a235ed291296114b9f79c93e3fe"
+    },
+    {
+      "source": "crates/web/obscura-render/Cargo.toml",
+      "destination": "crates/render/Cargo.toml",
+      "sha256": "808b5eab74705597b5da4207bf77e368a0f6f5233e46a90a6828b18e482da6c6",
+      "bytes": 4199,
+      "integratedBytes": 4298,
+      "integratedSha256": "f2fe6c9f3432fdfcd7358c61d8ea4ba47e62d05380c3b4caf148de63e1193a71"
+    },
+    {
+      "source": "crates/web/obscura-render/assets/FONT-PROVENANCE.md",
+      "destination": "crates/render/assets/FONT-PROVENANCE.md",
+      "sha256": "973a9f0783a068088c169905cb4b3776935569a784f10234b6a0baab355c7ee3",
+      "bytes": 370,
+      "integratedBytes": 370,
+      "integratedSha256": "973a9f0783a068088c169905cb4b3776935569a784f10234b6a0baab355c7ee3"
+    },
+    {
+      "source": "crates/web/obscura-render/assets/LICENSE-NOTO-COLOR-EMOJI.txt",
+      "destination": "crates/render/assets/LICENSE-NOTO-COLOR-EMOJI.txt",
+      "sha256": "88f117575237307bdd86a17ef15e21790fc9a662fe4dfb103ca1ca077f0d9982",
+      "bytes": 4393,
+      "integratedBytes": 4393,
+      "integratedSha256": "88f117575237307bdd86a17ef15e21790fc9a662fe4dfb103ca1ca077f0d9982"
+    },
+    {
+      "source": "crates/web/obscura-render/assets/dejavu-sans-bold.ttf",
+      "destination": "crates/render/assets/dejavu-sans-bold.ttf",
+      "sha256": "5c1247acef7f2b8522a31742c76d6adcb5569bacc0be7ceaa4dc39dd252ce895",
+      "bytes": 708920,
+      "integratedBytes": 708920,
+      "integratedSha256": "5c1247acef7f2b8522a31742c76d6adcb5569bacc0be7ceaa4dc39dd252ce895"
+    },
+    {
+      "source": "crates/web/obscura-render/assets/dejavu-sans-boldoblique.ttf",
+      "destination": "crates/render/assets/dejavu-sans-boldoblique.ttf",
+      "sha256": "6edf0283160186af451cbee71e7b845f2e4cabf264bb992ce668c83c25465e6f",
+      "bytes": 641720,
+      "integratedBytes": 641720,
+      "integratedSha256": "6edf0283160186af451cbee71e7b845f2e4cabf264bb992ce668c83c25465e6f"
+    },
+    {
+      "source": "crates/web/obscura-render/assets/dejavu-sans-oblique.ttf",
+      "destination": "crates/render/assets/dejavu-sans-oblique.ttf",
+      "sha256": "ccdf74b350f11fd3dd5774de50e5e6346a1a5da1f5b7d5fb83590665e97a5213",
+      "bytes": 633840,
+      "integratedBytes": 633840,
+      "integratedSha256": "ccdf74b350f11fd3dd5774de50e5e6346a1a5da1f5b7d5fb83590665e97a5213"
+    },
+    {
+      "source": "crates/web/obscura-render/assets/dejavu-sans.ttf",
+      "destination": "crates/render/assets/dejavu-sans.ttf",
+      "sha256": "690243adfefe0ce154b547db6205794bd30ac4277275179517a90994f4980648",
+      "bytes": 757076,
+      "integratedBytes": 757076,
+      "integratedSha256": "690243adfefe0ce154b547db6205794bd30ac4277275179517a90994f4980648"
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-mono-bold.ttf",
+      "destination": "crates/render/assets/liberation-mono-bold.ttf",
+      "sha256": "410af69b6297b7cf6d20dd004004bd1bdb46460a60f9fef69b04169f4ff09660",
+      "bytes": 105460,
+      "integratedBytes": 105460,
+      "integratedSha256": "410af69b6297b7cf6d20dd004004bd1bdb46460a60f9fef69b04169f4ff09660"
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-mono-boldoblique.ttf",
+      "destination": "crates/render/assets/liberation-mono-boldoblique.ttf",
+      "sha256": "a2ab7fe6f5bd7c2bc59ca7f5f4212f165dc174cbbab366cab171df4e73939aa2",
+      "bytes": 118296,
+      "integratedBytes": 118296,
+      "integratedSha256": "a2ab7fe6f5bd7c2bc59ca7f5f4212f165dc174cbbab366cab171df4e73939aa2"
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-mono-oblique.ttf",
+      "destination": "crates/render/assets/liberation-mono-oblique.ttf",
+      "sha256": "1b09e2a1d70adf339048943b21037462c56108411817bf6988c86cb88289fc34",
+      "bytes": 124012,
+      "integratedBytes": 124012,
+      "integratedSha256": "1b09e2a1d70adf339048943b21037462c56108411817bf6988c86cb88289fc34"
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-mono.ttf",
+      "destination": "crates/render/assets/liberation-mono.ttf",
+      "sha256": "babd36837e644f08e6ba09b69feb770fbeba9e4611a619e5471fb8dbc132d42c",
+      "bytes": 108172,
+      "integratedBytes": 108172,
+      "integratedSha256": "babd36837e644f08e6ba09b69feb770fbeba9e4611a619e5471fb8dbc132d42c"
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-sans-bold.ttf",
+      "destination": "crates/render/assets/liberation-sans-bold.ttf",
+      "sha256": "c2d334cafbd28522007cc16970db8db4a75256123594a43fe07f89cfceb5bacc",
+      "bytes": 137052,
+      "integratedBytes": 137052,
+      "integratedSha256": "c2d334cafbd28522007cc16970db8db4a75256123594a43fe07f89cfceb5bacc"
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-sans-boldoblique.ttf",
+      "destination": "crates/render/assets/liberation-sans-boldoblique.ttf",
+      "sha256": "2e5f6a48571d50f277598c533dea4f659abce53335fb475aa2bc45bd2527f1d0",
+      "bytes": 135124,
+      "integratedBytes": 135124,
+      "integratedSha256": "2e5f6a48571d50f277598c533dea4f659abce53335fb475aa2bc45bd2527f1d0"
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-sans-oblique.ttf",
+      "destination": "crates/render/assets/liberation-sans-oblique.ttf",
+      "sha256": "f71f02009bd7320571db05b7459c7db92a1f5f68ac619009a2f637e18c7a93f9",
+      "bytes": 162036,
+      "integratedBytes": 162036,
+      "integratedSha256": "f71f02009bd7320571db05b7459c7db92a1f5f68ac619009a2f637e18c7a93f9"
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-sans.ttf",
+      "destination": "crates/render/assets/liberation-sans.ttf",
+      "sha256": "36efda825bcd7d1de846204c3adad51ced9d9b5cb7df571fb33edc21207e324a",
+      "bytes": 139512,
+      "integratedBytes": 139512,
+      "integratedSha256": "36efda825bcd7d1de846204c3adad51ced9d9b5cb7df571fb33edc21207e324a"
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-serif-bold.ttf",
+      "destination": "crates/render/assets/liberation-serif-bold.ttf",
+      "sha256": "cfbe3d2edd46ae844b7eb95012f9274776801873e27b2230bbf751645f011888",
+      "bytes": 147132,
+      "integratedBytes": 147132,
+      "integratedSha256": "cfbe3d2edd46ae844b7eb95012f9274776801873e27b2230bbf751645f011888"
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-serif-boldoblique.ttf",
+      "destination": "crates/render/assets/liberation-serif-boldoblique.ttf",
+      "sha256": "23d013c7c9708b09be7517ddc3bff8322c5dfa16c629a68f6be2a860e2693698",
+      "bytes": 151452,
+      "integratedBytes": 151452,
+      "integratedSha256": "23d013c7c9708b09be7517ddc3bff8322c5dfa16c629a68f6be2a860e2693698"
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-serif-oblique.ttf",
+      "destination": "crates/render/assets/liberation-serif-oblique.ttf",
+      "sha256": "2d826fdde37518f7393052764703fc8ec120ef1e19ba49b50fcc6b6186b8aa78",
+      "bytes": 145028,
+      "integratedBytes": 145028,
+      "integratedSha256": "2d826fdde37518f7393052764703fc8ec120ef1e19ba49b50fcc6b6186b8aa78"
+    },
+    {
+      "source": "crates/web/obscura-render/assets/liberation-serif.ttf",
+      "destination": "crates/render/assets/liberation-serif.ttf",
+      "sha256": "8d6951ea5fc4a9656df4802227292c7943186364929f00b97629e70daf228439",
+      "bytes": 152408,
+      "integratedBytes": 152408,
+      "integratedSha256": "8d6951ea5fc4a9656df4802227292c7943186364929f00b97629e70daf228439"
+    },
+    {
+      "source": "crates/web/obscura-render/assets/noto-color-emoji.ttf",
+      "destination": "crates/render/assets/noto-color-emoji.ttf",
+      "sha256": "72a635cb3d2f3524c51620cdde406b217204e8a6a06c6a096ff8ed4b5fd6e27b",
+      "bytes": 10673480,
+      "integratedBytes": 10673480,
+      "integratedSha256": "72a635cb3d2f3524c51620cdde406b217204e8a6a06c6a096ff8ed4b5fd6e27b"
+    },
+    {
+      "source": "crates/web/obscura-render/examples/paint_file.rs",
+      "destination": "crates/render/examples/paint_file.rs",
+      "sha256": "01a71e4e5cad5d39393c83614d1e946a22e5f266ee8112473964a16c91866bf0",
+      "bytes": 978,
+      "integratedBytes": 986,
+      "integratedSha256": "2f63f677dbce2f777969539ecd0da7d71ee46e9de95430b53805e283ddcf6e8f"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/abs-fill.html",
+      "destination": "crates/render/render-repros/abs-fill.html",
+      "sha256": "91ad3e2d04445f0242be1b15969d8bad90236d01f956328d15fb7cf576511134",
+      "bytes": 1292,
+      "integratedBytes": 1292,
+      "integratedSha256": "91ad3e2d04445f0242be1b15969d8bad90236d01f956328d15fb7cf576511134"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/absolute-containing-block.html",
+      "destination": "crates/render/render-repros/absolute-containing-block.html",
+      "sha256": "12204d45b0a8a84d5cf4b82e76b7667c4c4a9de5bc85316ac163d08657557f71",
+      "bytes": 915,
+      "integratedBytes": 915,
+      "integratedSha256": "12204d45b0a8a84d5cf4b82e76b7667c4c4a9de5bc85316ac163d08657557f71"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/absolute-static-position.html",
+      "destination": "crates/render/render-repros/absolute-static-position.html",
+      "sha256": "7bb8c884d894ac0f44e6a72854e7d7c3535117135f5d5183c4ebc2a6aa03f5b0",
+      "bytes": 2385,
+      "integratedBytes": 2385,
+      "integratedSha256": "7bb8c884d894ac0f44e6a72854e7d7c3535117135f5d5183c4ebc2a6aa03f5b0"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/animation-fill-forwards.html",
+      "destination": "crates/render/render-repros/animation-fill-forwards.html",
+      "sha256": "66a0f93faba5791677925117697bd3f1a7947b9da950e6dfac0778a4f326d80b",
+      "bytes": 738,
+      "integratedBytes": 738,
+      "integratedSha256": "66a0f93faba5791677925117697bd3f1a7947b9da950e6dfac0778a4f326d80b"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/background-shorthand-reset.html",
+      "destination": "crates/render/render-repros/background-shorthand-reset.html",
+      "sha256": "9eca72a2357ecc5019f05a366fed8836e5d1108c3aaa1c9c214bff43b47af454",
+      "bytes": 682,
+      "integratedBytes": 682,
+      "integratedSha256": "9eca72a2357ecc5019f05a366fed8836e5d1108c3aaa1c9c214bff43b47af454"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/block-auto-margins.html",
+      "destination": "crates/render/render-repros/block-auto-margins.html",
+      "sha256": "12f80973b931c2b8be462aaf5ec95f7fa820ef3034439d9f630faeac87fe30f4",
+      "bytes": 1083,
+      "integratedBytes": 1083,
+      "integratedSha256": "12f80973b931c2b8be462aaf5ec95f7fa820ef3034439d9f630faeac87fe30f4"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/block-whitespace-margin-collapse.html",
+      "destination": "crates/render/render-repros/block-whitespace-margin-collapse.html",
+      "sha256": "24d672e7f9f1539e46ccb31dfc3690b65d4e6a8582fdecd9370aba83e905b56c",
+      "bytes": 459,
+      "integratedBytes": 459,
+      "integratedSha256": "24d672e7f9f1539e46ccb31dfc3690b65d4e6a8582fdecd9370aba83e905b56c"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/bootstrap-float-clearfix.html",
+      "destination": "crates/render/render-repros/bootstrap-float-clearfix.html",
+      "sha256": "e757e2550ffcf0fed7ac295a5b8e7b1d8b4c6fb01dbba5a8d557637fa80fa603",
+      "bytes": 744,
+      "integratedBytes": 744,
+      "integratedSha256": "e757e2550ffcf0fed7ac295a5b8e7b1d8b4c6fb01dbba5a8d557637fa80fa603"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/box-shadow-outset.html",
+      "destination": "crates/render/render-repros/box-shadow-outset.html",
+      "sha256": "931a530c34c49f2feaceac3bd8a44e0ac18b5d4a9ae759d7be66482f5b5997ce",
+      "bytes": 622,
+      "integratedBytes": 622,
+      "integratedSha256": "931a530c34c49f2feaceac3bd8a44e0ac18b5d4a9ae759d7be66482f5b5997ce"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/box-sizing.html",
+      "destination": "crates/render/render-repros/box-sizing.html",
+      "sha256": "b1f73731de8e070ecc9490a0957604b0798205999596a8091a81e0d5a447a4d0",
+      "bytes": 1206,
+      "integratedBytes": 1206,
+      "integratedSha256": "b1f73731de8e070ecc9490a0957604b0798205999596a8091a81e0d5a447a4d0"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/capture-media-emulation.py",
+      "destination": "crates/render/render-repros/capture-media-emulation.py",
+      "sha256": "3357a9ccdc978c82734503503df50f16d3887f9a6743f75fe3f8307cf6ff5715",
+      "bytes": 4226,
+      "integratedBytes": 4226,
+      "integratedSha256": "3357a9ccdc978c82734503503df50f16d3887f9a6743f75fe3f8307cf6ff5715"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/capture_chromium.py",
+      "destination": "crates/render/render-repros/capture_chromium.py",
+      "sha256": "3273b45174bdcbe91dc7a43d0d3ea46842e431f5739fe1bd872ce9ed33fcb90f",
+      "bytes": 1648,
+      "integratedBytes": 1648,
+      "integratedSha256": "3273b45174bdcbe91dc7a43d0d3ea46842e431f5739fe1bd872ce9ed33fcb90f"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/carousel-clip.html",
+      "destination": "crates/render/render-repros/carousel-clip.html",
+      "sha256": "5f05d7ff7c99dea9426e61e2f486a0715409994b1b73e1750253bbc95b697bf1",
+      "bytes": 944,
+      "integratedBytes": 944,
+      "integratedSha256": "5f05d7ff7c99dea9426e61e2f486a0715409994b1b73e1750253bbc95b697bf1"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/cascade-priority.html",
+      "destination": "crates/render/render-repros/cascade-priority.html",
+      "sha256": "5ad261c2e156ada829e415e76c3049b9213126ff830717f6650cf94aaee6108b",
+      "bytes": 1272,
+      "integratedBytes": 1272,
+      "integratedSha256": "5ad261c2e156ada829e415e76c3049b9213126ff830717f6650cf94aaee6108b"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/check.py",
+      "destination": "crates/render/render-repros/check.py",
+      "sha256": "c565321b69494245511b02e1d977aea4c5439a249112d01b05e364c4578f87db",
+      "bytes": 10549,
+      "integratedBytes": 10549,
+      "integratedSha256": "c565321b69494245511b02e1d977aea4c5439a249112d01b05e364c4578f87db"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/checks.json",
+      "destination": "crates/render/render-repros/checks.json",
+      "sha256": "0fd94beb0d67db9a7eaedef24d62f9e26f763138d0e88097b66c75debf087fdb",
+      "bytes": 34593,
+      "integratedBytes": 34593,
+      "integratedSha256": "0fd94beb0d67db9a7eaedef24d62f9e26f763138d0e88097b66c75debf087fdb"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/clear-float.html",
+      "destination": "crates/render/render-repros/clear-float.html",
+      "sha256": "c9b4aa58910ce431f8b72ab125ff270b939dbfcadba37bdd0452cc918e767073",
+      "bytes": 536,
+      "integratedBytes": 536,
+      "integratedSha256": "c9b4aa58910ce431f8b72ab125ff270b939dbfcadba37bdd0452cc918e767073"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/contained-flex-grid.html",
+      "destination": "crates/render/render-repros/contained-flex-grid.html",
+      "sha256": "017c40a3ed92a32da7377f0de07558369b7ca7c266498f50f345106448fe7f15",
+      "bytes": 742,
+      "integratedBytes": 742,
+      "integratedSha256": "017c40a3ed92a32da7377f0de07558369b7ca7c266498f50f345106448fe7f15"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/contextual-css-math.html",
+      "destination": "crates/render/render-repros/contextual-css-math.html",
+      "sha256": "a13bd4b6f2c8f50308d3482c264f261bef955ee725a113021c8c94743ec9fe06",
+      "bytes": 1300,
+      "integratedBytes": 1300,
+      "integratedSha256": "a13bd4b6f2c8f50308d3482c264f261bef955ee725a113021c8c94743ec9fe06"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/contextual-grid-gap.html",
+      "destination": "crates/render/render-repros/contextual-grid-gap.html",
+      "sha256": "0611d80ad4cdd0e38c545c2ef1b8796713bda8055b0ed79760f348517db0e2a2",
+      "bytes": 621,
+      "integratedBytes": 621,
+      "integratedSha256": "0611d80ad4cdd0e38c545c2ef1b8796713bda8055b0ed79760f348517db0e2a2"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/cssom-rule-ownership.html",
+      "destination": "crates/render/render-repros/cssom-rule-ownership.html",
+      "sha256": "e29bab8d8a136f89e1db8acc9751a676ff582405ffac6f54efd33e63f7b37dbb",
+      "bytes": 2233,
+      "integratedBytes": 2233,
+      "integratedSha256": "e29bab8d8a136f89e1db8acc9751a676ff582405ffac6f54efd33e63f7b37dbb"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/direction-rtl.html",
+      "destination": "crates/render/render-repros/direction-rtl.html",
+      "sha256": "2ade3f4a51a875150daacc4a90616a0775227f4728c2274ea777580048e93367",
+      "bytes": 678,
+      "integratedBytes": 678,
+      "integratedSha256": "2ade3f4a51a875150daacc4a90616a0775227f4728c2274ea777580048e93367"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/display-contents-cascade.html",
+      "destination": "crates/render/render-repros/display-contents-cascade.html",
+      "sha256": "dd4277bf194e8e7eb8f29566a4f04f87cb7820207ddee9eee91747aa005d4c67",
+      "bytes": 632,
+      "integratedBytes": 632,
+      "integratedSha256": "dd4277bf194e8e7eb8f29566a4f04f87cb7820207ddee9eee91747aa005d4c67"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/eventtarget-lifecycle.html",
+      "destination": "crates/render/render-repros/eventtarget-lifecycle.html",
+      "sha256": "4e97225c35ebd3bd7347e93927a69e6bf1a730c6f3427f48f78b3e7fb4619d3a",
+      "bytes": 1063,
+      "integratedBytes": 1063,
+      "integratedSha256": "4e97225c35ebd3bd7347e93927a69e6bf1a730c6f3427f48f78b3e7fb4619d3a"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/fixed-table-layout.html",
+      "destination": "crates/render/render-repros/fixed-table-layout.html",
+      "sha256": "2bdd3f165f6601dbae05cbdc9778a644c9520abd96b80c4bf73c39d6cf2e9802",
+      "bytes": 1066,
+      "integratedBytes": 1066,
+      "integratedSha256": "2bdd3f165f6601dbae05cbdc9778a644c9520abd96b80c4bf73c39d6cf2e9802"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/flex-flow.html",
+      "destination": "crates/render/render-repros/flex-flow.html",
+      "sha256": "9ff069ade2ba0282bb766c0873f78b24cfae1dac938ea3a14822342ef8d8585a",
+      "bytes": 2113,
+      "integratedBytes": 2113,
+      "integratedSha256": "9ff069ade2ba0282bb766c0873f78b24cfae1dac938ea3a14822342ef8d8585a"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/flex-post-ratio-cross-size.html",
+      "destination": "crates/render/render-repros/flex-post-ratio-cross-size.html",
+      "sha256": "d4d9e92578c47e173e32b63ffed79a70ee9d7fdb232e03a8d5532354883e46f0",
+      "bytes": 1067,
+      "integratedBytes": 1067,
+      "integratedSha256": "d4d9e92578c47e173e32b63ffed79a70ee9d7fdb232e03a8d5532354883e46f0"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/flex-whitespace-items.html",
+      "destination": "crates/render/render-repros/flex-whitespace-items.html",
+      "sha256": "970bd33aea52f5ec10d1864f8296008acc7bddcfbd3616cbba5fa5cdd8734e66",
+      "bytes": 1367,
+      "integratedBytes": 1367,
+      "integratedSha256": "970bd33aea52f5ec10d1864f8296008acc7bddcfbd3616cbba5fa5cdd8734e66"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/float-bfc-continuation.html",
+      "destination": "crates/render/render-repros/float-bfc-continuation.html",
+      "sha256": "568da4dbdc61f39042316e025cd1f876247379c7a645dcd833d891fdcc516f4b",
+      "bytes": 955,
+      "integratedBytes": 955,
+      "integratedSha256": "568da4dbdc61f39042316e025cd1f876247379c7a645dcd833d891fdcc516f4b"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/float-flow-bands.html",
+      "destination": "crates/render/render-repros/float-flow-bands.html",
+      "sha256": "c4b32b993ca9c2e46e152304ba71b9274c3cb1e7d8e118a63998ccc15d590652",
+      "bytes": 1447,
+      "integratedBytes": 1447,
+      "integratedSha256": "c4b32b993ca9c2e46e152304ba71b9274c3cb1e7d8e118a63998ccc15d590652"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/font-metric-line-height.html",
+      "destination": "crates/render/render-repros/font-metric-line-height.html",
+      "sha256": "df7589211cab52b040508211fa3bfa5ecf56d171377afe688f10aa275a59c48a",
+      "bytes": 2699,
+      "integratedBytes": 2699,
+      "integratedSha256": "df7589211cab52b040508211fa3bfa5ecf56d171377afe688f10aa275a59c48a"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/font-shorthand.html",
+      "destination": "crates/render/render-repros/font-shorthand.html",
+      "sha256": "5b433c6e1cf6918bd3365ba5c6ee8ef17c65813fe44547628000ff81b071d30f",
+      "bytes": 599,
+      "integratedBytes": 599,
+      "integratedSha256": "5b433c6e1cf6918bd3365ba5c6ee8ef17c65813fe44547628000ff81b071d30f"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/forced-line-breaks.html",
+      "destination": "crates/render/render-repros/forced-line-breaks.html",
+      "sha256": "ab4117b4d4eec1d6454a5092894657e49f6a33ad03d9e6d1fe5cd25996714cdd",
+      "bytes": 1439,
+      "integratedBytes": 1439,
+      "integratedSha256": "ab4117b4d4eec1d6454a5092894657e49f6a33ad03d9e6d1fe5cd25996714cdd"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/form-control-geometry.html",
+      "destination": "crates/render/render-repros/form-control-geometry.html",
+      "sha256": "0967bd8961024ea2cc9c1fa3ffb903464bb648ddeef2f3cc23408b6301bbe1ee",
+      "bytes": 2060,
+      "integratedBytes": 2060,
+      "integratedSha256": "0967bd8961024ea2cc9c1fa3ffb903464bb648ddeef2f3cc23408b6301bbe1ee"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/form-control-quirks.html",
+      "destination": "crates/render/render-repros/form-control-quirks.html",
+      "sha256": "03e0c36a3cb47d1f5a5bac9bfab579f5847af3c5e85ccb349100f871cd74b460",
+      "bytes": 702,
+      "integratedBytes": 702,
+      "integratedSha256": "03e0c36a3cb47d1f5a5bac9bfab579f5847af3c5e85ccb349100f871cd74b460"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/grid-auto-repeat.html",
+      "destination": "crates/render/render-repros/grid-auto-repeat.html",
+      "sha256": "3fa6eee736d67ef7c1de386f95573301ba1c2ed2440f0d1f464240c9c15cb2ab",
+      "bytes": 642,
+      "integratedBytes": 642,
+      "integratedSha256": "3fa6eee736d67ef7c1de386f95573301ba1c2ed2440f0d1f464240c9c15cb2ab"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/grid-shorthand.html",
+      "destination": "crates/render/render-repros/grid-shorthand.html",
+      "sha256": "71b4cfb10409c81f31806c278ca1469654c3080a9a50952d23207b1d8b44ee13",
+      "bytes": 630,
+      "integratedBytes": 630,
+      "integratedSha256": "71b4cfb10409c81f31806c278ca1469654c3080a9a50952d23207b1d8b44ee13"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/img-density-and-alt.html",
+      "destination": "crates/render/render-repros/img-density-and-alt.html",
+      "sha256": "1c5625d42e4a2dccc804c03d94416c7b79e56ca9e032bf800feaee3032eca4dd",
+      "bytes": 2821,
+      "integratedBytes": 2821,
+      "integratedSha256": "1c5625d42e4a2dccc804c03d94416c7b79e56ca9e032bf800feaee3032eca4dd"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/inline-block-flex-items.html",
+      "destination": "crates/render/render-repros/inline-block-flex-items.html",
+      "sha256": "e0e45ae333692ea6c902f9be9724df61796ed4cdff403865ef3ac66485919db7",
+      "bytes": 1580,
+      "integratedBytes": 1580,
+      "integratedSha256": "e0e45ae333692ea6c902f9be9724df61796ed4cdff403865ef3ac66485919db7"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/inline-replaced-flow.html",
+      "destination": "crates/render/render-repros/inline-replaced-flow.html",
+      "sha256": "8624f1502345afd80e61724adf9d2f49dc201a7e3520e9a62c0e9ee34d3754fe",
+      "bytes": 2286,
+      "integratedBytes": 2286,
+      "integratedSha256": "8624f1502345afd80e61724adf9d2f49dc201a7e3520e9a62c0e9ee34d3754fe"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/item-self-alignment.html",
+      "destination": "crates/render/render-repros/item-self-alignment.html",
+      "sha256": "6c079bfc76ca13bacd97f5f4120f2f96a51fbf1fbb59d780144b16421b868db3",
+      "bytes": 2897,
+      "integratedBytes": 2897,
+      "integratedSha256": "6c079bfc76ca13bacd97f5f4120f2f96a51fbf1fbb59d780144b16421b868db3"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/legacy-center.html",
+      "destination": "crates/render/render-repros/legacy-center.html",
+      "sha256": "01ce0551756516ed619d45260887ca6c76576f1af7ee379211c116d2d6629d5c",
+      "bytes": 2134,
+      "integratedBytes": 2134,
+      "integratedSha256": "01ce0551756516ed619d45260887ca6c76576f1af7ee379211c116d2d6629d5c"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/list-indentation.html",
+      "destination": "crates/render/render-repros/list-indentation.html",
+      "sha256": "cb7194b8e0817c4384977a6eb918923b055de9896ff9d5dd28e807ed901adde2",
+      "bytes": 1243,
+      "integratedBytes": 1243,
+      "integratedSha256": "cb7194b8e0817c4384977a6eb918923b055de9896ff9d5dd28e807ed901adde2"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/live-form-state.html",
+      "destination": "crates/render/render-repros/live-form-state.html",
+      "sha256": "421204366a51c49f96e1b7c83b79c864b5466effddd8b8ec717baf98d2db78ff",
+      "bytes": 1381,
+      "integratedBytes": 1381,
+      "integratedSha256": "421204366a51c49f96e1b7c83b79c864b5466effddd8b8ec717baf98d2db78ff"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/logical-borders.html",
+      "destination": "crates/render/render-repros/logical-borders.html",
+      "sha256": "e1ead77bfffbe41c930e4d8e9fa30275c4ce5a6e2410ae860af9df40db527f56",
+      "bytes": 680,
+      "integratedBytes": 680,
+      "integratedSha256": "e1ead77bfffbe41c930e4d8e9fa30275c4ce5a6e2410ae860af9df40db527f56"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/long-full-page-capture.html",
+      "destination": "crates/render/render-repros/long-full-page-capture.html",
+      "sha256": "8a182b6b5c32a77f9bd313d7ec2a3e93388b81710977311d4203d26bb160a6e9",
+      "bytes": 722,
+      "integratedBytes": 722,
+      "integratedSha256": "8a182b6b5c32a77f9bd313d7ec2a3e93388b81710977311d4203d26bb160a6e9"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/max-height-replaced.html",
+      "destination": "crates/render/render-repros/max-height-replaced.html",
+      "sha256": "e5d67f8674ef3ecf1d9e4232566d5d76865b2a37b116e78401fc3e6d69b4d1c6",
+      "bytes": 908,
+      "integratedBytes": 908,
+      "integratedSha256": "e5d67f8674ef3ecf1d9e4232566d5d76865b2a37b116e78401fc3e6d69b4d1c6"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/media-emulation.md",
+      "destination": "crates/render/render-repros/media-emulation.md",
+      "sha256": "7aca45c90631d2ebd2e136c93c98a70e3743fc2afdd7400929be52baa52926fe",
+      "bytes": 1365,
+      "integratedBytes": 1376,
+      "integratedSha256": "01a1906719d08110d0693af33f6bbfd45fb840f58b778e3bc5bbecd826742de1"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/media-text-track.html",
+      "destination": "crates/render/render-repros/media-text-track.html",
+      "sha256": "4d2b5caa783237c82a51f4effb548c02bd2c471c8d383c5aa2852746201798e4",
+      "bytes": 1282,
+      "integratedBytes": 1282,
+      "integratedSha256": "4d2b5caa783237c82a51f4effb548c02bd2c471c8d383c5aa2852746201798e4"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/mixed-content-block.html",
+      "destination": "crates/render/render-repros/mixed-content-block.html",
+      "sha256": "011c4427143a06b1a26b2b142ba52d9992c8afc18e6a1faf3c923e26d12b37cd",
+      "bytes": 774,
+      "integratedBytes": 774,
+      "integratedSha256": "011c4427143a06b1a26b2b142ba52d9992c8afc18e6a1faf3c923e26d12b37cd"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/mixed-float-run.html",
+      "destination": "crates/render/render-repros/mixed-float-run.html",
+      "sha256": "ac383a638cdf5fdd0556ca89300eeadff183fc760455cd6ef763db8a8339a438",
+      "bytes": 726,
+      "integratedBytes": 726,
+      "integratedSha256": "ac383a638cdf5fdd0556ca89300eeadff183fc760455cd6ef763db8a8339a438"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/modern-containing-block-triggers.html",
+      "destination": "crates/render/render-repros/modern-containing-block-triggers.html",
+      "sha256": "e685a475d3746fa0bd3a9bebaa4fb8d1db9fc9aff4a42f97eb24db1b2aca94ee",
+      "bytes": 1836,
+      "integratedBytes": 1836,
+      "integratedSha256": "e685a475d3746fa0bd3a9bebaa4fb8d1db9fc9aff4a42f97eb24db1b2aca94ee"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/modern-hydration-contracts.html",
+      "destination": "crates/render/render-repros/modern-hydration-contracts.html",
+      "sha256": "cfc6f90598d5df29ea30482a978af7c1c525b497ddef755708cc462c9319a9eb",
+      "bytes": 2552,
+      "integratedBytes": 2552,
+      "integratedSha256": "cfc6f90598d5df29ea30482a978af7c1c525b497ddef755708cc462c9319a9eb"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/modern-streams.html",
+      "destination": "crates/render/render-repros/modern-streams.html",
+      "sha256": "10c793f1c570a6e910c022738a3e44dfa8942b8539fb3e29899f5ad9d58d3aa6",
+      "bytes": 1833,
+      "integratedBytes": 1833,
+      "integratedSha256": "10c793f1c570a6e910c022738a3e44dfa8942b8539fb3e29899f5ad9d58d3aa6"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/nested-float-clearance.html",
+      "destination": "crates/render/render-repros/nested-float-clearance.html",
+      "sha256": "6f5fe747b2d6ef9aeec9adf214f05657732c70cb4c596624395ccddde54adf2c",
+      "bytes": 847,
+      "integratedBytes": 847,
+      "integratedSha256": "6f5fe747b2d6ef9aeec9adf214f05657732c70cb4c596624395ccddde54adf2c"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/opposing-header-floats.html",
+      "destination": "crates/render/render-repros/opposing-header-floats.html",
+      "sha256": "c1a2d069de1b39980e960cfe2c7e01bf7d6c0cba25c633df640edf70e8702696",
+      "bytes": 737,
+      "integratedBytes": 737,
+      "integratedSha256": "c1a2d069de1b39980e960cfe2c7e01bf7d6c0cba25c633df640edf70e8702696"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/paired-corpus.py",
+      "destination": "crates/render/render-repros/paired-corpus.py",
+      "sha256": "abc3063d0aeb2510c3d25cc12f03160ef9e29dc869c25506d586abff7454685c",
+      "bytes": 128981,
+      "integratedBytes": 128981,
+      "integratedSha256": "abc3063d0aeb2510c3d25cc12f03160ef9e29dc869c25506d586abff7454685c"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/pdf-print-import.css",
+      "destination": "crates/render/render-repros/pdf-print-import.css",
+      "sha256": "17c8bc28cac15d8641f3b9d1b894aef70f093d79b3dcb5afadcd8341e481bfd5",
+      "bytes": 163,
+      "integratedBytes": 163,
+      "integratedSha256": "17c8bc28cac15d8641f3b9d1b894aef70f093d79b3dcb5afadcd8341e481bfd5"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/pdf-print-media.html",
+      "destination": "crates/render/render-repros/pdf-print-media.html",
+      "sha256": "e5a3846b61a5a584f00686bcad719243fc2dd4a2f0b34934ca16299c6387b431",
+      "bytes": 1353,
+      "integratedBytes": 1353,
+      "integratedSha256": "e5a3846b61a5a584f00686bcad719243fc2dd4a2f0b34934ca16299c6387b431"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/percentage-height-indefinite-parent.html",
+      "destination": "crates/render/render-repros/percentage-height-indefinite-parent.html",
+      "sha256": "ce713b3c09706b077cd3ddb32842258bf579929775fa4f1a20077cce2e19faec",
+      "bytes": 703,
+      "integratedBytes": 703,
+      "integratedSha256": "ce713b3c09706b077cd3ddb32842258bf579929775fa4f1a20077cce2e19faec"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/ratio-only-inline-images.html",
+      "destination": "crates/render/render-repros/ratio-only-inline-images.html",
+      "sha256": "2d43270942c6dfc43eea32af5dae258963fd63a0280f2c95dd32293fcf827c25",
+      "bytes": 1804,
+      "integratedBytes": 1804,
+      "integratedSha256": "2d43270942c6dfc43eea32af5dae258963fd63a0280f2c95dd32293fcf827c25"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/reduced-motion-emulation.html",
+      "destination": "crates/render/render-repros/reduced-motion-emulation.html",
+      "sha256": "0981f4d437c108a4718808b3dc9633be09e8329575e1e874807655737c836a9f",
+      "bytes": 478,
+      "integratedBytes": 478,
+      "integratedSha256": "0981f4d437c108a4718808b3dc9633be09e8329575e1e874807655737c836a9f"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/relative-box-edges.html",
+      "destination": "crates/render/render-repros/relative-box-edges.html",
+      "sha256": "43e36ea00089a046087b584db7130dcbdce5928b8d34ede83bc6c840bd43888a",
+      "bytes": 1369,
+      "integratedBytes": 1369,
+      "integratedSha256": "43e36ea00089a046087b584db7130dcbdce5928b8d34ede83bc6c840bd43888a"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/replaced-block-wrapper.html",
+      "destination": "crates/render/render-repros/replaced-block-wrapper.html",
+      "sha256": "ef9d72e623ee421dd1ad6f824f1fbbfcf0026b7422b4edc50e590340f95677d5",
+      "bytes": 1272,
+      "integratedBytes": 1272,
+      "integratedSha256": "ef9d72e623ee421dd1ad6f824f1fbbfcf0026b7422b4edc50e590340f95677d5"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/replaced-grid-order.html",
+      "destination": "crates/render/render-repros/replaced-grid-order.html",
+      "sha256": "97b928a52ec9697e73613854e2c9697aad644b9e72f623048aa377b642d25c5d",
+      "bytes": 1002,
+      "integratedBytes": 1002,
+      "integratedSha256": "97b928a52ec9697e73613854e2c9697aad644b9e72f623048aa377b642d25c5d"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/representative-suite/run.sh",
+      "destination": "crates/render/render-repros/representative-suite/run.sh",
+      "sha256": "5a37fba26e963d23695f65fd26c60208d4c25ddc0f637271a8272fa87d53e421",
+      "bytes": 3040,
+      "integratedBytes": 3040,
+      "integratedSha256": "5a37fba26e963d23695f65fd26c60208d4c25ddc0f637271a8272fa87d53e421"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/representative-suite/sites.txt",
+      "destination": "crates/render/render-repros/representative-suite/sites.txt",
+      "sha256": "53c7a4cfce6820335783a90da0a8650c966b75ad55a49be73254cb737ce667d3",
+      "bytes": 547,
+      "integratedBytes": 547,
+      "integratedSha256": "53c7a4cfce6820335783a90da0a8650c966b75ad55a49be73254cb737ce667d3"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/representative-suite/test_suite.py",
+      "destination": "crates/render/render-repros/representative-suite/test_suite.py",
+      "sha256": "343d4d4e5e418931d5d35322a35024fc8c6ff03d52172a1ab06affa3d6bd40e4",
+      "bytes": 6736,
+      "integratedBytes": 6736,
+      "integratedSha256": "343d4d4e5e418931d5d35322a35024fc8c6ff03d52172a1ab06affa3d6bd40e4"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/retained-cssom-raster.html",
+      "destination": "crates/render/render-repros/retained-cssom-raster.html",
+      "sha256": "01dbaea70bfc16c3b29911498b716986a38d6c6a48bd5ed7b86de9667389891e",
+      "bytes": 2732,
+      "integratedBytes": 2732,
+      "integratedSha256": "01dbaea70bfc16c3b29911498b716986a38d6c6a48bd5ed7b86de9667389891e"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/right-float-navigation.html",
+      "destination": "crates/render/render-repros/right-float-navigation.html",
+      "sha256": "3845aafb0433bf948cbaf8a48c58ab58351cbf57c02a499bd330626b9d93843d",
+      "bytes": 1061,
+      "integratedBytes": 1061,
+      "integratedSha256": "3845aafb0433bf948cbaf8a48c58ab58351cbf57c02a499bd330626b9d93843d"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/run.sh",
+      "destination": "crates/render/render-repros/run.sh",
+      "sha256": "9b8a7c20dbdb45b2c72a28c6630c867fe1706e265dd97af2f623b1643bb1a3bb",
+      "bytes": 1470,
+      "integratedBytes": 1470,
+      "integratedSha256": "9b8a7c20dbdb45b2c72a28c6630c867fe1706e265dd97af2f623b1643bb1a3bb"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/scroll-into-view.html",
+      "destination": "crates/render/render-repros/scroll-into-view.html",
+      "sha256": "65cbdbd1242b78f894184daae3f5f6d9d619c4c191df42ff368c4cd1017b6cff",
+      "bytes": 898,
+      "integratedBytes": 898,
+      "integratedSha256": "65cbdbd1242b78f894184daae3f5f6d9d619c4c191df42ff368c4cd1017b6cff"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/sparse-grid-scroll.html",
+      "destination": "crates/render/render-repros/sparse-grid-scroll.html",
+      "sha256": "cee9c40ab99dccb43d78082843a5e688a8927608eefab14eeaf635e29eda83b4",
+      "bytes": 736,
+      "integratedBytes": 736,
+      "integratedSha256": "cee9c40ab99dccb43d78082843a5e688a8927608eefab14eeaf635e29eda83b4"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/spot-sites.txt",
+      "destination": "crates/render/render-repros/spot-sites.txt",
+      "sha256": "d409fd835cb21352d4f6d9b63215ebb726637c9cfe726997d94b0541f194b4cd",
+      "bytes": 295,
+      "integratedBytes": 295,
+      "integratedSha256": "d409fd835cb21352d4f6d9b63215ebb726637c9cfe726997d94b0541f194b4cd"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/supports-var-feature-query.html",
+      "destination": "crates/render/render-repros/supports-var-feature-query.html",
+      "sha256": "5283f04d50ec2cc3e16ac6cb1aacceb8d08f5a3560030d8fe7d989c8639c25d2",
+      "bytes": 278,
+      "integratedBytes": 278,
+      "integratedSha256": "5283f04d50ec2cc3e16ac6cb1aacceb8d08f5a3560030d8fe7d989c8639c25d2"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/table-row-geometry.html",
+      "destination": "crates/render/render-repros/table-row-geometry.html",
+      "sha256": "0c479495b638ff59397005ba169dd7aab501a5935aa6a51af75401b355ecc99e",
+      "bytes": 2898,
+      "integratedBytes": 2898,
+      "integratedSha256": "0c479495b638ff59397005ba169dd7aab501a5935aa6a51af75401b355ecc99e"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/table-track-geometry.html",
+      "destination": "crates/render/render-repros/table-track-geometry.html",
+      "sha256": "61163e1a38226a7811017b93ecbdee74af93b23497fb5bfb0e0802f22c2e6032",
+      "bytes": 3104,
+      "integratedBytes": 3104,
+      "integratedSha256": "61163e1a38226a7811017b93ecbdee74af93b23497fb5bfb0e0802f22c2e6032"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/tables.html",
+      "destination": "crates/render/render-repros/tables.html",
+      "sha256": "95d36e09ae1d44f56a089f438adb8d61b0904080a9f1af2a1be6b99d5b42ebe8",
+      "bytes": 1325,
+      "integratedBytes": 1325,
+      "integratedSha256": "95d36e09ae1d44f56a089f438adb8d61b0904080a9f1af2a1be6b99d5b42ebe8"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/test_check.py",
+      "destination": "crates/render/render-repros/test_check.py",
+      "sha256": "667d2ceadc21a330f824d656bea555bcbdabd5075683c764ead84a5821ba37a5",
+      "bytes": 1617,
+      "integratedBytes": 1617,
+      "integratedSha256": "667d2ceadc21a330f824d656bea555bcbdabd5075683c764ead84a5821ba37a5"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/test_paired_corpus.py",
+      "destination": "crates/render/render-repros/test_paired_corpus.py",
+      "sha256": "60ce5bb4df52d66df1bb122813cea89f145f9c7fccab66c5ccbb0fdb0f12b454",
+      "bytes": 49014,
+      "integratedBytes": 49014,
+      "integratedSha256": "60ce5bb4df52d66df1bb122813cea89f145f9c7fccab66c5ccbb0fdb0f12b454"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/text-align-flex-items.html",
+      "destination": "crates/render/render-repros/text-align-flex-items.html",
+      "sha256": "b699bd768fc4c2ef5a14c50941846cb48ef1ea7fc5437f49250161d8a6109256",
+      "bytes": 819,
+      "integratedBytes": 819,
+      "integratedSha256": "b699bd768fc4c2ef5a14c50941846cb48ef1ea7fc5437f49250161d8a6109256"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/text-decoration-lines.html",
+      "destination": "crates/render/render-repros/text-decoration-lines.html",
+      "sha256": "e2223dda266382ac8fa26d4a58ae08a31c7ecaf42e564e0b8b37fd0825602d52",
+      "bytes": 893,
+      "integratedBytes": 893,
+      "integratedSha256": "e2223dda266382ac8fa26d4a58ae08a31c7ecaf42e564e0b8b37fd0825602d52"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/transform-containing-block.html",
+      "destination": "crates/render/render-repros/transform-containing-block.html",
+      "sha256": "5d9d0cd7cd837de5ee92c5351d96563bc43299659260e69dbc983b5f663a719d",
+      "bytes": 1293,
+      "integratedBytes": 1293,
+      "integratedSha256": "5d9d0cd7cd837de5ee92c5351d96563bc43299659260e69dbc983b5f663a719d"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/video-poster.html",
+      "destination": "crates/render/render-repros/video-poster.html",
+      "sha256": "a938968365170dcddbd5d1183ce38d733cc68c810bbdb48643058de8343f9777",
+      "bytes": 1591,
+      "integratedBytes": 1591,
+      "integratedSha256": "a938968365170dcddbd5d1183ce38d733cc68c810bbdb48643058de8343f9777"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/viewport-consistency.html",
+      "destination": "crates/render/render-repros/viewport-consistency.html",
+      "sha256": "d86eae40b1ff428e619741e5eb763d7fa3b1ad991099008af23ae0643c20ce57",
+      "bytes": 895,
+      "integratedBytes": 895,
+      "integratedSha256": "d86eae40b1ff428e619741e5eb763d7fa3b1ad991099008af23ae0643c20ce57"
+    },
+    {
+      "source": "crates/web/obscura-render/render-repros/z-index.html",
+      "destination": "crates/render/render-repros/z-index.html",
+      "sha256": "1ca1039fe1f59873a34de8149a850c3e236e79e3cc8ea283254d0ae692d53004",
+      "bytes": 803,
+      "integratedBytes": 803,
+      "integratedSha256": "1ca1039fe1f59873a34de8149a850c3e236e79e3cc8ea283254d0ae692d53004"
+    },
+    {
+      "source": "crates/web/obscura-render/src/border.rs",
+      "destination": "crates/render/src/border.rs",
+      "sha256": "38d809cebdfe10083bc88813bdfa5cc5829c06ff349a8c86fd1d384d93429596",
+      "bytes": 12773,
+      "integratedBytes": 12773,
+      "integratedSha256": "38d809cebdfe10083bc88813bdfa5cc5829c06ff349a8c86fd1d384d93429596"
+    },
+    {
+      "source": "crates/web/obscura-render/src/css.rs",
+      "destination": "crates/render/src/css.rs",
+      "sha256": "9361ad3f5e5bb338eb21f46626cf1112862feedd993288392c31a541d944d37e",
+      "bytes": 375749,
+      "integratedBytes": 376868,
+      "integratedSha256": "7d5de2885ac037e79dec5a768efd2e874aa58730613349d2d1710c88871a5fc9"
+    },
+    {
+      "source": "crates/web/obscura-render/src/dom.rs",
+      "destination": "crates/render/src/dom.rs",
+      "sha256": "8f79c4e6ae94a04ece64e4be713d762d7bd05c626052eb61edfe7840cfd3f1b6",
+      "bytes": 920381,
+      "integratedBytes": 920507,
+      "integratedSha256": "807a7bc885c3f49b213e9a708ffa47d9c7a966fd05b41e5048e3b6997123f98a"
+    },
+    {
+      "source": "crates/web/obscura-render/src/inline.rs",
+      "destination": "crates/render/src/inline.rs",
+      "sha256": "a570d012441e60be87eea4f8aa3af8fab82558930cf5751001512fe1a31fc4a7",
+      "bytes": 219134,
+      "integratedBytes": 219341,
+      "integratedSha256": "1c56a10ea4b695bb07008a3e0d474733dbf0f7d5afa27c86006b0c39f8edd803"
+    },
+    {
+      "source": "crates/web/obscura-render/src/lib.rs",
+      "destination": "crates/render/src/lib.rs",
+      "sha256": "1e4723b29061b3b317e47d475fca88318bf876dee849d022b249b61ce28e14a5",
+      "bytes": 119480,
+      "integratedBytes": 119607,
+      "integratedSha256": "bce7aeadc0d37e326bbd9d3ddc870cc3e0301235e591de916ed849147e1bc22f"
+    },
+    {
+      "source": "crates/web/obscura-render/src/paint.rs",
+      "destination": "crates/render/src/paint.rs",
+      "sha256": "63564aaedafd34cb9b1842702ec5ba92bb8c9390e4bc58a821825e2d0801e685",
+      "bytes": 798456,
+      "integratedBytes": 798975,
+      "integratedSha256": "4f2323f2865704f90dc0b5fdc6a47d2b6958066d985b7555b26f5f6cbce3e8a2"
+    },
+    {
+      "source": "crates/web/obscura-render/src/style.rs",
+      "destination": "crates/render/src/style.rs",
+      "sha256": "2c774662a655fd7512d9fe33475dbdbc12ffad879d62e923ff43062a56c648e3",
+      "bytes": 410532,
+      "integratedBytes": 410543,
+      "integratedSha256": "0442652b443eca7e963cdcd14f42cbd8d30e72f701c690c46e199c988a22700b"
+    },
+    {
+      "source": "crates/web/obscura-render/tests/flat_tree_allocations.rs",
+      "destination": "crates/render/tests/flat_tree_allocations.rs",
+      "sha256": "8f9c6b8983586ccf0412ad04ca10eb789f5f0e02219b89ee233e112f4b80b293",
+      "bytes": 2405,
+      "integratedBytes": 2405,
+      "integratedSha256": "f87415044efc516cc73ff759dbd44ec79d741a5073567b843551636d1a259159"
+    },
+    {
+      "source": "crates/web/obscura-render/tests/fonts/LICENSE-OFL-1.1.txt",
+      "destination": "crates/render/tests/fonts/LICENSE-OFL-1.1.txt",
+      "sha256": "b3195af0fb14368d1b3b10fb9d3fe503b7163ea083859d2ee553bc74da07c320",
+      "bytes": 4472,
+      "integratedBytes": 4472,
+      "integratedSha256": "b3195af0fb14368d1b3b10fb9d3fe503b7163ea083859d2ee553bc74da07c320"
+    },
+    {
+      "source": "crates/web/obscura-render/tests/fonts/NotoSans-LICENSE",
+      "destination": "crates/render/tests/fonts/NotoSans-LICENSE",
+      "sha256": "9dcf4c49c17873ab93ee242ca9c5ca4f28a39e4bf17061cac8d63ad004c09744",
+      "bytes": 4350,
+      "integratedBytes": 4350,
+      "integratedSha256": "9dcf4c49c17873ab93ee242ca9c5ca4f28a39e4bf17061cac8d63ad004c09744"
+    },
+    {
+      "source": "crates/web/obscura-render/tests/fonts/NotoSansArabic.ttf",
+      "destination": "crates/render/tests/fonts/NotoSansArabic.ttf",
+      "sha256": "ee489b994b3e62def9874c918145e32b133b625abaf98cec60502bdb40102c56",
+      "bytes": 765740,
+      "integratedBytes": 765740,
+      "integratedSha256": "ee489b994b3e62def9874c918145e32b133b625abaf98cec60502bdb40102c56"
+    },
+    {
+      "source": "crates/web/obscura-render/tests/fonts/PROVENANCE.txt",
+      "destination": "crates/render/tests/fonts/PROVENANCE.txt",
+      "sha256": "e61bdde47144f7c6a9458b182e51ebcd0560384bd7e574686510d0635354a464",
+      "bytes": 1224,
+      "integratedBytes": 1224,
+      "integratedSha256": "e61bdde47144f7c6a9458b182e51ebcd0560384bd7e574686510d0635354a464"
+    },
+    {
+      "source": "crates/web/obscura-render/tests/fonts/obscura-vf-test.woff2.b64",
+      "destination": "crates/render/tests/fonts/obscura-vf-test.woff2.b64",
+      "sha256": "631a3e5208116da145dd7cf24faa672f563cd0ea009a3fc1ff4bfe0f054ae401",
+      "bytes": 5054,
+      "integratedBytes": 5054,
+      "integratedSha256": "631a3e5208116da145dd7cf24faa672f563cd0ea009a3fc1ff4bfe0f054ae401"
+    },
+    {
+      "source": "crates/web/obscura-render/tests/layout_test.rs",
+      "destination": "crates/render/tests/layout_test.rs",
+      "sha256": "ff65b60ffb05298e64586129aeec68d6ed00e1dc835098c7bce9b9760c1df208",
+      "bytes": 187636,
+      "integratedBytes": 187779,
+      "integratedSha256": "8bd469f91b4ae21b86e7cb0fcf1f9e70d130d91dd341f83ad06dc7c6d4fa9bed"
+    },
+    {
+      "source": "crates/web/obscura-render/tests/text_decoration.rs",
+      "destination": "crates/render/tests/text_decoration.rs",
+      "sha256": "c978b590c6d5c97407f99892d535cf43137187f3295d9e5796a9c0ec6b131f70",
+      "bytes": 4039,
+      "integratedBytes": 4047,
+      "integratedSha256": "8108cea1a2ad7a8c5f83e2a7122164fdea0259e713ada9ec35f59f764ad8e8fd"
+    },
+    {
+      "source": "crates/web/obscura-ssrf/Cargo.toml",
+      "destination": "crates/ssrf/Cargo.toml",
+      "sha256": "8dbc5e272023f6bf7a112489945fded15d515099d17f0fac835439aaa470bdbc",
+      "bytes": 801,
+      "integratedBytes": 807,
+      "integratedSha256": "2548eee41918a61bc64d3bbf9ad4880adf2b7016b1ac67741b2a4ae2c4375954"
+    },
+    {
+      "source": "crates/web/obscura-ssrf/src/lib.rs",
+      "destination": "crates/ssrf/src/lib.rs",
+      "sha256": "d2ebdad709a2eb195eca2251791eacf90c23a3333cdcd4727e3ba4caf725b57b",
+      "bytes": 5820,
+      "integratedBytes": 5831,
+      "integratedSha256": "fe4a87848648a078dd32d1113e23c10c3875f802bcc360a43f77da9fb410f87f"
+    },
+    {
+      "source": "crates/web/obscura/Cargo.toml",
+      "destination": "crates/api/Cargo.toml",
+      "sha256": "485f9f01a4481870dffe243ecf1e2da0e961d1bc8136971f4169151e151de16f",
+      "bytes": 1381,
+      "integratedBytes": 1407,
+      "integratedSha256": "1cd19e73e344b8f87612b2d815fb40da08eea03270c9c2f8ddb146aa1b2e9929"
+    },
+    {
+      "source": "crates/web/obscura/README.md",
+      "destination": "crates/api/README.md",
+      "sha256": "8717c0943ee3b2b6efa9f2dd7e926062d2342e2e63bf11d49cec7d52f3b82d2e",
+      "bytes": 1287,
+      "integratedBytes": 1303,
+      "integratedSha256": "ebe7b964e0b22009563f78c4af7260c38b040ea290747be842f1ba94ff3c9bdf"
+    },
+    {
+      "source": "crates/web/obscura/examples/basic.rs",
+      "destination": "crates/api/examples/basic.rs",
+      "sha256": "034256eb895a08cf6708156132ae3900888f3186abbbd658eccbeaa28cce92db",
+      "bytes": 635,
+      "integratedBytes": 643,
+      "integratedSha256": "5c8de0a8dc2efa962df87fb508d8231be96b085ed386ed8dad1a14fb8a6cbc43"
+    },
+    {
+      "source": "crates/web/obscura/src/browser.rs",
+      "destination": "crates/api/src/browser.rs",
+      "sha256": "ce3abda280af0df2a983eb1bbed1a019369e8f08cff5c31d1a8ab59f1de18244",
+      "bytes": 2351,
+      "integratedBytes": 2363,
+      "integratedSha256": "96032cbf22e0c76a9981f6e80e1b9c4e071bf873aa80c1cd9bf06953a8e7a3fd"
+    },
+    {
+      "source": "crates/web/obscura/src/config.rs",
+      "destination": "crates/api/src/config.rs",
+      "sha256": "ea37ef5cb7a8405b6a75858f4356ff3eaacf896624cb20de7fe73dbd34be1a85",
+      "bytes": 1728,
+      "integratedBytes": 1728,
+      "integratedSha256": "ea37ef5cb7a8405b6a75858f4356ff3eaacf896624cb20de7fe73dbd34be1a85"
+    },
+    {
+      "source": "crates/web/obscura/src/cookie.rs",
+      "destination": "crates/api/src/cookie.rs",
+      "sha256": "396dee830c52bdeb5a6d01893c449364743e0b5a5e1064400303fc41c608adb9",
+      "bytes": 3123,
+      "integratedBytes": 3127,
+      "integratedSha256": "c8c61de03051d6a10ee0732c26820dce5616ec673b777b52c59110b453cc1d43"
+    },
+    {
+      "source": "crates/web/obscura/src/error.rs",
+      "destination": "crates/api/src/error.rs",
+      "sha256": "560f65c3934b0065bf248efa35bd8d2878a3ed8400a182293e0ebc7282c03069",
+      "bytes": 419,
+      "integratedBytes": 419,
+      "integratedSha256": "560f65c3934b0065bf248efa35bd8d2878a3ed8400a182293e0ebc7282c03069"
+    },
+    {
+      "source": "crates/web/obscura/src/lib.rs",
+      "destination": "crates/api/src/lib.rs",
+      "sha256": "8643aafde4a7a37246f9a26afa5c534f81eb65b755aed7bbc6b135661c0e94bb",
+      "bytes": 831,
+      "integratedBytes": 846,
+      "integratedSha256": "c3bab42ee9a99a8b1f332d4f2367b554de6d6bc70fa93959b5027a41eb7ed2f3"
+    },
+    {
+      "source": "crates/web/obscura/src/page.rs",
+      "destination": "crates/api/src/page.rs",
+      "sha256": "dea2724594f6c06d4e19b63d05c7b2e1843d537b5b1304724c950f573f895475",
+      "bytes": 9001,
+      "integratedBytes": 9017,
+      "integratedSha256": "59bc7eb4eaa0facb910ac8d7b98d060e6450657d5fb423acf2210397698e90be"
+    },
+    {
+      "source": "crates/web/obscura/tests/attribute_injection.rs",
+      "destination": "crates/api/tests/attribute_injection.rs",
+      "sha256": "b42aadc8f5513cc63219f2e9a8bf7f289bdf8f029fa8f713fc36073cb9d44a82",
+      "bytes": 1818,
+      "integratedBytes": 1822,
+      "integratedSha256": "c0dacedd1795a1a921cda6d2bf02142c4e124d386a261010f94dba94643e3fb1"
+    },
+    {
+      "source": "crates/web/obscura/tests/child_frame_scripts.rs",
+      "destination": "crates/api/tests/child_frame_scripts.rs",
+      "sha256": "130e1cf5460d5ed66db3651c9532492eee71db8993c22e53b75623897ac84793",
+      "bytes": 13709,
+      "integratedBytes": 13733,
+      "integratedSha256": "9d9166120893ce334ae0073cf4e79e4ad2610f4614bd4014d39e5370c6d04f28"
+    },
+    {
+      "source": "crates/web/obscura/tests/concurrent_isolate_teardown.rs",
+      "destination": "crates/api/tests/concurrent_isolate_teardown.rs",
+      "sha256": "b6c48690dac6723ce6fb22033c057ed0c89299039e78f28089eb9f281513dff4",
+      "bytes": 6473,
+      "integratedBytes": 6480,
+      "integratedSha256": "7a29bccb592acaf17119cbd20924550daab963a14878f821b28861c59c3e1683"
+    },
+    {
+      "source": "crates/web/obscura/tests/fetch_relative_url_resolution.rs",
+      "destination": "crates/api/tests/fetch_relative_url_resolution.rs",
+      "sha256": "b6e13980be003201dd1d3430a2873d7eeb4ddb5354bfb24a53f09c19eee891fd",
+      "bytes": 6423,
+      "integratedBytes": 6427,
+      "integratedSha256": "ed32fd7dc632d02451234824cf31a1656cd8db247c6105f6d51f483f19e8b824"
+    },
+    {
+      "source": "crates/web/obscura/tests/image_shim.rs",
+      "destination": "crates/api/tests/image_shim.rs",
+      "sha256": "285665c2682db11a174ea1171571b1e70748ed49e1e3f55b9e5fea35e079f442",
+      "bytes": 5429,
+      "integratedBytes": 5433,
+      "integratedSha256": "c8109903183dfd31c9982e2ceb8ef9c5030b206073f2fce9f9a290c04e858420"
+    },
+    {
+      "source": "crates/web/obscura/tests/interception.rs",
+      "destination": "crates/api/tests/interception.rs",
+      "sha256": "424267db54e2032b16f617bd7ed7eb8eccf09461784dec4e603f762d97935f6e",
+      "bytes": 10887,
+      "integratedBytes": 10895,
+      "integratedSha256": "9365ba307233a154221ef24a4b4f936bad9db0bd4d4f291355bfceab4ed210cc"
+    },
+    {
+      "source": "crates/web/obscura/tests/select_semantics.rs",
+      "destination": "crates/api/tests/select_semantics.rs",
+      "sha256": "b935b7b94eaedc4f342a9f9edb5b1c37e9e7019dcade30b1332493690e511dd9",
+      "bytes": 3995,
+      "integratedBytes": 3999,
+      "integratedSha256": "88c52f330b065455077e9429f315300a74aa8fe339139fc70726f5b6cd909008"
+    },
+    {
+      "source": "crates/web/obscura/tests/sequential_runtime_fetch.rs",
+      "destination": "crates/api/tests/sequential_runtime_fetch.rs",
+      "sha256": "025da12bb37d7b3f2d7bcc7fbe59a366b7cbe10132e88955f78d259e0469fe9f",
+      "bytes": 3132,
+      "integratedBytes": 3136,
+      "integratedSha256": "33e4d1aa14da1566be64f1628e59787a15b3fdad6a8eca2e63d8425fe7c0d949"
+    },
+    {
+      "source": "crates/web/obscura/tests/stealth_transport.rs",
+      "destination": "crates/api/tests/stealth_transport.rs",
+      "sha256": "15b839c095d116534b77ce41294657af3106b8a03693afe8417c80478ea5d436",
+      "bytes": 2672,
+      "integratedBytes": 2676,
+      "integratedSha256": "79d451c2a6aff40cff36b153b4ae19faf4b4861e18687129b1f2f9330d12fee4"
+    },
+    {
+      "source": "crates/web/obscura/tests/textarea_semantics.rs",
+      "destination": "crates/api/tests/textarea_semantics.rs",
+      "sha256": "1ead0d02e485ac9823cd841ba445da1d0da2f79648e31a503ebd99f230fbe2de",
+      "bytes": 4743,
+      "integratedBytes": 4747,
+      "integratedSha256": "c036a82d175b90b32707cefc13d90a7ab554d7ec57a3081d5840ccd04da747cc"
+    },
+    {
+      "source": "crates/web/obscura/tests/xhr_binary_response.rs",
+      "destination": "crates/api/tests/xhr_binary_response.rs",
+      "sha256": "5941509ee898a14aebaa8298d84b21897c8614b278ec551b4b00a17a3811b673",
+      "bytes": 5015,
+      "integratedBytes": 5019,
+      "integratedSha256": "3b08d0951e57d4323a40253297a450d98afedeb12358dfec72f00c3c18e9ac8c"
+    },
+    {
+      "source": "crates/web/web-extract/Cargo.toml",
+      "destination": "crates/extract/Cargo.toml",
+      "sha256": "9ae9ca8766d37aa79ab61594e13f8a7207de79c8c1bf9b369fd47070b27a523a",
+      "bytes": 770,
+      "integratedBytes": 1060,
+      "integratedSha256": "64331b41170900970d531aa686cf969fde9a60b356ec952086917f25b3a67fac"
+    },
+    {
+      "source": "crates/web/web-extract/README.md",
+      "destination": "crates/extract/README.md",
+      "sha256": "f63d142da40c1cc9d6e8246a98bed6a999992deab435d1eebc0e2fa281aaa78f",
+      "bytes": 1342,
+      "integratedBytes": 905,
+      "integratedSha256": "202068b72fcdec2d26c12945c8078c765519045efc432c08b9b68c12cde4f307"
+    },
+    {
+      "source": "crates/web/web-extract/src/canonical.rs",
+      "destination": "crates/extract/src/canonical.rs",
+      "sha256": "d9a35fb5537cc988f2e42afea8a472b45b38628181de947a6f101e6c60fbab38",
+      "bytes": 5883,
+      "integratedBytes": 5883,
+      "integratedSha256": "d9a35fb5537cc988f2e42afea8a472b45b38628181de947a6f101e6c60fbab38"
+    },
+    {
+      "source": "crates/web/web-extract/src/chunk.rs",
+      "destination": "crates/extract/src/chunk.rs",
+      "sha256": "a87f8c5ca9bb52f910ff733aee523b1115f49ffd87e559af925f47956fa3837a",
+      "bytes": 12621,
+      "integratedBytes": 12621,
+      "integratedSha256": "a87f8c5ca9bb52f910ff733aee523b1115f49ffd87e559af925f47956fa3837a"
+    },
+    {
+      "source": "crates/web/web-extract/src/date.rs",
+      "destination": "crates/extract/src/date.rs",
+      "sha256": "6b29bdc61019b0c3a5ad53ca9b03717a7c9c3a35c03ff233b31bb0da76d0d7de",
+      "bytes": 9645,
+      "integratedBytes": 9645,
+      "integratedSha256": "6b29bdc61019b0c3a5ad53ca9b03717a7c9c3a35c03ff233b31bb0da76d0d7de"
+    },
+    {
+      "source": "crates/web/web-extract/src/dom.rs",
+      "destination": "crates/extract/src/dom.rs",
+      "sha256": "4dc4131d09b79f4bde634d036983c175921e6111202bd117754b70429d8fe2ab",
+      "bytes": 22998,
+      "integratedBytes": 23014,
+      "integratedSha256": "72fabc31977f28b30037fa487a39d96f4ca8f8f2ff3fe32945cc6eea73088083"
+    },
+    {
+      "source": "crates/web/web-extract/src/dragon_ball/archive.rs",
+      "destination": "crates/extract/src/dragon_ball/archive.rs",
+      "sha256": "9b3eac0b9b4380b8732edd09a185a7998d6000a6eed9f68c039a95da99bb0d2f",
+      "bytes": 4562,
+      "integratedBytes": 4562,
+      "integratedSha256": "9b3eac0b9b4380b8732edd09a185a7998d6000a6eed9f68c039a95da99bb0d2f"
+    },
+    {
+      "source": "crates/web/web-extract/src/dragon_ball/catalogue.rs",
+      "destination": "crates/extract/src/dragon_ball/catalogue.rs",
+      "sha256": "a1897a52360b4fb17c9c6f8b0465e90ff37a0e808d0ec110963396213e7a7ca7",
+      "bytes": 11847,
+      "integratedBytes": 11851,
+      "integratedSha256": "a3cab15ebda5d82ba03e9e09bd27d04c86593ecd567a64984787a0afa96b9156"
+    },
+    {
+      "source": "crates/web/web-extract/src/dragon_ball/gallery.rs",
+      "destination": "crates/extract/src/dragon_ball/gallery.rs",
+      "sha256": "7361f43eb9758aba36c6d26a0a0a423def6b00523a95758d2ac8a1e344eaef8f",
+      "bytes": 7186,
+      "integratedBytes": 7190,
+      "integratedSha256": "1cbd2beb9bbebe482dca4dbbe5325a48d0f8d4f6b5ab40f05514e433123c5f12"
+    },
+    {
+      "source": "crates/web/web-extract/src/dragon_ball/mod.rs",
+      "destination": "crates/extract/src/dragon_ball/mod.rs",
+      "sha256": "6d889d73b5b5bb13f07ac26282eea77434d915a337f24cf227f60cd0d9ff83ff",
+      "bytes": 2139,
+      "integratedBytes": 2139,
+      "integratedSha256": "6d889d73b5b5bb13f07ac26282eea77434d915a337f24cf227f60cd0d9ff83ff"
+    },
+    {
+      "source": "crates/web/web-extract/src/dragon_ball/official.rs",
+      "destination": "crates/extract/src/dragon_ball/official.rs",
+      "sha256": "5b61b2306a431d4a1d15abca54ae9d11b3479fc034965df9b876a8add92e218c",
+      "bytes": 5696,
+      "integratedBytes": 5700,
+      "integratedSha256": "741bcff149968f46b0758ac51af07bc02d2b19949f0a1eb49ecbf70ee761572a"
+    },
+    {
+      "source": "crates/web/web-extract/src/dragon_ball/reader.rs",
+      "destination": "crates/extract/src/dragon_ball/reader.rs",
+      "sha256": "cce0c539c6bb86146cfa0e35f9f87ee74b4e4beac151a2866f8508f62c2098da",
+      "bytes": 1649,
+      "integratedBytes": 1649,
+      "integratedSha256": "cce0c539c6bb86146cfa0e35f9f87ee74b4e4beac151a2866f8508f62c2098da"
+    },
+    {
+      "source": "crates/web/web-extract/src/dragon_ball/structured.rs",
+      "destination": "crates/extract/src/dragon_ball/structured.rs",
+      "sha256": "8d66b0dafbe2d7b068c981100e19f43cd80842b9b332448882d7d16024e197f2",
+      "bytes": 11871,
+      "integratedBytes": 11875,
+      "integratedSha256": "1117d5650a4cfc732f6ed3b48962f280958c1fc73442cd2cbeca6921b8109ea7"
+    },
+    {
+      "source": "crates/web/web-extract/src/extract.rs",
+      "destination": "crates/extract/src/extract.rs",
+      "sha256": "51aa2a7f9548eb808a5bf673da51081a85a7d031feadc6f9f09b83c3cab71c83",
+      "bytes": 50622,
+      "integratedBytes": 50622,
+      "integratedSha256": "51aa2a7f9548eb808a5bf673da51081a85a7d031feadc6f9f09b83c3cab71c83"
+    },
+    {
+      "source": "crates/web/web-extract/src/lib.rs",
+      "destination": "crates/extract/src/lib.rs",
+      "sha256": "a6b8ec8379d65caca52948c3c7178de60c6407319ab8e044b1b04afa43670c31",
+      "bytes": 4851,
+      "integratedBytes": 4847,
+      "integratedSha256": "f3f4ff8a514bf3ff39b8f53950bb5430105c2d7a463fb53bd55240e613b593c9"
+    },
+    {
+      "source": "crates/web/web-extract/src/media/extract.rs",
+      "destination": "crates/extract/src/media/extract.rs",
+      "sha256": "f408a7294affd179f44e02df9ea5bca73b3ac86ce68cf11393d8f5358c564dc5",
+      "bytes": 7145,
+      "integratedBytes": 7145,
+      "integratedSha256": "f408a7294affd179f44e02df9ea5bca73b3ac86ce68cf11393d8f5358c564dc5"
+    },
+    {
+      "source": "crates/web/web-extract/src/media/hls.rs",
+      "destination": "crates/extract/src/media/hls.rs",
+      "sha256": "9dc1451d8b24df94f634997ef89b48e860d33f75cca5162349a198b1b076dc0c",
+      "bytes": 5408,
+      "integratedBytes": 5408,
+      "integratedSha256": "9dc1451d8b24df94f634997ef89b48e860d33f75cca5162349a198b1b076dc0c"
+    },
+    {
+      "source": "crates/web/web-extract/src/media/hosts.rs",
+      "destination": "crates/extract/src/media/hosts.rs",
+      "sha256": "a416a9cf8bb5740bda571d45d4ae4aab852022c9e15d3189aefb1c1c1778c192",
+      "bytes": 4681,
+      "integratedBytes": 4681,
+      "integratedSha256": "a416a9cf8bb5740bda571d45d4ae4aab852022c9e15d3189aefb1c1c1778c192"
+    },
+    {
+      "source": "crates/web/web-extract/src/media/mod.rs",
+      "destination": "crates/extract/src/media/mod.rs",
+      "sha256": "10a37c5a027c7e74a180ad75d0839039d6cca57b0cc470af56c14460a188c067",
+      "bytes": 2434,
+      "integratedBytes": 2434,
+      "integratedSha256": "b97a7252866a638384073f3e34c09b5915a24fdc65143d2d4c94afb743bced2b"
+    },
+    {
+      "source": "crates/web/web-extract/src/media/resolver.rs",
+      "destination": "crates/extract/src/media/resolver.rs",
+      "sha256": "07a5bfdefcacb360615805c6b2cf2acb0ad8c4ffc86987f5d84f40ba92df0df3",
+      "bytes": 13228,
+      "integratedBytes": 13228,
+      "integratedSha256": "07a5bfdefcacb360615805c6b2cf2acb0ad8c4ffc86987f5d84f40ba92df0df3"
+    },
+    {
+      "source": "crates/web/web-extract/src/media/streaming.rs",
+      "destination": "crates/extract/src/media/streaming.rs",
+      "sha256": "7c3b99b54fe77e4420f5338317887a8cc41a8838dbfdd9a51177a569df9fce2a",
+      "bytes": 4593,
+      "integratedBytes": 4597,
+      "integratedSha256": "a4aad5551624088528d5b8ca0a7b848ea1ce91031cf41383289f32377d1a28a3"
+    },
+    {
+      "source": "crates/web/web-extract/src/media/unpack.rs",
+      "destination": "crates/extract/src/media/unpack.rs",
+      "sha256": "9964c1839df94c6968c47c9fe4d4de30464341191377c0d40ab0deef75751083",
+      "bytes": 4980,
+      "integratedBytes": 4980,
+      "integratedSha256": "9964c1839df94c6968c47c9fe4d4de30464341191377c0d40ab0deef75751083"
+    },
+    {
+      "source": "crates/web/web-extract/src/meta.rs",
+      "destination": "crates/extract/src/meta.rs",
+      "sha256": "f63233cbdb573c2dca19f6556bce4418673438933eae72f04adae2f9894dd642",
+      "bytes": 9084,
+      "integratedBytes": 9084,
+      "integratedSha256": "f63233cbdb573c2dca19f6556bce4418673438933eae72f04adae2f9894dd642"
+    },
+    {
+      "source": "crates/web/web-extract/src/patterns.rs",
+      "destination": "crates/extract/src/patterns.rs",
+      "sha256": "4af54d7d93c405e9da2733b14f9d979559a214c9a98f37b5eaac8bda9f0bdafa",
+      "bytes": 5140,
+      "integratedBytes": 5140,
+      "integratedSha256": "4af54d7d93c405e9da2733b14f9d979559a214c9a98f37b5eaac8bda9f0bdafa"
+    },
+    {
+      "source": "crates/web/web-extract/src/render.rs",
+      "destination": "crates/extract/src/render.rs",
+      "sha256": "142b5a642f423817fa0f28720edd389851b1dacdcdccf7ace6fdd40a5d2d65de",
+      "bytes": 35188,
+      "integratedBytes": 35188,
+      "integratedSha256": "142b5a642f423817fa0f28720edd389851b1dacdcdccf7ace6fdd40a5d2d65de"
+    },
+    {
+      "source": "crates/web/web-extract/src/simhash.rs",
+      "destination": "crates/extract/src/simhash.rs",
+      "sha256": "7329f1a5bd2a7ae256951e3518c1905cde2f6b5064db41e1da9a69fe84415feb",
+      "bytes": 9420,
+      "integratedBytes": 9420,
+      "integratedSha256": "7329f1a5bd2a7ae256951e3518c1905cde2f6b5064db41e1da9a69fe84415feb"
+    },
+    {
+      "source": "crates/web/web-extract/src/types.rs",
+      "destination": "crates/extract/src/types.rs",
+      "sha256": "9515b55b0fd31f04730c066a7316e7c069ae6c401b6bb2da6d0a2c62fa0abb34",
+      "bytes": 2108,
+      "integratedBytes": 2108,
+      "integratedSha256": "9515b55b0fd31f04730c066a7316e7c069ae6c401b6bb2da6d0a2c62fa0abb34"
+    },
+    {
+      "source": "crates/web/web-extract/src/url_metadata.rs",
+      "destination": "crates/extract/src/url_metadata.rs",
+      "sha256": "f2aa29528c8b51333754ceb1a89b57fff46d3b1ad6f11b18429b04e2f911915b",
+      "bytes": 7733,
+      "integratedBytes": 7736,
+      "integratedSha256": "1dd6b7255322a94fae4766901d5194f60f2be9df798a56e3a856a1cb757fddfa"
+    },
+    {
+      "source": "crates/web/web-extract/tests/extract.rs",
+      "destination": "crates/extract/tests/extract.rs",
+      "sha256": "ee5fc38a6488458b00979f67e5d22cc58711275774336277777b074a01cf74eb",
+      "bytes": 13258,
+      "integratedBytes": 13258,
+      "integratedSha256": "404f632e158191c45073858de3e6254286fdbe9c4f6bcc3a6f7e89b3764fcc23"
+    },
+    {
+      "source": "crates/web/web-extract/tests/markdown.rs",
+      "destination": "crates/extract/tests/markdown.rs",
+      "sha256": "fe0b4d5c12113b29be1a67f826f9fdacd6375c42036e6cddc8146155433a0e9c",
+      "bytes": 8333,
+      "integratedBytes": 8333,
+      "integratedSha256": "858acd994102d4642beadfe22a2ffb28270216611862f2267bae900fe90fadb3"
+    }
+  ],
+  "manifestAdaptations": [
+    "Standalone workspace inheritance preserves original requirements and features",
+    "Renderer Taffy path relocated to ../taffy"
+  ],
+  "engineSwap": false,
+  "runtimeBinding": false,
+  "integration": {
+    "date": "2026-10-11",
+    "owner": "bun",
+    "initialImport": "e4bcb7dc4d89304c1689222fd0af3cb07c5e4ee8",
+    "changes": [
+      "Relocate engine to src/browser and rename library identities",
+      "Share native HTML DOM with Bun runtime",
+      "Project CSS rules from Bun parser when bun-css enabled",
+      "Move service/crawl/detection/index to internal libraries"
+    ]
+  }
+}

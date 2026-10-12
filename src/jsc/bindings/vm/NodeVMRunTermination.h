@@ -23,7 +23,7 @@ class NodeVMRunTermination final {
 
 public:
     // `realm`: the realm being run; its VM is what the timeout / a SIGINT terminates.
-    NodeVMRunTermination(JSC::JSGlobalObject* realm, std::optional<Seconds> timeout, bool breakOnSigint);
+    NodeVMRunTermination(JSC::JSGlobalObject* realm, std::optional<Seconds> timeout, bool breakOnSigint, bool bareRealm = false);
     ~NodeVMRunTermination();
 
     // Call once, right after the run (and any microtask checkpoint it bounds). If the run was cut short
@@ -31,7 +31,9 @@ public:
     // withdrawn and the ERR_SCRIPT_EXECUTION_* error thrown on `scope`. Otherwise nothing is touched and
     // whatever is pending — an ordinary exception, or a termination that is not this run's — is the
     // caller's to propagate. Either way the caller follows with RETURN_IF_EXCEPTION.
-    void finish(JSC::ThrowScope&);
+    // Returns true only when this run withdrew its own deadline/interrupt and
+    // installed that run's error on the supplied scope.
+    bool finish(JSC::ThrowScope&);
 
     // After finish(): the run was unwound by the termination of a run it is nested in (that run's deadline
     // fired or its SIGINT arrived while this one was on the stack). The termination is that run's and stays
@@ -41,6 +43,7 @@ public:
     // SigintWatcher's signal thread, under its lock: record the SIGINT, then request m_vm's termination.
     JSC::VM& vm() const { return m_vm; }
     void setSigintReceived() { m_sigintReceived = true; }
+    bool didTimeOut() const { return timedOut(); }
 
 private:
     void disarm(); // stop listening: nothing of this run's can fire once it returns
@@ -51,6 +54,9 @@ private:
     JSC::VM& m_vm;
     JSC::JSGlobalObject* const m_realm;
     const std::optional<Seconds> m_timeout;
+    // Bare JSC API realms do not have Bun's Zig::GlobalObject or its ErrorCode cache.
+    // They still use the same VM deadline, but receive an ordinary JSC Error.
+    const bool m_bareRealm;
     std::atomic<bool> m_sigintReceived { false }; // read on this thread only once disarm()ed
     RefPtr<JSC::TerminationDeadline> m_deadline;
     bool m_listeningForSigint { false };

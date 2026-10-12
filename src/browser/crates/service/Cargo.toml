@@ -1,0 +1,43 @@
+[package]
+name = "bun_browser_service"
+description = "Canonical web execution contract for Aphrody OS: OXC analysis, Bun tooling and BunBrowser V8 pages."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "Apache-2.0"
+authors.workspace = true
+repository.workspace = true
+[features]
+default = []
+render = ["bun_browser_mcp/render"]
+stealth = ["render", "bun_browser_mcp/stealth", "bun_browser/stealth"]
+
+# Retained library lint baseline during native graph integration.
+[lints.rust]
+"unsafe_op_in_unsafe_fn" = "deny"
+"unused_must_use" = "deny"
+"non_ascii_idents" = "deny"
+
+[lints.clippy]
+"todo" = "deny"
+"unimplemented" = "deny"
+"dbg_macro" = "deny"
+"correctness" = { "level" = "warn", "priority" = -1 }
+"perf" = { "level" = "warn", "priority" = -1 }
+
+[dependencies]
+bun_browser_extract.workspace = true
+bun_browser_dom.workspace = true
+bun_browser_mcp.workspace = true
+serde = { workspace = true }
+serde_json.workspace = true
+thiserror.workspace = true
+url.workspace = true
+
+# The in-process page fetch and the shared browser session (modules `fetch`, `session`) are
+# native-only: they need sockets, threads and the BunBrowser engine.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+bun_browser.workspace = true
+reqwest.workspace = true
+rustls.workspace = true
+tokio.workspace = true

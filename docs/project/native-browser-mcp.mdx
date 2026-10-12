@@ -1,0 +1,67 @@
+---
+title: "Native browser syntax tools in Bun MCP"
+description: "Bounded inert HTML and shared CSS AST parsing inside the existing bun mcp server."
+---
+
+# Native browser syntax tools
+
+The existing `bun mcp` registry exposes `html_parse` and `css_parse`. Their
+callbacks invoke the same Rust libraries used by the native Bun browser APIs;
+they do not launch another process or another MCP server.
+
+`html_parse` calls `bun_browser_dom::parse_html`, applies an optional CSS selector
+(default `*`) and returns element IDs, tag names and text previews. Set
+`include_html: true` for HTML serialization previews. HTML5 recovery and entity
+decoding come from the browser DOM. Script elements remain inert. IDs belong to
+this result only; a subsequent call parses an independent document.
+
+```json
+{"name":"html_parse","arguments":{"html":"<table><tr><td>A &amp; B</table>","selector":"table > tbody > tr > td","include_html":true,"limit":20}}
+```
+
+`css_parse` calls `bun_css::browser::parse_stylesheet`, the shared Bun
+browser/bundler AST projection. It returns ordered rule preludes and optional
+bodies, including statement at-rules. It enables author-style error recovery
+without minification, CSS-module rewriting or URL resolution.
+
+```json
+{"name":"css_parse","arguments":{"css":"@layer reset, app; .a { height: 7px }","limit":20}}
+```
+
+## Limits and errors
+
+Inputs are limited to 2 MiB of UTF-8 per call. Selectors contain at most 512 UTF-8
+bytes. The integer result limit is 1–100, default 20. Invalid input types,
+selectors or limits return the existing native registry's MCP `isError` tool
+result with an `Invalid arguments` diagnostic. Malformed protocol requests and
+unknown tool names retain the server's JSON-RPC errors. A fatal CSS
+parser/printer failure also returns an MCP `isError` result.
+
+HTML text previews contain at most 512 bytes; optional HTML previews and CSS
+rule bodies contain at most 1024 bytes. CSS preludes contain at most 512 bytes.
+UTF-8 boundaries are preserved. A 48 KiB JSON budget may reduce the returned
+count further. `matches`/`rules_total`, `returned`, `truncated` and per-field
+truncation flags distinguish full counts from previews. Existing MCP token
+pagination still applies to the text result; previews are not full-document
+exports and field truncation does not have a resumable cursor.
+
+Both tools are read-only, idempotent and closed-world. They do not fetch URLs,
+execute JavaScript, create persistent sessions, navigate pages, compute the
+cascade, render screenshots or expose host permissions to HTML. DOM trees and
+CSS arenas remain local to the call. No V8 isolate, JS reference or browser
+session is stored in MCP's shared state.
+
+## Qualification
+
+Run the existing protocol harness against the candidate on the declared SSH
+VPS:
+
+```sh
+bun bd test test/cli/mcp/mcp.test.ts -t "native browser MCP"
+```
+
+The harness covers HTML5 recovery, inert scripts, isolation between calls,
+shared CSS recovery/URLs/order, invalid-argument errors, UTF-8 previews, count
+limits and output budgets. Source wiring alone does not qualify candidate
+runtime behavior. Full page-navigation/browser-runtime MCP migration remains
+separate unfinished work.
