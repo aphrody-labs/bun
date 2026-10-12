@@ -38,8 +38,14 @@ export function VideoStudio({ assets, initialAssetId, className, cache }: VideoS
     const asset = { id: `file-${Date.now()}`, title: file.name, src: URL.createObjectURL(file), type: file.type };
     setLocalAssets(current => [...current, asset]); setSelectedId(asset.id); setError(null);
   };
+  const addDropped = (event: React.DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    const file = event.dataTransfer.files[0];
+    if (file && (file.type.startsWith("video/") || file.type.startsWith("audio/"))) addFile(file);
+    else if (file) setError("Le fichier doit être vidéo ou audio");
+  };
   return (
-    <section className={className} aria-label="Bun Video Studio">
+    <section className={className} aria-label="Bun Video Studio" onDragOver={event => event.preventDefault()} onDrop={addDropped}>
       <aside>
         <strong>Bibliothèque</strong>
         <input type="file" accept="video/*,audio/*" onChange={event => { const file = event.target.files?.[0]; if (file) addFile(file); }} />
