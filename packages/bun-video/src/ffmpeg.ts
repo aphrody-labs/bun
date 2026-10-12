@@ -93,6 +93,20 @@ export const ffmpegABI = {
     swr_get_delay: functionABI([p, "i64"], "i64"),
     swr_free: functionABI([p], v),
   },
+  avdevice: {
+    avdevice_version: functionABI([], "u32"),
+    avdevice_register_all: functionABI([], v),
+    av_input_audio_device_next: functionABI([p], p),
+    av_input_video_device_next: functionABI([p], p),
+    av_output_audio_device_next: functionABI([p], p),
+    av_output_video_device_next: functionABI([p], p),
+    avdevice_list_devices: functionABI([p, p], i),
+    avdevice_free_list_devices: functionABI([p], v),
+    avdevice_list_input_sources: functionABI([p, p, p, p], i),
+    avdevice_list_output_sinks: functionABI([p, p, p, p], i),
+    avdevice_app_to_dev_control_message: functionABI([p, i, p, "u64"], i),
+    avdevice_dev_to_app_control_message: functionABI([p, i, p, "u64"], i),
+  },
 } as const;
 
 export type FFmpegComponent = keyof typeof ffmpegABI;
@@ -103,6 +117,7 @@ export const ffmpegMajors = {
   avfilter: 12,
   swscale: 10,
   swresample: 7,
+  avdevice: 63,
 } as const;
 
 export function ffmpegLibraryPath(component: FFmpegComponent, directory = dirname(process.execPath)): string {
@@ -137,7 +152,15 @@ export class FFmpeg {
     const libraries: Partial<FFmpegLibraries> = {};
     const owned: Array<{ close(): void }> = [];
     try {
-      for (const component of ["avutil", "swresample", "swscale", "avcodec", "avformat", "avfilter"] as const) {
+      for (const component of [
+        "avutil",
+        "swresample",
+        "swscale",
+        "avcodec",
+        "avformat",
+        "avfilter",
+        "avdevice",
+      ] as const) {
         const library = openFFmpegComponent(component, directory);
         owned.push(library);
         const version = (library.symbols as Record<string, (...args: never[]) => unknown>)[`${component}_version`]();
