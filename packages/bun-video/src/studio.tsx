@@ -22,6 +22,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
   const [url, setUrl] = useState("");
   const [metadata, setMetadata] = useState<YtDlpResult | null>(null);
   const [loadingMetadata, setLoadingMetadata] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(muted);
@@ -36,7 +37,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
     if (!storageKey || typeof localStorage === "undefined") return;
     localStorage.setItem(storageKey, JSON.stringify(localAssets.filter(asset => !asset.src.startsWith("blob:"))));
   }, [localAssets, storageKey]);
-  useEffect(() => { setVariantSrc(undefined); }, [selectedId]);
+  useEffect(() => { setVariantSrc(undefined); setAttempt(0); }, [selectedId]);
   useEffect(() => { setCaption(-1); setTextTracks([]); }, [selectedId, variantSrc]);
   useEffect(() => { if (videoRef.current) videoRef.current.playbackRate = playbackRate; }, [selectedId, playbackRate, variantSrc]);
   useEffect(() => { if (videoRef.current) videoRef.current.volume = volume; }, [selectedId, volume, variantSrc]);
@@ -153,7 +154,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
       </aside>
       <main>
         {selected ? (
-          <video ref={videoRef} key={`${selected.id}-${variantSrc ?? selected.src}`} controls playsInline preload="metadata" autoPlay={autoPlay} loop={loop} muted={isMuted} crossOrigin={selected.crossOrigin} poster={selected.poster} aria-label={selected.alt ?? selected.title} src={variantSrc ?? selected.src} onLoadedMetadata={() => { syncTextTracks(); restorePosition(); }} onTimeUpdate={reportPlayback} onPlay={reportPlayback} onPause={reportPlayback} onEnded={() => selectRelative(1)} onError={() => setError(`Lecture impossible : ${selected.title}`)}>
+          <video ref={videoRef} key={`${selected.id}-${variantSrc ?? selected.src}-${attempt}`} controls playsInline preload="metadata" autoPlay={autoPlay} loop={loop} muted={isMuted} crossOrigin={selected.crossOrigin} poster={selected.poster} aria-label={selected.alt ?? selected.title} src={variantSrc ?? selected.src} onLoadedMetadata={() => { syncTextTracks(); restorePosition(); }} onTimeUpdate={reportPlayback} onPlay={reportPlayback} onPause={reportPlayback} onEnded={() => selectRelative(1)} onError={() => setError(`Lecture impossible : ${selected.title}`)}>
             {selected.subtitles?.map(track => <track key={`${track.srclang}-${track.src}`} kind="subtitles" src={track.src} srcLang={track.srclang} label={track.label} default={track.default} />)}
           </video>
         ) : <p>Aucun média sélectionné.</p>}
@@ -169,6 +170,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
         {selected?.variants && <label>Qualité <select value={variantSrc ?? selected.src} onChange={event => setVariantSrc(event.target.value === selected.src ? undefined : event.target.value)}><option value={selected.src}>Auto</option>{selected.variants.map(variant => <option key={variant.src} value={variant.src}>{variant.label}</option>)}</select></label>}
         {selected && isHttpSource(selected.src) && <button type="button" onClick={() => void inspectSelected()} disabled={loadingMetadata}>{loadingMetadata ? "Analyse…" : "Analyser avec yt-dlp"}</button>}
         {metadata && <pre>{JSON.stringify({ title: metadata.title, id: metadata.id, formats: metadata.formats?.length ?? 0 }, null, 2)}</pre>}
+        {error?.startsWith("Lecture impossible") && selected && <button type="button" onClick={() => { setError(null); setAttempt(value => value + 1); }}>Réessayer</button>}
         {error && <p role="alert">{error}</p>}
       </main>
     </section>
