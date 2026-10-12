@@ -1,0 +1,88 @@
+name: Aphrody release smoke
+
+# Runs the VPS factory's runtime zips of a (draft) release on each target's native
+# machine: the platform qualification a cross-compiling host cannot give itself.
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag whose zips are tested (drafts included)"
+        type: string
+        required: true
+      targets:
+        description: "Targets, comma separated (empty: every release target)"
+        type: string
+        default: ""
+
+jobs:
+  plan:
+    if: github.repository == 'aphrody-labs/bun'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+      - id: plan
+        env:
+          INPUT_TARGETS: ${{ inputs.targets }}
+        run: echo "matrix={\"include\":$(bun scripts/aphrody/build-host.ts targets --only "$INPUT_TARGETS")}" >> "$GITHUB_OUTPUT"
+
+  smoke:
+    needs: plan
+    name: smoke ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    env:
+      GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
+      TAG: ${{ inputs.tag }}
+      TRIPLET: ${{ matrix.triplet }}
+      CONTAINER: ${{ matrix.container }}
+      ABI: ${{ matrix.abi }}
+    steps:
+      - name: Download
+        shell: bash
+        run: |
+          mkdir dist && cd dist
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p "$TRIPLET.zip" -p SHA256SUMS.txt
+          grep "  $TRIPLET.zip\$" SHA256SUMS.txt > expected.txt
+          if command -v sha256sum >/dev/null; then sha256sum -c expected.txt; else shasum -a 256 -c expected.txt; fi
+          unzip -q -o "$TRIPLET.zip"
+      - name: Run the binary
+        shell: bash
+        run: |
+          cd dist
+          cat > smoke.sh <<'EOF'
+          set -eu
+          # Like upstream's musl build, the binary links libstdc++ and libgcc dynamically.
+          if command -v apk >/dev/null; then apk add --no-cache -q libstdc++ libgcc; fi
+          bin="$1"
+          echo "--version: $("$bin" --version)"
+          "$bin" --revision
+          "$bin" -e 'console.log(Bun.version, process.platform, process.arch, Bun.version_with_sha)'
+          "$bin" -e 'const r = await fetch("data:text/plain,ok"); console.log(await r.text(), Bun.hash("x"))'
+          "$bin" -e 'await import("node:fs"); console.log(2)'
+          printf 'import { test, expect } from "bun:test";\ntest("smoke", async () => { await import("node:fs"); expect(1 + 1).toBe(2); });\n' > smoke.test.ts
+          "$bin" test ./smoke.test.ts
+          "$bin" -e 'const path = await import("node:path"); const { execFileSync } = require("node:child_process"); const out = execFileSync(process.execPath, ["-e", "console.log(6 * 7)"]).toString().trim(); if (out !== "42") throw new Error(out); console.log(path.join("a", "b"), out)'
+          EOF
+          if [ -n "$CONTAINER" ]; then
+            docker run --rm -v "$PWD:/d" -w /d "$CONTAINER" sh smoke.sh "/d/$TRIPLET/bun"
+            if [ "$ABI" = gnu ]; then
+              docker run --rm -v "$PWD:/d" -w /d ubuntu:26.04 sh smoke.sh "/d/$TRIPLET/bun"
+            fi
+          elif [ "$RUNNER_OS" = Windows ]; then
+            bash smoke.sh "./$TRIPLET/bun.exe"
+          else
+            chmod +x "$TRIPLET/bun"
+            bash smoke.sh "./$TRIPLET/bun"
+          fi
