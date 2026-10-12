@@ -2,7 +2,8 @@ import { useMemo, useRef, useState } from "react";
 import { extractYtDlp, type YtDlpResult } from "./ytdlp";
 import type { CrawlerCache } from "./cache";
 
-export interface StudioAsset { readonly id: string; readonly title: string; readonly src: string; readonly type?: string; }
+export interface StudioSubtitle { readonly src: string; readonly srclang: string; readonly label: string; readonly default?: boolean; }
+export interface StudioAsset { readonly id: string; readonly title: string; readonly src: string; readonly type?: string; readonly subtitles?: readonly StudioSubtitle[]; }
 export interface VideoStudioProps { readonly assets: readonly StudioAsset[]; readonly initialAssetId?: string; readonly className?: string; readonly cache?: CrawlerCache; }
 
 /** Compact React studio surface for browsing assets and driving the Bun Video pipeline. */
@@ -79,7 +80,9 @@ export function VideoStudio({ assets, initialAssetId, className, cache }: VideoS
       </aside>
       <main>
         {selected ? (
-          <video ref={videoRef} key={selected.id} controls playsInline preload="metadata" src={selected.src} onEnded={() => selectRelative(1)} onError={() => setError(`Lecture impossible : ${selected.title}`)} />
+          <video ref={videoRef} key={selected.id} controls playsInline preload="metadata" src={selected.src} onEnded={() => selectRelative(1)} onError={() => setError(`Lecture impossible : ${selected.title}`)}>
+            {selected.subtitles?.map(track => <track key={`${track.srclang}-${track.src}`} kind="subtitles" src={track.src} srcLang={track.srclang} label={track.label} default={track.default} />)}
+          </video>
         ) : <p>Aucun média sélectionné.</p>}
         {selected && <p>{selected.title}{selected.type ? ` · ${selected.type}` : ""}</p>}
         {selected && <nav aria-label="Contrôles de file"><button type="button" onClick={() => selectRelative(-1)}>Précédent</button><button type="button" onClick={() => selectRelative(1)}>Suivant</button></nav>}
