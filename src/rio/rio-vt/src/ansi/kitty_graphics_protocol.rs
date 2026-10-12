@@ -1120,7 +1120,11 @@ fn create_graphic_data(cmd: &KittyGraphicsCommand) -> Result<GraphicData, Graphi
             data
         }
         TransmissionMedium::SharedMemory => {
-            #[cfg(unix)]
+            #[cfg(target_os = "android")]
+            {
+                return Err(GraphicError::UnsupportedMedium);
+            }
+            #[cfg(all(unix, not(target_os = "android")))]
             {
                 use std::ffi::CString;
                 use std::os::unix::io::RawFd;

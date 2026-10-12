@@ -1,8 +1,8 @@
 // Idempotent Cloudflare provisioning for aphrody.app and its account: zone security/performance settings,
 // DNSSEC, DNS records (CAA, no-mail policy), www redirect, R2 buckets with CDN custom domains, CORS, lifecycle and
-// cache rules, smart tiered cache, AI Gateway. Re-running converges to the same state.
+// cache rules, smart tiered cache, AI Gateway, Vectorize indexes. Re-running converges to the same state.
 //
-//   bun app/scripts/provision.ts [--dry-run]
+//   bun app/scripts/provision.ts [--dry-run] [--only zones,ai,vectorize]
 //
 // Credentials come from the same place as deploy.ts (app/.env, else ~/.aphrody/config/cloudflare.env).
 import { envFile, parseEnv } from "./deploy.ts";
@@ -10,6 +10,9 @@ import { envFile, parseEnv } from "./deploy.ts";
 const env = { ...parseEnv(await Bun.file(envFile()).text()), ...process.env } as Record<string, string>;
 const account = env.CLOUDFLARE_ACCOUNT_ID;
 const dryRun = process.argv.includes("--dry-run");
+const onlyAt = process.argv.indexOf("--only");
+const only = onlyAt >= 0 ? new Set(process.argv[onlyAt + 1]?.split(",")) : undefined;
+const wants = (step: string) => !only || only.has(step);
 if (!account || !env.CLOUDFLARE_API_TOKEN)
   throw new Error(`${envFile()} lacks CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN`);
 
@@ -337,40 +340,82 @@ async function ai() {
   }
 }
 
-const all = await cf<{ id: string; name: string; status: string; name_servers: string[] }[]>(
-  "GET",
-  "/zones?per_page=50",
-);
-for (const name of zones) {
-  const zone = all.find(z => z.name === name);
-  if (!zone) {
-    console.warn(`zone ${name} missing from the account`);
-    continue;
+// Vectorize indexes queried by the Worker (wrangler.jsonc "vectorize"); filled by scripts/aphrody/dataset/publish.ts.
+// Dimensions and metric are fixed at creation: changing them means a new index name.
+export const vectorIndexes = [
+  {
+    name: "bun-native",
+    description: "bun-native dataset (scripts/aphrody/dataset): Bun code examples, signatures and migrations",
+    config: { dimensions: 1024, metric: "cosine" },
+    metadata: ["kind"],
+  },
+];
+
+async function vectorize() {
+  const existing = await cf<{ name: string }[]>("GET", `/accounts/${account}/vectorize/v2/indexes`);
+  for (const index of vectorIndexes) {
+    if (!existing.some(i => i.name === index.name)) {
+      await cf("POST", `/accounts/${account}/vectorize/v2/indexes`, {
+        name: index.name,
+        description: index.description,
+        config: index.config,
+      });
+      step(`Vectorize ${index.name} created`);
+    }
+    const listed = await cf<{ metadataIndexes?: { propertyName: string }[] }>(
+      "GET",
+      `/accounts/${account}/vectorize/v2/indexes/${index.name}/metadata_index/list`,
+    ).catch(() => ({ metadataIndexes: [] }));
+    for (const propertyName of index.metadata) {
+      if (listed?.metadataIndexes?.some(m => m.propertyName === propertyName)) continue;
+      await cf("POST", `/accounts/${account}/vectorize/v2/indexes/${index.name}/metadata_index/create`, {
+        propertyName,
+        indexType: "string",
+      });
+      step(`Vectorize ${index.name}: metadata index ${propertyName}`);
+    }
   }
-  await zoneSettings(zone);
-  if (zone.status !== "active")
-    console.warn(`${name} is ${zone.status}: set its nameservers to ${zone.name_servers.join(", ")}`);
-  if (name !== site) {
-    // VPS-served zones (DNS mirrored from OVH by ovh.ts): their cdn.* hosts cache at the edge per origin headers.
-    await entrypoint(zone, "http_request_cache_settings", [
-      {
-        ref: "aphrody-origin-cdn",
-        description: `cdn.${name}: edge cache following the origin Cache-Control`,
-        expression: `(http.host eq "cdn.${name}")`,
-        action: "set_cache_settings",
-        action_parameters: {
-          cache: true,
-          edge_ttl: { mode: "respect_origin" },
-          browser_ttl: { mode: "respect_origin" },
-          serve_stale: { disable_stale_while_updating: false },
-        },
-      },
-    ]);
-    continue;
-  }
-  await dns(zone);
-  await siteRules(zone);
-  await r2(zone.id);
 }
-await ai();
+
+async function provisionZones() {
+  const all = await cf<{ id: string; name: string; status: string; name_servers: string[] }[]>(
+    "GET",
+    "/zones?per_page=50",
+  );
+  for (const name of zones) {
+    const zone = all.find(z => z.name === name);
+    if (!zone) {
+      console.warn(`zone ${name} missing from the account`);
+      continue;
+    }
+    await zoneSettings(zone);
+    if (zone.status !== "active")
+      console.warn(`${name} is ${zone.status}: set its nameservers to ${zone.name_servers.join(", ")}`);
+    if (name !== site) {
+      // VPS-served zones (DNS mirrored from OVH by ovh.ts): their cdn.* hosts cache at the edge per origin headers.
+      await entrypoint(zone, "http_request_cache_settings", [
+        {
+          ref: "aphrody-origin-cdn",
+          description: `cdn.${name}: edge cache following the origin Cache-Control`,
+          expression: `(http.host eq "cdn.${name}")`,
+          action: "set_cache_settings",
+          action_parameters: {
+            cache: true,
+            edge_ttl: { mode: "respect_origin" },
+            browser_ttl: { mode: "respect_origin" },
+            serve_stale: { disable_stale_while_updating: false },
+          },
+        },
+      ]);
+      continue;
+    }
+    await dns(zone);
+    await siteRules(zone);
+    await r2(zone.id);
+  }
+}
+
+if (wants("zones")) await provisionZones();
+if (wants("ai")) await ai();
+if (wants("vectorize")) await vectorize();
 console.log(dryRun ? "dry-run done" : "provisioned");

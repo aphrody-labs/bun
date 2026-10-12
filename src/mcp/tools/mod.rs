@@ -6,6 +6,7 @@ use crate::registry::Tool;
 pub(crate) mod agent;
 pub(crate) mod browser;
 pub(crate) mod docs;
+pub(crate) mod examples;
 pub(crate) mod graph;
 pub(crate) mod host;
 pub(crate) mod lsp;
@@ -17,6 +18,7 @@ pub(crate) mod vfs;
 /// Tool slices in `tools/list` order.
 pub(crate) const BUILTIN: &[&[Tool]] = &[
     docs::TOOLS,
+    examples::TOOLS,
     skills::TOOLS,
     memory::TOOLS,
     graph::TOOLS,

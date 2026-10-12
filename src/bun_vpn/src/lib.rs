@@ -6,8 +6,10 @@ pub use mullvad_management_interface::Error;
 pub use mullvad_types::states::TunnelState;
 
 /// Controls the installed Mullvad daemon through its native management IPC.
+#[cfg(not(target_os = "android"))]
 pub struct VpnClient(mullvad_management_interface::client::MullvadProxyClient);
 
+#[cfg(not(target_os = "android"))]
 impl VpnClient {
     /// Connect to the platform's configured Mullvad management endpoint.
     pub async fn connect() -> Result<Self, Error> {
@@ -32,7 +34,15 @@ impl VpnClient {
     }
 }
 
+/// Mullvad's management interface has no Android client.
+#[cfg(target_os = "android")]
+pub fn cli(_args: &[String]) -> i32 {
+    eprintln!("bun vpn: not supported on Android");
+    1
+}
+
 /// Bun's single VPN CLI, backed by the same native daemon IPC client.
+#[cfg(not(target_os = "android"))]
 pub fn cli(args: &[String]) -> i32 {
     let Some(command) = args.first().map(String::as_str) else {
         eprintln!("usage: bun vpn <status|connect|disconnect>");

@@ -5907,6 +5907,30 @@
       "destination": "packages/bun-aphrody-web/integrations/crates/tauri/aphrody-tauri/scripts/freeze_prototype.js",
       "bytes": 174,
       "sha256": "599745f0da51f0ba6c7dcbb7c770d6f538f337f6df7f1bf420e4043b9e4b6bf9"
+    },
+    {
+      "source": "crates/tauri/aphrody-tauri/scripts/ipc.js",
+      "destination": "packages/bun-aphrody-web/integrations/crates/tauri/aphrody-tauri/scripts/ipc.js",
+      "bytes": 5832,
+      "sha256": "3e3766fc90efa68003096cbf0a07c6a00cb31c5756d55b5a68ebbfd2930c4865"
+    },
+    {
+      "source": "crates/tauri/aphrody-tauri/scripts/init.js",
+      "destination": "packages/bun-aphrody-web/integrations/crates/tauri/aphrody-tauri/scripts/init.js",
+      "bytes": 300,
+      "sha256": "2a062abc65bc99ac458dd9a78701a8a9e3f473aa1f25afa64dc810036932f973"
+    },
+    {
+      "source": "crates/tauri/aphrody-tauri/scripts/core.js",
+      "destination": "packages/bun-aphrody-web/integrations/crates/tauri/aphrody-tauri/scripts/core.js",
+      "bytes": 2994,
+      "sha256": "f8ff29d8778a1d34eede4a1e8bc9ddbf9120d444c8f6243632c8d0b6cc631e49"
+    },
+    {
+      "source": "crates/tauri/aphrody-tauri/scripts/isolation.js",
+      "destination": "packages/bun-aphrody-web/integrations/crates/tauri/aphrody-tauri/scripts/isolation.js",
+      "bytes": 584,
+      "sha256": "58e79828ba6d68c79eceb276d62f766710f77df70c5fec1f79176bd6aa6d0ae1"
     }
   ],
   "retainedStores": [

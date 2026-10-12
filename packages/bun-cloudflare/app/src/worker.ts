@@ -98,6 +98,54 @@ async function files(request: Request, env: Env, bucketName: string, key: string
   }
 }
 
+type BunExample = {
+  id: string;
+  kind: string;
+  api: string;
+  instruction: string;
+  code: string;
+  lang: string;
+  source: string;
+  version: string;
+};
+
+/**
+ * /api/bun/search?q=&k=&kind=: the bun-native dataset entries (scripts/aphrody/dataset) nearest to the query,
+ * embedded with the model publish.ts used. Results are cached in KV for an hour per query.
+ */
+async function bunSearch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const url = new URL(request.url);
+  const q = (url.searchParams.get("q") ?? "").trim();
+  if (!q) return error(400, "missing q");
+  if (q.length > 500) return error(400, "q is longer than 500 characters");
+  const k = Math.min(20, Math.max(1, Number(url.searchParams.get("k")) || 5));
+  const kind = url.searchParams.get("kind") ?? "";
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${kind}\0${k}\0${q}`));
+  const key = `bun-search:${Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("")}`;
+  const cached = await env.CACHE.get(key, "json");
+  if (cached) return json(cached, { headers: { "X-Cache": "HIT" } });
+  const ip = request.headers.get("CF-Connecting-IP") ?? "local";
+  const { success } = await env.WRITE_LIMITER.limit({ key: `search:${ip}` });
+  if (!success) return error(429, "rate limited");
+  const embedded = (await env.AI.run(
+    env.EMBEDDING_MODEL as keyof AiModels,
+    {
+      text: [q],
+    } as never,
+  )) as unknown as { data: number[][] };
+  const found = await env.BUN_NATIVE.query(embedded.data[0]!, {
+    topK: k,
+    returnMetadata: "all",
+    filter: kind ? { kind } : undefined,
+  });
+  const body = {
+    query: q,
+    results: found.matches.map(m => ({ score: Number(m.score.toFixed(4)), ...(m.metadata as BunExample) })),
+  };
+  ctx.waitUntil(env.CACHE.put(key, JSON.stringify(body), { expirationTtl: 3600 }));
+  return json(body, { headers: { "X-Cache": "MISS" } });
+}
+
 async function api(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
   const parts = url.pathname.split("/").slice(2).map(decodeURIComponent);
@@ -109,6 +157,10 @@ async function api(request: Request, env: Env, ctx: ExecutionContext): Promise<R
 
     case "files":
       return files(request, env, name, rest.join("/"));
+
+    case "bun":
+      if (name !== "search" || request.method !== "GET") return error(404, "not found");
+      return bunSearch(request, env, ctx);
 
     case "index": {
       const cached = await env.CACHE.get("index:recent", "json");

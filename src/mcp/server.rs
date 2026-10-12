@@ -139,7 +139,7 @@ impl Server {
             },
             "serverInfo": {"name": "bun", "title": "Bun", "version": crate::cli::version()},
             "instructions": format!(
-                "Bun's built-in MCP server (profile {agent}).{native_tools} test and run use this fork. Each tool result is capped at about {tokens} tokens; a truncated result ends with a cursor: call the same tool with {{\"cursor\": ...}} for the rest. Bun questions: docs_search then docs_read. Conventions: skills_list/skill_read, memory_search. Code: graph_symbols, graph_callers, graph_query."
+                "Bun's built-in MCP server (profile {agent}).{native_tools} test and run use this fork. Each tool result is capped at about {tokens} tokens; a truncated result ends with a cursor: call the same tool with {{\"cursor\": ...}} for the rest. Bun questions: docs_search then docs_read; Bun code to write: examples_search. Conventions: skills_list/skill_read, memory_search. Code: graph_symbols, graph_callers, graph_query."
             ),
         })
     }

@@ -21,6 +21,6 @@
     "test:dotnet": "dotnet test dotnet/test/NodeApi.Test.csproj -f net10.0"
   },
   "engines": {
-    "bun": ">=1.4.3"
+    "bun": ">=1.4.4"
   }
 }

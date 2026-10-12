@@ -89,6 +89,10 @@ test("aphrody.app Worker serves the API with its bindings", async () => {
   expect(history.map((m: { body: string }) => m.body)).toEqual(["salut"]);
   expect((await worker.fetch("/api/rooms/bad%20name")).status).toBe(400);
 
+  expect((await worker.fetch("/api/bun/search")).status).toBe(400);
+  expect((await worker.fetch(`/api/bun/search?q=${"x".repeat(501)}`)).status).toBe(400);
+  expect((await worker.fetch("/api/bun/other?q=serve")).status).toBe(404);
+
   const index = await worker.fetch("/api/index");
   expect(index.headers.get("X-Cache")).toBe("MISS");
   expect(Array.isArray(await index.json())).toBe(true);

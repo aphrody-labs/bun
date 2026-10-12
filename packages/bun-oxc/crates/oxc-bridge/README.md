@@ -7,7 +7,7 @@ In-process [Oxc](https://oxc.rs) bridge for JavaScript and TypeScript tooling: a
 Provenance: moved from the Aphrody monorepo (`crates/compat/oxc-bridge`, aphrody@09f1288c) into
 [aphrody-labs/bun](https://github.com/aphrody-labs/bun/tree/main/packages/bun-oxc). It builds on the crates.io Oxc
 crates, currently **0.153.0** (parser, semantic, transformer, isolated declarations, minifier, codegen, diagnostics)
-and `oxc_resolver` **11.24.3**. Minimum Rust: 1.97. Version 0.3.0.
+and `oxc_resolver` **11.24.3**. Minimum Rust: 1.97. Version 1.4.4.
 
 ## Rust API
 
