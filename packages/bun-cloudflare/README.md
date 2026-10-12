@@ -74,9 +74,11 @@ store `~/.aphrody/config/cloudflare.env`.
 bun app/scripts/provision.ts   # zones, DNS, DNSSEC, TLS, cache and redirect rules, R2 domains, AI Gateway
 bun app/scripts/deploy.ts      # builds the site, deploys the Worker and its assets, applies D1 migrations
 bun app/scripts/token.ts       # account-owned automation token (needs CLOUDFLARE_BOOTSTRAP_TOKEN)
+bun app/scripts/ovh.ts --switch  # OVH zones (aphrody.com, dragonballfr.com, rosegriffon.fr) mirrored, name servers moved
 ```
 
-The vps timer `aphrody-site-publish` runs `scripts/aphrody/site/publish.ts`, which deploys through `deploy.ts`.
+The vps timer `aphrody-site-publish` runs `scripts/aphrody/site/publish.ts`, which deploys through `deploy.ts`;
+`app/systemd/aphrody-dns-migrate.timer` finishes the OVH move (deferred name servers, DNSSEC) and then disables itself.
 
 ## Tests
 

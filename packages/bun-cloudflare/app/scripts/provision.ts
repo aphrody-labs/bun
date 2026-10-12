@@ -47,7 +47,7 @@ async function cf<T = any>(
 const step = (message: string) => console.log(`• ${message}`);
 
 export const site = "aphrody.app";
-export const zones = ["aphrody.app", "aphrody.com", "dragonballfr.com"];
+export const zones = ["aphrody.app", "aphrody.com", "dragonballfr.com", "rosegriffon.fr"];
 export const cdn = [
   { bucket: "aphrody", domain: "cdn.aphrody.app" },
   { bucket: "dragonballfr", domain: "dragonballfr.aphrody.app" },
@@ -334,7 +334,24 @@ for (const name of zones) {
     console.warn(
       `${name} is ${zone.status}: set its nameservers to ${zone.name_servers.join(", ")}`,
     );
-  if (name !== site) continue;
+  if (name !== site) {
+    // VPS-served zones (DNS mirrored from OVH by ovh.ts): their cdn.* hosts cache at the edge per origin headers.
+    await entrypoint(zone, "http_request_cache_settings", [
+      {
+        ref: "aphrody-origin-cdn",
+        description: `cdn.${name}: edge cache following the origin Cache-Control`,
+        expression: `(http.host eq "cdn.${name}")`,
+        action: "set_cache_settings",
+        action_parameters: {
+          cache: true,
+          edge_ttl: { mode: "respect_origin" },
+          browser_ttl: { mode: "respect_origin" },
+          serve_stale: { disable_stale_while_updating: false },
+        },
+      },
+    ]);
+    continue;
+  }
   await dns(zone);
   await siteRules(zone);
   await r2(zone.id);

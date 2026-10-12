@@ -36,18 +36,14 @@ test("aphrody.app Worker serves the API with its bindings", async () => {
   });
   const env = await worker.bindings<{ DB: D1Like }>();
   await env.DB.exec(
-    (await Bun.file(join(app, "migrations", "0001_init.sql")).text())
-      .replace(/--.*$/gm, "")
-      .replace(/\s+/g, " "),
+    (await Bun.file(join(app, "migrations", "0001_init.sql")).text()).replace(/--.*$/gm, "").replace(/\s+/g, " "),
   );
   const auth = { Authorization: `Bearer ${secret}` };
 
   const health = await (await worker.fetch("/api/health")).json();
   expect(health).toMatchObject({ ok: true, buckets: ["aphrody", "dragonballfr"] });
 
-  expect(
-    (await worker.fetch("/api/files/aphrody/a.txt", { method: "PUT", body: "x" })).status,
-  ).toBe(401);
+  expect((await worker.fetch("/api/files/aphrody/a.txt", { method: "PUT", body: "x" })).status).toBe(401);
   expect(
     (
       await worker.fetch("/api/files/aphrody/a.txt", {
@@ -79,10 +75,7 @@ test("aphrody.app Worker serves the API with its bindings", async () => {
   expect(await range.text()).toBe("bon");
   expect(range.status).toBe(206);
   const etag = get.headers.get("ETag")!;
-  expect(
-    (await worker.fetch("/api/files/aphrody/dir/a.txt", { headers: { "If-None-Match": etag } }))
-      .status,
-  ).toBe(304);
+  expect((await worker.fetch("/api/files/aphrody/dir/a.txt", { headers: { "If-None-Match": etag } })).status).toBe(304);
 
   expect((await worker.fetch("/api/files/nope")).status).toBe(404);
 
@@ -99,6 +92,39 @@ test("aphrody.app Worker serves the API with its bindings", async () => {
   const index = await worker.fetch("/api/index");
   expect(index.headers.get("X-Cache")).toBe("MISS");
   expect(Array.isArray(await index.json())).toBe(true);
+});
+
+test("ovh.ts mirrors an OVH BIND export without SOA, NS and ACME challenges", async () => {
+  const { parseZone, key } = await import("../app/scripts/ovh.ts");
+  const records = parseZone(
+    [
+      "$TTL 3600",
+      "@\tIN SOA dns200.anycast.me. tech.ovh.net. (1 86400 3600 3600000 60)",
+      "        IN NS     dns200.anycast.me.",
+      "        IN MX     5 mx1.mail.ovh.net.",
+      "    300 IN A     51.77.147.152",
+      '        IN TXT     "v=spf1 include:mx.ovh.com ~all"',
+      "_autodiscover._tcp        IN SRV     0 0 443 zimbra1.mail.ovh.net.",
+      '_acme-challenge.www     60 IN TXT     "x"',
+      "www    300 IN CNAME     example.com.",
+      "cdn    300 IN CNAME     example.com.",
+      "cdn    300 IN CNAME     example.com.",
+      'google._domainkey        IN TXT     ( "v=DKIM1; p=AB" "CD" )',
+    ].join("\n"),
+    "example.com",
+  );
+  expect(records.map(key)).toEqual([
+    "MX example.com mx1.mail.ovh.net",
+    "A example.com 51.77.147.152",
+    "TXT example.com v=spf1 include:mx.ovh.com ~all",
+    "SRV _autodiscover._tcp.example.com 0 443 zimbra1.mail.ovh.net",
+    "CNAME www.example.com example.com",
+    "CNAME cdn.example.com example.com",
+    "TXT google._domainkey.example.com v=DKIM1; p=ABCD",
+  ]);
+  expect(records[0]).toMatchObject({ priority: 5, ttl: 3600 });
+  expect(records[1].ttl).toBe(300);
+  expect(records[3].data).toEqual({ priority: 0, weight: 0, port: 443, target: "zimbra1.mail.ovh.net" });
 });
 
 type D1Like = { exec(sql: string): Promise<unknown> };

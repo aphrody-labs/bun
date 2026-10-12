@@ -1,0 +1,11 @@
+# See aphrody-dns-migrate.service.
+[Unit]
+Description=Migration DNS OVH vers Cloudflare (toutes les 3 h)
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=3h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
