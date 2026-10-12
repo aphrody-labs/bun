@@ -46,22 +46,37 @@ for await (const zone of cf.zones.list()) console.log(zone.name);
 
 `src/catalog.ts` lists every package with its category and docs:
 
-| Category   | Packages |
-| ---------- | -------- |
+| Category   | Packages                                                                                                                                                                                                                                                                                                               |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | tooling    | wrangler, miniflare, workerd, create-cloudflare, @cloudflare/vite-plugin, @cloudflare/vitest-plugin, @cloudflare/config, @cloudflare/autoconfig, @cloudflare/codemods, @cloudflare/build-output-utils, @cloudflare/pages-functions, @cloudflare/unenv-preset, @cloudflare/worker-bundler, @cloudflare/kv-asset-handler |
-| types      | @cloudflare/workers-types, @cloudflare/runtime-types, @cloudflare/types |
-| api        | cloudflare, chanfana, @cloudflare/cabidela |
-| frameworks | @opennextjs/cloudflare, vinext |
-| runtime    | @cloudflare/containers, @cloudflare/sandbox, @cloudflare/actors, @cloudflare/streamline, @cloudflare/dynamic-workflows, @cloudflare/workers-oauth-provider, @cloudflare/workers-response-store, @cloudflare/flagship, @cloudflare/computer |
-| ai         | agents, @cloudflare/ai-chat, @cloudflare/think, @cloudflare/codemode, @cloudflare/shell, @cloudflare/ai-gateway, @cloudflare/tanstack-ai, workers-ai-provider |
-| browser    | @cloudflare/puppeteer, @cloudflare/playwright, @cloudflare/speedtest |
-| realtime   | @cloudflare/realtimekit, partyserver, partysocket |
-| crypto     | @cloudflare/privacypass-ts, @cloudflare/voprf-ts, @cloudflare/blindrsa-ts |
+| types      | @cloudflare/workers-types, @cloudflare/runtime-types, @cloudflare/types                                                                                                                                                                                                                                                |
+| api        | cloudflare, chanfana, @cloudflare/cabidela                                                                                                                                                                                                                                                                             |
+| frameworks | @opennextjs/cloudflare, vinext                                                                                                                                                                                                                                                                                         |
+| runtime    | @cloudflare/containers, @cloudflare/sandbox, @cloudflare/actors, @cloudflare/streamline, @cloudflare/dynamic-workflows, @cloudflare/workers-oauth-provider, @cloudflare/workers-response-store, @cloudflare/flagship, @cloudflare/computer                                                                             |
+| ai         | agents, @cloudflare/ai-chat, @cloudflare/think, @cloudflare/codemode, @cloudflare/shell, @cloudflare/ai-gateway, @cloudflare/tanstack-ai, workers-ai-provider                                                                                                                                                          |
+| browser    | @cloudflare/puppeteer, @cloudflare/playwright, @cloudflare/speedtest                                                                                                                                                                                                                                                   |
+| realtime   | @cloudflare/realtimekit, partyserver, partysocket                                                                                                                                                                                                                                                                      |
+| crypto     | @cloudflare/privacypass-ts, @cloudflare/voprf-ts, @cloudflare/blindrsa-ts                                                                                                                                                                                                                                              |
 
 Left out: deprecated packages (`@cloudflare/vitest-pool-workers`, `@cloudflare/next-on-pages`), workers-sdk
 internals (`*-shared`, `workers-utils`, `workers-auth`, `deploy-helpers`), dashboard UI components, and
 framework-specific UI kits (`@cloudflare/realtimekit-react*`, `@cloudflare/stream-react`, `@cloudflare/kumo`).
 Add those to your app directly when you need them.
+
+## aphrody.app
+
+`app/` is the production Worker of https://aphrody.app: the Aphrody Bun site as static assets and an API under
+`/api` (R2 buckets `aphrody` and `dragonballfr`, D1, KV, Queues, Workflows, a Durable Object, Workers AI through
+the `aphrody` AI Gateway). Credentials come from `app/.env` (git-ignored, see `app/.env.example`) or the host key
+store `~/.aphrody/config/cloudflare.env`.
+
+```sh
+bun app/scripts/provision.ts   # zones, DNS, DNSSEC, TLS, cache and redirect rules, R2 domains, AI Gateway
+bun app/scripts/deploy.ts      # builds the site, deploys the Worker and its assets, applies D1 migrations
+bun app/scripts/token.ts       # account-owned automation token (needs CLOUDFLARE_BOOTSTRAP_TOKEN)
+```
+
+The vps timer `aphrody-site-publish` runs `scripts/aphrody/site/publish.ts`, which deploys through `deploy.ts`.
 
 ## Tests
 

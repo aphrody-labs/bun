@@ -620,7 +620,7 @@ export function documentPages(d: SiteData, ctx: PageContext): GeneratedPage[] {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// Site du runtime seul (bun.aphrody.com) : accueil depuis APHRODY.md du fork, page /runtime
+// Site du runtime seul (aphrody.app) : accueil depuis APHRODY.md du fork, page /runtime
 
 /**
  * Liens relatifs d'un document du fork : une page de `docs/` devient sa route du site (`/docs/...`), tout autre

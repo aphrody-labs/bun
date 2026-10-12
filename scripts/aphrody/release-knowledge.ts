@@ -6,7 +6,7 @@ import { pack } from "../../packages/bun-agent-plugin/src/archive.ts";
 import { mcpTools, lspExtensions } from "../../packages/bun-agent-plugin/src/catalog.ts";
 import { experimentalFeatureFlags } from "./release-feature-flags.ts";
 
-export function completeReleaseKnowledge(out: string, origin = "https://bun.aphrody.com") {
+export function completeReleaseKnowledge(out: string, origin = "https://aphrody.app") {
   const graph = JSON.parse(readFileSync(join(out, "graph.json"), "utf8"));
   using db = new Database(join(out, "monorepo.sqlite"), { readonly: true });
   const files = db

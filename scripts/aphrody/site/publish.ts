@@ -1,61 +1,25 @@
-// Publie le site du runtime, https://bun.aphrody.com, depuis origin/main d'aphrody-labs/bun (lancé sur le VPS, depuis
-// un checkout du fork) : git fetch, `git archive` de docs/ bench/ scripts/aphrody/ dans un dossier temporaire,
-// collect.ts (site-data.json : runtime et APHRODY.md, organisation GitHub), rapports perf du dernier run réussi
-// d'aphrody-perf.yml (gh), releases GitHub, build.ts de l'arbre extrait, puis extraction dans
-// <base>/releases/<UTC>-<sha12> et bascule atomique de <base>/current, servi par nginx (vhost bun.aphrody.com du
-// catalogue d'aphrody-labs/aphrody, tools/config/host/nginx/aphrody/bun.aphrody.com.conf). Seule la release
-// courante est gardée par défaut ; revenir en arrière = republier un commit antérieur (--ref).
+// Publie le site du runtime, https://aphrody.app, depuis origin/main d'aphrody-labs/bun (timer systemd du VPS ou
+// poste local) : git fetch, `git archive` de docs/ bench/ scripts/aphrody/ packages/bun-cloudflare/ dans un dossier
+// temporaire, collect.ts (site-data.json : runtime et APHRODY.md, organisation GitHub), rapports perf du dernier run
+// réussi d'aphrody-perf.yml (gh), releases GitHub, build.ts de l'arbre extrait, puis déploiement Cloudflare : assets
+// statiques du Worker aphrody-app (packages/bun-cloudflare/app, API sous /api) via app/scripts/deploy.ts.
+// Identifiants : ~/.aphrody/config/cloudflare.env de l'hôte (CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, APP_SECRET).
 //
 //   bun scripts/aphrody/site/publish.ts [--git <checkout du fork>] [--ref origin/main]
-//       [--to local:/var/www/bun.aphrody.com | ssh:<hôte>] [--keep 1]
 //       [--distribution <checkout aphrody-labs/aphrody>] [--distribution-ref origin/main]
 //       [--perf <dossier> | --no-perf] [--offline] [--dry-run] [--if-changed]
 // Sans --distribution, c'est le site du runtime seul ; --distribution ajoute les pages de la distribution.
-// --if-changed ne fait rien si <base>/current/publish.json porte déjà le même commit, la même release, le même run
-// perf et la même empreinte de données ; une collecte en erreur (réseau, jeton GitHub absent) n'y publie rien.
-//   bun scripts/aphrody/site/publish.ts rollback [--to ...] [--release <id>]   # défaut : la release précédente
-//   bun scripts/aphrody/site/publish.ts status [--to ...]
-//
-// Chaque action est journalisée dans ~/.coord-dbfr.log de l'hôte cible.
+// --if-changed ne fait rien si ${ORIGIN}/publish.json porte déjà le même commit, la même release, le même run perf et
+// la même empreinte de données ; une collecte en erreur (réseau, jeton GitHub absent) n'y publie rien.
+//   bun scripts/aphrody/site/publish.ts rollback [--version <id>]   # wrangler rollback, défaut : version précédente
+//   bun scripts/aphrody/site/publish.ts status                      # wrangler deployments list
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-export const DEFAULT_BASE = "/var/www/bun.aphrody.com";
-export const DEFAULT_TARGET = `local:${DEFAULT_BASE}`;
+export const ORIGIN = "https://aphrody.app";
 const REPO = "aphrody-labs/bun";
-
-export type Target = { kind: "ssh"; host: string; base: string } | { kind: "local"; base: string };
-
-export function parseTarget(spec: string, base = DEFAULT_BASE): Target {
-  if (spec.startsWith("local:")) return { kind: "local", base: resolve(spec.slice(6)) };
-  const host = spec.replace(/^ssh:/, "");
-  if (!/^[\w.@-]+$/.test(host)) throw new Error(`hôte invalide : ${spec}`);
-  return { kind: "ssh", host, base };
-}
-
-export const releaseId = (sha: string, now = new Date()) =>
-  `${now
-    .toISOString()
-    .replace(/[-:]/g, "")
-    .replace(/\.\d+Z$/, "Z")}-${sha.slice(0, 12)}`;
-
-const shq = (s: string) => `'${s.replaceAll("'", `'\\''`)}'`;
-
-/** Script shell de bascule : vérifie site.json, flip atomique de current, purge au-delà de `keep`, journal. */
-export function flipScript(base: string, id: string, keep: number, note: string, log = true): string {
-  return `set -eu
-base=${shq(base)}; id=${shq(id)}
-test -f "$base/releases/$id/site.json" || { echo "release incomplète : $id" >&2; exit 1; }
-ln -sfn "releases/$id" "$base/.current.tmp"
-mv -Tf "$base/.current.tmp" "$base/current"
-cur=$id
-ls -1 "$base/releases" | grep -v '^\\.' | sort -r | tail -n +${keep + 1} | while read -r old; do
-  [ "$old" = "$cur" ] || rm -rf -- "$base/releases/$old"
-done
-${log ? `echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) site bun.aphrody.com : ${note.replaceAll('"', "'")} -> $id" >> "$HOME/.coord-dbfr.log"` : ":"}
-readlink "$base/current"`;
-}
+const APP = "packages/bun-cloudflare";
 
 function run(cmd: string[], opts: { cwd?: string; stdin?: Blob | "inherit" } = {}): string {
   const r = Bun.spawnSync(cmd, {
@@ -64,31 +28,28 @@ function run(cmd: string[], opts: { cwd?: string; stdin?: Blob | "inherit" } = {
     stdout: "pipe",
     stderr: "pipe",
   });
-  if (!r.success) throw new Error(`${cmd.slice(0, 3).join(" ")} : ${r.stderr.toString().trim() || r.exitCode}`);
+  if (!r.success)
+    throw new Error(`${cmd.slice(0, 3).join(" ")} : ${r.stderr.toString().trim() || r.exitCode}`);
   return r.stdout.toString().trim();
 }
 
-function remote(target: Target, script: string, stdin?: Blob): string {
-  if (target.kind === "local") return run(["sh", "-c", script], { stdin });
-  return run(["ssh", "-o", "BatchMode=yes", target.host, `sh -c ${shq(script)}`], { stdin });
-}
-
-function listReleases(target: Target): { current: string; releases: string[] } {
-  const out = remote(
-    target,
-    `base=${shq(target.base)}; readlink "$base/current" 2>/dev/null || echo; ls -1 "$base/releases" 2>/dev/null | grep -v '^\\.' | sort || true`,
-  ).split("\n");
-  return {
-    current: (out[0] ?? "").replace(/^releases\//, ""),
-    releases: out.slice(1).filter(Boolean),
-  };
+/** Lance une commande en héritant de la sortie (wrangler, bun install) ; échoue sur code non nul. */
+async function live(cmd: string[], cwd: string) {
+  const proc = Bun.spawn({ cmd, cwd, stdio: ["ignore", "inherit", "inherit"] });
+  if ((await proc.exited) !== 0)
+    throw new Error(`${cmd.slice(0, 3).join(" ")} : code ${proc.exitCode}`);
 }
 
 /**
  * Ce qui détermine le contenu publié : rien n'est republié tant que ces valeurs ne changent pas. `data` est
  * l'empreinte de site-data.json (collect.ts) hors date de collecte.
  */
-export type Stamp = { commit: string; release: string | null; perfRun: number | null; data?: string | null };
+export type Stamp = {
+  commit: string;
+  release: string | null;
+  perfRun: number | null;
+  data?: string | null;
+};
 export const sameStamp = (a: Stamp | null, b: Stamp) =>
   !!a &&
   a.commit === b.commit &&
@@ -135,22 +96,22 @@ function latestRelease(): string | null {
   return out && out !== "null" ? out : null;
 }
 
-function remoteStamp(target: Target): Stamp | null {
+async function remoteStamp(): Promise<Stamp | null> {
   try {
-    return JSON.parse(remote(target, `cat ${shq(`${target.base}/current/publish.json`)} 2>/dev/null || echo null`));
+    const res = await fetch(`${ORIGIN}/publish.json`, { headers: { "Cache-Control": "no-cache" } });
+    return res.ok ? ((await res.json()) as Stamp) : null;
   } catch {
     return null;
   }
 }
 
-async function publish(args: string[], target: Target) {
+async function publish(args: string[]) {
   const option = (name: string) => {
     const i = args.indexOf(name);
     return i >= 0 ? args[i + 1] : undefined;
   };
   const repoDir = resolve(option("--git") ?? join(import.meta.dir, "..", "..", ".."));
   const ref = option("--ref") ?? "origin/main";
-  const keep = Number(option("--keep") ?? 1);
   const ifChanged = args.includes("--if-changed");
   if (ref.startsWith("origin/")) run(["git", "-C", repoDir, "fetch", "-q", "origin", ref.slice(7)]);
   const sha = run(["git", "-C", repoDir, "rev-parse", `${ref}^{commit}`]);
@@ -165,7 +126,8 @@ async function publish(args: string[], target: Target) {
       return null;
     }
   };
-  const perfRun = option("--perf") || args.includes("--no-perf") ? null : query("perf", latestPerfRun);
+  const perfRun =
+    option("--perf") || args.includes("--no-perf") ? null : query("perf", latestPerfRun);
 
   // Monorepo de la distribution : seulement sur demande (--distribution), le site publié est celui du runtime.
   const distOption = option("--distribution");
@@ -173,7 +135,8 @@ async function publish(args: string[], target: Target) {
   const distRef = option("--distribution-ref") ?? "origin/main";
   let distSha: string | null = null;
   if (distDir) {
-    if (distRef.startsWith("origin/")) run(["git", "-C", distDir, "fetch", "-q", "origin", distRef.slice(7)]);
+    if (distRef.startsWith("origin/"))
+      run(["git", "-C", distDir, "fetch", "-q", "origin", distRef.slice(7)]);
     distSha = run(["git", "-C", distDir, "rev-parse", `${distRef}^{commit}`]);
   }
 
@@ -192,6 +155,7 @@ async function publish(args: string[], target: Target) {
       "bench",
       "scripts/aphrody",
       "package.json",
+      APP,
     ]);
     if (!archive.success) throw new Error(`git archive : ${archive.stderr.toString()}`);
     run(["tar", "-x", "-C", src], { stdin: new Blob([archive.stdout]) });
@@ -215,7 +179,8 @@ async function publish(args: string[], target: Target) {
     const dataJson = readFileSync(dataFile, "utf8");
     const errors = (JSON.parse(dataJson).errors ?? []) as string[];
     if (errors.length) {
-      if (ifChanged) throw new Error(`collecte incomplète, rien n'est publié : ${errors.join(" ; ")}`);
+      if (ifChanged)
+        throw new Error(`collecte incomplète, rien n'est publié : ${errors.join(" ; ")}`);
       for (const e of errors) console.warn(`collecte : ${e}`);
     }
 
@@ -225,7 +190,7 @@ async function publish(args: string[], target: Target) {
       perfRun: perfRun?.id ?? null,
       data: dataDigest(dataJson),
     };
-    if (ifChanged && sameStamp(remoteStamp(target), stamp)) {
+    if (ifChanged && sameStamp(await remoteStamp(), stamp)) {
       console.log(
         `à jour : ${sha.slice(0, 12)}, distribution ${distSha?.slice(0, 12) ?? "aucune"}, release ${stamp.release ?? "aucune"}, perf ${stamp.perfRun ?? "aucun"}, données ${stamp.data}`,
       );
@@ -255,46 +220,49 @@ async function publish(args: string[], target: Target) {
     console.log(run(build, { cwd: src }));
     writeFileSync(join(out, "publish.json"), JSON.stringify(stamp) + "\n");
 
-    const id = releaseId(sha);
-    if (args.includes("--dry-run")) return console.log(`dry-run : ${out} prêt pour ${id}`);
-    const tar = Bun.spawnSync(["tar", "-cz", "-C", out, "."]);
-    if (!tar.success) throw new Error(`tar : ${tar.stderr.toString()}`);
-    const incoming = `${target.base}/releases/.incoming-${id}`;
-    remote(
-      target,
-      `set -eu; mkdir -p ${shq(incoming)}; tar -xz -C ${shq(incoming)}; chmod -R a+rX ${shq(incoming)}; mv ${shq(incoming)} ${shq(`${target.base}/releases/${id}`)}`,
-      new Blob([tar.stdout]),
-    );
-    const current = remote(
-      target,
-      flipScript(target.base, id, keep, `publication ${REPO}@${sha.slice(0, 12)}`, target.kind === "ssh"),
-    );
-    console.log(`publié : ${current} (${(tar.stdout.length / 1048576).toFixed(1)} Mio compressés)`);
+    const app = join(src, APP);
+    await live(["bun", "install", "--frozen-lockfile"], app);
+    const deploy = [
+      "bun",
+      join(app, "app/scripts/deploy.ts"),
+      "--assets",
+      out,
+      "--tag",
+      sha.slice(0, 12),
+    ];
+    deploy.push("--message", `${REPO}@${sha.slice(0, 12)}`);
+    if (args.includes("--dry-run")) deploy.push("--dry-run");
+    await live(deploy, app);
+    console.log(`publié : ${ORIGIN} (${REPO}@${sha.slice(0, 12)})`);
   } finally {
     rmSync(work, { recursive: true, force: true });
   }
 }
 
-function rollback(args: string[], target: Target) {
-  const i = args.indexOf("--release");
-  const { current, releases } = listReleases(target);
-  const to = i >= 0 ? args[i + 1]! : releases.filter(r => r < current).at(-1);
-  if (!to || !releases.includes(to)) throw new Error(`aucune release cible (courante ${current || "aucune"})`);
-  console.log(
-    remote(
-      target,
-      flipScript(target.base, to, Number.MAX_SAFE_INTEGER, `rollback depuis ${current}`, target.kind === "ssh"),
-    ),
-  );
+/** wrangler (rollback, deployments) dans le paquet du checkout, identifiants du deploy.ts. */
+async function wranglerCommand(args: string[]) {
+  const pkg = join(import.meta.dir, "..", "..", "..", APP);
+  const { envFile, parseEnv } = await import(join(pkg, "app/scripts/deploy.ts"));
+  const { wrangler } = await import(join(pkg, "src/wrangler.ts"));
+  const env = parseEnv(readFileSync(envFile(), "utf8"));
+  const code = await wrangler(args, { cwd: join(pkg, "app"), env }).exited;
+  if (code !== 0) process.exit(code);
 }
 
 if (import.meta.main) {
   const args = process.argv.slice(2);
   const command = args[0] && !args[0].startsWith("--") ? args.shift()! : "publish";
-  const toIndex = args.indexOf("--to");
-  const target = parseTarget(toIndex >= 0 ? args[toIndex + 1]! : DEFAULT_TARGET);
-  if (command === "publish") await publish(args, target);
-  else if (command === "rollback") rollback(args, target);
-  else if (command === "status") console.log(JSON.stringify(listReleases(target), null, 2));
+  const option = (name: string) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined);
+  if (command === "publish") await publish(args);
+  else if (command === "rollback") {
+    const version = option("--version");
+    await wranglerCommand([
+      "rollback",
+      ...(version ? [version] : []),
+      "--yes",
+      "--message",
+      "publish.ts rollback",
+    ]);
+  } else if (command === "status") await wranglerCommand(["deployments", "list"]);
   else throw new Error(`commande inconnue : ${command} (publish, rollback, status)`);
 }

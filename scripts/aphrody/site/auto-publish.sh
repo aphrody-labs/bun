@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Republication automatique de bun.aphrody.com (timer systemd --user aphrody-site-publish sur le VPS).
+# Republication automatique de aphrody.app (timer systemd --user aphrody-site-publish sur le VPS).
 # Fetch seul du checkout (le worktree n'est jamais touché), scripts du site pris dans origin/main,
 # puis publish.ts --if-changed : rien n'est fait si commit, release, run perf et données collectées (runtime,
 # APHRODY.md, organisation GitHub) n'ont pas bougé.

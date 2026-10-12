@@ -1,4 +1,4 @@
-// Génère un site statique. Sans données de distribution, c'est le site du runtime, bun.aphrody.com (« Aphrody Bun » :
+// Génère un site statique. Sans données de distribution, c'est le site du runtime, aphrody.app (« Aphrody Bun » :
 // accueil depuis APHRODY.md du fork, /runtime, /docs, téléchargements, notes de version, benchmarks, installateurs) ;
 // avec elles (--data d'un collect.ts --distribution), le site de la distribution Aphrody (accueil produit, /components, /runtime, /m3,
 // /security, /contributing, /about, pages générées par pages.ts depuis site-data.json de collect.ts), la doc du
@@ -6,7 +6,7 @@
 // /benchmarks, /downloads, /release-notes, /install (+ .sh, .ps1), /bun/setup.sh|ps1, /llms.txt,
 // /llms-full.txt, sitemap.xml, robots.txt.
 //
-//   bun scripts/aphrody/site/build.ts --out <dir> [--src <arbre du dépôt>] [--origin https://bun.aphrody.com]
+//   bun scripts/aphrody/site/build.ts --out <dir> [--src <arbre du dépôt>] [--origin https://aphrody.app]
 //       [--commit <sha>] [--repo aphrody-labs/bun] [--perf <dossier des perf-report.json>] [--perf-run <url>]
 //       [--releases <releases.json> | --offline] [--data <site-data.json>]
 //
@@ -314,7 +314,7 @@ export async function build(o: BuildOptions) {
   const { tabs, pages } = readNavigation(docsJson);
   const now = (o.now ?? new Date()).toISOString();
   const data = o.data ?? null;
-  /** Nom du site : la distribution (aphrody.com) ou le runtime seul (bun.aphrody.com). */
+  /** Nom du site : la distribution (aphrody.com) ou le runtime seul (aphrody.app). */
   const brand = data?.distribution ? "Aphrody" : "Aphrody Bun";
   const readSnippet = (path: string) => {
     const file = join(docs, path);
@@ -1059,7 +1059,7 @@ if (import.meta.main) {
   const result = await build({
     src,
     out: resolve(out),
-    origin: option("--origin", "https://bun.aphrody.com")!.replace(/\/$/, ""),
+    origin: option("--origin", "https://aphrody.app")!.replace(/\/$/, ""),
     commit,
     repo,
     perf: option("--perf"),

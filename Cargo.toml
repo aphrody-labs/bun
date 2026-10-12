@@ -150,7 +150,7 @@ exclude = ["packages/bun-oxc", "vendor", "packages/bun-cosmic", "packages/bun-do
 
 [workspace.package]
 "repository" = "https://github.com/aphrody-labs/bun"
-"homepage" = "https://bun.aphrody.com"
+"homepage" = "https://aphrody.app"
 "authors" = ["aphrody-dev <contact@aphrody.com>"]
 "rust-version" = "1.97"
 "license" = "MIT"

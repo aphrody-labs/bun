@@ -20,7 +20,7 @@ export type Shell = {
   footer: string;
   /** Lien GitHub de l'en-tête. */
   github: string;
-  /** Nom affiché dans l'en-tête : `Aphrody Bun` pour le site du runtime (bun.aphrody.com), `Aphrody` sinon. */
+  /** Nom affiché dans l'en-tête : `Aphrody Bun` pour le site du runtime (aphrody.app), `Aphrody` sinon. */
   brand?: string;
 };
 

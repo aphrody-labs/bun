@@ -58,7 +58,7 @@ and its existing system stack for plain text. New fork surfaces use Aphrody
 Google Sans Flex independently, without changing captured line breaks.
 Fork navigation exposes release downloads, docs, guides, plugin skills, the
 visual code graph and measured benchmarks. Installer and canonical URLs change
-to bun.aphrody.com. Upstream analytics are removed. Upstream benchmark values
+to aphrody.app. Upstream analytics are removed. Upstream benchmark values
 remain attributed to upstream and are never presented as fork measurements.
 
 `mirror-coverage.json` records each original and adapted SHA-256, missing local

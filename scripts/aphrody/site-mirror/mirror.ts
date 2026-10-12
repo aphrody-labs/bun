@@ -166,7 +166,7 @@ export function externalizeInlineScripts(html: string): {
 export function adaptHtml(
   html: string,
   source: string,
-  origin = "https://bun.aphrody.com",
+  origin = "https://aphrody.app",
 ): string {
   if (!/^[a-f0-9]{40}$/.test(source)) throw new Error("A release source SHA is required");
   const links = [
@@ -267,7 +267,7 @@ export function buildMirror(
         writeFileSync(
           join(root, path),
           rewritePagefindLoader(
-            rewriteInstallers(bytes.toString("utf8"), "https://bun.aphrody.com"),
+            rewriteInstallers(bytes.toString("utf8"), "https://aphrody.app"),
           ),
         );
       else writeFileSync(join(root, path), bytes);
