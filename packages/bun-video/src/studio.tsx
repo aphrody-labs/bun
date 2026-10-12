@@ -8,6 +8,8 @@ export interface StudioChapter { readonly title: string; readonly start: number;
 export interface StudioAsset { readonly id: string; readonly title: string; readonly src: string; readonly type?: string; readonly poster?: string; readonly alt?: string; readonly crossOrigin?: "anonymous" | "use-credentials"; readonly subtitles?: readonly StudioSubtitle[]; readonly variants?: readonly StudioVariant[]; readonly chapters?: readonly StudioChapter[]; }
 export interface VideoStudioProps { readonly assets: readonly StudioAsset[]; readonly initialAssetId?: string; readonly className?: string; readonly cache?: CrawlerCache; readonly storageKey?: string; readonly autoPlay?: boolean; readonly loop?: boolean; readonly muted?: boolean; readonly onAssetSelect?: (asset: StudioAsset) => void; readonly onPlayback?: (state: { currentTime: number; duration: number; paused: boolean }) => void; }
 
+const isHttpSource = (source: string) => /^https?:$/i.test(URL.canParse(source) ? new URL(source).protocol : "");
+
 /** Compact React studio surface for browsing assets and driving the Bun Video pipeline. */
 export function VideoStudio({ assets, initialAssetId, className, cache, storageKey, autoPlay = false, loop = false, muted = false, onAssetSelect, onPlayback }: VideoStudioProps) {
   const [localAssets, setLocalAssets] = useState<readonly StudioAsset[]>(() => {
@@ -63,7 +65,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
     } catch (cause) { setError(cause instanceof Error ? cause.message : "URL invalide"); }
   };
   const inspectSelected = async () => {
-    if (!selected || !/^https?:$/.test(new URL(selected.src).protocol)) return;
+    if (!selected || !isHttpSource(selected.src)) return;
     setLoadingMetadata(true); setError(null);
     try {
       const key = `yt-dlp:${selected.src}`;
@@ -133,7 +135,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
         {selected && <label>Vitesse <select value={playbackRate} onChange={event => setPlaybackRate(Number(event.target.value))}><option value="0.5">0,5×</option><option value="0.75">0,75×</option><option value="1">1×</option><option value="1.25">1,25×</option><option value="1.5">1,5×</option><option value="2">2×</option></select></label>}
         {selected && <label>Volume <input type="range" min="0" max="1" step="0.05" value={volume} onChange={event => setVolume(Number(event.target.value))} /></label>}
         {selected?.variants && <label>Qualité <select value={variantSrc ?? selected.src} onChange={event => setVariantSrc(event.target.value === selected.src ? undefined : event.target.value)}><option value={selected.src}>Auto</option>{selected.variants.map(variant => <option key={variant.src} value={variant.src}>{variant.label}</option>)}</select></label>}
-        {selected && /^https?:$/.test(new URL(selected.src).protocol) && <button type="button" onClick={() => void inspectSelected()} disabled={loadingMetadata}>{loadingMetadata ? "Analyse…" : "Analyser avec yt-dlp"}</button>}
+        {selected && isHttpSource(selected.src) && <button type="button" onClick={() => void inspectSelected()} disabled={loadingMetadata}>{loadingMetadata ? "Analyse…" : "Analyser avec yt-dlp"}</button>}
         {metadata && <pre>{JSON.stringify({ title: metadata.title, id: metadata.id, formats: metadata.formats?.length ?? 0 }, null, 2)}</pre>}
         {error && <p role="alert">{error}</p>}
       </main>
