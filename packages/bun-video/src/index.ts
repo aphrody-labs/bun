@@ -1,5 +1,5 @@
 export { interpolate, Easing } from "./remotion-fork";
-export { generateSpringEaseData, SPRING_PRESETS } from "@hyperframes/parsers/spring-ease";
+export { generateSpringEaseData, SPRING_PRESETS } from "./hyperframes-fork";
 export { captureNativeRemotionFrame } from "./remotion-frame";
 export type { NativeFrameOptions } from "./remotion-frame";
 export { captureNativeWebViewFrames } from "./hyperframes-native";
@@ -32,5 +32,4 @@ export * from "./studio";
 export * from "./studio-remotion";
 
 export { loadRemotionCore, loadRemotionRenderer } from "./remotion-fork";
-export const loadHyperframesCore = () => import("@hyperframes/core");
-export const loadHyperframesEngine = () => import("@hyperframes/engine");
+export { loadHyperframesCore, loadHyperframesEngine } from "./hyperframes-fork";
