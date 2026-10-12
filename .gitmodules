@@ -55,3 +55,15 @@
 [submodule "@aphrody/m3-motion"]
 	path = packages/aphrody-migrated/m3/aphrody-m3-motion
 	url = https://github.com/aphrody-labs/aphrody-m3-motion.git
+[submodule "@aphrody/m3-next"]
+	path = packages/aphrody-migrated/m3/aphrody-m3-next
+	url = https://github.com/aphrody-labs/aphrody-m3-next.git
+[submodule "@aphrody/m3-next-example"]
+	path = packages/aphrody-migrated/m3/aphrody-m3-next-example
+	url = https://github.com/aphrody-labs/aphrody-m3-next-example.git
+[submodule "@aphrody/m3-next-migrate"]
+	path = packages/aphrody-migrated/m3/aphrody-m3-next-migrate
+	url = https://github.com/aphrody-labs/aphrody-m3-next-migrate.git
+[submodule "@aphrody/m3-next-tauri-example"]
+	path = packages/aphrody-migrated/m3/aphrody-m3-next-tauri-example
+	url = https://github.com/aphrody-labs/aphrody-m3-next-tauri-example.git

@@ -25,6 +25,10 @@ pub async fn start_embedded_daemon() -> Result<EmbeddedDaemon, String> {
         .map_err(|error| error.to_string())
 }
 
+pub async fn run_embedded_daemon() -> Result<(), String> {
+    start_embedded_daemon().await?.run().await.map_err(|error| error.to_string())
+}
+
 /// Controls the installed Mullvad daemon through its native management IPC.
 #[cfg(not(target_os = "android"))]
 pub struct VpnClient(mullvad_management_interface::client::MullvadProxyClient);
@@ -65,11 +69,11 @@ pub fn cli(_args: &[String]) -> i32 {
 #[cfg(not(target_os = "android"))]
 pub fn cli(args: &[String]) -> i32 {
     let Some(command) = args.first().map(String::as_str) else {
-        eprintln!("usage: bun vpn <status|connect|disconnect>");
+        eprintln!("usage: bun vpn <daemon|status|connect|disconnect>");
         return 2;
     };
-    if args.len() != 1 || !matches!(command, "status" | "connect" | "disconnect") {
-        eprintln!("usage: bun vpn <status|connect|disconnect>");
+    if args.len() != 1 || !matches!(command, "daemon" | "status" | "connect" | "disconnect") {
+        eprintln!("usage: bun vpn <daemon|status|connect|disconnect>");
         return 2;
     }
     let runtime = match tokio::runtime::Builder::new_current_thread()
@@ -82,6 +86,15 @@ pub fn cli(args: &[String]) -> i32 {
             return 1;
         }
     };
+    if command == "daemon" {
+        return match runtime.block_on(run_embedded_daemon()) {
+            Ok(()) => 0,
+            Err(error) => {
+                eprintln!("bun vpn: {error}");
+                1
+            }
+        };
+    }
     match runtime.block_on(async move {
         let mut client = VpnClient::connect().await?;
         match command {
