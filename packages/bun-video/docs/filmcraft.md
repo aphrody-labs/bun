@@ -35,6 +35,25 @@ rates must not weaken Bun Video's explicit input validation.
 The [upstream architecture and codec documentation](https://github.com/storytold/filmcraft/blob/71438c627b5cbcfb550526c3971f4d0037733c5c/README.md#formats-and-codecs)
 states the runtime/test boundary explicitly.
 
+## Rules retained from the upstream engine
+
+The pinned [AGENTS.md](https://github.com/storytold/filmcraft/blob/71438c627b5cbcfb550526c3971f4d0037733c5c/AGENTS.md)
+and [CLAUDE.md](https://github.com/storytold/filmcraft/blob/71438c627b5cbcfb550526c3971f4d0037733c5c/CLAUDE.md)
+require:
+
+- Pure Rust codecs and containers; FFmpeg/ffprobe only as external test tools.
+- Recoverable `Result` errors, checked arithmetic, bounded input allocations,
+  bounded traversal and guarded workers. Preserve unwind support.
+- OS media FFI confined to the platform boundary, behind safe APIs.
+- No UI dependencies below the frontend/platform layer.
+- Integer `Tick` time for edits and one command registry for UI, CLI and automation.
+- Open assets with attribution; remove ArtCraft trademarks from modified versions
+  and import no Adobe artwork.
+- Formatting, strict Clippy, tests, layering, assets and WASM gates before delivery.
+
+The FilmCraft build profile must not link, bundle or ship FFmpeg/libmpv. Bun
+Video's separately requested native FFI path remains outside that profile.
+
 No FilmCraft code or dependency is integrated yet. The pinned GPU and time source
 files were fetched through the native Aphrody GitHub API into the local build
 reference cache for the next native integration batch.
