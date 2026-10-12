@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { extractYtDlp, type YtDlpResult } from "./ytdlp";
 
 export interface StudioAsset { readonly id: string; readonly title: string; readonly src: string; readonly type?: string; }
 export interface VideoStudioProps { readonly assets: readonly StudioAsset[]; readonly initialAssetId?: string; readonly className?: string; }
@@ -10,14 +11,21 @@ export function VideoStudio({ assets, initialAssetId, className }: VideoStudioPr
   const [selectedId, setSelectedId] = useState(first);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
+  const [metadata, setMetadata] = useState<YtDlpResult | null>(null);
+  const [loadingMetadata, setLoadingMetadata] = useState(false);
   const selected = useMemo(() => localAssets.find(asset => asset.id === selectedId) ?? localAssets[0], [localAssets, selectedId]);
   const addUrl = () => {
     try {
       const parsed = new URL(url);
       if (!/^https?:$/.test(parsed.protocol)) throw new Error("URL HTTP(S) requise");
       const asset = { id: `url-${Date.now()}`, title: parsed.hostname + parsed.pathname, src: parsed.href };
-      setLocalAssets(current => [...current, asset]); setSelectedId(asset.id); setUrl(""); setError(null);
+      setLocalAssets(current => [...current, asset]); setSelectedId(asset.id); setUrl(""); setMetadata(null); setError(null);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "URL invalide"); }
+  };
+  const inspectSelected = async () => {
+    if (!selected || !/^https?:$/.test(new URL(selected.src).protocol)) return;
+    setLoadingMetadata(true); setError(null);
+    try { setMetadata(await extractYtDlp(selected.src)); } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); } finally { setLoadingMetadata(false); }
   };
   const addFile = (file: File) => {
     const asset = { id: `file-${Date.now()}`, title: file.name, src: URL.createObjectURL(file), type: file.type };
@@ -43,6 +51,8 @@ export function VideoStudio({ assets, initialAssetId, className }: VideoStudioPr
           <video key={selected.id} controls playsInline preload="metadata" src={selected.src} onError={() => setError(`Lecture impossible : ${selected.title}`)} />
         ) : <p>Aucun média sélectionné.</p>}
         {selected && <p>{selected.title}{selected.type ? ` · ${selected.type}` : ""}</p>}
+        {selected && /^https?:$/.test(new URL(selected.src).protocol) && <button type="button" onClick={() => void inspectSelected()} disabled={loadingMetadata}>{loadingMetadata ? "Analyse…" : "Analyser avec yt-dlp"}</button>}
+        {metadata && <pre>{JSON.stringify({ title: metadata.title, id: metadata.id, formats: metadata.formats?.length ?? 0 }, null, 2)}</pre>}
         {error && <p role="alert">{error}</p>}
       </main>
     </section>
