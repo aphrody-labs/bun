@@ -91,14 +91,14 @@ function withAbi(cfg: Config, abi: Abi): Config {
 
 describe("native coreutils feature", () => {
   test("the standard Bun build forwards the enabled native owner to Cargo", () => {
-    const cfg = resolve({ os: "linux", arch: "x64" });
+    const cfg = resolve({ os: "linux", arch: "x64", linuxSysroot: "/fake" });
     expect(cfg.coreutils).toBe(true);
     const args = cargoBuildInvocation(cfg).args;
     expect(args[args.indexOf("--features") + 1]).toBe("coreutils");
   });
 
   test("the existing build configuration supports an explicit opt out", () => {
-    const cfg = resolve({ os: "linux", arch: "x64", coreutils: false });
+    const cfg = resolve({ os: "linux", arch: "x64", linuxSysroot: "/fake", coreutils: false });
     expect(cfg.coreutils).toBe(false);
     expect(cargoBuildInvocation(cfg).args).not.toContain("--features");
   });

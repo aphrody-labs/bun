@@ -224,6 +224,9 @@ function runtimeInitializers(cfg: Config): string[] {
 
   // mimalloc's process attach hook: every target.
   const initializers = ["_ZL17mi_process_attachv"];
+  // aws-lc's CPU-capability probe (aws-lc-sys, under rustls in the embedded uv and browser crates). Its
+  // BORINGSSL_NO_STATIC_INITIALIZER mode has no lazy init: aws-lc-rs never calls CRYPTO_library_init.
+  initializers.push("do_library_init");
   if (gnu || musl) {
     // crtbegin.o (GCC's crt objects).
     initializers.push("frame_dummy");

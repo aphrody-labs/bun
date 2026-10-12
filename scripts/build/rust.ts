@@ -567,6 +567,8 @@ export function cargoBuildInvocation(cfg: Config): CargoInvocation {
   // could otherwise resolve a different worktree's `rust-toolchain.toml`.
   if (cfg.rustToolchain !== undefined) unitEnv.RUSTUP_TOOLCHAIN = cfg.rustToolchain;
   if (cfg.rustc !== undefined) unitEnv.RUSTC = cfg.rustc;
+  // liblzma-sys (uv's archive codecs) links a host liblzma.so found by pkg-config; build the bundled xz instead.
+  unitEnv.LZMA_API_STATIC = "1";
   // Darwin cross-compile from a non-darwin host: point anything in the dep graph that cares about the Apple SDK at
   // the extracted sysroot. rustc itself doesn't need it for a staticlib, but cc-rs (build scripts compiling target C)
   // honours CFLAGS_<triple>/SDKROOT, and MACOSX_DEPLOYMENT_TARGET keeps the LC_BUILD_VERSION minos rustc stamps into
