@@ -304,7 +304,7 @@ export abstract class BaseDebugAdapter<T extends Inspector = Inspector>
     this.#bunEvalPath = bunEvalPath;
     this.#threadId = threadId++;
     this.inspector = inspector;
-    const emit = this.inspector.emit.bind(this.inspector);
+    const emit = this.inspector.emit.bind(this.inspector) as (event: string | symbol, ...args: unknown[]) => boolean;
     this.inspector.emit = (event, ...args) => {
       let sent = false;
       sent ||= emit(event, ...args);

@@ -1,21 +1,19 @@
 {
   "compilerOptions": {
     "lib": ["ESNext"],
-    "module": "NodeNext",
+    "module": "ESNext",
     "target": "esnext",
-    "moduleResolution": "nodenext",
+    "moduleResolution": "bundler",
     "moduleDetection": "force",
     "allowImportingTsExtensions": true,
     "noEmit": true,
     // "composite": true,
     "strict": true,
-    "downlevelIteration": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "inlineSourceMap": true,
-    "allowJs": true,
-    "outDir": "dist"
+    "allowJs": true
   },
-  "include": ["src", "scripts", "../bun-types/index.d.ts", "../bun-inspector-protocol/**/*.ts"]
+  "include": ["src", "scripts", "../bun-types/index.d.ts"]
 }
