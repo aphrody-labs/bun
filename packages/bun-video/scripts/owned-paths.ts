@@ -21,7 +21,7 @@ for (const name of ["remotion", "hyperframes"]) {
   );
   for (const path of git.stdout.toString().split("\0")) {
     if (path && !excluded.has(path) && existsSync(resolve(root, name, path)))
-      paths.add(`vendor/bun-video/${name}/${path}`);
+      paths.add(`packages/bun-video/${name}/${path}`);
   }
 }
 const extraPatterns = [
@@ -60,7 +60,7 @@ const extraPatterns = [
 ];
 for (const pattern of extraPatterns)
   for await (const path of new Bun.Glob(pattern).scan({ cwd: root }))
-    paths.add(`vendor/bun-video/${path.replaceAll("\\", "/")}`);
+    paths.add(`packages/bun-video/${path.replaceAll("\\", "/")}`);
 for await (const path of new Bun.Glob("**/*").scan({
   cwd: resolve(workspace, "packages/bun-video"),
   onlyFiles: true,
@@ -69,8 +69,8 @@ for await (const path of new Bun.Glob("**/*").scan({
 for (const path of paths)
   if (
     /(?:^|\/)(?:node_modules|target|dist)(?:\/|$)|\.(?:exe|dll|node|log)$/.test(path) &&
-    !path.startsWith("vendor/bun-video/hyperframes/") &&
-    !path.startsWith("vendor/bun-video/remotion/packages/")
+    !path.startsWith("packages/bun-video/hyperframes/") &&
+    !path.startsWith("packages/bun-video/remotion/packages/")
   )
     throw new Error(`Generated path rejected: ${path}`);
 const output = resolve(workspace, "tmp/bun-video-owned-paths.txt");

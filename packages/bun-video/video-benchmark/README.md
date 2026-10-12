@@ -6,7 +6,7 @@ warms each function, retains every timing/RSS sample, and rejects output mismatc
 It does not measure video encoding or claim Node-versus-Bun speedups.
 
 ```sh
-bun run vendor/bun-video/video-benchmark/runner.ts --remotion-upstream <clean-pinned-checkout> --hyperframes-upstream <clean-pinned-checkout> --aphrody-root <qualified-aphrody-checkout> --samples 7
+bun run packages/bun-video/video-benchmark/runner.ts --remotion-upstream <clean-pinned-checkout> --hyperframes-upstream <clean-pinned-checkout> --aphrody-root <qualified-aphrody-checkout> --samples 7
 ```
 
 `UPSTREAM.json` in each fork must contain the baseline checkout's exact SHA.

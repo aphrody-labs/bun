@@ -52,11 +52,11 @@ not emitted by that operation. Both paths require absolute input filenames.
 Final integrator gates, serialized through the selected owner's Cargo factory:
 
 ```text
-cargo check --manifest-path vendor/bun-video/native/Cargo.toml
-cargo test --manifest-path vendor/bun-video/native/Cargo.toml
-cargo clippy --manifest-path vendor/bun-video/native/Cargo.toml -- -D warnings
-cargo test --manifest-path vendor/bun-video/native/Cargo.toml -- --ignored
-cargo check --manifest-path vendor/bun-video/native/Cargo.toml --features libav
+cargo check --manifest-path packages/bun-video/native/Cargo.toml
+cargo test --manifest-path packages/bun-video/native/Cargo.toml
+cargo clippy --manifest-path packages/bun-video/native/Cargo.toml -- -D warnings
+cargo test --manifest-path packages/bun-video/native/Cargo.toml -- --ignored
+cargo check --manifest-path packages/bun-video/native/Cargo.toml --features libav
 ```
 
 The last two need qualified FFmpeg and SDK respectively. Use an isolated target

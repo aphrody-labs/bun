@@ -13,8 +13,8 @@ export async function measureStack(aphrodyRoot: string, bunRoot: string, nativeL
     const source = `import React from "react";
 import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
-import { interpolate } from ${JSON.stringify(`${bunRoot}/vendor/bun-video/remotion/packages/core/src/interpolate.ts`)};
-import { generateSpringEaseData } from ${JSON.stringify(`${bunRoot}/vendor/bun-video/hyperframes/packages/parsers/src/springEase.ts`)};
+import { interpolate } from ${JSON.stringify(`${bunRoot}/packages/bun-video/remotion/packages/core/src/interpolate.ts`)};
+import { generateSpringEaseData } from ${JSON.stringify(`${bunRoot}/packages/bun-video/hyperframes/packages/parsers/src/springEase.ts`)};
 const root = createRoot(document.getElementById("root"));
 const curve = generateSpringEaseData(1, 180, 12, 120);
 globalThis.setBenchmarkFrame = frame => flushSync(() => root.render(React.createElement("main", {
