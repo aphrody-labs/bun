@@ -121,6 +121,13 @@
             ]
           },
           {
+            "group": "VPN",
+            "icon": "shield",
+            "pages": [
+              "/vpn/index"
+            ]
+          },
+          {
             "group": "Data & Storage",
             "icon": "database",
             "pages": [

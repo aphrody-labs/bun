@@ -1,0 +1,111 @@
+---
+title: Native VPN
+description: Use Bun's embedded Mullvad daemon and native VPN management client
+---
+
+Bun includes a native VPN surface backed by the Mullvad daemon. The Rust crate is
+`bun_vpn`; it contains the management client, the embedded daemon entry point,
+and the `bun vpn` command. No Node.js package, sidecar process, or JavaScript
+bridge is required.
+
+## Commands
+
+```sh terminal icon="terminal"
+bun vpn daemon       # run the embedded Mullvad daemon in the current process
+bun vpn status       # print the daemon-reported tunnel state
+bun vpn connect      # request a connection using the current Mullvad settings
+bun vpn disconnect   # request a disconnect and attribute it to Bun
+```
+
+The command accepts exactly one subcommand. `status`, `connect`, and
+`disconnect` use Mullvad's local management IPC endpoint. `daemon` starts the
+same daemon implementation inside Bun and does not install a second global
+tracing logger.
+
+## Native architecture
+
+`src/bun_vpn` is the Bun-owned integration boundary:
+
+| Layer | Responsibility |
+| --- | --- |
+| `bun_vpn::VpnClient` | Native async client for status/connect/disconnect |
+| `bun_vpn::start_embedded_daemon` | Build Mullvad paths, endpoint and detached logging, then start the daemon |
+| `bun_vpn::run_embedded_daemon` | Run the daemon event loop until shutdown |
+| `mullvad-management-interface` | Generated Prost/Tonic IPC types and proxy client |
+| `mullvad-daemon` | Tunnel lifecycle, routing, DNS, leak protection and platform policy |
+| `talpid-*`, `mullvad-*` | WireGuard, obfuscation, relay selection, API, paths and platform services |
+| `windows/winfw` | Native Windows Filtering Platform implementation |
+
+The embedded dependency uses the `embedded` feature with
+`default-features = false`. This keeps the daemon's tunnel and policy code but
+does not compile Mullvad's standalone app updater into Bun. Standalone Mullvad
+builds retain the `in-app-upgrade` feature.
+
+## Platform prerequisites
+
+The daemon needs the privileges and native resources of the target platform:
+
+- Windows needs the generated `winfw.dll` and `winfw.lib`, WFP access, and the
+  WireGuard/Wintun resources expected by Talpid.
+- Linux needs the required network, routing, DNS and firewall privileges.
+- Android has no management-interface client in this crate; `bun vpn` reports
+  that it is unsupported there.
+
+Compilation is not tunnel qualification. A successful Rust build proves the
+crate graph and ABI compile; it does not prove firewall privileges, a Mullvad
+account, relay reachability, or an active tunnel.
+
+## Windows native build
+
+The embedded Windows daemon links the vendored C++ projects in
+`vendor/mullvad/windows`:
+
+```powershell
+msbuild vendor\mullvad\windows\winfw\winfw.sln /m `
+  /p:Configuration=Debug /p:Platform=x64
+$env:RUSTC_WRAPPER = ""
+cargo test -p bun_vpn --lib
+```
+
+`windows-libraries` and `libwfp` are source dependencies of the `winfw`
+solution. Keep them present when producing `winfw.lib`; substituting a stub
+library does not qualify the VPN implementation.
+
+## Management IPC and daemon lifecycle
+
+The management client connects through `mullvad_paths` to the platform's
+configured local socket or named endpoint. The client does not bypass Mullvad's
+IPC authorization and does not create a tunnel on its own. The embedded daemon
+uses the same settings/cache/resource paths as Mullvad and receives an
+isolated `LogHandle`, so starting it does not replace Bun's global logger.
+
+`connect` and `disconnect` are requests, not synchronous proof of tunnel state.
+Use `status` after the request and qualify the resulting platform state with
+the target's network and firewall probes.
+
+## Graph evidence
+
+The native graph snapshot for this page was generated with the qualified Bun
+graph indexer for domain `src/bun_vpn`:
+
+- snapshot: `source:bun/src/bun_vpn:graph:4a9293c126920aae344310c82ab29ce33b26a3a13b1a37b31c08bde24dc1c3aa`
+- snapshot SHA-256: `4a9293c126920aae344310c82ab29ce33b26a3a13b1a37b31c08bde24dc1c3aa`
+- coverage: 2 files, 13 nodes, 19 edges, 6 calls, 0 parser errors
+- boundary: 1 unresolved file and 10 unresolved calls remain; no domain benchmark was published
+
+The bounded export is staged under `tmp/graph-docs-vpn`; generated evidence is
+not a replacement for native build and runtime qualification.
+
+The complete vendored Mullvad daemon was also scanned as the separate graph
+domain `graph:bun:vendor:mullvad` because the Bun snapshot indexer accepts only
+`src/*` and `packages/*` domains. That native scanner report contains 6,843
+files, 19,772 nodes, 49,719 edges, 13,957 calls, 5,172 resolved imports and
+7,879 unresolved external calls. The report is staged at
+`tmp/mullvad-graph-report.md`; the unresolved calls are primarily platform and
+third-party boundaries and must not be presented as missing Bun code.
+
+## Licensing
+
+The embedded Mullvad and Talpid sources retain their upstream licenses and
+notices under `vendor/mullvad`. Distribute the corresponding notices with any
+binary containing this integration.
