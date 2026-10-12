@@ -8,8 +8,8 @@ import { moduleNames } from "./fork-capabilities.ts";
 import { buildReleaseGraph } from "./release-graph.ts";
 import { completeReleaseKnowledge } from "./release-knowledge.ts";
 import { writeGraphView } from "./site-mirror/graph-view.ts";
-import { build, type Release } from "./site/build.ts";
-import { collect, GitTree } from "./site/collect.ts";
+import { build, type Release } from "../../packages/web/site/build.ts";
+import { collect, GitTree } from "../../packages/web/site/collect.ts";
 import { generateSourceMarkdown } from "./source-markdown.ts";
 
 export function releaseReadme(version: string, sha: string, repo: string, modules: string[]): string {

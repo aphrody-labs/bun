@@ -6,9 +6,13 @@
   "workspaces": [
     "./packages/bun-types",
     "./packages/bun-web",
+    "./packages/bun-plugin-tailwind",
     "./packages/bun-m3",
-    "./packages/bun-webos",
+    "./packages/bun-next",
     "./packages/web",
+    "./packages/bun-webview-page",
+    "./packages/web/rust/packages/*",
+    "./packages/web/rust/integrations/m3",
     "./apps/desktop",
     "./apps/mobile"
   ],

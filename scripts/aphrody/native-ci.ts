@@ -46,13 +46,13 @@ export const gates: Gate[] = [
   })),
   ...["check", "test", "clippy"].map(action => ({
     id: `rust-web-${action}`,
-    ...(action === "clippy" ? { env: { CLIPPY_CONF_DIR: "packages/bun-aphrody-web" } } : {}),
+    ...(action === "clippy" ? { env: { CLIPPY_CONF_DIR: "packages/web/rust" } } : {}),
     command: [
       "bash",
       "../aphrody/scripts/build/rust/cargo-serial.sh",
       action,
       "--manifest-path",
-      "packages/bun-aphrody-web/Cargo.toml",
+      "packages/web/rust/Cargo.toml",
       "-p",
       "aphrody-web-source",
       "--locked",

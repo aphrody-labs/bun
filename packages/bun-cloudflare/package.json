@@ -21,11 +21,11 @@
     "./cli": "./src/cli.ts"
   },
   "scripts": {
-    "app:dev": "cd app && wrangler dev",
-    "app:types": "cd app && wrangler types --include-runtime=false",
-    "app:migrate": "cd app && wrangler d1 migrations apply aphrody-app --remote",
-    "app:deploy": "bun app/scripts/deploy.ts",
-    "app:tail": "cd app && wrangler tail aphrody-app --format json",
+    "app:dev": "cd ../web/cloudflare && wrangler dev",
+    "app:types": "cd ../web/cloudflare && wrangler types --include-runtime=false",
+    "app:migrate": "cd ../web/cloudflare && wrangler d1 migrations apply aphrody-app --remote",
+    "app:deploy": "bun ../web/cloudflare/scripts/deploy.ts",
+    "app:tail": "cd ../web/cloudflare && wrangler tail aphrody-app --format json",
     "packages": "bun src/cli.ts packages",
     "test": "bun test ./test"
   },

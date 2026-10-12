@@ -87,7 +87,7 @@ test("Clippy selects each source owner's configuration without changing strict w
   const inherited = { CLIPPY_CONF_DIR: "/foreign/config", CARGO_BUILD_JOBS: "1" };
   const directories = {
     "rust-google-clippy": "packages/bun-google/aphrody",
-    "rust-web-clippy": "packages/bun-aphrody-web",
+    "rust-web-clippy": "packages/web/rust",
     "rust-install-clippy": ".",
   };
   for (const [id, directory] of Object.entries(directories)) {

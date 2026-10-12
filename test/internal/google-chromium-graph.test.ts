@@ -15,7 +15,7 @@ test("graph plan covers the owned domains and separates runtime from source tool
     "packages/bun-google",
     "packages/bun-chromium",
     "packages/bun-m3",
-    "packages/bun-aphrody-web",
+    "packages/web/rust",
     "src/browser",
   ]);
   expect(SURFACE_FILES).toContain("src/js/bun/google.ts");

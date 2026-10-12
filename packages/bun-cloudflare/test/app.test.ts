@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { join } from "node:path";
 import { startWorker } from "../src/index.ts";
 
-const app = join(import.meta.dir, "..", "app");
+const app = join(import.meta.dir, "..", "..", "web", "cloudflare");
 const secret = "test-secret";
 
 async function bundle() {
@@ -99,7 +99,7 @@ test("aphrody.app Worker serves the API with its bindings", async () => {
 });
 
 test("ovh.ts mirrors an OVH BIND export without SOA, NS and ACME challenges", async () => {
-  const { parseZone, key } = await import("../app/scripts/ovh.ts");
+  const { parseZone, key } = await import("../../web/cloudflare/scripts/ovh.ts");
   const records = parseZone(
     [
       "$TTL 3600",

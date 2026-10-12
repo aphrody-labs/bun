@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { describe, expect, test } from "bun:test";
-import { repositoryRoot } from "../../../packages/bun-aphrody-web/packages/agent-browser/src/config.ts";
+import { repositoryRoot } from "../../../packages/web/rust/packages/agent-browser/src/config.ts";
 import {
   checkConfigFile,
   executionCommand,

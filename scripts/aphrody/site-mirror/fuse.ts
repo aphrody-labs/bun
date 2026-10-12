@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
-import { BRAND } from "../site/brand.ts";
+import { BRAND } from "../../../packages/web/site/brand.ts";
 import {
   FUSION_SYMBOLS,
   MATERIAL_SYMBOLS_CSS,
   MATERIAL_SYMBOLS_SHA256,
   navigationSymbol,
   symbol,
-} from "../site/icons.ts";
-import { docsSearchScript } from "../site/layout.ts";
+} from "../../../packages/web/site/icons.ts";
+import { docsSearchScript } from "../../../packages/web/site/layout.ts";
 import { externalizeInlineScripts, localReferences } from "./mirror.ts";
 
 const sha256 = (value: string | Uint8Array) => new Bun.CryptoHasher("sha256").update(value).digest("hex");
@@ -363,7 +363,7 @@ export function buildFusion(options: FusionOptions) {
         path: options.searchIndex,
         sha256: sha256(searchBytes),
         scriptSha256: sha256(docsSearchScript()),
-        owner: "scripts/aphrody/site/layout.ts and build.ts",
+        owner: "packages/web/site/layout.ts and build.ts",
       },
       bunHome: { sha256: sha256(input), coverageSha256: sha256(readFileSync(coverageFile)) },
       aphrodyLogo: { path: "docs/logo/icon.svg", sha256: sha256(logo) },

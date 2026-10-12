@@ -1,9 +1,11 @@
-import { startAphrodyWeb } from "@aphrody/web";
+import { resolve } from "node:path";
+import { startWebOS } from "../server.ts";
 
-const server = await startAphrodyWeb({
+const appUiRoot = process.env.APHRODY_APP_UI_ROOT;
+const server = await startWebOS({
   hostname: process.env.HOSTNAME || "127.0.0.1",
   port: Number(process.env.PORT || 3000),
-  appUiRoot: process.env.APHRODY_APP_UI_ROOT,
+  publicSite: appUiRoot ? { staticRoot: resolve(appUiRoot) } : undefined,
   hostAccess: process.env.APHRODY_HOST_ACCESS !== "0",
 });
 

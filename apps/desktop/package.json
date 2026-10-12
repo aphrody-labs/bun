@@ -3,6 +3,38 @@
   "version": "1.4.4",
   "private": true,
   "type": "module",
-  "bin": { "aphrody-desktop": "./src/main.ts" },
-  "dependencies": { "@aphrody/web": "workspace:*" }
+  "bin": {
+    "aphrody-desktop": "./src/main.ts"
+  },
+  "exports": {
+    ".": "./server.ts",
+    "./tailwind": "./src/tailwind.ts"
+  },
+  "scripts": {
+    "dev": "bun --hot server.ts",
+    "start": "NODE_ENV=production bun server.ts",
+    "build": "bun build.ts",
+    "test": "bun test ./test"
+  },
+  "dependencies": {
+    "@aphrody/bun-plugin-tailwind": "workspace:*",
+    "@aphrody/web": "workspace:*",
+    "@aphrody/m3-tokens": "^3.3.7",
+    "@bjorn3/browser_wasi_shim": "^0.4.2",
+    "@fluentui/tokens": "1.0.0-alpha.24",
+    "@fluentui/web-components": "^3.1.3",
+    "@microsoft/fast-element": "^3",
+    "@microsoft/focusgroup-polyfill": "^1.5.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@aphrody/bun-types": "workspace:*",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.3"
+  },
+  "bundledDependencies": [
+    "@aphrody/bun-plugin-tailwind"
+  ]
 }

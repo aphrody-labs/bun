@@ -1,0 +1,26 @@
+{
+  "name": "@aphrody/m3-bun-integration",
+  "version": "1.4.4",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@aphrody/drive-client": "0.1.2",
+    "@aphrody/bun": "3.3.8",
+    "@aphrody/m3-ai": "3.3.8",
+    "@aphrody/m3-explorer": "3.3.8",
+    "@aphrody/m3-forms": "3.3.8",
+    "@aphrody/m3-next": "3.3.8",
+    "@aphrody/m3-primitives": "3.3.8",
+    "@aphrody/m3-reader": "3.3.8",
+    "@aphrody/paths": "0.1.2",
+    "@aphrody/runtime-sdk": "0.1.2",
+    "@aphrody/webos-wasm": "workspace:*",
+    "@happy-dom/global-registrator": "17.0.3",
+    "element-internals-polyfill": "3.0.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "engines": {
+    "bun": ">=1.4.4"
+  }
+}

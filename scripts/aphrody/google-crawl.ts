@@ -4,7 +4,7 @@ import { constants } from "node:fs";
 import { lstat, mkdir, open } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { validateJob } from "../../packages/bun-aphrody-web/integrations/scripts/tools/web/crawl-index";
+import { validateJob } from "../../packages/web/rust/integrations/scripts/tools/web/crawl-index";
 
 export const PUBLIC_GOOGLE_HOSTS = Object.freeze([
   "developers.google.com",

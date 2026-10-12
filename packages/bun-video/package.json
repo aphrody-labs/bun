@@ -36,6 +36,7 @@
     "docs",
     "labs",
     "assets",
+    "vendor/mediabunny",
     "README.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
@@ -54,6 +55,7 @@
     "./oauth": "./src/oauth.ts",
     "./secrets": "./src/secrets.ts",
     "./webgpu": "./src/webgpu.ts",
+    "./mediabunny": "./vendor/mediabunny/src/index.ts",
     "./engine": "./umbrella-src/index.ts",
     "./encode": "./umbrella-src/encode.ts",
     "./computer": "./umbrella-src/computer.ts"

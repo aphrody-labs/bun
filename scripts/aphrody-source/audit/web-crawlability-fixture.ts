@@ -21,7 +21,7 @@ export const FIXTURE_ORIGIN = "http://fixture.invalid";
 const UI = resolve(import.meta.dir, "../../../../aphrody/m3/packages");
 const PAGES_MODULE = resolve(
   import.meta.dir,
-  "../../../packages/bun-aphrody-web/integrations/scripts/audit/web-crawlability-pages.tsx",
+  "../../../packages/web/rust/integrations/scripts/audit/web-crawlability-pages.tsx",
 );
 let installed = false;
 

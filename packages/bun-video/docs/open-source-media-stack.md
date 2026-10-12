@@ -8,10 +8,10 @@ The stack uses two explicit native owners:
 - **mpv** for local playback. It is a cross-platform open-source player and can
   be launched as a supervised process by a desktop integration.
 
-For browser-side demuxing, metadata and WebCodecs pipelines, use the existing
-Remotion media packages. A future in-process player can use Mediabunny, but it
-must remain separate from yt-dlp and mpv: those tools are external media owners
-and are not silently installed by this package.
+For browser-side demuxing, metadata and WebCodecs pipelines, use the vendored
+Mediabunny source through `@aphrody/bun-video/mediabunny`. It remains separate
+from yt-dlp and mpv: those tools are external media owners and are not silently
+installed by this package.
 
 ## Boundary
 

@@ -1,0 +1,56 @@
+// aphrody.app: the Aphrody Bun site and its AI/API routes, built from packages/web/site.
+// Secrets and account credentials live in .env (git-ignored, see .env.example). KV, D1 and Queue
+// resources without ids are provisioned by the first `wrangler deploy` and found by name afterwards.
+{
+  "$schema": "../../../node_modules/wrangler/config-schema.json",
+  "name": "aphrody-app",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-11",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": true,
+  "routes": [
+    { "pattern": "aphrody.app", "custom_domain": true },
+    { "pattern": "www.aphrody.app", "custom_domain": true },
+  ],
+  "assets": {
+    "directory": "./dist/site",
+    "binding": "ASSETS",
+    "html_handling": "drop-trailing-slash",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*"],
+  },
+  "placement": { "mode": "smart" },
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.1 },
+  },
+  "upload_source_maps": true,
+  "vars": {
+    "PUBLIC_ORIGIN": "https://aphrody.app",
+    "AI_MODEL": "@cf/qwen/qwen3-30b-a3b-fp8",
+    "AI_GATEWAY": "aphrody",
+    "EMBEDDING_MODEL": "@cf/baai/bge-m3",
+  },
+  "secrets": { "required": ["APP_SECRET"] },
+  "r2_buckets": [
+    { "binding": "APHRODY", "bucket_name": "aphrody" },
+    { "binding": "DRAGONBALLFR", "bucket_name": "dragonballfr" },
+  ],
+  "d1_databases": [{ "binding": "DB", "database_name": "aphrody-app", "migrations_dir": "migrations" }],
+  "kv_namespaces": [{ "binding": "CACHE" }],
+  "queues": {
+    "producers": [{ "binding": "JOBS", "queue": "aphrody-app-jobs" }],
+    "consumers": [{ "queue": "aphrody-app-jobs", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 3 }],
+  },
+  "durable_objects": { "bindings": [{ "name": "ROOMS", "class_name": "Room" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
+  "workflows": [{ "name": "aphrody-app-ingest", "binding": "INGEST", "class_name": "Ingest" }],
+  "ai": { "binding": "AI" },
+  // bun-native dataset vectors (scripts/aphrody/dataset/publish.ts), created by provision.ts --only vectorize.
+  "vectorize": [{ "binding": "BUN_NATIVE", "index_name": "bun-native" }],
+  "ratelimits": [{ "name": "WRITE_LIMITER", "namespace_id": "1001", "simple": { "limit": 60, "period": 60 } }],
+  "version_metadata": { "binding": "VERSION" },
+  "triggers": { "crons": ["17 3 * * *"] },
+}

@@ -3,9 +3,12 @@
   "version": "1.4.4",
   "type": "module",
   "license": "Apache-2.0",
-  "description": "Bun HTTP adapter for the canonical M3 app-ui artifact and explicit public capability owners.",
+  "description": "Compatibility entrypoint for the canonical @aphrody/web site API.",
   "exports": {
     "./site": "./src/site.ts"
+  },
+  "dependencies": {
+    "@aphrody/web": "workspace:*"
   },
   "files": [
     "src",

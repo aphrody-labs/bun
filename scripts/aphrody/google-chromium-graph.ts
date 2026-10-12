@@ -12,7 +12,7 @@ export const DOMAINS = [
   "packages/bun-google",
   "packages/bun-chromium",
   "packages/bun-m3",
-  "packages/bun-aphrody-web",
+  "packages/web/rust",
   "src/browser",
 ];
 export const SURFACE_FILES = [

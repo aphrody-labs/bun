@@ -3,7 +3,7 @@ import { tempDir } from "harness";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { adaptProductHome, buildFusion, designResources } from "../../scripts/aphrody/site-mirror/fuse.ts";
-import { FUSION_SYMBOLS, navigationSymbol, symbol } from "../../scripts/aphrody/site/icons.ts";
+import { FUSION_SYMBOLS, navigationSymbol, symbol } from "../../packages/web/site/icons.ts";
 
 const sha = "a".repeat(40);
 const home =

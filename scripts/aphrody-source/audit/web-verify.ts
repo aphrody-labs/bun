@@ -14,7 +14,7 @@ import { dirname, join, resolve } from "node:path";
 import {
   repositoryRoot,
   validateWebConfig,
-} from "../../../packages/bun-aphrody-web/packages/agent-browser/src/config.ts";
+} from "../../../packages/web/rust/packages/agent-browser/src/config.ts";
 
 export const WEB_CRATES = [
   "aphrody-obscura",
@@ -84,7 +84,7 @@ export function planStages(options: {
               "bun",
               "run",
               "--cwd",
-              `../bun/packages/bun-aphrody-web/packages/${pkg === "@aphrody/web-test" ? "aphrody-web-test" : "agent-browser"}`,
+              `../bun/packages/web/rust/packages/${pkg === "@aphrody/web-test" ? "aphrody-web-test" : "agent-browser"}`,
               script,
             ],
             timeoutMs: 10 * MINUTE,

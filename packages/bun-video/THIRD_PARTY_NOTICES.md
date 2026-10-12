@@ -43,6 +43,7 @@ Official external dependencies retain their own terms:
 | bitmovin-player                                              | 8.279.0 | [Bitmovin licensing](https://developer.bitmovin.com/playback/docs), requires the caller's valid player license and permitted deployment domain; upstream third-party notices apply                                |
 | react, react-dom                                             | 19.2.0  | MIT, upstream package notices                                                                                                                                                                                     |
 | @aphrody/bun-runtime-sdk                                     | 1.4.5   | Published package notices; native providers are distributed and qualified separately                                                                                                                              |
+| mediabunny                                                   | 1.9.3   | [MPL-2.0](vendor/mediabunny/LICENSE), vendored from [Vanilagy/mediabunny](https://github.com/Vanilagy/mediabunny/tree/v1.9.3) |
 
 Native Bun, JavaScriptCore, browser providers and media executables are not
 included in this source package. Their distribution licenses remain separate.

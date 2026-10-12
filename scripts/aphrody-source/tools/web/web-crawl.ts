@@ -7,12 +7,12 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { repositoryRoot } from "../../../../packages/bun-aphrody-web/packages/agent-browser/src/config.ts";
+import { repositoryRoot } from "../../../../packages/web/rust/packages/agent-browser/src/config.ts";
 import {
   WebService,
   type CrawlOptions,
   type CrawlReport,
-} from "../../../../packages/bun-aphrody-web/packages/agent-browser/src/service.ts";
+} from "../../../../packages/web/rust/packages/agent-browser/src/service.ts";
 
 export function parseCrawlArgs(argv: string[]): {
   seeds: string[];

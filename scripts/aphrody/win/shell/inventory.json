@@ -9496,7 +9496,7 @@
         "exemples": [
           "import { hostname } from \"node:os\";",
           "hostname?: string;",
-          "1. `packages/bun-webos/server.ts` exporte `startWebOS(options?: { port?: number; hostname?: string }): Promise<Server>` "
+          "1. `apps/desktop/server.ts` exporte `startWebOS(options?: { port?: number; hostname?: string }): Promise<Server>` "
         ]
       },
       "pwd": {

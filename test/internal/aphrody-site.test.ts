@@ -25,14 +25,14 @@ import {
 import { packageRelease, tar } from "../../scripts/aphrody/release-package.ts";
 import { createReleaseHandler } from "../../scripts/aphrody/release-server.ts";
 import { artifactPaths, digest, releaseReadme } from "../../scripts/aphrody/release-surfaces.ts";
-import { BRAND, SITE_ROOT_FILES } from "../../scripts/aphrody/site/brand.ts";
+import { BRAND, SITE_ROOT_FILES } from "../../packages/web/site/brand.ts";
 import {
   build,
   describeAsset,
   pageUrl,
   parseSums,
   readNavigation,
-} from "../../scripts/aphrody/site/build.ts";
+} from "../../packages/web/site/build.ts";
 import {
   GitTree,
   PRIVATE_TERMS,
@@ -42,23 +42,23 @@ import {
   declaredLicenses,
   installerUsage,
   type SiteData,
-} from "../../scripts/aphrody/site/collect.ts";
-import { highlight, highlightHtml } from "../../scripts/aphrody/site/highlight.ts";
-import { brandHtml } from "../../scripts/aphrody/site/layout.ts";
+} from "../../packages/web/site/collect.ts";
+import { highlight, highlightHtml } from "../../packages/web/site/highlight.ts";
+import { brandHtml } from "../../packages/web/site/layout.ts";
 import {
   absolutizeMarkdownLinks,
   mdxToHtmlMarkdown,
   parseFenceInfo,
   rewriteUpstreamUrls,
-} from "../../scripts/aphrody/site/mdx.ts";
+} from "../../packages/web/site/mdx.ts";
 import {
   esc,
   forkLinks,
   generatedPages,
   publicLinks,
   table,
-} from "../../scripts/aphrody/site/pages.ts";
-import { ORIGIN, dataDigest, sameStamp } from "../../scripts/aphrody/site/publish.ts";
+} from "../../packages/web/site/pages.ts";
+import { ORIGIN, dataDigest, sameStamp } from "../../packages/web/site/publish.ts";
 
 test("release README reflects source inventory and does not assert binary publication", () => {
   const readme = releaseReadme("9.8.7", "a".repeat(40), "owner/source", ["bun:future"]);
@@ -413,7 +413,7 @@ describe("brand sync", () => {
     expect(read("src/bun.ico")).toBe("favicon.ico");
     expect(read("docs/logo/logo-wordmark-dark.svg")).toBe("logo-wordmark-dark.svg");
     expect(existsSync(join(String(repo), "docs/logo/bun.png"))).toBe(false);
-    const module = read("scripts/aphrody/site/brand.ts");
+    const module = read("packages/web/site/brand.ts");
     const css = new TextEncoder().encode(":root{}");
     expect(module).toContain(`tokensCss: "https://cdn.test${hashedPath("m3-tokens.css", css)}"`);
     expect(module).toContain('themeColor: { light: "#fef9eb", dark: "#15140c" }');
@@ -846,7 +846,7 @@ test("gateway release routing retains existing configuration and rejects ambiguo
 });
 
 test("product benchmark page escapes labels and leaves unsupported cases unmeasured", async () => {
-  const { renderProductBenchmarks } = await import("../../scripts/aphrody/site/build.ts");
+  const { renderProductBenchmarks } = await import("../../packages/web/site/build.ts");
   const html = renderProductBenchmarks({
     schema: 1,
     generatedAt: "2026-10-10",
