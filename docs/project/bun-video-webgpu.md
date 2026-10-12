@@ -7,10 +7,20 @@
 import { runWebGpuJob } from "@aphrody/bun-video/webgpu";
 
 const result = await runWebGpuJob({
-  shader: `@compute @workgroup_size(1) fn main() {}`,
+  shader: `
+    @group(0) @binding(0) var<storage, read_write> data: array<u32>;
+    @compute @workgroup_size(1) fn main() { data[0] += 1; }
+  `,
   workgroups: [1, 1, 1],
-  data: new Uint8Array(),
+  data: new Uint32Array([0]),
 });
+console.log(
+  new DataView(
+    result.data.buffer,
+    result.data.byteOffset,
+    result.data.byteLength,
+  ).getUint32(0, true),
+);
 ```
 
 Use `backend: "chromium"` for Bun-launched Chromium WebGPU, or the default
