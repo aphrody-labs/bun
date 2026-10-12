@@ -1,0 +1,8 @@
+{
+  "name": "@aphrody/desktop",
+  "version": "1.4.4",
+  "private": true,
+  "type": "module",
+  "bin": { "aphrody-desktop": "./src/main.ts" },
+  "dependencies": { "@aphrody/web": "workspace:*" }
+}

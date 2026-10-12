@@ -1,0 +1,11 @@
+{
+  "name": "@aphrody/web",
+  "version": "1.4.4",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts", "./domains": "./src/domains.ts" },
+  "dependencies": {
+    "@aphrody/bun-m3": "workspace:*",
+    "@aphrody/bun-webos": "workspace:*"
+  }
+}

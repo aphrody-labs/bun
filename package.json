@@ -5,7 +5,12 @@
   "repository": "github:aphrody-labs/bun",
   "workspaces": [
     "./packages/bun-types",
-    "./packages/bun-web"
+    "./packages/bun-web",
+    "./packages/bun-m3",
+    "./packages/bun-webos",
+    "./packages/web",
+    "./apps/desktop",
+    "./apps/mobile"
   ],
   "scripts": {
     "gn": "bun scripts/aphrody/gn.ts",
