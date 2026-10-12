@@ -15,7 +15,7 @@ flock -n 9 || { echo "publication déjà en cours"; exit 0; }
 git -C "$checkout" fetch -q origin main
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-git -C "$checkout" archive origin/main scripts/aphrody/site | tar -x -C "$work"
+git -C "$checkout" archive origin/main scripts/aphrody/site packages/bun-cloudflare | tar -x -C "$work"
 GH_TOKEN=${GH_TOKEN:-$(gh auth token)}
 export GH_TOKEN
 bun "$work/scripts/aphrody/site/publish.ts" --git "$checkout" --if-changed "$@"
