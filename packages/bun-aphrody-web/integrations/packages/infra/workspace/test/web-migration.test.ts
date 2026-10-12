@@ -3,7 +3,7 @@ import { expect, test } from "bun:test";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { checkManifest } from "../src/bun-workspace.ts";
+import { checkManifest } from "../../../../../../../../aphrody/packages/infra/workspace/src/bun-workspace.ts";
 import { scanWebMigration } from "../src/web-migration.ts";
 
 test("missing Bun catalog entry is a non-fixable blocker", () => {

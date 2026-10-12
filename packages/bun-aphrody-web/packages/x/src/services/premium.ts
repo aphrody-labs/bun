@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Premium surfaces. Parsing, fetching and the per-operation variable templates are aphrody-x
-// (crates/web/x/src/premium.rs); this file keeps the public names and types over the native
+// (crates/x/src/premium.rs); this file keeps the public names and types over the native
 // operations.
 
 import type { XClient } from "../core/client";

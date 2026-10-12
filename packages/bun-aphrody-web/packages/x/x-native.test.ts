@@ -8,7 +8,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveNativeLibraryPath } from "@aphrody/bun/src/library";
-import policy from "../../../crates/web/x/data/x-policy.json";
+import policy from "../../crates/x/data/x-policy.json";
 import {
   API_BASE,
   Store,

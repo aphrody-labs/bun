@@ -46,8 +46,8 @@ export const DAY_MS = 24 * 60 * 60 * 1000;
 // ---------------------------------------------------------------------------
 
 /**
- * The error taxonomy has one owner: Rust (crates/web/x/src/policy.rs), shared as data in
- * crates/web/x/data/x-policy.json. An error that came through the native client carries its
+ * The error taxonomy has one owner: Rust (crates/x/src/policy.rs), shared as data in
+ * crates/x/data/x-policy.json. An error that came through the native client carries its
  * `kind`; the tables classify the ones that did not (hand-built, replayed from a journal).
  *
  * `TERMINAL_CODES`: "this target can never be mutated again" (gone, suspended, or the action

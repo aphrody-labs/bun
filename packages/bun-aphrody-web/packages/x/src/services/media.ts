@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Media upload. The chunked upload (INIT, APPEND, FINALIZE, processing wait, alt text) is
-// aphrody-x (crates/web/x/src/media.rs).
+// aphrody-x (crates/x/src/media.rs).
 
 import type { XClient } from "../core/client";
 

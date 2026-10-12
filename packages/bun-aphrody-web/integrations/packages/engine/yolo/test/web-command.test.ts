@@ -12,7 +12,10 @@ writeFileSync(
   }),
 );
 afterAll(() => rmSync(fixture, { recursive: true, force: true }));
-const cli = resolve(import.meta.dir, "../src/index.ts");
+const cli = resolve(
+  import.meta.dir,
+  "../../../../../../../../aphrody/packages/engine/yolo/src/index.ts",
+);
 for (const [command, action, code] of [
   ["web", "build", 23],
   ["desktop", "build", 23],

@@ -87,8 +87,8 @@ afterAll(() => {
 
 describe("tauri debug discovery", () => {
   test("directory honours APHRODY_HOME and falls back to ~/.aphrody", () => {
-    expect(tauriDebugDir({ APHRODY_HOME: "/data/aph" }, "/home/u")).toBe("/data/aph/web/tauri-debug");
-    expect(tauriDebugDir({}, "/home/u")).toBe("/home/u/.aphrody/web/tauri-debug");
+    expect(tauriDebugDir({ APHRODY_HOME: "/data/aph" }, "/home/u")).toBe(join("/data/aph", "web", "tauri-debug"));
+    expect(tauriDebugDir({}, "/home/u")).toBe(join("/home/u", ".aphrody", "web", "tauri-debug"));
   });
 
   test("parseDiscovery accepts only the documented loopback schema", () => {

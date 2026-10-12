@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // The local SQLite store of tweets, users, edges and the follow graph. The schema, the SQL and the
-// full-text index are aphrody-x (crates/web/x/src/store.rs, same file `~/.aphrody/x-store.sqlite`
+// full-text index are aphrody-x (crates/x/src/store.rs, same file `~/.aphrody/x-store.sqlite`
 // as `aphrody x db`); a store lives inside the native library and this class holds its handle.
 // Read-only SQL of your own goes through {@link Store.query}.
 

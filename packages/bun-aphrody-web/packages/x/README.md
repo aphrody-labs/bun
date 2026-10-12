@@ -1,6 +1,6 @@
 # @aphrody/x
 
-Headless **X (Twitter)** client for Bun, built for mass scripting. It is a thin import over the Rust crate `aphrody-x` (`crates/web/x`), reached in process through the `aphrody-ffi` library (`@aphrody/bun/x`): the client, parsers, store, retry, rate-limit waiting, pacing and checkpoint are Rust, one implementation shared with the `aphrody x` CLI and the MCP tool. Cookie-auth GraphQL + REST, no official API key required. Local state (SQLite store + FTS), catalog sync, and X function tools (`XTools`) that let Grok or any tool-calling model use X.
+Headless **X (Twitter)** client for Bun, built for mass scripting. It is a thin import over the Rust crate `aphrody-x` (`crates/x`), reached in process through the `aphrody-ffi` library (`@aphrody/bun/x`): the client, parsers, store, retry, rate-limit waiting, pacing and checkpoint are Rust, one implementation shared with the `aphrody x` CLI and the MCP tool. Cookie-auth GraphQL + REST, no official API key required. Local state (SQLite store + FTS), catalog sync, and X function tools (`XTools`) that let Grok or any tool-calling model use X.
 
 **Zero keys, fully native**: Uses real browser cookies (`auth_token` + `ct0`) and a query ID catalog synced from live X bundles. The native library is opened by the first call, never on import.
 
@@ -107,7 +107,7 @@ Operations are the Rust method names in snake case (`create_tweet`, `like`, `use
 `graphql`, ...); `xLocal("meta")` serves the table with arguments, mutation and retry class. One failing
 operation never stops the others, except an `auth` failure (a dead session): dispatch stops and the rest is
 reported `not_run`. `error.kind` is `auth`, `terminal`, `rate_limit`, `transient`, `invalid` or `other`,
-classified once in Rust (`crates/web/x/data/x-policy.json`). Mutations can be paced with `pacing`
+classified once in Rust (`crates/x/data/x-policy.json`). Mutations can be paced with `pacing`
 (`minDelayMs`, `maxDelayMs`, `perWindow`, `perDay`, `reserve`). `signal` or `run.cancel()` aborts the
 operations in flight; the checkpoint keeps every completed result. A single call with the same machinery:
 `await client.call("search", { query: "bun", all: true, max_pages: 5 })`.

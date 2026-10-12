@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { existsSync } from "node:fs";
 import { BrowserRuntime } from "../../runtime/src/browser";
-import { defaultLibraryPath, Runtime, Status } from "../../runtime/src/index";
+import { defaultLibraryPath, Runtime, Status } from "@aphrody/runtime-sdk";
 
 const required = process.env["YOLO_REQUIRE_BROWSER"] === "1";
 let available = false;

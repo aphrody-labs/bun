@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Mass scripting: run thousands of X operations from a Bun script with the concurrency, retry,
-// rate-limit waiting, pacing and checkpoint of the Rust runner (crates/web/x/src/batch.rs). The
+// rate-limit waiting, pacing and checkpoint of the Rust runner (crates/x/src/batch.rs). The
 // operations are dispatched in input order and finish out of order; each result carries its `id`.
 //
 //   const client = new XClient();

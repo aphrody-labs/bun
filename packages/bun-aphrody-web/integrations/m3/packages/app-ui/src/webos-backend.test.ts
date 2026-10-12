@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
+// oxlint-disable-next-line import/no-unassigned-import -- the source package bunfig preload: registers the DOM before UI imports
+import "../../../../../../../../aphrody/m3/packages/app-ui/test-preload.ts";
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { memoryImageStore, openWebOs } from "@aphrody/webos-wasm";
