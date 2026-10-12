@@ -30,6 +30,19 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
     localStorage.setItem(storageKey, JSON.stringify(localAssets.filter(asset => !asset.src.startsWith("blob:"))));
   }, [localAssets, storageKey]);
   useEffect(() => { if (videoRef.current) videoRef.current.playbackRate = playbackRate; }, [selectedId, playbackRate]);
+  useEffect(() => {
+    const mediaSession = typeof navigator !== "undefined" ? navigator.mediaSession : undefined;
+    const video = videoRef.current;
+    if (!mediaSession || !video) return;
+    const actions: Array<[MediaSessionAction, MediaSessionActionHandler]> = [
+      ["play", () => void video.play()], ["pause", () => video.pause()],
+      ["seekbackward", () => { video.currentTime = Math.max(0, video.currentTime - 10); }],
+      ["seekforward", () => { video.currentTime += 10; }],
+    ];
+    for (const [action, handler] of actions) try { mediaSession.setActionHandler(action, handler); } catch { /* browser may not implement every action */ }
+    if (selected) mediaSession.metadata = new MediaMetadata({ title: selected.title });
+    return () => { for (const [action] of actions) try { mediaSession.setActionHandler(action, null); } catch {} };
+  }, [selected, selectedId]);
   const selectedIndex = selected ? localAssets.findIndex(asset => asset.id === selected.id) : -1;
   useEffect(() => { if (selected) onAssetSelect?.(selected); }, [onAssetSelect, selected]);
   const selectRelative = (delta: number) => {
