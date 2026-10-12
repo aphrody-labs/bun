@@ -77,6 +77,11 @@ bun app/scripts/token.ts       # account-owned automation token (needs CLOUDFLAR
 bun app/scripts/ovh.ts --switch  # OVH zones (aphrody.com, dragonballfr.com, rosegriffon.fr) mirrored, name servers moved
 ```
 
+R2 buckets are public only through custom domains (r2.dev off): `cdn.aphrody.app`, `dragonballfr.aphrody.app`,
+`assets.aphrody.app` (fonts, symbols) and `dist.aphrody.app` (`aphrody-dist`: runtime releases under `bun/<tag>/`,
+channels `bun/latest.json` and `bun/manifest.json`, written by `scripts/aphrody/release-r2.ts`, read by the
+installers).
+
 The vps timer `aphrody-site-publish` runs `scripts/aphrody/site/publish.ts`, which deploys through `deploy.ts`;
 `app/systemd/aphrody-dns-migrate.timer` finishes the OVH move (deferred name servers, DNSSEC) and then disables itself.
 rosegriffon.fr has no application: its web hosts are proxied to the `app/maintenance` Worker (503 maintenance
