@@ -77,7 +77,13 @@ export function normalizeCookieExport(input: unknown): CookieBundle {
       host.length > 253
     )
       invalid();
-    if (typeof raw.path !== "string" || !raw.path.startsWith("/") || /[\x00-\x20\x7F;?#]/.test(raw.path)) invalid();
+    if (
+      typeof raw.path !== "string" ||
+      !raw.path.startsWith("/") ||
+      /[;?#]/.test(raw.path) ||
+      [...raw.path].some(char => char.charCodeAt(0) <= 0x20 || char.charCodeAt(0) === 0x7f)
+    )
+      invalid();
     const secure = booleanField(raw, "secure", false);
     const httpOnly = booleanField(raw, "httpOnly", false);
     const hostOnly = booleanField(raw, "hostOnly", !raw.domain.startsWith("."));

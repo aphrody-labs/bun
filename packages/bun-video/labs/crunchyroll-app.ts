@@ -27,7 +27,8 @@ export function planChromeSiteApp(profile: ActiveChromeProfile) {
     throw new Error("Chrome executable and user data directory must be absolute paths.");
   if (
     !profile.profileDirectory ||
-    /[\\/:\x00-\x1f]/.test(profile.profileDirectory) ||
+    /[\\/:]/.test(profile.profileDirectory) ||
+    [...profile.profileDirectory].some(char => char.charCodeAt(0) < 0x20) ||
     [".", ".."].includes(profile.profileDirectory)
   )
     throw new Error("Chrome profile directory must be a single directory name.");
