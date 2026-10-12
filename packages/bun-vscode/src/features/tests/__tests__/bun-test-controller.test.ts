@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { MockLocation, MockPosition, MockTestController, MockUri, MockWorkspaceFolder } from "./vscode-types.mock";
+import {
+  MockLocation,
+  MockPosition,
+  MockTestController,
+  MockTestItem,
+  MockUri,
+  MockWorkspaceFolder,
+} from "./vscode-types.mock";
 import "./vscode.mock";
 import { makeTestController, makeWorkspaceFolder } from "./vscode.mock";
 
@@ -102,7 +109,7 @@ describe("BunTestController", () => {
       expect(pattern).toContain("+plus+");
       expect(pattern).toContain("^caret^");
 
-      expect(() => new RegExp(pattern)).not.toThrow();
+      expect(() => new RegExp(pattern!)).not.toThrow();
     });
 
     test("should handle empty test arrays", () => {
@@ -139,7 +146,7 @@ describe("BunTestController", () => {
 
       const pattern = internal.buildTestNamePattern(mockTests);
       expect(pattern).toContain(longName);
-      expect(pattern.length).toBeGreaterThan(500);
+      expect(pattern?.length).toBeGreaterThan(500);
     });
   });
 
@@ -198,7 +205,7 @@ describe("BunTestController", () => {
   describe("processErrorData", () => {
     test("should handle toBe errors", () => {
       const message = "expect(received).toBe(expected)\n\nExpected: 5\nReceived: 3";
-      const location = new MockLocation(new MockUri("file:///test/file.ts"), new MockPosition(10, 5));
+      const location = new MockLocation(MockUri.parse("file:///test/file.ts"), new MockPosition(10, 5));
 
       const result = internal.processErrorData(message, location);
       expect(result).toBeDefined();
@@ -207,7 +214,7 @@ describe("BunTestController", () => {
 
     test("should handle toEqual errors", () => {
       const message = `expect(received).toEqual(expected)\nExpected: { name: "John", age: 30 }\nReceived: { name: "Jane", age: 25 }`;
-      const location = new MockLocation(new MockUri("file:///test/file.ts"), new MockPosition(10, 5));
+      const location = new MockLocation(MockUri.parse("file:///test/file.ts"), new MockPosition(10, 5));
 
       const result = internal.processErrorData(message, location);
       expect(result).toBeDefined();
@@ -216,7 +223,7 @@ describe("BunTestController", () => {
 
     test("should handle toBeInstanceOf errors", () => {
       const message = "expect(received).toBeInstanceOf(expected)\nExpected constructor: Array\nReceived value: {}";
-      const location = new MockLocation(new MockUri("file:///test/file.ts"), new MockPosition(10, 5));
+      const location = new MockLocation(MockUri.parse("file:///test/file.ts"), new MockPosition(10, 5));
 
       const result = internal.processErrorData(message, location);
       expect(result).toBeDefined();
@@ -225,7 +232,7 @@ describe("BunTestController", () => {
 
     test("should handle not.toBe errors", () => {
       const message = "expect(received).not.toBe(expected)\nExpected: not null\nReceived: null";
-      const location = new MockLocation(new MockUri("file:///test/file.ts"), new MockPosition(10, 5));
+      const location = new MockLocation(MockUri.parse("file:///test/file.ts"), new MockPosition(10, 5));
 
       const result = internal.processErrorData(message, location);
       expect(result).toBeDefined();
@@ -234,7 +241,7 @@ describe("BunTestController", () => {
 
     test("should handle generic errors", () => {
       const message = "TypeError: Cannot read property 'foo' of undefined";
-      const location = new MockLocation(new MockUri("file:///test/file.ts"), new MockPosition(10, 5));
+      const location = new MockLocation(MockUri.parse("file:///test/file.ts"), new MockPosition(10, 5));
 
       const result = internal.processErrorData(message, location);
       expect(result).toBeDefined();
@@ -243,7 +250,7 @@ describe("BunTestController", () => {
 
     test("should handle diff format", () => {
       const message = `expect(received).toEqual(expected)\n\n- Expected\n+ Received\n\n  Object {\n-   "name": "John",\n+   "name": "Jane",\n    "age": 30,\n  }`;
-      const location = new MockLocation(new MockUri("file:///test/file.ts"), new MockPosition(10, 5));
+      const location = new MockLocation(MockUri.parse("file:///test/file.ts"), new MockPosition(10, 5));
 
       const result = internal.processErrorData(message, location);
       expect(result).toBeDefined();
@@ -252,7 +259,7 @@ describe("BunTestController", () => {
 
     test("should handle snapshot errors", () => {
       const message = `expect(received).toMatchSnapshot(expected)\nExpected: "Hello World"\nReceived: "Hello Universe"`;
-      const location = new MockLocation(new MockUri("file:///test/file.ts"), new MockPosition(10, 5));
+      const location = new MockLocation(MockUri.parse("file:///test/file.ts"), new MockPosition(10, 5));
 
       const result = internal.processErrorData(message, location);
       expect(result).toBeDefined();
@@ -261,7 +268,7 @@ describe("BunTestController", () => {
 
     test("should handle inline snapshot errors", () => {
       const message = 'expect(received).toMatchInlineSnapshot(expected)\nExpected: "old value"\nReceived: "new value"';
-      const location = new MockLocation(new MockUri("file:///test/file.ts"), new MockPosition(15, 5));
+      const location = new MockLocation(MockUri.parse("file:///test/file.ts"), new MockPosition(15, 5));
 
       const result = internal.processErrorData(message, location);
       expect(result).toBeDefined();
@@ -270,7 +277,7 @@ describe("BunTestController", () => {
 
     test("should handle toBeNull errors", () => {
       const message = 'expect(received).toBeNull()\n\nReceived: "not null"';
-      const location = new MockLocation(new MockUri("file:///test/file.ts"), new MockPosition(10, 5));
+      const location = new MockLocation(MockUri.parse("file:///test/file.ts"), new MockPosition(10, 5));
 
       const result = internal.processErrorData(message, location);
       expect(result).toBeDefined();
@@ -279,7 +286,7 @@ describe("BunTestController", () => {
 
     test("should handle toMatchObject errors", () => {
       const message = `expect(received).toMatchObject(expected)\n\n- Expected\n+ Received\n\n  Object {\n-   "name": "John",\n+   "name": "Jane",\n+   "age": 30,\n  }`;
-      const location = new MockLocation(new MockUri("file:///test/file.ts"), new MockPosition(10, 5));
+      const location = new MockLocation(MockUri.parse("file:///test/file.ts"), new MockPosition(10, 5));
 
       const result = internal.processErrorData(message, location);
       expect(result).toBeDefined();
@@ -288,7 +295,7 @@ describe("BunTestController", () => {
 
     test("should handle malformed error messages", () => {
       const message = "Completely malformed error without pattern";
-      const location = new MockLocation(new MockUri("file:///test/file.ts"), new MockPosition(10, 5));
+      const location = new MockLocation(MockUri.parse("file:///test/file.ts"), new MockPosition(10, 5));
 
       const result = internal.processErrorData(message, location);
       expect(result).toBeDefined();
@@ -297,7 +304,7 @@ describe("BunTestController", () => {
 
     test("should handle errors with stack traces", () => {
       const message = `Error: Test failed\n    at /test/file.ts:25:10\n    at TestRunner.run (/lib/test.js:100:5)`;
-      const location = new MockLocation(new MockUri("file:///test/file.ts"), new MockPosition(25, 10));
+      const location = new MockLocation(MockUri.parse("file:///test/file.ts"), new MockPosition(25, 10));
 
       const result = internal.processErrorData(message, location);
       expect(result).toBeDefined();
@@ -306,7 +313,7 @@ describe("BunTestController", () => {
 
     test("should handle Windows file paths", () => {
       const message = `Error: Test failed\n    at C:\\test\\file.ts:15:8`;
-      const location = new MockLocation(new MockUri("file:///C:/test/file.ts"), new MockPosition(15, 8));
+      const location = new MockLocation(MockUri.parse("file:///C:/test/file.ts"), new MockPosition(15, 8));
 
       const result = internal.processErrorData(message, location);
       expect(result).toBeDefined();
@@ -315,7 +322,7 @@ describe("BunTestController", () => {
 
     test("should handle complex stack traces", () => {
       const message = `Error: Complex error\n    at Object.test (/complex/path/to/test.spec.ts:42:16)\n    at async TestRunner.execute (/node_modules/test/runner.js:200:12)\n    at async Suite.run (/node_modules/test/suite.js:50:8)`;
-      const location = new MockLocation(new MockUri("file:///complex/path/to/test.spec.ts"), new MockPosition(42, 16));
+      const location = new MockLocation(MockUri.parse("file:///complex/path/to/test.spec.ts"), new MockPosition(42, 16));
 
       const result = internal.processErrorData(message, location);
       expect(result).toBeDefined();
@@ -324,7 +331,7 @@ describe("BunTestController", () => {
 
     test("should handle errors with no stack trace", () => {
       const message = "Simple error message with no stack";
-      const location = new MockLocation(new MockUri("file:///test/file.ts"), new MockPosition(0, 0));
+      const location = new MockLocation(MockUri.parse("file:///test/file.ts"), new MockPosition(0, 0));
 
       const result = internal.processErrorData(message, location);
       expect(result).toBeDefined();
@@ -333,7 +340,7 @@ describe("BunTestController", () => {
 
     test("should handle timeout errors", () => {
       const message = "Error: Test timeout after 5000ms";
-      const location = new MockLocation(new MockUri("file:///test/file.ts"), new MockPosition(10, 5));
+      const location = new MockLocation(MockUri.parse("file:///test/file.ts"), new MockPosition(10, 5));
 
       const result = internal.processErrorData(message, location);
       expect(result).toBeDefined();
@@ -342,7 +349,7 @@ describe("BunTestController", () => {
 
     test("should handle assertion errors with detailed info", () => {
       const message = `AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ 'hello world'\n- 'hello universe'\n    at /test/assertions.test.ts:10:5`;
-      const location = new MockLocation(new MockUri("file:///test/assertions.test.ts"), new MockPosition(10, 5));
+      const location = new MockLocation(MockUri.parse("file:///test/assertions.test.ts"), new MockPosition(10, 5));
 
       const result = internal.processErrorData(message, location);
       expect(result).toBeDefined();
@@ -627,73 +634,57 @@ describe("BunTestController - Test Item Management", () => {
   });
 
   describe("findTestByName", () => {
-    test("should find test by name in parent children", () => {
-      const mockChild = { id: "child-test", label: "test name" };
-      const mockParent = {
-        children: new Map([["child-id", mockChild]]),
-      };
+    function parentWith(...children: [id: string, label: string][]): MockTestItem {
+      const parent = new MockTestItem("parent", "parent");
+      for (const [id, label] of children) {
+        parent.children.add(new MockTestItem(id, label, undefined, parent));
+      }
+      return parent;
+    }
 
-      const result = internal.findTestByName(mockParent as any, "test name");
-      expect(result).toBe(mockChild);
+    test("should find test by name in parent children", () => {
+      const mockParent = parentWith(["child-test", "test name"]);
+
+      const result = internal.findTestByName(mockParent, "test name");
+      expect(result).toBe(mockParent.children.get("child-test"));
     });
 
     test("should return undefined for non-existent test", () => {
-      const mockParent = {
-        children: new Map(),
-      };
-
-      const result = internal.findTestByName(mockParent as any, "nonexistent");
+      const result = internal.findTestByName(parentWith(), "nonexistent");
       expect(result).toBeUndefined();
     });
 
     test("should handle parent without children", () => {
-      const mockParent = { children: new Map() } as any;
-      const result = internal.findTestByName.call(controller, mockParent, "test");
+      const result = internal.findTestByName.call(controller, parentWith(), "test");
       expect(result).toBeUndefined();
     });
 
     test("should handle case-sensitive search", () => {
-      const mockChild1 = { id: "child1", label: "Test Name" };
-      const mockChild2 = { id: "child2", label: "test name" };
-      const mockParent = {
-        children: new Map([
-          ["child1", mockChild1],
-          ["child2", mockChild2],
-        ]),
-      };
+      const mockParent = parentWith(["child1", "Test Name"], ["child2", "test name"]);
 
-      const result1 = internal.findTestByName(mockParent as any, "Test Name");
-      const result2 = internal.findTestByName(mockParent as any, "test name");
+      const result1 = internal.findTestByName(mockParent, "Test Name");
+      const result2 = internal.findTestByName(mockParent, "test name");
 
-      expect(result1).toBe(mockChild1);
-      expect(result2).toBe(mockChild2);
+      expect(result1).toBe(mockParent.children.get("child1"));
+      expect(result2).toBe(mockParent.children.get("child2"));
       expect(result1).not.toBe(result2);
     });
 
     test("should handle multiple children with different names", () => {
-      const children = Array.from({ length: 10 }, (_, i) => ({
-        id: `child-${i}`,
-        label: `test ${i}`,
-      }));
+      const children = Array.from({ length: 10 }, (_, i): [string, string] => [`child-${i}`, `test ${i}`]);
+      const mockParent = parentWith(...children);
 
-      const mockParent = {
-        children: new Map(children.map(child => [child.id, child])),
-      };
-
-      children.forEach(child => {
-        const result = internal.findTestByName(mockParent as any, child.label);
-        expect(result).toBe(child);
-      });
+      for (const [id, label] of children) {
+        const result = internal.findTestByName(mockParent, label);
+        expect(result).toBe(mockParent.children.get(id));
+      }
     });
 
     test("should handle special characters in test names", () => {
-      const specialChild = { id: "special", label: "test with [special] chars!" };
-      const mockParent = {
-        children: new Map([["special", specialChild]]),
-      };
+      const mockParent = parentWith(["special", "test with [special] chars!"]);
 
-      const result = internal.findTestByName(mockParent as any, "test with [special] chars!");
-      expect(result).toBe(specialChild);
+      const result = internal.findTestByName(mockParent, "test with [special] chars!");
+      expect(result).toBe(mockParent.children.get("special"));
     });
   });
 
@@ -1035,7 +1026,7 @@ describe("BunTestController - Integration and Coverage", () => {
     });
 
     test("should provide consistent API", () => {
-      const methodNames = Object.keys(internal);
+      const methodNames = Object.keys(internal) as (keyof typeof internal)[];
       const functionCount = methodNames.filter(name => typeof internal[name] === "function").length;
 
       expect(functionCount).toBe(methodNames.length);
@@ -1089,13 +1080,13 @@ describe("BunTestController - Integration and Coverage", () => {
       const endTime = Date.now();
 
       expect(pattern).toBeDefined();
-      expect(pattern.length).toBeGreaterThan(10000);
+      expect(pattern?.length).toBeGreaterThan(10000);
       expect(endTime - startTime).toBeLessThan(1000); // Should complete in under 1 second
     });
 
     test("should handle complex error processing efficiently", () => {
       const largeErrorMessage = "Error: " + "very long error message ".repeat(1000);
-      const location = new MockLocation(new MockUri("file:///test/file.ts"), new MockPosition(10, 5));
+      const location = new MockLocation(MockUri.parse("file:///test/file.ts"), new MockPosition(10, 5));
 
       const startTime = Date.now();
       const result = internal.processErrorData(largeErrorMessage, location);

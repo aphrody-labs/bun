@@ -528,7 +528,7 @@ test("test with $variable and %s format", () => {
 
       // Track events we receive
       const events: { type: string; data: any }[] = [];
-      let adapter: NodeSocketDebugAdapter | null = null;
+      let adapter = null as NodeSocketDebugAdapter | null;
 
       // Wait for Bun to connect
       const connectionPromise = new Promise<void>(resolve => {
@@ -764,7 +764,7 @@ test("simple", () => {
       await signal.ready;
 
       const events: any[] = [];
-      let adapter: NodeSocketDebugAdapter | null = null;
+      let adapter = null as NodeSocketDebugAdapter | null;
       let connected = false;
 
       // Set up connection handler
@@ -922,7 +922,7 @@ test("simple", () => {
       // Track timing
       const startTime = Date.now();
       const events: { type: string; data: any }[] = [];
-      let adapter: NodeSocketDebugAdapter | null = null;
+      let adapter = null as NodeSocketDebugAdapter | null;
 
       // Wait for Bun to connect
       const connectionPromise = new Promise<void>(resolve => {
@@ -1030,7 +1030,7 @@ test("simple", () => {
       await signal.ready;
 
       const events: { type: string; data: any }[] = [];
-      let adapter: NodeSocketDebugAdapter | null = null;
+      let adapter = null as NodeSocketDebugAdapter | null;
 
       const connectionPromise = new Promise<void>(resolve => {
         signal.once("Signal.Socket.connect", (socket: net.Socket) => {
@@ -1175,7 +1175,7 @@ describe("Complex test.each scenarios", () => {
       await signal.ready;
 
       const events: { type: string; data: any }[] = [];
-      let adapter: NodeSocketDebugAdapter | null = null;
+      let adapter = null as NodeSocketDebugAdapter | null;
 
       const connectionPromise = new Promise<void>(resolve => {
         signal.once("Signal.Socket.connect", (socket: net.Socket) => {
@@ -1310,7 +1310,7 @@ test("test\\x07bell\\x08backspace", () => {
       await signal.ready;
 
       const events: { type: string; data: any }[] = [];
-      let adapter: NodeSocketDebugAdapter | null = null;
+      let adapter = null as NodeSocketDebugAdapter | null;
 
       const connectionPromise = new Promise<void>(resolve => {
         signal.once("Signal.Socket.connect", (socket: net.Socket) => {
@@ -1431,7 +1431,7 @@ ${largeArray}
         await signal.ready;
 
         const events: { type: string; data: any }[] = [];
-        let adapter: NodeSocketDebugAdapter | null = null;
+        let adapter = null as NodeSocketDebugAdapter | null;
         let _connectionError: Error | null = null;
 
         const connectionPromise = new Promise<void>(resolve => {
@@ -1526,7 +1526,7 @@ test("test 2", () => {
       await signal1.ready;
 
       const events1: any[] = [];
-      let adapter1: NodeSocketDebugAdapter | null = null;
+      let adapter1 = null as NodeSocketDebugAdapter | null;
 
       const connection1Promise = new Promise<void>(resolve => {
         signal1.once("Signal.Socket.connect", (socket: net.Socket) => {
@@ -1578,7 +1578,7 @@ test("test 3 new", () => {
       await signal2.ready;
 
       const events2: any[] = [];
-      let adapter2: NodeSocketDebugAdapter | null = null;
+      let adapter2 = null as NodeSocketDebugAdapter | null;
 
       const connection2Promise = new Promise<void>(resolve => {
         signal2.once("Signal.Socket.connect", (socket: net.Socket) => {
@@ -1671,7 +1671,7 @@ test("test 3 new", () => {
       await signal.ready;
 
       const events: { type: string; data: any }[] = [];
-      let adapter: NodeSocketDebugAdapter | null = null;
+      let adapter = null as NodeSocketDebugAdapter | null;
       const startTime = Date.now();
 
       const connectionPromise = new Promise<void>(resolve => {
@@ -1859,7 +1859,7 @@ test("temp ignored", () => expect(true).toBe(true));
       await signal.ready;
 
       const events: any[] = [];
-      let adapter: NodeSocketDebugAdapter | null = null;
+      let adapter = null as NodeSocketDebugAdapter | null;
 
       const connectionPromise = new Promise<void>(resolve => {
         signal.once("Signal.Socket.connect", (socket: net.Socket) => {
@@ -1950,7 +1950,7 @@ test("test with {braces} and |pipes|", () => {
       await signal.ready;
 
       const events: any[] = [];
-      let adapter: NodeSocketDebugAdapter | null = null;
+      let adapter = null as NodeSocketDebugAdapter | null;
 
       const connectionPromise = new Promise<void>(resolve => {
         signal.once("Signal.Socket.connect", (socket: net.Socket) => {
