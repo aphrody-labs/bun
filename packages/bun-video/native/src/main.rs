@@ -13,6 +13,20 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 println!("{{\"encoder\":\"{}\",\"runtimeReady\":{ready},\"exactRgba\":{}}}", backend.encoder(), backend == Backend::Ffv1);
             }
         }
+        #[cfg(feature = "gpu")]
+        Some("gpu-info") => {
+            let adapters = bun_video_native::probe_gpu_adapters().map_err(io::Error::other)?;
+            for adapter in adapters {
+                println!(
+                    "{{\"name\":{},\"driver\":{},\"deviceType\":{},\"supportsDecoding\":{},\"supportsEncoding\":{}}}",
+                    json_string(&adapter.name),
+                    json_string(&adapter.driver),
+                    json_string(&adapter.device_type),
+                    adapter.supports_decoding,
+                    adapter.supports_encoding,
+                );
+            }
+        }
         Some("media") if args.len() == 2 => {
             use std::io::Write;
             let ffprobe = std::env::var_os("BUN_VIDEO_FFPROBE").unwrap_or_else(|| "ffprobe".into());
@@ -41,9 +55,28 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             if let Err(error) = result { let _ = child.kill(); let _ = child.wait(); return Err(error.into()); }
             if !child.wait()?.success() { return Err("FFmpeg encode failed".into()); }
         }
-        _ => return Err("usage: bun-video-native probe | media ABS_INPUT | decode ABS_INPUT | encode ffv1|nvenc|qsv|amf FPS FRAMES THREADS ABS_OUTPUT [--allow-lossy]; stdin: concatenated PNG frames".into()),
+        _ => return Err("usage: bun-video-native probe | gpu-info | media ABS_INPUT | decode ABS_INPUT | encode ffv1|nvenc|qsv|amf FPS FRAMES THREADS ABS_OUTPUT [--allow-lossy]; stdin: concatenated PNG frames".into()),
     }
     Ok(())
+}
+
+#[cfg(feature = "gpu")]
+fn json_string(value: &str) -> String {
+    let mut output = String::with_capacity(value.len() + 2);
+    output.push('"');
+    for character in value.chars() {
+        match character {
+            '"' => output.push_str("\\\""),
+            '\\' => output.push_str("\\\\"),
+            '\n' => output.push_str("\\n"),
+            '\r' => output.push_str("\\r"),
+            '\t' => output.push_str("\\t"),
+            character if character.is_control() => output.push_str(&format!("\\u{:04x}", character as u32)),
+            character => output.push(character),
+        }
+    }
+    output.push('"');
+    output
 }
 
 fn main() {

@@ -7,6 +7,37 @@ use std::io;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
+#[cfg(feature = "gpu")]
+use gpu_video::{VideoInstance, parameters::VideoInstanceDescriptor};
+
+#[cfg(feature = "gpu")]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GpuAdapterInfo {
+    pub name: String,
+    pub driver: String,
+    pub device_type: String,
+    pub supports_decoding: bool,
+    pub supports_encoding: bool,
+}
+
+#[cfg(feature = "gpu")]
+pub fn probe_gpu_adapters() -> Result<Vec<GpuAdapterInfo>, String> {
+    let instance = VideoInstance::new(&VideoInstanceDescriptor::default()).map_err(|error| error.to_string())?;
+    let adapters = instance.iter_adapters().map_err(|error| error.to_string())?;
+    Ok(adapters
+        .map(|adapter| {
+            let info = adapter.info();
+            GpuAdapterInfo {
+                name: info.name.clone(),
+                driver: format!("{} {}", info.driver_name, info.driver_info),
+                device_type: format!("{:?}", info.device_type),
+                supports_decoding: adapter.supports_decoding(),
+                supports_encoding: adapter.supports_encoding(),
+            }
+        })
+        .collect())
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Backend { Ffv1, Nvenc, Qsv, Amf }
 
