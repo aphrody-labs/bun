@@ -1,4 +1,4 @@
-import { CString, dlopen, ptr, type FFIFunction } from "bun:ffi";
+import { CString, dlopen, ptr, type FFIFunction, type Pointer } from "bun:ffi";
 import { dirname, isAbsolute, join } from "node:path";
 
 const functionABI = <
@@ -127,6 +127,7 @@ type FFmpegLibraries = { [C in FFmpegComponent]: FFmpegLibrary<C> };
 export class FFmpeg {
   readonly #libraries: FFmpegLibraries;
   #closed = false;
+  readonly #resources = new Set<() => void>();
 
   private constructor(libraries: FFmpegLibraries) {
     this.#libraries = libraries;
@@ -136,7 +137,7 @@ export class FFmpeg {
     const libraries: Partial<FFmpegLibraries> = {};
     const owned: Array<{ close(): void }> = [];
     try {
-      for (const component of Object.keys(ffmpegABI) as FFmpegComponent[]) {
+      for (const component of ["avutil", "swresample", "swscale", "avcodec", "avformat", "avfilter"] as const) {
         const library = openFFmpegComponent(component, directory);
         owned.push(library);
         const version = (library.symbols as Record<string, (...args: never[]) => unknown>)[`${component}_version`]();
@@ -164,8 +165,76 @@ export class FFmpeg {
     throw new Error(`FFmpeg: ${detail} (${status})`);
   }
 
+  openInput(url: string): FFmpegInput {
+    if (url.includes("\0")) throw new TypeError("FFmpeg input must not contain NUL");
+    const api = this.libraries.avformat.symbols;
+    const slot = new BigUint64Array(1);
+    const encoded = new TextEncoder().encode(`${url}\0`);
+    this.check(api.avformat_open_input(ptr(slot), ptr(encoded), null, null));
+    const context = Number(slot[0]) as Pointer;
+    try {
+      this.check(api.avformat_find_stream_info(context, null));
+    } catch (error) {
+      api.avformat_close_input(ptr(slot));
+      throw error;
+    }
+    let closed = false;
+    const close = () => {
+      if (closed) return;
+      closed = true;
+      api.avformat_close_input(ptr(slot));
+      this.#resources.delete(close);
+    };
+    this.#resources.add(close);
+    return {
+      get pointer() {
+        if (closed) throw new Error("FFmpeg input is closed");
+        return context;
+      },
+      close,
+      [Symbol.dispose]: close,
+    };
+  }
+
+  allocatePacket(): FFmpegPacket {
+    const api = this.libraries.avcodec.symbols;
+    const allocated = api.av_packet_alloc();
+    if (!allocated) throw new Error("FFmpeg packet allocation failed");
+    const packet = Number(allocated) as Pointer;
+    const slot = new BigUint64Array([BigInt(packet)]);
+    let closed = false;
+    const close = () => {
+      if (closed) return;
+      closed = true;
+      api.av_packet_free(ptr(slot));
+      this.#resources.delete(close);
+    };
+    this.#resources.add(close);
+    return {
+      get pointer() {
+        if (closed) throw new Error("FFmpeg packet is closed");
+        return packet;
+      },
+      unref() {
+        if (closed) throw new Error("FFmpeg packet is closed");
+        api.av_packet_unref(packet);
+      },
+      close,
+      [Symbol.dispose]: close,
+    };
+  }
+
+  readPacket(input: FFmpegInput, packet: FFmpegPacket): boolean {
+    packet.unref();
+    const status = this.libraries.avformat.symbols.av_read_frame(input.pointer, packet.pointer);
+    if (status === -541478725) return false;
+    this.check(status);
+    return true;
+  }
+
   close(): void {
     if (this.#closed) return;
+    for (const close of [...this.#resources].reverse()) close();
     this.#closed = true;
     for (const library of Object.values(this.#libraries).reverse()) library.close();
   }
@@ -173,4 +242,13 @@ export class FFmpeg {
   [Symbol.dispose](): void {
     this.close();
   }
+}
+
+export interface FFmpegInput extends Disposable {
+  readonly pointer: Pointer;
+  close(): void;
+}
+
+export interface FFmpegPacket extends FFmpegInput {
+  unref(): void;
 }
