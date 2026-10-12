@@ -80,14 +80,12 @@
     "@hyperframes/core": "0.8.144",
     "@hyperframes/engine": "0.8.144",
     "@hyperframes/parsers": "0.8.144",
-    "@remotion/renderer": "4.0.534",
     "bitmovin-player": "8.279.0",
     "dashjs": "5.2.1",
     "fast-xml-parser": "5.11.2",
     "hls.js": "1.7.3",
     "react": "19.2.0",
-    "react-dom": "19.2.0",
-    "remotion": "4.0.534"
+    "react-dom": "19.2.0"
   },
   "engines": {
     "bun": ">=1.4.4"

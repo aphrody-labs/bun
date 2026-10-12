@@ -1,4 +1,4 @@
-import { AbsoluteFill } from "remotion";
+import { AbsoluteFill } from "./remotion-fork";
 import { createRequire } from "node:module";
 import type { StudioAsset } from "./studio";
 

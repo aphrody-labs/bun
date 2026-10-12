@@ -1,4 +1,4 @@
-export { interpolate, Easing } from "remotion";
+export { interpolate, Easing } from "./remotion-fork";
 export { generateSpringEaseData, SPRING_PRESETS } from "@hyperframes/parsers/spring-ease";
 export { captureNativeRemotionFrame } from "./remotion-frame";
 export type { NativeFrameOptions } from "./remotion-frame";
@@ -31,7 +31,6 @@ export * from "./archive";
 export * from "./studio";
 export * from "./studio-remotion";
 
-export const loadRemotionCore = () => import("remotion");
-export const loadRemotionRenderer = () => import("@remotion/renderer");
+export { loadRemotionCore, loadRemotionRenderer } from "./remotion-fork";
 export const loadHyperframesCore = () => import("@hyperframes/core");
 export const loadHyperframesEngine = () => import("@hyperframes/engine");

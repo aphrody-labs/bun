@@ -1,5 +1,5 @@
 import { createInterface } from "node:readline";
-import { interpolate } from "remotion";
+import { interpolate } from "./remotion-fork";
 import { generateSpringEaseData } from "@hyperframes/parsers/spring-ease";
 
 const array = { type: "array", minItems: 2, maxItems: 1024, items: { type: "number" } };
