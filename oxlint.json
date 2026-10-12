@@ -126,6 +126,15 @@
       }
     },
     {
+      // Obscura's DOM emulation keeps WebIDL parameter names (Function.length is
+      // page-observable) and implements page evaluation with eval.
+      "files": ["packages/bun-aphrody-web/crates/obscura-js/js/bootstrap.js"],
+      "rules": {
+        "eslint/no-unused-vars": ["error", { "args": "none", "caughtErrors": "none", "varsIgnorePattern": "^_" }],
+        "eslint/no-eval": "off"
+      }
+    },
+    {
       "files": ["packages/bun-supervisor/src/budget.ts"],
       "rules": {
         "unicorn/no-useless-spread": "off"
@@ -146,6 +155,7 @@
         "packages/bun-tauri/crates/aphrody-tauri/scripts/bundle.global.js",
         "packages/bun-tauri/crates/aphrody-tauri/scripts/init.js",
         "packages/bun-tauri/crates/aphrody-tauri/scripts/process-ipc-message-fn.js",
+        "packages/bun-aphrody-web/integrations/crates/tauri/aphrody-tauri/scripts/process-ipc-message-fn.js",
         "packages/bun-tauri/crates/tauri-plugin-aphrody/iife/fs.js",
         "packages/bun-tauri/crates/tauri-plugin-aphrody/iife/log.js",
         "packages/bun-tauri/crates/tauri-plugin-aphrody/iife/notification.js",

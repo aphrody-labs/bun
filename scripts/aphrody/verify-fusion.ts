@@ -350,7 +350,7 @@ async function docsContent(root: string) {
     .split("\0")
     .filter((path) => /\.(md|mdx)$/.test(path));
   const failures: string[] = [];
-  for (const path of [...new Set(paths)]) {
+  for (const path of new Set(paths)) {
     const text = await Bun.file(join(root, path)).text();
     if (/^(?:<<<<<<< |>>>>>>> )/m.test(text)) failures.push(`${path}: unresolved merge marker`);
     if (/\t+\r?$/m.test(text) || /^.*\S(?: | {3,})\r?$/m.test(text))

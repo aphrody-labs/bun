@@ -1600,12 +1600,7 @@ class MessagePort {
     // Structured serialization happens before inspecting the entanglement.
     // This preserves the browser-observable DataCloneError on closed ports and
     // prevents mutations after postMessage from changing the delivered value.
-    let cloned;
-    try {
-      cloned = globalThis.structuredClone(message, options);
-    } catch (error) {
-      throw error;
-    }
+    const cloned = globalThis.structuredClone(message, options);
     const state = _messagePortStateFor(this);
     const target = state.entangled;
     const targetState = target && _messagePortState.get(target);
@@ -3298,7 +3293,7 @@ const _waapiAnimations = new Set();
 function _normalizeWaapiKeyframes(input) {
   let frames;
   if (Array.isArray(input)) {
-    frames = input.map(frame => ({ ...(frame || {}) }));
+    frames = input.map(frame => ({ ...frame }));
   } else if (input && typeof input === 'object') {
     const properties = Object.keys(input).filter(name => name !== 'offset' && name !== 'easing' && name !== 'composite');
     const count = Math.max(1, ...properties.map(name => Array.isArray(input[name]) ? input[name].length : 1));
@@ -4772,7 +4767,7 @@ class Element extends Node {
     }
     if (!this._iframeWin) {
       if (this.parentNode === null) return null;
-      this.contentDocument;
+      void this.contentDocument;
     }
     return this._iframeWin;
   }
@@ -5317,7 +5312,7 @@ class Element extends Node {
     // from the node id so Playwright's actionability polling still gets a
     // stable, distinct rect for hit-testing (issue #45).
     // Every nid maps to a unique cell in a 12-column grid for a 1280x720 viewport.
-    const VW = 1280, VH = 720, COLS = 12, CW = 100, CH = 20, GX = 110, GY = 30;
+    const VH = 720, COLS = 12, CW = 100, CH = 20, GX = 110, GY = 30;
     const rowsPerScreen = Math.max(1, Math.floor((VH - 10) / GY));
     const cell = this._nid | 0;
     const col = ((cell * 7) | 0) % COLS;
@@ -7048,7 +7043,7 @@ class HTMLTrackElement extends Element {
   get label() { return this.getAttribute("label") || ""; }
   set label(value) { this.setAttribute("label", value); }
   get default() { return this.hasAttribute("default"); }
-  set default(value) { value ? this.setAttribute("default", "") : this.removeAttribute("default"); }
+  set default(value) { if (value) this.setAttribute("default", ""); else this.removeAttribute("default"); }
   get readyState() { return HTMLTrackElement.LOADED; }
   get track() {
     if (!this._textTrack) {
@@ -11836,7 +11831,7 @@ globalThis.performance = globalThis.performance || {
     }
   };
   globalThis.PerformanceMeasure = class PerformanceMeasure extends PerformanceEntry {
-    constructor() { throw new TypeError('Illegal constructor'); }
+    constructor() { super(); }
     get detail() {
       const data = state(entryState, this);
       if (data.entryType !== 'measure') throw new TypeError('Illegal invocation');
@@ -13910,7 +13905,7 @@ globalThis.Selection = class Selection {
   get anchorOffset() { return this._anchor ? this._anchor[1] : 0; }
   get focusNode() { return this._focus ? this._focus[0] : null; }
   get focusOffset() { return this._focus ? this._focus[1] : 0; }
-  getRangeAt(i) { i = +i; if (!this._range || i < 0 || i > 0) throw new DOMException('The index provided is out of range.', 'IndexSizeError'); return this._range; }
+  getRangeAt(i) { i = i >>> 0; if (!this._range || i !== 0) throw new DOMException('The index provided is out of range.', 'IndexSizeError'); return this._range; }
   addRange(range) { if (this._range) return; if (!(range instanceof Range)) return; if (!this._inDoc(range.startContainer) || !this._inDoc(range.endContainer)) return; this._setRange(range, 'forwards'); }
   removeRange(range) { if (!(range instanceof Range)) throw new TypeError("Failed to execute 'removeRange' on 'Selection': parameter 1 is not a Range."); if (this._range === range) this._setRange(null, 'none'); else throw new DOMException('The range was not found.', 'NotFoundError'); }
   removeAllRanges() { this._setRange(null, 'none'); }
@@ -17037,7 +17032,7 @@ if (typeof FontFace === 'undefined') {
       this._discoverCssFaces();
       const selection = _fontFaceSelection(font);
       const matches = Array.from(this._faces).filter(face => _fontFaceMatches(face, selection));
-      return matches.length === 0 || matches.every(face => face.status === 'loaded');
+      return matches.every(face => face.status === 'loaded');
     }
     clear() {
       for (const face of Array.from(this._faces)) {
