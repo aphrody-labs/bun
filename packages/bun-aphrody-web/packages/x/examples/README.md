@@ -22,6 +22,7 @@ bun run examples/showcase/hn-1000-crawler.ts
 ```
 
 Expected output:
+
 - storage/datasets/hn-top-1000/data.jsonl — title, url, score, comment count
 - Resumes automatically if interrupted (SQLite queue tracks DONE/PENDING)
 
@@ -47,6 +48,7 @@ bun run examples/reddit-json-crawler.ts
 ```
 
 Expected output:
+
 - storage/datasets/reddit-programming/data.jsonl
 - 25 rows: { id, title, url, score, numComments, topComment, topCommentAuthor }
 
@@ -72,6 +74,7 @@ bun run examples/wikipedia-infobox-extractor.ts
 ```
 
 Expected output:
+
 - storage/datasets/wikipedia-infoboxes/data.jsonl
 - 10 rows: { topic, url, title, infobox: { label: value }, rows: [...] }
 
@@ -81,6 +84,7 @@ Expected output:
 
 Synopsis: Demonstrates the full AphrodyWeb profile auto-detection pipeline on 5
 simulated e-commerce product pages (data: URIs with inline HTML). For each URL:
+
 1. suggestStrategy() maps simulated wappalyzergo output to a AphrodyWeb profile
 2. Browser.newPage() opens with the suggested profile
 3. The .price CSS selector is extracted
@@ -101,6 +105,7 @@ bun run examples/ecommerce-price-monitor.ts
 ```
 
 Expected output:
+
 - First run: "baseline: $29.99 (recorded)" for each product
 - Subsequent runs: "unchanged: $29.99" or "PRICE CHANGE UP/DOWN: old => new"
 - /tmp/prices-baseline.json updated after each run
@@ -109,13 +114,13 @@ Expected output:
 
 ## Profile reference
 
-| Profile | Binary required | JS execution | TLS fingerprint | Anti-bot level |
-|---|---|---|---|---|
-| static | none (in-process) | no | none | 10% CF bypass |
-| fast | lightpanda binary | yes | none | 55% CF bypass |
-| http | curl-impersonate.so | no | Chrome131/FF136 | 55% CF bypass |
-| stealth | patchright Chromium | yes | coherent | 80% CF bypass |
-| max | Camoufox Firefox 135 | yes | coherent + Turnstile | 95% CF bypass |
+| Profile | Binary required      | JS execution | TLS fingerprint      | Anti-bot level |
+| ------- | -------------------- | ------------ | -------------------- | -------------- |
+| static  | none (in-process)    | no           | none                 | 10% CF bypass  |
+| fast    | lightpanda binary    | yes          | none                 | 55% CF bypass  |
+| http    | curl-impersonate.so  | no           | Chrome131/FF136      | 55% CF bypass  |
+| stealth | patchright Chromium  | yes          | coherent             | 80% CF bypass  |
+| max     | Camoufox Firefox 135 | yes          | coherent + Turnstile | 95% CF bypass  |
 
 Choose the cheapest profile that satisfies your target's bot-detection level.
 Use suggestStrategy() to automate the decision from wappalyzergo output.

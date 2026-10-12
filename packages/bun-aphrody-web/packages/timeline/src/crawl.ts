@@ -26,13 +26,10 @@ const fields = [
   "officialSourceUrl",
 ];
 export function detailText(value: unknown): string {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error("invalid detail object");
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("invalid detail object");
   const data = value as Record<string, unknown>;
   return fields
-    .flatMap((field) =>
-      typeof data[field] === "string" && data[field].trim() ? [`${field}: ${data[field]}`] : [],
-    )
+    .flatMap(field => (typeof data[field] === "string" && data[field].trim() ? [`${field}: ${data[field]}`] : []))
     .join("\n");
 }
 
@@ -44,18 +41,14 @@ export async function crawlDetails(
   fetcher: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> = fetch,
   pause: () => Promise<unknown> = () => Bun.sleep(1000),
 ): Promise<{ state: CrawlState; checked: number; failed: number }> {
-  if (!Number.isInteger(budget) || budget < 1 || budget > 1000)
-    throw new Error("crawl budget must be 1..1000");
+  if (!Number.isInteger(budget) || budget < 1 || budget > 1000) throw new Error("crawl budget must be 1..1000");
   const file = join(output, "crawl-state.json");
-  const state: CrawlState = (await Bun.file(file).exists())
-    ? await Bun.file(file).json()
-    : { entries: {} };
+  const state: CrawlState = (await Bun.file(file).exists()) ? await Bun.file(file).json() : { entries: {} };
   const selected = snapshot.entries
     .toSorted(
       (a, b) =>
-        (state.entries[a.key]?.checkedAt ?? "").localeCompare(
-          state.entries[b.key]?.checkedAt ?? "",
-        ) || a.key.localeCompare(b.key),
+        (state.entries[a.key]?.checkedAt ?? "").localeCompare(state.entries[b.key]?.checkedAt ?? "") ||
+        a.key.localeCompare(b.key),
     )
     .slice(0, budget);
   let failed = 0;

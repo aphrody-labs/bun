@@ -16,9 +16,7 @@ export function hostTarget(): string {
   const key = `${process.platform}-${process.arch}`;
   const target = SUPPORTED_TARGETS[key];
   if (target === undefined) {
-    throw new Error(
-      `Unsupported platform ${key}; supported: ${Object.keys(SUPPORTED_TARGETS).join(", ")}`,
-    );
+    throw new Error(`Unsupported platform ${key}; supported: ${Object.keys(SUPPORTED_TARGETS).join(", ")}`);
   }
   return target;
 }

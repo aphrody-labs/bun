@@ -15,9 +15,7 @@ const server = await startWebOS({
   root: "/tmp/webos/home",
   dataDir: "/tmp/webos/state",
 });
-console.log(
-  JSON.stringify({ service: "bun-webos", url: server.url, hostAccess: false, bun: Bun.version }),
-);
+console.log(JSON.stringify({ service: "bun-webos", url: server.url, hostAccess: false, bun: Bun.version }));
 let stopping = false;
 const stop = async () => {
   if (stopping) return;

@@ -35,11 +35,7 @@ export interface ScoredPost {
 }
 
 /** Rank posts in the shared Rust implementation while preserving caller post shapes. */
-export function rankPosts(
-  candidates: PostCandidate[],
-  context: RankingContext = {},
-  topK = 20,
-): ScoredPost[] {
+export function rankPosts(candidates: PostCandidate[], context: RankingContext = {}, topK = 20): ScoredPost[] {
   if (!candidates?.length) return [];
   const ranked = webXAlgorithmRank(candidates, { ...context }, topK);
   if (!Array.isArray(ranked)) {
@@ -54,7 +50,7 @@ export function rankPosts(
   for (const post of candidates) {
     if (!originals.has(post.id)) originals.set(post.id, post);
   }
-  return (ranked as ScoredPost[]).map((scored) => {
+  return (ranked as ScoredPost[]).map(scored => {
     scored.post = originals.get(scored.post.id) ?? scored.post;
     return scored;
   });
@@ -148,9 +144,7 @@ export function tweetToPostCandidate(tweet: Tweet, inNetwork = false): PostCandi
  * Returns scored posts with explainable reasons.
  */
 export function rankTweets(tweets: Tweet[], context: RankingContext = {}, topK = 20): ScoredPost[] {
-  const candidates = tweets
-    .map((t) => tweetToPostCandidate(t, false))
-    .filter((c): c is PostCandidate => c !== null);
+  const candidates = tweets.map(t => tweetToPostCandidate(t, false)).filter((c): c is PostCandidate => c !== null);
   return rankPosts(candidates, context, topK);
 }
 
@@ -160,7 +154,7 @@ export async function rankTweetsNative(
   topK = 20,
 ): Promise<ScoredPost[]> {
   return rankPostsNative(
-    tweets.map((tweet) => tweetToPostCandidate(tweet, false)),
+    tweets.map(tweet => tweetToPostCandidate(tweet, false)),
     context,
     topK,
   );

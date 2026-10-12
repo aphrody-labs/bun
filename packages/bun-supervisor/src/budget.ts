@@ -31,10 +31,9 @@ function fill(items: Budget[], total: number): Map<Budget, number> {
   for (let guard = items.length + 1; guard > 0 && open.size > 0; guard--) {
     let sum = 0;
     for (const b of open) sum += Math.max(b.weight, 0);
-    const share = (b: Budget) =>
-      sum > 0 ? (left * Math.max(b.weight, 0)) / sum : left / open.size;
-    const low = [...open].filter((b) => share(b) < b.min);
-    const fixed = low.length > 0 ? low : [...open].filter((b) => share(b) > b.max);
+    const share = (b: Budget) => (sum > 0 ? (left * Math.max(b.weight, 0)) / sum : left / open.size);
+    const low = [...open].filter(b => share(b) < b.min);
+    const fixed = low.length > 0 ? low : [...open].filter(b => share(b) > b.max);
     if (fixed.length === 0) {
       for (const b of open) out.set(b, Math.floor(share(b)));
       return out;
@@ -88,8 +87,7 @@ export class Budget {
     let bytes: number;
     if (cg.high !== null && Number.isFinite(cg.high)) bytes = cg.high;
     else if (cg.max !== null && Number.isFinite(cg.max)) bytes = Math.floor(cg.max * ratio);
-    else if (Number(process.env.SUPERVISOR_MEMORY_BYTES) > 0)
-      bytes = Number(process.env.SUPERVISOR_MEMORY_BYTES);
+    else if (Number(process.env.SUPERVISOR_MEMORY_BYTES) > 0) bytes = Number(process.env.SUPERVISOR_MEMORY_BYTES);
     else bytes = Math.floor(totalmem() * 0.5);
     return Budget.root({ name: opts.name, bytes });
   }
@@ -176,7 +174,7 @@ export class Budget {
   async shrink(level: ShrinkLevel): Promise<void> {
     this.#factor = FACTORS[level];
     this.#set(this.#nominal, this.#share, "pressure");
-    await this.#walk((b) => b.#shrink, level);
+    await this.#walk(b => b.#shrink, level);
     Bun.gc(level === "hard");
   }
 
@@ -189,7 +187,7 @@ export class Budget {
 
   /** Long quiet period: idle callbacks, then a full collection to return memory. */
   async idle(): Promise<void> {
-    await this.#walk((b) => b.#idle);
+    await this.#walk(b => b.#idle);
     Bun.gc(true);
   }
 
@@ -199,14 +197,11 @@ export class Budget {
       nominal: this.#nominal,
       bytes: this.#bytes,
       usage: this.#usage,
-      children: [...this.#children].map((c) => c.tree()),
+      children: [...this.#children].map(c => c.tree()),
     };
   }
 
-  async #walk(
-    pick: (b: Budget) => Set<(arg: any) => void | Promise<void>>,
-    arg?: ShrinkLevel,
-  ): Promise<void> {
+  async #walk(pick: (b: Budget) => Set<(arg: any) => void | Promise<void>>, arg?: ShrinkLevel): Promise<void> {
     for (const c of [...this.#children]) await c.#walk(pick, arg);
     for (const cb of [...pick(this)]) {
       try {
@@ -266,9 +261,7 @@ export class BoundedLRU<K, V> {
     this.#opts = opts;
     this.#off = [
       budget.onResize(() => this.#evict(budget.bytes)),
-      budget.onShrink((level) =>
-        level === "hard" ? this.clear() : this.#evict(Math.floor(budget.bytes / 2)),
-      ),
+      budget.onShrink(level => (level === "hard" ? this.clear() : this.#evict(Math.floor(budget.bytes / 2)))),
       budget.onIdle(() => this.#expire()),
     ];
   }

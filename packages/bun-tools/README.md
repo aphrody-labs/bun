@@ -5,7 +5,13 @@ volume, reads credential files, starts services or connects to Redis.
 
 ```ts
 import { startConnectProxy } from "@aphrody/bun-tools/connect-proxy";
-import { indexNtfs, syncNtfs, scanPe, persistPe, publishMetadataCache } from "@aphrody/bun-tools/indexing";
+import {
+  indexNtfs,
+  syncNtfs,
+  scanPe,
+  persistPe,
+  publishMetadataCache,
+} from "@aphrody/bun-tools/indexing";
 
 const proxy = await startConnectProxy({
   upstream: { hostname: "127.0.0.1", port: 1080 },

@@ -124,9 +124,7 @@ export class Crawler {
         const didWork = await this.step();
         if (!didWork) {
           if (process.env.APHRODY_X_DEBUG) {
-            console.log(
-              "[crawler] All queues are empty. Waiting for new seeds or scheduled cron...",
-            );
+            console.log("[crawler] All queues are empty. Waiting for new seeds or scheduled cron...");
           }
           // Idle wait
           // oxlint-disable-next-line no-await-in-loop -- intentional idle wait between crawl passes
@@ -156,10 +154,7 @@ export class Crawler {
   /** Perform a single crawl task from the queues */
   public async step(): Promise<boolean> {
     // 1. Process community queue first
-    if (
-      this.queueCommunities.size > 0 &&
-      this.visitedCommunities.size < this.options.maxCommunitiesToCrawl
-    ) {
+    if (this.queueCommunities.size > 0 && this.visitedCommunities.size < this.options.maxCommunitiesToCrawl) {
       const commId = this.queueCommunities.values().next().value!;
       this.queueCommunities.delete(commId);
       this.visitedCommunities.add(commId);
@@ -277,10 +272,7 @@ export class Crawler {
     }
 
     // 3. Process hashtag/query queue
-    if (
-      this.queueHashtags.size > 0 &&
-      this.visitedHashtags.size < this.options.maxHashtagsToCrawl
-    ) {
+    if (this.queueHashtags.size > 0 && this.visitedHashtags.size < this.options.maxHashtagsToCrawl) {
       const hashtag = this.queueHashtags.values().next().value!;
       this.queueHashtags.delete(hashtag);
       this.visitedHashtags.add(hashtag);

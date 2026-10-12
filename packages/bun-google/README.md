@@ -9,7 +9,12 @@ import { createGoogleServices } from "@aphrody/bun-google";
 // Supply a provider owned by your existing authenticated application.
 const google = createGoogleServices({ credentialProvider });
 const document = await google.docs.get(documentId, signal);
-await google.docs.batchUpdate(documentId, reviewedRequests, document.revisionId!, signal);
+await google.docs.batchUpdate(
+  documentId,
+  reviewedRequests,
+  document.revisionId!,
+  signal,
+);
 ```
 
 The credential provider returns a bearer token for each request. The transport

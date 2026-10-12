@@ -77,10 +77,8 @@ function fakeClient(opts: FakeOpts) {
     session: { handle: "tester" },
     lastRateLimit: null as null | { limit: number; remaining: number; reset_epoch: number },
     whoami: async () => ({ id: "viewer-1", name: "Tester", screen_name: "tester" }),
-    following: async (_id: string, _count: number, cursor?: string) =>
-      paginate(opts.following, cursor),
-    followers: async (_id: string, _count: number, cursor?: string) =>
-      paginate(opts.followers, cursor),
+    following: async (_id: string, _count: number, cursor?: string) => paginate(opts.following, cursor),
+    followers: async (_id: string, _count: number, cursor?: string) => paginate(opts.followers, cursor),
     unfollow: async (userId: string) => {
       calls.push(userId);
       const queued = errors[userId];
@@ -109,15 +107,15 @@ describe("buildQueue", () => {
     const following = [user("1"), user("2"), user("3"), user("4")];
     const queue = buildQueue(following, ["2", "4"]);
 
-    expect(queue.map((t) => t.id)).toEqual(["1", "3", "2", "4"]);
-    expect(queue.slice(0, 2).every((t) => !t.mutual)).toBe(true);
-    expect(queue.slice(2).every((t) => t.mutual)).toBe(true);
+    expect(queue.map(t => t.id)).toEqual(["1", "3", "2", "4"]);
+    expect(queue.slice(0, 2).every(t => !t.mutual)).toBe(true);
+    expect(queue.slice(2).every(t => t.mutual)).toBe(true);
   });
 
   test("preserves timeline order inside each group", () => {
     const following = [user("a"), user("b"), user("c"), user("d"), user("e")];
     const queue = buildQueue(following, new Set(["a", "c"]));
-    expect(queue.map((t) => t.id)).toEqual(["b", "d", "e", "a", "c"]);
+    expect(queue.map(t => t.id)).toEqual(["b", "d", "e", "a", "c"]);
   });
 
   test("nonMutualOnly drops mutuals entirely", () => {
@@ -235,10 +233,10 @@ describe("RateGovernor", () => {
 
   test("seeded history from a previous run is honoured", () => {
     const clock = fakeClock();
-    const gov = new RateGovernor(
-      { ...baseOpts(clock), perWindow: 2, minDelayMs: 0, maxDelayMs: 0 },
-      [T0 - 1_000, T0 - 500],
-    );
+    const gov = new RateGovernor({ ...baseOpts(clock), perWindow: 2, minDelayMs: 0, maxDelayMs: 0 }, [
+      T0 - 1_000,
+      T0 - 500,
+    ]);
     expect(gov.budgetExhausted()).toBe(true);
     expect(gov.delayBeforeNext().reason).toBe("window-budget");
   });
@@ -257,7 +255,7 @@ describe("graph collection", () => {
     expect(res.users).toHaveLength(250);
     expect(res.pages).toBe(3);
     expect(res.complete).toBe(true);
-    expect(new Set(res.users.map((u) => u.id)).size).toBe(250);
+    expect(new Set(res.users.map(u => u.id)).size).toBe(250);
   });
 
   test("maxPages caps the walk and reports it as incomplete", async () => {
@@ -315,7 +313,7 @@ describe("purgeFollowing", () => {
     expect(report.following_total).toBe(3);
     expect(report.non_mutual_total).toBe(2);
     expect(report.mutual_total).toBe(1);
-    expect(report.planned.map((t) => t.id)).toEqual(["1", "3", "2"]);
+    expect(report.planned.map(t => t.id)).toEqual(["1", "3", "2"]);
     expect(report.eta_epoch).toBeGreaterThan(clock.now());
   });
 
@@ -501,7 +499,7 @@ describe("purgeFollowing", () => {
       ...baseOpts(clock),
       dryRun: false,
       signal: controller.signal,
-      onProgress: (p) => {
+      onProgress: p => {
         if (p.processed === 1) controller.abort();
       },
     });
@@ -580,7 +578,7 @@ describe("resumable journal", () => {
       expect(calls).toEqual(["1", "2"]);
 
       const state = loadState(statePath) as PurgeState;
-      expect(state.queue.map((t) => t.id)).toEqual(["3", "4"]);
+      expect(state.queue.map(t => t.id)).toEqual(["3", "4"]);
       expect(Object.keys(state.done)).toHaveLength(2);
       expect(state.history).toHaveLength(2);
 
@@ -661,7 +659,7 @@ describe("resumable journal", () => {
       });
 
       // The fake graph is static, so a refresh re-plans both accounts.
-      expect(report.planned.map((t) => t.id)).toEqual(["1", "2"]);
+      expect(report.planned.map(t => t.id)).toEqual(["1", "2"]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -671,10 +669,7 @@ describe("resumable journal", () => {
     const dir = mkdtempSync(join(tmpdir(), "aphrody-web-unfollow-"));
     const statePath = join(dir, "state.json");
     try {
-      await Bun.write(
-        statePath,
-        JSON.stringify({ version: 1, user_id: "someone-else", queue: [] }),
-      );
+      await Bun.write(statePath, JSON.stringify({ version: 1, user_id: "someone-else", queue: [] }));
       expect(loadState(statePath, "viewer-1")).toBeNull();
       expect(loadState(statePath, "someone-else")).not.toBeNull();
       expect(loadState(join(dir, "missing.json"))).toBeNull();

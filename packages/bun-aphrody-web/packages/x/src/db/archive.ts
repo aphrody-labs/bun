@@ -18,18 +18,11 @@ export function parseArchiveArray(raw: string): any[] {
 }
 
 /** Convert one archive element into a Tweet structure. */
-export function archiveTweetToTweet(
-  elem: unknown,
-  owner: { username: string; name: string },
-): Tweet | null {
+export function archiveTweetToTweet(elem: unknown, owner: { username: string; name: string }): Tweet | null {
   return local<Tweet | null>("archive_tweet", { element: elem, owner });
 }
 
 /** Import a tweets archive into the SQLite store; returns the number of tweets imported. */
-export async function importArchive(
-  store: Store,
-  path: string,
-  ownerHandle: string,
-): Promise<number> {
+export async function importArchive(store: Store, path: string, ownerHandle: string): Promise<number> {
   return store.importArchive(path, ownerHandle);
 }

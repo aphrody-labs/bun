@@ -4,22 +4,12 @@ import { CapturedHar, loadHarCapture } from "../src/har";
 
 const manifest =
   '<MPD xmlns="urn:mpeg:dash:schema:mpd:2011"><BaseURL>video.mp4?token=secret-marker</BaseURL><Period><AdaptationSet><ContentProtection schemeIdUri="urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"/><Representation codecs="avc1.640028"/></AdaptationSet></Period></MPD>';
-function entry(
-  url: string,
-  mimeType: string,
-  text: string,
-  status = 200,
-  range?: string,
-  contentRange?: string,
-) {
+function entry(url: string, mimeType: string, text: string, status = 200, range?: string, contentRange?: string) {
   return {
     request: {
       method: "GET",
       url,
-      headers: [
-        { name: "Cookie", value: "secret-marker" },
-        ...(range ? [{ name: "Range", value: range }] : []),
-      ],
+      headers: [{ name: "Cookie", value: "secret-marker" }, ...(range ? [{ name: "Range", value: range }] : [])],
     },
     response: {
       status,
@@ -34,9 +24,7 @@ function entry(
 const capture = (...entries: ReturnType<typeof entry>[]) => new CapturedHar({ log: { entries } });
 
 test("HAR summary and manifest selection contain metadata without credential or URL details", () => {
-  const har = capture(
-    entry("https://media.example.test/m.mpd?token=secret-marker", "application/dash+xml", manifest),
-  );
+  const har = capture(entry("https://media.example.test/m.mpd?token=secret-marker", "application/dash+xml", manifest));
   expect(har.selectManifest({ kind: "dash" })?.entryIndex).toBe(0);
   expect(har.summary.manifests[0]?.metadata).toMatchObject({
     encrypted: true,
@@ -98,14 +86,7 @@ test("complete captured bodies support bounded, open and suffix ranges without f
 
 test("invalid partial bodies and license/API responses cannot be replayed", () => {
   const har = capture(
-    entry(
-      "https://media.example.test/video.mp4",
-      "video/mp4",
-      "short",
-      206,
-      "bytes=0-9",
-      "bytes 0-9/100",
-    ),
+    entry("https://media.example.test/video.mp4", "video/mp4", "short", 206, "bytes=0-9", "bytes 0-9/100"),
     entry("https://media.example.test/license.mp4", "application/octet-stream", "license-secret"),
     entry("https://www.crunchyroll.com/api", "application/json", '{"token":"secret-marker"}'),
   );
@@ -146,7 +127,7 @@ test("HLS manifests are classified without retaining key or segment URLs", () =>
 
 test("loader requires an absolute path and malformed HAR errors omit raw details", async () => {
   await expect(loadHarCapture("relative.har")).rejects.toThrow("absolute");
-  expect(
-    () => new CapturedHar({ log: { entries: [{ request: { url: "secret-marker" } }] } }),
-  ).toThrow("Invalid HAR entry structure.");
+  expect(() => new CapturedHar({ log: { entries: [{ request: { url: "secret-marker" } }] } })).toThrow(
+    "Invalid HAR entry structure.",
+  );
 });

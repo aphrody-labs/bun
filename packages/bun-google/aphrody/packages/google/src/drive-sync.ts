@@ -6,12 +6,7 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import type { drive_v3 } from "@googleapis/drive";
 import { googleApi } from "./api.ts";
-import {
-  nativeMarkdown,
-  projectionAction,
-  projectionMarkdown,
-  type NativeDocument,
-} from "./drive-markdown.ts";
+import { nativeMarkdown, projectionAction, projectionMarkdown, type NativeDocument } from "./drive-markdown.ts";
 import syncContract from "./sync-contract.json";
 
 export const AGENT_HOME_DEFAULT_DOCS: readonly string[] = syncContract;
@@ -57,8 +52,7 @@ async function save(path: string, data: string): Promise<void> {
 async function privateDirectory(path: string): Promise<void> {
   await mkdir(path, { recursive: true, mode: 0o700 });
   const info = await lstat(path);
-  if (!info.isDirectory() || info.isSymbolicLink())
-    throw new Error("Unsafe retrieval projection directory");
+  if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("Unsafe retrieval projection directory");
   await chmod(path, 0o700);
 }
 /** Index candidates separately from their private local/baseline/native evidence. */
@@ -109,9 +103,7 @@ async function remoteDocs(drive: drive_v3.Drive, rootId: string): Promise<Map<st
     if (!docs.has(name)) throw new Error(`Required native Agent Home document missing: ${name}`);
   return docs;
 }
-export async function syncAgentHome(
-  options: { dryRun?: boolean; seedReviewed?: string } = {},
-): Promise<void> {
+export async function syncAgentHome(options: { dryRun?: boolean; seedReviewed?: string } = {}): Promise<void> {
   const root = resolve(required("APHRODY_AGENT_HOME")),
     rootFolderId = required("APHRODY_GOOGLE_DRIVE_FOLDER_ID");
   const privateRoot = join(homedir(), ".aphrody/drive-sync");
@@ -145,20 +137,14 @@ export async function syncAgentHome(
     const state: State = (await Bun.file(statePath).exists())
       ? await Bun.file(statePath).json()
       : { version: 1, kind: "native-markdown-download-only", rootFolderId, files: {} };
-    if (
-      state.version !== 1 ||
-      state.kind !== "native-markdown-download-only" ||
-      state.rootFolderId !== rootFolderId
-    )
+    if (state.version !== 1 || state.kind !== "native-markdown-download-only" || state.rootFolderId !== rootFolderId)
       throw new Error("Native Markdown state scope mismatch");
-    if (Object.keys(state.files).some((name) => !DEFAULT_DOCS.has(name)))
+    if (Object.keys(state.files).some(name => !DEFAULT_DOCS.has(name)))
       throw new Error("Native Markdown state contains out-of-scope entries");
     const service = await googleApi(),
       remote = await remoteDocs(service.drive, rootFolderId);
     const local = new Set(
-      (await readdir(root, { withFileTypes: true }))
-        .filter((entry) => entry.isFile())
-        .map((entry) => entry.name),
+      (await readdir(root, { withFileTypes: true })).filter(entry => entry.isFile()).map(entry => entry.name),
     );
     const summary = {
       mode: state.kind,
@@ -171,9 +157,7 @@ export async function syncAgentHome(
     };
     for (const name of AGENT_HOME_DEFAULT_DOCS) {
       const doc = remote.get(name)!;
-      const native = (
-        await service.docs.documents.get({ documentId: doc.id, includeTabsContent: true })
-      ).data;
+      const native = (await service.docs.documents.get({ documentId: doc.id, includeTabsContent: true })).data;
       const nativeJson = JSON.stringify(native, null, 2);
       const localText = local.has(name) ? await Bun.file(join(root, name)).text() : "";
       const localHash = digest(localText);
@@ -191,8 +175,7 @@ export async function syncAgentHome(
           await save(join(directory, "remote.native.json"), nativeJson + "\n");
           await save(join(directory, "local.md"), localText);
           const baseline = Bun.file(join(privateRoot, "markdown-reviewed-baseline", name));
-          if (await baseline.exists())
-            await save(join(directory, "reviewed-baseline.md"), await baseline.text());
+          if (await baseline.exists()) await save(join(directory, "reviewed-baseline.md"), await baseline.text());
           await save(
             join(directory, "evidence.json"),
             JSON.stringify(
@@ -222,21 +205,14 @@ export async function syncAgentHome(
         };
         if (!options.dryRun) {
           await save(join(privateRoot, "markdown-reviewed-baseline", name), localText);
-          await save(
-            join(privateRoot, "markdown-reviewed-baseline", name + ".native.json"),
-            snapshot,
-          );
+          await save(join(privateRoot, "markdown-reviewed-baseline", name + ".native.json"), snapshot);
           state.files[name] = baseline;
         }
         summary.seeded++;
         continue;
       }
       const previous = state.files[name];
-      const action = projectionAction(
-        previous?.id === doc.id ? previous : undefined,
-        remoteHash,
-        localHash,
-      );
+      const action = projectionAction(previous?.id === doc.id ? previous : undefined, remoteHash, localHash);
       if (action === "unchanged") {
         summary.unchanged++;
         continue;
@@ -254,8 +230,7 @@ export async function syncAgentHome(
         await save(join(directory, "remote.candidate.md"), candidate);
         await save(join(directory, "local.md"), localText);
         const baseline = Bun.file(join(privateRoot, "markdown-reviewed-baseline", name));
-        if (await baseline.exists())
-          await save(join(directory, "reviewed-baseline.md"), await baseline.text());
+        if (await baseline.exists()) await save(join(directory, "reviewed-baseline.md"), await baseline.text());
         await save(
           join(directory, "evidence.json"),
           JSON.stringify(

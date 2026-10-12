@@ -44,15 +44,11 @@ export function extractAllOperationsFromJs(js: string): Map<string, string> {
 }
 
 /** Fetch the live bundles and return the operation to queryId map (restricted to `targets`). */
-export function fetchLiveQueryIds(
-  targets?: string[],
-): Promise<{ ids: Record<string, string>; bundles: string[] }> {
+export function fetchLiveQueryIds(targets?: string[]): Promise<{ ids: Record<string, string>; bundles: string[] }> {
   return open("query_ids_live", targets ? { operations: targets } : {});
 }
 
 /** Full sync: scrape the bundles and update the shared catalog file in place. */
-export function syncCatalogFromBundles(opts?: {
-  catalogPath?: string;
-}): Promise<Record<string, unknown>> {
+export function syncCatalogFromBundles(opts?: { catalogPath?: string }): Promise<Record<string, unknown>> {
   return open("catalog_sync", { path: opts?.catalogPath ?? DEFAULT_CATALOG_PATH });
 }

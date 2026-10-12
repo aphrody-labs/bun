@@ -59,8 +59,7 @@ const MAX_DEPTH = 3;
 const SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const CHUNK = 8 * 1024 * 1024;
 
-const digest = (bytes: Uint8Array): string =>
-  new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
+const digest = (bytes: Uint8Array): string => new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
 /** Hash a file in bounded chunks: the CEF library is far larger than a safe in-memory read. */
 function digestFile(path: string): DesktopFile {
   const hasher = new Bun.CryptoHasher("sha256");
@@ -83,7 +82,7 @@ function digestFile(path: string): DesktopFile {
 export function safeDesktopPath(name: string): boolean {
   if (name === "manifest.json") return false;
   const segments = name.split("/");
-  return segments.length <= MAX_DEPTH + 1 && segments.every((segment) => SEGMENT.test(segment));
+  return segments.length <= MAX_DEPTH + 1 && segments.every(segment => SEGMENT.test(segment));
 }
 export function desktopFile(target = hostTarget()): string {
   return target.includes("windows") ? "yolo-desktop.exe" : "yolo-desktop";
@@ -117,10 +116,7 @@ export function inspectDesktopBinary(executable: string): DesktopBuildInfo {
     timeout: 5_000,
   });
   if (reply.exitCode !== 0)
-    throw new Error(
-      "Native desktop host metadata failed: " +
-        new TextDecoder().decode(reply.stderr).slice(0, 2048),
-    );
+    throw new Error("Native desktop host metadata failed: " + new TextDecoder().decode(reply.stderr).slice(0, 2048));
   const info = JSON.parse(new TextDecoder().decode(reply.stdout)) as DesktopBuildInfo;
   if (
     info.name !== "yolo-desktop" ||
@@ -154,7 +150,7 @@ export function desktopTreeDigest(manifest: DesktopManifest): string {
     new TextEncoder().encode(
       Object.keys(manifest.files)
         .sort()
-        .map((file) => `${file}\0${manifest.files[file]!.sha256}\n`)
+        .map(file => `${file}\0${manifest.files[file]!.sha256}\n`)
         .join(""),
     ),
   );
@@ -184,8 +180,7 @@ export function verifyDesktopArtifact(path: string, inspect = true): DesktopMani
   ) {
     throw new Error("Desktop artifact manifest is incompatible");
   }
-  if (!(manifest.executable in manifest.files))
-    throw new Error("Desktop manifest omits its executable");
+  if (!(manifest.executable in manifest.files)) throw new Error("Desktop manifest omits its executable");
   for (const [file, expected] of Object.entries(manifest.files)) {
     if (
       !safeDesktopPath(file) ||
@@ -204,7 +199,7 @@ export function verifyDesktopArtifact(path: string, inspect = true): DesktopMani
   // Avoid carrying untracked data or unverified libraries into a trusted installation. A directory
   // is allowed only as the parent of a listed file; a symlink or a stray file never is.
   const parents = new Set(
-    Object.keys(manifest.files).flatMap((file) => {
+    Object.keys(manifest.files).flatMap(file => {
       const segments = file.split("/").slice(0, -1);
       return segments.map((_, index) => segments.slice(0, index + 1).join("/"));
     }),
@@ -306,8 +301,7 @@ export function rollbackDesktopArtifact(home = desktopHome()): string {
   return locked(home, () => {
     const current = pointer(home, "current");
     const previous = pointer(home, "previous");
-    if (current === undefined || previous === undefined)
-      throw new Error("No verified previous desktop artifact");
+    if (current === undefined || previous === undefined) throw new Error("No verified previous desktop artifact");
     verifyDesktopArtifact(join(home, current));
     verifyDesktopArtifact(join(home, previous));
     point(home, "previous", current);
@@ -383,8 +377,7 @@ export function writeDesktopManifest(
     add(name, source);
   }
   for (const [name, source] of Object.entries(write.payload ?? {})) add(name, source);
-  if (write.payload?.["chrome-sandbox"] !== undefined)
-    chmodSync(join(path, "chrome-sandbox"), 0o755);
+  if (write.payload?.["chrome-sandbox"] !== undefined) chmodSync(join(path, "chrome-sandbox"), 0o755);
   writeFileSync(join(path, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
   verifyDesktopArtifact(path);
   return manifest;

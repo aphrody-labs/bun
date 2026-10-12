@@ -19,7 +19,7 @@ const supervisor = new ServiceSupervisor({
   ],
   healthPort: 0,
   signals: true,
-  log: (event) => console.error(JSON.stringify(event)),
+  log: event => console.error(JSON.stringify(event)),
 });
 await supervisor.start();
 console.log(supervisor.healthUrl);

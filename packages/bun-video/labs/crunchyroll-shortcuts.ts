@@ -7,11 +7,7 @@ const root = resolve(import.meta.dir, "../assets");
 const locales = ["fr", "en", "es", "pt", "de", "it", "ar", "ja", "ko", "hi", "ru"];
 const assets = new Map<string, string>();
 for (const [prefix, directory, files] of [
-  [
-    "pwa",
-    "crunchyroll-pwa",
-    ["index.html", "app.js", "styles.css", "locales.js", "manifest.webmanifest", "sw.js"],
-  ],
+  ["pwa", "crunchyroll-pwa", ["index.html", "app.js", "styles.css", "locales.js", "manifest.webmanifest", "sw.js"]],
   ["extension", "crunchyroll-extension", ["manifest.json", "popup.html", "popup.js", "locales.js"]],
 ] as const) {
   for (const file of [...files, "icons/icon192.png", "icons/icon512.png"])
@@ -24,9 +20,7 @@ for (const locale of locales)
   );
 assets.set("/pwa/", resolve(root, "crunchyroll-pwa/index.html"));
 
-export async function startCrunchyrollShortcuts(
-  options: { port?: number; hostname?: string } = {},
-) {
+export async function startCrunchyrollShortcuts(options: { port?: number; hostname?: string } = {}) {
   const hostname = options.hostname ?? "127.0.0.1";
   if (!["127.0.0.1", "localhost", "::1"].includes(hostname))
     throw new Error("The shortcut server requires a loopback address.");
@@ -56,19 +50,14 @@ export async function startCrunchyrollShortcuts(
         });
       if (url.pathname === "/health")
         return new Response(
-          request.method === "HEAD"
-            ? null
-            : JSON.stringify({ service: "bun-crunchyroll-shortcuts" }),
+          request.method === "HEAD" ? null : JSON.stringify({ service: "bun-crunchyroll-shortcuts" }),
           { headers: { ...Object.fromEntries(headers), "Content-Type": "application/json" } },
         );
       const path = assets.get(url.pathname);
       if (!path) return new Response("Not found", { status: 404, headers });
       const file = Bun.file(path);
       if (!(await file.exists())) return new Response("Not found", { status: 404, headers });
-      headers.set(
-        "Content-Type",
-        url.pathname.endsWith(".webmanifest") ? "application/manifest+json" : file.type,
-      );
+      headers.set("Content-Type", url.pathname.endsWith(".webmanifest") ? "application/manifest+json" : file.type);
       if (url.pathname === "/pwa/sw.js") headers.set("Service-Worker-Allowed", "/pwa/");
       return new Response(request.method === "HEAD" ? null : file, { headers });
     },
@@ -88,12 +77,8 @@ export async function crunchyrollShortcutsMain(args = Bun.argv.slice(2)) {
     try {
       if (args.includes("--check")) {
         const [manifest, extension, browser] = await Promise.all([
-          fetch(new URL("/pwa/manifest.webmanifest", server.url)).then((response) =>
-            response.json(),
-          ),
-          fetch(new URL("/extension/manifest.json", server.url)).then((response) =>
-            response.json(),
-          ),
+          fetch(new URL("/pwa/manifest.webmanifest", server.url)).then(response => response.json()),
+          fetch(new URL("/extension/manifest.json", server.url)).then(response => response.json()),
           probeForkBrowserCapabilities(),
         ]);
         console.log(

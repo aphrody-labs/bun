@@ -12,18 +12,13 @@ export interface ConnectProxyOptions {
 }
 
 function portNumber(value: number, allowZero = false) {
-  if (!Number.isInteger(value) || value < (allowZero ? 0 : 1) || value > 65535)
-    throw new Error("Invalid port");
+  if (!Number.isInteger(value) || value < (allowZero ? 0 : 1) || value > 65535) throw new Error("Invalid port");
   return value;
 }
 
 function normalizeHost(host: string) {
   const value = domainToASCII(host.trim().toLowerCase().replace(/\.$/, ""));
-  if (
-    !value ||
-    !/^[a-z0-9.-]+$/.test(value) ||
-    value.split(".").some((part) => !part || part.length > 63)
-  ) {
+  if (!value || !/^[a-z0-9.-]+$/.test(value) || value.split(".").some(part => !part || part.length > 63)) {
     throw new Error("Expected a DNS hostname");
   }
   return value;
@@ -53,10 +48,7 @@ async function socksConnect(
   };
   const cancel = () => socket.destroy();
   client.once("close", cancel);
-  const deadline = setTimeout(
-    () => socket.destroy(new Error("SOCKS handshake timeout")),
-    options.timeoutMs ?? 10_000,
-  );
+  const deadline = setTimeout(() => socket.destroy(new Error("SOCKS handshake timeout")), options.timeoutMs ?? 10_000);
   // The async iterator owns socket errors throughout connect and handshake.
   try {
     socket.write(Buffer.from([5, 1, 0]));
@@ -70,8 +62,7 @@ async function socksConnect(
     request.writeUInt16BE(port, 5 + name.length);
     socket.write(request);
     const reply = await read(4);
-    if (reply[0] !== 5 || reply[1] !== 0 || reply[2] !== 0)
-      throw new Error("SOCKS connect refused");
+    if (reply[0] !== 5 || reply[1] !== 0 || reply[2] !== 0) throw new Error("SOCKS connect refused");
     if (reply[3] === 1) await read(4);
     else if (reply[3] === 4) await read(16);
     else if (reply[3] === 3) await read((await read(1))[0]!);
@@ -94,29 +85,24 @@ export async function startConnectProxy(options: ConnectProxyOptions) {
   portNumber(options.upstream.port);
   portNumber(options.port ?? 0, true);
   if (!options.upstream.hostname) throw new Error("SOCKS upstream hostname is required");
-  if (
-    options.timeoutMs !== undefined &&
-    (!Number.isSafeInteger(options.timeoutMs) || options.timeoutMs < 1)
-  ) {
+  if (options.timeoutMs !== undefined && (!Number.isSafeInteger(options.timeoutMs) || options.timeoutMs < 1)) {
     throw new Error("timeoutMs must be positive");
   }
   const hosts = options.allowedHosts.map(normalizeHost);
   if (!hosts.length) throw new Error("An explicit host allowlist is required");
-  const ports = new Set((options.allowedPorts ?? [443]).map((port) => portNumber(port)));
+  const ports = new Set((options.allowedPorts ?? [443]).map(port => portNumber(port)));
   const hostname = options.hostname ?? "127.0.0.1";
-  if (hostname !== "127.0.0.1" && hostname !== "::1")
-    throw new Error("CONNECT listener must use loopback");
+  if (hostname !== "127.0.0.1" && hostname !== "::1") throw new Error("CONNECT listener must use loopback");
   const sockets = new Set<Socket>();
   let stopping = false;
   let shutdown: Promise<void> | undefined;
-  const server = createServer((client) => {
+  const server = createServer(client => {
     sockets.add(client);
     client.on("error", () => client.destroy());
     client.once("close", () => sockets.delete(client));
     client.setTimeout(options.timeoutMs ?? 10_000, () => client.destroy());
     let headers = Buffer.alloc(0);
-    const reject = (status: string) =>
-      client.end(`HTTP/1.1 ${status}\r\nConnection: close\r\n\r\n`);
+    const reject = (status: string) => client.end(`HTTP/1.1 ${status}\r\nConnection: close\r\n\r\n`);
     const onData = async (chunk: Buffer) => {
       headers = Buffer.concat([headers, chunk]);
       const end = headers.indexOf("\r\n\r\n");
@@ -142,10 +128,7 @@ export async function startConnectProxy(options: ConnectProxyOptions) {
         return;
       }
       const port = Number(match[2]);
-      if (
-        !ports.has(port) ||
-        !hosts.some((host) => target === host || target.endsWith(`.${host}`))
-      ) {
+      if (!ports.has(port) || !hosts.some(host => target === host || target.endsWith(`.${host}`))) {
         reject("403 Forbidden");
         return;
       }
@@ -187,7 +170,7 @@ export async function startConnectProxy(options: ConnectProxyOptions) {
       if (shutdown) return shutdown;
       stopping = true;
       return (shutdown = new Promise<void>((resolve, reject) => {
-        server.close((error) => (error ? reject(error) : resolve()));
+        server.close(error => (error ? reject(error) : resolve()));
         for (const socket of sockets) socket.destroy();
       }));
     },

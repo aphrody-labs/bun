@@ -24,7 +24,7 @@ function message(id = "m1", historyId = "10") {
 function mirror(owner: ReturnType<typeof store>, handler: (url: URL) => unknown, options = {}) {
   return createReadonlyGmailMirror({
     store: owner.mirror,
-    authorization: async (subject) => ({ subject, accessToken: "fixture", scopes: [scope] }),
+    authorization: async subject => ({ subject, accessToken: "fixture", scopes: [scope] }),
     fetch: async (input, init) => {
       const url = new URL(String(input));
       expect(url.origin).toBe("https://gmail.googleapis.com");
@@ -96,7 +96,7 @@ test("requires explicit protected-path owner and refuses exhausted OAuth capacit
 test("full paginated metadata synchronization excludes message bodies and isolates subjects", async () => {
   using directory = tempDir("gmail-full", {});
   using owner = store(join(String(directory), "google.sqlite"));
-  const sync = mirror(owner, (url) => {
+  const sync = mirror(owner, url => {
     if (url.pathname.endsWith("/profile")) return { historyId: "10" };
     if (url.pathname.endsWith("/messages"))
       return url.searchParams.has("pageToken")
@@ -118,7 +118,7 @@ test("history changes deduplicate messages and apply deletions atomically", asyn
   using directory = tempDir("gmail-history", {});
   using owner = store(join(String(directory), "google.sqlite"));
   owner.mirror.commit("accountA", undefined, "10", [{ ...message("m1"), headers: [] }], [], true);
-  const sync = mirror(owner, (url) => {
+  const sync = mirror(owner, url => {
     if (url.pathname.endsWith("/history")) {
       expect(url.searchParams.get("startHistoryId")).toBe("10");
       return {
@@ -135,7 +135,7 @@ test("history changes deduplicate messages and apply deletions atomically", asyn
     return url.pathname.endsWith("/m1") ? new Response(null, { status: 404 }) : message("m2", "20");
   });
   expect(await sync.sync("accountA")).toEqual({ mode: "history", updated: 1, deleted: 1 });
-  expect(owner.readMessages("accountA").map((value) => value.id)).toEqual(["m2"]);
+  expect(owner.readMessages("accountA").map(value => value.id)).toEqual(["m2"]);
   expect(owner.mirror.checkpoint("accountA")?.historyId).toBe("20");
 });
 
@@ -143,14 +143,14 @@ test("expired history cursor triggers bounded full replacement", async () => {
   using directory = tempDir("gmail-expired", {});
   using owner = store(join(String(directory), "google.sqlite"));
   owner.mirror.commit("accountA", undefined, "10", [{ ...message("old"), headers: [] }], [], true);
-  const sync = mirror(owner, (url) => {
+  const sync = mirror(owner, url => {
     if (url.pathname.endsWith("/history")) return new Response(null, { status: 404 });
     if (url.pathname.endsWith("/profile")) return { historyId: "30" };
     if (url.pathname.endsWith("/messages")) return { messages: [{ id: "new" }] };
     return message("new", "30");
   });
   expect((await sync.sync("accountA")).mode).toBe("full");
-  expect(owner.readMessages("accountA").map((value) => value.id)).toEqual(["new"]);
+  expect(owner.readMessages("accountA").map(value => value.id)).toEqual(["new"]);
 });
 
 test("pagination cycle or limits leave checkpoint and private rows unchanged", async () => {
@@ -161,11 +161,9 @@ test("pagination cycle or limits leave checkpoint and private rows unchanged", a
   await expect(sync.sync("accountA")).rejects.toThrow("pagination cycle");
   expect(owner.mirror.checkpoint("accountA")).toEqual({ historyId: "10", revision: 1 });
   expect(owner.readMessages("accountA")[0]?.id).toBe("old");
-  const limited = mirror(
-    owner,
-    () => ({ historyId: "20", history: [{ messages: [{ id: "m1" }, { id: "m2" }] }] }),
-    { maxMessages: 1 },
-  );
+  const limited = mirror(owner, () => ({ historyId: "20", history: [{ messages: [{ id: "m1" }, { id: "m2" }] }] }), {
+    maxMessages: 1,
+  });
   await expect(limited.sync("accountA")).rejects.toThrow("message limit");
   expect(owner.mirror.checkpoint("accountA")?.historyId).toBe("10");
 });
@@ -205,23 +203,12 @@ test("concurrent stale commits and storage capacity failures roll back rows and 
   using owner = store(join(String(directory), "google.sqlite"), 1);
   owner.mirror.commit("accountA", undefined, "10", [{ ...message("m1"), headers: [] }], [], true);
   const checkpoint = owner.mirror.checkpoint("accountA");
-  expect(() => owner.mirror.commit("accountA", undefined, "20", [], ["m1"], false)).toThrow(
-    "checkpoint changed",
-  );
+  expect(() => owner.mirror.commit("accountA", undefined, "20", [], ["m1"], false)).toThrow("checkpoint changed");
   expect(() =>
-    owner.mirror.commit(
-      "accountA",
-      checkpoint,
-      "20",
-      [{ ...message("m2"), headers: [] }],
-      [],
-      false,
-    ),
+    owner.mirror.commit("accountA", checkpoint, "20", [{ ...message("m2"), headers: [] }], [], false),
   ).toThrow("capacity");
-  expect(owner.readMessages("accountA").map((value) => value.id)).toEqual(["m1"]);
+  expect(owner.readMessages("accountA").map(value => value.id)).toEqual(["m1"]);
   expect(owner.mirror.checkpoint("accountA")).toEqual(checkpoint);
-  expect(() => owner.mirror.commit("accountA", checkpoint, "9", [], ["m1"], false)).toThrow(
-    "backwards",
-  );
-  expect(owner.readMessages("accountA").map((value) => value.id)).toEqual(["m1"]);
+  expect(() => owner.mirror.commit("accountA", checkpoint, "9", [], ["m1"], false)).toThrow("backwards");
+  expect(owner.readMessages("accountA").map(value => value.id)).toEqual(["m1"]);
 });

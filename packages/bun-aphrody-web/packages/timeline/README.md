@@ -10,7 +10,12 @@ runtime Bun sur Linux, Windows et macOS ; ces trois OS n'ont pas tous été
 qualifiés par cette passe.
 
 ```ts
-import { collect, createTimelineHandler, sqliteExport, redisIndex } from "@aphrody/timeline";
+import {
+  collect,
+  createTimelineHandler,
+  sqliteExport,
+  redisIndex,
+} from "@aphrody/timeline";
 
 const snapshot = await collect();
 sqliteExport(snapshot, "timeline.sqlite");

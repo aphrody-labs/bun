@@ -48,7 +48,8 @@ without adding a serializable token property:
 import { createCrunchyrollClient } from "@aphrody/bun-video/crunchyroll";
 
 const catalog = await oauth.withAccessToken((accessToken, tokenType) => {
-  if (tokenType.toLowerCase() !== "bearer") throw new Error("The catalog requires a bearer token");
+  if (tokenType.toLowerCase() !== "bearer")
+    throw new Error("The catalog requires a bearer token");
   return createCrunchyrollClient({
     accessToken,
     accountId: ownerAccountId,

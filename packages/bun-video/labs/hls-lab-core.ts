@@ -68,37 +68,23 @@ export function normalizeCookieExport(input: unknown): CookieBundle {
     const raw = record(item);
     if (raw.partitionKey !== undefined || raw.partitioned === true) invalid();
     if (typeof raw.name !== "string" || !/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(raw.name)) invalid();
-    if (
-      typeof raw.value !== "string" ||
-      !/^[\x21\x23-\x2B\x2D-\x3A\x3C-\x5B\x5D-\x7E]*$/.test(raw.value)
-    )
-      invalid();
-    if (typeof raw.domain !== "string" || !raw.domain || !/^\.?[A-Za-z0-9.-]+$/.test(raw.domain))
-      invalid();
+    if (typeof raw.value !== "string" || !/^[\x21\x23-\x2B\x2D-\x3A\x3C-\x5B\x5D-\x7E]*$/.test(raw.value)) invalid();
+    if (typeof raw.domain !== "string" || !raw.domain || !/^\.?[A-Za-z0-9.-]+$/.test(raw.domain)) invalid();
     const host = raw.domain.replace(/^\./, "").toLowerCase();
     if (host.includes("..") || host.endsWith(".") || host.startsWith(".")) invalid();
     if (
-      host
-        .split(".")
-        .some((label) => !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label) || label.length > 63) ||
+      host.split(".").some(label => !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label) || label.length > 63) ||
       host.length > 253
     )
       invalid();
-    if (
-      typeof raw.path !== "string" ||
-      !raw.path.startsWith("/") ||
-      /[\x00-\x20\x7F;?#]/.test(raw.path)
-    )
-      invalid();
+    if (typeof raw.path !== "string" || !raw.path.startsWith("/") || /[\x00-\x20\x7F;?#]/.test(raw.path)) invalid();
     const secure = booleanField(raw, "secure", false);
     const httpOnly = booleanField(raw, "httpOnly", false);
     const hostOnly = booleanField(raw, "hostOnly", !raw.domain.startsWith("."));
     const session = booleanField(raw, "session", raw.expirationDate === undefined);
     if (
       raw.expirationDate !== undefined &&
-      (typeof raw.expirationDate !== "number" ||
-        !Number.isFinite(raw.expirationDate) ||
-        raw.expirationDate < 0)
+      (typeof raw.expirationDate !== "number" || !Number.isFinite(raw.expirationDate) || raw.expirationDate < 0)
     )
       invalid();
     let sameSite: BunCookie["sameSite"];
@@ -153,10 +139,9 @@ export function normalizeCookieExport(input: unknown): CookieBundle {
 export function parseCookieBundle(input: unknown): CookieBundle {
   try {
     const raw = input as CookieBundle;
-    if (raw?.schemaVersion !== 1 || !Array.isArray(raw.chromium) || !Array.isArray(raw.bun))
-      throw new Error();
+    if (raw?.schemaVersion !== 1 || !Array.isArray(raw.chromium) || !Array.isArray(raw.bun)) throw new Error();
     const normalized = normalizeCookieExport(
-      raw.chromium.map((cookie) => ({
+      raw.chromium.map(cookie => ({
         ...cookie,
         domain: cookie.domain ?? new URL(String(cookie.url)).hostname,
         hostOnly: !cookie.domain,
@@ -171,14 +156,10 @@ export function parseCookieBundle(input: unknown): CookieBundle {
   }
 }
 
-export function cookieHeader(
-  cookies: readonly ChromiumCookie[],
-  url: URL,
-  now = Date.now() / 1000,
-): string {
+export function cookieHeader(cookies: readonly ChromiumCookie[], url: URL, now = Date.now() / 1000): string {
   httpUrl(url.href);
   const host = url.hostname.toLowerCase();
-  const matching = cookies.filter((cookie) => {
+  const matching = cookies.filter(cookie => {
     if (
       !/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(cookie.name) ||
       !/^[\x21\x23-\x2B\x2D-\x3A\x3C-\x5B\x5D-\x7E]*$/.test(cookie.value)
@@ -198,7 +179,7 @@ export function cookieHeader(
     );
   });
   matching.sort((a, b) => b.path.length - a.path.length);
-  return matching.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
+  return matching.map(cookie => `${cookie.name}=${cookie.value}`).join("; ");
 }
 
 export function rewritePlaylist(text: string, base: URL, proxy: (url: string) => string): string {
@@ -214,7 +195,7 @@ export function rewritePlaylist(text: string, base: URL, proxy: (url: string) =>
   };
   return text
     .split(/(\r?\n)/)
-    .map((line) => {
+    .map(line => {
       if (!line.trim() || /^\r?\n$/.test(line)) return line;
       if (line.trimStart().startsWith("#")) {
         return line.replace(/\bURI="([^"]*)"/g, (_match, uri: string) => `URI="${rewrite(uri)}"`);
@@ -235,8 +216,7 @@ export function validateHlsConfig(input: unknown): HlsConfig {
   if (typeof input !== "object" || input === null || Array.isArray(input))
     throw new Error("Invalid HLS configuration.");
   const raw = input as Record<string, unknown>;
-  if (raw.src !== null && typeof raw.src !== "string")
-    throw new Error("HLS src must be a URL or null.");
+  if (raw.src !== null && typeof raw.src !== "string") throw new Error("HLS src must be a URL or null.");
   const result: HlsConfig = {
     src: raw.src === null ? null : httpUrl(raw.src as string).href,
     config: { enableWorker: false },
@@ -246,7 +226,7 @@ export function validateHlsConfig(input: unknown): HlsConfig {
       throw new Error("Invalid HLS playback options.");
     const options = raw.config as Record<string, unknown>;
     if (
-      Object.keys(options).some((key) => key !== "enableWorker") ||
+      Object.keys(options).some(key => key !== "enableWorker") ||
       (options.enableWorker !== undefined && options.enableWorker !== false)
     ) {
       throw new Error("HLS lab supports only enableWorker: false.");

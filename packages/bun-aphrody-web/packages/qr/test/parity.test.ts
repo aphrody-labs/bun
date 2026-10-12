@@ -41,15 +41,13 @@ describe("encoder behaviour", () => {
     expect(symbol.version).toBe(1);
     expect(symbol.modules.size).toBe(21);
     const at = (row: number, col: number) => symbol.modules.data[row * 21 + col];
-    expect([at(0, 0), at(0, 6), at(6, 0), at(6, 6), at(3, 3), at(1, 1)]).toEqual([
-      1, 1, 1, 1, 1, 0,
-    ]);
+    expect([at(0, 0), at(0, 6), at(6, 0), at(6, 6), at(3, 3), at(1, 1)]).toEqual([1, 1, 1, 1, 1, 0]);
     expect(at(13, 8)).toBe(1);
   });
 
   test("segments switch to numeric and alphanumeric where cheaper", () => {
     const symbol = createQr("abc0123456789012345678901234567890ABCDEFGHIJKLMN");
-    expect(symbol.segments.map((s) => s.mode)).toEqual(["byte", "numeric", "alphanumeric"]);
+    expect(symbol.segments.map(s => s.mode)).toEqual(["byte", "numeric", "alphanumeric"]);
   });
 
   test("rejects empty input, oversize data and a too-small forced version", () => {

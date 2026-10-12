@@ -15,10 +15,9 @@ export function ExplorerServices({
     const controller = new AbortController();
     const health = async () => {
       try {
-        const result = await api<{ services?: { id: string; healthy: boolean }[] }>(
-          "/api/explorer/services",
-          { signal: controller.signal },
-        );
+        const result = await api<{ services?: { id: string; healthy: boolean }[] }>("/api/explorer/services", {
+          signal: controller.signal,
+        });
         if (!controller.signal.aborted) {
           setServices(result.services ?? []);
           setError(null);
@@ -51,11 +50,8 @@ export function ExplorerServices({
             {error}
           </p>
         )}
-        {services.map((service) => (
-          <div
-            key={service.id}
-            className="flex justify-between border-b border-white/10 p-2 text-xs"
-          >
+        {services.map(service => (
+          <div key={service.id} className="flex justify-between border-b border-white/10 p-2 text-xs">
             <span>{service.id}</span>
             <span>{service.healthy ? "Healthy" : "Unavailable"}</span>
           </div>
@@ -63,7 +59,7 @@ export function ExplorerServices({
       </section>
       <section>
         <h3 className="text-sm font-semibold">Indexed resources</h3>
-        {resources.map((resource) => (
+        {resources.map(resource => (
           <article key={resource.id} className="border-b border-white/10 pb-3">
             <h4 className="text-sm">{resource.name}</h4>
             <p className="mt-1 break-all text-xs opacity-65">{resource.canonical_path}</p>

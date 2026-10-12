@@ -57,15 +57,11 @@ async function login(): Promise<void> {
       });
       void process.exited;
     }
-    const timeout = setTimeout(
-      () => rejectCode(new Error("OAuth callback timed out after five minutes")),
-      300_000,
-    );
+    const timeout = setTimeout(() => rejectCode(new Error("OAuth callback timed out after five minutes")), 300_000);
     try {
       const code = await codePromise;
       const response = await client.getToken({ code, codeVerifier, redirect_uri: redirectUri });
-      if (!response.tokens.refresh_token)
-        throw new Error("Google did not grant an offline refresh token");
+      if (!response.tokens.refresh_token) throw new Error("Google did not grant an offline refresh token");
       await saveOAuthToken(response.tokens, googlePaths().token);
       console.log("Google OAuth token saved in the private Aphrody credential store.");
     } finally {
@@ -114,13 +110,10 @@ export async function runDriveCli(args: string[]): Promise<void> {
     return;
   }
   if (args.includes("--legacy-bidirectional"))
-    throw new Error(
-      "Legacy plain-text Google Docs writes are disabled; use native download-only projection",
-    );
+    throw new Error("Legacy plain-text Google Docs writes are disabled; use native download-only projection");
   if (
     args.includes("--seed-reviewed") &&
-    (!args[args.indexOf("--seed-reviewed") + 1] ||
-      args[args.indexOf("--seed-reviewed") + 1]!.startsWith("--"))
+    (!args[args.indexOf("--seed-reviewed") + 1] || args[args.indexOf("--seed-reviewed") + 1]!.startsWith("--"))
   )
     throw new Error("--seed-reviewed requires the private native snapshot directory");
   if (command === "auth-login") await login();
@@ -129,9 +122,7 @@ export async function runDriveCli(args: string[]): Promise<void> {
   else if (command === "sync")
     await syncAgentHome({
       dryRun: args.includes("--dry-run"),
-      seedReviewed: args.includes("--seed-reviewed")
-        ? args[args.indexOf("--seed-reviewed") + 1]
-        : undefined,
+      seedReviewed: args.includes("--seed-reviewed") ? args[args.indexOf("--seed-reviewed") + 1] : undefined,
     });
   else throw new Error(usage);
 }

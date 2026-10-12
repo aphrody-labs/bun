@@ -39,11 +39,7 @@ export { expect, type LocatorMatchers, type MatcherOptions } from "./expect.ts";
 
 export { TestPage, type TestPageOptions } from "./page.ts";
 
-export {
-  collectPageDiagnostics,
-  type DiagnosticsOptions,
-  type PageDiagnostics,
-} from "./diagnostics.ts";
+export { collectPageDiagnostics, type DiagnosticsOptions, type PageDiagnostics } from "./diagnostics.ts";
 
 export { WebLocator, type CdpPage, type FilterOptions } from "./locator.ts";
 

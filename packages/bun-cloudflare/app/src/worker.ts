@@ -30,14 +30,8 @@ async function guardWrite(request: Request, env: Env): Promise<Response | null> 
   return success ? null : error(429, "rate limited");
 }
 
-async function files(
-  request: Request,
-  env: Env,
-  bucketName: string,
-  key: string,
-): Promise<Response> {
-  if (!isBucket(bucketName))
-    return error(404, `unknown bucket, expected one of ${buckets.join(", ")}`);
+async function files(request: Request, env: Env, bucketName: string, key: string): Promise<Response> {
+  if (!isBucket(bucketName)) return error(404, `unknown bucket, expected one of ${buckets.join(", ")}`);
   const bucket = bucketFor(env, bucketName);
 
   if (!key) {
@@ -49,7 +43,7 @@ async function files(
       limit: 100,
     });
     return json({
-      objects: listing.objects.map((o) => ({
+      objects: listing.objects.map(o => ({
         key: o.key,
         size: o.size,
         etag: o.etag,
@@ -96,9 +90,7 @@ async function files(
       const denied = await guardWrite(request, env);
       if (denied) return denied;
       await bucket.delete(key);
-      await env.DB.prepare("DELETE FROM files WHERE bucket = ? AND key = ?")
-        .bind(bucketName, key)
-        .run();
+      await env.DB.prepare("DELETE FROM files WHERE bucket = ? AND key = ?").bind(bucketName, key).run();
       return new Response(null, { status: 204 });
     }
     default:
@@ -148,13 +140,9 @@ async function api(request: Request, env: Env, ctx: ExecutionContext): Promise<R
       if (denied) return denied;
       const { prompt } = await request.json<{ prompt?: string }>();
       if (!prompt) return error(400, "missing prompt");
-      const stream = await env.AI.run(
-        env.AI_MODEL as keyof AiModels,
-        { prompt, stream: true } as never,
-        {
-          gateway: { id: env.AI_GATEWAY },
-        },
-      );
+      const stream = await env.AI.run(env.AI_MODEL as keyof AiModels, { prompt, stream: true } as never, {
+        gateway: { id: env.AI_GATEWAY },
+      });
       return new Response(stream as ReadableStream, {
         headers: { "Content-Type": "text/event-stream" },
       });
@@ -194,9 +182,7 @@ export default {
 
   async scheduled(controller, env) {
     const cutoff = Date.now() - 365 * 24 * 3600 * 1000;
-    const { meta } = await env.DB.prepare("DELETE FROM files WHERE uploaded_at < ?")
-      .bind(cutoff)
-      .run();
+    const { meta } = await env.DB.prepare("DELETE FROM files WHERE uploaded_at < ?").bind(cutoff).run();
     log("info", "scheduled cleanup", { cron: controller.cron, deleted: meta.changes });
   },
 } satisfies ExportedHandler<Env, IngestParams>;

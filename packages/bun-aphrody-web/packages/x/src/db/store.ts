@@ -136,11 +136,7 @@ export class Store {
   }
 
   /** Read-only SQL (`SELECT`, `WITH`, `VALUES`, `EXPLAIN`) with `?` / `?N` parameters. */
-  public query<T = Record<string, unknown>>(
-    sql: string,
-    params: unknown[] = [],
-    limit = 1000,
-  ): T[] {
+  public query<T = Record<string, unknown>>(sql: string, params: unknown[] = [], limit = 1000): T[] {
     return this.run("store_query", { sql, params, limit });
   }
 

@@ -24,8 +24,7 @@ function windowsPath(value: string, name: string): string {
 }
 
 function argument(value: string): string {
-  if (typeof value !== "string" || /[\0\r\n]/.test(value))
-    throw new Error("Invalid Windows service argument");
+  if (typeof value !== "string" || /[\0\r\n]/.test(value)) throw new Error("Invalid Windows service argument");
   if (value && !/[\s"]/.test(value)) return value;
   return `"${value.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/g, "$1$1")}"`;
 }
@@ -40,8 +39,7 @@ export function planWindowsService(options: WindowsServicePlanOptions) {
   if (options.start !== undefined && options.start !== "automatic" && options.start !== "manual")
     throw new Error("Invalid service start policy");
   const delay = options.restartDelayMs ?? 5000;
-  if (!Number.isSafeInteger(delay) || delay < 0 || delay > 2_147_483_647)
-    throw new Error("Invalid restartDelayMs");
+  if (!Number.isSafeInteger(delay) || delay < 0 || delay > 2_147_483_647) throw new Error("Invalid restartDelayMs");
   for (const value of [options.displayName, options.description]) {
     if (value !== undefined && (typeof value !== "string" || /[\0\r\n]/.test(value)))
       throw new Error("Invalid service metadata");
@@ -59,10 +57,8 @@ export function planWindowsService(options: WindowsServicePlanOptions) {
   ];
   if (options.displayName !== undefined) values.push(["DisplayName", [options.displayName]]);
   if (options.description !== undefined) values.push(["Description", [options.description]]);
-  if (options.stdout !== undefined)
-    values.push(["AppStdout", [windowsPath(options.stdout, "stdout")]]);
-  if (options.stderr !== undefined)
-    values.push(["AppStderr", [windowsPath(options.stderr, "stderr")]]);
+  if (options.stdout !== undefined) values.push(["AppStdout", [windowsPath(options.stdout, "stdout")]]);
+  if (options.stderr !== undefined) values.push(["AppStderr", [windowsPath(options.stderr, "stderr")]]);
   for (const [key, value] of values) commands.push([nssm, "set", options.name, key, ...value]);
   return { service: options.name, requiresAdministrator: true, startsService: false, commands };
 }

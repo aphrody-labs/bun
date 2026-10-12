@@ -37,11 +37,7 @@ export interface FilterOptions {
  * all via Aphrody's CDP DOM domain. Shared by the locator and the web-first
  * matchers in `expect.ts`.
  */
-export async function resolveNodes(
-  page: CdpPage,
-  query: ResolvedQuery,
-  extraText?: TextMatcher,
-): Promise<number[]> {
+export async function resolveNodes(page: CdpPage, query: ResolvedQuery, extraText?: TextMatcher): Promise<number[]> {
   const doc = (await page._send("DOM.getDocument", { depth: 0 })) as {
     root: { nodeId: number };
   };
@@ -55,12 +51,8 @@ export async function resolveNodes(
   if (extraText) predicates.push(extraText);
   if (predicates.length === 0) return nodeIds ?? [];
 
-  const withText = await Promise.all(
-    (nodeIds ?? []).map(async (id) => ({ id, text: await nodeText(page, id) })),
-  );
-  return withText
-    .filter(({ text }) => predicates.every((p) => matchesText(p, text)))
-    .map(({ id }) => id);
+  const withText = await Promise.all((nodeIds ?? []).map(async id => ({ id, text: await nodeText(page, id) })));
+  return withText.filter(({ text }) => predicates.every(p => matchesText(p, text))).map(({ id }) => id);
 }
 
 /** Returns an element's stripped text content via `DOM.getOuterHTML`. */
@@ -75,11 +67,7 @@ export async function nodeText(page: CdpPage, nodeId: number): Promise<string> {
 }
 
 /** Returns the value of an attribute via `DOM.describeNode`, or `null`. */
-export async function nodeAttribute(
-  page: CdpPage,
-  nodeId: number,
-  name: string,
-): Promise<string | null> {
+export async function nodeAttribute(page: CdpPage, nodeId: number, name: string): Promise<string | null> {
   const { node } = (await page._send("DOM.describeNode", { nodeId })) as {
     node: { attributes?: string[] };
   };
@@ -120,12 +108,7 @@ export class WebLocator {
   /** Extra text predicate from `.filter({ hasText })`. */
   readonly #extraText?: TextMatcher;
 
-  constructor(
-    page: CdpPage,
-    query: ResolvedQuery,
-    index: number | null = null,
-    extraText?: TextMatcher,
-  ) {
+  constructor(page: CdpPage, query: ResolvedQuery, index: number | null = null, extraText?: TextMatcher) {
     this.#page = page;
     this.#query = query;
     this.#index = index;

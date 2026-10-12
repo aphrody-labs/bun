@@ -18,8 +18,8 @@ export const BrowserAccessApp: React.FC = () => {
     setBusy(id);
     void pending
       .then(
-        (result) => setResults((previous) => ({ ...previous, [id]: result })),
-        (error) => setResults((previous) => ({ ...previous, [id]: errorText(error) })),
+        result => setResults(previous => ({ ...previous, [id]: result })),
+        error => setResults(previous => ({ ...previous, [id]: errorText(error) })),
       )
       .finally(() => setBusy(null));
   };
@@ -27,15 +27,15 @@ export const BrowserAccessApp: React.FC = () => {
     <div className="h-full overflow-auto bg-[#0e1017] p-5 text-gray-200">
       <h2 className="text-lg font-semibold">Accès de ce navigateur</h2>
       <p className="my-3 text-sm text-gray-400">
-        Chaque bouton demande une capacité précise. Les fichiers importés restent sur cet appareil,
-        dans le stockage du site. Aucun envoi au serveur.
+        Chaque bouton demande une capacité précise. Les fichiers importés restent sur cet appareil, dans le stockage du
+        site. Aucun envoi au serveur.
       </p>
       <p className="mb-4 text-sm text-gray-400">
-        Le terminal et les API Windows/Linux nécessitent votre agent Bun local. Les permissions
-        Chrome ne donnent pas accès au système entier.
+        Le terminal et les API Windows/Linux nécessitent votre agent Bun local. Les permissions Chrome ne donnent pas
+        accès au système entier.
       </p>
       <div className="grid gap-3">
-        {(Object.keys(CAPABILITY_LABELS) as BrowserCapability[]).map((id) => (
+        {(Object.keys(CAPABILITY_LABELS) as BrowserCapability[]).map(id => (
           <div key={id} className="rounded border border-gray-700 p-3">
             <button
               type="button"
@@ -48,9 +48,7 @@ export const BrowserAccessApp: React.FC = () => {
             </button>
             <p role="status" className="mt-2 text-xs text-gray-400">
               {results[id] ??
-                (browserCapabilityAvailable(id)
-                  ? "Disponible, non demandé"
-                  : "Indisponible dans ce navigateur")}
+                (browserCapabilityAvailable(id) ? "Disponible, non demandé" : "Indisponible dans ce navigateur")}
             </p>
           </div>
         ))}

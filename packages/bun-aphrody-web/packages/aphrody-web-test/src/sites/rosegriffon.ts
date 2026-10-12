@@ -124,10 +124,7 @@ export function roseGriffonAuthHeaders(
 /**
  * Injects Rose Griffon authentication cookies into a test page or browser context.
  */
-export async function injectRoseGriffonAuth(
-  target: unknown,
-  options: RoseGriffonAuthOptions = {},
-): Promise<void> {
+export async function injectRoseGriffonAuth(target: unknown, options: RoseGriffonAuthOptions = {}): Promise<void> {
   const cookies = createRoseGriffonAuthCookies(options);
   if (
     typeof target === "object" &&

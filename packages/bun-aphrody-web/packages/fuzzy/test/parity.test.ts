@@ -48,9 +48,7 @@ describe("parity with fuse.js 7.1.0 (generated fixtures)", () => {
   }, 30_000); // Hundreds of oracle comparisons also run under debug instrumentation.
 
   test("some fixtures return matches (the comparison is not vacuous)", () => {
-    const withResults = fixtures.cases.filter(
-      (fixture) => (fixture.results as unknown[]).length > 0,
-    );
+    const withResults = fixtures.cases.filter(fixture => (fixture.results as unknown[]).length > 0);
     expect(withResults.length).toBeGreaterThan(fixtures.cases.length / 2);
   });
 });

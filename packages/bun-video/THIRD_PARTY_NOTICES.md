@@ -33,16 +33,16 @@ does not represent an official Crunchyroll SDK or grant access to content.
 
 Official external dependencies retain their own terms:
 
-| Dependency | Version | Terms/source |
-| --- | --- | --- |
-| remotion, @remotion/renderer | 4.0.534 | [Remotion license](https://github.com/remotion-dev/remotion/blob/32af7e8f8ac67493ef81498d311af3dc9ca953a6/LICENSE.md), including applicable company licensing; no modified Remotion engine source is bundled here |
-| @hyperframes/core, @hyperframes/engine, @hyperframes/parsers | 0.8.144 | [Apache-2.0](https://github.com/heygen-com/hyperframes/blob/063c2f8d61b4e989274b6526b370edc588b37e4a/LICENSE) |
-| hls.js | 1.7.3 | Apache-2.0, upstream package notices |
-| dashjs | 5.2.1 | BSD-3-Clause, upstream package notices |
-| fast-xml-parser | 5.11.2 | MIT, upstream package notices |
-| bitmovin-player | 8.279.0 | [Bitmovin licensing](https://developer.bitmovin.com/playback/docs), requires the caller's valid player license and permitted deployment domain; upstream third-party notices apply |
-| react, react-dom | 19.2.0 | MIT, upstream package notices |
-| @aphrody/bun-runtime-sdk | 1.4.5 | Published package notices; native providers are distributed and qualified separately |
+| Dependency                                                   | Version | Terms/source                                                                                                                                                                                                      |
+| ------------------------------------------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| remotion, @remotion/renderer                                 | 4.0.534 | [Remotion license](https://github.com/remotion-dev/remotion/blob/32af7e8f8ac67493ef81498d311af3dc9ca953a6/LICENSE.md), including applicable company licensing; no modified Remotion engine source is bundled here |
+| @hyperframes/core, @hyperframes/engine, @hyperframes/parsers | 0.8.144 | [Apache-2.0](https://github.com/heygen-com/hyperframes/blob/063c2f8d61b4e989274b6526b370edc588b37e4a/LICENSE)                                                                                                     |
+| hls.js                                                       | 1.7.3   | Apache-2.0, upstream package notices                                                                                                                                                                              |
+| dashjs                                                       | 5.2.1   | BSD-3-Clause, upstream package notices                                                                                                                                                                            |
+| fast-xml-parser                                              | 5.11.2  | MIT, upstream package notices                                                                                                                                                                                     |
+| bitmovin-player                                              | 8.279.0 | [Bitmovin licensing](https://developer.bitmovin.com/playback/docs), requires the caller's valid player license and permitted deployment domain; upstream third-party notices apply                                |
+| react, react-dom                                             | 19.2.0  | MIT, upstream package notices                                                                                                                                                                                     |
+| @aphrody/bun-runtime-sdk                                     | 1.4.5   | Published package notices; native providers are distributed and qualified separately                                                                                                                              |
 
 Native Bun, JavaScriptCore, browser providers and media executables are not
 included in this source package. Their distribution licenses remain separate.

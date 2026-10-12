@@ -19,9 +19,7 @@ export async function runChromiumCommand(args: string[]): Promise<unknown> {
       if (!value) throw new TypeError("bookmarks requires an explicit Bookmarks file");
       return chromium.profiles.readBookmarks(value);
     default:
-      throw new TypeError(
-        "Commands: status, validate-url <url>, validate-extension <json>, bookmarks <file>",
-      );
+      throw new TypeError("Commands: status, validate-url <url>, validate-extension <json>, bookmarks <file>");
   }
 }
 

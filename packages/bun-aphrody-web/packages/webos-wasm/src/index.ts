@@ -21,8 +21,8 @@ export function memoryImageStore(initial?: Uint8Array): ImageStore {
   let image = initial ?? new Uint8Array();
   return {
     persistent: false,
-    load: async (accept) => (image.byteLength > 0 && accept(image) ? image : new Uint8Array()),
-    save: async (next) => {
+    load: async accept => (image.byteLength > 0 && accept(image) ? image : new Uint8Array()),
+    save: async next => {
       image = Uint8Array.from(next);
     },
   };
@@ -54,12 +54,8 @@ export function encodeSlot(sequence: bigint, image: Uint8Array): Uint8Array {
 
 /** Decode a slot; null when empty, torn or foreign. */
 export function decodeSlot(bytes: Uint8Array): { sequence: bigint; image: Uint8Array } | null {
-  if (bytes.byteLength < SLOT_HEADER_BYTES || !SLOT_MAGIC.every((b, i) => bytes[i] === b))
-    return null;
-  const sequence = new DataView(bytes.buffer, bytes.byteOffset).getBigUint64(
-    SLOT_MAGIC.length,
-    true,
-  );
+  if (bytes.byteLength < SLOT_HEADER_BYTES || !SLOT_MAGIC.every((b, i) => bytes[i] === b)) return null;
+  const sequence = new DataView(bytes.buffer, bytes.byteOffset).getBigUint64(SLOT_MAGIC.length, true);
   return { sequence, image: bytes.subarray(SLOT_HEADER_BYTES) };
 }
 
@@ -70,12 +66,8 @@ export function slotImageStore(directory: SlotDirectory, persistent = true): Ima
   return {
     persistent,
     async load(accept) {
-      const files = await Promise.all(
-        SLOT_NAMES.map((name) => directory.getFileHandle(name, { create: true })),
-      );
-      const raw = await Promise.all(
-        files.map(async (f) => new Uint8Array(await (await f.getFile()).arrayBuffer())),
-      );
+      const files = await Promise.all(SLOT_NAMES.map(name => directory.getFileHandle(name, { create: true })));
+      const raw = await Promise.all(files.map(async f => new Uint8Array(await (await f.getFile()).arrayBuffer())));
       const candidates = raw
         .map((bytes, index) => ({ index, slot: decodeSlot(bytes) }))
         .filter((c): c is { index: number; slot: NonNullable<typeof c.slot> } => c.slot !== null)
@@ -87,7 +79,7 @@ export function slotImageStore(directory: SlotDirectory, persistent = true): Ima
           return c.slot.image;
         }
       }
-      if (raw.some((bytes) => bytes.byteLength > 0))
+      if (raw.some(bytes => bytes.byteLength > 0))
         throw new Error("both OPFS WebOS images are invalid; existing data was preserved");
       return new Uint8Array();
     },
@@ -110,8 +102,8 @@ export async function defaultImageStore(): Promise<ImageStore> {
   if (!nav || !storage?.getDirectory) return memoryImageStore();
   const locks = nav.locks;
   if (locks) {
-    const held = await new Promise<boolean>((resolve) => {
-      void locks.request(WRITER_LOCK, { ifAvailable: true }, (lock) => {
+    const held = await new Promise<boolean>(resolve => {
+      void locks.request(WRITER_LOCK, { ifAvailable: true }, lock => {
         resolve(lock !== null);
         return lock ? new Promise<never>(() => {}) : undefined;
       });
@@ -184,7 +176,7 @@ export async function openWebOs(options: OpenOptions = {}): Promise<WebOs> {
   await init(options.wasm === undefined ? undefined : { module_or_path: options.wasm });
   const store = options.store ?? (await defaultImageStore());
   let restored: WebOsFs | undefined;
-  const image = await store.load((candidate) => {
+  const image = await store.load(candidate => {
     try {
       restored = new WebOsFs(candidate);
       return true;
@@ -255,7 +247,7 @@ export async function openWebOs(options: OpenOptions = {}): Promise<WebOs> {
         },
       };
     },
-    detectLanguage: (text) => JSON.parse(detectLanguage(text)) as LanguageDetection,
+    detectLanguage: text => JSON.parse(detectLanguage(text)) as LanguageDetection,
     flush,
   };
 }

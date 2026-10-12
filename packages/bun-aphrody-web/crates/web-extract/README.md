@@ -1,4 +1,5 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # aphrody-web-extract
 
 Canonical Rust owner for Aphrody Web content processing. The source extractor

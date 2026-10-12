@@ -10,11 +10,7 @@ export interface EncodeVideoOptions {
   ffmpegExecutable?: string;
 }
 
-export async function encodeVideo(
-  input: FramePlan,
-  options: EncodeVideoOptions,
-  signal?: AbortSignal,
-) {
+export async function encodeVideo(input: FramePlan, options: EncodeVideoOptions, signal?: AbortSignal) {
   signal?.throwIfAborted();
   const plan = validateFramePlan(input);
   if (![options.nativeExecutable, options.output].every(isAbsolute))
@@ -25,8 +21,7 @@ export async function encodeVideo(
     throw new TypeError("allowLossy must be a boolean");
   const codec = options.codec ?? "ffv1";
   if (!["ffv1", "nvenc", "qsv", "amf"].includes(codec)) throw new TypeError("Unknown encoder");
-  if (codec !== "ffv1" && !options.allowLossy)
-    throw new Error("GPU H264 requires explicit allowLossy and drops alpha");
+  if (codec !== "ffv1" && !options.allowLossy) throw new Error("GPU H264 requires explicit allowLossy and drops alpha");
   const args = [
     options.nativeExecutable,
     "encode",

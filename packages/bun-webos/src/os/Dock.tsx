@@ -131,7 +131,7 @@ export const DOCK_ITEMS: DockItemConfig[] = [
   },
 ];
 
-const APP_IDS = new Set<string>(DOCK_ITEMS.map((item) => item.id));
+const APP_IDS = new Set<string>(DOCK_ITEMS.map(item => item.id));
 
 export function isAppId(id: string): id is AppId {
   return APP_IDS.has(id);
@@ -153,8 +153,8 @@ export const Dock: React.FC<DockProps> = ({ windows, onToggleApp, onOpenCommandP
         <div className="w-px h-8 shrink-0 bg-[var(--md-sys-color-outline-variant)] my-auto mx-1" />
 
         {/* Application Dock Icons */}
-        {DOCK_ITEMS.map((item) => {
-          const win = windows.find((w) => w.id === item.id);
+        {DOCK_ITEMS.map(item => {
+          const win = windows.find(w => w.id === item.id);
           const isOpen = Boolean(win?.isOpen);
           const isMinimized = Boolean(win?.isMinimized);
 
@@ -178,9 +178,7 @@ export const Dock: React.FC<DockProps> = ({ windows, onToggleApp, onOpenCommandP
                 {isOpen && (
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${
-                      isMinimized
-                        ? "bg-[var(--md-sys-color-outline)]"
-                        : "bg-[var(--md-sys-color-primary)]"
+                      isMinimized ? "bg-[var(--md-sys-color-outline)]" : "bg-[var(--md-sys-color-primary)]"
                     }`}
                   />
                 )}

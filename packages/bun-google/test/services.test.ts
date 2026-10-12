@@ -132,9 +132,7 @@ test("Gemini JSON and SSE retain request body and signal", async () => {
     });
     const body = { contents: [{ parts: [{ text: "hello" }] }] };
     expect(await api.gemini.generate("gemini-test", body)).toEqual({ candidates: [] });
-    expect(await (await api.gemini.stream("gemini-test", body)).text()).toBe(
-      'data: {"text":"hello"}\n\n',
-    );
+    expect(await (await api.gemini.stream("gemini-test", body)).text()).toBe('data: {"text":"hello"}\n\n');
     expect(bodies).toEqual([body, body]);
     await expect(api.gemini.generate("gemini-test", body, AbortSignal.abort())).rejects.toThrow();
     expect(bodies.length).toBe(2);

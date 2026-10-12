@@ -67,11 +67,7 @@ export async function createDeck(
   return answer.deck_id ?? null;
 }
 
-export function updateDeck(
-  client: XClient,
-  deckId: string,
-  config: XProDeckConfig,
-): Promise<unknown> {
+export function updateDeck(client: XClient, deckId: string, config: XProDeckConfig): Promise<unknown> {
   return client.call("xpro_update_deck", { deck_id: deckId, config });
 }
 
@@ -104,11 +100,7 @@ export function removeColumn(client: XClient, deckId: string, columnId: string):
   return client.call("xpro_remove_column", { deck_id: deckId, column_id: columnId });
 }
 
-export function reorderColumns(
-  client: XClient,
-  deckId: string,
-  columnIds: string[],
-): Promise<unknown> {
+export function reorderColumns(client: XClient, deckId: string, columnIds: string[]): Promise<unknown> {
   return client.call("xpro_reorder_columns", { deck_id: deckId, column_ids: columnIds });
 }
 

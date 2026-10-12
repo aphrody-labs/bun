@@ -25,7 +25,7 @@ export function useSystemSnapshot(intervalMs = 5000): SystemState {
         if (alive) setState({ snapshot, error: null });
       } catch (error) {
         if (alive)
-          setState((prev) => ({
+          setState(prev => ({
             ...prev,
             error: error instanceof Error ? error.message : String(error),
           }));

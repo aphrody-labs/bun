@@ -79,13 +79,10 @@ export class OAuthClient {
   #generation = 0;
 
   constructor(config: OAuthClientConfig) {
-    if (!config.clientId?.trim())
-      throw new OAuthError("An owner-provided OAuth clientId is required");
+    if (!config.clientId?.trim()) throw new OAuthError("An owner-provided OAuth clientId is required");
     this.#authorization = checkedURL(config.authorizationEndpoint);
     this.#tokenEndpoint = checkedURL(config.tokenEndpoint);
-    this.#revocation = config.revocationEndpoint
-      ? checkedURL(config.revocationEndpoint)
-      : undefined;
+    this.#revocation = config.revocationEndpoint ? checkedURL(config.revocationEndpoint) : undefined;
     this.#redirect = checkedURL(config.redirectURI);
     for (const reserved of ["code", "state", "error", "error_description", "error_uri", "iss"]) {
       if (this.#redirect.searchParams.has(reserved))
@@ -107,9 +104,7 @@ export class OAuthClient {
 
   get session(): OAuthSession {
     return {
-      authenticated:
-        !!this.#tokens &&
-        (this.#tokens.expiresAt === undefined || this.#tokens.expiresAt > Date.now()),
+      authenticated: !!this.#tokens && (this.#tokens.expiresAt === undefined || this.#tokens.expiresAt > Date.now()),
       expiresAt: this.#tokens?.expiresAt,
       refreshable: !!this.#tokens?.refreshToken,
     };
@@ -123,10 +118,8 @@ export class OAuthClient {
 
   async createAuthorizationURL(options: AuthorizationOptions = {}): Promise<string> {
     const now = Date.now();
-    for (const [state, pending] of this.#pending)
-      if (pending.expiresAt <= now) this.#pending.delete(state);
-    if (this.#pending.size >= 8)
-      throw new OAuthError("Too many pending OAuth authorization attempts");
+    for (const [state, pending] of this.#pending) if (pending.expiresAt <= now) this.#pending.delete(state);
+    if (this.#pending.size >= 8) throw new OAuthError("Too many pending OAuth authorization attempts");
     const url = new URL(this.#authorization);
     const reserved = new Set([
       "response_type",
@@ -141,21 +134,17 @@ export class OAuthClient {
     ]);
     for (const [key, value] of Object.entries(options.extra ?? {})) {
       if (reserved.has(key))
-        throw new OAuthError(
-          "Additional authorization parameters cannot override OAuth security fields",
-        );
+        throw new OAuthError("Additional authorization parameters cannot override OAuth security fields");
       url.searchParams.set(key, value);
     }
-    if (options.scope?.some((scope) => !scope || !/^[\x21\x23-\x5b\x5d-\x7e]+$/.test(scope)))
+    if (options.scope?.some(scope => !scope || !/^[\x21\x23-\x5b\x5d-\x7e]+$/.test(scope)))
       throw new OAuthError("Invalid OAuth scope token");
     const state = base64url(crypto.getRandomValues(new Uint8Array(32)));
     const verifier = base64url(crypto.getRandomValues(new Uint8Array(32)));
     const generation = this.#generation;
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
-    if (generation !== this.#generation)
-      throw new OAuthError("OAuth authorization attempt was cleared");
-    if (this.#pending.size >= 8)
-      throw new OAuthError("Too many pending OAuth authorization attempts");
+    if (generation !== this.#generation) throw new OAuthError("OAuth authorization attempt was cleared");
+    if (this.#pending.size >= 8) throw new OAuthError("Too many pending OAuth authorization attempts");
     url.searchParams.set("response_type", "code");
     url.searchParams.set("client_id", this.#config.clientId);
     url.searchParams.set("redirect_uri", this.#config.redirectURI);
@@ -180,11 +169,7 @@ export class OAuthClient {
     }
   }
 
-  async #post(
-    endpoint: URL,
-    values: Record<string, string>,
-    expectsTokens: boolean,
-  ): Promise<unknown> {
+  async #post(endpoint: URL, values: Record<string, string>, expectsTokens: boolean): Promise<unknown> {
     const body = new URLSearchParams(values);
     const headers = new Headers({
       "Content-Type": "application/x-www-form-urlencoded",
@@ -212,8 +197,7 @@ export class OAuthClient {
       });
       if (response.status >= 300 && response.status < 400)
         throw new OAuthError("OAuth endpoint redirects are refused", response.status);
-      if (!response.ok)
-        throw new OAuthError(`OAuth endpoint request failed (${response.status})`, response.status);
+      if (!response.ok) throw new OAuthError(`OAuth endpoint request failed (${response.status})`, response.status);
       if (!expectsTokens) return undefined;
       let value: unknown;
       try {
@@ -226,15 +210,12 @@ export class OAuthClient {
       return value;
     } catch (error) {
       if (error instanceof OAuthError) throw error;
-      throw new OAuthError(
-        signal.aborted ? "OAuth request was aborted or timed out" : "OAuth network request failed",
-      );
+      throw new OAuthError(signal.aborted ? "OAuth request was aborted or timed out" : "OAuth network request failed");
     }
   }
 
   #store(value: unknown, generation: number, previousRefresh?: string): OAuthSession {
-    if (generation !== this.#generation)
-      throw new OAuthError("OAuth session was cleared during the request");
+    if (generation !== this.#generation) throw new OAuthError("OAuth session was cleared during the request");
     const result = value as Record<string, unknown>;
     const accessToken = result.access_token;
     const tokenType = result.token_type;
@@ -247,10 +228,7 @@ export class OAuthClient {
       !/^[A-Za-z][A-Za-z0-9._-]*$/.test(tokenType)
     )
       throw new OAuthError("OAuth endpoint returned invalid token data");
-    if (
-      refreshToken !== undefined &&
-      (typeof refreshToken !== "string" || !/^[\x21-\x7e]+$/.test(refreshToken))
-    )
+    if (refreshToken !== undefined && (typeof refreshToken !== "string" || !/^[\x21-\x7e]+$/.test(refreshToken)))
       throw new OAuthError("OAuth endpoint returned invalid refresh token data");
     if (
       expiresIn !== undefined &&
@@ -270,21 +248,11 @@ export class OAuthClient {
   }
 
   async exchangeCallback(callbackURL: string): Promise<OAuthSession> {
-    return this.#exclusive(async (generation) => {
+    return this.#exclusive(async generation => {
       const callback = checkedURL(callbackURL);
-      if (
-        callback.origin !== this.#redirect.origin ||
-        callback.pathname !== this.#redirect.pathname
-      )
+      if (callback.origin !== this.#redirect.origin || callback.pathname !== this.#redirect.pathname)
         throw new OAuthError("OAuth callback does not match the configured redirect URI");
-      const responseParameters = new Set([
-        "code",
-        "state",
-        "error",
-        "error_description",
-        "error_uri",
-        "iss",
-      ]);
+      const responseParameters = new Set(["code", "state", "error", "error_description", "error_uri", "iss"]);
       for (const key of callback.searchParams.keys()) {
         if (!responseParameters.has(key) && !this.#redirect.searchParams.has(key))
           throw new OAuthError("OAuth callback contains an unconfigured query parameter");
@@ -292,10 +260,7 @@ export class OAuthClient {
       for (const key of new Set(this.#redirect.searchParams.keys())) {
         const actual = callback.searchParams.getAll(key);
         const expected = this.#redirect.searchParams.getAll(key);
-        if (
-          actual.length !== expected.length ||
-          actual.some((value, index) => value !== expected[index])
-        )
+        if (actual.length !== expected.length || actual.some((value, index) => value !== expected[index]))
           throw new OAuthError("OAuth callback does not match the configured redirect URI");
       }
       if (callback.searchParams.getAll("state").length !== 1)
@@ -305,8 +270,7 @@ export class OAuthClient {
       if (!pending) throw new OAuthError("OAuth state is unknown or already used");
       this.#pending.delete(state);
       if (pending.expiresAt <= Date.now()) throw new OAuthError("OAuth state has expired");
-      if (callback.searchParams.has("error"))
-        throw new OAuthError("OAuth authorization was denied");
+      if (callback.searchParams.has("error")) throw new OAuthError("OAuth authorization was denied");
       if (callback.searchParams.getAll("code").length !== 1 || !callback.searchParams.get("code"))
         throw new OAuthError("OAuth callback requires one authorization code");
       const value = await this.#post(
@@ -324,7 +288,7 @@ export class OAuthClient {
   }
 
   async refresh(): Promise<OAuthSession> {
-    return this.#exclusive(async (generation) => {
+    return this.#exclusive(async generation => {
       const refreshToken = this.#tokens?.refreshToken;
       if (!refreshToken) throw new OAuthError("OAuth session has no refresh token");
       const result = await this.#post(
@@ -338,33 +302,21 @@ export class OAuthClient {
 
   async revoke(): Promise<void> {
     return this.#exclusive(async () => {
-      if (!this.#revocation)
-        throw new OAuthError("An owner-configured OAuth revocation endpoint is required");
+      if (!this.#revocation) throw new OAuthError("An owner-configured OAuth revocation endpoint is required");
       const tokens = this.#tokens;
       try {
         if (tokens?.refreshToken)
-          await this.#post(
-            this.#revocation,
-            { token: tokens.refreshToken, token_type_hint: "refresh_token" },
-            false,
-          );
+          await this.#post(this.#revocation, { token: tokens.refreshToken, token_type_hint: "refresh_token" }, false);
         if (tokens?.accessToken)
-          await this.#post(
-            this.#revocation,
-            { token: tokens.accessToken, token_type_hint: "access_token" },
-            false,
-          );
+          await this.#post(this.#revocation, { token: tokens.accessToken, token_type_hint: "access_token" }, false);
       } finally {
         this.clear();
       }
     });
   }
 
-  async withAccessToken<T>(
-    use: (accessToken: string, tokenType: string) => T | Promise<T>,
-  ): Promise<T> {
-    if (!this.session.authenticated || !this.#tokens)
-      throw new OAuthError("OAuth session has no usable access token");
+  async withAccessToken<T>(use: (accessToken: string, tokenType: string) => T | Promise<T>): Promise<T> {
+    if (!this.session.authenticated || !this.#tokens) throw new OAuthError("OAuth session has no usable access token");
     return use(this.#tokens.accessToken, this.#tokens.tokenType);
   }
 }

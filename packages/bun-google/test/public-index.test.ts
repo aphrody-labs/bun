@@ -42,7 +42,7 @@ function options(root: string, collections = ["google"]): PublicIndexSdkOptions 
   return {
     root,
     collections: Object.fromEntries(
-      collections.map((name) => [
+      collections.map(name => [
         name,
         {
           pointer: `${name}.pointer.json`,
@@ -112,9 +112,7 @@ describe("Explicit public snapshot SQLite FTS5 projection", () => {
       expect(hit.etag).toBe(result.etag);
       expect(hit.body.organic[0]!.title).toBe("Bun public search");
       expect((await search({ ...request, query: "cafe 東京" })).body.organic).toHaveLength(1);
-      expect(
-        (await search({ ...request, query: '"Bun" OR nonexistent' })).body.organic,
-      ).toHaveLength(0);
+      expect((await search({ ...request, query: '"Bun" OR nonexistent' })).body.organic).toHaveLength(0);
       expect((await search({ ...request, query: "* : () -" })).body.organic).toEqual([]);
       expect((await search({ ...request, start: 1 })).body.organic).toEqual([]);
     } finally {
@@ -132,9 +130,7 @@ describe("Explicit public snapshot SQLite FTS5 projection", () => {
     try {
       const before = await search(request);
       expect((await search({ ...request, collection: "other" })).body.organic).toEqual([]);
-      expect(
-        (await search({ ...request, collection: "other", query: "other" })).body.organic,
-      ).toHaveLength(1);
+      expect((await search({ ...request, collection: "other", query: "other" })).body.organic).toHaveLength(1);
       const afterOtherLoaded = await search(request);
       expect(afterOtherLoaded.etag).toBe(before.etag);
       expect(afterOtherLoaded.body).toEqual(before.body);
@@ -228,10 +224,7 @@ describe("Explicit public snapshot SQLite FTS5 projection", () => {
       }
       const good = snapshot();
       const sha = await publish(String(dir), good);
-      await writeFile(
-        join(String(dir), `${sha}.json`),
-        JSON.stringify(snapshot("google", "Corrupted")),
-      );
+      await writeFile(join(String(dir), `${sha}.json`), JSON.stringify(snapshot("google", "Corrupted")));
       await expect(search(request)).rejects.toThrow("Public index unavailable");
     } finally {
       search.close();

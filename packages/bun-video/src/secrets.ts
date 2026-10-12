@@ -42,9 +42,9 @@ interface Manifest {
 }
 
 const nativeStore: JsonSecretStore = {
-  get: (reference) => Bun.secrets.get(reference),
-  set: (reference) => Bun.secrets.set(reference),
-  delete: (reference) => Bun.secrets.delete(reference),
+  get: reference => Bun.secrets.get(reference),
+  set: reference => Bun.secrets.set(reference),
+  delete: reference => Bun.secrets.delete(reference),
 };
 
 function checkedReference(reference: SecretReference): SecretReference {
@@ -63,16 +63,12 @@ function checkedReference(reference: SecretReference): SecretReference {
   return { service: reference.service, name: reference.name };
 }
 
-function partReference(
-  reference: SecretReference,
-  generation: string,
-  index: number,
-): SecretReference {
+function partReference(reference: SecretReference, generation: string, index: number): SecretReference {
   return { service: reference.service, name: `${reference.name}.part.${generation}.${index}` };
 }
 
 async function digest(value: Uint8Array<ArrayBuffer>): Promise<string> {
-  return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", value)), (byte) =>
+  return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", value)), byte =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
 }
@@ -121,8 +117,7 @@ export async function loadJsonSecret(
     const root = await store.get(ref);
     if (root === null) return null;
     const value = parse(root);
-    if (!value || typeof value !== "object" || Array.isArray(value) || !(MARKER in value))
-      return value;
+    if (!value || typeof value !== "object" || Array.isArray(value) || !(MARKER in value)) return value;
     const descriptor = manifest(value as Record<string, unknown>);
     const bytes = new Uint8Array(descriptor.bytes);
     for (let index = 0; index < descriptor.chunks; index++) {
@@ -141,17 +136,12 @@ export async function loadJsonSecret(
       } catch {
         throw new JsonSecretError("Secret chunk encoding is invalid");
       }
-      if (
-        btoa(binary) !== part ||
-        binary.length !== Math.min(PART_BYTES, descriptor.bytes - index * PART_BYTES)
-      )
+      if (btoa(binary) !== part || binary.length !== Math.min(PART_BYTES, descriptor.bytes - index * PART_BYTES))
         throw new JsonSecretError("Secret chunk length or encoding is invalid");
       const offset = index * PART_BYTES;
-      for (let cursor = 0; cursor < binary.length; cursor++)
-        bytes[offset + cursor] = binary.charCodeAt(cursor);
+      for (let cursor = 0; cursor < binary.length; cursor++) bytes[offset + cursor] = binary.charCodeAt(cursor);
     }
-    if ((await digest(bytes)) !== descriptor.sha256)
-      throw new JsonSecretError("Secret checksum validation failed");
+    if ((await digest(bytes)) !== descriptor.sha256) throw new JsonSecretError("Secret checksum validation failed");
     let json: string;
     try {
       json = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
@@ -185,19 +175,12 @@ export async function saveJsonSecret(
   }
   if (json === undefined) throw new JsonSecretError("Secret value must be JSON serializable");
   const serialized = JSON.parse(json) as unknown;
-  if (
-    serialized &&
-    typeof serialized === "object" &&
-    !Array.isArray(serialized) &&
-    MARKER in serialized
-  )
+  if (serialized && typeof serialized === "object" && !Array.isArray(serialized) && MARKER in serialized)
     throw new JsonSecretError("Secret JSON contains a reserved storage marker");
   const bytes = encoder.encode(json);
-  if (bytes.length > MAX_BYTES)
-    throw new JsonSecretError("Secret JSON exceeds the supported storage size");
+  if (bytes.length > MAX_BYTES) throw new JsonSecretError("Secret JSON exceeds the supported storage size");
   const lock = `${ref.service}\0${ref.name}`.toLowerCase();
-  if (writers.has(lock))
-    throw new JsonSecretError("A write to this secret reference is already in progress");
+  if (writers.has(lock)) throw new JsonSecretError("A write to this secret reference is already in progress");
   writers.add(lock);
   const attempted: { reference: SecretReference; value: string }[] = [];
   try {
@@ -207,12 +190,8 @@ export async function saveJsonSecret(
     const chunks = bytes.length <= CREDENTIAL_BYTES ? 0 : Math.ceil(bytes.length / PART_BYTES);
     for (let index = 0; index < chunks; index++) {
       const partRef = partReference(ref, generation, index);
-      if ((await store.get(partRef)) !== null)
-        throw new JsonSecretError("Secret chunk reference already exists");
-      const part = bytes.subarray(
-        index * PART_BYTES,
-        Math.min(bytes.length, (index + 1) * PART_BYTES),
-      );
+      if ((await store.get(partRef)) !== null) throw new JsonSecretError("Secret chunk reference already exists");
+      const part = bytes.subarray(index * PART_BYTES, Math.min(bytes.length, (index + 1) * PART_BYTES));
       const partValue = JSON.stringify(btoa(String.fromCharCode(...part)));
       attempted.push({ reference: partRef, value: partValue });
       await store.set({ ...partRef, value: partValue, persist: "local" });
@@ -237,10 +216,7 @@ export async function saveJsonSecret(
     let incomplete = false;
     for (const entry of attempted.toReversed()) {
       try {
-        if (
-          (await store.get(entry.reference)) === entry.value &&
-          !(await store.delete(entry.reference))
-        )
+        if ((await store.get(entry.reference)) === entry.value && !(await store.delete(entry.reference)))
           incomplete = true;
       } catch {
         incomplete = true;

@@ -18,8 +18,7 @@ export function createTimelineHandler(snapshot: () => Snapshot | Promise<Snapsho
       }
       if (path === "/timeline.json") return Response.json(await snapshot());
       if (path !== "/graphql") return new Response("Not found", { status: 404 });
-      if (request.method !== "POST")
-        return new Response("POST required", { status: 405, headers: { Allow: "POST" } });
+      if (request.method !== "POST") return new Response("POST required", { status: 405, headers: { Allow: "POST" } });
       if (Number(request.headers.get("content-length")) > 32768)
         return new Response("Request too large", { status: 413 });
       const text = await request.text();
@@ -32,9 +31,7 @@ export function createTimelineHandler(snapshot: () => Snapshot | Promise<Snapsho
       }
       if (!body || typeof body.query !== "string" || body.query.length > 16384)
         return new Response("Invalid query", { status: 400 });
-      return Response.json(
-        await query(await snapshot(), body.query, body.variables, body.operationName),
-      );
+      return Response.json(await query(await snapshot(), body.query, body.variables, body.operationName));
     } catch {
       return Response.json({ error: "Timeline unavailable" }, { status: 503 });
     }

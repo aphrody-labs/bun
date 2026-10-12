@@ -59,9 +59,7 @@ export async function* captureNativeWebViewFrames(
     throw new Error("Composition does not expose a ready finite window.__hf seek protocol");
   }
   if (contract.media || contract.transitions || contract.webgpu) {
-    throw new Error(
-      "Native capture does not support media injection, shader transitions or WebGPU requirements",
-    );
+    throw new Error("Native capture does not support media injection, shader transitions or WebGPU requirements");
   }
   if (options.endFrame > Math.ceil((contract.duration * num) / den)) {
     throw new RangeError("Native frame range exceeds composition duration");
@@ -72,13 +70,9 @@ export async function* captureNativeWebViewFrames(
     const acknowledged = await context.evaluate<boolean>(
       `(async () => { await window.__hf.seek(${JSON.stringify(timeSeconds)}); await window.__hfWaitForSeekCompletion?.(); await window.__hfFlushSync?.(); return true; })()`,
     );
-    if (acknowledged !== true)
-      throw new Error(`Native seek was not acknowledged for frame ${frame}`);
+    if (acknowledged !== true) throw new Error(`Native seek was not acknowledged for frame ${frame}`);
     const png = await context.screenshot();
-    if (
-      png.length < 8 ||
-      ![137, 80, 78, 71, 13, 10, 26, 10].every((byte, index) => png[index] === byte)
-    ) {
+    if (png.length < 8 || ![137, 80, 78, 71, 13, 10, 26, 10].every((byte, index) => png[index] === byte)) {
       throw new Error(`Native screenshot did not return PNG bytes for frame ${frame}`);
     }
     options.signal?.throwIfAborted();

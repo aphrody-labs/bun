@@ -10,15 +10,15 @@ import { startTaskService } from "../src/task-service.ts";
 test("periodic metadata service serializes tasks and awaits cancellation on stop", async () => {
   let calls = 0;
   let entered!: () => void;
-  const ready = new Promise<void>((resolve) => {
+  const ready = new Promise<void>(resolve => {
     entered = resolve;
   });
   const service = await startTaskService({
     intervalMs: 60_000,
-    task: async (signal) => {
+    task: async signal => {
       calls++;
       entered();
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         signal.addEventListener("abort", () => resolve(), { once: true });
       });
     },
@@ -43,12 +43,12 @@ test("periodic metadata service serializes tasks and awaits cancellation on stop
 test("CONNECT proxy denies unlisted hosts and tunnels through an explicit SOCKS endpoint", async () => {
   const sockets = new Set<Socket>();
   let destination: string | undefined;
-  const socks = createServer((socket) => {
+  const socks = createServer(socket => {
     sockets.add(socket);
     socket.once("close", () => sockets.delete(socket));
     let stage = 0;
     let bytes = Buffer.alloc(0);
-    socket.on("data", (chunk) => {
+    socket.on("data", chunk => {
       if (stage === 2) {
         socket.write(chunk);
         return;
@@ -70,7 +70,7 @@ test("CONNECT proxy denies unlisted hosts and tunnels through an explicit SOCKS 
       }
     });
   });
-  await new Promise<void>((resolve) => socks.listen(0, "127.0.0.1", resolve));
+  await new Promise<void>(resolve => socks.listen(0, "127.0.0.1", resolve));
   const upstream = socks.address();
   if (!upstream || typeof upstream === "string") throw new Error("Missing SOCKS port");
   const proxy = await startConnectProxy({
@@ -103,9 +103,7 @@ test("CONNECT proxy denies unlisted hosts and tunnels through an explicit SOCKS 
   } finally {
     await proxy.stop();
     for (const socket of sockets) socket.destroy();
-    await new Promise<void>((resolve, reject) =>
-      socks.close((error) => (error ? reject(error) : resolve())),
-    );
+    await new Promise<void>((resolve, reject) => socks.close(error => (error ? reject(error) : resolve())));
   }
 });
 
@@ -144,10 +142,8 @@ test("system stream uses explicit channels and refuses cross-site requests", asy
     ).toBe(403);
     expect((await fetch(new URL("/events?channel=Security", stream.server.url))).status).toBe(400);
     const event = new Promise<Record<string, unknown>>((resolve, reject) => {
-      const socket = new WebSocket(
-        new URL("/events", stream.server.url).href.replace("http:", "ws:"),
-      );
-      socket.onmessage = (message) => {
+      const socket = new WebSocket(new URL("/events", stream.server.url).href.replace("http:", "ws:"));
+      socket.onmessage = message => {
         resolve(JSON.parse(String(message.data)));
         socket.close();
       };
@@ -210,11 +206,7 @@ test("tool cache verifies bytes and replaces corruption only after a valid downl
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    child.stdout.text(),
-    child.stderr.text(),
-    child.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
   expect(stdout.trim()).toBe(
     '{"cachedDownloads":0,"rejected":true,"preserved":"corrupted-cache","repaired":"qualified-tool-bytes","downloads":2,"partials":0}',
   );
@@ -222,9 +214,6 @@ test("tool cache verifies bytes and replaces corruption only after a valid downl
   expect(exitCode).toBe(0);
 });
 
-test.skipIf(process.platform !== "win32")(
-  "rsync rejects Windows before starting a compatibility process",
-  async () => {
-    await expect(rsync(["--version"])).rejects.toThrow("Native rsync is unsupported on Windows");
-  },
-);
+test.skipIf(process.platform !== "win32")("rsync rejects Windows before starting a compatibility process", async () => {
+  await expect(rsync(["--version"])).rejects.toThrow("Native rsync is unsupported on Windows");
+});

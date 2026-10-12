@@ -10,18 +10,14 @@ export interface IndexedResource {
 }
 
 /** Stores caller-selected resource metadata; never discovers services, profiles or personal repositories. */
-export async function persistResources(
-  dbPath: string,
-  resources: IndexedResource[],
-  maxResources = 10_000,
-) {
+export async function persistResources(dbPath: string, resources: IndexedResource[], maxResources = 10_000) {
   positiveInteger("maxResources", maxResources);
   if (resources.length > maxResources) throw new RangeError("Resources exceed maxResources");
   const ids = new Set<string>();
-  const rows = resources.map((resource) => {
+  const rows = resources.map(resource => {
     if (
       ![resource.id, resource.kind, resource.name].every(
-        (value) => typeof value === "string" && value.length > 0 && value.length <= 1_024,
+        value => typeof value === "string" && value.length > 0 && value.length <= 1_024,
       )
     )
       throw new TypeError("Resource id, kind and name must be nonempty bounded strings");
@@ -30,8 +26,7 @@ export async function persistResources(
     const metadata = JSON.stringify(resource.metadata ?? {}, (_key, value) =>
       typeof value === "bigint" ? String(value) : value,
     );
-    if (Buffer.byteLength(metadata) > 1 << 20)
-      throw new RangeError("Resource metadata exceeds 1 MiB");
+    if (Buffer.byteLength(metadata) > 1 << 20) throw new RangeError("Resource metadata exceeds 1 MiB");
     return { ...resource, metadata };
   });
   await prepareDatabase(dbPath);
@@ -46,8 +41,7 @@ export async function persistResources(
     metadata_json=excluded.metadata_json,updated_at=excluded.updated_at`);
   const at = new Date().toISOString();
   db.transaction(() => {
-    for (const row of rows)
-      put.run(row.id, row.kind, row.name, row.canonicalPath ?? null, row.metadata, at);
+    for (const row of rows) put.run(row.id, row.kind, row.name, row.canonicalPath ?? null, row.metadata, at);
   }).immediate();
   return { resources: rows.length, updatedAt: at };
 }

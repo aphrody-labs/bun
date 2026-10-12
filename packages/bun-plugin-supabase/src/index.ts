@@ -85,9 +85,9 @@ function errorFrom(error: unknown): SupabaseError {
   return { message: String(error) };
 }
 
-class Builder<Row extends Record<string, unknown>, Insert = Partial<Row>, Update = Partial<Row>>
-  implements PromiseLike<SupabaseResult<Row[] | Row | null>>
-{
+class Builder<Row extends Record<string, unknown>, Insert = Partial<Row>, Update = Partial<Row>> implements PromiseLike<
+  SupabaseResult<Row[] | Row | null>
+> {
   private operation?: Operation;
   private readonly filters: Filter[] = [];
   private readonly orders: { column: string; ascending: boolean; nullsFirst?: boolean }[] = [];

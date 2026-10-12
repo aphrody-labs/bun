@@ -1,4 +1,5 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Module Dragon Ball d’Aphrody Web
 
 Le propriétaire natif est `aphrody-web-crawl::dragon_ball`. Les campagnes, le
@@ -13,14 +14,14 @@ Les sources ont été examinées dans les historiques locaux, sans clone de
 recherche. Le BXC intégré à Aphrody, avant `0b2aec6c9`, contient les sources
 suivantes sous `apps/bxc` :
 
-| Ancien propriétaire | Propriétaire natif |
-| --- | --- |
-| `src/sources/dragonball.ts` | `sources.rs`, `plan.json` |
-| `src/cli/dragonball.ts` : portail officiel, six séries Toei, Jajanken et biographies | `runner.rs`, `structured.rs`, cibles du plan |
-| Catalogue public Shenron et références CDN | pagination JSON native, `shenron-catalogue.json`, `shenron-assets.json` |
-| `src/crawler/dragonballfr.ts`, `scripts/train-dragonballfr-links.ts` | `dragonballfr-training-links.json` |
-| `src/archive/dragonball-export.ts`, `scripts/export-dragonball-jsonl.ts` | `documents.rs`, `export_bxc`, projection `shenron-documents.jsonl` |
-| `scripts/consolidate-dragonball-crawls.ts` | `consolidation.rs`, `consolidate_bxc` |
+| Ancien propriétaire                                                                  | Propriétaire natif                                                      |
+| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| `src/sources/dragonball.ts`                                                          | `sources.rs`, `plan.json`                                               |
+| `src/cli/dragonball.ts` : portail officiel, six séries Toei, Jajanken et biographies | `runner.rs`, `structured.rs`, cibles du plan                            |
+| Catalogue public Shenron et références CDN                                           | pagination JSON native, `shenron-catalogue.json`, `shenron-assets.json` |
+| `src/crawler/dragonballfr.ts`, `scripts/train-dragonballfr-links.ts`                 | `dragonballfr-training-links.json`                                      |
+| `src/archive/dragonball-export.ts`, `scripts/export-dragonball-jsonl.ts`             | `documents.rs`, `export_bxc`, projection `shenron-documents.jsonl`      |
+| `scripts/consolidate-dragonball-crawls.ts`                                           | `consolidation.rs`, `consolidate_bxc`                                   |
 
 Le corpus de `8172f535c`, sous
 `crates/ai/rag-eval/datasets/dragonball`, fournit la configuration et le registre

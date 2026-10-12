@@ -52,17 +52,10 @@ export class CrunchyrollClient {
   constructor(options: CrunchyrollOptions = {}) {
     this.#options = { ...options };
     this.#base = new URL(options.baseURL ?? "https://beta-api.crunchyroll.com");
-    if (
-      this.#base.username ||
-      this.#base.password ||
-      !["https:", "http:"].includes(this.#base.protocol)
-    ) {
+    if (this.#base.username || this.#base.password || !["https:", "http:"].includes(this.#base.protocol)) {
       throw new CrunchyrollError("Invalid API base URL");
     }
-    if (
-      this.#base.protocol === "http:" &&
-      !["localhost", "127.0.0.1", "[::1]"].includes(this.#base.hostname)
-    ) {
+    if (this.#base.protocol === "http:" && !["localhost", "127.0.0.1", "[::1]"].includes(this.#base.hostname)) {
       throw new CrunchyrollError("API authorization requires HTTPS");
     }
     if (!Number.isFinite(options.timeoutMs ?? 30_000) || (options.timeoutMs ?? 30_000) <= 0) {
@@ -82,15 +75,9 @@ export class CrunchyrollClient {
     };
   }
 
-  async #request(
-    path: string,
-    query?: URLSearchParams,
-    body?: URLSearchParams,
-    basic = false,
-  ): Promise<any> {
+  async #request(path: string, query?: URLSearchParams, body?: URLSearchParams, basic = false): Promise<any> {
     const url = new URL(path, this.#base);
-    if (url.origin !== this.#base.origin)
-      throw new CrunchyrollError("API request must stay on the configured origin");
+    if (url.origin !== this.#base.origin) throw new CrunchyrollError("API request must stay on the configured origin");
     if (query) url.search = query.toString();
     const authorization = basic ? this.#options.basicAuthorization : this.#token;
     if (!authorization)
@@ -102,9 +89,7 @@ export class CrunchyrollClient {
       "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
     });
     const timeout = AbortSignal.timeout(this.#options.timeoutMs ?? 30_000);
-    const signal = this.#options.signal
-      ? AbortSignal.any([timeout, this.#options.signal])
-      : timeout;
+    const signal = this.#options.signal ? AbortSignal.any([timeout, this.#options.signal]) : timeout;
     const response = await fetch(url, {
       method: body ? "POST" : "GET",
       headers,
@@ -113,12 +98,8 @@ export class CrunchyrollClient {
       redirect: "manual",
     });
     if (response.status >= 300 && response.status < 400)
-      throw new CrunchyrollError(
-        "API redirects are refused to protect authorization",
-        response.status,
-      );
-    if (!response.ok)
-      throw new CrunchyrollError(`API request failed (${response.status})`, response.status);
+      throw new CrunchyrollError("API redirects are refused to protect authorization", response.status);
+    if (!response.ok) throw new CrunchyrollError(`API request failed (${response.status})`, response.status);
     let result: any;
     try {
       result = await response.json();
@@ -136,9 +117,7 @@ export class CrunchyrollClient {
     const cms = result.cms;
     if (
       !cms ||
-      !["bucket", "signature", "policy", "key_pair_id"].every(
-        (key) => typeof cms[key] === "string",
-      ) ||
+      !["bucket", "signature", "policy", "key_pair_id"].every(key => typeof cms[key] === "string") ||
       !["number", "string"].includes(typeof cms.expires)
     ) {
       throw new CrunchyrollError("API returned an invalid CMS session");
@@ -186,8 +165,7 @@ export class CrunchyrollClient {
       this.#cms = undefined;
       return {
         success: false,
-        message:
-          error instanceof CrunchyrollError ? error.message : "Authentication request failed",
+        message: error instanceof CrunchyrollError ? error.message : "Authentication request failed",
         client: this.client,
       };
     }
@@ -201,8 +179,7 @@ export class CrunchyrollClient {
     } catch (error) {
       return {
         success: false,
-        message:
-          error instanceof CrunchyrollError ? error.message : "Authentication request failed",
+        message: error instanceof CrunchyrollError ? error.message : "Authentication request failed",
         client: this.client,
       };
     }
@@ -235,11 +212,7 @@ export class CrunchyrollClient {
     );
   }
 
-  async #content(
-    path: () => string,
-    values?: Record<string, string | number>,
-    signed = true,
-  ): Promise<any> {
+  async #content(path: () => string, values?: Record<string, string | number>, signed = true): Promise<any> {
     await this.#ensureLogin();
     return this.#request(path(), signed ? this.#query(values) : undefined);
   }

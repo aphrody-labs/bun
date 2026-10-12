@@ -4,9 +4,7 @@ import { dlopen, FFIType, ptr } from "bun:ffi";
 
 const [mode, hostPath, pythonPath, separator, ...arguments_] = process.argv.slice(2);
 if (!hostPath || (mode !== "--probe" && (mode !== "--invoke" || !pythonPath || separator !== "--")))
-  throw new Error(
-    "usage: driver.ts --probe <host> | --invoke <host> <libpython> -- <python argv...>",
-  );
+  throw new Error("usage: driver.ts --probe <host> | --invoke <host> <libpython> -- <python argv...>");
 const host = dlopen(hostPath, {
   bun_py_abi_version: { args: [], returns: FFIType.u32 },
   aphrody_py_load: { args: [FFIType.ptr], returns: FFIType.i32 },
@@ -19,13 +17,12 @@ if (mode === "--probe") {
   process.exit(version === 1 ? 0 : 87);
 }
 if (version !== 1) process.exit(87);
-if (!["x64", "arm64"].includes(process.arch))
-  throw new Error("qualified driver needs 64-bit pointers");
+if (!["x64", "arm64"].includes(process.arch)) throw new Error("qualified driver needs 64-bit pointers");
 const library = Buffer.from(`${pythonPath}\0`);
 const loadStatus = host.symbols.aphrody_py_load(ptr(library));
 console.error(`BUN_PY_CONFORMANCE phase=load host_status=${loadStatus} python_exit=0`);
 if (loadStatus !== 0) process.exit(125);
-const strings = arguments_.map((argument) => Buffer.from(`${argument}\0`));
+const strings = arguments_.map(argument => Buffer.from(`${argument}\0`));
 const argv = Buffer.alloc(strings.length * 8);
 strings.forEach((argument, index) => argv.writeBigUInt64LE(BigInt(ptr(argument)), index * 8));
 const result = new Int32Array(1);

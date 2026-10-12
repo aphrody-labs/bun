@@ -25,11 +25,17 @@ const cstring = (value: string) => {
   return Buffer.from(`${value}\0`);
 };
 
-export interface PythonOptions { hostLibrary: string; libpython: string; }
+export interface PythonOptions {
+  hostLibrary: string;
+  libpython: string;
+}
 
 export class PythonSession {
   #closed = false;
-  constructor(private readonly library: Library, readonly libpython: string) {}
+  constructor(
+    private readonly library: Library,
+    readonly libpython: string,
+  ) {}
 
   #check(status: number): void {
     if (this.#closed) throw new Error("Python session is closed");
@@ -56,8 +62,11 @@ export class PythonSession {
     const output = new BigUint64Array(1);
     this.#check(this.library.symbols.aphrody_py_eval(ptr(input), ptr(output)));
     const address = Number(output[0]);
-    try { return String(new CString(address)); }
-    finally { this.library.symbols.aphrody_py_string_free(address); }
+    try {
+      return String(new CString(address));
+    } finally {
+      this.library.symbols.aphrody_py_string_free(address);
+    }
   }
 
   /** Writable contiguous bytes; exporter and storage stay pinned through JS GC. */
@@ -79,8 +88,7 @@ export class PythonSession {
       return new ArrayBuffer(0);
     }
     try {
-      return toArrayBuffer(address, 0, Number(length), lease,
-        this.library.symbols.bun_py_buffer_deallocator.ptr);
+      return toArrayBuffer(address, 0, Number(length), lease, this.library.symbols.bun_py_buffer_deallocator.ptr);
     } catch (error) {
       this.library.symbols.bun_py_buffer_release(lease);
       throw error;

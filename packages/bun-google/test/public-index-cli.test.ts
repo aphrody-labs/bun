@@ -69,17 +69,11 @@ test("public CLI delegates real FTS queries with explicit policy and bounds", as
   ]);
   expect(result).toHaveProperty("cache", "miss");
   expect(result).toHaveProperty("etag");
-  expect(await runPublicIndexCommand([...args, "--start", "1", "--num", "1"])).toHaveProperty(
-    "body.organic",
-    [],
-  );
+  expect(await runPublicIndexCommand([...args, "--start", "1", "--num", "1"])).toHaveProperty("body.organic", []);
 });
 
 test("help and invalid arguments never discover a policy or private store", async () => {
-  expect(await runPublicIndexCommand(["--help"])).toHaveProperty(
-    "command",
-    "bun-google-index-public",
-  );
+  expect(await runPublicIndexCommand(["--help"])).toHaveProperty("command", "bun-google-index-public");
   for (const args of [
     [],
     ["--unknown", "secret"],
@@ -105,9 +99,7 @@ test("help and invalid arguments never discover a policy or private store", asyn
     ["--start", "1001"],
     ["--num", "1.5"],
   ])
-    await expect(runPublicIndexCommand([...args, ...bounds])).rejects.toThrow(
-      "Invalid public index arguments",
-    );
+    await expect(runPublicIndexCommand([...args, ...bounds])).rejects.toThrow("Invalid public index arguments");
   await expect(runPublicIndexCommand(args)).rejects.toThrow("Public index unavailable");
 });
 

@@ -5,14 +5,7 @@
  * The SDK never builds an engine and never touches the driver directly.
  */
 import { dlopen, FFIType, ptr, read, toArrayBuffer } from "bun:ffi";
-import {
-  defaultLibraryPath,
-  EXPECTED_ABI_MAJOR,
-  Runtime,
-  RuntimeError,
-  Status,
-  type LoadOptions,
-} from "./index";
+import { defaultLibraryPath, EXPECTED_ABI_MAJOR, Runtime, RuntimeError, Status, type LoadOptions } from "./index";
 
 /** The GPU symbol first shipped in ABI 1.5. */
 export const GPU_ABI_MINOR = 5;
@@ -155,7 +148,7 @@ export class GpuRuntime implements Disposable {
       using probe = Runtime.load(options);
       capabilities = probe.capabilities();
     }
-    const missing = GPU_CAPABILITIES.filter((capability) => !capabilities.includes(capability));
+    const missing = GPU_CAPABILITIES.filter(capability => !capabilities.includes(capability));
     if (missing.length > 0) {
       throw new RuntimeError(
         Status.AbiMismatch,
@@ -163,12 +156,7 @@ export class GpuRuntime implements Disposable {
       );
     }
     const library = dlopen(path, SYMBOLS);
-    const createInfo = new Uint32Array([
-      16,
-      EXPECTED_ABI_MAJOR,
-      GPU_ABI_MINOR,
-      options.maxOperations ?? 8,
-    ]);
+    const createInfo = new Uint32Array([16, EXPECTED_ABI_MAJOR, GPU_ABI_MINOR, options.maxOperations ?? 8]);
     const out = new BigUint64Array(1);
     try {
       check(library.symbols, library.symbols.yolo_runtime_create(ptr(createInfo), ptr(out)));

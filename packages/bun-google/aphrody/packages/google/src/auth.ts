@@ -1,9 +1,6 @@
 import type { GoogleClientOptions } from "bun:google";
 import { createAntigravityCredentialProvider } from "../../../../src/credentials.ts";
-import {
-  createAntigravityServices,
-  type AntigravityServicesOptions,
-} from "../../../../src/antigravity.ts";
+import { createAntigravityServices, type AntigravityServicesOptions } from "../../../../src/antigravity.ts";
 
 export interface GoogleNativeAuthOptions {
   credentialProvider?: GoogleClientOptions["credentialProvider"];
@@ -16,10 +13,7 @@ export interface GoogleNativeAuthOptions {
 }
 
 function nativeProvider(options: GoogleNativeAuthOptions) {
-  return (
-    options.credentialProvider ??
-    createAntigravityCredentialProvider({ target: "gemini:antigravity" })
-  );
+  return options.credentialProvider ?? createAntigravityCredentialProvider({ target: "gemini:antigravity" });
 }
 
 export interface GoogleProfile {
@@ -39,8 +33,7 @@ export function resolveGoogleBinary(): string {
   const configured = Bun.env.APHRODY_GOOGLE_BIN;
   if (configured) return configured;
   const binary = Bun.which("aphrody-google") ?? Bun.which("google");
-  if (!binary)
-    throw new Error("aphrody-google binary not found; set APHRODY_GOOGLE_BIN or add it to PATH");
+  if (!binary) throw new Error("aphrody-google binary not found; set APHRODY_GOOGLE_BIN or add it to PATH");
   return binary;
 }
 

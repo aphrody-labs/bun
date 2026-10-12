@@ -46,10 +46,7 @@ function webBinary(): string {
   return existsSync(workspaceBinary) ? workspaceBinary : "aphrody-web";
 }
 
-async function fetchRendered(
-  url: string,
-  profile: WebReconProfile,
-): Promise<Record<string, unknown>> {
+async function fetchRendered(url: string, profile: WebReconProfile): Promise<Record<string, unknown>> {
   const args = [webBinary(), "fetch", url, "--dump", "artifact", "--quiet", "--timeout", "90"];
   if (profile === "stealth" || profile === "max") args.push("--stealth");
   const proc = Bun.spawn({ windowsHide: true, cmd: args, stdout: "pipe", stderr: "pipe" });

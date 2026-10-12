@@ -38,8 +38,7 @@ function redisStats(value: unknown) {
   const text = String(value);
   const field = (name: string): number => {
     const match = new RegExp(`^${name}:(\\d+)\\r?$`, "m").exec(text);
-    if (!match || !Number.isSafeInteger(Number(match[1])))
-      throw new Error(`Redis INFO missing ${name}`);
+    if (!match || !Number.isSafeInteger(Number(match[1]))) throw new Error(`Redis INFO missing ${name}`);
     return Number(match[1]);
   };
   return {
@@ -54,13 +53,12 @@ export async function publishMetadataCache(options: MetadataCacheOptions) {
   absolutePath("dbPath", options.dbPath);
   absolutePath("artifactRoot", options.artifactRoot);
   if (!options.redisUrl) throw new TypeError("redisUrl is required");
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9:._-]{0,127}$/.test(options.namespace))
-    throw new TypeError("Invalid cache namespace");
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9:._-]{0,127}$/.test(options.namespace)) throw new TypeError("Invalid cache namespace");
   if (
     !options.tables.length ||
     options.tables.length > 256 ||
     new Set(options.tables).size !== options.tables.length ||
-    options.tables.some((table) => !/^[a-zA-Z_][a-zA-Z0-9_]{0,127}$/.test(table))
+    options.tables.some(table => !/^[a-zA-Z_][a-zA-Z0-9_]{0,127}$/.test(table))
   )
     throw new TypeError("tables must be a nonempty unique list of plain SQLite table names");
   const chunkRows = positiveInteger("chunkRows", options.chunkRows ?? 5_000, 100_000);
@@ -76,8 +74,7 @@ export async function publishMetadataCache(options: MetadataCacheOptions) {
   const generation = crypto.randomUUID();
   const generationDir = join(root, generation);
   await mkdir(generationDir, { recursive: false });
-  if (!within(root, await realpath(generationDir)))
-    throw new Error("Cache generation escaped artifactRoot");
+  if (!within(root, await realpath(generationDir))) throw new Error("Cache generation escaped artifactRoot");
   using db = new Database(options.dbPath, { readonly: true, strict: true, safeIntegers: true });
   let redis: MetadataRedis | undefined;
   let snapshot = false;
@@ -89,19 +86,12 @@ export async function publishMetadataCache(options: MetadataCacheOptions) {
     snapshot = true;
     for (const table of options.tables) {
       const schema = db
-        .query<{ sql: string }, [string]>(
-          "SELECT sql FROM sqlite_master WHERE type='table' AND name=?",
-        )
+        .query<{ sql: string }, [string]>("SELECT sql FROM sqlite_master WHERE type='table' AND name=?")
         .get(table);
       if (!schema) throw new Error(`Metadata table missing: ${table}`);
-      if (/WITHOUT\s+ROWID/i.test(schema.sql))
-        throw new Error(`Metadata table has no rowid: ${table}`);
+      if (/WITHOUT\s+ROWID/i.test(schema.sql)) throw new Error(`Metadata table has no rowid: ${table}`);
       const columns = db.query<{ name: string }, []>(`PRAGMA table_info("${table}")`).all();
-      if (
-        columns.some((column) =>
-          ["rowid", "_rowid_", "oid", "__cache_rowid"].includes(column.name.toLowerCase()),
-        )
-      )
+      if (columns.some(column => ["rowid", "_rowid_", "oid", "__cache_rowid"].includes(column.name.toLowerCase())))
         throw new Error(`Metadata table shadows rowid: ${table}`);
       const statement = db.query<Record<string, unknown>, [bigint, number]>(
         `SELECT rowid AS __cache_rowid,* FROM "${table}" WHERE rowid>=? ORDER BY rowid LIMIT ?`,
@@ -114,20 +104,16 @@ export async function publishMetadataCache(options: MetadataCacheOptions) {
         last = finalRowid + 1n;
         totalRows += rows.length;
         if (totalRows > maxRows) throw new RangeError("Metadata cache exceeds maxRows");
-        const lines = rows.map((row) => {
+        const lines = rows.map(row => {
           const { __cache_rowid: _rowid, ...fields } = row;
-          const line = JSON.stringify(fields, (_key, value) =>
-            typeof value === "bigint" ? String(value) : value,
-          );
-          if (Buffer.byteLength(line) > maxRowBytes)
-            throw new RangeError("Metadata row exceeds maxRowBytes");
+          const line = JSON.stringify(fields, (_key, value) => (typeof value === "bigint" ? String(value) : value));
+          if (Buffer.byteLength(line) > maxRowBytes) throw new RangeError("Metadata row exceeds maxRowBytes");
           return line;
         });
         const bytes = Bun.gzipSync(Buffer.from(lines.join("\n")), { level: 6 });
         if (chunks.length >= maxChunks) throw new RangeError("Metadata cache exceeds maxChunks");
         compressedBytes += bytes.length;
-        if (compressedBytes > maxBytes)
-          throw new RangeError("Metadata cache exceeds maxCompressedBytes");
+        if (compressedBytes > maxBytes) throw new RangeError("Metadata cache exceeds maxCompressedBytes");
         const file = join(generationDir, `${table}-${chunks.length}.jsonl.gz`);
         await Bun.write(file, bytes);
         chunks.push({
@@ -152,27 +138,18 @@ export async function publishMetadataCache(options: MetadataCacheOptions) {
       throw new RangeError("Metadata generation exceeds Redis memory budget");
     for (let index = 0; index < chunks.length; index += concurrency) {
       await Promise.all(
-        chunks.slice(index, index + concurrency).map(async (chunk) => {
+        chunks.slice(index, index + concurrency).map(async chunk => {
           const bytes = await Bun.file(chunk.file).bytes();
-          await redis!.send("SET", [
-            chunk.key,
-            Buffer.from(bytes).toString("base64"),
-            "EX",
-            String(ttlSeconds),
-          ]);
+          await redis!.send("SET", [chunk.key, Buffer.from(bytes).toString("base64"), "EX", String(ttlSeconds)]);
         }),
       );
     }
     let verifiedTtl = ttlSeconds;
     for (let index = 0; index < chunks.length; index += concurrency) {
       await Promise.all(
-        chunks.slice(index, index + concurrency).map(async (chunk) => {
-          const [value, ttl] = await Promise.all([
-            redis!.get(chunk.key),
-            redis!.send("TTL", [chunk.key]),
-          ]);
-          if (value === null || Number(ttl) <= 0)
-            throw new Error("Metadata chunk missing or expired");
+        chunks.slice(index, index + concurrency).map(async chunk => {
+          const [value, ttl] = await Promise.all([redis!.get(chunk.key), redis!.send("TTL", [chunk.key])]);
+          if (value === null || Number(ttl) <= 0) throw new Error("Metadata chunk missing or expired");
           verifiedTtl = Math.min(verifiedTtl, Number(ttl));
           const bytes = Buffer.from(value, "base64");
           if (new Bun.CryptoHasher("sha256").update(bytes).digest("hex") !== chunk.sha256)
@@ -184,11 +161,9 @@ export async function publishMetadataCache(options: MetadataCacheOptions) {
       );
     }
     const after = redisStats(await redis.send("INFO", ["all"]));
-    if (after.evictedKeys !== before.evictedKeys)
-      throw new Error("Redis evicted keys during metadata publication");
+    if (after.evictedKeys !== before.evictedKeys) throw new Error("Redis evicted keys during metadata publication");
     const manifestTtl = chunks.length ? verifiedTtl - 1 : ttlSeconds;
-    if (manifestTtl < 1)
-      throw new Error("Metadata chunks expire before a manifest can be published");
+    if (manifestTtl < 1) throw new Error("Metadata chunks expire before a manifest can be published");
     const manifest = {
       generation,
       namespace: options.namespace,
@@ -212,20 +187,16 @@ export async function publishMetadataCache(options: MetadataCacheOptions) {
       publish,
       String(chunks.length + 1),
       manifestKey,
-      ...chunks.map((chunk) => chunk.key),
+      ...chunks.map(chunk => chunk.key),
       manifestJson,
       String(manifestTtl),
     ]);
-    if ((await redis.get(manifestKey)) !== manifestJson)
-      throw new Error("Metadata manifest readback failed");
+    if ((await redis.get(manifestKey)) !== manifestJson) throw new Error("Metadata manifest readback failed");
     await Bun.write(join(generationDir, "manifest.json"), manifestJson);
     return manifest;
   } catch (error) {
     throw new Error(
-      (error instanceof Error ? error.message : String(error)).replace(
-        /rediss?:\/\/[^\s"']+/gi,
-        "redis://[redacted]",
-      ),
+      (error instanceof Error ? error.message : String(error)).replace(/rediss?:\/\/[^\s"']+/gi, "redis://[redacted]"),
     );
   } finally {
     try {

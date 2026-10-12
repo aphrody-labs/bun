@@ -24,11 +24,7 @@ export interface JournalEntry {
 export interface NtfsVolumeReader {
   queryJournal(): JournalState;
   enumerateMft(bufferBytes?: number): MftEntry[];
-  readJournal(
-    startUsn: bigint,
-    journalId: bigint,
-    bufferBytes?: number,
-  ): { records: JournalEntry[]; next: bigint };
+  readJournal(startUsn: bigint, journalId: bigint, bufferBytes?: number): { records: JournalEntry[]; next: bigint };
   close(): void;
 }
 export interface NtfsIndexOptions {
@@ -41,8 +37,7 @@ export interface NtfsIndexOptions {
 }
 
 async function volumeReader(options: NtfsIndexOptions): Promise<NtfsVolumeReader> {
-  if (!/^[a-z]:?$/i.test(options.drive))
-    throw new TypeError("drive must be a Windows drive letter");
+  if (!/^[a-z]:?$/i.test(options.drive)) throw new TypeError("drive must be a Windows drive letter");
   if (options.createVolume) return options.createVolume(options.drive.replace(/:$/, ""));
   const { default: windows } = await import("bun:windows");
   return new windows.ntfs.Volume(options.drive.replace(/:$/, ""));
@@ -90,14 +85,8 @@ export async function indexNtfs(options: NtfsIndexOptions) {
     const entries = volume.enumerateMft(bufferBytes);
     if (entries.length > maxEntries) throw new RangeError("MFT baseline exceeds maxEntries");
     const after = before ? volume.queryJournal() : undefined;
-    if (
-      before &&
-      after &&
-      (before.journalId !== after.journalId || before.nextUsn < after.lowestValidUsn)
-    )
-      throw new Error(
-        "USN journal changed or expired during enumeration; baseline was not replaced",
-      );
+    if (before && after && (before.journalId !== after.journalId || before.nextUsn < after.lowestValidUsn))
+      throw new Error("USN journal changed or expired during enumeration; baseline was not replaced");
     db = new Database(options.dbPath, { create: true, strict: true });
     schema(db);
     const volumeId = `${options.drive.replace(/:$/, "").toUpperCase()}:`;
@@ -162,33 +151,18 @@ export async function syncNtfs(options: NtfsIndexOptions) {
         "SELECT journal_id,next_usn,scan_status FROM ntfs_volumes WHERE volume_id=?",
       )
       .get(volumeId);
-    if (
-      !baseline ||
-      baseline.scan_status !== "complete" ||
-      !baseline.journal_id ||
-      !baseline.next_usn
-    )
+    if (!baseline || baseline.scan_status !== "complete" || !baseline.journal_id || !baseline.next_usn)
       throw new Error("No complete NTFS baseline with active USN checkpoint");
     const current = volume.queryJournal();
     let next = BigInt(baseline.next_usn);
-    if (
-      String(current.journalId) !== baseline.journal_id ||
-      next < current.lowestValidUsn ||
-      next > current.nextUsn
-    )
+    if (String(current.journalId) !== baseline.journal_id || next < current.lowestValidUsn || next > current.nextUsn)
       throw new Error("USN checkpoint is stale; a full baseline is required");
-    const event = db.query(
-      "INSERT INTO ntfs_journal_events VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING",
-    );
-    const put =
-      db.query(`INSERT INTO ntfs_entries VALUES(?,?,?,?,?,?) ON CONFLICT(volume_id,record,parent_record,name)
+    const event = db.query("INSERT INTO ntfs_journal_events VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING");
+    const put = db.query(`INSERT INTO ntfs_entries VALUES(?,?,?,?,?,?) ON CONFLICT(volume_id,record,parent_record,name)
       DO UPDATE SET attributes=excluded.attributes,is_directory=excluded.is_directory`);
-    const remove = db.query(
-      "DELETE FROM ntfs_entries WHERE volume_id=? AND record=? AND parent_record=? AND name=?",
-    );
+    const remove = db.query("DELETE FROM ntfs_entries WHERE volume_id=? AND record=? AND parent_record=? AND name=?");
     const edge = db.query("INSERT INTO ntfs_entry_edges VALUES(?,?,?) ON CONFLICT DO NOTHING");
-    const pruneEdge =
-      db.query(`DELETE FROM ntfs_entry_edges WHERE volume_id=? AND child_record=? AND parent_record=?
+    const pruneEdge = db.query(`DELETE FROM ntfs_entry_edges WHERE volume_id=? AND child_record=? AND parent_record=?
       AND NOT EXISTS(SELECT 1 FROM ntfs_entries WHERE volume_id=? AND record=? AND parent_record=?)`);
     let pages = 0;
     let changes = 0;
@@ -211,14 +185,7 @@ export async function syncNtfs(options: NtfsIndexOptions) {
           );
           if (row.reason & (0x200 | 0x1000)) {
             remove.run(volumeId, row.record, row.parentRecord, row.name);
-            pruneEdge.run(
-              volumeId,
-              row.record,
-              row.parentRecord,
-              volumeId,
-              row.record,
-              row.parentRecord,
-            );
+            pruneEdge.run(volumeId, row.record, row.parentRecord, volumeId, row.record, row.parentRecord);
           } else if (row.name) {
             put.run(
               volumeId,

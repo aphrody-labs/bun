@@ -57,14 +57,14 @@ describe("native Crunchyroll migration", () => {
       expect((await api.login("local@example.test", "local-password")).client.locale).toBe("fr-FR");
       await api.search("déesse & dieu 日本語");
       await api.getAllAnimes(20, 5);
-      const search = calls.find((call) => call.url.pathname.endsWith("/search"))!.url;
-      const catalog = calls.find((call) => call.url.pathname.endsWith("/browse"))!.url;
+      const search = calls.find(call => call.url.pathname.endsWith("/search"))!.url;
+      const catalog = calls.find(call => call.url.pathname.endsWith("/browse"))!.url;
       expect(search.searchParams.get("locale")).toBe("fr-FR");
       expect(search.searchParams.get("q")).toBe("déesse & dieu 日本語");
       expect(catalog.searchParams.get("locale")).toBe("fr-FR");
       expect(catalog.searchParams.get("start")).toBe("20");
       expect(catalog.searchParams.get("n")).toBe("5");
-      expect(calls.filter((call) => call.url.pathname === "/auth/v1/token")).toHaveLength(1);
+      expect(calls.filter(call => call.url.pathname === "/auth/v1/token")).toHaveLength(1);
     });
   });
 
@@ -102,43 +102,13 @@ describe("native Crunchyroll migration", () => {
       const operations: [() => Promise<unknown>, string, Record<string, string>, boolean][] = [
         [() => api.getProfile(), "/accounts/v1/me/profile", {}, false],
         [() => api.getAnime("A/B"), "/cms/v2/FR/M3/series/A%2FB", {}, true],
-        [
-          () => api.getSeasons("series & id"),
-          "/cms/v2/FR/M3/seasons",
-          { series_id: "series & id" },
-          true,
-        ],
+        [() => api.getSeasons("series & id"), "/cms/v2/FR/M3/seasons", { series_id: "series & id" }, true],
         [() => api.getEpisodes("season"), "/cms/v2/FR/M3/episodes", { season_id: "season" }, true],
-        [
-          () => api.getCategories("series"),
-          "/content/v1/tenant_categories",
-          { guid: "series" },
-          true,
-        ],
-        [
-          () => api.getRate("series"),
-          "/content-reviews/v2/user/account/rating/series/series",
-          {},
-          false,
-        ],
-        [
-          () => api.getSimilar("series"),
-          "/content/v1/similar_to",
-          { guid: "series", n: "10" },
-          true,
-        ],
-        [
-          () => api.search("dragon & ball 日本語"),
-          "/content/v1/search",
-          { q: "dragon & ball 日本語" },
-          true,
-        ],
-        [
-          () => api.getAllAnimes(),
-          "/content/v1/browse",
-          { start: "0", n: "10", sort_by: "alphabetical" },
-          true,
-        ],
+        [() => api.getCategories("series"), "/content/v1/tenant_categories", { guid: "series" }, true],
+        [() => api.getRate("series"), "/content-reviews/v2/user/account/rating/series/series", {}, false],
+        [() => api.getSimilar("series"), "/content/v1/similar_to", { guid: "series", n: "10" }, true],
+        [() => api.search("dragon & ball 日本語"), "/content/v1/search", { q: "dragon & ball 日本語" }, true],
+        [() => api.getAllAnimes(), "/content/v1/browse", { start: "0", n: "10", sort_by: "alphabetical" }, true],
         [() => api.getNewsFeed(), "/content/v1/news_feed", {}, true],
       ];
       for (const [operation, path, query, signed] of operations) {
@@ -148,8 +118,7 @@ describe("native Crunchyroll migration", () => {
         expect(call.method).toBe("GET");
         expect(call.body).toBe("");
         expect(call.authorization).toBe("Bearer local-token");
-        for (const [key, value] of Object.entries(query))
-          expect(call.url.searchParams.get(key)).toBe(value);
+        for (const [key, value] of Object.entries(query)) expect(call.url.searchParams.get(key)).toBe(value);
         expect(call.url.searchParams.get("Signature")).toBe(signed ? cms.signature : null);
         if (signed) {
           expect(call.url.searchParams.get("Policy")).toBe(cms.policy);
@@ -180,9 +149,7 @@ describe("native Crunchyroll migration", () => {
       expect(calls.at(-1)!.authorization).toBe("Bearer second");
       expect(calls.at(-1)!.url.searchParams.get("locale")).toBe("en-US");
       const count = calls.length;
-      await expect(createCrunchyrollClient({ baseURL }).getProfile()).rejects.toThrow(
-        "You must login first",
-      );
+      await expect(createCrunchyrollClient({ baseURL }).getProfile()).rejects.toThrow("You must login first");
       expect(calls.length).toBe(count);
       await expect(first.getRate("series")).rejects.toThrow("An accountId is required");
     });
@@ -196,8 +163,8 @@ describe("native Crunchyroll migration", () => {
       const clock = spyOn(Date, "now").mockReturnValue(now + 240_001);
       try {
         await Promise.all([api.getAnime("series"), api.getSeasons("series")]);
-        expect(calls.filter((call) => call.url.pathname === "/auth/v1/token")).toHaveLength(2);
-        expect(calls.filter((call) => call.url.pathname === "/index/v2")).toHaveLength(2);
+        expect(calls.filter(call => call.url.pathname === "/auth/v1/token")).toHaveLength(2);
+        expect(calls.filter(call => call.url.pathname === "/index/v2")).toHaveLength(2);
         expect(calls.at(-1)!.url.searchParams.get("locale")).toBe("fr-FR");
       } finally {
         clock.mockRestore();
@@ -222,7 +189,7 @@ describe("native Crunchyroll migration", () => {
       new Response("private-response"),
     ]) {
       await withAPI(
-        async (baseURL) => {
+        async baseURL => {
           const api = createCrunchyrollClient({ baseURL, accessToken: "local" });
           const result = await api.loginWithAccessToken();
           expect(result.success).toBe(false);
@@ -245,7 +212,7 @@ describe("native Crunchyroll migration", () => {
     });
     try {
       await withAPI(
-        async (baseURL) => {
+        async baseURL => {
           const api = createCrunchyrollClient({ baseURL, accessToken: "local" });
           const result = await api.loginWithAccessToken();
           expect(result.success).toBe(false);
@@ -270,15 +237,13 @@ describe("native Crunchyroll migration", () => {
       expect(calls).toHaveLength(0);
     });
     await withAPI(
-      async (baseURL) => {
+      async baseURL => {
         const api = createCrunchyrollClient({ baseURL, accessToken: "local", timeoutMs: 10 });
         expect((await api.loginWithAccessToken()).success).toBe(false);
       },
       () => new Promise<Response>(() => {}),
     );
     expect(() => createCrunchyrollClient({ timeoutMs: 0 })).toThrow(CrunchyrollError);
-    expect(() => createCrunchyrollClient({ baseURL: "http://example.test" })).toThrow(
-      "requires HTTPS",
-    );
+    expect(() => createCrunchyrollClient({ baseURL: "http://example.test" })).toThrow("requires HTTPS");
   });
 });

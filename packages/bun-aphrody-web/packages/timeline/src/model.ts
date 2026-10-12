@@ -48,13 +48,11 @@ export interface Snapshot {
 }
 type Row = Record<string, unknown>;
 function row(value: unknown): Row {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error("invalid source object");
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("invalid source object");
   return value as Row;
 }
 function integer(value: unknown): number {
-  if (typeof value !== "number" || !Number.isSafeInteger(value))
-    throw new Error("invalid source integer");
+  if (typeof value !== "number" || !Number.isSafeInteger(value)) throw new Error("invalid source integer");
   return value;
 }
 function nullableInteger(value: unknown): number | null {
@@ -69,8 +67,7 @@ function nullableString(value: unknown): string | null {
 }
 function publicUrl(value: unknown, source: string): string {
   const url = new URL(string(value), source);
-  if (url.origin !== new URL(source).origin || url.username || url.password)
-    throw new Error("unexpected source URL");
+  if (url.origin !== new URL(source).origin || url.username || url.password) throw new Error("unexpected source URL");
   return url.href;
 }
 export function normalize(
@@ -80,8 +77,7 @@ export function normalize(
   source: TimelineSource = DRAGON_BALL_SOURCE,
 ): Snapshot {
   const media = row(mediaValue);
-  if (media.source !== source.source || !Array.isArray(media.entries))
-    throw new Error("unexpected timeline source");
+  if (media.source !== source.source || !Array.isArray(media.entries)) throw new Error("unexpected timeline source");
   const mediaTotal = integer(media.timelineTotal);
   if (mediaTotal < 1 || integer(media.total) !== mediaTotal || media.entries.length !== mediaTotal)
     throw new Error("incomplete media timeline");
@@ -93,10 +89,7 @@ export function normalize(
     const id = integer(r.id);
     if (id < 1 || !string(r.title).trim()) throw new Error("invalid media identity");
     const date = nullableString(r.date);
-    if (
-      date !== null &&
-      (!/^\d{4}-\d{2}-\d{2}$/.test(date) || new Date(date).toISOString().slice(0, 10) !== date)
-    )
+    if (date !== null && (!/^\d{4}-\d{2}-\d{2}$/.test(date) || new Date(date).toISOString().slice(0, 10) !== date))
       throw new Error("invalid release date");
     return {
       key: `${kind}:${id}`,
@@ -127,8 +120,7 @@ export function normalize(
     const id = integer(r.id);
     if (id < 1 || !string(r.title).trim() || !Array.isArray(r.charactersInvolved))
       throw new Error("invalid age identity");
-    if (![true, false, 0, 1, "0", "1"].includes(r.canon as string))
-      throw new Error("invalid canonicity");
+    if (![true, false, 0, 1, "0", "1"].includes(r.canon as string)) throw new Error("invalid canonicity");
     const year = integer(r.ageYear);
     entries.push({
       key: `age:${id}`,
@@ -154,7 +146,7 @@ export function normalize(
       canon: [true, 1, "1"].includes(r.canon as string),
     });
   }
-  if (!ageValues.length || new Set(entries.map((e) => e.key)).size !== entries.length)
+  if (!ageValues.length || new Set(entries.map(e => e.key)).size !== entries.length)
     throw new Error("empty or duplicate timeline");
   // The media array stays in its curated order. Ages have their own chronology.
   entries.splice(
@@ -197,11 +189,9 @@ export async function collect(
     // eslint-disable-next-line no-await-in-loop -- The previous total/offset is required before fetching the next page.
     const page = await read(`${source.ageApi}?limit=100&offset=${offset}`);
     const total = integer(page.total);
-    if (expected !== undefined && expected !== total)
-      throw new Error("source changed during pagination");
+    if (expected !== undefined && expected !== total) throw new Error("source changed during pagination");
     expected = total;
-    if (!Array.isArray(page.items) || integer(page.offset) !== offset)
-      throw new Error("invalid age pagination");
+    if (!Array.isArray(page.items) || integer(page.offset) !== offset) throw new Error("invalid age pagination");
     ages.push(...page.items);
     if (ages.length === total) return normalize(media, ages, undefined, source);
     if (!page.items.length || ages.length > total) throw new Error("incomplete age timeline");
@@ -222,10 +212,9 @@ export interface TrainingOptions {
   content?: (entry: Entry) => string;
 }
 export function trainingRows(snapshot: Snapshot, options: TrainingOptions = {}) {
-  return snapshot.entries.map((e) => {
+  return snapshot.entries.map(e => {
     const split =
-      parseInt(new Bun.CryptoHasher("sha256").update(e.key).digest("hex").slice(0, 8), 16) % 10 ===
-      0
+      parseInt(new Bun.CryptoHasher("sha256").update(e.key).digest("hex").slice(0, 8), 16) % 10 === 0
         ? "eval"
         : "train";
     return {

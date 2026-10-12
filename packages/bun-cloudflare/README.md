@@ -21,11 +21,17 @@ Defaults: ES modules, `nodejs_compat`, a recent compatibility date.
 ```ts
 import { startWorker, serveWorker } from "@aphrody/bun-cloudflare/worker";
 
-await using worker = await startWorker({ scriptPath: "./src/worker.ts", kvNamespaces: ["KV"] });
+await using worker = await startWorker({
+  scriptPath: "./src/worker.ts",
+  kvNamespaces: ["KV"],
+});
 await worker.fetch("/hello");
 const env = await worker.bindings(); // env.KV from Bun
 
-await using served = await serveWorker({ scriptPath: "./dist/worker.js", port: 8787 }); // Bun.serve in front of workerd
+await using served = await serveWorker({
+  scriptPath: "./dist/worker.js",
+  port: 8787,
+}); // Bun.serve in front of workerd
 ```
 
 `getPlatformProxy` (re-exported from wrangler) reads `wrangler.jsonc` and hands its bindings to code running in Bun.

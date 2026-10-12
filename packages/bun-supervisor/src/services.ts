@@ -83,9 +83,7 @@ export class ServiceSupervisor {
   #start?: Promise<void>;
   #stop?: Promise<void>;
   #signal = () => {
-    void this.stop().catch((error) =>
-      this.#log({ event: "shutdown-failed", error: String(error) }),
-    );
+    void this.stop().catch(error => this.#log({ event: "shutdown-failed", error: String(error) }));
   };
   #probeInterval: number;
   #probeTimeout: number;
@@ -95,10 +93,9 @@ export class ServiceSupervisor {
   #stableMs: number;
 
   constructor(options: ServiceSupervisorOptions) {
-    if (!Array.isArray(options.services) || !options.services.length)
-      throw new Error("Services must not be empty");
+    if (!Array.isArray(options.services) || !options.services.length) throw new Error("Services must not be empty");
     const ids = new Set<string>();
-    this.#entries = options.services.map((definition) => {
+    this.#entries = options.services.map(definition => {
       if (
         typeof definition.id !== "string" ||
         !/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(definition.id) ||
@@ -111,21 +108,17 @@ export class ServiceSupervisor {
       if (
         !Array.isArray(definition.command) ||
         !definition.command.length ||
-        definition.command.some((arg) => typeof arg !== "string" || arg.includes("\0")) ||
+        definition.command.some(arg => typeof arg !== "string" || arg.includes("\0")) ||
         !definition.command[0]
       ) {
         throw new Error(`Invalid command: ${definition.id}`);
       }
-      if (
-        definition.restart !== undefined &&
-        !["always", "on-failure", "never"].includes(definition.restart)
-      ) {
+      if (definition.restart !== undefined && !["always", "on-failure", "never"].includes(definition.restart)) {
         throw new Error(`Invalid restart policy: ${definition.id}`);
       }
       if (definition.health) {
         const url = new URL(definition.health);
-        if (!["http:", "https:"].includes(url.protocol))
-          throw new Error(`Invalid health URL: ${definition.id}`);
+        if (!["http:", "https:"].includes(url.protocol)) throw new Error(`Invalid health URL: ${definition.id}`);
       }
       return {
         definition: { ...definition, command: [...definition.command], env: { ...definition.env } },
@@ -153,9 +146,7 @@ export class ServiceSupervisor {
     this.#stableMs = positive(options.backoff?.stableMs, 60_000, "stableMs", true);
     if (
       options.healthPort !== undefined &&
-      (!Number.isInteger(options.healthPort) ||
-        options.healthPort < 0 ||
-        options.healthPort > 65535)
+      (!Number.isInteger(options.healthPort) || options.healthPort < 0 || options.healthPort > 65535)
     ) {
       throw new Error("Invalid healthPort");
     }
@@ -170,10 +161,8 @@ export class ServiceSupervisor {
       observedAt: new Date().toISOString(),
       runtime: Bun.version,
       runtimeRevision: Bun.revision,
-      ok: !this.#abort.signal.aborted && this.#entries.every((entry) => entry.healthy),
-      services: this.#entries.map(
-        ({ definition: _definition, child: _child, job: _job, ...status }) => status,
-      ),
+      ok: !this.#abort.signal.aborted && this.#entries.every(entry => entry.healthy),
+      services: this.#entries.map(({ definition: _definition, child: _child, job: _job, ...status }) => status),
     };
   }
 
@@ -183,7 +172,7 @@ export class ServiceSupervisor {
   }
 
   #entry(id: string): Entry {
-    const entry = this.#entries.find((entry) => entry.id === id);
+    const entry = this.#entries.find(entry => entry.id === id);
     if (!entry) throw new Error(`Unknown service: ${id}`);
     return entry;
   }
@@ -211,7 +200,7 @@ export class ServiceSupervisor {
     if (control.paused) return;
     if (entry.state === "exited" || entry.state === "stopped")
       throw new Error(`Service is not supervised: ${entry.id}`);
-    const acknowledged = new Promise<void>((done) => {
+    const acknowledged = new Promise<void>(done => {
       control.acknowledge = done;
     });
     control.paused = true;
@@ -268,7 +257,7 @@ export class ServiceSupervisor {
     try {
       await Promise.race([
         child.exited,
-        new Promise<void>((done) => {
+        new Promise<void>(done => {
           timer = setTimeout(done, this.#drainMs);
         }),
       ]);
@@ -290,8 +279,7 @@ export class ServiceSupervisor {
 
   async #initialize(): Promise<void> {
     try {
-      const WindowsJob =
-        process.platform === "win32" ? (await import("bun:windows")).default.Job : undefined;
+      const WindowsJob = process.platform === "win32" ? (await import("bun:windows")).default.Job : undefined;
       if (this.#abort.signal.aborted) return;
       if (this.#options.logDirectory) mkdirSync(this.#options.logDirectory, { recursive: true });
       if (this.#options.healthPort !== undefined) {
@@ -328,11 +316,9 @@ export class ServiceSupervisor {
         process.on("SIGINT", this.#signal);
         process.on("SIGTERM", this.#signal);
       }
-      this.#runs = this.#entries.map((entry) => this.#supervise(entry, WindowsJob));
+      this.#runs = this.#entries.map(entry => this.#supervise(entry, WindowsJob));
       this.#timer = setInterval(() => {
-        void this.probe().catch((error) =>
-          this.#log({ event: "probe-failed", error: String(error) }),
-        );
+        void this.probe().catch(error => this.#log({ event: "probe-failed", error: String(error) }));
       }, this.#probeInterval);
       await this.probe();
     } catch (error) {
@@ -357,7 +343,7 @@ export class ServiceSupervisor {
       if (control.paused) {
         entry.state = "paused";
         control.acknowledge?.();
-        await new Promise<void>((done) => {
+        await new Promise<void>(done => {
           const wake = () => {
             this.#abort.signal.removeEventListener("abort", wake);
             control.wake = undefined;
@@ -374,8 +360,7 @@ export class ServiceSupervisor {
       let child: Child | undefined;
       const started = Date.now();
       try {
-        if (this.#options.logDirectory)
-          fd = openSync(resolve(this.#options.logDirectory, `${entry.id}.log`), "a");
+        if (this.#options.logDirectory) fd = openSync(resolve(this.#options.logDirectory, `${entry.id}.log`), "a");
         if (WindowsJob) entry.job = new WindowsJob({ killOnClose: true });
         child = Bun.spawn({
           cmd: entry.definition.command,
@@ -426,7 +411,7 @@ export class ServiceSupervisor {
       entry.restarts++;
       entry.state = "backoff";
       this.#log({ event: "restart-pending", service: entry.id, exit: entry.lastExit, backoff });
-      await new Promise<void>((resolveWait) => {
+      await new Promise<void>(resolveWait => {
         const done = () => {
           clearTimeout(timer);
           this.#abort.signal.removeEventListener("abort", done);
@@ -452,7 +437,7 @@ export class ServiceSupervisor {
 
   async #probeHealth(): Promise<void> {
     await Promise.all(
-      this.#entries.map(async (entry) => {
+      this.#entries.map(async entry => {
         const child = entry.child;
         if (!child || !entry.definition.health) return;
         let healthy = false;
@@ -469,11 +454,7 @@ export class ServiceSupervisor {
         } catch {
           healthy = false;
         }
-        if (
-          entry.child === child &&
-          !this.#abort.signal.aborted &&
-          !this.#controls.get(entry)!.paused
-        )
+        if (entry.child === child && !this.#abort.signal.aborted && !this.#controls.get(entry)!.paused)
           entry.healthy = healthy;
       }),
     );
@@ -506,7 +487,7 @@ export class ServiceSupervisor {
     process.off("SIGTERM", this.#signal);
     await this.#server?.stop(true);
     this.#server = undefined;
-    const children = this.#entries.flatMap((entry) => (entry.child ? [entry.child] : []));
+    const children = this.#entries.flatMap(entry => (entry.child ? [entry.child] : []));
     for (const child of children) {
       try {
         child.kill("SIGTERM");
@@ -515,8 +496,8 @@ export class ServiceSupervisor {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       await Promise.race([
-        Promise.all(children.map((child) => child.exited)),
-        new Promise<void>((done) => {
+        Promise.all(children.map(child => child.exited)),
+        new Promise<void>(done => {
           timer = setTimeout(done, this.#drainMs);
         }),
       ]);

@@ -15,12 +15,7 @@ type Timeline { source: String!, generation: String!, fetchedAt: String!, mediaT
 type Query { timeline: Timeline!, timelineEntry(key: ID!): TimelineEntry, timelineEntries(kind: TimelineKind, era: String, offset: Int = 0, limit: Int = 100): [TimelineEntry!]! }
 `;
 const schema = buildSchema(SDL);
-export function query(
-  snapshot: Snapshot,
-  source: string,
-  variables?: Record<string, unknown>,
-  operationName?: string,
-) {
+export function query(snapshot: Snapshot, source: string, variables?: Record<string, unknown>, operationName?: string) {
   return graphql({
     schema,
     source,
@@ -28,8 +23,7 @@ export function query(
     operationName,
     rootValue: {
       timeline: () => snapshot,
-      timelineEntry: ({ key }: { key: string }) =>
-        snapshot.entries.find((e) => e.key === key) ?? null,
+      timelineEntry: ({ key }: { key: string }) => snapshot.entries.find(e => e.key === key) ?? null,
       timelineEntries: ({
         kind,
         era,
@@ -41,10 +35,9 @@ export function query(
         offset?: number;
         limit?: number;
       }) => {
-        if (offset < 0 || limit < 1 || limit > 1000)
-          throw new Error("offset >= 0 and limit 1..1000 required");
+        if (offset < 0 || limit < 1 || limit > 1000) throw new Error("offset >= 0 and limit 1..1000 required");
         return snapshot.entries
-          .filter((e) => (!kind || e.kind === kind) && (!era || e.era === era))
+          .filter(e => (!kind || e.kind === kind) && (!era || e.era === era))
           .slice(offset, offset + limit);
       },
     },

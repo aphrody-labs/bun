@@ -10,13 +10,13 @@ import { XClient, xBatch } from "@aphrody/x";
 const [handlesFile = "handles.txt", checkpoint = "users.jsonl"] = process.argv.slice(2);
 const handles = (await Bun.file(handlesFile).text())
   .split("\n")
-  .map((line) => line.trim().replace(/^@/, ""))
+  .map(line => line.trim().replace(/^@/, ""))
   .filter(Boolean);
 
 const client = new XClient(); // credentials discovered by Rust, like `aphrody x`
 const run = xBatch(
   client,
-  handles.map((handle) => ({ id: handle, op: "user_by_screen_name", args: { handle } })),
+  handles.map(handle => ({ id: handle, op: "user_by_screen_name", args: { handle } })),
   {
     concurrency: 8,
     checkpoint,

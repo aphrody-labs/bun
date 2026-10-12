@@ -5,17 +5,12 @@ export type { PlayerAPI, PlayerConfig, SourceConfig } from "bitmovin-player";
 
 export async function loadBitmovinPlayer(): Promise<typeof import("bitmovin-player")> {
   if (typeof window === "undefined" || typeof document === "undefined") {
-    throw new Error(
-      "Bitmovin Player requires a browser DOM; import is deferred until browser use.",
-    );
+    throw new Error("Bitmovin Player requires a browser DOM; import is deferred until browser use.");
   }
   return import("bitmovin-player");
 }
 
-export async function createBitmovinPlayer(
-  container: HTMLElement,
-  config: PlayerConfig,
-): Promise<PlayerAPI> {
+export async function createBitmovinPlayer(container: HTMLElement, config: PlayerConfig): Promise<PlayerAPI> {
   const { Player } = await loadBitmovinPlayer();
   return new Player(container, config);
 }
@@ -28,8 +23,7 @@ export interface BitmovinBrowserBuildOptions {
 
 export async function buildBitmovinBrowser(options: BitmovinBrowserBuildOptions) {
   const assetBase = new URL(options.assetBaseURL);
-  if (!/^https?:$/.test(assetBase.protocol))
-    throw new Error("assetBaseURL must use HTTP or HTTPS.");
+  if (!/^https?:$/.test(assetBase.protocol)) throw new Error("assetBaseURL must use HTTP or HTTPS.");
   if (!assetBase.pathname.endsWith("/")) assetBase.pathname += "/";
   const bundle = await Bun.build({
     entrypoints: [import.meta.path],

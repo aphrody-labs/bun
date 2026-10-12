@@ -71,24 +71,20 @@ export class ReviewError extends Error {
 const fail = (code: string): never => {
   throw new ReviewError(code);
 };
-export const sha = (bytes: string | Uint8Array): string =>
-  new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
+export const sha = (bytes: string | Uint8Array): string => new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
 function obj(value: unknown): Obj {
   if (!value || typeof value !== "object" || Array.isArray(value)) return fail("INVALID_OBJECT");
   return value as Obj;
 }
 function keys(value: Obj, allowed: string[], required: string[] = []): void {
-  if (Object.keys(value).some((k) => !allowed.includes(k)) || required.some((k) => !(k in value)))
-    fail("UNSUPPORTED_KEYS");
+  if (Object.keys(value).some(k => !allowed.includes(k)) || required.some(k => !(k in value))) fail("UNSUPPORTED_KEYS");
 }
 function str(value: unknown): string {
-  if (typeof value !== "string" || !value || value.length > MAX_BYTES)
-    return fail("INVALID_STRING");
+  if (typeof value !== "string" || !value || value.length > MAX_BYTES) return fail("INVALID_STRING");
   return value;
 }
 function integer(value: unknown): number {
-  if (!Number.isSafeInteger(value) || Number(value) < 0 || Number(value) > 2147483647)
-    return fail("INVALID_INDEX");
+  if (!Number.isSafeInteger(value) || Number(value) < 0 || Number(value) > 2147483647) return fail("INVALID_INDEX");
   return Number(value);
 }
 function sorted(v: unknown): unknown {
@@ -117,18 +113,10 @@ function utf8(bytes: Uint8Array): string {
 }
 function inside(root: string, path: string): boolean {
   const r = relative(resolve(root), path);
-  return (
-    isAbsolute(path) &&
-    !!r &&
-    r !== ".." &&
-    !r.startsWith("../") &&
-    !isAbsolute(r) &&
-    resolve(path) === path
-  );
+  return isAbsolute(path) && !!r && r !== ".." && !r.startsWith("../") && !isAbsolute(r) && resolve(path) === path;
 }
 async function safeFile(path: string, privateRoot?: string): Promise<Uint8Array> {
-  if (!isAbsolute(path) || resolve(path) !== path || (privateRoot && !inside(privateRoot, path)))
-    fail("UNSAFE_PATH");
+  if (!isAbsolute(path) || resolve(path) !== path || (privateRoot && !inside(privateRoot, path))) fail("UNSAFE_PATH");
   const parts = path.split("/").filter(Boolean);
   let current = "/";
   for (let i = 0; i < parts.length; i++) {
@@ -143,11 +131,7 @@ async function safeFile(path: string, privateRoot?: string): Promise<Uint8Array>
       fail("NON_PRIVATE_PATH");
     if (
       i === parts.length - 1 &&
-      (!s.isFile() ||
-        s.nlink !== 1 ||
-        s.size > MAX_BYTES ||
-        (s.mode & 0o077) !== 0 ||
-        s.uid !== process.getuid?.())
+      (!s.isFile() || s.nlink !== 1 || s.size > MAX_BYTES || (s.mode & 0o077) !== 0 || s.uid !== process.getuid?.())
     )
       fail("NON_PRIVATE_FILE");
   }
@@ -155,13 +139,7 @@ async function safeFile(path: string, privateRoot?: string): Promise<Uint8Array>
   try {
     const s = await handle.stat();
     const now = await lstat(path);
-    if (
-      s.ino !== now.ino ||
-      s.dev !== now.dev ||
-      !s.isFile() ||
-      s.nlink !== 1 ||
-      s.size > MAX_BYTES
-    )
+    if (s.ino !== now.ino || s.dev !== now.dev || !s.isFile() || s.nlink !== 1 || s.size > MAX_BYTES)
       fail("FILE_CHANGED");
     return new Uint8Array(await handle.readFile());
   } finally {
@@ -182,15 +160,10 @@ async function privateDirectory(path: string): Promise<void> {
     if (!part.isDirectory() || part.isSymbolicLink()) fail("UNSAFE_DIRECTORY");
   }
   const s = await lstat(path);
-  if (!s.isDirectory() || s.isSymbolicLink() || s.uid !== process.getuid?.())
-    fail("UNSAFE_DIRECTORY");
+  if (!s.isDirectory() || s.isSymbolicLink() || s.uid !== process.getuid?.()) fail("UNSAFE_DIRECTORY");
   await chmod(path, 0o700);
 }
-async function atomic(
-  path: string,
-  bytes: string | Uint8Array,
-  beforeHash?: string,
-): Promise<void> {
+async function atomic(path: string, bytes: string | Uint8Array, beforeHash?: string): Promise<void> {
   await privateDirectory(dirname(path));
   try {
     await lstat(path);
@@ -229,16 +202,11 @@ export function parsePlan(value: unknown, paths: Paths): Plan {
     ["version", "folderId", "files", "reviewedAt", "mode", "applicationGates", "counts"],
     ["version", "folderId", "files"],
   );
-  if (
-    p.version !== 1 ||
-    p.folderId !== paths.folder ||
-    !Array.isArray(p.files) ||
-    p.files.length !== NAMES.length
-  )
+  if (p.version !== 1 || p.folderId !== paths.folder || !Array.isArray(p.files) || p.files.length !== NAMES.length)
     fail("PLAN_SCOPE");
   const names = new Set<string>();
   const ids = new Set<string>();
-  const files = (p.files as unknown[]).map((fileValue) => {
+  const files = (p.files as unknown[]).map(fileValue => {
     const f = obj(fileValue);
     keys(
       f,
@@ -280,14 +248,10 @@ export function parsePlan(value: unknown, paths: Paths): Plan {
     ids.add(id);
     const localHash = str(f.localBeforeSha256),
       remoteHash = str(f.remoteBeforeSha256);
-    if (![localHash, remoteHash].every((s) => /^[a-f0-9]{64}$/.test(s))) fail("INVALID_HASH");
+    if (![localHash, remoteHash].every(s => /^[a-f0-9]{64}$/.test(s))) fail("INVALID_HASH");
     const proposed = str(f.proposedLocalFile),
       explanation = str(f.explanationFile);
-    if (
-      !inside(paths.stage, proposed) ||
-      !inside(paths.stage, explanation) ||
-      proposed === explanation
-    )
+    if (!inside(paths.stage, proposed) || !inside(paths.stage, explanation) || proposed === explanation)
       fail("UNSAFE_PROPOSAL_PATH");
     if (f.writeControl !== undefined) {
       const control = obj(f.writeControl);
@@ -312,8 +276,7 @@ export function parsePlan(value: unknown, paths: Paths): Plan {
 function body(document: Obj): Obj {
   if (!Array.isArray(document.tabs) || document.tabs.length !== 1) return fail("UNSUPPORTED_TABS");
   const tab = obj(document.tabs[0]);
-  if (tab.childTabs && (!Array.isArray(tab.childTabs) || tab.childTabs.length))
-    fail("UNSUPPORTED_TABS");
+  if (tab.childTabs && (!Array.isArray(tab.childTabs) || tab.childTabs.length)) fail("UNSUPPORTED_TABS");
   const tabBody = obj(obj(tab.documentTab).body);
   if (document.body) fail("AMBIGUOUS_BODY");
   return tabBody;
@@ -329,7 +292,7 @@ export function modelDocument(value: unknown): Model {
   keys(first, ["startIndex", "endIndex", "sectionBreak"], ["endIndex", "sectionBreak"]);
   if ((first.startIndex ?? 0) !== 0 || first.endIndex !== 1) fail("UNSUPPORTED_SECTION");
   let cursor = 1;
-  const paragraphs = content.slice(1).map((paragraphValue) => {
+  const paragraphs = content.slice(1).map(paragraphValue => {
     const item = obj(paragraphValue);
     keys(item, ["startIndex", "endIndex", "paragraph"], ["startIndex", "endIndex", "paragraph"]);
     if (integer(item.startIndex) !== cursor) fail("NONCONTIGUOUS_BODY");
@@ -345,8 +308,7 @@ export function modelDocument(value: unknown): Model {
       const run = obj(e.textRun);
       keys(run, ["content", "textStyle"], ["content"]);
       const text = str(run.content);
-      if (integer(e.startIndex) !== cursor || integer(e.endIndex) !== cursor + text.length)
-        fail("NONCONTIGUOUS_RUN");
+      if (integer(e.startIndex) !== cursor || integer(e.endIndex) !== cursor + text.length) fail("NONCONTIGUOUS_RUN");
       const style = canonical(run.textStyle ?? {});
       for (let i = 0; i < text.length; i++) cells.push({ unit: text[i]!, style });
       cursor += text.length;
@@ -354,7 +316,7 @@ export function modelDocument(value: unknown): Model {
     if (
       integer(item.endIndex) !== cursor ||
       cells.at(-1)?.unit !== "\n" ||
-      cells.slice(0, -1).some((c) => c.unit === "\n")
+      cells.slice(0, -1).some(c => c.unit === "\n")
     )
       fail("UNSUPPORTED_PARAGRAPH");
     return { metadata, cells };
@@ -377,10 +339,7 @@ function boundary(cells: Cell[], index: number): void {
   )
     fail("SURROGATE_BOUNDARY");
 }
-function locate(
-  model: Model,
-  index: number,
-): { paragraph: Paragraph; offset: number; position: number } {
+function locate(model: Model, index: number): { paragraph: Paragraph; offset: number; position: number } {
   let cursor = 1;
   for (let i = 0; i < model.paragraphs.length; i++) {
     const paragraph = model.paragraphs[i]!;
@@ -404,7 +363,7 @@ export function simulate(before: Model, requests: Request[]): Model {
       if (location.tabId !== expected.tabId) fail("WRONG_TAB");
       const text = str(insert.text);
       if (
-        [...text].some((c) => {
+        [...text].some(c => {
           const n = c.charCodeAt(0);
           return n <= 8 || (n >= 12 && n <= 31) || n === 11 || (n >= 0xe000 && n <= 0xf8ff);
         }) ||
@@ -416,7 +375,7 @@ export function simulate(before: Model, requests: Request[]): Model {
       if (text.includes("\n")) {
         if (
           position !== expected.paragraphs.length - 1 ||
-          paragraph.cells.map((c) => c.unit).join("") !== "\n" ||
+          paragraph.cells.map(c => c.unit).join("") !== "\n" ||
           offset !== 0
         )
           fail("NON_APPEND_PARAGRAPH_INSERT");
@@ -424,13 +383,12 @@ export function simulate(before: Model, requests: Request[]): Model {
         const created = pieces.map((piece, i) => ({
           metadata: clone(paragraph.metadata),
           cells: [
-            ...piece.split("").map((unit) => ({ unit, style: null })),
+            ...piece.split("").map(unit => ({ unit, style: null })),
             ...(i === pieces.length - 1 ? paragraph.cells : [{ unit: "\n", style: null }]),
           ],
         }));
         expected.paragraphs.splice(position, 1, ...created);
-      } else
-        paragraph.cells.splice(offset, 0, ...text.split("").map((unit) => ({ unit, style: null })));
+      } else paragraph.cells.splice(offset, 0, ...text.split("").map(unit => ({ unit, style: null })));
     } else if (r.deleteContentRange) {
       const deletion = obj(r.deleteContentRange);
       keys(deletion, ["range"], ["range"]);
@@ -445,7 +403,7 @@ export function simulate(before: Model, requests: Request[]): Model {
       boundary(paragraph.cells, offset + end - start);
       if (
         offset + end - start >= paragraph.cells.length ||
-        paragraph.cells.slice(offset, offset + end - start).some((c) => c.unit === "\n")
+        paragraph.cells.slice(offset, offset + end - start).some(c => c.unit === "\n")
       )
         fail("CROSS_PARAGRAPH_DELETE");
       paragraph.cells.splice(offset, end - start);
@@ -460,7 +418,7 @@ export function renderedModel(model: Model): Obj {
   const section = clone((b.content as unknown[])[0]);
   b.content = [
     section,
-    ...model.paragraphs.map((p) => {
+    ...model.paragraphs.map(p => {
       const startIndex = cursor;
       const elements: Obj[] = [];
       for (const c of p.cells) {
@@ -492,8 +450,7 @@ export function verifyAfter(expected: Model, after: unknown): void {
   for (let i = 0; i < expected.paragraphs.length; i++) {
     const e = expected.paragraphs[i]!,
       a = actual.paragraphs[i]!;
-    if (canonical(e.metadata) !== canonical(a.metadata) || e.cells.length !== a.cells.length)
-      fail("PARAGRAPH_CHANGED");
+    if (canonical(e.metadata) !== canonical(a.metadata) || e.cells.length !== a.cells.length) fail("PARAGRAPH_CHANGED");
     for (let j = 0; j < e.cells.length; j++)
       if (
         e.cells[j]!.unit !== a.cells[j]!.unit ||
@@ -507,13 +464,10 @@ export function verifyPlainProposal(model: Model, proposed: string): void {
   // Preserve every interior byte, including fenced code and hard line breaks.
   for (const p of model.paragraphs) {
     const style = obj(p.metadata.paragraphStyle ?? {});
-    if (
-      style.namedStyleType !== "NORMAL_TEXT" ||
-      p.cells.some((c) => c.style !== null && c.style !== "{}")
-    )
+    if (style.namedStyleType !== "NORMAL_TEXT" || p.cells.some(c => c.style !== null && c.style !== "{}"))
       fail("UNSUPPORTED_PATCH_DOCUMENT");
   }
-  const plain = model.paragraphs.flatMap((p) => p.cells.map((c) => c.unit)).join("");
+  const plain = model.paragraphs.flatMap(p => p.cells.map(c => c.unit)).join("");
   if (plain.replace(/\n+$/, "") !== proposed.replace(/\n+$/, "")) fail("PROPOSAL_REQUEST_MISMATCH");
 }
 async function checkScope(api: Api, entry: Entry, paths: Paths): Promise<void> {
@@ -539,9 +493,7 @@ async function checkScope(api: Api, entry: Entry, paths: Paths): Promise<void> {
 }
 async function checkedCurrent(api: Api, entry: Entry, paths: Paths): Promise<Obj> {
   await checkScope(api, entry, paths);
-  const d = obj(
-    (await api.docs.documents.get({ documentId: entry.id, includeTabsContent: true })).data,
-  );
+  const d = obj((await api.docs.documents.get({ documentId: entry.id, includeTabsContent: true })).data);
   if (
     d.documentId !== entry.id ||
     d.revisionId !== entry.remoteRevisionId ||
@@ -579,7 +531,7 @@ export async function refreshRevisions(
   binding: RevisionBinding,
 ): Promise<{ planSha: string; refreshed: number }> {
   if (
-    ![binding.expectedInputHash, binding.originalPlanSha].every((h) => /^[a-f0-9]{64}$/.test(h)) ||
+    ![binding.expectedInputHash, binding.originalPlanSha].every(h => /^[a-f0-9]{64}$/.test(h)) ||
     dirname(binding.inputManifestPath) !== dirname(paths.plan) ||
     dirname(binding.originalPlanPath) !== dirname(paths.plan) ||
     binding.originalPlanPath === paths.plan ||
@@ -598,9 +550,7 @@ export async function refreshRevisions(
     manifest.profile !== "dbfr" ||
     manifest.folderId !== paths.folder ||
     sha(JSON.stringify(manifest)) !== binding.expectedInputHash ||
-    ![manifest.ownerSha256, manifest.validatorSha256].every(
-      (h) => typeof h === "string" && /^[a-f0-9]{64}$/.test(h),
-    ) ||
+    ![manifest.ownerSha256, manifest.validatorSha256].every(h => typeof h === "string" && /^[a-f0-9]{64}$/.test(h)) ||
     !Array.isArray(manifest.files) ||
     manifest.files.length !== NAMES.length
   )
@@ -612,9 +562,7 @@ export async function refreshRevisions(
   const currentBytes = await safeFile(paths.plan),
     currentValue = obj(JSON.parse(utf8(currentBytes))),
     plan = parsePlan(currentValue, paths);
-  if (
-    canonical(withoutPlanRevisions(originalValue)) !== canonical(withoutPlanRevisions(currentValue))
-  )
+  if (canonical(withoutPlanRevisions(originalValue)) !== canonical(withoutPlanRevisions(currentValue)))
     fail("REVIEWED_PLAN_CHANGED");
   const inputDirectory = join(dirname(binding.inputManifestPath), "inputs");
   const seen = new Set<string>(),
@@ -657,9 +605,8 @@ export async function refreshRevisions(
     )
       fail("FROZEN_MANIFEST_SCOPE");
     seen.add(name);
-    const originalEntry =
-        original.files.find((f) => f.name === name) ?? fail("ORIGINAL_INPUT_BINDING"),
-      entry = plan.files.find((f) => f.name === name) ?? fail("ORIGINAL_INPUT_BINDING");
+    const originalEntry = original.files.find(f => f.name === name) ?? fail("ORIGINAL_INPUT_BINDING"),
+      entry = plan.files.find(f => f.name === name) ?? fail("ORIGINAL_INPUT_BINDING");
     if (
       !originalEntry ||
       !entry ||
@@ -675,13 +622,9 @@ export async function refreshRevisions(
       ["baseline.md", input.baselineLocalSha256],
       ["baseline.native.json", input.baselineNativeSha256],
     ] as const)
-      if (
-        sha(await safeFile(join(inputDirectory, name + "." + suffix), inputDirectory)) !== expected
-      )
+      if (sha(await safeFile(join(inputDirectory, name + "." + suffix), inputDirectory)) !== expected)
         fail("FROZEN_SNAPSHOT_CHANGED");
-    const frozen = obj(
-      JSON.parse(utf8(await safeFile(join(inputDirectory, name + ".native.json"), inputDirectory))),
-    );
+    const frozen = obj(JSON.parse(utf8(await safeFile(join(inputDirectory, name + ".native.json"), inputDirectory))));
     if (
       frozen.documentId !== input.id ||
       frozen.revisionId !== input.remoteRevisionId ||
@@ -691,9 +634,7 @@ export async function refreshRevisions(
     )
       fail("FROZEN_OR_LOCAL_CHANGED");
     await checkScope(api, entry, paths);
-    const current = obj(
-      (await api.docs.documents.get({ documentId: entry.id, includeTabsContent: true })).data,
-    );
+    const current = obj((await api.docs.documents.get({ documentId: entry.id, includeTabsContent: true })).data);
     if (
       current.documentId !== entry.id ||
       !current.revisionId ||
@@ -703,7 +644,7 @@ export async function refreshRevisions(
     const revision = str(current.revisionId),
       hash = sha(JSON.stringify(current));
     if (entry.remoteRevisionId !== revision || entry.remoteBeforeSha256 !== hash) refreshed++;
-    const updated = (currentValue.files as unknown[]).map(obj).find((f) => f.name === name)!;
+    const updated = (currentValue.files as unknown[]).map(obj).find(f => f.name === name)!;
     updated.remoteRevisionId = revision;
     updated.remoteBeforeSha256 = hash;
     if (updated.writeControl !== undefined) obj(updated.writeControl).requiredRevisionId = revision;
@@ -721,8 +662,7 @@ export async function refreshRevisions(
   for (const s of snapshots)
     if (
       sha(await safeFile(join(paths.home, s.name))) !== s.input.localBeforeSha256 ||
-      sha(await safeFile(join(inputDirectory, s.name + ".native.json"), inputDirectory)) !==
-        s.input.remoteBeforeSha256
+      sha(await safeFile(join(inputDirectory, s.name + ".native.json"), inputDirectory)) !== s.input.remoteBeforeSha256
     )
       fail("FROZEN_OR_LOCAL_CHANGED");
   const next = JSON.stringify(currentValue, null, 2) + "\n",
@@ -730,8 +670,7 @@ export async function refreshRevisions(
   const backup = join(dirname(paths.plan), "revision-refresh", sha(currentBytes) + "-" + nextHash);
   await privateDirectory(backup);
   await atomic(join(backup, "before-plan.json"), currentBytes);
-  if (sha(await safeFile(join(backup, "before-plan.json"))) !== sha(currentBytes))
-    fail("REVISION_BACKUP_CHANGED");
+  if (sha(await safeFile(join(backup, "before-plan.json"))) !== sha(currentBytes)) fail("REVISION_BACKUP_CHANGED");
   for (const s of snapshots) {
     const snapshot = JSON.stringify(s.current),
       path = join(backup, s.name + ".fresh.native.json");
@@ -795,17 +734,16 @@ export async function preflight(api: Api, owner: Owner, paths: Paths): Promise<R
   }
   const classes = { insertText: 0, deleteContentRange: 0 };
   for (const p of prepared)
-    for (const r of p.entry.requests)
-      classes["insertText" in r ? "insertText" : "deleteContentRange"]++;
+    for (const r of p.entry.requests) classes["insertText" in r ? "insertText" : "deleteContentRange"]++;
   return {
     plan,
     planSha: sha(planBytes),
     prepared,
     metadata: {
-      names: prepared.map((p) => p.entry.name),
+      names: prepared.map(p => p.entry.name),
       documents: prepared.length,
-      changedDocuments: prepared.filter((p) => p.entry.requests.length).length,
-      localPromotions: prepared.filter((p) => sha(p.local) !== p.proposedSha).length,
+      changedDocuments: prepared.filter(p => p.entry.requests.length).length,
+      localPromotions: prepared.filter(p => sha(p.local) !== p.proposedSha).length,
       requests: classes,
       revisionGuards: prepared.length,
       byteHashGuards: prepared.length * 2,
@@ -850,10 +788,8 @@ export async function apply(api: Api, owner: Owner, paths: Paths): Promise<Obj> 
       await atomic(join(run, p.entry.name + ".before.local.md"), p.local);
       await atomic(join(run, p.entry.name + ".proposal.md"), p.proposed);
       if (
-        sha(await safeFile(join(run, p.entry.name + ".before.native.json"))) !==
-          p.entry.remoteBeforeSha256 ||
-        sha(await safeFile(join(run, p.entry.name + ".before.local.md"))) !==
-          p.entry.localBeforeSha256 ||
+        sha(await safeFile(join(run, p.entry.name + ".before.native.json"))) !== p.entry.remoteBeforeSha256 ||
+        sha(await safeFile(join(run, p.entry.name + ".before.local.md"))) !== p.entry.localBeforeSha256 ||
         sha(await safeFile(join(run, p.entry.name + ".proposal.md"))) !== p.proposedSha
       )
         fail("BACKUP_HASH_CHANGED");
@@ -886,8 +822,7 @@ export async function apply(api: Api, owner: Owner, paths: Paths): Promise<Obj> 
     const snapshots = join(run, "fresh-native");
     await privateDirectory(snapshots);
     for (const p of review.prepared) {
-      if (sha(await safeFile(join(paths.home, p.entry.name))) !== p.entry.localBeforeSha256)
-        fail("LOCAL_CHANGED");
+      if (sha(await safeFile(join(paths.home, p.entry.name))) !== p.entry.localBeforeSha256) fail("LOCAL_CHANGED");
       await checkedCurrent(api, p.entry, paths);
       journal.remoteAttempt = {
         name: p.entry.name,
@@ -905,9 +840,7 @@ export async function apply(api: Api, owner: Owner, paths: Paths): Promise<Obj> 
           },
         });
       }
-      const after = obj(
-        (await api.docs.documents.get({ documentId: p.entry.id, includeTabsContent: true })).data,
-      );
+      const after = obj((await api.docs.documents.get({ documentId: p.entry.id, includeTabsContent: true })).data);
       if (after.documentId !== p.entry.id) fail("REMOTE_SCOPE_CHANGED");
       await checkScope(api, p.entry, paths);
       verifyAfter(p.expected, after);
@@ -925,13 +858,10 @@ export async function apply(api: Api, owner: Owner, paths: Paths): Promise<Obj> 
     // Freeze all final revisions before promoting any local document.
     for (const p of review.prepared) {
       await checkScope(api, p.entry, paths);
-      const d = obj(
-        (await api.docs.documents.get({ documentId: p.entry.id, includeTabsContent: true })).data,
-      );
+      const d = obj((await api.docs.documents.get({ documentId: p.entry.id, includeTabsContent: true })).data);
       const saved = await safeFile(join(snapshots, p.entry.name + ".json"));
       if (sha(JSON.stringify(d)) !== sha(saved)) fail("AFTER_REMOTE_CHANGED");
-      if (sha(await safeFile(join(paths.home, p.entry.name))) !== p.entry.localBeforeSha256)
-        fail("LOCAL_CHANGED");
+      if (sha(await safeFile(join(paths.home, p.entry.name))) !== p.entry.localBeforeSha256) fail("LOCAL_CHANGED");
     }
     journal.phase = "local-promoting";
     await record();

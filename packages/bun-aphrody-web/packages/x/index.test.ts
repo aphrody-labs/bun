@@ -163,9 +163,9 @@ describe("X Algo (For You ranking - from x-algorithm)", () => {
     // dupe filter, self (none), blocked (none), muted (filtered), age (none filtered)
     expect(ranked.length).toBe(3); // 1,2,3 (4 muted out)
     expect(ranked[0].post.id).toBe("1"); // highest: in_network + eng + history + fresh + media
-    expect(ranked[0].reasons.some((r) => r.includes("in_network"))).toBe(true);
-    expect(ranked[0].reasons.some((r) => r.includes("engagement"))).toBe(true);
-    expect(ranked.some((r) => r.post.id === "4")).toBe(false); // muted filtered
+    expect(ranked[0].reasons.some(r => r.includes("in_network"))).toBe(true);
+    expect(ranked[0].reasons.some(r => r.includes("engagement"))).toBe(true);
+    expect(ranked.some(r => r.post.id === "4")).toBe(false); // muted filtered
   });
 
   test("author diversity attenuates repeats", () => {
@@ -196,9 +196,7 @@ describe("X Algo (For You ranking - from x-algorithm)", () => {
     expect(ranked[0].post.id).toBe("a1");
     expect(ranked[1].post.id).toBe("a3");
     expect(ranked[2].post.id).toBe("a2");
-    expect(
-      ranked.find((r) => r.post.id === "a2")!.reasons.some((r) => r.includes("diversity_penalty")),
-    ).toBe(true);
+    expect(ranked.find(r => r.post.id === "a2")!.reasons.some(r => r.includes("diversity_penalty"))).toBe(true);
   });
 
   test("toPostCandidate and tweetToPostCandidate roundtrip", () => {
@@ -319,9 +317,7 @@ describe("X Algo (For You ranking - from x-algorithm)", () => {
     );
     expect(ranked.length).toBe(2);
     expect(ranked[0].post.id).toBe("s1"); // high eng + in_network (followed)
-    expect(
-      ranked[0].reasons.some((r) => r.includes("in_network") || r.includes("engagement")),
-    ).toBe(true);
+    expect(ranked[0].reasons.some(r => r.includes("in_network") || r.includes("engagement"))).toBe(true);
   });
 });
 

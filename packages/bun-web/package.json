@@ -12,5 +12,7 @@
     "./selectors": "./src/selectors.ts",
     "./types": "./src/types.ts"
   },
-  "engines": { "bun": ">=1.4.3" }
+  "engines": {
+    "bun": ">=1.4.3"
+  }
 }

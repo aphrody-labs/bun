@@ -100,34 +100,15 @@ declare module "picocolors" {
   export function createColors(enabled?: boolean): Colors;
   export const isColorSupported: boolean;
   export const reset: Formatter, bold: Formatter, dim: Formatter, italic: Formatter;
-  export const underline: Formatter,
-    inverse: Formatter,
-    hidden: Formatter,
-    strikethrough: Formatter;
+  export const underline: Formatter, inverse: Formatter, hidden: Formatter, strikethrough: Formatter;
   export const black: Formatter, red: Formatter, green: Formatter, yellow: Formatter;
-  export const blue: Formatter,
-    magenta: Formatter,
-    cyan: Formatter,
-    white: Formatter,
-    gray: Formatter;
+  export const blue: Formatter, magenta: Formatter, cyan: Formatter, white: Formatter, gray: Formatter;
   export const bgBlack: Formatter, bgRed: Formatter, bgGreen: Formatter, bgYellow: Formatter;
   export const bgBlue: Formatter, bgMagenta: Formatter, bgCyan: Formatter, bgWhite: Formatter;
-  export const blackBright: Formatter,
-    redBright: Formatter,
-    greenBright: Formatter,
-    yellowBright: Formatter;
-  export const blueBright: Formatter,
-    magentaBright: Formatter,
-    cyanBright: Formatter,
-    whiteBright: Formatter;
-  export const bgBlackBright: Formatter,
-    bgRedBright: Formatter,
-    bgGreenBright: Formatter,
-    bgYellowBright: Formatter;
-  export const bgBlueBright: Formatter,
-    bgMagentaBright: Formatter,
-    bgCyanBright: Formatter,
-    bgWhiteBright: Formatter;
+  export const blackBright: Formatter, redBright: Formatter, greenBright: Formatter, yellowBright: Formatter;
+  export const blueBright: Formatter, magentaBright: Formatter, cyanBright: Formatter, whiteBright: Formatter;
+  export const bgBlackBright: Formatter, bgRedBright: Formatter, bgGreenBright: Formatter, bgYellowBright: Formatter;
+  export const bgBlueBright: Formatter, bgMagentaBright: Formatter, bgCyanBright: Formatter, bgWhiteBright: Formatter;
   const picocolors: Colors & { createColors: typeof createColors };
   export default picocolors;
 }
@@ -149,25 +130,14 @@ declare module "zlib-sync" {
   }
   export const ZLIB_VERSION: string;
   export const Z_NULL: 0;
-  export const Z_NO_FLUSH: number,
-    Z_PARTIAL_FLUSH: number,
-    Z_SYNC_FLUSH: number,
-    Z_FULL_FLUSH: number;
-  export const Z_FINISH: number,
-    Z_BLOCK: number,
-    Z_TREES: number,
-    Z_OK: number,
-    Z_STREAM_END: number;
+  export const Z_NO_FLUSH: number, Z_PARTIAL_FLUSH: number, Z_SYNC_FLUSH: number, Z_FULL_FLUSH: number;
+  export const Z_FINISH: number, Z_BLOCK: number, Z_TREES: number, Z_OK: number, Z_STREAM_END: number;
   export const Z_NEED_DICT: number, Z_ERRNO: number, Z_STREAM_ERROR: number, Z_DATA_ERROR: number;
   export const Z_MEM_ERROR: number, Z_BUF_ERROR: number, Z_VERSION_ERROR: number;
   export const Z_NO_COMPRESSION: number, Z_BEST_SPEED: number, Z_BEST_COMPRESSION: number;
   export const Z_DEFAULT_COMPRESSION: number, Z_FILTERED: number, Z_HUFFMAN_ONLY: number;
   export const Z_RLE: number, Z_FIXED: number, Z_DEFAULT_STRATEGY: number;
-  export const Z_BINARY: number,
-    Z_TEXT: number,
-    Z_ASCII: number,
-    Z_UNKNOWN: number,
-    Z_DEFLATED: number;
+  export const Z_BINARY: number, Z_TEXT: number, Z_ASCII: number, Z_UNKNOWN: number, Z_DEFLATED: number;
   const zlibSync: {
     Inflate: typeof Inflate;
     ZLIB_VERSION: typeof ZLIB_VERSION;

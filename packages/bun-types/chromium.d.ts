@@ -25,11 +25,7 @@ declare module "bun:chromium" {
     private constructor();
     readonly closed: boolean;
     /** Send a CDP command, optionally addressing a flattened target session. */
-    send<T = unknown>(
-      method: string,
-      params?: Record<string, unknown>,
-      sessionId?: string,
-    ): Promise<T>;
+    send<T = unknown>(method: string, params?: Record<string, unknown>, sessionId?: string): Promise<T>;
     /** Probe navigator.gpu in an attached secure target session. */
     gpu(sessionId: string): Promise<{
       available: boolean;
@@ -38,10 +34,7 @@ declare module "bun:chromium" {
       info: Record<string, unknown> | null;
     }>;
     /** Subscribe to a CDP event. Returns a function that removes the subscription. */
-    on(
-      method: string,
-      callback: (params: Record<string, unknown>, sessionId?: string) => void,
-    ): () => void;
+    on(method: string, callback: (params: Record<string, unknown>, sessionId?: string) => void): () => void;
     /** Close this connection. */
     close(): void;
   }

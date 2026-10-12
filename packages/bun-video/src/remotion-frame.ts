@@ -62,10 +62,9 @@ export async function captureNativeRemotionFrame(options: NativeFrameOptions): P
     }
   };
   await waitForReady();
-  await context.evaluate(
-    `window.remotion_setFrame(${options.frame}, ${JSON.stringify(options.composition)}, 0)`,
-    { signal },
-  );
+  await context.evaluate(`window.remotion_setFrame(${options.frame}, ${JSON.stringify(options.composition)}, 0)`, {
+    signal,
+  });
   await waitForReady();
   await context.evaluate("document.fonts.ready.then(() => true)", { signal });
   return context.screenshot({ signal });

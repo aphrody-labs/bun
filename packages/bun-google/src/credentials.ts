@@ -41,10 +41,7 @@ export function createAntigravityCredentialProvider(
       throw new Error("Google protected credential envelope unavailable");
     }
     const token = envelope?.token;
-    if (
-      typeof token?.access_token !== "string" ||
-      !/^[A-Za-z0-9._~+/-]+=*$/.test(token.access_token)
-    )
+    if (typeof token?.access_token !== "string" || !/^[A-Za-z0-9._~+/-]+=*$/.test(token.access_token))
       throw new Error("Google protected credential envelope unavailable");
     if (token.expiry !== undefined && token.expiry !== null) {
       const expiry =

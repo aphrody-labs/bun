@@ -63,12 +63,7 @@ export async function auditM3DesignTokens(
 ): Promise<M3TokenAuditResult> {
   let stylesMap: Record<string, string> = {};
 
-  if (
-    typeof input === "object" &&
-    input !== null &&
-    "content" in input &&
-    typeof input.content === "function"
-  ) {
+  if (typeof input === "object" && input !== null && "content" in input && typeof input.content === "function") {
     const html = await input.content();
     stylesMap = extractCssVariables(html);
   } else if (typeof input === "string") {
@@ -81,11 +76,11 @@ export async function auditM3DesignTokens(
   const violations: string[] = [];
 
   const categories = {
-    color: tokenNames.some((t) => t.startsWith("--md-sys-color-")),
-    shape: tokenNames.some((t) => t.startsWith("--md-sys-shape-")),
-    elevation: tokenNames.some((t) => t.startsWith("--md-sys-elevation-")),
-    motion: tokenNames.some((t) => t.startsWith("--md-sys-motion-")),
-    typescale: tokenNames.some((t) => t.startsWith("--md-sys-typescale-")),
+    color: tokenNames.some(t => t.startsWith("--md-sys-color-")),
+    shape: tokenNames.some(t => t.startsWith("--md-sys-shape-")),
+    elevation: tokenNames.some(t => t.startsWith("--md-sys-elevation-")),
+    motion: tokenNames.some(t => t.startsWith("--md-sys-motion-")),
+    typescale: tokenNames.some(t => t.startsWith("--md-sys-typescale-")),
   };
 
   const missingTokens: string[] = [];
@@ -105,9 +100,7 @@ export async function auditM3DesignTokens(
     if (prop.startsWith("--md-sys-shape-corner-")) {
       const cleanVal = val.trim();
       if (!M3_ALLOWED_SHAPE_RADII.has(cleanVal) && !cleanVal.includes("var(")) {
-        violations.push(
-          `Non-standard M3 shape radius for ${prop}: "${cleanVal}" (expected standard M3 scale)`,
-        );
+        violations.push(`Non-standard M3 shape radius for ${prop}: "${cleanVal}" (expected standard M3 scale)`);
       }
     }
   }
@@ -125,7 +118,7 @@ export async function auditM3DesignTokens(
     compliant,
     score,
     categories,
-    foundTokens: tokenNames.filter((t) => t.startsWith("--md-sys-")),
+    foundTokens: tokenNames.filter(t => t.startsWith("--md-sys-")),
     missingTokens,
     violations,
   };
@@ -190,11 +183,7 @@ const HYDRATION_ERROR_PATTERNS = [
  * Scans page logs, diagnostics, or HTML content for Next.js / React hydration errors.
  */
 export async function detectHydrationErrors(
-  input:
-    | string
-    | string[]
-    | { content(): Promise<string> }
-    | { jsErrors?: string[]; consoleErrors?: string[] },
+  input: string | string[] | { content(): Promise<string> } | { jsErrors?: string[]; consoleErrors?: string[] },
 ): Promise<HydrationCheckResult> {
   const textSnippets: string[] = [];
 
@@ -291,6 +280,6 @@ export async function benchmarkInstantNavigation(
     minMs,
     maxMs,
     cachedRendered: true,
-    timings: timings.map((t) => Math.round(t * 100) / 100),
+    timings: timings.map(t => Math.round(t * 100) / 100),
   };
 }

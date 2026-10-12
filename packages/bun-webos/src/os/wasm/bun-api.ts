@@ -18,8 +18,7 @@ export interface WebBunFile {
 }
 
 export function createBunApi(core: BunWasm, fs: Vfs, cwd = "/") {
-  const resolve = (path: string) =>
-    path.startsWith("/") ? path : `${cwd.replace(/\/$/, "")}/${path}`;
+  const resolve = (path: string) => (path.startsWith("/") ? path : `${cwd.replace(/\/$/, "")}/${path}`);
   const file = (path: string): WebBunFile => {
     const abs = resolve(path);
     return {
@@ -46,10 +45,7 @@ export function createBunApi(core: BunWasm, fs: Vfs, cwd = "/") {
     /** Not a public Bun API: Bun Shell's parser, exposed for the WebOS tools. */
     shellParse: core.shellParse,
     file,
-    async write(
-      target: string | WebBunFile,
-      data: string | Uint8Array | ArrayBuffer | WebBunFile,
-    ): Promise<number> {
+    async write(target: string | WebBunFile, data: string | Uint8Array | ArrayBuffer | WebBunFile): Promise<number> {
       const path = typeof target === "string" ? resolve(target) : target.name;
       const bytes =
         typeof data === "string"
@@ -62,7 +58,7 @@ export function createBunApi(core: BunWasm, fs: Vfs, cwd = "/") {
       await fs.write(path, bytes);
       return bytes.byteLength;
     },
-    sleep: (ms: number) => new Promise<void>((r) => setTimeout(r, ms)),
+    sleep: (ms: number) => new Promise<void>(r => setTimeout(r, ms)),
     nanoseconds: () => Math.round(performance.now() * 1e6),
     spawn: unsupported("spawn"),
     serve: unsupported("serve"),

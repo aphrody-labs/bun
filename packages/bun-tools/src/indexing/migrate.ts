@@ -28,26 +28,22 @@ function tableColumns(db: Database, table: string): Set<string> {
     db
       .query<{ name: string }, []>(`PRAGMA table_info("${table}")`)
       .all()
-      .map((row) => row.name),
+      .map(row => row.name),
   );
 }
 
 function requireColumns(columns: Set<string>, required: string[], table: string): void {
-  if (!required.every((column) => columns.has(column)))
-    throw new Error(`Unsupported legacy schema: ${table}`);
+  if (!required.every(column => columns.has(column))) throw new Error(`Unsupported legacy schema: ${table}`);
 }
 
 function integrity(db: Database): void {
   const rows = db.query<{ quick_check: string }, []>("PRAGMA quick_check").all();
-  if (rows.length !== 1 || rows[0]?.quick_check !== "ok")
-    throw new Error("Index database integrity check failed");
+  if (rows.length !== 1 || rows[0]?.quick_check !== "ok") throw new Error("Index database integrity check failed");
 }
 
 function databaseBytes(db: Database): number {
   const pageSize = Number(db.query<{ page_size: bigint }, []>("PRAGMA page_size").get()!.page_size);
-  const pageCount = Number(
-    db.query<{ page_count: bigint }, []>("PRAGMA page_count").get()!.page_count,
-  );
+  const pageCount = Number(db.query<{ page_count: bigint }, []>("PRAGMA page_count").get()!.page_count);
   return pageSize * pageCount;
 }
 
@@ -63,23 +59,14 @@ export async function migrateIndexDatabase(options: IndexMigrationOptions) {
     throw new Error("Source database exceeds size budget or is not a file");
   const requestedDestination = resolve(options.destinationDbPath);
   await mkdir(dirname(requestedDestination), { recursive: true });
-  const destinationPath = resolve(
-    await realpath(dirname(requestedDestination)),
-    basename(requestedDestination),
-  );
-  if (sourcePath.toLowerCase() === destinationPath.toLowerCase())
-    throw new Error("Source and destination must differ");
+  const destinationPath = resolve(await realpath(dirname(requestedDestination)), basename(requestedDestination));
+  if (sourcePath.toLowerCase() === destinationPath.toLowerCase()) throw new Error("Source and destination must differ");
   for (const suffix of ["", "-wal", "-shm", "-journal"]) {
-    const existing = await lstat(`${destinationPath}${suffix}`).catch(
-      (error: NodeJS.ErrnoException) => {
-        if (error.code === "ENOENT") return null;
-        throw error;
-      },
-    );
-    if (existing)
-      throw new Error(
-        "Destination or SQLite sidecar already exists; migration never overwrites it",
-      );
+    const existing = await lstat(`${destinationPath}${suffix}`).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") return null;
+      throw error;
+    });
+    if (existing) throw new Error("Destination or SQLite sidecar already exists; migration never overwrites it");
   }
   const reservation = await open(destinationPath, "wx");
   const identity = await reservation.stat();
@@ -90,8 +77,7 @@ export async function migrateIndexDatabase(options: IndexMigrationOptions) {
     using source = new Database(sourcePath, { readonly: true, strict: true, safeIntegers: true });
     source.exec("PRAGMA busy_timeout=30000;");
     integrity(source);
-    if (databaseBytes(source) > maxBytes)
-      throw new RangeError("Source database exceeds maxDatabaseBytes");
+    if (databaseBytes(source) > maxBytes) throw new RangeError("Source database exceeds maxDatabaseBytes");
     // VACUUM INTO owns a consistent read transaction and cannot run inside an explicit transaction.
     source.query("VACUUM main INTO ?").run(destinationPath);
     destination = new Database(destinationPath, {
@@ -99,9 +85,7 @@ export async function migrateIndexDatabase(options: IndexMigrationOptions) {
       strict: true,
       safeIntegers: true,
     });
-    destination.exec(
-      "PRAGMA busy_timeout=30000; PRAGMA journal_mode=DELETE; PRAGMA foreign_keys=OFF;",
-    );
+    destination.exec("PRAGMA busy_timeout=30000; PRAGMA journal_mode=DELETE; PRAGMA foreign_keys=OFF;");
     integrity(destination);
     const tables = destination
       .query<Table, []>(
@@ -109,16 +93,13 @@ export async function migrateIndexDatabase(options: IndexMigrationOptions) {
       )
       .all();
     if (tables.length > 1_024) throw new RangeError("Index migration exceeds table count budget");
-    const knownTables = new Set(tables.map((table) => table.name));
-    const preserved = tables.filter((table) => !metadataTables.has(table.name));
+    const knownTables = new Set(tables.map(table => table.name));
+    const preserved = tables.filter(table => !metadataTables.has(table.name));
     const counts = new Map<string, number>();
     let rowCount = 0;
     for (const table of tables) {
-      if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(table.name))
-        throw new Error("Unsupported noncanonical table name");
-      const count = Number(
-        destination.query<{ n: bigint }, []>(`SELECT COUNT(*) AS n FROM "${table.name}"`).get()!.n,
-      );
+      if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(table.name)) throw new Error("Unsupported noncanonical table name");
+      const count = Number(destination.query<{ n: bigint }, []>(`SELECT COUNT(*) AS n FROM "${table.name}"`).get()!.n);
       rowCount += count;
       counts.set(table.name, count);
       if (rowCount > maxRows) throw new RangeError("Index migration exceeds maxRows");
@@ -129,17 +110,13 @@ export async function migrateIndexDatabase(options: IndexMigrationOptions) {
     const db = destination;
     const archive = (table: string) => {
       const dependents = db
-        .query<{ name: string; sql: string }, []>(
-          "SELECT name,sql FROM sqlite_master WHERE type IN ('view','trigger')",
-        )
+        .query<{ name: string; sql: string }, []>("SELECT name,sql FROM sqlite_master WHERE type IN ('view','trigger')")
         .all();
-      if (dependents.some((item) => new RegExp(`\\b${table}\\b`, "i").test(item.sql)))
+      if (dependents.some(item => new RegExp(`\\b${table}\\b`, "i").test(item.sql)))
         throw new Error(`Metadata views or triggers cannot be migrated automatically: ${table}`);
       for (const other of tables) {
-        const foreignKeys = db
-          .query<{ table: string }, []>(`PRAGMA foreign_key_list("${other.name}")`)
-          .all();
-        if (foreignKeys.some((key) => key.table === table))
+        const foreignKeys = db.query<{ table: string }, []>(`PRAGMA foreign_key_list("${other.name}")`).all();
+        if (foreignKeys.some(key => key.table === table))
           throw new Error(`Foreign keys reference legacy metadata: ${table}`);
       }
       const name = `legacy_archive_${table}`;
@@ -147,11 +124,8 @@ export async function migrateIndexDatabase(options: IndexMigrationOptions) {
       archives.push(name);
     };
     const assertSameCount = (original: string, converted: string) => {
-      const count = Number(
-        db.query<{ n: bigint }, []>(`SELECT COUNT(*) AS n FROM "${converted}"`).get()!.n,
-      );
-      if (count !== counts.get(original))
-        throw new Error(`Migration row count differs: ${original}`);
+      const count = Number(db.query<{ n: bigint }, []>(`SELECT COUNT(*) AS n FROM "${converted}"`).get()!.n);
+      if (count !== counts.get(original)) throw new Error(`Migration row count differs: ${original}`);
     };
     db.transaction(() => {
       if (knownTables.has("ntfs_volumes")) {
@@ -237,17 +211,7 @@ export async function migrateIndexDatabase(options: IndexMigrationOptions) {
       if (knownTables.has("ntfs_journal_events")) {
         requireColumns(
           tableColumns(db, "ntfs_journal_events"),
-          [
-            "volume_id",
-            "journal_id",
-            "usn",
-            "record",
-            "parent_record",
-            "timestamp",
-            "reason",
-            "attributes",
-            "name",
-          ],
+          ["volume_id", "journal_id", "usn", "record", "parent_record", "timestamp", "reason", "attributes", "name"],
           "ntfs_journal_events",
         );
         archive("ntfs_journal_events");
@@ -346,15 +310,7 @@ export async function migrateIndexDatabase(options: IndexMigrationOptions) {
         if (columns.has("metadata_json"))
           requireColumns(
             columns,
-            [
-              "root",
-              "source_path",
-              "ordinal",
-              "module",
-              "resolved_path",
-              "status",
-              "metadata_json",
-            ],
+            ["root", "source_path", "ordinal", "module", "resolved_path", "status", "metadata_json"],
             "pe_import_edges",
           );
         else {
@@ -394,8 +350,7 @@ export async function migrateIndexDatabase(options: IndexMigrationOptions) {
         }
       }
       if (knownTables.has("omar_resources")) {
-        if (knownTables.has("resources"))
-          throw new Error("Both legacy and generic resource catalogs exist");
+        if (knownTables.has("resources")) throw new Error("Both legacy and generic resource catalogs exist");
         requireColumns(
           tableColumns(db, "omar_resources"),
           ["id", "kind", "name", "canonical_path", "metadata_json", "updated_at"],
@@ -409,15 +364,12 @@ export async function migrateIndexDatabase(options: IndexMigrationOptions) {
       }
       for (const table of preserved) {
         const sql = db
-          .query<{ sql: string }, [string]>(
-            "SELECT sql FROM sqlite_master WHERE type='table' AND name=?",
-          )
+          .query<{ sql: string }, [string]>("SELECT sql FROM sqlite_master WHERE type='table' AND name=?")
           .get(table.name)?.sql;
         if (sql !== table.sql) throw new Error(`Preserved table schema changed: ${table.name}`);
         assertSameCount(table.name, table.name);
       }
-      if (databaseBytes(db) > maxBytes)
-        throw new RangeError("Migrated database exceeds maxDatabaseBytes");
+      if (databaseBytes(db) > maxBytes) throw new RangeError("Migrated database exceeds maxDatabaseBytes");
       db.exec(
         `CREATE TABLE IF NOT EXISTS index_migrations(id TEXT PRIMARY KEY,metadata_json TEXT NOT NULL CHECK(json_valid(metadata_json))) STRICT`,
       );
@@ -432,12 +384,10 @@ export async function migrateIndexDatabase(options: IndexMigrationOptions) {
           sourceTableRows: Object.fromEntries(counts),
         }),
       );
-      if (databaseBytes(db) > maxBytes)
-        throw new RangeError("Migration receipt exceeds maxDatabaseBytes");
+      if (databaseBytes(db) > maxBytes) throw new RangeError("Migration receipt exceeds maxDatabaseBytes");
     }).immediate();
     integrity(db);
-    if (db.query("PRAGMA foreign_key_check").get())
-      throw new Error("Migrated database has foreign key violations");
+    if (db.query("PRAGMA foreign_key_check").get()) throw new Error("Migrated database has foreign key violations");
     const bytes = databaseBytes(db);
     destination.close();
     destination = undefined;
@@ -448,7 +398,7 @@ export async function migrateIndexDatabase(options: IndexMigrationOptions) {
       bytes,
       sourceRows: rowCount,
       archivedTables: archives,
-      preservedTables: preserved.map((table) => table.name),
+      preservedTables: preserved.map(table => table.name),
       integrity: "ok" as const,
     };
   } finally {
@@ -457,12 +407,7 @@ export async function migrateIndexDatabase(options: IndexMigrationOptions) {
     } finally {
       if (!complete) {
         const owned = await lstat(destinationPath).catch(() => null);
-        if (
-          owned &&
-          !owned.isSymbolicLink() &&
-          owned.dev === identity.dev &&
-          owned.ino === identity.ino
-        ) {
+        if (owned && !owned.isSymbolicLink() && owned.dev === identity.dev && owned.ino === identity.ino) {
           for (const suffix of ["-journal", "-wal", "-shm", ""])
             await unlink(`${destinationPath}${suffix}`).catch((error: NodeJS.ErrnoException) => {
               if (error.code !== "ENOENT") throw error;

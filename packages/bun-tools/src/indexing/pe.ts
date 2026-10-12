@@ -94,8 +94,7 @@ export async function scanPe(options: PeScanOptions): Promise<PeScanResult> {
         directories.push(candidate);
         continue;
       }
-      if (!entry.isFile() || ![".exe", ".dll"].includes(extname(entry.name).toLowerCase()))
-        continue;
+      if (!entry.isFile() || ![".exe", ".dll"].includes(extname(entry.name).toLowerCase())) continue;
       if (++candidates > maxFiles) throw new RangeError("PE scan exceeds maxFiles");
       try {
         const stat = await lstat(candidate);
@@ -149,9 +148,7 @@ export function resolvePeImports(
   artifacts: PeArtifact[],
   apiSets: ReadonlyMap<string, readonly string[]> = new Map(),
 ): PeImportEdge[] {
-  const normalizedSets = new Map(
-    [...apiSets].map(([key, hosts]) => [key.toLowerCase().replace(/\.dll$/i, ""), hosts]),
-  );
+  const normalizedSets = new Map([...apiSets].map(([key, hosts]) => [key.toLowerCase().replace(/\.dll$/i, ""), hosts]));
   const modules = new Map<string, string[]>();
   for (const artifact of artifacts) {
     const key = basename(artifact.path.replaceAll("\\", "/")).toLowerCase();
@@ -168,10 +165,7 @@ export function resolvePeImports(
       const candidates = [
         ...new Set(
           (hosts ?? []).flatMap(
-            (host) =>
-              modules.get(
-                /\.dll$/i.test(host) ? host.toLowerCase() : `${host.toLowerCase()}.dll`,
-              ) ?? [],
+            host => modules.get(/\.dll$/i.test(host) ? host.toLowerCase() : `${host.toLowerCase()}.dll`) ?? [],
           ),
         ),
       ];
@@ -196,10 +190,7 @@ export function resolvePeImports(
   return edges;
 }
 
-export async function parseApiSetFile(
-  path: string,
-  maxBytes = 64 << 20,
-): Promise<Map<string, string[]>> {
+export async function parseApiSetFile(path: string, maxBytes = 64 << 20): Promise<Map<string, string[]>> {
   absolutePath("apiSetPath", path);
   positiveInteger("maxBytes", maxBytes);
   if (Bun.file(path).size > maxBytes) throw new RangeError("API set schema exceeds maxBytes");
@@ -208,16 +199,9 @@ export async function parseApiSetFile(
   const { default: windows } = await import("bun:windows");
   const metadata = windows.pe.parse(bytes, path);
   const section = metadata?.sections.find((item: { name: string }) => item.name === ".apiset");
-  if (
-    !section ||
-    section.rawOffset < 0 ||
-    section.rawSize < 0 ||
-    section.rawOffset + section.rawSize > bytes.length
-  )
+  if (!section || section.rawOffset < 0 || section.rawSize < 0 || section.rawOffset + section.rawSize > bytes.length)
     throw new Error("API set schema has no valid .apiset section");
-  return windows.pe.parseApiSetSchema(
-    bytes.subarray(section.rawOffset, section.rawOffset + section.rawSize),
-  );
+  return windows.pe.parseApiSetSchema(bytes.subarray(section.rawOffset, section.rawOffset + section.rawSize));
 }
 
 /** A complete scan replaces its root atomically; incomplete scans require explicit opt-in and do not prune. */
@@ -250,10 +234,7 @@ export async function persistPe(options: {
       db.query("DELETE FROM pe_import_edges WHERE root=?").run(options.scan.root);
     } else {
       for (const row of options.scan.artifacts)
-        db.query("DELETE FROM pe_import_edges WHERE root=? AND source_path=?").run(
-          options.scan.root,
-          row.path,
-        );
+        db.query("DELETE FROM pe_import_edges WHERE root=? AND source_path=?").run(options.scan.root, row.path);
     }
     for (const row of options.scan.artifacts)
       artifact.run(
@@ -262,25 +243,15 @@ export async function persistPe(options: {
         row.relativePath,
         row.bytes,
         row.sha256,
-        JSON.stringify(row.metadata, (_key, value) =>
-          typeof value === "bigint" ? String(value) : value,
-        ),
+        JSON.stringify(row.metadata, (_key, value) => (typeof value === "bigint" ? String(value) : value)),
       );
     for (const row of edges)
-      edge.run(
-        options.scan.root,
-        row.source,
-        row.ordinal,
-        row.module,
-        row.resolved,
-        row.status,
-        JSON.stringify(row),
-      );
+      edge.run(options.scan.root, row.source, row.ordinal, row.module, row.resolved, row.status, JSON.stringify(row));
   }).immediate();
   return {
     artifacts: options.scan.artifacts.length,
     edges: edges.length,
-    resolved: edges.filter((row) => row.status === "resolved").length,
+    resolved: edges.filter(row => row.status === "resolved").length,
     complete: options.scan.complete,
   };
 }
@@ -352,8 +323,7 @@ export async function readFileAliases(path: string): Promise<FileAliases> {
             declaredLinks,
             paths,
           };
-        if (code !== 234 || capacity >= 1_048_576)
-          throw new Error(`FindNextFileNameW failed: ${code}`);
+        if (code !== 234 || capacity >= 1_048_576) throw new Error(`FindNextFileNameW failed: ${code}`);
         capacity = Math.min(1_048_576, Math.max(capacity * 2, length.readUInt32LE(0)));
         names = Buffer.alloc(capacity * 2);
       }

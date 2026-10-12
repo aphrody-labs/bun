@@ -24,10 +24,7 @@ async function cf<T>(token: string, method: string, path: string, body?: unknown
     result: T;
     errors: { code: number; message: string }[];
   };
-  if (!json.success)
-    throw new Error(
-      `${method} ${path}: ${json.errors.map((e) => `${e.code} ${e.message}`).join("; ")}`,
-    );
+  if (!json.success) throw new Error(`${method} ${path}: ${json.errors.map(e => `${e.code} ${e.message}`).join("; ")}`);
   return json.result;
 }
 
@@ -49,61 +46,42 @@ export function policies(groups: Group[], accountId: string) {
       effect: "allow",
       resources: res,
       permission_groups: groups
-        .filter((g) => g.is_selectable !== false && g.scopes.includes(scope))
-        .map((g) => ({ id: g.id })),
+        .filter(g => g.is_selectable !== false && g.scopes.includes(scope))
+        .map(g => ({ id: g.id })),
     }))
-    .filter((p) => p.permission_groups.length > 0);
+    .filter(p => p.permission_groups.length > 0);
 }
 
 function upsert(text: string, key: string, value: string): string {
-  const lines = text.split(/\r?\n/).filter((line) => line !== "");
-  const i = lines.findIndex((line) => line.startsWith(`${key}=`));
+  const lines = text.split(/\r?\n/).filter(line => line !== "");
+  const i = lines.findIndex(line => line.startsWith(`${key}=`));
   if (i >= 0) lines[i] = `${key}=${value}`;
   else lines.push(`${key}=${value}`);
   return lines.join("\n") + "\n";
 }
 
 if (import.meta.main) {
-  const env = { ...parseEnv(await Bun.file(envFile()).text()), ...process.env } as Record<
-    string,
-    string
-  >;
+  const env = { ...parseEnv(await Bun.file(envFile()).text()), ...process.env } as Record<string, string>;
   const account = env.CLOUDFLARE_ACCOUNT_ID;
   const bootstrap = env.CLOUDFLARE_BOOTSTRAP_TOKEN;
-  if (!account || !bootstrap)
-    throw new Error("CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_BOOTSTRAP_TOKEN are required");
-  const groups = await cf<Group[]>(
-    bootstrap,
-    "GET",
-    `/accounts/${account}/tokens/permission_groups?per_page=1000`,
-  );
+  if (!account || !bootstrap) throw new Error("CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_BOOTSTRAP_TOKEN are required");
+  const groups = await cf<Group[]>(bootstrap, "GET", `/accounts/${account}/tokens/permission_groups?per_page=1000`);
   const existing = await cf<{ id: string; name: string }[]>(
     bootstrap,
     "GET",
     `/accounts/${account}/tokens?per_page=100`,
   );
-  for (const old of existing.filter((t) => t.name === NAME))
+  for (const old of existing.filter(t => t.name === NAME))
     await cf(bootstrap, "DELETE", `/accounts/${account}/tokens/${old.id}`);
-  const created = await cf<{ id: string; value: string }>(
-    bootstrap,
-    "POST",
-    `/accounts/${account}/tokens`,
-    {
-      name: NAME,
-      policies: policies(groups, account),
-    },
-  );
+  const created = await cf<{ id: string; value: string }>(bootstrap, "POST", `/accounts/${account}/tokens`, {
+    name: NAME,
+    policies: policies(groups, account),
+  });
   await cf(created.value, "GET", `/accounts/${account}/tokens/verify`);
 
-  const stores = [
-    join(import.meta.dir, "..", ".env"),
-    join(homedir(), ".aphrody", "config", "cloudflare.env"),
-  ];
+  const stores = [join(import.meta.dir, "..", ".env"), join(homedir(), ".aphrody", "config", "cloudflare.env")];
   for (const store of stores.filter(existsSync))
-    await Bun.write(
-      store,
-      upsert(await Bun.file(store).text(), "CLOUDFLARE_API_TOKEN", created.value),
-    );
+    await Bun.write(store, upsert(await Bun.file(store).text(), "CLOUDFLARE_API_TOKEN", created.value));
   if (!process.argv.includes("--no-vps")) {
     const keyStore = stores[1];
     const ssh = Bun.spawn({

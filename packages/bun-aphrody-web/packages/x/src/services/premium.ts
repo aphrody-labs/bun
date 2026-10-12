@@ -83,10 +83,7 @@ export async function fetchPremiumBundle(
 }
 
 /** Variable templates for full Premium GraphQL coverage (see scripts/tools/web/x-premium-dump.ts). */
-export function premiumGraphqlVariables(
-  handle: string,
-  userId: string,
-): Record<string, Record<string, unknown>> {
+export function premiumGraphqlVariables(handle: string, userId: string): Record<string, Record<string, unknown>> {
   return local("premium_variables", { handle, user_id: userId });
 }
 

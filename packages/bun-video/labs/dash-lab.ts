@@ -17,14 +17,12 @@ export function prepareCapturedDash(xml: string, baseURL: string, localRoot: str
   const summary = inspectDashManifest(xml);
   if (
     summary.segmentTemplateCount ||
-    /<(?:\w+:)?(?:SegmentList|Location|PatchLocation|UTCTiming|ContentSteering|Laurl|License)\b/i.test(
-      xml,
-    )
+    /<(?:\w+:)?(?:SegmentList|Location|PatchLocation|UTCTiming|ContentSteering|Laurl|License)\b/i.test(xml)
   )
     throw new Error("This offline dashboard supports captured BaseURL/SegmentBase MPDs only.");
   const resources: string[] = [];
   const decode = (text: string) =>
-    text.replace(/&(?:amp|quot|apos|lt|gt|#\d+|#x[\da-f]+);/gi, (value) => {
+    text.replace(/&(?:amp|quot|apos|lt|gt|#\d+|#x[\da-f]+);/gi, value => {
       const named: Record<string, string> = {
         "&amp;": "&",
         "&quot;": '"',
@@ -36,24 +34,15 @@ export function prepareCapturedDash(xml: string, baseURL: string, localRoot: str
       const hex = /^&#x/i.test(value);
       return String.fromCodePoint(Number.parseInt(value.slice(hex ? 3 : 2, -1), hex ? 16 : 10));
     });
-  const rewritten = xml.replace(
-    /<((?:\w+:)?BaseURL)\b[^>]*>([^<]*)<\/\1\s*>/g,
-    (_all, name: string, body: string) => {
-      const decoded = decode(body.trim());
-      if (!/^https?:\/\//i.test(decoded))
-        throw new Error("Offline replay requires absolute captured BaseURLs.");
-      const url = new URL(decoded, baseURL);
-      if (
-        !/^https?:$/.test(url.protocol) ||
-        url.username ||
-        url.password ||
-        url.pathname.endsWith("/")
-      )
-        throw new Error("Unsupported captured media BaseURL.");
-      const index = resources.push(url.href) - 1;
-      return `<${name}>${localRoot}media/${index}</${name}>`;
-    },
-  );
+  const rewritten = xml.replace(/<((?:\w+:)?BaseURL)\b[^>]*>([^<]*)<\/\1\s*>/g, (_all, name: string, body: string) => {
+    const decoded = decode(body.trim());
+    if (!/^https?:\/\//i.test(decoded)) throw new Error("Offline replay requires absolute captured BaseURLs.");
+    const url = new URL(decoded, baseURL);
+    if (!/^https?:$/.test(url.protocol) || url.username || url.password || url.pathname.endsWith("/"))
+      throw new Error("Unsupported captured media BaseURL.");
+    const index = resources.push(url.href) - 1;
+    return `<${name}>${localRoot}media/${index}</${name}>`;
+  });
   if (!resources.length) throw new Error("Captured DASH manifest has no replayable BaseURL.");
   const withoutNamespaces = rewritten.replace(/\sxmlns(?::[\w-]+)?\s*=\s*(["']).*?\1/g, "");
   if (
@@ -68,8 +57,7 @@ export async function startDashLab(inputPath: string, mode: "capture" | "live" =
   const capture = mode === "capture" ? await loadHarCapture(resolve(inputPath)) : null;
   const descriptor = capture?.selectManifest({ kind: "dash" });
   if (capture && !descriptor) throw new Error("No captured DASH manifest is available.");
-  const live =
-    mode === "live" ? createDashLiveTransport(await readPrivateLiveConfig(inputPath)) : null;
+  const live = mode === "live" ? createDashLiveTransport(await readPrivateLiveConfig(inputPath)) : null;
   const source = live ? await live.fetchSource() : null;
   const capability = crypto.randomUUID();
   const route = `/lab/${capability}/`;
@@ -92,14 +80,10 @@ export async function startDashLab(inputPath: string, mode: "capture" | "live" =
     port: 0,
     async fetch(request) {
       const url = new URL(request.url);
-      if (url.origin !== serverOrigin || !url.pathname.startsWith(route))
-        return new Response(null, { status: 404 });
+      if (url.origin !== serverOrigin || !url.pathname.startsWith(route)) return new Response(null, { status: 404 });
       const relative = url.pathname.slice(route.length);
       const headers = { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" };
-      if (
-        request.method !== "GET" &&
-        !(live && relative.startsWith("live/") && request.method === "HEAD")
-      )
+      if (request.method !== "GET" && !(live && relative.startsWith("live/") && request.method === "HEAD"))
         return new Response(null, { status: 405 });
       if (!relative)
         return new Response(html, {
@@ -232,7 +216,7 @@ export async function main() {
       const manifest = await live.rewriteDashManifest(
         source.text,
         source.baseURL,
-        (token) => `http://127.0.0.1/lab/check/live/${token}`,
+        token => `http://127.0.0.1/lab/check/live/${token}`,
       );
       console.log(
         JSON.stringify({
@@ -253,10 +237,7 @@ export async function main() {
         }),
       );
       if (args.includes("--open")) {
-        const chrome = resolve(
-          process.env.PROGRAMFILES ?? "C:/Program Files",
-          "Google/Chrome/Application/chrome.exe",
-        );
+        const chrome = resolve(process.env.PROGRAMFILES ?? "C:/Program Files", "Google/Chrome/Application/chrome.exe");
         if (await Bun.file(chrome).exists())
           Bun.spawn([chrome, lab.url], { stdout: "ignore", stderr: "ignore" }).unref();
       }
@@ -265,8 +246,7 @@ export async function main() {
     }
   } else {
     const index = args.indexOf("--har");
-    const input =
-      index < 0 ? resolve(process.cwd(), "tmp/test/www.crunchyroll.com.har") : args[index + 1];
+    const input = index < 0 ? resolve(process.cwd(), "tmp/test/www.crunchyroll.com.har") : args[index + 1];
     if (!input) throw new Error("--har requires a file path.");
     if (args.includes("--check")) {
       const capture = await loadHarCapture(resolve(input));
@@ -290,10 +270,7 @@ export async function main() {
       const lab = await startDashLab(input);
       console.log(JSON.stringify({ url: lab.url, summary: lab.summary, playbackValidated: false }));
       if (args.includes("--open")) {
-        const chrome = resolve(
-          process.env.PROGRAMFILES ?? "C:/Program Files",
-          "Google/Chrome/Application/chrome.exe",
-        );
+        const chrome = resolve(process.env.PROGRAMFILES ?? "C:/Program Files", "Google/Chrome/Application/chrome.exe");
         if (await Bun.file(chrome).exists())
           Bun.spawn([chrome, lab.url], { stdout: "ignore", stderr: "ignore" }).unref();
       }
@@ -305,8 +282,6 @@ export async function main() {
 
 if (import.meta.main)
   main().catch(() => {
-    console.error(
-      "Video lab failed; check private inputs and options. Captured values are omitted.",
-    );
+    console.error("Video lab failed; check private inputs and options. Captured values are omitted.");
     process.exitCode = 1;
   });

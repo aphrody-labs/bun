@@ -104,51 +104,35 @@ export const videoTools = [
 ] as const;
 
 function finite(value: unknown, key: string): number {
-  if (typeof value !== "number" || !Number.isFinite(value))
-    throw new TypeError(`${key} must be finite`);
+  if (typeof value !== "number" || !Number.isFinite(value)) throw new TypeError(`${key} must be finite`);
   return value;
 }
 
-export async function callVideoTool(
-  name: string,
-  args: Record<string, unknown> = {},
-  signal?: AbortSignal,
-) {
+export async function callVideoTool(name: string, args: Record<string, unknown> = {}, signal?: AbortSignal) {
   signal?.throwIfAborted();
-  const definition = videoTools.find((tool) => tool.name === name);
+  const definition = videoTools.find(tool => tool.name === name);
   if (!definition) throw new Error(`Unknown video tool: ${name}`);
-  if (!args || typeof args !== "object" || Array.isArray(args))
-    throw new TypeError("Tool arguments must be an object");
-  const properties =
-    "properties" in definition.inputSchema ? definition.inputSchema.properties : {};
-  if (Object.keys(args).some((key) => !Object.hasOwn(properties, key)))
-    throw new TypeError("Unknown tool argument");
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new TypeError("Tool arguments must be an object");
+  const properties = "properties" in definition.inputSchema ? definition.inputSchema.properties : {};
+  if (Object.keys(args).some(key => !Object.hasOwn(properties, key))) throw new TypeError("Unknown tool argument");
   let result: unknown;
   if (name === "video_encode") {
-    if (
-      !args.plan ||
-      typeof args.plan !== "object" ||
-      Array.isArray(args.plan) ||
-      typeof args.output !== "string"
-    )
+    if (!args.plan || typeof args.plan !== "object" || Array.isArray(args.plan) || typeof args.output !== "string")
       throw new TypeError("Frame plan object and absolute output required");
     const plan = args.plan as Record<string, unknown>;
-    if (Object.keys(plan).some((key) => !Object.hasOwn(framePlanSchema.properties, key)))
+    if (Object.keys(plan).some(key => !Object.hasOwn(framePlanSchema.properties, key)))
       throw new TypeError("Unknown frame plan property");
     const fps = plan.fps as Record<string, unknown> | undefined;
     if (
       !fps ||
       typeof fps !== "object" ||
       Array.isArray(fps) ||
-      Object.keys(fps).some((key) => key !== "num" && key !== "den")
+      Object.keys(fps).some(key => key !== "num" && key !== "den")
     )
       throw new TypeError("Rational FPS object required");
     const num = finite(fps.num, "fps.num"),
       den = finite(fps.den, "fps.den");
-    if (
-      ![num, den].every((value) => Number.isInteger(value) && value > 0 && value <= 4294967295) ||
-      num / den > 240
-    )
+    if (![num, den].every(value => Number.isInteger(value) && value > 0 && value <= 4294967295) || num / den > 240)
       throw new RangeError("FPS must use positive u32 components and be at most 240");
     if (
       (plan.allowPrivateNetwork !== undefined && typeof plan.allowPrivateNetwork !== "boolean") ||
@@ -163,14 +147,11 @@ export async function callVideoTool(
       signal,
     );
   } else if (name === "video_capabilities") {
-    result = await import("./capabilities").then((mod) => mod.capabilities());
+    result = await import("./capabilities").then(mod => mod.capabilities());
   } else if (name === "video_browser_task") {
-    if (
-      typeof args.url !== "string" ||
-      (args.screenshot !== undefined && typeof args.screenshot !== "boolean")
-    )
+    if (typeof args.url !== "string" || (args.screenshot !== undefined && typeof args.screenshot !== "boolean"))
       throw new TypeError("URL string and screenshot boolean required");
-    result = await import("./computer").then((mod) =>
+    result = await import("./computer").then(mod =>
       mod.runBrowserTask(
         {
           url: args.url as string,
@@ -192,8 +173,8 @@ export async function callVideoTool(
       inputRange.length > 1024
     )
       throw new RangeError("Ranges must have equal lengths in 2..1024");
-    inputRange.forEach((value) => finite(value, "inputRange"));
-    outputRange.forEach((value) => finite(value, "outputRange"));
+    inputRange.forEach(value => finite(value, "inputRange"));
+    outputRange.forEach(value => finite(value, "outputRange"));
     result = {
       value: interpolate(finite(args.frame, "frame"), inputRange, outputRange, {
         extrapolateLeft: "clamp",
@@ -205,14 +186,7 @@ export async function callVideoTool(
       stiffness = finite(args.stiffness, "stiffness"),
       damping = finite(args.damping, "damping");
     const steps = args.steps === undefined ? 120 : finite(args.steps, "steps");
-    if (
-      mass <= 0 ||
-      stiffness <= 0 ||
-      damping <= 0 ||
-      !Number.isInteger(steps) ||
-      steps < 1 ||
-      steps > 4096
-    )
+    if (mass <= 0 || stiffness <= 0 || damping <= 0 || !Number.isInteger(steps) || steps < 1 || steps > 4096)
       throw new RangeError("Positive spring parameters and integer steps 1..4096 required");
     result = { path: generateSpringEaseData(mass, stiffness, damping, steps) };
   }
@@ -229,8 +203,7 @@ export function registerVideoTools(
     handler: (args: Record<string, unknown>, signal?: AbortSignal) => Promise<unknown>,
   ) => void,
 ) {
-  for (const tool of videoTools)
-    register(tool, (args, signal) => callVideoTool(tool.name, args, signal));
+  for (const tool of videoTools) register(tool, (args, signal) => callVideoTool(tool.name, args, signal));
 }
 
 export async function serveMcp() {
@@ -276,9 +249,7 @@ export async function serveMcp() {
       initialized = true;
       const requested = request.params?.protocolVersion;
       result = {
-        protocolVersion: ["2025-11-25", "2025-06-18", "2024-11-05"].includes(requested)
-          ? requested
-          : "2025-11-25",
+        protocolVersion: ["2025-11-25", "2025-06-18", "2024-11-05"].includes(requested) ? requested : "2025-11-25",
         capabilities: { tools: {} },
         serverInfo: { name: "bun-video", version: "0.1.0" },
       };
@@ -294,9 +265,7 @@ export async function serveMcp() {
           id,
           error: {
             code: -32000,
-            message: active.has(id)
-              ? "Duplicate active request id"
-              : "At most 16 active tool calls are permitted",
+            message: active.has(id) ? "Duplicate active request id" : "At most 16 active tool calls are permitted",
           },
         });
         continue;
@@ -306,11 +275,7 @@ export async function serveMcp() {
       const task = (async () => {
         let toolResult: unknown;
         try {
-          toolResult = await callVideoTool(
-            request.params?.name,
-            request.params?.arguments,
-            controller.signal,
-          );
+          toolResult = await callVideoTool(request.params?.name, request.params?.arguments, controller.signal);
           controller.signal.throwIfAborted();
         } catch (error) {
           toolResult = { isError: true, content: [{ type: "text", text: String(error) }] };

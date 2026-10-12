@@ -56,9 +56,7 @@ function activityBuckets(tweets: Tweet[], days = 3): RadarActivityBucket[] {
     const day = tweetDay(t);
     counts.set(day, (counts.get(day) ?? 0) + 1);
   }
-  return [...counts.entries()]
-    .map(([day, count]) => ({ day, count }))
-    .toSorted((a, b) => a.day.localeCompare(b.day));
+  return [...counts.entries()].map(([day, count]) => ({ day, count })).toSorted((a, b) => a.day.localeCompare(b.day));
 }
 
 function computeMetrics(query: string, tweets: Tweet[]): RadarMetrics {
@@ -69,9 +67,7 @@ function computeMetrics(query: string, tweets: Tweet[]): RadarMetrics {
     totalRts += t.retweet_count ?? 0;
   }
   const n = tweets.length || 1;
-  const top = [...tweets]
-    .toSorted((a, b) => (b.like_count ?? 0) - (a.like_count ?? 0))
-    .slice(0, 10);
+  const top = [...tweets].toSorted((a, b) => (b.like_count ?? 0) - (a.like_count ?? 0)).slice(0, 10);
   return {
     query,
     tweet_count: tweets.length,
@@ -90,14 +86,9 @@ export async function radarSearch(
   rawQuery: string,
   opts: RadarSearchOptions = {},
 ): Promise<TweetPage> {
-  return client.search(
-    rawQuery,
-    opts.count ?? 40,
-    opts.cursor,
-    opts.product ?? "Latest",
-    opts.quoteDepth ?? 0,
-    { querySource: opts.querySource ?? RADAR_QUERY_SOURCE },
-  );
+  return client.search(rawQuery, opts.count ?? 40, opts.cursor, opts.product ?? "Latest", opts.quoteDepth ?? 0, {
+    querySource: opts.querySource ?? RADAR_QUERY_SOURCE,
+  });
 }
 
 export async function radarSearchAll(

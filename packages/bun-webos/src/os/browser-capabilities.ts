@@ -89,15 +89,14 @@ export function browserCapabilityAvailable(id: BrowserCapability): boolean {
 export async function requestBrowserCapability(id: BrowserCapability): Promise<string> {
   if (!globalThis.isSecureContext) throw new Error("Ouvrez le site en HTTPS ou sur localhost.");
   if (!navigator.userActivation?.isActive) throw new Error("Cliquez sur la capacité à autoriser.");
-  if (!browserCapabilityAvailable(id))
-    throw new Error("Cette capacité est indisponible dans ce navigateur.");
+  if (!browserCapabilityAvailable(id)) throw new Error("Cette capacité est indisponible dans ce navigateur.");
   const extra = navigator as Navigator & BrowserExtensions;
   const picker = window as Window & FilePickerWindow;
   switch (id) {
     case "files": {
       const handles = await picker.showOpenFilePicker!({ multiple: true });
       if (handles.length > 8) throw new Error("Import limité à huit fichiers par opération.");
-      const files = await Promise.all(handles.map((handle) => handle.getFile()));
+      const files = await Promise.all(handles.map(handle => handle.getFile()));
       if (files.reduce((sum, file) => sum + file.size, 0) > 16 * 1024 * 1024)
         throw new Error("Import limité à 16 Mio par opération.");
       const root = await (
@@ -141,7 +140,7 @@ export async function requestBrowserCapability(id: BrowserCapability): Promise<s
     case "location":
       return new Promise((resolve, reject) =>
         navigator.geolocation.getCurrentPosition(
-          (position) =>
+          position =>
             resolve(
               `${position.coords.latitude.toFixed(5)}, ${position.coords.longitude.toFixed(5)} (±${Math.round(position.coords.accuracy)} m)`,
             ),

@@ -280,12 +280,7 @@ export async function collectFollowing(
   opts: PurgeOptions = {},
 ): Promise<CollectResult> {
   const size = opts.pageSize ?? DEFAULTS.pageSize;
-  return collectUsers(
-    client,
-    (cursor) => client.following(userId, size, cursor),
-    opts,
-    "following",
-  );
+  return collectUsers(client, cursor => client.following(userId, size, cursor), opts, "following");
 }
 
 /** Walks the full `Followers` timeline. */
@@ -295,12 +290,7 @@ export async function collectFollowers(
   opts: PurgeOptions = {},
 ): Promise<CollectResult> {
   const size = opts.pageSize ?? DEFAULTS.pageSize;
-  return collectUsers(
-    client,
-    (cursor) => client.followers(userId, size, cursor),
-    opts,
-    "followers",
-  );
+  return collectUsers(client, cursor => client.followers(userId, size, cursor), opts, "followers");
 }
 
 /** Captures both sides of the follow graph for `handle` / `userId`. */
@@ -317,7 +307,7 @@ export async function captureFollowGraph(
     user_id: userId,
     handle,
     following: following.users,
-    follower_ids: followers.users.map((u) => u.id),
+    follower_ids: followers.users.map(u => u.id),
     captured_at: (opts.now ?? Date.now)(),
     following_complete: following.complete,
     followers_complete: followers.complete,
@@ -385,7 +375,7 @@ function stateFromGraph(graph: FollowGraph, queue: UnfollowTarget[], now: number
       captured_at: graph.captured_at,
       following_total: graph.following.length,
       followers_total: graph.follower_ids.length,
-      non_mutual_total: queue.filter((t) => !t.mutual).length,
+      non_mutual_total: queue.filter(t => !t.mutual).length,
       following_complete: graph.following_complete,
       followers_complete: graph.followers_complete,
     },
@@ -406,10 +396,7 @@ function stateFromGraph(graph: FollowGraph, queue: UnfollowTarget[], now: number
  * The run is resumable — stop it at any time (Ctrl-C, `signal`, budget
  * exhaustion) and call again to pick up exactly where it left off.
  */
-export async function purgeFollowing(
-  client: XClient,
-  opts: PurgeOptions = {},
-): Promise<PurgeReport> {
+export async function purgeFollowing(client: XClient, opts: PurgeOptions = {}): Promise<PurgeReport> {
   const now = opts.now ?? Date.now;
   const log = opts.onLog ?? (() => {});
   const dryRun = opts.dryRun !== false;
@@ -453,7 +440,7 @@ export async function purgeFollowing(
 
   // A queue built without --non-mutual-only still honours the flag on resume.
   if (opts.nonMutualOnly) {
-    state.queue = state.queue.filter((t) => !t.mutual);
+    state.queue = state.queue.filter(t => !t.mutual);
   }
 
   const mutualTotal = state.graph.following_total - state.graph.non_mutual_total;
@@ -473,7 +460,7 @@ export async function purgeFollowing(
     remaining: state!.queue.length,
     stopped_by: stoppedBy,
     state_path: persist ? statePath : undefined,
-    failures: Object.values(state!.done).filter((r) => r.status === "failed"),
+    failures: Object.values(state!.done).filter(r => r.status === "failed"),
     elapsed_ms: now() - startedAt,
     eta_epoch: estimateEta(state!.queue.length, opts, now()),
   });
@@ -491,9 +478,9 @@ export async function purgeFollowing(
 
   const result = await runMutationQueue<UnfollowTarget>({
     queue: state.queue,
-    mutate: (t) => client.unfollow(t.id),
+    mutate: t => client.unfollow(t.id),
     rateLimit: () => client.lastRateLimit,
-    label: (t) => `@${t.username}${t.mutual ? " (mutuel)" : ""}`,
+    label: t => `@${t.username}${t.mutual ? " (mutuel)" : ""}`,
     governor,
     limit: opts.limit,
     once: opts.once,

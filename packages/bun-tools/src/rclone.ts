@@ -9,11 +9,7 @@ export async function rcloneBin(): Promise<string> {
 /** Lance le CLI rclone ; renvoie code de sortie et sorties. */
 export async function rclone(args: string[]) {
   const p = Bun.spawn([await rcloneBin(), ...args], { stdout: "pipe", stderr: "pipe" });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    p.stdout.text(),
-    p.stderr.text(),
-    p.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([p.stdout.text(), p.stderr.text(), p.exited]);
   return { stdout, stderr, exitCode };
 }
 

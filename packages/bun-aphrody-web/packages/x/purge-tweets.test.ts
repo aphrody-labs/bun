@@ -113,12 +113,9 @@ function fakeClient(opts: FakeOpts) {
     session: { handle: "tester" },
     lastRateLimit: null as null | { limit: number; remaining: number; reset_epoch: number },
     whoami: async () => ({ id: VIEWER, name: "Tester", screen_name: "tester" }),
-    userTweets: async (_id: string, _n: number, cursor?: string) =>
-      paginate(opts.tweets ?? [], cursor),
-    userTweetsAndReplies: async (_id: string, _n: number, cursor?: string) =>
-      paginate(opts.replies ?? [], cursor),
-    userMedia: async (_id: string, _n: number, cursor?: string) =>
-      paginate(opts.media ?? [], cursor),
+    userTweets: async (_id: string, _n: number, cursor?: string) => paginate(opts.tweets ?? [], cursor),
+    userTweetsAndReplies: async (_id: string, _n: number, cursor?: string) => paginate(opts.replies ?? [], cursor),
+    userMedia: async (_id: string, _n: number, cursor?: string) => paginate(opts.media ?? [], cursor),
     deleteTweet: async (id: string) => {
       deleted.push(id);
       consume(id);
@@ -181,19 +178,15 @@ describe("buildTweetQueue", () => {
     ];
     const { queue, kept } = buildTweetQueue(posts, VIEWER, { maxLikes: 1000 });
 
-    expect(queue.map((t) => t.id)).toEqual(["a", "b"]);
+    expect(queue.map(t => t.id)).toEqual(["a", "b"]);
     expect(kept).toBe(2); // 1000 is "at" the threshold → kept
   });
 
   test("orders least-liked first", () => {
-    const posts = [
-      post({ id: "a", likes: 40 }),
-      post({ id: "b", likes: 0 }),
-      post({ id: "c", likes: 7 }),
-    ];
+    const posts = [post({ id: "a", likes: 40 }), post({ id: "b", likes: 0 }), post({ id: "c", likes: 7 })];
     const { queue } = buildTweetQueue(posts, VIEWER, { maxLikes: 1000 });
-    expect(queue.map((t) => t.id)).toEqual(["b", "c", "a"]);
-    expect(queue.map((t) => t.like_count)).toEqual([0, 7, 40]);
+    expect(queue.map(t => t.id)).toEqual(["b", "c", "a"]);
+    expect(queue.map(t => t.like_count)).toEqual([0, 7, 40]);
   });
 
   test("equal likes break the tie on the oldest post", () => {
@@ -202,15 +195,11 @@ describe("buildTweetQueue", () => {
       post({ id: "old", likes: 3, createdAt: "Wed Aug 20 08:00:00 +0000 2025" }),
     ];
     const { queue } = buildTweetQueue(posts, VIEWER, { maxLikes: 1000 });
-    expect(queue.map((t) => t.id)).toEqual(["old", "new"]);
+    expect(queue.map(t => t.id)).toEqual(["old", "new"]);
   });
 
   test("covers tweets, replies and media by default", () => {
-    const posts = [
-      post({ id: "t" }),
-      post({ id: "r", replyTo: "99" }),
-      post({ id: "m", media: true }),
-    ];
+    const posts = [post({ id: "t" }), post({ id: "r", replyTo: "99" }), post({ id: "m", media: true })];
     const { queue, byKind } = buildTweetQueue(posts, VIEWER, {});
     expect(queue).toHaveLength(3);
     expect(byKind).toMatchObject({ tweet: 1, reply: 1, media: 1, retweet: 0 });
@@ -220,29 +209,25 @@ describe("buildTweetQueue", () => {
     const posts = [post({ id: "t" }), post({ id: "rt", authorId: "other", likes: 50_000 })];
 
     const off = buildTweetQueue(posts, VIEWER, {});
-    expect(off.queue.map((t) => t.id)).toEqual(["t"]);
+    expect(off.queue.map(t => t.id)).toEqual(["t"]);
     expect(off.kept).toBe(1);
 
     // A retweet's likes belong to someone else, so the threshold cannot apply:
     // scope alone decides, even at 50k likes.
     const on = buildTweetQueue(posts, VIEWER, { includeRetweets: true });
-    expect(on.queue.map((t) => t.id).toSorted()).toEqual(["rt", "t"]);
+    expect(on.queue.map(t => t.id).toSorted()).toEqual(["rt", "t"]);
   });
 
   test("kinds narrows the scope", () => {
-    const posts = [
-      post({ id: "t" }),
-      post({ id: "r", replyTo: "99" }),
-      post({ id: "m", media: true }),
-    ];
+    const posts = [post({ id: "t" }), post({ id: "r", replyTo: "99" }), post({ id: "m", media: true })];
     const { queue } = buildTweetQueue(posts, VIEWER, { kinds: ["reply"] });
-    expect(queue.map((t) => t.id)).toEqual(["r"]);
+    expect(queue.map(t => t.id)).toEqual(["r"]);
   });
 
   test("protected ids are never queued", () => {
     const posts = [post({ id: "pinned" }), post({ id: "other" })];
     const { queue, kept } = buildTweetQueue(posts, VIEWER, { protectIds: ["pinned"] });
-    expect(queue.map((t) => t.id)).toEqual(["other"]);
+    expect(queue.map(t => t.id)).toEqual(["other"]);
     expect(kept).toBe(1);
   });
 
@@ -276,8 +261,8 @@ describe("captureArchive", () => {
     });
 
     const archive = await captureArchive(client, VIEWER, "tester", {});
-    expect(archive.posts.map((p) => p.id).toSorted()).toEqual(["dup", "r1", "t1"]);
-    expect(archive.sources.map((s) => s.source)).toEqual(["tweets", "replies", "media"]);
+    expect(archive.posts.map(p => p.id).toSorted()).toEqual(["dup", "r1", "t1"]);
+    expect(archive.sources.map(s => s.source)).toEqual(["tweets", "replies", "media"]);
     expect(archive.complete).toBe(true);
   });
 
@@ -340,17 +325,13 @@ describe("purgeTweets", () => {
     expect(report.posts_total).toBe(3);
     expect(report.queued).toBe(2);
     expect(report.kept).toBe(1);
-    expect(report.planned.map((t) => t.id)).toEqual(["r", "a"]);
+    expect(report.planned.map(t => t.id)).toEqual(["r", "a"]);
   });
 
   test("live run deletes the queue least-liked first", async () => {
     const clock = fakeClock();
     const { client, deleted } = fakeClient({
-      tweets: [
-        post({ id: "a", likes: 30 }),
-        post({ id: "b", likes: 1 }),
-        post({ id: "keep", likes: 2000 }),
-      ],
+      tweets: [post({ id: "a", likes: 30 }), post({ id: "b", likes: 1 }), post({ id: "keep", likes: 2000 })],
     });
 
     const report = await purgeTweets(client, {
@@ -480,7 +461,7 @@ describe("purgeTweets", () => {
       ...baseOpts(clock),
       dryRun: false,
       signal: controller.signal,
-      onProgress: (p) => {
+      onProgress: p => {
         if (p.processed === 1) controller.abort();
       },
     });
@@ -522,11 +503,7 @@ describe("resumable journal", () => {
     try {
       const clock = fakeClock();
       const { client, deleted } = fakeClient({
-        tweets: [
-          post({ id: "a", likes: 1 }),
-          post({ id: "b", likes: 2 }),
-          post({ id: "c", likes: 3 }),
-        ],
+        tweets: [post({ id: "a", likes: 1 }), post({ id: "b", likes: 2 }), post({ id: "c", likes: 3 })],
       });
 
       const first = await purgeTweets(client, {
@@ -541,7 +518,7 @@ describe("resumable journal", () => {
       expect(deleted).toEqual(["a"]);
 
       const state = loadTweetState(statePath) as TweetPurgeState;
-      expect(state.queue.map((t) => t.id)).toEqual(["b", "c"]);
+      expect(state.queue.map(t => t.id)).toEqual(["b", "c"]);
       expect(state.history).toHaveLength(1);
       // NTFS n'a pas de bits POSIX : cf. CROSS-PLATFORM.md M7.
       if (process.platform !== "win32") {
@@ -580,7 +557,7 @@ describe("resumable journal", () => {
         maxLikes: 100,
         statePath,
       });
-      expect(tight.planned.map((t) => t.id)).toEqual(["a"]);
+      expect(tight.planned.map(t => t.id)).toEqual(["a"]);
 
       const loose = await purgeTweets(client, {
         now: clock.now,
@@ -589,7 +566,7 @@ describe("resumable journal", () => {
         maxLikes: 1000,
         statePath,
       });
-      expect(loose.planned.map((t) => t.id)).toEqual(["a", "b"]);
+      expect(loose.planned.map(t => t.id)).toEqual(["a", "b"]);
       expect(loose.max_likes).toBe(1000);
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -712,7 +689,7 @@ describe("readWithBackoff", () => {
       now: clock.now,
       sleep: clock.sleep,
     });
-    expect(archive.posts.map((p) => p.id)).toEqual(["p0", "p1"]);
+    expect(archive.posts.map(p => p.id)).toEqual(["p0", "p1"]);
     expect(archive.complete).toBe(true);
   });
 });
@@ -750,12 +727,8 @@ describe("retweet detection (regression)", () => {
   });
 
   test("out-of-scope by default, so a retweet is never deleted as an own post", () => {
-    const { queue, byKind, kept } = buildTweetQueue(
-      [rtOnOwnTimeline, post({ id: "mine" })],
-      VIEWER,
-      {},
-    );
-    expect(queue.map((t) => t.id)).toEqual(["mine"]);
+    const { queue, byKind, kept } = buildTweetQueue([rtOnOwnTimeline, post({ id: "mine" })], VIEWER, {});
+    expect(queue.map(t => t.id)).toEqual(["mine"]);
     expect(byKind.retweet).toBe(0);
     expect(kept).toBe(1);
   });
@@ -868,6 +841,6 @@ describe("barren pages (regression)", () => {
     const archive = await captureArchive(client, VIEWER, "tester", { maxBarrenPages: 3 });
     // p1, dup(2), dup(3) sterile x2, p4 remet a zero, puis 3 steriles -> arret page 7.
     expect(served).toBe(7);
-    expect(archive.posts.map((p) => p.id).toSorted()).toEqual(["dup", "p1", "p4"]);
+    expect(archive.posts.map(p => p.id).toSorted()).toEqual(["dup", "p1", "p4"]);
   });
 });

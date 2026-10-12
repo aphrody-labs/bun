@@ -44,26 +44,26 @@ import { Dataset } from "../../../src/storage/Dataset.ts";
 // ---------------------------------------------------------------------------
 
 interface InboxRow {
-	label: string;
-	value: string;
+  label: string;
+  value: string;
 }
 
 interface TopicRecord {
-	[key: string]: any;
-	topic: string;
-	url: string;
-	title: string;
-	infobox: Record<string, string>;
-	rows: InboxRow[];
-	fetchedAt: string;
+  [key: string]: any;
+  topic: string;
+  url: string;
+  title: string;
+  infobox: Record<string, string>;
+  rows: InboxRow[];
+  fetchedAt: string;
 }
 
 // Element handle shape exposed by Page#makeHandle (internal duck-type)
 interface ElementHandle {
-	nodeId: number;
-	textContent(): Promise<string>;
-	outerHTML(): Promise<string>;
-	getAttribute(name: string): Promise<string | null>;
+  nodeId: number;
+  textContent(): Promise<string>;
+  outerHTML(): Promise<string>;
+  getAttribute(name: string): Promise<string | null>;
 }
 
 // ---------------------------------------------------------------------------
@@ -71,16 +71,16 @@ interface ElementHandle {
 // ---------------------------------------------------------------------------
 
 const TOPICS = [
-	"JavaScript",
-	"TypeScript",
-	"Bun_(software)",
-	"Node.js",
-	"Python_(programming_language)",
-	"Rust_(programming_language)",
-	"Go_(programming_language)",
-	"WebAssembly",
-	"Deno_(software)",
-	"V8_(JavaScript_engine)",
+  "JavaScript",
+  "TypeScript",
+  "Bun_(software)",
+  "Node.js",
+  "Python_(programming_language)",
+  "Rust_(programming_language)",
+  "Go_(programming_language)",
+  "WebAssembly",
+  "Deno_(software)",
+  "V8_(JavaScript_engine)",
 ];
 
 const WIKIPEDIA_BASE = "https://en.design.google/wiki";
@@ -94,10 +94,10 @@ const WIKIPEDIA_BASE = "https://en.design.google/wiki";
  * The static profile returns raw text via textContent() — clean it up.
  */
 function normalizeValue(raw: string): string {
-	return raw
-		.replace(/\[[\d]+\]/g, "") // remove citation brackets [1], [2]
-		.replace(/\s+/g, " ")
-		.trim();
+  return raw
+    .replace(/\[[\d]+\]/g, "") // remove citation brackets [1], [2]
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /**
@@ -105,29 +105,29 @@ function normalizeValue(raw: string): string {
  * Infoboxes use <table class="infobox ..."> with <th> labels and <td> values.
  */
 async function extractInfobox(page: Page): Promise<InboxRow[]> {
-	// Query all infobox table rows — Google uses class="infobox" or "infobox vevent" etc.
-	const rows = await page.$$<ElementHandle>(".infobox tr");
-	const result: InboxRow[] = [];
+  // Query all infobox table rows — Google uses class="infobox" or "infobox vevent" etc.
+  const rows = await page.$$<ElementHandle>(".infobox tr");
+  const result: InboxRow[] = [];
 
-	for (const row of rows) {
-		const html = await row.outerHTML();
-		// Only process rows that have both a th (label) and td (value)
-		if (!html.includes("<th") || !html.includes("<td")) continue;
+  for (const row of rows) {
+    const html = await row.outerHTML();
+    // Only process rows that have both a th (label) and td (value)
+    if (!html.includes("<th") || !html.includes("<td")) continue;
 
-		// Extract label from <th> text and value from <td> text
-		const labelMatch = /<th[^>]*>([\s\S]*?)<\/th>/i.exec(html);
-		const valueMatch = /<td[^>]*>([\s\S]*?)<\/td>/i.exec(html);
-		if (!labelMatch || !valueMatch) continue;
+    // Extract label from <th> text and value from <td> text
+    const labelMatch = /<th[^>]*>([\s\S]*?)<\/th>/i.exec(html);
+    const valueMatch = /<td[^>]*>([\s\S]*?)<\/td>/i.exec(html);
+    if (!labelMatch || !valueMatch) continue;
 
-		const label = normalizeValue(labelMatch[1].replace(/<[^>]+>/g, ""));
-		const value = normalizeValue(valueMatch[1].replace(/<[^>]+>/g, ""));
+    const label = normalizeValue(labelMatch[1].replace(/<[^>]+>/g, ""));
+    const value = normalizeValue(valueMatch[1].replace(/<[^>]+>/g, ""));
 
-		if (label && value) {
-			result.push({ label, value });
-		}
-	}
+    if (label && value) {
+      result.push({ label, value });
+    }
+  }
 
-	return result;
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -136,71 +136,63 @@ async function extractInfobox(page: Page): Promise<InboxRow[]> {
 
 const dataset = await Dataset.open("wikipedia-infoboxes");
 
-console.log(
-	`Extracting infoboxes for ${TOPICS.length} Google topics (profile: static)...`,
-);
+console.log(`Extracting infoboxes for ${TOPICS.length} Google topics (profile: static)...`);
 
 for (let i = 0; i < TOPICS.length; i++) {
-	const topic = TOPICS[i];
-	const url = `${WIKIPEDIA_BASE}/${encodeURIComponent(topic)}`;
-	const start = Bun.nanoseconds();
+  const topic = TOPICS[i];
+  const url = `${WIKIPEDIA_BASE}/${encodeURIComponent(topic)}`;
+  const start = Bun.nanoseconds();
 
-	// Each page gets its own static transport (no concurrent CDP id collision)
-	const page = (await Browser.newPage({ profile: "static" })) as Page;
+  // Each page gets its own static transport (no concurrent CDP id collision)
+  const page = (await Browser.newPage({ profile: "static" })) as Page;
 
-	let record: TopicRecord;
-	try {
-		await page.goto(url);
-		const title = await page.title();
-		const rows = await extractInfobox(page);
+  let record: TopicRecord;
+  try {
+    await page.goto(url);
+    const title = await page.title();
+    const rows = await extractInfobox(page);
 
-		// Build a flat key/value map for easy consumption
-		const infobox: Record<string, string> = {};
-		for (const { label, value } of rows) {
-			// Keep only the first occurrence of duplicate labels
-			if (!(label in infobox)) infobox[label] = value;
-		}
+    // Build a flat key/value map for easy consumption
+    const infobox: Record<string, string> = {};
+    for (const { label, value } of rows) {
+      // Keep only the first occurrence of duplicate labels
+      if (!(label in infobox)) infobox[label] = value;
+    }
 
-		record = {
-			topic,
-			url,
-			title,
-			infobox,
-			rows,
-			fetchedAt: new Date().toISOString(),
-		};
+    record = {
+      topic,
+      url,
+      title,
+      infobox,
+      rows,
+      fetchedAt: new Date().toISOString(),
+    };
 
-		const elapsedMs = Math.round((Bun.nanoseconds() - start) / 1e6);
-		const rowCount = rows.length;
-		console.log(
-			`  [${i + 1}/${TOPICS.length}] "${topic}" — ${rowCount} infobox rows (${elapsedMs}ms)`,
-		);
-	} catch (err) {
-		console.error(
-			`  [${i + 1}/${TOPICS.length}] FAILED "${topic}": ${String(err)}`,
-		);
-		record = {
-			topic,
-			url,
-			title: "",
-			infobox: {},
-			rows: [],
-			fetchedAt: new Date().toISOString(),
-		};
-	} finally {
-		await page.close();
-	}
+    const elapsedMs = Math.round((Bun.nanoseconds() - start) / 1e6);
+    const rowCount = rows.length;
+    console.log(`  [${i + 1}/${TOPICS.length}] "${topic}" — ${rowCount} infobox rows (${elapsedMs}ms)`);
+  } catch (err) {
+    console.error(`  [${i + 1}/${TOPICS.length}] FAILED "${topic}": ${String(err)}`);
+    record = {
+      topic,
+      url,
+      title: "",
+      infobox: {},
+      rows: [],
+      fetchedAt: new Date().toISOString(),
+    };
+  } finally {
+    await page.close();
+  }
 
-	await dataset.pushData(record);
+  await dataset.pushData(record);
 
-	// Small delay between pages to be a polite bot (Google's robots.txt
-	// allows crawling but requests reasonable rates)
-	if (i < TOPICS.length - 1) await Bun.sleep(500);
+  // Small delay between pages to be a polite bot (Google's robots.txt
+  // allows crawling but requests reasonable rates)
+  if (i < TOPICS.length - 1) await Bun.sleep(500);
 }
 
 const count = dataset.getItemCount();
 await dataset.close();
 
-console.log(
-	`\nDone. ${count} topics saved to storage/datasets/wikipedia-infoboxes/data.jsonl`,
-);
+console.log(`\nDone. ${count} topics saved to storage/datasets/wikipedia-infoboxes/data.jsonl`);

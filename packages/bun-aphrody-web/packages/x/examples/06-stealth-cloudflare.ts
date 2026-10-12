@@ -31,25 +31,25 @@
 import { launchGhostBrowser } from "../../../src/profiles/ghost/index.ts";
 
 await using stealth = await launchGhostBrowser({
-	fingerprint: {
-		os: "linux",
-		browser: "chrome",
-		version: 130,
-	},
-	cookies: "./profiles/cloudflare-cookies.json",
+  fingerprint: {
+    os: "linux",
+    browser: "chrome",
+    version: 130,
+  },
+  cookies: "./profiles/cloudflare-cookies.json",
 });
 
 await stealth.page.goto("https://www.fingerprint.com/products/bot-detection/", {
-	waitUntil: "domcontentloaded",
+  waitUntil: "domcontentloaded",
 });
 
 const detection = await stealth.page.evaluate(() => {
-	const w = window as Window & { fpVisitor?: { isBot?: boolean } };
-	return {
-		isBot: w.fpVisitor?.isBot,
-		webdriver: (navigator as Navigator & { webdriver?: boolean }).webdriver,
-		ua: navigator.userAgent,
-	};
+  const w = window as Window & { fpVisitor?: { isBot?: boolean } };
+  return {
+    isBot: w.fpVisitor?.isBot,
+    webdriver: (navigator as Navigator & { webdriver?: boolean }).webdriver,
+    ua: navigator.userAgent,
+  };
 });
 
 console.log("Bot detection result:", detection);

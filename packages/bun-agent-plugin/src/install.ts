@@ -34,8 +34,7 @@ export type InstallReport = {
 };
 
 const PLUGIN_ID = `${PLUGIN}@${MARKETPLACE}`;
-const BEGIN =
-  ">>> bun-agent-plugin (managed by `bun agent-plugin install`; `bun agent-plugin uninstall` removes it)";
+const BEGIN = ">>> bun-agent-plugin (managed by `bun agent-plugin install`; `bun agent-plugin uninstall` removes it)";
 const END = "<<< bun-agent-plugin";
 
 function paths(home: string, real: boolean) {
@@ -59,11 +58,7 @@ export function hasTable(toml: string, parent: string, key: string): boolean {
   return new RegExp(`^\\s*\\[${parent}\\.(?:${k}|"${k}"|'${k}')\\]\\s*$`, "m").test(toml);
 }
 
-export function upsertBlock(
-  text: string,
-  body: string | undefined,
-  comment: (s: string) => string,
-): string {
+export function upsertBlock(text: string, body: string | undefined, comment: (s: string) => string): string {
   const begin = comment(BEGIN);
   const end = comment(END);
   const block =
@@ -120,10 +115,7 @@ function detected(home: string, real: boolean): Target[] {
   return out;
 }
 
-export function install(
-  files: Map<string, string | Uint8Array>,
-  options: InstallOptions = {},
-): InstallReport {
+export function install(files: Map<string, string | Uint8Array>, options: InstallOptions = {}): InstallReport {
   const home = options.home ?? homedir();
   const real = options.home === undefined;
   const p = paths(home, real);
@@ -132,12 +124,7 @@ export function install(
   const executable = typeof Bun !== "undefined" && isAphrodyBun() ? process.execPath : undefined;
   if (executable) {
     files = new Map(files);
-    for (const path of [
-      "claude/.mcp.json",
-      "codex/.mcp.json",
-      "agy/mcp_config.json",
-      "agy/gemini-extension.json",
-    ]) {
+    for (const path of ["claude/.mcp.json", "codex/.mcp.json", "agy/mcp_config.json", "agy/gemini-extension.json"]) {
       if (!files.has(path)) continue;
       const config = JSON.parse(str(files.get(path)));
       if (config.mcpServers?.bun) config.mcpServers.bun.command = executable;
@@ -151,9 +138,7 @@ export function install(
       );
   }
   const actions: string[] = [];
-  let targets =
-    options.targets ??
-    (options.update && previous.targets ? previous.targets : detected(home, real));
+  let targets = options.targets ?? (options.update && previous.targets ? previous.targets : detected(home, real));
   const record = (targets: Target[]) =>
     JSON.stringify(
       {
@@ -171,8 +156,7 @@ export function install(
     return { root: p.root, version: meta.version, targets: [], actions, skipped: "not installed" };
   }
   if (options.update && previous.hash === meta.hash && previous.executable === executable) {
-    if (!options.dryRun && previous.bun !== bunRevision())
-      writeFileSync(join(p.root, "install.json"), record(targets));
+    if (!options.dryRun && previous.bun !== bunRevision()) writeFileSync(join(p.root, "install.json"), record(targets));
     return { root: p.root, version: meta.version, targets, actions, skipped: "up to date" };
   }
   const write = (path: string, content: string | Uint8Array) => {
@@ -198,9 +182,7 @@ export function install(
     };
     settings.enabledPlugins ??= {};
     settings.enabledPlugins[PLUGIN_ID] = true;
-    actions.push(
-      `merge ${p.claudeSettings}: extraKnownMarketplaces.${MARKETPLACE}, enabledPlugins.${PLUGIN_ID}`,
-    );
+    actions.push(`merge ${p.claudeSettings}: extraKnownMarketplaces.${MARKETPLACE}, enabledPlugins.${PLUGIN_ID}`);
     write(p.claudeSettings, JSON.stringify(settings, null, 2) + "\n");
     if (real && which("claude")) {
       run(["claude", "plugin", "marketplace", "add", p.root], actions, options.dryRun);
@@ -217,14 +199,8 @@ export function install(
     const outside = upsertBlock(config, undefined, toml);
     const lines: string[] = [];
     if (!hasTable(outside, "marketplaces", MARKETPLACE))
-      lines.push(
-        `[marketplaces.${MARKETPLACE}]`,
-        `source_type = "local"`,
-        `source = ${JSON.stringify(p.root)}`,
-        "",
-      );
-    if (!hasTable(outside, "plugins", PLUGIN_ID))
-      lines.push(`[plugins."${PLUGIN_ID}"]`, "enabled = true");
+      lines.push(`[marketplaces.${MARKETPLACE}]`, `source_type = "local"`, `source = ${JSON.stringify(p.root)}`, "");
+    if (!hasTable(outside, "plugins", PLUGIN_ID)) lines.push(`[plugins."${PLUGIN_ID}"]`, "enabled = true");
     actions.push(`merge ${configPath}: marketplaces.${MARKETPLACE}, plugins."${PLUGIN_ID}"`);
     write(configPath, upsertBlock(config, lines.join("\n"), toml));
     const agentsPath = join(p.codexHome, "AGENTS.md");
@@ -277,8 +253,7 @@ export function uninstall(options: InstallOptions = {}): InstallReport {
     }
   }
   if (targets.includes("codex")) {
-    if (real && which("codex"))
-      run(["codex", "plugin", "remove", PLUGIN_ID], actions, options.dryRun);
+    if (real && which("codex")) run(["codex", "plugin", "remove", PLUGIN_ID], actions, options.dryRun);
     for (const [file, comment] of [
       ["config.toml", toml],
       ["AGENTS.md", markdown],
@@ -290,10 +265,7 @@ export function uninstall(options: InstallOptions = {}): InstallReport {
     }
   }
   if (targets.includes("agy")) {
-    for (const dir of [
-      join(p.gemini, "config", "plugins", PLUGIN),
-      join(p.gemini, "extensions", PLUGIN),
-    ]) {
+    for (const dir of [join(p.gemini, "config", "plugins", PLUGIN), join(p.gemini, "extensions", PLUGIN)]) {
       if (!existsSync(dir)) continue;
       actions.push(`remove ${dir}`);
       if (!options.dryRun) rmSync(dir, { recursive: true, force: true });
@@ -301,7 +273,7 @@ export function uninstall(options: InstallOptions = {}): InstallReport {
   }
   if (
     targets.length === ALL_TARGETS.length ||
-    ALL_TARGETS.every((t) => targets.includes(t) || !previous.targets?.includes(t))
+    ALL_TARGETS.every(t => targets.includes(t) || !previous.targets?.includes(t))
   ) {
     actions.push(`remove ${p.root}`);
     if (!options.dryRun) rmSync(p.root, { recursive: true, force: true });

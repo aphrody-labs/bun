@@ -1,4 +1,5 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # gemini-web
 
 Pure-Rust SDK for the **Gemini web app** (`gemini.google.com/app`) — the
@@ -38,14 +39,14 @@ println!("{} (images: {:?})", follow.text, follow.generated_image_urls);
 
 ## Surface
 
-| Area | Item |
-|---|---|
-| Client | `GeminiWebClient::{from_default_cookie_file, from_cookie_file, from_auth, ask, send, get_config_flag, refresh}` |
-| Models | `GeminiModel::{FlashLite, Flash, Pro}` (verified header tokens), `ReasoningLevel::{Standard, Extended}` (Deep Think) |
-| Reply | `ChatReply { text, metadata, web_image_urls, generated_image_urls, generated_video_urls, candidate_count }` |
-| Transport | `HttpTransport::{rpc_raw, stream_generate}`, `SessionTokens` |
-| Auth | `Auth`, `CookieJar`, `SessionCookie`, `sapisidhash` |
-| Codec | `boq::{encode_f_req, parse_envelopes, ...}` |
+| Area      | Item                                                                                                                 |
+| --------- | -------------------------------------------------------------------------------------------------------------------- |
+| Client    | `GeminiWebClient::{from_default_cookie_file, from_cookie_file, from_auth, ask, send, get_config_flag, refresh}`      |
+| Models    | `GeminiModel::{FlashLite, Flash, Pro}` (verified header tokens), `ReasoningLevel::{Standard, Extended}` (Deep Think) |
+| Reply     | `ChatReply { text, metadata, web_image_urls, generated_image_urls, generated_video_urls, candidate_count }`          |
+| Transport | `HttpTransport::{rpc_raw, stream_generate}`, `SessionTokens`                                                         |
+| Auth      | `Auth`, `CookieJar`, `SessionCookie`, `sapisidhash`                                                                  |
+| Codec     | `boq::{encode_f_req, parse_envelopes, ...}`                                                                          |
 
 ## Consumers
 

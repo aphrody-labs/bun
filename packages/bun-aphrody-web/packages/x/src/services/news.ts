@@ -27,12 +27,7 @@ export function parsePostCount(text: string): number | null {
 }
 
 /** Parse one itemContent node into a NewsItem, applying the AI filter. */
-export function parseNewsItem(
-  itemContent: unknown,
-  entryId: string,
-  source: string,
-  aiOnly: boolean,
-): NewsItem | null {
+export function parseNewsItem(itemContent: unknown, entryId: string, source: string, aiOnly: boolean): NewsItem | null {
   return local<NewsItem | null>("parse_news_item", {
     item_content: itemContent,
     entry_id: entryId,
@@ -42,12 +37,7 @@ export function parseNewsItem(
 }
 
 /** Parse all news items from a GenericTimelineById response. */
-export function parseTabItems(
-  data: unknown,
-  source: string,
-  maxCount: number,
-  aiOnly: boolean,
-): NewsItem[] {
+export function parseTabItems(data: unknown, source: string, maxCount: number, aiOnly: boolean): NewsItem[] {
   return local<NewsItem[]>("parse_tab_items", {
     json: data,
     source,
@@ -57,10 +47,6 @@ export function parseTabItems(
 }
 
 /** Fetch news / trending items from the requested Explore tabs. */
-export function getNews(
-  client: XClient,
-  count: number,
-  options: NewsOptions = {},
-): Promise<NewsItem[]> {
+export function getNews(client: XClient, count: number, options: NewsOptions = {}): Promise<NewsItem[]> {
   return client.call("get_news", defined({ count, tabs: options.tabs, ai_only: options.ai_only }));
 }

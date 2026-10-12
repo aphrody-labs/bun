@@ -14,31 +14,17 @@ export const platformTag = () => {
 
 const cacheDir = () =>
   process.env.APHRODY_TOOLS_DIR ??
-  join(
-    process.env.LOCALAPPDATA ?? join(process.env.HOME ?? ".", ".cache"),
-    "aphrody",
-    "tools",
-    RELEASE,
-  );
+  join(process.env.LOCALAPPDATA ?? join(process.env.HOME ?? ".", ".cache"), "aphrody", "tools", RELEASE);
 
 /** Nom de l'asset de la release pour un outil sur la plateforme courante. */
 export function assetName(tool: "rclone" | "rsync" | "librclone"): string {
   const t = platformTag();
   if (tool === "rsync") {
     if (t !== "linux-x64")
-      throw new Error(
-        "Native rsync is unsupported on this target; a qualified native producer is required",
-      );
+      throw new Error("Native rsync is unsupported on this target; a qualified native producer is required");
     return "rsync-linux-x64-musl";
   }
-  const ext =
-    tool === "librclone"
-      ? t === "windows-x64"
-        ? ".dll"
-        : ".so"
-      : t === "windows-x64"
-        ? ".exe"
-        : "";
+  const ext = tool === "librclone" ? (t === "windows-x64" ? ".dll" : ".so") : t === "windows-x64" ? ".exe" : "";
   return `${tool}-${t}${ext}`;
 }
 
@@ -64,8 +50,7 @@ export async function ensureAsset(name: string): Promise<string> {
   const want = sums.get(name);
   if (!want) throw new Error(`${name} absent de SHA256SUMS.txt`);
   if (existsSync(dest)) {
-    if (!lstatSync(dest).isFile())
-      throw new Error(`Tool cache entry is not a regular file: ${name}`);
+    if (!lstatSync(dest).isFile()) throw new Error(`Tool cache entry is not a regular file: ${name}`);
     const cached = await Bun.file(dest).arrayBuffer();
     const cachedHash = new Bun.CryptoHasher("sha256").update(cached).digest("hex");
     if (cachedHash === want) return dest;

@@ -17,19 +17,15 @@ export class Ingest extends WorkflowEntrypoint<Env, IngestParams> {
         uploaded: object.uploaded.getTime(),
       };
     });
-    await step.do(
-      "record in D1",
-      { retries: { limit: 5, delay: "2 seconds", backoff: "exponential" } },
-      async () => {
-        await this.env.DB.prepare(
-          `INSERT INTO files (bucket, key, size, etag, content_type, uploaded_at) VALUES (?, ?, ?, ?, ?, ?)
+    await step.do("record in D1", { retries: { limit: 5, delay: "2 seconds", backoff: "exponential" } }, async () => {
+      await this.env.DB.prepare(
+        `INSERT INTO files (bucket, key, size, etag, content_type, uploaded_at) VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT (bucket, key) DO UPDATE SET size = excluded.size, etag = excluded.etag,
            content_type = excluded.content_type, uploaded_at = excluded.uploaded_at`,
-        )
-          .bind(bucket, key, head.size, head.etag, head.contentType, head.uploaded)
-          .run();
-      },
-    );
+      )
+        .bind(bucket, key, head.size, head.etag, head.contentType, head.uploaded)
+        .run();
+    });
     return head;
   }
 }

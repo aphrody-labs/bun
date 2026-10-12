@@ -33,8 +33,7 @@ async function prepare() {
     if (!home) throw new Error("The protected owner cookie store is unavailable.");
     const store = join(home, ".aphrody/cookies/bun-video");
     const protectedFile = join(store, "cookie.json");
-    if (await Bun.file(protectedFile).exists())
-      throw new Error("Protected cookie input already exists; preserve it.");
+    if (await Bun.file(protectedFile).exists()) throw new Error("Protected cookie input already exists; preserve it.");
     await mkdir(store, { recursive: true });
     await Bun.write(protectedFile, JSON.stringify(bundle, null, 2) + "\n");
     await symlink(protectedFile, cookieFile, "file");
@@ -67,8 +66,7 @@ async function loadCookies(): Promise<CookieBundle> {
   }
   if (raw?.provider === "bun.secrets") {
     raw = await loadJsonSecret({ service: raw.service, name: raw.name });
-    if (raw === null)
-      throw new Error("Configured cookie credential is missing from the OS trousseau.");
+    if (raw === null) throw new Error("Configured cookie credential is missing from the OS trousseau.");
   }
   return parseCookieBundle(raw);
 }
@@ -90,28 +88,21 @@ async function selfCheck() {
     },
   ]);
   assert(
-    cookieHeader(synthetic.chromium, new URL("https://www.example.com/watch/1")) ===
-      "lab=synthetic",
+    cookieHeader(synthetic.chromium, new URL("https://www.example.com/watch/1")) === "lab=synthetic",
     "Cookie matching failed.",
   );
   assert(
     !cookieHeader(synthetic.chromium, new URL("https://evil-example.com/watch/1")),
     "Cookie domain isolation failed.",
   );
-  assert(
-    !cookieHeader(synthetic.chromium, new URL("https://example.com/watching")),
-    "Cookie path isolation failed.",
-  );
-  assert(
-    !cookieHeader(synthetic.chromium, new URL("http://example.com/watch")),
-    "Secure cookie isolation failed.",
-  );
+  assert(!cookieHeader(synthetic.chromium, new URL("https://example.com/watching")), "Cookie path isolation failed.");
+  assert(!cookieHeader(synthetic.chromium, new URL("http://example.com/watch")), "Secure cookie isolation failed.");
   const nativeCookie = new Bun.Cookie(synthetic.bun[0]!);
   assert(nativeCookie.name === "lab" && nativeCookie.httpOnly, "Native Bun.Cookie failed.");
   const rewritten = rewritePlaylist(
     '#EXTM3U\n#EXT-X-MAP:URI="init.mp4"\n#EXTINF:2,\nsegment.m4s\n',
     new URL("https://example.com/media/main.m3u8"),
-    (url) => `/proxy/${encodeURIComponent(url)}`,
+    url => `/proxy/${encodeURIComponent(url)}`,
   );
   assert(
     rewritten.includes(encodeURIComponent("https://example.com/media/init.mp4")) &&
@@ -194,9 +185,7 @@ export async function main() {
     JSON.stringify({
       pageProbe,
       cookies: cookies.chromium.length,
-      unexpiredCookies: cookies.chromium.filter(
-        (c) => c.expires === undefined || c.expires > Date.now() / 1000,
-      ).length,
+      unexpiredCookies: cookies.chromium.filter(c => c.expires === undefined || c.expires > Date.now() / 1000).length,
       hlsSourceConfigured: !!config.src,
       realPlaybackQualified: false,
     }),
@@ -258,8 +247,7 @@ export async function main() {
           { headers },
         );
       if (req.method === "POST" && path === "/source") {
-        if (req.headers.get("origin") !== server.url.origin)
-          return new Response("Origin rejected", { status: 403 });
+        if (req.headers.get("origin") !== server.url.origin) return new Response("Origin rejected", { status: 403 });
         try {
           const next = validateHlsConfig({
             ...(await req.json()),
@@ -281,11 +269,7 @@ export async function main() {
           let target = new URL(resource);
           let response: Response | undefined;
           for (let attempt = 0; attempt < 6; attempt++) {
-            if (
-              !["http:", "https:"].includes(target.protocol) ||
-              target.username ||
-              target.password
-            )
+            if (!["http:", "https:"].includes(target.protocol) || target.username || target.password)
               throw new Error("Invalid media URL.");
             const forwarded = new Headers({ Cookie: cookieHeader(cookies.chromium, target) });
             if (req.headers.has("range")) forwarded.set("Range", req.headers.get("range")!);
@@ -304,8 +288,7 @@ export async function main() {
           const type = response.headers.get("content-type") ?? "application/octet-stream";
           if (response.ok && (target.pathname.endsWith(".m3u8") || /mpegurl/i.test(type))) {
             const playlist = await response.text();
-            if (!playlist.trimStart().startsWith("#EXTM3U"))
-              throw new Error("Invalid HLS playlist.");
+            if (!playlist.trimStart().startsWith("#EXTM3U")) throw new Error("Invalid HLS playlist.");
             return new Response(rewritePlaylist(playlist, target, register), {
               headers: { ...headers, "Content-Type": "application/vnd.apple.mpegurl" },
             });
@@ -341,10 +324,7 @@ export async function main() {
       console.log("CDP unavailable; real Chrome automation remains unqualified.");
     }
   } else if (args.includes("--open")) {
-    const chrome = join(
-      process.env.PROGRAMFILES ?? "C:/Program Files",
-      "Google/Chrome/Application/chrome.exe",
-    );
+    const chrome = join(process.env.PROGRAMFILES ?? "C:/Program Files", "Google/Chrome/Application/chrome.exe");
     if (await Bun.file(chrome).exists()) {
       const child = Bun.spawn([chrome, url], { stdout: "ignore", stderr: "ignore" });
       child.unref();

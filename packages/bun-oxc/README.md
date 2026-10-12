@@ -10,37 +10,65 @@ formatter come from the `aphrody` branch of [aphrody-labs/oxc](https://github.co
 through `[patch.crates-io]`, so the addon holds a single copy of the AST.
 
 ```ts
-import { oxcPlugin, transform, minify, lint, format, check, resolve, isolatedDeclaration } from "@aphrody/bun-plugin-oxc";
+import {
+  oxcPlugin,
+  transform,
+  minify,
+  lint,
+  format,
+  check,
+  resolve,
+  isolatedDeclaration,
+} from "@aphrody/bun-plugin-oxc";
 
 transform("const a: number = 1", "a.ts", { target: "es2019", sourcemap: true }); // { code, map }
-transform(src, "a.tsx", { decorators: "legacy", reactRefresh: true, styledComponents: true });
-isolatedDeclaration("export function f(a: number): string { return '' }", "a.ts"); // { code: ".d.ts" }
+transform(src, "a.tsx", {
+  decorators: "legacy",
+  reactRefresh: true,
+  styledComponents: true,
+});
+isolatedDeclaration(
+  "export function f(a: number): string { return '' }",
+  "a.ts",
+); // { code: ".d.ts" }
 minify("const x = 1 + 2", "a.js", { topLevel: true, dropConsole: true });
-lint("debugger;", "a.js", { config: { rules: { "no-debugger": "error" } }, fix: true }); // { diagnostics, fixed, ... }
+lint("debugger;", "a.js", {
+  config: { rules: { "no-debugger": "error" } },
+  fix: true,
+}); // { diagnostics, fixed, ... }
 format("const x=1", "a.ts", { config: { semi: false } });
-resolve(import.meta.dir, "pkg", { conditionNames: ["import"], tsconfig: "auto" }); // { path, ... }
+resolve(import.meta.dir, "pkg", {
+  conditionNames: ["import"],
+  tsconfig: "auto",
+}); // { path, ... }
 
 await Bun.build({
   entrypoints: ["./index.tsx"],
-  plugins: [oxcPlugin({ minify: true, lint: "warn", dts: { outdir: "types", root: "src" } })],
+  plugins: [
+    oxcPlugin({
+      minify: true,
+      lint: "warn",
+      dts: { outdir: "types", root: "src" },
+    }),
+  ],
 });
 ```
 
 ## API (`@aphrody/bun-plugin-oxc`)
 
-| Function | Result |
-| --- | --- |
-| `transform(source, filename, options?)` | `{ code, map? }`. `target`, `jsx`, `jsxImportSource`, `jsxPragma`, `jsxPragmaFrag`, `development`, `sourcemap`, `decorators` (`"legacy"` \| `"standard"`), `emitDecoratorMetadata`, `reactRefresh`, `styledComponents`, `helpersModule` |
-| `minify(source, filename, options?)`, `minifyWithMap` | `compress`, `mangle`, `topLevel`, `whitespace`, `dropConsole`, `dropDebugger`, `target`, `sourcemap` |
-| `isolatedDeclaration(source, filename, options?)` | `.d.ts` text (`stripInternal`, `sourcemap`) |
-| `check(source, filename)` | syntax and semantic errors `{ ok, diagnostics }` |
-| `lint(source, filename, options?)` | oxlint, every built-in rule: `{ diagnostics, fixed?, errorCount, warningCount }`. `config` (inline `.oxlintrc.json`), `configPath`, `discoverConfig`, `fix` (`true`/`"safe"`, `"suggestions"`, `"dangerous"`) |
-| `lintFix`, `lintRules()` | fixed source; the rule table (`name`, `plugin`, `category`, `default`, `fix`, `docs`, `version`, `typeAware`) |
-| `format(source, filename, options?)` | oxfmt (JS/TS, JSON, CSS, GraphQL, Markdown, YAML, TOML, `package.json`): `config` (inline `.oxfmtrc.json`), `configPath`, `discoverConfig` |
-| `resolve(from, specifier, options?)` | `oxc_resolver`: `{ path, query, fragment, moduleType }`; `tsconfig`, `alias`, `fallback`, `conditionNames`, `extensions`, `extensionAlias`, `mainFields`, `modules`, `roots`... |
-| `analyze`, `parse` | static imports/exports; ESTree JSON |
-| `parseSync`, `transformSync`, `isolatedDeclarationSync`, `minifySync` | the official oxc APIs (below) |
-| `formatDiagnostics`, `lineColumn` | `path:line:col severity code: message` |
+| Function                                                              | Result                                                                                                                                                                                                                                  |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `transform(source, filename, options?)`                               | `{ code, map? }`. `target`, `jsx`, `jsxImportSource`, `jsxPragma`, `jsxPragmaFrag`, `development`, `sourcemap`, `decorators` (`"legacy"` \| `"standard"`), `emitDecoratorMetadata`, `reactRefresh`, `styledComponents`, `helpersModule` |
+| `minify(source, filename, options?)`, `minifyWithMap`                 | `compress`, `mangle`, `topLevel`, `whitespace`, `dropConsole`, `dropDebugger`, `target`, `sourcemap`                                                                                                                                    |
+| `isolatedDeclaration(source, filename, options?)`                     | `.d.ts` text (`stripInternal`, `sourcemap`)                                                                                                                                                                                             |
+| `check(source, filename)`                                             | syntax and semantic errors `{ ok, diagnostics }`                                                                                                                                                                                        |
+| `lint(source, filename, options?)`                                    | oxlint, every built-in rule: `{ diagnostics, fixed?, errorCount, warningCount }`. `config` (inline `.oxlintrc.json`), `configPath`, `discoverConfig`, `fix` (`true`/`"safe"`, `"suggestions"`, `"dangerous"`)                           |
+| `lintFix`, `lintRules()`                                              | fixed source; the rule table (`name`, `plugin`, `category`, `default`, `fix`, `docs`, `version`, `typeAware`)                                                                                                                           |
+| `format(source, filename, options?)`                                  | oxfmt (JS/TS, JSON, CSS, GraphQL, Markdown, YAML, TOML, `package.json`): `config` (inline `.oxfmtrc.json`), `configPath`, `discoverConfig`                                                                                              |
+| `resolve(from, specifier, options?)`                                  | `oxc_resolver`: `{ path, query, fragment, moduleType }`; `tsconfig`, `alias`, `fallback`, `conditionNames`, `extensions`, `extensionAlias`, `mainFields`, `modules`, `roots`...                                                         |
+| `analyze`, `parse`                                                    | static imports/exports; ESTree JSON                                                                                                                                                                                                     |
+| `parseSync`, `transformSync`, `isolatedDeclarationSync`, `minifySync` | the official oxc APIs (below)                                                                                                                                                                                                           |
+| `formatDiagnostics`, `lineColumn`                                     | `path:line:col severity code: message`                                                                                                                                                                                                  |
 
 Diagnostics carry `message`, `severity`, `code`, `help`, `url` and `labels` with UTF-16 offsets. Errors thrown by
 the addon start with their kind: `[syntax]`, `[input]`, `[tool]`, `[transform]`, `[resolve]`.

@@ -18,23 +18,21 @@ function show(value: unknown): string {
   if (typeof value === "string") return JSON.stringify(value);
   if (value === undefined) return "undefined";
   try {
-    return (
-      JSON.stringify(value, (_k, v) => (typeof v === "bigint" ? `${v}n` : v), 2) ?? String(value)
-    );
+    return JSON.stringify(value, (_k, v) => (typeof v === "bigint" ? `${v}n` : v), 2) ?? String(value);
   } catch {
     return String(value);
   }
 }
 
 const consoleProxy = Object.fromEntries(
-  (["log", "info", "warn", "error"] as const).map((level) => [
+  (["log", "info", "warn", "error"] as const).map(level => [
     level,
     (...args: unknown[]) =>
       post({
         type: "log",
         id: current,
         level: level === "info" ? "log" : level,
-        text: args.map((a) => (typeof a === "string" ? a : show(a))).join(" "),
+        text: args.map(a => (typeof a === "string" ? a : show(a))).join(" "),
       }),
   ]),
 );

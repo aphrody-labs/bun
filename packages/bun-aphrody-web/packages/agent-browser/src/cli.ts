@@ -86,8 +86,7 @@ export async function runAgentBrowser(raw: readonly string[]): Promise<number> {
         break;
       case "get":
         if (rest[0] === "text") data = await page.getText(rest[1] as string);
-        else if (rest[0] === "attribute")
-          data = await page.getAttribute(rest[1] as string, rest[2] as string);
+        else if (rest[0] === "attribute") data = await page.getAttribute(rest[1] as string, rest[2] as string);
         else throw new Error(`Unsupported get command: ${rest[0]}`);
         break;
       default:

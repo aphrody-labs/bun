@@ -17,8 +17,7 @@ for (let index = 0; index < args.length; index++) {
 
 try {
   const report = await discoverRuntime({ artifact });
-  if (capabilities && report.status === "qualified")
-    await probePythonCapabilities(report);
+  if (capabilities && report.status === "qualified") await probePythonCapabilities(report);
   console.log(JSON.stringify(report, null, 2));
   if (report.status !== "qualified") process.exitCode = 1;
 } catch (error) {

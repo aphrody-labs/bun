@@ -41,10 +41,10 @@ export function allOperations(): Operation[] {
 
 /** Return only mutation operations. */
 export function mutations(): Operation[] {
-  return allOperations().filter((op) => op.operationType === "mutation");
+  return allOperations().filter(op => op.operationType === "mutation");
 }
 
 /** Return only query operations. */
 export function queries(): Operation[] {
-  return allOperations().filter((op) => op.operationType === "query");
+  return allOperations().filter(op => op.operationType === "query");
 }

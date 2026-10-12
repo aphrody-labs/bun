@@ -13,11 +13,8 @@ export interface FramePlan {
   allowPrivateNetwork?: boolean;
 }
 
-export function validateFramePlan(
-  plan: FramePlan,
-): FramePlan & { workers: number; timeoutMs: number } {
-  if (!plan || !["remotion", "hyperframes"].includes(plan.kind))
-    throw new TypeError("Unknown video composition kind");
+export function validateFramePlan(plan: FramePlan): FramePlan & { workers: number; timeoutMs: number } {
+  if (!plan || !["remotion", "hyperframes"].includes(plan.kind)) throw new TypeError("Unknown video composition kind");
   if (
     (plan.allowPrivateNetwork !== undefined && typeof plan.allowPrivateNetwork !== "boolean") ||
     (plan.libraryPath !== undefined && typeof plan.libraryPath !== "string")
@@ -35,19 +32,10 @@ export function validateFramePlan(
     timeoutMs: plan.timeoutMs ?? 30000,
   };
   for (const [key, value] of Object.entries(integers))
-    if (!Number.isSafeInteger(value) || value <= 0)
-      throw new RangeError(`${key} must be a positive safe integer`);
-  if (
-    integers.fpsNum > 0xffffffff ||
-    integers.fpsDen > 0xffffffff ||
-    integers.fpsNum > integers.fpsDen * 240
-  )
+    if (!Number.isSafeInteger(value) || value <= 0) throw new RangeError(`${key} must be a positive safe integer`);
+  if (integers.fpsNum > 0xffffffff || integers.fpsDen > 0xffffffff || integers.fpsNum > integers.fpsDen * 240)
     throw new RangeError("FPS must use u32 numerator/denominator and be at most 240");
-  if (
-    integers.workers > 16 ||
-    integers.width * integers.height > 7680 * 4320 ||
-    integers.timeoutMs > 300000
-  )
+  if (integers.workers > 16 || integers.width * integers.height > 7680 * 4320 || integers.timeoutMs > 300000)
     throw new RangeError("Plan exceeds worker, pixel or timeout limits");
   if (
     !Number.isSafeInteger(plan.startFrame) ||

@@ -8,17 +8,7 @@ type Check = { name: string; status: "passed" | "failed" | "skipped"; reason?: s
 type InvocationResult = { stdout: string; stderr: string; failure?: string };
 
 const abiVersion = 1;
-const pythonChecks = [
-  "argv",
-  "sys.path",
-  "venv",
-  "encoding",
-  "exit",
-  "traceback",
-  "stdin",
-  "-c",
-  "-m",
-];
+const pythonChecks = ["argv", "sys.path", "venv", "encoding", "exit", "traceback", "stdin", "-c", "-m"];
 
 function hardware() {
   const deviceNode = ["/dev/nvidiactl", "/dev/nvidia0"].some(existsSync);
@@ -41,11 +31,7 @@ export function terminalExitStatus(exitCode: number): number {
   return exitCode & 0xff;
 }
 
-function report(
-  checks: Check[],
-  nativeDispatchExecuted: boolean,
-  status: "open" | "failed" | "passed",
-) {
+function report(checks: Check[], nativeDispatchExecuted: boolean, status: "open" | "failed" | "passed") {
   return {
     schema: "aphrody.bun-python-conformance/1",
     status,
@@ -67,7 +53,7 @@ function report(
 
 function skippedChecks(reason: string): Check[] {
   return [
-    ...pythonChecks.map((name) => ({ name, status: "skipped" as const, reason })),
+    ...pythonChecks.map(name => ({ name, status: "skipped" as const, reason })),
     { name: "pytorch-cpu-import", status: "skipped", reason },
     { name: "pytorch-cuda-import", status: "skipped", reason },
   ];
@@ -87,11 +73,7 @@ function main() {
   if (library === undefined || library.trim() === "" || !existsSync(library)) {
     console.log(
       JSON.stringify(
-        report(
-          skippedChecks("No real shared host library was supplied in BUN_PYTHON_HOST_LIBRARY."),
-          false,
-          "open",
-        ),
+        report(skippedChecks("No real shared host library was supplied in BUN_PYTHON_HOST_LIBRARY."), false, "open"),
       ),
     );
     return 77;
@@ -99,27 +81,15 @@ function main() {
   if (pythonLibrary === undefined || pythonLibrary.trim() === "" || !existsSync(pythonLibrary)) {
     console.log(
       JSON.stringify(
-        report(
-          skippedChecks("No explicit shared libpython was supplied in BUN_PYTHON_LIBPYTHON."),
-          false,
-          "open",
-        ),
+        report(skippedChecks("No explicit shared libpython was supplied in BUN_PYTHON_LIBPYTHON."), false, "open"),
       ),
     );
     return 77;
   }
-  if (
-    pythonExecutable === undefined ||
-    pythonExecutable.trim() === "" ||
-    !existsSync(pythonExecutable)
-  ) {
+  if (pythonExecutable === undefined || pythonExecutable.trim() === "" || !existsSync(pythonExecutable)) {
     console.log(
       JSON.stringify(
-        report(
-          skippedChecks("No installed Python executable was supplied in BUN_PYTHON_EXECUTABLE."),
-          false,
-          "open",
-        ),
+        report(skippedChecks("No installed Python executable was supplied in BUN_PYTHON_EXECUTABLE."), false, "open"),
       ),
     );
     return 77;
@@ -127,11 +97,7 @@ function main() {
   if (process.platform !== "linux" && process.platform !== "darwin") {
     console.log(
       JSON.stringify(
-        report(
-          skippedChecks("The dynamic ABI driver is currently qualified only on POSIX."),
-          false,
-          "open",
-        ),
+        report(skippedChecks("The dynamic ABI driver is currently qualified only on POSIX."), false, "open"),
       ),
     );
     return 77;
@@ -177,9 +143,7 @@ function main() {
       console.log(
         JSON.stringify(
           report(
-            skippedChecks(
-              "The configured library does not expose bun_py_abi_version and bun_py_main yet.",
-            ),
+            skippedChecks("The configured library does not expose bun_py_abi_version and bun_py_main yet."),
             false,
             "open",
           ),
@@ -193,9 +157,7 @@ function main() {
         status: "failed" as const,
         reason: probe.stderr.trim() || probe.stdout.trim(),
       };
-      console.log(
-        JSON.stringify(report([check, ...skippedChecks("ABI v1 probe failed.")], false, "failed")),
-      );
+      console.log(JSON.stringify(report([check, ...skippedChecks("ABI v1 probe failed.")], false, "failed")));
       return 1;
     }
 
@@ -216,26 +178,19 @@ function main() {
       validate: (stdout: string, stderr: string) => string | undefined,
       options: { env?: Record<string, string>; input?: string } = {},
     ): InvocationResult {
-      const result = spawnSync(
-        driver,
-        ["--invoke", selectedHost, selectedPython, "--", resolve(executable), ...args],
-        {
-          encoding: "utf8",
-          env: { ...process.env, ...options.env },
-          input: options.input,
-        },
-      );
-      const marker =
-        /^BUN_PY_CONFORMANCE phase=(load|main) host_status=(-?\d+) python_exit=(-?\d+)\r?$/m;
+      const result = spawnSync(driver, ["--invoke", selectedHost, selectedPython, "--", resolve(executable), ...args], {
+        encoding: "utf8",
+        env: { ...process.env, ...options.env },
+        input: options.input,
+      });
+      const marker = /^BUN_PY_CONFORMANCE phase=(load|main) host_status=(-?\d+) python_exit=(-?\d+)\r?$/m;
       const markers = [...result.stderr.matchAll(new RegExp(marker.source, "gm"))];
-      const loadMarker = markers.find((entry) => entry[1] === "load");
-      const mainMarker = markers.find((entry) => entry[1] === "main");
+      const loadMarker = markers.find(entry => entry[1] === "load");
+      const mainMarker = markers.find(entry => entry[1] === "main");
       const pythonStderr = result.stderr.replace(new RegExp(marker.source, "gm"), "").trim();
       let failure: string | undefined;
-      if (loadMarker === undefined)
-        failure = `native host did not report aphrody_py_load (driver=${result.status})`;
-      else if (Number(loadMarker[2]) !== 0)
-        failure = `aphrody_py_load returned status ${loadMarker[2]}`;
+      if (loadMarker === undefined) failure = `native host did not report aphrody_py_load (driver=${result.status})`;
+      else if (Number(loadMarker[2]) !== 0) failure = `aphrody_py_load returned status ${loadMarker[2]}`;
       else if (mainMarker !== undefined && Number(mainMarker[2]) !== 0)
         failure = `bun_py_main returned host status ${mainMarker[2]}`;
       else {
@@ -243,8 +198,7 @@ function main() {
         if (mainMarker !== undefined) {
           if (Number(mainMarker[3]) !== expectedExit)
             failure = `expected returned Python exit ${expectedExit}, received ${mainMarker[3]}`;
-          else if (result.status !== 0)
-            failure = `driver exited ${result.status} after bun_py_main returned`;
+          else if (result.status !== 0) failure = `driver exited ${result.status} after bun_py_main returned`;
         } else if (result.status === null) {
           failure = `native host terminated by signal ${result.signal ?? "unknown"} before returning from bun_py_main`;
         } else if (terminalExitStatus(expectedExit) !== result.status) {
@@ -252,11 +206,7 @@ function main() {
         }
       }
       if (failure === undefined) failure = validate(result.stdout, pythonStderr);
-      checks.push(
-        failure === undefined
-          ? { name, status: "passed" }
-          : { name, status: "failed", reason: failure },
-      );
+      checks.push(failure === undefined ? { name, status: "passed" } : { name, status: "failed", reason: failure });
       return { stdout: result.stdout, stderr: pythonStderr, failure };
     }
 
@@ -265,7 +215,7 @@ function main() {
       resolve(pythonExecutable),
       ["-c", "import json,sys; print(json.dumps(sys.argv, ensure_ascii=True))", "alpha", "café"],
       0,
-      (stdout) => {
+      stdout => {
         try {
           const argv = JSON.parse(stdout) as string[];
           return argv[0] === "-c" && argv[1] === "alpha" && argv[2] === "café"
@@ -282,7 +232,7 @@ function main() {
       resolve(pythonExecutable),
       ["-m", "vu_conformance_module"],
       0,
-      (stdout) => {
+      stdout => {
         try {
           const value = JSON.parse(stdout) as { name: string; found: boolean };
           return value.name === "__main__" && value.found
@@ -300,8 +250,7 @@ function main() {
       resolve(pythonExecutable),
       ["-m", "venv", "--without-pip", join(scratch, ".venv")],
       0,
-      (stdout) =>
-        stdout.length === 0 ? undefined : `unexpected venv creation output ${stdout.trim()}`,
+      stdout => (stdout.length === 0 ? undefined : `unexpected venv creation output ${stdout.trim()}`),
     );
     const venvPython = join(scratch, ".venv", "bin", "python");
     if (!existsSync(venvPython)) {
@@ -319,7 +268,7 @@ function main() {
         "import json,site,sys; print(json.dumps({'executable':sys.executable,'prefix':sys.prefix,'base':sys.base_prefix,'site':site.getsitepackages()}))",
       ],
       0,
-      (stdout) => {
+      stdout => {
         try {
           const value = JSON.parse(stdout) as {
             executable: string;
@@ -330,7 +279,7 @@ function main() {
           return resolve(value.executable) === resolve(venvPython) &&
             resolve(value.prefix) === resolve(join(scratch, ".venv")) &&
             value.base !== value.prefix &&
-            value.site.some((path) => path.startsWith(value.prefix))
+            value.site.some(path => path.startsWith(value.prefix))
             ? undefined
             : `venv prefix was not selected: ${stdout.trim()}`;
         } catch {
@@ -345,10 +294,7 @@ function main() {
       resolve(pythonExecutable),
       ["-c", "import sys; sys.stdout.write('café 東京|' + sys.stdout.encoding)"],
       0,
-      (stdout) =>
-        stdout === "café 東京|utf-8"
-          ? undefined
-          : `UTF-8 output mismatch ${JSON.stringify(stdout)}`,
+      stdout => (stdout === "café 東京|utf-8" ? undefined : `UTF-8 output mismatch ${JSON.stringify(stdout)}`),
       { env: { PYTHONIOENCODING: "utf-8:strict" } },
     );
     invoke(
@@ -356,22 +302,14 @@ function main() {
       resolve(pythonExecutable),
       ["-c", "import sys; sys.stdout.write(sys.stdin.buffer.read().hex())"],
       0,
-      (stdout) =>
-        stdout === Buffer.from("stdin café\n", "utf8").toString("hex")
-          ? undefined
-          : `stdin mismatch ${stdout}`,
+      stdout =>
+        stdout === Buffer.from("stdin café\n", "utf8").toString("hex") ? undefined : `stdin mismatch ${stdout}`,
       { input: "stdin café\n" },
     );
-    invoke("-c-dispatch", resolve(pythonExecutable), ["-c", "print('native-c')"], 0, (stdout) =>
+    invoke("-c-dispatch", resolve(pythonExecutable), ["-c", "print('native-c')"], 0, stdout =>
       stdout === "native-c\n" ? undefined : `unexpected output ${stdout}`,
     );
-    invoke(
-      "positive-exit-code-terminal",
-      resolve(pythonExecutable),
-      ["-c", "raise SystemExit(7)"],
-      7,
-      () => undefined,
-    );
+    invoke("positive-exit-code-terminal", resolve(pythonExecutable), ["-c", "raise SystemExit(7)"], 7, () => undefined);
     invoke(
       "negative-exit-code-terminal",
       resolve(pythonExecutable),
@@ -398,7 +336,7 @@ function main() {
         "import json,torch; x=torch.tensor([2,3],device='cpu').add(1); print(json.dumps({'version':torch.__version__,'cpu':x.tolist(),'cuda':torch.cuda.is_available()}))",
       ],
       0,
-      (stdout) => {
+      stdout => {
         try {
           const value = JSON.parse(stdout) as { version: string; cpu: number[]; cuda: boolean };
           return value.version.length > 0 && value.cpu.join(",") === "3,4"
@@ -410,11 +348,8 @@ function main() {
       },
     );
 
-    if (
-      torch.failure !== undefined &&
-      /ModuleNotFoundError: No module named ['"]torch['"]/.test(torch.stderr)
-    ) {
-      const at = checks.findIndex((check) => check.name === "pytorch-cpu-import");
+    if (torch.failure !== undefined && /ModuleNotFoundError: No module named ['"]torch['"]/.test(torch.stderr)) {
+      const at = checks.findIndex(check => check.name === "pytorch-cpu-import");
       checks[at] = {
         name: "pytorch-cpu-import",
         status: "skipped",
@@ -441,13 +376,9 @@ function main() {
       invoke(
         "pytorch-cuda-import-and-tensor",
         resolve(pythonExecutable),
-        [
-          "-c",
-          "import torch; x=torch.tensor([2,3],device='cuda').add(1); print(','.join(map(str,x.cpu().tolist())))",
-        ],
+        ["-c", "import torch; x=torch.tensor([2,3],device='cuda').add(1); print(','.join(map(str,x.cpu().tolist())))"],
         0,
-        (stdout) =>
-          stdout.trim() === "3,4" ? undefined : `unexpected CUDA tensor result ${stdout.trim()}`,
+        stdout => (stdout.trim() === "3,4" ? undefined : `unexpected CUDA tensor result ${stdout.trim()}`),
       );
     }
 
@@ -458,13 +389,9 @@ function main() {
         ? "Weights were configured, but this harness does not select or load a model."
         : "No explicit VU_TORCH_TEST_MODEL weights were supplied; no model inference was attempted.",
     });
-    const failed = checks.some((check) => check.status === "failed");
-    const open = checks.some((check) => check.status === "skipped");
-    console.log(
-      JSON.stringify(
-        report(checks, nativeDispatchExecuted, failed ? "failed" : open ? "open" : "passed"),
-      ),
-    );
+    const failed = checks.some(check => check.status === "failed");
+    const open = checks.some(check => check.status === "skipped");
+    console.log(JSON.stringify(report(checks, nativeDispatchExecuted, failed ? "failed" : open ? "open" : "passed")));
     return failed ? 1 : open ? 77 : 0;
   } finally {
     rmSync(temporary, { recursive: true, force: true });

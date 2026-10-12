@@ -34,7 +34,7 @@ test("DASH registers configuration and listeners before initializing; cleanup is
   const calls: string[] = [];
   const player = mockPlayer(calls);
   const data = { "com.widevine.alpha": { serverURL: "https://licenses.example.test" } };
-  player.setProtectionData = (supplied) => {
+  player.setProtectionData = supplied => {
     expect(supplied).toBe(data);
     calls.push("protection");
   };
@@ -43,21 +43,14 @@ test("DASH registers configuration and listeners before initializing; cleanup is
     createPlayer: () => player,
     settings: {},
     protectionData: data,
-    requestInterceptor: async (request) => request,
+    requestInterceptor: async request => request,
     beforeStart: () => {
       calls.push("listeners");
     },
   });
   playback.destroy();
   playback.destroy();
-  expect(calls).toEqual([
-    "settings",
-    "protection",
-    "interceptor",
-    "listeners",
-    "initialize:false",
-    "reset",
-  ]);
+  expect(calls).toEqual(["settings", "protection", "interceptor", "listeners", "initialize:false", "reset"]);
 });
 
 test("startup failure resets once and preserves the original exception even when reset throws", async () => {
@@ -92,11 +85,7 @@ test("async listener setup is rejected before initialization", async () => {
 });
 
 test("unsafe sources fail before factory creation and server attachment requires a factory", async () => {
-  for (const src of [
-    "file:///manifest.mpd",
-    "https://user:password@example.test/m.mpd",
-    "/relative.mpd",
-  ]) {
+  for (const src of ["file:///manifest.mpd", "https://user:password@example.test/m.mpd", "/relative.mpd"]) {
     await expect(
       attachDashPlayback(video, {
         src,
@@ -106,9 +95,9 @@ test("unsafe sources fail before factory creation and server attachment requires
       }),
     ).rejects.toThrow("DASH source");
   }
-  await expect(
-    attachDashPlayback(video, { src: "https://media.example.test/m.mpd" }),
-  ).rejects.toThrow("browser media element");
+  await expect(attachDashPlayback(video, { src: "https://media.example.test/m.mpd" })).rejects.toThrow(
+    "browser media element",
+  );
 });
 
 test("MPD inspection understands namespace prefixes, inherited codecs, relative bases and templates", () => {

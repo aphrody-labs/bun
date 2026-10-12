@@ -2,7 +2,7 @@
 name: bun-graph-hotspots
 description: "Upstream oven-sh/bun churn hotspots (files/dirs, last 30 days), commit cadence, who commits (robobun ~75%), commit-subject areas, and fork divergence as of 2026-10-08"
 metadata:
- type: reference
+  type: reference
 ---
 
 Measured 2026-10-08 on local `upstream/main` (tip 620b50f6abe, 2026-10-08 00:29 -0700; not re-fetched). `aphrody git inspect` only reports branch/HEAD/remotes/dirty state (gix), no history, so churn came from `git log`.
@@ -14,6 +14,7 @@ Measured 2026-10-08 on local `upstream/main` (tip 620b50f6abe, 2026-10-08 00:29 
 **Hot directories (file-touches, 30 days)**: src/jsc 656 (519 of them in `src/jsc/bindings` C++), scripts 343, src/sema 263, test/js/bun 261, test/js/node 229, src/runtime/webcore 177, src/js_parser 135, src/runtime/api 124, test/js/web 111, src/js/node 102, src/bundler 100, packages/bun-usockets 93, test/cli 92, src/js/internal 92, test/bundler 90, src/runtime/cli 86, src/runtime/shell 83, src/runtime/server 70, docs 67, src/runtime/node 62, src/runtime/socket 61, src/http 56, src/install 55, src/runtime/bake 54, packages/bun-uws 45, src/sql_jsc 44.
 
 **Hot files (commits touching, 30 days)**: `src/jsc/VirtualMachine.rs` 20, `src/js/node/net.ts` 20, `scripts/build/deps/webkit.ts` 18 (WebKit bumps), `test/bundler/transpiler/react-compiler.test.ts` 17, `src/jsc/bindings/ZigGlobalObject.cpp` 17, `src/runtime/socket/socket_body.rs` 16, `src/js_parser/p.rs` 16, `src/runtime/jsc_hooks.rs` 15, `packages/bun-types/bun.d.ts` 15, `mordant-baseline.toml` 15, `src/runtime/server/RequestContext.rs` 14, `src/bundler/bundle_v2.rs` 14, `.github/workflows/rust-lints.yml` 13, `src/runtime/webcore/fetch/FetchTasklet.rs` 12, `src/runtime/webcore/Blob.rs` 12, `src/js_printer/lib.rs` 12, `scripts/build/CLAUDE.md` 12, `packages/bun-usockets/src/internal/internal.h` 12, `PostgresSQLConnection.rs` 11, `NodeHTTPResponse.rs` 11, `LinkerContext.rs` 11, `packages/bun-uws/src/HttpContext.h` 11, `packages/bun-usockets/src/crypto/openssl.c` 11.
+
 - Merge-conflict risk for the fork concentrates on these files plus fork-touched ones (`src/runtime/cli/mod.rs`, `src/resolve_builtins/HardcodedModule.rs`, `src/js/bun/ffi.ts`, `scripts/build/*.ts`) — see `bun-fork-aphrody`.
 - Networking is the busiest runtime area: net.ts + tls.ts + socket_body.rs + usockets/uWS C sources (`packages/bun-usockets`, `packages/bun-uws` are the in-repo C/C++ socket layer, not npm packages). See `bun-runtime-http-sql-valkey`, `bun-runtime-node-compat`.
 

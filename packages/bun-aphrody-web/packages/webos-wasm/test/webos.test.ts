@@ -1,14 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { describe, expect, test } from "bun:test";
 import { fileURLToPath } from "node:url";
-import {
-  decodeSlot,
-  encodeSlot,
-  memoryImageStore,
-  openWebOs,
-  slotImageStore,
-  type ImageStore,
-} from "../src/index";
+import { decodeSlot, encodeSlot, memoryImageStore, openWebOs, slotImageStore, type ImageStore } from "../src/index";
 
 const wasm = await Bun.file(
   fileURLToPath(import.meta.resolve("@aphrody/webos-wasm/wasm/aphrody_webos_wasm_bg.wasm")),
@@ -82,15 +75,15 @@ describe("explorer backend in Rust WASM", () => {
     const reply = (await os.rpc(listing("/home/user"))) as {
       json: { files: { name: string; size: number }[] };
     };
-    expect(reply.json.files.map((f) => f.name)).toContain("note.txt");
-    expect(reply.json.files.find((f) => f.name === "note.txt")?.size).toBe(10);
+    expect(reply.json.files.map(f => f.name)).toContain("note.txt");
+    expect(reply.json.files.find(f => f.name === "note.txt")?.size).toBe(10);
     await os.flush();
 
     const again = await open(store);
     expect(new TextDecoder().decode(again.fs.read("/home/user/note.txt"))).toBe("persisted\n");
-    const found = (await again.rpc(
-      query("query:search.files", { query: "note", scope: "Library" }),
-    )) as { json: { total_found: number } };
+    const found = (await again.rpc(query("query:search.files", { query: "note", scope: "Library" }))) as {
+      json: { total_found: number };
+    };
     expect(found.json.total_found).toBe(1);
   });
 
@@ -129,10 +122,7 @@ describe("explorer backend in Rust WASM", () => {
       confidence: expect.any(Number),
       isReliable: true,
     });
-    os.fs.write(
-      "/home/user/lettre.md",
-      new TextEncoder().encode("# Lettre\n\nbonjour et merci pour le colis\n"),
-    );
+    os.fs.write("/home/user/lettre.md", new TextEncoder().encode("# Lettre\n\nbonjour et merci pour le colis\n"));
     const hits = JSON.parse(os.fs.ragSearch("colis", 5)) as {
       results: { path: string; language: string }[];
     };

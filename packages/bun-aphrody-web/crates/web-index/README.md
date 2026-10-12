@@ -1,4 +1,5 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # aphrody-web-index
 
 The BXC HNSW vector index is imported as a Rust library from clean Aphrody Web

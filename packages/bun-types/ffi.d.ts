@@ -597,11 +597,7 @@ declare module "bun:ffi" {
     close(): void;
   }
 
-  type ToFFIType<T extends FFITypeOrString> = T extends FFIType
-    ? T
-    : T extends string
-      ? FFITypeStringToType[T]
-      : never;
+  type ToFFIType<T extends FFITypeOrString> = T extends FFIType ? T : T extends string ? FFITypeStringToType[T] : never;
 
   type FFIArgValue<T> = T extends FFIAggregateType
     ? FFIStructValue
@@ -797,11 +793,7 @@ declare module "bun:ffi" {
         /**
          * File path to an ISO C source file to compile and link, or several
          */
-        source:
-          | string
-          | import("bun").BunFile
-          | URL
-          | readonly (string | import("bun").BunFile | URL)[];
+        source: string | import("bun").BunFile | URL | readonly (string | import("bun").BunFile | URL)[];
         code?: never;
       }
     | {
@@ -917,11 +909,7 @@ declare module "bun:ffi" {
    * @param byteOffset bytes to skip before reading
    * @param byteLength bytes to read
    */
-  function toBuffer(
-    ptr: Pointer | number | bigint,
-    byteOffset?: number,
-    byteLength?: number,
-  ): Buffer;
+  function toBuffer(ptr: Pointer | number | bigint, byteOffset?: number, byteLength?: number): Buffer;
   /**
    * Wrap a pointer in a {@link Buffer} that calls `deallocator` once the
    * garbage collector frees it. `deallocator` is a C function pointer with the
@@ -971,11 +959,7 @@ declare module "bun:ffi" {
    * @param byteOffset bytes to skip before reading
    * @param byteLength bytes to read
    */
-  function toArrayBuffer(
-    ptr: Pointer | number | bigint,
-    byteOffset?: number,
-    byteLength?: number,
-  ): ArrayBuffer;
+  function toArrayBuffer(ptr: Pointer | number | bigint, byteOffset?: number, byteLength?: number): ArrayBuffer;
   /**
    * Wrap a pointer in an {@link ArrayBuffer} that calls `deallocator` once
    * the garbage collector frees it, so native memory can be handed to

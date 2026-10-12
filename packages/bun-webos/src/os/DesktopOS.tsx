@@ -37,8 +37,7 @@ const INITIAL_WINDOWS: WindowState[] = DOCK_ITEMS.map((item, i) => ({
   isMinimized: false,
   isMaximized: false,
   zIndex: item.id === "bun-repl" ? 12 : item.id === "browser-access" ? 11 : 10,
-  position:
-    item.id === "bun-repl" ? { x: 260, y: 110 } : { x: 30 + (i % 8) * 30, y: 50 + (i % 8) * 20 },
+  position: item.id === "bun-repl" ? { x: 260, y: 110 } : { x: 30 + (i % 8) * 30, y: 50 + (i % 8) * 20 },
   size: item.size,
 }));
 
@@ -100,11 +99,11 @@ export const DesktopOS: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setCommandPaletteOpen((prev) => !prev);
+        setCommandPaletteOpen(prev => !prev);
       }
       if (e.altKey && e.code === "Space") {
         e.preventDefault();
-        setQuickAskOpen((prev) => !prev);
+        setQuickAskOpen(prev => !prev);
       }
     };
     globalThis.addEventListener("keydown", handleKeyDown);
@@ -114,9 +113,9 @@ export const DesktopOS: React.FC = () => {
   const bringToFront = (id: AppId, patch: Partial<WindowState>) => {
     const nextZ = highestZIndex + 1;
     setHighestZIndex(nextZ);
-    const win = windows.find((w) => w.id === id);
+    const win = windows.find(w => w.id === id);
     if (win) setActiveAppTitle(win.title);
-    setWindows((prev) => prev.map((w) => (w.id === id ? { ...w, ...patch, zIndex: nextZ } : w)));
+    setWindows(prev => prev.map(w => (w.id === id ? { ...w, ...patch, zIndex: nextZ } : w)));
   };
 
   const focusWindow = (id: AppId) => bringToFront(id, { isMinimized: false });
@@ -124,13 +123,13 @@ export const DesktopOS: React.FC = () => {
   /** Opens, raises or minimizes `id`; false when no application has that id. */
   const toggleApp = (id: string): boolean => {
     if (!isAppId(id)) return false;
-    const win = windows.find((w) => w.id === id)!;
+    const win = windows.find(w => w.id === id)!;
     if (!win.isOpen || win.isMinimized) {
       playSound("open");
       bringToFront(id, { isOpen: true, isMinimized: false });
     } else if (win.zIndex === highestZIndex) {
       playSound("minimize");
-      setWindows((prev) => prev.map((w) => (w.id === id ? { ...w, isMinimized: true } : w)));
+      setWindows(prev => prev.map(w => (w.id === id ? { ...w, isMinimized: true } : w)));
     } else {
       playSound("click");
       bringToFront(id, {});
@@ -139,7 +138,7 @@ export const DesktopOS: React.FC = () => {
   };
 
   const updateWindow = (id: AppId, patch: Partial<WindowState>) =>
-    setWindows((prev) => prev.map((w) => (w.id === id ? { ...w, ...patch } : w)));
+    setWindows(prev => prev.map(w => (w.id === id ? { ...w, ...patch } : w)));
 
   const renderApp = (id: AppId): React.ReactNode => {
     switch (id) {
@@ -226,7 +225,7 @@ export const DesktopOS: React.FC = () => {
       />
 
       <main className="absolute inset-0 top-10 bottom-16 overflow-hidden">
-        {windows.map((win) =>
+        {windows.map(win =>
           win.isOpen ? (
             <WindowFrame
               key={win.id}
@@ -255,11 +254,7 @@ export const DesktopOS: React.FC = () => {
         <PetCompanion soundEnabled={soundEnabled} onOpenApp={toggleApp} />
       </main>
 
-      <Dock
-        windows={windows}
-        onToggleApp={toggleApp}
-        onOpenCommandPalette={() => setCommandPaletteOpen(true)}
-      />
+      <Dock windows={windows} onToggleApp={toggleApp} onOpenCommandPalette={() => setCommandPaletteOpen(true)} />
 
       <CommandPalette
         isOpen={commandPaletteOpen}
@@ -268,11 +263,7 @@ export const DesktopOS: React.FC = () => {
         onSetTheme={setSeedColor}
       />
 
-      <QuickAskBar
-        isOpen={quickAskOpen}
-        onClose={() => setQuickAskOpen(false)}
-        onOpenApp={toggleApp}
-      />
+      <QuickAskBar isOpen={quickAskOpen} onClose={() => setQuickAskOpen(false)} onOpenApp={toggleApp} />
 
       {showAboutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md">
@@ -280,13 +271,9 @@ export const DesktopOS: React.FC = () => {
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-3xl shadow-lg mb-3">
               🌸
             </div>
-            <h2 className="text-xl font-black tracking-tight text-[var(--md-sys-color-on-surface)]">
-              Bun WebOS
-            </h2>
+            <h2 className="text-xl font-black tracking-tight text-[var(--md-sys-color-on-surface)]">Bun WebOS</h2>
             <div className="text-xs font-mono text-[var(--md-sys-color-primary)] font-semibold mt-0.5">
-              {snap
-                ? (snap.linux?.distribution ?? `${snap.host.type} ${snap.host.version}`)
-                : UNAVAILABLE}
+              {snap ? (snap.linux?.distribution ?? `${snap.host.type} ${snap.host.version}`) : UNAVAILABLE}
             </div>
 
             <div className="w-full bg-[var(--md-sys-color-surface-container-high)] rounded-2xl p-3.5 my-4 text-xs font-mono space-y-1.5 text-left border border-[var(--md-sys-color-outline-variant)]">
@@ -295,29 +282,17 @@ export const DesktopOS: React.FC = () => {
                   ["Noyau", snap ? `${snap.host.type} ${snap.host.release}` : UNAVAILABLE],
                   [
                     "Architecture",
-                    snap
-                      ? `${snap.host.platform}-${snap.host.arch} (${snap.host.machine})`
-                      : UNAVAILABLE,
+                    snap ? `${snap.host.platform}-${snap.host.arch} (${snap.host.machine})` : UNAVAILABLE,
                   ],
-                  [
-                    "Runtime",
-                    snap
-                      ? `Bun ${snap.runtime.bun} (${snap.runtime.revision.slice(0, 12)})`
-                      : UNAVAILABLE,
-                  ],
-                  [
-                    "CPU",
-                    snap ? `${snap.cpu.model ?? UNAVAILABLE} × ${snap.cpu.count}` : UNAVAILABLE,
-                  ],
+                  ["Runtime", snap ? `Bun ${snap.runtime.bun} (${snap.runtime.revision.slice(0, 12)})` : UNAVAILABLE],
+                  ["CPU", snap ? `${snap.cpu.model ?? UNAVAILABLE} × ${snap.cpu.count}` : UNAVAILABLE],
                   ["Mémoire", snap ? formatBytes(snap.memory.totalBytes) : UNAVAILABLE],
                   ["Uptime hôte", snap ? formatDuration(snap.host.uptimeSeconds) : UNAVAILABLE],
                 ] as const
               ).map(([label, value]) => (
                 <div key={label} className="flex justify-between gap-4">
                   <span className="text-[var(--md-sys-color-on-surface-variant)]">{label}</span>
-                  <span className="text-[var(--md-sys-color-on-surface)] font-bold text-right">
-                    {value}
-                  </span>
+                  <span className="text-[var(--md-sys-color-on-surface)] font-bold text-right">{value}</span>
                 </div>
               ))}
               {system.error && <div className="text-rose-300">{system.error}</div>}

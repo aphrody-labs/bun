@@ -10,16 +10,7 @@
  * `bun:test` lifecycle + try/finally.
  */
 
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  it,
-  mock,
-  test as bunTest,
-} from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, it, mock, test as bunTest } from "bun:test";
 import type { WebTestConfig } from "./config.ts";
 import { TestPage, type TestPageOptions } from "./page.ts";
 
@@ -56,14 +47,10 @@ export interface WebTest {
  * as forwarding wrappers that touch the underlying property only when actually
  * invoked, rather than dereferencing them at module-load time.
  */
-const skipFn = ((...args: Parameters<typeof bunTest.skip>) =>
-  bunTest.skip(...args)) as typeof bunTest.skip;
-const onlyFn = ((...args: Parameters<typeof bunTest.only>) =>
-  bunTest.only(...args)) as typeof bunTest.only;
-const todoFn = ((...args: Parameters<typeof bunTest.todo>) =>
-  bunTest.todo(...args)) as typeof bunTest.todo;
-const eachFn = ((...args: Parameters<typeof bunTest.each>) =>
-  bunTest.each(...args)) as typeof bunTest.each;
+const skipFn = ((...args: Parameters<typeof bunTest.skip>) => bunTest.skip(...args)) as typeof bunTest.skip;
+const onlyFn = ((...args: Parameters<typeof bunTest.only>) => bunTest.only(...args)) as typeof bunTest.only;
+const todoFn = ((...args: Parameters<typeof bunTest.todo>) => bunTest.todo(...args)) as typeof bunTest.todo;
+const eachFn = ((...args: Parameters<typeof bunTest.each>) => bunTest.each(...args)) as typeof bunTest.each;
 
 /**
  * Builds a `test` function bound to `config`. The returned function accepts
@@ -78,11 +65,7 @@ export function createTest(config: WebTestConfig = {}): WebTest {
     testIdAttribute: config.use?.testIdAttribute,
   };
 
-  const fn = ((
-    name: string,
-    body: FixtureBody | (() => void | Promise<void>),
-    timeout?: number,
-  ) => {
+  const fn = ((name: string, body: FixtureBody | (() => void | Promise<void>), timeout?: number) => {
     // Distinguish a fixture body (declares one arg) from a plain body.
     const wantsFixtures = body.length >= 1;
     if (!wantsFixtures) {

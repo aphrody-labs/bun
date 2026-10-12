@@ -30,18 +30,14 @@ export async function runGoogle(argv: readonly string[]): Promise<number> {
       const value = index >= 0 ? options[index + 1] : undefined;
       return value || fallback;
     };
-    const statics = options.flatMap((value, index) =>
-      options[index - 1] === "--static" && value ? [value] : [],
-    );
+    const statics = options.flatMap((value, index) => (options[index - 1] === "--static" && value ? [value] : []));
     const { serveFontsProxy } = await import("./fonts-proxy.ts");
     const server = serveFontsProxy({
       port: Number(option("port", Bun.env.FONTS_PROXY_PORT ?? "8796")),
       cacheDir: option("cache", Bun.env.FONTS_PROXY_CACHE ?? "/home/ubuntu/apps/cdn/google"),
       origin: option("origin", Bun.env.FONTS_PROXY_ORIGIN ?? "https://cdn.aphrody.com"),
       families: options.includes("--all-families") ? null : undefined,
-      staticRoot: statics.length
-        ? statics
-        : (Bun.env.FONTS_PROXY_STATIC ?? "").split(",").filter(Boolean),
+      staticRoot: statics.length ? statics : (Bun.env.FONTS_PROXY_STATIC ?? "").split(",").filter(Boolean),
     });
     console.log(`aphrody-fonts-proxy on ${server.url}`);
     return await new Promise<number>(() => {});
@@ -50,8 +46,6 @@ export async function runGoogle(argv: readonly string[]): Promise<number> {
     console.log(googleHelp);
     return command === undefined ? 2 : 0;
   }
-  console.error(
-    `yolo google ${command}: not a Bun command; the Rust owner runs it: aphrody google ${argv.join(" ")}`,
-  );
+  console.error(`yolo google ${command}: not a Bun command; the Rust owner runs it: aphrody google ${argv.join(" ")}`);
   return 2;
 }

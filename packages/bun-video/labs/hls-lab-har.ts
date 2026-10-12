@@ -16,10 +16,8 @@ export function validateHar(value: unknown): HarEntry[] {
       typeof entry?.request?.url !== "string" ||
       !Number.isInteger(entry?.response?.status) ||
       typeof entry?.response?.content?.mimeType !== "string" ||
-      (entry.response.content.text !== undefined &&
-        typeof entry.response.content.text !== "string") ||
-      (entry.response.content.encoding !== undefined &&
-        entry.response.content.encoding !== "base64")
+      (entry.response.content.text !== undefined && typeof entry.response.content.text !== "string") ||
+      (entry.response.content.encoding !== undefined && entry.response.content.encoding !== "base64")
     )
       throw new Error("Invalid HAR entry structure.");
     try {
@@ -33,8 +31,7 @@ export function validateHar(value: unknown): HarEntry[] {
 
 const attributes = (tag: string) => {
   const result: Record<string, string> = {};
-  for (const match of tag.matchAll(/([\w:-]+)\s*=\s*(["'])(.*?)\2/gs))
-    result[match[1]!] = match[3]!;
+  for (const match of tag.matchAll(/([\w:-]+)\s*=\s*(["'])(.*?)\2/gs)) result[match[1]!] = match[3]!;
   return result;
 };
 const numberAttribute = (value: string | undefined) => {
@@ -53,8 +50,7 @@ export function validateCapturedManifest(text: string, mimeType: string) {
     };
   }
   if (!/<(?:\w+:)?MPD\b/.test(text)) {
-    if (/dash\+xml|mpegurl/i.test(mimeType))
-      throw new Error("Captured manifest has an unrecognized format.");
+    if (/dash\+xml|mpegurl/i.test(mimeType)) throw new Error("Captured manifest has an unrecognized format.");
     return null;
   }
   if (!/<\/(?:\w+:)?MPD\s*>/.test(text)) throw new Error("Captured DASH manifest is incomplete.");
@@ -63,9 +59,7 @@ export function validateCapturedManifest(text: string, mimeType: string) {
   const systems = new Set<string>();
   for (const tag of text.matchAll(/<(?:\w+:)?ContentProtection\b[^>]*>/g)) {
     const scheme = attributes(tag[0]).schemeIdUri?.toLowerCase();
-    const uuid = scheme?.match(
-      /^urn:uuid:([\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12})$/,
-    )?.[1];
+    const uuid = scheme?.match(/^urn:uuid:([\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12})$/)?.[1];
     if (uuid) {
       systems.add(
         uuid === "edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
@@ -75,13 +69,9 @@ export function validateCapturedManifest(text: string, mimeType: string) {
             : uuid,
       );
     } else
-      systems.add(
-        scheme === "urn:mpeg:dash:mp4protection:2011"
-          ? "CommonEncryption"
-          : "UnrecognizedProtectionScheme",
-      );
+      systems.add(scheme === "urn:mpeg:dash:mp4protection:2011" ? "CommonEncryption" : "UnrecognizedProtectionScheme");
   }
-  const representations = [...text.matchAll(/<(?:\w+:)?Representation\b[^>]*>/g)].map((tag) => {
+  const representations = [...text.matchAll(/<(?:\w+:)?Representation\b[^>]*>/g)].map(tag => {
     const attrs = attributes(tag[0]);
     return {
       width: numberAttribute(attrs.width),
@@ -118,20 +108,15 @@ export function analyzeHar(value: unknown, html = "") {
     const mime = content.mimeType.split(";")[0]!.trim().toLowerCase();
     const safeMime = /^[a-z\d.+-]+\/[a-z\d.+-]+$/.test(mime) ? mime : "unknown";
     mimeTypes[safeMime] = (mimeTypes[safeMime] ?? 0) + 1;
-    const statusClass =
-      entry.response.status === 0 ? "unavailable" : `${Math.floor(entry.response.status / 100)}xx`;
+    const statusClass = entry.response.status === 0 ? "unavailable" : `${Math.floor(entry.response.status / 100)}xx`;
     statusClasses[statusClass] = (statusClasses[statusClass] ?? 0) + 1;
     if (content.text === undefined) continue;
-    const body =
-      content.encoding === "base64"
-        ? Buffer.from(content.text, "base64").toString("utf8")
-        : content.text;
+    const body = content.encoding === "base64" ? Buffer.from(content.text, "base64").toString("utf8") : content.text;
     if (/\/(?:[\w.+-]*\+)?json$/.test(mime)) {
       try {
         JSON.parse(body);
         jsonResponses++;
-        if (host === "crunchyroll.com" || host.endsWith(".crunchyroll.com"))
-          crunchyrollJsonResponses++;
+        if (host === "crunchyroll.com" || host.endsWith(".crunchyroll.com")) crunchyrollJsonResponses++;
       } catch {
         invalidJsonResponses++;
       }
@@ -149,8 +134,8 @@ export function analyzeHar(value: unknown, html = "") {
     invalidJsonResponses,
     crunchyrollJsonResponses,
     manifests,
-    hlsManifestCount: manifests.filter((item) => item.manifest.kind === "hls").length,
-    dashManifestCount: manifests.filter((item) => item.manifest.kind === "dash").length,
+    hlsManifestCount: manifests.filter(item => item.manifest.kind === "hls").length,
+    dashManifestCount: manifests.filter(item => item.manifest.kind === "dash").length,
     html: {
       videoElementCount: (html.match(/<video\b/gi) ?? []).length,
       hasBlobSource: /\bsrc\s*=\s*["']blob:/i.test(html),
@@ -199,8 +184,6 @@ export async function main() {
 
 if (import.meta.main)
   main().catch(() => {
-    console.error(
-      "Video lab failed; check private inputs and options. Captured values are omitted.",
-    );
+    console.error("Video lab failed; check private inputs and options. Captured values are omitted.");
     process.exitCode = 1;
   });

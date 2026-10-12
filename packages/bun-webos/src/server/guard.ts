@@ -20,35 +20,21 @@ export interface HostAccessPolicy {
 }
 
 /** null when the request may touch the host, otherwise the 403 to send. */
-export function denyHostAccess(
-  req: Request,
-  server: Server<unknown>,
-  policy: HostAccessPolicy,
-): Response | null {
+export function denyHostAccess(req: Request, server: Server<unknown>, policy: HostAccessPolicy): Response | null {
   const reason = hostAccessProblem(req, server, policy);
-  return reason === null
-    ? null
-    : Response.json({ status: "permission_denied", error: reason }, { status: 403 });
+  return reason === null ? null : Response.json({ status: "permission_denied", error: reason }, { status: 403 });
 }
 
-export function hostAccessProblem(
-  req: Request,
-  server: Server<unknown>,
-  policy: HostAccessPolicy,
-): string | null {
+export function hostAccessProblem(req: Request, server: Server<unknown>, policy: HostAccessPolicy): string | null {
   if (!policy.enabled) return "host access is disabled for this WebOS server (hostAccess: false)";
   if (!isLoopbackHost(server.hostname ?? ""))
     return `host access needs a loopback listener (listening on ${server.hostname})`;
   const url = new URL(req.url);
   const port = Number(url.port || (url.protocol === "https:" ? 443 : 80));
-  if (
-    (!isLoopbackHost(url.hostname) || port !== server.port) &&
-    !policy.trustedOrigins?.includes(url.origin)
-  )
+  if ((!isLoopbackHost(url.hostname) || port !== server.port) && !policy.trustedOrigins?.includes(url.origin))
     return "request authority is not this loopback WebOS server";
   const peer = server.requestIP(req)?.address;
-  if (peer !== undefined && !isLoopbackHost(peer))
-    return `host access is refused to the non-loopback peer ${peer}`;
+  if (peer !== undefined && !isLoopbackHost(peer)) return `host access is refused to the non-loopback peer ${peer}`;
   if (req.headers.get("sec-fetch-site") === "cross-site") return "cross-site request refused";
   const origin = req.headers.get("origin");
   if (origin !== null && origin !== url.origin) return `origin ${origin} is not this WebOS`;

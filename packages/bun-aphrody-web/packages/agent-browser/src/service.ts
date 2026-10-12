@@ -169,11 +169,7 @@ export function fetchArgs(url: string, options: FetchOptions = {}, config?: WebC
 }
 
 /** Builds the `aphrody-web crawl` argument list. Pure, covered by unit tests. */
-export function crawlArgs(
-  seeds: readonly string[],
-  options: CrawlOptions = {},
-  config?: WebConfig,
-): string[] {
+export function crawlArgs(seeds: readonly string[], options: CrawlOptions = {}, config?: WebConfig): string[] {
   if (seeds.length === 0) throw new TypeError("crawl requires at least one seed URL");
   const crawl = config?.crawl;
   const args: string[] = [];
@@ -185,8 +181,7 @@ export function crawlArgs(
   args.push("--delay-ms", String(options.delayMs ?? crawl?.delayMs ?? 0));
   args.push("--timeout", String(options.timeoutSecs ?? crawl?.timeoutSecs ?? 300));
   args.push("--user-agent", options.userAgent ?? crawl?.userAgent ?? "AphrodyWeb/1.0");
-  for (const host of options.allowedDomains ?? crawl?.allowedHosts ?? [])
-    args.push("--allowed-domain", host);
+  for (const host of options.allowedDomains ?? crawl?.allowedHosts ?? []) args.push("--allowed-domain", host);
   for (const pattern of options.includeUrlRegex ?? []) args.push("--include-url-regex", pattern);
   for (const pattern of options.excludeUrlRegex ?? []) args.push("--exclude-url-regex", pattern);
   if (options.obeyRobots ?? crawl?.obeyRobots ?? true) args.push("--obey-robots");
@@ -274,11 +269,7 @@ export class WebService {
       signal?.throwIfAborted();
       diagnostics = (diagnostics + decoder.decode()).slice(-2000);
       if (error instanceof RuntimeError && error.status === Status.Timeout) {
-        throw new WebServiceError(
-          `aphrody-web ${command} timed out after ${timeoutMs} ms`,
-          null,
-          diagnostics,
-        );
+        throw new WebServiceError(`aphrody-web ${command} timed out after ${timeoutMs} ms`, null, diagnostics);
       }
       if (error instanceof RuntimeError && error.status === Status.OutputLimit) {
         throw new WebServiceError(
@@ -341,14 +332,7 @@ export class WebService {
     if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > 64_000_000) {
       throw new RangeError("maxBytes must be an integer between 1 and 64000000");
     }
-    const args = [
-      "response",
-      url,
-      "--max-bytes",
-      String(maxBytes),
-      "--timeout",
-      String(timeoutSecs),
-    ];
+    const args = ["response", url, "--max-bytes", String(maxBytes), "--timeout", String(timeoutSecs)];
     if (options.allowPrivateNetwork) args.push("--allow-private-network");
     return JSON.parse(await this.#run(args, (timeoutSecs + 15) * 1000)) as NativeResponse;
   }
@@ -371,22 +355,14 @@ export class WebService {
     args.push("scrape", ...urls, "--quiet", "--format", "json", "--timeout", String(timeoutSecs));
     args.push("--concurrency", String(options.concurrency ?? 4));
     if (options.eval) args.push("--eval", options.eval);
-    const out = await this.#run(
-      args,
-      (timeoutSecs + 30) * 1000 * Math.ceil(urls.length / (options.concurrency ?? 4)),
-    );
+    const out = await this.#run(args, (timeoutSecs + 30) * 1000 * Math.ceil(urls.length / (options.concurrency ?? 4)));
     return JSON.parse(out) as unknown[];
   }
 
   /** Bounded, robots-aware crawl over the static HTTP stack. */
   async crawl(seeds: readonly string[], options: CrawlOptions = {}): Promise<CrawlReport> {
     const timeoutSecs = options.timeoutSecs ?? this.config.crawl.timeoutSecs;
-    const out = await this.#run(
-      crawlArgs(seeds, options, this.config),
-      (timeoutSecs + 15) * 1000,
-      {},
-      options.signal,
-    );
+    const out = await this.#run(crawlArgs(seeds, options, this.config), (timeoutSecs + 15) * 1000, {}, options.signal);
     return JSON.parse(out) as CrawlReport;
   }
 

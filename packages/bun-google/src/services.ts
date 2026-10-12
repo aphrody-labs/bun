@@ -38,8 +38,7 @@ function id(value: string): string {
 
 function query(values: Record<string, string | number | boolean | undefined>): string {
   const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(values))
-    if (value !== undefined) params.set(key, String(value));
+  for (const [key, value] of Object.entries(values)) if (value !== undefined) params.set(key, String(value));
   return params.size ? `?${params}` : "";
 }
 
@@ -59,8 +58,7 @@ function driveFile(value: unknown): DriveFile {
 
 async function drivePage(response: Response): Promise<DrivePage> {
   const page = record(await response.json(), "Drive list");
-  if (page.files !== undefined && !Array.isArray(page.files))
-    throw new Error("Google Drive list response is invalid");
+  if (page.files !== undefined && !Array.isArray(page.files)) throw new Error("Google Drive list response is invalid");
   if (page.nextPageToken !== undefined && typeof page.nextPageToken !== "string")
     throw new Error("Google Drive list response is invalid");
   if (page.incompleteSearch !== undefined && typeof page.incompleteSearch !== "boolean")
@@ -75,11 +73,7 @@ async function drivePage(response: Response): Promise<DrivePage> {
 async function googleDocument(response: Response): Promise<GoogleDocument> {
   const document = record(await response.json(), "Docs document");
   for (const field of ["documentId", "title", "revisionId"])
-    if (
-      document[field] !== undefined &&
-      document[field] !== null &&
-      typeof document[field] !== "string"
-    )
+    if (document[field] !== undefined && document[field] !== null && typeof document[field] !== "string")
       throw new Error("Google Docs document response is invalid");
   return document as GoogleDocument;
 }
@@ -120,9 +114,7 @@ export function createGoogleServices(options: ServiceOptions) {
         return drivePage(response);
       },
       async getFile(fileId: string, fields?: string, signal?: AbortSignal): Promise<DriveFile> {
-        return driveFile(
-          await (await drive.request(`files/${id(fileId)}${query({ fields })}`, { signal })).json(),
-        );
+        return driveFile(await (await drive.request(`files/${id(fileId)}${query({ fields })}`, { signal })).json());
       },
       async exportFile(fileId: string, mimeType: string, signal?: AbortSignal): Promise<Response> {
         if (!mimeType) throw new TypeError("Drive export requires a MIME type");
@@ -143,8 +135,7 @@ export function createGoogleServices(options: ServiceOptions) {
           const result = await this.listFiles({ ...params, pageToken }, options.signal);
           for (const file of result.files ?? []) yield file;
           if (!result.nextPageToken) return;
-          if (seen.has(result.nextPageToken))
-            throw new Error("Drive returned a repeated page token");
+          if (seen.has(result.nextPageToken)) throw new Error("Drive returned a repeated page token");
           seen.add(result.nextPageToken);
           pageToken = result.nextPageToken;
         }
@@ -161,8 +152,7 @@ export function createGoogleServices(options: ServiceOptions) {
         requiredRevisionId: string,
         signal?: AbortSignal,
       ): Promise<unknown> {
-        if (!requiredRevisionId?.trim())
-          throw new TypeError("Docs batchUpdate requires the reviewed revision ID");
+        if (!requiredRevisionId?.trim()) throw new TypeError("Docs batchUpdate requires the reviewed revision ID");
         return (
           await docs.request(`documents/${id(documentId)}:batchUpdate`, {
             method: "POST",
@@ -174,11 +164,7 @@ export function createGoogleServices(options: ServiceOptions) {
       },
     },
     gemini: {
-      async generate(
-        model: string,
-        body: Record<string, unknown>,
-        signal?: AbortSignal,
-      ): Promise<unknown> {
+      async generate(model: string, body: Record<string, unknown>, signal?: AbortSignal): Promise<unknown> {
         return (
           await gemini.request(`models/${id(model)}:generateContent`, {
             method: "POST",
@@ -189,11 +175,7 @@ export function createGoogleServices(options: ServiceOptions) {
         ).json();
       },
       /** Returns the SSE response; the caller owns reading and cancelling its body. */
-      stream(
-        model: string,
-        body: Record<string, unknown>,
-        signal?: AbortSignal,
-      ): Promise<Response> {
+      stream(model: string, body: Record<string, unknown>, signal?: AbortSignal): Promise<Response> {
         return gemini.request(`models/${id(model)}:streamGenerateContent?alt=sse`, {
           method: "POST",
           headers: { "content-type": "application/json" },

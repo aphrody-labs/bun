@@ -2,14 +2,7 @@ import { dlopen, ptr } from "bun:ffi";
 
 type Libc = {
   socket(domain: number, type: number, protocol: number): number;
-  sendto(
-    fd: number,
-    buf: any,
-    len: number | bigint,
-    flags: number,
-    addr: any,
-    addrlen: number,
-  ): number | bigint;
+  sendto(fd: number, buf: any, len: number | bigint, flags: number, addr: any, addrlen: number): number | bigint;
   close(fd: number): number;
 };
 
@@ -76,8 +69,7 @@ export function sdNotify(state: string): boolean {
   }
 }
 
-export const notifyReady = (status?: string): boolean =>
-  sdNotify(status ? `READY=1\nSTATUS=${status}` : "READY=1");
+export const notifyReady = (status?: string): boolean => sdNotify(status ? `READY=1\nSTATUS=${status}` : "READY=1");
 export const notifyStopping = (): boolean => sdNotify("STOPPING=1");
 export const notifyStatus = (status: string): boolean => sdNotify(`STATUS=${status}`);
 export const notifyReloading = (): boolean =>

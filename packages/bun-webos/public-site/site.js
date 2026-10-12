@@ -14,17 +14,15 @@ const examples = {
     '<h2>Choisissez votre ambiance</h2><p>La couleur change uniquement cette démonstration.</p><div class="theme-row"><button data-theme="#dce5f8">Bleu</button><button data-theme="#d8ebe6">Sauge</button></div>',
   ],
 };
-document.querySelectorAll("[data-app]").forEach((button) => {
+document.querySelectorAll("[data-app]").forEach(button => {
   button.addEventListener("click", () => {
     const [name, html] = examples[button.dataset.app];
     title.textContent = name;
     content.innerHTML = html;
-    document
-      .querySelectorAll("[data-app]")
-      .forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+    document.querySelectorAll("[data-app]").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
   });
 });
-content.addEventListener("click", (event) => {
+content.addEventListener("click", event => {
   const button = event.target.closest("[data-theme]");
   if (button) document.documentElement.style.setProperty("--desktop", button.dataset.theme);
 });

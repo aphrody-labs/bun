@@ -23,52 +23,47 @@ import { GoogleMassScanner } from "../../../src/google/mass-scanner.ts";
  */
 
 async function main() {
-	const scanner = new GoogleMassScanner({
-		concurrency: 5,
-		maxPages: 50, // Limit for this discovery task
-	});
+  const scanner = new GoogleMassScanner({
+    concurrency: 5,
+    maxPages: 50, // Limit for this discovery task
+  });
 
-	const seeds = [
-		"https://m3.material.io/",
-		"https://design.google/",
-		"https://developers.google.com/",
-		"https://firebase.google.com/",
-		"https://angular.io/",
-		"https://flutter.dev/",
-		"https://web.dev/",
-		"https://tensorflow.org/",
-		"https://go.dev/",
-	];
+  const seeds = [
+    "https://m3.material.io/",
+    "https://design.google/",
+    "https://developers.google.com/",
+    "https://firebase.google.com/",
+    "https://angular.io/",
+    "https://flutter.dev/",
+    "https://web.dev/",
+    "https://tensorflow.org/",
+    "https://go.dev/",
+  ];
 
-	console.log(
-		`🔍 Mapping Google Design & UI Ecosystem starting from ${seeds.length} seeds...`,
-	);
+  console.log(`🔍 Mapping Google Design & UI Ecosystem starting from ${seeds.length} seeds...`);
 
-	const results = await scanner.scan(seeds);
+  const results = await scanner.scan(seeds);
 
-	console.log("\n✨ Discovery Complete!");
+  console.log("\n✨ Discovery Complete!");
 
-	// Filter and group by domain to find unique official properties
-	const uniqueDomains = new Set<string>();
-	for (const r of results) {
-		try {
-			const hostname = new URL(r.url).hostname;
-			uniqueDomains.add(hostname);
-		} catch {}
-	}
+  // Filter and group by domain to find unique official properties
+  const uniqueDomains = new Set<string>();
+  for (const r of results) {
+    try {
+      const hostname = new URL(r.url).hostname;
+      uniqueDomains.add(hostname);
+    } catch {}
+  }
 
-	console.log("\n🌐 Official Google Design/UI/Framework Hostnames Found:");
-	Array.from(uniqueDomains)
-		.sort()
-		.forEach((domain) => {
-			console.log(`  - ${domain}`);
-		});
+  console.log("\n🌐 Official Google Design/UI/Framework Hostnames Found:");
+  Array.from(uniqueDomains)
+    .sort()
+    .forEach(domain => {
+      console.log(`  - ${domain}`);
+    });
 
-	// Save results
-	await Bun.write(
-		"discovery-design-results.json",
-		JSON.stringify(results, null, 2),
-	);
+  // Save results
+  await Bun.write("discovery-design-results.json", JSON.stringify(results, null, 2));
 }
 
 main().catch(console.error);

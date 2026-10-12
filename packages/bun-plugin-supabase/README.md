@@ -55,7 +55,9 @@ The result shape (`{ data, error, count, status, statusText }`) is intentionally
 ```ts
 import { applyMigrations } from "@aphrody/bun-plugin-supabase/migrations";
 
-const report = await applyMigrations(db.sql, { directory: "./supabase/migrations" });
+const report = await applyMigrations(db.sql, {
+  directory: "./supabase/migrations",
+});
 console.log(`Applied ${report.applied.length} migrations`);
 ```
 

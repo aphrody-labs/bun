@@ -34,7 +34,8 @@ test("migrated HTTP transport preserves methods and headers and refuses redirect
   );
   expect(result.value).toEqual({ received: true });
   expect(received).toEqual({ method: "POST", header: "fixture", body: "payload" });
-  await expect(
-    consumerRequestJson(new URL("/redirect", server.url), {}, { timeoutMs: 2_000 }),
-  ).rejects.toMatchObject({ stage: "request", timedOut: false });
+  await expect(consumerRequestJson(new URL("/redirect", server.url), {}, { timeoutMs: 2_000 })).rejects.toMatchObject({
+    stage: "request",
+    timedOut: false,
+  });
 });

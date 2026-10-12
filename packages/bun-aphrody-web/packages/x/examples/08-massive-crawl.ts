@@ -28,7 +28,7 @@ for (const url of urls) {
     profile = candidate;
     const report = await runXWebRecon(candidate, [url]);
     const page = report.results[url];
-    error = page ? page.error ?? "" : "no page result";
+    error = page ? (page.error ?? "") : "no page result";
     const raw = page?.raw as { extracted?: { title?: string } } | undefined;
     title = raw?.extracted?.title ?? "";
     if (!error && !title) error = "empty page title";
@@ -44,7 +44,7 @@ for (const url of urls) {
   );
 }
 
-const successful = results.filter((result) => result.ok);
+const successful = results.filter(result => result.ok);
 console.log(`${successful.length}/${urls.length} successful`);
 console.log(`profiles: ${JSON.stringify(profileStats)}`);
 await Bun.write("results.json", JSON.stringify(successful, null, 2));

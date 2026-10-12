@@ -2,17 +2,19 @@
 name: bun-graph-call-paths
 description: "Verified end-to-end call chains (file:line) for bun run, Bun.serve, bun install and bun build, found via the aphrody graph + source, plus the graph node ids to explain them"
 metadata:
- type: reference
+  type: reference
 ---
 
 Built 2026-10-08 on HEAD fe43d1d685a. Graph (`aphrody graph --source graph:bun`) only locates symbols; its Rust `calls` edges are same-file name matches, so every hop below was confirmed in source (see `bun-graph-structure` for why).
 
 **`bun file.ts` (run path)**
+
 1. `src/runtime/cli/mod.rs:953..1095` classify argv → `Tag::AutoCommand` / `Tag::RunCommand`.
 2. `RunCommand::exec_with_cfg` `src/runtime/cli/run_command.rs:2352` → `boot_and_handle_error` `:1757` → `RunCommand::boot` `:963` (calls `VirtualMachine::init` at `:1011`, `wire_transpiler_from_ctx` `:818`) → `Run::start` `:1347`.
 3. `Run::start` → `vm.load_entry_point(entry)` `:1493` → `VirtualMachine::load_entry_point` `src/jsc/VirtualMachine.rs:3550` → `reload_entry_point` `:3400` → `JSModuleLoader::resolve_and_load_and_evaluate_module_ptr` `:3540` (C++ JSC module loader). Then the run loop `while vm.is_event_loop_alive … vm.tick` at `run_command.rs:~1541`.
 4. JSC asks for source: `fetchESMSourceCode` `src/jsc/bindings/ModuleLoader.cpp:972` / `fetchCommonJSModuleNonBuiltin` `:829` → `Bun__transpileFile` (extern "C") `src/runtime/jsc_hooks.rs:4086` → `transpile_source_code_inner` `:2136` → `Transpiler::parse_maybe_return_file_only` `src/bundler/transpiler.rs:1250` (calls at `jsc_hooks.rs:2611/2618`) → `cache::JavaScript::parse` `src/bundler/cache.rs:71` → `js_parser::Parser::init` + `Parser::parse` `src/js_parser/parse/parse_entry.rs:420` → `_parse<TS>` `:999`.
- - `src/jsc/ModuleLoader.rs` is only a 7-edge shell (arena + `TranspileArgs` at `:116`); the real loader bodies live in `src/runtime/jsc_hooks.rs` because `bun_jsc` cannot depend on the transpiler (crate-DAG inversion; header comment `jsc_hooks.rs:1-17`, link-time `extern "Rust"` `__bun_transpile_source_code` `:2122`). Async off-thread variant: `RuntimeTranspilerStore` `src/jsc/RuntimeTranspilerStore.rs:198`.
+
+- `src/jsc/ModuleLoader.rs` is only a 7-edge shell (arena + `TranspileArgs` at `:116`); the real loader bodies live in `src/runtime/jsc_hooks.rs` because `bun_jsc` cannot depend on the transpiler (crate-DAG inversion; header comment `jsc_hooks.rs:1-17`, link-time `extern "Rust"` `__bun_transpile_source_code` `:2122`). Async off-thread variant: `RuntimeTranspilerStore` `src/jsc/RuntimeTranspilerStore.rs:198`.
 
 **`Bun.serve`**
 `serve` `src/runtime/api/BunObject.rs:1354` → `ServerConfig::from_js` → `<NewServer>::init` `BunObject.rs:1440` (= `src/runtime/server/mod.rs:2197`) → `listen` `:2852` → `set_routes` `:2303`. uWS callback `extern "C" on_request<SSL,DEBUG>` `mod.rs:3467` → `NewServer::on_request` `:1136` → `prepare_js_request_context` `:728` (creates `RequestContext::create` at `:814`) → JS `fetch` handler `on_request.call(...)` `:1171` → `handle_request` `:1084` → `RequestContext::on_response` `src/runtime/server/RequestContext.rs:2727` → promise `on_resolve` `:727`/`handle_resolve` `:847` → `do_render_with_body` `:3105` / `do_render_stream` `:2126`. `NewServer` struct `mod.rs:228`, `RequestContext` `RequestContext.rs:118`. Routes: `on_user_route_request` `mod.rs:1186`; node:http path `on_node_http_request` `:1251`. See `bun-runtime-server`.

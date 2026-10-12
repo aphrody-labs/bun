@@ -33,9 +33,7 @@ function headers(value: unknown): Record<string, string> {
       typeof content !== "string" ||
       /[\r\n]/.test(content) ||
       content.includes("\0") ||
-      /^(?:host|content-length|connection|transfer-encoding|upgrade|proxy-.*|te|trailer)$/i.test(
-        name,
-      )
+      /^(?:host|content-length|connection|transfer-encoding|upgrade|proxy-.*|te|trailer)$/i.test(name)
     )
       throw new Error("Invalid or transport-managed live DASH header.");
     result[name.toLowerCase()] = content;
@@ -47,12 +45,10 @@ export function validateDashLiveConfig(value: unknown): DashLiveConfig {
   if (!record(value) || !Array.isArray(value.allowedOrigins) || !value.allowedOrigins.length)
     throw new Error("Live DASH config requires explicit allowedOrigins.");
   if (Object.hasOwn(value, "protectionData"))
-    throw new Error(
-      "Live DASH laboratory transport supports media only; protectionData is unsupported.",
-    );
+    throw new Error("Live DASH laboratory transport supports media only; protectionData is unsupported.");
   const allowedOrigins = [
     ...new Set(
-      value.allowedOrigins.map((origin) => {
+      value.allowedOrigins.map(origin => {
         const url = httpUrl(origin);
         if (url.pathname !== "/" || url.search)
           throw new Error("Allowed origins must contain only scheme, host and port.");
@@ -61,8 +57,7 @@ export function validateDashLiveConfig(value: unknown): DashLiveConfig {
     ),
   ];
   const src = httpUrl(value.src);
-  if (!allowedOrigins.includes(src.origin))
-    throw new Error("Live DASH source origin is not authorized.");
+  if (!allowedOrigins.includes(src.origin)) throw new Error("Live DASH source origin is not authorized.");
   if (/licen[cs]|widevine|playready/i.test(src.hostname + src.pathname))
     throw new Error("Live DASH source must be a media manifest resource.");
   const headersByOrigin: DashLiveConfig["headersByOrigin"] = {};
@@ -121,20 +116,16 @@ async function boundedBody(
   return result;
 }
 
-export function createDashLiveTransport(
-  input: DashLiveConfig,
-  options: DashLiveTransportOptions = {},
-) {
+export function createDashLiveTransport(input: DashLiveConfig, options: DashLiveTransportOptions = {}) {
   const config = validateDashLiveConfig(input);
   const timeoutMs = options.timeoutMs ?? 15_000;
   const maxManifestBytes = options.maxManifestBytes ?? 5 * 1024 * 1024;
-  if (![timeoutMs, maxManifestBytes].every((value) => Number.isSafeInteger(value) && value > 0))
+  if (![timeoutMs, maxManifestBytes].every(value => Number.isSafeInteger(value) && value > 0))
     throw new Error("Live DASH transport limits must be positive integers.");
   const resources = new Map<string, Resource>();
   function authorized(value: string): URL {
     const url = httpUrl(value);
-    if (!config.allowedOrigins.includes(url.origin))
-      throw new Error("Live DASH resource origin is not authorized.");
+    if (!config.allowedOrigins.includes(url.origin)) throw new Error("Live DASH resource origin is not authorized.");
     return url;
   }
   function register(resource: Resource): string {
@@ -163,8 +154,7 @@ export function createDashLiveTransport(
       const originHeaders = new Headers(config.headersByOrigin[url.origin]);
       const range = request?.headers.get("range");
       if (range) {
-        if (!/^bytes=(?:\d+-\d*|-\d+)$/.test(range))
-          throw new Error("Unsupported live DASH byte range.");
+        if (!/^bytes=(?:\d+-\d*|-\d+)$/.test(range)) throw new Error("Unsupported live DASH byte range.");
         originHeaders.set("range", range);
       }
       const response = await fetch(url, {
@@ -197,16 +187,12 @@ export function createDashLiveTransport(
   async function fetchSource(): Promise<{ text: string; baseURL: string }> {
     const { response, done, controller } = await remote(resources.get(sourceToken)!);
     try {
-      const text = new TextDecoder().decode(
-        await boundedBody(response.body, maxManifestBytes, controller.signal),
-      );
+      const text = new TextDecoder().decode(await boundedBody(response.body, maxManifestBytes, controller.signal));
       inspectDashManifest(text);
       return { text, baseURL: config.src };
     } catch {
       throw new Error(
-        controller.signal.aborted
-          ? "Live DASH request timed out."
-          : "Live DASH source is not a valid bounded MPD.",
+        controller.signal.aborted ? "Live DASH request timed out." : "Live DASH source is not a valid bounded MPD.",
       );
     } finally {
       done();
@@ -261,11 +247,7 @@ export function createDashLiveTransport(
         } catch {
           finish();
           target.error(
-            new Error(
-              controller.signal.aborted
-                ? "Live DASH request timed out."
-                : "Live DASH response stream failed.",
-            ),
+            new Error(controller.signal.aborted ? "Live DASH request timed out." : "Live DASH response stream failed."),
           );
         }
       },
@@ -304,10 +286,9 @@ export function createDashLiveTransport(
     }).parse(xml) as Record<string, unknown>;
     let baseCount = 0;
     const visit = (node: Record<string, unknown>, base: string) => {
-      const baseKeys = Object.keys(node).filter((name) => name.split(":").at(-1) === "BaseURL");
+      const baseKeys = Object.keys(node).filter(name => name.split(":").at(-1) === "BaseURL");
       let currentBase = base;
-      if (baseKeys.length > 1)
-        throw new Error("Live DASH replay supports a single BaseURL per manifest node.");
+      if (baseKeys.length > 1) throw new Error("Live DASH replay supports a single BaseURL per manifest node.");
       for (const name of baseKeys) {
         const value = node[name];
         if (typeof value !== "string" || !value.trim())
@@ -316,8 +297,7 @@ export function createDashLiveTransport(
           .trim()
           .replace(
             /&(amp|quot|apos|lt|gt);/g,
-            (_match, entity: string) =>
-              ({ amp: "&", quot: '"', apos: "'", lt: "<", gt: ">" })[entity]!,
+            (_match, entity: string) => ({ amp: "&", quot: '"', apos: "'", lt: "<", gt: ">" })[entity]!,
           );
         try {
           currentBase = new URL(decoded, base).href;
@@ -342,9 +322,7 @@ export function createDashLiveTransport(
             "LicenseURL",
           ].includes(local!)
         )
-          throw new Error(
-            "Live DASH laboratory supports only SegmentBase manifests without external references.",
-          );
+          throw new Error("Live DASH laboratory supports only SegmentBase manifests without external references.");
         if (name.startsWith("@_")) {
           const attributeName = name.slice(2).split(":").at(-1)?.toLowerCase();
           if (
@@ -366,11 +344,8 @@ export function createDashLiveTransport(
       }
     };
     visit(parsed, baseURL);
-    if (!baseCount)
-      throw new Error("Live DASH laboratory requires captured-style BaseURL resources.");
-    return new module.XMLBuilder({ ignoreAttributes: false, format: false }).build(
-      parsed,
-    ) as string;
+    if (!baseCount) throw new Error("Live DASH laboratory requires captured-style BaseURL resources.");
+    return new module.XMLBuilder({ ignoreAttributes: false, format: false }).build(parsed) as string;
   }
 
   return { sourceToken, resourceToken, fetchSource, fetchResource, proxy, rewriteDashManifest };

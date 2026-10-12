@@ -8,7 +8,7 @@ import { WebService, WebServiceError } from "../src/service.ts";
 
 const directories: string[] = [];
 afterEach(async () => {
-  await Promise.all(directories.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
+  await Promise.all(directories.splice(0).map(dir => rm(dir, { recursive: true, force: true })));
 });
 
 async function fixture(body: string): Promise<string> {
@@ -82,9 +82,9 @@ setInterval(() => {}, 1000);
 `);
   const spawned = spyOn(Runtime.prototype, "spawn");
   try {
-    await expect(
-      new WebService({ binary, maxOutputBytes: 1024 }).bytes("https://example.test/"),
-    ).rejects.toMatchObject({ exitCode: null, stderr: "budget diagnostics\n" });
+    await expect(new WebService({ binary, maxOutputBytes: 1024 }).bytes("https://example.test/")).rejects.toMatchObject(
+      { exitCode: null, stderr: "budget diagnostics\n" },
+    );
     const child = spawned.mock.results[0]!.value as ManagedProcess;
     expect(alive(child.pid)).toBe(false);
     expect(() => child.status()).toThrow(/released/);
@@ -107,12 +107,10 @@ setInterval(() => {}, 1000);
   const controller = new AbortController();
   const reason = new Error("caller cancelled native crawl");
   const spawned = spyOn(Runtime.prototype, "spawn");
-  const pending = new WebService({ binary })
-    .crawl(["https://example.test/"], { signal: controller.signal })
-    .then(
-      () => undefined,
-      (error: unknown) => error,
-    );
+  const pending = new WebService({ binary }).crawl(["https://example.test/"], { signal: controller.signal }).then(
+    () => undefined,
+    (error: unknown) => error,
+  );
   try {
     const deadline = Date.now() + 2000;
     // Readiness must be observed sequentially before aborting this owned fixture.
@@ -150,10 +148,7 @@ test("an already aborted crawl starts no native process", async () => {
 test("concurrent one-shot commands preserve the shared engine and supervisor", async () => {
   const binary = await fixture('await Bun.sleep(20); console.log("fixture version");');
   const service = new WebService({ binary });
-  expect(await Promise.all([service.version(), service.version()])).toEqual([
-    "fixture version",
-    "fixture version",
-  ]);
+  expect(await Promise.all([service.version(), service.version()])).toEqual(["fixture version", "fixture version"]);
   // The preload engine belongs to the same SDK owner and remains available.
   const { endpoint } = await service.engine();
   expect(endpoint).toBe(process.env.APHRODY_BROWSER_CDP_URL!);
@@ -162,14 +157,10 @@ test("concurrent one-shot commands preserve the shared engine and supervisor", a
 });
 
 test("native timeout preserves WebServiceError and reaps its owning child", async () => {
-  const binary = await fixture(
-    'console.error("timeout diagnostics"); setInterval(() => {}, 1000);',
-  );
+  const binary = await fixture('console.error("timeout diagnostics"); setInterval(() => {}, 1000);');
   const spawned = spyOn(Runtime.prototype, "spawn");
   try {
-    await expect(
-      new WebService({ binary }).fetch("https://example.test/", { timeoutSecs: 0 }),
-    ).rejects.toMatchObject({
+    await expect(new WebService({ binary }).fetch("https://example.test/", { timeoutSecs: 0 })).rejects.toMatchObject({
       exitCode: null,
       stderr: "timeout diagnostics\n",
       message: "aphrody-web fetch timed out after 15000 ms",

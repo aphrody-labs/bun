@@ -28,9 +28,7 @@ test("Anonymous search uses the qualified Rust owner with SafeSearch and no brow
       expect(signal).toBeInstanceOf(AbortSignal);
       return JSON.stringify({
         query: "Bun & M3",
-        organic: [
-          { title: "Real fixture", url: "https://example.test", snippet: "Source fixture" },
-        ],
+        organic: [{ title: "Real fixture", url: "https://example.test", snippet: "Source fixture" }],
         authenticated: false,
       });
     },
@@ -71,13 +69,13 @@ test("Search caps concurrent owner jobs and honors cancellation", async () => {
   const releases: (() => void)[] = [];
   const search = createGooglePublicSearch({
     run: async () => {
-      await new Promise<void>((resolve) => releases.push(resolve));
+      await new Promise<void>(resolve => releases.push(resolve));
       return JSON.stringify({ query: "x", organic: [] });
     },
   });
   const pending = Array.from({ length: 4 }, () => search({ query: "x" }));
   await expect(search({ query: "x" })).rejects.toThrow("capacity");
-  releases.forEach((release) => release());
+  releases.forEach(release => release());
   await Promise.all(pending);
   const abort = new AbortController();
   abort.abort(new Error("cancelled"));

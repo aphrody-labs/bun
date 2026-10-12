@@ -15,9 +15,7 @@ export interface GoogleGeminiClient {
 }
 
 /** Create an ADC-backed Vertex Gemini client from the shared runtime contract. */
-export function createGoogleGeminiClient(
-  runtime: GoogleRuntime = googleRuntime(),
-): GoogleGeminiClient {
+export function createGoogleGeminiClient(runtime: GoogleRuntime = googleRuntime()): GoogleGeminiClient {
   const vertex = createVertex({ project: runtime.project, location: runtime.location });
 
   return {
@@ -35,7 +33,7 @@ export function createGoogleGeminiClient(
         const content = (
           result as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
         ).candidates?.[0]?.content?.parts
-          ?.map((part) => part.text ?? "")
+          ?.map(part => part.text ?? "")
           .join("");
         return content ?? "";
       }

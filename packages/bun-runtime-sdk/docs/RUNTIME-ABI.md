@@ -6,13 +6,13 @@ First vertical slice of [PLAN.md](../../../PLAN.md) phase R0: one capability fam
 C ABI, a precompiled artifact and a light TypeScript consumer. Nothing here qualifies later
 phases.
 
-| Piece                      | Path                                                      |
-| :------------------------- | :-------------------------------------------------------- |
-| Library (cdylib + rlib)    | `crates/engine/yolo-runtime`                                     |
+| Piece                      | Path                                                                                                                                  |
+| :------------------------- | :------------------------------------------------------------------------------------------------------------------------------------ |
+| Library (cdylib + rlib)    | `crates/engine/yolo-runtime`                                                                                                          |
 | C header                   | `crates/interop/ffi/include/aphrody.h` (canonical main header of `aphrody_ffi`; packaged `yolo_runtime.h` is a compatibility include) |
-| TypeScript SDK (`bun:ffi`) | `packages/engine/runtime`                                             |
-| Artifact packaging         | `scripts/release/runtime_artifact.ts` → `dist/runtime/<target>/`  |
-| Tests                      | `cargo test -p yolo-runtime`, `test/runtime_sdk.test.ts` |
+| TypeScript SDK (`bun:ffi`) | `packages/engine/runtime`                                                                                                             |
+| Artifact packaging         | `scripts/release/runtime_artifact.ts` → `dist/runtime/<target>/`                                                                      |
+| Tests                      | `cargo test -p yolo-runtime`, `test/runtime_sdk.test.ts`                                                                              |
 
 The main header merges the former `yolo_runtime.h` declarations. Optional feature
 interfaces remain in `crates/interop/ffi/include/aphrody-tooling.h`,

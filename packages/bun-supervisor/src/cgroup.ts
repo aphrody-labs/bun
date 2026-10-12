@@ -62,7 +62,7 @@ export function parsePsi(text: string | undefined): { some: Psi | null; full: Ps
   for (const line of (text ?? "").split("\n")) {
     const [kind, ...fields] = line.trim().split(/\s+/);
     if (kind !== "some" && kind !== "full") continue;
-    const kv = Object.fromEntries(fields.map((f) => f.split("=") as [string, string]));
+    const kv = Object.fromEntries(fields.map(f => f.split("=") as [string, string]));
     out[kind] = {
       avg10: Number(kv.avg10 ?? 0),
       avg60: Number(kv.avg60 ?? 0),

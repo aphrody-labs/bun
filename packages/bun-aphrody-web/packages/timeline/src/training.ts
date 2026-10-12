@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: Apache-2.0
 import { trainingRows, type Snapshot, type TrainingOptions } from "./model.ts";
 
-const jsonl = (rows: unknown[]) => rows.map((row) => JSON.stringify(row)).join("\n") + "\n";
+const jsonl = (rows: unknown[]) => rows.map(row => JSON.stringify(row)).join("\n") + "\n";
 const checksum = (text: string) => new Bun.CryptoHasher("sha256").update(text).digest("hex");
 
 /** Prepared LoRA inputs consumed by the existing aphrody_train.lora loader. */
 export function trainingArtifacts(snapshot: Snapshot, options: TrainingOptions = {}) {
   const examples = trainingRows(snapshot, options);
   const rollouts = examples
-    .filter((row) => row.split === "train")
-    .map((row) => ({
+    .filter(row => row.split === "train")
+    .map(row => ({
       sourceId: row.sourceId,
       generation: row.generation,
       source: row.source,
       session: `timeline:${snapshot.generation}`,
       prompt: row.messages[0]!.content,
-      messages: row.messages.map((message) => ({
+      messages: row.messages.map(message => ({
         role: message.role === "assistant" ? "model" : "user",
         parts: [{ text: message.content }],
       })),

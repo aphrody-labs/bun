@@ -41,7 +41,7 @@ export async function* captureParallelFrames(
   };
   const abort = () => fail(new Error("Video capture aborted", { cause: signal?.reason }));
   const wait = () =>
-    new Promise<void>((resolve) => {
+    new Promise<void>(resolve => {
       wake = resolve;
     });
   const arm = (state: (typeof states)[number]) => {
@@ -62,7 +62,7 @@ export async function* captureParallelFrames(
         done: false,
       };
       states.push(state);
-      worker.addEventListener("message", (event) => {
+      worker.addEventListener("message", event => {
         const message = event.data;
         if (message?.type === "error") {
           fail(new Error(String(message.message)));
@@ -108,12 +108,9 @@ export async function* captureParallelFrames(
         pending.set(message.frame, { state, png });
         notify();
       });
-      worker.addEventListener("error", (event) =>
-        fail(new Error(event.message ?? "Capture worker error")),
-      );
+      worker.addEventListener("error", event => fail(new Error(event.message ?? "Capture worker error")));
       worker.addEventListener("close", () => {
-        if (!state.done)
-          fail(new Error("Capture worker closed before completing its assigned frames"));
+        if (!state.done) fail(new Error("Capture worker closed before completing its assigned frames"));
       });
       arm(state);
       worker.postMessage({
@@ -136,7 +133,7 @@ export async function* captureParallelFrames(
       arm(item.state);
       item.state.worker.postMessage({ type: "next" });
     }
-    while (!states.every((state) => state.done)) {
+    while (!states.every(state => state.done)) {
       if (failure) throw failure;
       await wait();
     }

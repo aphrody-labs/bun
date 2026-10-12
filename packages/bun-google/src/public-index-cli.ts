@@ -10,14 +10,7 @@ const HELP = {
     "bun-google-index-public --root <absolute-export-root> --collections-file <absolute-policy.json> --collection <slug> --query <text> [--num 1..20] [--start 0..1000]",
   source: "public-crawl-cache",
 };
-const FLAGS = new Set([
-  "--root",
-  "--collections-file",
-  "--collection",
-  "--query",
-  "--num",
-  "--start",
-]);
+const FLAGS = new Set(["--root", "--collections-file", "--collection", "--query", "--num", "--start"]);
 
 async function readCollections(path: string, signal?: AbortSignal) {
   signal?.throwIfAborted();
@@ -28,12 +21,7 @@ async function readCollections(path: string, signal?: AbortSignal) {
   try {
     signal?.throwIfAborted();
     const actual = await file.stat();
-    if (
-      !actual.isFile() ||
-      actual.ino !== before.ino ||
-      actual.dev !== before.dev ||
-      actual.size !== before.size
-    )
+    if (!actual.isFile() || actual.ino !== before.ino || actual.dev !== before.dev || actual.size !== before.size)
       throw new Error("Public index configuration unavailable");
     const buffer = Buffer.alloc(actual.size + 1);
     let size = 0;
@@ -45,9 +33,7 @@ async function readCollections(path: string, signal?: AbortSignal) {
       size += result.bytesRead;
     }
     if (size !== actual.size) throw new Error("Public index configuration unavailable");
-    const value: unknown = JSON.parse(
-      new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, size)),
-    );
+    const value: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, size)));
     if (!value || typeof value !== "object" || Array.isArray(value))
       throw new Error("Public index configuration unavailable");
     return value as Record<string, PublicIndexCollection>;

@@ -8,8 +8,7 @@ export const locales = {
     language: "App language",
     note: "This changes the shortcut language. Crunchyroll controls audio, subtitles, account access and playback.",
     install: "Install this shortcut",
-    installUnavailable:
-      "Installation is available when Chrome offers it. You can also use the browser menu.",
+    installUnavailable: "Installation is available when Chrome offers it. You can also use the browser menu.",
     offline:
       "The shortcut works offline; watching the episode requires an internet connection and authorized Crunchyroll access.",
     online: "Shortcut ready. Playback happens on the official site.",
@@ -27,8 +26,7 @@ export const locales = {
     install: "Installer ce raccourci",
     installUnavailable:
       "L’installation est disponible lorsque Chrome la propose. Vous pouvez aussi utiliser le menu du navigateur.",
-    offline:
-      "Le raccourci fonctionne hors ligne ; la vidéo nécessite internet et un accès Crunchyroll autorisé.",
+    offline: "Le raccourci fonctionne hors ligne ; la vidéo nécessite internet et un accès Crunchyroll autorisé.",
     online: "Raccourci prêt. La lecture se fait sur le site officiel.",
     installed: "Installation demandée. Chrome confirme le résultat.",
     installDismissed: "Installation annulée. Vous pouvez réessayer.",
@@ -61,8 +59,7 @@ export const locales = {
     install: "Instalar este atalho",
     installUnavailable:
       "A instalação fica disponível quando o Chrome a oferece. Você também pode usar o menu do navegador.",
-    offline:
-      "O atalho funciona offline; o episódio exige internet e acesso autorizado ao Crunchyroll.",
+    offline: "O atalho funciona offline; o episódio exige internet e acesso autorizado ao Crunchyroll.",
     online: "Atalho pronto. A reprodução acontece no site oficial.",
     installed: "Instalação solicitada. O Chrome confirma o resultado.",
     installDismissed: "A instalação foi cancelada. Você pode tentar novamente.",
@@ -78,8 +75,7 @@ export const locales = {
     install: "Diese Verknüpfung installieren",
     installUnavailable:
       "Die Installation ist verfügbar, wenn Chrome sie anbietet. Du kannst auch das Browsermenü nutzen.",
-    offline:
-      "Die Verknüpfung funktioniert offline; die Folge erfordert Internet und berechtigten Crunchyroll-Zugang.",
+    offline: "Die Verknüpfung funktioniert offline; die Folge erfordert Internet und berechtigten Crunchyroll-Zugang.",
     online: "Verknüpfung bereit. Die Wiedergabe erfolgt auf der offiziellen Website.",
     installed: "Installation angefordert. Chrome bestätigt das Ergebnis.",
     installDismissed: "Die Installation wurde abgebrochen. Du kannst es erneut versuchen.",
@@ -93,10 +89,8 @@ export const locales = {
     language: "Lingua dell’app",
     note: "Questa scelta cambia la lingua della scorciatoia. Crunchyroll gestisce audio, sottotitoli, account e riproduzione.",
     install: "Installa questa scorciatoia",
-    installUnavailable:
-      "L’installazione è disponibile quando Chrome la propone. Puoi anche usare il menu del browser.",
-    offline:
-      "La scorciatoia funziona offline; l’episodio richiede internet e accesso autorizzato a Crunchyroll.",
+    installUnavailable: "L’installazione è disponibile quando Chrome la propone. Puoi anche usare il menu del browser.",
+    offline: "La scorciatoia funziona offline; l’episodio richiede internet e accesso autorizzato a Crunchyroll.",
     online: "Scorciatoia pronta. La riproduzione avviene sul sito ufficiale.",
     installed: "Installazione richiesta. Chrome conferma il risultato.",
     installDismissed: "Installazione annullata. Puoi riprovare.",
@@ -111,8 +105,7 @@ export const locales = {
     note: "يغيّر هذا الخيار لغة الاختصار. يتحكم كرانشي رول في الصوت والترجمة والوصول إلى الحساب وتشغيل الفيديو.",
     install: "تثبيت هذا الاختصار",
     installUnavailable: "يتوفر التثبيت عندما يعرضه Chrome. يمكنك أيضًا استخدام قائمة المتصفح.",
-    offline:
-      "يعمل الاختصار دون اتصال؛ تتطلب مشاهدة الحلقة الإنترنت والوصول المصرح به إلى كرانشي رول.",
+    offline: "يعمل الاختصار دون اتصال؛ تتطلب مشاهدة الحلقة الإنترنت والوصول المصرح به إلى كرانشي رول.",
     online: "الاختصار جاهز. يتم تشغيل الفيديو على الموقع الرسمي.",
     installed: "تم طلب التثبيت. يؤكد Chrome النتيجة.",
     installDismissed: "تم إلغاء التثبيت. يمكنك المحاولة مجددًا.",
@@ -126,8 +119,7 @@ export const locales = {
     language: "アプリの言語",
     note: "この設定はショートカットの表示言語を変更します。音声、字幕、アカウントへのアクセス、再生は Crunchyroll が管理します。",
     install: "ショートカットをインストール",
-    installUnavailable:
-      "Chrome がインストールを提案すると利用できます。ブラウザのメニューからも操作できます。",
+    installUnavailable: "Chrome がインストールを提案すると利用できます。ブラウザのメニューからも操作できます。",
     offline:
       "ショートカットはオフラインで使えます。視聴にはインターネット接続と正規の Crunchyroll アクセスが必要です。",
     online: "準備完了。再生は公式サイトで行われます。",
@@ -143,10 +135,8 @@ export const locales = {
     language: "앱 언어",
     note: "이 설정은 바로가기의 표시 언어를 변경합니다. 오디오, 자막, 계정 접근 및 재생은 Crunchyroll이 관리합니다.",
     install: "바로가기 설치",
-    installUnavailable:
-      "Chrome에서 설치를 제안하면 사용할 수 있습니다. 브라우저 메뉴에서도 설치할 수 있습니다.",
-    offline:
-      "바로가기는 오프라인에서도 작동합니다. 시청에는 인터넷과 승인된 Crunchyroll 접근 권한이 필요합니다.",
+    installUnavailable: "Chrome에서 설치를 제안하면 사용할 수 있습니다. 브라우저 메뉴에서도 설치할 수 있습니다.",
+    offline: "바로가기는 오프라인에서도 작동합니다. 시청에는 인터넷과 승인된 Crunchyroll 접근 권한이 필요합니다.",
     online: "바로가기 준비 완료. 재생은 공식 사이트에서 진행됩니다.",
     installed: "설치를 요청했습니다. Chrome이 결과를 확인합니다.",
     installDismissed: "설치가 취소되었습니다. 다시 시도할 수 있습니다.",
@@ -160,8 +150,7 @@ export const locales = {
     language: "ऐप की भाषा",
     note: "यह विकल्प शॉर्टकट की भाषा बदलता है। ऑडियो, उपशीर्षक, खाते की पहुँच और वीडियो चलाना Crunchyroll नियंत्रित करता है।",
     install: "यह शॉर्टकट इंस्टॉल करें",
-    installUnavailable:
-      "जब Chrome इंस्टॉल करने का विकल्प दे, तब यह उपलब्ध होगा। आप ब्राउज़र मेनू भी इस्तेमाल कर सकते हैं।",
+    installUnavailable: "जब Chrome इंस्टॉल करने का विकल्प दे, तब यह उपलब्ध होगा। आप ब्राउज़र मेनू भी इस्तेमाल कर सकते हैं।",
     offline: "शॉर्टकट ऑफ़लाइन काम करता है; एपिसोड देखने के लिए इंटरनेट और अधिकृत Crunchyroll पहुँच चाहिए।",
     online: "शॉर्टकट तैयार है। वीडियो आधिकारिक साइट पर चलता है।",
     installed: "इंस्टॉल करने का अनुरोध भेजा गया। Chrome परिणाम की पुष्टि करेगा।",
@@ -176,10 +165,8 @@ export const locales = {
     language: "Язык приложения",
     note: "Этот выбор меняет язык ярлыка. Звук, субтитры, доступ к аккаунту и воспроизведение управляются Crunchyroll.",
     install: "Установить этот ярлык",
-    installUnavailable:
-      "Установка доступна, когда Chrome предлагает её. Также можно использовать меню браузера.",
-    offline:
-      "Ярлык работает без сети; для просмотра нужны интернет и разрешённый доступ к Crunchyroll.",
+    installUnavailable: "Установка доступна, когда Chrome предлагает её. Также можно использовать меню браузера.",
+    offline: "Ярлык работает без сети; для просмотра нужны интернет и разрешённый доступ к Crunchyroll.",
     online: "Ярлык готов. Воспроизведение идёт на официальном сайте.",
     installed: "Установка запрошена. Chrome подтвердит результат.",
     installDismissed: "Установка отменена. Можно попробовать снова.",

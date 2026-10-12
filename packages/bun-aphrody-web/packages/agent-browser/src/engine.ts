@@ -128,9 +128,7 @@ export async function startEngine(options: EngineOptions = {}): Promise<Engine> 
     }
     const expected = `ws://${host}:${port}/devtools/browser`;
     if (endpoint !== expected)
-      return await fail(
-        `unexpected CDP endpoint ${JSON.stringify(endpoint)}, expected ${expected}`,
-      );
+      return await fail(`unexpected CDP endpoint ${JSON.stringify(endpoint)}, expected ${expected}`);
     const url = `http://${host}:${port}/json/version`;
     try {
       await child.waitForHttp({
@@ -138,7 +136,7 @@ export async function startEngine(options: EngineOptions = {}): Promise<Engine> 
         port,
         path: "/json/version",
         timeoutMs: Math.max(1, deadline - Date.now()),
-        accept: (status) => status >= 200 && status < 300,
+        accept: status => status >= 200 && status < 300,
       });
     } catch (error) {
       if (error instanceof ProcessExitedError) {
@@ -185,7 +183,7 @@ export async function startEngine(options: EngineOptions = {}): Promise<Engine> 
 
 /** Stops every engine started by this process; safe to call repeatedly. */
 export async function stopAllEngines(): Promise<void> {
-  await Promise.all([...running].map((engine) => engine.stop()));
+  await Promise.all([...running].map(engine => engine.stop()));
 }
 
 function reap(signal: NodeJS.Signals): void {
@@ -202,10 +200,7 @@ export function installEngineCleanup(): void {
 }
 
 /** Runs `fn` against a fresh engine and always stops it. */
-export async function withEngine<T>(
-  fn: (engine: Engine) => Promise<T>,
-  options: EngineOptions = {},
-): Promise<T> {
+export async function withEngine<T>(fn: (engine: Engine) => Promise<T>, options: EngineOptions = {}): Promise<T> {
   installEngineCleanup();
   const engine = await startEngine(options);
   try {
@@ -222,9 +217,7 @@ const TEST_ENDPOINT_KEYS = ["APHRODY_BROWSER_CDP_URL", "APHRODY_CDP_URL"] as con
  * process already started, otherwise starts one (private network allowed for local fixtures)
  * and exports its endpoint as `APHRODY_BROWSER_CDP_URL`. Idempotent.
  */
-export async function ensureTestEngine(
-  options: EngineOptions = {},
-): Promise<{ endpoint: string; owned: boolean }> {
+export async function ensureTestEngine(options: EngineOptions = {}): Promise<{ endpoint: string; owned: boolean }> {
   const explicit = process.env.APHRODY_WEB_TEST_CDP_URL;
   if (explicit) {
     for (const key of TEST_ENDPOINT_KEYS) process.env[key] = explicit;

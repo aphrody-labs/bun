@@ -3,10 +3,7 @@ import { expect, test } from "bun:test";
 import { chmodSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tempDir } from "../../../test/harness";
-import {
-  createChromePasswordProvider,
-  createConfiguredChromePasswordProvider,
-} from "../src/password-store";
+import { createChromePasswordProvider, createConfiguredChromePasswordProvider } from "../src/password-store";
 
 function provider(directory: string, content: string) {
   const filename = join(directory, "fixture.csv");
@@ -37,7 +34,7 @@ test("audit exposes only counters, handles BOM, quotes, commas, Unicode and mult
   });
   let observed = false;
   expect(
-    await source.withCredential({ url: "https://example.test/other" }, (credential) => {
+    await source.withCredential({ url: "https://example.test/other" }, credential => {
       expect(credential.name).toBe("Fixture, 日本");
       expect(credential.password).toBe('a"b\r\nc');
       expect(Object.isFrozen(credential)).toBe(true);
@@ -67,7 +64,7 @@ test("origin and username selectors never fallback across unrelated origins or a
       }),
     ).rejects.toThrow();
   let selected = "";
-  await source.withCredential({ url: "https://example.test", username: "b" }, (value) => {
+  await source.withCredential({ url: "https://example.test", username: "b" }, value => {
     selected = value.password;
   });
   expect(selected).toBe("second");
@@ -83,17 +80,15 @@ test("strict CSV failures reveal no field values", () => {
     header + "private,https://example.test,secret,password,extra\n",
     header + "private,https://example.test,secret,pass\0word\n",
   ])
-    expect(() => provider(String(directory), content).audit()).toThrow(
-      "Invalid Chrome password CSV",
-    );
+    expect(() => provider(String(directory), content).audit()).toThrow("Invalid Chrome password CSV");
 });
 
 test("requires explicit path allowlist and owner protection validation before any private read", () => {
   using directory = tempDir("chrome-password-owner", {});
   const filename = join(String(directory), "missing.csv");
-  expect(() =>
-    createChromePasswordProvider({ filename, allowedPaths: [], assertProtectedPath() {} }),
-  ).toThrow("allowlisted");
+  expect(() => createChromePasswordProvider({ filename, allowedPaths: [], assertProtectedPath() {} })).toThrow(
+    "allowlisted",
+  );
   const source = createChromePasswordProvider({
     filename,
     allowedPaths: [filename],
@@ -106,29 +101,20 @@ test("requires explicit path allowlist and owner protection validation before an
 
 test("credential callback errors are redacted and never return consumer values", async () => {
   using directory = tempDir("chrome-password-callback", {});
-  const source = provider(
-    String(directory),
-    header + "Fixture,https://example.test,fixture,synthetic-secret\n",
-  );
+  const source = provider(String(directory), header + "Fixture,https://example.test,fixture,synthetic-secret\n");
   await expect(
-    source.withCredential({ url: "https://example.test" }, (value) => {
+    source.withCredential({ url: "https://example.test" }, value => {
       throw new Error(value.password);
     }),
   ).rejects.toThrow("Chrome credential consumer failed");
   expect(
-    await source.withCredential(
-      { url: "https://example.test" },
-      (() => "synthetic-secret") as () => void,
-    ),
+    await source.withCredential({ url: "https://example.test" }, (() => "synthetic-secret") as () => void),
   ).toBeUndefined();
 });
 
 test("rejects oversized credential cells without yielding a credential", () => {
   using directory = tempDir("chrome-password-bound", {});
-  const source = provider(
-    String(directory),
-    header + "Fixture,https://example.test,fixture," + "x".repeat(16385),
-  );
+  const source = provider(String(directory), header + "Fixture,https://example.test,fixture," + "x".repeat(16385));
   expect(() => source.audit()).toThrow("exceeds limit");
 });
 
@@ -136,11 +122,10 @@ test("current Chrome optional note column is accepted and never reaches the cred
   using directory = tempDir("chrome-password-note", {});
   const source = provider(
     String(directory),
-    "name,url,username,password,note\r\n" +
-      'Fixture,https://example.test,fixture,password,"private, note"\r\n',
+    "name,url,username,password,note\r\n" + 'Fixture,https://example.test,fixture,password,"private, note"\r\n',
   );
   expect(source.audit().records).toBe(1);
-  await source.withCredential({ url: "https://example.test" }, (value) => {
+  await source.withCredential({ url: "https://example.test" }, value => {
     expect(Object.keys(value).sort()).toEqual(["name", "password", "url", "username"]);
   });
 });

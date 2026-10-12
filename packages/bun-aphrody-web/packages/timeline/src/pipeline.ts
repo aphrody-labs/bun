@@ -1,14 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { mkdir, rename, rm } from "node:fs/promises";
 import { resolve, join } from "node:path";
-import {
-  collect,
-  passage,
-  type Entry,
-  type Snapshot,
-  type TimelineSource,
-  type TrainingOptions,
-} from "./model.ts";
+import { collect, passage, type Entry, type Snapshot, type TimelineSource, type TrainingOptions } from "./model.ts";
 import { sqliteExport, sqlExport, redisIndex } from "./storage.ts";
 import { SDL, query } from "./graphql.ts";
 import { crawlDetails } from "./crawl.ts";
@@ -35,9 +28,7 @@ export async function refresh(output: string, options: RefreshOptions = {}) {
       JSON.stringify({ pid: process.pid, startedAt: new Date().toISOString() }),
     );
     const snapshot = await collect(fetch, options.source);
-    const crawl = options.crawlBudget
-      ? await crawlDetails(snapshot, output, options.crawlBudget)
-      : null;
+    const crawl = options.crawlBudget ? await crawlDetails(snapshot, output, options.crawlBudget) : null;
     const dir = join(output, "generations", snapshot.generation);
     await mkdir(join(dir, "documents"), { recursive: true, mode: 0o700 });
     await Bun.write(join(dir, "timeline.json.tmp"), JSON.stringify(snapshot, null, 2));
@@ -47,13 +38,9 @@ export async function refresh(output: string, options: RefreshOptions = {}) {
     await Bun.write(join(dir, "timeline.graphql"), SDL);
     const content = (entry: Entry) =>
       passage(entry, snapshot.source) +
-      (crawl?.state.entries[entry.key]?.text
-        ? `\n## Fiche source\n${crawl.state.entries[entry.key]!.text}\n`
-        : "");
+      (crawl?.state.entries[entry.key]?.text ? `\n## Fiche source\n${crawl.state.entries[entry.key]!.text}\n` : "");
     await Promise.all(
-      snapshot.entries.map((e) =>
-        Bun.write(join(dir, "documents", e.key.replace(":", "-") + ".md"), content(e)),
-      ),
+      snapshot.entries.map(e => Bun.write(join(dir, "documents", e.key.replace(":", "-") + ".md"), content(e))),
     );
     const training = trainingArtifacts(snapshot, { content, ...options.training });
     const rows = training.examples;
@@ -64,12 +51,12 @@ export async function refresh(output: string, options: RefreshOptions = {}) {
       Bun.write(join(dir, "training.json"), JSON.stringify(training.manifest, null, 2)),
     ]);
     await Promise.all(
-      ["train", "eval"].map((split) =>
+      ["train", "eval"].map(split =>
         Bun.write(
           join(dir, `${split}.jsonl`),
           rows
-            .filter((r) => r.split === split)
-            .map((r) => JSON.stringify(r))
+            .filter(r => r.split === split)
+            .map(r => JSON.stringify(r))
             .join("\n") + "\n",
         ),
       ),
@@ -77,15 +64,14 @@ export async function refresh(output: string, options: RefreshOptions = {}) {
     const check = await query(snapshot, "{ timeline { mediaTotal ageTotal entries { key } } }");
     if (check.errors) throw new Error("GraphQL projection failed validation");
     let index: unknown = null;
-    if (options.indexDocuments)
-      index = await options.indexDocuments(join(dir, "documents"), snapshot);
+    if (options.indexDocuments) index = await options.indexDocuments(join(dir, "documents"), snapshot);
     if (options.redisUrl) await redisIndex(snapshot, options.redisUrl, options.redisNamespace);
     const report = {
       generation: snapshot.generation,
       mediaTotal: snapshot.mediaTotal,
       ageTotal: snapshot.ageTotal,
-      train: rows.filter((r) => r.split === "train").length,
-      eval: rows.filter((r) => r.split === "eval").length,
+      train: rows.filter(r => r.split === "train").length,
+      eval: rows.filter(r => r.split === "eval").length,
       redisIndexed: !!options.redisUrl,
       index,
       fetchedAt: snapshot.fetchedAt,
@@ -100,10 +86,7 @@ export async function refresh(output: string, options: RefreshOptions = {}) {
         : null,
     };
     await Bun.write(join(dir, "report.json"), JSON.stringify(report, null, 2));
-    await Bun.write(
-      join(output, "current.json.tmp"),
-      JSON.stringify({ generation: snapshot.generation, dir }),
-    );
+    await Bun.write(join(output, "current.json.tmp"), JSON.stringify({ generation: snapshot.generation, dir }));
     await rename(join(output, "current.json.tmp"), join(output, "current.json"));
     return report;
   } finally {

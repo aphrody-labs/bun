@@ -19,18 +19,16 @@ export function parseEnv(text: string): Record<string, string> {
   return Object.fromEntries(
     text
       .split(/\r?\n/)
-      .map((line) => line.match(/^\s*(?:export\s+)?([A-Za-z0-9_]+)\s*=\s*(.*?)\s*$/))
-      .filter((m) => m !== null)
-      .map((m) => [m[1], m[2].replace(/^(["'])(.*)\1$/, "$2")]),
+      .map(line => line.match(/^\s*(?:export\s+)?([A-Za-z0-9_]+)\s*=\s*(.*?)\s*$/))
+      .filter(m => m !== null)
+      .map(m => [m[1], m[2].replace(/^(["'])(.*)\1$/, "$2")]),
   );
 }
 
 export function envFile(): string {
   const local = join(app, ".env");
   if (existsSync(local)) return local;
-  return (
-    process.env.APHRODY_CLOUDFLARE_ENV ?? join(homedir(), ".aphrody", "config", "cloudflare.env")
-  );
+  return process.env.APHRODY_CLOUDFLARE_ENV ?? join(homedir(), ".aphrody", "config", "cloudflare.env");
 }
 
 // Static asset headers: installers never cached, /assets 1 h, pages 5 min.
@@ -48,13 +46,7 @@ const csp = [
   "frame-ancestors 'none'",
 ].join("; ");
 
-export const installers = [
-  "/install",
-  "/install.sh",
-  "/install.ps1",
-  "/bun/setup.sh",
-  "/bun/setup.ps1",
-];
+export const installers = ["/install", "/install.sh", "/install.ps1", "/bun/setup.sh", "/bun/setup.ps1"];
 
 export const headersFile = `/*
   Content-Security-Policy: ${csp}
@@ -74,14 +66,13 @@ export const headersFile = `/*
 /publish.json
   ! Cache-Control
   Cache-Control: no-cache
-${installers.map((path) => `\n${path}\n  ! Content-Type\n  ! Cache-Control\n  Content-Type: text/plain; charset=utf-8\n  Cache-Control: no-cache\n`).join("")}`;
+${installers.map(path => `\n${path}\n  ! Content-Type\n  ! Cache-Control\n  Content-Type: text/plain; charset=utf-8\n  Cache-Control: no-cache\n`).join("")}`;
 
 /** Cloudflare compresses at the edge: the precompressed .gz twins of build.ts stay out. */
 export const assetsIgnore = ["*.gz", "**/*.gz", "_headers", ".assetsignore", ""].join("\n");
 
 export async function prepareAssets(dir: string) {
-  if (!existsSync(join(dir, "index.html")))
-    throw new Error(`${dir} is not a built site (index.html missing)`);
+  if (!existsSync(join(dir, "index.html"))) throw new Error(`${dir} is not a built site (index.html missing)`);
   await Bun.write(join(dir, "_headers"), headersFile);
   await Bun.write(join(dir, ".assetsignore"), assetsIgnore);
 }
@@ -120,10 +111,8 @@ async function main() {
   const config = Bun.JSONC.parse(await Bun.file(join(app, "wrangler.jsonc")).text()) as {
     secrets?: { required?: string[] };
   };
-  const secrets = Object.fromEntries(
-    (config.secrets?.required ?? []).map((name) => [name, env[name]]),
-  );
-  const missing = Object.keys(secrets).filter((name) => !secrets[name]);
+  const secrets = Object.fromEntries((config.secrets?.required ?? []).map(name => [name, env[name]]));
+  const missing = Object.keys(secrets).filter(name => !secrets[name]);
   if (missing.length) throw new Error(`${envFile()} is missing ${missing.join(", ")}`);
 
   const secretsFile = join(tmpdir(), `aphrody-app-secrets-${crypto.randomUUID()}.json`);
@@ -134,8 +123,7 @@ async function main() {
   };
   try {
     await run(["deploy", "--assets", assets, "--secrets-file", secretsFile, ...args]);
-    if (!args.includes("--dry-run"))
-      await run(["d1", "migrations", "apply", "aphrody-app", "--remote"]);
+    if (!args.includes("--dry-run")) await run(["d1", "migrations", "apply", "aphrody-app", "--remote"]);
   } finally {
     await rm(secretsFile, { force: true });
   }

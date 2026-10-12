@@ -79,15 +79,10 @@ function exchange(
       if (error !== undefined) reject(error);
       else resolve(value);
     };
-    const timer = setTimeout(
-      () => finish(new DesktopError("Timeout", "desktop reply timed out")),
-      REQUEST_TIMEOUT_MS,
-    );
+    const timer = setTimeout(() => finish(new DesktopError("Timeout", "desktop reply timed out")), REQUEST_TIMEOUT_MS);
     socket.once("connect", () => socket.write(frame));
-    socket.once("error", (error) => finish(error));
-    socket.once("close", () =>
-      finish(new DesktopError("SessionClosed", "desktop connection closed")),
-    );
+    socket.once("error", error => finish(error));
+    socket.once("close", () => finish(new DesktopError("SessionClosed", "desktop connection closed")));
     socket.on("data", (data: Buffer) => {
       chunks = Buffer.concat([chunks, data]);
       if (chunks.length > MAX_FRAME) {
@@ -177,10 +172,7 @@ export class DesktopSession {
         process.platform === "win32" ? "yolo-desktop.exe" : "yolo-desktop",
       );
     if (!existsSync(executable))
-      throw new DesktopError(
-        "ArtifactMissing",
-        `precompiled desktop host not found at ${executable}`,
-      );
+      throw new DesktopError("ArtifactMissing", `precompiled desktop host not found at ${executable}`);
     const token = randomBytes(32).toString("hex");
     const child = sharedRuntime().spawn({
       program: executable,
@@ -257,15 +249,11 @@ export class DesktopSession {
 
   /** Calls are checked for grants, bounds and current window identity in the native host. */
   request(method: string, params: unknown = null): Promise<unknown> {
-    if (this.#closed)
-      return Promise.reject(new DesktopError("SessionClosed", "desktop session is closed"));
-    return exchange(this.port, this.token, ++this.#nextId, method, params, this.#sockets).then(
-      (result) => {
-        if (this.#closed)
-          throw new DesktopError("SessionClosed", "desktop session closed during dispatch");
-        return result;
-      },
-    );
+    if (this.#closed) return Promise.reject(new DesktopError("SessionClosed", "desktop session is closed"));
+    return exchange(this.port, this.token, ++this.#nextId, method, params, this.#sockets).then(result => {
+      if (this.#closed) throw new DesktopError("SessionClosed", "desktop session closed during dispatch");
+      return result;
+    });
   }
 
   async createWindow(options: WindowOptions): Promise<DesktopWindow> {
@@ -275,13 +263,8 @@ export class DesktopSession {
       title: options.title,
       ...(options.width === undefined ? {} : { width: options.width }),
       ...(options.height === undefined ? {} : { height: options.height }),
-    }).then((result) => {
-      if (
-        result === null ||
-        typeof result !== "object" ||
-        !("window" in result) ||
-        typeof result.window !== "string"
-      ) {
+    }).then(result => {
+      if (result === null || typeof result !== "object" || !("window" in result) || typeof result.window !== "string") {
         throw new DesktopError("ProtocolMismatch", "desktop create reply is invalid");
       }
       return new DesktopWindow(result.window, this);
@@ -291,12 +274,12 @@ export class DesktopSession {
     return await new Promise<DesktopWindow>((resolve, reject) => {
       const abort = (): void => {
         // Keep the native create reply alive so cancellation can destroy its exact resource.
-        void pending.then((window) => window.close()).catch(() => {});
+        void pending.then(window => window.close()).catch(() => {});
         reject(signal.reason ?? new DOMException("Window creation aborted", "AbortError"));
       };
       signal.addEventListener("abort", abort, { once: true });
       pending.then(
-        (window) => {
+        window => {
           signal.removeEventListener("abort", abort);
           resolve(window);
         },
@@ -309,9 +292,7 @@ export class DesktopSession {
     });
   }
 
-  async events(
-    since = 0,
-  ): Promise<{ readonly sequence: number; readonly events: readonly DesktopEvent[] }> {
+  async events(since = 0): Promise<{ readonly sequence: number; readonly events: readonly DesktopEvent[] }> {
     return (await this.request("events.read", { since })) as {
       readonly sequence: number;
       readonly events: readonly DesktopEvent[];

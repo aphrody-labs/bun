@@ -56,9 +56,7 @@ describe("generic index explorer", () => {
       expect(await Bun.file(join(dataDir, "public-mode", "webos.sqlite")).exists()).toBe(true);
       expect((await fetch(new URL("/api/webos/system", publicServer.url))).status).toBe(403);
       expect((await fetch(new URL("/api/metrics", publicServer.url))).status).toBe(403);
-      const capabilities = await (
-        await fetch(new URL("/api/webos/capabilities", publicServer.url))
-      ).json();
+      const capabilities = await (await fetch(new URL("/api/webos/capabilities", publicServer.url))).json();
       expect(capabilities).toEqual({ hostAccess: false, terminal: null, bunWasm: false });
     } finally {
       await publicServer.stop(true);
@@ -121,12 +119,8 @@ describe("generic index explorer", () => {
       services: false,
     });
     expect((await get("/api/explorer/search")).status).toBe(503);
-    expect(
-      (await post("/api/explorer/chat", { messages: [{ role: "user", content: "Hello" }] })).status,
-    ).toBe(503);
-    expect(
-      (await get("/api/explorer/summary", { headers: { Origin: "https://example.com" } })).status,
-    ).toBe(403);
+    expect((await post("/api/explorer/chat", { messages: [{ role: "user", content: "Hello" }] })).status).toBe(503);
+    expect((await get("/api/explorer/summary", { headers: { Origin: "https://example.com" } })).status).toBe(403);
   });
 
   test("readonly metadata queries include user-selected volumes and escape LIKE patterns", async () => {
@@ -138,18 +132,13 @@ describe("generic index explorer", () => {
     fixture.close();
     const explorer = createExplorer({ databasePath: path, volume: "D:" });
     try {
-      const response = await explorer.handle(
-        "search",
-        new Request("http://localhost/api/explorer/search?q=%25"),
-      );
+      const response = await explorer.handle("search", new Request("http://localhost/api/explorer/search?q=%25"));
       expect(await response.json()).toMatchObject({
         items: [{ name: "100%.txt", path: "D:/100%.txt" }],
         more: false,
       });
       const second = new Database(path, { readonly: true });
-      expect(
-        (second.query("SELECT count(*) AS n FROM ntfs_entries").get() as { n: number }).n,
-      ).toBe(3);
+      expect((second.query("SELECT count(*) AS n FROM ntfs_entries").get() as { n: number }).n).toBe(3);
       second.close();
     } finally {
       explorer.close();
@@ -164,10 +153,9 @@ describe("generic index explorer", () => {
       async fetch(req) {
         input = await req.json();
         expect(req.headers.get("authorization")).toBe("Bearer test-key");
-        return new Response(
-          'data: {"choices":[{"delta":{"content":"Hello"}}]}\n\ndata: [DONE]\n\n',
-          { headers: { "Content-Type": "text/event-stream" } },
-        );
+        return new Response('data: {"choices":[{"delta":{"content":"Hello"}}]}\n\ndata: [DONE]\n\n', {
+          headers: { "Content-Type": "text/event-stream" },
+        });
       },
     });
     const explorer = createExplorer({
@@ -230,27 +218,16 @@ describe("generic index explorer", () => {
     try {
       expect(
         await (
-          await explorer.handle(
-            "search",
-            new Request("http://localhost/api/explorer/search?mode=pe&q=demo"),
-          )
+          await explorer.handle("search", new Request("http://localhost/api/explorer/search?mode=pe&q=demo"))
         ).json(),
       ).toMatchObject({ items: [{ name: "demo.dll", imports: 1 }] });
       expect(
         await (
-          await explorer.handle(
-            "binary",
-            new Request("http://localhost/api/explorer/binary?path=D:/apps/demo.dll"),
-          )
+          await explorer.handle("binary", new Request("http://localhost/api/explorer/binary?path=D:/apps/demo.dll"))
         ).json(),
       ).toMatchObject({ imports: [{ module: "base.dll", symbols: 1 }] });
       expect(
-        await (
-          await explorer.handle(
-            "search",
-            new Request("http://localhost/api/explorer/search?q=demo"),
-          )
-        ).json(),
+        await (await explorer.handle("search", new Request("http://localhost/api/explorer/search?q=demo"))).json(),
       ).toMatchObject({ items: [{ path: "D:/apps/demo.dll", name: "demo.dll" }] });
     } finally {
       explorer.close();
@@ -264,13 +241,10 @@ describe("generic index explorer", () => {
       port: 0,
       async fetch(req) {
         const path = new URL(req.url).pathname;
-        if (path === "/props")
-          return Response.json({ default_generation_settings: { n_ctx: 600 } });
+        if (path === "/props") return Response.json({ default_generation_settings: { n_ctx: 600 } });
         const input = await req.json();
-        if (path === "/apply-template")
-          return Response.json({ prompt: input.messages.length > 1 ? "long" : "short" });
-        if (path === "/tokenize")
-          return Response.json({ tokens: Array(input.content === "long" ? 200 : 10).fill(1) });
+        if (path === "/apply-template") return Response.json({ prompt: input.messages.length > 1 ? "long" : "short" });
+        if (path === "/tokenize") return Response.json({ tokens: Array(input.content === "long" ? 200 : 10).fill(1) });
         submitted = input;
         return new Response("data: [DONE]\n\n", {
           headers: { "Content-Type": "text/event-stream" },
@@ -306,9 +280,7 @@ describe("generic index explorer", () => {
 });
 
 test("compiled page routes serve assets from an unrelated working directory", async () => {
-  const helper = fileURLToPath(
-    new URL("../src/server/page-manifest.ts", import.meta.url),
-  ).replaceAll("\\", "/");
+  const helper = fileURLToPath(new URL("../src/server/page-manifest.ts", import.meta.url)).replaceAll("\\", "/");
   using fixture = tempDir("webos-portable-page", {
     "index.html":
       '<!doctype html><html><body>portable-page<script type="module" src="./entry.js"></script></body></html>',
@@ -337,11 +309,7 @@ try {
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
   expect(stderr).toBe("");
   const result = JSON.parse(stdout);
   expect(result).toMatchObject({ page: 200, marker: true });
@@ -365,8 +333,8 @@ test("the M3 native app browser entry bundles with the aphrody M3 front left ext
   });
 
   expect(result.success).toBe(true);
-  expect(result.outputs.some((output) => output.path.endsWith("index.html"))).toBe(true);
-  const app = result.outputs.find((output) => output.path.endsWith(".js"));
+  expect(result.outputs.some(output => output.path.endsWith("index.html"))).toBe(true);
+  const app = result.outputs.find(output => output.path.endsWith(".js"));
   expect(app).toBeDefined();
   expect(await app!.text()).toContain("@aphrody/material-web");
 });
@@ -388,9 +356,7 @@ describe("commands", () => {
   });
 
   test("eval runs JavaScript in a child bun", async () => {
-    const out = (await (
-      await post("/api/os/eval", { code: "Bun.semver.order('1.0.0', '2.0.0')" })
-    ).json()) as {
+    const out = (await (await post("/api/os/eval", { code: "Bun.semver.order('1.0.0', '2.0.0')" })).json()) as {
       stdout: string;
       exitCode: number;
     };
@@ -403,7 +369,7 @@ describe("commands", () => {
       kind: string;
       input: string;
     }[];
-    expect(rows.some((row) => row.kind === "shell" && row.input === "echo bun-webos")).toBe(true);
+    expect(rows.some(row => row.kind === "shell" && row.input === "echo bun-webos")).toBe(true);
   });
 
   test("the PTY runs a shell on Bun.Terminal", async () => {
@@ -422,18 +388,13 @@ describe("commands", () => {
     const failure = Promise.withResolvers<never>();
     let stage = "startup";
     const deadline = setTimeout(
-      () =>
-        failure.reject(
-          new Error(`PTY stalled during ${stage}: ${Bun.stripANSI(output).slice(-500)}`),
-        ),
+      () => failure.reject(new Error(`PTY stalled during ${stage}: ${Bun.stripANSI(output).slice(-500)}`)),
       20_000,
     );
     ws.onerror = () => failure.reject(new Error("PTY websocket transport failed"));
-    ws.onclose = (event) =>
-      failure.reject(
-        new Error(`PTY websocket closed during ${stage}: ${event.code} ${event.reason}`),
-      );
-    ws.onmessage = (event) => {
+    ws.onclose = event =>
+      failure.reject(new Error(`PTY websocket closed during ${stage}: ${event.code} ${event.reason}`));
+    ws.onmessage = event => {
       if (typeof event.data === "string") {
         const msg = JSON.parse(event.data);
         if (msg.type === "started") onStarted(msg);
@@ -472,16 +433,14 @@ describe("commands", () => {
 describe("files", () => {
   test("write, list, read with markdown and hash", async () => {
     expect((await post("/api/os/vfs/mkdir", { path: "/docs" })).status).toBe(200);
-    const written = (await (
-      await post("/api/os/vfs/write", { path: "/docs/a.md", text: "# Titre" })
-    ).json()) as {
+    const written = (await (await post("/api/os/vfs/write", { path: "/docs/a.md", text: "# Titre" })).json()) as {
       written: number;
     };
     expect(written.written).toBe(7);
     const listing = (await (await get("/api/os/vfs/list?path=/docs")).json()) as {
       entries: { name: string }[];
     };
-    expect(listing.entries.map((e) => e.name)).toEqual(["a.md"]);
+    expect(listing.entries.map(e => e.name)).toEqual(["a.md"]);
     const file = (await (await get("/api/os/vfs/read?path=/docs/a.md")).json()) as {
       text: string;
       html: string;
@@ -501,13 +460,11 @@ describe("files", () => {
     const res = await get("/api/os/vfs/archive?path=/docs");
     expect(res.headers.get("content-type")).toBe("application/gzip");
     const files = await new Bun.Archive(await res.bytes()).files();
-    expect([...files.keys()].some((name) => name.endsWith("a.md"))).toBe(true);
+    expect([...files.keys()].some(name => name.endsWith("a.md"))).toBe(true);
   });
 
   test("move and remove; the root cannot be removed", async () => {
-    expect((await post("/api/os/vfs/move", { from: "/docs/a.md", to: "/docs/b.md" })).status).toBe(
-      200,
-    );
+    expect((await post("/api/os/vfs/move", { from: "/docs/a.md", to: "/docs/b.md" })).status).toBe(200);
     expect((await get("/api/os/vfs/read?path=/docs/a.md")).status).toBe(404);
     expect((await post("/api/os/vfs/remove", { path: "/docs" })).status).toBe(200);
     expect((await post("/api/os/vfs/remove", { path: "/" })).status).toBe(403);
@@ -515,19 +472,13 @@ describe("files", () => {
 
   test("paths outside the home directory are refused", async () => {
     expect((await get("/api/os/vfs/list?path=../..")).status).toBe(403);
-    expect((await post("/api/os/vfs/write", { path: "../escape.txt", text: "x" })).status).toBe(
-      403,
-    );
+    expect((await post("/api/os/vfs/write", { path: "../escape.txt", text: "x" })).status).toBe(403);
   });
 });
 
 describe("host guard", () => {
   test("cross-origin requests get 403", async () => {
-    const res = await post(
-      "/api/os/exec",
-      { command: "echo no" },
-      { Origin: "https://example.com" },
-    );
+    const res = await post("/api/os/exec", { command: "echo no" }, { Origin: "https://example.com" });
     expect(res.status).toBe(403);
     expect(((await res.json()) as { status: string }).status).toBe("permission_denied");
   });
@@ -555,7 +506,7 @@ describe("system", () => {
       processes: { pid: number; owned: boolean }[];
     };
     expect(out.serverPid).toBe(process.pid);
-    expect(out.processes.find((p) => p.pid === process.pid)?.owned).toBe(true);
+    expect(out.processes.find(p => p.pid === process.pid)?.owned).toBe(true);
   });
 
   test("system packages name their source or why none was read", async () => {
@@ -574,7 +525,7 @@ describe("system", () => {
       modules: { name: string }[];
     };
     expect(snap.runtime).toMatchObject({ bun: Bun.version, pid: process.pid });
-    expect(snap.modules.map((m) => m.name)).toEqual([
+    expect(snap.modules.map(m => m.name)).toEqual([
       "bun:linux",
       "bun:windows",
       "bun:cosmic",

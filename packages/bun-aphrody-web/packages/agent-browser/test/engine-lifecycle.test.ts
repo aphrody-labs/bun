@@ -14,8 +14,8 @@ async function startFixture(binary: string): Promise<Engine> {
   return engine;
 }
 afterEach(async () => {
-  await Promise.all(engines.splice(0).map((engine) => engine.stop()));
-  await Promise.all(directories.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
+  await Promise.all(engines.splice(0).map(engine => engine.stop()));
+  await Promise.all(directories.splice(0).map(dir => rm(dir, { recursive: true, force: true })));
 });
 
 async function fixture(body: string): Promise<string> {
@@ -72,9 +72,7 @@ test("natural exit releases the engine and retains its final code and diagnostic
 });
 
 test("concurrent stop and global cleanup share shutdown and reap the child", async () => {
-  const binary = await fixture(
-    'process.on("SIGTERM", () => setTimeout(() => process.exit(0), 50));',
-  );
+  const binary = await fixture('process.on("SIGTERM", () => setTimeout(() => process.exit(0), 50));');
   // Global shutdown runs in its own host, preserving the shared CDP test engine.
   const script = `
 import { startEngine, stopAllEngines } from ${JSON.stringify(join(import.meta.dir, "../src/engine.ts"))};
@@ -129,9 +127,7 @@ setInterval(() => {}, 1000);
 `,
     { mode: 0o700 },
   );
-  await expect(startEngine({ binary, startupTimeoutMs: 2000 })).rejects.toThrow(
-    "unexpected CDP endpoint",
-  );
+  await expect(startEngine({ binary, startupTimeoutMs: 2000 })).rejects.toThrow("unexpected CDP endpoint");
   expect(alive(Number(await Bun.file(pidFile).text()))).toBe(false);
   const validBinary = await fixture('process.on("SIGTERM", () => process.exit(0));');
   const engine = await startFixture(validBinary);

@@ -24,7 +24,7 @@ export class BrowserPage {
   private constructor(view: Bun.WebView, console: Set<(params: CdpParams) => void>) {
     this.#view = view;
     this.#console = console;
-    listen(view, "Network.responseReceived", (data) => {
+    listen(view, "Network.responseReceived", data => {
       if (data.type !== "Document") return;
       const response = data.response as
         | { url?: string; status?: number; statusText?: string; headers?: Record<string, string> }
@@ -42,14 +42,12 @@ export class BrowserPage {
   }
 
   static async connect(
-    endpoint = process.env.APHRODY_BROWSER_CDP_URL ??
-      process.env.APHRODY_CDP_URL ??
-      DEFAULT_BUN_CDP_URL,
+    endpoint = process.env.APHRODY_BROWSER_CDP_URL ?? process.env.APHRODY_CDP_URL ?? DEFAULT_BUN_CDP_URL,
   ): Promise<BrowserPage> {
     // Bun.WebView keeps Runtime.consoleAPICalled for its `console` option and never dispatches it.
     const console = new Set<(params: CdpParams) => void>();
     const onConsole = (type: string, ...args: unknown[]) => {
-      const params = { type, args: args.map((value) => ({ value })) };
+      const params = { type, args: args.map(value => ({ value })) };
       for (const listener of console) listener(params);
     };
     let view: Bun.WebView;
@@ -59,11 +57,7 @@ export class BrowserPage {
       throw new Error(`Bun browser CDP is unavailable: ${endpoint}`, { cause: error });
     }
     try {
-      await timeout(
-        view.navigate("about:blank"),
-        10_000,
-        `Bun browser CDP connection timed out: ${endpoint}`,
-      );
+      await timeout(view.navigate("about:blank"), 10_000, `Bun browser CDP connection timed out: ${endpoint}`);
       const page = new BrowserPage(view, console);
       await Promise.all([
         page._send("Page.enable", {}),
@@ -90,13 +84,9 @@ export class BrowserPage {
    * `Runtime.consoleAPICalled` carries `{ type, args: [{ value }] }`; `Page.frameNavigated` and
    * `Page.loadEventFired` stay internal to Bun.WebView.
    */
-  onEvent(
-    methods: readonly string[],
-    listener: (method: string, params: CdpParams) => void,
-  ): () => void {
-    const stops = methods.map((method) => {
-      if (method !== "Runtime.consoleAPICalled")
-        return listen(this.#view, method, (params) => listener(method, params));
+  onEvent(methods: readonly string[], listener: (method: string, params: CdpParams) => void): () => void {
+    const stops = methods.map(method => {
+      if (method !== "Runtime.consoleAPICalled") return listen(this.#view, method, params => listener(method, params));
       const forward = (params: CdpParams) => listener(method, params);
       this.#console.add(forward);
       return () => void this.#console.delete(forward);
@@ -123,9 +113,7 @@ export class BrowserPage {
   }
 
   async setContent(html: string): Promise<void> {
-    await this.evaluate<void>(
-      `document.open(); document.write(${JSON.stringify(html)}); document.close()`,
-    );
+    await this.evaluate<void>(`document.open(); document.write(${JSON.stringify(html)}); document.close()`);
   }
 
   async evaluate<T>(script: string): Promise<T> {
@@ -135,9 +123,7 @@ export class BrowserPage {
       awaitPromise: true,
     });
     if (evaluated.exceptionDetails)
-      throw new Error(
-        `Bun browser CDP evaluation failed: ${JSON.stringify(evaluated.exceptionDetails)}`,
-      );
+      throw new Error(`Bun browser CDP evaluation failed: ${JSON.stringify(evaluated.exceptionDetails)}`);
     return (evaluated.result as { value?: T } | undefined)?.value as T;
   }
 
@@ -173,11 +159,7 @@ export class BrowserPage {
   }
 }
 
-function listen(
-  view: Bun.WebView,
-  method: string,
-  handler: (params: CdpParams) => void,
-): () => void {
+function listen(view: Bun.WebView, method: string, handler: (params: CdpParams) => void): () => void {
   const listener = (event: Event) => handler((event as Event & { data?: CdpParams }).data ?? {});
   view.addEventListener(method, listener);
   return () => view.removeEventListener(method, listener);

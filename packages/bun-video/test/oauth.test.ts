@@ -54,9 +54,7 @@ async function withProvider(
 }
 
 async function callback(api: OAuthClient, config: OAuthClientConfig, code = "local-code") {
-  const authorization = new URL(
-    await api.createAuthorizationURL({ scope: ["catalog", "offline_access"] }),
-  );
+  const authorization = new URL(await api.createAuthorizationURL({ scope: ["catalog", "offline_access"] }));
   const callback = new URL(config.redirectURI);
   callback.searchParams.set("state", authorization.searchParams.get("state")!);
   callback.searchParams.set("code", code);
@@ -91,17 +89,16 @@ test("authorization code S256 PKCE exchange uses native fetch and private tokens
     expect(calls[0]!.body.get("client_id")).toBe(config.clientId);
     const verifier = calls[0]!.body.get("code_verifier")!;
     expect(verifier).toMatch(/^[\w-]{43}$/);
-    const digest = new Uint8Array(
-      await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
-    );
+    const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
     const challenge = btoa(String.fromCharCode(...digest))
       .replaceAll("+", "-")
       .replaceAll("/", "_")
       .replace(/=+$/, "");
     expect(challenge).toBe(urls.authorization.searchParams.get("code_challenge")!);
-    expect(
-      await api.withAccessToken((token, type) => ({ correct: token === "local-access", type })),
-    ).toEqual({ correct: true, type: "Bearer" });
+    expect(await api.withAccessToken((token, type) => ({ correct: token === "local-access", type }))).toEqual({
+      correct: true,
+      type: "Bearer",
+    });
     expect(JSON.stringify(api)).toBe("{}");
     expect(JSON.stringify(api.session)).not.toContain("local-access");
     expect(JSON.stringify(api.session)).not.toContain("local-refresh");
@@ -141,9 +138,7 @@ test("callback matching rejects other origins, paths, fixed query values, duplic
     expect(calls).toHaveLength(0);
     const duplicateCode = new URL(urls.callback);
     duplicateCode.searchParams.append("code", "duplicate");
-    await expect(api.exchangeCallback(duplicateCode.href)).rejects.toThrow(
-      "one authorization code",
-    );
+    await expect(api.exchangeCallback(duplicateCode.href)).rejects.toThrow("one authorization code");
     await expect(api.exchangeCallback(urls.callback.href)).rejects.toThrow("already used");
     expect(calls).toHaveLength(0);
   });
@@ -164,9 +159,7 @@ test("expired states and provider denial are consumed without disclosing callbac
     denied.callback.searchParams.delete("code");
     denied.callback.searchParams.set("error", "private-provider-error");
     denied.callback.searchParams.set("error_description", "private-description");
-    await expect(api.exchangeCallback(denied.callback.href)).rejects.toThrow(
-      "OAuth authorization was denied",
-    );
+    await expect(api.exchangeCallback(denied.callback.href)).rejects.toThrow("OAuth authorization was denied");
     await expect(api.exchangeCallback(denied.callback.href)).rejects.toThrow("already used");
     expect(calls).toHaveLength(0);
   });
@@ -182,7 +175,7 @@ test("refresh rotates tokens and revoke sends both token types before forgetting
       await api.refresh();
       expect(calls[1]!.body.get("grant_type")).toBe("refresh_token");
       expect(calls[1]!.body.get("refresh_token")).toBe("refresh-0");
-      expect(await api.withAccessToken((token) => token === "access-1")).toBe(true);
+      expect(await api.withAccessToken(token => token === "access-1")).toBe(true);
       await api.refresh();
       expect(calls[2]!.body.get("refresh_token")).toBe("refresh-1");
       await api.revoke();
@@ -225,9 +218,7 @@ test("confidential Basic and POST credentials remain outside authorization URLs"
       await api.exchangeCallback(urls.callback.href);
       const call = calls.at(-1)!;
       if (method === "client_secret_basic") {
-        expect(atob(call.authorization!.slice("Basic ".length))).toBe(
-          "owner+client:local%3Asecret",
-        );
+        expect(atob(call.authorization!.slice("Basic ".length))).toBe("owner+client:local%3Asecret");
         expect(call.body.has("client_secret")).toBe(false);
       } else {
         expect(call.authorization).toBeNull();
@@ -256,27 +247,21 @@ test("independent clients isolate states; reserved fields and insecure configura
       "client_secret",
       "response_type",
     ]) {
-      await expect(first.createAuthorizationURL({ extra: { [key]: "override" } })).rejects.toThrow(
-        "cannot override",
-      );
+      await expect(first.createAuthorizationURL({ extra: { [key]: "override" } })).rejects.toThrow("cannot override");
     }
     expect(() => createOAuthClient({ ...config, clientId: "" })).toThrow("owner-provided");
-    expect(() =>
-      createOAuthClient({ ...config, tokenEndpoint: "http://provider.example/token" }),
-    ).toThrow("loopback");
-    expect(() =>
-      createOAuthClient({ ...config, tokenEndpoint: "https://user:secret@provider.example/token" }),
-    ).toThrow("embedded credentials");
-    expect(() => createOAuthClient({ ...config, clientSecret: "local" })).toThrow(
-      "explicit method",
+    expect(() => createOAuthClient({ ...config, tokenEndpoint: "http://provider.example/token" })).toThrow("loopback");
+    expect(() => createOAuthClient({ ...config, tokenEndpoint: "https://user:secret@provider.example/token" })).toThrow(
+      "embedded credentials",
     );
-    expect(() =>
-      createOAuthClient({ ...config, tokenEndpointAuthMethod: "client_secret_basic" }),
-    ).toThrow("client secret");
+    expect(() => createOAuthClient({ ...config, clientSecret: "local" })).toThrow("explicit method");
+    expect(() => createOAuthClient({ ...config, tokenEndpointAuthMethod: "client_secret_basic" })).toThrow(
+      "client secret",
+    );
     expect(() => createOAuthClient({ ...config, stateTTLms: 0 })).toThrow("durations");
-    expect(() =>
-      createOAuthClient({ ...config, redirectURI: `${config.redirectURI}&state=reserved` }),
-    ).toThrow("reserved response");
+    expect(() => createOAuthClient({ ...config, redirectURI: `${config.redirectURI}&state=reserved` })).toThrow(
+      "reserved response",
+    );
   });
 });
 
@@ -288,7 +273,7 @@ test("token HTTP, JSON and OAuth errors are redacted and each exchange remains s
     Response.json({ access_token: "private-secret", token_type: "Bearer", expires_in: -1 }),
   ]) {
     await withProvider(
-      async (config) => {
+      async config => {
         const api = createOAuthClient(config);
         const urls = await callback(api, config);
         try {
@@ -318,16 +303,14 @@ test("cross-origin endpoint redirect never forwards a code, verifier or client s
   });
   try {
     await withProvider(
-      async (config) => {
+      async config => {
         const api = createOAuthClient({
           ...config,
           clientSecret: "local",
           tokenEndpointAuthMethod: "client_secret_basic",
         });
         const urls = await callback(api, config);
-        await expect(api.exchangeCallback(urls.callback.href)).rejects.toThrow(
-          "redirects are refused",
-        );
+        await expect(api.exchangeCallback(urls.callback.href)).rejects.toThrow("redirects are refused");
         expect(destinationCalls).toBe(0);
       },
       () => Response.redirect(destination.url, 307),
@@ -339,7 +322,7 @@ test("cross-origin endpoint redirect never forwards a code, verifier or client s
 
 test("expired access token cannot be used; public cancellation aborts without exposing transport detail", async () => {
   await withProvider(
-    async (config) => {
+    async config => {
       const api = createOAuthClient(config);
       const urls = await callback(api, config);
       await api.exchangeCallback(urls.callback.href);
@@ -365,11 +348,11 @@ test("expired access token cannot be used; public cancellation aborts without ex
 test("clear during in-flight exchange cannot resurrect tokens or pending authorization", async () => {
   let resolveResponse!: (response: Response) => void;
   let requestStarted!: () => void;
-  const started = new Promise<void>((resolve) => {
+  const started = new Promise<void>(resolve => {
     requestStarted = resolve;
   });
   await withProvider(
-    async (config) => {
+    async config => {
       const api = createOAuthClient(config);
       const urls = await callback(api, config);
       const exchange = api.exchangeCallback(urls.callback.href);
@@ -382,7 +365,7 @@ test("clear during in-flight exchange cannot resurrect tokens or pending authori
       await expect(api.exchangeCallback(urls.callback.href)).rejects.toThrow("already used");
     },
     () =>
-      new Promise<Response>((resolve) => {
+      new Promise<Response>(resolve => {
         resolveResponse = resolve;
         requestStarted();
       }),
@@ -391,12 +374,10 @@ test("clear during in-flight exchange cannot resurrect tokens or pending authori
 
 test("request deadline terminates a stalled provider response", async () => {
   await withProvider(
-    async (config) => {
+    async config => {
       const api = createOAuthClient({ ...config, timeoutMs: 10 });
       const urls = await callback(api, config);
-      await expect(api.exchangeCallback(urls.callback.href)).rejects.toThrow(
-        "aborted or timed out",
-      );
+      await expect(api.exchangeCallback(urls.callback.href)).rejects.toThrow("aborted or timed out");
       await expect(api.exchangeCallback(urls.callback.href)).rejects.toThrow("already used");
     },
     () => new Promise<Response>(() => {}),
@@ -405,7 +386,7 @@ test("request deadline terminates a stalled provider response", async () => {
 
 test("failed remote revocation clears local tokens while reporting unconfirmed remote status", async () => {
   await withProvider(
-    async (config) => {
+    async config => {
       const api = createOAuthClient(config);
       const urls = await callback(api, config);
       await api.exchangeCallback(urls.callback.href);

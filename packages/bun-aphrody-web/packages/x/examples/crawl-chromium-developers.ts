@@ -71,37 +71,37 @@ const GEMINI_COOKIES = join(APHRODY_WEB_DIR, "cookies/private/gemini.google.com.
 // ---------------------------------------------------------------------------
 
 interface RawMeta {
-	url: string;
-	slug: string;
-	fetchedAt: string;
-	statusCode: number;
-	contentType: string;
-	size: number;
+  url: string;
+  slug: string;
+  fetchedAt: string;
+  statusCode: number;
+  contentType: string;
+  size: number;
 }
 
 interface Section {
-	level: "h2" | "h3";
-	heading: string;
-	paragraphs: string[];
+  level: "h2" | "h3";
+  heading: string;
+  paragraphs: string[];
 }
 
 interface ExtractedPage {
-	url: string;
-	slug: string;
-	title: string;
-	intro: string;
-	sections: Section[];
-	codeBlocks: string[];
-	externalLinks: string[];
-	lastUpdated: string | null;
-	wordCount: number;
+  url: string;
+  slug: string;
+  title: string;
+  intro: string;
+  sections: Section[];
+  codeBlocks: string[];
+  externalLinks: string[];
+  lastUpdated: string | null;
+  wordCount: number;
 }
 
 interface RewrittenPage extends ExtractedPage {
-	tldr: string;
-	bullets: string[];
-	quote: string;
-	geminiUsed: boolean;
+  tldr: string;
+  bullets: string[];
+  quote: string;
+  geminiUsed: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -109,71 +109,67 @@ interface RewrittenPage extends ExtractedPage {
 // ---------------------------------------------------------------------------
 
 function urlToSlug(url: string): string {
-	try {
-		const u = new URL(url);
-		const path = u.pathname
-			.replace(/^\/+|\/+$/g, "")
-			.replace(/[^a-z0-9]/gi, "-")
-			.toLowerCase();
-		return path || "index";
-	} catch {
-		return "page";
-	}
+  try {
+    const u = new URL(url);
+    const path = u.pathname
+      .replace(/^\/+|\/+$/g, "")
+      .replace(/[^a-z0-9]/gi, "-")
+      .toLowerCase();
+    return path || "index";
+  } catch {
+    return "page";
+  }
 }
 
 function ensureUniqueSlug(slug: string, seen: Set<string>): string {
-	if (!seen.has(slug)) {
-		seen.add(slug);
-		return slug;
-	}
-	let i = 2;
-	while (seen.has(`${slug}-${i}`)) i++;
-	const unique = `${slug}-${i}`;
-	seen.add(unique);
-	return unique;
+  if (!seen.has(slug)) {
+    seen.add(slug);
+    return slug;
+  }
+  let i = 2;
+  while (seen.has(`${slug}-${i}`)) i++;
+  const unique = `${slug}-${i}`;
+  seen.add(unique);
+  return unique;
 }
 
 function wordCount(text: string): number {
-	return text.split(/\s+/).filter(Boolean).length;
+  return text.split(/\s+/).filter(Boolean).length;
 }
 
 function clamp(s: string, max: number): string {
-	if (s.length <= max) return s;
-	return s.slice(0, max - 3) + "...";
+  if (s.length <= max) return s;
+  return s.slice(0, max - 3) + "...";
 }
 
 function normalizeInternalUrl(href: string): string | null {
-	try {
-		if (href.startsWith("//")) href = "https:" + href;
-		if (href.startsWith("/")) href = ORIGIN + href;
-		const u = new URL(href);
-		if (u.hostname !== "www.chromium.org" && u.hostname !== "chromium.org")
-			return null;
-		// strip fragment
-		u.hash = "";
-		// canonicalise trailing slash
-		if (!u.pathname.endsWith("/") && !u.pathname.includes("."))
-			u.pathname += "/";
-		return u.toString();
-	} catch {
-		return null;
-	}
+  try {
+    if (href.startsWith("//")) href = "https:" + href;
+    if (href.startsWith("/")) href = ORIGIN + href;
+    const u = new URL(href);
+    if (u.hostname !== "www.chromium.org" && u.hostname !== "chromium.org") return null;
+    // strip fragment
+    u.hash = "";
+    // canonicalise trailing slash
+    if (!u.pathname.endsWith("/") && !u.pathname.includes(".")) u.pathname += "/";
+    return u.toString();
+  } catch {
+    return null;
+  }
 }
 
 function safeHttpUrl(value: string): string | null {
-	try {
-		const url = new URL(value);
-		return url.protocol === "https:" || url.protocol === "http:"
-			? url.href
-			: null;
-	} catch {
-		return null;
-	}
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+  } catch {
+    return null;
+  }
 }
 
 function isDevPage(url: string): boolean {
-	const u = new URL(url);
-	return u.pathname.startsWith("/developers");
+  const u = new URL(url);
+  return u.pathname.startsWith("/developers");
 }
 
 // ---------------------------------------------------------------------------
@@ -181,317 +177,299 @@ function isDevPage(url: string): boolean {
 // ---------------------------------------------------------------------------
 
 async function crawl(): Promise<Map<string, ExtractedPage>> {
-	console.log("[crawl] initialising queue");
-	const queue = RequestQueue.open(QUEUE_DB, {
-		maxRetries: 2,
-		lockTimeoutMs: 60_000,
-	});
-	queue.addRequest(SEED);
+  console.log("[crawl] initialising queue");
+  const queue = RequestQueue.open(QUEUE_DB, {
+    maxRetries: 2,
+    lockTimeoutMs: 60_000,
+  });
+  queue.addRequest(SEED);
 
-	const client = new ImpersonatedClient({
-		profile: "chrome146",
-		timeoutMs: 30_000,
-	});
-	const robots = await RobotsFile.fetch(SEED, { userAgent: "AphrodyWeb/1.0" });
-	const crawlDelay = robots.crawlDelay("AphrodyWeb") ?? robots.crawlDelay("*");
-	const delayMs = crawlDelay ? crawlDelay * 1000 : RATE_DELAY_MS;
+  const client = new ImpersonatedClient({
+    profile: "chrome146",
+    timeoutMs: 30_000,
+  });
+  const robots = await RobotsFile.fetch(SEED, { userAgent: "AphrodyWeb/1.0" });
+  const crawlDelay = robots.crawlDelay("AphrodyWeb") ?? robots.crawlDelay("*");
+  const delayMs = crawlDelay ? crawlDelay * 1000 : RATE_DELAY_MS;
 
-	const slugSeen = new Set<string>();
-	const extractedPages = new Map<string, ExtractedPage>();
+  const slugSeen = new Set<string>();
+  const extractedPages = new Map<string, ExtractedPage>();
 
-	// Recover any stale locks from a previous crashed run
-	const recovered = queue.recoverStaleLocks();
-	if (recovered > 0)
-		console.log(`[crawl] recovered ${recovered} stale locks from previous run`);
+  // Recover any stale locks from a previous crashed run
+  const recovered = queue.recoverStaleLocks();
+  if (recovered > 0) console.log(`[crawl] recovered ${recovered} stale locks from previous run`);
 
-	let crawledCount = 0;
-	let discovered = 0;
+  let crawledCount = 0;
+  let discovered = 0;
 
-	process.on("SIGINT", () => {
-		console.log("\n[crawl] SIGINT — closing queue and client");
-		queue.close();
-		client.close();
-		process.exit(0);
-	});
+  process.on("SIGINT", () => {
+    console.log("\n[crawl] SIGINT — closing queue and client");
+    queue.close();
+    client.close();
+    process.exit(0);
+  });
 
-	const stats0 = queue.stats();
-	console.log(
-		`[crawl] queue: pending=${stats0.pending} done=${stats0.done} failed=${stats0.failed}`,
-	);
+  const stats0 = queue.stats();
+  console.log(`[crawl] queue: pending=${stats0.pending} done=${stats0.done} failed=${stats0.failed}`);
 
-	// Active worker slots
-	const inFlight = new Set<Promise<void>>();
+  // Active worker slots
+  const inFlight = new Set<Promise<void>>();
 
-	async function processOne(req: { id: number; url: string }): Promise<void> {
-		const { id, url } = req;
+  async function processOne(req: { id: number; url: string }): Promise<void> {
+    const { id, url } = req;
 
-		if (!robots.isAllowed(url, "AphrodyWeb")) {
-			console.log(`[crawl] robots.txt disallows ${url} — skipping`);
-			queue.markDone(id);
-			return;
-		}
+    if (!robots.isAllowed(url, "AphrodyWeb")) {
+      console.log(`[crawl] robots.txt disallows ${url} — skipping`);
+      queue.markDone(id);
+      return;
+    }
 
-		try {
-			console.log(`[crawl] [${crawledCount + 1}] GET ${url}`);
-			const res = await client.fetch(url, {
-				headers: {
-					Accept: "text/html,application/xhtml+xml",
-					"Accept-Language": "en-US,en;q=0.9",
-				},
-			});
+    try {
+      console.log(`[crawl] [${crawledCount + 1}] GET ${url}`);
+      const res = await client.fetch(url, {
+        headers: {
+          Accept: "text/html,application/xhtml+xml",
+          "Accept-Language": "en-US,en;q=0.9",
+        },
+      });
 
-			const html = await res.text();
-			const statusCode = res.status;
-			const contentType = res.headers.get("content-type") ?? "";
+      const html = await res.text();
+      const statusCode = res.status;
+      const contentType = res.headers.get("content-type") ?? "";
 
-			if (statusCode >= 400) {
-				queue.markFailed(id, `HTTP ${statusCode}`);
-				console.log(`[crawl] HTTP ${statusCode} for ${url}`);
-				return;
-			}
+      if (statusCode >= 400) {
+        queue.markFailed(id, `HTTP ${statusCode}`);
+        console.log(`[crawl] HTTP ${statusCode} for ${url}`);
+        return;
+      }
 
-			// Derive slug
-			const baseSlug = urlToSlug(url);
-			const slug = ensureUniqueSlug(baseSlug, slugSeen);
+      // Derive slug
+      const baseSlug = urlToSlug(url);
+      const slug = ensureUniqueSlug(baseSlug, slugSeen);
 
-			// Save raw HTML
-			await Bun.write(`${RAW_DIR}/${slug}.html`, html);
+      // Save raw HTML
+      await Bun.write(`${RAW_DIR}/${slug}.html`, html);
 
-			const meta: RawMeta = {
-				url,
-				slug,
-				fetchedAt: new Date().toISOString(),
-				statusCode,
-				contentType,
-				size: html.length,
-			};
-			await Bun.write(`${RAW_DIR}/${slug}.json`, JSON.stringify(meta, null, 2));
+      const meta: RawMeta = {
+        url,
+        slug,
+        fetchedAt: new Date().toISOString(),
+        statusCode,
+        contentType,
+        size: html.length,
+      };
+      await Bun.write(`${RAW_DIR}/${slug}.json`, JSON.stringify(meta, null, 2));
 
-			// Extract immediately so we have the page data for link discovery
-			const extracted = await extractPage(html, url, slug);
-			extractedPages.set(slug, extracted);
+      // Extract immediately so we have the page data for link discovery
+      const extracted = await extractPage(html, url, slug);
+      extractedPages.set(slug, extracted);
 
-			crawledCount++;
-			console.log(
-				`[crawl] [${crawledCount}] done: "${extracted.title}" (${extracted.wordCount} words)`,
-			);
+      crawledCount++;
+      console.log(`[crawl] [${crawledCount}] done: "${extracted.title}" (${extracted.wordCount} words)`);
 
-			// Discover sub-pages (1 level only from the seed domain /developers path)
-			if ((discovered < MAX_URLS && url === SEED) || isDevPage(url)) {
-				const doc = await parseHtml(html);
-				try {
-					const anchors = await doc.find("a[href]");
-					for (let i = 0; i < anchors.count && discovered < MAX_URLS; i++) {
-						const el = anchors.at(i);
-						if (!el) continue;
-						const href = el.getAttribute("href");
-						el.destroy();
-						const normalized = normalizeInternalUrl(href);
-						if (!normalized) continue;
-						if (!isDevPage(normalized)) continue;
-						if (!queue.has(normalized)) {
-							queue.addRequest(normalized);
-							discovered++;
-						}
-					}
-					anchors.destroy();
-				} finally {
-					doc.destroy();
-				}
-			}
+      // Discover sub-pages (1 level only from the seed domain /developers path)
+      if ((discovered < MAX_URLS && url === SEED) || isDevPage(url)) {
+        const doc = await parseHtml(html);
+        try {
+          const anchors = await doc.find("a[href]");
+          for (let i = 0; i < anchors.count && discovered < MAX_URLS; i++) {
+            const el = anchors.at(i);
+            if (!el) continue;
+            const href = el.getAttribute("href");
+            el.destroy();
+            const normalized = normalizeInternalUrl(href);
+            if (!normalized) continue;
+            if (!isDevPage(normalized)) continue;
+            if (!queue.has(normalized)) {
+              queue.addRequest(normalized);
+              discovered++;
+            }
+          }
+          anchors.destroy();
+        } finally {
+          doc.destroy();
+        }
+      }
 
-			queue.markDone(id);
-		} catch (err) {
-			queue.markFailed(id, String(err));
-			console.error(`[crawl] FAILED ${url}: ${String(err)}`);
-		}
-	}
+      queue.markDone(id);
+    } catch (err) {
+      queue.markFailed(id, String(err));
+      console.error(`[crawl] FAILED ${url}: ${String(err)}`);
+    }
+  }
 
-	// Drain queue with bounded concurrency
-	outer: while (true) {
-		// Recover stale periodically
-		queue.recoverStaleLocks();
+  // Drain queue with bounded concurrency
+  outer: while (true) {
+    // Recover stale periodically
+    queue.recoverStaleLocks();
 
-		const stats = queue.stats();
-		if (stats.pending === 0 && inFlight.size === 0) break;
-		if (crawledCount >= MAX_URLS && stats.pending === 0 && inFlight.size === 0)
-			break;
+    const stats = queue.stats();
+    if (stats.pending === 0 && inFlight.size === 0) break;
+    if (crawledCount >= MAX_URLS && stats.pending === 0 && inFlight.size === 0) break;
 
-		// Fill up to CONCURRENCY
-		while (inFlight.size < CONCURRENCY && crawledCount < MAX_URLS) {
-			const batch = queue.fetchBatch(1);
-			if (batch.length === 0) break;
-			const req = batch[0];
-			const p = processOne(req).finally(() => inFlight.delete(p));
-			inFlight.add(p);
-			await Bun.sleep(delayMs); // polite rate limit between dispatches
-		}
+    // Fill up to CONCURRENCY
+    while (inFlight.size < CONCURRENCY && crawledCount < MAX_URLS) {
+      const batch = queue.fetchBatch(1);
+      if (batch.length === 0) break;
+      const req = batch[0];
+      const p = processOne(req).finally(() => inFlight.delete(p));
+      inFlight.add(p);
+      await Bun.sleep(delayMs); // polite rate limit between dispatches
+    }
 
-		if (inFlight.size === 0) {
-			// Nothing in flight and nothing pending
-			break outer;
-		}
+    if (inFlight.size === 0) {
+      // Nothing in flight and nothing pending
+      break outer;
+    }
 
-		// Wait for any slot to open up
-		await Promise.race(inFlight);
-	}
+    // Wait for any slot to open up
+    await Promise.race(inFlight);
+  }
 
-	// Wait for all remaining
-	await Promise.all(inFlight);
+  // Wait for all remaining
+  await Promise.all(inFlight);
 
-	const finalStats = queue.stats();
-	console.log(
-		`[crawl] complete: ${finalStats.done} done, ${finalStats.failed} failed`,
-	);
-	queue.close();
-	client.close();
+  const finalStats = queue.stats();
+  console.log(`[crawl] complete: ${finalStats.done} done, ${finalStats.failed} failed`);
+  queue.close();
+  client.close();
 
-	return extractedPages;
+  return extractedPages;
 }
 
 // ---------------------------------------------------------------------------
 // Stage 2: Extract structured data from HTML via the native DOM
 // ---------------------------------------------------------------------------
 
-async function extractPage(
-	html: string,
-	url: string,
-	slug: string,
-): Promise<ExtractedPage> {
-	let title = "";
-	let intro = "";
-	const sections: Section[] = [];
-	const codeBlocks: string[] = [];
-	const externalLinks: string[] = [];
-	let lastUpdated: string | null = null;
+async function extractPage(html: string, url: string, slug: string): Promise<ExtractedPage> {
+  let title = "";
+  let intro = "";
+  const sections: Section[] = [];
+  const codeBlocks: string[] = [];
+  const externalLinks: string[] = [];
+  let lastUpdated: string | null = null;
 
-	let doc;
-	try {
-		doc = await parseHtml(html);
-	} catch {
-		// If the native DOM is unavailable, return minimal extraction
-		return {
-			url,
-			slug,
-			title: slug,
-			intro: "",
-			sections: [],
-			codeBlocks: [],
-			externalLinks: [],
-			lastUpdated: null,
-			wordCount: 0,
-		};
-	}
+  let doc;
+  try {
+    doc = await parseHtml(html);
+  } catch {
+    // If the native DOM is unavailable, return minimal extraction
+    return {
+      url,
+      slug,
+      title: slug,
+      intro: "",
+      sections: [],
+      codeBlocks: [],
+      externalLinks: [],
+      lastUpdated: null,
+      wordCount: 0,
+    };
+  }
 
-	try {
-		// Title: prefer <h1>, fall back to <title>
-		const h1Sel = await doc.find("h1");
-		if (h1Sel.count > 0) {
-			title = h1Sel.at(0)?.textContent().trim() ?? "";
-		}
-		h1Sel.destroy();
+  try {
+    // Title: prefer <h1>, fall back to <title>
+    const h1Sel = await doc.find("h1");
+    if (h1Sel.count > 0) {
+      title = h1Sel.at(0)?.textContent().trim() ?? "";
+    }
+    h1Sel.destroy();
 
-		if (!title) {
-			const titleSel = await doc.find("title");
-			if (titleSel.count > 0) {
-				title = titleSel.at(0)?.textContent().trim() ?? "";
-			}
-			titleSel.destroy();
-		}
+    if (!title) {
+      const titleSel = await doc.find("title");
+      if (titleSel.count > 0) {
+        title = titleSel.at(0)?.textContent().trim() ?? "";
+      }
+      titleSel.destroy();
+    }
 
-		// Intro: first <p> in main content area
-		const pSel = await doc.find(
-			"article p, main p, .content p, .entry-content p, div.page p",
-		);
-		if (pSel.count > 0) {
-			intro = pSel.at(0)?.textContent().trim() ?? "";
-		} else {
-			// Fallback: any first <p>
-			const allP = await doc.find("p");
-			if (allP.count > 0) {
-				intro = allP.at(0)?.textContent().trim() ?? "";
-			}
-			allP.destroy();
-		}
-		pSel.destroy();
+    // Intro: first <p> in main content area
+    const pSel = await doc.find("article p, main p, .content p, .entry-content p, div.page p");
+    if (pSel.count > 0) {
+      intro = pSel.at(0)?.textContent().trim() ?? "";
+    } else {
+      // Fallback: any first <p>
+      const allP = await doc.find("p");
+      if (allP.count > 0) {
+        intro = allP.at(0)?.textContent().trim() ?? "";
+      }
+      allP.destroy();
+    }
+    pSel.destroy();
 
-		// H2 sections
-		const h2Sel = await doc.find("h2");
-		for (let i = 0; i < h2Sel.count; i++) {
-			const el = h2Sel.at(i);
-			const heading = el?.textContent().trim() ?? "";
-			el?.destroy();
-			sections.push({ level: "h2", heading, paragraphs: [] });
-		}
-		h2Sel.destroy();
+    // H2 sections
+    const h2Sel = await doc.find("h2");
+    for (let i = 0; i < h2Sel.count; i++) {
+      const el = h2Sel.at(i);
+      const heading = el?.textContent().trim() ?? "";
+      el?.destroy();
+      sections.push({ level: "h2", heading, paragraphs: [] });
+    }
+    h2Sel.destroy();
 
-		// H3 sections
-		const h3Sel = await doc.find("h3");
-		for (let i = 0; i < h3Sel.count; i++) {
-			const el = h3Sel.at(i);
-			const heading = el?.textContent().trim() ?? "";
-			el?.destroy();
-			sections.push({ level: "h3", heading, paragraphs: [] });
-		}
-		h3Sel.destroy();
+    // H3 sections
+    const h3Sel = await doc.find("h3");
+    for (let i = 0; i < h3Sel.count; i++) {
+      const el = h3Sel.at(i);
+      const heading = el?.textContent().trim() ?? "";
+      el?.destroy();
+      sections.push({ level: "h3", heading, paragraphs: [] });
+    }
+    h3Sel.destroy();
 
-		// Code blocks
-		const codeSel = await doc.find("pre, code");
-		for (let i = 0; i < Math.min(codeSel.count, 10); i++) {
-			const el = codeSel.at(i);
-			const text = el?.textContent().trim() ?? "";
-			el?.destroy();
-			if (text.length > 10) codeBlocks.push(text);
-		}
-		codeSel.destroy();
+    // Code blocks
+    const codeSel = await doc.find("pre, code");
+    for (let i = 0; i < Math.min(codeSel.count, 10); i++) {
+      const el = codeSel.at(i);
+      const text = el?.textContent().trim() ?? "";
+      el?.destroy();
+      if (text.length > 10) codeBlocks.push(text);
+    }
+    codeSel.destroy();
 
-		// External links
-		const aSel = await doc.find("a[href]");
-		for (let i = 0; i < aSel.count; i++) {
-			const el = aSel.at(i);
-			const href = el?.getAttribute("href") ?? "";
-			el?.destroy();
-			try {
-				const safeUrl = safeHttpUrl(href);
-				if (!safeUrl) continue;
-				const u = new URL(safeUrl);
-				if (
-					u.hostname !== "www.chromium.org" &&
-					u.hostname !== "chromium.org"
-				) {
-					externalLinks.push(safeUrl);
-				}
-			} catch {
-				/* relative or invalid */
-			}
-		}
-		aSel.destroy();
+    // External links
+    const aSel = await doc.find("a[href]");
+    for (let i = 0; i < aSel.count; i++) {
+      const el = aSel.at(i);
+      const href = el?.getAttribute("href") ?? "";
+      el?.destroy();
+      try {
+        const safeUrl = safeHttpUrl(href);
+        if (!safeUrl) continue;
+        const u = new URL(safeUrl);
+        if (u.hostname !== "www.chromium.org" && u.hostname !== "chromium.org") {
+          externalLinks.push(safeUrl);
+        }
+      } catch {
+        /* relative or invalid */
+      }
+    }
+    aSel.destroy();
 
-		// Last-updated: look for <time> or common "Last updated" text
-		const timeSel = await doc.find("time");
-		if (timeSel.count > 0) {
-			const el = timeSel.at(0);
-			lastUpdated =
-				el?.getAttribute("datetime") || el?.textContent().trim() || null;
-			el?.destroy();
-		}
-		timeSel.destroy();
-	} finally {
-		doc.destroy();
-	}
+    // Last-updated: look for <time> or common "Last updated" text
+    const timeSel = await doc.find("time");
+    if (timeSel.count > 0) {
+      const el = timeSel.at(0);
+      lastUpdated = el?.getAttribute("datetime") || el?.textContent().trim() || null;
+      el?.destroy();
+    }
+    timeSel.destroy();
+  } finally {
+    doc.destroy();
+  }
 
-	const allText = [title, intro, ...sections.map((s) => s.heading)].join(" ");
-	return {
-		url,
-		slug,
-		title: title || slug,
-		intro,
-		sections: sections.slice(0, 20), // cap to avoid huge pages
-		codeBlocks: codeBlocks.slice(0, 5),
-		externalLinks: [...new Set(externalLinks)].slice(0, 30),
-		lastUpdated,
-		wordCount: wordCount(allText),
-	};
+  const allText = [title, intro, ...sections.map(s => s.heading)].join(" ");
+  return {
+    url,
+    slug,
+    title: title || slug,
+    intro,
+    sections: sections.slice(0, 20), // cap to avoid huge pages
+    codeBlocks: codeBlocks.slice(0, 5),
+    externalLinks: [...new Set(externalLinks)].slice(0, 30),
+    lastUpdated,
+    wordCount: wordCount(allText),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -499,74 +477,66 @@ async function extractPage(
 // ---------------------------------------------------------------------------
 
 interface GeminiClient {
-	generate(prompt: string, options?: any): Promise<{ text: string }>;
-	resetChat(): void;
-	stop(): Promise<void>;
+  generate(prompt: string, options?: any): Promise<{ text: string }>;
+  resetChat(): void;
+  stop(): Promise<void>;
 }
 
 async function tryGeminiBootstrap(): Promise<GeminiClient | null> {
-	try {
-		const cookieExists = await Bun.file(GEMINI_COOKIES).exists();
-		if (!cookieExists) {
-			console.log("[gemini] cookie file not found, falling back to heuristic");
-			return null;
-		}
-		const client = null /* gemini removed from main */;
-		// gemini removed
-		// Lightweight probe
-		const probe = { text: "" } /* gemini removed */;
-		if (!probe.text.toLowerCase().includes("ok"))
-			throw new Error("probe returned unexpected text");
-		console.log("[gemini] bootstrap succeeded");
-		return client;
-	} catch (err) {
-		console.log(
-			`[gemini] cookies expired or invalid, falling back to heuristic: ${String(err)}`,
-		);
-		return null;
-	}
+  try {
+    const cookieExists = await Bun.file(GEMINI_COOKIES).exists();
+    if (!cookieExists) {
+      console.log("[gemini] cookie file not found, falling back to heuristic");
+      return null;
+    }
+    const client = null; /* gemini removed from main */
+    // gemini removed
+    // Lightweight probe
+    const probe = { text: "" }; /* gemini removed */
+    if (!probe.text.toLowerCase().includes("ok")) throw new Error("probe returned unexpected text");
+    console.log("[gemini] bootstrap succeeded");
+    return client;
+  } catch (err) {
+    console.log(`[gemini] cookies expired or invalid, falling back to heuristic: ${String(err)}`);
+    return null;
+  }
 }
 
 function heuristicRewrite(page: ExtractedPage): {
-	tldr: string;
-	bullets: string[];
-	quote: string;
+  tldr: string;
+  bullets: string[];
+  quote: string;
 } {
-	const h2s = page.sections
-		.filter((s) => s.level === "h2")
-		.slice(0, 5)
-		.map((s) => s.heading);
+  const h2s = page.sections
+    .filter(s => s.level === "h2")
+    .slice(0, 5)
+    .map(s => s.heading);
 
-	const tldr = page.intro
-		? clamp(page.intro, 300)
-		: `${page.title} is a page on the Chromium developers documentation site.`;
+  const tldr = page.intro
+    ? clamp(page.intro, 300)
+    : `${page.title} is a page on the Chromium developers documentation site.`;
 
-	const bullets: string[] =
-		h2s.length > 0
-			? h2s.map((h) => `Section: ${h}`)
-			: ["No structured sections found on this page."];
+  const bullets: string[] =
+    h2s.length > 0 ? h2s.map(h => `Section: ${h}`) : ["No structured sections found on this page."];
 
-	const quote = page.intro ? clamp(page.intro, 150) : page.title;
+  const quote = page.intro ? clamp(page.intro, 150) : page.title;
 
-	return { tldr, bullets, quote };
+  return { tldr, bullets, quote };
 }
 
-async function rewritePage(
-	page: ExtractedPage,
-	gemini: GeminiClient | null,
-): Promise<RewrittenPage> {
-	if (!gemini) {
-		const { tldr, bullets, quote } = heuristicRewrite(page);
-		return { ...page, tldr, bullets, quote, geminiUsed: false };
-	}
+async function rewritePage(page: ExtractedPage, gemini: GeminiClient | null): Promise<RewrittenPage> {
+  if (!gemini) {
+    const { tldr, bullets, quote } = heuristicRewrite(page);
+    return { ...page, tldr, bullets, quote, geminiUsed: false };
+  }
 
-	const prompt = `
+  const prompt = `
 You are a technical documentation editor. Given the following page from Chromium developers documentation:
 
 Title: ${page.title}
 URL: ${page.url}
 Intro: ${clamp(page.intro, 500)}
-Sections: ${page.sections.map((s) => `${s.level}: ${s.heading}`).join(", ")}
+Sections: ${page.sections.map(s => `${s.level}: ${s.heading}`).join(", ")}
 
 Write:
 1. A TL;DR of exactly 2 sentences.
@@ -577,36 +547,32 @@ Format your response as JSON: {"tldr":"...","bullets":["..."],"quote":"..."}
 Do not wrap in markdown code fences. Output only the JSON object.
 `.trim();
 
-	try {
-		gemini.resetChat();
-		const reply = await gemini.generate(prompt);
-		const text = reply.text.trim();
-		// Strip possible markdown fences
-		const jsonText = text
-			.replace(/^```json\s*/i, "")
-			.replace(/```\s*$/i, "")
-			.trim();
-		const parsed = JSON.parse(jsonText) as {
-			tldr: string;
-			bullets: string[];
-			quote: string;
-		};
-		return {
-			...page,
-			tldr: parsed.tldr ?? heuristicRewrite(page).tldr,
-			bullets: Array.isArray(parsed.bullets)
-				? parsed.bullets.slice(0, 5)
-				: heuristicRewrite(page).bullets,
-			quote: parsed.quote ?? heuristicRewrite(page).quote,
-			geminiUsed: true,
-		};
-	} catch (err) {
-		console.log(
-			`[gemini] parse failed for "${page.title}": ${String(err)} — using heuristic`,
-		);
-		const { tldr, bullets, quote } = heuristicRewrite(page);
-		return { ...page, tldr, bullets, quote, geminiUsed: false };
-	}
+  try {
+    gemini.resetChat();
+    const reply = await gemini.generate(prompt);
+    const text = reply.text.trim();
+    // Strip possible markdown fences
+    const jsonText = text
+      .replace(/^```json\s*/i, "")
+      .replace(/```\s*$/i, "")
+      .trim();
+    const parsed = JSON.parse(jsonText) as {
+      tldr: string;
+      bullets: string[];
+      quote: string;
+    };
+    return {
+      ...page,
+      tldr: parsed.tldr ?? heuristicRewrite(page).tldr,
+      bullets: Array.isArray(parsed.bullets) ? parsed.bullets.slice(0, 5) : heuristicRewrite(page).bullets,
+      quote: parsed.quote ?? heuristicRewrite(page).quote,
+      geminiUsed: true,
+    };
+  } catch (err) {
+    console.log(`[gemini] parse failed for "${page.title}": ${String(err)} — using heuristic`);
+    const { tldr, bullets, quote } = heuristicRewrite(page);
+    return { ...page, tldr, bullets, quote, geminiUsed: false };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -834,18 +800,18 @@ if (search && count) {
 `;
 
 function renderIndexHtml(pages: RewrittenPage[]): string {
-	const cards = pages
-		.map(
-			(p) => `
+  const cards = pages
+    .map(
+      p => `
     <article class="page-card" data-title="${Bun.escapeHTML(p.title.toLocaleLowerCase())}">
       <h2><a href="pages/${Bun.escapeHTML(p.slug)}.html">${Bun.escapeHTML(p.title)}</a></h2>
       <p>${Bun.escapeHTML(clamp(p.tldr, 140))}</p>
       <div class="meta">${p.wordCount} words${p.geminiUsed ? ' <span class="badge">AI</span>' : ""}</div>
     </article>`,
-		)
-		.join("\n");
+    )
+    .join("\n");
 
-	return `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -875,28 +841,21 @@ ${cards}
 }
 
 function renderPageHtml(page: RewrittenPage): string {
-	const sectionItems = page.sections
-		.map((s) => `<li>${Bun.escapeHTML(s.heading)}</li>`)
-		.join("\n");
+  const sectionItems = page.sections.map(s => `<li>${Bun.escapeHTML(s.heading)}</li>`).join("\n");
 
-	const codeBlocksHtml = page.codeBlocks
-		.map((c) => `<pre><code>${Bun.escapeHTML(c)}</code></pre>`)
-		.join("\n");
+  const codeBlocksHtml = page.codeBlocks.map(c => `<pre><code>${Bun.escapeHTML(c)}</code></pre>`).join("\n");
 
-	const externalLinksHtml = page.externalLinks
-		.filter((url) => safeHttpUrl(url) !== null)
-		.slice(0, 10)
-		.map(
-			(l) =>
-				`<li><a href="${Bun.escapeHTML(l)}" rel="noopener noreferrer" target="_blank">${Bun.escapeHTML(l)}</a></li>`,
-		)
-		.join("\n");
+  const externalLinksHtml = page.externalLinks
+    .filter(url => safeHttpUrl(url) !== null)
+    .slice(0, 10)
+    .map(
+      l => `<li><a href="${Bun.escapeHTML(l)}" rel="noopener noreferrer" target="_blank">${Bun.escapeHTML(l)}</a></li>`,
+    )
+    .join("\n");
 
-	const bulletsHtml = page.bullets
-		.map((b) => `<li>${Bun.escapeHTML(b.replace(/^[-*]\s*/, ""))}</li>`)
-		.join("\n");
+  const bulletsHtml = page.bullets.map(b => `<li>${Bun.escapeHTML(b.replace(/^[-*]\s*/, ""))}</li>`).join("\n");
 
-	return `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -949,121 +908,107 @@ function renderPageHtml(page: RewrittenPage): string {
 // ---------------------------------------------------------------------------
 
 async function main() {
-	const t0 = Bun.nanoseconds();
+  const t0 = Bun.nanoseconds();
 
-	// Stage 1 — Crawl
-	console.log("\n=== Stage 1: Crawl ===");
-	const extractedPages = await crawl();
+  // Stage 1 — Crawl
+  console.log("\n=== Stage 1: Crawl ===");
+  const extractedPages = await crawl();
 
-	// Stage 2 — Persist extracted JSONL (pages already extracted inline during crawl)
-	console.log("\n=== Stage 2: Persist extraction ===");
+  // Stage 2 — Persist extracted JSONL (pages already extracted inline during crawl)
+  console.log("\n=== Stage 2: Persist extraction ===");
 
-	// Also re-extract any raw pages that exist on disk but weren't in this run (resume case)
-	const rawFiles = Array.from(
-		new Bun.Glob("*.json").scanSync({ cwd: RAW_DIR }),
-	);
-	for (const metaFile of rawFiles) {
-		try {
-			const meta = JSON.parse(
-				await Bun.file(`${RAW_DIR}/${metaFile}`).text(),
-			) as RawMeta;
-			if (typeof meta.slug !== "string" || !/^[a-z0-9-]+$/.test(meta.slug)) continue;
-			if (!extractedPages.has(meta.slug)) {
-				const htmlPath = `${RAW_DIR}/${meta.slug}.html`;
-				if (await Bun.file(htmlPath).exists()) {
-					const html = await Bun.file(htmlPath).text();
-					extractedPages.set(
-						meta.slug,
-						await extractPage(html, meta.url, meta.slug),
-					);
-				}
-			}
-		} catch {
-			/* skip malformed meta */
-		}
-	}
+  // Also re-extract any raw pages that exist on disk but weren't in this run (resume case)
+  const rawFiles = Array.from(new Bun.Glob("*.json").scanSync({ cwd: RAW_DIR }));
+  for (const metaFile of rawFiles) {
+    try {
+      const meta = JSON.parse(await Bun.file(`${RAW_DIR}/${metaFile}`).text()) as RawMeta;
+      if (typeof meta.slug !== "string" || !/^[a-z0-9-]+$/.test(meta.slug)) continue;
+      if (!extractedPages.has(meta.slug)) {
+        const htmlPath = `${RAW_DIR}/${meta.slug}.html`;
+        if (await Bun.file(htmlPath).exists()) {
+          const html = await Bun.file(htmlPath).text();
+          extractedPages.set(meta.slug, await extractPage(html, meta.url, meta.slug));
+        }
+      }
+    } catch {
+      /* skip malformed meta */
+    }
+  }
 
-	const extractedWriter = Bun.file(EXTRACTED_JSONL).writer();
-	for (const page of extractedPages.values()) {
-		extractedWriter.write(JSON.stringify(page) + "\n");
-	}
-	await extractedWriter.end();
-	console.log(
-		`[extract] wrote ${extractedPages.size} pages to extracted.jsonl`,
-	);
+  const extractedWriter = Bun.file(EXTRACTED_JSONL).writer();
+  for (const page of extractedPages.values()) {
+    extractedWriter.write(JSON.stringify(page) + "\n");
+  }
+  await extractedWriter.end();
+  console.log(`[extract] wrote ${extractedPages.size} pages to extracted.jsonl`);
 
-	// Stage 3 — Rewrite
-	console.log("\n=== Stage 3: AI Rewrite ===");
-	const gemini = await tryGeminiBootstrap();
-	const rewritten: RewrittenPage[] = [];
-	let geminiCount = 0;
-	let heuristicCount = 0;
+  // Stage 3 — Rewrite
+  console.log("\n=== Stage 3: AI Rewrite ===");
+  const gemini = await tryGeminiBootstrap();
+  const rewritten: RewrittenPage[] = [];
+  let geminiCount = 0;
+  let heuristicCount = 0;
 
-	for (const page of extractedPages.values()) {
-		const rw = await rewritePage(page, gemini);
-		rewritten.push(rw);
-		if (rw.geminiUsed) geminiCount++;
-		else heuristicCount++;
-		console.log(
-			`[rewrite] "${rw.title}" [${rw.geminiUsed ? "gemini" : "heuristic"}]`,
-		);
-		if (gemini && rw.geminiUsed) await Bun.sleep(500); // rate-limit Gemini
-	}
+  for (const page of extractedPages.values()) {
+    const rw = await rewritePage(page, gemini);
+    rewritten.push(rw);
+    if (rw.geminiUsed) geminiCount++;
+    else heuristicCount++;
+    console.log(`[rewrite] "${rw.title}" [${rw.geminiUsed ? "gemini" : "heuristic"}]`);
+    if (gemini && rw.geminiUsed) await Bun.sleep(500); // rate-limit Gemini
+  }
 
-	if (gemini) await gemini.stop();
+  if (gemini) await gemini.stop();
 
-	// Stage 4 — Site generation
-	console.log("\n=== Stage 4: Site generation ===");
-	await Bun.write(`${SITE_DIR}/assets/style.css`, CSS);
-	await Bun.write(`${SITE_DIR}/assets/app.js`, APP_JS);
+  // Stage 4 — Site generation
+  console.log("\n=== Stage 4: Site generation ===");
+  await Bun.write(`${SITE_DIR}/assets/style.css`, CSS);
+  await Bun.write(`${SITE_DIR}/assets/app.js`, APP_JS);
 
-	// Sort by wordCount desc for "top pages"
-	rewritten.sort((a, b) => b.wordCount - a.wordCount);
+  // Sort by wordCount desc for "top pages"
+  rewritten.sort((a, b) => b.wordCount - a.wordCount);
 
-	// index.html
-	await Bun.write(`${SITE_DIR}/index.html`, renderIndexHtml(rewritten));
+  // index.html
+  await Bun.write(`${SITE_DIR}/index.html`, renderIndexHtml(rewritten));
 
-	// individual pages
-	for (const page of rewritten) {
-		await Bun.write(
-			`${SITE_DIR}/pages/${page.slug}.html`,
-			renderPageHtml(page),
-		);
-	}
+  // individual pages
+  for (const page of rewritten) {
+    await Bun.write(`${SITE_DIR}/pages/${page.slug}.html`, renderPageHtml(page));
+  }
 
-	// meta.json
-	const meta = {
-		generatedAt: new Date().toISOString(),
-		totalPages: rewritten.length,
-		geminiUsed: geminiCount,
-		heuristicUsed: heuristicCount,
-		pages: rewritten.map((p) => ({
-			slug: p.slug,
-			title: p.title,
-			url: p.url,
-			wordCount: p.wordCount,
-			geminiUsed: p.geminiUsed,
-		})),
-	};
-	await Bun.write(`${SITE_DIR}/meta.json`, JSON.stringify(meta, null, 2));
+  // meta.json
+  const meta = {
+    generatedAt: new Date().toISOString(),
+    totalPages: rewritten.length,
+    geminiUsed: geminiCount,
+    heuristicUsed: heuristicCount,
+    pages: rewritten.map(p => ({
+      slug: p.slug,
+      title: p.title,
+      url: p.url,
+      wordCount: p.wordCount,
+      geminiUsed: p.geminiUsed,
+    })),
+  };
+  await Bun.write(`${SITE_DIR}/meta.json`, JSON.stringify(meta, null, 2));
 
-	// Compute disk size
-	let diskBytes = 0;
-	for await (const f of new Bun.Glob("**/*").scan({ cwd: SITE_DIR })) {
-		try {
-			const stat = await Bun.file(`${SITE_DIR}/${f}`).size;
-			diskBytes += stat;
-		} catch {
-			/* skip */
-		}
-	}
+  // Compute disk size
+  let diskBytes = 0;
+  for await (const f of new Bun.Glob("**/*").scan({ cwd: SITE_DIR })) {
+    try {
+      const stat = await Bun.file(`${SITE_DIR}/${f}`).size;
+      diskBytes += stat;
+    } catch {
+      /* skip */
+    }
+  }
 
-	const elapsed = ((Bun.nanoseconds() - t0) / 1e9).toFixed(1);
+  const elapsed = ((Bun.nanoseconds() - t0) / 1e9).toFixed(1);
 
-	// top 5 pages
-	const top5 = rewritten.slice(0, 5);
+  // top 5 pages
+  const top5 = rewritten.slice(0, 5);
 
-	console.log(`
+  console.log(`
 === Final Report ===
 URLs crawled:      ${extractedPages.size}
 Pages generated:   ${rewritten.length}
@@ -1082,7 +1027,7 @@ Serve with:
 `);
 }
 
-main().catch((err) => {
-	console.error("[fatal]", err);
-	process.exit(1);
+main().catch(err => {
+  console.error("[fatal]", err);
+  process.exit(1);
 });

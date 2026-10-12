@@ -5,10 +5,7 @@
 // from the npm package. Not implemented: extended search, logical queries, diacritic folding and
 // index serialisation (none are used by Aphrody).
 
-export type FuzzyKey =
-  | string
-  | readonly string[]
-  | { name: string | readonly string[]; weight?: number };
+export type FuzzyKey = string | readonly string[] | { name: string | readonly string[]; weight?: number };
 
 export type FuzzyOptions<T> = {
   keys?: readonly FuzzyKey[];
@@ -183,8 +180,7 @@ function bitap(
   alphabet: Map<string, number>,
   params: SearchParams,
 ): { isMatch: boolean; score: number; indices?: [number, number][] } {
-  const { location, distance, threshold, findAllMatches, minMatchCharLength, ignoreLocation } =
-    params;
+  const { location, distance, threshold, findAllMatches, minMatchCharLength, ignoreLocation } = params;
   const patternLen = pattern.length;
   const textLen = text.length;
   const expectedLocation = Math.max(0, Math.min(location, textLen));
@@ -213,14 +209,7 @@ function bitap(
     let binMin = 0;
     let binMid = binMax;
     while (binMin < binMid) {
-      const score = computeScore(
-        pattern,
-        i,
-        expectedLocation + binMid,
-        expectedLocation,
-        distance,
-        ignoreLocation,
-      );
+      const score = computeScore(pattern, i, expectedLocation + binMid, expectedLocation, distance, ignoreLocation);
       if (score <= currentThreshold) binMin = binMid;
       else binMax = binMid;
       binMid = Math.floor((binMax - binMin) / 2 + binMin);
@@ -228,9 +217,7 @@ function bitap(
     binMax = binMid;
 
     let start = Math.max(1, expectedLocation - binMid + 1);
-    const finish = findAllMatches
-      ? textLen
-      : Math.min(expectedLocation + binMid, textLen) + patternLen;
+    const finish = findAllMatches ? textLen : Math.min(expectedLocation + binMid, textLen) + patternLen;
     const bitArr: number[] = Array.from({ length: finish + 2 });
     bitArr[finish + 1] = (1 << i) - 1;
 
@@ -241,18 +228,10 @@ function bitap(
 
       bitArr[j] = (((bitArr[j + 1] ?? 0) << 1) | 1) & charMatch;
       if (i) {
-        bitArr[j]! |=
-          (((lastBitArr[j + 1] ?? 0) | (lastBitArr[j] ?? 0)) << 1) | 1 | (lastBitArr[j + 1] ?? 0);
+        bitArr[j]! |= (((lastBitArr[j + 1] ?? 0) | (lastBitArr[j] ?? 0)) << 1) | 1 | (lastBitArr[j + 1] ?? 0);
       }
       if (bitArr[j]! & mask) {
-        finalScore = computeScore(
-          pattern,
-          i,
-          currentLocation,
-          expectedLocation,
-          distance,
-          ignoreLocation,
-        );
+        finalScore = computeScore(pattern, i, currentLocation, expectedLocation, distance, ignoreLocation);
         if (finalScore <= currentThreshold) {
           currentThreshold = finalScore;
           bestLocation = currentLocation;
@@ -262,14 +241,7 @@ function bitap(
       }
     }
 
-    const score = computeScore(
-      pattern,
-      i + 1,
-      expectedLocation,
-      expectedLocation,
-      distance,
-      ignoreLocation,
-    );
+    const score = computeScore(pattern, i + 1, expectedLocation, expectedLocation, distance, ignoreLocation);
     if (score > currentThreshold) break;
     lastBitArr = bitArr;
   }
@@ -375,7 +347,7 @@ export class FuzzySearch<T> {
     }
     this.getFn = options.getFn ?? ((item, path) => accessor(item, path));
     this.docs = [...docs];
-    this.keys = (options.keys ?? []).map((key) => createKey(key));
+    this.keys = (options.keys ?? []).map(key => createKey(key));
     this.index();
   }
 
@@ -436,8 +408,7 @@ export class FuzzySearch<T> {
     if (stringList) {
       for (const { v, i, n } of this.stringRecords) {
         const { isMatch, score, indices } = searcher.searchIn(v);
-        if (isMatch)
-          raw.push({ idx: i, score: 0, matches: [{ score, value: v, norm: n, indices }] });
+        if (isMatch) raw.push({ idx: i, score: 0, matches: [{ score, value: v, norm: n, indices }] });
       }
     } else {
       for (const { $: item, i } of this.records) {
@@ -473,17 +444,15 @@ export class FuzzySearch<T> {
     }
 
     if (this.options.shouldSort) {
-      raw.sort((a, b) =>
-        a.score === b.score ? (a.idx < b.idx ? -1 : 1) : a.score < b.score ? -1 : 1,
-      );
+      raw.sort((a, b) => (a.score === b.score ? (a.idx < b.idx ? -1 : 1) : a.score < b.score ? -1 : 1));
     }
     const limited = limit > -1 ? raw.slice(0, limit) : raw;
 
-    return limited.map((result) => {
+    return limited.map(result => {
       const out: FuzzyResult<T> = { item: this.docs[result.idx]!, refIndex: result.idx };
       if (this.options.includeMatches) {
         out.matches = result.matches
-          .filter((match) => match.indices.length)
+          .filter(match => match.indices.length)
           .map((match): FuzzyMatch =>
             Object.assign(
               { indices: match.indices, value: match.value },
@@ -505,8 +474,7 @@ function createKey(key: FuzzyKey): Key {
   }
   const named = key as { name: string | readonly string[]; weight?: number };
   const weight = named.weight ?? 1;
-  if (weight <= 0)
-    throw new Error(`Property 'weight' in key '${named.name}' must be a positive integer`);
+  if (weight <= 0) throw new Error(`Property 'weight' in key '${named.name}' must be a positive integer`);
   const path = typeof named.name === "string" ? named.name.split(".") : [...named.name];
   return { path, id: path.join("."), weight };
 }

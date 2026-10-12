@@ -27,12 +27,12 @@ describe("@aphrody/agent-browser", () => {
   });
 
   it("preserves explicit CDP and maps headed mode without duplicates", () => {
-    const args = prepareAgentBrowserArgs(
-      ["open", "--cdp", "ws://127.0.0.1:9333/devtools/browser", "--json"],
-      { cdpUrl: "ws://127.0.0.1:9222/devtools/browser", headless: false },
-    );
-    expect(args.filter((arg) => arg === "--cdp")).toHaveLength(1);
-    expect(args.filter((arg) => arg === "--json")).toHaveLength(1);
+    const args = prepareAgentBrowserArgs(["open", "--cdp", "ws://127.0.0.1:9333/devtools/browser", "--json"], {
+      cdpUrl: "ws://127.0.0.1:9222/devtools/browser",
+      headless: false,
+    });
+    expect(args.filter(arg => arg === "--cdp")).toHaveLength(1);
+    expect(args.filter(arg => arg === "--json")).toHaveLength(1);
     expect(args).toContain("--headed");
     expect(args).not.toContain("--headless");
   });

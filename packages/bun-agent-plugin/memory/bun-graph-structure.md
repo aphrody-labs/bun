@@ -2,12 +2,13 @@
 name: bun-graph-structure
 description: "What the graph:bun code graph says about Bun's structure (communities decoded, god nodes, crate coupling), repo size facts from aphrody scan/ingest, and the graph's reliability limits + label-to-id recipe"
 metadata:
- type: reference
+  type: reference
 ---
 
 Sources: `aphrody graph --source graph:bun report|explain|path|query`, a Bun script over `~\.aphrody\graphs\bun\graph.json` (keys `nodes`, `links`, `hyperedges`=0, `built_at_commit`=null), `aphrody scan tree|manifests`, `aphrody ingest --subpath … --include "*.rs" --json`. HEAD fe43d1d685a, 2026-10-08. Graph setup: `bun-aphrody-graph-memory`.
 
 **Size facts**
+
 - Cargo workspace = **103 members** (`Cargo.toml:3-111`, `exclude = ["vendor"]` `:112`), 99 internal `bun_*` path deps in `[workspace.dependencies]` (`:325`). Members include nested `src/install/windows-shim`, `src/sema/{baselines,driver,standalone}`. 111 tracked Cargo.toml: 104 under `src/` (only `src/css_derive` is not a member) + `bench/ffi/src`, `packages/bun-build-mdx-rs`, `packages/bun-native-plugin-rs{,/bun-macro}`, `scripts/verify-baseline-static`, a grpc test fixture. The "~200 crates" in CLAUDE.md is an overcount.
 - External Rust deps are few: hashbrown, allocator-api2, bstr, rustix, libc, bitflags, smallvec, thiserror, strum, enumset, enum-map, scopeguard, const_format, itoa, encoding_rs, bcrypt, getrandom, plus path deps `vendor/rust-argon2`, `vendor/lolhtml` (`Cargo.toml:325-450`).
 - Tracked source: 1 646 `.rs` files / **1.25 M lines** in `src/`; 1 280 `.cpp/.h` / 292 k lines; `src/js/**.ts` 100 k lines. Manifests: 559 package.json, 51 bun.lock, 40 tsconfig, 22 bunfig.toml.
@@ -18,6 +19,7 @@ Sources: `aphrody graph --source graph:bun report|explain|path|query`, a Bun scr
 **Graph totals**: 114 065 nodes, 304 039 edges (references 87 k, calls 72 k, contains 49 k, imports_from 38 k, method 36 k, case_of 12 k, implements 1.6 k, inherits 117); 98 % EXTRACTED.
 
 **Communities decoded** (id: label, size → dominant dirs → meaning)
+
 - 0 JSValue 11 264 → src/jsc, runtime/webcore, runtime/api, runtime/node, runtime/socket → the JS-facing runtime surface (everything taking `&JSGlobalObject`/returning `JsResult<JSValue>`).
 - 1 bun_test.rs 10 402 → test/js/node, test/js/bun, test/cli, test/js/web, regression → the test suite (glued by `bunExe`/`tempDir` in `test/harness.ts`).
 - 2 Fd 7 305 → src/install (2 598), runtime/cli, resolver → package manager + CLI + resolver (file-descriptor heavy I/O code). `Transpiler`, `PackageManager`, `Lockfile`, `AsyncModule` land here.
@@ -33,9 +35,11 @@ Sources: `aphrody graph --source graph:bun report|explain|path|query`, a Bun scr
 - 13 index.d.ts → packages/bun-inspector-protocol; 14 Interpreter 1 540 → runtime/shell (Bun Shell); 16 shared_runtime → test/bundler fixtures; 17 runner.node.mjs → scripts/build + CI runner; 18 → bench/react-hello-world (generated bundle); 19 Error → error enums across crates; 21 StandaloneModuleGraph.rs 813 → exe_format, url, standalone_graph, router (`--compile`); 22 VirtualMachine 805 → src/jsc + bun_core (VM struct proper); 24 spawn/process.rs 705 → io, spawn, spawn_sys.
 
 **God nodes**: JSValue 4 439 edges, JSGlobalObject 4 065, JsResult 3 018, TypeId 2 615, bun_test.rs 2 146, c_void, FileId 1 924, `bunExe` 1 669, CallFrame 1 228, ExprId 987. Highest-degree real code nodes: `napi_body.rs` 979, `sys/lib.rs` 873, `tempDir` 807, `Loc` (`src/ast/lib.rs:589`) 722, `node_fs.rs` 683, `AllocError` (`src/bun_alloc/lib.rs:492`) 658, `ZStr` (`src/bun_core/util.rs:77`) 632, `JSValue` (`src/jsc/JSValue.rs:31`) 507, `Interpreter` (`src/runtime/shell/interpreter.rs:269`) 367, `VirtualMachine` (`src/jsc/VirtualMachine.rs:131`) 314.
+
 - Most imported-from crate dirs (cross-dir `use` edges): collections 558, jsc 525, bun_core 430, spawn 323, ast 244, bun_alloc 179, ptr 141, runtime 119, event_loop 118, sema 113.
 
 **Reliability limits (read before trusting graph output)**
+
 - Rust `calls` are resolved by name within the same file: 61 729 same-file vs 9 907 cross-file call edges, and most cross-file ones are TS (test→src/js, test→harness). Top "called" Rust targets are `.get`/`.len`/`.new` in one file. Do not use `path` for call chains; it is undirected and walks shared type refs (e.g. `path RunCommand ModuleLoader` goes via `Loader`/`Macro.rs`). Verified chains: `bun-graph-call-paths`.
 - INFERRED name collisions: `join` in `src/node-fallbacks/path.js:173` collects 1 023 edges from every `path.join` in tests; `bench/react-hello-world` → test/js edges are spurious.
 - Type names appear twice: a `concept` node (all references, e.g. `virtualmachine` deg 407) and a `code` node (definition). `explain <Label>` picks the concept or an unrelated same-named struct. Find ids with a Bun one-liner: `g.nodes.filter(n=>n.label==="X")` over graph.json, then `explain <id>`.

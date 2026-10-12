@@ -6,12 +6,12 @@ export function opfsParts(path: string): string[] {
   const parts = path.replace(/^\//, "").split("/");
   if (
     parts.some(
-      (part) =>
+      part =>
         !part ||
         part === "." ||
         part === ".." ||
         part.includes("\\") ||
-        Array.from(part).some((char) => char.charCodeAt(0) < 32),
+        Array.from(part).some(char => char.charCodeAt(0) < 32),
     )
   )
     throw new Error("Invalid browser file path");
@@ -23,8 +23,7 @@ async function fileHandle(path: string, create: boolean): Promise<FileSystemFile
   let directory = await (
     await navigator.storage.getDirectory()
   ).getDirectoryHandle("bun-webos-files", { create: true });
-  for (const part of parts.slice(0, -1))
-    directory = await directory.getDirectoryHandle(part, { create });
+  for (const part of parts.slice(0, -1)) directory = await directory.getDirectoryHandle(part, { create });
   return directory.getFileHandle(parts.at(-1)!, { create });
 }
 

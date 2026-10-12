@@ -128,10 +128,7 @@ describe("read-only native Google Docs Markdown projection", () => {
                   tableCells: [{ content: [paragraph("Name")] }, { content: [paragraph("Role")] }],
                 },
                 {
-                  tableCells: [
-                    { content: [paragraph("Shenron")] },
-                    { content: [paragraph("Dragon | dbfr")] },
-                  ],
+                  tableCells: [{ content: [paragraph("Shenron")] }, { content: [paragraph("Dragon | dbfr")] }],
                 },
               ],
             },
@@ -159,24 +156,16 @@ describe("read-only native Google Docs Markdown projection", () => {
     expect(md.match(/^---$/gm)).toHaveLength(2);
   });
   test("stages remote changes even when local is untouched and never trusts untracked local context", () => {
-    expect(projectionAction({ remoteHash: "old", localHash: "local" }, "new", "local")).toBe(
-      "stage",
-    );
-    expect(projectionAction({ remoteHash: "old", localHash: "local" }, "new", "modified")).toBe(
-      "stage",
-    );
+    expect(projectionAction({ remoteHash: "old", localHash: "local" }, "new", "local")).toBe("stage");
+    expect(projectionAction({ remoteHash: "old", localHash: "local" }, "new", "modified")).toBe("stage");
     expect(projectionAction(undefined, "remote", "local")).toBe("stage");
-    expect(projectionAction({ remoteHash: "same", localHash: "local" }, "same", "local")).toBe(
-      "unchanged",
-    );
-    expect(projectionAction({ remoteHash: "same", localHash: "local" }, "same", "modified")).toBe(
-      "local-ahead",
-    );
+    expect(projectionAction({ remoteHash: "same", localHash: "local" }, "same", "local")).toBe("unchanged");
+    expect(projectionAction({ remoteHash: "same", localHash: "local" }, "same", "modified")).toBe("local-ahead");
   });
   test("rejects unsupported native content instead of silently deleting it", () => {
-    expect(() =>
-      nativeMarkdown({ body: { content: [{ paragraph: { elements: [{}] } }] } }),
-    ).toThrow("Unsupported native element");
+    expect(() => nativeMarkdown({ body: { content: [{ paragraph: { elements: [{}] } }] } })).toThrow(
+      "Unsupported native element",
+    );
   });
 });
 
@@ -188,7 +177,7 @@ async function directory() {
   return path;
 }
 afterEach(async () => {
-  await Promise.all(temporary.splice(0).map((path) => rm(path, { recursive: true, force: true })));
+  await Promise.all(temporary.splice(0).map(path => rm(path, { recursive: true, force: true })));
 });
 // The private projection relies on POSIX mode bits and rename over an open target.
 describe.skipIf(process.platform === "win32")("private candidate retrieval projection", () => {
@@ -202,17 +191,13 @@ describe.skipIf(process.platform === "win32")("private candidate retrieval proje
       "remote.native.json": '{"native":"private"}',
       "evidence.json": '{"reason":"private review"}',
     };
-    await Promise.all(
-      Object.entries(source).map(([name, text]) => Bun.write(join(incoming, name), text)),
-    );
+    await Promise.all(Object.entries(source).map(([name, text]) => Bun.write(join(incoming, name), text)));
     await projectRetrievalCandidate(root, snapshot, source["remote.candidate.md"]);
     const retrieval = join(root, "retrieval-markdown"),
       projected = join(retrieval, snapshot);
     expect(await readdir(retrieval)).toEqual([snapshot]);
     expect(await readdir(projected)).toEqual(["remote.candidate.md"]);
-    expect(await Bun.file(join(projected, "remote.candidate.md")).text()).toBe(
-      "Remote candidate\n",
-    );
+    expect(await Bun.file(join(projected, "remote.candidate.md")).text()).toBe("Remote candidate\n");
     expect((await stat(retrieval)).mode & 0o777).toBe(0o700);
     expect((await stat(projected)).mode & 0o777).toBe(0o700);
     expect((await stat(join(projected, "remote.candidate.md"))).mode & 0o777).toBe(0o600);
@@ -243,18 +228,14 @@ describe.skipIf(process.platform === "win32")("private candidate retrieval proje
   });
   test("unsafe snapshot paths and symlinked candidate files cannot write outside the projection", async () => {
     const root = await directory();
-    await expect(projectRetrievalCandidate(root, "../escape", "candidate")).rejects.toThrow(
-      "snapshot name",
-    );
+    await expect(projectRetrievalCandidate(root, "../escape", "candidate")).rejects.toThrow("snapshot name");
     await projectRetrievalCandidate(root, snapshot, "Initial candidate\n");
     const projected = join(root, "retrieval-markdown", snapshot, "remote.candidate.md"),
       outside = join(root, "local.md");
     await Bun.write(outside, "Protected local\n");
     await rm(projected);
     await symlink(outside, projected);
-    await expect(projectRetrievalCandidate(root, snapshot, "Replacement\n")).rejects.toThrow(
-      "projection file",
-    );
+    await expect(projectRetrievalCandidate(root, snapshot, "Replacement\n")).rejects.toThrow("projection file");
     expect(await Bun.file(outside).text()).toBe("Protected local\n");
   });
 });

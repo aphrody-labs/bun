@@ -118,15 +118,9 @@ beforeAll(() => {
       if (url.pathname.endsWith("/FavoriteTweet")) {
         const id = JSON.parse(body || "{}")?.variables?.tweet_id;
         if (id === "4040")
-          return Response.json(
-            { errors: [{ code: 144, message: "status not found" }] },
-            { status: 404 },
-          );
+          return Response.json({ errors: [{ code: 144, message: "status not found" }] }, { status: 404 });
         if (id === "9999")
-          return Response.json(
-            { errors: [{ code: 32, message: "could not authenticate" }] },
-            { status: 401 },
-          );
+          return Response.json({ errors: [{ code: 32, message: "could not authenticate" }] }, { status: 401 });
         return Response.json({ data: { favorite_tweet: "Done" } }, { headers: rate });
       }
       return Response.json({ data: {} });
@@ -140,16 +134,13 @@ afterAll(() => {
 });
 
 function client(): XClient {
-  return new XClient(
-    new XSession({ auth_token: "AUTH_TOKEN_PLACEHOLDER", ct0: "CT0_PLACEHOLDER" }),
-    {
-      apiBase: `http://127.0.0.1:${server.port}/i/api`,
-      uploadBase: `http://127.0.0.1:${server.port}/upload`,
-      persistSession: false,
-      queryIdsPath: join(dir, "query-ids.json"),
-      discoveryPages: [],
-    },
-  );
+  return new XClient(new XSession({ auth_token: "AUTH_TOKEN_PLACEHOLDER", ct0: "CT0_PLACEHOLDER" }), {
+    apiBase: `http://127.0.0.1:${server.port}/i/api`,
+    uploadBase: `http://127.0.0.1:${server.port}/upload`,
+    persistSession: false,
+    queryIdsPath: join(dir, "query-ids.json"),
+    discoveryPages: [],
+  });
 }
 
 describe("without the native library", () => {
@@ -161,9 +152,7 @@ describe("without the native library", () => {
     expect(isTerminalError(new XError("gone", 144))).toBe(true);
     // A native classification wins over the tables.
     expect(isTerminalError(new XError("whatever", -1, undefined, "terminal"))).toBe(true);
-    expect(isAuthFailure(new XError("32 but classified otherwise", 32, undefined, "other"))).toBe(
-      false,
-    );
+    expect(isAuthFailure(new XError("32 but classified otherwise", 32, undefined, "other"))).toBe(false);
   });
 });
 
@@ -199,14 +188,14 @@ describe("over aphrody-x", () => {
 
   native("failures throw an XError carrying the Rust classification", async () => {
     const x = client();
-    const gone = await x.like("4040").catch((error) => error);
+    const gone = await x.like("4040").catch(error => error);
     expect(gone).toBeInstanceOf(XError);
     expect(gone.kind).toBe("terminal");
     expect(isTerminalError(gone)).toBe(true);
-    const dead = await x.like("9999").catch((error) => error);
+    const dead = await x.like("9999").catch(error => error);
     expect(dead.kind).toBe("auth");
     expect(isAuthFailure(dead)).toBe(true);
-    const invalid = await x.call("like", {}).catch((error) => error);
+    const invalid = await x.call("like", {}).catch(error => error);
     expect(invalid.kind).toBe("invalid");
     x.close();
   });
@@ -223,12 +212,12 @@ describe("over aphrody-x", () => {
     const run = xBatch(x, ops, {
       concurrency: 4,
       checkpoint,
-      onProgress: (p) => progress.push(p.completed),
+      onProgress: p => progress.push(p.completed),
     });
     const results = [];
     for await (const result of run) results.push(result);
     expect(results).toHaveLength(12);
-    expect(new Set(results.map((r) => r.id)).size).toBe(12);
+    expect(new Set(results.map(r => r.id)).size).toBe(12);
     expect(run.summary).toMatchObject({
       total: 12,
       ok: 11,
@@ -242,7 +231,7 @@ describe("over aphrody-x", () => {
     requests.length = 0;
     const again = xBatch(x, ops, { concurrency: 4, checkpoint });
     const replayed = await again.collect();
-    expect(replayed.every((r) => r.resumed === true)).toBe(true);
+    expect(replayed.every(r => r.resumed === true)).toBe(true);
     expect(again.summary?.resumed).toBe(12);
     expect(requests).toHaveLength(0);
     x.close();

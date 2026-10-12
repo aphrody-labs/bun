@@ -5,17 +5,10 @@ import type { MediaPlayerClass, ProtectionDataSet } from "dashjs";
 export interface DashPlaybackInstance {
   on: MediaPlayerClass["on"];
   off: MediaPlayerClass["off"];
-  initialize(
-    video?: HTMLMediaElement,
-    source?: string,
-    autoplay?: boolean,
-    startTime?: number | string,
-  ): void;
+  initialize(video?: HTMLMediaElement, source?: string, autoplay?: boolean, startTime?: number | string): void;
   updateSettings(settings: Parameters<MediaPlayerClass["updateSettings"]>[0]): void;
   setProtectionData(data: ProtectionDataSet): void;
-  addRequestInterceptor(
-    interceptor: Parameters<MediaPlayerClass["addRequestInterceptor"]>[0],
-  ): void;
+  addRequestInterceptor(interceptor: Parameters<MediaPlayerClass["addRequestInterceptor"]>[0]): void;
   reset(): void;
 }
 
@@ -42,9 +35,7 @@ function sourceUrl(value: string): string {
   return url.href;
 }
 
-export async function attachDashPlayback<
-  Instance extends DashPlaybackInstance = DashPlaybackInstance,
->(
+export async function attachDashPlayback<Instance extends DashPlaybackInstance = DashPlaybackInstance>(
   video: HTMLMediaElement,
   options: DashPlaybackOptions<Instance>,
 ): Promise<{ instance: Instance; destroy(): void }> {
@@ -54,9 +45,7 @@ export async function attachDashPlayback<
   else {
     const view = video.ownerDocument?.defaultView;
     if (!view || !(video instanceof view.HTMLMediaElement))
-      throw new Error(
-        "DASH playback requires a browser media element or an explicit player factory.",
-      );
+      throw new Error("DASH playback requires a browser media element or an explicit player factory.");
     const { MediaPlayer } = await import("dashjs");
     instance = MediaPlayer().create() as unknown as Instance;
   }
@@ -87,17 +76,12 @@ export async function attachDashPlayback<
 
 /** Serve this installed UMD file with Bun.file; resolving it never imports the browser player. */
 export function getDashBrowserAssetPath(): string {
-  return Bun.resolveSync("dashjs", import.meta.dir).replace(
-    /[\\/](?:esm|umd)[\\/][^\\/]+$/,
-    "/umd/dash.all.min.js",
-  );
+  return Bun.resolveSync("dashjs", import.meta.dir).replace(/[\\/](?:esm|umd)[\\/][^\\/]+$/, "/umd/dash.all.min.js");
 }
 
 type XmlNode = Record<string, unknown>;
 const nodes = (value: unknown): XmlNode[] =>
-  (Array.isArray(value) ? value : [value]).filter(
-    (node): node is XmlNode => !!node && typeof node === "object",
-  );
+  (Array.isArray(value) ? value : [value]).filter((node): node is XmlNode => !!node && typeof node === "object");
 const children = (node: XmlNode, localName: string): XmlNode[] =>
   Object.entries(node)
     .filter(([name]) => !name.startsWith("@_") && name.split(":").at(-1) === localName)
@@ -111,8 +95,7 @@ const numeric = (value: string | undefined): number | undefined => {
   const number = Number(value);
   return Number.isFinite(number) ? number : undefined;
 };
-const safeCodecs = (value: string | undefined) =>
-  value && /^[\w., -]{1,100}$/.test(value) ? value : undefined;
+const safeCodecs = (value: string | undefined) => (value && /^[\w., -]{1,100}$/.test(value) ? value : undefined);
 const protectionSystem = (node: XmlNode): string => {
   const scheme = attribute(node, "schemeIdUri")?.toLowerCase();
   if (scheme === "urn:mpeg:dash:mp4protection:2011") return "CommonEncryption";
@@ -139,8 +122,7 @@ export function inspectDashManifest(xml: string) {
   const rootName = roots[0]![0];
   const prefix = rootName.includes(":") ? rootName.split(":")[0] : undefined;
   const namespace = attribute(mpd, prefix ? `xmlns:${prefix}` : "xmlns");
-  if (namespace !== "urn:mpeg:dash:schema:mpd:2011")
-    throw new Error("DASH manifest must declare the MPD namespace.");
+  if (namespace !== "urn:mpeg:dash:schema:mpd:2011") throw new Error("DASH manifest must declare the MPD namespace.");
   const systems = new Set<string>();
   let contentProtectionCount = 0,
     baseUrlCount = 0,
@@ -161,9 +143,9 @@ export function inspectDashManifest(xml: string) {
   };
   visit(mpd);
   const periods = children(mpd, "Period");
-  const representations = periods.flatMap((period) =>
-    children(period, "AdaptationSet").flatMap((adaptation) =>
-      children(adaptation, "Representation").map((representation) => ({
+  const representations = periods.flatMap(period =>
+    children(period, "AdaptationSet").flatMap(adaptation =>
+      children(adaptation, "Representation").map(representation => ({
         width: numeric(attribute(representation, "width") ?? attribute(adaptation, "width")),
         height: numeric(attribute(representation, "height") ?? attribute(adaptation, "height")),
         bandwidth: numeric(attribute(representation, "bandwidth")),

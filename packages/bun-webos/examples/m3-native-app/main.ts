@@ -21,9 +21,7 @@ const server = Bun.serve({
     if (url.pathname.startsWith("/api/")) {
       const origin = request.headers.get("origin");
       const referer = request.headers.get("referer");
-      const refererOrigin = URL.canParse(referer ?? "")
-        ? new URL(referer!).origin
-        : "";
+      const refererOrigin = URL.canParse(referer ?? "") ? new URL(referer!).origin : "";
       const sameOrigin = origin === server.url.origin || refererOrigin === server.url.origin;
       if (!sameOrigin) return new Response("Origine refusée", { status: 403 });
     }

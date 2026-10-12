@@ -11,7 +11,7 @@ const SHELL_PATHS = new Set([
   "/pwa/icons/icon192.png",
   "/pwa/icons/icon512.png",
 ]);
-self.addEventListener("install", (event) => {
+self.addEventListener("install", event => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE_NAME);
@@ -29,7 +29,7 @@ self.addEventListener("install", (event) => {
     })(),
   );
 });
-self.addEventListener("activate", (event) => {
+self.addEventListener("activate", event => {
   event.waitUntil(
     (async () => {
       for (const name of await caches.keys())
@@ -38,7 +38,7 @@ self.addEventListener("activate", (event) => {
     })(),
   );
 });
-self.addEventListener("fetch", (event) => {
+self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
   if (
     event.request.method !== "GET" ||

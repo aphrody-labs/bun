@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { isAbsolute, resolve } from "node:path";
 
-export const CRUNCHYROLL_WATCH_URL =
-  "https://www.crunchyroll.com/fr/watch/GE00389313JAJP/the-god-who-destroys";
+export const CRUNCHYROLL_WATCH_URL = "https://www.crunchyroll.com/fr/watch/GE00389313JAJP/the-god-who-destroys";
 
 export interface ActiveChromeProfile {
   pid: number;
@@ -13,11 +12,8 @@ export interface ActiveChromeProfile {
 }
 
 export function selectActiveGoogleChromeRoot(processes: Array<Partial<ActiveChromeProfile>>) {
-  const candidates = processes.filter((process) =>
-    process.executable
-      ?.replaceAll("\\", "/")
-      .toLowerCase()
-      .endsWith("/google/chrome/application/chrome.exe"),
+  const candidates = processes.filter(process =>
+    process.executable?.replaceAll("\\", "/").toLowerCase().endsWith("/google/chrome/application/chrome.exe"),
   );
   if (candidates.length !== 1)
     throw new Error(
@@ -86,8 +82,7 @@ async function powershellJson(script: string, env: Record<string, string> = {}) 
 }
 
 export async function detectActiveChromeProfile(): Promise<ActiveChromeProfile> {
-  if (process.platform !== "win32")
-    throw new Error("This Chrome site-app launcher requires Windows.");
+  if (process.platform !== "win32") throw new Error("This Chrome site-app launcher requires Windows.");
   const processes = (await powershellJson(`
 $chromeRoots = @(Get-CimInstance Win32_Process -Filter "name='chrome.exe'" | Where-Object { $_.CommandLine -and $_.CommandLine -notmatch '--type=' } | ForEach-Object {
   $dirMatch = [regex]::Match($_.CommandLine, '--user-data-dir=(?:"([^"]+)"|([^\\s]+))')
@@ -98,25 +93,19 @@ ConvertTo-Json -InputObject $chromeRoots -Compress
 `)) as Array<Partial<ActiveChromeProfile>>;
   if (!Array.isArray(processes)) throw new Error("Chrome process metadata is unavailable.");
   const active = selectActiveGoogleChromeRoot(processes);
-  if (!active.executable || !active.pid)
-    throw new Error("Running Chrome executable metadata is unavailable.");
-  const userDataDir =
-    active.userDataDir || resolve(process.env.LOCALAPPDATA ?? "", "Google/Chrome/User Data");
+  if (!active.executable || !active.pid) throw new Error("Running Chrome executable metadata is unavailable.");
+  const userDataDir = active.userDataDir || resolve(process.env.LOCALAPPDATA ?? "", "Google/Chrome/User Data");
   const stateFile = Bun.file(resolve(userDataDir, "Local State"));
-  if (!(await stateFile.exists()))
-    throw new Error("The running Chrome profile has no readable Local State.");
+  if (!(await stateFile.exists())) throw new Error("The running Chrome profile has no readable Local State.");
   const state = await stateFile.json();
   const profileDirectory = active.profileDirectory || state?.profile?.last_used;
-  if (typeof profileDirectory !== "string")
-    throw new Error("Chrome last-used profile metadata is unavailable.");
+  if (typeof profileDirectory !== "string") throw new Error("Chrome last-used profile metadata is unavailable.");
   if (
     !active.profileDirectory &&
     Array.isArray(state?.profile?.last_active_profiles) &&
     state.profile.last_active_profiles.length > 1
   )
-    throw new Error(
-      "Several Chrome profiles are active; automatic profile selection is ambiguous.",
-    );
+    throw new Error("Several Chrome profiles are active; automatic profile selection is ambiguous.");
   const profile = { pid: active.pid, executable: active.executable, userDataDir, profileDirectory };
   planChromeSiteApp(profile);
   return profile;
@@ -170,10 +159,8 @@ export async function crunchyrollAppMain(args = Bun.argv.slice(2)) {
       }),
     );
     if (!args.includes("--check")) {
-      if (args.includes("--install"))
-        console.log(JSON.stringify(await installChromeSiteAppShortcut(profile)));
-      if (args.includes("--open"))
-        Bun.spawn(plan.command, { stdout: "ignore", stderr: "ignore" }).unref();
+      if (args.includes("--install")) console.log(JSON.stringify(await installChromeSiteAppShortcut(profile)));
+      if (args.includes("--open")) Bun.spawn(plan.command, { stdout: "ignore", stderr: "ignore" }).unref();
     }
   }
 }

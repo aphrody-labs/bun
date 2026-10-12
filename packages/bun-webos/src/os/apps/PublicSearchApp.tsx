@@ -112,11 +112,10 @@ export const PublicSearchApp: React.FC = () => {
     <div className="h-full overflow-auto bg-[#0e1017] p-5 text-gray-200">
       <h2 className="text-lg font-semibold">Recherche publique Bun</h2>
       <p className="my-3 text-sm text-gray-400">
-        Interroge les pages publiques indexées. Aucun accès aux fichiers ou sessions de votre
-        appareil.
+        Interroge les pages publiques indexées. Aucun accès aux fichiers ou sessions de votre appareil.
       </p>
       <form
-        onSubmit={(event) => {
+        onSubmit={event => {
           void search(event);
         }}
         className="flex gap-2"
@@ -125,7 +124,7 @@ export const PublicSearchApp: React.FC = () => {
           aria-label="Recherche publique"
           value={query}
           maxLength={1024}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={event => setQuery(event.target.value)}
           className="min-w-0 flex-1 rounded bg-gray-800 px-3 py-2"
         />
         <button
@@ -149,12 +148,7 @@ export const PublicSearchApp: React.FC = () => {
           {page.organic.length === 0 && <p>Aucun résultat dans cette collection.</p>}
           {page.organic.map((result, index) => (
             <article key={`${index}:${result.url}`} className="my-4">
-              <a
-                href={result.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sky-300 underline"
-              >
+              <a href={result.url} target="_blank" rel="noopener noreferrer" className="text-sky-300 underline">
                 {result.title}
               </a>
               <p className="mt-1 text-sm text-gray-400">{result.snippet}</p>

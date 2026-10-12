@@ -12,8 +12,7 @@ export class Room extends DurableObject<Env> {
   }
 
   async fetch(request: Request): Promise<Response> {
-    if (request.headers.get("Upgrade") !== "websocket")
-      return new Response("expected websocket", { status: 426 });
+    if (request.headers.get("Upgrade") !== "websocket") return new Response("expected websocket", { status: 426 });
     const { 0: client, 1: server } = new WebSocketPair();
     this.ctx.acceptWebSocket(server);
     return new Response(null, { status: 101, webSocket: client });
@@ -21,10 +20,7 @@ export class Room extends DurableObject<Env> {
 
   history(limit = 50): Message[] {
     return this.ctx.storage.sql
-      .exec<Message>(
-        "SELECT id, body, at FROM messages ORDER BY id DESC LIMIT ?",
-        Math.min(limit, 200),
-      )
+      .exec<Message>("SELECT id, body, at FROM messages ORDER BY id DESC LIMIT ?", Math.min(limit, 200))
       .toArray()
       .reverse();
   }
@@ -32,11 +28,7 @@ export class Room extends DurableObject<Env> {
   post(body: string): Message {
     const text = body.slice(0, 2000);
     const message = this.ctx.storage.sql
-      .exec<Message>(
-        "INSERT INTO messages (body, at) VALUES (?, ?) RETURNING id, body, at",
-        text,
-        Date.now(),
-      )
+      .exec<Message>("INSERT INTO messages (body, at) VALUES (?, ?) RETURNING id, body, at", text, Date.now())
       .one();
     const payload = JSON.stringify(message);
     for (const socket of this.ctx.getWebSockets()) socket.send(payload);

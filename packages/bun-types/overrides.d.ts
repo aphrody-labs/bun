@@ -116,18 +116,9 @@ declare global {
       once(event: "memoryPressure", listener: (level: "warning" | "critical") => void): this;
       off(event: "memoryPressure", listener: (level: "warning" | "critical") => void): this;
       addListener(event: "memoryPressure", listener: (level: "warning" | "critical") => void): this;
-      removeListener(
-        event: "memoryPressure",
-        listener: (level: "warning" | "critical") => void,
-      ): this;
-      prependListener(
-        event: "memoryPressure",
-        listener: (level: "warning" | "critical") => void,
-      ): this;
-      prependOnceListener(
-        event: "memoryPressure",
-        listener: (level: "warning" | "critical") => void,
-      ): this;
+      removeListener(event: "memoryPressure", listener: (level: "warning" | "critical") => void): this;
+      prependListener(event: "memoryPressure", listener: (level: "warning" | "critical") => void): this;
+      prependOnceListener(event: "memoryPressure", listener: (level: "warning" | "critical") => void): this;
       emit(event: "memoryPressure", level: "warning" | "critical"): boolean;
 
       // @types/node <= 24 does not declare `off`/`removeListener` directly on
@@ -370,13 +361,7 @@ declare module "node:tls" {
      * well-known CAs curated by Mozilla; setting this option replaces
      * that list entirely.
      */
-    ca?:
-      | string
-      | Buffer
-      | NodeJS.TypedArray
-      | Bun.BunFile
-      | Array<string | Buffer | Bun.BunFile>
-      | undefined;
+    ca?: string | Buffer | NodeJS.TypedArray | Bun.BunFile | Array<string | Buffer | Bun.BunFile> | undefined;
     /**
      * Cert chains in PEM format. Provide one cert chain per private key.
      * Each chain consists of the PEM certificate for its private key,

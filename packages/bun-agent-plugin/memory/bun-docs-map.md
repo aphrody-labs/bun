@@ -2,7 +2,7 @@
 name: bun-docs-map
 description: "Map of <bun>\\docs (Mintlify site bun.com/docs) - docs.json nav tabs/groups, page locations, guides categories, install/quickstart facts, MDX conventions"
 metadata:
- type: reference
+  type: reference
 ---
 
 # Bun docs map (`<bun>\docs`, published at http<bun>.com/docs)
@@ -16,24 +16,25 @@ Only page not in nav: `runtime/typescript.mdx` (orphan). Nav has no dead links (
 `packages/bun-types/scripts/build.ts` copies every `docs/**/*.{md,mdx}` into the published types package (replacing `$BUN_LATEST_VERSION`) - see `bun-packages`.
 
 ## Nav (docs.json `navigation.tabs`)
+
 - **Runtime** tab
- - Get Started: index, installation, quickstart, typescript, typescript-6, runtime/templating/init, runtime/templating/create
- - Core Runtime: runtime/index (bun run), watch-mode, check, debugger, repl, bunfig, code-generation-from-strings
- - File & Module System: file-types, module-resolution, jsx, auto-install, plugins, file-system-router
- - HTTP server: runtime/http/{server,routing,cookies,tls,error-handling,metrics}
- - Networking: runtime/networking/fetch, runtime/http/websockets, networking/{tcp,udp,dns}
- - Data & Storage: cookies, file-io, streams, binary-data, archive, sql, sqlite, s3, redis
- - Concurrency: workers, module-graph
- - Process & System: environment-variables, shell, child-process, webview, cron
- - Interop & Tooling: node-api, ffi, c-compiler, transpiler
- - Utilities: csrf, secrets, console, toml, yaml, markdown, json5, xml, jsonl, html-rewriter, image, hashing, glob, semver, color, utils
- - Standards & Compatibility: globals, bun-apis, web-apis, nodejs-compat
- - Contributing: project/{roadmap,benchmarking,contributing,building-windows,bindgen,license}
+- Get Started: index, installation, quickstart, typescript, typescript-6, runtime/templating/init, runtime/templating/create
+- Core Runtime: runtime/index (bun run), watch-mode, check, debugger, repl, bunfig, code-generation-from-strings
+- File & Module System: file-types, module-resolution, jsx, auto-install, plugins, file-system-router
+- HTTP server: runtime/http/{server,routing,cookies,tls,error-handling,metrics}
+- Networking: runtime/networking/fetch, runtime/http/websockets, networking/{tcp,udp,dns}
+- Data & Storage: cookies, file-io, streams, binary-data, archive, sql, sqlite, s3, redis
+- Concurrency: workers, module-graph
+- Process & System: environment-variables, shell, child-process, webview, cron
+- Interop & Tooling: node-api, ffi, c-compiler, transpiler
+- Utilities: csrf, secrets, console, toml, yaml, markdown, json5, xml, jsonl, html-rewriter, image, hashing, glob, semver, color, utils
+- Standards & Compatibility: globals, bun-apis, web-apis, nodejs-compat
+- Contributing: project/{roadmap,benchmarking,contributing,building-windows,bindgen,license}
 - **Package Manager** tab: Core (pm/cli install/add/remove/update/dedupe/prune, pm/bunx); Publishing & Analysis (publish/outdated/why/audit/info);
- Workspace Mgmt (pm/workspaces, catalogs, cli/link, cli/pm); Advanced (cli/patch, filter, global-cache, global-store, isolated-installs, lockfile
- lifecycle, scopes-registries, overrides, security-scanner-api, npmrc)
+  Workspace Mgmt (pm/workspaces, catalogs, cli/link, cli/pm); Advanced (cli/patch, filter, global-cache, global-store, isolated-installs, lockfile
+  lifecycle, scopes-registries, overrides, security-scanner-api, npmrc)
 - **Bundler** tab: bundler/index; Dev Server (fullstack, hot-reloading); Assets (html-static, standalone-html, css, loaders); executables;
- Extensions (plugins, macros); Optimization (bytecode, minifier); Migration (esbuild)
+  Extensions (plugins, macros); Optimization (bytecode, minifier); Migration (esbuild)
 - **Test Runner** tab: test/index, writing-tests, configuration; runtime-behavior, discovery, parallel; lifecycle, mocks, snapshots, dates-times; dom; code-coverage, reporters
 - **Guides** tab (~190 pages under `docs/guides/<cat>/`)
 - External tabs: Reference -> http<bun>.com/reference, Blog -> http<bun>.com/blog; Feedback tab -> /feedback
@@ -42,6 +43,7 @@ Topic memories: `bun-docs-runtime-apis-a-m`, `bun-docs-runtime-apis-n-z`, `bun-d
 `bun-docs-pm`, `bun-docs-test`, `bun-docs-bunfig-env`.
 
 ## Guides categories (dir: count) and notable pages
+
 - deployment (6): vercel, railway, render, aws-lambda, digital-ocean, google-cloud-run
 - ecosystem (27): astro, discordjs, docker, drizzle, gel, elysia, express, hono, mongoose, neon-*, nextjs, nuxt, pm2, prisma(+postgres), qwik, react, remix, tanstack-start, sentry, solidstart, ssr-react, sveltekit, systemd, vite, upstash
 - http (13): server, simple, fetch, hot, cluster (reusePort), tls, proxy, stream-file, file-uploads, fetch-unix, stream-iterator, sse, stream-node-streams-in-bun
@@ -52,14 +54,16 @@ Topic memories: `bun-docs-runtime-apis-a-m`, `bun-docs-runtime-apis-n-z`, `bun-d
 - test (19): run-tests, watch-mode, migrate-from-jest, mock-functions, spy-on, mock-clock, snapshot, update-snapshots, coverage(-threshold), concurrent-test-glob, skip/todo, timeout, bail, rerun-each, testing-library, happy-dom, svelte-test
 - util (19): upgrade, detect-bun, version, hash-a-password, javascript-uuid, base64, gzip, deflate, escape-html, deep-equals, sleep, file-url-to-path, path-to-file-url, which-path-to-executable-bin, import-meta-dir/file/path, entrypoint, main
 - read-file (9), write-file (10), binary (22 conversion recipes), streams (12 to-X recipes), html-rewriter (2: extract-links, extract-social-meta)
-Guide frontmatter: `title`, `sidebarTitle`, `mode: center`.
+  Guide frontmatter: `title`, `sidebarTitle`, `mode: center`.
 
 ## MDX conventions
+
 Components by frequency: `<ParamField path= type=>` (flag tables), `<Note>`, `<Tabs>/<Tab>`, `<CodeGroup>`, `<Frame>`, `<Accordion>`, `<Warning>`
 `<Steps>/<Step>`, `<Info>`, `<Tip>`, `<Columns>`, `<CardGroup>/<Card>`, `<Callout>`. Code fences carry `title`/`icon` meta:
-```` ```ts index.ts icon="/icons/typescript.svg" ````, ```` ```bash terminal icon="terminal" ````, ```` ```toml title="bunfig.toml" icon="settings" ````. Diff markers `// [!code ++]`.
+` ```ts index.ts icon="/icons/typescript.svg" `, ` ```bash terminal icon="terminal" `, ` ```toml title="bunfig.toml" icon="settings" `. Diff markers `// [!code ++]`.
 
 ## Installation facts (installation.mdx)
+
 - Script: `curl -fsSL http<bun>.com/install | bash`; Windows `powershell -c "irm bun.sh/install.ps1|iex"`; `npm install -g bun`; `brew install oven-sh/bun/bun`; Scoop.
 - Docker `oven/bun` (x64+arm64), tags `:debian :slim :distroless :alpine`; run with `--init --ulimit memlock=-1:-1`.
 - Linux needs `unzip`; recommended kernel >= 5.6, runs down to 3.10 (RHEL 7) with degradation (README.md still says "minimum 5.1" - inconsistent).
@@ -70,11 +74,13 @@ Components by frequency: `<ParamField path= type=>` (flag tables), `<Note>`, `<T
 - Uninstall: `rm -rf ~/.bun`.
 
 ## Quickstart flow
+
 `bun init my-app` -> template prompt Blank/React/Library; Blank creates `.gitignore`, `CLAUDE.md`, `.cursor/rules/use-bun-instead-of-node-vite-npm-pnpm.mdc -> CLAUDE.md`
 `index.ts`, `tsconfig.json`, `README.md`. Then `Bun.serve({ port: 3000, routes: { "/": => new Response("Bun!") } })`, `server.url`; `bun add figlet`, `bun add -d @types/figlet`; then HTML import.
 Recommended tsconfig for Bun: `lib ["ESNext"]`, `target ESNext`, `module Preserve`, `moduleDetection force`, `moduleResolution bundler`
 `allowImportingTsExtensions`, `verbatimModuleSyntax`, `noEmit`. Missing `Bun` global types -> `bun add -d @aphrody/bun-types`.
 
 ## index.mdx pitch
+
 Four pillars: Runtime (`bun run`, drop-in Node replacement), Package Manager (`bun install`, "up to 30x faster than npm"), Test Runner (`bun test`, Jest-compatible)
 Bundler (`bun build`). Runtime page claim: JavaScriptCore + Rust; `bun hello.js` 5.2ms vs node 25.1ms on Linux; `npm run` ~170ms vs bun 6ms.

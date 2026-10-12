@@ -17,12 +17,12 @@ import type {
 const OWN_LAUNCHER = realpathSync(join(import.meta.dir, "cli.ts"));
 
 function hasFlag(args: readonly string[], flag: string): boolean {
-  return args.some((arg) => arg === flag || arg.startsWith(`${flag}=`));
+  return args.some(arg => arg === flag || arg.startsWith(`${flag}=`));
 }
 
 function isMetaCommand(args: readonly string[]): boolean {
   return (
-    args.some((arg) => arg === "--help" || arg === "-h" || arg === "--version") ||
+    args.some(arg => arg === "--help" || arg === "-h" || arg === "--version") ||
     ["skills", "install", "doctor", "upgrade", "help", "version"].includes(args[0] ?? "")
   );
 }
@@ -30,15 +30,12 @@ function isMetaCommand(args: readonly string[]): boolean {
 /** Resolve the installed native Rust CLI, never this package's Bun launcher. */
 export function resolveAgentBrowserBinary(): string {
   const override =
-    process.env.APHRODY_AGENT_BROWSER_BIN ??
-    process.env.AGENT_BROWSER_BIN ??
-    process.env.APHRODY_BROWSER_BIN;
+    process.env.APHRODY_AGENT_BROWSER_BIN ?? process.env.AGENT_BROWSER_BIN ?? process.env.APHRODY_BROWSER_BIN;
   if (override) {
     const path = existsSync(override) ? override : Bun.which(override);
     if (!path) throw new Error(`agent-browser binary override is unavailable: ${override}`);
     const binary = realpathSync(resolve(path));
-    if (binary === OWN_LAUNCHER)
-      throw new Error("agent-browser binary override points to this Bun launcher");
+    if (binary === OWN_LAUNCHER) throw new Error("agent-browser binary override points to this Bun launcher");
     return binary;
   }
 
@@ -54,17 +51,11 @@ export function resolveAgentBrowserBinary(): string {
 
   const installed = Bun.which(`aphrody-agent-browser${ext}`);
   if (installed) return realpathSync(installed);
-  throw new Error(
-    "native agent-browser Rust CLI is unavailable; install it or set APHRODY_AGENT_BROWSER_BIN",
-  );
+  throw new Error("native agent-browser Rust CLI is unavailable; install it or set APHRODY_AGENT_BROWSER_BIN");
 }
 
 /** Build CLI arguments for the externally owned Obscura CDP server. */
-export function prepareAgentBrowserArgs(
-  args: readonly string[],
-  options: LaunchOptions = {},
-  json = true,
-): string[] {
+export function prepareAgentBrowserArgs(args: readonly string[], options: LaunchOptions = {}, json = true): string[] {
   const finalArgs = [...args];
   if (options.session && !hasFlag(finalArgs, "--session")) {
     finalArgs.push("--session", options.session);
@@ -133,8 +124,7 @@ function parseResponse(stdout: string, stderr: string, status: number): CommandR
 // oxlint-disable-next-line typescript/no-extraneous-class
 export class AgentBrowser {
   static async open(url?: string, options: LaunchOptions = {}): Promise<AgentPage> {
-    const session =
-      options.session ?? `sess-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const session = options.session ?? `sess-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const endpoint =
       options.cdpUrl ??
       (options.port ? `ws://127.0.0.1:${options.port}/devtools/browser` : undefined) ??
@@ -155,21 +145,14 @@ export class AgentBrowser {
   /** Compatibility path for callers requiring a synchronous command result. */
   static exec(args: string[], options: LaunchOptions = {}): CommandResponse {
     try {
-      const result = Bun.spawnSync(
-        [process.execPath, OWN_LAUNCHER, ...prepareAgentBrowserArgs(args, options)],
-        {
-          stdin: "ignore",
-          stdout: "pipe",
-          stderr: "pipe",
-          timeout: options.timeoutMs ?? 30_000,
-          windowsHide: true,
-        },
-      );
-      return parseResponse(
-        result.stdout.toString("utf8"),
-        result.stderr.toString("utf8"),
-        result.exitCode ?? 1,
-      );
+      const result = Bun.spawnSync([process.execPath, OWN_LAUNCHER, ...prepareAgentBrowserArgs(args, options)], {
+        stdin: "ignore",
+        stdout: "pipe",
+        stderr: "pipe",
+        timeout: options.timeoutMs ?? 30_000,
+        windowsHide: true,
+      });
+      return parseResponse(result.stdout.toString("utf8"), result.stderr.toString("utf8"), result.exitCode ?? 1);
     } catch (error) {
       return {
         id: "",
@@ -182,14 +165,11 @@ export class AgentBrowser {
   /** Browser actions use this path so a Rust CDP command cannot freeze Bun. */
   static async execAsync(args: string[], options: LaunchOptions = {}): Promise<CommandResponse> {
     try {
-      const proc = Bun.spawn(
-        [process.execPath, OWN_LAUNCHER, ...prepareAgentBrowserArgs(args, options)],
-        {
-          stdout: "pipe",
-          stderr: "pipe",
-          windowsHide: true,
-        },
-      );
+      const proc = Bun.spawn([process.execPath, OWN_LAUNCHER, ...prepareAgentBrowserArgs(args, options)], {
+        stdout: "pipe",
+        stderr: "pipe",
+        windowsHide: true,
+      });
       const timeoutMs = options.timeoutMs ?? 30_000;
       let timedOut = false;
       const timer = setTimeout(() => {
@@ -202,8 +182,7 @@ export class AgentBrowser {
           new Response(proc.stderr).text(),
           proc.exited,
         ]);
-        if (timedOut)
-          return { id: "", success: false, error: `agent-browser timed out after ${timeoutMs} ms` };
+        if (timedOut) return { id: "", success: false, error: `agent-browser timed out after ${timeoutMs} ms` };
         return parseResponse(stdout, stderr, status);
       } finally {
         clearTimeout(timer);
@@ -295,7 +274,7 @@ export class AgentPage {
     const lines: string[] = [];
     const nodes = (matches.nodeIds as number[] | undefined) ?? [];
     const entries = await Promise.all(
-      nodes.map(async (nodeId) => {
+      nodes.map(async nodeId => {
         const [described, html] = await Promise.all([
           this.#page._send("DOM.describeNode", { nodeId }),
           this.#outerHtml(nodeId),
@@ -438,8 +417,7 @@ export class AgentPage {
       nodeId: await this.#resolve(target),
     });
     const attrs = (described.node as { attributes?: string[] } | undefined)?.attributes ?? [];
-    for (let i = 0; i + 1 < attrs.length; i += 2)
-      if (attrs[i] === name) return attrs[i + 1] ?? null;
+    for (let i = 0; i + 1 < attrs.length; i += 2) if (attrs[i] === name) return attrs[i + 1] ?? null;
     return null;
   }
 

@@ -27,9 +27,7 @@ export const IndexExplorerApp: React.FC = () => {
   const [graphScope, setGraphScope] = useState<"Code" | "Binaires">("Code");
   const [query, setQuery] = useState("");
   const [offset, setOffset] = useState(0);
-  const [result, setResult] = useState<{ items: Item[]; more: boolean; pending?: boolean } | null>(
-    null,
-  );
+  const [result, setResult] = useState<{ items: Item[]; more: boolean; pending?: boolean } | null>(null);
   const [summary, setSummary] = useState<any>(null);
   const [cache, setCache] = useState<any>(null);
   const [resources, setResources] = useState<any[]>([]);
@@ -184,11 +182,8 @@ export const IndexExplorerApp: React.FC = () => {
           Actualiser
         </button>
       </header>
-      <nav
-        className="flex flex-wrap gap-1 border-b border-white/10 px-3 py-2"
-        aria-label="Vues de l’explorateur"
-      >
-        {tabs.map((name) => (
+      <nav className="flex flex-wrap gap-1 border-b border-white/10 px-3 py-2" aria-label="Vues de l’explorateur">
+        {tabs.map(name => (
           <button
             key={name}
             className={`${button} ${tab === name ? "bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)]" : ""}`}
@@ -238,7 +233,7 @@ export const IndexExplorerApp: React.FC = () => {
           )}
           <form
             className="flex gap-2 px-4 py-3"
-            onSubmit={(event) => {
+            onSubmit={event => {
               event.preventDefault();
               void search();
             }}
@@ -247,7 +242,7 @@ export const IndexExplorerApp: React.FC = () => {
               <span className="sr-only">Rechercher dans {tab}</span>
               <input
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={event => setQuery(event.target.value)}
                 placeholder={
                   tab === "Fichiers"
                     ? "Indexed file or directory"
@@ -258,10 +253,7 @@ export const IndexExplorerApp: React.FC = () => {
                 className="w-full rounded-lg border border-white/15 bg-transparent px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-[var(--md-sys-color-primary)]"
               />
             </label>
-            <button
-              className={`${button} bg-[var(--md-sys-color-primary-container)]`}
-              disabled={busy}
-            >
+            <button className={`${button} bg-[var(--md-sys-color-primary-container)]`} disabled={busy}>
               Rechercher
             </button>
           </form>
@@ -282,10 +274,8 @@ export const IndexExplorerApp: React.FC = () => {
                         key={item.id ?? `${item.module}:${i}`}
                         role={item.id ? "button" : undefined}
                         tabIndex={item.id ? 0 : undefined}
-                        onClick={() =>
-                          item.id && void inspect({ id: item.id, path: "", name: item.module })
-                        }
-                        onKeyDown={(e) => {
+                        onClick={() => item.id && void inspect({ id: item.id, path: "", name: item.module })}
+                        onKeyDown={e => {
                           if (item.id && ["Enter", " "].includes(e.key)) {
                             e.preventDefault();
                             void inspect({ id: item.id, path: "", name: item.module });
@@ -319,8 +309,8 @@ export const IndexExplorerApp: React.FC = () => {
                   </text>
                 </svg>
                 <p className="px-3 pb-3 text-xs opacity-65">
-                  Aperçu de {dependencies.length} dépendances sur {selected.import_module_count}. Le
-                  graphe SQLite conserve les liens indexés.
+                  Aperçu de {dependencies.length} dépendances sur {selected.import_module_count}. Le graphe SQLite
+                  conserve les liens indexés.
                 </p>
               </div>
             )}
@@ -337,19 +327,14 @@ export const IndexExplorerApp: React.FC = () => {
                     Nom
                   </th>
                   <th scope="col" className="p-2">
-                    {tab === "Fichiers" || (graphScope === "Code" && tab === "Graphe")
-                      ? "Type"
-                      : "Imports / exports"}
+                    {tab === "Fichiers" || (graphScope === "Code" && tab === "Graphe") ? "Type" : "Imports / exports"}
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {result?.items.map((item, i) => (
                   <tr key={`${item.id ?? item.path}:${i}`} className="align-top">
-                    <th
-                      scope="row"
-                      className="max-w-[560px] border-b border-white/5 py-2 pr-3 font-normal"
-                    >
+                    <th scope="row" className="max-w-[560px] border-b border-white/5 py-2 pr-3 font-normal">
                       <button
                         className="block max-w-full text-left text-[var(--md-sys-color-primary)] underline-offset-4 hover:underline focus-visible:outline-2"
                         onClick={() => void inspect(item)}
@@ -379,20 +364,15 @@ export const IndexExplorerApp: React.FC = () => {
             )}
             {selected && tab !== "Graphe" && (
               <aside className="my-4 rounded-xl border border-white/10 p-3">
-                <h3 className="break-all text-sm font-semibold">
-                  {selected.relative_path ?? selected.name}
-                </h3>
+                <h3 className="break-all text-sm font-semibold">{selected.relative_path ?? selected.name}</h3>
                 <p className="mt-2 break-all text-xs opacity-70">{selected.path}</p>
                 {selected.sha256 && (
                   <>
                     <p className="mt-2 text-xs">
-                      {selected.machine}, {selected.bits} bits ·{" "}
-                      {number(selected.import_symbol_count)} symboles importés ·{" "}
-                      {number(selected.export_count)} exports
+                      {selected.machine}, {selected.bits} bits · {number(selected.import_symbol_count)} symboles
+                      importés · {number(selected.export_count)} exports
                     </p>
-                    <p className="mt-2 break-all text-[10px] opacity-60">
-                      SHA-256 {selected.sha256}
-                    </p>
+                    <p className="mt-2 break-all text-[10px] opacity-60">SHA-256 {selected.sha256}</p>
                     <button
                       className={`${button} mt-2`}
                       onClick={() => {
@@ -409,8 +389,7 @@ export const IndexExplorerApp: React.FC = () => {
           </div>
           <footer className="flex items-center justify-between border-t border-white/10 px-4 py-2 text-xs">
             <span>
-              Résultats {number(result?.items.length ? offset + 1 : 0)}–
-              {number(offset + (result?.items.length ?? 0))}
+              Résultats {number(result?.items.length ? offset + 1 : 0)}–{number(offset + (result?.items.length ?? 0))}
             </span>
             <div>
               <button
@@ -420,11 +399,7 @@ export const IndexExplorerApp: React.FC = () => {
               >
                 Précédents
               </button>
-              <button
-                className={button}
-                disabled={!result?.more || busy}
-                onClick={() => void search(offset + 50)}
-              >
+              <button className={button} disabled={!result?.more || busy} onClick={() => void search(offset + 50)}>
                 Suivants
               </button>
             </div>
@@ -441,24 +416,20 @@ export const IndexExplorerApp: React.FC = () => {
             </p>
           )}
           <div className="min-h-0 flex-1 space-y-4 overflow-auto p-4" aria-live="polite">
-            {!messages.length && (
-              <p className="text-sm opacity-65">Écrivez un message pour ouvrir la conversation.</p>
-            )}
+            {!messages.length && <p className="text-sm opacity-65">Écrivez un message pour ouvrir la conversation.</p>}
             {messages.map((message, i) => (
               <article
                 key={i}
                 className={`max-w-[80ch] rounded-xl p-3 text-sm ${message.role === "user" ? "ml-auto bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)]" : "bg-[var(--md-sys-color-surface-container)]"}`}
               >
-                <p className="mb-1 text-xs opacity-60">
-                  {message.role === "user" ? "You" : "Assistant"}
-                </p>
+                <p className="mb-1 text-xs opacity-60">{message.role === "user" ? "You" : "Assistant"}</p>
                 <p className="whitespace-pre-wrap break-words">{message.content || "Réponse…"}</p>
               </article>
             ))}
           </div>
           <form
             className="flex items-end gap-2 border-t border-white/10 p-3"
-            onSubmit={(event) => {
+            onSubmit={event => {
               event.preventDefault();
               void chat();
             }}
@@ -468,7 +439,7 @@ export const IndexExplorerApp: React.FC = () => {
               <textarea
                 rows={2}
                 value={draft}
-                onChange={(event) => setDraft(event.target.value)}
+                onChange={event => setDraft(event.target.value)}
                 className="w-full resize-none rounded-lg border border-white/15 bg-transparent p-2 text-sm focus-visible:outline-2 focus-visible:outline-[var(--md-sys-color-primary)]"
               />
             </label>
@@ -477,10 +448,7 @@ export const IndexExplorerApp: React.FC = () => {
                 Arrêter
               </button>
             ) : (
-              <button
-                className={`${button} bg-[var(--md-sys-color-primary-container)]`}
-                disabled={!draft.trim()}
-              >
+              <button className={`${button} bg-[var(--md-sys-color-primary-container)]`} disabled={!draft.trim()}>
                 Envoyer
               </button>
             )}

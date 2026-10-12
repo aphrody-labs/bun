@@ -83,12 +83,17 @@ import { XClient, xBatch } from "@aphrody/x";
 const client = new XClient();
 const run = xBatch(
   client,
-  handles.map((handle) => ({ id: handle, op: "user_by_screen_name", args: { handle } })),
+  handles.map(handle => ({
+    id: handle,
+    op: "user_by_screen_name",
+    args: { handle },
+  })),
   {
     concurrency: 8,
     checkpoint: "users.jsonl", // a rerun replays the final results instead of running them again
-    retry: { maxRetries: 3 },  // transient failures, idempotent operations only
-    onProgress: ({ completed, total }) => console.error(`${completed}/${total}`),
+    retry: { maxRetries: 3 }, // transient failures, idempotent operations only
+    onProgress: ({ completed, total }) =>
+      console.error(`${completed}/${total}`),
   },
 );
 for await (const result of run) {
@@ -140,8 +145,15 @@ const xTools = new XTools(session); // XSession, cookie string, or an injected c
 // request: { model, messages, tools: xNativeTools }
 for (const call of reply.choices[0].message.tool_calls ?? []) {
   if (!isXToolName(call.function.name)) continue;
-  const result = await xTools.execute(call.function.name, JSON.parse(call.function.arguments));
-  messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
+  const result = await xTools.execute(
+    call.function.name,
+    JSON.parse(call.function.arguments),
+  );
+  messages.push({
+    role: "tool",
+    tool_call_id: call.id,
+    content: JSON.stringify(result),
+  });
 }
 ```
 
@@ -178,10 +190,18 @@ const client = new XClient(XSession.loadOrEnv());
 
 // Plan only — reads the graph, mutates nothing.
 const plan = await purgeFollowing(client, { onLog: console.error });
-console.log(plan.non_mutual_total, "non-mutuals /", plan.following_total, "abonnements");
+console.log(
+  plan.non_mutual_total,
+  "non-mutuals /",
+  plan.following_total,
+  "abonnements",
+);
 
 // Execute. Stop it whenever; the next call resumes from the journal.
-const run = await purgeFollowing(client, { dryRun: false, onLog: console.error });
+const run = await purgeFollowing(client, {
+  dryRun: false,
+  onLog: console.error,
+});
 ```
 
 ### Three brakes on every mutation
@@ -189,16 +209,16 @@ const run = await purgeFollowing(client, { dryRun: false, onLog: console.error }
 `POST friendships/destroy.json` is throttled and bursts are a known automation
 signature, so `RateGovernor` clears three independent budgets before each call:
 
-| Brake | Default | Purpose |
-| --- | --- | --- |
-| Randomised delay | 4–11 s | breaks up the machine-gun cadence |
-| Rolling 15 min window | 45 | stays under the per-window ceiling |
-| Rolling 24 h | 400 | stays under the unofficial ~500/day ceiling |
+| Brake                 | Default | Purpose                                     |
+| --------------------- | ------- | ------------------------------------------- |
+| Randomised delay      | 4–11 s  | breaks up the machine-gun cadence           |
+| Rolling 15 min window | 45      | stays under the per-window ceiling          |
+| Rolling 24 h          | 400     | stays under the unofficial ~500/day ceiling |
 
 On top of that it reads `x-rate-limit-remaining` / `x-rate-limit-reset` from
 every response (captured by `XClient.request`) and waits out the reset once the
 remaining count drops to the reserve. A 429 or API code 88 triggers a full
-back-off and a retry of the *same* target — a throttle is not a strike against
+back-off and a retry of the _same_ target — a throttle is not a strike against
 the account being removed.
 
 ### Autonomy and resumption
@@ -216,13 +236,13 @@ atomic rename):
 
 ### Error handling
 
-| Situation | Behaviour |
-| --- | --- |
-| Suspended / deleted / already unfollowed (34, 50, 63, 108, 162, 404) | recorded as `skipped`, never retried |
-| Rate limit (88, 429) | back off to the reset, retry the same target |
-| Persistent rate limit (6 consecutive waits) | stop the run, keep the target queued |
-| Transient (5xx, network) | exponential backoff, up to `maxRetries` (3), then `failed` |
-| Auth (32, 89, 99, 215, 401, 403) | abort immediately — a rotated cookie must not be burned through the queue |
+| Situation                                                            | Behaviour                                                                 |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Suspended / deleted / already unfollowed (34, 50, 63, 108, 162, 404) | recorded as `skipped`, never retried                                      |
+| Rate limit (88, 429)                                                 | back off to the reset, retry the same target                              |
+| Persistent rate limit (6 consecutive waits)                          | stop the run, keep the target queued                                      |
+| Transient (5xx, network)                                             | exponential backoff, up to `maxRetries` (3), then `failed`                |
+| Auth (32, 89, 99, 215, 401, 403)                                     | abort immediately — a rotated cookie must not be burned through the queue |
 
 ### Options
 
@@ -247,11 +267,18 @@ import { XClient, XSession, purgeTweets } from "@aphrody/x";
 const client = new XClient(XSession.loadOrEnv());
 
 // Plan only — walks the timelines, deletes nothing.
-const plan = await purgeTweets(client, { maxLikes: 1000, onLog: console.error });
+const plan = await purgeTweets(client, {
+  maxLikes: 1000,
+  onLog: console.error,
+});
 console.log(plan.queued, "posts sous le seuil /", plan.posts_total, "au total");
 
 // Execute. Stop it whenever; the next call resumes from the journal.
-await purgeTweets(client, { maxLikes: 1000, dryRun: false, onLog: console.error });
+await purgeTweets(client, {
+  maxLikes: 1000,
+  dryRun: false,
+  onLog: console.error,
+});
 ```
 
 ### Three timelines, one archive
@@ -263,12 +290,12 @@ which is what makes "everything under N likes" actually true rather than
 
 ### What gets deleted
 
-| Kind | In scope by default | Mutation |
-| --- | --- | --- |
-| `tweet` | yes | `DeleteTweet` |
-| `reply` | yes | `DeleteTweet` |
-| `media` | yes | `DeleteTweet` |
-| `retweet` | **no** | `DeleteRetweet` |
+| Kind      | In scope by default | Mutation        |
+| --------- | ------------------- | --------------- |
+| `tweet`   | yes                 | `DeleteTweet`   |
+| `reply`   | yes                 | `DeleteTweet`   |
+| `media`   | yes                 | `DeleteTweet`   |
+| `retweet` | **no**              | `DeleteRetweet` |
 
 Retweets are off by default because a retweet's like count belongs to someone
 else's post — the "under N likes" rule says nothing about it. Turn them on with
@@ -344,6 +371,7 @@ Main entry: `src/index.ts` (re-exports core, services, algo, etc.).
 This is the Bun face of the headless X client (Rust `aphrody-x`) powering the `aphrody web x` CLI, recon, and MCP. The AI layer consumes it, never the reverse: Grok agent loops use its `XTools` (keyless SuperGrok OIDC + cookie X = zero external keys). The former `@aphrody/xai` SDK was removed from this repository on 2026-10-09 (last npm version kept).
 
 See:
+
 - Root `README.md` and `AGENTS.md`
 - `src/cli/x.ts`, `src/mcp/server.ts`
 - `docs/web/x/` (X_PRO.md, COVERAGE.md, PREMIUM.md)

@@ -39,7 +39,7 @@ export const BunReplApp: React.FC = () => {
   useEffect(() => {
     const controller = new AbortController();
     void api<{ hostAccess: boolean }>("/api/webos/capabilities", { signal: controller.signal })
-      .then((capabilities) => {
+      .then(capabilities => {
         if (controller.signal.aborted) return;
         const enabled = capabilities.hostAccess === true;
         setHostAccess(enabled);
@@ -52,7 +52,7 @@ export const BunReplApp: React.FC = () => {
   }, []);
   useEffect(() => () => worker.current?.terminate(), []);
 
-  const push = (line: Line) => setLines((l) => [...l, line]);
+  const push = (line: Line) => setLines(l => [...l, line]);
 
   const startWasm = () => {
     if (worker.current) return;
@@ -70,7 +70,7 @@ export const BunReplApp: React.FC = () => {
         setBusy(false);
       }
     };
-    w.onerror = (e) => {
+    w.onerror = e => {
       setWasmState(`indisponible : ${e.message}`);
       setBusy(false);
     };
@@ -109,7 +109,7 @@ export const BunReplApp: React.FC = () => {
   return (
     <div className="flex h-full flex-col bg-[#0f1117] font-mono text-xs text-gray-100">
       <div className="flex items-center gap-2 border-b border-gray-800 bg-[#161922] px-3 py-1 text-[11px] text-gray-400">
-        {(["native", "wasm"] as const).map((e) => (
+        {(["native", "wasm"] as const).map(e => (
           <button
             key={e}
             disabled={e === "native" && !hostAccess}
@@ -123,9 +123,7 @@ export const BunReplApp: React.FC = () => {
           </button>
         ))}
         <span className="flex-1 truncate">
-          {engine === "native"
-            ? "API Bun de votre agent local"
-            : `${wasmState} · fichiers privés dans ce navigateur`}
+          {engine === "native" ? "API Bun de votre agent local" : `${wasmState} · fichiers privés dans ce navigateur`}
         </span>
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-3">
@@ -144,8 +142,8 @@ export const BunReplApp: React.FC = () => {
           className="h-20 flex-1 resize-none bg-transparent p-2 outline-none"
           placeholder={'Bun.semver.satisfies("1.4.0", "^1.2")  (Ctrl+Entrée)'}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => {
             if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
               e.preventDefault();
               void submit();

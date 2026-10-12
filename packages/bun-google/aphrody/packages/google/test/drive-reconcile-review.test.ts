@@ -79,15 +79,7 @@ async function freeze(f: Awaited<ReturnType<typeof fixture>>) {
 }
 
 test("contract names come from the owner's seven-document sync contract", () => {
-  expect(NAMES).toEqual([
-    "AGENTS.md",
-    "SOUL.md",
-    "IDENTITY.md",
-    "USER.md",
-    "TOOLS.md",
-    "HEARTBEAT.md",
-    "BOOT.md",
-  ]);
+  expect(NAMES).toEqual(["AGENTS.md", "SOUL.md", "IDENTITY.md", "USER.md", "TOOLS.md", "HEARTBEAT.md", "BOOT.md"]);
 }, 20_000);
 
 posixTest(
@@ -102,11 +94,7 @@ posixTest(
     expect(f.writes).toHaveLength(0);
     expect(sha(await readFile(binding.originalPlanPath))).toBe(binding.originalPlanSha);
     expect(
-      sha(
-        await readFile(
-          join(f.root, "revision-refresh", sha(oldPlan) + "-" + result.planSha, "before-plan.json"),
-        ),
-      ),
+      sha(await readFile(join(f.root, "revision-refresh", sha(oldPlan) + "-" + result.planSha, "before-plan.json"))),
     ).toBe(sha(oldPlan));
     expect((await preflight(f.api, owner, f.paths)).metadata.documents).toBe(7);
     expect(await refreshRevisions(f.api, owner, f.paths, binding)).toEqual({
@@ -124,9 +112,7 @@ posixTest(
       binding = await freeze(f);
     const before = sha(await readFile(f.paths.plan));
     f.docs.get("owned-document-6")!.title = "foreign-title";
-    await expect(refreshRevisions(f.api, owner, f.paths, binding)).rejects.toThrow(
-      "REAL_NATIVE_CHANGE",
-    );
+    await expect(refreshRevisions(f.api, owner, f.paths, binding)).rejects.toThrow("REAL_NATIVE_CHANGE");
     expect(sha(await readFile(f.paths.plan))).toBe(before);
     expect(f.writes).toHaveLength(0);
   },
@@ -156,15 +142,11 @@ posixTest(
     const request = (f.files[0]!.requests as { insertText: { text: string } }[])[0]!;
     request.insertText.text = "foreign-intent";
     await f.savePlan();
-    await expect(refreshRevisions(f.api, owner, f.paths, binding)).rejects.toThrow(
-      "REVIEWED_PLAN_CHANGED",
-    );
+    await expect(refreshRevisions(f.api, owner, f.paths, binding)).rejects.toThrow("REVIEWED_PLAN_CHANGED");
     const g = await fixture(),
       other = await freeze(g);
     await writeFile(join(g.root, "inputs", "BOOT.md.native.json"), "foreign", { mode: 0o600 });
-    await expect(refreshRevisions(g.api, owner, g.paths, other)).rejects.toThrow(
-      "FROZEN_SNAPSHOT_CHANGED",
-    );
+    await expect(refreshRevisions(g.api, owner, g.paths, other)).rejects.toThrow("FROZEN_SNAPSHOT_CHANGED");
     await expect(
       refreshRevisions(g.api, owner, g.paths, { ...other, expectedInputHash: sha("forged") }),
     ).rejects.toThrow("FROZEN_MANIFEST_CHANGED");
@@ -180,21 +162,17 @@ posixTest(
       binding = await freeze(f);
     const before = sha(await readFile(f.paths.plan));
     await writeFile(join(f.paths.home, "BOOT.md"), "concurrent", { mode: 0o600 });
-    await expect(refreshRevisions(f.api, owner, f.paths, binding)).rejects.toThrow(
-      "FROZEN_OR_LOCAL_CHANGED",
-    );
+    await expect(refreshRevisions(f.api, owner, f.paths, binding)).rejects.toThrow("FROZEN_OR_LOCAL_CHANGED");
     expect(sha(await readFile(f.paths.plan))).toBe(before);
     const g = await fixture(),
       other = await freeze(g);
-    g.hooks.metadata = (id) => ({
+    g.hooks.metadata = id => ({
       id,
       name: "AGENTS.md",
       mimeType: "application/vnd.google-apps.document",
       parents: ["foreign-folder"],
     });
-    await expect(refreshRevisions(g.api, owner, g.paths, other)).rejects.toThrow(
-      "REMOTE_SCOPE_CHANGED",
-    );
+    await expect(refreshRevisions(g.api, owner, g.paths, other)).rejects.toThrow("REMOTE_SCOPE_CHANGED");
     expect(g.writes).toHaveLength(0);
   },
   20_000,
@@ -246,7 +224,7 @@ function document(id: string, lines = ["original", ""]): Obj {
           body: {
             content: [
               { endIndex: 1, sectionBreak: { sectionStyle: { columnSeparatorStyle: "NONE" } } },
-              ...lines.map((line) => {
+              ...lines.map(line => {
                 const text = line + "\n",
                   startIndex = index;
                 index += text.length;
@@ -255,9 +233,7 @@ function document(id: string, lines = ["original", ""]): Obj {
                   endIndex: index,
                   paragraph: {
                     paragraphStyle: { namedStyleType: "NORMAL_TEXT", direction: "LEFT_TO_RIGHT" },
-                    elements: [
-                      { startIndex, endIndex: index, textRun: { content: text, textStyle: {} } },
-                    ],
+                    elements: [{ startIndex, endIndex: index, textRun: { content: text, textStyle: {} } }],
                   },
                 };
               }),
@@ -270,16 +246,16 @@ function document(id: string, lines = ["original", ""]): Obj {
 }
 function plain(d: unknown): string {
   return modelDocument(d)
-    .paragraphs.flatMap((p) => p.cells.map((c) => c.unit))
+    .paragraphs.flatMap(p => p.cells.map(c => c.unit))
     .join("");
 }
 const owner: Owner = {
   googleApi: async () => {
     throw Error("unused");
   },
-  nativeMarkdown: (d) => plain(d),
-  projectionMarkdown: (d) => plain(d),
-  normalizeMarkdown: (s) => s.replace(/\n+$/, "\n"),
+  nativeMarkdown: d => plain(d),
+  projectionMarkdown: d => plain(d),
+  normalizeMarkdown: s => s.replace(/\n+$/, "\n"),
 };
 async function fixture() {
   const root = await mkdtemp(join(tmpdir(), "aphrody-drive-review-"));
@@ -386,10 +362,7 @@ async function fixture() {
             throw Error("private SDK payload must not escape");
           writes.push(structuredClone(p));
           const d = renderedModel(
-            simulate(
-              modelDocument(docs.get(id)),
-              payload.requests as Parameters<typeof simulate>[1],
-            ),
+            simulate(modelDocument(docs.get(id)), payload.requests as Parameters<typeof simulate>[1]),
           );
           d.revisionId = "revision-2";
           docs.set(id, d);
@@ -448,8 +421,7 @@ test("rejects foreign operations, body replacement, newline merges, alternate ta
     { insertText: { location: { index: 5, tabId: "owned-tab" }, text: "split" } },
     { insertText: { location: { index: 1, tabId: "owned-tab" }, text: "bad\ue000" } },
   ];
-  for (const request of bad)
-    expect(() => simulate(model, [request] as Parameters<typeof simulate>[1])).toThrow();
+  for (const request of bad) expect(() => simulate(model, [request] as Parameters<typeof simulate>[1])).toThrow();
   expect(() => verifyPlainProposal(model, "one😀  \n\n")).toThrow("PROPOSAL_REQUEST_MISMATCH");
 }, 20_000);
 
@@ -525,7 +497,7 @@ posixTest(
     await expect(apply(f.api, owner, f.paths)).rejects.toThrow("LOCAL_CHANGED");
     expect(f.writes).toHaveLength(0);
     const g = await fixture();
-    g.hooks.metadata = (id) => ({
+    g.hooks.metadata = id => ({
       id,
       name: "AGENTS.md",
       mimeType: "application/vnd.google-apps.document",
@@ -550,7 +522,7 @@ posixTest(
     const seed = String(result.seedReviewed);
     for (const name of NAMES)
       expect((await Bun.file(join(seed, name + ".json")).json()).documentId).toBe(
-        f.files.find((x) => x.name === name)!.id,
+        f.files.find(x => x.name === name)!.id,
       );
     const receipt = await Bun.file(String(result.receipt)).json();
     expect(receipt.remoteVerified).toHaveLength(7);
@@ -582,14 +554,12 @@ posixTest(
   "strict requiredRevisionId rejects a race at batchUpdate and records safe failure without local promotion",
   async () => {
     const f = await fixture();
-    f.hooks.beforeWrite = (id) => {
+    f.hooks.beforeWrite = id => {
       f.docs.get(id)!.revisionId = "concurrent";
     };
     await expect(apply(f.api, owner, f.paths)).rejects.toThrow("OWNER_OPERATION_FAILED");
     expect(f.writes).toHaveLength(0);
-    const receipt = await Bun.file(
-      join(f.paths.journalRoot, sha(await readFile(f.paths.plan)), "receipt.json"),
-    ).json();
+    const receipt = await Bun.file(join(f.paths.journalRoot, sha(await readFile(f.paths.plan)), "receipt.json")).json();
     expect(receipt.phase).toBe("failed");
     expect(receipt.failedClass).toBe("OWNER_OPERATION_FAILED");
     expect(JSON.stringify(receipt)).not.toContain("private SDK payload");
@@ -601,7 +571,7 @@ posixTest(
   "changed paragraph style after a write is rejected with a durable partial receipt and untouched locals",
   async () => {
     const f = await fixture();
-    f.hooks.afterWrite = (id) => {
+    f.hooks.afterWrite = id => {
       const d = f.docs.get(id)!;
       const p = (((d.tabs as Obj[])[0]!.documentTab as Obj).body as Obj).content as Obj[];
       (p[1]!.paragraph as Obj).paragraphStyle = {
@@ -629,7 +599,7 @@ posixTest(
   "unchanged Docs retain independently reviewed local bytes even when native rendering differs",
   async () => {
     const f = await fixture();
-    const entry = f.files.find((x) => x.name === "USER.md")!;
+    const entry = f.files.find(x => x.name === "USER.md")!;
     const reviewedLocal = "---\nowner: local-profile\n---\noriginal\n";
     await writeFile(join(f.paths.home, "USER.md"), reviewedLocal, { mode: 0o600 });
     await writeFile(String(entry.proposedLocalFile), reviewedLocal, { mode: 0o600 });
@@ -646,7 +616,5 @@ posixTest(
 test("raw proposal guard preserves interior trailing spaces and existing terminal vertical-tab", () => {
   const model = modelDocument(document("owned-document", ["line ", "fenced  ", "end\u000b", ""]));
   verifyPlainProposal(model, "line \nfenced  \nend\u000b\n");
-  expect(() => verifyPlainProposal(model, "line\nfenced\nend\n")).toThrow(
-    "PROPOSAL_REQUEST_MISMATCH",
-  );
+  expect(() => verifyPlainProposal(model, "line\nfenced\nend\n")).toThrow("PROPOSAL_REQUEST_MISMATCH");
 }, 20_000);

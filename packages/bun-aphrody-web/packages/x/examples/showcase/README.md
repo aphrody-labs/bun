@@ -34,13 +34,13 @@ bun examples/showcase/hn-1000-crawler.ts
 
 ## Environment variables
 
-| Variable | Default | Description |
-|---|---|---|
-| `SHOWCASE_LIMIT` | `1000` | Max number of articles to crawl |
-| `HN_QUEUE_DB` | `./hn-queue.sqlite` | Path to the persistent queue database |
-| `HN_DATASET_NAME` | `hn-articles` | Dataset name (stored in `./storage/datasets/<name>/`) |
-| `HN_CONCURRENCY_MIN` | `2` | Minimum concurrent scrapers |
-| `HN_CONCURRENCY_MAX` | `10` | Maximum concurrent scrapers |
+| Variable             | Default             | Description                                           |
+| -------------------- | ------------------- | ----------------------------------------------------- |
+| `SHOWCASE_LIMIT`     | `1000`              | Max number of articles to crawl                       |
+| `HN_QUEUE_DB`        | `./hn-queue.sqlite` | Path to the persistent queue database                 |
+| `HN_DATASET_NAME`    | `hn-articles`       | Dataset name (stored in `./storage/datasets/<name>/`) |
+| `HN_CONCURRENCY_MIN` | `2`                 | Minimum concurrent scrapers                           |
+| `HN_CONCURRENCY_MAX` | `10`                | Maximum concurrent scrapers                           |
 
 ## Output
 
@@ -73,13 +73,13 @@ Each JSONL record:
 
 The crawler uses `detectFromPage` (wappalyzergo) + `suggestStrategy` to pick the right AphrodyWeb profile per article:
 
-| Detected tech | Profile used | Rationale |
-|---|---|---|
-| WordPress, Drupal, Ghost | `static` | Static-friendly CMS, good SSR HTML |
-| Next.js, Nuxt, SvelteKit | `fast` | SSR framework, needs JS evaluation |
-| React SPA, Vue SPA | `fast` | SPA without SSR shell needs rendering |
-| Cloudflare, DataDome | `stealth` / `max` | Anti-bot WAF detected |
-| Unknown | `static` | Cheapest default |
+| Detected tech            | Profile used      | Rationale                             |
+| ------------------------ | ----------------- | ------------------------------------- |
+| WordPress, Drupal, Ghost | `static`          | Static-friendly CMS, good SSR HTML    |
+| Next.js, Nuxt, SvelteKit | `fast`            | SSR framework, needs JS evaluation    |
+| React SPA, Vue SPA       | `fast`            | SPA without SSR shell needs rendering |
+| Cloudflare, DataDome     | `stealth` / `max` | Anti-bot WAF detected                 |
+| Unknown                  | `static`          | Cheapest default                      |
 
 ## Resume behavior
 

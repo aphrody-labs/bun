@@ -600,7 +600,12 @@ declare module "bun:linux" {
   /** AF_NETLINK request/response exchanges with the kernel. */
   namespace netlink {
     /** Encodes one `nlmsghdr` message. `flags` defaults to `NLM_F_REQUEST`. */
-    function encode(options: { type: number; flags?: number; seq?: number; payload?: ArrayBufferView }): Uint8Array<ArrayBuffer>;
+    function encode(options: {
+      type: number;
+      flags?: number;
+      seq?: number;
+      payload?: ArrayBufferView;
+    }): Uint8Array<ArrayBuffer>;
     function parse(buffer: ArrayBufferView): NetlinkMessage[];
     /**
      * Sends `message` on a new `AF_NETLINK` socket and collects every reply until

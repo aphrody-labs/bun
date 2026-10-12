@@ -78,30 +78,30 @@ test("LoRA inputs preserve provenance, exclude held-out identities and hash thei
   const prepared = result.rolloutJsonl
     .trim()
     .split("\n")
-    .map((line) => JSON.parse(line));
+    .map(line => JSON.parse(line));
   const gold = result.goldJsonl
     .trim()
     .split("\n")
-    .map((line) => JSON.parse(line));
-  const heldOut = new Set(gold.map((row) => row.sourceId));
+    .map(line => JSON.parse(line));
+  const heldOut = new Set(gold.map(row => row.sourceId));
   expect(result.manifest.hasBothSplits).toBe(true);
   expect(prepared.length + gold.length).toBe(snapshot.entries.length);
-  expect(prepared.some((row) => heldOut.has(row.sourceId))).toBe(false);
+  expect(prepared.some(row => heldOut.has(row.sourceId))).toBe(false);
   expect(prepared[0].messages[1].role).toBe("model");
   expect(prepared[0].messages[0].parts[0].text).toBe(prepared[0].prompt);
   expect(prepared[0].prompt).toStartWith("Pour l’entrée movie 11,");
   expect(prepared[0].messages[1].parts[0].text).toContain("Source : " + SOURCE);
-  const ageGold = gold.find((row) => row.sourceId.includes(":age:"));
+  const ageGold = gold.find(row => row.sourceId.includes(":age:"));
   expect(ageGold.expected_url).toStartWith(AGE_API + "/");
   expect(ageGold.expected_url).not.toContain("#");
   expect(result.manifest.prepared.sha256).toBe(
     new Bun.CryptoHasher("sha256").update(result.rolloutJsonl).digest("hex"),
   );
-  const changed = trainingArtifacts(snapshot, { content: (entry) => `Corrected ${entry.title}` });
+  const changed = trainingArtifacts(snapshot, { content: entry => `Corrected ${entry.title}` });
   expect(changed.manifest.prepared.sha256).not.toBe(result.manifest.prepared.sha256);
   expect(changed.manifest.gold.sha256).not.toBe(result.manifest.gold.sha256);
-  expect(changed.examples.map((row) => [row.sourceId, row.split])).toEqual(
-    result.examples.map((row) => [row.sourceId, row.split]),
+  expect(changed.examples.map(row => [row.sourceId, row.split])).toEqual(
+    result.examples.map(row => [row.sourceId, row.split]),
   );
 });
 
@@ -124,10 +124,7 @@ test("native retrieval refresh retires only its namespace after all documents an
       expect(body.expectedCount).toBe(3);
       let retired = 0;
       for (const [key, document] of documents)
-        if (
-          document.originSourceId === body.originSourceId &&
-          document.syncGeneration !== body.syncGeneration
-        ) {
+        if (document.originSourceId === body.originSourceId && document.syncGeneration !== body.syncGeneration) {
           documents.delete(key);
           retired++;
         }
@@ -170,8 +167,7 @@ test("an incomplete or vectorless retrieval pass cannot retire the previous corp
         fetcher: async (input, init) => {
           calls.push(new URL(String(input)).pathname);
           const body = JSON.parse(init!.body as string);
-          if (calls.length === 1)
-            return Response.json({ sourceId: body.sourceId, indexed: true, vectorIndexed: true });
+          if (calls.length === 1) return Response.json({ sourceId: body.sourceId, indexed: true, vectorIndexed: true });
           return failure === "http"
             ? new Response("private error details", { status: 503 })
             : Response.json({
@@ -183,7 +179,7 @@ test("an incomplete or vectorless retrieval pass cannot retire the previous corp
       }),
     ).rejects.toThrow(/retrieval/);
     expect(calls).toHaveLength(2);
-    expect(calls.every((path) => path.endsWith("/ingest"))).toBe(true);
+    expect(calls.every(path => path.endsWith("/ingest"))).toBe(true);
   }
 });
 
@@ -195,16 +191,12 @@ test("retrieval count mismatches and absent credentials fail without exposing pr
     fetcher: async (_input: RequestInfo | URL, init?: RequestInit) => {
       const body = JSON.parse(init!.body as string);
       return Response.json(
-        body.sourceId
-          ? { sourceId: body.sourceId, indexed: true }
-          : { status: "complete", active: 2, retired: 0 },
+        body.sourceId ? { sourceId: body.sourceId, indexed: true } : { status: "complete", active: 2, retired: 0 },
       );
     },
   };
   await expect(indexRetrieval(normalize(media, ages), options)).rejects.toThrow("count mismatch");
-  await expect(indexRetrieval(normalize(media, ages), { ...options, token: "" })).rejects.toThrow(
-    "configuration",
-  );
+  await expect(indexRetrieval(normalize(media, ages), { ...options, token: "" })).rejects.toThrow("configuration");
 });
 
 test("linked crawl indexes editorial fields and excludes streaming/config payloads", () => {
@@ -230,7 +222,7 @@ test("the same native package supports another application source and mounts int
     {
       ...media,
       source: source.source,
-      entries: media.entries.map((e) => ({
+      entries: media.entries.map(e => ({
         ...e,
         href: e.href.replace("dragonballfr.com", "example.org"),
         api: e.api.replace("dragonballfr.com", "example.org"),
@@ -245,7 +237,7 @@ test("the same native package supports another application source and mounts int
   const rows = trainingRows(s, {
     subject: "Example",
     originSourceId: "example:timeline",
-    content: (entry) => `Verified detail: ${entry.title}`,
+    content: entry => `Verified detail: ${entry.title}`,
   });
   expect(rows[0]!.sourceId).toBe("example:timeline:movie:11");
   expect(rows[0]!.messages[0]!.content).toContain("Example");
@@ -262,9 +254,7 @@ test("the same native package supports another application source and mounts int
       data: { timeline: { source: source.source, mediaTotal: 2, ageTotal: 1 } },
     });
     expect((await fetch(new URL("/graphql", server.url))).status).toBe(405);
-    expect(
-      (await fetch(new URL("/graphql", server.url), { method: "POST", body: "invalid" })).status,
-    ).toBe(400);
+    expect((await fetch(new URL("/graphql", server.url), { method: "POST", body: "invalid" })).status).toBe(400);
   } finally {
     await server.stop(true);
   }
@@ -278,9 +268,7 @@ test("curation precedes broadcast dates; negative ages and print provenance surv
     db.exec(sqlExport(s));
     db.exec(sqlExport(s));
     expect(db.query("SELECT count(*) AS n FROM shenron_timeline").get()).toEqual({ n: 3 });
-    const saved = db
-      .query("SELECT payload FROM shenron_timeline WHERE entry_key='age:2'")
-      .get() as { payload: string };
+    const saved = db.query("SELECT payload FROM shenron_timeline WHERE entry_key='age:2'").get() as { payload: string };
     expect(JSON.parse(saved.payload)).toEqual(s.entries[2]);
     expect(db.query("SELECT title FROM shenron_timeline WHERE editorial_rank=1").get()).toEqual({
       title: "Bardock's story",
@@ -313,9 +301,7 @@ test("truncated, duplicate, reordered or foreign-source media cannot replace a c
       ages,
     ),
   ).toThrow("source URL");
-  expect(normalize(media, ages, "first").generation).toBe(
-    normalize(media, ages, "second").generation,
-  );
+  expect(normalize(media, ages, "first").generation).toBe(normalize(media, ages, "second").generation);
 });
 
 test("age pagination follows every page and rejects unavailable or changing sources", async () => {
@@ -325,19 +311,11 @@ test("age pagination follows every page and rejects unavailable or changing sour
     const url = String(input);
     calls.push(url);
     const offset = Number(new URL(url).searchParams.get("offset") ?? 0);
-    return Response.json(
-      url === MEDIA_API ? media : { total: 101, offset, items: many.slice(offset, offset + 100) },
-    );
+    return Response.json(url === MEDIA_API ? media : { total: 101, offset, items: many.slice(offset, offset + 100) });
   };
   expect((await collect(fetcher)).ageTotal).toBe(101);
-  expect(calls).toEqual([
-    MEDIA_API,
-    AGE_API + "?limit=100&offset=0",
-    AGE_API + "?limit=100&offset=100",
-  ]);
-  await expect(collect(async () => new Response("offline", { status: 503 }))).rejects.toThrow(
-    "unavailable",
-  );
+  expect(calls).toEqual([MEDIA_API, AGE_API + "?limit=100&offset=0", AGE_API + "?limit=100&offset=100"]);
+  await expect(collect(async () => new Response("offline", { status: 503 }))).rejects.toThrow("unavailable");
 });
 
 test("held-out entities stay out of training when content changes", () => {
@@ -345,13 +323,11 @@ test("held-out entities stay out of training when content changes", () => {
   const before = trainingRows(s);
   const after = trainingRows({
     ...s,
-    entries: s.entries.map((e) => ({ ...e, title: e.title + " correction" })),
+    entries: s.entries.map(e => ({ ...e, title: e.title + " correction" })),
   });
-  expect(before.map((r) => [r.sourceId, r.split])).toEqual(after.map((r) => [r.sourceId, r.split]));
-  expect(new Set(before.map((r) => r.sourceId)).size).toBe(s.entries.length);
-  expect(before.find((r) => r.sourceId.endsWith("age:2"))!.messages[1]!.content).toContain(
-    "Daizenshuu 7",
-  );
+  expect(before.map(r => [r.sourceId, r.split])).toEqual(after.map(r => [r.sourceId, r.split]));
+  expect(new Set(before.map(r => r.sourceId)).size).toBe(s.entries.length);
+  expect(before.find(r => r.sourceId.endsWith("age:2"))!.messages[1]!.content).toContain("Daizenshuu 7");
 });
 
 test("GraphQL filters retain original ranks and enforce pagination limits", async () => {

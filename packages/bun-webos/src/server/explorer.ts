@@ -20,8 +20,7 @@ export interface ExplorerOptions {
   };
 }
 
-const unavailable = (feature: string) =>
-  Response.json({ error: `${feature} is not configured` }, { status: 503 });
+const unavailable = (feature: string) => Response.json({ error: `${feature} is not configured` }, { status: 503 });
 const escapeLike = (value: string) => `%${value.replace(/[\\%_]/g, "\\$&")}%`;
 
 export function createExplorer(options: ExplorerOptions = {}) {
@@ -35,15 +34,9 @@ export function createExplorer(options: ExplorerOptions = {}) {
   }
   const database = () => (db ??= new Database(options.databasePath!, { readonly: true }));
   const has = (table: string) =>
-    Boolean(
-      database()
-        .query("SELECT 1 FROM sqlite_master WHERE type IN ('table','view') AND name=?")
-        .get(table),
-    );
+    Boolean(database().query("SELECT 1 FROM sqlite_master WHERE type IN ('table','view') AND name=?").get(table));
   const count = (table: string) =>
-    has(table)
-      ? (database().query(`SELECT count(*) AS n FROM ${table}`).get() as { n: number }).n
-      : 0;
+    has(table) ? (database().query(`SELECT count(*) AS n FROM ${table}`).get() as { n: number }).n : 0;
   const latest =
     "WITH ranked AS (SELECT id,repository_id,row_number() OVER(PARTITION BY repository_id ORDER BY created_at DESC,id DESC) AS position FROM graph_snapshots), current AS (SELECT id,repository_id FROM ranked WHERE position=1)";
   const pathOf = (entry: any) => {
@@ -54,9 +47,7 @@ export function createExplorer(options: ExplorerOptions = {}) {
       if (seen.has(String(parent))) break;
       seen.add(String(parent));
       const next = database()
-        .query(
-          "SELECT record,parent_record,name FROM ntfs_entries WHERE volume_id=? AND record=? LIMIT 1",
-        )
+        .query("SELECT record,parent_record,name FROM ntfs_entries WHERE volume_id=? AND record=? LIMIT 1")
         .get(entry.volume_id, parent) as any;
       if (!next || next.record === next.parent_record) break;
       parts.unshift(next.name);
@@ -77,14 +68,9 @@ export function createExplorer(options: ExplorerOptions = {}) {
       !Array.isArray(input?.messages) ||
       input.messages.length === 0 ||
       input.messages.length > 20 ||
-      input.messages.some(
-        (m: any) => !m || !["user", "assistant"].includes(m.role) || typeof m.content !== "string",
-      )
+      input.messages.some((m: any) => !m || !["user", "assistant"].includes(m.role) || typeof m.content !== "string")
     )
-      return Response.json(
-        { error: "Expected up to 20 user and assistant messages" },
-        { status: 400 },
-      );
+      return Response.json({ error: "Expected up to 20 user and assistant messages" }, { status: 400 });
     const messages = input.messages.map((m: any) => ({ role: m.role, content: m.content }));
     if (messages.at(-1).role !== "user" || !messages.at(-1).content.trim())
       return Response.json({ error: "A user message is required" }, { status: 400 });
@@ -113,8 +99,7 @@ export function createExplorer(options: ExplorerOptions = {}) {
       try {
         const props = await read("props");
         const context = Number(props.default_generation_settings?.n_ctx);
-        if (!Number.isFinite(context) || context <= maxTokens + 16)
-          throw new Error("Invalid assistant context");
+        if (!Number.isFinite(context) || context <= maxTokens + 16) throw new Error("Invalid assistant context");
         while (true) {
           const rendered = await read("apply-template", { messages });
           if (typeof rendered.prompt !== "string") throw new Error("Invalid rendered prompt");
@@ -126,10 +111,7 @@ export function createExplorer(options: ExplorerOptions = {}) {
           if (!Array.isArray(tokens.tokens)) throw new Error("Invalid token response");
           if (tokens.tokens.length + maxTokens + 16 <= context) break;
           if (messages.length === 1)
-            return Response.json(
-              { error: "Message exceeds the assistant context" },
-              { status: 413 },
-            );
+            return Response.json({ error: "Message exceeds the assistant context" }, { status: 413 });
           messages.shift();
           pruned++;
           while (messages.length > 1 && messages[0].role !== "user") {
@@ -183,8 +165,8 @@ export function createExplorer(options: ExplorerOptions = {}) {
           const fields = Object.fromEntries(
             String(info)
               .split(/\r?\n/)
-              .filter((line) => line.includes(":"))
-              .map((line) => {
+              .filter(line => line.includes(":"))
+              .map(line => {
                 const i = line.indexOf(":");
                 return [line.slice(0, i), line.slice(i + 1)];
               }),
@@ -208,10 +190,7 @@ export function createExplorer(options: ExplorerOptions = {}) {
               : null,
           });
         } catch {
-          return Response.json(
-            { available: false, error: "Configured cache is unavailable" },
-            { status: 503 },
-          );
+          return Response.json({ available: false, error: "Configured cache is unavailable" }, { status: 503 });
         }
       }
       if (action === "services") {
@@ -219,11 +198,7 @@ export function createExplorer(options: ExplorerOptions = {}) {
         const response = await fetch(options.servicesUrl, {
           signal: AbortSignal.any([req.signal, AbortSignal.timeout(3000)]),
         });
-        if (!response.ok)
-          return Response.json(
-            { error: "Service health endpoint is unavailable" },
-            { status: 502 },
-          );
+        if (!response.ok) return Response.json({ error: "Service health endpoint is unavailable" }, { status: 502 });
         return Response.json(await response.json());
       }
       if (action === "summary")
@@ -257,9 +232,7 @@ export function createExplorer(options: ExplorerOptions = {}) {
         return Response.json(
           has(resourcesTable)
             ? database()
-                .query(
-                  `SELECT id,kind,name,canonical_path,metadata_json FROM ${resourcesTable} ORDER BY kind,name`,
-                )
+                .query(`SELECT id,kind,name,canonical_path,metadata_json FROM ${resourcesTable} ORDER BY kind,name`)
                 .all()
             : [],
         );
@@ -293,8 +266,7 @@ export function createExplorer(options: ExplorerOptions = {}) {
         });
       }
       if (action === "graph") {
-        if (!has("nodes") || !has("edges") || !has("graph_snapshots"))
-          return unavailable("Code graph");
+        if (!has("nodes") || !has("edges") || !has("graph_snapshots")) return unavailable("Code graph");
         const id = params.get("id");
         if (id) {
           const node = database()
@@ -311,12 +283,12 @@ export function createExplorer(options: ExplorerOptions = {}) {
             name: node.label,
             path: node.file,
             relative_path: node.label,
-            imports: neighbors.map((n) => ({ id: n.id, module: n.label })),
+            imports: neighbors.map(n => ({ id: n.id, module: n.label })),
             neighbors,
             import_module_count: (
-              database()
-                .query("SELECT count(*) AS n FROM edges WHERE source=? OR target=?")
-                .get(id, id) as { n: number }
+              database().query("SELECT count(*) AS n FROM edges WHERE source=? OR target=?").get(id, id) as {
+                n: number;
+              }
             ).n,
           });
         }
@@ -365,7 +337,7 @@ export function createExplorer(options: ExplorerOptions = {}) {
                   "SELECT volume_id,record,parent_record,name,is_directory,attributes FROM ntfs_entries WHERE (? IS NULL OR volume_id=?) AND name LIKE ? ESCAPE '\\' ORDER BY name,record LIMIT 51 OFFSET ?",
                 )
                 .all(volume, volume, pattern, offset);
-          items = items.map((item) => ({
+          items = items.map(item => ({
             ...item,
             name: item.path ? item.path.split(/[\\/]/).at(-1) : item.name,
             path: item.path ?? pathOf(item),

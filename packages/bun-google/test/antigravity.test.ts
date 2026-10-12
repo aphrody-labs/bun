@@ -45,8 +45,7 @@ test("legacy models, Vertex generation and Cloud Code streaming retain exact nat
         return Response.json({
           models: { zeta: { displayName: "Z" }, alpha: { name: "explicit" } },
         });
-      if (url.pathname.endsWith("loadCodeAssist"))
-        return Response.json({ cloudaicompanionProject: "account-project" });
+      if (url.pathname.endsWith("loadCodeAssist")) return Response.json({ cloudaicompanionProject: "account-project" });
       if (url.pathname.endsWith("streamGenerateContent"))
         return new Response(
           'data: {"response":{"candidates":[{"content":{"parts":[{"text":"Bonjour "},{"text":"été"}]}}]}}\r\n\r\ndata: [DONE]\n\n',
@@ -65,17 +64,14 @@ test("legacy models, Vertex generation and Cloud Code streaming retain exact nat
       runtime,
       authMethod: "enterprise",
     };
-    expect(await googleModels(options)).toEqual([
-      { name: "explicit" },
-      { displayName: "Z", name: "zeta" },
-    ]);
+    expect(await googleModels(options)).toEqual([{ name: "explicit" }, { displayName: "Z", name: "zeta" }]);
     expect(await googleGenerate("prompt", "gemini-fixture", options)).toEqual({
       candidates: [{ content: { parts: [{ text: "reply" }] } }],
     });
-    expect(
-      await collect(googleGenerateStream("stream prompt", "gemini-fixture", undefined, options)),
-    ).toBe("Bonjour été");
-    expect(received.map((item) => [item.path, item.query, item.body])).toEqual([
+    expect(await collect(googleGenerateStream("stream prompt", "gemini-fixture", undefined, options))).toBe(
+      "Bonjour été",
+    );
+    expect(received.map(item => [item.path, item.query, item.body])).toEqual([
       ["/v1internal:fetchAvailableModels", "", {}],
       [
         "/v1/projects/rgfr/locations/europe-west9/publishers/google/models/gemini-fixture:generateContent",
@@ -133,14 +129,12 @@ test("production defaults route model listing to Prod, generation to regional Ve
   const service = createAntigravityServices({
     credentialProvider: () => "fixture",
     runtime,
-    fetch: async (input) => {
+    fetch: async input => {
       const url = String(input);
       urls.push(url);
       if (url.includes("loadCodeAssist")) return Response.json({});
       if (url.includes("streamGenerateContent"))
-        return new Response(
-          'data: {"candidates":[{"content":{"parts":[{"text":"fallback"}]}}]}\n\n',
-        );
+        return new Response('data: {"candidates":[{"content":{"parts":[{"text":"fallback"}]}}]}\n\n');
       return Response.json({ models: [] });
     },
   });
@@ -180,7 +174,7 @@ test("Cloud Code retries 429 with server RetryInfo, capped backoff and a three-a
   const waits: number[] = [];
   const service = createAntigravityServices({
     credentialProvider: () => "fixture",
-    wait: async (milliseconds) => {
+    wait: async milliseconds => {
       waits.push(milliseconds);
     },
     fetch: async () => {
@@ -189,9 +183,7 @@ test("Cloud Code retries 429 with server RetryInfo, capped backoff and a three-a
         ? Response.json(
             {
               error: {
-                details: [
-                  { "@type": "type.googleapis.com/google.rpc.RetryInfo", retryDelay: "99.5s" },
-                ],
+                details: [{ "@type": "type.googleapis.com/google.rpc.RetryInfo", retryDelay: "99.5s" }],
               },
             },
             { status: 429 },
@@ -222,7 +214,7 @@ test("stream decoder handles split UTF8, split frames, CRLF, comments and a fina
   let offset = 0;
   const service = createAntigravityServices({
     credentialProvider: () => "fixture",
-    fetch: async (input) =>
+    fetch: async input =>
       String(input).includes("loadCodeAssist")
         ? Response.json({})
         : new Response(
@@ -252,9 +244,7 @@ test("stream cancellation aborts the HTTP request and releases the underlying re
         new ReadableStream<Uint8Array>({
           start(controller) {
             controller.enqueue(
-              new TextEncoder().encode(
-                'data: {"candidates":[{"content":{"parts":[{"text":"first"}]}}]}\n\n',
-              ),
+              new TextEncoder().encode('data: {"candidates":[{"content":{"parts":[{"text":"first"}]}}]}\n\n'),
             );
           },
           cancel() {
@@ -278,10 +268,8 @@ test("pre-aborted requests avoid credentials/HTTP and malformed streams fail wit
       calls++;
       return "fixture";
     },
-    fetch: async (input) =>
-      String(input).includes("loadCodeAssist")
-        ? Response.json({})
-        : new Response("data: private-secret-payload\n\n"),
+    fetch: async input =>
+      String(input).includes("loadCodeAssist") ? Response.json({}) : new Response("data: private-secret-payload\n\n"),
   });
   await expect(service.models(AbortSignal.abort())).rejects.toThrow();
   await expect(collect(service.stream("prompt", undefined, AbortSignal.abort()))).rejects.toThrow();

@@ -22,8 +22,7 @@ const run = async (cwd: string, command: string[]) => {
     stdout: "inherit",
     stderr: "inherit",
   });
-  if ((await proc.exited) !== 0)
-    throw new Error(`Packaging command failed: ${command[0]} ${command[1]}`);
+  if ((await proc.exited) !== 0) throw new Error(`Packaging command failed: ${command[0]} ${command[1]}`);
 };
 try {
   const helper = join(temporary, "tailwind-owner.tgz");

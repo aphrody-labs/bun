@@ -3,15 +3,15 @@
 The package retains its existing Remotion and HyperFrames entry point. Protocol
 entry points are explicit so importing a server API does not initialize a player:
 
-| Import | Behavior |
-| --- | --- |
-| `@aphrody/bun-video/hls` | Fork SDK lifecycle plus the pinned HLS.js browser decoder |
-| `@aphrody/bun-video/dash` or `/mpd` | MPD inspection and dash.js browser lifecycle |
-| `@aphrody/bun-video/har` | Private HAR inspection and captured response replay |
-| `@aphrody/bun-video/bitmovin` | Official player loading and Bun browser bundling |
-| `@aphrody/bun-video/crunchyroll` | Migrated native fetch client |
-| `@aphrody/bun-video/oauth` | Owner-configured authorization-code PKCE, refresh and revocation |
-| `@aphrody/bun-video/secrets` | Native OS JSON credential storage with bounded Windows entries |
+| Import                              | Behavior                                                         |
+| ----------------------------------- | ---------------------------------------------------------------- |
+| `@aphrody/bun-video/hls`            | Fork SDK lifecycle plus the pinned HLS.js browser decoder        |
+| `@aphrody/bun-video/dash` or `/mpd` | MPD inspection and dash.js browser lifecycle                     |
+| `@aphrody/bun-video/har`            | Private HAR inspection and captured response replay              |
+| `@aphrody/bun-video/bitmovin`       | Official player loading and Bun browser bundling                 |
+| `@aphrody/bun-video/crunchyroll`    | Migrated native fetch client                                     |
+| `@aphrody/bun-video/oauth`          | Owner-configured authorization-code PKCE, refresh and revocation |
+| `@aphrody/bun-video/secrets`        | Native OS JSON credential storage with bounded Windows entries   |
 
 HLS reuses `@aphrody/bun-runtime-sdk/video/hls`, including synchronous listener
 registration, URL validation, explicit worker origin checks and cleanup. The

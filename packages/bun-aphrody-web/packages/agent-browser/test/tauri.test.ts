@@ -41,11 +41,8 @@ beforeAll(() => {
     port: 0,
     fetch(request, srv) {
       const url = new URL(request.url);
-      if (url.searchParams.get("token") !== TOKEN)
-        return new Response("forbidden", { status: 403 });
-      return srv.upgrade(request, { data: undefined })
-        ? undefined
-        : new Response("upgrade required", { status: 426 });
+      if (url.searchParams.get("token") !== TOKEN) return new Response("forbidden", { status: 403 });
+      return srv.upgrade(request, { data: undefined }) ? undefined : new Response("upgrade required", { status: 426 });
     },
     websocket: {
       message(socket, raw) {
@@ -55,8 +52,7 @@ beforeAll(() => {
           args: Record<string, unknown>;
         };
         seenCommands.push(request.command);
-        const ok = (data: unknown) =>
-          socket.send(JSON.stringify({ id: request.id, success: true, data }));
+        const ok = (data: unknown) => socket.send(JSON.stringify({ id: request.id, success: true, data }));
         if (request.command === "list_windows")
           ok([
             {
@@ -91,9 +87,7 @@ afterAll(() => {
 
 describe("tauri debug discovery", () => {
   test("directory honours APHRODY_HOME and falls back to ~/.aphrody", () => {
-    expect(tauriDebugDir({ APHRODY_HOME: "/data/aph" }, "/home/u")).toBe(
-      "/data/aph/web/tauri-debug",
-    );
+    expect(tauriDebugDir({ APHRODY_HOME: "/data/aph" }, "/home/u")).toBe("/data/aph/web/tauri-debug");
     expect(tauriDebugDir({}, "/home/u")).toBe("/home/u/.aphrody/web/tauri-debug");
   });
 
@@ -111,8 +105,8 @@ describe("tauri debug discovery", () => {
     writeFileSync(join(dir, "dead-3.json"), JSON.stringify(discovery({ pid: 3, startedAtMs: 99 })));
     writeFileSync(join(dir, "junk.json"), "not json");
     writeFileSync(join(dir, ".tmp-4.json"), JSON.stringify(discovery({ pid: 4 })));
-    const apps = listTauriApps({ dir, alive: (pid) => pid !== 3 });
-    expect(apps.map((app) => app.pid)).toEqual([2, 1]);
+    const apps = listTauriApps({ dir, alive: pid => pid !== 3 });
+    expect(apps.map(app => app.pid)).toEqual([2, 1]);
     expect(listTauriApps({ dir: join(dir, "missing") })).toEqual([]);
   });
 });
@@ -134,12 +128,10 @@ describe("TauriBridge against a fake bridge", () => {
   });
 
   test("a wrong token and a non-loopback URL are refused", async () => {
-    await expect(
-      TauriBridge.connect(`ws://127.0.0.1:${server.port}/?token=wrong`, 2_000),
-    ).rejects.toThrow(/unavailable|rejected/);
-    await expect(TauriBridge.connect("ws://example.com:9/?token=x")).rejects.toThrow(
-      /non-loopback/,
+    await expect(TauriBridge.connect(`ws://127.0.0.1:${server.port}/?token=wrong`, 2_000)).rejects.toThrow(
+      /unavailable|rejected/,
     );
+    await expect(TauriBridge.connect("ws://example.com:9/?token=x")).rejects.toThrow(/non-loopback/);
   });
 });
 
@@ -160,17 +152,15 @@ describe("DOM snapshot script", () => {
         title: string;
         lang: string;
         tree: { role: string | null; name: string; testId: string | null }[];
-      }>(
-        `(() => { ${DOM_SNAPSHOT_SCRIPT.replace(/^\s*/, "").replace(/\breturn \{/, "return {")} })()`,
-      );
+      }>(`(() => { ${DOM_SNAPSHOT_SCRIPT.replace(/^\s*/, "").replace(/\breturn \{/, "return {")} })()`);
       expect(snapshot.title).toBe("Tauri fixture");
       expect(snapshot.lang).toBe("fr");
-      const roles = snapshot.tree.map((node) => `${node.role}:${node.name}`);
+      const roles = snapshot.tree.map(node => `${node.role}:${node.name}`);
       expect(roles).toContain("navigation:Principal");
       expect(roles).toContain("link:Accueil");
       expect(roles).toContain("heading:Titre");
       expect(roles).toContain("textbox:Nom");
-      expect(snapshot.tree.find((node) => node.testId === "go")?.role).toBe("button");
+      expect(snapshot.tree.find(node => node.testId === "go")?.role).toBe("button");
     } finally {
       await page.close();
       fixture.stop(true);

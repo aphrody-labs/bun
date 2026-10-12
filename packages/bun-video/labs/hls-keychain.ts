@@ -68,9 +68,7 @@ export async function configureLabKeychain() {
     await symlink(referenceFile, cookieLink, "file");
   } catch {
     await symlink(previousTarget, cookieLink, "file");
-    throw new Error(
-      "Lab credential reference could not be activated; the original link was restored.",
-    );
+    throw new Error("Lab credential reference could not be activated; the original link was restored.");
   }
 }
 
@@ -94,8 +92,7 @@ export async function main() {
   } else {
     const sourceIndex = args.indexOf("--source");
     const source = args[sourceIndex + 1];
-    if (sourceIndex < 0 || !source)
-      throw new Error("--source requires an absolute protected cookie path.");
+    if (sourceIndex < 0 || !source) throw new Error("--source requires an absolute protected cookie path.");
     const result = await migrateCookieInput(source);
     if (args.includes("--configure-lab")) await configureLabKeychain();
     console.log(
@@ -110,8 +107,6 @@ export async function main() {
 
 if (import.meta.main)
   main().catch(() => {
-    console.error(
-      "Video lab failed; check private inputs and options. Captured values are omitted.",
-    );
+    console.error("Video lab failed; check private inputs and options. Captured values are omitted.");
     process.exitCode = 1;
   });

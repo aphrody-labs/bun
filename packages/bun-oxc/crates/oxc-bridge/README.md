@@ -1,4 +1,5 @@
 <!-- SPDX-License-Identifier: MIT -->
+
 # aphrody-oxc-bridge
 
 In-process [Oxc](https://oxc.rs) bridge for JavaScript and TypeScript tooling: a safe Rust API and a stable C ABI.
@@ -10,17 +11,17 @@ and `oxc_resolver` **11.24.3**. Minimum Rust: 1.97. Version 0.3.0.
 
 ## Rust API
 
-| Function | Does | Runs |
-| --- | --- | --- |
-| `transform(src, file, &TransformOptions)` | TypeScript/JSX to JavaScript, ES target lowering, legacy decorators and metadata, React Refresh, styled-components, runtime helpers, optional source map | in-process |
-| `isolated_declaration(src, file, strip_internal, sourcemap)` | `.d.ts` under `--isolatedDeclarations` | in-process |
-| `minify(src, file)` / `minify_with(src, file, &MinifyOptions)` | compress, mangle (top level), whitespace, drop console/debugger, target, source map | in-process |
-| `check(src, file)` | syntax and semantic diagnostics (`{ ok, diagnostics }`, UTF-16 labels) | in-process |
-| `resolve(from, specifier, &options)` | `oxc_resolver` with tsconfig paths, aliases, conditions, extensions | in-process |
-| `analyze(src, file)` | static imports/exports in source order, UTF-16 spans | in-process |
-| `parse(src, file)` | official ESTree JSON program, UTF-16 spans | in-process |
-| `format(src, file)` | Oxc formatter | `oxfmt` binary (`APHRODY_OXFMT`) |
-| `lint(src, file)` | default Oxc rules, messages | `oxlint` binary (`APHRODY_OXLINT`) |
+| Function                                                       | Does                                                                                                                                                     | Runs                               |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `transform(src, file, &TransformOptions)`                      | TypeScript/JSX to JavaScript, ES target lowering, legacy decorators and metadata, React Refresh, styled-components, runtime helpers, optional source map | in-process                         |
+| `isolated_declaration(src, file, strip_internal, sourcemap)`   | `.d.ts` under `--isolatedDeclarations`                                                                                                                   | in-process                         |
+| `minify(src, file)` / `minify_with(src, file, &MinifyOptions)` | compress, mangle (top level), whitespace, drop console/debugger, target, source map                                                                      | in-process                         |
+| `check(src, file)`                                             | syntax and semantic diagnostics (`{ ok, diagnostics }`, UTF-16 labels)                                                                                   | in-process                         |
+| `resolve(from, specifier, &options)`                           | `oxc_resolver` with tsconfig paths, aliases, conditions, extensions                                                                                      | in-process                         |
+| `analyze(src, file)`                                           | static imports/exports in source order, UTF-16 spans                                                                                                     | in-process                         |
+| `parse(src, file)`                                             | official ESTree JSON program, UTF-16 spans                                                                                                               | in-process                         |
+| `format(src, file)`                                            | Oxc formatter                                                                                                                                            | `oxfmt` binary (`APHRODY_OXFMT`)   |
+| `lint(src, file)`                                              | default Oxc rules, messages                                                                                                                              | `oxlint` binary (`APHRODY_OXLINT`) |
 
 The file extension selects the syntax. Oxc does not publish its formatter and linter as crates, so `format` and
 `lint` here call the binaries; the unpublished sibling crate `aphrody-oxc-tools` runs them in process from the

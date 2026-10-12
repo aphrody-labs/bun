@@ -75,7 +75,7 @@ export function monitorPressure(opts: PressureOptions): PressureMonitor {
   let lastReading: ReturnType<PressureMonitor["last"]>;
   let busy: Promise<PressureLevel> | undefined;
 
-  const unwatch = (opts.watchRuntime ?? defaultWatch)((l) => {
+  const unwatch = (opts.watchRuntime ?? defaultWatch)(l => {
     if (RANK[l] > RANK[runtimeFloor]) runtimeFloor = l;
   });
 
@@ -103,8 +103,7 @@ export function monitorPressure(opts: PressureOptions): PressureMonitor {
     const down = classify(stats, false);
     const ev = stats.events;
     if (prevEvents) {
-      if ((ev.oom_kill ?? 0) > (prevEvents.oom_kill ?? 0) || (ev.max ?? 0) > (prevEvents.max ?? 0))
-        up = "hard";
+      if ((ev.oom_kill ?? 0) > (prevEvents.oom_kill ?? 0) || (ev.max ?? 0) > (prevEvents.max ?? 0)) up = "hard";
       else if ((ev.high ?? 0) > (prevEvents.high ?? 0) && up === "ok") up = "soft";
     }
     prevEvents = ev;

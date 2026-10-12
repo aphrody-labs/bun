@@ -53,7 +53,7 @@ function mockClient(calls: string[]): XToolsClient {
 
 describe("X function tools", () => {
   test("advertises every tool once, in the declared order", () => {
-    expect(xNativeTools.map((tool) => tool.function.name)).toEqual([...X_TOOL_NAMES]);
+    expect(xNativeTools.map(tool => tool.function.name)).toEqual([...X_TOOL_NAMES]);
     expect(xSearchToolDef.function.parameters.required).toEqual(["query"]);
     expect(xTweetsToolDef.function.parameters.required).toEqual(["handle"]);
     expect(xWhoamiToolDef.function.parameters.properties).toEqual({});
@@ -63,9 +63,7 @@ describe("X function tools", () => {
 
   test("builds a client from a cookie string or a session without network access", () => {
     expect(new XTools("auth_token=fake; ct0=fake")).toBeInstanceOf(XTools);
-    expect(new XTools(XSession.fromCookieString("auth_token=fake; ct0=fake"))).toBeInstanceOf(
-      XTools,
-    );
+    expect(new XTools(XSession.fromCookieString("auth_token=fake; ct0=fake"))).toBeInstanceOf(XTools);
   });
 
   test("maps each tool onto the injected X client", async () => {
@@ -113,15 +111,9 @@ describe("X function tools", () => {
     await tools.execute("x_whoami", undefined);
     expect(calls).toEqual(["search:rust:10:Top", "getNews:10", "whoami"]);
 
-    await expect(tools.execute("x_search", { query: "" })).rejects.toThrow(
-      'non-empty string "query"',
-    );
-    await expect(tools.execute("x_tweets", { handle: "a", count: 2.5 })).rejects.toThrow(
-      "positive integer",
-    );
-    await expect(tools.execute("x_search", { query: "a", mode: "Hot" })).rejects.toThrow(
-      '"Latest" or "Top"',
-    );
+    await expect(tools.execute("x_search", { query: "" })).rejects.toThrow('non-empty string "query"');
+    await expect(tools.execute("x_tweets", { handle: "a", count: 2.5 })).rejects.toThrow("positive integer");
+    await expect(tools.execute("x_search", { query: "a", mode: "Hot" })).rejects.toThrow('"Latest" or "Top"');
     await expect(tools.execute("web_search", {})).rejects.toThrow("Unknown X tool: web_search");
     expect(xNewsToolDef.function.name).toBe("x_news");
   });

@@ -35,12 +35,8 @@ export interface TauriApp {
 }
 
 /** `<APHRODY_HOME or ~/.aphrody>/web/tauri-debug`. */
-export function tauriDebugDir(
-  env: Record<string, string | undefined> = process.env,
-  home = homedir(),
-): string {
-  const base =
-    env.APHRODY_HOME && env.APHRODY_HOME.length > 0 ? env.APHRODY_HOME : join(home, ".aphrody");
+export function tauriDebugDir(env: Record<string, string | undefined> = process.env, home = homedir()): string {
+  const base = env.APHRODY_HOME && env.APHRODY_HOME.length > 0 ? env.APHRODY_HOME : join(home, ".aphrody");
   return join(base, "web", "tauri-debug");
 }
 
@@ -91,9 +87,7 @@ export function listTauriApps(
   if (!existsSync(dir)) return [];
   const alive = options.alive ?? pidAlive;
   const apps: TauriApp[] = [];
-  for (const name of readdirSync(dir).filter(
-    (entry) => entry.endsWith(".json") && !entry.startsWith("."),
-  )) {
+  for (const name of readdirSync(dir).filter(entry => entry.endsWith(".json") && !entry.startsWith("."))) {
     const file = join(dir, name);
     let parsed: unknown;
     try {
@@ -183,7 +177,7 @@ export class TauriBridge {
 
   private constructor(socket: WebSocket) {
     this.#socket = socket;
-    socket.addEventListener("message", (event) => this.#onMessage(String(event.data)));
+    socket.addEventListener("message", event => this.#onMessage(String(event.data)));
     const fail = () => {
       for (const { reject, timer } of this.#pending.values()) {
         clearTimeout(timer);
@@ -197,10 +191,7 @@ export class TauriBridge {
 
   /** Connects to a discovered app (or a `ws://` URL that already carries `?token=`). */
   static async connect(target: TauriApp | string, timeoutMs = 10_000): Promise<TauriBridge> {
-    const url =
-      typeof target === "string"
-        ? target
-        : `${target.ws}/?token=${encodeURIComponent(target.token)}`;
+    const url = typeof target === "string" ? target : `${target.ws}/?token=${encodeURIComponent(target.token)}`;
     const parsed = new URL(url);
     if (!["127.0.0.1", "[::1]", "localhost"].includes(parsed.hostname))
       throw new Error("refusing to connect to a non-loopback bridge");
@@ -232,7 +223,7 @@ export class TauriBridge {
 
   /** Connects to the newest running debug-enabled app, optionally filtered by executable name. */
   static async connectToRunning(exe?: string): Promise<{ app: TauriApp; bridge: TauriBridge }> {
-    const app = listTauriApps({ prune: true }).find((candidate) => !exe || candidate.exe === exe);
+    const app = listTauriApps({ prune: true }).find(candidate => !exe || candidate.exe === exe);
     if (!app)
       throw new Error(
         `no running Tauri app with the debug bridge${exe ? ` named ${exe}` : ""}; start it with APHRODY_TAURI_DEBUG=1 and the debug-bridge feature`,
@@ -264,27 +255,17 @@ export class TauriBridge {
   }
 
   /** Sends one command and resolves with its `data`; rejects with `TauriBridgeError` on failure. */
-  async request<T = unknown>(
-    command: string,
-    args: Record<string, unknown> = {},
-    timeoutMs = 15_000,
-  ): Promise<T> {
+  async request<T = unknown>(command: string, args: Record<string, unknown> = {}, timeoutMs = 15_000): Promise<T> {
     const id = `aw-${this.#nextId++}`;
     const response = await new Promise<BridgeResponse<T>>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.#pending.delete(id);
-        reject(
-          new TauriBridgeError(
-            `bridge command ${command} timed out after ${timeoutMs} ms`,
-            command,
-          ),
-        );
+        reject(new TauriBridgeError(`bridge command ${command} timed out after ${timeoutMs} ms`, command));
       }, timeoutMs);
       this.#pending.set(id, { resolve: resolve as (value: BridgeResponse) => void, reject, timer });
       this.#socket.send(JSON.stringify({ id, command, args }));
     });
-    if (!response.success)
-      throw new TauriBridgeError(response.error ?? `bridge command ${command} failed`, command);
+    if (!response.success) throw new TauriBridgeError(response.error ?? `bridge command ${command} failed`, command);
     return response.data as T;
   }
 
@@ -322,9 +303,7 @@ export class TauriBridge {
   }
 
   /** Console entries buffered by the bridge since the page loaded. */
-  consoleLogs(
-    windowLabel?: string,
-  ): Promise<{ level?: string; message?: string; timestamp?: number }[]> {
+  consoleLogs(windowLabel?: string): Promise<{ level?: string; message?: string; timestamp?: number }[]> {
     return this.evaluate("return window.__MCP_CONSOLE_LOGS__ || [];", windowLabel);
   }
 

@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { beforeAll, expect, test } from "bun:test";
 import type { webcrypto } from "node:crypto";
-import {
-  createGoogleOAuthServer,
-  createMemoryGoogleOAuthStore,
-  type GoogleOAuthOptions,
-} from "../src/oauth";
+import { createGoogleOAuthServer, createMemoryGoogleOAuthStore, type GoogleOAuthOptions } from "../src/oauth";
 
 const origin = "https://aphrody.example";
 const clientId = "fixture.apps.googleusercontent.com";
@@ -34,18 +30,14 @@ async function signed(claims: Record<string, unknown>, header: Record<string, un
     data +
     "." +
     Buffer.from(
-      await crypto.subtle.sign(
-        "RSASSA-PKCS1-v1_5",
-        pair.privateKey,
-        new TextEncoder().encode(data),
-      ),
+      await crypto.subtle.sign("RSASSA-PKCS1-v1_5", pair.privateKey, new TextEncoder().encode(data)),
     ).toString("base64url")
   );
 }
 function cookie(result: Response, name: string) {
   return result.headers
     .getSetCookie()
-    .find((value) => value.startsWith(name + "="))!
+    .find(value => value.startsWith(name + "="))!
     .split(";")[0]!;
 }
 function fixture(overrides: Partial<GoogleOAuthOptions> = {}) {
@@ -73,9 +65,7 @@ function fixture(overrides: Partial<GoogleOAuthOptions> = {}) {
     expect(form.get("client_id")).toBe(clientId);
     expect(form.get("redirect_uri")).toBe(callbackURL);
     expect(form.get("grant_type")).toBe("authorization_code");
-    expect(
-      new Bun.CryptoHasher("sha256").update(form.get("code_verifier")!).digest("base64url"),
-    ).toBe(challenge);
+    expect(new Bun.CryptoHasher("sha256").update(form.get("code_verifier")!).digest("base64url")).toBe(challenge);
     const seconds = Math.floor(time / 1000);
     let token = await signed(
       {
@@ -129,11 +119,7 @@ function fixture(overrides: Partial<GoogleOAuthOptions> = {}) {
       state: url.searchParams.get("state")!,
     };
   }
-  async function complete(
-    flow: Awaited<ReturnType<typeof login>>,
-    query = "",
-    binding = flow.binding,
-  ) {
+  async function complete(flow: Awaited<ReturnType<typeof login>>, query = "", binding = flow.binding) {
     return (await server.fetch(
       new Request(callbackURL + "?state=" + flow.state + "&code=fixture-code" + query, {
         headers: { cookie: binding },
@@ -191,9 +177,7 @@ test("PKCE, nonce, bound one-time state, opaque secure session and token isolati
   expect(result.status).toBe(303);
   expect(result.headers.get("location")).toBe(origin + "/");
   const session = cookie(result, "__Host-aphrody-google-session");
-  const identity = (await f.server.fetch(
-    new Request(origin + "/auth/session", { headers: { cookie: session } }),
-  ))!;
+  const identity = (await f.server.fetch(new Request(origin + "/auth/session", { headers: { cookie: session } })))!;
   expect(identity.headers.get("cache-control")).toBe("no-store");
   const body = await identity.text();
   expect(JSON.parse(body)).toMatchObject({
@@ -221,23 +205,19 @@ test.each([
   { aud: [clientId, "another"], azp: undefined },
   { nbf: 9999999999 },
   { sub: "" },
-])("reject invalid signed OIDC claims %j", async (claims) => {
+])("reject invalid signed OIDC claims %j", async claims => {
   const f = fixture();
   const flow = await f.login();
   f.alter(claims);
   const result = await f.complete(flow);
   expect(result.status).toBe(400);
   expect(await result.json()).toEqual({ error: "google_oauth_failed" });
-  expect(
-    result.headers
-      .getSetCookie()
-      .some((value) => value.startsWith("__Host-aphrody-google-session=")),
-  ).toBe(false);
+  expect(result.headers.getSetCookie().some(value => value.startsWith("__Host-aphrody-google-session="))).toBe(false);
 });
 
 test.each([{ alg: "none" }, { kid: "untrusted" }, { crit: ["jku"] }])(
   "reject invalid JOSE headers %j",
-  async (header) => {
+  async header => {
     const f = fixture();
     const flow = await f.login();
     f.header(header);
@@ -249,9 +229,7 @@ test("missing or duplicated binding and expired state do not exchange a code", a
   const f = fixture();
   expect((await f.complete(await f.login(), "", "")).status).toBe(400);
   const wrong = await f.login();
-  expect((await f.complete(wrong, "", "__Host-aphrody-google-flow=" + "a".repeat(43))).status).toBe(
-    400,
-  );
+  expect((await f.complete(wrong, "", "__Host-aphrody-google-flow=" + "a".repeat(43))).status).toBe(400);
   expect((await f.complete(wrong)).status).toBe(400);
   const flow = await f.login();
   expect((await f.complete(flow, "", flow.binding + "; " + flow.binding)).status).toBe(400);
@@ -263,9 +241,7 @@ test("missing or duplicated binding and expired state do not exchange a code", a
 test("reject callback parameter pollution, open redirect and unapproved scope", async () => {
   const f = fixture();
   expect((await f.login("?returnTo=https%3A%2F%2Fother.example")).result.status).toBe(400);
-  expect(
-    (await f.login("?scope=openid%20https://www.googleapis.com/auth/drive")).result.status,
-  ).toBe(400);
+  expect((await f.login("?scope=openid%20https://www.googleapis.com/auth/drive")).result.status).toBe(400);
   expect((await f.complete(await f.login(), "&state=other")).status).toBe(400);
   const flow = await f.login();
   f.scope("openid https://www.googleapis.com/auth/drive");
@@ -291,16 +267,12 @@ test("logout requires same-origin POST, revokes session; sessions expire", async
   expect(logout.status).toBe(200);
   expect(logout.headers.get("set-cookie")).toContain("Max-Age=0");
   expect(
-    await (await f.server.fetch(
-      new Request(origin + "/auth/session", { headers: { cookie: session } }),
-    ))!.json(),
+    await (await f.server.fetch(new Request(origin + "/auth/session", { headers: { cookie: session } })))!.json(),
   ).toEqual({ authenticated: false, scopes: [] });
   const next = cookie(await f.complete(await f.login()), "__Host-aphrody-google-session");
   f.advance(60001);
   expect(
-    await (await f.server.fetch(
-      new Request(origin + "/auth/scopes", { headers: { cookie: next } }),
-    ))!.json(),
+    await (await f.server.fetch(new Request(origin + "/auth/scopes", { headers: { cookie: next } })))!.json(),
   ).toEqual({ authenticated: false, scopes: [] });
 });
 
@@ -343,26 +315,17 @@ test("Google issuer and scope aliases are accepted; cached keys and session rota
   const f = fixture();
   const flow = await f.login();
   f.alter({ iss: "accounts.google.com", aud: [clientId, "other"], azp: clientId });
-  f.scope(
-    "openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
-  );
+  f.scope("openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile");
   const prior = cookie(await f.complete(flow), "__Host-aphrody-google-session");
   const nextFlow = await f.login();
-  const next = cookie(
-    await f.complete(nextFlow, "", nextFlow.binding + "; " + prior),
-    "__Host-aphrody-google-session",
-  );
+  const next = cookie(await f.complete(nextFlow, "", nextFlow.binding + "; " + prior), "__Host-aphrody-google-session");
   expect(next).not.toBe(prior);
   expect(f.counts()).toEqual({ exchanges: 2, keyLoads: 1 });
   expect(
-    await (await f.server.fetch(
-      new Request(origin + "/auth/session", { headers: { cookie: prior } }),
-    ))!.json(),
+    await (await f.server.fetch(new Request(origin + "/auth/session", { headers: { cookie: prior } })))!.json(),
   ).toEqual({ authenticated: false, scopes: [] });
   expect(
-    await (await f.server.fetch(
-      new Request(origin + "/auth/scopes", { headers: { cookie: next } }),
-    ))!.json(),
+    await (await f.server.fetch(new Request(origin + "/auth/scopes", { headers: { cookie: next } })))!.json(),
   ).toMatchObject({ authenticated: true, scopes: ["openid", "email", "profile"] });
 });
 
@@ -391,9 +354,6 @@ test("bounded memory store consumes state atomically", async () => {
   };
   await store.putState("first", value);
   await expect(store.putState("second", value)).rejects.toThrow();
-  const results = await Promise.all([
-    store.consumeState("first", Date.now()),
-    store.consumeState("first", Date.now()),
-  ]);
+  const results = await Promise.all([store.consumeState("first", Date.now()), store.consumeState("first", Date.now())]);
   expect(results.filter(Boolean)).toHaveLength(1);
 });

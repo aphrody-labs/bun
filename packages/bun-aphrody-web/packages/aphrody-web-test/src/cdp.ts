@@ -36,7 +36,7 @@ export class ObscuraPage {
 
   private constructor(page: Page) {
     this.page = page;
-    page.view.addEventListener("Network.responseReceived", (event) => {
+    page.view.addEventListener("Network.responseReceived", event => {
       const data = (event as Event & { data?: CdpParams }).data;
       if (data?.type !== "Document") return;
       const response = data.response as
@@ -56,9 +56,7 @@ export class ObscuraPage {
 
   /** Opens a tab on `endpoint` (default: `APHRODY_BROWSER_CDP_URL`, `APHRODY_CDP_URL`, then the shared server). */
   static async connect(
-    endpoint = process.env.APHRODY_BROWSER_CDP_URL ??
-      process.env.APHRODY_CDP_URL ??
-      DEFAULT_OBSCURA_CDP_URL,
+    endpoint = process.env.APHRODY_BROWSER_CDP_URL ?? process.env.APHRODY_CDP_URL ?? DEFAULT_OBSCURA_CDP_URL,
   ): Promise<ObscuraPage> {
     const browser = browserFrom(
       ({ width, height }, console) =>
@@ -72,11 +70,7 @@ export class ObscuraPage {
     );
     let page: Page;
     try {
-      page = await timeout(
-        browser.newPage(),
-        10_000,
-        `Obscura CDP connection timed out: ${endpoint}`,
-      );
+      page = await timeout(browser.newPage(), 10_000, `Obscura CDP connection timed out: ${endpoint}`);
     } catch (error) {
       if (error instanceof Error && error.message.startsWith("Obscura CDP")) throw error;
       throw new Error(`Obscura CDP is unavailable: ${endpoint}`, { cause: error });
@@ -87,11 +81,7 @@ export class ObscuraPage {
   /** Raw CDP command on this tab. */
   _send(method: string, params: CdpParams = {}): Promise<CdpParams> {
     if (this.#closed) return Promise.reject(new Error("Obscura CDP page is closed"));
-    return timeout(
-      this.page.cdp(method, params) as Promise<CdpParams>,
-      30_000,
-      `Obscura CDP ${method} timed out`,
-    );
+    return timeout(this.page.cdp(method, params) as Promise<CdpParams>, 30_000, `Obscura CDP ${method} timed out`);
   }
 
   url(): string {
@@ -106,9 +96,7 @@ export class ObscuraPage {
   }
 
   async setContent(html: string): Promise<void> {
-    await this.page.evaluate(
-      `(document.open(), document.write(${JSON.stringify(html)}), document.close())`,
-    );
+    await this.page.evaluate(`(document.open(), document.write(${JSON.stringify(html)}), document.close())`);
   }
 
   title(): Promise<string> {

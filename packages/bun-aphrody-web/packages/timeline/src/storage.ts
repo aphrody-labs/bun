@@ -17,14 +17,10 @@ CREATE TABLE IF NOT EXISTS shenron_timeline_generation (
 );`;
 
 const literal = (value: string | number | null) =>
-  value === null
-    ? "NULL"
-    : typeof value === "number"
-      ? String(value)
-      : `'${value.replaceAll("'", "''")}'`;
+  value === null ? "NULL" : typeof value === "number" ? String(value) : `'${value.replaceAll("'", "''")}'`;
 export function sqlExport(snapshot: Snapshot): string {
   const rows = snapshot.entries.map(
-    (e) =>
+    e =>
       `INSERT INTO shenron_timeline VALUES (${[snapshot.generation, e.key, e.kind, e.id, e.rank, e.ageYear, e.title, e.era, e.href, e.sourceRef, JSON.stringify(e)].map(literal).join(",")}) ON CONFLICT (generation, entry_key) DO NOTHING;`,
   );
   return `BEGIN;\n${DDL}\n${rows.join("\n")}\nINSERT INTO shenron_timeline_generation VALUES (${[snapshot.generation, snapshot.fetchedAt, snapshot.mediaTotal, snapshot.ageTotal].map(literal).join(",")}) ON CONFLICT (generation) DO NOTHING;\nCOMMIT;\n`;
@@ -39,24 +35,20 @@ export function sqliteExport(snapshot: Snapshot, path: string): void {
 }
 
 /** One immutable Redis hash + sorted sets; publish only after cardinality checks. */
-export async function redisIndex(
-  snapshot: Snapshot,
-  url: string,
-  namespace = "shenron:timeline",
-): Promise<void> {
+export async function redisIndex(snapshot: Snapshot, url: string, namespace = "shenron:timeline"): Promise<void> {
   if (!/^[a-zA-Z0-9:_-]{1,200}$/.test(namespace)) throw new Error("invalid Redis namespace");
   const client = new RedisClient(url, { connectionTimeout: 10_000 });
   const base = `${namespace}:${snapshot.generation}`;
   try {
-    const pairs = snapshot.entries.flatMap((e) => [e.key, JSON.stringify(e)]);
+    const pairs = snapshot.entries.flatMap(e => [e.key, JSON.stringify(e)]);
     await client.send("HSET", [`${base}:entries`, ...pairs]);
     await client.send("ZADD", [
       `${base}:media`,
-      ...snapshot.entries.flatMap((e) => (e.rank === null ? [] : [String(e.rank), e.key])),
+      ...snapshot.entries.flatMap(e => (e.rank === null ? [] : [String(e.rank), e.key])),
     ]);
     await client.send("ZADD", [
       `${base}:ages`,
-      ...snapshot.entries.flatMap((e) => (e.kind === "age" ? [String(e.ageYear), e.key] : [])),
+      ...snapshot.entries.flatMap(e => (e.kind === "age" ? [String(e.ageYear), e.key] : [])),
     ]);
     const counts = await Promise.all([
       client.send("HLEN", [`${base}:entries`]),
@@ -80,9 +72,7 @@ export async function redisIndex(
     ]);
     // Refresh renews the current generation; abandoned projections expire in seven days.
     await Promise.all(
-      ["entries", "media", "ages", "manifest"].map((suffix) =>
-        client.send("EXPIRE", [`${base}:${suffix}`, "604800"]),
-      ),
+      ["entries", "media", "ages", "manifest"].map(suffix => client.send("EXPIRE", [`${base}:${suffix}`, "604800"])),
     );
     await client.send("SET", [`${namespace}:current`, snapshot.generation]);
   } finally {

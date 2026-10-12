@@ -8,7 +8,7 @@ const scope = globalThis as unknown as {
 };
 let resume: (() => void) | undefined;
 let running = false;
-scope.onmessage = (event) => {
+scope.onmessage = event => {
   if (event.data?.type === "next") {
     resume?.();
     resume = undefined;
@@ -16,16 +16,13 @@ scope.onmessage = (event) => {
   }
   if (event.data?.type !== "capture" || running) return;
   running = true;
-  void capture(event.data.plan).catch((error) =>
-    scope.postMessage({ type: "error", message: String(error) }),
-  );
+  void capture(event.data.plan).catch(error => scope.postMessage({ type: "error", message: String(error) }));
 };
 
 async function capture(plan: FramePlan & { frameStride?: number }) {
   const operationSignal = () => AbortSignal.timeout(plan.timeoutMs ?? 30000);
   const frameStride = plan.frameStride ?? 1;
-  if (!Number.isSafeInteger(frameStride) || frameStride < 1)
-    throw new RangeError("Invalid frame stride");
+  if (!Number.isSafeInteger(frameStride) || frameStride < 1) throw new RangeError("Invalid frame stride");
   using runtime = BrowserRuntime.load({ libraryPath: plan.libraryPath });
   using context = runtime.createContext({
     allowedOrigins: [new URL(plan.compositionUrl).origin],
@@ -35,13 +32,11 @@ async function capture(plan: FramePlan & { frameStride?: number }) {
     timeoutMs: plan.timeoutMs,
   });
   const send = async (frame: number, png: Uint8Array) => {
-    const ack = new Promise<void>((resolve) => {
+    const ack = new Promise<void>(resolve => {
       resume = resolve;
     });
     const bytes =
-      png.byteOffset === 0 &&
-      png.byteLength === png.buffer.byteLength &&
-      png.buffer instanceof ArrayBuffer
+      png.byteOffset === 0 && png.byteLength === png.buffer.byteLength && png.buffer instanceof ArrayBuffer
         ? png.buffer
         : png.slice().buffer;
     scope.postMessage({ type: "frame", frame, png: bytes }, [bytes]);
@@ -50,8 +45,7 @@ async function capture(plan: FramePlan & { frameStride?: number }) {
   if (plan.kind === "hyperframes") {
     const boundedContext = {
       navigate: (url: string) => context.navigate(url, { signal: operationSignal() }),
-      evaluate: <T>(expression: string) =>
-        context.evaluate<T>(expression, { signal: operationSignal() }),
+      evaluate: <T>(expression: string) => context.evaluate<T>(expression, { signal: operationSignal() }),
       screenshot: () => context.screenshot({ signal: operationSignal() }),
     };
     for await (const frame of captureNativeWebViewFrames(boundedContext, {
@@ -68,14 +62,10 @@ async function capture(plan: FramePlan & { frameStride?: number }) {
       'typeof window.remotion_setFrame === "function" && typeof window.remotion_renderReady === "boolean"',
       { signal: operationSignal() },
     );
-    if (!contract)
-      throw new Error("Served React composition lacks initialized Remotion render globals");
+    if (!contract) throw new Error("Served React composition lacks initialized Remotion render globals");
     for (let frame = plan.startFrame; frame < plan.endFrame; frame += frameStride) {
       const signal = operationSignal();
-      await context.evaluate(
-        `window.remotion_setFrame(${frame}, ${JSON.stringify(plan.composition)}, 0)`,
-        { signal },
-      );
+      await context.evaluate(`window.remotion_setFrame(${frame}, ${JSON.stringify(plan.composition)}, 0)`, { signal });
       for (;;) {
         const state = await context.evaluate<{ ready: boolean; error: string | null }>(
           "({ready: window.remotion_renderReady === true, error: window.remotion_cancelledError ?? null})",

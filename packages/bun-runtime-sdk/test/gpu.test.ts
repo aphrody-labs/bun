@@ -24,15 +24,13 @@ describe.skipIf(!available)("GPU runtime (ABI 1.5)", () => {
     const input = Uint32Array.from({ length: 256 }, (_, i) => i);
     const { data } = await gpu.wgsl({ shader: DOUBLE, workgroups: [4, 1, 1], data: input });
     const output = new Uint32Array(data.buffer, data.byteOffset, data.byteLength / 4);
-    expect([...output]).toEqual([...input].map((v) => v * 2 + 1));
+    expect([...output]).toEqual([...input].map(v => v * 2 + 1));
   });
 
   it("turns GPU errors into rejections without breaking the device", async () => {
     using gpu = GpuRuntime.load({ libraryPath: library });
     if ((await gpu.info()).selected === null) return;
-    await expect(
-      gpu.wgsl({ shader: "broken", workgroups: [1, 1, 1], data: new Uint32Array(1) }),
-    ).rejects.toThrow();
+    await expect(gpu.wgsl({ shader: "broken", workgroups: [1, 1, 1], data: new Uint32Array(1) })).rejects.toThrow();
     const { data } = await gpu.wgsl({
       shader: DOUBLE,
       workgroups: [1, 1, 1],

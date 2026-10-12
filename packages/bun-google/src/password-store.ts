@@ -98,10 +98,7 @@ function canonical(value: string) {
 }
 
 export function createConfiguredChromePasswordProvider(
-  options: Pick<
-    Parameters<typeof createChromePasswordProvider>[0],
-    "allowedPaths" | "assertProtectedPath"
-  >,
+  options: Pick<Parameters<typeof createChromePasswordProvider>[0], "allowedPaths" | "assertProtectedPath">,
   env: Record<string, string | undefined> = process.env,
 ) {
   const filename = env.BUN_BROWSER_PASSWORDS_FILE;
@@ -121,8 +118,8 @@ export function createChromePasswordProvider(options: {
     !Array.isArray(options.allowedPaths) ||
     options.allowedPaths.length < 1 ||
     options.allowedPaths.length > 8 ||
-    options.allowedPaths.some((path) => !isAbsolute(path)) ||
-    !options.allowedPaths.some((path) => canonical(path) === canonical(options.filename)) ||
+    options.allowedPaths.some(path => !isAbsolute(path)) ||
+    !options.allowedPaths.some(path => canonical(path) === canonical(options.filename)) ||
     typeof options.assertProtectedPath !== "function"
   )
     throw new TypeError("An explicitly allowlisted private Chrome password file is required");
@@ -130,8 +127,7 @@ export function createChromePasswordProvider(options: {
   function load() {
     for (let current = dirname(filename); ; current = dirname(current)) {
       const stat = lstatSync(current);
-      if (!stat.isDirectory() || stat.isSymbolicLink())
-        throw new Error("Unsafe Chrome password path");
+      if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error("Unsafe Chrome password path");
       if (dirname(current) === current) break;
     }
     options.assertProtectedPath(filename);
@@ -140,8 +136,7 @@ export function createChromePasswordProvider(options: {
       !before.isFile() ||
       before.isSymbolicLink() ||
       before.nlink !== 1 ||
-      (process.platform !== "win32" &&
-        ((before.mode & 0o077) !== 0 || before.uid !== process.getuid!()))
+      (process.platform !== "win32" && ((before.mode & 0o077) !== 0 || before.uid !== process.getuid!()))
     )
       throw new Error("Unsafe Chrome password file");
     const descriptor = openSync(filename, "r");
@@ -212,7 +207,7 @@ export function createChromePasswordProvider(options: {
       )
         throw new TypeError("Invalid Chrome credential selector");
       const matches = load().filter(
-        (row) =>
+        row =>
           webOrigin(row.url) === origin &&
           row.password &&
           (selector.username === undefined || row.username === selector.username),

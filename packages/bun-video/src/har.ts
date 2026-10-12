@@ -36,10 +36,8 @@ function validateEntries(value: unknown): HarEntry[] {
       typeof entry?.request?.url !== "string" ||
       !Number.isInteger(entry?.response?.status) ||
       typeof entry?.response?.content?.mimeType !== "string" ||
-      (entry.response.content.text !== undefined &&
-        typeof entry.response.content.text !== "string") ||
-      (entry.response.content.encoding !== undefined &&
-        entry.response.content.encoding !== "base64")
+      (entry.response.content.text !== undefined && typeof entry.response.content.text !== "string") ||
+      (entry.response.content.encoding !== undefined && entry.response.content.encoding !== "base64")
     )
       throw new Error("Invalid HAR entry structure.");
     try {
@@ -51,9 +49,7 @@ function validateEntries(value: unknown): HarEntry[] {
       if (
         headers !== undefined &&
         (!Array.isArray(headers) ||
-          headers.some(
-            (header) => typeof header?.name !== "string" || typeof header?.value !== "string",
-          ))
+          headers.some(header => typeof header?.name !== "string" || typeof header?.value !== "string"))
       )
         throw new Error("Invalid HAR header structure.");
     }
@@ -71,38 +67,23 @@ function bodyBytes(entry: HarEntry): Uint8Array<ArrayBuffer> | null {
   return new Uint8Array(Buffer.from(text, encoding === "base64" ? "base64" : "utf8"));
 }
 function header(headers: HarHeader[] | undefined, name: string): string | undefined {
-  return headers?.find((item) => item.name.toLowerCase() === name)?.value.trim();
+  return headers?.find(item => item.name.toLowerCase() === name)?.value.trim();
 }
 function resourceKind(entry: HarEntry): CapturedResource["kind"] | null {
   const url = new URL(entry.request.url);
-  if (
-    !/^https?:$/.test(url.protocol) ||
-    url.username ||
-    url.password ||
-    entry.request.method !== "GET"
-  )
-    return null;
+  if (!/^https?:$/.test(url.protocol) || url.username || url.password || entry.request.method !== "GET") return null;
   if (/licen[cs]|widevine|playready/i.test(url.hostname + url.pathname)) return null;
   const mime = mimeType(entry);
   if (mime === "application/dash+xml" || /\.mpd$/i.test(url.pathname)) return "dash";
   if (/mpegurl/.test(mime) || /\.m3u8$/i.test(url.pathname)) return "hls";
   if (/^(?:audio|video)\//.test(mime)) return "media";
-  if (
-    mime === "application/octet-stream" &&
-    /\.(?:mp4|m4[asv]|webm|ts|aac|mp3)$/i.test(url.pathname)
-  )
-    return "media";
+  if (mime === "application/octet-stream" && /\.(?:mp4|m4[asv]|webm|ts|aac|mp3)$/i.test(url.pathname)) return "media";
   return null;
 }
 
 function descriptor(entry: HarEntry, entryIndex: number): CapturedResource | null {
   const kind = resourceKind(entry);
-  if (
-    !kind ||
-    ![200, 206].includes(entry.response.status) ||
-    entry.response.content.text === undefined
-  )
-    return null;
+  if (!kind || ![200, 206].includes(entry.response.status) || entry.response.content.text === undefined) return null;
   return {
     entryIndex,
     kind,
@@ -117,14 +98,11 @@ function requestedRange(value: string, size: number): [number, number] | null {
   if (!match || (!match[1] && !match[2]) || size === 0) return null;
   if (!match[1]) {
     const suffix = Number(match[2]);
-    return Number.isSafeInteger(suffix) && suffix > 0
-      ? [Math.max(0, size - suffix), size - 1]
-      : null;
+    return Number.isSafeInteger(suffix) && suffix > 0 ? [Math.max(0, size - suffix), size - 1] : null;
   }
   const start = Number(match[1]);
   const end = match[2] ? Number(match[2]) : size - 1;
-  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start >= size || start > end)
-    return null;
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start >= size || start > end) return null;
   return [start, Math.min(end, size - 1)];
 }
 
@@ -159,10 +137,7 @@ export class CapturedHar {
       hosts[host] = (hosts[host] ?? 0) + 1;
       const mime = mimeType(entry);
       mimeTypes[mime] = (mimeTypes[mime] ?? 0) + 1;
-      const statusClass =
-        entry.response.status === 0
-          ? "unavailable"
-          : `${Math.floor(entry.response.status / 100)}xx`;
+      const statusClass = entry.response.status === 0 ? "unavailable" : `${Math.floor(entry.response.status / 100)}xx`;
       statusClasses[statusClass] = (statusClasses[statusClass] ?? 0) + 1;
       if (/\/(?:[\w.+-]*\+)?json$/.test(mime) && entry.response.content.text !== undefined) {
         try {
@@ -208,14 +183,12 @@ export class CapturedHar {
       replayableResourceCount,
       playbackValidated: false,
     };
-    this.#manifestIndices = new Set(manifests.map((item) => item.entryIndex));
+    this.#manifestIndices = new Set(manifests.map(item => item.entryIndex));
   }
 
-  selectManifest(
-    options: { kind?: "dash" | "hls"; index?: number } = {},
-  ): CapturedManifest | undefined {
+  selectManifest(options: { kind?: "dash" | "hls"; index?: number } = {}): CapturedManifest | undefined {
     return this.summary.manifests.find(
-      (item) =>
+      item =>
         (!options.kind || item.kind === options.kind) &&
         (options.index === undefined || item.entryIndex === options.index),
     );
@@ -267,12 +240,7 @@ export class CapturedHar {
         )
           continue;
         const exact = header(entry.request.headers, "range") === range;
-        const bounds =
-          total !== undefined
-            ? requestedRange(range, total)
-            : exact
-              ? [capturedStart, capturedEnd]
-              : null;
+        const bounds = total !== undefined ? requestedRange(range, total) : exact ? [capturedStart, capturedEnd] : null;
         if (!bounds || bounds[0]! < capturedStart || bounds[1]! > capturedEnd) continue;
         const [start, end] = bounds as [number, number];
         const body = bytes.slice(start - capturedStart, end - capturedStart + 1);
@@ -285,9 +253,7 @@ export class CapturedHar {
         return new Response(body, { status: 206, headers });
       }
     }
-    const full = candidates.find(
-      (entry) => entry.response.status === 200 && !header(entry.request.headers, "range"),
-    );
+    const full = candidates.find(entry => entry.response.status === 200 && !header(entry.request.headers, "range"));
     if (!full) return null;
     const bytes = bodyBytes(full)!;
     if (range) {
@@ -320,8 +286,7 @@ export class CapturedHar {
 }
 
 export async function loadHarCapture(absolutePath: string): Promise<CapturedHar> {
-  if (!/^(?:[A-Za-z]:[\\/]|\/|\\\\)/.test(absolutePath))
-    throw new Error("HAR capture path must be absolute.");
+  if (!/^(?:[A-Za-z]:[\\/]|\/|\\\\)/.test(absolutePath)) throw new Error("HAR capture path must be absolute.");
   let value: unknown;
   try {
     value = await Bun.file(absolutePath).json();

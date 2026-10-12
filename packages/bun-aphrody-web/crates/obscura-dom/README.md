@@ -1,4 +1,5 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # obscura-dom
 
 Vendored Obscura DOM backend from Aphrody Web commit

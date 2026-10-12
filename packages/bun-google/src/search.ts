@@ -53,13 +53,9 @@ async function runOwner(executable: string, args: string[], signal: AbortSignal)
 
 export function createGooglePublicSearch(options: GooglePublicSearchOptions = {}) {
   const executable = options.executable ?? "aphrody";
-  if (!executable.trim() || executable.includes("\0"))
-    throw new TypeError("Invalid Google owner executable");
+  if (!executable.trim() || executable.includes("\0")) throw new TypeError("Invalid Google owner executable");
   let active = 0;
-  return async (
-    request: GooglePublicSearchRequest,
-    signal?: AbortSignal,
-  ): Promise<GooglePublicSearchPage> => {
+  return async (request: GooglePublicSearchRequest, signal?: AbortSignal): Promise<GooglePublicSearchPage> => {
     const query = request.query?.trim();
     const hl = request.hl ?? "en";
     const start = request.start ?? 0;
@@ -68,7 +64,7 @@ export function createGooglePublicSearch(options: GooglePublicSearchOptions = {}
       typeof query !== "string" ||
       !query ||
       new TextEncoder().encode(query).byteLength > 4096 ||
-      Array.from(query).some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)
+      Array.from(query).some(char => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)
     )
       throw new TypeError("Invalid search query");
     if (
@@ -77,14 +73,7 @@ export function createGooglePublicSearch(options: GooglePublicSearchOptions = {}
       !/^[a-z]{2,3}(?:-[A-Za-z]{2,4})?$/.test(hl)
     )
       throw new TypeError("Public search requires web SafeSearch and a valid language");
-    if (
-      !Number.isInteger(start) ||
-      start < 0 ||
-      start > 1000 ||
-      !Number.isInteger(num) ||
-      num < 1 ||
-      num > 20
-    )
+    if (!Number.isInteger(start) || start < 0 || start > 1000 || !Number.isInteger(num) || num < 1 || num > 20)
       throw new TypeError("Invalid search bounds");
     signal?.throwIfAborted();
     if (active >= 4) throw new Error("Google search capacity exceeded");
@@ -112,9 +101,7 @@ export function createGooglePublicSearch(options: GooglePublicSearchOptions = {}
     ];
     active++;
     try {
-      const output = await (options.run
-        ? options.run(args, combined)
-        : runOwner(executable, args, combined));
+      const output = await (options.run ? options.run(args, combined) : runOwner(executable, args, combined));
       combined.throwIfAborted();
       if (new TextEncoder().encode(output).byteLength > MAX_OUTPUT) throw new Error();
       const payload: unknown = JSON.parse(output);
@@ -130,16 +117,10 @@ export function createGooglePublicSearch(options: GooglePublicSearchOptions = {}
         throw new Error();
       const organic: GooglePublicSearchPage["organic"] = [];
       for (const hit of payload.organic.slice(0, num)) {
-        if (
-          !hit ||
-          typeof hit.title !== "string" ||
-          typeof hit.url !== "string" ||
-          typeof hit.snippet !== "string"
-        )
+        if (!hit || typeof hit.title !== "string" || typeof hit.url !== "string" || typeof hit.snippet !== "string")
           throw new Error();
         const url = new URL(hit.url);
-        if (!["https:", "http:"].includes(url.protocol) || url.username || url.password)
-          throw new Error();
+        if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) throw new Error();
         organic.push({ title: hit.title, url: url.href, snippet: hit.snippet });
       }
       return {

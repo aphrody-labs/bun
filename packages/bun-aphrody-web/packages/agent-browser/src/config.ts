@@ -71,11 +71,7 @@ export const DEFAULT_WEB_CONFIG: Omit<WebConfig, "root" | "source"> = {
     binary: "aphrody-web",
     workerBinary: "aphrody-web-worker",
     binaryEnv: "APHRODY_WEB_BIN",
-    binaryCandidates: [
-      "target/debug/aphrody-web",
-      "target/release/aphrody-web",
-      "~/.local/bin/aphrody-web",
-    ],
+    binaryCandidates: ["target/debug/aphrody-web", "target/release/aphrody-web", "~/.local/bin/aphrody-web"],
     host: "127.0.0.1",
     port: 9222,
     workers: 1,
@@ -109,8 +105,7 @@ export const DEFAULT_WEB_CONFIG: Omit<WebConfig, "root" | "source"> = {
 /** Repository root: `APHRODY_ROOT` when set, otherwise the application workspace owning the native SDK. */
 export function repositoryRoot(env: Record<string, string | undefined> = process.env): string {
   return resolve(
-    env.APHRODY_ROOT ??
-      resolve(fileURLToPath(import.meta.resolve("@aphrody/bun/package.json")), "../../../.."),
+    env.APHRODY_ROOT ?? resolve(fileURLToPath(import.meta.resolve("@aphrody/bun/package.json")), "../../../.."),
   );
 }
 
@@ -125,8 +120,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 /** Recursive merge where `override` wins; arrays and scalars replace, objects merge. */
 export function mergeConfig<T>(base: T, override: unknown): T {
-  if (!isPlainObject(base) || !isPlainObject(override))
-    return (override === undefined ? base : override) as T;
+  if (!isPlainObject(base) || !isPlainObject(override)) return (override === undefined ? base : override) as T;
   const out: Record<string, unknown> = { ...base };
   for (const [key, value] of Object.entries(override)) {
     if (value === undefined) continue;
@@ -169,10 +163,7 @@ export function loadWebConfig(options: LoadWebConfigOptions = {}): WebConfig {
   }
   const port = positiveInt(env.APHRODY_WEB_PORT);
   if (port !== undefined) merged.engine.port = port;
-  if (
-    env.OBSCURA_ALLOW_PRIVATE_NETWORK &&
-    /^(1|true|yes|on)$/i.test(env.OBSCURA_ALLOW_PRIVATE_NETWORK.trim())
-  ) {
+  if (env.OBSCURA_ALLOW_PRIVATE_NETWORK && /^(1|true|yes|on)$/i.test(env.OBSCURA_ALLOW_PRIVATE_NETWORK.trim())) {
     merged.engine.allowPrivateNetwork = true;
   }
   merged = mergeConfig(merged, options.overrides);
@@ -185,7 +176,7 @@ export function engineBinaryCandidates(
   env: Record<string, string | undefined> = process.env,
 ): string[] {
   const explicit = env[config.engine.binaryEnv];
-  const listed = config.engine.binaryCandidates.flatMap((candidate) => {
+  const listed = config.engine.binaryCandidates.flatMap(candidate => {
     const path = resolve(config.root, expandHome(candidate));
     return process.platform === "win32" && !path.endsWith(".exe") ? [path, `${path}.exe`] : [path];
   });
@@ -204,15 +195,14 @@ export function resolveEngineBinary(
   const explicit = env[config.engine.binaryEnv];
   if (explicit) {
     const path = existsSync(explicit) ? explicit : Bun.which(explicit);
-    if (!path)
-      throw new Error(`${config.engine.binaryEnv} points to a missing binary: ${explicit}`);
+    if (!path) throw new Error(`${config.engine.binaryEnv} points to a missing binary: ${explicit}`);
     return realpathSync(resolve(path));
   }
   // Among the existing candidates the most recently built binary wins, so a fresh
   // `cargo build` is preferred over an older installed copy.
   const existing = engineBinaryCandidates(config, env)
-    .filter((candidate) => existsSync(candidate))
-    .map((candidate) => ({ path: realpathSync(candidate), mtime: statSync(candidate).mtimeMs }))
+    .filter(candidate => existsSync(candidate))
+    .map(candidate => ({ path: realpathSync(candidate), mtime: statSync(candidate).mtimeMs }))
     .toSorted((a, b) => b.mtime - a.mtime);
   if (existing[0]) return existing[0].path;
   const onPath = Bun.which(config.engine.binary);
@@ -236,8 +226,7 @@ const SECRET_KEYS = new Set([
 ]);
 
 function collectSecretLooking(value: unknown, path: string, out: string[]): void {
-  if (Array.isArray(value))
-    value.forEach((item, index) => collectSecretLooking(item, `${path}[${index}]`, out));
+  if (Array.isArray(value)) value.forEach((item, index) => collectSecretLooking(item, `${path}[${index}]`, out));
   else if (isPlainObject(value)) {
     for (const [key, child] of Object.entries(value)) {
       if (path === "env") continue; // documentation of variable names, never values
@@ -271,23 +260,19 @@ export function validateWebConfig(raw: unknown): string[] {
   range("engine.shutdownGraceMs", engine.shutdownGraceMs, 100, 120_000);
   if (engine.allowPrivateNetwork !== false)
     problems.push("engine.allowPrivateNetwork must be false in the shared file");
-  if (engine.allowFileAccess !== false)
-    problems.push("engine.allowFileAccess must be false in the shared file");
+  if (engine.allowFileAccess !== false) problems.push("engine.allowFileAccess must be false in the shared file");
   range("crawl.maxDepth", crawl.maxDepth, 0, 20);
   range("crawl.maxPages", crawl.maxPages, 1, 10_000);
   range("crawl.concurrency", crawl.concurrency, 1, 64);
   range("crawl.timeoutSecs", crawl.timeoutSecs, 1, 86_400);
   if (typeof crawl.obeyRobots !== "boolean") problems.push("crawl.obeyRobots must be a boolean");
-  if (
-    !Array.isArray(crawl.allowedHosts) ||
-    crawl.allowedHosts.some((host) => typeof host !== "string")
-  )
+  if (!Array.isArray(crawl.allowedHosts) || crawl.allowedHosts.some(host => typeof host !== "string"))
     problems.push("crawl.allowedHosts must be a string array");
   const schemes = network.allowedSchemes;
   if (
     !Array.isArray(schemes) ||
     schemes.length === 0 ||
-    schemes.some((scheme) => scheme !== "http" && scheme !== "https")
+    schemes.some(scheme => scheme !== "http" && scheme !== "https")
   ) {
     problems.push("network.allowedSchemes must list only http and/or https");
   }

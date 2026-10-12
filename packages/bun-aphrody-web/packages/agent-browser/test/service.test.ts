@@ -36,9 +36,9 @@ describe("tools/config/web.json", () => {
     });
     expect(missing.source).toBeNull();
     expect(missing.engine.port).toBe(DEFAULT_WEB_CONFIG.engine.port);
-    expect(() =>
-      loadWebConfig({ root, file: join(import.meta.dir, "../package.json"), env: {} }),
-    ).toThrow(/schemaVersion 1/);
+    expect(() => loadWebConfig({ root, file: join(import.meta.dir, "../package.json"), env: {} })).toThrow(
+      /schemaVersion 1/,
+    );
   });
 
   test("environment and explicit overrides win, in that order", () => {
@@ -63,9 +63,7 @@ describe("tools/config/web.json", () => {
     const candidates = engineBinaryCandidates(config, { APHRODY_WEB_BIN: "/opt/aphrody-web" });
     expect(candidates[0]).toBe(resolve("/opt/aphrody-web"));
     expect(candidates).toContain(join(root, "target/debug/aphrody-web"));
-    expect(
-      candidates.some((path) => path === join(expandHome("~"), ".local/bin/aphrody-web")),
-    ).toBe(true);
+    expect(candidates.some(path => path === join(expandHome("~"), ".local/bin/aphrody-web"))).toBe(true);
   });
 });
 
@@ -106,9 +104,7 @@ describe("service argument builders", () => {
     expect(args[args.indexOf("--include-url-regex") + 1]).toBe("/target/");
     expect(args[args.indexOf("--exclude-url-regex") + 1]).toBe("/private/");
     expect(args).not.toContain("--allow-private-network");
-    expect(crawlArgs(["https://example.test/"], { obeyRobots: false }, config)).not.toContain(
-      "--obey-robots",
-    );
+    expect(crawlArgs(["https://example.test/"], { obeyRobots: false }, config)).not.toContain("--obey-robots");
     expect(() => crawlArgs([], {}, config)).toThrow(/at least one seed/);
   });
 });
@@ -128,11 +124,11 @@ describe("validateWebConfig", () => {
     bad.network.allowedSchemes = ["http", "file"];
     bad.storage.token = "abc123";
     const problems = validateWebConfig(bad);
-    expect(problems.some((p) => p.includes("loopback"))).toBe(true);
-    expect(problems.some((p) => p.includes("allowPrivateNetwork"))).toBe(true);
-    expect(problems.some((p) => p.includes("crawl.maxPages"))).toBe(true);
-    expect(problems.some((p) => p.includes("allowedSchemes"))).toBe(true);
-    expect(problems.some((p) => p.includes("storage.token"))).toBe(true);
+    expect(problems.some(p => p.includes("loopback"))).toBe(true);
+    expect(problems.some(p => p.includes("allowPrivateNetwork"))).toBe(true);
+    expect(problems.some(p => p.includes("crawl.maxPages"))).toBe(true);
+    expect(problems.some(p => p.includes("allowedSchemes"))).toBe(true);
+    expect(problems.some(p => p.includes("storage.token"))).toBe(true);
     expect(validateWebConfig(null)).toEqual(["config must be a JSON object"]);
   });
 });
@@ -160,9 +156,7 @@ console.log(JSON.stringify({ url: "https://example.test/final", status: 206, hea
       truncated: true,
       body: "abcdef",
     });
-    await expect(service.response("https://example.test/", { maxBytes: 0 })).rejects.toThrow(
-      RangeError,
-    );
+    await expect(service.response("https://example.test/", { maxBytes: 0 })).rejects.toThrow(RangeError);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -182,12 +176,10 @@ setInterval(() => {}, 1000);
   );
   const abort = new AbortController();
   const service = new WebService({ binary });
-  const completed = service
-    .crawl(["https://example.test/"], { signal: abort.signal, timeoutSecs: 10 })
-    .then(
-      () => ({ error: null }),
-      (error: unknown) => ({ error }),
-    );
+  const completed = service.crawl(["https://example.test/"], { signal: abort.signal, timeoutSecs: 10 }).then(
+    () => ({ error: null }),
+    (error: unknown) => ({ error }),
+  );
   try {
     const started = Date.now();
     // oxlint-disable-next-line no-await-in-loop -- attente active bornée (2 s) du fichier de readiness créé par le processus fils
@@ -207,9 +199,7 @@ test("cookie files remain path-only native crawl arguments", () => {
     cookieFiles: ["/private/cookie file.json", "/private/second.json"],
     render: true,
   });
-  const files = args.flatMap((value, index) =>
-    value === "--cookie-file" ? [args[index + 1]] : [],
-  );
+  const files = args.flatMap((value, index) => (value === "--cookie-file" ? [args[index + 1]] : []));
   expect(files).toEqual(["/private/cookie file.json", "/private/second.json"]);
   expect(args).toContain("--render");
 });
@@ -228,9 +218,9 @@ await Bun.write(Bun.stdout, new Uint8Array([0, 137, 255, 254, 10]));
   );
   try {
     const service = new WebService({ binary });
-    expect(
-      await service.bytes("https://example.test/image.png", { userAgent: "Fixture/1" }),
-    ).toEqual(new Uint8Array([0, 137, 255, 254, 10]));
+    expect(await service.bytes("https://example.test/image.png", { userAgent: "Fixture/1" })).toEqual(
+      new Uint8Array([0, 137, 255, 254, 10]),
+    );
     await expect(service.bytes("https://example.test/image.png")).rejects.toThrow(/exited with 9/);
   } finally {
     await rm(dir, { recursive: true, force: true });

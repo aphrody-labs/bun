@@ -7,10 +7,7 @@
 // Credentials come from the same place as deploy.ts (app/.env, else ~/.aphrody/config/cloudflare.env).
 import { envFile, parseEnv } from "./deploy.ts";
 
-const env = { ...parseEnv(await Bun.file(envFile()).text()), ...process.env } as Record<
-  string,
-  string
->;
+const env = { ...parseEnv(await Bun.file(envFile()).text()), ...process.env } as Record<string, string>;
 const account = env.CLOUDFLARE_ACCOUNT_ID;
 const dryRun = process.argv.includes("--dry-run");
 if (!account || !env.CLOUDFLARE_API_TOKEN)
@@ -18,12 +15,7 @@ if (!account || !env.CLOUDFLARE_API_TOKEN)
 
 type Envelope<T> = { success: boolean; result: T; errors: { code: number; message: string }[] };
 
-async function cf<T = any>(
-  method: string,
-  path: string,
-  body?: unknown,
-  allow: number[] = [],
-): Promise<T> {
+async function cf<T = any>(method: string, path: string, body?: unknown, allow: number[] = []): Promise<T> {
   if (dryRun && method !== "GET") {
     console.log(`dry-run ${method} ${path}`);
     return undefined as T;
@@ -37,10 +29,8 @@ async function cf<T = any>(
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const json = (await res.json()) as Envelope<T>;
-  if (!json.success && !json.errors.some((e) => allow.includes(e.code)))
-    throw new Error(
-      `${method} ${path}: ${json.errors.map((e) => `${e.code} ${e.message}`).join("; ")}`,
-    );
+  if (!json.success && !json.errors.some(e => allow.includes(e.code)))
+    throw new Error(`${method} ${path}: ${json.errors.map(e => `${e.code} ${e.message}`).join("; ")}`);
   return json.result;
 }
 
@@ -95,10 +85,7 @@ export const settings: Record<string, unknown> = {
 
 async function zoneSettings(zone: { id: string; name: string }) {
   const current = new Map(
-    (await cf<{ id: string; value: unknown }[]>("GET", `/zones/${zone.id}/settings`)).map((s) => [
-      s.id,
-      s.value,
-    ]),
+    (await cf<{ id: string; value: unknown }[]>("GET", `/zones/${zone.id}/settings`)).map(s => [s.id, s.value]),
   );
   for (const [id, value] of Object.entries(settings)) {
     const now = current.get(id);
@@ -140,7 +127,7 @@ export function records(name: string): DnsRecord[] {
     ttl: 1,
   });
   return [
-    ...["letsencrypt.org", "pki.goog; cansignhttpexchanges=yes", "ssl.com"].flatMap((ca) => [
+    ...["letsencrypt.org", "pki.goog; cansignhttpexchanges=yes", "ssl.com"].flatMap(ca => [
       caa("issue", ca),
       caa("issuewild", ca),
     ]),
@@ -167,14 +154,12 @@ const sameRecord = (a: DnsRecord, b: DnsRecord) =>
 async function dns(zone: { id: string; name: string }) {
   const existing = await cf<DnsRecord[]>("GET", `/zones/${zone.id}/dns_records?per_page=500`);
   for (const record of records(zone.name)) {
-    if (existing.some((r) => sameRecord(r, record))) continue;
+    if (existing.some(r => sameRecord(r, record))) continue;
     await cf("POST", `/zones/${zone.id}/dns_records`, {
       ...record,
       comment: "app/scripts/provision.ts",
     });
-    step(
-      `${zone.name}: DNS ${record.type} ${record.name} ${record.content ?? JSON.stringify(record.data)}`,
-    );
+    step(`${zone.name}: DNS ${record.type} ${record.name} ${record.content ?? JSON.stringify(record.data)}`);
   }
   const dnssec = await cf<{ status: string; ds?: string }>("GET", `/zones/${zone.id}/dnssec`);
   if (dnssec.status === "disabled") {
@@ -199,7 +184,7 @@ async function entrypoint(zone: { id: string; name: string }, phase: string, rul
     undefined,
     [10003],
   );
-  const kept = (current?.rules ?? []).filter((r) => !r.ref?.startsWith("aphrody-"));
+  const kept = (current?.rules ?? []).filter(r => !r.ref?.startsWith("aphrody-"));
   const strip = (r: Rule) => ({
     ref: r.ref,
     description: r.description,
@@ -207,16 +192,15 @@ async function entrypoint(zone: { id: string; name: string }, phase: string, rul
     action: r.action,
     action_parameters: r.action_parameters,
   });
-  const owned = (current?.rules ?? []).filter((r) => r.ref?.startsWith("aphrody-")).map(strip);
+  const owned = (current?.rules ?? []).filter(r => r.ref?.startsWith("aphrody-")).map(strip);
   if (JSON.stringify(owned) === JSON.stringify(rules.map(strip))) return;
   await cf("PUT", `/zones/${zone.id}/rulesets/phases/${phase}/entrypoint`, {
     rules: [...kept.map(({ id: _id, ...r }) => r), ...rules],
   });
-  step(`${zone.name}: ${phase} (${rules.map((r) => r.ref).join(", ")})`);
+  step(`${zone.name}: ${phase} (${rules.map(r => r.ref).join(", ")})`);
 }
 
-const hosts = (list: { domain: string }[]) =>
-  `(http.host in {${list.map((c) => `"${c.domain}"`).join(" ")}})`;
+const hosts = (list: { domain: string }[]) => `(http.host in {${list.map(c => `"${c.domain}"`).join(" ")}})`;
 
 async function siteRules(zone: { id: string; name: string }) {
   await entrypoint(zone, "http_request_dynamic_redirect", [
@@ -238,7 +222,7 @@ async function siteRules(zone: { id: string; name: string }) {
     {
       ref: "aphrody-r2-cdn",
       description: "R2 CDN hosts: cache everything for 30 days at the edge",
-      expression: hosts(cdn.filter((c) => !c.channels)),
+      expression: hosts(cdn.filter(c => !c.channels)),
       action: "set_cache_settings",
       action_parameters: {
         cache: true,
@@ -250,7 +234,7 @@ async function siteRules(zone: { id: string; name: string }) {
     {
       ref: "aphrody-r2-versioned",
       description: "R2 release hosts: versioned objects for a year",
-      expression: hosts(cdn.filter((c) => c.channels)),
+      expression: hosts(cdn.filter(c => c.channels)),
       action: "set_cache_settings",
       action_parameters: {
         cache: true,
@@ -262,7 +246,7 @@ async function siteRules(zone: { id: string; name: string }) {
     {
       ref: "aphrody-r2-channels",
       description: "R2 release channels: a minute",
-      expression: `${hosts(cdn.filter((c) => c.channels))} and (ends_with(http.request.uri.path, "/latest.json") or ends_with(http.request.uri.path, "/manifest.json"))`,
+      expression: `${hosts(cdn.filter(c => c.channels))} and (ends_with(http.request.uri.path, "/latest.json") or ends_with(http.request.uri.path, "/manifest.json"))`,
       action: "set_cache_settings",
       action_parameters: {
         cache: true,
@@ -275,12 +259,9 @@ async function siteRules(zone: { id: string; name: string }) {
 
 async function r2(zoneId: string) {
   const buckets = new Set(
-    (
-      await cf<{ buckets: { name: string }[] }>(
-        "GET",
-        `/accounts/${account}/r2/buckets?per_page=100`,
-      )
-    ).buckets.map((b) => b.name),
+    (await cf<{ buckets: { name: string }[] }>("GET", `/accounts/${account}/r2/buckets?per_page=100`)).buckets.map(
+      b => b.name,
+    ),
   );
   for (const { bucket, domain } of cdn) {
     if (!buckets.has(bucket)) {
@@ -291,7 +272,7 @@ async function r2(zoneId: string) {
       "GET",
       `/accounts/${account}/r2/buckets/${bucket}/domains/custom`,
     );
-    if (!domains.domains.some((d) => d.domain === domain)) {
+    if (!domains.domains.some(d => d.domain === domain)) {
       await cf("POST", `/accounts/${account}/r2/buckets/${bucket}/domains/custom`, {
         domain,
         zoneId,
@@ -300,10 +281,7 @@ async function r2(zoneId: string) {
       });
       step(`R2 ${bucket}: custom domain https://${domain}`);
     }
-    const managed = await cf<{ enabled: boolean }>(
-      "GET",
-      `/accounts/${account}/r2/buckets/${bucket}/domains/managed`,
-    );
+    const managed = await cf<{ enabled: boolean }>("GET", `/accounts/${account}/r2/buckets/${bucket}/domains/managed`);
     if (managed.enabled) {
       await cf("PUT", `/accounts/${account}/r2/buckets/${bucket}/domains/managed`, {
         enabled: false,
@@ -350,7 +328,7 @@ export const gateway = {
 
 async function ai() {
   const gateways = await cf<{ id: string }[]>("GET", `/accounts/${account}/ai-gateway/gateways`);
-  if (gateways.some((g) => g.id === gateway.id)) {
+  if (gateways.some(g => g.id === gateway.id)) {
     const { id, ...rest } = gateway;
     await cf("PUT", `/accounts/${account}/ai-gateway/gateways/${id}`, rest);
   } else {
@@ -364,16 +342,14 @@ const all = await cf<{ id: string; name: string; status: string; name_servers: s
   "/zones?per_page=50",
 );
 for (const name of zones) {
-  const zone = all.find((z) => z.name === name);
+  const zone = all.find(z => z.name === name);
   if (!zone) {
     console.warn(`zone ${name} missing from the account`);
     continue;
   }
   await zoneSettings(zone);
   if (zone.status !== "active")
-    console.warn(
-      `${name} is ${zone.status}: set its nameservers to ${zone.name_servers.join(", ")}`,
-    );
+    console.warn(`${name} is ${zone.status}: set its nameservers to ${zone.name_servers.join(", ")}`);
   if (name !== site) {
     // VPS-served zones (DNS mirrored from OVH by ovh.ts): their cdn.* hosts cache at the edge per origin headers.
     await entrypoint(zone, "http_request_cache_settings", [

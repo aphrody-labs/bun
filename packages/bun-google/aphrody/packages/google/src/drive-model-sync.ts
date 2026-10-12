@@ -33,15 +33,11 @@ export function resumeOffset(range: string | null, size: number): number {
 }
 export function safeArtifactName(name: string): boolean {
   return (
-    name.split("/").every((part) => Boolean(part) && part !== "." && part !== "..") &&
+    name.split("/").every(part => Boolean(part) && part !== "." && part !== "..") &&
     EXTENSIONS.test(name) &&
     !name
       .split("/")
-      .some((part) =>
-        /^(?:credentials?|secrets?|cookies?|(?:oauth-)?tokens?)(?:[._-]|$)|^\.env(?:\.|$)/i.test(
-          part,
-        ),
-      )
+      .some(part => /^(?:credentials?|secrets?|cookies?|(?:oauth-)?tokens?)(?:[._-]|$)|^\.env(?:\.|$)/i.test(part))
   );
 }
 async function artifacts(root: string, prefix: string): Promise<Artifact[]> {
@@ -53,8 +49,7 @@ async function artifacts(root: string, prefix: string): Promise<Artifact[]> {
         relative = `${name}/${entry.name}`;
       if (entry.isDirectory()) await visit(full, relative);
       else if (entry.isFile()) {
-        if (!safeArtifactName(relative))
-          throw new Error(`Out-of-scope training artifact: ${relative}`);
+        if (!safeArtifactName(relative)) throw new Error(`Out-of-scope training artifact: ${relative}`);
         const info = await stat(full);
         found.push({ path: full, name: relative, bytes: info.size, mtimeMs: info.mtimeMs });
       }
@@ -118,10 +113,7 @@ export async function syncTrainedArtifacts(): Promise<void> {
     const folders = new Map<string, string>();
     let refreshedAt = Date.now();
     const headers = async () => {
-      if (
-        process.env.APHRODY_GOOGLE_DRIVE_AUTH === "gcloud-user" &&
-        Date.now() - refreshedAt > 20 * 60_000
-      ) {
+      if (process.env.APHRODY_GOOGLE_DRIVE_AUTH === "gcloud-user" && Date.now() - refreshedAt > 20 * 60_000) {
         const fresh = await gcloudUserClient();
         if ("setCredentials" in service.auth) service.auth.setCredentials(fresh.credentials);
         refreshedAt = Date.now();
@@ -137,7 +129,7 @@ export async function syncTrainedArtifacts(): Promise<void> {
         pageSize: 1000,
       });
       const files = listed.data.files ?? [];
-      if (files.length > 1 || files.some((file) => file.mimeType !== FOLDER))
+      if (files.length > 1 || files.some(file => file.mimeType !== FOLDER))
         throw new Error("Ambiguous training backup folder");
       let id = files[0]?.id;
       if (!id)
@@ -173,11 +165,7 @@ export async function syncTrainedArtifacts(): Promise<void> {
           fileId: entry.id,
           fields: "id,size,md5Checksum,trashed",
         });
-        if (
-          !remote.data.trashed &&
-          Number(remote.data.size) === entry.bytes &&
-          remote.data.md5Checksum === entry.md5
-        ) {
+        if (!remote.data.trashed && Number(remote.data.size) === entry.bytes && remote.data.md5Checksum === entry.md5) {
           unchanged++;
           continue;
         }
@@ -209,8 +197,7 @@ export async function syncTrainedArtifacts(): Promise<void> {
         await save(statePath, state);
       }
       const sessionUrl = new URL(entry.session);
-      if (sessionUrl.origin !== "https://www.googleapis.com")
-        throw new Error("Invalid training upload session origin");
+      if (sessionUrl.origin !== "https://www.googleapis.com") throw new Error("Invalid training upload session origin");
       const h = await headers();
       h.set("Content-Length", "0");
       h.set("Content-Range", `bytes */${entry.bytes}`);
@@ -225,24 +212,17 @@ export async function syncTrainedArtifacts(): Promise<void> {
         await save(statePath, state);
         throw new Error("Training upload session expired; next sync recreates it");
       }
-      let offset =
-        response.status === 308
-          ? resumeOffset(response.headers.get("range"), entry.bytes)
-          : entry.bytes;
+      let offset = response.status === 308 ? resumeOffset(response.headers.get("range"), entry.bytes) : entry.bytes;
       const handle = await open(file.path, "r");
       try {
         while (offset < entry.bytes) {
           const chunk = Buffer.alloc(Math.min(CHUNK, entry.bytes - offset));
           const { bytesRead } = await handle.read(chunk, 0, chunk.length, offset);
-          if (bytesRead !== chunk.length)
-            throw new Error("Training artifact changed during upload");
+          if (bytesRead !== chunk.length) throw new Error("Training artifact changed during upload");
           const headersChunk = await headers();
           headersChunk.set("Content-Type", "application/octet-stream");
           headersChunk.set("Content-Length", String(chunk.length));
-          headersChunk.set(
-            "Content-Range",
-            `bytes ${offset}-${offset + chunk.length - 1}/${entry.bytes}`,
-          );
+          headersChunk.set("Content-Range", `bytes ${offset}-${offset + chunk.length - 1}/${entry.bytes}`);
           response = await fetch(entry.session, {
             method: "PUT",
             headers: headersChunk,
@@ -254,10 +234,7 @@ export async function syncTrainedArtifacts(): Promise<void> {
             if (next <= offset) throw new Error("Training upload made no progress");
             offset = next;
           } else if (response.ok) offset = entry.bytes;
-          else
-            throw new Error(
-              `Training upload failed (${response.status}); private session retained for resume`,
-            );
+          else throw new Error(`Training upload failed (${response.status}); private session retained for resume`);
         }
       } finally {
         await handle.close();

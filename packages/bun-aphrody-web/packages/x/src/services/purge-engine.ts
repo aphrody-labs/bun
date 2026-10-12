@@ -66,18 +66,13 @@ export function errorStatus(err: unknown): number | undefined {
 export function isRateLimitError(err: unknown): boolean {
   if (err instanceof XError && err.kind) return err.kind === "rate_limit";
   const status = errorStatus(err);
-  return (
-    RATE_LIMIT_CODES.has(errorCode(err)) ||
-    (status !== undefined && RATE_LIMIT_STATUSES.has(status))
-  );
+  return RATE_LIMIT_CODES.has(errorCode(err)) || (status !== undefined && RATE_LIMIT_STATUSES.has(status));
 }
 
 export function isTerminalError(err: unknown): boolean {
   if (err instanceof XError && err.kind) return err.kind === "terminal";
   const status = errorStatus(err);
-  return (
-    TERMINAL_CODES.has(errorCode(err)) || (status !== undefined && TERMINAL_STATUSES.has(status))
-  );
+  return TERMINAL_CODES.has(errorCode(err)) || (status !== undefined && TERMINAL_STATUSES.has(status));
 }
 
 /**
@@ -105,7 +100,7 @@ export function errorMessage(err: unknown): string {
 /** Abortable sleep. Resolves early (does not throw) when the signal fires. */
 export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   if (ms <= 0) return Promise.resolve();
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     if (signal?.aborted) return resolve();
     const timer = setTimeout(done, ms);
     function done() {
@@ -227,12 +222,12 @@ export class RateGovernor {
 
   private prune(): void {
     const cutoff = this.now() - DAY_MS;
-    this.history = this.history.filter((t) => t > cutoff);
+    this.history = this.history.filter(t => t > cutoff);
   }
 
   private countSince(ms: number): number {
     const cutoff = this.now() - ms;
-    return this.history.filter((t) => t > cutoff).length;
+    return this.history.filter(t => t > cutoff).length;
   }
 
   /**
@@ -255,13 +250,12 @@ export class RateGovernor {
     }
 
     if (this.countSince(WINDOW_MS) >= this.perWindow) {
-      const inWindow = this.history.filter((t) => t > now - WINDOW_MS);
+      const inWindow = this.history.filter(t => t > now - WINDOW_MS);
       const oldest = inWindow[inWindow.length - this.perWindow] ?? now;
       return { waitMs: Math.max(oldest + WINDOW_MS - now, 0) + 1_000, reason: "window-budget" };
     }
 
-    const jitter =
-      this.minDelayMs + Math.floor(this.random() * (this.maxDelayMs - this.minDelayMs + 1));
+    const jitter = this.minDelayMs + Math.floor(this.random() * (this.maxDelayMs - this.minDelayMs + 1));
     const sinceLast = now - this.lastCallAt;
     const waitMs = this.lastCallAt === 0 ? 0 : Math.max(jitter - sinceLast, 0);
     return { waitMs, reason: "pace" };
@@ -359,10 +353,7 @@ export interface ReadRetryDeps {
  * exist to pace irreversible mutations, and spending them on pagination would
  * stall the actual purge for nothing.
  */
-export async function readWithBackoff<T>(
-  fetchPage: () => Promise<T>,
-  d: ReadRetryDeps,
-): Promise<T> {
+export async function readWithBackoff<T>(fetchPage: () => Promise<T>, d: ReadRetryDeps): Promise<T> {
   const maxWaits = d.maxWaits ?? PACING_DEFAULTS.maxRateLimitWaits;
   const maxRetries = d.maxRetries ?? PACING_DEFAULTS.maxRetries;
 
@@ -382,10 +373,7 @@ export async function readWithBackoff<T>(
         const reset = d.rateLimit()?.reset_epoch;
         const resetMs = reset ? reset * 1000 - d.now() : 0;
         const waitMs = resetMs > 0 ? resetMs + 1_000 : WINDOW_MS;
-        d.log(
-          `[read] ${d.label}: rate limit — pause ${Math.round(waitMs / 1000)}s ` +
-            `(${waits}/${maxWaits})`,
-        );
+        d.log(`[read] ${d.label}: rate limit — pause ${Math.round(waitMs / 1000)}s ` + `(${waits}/${maxWaits})`);
         // oxlint-disable-next-line no-await-in-loop -- pause de limitation de débit avant le réessai séquentiel
         await d.sleep(waitMs, d.signal);
         if (d.signal?.aborted) throw err;
@@ -463,9 +451,7 @@ export interface RunQueueResult {
  *  - **anything else** → exponential backoff up to `maxRetries`, then record
  *    `failed` and move on.
  */
-export async function runMutationQueue<T extends { id: string }>(
-  d: RunQueueDeps<T>,
-): Promise<RunQueueResult> {
+export async function runMutationQueue<T extends { id: string }>(d: RunQueueDeps<T>): Promise<RunQueueResult> {
   const maxRetries = d.maxRetries ?? PACING_DEFAULTS.maxRetries;
   const maxRateLimitWaits = d.maxRateLimitWaits ?? PACING_DEFAULTS.maxRateLimitWaits;
   const limit = d.limit ?? Infinity;

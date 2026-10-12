@@ -1,10 +1,7 @@
 declare module "runtime:system" {
   export const system: {
     stats(): { os: string; arch: string; timestamp_ms: number };
-    bench(
-      iterations: number,
-      options?: { signal?: AbortSignal },
-    ): Promise<{ message: string; latency_us: number }>;
+    bench(iterations: number, options?: { signal?: AbortSignal }): Promise<{ message: string; latency_us: number }>;
     info(): {
       name: string;
       version: string;
@@ -22,12 +19,7 @@ declare module "runtime:process" {
   import type { ManagedProcess, SpawnOptions } from "@aphrody/bun-runtime-sdk";
   export const processes: {
     spawn(options: SpawnOptions): ManagedProcess;
-    probeHttp(
-      host: string,
-      port: number,
-      path?: string,
-      timeoutMs?: number,
-    ): Promise<number | undefined>;
+    probeHttp(host: string, port: number, path?: string, timeoutMs?: number): Promise<number | undefined>;
   };
 }
 

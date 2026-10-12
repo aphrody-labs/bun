@@ -5,9 +5,7 @@ declare module "#webos-wasm-glue" {
   export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
   export type InitOptions = { module_or_path?: InitInput | Promise<InitInput> };
 
-  export default function init(
-    input?: InitInput | Promise<InitInput> | InitOptions,
-  ): Promise<unknown>;
+  export default function init(input?: InitInput | Promise<InitInput> | InitOptions): Promise<unknown>;
 
   export class WebOsShell {
     private constructor();

@@ -67,9 +67,7 @@ test("legacy index migration preserves source bytes and graph provenance while n
       CREATE TABLE graph_snapshots(id TEXT PRIMARY KEY,repository_id TEXT,revision TEXT,metadata TEXT);
       INSERT INTO graph_snapshots VALUES('snapshot:fixture','repo:fixture','source:fixture','{"producerSHA256":"unchanged"}');
     `);
-    db.query(
-      "INSERT INTO pe_artifacts VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-    ).run(
+    db.query("INSERT INTO pe_artifacts VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(
       "D:/images/sample.dll",
       "sample.dll",
       128,
@@ -107,16 +105,12 @@ test("legacy index migration preserves source bytes and graph provenance while n
       "direct_unresolved",
     );
   }
-  const before = new Bun.CryptoHasher("sha256")
-    .update(await Bun.file(sourceDbPath).bytes())
-    .digest("hex");
+  const before = new Bun.CryptoHasher("sha256").update(await Bun.file(sourceDbPath).bytes()).digest("hex");
   const receipt = await migrateIndexDatabase({ sourceDbPath, destinationDbPath });
   expect(receipt.integrity).toBe("ok");
   expect(receipt.archivedTables).toContain("legacy_archive_ntfs_volumes");
   expect(receipt.preservedTables).toContain("graph_snapshots");
-  expect(
-    new Bun.CryptoHasher("sha256").update(await Bun.file(sourceDbPath).bytes()).digest("hex"),
-  ).toBe(before);
+  expect(new Bun.CryptoHasher("sha256").update(await Bun.file(sourceDbPath).bytes()).digest("hex")).toBe(before);
   {
     using db = new Database(destinationDbPath, { readonly: true });
     expect(db.query("SELECT journal_id,next_usn,updated_at FROM ntfs_volumes").get()).toEqual({
@@ -131,9 +125,7 @@ test("legacy index migration preserves source bytes and graph provenance while n
       root: "D:/images",
       path: "D:/images/sample.dll",
     });
-    const pe = db
-      .query<{ metadata_json: string }, []>("SELECT metadata_json FROM pe_artifacts")
-      .get()!;
+    const pe = db.query<{ metadata_json: string }, []>("SELECT metadata_json FROM pe_artifacts").get()!;
     expect(JSON.parse(pe.metadata_json).imageBase).toBe("9007199254740993");
     expect(JSON.parse(pe.metadata_json).imports[0].module).toBe("absent.dll");
     expect(db.query("SELECT status FROM pe_import_edges").get()).toEqual({ status: "missing" });
@@ -144,17 +136,13 @@ test("legacy index migration preserves source bytes and graph provenance while n
     });
     expect(db.query("SELECT COUNT(*) AS n FROM index_migrations").get()).toEqual({ n: 1 });
   }
-  await expect(migrateIndexDatabase({ sourceDbPath, destinationDbPath })).rejects.toThrow(
-    "never overwrites",
-  );
+  await expect(migrateIndexDatabase({ sourceDbPath, destinationDbPath })).rejects.toThrow("never overwrites");
   const rejected = join(String(directory), "rejected.sqlite");
-  await expect(
-    migrateIndexDatabase({ sourceDbPath, destinationDbPath: rejected, maxRows: 1 }),
-  ).rejects.toThrow("maxRows");
+  await expect(migrateIndexDatabase({ sourceDbPath, destinationDbPath: rejected, maxRows: 1 })).rejects.toThrow(
+    "maxRows",
+  );
   expect(await Bun.file(rejected).exists()).toBe(false);
-  expect(
-    new Bun.CryptoHasher("sha256").update(await Bun.file(sourceDbPath).bytes()).digest("hex"),
-  ).toBe(before);
+  expect(new Bun.CryptoHasher("sha256").update(await Bun.file(sourceDbPath).bytes()).digest("hex")).toBe(before);
 });
 
 test("native source index retains domain scope, receipt label and bounded snapshot provenance", async () => {
@@ -181,7 +169,7 @@ test("native source index retains domain scope, receipt label and bounded snapsh
   });
   expect(result.receiptNamespace).toBe("public-fixture");
   expect(result.revision).toBe("fixture-source-v1");
-  expect(result.domains.map((domain) => domain.domain).sort()).toEqual(["packages/client", "src"]);
+  expect(result.domains.map(domain => domain.domain).sort()).toEqual(["packages/client", "src"]);
   expect(result.producerSHA256).toMatch(/^[a-f0-9]{64}$/);
   const { BunPython } = await import("bun:graph");
   using registry = new BunPython(dbPath);
@@ -333,9 +321,7 @@ test("PE scan budgets report incomplete results and persistence refuses them", a
   expect(scan.complete).toBe(false);
   expect(scan.errors).toHaveLength(1);
   expect(scan.artifacts).toHaveLength(0);
-  await expect(
-    persistPe({ dbPath: join(String(directory), "index.sqlite"), scan }),
-  ).rejects.toThrow("incomplete");
+  await expect(persistPe({ dbPath: join(String(directory), "index.sqlite"), scan })).rejects.toThrow("incomplete");
   expect(await Bun.file(join(String(directory), "index.sqlite")).exists()).toBe(false);
 });
 
@@ -360,7 +346,7 @@ test("PE imports preserve ambiguity and normalize API-set hosts", () => {
     ],
     new Map([["api-ms-win-test", ["HOST"]]]),
   );
-  expect(edges.map((edge) => edge.status)).toEqual(["resolved", "ambiguous", "missing"]);
+  expect(edges.map(edge => edge.status)).toEqual(["resolved", "ambiguous", "missing"]);
   expect(edges[0]!.resolved).toBe("C:/images/host.dll");
   expect(edges[1]!.resolved).toBeNull();
 });
@@ -400,7 +386,7 @@ test("alias persistence retains only complete deduplicated identity sets", async
   const result = await indexFileAliases({
     dbPath,
     paths: ["one", "duplicate", "incomplete"],
-    readAliases: async (path) =>
+    readAliases: async path =>
       path === "incomplete"
         ? { fileId: "other", record: 30, declaredLinks: 2, paths: ["only-one"] }
         : { fileId: "same", record: 20, declaredLinks: 2, paths: ["one", "duplicate"] },
@@ -468,9 +454,7 @@ test("metadata publication verifies every chunk and preserves old manifest on ex
   expect(redis.closed).toBe(true);
   const failing = fakeRedis(true);
   failing.values.set("test:metadata:manifest", "old-generation");
-  await expect(
-    publishMetadataCache({ ...options, createRedis: () => failing.client }),
-  ).rejects.toThrow("expired");
+  await expect(publishMetadataCache({ ...options, createRedis: () => failing.client })).rejects.toThrow("expired");
   expect(failing.values.get("test:metadata:manifest")).toBe("old-generation");
   expect(failing.closed).toBe(true);
 });

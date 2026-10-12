@@ -20,8 +20,5 @@ const manifest = {
   sha256: new Bun.CryptoHasher("sha256").update(bytes).digest("hex"),
   qualificationCommand: "bun scripts/qualify-bun-wasm.ts",
 };
-await Bun.write(
-  join(appDir, "dist", "bun-wasm.manifest.json"),
-  JSON.stringify(manifest, null, 2) + "\n",
-);
+await Bun.write(join(appDir, "dist", "bun-wasm.manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
 console.log(JSON.stringify(manifest));

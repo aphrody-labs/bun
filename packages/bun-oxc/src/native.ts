@@ -100,9 +100,9 @@ function load(): { addon: NativeAddon; path: string } {
     keys.length === 0
       ? `bun-plugin-oxc has no native build for ${process.platform}-${process.arch}`
       : `bun-plugin-oxc native addon not found for ${keys.join(" / ")}. Build it with ` +
-        `\`bun scripts/aphrody/build-napi.ts packages/bun-oxc\`, install ` +
-        `@aphrody/${NAME}-${keys[0]}, or set APHRODY_BUN_PLUGIN_OXC_NATIVE.` +
-        (errors.length ? `\n${errors.join("\n")}` : ""),
+          `\`bun scripts/aphrody/build-napi.ts packages/bun-oxc\`, install ` +
+          `@aphrody/${NAME}-${keys[0]}, or set APHRODY_BUN_PLUGIN_OXC_NATIVE.` +
+          (errors.length ? `\n${errors.join("\n")}` : ""),
   );
 }
 

@@ -41,17 +41,13 @@ suite("Aphrody product consumes the precompiled native browser", () => {
       expect((await accountA.snapshot()).title).toBe("Product fixture");
       expect(await accountA.extract("#result")).toEqual(["Product rendered"]);
       expect(await accountA.content()).toContain("Product rendered");
-      expect(Array.from((await accountA.capture()).subarray(0, 8))).toEqual([
-        137, 80, 78, 71, 13, 10, 26, 10,
-      ]);
+      expect(Array.from((await accountA.capture()).subarray(0, 8))).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
       await accountA.setCookie(origin, "productSession=A; Path=/");
       await accountA.navigate(origin);
       await accountB.navigate(origin);
       expect(await accountA.extract("#cookie")).toEqual(["productSession=A"]);
       expect(await accountB.extract("#cookie")).toEqual([""]);
-      await expect(accountA.navigate("https://outside.test")).rejects.toThrow(
-        /outside this context/,
-      );
+      await expect(accountA.navigate("https://outside.test")).rejects.toThrow(/outside this context/);
       expect(await accountB.cookies(origin)).toBe("");
     } finally {
       await server.stop(true);

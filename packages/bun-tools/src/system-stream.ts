@@ -26,14 +26,9 @@ export function eventRecordId(xml: string): bigint | null {
 
 export async function startSystemStream(options: SystemStreamOptions = {}) {
   const intervalMs = options.intervalMs ?? 2000;
-  if (!Number.isSafeInteger(intervalMs) || intervalMs < 50)
-    throw new Error("intervalMs must be at least 50");
+  if (!Number.isSafeInteger(intervalMs) || intervalMs < 50) throw new Error("intervalMs must be at least 50");
   const channels = new Set(options.channels ?? ["System", "Application"]);
-  if (
-    !channels.size ||
-    channels.size > 16 ||
-    [...channels].some((name) => !name || name.length > 128)
-  ) {
+  if (!channels.size || channels.size > 16 || [...channels].some(name => !name || name.length > 128)) {
     throw new Error("Expected 1 to 16 explicit event channels");
   }
   let source = options.source;
@@ -62,7 +57,7 @@ export async function startSystemStream(options: SystemStreamOptions = {}) {
       try {
         const records = provider
           .events(channel, initial ? 40 : 100)
-          .map((xml) => ({ id: eventRecordId(xml), xml }))
+          .map(xml => ({ id: eventRecordId(xml), xml }))
           .filter((record): record is { id: bigint; xml: string } => record.id !== null)
           .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
         let cursor = socket.data.cursors.get(channel) ?? 0n;
@@ -82,9 +77,7 @@ export async function startSystemStream(options: SystemStreamOptions = {}) {
         }
         socket.data.cursors.set(channel, cursor);
       } catch {
-        socket.send(
-          JSON.stringify({ type: "error", channel, message: "Event channel unavailable" }),
-        );
+        socket.send(JSON.stringify({ type: "error", channel, message: "Event channel unavailable" }));
       }
     }
   }
@@ -115,7 +108,7 @@ export async function startSystemStream(options: SystemStreamOptions = {}) {
       if (url.pathname !== "/events") return new Response("Not found", { status: 404 });
       const selected = url.searchParams.getAll("channel");
       const requested = selected.length ? selected : [...channels];
-      if (requested.length > channels.size || requested.some((channel) => !channels.has(channel))) {
+      if (requested.length > channels.size || requested.some(channel => !channels.has(channel))) {
         return new Response("Event channel refused", { status: 400 });
       }
       return server.upgrade(request, { data: { channels: requested, cursors: new Map() } })

@@ -50,33 +50,33 @@ from that module (default, named, namespace or `require` binding). A local varia
 
 ## Rule ID families
 
-| Prefix                                                                                                                                                               | Source                                                        |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `api/*`                                                                                                                                                              | `apis.toml`                                                   |
-| `imports/*`                                                                                                                                                          | `modules.toml`, `packages.toml`, and the `node:` prefix check |
-| `cli/*`                                                                                                                                                              | `cli.toml`                                                    |
-| `globals/*`                                                                                                                                                          | `globals.toml`                                                |
-| `next/*`                                                                                                                                                             | `packages.toml` entries for Next.js                           |
+| Prefix                                                                                                                                                                              | Source                                                        |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `api/*`                                                                                                                                                                             | `apis.toml`                                                   |
+| `imports/*`                                                                                                                                                                         | `modules.toml`, `packages.toml`, and the `node:` prefix check |
+| `cli/*`                                                                                                                                                                             | `cli.toml`                                                    |
+| `globals/*`                                                                                                                                                                         | `globals.toml`                                                |
+| `next/*`                                                                                                                                                                            | `packages.toml` entries for Next.js                           |
 | `tsconfig/*`, `bunfig/*`, `npmrc/*`, `env/*`, `shebang/*`, `docker/*`, `docker-compose/*`, `lock/*`, `pkg/*`, `husky/*`, `turbo/*`, `tauri/*`, `ci/*`, `js-config/*`, `workspace/*` | Scanners in `crates/n2b-core/src/scanners/`                   |
 
 `test/*` comes from `crates/n2b-core/src/rules/test_apis.rs`.
 
 ## Monorepo and test-runner rules
 
-| ID                                                     | Severity | Fix                                                                                         |
-| ------------------------------------------------------ | -------- | ------------------------------------------------------------------------------------------- |
-| `cli/vitest-run`, `cli/vitest-watch`, `cli/vitest`     | warn     | `aggressive`: `vitest run` becomes `bun test`, `vitest watch`/`dev` becomes `bun test --watch` |
-| `cli/jest`                                             | warn     | `aggressive`: `jest` becomes `bun test`                                                     |
-| `cli/tsx-watch`, `cli/ts-node`, `cli/node-ts-loader`   | warn     | `tsx watch f` becomes `bun --watch f`; `ts-node`, `tsx`, `node --loader/--import` become `bun` |
-| `cli/pnpm-recursive`, `cli/pnpm-filter`                | warn     | `pnpm -r <script>` and `pnpm --filter <name> <script>` become `bun run --filter`            |
-| `workspace/pnpm-yaml`                                  | warn     | `--migrate` moves the file into `package.json`                                              |
-| `workspace/pnpm-catalog`                               | info     | `--migrate` writes `catalog`/`catalogs`                                                     |
-| `workspace/pnpm-overrides`, `workspace/pnpm-patched`   | warn     | `--migrate`; selectors deeper than `a>b`, `pkg@` and `"-"` are only reported               |
-| `workspace/only-built-deps`                            | warn     | `--migrate` writes `trustedDependencies`                                                    |
-| `workspace/pnpm-settings`                              | info     | `--migrate` writes `bunfig.toml` `[install]`                                                |
-| `pkg/pnpm-field`, `pkg/jest-field`                     | warn     | none; the `pnpm` field is migrated like the YAML, `jest` must move to `bunfig.toml [test]`  |
-| `test/unsupported-api`                                 | warn     | none; `vi.*`/`jest.*` members that `bun:test` lacks                                         |
-| `test/mock-hoisting`                                   | info     | none; `bun:test` does not hoist `vi.mock`/`jest.mock`                                       |
+| ID                                                   | Severity | Fix                                                                                            |
+| ---------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------- |
+| `cli/vitest-run`, `cli/vitest-watch`, `cli/vitest`   | warn     | `aggressive`: `vitest run` becomes `bun test`, `vitest watch`/`dev` becomes `bun test --watch` |
+| `cli/jest`                                           | warn     | `aggressive`: `jest` becomes `bun test`                                                        |
+| `cli/tsx-watch`, `cli/ts-node`, `cli/node-ts-loader` | warn     | `tsx watch f` becomes `bun --watch f`; `ts-node`, `tsx`, `node --loader/--import` become `bun` |
+| `cli/pnpm-recursive`, `cli/pnpm-filter`              | warn     | `pnpm -r <script>` and `pnpm --filter <name> <script>` become `bun run --filter`               |
+| `workspace/pnpm-yaml`                                | warn     | `--migrate` moves the file into `package.json`                                                 |
+| `workspace/pnpm-catalog`                             | info     | `--migrate` writes `catalog`/`catalogs`                                                        |
+| `workspace/pnpm-overrides`, `workspace/pnpm-patched` | warn     | `--migrate`; selectors deeper than `a>b`, `pkg@` and `"-"` are only reported                   |
+| `workspace/only-built-deps`                          | warn     | `--migrate` writes `trustedDependencies`                                                       |
+| `workspace/pnpm-settings`                            | info     | `--migrate` writes `bunfig.toml` `[install]`                                                   |
+| `pkg/pnpm-field`, `pkg/jest-field`                   | warn     | none; the `pnpm` field is migrated like the YAML, `jest` must move to `bunfig.toml [test]`     |
+| `test/unsupported-api`                               | warn     | none; `vi.*`/`jest.*` members that `bun:test` lacks                                            |
+| `test/mock-hoisting`                                 | info     | none; `bun:test` does not hoist `vi.mock`/`jest.mock`                                          |
 
 Rule IDs are part of the public contract. Add a new rule instead of renaming or repurposing an
 existing ID.

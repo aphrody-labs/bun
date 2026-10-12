@@ -41,10 +41,7 @@ export function isXToolName(name: string): name is XToolName {
 }
 
 /** The {@link XClient} methods the tools call; callers and tests may inject their own. */
-export type XToolsClient = Pick<
-  XClient,
-  "search" | "userByScreenName" | "userTweets" | "whoami" | "getNews"
->;
+export type XToolsClient = Pick<XClient, "search" | "userByScreenName" | "userTweets" | "whoami" | "getNews">;
 
 function stripAt(handle: string): string {
   return handle.replace(/^@/, "");
@@ -78,11 +75,7 @@ export class XTools {
    *   `X_AUTH_TOKEN` + `X_CT0`) when the first tool call runs.
    */
   constructor(source?: XToolsClient | XSession | string) {
-    if (
-      source &&
-      typeof source === "object" &&
-      typeof (source as Partial<XToolsClient>).search === "function"
-    ) {
+    if (source && typeof source === "object" && typeof (source as Partial<XToolsClient>).search === "function") {
       this.x = source as XToolsClient;
     } else {
       this.x = new XClient(source as XSession | string | undefined);
@@ -90,14 +83,9 @@ export class XTools {
   }
 
   async search(args: XSearchToolArgs) {
-    const page = await this.x.search(
-      args.query,
-      args.count ?? 10,
-      undefined,
-      args.mode ?? "Latest",
-    );
+    const page = await this.x.search(args.query, args.count ?? 10, undefined, args.mode ?? "Latest");
     return {
-      tweets: (page.tweets ?? []).map((t) => ({
+      tweets: (page.tweets ?? []).map(t => ({
         id: t.id,
         text: t.text,
         author: t.author?.username,
@@ -123,7 +111,7 @@ export class XTools {
     const page = await this.x.userTweets(user.id, args.count ?? 20);
     return {
       user: { id: user.id, screen_name: user.screen_name, name: user.name },
-      tweets: (page.tweets ?? []).map((t) => ({
+      tweets: (page.tweets ?? []).map(t => ({
         id: t.id,
         text: t.text,
         created_at: t.created_at,
@@ -241,8 +229,7 @@ export const xNewsToolDef = {
   type: "function" as const,
   function: {
     name: "x_news" as const,
-    description:
-      "Fetch trending news / Explore tab items from X using the native client (real-time, no keys).",
+    description: "Fetch trending news / Explore tab items from X using the native client (real-time, no keys).",
     parameters: {
       type: "object",
       properties: {
@@ -253,10 +240,4 @@ export const xNewsToolDef = {
 };
 
 /** Every X tool definition, ready to pass as `tools` to an OpenAI-compatible chat request. */
-export const xNativeTools = [
-  xSearchToolDef,
-  xProfileToolDef,
-  xNewsToolDef,
-  xTweetsToolDef,
-  xWhoamiToolDef,
-] as const;
+export const xNativeTools = [xSearchToolDef, xProfileToolDef, xNewsToolDef, xTweetsToolDef, xWhoamiToolDef] as const;

@@ -6,10 +6,10 @@ repository use it. Each one is its own Cargo workspace. `packages/bun-oxc` pins 
 of aphrody-labs/oxc so the unpublished `aphrody-oxc-tools` (oxc_linter, oxfmt) and the official napi crates share
 one AST. `packages/bun-n2b` pins its Oxc crates from crates.io.
 
-| Package                                        | Crates               | Oxc crates                                                                                                                                            |
-| ---------------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Package                                        | Crates                                                           | Oxc crates                                                                                                                                                                                                                                                                                               |
+| ---------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `packages/bun-oxc` (`@aphrody/bun-plugin-oxc`) | `aphrody-oxc-bridge`, `aphrody-oxc-tools`, `bun-plugin-oxc-napi` | `oxc_allocator`, `oxc_ast`, `oxc_ast_visit`, `oxc_codegen`, `oxc_diagnostics`, `oxc_isolated_declarations`, `oxc_minifier`, `oxc_parser`, `oxc_semantic`, `oxc_span`, `oxc_syntax`, `oxc_transformer`, `oxc_resolver`, `oxc_linter`, `oxfmt`, `oxc_parser_napi`, `oxc_transform_napi`, `oxc_minify_napi` |
-| `packages/bun-n2b` (`@aphrody/bun-plugin-n2b`) | `aphrody-n2b-core`   | `oxc_allocator`, `oxc_ast`, `oxc_ast_visit`, `oxc_parser`, `oxc_span`                                                                                 |
+| `packages/bun-n2b` (`@aphrody/bun-plugin-n2b`) | `aphrody-n2b-core`                                               | `oxc_allocator`, `oxc_ast`, `oxc_ast_visit`, `oxc_parser`, `oxc_span`                                                                                                                                                                                                                                    |
 
 Bun itself does not use Oxc. `Bun.Transpiler`, `Bun.build`, `bun test` and the runtime keep Bun's own
 parser and printer.

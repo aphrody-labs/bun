@@ -15,8 +15,8 @@ test("Bun bundles the installed player and provides unchanged local UI and servi
   expect(output).toContain("loadBitmovinPlayer");
   expect(output).toContain("createBitmovinPlayer");
   expect(bundle.success).toBe(true);
-  expect(assets.map((asset) => asset.path)).toContain("bitmovinplayer-serviceworker.js");
-  expect(assets.map((asset) => asset.path)).toContain("THIRD_PARTY_NOTICES");
+  expect(assets.map(asset => asset.path)).toContain("bitmovinplayer-serviceworker.js");
+  expect(assets.map(asset => asset.path)).toContain("THIRD_PARTY_NOTICES");
   expect(location.ui_css).toBe("http://localhost/assets/bitmovinplayer-ui.css");
   const config: PlayerConfig = {
     key: "caller-supplied-license",
@@ -29,7 +29,5 @@ test("Bun bundles the installed player and provides unchanged local UI and servi
 }, 30_000);
 
 test("browser asset URLs reject unsupported schemes", async () => {
-  await expect(buildBitmovinBrowser({ assetBaseURL: "file:///assets/" })).rejects.toThrow(
-    "HTTP or HTTPS",
-  );
+  await expect(buildBitmovinBrowser({ assetBaseURL: "file:///assets/" })).rejects.toThrow("HTTP or HTTPS");
 });

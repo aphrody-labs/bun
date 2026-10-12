@@ -333,9 +333,9 @@ export async function captureArchive(
   const size = opts.pageSize ?? TWEET_PURGE_DEFAULTS.pageSize;
 
   const walks: Array<[ArchiveSource, (cursor?: string) => Promise<TweetPage>]> = [
-    ["tweets", (c) => client.userTweets(userId, size, c, 0)],
-    ["replies", (c) => client.userTweetsAndReplies(userId, size, c, 0)],
-    ["media", (c) => client.userMedia(userId, size, c, 0)],
+    ["tweets", c => client.userTweets(userId, size, c, 0)],
+    ["replies", c => client.userTweetsAndReplies(userId, size, c, 0)],
+    ["media", c => client.userMedia(userId, size, c, 0)],
   ];
 
   const byId = new Map<string, Tweet>();
@@ -357,7 +357,7 @@ export async function captureArchive(
     posts: [...byId.values()],
     captured_at: (opts.now ?? Date.now)(),
     sources,
-    complete: sources.every((s) => s.complete),
+    complete: sources.every(s => s.complete),
   };
 }
 
@@ -497,10 +497,7 @@ export function saveTweetState(path: string, state: TweetPurgeState): void {
  * The run is resumable — stop it at any time and call again to pick up exactly
  * where it left off, without re-walking the timelines.
  */
-export async function purgeTweets(
-  client: XClient,
-  opts: PurgeTweetsOptions = {},
-): Promise<TweetPurgeReport> {
+export async function purgeTweets(client: XClient, opts: PurgeTweetsOptions = {}): Promise<TweetPurgeReport> {
   const now = opts.now ?? Date.now;
   const log = opts.onLog ?? (() => {});
   const dryRun = opts.dryRun !== false;
@@ -513,9 +510,7 @@ export async function purgeTweets(
   const handle = viewer.screen_name || client.session.handle || "viewer";
   const statePath = opts.statePath ?? defaultStatePath(handle);
 
-  log(
-    `[purge] compte @${handle} (${viewer.id}) — ${dryRun ? "DRY-RUN" : "LIVE"}, seuil ${maxLikes} likes`,
-  );
+  log(`[purge] compte @${handle} (${viewer.id}) — ${dryRun ? "DRY-RUN" : "LIVE"}, seuil ${maxLikes} likes`);
 
   // --- queue: resume or (re)build -----------------------------------------
   let state = opts.refresh || !persist ? null : loadTweetState(statePath, viewer.id);
@@ -588,7 +583,7 @@ export async function purgeTweets(
     remaining: state!.queue.length,
     stopped_by: stoppedBy,
     state_path: persist ? statePath : undefined,
-    failures: Object.values(state!.done).filter((r) => r.status === "failed"),
+    failures: Object.values(state!.done).filter(r => r.status === "failed"),
     archive_complete: state!.archive.complete,
     sources: state!.archive.sources,
     elapsed_ms: now() - startedAt,
@@ -608,14 +603,14 @@ export async function purgeTweets(
 
   const result = await runMutationQueue<TweetTarget>({
     queue: state.queue,
-    mutate: (t) =>
+    mutate: t =>
       t.kind === "retweet" && !retweetIsOwnStatus(t)
         ? // The id is the original tweet: only DeleteRetweet applies.
           client.unretweet(t.id)
         : // Our own post, or our own retweet status — DeleteTweet removes it.
           client.deleteTweet(t.id),
     rateLimit: () => client.lastRateLimit,
-    label: (t) => `${t.kind} ${t.id} (${t.like_count}♥) "${t.preview}"`,
+    label: t => `${t.kind} ${t.id} (${t.like_count}♥) "${t.preview}"`,
     governor,
     limit: opts.limit,
     once: opts.once,

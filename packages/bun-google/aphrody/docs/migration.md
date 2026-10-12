@@ -1,4 +1,5 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Google source ownership migration
 
 The Google sources formerly at `crates/google/{antigravity,gemini-runtime,

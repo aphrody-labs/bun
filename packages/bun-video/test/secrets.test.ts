@@ -48,9 +48,7 @@ test("small OAuth JSON stays in native local credentials without plaintext files
   expect(memory.writes[0]!.persist).toBe("local");
   expect(await loadJsonSecret(ref, memory.store)).toEqual(config);
   expect(JSON.stringify(metadata)).not.toContain("local-secret");
-  await expect(saveJsonSecret(ref, { replacement: true }, memory.store)).rejects.toThrow(
-    "overwrite is refused",
-  );
+  await expect(saveJsonSecret(ref, { replacement: true }, memory.store)).rejects.toThrow("overwrite is refused");
   expect(await loadJsonSecret(ref, memory.store)).toEqual(config);
   expect(memory.deletes).toHaveLength(0);
 });
@@ -83,28 +81,16 @@ test("large Unicode JSON roundtrips across byte boundaries with bounded credenti
 });
 
 test("tampered content, missing parts, malformed base64 and manifest size attacks fail before returning secrets", async () => {
-  for (const mutation of [
-    "content",
-    "missing",
-    "encoding",
-    "size",
-    "generation",
-    "extra",
-    "checksum",
-  ] as const) {
+  for (const mutation of ["content", "missing", "encoding", "size", "generation", "extra", "checksum"] as const) {
     const memory = memoryStore();
     await saveJsonSecret(ref, { secret: "private-fixture".repeat(700) }, memory.store);
     const first = memory.writes[0]!;
     const root = memory.writes.at(-1)!;
     if (mutation === "missing") memory.values.delete(key(first));
-    else if (mutation === "encoding")
-      memory.values.set(key(first), JSON.stringify("%%%private-fixture"));
+    else if (mutation === "encoding") memory.values.set(key(first), JSON.stringify("%%%private-fixture"));
     else if (mutation === "content") {
       const encoded = JSON.parse(first.value) as string;
-      memory.values.set(
-        key(first),
-        JSON.stringify((encoded[0] === "A" ? "B" : "A") + encoded.slice(1)),
-      );
+      memory.values.set(key(first), JSON.stringify((encoded[0] === "A" ? "B" : "A") + encoded.slice(1)));
     } else {
       const manifest = JSON.parse(root.value);
       if (mutation === "size") {
@@ -131,23 +117,23 @@ test("partial part write failure rolls back only generated entries and preserves
   memory.values.set(key({ ...ref, name: "unrelated" }), "protected-original");
   const originalSet = memory.store.set;
   let attempts = 0;
-  memory.store.set = async (reference) => {
+  memory.store.set = async reference => {
     await originalSet(reference);
     if (++attempts === 2) throw new Error("private-provider-error");
   };
-  await expect(
-    saveJsonSecret(ref, { secret: "private-value".repeat(600) }, memory.store),
-  ).rejects.toThrow("Secret credential write failed");
+  await expect(saveJsonSecret(ref, { secret: "private-value".repeat(600) }, memory.store)).rejects.toThrow(
+    "Secret credential write failed",
+  );
   expect(memory.deletes).toHaveLength(2);
   expect(memory.values.size).toBe(1);
   expect(memory.values.get(key({ ...ref, name: "unrelated" }))).toBe("protected-original");
-  expect(memory.writes.some((write) => write.name === ref.name)).toBe(false);
+  expect(memory.writes.some(write => write.name === ref.name)).toBe(false);
 });
 
 test("manifest write acknowledgement failure removes an owned root plus parts", async () => {
   const memory = memoryStore();
   const originalSet = memory.store.set;
-  memory.store.set = async (reference) => {
+  memory.store.set = async reference => {
     await originalSet(reference);
     if (reference.name === ref.name) throw new Error("private-root-failure");
   };
@@ -162,7 +148,7 @@ test("concurrent root creation is preserved and newly written parts are rolled b
   const memory = memoryStore();
   const originalGet = memory.store.get;
   let rootReads = 0;
-  memory.store.get = async (reference) => {
+  memory.store.get = async reference => {
     if (reference.name === ref.name && ++rootReads === 2)
       memory.values.set(key(ref), JSON.stringify({ protected: true }));
     return originalGet(reference);
@@ -172,14 +158,14 @@ test("concurrent root creation is preserved and newly written parts are rolled b
   );
   expect(memory.values.size).toBe(1);
   expect(await loadJsonSecret(ref, memory.store)).toEqual({ protected: true });
-  expect(memory.deletes.every((entry) => entry.name !== ref.name)).toBe(true);
+  expect(memory.deletes.every(entry => entry.name !== ref.name)).toBe(true);
 });
 
 test("rollback preserves a part replaced by another writer and reports cleanup failures safely", async () => {
   const memory = memoryStore();
   const originalSet = memory.store.set;
   let writes = 0;
-  memory.store.set = async (reference) => {
+  memory.store.set = async reference => {
     await originalSet(reference);
     if (++writes === 2) {
       memory.values.set(key(memory.writes[0]!), "foreign-writer-value");
@@ -192,7 +178,7 @@ test("rollback preserves a part replaced by another writer and reports cleanup f
   expect(memory.values.size).toBe(1);
   expect(memory.values.get(key(memory.writes[0]!))).toBe("foreign-writer-value");
   const failing = memoryStore();
-  failing.store.set = async (reference) => {
+  failing.store.set = async reference => {
     failing.values.set(key(reference), reference.value);
     throw new Error("private-write-error");
   };
@@ -227,20 +213,16 @@ test("unsafe references, reserved manifests, unserializable and oversized values
     { $bunVideoSecret: "private-marker" },
     { toJSON: () => ({ $bunVideoSecret: "private-marker" }) },
   ])
-    await expect(saveJsonSecret(ref, value, memory.store)).rejects.toThrow(
-      "reserved storage marker",
-    );
-  await expect(
-    saveJsonSecret(ref, { secret: "x".repeat(1024 * 1024) }, memory.store),
-  ).rejects.toThrow("supported storage size");
+    await expect(saveJsonSecret(ref, value, memory.store)).rejects.toThrow("reserved storage marker");
+  await expect(saveJsonSecret(ref, { secret: "x".repeat(1024 * 1024) }, memory.store)).rejects.toThrow(
+    "supported storage size",
+  );
   for (const invalid of [
     { ...ref, name: "other/name" },
     { ...ref, service: "service\0secret" },
     { ...ref, name: "" },
   ])
-    await expect(saveJsonSecret(invalid, {}, memory.store)).rejects.toThrow(
-      "Invalid secret reference",
-    );
+    await expect(saveJsonSecret(invalid, {}, memory.store)).rejects.toThrow("Invalid secret reference");
   expect(memory.writes).toHaveLength(0);
 });
 
@@ -248,23 +230,21 @@ test("same-reference saves serialize with a bounded lock", async () => {
   const memory = memoryStore();
   let release!: () => void;
   let started!: () => void;
-  const written = new Promise<void>((resolve) => {
+  const written = new Promise<void>(resolve => {
     started = resolve;
   });
-  const blocked = new Promise<void>((resolve) => {
+  const blocked = new Promise<void>(resolve => {
     release = resolve;
   });
   const originalSet = memory.store.set;
-  memory.store.set = async (reference) => {
+  memory.store.set = async reference => {
     started();
     await blocked;
     await originalSet(reference);
   };
   const first = saveJsonSecret(ref, { secret: "local" }, memory.store);
   await written;
-  await expect(saveJsonSecret(ref, { other: "local" }, memory.store)).rejects.toThrow(
-    "already in progress",
-  );
+  await expect(saveJsonSecret(ref, { other: "local" }, memory.store)).rejects.toThrow("already in progress");
   release();
   await first;
   expect(await loadJsonSecret(ref, memory.store)).toEqual({ secret: "local" });

@@ -16,8 +16,4 @@ export {
   type AntigravityCredentialOptions,
   type AntigravityCredentialProvider,
 } from "./credentials.ts";
-export {
-  createAntigravityServices,
-  type AntigravityServicesOptions,
-  type AntigravityModel,
-} from "./antigravity.ts";
+export { createAntigravityServices, type AntigravityServicesOptions, type AntigravityModel } from "./antigravity.ts";

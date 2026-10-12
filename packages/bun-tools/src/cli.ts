@@ -42,8 +42,7 @@ export async function hostCommand(argv: string[]) {
   ]);
   if (!commands.has(command)) throw new Error(`Unknown command: ${command}`);
   const config = await Bun.file(configPath).json();
-  if (!config || typeof config !== "object" || Array.isArray(config))
-    throw new Error("Expected a JSON object");
+  if (!config || typeof config !== "object" || Array.isArray(config)) throw new Error("Expected a JSON object");
   if (command === "migrate" && config.intervalMs !== undefined)
     throw new Error("Database migration is a one-time command");
   if (command === "proxy" || command === "stream") {
@@ -51,9 +50,7 @@ export async function hostCommand(argv: string[]) {
       command === "proxy"
         ? await startConnectProxy(config as ConnectProxyOptions)
         : await startSystemStream(config as SystemStreamOptions);
-    console.log(
-      JSON.stringify({ command, port: "server" in service ? service.server.port : service.port }),
-    );
+    console.log(JSON.stringify({ command, port: "server" in service ? service.server.port : service.port }));
     let shutdown: Promise<void> | undefined;
     const stop = () => {
       shutdown ??= service.stop().finally(() => {
@@ -89,9 +86,7 @@ export async function hostCommand(argv: string[]) {
         return indexing.persistResources(config.dbPath, config.resources, config.maxResources);
       case "pe": {
         const scan = await indexing.scanPe(options);
-        const apiSets = config.apiSetFile
-          ? await indexing.parseApiSetFile(config.apiSetFile)
-          : undefined;
+        const apiSets = config.apiSetFile ? await indexing.parseApiSetFile(config.apiSetFile) : undefined;
         return indexing.persistPe({ ...config, scan, apiSets });
       }
     }
@@ -114,22 +109,14 @@ export async function hostCommand(argv: string[]) {
     return;
   }
   const result = await run();
-  console.log(
-    JSON.stringify(
-      result,
-      (_key, value) => (typeof value === "bigint" ? value.toString() : value),
-      2,
-    ),
-  );
+  console.log(JSON.stringify(result, (_key, value) => (typeof value === "bigint" ? value.toString() : value), 2));
 }
 
 if (import.meta.main) {
   try {
     await hostCommand(Bun.argv.slice(2));
   } catch {
-    console.error(
-      "Host command failed; verify the explicit configuration and runtime capabilities.",
-    );
+    console.error("Host command failed; verify the explicit configuration and runtime capabilities.");
     process.exitCode = 1;
   }
 }

@@ -10,14 +10,11 @@ import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 
 /** Select one embedded provider before any native ABI call; ambiguity is an error. */
-export function embeddedNativeLibraryPath(
-  name: string,
-  files: readonly Blob[] = Bun.embeddedFiles,
-): string | null {
+export function embeddedNativeLibraryPath(name: string, files: readonly Blob[] = Bun.embeddedFiles): string | null {
   const stem = process.platform === "win32" ? name : `lib${name}`;
   const escaped = stem.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(`^${escaped}(?:-[A-Za-z0-9_-]+)?\\.${suffix}$`);
-  const matches = files.flatMap((file) => {
+  const matches = files.flatMap(file => {
     const path = (file as Blob & { name?: string }).name;
     return typeof path === "string" && pattern.test(basename(path)) ? [path] : [];
   });
@@ -48,14 +45,14 @@ export function readOwnedBytes(
   slot: Uint8Array,
   free: (data: bigint, len: bigint, cap: bigint) => void,
 ): Uint8Array | null {
-  return withOwnedView(slot, free, (view) => view.slice());
+  return withOwnedView(slot, free, view => view.slice());
 }
 
 export function readOwnedString(
   slot: Uint8Array,
   free: (data: bigint, len: bigint, cap: bigint) => void,
 ): string | null {
-  return withOwnedView(slot, free, (view) => decoder.decode(view));
+  return withOwnedView(slot, free, view => decoder.decode(view));
 }
 
 /**
@@ -100,11 +97,7 @@ export function readOwnedJson<T = unknown>(
  * Copy `len` bytes at a native address and release the allocation through `free(address)`.
  * For C ABIs returning `(ptr, len)` through separate out-parameters.
  */
-export function readNativeBytes(
-  address: number | bigint,
-  len: number,
-  free: (address: number) => void,
-): Uint8Array {
+export function readNativeBytes(address: number | bigint, len: number, free: (address: number) => void): Uint8Array {
   const addr = Number(address);
   try {
     return new Uint8Array(toArrayBuffer(addr as unknown as Pointer, 0, len)).slice();
@@ -114,10 +107,7 @@ export function readNativeBytes(
 }
 
 /** Copy a NUL-terminated native string and always release its original allocation. */
-export function readNativeString(
-  address: number | bigint,
-  free: (address: number) => void,
-): string {
+export function readNativeString(address: number | bigint, free: (address: number) => void): string {
   const addr = Number(address);
   try {
     return new CString(addr as Pointer).toString();
@@ -158,8 +148,7 @@ export interface NativeLibrary<S extends Record<string, FFIFunction>> {
 export function nativeLibrary<S extends Record<string, FFIFunction>>(
   options: NativeLibraryOptions<S>,
 ): NativeLibrary<S> {
-  const defaultFile =
-    process.platform === "win32" ? `${options.name}.dll` : `lib${options.name}.${suffix}`;
+  const defaultFile = process.platform === "win32" ? `${options.name}.dll` : `lib${options.name}.${suffix}`;
   const files = options.fileNames?.length ? options.fileNames : [defaultFile];
   const file = files[0]!;
   let attempted = false;
@@ -175,13 +164,9 @@ export function nativeLibrary<S extends Record<string, FFIFunction>>(
       const value = process.env[env];
       if (value && existsSync(value)) return value;
     }
-    const dirs = [
-      dirname(process.execPath),
-      resolve(homedir(), ".local/bin"),
-      ...(options.searchDirs ?? []),
-    ];
-    const candidates = dirs.flatMap((dir) => files.map((name) => resolve(dir, name)));
-    return candidates.find((candidate) => existsSync(candidate)) ?? null;
+    const dirs = [dirname(process.execPath), resolve(homedir(), ".local/bin"), ...(options.searchDirs ?? [])];
+    const candidates = dirs.flatMap(dir => files.map(name => resolve(dir, name)));
+    return candidates.find(candidate => existsSync(candidate)) ?? null;
   };
   const load = () => {
     if (attempted) return symbols;
