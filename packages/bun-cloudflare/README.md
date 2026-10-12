@@ -79,6 +79,8 @@ bun app/scripts/ovh.ts --switch  # OVH zones (aphrody.com, dragonballfr.com, ros
 
 The vps timer `aphrody-site-publish` runs `scripts/aphrody/site/publish.ts`, which deploys through `deploy.ts`;
 `app/systemd/aphrody-dns-migrate.timer` finishes the OVH move (deferred name servers, DNSSEC) and then disables itself.
+rosegriffon.fr has no application: its web hosts are proxied to the `app/maintenance` Worker (503 maintenance
+page), deployed by `ovh.ts` once the zone is active.
 
 ## Tests
 
