@@ -6,13 +6,11 @@
     "moduleResolution": "Bundler",
     "moduleDetection": "force",
     "strict": true,
-    "downlevelIteration": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "inlineSourceMap": true,
-    "allowJs": true,
-    "outDir": "dist"
+    "allowJs": true
   },
   "include": [".", "../bun-types/index.d.ts"]
 }

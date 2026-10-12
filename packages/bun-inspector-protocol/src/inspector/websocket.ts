@@ -49,7 +49,6 @@ export class WebSocketInspector extends EventEmitter<InspectorEventMap> implemen
 
     let webSocket: WebSocket;
     try {
-      // @ts-expect-error: Support both Bun and Node.js version of `headers`.
       webSocket = new WebSocket(url, {
         headers: {
           "Ref-Event-Loop": "0",
@@ -91,7 +90,7 @@ export class WebSocketInspector extends EventEmitter<InspectorEventMap> implemen
       this.#close(unknownToError(event));
     });
 
-    webSocket.addEventListener("unexpected-response", () => {
+    webSocket.on("unexpected-response", () => {
       this.#close(new Error("WebSocket upgrade failed"));
     });
 

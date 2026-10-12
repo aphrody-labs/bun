@@ -83,7 +83,7 @@ export class NodeSocketInspector extends EventEmitter<InspectorEventMap> impleme
       }
     });
 
-    socket.on("data", data => this.#framer.onData(data));
+    socket.on("data", data => this.#framer.onData(typeof data === "string" ? Buffer.from(data) : data));
 
     socket.on("error", error => {
       this.#close(unknownToError(error));

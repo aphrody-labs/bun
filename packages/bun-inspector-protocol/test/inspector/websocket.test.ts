@@ -3,7 +3,7 @@ import { serve } from "bun";
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { WebSocketInspector } from "../../src/inspector/websocket";
 
-let server: Server;
+let server: Server<undefined>;
 let url: URL;
 
 describe("WebSocketInspector", () => {
@@ -58,18 +58,21 @@ describe("WebSocketInspector", () => {
     ws.close();
   });
 
-  test("can disconnect from a server", () => {
+  test("can disconnect from a server", async () => {
     const ws = new WebSocketInspector(url);
+    const { promise: disconnected, resolve } = Promise.withResolvers<void>();
     const fn = mock(() => {
       expect(ws.closed).toBeTrue();
+      resolve();
     });
     ws.on("Inspector.disconnected", fn);
-    expect(ws.start()).resolves.toBeTrue();
+    expect(await ws.start()).toBeTrue();
     ws.close();
+    await disconnected;
     expect(fn).toHaveBeenCalled();
   });
 
-  test("can connect to a server multiple times", () => {
+  test("can connect to a server multiple times", async () => {
     const ws = new WebSocketInspector(url);
     const fn0 = mock(() => {
       expect(ws.closed).toBeFalse();
@@ -80,8 +83,10 @@ describe("WebSocketInspector", () => {
     });
     ws.on("Inspector.disconnected", fn1);
     for (let i = 0; i < 3; i++) {
-      expect(ws.start()).resolves.toBeTrue();
+      expect(await ws.start()).toBeTrue();
+      const disconnected = new Promise<void>(resolve => ws.once("Inspector.disconnected", () => resolve()));
       ws.close();
+      await disconnected;
     }
     expect(fn0).toHaveBeenCalledTimes(3);
     expect(fn1).toHaveBeenCalledTimes(3);
