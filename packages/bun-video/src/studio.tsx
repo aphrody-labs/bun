@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { extractYtDlp, type YtDlpResult } from "./ytdlp";
 import type { CrawlerCache } from "./cache";
 
@@ -14,6 +14,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache }: VideoS
   const [url, setUrl] = useState("");
   const [metadata, setMetadata] = useState<YtDlpResult | null>(null);
   const [loadingMetadata, setLoadingMetadata] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const selected = useMemo(() => localAssets.find(asset => asset.id === selectedId) ?? localAssets[0], [localAssets, selectedId]);
   const selectedIndex = selected ? localAssets.findIndex(asset => asset.id === selected.id) : -1;
   const selectRelative = (delta: number) => {
@@ -50,8 +51,17 @@ export function VideoStudio({ assets, initialAssetId, className, cache }: VideoS
     if (file && (file.type.startsWith("video/") || file.type.startsWith("audio/"))) addFile(file);
     else if (file) setError("Le fichier doit être vidéo ou audio");
   };
+  const handleKeys = (event: React.KeyboardEvent<HTMLElement>) => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+      event.preventDefault(); video.currentTime = Math.max(0, video.currentTime + (event.key === "ArrowRight" ? 10 : -10));
+    } else if (event.key === " ") {
+      event.preventDefault(); void (video.paused ? video.play() : video.pause());
+    }
+  };
   return (
-    <section className={className} aria-label="Bun Video Studio" onDragOver={event => event.preventDefault()} onDrop={addDropped}>
+    <section className={className} aria-label="Bun Video Studio" tabIndex={0} onKeyDown={handleKeys} onDragOver={event => event.preventDefault()} onDrop={addDropped}>
       <aside>
         <strong>Bibliothèque</strong>
         <input type="file" accept="video/*,audio/*" onChange={event => { const file = event.target.files?.[0]; if (file) addFile(file); }} />
@@ -67,7 +77,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache }: VideoS
       </aside>
       <main>
         {selected ? (
-          <video key={selected.id} controls playsInline preload="metadata" src={selected.src} onEnded={() => selectRelative(1)} onError={() => setError(`Lecture impossible : ${selected.title}`)} />
+          <video ref={videoRef} key={selected.id} controls playsInline preload="metadata" src={selected.src} onEnded={() => selectRelative(1)} onError={() => setError(`Lecture impossible : ${selected.title}`)} />
         ) : <p>Aucun média sélectionné.</p>}
         {selected && <p>{selected.title}{selected.type ? ` · ${selected.type}` : ""}</p>}
         {selected && <nav aria-label="Contrôles de file"><button type="button" onClick={() => selectRelative(-1)}>Précédent</button><button type="button" onClick={() => selectRelative(1)}>Suivant</button></nav>}
