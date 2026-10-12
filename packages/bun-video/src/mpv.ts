@@ -51,11 +51,7 @@ export class MpvClient {
       options.libraryPath ??
       join(
         dirname(process.execPath),
-        process.platform === "win32"
-        ? "mpv-2.dll"
-          : process.platform === "darwin"
-            ? "libmpv.2.dylib"
-            : "libmpv.so.2",
+        process.platform === "win32" ? "mpv-2.dll" : process.platform === "darwin" ? "libmpv.2.dylib" : "libmpv.so.2",
       );
     const library = dlopen(libraryPath, symbols);
     const handle = library.symbols.mpv_create();
