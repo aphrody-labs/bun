@@ -36,7 +36,7 @@
     "docs",
     "labs",
     "assets",
-    "vendor/mediabunny",
+    "packages/mediabunny",
     "vendor/yt-dlp",
     "vendor/mpv",
     "README.md",
@@ -46,7 +46,8 @@
   "type": "module",
   "workspaces": [
     "packages/remotion/packages/*",
-    "packages/hyperframes/packages/*"
+    "packages/hyperframes/packages/*",
+    "packages/mediabunny"
   ],
   "exports": {
     ".": "./src/index.ts",
@@ -61,7 +62,7 @@
     "./oauth": "./src/oauth.ts",
     "./secrets": "./src/secrets.ts",
     "./webgpu": "./src/webgpu.ts",
-    "./mediabunny": "./vendor/mediabunny/src/index.ts",
+    "./mediabunny": "./packages/mediabunny/src/index.ts",
     "./ytdlp": "./src/ytdlp.ts",
     "./pipeline": "./src/pipeline.ts",
     "./image": "./src/image.ts",

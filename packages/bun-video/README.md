@@ -12,7 +12,7 @@ The optional open-source media toolchain is documented in
 authorized downloads and mpv handles local playback. Their executables remain
 caller-owned and are never installed implicitly.
 
-The source of [Mediabunny](vendor/mediabunny/README.md) v1.9.3 is vendored and
+The source of [Mediabunny](packages/mediabunny/README.md) v1.9.3 is absorbed into the unified package tree and
 available through `@aphrody/bun-video/mediabunny`. This export is the media
 demuxing, muxing and WebCodecs layer; it does not install a downloader or
 desktop player.
