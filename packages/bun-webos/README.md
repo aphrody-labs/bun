@@ -51,6 +51,16 @@ and `resources` tables. Set `resourcesTable` for a different resource table and
 `volume` to restrict indexed filesystem results. The CLI accepts `--index` and
 `--volume`; advanced integrations use `startWebOS` options.
 
+The same server can mount the canonical M3 UI and retain the WebOS, explorer,
+search and assistant APIs:
+
+```ts
+await startWebOS({
+  publicSite: { staticRoot: "/var/www/aphrody/app-ui" },
+  explorer: { assistant: { baseUrl: "http://127.0.0.1:8080", model: "default" } },
+});
+```
+
 `assistant.baseUrl` identifies an OpenAI-compatible server base, without `/v1`.
 Supply `model`, optional `apiKey`, and optional `maxTokens`. `llamaContext: true`
 enables llama.cpp `/props`, `/apply-template` and `/tokenize` preparation, dropping

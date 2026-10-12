@@ -12,6 +12,7 @@ import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import index from "./index.html";
+import { createM3Site, type M3SiteOptions } from "@aphrody/bun-m3/site";
 import type { BenchResult } from "./src/server/bench-worker";
 import { runCc, probeDlopen } from "./src/server/ffi";
 import {
@@ -39,6 +40,8 @@ import { createExplorer, type ExplorerOptions } from "./src/server/explorer";
 export type { ExplorerOptions } from "./src/server/explorer";
 
 export interface WebOSOptions {
+  /** Optional canonical M3 UI mounted as the fallback for non-API routes. */
+  publicSite?: Omit<M3SiteOptions, "hostname" | "port">;
   /** Optional metadata index, service health and assistant endpoints. Disabled by default. */
   explorer?: ExplorerOptions;
   /** 0 picks a free port. Default: $PORT or 3000. */
@@ -164,6 +167,7 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
   const policy: HostAccessPolicy = { enabled: options.hostAccess ?? true, trustedOrigins };
   const store = new WebOSStore(join(dataDir, "webos.sqlite"));
   const explorer = createExplorer(options.explorer);
+  const publicSite = options.publicSite ? await createM3Site(options.publicSite) : undefined;
   const children = new Map<number, Subprocess>();
   const track = (proc: Subprocess) => {
     children.set(proc.pid, proc);
@@ -413,8 +417,8 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
       },
     },
 
-    fetch() {
-      return new Response("Not Found", { status: 404 });
+    async fetch(request) {
+      return publicSite ? publicSite(request) : new Response("Not Found", { status: 404 });
     },
 
     websocket: {

@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "@aphrody/bun-plugin-tailwind": "file:../bun-plugin-tailwind",
+    "@aphrody/bun-m3": "workspace:*",
     "@aphrody/m3-tokens": "^3.3.7",
     "@bjorn3/browser_wasi_shim": "^0.4.2",
     "@fluentui/tokens": "1.0.0-alpha.24",
