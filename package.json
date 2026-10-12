@@ -103,7 +103,8 @@
     "buv:embedded": "bun scripts/aphrody/buv.ts embedded",
     "buv:bench": "bun scripts/aphrody/bench.ts",
     "buv:formats": "bun scripts/aphrody/formats.ts",
-    "typecheck:prepare": "bun run --cwd packages/bun-plugin-tailwind types:prepare"
+    "typecheck:prepare": "bun run --cwd packages/bun-plugin-tailwind types:prepare",
+    "libmpv": "bun scripts/aphrody/libmpv.ts"
   },
   "devDependencies": {
     "@lezer/common": "1.5.2",
