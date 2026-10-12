@@ -1,7 +1,13 @@
-import { dlopen, type FFIFunction } from "bun:ffi";
+import { CString, dlopen, ptr, type FFIFunction } from "bun:ffi";
 import { dirname, isAbsolute, join } from "node:path";
 
-const functionABI = (args: FFIFunction["args"], returns: FFIFunction["returns"]): FFIFunction => ({ args, returns });
+const functionABI = <
+  const A extends NonNullable<FFIFunction["args"]>,
+  const R extends NonNullable<FFIFunction["returns"]>,
+>(
+  args: A,
+  returns: R,
+) => ({ args, returns });
 const p = "ptr";
 const i = "i32";
 const v = "void";
@@ -113,4 +119,58 @@ export function ffmpegLibraryPath(component: FFmpegComponent, directory = dirnam
 
 export function openFFmpegComponent<C extends FFmpegComponent>(component: C, directory?: string) {
   return dlopen(ffmpegLibraryPath(component, directory), ffmpegABI[component]);
+}
+
+type FFmpegLibrary<C extends FFmpegComponent> = ReturnType<typeof openFFmpegComponent<C>>;
+type FFmpegLibraries = { [C in FFmpegComponent]: FFmpegLibrary<C> };
+
+export class FFmpeg {
+  readonly #libraries: FFmpegLibraries;
+  #closed = false;
+
+  private constructor(libraries: FFmpegLibraries) {
+    this.#libraries = libraries;
+  }
+
+  static open(directory?: string): FFmpeg {
+    const libraries: Partial<FFmpegLibraries> = {};
+    const owned: Array<{ close(): void }> = [];
+    try {
+      for (const component of Object.keys(ffmpegABI) as FFmpegComponent[]) {
+        const library = openFFmpegComponent(component, directory);
+        owned.push(library);
+        const version = (library.symbols as Record<string, (...args: never[]) => unknown>)[`${component}_version`]();
+        if (typeof version !== "number" || version >>> 16 !== ffmpegMajors[component])
+          throw new Error(`FFmpeg ${component} ABI mismatch: expected major ${ffmpegMajors[component]}`);
+        Object.assign(libraries, { [component]: library });
+      }
+      return new FFmpeg(libraries as FFmpegLibraries);
+    } catch (error) {
+      for (const library of owned.reverse()) library.close();
+      throw error;
+    }
+  }
+
+  get libraries(): Readonly<FFmpegLibraries> {
+    if (this.#closed) throw new Error("FFmpeg is closed");
+    return this.#libraries;
+  }
+
+  check(status: number): number {
+    if (status >= 0) return status;
+    const bytes = new Uint8Array(256);
+    const code = this.libraries.avutil.symbols.av_strerror(status, ptr(bytes), BigInt(bytes.length));
+    const detail = code < 0 ? String(status) : new CString(ptr(bytes)).toString();
+    throw new Error(`FFmpeg: ${detail} (${status})`);
+  }
+
+  close(): void {
+    if (this.#closed) return;
+    this.#closed = true;
+    for (const library of Object.values(this.#libraries).reverse()) library.close();
+  }
+
+  [Symbol.dispose](): void {
+    this.close();
+  }
 }
