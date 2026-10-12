@@ -53,6 +53,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             let opts = EncodeOptions { backend: Backend::parse(&args[1])?, fps: args[2].parse()?, frames: args[3].parse()?, threads: args[4].parse()?, allow_lossy };
             let path = PathBuf::from(&args[5]);
             opts.args(&path)?;
+            #[cfg(feature = "libav")]
+            if opts.backend == Backend::Ffv1 {
+                bun_video_native::libav::encode_ffv1(&mut io::stdin().lock(), &path, &opts)?;
+                return Ok(());
+            }
             if opts.backend != Backend::Ffv1 && !probe_backend(&ffmpeg, opts.backend)? { return Err("requested GPU encoder unavailable on this host".into()); }
             let mut child = opts.spawn(OsStr::new(&ffmpeg), &path)?;
             let result = {

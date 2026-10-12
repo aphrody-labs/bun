@@ -163,6 +163,22 @@ pub fn libav_encoder_present(backend: Backend) -> Result<bool, ffmpeg_next::Erro
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "libav")]
+    #[test]
+    fn direct_libav_ffv1_preserves_rgba_and_refuses_existing_output() {
+        let path = std::env::temp_dir().join(format!("bun-libav-{}-{}.mkv", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let opts = options();
+        let mut rgba: Vec<u8> = (0u8..=255).cycle().take(64 * 64 * 4 * 2).collect();
+        rgba[3] = 0;
+        rgba[64 * 64 * 4 + 3] = 0;
+        let pngs: Vec<u8> = rgba.chunks_exact(64 * 64 * 4).flat_map(|frame| encode_rgba_png(64, 64, frame).unwrap()).collect();
+        libav::encode_ffv1(&mut std::io::Cursor::new(&pngs), &path, &opts).unwrap();
+        let mut decoded = Vec::new();
+        assert_eq!(libav::decode_rgba(&path, &mut decoded).unwrap(), 2);
+        assert_eq!(decoded, rgba);
+        assert!(libav::encode_ffv1(&mut std::io::Cursor::new(&pngs), &path, &opts).is_err());
+        std::fs::remove_file(path).unwrap();
+    }
     fn output() -> std::path::PathBuf { std::env::temp_dir().join("bun-video-test.mkv") }
     fn options() -> EncodeOptions { EncodeOptions { fps: FrameRate { num: 30, den: 1 }, frames: 2, threads: 2, backend: Backend::Ffv1, allow_lossy: false } }
     #[test]
