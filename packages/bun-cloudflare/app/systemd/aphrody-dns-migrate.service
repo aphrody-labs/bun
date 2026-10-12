@@ -10,5 +10,6 @@ After=network-online.target
 [Service]
 Type=oneshot
 TimeoutStartSec=900
+Environment=PATH=%h/.bun/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 Environment=APHRODY_SRC=%h/src/bun APHRODY_INFRA_ROOT=%h/src/aphrody
 ExecStart=/usr/bin/env bash -c 'set -euo pipefail; git -C "$APHRODY_SRC" fetch -q origin main; w=$(mktemp -d); trap "rm -rf $w" EXIT; git -C "$APHRODY_SRC" archive origin/main packages/bun-cloudflare | tar -x -C "$w"; out=$(cd "$w/packages/bun-cloudflare" && bun app/scripts/ovh.ts --switch --dnssec 2>&1); echo "$out"; if grep -q "migration complete" <<<"$out"; then systemctl --user disable --now aphrody-dns-migrate.timer; fi'
