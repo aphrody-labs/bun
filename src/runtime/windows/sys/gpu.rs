@@ -335,6 +335,7 @@ fn unmap(resource: &Com) {
 }
 
 pub(crate) struct Info {
+    adapter_index: u32,
     adapter: String,
     vendor_id: u32,
     device_id: u32,
@@ -358,6 +359,10 @@ struct Gpu {
 
 impl Gpu {
     fn open() -> WinResult<Gpu> {
+        let adapter_index = std::env::var("BUN_D3D12_ADAPTER_INDEX")
+            .ok()
+            .and_then(|value| value.parse::<u32>().ok())
+            .unwrap_or(0);
         let create_factory = proc_addr("dxgi.dll", c"CreateDXGIFactory1")?;
         // SAFETY: `CreateDXGIFactory1` has this signature.
         let create_factory: unsafe extern "system" fn(*const Guid, *mut *mut c_void) -> HRESULT =
@@ -374,7 +379,7 @@ impl Gpu {
                 factory.0,
                 SLOT_DXGI_ENUM_ADAPTERS1,
                 fn(u32, *mut *mut c_void) -> HRESULT,
-                0,
+                adapter_index,
                 &raw mut adapter
             )
         };
@@ -491,6 +496,7 @@ impl Gpu {
         }
 
         let info = Info {
+            adapter_index,
             adapter: from_wide(&desc.description),
             vendor_id: desc.vendor_id,
             device_id: desc.device_id,
@@ -680,7 +686,7 @@ impl Gpu {
     }
 }
 
-/// `{ api, adapter, vendorId, deviceId, dedicatedVideoMemory, featureLevel }` for adapter 0.
+/// `{ api, adapter, adapterIndex, vendorId, deviceId, dedicatedVideoMemory, featureLevel }`.
 pub(crate) fn info_json() -> WinResult<String> {
     let gpu = Gpu::open()?;
     let info = &gpu.info;
@@ -688,6 +694,7 @@ pub(crate) fn info_json() -> WinResult<String> {
     j.begin_object()
         .field_str("api", "d3d12")
         .field_str("adapter", &info.adapter)
+        .field_num("adapterIndex", f64::from(info.adapter_index))
         .field_num("vendorId", f64::from(info.vendor_id))
         .field_num("deviceId", f64::from(info.device_id))
         .field_num("dedicatedVideoMemory", info.dedicated_video_memory as f64)
