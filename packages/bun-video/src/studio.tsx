@@ -60,6 +60,8 @@ export function VideoStudio({ assets, initialAssetId, className, cache }: VideoS
       event.preventDefault(); void (video.paused ? video.play() : video.pause());
     }
   };
+  const fullscreen = () => { void videoRef.current?.requestFullscreen?.(); };
+  const pictureInPicture = () => { const video = videoRef.current; if (video && "requestPictureInPicture" in video) void (video as HTMLVideoElement & { requestPictureInPicture(): Promise<unknown> }).requestPictureInPicture(); };
   return (
     <section className={className} aria-label="Bun Video Studio" tabIndex={0} onKeyDown={handleKeys} onDragOver={event => event.preventDefault()} onDrop={addDropped}>
       <aside>
@@ -81,6 +83,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache }: VideoS
         ) : <p>Aucun média sélectionné.</p>}
         {selected && <p>{selected.title}{selected.type ? ` · ${selected.type}` : ""}</p>}
         {selected && <nav aria-label="Contrôles de file"><button type="button" onClick={() => selectRelative(-1)}>Précédent</button><button type="button" onClick={() => selectRelative(1)}>Suivant</button></nav>}
+        {selected && <nav aria-label="Affichage"><button type="button" onClick={fullscreen}>Plein écran</button><button type="button" onClick={pictureInPicture}>Picture-in-Picture</button></nav>}
         {selected && /^https?:$/.test(new URL(selected.src).protocol) && <button type="button" onClick={() => void inspectSelected()} disabled={loadingMetadata}>{loadingMetadata ? "Analyse…" : "Analyser avec yt-dlp"}</button>}
         {metadata && <pre>{JSON.stringify({ title: metadata.title, id: metadata.id, formats: metadata.formats?.length ?? 0 }, null, 2)}</pre>}
         {error && <p role="alert">{error}</p>}
