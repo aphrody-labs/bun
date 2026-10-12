@@ -62,6 +62,7 @@
     "./pipeline": "./src/pipeline.ts",
     "./image": "./src/image.ts",
     "./formats": "./src/formats.ts",
+    "./source": "./src/source.ts",
     "./engine": "./umbrella-src/index.ts",
     "./encode": "./umbrella-src/encode.ts",
     "./computer": "./umbrella-src/computer.ts"

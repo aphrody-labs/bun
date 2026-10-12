@@ -1,9 +1,10 @@
 import { runYtDlp, type YtDlpOptions } from "./ytdlp";
 import { MpvClient } from "./mpv";
 import { nativeWebGpuInfo, type WebGpuOptions } from "./webgpu";
+import { resolveVideoSource, type VideoSource } from "./source";
 
 export interface VideoPipelineOptions {
-  readonly url: string;
+  readonly source: VideoSource;
   readonly ytDlp?: YtDlpOptions;
   readonly mpvLibraryPath?: string;
   readonly webgpu?: WebGpuOptions | false;
@@ -19,7 +20,10 @@ export interface VideoPipelineResult {
 /** Resolve a source, qualify the native GPU, and optionally attach a libmpv player. */
 export async function openVideoPipeline(options: VideoPipelineOptions): Promise<VideoPipelineResult> {
   options.signal?.throwIfAborted();
-  const source = await runYtDlp({ url: options.url, options: { quiet: true, ...options.ytDlp }, signal: options.signal });
+  const input = resolveVideoSource(options.source);
+  const source = input.kind === "remote"
+    ? await runYtDlp({ url: input.url, options: { quiet: true, ...options.ytDlp }, signal: options.signal })
+    : input;
   options.signal?.throwIfAborted();
   const gpu = options.webgpu === false ? null : await nativeWebGpuInfo(options.webgpu ?? {});
   options.signal?.throwIfAborted();
