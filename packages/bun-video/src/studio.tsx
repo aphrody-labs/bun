@@ -5,7 +5,7 @@ import type { CrawlerCache } from "./cache";
 export interface StudioSubtitle { readonly src: string; readonly srclang: string; readonly label: string; readonly default?: boolean; }
 export interface StudioVariant { readonly label: string; readonly src: string; }
 export interface StudioChapter { readonly title: string; readonly start: number; }
-export interface StudioAsset { readonly id: string; readonly title: string; readonly src: string; readonly type?: string; readonly poster?: string; readonly alt?: string; readonly subtitles?: readonly StudioSubtitle[]; readonly variants?: readonly StudioVariant[]; readonly chapters?: readonly StudioChapter[]; }
+export interface StudioAsset { readonly id: string; readonly title: string; readonly src: string; readonly type?: string; readonly poster?: string; readonly alt?: string; readonly crossOrigin?: "anonymous" | "use-credentials"; readonly subtitles?: readonly StudioSubtitle[]; readonly variants?: readonly StudioVariant[]; readonly chapters?: readonly StudioChapter[]; }
 export interface VideoStudioProps { readonly assets: readonly StudioAsset[]; readonly initialAssetId?: string; readonly className?: string; readonly cache?: CrawlerCache; readonly storageKey?: string; readonly autoPlay?: boolean; readonly loop?: boolean; readonly muted?: boolean; readonly onAssetSelect?: (asset: StudioAsset) => void; readonly onPlayback?: (state: { currentTime: number; duration: number; paused: boolean }) => void; }
 
 /** Compact React studio surface for browsing assets and driving the Bun Video pipeline. */
@@ -121,7 +121,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
       </aside>
       <main>
         {selected ? (
-          <video ref={videoRef} key={`${selected.id}-${variantSrc ?? selected.src}`} controls playsInline preload="metadata" autoPlay={autoPlay} loop={loop} muted={muted} poster={selected.poster} aria-label={selected.alt ?? selected.title} src={variantSrc ?? selected.src} onLoadedMetadata={restorePosition} onTimeUpdate={reportPlayback} onPlay={reportPlayback} onPause={reportPlayback} onEnded={() => selectRelative(1)} onError={() => setError(`Lecture impossible : ${selected.title}`)}>
+          <video ref={videoRef} key={`${selected.id}-${variantSrc ?? selected.src}`} controls playsInline preload="metadata" autoPlay={autoPlay} loop={loop} muted={muted} crossOrigin={selected.crossOrigin} poster={selected.poster} aria-label={selected.alt ?? selected.title} src={variantSrc ?? selected.src} onLoadedMetadata={restorePosition} onTimeUpdate={reportPlayback} onPlay={reportPlayback} onPause={reportPlayback} onEnded={() => selectRelative(1)} onError={() => setError(`Lecture impossible : ${selected.title}`)}>
             {selected.subtitles?.map(track => <track key={`${track.srclang}-${track.src}`} kind="subtitles" src={track.src} srcLang={track.srclang} label={track.label} default={track.default} />)}
           </video>
         ) : <p>Aucun média sélectionné.</p>}
