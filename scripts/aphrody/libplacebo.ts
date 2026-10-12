@@ -21,6 +21,15 @@ const setup = [
   "-Dglslang=enabled",
   ...(process.platform === "win32" ? ["-Dd3d11=enabled", "-Dopengl=disabled"] : []),
   `--pkg-config-path=${[prefix, ...dependencies].map(path => join(path, "lib/pkgconfig")).join(delimiter)}`,
+  ...(process.platform === "win32" && dependencies.length
+    ? [
+        `-Dvulkan-sdk=${dependencies[0]}`,
+        `-Dc_args=${JSON.stringify(dependencies.map(path => `/I${join(path, "include")}`))}`,
+        `-Dcpp_args=${JSON.stringify(dependencies.map(path => `/I${join(path, "include")}`))}`,
+        `-Dc_link_args=${JSON.stringify(dependencies.map(path => `/LIBPATH:${join(path, "lib")}`))}`,
+        `-Dcpp_link_args=${JSON.stringify(dependencies.map(path => `/LIBPATH:${join(path, "lib")}`))}`,
+      ]
+    : []),
 ];
 const action = process.argv[2] ?? "plan";
 if (action === "plan") console.log(JSON.stringify({ source, output, prefix, setup }, null, 2));

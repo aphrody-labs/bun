@@ -4,8 +4,21 @@ d3d11_headers_extra = [ # needed internally
   cc.check_header('d3d11_4.h', required: d3d11),
   cc.check_header('dxgi1_6.h', required: d3d11),
 ]
+spirv_cross = dependency('spirv-cross-c-shared', version: '>=0.29.0', required: false)
+if not spirv_cross.found()
+  spirv_cross = dependency('spirv-cross-c', version: '>=0.29.0', static: true, required: d3d11)
+  if spirv_cross.found()
+    spirv_cross = declare_dependency(dependencies: [spirv_cross,
+      cxx.find_library('spirv-cross-core', static: true, dirs: [get_option('vulkan-sdk') / 'lib']),
+      cxx.find_library('spirv-cross-glsl', static: true, dirs: [get_option('vulkan-sdk') / 'lib']),
+      cxx.find_library('spirv-cross-hlsl', static: true, dirs: [get_option('vulkan-sdk') / 'lib']),
+      cxx.find_library('spirv-cross-msl', static: true, dirs: [get_option('vulkan-sdk') / 'lib']),
+      cxx.find_library('spirv-cross-cpp', static: true, dirs: [get_option('vulkan-sdk') / 'lib']),
+      cxx.find_library('spirv-cross-reflect', static: true, dirs: [get_option('vulkan-sdk') / 'lib'])])
+  endif
+endif
 d3d11_deps = [
-  dependency('spirv-cross-c-shared', version: '>=0.29.0', required: d3d11),
+  spirv_cross,
   cc.find_library('version', required: d3d11),
 ]
 

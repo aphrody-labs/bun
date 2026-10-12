@@ -59,7 +59,7 @@ elif not glslang_req.disabled()
 
     # Glslang 15.0.0 moved some code around, add also linking to glslang, while
     # this is not needed for older versions, it will still work.
-    glslang_deps += cxx.find_library('glslang', required: required, static: static)
+    glslang_deps += cxx.find_library('glslang', required: required, static: static, dirs: vulkan_lib_dirs)
 
     if static
       glslang_deps += [
