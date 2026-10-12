@@ -78,6 +78,17 @@ Les raccourcis `Espace`, `←`, `→` et `M` contrôlent lecture, recherche et s
 Les sources distantes doivent autoriser CORS pour les sous-titres et variantes. Le
 callback `onStatus` reçoit `loading`, `ready` ou `failed` pour synchroniser l’interface.
 
+Pour rendre le même asset dans une composition Remotion, utilisez
+`StudioRemotionComposition` depuis `@aphrody/bun-video/studio-remotion` :
+
+```tsx
+import { StudioRemotionComposition } from "@aphrody/bun-video/studio-remotion";
+
+export const Composition = () => (
+  <StudioRemotionComposition asset={asset} startFrom={0} endAt={150} />
+);
+```
+
 The official Remotion renderer 4.0.534 rejects Bun prerelease versions such as
 1.4.4-debug and 1.4.3-aphrody.4 at import: its minimum-version check excludes
 prereleases. `loadRemotionRenderer()` preserves that upstream check. The three
