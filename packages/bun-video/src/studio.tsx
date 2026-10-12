@@ -163,6 +163,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
         ) : <p>Aucun média sélectionné.</p>}
         {selected && <p>{selected.title}{selected.type ? ` · ${selected.type}` : ""}</p>}
         {selected && <progress max={progress.duration || 1} value={progress.currentTime} aria-label="Progression" />}
+        <p role="status" aria-live="polite">{status === "loading" ? "Chargement…" : status === "failed" ? "Lecture indisponible" : "Prêt à lire"}</p>
         {selected?.chapters && <nav aria-label="Chapitres">{selected.chapters.map(chapter => <button key={`${chapter.start}-${chapter.title}`} type="button" onClick={() => { if (videoRef.current) videoRef.current.currentTime = chapter.start; }}>{chapter.title}</button>)}</nav>}
         {selected && <nav aria-label="Contrôles de file"><button type="button" onClick={() => selectRelative(-1)}>Précédent</button><button type="button" onClick={() => selectRelative(1)}>Suivant</button></nav>}
         {selected && <nav aria-label="Affichage"><button type="button" onClick={fullscreen}>Plein écran</button><button type="button" onClick={pictureInPicture}>Picture-in-Picture</button></nav>}
