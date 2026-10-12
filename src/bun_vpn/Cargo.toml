@@ -9,7 +9,10 @@ publish = false
 workspace = true
 
 [dependencies]
+log.workspace = true
+mullvad-api = { path = "../../vendor/mullvad/mullvad-api" }
 mullvad-daemon = { path = "../../vendor/mullvad/mullvad-daemon", default-features = false }
 mullvad-management-interface = { path = "../../vendor/mullvad/mullvad-management-interface" }
+mullvad-paths = { path = "../../vendor/mullvad/mullvad-paths" }
 mullvad-types = { path = "../../vendor/mullvad/mullvad-types" }
 tokio.workspace = true

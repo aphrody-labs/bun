@@ -3349,8 +3349,11 @@ dependencies = [
 name = "bun_vpn"
 version = "1.4.4"
 dependencies = [
+ "log",
+ "mullvad-api",
  "mullvad-daemon",
  "mullvad-management-interface",
+ "mullvad-paths",
  "mullvad-types",
  "tokio",
 ]

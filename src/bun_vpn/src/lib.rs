@@ -6,6 +6,25 @@ pub use mullvad_management_interface::Error;
 pub use mullvad_types::states::TunnelState;
 pub type EmbeddedDaemon = mullvad_daemon::Daemon;
 
+pub async fn start_embedded_daemon() -> Result<EmbeddedDaemon, String> {
+    let settings_dir = mullvad_paths::settings_dir().map_err(|error| error.to_string())?;
+    let cache_dir = mullvad_paths::cache_dir().map_err(|error| error.to_string())?;
+    let log_handle = mullvad_daemon::logging::init_logger(log::LevelFilter::Info, None, false)
+        .map_err(|error| error.to_string())?;
+    let config = mullvad_daemon::DaemonConfig {
+        log_dir: None,
+        resource_dir: mullvad_paths::get_resource_dir(),
+        settings_dir,
+        cache_dir,
+        rpc_socket_path: mullvad_paths::get_rpc_socket_path(),
+        endpoint: mullvad_api::ApiEndpoint::from_env_vars(),
+        log_handle,
+    };
+    mullvad_daemon::Daemon::start(config, mullvad_daemon::DaemonCommandChannel::new())
+        .await
+        .map_err(|error| error.to_string())
+}
+
 /// Controls the installed Mullvad daemon through its native management IPC.
 #[cfg(not(target_os = "android"))]
 pub struct VpnClient(mullvad_management_interface::client::MullvadProxyClient);
