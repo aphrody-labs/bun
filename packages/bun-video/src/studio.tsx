@@ -116,9 +116,10 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
           <button type="submit">Ajouter</button>
         </form>
         {localAssets.map(asset => (
-          <button key={asset.id} type="button" aria-pressed={asset.id === selected?.id} onClick={() => { setError(null); setSelectedId(asset.id); }}>
-            {asset.title} <span><button type="button" aria-label={`Supprimer ${asset.title}`} onClick={event => { event.stopPropagation(); removeAsset(asset.id); }}>×</button></span>
-          </button>
+          <div key={asset.id} role="group" aria-label={asset.title}>
+            <button type="button" aria-pressed={asset.id === selected?.id} onClick={() => { setError(null); setSelectedId(asset.id); }}>{asset.title}</button>
+            <button type="button" aria-label={`Supprimer ${asset.title}`} onClick={() => removeAsset(asset.id)}>×</button>
+          </div>
         ))}
       </aside>
       <main>
