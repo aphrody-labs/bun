@@ -44,6 +44,7 @@ Official external dependencies retain their own terms:
 | react, react-dom                                             | 19.2.0  | MIT, upstream package notices                                                                                                                                                                                     |
 | @aphrody/bun-runtime-sdk                                     | 1.4.5   | Published package notices; native providers are distributed and qualified separately                                                                                                                              |
 | mediabunny                                                   | 1.9.3   | [MPL-2.0](vendor/mediabunny/LICENSE), vendored from [Vanilagy/mediabunny](https://github.com/Vanilagy/mediabunny/tree/v1.9.3) |
+| yt-dlp                                                       | 2026.08.19 | [Unlicense](vendor/yt-dlp/LICENSE), vendored from [yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp/tree/2026.08.19); executed through `bun:python`/BUV |
 
 Native Bun, JavaScriptCore, browser providers and media executables are not
 included in this source package. Their distribution licenses remain separate.

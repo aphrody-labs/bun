@@ -37,6 +37,7 @@
     "labs",
     "assets",
     "vendor/mediabunny",
+    "vendor/yt-dlp",
     "README.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
@@ -56,6 +57,7 @@
     "./secrets": "./src/secrets.ts",
     "./webgpu": "./src/webgpu.ts",
     "./mediabunny": "./vendor/mediabunny/src/index.ts",
+    "./ytdlp": "./src/ytdlp.ts",
     "./engine": "./umbrella-src/index.ts",
     "./encode": "./umbrella-src/encode.ts",
     "./computer": "./umbrella-src/computer.ts"
