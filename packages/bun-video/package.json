@@ -38,7 +38,7 @@
     "assets",
     "packages/mediabunny",
     "packages/yt-dlp",
-    "packages/mpv",
+    "packages/libmpv",
     "README.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
