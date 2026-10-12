@@ -5,11 +5,14 @@ import type { CrawlerCache } from "./cache";
 export interface StudioSubtitle { readonly src: string; readonly srclang: string; readonly label: string; readonly default?: boolean; }
 export interface StudioVariant { readonly label: string; readonly src: string; }
 export interface StudioAsset { readonly id: string; readonly title: string; readonly src: string; readonly type?: string; readonly subtitles?: readonly StudioSubtitle[]; readonly variants?: readonly StudioVariant[]; }
-export interface VideoStudioProps { readonly assets: readonly StudioAsset[]; readonly initialAssetId?: string; readonly className?: string; readonly cache?: CrawlerCache; readonly autoPlay?: boolean; readonly loop?: boolean; readonly muted?: boolean; }
+export interface VideoStudioProps { readonly assets: readonly StudioAsset[]; readonly initialAssetId?: string; readonly className?: string; readonly cache?: CrawlerCache; readonly storageKey?: string; readonly autoPlay?: boolean; readonly loop?: boolean; readonly muted?: boolean; }
 
 /** Compact React studio surface for browsing assets and driving the Bun Video pipeline. */
-export function VideoStudio({ assets, initialAssetId, className, cache, autoPlay = false, loop = false, muted = false }: VideoStudioProps) {
-  const [localAssets, setLocalAssets] = useState<readonly StudioAsset[]>(assets);
+export function VideoStudio({ assets, initialAssetId, className, cache, storageKey, autoPlay = false, loop = false, muted = false }: VideoStudioProps) {
+  const [localAssets, setLocalAssets] = useState<readonly StudioAsset[]>(() => {
+    if (!storageKey || typeof localStorage === "undefined") return assets;
+    try { return JSON.parse(localStorage.getItem(storageKey) ?? "null") ?? assets; } catch { return assets; }
+  });
   const first = initialAssetId ?? localAssets[0]?.id;
   const [selectedId, setSelectedId] = useState(first);
   const [error, setError] = useState<string | null>(null);
@@ -19,6 +22,10 @@ export function VideoStudio({ assets, initialAssetId, className, cache, autoPlay
   const [playbackRate, setPlaybackRate] = useState(1);
   const videoRef = useRef<HTMLVideoElement>(null);
   const selected = useMemo(() => localAssets.find(asset => asset.id === selectedId) ?? localAssets[0], [localAssets, selectedId]);
+  useEffect(() => {
+    if (!storageKey || typeof localStorage === "undefined") return;
+    localStorage.setItem(storageKey, JSON.stringify(localAssets.filter(asset => !asset.src.startsWith("blob:"))));
+  }, [localAssets, storageKey]);
   useEffect(() => { if (videoRef.current) videoRef.current.playbackRate = playbackRate; }, [selectedId, playbackRate]);
   const selectedIndex = selected ? localAssets.findIndex(asset => asset.id === selected.id) : -1;
   const selectRelative = (delta: number) => {
