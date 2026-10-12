@@ -1,5 +1,5 @@
 import { mkdir } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "../..");
 const source = join(root, "vendor/ffmpeg");
@@ -7,7 +7,7 @@ const output = join(root, "build/ffmpeg");
 const prefix = resolve(Bun.env.BUN_MEDIA_PREFIX ?? join(root, "build/media"));
 const action = process.argv[2] ?? "plan";
 const bash = Bun.env.BUN_MEDIA_BASH ?? (process.platform === "win32" ? "C:/Program Files/Git/bin/bash.exe" : "bash");
-const make = Bun.env.BUN_MEDIA_MAKE ?? "make";
+const make = Bun.env.BUN_MEDIA_MAKE ?? Bun.which("make") ?? "make";
 const configure = [
   bash,
   join(source, "configure"),
@@ -26,9 +26,30 @@ if (action === "plan") {
       ? [configure]
       : [configure, [make, "-j", String(Math.min(16, navigator.hardwareConcurrency))], [make, "install"]];
   for (const args of commands) {
-    const cmd = process.platform === "win32" ? [process.execPath, "msvc", "exec", "--", ...args] : args;
+    const nativeArgs =
+      process.platform === "win32" && args !== configure
+        ? [
+            bash,
+            "-c",
+            'exec "$@"',
+            "bun-ffmpeg",
+            ...args,
+            `SHELL=${join(dirname(bash), "../usr/bin/sh.exe").replaceAll("\\", "/")}`,
+          ]
+        : args;
+    const cmd = process.platform === "win32" ? [process.execPath, "msvc", "exec", "--", ...nativeArgs] : nativeArgs;
     const child = Bun.spawn(cmd, { cwd: output, stdout: "inherit", stderr: "inherit" });
     if ((await child.exited) !== 0)
       throw new Error("FFmpeg native build failed; inspect build/ffmpeg/ffbuild/config.log");
+    if (args === configure && process.platform === "win32") {
+      for (const name of ["Makefile", "ffbuild/config.mak"]) {
+        const path = join(output, name);
+        const content = await Bun.file(path).text();
+        await Bun.write(
+          path,
+          content.replace(/\/([a-z])\//g, (_, drive: string) => `${drive.toUpperCase()}:/`),
+        );
+      }
+    }
   }
 } else throw new Error("usage: bun run ffmpeg plan|configure|build");
