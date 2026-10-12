@@ -192,6 +192,20 @@ struct LogStreamer {
     tx: tokio::sync::broadcast::Sender<String>,
 }
 
+/// Build a daemon log handle without replacing the host process logger.
+pub fn detached_log_handle() -> Result<LogHandle, Error> {
+    let (tx, _) = tokio::sync::broadcast::channel(128);
+    let log_stream = LogStreamer { tx };
+    let (user_filter, reload_handle) = tracing_subscriber::reload::Layer::new(EnvFilter::new("off"));
+    let _ = user_filter;
+    Ok(LogHandle {
+        env_filter: reload_handle,
+        log_stream,
+        #[cfg(target_os = "android")]
+        logfile_writer: LogFileWriter::new(None)?,
+    })
+}
+
 impl io::Write for LogStreamer {
     /// Will always write the entire `buf` or nothing (`0` bytes) in case there are no subscribers.
     ///

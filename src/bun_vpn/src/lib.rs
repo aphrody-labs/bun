@@ -9,7 +9,7 @@ pub type EmbeddedDaemon = mullvad_daemon::Daemon;
 pub async fn start_embedded_daemon() -> Result<EmbeddedDaemon, String> {
     let settings_dir = mullvad_paths::settings_dir().map_err(|error| error.to_string())?;
     let cache_dir = mullvad_paths::cache_dir().map_err(|error| error.to_string())?;
-    let log_handle = mullvad_daemon::logging::init_logger(log::LevelFilter::Info, None, false)
+    let log_handle = mullvad_daemon::logging::detached_log_handle()
         .map_err(|error| error.to_string())?;
     let config = mullvad_daemon::DaemonConfig {
         log_dir: None,
