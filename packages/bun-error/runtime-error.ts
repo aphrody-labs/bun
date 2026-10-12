@@ -2,6 +2,16 @@
 
 import type { StackFramePosition, StackFrameScope, StackFrame as StackFrameType } from "./schema";
 
+interface StackFrameInit {
+  functionName?: string;
+  fileName?: string;
+  lineNumber?: number;
+  columnNumber?: number;
+  source?: string;
+}
+
+type Location = [file: string, line?: number, column?: number];
+
 export class StackFrame implements StackFrameType {
   function_name: string;
   file: string;
@@ -16,7 +26,7 @@ export class StackFrame implements StackFrameType {
     lineNumber: line = -1,
     columnNumber: column = -1,
     source = "",
-  }) {
+  }: StackFrameInit) {
     this.function_name = function_name;
     this.file = file;
     if (source) this.lineText = source;
@@ -56,18 +66,18 @@ export default class RuntimeError {
    * @param {Error} error object
    * @return {Array} of StackFrames
    */
-  static parseStack(error) {
+  static parseStack(error: Error): StackFrame[] {
     if (error.stack && error.stack.match(CHROME_IE_STACK_REGEXP)) {
-      return this.parseV8OrIE(error);
+      return this.parseV8OrIE(error.stack);
     } else if (error.stack) {
-      return this.parseFFOrSafari(error);
+      return this.parseFFOrSafari(error.stack);
     } else {
       return [];
     }
   }
 
   // Separate line and column numbers from a string of the form: (URI:Line:Column)
-  static extractLocation(urlLike) {
+  static extractLocation(urlLike: string): Location {
     // Fail-fast but return locations like "(native)"
     if (urlLike.indexOf(":") === -1) {
       return [urlLike];
@@ -75,15 +85,13 @@ export default class RuntimeError {
 
     var regExp = /(.+?)(?::(\d+))?(?::(\d+))?$/;
     var parts = regExp.exec(urlLike.replace(/[()]/g, ""));
-    return [parts![1], parts![2] || undefined, parts![3] || undefined];
+    return [parts![1], parts![2] ? Number(parts![2]) : undefined, parts![3] ? Number(parts![3]) : undefined];
   }
 
-  static parseV8OrIE(error) {
-    var filtered = error.stack.split("\n").filter(function (line) {
-      return !!line.match(CHROME_IE_STACK_REGEXP);
-    }, this);
+  static parseV8OrIE(stack: string): StackFrame[] {
+    var filtered = stack.split("\n").filter(line => !!line.match(CHROME_IE_STACK_REGEXP));
 
-    return filtered.map(function (line) {
+    return filtered.map(line => {
       if (line.indexOf("(eval ") > -1) {
         // Throw away eval information until we implement stacktrace.js/stackframe#8
         line = line.replace(/eval code/g, "eval").replace(/(\(eval at [^()]*)|(\),.*$)/g, "");
@@ -99,7 +107,7 @@ export default class RuntimeError {
 
       var tokens = sanitizedLine.split(/\s+/).slice(1);
       // if a location was matched, pass it to extractLocation() otherwise pop the last token
-      var locationParts = this.extractLocation(location ? location[1] : tokens.pop());
+      var locationParts = this.extractLocation(location ? location[1] : (tokens.pop() ?? ""));
       var functionName = tokens.join(" ") || undefined;
       var fileName = ["eval", "<anonymous>"].indexOf(locationParts[0]) > -1 ? undefined : locationParts[0];
 
@@ -110,15 +118,13 @@ export default class RuntimeError {
         columnNumber: locationParts[2],
         source: line,
       });
-    }, this);
+    });
   }
 
-  static parseFFOrSafari(error) {
-    var filtered = error.stack.split("\n").filter(function (line) {
-      return !line.match(SAFARI_NATIVE_CODE_REGEXP);
-    }, this);
+  static parseFFOrSafari(stack: string): StackFrame[] {
+    var filtered = stack.split("\n").filter(line => !line.match(SAFARI_NATIVE_CODE_REGEXP));
 
-    return filtered.map(function (line) {
+    return filtered.map(line => {
       // Throw away eval information until we implement stacktrace.js/stackframe#8
       if (line.indexOf(" > eval") > -1) {
         line = line.replace(/ line (\d+)(?: > eval line \d+)* > eval:\d+:\d+/g, ":$1");
@@ -143,6 +149,6 @@ export default class RuntimeError {
           source: line,
         });
       }
-    }, this);
+    });
   }
 }

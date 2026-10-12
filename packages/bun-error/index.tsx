@@ -1,4 +1,4 @@
-import type { JSX } from "preact";
+import type { ComponentChildren, JSX, VNode } from "preact";
 import { createContext, render } from "preact";
 import { useCallback, useContext, useEffect, useRef, useState } from "preact/hooks";
 import { problemsToMarkdown, withBunInfo } from "./markdown";
@@ -8,6 +8,7 @@ import {
   type JSException as JSExceptionType,
   type Location,
   type Message,
+  type Problems,
   type SourceLine,
   type StackFrame,
 } from "./schema";
@@ -78,8 +79,12 @@ const errorTags = [
   <ErrorTag type={ErrorTagType.hmr}></ErrorTag>,
 ];
 
-function getAssetPrefixPath() {
-  return globalThis["__BUN_HMR"]?.assetPrefixPath || "";
+declare global {
+  var __BUN_HMR: { assetPrefixPath?: string } | undefined;
+}
+
+function getAssetPrefixPath(): string {
+  return globalThis.__BUN_HMR?.assetPrefixPath || "";
 }
 
 export const normalizedFilename = (filename: string, cwd?: string): string => {
@@ -151,7 +156,7 @@ const maybeBlobFileURL = (filename: string, line?: number, column?: number): str
     return appendLineColumnIfNeeded(filename, line, column);
   }
 
-  return srcFileURL(filename, line, column);
+  return srcFileURL(filename);
 };
 
 const openWithoutFlashOfNewTab: JSX.MouseEventHandler<HTMLAnchorElement> = event => {
@@ -278,7 +283,7 @@ class FancyTypeError {
   }
 }
 
-export const clientURL = filename => {
+export const clientURL = (filename: string, _line?: number, _column?: number): string => {
   if (filename.includes(".bun")) {
     return `/${filename.replace(/^(\/)?/g, "")}`;
   }
@@ -503,7 +508,7 @@ const SourceLines = ({
 const BuildErrorSourceLines = ({ location, filename }: { location: Location; filename: string }) => {
   const { line, line_text, column } = location;
   const sourceLines: SourceLine[] = [{ line, text: line_text }];
-  const buildURL = useCallback((line, column) => srcFileURL(filename, line, column), [filename]);
+  const buildURL = useCallback((line?: number, column?: number) => srcFileURL(filename, line, column), [filename]);
   return (
     <SourceLines
       sourceLines={sourceLines}
@@ -572,7 +577,7 @@ export const StackFrameIdentifier = ({
   }
 };
 
-const getNativeStackFrameIdentifier = frame => {
+const getNativeStackFrameIdentifier = (frame: StackFrame) => {
   const { file: _file, function_name: functionName, scope } = frame;
 
   return StackFrameIdentifier({
@@ -629,7 +634,7 @@ const NativeStackFrame = ({
   );
 };
 
-const NativeStackFrames = ({ frames, urlBuilder }) => {
+const NativeStackFrames = ({ frames, urlBuilder }: { frames: StackFrame[]; urlBuilder: typeof maybeBlobFileURL }) => {
   const items = new Array(frames.length);
   var maxLength = 0;
 
@@ -666,7 +671,7 @@ const NativeStackTrace = ({
   const filename = normalizedFilename(file, cwd);
   const urlBuilder = isClient ? clientURL : maybeBlobFileURL;
   const ref = useRef<HTMLDivElement>(null);
-  const buildURL = useCallback((line, column) => urlBuilder(file, line, column), [file, urlBuilder]);
+  const buildURL = useCallback((line?: number, column?: number) => urlBuilder(file, line, column), [file, urlBuilder]);
 
   return (
     <div ref={ref} className={`BunError-NativeStackTrace`}>
@@ -709,7 +714,7 @@ const NativeStackTrace = ({
   );
 };
 
-const Indent = ({ by, children }) => {
+const Indent = ({ by, children }: { by: number; children: ComponentChildren }) => {
   const amount = useContext(IndentationContext);
   return (
     <>
@@ -940,7 +945,7 @@ const OverlayMessageContainer = ({ problems, isClient = false }: FallbackMessage
 };
 
 // we can ignore the synchronous copy to clipboard API...I think
-function copyToClipboard(input: string | Promise<string>) {
+function copyToClipboard(input: string | Promise<string>): Promise<void> | undefined {
   if (!input) return;
 
   if (typeof input === "object" && "then" in input) {
@@ -950,7 +955,13 @@ function copyToClipboard(input: string | Promise<string>) {
   return navigator.clipboard.writeText(input).then(() => {});
 }
 
-const Footer = ({ toMarkdown, data }) => (
+const Footer = ({
+  toMarkdown,
+  data,
+}: {
+  toMarkdown: (problems: Problems | undefined) => string;
+  data: Problems | undefined;
+}) => (
   <div className="BunError-footer">
     <div
       title="Copy error as markdown so it can be pasted into a bug report or slack/discord"
@@ -969,19 +980,20 @@ const Footer = ({ toMarkdown, data }) => (
 
 export var thisCwd = "";
 const ErrorGroupContext = createContext<{ cwd?: string }>({ cwd: undefined });
-var reactRoot;
+var reactRoot: HTMLDivElement | null = null;
 
-function renderWithFunc(func) {
+function renderWithFunc(func: () => VNode) {
   if (!reactRoot) {
     const root = document.createElement("div");
     root.id = "__bun__error-root";
 
-    reactRoot = document.createElement("div");
-    reactRoot.id = BUN_ERROR_CONTAINER_ID;
+    const container = document.createElement("div");
+    reactRoot = container;
+    container.id = BUN_ERROR_CONTAINER_ID;
 
     const fallbackStyleSheet = document.querySelector("style[data-has-bun-fallback-style]");
     if (!fallbackStyleSheet) {
-      reactRoot.style.visibility = "hidden";
+      container.style.visibility = "hidden";
     }
     const shadowRoot = root.attachShadow({ mode: "closed" });
     if (!fallbackStyleSheet) {
@@ -989,19 +1001,19 @@ function renderWithFunc(func) {
       link.rel = "stylesheet";
       link.href = new URL("/bun:erro.css", document.baseURI).href;
       link.onload = () => {
-        reactRoot.style.visibility = "visible";
+        container.style.visibility = "visible";
       };
       shadowRoot.appendChild(link);
     } else {
       fallbackStyleSheet.remove();
       shadowRoot.appendChild(fallbackStyleSheet);
-      reactRoot.classList.add("BunErrorRoot--FullPage");
+      container.classList.add("BunErrorRoot--FullPage");
     }
 
-    shadowRoot.appendChild(reactRoot);
+    shadowRoot.appendChild(container);
 
     document.body.appendChild(root);
-    render(func(), reactRoot);
+    render(func(), container);
   } else {
     render(func(), reactRoot);
   }
@@ -1018,7 +1030,7 @@ export function renderFallbackError(fallback: FallbackMessageContainer) {
   ));
 }
 
-globalThis[Symbol.for("Bun__renderFallbackError")] = renderFallbackError;
+(globalThis as Record<symbol, unknown>)[Symbol.for("Bun__renderFallbackError")] = renderFallbackError;
 
 export function dismissError() {
   if (reactRoot) {

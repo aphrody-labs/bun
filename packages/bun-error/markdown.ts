@@ -1,7 +1,7 @@
 import { normalizedFilename, StackFrameIdentifier, thisCwd } from "./index";
 import { StackFrameScope, type JSException, type Message, type Problems } from "./schema";
 
-export function problemsToMarkdown(problems: Problems) {
+export function problemsToMarkdown(problems: Problems | undefined) {
   var markdown = "";
   if (problems?.build?.msgs?.length) {
     markdown += messagesToMarkdown(problems.build.msgs);
@@ -225,7 +225,18 @@ function messageToMarkdown(message: Message): string {
   return markdown;
 }
 
-export const withBunInfo = text => {
+interface BunInfo {
+  bun_version: string;
+  framework?: string;
+  framework_version?: string;
+  platform: {
+    os: string;
+    version: string;
+    arch: string;
+  };
+}
+
+export const withBunInfo = (text: string): string | Promise<string> => {
   const bunInfo = getBunInfo();
 
   const trimmed = text.trim();
@@ -249,8 +260,7 @@ export const withBunInfo = text => {
   return trimmed + "\n";
 };
 
-function bunInfoToMarkdown(_info) {
-  if (!_info) return;
+function bunInfoToMarkdown(_info: BunInfo): string {
   const info = { ..._info, platform: { ..._info.platform } };
 
   var operatingSystemVersion = info.platform.version;
@@ -326,15 +336,16 @@ function bunInfoToMarkdown(_info) {
   return base;
 }
 
-var bunInfoMemoized;
-function getBunInfo() {
+var bunInfoMemoized: BunInfo | undefined;
+function getBunInfo(): BunInfo | Promise<BunInfo> {
   if (bunInfoMemoized) return bunInfoMemoized;
   if ("sessionStorage" in globalThis) {
     try {
       const bunInfoMemoizedString = sessionStorage.getItem("__bunInfo");
       if (bunInfoMemoizedString) {
-        bunInfoMemoized = JSON.parse(bunInfoMemoized);
-        return bunInfoMemoized;
+        const parsed: BunInfo = JSON.parse(bunInfoMemoizedString);
+        bunInfoMemoized = parsed;
+        return parsed;
       }
     } catch {}
   }
@@ -347,7 +358,7 @@ function getBunInfo() {
       Accept: "application/json",
     },
   })
-    .then(resp => resp.json())
+    .then(resp => resp.json() as Promise<BunInfo>)
     .then(bunInfo => {
       clearTimeout(id);
       bunInfoMemoized = bunInfo;
