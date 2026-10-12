@@ -1783,6 +1783,60 @@ describe("Bun.TerminalScreen", () => {
 });
 
 describe("bun:rio", () => {
+  test("consumes only the supplied buffer view and returns independent snapshots", () => {
+    const terminal = new RioTerminal({ cols: 4, rows: 1 });
+    const bytes = new TextEncoder().encode("!é?");
+    expect(terminal.write(new DataView(bytes.buffer, 1, 2))).toBe(2);
+    expect(terminal.text()).toBe("é");
+    const snapshot = terminal.cells();
+    expect(snapshot.length).toBe(16);
+    snapshot[0] = 0x58;
+    expect(terminal.cellText(0, 0)).toBe("é");
+    terminal.write("Z");
+    expect(terminal.cellText(1, 0)).toBe("Z");
+    expect(snapshot[4]).toBe(32);
+  });
+
+  test("reset discards partial input, alternate screen, title and queued replies", () => {
+    const terminal = new RioTerminal({ cols: 4, rows: 2, scrollback: 0 });
+    terminal.write("a\r\nb\r\nc\x1b]2;title\x07\x1b[?1049h\x1b[6n");
+    terminal.write(new Uint8Array([0xe2]));
+    terminal.reset();
+    expect([terminal.cols, terminal.rows]).toEqual([4, 2]);
+    expect(terminal.alternateScreen).toBe(false);
+    expect(terminal.title).toBe("");
+    expect(terminal.takeReplies()).toBe("");
+    expect(terminal.text({ scrollback: true })).toBe("\n");
+    terminal.write("X\r\nY\r\nZ");
+    expect(terminal.text({ scrollback: true })).toBe("Y\nZ");
+  });
+
+  test("invalid resize is atomic and option getter failures preserve the screen", () => {
+    const terminal = new RioTerminal({ cols: 4, rows: 2 });
+    terminal.write("OK");
+    expect(() => terminal.resize(8, 0)).toThrow(expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }));
+    expect([terminal.cols, terminal.rows]).toEqual([4, 2]);
+    const error = new Error("scrollback getter");
+    expect(() =>
+      terminal.text({
+        get scrollback(): boolean {
+          throw error;
+        },
+      }),
+    ).toThrow(error);
+    expect(terminal.text()).toBe("OK\n");
+  });
+
+  test("synchronized updates retain bytes until their explicit end sequence", () => {
+    const terminal = new RioTerminal({ cols: 8, rows: 1 });
+    terminal.write("old\r\x1b[?2026h");
+    terminal.write("new");
+    terminal.write("\x1b[?2026l");
+    expect(terminal.text()).toBe("new");
+    expect(terminal.write("")).toBe(0);
+    expect(terminal.text()).toBe("new");
+  });
+
   test("exports Bun.RioTerminal as the named Terminal constructor", () => {
     expect(isBuiltin("bun:rio")).toBe(true);
     expect(builtinModules).toContain("bun:rio");

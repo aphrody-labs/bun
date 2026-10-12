@@ -52,3 +52,50 @@ word; the spacer cell uses code point 32 and display width 0.
 `Bun.TerminalScreen` remains available for existing applications using Bun's
 built-in terminal parser. Use `Bun.RioTerminal` or `bun:rio` when you want Rio's
 VT parser and grid.
+
+## Streaming and snapshots
+
+`write()` consumes UTF-8 bytes; its return value counts bytes rather than JavaScript
+UTF-16 code units. Pass byte chunks directly to preserve characters and escape
+sequences split across reads. A typed-array or DataView input consumes only that
+view's byte range. A string is encoded as UTF-8 on each call, so splitting a
+surrogate pair across separate string writes does not preserve that pair.
+
+```ts
+import { Terminal } from "bun:rio";
+
+const screen = new Terminal({ cols: 80, rows: 24, scrollback: 1000 });
+const bytes = new TextEncoder().encode("café\r\n");
+screen.write(bytes.subarray(0, 4));
+screen.write(bytes.subarray(4));
+console.log(screen.cellText(3, 0)); // é
+```
+
+LF moves down without an implicit carriage return; use CRLF to start a new line
+at column zero. `text()` joins physical screen rows with LF and omits unused
+trailing cells. Blank rows remain present; wrapped lines remain separate rows.
+`text({ scrollback: true })` prepends retained history without consuming it or
+changing subsequent visible-screen reads. A zero scrollback limit retains no
+history. Alternate-screen content is separate from the normal screen.
+
+`cells()` returns a fresh `Uint32Array` of `cols * rows * 4` words. Cell `(col, row)`
+starts at `4 * (row * cols + col)`. Mutating this array does not alter the terminal,
+and subsequent writes do not alter an earlier snapshot. The first word stores
+the first code point, while `cellText(col, row)` retains the full grapheme.
+Wide-character spacer cells, including wrap fillers, have width zero and empty
+`cellText()` output. See the public type declaration for packed colors and flags.
+
+Terminal queries enqueue replies. `takeReplies()` concatenates and drains them;
+the caller decides whether to send those bytes back to its child process. Rio
+does not send them to any host process automatically. Synchronized updates
+(`CSI ? 2026 h`) buffer input until their matching end sequence (`CSI ? 2026 l`).
+Timeout expiry is processed on a subsequent `write()` call, including an empty
+write; reading a snapshot does not drive an event loop.
+
+`reset()` discards normal and alternate screen content, scrollback, title,
+pending replies and incomplete input. It retains the current dimensions and
+configured scrollback limit. `resize()` validates both dimensions before changing
+the grid and lets Rio reflow existing content. Large dimensions and history
+limits increase retained memory; Bun accounts for the grids, parser buffers and
+queued replies when scheduling garbage collection.
+

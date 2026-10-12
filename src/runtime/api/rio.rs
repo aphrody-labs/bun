@@ -146,15 +146,17 @@ impl RioTerminal {
         };
         let bytes = input.slice();
         let old_history = self.terminal.get().history_size();
+        let old_buffer_cost = self.buffer_memory_cost();
         self.parser.with_mut(|parser| {
             self.terminal
                 .with_mut(|terminal| parser.advance(terminal, bytes));
         });
         let terminal = self.terminal.get();
         let added_rows = terminal.history_size().saturating_sub(old_history);
-        global
-            .vm()
-            .report_extra_memory(added_rows * terminal.columns() * core::mem::size_of::<Square>());
+        global.vm().report_extra_memory(
+            added_rows * terminal.columns() * core::mem::size_of::<Square>()
+                + self.buffer_memory_cost().saturating_sub(old_buffer_cost),
+        );
         Ok(JSValue::js_number(bytes.len() as f64))
     }
 
@@ -320,12 +322,18 @@ impl RioTerminal {
     }
 
     pub(crate) fn memory_cost(&self) -> usize {
-        let replies = self.replies.lock().unwrap_or_else(PoisonError::into_inner);
         core::mem::size_of::<Self>() + self.terminal.get().memory_cost()
             - core::mem::size_of::<Crosswords<ReplyListener>>()
             + core::mem::size_of::<Mutex<Vec<String>>>()
             + replies.capacity() * core::mem::size_of::<String>()
             + replies.iter().map(String::capacity).sum::<usize>()
+            + self.buffer_memory_cost() - self.terminal.get().title.capacity()
+    }
+
+    fn buffer_memory_cost(&self) -> usize {
+        let replies = self.replies.lock().unwrap_or_else(PoisonError::into_inner);
+        self.parser.get().memory_cost() - core::mem::size_of::<Processor>()
+            + self.terminal.get().title.capacity()
     }
 
     #[bun_jsc::host_fn(getter)]

@@ -138,6 +138,16 @@ impl OscBuffer {
 }
 
 impl Parser {
+    pub(super) fn memory_cost(&self) -> usize {
+        std::mem::size_of::<Self>()
+            .saturating_add(self.osc_raw.overflow.capacity())
+            .saturating_add(
+                self.decode_buf
+                    .capacity()
+                    .saturating_mul(std::mem::size_of::<u32>()),
+            )
+    }
+
     /// Create a new parser in the ground state.
     pub fn new() -> Self {
         Self::default()

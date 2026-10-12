@@ -590,6 +590,15 @@ pub struct Processor {
 }
 
 impl Processor {
+    /// Estimates retained parser and protocol-buffer memory.
+    pub fn memory_cost(&self) -> usize {
+        std::mem::size_of::<Self>()
+            .saturating_add(self.parser.memory_cost() - std::mem::size_of::<Parser>())
+            .saturating_add(self.state.sync_state.buffer.capacity())
+            .saturating_add(self.state.xtgettcap_state.buffer.capacity())
+            .saturating_add(self.state.apc_state.buffer.capacity())
+    }
+
     /// Synchronized update timeout.
     pub fn sync_timeout(&self) -> &StdSyncHandler {
         &self.state.sync_state.timeout
@@ -2237,6 +2246,31 @@ fn get_termcap_capability(name: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn memory_cost_tracks_retained_protocol_buffers() {
+        let mut processor = Processor::default();
+        let initial = processor.memory_cost();
+        assert_eq!(initial, std::mem::size_of::<Processor>() + SYNC_BUFFER_SIZE);
+
+        processor.state.xtgettcap_state.buffer.reserve(8192);
+        processor.state.apc_state.buffer.reserve(16384);
+        let protocol_cost = processor.state.xtgettcap_state.buffer.capacity()
+            + processor.state.apc_state.buffer.capacity();
+        assert_eq!(processor.memory_cost(), initial + protocol_cost);
+
+        let mut handler = SyncHandler::default();
+        let mut title = b"\x1b]2;".to_vec();
+        title.extend(std::iter::repeat_n(b'x', 8192));
+        processor.advance(&mut handler, &title);
+        let pending_cost = processor.memory_cost();
+        assert!(pending_cost >= initial + protocol_cost + 8192);
+        processor.advance(&mut handler, b"\x07");
+        assert_eq!(processor.memory_cost(), pending_cost);
+
+        processor.advance(&mut handler, "é".repeat(4096).as_bytes());
+        assert!(processor.memory_cost() > pending_cost);
+    }
 
     #[derive(Default)]
     struct SyncHandler {

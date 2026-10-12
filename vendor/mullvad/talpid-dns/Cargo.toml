@@ -1,5 +1,6 @@
 [package]
 name = "talpid-dns"
+build = "build.rs"
 edition.workspace = true
 rust-version.workspace = true
 description = "Privacy preserving and secure DNS library"
