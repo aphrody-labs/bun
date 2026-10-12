@@ -1,0 +1,6 @@
+{
+  "repository": "https://github.com/mpv-player/mpv-examples",
+  "commit": "e0d1a84c99e8c469b58fde31a1541401acfb0eb2",
+  "archiveSha256": "fbcc4395039eec363c35bb82dc21f484a3b74672be12c1e90484862e6881d5ad",
+  "role": "native API reference; not linked into Bun yet"
+}

@@ -1,0 +1,6 @@
+{
+  "repository": "https://github.com/zmwangx/rust-ffmpeg",
+  "commit": "9b9c0b9ba061a019d03807d339fcdd85e3ea9c97",
+  "archiveSha256": "7605ec102ecb1f9078c51f7089fe9aa50eb9f288c625e8de86d56f595b5ac194",
+  "role": "native API reference; not linked into Bun yet"
+}
