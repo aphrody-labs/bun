@@ -12,7 +12,7 @@ export async function providePackageJsonTasks(): Promise<BunTask[]> {
   //
   const scripts: Record<string, string> = await (async () => {
     try {
-      const file = vscode.Uri.file(vscode.workspace.workspaceFolders[0]?.uri.fsPath + "/package.json");
+      const file = vscode.Uri.file(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath + "/package.json");
 
       // Load contents of package.json, no need to check if file exists, we return null if it doesn't
       const contents = await vscode.workspace.fs.readFile(file);
@@ -89,7 +89,9 @@ function registerCodeLensProvider(context: vscode.ExtensionContext) {
       },
       {
         provideCodeLenses(document: vscode.TextDocument) {
-          const { range } = extractScriptsFromPackageJson(document);
+          const extracted = extractScriptsFromPackageJson(document);
+          if (!extracted) return [];
+          const { range } = extracted;
 
           const codeLenses: vscode.CodeLens[] = [];
           codeLenses.push(
@@ -120,7 +122,7 @@ function registerCodeLensProvider(context: vscode.ExtensionContext) {
 
       const pick = await vscode.window.showQuickPick(
         tasks
-          .filter(task => task.detail.endsWith("package.json"))
+          .filter(task => task.detail?.endsWith("package.json"))
           .map(task => ({
             label: task.name,
             detail: task.detail,
@@ -158,11 +160,13 @@ function registerHoverProvider(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.languages.registerHoverProvider("json", {
       provideHover(document, position) {
-        const { scripts } = extractScriptsFromPackageJson(document);
+        const extracted = extractScriptsFromPackageJson(document);
+        if (!extracted) return;
+        const { scripts } = extracted;
 
         return {
-          contents: scripts.map(script => {
-            if (!script.range.contains(position)) return null;
+          contents: scripts.flatMap(script => {
+            if (!script?.range.contains(position)) return [];
 
             const command = encodeURI(JSON.stringify({ script: script.command, name: script.name }));
 
@@ -171,7 +175,7 @@ function registerHoverProvider(context: vscode.ExtensionContext) {
             );
             markdownString.isTrusted = true;
 
-            return markdownString;
+            return [markdownString];
           }),
         };
       },

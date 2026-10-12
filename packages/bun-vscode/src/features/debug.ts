@@ -357,7 +357,8 @@ class FileDebugSession extends DebugSession {
     this.adapter = new WebSocketDebugAdapter(url, untitledDocPath, bunEvalPath);
 
     if (untitledDocPath) {
-      this.adapter.on("Adapter.response", (response: DebugProtocolResponse) => {
+      this.adapter.on("Adapter.response", (message: DAP.Response) => {
+        const response = message as DebugProtocolResponse;
         if (response.body?.source?.path) {
           if (response.body.source.path === bunEvalPath) {
             response.body.source.path = untitledDocPath;
@@ -367,7 +368,7 @@ class FileDebugSession extends DebugSession {
         }
         if (Array.isArray(response.body?.breakpoints)) {
           for (const bp of response.body.breakpoints) {
-            if (bp.source?.path === bunEvalPath) {
+            if (bp.source && bp.source.path === bunEvalPath) {
               bp.source.path = untitledDocPath;
               bp.verified = true;
             } else if (bp.source?.path) {
@@ -378,7 +379,8 @@ class FileDebugSession extends DebugSession {
         this.sendResponse(response);
       });
 
-      this.adapter.on("Adapter.event", (event: DebugProtocolEvent) => {
+      this.adapter.on("Adapter.event", (message: DAP.Event) => {
+        const event = message as DebugProtocolEvent;
         if (event.body?.source?.path) {
           if (event.body.source.path === bunEvalPath) {
             event.body.source.path = untitledDocPath;
@@ -389,7 +391,8 @@ class FileDebugSession extends DebugSession {
         this.sendEvent(event);
       });
     } else {
-      this.adapter.on("Adapter.response", (response: DebugProtocolResponse) => {
+      this.adapter.on("Adapter.response", (message: DAP.Response) => {
+        const response = message as DebugProtocolResponse;
         if (response.body?.source?.path) {
           response.body.source.path = this.mapRemoteToLocal(response.body.source.path);
         }
@@ -402,7 +405,8 @@ class FileDebugSession extends DebugSession {
         }
         this.sendResponse(response);
       });
-      this.adapter.on("Adapter.event", (event: DebugProtocolEvent) => {
+      this.adapter.on("Adapter.event", (message: DAP.Event) => {
+        const event = message as DebugProtocolEvent;
         if (event.body?.source?.path) {
           event.body.source.path = this.mapRemoteToLocal(event.body.source.path);
         }
@@ -423,15 +427,15 @@ class FileDebugSession extends DebugSession {
     if (type === "request") {
       const { untitledDocPath, bunEvalPath } = this;
       const { command } = message;
+      const args = message.arguments as { source?: { path?: string } } | undefined;
       if (command === "setBreakpoints" || command === "breakpointLocations") {
-        const args = message.arguments as any;
-        if (untitledDocPath && args.source?.path === untitledDocPath) {
+        if (untitledDocPath && args?.source?.path === untitledDocPath) {
           args.source.path = bunEvalPath;
-        } else if (args.source?.path) {
+        } else if (args?.source?.path) {
           args.source.path = this.mapLocalToRemote(args.source.path);
         }
-      } else if (command === "source" && message.arguments?.source?.path) {
-        message.arguments.source.path = this.mapLocalToRemote(message.arguments.source.path);
+      } else if (command === "source" && args?.source?.path) {
+        args.source.path = this.mapLocalToRemote(args.source.path);
       }
 
       this.adapter.emit("Adapter.request", message);

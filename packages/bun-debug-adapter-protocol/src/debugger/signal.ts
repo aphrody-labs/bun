@@ -47,12 +47,14 @@ export class UnixSignal extends EventEmitter<UnixSignalEventMap> {
     this.#server.listen(this.#path);
   }
 
-  emit<E extends keyof UnixSignalEventMap>(event: E, ...args: UnixSignalEventMap[E]): boolean {
+  emit<E extends keyof UnixSignalEventMap>(event: E, ...args: UnixSignalEventMap[E]): boolean;
+  emit(event: string | symbol, ...args: unknown[]): boolean;
+  emit(event: string | symbol, ...args: unknown[]): boolean {
     if (isDebug) {
       console.log(event, ...args);
     }
 
-    return super.emit(event, ...(args as never));
+    return super.emit(event, ...args);
   }
 
   /**

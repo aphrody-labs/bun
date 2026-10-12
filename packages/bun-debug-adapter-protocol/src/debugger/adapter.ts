@@ -242,7 +242,7 @@ export type DebugAdapterEventMap = Pick<InspectorEventMap, InspectorEvent> & {
 };
 
 const isDebug = process.env.NODE_ENV === "development";
-const debugSilentEvents = new Set(["Adapter.event", "Inspector.event"]);
+const debugSilentEvents = new Set<string | symbol>(["Adapter.event", "Inspector.event"]);
 
 const inspectorEventDomainSet: ReadonlySet<string> = new Set(inspectorEventDomains);
 
@@ -304,7 +304,7 @@ export abstract class BaseDebugAdapter<T extends Inspector = Inspector>
     this.#bunEvalPath = bunEvalPath;
     this.#threadId = threadId++;
     this.inspector = inspector;
-    const emit = this.inspector.emit.bind(this.inspector) as (event: string | symbol, ...args: unknown[]) => boolean;
+    const emit = this.inspector.emit.bind(this.inspector) as (event: unknown, ...args: unknown[]) => boolean;
     this.inspector.emit = (event, ...args) => {
       let sent = false;
       sent ||= emit(event, ...args);
@@ -369,7 +369,9 @@ export abstract class BaseDebugAdapter<T extends Inspector = Inspector>
    * @param args the event arguments
    * @returns if the event was sent to a listener
    */
-  emit<E extends keyof DebugAdapterEventMap>(event: E, ...args: DebugAdapterEventMap[E] | []): boolean {
+  emit<E extends keyof DebugAdapterEventMap>(event: E, ...args: DebugAdapterEventMap[E] | []): boolean;
+  emit(event: string | symbol, ...args: unknown[]): boolean;
+  emit(event: string | symbol, ...args: unknown[]): boolean {
     if (isDebug && !debugSilentEvents.has(event)) {
       console.log(this.#threadId, event, ...args);
     }

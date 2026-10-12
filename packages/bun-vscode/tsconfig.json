@@ -1,14 +1,17 @@
 {
   "compilerOptions": {
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "target": "ESNext",
     "module": "ESNext",
-    "declaration": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "isolatedModules": false,
     "skipLibCheck": true,
-    "strict": true
+    "strict": true,
+    "types": [],
+    "typeRoots": ["../bun-types/node_modules/@types"]
   },
-  "include": ["src", "test", "types", "../../bun-devtools", "../../bun-debug-adapter-protocol"],
+  "include": ["src", "../bun-types/index.d.ts"],
   "exclude": ["node_modules"]
 }
