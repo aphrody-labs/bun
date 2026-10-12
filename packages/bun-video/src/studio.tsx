@@ -40,7 +40,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
       ["seekforward", () => { video.currentTime += 10; }],
     ];
     for (const [action, handler] of actions) try { mediaSession.setActionHandler(action, handler); } catch { /* browser may not implement every action */ }
-    if (selected) mediaSession.metadata = new MediaMetadata({ title: selected.title });
+    if (selected) mediaSession.metadata = new MediaMetadata({ title: selected.title, artwork: selected.poster ? [{ src: selected.poster }] : undefined });
     return () => { for (const [action] of actions) try { mediaSession.setActionHandler(action, null); } catch {} };
   }, [selected, selectedId]);
   const selectedIndex = selected ? localAssets.findIndex(asset => asset.id === selected.id) : -1;
