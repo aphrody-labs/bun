@@ -47,7 +47,7 @@ try {
       "../../../src/bun.js/WebKit/WebKitBuild/Release/JavaScriptCore/DerivedSources/inspector/InspectorBackendCommands.js",
     );
   writeNativeFunctionParameters(basePath);
-  const scriptsToBundle = [];
+  const scriptsToBundle: string[] = [];
   const _stylesToBundle = [];
   const jsReplacementId = crypto.randomUUID() + ".js";
   const _cssReplacementId = crypto.randomUUID() + ".css";

@@ -1,20 +1,18 @@
 {
   "compilerOptions": {
     "lib": ["ESNext"],
-    "module": "esnext",
+    "module": "NodeNext",
     "target": "esnext",
-    "moduleResolution": "nodenext",
+    "moduleResolution": "NodeNext",
     "moduleDetection": "force",
     "strict": true,
-    "downlevelIteration": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "inlineSourceMap": true,
     "allowJs": true,
     "noImplicitAny": false,
-    "outDir": "dist",
-    "types": ["node"]
+    "outDir": "dist"
   },
   "include": [".", "../bun-types/index.d.ts"]
 }

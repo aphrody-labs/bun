@@ -26,7 +26,7 @@ const local =
 const dryRun = process.argv.includes("--dry-run");
 
 const [tag] = process.argv.slice(2);
-let bucketUrl;
+let bucketUrl: URL;
 let aws: AwsClient;
 try {
   bucketUrl = new URL(`${env("AWS_BUCKET")}/`, env("AWS_ENDPOINT"));

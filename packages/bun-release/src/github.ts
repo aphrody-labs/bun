@@ -88,7 +88,7 @@ export async function getSha(tag: string, format?: "short" | "long") {
 export async function getBuild(): Promise<number> {
   const date = new Date().toISOString().split("T")[0].replace(/-/g, "");
   const response = await fetch("https://registry.npmjs.org/-/package/bun/dist-tags");
-  const { canary }: { canary: string } = await response.json();
+  const { canary } = (await response.json()) as { canary: string };
   if (!canary.includes(date)) {
     return 1;
   }
