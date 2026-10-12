@@ -24,6 +24,7 @@ export * from "./ytdlp";
 export * from "./mpv";
 export * from "./pipeline";
 export * from "./image";
+export * from "./formats";
 
 export const loadRemotionCore = () => import("remotion");
 export const loadRemotionRenderer = () => import("@remotion/renderer");
