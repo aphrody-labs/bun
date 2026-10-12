@@ -67,3 +67,15 @@
 [submodule "@aphrody/m3-next-tauri-example"]
 	path = packages/aphrody-migrated/m3/aphrody-m3-next-tauri-example
 	url = https://github.com/aphrody-labs/aphrody-m3-next-tauri-example.git
+[submodule "@aphrody/m3-os-themes"]
+	path = packages/aphrody-migrated/m3/aphrody-m3-os-themes
+	url = https://github.com/aphrody-labs/aphrody-m3-os-themes.git
+[submodule "@aphrody/m3-primitives"]
+	path = packages/aphrody-migrated/m3/aphrody-m3-primitives
+	url = https://github.com/aphrody-labs/aphrody-m3-primitives.git
+[submodule "@aphrody/m3-react"]
+	path = packages/aphrody-migrated/m3/aphrody-m3-react
+	url = https://github.com/aphrody-labs/aphrody-m3-react.git
+[submodule "@aphrody/m3-reader"]
+	path = packages/aphrody-migrated/m3/aphrody-m3-reader
+	url = https://github.com/aphrody-labs/aphrody-m3-reader.git
