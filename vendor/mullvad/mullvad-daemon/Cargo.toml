@@ -126,7 +126,7 @@ tokio = { workspace = true, features = ["test-util"] }
 # download-and-install half of `mullvad-update`. Keep in sync with the
 # `in_app_upgrade` cfg set in `build.rs`.
 [target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
-mullvad-update = { path = "../mullvad-update", features = ["client"] }
+mullvad-update = { path = "../mullvad-update" }
 
 [target.'cfg(target_os="android")'.dependencies]
 async-trait = { workspace = true }
@@ -181,7 +181,12 @@ workspace = true
 features = ["Win32_System_SystemServices"]
 
 [features]
-default = ["default-allocator"]
+default = ["default-allocator", "in-app-upgrade"]
+# Bun embeds the daemon and owns its release lifecycle, so it does not need the
+# standalone app updater in the embedded binary.
+embedded = []
+# Keep the standalone daemon's updater behavior enabled by default on desktop.
+in-app-upgrade = ["mullvad-update/client"]
 # Allow the API server to use to be configured
 api-override = ["mullvad-api/api-override"]
 cgroup2 = ["talpid-core/cgroup2"]

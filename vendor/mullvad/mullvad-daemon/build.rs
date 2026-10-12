@@ -27,9 +27,11 @@ fn main() {
         res.compile().expect("Unable to generate windows resources");
     }
 
-    // Enable in-app upgrades on macOS and Windows
+    // Enable in-app upgrades on macOS and Windows for standalone builds.
     println!("cargo::rustc-check-cfg=cfg(in_app_upgrade)");
-    if matches!(target_os(), Os::Windows | Os::Macos) {
+    if matches!(target_os(), Os::Windows | Os::Macos)
+        && env::var_os("CARGO_FEATURE_IN_APP_UPGRADE").is_some()
+    {
         println!(r#"cargo::rustc-cfg=in_app_upgrade"#);
     }
 
