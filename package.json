@@ -106,7 +106,8 @@
     "typecheck:prepare": "bun run --cwd packages/bun-plugin-tailwind types:prepare",
     "libmpv": "bun scripts/aphrody/libmpv.ts",
     "ffmpeg": "bun scripts/aphrody/ffmpeg.ts",
-    "libplacebo": "bun scripts/aphrody/libplacebo.ts"
+    "libplacebo": "bun scripts/aphrody/libplacebo.ts",
+    "media:stage": "bun scripts/aphrody/media-stage.ts"
   },
   "devDependencies": {
     "@lezer/common": "1.5.2",

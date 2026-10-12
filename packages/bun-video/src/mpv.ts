@@ -27,6 +27,13 @@ const symbols: MpvSymbols = {
 
 export type MpvLibraryOptions = { libraryPath?: string; options?: Readonly<Record<string, string>> };
 
+export function mpvLibraryPath(directory = dirname(process.execPath)): string {
+  return join(
+    directory,
+    process.platform === "win32" ? "mpv-2.dll" : process.platform === "darwin" ? "libmpv.2.dylib" : "libmpv.so.2",
+  );
+}
+
 function cstring(value: string): Uint8Array {
   if (value.includes("\0")) throw new TypeError("mpv strings must not contain NUL");
   return new TextEncoder().encode(`${value}\0`);
@@ -47,12 +54,7 @@ export class MpvClient {
   }
 
   static open(options: MpvLibraryOptions = {}): MpvClient {
-    const libraryPath =
-      options.libraryPath ??
-      join(
-        dirname(process.execPath),
-        process.platform === "win32" ? "mpv-2.dll" : process.platform === "darwin" ? "libmpv.2.dylib" : "libmpv.so.2",
-      );
+    const libraryPath = options.libraryPath ?? mpvLibraryPath();
     const library = dlopen(libraryPath, symbols);
     const handle = library.symbols.mpv_create();
     if (!handle) {

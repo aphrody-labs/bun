@@ -1,5 +1,5 @@
 import { runYtDlp, type YtDlpOptions } from "./ytdlp";
-import { MpvClient } from "./mpv";
+import { MpvClient, mpvLibraryPath } from "./mpv";
 import { FFmpeg } from "./ffmpeg";
 import { nativeWebGpuInfo, type WebGpuOptions } from "./webgpu";
 import { resolveVideoSource, type VideoSource } from "./source";
@@ -10,6 +10,7 @@ export interface VideoPipelineOptions {
   readonly mpvLibraryPath?: string;
   readonly mediaDirectory?: string;
   readonly playback?: boolean;
+  readonly playerOptions?: Readonly<Record<string, string>>;
   readonly webgpu?: WebGpuOptions | false;
   readonly signal?: AbortSignal;
 }
@@ -38,7 +39,12 @@ export async function openVideoPipeline(options: VideoPipelineOptions): Promise<
     const gpu = options.webgpu === false ? null : await nativeWebGpuInfo(options.webgpu ?? {});
     options.signal?.throwIfAborted();
     player =
-      options.playback || options.mpvLibraryPath ? MpvClient.open({ libraryPath: options.mpvLibraryPath }) : null;
+      options.playback || options.mpvLibraryPath
+        ? MpvClient.open({
+            libraryPath: options.mpvLibraryPath ?? mpvLibraryPath(options.mediaDirectory),
+            options: options.playerOptions,
+          })
+        : null;
     const close = () => {
       try {
         player?.close();
