@@ -1,5 +1,4 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-
 # `vu` runtime transfer receipt
 
 Date: 2026-10-09

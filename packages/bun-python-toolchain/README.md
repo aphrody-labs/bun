@@ -1,5 +1,4 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-
 # @aphrody/bun-python-toolchain
 
 Private, optional discovery and delegation package for the existing Aphrody Python toolchain. It adds no Rust or JavaScript dependency to Bun's default graph and does no work until one of its scripts is invoked.

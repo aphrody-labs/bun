@@ -22,7 +22,9 @@
     "packages/bun-n2b/crates/n2b-types/schema/*.json",
     "packages/bun-python-native/patches/*.json",
     "packages/bun-cloudflare/app/worker-configuration.d.ts",
-    "packages/bun-fluent/src/tokens/**"
+    "packages/bun-fluent/src/tokens/**",
+    "packages/buv/**",
+    "packages/bun-python-toolchain/**"
   ],
   "overrides": [
     {

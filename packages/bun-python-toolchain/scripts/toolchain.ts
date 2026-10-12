@@ -90,22 +90,11 @@ export function validateManifest(
     problems.push("unsupported vu artifact manifest");
   if (!/^[0-9a-f]{40}$/.test(manifest.revision)) problems.push("invalid vu source revision");
   if (manifest.target !== target) problems.push(`artifact target ${manifest.target} does not match host ${target}`);
-  if (
-    !manifestSha256 ||
-    !receipt.observedArtifacts.some(
-      artifact =>
-        artifact.target === target &&
-        artifact.revision === manifest.revision &&
-        artifact.manifestSha256 === manifestSha256,
-    )
-  )
+  if (!manifestSha256 || !receipt.observedArtifacts.some((artifact) =>
+    artifact.target === target && artifact.revision === manifest.revision && artifact.manifestSha256 === manifestSha256))
     problems.push("artifact manifest is not covered by the immutable toolchain receipt");
-  const artifactReceipt = receipt.observedArtifacts.find(
-    artifact =>
-      artifact.target === target &&
-      artifact.revision === manifest.revision &&
-      artifact.manifestSha256 === manifestSha256,
-  );
+  const artifactReceipt = receipt.observedArtifacts.find((artifact) =>
+    artifact.target === target && artifact.revision === manifest.revision && artifact.manifestSha256 === manifestSha256);
   for (const name of ["uv", "ruff", "python"])
     if (!manifest.capabilities.includes(name)) problems.push(`artifact does not declare ${name}`);
 
@@ -124,9 +113,7 @@ export function validateManifest(
   const python = manifest.pins["python"] as { version?: unknown; sha256?: unknown } | undefined;
   if (python?.version !== receipt.python.version || python.sha256 !== receipt.python.archiveSha256)
     problems.push("CPython source pin does not match the accepted receipt");
-  const pythonPath = Object.keys(manifest.files).find(path =>
-    /^bin\/python(?:3\.)?\d+(?:\.\d+)?(?:\.exe)?$/.test(path),
-  );
+  const pythonPath = Object.keys(manifest.files).find((path) => /^bin\/python(?:3\.)?\d+(?:\.\d+)?(?:\.exe)?$/.test(path));
   const pythonFileHash = pythonPath ? manifest.files[pythonPath]?.sha256 : undefined;
   if (!pythonFileHash || pythonFileHash !== artifactReceipt?.files.python)
     problems.push("CPython executable hash does not match the immutable toolchain receipt");
@@ -135,18 +122,17 @@ export function validateManifest(
 
 function binaryPath(root: string, name: string, manifest: VuManifest): string {
   const candidates = process.platform === "win32" ? [`bin/${name}.exe`, `bin/${name}`] : [`bin/${name}`];
-  const path = candidates.find(candidate => manifest.files[candidate] !== undefined);
+  const path = candidates.find((candidate) => manifest.files[candidate] !== undefined);
   if (!path) throw new Error(`${name} is absent from the artifact file manifest`);
   return join(root, path);
 }
 
 function pythonBinaryPath(root: string, manifest: VuManifest, version: string): string {
   const [major, minor] = version.split(".");
-  const names =
-    process.platform === "win32"
-      ? [`bin/python${major}.${minor}.exe`, "bin/python.exe"]
-      : [`bin/python${major}.${minor}`, `bin/python${major}.${minor}.0`];
-  const path = names.find(candidate => manifest.files[candidate] !== undefined);
+  const names = process.platform === "win32"
+    ? [`bin/python${major}.${minor}.exe`, "bin/python.exe"]
+    : [`bin/python${major}.${minor}`, `bin/python${major}.${minor}.0`];
+  const path = names.find((candidate) => manifest.files[candidate] !== undefined);
   if (!path) throw new Error(`CPython ${version} executable is absent from the artifact file manifest`);
   return join(root, path);
 }
@@ -154,10 +140,7 @@ function pythonBinaryPath(root: string, manifest: VuManifest, version: string): 
 function sha256(path: string): Promise<string> {
   return new Promise((resolveHash, reject) => {
     const hash = createHash("sha256");
-    createReadStream(path)
-      .on("data", chunk => hash.update(chunk))
-      .on("error", reject)
-      .on("end", () => resolveHash(hash.digest("hex")));
+    createReadStream(path).on("data", (chunk) => hash.update(chunk)).on("error", reject).on("end", () => resolveHash(hash.digest("hex")));
   });
 }
 
@@ -188,21 +171,19 @@ function expectedVersion(tool: "uv" | "ruff", output: string, receipt: Toolchain
   return output === expected || output.startsWith(`${expected} `);
 }
 
-export async function discoverRuntime(
-  options: {
-    artifact?: string;
-    env?: Record<string, string | undefined>;
-    target?: string;
-    receipt?: ToolchainReceipt;
-    versionProbe?: (path: string, args: string[]) => string;
-  } = {},
-): Promise<RuntimeReport> {
+export async function discoverRuntime(options: {
+  artifact?: string;
+  env?: Record<string, string | undefined>;
+  target?: string;
+  receipt?: ToolchainReceipt;
+  versionProbe?: (path: string, args: string[]) => string;
+} = {}): Promise<RuntimeReport> {
   const env = options.env ?? process.env;
   const receiptText = await Bun.file(RECEIPT_PATH).text();
   const receiptSha256 = createHash("sha256").update(receiptText).digest("hex");
   if (receiptSha256 !== ACCEPTED_RECEIPT_SHA256)
     throw new Error("committed toolchain receipt hash changed; refusing discovery");
-  const receipt = options.receipt ?? (JSON.parse(receiptText) as ToolchainReceipt);
+  const receipt = options.receipt ?? JSON.parse(receiptText) as ToolchainReceipt;
   const target = options.target ?? hostTarget();
   const selectedPath = options.artifact ? resolve(options.artifact) : artifactPath(env, target);
   const report: RuntimeReport = {
@@ -229,7 +210,7 @@ export async function discoverRuntime(
     const root = resolve(selectedPath);
     const manifestPath = join(root, MANIFEST_PATH);
     const manifestHash = await sha256(manifestPath);
-    const manifest = (await Bun.file(manifestPath).json()) as VuManifest;
+    const manifest = await Bun.file(manifestPath).json() as VuManifest;
     const problems = validateManifest(manifest, target, receipt, manifestHash);
     if (problems.length) {
       report.status = "rejected";
@@ -255,8 +236,7 @@ export async function discoverRuntime(
         throw new Error(`${name} executable size does not match the vu manifest`);
       if (digest !== entry?.sha256) throw new Error(`${name} executable hash does not match the vu manifest`);
       const version = probe(path, ["--version"]);
-      if (!expectedVersion(name, version, receipt))
-        throw new Error(`${name} version does not match the accepted receipt`);
+      if (!expectedVersion(name, version, receipt)) throw new Error(`${name} version does not match the accepted receipt`);
       report.tools[name] = { path, version, sha256: digest, status: "qualified" };
     }
     const pythonPath = pythonBinaryPath(root, manifest, receipt.python.version);
@@ -341,8 +321,7 @@ print(json.dumps(result, sort_keys=True))
 `;
 
 function hasPythonSelection(env: Record<string, string | undefined>, cwd: string): string | null {
-  if (env["VU_PYTHON"])
-    return "VU_PYTHON selects a managed interpreter; capability probe skipped to avoid resolving or installing it";
+  if (env["VU_PYTHON"]) return "VU_PYTHON selects a managed interpreter; capability probe skipped to avoid resolving or installing it";
   let directory = resolve(cwd);
   for (;;) {
     if (existsSync(join(directory, ".python-version")))
