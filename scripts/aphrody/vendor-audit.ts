@@ -17,7 +17,8 @@ async function git(args: string[]) {
 }
 
 async function references(name: string): Promise<number> {
-  const output = await git(["grep", "-l", "-I", "--", `:${name}`]).catch(() => "");
+  const patterns = [`vendor/${name}`, `vendor\\${name}`];
+  const output = await git(["grep", "-l", "-I", ...patterns.flatMap(pattern => ["-e", pattern]), "--", ".", ":!vendor/**"]).catch(() => "");
   return output.split(/\r?\n/).filter(Boolean).filter(path => !path.startsWith("vendor/")).length;
 }
 
