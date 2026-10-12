@@ -1,6 +1,6 @@
 import { createInterface } from "node:readline";
-import { interpolate } from "./remotion-fork";
-import { generateSpringEaseData } from "./hyperframes-fork";
+import { interpolate } from "./render-runtime";
+import { generateSpringEaseData } from "./render-runtime";
 
 const array = { type: "array", minItems: 2, maxItems: 1024, items: { type: "number" } };
 export const framePlanSchema = {
