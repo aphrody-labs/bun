@@ -19,6 +19,7 @@ import { SITE_ROOT_FILES } from "./brand.ts";
 import type { SiteData } from "./collect.ts";
 import { HIGHLIGHT_CSS, highlightHtml } from "./highlight.ts";
 import { CSS, JS, shell, type NavLink, type Shell } from "./layout.ts";
+import { APHRODY_DOMAINS } from "./domains.ts";
 import {
   absolutizeMarkdownLinks,
   escapeHtml,
@@ -686,7 +687,15 @@ ${runtimeInstallCommands(o.origin)}
       tabs: topTabs(),
     }),
   );
-  write(join(o.out, "robots.txt"), `User-agent: *\nAllow: /\n\nSitemap: ${o.origin}/sitemap.xml\n`);
+  const owner = APHRODY_DOMAINS.find(domain => domain.canonical === o.origin);
+  const disallowed = owner?.routes
+    .filter(route => route.startsWith("/api/") || route === "/v1/*")
+    .map(route => `Disallow: ${route.replace("*", "")}`)
+    .join("\n");
+  write(
+    join(o.out, "robots.txt"),
+    `User-agent: *\nAllow: /\n${disallowed ? `${disallowed}\n` : ""}\nSitemap: ${o.origin}/sitemap.xml\n`,
+  );
   const urls = [
     "/",
     ...generated.map(g => g.path),
