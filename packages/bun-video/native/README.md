@@ -8,6 +8,7 @@ distribution; this binary alone does **not** embed FFmpeg or a browser.
 ```text
 BUN_VIDEO_FFMPEG=<absolute ffmpeg executable>
 bun-video-native probe
+bun-video-native gpu-info
 bun-video-native media <absolute input video>
 bun-video-native decode <absolute input video>
 bun-video-native encode ffv1 30 120 4 <absolute output.mkv>
@@ -19,6 +20,11 @@ never replaces an existing output, and fails when the selected GPU cannot encode
 a 256×256 PNG probe frame. `probe` emits JSON lines with encoder and host readiness. A device
 probe success establishes encoding capability for that small fixture, not
 arbitrary dimensions, sustained performance or browser rendering acceleration.
+The default `gpu` feature wires the native path to the pinned `gpu-video`
+crate (wgpu 30). On Windows and Linux it uses Vulkan Video and keeps decoded
+frames on the GPU for downstream wgpu work. `gpu-info` reports the real adapter,
+driver, device class, and hardware decode/encode flags; codec support remains
+driver-dependent.
 FPS accepts an integer or exact positive rational such as `30000/1001`, capped
 at 240 frames per second. The command passes that ratio to FFmpeg unchanged.
 
