@@ -1,6 +1,4 @@
-import { createRequire } from "node:module";
-
-const requireFork = createRequire(import.meta.url);
+const requireFork = require;
 
 /** HyperFrames primitives loaded from the vendored fork shipped with Bun Video. */
 export const loadHyperframesCore = async () => requireFork("../hyperframes/packages/core/src/index");

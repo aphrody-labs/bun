@@ -1,6 +1,4 @@
-import { createRequire } from "node:module";
-
-const requireFork = createRequire(import.meta.url);
+const requireFork = require;
 const core = requireFork("../remotion/packages/core/src/index") as {
   AbsoluteFill: any;
   Easing: any;
