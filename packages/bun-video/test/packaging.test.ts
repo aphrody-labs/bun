@@ -26,7 +26,8 @@ describe("standalone source package", () => {
 
   test("manifest exports and CLI entry points exist in explicit public directories", async () => {
     expect(manifest.private).not.toBe(true);
-    expect(manifest.dependencies["@aphrody/bun-runtime-sdk"]).toBe("1.4.5");
+    const sdk = await Bun.file(resolve(root, "../bun-runtime-sdk/package.json")).json();
+    expect(manifest.dependencies["@aphrody/bun-runtime-sdk"]).toBe(sdk.version);
     expect(
       Object.values(manifest.dependencies).every(value => typeof value === "string" && !value.startsWith("file:")),
     ).toBe(true);
