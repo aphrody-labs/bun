@@ -4,10 +4,10 @@ import type { CrawlerCache } from "./cache";
 
 export interface StudioSubtitle { readonly src: string; readonly srclang: string; readonly label: string; readonly default?: boolean; }
 export interface StudioAsset { readonly id: string; readonly title: string; readonly src: string; readonly type?: string; readonly subtitles?: readonly StudioSubtitle[]; }
-export interface VideoStudioProps { readonly assets: readonly StudioAsset[]; readonly initialAssetId?: string; readonly className?: string; readonly cache?: CrawlerCache; }
+export interface VideoStudioProps { readonly assets: readonly StudioAsset[]; readonly initialAssetId?: string; readonly className?: string; readonly cache?: CrawlerCache; readonly autoPlay?: boolean; readonly loop?: boolean; readonly muted?: boolean; }
 
 /** Compact React studio surface for browsing assets and driving the Bun Video pipeline. */
-export function VideoStudio({ assets, initialAssetId, className, cache }: VideoStudioProps) {
+export function VideoStudio({ assets, initialAssetId, className, cache, autoPlay = false, loop = false, muted = false }: VideoStudioProps) {
   const [localAssets, setLocalAssets] = useState<readonly StudioAsset[]>(assets);
   const first = initialAssetId ?? localAssets[0]?.id;
   const [selectedId, setSelectedId] = useState(first);
@@ -80,7 +80,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache }: VideoS
       </aside>
       <main>
         {selected ? (
-          <video ref={videoRef} key={selected.id} controls playsInline preload="metadata" src={selected.src} onEnded={() => selectRelative(1)} onError={() => setError(`Lecture impossible : ${selected.title}`)}>
+          <video ref={videoRef} key={selected.id} controls playsInline preload="metadata" autoPlay={autoPlay} loop={loop} muted={muted} src={selected.src} onEnded={() => selectRelative(1)} onError={() => setError(`Lecture impossible : ${selected.title}`)}>
             {selected.subtitles?.map(track => <track key={`${track.srclang}-${track.src}`} kind="subtitles" src={track.src} srcLang={track.srclang} label={track.label} default={track.default} />)}
           </video>
         ) : <p>Aucun média sélectionné.</p>}
