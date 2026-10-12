@@ -1,9 +1,4 @@
 // SPDX-License-Identifier: Apache-2.0
-import {
-  aphrodyRpc,
-  ensureAphrodyInitialized,
-  isTauri,
-} from "../../../../../../../aphrody-migrated/m3/aphrody-m3/packages/app-ui/src/tauri-bridge.ts";
 
 export type SearchVertical = "web" | "images" | "news" | "videos" | "books";
 export interface GoogleSearchRequest {
@@ -23,7 +18,7 @@ export interface GoogleSearchPage {
   organic: GoogleSearchHit[];
   correctedQuery?: string;
 }
-type Rpc = typeof aphrodyRpc;
+type Rpc = (method: string, params?: Record<string, unknown>) => Promise<Record<string, unknown>>;
 
 export function safeSearchUrl(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -81,17 +76,13 @@ export function parseGoogleSearchResponse(response: Record<string, unknown>): Go
 
 export async function searchGoogle(
   request: GoogleSearchRequest,
-  rpc: Rpc = async (method, params = {}) => {
-    if (!isTauri()) {
-      const query = new URLSearchParams();
-      for (const key of ["query", "vertical", "hl", "safe", "start"]) query.set(key, String(params[key]));
-      const response = await fetch(`/api/search?${query}`);
-      const body = (await response.json()) as Record<string, unknown>;
-      if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "Search is unavailable");
-      return body;
-    }
-    await ensureAphrodyInitialized();
-    return aphrodyRpc(method, params);
+  rpc: Rpc = async (_method, params = {}) => {
+    const query = new URLSearchParams();
+    for (const key of ["query", "vertical", "hl", "safe", "start"]) query.set(key, String(params[key] ?? ""));
+    const response = await fetch(`/api/search?${query}`);
+    const body = (await response.json()) as Record<string, unknown>;
+    if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "Search is unavailable");
+    return body;
   },
 ): Promise<GoogleSearchPage> {
   const query = request.query.trim();

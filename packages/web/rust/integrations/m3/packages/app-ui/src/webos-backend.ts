@@ -40,6 +40,11 @@ export function wantsHttpBackend(search: string): boolean {
   return new URLSearchParams(search).get("backend") === "http";
 }
 
+/** Use the in-browser OS unless this URL explicitly selects the HTTP daemon. */
+export function usesBrowserBackend(search = typeof window === "undefined" ? "" : window.location.search): boolean {
+  return !wantsHttpBackend(search);
+}
+
 export interface BrowserFsEntry {
   name: string;
   path: string;

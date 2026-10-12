@@ -1,8 +1,18 @@
 import { createContext, useCallback, useContext, useMemo, useState, type PropsWithChildren } from "react";
 import { CaretRight } from "@phosphor-icons/react";
-import { DropdownMenu, renderIcon } from "@aphrody/m3-primitives";
+import { DropdownMenu, renderIcon, type IconSource } from "@aphrody/m3-primitives";
 import { clsx } from "clsx";
-import type { ContextMenuItem } from "../../../../../../../../aphrody-migrated/m3/aphrody-m3/packages/app-ui/src/hooks/useContextMenu.ts";
+
+interface ContextMenuItem {
+  type?: "separator" | "submenu";
+  icon?: IconSource;
+  label?: string;
+  onClick?: () => void;
+  keybind?: string;
+  variant?: "default" | "dull" | "danger";
+  disabled?: boolean;
+  submenu?: ContextMenuItem[];
+}
 
 interface MenuState {
   items: ContextMenuItem[];

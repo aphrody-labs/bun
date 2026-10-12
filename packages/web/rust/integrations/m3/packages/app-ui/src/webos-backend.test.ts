@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // oxlint-disable-next-line import/no-unassigned-import -- the source package bunfig preload: registers the DOM before UI imports
-import "../../../../../../../aphrody-migrated/m3/aphrody-m3/packages/app-ui/test-preload.ts";
+import "../../../test/dom-preload.ts";
 import { afterAll, afterEach, beforeEach, expect, test } from "bun:test";
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 import { fileURLToPath } from "node:url";
@@ -12,15 +12,11 @@ import {
   webOsRagSearch,
   webOsReadDir,
   webOsReadText,
+  webOsRagStats,
   webOsTransport,
-} from "./webos-backend";
-import {
-  fsReadDir,
-  getRagStats,
-  runRagSearch,
   usesBrowserBackend,
-} from "../../../../../../../aphrody-migrated/m3/aphrody-m3/packages/app-ui/src/tauri-bridge.ts";
-import { keyToInput } from "../../../../../../../aphrody-migrated/m3/aphrody-m3/packages/app-ui/src/routes/terminal/keys.ts";
+} from "./webos-backend";
+import { keyToInput } from "./routes/terminal/keys.ts";
 
 const wasm = await Bun.file(
   fileURLToPath(import.meta.resolve("@aphrody/webos-wasm/wasm/aphrody_webos_wasm_bg.wasm")),
@@ -49,8 +45,8 @@ test("outside Tauri the Rust backend is used unless ?backend=http", () => {
 test("Files commands read the WASM file system", async () => {
   const os = await (await import("./webos-backend")).getWebOs();
   os.fs.write("/home/user/docs/a.txt", text("alpha"));
-  const listing = await fsReadDir("/home/user/docs");
-  expect(listing?.entries).toEqual([{ name: "a.txt", path: "/home/user/docs/a.txt", is_dir: false, size: 5 }]);
+  const listing = await webOsReadDir("/home/user/docs");
+  expect(listing.entries).toEqual([{ name: "a.txt", path: "/home/user/docs/a.txt", is_dir: false, size: 5 }]);
   expect((await webOsReadDir("/home/user")).entries.map(e => e.name)).toContain("docs");
   expect((await webOsReadText("/home/user/docs/a.txt")).content).toBe("alpha");
 });
@@ -59,12 +55,12 @@ test("RAG search and stats come from the Rust module", async () => {
   const os = await (await import("./webos-backend")).getWebOs();
   os.fs.write("/home/user/zebra.md", text("# Zebra\n\nStripes help a zebra confuse predators.\n"));
   os.fs.write("/home/user/other.md", text("# Other\n\nNothing relevant here.\n"));
-  const response = await runRagSearch("zebra stripes", 3);
-  expect(response.results[0]?.path).toBe("/home/user/zebra.md");
-  expect(response.results[0]?.text).toContain("Stripes");
-  expect(response.results[0]?.language).toBe("en");
+  const results = await webOsRagSearch("zebra stripes", 3);
+  expect(results[0]?.path).toBe("/home/user/zebra.md");
+  expect(results[0]?.content).toContain("Stripes");
+  expect(results[0]?.language).toBe("en");
   expect((await webOsRagSearch("zebra", 1)).length).toBe(1);
-  expect(await getRagStats()).toEqual({ documents: 2, chunks: 2 });
+  expect(await webOsRagStats()).toEqual({ documents: 2, chunks: 2 });
 });
 
 test("the explorer client lists, creates through the terminal, renames and deletes", async () => {
