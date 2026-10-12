@@ -15,6 +15,12 @@ export function VideoStudio({ assets, initialAssetId, className, cache }: VideoS
   const [metadata, setMetadata] = useState<YtDlpResult | null>(null);
   const [loadingMetadata, setLoadingMetadata] = useState(false);
   const selected = useMemo(() => localAssets.find(asset => asset.id === selectedId) ?? localAssets[0], [localAssets, selectedId]);
+  const selectedIndex = selected ? localAssets.findIndex(asset => asset.id === selected.id) : -1;
+  const selectRelative = (delta: number) => {
+    if (selectedIndex < 0 || localAssets.length === 0) return;
+    const next = localAssets[(selectedIndex + delta + localAssets.length) % localAssets.length];
+    setSelectedId(next.id); setMetadata(null); setError(null);
+  };
   const addUrl = () => {
     try {
       const parsed = new URL(url);
@@ -61,9 +67,10 @@ export function VideoStudio({ assets, initialAssetId, className, cache }: VideoS
       </aside>
       <main>
         {selected ? (
-          <video key={selected.id} controls playsInline preload="metadata" src={selected.src} onError={() => setError(`Lecture impossible : ${selected.title}`)} />
+          <video key={selected.id} controls playsInline preload="metadata" src={selected.src} onEnded={() => selectRelative(1)} onError={() => setError(`Lecture impossible : ${selected.title}`)} />
         ) : <p>Aucun média sélectionné.</p>}
         {selected && <p>{selected.title}{selected.type ? ` · ${selected.type}` : ""}</p>}
+        {selected && <nav aria-label="Contrôles de file"><button type="button" onClick={() => selectRelative(-1)}>Précédent</button><button type="button" onClick={() => selectRelative(1)}>Suivant</button></nav>}
         {selected && /^https?:$/.test(new URL(selected.src).protocol) && <button type="button" onClick={() => void inspectSelected()} disabled={loadingMetadata}>{loadingMetadata ? "Analyse…" : "Analyser avec yt-dlp"}</button>}
         {metadata && <pre>{JSON.stringify({ title: metadata.title, id: metadata.id, formats: metadata.formats?.length ?? 0 }, null, 2)}</pre>}
         {error && <p role="alert">{error}</p>}
