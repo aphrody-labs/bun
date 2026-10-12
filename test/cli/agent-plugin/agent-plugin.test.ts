@@ -12,6 +12,7 @@ import { bunEnv, bunExe, isASAN, tempDir } from "harness";
 import { join, relative, resolve } from "path";
 import { lspExtensions, mcpTools } from "../../../packages/bun-agent-plugin/src/catalog.ts";
 import { generate } from "../../../packages/bun-agent-plugin/src/generate.ts";
+import { hasTable } from "../../../packages/bun-agent-plugin/src/install.ts";
 import { isAphrodyRuntime } from "../../../packages/bun-agent-plugin/src/hooks/common.ts";
 import { rewriteCommand } from "../../../packages/bun-agent-plugin/src/hooks/rewrite.ts";
 import { forbiddenIn } from "../../../packages/bun-agent-plugin/src/sanitize.ts";
@@ -521,4 +522,20 @@ describe("bun agent-plugin", () => {
     },
     SPAWN_TIMEOUT,
   );
+});
+
+describe("codex config.toml merge", () => {
+  test("finds the plugin tables whatever quotes Codex rewrote them with", () => {
+    for (const toml of [
+      '[plugins."bun@aphrody-bun"]\nenabled = true\n',
+      "[plugins.'bun@aphrody-bun']\nenabled = true\n",
+      "x = 1\n  [marketplaces.aphrody-bun]  \n",
+    ]) {
+      const table = toml.includes("marketplaces") ? "marketplaces" : "plugins";
+      const key = table === "plugins" ? "bun@aphrody-bun" : "aphrody-bun";
+      expect(hasTable(toml, table, key)).toBe(true);
+    }
+    expect(hasTable("[plugins.'bun@aphrody-bun'.sub]\n", "plugins", "bun@aphrody-bun")).toBe(false);
+    expect(hasTable("[plugins.'bunXaphrody-bun']\n", "plugins", "bun.aphrody-bun")).toBe(false);
+  });
 });
