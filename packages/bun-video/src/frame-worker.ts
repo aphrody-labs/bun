@@ -1,5 +1,5 @@
 import { BrowserRuntime } from "@aphrody/bun-runtime-sdk/browser";
-import { captureNativeWebViewFrames } from "./hyperframes-native";
+import { captureCompositionFrames } from "./render-frame";
 import type { FramePlan } from "./frame-plan";
 
 const scope = globalThis as unknown as {
@@ -42,43 +42,12 @@ async function capture(plan: FramePlan & { frameStride?: number }) {
     scope.postMessage({ type: "frame", frame, png: bytes }, [bytes]);
     await ack;
   };
-  if (plan.kind === "hyperframes") {
-    const boundedContext = {
-      navigate: (url: string) => context.navigate(url, { signal: operationSignal() }),
-      evaluate: <T>(expression: string) => context.evaluate<T>(expression, { signal: operationSignal() }),
-      screenshot: () => context.screenshot({ signal: operationSignal() }),
-    };
-    for await (const frame of captureNativeWebViewFrames(boundedContext, {
-      url: plan.compositionUrl,
-      fps: plan.fps,
-      startFrame: plan.startFrame,
-      endFrame: plan.endFrame,
-      frameStride,
-    }))
-      await send(frame.frame, frame.png);
-  } else {
-    await context.navigate(plan.compositionUrl, { signal: operationSignal() });
-    const contract = await context.evaluate(
-      'typeof window.remotion_setFrame === "function" && typeof window.remotion_renderReady === "boolean"',
-      { signal: operationSignal() },
-    );
-    if (!contract) throw new Error("Served React composition lacks initialized Remotion render globals");
-    for (let frame = plan.startFrame; frame < plan.endFrame; frame += frameStride) {
-      const signal = operationSignal();
-      await context.evaluate(`window.remotion_setFrame(${frame}, ${JSON.stringify(plan.composition)}, 0)`, { signal });
-      for (;;) {
-        const state = await context.evaluate<{ ready: boolean; error: string | null }>(
-          "({ready: window.remotion_renderReady === true, error: window.remotion_cancelledError ?? null})",
-          { signal },
-        );
-        if (state.error !== null) throw new Error(state.error);
-        if (state.ready) break;
-        signal.throwIfAborted();
-        await Bun.sleep(10);
-      }
-      await context.evaluate("document.fonts.ready.then(() => true)", { signal });
-      await send(frame, await context.screenshot({ signal }));
-    }
-  }
+  const boundedContext = {
+    navigate: (url: string) => context.navigate(url, { signal: operationSignal() }),
+    evaluate: <T>(expression: string) => context.evaluate<T>(expression, { signal: operationSignal() }),
+    screenshot: () => context.screenshot({ signal: operationSignal() }),
+  };
+  for await (const frame of captureCompositionFrames(boundedContext, { ...plan, frameStride }))
+    await send(frame.frame, frame.png);
   scope.postMessage({ type: "done" });
 }

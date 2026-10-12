@@ -2,6 +2,7 @@ export { interpolate, Easing, generateSpringEaseData, SPRING_PRESETS } from "./r
 export { captureNativeRemotionFrame } from "./remotion-frame";
 export type { NativeFrameOptions } from "./remotion-frame";
 export { captureNativeWebViewFrames } from "./hyperframes-native";
+export { captureCompositionFrames } from "./render-frame";
 export type { NativeWebViewContext, NativeFrameCaptureOptions, NativeCapturedFrame } from "./hyperframes-native";
 export { captureParallelFrames } from "./parallel-capture";
 export { validateFramePlan, partitionFrames } from "./frame-plan";
