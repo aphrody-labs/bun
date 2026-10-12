@@ -63,7 +63,5 @@ installation into the active Google Chrome remain unqualified. The local PWA
 server continues on `http://127.0.0.1:8000/pwa/`; credentials remain in the owner's
 Windows keychain and protected local store.
 
-The old root `crunchyroll-extension` and `crunchyroll-pwa` directories remain:
-automatic command review rejected their recursive deletion with
-`blocked by policy`. Their canonical copies are packaged under
-`packages/bun-video/assets`; the old copies are not in the npm artifact.
+The former root `crunchyroll-extension` and `crunchyroll-pwa` directories were
+removed. Their canonical copies are packaged under `packages/bun-video/assets`.
