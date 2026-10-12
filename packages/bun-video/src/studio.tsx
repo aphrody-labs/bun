@@ -23,6 +23,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
   const [playbackRate, setPlaybackRate] = useState(1);
   const [progress, setProgress] = useState({ currentTime: 0, duration: 0 });
   const videoRef = useRef<HTMLVideoElement>(null);
+  const blobUrls = useRef(new Set<string>());
   const selected = useMemo(() => localAssets.find(asset => asset.id === selectedId) ?? localAssets[0], [localAssets, selectedId]);
   useEffect(() => {
     if (!storageKey || typeof localStorage === "undefined") return;
@@ -57,6 +58,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
   };
   const addFile = (file: File) => {
     const asset = { id: `file-${Date.now()}`, title: file.name, src: URL.createObjectURL(file), type: file.type };
+    blobUrls.current.add(asset.src);
     setLocalAssets(current => [...current, asset]); setSelectedId(asset.id); setError(null);
   };
   const addDropped = (event: React.DragEvent<HTMLElement>) => {
@@ -67,10 +69,11 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
   };
   const removeAsset = (id: string) => {
     const asset = localAssets.find(item => item.id === id);
-    if (asset?.src.startsWith("blob:")) URL.revokeObjectURL(asset.src);
+    if (asset?.src.startsWith("blob:")) { URL.revokeObjectURL(asset.src); blobUrls.current.delete(asset.src); }
     const remaining = localAssets.filter(item => item.id !== id);
     setLocalAssets(remaining); if (selectedId === id) setSelectedId(remaining[0]?.id); setMetadata(null);
   };
+  useEffect(() => () => { for (const url of blobUrls.current) URL.revokeObjectURL(url); blobUrls.current.clear(); }, []);
   const handleKeys = (event: React.KeyboardEvent<HTMLElement>) => {
     const video = videoRef.current;
     if (!video) return;
