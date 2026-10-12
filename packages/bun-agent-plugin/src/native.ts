@@ -414,7 +414,7 @@ export type Replacement = { names: string[]; use: string; task?: string };
 export function n2bPackages(toml: string): Replacement[] {
   const out: Replacement[] = [];
   for (const block of toml.split(/^\[\[packages\]\]\s*$/m).slice(1)) {
-    const field = (k: string) => new RegExp(`^\s*${k}\s*=\s*"([^"]*)"`, "m").exec(block)?.[1];
+    const field = (k: string) => new RegExp(`^\\s*${k}\\s*=\\s*"([^"]*)"`, "m").exec(block)?.[1];
     if (field("id") !== "imports/bun-native") continue;
     const name = field("package");
     const replacement = field("replacement");
@@ -443,9 +443,11 @@ export function replacements(n2bToml?: string): Replacement[] {
 }
 
 export function nativeSkill(version: string, n2bToml?: string): string {
-  const esc = (s: string) => s.replace(/\|/g, "\|");
+  const esc = (s: string) => s.replace(/\|/g, "\\|");
   const rows = replacements(n2bToml).map(r => `| ${esc(r.names.join(", "))} | ${esc(r.use)} |`);
-  const examples = PAIRS.map(p => `### ${p.task}\n\nInstead of ${p.instead.join(", ")}:\n\n\`\`\`ts\n${p.after}\n\`\`\``);
+  const examples = PAIRS.map(
+    p => `### ${p.task}\n\nInstead of ${p.instead.join(", ")}:\n\n\`\`\`ts\n${p.after}\n\`\`\``,
+  );
   const description =
     `Write Bun-native code for Bun ${version}: Bun APIs before Node.js modules and npm packages (Bun.serve, Bun.file/Bun.write, ` +
     "bun:sqlite, Bun.sql, Bun.redis, Bun.s3, Bun.$, Bun.spawn, bun:test, Bun.build, Bun.password, Bun.Glob, HTMLRewriter, " +
@@ -482,11 +484,16 @@ export function nativeSkill(version: string, n2bToml?: string): string {
   ].join("\n");
 }
 
+/** Package names that are everyday words: a prompt saying them is not about the package. */
+const ENGLISH = new Set(["which", "got", "threads", "debug", "cookie"]);
+
 /** hooks/native.json: what the user-prompt-submit hook matches prompts against. */
 export function nativeHookData(n2bToml?: string) {
   return {
     skill: NATIVE_SKILL,
     search: SEARCH_URL,
-    instead: replacements(n2bToml).map(r => ({ names: r.names, use: r.use })),
+    instead: replacements(n2bToml)
+      .map(r => ({ names: r.names.filter(n => !ENGLISH.has(n)), use: r.use }))
+      .filter(r => r.names.length),
   };
 }

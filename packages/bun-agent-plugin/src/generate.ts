@@ -7,6 +7,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { catalogInputs, lspExtensions, mcpTools } from "./catalog.ts";
+import { NATIVE_SKILL, RULES as NATIVE_RULES, nativeHookData, nativeSkill } from "./native.ts";
 import { forbiddenIn, sanitizeText } from "./sanitize.ts";
 import {
   AUTHOR,
@@ -34,6 +35,7 @@ export type GenerateOptions = {
 };
 
 const TARGETS = ["claude", "codex", "agy"] as const;
+const N2B_PACKAGES = "packages/bun-n2b/crates/n2b-registry/registry/packages.toml";
 
 // ─── Reading sources ───────────────────────────────────────────────────────
 
@@ -409,7 +411,7 @@ function derivedSkills(root: string, fiches: Fiche[], repo: Skill[]): Skill[] {
     ],
   );
 
-  const all = [...repo.map(s => s.name), ...DERIVED_SKILLS.map(d => d.name)].sort();
+  const all = [...repo.map(s => s.name), ...DERIVED_SKILLS.map(d => d.name), NATIVE_SKILL].sort();
   make(
     "bun-aphrody",
     "Start here for any work with Bun: use the Aphrody runtime (aphrody-labs/bun) for everything (bun, bunx, bun uv instead of node, npm, npx, yarn, pnpm, pip, python), install and upgrade it, and pick the skill or memory fiche for the task.",
@@ -447,6 +449,12 @@ export function generate(options: GenerateOptions): Files {
   const fiches = memoryFiches(pkg);
   const repo = repoSkills(root, options.skillDirs);
   const derived = derivedSkills(root, fiches, repo);
+  const n2bToml = maybe(join(root, N2B_PACKAGES));
+  derived.push({
+    name: NATIVE_SKILL,
+    files: new Map([["SKILL.md", nativeSkill(bunVersion(root), n2bToml)]]),
+    source: "packages/bun-agent-plugin/src/native.ts",
+  });
   const skills = [...repo, ...derived.filter(d => !repo.some(r => r.name === d.name))].sort((a, b) =>
     a.name.localeCompare(b.name),
   );
@@ -488,13 +496,14 @@ export function generate(options: GenerateOptions): Files {
     })
     .join("\n");
   const instructions = `# Bun (Aphrody runtime)\n\n${rules}\n\n${toolsDoc}\n\n## Skills\n\n${skillIndex}\n`;
-  const context = rules;
+  const context = [rules, "## Bun-native code", NATIVE_RULES.map(r => `- ${r}`).join("\n")].join("\n\n");
 
   // Content shared by every target, before the version stamp.
   const common: Files = new Map();
   for (const s of skills) for (const [rel, content] of s.files) common.set(`skills/${s.name}/${rel}`, content);
   for (const h of HOOKS) common.set(`hooks/${h}`, text(join(pkg, "src", "hooks", h)));
   common.set("hooks/context.md", context.trimEnd() + "\n");
+  common.set("hooks/native.json", json(nativeHookData(n2bToml)));
   common.set(
     "hooks/tools.json",
     json({
@@ -539,6 +548,7 @@ export function generate(options: GenerateOptions): Files {
           hooks: [{ type: "command", command: hook("post-tool-use", t, rootVar), timeout: 5 }],
         },
       ],
+      UserPromptSubmit: [{ hooks: [{ type: "command", command: hook("user-prompt-submit", t, rootVar), timeout: 5 }] }],
     },
   });
   const mcp = {
@@ -701,6 +711,7 @@ export function inputFiles(root: string, pkg = join(root, "packages", "bun-agent
   for (const f of sorted(join(pkg, "memory"))) add(join(pkg, "memory", f));
   for (const f of sorted(join(pkg, "src"))) if (f.endsWith(".ts")) add(join(pkg, "src", f));
   for (const h of HOOKS) add(join(pkg, "src", "hooks", h));
+  add(join(root, N2B_PACKAGES));
   for (const f of ["package.json", "README.md", "bin/bun-agent-plugin.ts"]) add(join(pkg, f));
   for (const f of [
     "CLAUDE.md",

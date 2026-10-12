@@ -15,6 +15,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, wri
 import { homedir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { pack } from "./archive.ts";
+import { syncDataset } from "./dataset.ts";
 import { generate, inputFiles, type Files } from "./generate.ts";
 import { isAphrodyBun } from "./hooks/common.ts";
 import { ALL_TARGETS, install, uninstall, type Target } from "./install.ts";
@@ -188,7 +189,19 @@ export async function main(argv: string[]) {
         quiet: a.quiet || a.json,
         update: a.update,
       };
-      const report = a.command === "install" ? install(plugins(a), options) : uninstall(options);
+      const report: Record<string, any> = a.command === "install" ? install(plugins(a), options) : uninstall(options);
+      if (a.command === "install" && !a.dryRun) {
+        const bunHome = a.home ? join(a.home, ".bun") : process.env.BUN_INSTALL || join(homedir(), ".bun");
+        const checkout = a.from ? undefined : (a.root ?? resolve(pkg, "..", ".."));
+        // A --home install is a sandbox (tests, CI): only the checkout's build is copied, nothing is downloaded.
+        report.dataset = await syncDataset(bunHome, checkout, !a.home);
+        if (!a.quiet && !a.json)
+          console.log(
+            "error" in report.dataset
+              ? `bun-native dataset not installed: ${report.dataset.error}`
+              : `bun-native dataset: ${report.dataset.path}`,
+          );
+      }
       if (a.json) console.log(JSON.stringify(report, null, 2));
       else if (!a.quiet && report.skipped) console.log(`bun agent plugin ${report.version}: ${report.skipped}`);
       else if (!a.quiet)

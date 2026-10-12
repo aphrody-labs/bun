@@ -43,4 +43,11 @@ export const DERIVED_SKILLS: { name: string; fiches: RegExp[] }[] = [
   { name: "bun-aphrody", fiches: [/./] },
 ];
 
-export const HOOKS = ["common.ts", "rewrite.ts", "session-start.ts", "pre-tool-use.ts", "post-tool-use.ts"];
+export const HOOKS = [
+  "common.ts",
+  "rewrite.ts",
+  "session-start.ts",
+  "pre-tool-use.ts",
+  "post-tool-use.ts",
+  "user-prompt-submit.ts",
+];
