@@ -7,6 +7,11 @@ an isolated Crunchyroll client, OAuth PKCE, and native OS secret storage. It
 also preserves the Remotion and HyperFrames integration API, using official
 version-pinned libraries and package-local native capture adapters.
 
+The optional open-source media toolchain is documented in
+[Open source media stack](docs/open-source-media-stack.md): yt-dlp handles
+authorized downloads and mpv handles local playback. Their executables remain
+caller-owned and are never installed implicitly.
+
 ```sh
 bun add @aphrody/bun-video@next
 ```
