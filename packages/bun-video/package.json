@@ -88,5 +88,9 @@
   },
   "bugs": {
     "url": "https://github.com/aphrody-labs/bun/issues"
+  },
+  "devDependencies": {
+    "@types/dom-mediacapture-transform": "0.1.11",
+    "@types/dom-webcodecs": "0.1.13"
   }
 }
