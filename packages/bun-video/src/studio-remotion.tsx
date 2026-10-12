@@ -1,6 +1,10 @@
 import { AbsoluteFill } from "remotion";
-import { Video } from "@remotion/media";
+import { createRequire } from "node:module";
 import type { StudioAsset } from "./studio";
+
+const { OffthreadVideo } = createRequire(import.meta.url)("../remotion/packages/core/src/index") as {
+  OffthreadVideo: any;
+};
 
 export interface StudioRemotionProps {
   readonly asset: StudioAsset;
@@ -22,10 +26,10 @@ export function StudioRemotionComposition({
 }: StudioRemotionProps) {
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      <Video
+      <OffthreadVideo
         src={asset.src}
-        trimBefore={startFrom}
-        trimAfter={endAt}
+        startFrom={startFrom}
+        endAt={endAt}
         volume={volume}
         playbackRate={playbackRate}
         style={{ width: "100%", height: "100%", objectFit }}

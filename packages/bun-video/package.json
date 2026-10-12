@@ -80,7 +80,6 @@
     "@hyperframes/core": "0.8.144",
     "@hyperframes/engine": "0.8.144",
     "@hyperframes/parsers": "0.8.144",
-    "@remotion/media": "4.0.534",
     "@remotion/renderer": "4.0.534",
     "bitmovin-player": "8.279.0",
     "dashjs": "5.2.1",
