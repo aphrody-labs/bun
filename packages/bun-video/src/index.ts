@@ -29,6 +29,7 @@ export * from "./source";
 export * from "./cache";
 export * from "./archive";
 export * from "./studio";
+export * from "./studio-remotion";
 
 export const loadRemotionCore = () => import("remotion");
 export const loadRemotionRenderer = () => import("@remotion/renderer");
