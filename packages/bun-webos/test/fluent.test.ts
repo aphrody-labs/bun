@@ -7,10 +7,16 @@ import { readPublicSearch } from "../src/os/apps/PublicSearchApp";
 
 const entry = join(import.meta.dir, "fixtures", "fluent-page.ts");
 
+interface WasmReply {
+  type: string;
+  ok?: boolean;
+  text?: string;
+}
+
 test("public search refuses unverified sources, unsafe links and oversized replies", async () => {
   const page = {
     query: "fixture",
-    source: "public-crawl-cache",
+    source: "public-crawl-cache" as const,
     collection: "fixture",
     generatedAt: "2026-10-11T00:00:00Z",
     organic: [{ title: "Fixture", url: "https://example.com/", snippet: "Fixture" }],
@@ -101,14 +107,14 @@ describe.skipIf(!hasChrome())("headless render in Bun.WebView (Chrome)", () => {
           window.wasmWorker.postMessage({ type: 'eval', id: 1, code: ${JSON.stringify("(async () => { await Bun.write('first-evaluation.txt', 'private browser file'); return { order: Bun.semver.order('1.4.4', '1.10.0'), satisfies: Bun.semver.satisfies('1.4.4', '^1.4.0'), markdown: Bun.markdown.html('# Bun WASM'), shell: JSON.stringify(Bun.shellParse('echo bun | wc -c')).includes('echo'), file: await Bun.file('first-evaluation.txt').text() }; })()")} });
         })()`);
         await waitFor(view, "['result', 'failed'].includes(document.body.dataset.wasmState)");
-        const replies = await view.evaluate("window.wasmReplies");
-        expect(replies.find((reply: any) => reply.type === "failed")).toBeUndefined();
-        expect(replies.find((reply: any) => reply.type === "ready")).toMatchObject({
+        const replies = await view.evaluate<WasmReply[]>("window.wasmReplies");
+        expect(replies.find(reply => reply.type === "failed")).toBeUndefined();
+        expect(replies.find(reply => reply.type === "ready")).toMatchObject({
           bunVersion: "1.4.4",
         });
-        const result = replies.find((reply: any) => reply.type === "result");
-        expect(result.ok).toBe(true);
-        expect(JSON.parse(result.text)).toEqual({
+        const result = replies.find(reply => reply.type === "result");
+        expect(result?.ok).toBe(true);
+        expect(JSON.parse(result?.text ?? "null")).toEqual({
           order: -1,
           satisfies: true,
           markdown: "<h1>Bun WASM</h1>\n",
