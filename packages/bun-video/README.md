@@ -75,7 +75,8 @@ export function Player() {
 ```
 
 Les raccourcis `Espace`, `←`, `→` et `M` contrôlent lecture, recherche et son.
-Les sources distantes doivent autoriser CORS pour les sous-titres et variantes.
+Les sources distantes doivent autoriser CORS pour les sous-titres et variantes. Le
+callback `onStatus` reçoit `loading`, `ready` ou `failed` pour synchroniser l’interface.
 
 The official Remotion renderer 4.0.534 rejects Bun prerelease versions such as
 1.4.4-debug and 1.4.3-aphrody.4 at import: its minimum-version check excludes
