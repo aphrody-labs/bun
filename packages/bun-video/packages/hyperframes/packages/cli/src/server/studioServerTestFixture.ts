@@ -22,7 +22,7 @@ export function makeStudioServerRoot(prefix: string): {
 
 /** The one SPA shell every studioServer static-file test needs, unchanged. */
 export function writeStudioIndexHtml(studioDir: string): void {
-  await Bun.write(path.join(studioDir, "index.html"),
+  fs.writeFileSync(path.join(studioDir, "index.html"),
     "<html><head></head><body>Studio</body></html>",
   );
 }

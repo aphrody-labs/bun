@@ -116,7 +116,7 @@ export const getExpectedVersion = ({
 export const readVersionFile = (chromeMode: ChromeMode): string | null => {
 	const versionFilePath = getVersionFilePath(chromeMode);
 	try {
-		return await Bun.file(versionFilePath).text().trim();
+		return fs.readFileSync(versionFilePath, "utf8").trim();
 	} catch {
 		return null;
 	}
@@ -124,7 +124,7 @@ export const readVersionFile = (chromeMode: ChromeMode): string | null => {
 
 const writeVersionFile = (chromeMode: ChromeMode, version: string): void => {
 	const versionFilePath = getVersionFilePath(chromeMode);
-	await Bun.write(versionFilePath, version);
+	fs.writeFileSync(versionFilePath, version);
 };
 
 export const downloadBrowser = async ({
@@ -300,7 +300,7 @@ const getExecutablePath = (chromeMode: ChromeMode) => {
 			`chrome-headless-shell-${platform}`,
 		);
 		const remotionExecutable = path.join(shellFolder, 'headless_shell');
-		if (await Bun.file(remotionExecutable).exists()) {
+		if (fs.existsSync(remotionExecutable)) {
 			return remotionExecutable;
 		}
 
@@ -324,7 +324,7 @@ export const getRevisionInfo = (
 	const folderPath = getFolderPath(downloadsFolder, platform);
 
 	const url = getChromeDownloadUrl({platform, version: null, chromeMode});
-	const local = await Bun.file(folderPath).exists();
+	const local = fs.existsSync(folderPath);
 
 	return {
 		executablePath,

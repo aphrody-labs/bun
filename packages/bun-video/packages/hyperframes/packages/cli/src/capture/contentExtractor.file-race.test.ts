@@ -45,7 +45,7 @@ describe("caption image file reads", () => {
     dir = fs.mkdtempSync(join(tmpdir(), "hf-caption-read-"));
     fs.mkdirSync(join(dir, "assets"));
     file = join(dir, "assets", "hero.png");
-    await Bun.write(file, "original image");
+    fs.writeFileSync(file, "original image");
     hooks.afterStat = () => {};
     hooks.beforeRead = () => {};
     hooks.descriptor = -1;
@@ -72,7 +72,7 @@ describe("caption image file reads", () => {
   it("reads the checked image when its directory entry is replaced", async () => {
     hooks.afterStat = () => {
       fs.renameSync(file, join(dir, "original.png"));
-      await Bun.write(file, "replacement image");
+      fs.writeFileSync(file, "replacement image");
     };
     expect(await captionImagesWithGemini(dir, () => {}, [])).toEqual({ "hero.png": "A hero." });
     expect(sentBody).toContain(Buffer.from("original image").toString("base64"));

@@ -1,3 +1,4 @@
+import * as engineFs from "node:fs";
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { spawn } from "node:child_process";
@@ -42,10 +43,10 @@ vi.mock("node:fs", async (importOriginal) => {
     writeFileSync: (...args: Parameters<typeof fs.writeFileSync>) => {
       hooks.writing?.();
       if (hooks.failWrite) {
-        await Bun.write(args[0], "partial");
+        engineFs.writeFileSync(args[0], "partial");
         throw new Error("cache write failed");
       }
-      return await Bun.write(...args);
+      return engineFs.writeFileSync(...args);
     }, rmSync: (...args: Parameters<typeof fs.rmSync>) => {
       if (hooks.failCleanup) throw new Error("cache cleanup failed");
       return fs.rmSync(...args);
@@ -73,7 +74,7 @@ beforeEach(() => {
     failCleanup: false,
   });
   projectDir = fs.mkdtempSync(join(tmpdir(), "hf-waveform-test-"));
-  await Bun.write(join(projectDir, "audio.wav"), "audio");
+  engineFs.writeFileSync(join(projectDir, "audio.wav"), "audio");
   cacheDir = join(projectDir, ".waveform-cache");
   cachePath = join(
     cacheDir,
@@ -94,11 +95,11 @@ beforeEach(() => {
 afterEach(() => fs.rmSync(projectDir, { recursive: true, force: true }));
 
 function readPeaks() {
-  return await Bun.file(cachePath).json();
+  return JSON.parse(engineFs.readFileSync(cachePath, "utf8"));
 }
 function seedCache(content: string) {
   fs.mkdirSync(cacheDir, { recursive: true });
-  await Bun.write(cachePath, content);
+  engineFs.writeFileSync(cachePath, content);
 }
 function request() {
   return app.request("http://localhost/projects/demo/waveform/audio.wav");
@@ -187,7 +188,7 @@ for (const caller of ["helper", "route"]) {
     });
 
     it("publishes complete JSON and removes staging directories", async () => {
-      hooks.writing = () => expect(await Bun.file(cachePath).exists()).toBe(false);
+      hooks.writing = () => expect(engineFs.existsSync(cachePath)).toBe(false);
       await generate();
       expect(readPeaks()).toHaveLength(4000);
       expect(fs.readdirSync(cacheDir)).toHaveLength(1);
@@ -226,7 +227,7 @@ for (const caller of ["helper", "route"]) {
 
 it("regenerates a corrupt cache and reuses the replacement", async () => {
   seedCache("not JSON");
-  hooks.writing = () => expect(await Bun.file(cachePath).text()).toBe("not JSON");
+  hooks.writing = () => expect(engineFs.readFileSync(cachePath, "utf8")).toBe("not JSON");
   expect((await request()).status).toBe(200);
   expect(readPeaks()).toHaveLength(4000);
   expect((await request()).status).toBe(200);

@@ -91,7 +91,7 @@ describe("file server checked reads", () => {
       if (path !== file) return;
       hooks.checked = () => {};
       fs.renameSync(file, join(root, "original"));
-      await Bun.write(file, "replacement bytes");
+      fs.writeFileSync(file, "replacement bytes");
     };
     server = await createFileServer({ projectDir, compiledDir });
     const response = await fetch(`${server.url}/${name}`);

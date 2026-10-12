@@ -21,7 +21,7 @@ export const validatePublicDir = (p: string) => {
 		// Path does not exist
 		// Check if the parent path exists
 		const parentPath = path.dirname(p);
-		const exists = await Bun.file(parentPath).exists();
+		const exists = fs.existsSync(parentPath);
 		if (!exists) {
 			throw new Error(
 				`The public directory was specified as "${p}", but this folder does not exist and the parent directory "${parentPath}" does also not exist. Create at least the parent directory.`,

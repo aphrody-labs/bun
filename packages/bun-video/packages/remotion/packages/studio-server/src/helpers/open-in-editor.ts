@@ -277,7 +277,7 @@ function getArgumentsForLineNumber(
 		editor.endsWith('/Zed.app/Contents/MacOS/cli') ||
 		editor.endsWith('/Zed Preview.app/Contents/MacOS/cli');
 	const isFolder =
-		await Bun.file(fileName).exists() && fs.lstatSync(fileName).isDirectory();
+		fs.existsSync(fileName) && fs.lstatSync(fileName).isDirectory();
 	if (isZedEditor) {
 		return ['--existing', fileName + ':' + lineNumber + ':' + colNumber];
 	}

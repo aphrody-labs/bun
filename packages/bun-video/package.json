@@ -15,9 +15,11 @@
   },
   "scripts": {
     "check:types": "bun check --project tsconfig.json",
+    "check:engines": "bun scripts/check-engines.ts",
+    "repair:engines": "bun scripts/repair-engine-migration.ts",
     "lint": "bunx oxlint src labs test",
     "format:check": "bunx oxfmt --check src labs test",
-    "check": "bun run check:types && bun run lint && bun run format:check",
+    "check": "bun run check:types && bun run check:engines && bun run lint && bun run format:check",
     "build:library": "bun scripts/build.ts --library",
     "pack": "bun pm pack",
     "release": "bun run check && bun run build:library && bun run pack",
@@ -74,7 +76,12 @@
     "./engine": "./umbrella-src/index.ts",
     "./encode": "./umbrella-src/encode.ts",
     "./computer": "./umbrella-src/computer.ts",
-    "./ffmpeg": "./src/ffmpeg.ts"
+    "./ffmpeg": "./src/ffmpeg.ts",
+    "./mpv": "./src/mpv.ts",
+    "./remotion": "./packages/remotion/packages/core/src/index.ts",
+    "./remotion/renderer": "./packages/remotion/packages/renderer/src/index.ts",
+    "./hyperframes": "./packages/hyperframes/packages/core/src/index.ts",
+    "./hyperframes/engine": "./packages/hyperframes/packages/engine/src/index.ts"
   },
   "publishConfig": {
     "access": "public",

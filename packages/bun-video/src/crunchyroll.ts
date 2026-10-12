@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: MIT
 // API migration of crunchyroll.js 1.1.1, Copyright (c) 2022 Mssjim.
 // Original MIT license reproduced in ../docs/crunchyroll-migration.md.
-import { createChromiumPasswordConnection, type ChromiumPasswordProvider } from "../../bun-chromium/src/passwords";
+export interface BrowserPasswordProvider {
+  withCredential(
+    selector: { url: string; username?: string },
+    consumer: (credential: Readonly<{ username: string; password: string }>) => void | Promise<void>,
+  ): Promise<void>;
+}
 
 export function parseCrunchyrollWatchUrl(value: string | URL) {
   const url = new URL(value);
@@ -55,10 +60,11 @@ export class CrunchyrollError extends Error {
 
 /** Native fetch implementation of every public crunchyroll.js 1.1.1 operation. */
 export class CrunchyrollClient {
-  async loginWithBrowserPassword(provider: ChromiumPasswordProvider, username?: string): Promise<LoginResult> {
+  async loginWithBrowserPassword(provider: BrowserPasswordProvider, username?: string): Promise<LoginResult> {
     let result: LoginResult | undefined;
-    const passwords = createChromiumPasswordConnection(provider);
-    await passwords.withCredential({ url: "https://www.crunchyroll.com", username }, async credential => {
+    if (!provider || typeof provider.withCredential !== "function")
+      throw new TypeError("An explicit private browser password provider is required");
+    await provider.withCredential({ url: "https://www.crunchyroll.com", username }, async credential => {
       result = await this.login(credential.username, credential.password);
     });
     if (!result) throw new CrunchyrollError("Private password provider did not supply a credential");

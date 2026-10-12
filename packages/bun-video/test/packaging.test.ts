@@ -33,7 +33,7 @@ describe("standalone source package", () => {
     ).toBe(true);
     expect(manifest.publishConfig).toEqual({ access: "public", tag: "next" });
     for (const entry of [...Object.values(manifest.exports), ...Object.values(manifest.bin)] as string[]) {
-      expect(/^(\.\/(src|labs|umbrella-src)\/)/.test(entry)).toBe(true);
+      expect(/^(\.\/(src|labs|umbrella-src|packages)\/)/.test(entry)).toBe(true);
       expect(await Bun.file(resolve(root, entry)).exists()).toBe(true);
     }
     for (const entry of Object.values(manifest.bin) as string[]) {
@@ -42,8 +42,8 @@ describe("standalone source package", () => {
     expect(manifest.files).toEqual([
       "src",
       "umbrella-src",
-      "remotion",
-      "hyperframes",
+      "packages/remotion",
+      "packages/hyperframes",
       "native",
       "infra",
       "plugin",
@@ -52,10 +52,36 @@ describe("standalone source package", () => {
       "docs",
       "labs",
       "assets",
+      "packages/mediabunny",
+      "packages/yt-dlp",
       "README.md",
       "LICENSE",
       "THIRD_PARTY_NOTICES.md",
     ]);
+  });
+
+  test("direct engine exports resolve to the absorbed source", async () => {
+    expect(manifest.exports["./remotion"]).toBe("./packages/remotion/packages/core/src/index.ts");
+    expect(manifest.exports["./hyperframes"]).toBe("./packages/hyperframes/packages/core/src/index.ts");
+    for (const entry of [manifest.exports["./remotion"], manifest.exports["./hyperframes"]]) {
+      expect(await Bun.file(resolve(root, entry)).exists()).toBe(true);
+    }
+    expect(manifest.dependencies.remotion).toBeUndefined();
+    expect(manifest.dependencies["@hyperframes/core"]).toBeUndefined();
+  });
+
+  test("absorbed Remotion core loads as Bun source without generated dist files", async () => {
+    const core = await import(resolve(root, manifest.exports["./remotion"]));
+    expect(typeof core.Composition).toBe("function");
+    expect(typeof core.interpolate).toBe("function");
+    expect(core.interpolate(5, [0, 10], [0, 100])).toBe(50);
+    expect(typeof core.AbsoluteFill).toBe("object");
+  });
+
+  test("absorbed HyperFrames core loads as Bun source", async () => {
+    const core = await import(resolve(root, manifest.exports["./hyperframes"]));
+    expect(typeof core.generateBaseHtml).toBe("function");
+    expect(typeof core.parseSlideshowManifest).toBe("function");
   });
 
   test("public source and browser assets contain no private fixture files", async () => {

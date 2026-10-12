@@ -38,7 +38,7 @@ describe("synthesis script cache", () => {
     outputPath = join(paths.home, "speech.wav");
     fs.mkdirSync(cacheDir, { recursive: true });
     vi.mocked(execFileSync).mockImplementation(() => {
-      await Bun.write(outputPath, "stub audio");
+      fs.writeFileSync(outputPath, "stub audio");
       return JSON.stringify({
         outputPath,
         sampleRate: 24000,
@@ -78,7 +78,7 @@ describe("synthesis script cache", () => {
         if (path === scriptPath && !injected) {
           injected = true;
           if (kind === "dangling symlink") fs.symlinkSync(target, scriptPath);
-          else await Bun.write(scriptPath, "concurrent script");
+          else fs.writeFileSync(scriptPath, "concurrent script");
           return false;
         }
         return original.existsSync(path);

@@ -33,14 +33,14 @@ describe("project config creation", () => {
     const dir = project();
     const path = projectConfigPath(dir);
     createProjectConfig(dir);
-    expect(await Bun.file(path).text()).toBe(
+    expect(fs.readFileSync(path, "utf8")).toBe(
       JSON.stringify(DEFAULT_PROJECT_CONFIG, null, 2) + "\n",
     );
     const updated = { ...DEFAULT_PROJECT_CONFIG, authoringSkill: "slideshow" };
     createProjectConfig(dir, updated);
-    expect(await Bun.file(path).json()).toEqual(DEFAULT_PROJECT_CONFIG);
+    expect(JSON.parse(fs.readFileSync(path, "utf8"))).toEqual(DEFAULT_PROJECT_CONFIG);
     writeProjectConfig(dir, updated);
-    expect(await Bun.file(path).json()).toEqual(updated);
+    expect(JSON.parse(fs.readFileSync(path, "utf8"))).toEqual(updated);
   });
 
   it("preserves a config created after the skill seed reads ENOENT", () => {
@@ -48,11 +48,11 @@ describe("project config creation", () => {
     const path = projectConfigPath(dir);
     const winner = '{"registry":"https://custom.example","authoringSkill":"slideshow"}\n';
     vi.mocked(fs.readFileSync).mockImplementationOnce(() => {
-      await Bun.write(path, winner);
+      fs.writeFileSync(path, winner);
       throw Object.assign(new Error("missing before concurrent creation"), { code: "ENOENT" });
     });
     seedProjectAuthoringSkill(dir, "product-launch-video");
-    expect(await Bun.file(path).text()).toBe(winner);
+    expect(fs.readFileSync(path, "utf8")).toBe(winner);
   });
 
   it("does not create a dangling symlink target when seeding an absent config", () => {
@@ -60,7 +60,7 @@ describe("project config creation", () => {
     const target = join(dir, "missing.json");
     fs.symlinkSync(target, projectConfigPath(dir));
     seedProjectAuthoringSkill(dir, "slideshow");
-    expect(await Bun.file(target).exists()).toBe(false);
+    expect(fs.existsSync(target)).toBe(false);
     expect(fs.lstatSync(projectConfigPath(dir)).isSymbolicLink()).toBe(true);
   });
 });

@@ -51,7 +51,7 @@ export const validateBundleDir = (bundleDir: unknown): string => {
 
 	const resolvedBundleDir = path.resolve(bundleDir);
 
-	if (!await Bun.file(resolvedBundleDir).exists()) {
+	if (!fs.existsSync(resolvedBundleDir)) {
 		throw new Error(
 			`The bundle directory ${resolvedBundleDir} does not exist. Run \`npx remotion bundle\` or pass a valid \`bundleDir\`.`,
 		);
@@ -64,7 +64,7 @@ export const validateBundleDir = (bundleDir: unknown): string => {
 	}
 
 	const indexHtmlPath = path.join(resolvedBundleDir, 'index.html');
-	if (!await Bun.file(indexHtmlPath).exists() || !fs.statSync(indexHtmlPath).isFile()) {
+	if (!fs.existsSync(indexHtmlPath) || !fs.statSync(indexHtmlPath).isFile()) {
 		throw new Error(
 			`The bundle directory ${resolvedBundleDir} does not contain an index.html file at its root.`,
 		);
@@ -72,7 +72,7 @@ export const validateBundleDir = (bundleDir: unknown): string => {
 
 	const bundleScriptPath = path.join(resolvedBundleDir, 'bundle.js');
 	if (
-		!await Bun.file(bundleScriptPath).exists() ||
+		!fs.existsSync(bundleScriptPath) ||
 		!fs.statSync(bundleScriptPath).isFile()
 	) {
 		throw new Error(
@@ -80,7 +80,7 @@ export const validateBundleDir = (bundleDir: unknown): string => {
 		);
 	}
 
-	const indexHtml = await Bun.file(indexHtmlPath).text();
+	const indexHtml = fs.readFileSync(indexHtmlPath, "utf8");
 	const publicPath = getPublicPath(indexHtml);
 	if (publicPath !== './') {
 		throw new Error(

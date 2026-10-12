@@ -38,7 +38,7 @@ export const readRecursively = ({
 }): StaticFile[] => {
 	const absFolder = path.join(startPath, folder);
 
-	if (!await Bun.file(absFolder).exists()) {
+	if (!fs.existsSync(absFolder)) {
 		return [];
 	}
 

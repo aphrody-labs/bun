@@ -1,0 +1,84 @@
+{
+	"repository": {
+		"url": "https://github.com/remotion-dev/remotion/tree/main/packages/core"
+	},
+	"name": "remotion",
+	"version": "4.0.534",
+	"description": "Make videos programmatically",
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"module": "./src/index.ts",
+	"scripts": {
+		"formatting": "oxfmt src --check",
+		"format": "oxfmt src",
+		"prepublishOnly": "bun ensure-correct-version.ts && cp ../../README.md . && cp ../../LICENSE.md .",
+		"lint": "eslint src",
+		"test": "bun test src/test",
+		"make": "tsgo -d && bun --env-file=../.env.bundle bundle.ts"
+	},
+	"bugs": {
+		"url": "https://github.com/remotion-dev/remotion/issues"
+	},
+	"author": "Jonny Burger <jonny@remotion.dev>",
+	"license": "SEE LICENSE IN LICENSE.md",
+	"peerDependencies": {
+		"react": ">=16.8.0",
+		"react-dom": ">=16.8.0"
+	},
+	"devDependencies": {
+		"@testing-library/react": "16.1.0",
+		"@testing-library/dom": "10.4.0",
+		"@happy-dom/global-registrator": "14.5.1",
+		"@types/dom-webcodecs": "catalog:",
+		"happy-dom": "20.0.2",
+		"react": "catalog:",
+		"react-dom": "catalog:",
+		"webpack": "5.105.0",
+		"zod": "catalog:",
+		"@remotion/eslint-config-internal": "workspace:*",
+		"eslint": "catalog:",
+		"@typescript/native-preview": "catalog:"
+	},
+	"keywords": [
+		"video",
+		"creation",
+		"editor",
+		"react",
+		"player"
+	],
+	"publishConfig": {
+		"access": "public"
+	},
+	"exports": {
+		"./package.json": "./package.json",
+		".": {
+			"types": "./src/index.ts",
+			"bun": "./src/index.ts",
+			"import": "./src/index.ts",
+			"require": "./src/index.ts"
+		},
+		"./version": {
+			"types": "./src/version.ts",
+			"bun": "./src/version.ts",
+			"import": "./src/version.ts",
+			"require": "./src/version.ts"
+		},
+		"./no-react": {
+			"types": "./src/no-react.ts",
+			"bun": "./src/no-react.ts",
+			"import": "./src/no-react.ts",
+			"require": "./src/no-react.ts"
+		}
+	},
+	"typesVersions": {
+		">=1.0": {
+			"version": [
+				"src/version.ts"
+			],
+			"no-react": [
+				"src/no-react.ts"
+			]
+		}
+	},
+	"homepage": "https://www.remotion.dev/docs/remotion"
+}

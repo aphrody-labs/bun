@@ -41,7 +41,7 @@ describe("generateProjectScaffold metadata", () => {
   });
 
   afterEach(() => {
-    if (await Bun.file(dir).exists()) {
+    if (fs.existsSync(dir)) {
       expect(fs.readdirSync(dir).filter((name) => name.startsWith(".hf-create-"))).toEqual([]);
     }
     fs.rmSync(dir, { recursive: true, force: true });
@@ -86,7 +86,7 @@ describe("generateProjectScaffold metadata", () => {
 
   it("preserves a file created after the existence check and continues scaffolding", async () => {
     vi.mocked(fs.existsSync).mockImplementationOnce(() => {
-      await Bun.write(metaPath, "concurrent metadata");
+      fs.writeFileSync(metaPath, "concurrent metadata");
       return false;
     });
     await generate();
@@ -138,7 +138,7 @@ describe("loadEnvFile", () => {
   });
 
   it("never takes the feedback email from a project file, in any letter case", () => {
-    await Bun.write(join(dir, ".env"),
+    fs.writeFileSync(join(dir, ".env"),
       'hyperframes_feedback_email=a@example.com\nHyperFrames_Feedback_Email=b@example.com\nHF_SCAFFOLD_TEST_KEY="kept"\n',
     );
     loadEnvFile(join(dir, "out"));

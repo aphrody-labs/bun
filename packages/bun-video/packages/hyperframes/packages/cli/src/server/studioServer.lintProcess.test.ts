@@ -18,7 +18,7 @@ let server: ReturnType<typeof createStudioServer>;
 
 beforeEach(() => {
   root = fs.mkdtempSync(path.join(tmpdir(), "hf-studio-lint-"));
-  await Bun.write(path.join(root, "index.html"),
+  fs.writeFileSync(path.join(root, "index.html"),
     `<!doctype html><html><head></head><body>
 <div id="root" data-composition-id="main" data-width="320" data-height="180"></div>
 </body></html>`,

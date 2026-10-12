@@ -33,7 +33,7 @@ const makeCodemodEnvironment = (
 	extname: path.extname,
 	fileExists: (fileName) =>
 		sourceFileOverrides?.has(path.resolve(fileName)) === true ||
-		(await Bun.file(fileName).exists() && fs.statSync(fileName).isFile()),
+		(fs.existsSync(fileName) && fs.statSync(fileName).isFile()),
 	isAbsolute: path.isAbsolute,
 	join: path.join,
 	pathSeparator: path.sep,

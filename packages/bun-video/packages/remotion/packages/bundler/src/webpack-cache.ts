@@ -112,11 +112,11 @@ export const cacheExists = (
 	environment: Environment,
 	hash: string,
 ): CacheState => {
-	if (await Bun.file(remotionCacheLocation(remotionRoot, environment, hash).exists())) {
+	if (fs.existsSync(remotionCacheLocation(remotionRoot, environment, hash))) {
 		return 'exists';
 	}
 
-	if (!await Bun.file(getWebpackCacheDir(remotionRoot).exists())) {
+	if (!fs.existsSync(getWebpackCacheDir(remotionRoot))) {
 		return 'does-not-exist';
 	}
 

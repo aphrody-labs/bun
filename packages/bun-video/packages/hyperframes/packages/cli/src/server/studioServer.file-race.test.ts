@@ -99,13 +99,13 @@ describe("Studio bundle file reads", () => {
     hooks.studioDir = path.join(root, "studio");
     hooks.runtimeDir = path.join(root, "runtime");
     fs.mkdirSync(hooks.runtimeDir);
-    await Bun.write(path.join(hooks.runtimeDir, "hyperframe-runtime.js"), "checked runtime");
+    fs.writeFileSync(path.join(hooks.runtimeDir, "hyperframe-runtime.js"), "checked runtime");
     const projectDir = path.join(root, "project");
     fs.mkdirSync(projectDir);
     fs.mkdirSync(hooks.studioDir);
     fs.mkdirSync(path.join(hooks.studioDir, "assets"));
     fs.mkdirSync(path.join(hooks.studioDir, "icons"));
-    await Bun.write(path.join(hooks.studioDir, "index.html"),
+    fs.writeFileSync(path.join(hooks.studioDir, "index.html"),
       "<html><head></head><body>Studio</body></html>",
     );
     server = createStudioServer({ projectDir });
@@ -138,7 +138,7 @@ describe("Studio bundle file reads", () => {
         if (checked !== file) return;
         hooks.checked = () => {};
         fs.renameSync(file, path.join(root, "original"));
-        await Bun.write(file, "replacement bytes");
+        fs.writeFileSync(file, "replacement bytes");
       };
       const response = await server.app.request(name === "index.html" ? "/" : `/${name}`);
       expect(response.status).toBe(200);
@@ -172,7 +172,7 @@ describe("Studio bundle file reads", () => {
       if (checked !== file) return;
       hooks.checked = () => {};
       fs.renameSync(file, path.join(root, "original-index"));
-      await Bun.write(file, "replacement index");
+      fs.writeFileSync(file, "replacement index");
     };
     expect(await loadPreviewServerBuildSignature()).toBe(expected);
     expectClosed();
@@ -185,7 +185,7 @@ describe("Studio bundle file reads", () => {
       if (checked !== file) return;
       hooks.checked = () => {};
       fs.renameSync(file, path.join(root, "original-runtime"));
-      await Bun.write(file, "replacement runtime");
+      fs.writeFileSync(file, "replacement runtime");
     };
     const response = await server.app.request("/api/runtime.js");
     expect(response.status).toBe(200);

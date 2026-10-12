@@ -1,3 +1,4 @@
+import * as engineFs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -74,7 +75,7 @@ afterEach(() => {
 function writeEntry(name: string, html = "<html>checked</html>") {
   const path = join(projectDir, name);
   fs.mkdirSync(resolve(path, ".."), { recursive: true });
-  await Bun.write(path, html);
+  engineFs.writeFileSync(path, html);
   return path;
 }
 function prepare(entryFile?: string) {
@@ -91,7 +92,7 @@ describe("project entry reads", () => {
       hooks.target = writeEntry(entry);
       hooks.swap = () => {
         fs.renameSync(hooks.target, join(root, "original.html"));
-        await Bun.write(hooks.target, "<html>unchecked</html>");
+        engineFs.writeFileSync(hooks.target, "<html>unchecked</html>");
       };
       expect(prepare(entry === "preferred.html" ? entry : undefined)).toEqual(expected(entry));
       expect(hooks.swap).toBeUndefined();
@@ -124,7 +125,7 @@ describe("project entry reads", () => {
   });
   it("keeps project and entry symlinks working", () => {
     const target = join(root, "linked.html");
-    await Bun.write(target, "linked");
+    engineFs.writeFileSync(target, "linked");
     fs.symlinkSync(target, join(projectDir, "index.html"), "file");
     const linkedProject = join(root, "linked-project");
     fs.symlinkSync(projectDir, linkedProject, process.platform === "win32" ? "junction" : "dir");
@@ -135,7 +136,7 @@ describe("project entry reads", () => {
   it("rejects a sibling directory sharing the project name prefix", () => {
     const sibling = join(root, "project-other");
     fs.mkdirSync(sibling);
-    await Bun.write(join(sibling, "index.html"), "outside");
+    engineFs.writeFileSync(join(sibling, "index.html"), "outside");
     expect(prepare("../project-other/index.html")).toEqual({
       error: "Entry file must stay inside project directory: ../project-other/index.html",
     });

@@ -78,8 +78,7 @@ export const getPackageManager = ({
 	}
 
 	const existingPkgManagers = lockFilePaths.filter((p) =>
-		await Bun.file(path.join(remotionRoot, ...new Array(dirUp).exists().fill('..'), p.path),
-		),
+		fs.existsSync(path.join(remotionRoot, ...new Array(dirUp).fill('..'), p.path)),
 	);
 
 	if (existingPkgManagers.length === 0 && dirUp >= 2) {

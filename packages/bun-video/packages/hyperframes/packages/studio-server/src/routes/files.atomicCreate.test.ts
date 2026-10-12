@@ -19,7 +19,7 @@ vi.mock("node:fs", async (importOriginal) => {
 let project: string;
 beforeEach(() => {
   project = fs.mkdtempSync(join(tmpdir(), "hf-atomic-create-"));
-  await Bun.write(join(project, "index.html"), "<html>index</html>");
+  fs.writeFileSync(join(project, "index.html"), "<html>index</html>");
   vi.clearAllMocks();
 });
 afterEach(() => fs.rmSync(project, { recursive: true, force: true }));

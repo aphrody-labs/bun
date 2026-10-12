@@ -24,9 +24,9 @@ let server: StudioServer | undefined;
 beforeEach(() => {
   dir = fs.mkdtempSync(path.join(tmpdir(), "hf-stamp-on-open-"));
   fs.mkdirSync(path.join(dir, "compositions"));
-  await Bun.write(path.join(dir, "index.html"), root(SCENES));
+  fs.writeFileSync(path.join(dir, "index.html"), root(SCENES));
   for (const id of SCENES)
-    await Bun.write(path.join(dir, "compositions", `${id}.html`), scene(id));
+    fs.writeFileSync(path.join(dir, "compositions", `${id}.html`), scene(id));
 });
 
 afterEach(() => {
@@ -83,14 +83,14 @@ describe("opening a film of external scenes", () => {
     fs.utimesSync(file, pinned, pinned);
     open();
     // What `cp -p` or rsync leaves: new content at the recorded size and mtime.
-    const stamped = await Bun.file(file).text();
+    const stamped = fs.readFileSync(file, "utf8");
     const unstamped = stamped.replace(/ data-hf-id="[^"]*"/, "").padEnd(stamped.length, " ");
-    await Bun.write(file, unstamped);
+    fs.writeFileSync(file, unstamped);
     fs.utimesSync(file, pinned, pinned);
 
     open();
 
-    const reopened = await Bun.file(file).text();
+    const reopened = fs.readFileSync(file, "utf8");
     expect(reopened).not.toBe(unstamped);
     expect(reopened.match(/data-hf-id=/g)?.length).toBe(
       unstamped.match(/data-hf-id=/g)!.length + 1,

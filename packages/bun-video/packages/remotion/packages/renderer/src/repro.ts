@@ -123,13 +123,13 @@ const reproWriter = (name: string): ReproWriter => {
 		}
 
 		const serializedProps = path.resolve(reproFolder, 'input-props.json');
-		await Bun.write(serializedProps, serializedInputPropsWithCustomSchema);
+		fs.writeFileSync(serializedProps, serializedInputPropsWithCustomSchema);
 
 		const serializedResolvedProps = path.resolve(
 			reproFolder,
 			'resolved-props.json',
 		);
-		await Bun.write(serializedResolvedProps, serializedResolvedPropsWithCustomSchema,);
+		fs.writeFileSync(serializedResolvedProps, serializedResolvedPropsWithCustomSchema,);
 
 		writeLine('info', [`Args: ${JSON.stringify(process.argv)}`]);
 		writeLine('info', [`Node/Bun version: ${process.version}`]);

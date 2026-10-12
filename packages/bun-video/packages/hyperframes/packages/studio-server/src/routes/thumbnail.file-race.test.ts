@@ -1,3 +1,4 @@
+import * as engineFs from "node:fs";
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "bun:test";
 import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -11,7 +12,7 @@ import type { StudioApiAdapter } from "../types.js";
 const vanished = vi.hoisted(() => ({ matches: (_path: string) => false }));
 vi.mock("node:fs", async (importOriginal) => {
   const fs = await importOriginal<typeof import("node:fs")>();
-  return { ...fs, existsSync: (path: string) => vanished.matches(path) || await Bun.file(path).exists() };
+  return { ...fs, existsSync: (path: string) => vanished.matches(path) || engineFs.existsSync(path) };
 });
 
 const projectDirs: string[] = [];

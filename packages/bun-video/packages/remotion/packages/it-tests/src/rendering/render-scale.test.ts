@@ -8,12 +8,12 @@ import {NoReactInternals} from 'remotion/no-react';
 const outputPath = path.join(process.cwd(), 'packages/example/out-scale.mp4');
 
 beforeEach(() => {
-	if (await Bun.file(outputPath).exists()) {
+	if (fs.existsSync(outputPath)) {
 		fs.unlinkSync(outputPath);
 	}
 });
 afterEach(() => {
-	if (await Bun.file(outputPath).exists()) {
+	if (fs.existsSync(outputPath)) {
 		fs.unlinkSync(outputPath);
 	}
 });

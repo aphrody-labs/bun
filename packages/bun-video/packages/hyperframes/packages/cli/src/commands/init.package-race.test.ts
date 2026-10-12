@@ -32,7 +32,7 @@ describe("init config creation", () => {
       if (path === packagePath && !injected) {
         injected = true;
         if (kind === "dangling symlink") fs.symlinkSync(target, packagePath);
-        else await Bun.write(packagePath, '{"name":"preserve-me"}\n');
+        else fs.writeFileSync(packagePath, '{"name":"preserve-me"}\n');
         return kind === "existing";
       }
       return original.existsSync(path);

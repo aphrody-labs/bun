@@ -12,18 +12,18 @@ export const getLocalPackageOverride = ({
 	packageName: string;
 }): string | null => {
 	const packageJsonPath = path.join(remotionRoot, 'package.json');
-	if (!await Bun.file(packageJsonPath).exists()) {
+	if (!fs.existsSync(packageJsonPath)) {
 		return null;
 	}
 
-	const packageJson = await Bun.file(packageJsonPath).json();
+	const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
 	const localPackageRoot = packageJson[localPackageRootKey];
 	if (typeof localPackageRoot !== 'string') {
 		return null;
 	}
 
 	const packagesRoot = path.join(localPackageRoot, 'packages');
-	if (!await Bun.file(packagesRoot).exists()) {
+	if (!fs.existsSync(packagesRoot)) {
 		return null;
 	}
 
@@ -33,12 +33,12 @@ export const getLocalPackageOverride = ({
 			packageDirectory,
 			'package.json',
 		);
-		if (!await Bun.file(candidatePackageJsonPath).exists()) {
+		if (!fs.existsSync(candidatePackageJsonPath)) {
 			continue;
 		}
 
 		const candidatePackageJson = JSON.parse(
-			await Bun.file(candidatePackageJsonPath).text(),
+			fs.readFileSync(candidatePackageJsonPath, "utf8"),
 		);
 		if (
 			candidatePackageJson.name === packageName &&

@@ -31,10 +31,10 @@ export const findWorkspaceRoot = (startDir: string): string | null => {
 	for (let i = 0; i < WORKSPACE_ROOT_SEARCH_LIMIT; i++) {
 		const packageJsonPath = path.join(currentDir, 'package.json');
 
-		if (await Bun.file(packageJsonPath).exists()) {
+		if (fs.existsSync(packageJsonPath)) {
 			try {
 				const packageJson = JSON.parse(
-					await Bun.file(packageJsonPath).text(),
+					fs.readFileSync(packageJsonPath, "utf8"),
 				);
 				if (packageJson.workspaces) {
 					return currentDir;
@@ -43,7 +43,7 @@ export const findWorkspaceRoot = (startDir: string): string | null => {
 		}
 
 		const pnpmWorkspacePath = path.join(currentDir, 'pnpm-workspace.yaml');
-		if (await Bun.file(pnpmWorkspacePath).exists()) {
+		if (fs.existsSync(pnpmWorkspacePath)) {
 			return currentDir;
 		}
 
@@ -67,9 +67,9 @@ export const findCatalogSource = (
 ): CatalogSource | null => {
 	const packageJsonPath = path.join(workspaceRoot, 'package.json');
 
-	if (await Bun.file(packageJsonPath).exists()) {
+	if (fs.existsSync(packageJsonPath)) {
 		try {
-			const packageJson = await Bun.file(packageJsonPath).json();
+			const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
 
 			if (
 				packageJson.workspaces &&
@@ -95,8 +95,8 @@ export const findCatalogSource = (
 	}
 
 	const pnpmWorkspacePath = path.join(workspaceRoot, 'pnpm-workspace.yaml');
-	if (await Bun.file(pnpmWorkspacePath).exists()) {
-		const content = await Bun.file(pnpmWorkspacePath).text();
+	if (fs.existsSync(pnpmWorkspacePath)) {
+		const content = fs.readFileSync(pnpmWorkspacePath, "utf8");
 		if (/^catalog:/m.test(content)) {
 			return {type: 'pnpm-workspace', filePath: pnpmWorkspacePath};
 		}
@@ -114,7 +114,7 @@ export const getCatalogEntries = (
 	}
 
 	if (source.type === 'package-json') {
-		const packageJson = await Bun.file(source.filePath).json();
+		const packageJson = JSON.parse(fs.readFileSync(source.filePath, "utf8"));
 
 		if (source.catalogKey === 'workspaces') {
 			return (packageJson.workspaces.catalog ?? {}) as Record<string, string>;
@@ -123,7 +123,7 @@ export const getCatalogEntries = (
 		return (packageJson.catalog ?? {}) as Record<string, string>;
 	}
 
-	return parsePnpmWorkspaceCatalog(await Bun.file(source.filePath).text());
+	return parsePnpmWorkspaceCatalog(fs.readFileSync(source.filePath, "utf8"));
 };
 
 export const parsePnpmWorkspaceCatalog = (
@@ -168,7 +168,7 @@ export const updateCatalogEntryInPackageJson = ({
 	pkg: string;
 	newVersion: string;
 }): boolean => {
-	const content = await Bun.file(filePath).text();
+	const content = fs.readFileSync(filePath, "utf8");
 	const packageJson = JSON.parse(content);
 
 	const catalog =
@@ -185,7 +185,7 @@ export const updateCatalogEntryInPackageJson = ({
 	const indentMatch = content.match(/^(\s+)"/m);
 	const indent = indentMatch ? indentMatch[1] : '\t';
 
-	await Bun.write(filePath, JSON.stringify(packageJson, null, indent) + '\n');
+	fs.writeFileSync(filePath, JSON.stringify(packageJson, null, indent) + '\n');
 
 	return true;
 };
@@ -199,7 +199,7 @@ export const updateCatalogEntryInPnpmWorkspace = ({
 	pkg: string;
 	newVersion: string;
 }): boolean => {
-	const content = await Bun.file(filePath).text();
+	const content = fs.readFileSync(filePath, "utf8");
 	const lines = content.split('\n');
 	let inCatalogSection = false;
 	let updated = false;
@@ -235,7 +235,7 @@ export const updateCatalogEntryInPnpmWorkspace = ({
 	}
 
 	if (updated) {
-		await Bun.write(filePath, lines.join('\n'));
+		fs.writeFileSync(filePath, lines.join('\n'));
 	}
 
 	return updated;

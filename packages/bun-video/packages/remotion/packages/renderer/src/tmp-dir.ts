@@ -16,7 +16,7 @@ const randomHash = (): string => {
 export const tmpDir = (str: string) => {
 	const newDir = path.join(os.tmpdir(), str + randomHash());
 
-	if (await Bun.file(newDir).exists()) {
+	if (fs.existsSync(newDir)) {
 		fs.rmSync(newDir, {
 			recursive: true,
 			force: true,

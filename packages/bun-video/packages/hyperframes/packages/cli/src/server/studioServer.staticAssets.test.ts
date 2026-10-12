@@ -47,9 +47,9 @@ beforeEach(() => {
   root = fixture.root;
   hooks.studioDir = fixture.studioDir;
   fs.mkdirSync(path.join(hooks.studioDir, "icons"), { recursive: true });
-  await Bun.write(path.join(hooks.studioDir, "assets", HASHED_BUNDLE), BUNDLE_BYTES);
-  await Bun.write(path.join(hooks.studioDir, "icons", PUBLIC_ICON), "<svg/>");
-  await Bun.write(path.join(hooks.studioDir, "favicon.svg"), "<svg/>");
+  fs.writeFileSync(path.join(hooks.studioDir, "assets", HASHED_BUNDLE), BUNDLE_BYTES);
+  fs.writeFileSync(path.join(hooks.studioDir, "icons", PUBLIC_ICON), "<svg/>");
+  fs.writeFileSync(path.join(hooks.studioDir, "favicon.svg"), "<svg/>");
   writeStudioIndexHtml(hooks.studioDir);
   server = createStudioServer({ projectDir: fixture.projectDir });
 });

@@ -29,7 +29,7 @@ export const patchReadmeMd = (
 		return;
 	}
 
-	const contents = await Bun.file(fileName).text();
+	const contents = fs.readFileSync(fileName, "utf8");
 	const newContents = contents
 		.split('\n')
 		.map((c) => {
@@ -57,5 +57,5 @@ export const patchReadmeMd = (
 		})
 		.join('\n');
 
-	await Bun.write(fileName, newContents);
+	fs.writeFileSync(fileName, newContents);
 };

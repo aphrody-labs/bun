@@ -7,12 +7,12 @@ import execa from 'execa';
 const outputPath = path.join(process.cwd(), 'packages/example/out.mp3');
 
 beforeEach(() => {
-	if (await Bun.file(outputPath).exists()) {
+	if (fs.existsSync(outputPath)) {
 		fs.unlinkSync(outputPath);
 	}
 });
 afterEach(() => {
-	if (await Bun.file(outputPath).exists()) {
+	if (fs.existsSync(outputPath)) {
 		fs.unlinkSync(outputPath);
 	}
 });

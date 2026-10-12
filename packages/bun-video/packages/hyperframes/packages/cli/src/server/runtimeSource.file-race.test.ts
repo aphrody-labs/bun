@@ -88,7 +88,7 @@ describe("prebuilt runtime file reads", () => {
       hooks.checked = () => {
         hooks.checked = () => {};
         fs.renameSync(file, path.join(hooks.dir, "original"));
-        await Bun.write(file, "replacement runtime");
+        fs.writeFileSync(file, "replacement runtime");
       };
       expect(await loadRuntimeSource()).toBe("checked runtime");
       expectClosed();

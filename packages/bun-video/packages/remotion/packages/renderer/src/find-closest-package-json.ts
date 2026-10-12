@@ -8,7 +8,7 @@ export const findClosestPackageJson = (): string | null => {
 	let possiblePackageJson = '';
 	for (let i = 0; i < recursionLimit; i++) {
 		possiblePackageJson = path.join(currentDir, 'package.json');
-		const exists = await Bun.file(possiblePackageJson).exists();
+		const exists = fs.existsSync(possiblePackageJson);
 		if (exists) {
 			return possiblePackageJson;
 		}

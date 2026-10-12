@@ -233,7 +233,7 @@ export const findClosestFolderWithItem = (
 	let possibleFile = '';
 	for (let i = 0; i < recursionLimit; i++) {
 		possibleFile = path.join(currentDir, file);
-		const exists = await Bun.file(possibleFile).exists();
+		const exists = fs.existsSync(possibleFile);
 		if (exists) {
 			return path.dirname(possibleFile);
 		}
