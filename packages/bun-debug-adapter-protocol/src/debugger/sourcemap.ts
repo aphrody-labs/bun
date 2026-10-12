@@ -68,6 +68,8 @@ class ActualSourceMap implements SourceMap {
         line: lineTo1BasedLine(line),
         column: columnToColumn(column),
         source,
+        // A breakpoint on a source line binds to the first generated position at or after it.
+        bias: SourceMapConsumer.LEAST_UPPER_BOUND,
       });
     } catch (error) {
       return {
