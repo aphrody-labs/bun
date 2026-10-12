@@ -5,13 +5,13 @@ import { existsSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import packageMetadata from "@aphrody/bun/package.json";
-import { resolveInstalledNativeLibraryPath } from "@aphrody/bun/src/native-installation";
+import { resolveInstalledNativeLibraryPath } from "@aphrody/bun/src/native-installation.js";
 import {
   NATIVE_ABI_VERSIONS,
   nativeDevelopmentEnabled,
   nativeHostTriple,
   verifyNativeArtifact,
-} from "@aphrody/bun/src/native-artifact";
+} from "@aphrody/bun/src/native-artifact.js";
 
 export const EXPECTED_ABI_VERSION = NATIVE_ABI_VERSIONS.aphrody_abi_version;
 export const EXPECTED_WEB_ABI_VERSION = NATIVE_ABI_VERSIONS.aphrody_web_bridge_abi_version;

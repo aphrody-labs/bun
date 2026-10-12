@@ -44,7 +44,8 @@
     "@aphrody/agent-browser": "workspace:*"
   },
   "devDependencies": {
-    "@aphrody/m3-config": "file:../../../../../../../aphrody/m3/packages/m3-config",
+    "@aphrody/m3-config": "workspace:*",
+    "@types/bun": "npm:@aphrody/bun-types@1.4.3-aphrody.4",
     "typescript": "7.0.2"
   },
   "peerDependencies": {
