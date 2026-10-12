@@ -7,6 +7,26 @@
   font-display: block;
 }
 
+/* The public home is a landing surface, not the authenticated workspace shell.
+   Keep the workspace rail on product routes, but remove it from the home route
+   after the app shell hydrates so the public hierarchy remains intentional. */
+body:has(#aphrody-home-title) {
+  min-height: 100vh;
+  background: var(--md-sys-color-surface, #fdf7ff);
+}
+
+body:has(#aphrody-home-title) #root,
+body:has(#aphrody-home-title) .app-shell {
+  min-height: 100vh;
+  border: 0;
+  background: var(--md-sys-color-surface, #fdf7ff);
+}
+
+body:has(#aphrody-home-title) .app-rail,
+body:has(#aphrody-home-title) [data-tauri-drag-region] {
+  display: none !important;
+}
+
 .material-symbol {
   font-family: "Material Symbols Outlined";
   font-style: normal;
