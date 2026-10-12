@@ -42,7 +42,7 @@ export async function runYtDlp(request: YtDlpRequest): Promise<YtDlpResult> {
   validate(request);
   request.signal?.throwIfAborted();
   const root = resolve(request.vendorRoot ?? new URL("../vendor/yt-dlp", import.meta.url).pathname);
-  const options = { quiet: true, no_warnings: true, ...(request.options ?? {}) };
+  const options = { quiet: true, no_warnings: true, ...request.options };
   const code = [
     "import json, sys",
     `sys.path.insert(0, ${JSON.stringify(root)})`,
