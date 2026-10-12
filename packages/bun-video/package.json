@@ -10,10 +10,29 @@
     "bun-video-hls": "./labs/hls-lab.ts",
     "bun-video-keychain": "./labs/hls-keychain.ts",
     "bun-video-shortcuts": "./labs/crunchyroll-shortcuts.ts",
-    "bun-video-webgpu": "./labs/webgpu.ts"
+    "bun-video-webgpu": "./labs/webgpu.ts",
+    "bun-video-engine": "./umbrella-src/cli.ts"
+  },
+  "scripts": {
+    "check:types": "bun check --project tsconfig.json",
+    "lint": "bunx oxlint src labs test",
+    "format:check": "bunx oxfmt --check src labs test",
+    "check": "bun run check:types && bun run lint && bun run format:check",
+    "build:library": "bun scripts/build.ts --library",
+    "pack": "bun pm pack",
+    "release": "bun run check && bun run build:library && bun run pack",
+    "publish:next": "bun run release && bun publish --access public --tag next"
   },
   "files": [
     "src",
+    "umbrella-src",
+    "remotion",
+    "hyperframes",
+    "native",
+    "infra",
+    "plugin",
+    "scripts",
+    "video-benchmark",
     "docs",
     "labs",
     "assets",
@@ -34,7 +53,10 @@
     "./crunchyroll": "./src/crunchyroll.ts",
     "./oauth": "./src/oauth.ts",
     "./secrets": "./src/secrets.ts",
-    "./webgpu": "./src/webgpu.ts"
+    "./webgpu": "./src/webgpu.ts",
+    "./engine": "./umbrella-src/index.ts",
+    "./encode": "./umbrella-src/encode.ts",
+    "./computer": "./umbrella-src/computer.ts"
   },
   "publishConfig": {
     "access": "public",

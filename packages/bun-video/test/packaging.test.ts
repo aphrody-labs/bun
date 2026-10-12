@@ -33,13 +33,29 @@ describe("standalone source package", () => {
     ).toBe(true);
     expect(manifest.publishConfig).toEqual({ access: "public", tag: "next" });
     for (const entry of [...Object.values(manifest.exports), ...Object.values(manifest.bin)] as string[]) {
-      expect(/^(\.\/src\/|\.\/labs\/)/.test(entry)).toBe(true);
+      expect(/^(\.\/(src|labs|umbrella-src)\/)/.test(entry)).toBe(true);
       expect(await Bun.file(resolve(root, entry)).exists()).toBe(true);
     }
     for (const entry of Object.values(manifest.bin) as string[]) {
       expect((await Bun.file(resolve(root, entry)).text()).startsWith("#!/usr/bin/env bun")).toBe(true);
     }
-    expect(manifest.files).toEqual(["src", "docs", "labs", "assets", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"]);
+    expect(manifest.files).toEqual([
+      "src",
+      "umbrella-src",
+      "remotion",
+      "hyperframes",
+      "native",
+      "infra",
+      "plugin",
+      "scripts",
+      "video-benchmark",
+      "docs",
+      "labs",
+      "assets",
+      "README.md",
+      "LICENSE",
+      "THIRD_PARTY_NOTICES.md",
+    ]);
   });
 
   test("public source and browser assets contain no private fixture files", async () => {

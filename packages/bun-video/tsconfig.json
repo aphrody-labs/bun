@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "paths": {
+      "bun": ["../../packages/bun-types/index.d.ts"],
+      "bun:*": ["../../packages/bun-types/*.d.ts"]
+    },
+    "lib": ["ESNext", "DOM"],
+    "jsx": "react-jsx",
+    "typeRoots": ["../../packages/bun-types/node_modules/@types"],
+    "types": ["node"],
+    "allowImportingTsExtensions": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "labs/**/*.ts",
+    "test/**/*.ts"
+  ]
+}

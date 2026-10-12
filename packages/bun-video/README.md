@@ -1,5 +1,7 @@
 # @aphrody/bun-video
 
+[![checks](https://github.com/aphrody-labs/bun/actions/workflows/bun-video-release.yml/badge.svg)](https://github.com/aphrody-labs/bun/actions/workflows/bun-video-release.yml)
+
 Source package for Bun with HLS, DASH/MPD, HAR inspection, Bitmovin integration,
 an isolated Crunchyroll client, OAuth PKCE, and native OS secret storage. It
 also preserves the Remotion and HyperFrames integration API, using official
@@ -51,3 +53,20 @@ The official Remotion renderer 4.0.534 rejects Bun prerelease versions such as
 prereleases. `loadRemotionRenderer()` preserves that upstream check. The three
 other library loaders and package utilities are qualified separately; importing
 the renderer or rendering a composition is not claimed for those runtimes.
+
+## Native checks and release
+
+```sh
+bun install --cwd packages/bun-video --frozen-lockfile
+bun run --cwd packages/bun-video check
+bun run --cwd packages/bun-video build:library
+bun run --cwd packages/bun-video pack
+```
+
+The release build embeds only explicitly qualified absolute media assets. Set
+`BUN_VIDEO_NATIVE_EXECUTABLE`, `BUN_VIDEO_FFMPEG`, and `BUN_VIDEO_FFPROBE` before
+`build:library`. Credentials, cookies, HAR files and signed URLs never belong in
+the package or CI logs. Tags `bun-video-v*` and manual dispatch run the checks,
+publish the `next` npm tag with `NPM_TOKEN`, and optionally upload the packed
+artifact to Cloudflare R2 with `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
+and `BUN_VIDEO_R2_BUCKET`.

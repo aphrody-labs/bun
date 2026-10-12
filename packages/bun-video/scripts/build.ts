@@ -35,7 +35,7 @@ const result = await Bun.build({
     await sharpNativePlugin(),
     hyperframesRuntimeAssetsPlugin(),
     await remotionModuleAssetsPlugin(),
-    mediaPlugin(),
+    ...(library ? [] : [mediaPlugin()]),
   ],
   ...(library
     ? { compile: undefined, outdir: outfile, naming: "[name].ts", format: "esm" as const }
