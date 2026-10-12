@@ -58,6 +58,25 @@ ABI 1.5 runtime artifact is installed, and can open the native Windows CEF deskt
 This compute interface does not yet route Remotion/HyperFrames WebGPU compositions through the
 video frame encoder; see [the WebGPU guide](docs/webgpu.md) for runtime requirements and limits.
 
+## React Video Studio
+
+`VideoStudio` fournit une bibliothèque et un lecteur React natif pour fichiers locaux,
+URLs HTTP(S), variantes de qualité, sous-titres, chapitres, reprise de position,
+Picture-in-Picture, plein écran, Media Session et inspection yt-dlp :
+
+```tsx
+import { VideoStudio } from "@aphrody/bun-video/studio";
+
+export function Player() {
+  return <VideoStudio storageKey="catalogue" assets={[
+    { id: "episode-1", title: "Episode 1", src: "https://cdn.example/video.mp4", poster: "/poster.jpg" },
+  ]} />;
+}
+```
+
+Les raccourcis `Espace`, `←`, `→` et `M` contrôlent lecture, recherche et son.
+Les sources distantes doivent autoriser CORS pour les sous-titres et variantes.
+
 The official Remotion renderer 4.0.534 rejects Bun prerelease versions such as
 1.4.4-debug and 1.4.3-aphrody.4 at import: its minimum-version check excludes
 prereleases. `loadRemotionRenderer()` preserves that upstream check. The three
