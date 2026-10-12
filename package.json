@@ -10,6 +10,7 @@
   "scripts": {
     "gn": "bun scripts/aphrody/gn.ts",
     "gn:vendor": "bun scripts/aphrody/vendor-gn.ts",
+    "vendor:audit": "bun scripts/aphrody/vendor-audit.ts",
     "depots_tools": "bun scripts/aphrody/chromium.ts --depot-tools",
     "depot_tools": "bun scripts/aphrody/chromium.ts --depot-tools",
     "chromium": "bun scripts/aphrody/chromium.ts",
