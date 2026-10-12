@@ -21,9 +21,10 @@ export interface VideoPipelineResult {
 export async function openVideoPipeline(options: VideoPipelineOptions): Promise<VideoPipelineResult> {
   options.signal?.throwIfAborted();
   const input = resolveVideoSource(options.source);
-  const source = input.kind === "remote"
-    ? await runYtDlp({ url: input.url, options: { quiet: true, ...options.ytDlp }, signal: options.signal })
-    : input;
+  const source =
+    input.kind === "remote"
+      ? await runYtDlp({ url: input.url, options: { quiet: true, ...options.ytDlp }, signal: options.signal })
+      : input;
   options.signal?.throwIfAborted();
   const gpu = options.webgpu === false ? null : await nativeWebGpuInfo(options.webgpu ?? {});
   options.signal?.throwIfAborted();

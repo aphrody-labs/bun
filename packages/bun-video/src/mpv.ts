@@ -64,12 +64,18 @@ export class MpvClient {
     const value = this.#library.symbols.mpv_get_property_string(this.#handle, name);
     if (value === null || value === 0 || value === 0n) return null;
     const pointer = Number(value) as Pointer;
-    try { return new CString(pointer).toString(); } finally { this.#library.symbols.mpv_free(pointer); }
+    try {
+      return new CString(pointer).toString();
+    } finally {
+      this.#library.symbols.mpv_free(pointer);
+    }
   }
 
   waitEvent(timeoutSeconds = 0): Pointer | null {
     return this.#library.symbols.mpv_wait_event(this.#handle, timeoutSeconds) as Pointer | null;
   }
 
-  close(): void { this.#library.symbols.mpv_terminate_destroy(this.#handle); }
+  close(): void {
+    this.#library.symbols.mpv_terminate_destroy(this.#handle);
+  }
 }

@@ -62,7 +62,10 @@ export async function extractYtDlp(url: string, options: YtDlpOptions = {}): Pro
   return await runYtDlp({ url, options: { skip_download: true, ...options } });
 }
 
-export async function listYtDlpFormats(url: string, options: YtDlpOptions = {}): Promise<readonly Record<string, unknown>[]> {
+export async function listYtDlpFormats(
+  url: string,
+  options: YtDlpOptions = {},
+): Promise<readonly Record<string, unknown>[]> {
   const result = await extractYtDlp(url, options);
   return result.formats ?? [];
 }
@@ -71,7 +74,10 @@ export async function downloadYtDlp(url: string, output: string, options: YtDlpO
   return await runYtDlp({ url, options: { outtmpl: output, download: true, ...options } });
 }
 
-export async function extractYtDlpPlaylist(url: string, options: YtDlpOptions = {}): Promise<readonly Record<string, unknown>[]> {
+export async function extractYtDlpPlaylist(
+  url: string,
+  options: YtDlpOptions = {},
+): Promise<readonly Record<string, unknown>[]> {
   const result = await extractYtDlp(url, { extract_flat: true, ...options });
   return result.entries ?? [];
 }
