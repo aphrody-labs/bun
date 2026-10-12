@@ -6,7 +6,7 @@
 //
 //   bun scripts/aphrody/release-r2.ts [<tag>] [--keep 5] [--force] [--dry-run]
 //
-// Without a tag: the newest published runtime release (bun-v*, aphrody-v*) carrying SHA256SUMS.txt, which also
+// Without a tag: the newest published, non-prerelease runtime release (bun-v*, aphrody-v*) carrying SHA256SUMS.txt, which also
 // moves the channels. Credentials: R2_ENDPOINT, R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY (or AWS_ACCESS_KEY_ID and
 // AWS_SECRET_ACCESS_KEY) from the environment, else ~/.aphrody/config/cloudflare.env.
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -118,6 +118,7 @@ function gh(args: string[]): string {
 type Release = {
   tag_name: string;
   draft: boolean;
+  prerelease: boolean;
   published_at: string;
   assets: { name: string; size: number }[];
 };
@@ -128,6 +129,7 @@ function release(tag: string | undefined): Release {
   const found = list.find(
     (r) =>
       !r.draft &&
+      !r.prerelease &&
       /^(bun-v|aphrody-v)/.test(r.tag_name) &&
       r.assets.some((a) => a.name === "SHA256SUMS.txt"),
   );

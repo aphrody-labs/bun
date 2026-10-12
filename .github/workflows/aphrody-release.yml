@@ -126,3 +126,14 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: bun scripts/aphrody/publish-runtime.ts publish --version "$VERSION" --assets dist --out "$RUNNER_TEMP/npm"
+      - name: Mirror the published release to R2 (dist.aphrody.app)
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          if [ "$RELEASE_CHANNEL" = stable ]; then
+            bun scripts/aphrody/release-r2.ts
+          else
+            bun scripts/aphrody/release-r2.ts "$TAG"
+          fi
