@@ -1,19 +1,18 @@
-import { CString, FFIType, dlopen, ptr, type Pointer } from "bun:ffi";
+import { CString, FFIType, dlopen, ptr, type FFIFunction, type Pointer } from "bun:ffi";
 import { dirname, join } from "node:path";
 
-type MpvSymbols = {
-  mpv_create: { args: []; returns: FFIType.pointer };
-  mpv_initialize: { args: [FFIType.pointer]; returns: FFIType.i32 };
-  mpv_set_option_string: { args: [FFIType.pointer, FFIType.pointer, FFIType.pointer]; returns: FFIType.i32 };
-  mpv_command: { args: [FFIType.pointer, FFIType.pointer]; returns: FFIType.i32 };
-  mpv_set_property_string: { args: [FFIType.pointer, FFIType.cstring, FFIType.cstring]; returns: FFIType.i32 };
-  mpv_get_property_string: { args: [FFIType.pointer, FFIType.cstring]; returns: FFIType.pointer };
-  mpv_free: { args: [FFIType.pointer]; returns: FFIType.void };
-  mpv_wait_event: { args: [FFIType.pointer, FFIType.double]; returns: FFIType.pointer };
-  mpv_terminate_destroy: { args: [FFIType.pointer]; returns: FFIType.void };
-};
+const functionABI = <
+  const A extends NonNullable<FFIFunction["args"]>,
+  const R extends NonNullable<FFIFunction["returns"]>,
+>(
+  args: A,
+  returns: R,
+) => ({ args, returns });
+const p = "ptr";
+const i = "i32";
+const v = "void";
 
-const symbols: MpvSymbols = {
+export const mpvABI = {
   mpv_create: { args: [], returns: FFIType.pointer },
   mpv_initialize: { args: [FFIType.pointer], returns: FFIType.i32 },
   mpv_set_option_string: { args: [FFIType.pointer, FFIType.pointer, FFIType.pointer], returns: FFIType.i32 },
@@ -23,7 +22,52 @@ const symbols: MpvSymbols = {
   mpv_free: { args: [FFIType.pointer], returns: FFIType.void },
   mpv_wait_event: { args: [FFIType.pointer, FFIType.double], returns: FFIType.pointer },
   mpv_terminate_destroy: { args: [FFIType.pointer], returns: FFIType.void },
-};
+  mpv_client_api_version: functionABI([], process.platform === "win32" ? "u32" : "u64"),
+  mpv_error_string: functionABI([i], p),
+  mpv_client_name: functionABI([p], p),
+  mpv_client_id: functionABI([p], "i64"),
+  mpv_destroy: functionABI([p], v),
+  mpv_create_client: functionABI([p, p], p),
+  mpv_create_weak_client: functionABI([p, p], p),
+  mpv_load_config_file: functionABI([p, p], i),
+  mpv_get_time_ns: functionABI([p], "i64"),
+  mpv_get_time_us: functionABI([p], "i64"),
+  mpv_free_node_contents: functionABI([p], v),
+  mpv_set_option: functionABI([p, p, i, p], i),
+  mpv_command_node: functionABI([p, p, p], i),
+  mpv_command_ret: functionABI([p, p, p], i),
+  mpv_command_string: functionABI([p, p], i),
+  mpv_command_async: functionABI([p, "u64", p], i),
+  mpv_command_node_async: functionABI([p, "u64", p], i),
+  mpv_abort_async_command: functionABI([p, "u64"], v),
+  mpv_set_property: functionABI([p, p, i, p], i),
+  mpv_del_property: functionABI([p, p], i),
+  mpv_set_property_async: functionABI([p, "u64", p, i, p], i),
+  mpv_get_property: functionABI([p, p, i, p], i),
+  mpv_get_property_osd_string: functionABI([p, p], p),
+  mpv_get_property_async: functionABI([p, "u64", p, i], i),
+  mpv_observe_property: functionABI([p, "u64", p, i], i),
+  mpv_unobserve_property: functionABI([p, "u64"], i),
+  mpv_event_name: functionABI([i], p),
+  mpv_event_to_node: functionABI([p, p], i),
+  mpv_request_event: functionABI([p, i, i], i),
+  mpv_request_log_messages: functionABI([p, p], i),
+  mpv_wakeup: functionABI([p], v),
+  mpv_set_wakeup_callback: functionABI([p, p, p], v),
+  mpv_wait_async_requests: functionABI([p], v),
+  mpv_hook_add: functionABI([p, "u64", p, i], i),
+  mpv_hook_continue: functionABI([p, "u64"], i),
+  mpv_get_wakeup_pipe: functionABI([p], i),
+  mpv_render_context_create: functionABI([p, p, p], i),
+  mpv_render_context_set_update_callback: functionABI([p, p, p], v),
+  mpv_render_context_update: functionABI([p], "u64"),
+  mpv_render_context_render: functionABI([p, p], i),
+  mpv_render_context_report_swap: functionABI([p], v),
+  mpv_render_context_free: functionABI([p], v),
+  mpv_stream_cb_add_ro: functionABI([p, p, p, p], i),
+} as const;
+
+type MpvSymbols = typeof mpvABI;
 
 export type MpvLibraryOptions = { libraryPath?: string; options?: Readonly<Record<string, string>> };
 
@@ -53,9 +97,19 @@ export class MpvClient {
     this.#handle = handle;
   }
 
+  get pointer(): Pointer {
+    this.#assertOpen();
+    return this.#handle;
+  }
+
+  get symbols() {
+    this.#assertOpen();
+    return this.#library.symbols;
+  }
+
   static open(options: MpvLibraryOptions = {}): MpvClient {
     const libraryPath = options.libraryPath ?? mpvLibraryPath();
-    const library = dlopen(libraryPath, symbols);
+    const library = dlopen(libraryPath, mpvABI);
     const handle = library.symbols.mpv_create();
     if (!handle) {
       library.close();

@@ -22,6 +22,10 @@ export const ffmpegABI = {
     av_frame_alloc: functionABI([], p),
     av_frame_free: functionABI([p], v),
     av_frame_unref: functionABI([p], v),
+    av_frame_ref: functionABI([p, p], i),
+    av_frame_clone: functionABI([p], p),
+    av_frame_copy: functionABI([p, p], i),
+    av_frame_copy_props: functionABI([p, p], i),
     av_frame_get_buffer: functionABI([p, i], i),
     av_frame_make_writable: functionABI([p], i),
     av_dict_set: functionABI([p, p, p, i], i),
@@ -42,6 +46,9 @@ export const ffmpegABI = {
     avcodec_open2: functionABI([p, p, p], i),
     avcodec_parameters_to_context: functionABI([p, p], i),
     avcodec_parameters_from_context: functionABI([p, p], i),
+    avcodec_parameters_alloc: functionABI([], p),
+    avcodec_parameters_free: functionABI([p], v),
+    avcodec_parameters_copy: functionABI([p, p], i),
     avcodec_send_packet: functionABI([p, p], i),
     avcodec_receive_frame: functionABI([p, p], i),
     avcodec_send_frame: functionABI([p, p], i),
@@ -50,13 +57,23 @@ export const ffmpegABI = {
     av_packet_alloc: functionABI([], p),
     av_packet_free: functionABI([p], v),
     av_packet_unref: functionABI([p], v),
+    av_packet_clone: functionABI([p], p),
+    av_packet_ref: functionABI([p, p], i),
+    av_packet_move_ref: functionABI([p, p], v),
+    av_packet_make_refcounted: functionABI([p], i),
+    av_packet_make_writable: functionABI([p], i),
     av_codec_iterate: functionABI([p], p),
   },
   avformat: {
     avformat_version: functionABI([], "u32"),
     avformat_network_init: functionABI([], i),
+    avformat_alloc_context: functionABI([], p),
+    av_demuxer_iterate: functionABI([p], p),
+    av_muxer_iterate: functionABI([p], p),
     avformat_open_input: functionABI([p, p, p, p], i),
     avformat_find_stream_info: functionABI([p, p], i),
+    av_find_best_stream: functionABI([p, i, i, i, p, i], i),
+    avformat_flush: functionABI([p], i),
     avformat_close_input: functionABI([p], v),
     av_read_frame: functionABI([p, p], i),
     av_seek_frame: functionABI([p, i, "i64", i], i),
@@ -73,6 +90,10 @@ export const ffmpegABI = {
     avfilter_version: functionABI([], "u32"),
     avfilter_graph_alloc: functionABI([], p),
     avfilter_graph_free: functionABI([p], v),
+    avfilter_get_by_name: functionABI([p], p),
+    avfilter_graph_create_filter: functionABI([p, p, p, p, p, p], i),
+    avfilter_inout_alloc: functionABI([], p),
+    avfilter_inout_free: functionABI([p], v),
     avfilter_graph_parse_ptr: functionABI([p, p, p, p, p], i),
     avfilter_graph_config: functionABI([p, p], i),
     av_buffersrc_add_frame_flags: functionABI([p, p, i], i),
@@ -82,6 +103,10 @@ export const ffmpegABI = {
     swscale_version: functionABI([], "u32"),
     sws_getContext: functionABI([i, i, i, i, i, i, i, p, p, p], p),
     sws_scale: functionABI([p, p, p, i, i, p, p], i),
+    sws_scale_frame: functionABI([p, p, p], i),
+    sws_isSupportedInput: functionABI([i], i),
+    sws_isSupportedOutput: functionABI([i], i),
+    sws_isSupportedEndiannessConversion: functionABI([i], i),
     sws_freeContext: functionABI([p], v),
   },
   swresample: {
@@ -89,6 +114,9 @@ export const ffmpegABI = {
     swr_alloc: functionABI([], p),
     swr_alloc_set_opts2: functionABI([p, p, i, i, p, i, i, i, p], i),
     swr_init: functionABI([p], i),
+    swr_close: functionABI([p], v),
+    swr_convert_frame: functionABI([p, p, p], i),
+    swr_config_frame: functionABI([p, p, p], i),
     swr_convert: functionABI([p, p, i, p, i], i),
     swr_get_delay: functionABI([p, "i64"], "i64"),
     swr_free: functionABI([p], v),
@@ -219,28 +247,41 @@ export class FFmpeg {
     };
   }
 
+  allocateFrame(): FFmpegFrame {
+    const api = this.libraries.avutil.symbols;
+    return this.#ownReference("frame", api.av_frame_alloc(), api.av_frame_free, api.av_frame_unref);
+  }
+
   allocatePacket(): FFmpegPacket {
     const api = this.libraries.avcodec.symbols;
-    const allocated = api.av_packet_alloc();
-    if (!allocated) throw new Error("FFmpeg packet allocation failed");
-    const packet = Number(allocated) as Pointer;
-    const slot = new BigUint64Array([BigInt(packet)]);
+    return this.#ownReference("packet", api.av_packet_alloc(), api.av_packet_free, api.av_packet_unref);
+  }
+
+  #ownReference(
+    kind: "frame" | "packet",
+    allocated: Pointer | number | bigint | null,
+    free: (slot: Pointer) => void,
+    unref: (value: Pointer) => void,
+  ): FFmpegPacket {
+    if (!allocated) throw new Error(`FFmpeg ${kind} allocation failed`);
+    const value = Number(allocated) as Pointer;
+    const slot = new BigUint64Array([BigInt(value)]);
     let closed = false;
     const close = () => {
       if (closed) return;
       closed = true;
-      api.av_packet_free(ptr(slot));
+      free(ptr(slot));
       this.#resources.delete(close);
     };
     this.#resources.add(close);
     return {
       get pointer() {
-        if (closed) throw new Error("FFmpeg packet is closed");
-        return packet;
+        if (closed) throw new Error(`FFmpeg ${kind} is closed`);
+        return value;
       },
       unref() {
-        if (closed) throw new Error("FFmpeg packet is closed");
-        api.av_packet_unref(packet);
+        if (closed) throw new Error(`FFmpeg ${kind} is closed`);
+        unref(value);
       },
       close,
       [Symbol.dispose]: close,
@@ -273,5 +314,9 @@ export interface FFmpegInput extends Disposable {
 }
 
 export interface FFmpegPacket extends FFmpegInput {
+  unref(): void;
+}
+
+export interface FFmpegFrame extends FFmpegInput {
   unref(): void;
 }
