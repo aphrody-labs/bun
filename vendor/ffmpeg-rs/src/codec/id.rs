@@ -9,6 +9,12 @@ use crate::util::media;
 #[allow(non_camel_case_types)]
 #[derive(Eq, PartialEq, Clone, Copy, Debug)]
 pub enum Id {
+    ASTC,
+    RW2,
+    PCM_DVDA,
+    ADPCM_RHETOREX,
+    ADPCM_IMA_CITRIX,
+    ITUT_T35,
     None,
 
     // video codecs
@@ -740,6 +746,12 @@ impl From<AVCodecID> for Id {
     fn from(value: AVCodecID) -> Self {
         match value {
             AV_CODEC_ID_NONE => Id::None,
+            AV_CODEC_ID_ASTC => Id::ASTC,
+            AV_CODEC_ID_RW2 => Id::RW2,
+            AV_CODEC_ID_PCM_DVDA => Id::PCM_DVDA,
+            AV_CODEC_ID_ADPCM_RHETOREX => Id::ADPCM_RHETOREX,
+            AV_CODEC_ID_ADPCM_IMA_CITRIX => Id::ADPCM_IMA_CITRIX,
+            AV_CODEC_ID_ITUT_T35 => Id::ITUT_T35,
 
             /* video codecs */
             AV_CODEC_ID_MPEG1VIDEO => Id::MPEG1VIDEO,
@@ -1459,6 +1471,12 @@ impl From<Id> for AVCodecID {
     fn from(value: Id) -> AVCodecID {
         match value {
             Id::None => AV_CODEC_ID_NONE,
+            Id::ASTC => AV_CODEC_ID_ASTC,
+            Id::RW2 => AV_CODEC_ID_RW2,
+            Id::PCM_DVDA => AV_CODEC_ID_PCM_DVDA,
+            Id::ADPCM_RHETOREX => AV_CODEC_ID_ADPCM_RHETOREX,
+            Id::ADPCM_IMA_CITRIX => AV_CODEC_ID_ADPCM_IMA_CITRIX,
+            Id::ITUT_T35 => AV_CODEC_ID_ITUT_T35,
 
             /* video codecs */
             Id::MPEG1VIDEO => AV_CODEC_ID_MPEG1VIDEO,

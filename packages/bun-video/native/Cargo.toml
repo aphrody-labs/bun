@@ -13,7 +13,7 @@ gpu = ["dep:gpu-video"]
 libav = ["dep:ffmpeg-next"]
 
 [dependencies]
-ffmpeg-next = { version = "=8.1.0", optional = true, default-features = false, features = ["codec", "format"] }
+ffmpeg-next = { path = "../../../vendor/ffmpeg-rs", version = "=9.0.1", optional = true, default-features = false, features = ["codec", "device", "filter", "format", "software-resampling", "software-scaling"] }
 gpu-video = { git = "https://github.com/software-mansion/smelter.git", rev = "6637f3df71282c816140cd3bb9821d69b30be2ba", package = "gpu-video", default-features = true, optional = true }
 png = "=0.17.16"
 

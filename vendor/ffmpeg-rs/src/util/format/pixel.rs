@@ -8,6 +8,9 @@ use crate::ffi::*;
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum Pixel {
+    CUARRAY,
+    XYZP12LE,
+    XYZP12BE,
     None,
 
     YUV420P,
@@ -583,6 +586,9 @@ impl From<AVPixelFormat> for Pixel {
     fn from(value: AVPixelFormat) -> Self {
         match value {
             AV_PIX_FMT_NONE => Pixel::None,
+            AV_PIX_FMT_CUARRAY => Pixel::CUARRAY,
+            AV_PIX_FMT_XYZP12LE => Pixel::XYZP12LE,
+            AV_PIX_FMT_XYZP12BE => Pixel::XYZP12BE,
 
             AV_PIX_FMT_YUV420P => Pixel::YUV420P,
             AV_PIX_FMT_YUYV422 => Pixel::YUYV422,
@@ -1030,6 +1036,9 @@ impl From<Pixel> for AVPixelFormat {
     fn from(value: Pixel) -> AVPixelFormat {
         match value {
             Pixel::None => AV_PIX_FMT_NONE,
+            Pixel::CUARRAY => AV_PIX_FMT_CUARRAY,
+            Pixel::XYZP12LE => AV_PIX_FMT_XYZP12LE,
+            Pixel::XYZP12BE => AV_PIX_FMT_XYZP12BE,
 
             Pixel::YUV420P => AV_PIX_FMT_YUV420P,
             Pixel::YUYV422 => AV_PIX_FMT_YUYV422,

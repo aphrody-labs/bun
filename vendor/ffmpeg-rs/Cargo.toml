@@ -115,5 +115,6 @@ version  = "0.25"
 optional = true
 
 [dependencies.ffmpeg-sys-next]
+path = "../ffmpeg-sys-rs"
 version = "9.0.1"
 default-features = false

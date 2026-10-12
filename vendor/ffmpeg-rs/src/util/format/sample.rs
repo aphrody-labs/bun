@@ -10,6 +10,7 @@ use libc::{c_int, c_void};
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum Sample {
+    DSD,
     None,
 
     U8(Type),
@@ -70,6 +71,7 @@ impl From<AVSampleFormat> for Sample {
     fn from(value: AVSampleFormat) -> Self {
         match value {
             AV_SAMPLE_FMT_NONE => Sample::None,
+            AV_SAMPLE_FMT_DSD => Sample::DSD,
 
             AV_SAMPLE_FMT_U8 => Sample::U8(Type::Packed),
             AV_SAMPLE_FMT_S16 => Sample::I16(Type::Packed),
@@ -109,6 +111,7 @@ impl From<Sample> for AVSampleFormat {
     fn from(value: Sample) -> AVSampleFormat {
         match value {
             Sample::None => AV_SAMPLE_FMT_NONE,
+            Sample::DSD => AV_SAMPLE_FMT_DSD,
 
             Sample::U8(Type::Packed) => AV_SAMPLE_FMT_U8,
             Sample::I16(Type::Packed) => AV_SAMPLE_FMT_S16,

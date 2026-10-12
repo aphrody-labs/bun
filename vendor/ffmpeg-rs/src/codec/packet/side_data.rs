@@ -7,6 +7,7 @@ use crate::ffi::*;
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum Type {
+    GAIN_MAP_PARAMS,
     Palette,
     NewExtraData,
     ParamChange,
@@ -87,6 +88,7 @@ impl From<AVPacketSideDataType> for Type {
     fn from(value: AVPacketSideDataType) -> Self {
         match value {
             AV_PKT_DATA_PALETTE => Type::Palette,
+            AV_PKT_DATA_GAIN_MAP_PARAMS => Type::GAIN_MAP_PARAMS,
             AV_PKT_DATA_NEW_EXTRADATA => Type::NewExtraData,
             AV_PKT_DATA_PARAM_CHANGE => Type::ParamChange,
             AV_PKT_DATA_H263_MB_INFO => Type::H263MbInfo,
@@ -171,6 +173,7 @@ impl From<Type> for AVPacketSideDataType {
     fn from(value: Type) -> AVPacketSideDataType {
         match value {
             Type::Palette => AV_PKT_DATA_PALETTE,
+            Type::GAIN_MAP_PARAMS => AV_PKT_DATA_GAIN_MAP_PARAMS,
             Type::NewExtraData => AV_PKT_DATA_NEW_EXTRADATA,
             Type::ParamChange => AV_PKT_DATA_PARAM_CHANGE,
             Type::H263MbInfo => AV_PKT_DATA_H263_MB_INFO,

@@ -10,6 +10,8 @@ use crate::ffi::*;
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum Type {
+    DOWNMIX_MATRIX,
+    GAIN_MAP_PARAMS,
     PanScan,
     A53CC,
     Stereo3D,
@@ -102,6 +104,8 @@ impl From<AVFrameSideDataType> for Type {
     fn from(value: AVFrameSideDataType) -> Self {
         match value {
             AV_FRAME_DATA_PANSCAN => Type::PanScan,
+            AV_FRAME_DATA_DOWNMIX_MATRIX => Type::DOWNMIX_MATRIX,
+            AV_FRAME_DATA_GAIN_MAP_PARAMS => Type::GAIN_MAP_PARAMS,
             AV_FRAME_DATA_A53_CC => Type::A53CC,
             AV_FRAME_DATA_STEREO3D => Type::Stereo3D,
             AV_FRAME_DATA_MATRIXENCODING => Type::MatrixEncoding,
@@ -188,6 +192,8 @@ impl From<Type> for AVFrameSideDataType {
     fn from(value: Type) -> AVFrameSideDataType {
         match value {
             Type::PanScan => AV_FRAME_DATA_PANSCAN,
+            Type::DOWNMIX_MATRIX => AV_FRAME_DATA_DOWNMIX_MATRIX,
+            Type::GAIN_MAP_PARAMS => AV_FRAME_DATA_GAIN_MAP_PARAMS,
             Type::A53CC => AV_FRAME_DATA_A53_CC,
             Type::Stereo3D => AV_FRAME_DATA_STEREO3D,
             Type::MatrixEncoding => AV_FRAME_DATA_MATRIXENCODING,
