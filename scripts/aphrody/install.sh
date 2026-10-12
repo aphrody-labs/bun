@@ -3,7 +3,7 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install.sh | bash
 #   ... | bash -s 1.4.4                       # exact stable release
-#   ... | bash -s aphrody-v1.4.3-aphrody.1    # exact release tag
+#   ... | bash -s bun-v1.4.4                # exact release tag
 #
 # BUN_INSTALL (default ~/.bun) receives bin/bun and bin/bunx. APHRODY_BUN_DIST overrides the mirror (empty: GitHub
 # only), APHRODY_BUN_REPO the repository,

@@ -67,7 +67,7 @@ fn argv_contains(target: &[u8]) -> bool {
 
 /// Releases come from this GitHub repository unless `APHRODY_BUN_REPO` names another one.
 const DEFAULT_REPO: &str = "aphrody-labs/bun";
-/// Runtime release tags look like `aphrody-v1.4.3-aphrody.2`; other tags of the repository
+/// Runtime release tags look like `bun-v1.4.4` (or the older `aphrody-v1.4.3-aphrody.2`); other tags of the repository
 /// (`n2b-v0.7.1`, …) belong to other packages.
 const RELEASE_TAG_PREFIX: &[u8] = b"aphrody-v";
 const UPSTREAM_TAG_PREFIX: &[u8] = b"bun-v";

@@ -26,7 +26,7 @@ Si vous **devez** builder sur Windows natif (CI matrix `windows-latest`, ou test
 
 ```bash
 # Bun du fork aphrody-labs/bun — embarque son propre transpilateur, linker et asset bundler
-curl -fsSL https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install.sh | bash -s 1.4.3
+curl -fsSL https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install.sh | bash -s 1.4.4
 
 # Zig 0.14 — hermetic linker, supporte tous les targets Windows ABI
 curl -fsSL https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz | tar -xJ
@@ -47,7 +47,7 @@ Liste vérifiée 2026-05-10 — toutes Windows-natives, aucune mémoire shared a
 
 ```powershell
 # Toolchains de base
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install.ps1))) -Version 1.4.3   # Bun (fork) + bun build --compile
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install.ps1))) -Version 1.4.4   # Bun (fork) + bun build --compile
 winget install --id zig.zig --version 0.14.0    # Zig (Lightpanda)
 winget install --id Rustlang.Rustup             # Rust
 winget install --id Git.Git
@@ -356,7 +356,7 @@ windows-release:
   needs: publish-github-packages
   steps:
     - uses: actions/checkout@v4
-    - run: '& ([scriptblock]::Create((irm https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install.ps1))) -Version 1.4.3'
+    - run: '& ([scriptblock]::Create((irm https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install.ps1))) -Version 1.4.4'
       shell: pwsh
     - uses: goto-bus-stop/setup-zig@v2
       with:
@@ -501,7 +501,7 @@ ls -la dist/standalone/windows/
 Si Windows natif et winget OK :
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install.ps1))) -Version 1.4.3
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install.ps1))) -Version 1.4.4
 winget install zig.zig Rustlang.Rustup Git.Git LLVM.LLVM
 git clone https://developers.google.com/aphrody-code/bxc C:\dev\bxc
 cd C:\dev\bxc

@@ -62,14 +62,14 @@ To check that Bun was installed successfully, open a new terminal window and run
 
 ```bash terminal icon="terminal"
 bun --version
-# Output: 1.4.3-aphrody.4
+# Output: 1.4.4
 
 # See the release and the commit of aphrody-labs/bun that you're using
 bun --revision
-# Output: 1.4.3-aphrody.4+86ad19e8c
+# Output: 1.4.4+<commit>
 ```
 
-`bun --version` prints the component version. `Bun.version` and `process.versions.bun` keep the upstream Bun base version (`1.4.3`).
+`bun --version` prints the component version. `Bun.version` and `process.versions.bun` report the same base version (`1.4.4`).
 
 <Warning>
   If you've installed Bun but are seeing a `command not found` error, you may have to manually add the installation
@@ -157,7 +157,7 @@ Pass an upstream base version (the newest `aphrody.<n>` release of that base) or
 <Tabs>
   <Tab title="Linux & macOS">
     ```bash terminal icon="terminal"
-    curl -fsSL https://aphrody.app/install.sh | bash -s 1.4.3
+    curl -fsSL https://aphrody.app/install.sh | bash -s 1.4.4
     curl -fsSL https://aphrody.app/install.sh | bash -s aphrody-v1.4.3-aphrody.2
     ```
 

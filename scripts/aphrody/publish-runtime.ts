@@ -82,7 +82,7 @@ export function parseRuntimeVersion(version: string): { base: string; n: number 
   return { base: m[1], n: Number(m[2]) };
 }
 
-/** Accepts `aphrody-v1.4.3-aphrody.1`, `v1.4.3-aphrody.1` or `1.4.3-aphrody.1`. */
+/** Accepts `bun-v1.4.4`, `aphrody-v1.4.3-aphrody.1`, `v1.4.4` or `1.4.4`. */
 export function versionFromTag(tag: string): string {
   const version = tag.replace(/^refs\/tags\//, "").replace(/^(?:bun-v|aphrody-v|v)/, "");
   parseRuntimeVersion(version);

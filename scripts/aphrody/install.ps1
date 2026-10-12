@@ -2,7 +2,7 @@
 #
 #   irm https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install.ps1 | iex
 #   & ([scriptblock]::Create((irm .../install.ps1))) -Version 1.4.4   # exact stable release
-#   & ([scriptblock]::Create((irm .../install.ps1))) -Version aphrody-v1.4.3-aphrody.1
+#   & ([scriptblock]::Create((irm .../install.ps1))) -Version bun-v1.4.4                # exact release tag
 #
 # BUN_INSTALL (default ~\.bun) keeps user state. -BinDir or APHRODY_BUN_BIN_DIR overrides the executable directory.
 # System32 requires an administrator token. -NoPathUpdate skips the user PATH.
