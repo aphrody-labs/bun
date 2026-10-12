@@ -13,13 +13,25 @@
 // la même empreinte de données ; une collecte en erreur (réseau, jeton GitHub absent) n'y publie rien.
 //   bun scripts/aphrody/site/publish.ts rollback [--version <id>]   # wrangler rollback, défaut : version précédente
 //   bun scripts/aphrody/site/publish.ts status                      # wrangler deployments list
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 export const ORIGIN = "https://aphrody.app";
 const REPO = "aphrody-labs/bun";
 const APP = "packages/bun-cloudflare";
+
+let windowsToolchainReady = false;
+
+async function nativeBun(): Promise<string> {
+  if (process.platform === "win32" && !windowsToolchainReady) {
+    const windows = (await import("bun:windows")).default;
+    const toolchain = windows.toolchain();
+    if (toolchain.error) throw new Error(`bun:windows toolchain : ${toolchain.error}`);
+    windowsToolchainReady = true;
+  }
+  return process.execPath;
+}
 
 function run(cmd: string[], opts: { cwd?: string; stdin?: Blob | "inherit" } = {}): string {
   const r = Bun.spawnSync(cmd, {
@@ -104,6 +116,7 @@ async function remoteStamp(): Promise<Stamp | null> {
 }
 
 async function publish(args: string[]) {
+  const bun = await nativeBun();
   const option = (name: string) => {
     const i = args.indexOf(name);
     return i >= 0 ? args[i + 1] : undefined;
@@ -140,7 +153,7 @@ async function publish(args: string[]) {
   try {
     const src = join(work, "src");
     const out = join(work, "out");
-    run(["mkdir", "-p", src]);
+    mkdirSync(src, { recursive: true });
     const archive = Bun.spawnSync([
       "git",
       "-C",
@@ -159,7 +172,7 @@ async function publish(args: string[]) {
     // Données du site (collect.ts de l'arbre extrait) : runtime au commit publié, distribution, organisation.
     const dataFile = join(work, "site-data.json");
     const collect = [
-      "bun",
+      bun,
       join(src, "scripts/aphrody/site/collect.ts"),
       "--out",
       dataFile,
@@ -193,7 +206,7 @@ async function publish(args: string[]) {
     }
 
     const build = [
-      "bun",
+      bun,
       join(src, "scripts/aphrody/site/build.ts"),
       "--src",
       src,
@@ -216,8 +229,8 @@ async function publish(args: string[]) {
     writeFileSync(join(out, "publish.json"), JSON.stringify(stamp) + "\n");
 
     const app = join(src, APP);
-    await live(["bun", "install", "--frozen-lockfile"], app);
-    const deploy = ["bun", join(app, "app/scripts/deploy.ts"), "--assets", out, "--tag", sha.slice(0, 12)];
+    await live([bun, "install", "--frozen-lockfile"], app);
+    const deploy = [bun, join(app, "app/scripts/deploy.ts"), "--assets", out, "--tag", sha.slice(0, 12)];
     deploy.push("--message", `${REPO}@${sha.slice(0, 12)}`);
     if (args.includes("--dry-run")) deploy.push("--dry-run");
     await live(deploy, app);
