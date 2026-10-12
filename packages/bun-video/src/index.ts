@@ -23,6 +23,7 @@ export * from "./webgpu";
 export * from "./ytdlp";
 export * from "./mpv";
 export * from "./pipeline";
+export * from "./image";
 
 export const loadRemotionCore = () => import("remotion");
 export const loadRemotionRenderer = () => import("@remotion/renderer");
