@@ -26,6 +26,7 @@ export * from "./pipeline";
 export * from "./image";
 export * from "./formats";
 export * from "./source";
+export * from "./cache";
 
 export const loadRemotionCore = () => import("remotion");
 export const loadRemotionRenderer = () => import("@remotion/renderer");
