@@ -34,7 +34,7 @@
  * @module
  */
 
-import { getCurrentWebview, Webview, WebviewLabel, WebviewOptions } from "./webview";
+import { getCurrentWebview, Webview, type WebviewLabel, type WebviewOptions } from "./webview";
 import type { WindowOptions } from "../../../../../../../../aphrody/crates/tauri/aphrody-tauri-api/src/window.ts";
 import { Window } from "../../../../../../../../aphrody/crates/tauri/aphrody-tauri-api/src/window.ts";
 import {
@@ -198,7 +198,9 @@ class WebviewWindow {
       return () => {
         // eslint-disable-next-line security/detect-object-injection
         const listeners = this.listeners[event];
-        listeners.splice(listeners.indexOf(handler), 1);
+        if (listeners) {
+          listeners.splice(listeners.indexOf(handler), 1);
+        }
       };
     }
     return listen(event, handler, {
@@ -233,7 +235,9 @@ class WebviewWindow {
       return () => {
         // eslint-disable-next-line security/detect-object-injection
         const listeners = this.listeners[event];
-        listeners.splice(listeners.indexOf(handler), 1);
+        if (listeners) {
+          listeners.splice(listeners.indexOf(handler), 1);
+        }
       };
     }
     return once(event, handler, {

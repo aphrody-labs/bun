@@ -69,9 +69,9 @@ import {
 } from "../../../../../../../../aphrody/crates/tauri/aphrody-tauri-api/src/event.ts";
 import { invoke } from "../../../../../../../../aphrody/crates/tauri/aphrody-tauri-api/src/core.ts";
 import {
-  BackgroundThrottlingPolicy,
-  ScrollBarStyle,
-  Color,
+  type BackgroundThrottlingPolicy,
+  type ScrollBarStyle,
+  type Color,
   Window,
   getCurrentWindow,
 } from "../../../../../../../../aphrody/crates/tauri/aphrody-tauri-api/src/window.ts";
@@ -338,7 +338,9 @@ class Webview {
       return () => {
         // eslint-disable-next-line security/detect-object-injection
         const listeners = this.listeners[event];
-        listeners.splice(listeners.indexOf(handler), 1);
+        if (listeners) {
+          listeners.splice(listeners.indexOf(handler), 1);
+        }
       };
     }
     return listen(event, handler, {
@@ -373,7 +375,9 @@ class Webview {
       return () => {
         // eslint-disable-next-line security/detect-object-injection
         const listeners = this.listeners[event];
-        listeners.splice(listeners.indexOf(handler), 1);
+        if (listeners) {
+          listeners.splice(listeners.indexOf(handler), 1);
+        }
       };
     }
     return once(event, handler, {
@@ -439,12 +443,13 @@ class Webview {
   /** @ignore */
   _handleTauriEvent<T>(event: string, handler: EventCallback<T>): boolean {
     if (localTauriEvents.includes(event)) {
-      if (!(event in this.listeners)) {
-        // eslint-disable-next-line security/detect-object-injection
-        this.listeners[event] = [handler];
+      // eslint-disable-next-line security/detect-object-injection
+      const listeners = this.listeners[event];
+      if (listeners) {
+        listeners.push(handler);
       } else {
         // eslint-disable-next-line security/detect-object-injection
-        this.listeners[event].push(handler);
+        this.listeners[event] = [handler];
       }
       return true;
     }
