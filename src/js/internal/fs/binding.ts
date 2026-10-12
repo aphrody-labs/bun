@@ -89,9 +89,7 @@ type WatchListener = (eventType: string, filename: string | Buffer | undefined) 
 type WatchFileListener = (curr: import("node:fs").Stats, prev: import("node:fs").Stats) => void;
 
 interface FsBinding
-  extends Pick<NodeFS, SyncMethod | "Dirent" | "Stats">,
-    Pick<NodeFSPromises, PathPromiseMethod>,
-    Promisified {
+  extends Pick<NodeFS, SyncMethod | "Dirent" | "Stats">, Pick<NodeFSPromises, PathPromiseMethod>, Promisified {
   cp(src: string, dest: string, recursive: boolean, errorOnExist: boolean, force: boolean, mode: number): Promise<void>;
   cpSync(src: string, dest: string, recursive: boolean, errorOnExist: boolean, force: boolean, mode: number): void;
   read(

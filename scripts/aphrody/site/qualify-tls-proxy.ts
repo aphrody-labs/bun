@@ -17,8 +17,7 @@ export function startQualificationProxy() {
       target.port = "18804";
       const headers = new Headers(request.headers);
       headers.set("host", "aphrody.com");
-      for (const header of ["connection", "forwarded", "x-forwarded-host", "x-forwarded-proto"])
-        headers.delete(header);
+      for (const header of ["connection", "forwarded", "x-forwarded-host", "x-forwarded-proto"]) headers.delete(header);
       return fetch(target, {
         method: request.method,
         headers,

@@ -51,20 +51,13 @@ function ownerFor(source: string): { owner: string; disposition: string } {
   }
   if (source.startsWith("server/")) {
     const path = source.slice(7);
-    if (replacements[path])
-      return { owner: replacements[path]!, disposition: "generic-capability" };
+    if (replacements[path]) return { owner: replacements[path]!, disposition: "generic-capability" };
     if (
-      /^(config\/|nginx\/|services\.json$|runtime-features\.json$|start-beszel-agent\.ps1$|vps-client\.pub$)/.test(
-        path,
-      )
+      /^(config\/|nginx\/|services\.json$|runtime-features\.json$|start-beszel-agent\.ps1$|vps-client\.pub$)/.test(path)
     ) {
       return { owner: "docs/project/omar-integration.md", disposition: "historical-host-input" };
     }
-    if (
-      /^(tools\/(consolidate|retire|find|update-work)|find-omar-folders|dedupe-runtime-backups)/.test(
-        path,
-      )
-    ) {
+    if (/^(tools\/(consolidate|retire|find|update-work)|find-omar-folders|dedupe-runtime-backups)/.test(path)) {
       return { owner: "src/vfs/lib.rs", disposition: "superseded-host-maintenance" };
     }
     const operations: Record<string, string> = {
@@ -96,8 +89,7 @@ function ownerFor(source: string): { owner: string; disposition: string } {
       "apps/webos-source-manifest.json": "scripts/aphrody/vendor-omar.ts",
       "package.json": "packages/bun-tools/package.json",
     };
-    if (operations[path])
-      return { owner: operations[path]!, disposition: "existing-native-workflow" };
+    if (operations[path]) return { owner: operations[path]!, disposition: "existing-native-workflow" };
     throw new Error(`Unmapped upstream source: ${source}`);
   }
   if (source.startsWith("codex/"))
@@ -110,11 +102,7 @@ async function git(args: string[]) {
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, code] = await Promise.all([
-    child.stdout.text(),
-    child.stderr.text(),
-    child.exited,
-  ]);
+  const [stdout, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
   if (code) throw new Error(`Omar source inventory: ${stderr.trim()}`);
   return stdout;
 }
@@ -122,11 +110,7 @@ async function git(args: string[]) {
 export async function inventoryOmar() {
   if (!(await Bun.file(join(root, ".git/modules/vendor/omar/HEAD")).exists())) {
     const saved = (await Bun.file(receipt).json()) as Awaited<ReturnType<typeof inventoryFromGit>>;
-    if (
-      saved.schema !== "bun.vendor-source-inventory/v1" ||
-      saved.revision !== OMAR_REVISION ||
-      !saved.files.length
-    )
+    if (saved.schema !== "bun.vendor-source-inventory/v1" || saved.revision !== OMAR_REVISION || !saved.files.length)
       throw new Error("Invalid pinned source inventory");
     for (const file of saved.files) {
       if (file.source.startsWith("/") || file.source.split("/").includes(".."))
@@ -134,10 +118,7 @@ export async function inventoryOmar() {
       const bytes = await Bun.file(join(vendor, file.source)).bytes();
       if (new Bun.CryptoHasher("sha256").update(bytes).digest("hex") !== file.sha256)
         throw new Error(`Changed upstream source: ${file.source}`);
-      const blob = new Bun.CryptoHasher("sha1")
-        .update(`blob ${bytes.length}\0`)
-        .update(bytes)
-        .digest("hex");
+      const blob = new Bun.CryptoHasher("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
       if (blob !== file.gitBlob || !(await Bun.file(join(root, file.owner)).exists()))
         throw new Error(`Invalid upstream provenance: ${file.source}`);
     }
@@ -169,13 +150,9 @@ async function inventoryFromGit() {
     if (!(await target.exists())) throw new Error(`Missing owner ${mapping.owner} for ${source}`);
     const bytes = await Bun.file(join(vendor, source)).bytes();
     const sha256 = new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
-    const blob = new Bun.CryptoHasher("sha1")
-      .update(`blob ${bytes.length}\0`)
-      .update(bytes)
-      .digest("hex");
+    const blob = new Bun.CryptoHasher("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
     if (blob !== match[2]) throw new Error(`Changed upstream source: ${source}`);
-    const same =
-      sha256 === new Bun.CryptoHasher("sha256").update(await target.bytes()).digest("hex");
+    const same = sha256 === new Bun.CryptoHasher("sha256").update(await target.bytes()).digest("hex");
     files.push({
       source,
       mode: match[1],
@@ -201,7 +178,5 @@ if (import.meta.main) {
   if (Bun.argv.includes("--write")) await Bun.write(receipt, json);
   else if ((await Bun.file(receipt).text()) !== json)
     throw new Error("Source inventory differs; run vendor-omar.ts --write and review");
-  console.log(
-    JSON.stringify({ revision: inventory.revision, files: inventory.files.length, complete: true }),
-  );
+  console.log(JSON.stringify({ revision: inventory.revision, files: inventory.files.length, complete: true }));
 }

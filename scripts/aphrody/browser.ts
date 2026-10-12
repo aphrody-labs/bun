@@ -27,7 +27,7 @@ export function parseArguments(args: string[]): Options {
   const engine = args[0];
   if (engine !== "chrome" && engine !== "obscura") throw new Error("Select chrome or obscura");
   const options: Options = { engine, command: "help", launch: {} };
-  if (args.slice(1).some((arg) => arg === "--help" || arg === "-h")) return options;
+  if (args.slice(1).some(arg => arg === "--help" || arg === "-h")) return options;
   const command = args[1] ?? "help";
   if (command === "help" || command === "--help" || command === "-h") return options;
   if (command !== "connect" && command !== "launch") throw new Error(`Unknown command: ${command}`);
@@ -35,16 +35,14 @@ export function parseArguments(args: string[]): Options {
   let index = 2;
   if (command === "connect") {
     const endpoint = args[index++];
-    if (!endpoint || endpoint.startsWith("--"))
-      throw new Error("connect needs a WebSocket endpoint");
+    if (!endpoint || endpoint.startsWith("--")) throw new Error("connect needs a WebSocket endpoint");
     options.endpoint = endpoint;
   }
   for (; index < args.length; index++) {
     const flag = args[index]!;
     if (flag === "--help" || flag === "-h") return { ...options, command: "help" };
     if (flag === "--headless" || flag === "--no-webgpu") {
-      if (engine !== "chrome" || command !== "launch")
-        throw new Error(`${flag} requires chrome launch`);
+      if (engine !== "chrome" || command !== "launch") throw new Error(`${flag} requires chrome launch`);
       if (flag === "--headless") options.launch.headless = true;
       else options.launch.webgpu = false;
       continue;
@@ -57,9 +55,7 @@ export function parseArguments(args: string[]): Options {
       !shared &&
       !(
         command === "launch" &&
-        (commonLaunch ||
-          (chromeLaunch && engine === "chrome") ||
-          (obscuraLaunch && engine === "obscura"))
+        (commonLaunch || (chromeLaunch && engine === "chrome") || (obscuraLaunch && engine === "obscura"))
       )
     )
       throw new Error(`Unsupported option for ${engine} ${command}: ${flag}`);
@@ -67,12 +63,7 @@ export function parseArguments(args: string[]): Options {
     if (!value || value.startsWith("--")) throw new Error(`${flag} needs a value`);
     if (shared || obscuraLaunch) {
       const maximum = shared ? 2147483647 : 64;
-      if (
-        !/^\d+$/.test(value) ||
-        !Number.isSafeInteger(Number(value)) ||
-        Number(value) < 1 ||
-        Number(value) > maximum
-      )
+      if (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) < 1 || Number(value) > maximum)
         throw new Error(`${flag} must be an integer from 1 to ${maximum}`);
       if (shared) options.launch.timeout = Number(value);
       else options.launch.workers = Number(value);
@@ -93,10 +84,7 @@ export interface Browser {
   close(): Promise<void>;
 }
 export interface Owner {
-  connect(
-    endpoint: string,
-    options: { timeout?: number; signal?: AbortSignal },
-  ): Promise<Connection>;
+  connect(endpoint: string, options: { timeout?: number; signal?: AbortSignal }): Promise<Connection>;
   launch(options: Options["launch"]): Promise<Browser>;
 }
 

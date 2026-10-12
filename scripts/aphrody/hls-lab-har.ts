@@ -3,8 +3,6 @@ export * from "../../packages/bun-video/labs/hls-lab-har";
 import { main } from "../../packages/bun-video/labs/hls-lab-har";
 if (import.meta.main)
   main().catch(() => {
-    console.error(
-      "Video lab failed; check private inputs and options. Captured values are omitted.",
-    );
+    console.error("Video lab failed; check private inputs and options. Captured values are omitted.");
     process.exitCode = 1;
   });

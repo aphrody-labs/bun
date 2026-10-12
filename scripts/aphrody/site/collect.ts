@@ -144,20 +144,14 @@ export type SiteData = {
 // ---------------------------------------------------------------------------------------------------------------
 // Git : lecture des objets d'un ref, sans toucher au worktree (les checkouts du VPS sont partiels, blob:none)
 
-export function git(
-  repo: string,
-  args: string[],
-  input?: string,
-  env?: Record<string, string>,
-): string {
+export function git(repo: string, args: string[], input?: string, env?: Record<string, string>): string {
   const r = Bun.spawnSync(["git", "-C", repo, ...args], {
     stdin: input === undefined ? "ignore" : new Blob([input]),
     stdout: "pipe",
     stderr: "pipe",
     env: { ...process.env, ...env },
   });
-  if (!r.success)
-    throw new Error(`git ${args.slice(0, 2).join(" ")} (${repo}) : ${r.stderr.toString().trim()}`);
+  if (!r.success) throw new Error(`git ${args.slice(0, 2).join(" ")} (${repo}) : ${r.stderr.toString().trim()}`);
   return r.stdout.toString();
 }
 
@@ -181,19 +175,17 @@ export class GitTree {
   }
   list(pattern: string): string[] {
     const glob = new Bun.Glob(pattern);
-    return [...this.files.keys()].filter((p) => glob.match(p)).sort();
+    return [...this.files.keys()].filter(p => glob.match(p)).sort();
   }
   read(paths: string[]): Map<string, string> {
     const decoder = new TextDecoder();
-    return new Map(
-      [...this.readBytes(paths)].map(([path, bytes]) => [path, decoder.decode(bytes)]),
-    );
+    return new Map([...this.readBytes(paths)].map(([path, bytes]) => [path, decoder.decode(bytes)]));
   }
   readBytes(paths: string[]): Map<string, Uint8Array> {
-    const wanted = [...new Set(paths)].filter((p) => this.files.has(p));
+    const wanted = [...new Set(paths)].filter(p => this.files.has(p));
     const out = new Map<string, Uint8Array>();
     if (!wanted.length) return out;
-    const oids = wanted.map((p) => this.files.get(p)!);
+    const oids = wanted.map(p => this.files.get(p)!);
     this.prefetch(oids);
     const r = Bun.spawnSync(["git", "-C", this.repo, "cat-file", "--batch"], {
       stdin: new Blob([oids.join("\n") + "\n"]),
@@ -241,8 +233,8 @@ export class GitTree {
     });
     const missing = check
       .split("\n")
-      .filter((l) => l.endsWith(" missing"))
-      .map((l) => l.split(" ")[0]!);
+      .filter(l => l.endsWith(" missing"))
+      .map(l => l.split(" ")[0]!);
     if (missing.length)
       git(
         this.repo,
@@ -298,9 +290,7 @@ export const PRIVATE_TERMS = /\b(shenron|dragon ?ball|dbfr|iecode|niers?|omar)\b
 
 /** Licences déclarées en tête d'un LICENSE.md (`Bun itself is MIT-licensed`, `… which is LGPL-2 licensed`). */
 export function declaredLicenses(text: string): string[] {
-  const found = [
-    ...text.slice(0, 1500).matchAll(/\b([A-Z][\w.]*(?:-[\w.]+)*?)[- ]licensed\b/g),
-  ].map((m) => m[1]!);
+  const found = [...text.slice(0, 1500).matchAll(/\b([A-Z][\w.]*(?:-[\w.]+)*?)[- ]licensed\b/g)].map(m => m[1]!);
   return [...new Set(found)];
 }
 
@@ -322,10 +312,7 @@ const githubName = (url: string) =>
     .replace(/\/$/, "");
 
 /** `[package]` d'un Cargo.toml (champs `.workspace = true` résolus contre `[workspace.package]`). */
-export function cargoPackage(
-  toml: string,
-  workspace: Record<string, any> = {},
-): Omit<Component, "path"> | null {
+export function cargoPackage(toml: string, workspace: Record<string, any> = {}): Omit<Component, "path"> | null {
   let doc: any;
   try {
     doc = Bun.TOML.parse(toml);
@@ -334,8 +321,7 @@ export function cargoPackage(
   }
   const p = doc.package;
   if (!p?.name) return null;
-  const inherit = (v: any, key: string) =>
-    v && typeof v === "object" && v.workspace ? workspace[key] : v;
+  const inherit = (v: any, key: string) => (v && typeof v === "object" && v.workspace ? workspace[key] : v);
   const repository = inherit(p.repository, "repository");
   return {
     name: String(p.name),
@@ -373,7 +359,7 @@ export function cargoMembers(
   base = "",
 ): string[] {
   const prefix = base ? `${base}/` : "";
-  const exclude = new Set((workspace.exclude ?? []).map((e) => prefix + e));
+  const exclude = new Set((workspace.exclude ?? []).map(e => prefix + e));
   const dirs = new Set<string>();
   for (const member of workspace.members ?? [])
     for (const file of tree.list(`${prefix}${member}/Cargo.toml`)) {
@@ -403,8 +389,8 @@ function packageComponents(tree: GitTree, dir: string, texts: Map<string, string
   if (!ws) return [];
   const wsPackage = { ...ws.package, license: ws.package?.license ?? spdxHeader(toml) };
   const members = cargoMembers(tree, ws, dir);
-  const memberTexts = tree.read(members.map((m) => `${m}/Cargo.toml`));
-  return members.flatMap((m) => {
+  const memberTexts = tree.read(members.map(m => `${m}/Cargo.toml`));
+  return members.flatMap(m => {
     const c = cargoPackage(memberTexts.get(`${m}/Cargo.toml`) ?? "", wsPackage);
     return c ? [{ ...c, path: m }] : [];
   });
@@ -436,18 +422,11 @@ export function collectRuntime(
     git(tree.repo, ["log", "--no-renames", ...args, tree.sha], undefined, noFetch)
       .split("\n")
       .filter(Boolean);
-  const commits = log(["--no-merges", `--author=${author}`, `--format=%h${SEP}%cI${SEP}%s`]).map(
-    (line) => {
-      const [sha, date, subject] = line.split(SEP) as [string, string, string];
-      return { sha, date, subject };
-    },
-  );
-  const merge = log([
-    "--merges",
-    "--grep=upstream/",
-    "-1",
-    `--format=%h${SEP}%cI${SEP}%s`,
-  ])[0]?.split(SEP);
+  const commits = log(["--no-merges", `--author=${author}`, `--format=%h${SEP}%cI${SEP}%s`]).map(line => {
+    const [sha, date, subject] = line.split(SEP) as [string, string, string];
+    return { sha, date, subject };
+  });
+  const merge = log(["--merges", "--grep=upstream/", "-1", `--format=%h${SEP}%cI${SEP}%s`])[0]?.split(SEP);
   const changed = (filter: string, ...paths: string[]) =>
     new Set(
       git(
@@ -468,7 +447,7 @@ export function collectRuntime(
         noFetch,
       )
         .split("\n")
-        .filter((p) => p && tree.has(p)),
+        .filter(p => p && tree.has(p)),
     );
   const added = changed("A", "docs", "packages", "src/js/bun", "src/runtime/cli");
   const modified = changed("M", "docs");
@@ -485,14 +464,9 @@ export function collectRuntime(
     walk(tab.pages);
     for (const g of tab.groups ?? []) walk(g.pages);
   }
-  const docFile = (slug: string) =>
-    [`docs/${slug}.mdx`, `docs/${slug}.md`].find((f) => tree.has(f));
-  const pageFiles = new Map(
-    navSlugs.map((s) => [s, docFile(s)] as const).filter((e): e is [string, string] => !!e[1]),
-  );
-  const contents = tree.read(
-    [...pageFiles.values()].filter((f) => added.has(f) || modified.has(f)),
-  );
+  const docFile = (slug: string) => [`docs/${slug}.mdx`, `docs/${slug}.md`].find(f => tree.has(f));
+  const pageFiles = new Map(navSlugs.map(s => [s, docFile(s)] as const).filter((e): e is [string, string] => !!e[1]));
+  const contents = tree.read([...pageFiles.values()].filter(f => added.has(f) || modified.has(f)));
   const pages = (set: Set<string>) =>
     [...pageFiles]
       .filter(([, file]) => set.has(file))
@@ -501,19 +475,19 @@ export function collectRuntime(
         return { slug, title: oneLine(fm.title ?? slug), description: oneLine(fm.description) };
       });
   const addedDocs = pages(added);
-  const addedSlugs = new Set(addedDocs.map((d) => d.slug));
+  const addedSlugs = new Set(addedDocs.map(d => d.slug));
 
   const dirs = [
     ...new Set(
       [...added]
-        .filter((p) => /^packages\/[^/]+\/(package\.json|Cargo\.toml)$/.test(p))
-        .map((p) => p.slice(0, p.lastIndexOf("/"))),
+        .filter(p => /^packages\/[^/]+\/(package\.json|Cargo\.toml)$/.test(p))
+        .map(p => p.slice(0, p.lastIndexOf("/"))),
     ),
   ].sort();
-  const texts = tree.read(dirs.flatMap((d) => [`${d}/package.json`, `${d}/Cargo.toml`]));
-  const all = dirs.flatMap((d) => packageComponents(tree, d, texts));
-  const bindings = all.filter((c) => WINDOWS_BINDINGS.test(c.name));
-  const packages = all.filter((c) => !WINDOWS_BINDINGS.test(c.name));
+  const texts = tree.read(dirs.flatMap(d => [`${d}/package.json`, `${d}/Cargo.toml`]));
+  const all = dirs.flatMap(d => packageComponents(tree, d, texts));
+  const bindings = all.filter(c => WINDOWS_BINDINGS.test(c.name));
+  const packages = all.filter(c => !WINDOWS_BINDINGS.test(c.name));
 
   const compose = tree.text("scripts/aphrody/deploy/docker/compose.yaml") ?? "";
   const dockerfile = "scripts/aphrody/deploy/docker/Dockerfile";
@@ -523,7 +497,7 @@ export function collectRuntime(
     tree.text("scripts/aphrody/publish-runtime.ts") ?? "",
   )?.[1];
 
-  const licenseFile = ["LICENSE.md", "LICENSE"].find((f) => tree.has(f)) ?? "";
+  const licenseFile = ["LICENSE.md", "LICENSE"].find(f => tree.has(f)) ?? "";
   for (const c of packages) {
     if (SLOP.test(c.description)) warnings.push(`${repo} ${c.path}: ${c.description}`);
     if (!c.description) warnings.push(`${repo} ${c.path}: no description`);
@@ -544,31 +518,30 @@ export function collectRuntime(
     commits: {
       count: commits.length,
       first: commits.at(-1)?.date ?? "",
-      types: count(commits.map((c) => conventional(c.subject)?.type ?? "other")),
-      scopes: count(
-        commits.flatMap((c) =>
-          (conventional(c.subject)?.scope ?? "").split(/,\s*/).filter(Boolean),
-        ),
-      ).slice(0, 30),
+      types: count(commits.map(c => conventional(c.subject)?.type ?? "other")),
+      scopes: count(commits.flatMap(c => (conventional(c.subject)?.scope ?? "").split(/,\s*/).filter(Boolean))).slice(
+        0,
+        30,
+      ),
       recent: commits.slice(0, 40),
     },
     lastUpstreamMerge: merge ? { sha: merge[0]!, date: merge[1]!, subject: merge[2]! } : null,
-    docs: { added: addedDocs, modified: pages(modified).filter((d) => !addedSlugs.has(d.slug)) },
+    docs: { added: addedDocs, modified: pages(modified).filter(d => !addedSlugs.has(d.slug)) },
     modules: tree.has("src/resolve_builtins/HardcodedModule.rs")
       ? moduleNames(tree.text("src/resolve_builtins/HardcodedModule.rs")!)
       : [...added]
-          .filter((p) => /^src\/js\/bun\/[^/]+\.ts$/.test(p))
-          .map((p) => `bun:${p.slice("src/js/bun/".length, -3)}`)
+          .filter(p => /^src\/js\/bun\/[^/]+\.ts$/.test(p))
+          .map(p => `bun:${p.slice("src/js/bun/".length, -3)}`)
           .sort(),
-    commands: [...added].filter((p) => /^src\/runtime\/cli\/[^/]+_command\.rs$/.test(p)).sort(),
+    commands: [...added].filter(p => /^src\/runtime\/cli\/[^/]+_command\.rs$/.test(p)).sort(),
     packages: packages.sort((a, b) => a.name.localeCompare(b.name)),
     windowsBindings: bindings.length
       ? {
           count: bindings.length,
-          versions: [...new Set(bindings.map((b) => b.version))].sort(),
-          licenses: [...new Set(bindings.map((b) => b.license))].sort(),
+          versions: [...new Set(bindings.map(b => b.version))].sort(),
+          licenses: [...new Set(bindings.map(b => b.license))].sort(),
           source: bindings[0]!.description.replace(/^.*?generated from /, ""),
-          names: bindings.map((b) => b.name).sort(),
+          names: bindings.map(b => b.name).sort(),
         }
       : null,
     npm: npmName ? { name: npmName } : null,
@@ -602,7 +575,7 @@ export function collectDistribution(
       integrated.set(i.integratedPath, { name: githubName(i.upstreamUrl), url: i.upstreamUrl });
 
   const crateDirs = cargoMembers(tree, ws);
-  const crateTexts = tree.read(crateDirs.map((d) => `${d}/Cargo.toml`));
+  const crateTexts = tree.read(crateDirs.map(d => `${d}/Cargo.toml`));
   const crates: Component[] = [];
   for (const dir of crateDirs) {
     const c = cargoPackage(crateTexts.get(`${dir}/Cargo.toml`) ?? "", wsPackage);
@@ -615,7 +588,7 @@ export function collectDistribution(
   const m3Files = tree.list("m3/packages/*/package.json");
   const pkgTexts = tree.read([...pkgFiles, ...m3Files]);
   const fromNpm = (files: string[]) =>
-    files.flatMap((file) => {
+    files.flatMap(file => {
       const c = npmPackage(pkgTexts.get(file) ?? "");
       return c ? [{ ...c, path: file.slice(0, -"/package.json".length) }] : [];
     });
@@ -623,9 +596,9 @@ export function collectDistribution(
   const m3Packages = fromNpm(m3Files).sort((a, b) => a.name.localeCompare(b.name));
 
   const downloadsConfig = JSON.parse(tree.text("tools/config/downloads.json") ?? "{}");
-  const installerFiles = Object.entries(
-    (downloadsConfig.assets ?? {}) as Record<string, string>,
-  ).filter(([file]) => /^install\.(sh|ps1)$/.test(file));
+  const installerFiles = Object.entries((downloadsConfig.assets ?? {}) as Record<string, string>).filter(([file]) =>
+    /^install\.(sh|ps1)$/.test(file),
+  );
   const docs = tree.read([
     ...Object.values(DOCUMENTS),
     ...installerFiles.map(([, source]) => source),
@@ -639,13 +612,11 @@ export function collectDistribution(
     else warnings.push(`${repo}: ${path} absent`);
   }
   const css = docs.get("m3/packages/m3-tokens/src/m3-tokens.css") ?? "";
-  const tokenNames = new Set(
-    [...css.matchAll(/--md-sys-([a-z]+)-[\w-]+(?=\s*:)/g)].map((m) => m[0]),
-  );
+  const tokenNames = new Set([...css.matchAll(/--md-sys-([a-z]+)-[\w-]+(?=\s*:)/g)].map(m => m[0]));
 
   const sections = ((root.readme?.sections ?? []) as any[])
-    .filter((s) => s.public)
-    .map((s) => ({
+    .filter(s => s.public)
+    .map(s => ({
       id: String(s.id),
       title: String(s.title),
       markdown: (s.body as string[]).join("\n"),
@@ -659,8 +630,7 @@ export function collectDistribution(
     if (SLOP.test(c.description)) warnings.push(`${repo} ${c.path}: ${c.description}`);
   }
   for (const [key, text] of Object.entries(documents))
-    if (PRIVATE_TERMS.test(text))
-      warnings.push(`${repo} ${DOCUMENTS[key]}: names a private profile`);
+    if (PRIVATE_TERMS.test(text)) warnings.push(`${repo} ${DOCUMENTS[key]}: names a private profile`);
   return {
     repo,
     visibility: "unknown",
@@ -680,26 +650,26 @@ export function collectDistribution(
       packages: m3Packages,
       elements: (docs.get("m3/packages/m3-react/md-elements.txt") ?? "")
         .split(/\r?\n/)
-        .map((s) => s.trim())
-        .filter((s) => s.startsWith("md-")),
+        .map(s => s.trim())
+        .filter(s => s.startsWith("md-")),
       primitives: tree
         .list("m3/packages/m3-baseui/src/*.tsx")
-        .map((p) => p.slice(p.lastIndexOf("/") + 1, -4))
-        .filter((n) => n !== "index" && n !== "part"),
-      tokens: count([...tokenNames].map((t) => t.split("-")[4]!)),
-      templates: [...new Set(tree.list("m3/templates/*/**").map((p) => p.split("/")[2]!))].sort(),
-      uiCrates: crates.filter((c) => c.path.startsWith("crates/ui/")).map((c) => c.name),
+        .map(p => p.slice(p.lastIndexOf("/") + 1, -4))
+        .filter(n => n !== "index" && n !== "part"),
+      tokens: count([...tokenNames].map(t => t.split("-")[4]!)),
+      templates: [...new Set(tree.list("m3/templates/*/**").map(p => p.split("/")[2]!))].sort(),
+      uiCrates: crates.filter(c => c.path.startsWith("crates/ui/")).map(c => c.name),
     },
     installers: installerFiles.map(([file, source]) => ({
       file,
       source,
       usage: installerUsage(docs.get(source) ?? ""),
     })),
-    catalogue: ((downloadsConfig.artifacts ?? []) as any[]).map((a) => ({
+    catalogue: ((downloadsConfig.artifacts ?? []) as any[]).map(a => ({
       id: String(a.id),
       kind: String(a.kind ?? ""),
       description: oneLine(a.description),
-      platforms: ((a.platforms ?? []) as any[]).map((p) => ({
+      platforms: ((a.platforms ?? []) as any[]).map(p => ({
         platform: String(p.platform),
         enabled: p.enabled !== false,
       })),
@@ -714,27 +684,23 @@ export function usedBy(
   org: string,
   names: string[],
 ): Map<string, OrgRepo["usedBy"]> {
-  const found = new Map<string, Map<string, OrgRepo["usedBy"][number]>>(
-    names.map((n) => [n.toLowerCase(), new Map()]),
-  );
-  const escaped = names
-    .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
-    .sort((a, b) => b.length - a.length);
+  const found = new Map<string, Map<string, OrgRepo["usedBy"][number]>>(names.map(n => [n.toLowerCase(), new Map()]));
+  const escaped = names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).sort((a, b) => b.length - a.length);
   const pattern = new RegExp(`${org}/(${escaped.join("|")})(?![\\w.-]*[\\w-])`, "gi");
   for (const { repo, tree, patterns, components } of sources) {
     const byDepth = [...components].sort((a, b) => b.path.length - a.path.length);
-    const files = [...new Set(patterns.flatMap((p) => tree.list(p)))];
+    const files = [...new Set(patterns.flatMap(p => tree.list(p)))];
     for (const [file, text] of tree.read(files))
       for (const m of text.matchAll(pattern)) {
         const target = found.get(m[1]!.toLowerCase());
         if (!target || `${org}/${m[1]}`.toLowerCase() === repo.toLowerCase()) continue;
-        const owner = byDepth.find((c) => file === c.path || file.startsWith(`${c.path}/`));
+        const owner = byDepth.find(c => file === c.path || file.startsWith(`${c.path}/`));
         const entry = owner ? { repo, path: owner.path, name: owner.name } : { repo, path: file };
         target.set(`${repo}:${entry.path}`, entry);
       }
   }
   return new Map(
-    names.map((n) => [
+    names.map(n => [
       n,
       [...found.get(n.toLowerCase())!.values()].sort((a, b) =>
         `${a.repo}${a.path}`.localeCompare(`${b.repo}${b.path}`),
@@ -746,11 +712,7 @@ export function usedBy(
 // ---------------------------------------------------------------------------------------------------------------
 // Réseau
 
-async function github(
-  query: string,
-  variables: Record<string, unknown>,
-  token: string,
-): Promise<any> {
+async function github(query: string, variables: Record<string, unknown>, token: string): Promise<any> {
   const res = await fetch("https://api.github.com/graphql", {
     method: "POST",
     headers: {
@@ -794,10 +756,7 @@ export async function collectOrg(login: string, token: string): Promise<any[]> {
   return nodes;
 }
 
-export async function distributionReleases(
-  repo: string,
-  token: string,
-): Promise<DistributionRelease[]> {
+export async function distributionReleases(repo: string, token: string): Promise<DistributionRelease[]> {
   const [owner, name] = repo.split("/");
   const data = await github(
     `query($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { releases(first: 20, orderBy: {field: CREATED_AT, direction: DESC}) { nodes { tagName name publishedAt isDraft } } } }`,
@@ -834,8 +793,7 @@ export async function imagePull(image: string): Promise<string> {
     method: "HEAD",
     headers: {
       authorization: `Bearer ${t}`,
-      accept:
-        "application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json",
+      accept: "application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json",
     },
   });
   return manifest.ok
@@ -852,7 +810,7 @@ export async function downloadsManifest(url: string): Promise<SiteData["download
     commit: String(j.release?.commit ?? ""),
     generatedAt: String(j.generatedAt ?? ""),
     baseUrl: String(j.baseUrl ?? new URL(url).origin),
-    artifacts: ((j.artifacts ?? []) as any[]).map((a) => ({
+    artifacts: ((j.artifacts ?? []) as any[]).map(a => ({
       name: String(a.name),
       version: String(a.version),
       platform: String(a.platform),
@@ -912,12 +870,8 @@ export async function collect(o: CollectOptions): Promise<SiteData> {
   };
   const runtimeTree = o.runtime ? new GitTree(o.runtime.repo, o.runtime.ref) : null;
   const distTree = o.distribution ? new GitTree(o.distribution.repo, o.distribution.ref) : null;
-  const runtime = runtimeTree
-    ? collectRuntime(runtimeTree, `${o.org}/bun`, o.author, warnings)
-    : null;
-  const distribution = distTree
-    ? collectDistribution(distTree, `${o.org}/aphrody`, warnings)
-    : null;
+  const runtime = runtimeTree ? collectRuntime(runtimeTree, `${o.org}/bun`, o.author, warnings) : null;
+  const distribution = distTree ? collectDistribution(distTree, `${o.org}/aphrody`, warnings) : null;
 
   const npm = await soft("npm", () => npmVersions("@aphrody"));
   if (npm) {
@@ -934,21 +888,19 @@ export async function collect(o: CollectOptions): Promise<SiteData> {
       if (version !== undefined) runtime.npm.version = version;
     }
   }
-  if (runtime?.image)
-    runtime.image.pull =
-      (await soft("ghcr", () => imagePull(runtime.image!.name))) ?? "not checked";
+  if (runtime?.image) runtime.image.pull = (await soft("ghcr", () => imagePull(runtime.image!.name))) ?? "not checked";
 
   let org: SiteData["org"] = null;
   if (o.token) {
     const nodes = await soft("GitHub", () => collectOrg(o.org, o.token!));
     if (nodes) {
       const visibility = (repo: string): Visibility => {
-        const node = nodes.find((n) => `${o.org}/${n.name}`.toLowerCase() === repo.toLowerCase());
+        const node = nodes.find(n => `${o.org}/${n.name}`.toLowerCase() === repo.toLowerCase());
         return node ? (node.isPrivate ? "private" : "public") : "unknown";
       };
       if (runtime) runtime.visibility = visibility(runtime.repo);
       if (distribution) distribution.visibility = visibility(distribution.repo);
-      const visible = nodes.filter((n) => !n.isPrivate);
+      const visible = nodes.filter(n => !n.isPrivate);
       const refs = usedBy(
         [
           ...(runtimeTree && runtime
@@ -967,22 +919,18 @@ export async function collect(o: CollectOptions): Promise<SiteData> {
                   repo: distribution.repo,
                   tree: distTree,
                   patterns: REFERENCE_PATTERNS.distribution,
-                  components: [
-                    ...distribution.crates,
-                    ...distribution.packages,
-                    ...distribution.m3.packages,
-                  ],
+                  components: [...distribution.crates, ...distribution.packages, ...distribution.m3.packages],
                 },
               ]
             : []),
         ],
         o.org,
-        visible.map((n) => n.name),
+        visible.map(n => n.name),
       );
       org = {
         login: o.org,
         privateCount: nodes.length - visible.length,
-        public: visible.map((n) => ({
+        public: visible.map(n => ({
           name: n.name,
           url: n.url,
           description: oneLine(n.description),
@@ -1006,30 +954,22 @@ export async function collect(o: CollectOptions): Promise<SiteData> {
       };
     }
     if (distribution)
-      distribution.releases =
-        (await soft("releases", () => distributionReleases(distribution.repo, o.token!))) ?? [];
-  } else if (!o.offline)
-    errors.push("GitHub: no token (GH_TOKEN or GITHUB_TOKEN), organization not collected");
+      distribution.releases = (await soft("releases", () => distributionReleases(distribution.repo, o.token!))) ?? [];
+  } else if (!o.offline) errors.push("GitHub: no token (GH_TOKEN or GITHUB_TOKEN), organization not collected");
 
   // Artefacts d'un profil privé : servis par downloads.aphrody.com à qui les connaît, pas listés par le site.
   // Le manifeste est celui de la distribution : le site du runtime seul (`--downloads none`) ne le lit pas.
-  const downloads = o.downloadsUrl
-    ? await soft("downloads", () => downloadsManifest(o.downloadsUrl))
-    : null;
+  const downloads = o.downloadsUrl ? await soft("downloads", () => downloadsManifest(o.downloadsUrl)) : null;
   if (downloads) {
-    const described = new Map((distribution?.catalogue ?? []).map((c) => [c.id, c.description]));
+    const described = new Map((distribution?.catalogue ?? []).map(c => [c.id, c.description]));
     const withheld = new Set(
       downloads.artifacts
-        .map((a) => a.name)
-        .filter(
-          (name) => PRIVATE_TERMS.test(name) || PRIVATE_TERMS.test(described.get(name) ?? ""),
-        ),
+        .map(a => a.name)
+        .filter(name => PRIVATE_TERMS.test(name) || PRIVATE_TERMS.test(described.get(name) ?? "")),
     );
-    for (const name of withheld)
-      warnings.push(`downloads ${name}: not listed (names a private profile)`);
-    downloads.artifacts = downloads.artifacts.filter((a) => !withheld.has(a.name));
-    if (distribution)
-      distribution.catalogue = distribution.catalogue.filter((c) => !withheld.has(c.id));
+    for (const name of withheld) warnings.push(`downloads ${name}: not listed (names a private profile)`);
+    downloads.artifacts = downloads.artifacts.filter(a => !withheld.has(a.name));
+    if (distribution) distribution.catalogue = distribution.catalogue.filter(c => !withheld.has(c.id));
   }
 
   return {
@@ -1057,9 +997,7 @@ if (import.meta.main) {
   const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
   const data = await collect({
     ...(runtime ? { runtime: { repo: runtime, ref: option("--runtime-ref", "HEAD")! } } : {}),
-    ...(distribution
-      ? { distribution: { repo: distribution, ref: option("--distribution-ref", "HEAD")! } }
-      : {}),
+    ...(distribution ? { distribution: { repo: distribution, ref: option("--distribution-ref", "HEAD")! } } : {}),
     org: option("--org", "aphrody-labs")!,
     author: option("--fork-author", "contact@aphrody.com")!,
     offline: args.includes("--offline"),

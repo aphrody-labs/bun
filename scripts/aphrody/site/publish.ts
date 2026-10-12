@@ -28,16 +28,14 @@ function run(cmd: string[], opts: { cwd?: string; stdin?: Blob | "inherit" } = {
     stdout: "pipe",
     stderr: "pipe",
   });
-  if (!r.success)
-    throw new Error(`${cmd.slice(0, 3).join(" ")} : ${r.stderr.toString().trim() || r.exitCode}`);
+  if (!r.success) throw new Error(`${cmd.slice(0, 3).join(" ")} : ${r.stderr.toString().trim() || r.exitCode}`);
   return r.stdout.toString().trim();
 }
 
 /** Lance une commande en héritant de la sortie (wrangler, bun install) ; échoue sur code non nul. */
 async function live(cmd: string[], cwd: string) {
   const proc = Bun.spawn({ cmd, cwd, stdio: ["ignore", "inherit", "inherit"] });
-  if ((await proc.exited) !== 0)
-    throw new Error(`${cmd.slice(0, 3).join(" ")} : code ${proc.exitCode}`);
+  if ((await proc.exited) !== 0) throw new Error(`${cmd.slice(0, 3).join(" ")} : code ${proc.exitCode}`);
 }
 
 /**
@@ -126,8 +124,7 @@ async function publish(args: string[]) {
       return null;
     }
   };
-  const perfRun =
-    option("--perf") || args.includes("--no-perf") ? null : query("perf", latestPerfRun);
+  const perfRun = option("--perf") || args.includes("--no-perf") ? null : query("perf", latestPerfRun);
 
   // Monorepo de la distribution : seulement sur demande (--distribution), le site publié est celui du runtime.
   const distOption = option("--distribution");
@@ -135,8 +132,7 @@ async function publish(args: string[]) {
   const distRef = option("--distribution-ref") ?? "origin/main";
   let distSha: string | null = null;
   if (distDir) {
-    if (distRef.startsWith("origin/"))
-      run(["git", "-C", distDir, "fetch", "-q", "origin", distRef.slice(7)]);
+    if (distRef.startsWith("origin/")) run(["git", "-C", distDir, "fetch", "-q", "origin", distRef.slice(7)]);
     distSha = run(["git", "-C", distDir, "rev-parse", `${distRef}^{commit}`]);
   }
 
@@ -179,8 +175,7 @@ async function publish(args: string[]) {
     const dataJson = readFileSync(dataFile, "utf8");
     const errors = (JSON.parse(dataJson).errors ?? []) as string[];
     if (errors.length) {
-      if (ifChanged)
-        throw new Error(`collecte incomplète, rien n'est publié : ${errors.join(" ; ")}`);
+      if (ifChanged) throw new Error(`collecte incomplète, rien n'est publié : ${errors.join(" ; ")}`);
       for (const e of errors) console.warn(`collecte : ${e}`);
     }
 
@@ -222,14 +217,7 @@ async function publish(args: string[]) {
 
     const app = join(src, APP);
     await live(["bun", "install", "--frozen-lockfile"], app);
-    const deploy = [
-      "bun",
-      join(app, "app/scripts/deploy.ts"),
-      "--assets",
-      out,
-      "--tag",
-      sha.slice(0, 12),
-    ];
+    const deploy = ["bun", join(app, "app/scripts/deploy.ts"), "--assets", out, "--tag", sha.slice(0, 12)];
     deploy.push("--message", `${REPO}@${sha.slice(0, 12)}`);
     if (args.includes("--dry-run")) deploy.push("--dry-run");
     await live(deploy, app);
@@ -256,13 +244,7 @@ if (import.meta.main) {
   if (command === "publish") await publish(args);
   else if (command === "rollback") {
     const version = option("--version");
-    await wranglerCommand([
-      "rollback",
-      ...(version ? [version] : []),
-      "--yes",
-      "--message",
-      "publish.ts rollback",
-    ]);
+    await wranglerCommand(["rollback", ...(version ? [version] : []), "--yes", "--message", "publish.ts rollback"]);
   } else if (command === "status") await wranglerCommand(["deployments", "list"]);
   else throw new Error(`commande inconnue : ${command} (publish, rollback, status)`);
 }

@@ -20,11 +20,7 @@ export type CommentCandidate = {
 };
 
 /** Rust-only lexical selection; prose language and correctness remain review decisions. */
-export function selectRustComments(
-  path: string,
-  source: string,
-  sourceSha: string,
-): CommentCandidate[] {
+export function selectRustComments(path: string, source: string, sourceSha: string): CommentCandidate[] {
   const candidates: CommentCandidate[] = [];
   const sourceHash = digest(source);
   for (let at = 0; at < source.length;) {
@@ -74,9 +70,7 @@ export function selectRustComments(
     }
     const text = source.slice(at, end);
     const protectedNotice =
-      /\b(copyright|license|SPDX|permission is hereby|safety|SAFETY|generated|do not edit)\b/i.test(
-        text,
-      );
+      /\b(copyright|license|SPDX|permission is hereby|safety|SAFETY|generated|do not edit)\b/i.test(text);
     const rationale: string[] = [];
     if (/\b(le|les|une|dans|pour|avec|ceci|cette|doit|depuis)\b|[éèàçùœ]/i.test(text))
       rationale.push("French lexical signal; human translation review required");
@@ -94,9 +88,7 @@ export function selectRustComments(
         end,
         line: source.slice(0, at).split("\n").length,
         text,
-        language: rationale.some((r) => r.startsWith("French"))
-          ? "review-required"
-          : "undetermined",
+        language: rationale.some(r => r.startsWith("French")) ? "review-required" : "undetermined",
         rationale,
         protected: protectedNotice,
       });
@@ -105,13 +97,8 @@ export function selectRustComments(
   return candidates;
 }
 
-export function reviewedReplacement(
-  source: string,
-  candidate: CommentCandidate,
-  replacement: string,
-): string {
-  if (candidate.protected)
-    throw new Error("Protected notice or safety comment requires owner review");
+export function reviewedReplacement(source: string, candidate: CommentCandidate, replacement: string): string {
+  if (candidate.protected) throw new Error("Protected notice or safety comment requires owner review");
   if (
     digest(source) !== candidate.sourceHash ||
     digest(source.slice(candidate.start, candidate.end)) !== candidate.commentHash
@@ -120,8 +107,7 @@ export function reviewedReplacement(
   if (
     !replacement.startsWith(candidate.text.startsWith("//") ? "//" : "/*") ||
     (candidate.text.startsWith("//") && /[\r\n]/.test(replacement)) ||
-    (candidate.text.startsWith("/*") &&
-      (!replacement.endsWith("*/") || /\/\*|\*\//.test(replacement.slice(2, -2))))
+    (candidate.text.startsWith("/*") && (!replacement.endsWith("*/") || /\/\*|\*\//.test(replacement.slice(2, -2))))
   )
     throw new Error("Replacement must preserve comment boundaries");
   return source.slice(0, candidate.start) + replacement + source.slice(candidate.end);
@@ -130,7 +116,7 @@ export function reviewedReplacement(
 export function markdownInventory(tree: Pick<GitTree, "sha" | "files" | "read">) {
   const paths = [...tree.files.keys()]
     .filter(
-      (p) =>
+      p =>
         p === "package.json" ||
         p === "src/resolve_builtins/HardcodedModule.rs" ||
         /^(?:packages|vendor)\/.+\/package\.json$/.test(p) ||
@@ -141,8 +127,8 @@ export function markdownInventory(tree: Pick<GitTree, "sha" | "files" | "read">)
   const root = JSON.parse(texts.get("package.json") ?? "{}");
   const unresolvedManifests: { path: string; sha256: string; parseError: string }[] = [];
   const packages = paths
-    .filter((path) => path.endsWith("/package.json"))
-    .flatMap((path) => {
+    .filter(path => path.endsWith("/package.json"))
+    .flatMap(path => {
       const content = texts.get(path)!;
       let declaration: { name?: unknown; version?: unknown; private?: unknown };
       try {
@@ -168,12 +154,12 @@ export function markdownInventory(tree: Pick<GitTree, "sha" | "files" | "read">)
   return {
     sourceSha: tree.sha,
     version: String(root.version ?? "unknown"),
-    inputs: paths.map((path) => ({ path, sha256: digest(texts.get(path) ?? "") })),
+    inputs: paths.map(path => ({ path, sha256: digest(texts.get(path) ?? "") })),
     modules: moduleNames(texts.get("src/resolve_builtins/HardcodedModule.rs") ?? ""),
     scripts: Object.entries(root.scripts ?? {}).sort(([a], [b]) => a.localeCompare(b)),
     packages,
     unresolvedManifests,
-    licenses: paths.filter((p) => /^(LICENSE|COPYING)/.test(p)),
+    licenses: paths.filter(p => /^(LICENSE|COPYING)/.test(p)),
   };
 }
 
@@ -186,7 +172,7 @@ export function renderRootMarkdown(inventory: ReturnType<typeof markdownInventor
   return new Map([
     [
       "SOURCE-INDEX.md",
-      `# Source index\n\n${provenance}\n## Registered modules\n\n${inventory.modules.map((m) => `- \`${quote(m)}\``).join("\n")}\n\n## Package manifests\n\n| Name | Version | Manifest | Private |\n| --- | --- | --- | --- |\n${inventory.packages.map((p) => `| ${quote(p.name)} | ${quote(p.version)} | ${p.path} | ${p.private} |`).join("\n")}\n\n## Unresolved vendored fixture manifests\n\nThese source fixtures are retained with their hashes and parse errors; they do not declare qualified packages.\n\n${inventory.unresolvedManifests.map((p) => `- ${quote(p.path)}: SHA-256 ${p.sha256}; ${quote(p.parseError)}`).join("\n")}\n\n## Licenses\n\n${inventory.licenses.map((p) => `- [${p}](${p})`).join("\n")}\n`,
+      `# Source index\n\n${provenance}\n## Registered modules\n\n${inventory.modules.map(m => `- \`${quote(m)}\``).join("\n")}\n\n## Package manifests\n\n| Name | Version | Manifest | Private |\n| --- | --- | --- | --- |\n${inventory.packages.map(p => `| ${quote(p.name)} | ${quote(p.version)} | ${p.path} | ${p.private} |`).join("\n")}\n\n## Unresolved vendored fixture manifests\n\nThese source fixtures are retained with their hashes and parse errors; they do not declare qualified packages.\n\n${inventory.unresolvedManifests.map(p => `- ${quote(p.path)}: SHA-256 ${p.sha256}; ${quote(p.parseError)}`).join("\n")}\n\n## Licenses\n\n${inventory.licenses.map(p => `- [${p}](${p})`).join("\n")}\n`,
     ],
     [
       "BUILD-COMMANDS.md",
@@ -195,17 +181,10 @@ export function renderRootMarkdown(inventory: ReturnType<typeof markdownInventor
   ]);
 }
 
-export async function generateSourceMarkdown(
-  root: string,
-  ref: string,
-  out: string,
-  check = false,
-) {
+export async function generateSourceMarkdown(root: string, ref: string, out: string, check = false) {
   const tree = new GitTree(root, ref);
   const inventory = markdownInventory(tree);
-  const rustPaths = tree
-    .list("src/**/*.rs")
-    .filter((p) => !/(?:^|\/)(?:generated|codegen)(?:\/|\.)/.test(p));
+  const rustPaths = tree.list("src/**/*.rs").filter(p => !/(?:^|\/)(?:generated|codegen)(?:\/|\.)/.test(p));
   const comments: CommentCandidate[] = [];
   for (let at = 0; at < rustPaths.length; at += 128) {
     for (const [path, text] of tree.read(rustPaths.slice(at, at + 128)))
@@ -221,8 +200,7 @@ export async function generateSourceMarkdown(
         coverage: {
           language: "Rust",
           paths: rustPaths.length,
-          excluded:
-            "vendor, generated directories, non-Rust source; no semantic or language certainty",
+          excluded: "vendor, generated directories, non-Rust source; no semantic or language certainty",
         },
         comments,
       },
@@ -255,17 +233,8 @@ if (import.meta.main) {
     strict: true,
   });
   if (!values.out)
-    throw new Error(
-      "--out staging directory is required; owner policy and source are never rewritten automatically",
-    );
+    throw new Error("--out staging directory is required; owner policy and source are never rewritten automatically");
   console.log(
-    JSON.stringify(
-      await generateSourceMarkdown(
-        resolve(values.root!),
-        values.ref!,
-        resolve(values.out),
-        values.check,
-      ),
-    ),
+    JSON.stringify(await generateSourceMarkdown(resolve(values.root!), values.ref!, resolve(values.out), values.check)),
   );
 }

@@ -1,12 +1,7 @@
 // Hardcoded module "node:timers/promises"
 // https://github.com/niksy/isomorphic-timers-promises/blob/master/index.js
 
-const {
-  validateBoolean,
-  validateAbortSignal,
-  validateObject,
-  validateNumber,
-} = require("internal/validators");
+const { validateBoolean, validateAbortSignal, validateObject, validateNumber } = require("internal/validators");
 const { resistStopPropagation } = require("internal/shared");
 
 const symbolAsyncIterator = Symbol.asyncIterator;
@@ -206,11 +201,7 @@ function setInterval(after = 1, value?, options: TimerOptions = {}) {
           callback = undefined;
         }
       };
-      signal.addEventListener(
-        "abort",
-        onCancel,
-        resistStopPropagation({ __proto__: null, once: true }),
-      );
+      signal.addEventListener("abort", onCancel, resistStopPropagation({ __proto__: null, once: true }));
     }
 
     return asyncIterator({

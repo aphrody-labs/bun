@@ -1,10 +1,5 @@
 import { expect, test } from "bun:test";
-import {
-  cookieHeader,
-  normalizeCookieExport,
-  parseCookieBundle,
-  rewritePlaylist,
-} from "./hls-lab-core";
+import { cookieHeader, normalizeCookieExport, parseCookieBundle, rewritePlaylist } from "./hls-lab-core";
 
 const cookie = {
   name: "session",
@@ -27,9 +22,7 @@ test("browser exports preserve unspecified SameSite and session expiry", () => {
 
 test("cookies remain isolated across domains, paths, schemes and expiry", () => {
   const result = normalizeCookieExport([cookie]);
-  expect(cookieHeader(result.chromium, new URL("https://www.example.com/watch/episode"))).toBe(
-    "session=synthetic",
-  );
+  expect(cookieHeader(result.chromium, new URL("https://www.example.com/watch/episode"))).toBe("session=synthetic");
   for (const url of [
     "https://notexample.com/watch",
     "https://example.com.attacker.test/watch",
@@ -50,9 +43,7 @@ test("host-only cookies do not become domain cookies", () => {
 });
 
 test("invalid exports cannot inject headers or collapse partition semantics", () => {
-  expect(() =>
-    normalizeCookieExport([{ ...cookie, value: "value\r\nInjected: header" }]),
-  ).toThrow();
+  expect(() => normalizeCookieExport([{ ...cookie, value: "value\r\nInjected: header" }])).toThrow();
   expect(() => normalizeCookieExport([{ ...cookie, partitioned: true }])).toThrow();
 });
 
@@ -61,7 +52,7 @@ test("HLS maps, variants and media retain base URL resolution", () => {
   rewritePlaylist(
     '#EXTM3U\n#EXT-X-MAP:URI="../init.mp4"\n#EXT-X-STREAM-INF:BANDWIDTH=100\nvariant.m3u8?token=synthetic\n#EXTINF:2,\npart.m4s\n',
     new URL("https://example.com/vod/master.m3u8"),
-    (url) => {
+    url => {
       urls.push(url);
       return `/media/${urls.length}`;
     },

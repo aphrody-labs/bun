@@ -74,10 +74,7 @@ function readHString(handle, release) {
   if (!handle) return "";
   const length = new Uint32Array(1);
   const raw = combase().WindowsGetStringRawBuffer(handle, ptr(length));
-  const text =
-    length[0] && raw
-      ? new TextDecoder("utf-16le").decode(toArrayBuffer(raw, 0, length[0] * 2))
-      : "";
+  const text = length[0] && raw ? new TextDecoder("utf-16le").decode(toArrayBuffer(raw, 0, length[0] * 2)) : "";
   if (release) combase().WindowsDeleteString(handle);
   return text;
 }
@@ -118,7 +115,7 @@ const registry = {
   enums: new Map(),
   delegates: new Map(),
 };
-const release = new FinalizationRegistry((object) => vfunc(object, 2, [])(object));
+const release = new FinalizationRegistry(object => vfunc(object, 2, [])(object));
 
 function readOut(view, kind, type) {
   switch (kind) {
@@ -130,21 +127,13 @@ function readOut(view, kind, type) {
       const object = Number(view.getBigUint64(0, true));
       if (!object) return null;
       if (ASYNC[Array.isArray(type) ? type[0] : type]) return asyncPromise(object, type);
-      if (
-        Array.isArray(type) &&
-        (type[0] === "IVector" || type[0] === "IVectorView") &&
-        type.length === 2
-      ) {
+      if (Array.isArray(type) && (type[0] === "IVector" || type[0] === "IVectorView") && type.length === 2) {
         const interfaceName = vectorInterface(type[1], type[0] === "IVectorView");
         return wrap(object, interfaceName, interfaceName);
       }
       if (typeof type !== "string") return wrap(object, undefined, undefined);
       ensureType(type);
-      return wrap(
-        object,
-        kind === "class" ? registry.classes.get(type)?.defaultInterface : type,
-        type,
-      );
+      return wrap(object, kind === "class" ? registry.classes.get(type)?.defaultInterface : type, type);
     }
     case "prim":
       switch (type) {
@@ -190,10 +179,7 @@ function toPointer(value) {
 
 function invoke(object, method, values) {
   const [name, slot, params, ret] = method;
-  if (method[4])
-    throw new Error(
-      `WinRT method ${name} uses an ABI shape bun:ffi cannot express yet (${method[4]})`,
-    );
+  if (method[4]) throw new Error(`WinRT method ${name} uses an ABI shape bun:ffi cannot express yet (${method[4]})`);
   const ffiArgs: (FFIType | keyof typeof FFIType)[] = [];
   const callArgs = [object];
   const outs: [DataView, string, unknown][] = [];
@@ -222,11 +208,7 @@ function invoke(object, method, values) {
       // A class parameter takes its default interface and an interface parameter that exact interface:
       // a wrapper holding another interface of the object is converted with QueryInterface for the call.
       const target =
-        kind === "class"
-          ? registry.classes.get(type)?.defaultInterface
-          : kind === "iface"
-            ? type
-            : undefined;
+        kind === "class" ? registry.classes.get(type)?.defaultInterface : kind === "iface" ? type : undefined;
       const desc = target && registry.interfaces.get(target);
       if (desc && value instanceof WinRTObject && value.interfaceName !== target) {
         const converted = queryInterface(value.ptr, desc.iid);
@@ -281,10 +263,7 @@ class WinRTObject {
   }
   as(interfaceName) {
     const desc = registry.interfaces.get(interfaceName);
-    if (!desc)
-      throw new Error(
-        `WinRT interface ${interfaceName} is not loaded; require its namespace family first`,
-      );
+    if (!desc) throw new Error(`WinRT interface ${interfaceName} is not loaded; require its namespace family first`);
     return wrap(queryInterface(this.ptr, desc.iid), interfaceName, this.className);
   }
   get runtimeClassName() {
@@ -309,10 +288,9 @@ function bindMethods(target, object, desc, iid?) {
         }
       : (...values) => invoke(object(), method, values);
     if (!(name in target)) Object.defineProperty(target, name, { value: fn, enumerable: true });
-    if (name.startsWith("get_") && method[2].filter((p) => p[0] === "in").length === 0) {
+    if (name.startsWith("get_") && method[2].filter(p => p[0] === "in").length === 0) {
       const property = name.slice(4);
-      if (!(property in target))
-        Object.defineProperty(target, property, { get: fn, enumerable: true });
+      if (!(property in target)) Object.defineProperty(target, property, { get: fn, enumerable: true });
     }
   }
 }
@@ -356,8 +334,7 @@ function wrap(object, interfaceName?, className?) {
 const missingNamespaces = new Set();
 function ensureType(type) {
   if (typeof type !== "string" || !type.includes(".")) return;
-  if (registry.classes.has(type) || registry.interfaces.has(type) || registry.delegates.has(type))
-    return;
+  if (registry.classes.has(type) || registry.interfaces.has(type) || registry.delegates.has(type)) return;
   if (registry.enums.has(type)) return;
   const namespace = type.slice(0, type.lastIndexOf("."));
   if (missingNamespaces.has(namespace)) return;
@@ -440,10 +417,7 @@ function activationFactory(className, iid) {
   const name = createHString(className);
   const out = new BigUint64Array(1);
   try {
-    check(
-      combase().RoGetActivationFactory(name, ptr(guid(iid)), ptr(out)),
-      `RoGetActivationFactory(${className})`,
-    );
+    check(combase().RoGetActivationFactory(name, ptr(guid(iid)), ptr(out)), `RoGetActivationFactory(${className})`);
   } finally {
     combase().WindowsDeleteString(name);
   }
@@ -455,7 +429,7 @@ const IACTIVATIONFACTORY = "00000035-0000-0000-c000-000000000046";
 function runtimeClass(name, desc) {
   const cls: { className: string; activate?: () => WinRTObject } = { className: name };
   const factories = new Map();
-  const factory = (interfaceName) => {
+  const factory = interfaceName => {
     let object = factories.get(interfaceName);
     if (!object) {
       object = activationFactory(name, registry.interfaces.get(interfaceName).iid);
@@ -487,8 +461,7 @@ type NamespaceModel = WinrtNamespace & { namespace: string };
 
 function defineNamespace(data: NamespaceModel) {
   for (const [name, desc] of Object.entries(data.interfaces)) registry.interfaces.set(name, desc);
-  for (const [name, desc] of Object.entries(data.delegates ?? {}))
-    registry.delegates.set(name, desc);
+  for (const [name, desc] of Object.entries(data.delegates ?? {})) registry.delegates.set(name, desc);
   for (const [name, desc] of Object.entries(data.classes)) registry.classes.set(name, desc);
   for (const [name, values] of Object.entries(data.enums)) registry.enums.set(name, values);
   const exports: {
@@ -507,19 +480,14 @@ function defineNamespace(data: NamespaceModel) {
   }
   // winrtModel's interface records carry the ECMA-335-derived IID; its shared model leaves descriptor values opaque.
   exports.interfaces = Object.freeze(
-    Object.fromEntries(
-      Object.entries(data.interfaces).map(([k, v]) => [k, (v as { iid: string }).iid]),
-    ),
+    Object.fromEntries(Object.entries(data.interfaces).map(([k, v]) => [k, (v as { iid: string }).iid])),
   );
   return exports;
 }
 
 // Parameterized interface IIDs: the "pinterface" signature hashed with SHA-1 under the WinRT namespace
 // 11f47ad5-7b73-42c0-abae-878b1e16adee, so generic delegates and collections can be implemented and queried.
-const PINTERFACE_NAMESPACE = Uint8Array.from(
-  "11f47ad57b7342c0abae878b1e16adee".match(/../g)!,
-  (h) => parseInt(h, 16),
-);
+const PINTERFACE_NAMESPACE = Uint8Array.from("11f47ad57b7342c0abae878b1e16adee".match(/../g)!, h => parseInt(h, 16));
 const GENERIC = {
   TypedEventHandler: "9de1c534-6ae1-11e0-84e1-18a905bcc53f",
   EventHandler: "9de1c535-6ae1-11e0-84e1-18a905bcc53f",
@@ -551,7 +519,7 @@ function parameterizedIid(signatureText) {
   const hash = new Uint8Array(hasher.digest()).subarray(0, 16);
   hash[6] = (hash[6] & 0x0f) | 0x50;
   hash[8] = (hash[8] & 0x3f) | 0x80;
-  const hex = Array.from(hash, (b) => b.toString(16).padStart(2, "0")).join("");
+  const hex = Array.from(hash, b => b.toString(16).padStart(2, "0")).join("");
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
@@ -575,8 +543,7 @@ function signatureOf(type) {
   if (Array.isArray(type)) {
     const [generic, ...args] = type;
     const iid =
-      GENERIC[String(generic).replace(/`\d+$/, "")] ??
-      (/^[0-9a-f-]{36}$/i.test(generic) ? generic : undefined);
+      GENERIC[String(generic).replace(/`\d+$/, "")] ?? (/^[0-9a-f-]{36}$/i.test(generic) ? generic : undefined);
     if (!iid) throw new TypeError(`unknown WinRT generic type ${generic}`);
     return `pinterface({${iid}};${args.map(signatureOf).join(";")})`;
   }
@@ -598,10 +565,7 @@ function signatureOf(type) {
 function iidOf(type) {
   if (Array.isArray(type)) return parameterizedIid(signatureOf(type));
   const desc = registry.interfaces.get(type) ?? registry.delegates.get(type);
-  if (!desc)
-    throw new TypeError(
-      `WinRT interface ${type} is not loaded; require its namespace family first`,
-    );
+  if (!desc) throw new TypeError(`WinRT interface ${type} is not loaded; require its namespace family first`);
   return desc.iid;
 }
 
@@ -635,7 +599,7 @@ function iunknown() {
       if (!entry || !out) return E_NOINTERFACE;
       const { state } = entry;
       for (const [iids, address] of state.tearOffs) {
-        if (iids.some((iid) => sameGuid(riid, iid))) {
+        if (iids.some(iid => sameGuid(riid, iid))) {
           state.refs++;
           writePointer(out, address);
           return 0;
@@ -649,14 +613,14 @@ function iunknown() {
     { args: ["ptr", "ptr", "ptr"], returns: "i32" },
   );
   const addRefSlot = new JSCallback(
-    (self) => {
+    self => {
       const entry = comObjects.get(Number(self));
       return entry ? ++entry.state.refs : 1;
     },
     { args: ["ptr"], returns: "u32" },
   );
   const releaseSlot = new JSCallback(
-    (self) => {
+    self => {
       const entry = comObjects.get(Number(self));
       if (!entry) return 0;
       const { state } = entry;
@@ -700,14 +664,11 @@ function inspectableSlots(state) {
     },
     {
       args: ["ptr"],
-      fn: (name) => (state.inner ? callInner(4, [name]) : (writePointer(name, 0), 0)),
+      fn: name => (state.inner ? callInner(4, [name]) : (writePointer(name, 0), 0)),
     },
     {
       args: ["ptr"],
-      fn: (level) =>
-        state.inner
-          ? callInner(5, [level])
-          : ((new Int32Array(toArrayBuffer(level, 0, 4))[0] = 0), 0),
+      fn: level => (state.inner ? callInner(5, [level]) : ((new Int32Array(toArrayBuffer(level, 0, 4))[0] = 0), 0)),
     },
   ];
 }
@@ -735,12 +696,10 @@ function comObject(interfaces, inner?) {
     inner: inner ?? 0,
     memory: undefined,
   };
-  interfaces = interfaces.map((desc) =>
-    desc.inspectable === false
-      ? desc
-      : { ...desc, methods: [...inspectableSlots(state), ...desc.methods] },
+  interfaces = interfaces.map(desc =>
+    desc.inspectable === false ? desc : { ...desc, methods: [...inspectableSlots(state), ...desc.methods] },
   );
-  const sizes = interfaces.map((i) => 3 + i.methods.length);
+  const sizes = interfaces.map(i => 3 + i.methods.length);
   const memory = new ArrayBuffer(8 * (interfaces.length + sizes.reduce((a, b) => a + b, 0)));
   state.memory = memory;
   const selves = new BigUint64Array(memory, 0, interfaces.length);
@@ -756,8 +715,7 @@ function comObject(interfaces, inner?) {
       const callback =
         method.forward !== undefined
           ? new JSCallback(
-              (_self, ...values) =>
-                vfunc(state.inner, method.forward, method.args)(state.inner, ...values),
+              (_self, ...values) => vfunc(state.inner, method.forward, method.args)(state.inner, ...values),
               {
                 args: ["ptr", ...method.args],
                 returns: method.returns,
@@ -774,7 +732,7 @@ function comObject(interfaces, inner?) {
   });
   interfaces.forEach((desc, index) => {
     const address = ptr(selves) + 8 * index;
-    const iids = desc.iids.map((iid) => (typeof iid === "string" ? guid(iid) : iid));
+    const iids = desc.iids.map(iid => (typeof iid === "string" ? guid(iid) : iid));
     if (index === 0) iids.push(IID_IUNKNOWN);
     if (index === 0 && desc.inspectable !== false) iids.push(IID_IINSPECTABLE);
     state.tearOffs.push([iids, address]);
@@ -786,9 +744,7 @@ function comObject(interfaces, inner?) {
     ptr: address,
     tearOff(iid) {
       const bytes = guid(iid);
-      const found = state.tearOffs.find(([iids]) =>
-        iids.some((b) => b.every((v, i) => v === bytes[i])),
-      );
+      const found = state.tearOffs.find(([iids]) => iids.some(b => b.every((v, i) => v === bytes[i])));
       return found ? found[1] : 0;
     },
     // The outer owns the inner object for its whole life: keep the wrapper (and its reference) reachable.
@@ -828,7 +784,7 @@ function argumentOf(kind, type, value) {
 
 function delegateParams(type) {
   const [generic, ...args] = type;
-  const param = (t) =>
+  const param = t =>
     t === "Object"
       ? ["object", ""]
       : registry.classes.has(t)
@@ -858,9 +814,7 @@ function delegate(type, fn, params?) {
     returns: "i32",
     fn(...values) {
       try {
-        const result = fn(
-          ...values.map((value, i) => argumentOf(params[i][0], params[i][1], value)),
-        );
+        const result = fn(...values.map((value, i) => argumentOf(params[i][0], params[i][1], value)));
         if (result && typeof result.then === "function") result.then(undefined, reportError);
         return 0;
       } catch (error) {
@@ -869,10 +823,7 @@ function delegate(type, fn, params?) {
       }
     },
   };
-  return Object.assign(
-    comObject([{ iids: [iid, IID_IAGILEOBJECT], methods: [invoke], inspectable: false }]),
-    { iid },
-  );
+  return Object.assign(comObject([{ iids: [iid, IID_IAGILEOBJECT], methods: [invoke], inspectable: false }]), { iid });
 }
 
 // Metadata read at run time from a .winmd (a framework package's own metadata, or System32\WinMetadata),
@@ -887,20 +838,15 @@ function loadMetadata(path, options?) {
   if (exports) return exports;
   let model: Record<string, WinrtNamespace> | undefined;
   const cacheDir =
-    options?.cache === false
-      ? undefined
-      : require("node:path").join(require("node:os").tmpdir(), "bun-winrt-metadata");
-  const cacheFile =
-    cacheDir && require("node:path").join(cacheDir, `${Bun.hash(key).toString(16)}.json`);
+    options?.cache === false ? undefined : require("node:path").join(require("node:os").tmpdir(), "bun-winrt-metadata");
+  const cacheFile = cacheDir && require("node:path").join(cacheDir, `${Bun.hash(key).toString(16)}.json`);
   if (cacheFile) {
     try {
       model = JSON.parse(fs.readFileSync(cacheFile, "utf8"));
     } catch {}
   }
   if (!model) {
-    model = Object.fromEntries(
-      require("internal/winmd").winrtModel(new Uint8Array(fs.readFileSync(path))),
-    );
+    model = Object.fromEntries(require("internal/winmd").winrtModel(new Uint8Array(fs.readFileSync(path))));
     if (cacheFile) {
       try {
         fs.mkdirSync(cacheDir, { recursive: true });
@@ -910,8 +856,7 @@ function loadMetadata(path, options?) {
     }
   }
   exports = {};
-  for (const [namespace, data] of Object.entries(model))
-    exports[namespace] = defineNamespace({ namespace, ...data });
+  for (const [namespace, data] of Object.entries(model)) exports[namespace] = defineNamespace({ namespace, ...data });
   loadedMetadata.set(key, exports);
   return exports;
 }
@@ -935,7 +880,7 @@ function systemMetadata(namespace) {
 function findMethod(className, methodName) {
   const { interfaces } = registry;
   if (!registry.classes.has(className) && interfaces.has(className)) {
-    const method = interfaces.get(className).methods.find((m) => m[0] === methodName);
+    const method = interfaces.get(className).methods.find(m => m[0] === methodName);
     return method ? { interfaceName: className, method } : undefined;
   }
   for (let name = className; name;) {
@@ -946,9 +891,7 @@ function findMethod(className, methodName) {
         if (interfaceName[0] !== "IVector" || interfaceName.length !== 2) continue;
         interfaceName = vectorInterface(interfaceName[1]);
       }
-      const method = registry.interfaces
-        .get(interfaceName)
-        ?.methods.find((m) => m[0] === methodName);
+      const method = registry.interfaces.get(interfaceName)?.methods.find(m => m[0] === methodName);
       if (method) return { interfaceName, method };
     }
     name = desc.base;
@@ -1053,10 +996,7 @@ function vectorInterface(elementType, view = false) {
 // vector(object, "Microsoft.UI.Xaml.UIElement"): the object's IVector<T> (Panel.Children, ItemCollection...).
 function vector(object, elementType) {
   const interfaceName = vectorInterface(elementType);
-  const result = wrap(
-    queryInterface(toPointer(object), registry.interfaces.get(interfaceName).iid),
-    interfaceName,
-  );
+  const result = wrap(queryInterface(toPointer(object), registry.interfaces.get(interfaceName).iid), interfaceName);
   result[Symbol.iterator] = function* () {
     for (let i = 0, n = result.Size; i < n; i++) yield result.GetAt(i);
   };
@@ -1095,11 +1035,7 @@ function unbox(object) {
   if (!object || typeof object.ptr !== "number") return object;
   systemMetadata("Windows.Foundation");
   const out = new BigUint64Array(1);
-  const hr = vfunc(object.ptr, 0, ["ptr", "ptr"])(
-    object.ptr,
-    ptr(guid(IID_IPROPERTYVALUE)),
-    ptr(out),
-  );
+  const hr = vfunc(object.ptr, 0, ["ptr", "ptr"])(object.ptr, ptr(guid(IID_IPROPERTYVALUE)), ptr(out));
   if (hr < 0 || !out[0]) return object;
   const value = wrap(Number(out[0]), "Windows.Foundation.IPropertyValue");
   const getter = UNBOX[value.Type];

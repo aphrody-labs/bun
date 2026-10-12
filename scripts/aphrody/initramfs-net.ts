@@ -249,7 +249,7 @@ export function parseDhcp(packet: Uint8Array): DhcpReply | undefined {
     address: formatIPv4(packet.subarray(16, 20)),
     dns: [],
   };
-  for (let at = 240; at < packet.length; ) {
+  for (let at = 240; at < packet.length;) {
     const code = packet[at++];
     if (code === 0) continue;
     if (code === 255 || at >= packet.length) break;

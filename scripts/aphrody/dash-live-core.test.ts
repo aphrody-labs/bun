@@ -74,7 +74,7 @@ test("Bun fetches MPD, rewrites private BaseURLs to opaque tokens and proxies ca
     const local = await transport.rewriteDashManifest(
       source.text,
       source.baseURL,
-      (token) => `http://localhost/live/${token}`,
+      token => `http://localhost/live/${token}`,
     );
     expect(local).not.toContain("private-marker");
     const token = /http:\/\/localhost\/live\/([\da-f-]+)/.exec(local)![1]!;
@@ -91,10 +91,7 @@ test("Bun fetches MPD, rewrites private BaseURLs to opaque tokens and proxies ca
     expect(seen[1]?.authorization).toBe("private-marker");
     expect(seen[1]?.range).toBe("bytes=0-3");
     expect(seen[1]?.cookie).toBeNull();
-    const head = await transport.fetchResource(
-      token,
-      new Request("http://localhost/live", { method: "HEAD" }),
-    );
+    const head = await transport.fetchResource(token, new Request("http://localhost/live", { method: "HEAD" }));
     expect(head.status).toBe(206);
     expect(await head.text()).toBe("");
   } finally {
@@ -152,16 +149,12 @@ test("origin credentials never follow cross-origin media requests or redirects",
         headersByOrigin: { [first.url.origin]: { Authorization: "private-marker" } },
       }),
     );
-    const response = await transport.fetchResource(
-      transport.resourceToken(`${second.url.origin}/video.mp4`),
-    );
+    const response = await transport.fetchResource(transport.resourceToken(`${second.url.origin}/video.mp4`));
     expect(await response.text()).toBe("bytes");
     expect(secondAuthorization).toBeNull();
     await expect(transport.fetchSource()).rejects.toThrow("redirects are not authorized");
     expect(redirectTargetCalls).toBe(1);
-    expect(() => transport.resourceToken("https://outside.example.test/video.mp4")).toThrow(
-      "not authorized",
-    );
+    expect(() => transport.resourceToken("https://outside.example.test/video.mp4")).toThrow("not authorized");
   } finally {
     first.stop(true);
     second.stop(true);
@@ -200,16 +193,10 @@ test("unsupported MPD references and methods fail before remote resources are co
   ]) {
     const xml = mpd.replace("<SegmentBase", `${tag}<SegmentBase`);
     await expect(
-      transport.rewriteDashManifest(
-        xml,
-        "https://media.example.test/m.mpd",
-        (token) => `http://localhost/live/${token}`,
-      ),
+      transport.rewriteDashManifest(xml, "https://media.example.test/m.mpd", token => `http://localhost/live/${token}`),
     ).rejects.toThrow("only SegmentBase");
   }
-  await expect(transport.fetchResource("unknown")).rejects.toThrow(
-    "Unknown live DASH resource token",
-  );
+  await expect(transport.fetchResource("unknown")).rejects.toThrow("Unknown live DASH resource token");
   await expect(
     transport.fetchResource(
       transport.sourceToken,

@@ -43,12 +43,10 @@ export function installTestEnvironment(name: string, requireFromTest: NodeJS.Req
       return undefined;
     case "jsdom":
     case "jest-environment-jsdom": {
-      const jsdom = (tryRequire(requireFromTest, "jsdom") ??
-        requireBeside("jest-environment-jsdom", "jsdom")) as JsdomModule | undefined;
-      if (!jsdom)
-        throw new Error(
-          `Test environment "${name}" needs "jsdom" or "jest-environment-jsdom" installed`,
-        );
+      const jsdom = (tryRequire(requireFromTest, "jsdom") ?? requireBeside("jest-environment-jsdom", "jsdom")) as
+        | JsdomModule
+        | undefined;
+      if (!jsdom) throw new Error(`Test environment "${name}" needs "jsdom" or "jest-environment-jsdom" installed`);
       window = new jsdom.JSDOM("<!DOCTYPE html>", {
         pretendToBeVisual: true,
         runScripts: "dangerously",
@@ -61,16 +59,12 @@ export function installTestEnvironment(name: string, requireFromTest: NodeJS.Req
       const happyDOM = (tryRequire(requireFromTest, "happy-dom") ??
         requireBeside("@happy-dom/jest-environment", "happy-dom")) as HappyDomModule | undefined;
       if (!happyDOM)
-        throw new Error(
-          `Test environment "${name}" needs "happy-dom" or "@happy-dom/jest-environment" installed`,
-        );
+        throw new Error(`Test environment "${name}" needs "happy-dom" or "@happy-dom/jest-environment" installed`);
       window = new happyDOM.Window({ url: "http://localhost/" });
       break;
     }
     default:
-      throw new Error(
-        `Test environment "${name}" is not supported; use "node", "jsdom" or "happy-dom"`,
-      );
+      throw new Error(`Test environment "${name}" is not supported; use "node", "jsdom" or "happy-dom"`);
   }
 
   // The window's own copy of the language globals stays out, and so do the timers (jest.useFakeTimers() fakes
@@ -173,7 +167,7 @@ export function installTestEnvironment(name: string, requireFromTest: NodeJS.Req
     if (key === "window" || key === "top" || key === "parent" || key === "frames") continue;
     install(key, {
       get: () => window[key],
-      set: (value) => {
+      set: value => {
         window[key] = value;
       },
       enumerable: false,
@@ -183,8 +177,7 @@ export function installTestEnvironment(name: string, requireFromTest: NodeJS.Req
   // Events dispatched in the document bubble up to the window, so listeners added on globalThis go on the window.
   for (const key of ["addEventListener", "removeEventListener", "dispatchEvent"]) {
     const method = window[key];
-    if (typeof method === "function")
-      install(key, { value: method.bind(window), writable: true, enumerable: false });
+    if (typeof method === "function") install(key, { value: method.bind(window), writable: true, enumerable: false });
   }
 
   return function uninstallTestEnvironment() {

@@ -27,9 +27,7 @@ function endpointURL(endpoint: string): string {
     url.password ||
     url.hash
   )
-    throw new TypeError(
-      "CDP endpoint must be a loopback WebSocket URL without credentials or fragment",
-    );
+    throw new TypeError("CDP endpoint must be a loopback WebSocket URL without credentials or fragment");
   return url.href;
 }
 
@@ -53,7 +51,7 @@ class ChromiumConnection {
   constructor(socket: WebSocket, timeout: number, signal?: AbortSignal) {
     this.#socket = socket;
     this.#timeout = timeout;
-    socket.addEventListener("message", (event) => this.#message(event));
+    socket.addEventListener("message", event => this.#message(event));
     socket.addEventListener("close", () => this.close());
     socket.addEventListener("error", () => this.close());
     if (signal) {
@@ -69,8 +67,7 @@ class ChromiumConnection {
   }
 
   async gpu(sessionId: string) {
-    if (typeof sessionId !== "string" || !sessionId)
-      throw new TypeError("gpu requires an attached target sessionId");
+    if (typeof sessionId !== "string" || !sessionId) throw new TypeError("gpu requires an attached target sessionId");
     const response = await this.send<any>(
       "Runtime.evaluate",
       {
@@ -93,16 +90,11 @@ class ChromiumConnection {
     return response.result.value;
   }
 
-  async send<T = unknown>(
-    method: string,
-    params: Record<string, unknown> = {},
-    sessionId?: string,
-  ): Promise<T> {
+  async send<T = unknown>(method: string, params: Record<string, unknown> = {}, sessionId?: string): Promise<T> {
     if (this.#closed) throw new Error("Chrome connection closed");
     if (typeof method !== "string" || !/^[A-Za-z][A-Za-z0-9]*\.[A-Za-z][A-Za-z0-9]*$/.test(method))
       throw new TypeError("CDP method must have Domain.command syntax");
-    if (!params || typeof params !== "object" || Array.isArray(params))
-      throw new TypeError("params must be an object");
+    if (!params || typeof params !== "object" || Array.isArray(params)) throw new TypeError("params must be an object");
     if (sessionId !== undefined && (typeof sessionId !== "string" || !sessionId))
       throw new TypeError("sessionId must be a nonempty string");
     const id = ++this.#nextId;
@@ -131,16 +123,14 @@ class ChromiumConnection {
 
   on(method: string, callback: Listener): () => void {
     if (this.#closed) throw new Error("Chrome connection closed");
-    if (typeof method !== "string" || !method.includes("."))
-      throw new TypeError("event must have Domain.event syntax");
+    if (typeof method !== "string" || !method.includes(".")) throw new TypeError("event must have Domain.event syntax");
     if (typeof callback !== "function") throw new TypeError("callback must be a function");
     let listeners = this.#listeners.get(method);
     if (!listeners) this.#listeners.set(method, (listeners = new Set()));
     listeners.add(callback);
     return () => {
       listeners.delete(callback);
-      if (!listeners.size && this.#listeners.get(method) === listeners)
-        this.#listeners.delete(method);
+      if (!listeners.size && this.#listeners.get(method) === listeners) this.#listeners.delete(method);
     };
   }
 
@@ -149,8 +139,7 @@ class ChromiumConnection {
     try {
       if (typeof event.data !== "string") throw new TypeError("CDP messages must be text");
       message = JSON.parse(event.data);
-      if (!message || typeof message !== "object" || Array.isArray(message))
-        throw new TypeError("invalid CDP message");
+      if (!message || typeof message !== "object" || Array.isArray(message)) throw new TypeError("invalid CDP message");
     } catch {
       this.close();
       return;
@@ -241,12 +230,12 @@ function findExecutable(): string | null {
     process.platform === "win32"
       ? [process.env.ProgramFiles, process.env["ProgramFiles(x86)"], process.env.LOCALAPPDATA]
           .filter((root): root is string => typeof root === "string")
-          .flatMap((root) =>
+          .flatMap(root =>
             [
               "Chromium/Application/chrome.exe",
               "Google/Chrome/Application/chrome.exe",
               "Microsoft/Edge/Application/msedge.exe",
-            ].map((name) => path.join(root, name)),
+            ].map(name => path.join(root, name)),
           )
       : process.platform === "darwin"
         ? [
@@ -277,10 +266,7 @@ async function launch(
   const extensions = options.extensions ?? [];
   if (
     !Array.isArray(extensions) ||
-    extensions.some(
-      (dir) =>
-        typeof dir !== "string" || !path.isAbsolute(dir) || dir.includes(",") || dir.includes("\0"),
-    )
+    extensions.some(dir => typeof dir !== "string" || !path.isAbsolute(dir) || dir.includes(",") || dir.includes("\0"))
   )
     throw new TypeError("extensions must be absolute directory paths without commas or NUL");
   for (const dir of extensions) {
@@ -290,10 +276,7 @@ async function launch(
   if (options.webgpu !== undefined && typeof options.webgpu !== "boolean")
     throw new TypeError("webgpu must be a boolean");
   const ownedProfile = options.userDataDir === undefined;
-  if (
-    !ownedProfile &&
-    (typeof options.userDataDir !== "string" || !path.isAbsolute(options.userDataDir))
-  )
+  if (!ownedProfile && (typeof options.userDataDir !== "string" || !path.isAbsolute(options.userDataDir)))
     throw new TypeError("userDataDir must be an absolute dedicated directory path");
   const userDataDir: string = ownedProfile
     ? fs.mkdtempSync(path.join(os.tmpdir(), "bun-chromium-"))
@@ -308,11 +291,7 @@ async function launch(
     "--no-default-browser-check",
   ];
   if (options.headless === true) args.push("--headless=new");
-  args.push(
-    options.webgpu === false
-      ? "--disable-features=WebGPUService"
-      : "--enable-features=WebGPUService",
-  );
+  args.push(options.webgpu === false ? "--disable-features=WebGPUService" : "--enable-features=WebGPUService");
   if (extensions.length) args.push(`--load-extension=${extensions.join(",")}`);
   args.push(url);
   let proc: Bun.Subprocess<"ignore", "ignore", "pipe"> | undefined;
@@ -342,10 +321,7 @@ async function launch(
         if (error !== undefined) reject(error);
         else resolve(value!);
       };
-      const timer = setTimeout(
-        () => finish(new Error("Chromium debugging endpoint timed out")),
-        timeout,
-      );
+      const timer = setTimeout(() => finish(new Error("Chromium debugging endpoint timed out")), timeout);
       const cancelled = () => finish(options.signal?.reason);
       options.signal?.addEventListener("abort", cancelled, { once: true });
       const drain = async () => {
@@ -404,15 +380,10 @@ async function readBookmarks(file: string) {
   if (typeof file !== "string" || !path.isAbsolute(file))
     throw new TypeError("Bookmarks file must be an absolute path");
   const document = await Bun.file(file).json();
-  if (
-    !document ||
-    typeof document.roots !== "object" ||
-    !document.roots ||
-    Array.isArray(document.roots)
-  )
+  if (!document || typeof document.roots !== "object" || !document.roots || Array.isArray(document.roots))
     throw new TypeError("invalid Chrome Bookmarks roots");
   const result: { id: string; name: string; url: string; folder: string[] }[] = [];
-  const stack = Object.values(document.roots).map((node) => ({
+  const stack = Object.values(document.roots).map(node => ({
     node: node as any,
     folder: [] as string[],
   }));
@@ -420,15 +391,13 @@ async function readBookmarks(file: string) {
     const { node, folder } = stack.pop()!;
     if (!node || typeof node.name !== "string") throw new TypeError("invalid bookmark node");
     if (node.type === "url") {
-      if (typeof node.url !== "string" || typeof node.id !== "string")
-        throw new TypeError("invalid bookmark URL node");
+      if (typeof node.url !== "string" || typeof node.id !== "string") throw new TypeError("invalid bookmark URL node");
       result.push({ id: node.id, name: node.name, url: node.url, folder });
     } else if (node.type === "folder") {
       const { children } = node;
       if (!Array.isArray(children)) throw new TypeError("invalid bookmark folder children");
       const parent = [...folder, node.name];
-      for (let i = children.length - 1; i >= 0; i--)
-        stack.push({ node: children[i], folder: parent });
+      for (let i = children.length - 1; i >= 0; i--) stack.push({ node: children[i], folder: parent });
     } else throw new TypeError("invalid bookmark folder node");
   }
   return result;

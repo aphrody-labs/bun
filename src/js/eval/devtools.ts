@@ -44,7 +44,7 @@ function parseFlags(args: string[], spec: FlagSpec) {
       name = eq === -1 ? arg.slice(2) : arg.slice(2, eq);
       value = eq === -1 ? undefined : arg.slice(eq + 1);
     } else {
-      name = Object.keys(spec).find((key) => spec[key].short === arg.slice(1));
+      name = Object.keys(spec).find(key => spec[key].short === arg.slice(1));
     }
     const kind = name !== undefined ? spec[name] : undefined;
     if (!kind) throw new UsageError(`Unknown option ${arg}`);
@@ -94,30 +94,24 @@ function escapeRegExp(text: string): string {
 
 /** A match is skipped when an identifier character touches it on the left, or on the right when the
  * pattern itself ends with one (so `@scope/` also renames `@scope/pkg`). */
-function applyRules(
-  input: string,
-  rules: readonly RenameRule[],
-): { output: string; count: number } {
+function applyRules(input: string, rules: readonly RenameRule[]): { output: string; count: number } {
   let output = input;
   let count = 0;
   for (const rule of rules) {
     if (!rule.from) throw new UsageError("--from must not be empty");
     if (!output.includes(rule.from)) continue;
     const endsWithIdent = IDENT.test([...rule.from].at(-1)!);
-    output = output.replace(
-      new RegExp(escapeRegExp(rule.from), "g"),
-      (match, offset: number, whole: string) => {
-        const prev = whole.slice(Math.max(0, offset - 2), offset).match(/.$/u)?.[0];
-        if (prev !== undefined && IDENT.test(prev)) return match;
-        const next = whole
-          .slice(offset + match.length)
-          [Symbol.iterator]()
-          .next().value;
-        if (endsWithIdent && next !== undefined && IDENT.test(next)) return match;
-        count++;
-        return rule.to;
-      },
-    );
+    output = output.replace(new RegExp(escapeRegExp(rule.from), "g"), (match, offset: number, whole: string) => {
+      const prev = whole.slice(Math.max(0, offset - 2), offset).match(/.$/u)?.[0];
+      if (prev !== undefined && IDENT.test(prev)) return match;
+      const next = whole
+        .slice(offset + match.length)
+        [Symbol.iterator]()
+        .next().value;
+      if (endsWithIdent && next !== undefined && IDENT.test(next)) return match;
+      count++;
+      return rule.to;
+    });
   }
   return { output, count };
 }
@@ -153,13 +147,7 @@ async function pool<T>(items: readonly T[], limit: number, fn: (item: T) => Prom
 function safePath(root: string, path: string, missing = false): string {
   const abs = resolve(root, path);
   const rel = relative(root, abs);
-  if (
-    !rel ||
-    rel === ".." ||
-    rel.startsWith(`..${sep}`) ||
-    isAbsolute(rel) ||
-    rel.split(sep).includes(".git")
-  )
+  if (!rel || rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel) || rel.split(sep).includes(".git"))
     throw new Error(`Unsafe path: ${path}`);
   let current = root;
   const parts = rel.split(sep);
@@ -173,8 +161,7 @@ function safePath(root: string, path: string, missing = false): string {
       throw error;
     }
     if (stat.isSymbolicLink()) throw new Error(`Symlink rejected: ${path}`);
-    if (i < parts.length - 1 && !stat.isDirectory())
-      throw new Error(`Non-directory ancestor: ${path}`);
+    if (i < parts.length - 1 && !stat.isDirectory()) throw new Error(`Non-directory ancestor: ${path}`);
     if (i === parts.length - 1 && !stat.isFile()) throw new Error(`Not a regular file: ${path}`);
   }
   return abs;
@@ -194,23 +181,21 @@ function atomicWrite(path: string, bytes: Uint8Array, mode: number) {
 async function checkPlan(root: string, entries: readonly JournalEntry[], restore = false) {
   const destinations = new Set<string>();
   const sources = new Set<string>();
-  await pool(entries, 16, async (entry) => {
+  await pool(entries, 16, async entry => {
     const source = safePath(root, restore ? entry.destination : entry.path);
     if (sources.has(source)) throw new Error(`Duplicate source: ${source}`);
     sources.add(source);
     const destination = safePath(root, restore ? entry.path : entry.destination, true);
     if (destinations.has(destination)) throw new Error(`Path collision: ${destination}`);
     destinations.add(destination);
-    if (source !== destination && existsSync(destination))
-      throw new Error(`Destination exists: ${destination}`);
+    if (source !== destination && existsSync(destination)) throw new Error(`Destination exists: ${destination}`);
     if (sha256(await readBytes(source)) !== (restore ? entry.after : entry.before))
       throw new Error(`File changed since ${restore ? "rename" : "planning"}: ${source}`);
   });
   for (const destination of destinations) {
     let ancestor = dirname(destination);
     while (ancestor !== root) {
-      if (destinations.has(ancestor))
-        throw new Error(`Destination ancestor collision: ${ancestor}`);
+      if (destinations.has(ancestor)) throw new Error(`Destination ancestor collision: ${ancestor}`);
       const parent = dirname(ancestor);
       if (parent === ancestor) break;
       ancestor = parent;
@@ -232,20 +217,20 @@ async function renameTree(options: RenameOptions) {
   const started = Bun.nanoseconds();
   const cwd = realpathSync(options.cwd);
   const journalRelative = relative(cwd, options.journalDir).split(sep).join("/");
-  const excludes = options.exclude.map((pattern) => new Bun.Glob(pattern));
-  const includes = options.include.map((pattern) => new Bun.Glob(pattern));
+  const excludes = options.exclude.map(pattern => new Bun.Glob(pattern));
+  const includes = options.include.map(pattern => new Bun.Glob(pattern));
   const files = [...new Set(await gitFiles(cwd))].filter(
-    (file) =>
+    file =>
       file !== journalRelative &&
       !file.startsWith(journalRelative + "/") &&
-      !excludes.some((glob) => glob.match(file)) &&
-      (includes.length === 0 || includes.some((glob) => glob.match(file))),
+      !excludes.some(glob => glob.match(file)) &&
+      (includes.length === 0 || includes.some(glob => glob.match(file))),
   );
   const entries: JournalEntry[] = [];
   const outputs = new Map<string, Uint8Array>();
   let skippedBinary = 0;
   const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
-  await pool(files, Math.max(16, navigator.hardwareConcurrency * 8), async (rel) => {
+  await pool(files, Math.max(16, navigator.hardwareConcurrency * 8), async rel => {
     const abs = safePath(cwd, rel);
     const bytes = await readBytes(abs);
     let output = bytes;
@@ -285,19 +270,14 @@ async function renameTree(options: RenameOptions) {
     if (realpathSync(options.journalDir) !== resolve(options.journalDir))
       throw new Error("Symlinked journal directory rejected");
     journal = resolve(options.journalDir, `rename-${randomUUID()}.jsonl`);
-    writeFileSync(
-      journal,
-      [{ version: 2, cwd }, ...entries].map((e) => JSON.stringify(e)).join("\n") + "\n",
-      {
-        flag: "wx",
-        mode: 0o600,
-      },
-    );
+    writeFileSync(journal, [{ version: 2, cwd }, ...entries].map(e => JSON.stringify(e)).join("\n") + "\n", {
+      flag: "wx",
+      mode: 0o600,
+    });
     for (const entry of entries) {
       const { path, destination: destinationPath } = entry;
       const source = safePath(cwd, path);
-      if (sha256(await readBytes(source)) !== entry.before)
-        throw new Error(`Concurrent edit: ${path}`);
+      if (sha256(await readBytes(source)) !== entry.before) throw new Error(`Concurrent edit: ${path}`);
       if (entry.replacements) atomicWrite(source, outputs.get(path)!, entry.mode);
       if (destinationPath !== path) {
         const destination = safePath(cwd, destinationPath, true);
@@ -311,10 +291,10 @@ async function renameTree(options: RenameOptions) {
     cwd,
     scanned: files.length,
     skippedBinary,
-    changedFiles: entries.filter((e) => e.replacements > 0).length,
+    changedFiles: entries.filter(e => e.replacements > 0).length,
     replacements: entries.reduce((n, e) => n + e.replacements, 0),
-    renamedPaths: entries.filter((e) => e.path !== e.destination).length,
-    files: entries.map((e) => ({
+    renamedPaths: entries.filter(e => e.path !== e.destination).length,
+    files: entries.map(e => ({
       path: e.path,
       destination: e.destination,
       replacements: e.replacements,
@@ -329,10 +309,9 @@ async function restoreJournal(journalPath: string, apply: boolean) {
   const records = (await Bun.file(journalPath).text())
     .trim()
     .split("\n")
-    .map((line) => JSON.parse(line));
+    .map(line => JSON.parse(line));
   const header = records.shift();
-  if (header?.version !== 2 || typeof header.cwd !== "string")
-    throw new Error("Unsupported rename journal");
+  if (header?.version !== 2 || typeof header.cwd !== "string") throw new Error("Unsupported rename journal");
   const cwd = realpathSync(header.cwd);
   const entries = records as JournalEntry[];
   for (const entry of entries) {
@@ -357,8 +336,7 @@ async function restoreJournal(journalPath: string, apply: boolean) {
     const renamed = safePath(cwd, destination, true);
     if (existsSync(original)) {
       const current = sha256(await readBytes(original));
-      if (path !== destination && existsSync(renamed))
-        throw new Error(`Restore collision: ${path}`);
+      if (path !== destination && existsSync(renamed)) throw new Error(`Restore collision: ${path}`);
       if (current === entry.before) continue;
       if (current === entry.after) {
         pending.push({ ...entry, destination: path });
@@ -372,8 +350,7 @@ async function restoreJournal(journalPath: string, apply: boolean) {
   if (apply)
     for (const entry of pending) {
       const source = safePath(cwd, entry.destination);
-      if (sha256(await readBytes(source)) !== entry.after)
-        throw new Error(`Concurrent edit: ${entry.destination}`);
+      if (sha256(await readBytes(source)) !== entry.after) throw new Error(`Concurrent edit: ${entry.destination}`);
       const destination = safePath(cwd, entry.path, true);
       if (source !== destination) {
         if (existsSync(destination)) throw new Error(`Destination exists: ${entry.path}`);
@@ -424,8 +401,7 @@ async function rename(args: string[], cwd: string): Promise<number> {
   if (restore) {
     const report = await restoreJournal(resolve(cwd, restore), !!flags.apply);
     if (flags.json) console.log(JSON.stringify(report, null, 2));
-    else
-      console.log(`restore: ${report.files} file(s) (${report.applied ? "applied" : "dry-run"})`);
+    else console.log(`restore: ${report.files} file(s) (${report.applied ? "applied" : "dry-run"})`);
     return 0;
   }
   const from: string[] = flags.from ?? [];
@@ -435,16 +411,12 @@ async function rename(args: string[], cwd: string): Promise<number> {
   const rulesFile = flags.rules;
   if (rulesFile) {
     const extra = JSON.parse(readFileSync(resolve(cwd, rulesFile), "utf8"));
-    if (
-      !Array.isArray(extra) ||
-      extra.some((r) => typeof r?.from !== "string" || typeof r?.to !== "string")
-    )
+    if (!Array.isArray(extra) || extra.some(r => typeof r?.from !== "string" || typeof r?.to !== "string"))
       throw new UsageError(`${rulesFile}: expected [{ "from": "...", "to": "..." }]`);
     rules.push(...extra);
   }
-  if (rules.length === 0)
-    throw new UsageError(`No rules: pass --from and --to, or --rules\n\n${RENAME_HELP}`);
-  if (rules.some((rule) => !rule.from)) throw new UsageError("--from must not be empty");
+  if (rules.length === 0) throw new UsageError(`No rules: pass --from and --to, or --rules\n\n${RENAME_HELP}`);
+  if (rules.some(rule => !rule.from)) throw new UsageError("--from must not be empty");
 
   const targets = positionals.length ? positionals : ["."];
   const base = {
@@ -455,9 +427,7 @@ async function rename(args: string[], cwd: string): Promise<number> {
     journalDir: resolve(cwd, flags["journal-dir"] ?? ".cache/bun-rename"),
   };
   // Preflight every target before the first write.
-  if (flags.apply)
-    for (const target of targets)
-      await renameTree({ ...base, cwd: resolve(cwd, target), apply: false });
+  if (flags.apply) for (const target of targets) await renameTree({ ...base, cwd: resolve(cwd, target), apply: false });
   const reports: Awaited<ReturnType<typeof renameTree>>[] = [];
   for (const target of targets)
     reports.push(await renameTree({ ...base, cwd: resolve(cwd, target), apply: !!flags.apply }));
@@ -467,7 +437,7 @@ async function rename(args: string[], cwd: string): Promise<number> {
     return 0;
   }
   console.log(
-    `${paint("1", "rename")} ${flags.apply ? "apply" : "dry-run"}: ${rules.map((r) => `${r.from} -> ${r.to}`).join(", ")}`,
+    `${paint("1", "rename")} ${flags.apply ? "apply" : "dry-run"}: ${rules.map(r => `${r.from} -> ${r.to}`).join(", ")}`,
   );
   for (const [i, report] of reports.entries()) {
     console.log(
@@ -525,9 +495,8 @@ function localDocs(dir: string, terms: string[], content: boolean): DocMatch[] {
     if (path.startsWith("node_modules/")) continue;
     const text = readFileSync(join(dir, file), "utf8");
     const meta = frontmatter(text);
-    const haystack =
-      `${path} ${meta.title ?? ""} ${meta.description ?? ""}${content ? ` ${text}` : ""}`.toLowerCase();
-    if (terms.every((term) => haystack.includes(term)))
+    const haystack = `${path} ${meta.title ?? ""} ${meta.description ?? ""}${content ? ` ${text}` : ""}`.toLowerCase();
+    if (terms.every(term => haystack.includes(term)))
       matches.push({ path, title: meta.title ?? "", description: meta.description ?? "" });
   }
   return matches.sort((a, b) => a.path.localeCompare(b.path));
@@ -541,7 +510,7 @@ async function remoteDocs(terms: string[]): Promise<DocMatch[]> {
     const entry = /^\s*-\s*\[([^\]]+)\]\(([^)]+)\)(?::\s*(.*))?$/.exec(line);
     if (!entry) continue;
     const [, title, path, description = ""] = entry;
-    if (terms.every((term) => `${path} ${title} ${description}`.toLowerCase().includes(term)))
+    if (terms.every(term => `${path} ${title} ${description}`.toLowerCase().includes(term)))
       matches.push({ path, title, description });
   }
   return matches;
@@ -572,7 +541,7 @@ async function docs(args: string[], cwd: string): Promise<number> {
     console.log(DOCS_HELP);
     return 0;
   }
-  const terms = positionals.map((term) => term.toLowerCase());
+  const terms = positionals.map(term => term.toLowerCase());
   const dir = findDocsDir(cwd, flags.dir);
   if (flags.dir && !existsSync(dir!)) throw new UsageError(`No documentation at ${dir}`);
   const local = dir !== undefined && existsSync(dir);
@@ -610,7 +579,7 @@ async function docs(args: string[], cwd: string): Promise<number> {
         `- Matches: ${matches.length}`,
         "",
       ]
-        .concat(matches.map((m) => `- \`${m.path}\`${m.title ? `: ${m.title}` : ""}`))
+        .concat(matches.map(m => `- \`${m.path}\`${m.title ? `: ${m.title}` : ""}`))
         .join("\n"),
     );
     return matches.length ? 0 : 1;
@@ -649,7 +618,7 @@ async function parseFile(path: string) {
     bytes: bytes.byteLength,
     checksum: Bun.hash.wyhash(bytes).toString(16),
     exports: scanned.exports,
-    imports: scanned.imports.map((entry) => ({ path: entry.path, kind: entry.kind })),
+    imports: scanned.imports.map(entry => ({ path: entry.path, kind: entry.kind })),
     parseTimeMs: Number(((Bun.nanoseconds() - started) / 1e6).toFixed(3)),
   };
 }
@@ -672,16 +641,13 @@ async function parse(args: string[], cwd: string): Promise<number> {
   const results: Awaited<ReturnType<typeof parseFile>>[] = [];
   for (const file of positionals) {
     const abs = resolve(cwd, file);
-    if (!existsSync(abs) || !statSync(abs).isFile())
-      throw new UsageError(`File not found: ${file}`);
+    if (!existsSync(abs) || !statSync(abs).isFile()) throw new UsageError(`File not found: ${file}`);
     results.push({ ...(await parseFile(abs)), path: relative(cwd, abs).split("\\").join("/") });
   }
   if (flags.json) {
     console.log(
       JSON.stringify(
-        results.length === 1
-          ? { schema: "bun.parse/1", ...results[0] }
-          : { schema: "bun.parse/1", files: results },
+        results.length === 1 ? { schema: "bun.parse/1", ...results[0] } : { schema: "bun.parse/1", files: results },
         null,
         2,
       ),
@@ -701,24 +667,20 @@ async function parse(args: string[], cwd: string): Promise<number> {
           "",
           `## Exports (${r.exports.length})`,
           "",
-          ...r.exports.map((name) => `- \`${name}\``),
+          ...r.exports.map(name => `- \`${name}\``),
           "",
           `## Imports (${r.imports.length})`,
           "",
-          ...r.imports.map((entry) => `- \`${entry.path}\` (${entry.kind})`),
+          ...r.imports.map(entry => `- \`${entry.path}\` (${entry.kind})`),
           "",
         ].join("\n"),
       );
       continue;
     }
     console.log(paint("1", r.path));
-    console.log(
-      `  lines ${r.lines}, ${r.bytes} bytes, wyhash 0x${r.checksum}, ${r.parseTimeMs} ms`,
-    );
+    console.log(`  lines ${r.lines}, ${r.bytes} bytes, wyhash 0x${r.checksum}, ${r.parseTimeMs} ms`);
     console.log(`  exports (${r.exports.length}): ${r.exports.join(", ")}`);
-    console.log(
-      `  imports (${r.imports.length}): ${r.imports.map((entry) => entry.path).join(", ")}`,
-    );
+    console.log(`  imports (${r.imports.length}): ${r.imports.map(entry => entry.path).join(", ")}`);
   }
   return 0;
 }
@@ -762,14 +724,12 @@ async function bench(args: string[]): Promise<number> {
   const code = "export const add = (a: number, b: number): number => a + b;";
   const transpileIterations = Math.max(1, Math.floor(iterations / 1000));
   const results = {
-    "Bun.hash.wyhash": timeLoop(iterations, (i) => Bun.hash.wyhash(data, BigInt(i))),
-    "Bun.hash.crc32": timeLoop(iterations, (i) => Bun.hash.crc32(data, i)),
-    "Bun.hash.rapidhash": timeLoop(iterations, (i) => Bun.hash.rapidhash(data, BigInt(i))),
+    "Bun.hash.wyhash": timeLoop(iterations, i => Bun.hash.wyhash(data, BigInt(i))),
+    "Bun.hash.crc32": timeLoop(iterations, i => Bun.hash.crc32(data, i)),
+    "Bun.hash.rapidhash": timeLoop(iterations, i => Bun.hash.rapidhash(data, BigInt(i))),
     "Bun.stringWidth": timeLoop(iterations, () => Bun.stringWidth(ansi)),
     "Bun.stripANSI": timeLoop(iterations, () => Bun.stripANSI(ansi)),
-    "Bun.Transpiler.transformSync": timeLoop(transpileIterations, () =>
-      transpiler.transformSync(code),
-    ),
+    "Bun.Transpiler.transformSync": timeLoop(transpileIterations, () => transpiler.transformSync(code)),
   };
   const rows = Object.entries(results).map(([name, r]) => ({
     name,
@@ -796,10 +756,7 @@ async function bench(args: string[]): Promise<number> {
         "",
         "| Benchmark | Iterations | Elapsed | ops/s |",
         "| :--- | ---: | ---: | ---: |",
-        ...rows.map(
-          (r) =>
-            `| ${r.name} | ${r.iterations} | ${r.elapsedMs} ms | ${r.opsPerSec.toLocaleString()} |`,
-        ),
+        ...rows.map(r => `| ${r.name} | ${r.iterations} | ${r.elapsedMs} ms | ${r.opsPerSec.toLocaleString()} |`),
       ].join("\n"),
     );
     return 0;
@@ -815,7 +772,7 @@ async function bench(args: string[]): Promise<number> {
 
 async function main(): Promise<number> {
   const argv = process.argv.slice(1);
-  const at = argv.findIndex((a) => COMMANDS.includes(a));
+  const at = argv.findIndex(a => COMMANDS.includes(a));
   if (at === -1) throw new UsageError(`Expected one of ${COMMANDS.join(", ")}`);
   const args = argv.slice(at + 1);
   const cwd = process.cwd();
@@ -833,8 +790,8 @@ async function main(): Promise<number> {
 }
 
 main().then(
-  (code) => process.exit(code),
-  (error) => {
+  code => process.exit(code),
+  error => {
     process.stderr.write(`${paint("31", "error")}: ${error?.message ?? error}\n`);
     process.exit(1);
   },

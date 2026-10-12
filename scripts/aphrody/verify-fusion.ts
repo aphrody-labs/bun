@@ -1,15 +1,6 @@
 #!/usr/bin/env bun
 import { createHash } from "node:crypto";
-import {
-  closeSync,
-  existsSync,
-  mkdirSync,
-  openSync,
-  readSync,
-  realpathSync,
-  statfsSync,
-  writeSync,
-} from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readSync, realpathSync, statfsSync, writeSync } from "node:fs";
 import { hostname } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
@@ -86,10 +77,7 @@ export type GateResourceObservation = {
   availableMemoryMiB: number;
 };
 export function resourceBlockReason(observation: GateResourceObservation): string | undefined {
-  if (
-    observation.filesystemType <= 0n ||
-    [0x01021994n, 0x858458f6n].includes(observation.filesystemType)
-  )
+  if (observation.filesystemType <= 0n || [0x01021994n, 0x858458f6n].includes(observation.filesystemType))
     return "Cargo cache filesystem is not qualified as persistent (tmpfs/ramfs/unknown)";
   if (!Number.isFinite(observation.availableDiskMiB) || observation.availableDiskMiB < 8192)
     return `Cargo cache has ${observation.availableDiskMiB} MiB available; at least 8192 MiB is required`;
@@ -99,8 +87,7 @@ export function resourceBlockReason(observation: GateResourceObservation): strin
 }
 function observeGateResources(): GateResourceObservation {
   const cache = realpathSync(CARGO_FACTORY_TARGET);
-  if (cache !== CARGO_FACTORY_TARGET)
-    throw new Error("Cargo cache must resolve to its declared dedicated allocation");
+  if (cache !== CARGO_FACTORY_TARGET) throw new Error("Cargo cache must resolve to its declared dedicated allocation");
   const filesystem = statfsSync(cache, { bigint: true });
   const descriptor = openSync("/proc/meminfo", "r");
   const buffer = Buffer.alloc(16 * 1024);
@@ -110,8 +97,7 @@ function observeGateResources(): GateResourceObservation {
   } finally {
     closeSync(descriptor);
   }
-  if (length === buffer.length)
-    throw new Error("/proc/meminfo exceeds its bounded observation buffer");
+  if (length === buffer.length) throw new Error("/proc/meminfo exceeds its bounded observation buffer");
   const available = /^MemAvailable:\s+(\d+)\s+kB$/m.exec(buffer.toString("utf8", 0, length));
   if (!available) throw new Error("Cannot inspect VPS MemAvailable from /proc/meminfo");
   return {
@@ -122,21 +108,23 @@ function observeGateResources(): GateResourceObservation {
 }
 function git(root: string, args: string[]): string {
   const child = Bun.spawnSync(["git", ...args], { cwd: root, stdout: "pipe", stderr: "pipe" });
-  if (child.exitCode !== 0)
-    throw new Error(`git ${args[0]} failed: ${child.stderr.toString().trim()}`);
+  if (child.exitCode !== 0) throw new Error(`git ${args[0]} failed: ${child.stderr.toString().trim()}`);
   return child.stdout.toString();
 }
 export function gateFlags(step: FusionStep): Record<string, string> {
   const flags = step.env ?? {};
   for (const [name, value] of Object.entries(flags)) {
-    if (!["BUN_LIVE_WEBSITE_TEST", "BUN_SYSTEM_DEB_TEST_ROOT", "BUN_JSC_validateExceptionChecks"].includes(name) || !["0", "1"].includes(value))
+    if (
+      !["BUN_LIVE_WEBSITE_TEST", "BUN_SYSTEM_DEB_TEST_ROOT", "BUN_JSC_validateExceptionChecks"].includes(name) ||
+      !["0", "1"].includes(value)
+    )
       throw new Error(`Unsupported qualification flag ${name}`);
   }
   return flags;
 }
 export function orderSteps(steps: FusionStep[]): FusionStep[] {
   for (const step of steps) gateFlags(step);
-  const byId = new Map(steps.map((step) => [step.id, step]));
+  const byId = new Map(steps.map(step => [step.id, step]));
   if (byId.size !== steps.length) throw new Error("Duplicate step identity");
   const active = new Set<string>();
   const visited = new Set<string>();
@@ -165,11 +153,8 @@ export function selectSteps(steps: FusionStep[], mode: "all" | "changed", change
   if (mode === "all") return ordered;
   const selected = new Set(
     ordered
-      .filter(
-        (step) =>
-          !step.allOnly && changed.some((path) => step.scope.some((scope) => matches(path, scope))),
-      )
-      .map((step) => step.id),
+      .filter(step => !step.allOnly && changed.some(path => step.scope.some(scope => matches(path, scope))))
+      .map(step => step.id),
   );
   // Add every prerequisite and every affected non-full-suite dependent until
   // the DAG reaches a fixed point. This is a finite graph, not a retry loop.
@@ -184,13 +169,13 @@ export function selectSteps(steps: FusionStep[], mode: "all" | "changed", change
             grew = true;
           }
         }
-      } else if (!step.allOnly && step.requires.some((id) => selected.has(id))) {
+      } else if (!step.allOnly && step.requires.some(id => selected.has(id))) {
         selected.add(step.id);
         grew = true;
       }
     }
   }
-  return ordered.filter((step) => selected.has(step.id));
+  return ordered.filter(step => selected.has(step.id));
 }
 export function mayRetry(previous: StepReceipt | undefined, inputHash: string) {
   return previous === undefined || previous.inputHash !== inputHash;
@@ -202,7 +187,7 @@ export function diagnosticPaths(output: string): string[] {
         ...output.matchAll(
           /(?:^|\s|-->\s)((?:src|scripts|test|packages|docs)\/[\w./-]+\.(?:rs|ts|tsx|js|cpp|h|mdx?))(?::\d+)?/gm,
         ),
-      ].map((match) => match[1]!),
+      ].map(match => match[1]!),
     ),
   ].sort();
 }
@@ -229,14 +214,9 @@ export function assertVps(
   if (!Number.isFinite(age) || age < -60_000 || age > 300_000)
     throw new Error("Factory profile requires a live observation within five minutes");
   const scoped = relative(realpathSync(profile.factoryRoot), realpathSync(root));
-  if (
-    isAbsolute(scoped) ||
-    scoped === ".." ||
-    scoped.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`)
-  )
+  if (isAbsolute(scoped) || scoped === ".." || scoped.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`))
     throw new Error("Checkout must reside inside the declared factory root");
-  if (!profile.heavySlots || profile.target !== "linux-x64")
-    throw new Error("VPS native slot unavailable");
+  if (!profile.heavySlots || profile.target !== "linux-x64") throw new Error("VPS native slot unavailable");
   if (
     config.execution &&
     (!Number.isSafeInteger(config.execution.maxCpu) ||
@@ -244,12 +224,9 @@ export function assertVps(
       config.execution.maxCpu > MAX_FACTORY_CPU ||
       config.execution.cargoTargetDir !== CARGO_FACTORY_TARGET)
   )
-    throw new Error(
-      "Fusion execution requires at most six CPUs and the declared root-filesystem Cargo cache",
-    );
+    throw new Error("Fusion execution requires at most six CPUs and the declared root-filesystem Cargo cache");
   for (const path of Object.values(config.factory)) {
-    if (!isAbsolute(path) || !existsSync(path))
-      throw new Error(`Missing declared factory owner: ${path}`);
+    if (!isAbsolute(path) || !existsSync(path)) throw new Error(`Missing declared factory owner: ${path}`);
   }
 }
 async function scopeHash(root: string, scope: string[]) {
@@ -292,10 +269,7 @@ export function factoryCommand(config: FusionConfig, step: FusionStep): string[]
     ...(program === "bun" ? [process.execPath, ...args] : step.command),
   ];
 }
-export async function research(
-  urls: string[],
-  fetcher: typeof fetch = fetch,
-): Promise<ResearchReceipt[]> {
+export async function research(urls: string[], fetcher: typeof fetch = fetch): Promise<ResearchReceipt[]> {
   const receipts: ResearchReceipt[] = [];
   for (const url of urls) {
     const parsed = new URL(url);
@@ -313,9 +287,7 @@ export async function research(
         fetchedAt,
         status: response.status,
         sha256: response.ok ? sha256(bytes) : null,
-        ...(response.ok
-          ? { summary: await summarizeOfficialHtml(url, new TextDecoder().decode(bytes)) }
-          : {}),
+        ...(response.ok ? { summary: await summarizeOfficialHtml(url, new TextDecoder().decode(bytes)) } : {}),
       });
     } catch (error) {
       receipts.push({ url, fetchedAt, status: 0, sha256: null, error: String(error) });
@@ -338,17 +310,9 @@ export async function fileHash(path: string) {
   return hash.digest("hex");
 }
 async function docsContent(root: string) {
-  const paths = git(root, [
-    "ls-files",
-    "--cached",
-    "--others",
-    "--exclude-standard",
-    "-z",
-    "--",
-    "docs",
-  ])
+  const paths = git(root, ["ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", "docs"])
     .split("\0")
-    .filter((path) => /\.(md|mdx)$/.test(path));
+    .filter(path => /\.(md|mdx)$/.test(path));
   const failures: string[] = [];
   for (const path of new Set(paths)) {
     const text = await Bun.file(join(root, path)).text();
@@ -360,13 +324,7 @@ async function docsContent(root: string) {
     for (const match of text.matchAll(/\]\((\.{1,2}\/[^\s)#]+)(?:#[^)]*)?\)/g)) {
       const target = resolve(root, dirname(path), decodeURIComponent(match[1]!));
       if (
-        ![
-          target,
-          `${target}.mdx`,
-          `${target}.md`,
-          join(target, "index.mdx"),
-          join(target, "index.md"),
-        ].some(existsSync)
+        ![target, `${target}.mdx`, `${target}.md`, join(target, "index.mdx"), join(target, "index.md")].some(existsSync)
       )
         failures.push(`${path}: missing relative reference ${match[1]}`);
     }
@@ -399,12 +357,9 @@ export async function main(argv = process.argv.slice(2)) {
       "docs-only": { type: "boolean", default: false },
     },
   });
-  if (values.mode !== "all" && values.mode !== "changed")
-    throw new Error("mode must be all or changed");
+  if (values.mode !== "all" && values.mode !== "changed") throw new Error("mode must be all or changed");
   const root = resolve(values.root ?? join(import.meta.dir, "../.."));
-  const configText = await Bun.file(
-    resolve(values.config ?? join(import.meta.dir, "fusion-verification.json")),
-  ).text();
+  const configText = await Bun.file(resolve(values.config ?? join(import.meta.dir, "fusion-verification.json"))).text();
   const config = JSON.parse(configText) as FusionConfig;
   if (config.schema !== 1) throw new Error("Unsupported fusion config");
   for (const url of config.research) {
@@ -420,9 +375,7 @@ export async function main(argv = process.argv.slice(2)) {
   const changed = [
     ...new Set(
       [
-        ...(values.base
-          ? git(root, ["diff", "--name-only", `${values.base}...HEAD`]).split("\n")
-          : []),
+        ...(values.base ? git(root, ["diff", "--name-only", `${values.base}...HEAD`]).split("\n") : []),
         ...git(root, ["diff", "HEAD", "--name-only"]).split("\n"),
         ...git(root, ["ls-files", "--others", "--exclude-standard"]).split("\n"),
       ].filter(Boolean),
@@ -433,9 +386,7 @@ export async function main(argv = process.argv.slice(2)) {
     mode: values.mode,
     changed,
     selected,
-    omitted: config.steps
-      .filter((step) => !selected.some((entry) => entry.id === step.id))
-      .map((step) => step.id),
+    omitted: config.steps.filter(step => !selected.some(entry => entry.id === step.id)).map(step => step.id),
     research: config.research,
     crossPlatformCI:
       values.mode === "all"
@@ -464,16 +415,9 @@ export async function main(argv = process.argv.slice(2)) {
     stderr: "pipe",
   });
   if (ignored.exitCode !== 0) throw new Error("Journal/logs must be Git-ignored runtime output");
-  const tracked = git(root, [
-    "ls-files",
-    "--",
-    journalRelative,
-    `${dirname(journalRelative)}/*.log`,
-  ]).trim();
+  const tracked = git(root, ["ls-files", "--", journalRelative, `${dirname(journalRelative)}/*.log`]).trim();
   if (tracked) throw new Error("Journal/logs must never replace tracked files");
-  const prior = (await Bun.file(journalPath).exists())
-    ? ((await Bun.file(journalPath).json()) as Journal)
-    : undefined;
+  const prior = (await Bun.file(journalPath).exists()) ? ((await Bun.file(journalPath).json()) as Journal) : undefined;
   const journal: Journal = {
     schema: 1,
     revision: git(root, ["rev-parse", "HEAD"]).trim(),
@@ -481,7 +425,7 @@ export async function main(argv = process.argv.slice(2)) {
     configHash: sha256(configText),
     mode: values.mode,
     coverage: {
-      selected: selected.map((step) => step.id),
+      selected: selected.map(step => step.id),
       omitted: plan.omitted,
       crossPlatformCI: values.mode === "all" ? "required" : "not-claimed",
     },
@@ -497,16 +441,16 @@ export async function main(argv = process.argv.slice(2)) {
       ? Promise.resolve(prior.research)
       : research(config.research);
   for (const step of selected) {
-    const prerequisite = step.requires.map((id) => journal.steps.find((entry) => entry.id === id));
+    const prerequisite = step.requires.map(id => journal.steps.find(entry => entry.id === id));
     const inputHash = sha256(
       JSON.stringify({
         source: await scopeHash(root, step.scope),
         config: journal.configHash,
         step,
-        prerequisites: prerequisite.map((entry) => [entry?.inputHash, entry?.state]),
+        prerequisites: prerequisite.map(entry => [entry?.inputHash, entry?.state]),
       }),
     );
-    const previous = prior?.steps.find((entry) => entry.id === step.id);
+    const previous = prior?.steps.find(entry => entry.id === step.id);
     if (!mayRetry(previous, inputHash)) {
       const evidenceValid =
         !previous!.log ||
@@ -519,8 +463,7 @@ export async function main(argv = process.argv.slice(2)) {
           : {
               ...previous!,
               state: "blocked",
-              reason:
-                "Unchanged attempt has missing or altered evidence; change source/configuration before retry",
+              reason: "Unchanged attempt has missing or altered evidence; change source/configuration before retry",
               reused: true,
             },
       );
@@ -528,7 +471,7 @@ export async function main(argv = process.argv.slice(2)) {
       continue;
     }
     const startedAt = new Date().toISOString();
-    if (prerequisite.some((entry) => !entry || entry.state !== "passed")) {
+    if (prerequisite.some(entry => !entry || entry.state !== "passed")) {
       journal.steps.push({
         id: step.id,
         inputHash,
@@ -582,7 +525,7 @@ export async function main(argv = process.argv.slice(2)) {
     const descriptor = openSync(log, "w");
     let exitCode: number;
     try {
-      const command = step.command.map((argument) => (argument === "-j6" ? `-j${cpu}` : argument));
+      const command = step.command.map(argument => (argument === "-j6" ? `-j${cpu}` : argument));
       const child = Bun.spawn(factoryCommand(config, { ...step, command }), {
         cwd: root,
         env: {
@@ -612,17 +555,13 @@ export async function main(argv = process.argv.slice(2)) {
       state: qualified ? "passed" : "failed",
       exitCode,
       log,
-      ...(!qualified && exitCode === 0
-        ? { reason: "Required native tests were absent or skipped" }
-        : {}),
+      ...(!qualified && exitCode === 0 ? { reason: "Required native tests were absent or skipped" } : {}),
       logSha256: await fileHash(log),
       diagnosticPaths: diagnosticPaths(output),
       startedAt,
       endedAt: new Date().toISOString(),
     });
-    console.log(
-      JSON.stringify({ step: step.id, state: qualified ? "passed" : "failed", exitCode }),
-    );
+    console.log(JSON.stringify({ step: step.id, state: qualified ? "passed" : "failed", exitCode }));
     await persist();
   }
   journal.research = await researchPromise;
@@ -641,7 +580,7 @@ export async function main(argv = process.argv.slice(2)) {
       receipt.pipeline === config.pipeline &&
       receipt.status === "passed" &&
       receipt.url?.startsWith("https://buildkite.com/") &&
-      ["linux", "windows", "darwin"].every((platform) => receipt.platforms?.includes(platform));
+      ["linux", "windows", "darwin"].every(platform => receipt.platforms?.includes(platform));
     journal.crossPlatformCI = {
       state: full ? "passed" : "failed",
       reason: full
@@ -655,11 +594,8 @@ export async function main(argv = process.argv.slice(2)) {
     };
   await persist();
   const failed =
-    selected.some(
-      (step) =>
-        step.required && journal.steps.find((entry) => entry.id === step.id)?.state !== "passed",
-    ) ||
-    journal.research.some((entry) => entry.status < 200 || entry.status >= 300) ||
+    selected.some(step => step.required && journal.steps.find(entry => entry.id === step.id)?.state !== "passed") ||
+    journal.research.some(entry => entry.status < 200 || entry.status >= 300) ||
     (values.mode === "all" && journal.crossPlatformCI.state !== "passed");
   console.log(
     JSON.stringify(

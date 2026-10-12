@@ -77,10 +77,9 @@ async function fileHash(path: string, maxBytes: number, signal?: AbortSignal) {
 
 function readEvidence(registry: Registry, options: GraphDocsOptions, limit: number) {
   const repository = registry.db
-    .query<
-      { metadata: string; revision: string | null },
-      [string]
-    >("SELECT metadata,revision FROM repositories WHERE id=?")
+    .query<{ metadata: string; revision: string | null }, [string]>(
+      "SELECT metadata,revision FROM repositories WHERE id=?",
+    )
     .get(options.repositoryId);
   if (!repository) throw new Error(`unknown graph repository ${options.repositoryId}`);
   const domain = metadata(repository.metadata);
@@ -126,10 +125,9 @@ function readEvidence(registry: Registry, options: GraphDocsOptions, limit: numb
     )
     .get(...binds)!;
   const edges = registry.db
-    .query<
-      { count: number },
-      typeof binds
-    >("SELECT count(*) AS count FROM edges WHERE repository_id=? AND id>=? AND id<?")
+    .query<{ count: number }, typeof binds>(
+      "SELECT count(*) AS count FROM edges WHERE repository_id=? AND id>=? AND id<?",
+    )
     .get(...binds)!.count;
   const inputs = registry.db
     .query<Row, [string, string, string, number]>(
@@ -145,10 +143,9 @@ function readEvidence(registry: Registry, options: GraphDocsOptions, limit: numb
     )
     .all(...binds, limit);
   const links = registry.db
-    .query<
-      Row,
-      [string, string, string, number]
-    >("SELECT source,target,kind,provenance,confidence FROM edges WHERE repository_id=? AND id>=? AND id<? ORDER BY id LIMIT ?")
+    .query<Row, [string, string, string, number]>(
+      "SELECT source,target,kind,provenance,confidence FROM edges WHERE repository_id=? AND id>=? AND id<? ORDER BY id LIMIT ?",
+    )
     .all(...binds, limit);
   const benchmark = registry.db
     .query<{ id: string }, [string, string, string]>(
@@ -160,10 +157,9 @@ function readEvidence(registry: Registry, options: GraphDocsOptions, limit: numb
     .get(options.domain, options.profile, options.source);
   const samples = benchmark
     ? registry.db
-        .query<
-          Row,
-          [string, number]
-        >("SELECT name,implementation,sample,milliseconds FROM samples WHERE run_id=? ORDER BY name,implementation,sample LIMIT ?")
+        .query<Row, [string, number]>(
+          "SELECT name,implementation,sample,milliseconds FROM samples WHERE run_id=? ORDER BY name,implementation,sample LIMIT ?",
+        )
         .all(benchmark.id, limit + 1)
     : [];
   const sampleTruncated = samples.length > limit;

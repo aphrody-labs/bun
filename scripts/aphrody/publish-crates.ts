@@ -73,7 +73,7 @@ export const WORKSPACES: { dir: string; crates: string[] }[] = [
   { dir: "packages/bun-google/crates/boq", crates: ["aphrody-boq"] },
 ];
 
-const renamed = new Map(CRATES.map((c) => [c.upstream, c]));
+const renamed = new Map(CRATES.map(c => [c.upstream, c]));
 
 type Toml = Record<string, any>;
 
@@ -93,16 +93,11 @@ function key(k: string) {
 }
 
 function table(name: string, t: Toml): string {
-  return [`[${name}]`, ...Object.entries(t).map(([k, v]) => `${key(k)} = ${value(v)}`), ""].join(
-    "\n",
-  );
+  return [`[${name}]`, ...Object.entries(t).map(([k, v]) => `${key(k)} = ${value(v)}`), ""].join("\n");
 }
 
 function versionOf(c: Crate): string {
-  return (
-    c.version ??
-    (Bun.TOML.parse(readFileSync(join(ROOT, c.dir, "Cargo.toml"), "utf8")) as Toml).package.version
-  );
+  return c.version ?? (Bun.TOML.parse(readFileSync(join(ROOT, c.dir, "Cargo.toml"), "utf8")) as Toml).package.version;
 }
 
 function manifest(c: Crate): string {
@@ -132,8 +127,7 @@ function manifest(c: Crate): string {
     for (const [dep, spec] of Object.entries<any>(src[section])) {
       const target = renamed.get(dep);
       if (!target) {
-        if (typeof spec === "object" && spec.path)
-          throw new Error(`${c.dir}: path dependency ${dep} is not staged`);
+        if (typeof spec === "object" && spec.path) throw new Error(`${c.dir}: path dependency ${dep} is not staged`);
         deps[dep] = spec;
         continue;
       }
@@ -146,14 +140,7 @@ function manifest(c: Crate): string {
     }
     out.push(table(section, deps));
   }
-  const supportedSections = [
-    "package",
-    "lib",
-    "dependencies",
-    "build-dependencies",
-    "dev-dependencies",
-    "workspace",
-  ];
+  const supportedSections = ["package", "lib", "dependencies", "build-dependencies", "dev-dependencies", "workspace"];
   for (const k of Object.keys(src))
     if (!supportedSections.includes(k))
       throw new Error(`${c.dir}/Cargo.toml: section [${k}] is not handled by publish-crates.ts`);
@@ -163,10 +150,7 @@ function manifest(c: Crate): string {
 function readme(c: Crate, text: string): string {
   let body = text;
   for (const other of CRATES)
-    body = body.replace(
-      new RegExp(`cargo add ${other.upstream}\\b`, "g"),
-      `cargo add ${other.name}`,
-    );
+    body = body.replace(new RegExp(`cargo add ${other.upstream}\\b`, "g"), `cargo add ${other.name}`);
   const note =
     `> Published from the [Aphrody fork of Bun](${REPOSITORY}) as \`${c.name}\`. ` +
     `The library name is still \`${c.lib}\`, so code written for upstream's \`${c.upstream}\` compiles unchanged.\n\n`;
@@ -185,16 +169,10 @@ export function stage(out: string) {
       cpSync(from, join(dest, entry), { recursive: true });
     }
     writeFileSync(join(dest, "Cargo.toml"), manifest(c));
-    writeFileSync(
-      join(dest, "README.md"),
-      readme(c, readFileSync(join(ROOT, c.dir, "README.md"), "utf8")),
-    );
+    writeFileSync(join(dest, "README.md"), readme(c, readFileSync(join(ROOT, c.dir, "README.md"), "utf8")));
   }
   // Own workspace root: cargo must not attach the staged crates to the repository's workspace.
-  writeFileSync(
-    join(out, "Cargo.toml"),
-    table("workspace", { resolver: "2", members: CRATES.map((c) => c.name) }),
-  );
+  writeFileSync(join(out, "Cargo.toml"), table("workspace", { resolver: "2", members: CRATES.map(c => c.name) }));
 }
 
 async function published(name: string, version: string): Promise<boolean> {
@@ -232,15 +210,13 @@ async function main() {
 
   if (selected("sdk")) {
     stage(out);
-    console.log(`staged ${CRATES.map((c) => `${c.name}@${versionOf(c)}`).join(", ")} in ${out}`);
+    console.log(`staged ${CRATES.map(c => `${c.name}@${versionOf(c)}`).join(", ")} in ${out}`);
     const pending: { name: string; version: string }[] = [];
     for (const c of CRATES) {
-      if (await published(c.name, versionOf(c)))
-        console.log(`skip ${c.name}@${versionOf(c)}: already on crates.io`);
+      if (await published(c.name, versionOf(c))) console.log(`skip ${c.name}@${versionOf(c)}: already on crates.io`);
       else pending.push({ name: c.name, version: versionOf(c) });
     }
-    for (const c of CRATES)
-      cargo(out, toolchain, ["package", "--list", "--allow-dirty", "-p", c.name]);
+    for (const c of CRATES) cargo(out, toolchain, ["package", "--list", "--allow-dirty", "-p", c.name]);
     cargo(out, toolchain, ["check", "--workspace", "--all-targets"]);
     if (!skipTests) cargo(out, toolchain, ["test", "--workspace", "--lib"]);
     publishPending(out, toolchain, pending, publish);
@@ -254,13 +230,11 @@ async function main() {
     for (const name of ws.crates) {
       const version = versions.get(name);
       if (!version) throw new Error(`${ws.dir}: no crate ${name} in the workspace`);
-      if (await published(name, version))
-        console.log(`skip ${name}@${version}: already on crates.io`);
+      if (await published(name, version)) console.log(`skip ${name}@${version}: already on crates.io`);
       else pending.push({ name, version });
     }
-    for (const name of ws.crates)
-      cargo(dir, toolchain, ["package", "--list", "--allow-dirty", "-p", name]);
-    const sel = ws.crates.flatMap((name) => ["-p", name]);
+    for (const name of ws.crates) cargo(dir, toolchain, ["package", "--list", "--allow-dirty", "-p", name]);
+    const sel = ws.crates.flatMap(name => ["-p", name]);
     cargo(dir, toolchain, ["check", "--all-targets", ...sel]);
     if (!skipTests) cargo(dir, toolchain, ["test", ...sel]);
     publishPending(dir, toolchain, pending, publish);
@@ -268,17 +242,14 @@ async function main() {
 }
 
 function workspaceVersions(dir: string, toolchain: string): Map<string, string> {
-  const r = Bun.spawnSync(
-    ["cargo", `+${toolchain}`, "metadata", "--no-deps", "--format-version", "1"],
-    {
-      cwd: dir,
-      stdout: "pipe",
-      stderr: "inherit",
-    },
-  );
+  const r = Bun.spawnSync(["cargo", `+${toolchain}`, "metadata", "--no-deps", "--format-version", "1"], {
+    cwd: dir,
+    stdout: "pipe",
+    stderr: "inherit",
+  });
   if (r.exitCode !== 0) throw new Error(`cargo metadata failed in ${dir}`);
   const meta = JSON.parse(r.stdout.toString()) as { packages: { name: string; version: string }[] };
-  return new Map(meta.packages.map((p) => [p.name, p.version]));
+  return new Map(meta.packages.map(p => [p.name, p.version]));
 }
 
 function publishPending(
@@ -291,7 +262,7 @@ function publishPending(
     console.log(`nothing to publish in ${cwd}`);
     return;
   }
-  const sel = pending.flatMap((c) => ["-p", c.name]);
+  const sel = pending.flatMap(c => ["-p", c.name]);
   cargo(cwd, toolchain, ["publish", "--allow-dirty", "--dry-run", ...sel]);
   if (!publish) return;
   cargo(cwd, toolchain, ["publish", "--allow-dirty", ...sel]);

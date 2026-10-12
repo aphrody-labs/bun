@@ -78,10 +78,7 @@ function paxPath(data: Uint8Array): string | undefined {
  * pax/GNU long-name headers) and records every kept path in `seen`. Ustar, pax and GNU
  * long names, as written by `docker export`.
  */
-export function tarFilter(
-  drop: Set<string>,
-  seen: Set<string>,
-): TransformStream<Uint8Array, Uint8Array<ArrayBuffer>> {
+export function tarFilter(drop: Set<string>, seen: Set<string>): TransformStream<Uint8Array, Uint8Array<ArrayBuffer>> {
   let buf = new Uint8Array(0);
   let pending: Uint8Array<ArrayBuffer>[] = []; // pax / long-name blocks of the next entry
   let longName: string | undefined;
@@ -108,7 +105,7 @@ export function tarFilter(
         }
         if (merged.length - at < 512) break;
         const block = merged.subarray(at, at + 512);
-        if (ended || block.every((b) => b === 0)) {
+        if (ended || block.every(b => b === 0)) {
           ended = true;
           controller.enqueue(block.slice());
           at += 512;
@@ -128,8 +125,7 @@ export function tarFilter(
           continue;
         }
         const prefix = field(block, 345, 155);
-        const name =
-          longName ?? (prefix ? `${prefix}/${field(block, 0, 100)}` : field(block, 0, 100));
+        const name = longName ?? (prefix ? `${prefix}/${field(block, 0, 100)}` : field(block, 0, 100));
         const path = normalize(name);
         longName = undefined;
         if (drop.has(path)) {
@@ -193,7 +189,7 @@ function context(): string {
   cpSync(join(HERE, "wsl.Dockerfile"), join(dir, "Dockerfile"));
   cpSync(join(HERE, "wsl"), join(dir, "wsl"), {
     recursive: true,
-    filter: (src) => !/[\\/]wsl[\\/]examples([\\/]|$)/.test(src),
+    filter: src => !/[\\/]wsl[\\/]examples([\\/]|$)/.test(src),
   });
   cpSync(join(ROOT, "src", "bun.ico"), join(dir, "aphrody.ico"));
   return dir;
@@ -230,15 +226,13 @@ export async function build(opts: Options): Promise<{ out: string; sha256: strin
   try {
     mkdirSync(dirname(opts.out), { recursive: true });
     const exp = Bun.spawn(["docker", "export", id], { stdout: "pipe", stderr: "inherit" });
-    const gz = exp.stdout
-      .pipeThrough(tarFilter(DROPPED, seen))
-      .pipeThrough(new CompressionStream("gzip"));
+    const gz = exp.stdout.pipeThrough(tarFilter(DROPPED, seen)).pipeThrough(new CompressionStream("gzip"));
     await Bun.write(opts.out, new Response(gz));
     if ((await exp.exited) !== 0) throw new Error("docker export failed");
   } finally {
     await run(["docker", "rm", id], { quiet: true });
   }
-  const missing = REQUIRED.filter((p) => !seen.has(p));
+  const missing = REQUIRED.filter(p => !seen.has(p));
   if (missing.length) throw new Error(`${opts.out} lacks ${missing.join(", ")}`);
   const hasher = new Bun.CryptoHasher("sha256");
   hasher.update(await Bun.file(opts.out).arrayBuffer());

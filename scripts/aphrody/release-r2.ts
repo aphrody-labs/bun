@@ -33,10 +33,8 @@ export function parseSums(text: string): Map<string, string> {
   const sums = new Map<string, string>();
   for (const line of text.split(/\r?\n/)) {
     if (!line.trim()) continue;
-    const [, sha256, name] =
-      line.match(/^([0-9a-fA-F]{64})\s+\*?([A-Za-z0-9][A-Za-z0-9._+-]*)$/) ?? [];
-    if (!sha256 || !name)
-      throw new Error(`SHA256SUMS.txt: unexpected line ${JSON.stringify(line)}`);
+    const [, sha256, name] = line.match(/^([0-9a-fA-F]{64})\s+\*?([A-Za-z0-9][A-Za-z0-9._+-]*)$/) ?? [];
+    if (!sha256 || !name) throw new Error(`SHA256SUMS.txt: unexpected line ${JSON.stringify(line)}`);
     if (sums.has(name)) throw new Error(`SHA256SUMS.txt: ${name} listed twice`);
     sums.set(name, sha256.toLowerCase());
   }
@@ -55,7 +53,7 @@ export function contentType(name: string): string {
 
 /** Manifest read by packages/infra/product/src/setup/r2.ts (aphrody-labs/aphrody); null without a Windows archive. */
 export function windowsManifest(latest: Latest) {
-  const archive = latest.assets.find((a) => a.name === "bun-windows-x64.zip");
+  const archive = latest.assets.find(a => a.name === "bun-windows-x64.zip");
   if (!archive) return null;
   return {
     product: "bun",
@@ -71,27 +69,21 @@ export function windowsManifest(latest: Latest) {
 }
 
 /** Tags to delete: all mirrored tags but the current one and the `keep - 1` most recently uploaded others. */
-export function prune(
-  mirrored: { tag: string; uploaded: number }[],
-  current: string,
-  keep: number,
-): string[] {
+export function prune(mirrored: { tag: string; uploaded: number }[], current: string, keep: number): string[] {
   return mirrored
-    .filter((m) => m.tag !== current)
+    .filter(m => m.tag !== current)
     .sort((a, b) => b.uploaded - a.uploaded)
     .slice(Math.max(0, keep - 1))
-    .map((m) => m.tag);
+    .map(m => m.tag);
 }
 
 function client(): Bun.S3Client {
   let env: Record<string, string | undefined> = process.env;
   if (!env.R2_ENDPOINT) {
-    const file =
-      process.env.APHRODY_CLOUDFLARE_ENV ?? join(homedir(), ".aphrody", "config", "cloudflare.env");
+    const file = process.env.APHRODY_CLOUDFLARE_ENV ?? join(homedir(), ".aphrody", "config", "cloudflare.env");
     const parsed: Record<string, string> = {};
     for (const line of readFileSync(file, "utf8").split(/\r?\n/)) {
-      const [, key, value = ""] =
-        line.match(/^\s*(?:export\s+)?([A-Za-z0-9_]+)\s*=\s*(.*?)\s*$/) ?? [];
+      const [, key, value = ""] = line.match(/^\s*(?:export\s+)?([A-Za-z0-9_]+)\s*=\s*(.*?)\s*$/) ?? [];
       if (key) parsed[key] = value.replace(/^(["'])(.*)\1$/, "$2");
     }
     env = { ...parsed, ...process.env };
@@ -110,8 +102,7 @@ function client(): Bun.S3Client {
 
 function gh(args: string[]): string {
   const r = Bun.spawnSync(["gh", ...args], { stdout: "pipe", stderr: "pipe" });
-  if (!r.success)
-    throw new Error(`gh ${args.slice(0, 2).join(" ")} : ${r.stderr.toString().trim()}`);
+  if (!r.success) throw new Error(`gh ${args.slice(0, 2).join(" ")} : ${r.stderr.toString().trim()}`);
   return r.stdout.toString().trim();
 }
 
@@ -127,11 +118,11 @@ function release(tag: string | undefined): Release {
   if (tag) return JSON.parse(gh(["api", `repos/${REPO}/releases/tags/${tag}`]));
   const list = JSON.parse(gh(["api", `repos/${REPO}/releases?per_page=30`])) as Release[];
   const found = list.find(
-    (r) =>
+    r =>
       !r.draft &&
       !r.prerelease &&
       /^(bun-v|aphrody-v)/.test(r.tag_name) &&
-      r.assets.some((a) => a.name === "SHA256SUMS.txt"),
+      r.assets.some(a => a.name === "SHA256SUMS.txt"),
   );
   if (!found) throw new Error("no published runtime release with SHA256SUMS.txt");
   return found;
@@ -175,7 +166,7 @@ async function main(args: string[]) {
     const upload = force || !(await remote.exists()) || (await remote.text()) !== sumsText;
     const assets: Asset[] = [];
     for (const [name, sha256] of parseSums(sumsText)) {
-      const size = rel.assets.find((a) => a.name === name)?.size;
+      const size = rel.assets.find(a => a.name === name)?.size;
       if (size === undefined) throw new Error(`${tag}: ${name} is not a release asset`);
       assets.push({ name, sha256, size });
       if (!upload) continue;
@@ -188,8 +179,7 @@ async function main(args: string[]) {
       await s3.write(`${base}/${name}`, file, { type: contentType(name) });
       rmSync(join(work, name));
     }
-    if (upload && !dryRun)
-      await s3.write(`${base}/SHA256SUMS.txt`, sumsText, { type: contentType(".txt") });
+    if (upload && !dryRun) await s3.write(`${base}/SHA256SUMS.txt`, sumsText, { type: contentType(".txt") });
 
     const latest: Latest = {
       tag,
@@ -202,8 +192,7 @@ async function main(args: string[]) {
     if (!tagArg && !dryRun) {
       const json = { type: "application/json" };
       await s3.write(`${PREFIX}/latest.json`, JSON.stringify(latest, null, 2) + "\n", json);
-      if (manifest)
-        await s3.write(`${PREFIX}/manifest.json`, JSON.stringify(manifest, null, 2) + "\n", json);
+      if (manifest) await s3.write(`${PREFIX}/manifest.json`, JSON.stringify(manifest, null, 2) + "\n", json);
     }
     console.log(`${tag}: ${upload ? "mirrored" : "already mirrored"} at ${latest.base}`);
 

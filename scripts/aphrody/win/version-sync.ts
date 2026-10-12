@@ -26,11 +26,11 @@ export function sourceChanges(
 ): Change[] {
   validateVersion(version);
   const changes: Change[] = [];
-  const manifests = paths.map((path) => {
+  const manifests = paths.map(path => {
     if (
       path !== "package.json" &&
       (!/^packages\/(?:[^/\\:]+\/)*package\.json$/.test(path) ||
-        path.split("/").some((part) => part === "." || part === ".."))
+        path.split("/").some(part => part === "." || part === ".."))
     )
       throw new Error(`Manifest outside owned packages: ${path}`);
     const before = read(path);
@@ -51,27 +51,14 @@ export function sourceChanges(
     const newline = before.includes("\r\n") ? "\r\n" : "\n";
     let after =
       manifest.version === undefined
-        ? before.replace(
-            /^(\s*"name"\s*:\s*"[^"]+"\s*,)\r?\n/m,
-            `$1${newline}  "version": "${version}",${newline}`,
-          )
+        ? before.replace(/^(\s*"name"\s*:\s*"[^"]+"\s*,)\r?\n/m, `$1${newline}  "version": "${version}",${newline}`)
         : before.replace(/^(\s*"version"\s*:\s*")[^"]+("\s*,?\s*)$/m, `$1${version}$2`);
-    if (JSON.parse(after).version !== version)
-      throw new Error(`Missing unique version field: ${path}`);
+    if (JSON.parse(after).version !== version) throw new Error(`Missing unique version field: ${path}`);
     const updated = JSON.parse(after);
     let dependencyChanged = false;
-    for (const section of [
-      "dependencies",
-      "devDependencies",
-      "optionalDependencies",
-      "peerDependencies",
-    ]) {
+    for (const section of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"]) {
       for (const [name, range] of Object.entries(updated[section] ?? {})) {
-        if (
-          names.has(name) &&
-          typeof range === "string" &&
-          /^[~^]?\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(range)
-        ) {
+        if (names.has(name) && typeof range === "string" && /^[~^]?\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(range)) {
           const next = `${/^[~^]/.test(range) ? range[0] : ""}${version}`;
           if (range !== next) {
             updated[section][name] = next;
@@ -80,18 +67,14 @@ export function sourceChanges(
         }
       }
     }
-    if (dependencyChanged)
-      after = JSON.stringify(updated, null, 2).replaceAll("\n", newline) + newline;
+    if (dependencyChanged) after = JSON.stringify(updated, null, 2).replaceAll("\n", newline) + newline;
     if (path.includes("bun-agent-plugin")) {
       const minimum = manifest.engines?.bun;
-      if (!/^>=\d+\.\d+\.\d+$/.test(minimum))
-        throw new Error(`Unexpected Bun engine range: ${path}`);
+      if (!/^>=\d+\.\d+\.\d+$/.test(minimum)) throw new Error(`Unexpected Bun engine range: ${path}`);
       after = after.replace(/^(\s*"bun"\s*:\s*")>=\d+\.\d+\.\d+("\s*,?\s*)$/m, `$1>=${version}$2`);
-      if (JSON.parse(after).engines.bun !== `>=${version}`)
-        throw new Error(`Missing Bun engine field: ${path}`);
+      if (JSON.parse(after).engines.bun !== `>=${version}`) throw new Error(`Missing Bun engine field: ${path}`);
     }
-    if (after !== before)
-      changes.push({ path, before, after, reason: "owned product release version" });
+    if (after !== before) changes.push({ path, before, after, reason: "owned product release version" });
   }
   return changes;
 }
@@ -105,12 +88,7 @@ const RELEASE_PATHS = [
   "scripts/aphrody/alpine/runtime.Dockerfile",
 ] as const;
 
-export function releaseChanges(
-  read: (path: string) => string,
-  version: string,
-  tag: string,
-  sums: string,
-): Change[] {
+export function releaseChanges(read: (path: string) => string, version: string, tag: string, sums: string): Change[] {
   validateVersion(version);
   if (
     tag.trim() !== tag ||
@@ -135,10 +113,9 @@ export function releaseChanges(
     "bun-linux-x64-musl-baseline.zip",
     "bun-linux-aarch64-musl.zip",
   ];
-  for (const asset of required)
-    if (!hashes.has(asset)) throw new Error(`Release checksum missing: ${asset}`);
+  for (const asset of required) if (!hashes.has(asset)) throw new Error(`Release checksum missing: ${asset}`);
   const imageVersion = tag.replace(/^(?:bun-v|aphrody-v)/, "");
-  return RELEASE_PATHS.flatMap((path) => {
+  return RELEASE_PATHS.flatMap(path => {
     const before = read(path);
     let after = before.replace(
       /ghcr\.io\/aphrody-labs\/bun:\d+\.\d+\.\d+(?:-aphrody\.\d+)?/g,
@@ -153,9 +130,7 @@ export function releaseChanges(
         after = after.replace(pattern, `$1${hashes.get(asset)}`);
       }
     }
-    return before === after
-      ? []
-      : [{ path, before, after, reason: "verified release artifact pin" }];
+    return before === after ? [] : [{ path, before, after, reason: "verified release artifact pin" }];
   });
 }
 
@@ -172,8 +147,7 @@ export function applyChanges(root: string, changes: Change[]): void {
     try {
       writeFileSync(temporary, change.after, { flag: "wx" });
       created = true;
-      if (readFileSync(path, "utf8") !== change.before)
-        throw new Error(`Concurrent change: ${change.path}`);
+      if (readFileSync(path, "utf8") !== change.before) throw new Error(`Concurrent change: ${change.path}`);
       renameSync(temporary, path);
     } catch (error) {
       try {
@@ -274,16 +248,10 @@ if (import.meta.main) {
     if (realpathSync(git(root, ["rev-parse", "--show-toplevel"]).trim()) !== root)
       throw new Error("--root must be the checkout root");
     const read = (path: string) => readFileSync(join(root, path), "utf8");
-    const manifestPaths = git(root, [
-      "ls-files",
-      "-z",
-      "--",
-      "package.json",
-      "packages/**/package.json",
-    ])
+    const manifestPaths = git(root, ["ls-files", "-z", "--", "package.json", "packages/**/package.json"])
       .split("\0")
       .filter(Boolean)
-      .filter((path) => {
+      .filter(path => {
         const manifest = JSON.parse(read(path));
         const name = manifest.name;
         return (
@@ -298,19 +266,12 @@ if (import.meta.main) {
     const changes = sourceChanges(read, values.version, manifestPaths);
     if (values["release-tag"]) {
       const tag = values["release-tag"];
-      const release = JSON.parse(
-        gh(["api", `repos/aphrody-labs/bun/releases/tags/${encodeURIComponent(tag)}`]),
-      );
+      const release = JSON.parse(gh(["api", `repos/aphrody-labs/bun/releases/tags/${encodeURIComponent(tag)}`]));
       if (release.draft || release.prerelease || release.tag_name !== tag)
         throw new Error("Expected a published stable release");
       const imageVersion = tag.replace(/^(?:bun-v|aphrody-v)/, "");
       const imageVersions = JSON.parse(
-        gh([
-          "api",
-          "--paginate",
-          "--slurp",
-          "orgs/aphrody-labs/packages/container/bun/versions?per_page=100",
-        ]),
+        gh(["api", "--paginate", "--slurp", "orgs/aphrody-labs/packages/container/bun/versions?per_page=100"]),
       ).flat();
       if (
         !imageVersions.some((image: { metadata?: { container?: { tags?: string[] } } }) =>
@@ -319,9 +280,7 @@ if (import.meta.main) {
       ) {
         throw new Error(`Published GHCR image missing: ghcr.io/aphrody-labs/bun:${imageVersion}`);
       }
-      const checksum = release.assets.find(
-        (asset: { name: string }) => asset.name === "SHA256SUMS.txt",
-      );
+      const checksum = release.assets.find((asset: { name: string }) => asset.name === "SHA256SUMS.txt");
       if (!checksum) throw new Error("Release has no SHA256SUMS.txt");
       const sums = gh([
         "api",

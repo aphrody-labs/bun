@@ -75,10 +75,7 @@ function parseFlags(args: string[], spec: FlagSpec): Parsed {
 
 function bunfig(cwd: string): Record<string, any> {
   try {
-    return Bun.TOML.parse(fs.readFileSync(path.join(cwd, "bunfig.toml"), "utf8")) as Record<
-      string,
-      any
-    >;
+    return Bun.TOML.parse(fs.readFileSync(path.join(cwd, "bunfig.toml"), "utf8")) as Record<string, any>;
   } catch (error: any) {
     if (error?.code === "ENOENT") return {};
     throw new UsageError(`bunfig.toml: ${error?.message ?? error}`);
@@ -88,18 +85,12 @@ function bunfig(cwd: string): Record<string, any> {
 function strings(value: unknown, key: string): string[] {
   if (value === undefined) return [];
   if (typeof value === "string") return [value];
-  if (Array.isArray(value) && value.every((v) => typeof v === "string")) return value;
+  if (Array.isArray(value) && value.every(v => typeof v === "string")) return value;
   throw new UsageError(`bunfig.toml: ${key} must be a string or an array of strings`);
 }
 
 // The bin of `pkg` in the project, run with this Bun, else `bun x pkg@version`. `envName` overrides both.
-function toolCommand(
-  envName: string,
-  pkg: string,
-  bin: string,
-  version: string,
-  cwd: string,
-): string[] {
+function toolCommand(envName: string, pkg: string, bin: string, version: string, cwd: string): string[] {
   const override = process.env[envName];
   if (override) return /\.[cm]?[jt]s$/.test(override) ? [process.execPath, override] : [override];
   try {
@@ -120,24 +111,17 @@ async function spawn(cmd: string[], cwd: string, capture: boolean) {
     stdout: capture ? "pipe" : "inherit",
     stderr: "inherit",
   });
-  const [stdout, exitCode] = await Promise.all([
-    capture && proc.stdout ? proc.stdout.text() : "",
-    proc.exited,
-  ]);
+  const [stdout, exitCode] = await Promise.all([capture && proc.stdout ? proc.stdout.text() : "", proc.exited]);
   return { stdout, exitCode };
 }
 
 async function git(args: string[], cwd: string): Promise<string[]> {
   const proc = Bun.spawn({ cmd: ["git", ...args], cwd, stdout: "pipe", stderr: "pipe" });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
   if (exitCode !== 0) throw new UsageError(`git ${args.join(" ")}: ${stderr.trim()}`);
   return stdout
     .split("\n")
-    .map((line) => line.trim())
+    .map(line => line.trim())
     .filter(Boolean);
 }
 
@@ -150,8 +134,7 @@ async function changedSince(ref: string, cwd: string, pattern: RegExp): Promise<
     git(["ls-files", "--others", "--exclude-standard"], cwd),
   ]);
   const files = new Set<string>();
-  for (const file of lists.flat())
-    if (pattern.test(file) && fs.existsSync(path.join(cwd, file))) files.add(file);
+  for (const file of lists.flat()) if (pattern.test(file) && fs.existsSync(path.join(cwd, file))) files.add(file);
   return [...files].sort();
 }
 
@@ -166,7 +149,7 @@ function workspaces(cwd: string, filters: string[]): string[] {
   const patterns: string[] = Array.isArray(manifest.workspaces)
     ? manifest.workspaces
     : (manifest.workspaces?.packages ?? []);
-  const excluded = patterns.filter((p) => p.startsWith("!")).map((p) => new Bun.Glob(p.slice(1)));
+  const excluded = patterns.filter(p => p.startsWith("!")).map(p => new Bun.Glob(p.slice(1)));
   const dirs = new Set<string>();
   for (const pattern of patterns) {
     if (pattern.startsWith("!")) continue;
@@ -175,22 +158,19 @@ function workspaces(cwd: string, filters: string[]): string[] {
       onlyFiles: true,
     })) {
       const dir = path.dirname(file).replaceAll("\\", "/");
-      if (dir.split("/").includes("node_modules") || excluded.some((g) => g.match(dir))) continue;
+      if (dir.split("/").includes("node_modules") || excluded.some(g => g.match(dir))) continue;
       if (filters.length) {
         let name = "";
         try {
           name = JSON.parse(fs.readFileSync(path.join(cwd, file), "utf8")).name ?? "";
         } catch {}
-        const globs = filters.map((f) => new Bun.Glob(f));
-        if (!globs.some((g) => g.match(name) || g.match(dir) || g.match(`./${dir}`))) continue;
+        const globs = filters.map(f => new Bun.Glob(f));
+        if (!globs.some(g => g.match(name) || g.match(dir) || g.match(`./${dir}`))) continue;
       }
       dirs.add(dir);
     }
   }
-  if (!dirs.size)
-    throw new UsageError(
-      filters.length ? `No workspace matches ${filters.join(", ")}` : "No workspaces",
-    );
+  if (!dirs.size) throw new UsageError(filters.length ? `No workspace matches ${filters.join(", ")}` : "No workspaces");
   return [...dirs].sort();
 }
 
@@ -253,9 +233,7 @@ async function n2bFindings(roots: string[], cwd: string, opts: { fix: boolean; s
       continue;
     }
     for (const file of report.files ?? []) {
-      const filename =
-        path.relative(cwd, path.resolve(report.root ?? path.resolve(cwd, root), file.path)) ||
-        file.path;
+      const filename = path.relative(cwd, path.resolve(report.root ?? path.resolve(cwd, root), file.path)) || file.path;
       for (const f of file.findings ?? []) {
         if (opts.fix && f.autofix && file.changed) continue;
         diagnostics.push({
@@ -265,9 +243,7 @@ async function n2bFindings(roots: string[], cwd: string, opts: { fix: boolean; s
           causes: [],
           url: f.docs_url || undefined,
           help:
-            f.replacement !== undefined
-              ? `Use \`${f.replacement}\`${f.autofix ? " (bun lint --fix)" : ""}`
-              : undefined,
+            f.replacement !== undefined ? `Use \`${f.replacement}\`${f.autofix ? " (bun lint --fix)" : ""}` : undefined,
           filename: filename.replaceAll("\\", "/"),
           labels: [
             {
@@ -288,7 +264,7 @@ async function n2bFindings(roots: string[], cwd: string, opts: { fix: boolean; s
 }
 
 function printDiagnostics(diagnostics: Diagnostic[]) {
-  const shown = diagnostics.filter((d) => d.severity !== "advice");
+  const shown = diagnostics.filter(d => d.severity !== "advice");
   for (const d of shown) {
     const { line, column } = d.labels[0].span;
     const sev = d.severity === "error" ? paint("31", "error") : paint("33", "warning");
@@ -299,15 +275,15 @@ function printDiagnostics(diagnostics: Diagnostic[]) {
     if (help) process.stdout.write(`  ${paint("36", "help")}: ${help}\n`);
     if (url) process.stdout.write(`  ${paint("2", url)}\n`);
   }
-  const errors = shown.filter((d) => d.severity === "error").length;
+  const errors = shown.filter(d => d.severity === "error").length;
   const warnings = shown.length - errors;
   if (shown.length) process.stdout.write(`\nn2b: ${errors} error(s), ${warnings} warning(s)\n`);
 }
 
 function sarifRun(diagnostics: Diagnostic[]) {
-  const rules = [...new Set(diagnostics.map((d) => d.code))].map((id) => ({
+  const rules = [...new Set(diagnostics.map(d => d.code))].map(id => ({
     id,
-    helpUri: diagnostics.find((d) => d.code === id)?.url,
+    helpUri: diagnostics.find(d => d.code === id)?.url,
   }));
   return {
     tool: {
@@ -318,7 +294,7 @@ function sarifRun(diagnostics: Diagnostic[]) {
         rules,
       },
     },
-    results: diagnostics.map((d) => ({
+    results: diagnostics.map(d => ({
       ruleId: d.code,
       level: d.severity === "error" ? "error" : d.severity === "warning" ? "warning" : "note",
       message: { text: d.help ? `${d.message}\n${d.help}` : d.message },
@@ -364,9 +340,9 @@ async function lint(args: string[], cwd: string): Promise<number> {
   if (flags.workspaces || filter) paths = workspaces(cwd, filter ?? []);
   let files: string[] | undefined;
   if (since) {
-    const scope = [...paths, ...positionals].map((p) => path.resolve(cwd, p));
+    const scope = [...paths, ...positionals].map(p => path.resolve(cwd, p));
     files = (await changedSince(since, cwd, LINT_EXTENSIONS)).filter(
-      (f) => !scope.length || scope.some((s) => path.resolve(cwd, f).startsWith(s)),
+      f => !scope.length || scope.some(s => path.resolve(cwd, f).startsWith(s)),
     );
     if (!files.length) {
       if (format === "default") process.stdout.write(`No changed files since ${since}\n`);
@@ -379,18 +355,15 @@ async function lint(args: string[], cwd: string): Promise<number> {
   let oxlintOut = "";
   const capture = format === "json" || format === "sarif";
   if (withOxlint) {
-    const cmd = [
-      ...toolCommand("BUN_OXLINT", "oxlint", "oxlint", config.version ?? OXLINT_VERSION, cwd),
-    ];
+    const cmd = [...toolCommand("BUN_OXLINT", "oxlint", "oxlint", config.version ?? OXLINT_VERSION, cwd)];
     const configPath = flags.config ?? config.config;
     if (configPath) cmd.push("--config", configPath);
-    for (const pattern of strings(config.ignore, "lint.ignore"))
-      cmd.push("--ignore-pattern", pattern);
+    for (const pattern of strings(config.ignore, "lint.ignore")) cmd.push("--ignore-pattern", pattern);
     if (flags.fix) cmd.push("--fix");
     if (denyWarnings) cmd.push("--deny-warnings");
     if (format !== "default") cmd.push(`--format=${format}`);
     cmd.push(...toolArgs);
-    if (files) cmd.push(...files.filter((f) => !toolArgs.includes(f)));
+    if (files) cmd.push(...files.filter(f => !toolArgs.includes(f)));
     else cmd.push(...paths);
     const result = await spawn(cmd, cwd, capture);
     oxlintCode = result.exitCode;
@@ -401,7 +374,7 @@ async function lint(args: string[], cwd: string): Promise<number> {
   if (withN2b) {
     const roots = files
       ? ["."]
-      : [...paths, ...positionals].filter((p) => {
+      : [...paths, ...positionals].filter(p => {
           try {
             return fs.statSync(path.resolve(cwd, p)).isDirectory();
           } catch {
@@ -413,8 +386,8 @@ async function lint(args: string[], cwd: string): Promise<number> {
       since: flags.since,
     });
     if (files) {
-      const wanted = new Set(files.map((f) => f.replaceAll("\\", "/")));
-      n2b.diagnostics = n2b.diagnostics.filter((d) => wanted.has(d.filename));
+      const wanted = new Set(files.map(f => f.replaceAll("\\", "/")));
+      n2b.diagnostics = n2b.diagnostics.filter(d => wanted.has(d.filename));
     }
   }
 
@@ -447,9 +420,7 @@ async function lint(args: string[], cwd: string): Promise<number> {
 
   const n2bFailed =
     n2b.exitCode !== 0 ||
-    n2b.diagnostics.some(
-      (d) => d.severity === "error" || (denyWarnings && d.severity === "warning"),
-    );
+    n2b.diagnostics.some(d => d.severity === "error" || (denyWarnings && d.severity === "warning"));
   return oxlintCode || (n2bFailed ? n2b.exitCode || 1 : 0);
 }
 
@@ -497,15 +468,15 @@ async function fmt(args: string[], cwd: string): Promise<number> {
   if (configPath) cmd.push("--config", configPath);
   cmd.push(...strings(config.args, "fmt.args"), ...rest);
   if (since) {
-    const scope = [...paths, ...positionals].map((p) => path.resolve(cwd, p));
+    const scope = [...paths, ...positionals].map(p => path.resolve(cwd, p));
     const files = (await changedSince(since, cwd, FMT_EXTENSIONS)).filter(
-      (f) => !scope.length || scope.some((s) => path.resolve(cwd, f).startsWith(s)),
+      f => !scope.length || scope.some(s => path.resolve(cwd, f).startsWith(s)),
     );
     if (!files.length) {
       process.stdout.write(`No changed files since ${since}\n`);
       return 0;
     }
-    cmd.push("--no-error-on-unmatched-pattern", ...files.filter((f) => !rest.includes(f)));
+    cmd.push("--no-error-on-unmatched-pattern", ...files.filter(f => !rest.includes(f)));
   } else {
     cmd.push(...paths);
   }
@@ -529,9 +500,8 @@ Same as \`bun n2b migrate\`. \`bun n2b --help\` lists every n2b command.
 async function n2b(args: string[], cwd: string): Promise<number> {
   const command = toolCommand("BUN_N2B", N2B_PACKAGE, "bun-plugin-n2b", N2B_VERSION, cwd);
   // `bun n2b migrate` is the `--migrate` mode of the scan; scan, fix, report and rules are n2b verbs.
-  const at = args.findIndex((a) => !a.startsWith("-"));
-  if (at !== -1 && args[at] === "migrate")
-    args = [...args.slice(0, at), "--migrate", ...args.slice(at + 1)];
+  const at = args.findIndex(a => !a.startsWith("-"));
+  if (at !== -1 && args[at] === "migrate") args = [...args.slice(0, at), "--migrate", ...args.slice(at + 1)];
   return (await spawn([...command, ...args], cwd, false)).exitCode;
 }
 
@@ -608,17 +578,16 @@ async function wasmBuild(args: string[], cwd: string): Promise<number> {
   }
   const dashes = args.indexOf("--");
   const cargoArgs = dashes === -1 ? [] : args.slice(dashes + 1);
-  const unknown = rest.slice(0, rest.length - cargoArgs.length).find((a) => a.startsWith("-"));
+  const unknown = rest.slice(0, rest.length - cargoArgs.length).find(a => a.startsWith("-"));
   if (unknown) throw new UsageError(`Unknown flag ${unknown} (cargo flags go after --)`);
-  if (positionals.length > 1)
-    throw new UsageError(`Expected one crate, got ${positionals.join(", ")}`);
+  if (positionals.length > 1) throw new UsageError(`Expected one crate, got ${positionals.join(", ")}`);
   const target = flags.target === "wasm" ? undefined : flags.target;
   // Quotes keep spaces and are not escapes, so Windows paths pass unchanged.
   const cargo: string[] | undefined =
     flags.cargo === undefined
       ? undefined
       : [...flags.cargo.matchAll(/"([^"]*)"|'([^']*)'|(\S+)/g)]
-          .map((m) => m[1] ?? m[2] ?? m[3])
+          .map(m => m[1] ?? m[2] ?? m[3])
           .map((word, i) => (i === 0 && /[\\/]/.test(word) ? path.resolve(cwd, word) : word));
   if (cargo?.length === 0) throw new UsageError("--cargo needs a command");
   const { build } = require(WASM_MODULE);
@@ -627,10 +596,7 @@ async function wasmBuild(args: string[], cwd: string): Promise<number> {
     package: flags.package,
     artifact: flags.artifact ? path.resolve(cwd, flags.artifact) : undefined,
     cargo,
-    outdir:
-      (flags.outdir ?? flags["out-dir"])
-        ? path.resolve(cwd, flags.outdir ?? flags["out-dir"])
-        : undefined,
+    outdir: (flags.outdir ?? flags["out-dir"]) ? path.resolve(cwd, flags.outdir ?? flags["out-dir"]) : undefined,
     target,
     wasi: flags.wasi,
     triple: flags.triple,
@@ -646,9 +612,7 @@ async function wasmBuild(args: string[], cwd: string): Promise<number> {
     cargoArgs,
   });
   const rel = (p: string) => path.relative(cwd, p) || ".";
-  process.stdout.write(
-    `${paint("32", "built")} ${rel(result.js)} + ${rel(result.wasm)} (${result.bytes} bytes)\n`,
-  );
+  process.stdout.write(`${paint("32", "built")} ${rel(result.js)} + ${rel(result.wasm)} (${result.bytes} bytes)\n`);
   return 0;
 }
 
@@ -664,8 +628,7 @@ async function wasm(args: string[], cwd: string): Promise<number> {
       level: { type: "string", short: "O" },
       debug: { type: "boolean", short: "g" },
     });
-    if (positionals.length !== 1)
-      throw new UsageError("Usage: bun wasm opt <in.wasm> [-o out.wasm] [--level Oz]");
+    if (positionals.length !== 1) throw new UsageError("Usage: bun wasm opt <in.wasm> [-o out.wasm] [--level Oz]");
     const { optimize } = require(WASM_MODULE);
     const input = path.resolve(cwd, positionals[0]);
     const { before, after } = await optimize(input, {
@@ -719,9 +682,7 @@ function findAphrodyTemplates(cwd: string, given?: string): string {
   }
   if (BUN_CREATE_DIR) candidates.push(path.join(BUN_CREATE_DIR, "aphrody"));
   candidates.push(path.join(require("node:os").homedir(), ".bun-create", "aphrody"));
-  const found = (given ? candidates.slice(0, 1) : candidates).find((dir) =>
-    fs.existsSync(path.join(dir, "stack.toml")),
-  );
+  const found = (given ? candidates.slice(0, 1) : candidates).find(dir => fs.existsSync(path.join(dir, "stack.toml")));
   if (found) return found;
   if (given) throw new UsageError(`No stack.toml in ${given}`);
   throw new UsageError(
@@ -759,14 +720,12 @@ async function create(args: string[], cwd: string): Promise<number> {
     process.stdout.write(CREATE_HELP);
     return 0;
   }
-  const unknown = rest.find((a) => a.startsWith("-"));
+  const unknown = rest.find(a => a.startsWith("-"));
   if (unknown) throw new UsageError(`Unknown flag ${unknown}`);
   const [spec, dirArg, ...extra] = positionals;
   if (extra.length) throw new UsageError(`Unexpected ${extra.join(" ")}`);
   const templatesDir = findAphrodyTemplates(cwd, flags.templates);
-  const stack = Bun.TOML.parse(
-    fs.readFileSync(path.join(templatesDir, "stack.toml"), "utf8"),
-  ) as any;
+  const stack = Bun.TOML.parse(fs.readFileSync(path.join(templatesDir, "stack.toml"), "utf8")) as any;
   const templates: Record<string, any> = stack.template ?? {};
 
   const { list } = flags;
@@ -774,9 +733,7 @@ async function create(args: string[], cwd: string): Promise<number> {
     if (!list) process.stdout.write(CREATE_HELP + "\n");
     process.stdout.write(`${stack.meta?.name ?? "aphrody"} (${templatesDir})\n`);
     for (const [id, t] of Object.entries(templates))
-      process.stdout.write(
-        `  ${id.padEnd(8)} ${t.required ? "(always) " : "         "}${t.description ?? ""}\n`,
-      );
+      process.stdout.write(`  ${id.padEnd(8)} ${t.required ? "(always) " : "         "}${t.description ?? ""}\n`);
     return flags.list ? 0 : 1;
   }
 
@@ -787,30 +744,22 @@ async function create(args: string[], cwd: string): Promise<number> {
   const names = [...new Set([...required, ...requested])];
   for (const name of names)
     if (!templates[name])
-      throw new UsageError(
-        `Unknown template "${name}" (available: ${Object.keys(templates).join(", ")})`,
-      );
+      throw new UsageError(`Unknown template "${name}" (available: ${Object.keys(templates).join(", ")})`);
   const groups = new Map<string, string[]>();
   for (const name of names) {
     const group = templates[name].exclusive;
     if (group) groups.set(group, [...(groups.get(group) ?? []), name]);
   }
   for (const [group, members] of groups)
-    if (members.length > 1)
-      throw new UsageError(`Choose one ${group} template: ${members.join(" or ")}`);
+    if (members.length > 1) throw new UsageError(`Choose one ${group} template: ${members.join(" or ")}`);
 
   // stack.toml paths are relative to the Aphrody checkout (m3/templates/<name>).
   const checkout = path.resolve(templatesDir, "..", "..");
   const templateDir = (t: any) => {
     const fromCheckout = path.resolve(checkout, t.path);
-    return fs.existsSync(fromCheckout)
-      ? fromCheckout
-      : path.join(templatesDir, path.basename(t.path));
+    return fs.existsSync(fromCheckout) ? fromCheckout : path.join(templatesDir, path.basename(t.path));
   };
-  const aphrody = path.resolve(
-    cwd,
-    flags.aphrody ?? flags["yolo-path"] ?? process.env.YOLO_HOME ?? checkout,
-  );
+  const aphrody = path.resolve(cwd, flags.aphrody ?? flags["yolo-path"] ?? process.env.YOLO_HOME ?? checkout);
   const target = path.resolve(cwd, dirArg ?? requested.at(-1) ?? "aphrody-app");
   if (fs.existsSync(target) && fs.readdirSync(target).length > 0)
     throw new UsageError(`${path.relative(cwd, target) || "."} exists and is not empty`);
@@ -829,7 +778,7 @@ async function create(args: string[], cwd: string): Promise<number> {
     for (const rel of walkFiles(dir)) {
       const dest = rel
         .split("/")
-        .map((part) => (part === "gitignore" ? ".gitignore" : part))
+        .map(part => (part === "gitignore" ? ".gitignore" : part))
         .join("/");
       const bytes = fs.readFileSync(path.join(dir, rel));
       if (TEMPLATE_TEXT.test(rel)) {
@@ -841,10 +790,7 @@ async function create(args: string[], cwd: string): Promise<number> {
     Object.assign(dependencies, templates[id].dependencies ?? {});
     Object.assign(devDependencies, templates[id].dev_dependencies ?? {});
   }
-  if (
-    written.has("package.json") &&
-    (Object.keys(dependencies).length || Object.keys(devDependencies).length)
-  ) {
+  if (written.has("package.json") && (Object.keys(dependencies).length || Object.keys(devDependencies).length)) {
     const pkg = JSON.parse(written.get("package.json") as string);
     pkg.dependencies = { ...pkg.dependencies, ...dependencies };
     pkg.devDependencies = { ...pkg.devDependencies, ...devDependencies };
@@ -866,10 +812,10 @@ async function create(args: string[], cwd: string): Promise<number> {
 
 async function main(): Promise<number> {
   const argv = process.argv.slice(1);
-  const at = argv.findIndex((a) => COMMANDS.includes(a));
+  const at = argv.findIndex(a => COMMANDS.includes(a));
   if (at === -1) throw new UsageError(`Expected one of ${COMMANDS.join(", ")}`);
   const command = argv[at];
-  const args = argv.slice(at + 1).filter((arg) => arg !== "--external-backend");
+  const args = argv.slice(at + 1).filter(arg => arg !== "--external-backend");
   const cwd = process.cwd();
   switch (command) {
     case "lint":
@@ -892,8 +838,8 @@ async function main(): Promise<number> {
 }
 
 main().then(
-  (code) => process.exit(code),
-  (error) => {
+  code => process.exit(code),
+  error => {
     if (error instanceof UsageError) {
       process.stderr.write(`${paint("31", "error")}: ${error.message}\n`);
       process.exit(1);

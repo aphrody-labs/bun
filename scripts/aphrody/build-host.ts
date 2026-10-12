@@ -69,18 +69,15 @@ export const releaseTargets: ReleaseTarget[] = [
   { target: "darwin-x64", os: "darwin", arch: "x64", runner: "macos-15-intel" },
   { target: "windows-x64", os: "windows", arch: "x64", runner: "windows-2025" },
   { target: "windows-aarch64", os: "windows", arch: "aarch64", runner: "windows-11-arm" },
-].map((t) => {
+].map(t => {
   const triplet = `bun-${t.os}-${t.arch}${t.abi === "musl" ? "-musl" : ""}`;
   const alias = t.arch === "x64" ? `${triplet}-baseline` : undefined;
   return { ...t, triplet, ...(alias ? { baselineAlias: alias } : {}) } as ReleaseTarget;
 });
 
 export function findTarget(name: string): ReleaseTarget {
-  const t = releaseTargets.find((t) => t.target === name);
-  if (!t)
-    throw new Error(
-      `unknown target ${name}; known: ${releaseTargets.map((t) => t.target).join(", ")}`,
-    );
+  const t = releaseTargets.find(t => t.target === name);
+  if (!t) throw new Error(`unknown target ${name}; known: ${releaseTargets.map(t => t.target).join(", ")}`);
   return t;
 }
 
@@ -136,8 +133,7 @@ export function deriveFactoryProfile(
   },
 ): FactoryHostProfile {
   const target = findTarget(config.target);
-  if (!/^[a-z0-9][a-z0-9._-]{0,63}$/.test(config.host))
-    throw new Error("invalid factory host identity");
+  if (!/^[a-z0-9][a-z0-9._-]{0,63}$/.test(config.host)) throw new Error("invalid factory host identity");
   if (!observation.filesystem) throw new Error("factory filesystem must be observed");
   for (const [name, value] of Object.entries({
     cpu: observation.cpu,
@@ -145,24 +141,15 @@ export function deriveFactoryProfile(
     availableMemoryMiB: observation.availableMemoryMiB,
     freeDiskMiB: observation.freeDiskMiB,
   }))
-    if (!Number.isSafeInteger(value) || value <= 0)
-      throw new Error("invalid live resource observation: " + name);
+    if (!Number.isSafeInteger(value) || value <= 0) throw new Error("invalid live resource observation: " + name);
   if (observation.availableMemoryMiB > observation.memoryMiB)
     throw new Error("available memory exceeds physical memory");
   const age = Date.now() - Date.parse(observation.observedAt);
-  if (!Number.isFinite(age) || age < -60_000 || age > 300_000)
-    throw new Error("factory resource observation is stale");
-  if (observation.filesystem === "tmpfs")
-    throw new Error("factory target must reside on persistent disk");
-  if (!/^[a-f0-9]{40}$/.test(config.sourceTree))
-    throw new Error("factory source tree must be an exact Git object");
+  if (!Number.isFinite(age) || age < -60_000 || age > 300_000) throw new Error("factory resource observation is stale");
+  if (observation.filesystem === "tmpfs") throw new Error("factory target must reside on persistent disk");
+  if (!/^[a-f0-9]{40}$/.test(config.sourceTree)) throw new Error("factory source tree must be an exact Git object");
   for (const path of [config.factoryRoot, config.lockPath]) {
-    if (
-      !path.startsWith("/") ||
-      path === "/" ||
-      path.split("/").includes("..") ||
-      path.includes("\0")
-    ) {
+    if (!path.startsWith("/") || path === "/" || path.split("/").includes("..") || path.includes("\0")) {
       throw new Error("factory paths must be explicit absolute host paths");
     }
   }
@@ -175,7 +162,7 @@ export function deriveFactoryProfile(
   const usableMemory = observation.availableMemoryMiB - reserveMemoryMiB;
   const heavyMemory = config.heavyMemoryMiB ?? 2048;
   const lightMemory = config.lightMemoryMiB ?? 512;
-  if (![heavyMemory, lightMemory].every((value) => Number.isSafeInteger(value) && value > 0))
+  if (![heavyMemory, lightMemory].every(value => Number.isSafeInteger(value) && value > 0))
     throw new Error("invalid per-slot memory estimate");
   const heavySlots = Math.min(observation.cpu, Math.floor(usableMemory / heavyMemory));
   if (heavySlots < 1) throw new Error("insufficient memory for one heavy build slot");
@@ -227,11 +214,7 @@ export function splitSections(script: string): { header: string; sections: Map<s
 
 export type ForkBootstrap = { containerPath: string; sha256: string; version: string };
 
-export function provisionScript(
-  t: ReleaseTarget,
-  hostArch: Arch,
-  bootstrap: ForkBootstrap,
-): string {
+export function provisionScript(t: ReleaseTarget, hostArch: Arch, bootstrap: ForkBootstrap): string {
   if (
     !bootstrap ||
     !/^\/[a-zA-Z0-9_./-]+$/.test(bootstrap.containerPath) ||
@@ -255,7 +238,7 @@ export function provisionScript(
     const { directory } = generateImage(image, root);
     const { sections } = splitSections(readFileSync(join(directory, "bootstrap.sh"), "utf8"));
     const xmac = readFileSync(join(directory, "xmac.mjs"), "utf8");
-    const body = sectionsFor(t).map((name) => {
+    const body = sectionsFor(t).map(name => {
       const section =
         name === "bun"
           ? [
@@ -266,7 +249,7 @@ export function provisionScript(
               "install -m 755 ${bootstrap.containerPath} /usr/local/bin/bun",
               "ln -sf bun /usr/local/bin/bunx",
             ]
-              .map((line) =>
+              .map(line =>
                 line
                   .replaceAll("${bootstrap.containerPath}", bootstrap.containerPath)
                   .replaceAll("${bootstrap.sha256}", bootstrap.sha256)
@@ -318,12 +301,8 @@ if (import.meta.main) {
       factoryRoot: required("--factory-root"),
       lockPath: required("--heavy-lock"),
       sourceTree: required("--source-tree"),
-      ...(flag(args, "--heavy-memory-mib")
-        ? { heavyMemoryMiB: Number(flag(args, "--heavy-memory-mib")) }
-        : {}),
-      ...(flag(args, "--light-memory-mib")
-        ? { lightMemoryMiB: Number(flag(args, "--light-memory-mib")) }
-        : {}),
+      ...(flag(args, "--heavy-memory-mib") ? { heavyMemoryMiB: Number(flag(args, "--heavy-memory-mib")) } : {}),
+      ...(flag(args, "--light-memory-mib") ? { lightMemoryMiB: Number(flag(args, "--light-memory-mib")) } : {}),
     });
     console.log(JSON.stringify(profile, null, 2));
   } else if (command === "targets") {
@@ -333,8 +312,7 @@ if (import.meta.main) {
   } else if (command === "provision") {
     const target = findTarget(flag(args, "--target") ?? "");
     const out = flag(args, "--out");
-    const host = (flag(args, "--host-arch") ??
-      (process.arch === "arm64" ? "aarch64" : "x64")) as Arch;
+    const host = (flag(args, "--host-arch") ?? (process.arch === "arm64" ? "aarch64" : "x64")) as Arch;
     const script = provisionScript(target, host, {
       containerPath: flag(args, "--bootstrap-path") ?? "",
       sha256: flag(args, "--bootstrap-sha256") ?? "",
@@ -346,9 +324,7 @@ if (import.meta.main) {
     const target = findTarget(flag(args, "--target") ?? "");
     const lto = (flag(args, "--lto") ?? "on") !== "off";
     const versionTag = flag(args, "--version-tag");
-    console.log(
-      buildArgs(target, { lto, ...(versionTag !== undefined ? { versionTag } : {}) }).join(" "),
-    );
+    console.log(buildArgs(target, { lto, ...(versionTag !== undefined ? { versionTag } : {}) }).join(" "));
   } else {
     console.error("usage: build-host.ts <targets|provision|args> ...");
     process.exit(2);

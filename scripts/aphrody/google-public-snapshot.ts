@@ -73,7 +73,7 @@ function integer(value: unknown, max: number): number {
 function text(value: unknown, max: number): string {
   if (
     typeof value !== "string" ||
-    Array.from(value).some((char) => {
+    Array.from(value).some(char => {
       const code = char.charCodeAt(0);
       return code === 127 || (code < 32 && code !== 9 && code !== 10 && code !== 13);
     }) ||
@@ -89,7 +89,7 @@ export function canonicalPublicJson(value: unknown): string {
     const record = object(value);
     return `{${Object.keys(record)
       .sort()
-      .map((key) => `${JSON.stringify(key)}:${canonicalPublicJson(record[key])}`)
+      .map(key => `${JSON.stringify(key)}:${canonicalPublicJson(record[key])}`)
       .join(",")}}`;
   }
   const result = JSON.stringify(value);
@@ -103,7 +103,7 @@ function publicHost(value: unknown): string {
   if (
     typeof value !== "string" ||
     value.length > 253 ||
-    value.split(".").some((label) => label.length > 63) ||
+    value.split(".").some(label => label.length > 63) ||
     value !== value.toLowerCase() ||
     !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(value) ||
     isIP(value) ||
@@ -114,8 +114,7 @@ function publicHost(value: unknown): string {
 }
 function publicUrl(value: unknown, hosts: string[]): string {
   const input = text(value, 8192);
-  if (Array.from(input).some((char) => char.charCodeAt(0) <= 32 || char.charCodeAt(0) === 127))
-    fail();
+  if (Array.from(input).some(char => char.charCodeAt(0) <= 32 || char.charCodeAt(0) === 127)) fail();
   let url: URL;
   try {
     url = new URL(input);
@@ -135,17 +134,9 @@ function publicUrl(value: unknown, hosts: string[]): string {
 }
 function validatePolicy(input: PublicSnapshotPolicy): PublicSnapshotPolicy {
   const policy = object(input);
-  const keys = [
-    "collection",
-    "seeds",
-    "hosts",
-    "maxRequests",
-    "maxDepth",
-    "obeyRobots",
-    "anonymous",
-  ];
+  const keys = ["collection", "seeds", "hosts", "maxRequests", "maxDepth", "obeyRobots", "anonymous"];
   if (
-    Object.keys(policy).some((key) => !keys.includes(key)) ||
+    Object.keys(policy).some(key => !keys.includes(key)) ||
     typeof policy.collection !== "string" ||
     !slug.test(policy.collection) ||
     policy.obeyRobots !== true ||
@@ -161,11 +152,11 @@ function validatePolicy(input: PublicSnapshotPolicy): PublicSnapshotPolicy {
     policy.seeds.length > 1000
   )
     fail();
-  const seeds = policy.seeds.map((seed) => {
+  const seeds = policy.seeds.map(seed => {
     publicUrl(seed, hosts);
     return seed as string;
   });
-  if (new Set(seeds.map((seed) => new URL(seed).href)).size !== seeds.length) fail();
+  if (new Set(seeds.map(seed => new URL(seed).href)).size !== seeds.length) fail();
   const maxRequests = integer(policy.maxRequests, 5000);
   if (maxRequests < 1) fail();
   return {
@@ -198,18 +189,12 @@ export function buildPublicSnapshot(
   )
     fail();
   const calendar = new Date(`${context.generatedAt.slice(0, 10)}T00:00:00Z`);
-  if (
-    !Number.isFinite(calendar.valueOf()) ||
-    calendar.toISOString().slice(0, 10) !== context.generatedAt.slice(0, 10)
-  )
+  if (!Number.isFinite(calendar.valueOf()) || calendar.toISOString().slice(0, 10) !== context.generatedAt.slice(0, 10))
     fail();
   const crawl = object(report);
   if (
     Object.keys(crawl).some(
-      (key) =>
-        !["attempts", "pages", "errors", "frontier", "exactDuplicates", "nearDuplicates"].includes(
-          key,
-        ),
+      key => !["attempts", "pages", "errors", "frontier", "exactDuplicates", "nearDuplicates"].includes(key),
     )
   )
     fail();
@@ -223,8 +208,7 @@ export function buildPublicSnapshot(
   )
     fail();
   const frontier = object(crawl.frontier);
-  if (Object.keys(frontier).some((key) => !["pending", "locked", "done", "failed"].includes(key)))
-    fail();
+  if (Object.keys(frontier).some(key => !["pending", "locked", "done", "failed"].includes(key))) fail();
   const done = integer(frontier.done, attempted);
   const failed = integer(frontier.failed, attempted);
   const pending = integer(frontier.pending, 100000);
@@ -241,7 +225,7 @@ export function buildPublicSnapshot(
     const page = object(value);
     if (
       Object.keys(page).some(
-        (key) =>
+        key =>
           ![
             "url",
             "depth",
@@ -268,8 +252,7 @@ export function buildPublicSnapshot(
     if (status < 200 || status >= 300) continue;
     const content = text(page.text, 32768);
     const title = text(page.title, 2048);
-    if (Array.from(title).some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127))
-      fail();
+    if (Array.from(title).some(char => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)) fail();
     documents.push({
       url,
       title,
@@ -342,9 +325,7 @@ export async function runPublicSnapshotCli(args: string[]): Promise<void> {
     !["true", "false"].includes(values["timed-out"] ?? "")
   )
     fail();
-  const report = JSON.parse(
-    (await regularBytes(resolve(values.report), 40 * 1024 * 1024)).toString("utf8"),
-  ) as unknown;
+  const report = JSON.parse((await regularBytes(resolve(values.report), 40 * 1024 * 1024)).toString("utf8")) as unknown;
   const policy = JSON.parse(
     (await regularBytes(resolve(values.policy), 16384)).toString("utf8"),
   ) as PublicSnapshotPolicy;
@@ -352,9 +333,7 @@ export async function runPublicSnapshotCli(args: string[]): Promise<void> {
   const revision = values["source-revision"];
   const snapshot = buildPublicSnapshot(report, policy, revision, context);
   await canonicalRoot(values.root);
-  const result = values.apply
-    ? await publishPublicSnapshot(values.root, report, policy, revision, context)
-    : undefined;
+  const result = values.apply ? await publishPublicSnapshot(values.root, report, policy, revision, context) : undefined;
   console.log(
     JSON.stringify({
       mode: values.apply ? "apply" : "plan",
@@ -390,12 +369,7 @@ async function canonicalRoot(root: string): Promise<string> {
     path = parent;
   }
   const actual = resolve(await realpath(absolute));
-  if (
-    process.platform === "win32"
-      ? actual.toLowerCase() !== absolute.toLowerCase()
-      : actual !== absolute
-  )
-    fail();
+  if (process.platform === "win32" ? actual.toLowerCase() !== absolute.toLowerCase() : actual !== absolute) fail();
   return absolute;
 }
 async function exclusiveBytes(path: string, bytes: Buffer): Promise<void> {
@@ -476,7 +450,7 @@ export async function publishPublicSnapshot(
     await rename(temporary, pointerPath);
     return { snapshot, pointer, rollbackFile };
   } finally {
-    await unlink(temporary).catch((error) => {
+    await unlink(temporary).catch(error => {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     });
     await lock.close();

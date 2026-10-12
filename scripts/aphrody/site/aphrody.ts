@@ -1,14 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import { createM3Site } from "../../../packages/bun-m3/src/site";
 import { createGooglePublicSearch } from "../../../packages/bun-google/src/search";
-import {
-  createPublicCatalog,
-  type PublicCatalogOptions,
-} from "../../../packages/bun-m3/src/catalog";
-import {
-  createGoogleOAuthServer,
-  createMemoryGoogleOAuthStore,
-} from "../../../packages/bun-google/src/oauth";
+import { createPublicCatalog, type PublicCatalogOptions } from "../../../packages/bun-m3/src/catalog";
+import { createGoogleOAuthServer, createMemoryGoogleOAuthStore } from "../../../packages/bun-google/src/oauth";
 import { createNativeM3Renderer } from "../../../packages/bun-m3/src/native-renderer";
 import { searchPage } from "./search-page";
 import { publicPwaResponse } from "./pwa";
@@ -42,9 +36,7 @@ export async function createPublicSite(options: {
     if (path === "/favicon.png" || path === "/_app-ui/icon-512.png") {
       if (!["GET", "HEAD"].includes(request.method))
         return new Response(null, { status: 405, headers: { allow: "GET, HEAD" } });
-      const asset = Bun.file(
-        `${options.staticRoot}/${path === "/favicon.png" ? "favicon.png" : "icon-512.png"}`,
-      );
+      const asset = Bun.file(`${options.staticRoot}/${path === "/favicon.png" ? "favicon.png" : "icon-512.png"}`);
       if (!(await asset.exists())) return new Response(null, { status: 404 });
       return new Response(request.method === "HEAD" ? null : asset, {
         headers: {
@@ -75,8 +67,7 @@ export async function createPublicSite(options: {
       (path === "/terminal" && ["GET", "HEAD"].includes(request.method)
         ? await shell(request)
         : await options.catalog(request));
-    if (request.method === "HEAD" || !response.headers.get("content-type")?.includes("text/html"))
-      return response;
+    if (request.method === "HEAD" || !response.headers.get("content-type")?.includes("text/html")) return response;
     const headers = new Headers(response.headers);
     headers.delete("content-length");
     headers.delete("etag");
@@ -103,9 +94,7 @@ if (import.meta.main) {
   const themeFile = process.env.SITE_THEME_FILE;
   const googleOwner = process.env.GOOGLE_SEARCH_OWNER;
   if (!root || !catalogModule || !themeFile || !googleOwner)
-    throw new Error(
-      "APP_UI_ROOT, SITE_CATALOG_MODULE, SITE_THEME_FILE and GOOGLE_SEARCH_OWNER required",
-    );
+    throw new Error("APP_UI_ROOT, SITE_CATALOG_MODULE, SITE_THEME_FILE and GOOGLE_SEARCH_OWNER required");
   const source = await import(catalogModule);
   const downloadsRoot = process.env.DOWNLOADS_ROOT || "/srv/downloads";
   const catalog = source.createHandler(downloadsRoot, source.siteOptions(downloadsRoot));
@@ -132,10 +121,7 @@ if (import.meta.main) {
     allowedCallbackURLs: [`${publicOrigin}/auth/google/callback`],
     clientId: credentials?.clientId,
     clientSecret: credentials?.clientSecret,
-    store:
-      process.env.GOOGLE_OAUTH_SESSION_STORE === "memory"
-        ? createMemoryGoogleOAuthStore()
-        : undefined,
+    store: process.env.GOOGLE_OAUTH_SESSION_STORE === "memory" ? createMemoryGoogleOAuthStore() : undefined,
     allowedReturnPaths: ["/", "/settings"],
   });
   const port = Number(process.env.PORT ?? "3000");
@@ -150,7 +136,7 @@ if (import.meta.main) {
       themeFile,
       googleOwner,
       snapshots,
-      oauth: async (request) => {
+      oauth: async request => {
         const incoming = new URL(request.url);
         const canonical = new URL(publicOrigin);
         if (incoming.host === canonical.host && incoming.protocol === "http:") {

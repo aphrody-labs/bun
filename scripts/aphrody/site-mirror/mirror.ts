@@ -36,7 +36,7 @@ export function mirrorCommand(destination: string): string[] {
   ];
 }
 export function files(root: string): string[] {
-  return readdirSync(root, { withFileTypes: true }).flatMap((entry) =>
+  return readdirSync(root, { withFileTypes: true }).flatMap(entry =>
     entry.isDirectory()
       ? files(join(root, entry.name))
       : entry.isFile() && !/\.partial-[a-f0-9]{16}$/.test(entry.name)
@@ -58,11 +58,7 @@ export function localReferences(html: string): string[] {
     .transform(html);
   return references;
 }
-export function rewriteCapturedLinks(
-  html: string,
-  sourceFile: string,
-  capturedRoot: string,
-): string {
+export function rewriteCapturedLinks(html: string, sourceFile: string, capturedRoot: string): string {
   const base = resolve(capturedRoot);
   return new HTMLRewriter()
     .on("*", {
@@ -93,21 +89,14 @@ export function rewriteCapturedLinks(
                 ? "/" + route + suffix
                 : "https://bun.com/" + path.replace(/(?:^|\/)index\.html$/, "") + suffix,
             );
-          } else if (
-            existsSync(target) &&
-            !(name.toLowerCase() === "href" && element.tagName === "a")
-          )
+          } else if (existsSync(target) && !(name.toLowerCase() === "href" && element.tagName === "a"))
             element.setAttribute(name, "/" + local + suffix);
           else {
             const [host, ...parts] = local.split("/");
             if (host && /^(?:[a-z0-9-]+\.)+[a-z0-9-]+$/i.test(host))
               element.setAttribute(
                 name,
-                "https://" +
-                  host +
-                  "/" +
-                  parts.join("/").replace(/(?:^|\/)index\.html$/, "") +
-                  suffix,
+                "https://" + host + "/" + parts.join("/").replace(/(?:^|\/)index\.html$/, "") + suffix,
               );
           }
         }
@@ -115,11 +104,9 @@ export function rewriteCapturedLinks(
     })
     .transform(html);
 }
-const hash = (data: string | Uint8Array) =>
-  new Bun.CryptoHasher("sha256").update(data).digest("hex");
+const hash = (data: string | Uint8Array) => new Bun.CryptoHasher("sha256").update(data).digest("hex");
 const generatorSha256 = hash(readFileSync(import.meta.path));
-const escape = (value: string) =>
-  value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
+const escape = (value: string) => value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
 export function rewriteInstallers(text: string, origin: string): string {
   return text
     .replace(/https:\/\/bun\.sh\/install\.ps1/g, `${origin}/install.ps1`)
@@ -147,13 +134,9 @@ export function externalizeInlineScripts(html: string): {
       const type = (match?.[1] ?? match?.[2] ?? match?.[3] ?? "").toLowerCase();
       if (
         type &&
-        ![
-          "module",
-          "text/javascript",
-          "application/javascript",
-          "text/ecmascript",
-          "application/ecmascript",
-        ].includes(type)
+        !["module", "text/javascript", "application/javascript", "text/ecmascript", "application/ecmascript"].includes(
+          type,
+        )
       )
         return all;
       const file = `aphrody-inline-${hash(content).slice(0, 24)}.js`;
@@ -163,11 +146,7 @@ export function externalizeInlineScripts(html: string): {
   );
   return { html: output, assets };
 }
-export function adaptHtml(
-  html: string,
-  source: string,
-  origin = "https://aphrody.app",
-): string {
+export function adaptHtml(html: string, source: string, origin = "https://aphrody.app"): string {
   if (!/^[a-f0-9]{40}$/.test(source)) throw new Error("A release source SHA is required");
   const links = [
     ["Fork releases", "/downloads"],
@@ -187,9 +166,7 @@ export function adaptHtml(
           const url = new URL(src, origin);
           const localHost = url.pathname.split("/")[1];
           if (
-            [url.hostname, localHost].some(
-              (host) => host === "plausible.io" || host === "static.cloudflareinsights.com",
-            )
+            [url.hostname, localHost].some(host => host === "plausible.io" || host === "static.cloudflareinsights.com")
           )
             element.remove();
         } catch {}
@@ -202,10 +179,7 @@ export function adaptHtml(
     .replace(/<script\b[^>]*\bsrc=["'][^"']*plausible\.io[^"']*["'][^>]*>\s*<\/script>/gi, "")
     .replace(/https:\/\/bun\.sh\/install\.ps1/g, `${origin}/install.ps1`)
     .replace(/https:\/\/bun\.sh\/install(?![\w.])/g, `${origin}/install.sh`)
-    .replace(
-      /https:\/\/github\.com\/oven-sh\/bun(?=["'\s<])/g,
-      "https://github.com/aphrody-labs/bun-os",
-    )
+    .replace(/https:\/\/github\.com\/oven-sh\/bun(?=["'\s<])/g, "https://github.com/aphrody-labs/bun-os")
     .replace(/(<link\b[^>]*rel=["']canonical["'][^>]*href=["'])https:\/\/bun\.com/g, `$1${origin}`)
     .replace(
       "</head>",
@@ -217,13 +191,7 @@ export function adaptHtml(
 export const M3_CSS = `.aphrody-fork{position:relative;margin:2rem auto;padding:1rem 1.5rem;max-width:76rem;border-radius:24px;background:var(--md-sys-color-surface-container);color:var(--md-sys-color-on-surface);--md-ref-typeface-plain:"Google Sans Flex",system-ui;font-family:var(--md-ref-typeface-plain,system-ui)}.aphrody-fork strong,.aphrody-fork span{display:block}.aphrody-fork span{font-size:.875rem}.aphrody-fork nav{display:flex;gap:.5rem;flex-wrap:wrap;margin:.75rem 0}.aphrody-fork a{padding:.5rem .75rem;border-radius:999px;background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container)}.aphrody-fork code{overflow-wrap:anywhere}:root{--md-ref-typeface-brand:var(--font-display);--md-ref-typeface-plain:var(--font-sans);--radius-sm:8px;--radius:12px;--radius-lg:16px;--radius-xl:28px}a:focus-visible,button:focus-visible{outline:3px solid var(--md-sys-color-primary);outline-offset:3px}@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}`;
 export const M3_JS = `(()=>{const roles={canvas:'surface',subtle:'surface-container-low',surface:'surface',raised:'surface-container',line:'outline-variant','line-strong':'outline',fg:'on-surface','fg-muted':'on-surface-variant','fg-faint':'on-surface-variant',accent:'primary','accent-strong':'primary','accent-soft':'primary-container',signal:'tertiary',rule:'outline',slab:'inverse-surface','on-slab':'inverse-on-surface',bar:'primary',cream:'tertiary-container','code-bg':'surface-container','code-fg':'on-surface',danger:'error'};const probe=document.createElement('span');probe.hidden=true;document.body.append(probe);function apply(){for(const [name,role] of Object.entries(roles)){probe.style.color='var(--md-sys-color-'+role+')';const color=getComputedStyle(probe).color.match(/^rgba?\\((\\d+)[, ]+(\\d+)[, ]+(\\d+)/);if(color)document.documentElement.style.setProperty('--c-'+name,color.slice(1,4).join(' '));}}apply();matchMedia('(prefers-color-scheme:dark)').addEventListener('change',apply);new MutationObserver(apply).observe(document.documentElement,{attributes:true,attributeFilter:['class']});})();`;
 
-export function buildMirror(
-  capture: string,
-  output: string,
-  source: string,
-  origin?: string,
-  allowPartial = false,
-) {
+export function buildMirror(capture: string, output: string, source: string, origin?: string, allowPartial = false) {
   const base = resolve(capture, "upstream"),
     root = resolve(output);
   if (root === base || root.startsWith(base + "/") || root.startsWith(base + "\\"))
@@ -237,8 +205,7 @@ export function buildMirror(
     report = { state: "in-progress", nativeReportPending: true };
   }
   const upstream = join(base, "bun.com");
-  if (!existsSync(join(upstream, "index.html")))
-    throw new Error("The upstream homepage is missing");
+  if (!existsSync(join(upstream, "index.html"))) throw new Error("The upstream homepage is missing");
   mkdirSync(root, { recursive: true });
   mkdirSync(join(root, "mirror-assets"), { recursive: true });
   writeFileSync(
@@ -248,12 +215,10 @@ export function buildMirror(
   );
   writeFileSync(join(root, "mirror-assets/m3.js"), M3_JS);
   const entries = files(base)
-    .filter((file) => relative(base, file) !== "manifest.json")
-    .map((file) => {
+    .filter(file => relative(base, file) !== "manifest.json")
+    .map(file => {
       const capturedPath = relative(base, file).replaceAll("\\", "/");
-      const path = capturedPath.startsWith("bun.com/")
-        ? capturedPath.slice("bun.com/".length)
-        : capturedPath;
+      const path = capturedPath.startsWith("bun.com/") ? capturedPath.slice("bun.com/".length) : capturedPath;
       const bytes = readFileSync(file);
       mkdirSync(dirname(join(root, path)), { recursive: true });
       if (capturedPath.startsWith("bun.com/") && path.endsWith(".html")) {
@@ -261,14 +226,11 @@ export function buildMirror(
           adaptHtml(rewriteCapturedLinks(bytes.toString("utf8"), file, base), source, origin),
         );
         writeFileSync(join(root, path), adapted.html);
-        for (const asset of adapted.assets)
-          writeFileSync(join(dirname(join(root, path)), asset.file), asset.content);
+        for (const asset of adapted.assets) writeFileSync(join(dirname(join(root, path)), asset.file), asset.content);
       } else if (path.endsWith(".js"))
         writeFileSync(
           join(root, path),
-          rewritePagefindLoader(
-            rewriteInstallers(bytes.toString("utf8"), "https://aphrody.app"),
-          ),
+          rewritePagefindLoader(rewriteInstallers(bytes.toString("utf8"), "https://aphrody.app")),
         );
       else writeFileSync(join(root, path), bytes);
       return {
@@ -280,19 +242,16 @@ export function buildMirror(
       };
     });
   const unresolved = entries
-    .filter((entry) => entry.capturedPath.startsWith("bun.com/") && entry.path.endsWith(".html"))
-    .flatMap((entry) =>
-      localReferences(readFileSync(join(root, entry.path), "utf8")).flatMap((href) => {
+    .filter(entry => entry.capturedPath.startsWith("bun.com/") && entry.path.endsWith(".html"))
+    .flatMap(entry =>
+      localReferences(readFileSync(join(root, entry.path), "utf8")).flatMap(href => {
         const path = href.split(/[?#]/)[0]!;
         if (!path) return [];
-        const target = resolve(
-          path.startsWith("/") ? root : resolve(root, entry.path, ".."),
-          path.replace(/^\//, ""),
-        );
+        const target = resolve(path.startsWith("/") ? root : resolve(root, entry.path, ".."), path.replace(/^\//, ""));
         return existsSync(target) ? [] : [{ page: entry.path, href }];
       }),
     );
-  const originalPaths = new Set(entries.map((entry) => resolve(root, entry.path)));
+  const originalPaths = new Set(entries.map(entry => resolve(root, entry.path)));
   const coverage = {
     source,
     builtAt: new Date().toISOString(),
@@ -301,12 +260,12 @@ export function buildMirror(
     engine: "aphrody web mirror",
     limits: CAPTURE_LIMITS,
     report,
-    pages: entries.filter((x) => x.path.endsWith(".html")).length,
-    assets: entries.filter((x) => !x.path.endsWith(".html")).length,
+    pages: entries.filter(x => x.path.endsWith(".html")).length,
+    assets: entries.filter(x => !x.path.endsWith(".html")).length,
     files: entries,
     derivedAssets: files(root)
-      .filter((file) => !originalPaths.has(file))
-      .map((file) => ({
+      .filter(file => !originalPaths.has(file))
+      .map(file => ({
         path: relative(root, file).replaceAll("\\", "/"),
         sha256: hash(readFileSync(file)),
       })),
@@ -331,9 +290,7 @@ export function buildMirror(
 if (import.meta.main) {
   const [operation, first, second, source, origin] = process.argv.slice(2);
   if (operation === "plan" && first)
-    console.log(
-      JSON.stringify({ command: mirrorCommand(first), budgets: CAPTURE_LIMITS }, null, 2),
-    );
+    console.log(JSON.stringify({ command: mirrorCommand(first), budgets: CAPTURE_LIMITS }, null, 2));
   else if (operation === "capture" && first) {
     const root = resolve(first);
     if (existsSync(join(root, "report.json")))
@@ -344,10 +301,7 @@ if (import.meta.main) {
       stderr: Bun.file(join(root, "mirror.log")),
     });
     const code = await process.exited;
-    writeFileSync(
-      join(root, "exit.json"),
-      JSON.stringify({ code, endedAt: new Date().toISOString() }),
-    );
+    writeFileSync(join(root, "exit.json"), JSON.stringify({ code, endedAt: new Date().toISOString() }));
     if (code) throw new Error(`Native capture failed: ${code}`);
   } else if (
     (operation === "build" || operation === "wait-build" || operation === "partial-build") &&
@@ -380,7 +334,5 @@ if (import.meta.main) {
       }),
     );
   } else
-    throw new Error(
-      "Usage: mirror.ts plan|capture <capture-dir> | build <capture-dir> <new-output-dir> <source-sha>",
-    );
+    throw new Error("Usage: mirror.ts plan|capture <capture-dir> | build <capture-dir> <new-output-dir> <source-sha>");
 }

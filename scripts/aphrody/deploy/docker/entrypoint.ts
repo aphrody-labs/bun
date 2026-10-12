@@ -26,9 +26,13 @@ async function build() {
     return 4;
   }
   const tokenFile = process.env.GH_TOKEN_FILE;
-  if (!process.env.GH_TOKEN && tokenFile && existsSync(tokenFile)) process.env.GH_TOKEN = readFileSync(tokenFile, "utf8").trim();
+  if (!process.env.GH_TOKEN && tokenFile && existsSync(tokenFile))
+    process.env.GH_TOKEN = readFileSync(tokenFile, "utf8").trim();
   while (!stopping) {
-    child = Bun.spawn({ cmd: ["bun", join(dir, "queue.ts"), "--once", "--config", config], stdio: ["ignore", "inherit", "inherit"] });
+    child = Bun.spawn({
+      cmd: ["bun", join(dir, "queue.ts"), "--once", "--config", config],
+      stdio: ["ignore", "inherit", "inherit"],
+    });
     const code = await child.exited;
     if (code === 0 || code === 75) writeFileSync(stamp, String(Date.now()));
     else console.error(`queue.ts: code ${code}`);
@@ -49,7 +53,10 @@ async function prod() {
       continue;
     }
     const started = Date.now();
-    child = Bun.spawn({ cmd: script ? ["bun", script, ...process.argv.slice(3)] : [exe, ...process.argv.slice(3)], stdio: ["ignore", "inherit", "inherit"] });
+    child = Bun.spawn({
+      cmd: script ? ["bun", script, ...process.argv.slice(3)] : [exe, ...process.argv.slice(3)],
+      stdio: ["ignore", "inherit", "inherit"],
+    });
     writeFileSync(stamp, String(started));
     const code = await child.exited;
     if (stopping) break;
@@ -73,5 +80,14 @@ async function health() {
 
 const role = process.argv[2];
 const code =
-  role === "build" ? await build() : role === "prod" ? await prod() : role === "health" ? await health() : await (child = Bun.spawn({ cmd: ["bun", ...process.argv.slice(2)], stdio: ["inherit", "inherit", "inherit"] })).exited;
+  role === "build"
+    ? await build()
+    : role === "prod"
+      ? await prod()
+      : role === "health"
+        ? await health()
+        : await (child = Bun.spawn({
+            cmd: ["bun", ...process.argv.slice(2)],
+            stdio: ["inherit", "inherit", "inherit"],
+          })).exited;
 process.exit(code);

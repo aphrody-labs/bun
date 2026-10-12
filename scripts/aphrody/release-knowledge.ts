@@ -19,7 +19,7 @@ export function completeReleaseKnowledge(out: string, origin = "https://aphrody.
       "SELECT path,content,sha256 FROM release_files WHERE content IS NOT NULL AND path LIKE 'docs/%' AND (path LIKE '%.md' OR path LIKE '%.mdx') ORDER BY path",
     )
     .all();
-  const benchmarks = files.filter((file) => /(^|\/)(bench|benchmarks)\//.test(file.path));
+  const benchmarks = files.filter(file => /(^|\/)(bench|benchmarks)\//.test(file.path));
   const changed: string[] = [];
   const write = (path: string, body: string | Uint8Array) => {
     mkdirSync(dirname(join(out, path)), { recursive: true });
@@ -29,9 +29,7 @@ export function completeReleaseKnowledge(out: string, origin = "https://aphrody.
   const links: string[] = [];
   const full: string[] = [];
   const flagSource = db
-    .query<{ content: string; sha256: string }, [string]>(
-      "SELECT content,sha256 FROM release_files WHERE path=?",
-    )
+    .query<{ content: string; sha256: string }, [string]>("SELECT content,sha256 FROM release_files WHERE path=?")
     .get("src/bun_core/env_var.rs");
   if (flagSource) {
     const flags = experimentalFeatureFlags(flagSource.content);
@@ -52,10 +50,7 @@ export function completeReleaseKnowledge(out: string, origin = "https://aphrody.
       "",
       "| Environment switch | Declared default |",
       "| --- | --- |",
-      ...flags.map(
-        (flag) =>
-          "| `" + flag.name + "` | " + (flag.defaultEnabled ? "enabled" : "disabled") + " |",
-      ),
+      ...flags.map(flag => "| `" + flag.name + "` | " + (flag.defaultEnabled ? "enabled" : "disabled") + " |"),
       "",
     ].join("\n");
     write("site/knowledge/feature-flags.json", `${JSON.stringify(inventory, null, 2)}\n`);
@@ -80,33 +75,25 @@ export function completeReleaseKnowledge(out: string, origin = "https://aphrody.
   const languages = lspExtensions(join(out, "source"));
   const pluginFiles = new Map<string, Uint8Array | string>();
   const walk = (directory: string, prefix = "") => {
-    for (const entry of readdirSync(directory, { withFileTypes: true }).sort((a, b) =>
-      a.name.localeCompare(b.name),
-    )) {
+    for (const entry of readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
       const path = prefix + entry.name;
       if (entry.isDirectory()) walk(join(directory, entry.name), `${path}/`);
       else pluginFiles.set(path, readFileSync(join(directory, entry.name)));
     }
   };
   walk(join(out, "plugin"));
-  const skills = [...pluginFiles.keys()].filter((path) =>
-    /(?:SKILL\.md|references\/.*\.md)$/.test(path),
-  );
+  const skills = [...pluginFiles.keys()].filter(path => /(?:SKILL\.md|references\/.*\.md)$/.test(path));
   const cliSource =
     db
       .query<{ content: string }, [string]>("SELECT content FROM release_files WHERE path=?")
       .get("packages/bun-agent-plugin/src/cli.ts")?.content ?? "";
-  const commands = [
-    ...new Set([...cliSource.matchAll(/case\s+"([\w-]+)"\s*:/g)].map((match) => match[1]!)),
-  ].sort();
+  const commands = [...new Set([...cliSource.matchAll(/case\s+"([\w-]+)"\s*:/g)].map(match => match[1]!))].sort();
   const usage = [
     ...(commands.includes("install")
       ? ["bun agent-plugin install claude codex agy", "bun agent-plugin install --update"]
       : []),
     ...(commands.includes("doctor") ? ["bun agent-plugin doctor"] : []),
-    ...(commands.includes("generate")
-      ? ["bun run agent-plugin generate --out tmp/agent-plugin"]
-      : []),
+    ...(commands.includes("generate") ? ["bun run agent-plugin generate --out tmp/agent-plugin"] : []),
   ];
   const pluginReadme = [
     "# Bun agent plugin",
@@ -123,21 +110,21 @@ export function completeReleaseKnowledge(out: string, origin = "https://aphrody.
     ...usage,
     "```",
     "",
-    `Commands registered in the pinned package CLI: ${commands.map((command) => `\`${command}\``).join(", ") || "none in this source fixture"}.`,
+    `Commands registered in the pinned package CLI: ${commands.map(command => `\`${command}\``).join(", ") || "none in this source fixture"}.`,
     "",
     "## Native MCP tools",
     "",
-    ...tools.map((tool) => `- ${tool.name}: ${tool.title}`),
+    ...tools.map(tool => `- ${tool.name}: ${tool.title}`),
     "",
     "## Native LSP extensions",
     "",
     ...Object.keys(languages)
       .sort()
-      .map((extension) => `- ${extension}: ${languages[extension]}`),
+      .map(extension => `- ${extension}: ${languages[extension]}`),
     "",
     "## Skills and references",
     "",
-    ...skills.map((path) => `- [${path}](${origin}/knowledge/plugin/${path})`),
+    ...skills.map(path => `- [${path}](${origin}/knowledge/plugin/${path})`),
     "",
   ].join("\n");
   pluginFiles.set("README.md", pluginReadme);
@@ -148,14 +135,10 @@ export function completeReleaseKnowledge(out: string, origin = "https://aphrody.
     const content = pluginFiles.get(path)!;
     write(`site/knowledge/plugin/${path}`, content);
     links.push(`- [Plugin ${path}](${origin}/knowledge/plugin/${path})`);
-    full.push(
-      `# Plugin ${path}\nSource: ${graph.source}\n\n${new TextDecoder().decode(content as Uint8Array)}`,
-    );
+    full.push(`# Plugin ${path}\nSource: ${graph.source}\n\n${new TextDecoder().decode(content as Uint8Array)}`);
   }
   write("site/knowledge/plugin/README.md", pluginReadme);
-  const measured = files.filter((file) =>
-    /(?:perf-report|product-benchmarks)\.json$/.test(file.path),
-  );
+  const measured = files.filter(file => /(?:perf-report|product-benchmarks)\.json$/.test(file.path));
   const benchmarkReport = {
     source: graph.source,
     sourceFiles: benchmarks.map(({ path, sha256 }) => ({ path, sha256 })),
@@ -164,9 +147,7 @@ export function completeReleaseKnowledge(out: string, origin = "https://aphrody.
       "Source inventory and committed measurement reports only. No performance measurements were run by this documentation generator. Historical reports retain their recorded runtime, host and workload scope.",
   };
   write("site/benchmarks/source-inventory.json", `${JSON.stringify(benchmarkReport, null, 2)}\n`);
-  links.push(
-    `- [Benchmark source and measurement coverage](${origin}/benchmarks/source-inventory.json)`,
-  );
+  links.push(`- [Benchmark source and measurement coverage](${origin}/benchmarks/source-inventory.json)`);
   write(
     "site/llms.txt",
     `${readFileSync(join(out, "site/llms.txt"), "utf8").split("\n## Complete source knowledge\n")[0]}\n## Complete source knowledge\n\n${links.join("\n")}\n`,
@@ -181,7 +162,7 @@ export function completeReleaseKnowledge(out: string, origin = "https://aphrody.
       .update(readFileSync(import.meta.path))
       .digest("hex"),
     docs: docs.length,
-    guides: docs.filter((doc) => doc.path.startsWith("docs/guides/")).length,
+    guides: docs.filter(doc => doc.path.startsWith("docs/guides/")).length,
     graphDocuments: graph.documents.length,
     pluginSkillsAndReferences: skills.length,
     mcpTools: tools.length,
@@ -193,7 +174,7 @@ export function completeReleaseKnowledge(out: string, origin = "https://aphrody.
   write("site/knowledge/coverage.json", `${JSON.stringify(report, null, 2)}\n`);
   write(
     "site/knowledge/index.html",
-    `<!doctype html><html lang="en"><meta charset="utf-8"><title>Bun source knowledge</title><h1>Bun source knowledge</h1><p>Source ${Bun.escapeHTML(graph.source)}. ${docs.length} documentation pages, ${report.guides} guides, ${graph.documents.length} graph domain documents and ${skills.length} plugin skills and references.</p><p><a href="coverage.json">Coverage and generator provenance</a> · <a href="/graph/">Monorepo graph</a> · <a href="/llms.txt">LLM index</a> · <a href="/llms-full.txt">Complete LLM text</a> · <a href="/benchmarks/source-inventory.json">Benchmark source coverage</a></p><ul>${docs.map((doc) => `<li><a href="source/${Bun.escapeHTML(doc.path)}">${Bun.escapeHTML(doc.path)}</a></li>`).join("")}</ul></html>`,
+    `<!doctype html><html lang="en"><meta charset="utf-8"><title>Bun source knowledge</title><h1>Bun source knowledge</h1><p>Source ${Bun.escapeHTML(graph.source)}. ${docs.length} documentation pages, ${report.guides} guides, ${graph.documents.length} graph domain documents and ${skills.length} plugin skills and references.</p><p><a href="coverage.json">Coverage and generator provenance</a> · <a href="/graph/">Monorepo graph</a> · <a href="/llms.txt">LLM index</a> · <a href="/llms-full.txt">Complete LLM text</a> · <a href="/benchmarks/source-inventory.json">Benchmark source coverage</a></p><ul>${docs.map(doc => `<li><a href="source/${Bun.escapeHTML(doc.path)}">${Bun.escapeHTML(doc.path)}</a></li>`).join("")}</ul></html>`,
   );
   const finalCoverage = `${JSON.stringify(report, null, 2)}\n`;
   writeFileSync(join(out, "knowledge-coverage.json"), finalCoverage);

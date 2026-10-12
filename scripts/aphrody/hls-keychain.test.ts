@@ -24,9 +24,7 @@ function memoryStore() {
   return { store, values, writes: () => writes };
 }
 const bundle = (domain = ".crunchyroll.com", value = "synthetic") =>
-  normalizeCookieExport([
-    { name: "session", value, domain, path: "/", secure: true, httpOnly: true, session: true },
-  ]);
+  normalizeCookieExport([{ name: "session", value, domain, path: "/", secure: true, httpOnly: true, session: true }]);
 
 test("cookie migration verifies keychain data, preserves its source and can reuse an identical credential", async () => {
   const input = JSON.stringify(bundle());
@@ -77,8 +75,6 @@ test("a different existing keychain credential is preserved instead of overwritt
   const memory = memoryStore();
   await migrateCookieInput(`${directory}/first.json`, memory.store);
   const original = new Map(memory.values);
-  await expect(migrateCookieInput(`${directory}/second.json`, memory.store)).rejects.toThrow(
-    "already exists",
-  );
+  await expect(migrateCookieInput(`${directory}/second.json`, memory.store)).rejects.toThrow("already exists");
   expect(memory.values).toEqual(original);
 });

@@ -171,11 +171,7 @@ function convertStringToRegExp(str: string, name: string) {
   try {
     return new RegExp(pattern, flags);
   } catch (err) {
-    throw $ERR_INVALID_ARG_VALUE(
-      name,
-      str,
-      `is an invalid regular expression: ${(err as Error).message}`,
-    );
+    throw $ERR_INVALID_ARG_VALUE(name, str, `is an invalid regular expression: ${(err as Error).message}`);
   }
 }
 
@@ -185,19 +181,13 @@ let tagsExperimentalWarningEmitted = false;
 function emitTagsExperimentalWarning() {
   if (tagsExperimentalWarningEmitted) return;
   tagsExperimentalWarningEmitted = true;
-  process.emitWarning(
-    "Test tags is an experimental feature and might change at any time",
-    "ExperimentalWarning",
-  );
+  process.emitWarning("Test tags is an experimental feature and might change at any time", "ExperimentalWarning");
 }
 
 function validateRunOptions(options: Record<string, unknown>) {
   validateObject(options, "options");
 
-  let { testNamePatterns, testSkipPatterns, testTagFilters, shard } = options as Record<
-    string,
-    any
-  >;
+  let { testNamePatterns, testSkipPatterns, testTagFilters, shard } = options as Record<string, any>;
   const {
     files,
     forceExit,
@@ -246,10 +236,8 @@ function validateRunOptions(options: Record<string, unknown>) {
     }
   }
   if (setup != null) validateFunction(setup, "options.setup");
-  if (testNamePatterns != null)
-    testNamePatterns = toRegExpPatterns(testNamePatterns, "options.testNamePatterns");
-  if (testSkipPatterns != null)
-    testSkipPatterns = toRegExpPatterns(testSkipPatterns, "options.testSkipPatterns");
+  if (testNamePatterns != null) testNamePatterns = toRegExpPatterns(testNamePatterns, "options.testNamePatterns");
+  if (testSkipPatterns != null) testSkipPatterns = toRegExpPatterns(testSkipPatterns, "options.testSkipPatterns");
 
   let testTagFilterExpressions = null;
   if (testTagFilters != null) {
@@ -283,8 +271,7 @@ function validateRunOptions(options: Record<string, unknown>) {
   // the observable error is the same synchronous throw.
   const { concurrency, timeout, signal } = options as Record<string, any>;
   if (signal !== undefined) validateAbortSignal(signal, "options.signal");
-  if (timeout != null && timeout !== Infinity)
-    validateNumber(timeout, "options.timeout", 0, kTimeoutMax);
+  if (timeout != null && timeout !== Infinity) validateNumber(timeout, "options.timeout", 0, kTimeoutMax);
   if (concurrency != null && typeof concurrency !== "boolean") {
     if (typeof concurrency === "number") validateUint32(concurrency, "options.concurrency", true);
     else throw $ERR_INVALID_ARG_TYPE("options.concurrency", ["boolean", "number"], concurrency);
@@ -321,9 +308,7 @@ function run(options: Record<string, unknown> = kEmptyObject) {
   // A test file that calls run() on itself would otherwise fork forever; node
   // skips the files and returns an empty stream instead.
   if (runChildReporterEnabled) {
-    process.emitWarning(
-      "node:test run() is being called recursively within a test file. skipping running files.",
-    );
+    process.emitWarning("node:test run() is being called recursively within a test file. skipping running files.");
     reporter.endStream();
     return reporter;
   }
@@ -332,14 +317,8 @@ function run(options: Record<string, unknown> = kEmptyObject) {
   // silently ignored. testTagFilters and timeout are the deliberate exceptions:
   // validated for node's error contract but not yet forwarded (node's own
   // test-runner-filetest-location.js passes timeout).
-  if (opts.watch)
-    throwNotImplemented("run({ watch: true })", 5090, "Use `bun:test --watch` in the interim.");
-  if (opts.coverage)
-    throwNotImplemented(
-      "run({ coverage: true })",
-      5090,
-      "Use `bun:test --coverage` in the interim.",
-    );
+  if (opts.watch) throwNotImplemented("run({ watch: true })", 5090, "Use `bun:test --watch` in the interim.");
+  if (opts.coverage) throwNotImplemented("run({ coverage: true })", 5090, "Use `bun:test --coverage` in the interim.");
   if (opts.shard) throwNotImplemented("run({ shard })", 5090);
   if (opts.isolation === "none") throwNotImplemented("run({ isolation: 'none' })", 5090);
   if (opts.globPatterns?.length > 0) throwNotImplemented("run({ globPatterns })", 5090);
@@ -374,11 +353,7 @@ function addRunCounts(into: Record<string, number>, from: Record<string, number>
   for (const key of Object.keys(from)) into[key] += from[key];
 }
 
-function emitRunDiagnostics(
-  reporter: TestsStream,
-  counts: Record<string, number>,
-  durationMs: number,
-) {
+function emitRunDiagnostics(reporter: TestsStream, counts: Record<string, number>, durationMs: number) {
   reporter.diagnostic({ __proto__: null, nesting: 0, message: `tests ${counts.tests}` });
   reporter.diagnostic({ __proto__: null, nesting: 0, message: `suites ${counts.suites}` });
   reporter.diagnostic({ __proto__: null, nesting: 0, message: `pass ${counts.passed}` });
@@ -451,10 +426,7 @@ function reportCancelledFile(
     column: 1,
     file: absolute,
   };
-  const error = makeTestFailure(
-    "test did not finish before its parent and was cancelled",
-    "cancelledByParent",
-  );
+  const error = makeTestFailure("test did not finish before its parent and was cancelled", "cancelledByParent");
   const details = { __proto__: null, duration_ms: 0, type: "test", error };
   reporter.enqueue({ __proto__: null, ...fileNode });
   reporter.dequeue({ __proto__: null, ...fileNode });
@@ -482,13 +454,7 @@ async function runOneFile(
   // Node's getRunArgs builds [...execArgv, path, ...argv] so runtime flags land
   // in the child's process.execArgv; bun's CLI likewise takes runtime flags
   // before the `test` keyword and user args after the path.
-  const args = [
-    process.execPath,
-    ...(opts.execArgv as string[]),
-    "test",
-    absolute,
-    ...(opts.argv as string[]),
-  ];
+  const args = [process.execPath, ...(opts.execArgv as string[]), "test", absolute, ...(opts.argv as string[])];
   const fileStarted = Date.now();
   const fileCounts = makeRunCounts();
 
@@ -535,12 +501,10 @@ async function runOneFile(
         while ((nl = carry.indexOf("\n")) !== -1) {
           const line = carry.slice(0, nl);
           carry = carry.slice(nl + 1);
-          if (line.length > 0)
-            reporter.stderr({ __proto__: null, file: absolute, message: line + "\n" });
+          if (line.length > 0) reporter.stderr({ __proto__: null, file: absolute, message: line + "\n" });
         }
       }
-      if (carry.length > 0)
-        reporter.stderr({ __proto__: null, file: absolute, message: carry + "\n" });
+      if (carry.length > 0) reporter.stderr({ __proto__: null, file: absolute, message: carry + "\n" });
     })();
     // Defuse: a throwing test:stderr listener rejects this while the stdout
     // loop is still suspended on I/O, before the finally's .catch attaches.
@@ -609,10 +573,7 @@ async function runOneFile(
     }
 
     if (fileFailed) {
-      error = makeTestFailure(
-        stderrText.trim() || `Test file failed with exit code ${exitCode}`,
-        "testCodeFailure",
-      );
+      error = makeTestFailure(stderrText.trim() || `Test file failed with exit code ${exitCode}`, "testCodeFailure");
     } else {
       reporter.summary({
         __proto__: null,
@@ -720,8 +681,7 @@ function emitRunChildEvent(type: string, data: unknown) {
 // node's top-level tests are nesting 0, so the root node itself doesn't count.
 function nestingOf(node: TestNode) {
   let depth = 0;
-  for (let cur = node.parent; cur !== undefined && cur.parent !== undefined; cur = cur.parent)
-    depth++;
+  for (let cur = node.parent; cur !== undefined && cur.parent !== undefined; cur = cur.parent) depth++;
   return depth;
 }
 
@@ -799,12 +759,7 @@ function reportNodeToRunParent(node: TestNode, startedAt: number) {
 //   https://github.com/nodejs/node/blob/50c35fea9e64d50ab3bb5f359e8523de89d6c798/lib/internal/test_runner/mock/mock.js
 // API reference: https://nodejs.org/api/test.html#class-mocktracker
 // -----------------------------------------------------------------------------
-let trackMockCall: (
-  ctx: MockFunctionContext,
-  thisArg: unknown,
-  args: unknown[],
-  target: unknown,
-) => unknown;
+let trackMockCall: (ctx: MockFunctionContext, thisArg: unknown, args: unknown[], target: unknown) => unknown;
 
 class MockFunctionContext {
   #calls: unknown[];
@@ -1107,12 +1062,7 @@ class MockTracker {
 
   fn(original?: Function | object, implementation?: Function | object, options?: object) {
     this.#syncEntryFile();
-    if (
-      original !== null &&
-      original !== undefined &&
-      !$isCallable(original) &&
-      typeof original === "object"
-    ) {
+    if (original !== null && original !== undefined && !$isCallable(original) && typeof original === "object") {
       options = implementation as object;
       implementation = original;
       original = undefined;
@@ -1164,10 +1114,7 @@ class MockTracker {
     if (implementation !== undefined && !$isCallable(implementation)) {
       throw $ERR_INVALID_ARG_TYPE("implementation", "function", implementation);
     }
-    if (
-      (typeof objectOrFunction !== "object" || objectOrFunction === null) &&
-      !$isCallable(objectOrFunction)
-    ) {
+    if ((typeof objectOrFunction !== "object" || objectOrFunction === null) && !$isCallable(objectOrFunction)) {
       throw $ERR_INVALID_ARG_TYPE("object", "object", objectOrFunction);
     }
     if (typeof methodName !== "string" && typeof methodName !== "symbol") {
@@ -1189,11 +1136,7 @@ class MockTracker {
     validateBoolean(setter, "options.setter");
     validateTimes(times, "options.times");
     if (setter && getter) {
-      throw $ERR_INVALID_ARG_VALUE(
-        "options.setter",
-        setter,
-        "cannot be used with 'options.getter'",
-      );
+      throw $ERR_INVALID_ARG_VALUE("options.setter", setter, "cannot be used with 'options.getter'");
     }
 
     // Find the descriptor on the object or its prototype chain.
@@ -1230,12 +1173,7 @@ class MockTracker {
       // @ts-ignore
       Object.defineProperty(objectOrFunction, methodName, { __proto__: null, ...descriptor! });
     };
-    const mocked = this.#createMockFunction(
-      original,
-      implementation as Function | undefined,
-      restore,
-      times,
-    );
+    const mocked = this.#createMockFunction(original, implementation as Function | undefined, restore, times);
 
     const mockDescriptor: PropertyDescriptor = {
       // @ts-ignore
@@ -1368,11 +1306,7 @@ const mock = MockTracker.createFileScoped();
 // Assertions (t.assert + custom assertion registry)
 // -----------------------------------------------------------------------------
 
-function fileSnapshot(
-  _value: unknown,
-  _path: string,
-  _options: { serializers?: Function[] } = kEmptyObject,
-) {
+function fileSnapshot(_value: unknown, _path: string, _options: { serializers?: Function[] } = kEmptyObject) {
   throwNotImplemented("fileSnapshot()", 5090, "Use `bun:test` in the interim.");
 }
 
@@ -1386,10 +1320,7 @@ const { innerOk } = require("internal/assert/utils");
 // Custom assertions registered through `require("node:test").assert.register()`.
 // They become part of every TestContext's `t.assert` built afterwards.
 // Prototype-less so lookups never go through user-reachable Map/Object methods.
-let customAssertions: Record<string, Function> = { __proto__: null } as unknown as Record<
-  string,
-  Function
->;
+let customAssertions: Record<string, Function> = { __proto__: null } as unknown as Record<string, Function>;
 
 function registerCustomAssertion(name: string, fn: Function) {
   validateString(name, "name");
@@ -1427,10 +1358,7 @@ function buildContextAssert(node: TestNode, ctx: TestContext) {
   // Per-context assert namespace, prototype-less like Node's: node:assert
   // methods (minus the uncopied ones), snapshot/fileSnapshot, and custom
   // assertions; each call counts the plan and binds the TestContext.
-  const result: Record<string, Function> = { __proto__: null } as unknown as Record<
-    string,
-    Function
-  >;
+  const result: Record<string, Function> = { __proto__: null } as unknown as Record<string, Function>;
   // Node captures `plan` once at first `t.assert` access and closes over it,
   // so `t.assert; t.plan(2); t.assert.ok(1)` counts 0 (nodejs/node
   // lib/internal/test_runner/test.js:331). Match that.
@@ -1448,8 +1376,7 @@ function buildContextAssert(node: TestNode, ctx: TestContext) {
     // CallTracker is also excluded: bun's node:assert still ships it (Node 26
     // does not), and copying it would trigger its deprecation accessor.
     // `ok` is installed below, outside the generic wrapper.
-    if (key === "AssertionError" || key === "strict" || key === "CallTracker" || key === "ok")
-      continue;
+    if (key === "AssertionError" || key === "strict" || key === "CallTracker" || key === "ok") continue;
     const value = nodeAssert[key];
     if (!$isCallable(value)) continue;
     add(key, value);
@@ -1531,9 +1458,7 @@ class TestPlan {
         timer = realSetTimeout(() => {
           this.#pending = undefined;
           reject(
-            makeTestFailure(
-              `plan timed out after ${wait}ms with ${this.actual} assertions when expecting ${expected}`,
-            ),
+            makeTestFailure(`plan timed out after ${wait}ms with ${this.actual} assertions when expecting ${expected}`),
           );
         }, wait);
         // Not unref'd: count()/cancel()/the timer callback always clear it, and
@@ -1586,9 +1511,7 @@ function canonicalizeTags(tags: unknown, name: string): string[] {
 // Async context tracking for getTestContext()
 // -----------------------------------------------------------------------------
 
-let asyncLocalStorage:
-  | { getStore(): TestNode | undefined; run<T>(store: TestNode, fn: () => T): T }
-  | undefined;
+let asyncLocalStorage: { getStore(): TestNode | undefined; run<T>(store: TestNode, fn: () => T): T } | undefined;
 
 function getAsyncLocalStorage() {
   if (asyncLocalStorage === undefined) {
@@ -1675,15 +1598,13 @@ class TestNode {
     // Direct children of the root capture the entry file at declaration time
     // (under `bun test` with multiple files, Bun.main is the file currently
     // being collected); nested tests inherit their parent's file.
-    this.filePath =
-      parent !== undefined && parent.parent !== undefined ? parent.filePath : Bun.main;
+    this.filePath = parent !== undefined && parent.parent !== undefined ? parent.filePath : Bun.main;
     const { skip, todo } = options;
     this.skipped = !!skip;
     this.todoFlag = !!todo || (parent?.todoFlag ?? false);
     if (typeof skip === "string") this.message = skip;
     else if (typeof todo === "string") this.message = todo;
-    this.expectFailure =
-      parseExpectFailure(options.expectFailure) || parent?.expectFailure || false;
+    this.expectFailure = parseExpectFailure(options.expectFailure) || parent?.expectFailure || false;
   }
 
   get tags(): readonly string[] {
@@ -2065,8 +1986,7 @@ type ExpectFailure = false | { label?: string; match?: import("node:assert").Ass
 
 function parseExpectFailure(expectFailure: unknown): ExpectFailure {
   if (expectFailure === undefined || expectFailure === false) return false;
-  if (typeof expectFailure === "string")
-    return { __proto__: null, label: expectFailure, match: undefined } as any;
+  if (typeof expectFailure === "string") return { __proto__: null, label: expectFailure, match: undefined } as any;
   if (typeof expectFailure === "function" || $isRegExpObject(expectFailure)) {
     return { __proto__: null, label: undefined, match: expectFailure } as any;
   }
@@ -2076,13 +1996,9 @@ function parseExpectFailure(expectFailure: unknown): ExpectFailure {
   // `null` reaches Object.keys and throws, exactly as it does in node.
   const keys = Object.keys(expectFailure as object);
   if (keys.length === 0) {
-    throw $ERR_INVALID_ARG_VALUE(
-      "options.expectFailure",
-      expectFailure,
-      "must not be an empty object",
-    );
+    throw $ERR_INVALID_ARG_VALUE("options.expectFailure", expectFailure, "must not be an empty object");
   }
-  if (keys.every((k) => k === "match" || k === "label")) {
+  if (keys.every(k => k === "match" || k === "label")) {
     return {
       __proto__: null,
       label: (expectFailure as { label?: string }).label,
@@ -2259,10 +2175,7 @@ function createStopController(timeout: number | undefined) {
   const promise = new Promise<never>((_, reject) => {
     // Not unref'd: dispose() always clears it, and on Windows an unref'd timer
     // alone under bun:test leaves the uws loop inactive so auto_tick busy-spins.
-    timer = realSetTimeout(
-      () => reject(makeTestFailure(`test timed out after ${timeout}ms`)),
-      timeout,
-    );
+    timer = realSetTimeout(() => reject(makeTestFailure(`test timed out after ${timeout}ms`)), timeout);
   });
   // Swallow the rejection when nothing is racing it anymore.
   promise.catch(() => {});
@@ -2292,10 +2205,7 @@ async function raceWithTimeoutAndSignal(
     if (typeof timeout === "number" && Number.isFinite(timeout)) {
       racers.push(
         new Promise<never>((_, reject) => {
-          timer = realSetTimeout(
-            () => reject(makeTestFailure(`test timed out after ${timeout}ms`)),
-            timeout,
-          );
+          timer = realSetTimeout(() => reject(makeTestFailure(`test timed out after ${timeout}ms`)), timeout);
         }),
       );
     }
@@ -2507,12 +2417,7 @@ async function executeTestNode(node: TestNode, fn: TestFn): Promise<unknown> {
   return failure;
 }
 
-function scheduleSubtest(
-  parent: TestNode,
-  child: TestNode,
-  fn: TestFn,
-  ownTodo: boolean,
-): Promise<undefined> {
+function scheduleSubtest(parent: TestNode, child: TestNode, fn: TestFn, ownTodo: boolean): Promise<undefined> {
   const run = async () => {
     if (child.options.skip) {
       child.finished = true;
@@ -2556,12 +2461,7 @@ async function drainSubtestChain(node: TestNode) {
   } while (chain !== node.subtestChain);
 }
 
-function scheduleSuiteSubtest(
-  parent: TestNode,
-  suite: TestNode,
-  build: unknown,
-  ownTodo: boolean,
-): Promise<undefined> {
+function scheduleSuiteSubtest(parent: TestNode, suite: TestNode, build: unknown, ownTodo: boolean): Promise<undefined> {
   // A describe()/suite() created while a test is running becomes a suite
   // subtest: its children were collected eagerly when the callback ran and are
   // already chained on the suite's own subtestChain; failures roll up here.
@@ -2666,7 +2566,7 @@ function createTopLevelTestRunner(node: TestNode, fn: TestFn, declaredTodo = fal
     // plain describe so bun:test has no todo scope to consult.
     const todoBefore = node.todoFlag;
     executeTestNode(node, fn).then(
-      (failure) => {
+      failure => {
         // A runtime t.skip()/t.todo() overrides bun:test's pass/fail accounting
         // (Node counts these as skip/todo even when the body threw); a declared
         // todo body's failure must reach bun:test's own todo accounting instead.
@@ -2680,7 +2580,7 @@ function createTopLevelTestRunner(node: TestNode, fn: TestFn, declaredTodo = fal
         }
         done(undefined);
       },
-      (err) => done(err),
+      err => done(err),
     );
   };
 }
@@ -2729,8 +2629,7 @@ function addTest(
 
   // Node merges .todo()/.skip() into the options and checks skip first, so
   // test.todo(name, { skip: true }, fn) is a skip.
-  const effectiveMode =
-    mode === "skip" || options.skip ? "skip" : mode === "todo" || options.todo ? "todo" : undefined;
+  const effectiveMode = mode === "skip" || options.skip ? "skip" : mode === "todo" || options.todo ? "todo" : undefined;
 
   if (effectiveMode === "todo" || effectiveMode === "skip") {
     // Under a run() child, register skip as an ordinary test so its directive
@@ -2760,8 +2659,7 @@ function addTest(
     }
     const register = effectiveMode === "todo" ? test.todo : test.skip;
     // Node runs todo bodies; bun:test only does so under --todo.
-    const body =
-      effectiveMode === "todo" ? createTopLevelTestRunner(node, fn, true) : kDefaultFunction;
+    const body = effectiveMode === "todo" ? createTopLevelTestRunner(node, fn, true) : kDefaultFunction;
     if (passOptions !== undefined) {
       register(name, body, passOptions);
     } else {
@@ -2849,8 +2747,7 @@ function addSuite(
 
   // Node merges .todo()/.skip() into the options and checks skip first, so
   // describe.todo(name, { skip: true }, fn) is a skip.
-  const effectiveMode =
-    mode === "skip" || options.skip ? "skip" : mode === "todo" || options.todo ? "todo" : undefined;
+  const effectiveMode = mode === "skip" || options.skip ? "skip" : mode === "todo" || options.todo ? "todo" : undefined;
 
   // Node never invokes a skipped suite's callback (it does run a todo one), so
   // the children are never declared and side effects in the body never happen.
@@ -2941,7 +2838,7 @@ function before(arg0: unknown, arg1: unknown) {
   beforeAll((done: (error?: unknown) => void) => {
     Promise.resolve(runHook(hook, owner, hookArgFor(owner))).then(
       () => done(),
-      (err) => done(err ?? new Error("before hook failed")),
+      err => done(err ?? new Error("before hook failed")),
     );
   });
 }
@@ -2957,7 +2854,7 @@ function after(arg0: unknown, arg1: unknown) {
   afterAll((done: (error?: unknown) => void) => {
     Promise.resolve(runHook(hook, owner, hookArgFor(owner))).then(
       () => done(),
-      (err) => done(err ?? new Error("after hook failed")),
+      err => done(err ?? new Error("after hook failed")),
     );
   });
 }

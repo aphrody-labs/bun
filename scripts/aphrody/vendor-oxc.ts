@@ -4,15 +4,7 @@ import { parseArgs } from "node:util";
 
 export const OXC_REVISION = "b25696441c80fd580c35d671797f1940c642a624";
 const RECEIPT = ".bun-vendor.json";
-const FORBIDDEN = new Set([
-  ".git",
-  ".aphrody",
-  ".codex",
-  ".claude",
-  "cookies",
-  "credentials",
-  "sessions",
-]);
+const FORBIDDEN = new Set([".git", ".aphrody", ".codex", ".claude", "cookies", "credentials", "sessions"]);
 const ROOT_OUTPUTS = new Set(["node_modules", "target"]);
 
 type Entry = { path: string; mode: string; blob: string; size: number; link?: string };
@@ -34,10 +26,7 @@ function hash(data: Uint8Array, algorithm: "sha1" | "sha256" = "sha256") {
   return new Bun.CryptoHasher(algorithm).update(data).digest("hex");
 }
 function gitBlob(data: Uint8Array) {
-  return new Bun.CryptoHasher("sha1")
-    .update(`blob ${data.byteLength}\0`)
-    .update(data)
-    .digest("hex");
+  return new Bun.CryptoHasher("sha1").update(`blob ${data.byteLength}\0`).update(data).digest("hex");
 }
 async function git(source: string, args: string[]): Promise<Uint8Array> {
   const proc = Bun.spawn(["git", "-C", source, ...args], { stdout: "pipe", stderr: "pipe" });
@@ -58,9 +47,7 @@ function safePath(path: string) {
     path.includes("\0") ||
     /^[a-z]:/i.test(path) ||
     ROOT_OUTPUTS.has(segments[0]!) ||
-    segments.some(
-      (segment) => !segment || segment === "." || segment === ".." || FORBIDDEN.has(segment),
-    )
+    segments.some(segment => !segment || segment === "." || segment === ".." || FORBIDDEN.has(segment))
   ) {
     throw new Error(`Unsafe tracked source path: ${path}`);
   }
@@ -76,8 +63,7 @@ async function exists(path: string) {
 async function targetFor(options: VendorOptions) {
   const workspace = resolve(options.workspace);
   const target = resolve(options.target);
-  if (target !== resolve(workspace, "vendor/oxc"))
-    throw new Error("Target must be the selected workspace vendor/oxc");
+  if (target !== resolve(workspace, "vendor/oxc")) throw new Error("Target must be the selected workspace vendor/oxc");
   for (const path of [workspace, resolve(workspace, "vendor"), target]) {
     if ((await exists(path))?.isSymbolicLink()) throw new Error(`Symlink target boundary: ${path}`);
   }
@@ -87,13 +73,11 @@ async function targetFor(options: VendorOptions) {
 export async function vendorPlan(options: VendorOptions) {
   const target = await targetFor(options);
   const revision = options.revision ?? OXC_REVISION;
-  if (!/^[a-f0-9]{40}$/.test(revision))
-    throw new Error("Revision must be an exact lowercase 40-character Git SHA");
+  if (!/^[a-f0-9]{40}$/.test(revision)) throw new Error("Revision must be an exact lowercase 40-character Git SHA");
   const resolved = new TextDecoder()
     .decode(await git(resolve(options.source), ["rev-parse", `${revision}^{commit}`]))
     .trim();
-  if (resolved !== revision)
-    throw new Error("Resolved revision differs from the requested immutable commit");
+  if (resolved !== revision) throw new Error("Resolved revision differs from the requested immutable commit");
   const tree = new TextDecoder("utf-8", { fatal: true }).decode(
     await git(resolve(options.source), ["ls-tree", "-rlz", revision]),
   );
@@ -113,9 +97,8 @@ export async function vendorPlan(options: VendorOptions) {
         path
           .split("/")
           .some(
-            (segment) =>
-              /[<>:"|?*]|[. ]$/.test(segment) ||
-              /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(segment),
+            segment =>
+              /[<>:"|?*]|[. ]$/.test(segment) || /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(segment),
           )
       ) {
         throw new Error(`Source filename requires a qualified host: ${path}`);
@@ -137,12 +120,7 @@ export async function vendorPlan(options: VendorOptions) {
       entry.link = new TextDecoder("utf-8", { fatal: true }).decode(
         await git(resolve(options.source), ["cat-file", "blob", blob]),
       );
-      if (
-        !entry.link ||
-        isAbsolute(entry.link) ||
-        /^[a-z]:/i.test(entry.link) ||
-        entry.link.includes("\\")
-      )
+      if (!entry.link || isAbsolute(entry.link) || /^[a-z]:/i.test(entry.link) || entry.link.includes("\\"))
         throw new Error(`Unsafe source symlink: ${path}`);
       safePath(
         relative(target, resolve(dirname(resolve(target, path)), entry.link))
@@ -153,24 +131,23 @@ export async function vendorPlan(options: VendorOptions) {
     entries.push(entry);
   }
   entries.sort((a, b) => a.path.localeCompare(b.path, "en"));
-  if (!entries.some((entry) => /^LICENSE(?:\.[^/]*)?$/.test(entry.path)))
+  if (!entries.some(entry => /^LICENSE(?:\.[^/]*)?$/.test(entry.path)))
     throw new Error("Tracked root license is required");
   const bytes = entries.reduce((sum, entry) => sum + entry.size, 0);
-  if (bytes > 512 * 1024 * 1024)
-    throw new Error("Tracked source exceeds the 512 MiB archive budget");
+  if (bytes > 512 * 1024 * 1024) throw new Error("Tracked source exceeds the 512 MiB archive budget");
   return {
     revision,
     source: resolve(options.source),
     target,
     trackedFiles: entries.length,
     bytes,
-    symlinks: entries.filter((entry) => entry.link).length,
+    symlinks: entries.filter(entry => entry.link).length,
     entries,
   };
 }
 
 async function verifyFiles(target: string, entries: Entry[]) {
-  const declared = new Set(entries.map((entry) => entry.path));
+  const declared = new Set(entries.map(entry => entry.path));
   for await (const path of new Bun.Glob("**").scan({
     cwd: target,
     dot: true,
@@ -180,16 +157,14 @@ async function verifyFiles(target: string, entries: Entry[]) {
     const normalized = path.split("\\").join("/");
     const stat = await lstat(resolve(target, path));
     if (stat.isDirectory()) continue;
-    if (!declared.has(normalized) && normalized !== RECEIPT)
-      throw new Error(`Unexpected vendor output: ${normalized}`);
+    if (!declared.has(normalized) && normalized !== RECEIPT) throw new Error(`Unexpected vendor output: ${normalized}`);
   }
   const files: Receipt["files"] = [];
   for (const entry of entries) {
     const path = resolve(target, entry.path);
     let parent = dirname(path);
     while (parent !== target) {
-      if ((await lstat(parent)).isSymbolicLink())
-        throw new Error(`Symlink source parent: ${entry.path}`);
+      if ((await lstat(parent)).isSymbolicLink()) throw new Error(`Symlink source parent: ${entry.path}`);
       parent = dirname(parent);
     }
     const stat = await lstat(path);
@@ -197,9 +172,7 @@ async function verifyFiles(target: string, entries: Entry[]) {
       entry.link === undefined
         ? new Uint8Array(await Bun.file(path).arrayBuffer())
         : new TextEncoder().encode(
-            process.platform === "win32"
-              ? (await readlink(path)).split("\\").join("/")
-              : await readlink(path),
+            process.platform === "win32" ? (await readlink(path)).split("\\").join("/") : await readlink(path),
           );
     if (entry.link === undefined ? !stat.isFile() : !stat.isSymbolicLink())
       throw new Error(`Entry type differs: ${entry.path}`);
@@ -211,9 +184,9 @@ async function verifyFiles(target: string, entries: Entry[]) {
 }
 
 async function writeTrackedBlobs(source: string, target: string, entries: Entry[]) {
-  const regular = entries.filter((entry) => entry.link === undefined);
+  const regular = entries.filter(entry => entry.link === undefined);
   const proc = Bun.spawn(["git", "-C", source, "cat-file", "--batch"], {
-    stdin: new Blob([regular.map((entry) => entry.blob + "\n").join("")]),
+    stdin: new Blob([regular.map(entry => entry.blob + "\n").join("")]),
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -245,12 +218,11 @@ async function writeTrackedBlobs(source: string, target: string, entries: Entry[
 }
 
 async function ensureTrackedLinks(target: string, entries: Entry[]) {
-  for (const entry of entries.filter((entry) => entry.link !== undefined)) {
+  for (const entry of entries.filter(entry => entry.link !== undefined)) {
     const path = resolve(target, entry.path);
     let parent = dirname(path);
     while (parent !== target) {
-      if ((await lstat(parent)).isSymbolicLink())
-        throw new Error(`Symlink source parent: ${entry.path}`);
+      if ((await lstat(parent)).isSymbolicLink()) throw new Error(`Symlink source parent: ${entry.path}`);
       parent = dirname(parent);
     }
     if (!(await exists(path))) await symlink(entry.link!, path, "file");
@@ -265,9 +237,7 @@ export async function vendorApply(options: VendorOptions) {
     if (!receiptStat && options.resumeIncomplete) {
       await ensureTrackedLinks(plan.target, plan.entries);
       const files = await verifyFiles(plan.target, plan.entries);
-      const archiveSha256 = hash(
-        await git(plan.source, ["archive", "--format=tar", plan.revision]),
-      );
+      const archiveSha256 = hash(await git(plan.source, ["archive", "--format=tar", plan.revision]));
       const receipt: Receipt = { schema: 1, revision: plan.revision, archiveSha256, files };
       await Bun.write(receiptPath, JSON.stringify(receipt, null, 2) + "\n");
       return { ...plan, unchanged: false, archiveSha256, resumed: true };
@@ -279,9 +249,7 @@ export async function vendorApply(options: VendorOptions) {
     if (receiptStat.isSymbolicLink()) throw new Error("Vendor receipt must not be a symlink");
     const receipt = (await Bun.file(receiptPath).json()) as Receipt;
     if (receipt.schema !== 1 || receipt.revision !== plan.revision)
-      throw new Error(
-        "Existing vendor target is not the requested immutable source; no overwrite performed",
-      );
+      throw new Error("Existing vendor target is not the requested immutable source; no overwrite performed");
     const files = await verifyFiles(plan.target, plan.entries);
     if (JSON.stringify(files) !== JSON.stringify(receipt.files))
       throw new Error("Existing vendor receipt differs from tracked content");
@@ -312,9 +280,7 @@ if (import.meta.main) {
     },
   });
   if (!values.source || !values.target)
-    throw new Error(
-      "Provide --source Git checkout and --target <workspace>/vendor/oxc; default is plan-only",
-    );
+    throw new Error("Provide --source Git checkout and --target <workspace>/vendor/oxc; default is plan-only");
   const options = {
     workspace: values.workspace!,
     source: values.source,

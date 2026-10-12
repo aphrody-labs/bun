@@ -46,9 +46,7 @@ function createClient(options: ClientOptions) {
       !relativePath ||
       relativePath.startsWith("/") ||
       relativePath.includes("\\") ||
-      Array.from(relativePath).some(
-        (character) => character.charCodeAt(0) <= 32 || character.charCodeAt(0) === 127,
-      ) ||
+      Array.from(relativePath).some(character => character.charCodeAt(0) <= 32 || character.charCodeAt(0) === 127) ||
       /^[a-z][a-z0-9+.-]*:/i.test(relativePath)
     )
       throw new TypeError("Google request path must be relative");

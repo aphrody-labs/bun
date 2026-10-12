@@ -664,7 +664,8 @@ export async function main(argv: string[]): Promise<number> {
     };
   }
   report.failures = buildFailures(report);
-  if (arena?.verdict === "invalide") report.failures.push(`arena: verdict invalide (${arena.failedChecks.join(" ; ")})`);
+  if (arena?.verdict === "invalide")
+    report.failures.push(`arena: verdict invalide (${arena.failedChecks.join(" ; ")})`);
 
   mkdirSync(outDir, { recursive: true });
   writeFileSync(join(outDir, "perf-report.json"), JSON.stringify(report, null, 2));

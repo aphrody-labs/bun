@@ -114,7 +114,12 @@ const CASES: Case[] = [
   { id: "grep-n", bins: ["grep"], cmd: "grep -n foo a.txt", alt: "rg -n foo a.txt" },
   { id: "grep-c", bins: ["grep"], cmd: "grep -c foo a.txt", alt: "rg -c foo a.txt" },
   { id: "grep-v", bins: ["grep"], cmd: "grep -v foo a.txt", alt: "rg -v foo a.txt" },
-  { id: "grep-E", bins: ["grep"], cmd: "grep -E 'ba[rz]' a.txt b.txt", alt: "rg --sort path --no-heading 'ba[rz]' a.txt b.txt" },
+  {
+    id: "grep-E",
+    bins: ["grep"],
+    cmd: "grep -E 'ba[rz]' a.txt b.txt",
+    alt: "rg --sort path --no-heading 'ba[rz]' a.txt b.txt",
+  },
   { id: "grep-rl", bins: ["grep"], cmd: "grep -rl foo sub", alt: "rg -l foo sub" },
   { id: "find-name", bins: ["find"], cmd: "find sub -name '*.txt'" },
   { id: "find-type", bins: ["find"], cmd: "find . -maxdepth 1 -type f -name '*.csv'" },

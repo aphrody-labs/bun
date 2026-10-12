@@ -83,17 +83,17 @@ export function publicRepository(repository: { full_name?: string; private?: boo
 export function nextPage(header: string, repositoryId?: number): string | null {
   const link = header
     .split(/\r?\n/)
-    .find((line) => /^link:/i.test(line))
+    .find(line => /^link:/i.test(line))
     ?.replace(/^link:\s*/i, "");
   const next = link
     ?.split(",")
-    .map((part) => part.match(/<([^>]+)>;\s*rel="next"/))
+    .map(part => part.match(/<([^>]+)>;\s*rel="next"/))
     .find(Boolean)?.[1];
   if (!next) return null;
   const url = new URL(next);
   const prefixes = [`/repos/${PUBLIC_UPSTREAM}/`];
   if (Number.isSafeInteger(repositoryId)) prefixes.push(`/repositories/${repositoryId}/`);
-  const prefix = prefixes.find((prefix) => url.pathname.startsWith(prefix));
+  const prefix = prefixes.find(prefix => url.pathname.startsWith(prefix));
   if (
     url.origin !== "https://api.github.com" ||
     !prefix ||
@@ -101,8 +101,7 @@ export function nextPage(header: string, repositoryId?: number): string | null {
   ) {
     throw new Error("Unexpected public pagination destination");
   }
-  if (url.searchParams.has("after") || url.searchParams.has("before"))
-    url.searchParams.delete("page");
+  if (url.searchParams.has("after") || url.searchParams.has("before")) url.searchParams.delete("page");
   return url.pathname.slice(1) + url.search;
 }
 
@@ -110,8 +109,7 @@ export function publicPageEntries(values: unknown, seen: Set<number>): Record<st
   if (!Array.isArray(values)) throw new Error("Unexpected GitHub page");
   const fresh: Record<string, unknown>[] = [];
   for (const value of values) {
-    if (!value || typeof value !== "object" || Array.isArray(value))
-      throw new Error("Unexpected GitHub entry");
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Unexpected GitHub entry");
     const entry = value as Record<string, unknown>;
     if (typeof entry.id !== "number" || !Number.isSafeInteger(entry.id) || entry.id <= 0)
       throw new Error("GitHub entry missing stable id");
@@ -129,13 +127,7 @@ export function nextCommentWindow(
   records: number,
   fresh: number,
 ): string | null {
-  if (
-    !Number.isSafeInteger(records) ||
-    records < 0 ||
-    !Number.isSafeInteger(fresh) ||
-    fresh < 0 ||
-    fresh > records
-  )
+  if (!Number.isSafeInteger(records) || records < 0 || !Number.isSafeInteger(fresh) || fresh < 0 || fresh > records)
     throw new Error("Invalid comment window counts");
   const previous = Date.parse(since);
   if (!Number.isFinite(previous)) throw new Error("Invalid comment window cursor");
@@ -154,16 +146,10 @@ export function nextCommentWindow(
   return new Date(next).toISOString();
 }
 
-async function api(
-  endpoint: string,
-  payload?: Record<string, unknown>,
-  headers = false,
-): Promise<any> {
+async function api(endpoint: string, payload?: Record<string, unknown>, headers = false): Promise<any> {
   const requestPayload = endpoint === "graphql" && payload ? graphqlRequest(payload) : payload;
   const key = new Bun.CryptoHasher("sha256")
-    .update(
-      JSON.stringify({ endpoint, payload: requestPayload, ...(headers ? { headers: true } : {}) }),
-    )
+    .update(JSON.stringify({ endpoint, payload: requestPayload, ...(headers ? { headers: true } : {}) }))
     .digest("hex");
   const cachePath = responseCache ? join(responseCache, `${key}.json`) : undefined;
   const cached = cachePath ? Bun.file(cachePath) : undefined;
@@ -179,28 +165,19 @@ async function api(
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [out, error, code] = await Promise.all([
-    child.stdout.text(),
-    child.stderr.text(),
-    child.exited,
-  ]);
-  if (code !== 0)
-    throw new Error(`GitHub ${endpoint.split("?")[0]} failed (${code}): ${error.trim()}`);
+  const [out, error, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+  if (code !== 0) throw new Error(`GitHub ${endpoint.split("?")[0]} failed (${code}): ${error.trim()}`);
   const split = headers ? out.search(/\r?\n\r?\n/) : -1;
   if (headers && split < 0) throw new Error("GitHub response headers missing");
   const value = JSON.parse(headers ? out.slice(split).trimStart() : out);
-  const result = headers
-    ? { data: value, next: nextPage(out.slice(0, split), publicRepositoryId) }
-    : value;
-  if (result.errors?.length)
-    throw new Error("GitHub GraphQL returned errors; snapshot remains incomplete");
+  const result = headers ? { data: value, next: nextPage(out.slice(0, split), publicRepositoryId) } : value;
+  if (result.errors?.length) throw new Error("GitHub GraphQL returned errors; snapshot remains incomplete");
   if (cachePath) await writePublicCache(cachePath, result);
   return result;
 }
 
 export async function snapshot(output: string, maxPages = 1000, resume?: string) {
-  if (!Number.isSafeInteger(maxPages) || maxPages < 1 || maxPages > 10000)
-    throw new Error("Invalid page bound");
+  if (!Number.isSafeInteger(maxPages) || maxPages < 1 || maxPages > 10000) throw new Error("Invalid page bound");
   const root = resolve(import.meta.dir, "../..");
   await mkdir(output, { recursive: true });
   const destination = await realpath(output);
@@ -210,8 +187,7 @@ export async function snapshot(output: string, maxPages = 1000, resume?: string)
   apiRequests = 0;
   const repository = await api(`repos/${PUBLIC_UPSTREAM}`);
   publicRepository(repository);
-  if (!Number.isSafeInteger(repository.id) || repository.id <= 0)
-    throw new Error("Invalid public repository identity");
+  if (!Number.isSafeInteger(repository.id) || repository.id <= 0) throw new Error("Invalid public repository identity");
   publicRepositoryId = repository.id;
   if (resume && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(resume))
     throw new Error("Invalid resume generation");
@@ -253,10 +229,7 @@ export async function snapshot(output: string, maxPages = 1000, resume?: string)
           finished = true;
           break;
         }
-        request = nextPage(
-          `Link: <https://api.github.com/${response.next}>; rel="next"`,
-          publicRepositoryId,
-        )!;
+        request = nextPage(`Link: <https://api.github.com/${response.next}>; rel="next"`, publicRepositoryId)!;
       }
       if (!finished) throw new Error(`Page limit reached for ${kind}; snapshot is incomplete`);
     }
@@ -275,8 +248,7 @@ export async function snapshot(output: string, maxPages = 1000, resume?: string)
         const response = await api(request, undefined, true);
         if (!Array.isArray(response.data)) throw new Error("Unexpected GitHub comment page");
         for (const value of response.data) {
-          if (!value || typeof value.updated_at !== "string")
-            throw new Error("Comment missing update timestamp");
+          if (!value || typeof value.updated_at !== "string") throw new Error("Comment missing update timestamp");
           const updated = commentUpdateTimestamp(value.updated_at, lastUpdate);
           lastUpdate = updated;
           latestUpdated = value.updated_at;
@@ -290,10 +262,7 @@ export async function snapshot(output: string, maxPages = 1000, resume?: string)
           windowFinished = true;
           break;
         }
-        request = nextPage(
-          `Link: <https://api.github.com/${response.next}>; rel="next"`,
-          publicRepositoryId,
-        )!;
+        request = nextPage(`Link: <https://api.github.com/${response.next}>; rel="next"`, publicRepositoryId)!;
       }
       if (!windowFinished) throw new Error("Comment page limit reached; snapshot is incomplete");
       const next = nextCommentWindow(since, latestUpdated, records, fresh);
@@ -330,10 +299,7 @@ export async function snapshot(output: string, maxPages = 1000, resume?: string)
     await writer.end();
     if (complete) await rename(join(destination, `${name}.partial`), join(destination, name));
     await Bun.write(
-      join(
-        destination,
-        complete ? "upstream-public.json" : `upstream-public-${generation}.incomplete.json`,
-      ),
+      join(destination, complete ? "upstream-public.json" : `upstream-public-${generation}.incomplete.json`),
       JSON.stringify(
         {
           source: PUBLIC_UPSTREAM,
@@ -353,11 +319,7 @@ export async function snapshot(output: string, maxPages = 1000, resume?: string)
   return counts;
 }
 
-async function discussionComments(
-  id: string,
-  bound: number,
-  write: (kind: string, value: unknown) => void,
-) {
+async function discussionComments(id: string, bound: number, write: (kind: string, value: unknown) => void) {
   let cursor: string | null = null;
   for (let page = 1; page <= bound; page++) {
     const result = await api("graphql", {
@@ -377,8 +339,7 @@ async function discussionComments(
           cursor: replyCursor,
         });
         const replies = result.data.node.replies;
-        for (const reply of replies.nodes)
-          write("discussion-reply", { commentId: comment.id, ...reply });
+        for (const reply of replies.nodes) write("discussion-reply", { commentId: comment.id, ...reply });
         if (!replies.pageInfo.hasNextPage) {
           finished = true;
           break;
@@ -398,8 +359,7 @@ async function discussionComments(
 if (import.meta.main) {
   const args = Bun.argv.slice(2);
   const output = args[args.indexOf("--output") + 1];
-  if (!args.includes("--output") || !output)
-    throw new Error("Required: --output <external-factory-directory>");
+  if (!args.includes("--output") || !output) throw new Error("Required: --output <external-factory-directory>");
   const bound = args.includes("--max-pages") ? Number(args[args.indexOf("--max-pages") + 1]) : 1000;
   const resume = args.includes("--resume") ? args[args.indexOf("--resume") + 1] : undefined;
   if (args.includes("--resume") && !resume)

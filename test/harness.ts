@@ -5,7 +5,7 @@
  * without always needing to run `bun install` in development.
  */
 
-import * as numeric from "_util/numeric.ts";
+import * as numeric from "./_util/numeric.ts";
 import { gc as bunGC, sleepSync, spawnSync, unsafe, which, write } from "bun";
 import { heapStats } from "bun:jsc";
 import { beforeAll, describe, expect } from "bun:test";
@@ -1094,7 +1094,7 @@ export function toHaveBins(actual: any, expectedBins: string[]) {
     return { pass: true, message };
   }
 
-  return { pass: actual.length === expectedBins.length && actual.every((bin, i) => bin === expectedBins[i]), message };
+  return { pass: actual.length === expectedBins.length && actual.every((bin: string, i: number) => bin === expectedBins[i]), message };
 }
 
 export function toBeValidBin(actual: any, expectedLinkPath: string) {
@@ -1366,7 +1366,7 @@ import * as child_process from "node:child_process";
 import { basename } from "node:path";
 
 class WriteBlockedError extends Error {
-  constructor(time) {
+  constructor(time: number) {
     super("Write blocked for " + (time | 0) + "ms");
     this.name = "WriteBlockedError";
   }
@@ -1388,12 +1388,13 @@ function failTestsOnBlockingWriteCall() {
     });
   }
 
-  function attachWriteMeasurement(stream) {
-    const prop = Object.getOwnPropertyDescriptor(stream.__proto__, "write");
+  function attachWriteMeasurement(stream: object) {
+    const proto = Object.getPrototypeOf(stream);
+    const prop = Object.getOwnPropertyDescriptor(proto, "write");
     if (prop) {
-      Object.defineProperty(stream.__proto__, "write", {
+      Object.defineProperty(proto, "write", {
         ...prop,
-        value(chunk, encoding, cb) {
+        value(chunk: unknown, encoding?: unknown, cb?: unknown) {
           const start = performance.now();
           const rc = prop.value.apply(this, arguments);
           const end = performance.now();
@@ -1811,7 +1812,7 @@ export function isMacOSVersionAtLeast(minVersion: number): boolean {
   return parseFloat(macOSVersion) >= minVersion;
 }
 
-export function readableStreamFromArray(array) {
+export function readableStreamFromArray<T>(array: Iterable<T>) {
   return new ReadableStream({
     pull(controller) {
       for (let entry of array) {
@@ -1823,7 +1824,7 @@ export function readableStreamFromArray(array) {
 }
 
 let hasGuardMalloc = -1;
-export function forceGuardMalloc(env) {
+export function forceGuardMalloc(env: Record<string, string | undefined>) {
   if (process.platform !== "darwin") {
     return;
   }

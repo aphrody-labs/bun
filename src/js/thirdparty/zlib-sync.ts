@@ -77,12 +77,7 @@ class Inflate {
     if (result === null) {
       const chunks = this.#resultChunks;
       const total = this.#resultBytes;
-      result =
-        total === 0
-          ? Buffer.alloc(0)
-          : chunks.length === 1
-            ? chunks[0]
-            : Buffer.concat(chunks, total);
+      result = total === 0 ? Buffer.alloc(0) : chunks.length === 1 ? chunks[0] : Buffer.concat(chunks, total);
       this.#result = result;
     }
     return this.#toString ? result.toString() : Buffer.from(result);

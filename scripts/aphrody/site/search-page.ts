@@ -2,10 +2,8 @@
 export async function searchPage(request: Request, api: (request: Request) => Promise<Response>) {
   const url = new URL(request.url);
   if (url.pathname !== "/" || !url.searchParams.has("q")) return null;
-  if (request.method !== "GET")
-    return new Response(null, { status: 405, headers: { allow: "GET" } });
-  if (url.searchParams.getAll("q").length !== 1)
-    return new Response("Invalid search query", { status: 400 });
+  if (request.method !== "GET") return new Response(null, { status: 405, headers: { allow: "GET" } });
+  if (url.searchParams.getAll("q").length !== 1) return new Response("Invalid search query", { status: 400 });
   const query = url.searchParams.get("q") ?? "";
   const endpoint = new URL("/api/search", url);
   endpoint.searchParams.set("query", query);
@@ -18,7 +16,7 @@ export async function searchPage(request: Request, api: (request: Request) => Pr
     response.ok && Array.isArray(result.organic)
       ? result.organic
           .map(
-            (hit) =>
+            hit =>
               `<section class="p-4"><h2 class="text-title-large"><a href="${escape(hit.url)}" rel="noreferrer">${escape(hit.title)}</a></h2><p class="text-body-large">${escape(hit.snippet)}</p></section>`,
           )
           .join("")

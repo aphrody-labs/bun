@@ -46,8 +46,7 @@ function kids(b: Uint8Array, t: Tlv): Tlv[] {
   return out;
 }
 
-const eq = (a: Uint8Array, b: Uint8Array) =>
-  a.byteLength === b.byteLength && a.every((x, i) => x === b[i]);
+const eq = (a: Uint8Array, b: Uint8Array) => a.byteLength === b.byteLength && a.every((x, i) => x === b[i]);
 const raw = (b: Uint8Array, t: Tlv) => b.subarray(t.start - t.hdr, t.end);
 
 const OID = {
@@ -102,9 +101,9 @@ function parseSignedData(b: Uint8Array): Authenticode | null {
   const signedData = kids(b, explicit)[0];
   if (!signedData) return null;
   const parts = kids(b, signedData);
-  const certSet = parts.find((p) => p.tag === 0xa0);
+  const certSet = parts.find(p => p.tag === 0xa0);
   const signerInfos = parts.at(-1);
-  const certs = certSet ? kids(b, certSet).filter((c) => c.tag === 0x30) : [];
+  const certs = certSet ? kids(b, certSet).filter(c => c.tag === 0x30) : [];
   let issuerRaw: Uint8Array | null = null;
   let serialRaw: Uint8Array | null = null;
   let digest: string | null = null;
@@ -120,8 +119,7 @@ function parseSignedData(b: Uint8Array): Authenticode | null {
       }
     }
     const alg = si[2] ? kids(b, si[2])[0] : undefined;
-    if (alg)
-      digest = DIGESTS[hex(b.subarray(alg.start, alg.end))] ?? hex(b.subarray(alg.start, alg.end));
+    if (alg) digest = DIGESTS[hex(b.subarray(alg.start, alg.end))] ?? hex(b.subarray(alg.start, alg.end));
   }
   let signer: string | null = null;
   let issuer: string | null = null;
@@ -135,8 +133,7 @@ function parseSignedData(b: Uint8Array): Authenticode | null {
     const iss = f[i + 2];
     const subject = f[i + 4];
     if (!serial || !iss || !subject) continue;
-    const match =
-      issuerRaw && serialRaw ? eq(raw(b, iss), issuerRaw) && eq(raw(b, serial), serialRaw) : false;
+    const match = issuerRaw && serialRaw ? eq(raw(b, iss), issuerRaw) && eq(raw(b, serial), serialRaw) : false;
     if (match || (!issuerRaw && signer === null)) {
       signer = nameAttr(b, subject, OID.cn) ?? nameAttr(b, subject, OID.o);
       issuer = nameAttr(b, iss, OID.cn) ?? nameAttr(b, iss, OID.o);

@@ -15,15 +15,15 @@ const domains = "google.com\nGOOGLE.COM\ndevelopers.google.com\n";
 test("merges source provenance while distinguishing public seeds from observed foreign and private hosts", () => {
   const plan = createGoogleCrawlPlan(atlas, domains);
   expect(plan.counts).toEqual({ atlas: 28, googleDomains: 2, merged: 29, seeds: 25 });
-  expect(plan.catalog.find((item) => item.hostname === "developers.google.com")?.sources).toEqual([
+  expect(plan.catalog.find(item => item.hostname === "developers.google.com")?.sources).toEqual([
     "atlas",
     "google_domains",
   ]);
   for (const hostname of ["accounts.google.com", "mail.google.com", "github.com", "google.com"]) {
-    expect(plan.catalog.find((item) => item.hostname === hostname)?.publicSeed).toBe(false);
+    expect(plan.catalog.find(item => item.hostname === hostname)?.publicSeed).toBe(false);
   }
-  expect(plan.catalog.every((item) => !item.ownershipVerified)).toBe(true);
-  expect(plan.provenance.every((item) => /^[a-f0-9]{64}$/.test(item.sha256))).toBe(true);
+  expect(plan.catalog.every(item => !item.ownershipVerified)).toBe(true);
+  expect(plan.provenance.every(item => /^[a-f0-9]{64}$/.test(item.sha256))).toBe(true);
   expect(plan.job.maxDepth).toBe(0);
 });
 
@@ -35,9 +35,7 @@ test("catalog and native helper reject invalid hosts, oversized budgets and non-
     "-google.com",
     "google..com",
   ])
-    expect(() =>
-      createGoogleCrawlPlan(JSON.stringify({ allHosts: [hostname] }), domains),
-    ).toThrow();
+    expect(() => createGoogleCrawlPlan(JSON.stringify({ allHosts: [hostname] }), domains)).toThrow();
   for (const budget of [0, 5001, 1.5, Number.NaN])
     expect(() => createGoogleCrawlPlan(atlas, domains, "public", budget)).toThrow();
   expect(() => createGoogleCrawlPlan(atlas, domains, "../foreign")).toThrow();

@@ -31,7 +31,7 @@ export async function indexFiles(registry: BunPython, name: string, root: string
   const files = (await git(absolute, "ls-files", "--stage", "-z"))
     .split("\0")
     .filter(Boolean)
-    .map((entry) => {
+    .map(entry => {
       const tab = entry.indexOf("\t");
       const [mode, object, stage] = entry.slice(0, tab).split(" ");
       if (tab < 0 || stage !== "0") throw new Error(`Unmerged or malformed Git entry ${entry}`);
@@ -44,7 +44,7 @@ export async function indexFiles(registry: BunPython, name: string, root: string
   let missing = 0;
   for (let offset = 0; offset < files.length; offset += 32) {
     const rows = await Promise.all(
-      files.slice(offset, offset + 32).map(async (entry) => {
+      files.slice(offset, offset + 32).map(async entry => {
         const { path, mode, object } = entry;
         const file = Bun.file(resolve(absolute, path));
         const hasher = new Bun.CryptoHasher("sha256");
@@ -58,8 +58,7 @@ export async function indexFiles(registry: BunPython, name: string, root: string
           try {
             info = await lstat(resolve(absolute, path));
           } catch (error) {
-            if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT")
-              throw error;
+            if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") throw error;
             missing++;
             return null;
           }
@@ -135,7 +134,7 @@ export function indexCargo(
   const members = new Set(metadata.workspace_members);
   const sha256 = new Bun.CryptoHasher("sha256").update(JSON.stringify(metadata)).digest("hex");
   const namespace = `${repository}:cargo:${sha256}:`;
-  const resolutions = new Map(metadata.resolve?.nodes.map((node) => [node.id, node]) ?? []);
+  const resolutions = new Map(metadata.resolve?.nodes.map(node => [node.id, node]) ?? []);
   const node = registry.db.query("INSERT OR REPLACE INTO nodes VALUES(?,?,?,?,?,?,?,?)");
   const edge = registry.db.query("INSERT OR REPLACE INTO edges VALUES(?,?,?,?,?,?,?,?)");
   registry.db.transaction(() => {
@@ -165,22 +164,20 @@ export function indexCargo(
         );
       }
     }
-    registry.db
-      .query("INSERT INTO graph_snapshots VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING")
-      .run(
-        `${repository}:cargo:${sha256}`,
-        repository,
-        "cargo metadata",
-        null,
-        sha256,
-        new Date().toISOString(),
-        JSON.stringify({
-          namespace,
-          packages: metadata.packages.length,
-          workspaceCrates: members.size,
-          resolved: metadata.resolve !== null,
-        }),
-      );
+    registry.db.query("INSERT INTO graph_snapshots VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING").run(
+      `${repository}:cargo:${sha256}`,
+      repository,
+      "cargo metadata",
+      null,
+      sha256,
+      new Date().toISOString(),
+      JSON.stringify({
+        namespace,
+        packages: metadata.packages.length,
+        workspaceCrates: members.size,
+        resolved: metadata.resolve !== null,
+      }),
+    );
   })();
   const resolved = metadata.resolve !== null;
   registry.event("cargo-index", {

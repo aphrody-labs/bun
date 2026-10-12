@@ -95,16 +95,10 @@ export function pythonCommand(
 }
 
 export function mergeGraphs(base: EngineGraph, extra: EngineGraph): EngineGraph {
-  if (
-    base.built_at_commit &&
-    extra.built_at_commit &&
-    base.built_at_commit !== extra.built_at_commit
-  ) {
-    throw new Error(
-      `Cannot merge source graphs from ${base.built_at_commit} and ${extra.built_at_commit}`,
-    );
+  if (base.built_at_commit && extra.built_at_commit && base.built_at_commit !== extra.built_at_commit) {
+    throw new Error(`Cannot merge source graphs from ${base.built_at_commit} and ${extra.built_at_commit}`);
   }
-  const nodes = new Map(base.nodes.map((node) => [node.id, node]));
+  const nodes = new Map(base.nodes.map(node => [node.id, node]));
   for (const node of extra.nodes) nodes.set(node.id, { ...nodes.get(node.id), ...node });
   return {
     producer: `${base.producer}; ${extra.producer}`,
@@ -122,16 +116,15 @@ export function memoryReferences(graph: EngineGraph) {
     arena: /(?:\bArena\b|PyArena|_arena\b|ArenaAllocator|BumpArena)/,
     allocator:
       /(?:\b(?:malloc|calloc|realloc|free)\b|PyMem_|PyObject_(?:Malloc|Calloc|Realloc|Free)|Allocator|allocateCell)/,
-    tracing:
-      /(?:MarkedSpace|MarkedBlock|IsoSubspace|SlotVisitor|WriteBarrier|visitChildren|\bgc\b)/,
+    tracing: /(?:MarkedSpace|MarkedBlock|IsoSubspace|SlotVisitor|WriteBarrier|visitChildren|\bgc\b)/,
     referenceCounting: /(?:Py_(?:X?INCREF|X?DECREF)|\b(?:incref|decref|deref)\b)/,
   };
   return Object.fromEntries(
     Object.entries(patterns).map(([kind, pattern]) => [
       kind,
       graph.nodes
-        .filter((node) => pattern.test(String(node.label ?? "")))
-        .map((node) => ({
+        .filter(node => pattern.test(String(node.label ?? "")))
+        .map(node => ({
           id: node.id,
           label: node.label,
           source_file: node.source_file,
@@ -146,9 +139,7 @@ export function memoryReferences(graph: EngineGraph) {
 function coverageSummary(metadata: Record<string, unknown>): Record<string, unknown> {
   const result = { ...metadata };
   if (Array.isArray(metadata.sources))
-    result.sources = metadata.sources.map((source) =>
-      coverageSummary(source as Record<string, unknown>),
-    );
+    result.sources = metadata.sources.map(source => coverageSummary(source as Record<string, unknown>));
   if (metadata.memoryReferences && typeof metadata.memoryReferences === "object") {
     result.memoryReferences = Object.fromEntries(
       Object.entries(metadata.memoryReferences).map(([kind, nodes]) => [
@@ -231,8 +222,7 @@ export class NativeCalls {
       multigraph: true,
       graph: {
         language: this.language,
-        filesWithCalls: [...this.nodes.values()].filter((node) => node.kind === "source-file")
-          .length,
+        filesWithCalls: [...this.nodes.values()].filter(node => node.kind === "source-file").length,
         calls: this.calls,
         extraction:
           "syntactic call expressions; overloads, preprocessor expansion and dynamic dispatch are not resolved",
@@ -314,9 +304,7 @@ export async function readGraphFile(path: string): Promise<SourceGraph> {
       if (!value || typeof value !== "object" || Array.isArray(value)) fail();
       const row = value as Record<string, unknown>;
       if (
-        key === "nodes"
-          ? typeof row.id !== "string"
-          : typeof row.source !== "string" || typeof row.target !== "string"
+        key === "nodes" ? typeof row.id !== "string" : typeof row.source !== "string" || typeof row.target !== "string"
       )
         fail();
       array.push(value);
@@ -339,8 +327,7 @@ export async function readGraphFile(path: string): Promise<SourceGraph> {
   for await (const chunk of textChunks(path)) {
     for (let index = 0; index < chunk.length; index++) {
       const character = chunk[index]!;
-      const whitespace =
-        character === " " || character === "\n" || character === "\r" || character === "\t";
+      const whitespace = character === " " || character === "\n" || character === "\r" || character === "\t";
       if (parser.state !== "value" && parser.state !== "key-string" && whitespace) continue;
       switch (parser.state) {
         case "root":
@@ -392,11 +379,7 @@ export async function readGraphFile(path: string): Promise<SourceGraph> {
           begin(character);
           break;
         case "value":
-          if (
-            !quoted &&
-            depth === 0 &&
-            (whitespace || character === "," || character === "}" || character === "]")
-          ) {
+          if (!quoted && depth === 0 && (whitespace || character === "," || character === "}" || character === "]")) {
             finish();
             index--;
             break;
@@ -483,17 +466,9 @@ async function recorded(registry: BunPython, kind: string, command: string[], cw
       stderr: "pipe",
       stdin: "ignore",
     });
-    const [stderr, code] = await Promise.all([
-      Bun.readableStreamToText(child.stderr),
-      child.exited,
-    ]);
+    const [stderr, code] = await Promise.all([Bun.readableStreamToText(child.stderr), child.exited]);
     const sha256 = await registry.artifact(stdoutPath, "process-stdout", run, { kind });
-    registry.finishRun(
-      run,
-      code,
-      JSON.stringify({ stdoutPath, sha256, bytes: Bun.file(stdoutPath).size }),
-      stderr,
-    );
+    registry.finishRun(run, code, JSON.stringify({ stdoutPath, sha256, bytes: Bun.file(stdoutPath).size }), stderr);
     completed = true;
     if (code !== 0) throw new Error(`${command[0]} exited ${code}: ${stderr}`);
     return { stdoutPath, stderr, run };
@@ -530,8 +505,7 @@ async function main() {
   }
   const root = resolve(values.root);
   const output = resolve(
-    values.out ??
-      resolve(import.meta.dir, "../../tmp/bun-python", `graph-${values.name}-${mode}.json`),
+    values.out ?? resolve(import.meta.dir, "../../tmp/bun-python", `graph-${values.name}-${mode}.json`),
   );
   await mkdir(dirname(output), { recursive: true });
   const revision = await git(root, "rev-parse", "HEAD");
@@ -542,14 +516,11 @@ async function main() {
   if (mode === "python") {
     const runner = values.runner ?? "bun-uv";
     if (!values.python || !["bun-uv", "uv"].includes(runner))
-      throw new Error(
-        "Python extraction requires --python <qualified interpreter> and --runner bun-uv|uv",
-      );
+      throw new Error("Python extraction requires --python <qualified interpreter> and --runner bun-uv|uv");
     const paths = (await git(root, "ls-files", "-z", "--", "*.py")).split("\0").filter(Boolean);
     const manifest = `${output}.files.json`;
     await Bun.write(manifest, JSON.stringify(paths));
-    const executable =
-      values.executable ?? (runner === "bun-uv" ? process.execPath : Bun.which("uv"));
+    const executable = values.executable ?? (runner === "bun-uv" ? process.execPath : Bun.which("uv"));
     if (!executable) throw new Error("Native UV executable is unavailable; provide --executable");
     const result = await recorded(
       registry,
@@ -584,17 +555,13 @@ async function main() {
   if (values.outline) {
     const base = (await readGraphFile(resolve(values.outline))) as EngineGraph;
     if (base.built_at_commit !== revision)
-      throw new Error(
-        `Outline revision ${base.built_at_commit} differs from selected checkout ${revision}`,
-      );
+      throw new Error(`Outline revision ${base.built_at_commit} differs from selected checkout ${revision}`);
     graph = mergeGraphs(base, graph);
   }
-  const files = graph.nodes.filter(
-    (node) => typeof node.source_file === "string" && String(node.id).startsWith("file:"),
-  );
+  const files = graph.nodes.filter(node => typeof node.source_file === "string" && String(node.id).startsWith("file:"));
   for (let offset = 0; offset < files.length; offset += 32) {
     await Promise.all(
-      files.slice(offset, offset + 32).map(async (node) => {
+      files.slice(offset, offset + 32).map(async node => {
         const path = resolve(root, node.source_file as string);
         const bytes = await Bun.file(path).bytes();
         node.sha256 = new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
@@ -606,9 +573,7 @@ async function main() {
   if (finishedRevision !== revision)
     throw new Error(`Source revision changed while extracting ${revision} to ${finishedRevision}`);
   graph.graph.memoryReferences = memoryReferences(graph);
-  graph.graph.unresolvedReferences = graph.nodes.filter(
-    (node) => node.provenance === "UNRESOLVED",
-  ).length;
+  graph.graph.unresolvedReferences = graph.nodes.filter(node => node.provenance === "UNRESOLVED").length;
   await writeGraph(output, graph);
   const sha256 = await registry.artifact(output, "engine-source-graph", run, {
     root,
@@ -623,9 +588,7 @@ async function main() {
     { repository, revision, mode, sha256, output, coverage: graph.graph, ...result },
     run,
   );
-  console.log(
-    JSON.stringify({ output, revision, sha256, ...result, coverage: coverageSummary(graph.graph) }),
-  );
+  console.log(JSON.stringify({ output, revision, sha256, ...result, coverage: coverageSummary(graph.graph) }));
 }
 
 if (import.meta.main) await main();

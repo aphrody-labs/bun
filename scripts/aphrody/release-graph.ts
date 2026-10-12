@@ -24,9 +24,7 @@ export function sourceDomain(path: string): string {
   const parts = path.split("/");
   return parts.length === 1
     ? "root"
-    : parts
-        .slice(0, parts[0] === "src" || parts[0] === "packages" || parts[0] === "vendor" ? 2 : 1)
-        .join("/");
+    : parts.slice(0, parts[0] === "src" || parts[0] === "packages" || parts[0] === "vendor" ? 2 : 1).join("/");
 }
 
 export function sourceReadable(path: string): boolean {
@@ -42,18 +40,13 @@ export function sourceReadable(path: string): boolean {
   );
 }
 
-export function resolvedImport(
-  path: string,
-  specifier: string,
-  available: Set<string>,
-): string | null {
+export function resolvedImport(path: string, specifier: string, available: Set<string>): string | null {
   if (!specifier.startsWith(".")) return null;
   const base = posix.normalize(posix.join(posix.dirname(path), specifier));
   return (
-    [
-      base,
-      ...[".ts", ".tsx", ".js", ".jsx", "/index.ts", "/index.js"].map((suffix) => base + suffix),
-    ].find((candidate) => available.has(candidate)) ?? null
+    [base, ...[".ts", ".tsx", ".js", ".jsx", "/index.ts", "/index.js"].map(suffix => base + suffix)].find(candidate =>
+      available.has(candidate),
+    ) ?? null
   );
 }
 
@@ -76,8 +69,7 @@ export async function buildReleaseGraph(tree: GitTree, snapshot: string, out: st
       for (const path of batch) {
         const bytes = blobs.get(path);
         const content = bytes === undefined ? null : decodeSourceText(bytes);
-        const sha256 =
-          bytes === undefined ? null : createHash("sha256").update(bytes).digest("hex");
+        const sha256 = bytes === undefined ? null : createHash("sha256").update(bytes).digest("hex");
         if (bytes !== undefined && content === null) excludedInvalidUtf8Files++;
         if (bytes !== undefined && content !== null) {
           const destination = join(snapshot, path);
@@ -94,14 +86,10 @@ export async function buildReleaseGraph(tree: GitTree, snapshot: string, out: st
   const available = new Set(paths);
   const link = db.prepare("INSERT OR IGNORE INTO release_links VALUES(?,?,?)");
   for (const { path, content } of db
-    .query<{ path: string; content: string }, []>(
-      "SELECT path,content FROM release_files WHERE content IS NOT NULL",
-    )
+    .query<{ path: string; content: string }, []>("SELECT path,content FROM release_files WHERE content IS NOT NULL")
     .iterate()) {
     if (/\.[cm]?[jt]sx?$/.test(path)) {
-      for (const match of content.matchAll(
-        /(?:\bfrom\s*|\bimport\s*\(|\brequire\s*\()?["'](\.{1,2}\/[^"'\n]+)["']/g,
-      )) {
+      for (const match of content.matchAll(/(?:\bfrom\s*|\bimport\s*\(|\brequire\s*\()?["'](\.{1,2}\/[^"'\n]+)["']/g)) {
         const target = resolvedImport(path, match[1]!, available);
         if (target) link.run(path, target, "relative-reference");
       }
@@ -132,9 +120,7 @@ export async function buildReleaseGraph(tree: GitTree, snapshot: string, out: st
       directory: document.out.slice(out.length + 1).replaceAll("\\", "/"),
     });
   }
-  const domains = db
-    .query<{ name: string; files: number }, []>("SELECT * FROM release_domains ORDER BY name")
-    .all();
+  const domains = db.query<{ name: string; files: number }, []>("SELECT * FROM release_domains ORDER BY name").all();
   const links = db
     .query<{ source: string; target: string; references_count: number }, []>(
       "SELECT a.domain AS source,b.domain AS target,count(*) AS references_count FROM release_links l JOIN release_files a ON a.path=l.source JOIN release_files b ON b.path=l.target WHERE a.domain<>b.domain GROUP BY a.domain,b.domain ORDER BY a.domain,b.domain",

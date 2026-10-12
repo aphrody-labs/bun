@@ -34,14 +34,7 @@ const WASM_OPT_FEATURES = [
   "--enable-reference-types",
 ];
 
-const BINDGEN_TARGETS = [
-  "web",
-  "bundler",
-  "nodejs",
-  "deno",
-  "no-modules",
-  "experimental-nodejs-module",
-];
+const BINDGEN_TARGETS = ["web", "bundler", "nodejs", "deno", "no-modules", "experimental-nodejs-module"];
 
 function exe(name) {
   return process.platform === "win32" ? name + ".exe" : name;
@@ -93,9 +86,7 @@ async function checked(cmd: string[], options: RunOptions = {}) {
   const { exitCode } = result;
   if (exitCode !== 0) {
     const output = (result.stderr || result.stdout || "").trim();
-    throw new Error(
-      `${path.basename(cmd[0])} ${cmd[1] ?? ""} failed (exit ${exitCode})${output ? "\n" + output : ""}`,
-    );
+    throw new Error(`${path.basename(cmd[0])} ${cmd[1] ?? ""} failed (exit ${exitCode})${output ? "\n" + output : ""}`);
   }
   return result;
 }
@@ -137,11 +128,7 @@ function findManifest(input) {
 function cargoCommand(cargo) {
   if (cargo === undefined || cargo === true || cargo === false) return ["cargo"];
   const command = typeof cargo === "string" ? [cargo] : cargo;
-  if (
-    !$isArray(command) ||
-    command.length === 0 ||
-    command.some((part) => typeof part !== "string" || !part)
-  ) {
+  if (!$isArray(command) || command.length === 0 || command.some(part => typeof part !== "string" || !part)) {
     throw $ERR_INVALID_ARG_TYPE("options.cargo", ["boolean", "string", "string[]"], cargo);
   }
   const [bin, ...args] = command;
@@ -162,19 +149,13 @@ async function metadata(manifest, name, cargo = ["cargo"]) {
   const meta = JSON.parse(stdout);
   const same = (a, b) => path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase();
   const pkg = name
-    ? meta.packages.find((p) => p.name === name)
-    : meta.packages.find((p) => same(p.manifest_path, manifest));
-  if (!pkg && name)
-    throw new Error(`${name} is not a package of the workspace ${meta.workspace_root}`);
-  if (!pkg)
-    throw new Error(
-      `${manifest} is a virtual workspace manifest: point at a member crate or pass package`,
-    );
-  const lib = pkg.targets.find((t) => t.kind.includes("cdylib"));
+    ? meta.packages.find(p => p.name === name)
+    : meta.packages.find(p => same(p.manifest_path, manifest));
+  if (!pkg && name) throw new Error(`${name} is not a package of the workspace ${meta.workspace_root}`);
+  if (!pkg) throw new Error(`${manifest} is a virtual workspace manifest: point at a member crate or pass package`);
+  const lib = pkg.targets.find(t => t.kind.includes("cdylib"));
   if (!lib) {
-    throw new Error(
-      `${pkg.name} has no cdylib target: add [lib] crate-type = ["cdylib"] to ${manifest}`,
-    );
+    throw new Error(`${pkg.name} has no cdylib target: add [lib] crate-type = ["cdylib"] to ${manifest}`);
   }
   return {
     name: pkg.name,
@@ -183,7 +164,7 @@ async function metadata(manifest, name, cargo = ["cargo"]) {
     description: pkg.description ?? undefined,
     license: pkg.license ?? undefined,
     libName: lib.name.replaceAll("-", "_"),
-    usesBindgen: pkg.dependencies.some((d) => d.name === "wasm-bindgen" && d.kind !== "dev"),
+    usesBindgen: pkg.dependencies.some(d => d.name === "wasm-bindgen" && d.kind !== "dev"),
     workspaceRoot: meta.workspace_root,
     targetDirectory: meta.target_directory,
   };
@@ -211,8 +192,7 @@ async function resolveBindgen(version) {
   const wanted = `wasm-bindgen ${version}`;
   const override = process.env.BUN_WASM_BINDGEN;
   if (override) {
-    if ((await versionOf(override)) !== wanted)
-      throw new Error(`BUN_WASM_BINDGEN is not ${wanted}`);
+    if ((await versionOf(override)) !== wanted) throw new Error(`BUN_WASM_BINDGEN is not ${wanted}`);
     return override;
   }
   const onPath = Bun.which("wasm-bindgen");
@@ -236,24 +216,11 @@ async function resolveBindgen(version) {
       { inherit: true },
     );
   } else {
-    await checked(
-      [
-        "cargo",
-        "install",
-        "--locked",
-        "--version",
-        `=${version}`,
-        "--root",
-        root,
-        "wasm-bindgen-cli",
-      ],
-      {
-        inherit: true,
-      },
-    );
+    await checked(["cargo", "install", "--locked", "--version", `=${version}`, "--root", root, "wasm-bindgen-cli"], {
+      inherit: true,
+    });
   }
-  if ((await versionOf(cached)) !== wanted)
-    throw new Error(`${wanted} (Cargo.lock) could not be installed`);
+  if ((await versionOf(cached)) !== wanted) throw new Error(`${wanted} (Cargo.lock) could not be installed`);
   return cached;
 }
 
@@ -347,38 +314,25 @@ function hashFile(file, extra) {
  * The package is staged next to `outdir` and renamed into place only once it is complete and valid.
  */
 async function build(options: BuildOptions = {}) {
-  if (typeof options !== "object" || options === null)
-    throw $ERR_INVALID_ARG_TYPE("options", "object", options);
+  if (typeof options !== "object" || options === null) throw $ERR_INVALID_ARG_TYPE("options", "object", options);
   const cargoBin = cargoCommand(options.cargo);
-  const meta = await metadata(
-    findManifest(options.crate ?? process.cwd()),
-    options.package,
-    cargoBin,
-  );
+  const meta = await metadata(findManifest(options.crate ?? process.cwd()), options.package, cargoBin);
   const manifest = meta.manifestPath;
   const crateDir = path.dirname(manifest);
   const wasi = options.wasi ?? undefined;
-  if (wasi !== undefined && wasi !== "p1" && wasi !== "p2")
-    throw new Error(`wasi must be "p1" or "p2", got ${wasi}`);
+  if (wasi !== undefined && wasi !== "p1" && wasi !== "p2") throw new Error(`wasi must be "p1" or "p2", got ${wasi}`);
   const triple = options.triple ?? TRIPLES[wasi ?? "unknown"];
   const profile = options.profile ?? "release";
   const profileDir = profile === "dev" ? "debug" : profile;
   const name = options.name ?? meta.libName;
   if (!/^[A-Za-z0-9_-]+$/.test(name)) throw new Error(`Invalid output name ${name}`);
   const target = options.target ?? "web";
-  if (!BINDGEN_TARGETS.includes(target))
-    throw new Error(`target must be one of ${BINDGEN_TARGETS.join(", ")}`);
+  if (!BINDGEN_TARGETS.includes(target)) throw new Error(`target must be one of ${BINDGEN_TARGETS.join(", ")}`);
   const outdir = path.resolve(options.outdir ?? path.join(crateDir, "pkg"));
-  if (
-    outdir === path.parse(outdir).root ||
-    crateDir.startsWith(outdir + path.sep) ||
-    outdir === crateDir
-  ) {
-    throw new Error(
-      `outdir ${outdir} must be a package directory, not the crate or one of its parents`,
-    );
+  if (outdir === path.parse(outdir).root || crateDir.startsWith(outdir + path.sep) || outdir === crateDir) {
+    throw new Error(`outdir ${outdir} must be a package directory, not the crate or one of its parents`);
   }
-  const log = options.quiet ? () => {} : (msg) => process.stderr.write(msg + "\n");
+  const log = options.quiet ? () => {} : msg => process.stderr.write(msg + "\n");
 
   if (options.cargo !== false && !options.artifact) {
     // A custom cargo may build elsewhere (a build server, a container): its toolchain is its own.
@@ -401,13 +355,8 @@ async function build(options: BuildOptions = {}) {
   const bindgen = triple === TRIPLES.unknown && meta.usesBindgen && options.bindgen !== false;
   const component = triple === TRIPLES.p2;
   // wasm-opt does not read components; `jco opt` would.
-  let optimizeLevel: string | undefined =
-    typeof options.optimize === "string" ? options.optimize : "Oz";
-  if (
-    options.optimize === false ||
-    component ||
-    (options.optimize === undefined && profile === "dev")
-  ) {
+  let optimizeLevel: string | undefined = typeof options.optimize === "string" ? options.optimize : "Oz";
+  if (options.optimize === false || component || (options.optimize === undefined && profile === "dev")) {
     optimizeLevel = undefined;
   }
   const typescript = options.typescript !== false;
@@ -426,8 +375,7 @@ async function build(options: BuildOptions = {}) {
     let wasmFile;
     if (bindgen) {
       const version = pinnedBindgen(meta.workspaceRoot);
-      if (!version)
-        throw new Error(`wasm-bindgen is not in ${path.join(meta.workspaceRoot, "Cargo.lock")}`);
+      if (!version) throw new Error(`wasm-bindgen is not in ${path.join(meta.workspaceRoot, "Cargo.lock")}`);
       const tool = await resolveBindgen(version);
       const args = [tool, "--target", target, "--out-dir", stage, "--out-name", name];
       if (!typescript) args.push("--no-typescript");
@@ -464,7 +412,7 @@ async function build(options: BuildOptions = {}) {
       throw new Error(`${name}: ${bytes} bytes is over maxBytes ${maxBytes}`);
     }
     if (options.packageJson !== false) {
-      const files = fs.readdirSync(stage).filter((f) => f !== "package.json");
+      const files = fs.readdirSync(stage).filter(f => f !== "package.json");
       const pkg = {
         name: options.packageName ?? meta.name,
         version: meta.version,
@@ -502,10 +450,7 @@ async function build(options: BuildOptions = {}) {
 }
 
 function result(outdir, name, bindgen, component, cached) {
-  const wasm = path.join(
-    outdir,
-    bindgen ? `${name}_bg.wasm` : component ? `${name}.component.wasm` : `${name}.wasm`,
-  );
+  const wasm = path.join(outdir, bindgen ? `${name}_bg.wasm` : component ? `${name}.component.wasm` : `${name}.wasm`);
   const js = path.join(outdir, `${name}.js`);
   const dts = path.join(outdir, `${name}.d.ts`);
   return {
@@ -522,13 +467,11 @@ function result(outdir, name, bindgen, component, cached) {
  * A Bun plugin that builds the crate when a module imports its `Cargo.toml` or one of its `.rs` files
  * (cached in its Cargo target directory) and loads the generated module.
  */
-function plugin(
-  options: Omit<BuildOptions, "crate" | "outdir" | "packageJson" | "cache"> = {},
-): BunPlugin {
+function plugin(options: Omit<BuildOptions, "crate" | "outdir" | "packageJson" | "cache"> = {}): BunPlugin {
   return {
     name: "bun:wasm",
     setup(builder) {
-      builder.onLoad({ filter: /(^|[\\/])Cargo\.toml$|\.rs$/ }, async (args) => {
+      builder.onLoad({ filter: /(^|[\\/])Cargo\.toml$|\.rs$/ }, async args => {
         const manifest = findManifest(args.path);
         const meta = await metadata(manifest, undefined, cargoCommand(options.cargo));
         const triple = options.triple ?? TRIPLES[options.wasi ?? "unknown"];

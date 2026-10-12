@@ -96,7 +96,7 @@ export function shq(s: string): string {
 export function logEvent(
   event: string,
   fields: Record<string, unknown> = {},
-  out: (line: string) => void = (l) => console.log(l),
+  out: (line: string) => void = l => console.log(l),
 ) {
   out(JSON.stringify({ t: new Date().toISOString(), event, ...fields }));
 }
@@ -121,10 +121,7 @@ export function validateApp(raw: any): App {
   need(typeof raw.build?.artifact === "string", "build.artifact");
   need(typeof raw.build?.cwd === "string", "build.cwd");
   need(typeof raw.host === "string" && raw.host, "host");
-  need(
-    typeof raw.remote?.root === "string" && raw.remote.root.startsWith("/"),
-    "remote.root must be absolute",
-  );
+  need(typeof raw.remote?.root === "string" && raw.remote.root.startsWith("/"), "remote.root must be absolute");
   need(/^[A-Za-z0-9@._:-]+$/.test(raw.remote?.unit ?? ""), "remote.unit");
   need(typeof raw.remote?.health === "string", "remote.health");
   return raw as App;
@@ -143,7 +140,7 @@ const sanitize = (s: string) => s.replace(/[^A-Za-z0-9._-]/g, "_");
 
 /** `<sha7>-<sha7>-<tag>` in source order; git sources contribute sha7, release sources their tag. */
 export function computeReleaseId(sources: ResolvedSource[]): string {
-  return sources.map((s) => (s.sha ? s.sha.slice(0, 7) : sanitize(s.tag ?? "none"))).join("-");
+  return sources.map(s => (s.sha ? s.sha.slice(0, 7) : sanitize(s.tag ?? "none"))).join("-");
 }
 
 /** Token goes through the environment only (git config env), never argv. */
@@ -170,7 +167,7 @@ export async function resolveSource(
   if (s.kind === "release") {
     const releases = await (io.releases ?? ghReleases)(s.repo);
     const prefix = s.tagPrefix ?? "bun-v";
-    const hit = releases.find((r) => !r.draft && r.tag_name.startsWith(prefix));
+    const hit = releases.find(r => !r.draft && r.tag_name.startsWith(prefix));
     if (!hit) throw new Error(`${s.name}: no release tag starting with ${prefix}`);
     return { name: s.name, tag: hit.tag_name };
   }
@@ -210,11 +207,8 @@ async function ghReleases(repo: string): Promise<{ tag_name: string; draft?: boo
   return releases;
 }
 
-export async function resolveAll(
-  app: App,
-  io: Parameters<typeof resolveSource>[1] = {},
-): Promise<Resolved> {
-  const sources = await Promise.all(app.sources.map((s) => resolveSource(s, io)));
+export async function resolveAll(app: App, io: Parameters<typeof resolveSource>[1] = {}): Promise<Resolved> {
+  const sources = await Promise.all(app.sources.map(s => resolveSource(s, io)));
   return { id: computeReleaseId(sources), sources };
 }
 
@@ -239,10 +233,7 @@ export class QueueState {
   }
   markBad(id: string, reason: string) {
     mkdirSync(join(this.dir, "bad"), { recursive: true });
-    writeFileSync(
-      join(this.dir, "bad", id),
-      JSON.stringify({ reason, at: new Date().toISOString() }) + "\n",
-    );
+    writeFileSync(join(this.dir, "bad", id), JSON.stringify({ reason, at: new Date().toISOString() }) + "\n");
   }
   badIds() {
     try {
@@ -257,11 +248,7 @@ export type Decision =
   | { action: "build"; id: string }
   | { action: "noop"; reason: "deployed" | "known-bad"; id: string };
 
-export function decide(
-  id: string,
-  deployed: string | null,
-  state: Pick<QueueState, "isBad">,
-): Decision {
+export function decide(id: string, deployed: string | null, state: Pick<QueueState, "isBad">): Decision {
   if (id === deployed) return { action: "noop", reason: "deployed", id };
   if (state.isBad(id)) return { action: "noop", reason: "known-bad", id };
   return { action: "build", id };
@@ -344,16 +331,13 @@ export const sha256File = (p: string) => createHash("sha256").update(readFileSyn
 
 export function listReleaseFiles(dir: string) {
   return readdirSync(dir)
-    .filter((f) => f !== "SHA256SUMS" && f !== "bad" && statSync(join(dir, f)).isFile())
+    .filter(f => f !== "SHA256SUMS" && f !== "bad" && statSync(join(dir, f)).isFile())
     .sort();
 }
 
 export function writeSums(dir: string): string[] {
   const files = listReleaseFiles(dir);
-  writeFileSync(
-    join(dir, "SHA256SUMS"),
-    files.map((f) => `${sha256File(join(dir, f))}  ${f}`).join("\n") + "\n",
-  );
+  writeFileSync(join(dir, "SHA256SUMS"), files.map(f => `${sha256File(join(dir, f))}  ${f}`).join("\n") + "\n");
   return files;
 }
 
@@ -372,13 +356,7 @@ export function verifySums(dir: string): string[] {
     const m = /^([0-9a-f]{64})  (.+)$/.exec(line);
     const hash = m?.[1];
     const name = m?.[2];
-    if (
-      hash === undefined ||
-      name === undefined ||
-      name.includes("/") ||
-      name.includes("\\") ||
-      name.includes("..")
-    ) {
+    if (hash === undefined || name === undefined || name.includes("/") || name.includes("\\") || name.includes("..")) {
       bad.push(line);
       continue;
     }
@@ -403,8 +381,8 @@ export function selectReleasesToKeep(
     kept.add(r.name);
   }
   return {
-    keep: releases.filter((r) => kept.has(r.name)).map((r) => r.name),
-    remove: releases.filter((r) => !kept.has(r.name)).map((r) => r.name),
+    keep: releases.filter(r => kept.has(r.name)).map(r => r.name),
+    remove: releases.filter(r => !kept.has(r.name)).map(r => r.name),
   };
 }
 

@@ -50,8 +50,7 @@ function copyJSON(value: any, field: string, ancestors: any[] = []): any {
   ancestors[ancestors.length] = value;
   const result: any = isArray ? [] : { __proto__: null };
   if (isArray) {
-    for (let i = 0; i < value.length; i++)
-      result[i] = copyJSON(value[i], `${field}[${i}]`, ancestors);
+    for (let i = 0; i < value.length; i++) result[i] = copyJSON(value[i], `${field}[${i}]`, ancestors);
   } else {
     const keys = ObjectKeys(value);
     for (let i = 0; i < keys.length; i++) {
@@ -95,9 +94,7 @@ function identity(manifest: any) {
   string(manifest.version, "version");
   if (manifest.manifest_version !== 3) throw new RangeError("manifest_version must be 3");
   if (!matches(/^(0|[1-9]\d{0,4})(\.(0|[1-9]\d{0,4})){0,3}$/, manifest.version)) {
-    throw new TypeError(
-      "version must contain one to four dot-separated integers without leading zeros",
-    );
+    throw new TypeError("version must contain one to four dot-separated integers without leading zeros");
   }
   const parts = StringSplit.$call(manifest.version, ".");
   let nonzero = false;
@@ -137,9 +134,7 @@ function permissions(value: any, field: string, hosts: boolean) {
     const name = `${field}[${i}]`;
     if (hosts) hostPattern(items[i], name);
     else if (!matches(/^[a-zA-Z][a-zA-Z0-9_.]*$/, string(items[i], name))) {
-      throw new TypeError(
-        `${name} must be a permission name; use host_permissions for host patterns`,
-      );
+      throw new TypeError(`${name} must be a permission name; use host_permissions for host patterns`);
     }
   }
 }
@@ -147,38 +142,23 @@ function permissions(value: any, field: string, hosts: boolean) {
 function validateExtension(input: any) {
   const manifest = copyJSON(object(input, "manifest"), "manifest");
   identity(manifest);
-  if (manifest.theme !== undefined)
-    throw new TypeError("Extension manifests must not contain theme");
+  if (manifest.theme !== undefined) throw new TypeError("Extension manifests must not contain theme");
   for (const key of ["browser_action", "page_action"]) {
-    if (manifest[key] !== undefined)
-      throw new TypeError(`Manifest V3 must use action instead of ${key}`);
+    if (manifest[key] !== undefined) throw new TypeError(`Manifest V3 must use action instead of ${key}`);
   }
-  for (const key of [
-    "permissions",
-    "optional_permissions",
-    "host_permissions",
-    "optional_host_permissions",
-  ]) {
+  for (const key of ["permissions", "optional_permissions", "host_permissions", "optional_host_permissions"]) {
     const value = manifest[key];
-    if (value !== undefined)
-      permissions(value, key, key === "host_permissions" || key === "optional_host_permissions");
+    if (value !== undefined) permissions(value, key, key === "host_permissions" || key === "optional_host_permissions");
   }
   const backgroundValue = manifest.background;
   if (backgroundValue !== undefined) {
     const background = object(backgroundValue, "background");
     resource(background.service_worker, "background.service_worker");
-    if (
-      background.scripts !== undefined ||
-      background.page !== undefined ||
-      background.persistent !== undefined
-    ) {
-      throw new TypeError(
-        "Manifest V3 background must use service_worker instead of scripts, page or persistent",
-      );
+    if (background.scripts !== undefined || background.page !== undefined || background.persistent !== undefined) {
+      throw new TypeError("Manifest V3 background must use service_worker instead of scripts, page or persistent");
     }
     const type = background.type;
-    if (type !== undefined && type !== "module")
-      throw new TypeError('background.type must be "module"');
+    if (type !== undefined && type !== "module") throw new TypeError('background.type must be "module"');
   }
   const actionValue = manifest.action;
   if (actionValue !== undefined) {
@@ -220,8 +200,7 @@ function validateExtension(input: any) {
       const entry = object(entries[i], `web_accessible_resources[${i}]`);
       resources(entry.resources, `web_accessible_resources[${i}].resources`);
       const matchesValue = entry.matches;
-      if (matchesValue !== undefined)
-        permissions(matchesValue, `web_accessible_resources[${i}].matches`, true);
+      if (matchesValue !== undefined) permissions(matchesValue, `web_accessible_resources[${i}].matches`, true);
     }
   }
   return manifest;
@@ -267,9 +246,7 @@ function validateTheme(input: any) {
       const field = `theme.${key}.${name}`;
       const components = array(values[name], field);
       if (components.length !== 3 && !(key === "colors" && components.length === 4)) {
-        throw new TypeError(
-          `${field} must have three components${key === "colors" ? " or four for RGBA" : ""}`,
-        );
+        throw new TypeError(`${field} must have three components${key === "colors" ? " or four for RGBA" : ""}`);
       }
       for (let i = 0; i < components.length; i++) {
         const component = components[i];
@@ -278,11 +255,7 @@ function validateTheme(input: any) {
         if (key === "tints") {
           if (component !== -1 && (component < 0 || component > 1))
             throw new RangeError(`${field}[${i}] must be -1 or between 0 and 1`);
-        } else if (
-          component < 0 ||
-          component > (i === 3 ? 1 : 255) ||
-          (i < 3 && component % 1 !== 0)
-        ) {
+        } else if (component < 0 || component > (i === 3 ? 1 : 255) || (i < 3 && component % 1 !== 0)) {
           throw new RangeError(
             `${field}[${i}] must be ${i === 3 ? "between 0 and 1" : "an integer between 0 and 255"}`,
           );
@@ -305,8 +278,7 @@ function createTheme(input: any) {
 function httpURL(value: any, field: string, base?: string) {
   string(value, field);
   const url = new URLConstructor(value, base);
-  if (url.protocol !== "https:" && url.protocol !== "http:")
-    throw new TypeError(`${field} must use HTTP or HTTPS`);
+  if (url.protocol !== "https:" && url.protocol !== "http:") throw new TypeError(`${field} must use HTTP or HTTPS`);
   if (url.username || url.password) throw new TypeError(`${field} must not contain credentials`);
   return url;
 }
@@ -327,10 +299,7 @@ function validatePWA(input: any) {
     manifest.scope = scope.href;
   }
   const display = manifest.display;
-  if (
-    display !== undefined &&
-    !ArrayIncludes.$call(["fullscreen", "standalone", "minimal-ui", "browser"], display)
-  ) {
+  if (display !== undefined && !ArrayIncludes.$call(["fullscreen", "standalone", "minimal-ui", "browser"], display)) {
     throw new TypeError("display must be fullscreen, standalone, minimal-ui or browser");
   }
   const iconsValue = manifest.icons;
@@ -342,10 +311,7 @@ function validatePWA(input: any) {
       const sizes = icon.sizes;
       if (
         sizes !== undefined &&
-        !matches(
-          /^(any|[1-9]\d*x[1-9]\d*)( +(any|[1-9]\d*x[1-9]\d*))*$/,
-          string(sizes, `icons[${i}].sizes`),
-        )
+        !matches(/^(any|[1-9]\d*x[1-9]\d*)( +(any|[1-9]\d*x[1-9]\d*))*$/, string(sizes, `icons[${i}].sizes`))
       ) {
         throw new TypeError(`icons[${i}].sizes must contain dimensions or any`);
       }
@@ -354,10 +320,7 @@ function validatePWA(input: any) {
       const purpose = icon.purpose;
       if (
         purpose !== undefined &&
-        !matches(
-          /^(any|maskable|monochrome)( +(any|maskable|monochrome))*$/,
-          string(purpose, `icons[${i}].purpose`),
-        )
+        !matches(/^(any|maskable|monochrome)( +(any|maskable|monochrome))*$/, string(purpose, `icons[${i}].purpose`))
       ) {
         throw new TypeError(`icons[${i}].purpose must contain any, maskable or monochrome`);
       }

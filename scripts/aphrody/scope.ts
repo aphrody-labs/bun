@@ -43,7 +43,7 @@ function scopedName(name: string): string {
 // In code only exact string literals are package names (`"bun-types"`,
 // `"bun-types/x"`); paths like "../bun-types" and file names like
 // "bun-mdx-rs.linux-x64-gnu.node" are not.
-const CODE_RULES = RENAMED.map((name) => ({
+const CODE_RULES = RENAMED.map(name => ({
   re: new RegExp(`(["'])${escape(name)}(?=["'/]|${PLATFORM_SUFFIX})`, "g"),
   to: `$1${SCOPE}/${name}`,
 }));
@@ -52,7 +52,7 @@ const CODE_RULES = RENAMED.map((name) => ({
 // identifier.
 const PROSE_RULES = [
   { re: /(?<![\w@/.-])@types\/bun(?![\w/-])/g, to: `${SCOPE}/bun-types` },
-  ...RENAMED.map((name) => ({
+  ...RENAMED.map(name => ({
     re: new RegExp(`(?<![\\w@/.-])${escape(name)}(?!\\w|\\.\\w)`, "g"),
     to: `${SCOPE}/${name}`,
   })),
@@ -92,8 +92,7 @@ function rewriteManifest(text: string): string {
     }
     if (character === "}" || character === "]") {
       depth--;
-      if (dependenciesDepth !== undefined && depth < dependenciesDepth)
-        dependenciesDepth = undefined;
+      if (dependenciesDepth !== undefined && depth < dependenciesDepth) dependenciesDepth = undefined;
       continue;
     }
     if (character !== '"') continue;
@@ -102,8 +101,7 @@ function rewriteManifest(text: string): string {
     const colon = skipSpace(end);
     if (text[colon] === ":") {
       const valueStart = skipSpace(colon + 1);
-      if (depth === 1 && DEP_FIELDS.includes(key) && text[valueStart] === "{")
-        dependenciesDepth = 2;
+      if (depth === 1 && DEP_FIELDS.includes(key) && text[valueStart] === "{") dependenciesDepth = 2;
       if (text[valueStart] === '"') {
         const valueEnd = stringEnd(valueStart);
         const value = JSON.parse(text.slice(valueStart, valueEnd)) as string;
@@ -113,11 +111,7 @@ function rewriteManifest(text: string): string {
             end: valueEnd,
             value: JSON.stringify(scopedName(value)),
           });
-        } else if (
-          depth === dependenciesDepth &&
-          LOCAL_SPEC.test(value) &&
-          scopedName(key) !== key
-        ) {
+        } else if (depth === dependenciesDepth && LOCAL_SPEC.test(value) && scopedName(key) !== key) {
           edits.push({ start: offset, end, value: JSON.stringify(scopedName(key)) });
         }
       }
@@ -125,8 +119,7 @@ function rewriteManifest(text: string): string {
     offset = end - 1;
   }
   let out = text;
-  for (const edit of edits.reverse())
-    out = out.slice(0, edit.start) + edit.value + out.slice(edit.end);
+  for (const edit of edits.reverse()) out = out.slice(0, edit.start) + edit.value + out.slice(edit.end);
   return out;
 }
 
@@ -138,11 +131,7 @@ export function rewrite(path: string, text: string): string {
   // Lines that mention "upstream" describe the upstream names on purpose.
   return text
     .split("\n")
-    .map((line) =>
-      /upstream/i.test(line)
-        ? line
-        : PROSE_RULES.reduce((l, { re, to }) => l.replace(re, to), line),
-    )
+    .map(line => (/upstream/i.test(line) ? line : PROSE_RULES.reduce((l, { re, to }) => l.replace(re, to), line)))
     .join("\n");
 }
 
@@ -150,14 +139,11 @@ export function rewrite(path: string, text: string): string {
 // mention one of the names, so JS never reads the whole tree.
 export function candidates(root: string): string[] {
   const pattern = ["@types/bun", ...RENAMED].map(escape).join("|");
-  const proc = Bun.spawnSync(
-    ["rg", "--files-with-matches", "--no-messages", "-e", pattern, "packages"],
-    {
-      cwd: root,
-      stdout: "pipe",
-      stderr: "pipe",
-    },
-  );
+  const proc = Bun.spawnSync(["rg", "--files-with-matches", "--no-messages", "-e", pattern, "packages"], {
+    cwd: root,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
   if (proc.exitCode !== 0 && proc.exitCode !== 1) {
     throw new Error(`rg failed with exit code ${proc.exitCode}: ${proc.stderr.toString()}`);
   }
@@ -165,7 +151,7 @@ export function candidates(root: string): string[] {
     .toString()
     .split(/\r?\n/)
     .filter(Boolean)
-    .map((f) => f.replaceAll("\\", "/"))
+    .map(f => f.replaceAll("\\", "/"))
     .filter(isManaged)
     .sort();
 }

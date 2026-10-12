@@ -14,25 +14,16 @@ function record(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function keys(value: Record<string, unknown>, allowed: string[]) {
-  if (Object.keys(value).some((key) => !allowed.includes(key))) throw new Error("Invalid fields");
+  if (Object.keys(value).some(key => !allowed.includes(key))) throw new Error("Invalid fields");
 }
 function text(value: unknown, limit: number, optional = false) {
   if (optional && value === undefined) return;
-  if (
-    typeof value !== "string" ||
-    value.length > limit ||
-    /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value)
-  )
+  if (typeof value !== "string" || value.length > limit || /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value))
     throw new Error("Invalid text");
 }
 function number(value: unknown, optional = false) {
   if (optional && value === undefined) return;
-  if (
-    typeof value !== "number" ||
-    !Number.isFinite(value) ||
-    value < 0 ||
-    value > Number.MAX_SAFE_INTEGER
-  )
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > Number.MAX_SAFE_INTEGER)
     throw new Error("Invalid number");
 }
 function url(value: unknown) {
@@ -54,11 +45,7 @@ export function validateExport(value: unknown): ExportMessage {
   if (value.schemaVersion !== 1 || value.type !== "export" || !Array.isArray(value.items))
     throw new Error("Invalid message");
   const limits: Record<string, number> = { bookmarks: 500, history: 200, tabs: 100, sessions: 25 };
-  if (
-    typeof value.kind !== "string" ||
-    !Object.hasOwn(limits, value.kind) ||
-    value.items.length > limits[value.kind]!
-  )
+  if (typeof value.kind !== "string" || !Object.hasOwn(limits, value.kind) || value.items.length > limits[value.kind]!)
     throw new Error("Invalid kind or count");
   let sessionTabs = 0;
   for (const item of value.items) {
@@ -81,8 +68,7 @@ export function validateExport(value: unknown): ExportMessage {
       keys(item, ["sessionId", "lastModified", "tabs"]);
       text(item.sessionId, 128);
       number(item.lastModified);
-      if (!Array.isArray(item.tabs) || item.tabs.length > 100)
-        throw new Error("Invalid session tabs");
+      if (!Array.isArray(item.tabs) || item.tabs.length > 100) throw new Error("Invalid session tabs");
       sessionTabs += item.tabs.length;
       if (sessionTabs > 100) throw new Error("Session tab count exceeds limit");
       for (const entry of item.tabs) tab(entry);
@@ -92,8 +78,7 @@ export function validateExport(value: unknown): ExportMessage {
 }
 export function encodeFrame(value: unknown): Uint8Array {
   const payload = new TextEncoder().encode(JSON.stringify(value));
-  if (!payload.length || payload.length > MAX_FRAME_BYTES)
-    throw new Error("Native frame exceeds limit");
+  if (!payload.length || payload.length > MAX_FRAME_BYTES) throw new Error("Native frame exceeds limit");
   const result = new Uint8Array(4 + payload.length);
   new DataView(result.buffer).setUint32(0, payload.length, true);
   result.set(payload, 4);

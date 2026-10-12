@@ -44,14 +44,13 @@ const SOURCES = [
   ],
 ] as const;
 export const REQUIRED_REDIRECT_CAPABILITY = "crawl-redirect-allowlist-before-network";
-const sha256 = (value: Uint8Array | string) =>
-  new Bun.CryptoHasher("sha256").update(value).digest("hex");
+const sha256 = (value: Uint8Array | string) => new Bun.CryptoHasher("sha256").update(value).digest("hex");
 
 function host(value: unknown): string {
   if (typeof value !== "string" || value.length > 253 || !/^[a-z0-9.-]+$/i.test(value))
     throw new Error("catalog contains an invalid hostname");
   const normalized = value.toLowerCase();
-  if (normalized.split(".").some((label) => !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label)))
+  if (normalized.split(".").some(label => !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label)))
     throw new Error("catalog contains an invalid hostname");
   return normalized;
 }
@@ -65,35 +64,27 @@ export function createGoogleCrawlPlan(
   if (Buffer.byteLength(atlasText) > 2_000_000 || Buffer.byteLength(domainsText) > 100_000)
     throw new Error("catalog exceeds source budget");
   const atlas: unknown = JSON.parse(atlasText);
-  if (
-    !atlas ||
-    typeof atlas !== "object" ||
-    !("allHosts" in atlas) ||
-    !Array.isArray(atlas.allHosts)
-  )
+  if (!atlas || typeof atlas !== "object" || !("allHosts" in atlas) || !Array.isArray(atlas.allHosts))
     throw new Error("atlas must provide allHosts");
   if (atlas.allHosts.length > 10_000) throw new Error("catalog exceeds host budget");
   const atlasHosts = new Set(atlas.allHosts.map(host));
   const domainHosts = new Set(
     domainsText
       .split(/\r?\n/)
-      .map((line) => line.trim())
+      .map(line => line.trim())
       .filter(Boolean)
       .map(host),
   );
   const allHosts = [...new Set([...atlasHosts, ...domainHosts])].sort();
   if (allHosts.length > 10_000) throw new Error("catalog exceeds host budget");
-  const catalog = allHosts.map((hostname) => ({
+  const catalog = allHosts.map(hostname => ({
     hostname,
-    sources: [
-      ...(atlasHosts.has(hostname) ? ["atlas"] : []),
-      ...(domainHosts.has(hostname) ? ["google_domains"] : []),
-    ],
+    sources: [...(atlasHosts.has(hostname) ? ["atlas"] : []), ...(domainHosts.has(hostname) ? ["google_domains"] : [])],
     publicSeed: PUBLIC_GOOGLE_HOSTS.includes(hostname),
     ownershipVerified: false,
   }));
-  const seeds = PUBLIC_GOOGLE_HOSTS.filter((hostname) => allHosts.includes(hostname)).map(
-    (hostname) => `https://${hostname}/`,
+  const seeds = PUBLIC_GOOGLE_HOSTS.filter(hostname => allHosts.includes(hostname)).map(
+    hostname => `https://${hostname}/`,
   );
   const job = validateJob({ host: "vps", label, seeds, maxRequests, maxDepth: 0 });
   const atlasHash = sha256(atlasText);
@@ -104,7 +95,7 @@ export function createGoogleCrawlPlan(
     transport: "anonymous-native" as const,
     requiredCapability: REQUIRED_REDIRECT_CAPABILITY,
     policy: {
-      allowedDomains: seeds.map((seed) => new URL(seed).hostname),
+      allowedDomains: seeds.map(seed => new URL(seed).hostname),
       obeyRobots: true,
       authenticated: false,
       depth: 0,
@@ -124,11 +115,7 @@ export function createGoogleCrawlPlan(
 }
 export type GoogleCrawlPlan = ReturnType<typeof createGoogleCrawlPlan>;
 
-export async function loadGoogleCrawlPlan(
-  repository: string,
-  label = "google-public",
-  maxRequests = 25,
-) {
+export async function loadGoogleCrawlPlan(repository: string, label = "google-public", maxRequests = 25) {
   if (!isAbsolute(repository)) throw new Error("repository must be absolute");
   const contents: string[] = [];
   for (const [relative, expected] of SOURCES) {
@@ -149,7 +136,7 @@ export function nativeCrawlArguments(plan: GoogleCrawlPlan, jobDirectory: string
   if (!isAbsolute(jobDirectory)) throw new Error("job directory must be absolute");
   if (
     plan.job.maxDepth !== 0 ||
-    plan.job.seeds.some((seed) => {
+    plan.job.seeds.some(seed => {
       const url = new URL(seed);
       return (
         url.protocol !== "https:" ||
@@ -219,8 +206,7 @@ export async function executeGoogleCrawlPlan(
   const crawlArgs = nativeCrawlArguments(plan, join(root, "crawl"));
   if (crawl && !(await owner.capabilities()).includes(REQUIRED_REDIRECT_CAPABILITY))
     throw new Error("native per-hop redirect allowlist is not qualified; crawl refused");
-  if (process.platform === "win32")
-    throw new Error("apply requires the existing native Linux VPS owner");
+  if (process.platform === "win32") throw new Error("apply requires the existing native Linux VPS owner");
   for (let current = dirname(root); ; current = dirname(current)) {
     const stat = await lstat(current);
     if (!stat.isDirectory() || stat.isSymbolicLink())
@@ -230,12 +216,7 @@ export async function executeGoogleCrawlPlan(
     if (dirname(current) === current) break;
   }
   const parent = await lstat(dirname(root));
-  if (
-    !parent.isDirectory() ||
-    parent.isSymbolicLink() ||
-    parent.uid !== process.getuid!() ||
-    parent.mode & 0o077
-  )
+  if (!parent.isDirectory() || parent.isSymbolicLink() || parent.uid !== process.getuid!() || parent.mode & 0o077)
     throw new Error("existing parent must be an owner-only ordinary directory");
   // Exclusive creation refuses foreign job state; frontier resume is owned by the native CLI.
   await mkdir(root, { mode: 0o700 });
@@ -252,19 +233,11 @@ export async function executeGoogleCrawlPlan(
   } finally {
     await document.close();
   }
-  const index = indexSummary(
-    await owner.indexCatalog(documents, `google-catalog:${plan.job.label}`),
-  );
+  const index = indexSummary(await owner.indexCatalog(documents, `google-catalog:${plan.job.label}`));
   const result = crawl ? await owner.crawl(crawlArgs) : null;
-  let crawlSummary: { complete: boolean; attempts: number; pages: number; written: number } | null =
-    null;
+  let crawlSummary: { complete: boolean; attempts: number; pages: number; written: number } | null = null;
   if (crawl) {
-    if (
-      !result ||
-      typeof result !== "object" ||
-      !("complete" in result) ||
-      result.complete !== true
-    )
+    if (!result || typeof result !== "object" || !("complete" in result) || result.complete !== true)
       throw new Error("native crawl is incomplete; protected job state was preserved");
     const record = result as Record<string, unknown>;
     for (const field of ["attempts", "pages", "written"])
@@ -304,11 +277,7 @@ if (import.meta.main) {
       "google-crawl --repository ABS --label SLUG --max-requests 1..5000 [--apply|--index-catalog --root ABS --native-binary ABS]",
     );
   } else {
-    const plan = await loadGoogleCrawlPlan(
-      values.repository!,
-      values.label,
-      Number(values["max-requests"]),
-    );
+    const plan = await loadGoogleCrawlPlan(values.repository!, values.label, Number(values["max-requests"]));
     if (!values.apply && !values["index-catalog"]) {
       const { catalog: _catalog, ...summary } = plan;
       console.log(JSON.stringify(summary));
@@ -319,8 +288,7 @@ if (import.meta.main) {
       const binary = values["native-binary"]!;
       const runText = async (args: readonly string[]) => {
         const env = { ...process.env };
-        for (const key of Object.keys(env))
-          if (/^(?:https?|all|no)_proxy$/i.test(key)) delete env[key];
+        for (const key of Object.keys(env)) if (/^(?:https?|all|no)_proxy$/i.test(key)) delete env[key];
         delete env.OBSCURA_ALLOW_PRIVATE_NETWORK;
         const child = Bun.spawn([binary, ...args], {
           env,
@@ -344,7 +312,7 @@ if (import.meta.main) {
           },
           indexCatalog: (directory, label) =>
             run(["home", "index", directory, "--profile", "aphrody", "--label", label]),
-          crawl: (args) => run(args),
+          crawl: args => run(args),
         },
         !!values.apply,
       );

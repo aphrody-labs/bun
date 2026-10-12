@@ -5,8 +5,7 @@
 // forwarders), VS_VERSIONINFO, the Authenticode certificate table and the CLR header. Pure TypeScript over a
 // random-access byte source, bounded against malformed input; it never executes or maps the image (no
 // `LoadLibrary`, no WinRT activation).
-const { parseAuthenticode } =
-  require("internal/authenticode") as typeof import("./authenticode").default;
+const { parseAuthenticode } = require("internal/authenticode") as typeof import("./authenticode").default;
 import type { Authenticode } from "./authenticode";
 
 /** Random-access bytes: an in-memory image or positional reads on a file descriptor. */
@@ -223,11 +222,7 @@ function parsePe(src: ByteSource, fileName = ""): PeInfo | null {
   }
   let authenticode: Authenticode | null = null;
   const { rva: certificateOffset, size: certificateSize } = dirs[4]!;
-  if (
-    certificateOffset &&
-    certificateSize >= 8 &&
-    certificateOffset + certificateSize <= src.size
-  ) {
+  if (certificateOffset && certificateSize >= 8 && certificateOffset + certificateSize <= src.size) {
     // The certificate table entry holds a file offset, not an RVA.
     const certs = r.bytes(certificateOffset, Math.min(certificateSize, 1 << 20));
     try {
@@ -261,16 +256,11 @@ function parsePe(src: ByteSource, fileName = ""): PeInfo | null {
   };
 }
 
-function classify(
-  fileName: string,
-  characteristics: number,
-  subsystem: number,
-  imports: PeImport[],
-): PeKind {
+function classify(fileName: string, characteristics: number, subsystem: number, imports: PeImport[]): PeKind {
   const ext = fileName.toLowerCase().split(".").pop() ?? "";
   if (ext === "mui") return "mui";
   if (subsystem >= 10 && subsystem <= 13) return "efi";
-  const kernelImport = imports.some((i) =>
+  const kernelImport = imports.some(i =>
     /^(ntoskrnl\.exe|hal\.dll|ntkrnlpa\.exe|wdfldr\.sys|fltmgr\.sys|ndis\.sys)$/.test(i.module),
   );
   if (ext === "sys" || (subsystem === 1 && kernelImport)) return "sys";
@@ -278,12 +268,7 @@ function classify(
   return "exe";
 }
 
-function readThunks(
-  r: Reader,
-  off: number,
-  is64: boolean,
-  rvaToOff: (rva: number) => number,
-): string[] {
+function readThunks(r: Reader, off: number, is64: boolean, rvaToOff: (rva: number) => number): string[] {
   const out: string[] = [];
   const width = is64 ? 8 : 4;
   for (let i = 0; i < MAX_THUNKS; i++) {
@@ -448,11 +433,11 @@ function readVersion(
   if (!dir.rva) return null;
   const rsrc = rvaToOff(dir.rva);
   if (rsrc < 0) return null;
-  const type = resourceEntries(r, rsrc, 0).find((e) => e.id === RT_VERSION && e.isDir);
+  const type = resourceEntries(r, rsrc, 0).find(e => e.id === RT_VERSION && e.isDir);
   if (!type) return null;
-  const name = resourceEntries(r, rsrc, type.dataRel).find((e) => e.isDir);
+  const name = resourceEntries(r, rsrc, type.dataRel).find(e => e.isDir);
   if (!name) return null;
-  const langs = resourceEntries(r, rsrc, name.dataRel).filter((e) => !e.isDir);
+  const langs = resourceEntries(r, rsrc, name.dataRel).filter(e => !e.isDir);
   const lang = langs[0];
   if (!lang) return null;
   const entry = r.view(rsrc + lang.dataRel, 16);
@@ -501,8 +486,7 @@ function children(b: Uint8Array, v: DataView, parent: Block): Block[] {
   return out;
 }
 
-const verString = (ms: number, ls: number) =>
-  `${ms >>> 16}.${ms & 0xffff}.${ls >>> 16}.${ls & 0xffff}`;
+const verString = (ms: number, ls: number) => `${ms >>> 16}.${ms & 0xffff}.${ls >>> 16}.${ls & 0xffff}`;
 
 /** Parses a VS_VERSIONINFO blob (fixed file info and the first StringTable). */
 function parseVersionInfo(b: Uint8Array): VersionInfo | null {
@@ -513,21 +497,14 @@ function parseVersionInfo(b: Uint8Array): VersionInfo | null {
   const { valueOff } = root;
   if (root.valueBytes >= 52 && v.getUint32(valueOff, true) === 0xfeef04bd) {
     info.fileVersion = verString(v.getUint32(valueOff + 8, true), v.getUint32(valueOff + 12, true));
-    info.productVersion = verString(
-      v.getUint32(valueOff + 16, true),
-      v.getUint32(valueOff + 20, true),
-    );
+    info.productVersion = verString(v.getUint32(valueOff + 16, true), v.getUint32(valueOff + 20, true));
   }
   for (const c of children(b, v, root)) {
     if (c.key !== "StringFileInfo") continue;
     for (const table of children(b, v, c)) {
       for (const s of children(b, v, table)) {
         if (s.valueBytes <= 0) continue;
-        const raw = Buffer.from(
-          b.buffer,
-          b.byteOffset + s.valueOff,
-          Math.min(s.valueBytes, b.byteLength - s.valueOff),
-        );
+        const raw = Buffer.from(b.buffer, b.byteOffset + s.valueOff, Math.min(s.valueBytes, b.byteLength - s.valueOff));
         const value = raw.toString("utf16le").replace(/\0+$/, "").trim();
         const { key } = s;
         const { strings } = info;
@@ -550,9 +527,7 @@ function parseApiSetSchema(b: Uint8Array): Map<string, string[]> {
   const count = v.getUint32(12, true);
   const entryOff = v.getUint32(16, true);
   const str = (off: number, len: number) =>
-    off + len <= b.byteLength
-      ? Buffer.from(b.buffer, b.byteOffset + off, len).toString("utf16le")
-      : "";
+    off + len <= b.byteLength ? Buffer.from(b.buffer, b.byteOffset + off, len).toString("utf16le") : "";
   for (let i = 0; i < Math.min(count, 65_536); i++) {
     const e = entryOff + i * 24;
     if (e + 24 > b.byteLength) break;

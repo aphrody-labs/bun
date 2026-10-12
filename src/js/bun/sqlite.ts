@@ -14,10 +14,7 @@ const isTypedArray = ArrayBuffer.isView;
 let internalFieldTuple;
 
 function initializeSQL() {
-  ({ 0: SQL, 1: internalFieldTuple } = $cpp(
-    "JSSQLStatement.cpp",
-    "createJSSQLStatementConstructor",
-  ));
+  ({ 0: SQL, 1: internalFieldTuple } = $cpp("JSSQLStatement.cpp", "createJSSQLStatementConstructor"));
 }
 
 function createChangesObject() {
@@ -124,21 +121,11 @@ interface CppSQL {
   isInTransaction(handle: TODO): boolean;
   loadExtension(handle: TODO, name: string, entryPoint: string): void;
   serialize(handle: TODO, name: string): Buffer;
-  deserialize(
-    serialized: NodeJS.TypedArray | ArrayBufferLike,
-    openFlags: number,
-    deserializeFlags: number,
-  ): TODO;
+  deserialize(serialized: NodeJS.TypedArray | ArrayBufferLike, openFlags: number, deserializeFlags: number): TODO;
   fcntl(handle: TODO, ...args: TODO[]): TODO;
   close(handle: TODO, throwOnError: boolean): void;
   setCustomSQLite(path: string): boolean;
-  run(
-    handle: TODO,
-    internalFlags: number,
-    internalFieldTuple: TODO,
-    query: string,
-    ...params: TODO[]
-  ): void;
+  run(handle: TODO, internalFlags: number, internalFieldTuple: TODO, query: string, ...params: TODO[]): void;
   prepare(
     handle: TODO,
     query: string,
@@ -418,8 +405,7 @@ class Database implements SqliteTypes.Database {
         flags = constants.SQLITE_OPEN_READONLY;
       }
 
-      if ("readOnly" in options)
-        throw new TypeError('Misspelled option "readOnly" should be "readonly"');
+      if ("readOnly" in options) throw new TypeError('Misspelled option "readOnly" should be "readonly"');
 
       if (options.create) {
         flags = constants.SQLITE_OPEN_READWRITE | constants.SQLITE_OPEN_CREATE;
@@ -484,11 +470,7 @@ class Database implements SqliteTypes.Database {
     return SQL.serialize(this.#handle, optionalName || "main");
   }
 
-  static #deserialize(
-    serialized: NodeJS.TypedArray | ArrayBufferLike,
-    openFlags: number,
-    deserializeFlags: number,
-  ) {
+  static #deserialize(serialized: NodeJS.TypedArray | ArrayBufferLike, openFlags: number, deserializeFlags: number) {
     if (!SQL) {
       initializeSQL();
     }
@@ -542,7 +524,7 @@ class Database implements SqliteTypes.Database {
     return SQL.close(this.#handle, throwOnError);
   }
   clearQueryCache() {
-    this.#queryCache.$forEach((stmt) => stmt.finalize());
+    this.#queryCache.$forEach(stmt => stmt.finalize());
     this.#queryCache.$clear();
   }
 
@@ -562,10 +544,11 @@ class Database implements SqliteTypes.Database {
     return createChangesObject();
   }
 
-  prepare<
-    ReturnType,
-    ParamsType extends SqliteTypes.SQLQueryBindings | SqliteTypes.SQLQueryBindings[],
-  >(query: string, params?: ParamsType, flags: number = 0) {
+  prepare<ReturnType, ParamsType extends SqliteTypes.SQLQueryBindings | SqliteTypes.SQLQueryBindings[]>(
+    query: string,
+    params?: ParamsType,
+    flags: number = 0,
+  ) {
     return new Statement<ReturnType, ParamsType extends any[] ? ParamsType : [ParamsType]>(
       SQL.prepare(this.#handle, query, params, flags || 0, this.#internalFlags),
     );
@@ -573,13 +556,7 @@ class Database implements SqliteTypes.Database {
 
   [kPrepareOwned](query: string, flags: number) {
     return new Statement(
-      SQL.prepare(
-        this.#handle,
-        query,
-        undefined,
-        flags,
-        this.#internalFlags | kOwnedByDatabaseFlag,
-      ),
+      SQL.prepare(this.#handle, query, undefined, flags, this.#internalFlags | kOwnedByDatabaseFlag),
     );
   }
 

@@ -16,35 +16,13 @@ const {
   typeof import("node:fs/promises"),
   "lstat" | "realpath" | "mkdir" | "rename" | "unlink"
 > = require("node:fs/promises");
-const {
-  dirname,
-  extname,
-  isAbsolute,
-  join,
-  relative,
-  resolve,
-  sep,
-}: typeof import("node:path") = require("node:path");
+const { dirname, extname, isAbsolute, join, relative, resolve, sep }: typeof import("node:path") = require("node:path");
 const { randomUUID }: typeof import("node:crypto") = require("node:crypto");
-const {
-  scheduler,
-}: Pick<typeof import("node:timers/promises"), "scheduler"> = require("node:timers/promises");
+const { scheduler }: Pick<typeof import("node:timers/promises"), "scheduler"> = require("node:timers/promises");
 const { Buffer }: typeof import("node:buffer") = require("node:buffer");
 
 const FORMAT_VERSION = 1;
-const nativeExtensions = new Set([
-  "rs",
-  "js",
-  "jsx",
-  "mjs",
-  "cjs",
-  "ts",
-  "tsx",
-  "mts",
-  "cts",
-  "md",
-  "mdx",
-]);
+const nativeExtensions = new Set(["rs", "js", "jsx", "mjs", "cjs", "ts", "tsx", "mts", "cts", "md", "mdx"]);
 const textExtensions = new Set([
   ...nativeExtensions,
   "c",
@@ -137,7 +115,7 @@ function canonical(path: string) {
 }
 
 function normalized(path: string) {
-  return Array.from(path, (character) => character.toLowerCase())
+  return Array.from(path, character => character.toLowerCase())
     .join("")
     .replace(/[^\p{Alphabetic}\p{Number}]+/gu, "_")
     .replace(/^_+|_+$/g, "");
@@ -191,17 +169,7 @@ async function revisionAt(root: string, signal?: AbortSignal) {
 async function dirtyAt(root: string, signal?: AbortSignal): Promise<boolean | null> {
   signal?.throwIfAborted();
   await using child = Bun.spawn({
-    cmd: [
-      "git",
-      "-C",
-      root,
-      "status",
-      "--porcelain=v1",
-      "--untracked-files=normal",
-      "--",
-      "src",
-      "packages",
-    ],
+    cmd: ["git", "-C", root, "status", "--porcelain=v1", "--untracked-files=normal", "--", "src", "packages"],
     stdout: "pipe",
     stderr: "ignore",
     ...(signal ? { signal } : {}),
@@ -323,7 +291,7 @@ async function scan(root: string, options: IndexOptions, maxFiles: number, maxRe
   let scanned = 0;
   for (const surface of ["src", "packages"] as const) {
     const directory = join(root, surface);
-    const info = await lstat(directory).catch((error) => {
+    const info = await lstat(directory).catch(error => {
       if (error?.code === "ENOENT") return null;
       throw error;
     });
@@ -348,7 +316,7 @@ async function scan(root: string, options: IndexOptions, maxFiles: number, maxRe
       const filePath = canonical(relative(domainRoot, absolute));
       const extension = extname(filePath).slice(1).toLowerCase();
       const protectedPath =
-        parts.some((part) => protectedParts.has(part.toLowerCase())) ||
+        parts.some(part => protectedParts.has(part.toLowerCase())) ||
         /(^|\/)(?:\.env(?:\.|$)|.*\.(?:pem|key|pfx|p12)$)/i.test(filePath);
       const readable =
         !protectedPath &&
@@ -397,8 +365,7 @@ async function scan(root: string, options: IndexOptions, maxFiles: number, maxRe
     }
   }
   if (requested)
-    for (const name of requested)
-      if (!domains.has(name)) throw new Error(`Unknown or empty source domain ${name}`);
+    for (const name of requested) if (!domains.has(name)) throw new Error(`Unknown or empty source domain ${name}`);
   return [...domains.values()].sort((a, b) => a.name.localeCompare(b.name, "en"));
 }
 
@@ -424,12 +391,7 @@ async function indexDomain(
   const maxAstDepth = bound(options.maxAstDepth, 128, 256, "maxAstDepth");
   const maxNodes = bound(options.maxNodes, 250_000, 2_000_000, "maxNodes");
   const maxEdges = bound(options.maxEdges, 1_000_000, 4_000_000, "maxEdges");
-  const maxSnapshotBytes = bound(
-    options.maxSnapshotBytes,
-    512 * 1024 * 1024,
-    512 * 1024 * 1024,
-    "maxSnapshotBytes",
-  );
+  const maxSnapshotBytes = bound(options.maxSnapshotBytes, 512 * 1024 * 1024, 512 * 1024 * 1024, "maxSnapshotBytes");
   const scope = {
     profile: "bun",
     source: `graph:bun:${domain.name.replaceAll("/", ":")}` as `graph:${string}`,
@@ -453,19 +415,10 @@ async function indexDomain(
     signal?.throwIfAborted();
     if (file.readable) {
       const before = await lstat(file.absolute);
-      if (
-        before.isSymbolicLink() ||
-        !before.isFile() ||
-        !contained(sourceRoot, await realpath(file.absolute))
-      )
+      if (before.isSymbolicLink() || !before.isFile() || !contained(sourceRoot, await realpath(file.absolute)))
         throw new Error(`Source path changed before hashing: ${file.path}`);
       const text = { valid: true };
-      file.sha256 = await hashFile(
-        file.absolute,
-        signal,
-        options.maxReadBytes ?? 16 * 1024 * 1024,
-        text,
-      );
+      file.sha256 = await hashFile(file.absolute, signal, options.maxReadBytes ?? 16 * 1024 * 1024, text);
       const after = await lstat(file.absolute);
       if (after.isSymbolicLink() || after.size !== file.bytes || after.mtimeMs !== file.mtime)
         throw new Error(`Source changed while hashing: ${file.path}`);
@@ -513,13 +466,7 @@ async function indexDomain(
   );
   for (const file of domain.files)
     digest.update(
-      JSON.stringify([
-        file.path,
-        file.sha256,
-        file.bytes,
-        file.sha256 ? null : file.mtime,
-        file.reason,
-      ]) + "\n",
+      JSON.stringify([file.path, file.sha256, file.bytes, file.sha256 ? null : file.mtime, file.reason]) + "\n",
     );
   const inputSHA256 = digest.digest("hex");
   const repository = registry.repository(`bun/${domain.name}`, "source", domain.root, revision, {
@@ -577,18 +524,14 @@ async function indexDomain(
       coverage: previous.graph.coverage,
     };
   }
-  const nodes = new Map<string, RecordNode>(
-    domain.files.map((file) => [`file:${file.path}`, metadataNode(file)]),
-  );
+  const nodes = new Map<string, RecordNode>(domain.files.map(file => [`file:${file.path}`, metadataNode(file)]));
   const edges: RecordEdge[] = [];
   const edgeKeys = new Set<string>();
   let chunk: SourceFile[] = [],
     chunkBytes = 0;
   async function extract(files: SourceFile[]): Promise<BuildResponse[]> {
     signal?.throwIfAborted();
-    const {
-      executeGraph,
-    }: Pick<typeof import("bun:graph-native"), "executeGraph"> = require("bun:graph-native");
+    const { executeGraph }: Pick<typeof import("bun:graph-native"), "executeGraph"> = require("bun:graph-native");
     try {
       const response = await executeGraph(
         {
@@ -619,10 +562,7 @@ async function indexDomain(
       const fileCount = files.length;
       if (fileCount > 1) {
         const middle = Math.floor(fileCount / 2);
-        return [
-          ...(await extract(files.slice(0, middle))),
-          ...(await extract(files.slice(middle))),
-        ];
+        return [...(await extract(files.slice(0, middle))), ...(await extract(files.slice(middle)))];
       }
       const node = nodes.get(`file:${files[0]!.path}`)!;
       node.provenance = "UNRESOLVED";
@@ -636,7 +576,7 @@ async function indexDomain(
     if (!chunk.length) return;
     for (const result of await extract(chunk)) {
       coverage.chunks++;
-      coverage.calls += result.graph.links.filter((edge) => edge.relation === "calls").length;
+      coverage.calls += result.graph.links.filter(edge => edge.relation === "calls").length;
       coverage.unresolvedCalls += result.stats.unresolved;
       coverage.parseErrors += result.parse_errors.length;
       const ids = new Map<string, string>();
@@ -688,22 +628,14 @@ async function indexDomain(
   for (const file of domain.files) {
     signal?.throwIfAborted();
     if (!file.native) continue;
-    if (chunk.length >= filesPerChunk || chunkBytes + file.bytes > sourceBytesPerChunk)
-      await flush();
+    if (chunk.length >= filesPerChunk || chunkBytes + file.bytes > sourceBytesPerChunk) await flush();
     const stat = await lstat(file.absolute);
-    if (
-      stat.isSymbolicLink() ||
-      stat.size !== file.bytes ||
-      !contained(sourceRoot, await realpath(file.absolute))
-    )
+    if (stat.isSymbolicLink() || stat.size !== file.bytes || !contained(sourceRoot, await realpath(file.absolute)))
       throw new Error(`Source path changed before extraction: ${file.path}`);
     const bytes = await Bun.file(file.absolute)
       .slice(0, file.bytes + 1)
       .bytes();
-    if (
-      bytes.length !== file.bytes ||
-      new Bun.CryptoHasher("sha256").update(bytes).digest("hex") !== file.sha256
-    )
+    if (bytes.length !== file.bytes || new Bun.CryptoHasher("sha256").update(bytes).digest("hex") !== file.sha256)
       throw new Error(`Source changed before extraction: ${file.path}`);
     let content: string;
     try {
@@ -794,29 +726,17 @@ async function indexDomain(
   };
 }
 
-async function indexCodebase(
-  registry: Registry,
-  root: string,
-  options: IndexOptions,
-): Promise<IndexResult> {
-  if (!options || options.profile !== "bun")
-    throw new TypeError("Source indexing requires explicit profile 'bun'");
-  if (typeof root !== "string" || !isAbsolute(root))
-    throw new TypeError("Source index root must be absolute");
+async function indexCodebase(registry: Registry, root: string, options: IndexOptions): Promise<IndexResult> {
+  if (!options || options.profile !== "bun") throw new TypeError("Source indexing requires explicit profile 'bun'");
+  if (typeof root !== "string" || !isAbsolute(root)) throw new TypeError("Source index root must be absolute");
   options.signal?.throwIfAborted();
   const sourceRoot = await realpath(root);
   const concurrency = bound(options.concurrency, 2, 4, "concurrency");
   const maxFiles = bound(options.maxFiles, 100_000, 1_000_000, "maxFiles");
-  const maxReadBytes = bound(
-    options.maxReadBytes,
-    16 * 1024 * 1024,
-    16 * 1024 * 1024,
-    "maxReadBytes",
-  );
+  const maxReadBytes = bound(options.maxReadBytes, 16 * 1024 * 1024, 16 * 1024 * 1024, "maxReadBytes");
   if (
     options.domains &&
-    (options.domains.length > 1024 ||
-      options.domains.some((domain) => !/^(?:src|packages)(?:\/[^/\\:]+)?$/.test(domain)))
+    (options.domains.length > 1024 || options.domains.some(domain => !/^(?:src|packages)(?:\/[^/\\:]+)?$/.test(domain)))
   )
     throw new TypeError("Invalid source domain selection");
   const [actualRevision, dirty] = await Promise.all([
@@ -834,32 +754,16 @@ async function indexCodebase(
         ? join(sourceRoot, ".graph-artifacts")
         : join(dirname(registry.path), "tmp", "bun-python", "graphs")),
   );
-  if (
-    ["src", "packages"].some((surface) => contained(join(sourceRoot, surface), artifactDirectory))
-  )
+  if (["src", "packages"].some(surface => contained(join(sourceRoot, surface), artifactDirectory)))
     throw new Error("Graph artifacts cannot be written inside indexed source surfaces");
   producer ??= hashFile(process.execPath);
-  const [domains, producerSHA256] = await Promise.all([
-    scan(sourceRoot, options, maxFiles, maxReadBytes),
-    producer,
-  ]);
-  const results = await parallel(domains, concurrency, options.signal, (domain) =>
-    indexDomain(
-      registry,
-      domain,
-      revision,
-      options,
-      producerSHA256,
-      artifactDirectory,
-      dirty,
-      sourceRoot,
-    ),
+  const [domains, producerSHA256] = await Promise.all([scan(sourceRoot, options, maxFiles, maxReadBytes), producer]);
+  const results = await parallel(domains, concurrency, options.signal, domain =>
+    indexDomain(registry, domain, revision, options, producerSHA256, artifactDirectory, dirty, sourceRoot),
   );
   const finishedRevision = actualRevision ? await revisionAt(sourceRoot, options.signal) : revision;
   if (finishedRevision !== revision)
-    throw new Error(
-      "Git HEAD changed during source indexing; inspect exact published domain snapshots",
-    );
+    throw new Error("Git HEAD changed during source indexing; inspect exact published domain snapshots");
   return { root: sourceRoot, profile: "bun", revision, dirty, producerSHA256, domains: results };
 }
 

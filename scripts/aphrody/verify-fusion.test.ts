@@ -44,10 +44,13 @@ const config: FusionConfig = {
 
 describe("recursive fusion verification", () => {
   test("qualification flags enable fixtures without changing tool or resource authority", () => {
-    expect(gateFlags({ ...step("apt-fixture"), env: { BUN_SYSTEM_DEB_TEST_ROOT: "1" } }))
-      .toEqual({ BUN_SYSTEM_DEB_TEST_ROOT: "1" });
+    expect(gateFlags({ ...step("apt-fixture"), env: { BUN_SYSTEM_DEB_TEST_ROOT: "1" } })).toEqual({
+      BUN_SYSTEM_DEB_TEST_ROOT: "1",
+    });
     for (const name of ["PATH", "APHRODY_CARGO_JOBS", "BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS"])
-      expect(() => orderSteps([{ ...step("invalid"), env: { [name]: "1" } }])).toThrow("Unsupported qualification flag");
+      expect(() => orderSteps([{ ...step("invalid"), env: { [name]: "1" } }])).toThrow(
+        "Unsupported qualification flag",
+      );
     expect(() => gateFlags({ ...step("invalid"), env: { BUN_LIVE_WEBSITE_TEST: "yes" } })).toThrow();
   });
   test("gate admission observes current disk and memory without inventing a RAM quota", () => {
@@ -55,19 +58,12 @@ describe("recursive fusion verification", () => {
     expect(resourceBlockReason(observed)).toBeUndefined();
     expect(resourceBlockReason({ ...observed, availableDiskMiB: 8191 })).toContain("8192 MiB");
     expect(resourceBlockReason({ ...observed, availableMemoryMiB: 2047 })).toContain("2048 MiB");
-    expect(resourceBlockReason({ ...observed, filesystemType: 0x01021994n })).toContain(
-      "persistent",
-    );
-    expect(resourceBlockReason({ ...observed, filesystemType: 0x858458f6n })).toContain(
-      "persistent",
-    );
+    expect(resourceBlockReason({ ...observed, filesystemType: 0x01021994n })).toContain("persistent");
+    expect(resourceBlockReason({ ...observed, filesystemType: 0x858458f6n })).toContain("persistent");
     expect(resourceBlockReason({ ...observed, availableMemoryMiB: NaN })).toContain("MemAvailable");
   });
   test("orders prerequisites once and rejects cycles or missing dependencies", () => {
-    expect(orderSteps([step("test", ["build"]), step("build")]).map((entry) => entry.id)).toEqual([
-      "build",
-      "test",
-    ]);
+    expect(orderSteps([step("test", ["build"]), step("build")]).map(entry => entry.id)).toEqual(["build", "test"]);
     expect(() => orderSteps([step("a", ["b"]), step("b", ["a"])])).toThrow("cycle");
     expect(() => orderSteps([step("a", ["missing"])])).toThrow("Missing dependency");
   });
@@ -82,15 +78,12 @@ describe("recursive fusion verification", () => {
       step("test", ["build"], ["test/js/web"]),
       step("matrix", ["test"], ["."], true),
     ];
-    expect(
-      selectSteps(steps, "changed", ["src/browser/crates/dom/lib.rs"]).map((entry) => entry.id),
-    ).toEqual(["check", "build", "test"]);
-    expect(selectSteps(steps, "all", []).map((entry) => entry.id)).toEqual([
+    expect(selectSteps(steps, "changed", ["src/browser/crates/dom/lib.rs"]).map(entry => entry.id)).toEqual([
       "check",
       "build",
       "test",
-      "matrix",
     ]);
+    expect(selectSteps(steps, "all", []).map(entry => entry.id)).toEqual(["check", "build", "test", "matrix"]);
     expect(selectSteps(steps, "changed", ["src/browser-old/file.rs"])).toEqual([]);
   });
   test("unchanged failed inputs cannot enter an automatic retry loop", () => {
@@ -116,12 +109,12 @@ describe("recursive fusion verification", () => {
     ).toEqual(["scripts/aphrody/verify-fusion.ts", "src/css/browser.rs"]);
   });
   test("VPS assertion rejects the Windows owner workstation before inspecting factory paths", () => {
-    expect(() =>
-      assertVps(config, { host: "vps" } as FactoryHostProfile, "win32", "vps-203bea89", "."),
-    ).toThrow("SSH VPS");
-    expect(() =>
-      assertVps(config, { host: "vps" } as FactoryHostProfile, "linux", "other-host", "."),
-    ).toThrow("SSH VPS");
+    expect(() => assertVps(config, { host: "vps" } as FactoryHostProfile, "win32", "vps-203bea89", ".")).toThrow(
+      "SSH VPS",
+    );
+    expect(() => assertVps(config, { host: "vps" } as FactoryHostProfile, "linux", "other-host", ".")).toThrow(
+      "SSH VPS",
+    );
   });
   test("Cargo stays behind resource owner and serialized wrapper", () => {
     const command = factoryCommand(config, {
@@ -129,13 +122,7 @@ describe("recursive fusion verification", () => {
       command: ["cargo", "+nightly", "check", "--locked"],
     });
     expect(command.slice(1, 3)).toEqual([config.factory.resource, config.factory.config]);
-    expect(command.slice(-5)).toEqual([
-      "bash",
-      config.factory.cargoWrapper,
-      "+nightly",
-      "check",
-      "--locked",
-    ]);
+    expect(command.slice(-5)).toEqual(["bash", config.factory.cargoWrapper, "+nightly", "check", "--locked"]);
     expect(command).toContain("APHRODY_LOCAL_CARGO=1");
     expect(command).toContain("APHRODY_FACTORY_RESOURCE");
   });
@@ -145,8 +132,7 @@ describe("recursive fusion verification", () => {
     expect(command.slice(-2)).toEqual(["bd", "--version"]);
   });
   test("official-source HTTP and network failures remain failed evidence", async () => {
-    const unavailable = (() =>
-      Promise.resolve(new Response("missing", { status: 404 }))) as typeof fetch;
+    const unavailable = (() => Promise.resolve(new Response("missing", { status: 404 }))) as typeof fetch;
     const receipts = await research(["https://bun.sh/blog/bun-v1.4.3"], unavailable);
     expect(receipts[0]!.status).toBe(404);
     expect(receipts[0]!.sha256).toBeNull();
@@ -162,9 +148,7 @@ describe("recursive fusion verification", () => {
       const path = join(directory, "full.log");
       const contents = "diagnostic\n".repeat(20_000);
       await Bun.write(path, contents);
-      expect(await fileHash(path)).toBe(
-        new Bun.CryptoHasher("sha256").update(contents).digest("hex"),
-      );
+      expect(await fileHash(path)).toBe(new Bun.CryptoHasher("sha256").update(contents).digest("hex"));
     } finally {
       const file = Bun.file(join(directory, "full.log"));
       if (await file.exists()) await file.delete();

@@ -78,7 +78,7 @@ export const escapeHtml = (value: string): string =>
 export function parseAttributes(source: string): Record<string, string | true> {
   const attrs: Record<string, string | true> = {};
   const re = /([A-Za-z_][\w-]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|\{([^}]*)\}))?/g;
-  for (let m; (m = re.exec(source)); ) {
+  for (let m; (m = re.exec(source));) {
     const value = m[2] ?? m[3] ?? m[4];
     attrs[m[1]!] = value === undefined ? true : value.replace(/^["'`]|["'`]$/g, "");
   }

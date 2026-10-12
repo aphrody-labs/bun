@@ -1,0 +1,41 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxfmt/configuration_schema.json",
+  "arrowParens": "avoid",
+  "printWidth": 120,
+  "trailingComma": "all",
+  "useTabs": false,
+  "quoteProps": "preserve",
+  "experimentalSortPackageJson": false,
+  "ignorePatterns": [
+    "**/*.toml",
+    "**/fixtures/**",
+    "**/baselines/**",
+    "scripts/aphrody/work-queue.json",
+    "scripts/aphrody/fusion-verification.json",
+    "scripts/aphrody/deps.json",
+    "scripts/aphrody/win/shell/*.json",
+    "scripts/aphrody/deploy/*.json",
+    "packages/bun-aphrody-web/crates/web-crawl/src/dragon_ball/*.json",
+    "packages/bun-aphrody-web/crates/obscura-render/render-repros/*.json",
+    "packages/bun-aphrody-web/**/x/data/*.json",
+    "packages/bun-google/aphrody/crates/google/src/*.json",
+    "packages/bun-n2b/crates/n2b-types/schema/*.json",
+    "packages/bun-python-native/patches/*.json",
+    "packages/bun-cloudflare/app/worker-configuration.d.ts",
+    "packages/bun-fluent/src/tokens/**"
+  ],
+  "overrides": [
+    {
+      "files": ["*.md"],
+      "options": {
+        "printWidth": 80
+      }
+    },
+    {
+      "files": ["src/codegen/bindgenv2/**/*.ts", "*.bindv2.ts"],
+      "options": {
+        "printWidth": 100
+      }
+    }
+  ]
+}

@@ -34,14 +34,12 @@ test("native framing preserves UTF-8 bytes and little-endian lengths", () => {
   expect(() => decodeExport(new Uint8Array(MAX_EXPORT_BYTES + 1))).toThrow();
   expect(() => decodeExport(new Uint8Array([0xff]))).toThrow();
 });
-test.each([
-  "javascript:alert(1)",
-  "file:///C:/private",
-  "chrome://settings",
-  "https://user:password@example.invalid/",
-])("reject disallowed URL %s", (url) => {
-  expect(() => validateExport({ ...message, items: [{ ...message.items[0], url }] })).toThrow();
-});
+test.each(["javascript:alert(1)", "file:///C:/private", "chrome://settings", "https://user:password@example.invalid/"])(
+  "reject disallowed URL %s",
+  url => {
+    expect(() => validateExport({ ...message, items: [{ ...message.items[0], url }] })).toThrow();
+  },
+);
 test("reject unknown fields, invocation verbs, kinds and oversized batches", () => {
   for (const value of [
     { ...message, path: "C:/private" },
@@ -113,10 +111,7 @@ test("native origin allowlist rejects an unrelated extension without private wri
   const base = join(String(dir), "BunChromium");
   mkdirSync(join(base, "NativeMessaging"), { recursive: true });
   mkdirSync(join(base, "Exports"));
-  await Bun.write(
-    join(base, "NativeMessaging", "host-config.json"),
-    JSON.stringify({ extensionId: "a".repeat(32) }),
-  );
+  await Bun.write(join(base, "NativeMessaging", "host-config.json"), JSON.stringify({ extensionId: "a".repeat(32) }));
   await using proc = Bun.spawn({
     cmd: command("chrome-extension://" + "b".repeat(32) + "/"),
     env: { ...bunEnv, LOCALAPPDATA: String(dir) },

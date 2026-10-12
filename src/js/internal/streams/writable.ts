@@ -328,9 +328,7 @@ function resetBuffer(state) {
 }
 
 function getBuffer() {
-  return (this[kState] & kBuffered) === 0
-    ? []
-    : ArrayPrototypeSlice.$call(this.buffered, this.bufferedIndex);
+  return (this[kState] & kBuffered) === 0 ? [] : ArrayPrototypeSlice.$call(this.buffered, this.bufferedIndex);
 }
 
 ObjectDefineProperty(WritableState.prototype, "bufferedRequestCount", {
@@ -626,10 +624,7 @@ function onwrite(stream, er) {
             finishMaybe(stream, state, true);
           }
         }
-      } else if (
-        (state[kState] & kAfterWriteTickInfo) !== 0 &&
-        state[kAfterWriteTickInfoValue].cb === cb
-      ) {
+      } else if ((state[kState] & kAfterWriteTickInfo) !== 0 && state[kAfterWriteTickInfoValue].cb === cb) {
         state[kAfterWriteTickInfoValue].count++;
       } else if (needTick) {
         state[kAfterWriteTickInfoValue] = { count: 1, cb, stream, state };
@@ -656,8 +651,7 @@ function afterWriteTick({ stream, state, count, cb }) {
 function afterWrite(stream, state, count, cb) {
   state[kState] &= ~kAfterWritePending;
 
-  const needDrain =
-    (state[kState] & (kEnding | kNeedDrain | kDestroyed)) === kNeedDrain && state.length === 0;
+  const needDrain = (state[kState] & (kEnding | kNeedDrain | kDestroyed)) === kNeedDrain && state.length === 0;
   if (needDrain) {
     state[kState] &= ~kNeedDrain;
     stream.emit("drain");
@@ -723,17 +717,14 @@ function clearBuffer(stream, state) {
     const callback =
       (state[kState] & kAllNoop) !== 0
         ? nop
-        : (err) => {
+        : err => {
             for (let n = i; n < buffered.length; ++n) {
               buffered[n].callback(err);
             }
           };
     // Make a copy of `buffered` if it's going to be used by `callback` above,
     // since `doWrite` will mutate the array.
-    const chunks =
-      (state[kState] & kAllNoop) !== 0 && i === 0
-        ? buffered
-        : ArrayPrototypeSlice.$call(buffered, i);
+    const chunks = (state[kState] & kAllNoop) !== 0 && i === 0 ? buffered : ArrayPrototypeSlice.$call(buffered, i);
     chunks.allBuffers = (state[kState] & kAllBuffers) !== 0;
 
     doWrite(stream, state, true, state.length, chunks, "", callback);
@@ -878,7 +869,7 @@ function prefinish(stream, state) {
     state.pendingcb++;
 
     try {
-      stream._final((err) => onFinish(stream, state, err));
+      stream._final(err => onFinish(stream, state, err));
     } catch (err) {
       onFinish(stream, state, err);
     }
@@ -982,11 +973,7 @@ ObjectDefineProperties(Writable.prototype, {
       // where the writable side was disabled upon construction.
       // Compat. The user might manually disable writable side through
       // deprecated setter.
-      return (
-        !!w &&
-        w.writable !== false &&
-        (w[kState] & (kEnding | kEnded | kDestroyed | kErrored)) === 0
-      );
+      return !!w && w.writable !== false && (w[kState] & (kEnding | kEnded | kDestroyed | kErrored)) === 0;
     },
     set(val) {
       // Backwards compatible.
@@ -1108,8 +1095,7 @@ Writable.prototype[EE.captureRejectionSymbol] = function (err) {
 // Lazy to avoid circular references
 let webStreamsAdapters;
 function lazyWebStreams() {
-  if (webStreamsAdapters === undefined)
-    webStreamsAdapters = require("internal/webstreams_adapters");
+  if (webStreamsAdapters === undefined) webStreamsAdapters = require("internal/webstreams_adapters");
   return webStreamsAdapters;
 }
 
@@ -1128,7 +1114,7 @@ Writable.prototype[SymbolAsyncDispose] = function () {
     this.destroy(error);
   }
   return new Promise((resolve, reject) =>
-    eos(this, (err) => (err && err.name !== "AbortError" ? reject(err) : resolve(null))),
+    eos(this, err => (err && err.name !== "AbortError" ? reject(err) : resolve(null))),
   );
 };
 

@@ -66,7 +66,7 @@ const unavailableComparison = (reason: string): SourceRef["comparison"] => ({
 });
 
 function nativeGit(root: string): GitReader {
-  return (args) => {
+  return args => {
     const result = Bun.spawnSync(["git", ...args], {
       cwd: root,
       stdout: "pipe",
@@ -155,8 +155,7 @@ async function readLedger(root: string, path: string, git: GitReader): Promise<S
   try {
     const file = Bun.file(join(root, path));
     if (!(await file.exists())) return { ...absent, reason: "Migration ledger not present" };
-    if (file.size > 2 * 1024 * 1024)
-      return { ...absent, reason: "Migration ledger exceeds the 2 MiB planning budget" };
+    if (file.size > 2 * 1024 * 1024) return { ...absent, reason: "Migration ledger exceeds the 2 MiB planning budget" };
     const bytes = await file.bytes();
     const data = JSON.parse(new TextDecoder().decode(bytes));
     const commit = data.sourceCommit ?? data.sourceRevision;
@@ -166,22 +165,18 @@ async function readLedger(root: string, path: string, git: GitReader): Promise<S
         reason: "Migration ledger requires an exact original source commit and file array",
       };
     const hashes = data.files.filter(
-      (entry: { sha256?: unknown }) =>
-        typeof entry.sha256 === "string" && /^[a-f0-9]{64}$/.test(entry.sha256),
+      (entry: { sha256?: unknown }) => typeof entry.sha256 === "string" && /^[a-f0-9]{64}$/.test(entry.sha256),
     );
     const sizes = data.files.map((entry: { bytes?: unknown }) => entry.bytes);
     return {
       path,
       state: "available",
       sha256: new Bun.CryptoHasher("sha256").update(bytes).digest("hex"),
-      sourceRepository:
-        typeof data.sourceRepository === "string" ? redactRemoteUrl(data.sourceRepository) : null,
+      sourceRepository: typeof data.sourceRepository === "string" ? redactRemoteUrl(data.sourceRepository) : null,
       sourceCommit: commit,
       sourceCommitInObjectStore: git(["cat-file", "-e", `${commit}^{commit}`]).exitCode === 0,
       files: data.files.length,
-      originalBytes: sizes.every(
-        (n: unknown) => typeof n === "number" && Number.isSafeInteger(n) && n >= 0,
-      )
+      originalBytes: sizes.every((n: unknown) => typeof n === "number" && Number.isSafeInteger(n) && n >= 0)
         ? sizes.reduce((total: number, n: number) => total + n, 0)
         : null,
       originalHashEntries: hashes.length,
@@ -192,15 +187,12 @@ async function readLedger(root: string, path: string, git: GitReader): Promise<S
 }
 
 /** Plan against existing object/ref state only; no network synchronization or worktree changes. */
-export async function collectFusionSources(
-  root: string,
-  options: { git?: GitReader } = {},
-): Promise<FusionSourcePlan> {
+export async function collectFusionSources(root: string, options: { git?: GitReader } = {}): Promise<FusionSourcePlan> {
   const absolute = resolve(root);
   const git = options.git ?? nativeGit(absolute);
   const probe = git(["rev-parse", "--is-shallow-repository"]);
   const shallow = probe.exitCode === 0 ? probe.stdout.trim() === "true" : null;
-  const resolved = FUSION_REFS.map((ref) => {
+  const resolved = FUSION_REFS.map(ref => {
     const result = git(["rev-parse", "--verify", `${ref}^{commit}`]);
     const sha = result.stdout.trim();
     return { ref, sha: result.exitCode === 0 && validSha(sha) ? sha : null };
@@ -221,9 +213,7 @@ export async function collectFusionSources(
         state: "available",
         sha,
         comparison: unavailableComparison(
-          shallow === true
-            ? "Shallow history cannot prove full ancestry/counts"
-            : "Repository or HEAD unavailable",
+          shallow === true ? "Shallow history cannot prove full ancestry/counts" : "Repository or HEAD unavailable",
         ),
       };
     const base = git(["merge-base", head, sha]);
@@ -249,39 +239,26 @@ export async function collectFusionSources(
       },
     };
   });
-  const upstream = refs.find((ref) => ref.ref === "upstream/main")!;
+  const upstream = refs.find(ref => ref.ref === "upstream/main")!;
   let upstreamMerge: MergePreview = {
     state: "unavailable",
     head,
     upstream: upstream.sha,
     tree: null,
     conflicts: [],
-    reason:
-      shallow === true
-        ? "Shallow history: preview unavailable"
-        : "HEAD/upstream ancestry unavailable",
+    reason: shallow === true ? "Shallow history: preview unavailable" : "HEAD/upstream ancestry unavailable",
   };
   if (head && upstream.sha && upstream.comparison.state === "available") {
-    const result = git([
-      "merge-tree",
-      "--write-tree",
-      "--name-only",
-      "--no-messages",
-      "-z",
-      head,
-      upstream.sha,
-    ]);
+    const result = git(["merge-tree", "--write-tree", "--name-only", "--no-messages", "-z", head, upstream.sha]);
     upstreamMerge = parseMergePreview(result, head, upstream.sha);
   }
-  const remotes = ["bun-os", "origin", "upstream"].map((name) => {
+  const remotes = ["bun-os", "origin", "upstream"].map(name => {
     const result = git(["remote", "get-url", name]);
     const url = result.exitCode === 0 ? redactRemoteUrl(result.stdout) : null;
     return { name, state: url ? ("available" as const) : ("unavailable" as const), url };
   });
   const provenance = await Promise.all(
-    ["src/browser/MIGRATION.json", "src/browser/BROWSER-MIGRATION.json"].map((path) =>
-      readLedger(absolute, path, git),
-    ),
+    ["src/browser/MIGRATION.json", "src/browser/BROWSER-MIGRATION.json"].map(path => readLedger(absolute, path, git)),
   );
   return {
     schema: "bun.fusion-source-plan/1",
@@ -327,7 +304,7 @@ export async function summarizeOfficialHtml(url: string, html: string): Promise<
     base.protocol !== "https:" ||
     base.username ||
     base.password ||
-    !OFFICIAL_RESEARCH_HOSTS.some((host) => host === base.hostname)
+    !OFFICIAL_RESEARCH_HOSTS.some(host => host === base.hostname)
   )
     throw new Error("Official HTTPS research source required");
   const bytes = new TextEncoder().encode(html);
@@ -389,10 +366,10 @@ export async function summarizeOfficialHtml(url: string, html: string): Promise<
             parsed.protocol !== "https:" ||
             parsed.username ||
             parsed.password ||
-            !OFFICIAL_RESEARCH_HOSTS.some((host) => host === parsed.hostname)
+            !OFFICIAL_RESEARCH_HOSTS.some(host => host === parsed.hostname)
           )
             return;
-          if (links.some((entry) => entry.url === parsed.href)) return;
+          if (links.some(entry => entry.url === parsed.href)) return;
           link = { url: parsed.href, text: "" };
           links.push(link);
           element.onEndTag(() => {
@@ -410,8 +387,8 @@ export async function summarizeOfficialHtml(url: string, html: string): Promise<
   return {
     url: base.href,
     title: clean(title),
-    headings: headings.map((entry) => ({ ...entry, text: clean(entry.text) })),
-    links: links.map((entry) => ({ ...entry, text: clean(entry.text) })),
+    headings: headings.map(entry => ({ ...entry, text: clean(entry.text) })),
+    links: links.map(entry => ({ ...entry, text: clean(entry.text) })),
     truncated: bytes.length > limit,
     bytesRead: Math.min(bytes.length, limit),
   };
@@ -427,6 +404,5 @@ if (import.meta.main) {
     console.log(
       "bun scripts/aphrody/fusion-sources.ts --root PATH\nPlans existing refs/provenance and upstream conflicts. No fetch or worktree mutation.",
     );
-  else
-    console.log(JSON.stringify(await collectFusionSources(values.root ?? process.cwd()), null, 2));
+  else console.log(JSON.stringify(await collectFusionSources(values.root ?? process.cwd()), null, 2));
 }

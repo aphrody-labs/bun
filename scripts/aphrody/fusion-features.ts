@@ -40,11 +40,7 @@ const table = (value: unknown): Table =>
 const strings = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 
-export function manifestCrate(
-  text: string,
-  manifest: string,
-  workspaceDependencies: Table = {},
-): Crate {
+export function manifestCrate(text: string, manifest: string, workspaceDependencies: Table = {}): Crate {
   const data = table(Bun.TOML.parse(text));
   const name = table(data.package).name;
   if (typeof name !== "string") throw new Error(`Missing package name in ${manifest}`);
@@ -61,9 +57,7 @@ export function manifestCrate(
           optional: spec.optional === true,
           defaultFeatures:
             own["default-features"] === true ||
-            (own.workspace === true
-              ? inherited["default-features"] !== false
-              : own["default-features"] !== false),
+            (own.workspace === true ? inherited["default-features"] !== false : own["default-features"] !== false),
           target,
           kind,
           features: [...new Set([...strings(inherited.features), ...strings(own.features)])],
@@ -72,8 +66,7 @@ export function manifestCrate(
     }
   }
   collect(data, "all");
-  for (const [target, container] of Object.entries(table(data.target)))
-    collect(table(container), target);
+  for (const [target, container] of Object.entries(table(data.target))) collect(table(container), target);
   return {
     name,
     manifest,
@@ -87,7 +80,7 @@ export function manifestCrate(
 // Declaration traversal only: preserve target expressions and weak dependency
 // edges verbatim. Cargo's owner unit graph remains the feature resolver.
 export function featureClosure(crates: Crate[], selections: string[]) {
-  const byName = new Map(crates.map((crate) => [crate.name, crate]));
+  const byName = new Map(crates.map(crate => [crate.name, crate]));
   const visited = new Set<string>();
   const external = new Set<string>();
   const invalid = new Set<string>();
@@ -102,7 +95,7 @@ export function featureClosure(crates: Crate[], selections: string[]) {
     }
     if (!(feature in crate.features)) {
       const implicit =
-        crate.dependencies.some((dep) => dep.alias === feature && dep.optional) &&
+        crate.dependencies.some(dep => dep.alias === feature && dep.optional) &&
         !Object.values(crate.features).flat().includes(`dep:${feature}`);
       if (implicit) {
         visited.add(selection);
@@ -113,7 +106,7 @@ export function featureClosure(crates: Crate[], selections: string[]) {
     visited.add(selection);
     for (const edge of crate.features[feature]!) {
       if (edge.startsWith("dep:")) {
-        if (crate.dependencies.some((dep) => dep.alias === edge.slice(4) && dep.optional))
+        if (crate.dependencies.some(dep => dep.alias === edge.slice(4) && dep.optional))
           external.add(`${crate.name}/${edge}`);
         else invalid.add(`${crate.name}/${edge}`);
         continue;
@@ -121,9 +114,7 @@ export function featureClosure(crates: Crate[], selections: string[]) {
       if (edge.includes("/")) {
         const [alias, child] = edge.split("/");
         const weak = alias!.endsWith("?");
-        const dependencies = crate.dependencies.filter(
-          (dep) => dep.alias === (weak ? alias!.slice(0, -1) : alias),
-        );
+        const dependencies = crate.dependencies.filter(dep => dep.alias === (weak ? alias!.slice(0, -1) : alias));
         if (!dependencies.length || !child) {
           invalid.add(`${crate.name}/${edge}`);
           continue;
@@ -134,7 +125,7 @@ export function featureClosure(crates: Crate[], selections: string[]) {
             if (byName.has(dependency.package)) visit(`${dependency.package}/${child}`);
       } else if (edge in crate.features) visit(`${crate.name}/${edge}`);
       else if (
-        crate.dependencies.some((dep) => dep.alias === edge && dep.optional) &&
+        crate.dependencies.some(dep => dep.alias === edge && dep.optional) &&
         !Object.values(crate.features).flat().includes(`dep:${edge}`)
       )
         external.add(`${crate.name}/dep:${edge}`);
@@ -152,20 +143,17 @@ export function featureClosure(crates: Crate[], selections: string[]) {
 export function assessCombination(combo: Combination, crates: Crate[], platform: string) {
   let closure = featureClosure(crates, combo.features);
   const issues: string[] = [];
-  if (!combo.platforms.includes(platform))
-    issues.push(`Platform ${platform} is not declared for this combination`);
+  if (!combo.platforms.includes(platform)) issues.push(`Platform ${platform} is not declared for this combination`);
   for (const name of combo.packages)
-    if (!crates.some((crate) => crate.name === name))
-      issues.push(`Missing root workspace package ${name}`);
+    if (!crates.some(crate => crate.name === name)) issues.push(`Missing root workspace package ${name}`);
   const reachable = new Set(combo.packages);
   const selections = new Set(combo.features);
   for (const crate of crates)
-    if (combo.packages.includes(crate.name) && "default" in crate.features)
-      selections.add(`${crate.name}/default`);
+    if (combo.packages.includes(crate.name) && "default" in crate.features) selections.add(`${crate.name}/default`);
   const activeDependency = (crate: Crate, dep: Dependency) =>
     !dep.optional ||
     closure.dependencyEdges.includes(`${crate.name}/dep:${dep.alias}`) ||
-    closure.dependencyEdges.some((edge) => edge.startsWith(`${crate.name}/${dep.alias}/`));
+    closure.dependencyEdges.some(edge => edge.startsWith(`${crate.name}/${dep.alias}/`));
   let changed = true;
   while (changed) {
     changed = false;
@@ -181,7 +169,7 @@ export function assessCombination(combo: Combination, crates: Crate[], platform:
       if (reachable.has(crate.name)) {
         for (const dep of crate.dependencies)
           if (activeDependency(crate, dep) && dep.kind !== "dev-dependencies") {
-            const child = crates.find((candidate) => candidate.name === dep.package);
+            const child = crates.find(candidate => candidate.name === dep.package);
             if (!child) continue;
             if (!reachable.has(child.name)) {
               reachable.add(child.name);
@@ -205,29 +193,25 @@ export function assessCombination(combo: Combination, crates: Crate[], platform:
           }
       }
   }
-  issues.push(...closure.invalid.map((feature) => `Undeclared feature ${feature}`));
+  issues.push(...closure.invalid.map(feature => `Undeclared feature ${feature}`));
   const v8 = crates
     .filter(
-      (crate) =>
+      crate =>
         reachable.has(crate.name) &&
         crate.dependencies.some(
-          (dep) =>
+          dep =>
             dep.kind !== "dev-dependencies" &&
             activeDependency(crate, dep) &&
             ["deno_core", "v8", "rusty_v8"].includes(dep.package),
         ),
     )
-    .map((crate) => crate.name);
+    .map(crate => crate.name);
   if (combo.jscOnly && v8.length)
     issues.push(`JSC-only page execution still reaches V8 dependencies in ${v8.join(", ")}`);
   return {
     id: combo.id,
     platform,
-    status: issues.length
-      ? "unsupported"
-      : combo.requirements.length
-        ? "requiring-dependencies"
-        : "supported",
+    status: issues.length ? "unsupported" : combo.requirements.length ? "requiring-dependencies" : "supported",
     qualified: false,
     issues,
     requirements: combo.requirements,
@@ -240,7 +224,7 @@ export function assessCombination(combo: Combination, crates: Crate[], platform:
       "--locked",
       "--profile",
       "browser-tests",
-      ...combo.packages.flatMap((name) => ["-p", name]),
+      ...combo.packages.flatMap(name => ["-p", name]),
       ...(combo.features.length ? ["--features", combo.features.join(",")] : []),
     ],
   };
@@ -248,25 +232,19 @@ export function assessCombination(combo: Combination, crates: Crate[], platform:
 
 export function incompatibleSelections(selections: string[], groups: string[][]): string[] {
   return groups
-    .filter((group) => group.filter((item) => selections.includes(item)).length > 1)
-    .map((group) => `Incompatible selections: ${group.join(", ")}`);
+    .filter(group => group.filter(item => selections.includes(item)).length > 1)
+    .map(group => `Incompatible selections: ${group.join(", ")}`);
 }
 
 export function runtimeFlagDeclarations(source: string) {
-  return [
-    ...source.matchAll(
-      /new_feature_flag!\(\s*pub\s+(\w+)|new!\(\s*pub\s+(BUN_FEATURE_FLAG_\w+)\s*:\s*(\w+)/g,
-    ),
-  ]
-    .map((match) => ({ name: match[1] ?? match[2]!, kind: match[1] ? "feature-flag" : match[3]! }))
+  return [...source.matchAll(/new_feature_flag!\(\s*pub\s+(\w+)|new!\(\s*pub\s+(BUN_FEATURE_FLAG_\w+)\s*:\s*(\w+)/g)]
+    .map(match => ({ name: match[1] ?? match[2]!, kind: match[1] ? "feature-flag" : match[3]! }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function buildFeatureAudit(rustSource: string, configSource: string) {
   const invocation =
-    /export function cargoBuildInvocation\b[\s\S]*?(?=\/\*\*[\s\S]*?shimCargoInvocation)/.exec(
-      rustSource,
-    )?.[0] ?? "";
+    /export function cargoBuildInvocation\b[\s\S]*?(?=\/\*\*[\s\S]*?shimCargoInvocation)/.exec(rustSource)?.[0] ?? "";
   return {
     source: "scripts/build/rust.ts",
     requiresOwnerReview: true,
@@ -284,12 +262,7 @@ export async function inventory(root: string, config: FeatureConfig) {
   async function source(path: string) {
     const absolute = resolve(root, path);
     const scoped = relative(root, absolute);
-    if (
-      isAbsolute(scoped) ||
-      scoped === ".." ||
-      scoped.startsWith("../") ||
-      scoped.startsWith("..\\")
-    )
+    if (isAbsolute(scoped) || scoped === ".." || scoped.startsWith("../") || scoped.startsWith("..\\"))
       throw new Error("Source outside checkout");
     const file = Bun.file(absolute);
     if (file.size > 4 * 1024 * 1024) throw new Error(`Oversized inventory source ${path}`);
@@ -301,46 +274,38 @@ export async function inventory(root: string, config: FeatureConfig) {
   const workspace = table(rootManifest.workspace);
   const crates: Crate[] = [];
   for (const member of strings(workspace.members)) {
-    if (member.includes("*"))
-      throw new Error(`Workspace glob requires explicit owner expansion: ${member}`);
+    if (member.includes("*")) throw new Error(`Workspace glob requires explicit owner expansion: ${member}`);
     const manifest = `${member}/Cargo.toml`;
     crates.push(manifestCrate(await source(manifest), manifest, table(workspace.dependencies)));
   }
-  if (new Set(crates.map((crate) => crate.name)).size !== crates.length)
+  if (new Set(crates.map(crate => crate.name)).size !== crates.length)
     throw new Error("Ambiguous root workspace package names");
   const texts = new Map<string, string>();
-  for (const path of config.sources.filter((path) => path !== "Cargo.toml"))
-    texts.set(path, await source(path));
+  for (const path of config.sources.filter(path => path !== "Cargo.toml")) texts.set(path, await source(path));
   const envSource = texts.get("src/bun_core/env_var.rs") ?? "";
   const runtimeFlags = runtimeFlagDeclarations(envSource);
   const buildProfiles = [
-    ...(texts.get("scripts/build/profiles.ts") ?? "").matchAll(
-      /^  (?:"([\w-]+)"|([\w-]+)):\s*\{/gm,
-    ),
-  ].map((match) => match[1] ?? match[2]);
+    ...(texts.get("scripts/build/profiles.ts") ?? "").matchAll(/^  (?:"([\w-]+)"|([\w-]+)):\s*\{/gm),
+  ].map(match => match[1] ?? match[2]);
   const partialConfig =
-    /export interface PartialConfig\s*\{([\s\S]*?)^\}/m.exec(
-      texts.get("scripts/build/config.ts") ?? "",
-    )?.[1] ?? "";
-  const buildOptions = [...partialConfig.matchAll(/^\s+(\w+)\??:\s*([^;]+);/gm)].map((match) => ({
+    /export interface PartialConfig\s*\{([\s\S]*?)^\}/m.exec(texts.get("scripts/build/config.ts") ?? "")?.[1] ?? "";
+  const buildOptions = [...partialConfig.matchAll(/^\s+(\w+)\??:\s*([^;]+);/gm)].map(match => ({
     name: match[1],
     type: match[2],
   }));
   const compileTimeFlags = [
-    ...(texts.get("src/bun_core/feature_flags.rs") ?? "").matchAll(
-      /^pub(?:\(crate\))? const (\w+): bool = ([^;]+);/gm,
-    ),
-  ].map((match) => ({ name: match[1], expression: match[2], policy: "preserve-target-guards" }));
+    ...(texts.get("src/bun_core/feature_flags.rs") ?? "").matchAll(/^pub(?:\(crate\))? const (\w+): bool = ([^;]+);/gm),
+  ].map(match => ({ name: match[1], expression: match[2], policy: "preserve-target-guards" }));
   return {
     schema: 1,
     observedAt: new Date().toISOString(),
     qualification: "source-only; no build or runtime gate executed",
     crates,
     evidence,
-    runtimeFlags: runtimeFlags.map((flag) => ({
+    runtimeFlags: runtimeFlags.map(flag => ({
       ...flag,
       policy:
-        config.runtimeToggles.find((toggle) => toggle.name === flag.name)?.policy ??
+        config.runtimeToggles.find(toggle => toggle.name === flag.name)?.policy ??
         "preserve-default; review-before-enabling",
     })),
     explicitToggles: config.runtimeToggles,
@@ -352,8 +317,8 @@ export async function inventory(root: string, config: FeatureConfig) {
       texts.get("scripts/build/rust.ts") ?? "",
       texts.get("scripts/build/config.ts") ?? "",
     ),
-    matrix: config.platforms.flatMap((platform) =>
-      config.combinations.map((combo) => assessCombination(combo, crates, platform)),
+    matrix: config.platforms.flatMap(platform =>
+      config.combinations.map(combo => assessCombination(combo, crates, platform)),
     ),
   };
 }
@@ -371,16 +336,8 @@ if (import.meta.main) {
   const config = (await Bun.file(resolve(root, values.config!)).json()) as FeatureConfig;
   const report = await inventory(root, config);
   const requestedBuildSelections = values["build-selection"] ?? [];
-  const buildSelectionIssues = incompatibleSelections(
-    requestedBuildSelections,
-    config.incompatibleSelections,
-  );
-  console.log(
-    JSON.stringify({ ...report, requestedBuildSelections, buildSelectionIssues }, null, 2),
-  );
-  if (
-    values.strict &&
-    (buildSelectionIssues.length || report.matrix.some((row) => row.status === "unsupported"))
-  )
+  const buildSelectionIssues = incompatibleSelections(requestedBuildSelections, config.incompatibleSelections);
+  console.log(JSON.stringify({ ...report, requestedBuildSelections, buildSelectionIssues }, null, 2));
+  if (values.strict && (buildSelectionIssues.length || report.matrix.some(row => row.status === "unsupported")))
     process.exitCode = 1;
 }

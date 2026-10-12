@@ -58,8 +58,7 @@ export function experimentalFeatureFlags(source: string): ExperimentalFeatureFla
       if (declaration) {
         const [, name, key, options] = declaration;
         if (name!.includes("EXPERIMENTAL")) {
-          if (name !== key || flags.has(name!))
-            throw new Error("Ambiguous experimental feature flag declaration");
+          if (name !== key || flags.has(name!)) throw new Error("Ambiguous experimental feature flag declaration");
           const defaults = options!.replace(/\s/g, "").replace(/,$/, "");
           if (!["", "default:false", "default:true", "default:None"].includes(defaults))
             throw new Error("Unsupported experimental feature flag default: " + name);

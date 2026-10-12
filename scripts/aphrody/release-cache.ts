@@ -25,10 +25,9 @@ export async function warmCache(out: string, url: string) {
   try {
     await redis.connect();
     for (const row of db
-      .query<
-        { path: string; content: string },
-        []
-      >("SELECT path,content FROM release_files WHERE content IS NOT NULL ORDER BY path")
+      .query<{ path: string; content: string }, []>(
+        "SELECT path,content FROM release_files WHERE content IS NOT NULL ORDER BY path",
+      )
       .iterate()) {
       await put("source", row.path, row.content);
     }

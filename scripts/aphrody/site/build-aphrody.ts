@@ -4,9 +4,7 @@ import { mkdir, cp } from "node:fs/promises";
 
 const consumer = process.env.APHRODY_SITE_CONSUMER_ROOT;
 if (!consumer) throw new Error("Explicit APHRODY_SITE_CONSUMER_ROOT required");
-const output = resolve(
-  process.env.APHRODY_SITE_OUTPUT || join(import.meta.dir, "../../../build/site-aphrody"),
-);
+const output = resolve(process.env.APHRODY_SITE_OUTPUT || join(import.meta.dir, "../../../build/site-aphrody"));
 await mkdir(output, { recursive: true });
 for (const [entry, name] of [
   [join(import.meta.dir, "aphrody.ts"), "server.mjs"],
@@ -44,21 +42,17 @@ for (const [source, destination] of [
   if (chromeReceipt.files[path] !== hash) throw new Error("Chrome public asset receipt mismatch");
   await Bun.write(join(uiRoot, destination), bytes);
 }
-const generator = Bun.spawn(
-  ["aphrody", "site", "--root", resolve(consumer), "catalog", "templates"],
-  {
-    stdout: "pipe",
-    stderr: "pipe",
-  },
-);
+const generator = Bun.spawn(["aphrody", "site", "--root", resolve(consumer), "catalog", "templates"], {
+  stdout: "pipe",
+  stderr: "pipe",
+});
 const [templates, diagnostics, code] = await Promise.all([
   generator.stdout.text(),
   generator.stderr.text(),
   generator.exited,
 ]);
 if (code !== 0) throw new Error(`Native template catalog failed: ${diagnostics}`);
-if (!Array.isArray(JSON.parse(templates)))
-  throw new Error("Native template catalog must be an array");
+if (!Array.isArray(JSON.parse(templates))) throw new Error("Native template catalog must be an array");
 await Bun.write(join(uiRoot, "public-templates.json"), templates);
 // The public release has no registered dynamic assets; fonts are static build outputs.
 await Bun.write(join(uiRoot, "public-assets-manifest.json"), "[]\n");

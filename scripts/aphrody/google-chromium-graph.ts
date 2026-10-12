@@ -37,8 +37,7 @@ export const SURFACE_FILES = [
 ];
 export const SCOPE = { source: "graph:bun:capabilities:google-chromium", profile: "bun" } as const;
 export const SURFACE_DOMAIN = "capabilities/google-chromium";
-const hash = (value: string | Uint8Array) =>
-  new Bun.CryptoHasher("sha256").update(value).digest("hex");
+const hash = (value: string | Uint8Array) => new Bun.CryptoHasher("sha256").update(value).digest("hex");
 const nativeFormat = /\.(?:rs|[cm]?[jt]sx?|mdx?)$/;
 const rootDefault = resolve(import.meta.dir, "../..");
 
@@ -55,19 +54,8 @@ export function plan(root: string, out: string) {
     out,
     domains: [...DOMAINS],
     surfaceFiles: [...SURFACE_FILES],
-    excluded: [
-      "vendor/chromium/src full source",
-      "vendor/gn implementation",
-      "protected stores",
-      "engine compilation",
-    ],
-    owners: [
-      "bun:graph-index",
-      "bun:graph-native",
-      "bun:graph",
-      "fork-capabilities.ts",
-      "graph-docs.ts",
-    ],
+    excluded: ["vendor/chromium/src full source", "vendor/gn implementation", "protected stores", "engine compilation"],
+    owners: ["bun:graph-index", "bun:graph-native", "bun:graph", "fork-capabilities.ts", "graph-docs.ts"],
     concurrency: 1,
   };
 }
@@ -90,14 +78,11 @@ export async function indexSurface(
       isAbsolute(path) ||
       path
         .split(/[\\/]/)
-        .some(
-          (part) =>
-            part === ".." || [".coord", ".git", "secrets", "cookies", "sessions"].includes(part),
-        )
+        .some(part => part === ".." || [".coord", ".git", "secrets", "cookies", "sessions"].includes(part))
     )
       throw new Error(`Invalid explicit source path: ${path}`);
     const absolute = resolve(canonical, path);
-    const before = await lstat(absolute).catch((error) => {
+    const before = await lstat(absolute).catch(error => {
       if (error.code === "ENOENT") return null;
       throw error;
     });
@@ -116,8 +101,7 @@ export async function indexSurface(
       throw new Error(`Source changed while reading: ${path}`);
     const native = nativeFormat.test(path);
     facts.push({ path, sha256: hash(bytes), bytes: bytes.length, native });
-    if (native)
-      files.push({ path, content: new TextDecoder("utf-8", { fatal: true }).decode(bytes) });
+    if (native) files.push({ path, content: new TextDecoder("utf-8", { fatal: true }).decode(bytes) });
   }
   if (!files.length) throw new Error("No explicit native source files found");
   const response = await executeGraph({
@@ -136,11 +120,11 @@ export async function indexSurface(
       max_output_bytes: 32 * 1024 * 1024,
     },
   });
-  const failed = new Set(response.result.parse_errors.map((error) => error.path));
+  const failed = new Set(response.result.parse_errors.map(error => error.path));
   const coverage = {
     files: facts.length,
-    nativeFiles: facts.filter((file) => file.native && !failed.has(file.path)).length,
-    unresolvedFiles: facts.filter((file) => !file.native || failed.has(file.path)).length,
+    nativeFiles: facts.filter(file => file.native && !failed.has(file.path)).length,
+    unresolvedFiles: facts.filter(file => !file.native || failed.has(file.path)).length,
     metadataOnlyFiles: 0,
     parseErrors: response.result.parse_errors.length,
     calls: response.result.stats.calls,
@@ -149,7 +133,7 @@ export async function indexSurface(
     sourceBytes: facts.reduce((total, file) => total + file.bytes, 0),
     resolutionScope: "explicit-capability-files",
   };
-  const fileNodes = facts.map((file) => ({
+  const fileNodes = facts.map(file => ({
     id: `file:${file.path}`,
     label: file.path,
     file_type: "file",
@@ -158,11 +142,7 @@ export async function indexSurface(
     bytes: file.bytes,
     hashKind: "content-sha256",
     provenance: file.native && !failed.has(file.path) ? "EXTRACTED" : "UNRESOLVED",
-    unresolvedReason: !file.native
-      ? "unsupported-native-format"
-      : failed.has(file.path)
-        ? "native-parse-error"
-        : null,
+    unresolvedReason: !file.native ? "unsupported-native-format" : failed.has(file.path) ? "native-parse-error" : null,
   }));
   const graph = {
     ...response.result.graph,
@@ -177,18 +157,16 @@ export async function indexSurface(
       sourceIdentity: "immutable-file-sha256",
       parseErrors: response.result.parse_errors,
     },
-    nodes: [...response.result.graph.nodes.map((node) => ({ ...node })), ...fileNodes],
-    links: response.result.graph.links.map((link) => ({ ...link })),
+    nodes: [...response.result.graph.nodes.map(node => ({ ...node })), ...fileNodes],
+    links: response.result.graph.links.map(link => ({ ...link })),
   };
   const text = JSON.stringify(graph);
   const sha256 = hash(text);
-  const repository = registry.repository(
-    "bun/google-chromium-capabilities",
-    "source",
-    canonical,
-    revision,
-    { domain: SURFACE_DOMAIN, source: SCOPE.source, profile: SCOPE.profile },
-  );
+  const repository = registry.repository("bun/google-chromium-capabilities", "source", canonical, revision, {
+    domain: SURFACE_DOMAIN,
+    source: SCOPE.source,
+    profile: SCOPE.profile,
+  });
   const counts = await registry.importGraph(repository, graph, sha256);
   await mkdir(out, { recursive: true });
   const artifact = join(out, `capability-graph.${sha256}.json`);
@@ -214,13 +192,10 @@ export async function index(root: string, out: string) {
   const selected = plan(root, out);
   const catalog = await exportForkCapabilities(selected.root);
   const expected = ["bun:google", "bun:chromium", "bun:obscura"];
-  const modules = catalog.modules.filter((module) => expected.includes(module.name));
+  const modules = catalog.modules.filter(module => expected.includes(module.name));
   if (modules.length !== expected.length)
     throw new Error("Builtin capability catalog lacks a required browser/Google owner");
-  const [{ BunPython }, { indexCodebase }] = await Promise.all([
-    import("bun:graph"),
-    import("bun:graph-index"),
-  ]);
+  const [{ BunPython }, { indexCodebase }] = await Promise.all([import("bun:graph"), import("bun:graph-index")]);
   await mkdir(selected.out, { recursive: true });
   using registry = new BunPython(join(selected.out, "registry.sqlite"));
   const indexed: IndexResult = await indexCodebase(registry, selected.root, {
@@ -247,7 +222,7 @@ export async function index(root: string, out: string) {
     producer: { version: Bun.version, revision: Bun.revision, sha256: indexed.producerSHA256 },
     catalog: {
       modules,
-      packages: catalog.packages.filter((pkg) => /google|web|chromium|obscura/.test(pkg.name)),
+      packages: catalog.packages.filter(pkg => /google|web|chromium|obscura/.test(pkg.name)),
       sha256: hash(JSON.stringify(catalog)),
     },
     domains: [...indexed.domains, surface],
@@ -264,8 +239,7 @@ export async function index(root: string, out: string) {
 
 export async function exportDocs(out: string) {
   const evidence = await Bun.file(join(out, "evidence.json")).json();
-  if (evidence.schema !== "bun-google-chromium-graph/1")
-    throw new Error("Unknown graph evidence schema");
+  if (evidence.schema !== "bun-google-chromium-graph/1") throw new Error("Unknown graph evidence schema");
   const { BunPython } = await import("bun:graph");
   using registry = new BunPython(join(out, "registry.sqlite"));
   const docs: Awaited<ReturnType<typeof writeGraphDocs>>[] = [];
@@ -283,7 +257,7 @@ export async function exportDocs(out: string) {
         maxBytes: 64 * 1024 * 1024,
       }),
     );
-  const result = docs.map((doc) => ({
+  const result = docs.map(doc => ({
     out: doc.out,
     manifestPath: doc.manifestPath,
     scope: doc.manifest.scope,

@@ -11,7 +11,7 @@ export function createAutomock(actual: object, mockFn: Function) {
   const ownKeys = (object: object) => {
     const keys: string[] = [];
     const seen = new Set<string>();
-    for (let current = object; current && current !== objectPrototype && current !== functionPrototype; ) {
+    for (let current = object; current && current !== objectPrototype && current !== functionPrototype;) {
       for (const key of Object.getOwnPropertyNames(current)) {
         if (key === "constructor" || key === "__proto__" || seen.$has(key)) continue;
         seen.$add(key);

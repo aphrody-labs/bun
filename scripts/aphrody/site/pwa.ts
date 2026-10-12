@@ -11,8 +11,7 @@ const registration = `if ('serviceWorker' in navigator && window.isSecureContext
 
 export function publicPwaResponse(request: Request) {
   const path = new URL(request.url).pathname;
-  if (!["/manifest.webmanifest", "/service-worker.js", "/pwa-register.js"].includes(path))
-    return null;
+  if (!["/manifest.webmanifest", "/service-worker.js", "/pwa-register.js"].includes(path)) return null;
   if (!["GET", "HEAD"].includes(request.method))
     return new Response(null, { status: 405, headers: { allow: "GET, HEAD" } });
   const manifest = {
@@ -41,9 +40,7 @@ export function publicPwaResponse(request: Request) {
     {
       headers: {
         "content-type":
-          path === "/manifest.webmanifest"
-            ? "application/manifest+json"
-            : "text/javascript; charset=utf-8",
+          path === "/manifest.webmanifest" ? "application/manifest+json" : "text/javascript; charset=utf-8",
         "cache-control": "no-cache",
         "x-content-type-options": "nosniff",
         ...(path === "/service-worker.js" ? { "service-worker-allowed": "/" } : {}),

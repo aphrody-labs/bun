@@ -14,14 +14,7 @@ const exportPaths = [
   "/oauth",
   "/secrets",
 ];
-const labs = [
-  "hls-lab",
-  "dash-lab",
-  "hls-lab-har",
-  "hls-keychain",
-  "crunchyroll-app",
-  "crunchyroll-shortcuts",
-];
+const labs = ["hls-lab", "dash-lab", "hls-lab-har", "hls-keychain", "crunchyroll-app", "crunchyroll-shortcuts"];
 
 export async function probeBunVideoConsumer(
   project: string,
@@ -30,14 +23,10 @@ export async function probeBunVideoConsumer(
 ) {
   if (pins && (!/^[a-f0-9]{40}$/.test(pins.commit) || !/^[a-f0-9]{64}$/.test(pins.sha256)))
     throw new Error("Consumer pins must be a full commit and SHA-256 digest.");
-  if (!/^(?:[A-Za-z]:[\\/]|\/|\\\\)/.test(project))
-    throw new Error("Consumer project path must be absolute.");
+  if (!/^(?:[A-Za-z]:[\\/]|\/|\\\\)/.test(project)) throw new Error("Consumer project path must be absolute.");
   const packageRoot = `${project}/node_modules/@aphrody/bun-video`;
   const manifest = await Bun.file(`${packageRoot}/package.json`).json();
-  if (
-    manifest.name !== "@aphrody/bun-video" ||
-    (expectedVersion && manifest.version !== expectedVersion)
-  )
+  if (manifest.name !== "@aphrody/bun-video" || (expectedVersion && manifest.version !== expectedVersion))
     throw new Error("Installed package identity or version differs from the pinned consumer plan.");
   const modules: Record<string, Record<string, unknown>> = {};
   for (const path of exportPaths) {
@@ -83,9 +72,7 @@ export async function probeBunVideoConsumer(
       Bun.semver.satisfies(Bun.version, `>=${minimum}`) ||
       !Bun.semver.satisfies(Bun.version.split("-")[0]!, `>=${minimum}`)
     )
-      throw new Error(
-        "Consumer renderer import failed outside the known upstream prerelease gate.",
-      );
+      throw new Error("Consumer renderer import failed outside the known upstream prerelease gate.");
     rendererErrorClassification = "upstream-bun-prerelease-version-gate";
   }
   const cli: Array<{ lab: string; stdoutBytes: number; stderrBytes: number }> = [];
@@ -98,13 +85,8 @@ export async function probeBunVideoConsumer(
     });
     const timeout = setTimeout(() => child.kill(), 30_000);
     try {
-      const [stdout, stderr, exitCode] = await Promise.all([
-        child.stdout.text(),
-        child.stderr.text(),
-        child.exited,
-      ]);
-      if (exitCode !== 0 || !stdout.trim())
-        throw new Error(`Consumer CLI help gate failed: ${lab}.`);
+      const [stdout, stderr, exitCode] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+      if (exitCode !== 0 || !stdout.trim()) throw new Error(`Consumer CLI help gate failed: ${lab}.`);
       cli.push({
         lab,
         stdoutBytes: new TextEncoder().encode(stdout).byteLength,
@@ -122,22 +104,14 @@ export async function probeBunVideoConsumer(
   });
   const checkTimeout = setTimeout(() => check.kill(), 30_000);
   try {
-    const [stdout, , exitCode] = await Promise.all([
-      check.stdout.text(),
-      check.stderr.text(),
-      check.exited,
-    ]);
+    const [stdout, , exitCode] = await Promise.all([check.stdout.text(), check.stderr.text(), check.exited]);
     let result;
     try {
       result = JSON.parse(stdout);
     } catch {
       throw new Error("Consumer HLS check returned invalid qualification data.");
     }
-    if (
-      exitCode !== 0 ||
-      result.syntheticGates !== "PASS" ||
-      result.realPlaybackQualified !== false
-    )
+    if (exitCode !== 0 || result.syntheticGates !== "PASS" || result.realPlaybackQualified !== false)
       throw new Error("Consumer HLS synthetic check gate failed.");
   } finally {
     clearTimeout(checkTimeout);
@@ -183,25 +157,18 @@ export async function probeBunVideoConsumer(
           throw new Error("Consumer install icon gate failed.");
       } else if (route.endsWith("manifest.webmanifest")) {
         const data = await asset.json();
-        if (
-          data.start_url !== "/pwa/" ||
-          !data.icons?.some((icon: { sizes: string }) => icon.sizes === "192x192")
-        )
+        if (data.start_url !== "/pwa/" || !data.icons?.some((icon: { sizes: string }) => icon.sizes === "192x192"))
           throw new Error("Consumer PWA manifest gate failed.");
       } else if (route.endsWith("manifest.json")) {
         const data = await asset.json();
-        if (
-          data.manifest_version !== 3 ||
-          data.permissions?.length ||
-          data.host_permissions?.length
-        )
+        if (data.manifest_version !== 3 || data.permissions?.length || data.host_permissions?.length)
           throw new Error("Consumer extension permission gate failed.");
       } else if (route.endsWith("messages.json")) {
         const data = await asset.json();
         if (
           !Object.keys(data).length ||
           Object.values(data).some(
-            (value) =>
+            value =>
               !value ||
               typeof (value as { message?: unknown }).message !== "string" ||
               !(value as { message: string }).message.trim(),
@@ -217,7 +184,7 @@ export async function probeBunVideoConsumer(
       version: manifest.version,
       bunVersion: Bun.version,
       bunRevision: Bun.revision,
-      importedExports: exportPaths.map((path) => `@aphrody/bun-video${path}`),
+      importedExports: exportPaths.map(path => `@aphrody/bun-video${path}`),
       interpolation: 50,
       capabilityFunctions: Object.entries(modules["/capabilities"]!)
         .filter(([, value]) => typeof value === "function")

@@ -341,10 +341,9 @@ async function markdown(registry: Registry, options: MarkdownOptions = {}) {
   const repository = options.repository ?? null;
   const lines = ["# Bun graph", "", "## Sources", "", "| Repository | Kind | Revision |", "| --- | --- | --- |"];
   for (const row of registry.db
-    .query<
-      { id: string; kind: string; revision: string | null },
-      [string | null, string | null, number]
-    >("SELECT id,kind,revision FROM repositories WHERE (? IS NULL OR id=?) ORDER BY id LIMIT ?")
+    .query<{ id: string; kind: string; revision: string | null }, [string | null, string | null, number]>(
+      "SELECT id,kind,revision FROM repositories WHERE (? IS NULL OR id=?) ORDER BY id LIMIT ?",
+    )
     .iterate(repository, repository, limit))
     lines.push(`| ${markdownCell(row.id)} | ${markdownCell(row.kind)} | ${markdownCell(row.revision)} |`);
   await scheduler.yield();
@@ -386,17 +385,18 @@ async function markdown(registry: Registry, options: MarkdownOptions = {}) {
     .query<
       { label: string; kind: string; file: string; line: number | null; provenance: string },
       [string | null, string | null, number]
-    >("SELECT label,kind,file,line,provenance FROM nodes WHERE file IS NOT NULL AND (? IS NULL OR repository_id=?) ORDER BY repository_id,file,line,id LIMIT ?")
+    >(
+      "SELECT label,kind,file,line,provenance FROM nodes WHERE file IS NOT NULL AND (? IS NULL OR repository_id=?) ORDER BY repository_id,file,line,id LIMIT ?",
+    )
     .iterate(repository, repository, limit))
     lines.push(`| ${[row.label, row.kind, row.file, row.line, row.provenance].map(markdownCell).join(" | ")} |`);
   await scheduler.yield();
   const runId =
     options.runId ??
     registry.db
-      .query<
-        { run_id: string },
-        []
-      >("SELECT s.run_id FROM samples s JOIN runs r ON r.id=s.run_id WHERE r.status='passed' ORDER BY r.finished_at DESC,r.id DESC LIMIT 1")
+      .query<{ run_id: string }, []>(
+        "SELECT s.run_id FROM samples s JOIN runs r ON r.id=s.run_id WHERE r.status='passed' ORDER BY r.finished_at DESC,r.id DESC LIMIT 1",
+      )
       .get()?.run_id;
   if (runId) {
     lines.push(

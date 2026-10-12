@@ -3,7 +3,8 @@ import { join, resolve } from "node:path";
 import { verifyRelease } from "./release-verify.ts";
 
 // GNU tar (Git Bash) lit "C:\..." comme un hôte distant ; bsdtar de Windows traite les chemins à lecteur.
-export const tar = process.platform === "win32" ? join(process.env.SystemRoot ?? "C:\\Windows", "System32", "tar.exe") : "tar";
+export const tar =
+  process.platform === "win32" ? join(process.env.SystemRoot ?? "C:\\Windows", "System32", "tar.exe") : "tar";
 
 export async function packageRelease(directory: string, archive: string) {
   const root = resolve(directory);

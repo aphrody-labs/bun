@@ -7,9 +7,7 @@ const {
   rmSync,
 }: Pick<typeof import("node:fs"), "mkdirSync" | "renameSync" | "rmSync"> = require("node:fs");
 const { dirname, resolve }: typeof import("node:path") = require("node:path");
-const {
-  scheduler,
-}: Pick<typeof import("node:timers/promises"), "scheduler"> = require("node:timers/promises");
+const { scheduler }: Pick<typeof import("node:timers/promises"), "scheduler"> = require("node:timers/promises");
 
 const registryPath = resolve(process.cwd(), "bun_python.sqlite");
 const tables = [
@@ -56,13 +54,7 @@ type SnapshotRow = {
 };
 type Direction = "incoming" | "outgoing" | "both";
 type Bind = string | number | null;
-function bounded(
-  name: string,
-  value: number | undefined,
-  fallback: number,
-  maximum: number,
-  minimum = 0,
-) {
+function bounded(name: string, value: number | undefined, fallback: number, maximum: number, minimum = 0) {
   const result = value ?? fallback;
   if (!Number.isSafeInteger(result) || result < minimum || result > maximum)
     throw new RangeError(`${name} must be an integer between ${minimum} and ${maximum}`);
@@ -87,13 +79,10 @@ class BunPython implements Disposable {
     database.exec("PRAGMA busy_timeout=30000; PRAGMA foreign_keys=ON;");
     if (
       databasePath !== ":memory:" &&
-      database.query<{ journal_mode: string }, []>("PRAGMA journal_mode").get()!.journal_mode !==
-        "wal"
+      database.query<{ journal_mode: string }, []>("PRAGMA journal_mode").get()!.journal_mode !== "wal"
     )
       database.exec("PRAGMA journal_mode=WAL");
-    const version = this.db
-      .query<{ user_version: number }, []>("PRAGMA user_version")
-      .get()!.user_version;
+    const version = this.db.query<{ user_version: number }, []>("PRAGMA user_version").get()!.user_version;
     if (version > 1) {
       this.db.close();
       throw new Error(`Unsupported bun_python schema ${version}`);
@@ -161,9 +150,7 @@ class BunPython implements Disposable {
         PRAGMA user_version=1;
       `);
       })();
-    const indexes = this.db
-      .query<{ name: string }, []>("SELECT name FROM sqlite_master WHERE type='index'")
-      .all();
+    const indexes = this.db.query<{ name: string }, []>("SELECT name FROM sqlite_master WHERE type='index'").all();
     for (const [name, definition] of [
       ["snapshots_repository", "graph_snapshots(repository_id,created_at DESC)"],
       ["nodes_repository", "nodes(repository_id,id)"],
@@ -171,7 +158,7 @@ class BunPython implements Disposable {
       ["fixes_repository", "fixes(repository_id,id)"],
       ["runs_status", "runs(status,started_at DESC)"],
     ])
-      if (!indexes.some((index) => index.name === name))
+      if (!indexes.some(index => index.name === name))
         this.db.exec(`CREATE INDEX IF NOT EXISTS ${name} ON ${definition}`);
   }
 
@@ -204,34 +191,13 @@ class BunPython implements Disposable {
 
   finishRun(id: string, exitCode: number, stdout = "", stderr = "") {
     const change = this.db
-      .query(
-        "UPDATE runs SET finished_at=?,status=?,exit_code=?,stdout=?,stderr=? WHERE id=? AND status='running'",
-      )
-      .run(
-        new Date().toISOString(),
-        exitCode === 0 ? "passed" : "failed",
-        exitCode,
-        stdout,
-        stderr,
-        id,
-      );
+      .query("UPDATE runs SET finished_at=?,status=?,exit_code=?,stdout=?,stderr=? WHERE id=? AND status='running'")
+      .run(new Date().toISOString(), exitCode === 0 ? "passed" : "failed", exitCode, stdout, stderr, id);
     if (change.changes !== 1) throw new Error(`Run ${id} is missing or already finished`);
   }
 
-  sample(
-    runId: string,
-    name: string,
-    implementation: string,
-    sample: number,
-    milliseconds: number,
-    result?: string,
-  ) {
-    if (
-      !Number.isFinite(milliseconds) ||
-      milliseconds < 0 ||
-      !Number.isSafeInteger(sample) ||
-      sample < 0
-    ) {
+  sample(runId: string, name: string, implementation: string, sample: number, milliseconds: number, result?: string) {
+    if (!Number.isFinite(milliseconds) || milliseconds < 0 || !Number.isSafeInteger(sample) || sample < 0) {
       throw new Error("Invalid benchmark sample");
     }
     this.db
@@ -277,8 +243,7 @@ class BunPython implements Disposable {
       (graph.edges !== undefined && !Array.isArray(graph.edges))
     )
       throw new TypeError("Graph nodes and edges must be arrays");
-    if (typeof sha256 !== "string" || !sha256.length)
-      throw new TypeError("Graph snapshot hash must be nonempty");
+    if (typeof sha256 !== "string" || !sha256.length) throw new TypeError("Graph snapshot hash must be nonempty");
     options.signal?.throwIfAborted();
     const snapshotId = `${repositoryId}:graph:${sha256}`;
     const published = this.db
@@ -312,10 +277,7 @@ class BunPython implements Disposable {
       const confidence = edge.confidence_score;
       if (
         confidence !== undefined &&
-        (typeof confidence !== "number" ||
-          !Number.isFinite(confidence) ||
-          confidence < 0 ||
-          confidence > 1)
+        (typeof confidence !== "number" || !Number.isFinite(confidence) || confidence < 0 || confidence > 1)
       )
         throw new RangeError("Graph edge confidence must be between 0 and 1");
       if (++scanned % batchSize === 0) await scheduler.yield();
@@ -331,10 +293,7 @@ class BunPython implements Disposable {
     const insertNodes = this.db.transaction((start: number, end: number) => {
       for (let index = start; index < end; index++) {
         const node = graph.nodes[index]!;
-        const line =
-          typeof node.source_location === "string"
-            ? /^L(\d+)/.exec(node.source_location)?.[1]
-            : undefined;
+        const line = typeof node.source_location === "string" ? /^L(\d+)/.exec(node.source_location)?.[1] : undefined;
         nodes.run(
           `${namespace}${node.id}`,
           repositoryId,
@@ -342,8 +301,7 @@ class BunPython implements Disposable {
           String(node.label ?? node.name ?? node.id),
           typeof node.source_file === "string" ? node.source_file : null,
           line ? Number(line) : null,
-          typeof node.provenance === "string" &&
-            ["EXTRACTED", "INFERRED", "UNRESOLVED"].includes(node.provenance)
+          typeof node.provenance === "string" && ["EXTRACTED", "INFERRED", "UNRESOLVED"].includes(node.provenance)
             ? node.provenance
             : typeof node.source_file === "string"
               ? "EXTRACTED"
@@ -374,11 +332,7 @@ class BunPython implements Disposable {
           }
         }
         const score =
-          typeof edge.confidence_score === "number"
-            ? edge.confidence_score
-            : edge.confidence === "EXTRACTED"
-              ? 1
-              : 0;
+          typeof edge.confidence_score === "number" ? edge.confidence_score : edge.confidence === "EXTRACTED" ? 1 : 0;
         edges.run(
           `${namespace}edge:${index}`,
           repositoryId,
@@ -403,26 +357,24 @@ class BunPython implements Disposable {
       await scheduler.yield();
     }
     options.signal?.throwIfAborted();
-    this.db
-      .query("INSERT INTO graph_snapshots VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING")
-      .run(
-        snapshotId,
-        repositoryId,
-        String(graph.producer ?? "aphrody graph"),
-        typeof graph.built_at_commit === "string" ? graph.built_at_commit : null,
-        sha256,
-        new Date().toISOString(),
-        json({
-          namespace,
-          nodes: graph.nodes.length,
-          edges: links.length,
-          unresolved,
-          hyperedges: graph.hyperedges ?? [],
-          graph: graph.graph ?? {},
-          directed: graph.directed,
-          multigraph: graph.multigraph,
-        }),
-      );
+    this.db.query("INSERT INTO graph_snapshots VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING").run(
+      snapshotId,
+      repositoryId,
+      String(graph.producer ?? "aphrody graph"),
+      typeof graph.built_at_commit === "string" ? graph.built_at_commit : null,
+      sha256,
+      new Date().toISOString(),
+      json({
+        namespace,
+        nodes: graph.nodes.length,
+        edges: links.length,
+        unresolved,
+        hyperedges: graph.hyperedges ?? [],
+        graph: graph.graph ?? {},
+        directed: graph.directed,
+        multigraph: graph.multigraph,
+      }),
+    );
     return { nodes: graph.nodes.length, edges: links.length, unresolved };
   }
 
@@ -454,11 +406,7 @@ class BunPython implements Disposable {
       .query<SnapshotRow, Bind[]>(
         "SELECT * FROM graph_snapshots WHERE repository_id=? ORDER BY created_at DESC,rowid DESC LIMIT ? OFFSET ?",
       )
-      .all(
-        repositoryId,
-        bounded("limit", options.limit, 100, 10000, 1),
-        bounded("offset", options.offset, 0, 1000000),
-      );
+      .all(repositoryId, bounded("limit", options.limit, 100, 10000, 1), bounded("offset", options.offset, 0, 1000000));
   }
 
   getSnapshot(repositoryId: string, snapshotId?: string) {
@@ -469,17 +417,14 @@ class BunPython implements Disposable {
           )
           .get(repositoryId)
       : this.db
-          .query<SnapshotRow, [string, string]>(
-            "SELECT * FROM graph_snapshots WHERE repository_id=? AND id=?",
-          )
+          .query<SnapshotRow, [string, string]>("SELECT * FROM graph_snapshots WHERE repository_id=? AND id=?")
           .get(repositoryId, snapshotId);
   }
 
   #scope(scope: Scope) {
     const snapshotId = scope.snapshotId;
     const snapshot = this.getSnapshot(scope.repositoryId, snapshotId);
-    if (snapshotId !== undefined && !snapshot)
-      throw new Error(`Unknown graph snapshot ${snapshotId}`);
+    if (snapshotId !== undefined && !snapshot) throw new Error(`Unknown graph snapshot ${snapshotId}`);
     if (!snapshot) return { snapshot: null, namespace: null, end: null };
     const namespace: unknown = JSON.parse(snapshot.metadata).namespace;
     if (typeof namespace !== "string" || !namespace.endsWith(":"))
@@ -537,21 +482,13 @@ class BunPython implements Disposable {
       clauses.push("id>?");
       args.push(after);
     }
-    args.push(
-      bounded("limit", options.limit, 100, 10000, 1),
-      bounded("offset", options.offset, 0, 1000000),
-    );
+    args.push(bounded("limit", options.limit, 100, 10000, 1), bounded("offset", options.offset, 0, 1000000));
     return this.db
-      .query<NodeRow, Bind[]>(
-        `SELECT * FROM nodes WHERE ${clauses.join(" AND ")} ORDER BY id LIMIT ? OFFSET ?`,
-      )
+      .query<NodeRow, Bind[]>(`SELECT * FROM nodes WHERE ${clauses.join(" AND ")} ORDER BY id LIMIT ? OFFSET ?`)
       .all(...args);
   }
 
-  neighbors(
-    id: string,
-    options: { direction?: Direction; kind?: string; limit?: number; snapshotId?: string } = {},
-  ) {
+  neighbors(id: string, options: { direction?: Direction; kind?: string; limit?: number; snapshotId?: string } = {}) {
     const node = this.getNode(id);
     const limit = bounded("limit", options.limit, 100, 10000, 1);
     const selectedDirection = direction(options.direction);
@@ -563,9 +500,7 @@ class BunPython implements Disposable {
     }
     const args: Bind[] = [];
     const kind = options.kind ?? null;
-    const branches = (
-      selectedDirection === "both" ? ["outgoing", "incoming"] : [selectedDirection]
-    ).map((current) => {
+    const branches = (selectedDirection === "both" ? ["outgoing", "incoming"] : [selectedDirection]).map(current => {
       const outgoing = current === "outgoing";
       args.push(node.repository_id, id, kind, kind);
       return `SELECT n.*,e.id AS edge_id,e.kind AS edge_kind,e.provenance AS edge_provenance,e.confidence AS edge_confidence,e.metadata AS edge_metadata,'${current}' AS direction FROM edges e JOIN nodes n ON n.id=e.${outgoing ? "target" : "source"} AND n.repository_id=e.repository_id WHERE e.repository_id=? AND e.${outgoing ? "source" : "target"}=? AND (? IS NULL OR e.kind=?)${selectedDirection === "both" && !outgoing ? " AND e.source<>e.target" : ""}`;
@@ -632,9 +567,7 @@ class BunPython implements Disposable {
       const queueLimit = Math.min(remainingWork, frontier.length + capacity + 1);
       const args: Bind[] = [json(frontier)];
       const visitedJson = json([...visited.keys()]);
-      const branches = (
-        selectedDirection === "both" ? ["outgoing", "incoming"] : [selectedDirection]
-      ).map((current) => {
+      const branches = (selectedDirection === "both" ? ["outgoing", "incoming"] : [selectedDirection]).map(current => {
         const from = current === "outgoing" ? "source" : "target";
         const to = current === "outgoing" ? "target" : "source";
         args.push(
@@ -706,14 +639,9 @@ class BunPython implements Disposable {
       clauses.push("path>?");
       args.push(after);
     }
-    args.push(
-      bounded("limit", options.limit, 100, 10000, 1),
-      bounded("offset", options.offset, 0, 1000000),
-    );
+    args.push(bounded("limit", options.limit, 100, 10000, 1), bounded("offset", options.offset, 0, 1000000));
     return this.db
-      .query<FileRow, Bind[]>(
-        `SELECT * FROM files WHERE ${clauses.join(" AND ")} ORDER BY path LIMIT ? OFFSET ?`,
-      )
+      .query<FileRow, Bind[]>(`SELECT * FROM files WHERE ${clauses.join(" AND ")} ORDER BY path LIMIT ? OFFSET ?`)
       .all(...args);
   }
 
@@ -736,9 +664,9 @@ class BunPython implements Disposable {
       snapshot: selected.snapshot,
       nodes: nodeCounts.reduce((sum, row) => sum + row.count, 0),
       edges: edgeCounts.reduce((sum, row) => sum + row.count, 0),
-      nodeProvenance: Object.fromEntries(nodeCounts.map((row) => [row.provenance, row.count])),
-      edgeProvenance: Object.fromEntries(edgeCounts.map((row) => [row.provenance, row.count])),
-      unresolvedNodes: nodeCounts.find((row) => row.provenance === "UNRESOLVED")?.count ?? 0,
+      nodeProvenance: Object.fromEntries(nodeCounts.map(row => [row.provenance, row.count])),
+      edgeProvenance: Object.fromEntries(edgeCounts.map(row => [row.provenance, row.count])),
+      unresolvedNodes: nodeCounts.find(row => row.provenance === "UNRESOLVED")?.count ?? 0,
     };
   }
 
@@ -757,10 +685,7 @@ class BunPython implements Disposable {
         clauses.push(`${field}=?`);
         args.push(options[field]!);
       }
-    args.push(
-      bounded("limit", options.limit, 100, 10000, 1),
-      bounded("offset", options.offset, 0, 1000000),
-    );
+    args.push(bounded("limit", options.limit, 100, 10000, 1), bounded("offset", options.offset, 0, 1000000));
     return this.db
       .query<Record<string, unknown>, Bind[]>(
         `SELECT * FROM runs WHERE ${clauses.join(" AND ")} ORDER BY started_at DESC,rowid DESC LIMIT ? OFFSET ?`,
@@ -773,11 +698,7 @@ class BunPython implements Disposable {
       .query<Record<string, unknown>, Bind[]>(
         "SELECT * FROM fixes WHERE repository_id=? ORDER BY rowid DESC LIMIT ? OFFSET ?",
       )
-      .all(
-        repositoryId,
-        bounded("limit", options.limit, 100, 10000, 1),
-        bounded("offset", options.offset, 0, 1000000),
-      );
+      .all(repositoryId, bounded("limit", options.limit, 100, 10000, 1), bounded("offset", options.offset, 0, 1000000));
   }
 
   counts() {
@@ -797,9 +718,7 @@ class BunPython implements Disposable {
     };
   }
 
-  async export(
-    path = this.path === ":memory:" ? undefined : this.path.replace(/\.sqlite$/, ".json"),
-  ) {
+  async export(path = this.path === ":memory:" ? undefined : this.path.replace(/\.sqlite$/, ".json")) {
     if (!path) throw new Error("In-memory registries require an explicit export path");
     const target = resolve(path);
     if (target === this.path) throw new Error("JSON export cannot overwrite its SQLite database");
@@ -868,11 +787,7 @@ function executeGraph(
   return require("bun:graph-native").executeGraph(request, options);
 }
 
-function indexCodebase(
-  registry: BunPython,
-  root: string,
-  options: import("bun:graph-index").IndexOptions,
-) {
+function indexCodebase(registry: BunPython, root: string, options: import("bun:graph-index").IndexOptions) {
   return require("bun:graph-index").indexCodebase(registry, root, options);
 }
 

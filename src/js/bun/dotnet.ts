@@ -121,11 +121,7 @@ function nodeApiModule(relative, what) {
 
 function validateFramework(targetFramework) {
   if (!TARGET_FRAMEWORKS.includes(targetFramework)) {
-    throw $ERR_INVALID_ARG_VALUE(
-      "targetFramework",
-      targetFramework,
-      `must be one of ${TARGET_FRAMEWORKS.join(", ")}`,
-    );
+    throw $ERR_INVALID_ARG_VALUE("targetFramework", targetFramework, `must be one of ${TARGET_FRAMEWORKS.join(", ")}`);
   }
 }
 
@@ -133,10 +129,7 @@ let hostModule;
 function host(targetFramework = "net10.0") {
   validateFramework(targetFramework);
   if (hostModule !== undefined) return hostModule;
-  const file = nodeApiModule(
-    require("node:path").join("node-api-dotnet", `${targetFramework}.js`),
-    "node-api-dotnet",
-  );
+  const file = nodeApiModule(require("node:path").join("node-api-dotnet", `${targetFramework}.js`), "node-api-dotnet");
   hostModule = require("node:module").createRequire(file)(file);
   return hostModule;
 }
@@ -145,11 +138,7 @@ function load(assembly, targetFramework) {
   validateString(assembly, "assembly");
   const dotnet = host(targetFramework);
   const path = require("node:path");
-  dotnet.load(
-    path.isAbsolute(assembly) || !/[\\/]|\.dll$/i.test(assembly)
-      ? assembly
-      : path.resolve(assembly),
-  );
+  dotnet.load(path.isAbsolute(assembly) || !/[\\/]|\.dll$/i.test(assembly) ? assembly : path.resolve(assembly));
   return dotnet;
 }
 
@@ -172,11 +161,7 @@ async function spawnCollect(cmd, options: import("bun:dotnet").DotnetCommandOpti
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
   return { stdout, stderr, exitCode };
 }
 

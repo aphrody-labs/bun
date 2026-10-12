@@ -3,7 +3,10 @@
 //   bun scripts/aphrody/winui-smoke.ts
 import { join } from "node:path";
 
-const probe = Bun.spawnSync({ cmd: [process.execPath, "-e", `require("bun:winui"); require("bun:winrt")`], stderr: "pipe" });
+const probe = Bun.spawnSync({
+  cmd: [process.execPath, "-e", `require("bun:winui"); require("bun:winrt")`],
+  stderr: "pipe",
+});
 if (probe.exitCode !== 0) {
   console.error(`winui-smoke: ${process.execPath} (Bun ${Bun.version}) has no bun:winui/bun:winrt builtin`);
   process.exit(2);

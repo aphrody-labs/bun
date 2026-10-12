@@ -14,10 +14,8 @@ async function run(script: string) {
   return { stdout: normalizeBunSnapshot(stdout), stderr: normalizeBunSnapshot(stderr), exitCode };
 }
 
-test.concurrent(
-  "ws on/addListener/prepend*/addEventListener for upgrade/unexpected-response emit no warning",
-  async () => {
-    const { stdout, stderr, exitCode } = await run(/* js */ `
+test.concurrent("ws on/addListener/prepend*/addEventListener for upgrade/unexpected-response emit no warning", async () => {
+  const { stdout, stderr, exitCode } = await run(/* js */ `
     const { WebSocket } = require("ws");
     const ws = new WebSocket("ws://127.0.0.1:1");
     const h = () => {};
@@ -33,11 +31,10 @@ test.concurrent(
     ws.terminate();
     console.log("ok");
   `);
-    expect(stderr).toBe("");
-    expect(stdout).toBe("ok");
-    expect(exitCode).toBe(0);
-  },
-);
+  expect(stderr).toBe("");
+  expect(stdout).toBe("ok");
+  expect(exitCode).toBe(0);
+});
 
 test.concurrent("ws emits 'unexpected-response' with status, headers and body on non-101", async () => {
   const { stdout, exitCode } = await run(/* js */ `
@@ -307,10 +304,8 @@ test.concurrent("ws 'unexpected-response' fires for addListener / prependListene
 // response was handled). The suppression has to apply uniformly across every
 // registration API — on('error'), addEventListener('error', …) and the
 // onerror setter — not just on()/once().
-test.concurrent(
-  "ws suppresses the native error after 'unexpected-response' across on/addEventListener/onerror",
-  async () => {
-    const { stdout, exitCode } = await run(/* js */ `
+test.concurrent("ws suppresses the native error after 'unexpected-response' across on/addEventListener/onerror", async () => {
+  const { stdout, exitCode } = await run(/* js */ `
     const { createServer } = require("net");
     const { once } = require("events");
     const { WebSocket } = require("ws");
@@ -341,23 +336,20 @@ test.concurrent(
     console.log(JSON.stringify({ on, ael, prop }));
     process.exit(0);
   `);
-    // All three APIs: 'unexpected-response' seen (503), native 'error' suppressed.
-    expect(stdout).toMatchInlineSnapshot(
-      `"{"on":{"status":503,"errored":false},"ael":{"status":503,"errored":false},"prop":{"status":503,"errored":false}}"`,
-    );
-    expect(exitCode).toBe(0);
-  },
-);
+  // All three APIs: 'unexpected-response' seen (503), native 'error' suppressed.
+  expect(stdout).toMatchInlineSnapshot(
+    `"{"on":{"status":503,"errored":false},"ael":{"status":503,"errored":false},"prop":{"status":503,"errored":false}}"`,
+  );
+  expect(exitCode).toBe(0);
+});
 
 // The suppression must NOT apply when the consumer never subscribed to
 // 'unexpected-response'. A client that listens for 'upgrade' (arming the
 // handshake bridge) but registers its error handling via addEventListener
 // ('error') / onerror must still receive the native non-101 error — otherwise
 // the error is swallowed entirely.
-test.concurrent(
-  "ws still delivers the native error to addEventListener/onerror when there is no 'unexpected-response' listener",
-  async () => {
-    const { stdout, exitCode } = await run(/* js */ `
+test.concurrent("ws still delivers the native error to addEventListener/onerror when there is no 'unexpected-response' listener", async () => {
+  const { stdout, exitCode } = await run(/* js */ `
     const { createServer } = require("net");
     const { once } = require("events");
     const { WebSocket } = require("ws");
@@ -385,21 +377,18 @@ test.concurrent(
     console.log(JSON.stringify({ ael, prop }));
     process.exit(0);
   `);
-    // Both DOM-style APIs receive the native 'Expected 101' error.
-    expect(stdout).toMatchInlineSnapshot(`"{"ael":true,"prop":true}"`);
-    expect(exitCode).toBe(0);
-  },
-);
+  // Both DOM-style APIs receive the native 'Expected 101' error.
+  expect(stdout).toMatchInlineSnapshot(`"{"ael":true,"prop":true}"`);
+  expect(exitCode).toBe(0);
+});
 
 // With on('upgrade') + on('error') but no 'unexpected-response' listener, the
 // on('error') handler lives on BOTH the EventEmitter (gets the synthetic
 // "Unexpected server response" error) and — via the native bridge closure — on
 // this.#ws (would get the native 'Expected 101' error too). It must fire
 // exactly once, like real ws, not twice.
-test.concurrent(
-  "ws on('error') fires once (not twice) for a non-101 with no 'unexpected-response' listener",
-  async () => {
-    const { stdout, exitCode } = await run(/* js */ `
+test.concurrent("ws on('error') fires once (not twice) for a non-101 with no 'unexpected-response' listener", async () => {
+  const { stdout, exitCode } = await run(/* js */ `
     const { createServer } = require("net");
     const { once } = require("events");
     const { WebSocket } = require("ws");
@@ -420,22 +409,19 @@ test.concurrent(
     console.log(JSON.stringify({ count: messages.length, first: messages[0] }));
     process.exit(0);
   `);
-    // Exactly one 'error' — the synthetic non-101 message — and the native
-    // 'Expected 101' follow-up is suppressed for EventEmitter listeners.
-    expect(stdout).toMatchInlineSnapshot(`"{"count":1,"first":"Unexpected server response: 503"}"`);
-    expect(exitCode).toBe(0);
-  },
-);
+  // Exactly one 'error' — the synthetic non-101 message — and the native
+  // 'Expected 101' follow-up is suppressed for EventEmitter listeners.
+  expect(stdout).toMatchInlineSnapshot(`"{"count":1,"first":"Unexpected server response: 503"}"`);
+  expect(exitCode).toBe(0);
+});
 
 // Mixed registration styles: on('error') (EventEmitter) AND addEventListener
 // ('error')/onerror (native this.#ws), with on('upgrade') but no
 // 'unexpected-response'. Each handler must fire exactly once — the synthetic
 // emit suppresses the EE bridge re-fire, but the DOM-style handler must still
 // receive the native error (gated on a separate "handled" flag).
-test.concurrent(
-  "ws error handlers each fire once when on('error') and addEventListener/onerror are mixed",
-  async () => {
-    const { stdout, exitCode } = await run(/* js */ `
+test.concurrent("ws error handlers each fire once when on('error') and addEventListener/onerror are mixed", async () => {
+  const { stdout, exitCode } = await run(/* js */ `
     const { createServer } = require("net");
     const { once } = require("events");
     const { WebSocket } = require("ws");
@@ -469,20 +455,17 @@ test.concurrent(
     console.log(JSON.stringify({ ael, prop }));
     process.exit(0);
   `);
-    // Both the on('error') handler and the DOM-style handler fire exactly once.
-    expect(stdout).toMatchInlineSnapshot(`"{"ael":{"onCount":1,"domCount":1},"prop":{"onCount":1,"domCount":1}}"`);
-    expect(exitCode).toBe(0);
-  },
-);
+  // Both the on('error') handler and the DOM-style handler fire exactly once.
+  expect(stdout).toMatchInlineSnapshot(`"{"ael":{"onCount":1,"domCount":1},"prop":{"onCount":1,"domCount":1}}"`);
+  expect(exitCode).toBe(0);
+});
 
 // DOM dedup: registering the identical listener twice via addEventListener is
 // a no-op. Because we wrap the listener in a suppression closure, a naive
 // implementation would create two distinct wrappers and fire the handler
 // twice; removeEventListener must also detach it completely.
-test.concurrent(
-  "ws addEventListener('error', h) dedupes the same handler and removeEventListener detaches it",
-  async () => {
-    const { stdout, exitCode } = await run(/* js */ `
+test.concurrent("ws addEventListener('error', h) dedupes the same handler and removeEventListener detaches it", async () => {
+  const { stdout, exitCode } = await run(/* js */ `
     const { createServer } = require("net");
     const { once } = require("events");
     const { WebSocket } = require("ws");
@@ -505,11 +488,10 @@ test.concurrent(
     console.log(JSON.stringify({ count }));
     process.exit(0);
   `);
-    // The handler fires exactly once despite the duplicate registration.
-    expect(stdout).toMatchInlineSnapshot(`"{"count":1}"`);
-    expect(exitCode).toBe(0);
-  },
-);
+  // The handler fires exactly once despite the duplicate registration.
+  expect(stdout).toMatchInlineSnapshot(`"{"count":1}"`);
+  expect(exitCode).toBe(0);
+});
 
 // DOM dedup must also apply to the Node-only 'upgrade'/'unexpected-response'
 // events. These register on the EventEmitter (super.on) which doesn't dedup,

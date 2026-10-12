@@ -30,11 +30,7 @@ const pidfdSendSignalNative = $newRustFunction("linux/pidfd.rs", "jsPidfdSendSig
 const pidfdGetfdNative = $newRustFunction("linux/pidfd.rs", "jsPidfdGetfd", 2);
 const memfdCreateNative = $newRustFunction("linux/memfd.rs", "jsMemfdCreate", 2);
 const landlockAbiVersionNative = $newRustFunction("linux/landlock.rs", "jsLandlockAbiVersion", 0);
-const landlockRestrictSelfNative = $newRustFunction(
-  "linux/landlock.rs",
-  "jsLandlockRestrictSelf",
-  3,
-);
+const landlockRestrictSelfNative = $newRustFunction("linux/landlock.rs", "jsLandlockRestrictSelf", 3);
 const sysctlGetNative = $newRustFunction("linux/sysctl.rs", "jsSysctlGet", 1);
 const sysctlSetNative = $newRustFunction("linux/sysctl.rs", "jsSysctlSet", 2);
 const finitModuleNative = $newRustFunction("linux/kmod.rs", "jsFinitModule", 4);
@@ -44,11 +40,7 @@ const rebootNative = $newRustFunction("linux/power.rs", "jsReboot", 1);
 const kexecFileLoadNative = $newRustFunction("linux/power.rs", "jsKexecFileLoad", 4);
 const ioUringProbeNative = $newRustFunction("linux/io_uring.rs", "jsIoUringProbe", 0);
 const seccompSetFilterNative = $newRustFunction("linux/seccomp.rs", "jsSeccompSetFilter", 2);
-const seccompActionAvailableNative = $newRustFunction(
-  "linux/seccomp.rs",
-  "jsSeccompActionAvailable",
-  1,
-);
+const seccompActionAvailableNative = $newRustFunction("linux/seccomp.rs", "jsSeccompActionAvailable", 1);
 const perfEventOpenNative = $newRustFunction("linux/perf_event.rs", "jsPerfEventOpen", 5);
 const perfEventIoctlNative = $newRustFunction("linux/perf_event.rs", "jsPerfEventIoctl", 3);
 const bpfMapCreateNative = $newRustFunction("linux/bpf.rs", "jsBpfMapCreate", 6);
@@ -430,11 +422,7 @@ function cgroupCpuMax(value) {
   }
   if (typeof value === "string") {
     if (!/^(?:max|[0-9]+)(?: [0-9]+)?$/.test(value)) {
-      throw $ERR_INVALID_ARG_VALUE(
-        "limits.cpuMax",
-        value,
-        "must look like 'max', '<quota>' or '<quota> <period>'",
-      );
+      throw $ERR_INVALID_ARG_VALUE("limits.cpuMax", value, "must look like 'max', '<quota>' or '<quota> <period>'");
     }
     return value;
   }
@@ -455,13 +443,10 @@ function cgroupWrites(limits) {
   }
   const { cpuMax, memoryMax, memoryHigh, pidsMax, cpuWeight, ioWeight } = limits;
   if (cpuMax !== undefined) writes.push(["cpu.max", cgroupCpuMax(cpuMax)]);
-  if (memoryMax !== undefined)
-    writes.push(["memory.max", cgroupLimit(memoryMax, "limits.memoryMax")]);
-  if (memoryHigh !== undefined)
-    writes.push(["memory.high", cgroupLimit(memoryHigh, "limits.memoryHigh")]);
+  if (memoryMax !== undefined) writes.push(["memory.max", cgroupLimit(memoryMax, "limits.memoryMax")]);
+  if (memoryHigh !== undefined) writes.push(["memory.high", cgroupLimit(memoryHigh, "limits.memoryHigh")]);
   if (pidsMax !== undefined) writes.push(["pids.max", cgroupLimit(pidsMax, "limits.pidsMax")]);
-  if (cpuWeight !== undefined)
-    writes.push(["cpu.weight", cgroupWeight(cpuWeight, "limits.cpuWeight")]);
+  if (cpuWeight !== undefined) writes.push(["cpu.weight", cgroupWeight(cpuWeight, "limits.cpuWeight")]);
   if (ioWeight !== undefined) writes.push(["io.weight", cgroupWeight(ioWeight, "limits.ioWeight")]);
   return writes;
 }
@@ -663,11 +648,7 @@ const sysctlNameRegExp = /^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*$/;
 function sysctlName(name) {
   validateString(name, "name");
   if (!sysctlNameRegExp.test(name)) {
-    throw $ERR_INVALID_ARG_VALUE(
-      "name",
-      name,
-      "must be a dotted sysctl name such as 'net.ipv4.ip_forward'",
-    );
+    throw $ERR_INVALID_ARG_VALUE("name", name, "must be a dotted sysctl name such as 'net.ipv4.ip_forward'");
   }
   return name;
 }
@@ -810,8 +791,7 @@ function seccompFilter(options) {
   if (action !== undefined) validateInteger(action, "options.action", 0, MAX_UINT32);
   validateInteger(mismatch, "options.mismatch", 0, MAX_UINT32);
   const arch = auditArch();
-  if (arch === null)
-    throw $ERR_INVALID_ARG_VALUE("process.arch", process.arch, "has no seccomp filter support");
+  if (arch === null) throw $ERR_INVALID_ARG_VALUE("process.arch", process.arch, "has no seccomp filter support");
   const denied = action === undefined ? (constants.SECCOMP_RET_ERRNO | errno) >>> 0 : action;
   const x32 = arch === constants.AUDIT_ARCH_X86_64;
 

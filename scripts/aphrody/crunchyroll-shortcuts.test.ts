@@ -25,7 +25,7 @@ function localPath(path: string, origin: URL): URL {
 }
 
 test("shortcut server serves health and redirects its root to the local PWA", async () => {
-  await withServer(async (origin) => {
+  await withServer(async origin => {
     const health = await fetch(new URL("/health", origin));
     expect(health.status).toBe(200);
     expect(health.headers.get("content-type")).toContain("application/json");
@@ -41,7 +41,7 @@ test("shortcut server serves health and redirects its root to the local PWA", as
 });
 
 test("PWA manifest and PNG install icons use local resources with real 192 and 512 dimensions", async () => {
-  await withServer(async (origin) => {
+  await withServer(async origin => {
     const response = await fetch(new URL("/pwa/manifest.webmanifest", origin));
     expect(response.status).toBe(200);
     const manifest = await response.json();
@@ -49,9 +49,7 @@ test("PWA manifest and PNG install icons use local resources with real 192 and 5
     expect(localPath(manifest.scope, origin).pathname).toBe("/pwa/");
     expect(["standalone", "minimal-ui", "fullscreen"]).toContain(manifest.display);
     for (const size of [192, 512]) {
-      const icon = manifest.icons.find(
-        (entry: { sizes: string }) => entry.sizes === `${size}x${size}`,
-      );
+      const icon = manifest.icons.find((entry: { sizes: string }) => entry.sizes === `${size}x${size}`);
       expect(icon).toBeDefined();
       expect(icon.type).toBe("image/png");
       const iconUrl = localPath(icon.src, new URL("/pwa/manifest.webmanifest", origin));
@@ -69,7 +67,7 @@ test("PWA manifest and PNG install icons use local resources with real 192 and 5
 });
 
 test("local PWA shell assets are available to its service worker", async () => {
-  await withServer(async (origin) => {
+  await withServer(async origin => {
     const sw = await fetch(new URL("/pwa/sw.js", origin));
     expect(sw.status).toBe(200);
     expect(sw.headers.get("content-type")).toMatch(/(?:java|ecma)script/);
@@ -91,7 +89,7 @@ test("local PWA shell assets are available to its service worker", async () => {
 });
 
 test("extension is Manifest V3 with no browser or host permissions", async () => {
-  await withServer(async (origin) => {
+  await withServer(async origin => {
     const response = await fetch(new URL("/extension/manifest.json", origin));
     expect(response.status).toBe(200);
     const manifest = await response.json();
@@ -102,17 +100,14 @@ test("extension is Manifest V3 with no browser or host permissions", async () =>
     expect(manifest.optional_host_permissions ?? []).toEqual([]);
     expect(manifest.background).toBeUndefined();
     expect(manifest.content_scripts).toBeUndefined();
-    const popup = localPath(
-      manifest.action.default_popup,
-      new URL("/extension/manifest.json", origin),
-    );
+    const popup = localPath(manifest.action.default_popup, new URL("/extension/manifest.json", origin));
     expect((await fetch(popup)).status).toBe(200);
     expect((await fetch(new URL("/extension/_locales/fr/messages.json", origin))).status).toBe(200);
   });
 });
 
 test("HEAD preserves local content headers while POST has no write or authentication endpoint", async () => {
-  await withServer(async (origin) => {
+  await withServer(async origin => {
     for (const path of ["/health", "/pwa/", "/pwa/icons/icon192.png", "/extension/manifest.json"]) {
       const head = await fetch(new URL(path, origin), { method: "HEAD" });
       expect(head.status).toBe(200);
@@ -131,7 +126,7 @@ test("HEAD preserves local content headers while POST has no write or authentica
 });
 
 test("static allowlist rejects outside files and encoded traversal paths", async () => {
-  await withServer(async (origin) => {
+  await withServer(async origin => {
     for (const path of [
       "/cookie.json",
       "/hls.json",
@@ -153,7 +148,7 @@ test("static allowlist rejects outside files and encoded traversal paths", async
 });
 
 test("local CSP permits the shell's assets without broad remote execution or credential reflection", async () => {
-  await withServer(async (origin) => {
+  await withServer(async origin => {
     const response = await fetch(new URL("/pwa/", origin), {
       headers: {
         Cookie: "fixture-only-credential",
@@ -164,7 +159,7 @@ test("local CSP permits the shell's assets without broad remote execution or cre
     const csp = response.headers.get("content-security-policy");
     expect(csp).not.toBeNull();
     const directives = new Map(
-      csp!.split(";").map((part) => {
+      csp!.split(";").map(part => {
         const [name, ...sources] = part.trim().split(/\s+/);
         return [name!, sources];
       }),
@@ -189,9 +184,7 @@ type LocaleModule = {
 };
 
 test("eleven actual language catalogs and extension messages have matching nonempty keys", async () => {
-  const pwa = (await import(
-    new URL("../../crunchyroll-pwa/locales.js", import.meta.url).href
-  )) as LocaleModule;
+  const pwa = (await import(new URL("../../crunchyroll-pwa/locales.js", import.meta.url).href)) as LocaleModule;
   const extension = (await import(
     new URL("../../crunchyroll-extension/locales.js", import.meta.url).href
   )) as LocaleModule;
@@ -199,15 +192,12 @@ test("eleven actual language catalogs and extension messages have matching nonem
   expect(Object.keys(pwa.locales).sort()).toEqual([...languages].sort());
   expect(Object.keys(pwa.languageNames).sort()).toEqual([...languages].sort());
   const keys = Object.keys(pwa.locales.en!).sort();
-  await withServer(async (origin) => {
+  await withServer(async origin => {
     for (const language of languages) {
       expect(Object.keys(pwa.locales[language]!).sort()).toEqual(keys);
       expect(extension.locales[language]).toEqual(pwa.locales[language]);
-      for (const value of Object.values(pwa.locales[language]!))
-        expect(value.trim().length).toBeGreaterThan(0);
-      const messages = await (
-        await fetch(new URL(`/extension/_locales/${language}/messages.json`, origin))
-      ).json();
+      for (const value of Object.values(pwa.locales[language]!)) expect(value.trim().length).toBeGreaterThan(0);
+      const messages = await (await fetch(new URL(`/extension/_locales/${language}/messages.json`, origin))).json();
       expect(Object.keys(messages).sort()).toEqual(keys);
       for (const key of keys) expect(messages[key].message).toBe(pwa.locales[language]![key]);
     }
@@ -229,9 +219,7 @@ test("eleven actual language catalogs and extension messages have matching nonem
 });
 
 test("actual PWA renderer selects Arabic RTL, language variants and fallback without preference storage", async () => {
-  const catalog = (await import(
-    new URL("../../crunchyroll-pwa/locales.js", import.meta.url).href
-  )) as LocaleModule;
+  const catalog = (await import(new URL("../../crunchyroll-pwa/locales.js", import.meta.url).href)) as LocaleModule;
   const listeners = new Map<string, () => void>();
   const select = {
     value: "",
@@ -301,9 +289,7 @@ test("actual service worker caches only the local shell and cleans only its own 
     constructor(input: RequestInfo | URL, init?: RequestInit) {
       super(input, init);
       Object.defineProperty(this, "credentials", {
-        value:
-          init?.credentials ??
-          (input instanceof BrowserRequest ? input.credentials : "same-origin"),
+        value: init?.credentials ?? (input instanceof BrowserRequest ? input.credentials : "same-origin"),
       });
       requestInitializations.push({ ...init });
     }
@@ -343,11 +329,7 @@ test("actual service worker caches only the local shell and cleans only its own 
         return cache;
       },
       async keys() {
-        return [
-          "bun-crunchyroll-shortcut-shell-v0",
-          "bun-crunchyroll-shortcut-shell-v1",
-          "other-owner-cache",
-        ];
+        return ["bun-crunchyroll-shortcut-shell-v0", "bun-crunchyroll-shortcut-shell-v1", "other-owner-cache"];
       },
       async delete(name: string) {
         deleted.push(name);
@@ -397,7 +379,7 @@ test("actual service worker caches only the local shell and cleans only its own 
       shellResponse = value;
     },
   });
-  expect(await shellResponse!.then((response) => response.text())).toBe("local-shell");
+  expect(await shellResponse!.then(response => response.text())).toBe("local-shell");
   expect(fetched.length).toBe(8);
   for (const [url, method] of [
     ["https://www.crunchyroll.com/fr/watch/fixture", "GET"],

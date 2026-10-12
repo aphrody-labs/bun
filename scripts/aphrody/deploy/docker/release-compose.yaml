@@ -15,12 +15,18 @@ services:
     mem_limit: 1g
     environment:
       BUN_RELEASE_REDIS_URL: redis://127.0.0.1:6388
-      BUN_RELEASE_PORT: '8798'
+      BUN_RELEASE_PORT: "8798"
     volumes:
       - ${BUN_RELEASE_ROOT:?verified artifact directory required}:/release:ro
       - ${BUN_RELEASE_EXECUTABLE:?qualified published executable required}:/usr/local/bin/bun:ro
     healthcheck:
-      test: [CMD, /usr/local/bin/bun, -e, 'const r=await fetch("http://127.0.0.1:8798/graph/api/status");if(!r.ok)process.exit(1)']
+      test:
+        [
+          CMD,
+          /usr/local/bin/bun,
+          -e,
+          'const r=await fetch("http://127.0.0.1:8798/graph/api/status");if(!r.ok)process.exit(1)',
+        ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -29,7 +35,7 @@ services:
     image: redis@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
     restart: unless-stopped
     ports: [127.0.0.1:6388:6379]
-    command: [redis-server, --maxmemory, 2gb, --maxmemory-policy, allkeys-lfu, --save, '', --appendonly, 'no']
+    command: [redis-server, --maxmemory, 2gb, --maxmemory-policy, allkeys-lfu, --save, "", --appendonly, "no"]
     mem_limit: 3g
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]

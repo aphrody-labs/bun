@@ -90,21 +90,19 @@ export async function runRecorded(registry: BunPython, kind: string, command: st
   const receiptPath = resolve(directory, `${id}.receipt.json`);
   await Bun.write(receiptPath, JSON.stringify(receipt));
   try {
-    registry.db
-      .query("INSERT INTO runs VALUES(?,?,?,?,?,NULL,'running',NULL,NULL,NULL,?)")
-      .run(
-        id,
-        kind,
-        JSON.stringify(command),
-        cwd,
-        receipt.startedAt,
-        JSON.stringify({
-          bun: Bun.version,
-          bunRevision: Bun.revision,
-          executable: process.execPath,
-          receipt: receiptPath,
-        }),
-      );
+    registry.db.query("INSERT INTO runs VALUES(?,?,?,?,?,NULL,'running',NULL,NULL,NULL,?)").run(
+      id,
+      kind,
+      JSON.stringify(command),
+      cwd,
+      receipt.startedAt,
+      JSON.stringify({
+        bun: Bun.version,
+        bunRevision: Bun.revision,
+        executable: process.execPath,
+        receipt: receiptPath,
+      }),
+    );
   } catch (error) {
     if (!busy(error)) throw error;
   }

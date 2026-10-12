@@ -626,7 +626,7 @@ export function resolve(world: string[], installed: Pkg[], available: Pkg[], upg
 
   for (const w of world) visit(w, "world");
   // install_if : point fixe.
-  for (let changed = true; changed; ) {
+  for (let changed = true; changed;) {
     changed = false;
     for (const p of pool) {
       if (!p.installIf.length || selected.has(p.name)) continue;

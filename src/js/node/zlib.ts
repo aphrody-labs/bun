@@ -19,16 +19,12 @@ const NumberIsInteger = Number.isInteger;
 const MathMax = Math.max;
 
 const isArrayBufferView = ArrayBuffer.isView;
-const isAnyArrayBuffer = (b) => b instanceof ArrayBuffer || b instanceof SharedArrayBuffer;
+const isAnyArrayBuffer = b => b instanceof ArrayBuffer || b instanceof SharedArrayBuffer;
 const kMaxLength = $requireMap.$get("buffer")?.exports.kMaxLength ?? BufferModule.kMaxLength;
 
 const { Transform, finished } = require("node:stream");
 const owner_symbol = Symbol("owner_symbol");
-const {
-  checkRangesOrGetDefault,
-  validateFunction,
-  validateFiniteNumber,
-} = require("internal/validators");
+const { checkRangesOrGetDefault, validateFunction, validateFiniteNumber } = require("internal/validators");
 
 const kFlushFlag = Symbol("kFlushFlag");
 const kError = Symbol("kError");
@@ -119,11 +115,7 @@ function zlibBufferSync(engine, buffer) {
     if (isAnyArrayBuffer(buffer)) {
       buffer = Buffer.from(buffer);
     } else {
-      throw $ERR_INVALID_ARG_TYPE(
-        "buffer",
-        "string, Buffer, TypedArray, DataView, or ArrayBuffer",
-        buffer,
-      );
+      throw $ERR_INVALID_ARG_TYPE("buffer", "string, Buffer, TypedArray, DataView, or ArrayBuffer", buffer);
     }
   }
   buffer = processChunkSync(engine, buffer, engine._finishFlushFlag);
@@ -542,7 +534,7 @@ function processCallback() {
       );
     } else {
       const oldRead = self._read;
-      self._read = (n) => {
+      self._read = n => {
         self._read = oldRead;
         this.write(
           handle.flushFlag, // flush
@@ -599,10 +591,7 @@ function Zlib(opts, mode) {
     // windowBits is special. On the compression side, 0 is an invalid value.
     // But on the decompression side, a value of 0 for windowBits tells zlib
     // to use the window size in the zlib header of the compressed stream.
-    if (
-      (opts.windowBits == null || opts.windowBits === 0) &&
-      (mode === INFLATE || mode === GUNZIP || mode === UNZIP)
-    ) {
+    if ((opts.windowBits == null || opts.windowBits === 0) && (mode === INFLATE || mode === GUNZIP || mode === UNZIP)) {
       windowBits = 0;
     } else {
       // `{ windowBits: 8 }` is valid for deflate but not gzip.
@@ -616,13 +605,7 @@ function Zlib(opts, mode) {
       );
     }
 
-    level = checkRangesOrGetDefault(
-      opts.level,
-      "options.level",
-      Z_MIN_LEVEL,
-      Z_MAX_LEVEL,
-      Z_DEFAULT_COMPRESSION,
-    );
+    level = checkRangesOrGetDefault(opts.level, "options.level", Z_MIN_LEVEL, Z_MAX_LEVEL, Z_DEFAULT_COMPRESSION);
     // prettier-ignore
     memLevel = checkRangesOrGetDefault(opts.memLevel, "options.memLevel", Z_MIN_MEMLEVEL, Z_MAX_MEMLEVEL, Z_DEFAULT_MEMLEVEL);
     // prettier-ignore
@@ -772,14 +755,9 @@ function Brotli(opts, mode) {
 
   TypedArrayPrototypeFill.$call(brotliInitParamsArray, -1);
   if (opts?.params) {
-    ArrayPrototypeForEach.$call(ObjectKeys(opts.params), (origKey) => {
+    ArrayPrototypeForEach.$call(ObjectKeys(opts.params), origKey => {
       const key = +origKey;
-      if (
-        NumberIsNaN(key) ||
-        key < 0 ||
-        key > kMaxBrotliParam ||
-        (brotliInitParamsArray[key] | 0) !== -1
-      ) {
+      if (NumberIsNaN(key) || key < 0 || key > kMaxBrotliParam || (brotliInitParamsArray[key] | 0) !== -1) {
         throw $ERR_BROTLI_INVALID_PARAM(origKey);
       }
 
@@ -841,7 +819,7 @@ class Zstd extends ZlibBase {
 
     initParamsArray.fill(-1);
     if (opts?.params) {
-      ObjectKeys(opts.params).forEach((origKey) => {
+      ObjectKeys(opts.params).forEach(origKey => {
         const key = +origKey;
         if (NumberIsNaN(key) || key < 0 || key > maxParam || (initParamsArray[key] | 0) !== -1) {
           throw $ERR_ZSTD_INVALID_PARAM(origKey);
@@ -875,9 +853,7 @@ class Zstd extends ZlibBase {
   }
 }
 
-const kMaxZstdCParam = MathMax(
-  ...ObjectKeys(constants).map((key) => (key.startsWith("ZSTD_c_") ? constants[key] : 0)),
-);
+const kMaxZstdCParam = MathMax(...ObjectKeys(constants).map(key => (key.startsWith("ZSTD_c_") ? constants[key] : 0)));
 
 const zstdInitCParamsArray = new Uint32Array(kMaxZstdCParam + 1);
 
@@ -887,9 +863,7 @@ class ZstdCompress extends Zstd {
   }
 }
 
-const kMaxZstdDParam = MathMax(
-  ...ObjectKeys(constants).map((key) => (key.startsWith("ZSTD_d_") ? constants[key] : 0)),
-);
+const kMaxZstdDParam = MathMax(...ObjectKeys(constants).map(key => (key.startsWith("ZSTD_d_") ? constants[key] : 0)));
 
 const zstdInitDParamsArray = new Uint32Array(kMaxZstdDParam + 1);
 

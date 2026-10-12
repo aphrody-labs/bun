@@ -11,7 +11,7 @@ export async function verifyRelease(out: string) {
     if (
       /[:\\\x00-\x1f\x7f]/.test(path) ||
       path.startsWith("/") ||
-      path.split("/").some((part) => !part || part === "." || part === "..")
+      path.split("/").some(part => !part || part === "." || part === "..")
     )
       throw new Error(`Unsafe artifact path: ${path}`);
     const hash = new Bun.CryptoHasher("sha256");

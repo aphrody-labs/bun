@@ -201,7 +201,7 @@ export function elfDependencies(bytes: Uint8Array): ElfInfo {
   if (!dynamic) return { interp, needed: [], runpath: [], machine };
 
   const toOffset = (vaddr: number) => {
-    const load = loads.find((l) => vaddr >= l.vaddr && vaddr < l.vaddr + l.filesz);
+    const load = loads.find(l => vaddr >= l.vaddr && vaddr < l.vaddr + l.filesz);
     if (!load) throw new Error(`address 0x${vaddr.toString(16)} is outside every PT_LOAD`);
     return vaddr - load.vaddr + load.offset;
   };
@@ -221,7 +221,7 @@ export function elfDependencies(bytes: Uint8Array): ElfInfo {
   const paths = runpath ?? rpath;
   return {
     interp,
-    needed: neededOffsets.map((offset) => cstr(strtab + offset)),
+    needed: neededOffsets.map(offset => cstr(strtab + offset)),
     runpath:
       paths === undefined
         ? []
@@ -267,10 +267,8 @@ export function resolveInSysroot(sysroot: string, path: string): SysrootFile | u
           target = target.replace(/^(\\\\\?\\|\\\?\?\\)?[A-Za-z]:/, "").replaceAll("\\", "/");
         links.push([next, target]);
         const base = target.startsWith("/") ? [] : current.split("/").filter(Boolean);
-        parts = posix
-          .normalize([...base, ...target.split("/"), ...parts.slice(i + 1)].join("/"))
-          .split("/");
-        parts = parts.filter((p) => p && p !== "." && p !== "..");
+        parts = posix.normalize([...base, ...target.split("/"), ...parts.slice(i + 1)].join("/")).split("/");
+        parts = parts.filter(p => p && p !== "." && p !== "..");
         restarted = true;
         break;
       }
@@ -288,17 +286,14 @@ export function resolveInSysroot(sysroot: string, path: string): SysrootFile | u
 }
 
 function searchDirs(sysroot: string, info: ElfInfo, origin: string): string[] {
-  const dirs = info.runpath.map((dir) =>
-    dir.replaceAll("$ORIGIN", origin).replaceAll("${ORIGIN}", origin),
-  );
+  const dirs = info.runpath.map(dir => dir.replaceAll("$ORIGIN", origin).replaceAll("${ORIGIN}", origin));
   if (info.interp && posix.basename(info.interp).startsWith("ld-musl")) {
     const arch = posix
       .basename(info.interp)
       .replace(/^ld-musl-/, "")
       .replace(/\.so\.1$/, "");
     const pathFile = join(sysroot, "etc", `ld-musl-${arch}.path`);
-    if (existsSync(pathFile))
-      dirs.push(...readFileSync(pathFile, "utf8").split(/[:\n]/).filter(Boolean));
+    if (existsSync(pathFile)) dirs.push(...readFileSync(pathFile, "utf8").split(/[:\n]/).filter(Boolean));
     else dirs.push("/lib", "/usr/local/lib", "/usr/lib");
   } else {
     const triple = MULTIARCH[info.machine];
@@ -360,43 +355,27 @@ class Tree {
   }
 
   entries(): Entry[] {
-    return [...this.#entries.values()].sort((a, b) =>
-      a.path < b.path ? -1 : a.path > b.path ? 1 : 0,
-    );
+    return [...this.#entries.values()].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
   }
 }
 
 // Adds an ELF already placed in the tree and, recursively, everything its
 // loader will open: PT_INTERP, then each DT_NEEDED found in the sysroot.
-function addElfDependencies(
-  tree: Tree,
-  sysroot: string,
-  bytes: Uint8Array,
-  imagePath: string,
-  seen: Set<string>,
-) {
+function addElfDependencies(tree: Tree, sysroot: string, bytes: Uint8Array, imagePath: string, seen: Set<string>) {
   const info = elfDependencies(bytes);
   const musl = info.interp !== undefined && posix.basename(info.interp).startsWith("ld-musl");
   if (info.interp) addSysrootFile(tree, sysroot, info.interp, seen, false);
   const dirs = searchDirs(sysroot, info, posix.dirname(imagePath));
   for (const soname of info.needed) {
     if (musl && MUSL_BUILTIN.test(soname)) continue;
-    const candidates = soname.includes("/") ? [soname] : dirs.map((dir) => posix.join(dir, soname));
-    if (!candidates.some((candidate) => addSysrootFile(tree, sysroot, candidate, seen, true))) {
-      throw new Error(
-        `${soname} (needed by ${imagePath}) not found under ${sysroot}; pass --sysroot or --file`,
-      );
+    const candidates = soname.includes("/") ? [soname] : dirs.map(dir => posix.join(dir, soname));
+    if (!candidates.some(candidate => addSysrootFile(tree, sysroot, candidate, seen, true))) {
+      throw new Error(`${soname} (needed by ${imagePath}) not found under ${sysroot}; pass --sysroot or --file`);
     }
   }
 }
 
-function addSysrootFile(
-  tree: Tree,
-  sysroot: string,
-  path: string,
-  seen: Set<string>,
-  optional: boolean,
-): boolean {
+function addSysrootFile(tree: Tree, sysroot: string, path: string, seen: Set<string>, optional: boolean): boolean {
   const found = resolveInSysroot(sysroot, path);
   if (!found) {
     if (optional) return false;
@@ -460,20 +439,11 @@ export function buildEntries(options: Options): Built {
   for (const module of options.modules) {
     const name = `/lib/modules/${posix.basename(module.replaceAll("\\", "/"))}`;
     const found = module.startsWith("/") ? resolveInSysroot(options.sysroot, module) : undefined;
-    tree.file(
-      name,
-      readFileSync(found ? join(options.sysroot, found.path) : resolve(module)),
-      0o644,
-    );
+    tree.file(name, readFileSync(found ? join(options.sysroot, found.path) : resolve(module)), 0o644);
     config.modules!.push(name);
   }
-  tree.file(
-    "/etc/bun-init.json",
-    new TextEncoder().encode(JSON.stringify(config, null, 2) + "\n"),
-    0o644,
-  );
-  if (options.hostname)
-    tree.file("/etc/hostname", new TextEncoder().encode(options.hostname + "\n"), 0o644);
+  tree.file("/etc/bun-init.json", new TextEncoder().encode(JSON.stringify(config, null, 2) + "\n"), 0o644);
+  if (options.hostname) tree.file("/etc/hostname", new TextEncoder().encode(options.hostname + "\n"), 0o644);
   if (options.app) {
     tree.dir("app");
     tree.copyHostDir(resolve(options.app), "/app");
@@ -484,7 +454,7 @@ export function buildEntries(options: Options): Built {
   }
 
   const entries = tree.entries();
-  return { entries, interp, files: entries.filter((e) => (e.mode & S_IFMT) === S_IFREG).length };
+  return { entries, interp, files: entries.filter(e => (e.mode & S_IFMT) === S_IFREG).length };
 }
 
 // newc (SVR4 without CRC): a 110-byte ASCII header, the NUL-terminated name and
@@ -498,21 +468,7 @@ export function newc(entries: Entry[]): Uint8Array<ArrayBuffer> {
   const push = (path: string, mode: number, data: Uint8Array, rdev: [number, number]) => {
     const name = encoder.encode(path + "\0");
     const nlink = (mode & S_IFMT) === S_IFDIR ? 2 : 1;
-    const fields = [
-      ino++,
-      mode,
-      0,
-      0,
-      nlink,
-      0,
-      data.length,
-      0,
-      0,
-      rdev[0],
-      rdev[1],
-      name.length,
-      0,
-    ];
+    const fields = [ino++, mode, 0, 0, nlink, 0, data.length, 0, 0, rdev[0], rdev[1], name.length, 0];
     const header = encoder.encode("070701" + fields.map(hex).join(""));
     chunks.push(header, name, pad(header.length + name.length), data, pad(data.length));
   };

@@ -3,22 +3,14 @@
 export function googleEgressPlan(localPort = 1081, remotePort = 1081) {
   for (const port of [localPort, remotePort]) {
     if (!Number.isInteger(port) || port < 1024 || port > 65535 || port === 1080)
-      throw new RangeError(
-        "Egress ports must be unprivileged integer TCP ports and preserve Japan port 1080",
-      );
+      throw new RangeError("Egress ports must be unprivileged integer TCP ports and preserve Japan port 1080");
   }
   return {
     mode: "plan-only",
     provider: "existing Aphrody Mullvad WireGuard owner",
     country: "us",
     scope: "explicit Google client transport only",
-    sourceOwners: [
-      "aphrody infra vpn",
-      "aphrody infra ssh",
-      "aphrody infra boot",
-      "bun ssh",
-      "bun:google",
-    ],
+    sourceOwners: ["aphrody infra vpn", "aphrody infra ssh", "aphrody infra boot", "bun ssh", "bun:google"],
     observed: {
       host: "vps",
       existingNamespace: "mullvad",

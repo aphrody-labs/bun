@@ -6,8 +6,7 @@ import { startQualificationProxy } from "./qualify-tls-proxy";
 
 const origin = process.env.SITE_QUALIFY_ORIGIN;
 const executable = process.env.SITE_QUALIFY_CHROME;
-if (!origin || !executable)
-  throw new Error("Explicit SITE_QUALIFY_ORIGIN and SITE_QUALIFY_CHROME required");
+if (!origin || !executable) throw new Error("Explicit SITE_QUALIFY_ORIGIN and SITE_QUALIFY_CHROME required");
 const url = new URL(origin);
 if (!["http:", "https:"].includes(url.protocol) || url.username || url.password)
   throw new Error("Invalid qualification origin");
@@ -90,8 +89,7 @@ try {
   let documentStatus = 0;
   const removeNetwork = connection.on("Network.responseReceived", (event, source) => {
     const response = event as { type?: string; response?: { status: number } };
-    if (source === sessionId && response.type === "Document")
-      documentStatus = response.response?.status ?? 0;
+    if (source === sessionId && response.type === "Document") documentStatus = response.response?.status ?? 0;
   });
   const exceptions: unknown[] = [];
   const remove = connection.on("Runtime.exceptionThrown", (event, source) => {
@@ -152,11 +150,7 @@ try {
         },
         sessionId,
       );
-      if (
-        result.exceptionDetails ||
-        !result.result.value?.text ||
-        !result.result.value.title.trim()
-      )
+      if (result.exceptionDetails || !result.result.value?.text || !result.result.value.title.trim())
         throw new Error(`Empty or failed real page: ${route}`);
       receipts.push({ label, route, status: documentStatus, ...result.result.value });
       if (route === "/") {
@@ -195,11 +189,7 @@ try {
           },
           sessionId,
         );
-        const document = await connection.send<{ root: { nodeId: number } }>(
-          "DOM.getDocument",
-          {},
-          sessionId,
-        );
+        const document = await connection.send<{ root: { nodeId: number } }>("DOM.getDocument", {}, sessionId);
         const paragraph = await connection.send<{ nodeId: number }>(
           "DOM.querySelector",
           { nodeId: document.root.nodeId, selector: "article p" },
@@ -238,9 +228,7 @@ try {
     ),
   );
   if (exceptions.length)
-    throw new Error(
-      `${exceptions.length} uncaught real browser exceptions; inspect qualification receipt`,
-    );
+    throw new Error(`${exceptions.length} uncaught real browser exceptions; inspect qualification receipt`);
   console.log(JSON.stringify({ pages: receipts.length, exceptions: exceptions.length, output }));
 } finally {
   await browser?.close();

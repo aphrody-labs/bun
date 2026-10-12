@@ -11,7 +11,8 @@ describe.skipIf(process.platform !== "linux" || !cc)("bun:ffi dlopen global opti
   function build() {
     const dir = tempDir("ffi-global", {
       "a.c": "int aphrody_shared_value(void) { return 42; }\n",
-      "b.c": "extern int aphrody_shared_value(void);\nint aphrody_via_global(void) { return aphrody_shared_value() + 1; }\n",
+      "b.c":
+        "extern int aphrody_shared_value(void);\nint aphrody_via_global(void) { return aphrody_shared_value() + 1; }\n",
     });
     const a = join(String(dir), "liba.so");
     const b = join(String(dir), "libb.so");
@@ -31,7 +32,9 @@ describe.skipIf(process.platform !== "linux" || !cc)("bun:ffi dlopen global opti
     const lib = dlopen(a, { aphrody_shared_value: { args: [], returns: "i32" } });
     try {
       expect(lib.symbols.aphrody_shared_value()).toBe(42);
-      expect(() => dlopen(b, { aphrody_via_global: { args: [], returns: "i32" } })).toThrow(/undefined symbol|Failed to open/);
+      expect(() => dlopen(b, { aphrody_via_global: { args: [], returns: "i32" } })).toThrow(
+        /undefined symbol|Failed to open/,
+      );
     } finally {
       lib.close();
     }

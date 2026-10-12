@@ -196,10 +196,9 @@ try {
     },
   ];
   for (const file of registry.db
-    .query<
-      { path: string; sha256: string; bytes: number; language: string | null },
-      [string]
-    >("SELECT path,sha256,bytes,language FROM files WHERE repository_id=? ORDER BY path")
+    .query<{ path: string; sha256: string; bytes: number; language: string | null }, [string]>(
+      "SELECT path,sha256,bytes,language FROM files WHERE repository_id=? ORDER BY path",
+    )
     .iterate(repo)) {
     const id = `file:${file.path}`;
     nodes.push({

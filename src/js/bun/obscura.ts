@@ -21,9 +21,7 @@ async function launch(options: LaunchOptions = {}) {
   if (!Number.isSafeInteger(workers) || workers < 1 || workers > 64)
     throw new RangeError("workers must be an integer from 1 to 64");
   if (process.platform === "win32" && workers !== 1)
-    throw new RangeError(
-      "Windows Obscura supports one worker until process-tree shutdown is qualified",
-    );
+    throw new RangeError("Windows Obscura supports one worker until process-tree shutdown is qualified");
   const { signal } = options;
   signal?.throwIfAborted();
   const executable = options.executable ?? findExecutable();
@@ -65,16 +63,7 @@ async function launch(options: LaunchOptions = {}) {
   };
   try {
     proc = Bun.spawn(
-      [
-        executable,
-        "launch",
-        "--host",
-        "127.0.0.1",
-        "--port",
-        String(port),
-        "--workers",
-        String(workers),
-      ],
+      [executable, "launch", "--host", "127.0.0.1", "--port", String(port), "--workers", String(workers)],
       { stdin: "ignore", stdout: "ignore", stderr: "ignore" },
     );
     const child = proc;

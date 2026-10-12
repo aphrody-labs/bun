@@ -22,7 +22,12 @@ if (dirty) {
 }
 
 await $`rm -rf ${join(dst, "src")}`;
-const files = ["Cargo.toml", ...Array.from(new Bun.Glob("src/**/*.rs").scanSync({ cwd: src })).map(f => f.replaceAll("\\", "/")).sort()];
+const files = [
+  "Cargo.toml",
+  ...Array.from(new Bun.Glob("src/**/*.rs").scanSync({ cwd: src }))
+    .map(f => f.replaceAll("\\", "/"))
+    .sort(),
+];
 for (const f of files) await Bun.write(join(dst, f), Bun.file(join(src, f)));
 await Bun.write(
   join(dst, "UPSTREAM"),

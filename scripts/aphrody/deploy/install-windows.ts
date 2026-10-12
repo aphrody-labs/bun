@@ -32,7 +32,8 @@ if (process.argv.includes("--uninstall")) {
   process.exit(0);
 }
 
-if (!existsSync(winsvc)) throw new Error(`bun-winsvc.exe absent: ${winsvc} (cargo build --release dans packages/bun-winsvc)`);
+if (!existsSync(winsvc))
+  throw new Error(`bun-winsvc.exe absent: ${winsvc} (cargo build --release dans packages/bun-winsvc)`);
 mkdirSync(dir, { recursive: true });
 await remove();
 copyFileSync(process.execPath, join(dir, "bun.exe"));

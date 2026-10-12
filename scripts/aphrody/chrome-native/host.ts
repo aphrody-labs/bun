@@ -1,13 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import {
-  closeSync,
-  fsyncSync,
-  lstatSync,
-  openSync,
-  readSync,
-  readdirSync,
-  writeSync,
-} from "node:fs";
+import { closeSync, fsyncSync, lstatSync, openSync, readSync, readdirSync, writeSync } from "node:fs";
 import { dirname, join, resolve, parse } from "node:path";
 import { decodeExport, encodeFrame, extensionId, MAX_FRAME_BYTES } from "./protocol";
 
@@ -43,8 +35,7 @@ function send(value: unknown) {
   }
 }
 async function main() {
-  if (process.platform !== "win32" || !process.env.LOCALAPPDATA)
-    throw new Error("Native Windows required");
+  if (process.platform !== "win32" || !process.env.LOCALAPPDATA) throw new Error("Native Windows required");
   const base = resolve(process.env.LOCALAPPDATA, "BunChromium");
   const native = join(base, "NativeMessaging");
   const exports = join(base, "Exports");
@@ -52,8 +43,7 @@ async function main() {
   ordinaryDirectory(exports);
   const configPath = join(native, "host-config.json");
   const configStat = lstatSync(configPath);
-  if (!configStat.isFile() || configStat.isSymbolicLink())
-    throw new Error("Unsafe native configuration");
+  if (!configStat.isFile() || configStat.isSymbolicLink()) throw new Error("Unsafe native configuration");
   const configFile = Bun.file(configPath);
   if (configFile.size > 4096) throw new Error("Invalid native configuration");
   const config: unknown = await configFile.json();
@@ -66,10 +56,7 @@ async function main() {
   )
     throw new Error("Invalid native configuration");
   const origin = `chrome-extension://${config.extensionId}/`;
-  if (
-    process.argv[2] !== origin ||
-    process.argv.slice(3).some((value) => !/^--parent-window=\d+$/.test(value))
-  ) {
+  if (process.argv[2] !== origin || process.argv.slice(3).some(value => !/^--parent-window=\d+$/.test(value))) {
     send({ ok: false, error: "untrusted_origin" });
     return;
   }

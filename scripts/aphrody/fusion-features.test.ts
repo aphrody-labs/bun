@@ -32,10 +32,7 @@ describe("Bun OS source feature inventory", () => {
       `[package]\nname="consumer"\n[dependencies]\nrender={package="renderer",optional=true}\n[features]\nall=["render/paint","render?/serde","dep:render"]`,
       "a/Cargo.toml",
     );
-    const render = manifestCrate(
-      `[package]\nname="renderer"\n[features]\npaint=["base"]\nbase=[]`,
-      "b/Cargo.toml",
-    );
+    const render = manifestCrate(`[package]\nname="renderer"\n[features]\npaint=["base"]\nbase=[]`, "b/Cargo.toml");
     expect(featureClosure([consumer, render], ["consumer/all"])).toEqual({
       declared: ["consumer/all", "renderer/base", "renderer/paint"],
       dependencyEdges: ["consumer/dep:render", "consumer/render/paint", "consumer/render?/serde"],
@@ -43,22 +40,13 @@ describe("Bun OS source feature inventory", () => {
     });
   });
   test("cyclic declarations terminate and undeclared flags remain failures", () => {
-    const crate = manifestCrate(
-      `[package]\nname="a"\n[features]\na=["b"]\nb=["a"]`,
-      "a/Cargo.toml",
-    );
+    const crate = manifestCrate(`[package]\nname="a"\n[features]\na=["b"]\nb=["a"]`, "a/Cargo.toml");
     expect(featureClosure([crate], ["a/a", "a/missing"]).invalid).toEqual(["a/missing"]);
     expect(featureClosure([crate], ["a/a"]).declared).toEqual(["a/a", "a/b"]);
   });
   test("JSC-only policy catches V8 through mandatory workspace dependency edges", () => {
-    const browser = manifestCrate(
-      `[package]\nname="browser"\n[dependencies]\njs="1"`,
-      "browser/Cargo.toml",
-    );
-    const js = manifestCrate(
-      `[package]\nname="js"\n[build-dependencies]\ndeno_core="0.412"`,
-      "js/Cargo.toml",
-    );
+    const browser = manifestCrate(`[package]\nname="browser"\n[dependencies]\njs="1"`, "browser/Cargo.toml");
+    const js = manifestCrate(`[package]\nname="js"\n[build-dependencies]\ndeno_core="0.412"`, "js/Cargo.toml");
     const combo: Combination = {
       id: "full",
       packages: ["browser"],
@@ -74,10 +62,7 @@ describe("Bun OS source feature inventory", () => {
     expect(assessCombination(combo, [browser, js], "linux").issues.join(" ")).toContain("V8");
   });
   test("external dependencies and unsupported targets cannot become qualification claims", () => {
-    const crate = manifestCrate(
-      `[package]\nname="render"\n[features]\npaint=[]`,
-      "render/Cargo.toml",
-    );
+    const crate = manifestCrate(`[package]\nname="render"\n[features]\npaint=[]`, "render/Cargo.toml");
     const combo: Combination = {
       id: "paint",
       packages: ["render"],
@@ -112,12 +97,8 @@ describe("Bun OS source feature inventory", () => {
     expect(assessCombination(combo, [crate], "linux").issues.join(" ")).toContain("V8");
   });
   test("ABI and profile selections report conflicts instead of silently choosing one", () => {
-    expect(
-      incompatibleSelections(["pgoUse", "pgoGenerate"], [["pgoUse", "pgoGenerate"]]),
-    ).toHaveLength(1);
-    expect(incompatibleSelections(["webkit=local"], [["webkit=local", "webkit=prebuilt"]])).toEqual(
-      [],
-    );
+    expect(incompatibleSelections(["pgoUse", "pgoGenerate"], [["pgoUse", "pgoGenerate"]])).toHaveLength(1);
+    expect(incompatibleSelections(["webkit=local"], [["webkit=local", "webkit=prebuilt"]])).toEqual([]);
   });
   test("dependency feature requests apply without restoring disabled defaults", () => {
     const consumer = manifestCrate(
@@ -141,22 +122,16 @@ describe("Bun OS source feature inventory", () => {
     expect(result.closure.declared).toEqual(["js/safe"]);
   });
   test("workspace defaults retain Cargo inheritance and explicit reenabling", () => {
-    const source =
-      '[package]\nname="consumer"\n[dependencies]\njs={workspace=true,default-features=false}';
+    const source = '[package]\nname="consumer"\n[dependencies]\njs={workspace=true,default-features=false}';
+    expect(manifestCrate(source, "a/Cargo.toml", { js: { version: "1" } }).dependencies[0]!.defaultFeatures).toBe(true);
     expect(
-      manifestCrate(source, "a/Cargo.toml", { js: { version: "1" } }).dependencies[0]!
+      manifestCrate(source, "a/Cargo.toml", { js: { version: "1", "default-features": false } }).dependencies[0]!
         .defaultFeatures,
-    ).toBe(true);
-    expect(
-      manifestCrate(source, "a/Cargo.toml", { js: { version: "1", "default-features": false } })
-        .dependencies[0]!.defaultFeatures,
     ).toBe(false);
     expect(
-      manifestCrate(
-        source.replace("default-features=false", "default-features=true"),
-        "a/Cargo.toml",
-        { js: { version: "1", "default-features": false } },
-      ).dependencies[0]!.defaultFeatures,
+      manifestCrate(source.replace("default-features=false", "default-features=true"), "a/Cargo.toml", {
+        js: { version: "1", "default-features": false },
+      }).dependencies[0]!.defaultFeatures,
     ).toBe(true);
   });
   test("a selected package does not activate another owner's optional alias", () => {
@@ -196,21 +171,16 @@ describe("Bun OS source feature inventory", () => {
       jscOnly: true,
     };
     expect(assessCombination(combo, [consumer, js], "linux").status).toBe("supported");
-    expect(
-      assessCombination({ ...combo, features: ["consumer/strong"] }, [consumer, js], "linux")
-        .status,
-    ).toBe("unsupported");
+    expect(assessCombination({ ...combo, features: ["consumer/strong"] }, [consumer, js], "linux").status).toBe(
+      "unsupported",
+    );
   });
   test("missing dependency aliases and suppressed implicit optional features fail", () => {
     const crate = manifestCrate(
       `[package]\nname="a"\n[dependencies]\njs={version="1",optional=true}\n[features]\nbad=["dep:missing","missing/safe"]\nexplicit=["dep:js"]`,
       "a/Cargo.toml",
     );
-    expect(featureClosure([crate], ["a/bad", "a/js"]).invalid).toEqual([
-      "a/dep:missing",
-      "a/js",
-      "a/missing/safe",
-    ]);
+    expect(featureClosure([crate], ["a/bad", "a/js"]).invalid).toEqual(["a/dep:missing", "a/js", "a/missing/safe"]);
   });
   test("runtime inventory includes ordinary boolean and string feature declarations", () => {
     expect(
@@ -226,9 +196,7 @@ describe("Bun OS source feature inventory", () => {
   test("shim-only features do not prove runtime feature forwarding", () => {
     const source =
       'export function cargoBuildInvocation() { const args = ["-p", "bun_runtime"]; return args; } /** Shim */ function shimCargoInvocation() { return ["--features", "shim_standalone"]; }';
-    expect(
-      buildFeatureAudit(source, "if (pgoGenerate && pgoUse) { throw new Error(); }"),
-    ).toMatchObject({
+    expect(buildFeatureAudit(source, "if (pgoGenerate && pgoUse) { throw new Error(); }")).toMatchObject({
       runtimeInvocationFound: true,
       explicitFeaturesArgument: false,
       coreutilsMentioned: false,
@@ -236,12 +204,8 @@ describe("Bun OS source feature inventory", () => {
     });
   });
   test("missing cross-target snapshot producer rejects the build in source", async () => {
-    const source = await Bun.file(
-      new URL("../../src/browser/crates/js/build.rs", import.meta.url),
-    ).text();
-    const selection = /let cross_mksnapshot = match cross_mksnapshot\s*\{([\s\S]*?)\n\s*};/.exec(
-      source,
-    )?.[1];
+    const source = await Bun.file(new URL("../../src/browser/crates/js/build.rs", import.meta.url)).text();
+    const selection = /let cross_mksnapshot = match cross_mksnapshot\s*\{([\s\S]*?)\n\s*};/.exec(source)?.[1];
     expect(selection).toBeDefined();
     const missing = /None\s*=>\s*\{([\s\S]*?)\n\s*},/.exec(selection!)?.[1];
     expect(missing).toMatch(/^\s*panic!\(/);

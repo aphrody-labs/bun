@@ -37,8 +37,7 @@ function unsupportedError() {
 
 function validateOptions(name, value) {
   if (value === undefined) return {};
-  if (value === null || typeof value !== "object")
-    throw $ERR_INVALID_ARG_TYPE(name, "object", value);
+  if (value === null || typeof value !== "object") throw $ERR_INVALID_ARG_TYPE(name, "object", value);
   return value;
 }
 
@@ -133,11 +132,7 @@ function loadFont(source) {
   let bytes = source;
   if (typeof source === "string") bytes = fs.readFileSync(source);
   else if (!(source instanceof ArrayBuffer) && !ArrayBuffer.isView(source)) {
-    throw $ERR_INVALID_ARG_TYPE(
-      "source",
-      ["string", "ArrayBuffer", "TypedArray", "DataView"],
-      source,
-    );
+    throw $ERR_INVALID_ARG_TYPE("source", ["string", "ArrayBuffer", "TypedArray", "DataView"], source);
   }
   return JSON.parse(loadFontNative(bytes));
 }
@@ -175,29 +170,22 @@ function stringList(name, value, fallback) {
   if (value === undefined) return fallback();
   if (!Array.isArray(value)) throw $ERR_INVALID_ARG_TYPE(name, "Array", value);
   for (let i = 0; i < value.length; i++) {
-    if (typeof value[i] !== "string")
-      throw $ERR_INVALID_ARG_TYPE(`${name}[${i}]`, "string", value[i]);
-    if (value[i].includes("\0"))
-      throw $ERR_INVALID_ARG_VALUE(`${name}[${i}]`, value[i], "must not contain NUL");
+    if (typeof value[i] !== "string") throw $ERR_INVALID_ARG_TYPE(`${name}[${i}]`, "string", value[i]);
+    if (value[i].includes("\0")) throw $ERR_INVALID_ARG_VALUE(`${name}[${i}]`, value[i], "must not contain NUL");
   }
   return value;
 }
 
 function listApps(options?) {
   options = validateOptions("options", options);
-  const dirs = stringList("options.dirs", options.dirs, () =>
-    xdgDataDirs().map((dir) => path.join(dir, "applications")),
-  );
+  const dirs = stringList("options.dirs", options.dirs, () => xdgDataDirs().map(dir => path.join(dir, "applications")));
   const locales = stringList("options.locales", options.locales, defaultLocales);
   return JSON.parse(desktopEntriesNative(dirs.join("\0"), locales.join("\0")));
 }
 
 /** Desktop Entry spec "Possible value types": `\s`, `\n`, `\t`, `\r`, `\\` in string values. */
 function unescapeValue(value) {
-  return value.replace(
-    /\\([sntr\\])/g,
-    (_, c) => ({ s: " ", n: "\n", t: "\t", r: "\r", "\\": "\\" })[c],
-  );
+  return value.replace(/\\([sntr\\])/g, (_, c) => ({ s: " ", n: "\n", t: "\t", r: "\r", "\\": "\\" })[c]);
 }
 
 function execError(exec, message) {
@@ -292,7 +280,7 @@ function expandExecRaw(exec, context) {
 function launchApp(entry, options) {
   if (typeof entry === "string") {
     const id = entry;
-    entry = listApps().find((e) => e.id === id);
+    entry = listApps().find(e => e.id === id);
     if (!entry) throw $ERR_INVALID_ARG_VALUE("entry", id, "is not an installed application id");
   } else if (entry === null || typeof entry !== "object") {
     throw $ERR_INVALID_ARG_TYPE("entry", ["string", "object"], entry);
@@ -303,9 +291,8 @@ function launchApp(entry, options) {
   let exec = entry.exec;
   const actionId = options.action;
   if (actionId !== undefined) {
-    const action = (entry.actions ?? []).find((a) => a.id === actionId);
-    if (!action)
-      throw $ERR_INVALID_ARG_VALUE("options.action", actionId, "is not an action of this entry");
+    const action = (entry.actions ?? []).find(a => a.id === actionId);
+    if (!action) throw $ERR_INVALID_ARG_VALUE("options.action", actionId, "is not an action of this entry");
     exec = action.exec;
   }
   if (typeof exec !== "string" || exec === "") {
@@ -575,10 +562,7 @@ function parseRon(source) {
     if (c === undefined) throw ronError(source, i, "unexpected end of input");
     if (c === '"') return quoted('"');
     if (c === "'") return quoted("'");
-    if (
-      c === "r" &&
-      (source[i + 1] === '"' || (source[i + 1] === "#" && /["#]/.test(source[i + 2] ?? "")))
-    ) {
+    if (c === "r" && (source[i + 1] === '"' || (source[i + 1] === "#" && /["#]/.test(source[i + 2] ?? "")))) {
       return rawString();
     }
     if (c === "b" && source[i + 1] === '"') {
@@ -611,8 +595,7 @@ function parseRon(source) {
       const body = parenBody();
       return body.fields ?? new Tuple(body.values);
     }
-    if (/[0-9+\-.]/.test(c) || source.startsWith("inf", i) || source.startsWith("NaN", i))
-      return number();
+    if (/[0-9+\-.]/.test(c) || source.startsWith("inf", i) || source.startsWith("NaN", i)) return number();
     if (IDENT_START.test(c)) {
       const name = ident();
       if (name === "true") return true;
@@ -696,7 +679,7 @@ function stringifyRon(value) {
   function block(open, close, entries, indent) {
     if (entries.length === 0) return open + close;
     const inner = indent + "    ";
-    return `${open}\n${entries.map((entry) => inner + entry(inner) + ",\n").join("")}${indent}${close}`;
+    return `${open}\n${entries.map(entry => inner + entry(inner) + ",\n").join("")}${indent}${close}`;
   }
 
   function fieldsOf(fields, indent) {
@@ -704,14 +687,14 @@ function stringifyRon(value) {
       "(",
       ")",
       Object.keys(fields)
-        .filter((key) => fields[key] !== undefined)
-        .map((key) => (inner) => `${key}: ${write(fields[key], inner)}`),
+        .filter(key => fields[key] !== undefined)
+        .map(key => inner => `${key}: ${write(fields[key], inner)}`),
       indent,
     );
   }
 
   function inline(values, indent) {
-    return `(${values.map((v) => write(v, indent)).join(", ")})`;
+    return `(${values.map(v => write(v, indent)).join(", ")})`;
   }
 
   function write(value, indent) {
@@ -741,13 +724,12 @@ function stringifyRon(value) {
         if (values !== undefined) return name + inline(values, indent);
         return name;
       }
-      if (value instanceof Uint8Array)
-        return ronString(new TextDecoder().decode(value)).replace(/^"/, 'b"');
+      if (value instanceof Uint8Array) return ronString(new TextDecoder().decode(value)).replace(/^"/, 'b"');
       if (Array.isArray(value))
         return block(
           "[",
           "]",
-          value.map((v) => (inner) => write(v, inner)),
+          value.map(v => inner => write(v, inner)),
           indent,
         );
       if (value instanceof Map) {
@@ -756,7 +738,7 @@ function stringifyRon(value) {
           "}",
           [...value].map(
             ([k, v]) =>
-              (inner) =>
+              inner =>
                 `${write(k, inner)}: ${write(v, inner)}`,
           ),
           indent,
@@ -777,7 +759,7 @@ const ron = Object.freeze({
   Some,
   Tuple,
   Enum,
-  some: (value) => new Some(value),
+  some: value => new Some(value),
   tuple: (...values) => new Tuple(values),
   variant: (name, payload) => {
     if (typeof name !== "string" || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
@@ -854,8 +836,7 @@ class Config {
     this.name = name;
     this.version = version;
     this.#userDir = path.join(base, relative);
-    this.#previousDir =
-      version > 1 ? path.join(base, "cosmic", name, `v${version - 1}`) : undefined;
+    this.#previousDir = version > 1 ? path.join(base, "cosmic", name, `v${version - 1}`) : undefined;
     // XDG variables win on Windows too, as for the config and state bases above.
     const defaults = isWindows
       ? [
@@ -864,7 +845,7 @@ class Config {
           env.ProgramData || "C:\\ProgramData",
         ].filter((dir): dir is string => Boolean(dir))
       : xdgDataDirs();
-    this.#defaultDirs = state ? [] : defaults.map((dir) => path.join(dir, relative));
+    this.#defaultDirs = state ? [] : defaults.map(dir => path.join(dir, relative));
   }
 
   get path() {
@@ -897,10 +878,7 @@ class Config {
     const text = stringifyRon(value);
     fs.mkdirSync(this.#userDir, { recursive: true });
     const target = path.join(this.#userDir, key);
-    const temp = path.join(
-      this.#userDir,
-      `${ATOMIC_PREFIX}.${key}.${process.pid}.${atomicCounter++}`,
-    );
+    const temp = path.join(this.#userDir, `${ATOMIC_PREFIX}.${key}.${process.pid}.${atomicCounter++}`);
     try {
       fs.writeFileSync(temp, text);
       fs.renameSync(temp, target);
@@ -932,8 +910,7 @@ class Config {
 
   /** Calls `listener(key)` whenever a key of this config changes on disk; returns the watcher. */
   watch(listener) {
-    if (typeof listener !== "function")
-      throw $ERR_INVALID_ARG_TYPE("listener", "function", listener);
+    if (typeof listener !== "function") throw $ERR_INVALID_ARG_TYPE("listener", "function", listener);
     fs.mkdirSync(this.#userDir, { recursive: true });
     const watcher = fs.watch(this.#userDir, { recursive: true }, (_event, filename) => {
       if (!filename) return;
@@ -966,10 +943,7 @@ function helperPath() {
   if (env) return env;
   const onPath = Bun.which("bun-cosmic");
   if (onPath) return onPath;
-  const beside = path.join(
-    path.dirname(process.execPath),
-    isWindows ? "bun-cosmic.exe" : "bun-cosmic",
-  );
+  const beside = path.join(path.dirname(process.execPath), isWindows ? "bun-cosmic.exe" : "bun-cosmic");
   if (fs.existsSync(beside)) return beside;
   const error = new Error(
     "bun-cosmic helper not found: build packages/bun-cosmic, then put it on PATH, next to bun, or in BUN_COSMIC_HELPER",
@@ -1053,7 +1027,7 @@ function openWindow(options) {
       ready.resolve();
       closed.resolve(result);
     }
-  })().catch((error) => {
+  })().catch(error => {
     ready.reject(error);
     closed.reject(error);
   });
@@ -1098,10 +1072,8 @@ async function notify(options) {
   const actions = validateOptions("options.actions", options.actions);
   for (const id of Object.keys(actions)) {
     const label = actions[id];
-    if (typeof label !== "string")
-      throw $ERR_INVALID_ARG_TYPE(`options.actions.${id}`, "string", label);
-    if (id.includes("="))
-      throw $ERR_INVALID_ARG_VALUE("options.actions", id, "action ids must not contain '='");
+    if (typeof label !== "string") throw $ERR_INVALID_ARG_TYPE(`options.actions.${id}`, "string", label);
+    if (id.includes("=")) throw $ERR_INVALID_ARG_VALUE("options.actions", id, "action ids must not contain '='");
     args.push(`--action=${id}=${label}`);
   }
   if (options.wait) args.push("--wait");

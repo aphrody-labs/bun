@@ -30,11 +30,7 @@ const ArrayPrototypeJoin = Array.prototype.join;
 const ArrayPrototypePush = Array.prototype.push;
 const ArrayPrototypeSlice = Array.prototype.slice;
 // node's kPartial comparison, fully native (NodeUtilTypesModule.cpp).
-const nodePartialDeepStrictEqual = $newCppFunction(
-  "NodeUtilTypesModule.cpp",
-  "jsFunctionPartialDeepStrictEqual",
-  2,
-);
+const nodePartialDeepStrictEqual = $newCppFunction("NodeUtilTypesModule.cpp", "jsFunctionPartialDeepStrictEqual", 2);
 const NumberIsNaN = Number.isNaN;
 const ObjectAssign = Object.assign;
 const ObjectDefineProperty = Object.defineProperty;
@@ -152,13 +148,7 @@ function fail(
   // eslint-disable-next-line @typescript-eslint/ban-types
   stackStartFn?: Function,
 ): never;
-function fail(
-  actual?: unknown,
-  expected?: unknown,
-  message?: unknown,
-  operator?: string,
-  stackStartFn?: Function,
-) {
+function fail(actual?: unknown, expected?: unknown, message?: unknown, operator?: string, stackStartFn?: Function) {
   const argsLen = arguments.length;
 
   let internalMessage = false;
@@ -241,11 +231,7 @@ const prototypeOk = function ok(...args) {
  * @returns {void}
  */
 /* eslint-disable no-restricted-properties */
-const prototypeEqual = function equal(
-  actual: unknown,
-  expected: unknown,
-  message?: string | Error,
-) {
+const prototypeEqual = function equal(actual: unknown, expected: unknown, message?: string | Error) {
   if (arguments.length < 2) {
     throw $ERR_MISSING_ARGS("actual", "expected");
   }
@@ -515,8 +501,7 @@ function expectedException(actual, expected, message, fn) {
       if (!message) {
         generatedMessage = true;
         message =
-          "The input did not match the regular expression " +
-          `${inspect(expected)}. Input:\n\n${inspect(str)}\n`;
+          "The input did not match the regular expression " + `${inspect(expected)}. Input:\n\n${inspect(str)}\n`;
       }
       throwError = true;
       // Handle primitives properly.
@@ -585,9 +570,7 @@ function expectedException(actual, expected, message, fn) {
         generatedMessage = true;
         const name = expected.name ? `"${expected.name}" ` : "";
         const inspect = lazyInspect();
-        message =
-          `The ${name}validation function is expected to return` +
-          ` "true". Received ${inspect(res)}`;
+        message = `The ${name}validation function is expected to return` + ` "true". Received ${inspect(res)}`;
 
         if (Error.isError(actual)) {
           message += `\n\nCaught error:\n\n${actual}`;
@@ -627,10 +610,7 @@ function checkIsPromise(obj): obj is Promise<unknown> {
   // `catch` handler.
   return (
     isPromise(obj) ||
-    (obj !== null &&
-      typeof obj === "object" &&
-      typeof obj.then === "function" &&
-      typeof obj.catch === "function")
+    (obj !== null && typeof obj === "object" && typeof obj.then === "function" && typeof obj.catch === "function")
   );
 }
 
@@ -657,12 +637,7 @@ async function waitForActual(promiseFn) {
   return NO_EXCEPTION_SENTINEL;
 }
 
-function expectsError(
-  stackStartFn: Function,
-  actual: unknown,
-  error?: unknown,
-  message?: string | Error,
-) {
+function expectsError(stackStartFn: Function, actual: unknown, error?: unknown, message?: string | Error) {
   if (typeof error === "string") {
     if (arguments.length === 4) {
       throw $ERR_INVALID_ARG_TYPE("error", ["Object", "Error", "Function", "RegExp"], error);
@@ -675,10 +650,7 @@ function expectsError(
         throw $ERR_INVALID_ARG_VALUE("error", error, "may not be an empty object");
       }
     } else if (actual === error) {
-      throw $ERR_AMBIGUOUS_ARGUMENT(
-        "error/message",
-        `The error "${actual}" is identical to the message.`,
-      );
+      throw $ERR_AMBIGUOUS_ARGUMENT("error/message", `The error "${actual}" is identical to the message.`);
     }
     message = error;
     error = undefined;
@@ -692,8 +664,7 @@ function expectsError(
       details += ` (${(error as Error).name})`;
     }
     details += message ? `: ${message}` : ".";
-    const fnType =
-      stackStartFn === kQualifiedStackNames["assert.rejects"] ? "rejection" : "exception";
+    const fnType = stackStartFn === kQualifiedStackNames["assert.rejects"] ? "rejection" : "exception";
     innerFail({
       actual: undefined,
       expected: error,
@@ -736,8 +707,7 @@ function expectsNoError(stackStartFn, actual, error?, message?) {
 
   if (!error || hasMatchingError(actual, error)) {
     const details = message ? `: ${message}` : ".";
-    const fnType =
-      stackStartFn === kQualifiedStackNames["assert.doesNotReject"] ? "rejection" : "exception";
+    const fnType = stackStartFn === kQualifiedStackNames["assert.doesNotReject"] ? "rejection" : "exception";
     innerFail({
       actual,
       expected: error,
@@ -879,10 +849,7 @@ function internalMatch(string, regexp, message, fn) {
     throw $ERR_INVALID_ARG_TYPE("regexp", ["RegExp"], regexp);
   }
   const match = fn === Assert.prototype.match;
-  if (
-    typeof string !== "string" ||
-    (RegExpPrototypeExec.$call(regexp, string) !== null) !== match
-  ) {
+  if (typeof string !== "string" || (RegExpPrototypeExec.$call(regexp, string) !== null) !== match) {
     if (message instanceof Error) {
       throw message;
     }
@@ -893,8 +860,7 @@ function internalMatch(string, regexp, message, fn) {
     // 'The input was expected to not match the regular expression ' +
     message ||=
       typeof string !== "string"
-        ? 'The "string" argument must be of type string. Received type ' +
-          `${typeof string} (${inspect(string)})`
+        ? 'The "string" argument must be of type string. Received type ' + `${typeof string} (${inspect(string)})`
         : (match
             ? "The input did not match the regular expression "
             : "The input was expected to not match the regular expression ") +
@@ -939,11 +905,7 @@ Object.defineProperty(assert, "CallTracker", {
   get() {
     if (CallTracker === undefined) {
       const { deprecate } = require("internal/util/deprecate");
-      CallTracker = deprecate(
-        require("internal/assert/calltracker"),
-        "assert.CallTracker is deprecated.",
-        "DEP0173",
-      );
+      CallTracker = deprecate(require("internal/assert/calltracker"), "assert.CallTracker is deprecated.", "DEP0173");
     }
     return CallTracker;
   },

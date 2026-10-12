@@ -25,7 +25,6 @@ export function releaseProxyConfig(config: string): string {
 
 if (import.meta.main) {
   const [input, output] = process.argv.slice(2);
-  if (!input || !output)
-    throw new Error("Usage: bun release-nginx.ts <current-config> <planned-config>");
+  if (!input || !output) throw new Error("Usage: bun release-nginx.ts <current-config> <planned-config>");
   writeFileSync(output, releaseProxyConfig(readFileSync(input, "utf8")));
 }

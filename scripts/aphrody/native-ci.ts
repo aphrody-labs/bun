@@ -11,7 +11,7 @@ import { computeSourceIdentity } from "../build/fetch-cli.ts";
 
 export type Gate = { id: string; command: string[]; env?: { CLIPPY_CONF_DIR: string } };
 export const gates: Gate[] = [
-  ...["check", "test", "clippy"].map((action) => ({
+  ...["check", "test", "clippy"].map(action => ({
     id: `rust-google-${action}`,
     ...(action === "clippy" ? { env: { CLIPPY_CONF_DIR: "packages/bun-google/aphrody" } } : {}),
     command: [
@@ -30,7 +30,7 @@ export const gates: Gate[] = [
   })),
   { id: "install", command: ["bun", "install", "--frozen-lockfile", "--ignore-scripts"] },
   { id: "rust-dependencies", command: ["bun", "scripts/aphrody/native-ci.ts", "dependencies"] },
-  ...["check", "clippy"].map((action) => ({
+  ...["check", "clippy"].map(action => ({
     id: `rust-install-${action}`,
     ...(action === "clippy" ? { env: { CLIPPY_CONF_DIR: "." } } : {}),
     command: [
@@ -44,7 +44,7 @@ export const gates: Gate[] = [
       ...(action === "clippy" ? ["--no-deps", "--", "-D", "warnings"] : []),
     ],
   })),
-  ...["check", "test", "clippy"].map((action) => ({
+  ...["check", "test", "clippy"].map(action => ({
     id: `rust-web-${action}`,
     ...(action === "clippy" ? { env: { CLIPPY_CONF_DIR: "packages/bun-aphrody-web" } } : {}),
     command: [
@@ -96,16 +96,11 @@ export function gateEnvironment(
   checkout: string,
   inherited: Record<string, string | undefined>,
 ): Record<string, string | undefined> {
-  return gate.env
-    ? { ...inherited, CLIPPY_CONF_DIR: resolve(checkout, gate.env.CLIPPY_CONF_DIR) }
-    : { ...inherited };
+  return gate.env ? { ...inherited, CLIPPY_CONF_DIR: resolve(checkout, gate.env.CLIPPY_CONF_DIR) } : { ...inherited };
 }
 export async function cargoPathManifests(checkout: string) {
   const paths = new Map<string, string>();
-  const manifests = [
-    "Cargo.toml",
-    ...new Bun.Glob("src/**/Cargo.toml").scanSync({ cwd: checkout, onlyFiles: true }),
-  ];
+  const manifests = ["Cargo.toml", ...new Bun.Glob("src/**/Cargo.toml").scanSync({ cwd: checkout, onlyFiles: true })];
   for (const manifest of manifests) {
     const parsed = Bun.TOML.parse(await readFile(join(checkout, manifest), "utf8"));
     function visit(object: unknown, alias = "", dependency = false) {
@@ -121,10 +116,7 @@ export async function cargoPathManifests(checkout: string) {
         visit(
           value,
           key,
-          dependency ||
-            ["dependencies", "dev-dependencies", "build-dependencies", "patch", "replace"].includes(
-              key,
-            ),
+          dependency || ["dependencies", "dev-dependencies", "build-dependencies", "patch", "replace"].includes(key),
         );
     }
     visit(parsed);
@@ -141,11 +133,7 @@ async function verifyCargoManifest(path: string, name: string) {
 }
 async function verifyCargoPathManifests(checkout: string, absentSources: string[] = []) {
   for (const [path, name] of await cargoPathManifests(checkout)) {
-    if (
-      absentSources.some(
-        (destination) => path.startsWith(destination + "/") || path.startsWith(destination + "\\"),
-      )
-    )
+    if (absentSources.some(destination => path.startsWith(destination + "/") || path.startsWith(destination + "\\")))
       continue;
     await verifyCargoManifest(path, name);
   }
@@ -156,14 +144,11 @@ export async function rustDependencyPlan(checkout: string) {
   if (directory.isSymbolicLink() || !directory.isDirectory() || (await realpath(vendor)) !== vendor)
     throw Error("Dependency vendor directory must remain canonical");
   for (const path of [join(checkout, "build"), join(checkout, "build/native-ci-downloads")]) {
-    const state = await lstat(path).catch((error) => {
+    const state = await lstat(path).catch(error => {
       if (error.code === "ENOENT") return undefined;
       throw error;
     });
-    if (
-      state &&
-      (state.isSymbolicLink() || !state.isDirectory() || (await realpath(path)) !== path)
-    )
+    if (state && (state.isSymbolicLink() || !state.isDirectory() || (await realpath(path)) !== path))
       throw Error("Dependency download cache must remain within its checkout");
   }
   const dependencies = await Promise.all(
@@ -189,23 +174,19 @@ export async function rustDependencyPlan(checkout: string) {
         source: UUTILS_SOURCE,
         patches: UUTILS_PATCHES,
       },
-    ].map(async (dependency) => {
+    ].map(async dependency => {
       const destination = join(vendor, dependency.name);
-      const patches = dependency.patches.map((patch) => resolve(checkout, patch));
+      const patches = dependency.patches.map(patch => resolve(checkout, patch));
       const identity = computeSourceIdentity(
         dependency.source.commit,
-        await Promise.all(patches.map((patch) => readFile(patch, "utf8"))),
+        await Promise.all(patches.map(patch => readFile(patch, "utf8"))),
       );
-      const state = await lstat(destination).catch((error) => {
+      const state = await lstat(destination).catch(error => {
         if (error.code === "ENOENT") return undefined;
         throw error;
       });
       if (state) {
-        if (
-          state.isSymbolicLink() ||
-          !state.isDirectory() ||
-          (await realpath(destination)) !== destination
-        )
+        if (state.isSymbolicLink() || !state.isDirectory() || (await realpath(destination)) !== destination)
           throw Error(`Dependency ${dependency.name} destination must remain canonical`);
         const stamp = await lstat(join(destination, ".ref"));
         if (
@@ -221,16 +202,11 @@ export async function rustDependencyPlan(checkout: string) {
   );
   await verifyCargoPathManifests(
     checkout,
-    dependencies
-      .filter((dependency) => !dependency.present)
-      .map((dependency) => dependency.destination),
+    dependencies.filter(dependency => !dependency.present).map(dependency => dependency.destination),
   );
   return dependencies;
 }
-export async function provisionRustDependencies(
-  checkout: string,
-  fetchSource: (command: string[]) => Promise<number>,
-) {
+export async function provisionRustDependencies(checkout: string, fetchSource: (command: string[]) => Promise<number>) {
   const dependencies = await rustDependencyPlan(checkout); // Preflight all destinations before the first fetch.
   for (const dependency of dependencies) {
     const command = [
@@ -253,19 +229,14 @@ export async function provisionRustDependencies(
       (await readFile(join(dependency.destination, ".ref"), "utf8")).trim() !== dependency.identity
     )
       throw Error(`Dependency ${dependency.name} owner fetch did not qualify`);
-    await verifyCargoManifest(
-      join(dependency.destination, dependency.manifest),
-      dependency.package,
-    );
+    await verifyCargoManifest(join(dependency.destination, dependency.manifest), dependency.package);
     console.log(
       JSON.stringify({
         dependency: dependency.name,
         repository: dependency.source.repo,
         revision: dependency.source.commit,
         sourceIdentity: dependency.identity,
-        manifestSha256: hash(
-          await readFile(join(dependency.destination, dependency.manifest), "utf8"),
-        ),
+        manifestSha256: hash(await readFile(join(dependency.destination, dependency.manifest), "utf8")),
       }),
     );
   }
@@ -283,25 +254,18 @@ export async function preflightArchiveSources(checkout: string, sources: Archive
   if (!parent.isDirectory() || parent.isSymbolicLink() || (await realpath(vendor)) !== vendor)
     throw Error("Archive vendor allocation must remain canonical");
   for (const source of sources) {
-    if (
-      !/^[a-zA-Z0-9_-]+$/.test(source.name) ||
-      source.destination !== join(checkout, "vendor", source.name)
-    )
+    if (!/^[a-zA-Z0-9_-]+$/.test(source.name) || source.destination !== join(checkout, "vendor", source.name))
       throw Error(`Archive ${source.name} destination escapes the declared vendor allocation`);
     const identity = computeSourceIdentity(
       source.commit,
-      await Promise.all(source.patches.map((patch) => readFile(patch, "utf8"))),
+      await Promise.all(source.patches.map(patch => readFile(patch, "utf8"))),
     );
-    const state = await lstat(source.destination).catch((error) => {
+    const state = await lstat(source.destination).catch(error => {
       if (error.code === "ENOENT") return undefined;
       throw error;
     });
     if (!state) continue;
-    if (
-      !state.isDirectory() ||
-      state.isSymbolicLink() ||
-      (await realpath(source.destination)) !== source.destination
-    )
+    if (!state.isDirectory() || state.isSymbolicLink() || (await realpath(source.destination)) !== source.destination)
       throw Error(`Archive ${source.name} destination must remain canonical`);
     const stamp = await lstat(join(source.destination, ".ref"));
     if (
@@ -309,9 +273,7 @@ export async function preflightArchiveSources(checkout: string, sources: Archive
       stamp.isSymbolicLink() ||
       (await readFile(join(source.destination, ".ref"), "utf8")).trim() !== identity
     )
-      throw Error(
-        `Archive ${source.name} source identity differs; configure refused and source preserved`,
-      );
+      throw Error(`Archive ${source.name} source identity differs; configure refused and source preserved`);
   }
 }
 export async function configureRustDependencies(
@@ -332,7 +294,7 @@ export async function configureRustDependencies(
     ["build/native-ci-downloads/cargo-config.sha256", false],
   ] as const) {
     const path = join(checkout, relative);
-    const state = await lstat(path).catch((error) => {
+    const state = await lstat(path).catch(error => {
       if (error.code === "ENOENT") return undefined;
       throw error;
     });
@@ -345,7 +307,7 @@ export async function configureRustDependencies(
       throw Error(`Configure prerequisite ${relative} must remain canonical`);
   }
   const config = join(checkout, ".cargo/config.toml");
-  const cargoDirectory = await lstat(dirname(config)).catch((error) => {
+  const cargoDirectory = await lstat(dirname(config)).catch(error => {
     if (error.code === "ENOENT") return undefined;
     throw error;
   });
@@ -356,7 +318,7 @@ export async function configureRustDependencies(
       (await realpath(dirname(config))) !== dirname(config))
   )
     throw Error("Cargo configuration directory must remain canonical");
-  const existing = await lstat(config).catch((error) => {
+  const existing = await lstat(config).catch(error => {
     if (error.code === "ENOENT") return undefined;
     throw error;
   });
@@ -374,11 +336,10 @@ export async function configureRustDependencies(
       if (backupDirectory) {
         await mkdir(backupDirectory, { recursive: true, mode: 0o700 });
         const backup = join(backupDirectory, hash(bytes.toString()) + ".toml");
-        await writeFile(backup, bytes, { mode: 0o600, flag: "wx" }).catch((error) => {
+        await writeFile(backup, bytes, { mode: 0o600, flag: "wx" }).catch(error => {
           if (error.code !== "EEXIST") throw error;
         });
-        if (!(await readFile(backup)).equals(bytes))
-          throw Error("Cargo configuration backup differs");
+        if (!(await readFile(backup)).equals(bytes)) throw Error("Cargo configuration backup differs");
       }
       throw Error("Unknown Cargo configuration preserved; owner configuration refused");
     }
@@ -392,9 +353,7 @@ export async function configureRustDependencies(
     "--cache-dir=build/native-ci-downloads",
     "--configure-only",
   ];
-  if (
-    await invoke(command, { BUILDKITE_COMMIT: revision, GITHUB_SHA: revision, GIT_SHA: revision })
-  )
+  if (await invoke(command, { BUILDKITE_COMMIT: revision, GITHUB_SHA: revision, GIT_SHA: revision }))
     throw Error("Rust prerequisite owner configuration failed");
   const output = join(checkout, "build/debug/codegen/build_options.rs");
   const state = await lstat(output);
@@ -420,26 +379,19 @@ async function configuredArchiveSources(checkout: string) {
     profile: "debug",
     overrides: { ci: true, cacheDir: join(checkout, "build/native-ci-downloads") },
   });
-  if (
-    cfg.cwd !== checkout ||
-    cfg.os !== cfg.host.os ||
-    cfg.buildDir !== join(checkout, "build/debug")
-  )
+  if (cfg.cwd !== checkout || cfg.os !== cfg.host.os || cfg.buildDir !== join(checkout, "build/debug"))
     throw Error("Rust prerequisite configuration requires the declared native debug allocation");
-  return allDeps.flatMap((dependency) => {
+  return allDeps.flatMap(dependency => {
     if (dependency.enabled && !dependency.enabled(cfg)) return [];
     const source = depSource(cfg, dependency);
     if (source.kind !== "github-archive") return [];
-    const patches =
-      typeof dependency.patches === "function"
-        ? dependency.patches(cfg)
-        : (dependency.patches ?? []);
+    const patches = typeof dependency.patches === "function" ? dependency.patches(cfg) : (dependency.patches ?? []);
     return [
       {
         name: dependency.name,
         destination: depSourceDir(cfg, dependency.name),
         commit: source.commit,
-        patches: patches.map((patch) => resolve(checkout, patch)),
+        patches: patches.map(patch => resolve(checkout, patch)),
       },
     ];
   });
@@ -452,9 +404,9 @@ export function qualification(results: { id: string; exitCode: number }[]) {
   return (
     results.length === gates.length &&
     gates.every(
-      (gate) =>
-        results.filter((result) => result.id === gate.id).length === 1 &&
-        results.find((result) => result.id === gate.id)?.exitCode === 0,
+      gate =>
+        results.filter(result => result.id === gate.id).length === 1 &&
+        results.find(result => result.id === gate.id)?.exitCode === 0,
     )
   );
 }
@@ -488,12 +440,7 @@ async function worker(revision: string, id: string): Promise<number> {
   const dirty = Bun.spawnSync(["git", "status", "--porcelain", "--untracked-files=all"], {
     cwd: root,
   });
-  if (
-    head.exitCode ||
-    dirty.exitCode ||
-    head.stdout.toString().trim() !== revision ||
-    dirty.stdout.length
-  )
+  if (head.exitCode || dirty.exitCode || head.stdout.toString().trim() !== revision || dirty.stdout.length)
     throw Error("Factory source must be clean at the requested revision");
   const directory = join(process.env.APHRODY_ARTIFACT_ROOT, "native-ci", id);
   await mkdir(dirname(directory), { recursive: true });
@@ -589,7 +536,7 @@ export async function main(args: string[]): Promise<number> {
       root !== config.sourceAllocation.bun
     )
       throw Error("Dependency provisioning requires the declared locked Infra factory worker");
-    await provisionRustDependencies(root, async (command) => {
+    await provisionRustDependencies(root, async command => {
       const child = Bun.spawn(command, { cwd: root, stdout: "inherit", stderr: "inherit" });
       return child.exited;
     });
@@ -624,12 +571,7 @@ export async function main(args: string[]): Promise<number> {
     const dirty = Bun.spawnSync(["git", "status", "--porcelain", "--untracked-files=all"], {
       cwd: root,
     });
-    if (
-      after.exitCode ||
-      dirty.exitCode ||
-      after.stdout.toString() !== head.stdout.toString() ||
-      dirty.stdout.length
-    )
+    if (after.exitCode || dirty.exitCode || after.stdout.toString() !== head.stdout.toString() || dirty.stdout.length)
       throw Error("Owner configuration must preserve immutable clean Bun sources");
     return 0;
   }
@@ -646,33 +588,15 @@ export async function main(args: string[]): Promise<number> {
     throw Error("Unrecognized owner configuration");
   const factoryRoot = resolve(root, config.factoryRoot);
   const owner = await import(join(factoryRoot, config.factoryModule));
-  if (action === "status")
-    return owner.runBuildFactory(["status", "--job", values.id!, "--tail", "40"], factoryRoot);
+  if (action === "status") return owner.runBuildFactory(["status", "--job", values.id!, "--tail", "40"], factoryRoot);
   const factory = await owner.readFactoryConfig(factoryRoot);
   const fusion = await Bun.file(join(root, config.fusionConfig)).json();
-  if (
-    !factory ||
-    factory.repositories[config.repository] !== fusion.repositories[config.repository]
-  )
+  if (!factory || factory.repositories[config.repository] !== fusion.repositories[config.repository])
     throw Error("Infra and fusion factory must declare the same qualified source checkout");
-  const command = [
-    "bun",
-    "scripts/aphrody/native-ci.ts",
-    "worker",
-    "--revision",
-    values.revision!,
-    "--id",
-    values.id!,
-  ];
+  const command = ["bun", "scripts/aphrody/native-ci.ts", "worker", "--revision", values.revision!, "--id", values.id!];
   const plan = owner.buildFactoryPlan(factory, config.repository, values.revision!, command);
   if (action === "plan") {
-    console.log(
-      JSON.stringify(
-        { ...plan, gates, publicationAllowed: false, schedule: config.schedule },
-        null,
-        2,
-      ),
-    );
+    console.log(JSON.stringify({ ...plan, gates, publicationAllowed: false, schedule: config.schedule }, null, 2));
     return 0;
   }
   return owner.runBuildFactory(

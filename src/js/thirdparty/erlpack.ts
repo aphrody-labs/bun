@@ -199,9 +199,7 @@ class Reader {
 
   text(length: number) {
     this.need(length, "Reading sequence past the end of the buffer.");
-    const s = Buffer.from(this.data.buffer, this.data.byteOffset + this.offset, length).toString(
-      "utf8",
-    );
+    const s = Buffer.from(this.data.buffer, this.data.byteOffset + this.offset, length).toString("utf8");
     this.offset += length;
     return s;
   }
@@ -278,8 +276,7 @@ class Reader {
       }
       case LIST_EXT: {
         const list = this.array(this.u32());
-        if (this.u8() !== NIL_EXT)
-          throw new Error("List doesn't end with a tail marker, but it must!");
+        if (this.u8() !== NIL_EXT) throw new Error("List doesn't end with a tail marker, but it must!");
         return list;
       }
       case MAP_EXT: {
@@ -322,8 +319,7 @@ class Reader {
         return { mod: this.term(), fun: this.term(), arity: this.term() };
       case COMPRESSED: {
         const size = this.u32();
-        const inflateSync = require("node:zlib")
-          .inflateSync as typeof import("node:zlib").inflateSync;
+        const inflateSync = require("node:zlib").inflateSync as typeof import("node:zlib").inflateSync;
         const inflated = inflateSync(this.data.subarray(this.offset));
         this.offset = this.data.length;
         if (inflated.length !== size) throw new Error("Failed to uncompresss compressed item");
@@ -336,13 +332,10 @@ class Reader {
 }
 
 function unpack(data: unknown) {
-  if (data === null || typeof data !== "object")
-    throw new Error("Attempting to unpack a non-object.");
+  if (data === null || typeof data !== "object") throw new Error("Attempting to unpack a non-object.");
   let bytes: Uint8Array;
-  if (ArrayBuffer.isView(data))
-    bytes = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-  else if (data instanceof ArrayBuffer || data instanceof SharedArrayBuffer)
-    bytes = new Uint8Array(data);
+  if (ArrayBuffer.isView(data)) bytes = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+  else if (data instanceof ArrayBuffer || data instanceof SharedArrayBuffer) bytes = new Uint8Array(data);
   else bytes = new Uint8Array(0);
   if (bytes.length === 0) throw new Error("Zero length buffer.");
   return new Reader(bytes).term();
