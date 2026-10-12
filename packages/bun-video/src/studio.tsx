@@ -25,6 +25,8 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
   const [playbackRate, setPlaybackRate] = useState(1);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(muted);
+  const [caption, setCaption] = useState(-1);
+  const [textTracks, setTextTracks] = useState<{ index: number; label: string }[]>([]);
   const [variantSrc, setVariantSrc] = useState<string | undefined>();
   const [progress, setProgress] = useState({ currentTime: 0, duration: 0 });
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -35,6 +37,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
     localStorage.setItem(storageKey, JSON.stringify(localAssets.filter(asset => !asset.src.startsWith("blob:"))));
   }, [localAssets, storageKey]);
   useEffect(() => { setVariantSrc(undefined); }, [selectedId]);
+  useEffect(() => { setCaption(-1); setTextTracks([]); }, [selectedId, variantSrc]);
   useEffect(() => { if (videoRef.current) videoRef.current.playbackRate = playbackRate; }, [selectedId, playbackRate, variantSrc]);
   useEffect(() => { if (videoRef.current) videoRef.current.volume = volume; }, [selectedId, volume, variantSrc]);
   useEffect(() => {
@@ -98,13 +101,35 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
   const handleKeys = (event: React.KeyboardEvent<HTMLElement>) => {
     const video = videoRef.current;
     if (!video) return;
-    if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-      event.preventDefault(); video.currentTime = Math.max(0, video.currentTime + (event.key === "ArrowRight" ? 10 : -10));
-    } else if (event.key === " ") {
+    const key = event.key.toLowerCase();
+    if (key === "arrowright" || key === "arrowleft" || key === "j" || key === "l") {
+      event.preventDefault();
+      const delta = key === "arrowright" || key === "l" ? 10 : -10;
+      const end = Number.isFinite(video.duration) ? video.duration : Infinity;
+      video.currentTime = Math.min(end, Math.max(0, video.currentTime + delta));
+    } else if (event.key === " " || key === "k") {
       event.preventDefault(); void (video.paused ? video.play() : video.pause());
-    } else if (event.key.toLowerCase() === "m") {
+    } else if (key === "m") {
       event.preventDefault(); setIsMuted(current => !current);
+    } else if (key === "c" && textTracks.length > 0) {
+      event.preventDefault(); selectCaption(caption === -1 ? 0 : -1);
+    } else if (key === "f") {
+      event.preventDefault(); fullscreen();
+    } else if (key === "p") {
+      event.preventDefault(); pictureInPicture();
     }
+  };
+  const syncTextTracks = () => {
+    const tracks = videoRef.current?.textTracks;
+    if (!tracks) return;
+    setTextTracks(Array.from(tracks).map((track, index) => ({ index, label: track.label || track.language || `Sous-titre ${index + 1}` })));
+    setCaption(Array.from(tracks).findIndex(track => track.mode === "showing"));
+  };
+  const selectCaption = (index: number) => {
+    const tracks = videoRef.current?.textTracks;
+    if (!tracks || index < -1 || index >= tracks.length) return;
+    Array.from(tracks).forEach((track, current) => { track.mode = current === index ? "showing" : "disabled"; });
+    setCaption(index);
   };
   const reportPlayback = () => { const video = videoRef.current; if (!video) return; const state = { currentTime: video.currentTime, duration: Number.isFinite(video.duration) ? video.duration : 0, paused: video.paused }; setProgress(state); if (storageKey && selected) localStorage.setItem(`${storageKey}:position:${selected.id}`, String(state.currentTime)); onPlayback?.(state); };
   const restorePosition = () => { const video = videoRef.current; if (!video || !storageKey || !selected) return; const value = Number(localStorage.getItem(`${storageKey}:position:${selected.id}`)); if (Number.isFinite(value) && value > 0 && value < video.duration) video.currentTime = value; reportPlayback(); };
@@ -128,7 +153,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
       </aside>
       <main>
         {selected ? (
-          <video ref={videoRef} key={`${selected.id}-${variantSrc ?? selected.src}`} controls playsInline preload="metadata" autoPlay={autoPlay} loop={loop} muted={isMuted} crossOrigin={selected.crossOrigin} poster={selected.poster} aria-label={selected.alt ?? selected.title} src={variantSrc ?? selected.src} onLoadedMetadata={restorePosition} onTimeUpdate={reportPlayback} onPlay={reportPlayback} onPause={reportPlayback} onEnded={() => selectRelative(1)} onError={() => setError(`Lecture impossible : ${selected.title}`)}>
+          <video ref={videoRef} key={`${selected.id}-${variantSrc ?? selected.src}`} controls playsInline preload="metadata" autoPlay={autoPlay} loop={loop} muted={isMuted} crossOrigin={selected.crossOrigin} poster={selected.poster} aria-label={selected.alt ?? selected.title} src={variantSrc ?? selected.src} onLoadedMetadata={() => { syncTextTracks(); restorePosition(); }} onTimeUpdate={reportPlayback} onPlay={reportPlayback} onPause={reportPlayback} onEnded={() => selectRelative(1)} onError={() => setError(`Lecture impossible : ${selected.title}`)}>
             {selected.subtitles?.map(track => <track key={`${track.srclang}-${track.src}`} kind="subtitles" src={track.src} srcLang={track.srclang} label={track.label} default={track.default} />)}
           </video>
         ) : <p>Aucun média sélectionné.</p>}
@@ -140,6 +165,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
         {selected && <label>Vitesse <select value={playbackRate} onChange={event => setPlaybackRate(Number(event.target.value))}><option value="0.5">0,5×</option><option value="0.75">0,75×</option><option value="1">1×</option><option value="1.25">1,25×</option><option value="1.5">1,5×</option><option value="2">2×</option></select></label>}
         {selected && <label>Volume <input type="range" min="0" max="1" step="0.05" value={volume} onChange={event => setVolume(Number(event.target.value))} /></label>}
         {selected && <button type="button" aria-pressed={isMuted} onClick={() => setIsMuted(current => !current)}>{isMuted ? "Activer le son" : "Couper le son"}</button>}
+        {textTracks.length > 0 && <label>Sous-titres <select value={caption} onChange={event => selectCaption(Number(event.target.value))}><option value={-1}>Désactivés</option>{textTracks.map(track => <option key={track.index} value={track.index}>{track.label}</option>)}</select></label>}
         {selected?.variants && <label>Qualité <select value={variantSrc ?? selected.src} onChange={event => setVariantSrc(event.target.value === selected.src ? undefined : event.target.value)}><option value={selected.src}>Auto</option>{selected.variants.map(variant => <option key={variant.src} value={variant.src}>{variant.label}</option>)}</select></label>}
         {selected && isHttpSource(selected.src) && <button type="button" onClick={() => void inspectSelected()} disabled={loadingMetadata}>{loadingMetadata ? "Analyse…" : "Analyser avec yt-dlp"}</button>}
         {metadata && <pre>{JSON.stringify({ title: metadata.title, id: metadata.id, formats: metadata.formats?.length ?? 0 }, null, 2)}</pre>}
