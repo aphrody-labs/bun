@@ -55,6 +55,12 @@ export function VideoStudio({ assets, initialAssetId, className, cache, autoPlay
     if (file && (file.type.startsWith("video/") || file.type.startsWith("audio/"))) addFile(file);
     else if (file) setError("Le fichier doit être vidéo ou audio");
   };
+  const removeAsset = (id: string) => {
+    const asset = localAssets.find(item => item.id === id);
+    if (asset?.src.startsWith("blob:")) URL.revokeObjectURL(asset.src);
+    const remaining = localAssets.filter(item => item.id !== id);
+    setLocalAssets(remaining); if (selectedId === id) setSelectedId(remaining[0]?.id); setMetadata(null);
+  };
   const handleKeys = (event: React.KeyboardEvent<HTMLElement>) => {
     const video = videoRef.current;
     if (!video) return;
@@ -77,7 +83,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, autoPlay
         </form>
         {localAssets.map(asset => (
           <button key={asset.id} type="button" aria-pressed={asset.id === selected?.id} onClick={() => { setError(null); setSelectedId(asset.id); }}>
-            {asset.title}
+            {asset.title} <span><button type="button" aria-label={`Supprimer ${asset.title}`} onClick={event => { event.stopPropagation(); removeAsset(asset.id); }}>×</button></span>
           </button>
         ))}
       </aside>
