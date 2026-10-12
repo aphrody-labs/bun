@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { extractYtDlp, type YtDlpResult } from "./ytdlp";
+import type { CrawlerCache } from "./cache";
 
 export interface StudioAsset { readonly id: string; readonly title: string; readonly src: string; readonly type?: string; }
-export interface VideoStudioProps { readonly assets: readonly StudioAsset[]; readonly initialAssetId?: string; readonly className?: string; }
+export interface VideoStudioProps { readonly assets: readonly StudioAsset[]; readonly initialAssetId?: string; readonly className?: string; readonly cache?: CrawlerCache; }
 
 /** Compact React studio surface for browsing assets and driving the Bun Video pipeline. */
-export function VideoStudio({ assets, initialAssetId, className }: VideoStudioProps) {
+export function VideoStudio({ assets, initialAssetId, className, cache }: VideoStudioProps) {
   const [localAssets, setLocalAssets] = useState<readonly StudioAsset[]>(assets);
   const first = initialAssetId ?? localAssets[0]?.id;
   const [selectedId, setSelectedId] = useState(first);
@@ -25,7 +26,13 @@ export function VideoStudio({ assets, initialAssetId, className }: VideoStudioPr
   const inspectSelected = async () => {
     if (!selected || !/^https?:$/.test(new URL(selected.src).protocol)) return;
     setLoadingMetadata(true); setError(null);
-    try { setMetadata(await extractYtDlp(selected.src)); } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); } finally { setLoadingMetadata(false); }
+    try {
+      const key = `yt-dlp:${selected.src}`;
+      const cached = await cache?.get<YtDlpResult>(key);
+      const result = cached ?? await extractYtDlp(selected.src);
+      if (!cached) await cache?.set(key, result);
+      setMetadata(result);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); } finally { setLoadingMetadata(false); }
   };
   const addFile = (file: File) => {
     const asset = { id: `file-${Date.now()}`, title: file.name, src: URL.createObjectURL(file), type: file.type };
