@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {waitForTurn} from '../audio/sort-by-priority';
 
 test('does not resolve a running waiter after it got cancelled for being stale', async () => {

@@ -1,7 +1,7 @@
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { saveFault, timedWrite } from "./case.mjs";
 import { slowest } from "./sequences.mjs";
 import { score, UNDO_WRITE_MAX_MS } from "./report.mjs";

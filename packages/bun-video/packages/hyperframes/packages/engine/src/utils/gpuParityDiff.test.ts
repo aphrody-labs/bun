@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { deflateSync } from "node:zlib";
 import {
   diffGpuParityFrames,
@@ -103,7 +103,7 @@ function makePng(width: number, height: number, pixels: number[]): Buffer {
     PNG_SIG,
     makeChunk("IHDR", ihdr),
     makeChunk("IDAT", idat),
-    makeChunk("IEND", Buffer.alloc(0)),
+    makeChunk("IEND", new Uint8Array(0)),
   ]);
 }
 

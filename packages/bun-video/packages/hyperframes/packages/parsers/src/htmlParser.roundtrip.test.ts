@@ -4,7 +4,7 @@
  * T1 — parse→serialize round-trip (DOM/timing model only).
  * Scope: GSAP script fidelity is T6 territory; these tests cover element structure and timing.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

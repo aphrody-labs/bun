@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { thumbnailScheduler } from "../player/lib/thumbnailScheduler";
 // By package name, as a host imports it: the test fails if the export goes.
 import { useThumbnailStill, type ThumbnailStill } from "@hyperframes/studio";

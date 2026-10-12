@@ -5,7 +5,7 @@
 // through the history path, Undo restores it, and a 409 shows the banner.
 import { act, createElement, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 // Backend/storage mocking only, standing in for a host's own server and
 // persistence — not part of the host's integration code under test.
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";

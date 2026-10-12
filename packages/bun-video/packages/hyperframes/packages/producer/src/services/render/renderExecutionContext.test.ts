@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import type { ProducerLogger } from "../../logger.js";
 import type { RenderJob } from "../renderOrchestrator.js";
 import { RenderExecutionContext } from "./renderExecutionContext.js";

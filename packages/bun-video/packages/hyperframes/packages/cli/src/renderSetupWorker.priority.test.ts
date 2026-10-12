@@ -1,5 +1,5 @@
 import { constants } from "node:os";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "bun:test";
 
 const os = vi.hoisted(() => ({ setPriority: vi.fn() }));
 vi.mock("node:os", async (importOriginal) => ({

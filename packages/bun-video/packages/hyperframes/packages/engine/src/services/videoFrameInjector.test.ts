@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "bun:test";
 import { mkdtempSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -54,7 +54,7 @@ describe("frame source cache eviction", () => {
   // distinct files so eviction has predictable victims.
   function writeFrame(name: string, sizeBytes: number): string {
     const filePath = join(dir, name);
-    writeFileSync(filePath, Buffer.alloc(sizeBytes, 0));
+    writeFileSync(filePath, new Uint8Array(sizeBytes, 0));
     return filePath;
   }
 

@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "bun:test";
 import { consumeCommandResult } from "../../utils/commandResult.js";
 import {
   MAX_VIDEO_BYTES,

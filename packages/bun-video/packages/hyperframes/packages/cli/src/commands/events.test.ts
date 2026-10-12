@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 
 const order: string[] = [];
 const telemetry = vi.hoisted(() => ({

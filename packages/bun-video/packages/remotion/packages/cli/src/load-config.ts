@@ -20,7 +20,7 @@ export const prepareConfigFile = async (
 	const resolved = path.resolve(remotionRoot, configFileName);
 
 	const tsconfigJson = path.join(remotionRoot, 'tsconfig.json');
-	if (!isJavascript && !fs.existsSync(tsconfigJson)) {
+	if (!isJavascript && !await Bun.file(tsconfigJson).exists()) {
 		throw new Error(
 			`Could not find a tsconfig.json file in your project. Did you delete it? Create a tsconfig.json in the root of your project. Copy the default file from https://github.com/remotion-dev/template-helloworld/blob/main/tsconfig.json. The root directory is: ${remotionRoot}`,
 		);

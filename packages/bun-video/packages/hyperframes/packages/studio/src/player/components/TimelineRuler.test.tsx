@@ -2,7 +2,7 @@
 
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { TimelineRuler } from "./TimelineRuler";
 import { TIMELINE_SCROLL_SETTLE_MS } from "./useTimelineScrollViewport";
 import type { TimelineTheme } from "./timelineTheme";

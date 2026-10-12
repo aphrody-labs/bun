@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import type { TimelineElement } from "../store/playerStore";
 import type { ClipManifestClip } from "../lib/playbackTypes";
 import { createTimelineElementFromManifestClip } from "../lib/timelineDOM";

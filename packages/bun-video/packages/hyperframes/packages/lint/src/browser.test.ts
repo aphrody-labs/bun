@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { builtinModules } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { lintHyperframeHtml, shouldBlockRender } from "./browser.js";
 
 // Guards that @hyperframes/lint/browser exposes a working, node-free rule engine.

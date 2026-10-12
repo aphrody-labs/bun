@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { expect, it } from "vitest";
+import { expect, it } from "bun:test";
 import { groupInfoFor } from "./timelineGroupInfo";
 
 it("sees a group the preview adds, whichever window built its node", () => {

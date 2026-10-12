@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
 
 import type { RegistryItem } from "@hyperframes/core";
 import { catalogRow, countUnindexed, pickByName, searchMissCommand } from "./catalog.js";

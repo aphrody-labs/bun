@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { createProjectWatcher, type ProjectWatcher } from "./fileWatcher.js";
 
 // Real files, no fs mock: the failure lives in how the OS watch tracks a replaced inode.

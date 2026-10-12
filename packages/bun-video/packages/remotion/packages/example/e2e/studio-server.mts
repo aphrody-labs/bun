@@ -1,5 +1,5 @@
 import type {ChildProcess} from 'node:child_process';
-import {spawn} from 'child_process';
+import {spawn} from 'node:child_process';
 import fs from 'node:fs';
 import {
 	EXPANDED_SIDEBAR_STATE,
@@ -48,72 +48,50 @@ async function waitForServer(
 
 export async function startStudio(): Promise<void> {
 	// Save original files if not already saved
-	if (!fs.existsSync(ORIGINAL_CONTENT_FILE)) {
-		fs.writeFileSync(ORIGINAL_CONTENT_FILE, fs.readFileSync(rootFile, 'utf-8'));
+	if (!await Bun.file(ORIGINAL_CONTENT_FILE).exists()) {
+		await Bun.write(ORIGINAL_CONTENT_FILE, fs.readFileSync(rootFile, 'utf-8'));
 	}
 
-	if (!fs.existsSync(ORIGINAL_VISUAL_CONTROLS_FILE)) {
-		fs.writeFileSync(
-			ORIGINAL_VISUAL_CONTROLS_FILE,
-			fs.readFileSync(visualControlsFile, 'utf-8'),
+	if (!await Bun.file(ORIGINAL_VISUAL_CONTROLS_FILE).exists()) {
+		await Bun.write(ORIGINAL_VISUAL_CONTROLS_FILE, fs.readFileSync(visualControlsFile, 'utf-8'),
 		);
 	}
 
-	if (!fs.existsSync(ORIGINAL_EFFECT_KEYFRAME_E2E_FILE)) {
-		fs.writeFileSync(
-			ORIGINAL_EFFECT_KEYFRAME_E2E_FILE,
-			fs.readFileSync(effectKeyframeE2eFile, 'utf-8'),
+	if (!await Bun.file(ORIGINAL_EFFECT_KEYFRAME_E2E_FILE).exists()) {
+		await Bun.write(ORIGINAL_EFFECT_KEYFRAME_E2E_FILE, fs.readFileSync(effectKeyframeE2eFile, 'utf-8'),
 		);
 	}
 
-	if (!fs.existsSync(ORIGINAL_LOST_NODE_PATH_E2E_FILE)) {
-		fs.writeFileSync(
-			ORIGINAL_LOST_NODE_PATH_E2E_FILE,
-			fs.readFileSync(lostNodePathE2eFile, 'utf-8'),
+	if (!await Bun.file(ORIGINAL_LOST_NODE_PATH_E2E_FILE).exists()) {
+		await Bun.write(ORIGINAL_LOST_NODE_PATH_E2E_FILE, fs.readFileSync(lostNodePathE2eFile, 'utf-8'),
 		);
 	}
 
-	if (!fs.existsSync(ORIGINAL_ERROR_OVERLAY_E2E_FILE)) {
-		fs.writeFileSync(
-			ORIGINAL_ERROR_OVERLAY_E2E_FILE,
-			fs.readFileSync(errorOverlayE2eFile, 'utf-8'),
+	if (!await Bun.file(ORIGINAL_ERROR_OVERLAY_E2E_FILE).exists()) {
+		await Bun.write(ORIGINAL_ERROR_OVERLAY_E2E_FILE, fs.readFileSync(errorOverlayE2eFile, 'utf-8'),
 		);
 	}
 
-	if (!fs.existsSync(ORIGINAL_HOOK_ORDER_CHANGE_E2E_FILE)) {
-		fs.writeFileSync(
-			ORIGINAL_HOOK_ORDER_CHANGE_E2E_FILE,
-			fs.readFileSync(hookOrderChangeE2eFile, 'utf-8'),
+	if (!await Bun.file(ORIGINAL_HOOK_ORDER_CHANGE_E2E_FILE).exists()) {
+		await Bun.write(ORIGINAL_HOOK_ORDER_CHANGE_E2E_FILE, fs.readFileSync(hookOrderChangeE2eFile, 'utf-8'),
 		);
 	}
 
 	// Restore original files before starting
-	fs.writeFileSync(rootFile, fs.readFileSync(ORIGINAL_CONTENT_FILE, 'utf-8'));
-	fs.writeFileSync(
-		visualControlsFile,
-		fs.readFileSync(ORIGINAL_VISUAL_CONTROLS_FILE, 'utf-8'),
+	await Bun.write(rootFile, fs.readFileSync(ORIGINAL_CONTENT_FILE, 'utf-8'));
+	await Bun.write(visualControlsFile, fs.readFileSync(ORIGINAL_VISUAL_CONTROLS_FILE, 'utf-8'),
 	);
-	fs.writeFileSync(
-		effectKeyframeE2eFile,
-		fs.readFileSync(ORIGINAL_EFFECT_KEYFRAME_E2E_FILE, 'utf-8'),
+	await Bun.write(effectKeyframeE2eFile, fs.readFileSync(ORIGINAL_EFFECT_KEYFRAME_E2E_FILE, 'utf-8'),
 	);
-	fs.writeFileSync(
-		lostNodePathE2eFile,
-		fs.readFileSync(ORIGINAL_LOST_NODE_PATH_E2E_FILE, 'utf-8'),
+	await Bun.write(lostNodePathE2eFile, fs.readFileSync(ORIGINAL_LOST_NODE_PATH_E2E_FILE, 'utf-8'),
 	);
-	fs.writeFileSync(
-		errorOverlayE2eFile,
-		fs.readFileSync(ORIGINAL_ERROR_OVERLAY_E2E_FILE, 'utf-8'),
+	await Bun.write(errorOverlayE2eFile, fs.readFileSync(ORIGINAL_ERROR_OVERLAY_E2E_FILE, 'utf-8'),
 	);
-	fs.writeFileSync(
-		hookOrderChangeE2eFile,
-		fs.readFileSync(ORIGINAL_HOOK_ORDER_CHANGE_E2E_FILE, 'utf-8'),
+	await Bun.write(hookOrderChangeE2eFile, fs.readFileSync(ORIGINAL_HOOK_ORDER_CHANGE_E2E_FILE, 'utf-8'),
 	);
 
-	fs.writeFileSync(LOGS_FILE, '');
-	fs.writeFileSync(
-		EXPANDED_SIDEBAR_STATE,
-		JSON.stringify({
+	await Bun.write(LOGS_FILE, '');
+	await Bun.write(EXPANDED_SIDEBAR_STATE, JSON.stringify({
 			cookies: [],
 			origins: [
 				{
@@ -223,42 +201,32 @@ export async function stopStudio(): Promise<void> {
 	studioProcess = null;
 
 	// Restore original files
-	if (fs.existsSync(ORIGINAL_CONTENT_FILE)) {
-		fs.writeFileSync(rootFile, fs.readFileSync(ORIGINAL_CONTENT_FILE, 'utf-8'));
+	if (await Bun.file(ORIGINAL_CONTENT_FILE).exists()) {
+		await Bun.write(rootFile, fs.readFileSync(ORIGINAL_CONTENT_FILE, 'utf-8'));
 	}
 
-	if (fs.existsSync(ORIGINAL_VISUAL_CONTROLS_FILE)) {
-		fs.writeFileSync(
-			visualControlsFile,
-			fs.readFileSync(ORIGINAL_VISUAL_CONTROLS_FILE, 'utf-8'),
+	if (await Bun.file(ORIGINAL_VISUAL_CONTROLS_FILE).exists()) {
+		await Bun.write(visualControlsFile, fs.readFileSync(ORIGINAL_VISUAL_CONTROLS_FILE, 'utf-8'),
 		);
 	}
 
-	if (fs.existsSync(ORIGINAL_EFFECT_KEYFRAME_E2E_FILE)) {
-		fs.writeFileSync(
-			effectKeyframeE2eFile,
-			fs.readFileSync(ORIGINAL_EFFECT_KEYFRAME_E2E_FILE, 'utf-8'),
+	if (await Bun.file(ORIGINAL_EFFECT_KEYFRAME_E2E_FILE).exists()) {
+		await Bun.write(effectKeyframeE2eFile, fs.readFileSync(ORIGINAL_EFFECT_KEYFRAME_E2E_FILE, 'utf-8'),
 		);
 	}
 
-	if (fs.existsSync(ORIGINAL_LOST_NODE_PATH_E2E_FILE)) {
-		fs.writeFileSync(
-			lostNodePathE2eFile,
-			fs.readFileSync(ORIGINAL_LOST_NODE_PATH_E2E_FILE, 'utf-8'),
+	if (await Bun.file(ORIGINAL_LOST_NODE_PATH_E2E_FILE).exists()) {
+		await Bun.write(lostNodePathE2eFile, fs.readFileSync(ORIGINAL_LOST_NODE_PATH_E2E_FILE, 'utf-8'),
 		);
 	}
 
-	if (fs.existsSync(ORIGINAL_ERROR_OVERLAY_E2E_FILE)) {
-		fs.writeFileSync(
-			errorOverlayE2eFile,
-			fs.readFileSync(ORIGINAL_ERROR_OVERLAY_E2E_FILE, 'utf-8'),
+	if (await Bun.file(ORIGINAL_ERROR_OVERLAY_E2E_FILE).exists()) {
+		await Bun.write(errorOverlayE2eFile, fs.readFileSync(ORIGINAL_ERROR_OVERLAY_E2E_FILE, 'utf-8'),
 		);
 	}
 
-	if (fs.existsSync(ORIGINAL_HOOK_ORDER_CHANGE_E2E_FILE)) {
-		fs.writeFileSync(
-			hookOrderChangeE2eFile,
-			fs.readFileSync(ORIGINAL_HOOK_ORDER_CHANGE_E2E_FILE, 'utf-8'),
+	if (await Bun.file(ORIGINAL_HOOK_ORDER_CHANGE_E2E_FILE).exists()) {
+		await Bun.write(hookOrderChangeE2eFile, fs.readFileSync(ORIGINAL_HOOK_ORDER_CHANGE_E2E_FILE, 'utf-8'),
 		);
 	}
 }

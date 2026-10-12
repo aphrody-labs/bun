@@ -73,7 +73,7 @@ function artifactContents(path) {
 }
 
 function batchEntry(change) {
-  const size = Buffer.byteLength(JSON.stringify(change));
+  const size = new TextEncoder().encode(JSON.stringify(change).length);
   if (size > MAX_BATCH_BYTES)
     throw new Error(`Generated artifact exceeds API batch budget: ${change.path}`);
   if (change.kind === "delete") return { size, field: "deletions", file: { path: change.path } };

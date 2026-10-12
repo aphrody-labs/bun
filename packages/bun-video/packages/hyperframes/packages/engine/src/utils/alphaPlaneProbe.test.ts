@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { decoderForCodec } from "../services/videoFrameExtractor.js";
 import {
   inputAlphaOpaqueWarning,
@@ -15,7 +15,7 @@ const BYTES_PER_FRAME = 8 * 8 * 4; // 256 — one 8x8 rgba frame
 
 /** Build a raw rgba sample where the alpha byte of every pixel is `alpha`. */
 function sample(alpha: number, frameCount: number): Buffer {
-  const buf = Buffer.alloc(BYTES_PER_FRAME * frameCount, 0);
+  const buf = new Uint8Array(BYTES_PER_FRAME * frameCount, 0);
   for (let i = 3; i < buf.length; i += 4) {
     buf[i] = alpha;
   }
@@ -45,15 +45,15 @@ describe("sampledRgbaAlphaIsFullyOpaque", () => {
   });
 
   it("returns undefined for an empty sample (inconclusive, not a warning)", () => {
-    expect(sampledRgbaAlphaIsFullyOpaque(Buffer.alloc(0))).toBeUndefined();
+    expect(sampledRgbaAlphaIsFullyOpaque(new Uint8Array(0))).toBeUndefined();
   });
 
   it("returns undefined for a byte count that is not a whole-frame multiple", () => {
-    expect(sampledRgbaAlphaIsFullyOpaque(Buffer.alloc(BYTES_PER_FRAME - 1))).toBeUndefined();
+    expect(sampledRgbaAlphaIsFullyOpaque(new Uint8Array(BYTES_PER_FRAME - 1))).toBeUndefined();
   });
 
   it("returns undefined for an oversized sample beyond the 3-frame ceiling", () => {
-    expect(sampledRgbaAlphaIsFullyOpaque(Buffer.alloc(BYTES_PER_FRAME * 4))).toBeUndefined();
+    expect(sampledRgbaAlphaIsFullyOpaque(new Uint8Array(BYTES_PER_FRAME * 4))).toBeUndefined();
   });
 });
 

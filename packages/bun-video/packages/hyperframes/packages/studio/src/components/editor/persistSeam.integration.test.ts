@@ -7,7 +7,7 @@ import {
   type PatchOperation,
   type SourceMutationTarget,
 } from "@hyperframes/studio-server/source-mutation";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import {
   collectDomEditTextFields,
   buildDomEditPatchTarget,

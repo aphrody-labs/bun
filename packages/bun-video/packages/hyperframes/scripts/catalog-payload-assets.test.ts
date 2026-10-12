@@ -174,7 +174,7 @@ describe("processAssets", () => {
 });
 
 describe("externalizeDataUris", () => {
-  const font = (n: number) => Buffer.alloc(n, 7).toString("base64");
+  const font = (n: number) => new Uint8Array(n, 7).toString("base64");
 
   it("pulls an embedded font out into a shared file", () => {
     // Compositions arrive with fonts already embedded, which is where the bulk
@@ -238,7 +238,7 @@ describe("probableReferences", () => {
 
 describe("processAssets with script-loaded files", () => {
   it("inlines a model loaded by name, since the host will not publish glb", () => {
-    const dir = project({ "models/iphone.glb": Buffer.alloc(64, 3) });
+    const dir = project({ "models/iphone.glb": new Uint8Array(64, 3) });
     const result = processAssets(
       `<script>loader.load("models/iphone.glb")</script>`,
       dir,
@@ -298,7 +298,7 @@ describe("hostItemDirectory", () => {
   });
 
   it("reports over-budget distinctly from not-needed when the directory exceeds the cap", () => {
-    const dir = project({ "big.png": Buffer.alloc(MAX_HOSTED_DIRECTORY_BYTES + 1) });
+    const dir = project({ "big.png": new Uint8Array(MAX_HOSTED_DIRECTORY_BYTES + 1) });
     const out = target();
 
     assert.deepEqual(hostItemDirectory(dir, out.dir, "/base/"), { status: "over-budget" });

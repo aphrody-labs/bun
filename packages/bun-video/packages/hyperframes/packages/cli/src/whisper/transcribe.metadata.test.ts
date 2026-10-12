@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "bun:test";
 import { transcribe, type TranscribeProgress } from "./transcribe.js";
 
 const native = vi.hoisted(() => ({
@@ -57,7 +57,7 @@ vi.mock("../browser/ffmpeg.js", () => ({
 let dir: string;
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "hf-language-"));
-  writeFileSync(join(dir, "audio.wav"), Buffer.alloc(44));
+  writeFileSync(join(dir, "audio.wav"), new Uint8Array(44));
   native.missingLanguage = false;
   native.printed = { stdout: "", stderr: "" };
   native.runtime.mockReset().mockResolvedValue({ executablePath: "whisper-cli", source: "env" });
@@ -202,7 +202,7 @@ it("streams the words of each segment whisper prints, before the final transcrip
 });
 
 it("reports progress through audio where whisper prints no segment, once per step", async () => {
-  writeFileSync(join(dir, "audio.wav"), Buffer.alloc(4 * 32_000));
+  writeFileSync(join(dir, "audio.wav"), new Uint8Array(4 * 32_000));
   native.printed.stderr =
     "whisper_print_progress_callback: progress =  25%\n" +
     "whisper_print_progress_callback: progress =  25%\n" +

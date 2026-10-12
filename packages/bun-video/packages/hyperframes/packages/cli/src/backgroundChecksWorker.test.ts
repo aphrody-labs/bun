@@ -1,4 +1,4 @@
-import { expect, it, vi } from "vitest";
+import { expect, it, vi } from "bun:test";
 
 const checks = vi.hoisted(() => ({
   checkForUpdate: vi.fn(async () => ({})),

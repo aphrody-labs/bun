@@ -1,4 +1,4 @@
-FROM node:22-bookworm-slim
+FROM oven/bun:22-bookworm-slim
 # Install Chrome dependencies
 RUN apt-get update
 RUN apt install -y \
@@ -22,9 +22,9 @@ COPY src ./src
 # If you have a public folder:
 COPY public ./public
 # Install the right package manager and dependencies - see below for Yarn/PNPM
-RUN npm i
+RUN bun install
 # Install Chrome
-RUN npx remotion browser ensure
+RUN bunx remotion browser ensure
 # Run your application
 COPY render.mjs render.mjs
 CMD ["node", "render.mjs"]

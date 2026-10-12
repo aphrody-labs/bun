@@ -1,7 +1,7 @@
 import { chmodSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, test } from "vitest";
+import { describe, expect, it, test } from "bun:test";
 import {
   dtwPresetForModel,
   getPreparedWavDurationSeconds,
@@ -291,7 +291,7 @@ describe("getPreparedWavDurationSeconds", () => {
   it("reads the length from the size alone, whatever comes before the samples", () => {
     const dir = mkdtempSync(join(tmpdir(), "hf-wav-duration-"));
     const wav = join(dir, "prepared.wav");
-    writeFileSync(wav, Buffer.concat([Buffer.alloc(6000), Buffer.alloc(1.5 * 32_000)]));
+    writeFileSync(wav, Buffer.concat([new Uint8Array(6000), new Uint8Array(1.5 * 32_000)]));
     expect(getPreparedWavDurationSeconds(wav)).toBeCloseTo(1.69, 2);
     expect(getPreparedWavDurationSeconds(join(dir, "missing.wav"))).toBeNull();
     rmSync(dir, { recursive: true, force: true });

@@ -1,4 +1,4 @@
-import {assert, expect, test} from 'vitest';
+import {assert, expect, test} from 'bun:test';
 import {getMaxVideoCacheSize, globalMediaCache} from '../caches';
 import {getTimeInSeconds} from '../get-time-in-seconds';
 import {extractFrame} from '../video-extraction/extract-frame';

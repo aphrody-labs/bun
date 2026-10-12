@@ -5,7 +5,7 @@
  * that will be introduced during R5 (op-shape refactor) and R6 (runtime bridge).
  * All are .todo until the dispatch boundary is exposed.
  */
-import { describe, it } from "vitest";
+import { describe, it } from "bun:test";
 
 describe("T4 — op contract: move", () => {
   it.todo("move op has { type: 'move', id, x, y } shape");

@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "bun:test";
 import { ID_PATH, readId } from "./historyId.js";
 import { takeHistoryOwnership } from "./ownerLock.js";
 import { openProjectHistory } from "./projectHistory.js";

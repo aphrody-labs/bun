@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { TIMELINE_VIEWPORT_BUDGETS } from "../../src/player/lib/timelineViewportBudgets";
 import {
   attemptPassed,

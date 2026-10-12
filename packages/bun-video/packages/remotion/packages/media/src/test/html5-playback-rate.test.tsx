@@ -8,7 +8,7 @@ import {
 	Sequence,
 	type TSequence,
 } from 'remotion';
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 
 test('preserves the Player media playback rate across source changes and reloads', async () => {
 	const container = document.createElement('div');

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { Window } from "happy-dom";
 import type { DomEditSelection } from "./domEditing";
 import {

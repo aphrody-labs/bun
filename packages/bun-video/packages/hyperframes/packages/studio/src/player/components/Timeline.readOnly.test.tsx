@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
 import { Timeline } from "./Timeline";
 import { installTimelineMountEnv, KEYFRAMED_CARD } from "./timelineMountTestEnv";
 import { usePlayerStore, type TimelineElement } from "../store/playerStore";

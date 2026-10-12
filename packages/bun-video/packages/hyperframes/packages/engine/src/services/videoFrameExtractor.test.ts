@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "bun:test";
 import {
   existsSync,
   mkdirSync,

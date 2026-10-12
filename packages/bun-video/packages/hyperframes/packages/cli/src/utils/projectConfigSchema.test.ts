@@ -12,7 +12,7 @@
  * `additionalProperties: false`, so a fourth field on `RegistryItemRecord`
  * would recreate the same break one level down.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";

@@ -84,7 +84,7 @@ export const createFileWatcherRegistry = (): FileWatcherRegistry => {
 			};
 		}
 
-		const existedAtBeginning = fs.existsSync(file);
+		const existedAtBeginning = await Bun.file(file).exists();
 
 		const shared: SharedWatcher = {
 			subscribers: new Set([onChange]),
@@ -96,7 +96,7 @@ export const createFileWatcherRegistry = (): FileWatcherRegistry => {
 		};
 
 		const listener = () => {
-			const existsNow = fs.existsSync(file);
+			const existsNow = await Bun.file(file).exists();
 
 			let event: FileChangeEvent | null = null;
 

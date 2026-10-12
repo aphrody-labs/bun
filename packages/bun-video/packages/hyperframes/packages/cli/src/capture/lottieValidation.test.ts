@@ -1,5 +1,5 @@
 import AdmZip from "adm-zip";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { MAX_LOTTIE_BYTES, readLottieArchive, validLottieJson } from "./lottieValidation.js";
 import { preflightLottieArchive } from "./lottieArchivePreflight.js";
 
@@ -20,7 +20,7 @@ describe("Lottie archive validation", () => {
   it.each([0x06054b50, 0x06064b50, 0x07064b50])("rejects ambiguous footer marker %s", (marker) => {
     const bytes = archive("a/demo.json");
     const end = bytes.length - 22;
-    const injected = Buffer.alloc(4);
+    const injected = new Uint8Array(4);
     injected.writeUInt32LE(marker);
     const ambiguous = Buffer.concat([bytes.subarray(0, end), injected, bytes.subarray(end)]);
     expect(preflightLottieArchive(ambiguous)).toBe(false);

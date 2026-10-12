@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { parseHarnessUsage, parseCodexUsage, parseGrokUsage } from "./usageBudget.js";
 
 const windows = (session: number, weekly: number) =>

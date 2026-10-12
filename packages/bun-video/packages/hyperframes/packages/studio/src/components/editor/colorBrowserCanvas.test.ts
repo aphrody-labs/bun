@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 
 const CHROME_147_FILL_STYLE: Record<string, string> = {
   transparent: "rgba(0, 0, 0, 0)",

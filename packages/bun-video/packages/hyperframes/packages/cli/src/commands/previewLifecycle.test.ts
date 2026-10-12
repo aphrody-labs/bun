@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "bun:test";
 import type { ActiveServer } from "../server/portUtils.js";
 import { PreviewServerPortMismatchError } from "../utils/studioSelectionClient.js";
 import {

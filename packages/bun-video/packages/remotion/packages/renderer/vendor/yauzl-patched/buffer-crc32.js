@@ -69,7 +69,7 @@ function ensureBuffer(input) {
       typeof Buffer.from === "function";
 
   if (typeof input === "number") {
-    return hasNewBufferAPI ? Buffer.alloc(input) : new Buffer(input);
+    return hasNewBufferAPI ? new Uint8Array(input) : new Buffer(input);
   }
   else if (typeof input === "string") {
     return hasNewBufferAPI ? Buffer.from(input) : new Buffer(input);

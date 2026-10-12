@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { waitForTestCondition } from "../utils/processTestUtils.js";
 
 const fixturePath = join(dirname(fileURLToPath(import.meta.url)), "launch.fixture.ts");

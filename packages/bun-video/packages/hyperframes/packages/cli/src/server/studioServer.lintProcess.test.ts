@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { tmpdir } from "node:os";
@@ -18,8 +18,7 @@ let server: ReturnType<typeof createStudioServer>;
 
 beforeEach(() => {
   root = fs.mkdtempSync(path.join(tmpdir(), "hf-studio-lint-"));
-  fs.writeFileSync(
-    path.join(root, "index.html"),
+  await Bun.write(path.join(root, "index.html"),
     `<!doctype html><html><head></head><body>
 <div id="root" data-composition-id="main" data-width="320" data-height="180"></div>
 </body></html>`,

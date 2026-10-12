@@ -2,7 +2,7 @@
 
 import React, { act, type ReactElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { DesignPanelInputProvider } from "../../contexts/DesignPanelInputContext";
 import { __resetDesignInputThrottle } from "../../utils/designInputTracking";
 import type { PropertyPanelProps } from "./propertyPanelHelpers";

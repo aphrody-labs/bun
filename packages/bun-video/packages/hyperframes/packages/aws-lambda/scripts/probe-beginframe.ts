@@ -278,7 +278,7 @@ export async function probe(options: ProbeOptions = {}): Promise<ProbeResult> {
         "warm-up beginFrame",
       );
       let hasDamage = false;
-      let bytes = Buffer.alloc(0);
+      let bytes = new Uint8Array(0);
       let isPng = false;
       let attempts = 0;
       // A renderer-ready document can still need more than one controlled
@@ -297,7 +297,7 @@ export async function probe(options: ProbeOptions = {}): Promise<ProbeResult> {
         );
         hasDamage = response.hasDamage;
         const screenshot = response.screenshotData ?? "";
-        bytes = screenshot ? Buffer.from(screenshot, "base64") : Buffer.alloc(0);
+        bytes = screenshot ? Buffer.from(screenshot, "base64") : new Uint8Array(0);
         isPng =
           bytes.length >= 8 &&
           bytes[0] === 0x89 &&

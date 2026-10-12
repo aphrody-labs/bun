@@ -122,7 +122,7 @@ const findDotEnvFile = (
 	const paths = [defaultEnvFile, path.resolve(remotionRoot, '.env.local')];
 
 	for (const p of paths) {
-		if (fs.existsSync(p)) {
+		if (await Bun.file(p).exists()) {
 			return {found: p, defaultEnvFile};
 		}
 	}
@@ -146,7 +146,7 @@ export const getEnvironmentVariables = (
 	if (envFileValue && envFileSource !== 'default') {
 		const baseDir = envFileSource === 'cli' ? process.cwd() : remotionRoot;
 		const envFile = path.resolve(baseDir, envFileValue);
-		if (!fs.existsSync(envFile)) {
+		if (!await Bun.file(envFile).exists()) {
 			Log.error(
 				{indent: false, logLevel},
 				envFileSource === 'cli'

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { accurate } from "./ratchet.mjs";
 import { entry, score, UNDO_WRITE_MAX_MS } from "./report.mjs";
 

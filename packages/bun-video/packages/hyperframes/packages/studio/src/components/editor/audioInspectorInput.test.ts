@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { MAX_AUDIO_GAIN } from "@hyperframes/core/audio-gain";
 import { RATE_RANGE } from "@hyperframes/core/audio-automation";
 import { parseGainInput, parseRateInput, parseSecondsInput } from "./audioInspectorInput";

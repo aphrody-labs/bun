@@ -14,7 +14,7 @@ test('Set the right version for Ruby in version.rb', () => {
 		'version.rb',
 	);
 
-	fs.writeFileSync(versionPath, `VERSION = "${VERSION}"`);
+	await Bun.write(versionPath, `VERSION = "${VERSION}"`);
 });
 
 beforeAll(() => {
@@ -38,7 +38,7 @@ test('Set the right version for Ruby in remotion_lambda.gemspec', () => {
 		})
 		.join('\n');
 
-	fs.writeFileSync(gemspecPath, contents);
+	await Bun.write(gemspecPath, contents);
 });
 
 test('Render progress payload', () => {

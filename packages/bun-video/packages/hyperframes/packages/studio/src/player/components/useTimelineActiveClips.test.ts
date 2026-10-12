@@ -2,7 +2,7 @@
 
 import React, { act, useRef } from "react";
 import { createRoot } from "react-dom/client";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { liveTime, type TimelineElement } from "../store/playerStore";
 import {
   isTimelineClipActive,

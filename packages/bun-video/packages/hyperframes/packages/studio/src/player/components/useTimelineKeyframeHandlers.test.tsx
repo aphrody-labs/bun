@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import React, { act } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { mountReactHarness } from "../../hooks/domSelectionTestHarness";
 import type { TimelineElement } from "../store/playerStore";
 import { usePlayerStore } from "../store/playerStore";

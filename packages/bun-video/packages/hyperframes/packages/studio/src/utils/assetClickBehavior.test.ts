@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { findClipForAsset, isPointerClick, DRAG_THRESHOLD_PX } from "./assetClickBehavior";
 import type { TimelineElement } from "../player/store/playerStore";
 

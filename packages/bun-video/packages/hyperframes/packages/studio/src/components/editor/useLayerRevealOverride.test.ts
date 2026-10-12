@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import {
   LAYER_REVEAL_LIFT_Z,
   LAYER_REVEAL_PENDING_COMMIT_ATTR,

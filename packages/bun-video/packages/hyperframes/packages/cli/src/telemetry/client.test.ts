@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "bun:test";
 
 // CI exports HYPERFRAMES_NO_TELEMETRY=1 (and users may set DO_NOT_TRACK), which
 // makes shouldTrack() short-circuit — and it caches that decision for the module's

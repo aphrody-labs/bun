@@ -13,7 +13,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { expect, it } from "vitest";
+import { expect, it } from "bun:test";
 import { publishRegistryFile, registryRoot, registryTargetPath } from "./publication.js";
 
 it("rejects traversal, Windows aliases and streams before publication", () => {

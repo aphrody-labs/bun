@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 // Imported before "./validate.js" below: validate.js's own static import of
 // ../utils/project.js triggers that mocked module's factory as soon as
 // validate.js loads, so resolveProjectMock/lintProjectFailureMock must

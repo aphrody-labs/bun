@@ -6,7 +6,7 @@ import {
   syncPositionHoldsBeforeKeyframes,
   updateKeyframeInScript,
 } from "@hyperframes/parsers/gsap-writer-acorn";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "bun:test";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";
 import { usePlayerStore } from "../player/store/playerStore";
 import { findParsedTween, parsedImplicitEndValue, parsedTweenEase } from "./gsapParsedTween";

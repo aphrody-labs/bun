@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { tmpdir } from "node:os";
@@ -24,9 +24,9 @@ let server: StudioServer | undefined;
 beforeEach(() => {
   dir = fs.mkdtempSync(path.join(tmpdir(), "hf-stamp-on-open-"));
   fs.mkdirSync(path.join(dir, "compositions"));
-  fs.writeFileSync(path.join(dir, "index.html"), root(SCENES));
+  await Bun.write(path.join(dir, "index.html"), root(SCENES));
   for (const id of SCENES)
-    fs.writeFileSync(path.join(dir, "compositions", `${id}.html`), scene(id));
+    await Bun.write(path.join(dir, "compositions", `${id}.html`), scene(id));
 });
 
 afterEach(() => {
@@ -57,9 +57,9 @@ describe("opening a film of external scenes", () => {
   it("serves a scene added after open with the ids its source mints, so a save can find them", async () => {
     server = createStudioServer({ projectDir: dir, projectName: "film" });
     const added = `<template id="added-template"><div data-composition-id="added" data-width="320" data-height="180"><img class="logo" src="logo.png"></div></template>`;
-    fs.writeFileSync(path.join(dir, "compositions", "added.html"), added);
-    fs.writeFileSync(path.join(dir, "compositions", "logo.png"), "png");
-    fs.writeFileSync(path.join(dir, "index.html"), root(["added"]));
+    await Bun.write(path.join(dir, "compositions", "added.html"), added);
+    await Bun.write(path.join(dir, "compositions", "logo.png"), "png");
+    await Bun.write(path.join(dir, "index.html"), root(["added"]));
 
     const html = await (await server.app.request("/api/projects/film/preview")).text();
 
@@ -83,14 +83,14 @@ describe("opening a film of external scenes", () => {
     fs.utimesSync(file, pinned, pinned);
     open();
     // What `cp -p` or rsync leaves: new content at the recorded size and mtime.
-    const stamped = fs.readFileSync(file, "utf-8");
+    const stamped = await Bun.file(file).text();
     const unstamped = stamped.replace(/ data-hf-id="[^"]*"/, "").padEnd(stamped.length, " ");
-    fs.writeFileSync(file, unstamped);
+    await Bun.write(file, unstamped);
     fs.utimesSync(file, pinned, pinned);
 
     open();
 
-    const reopened = fs.readFileSync(file, "utf-8");
+    const reopened = await Bun.file(file).text();
     expect(reopened).not.toBe(unstamped);
     expect(reopened.match(/data-hf-id=/g)?.length).toBe(
       unstamped.match(/data-hf-id=/g)!.length + 1,

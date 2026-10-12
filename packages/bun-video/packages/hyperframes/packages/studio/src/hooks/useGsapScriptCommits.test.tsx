@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 
 // Mock the two preview-sync primitives so we can assert which path runCommit took.
 // `patchRuntimeTweenInPlace` is the instant in-place patch; `applySoftReload` is

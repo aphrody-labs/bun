@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { WAVEFORM_LAYER_Z } from "./AudioWaveform";
 import { usePlayerStore, type TimelineElement } from "../store/playerStore";
 import { TimelineClipFades, useClipFadeDraft } from "./TimelineClipFades";

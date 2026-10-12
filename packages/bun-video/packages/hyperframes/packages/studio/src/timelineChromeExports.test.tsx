@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 // Mounts the timeline chrome by package name with no StudioShellProvider, as a host app does.
 import { act } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import {
   AudioMeterStrip,
   dispatchLinkShortcut,

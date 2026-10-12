@@ -14,7 +14,7 @@
  *   - Empty src → settled (nothing to load).
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import type { Page } from "puppeteer-core";
 import { pollImagesReady } from "./frameCapture.js";
 

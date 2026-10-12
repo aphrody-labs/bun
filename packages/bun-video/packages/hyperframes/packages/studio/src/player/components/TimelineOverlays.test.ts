@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { act, createElement } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import type { TimelineElement } from "../store/playerStore";
 import { usePlayerStore } from "../store/playerStore";
 import { type KeyframeDiamondContextMenuState } from "./KeyframeDiamondContextMenu";

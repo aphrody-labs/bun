@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { expect, it } from "bun:test";
 import { buildStudioTools, collectStudioLookScene } from "@hyperframes/studio";
 
 it("exports Studio's agent tools for a host's own edit session", () => {

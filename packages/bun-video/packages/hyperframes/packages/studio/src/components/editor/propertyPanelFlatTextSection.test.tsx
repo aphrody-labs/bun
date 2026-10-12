@@ -3,7 +3,7 @@
 import React, { act, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { compile } from "tailwindcss";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { FlatTextLayerList, FlatTextSection } from "./propertyPanelFlatTextSection";
 import type { DomEditSelection, DomEditTextField } from "./domEditingTypes";
 

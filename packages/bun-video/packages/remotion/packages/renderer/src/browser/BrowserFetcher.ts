@@ -116,7 +116,7 @@ export const getExpectedVersion = ({
 export const readVersionFile = (chromeMode: ChromeMode): string | null => {
 	const versionFilePath = getVersionFilePath(chromeMode);
 	try {
-		return fs.readFileSync(versionFilePath, 'utf-8').trim();
+		return await Bun.file(versionFilePath).text().trim();
 	} catch {
 		return null;
 	}
@@ -124,7 +124,7 @@ export const readVersionFile = (chromeMode: ChromeMode): string | null => {
 
 const writeVersionFile = (chromeMode: ChromeMode, version: string): void => {
 	const versionFilePath = getVersionFilePath(chromeMode);
-	fs.writeFileSync(versionFilePath, version);
+	await Bun.write(versionFilePath, version);
 };
 
 export const downloadBrowser = async ({
@@ -227,7 +227,7 @@ export const downloadBrowser = async ({
 				const chromeLinuxFolder = path.join(outputPath, subdir);
 				const chromePath = path.join(chromeLinuxFolder, 'chrome');
 
-				if (chromeMode === 'headless-shell' && fs.existsSync(chromePath)) {
+				if (chromeMode === 'headless-shell' && await Bun.file(chromePath).exists()) {
 					const chromeHeadlessShellPath = path.join(
 						chromeLinuxFolder,
 						'chrome-headless-shell',
@@ -236,7 +236,7 @@ export const downloadBrowser = async ({
 					fs.renameSync(chromePath, chromeHeadlessShellPath);
 				}
 
-				if (fs.existsSync(chromeLinuxFolder)) {
+				if (await Bun.file(chromeLinuxFolder).exists()) {
 					const targetFolder = path.join(
 						outputPath,
 						(chromeMode === 'headless-shell'
@@ -300,7 +300,7 @@ const getExecutablePath = (chromeMode: ChromeMode) => {
 			`chrome-headless-shell-${platform}`,
 		);
 		const remotionExecutable = path.join(shellFolder, 'headless_shell');
-		if (fs.existsSync(remotionExecutable)) {
+		if (await Bun.file(remotionExecutable).exists()) {
 			return remotionExecutable;
 		}
 
@@ -324,7 +324,7 @@ export const getRevisionInfo = (
 	const folderPath = getFolderPath(downloadsFolder, platform);
 
 	const url = getChromeDownloadUrl({platform, version: null, chromeMode});
-	const local = fs.existsSync(folderPath);
+	const local = await Bun.file(folderPath).exists();
 
 	return {
 		executablePath,

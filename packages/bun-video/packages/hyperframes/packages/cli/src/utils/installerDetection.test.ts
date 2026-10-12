@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 
 // The module inspects `process.argv[1]` + `realpathSync`. We stub both so
 // each test describes a hypothetical install layout without touching the

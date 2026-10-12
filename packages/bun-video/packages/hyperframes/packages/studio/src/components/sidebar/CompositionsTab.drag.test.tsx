@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import { act } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { TIMELINE_COMPOSITION_MIME } from "../../utils/timelineCompositionDrop";
 import { mountCompositionsTab } from "./compositionsTabTestUtils";
 

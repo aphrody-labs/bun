@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { parseHTML } from "linkedom";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { AFTER_FONTS_SCRIPT_TYPE } from "@hyperframes/core/compiler";
 import { compileForRender } from "./htmlCompiler.js";
 

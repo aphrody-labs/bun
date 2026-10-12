@@ -2,7 +2,7 @@
  * Session-level behavior: history coalescing invariants and T3 override replay.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { openComposition } from "./session.js";
 import type { DraftProps, ElementAtPointResult, PreviewAdapter } from "./adapters/types.js";
 

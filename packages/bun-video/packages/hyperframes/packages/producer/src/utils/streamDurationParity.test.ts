@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { getFfmpegBinary } from "@hyperframes/engine";
 import { checkStreamDurationParity, MAX_STREAM_DRIFT_SECONDS } from "../regression-harness.js";
 

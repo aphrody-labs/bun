@@ -15,8 +15,7 @@ afterEach(() => {
 test('returns all dependencies declared by the project', () => {
 	const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'remotion-deps-'));
 	temporaryDirectories.push(directory);
-	fs.writeFileSync(
-		path.join(directory, 'package.json'),
+	await Bun.write(path.join(directory, 'package.json'),
 		JSON.stringify({
 			dependencies: {react: '19.0.0'},
 			devDependencies: {lodash: '4.17.21'},

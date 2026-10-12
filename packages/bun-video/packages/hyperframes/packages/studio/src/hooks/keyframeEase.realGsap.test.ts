@@ -1,7 +1,7 @@
 // Real gsap: the ease the parser reports for keyframes must be the one GSAP plays.
 import { parseGsapScriptAcorn } from "@hyperframes/core/gsap-parser-acorn";
 import { gsap } from "gsap";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 const STEPS = { "0%": { x: 0 }, "100%": { x: 10 } };
 

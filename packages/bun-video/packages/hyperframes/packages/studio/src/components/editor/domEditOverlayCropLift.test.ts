@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import {
   dropElementCropLift,
   hugRectForElement,

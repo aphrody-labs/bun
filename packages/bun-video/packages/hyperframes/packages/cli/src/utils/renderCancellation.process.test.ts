@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync 
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { testProcessIsAlive, waitForTestCondition } from "./processTestUtils.js";
 
 const IS_POSIX = process.platform !== "win32";

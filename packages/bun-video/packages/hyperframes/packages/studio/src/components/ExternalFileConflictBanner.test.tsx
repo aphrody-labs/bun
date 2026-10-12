@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { StudioFileConflictError } from "../utils/studioSaveDiagnostics";
 import type { ExternalFileChangeCoordinatorHandle } from "../hooks/useExternalFileChangeCoordinator";
 import { ExternalFileConflictBanner } from "./ExternalFileConflictBanner";

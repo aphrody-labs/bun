@@ -6,32 +6,32 @@ export const addTailwindRootCss = (projectRoot: string) => {
 	const rootFileJsx = path.join(projectRoot, 'src', 'Root.jsx');
 	const indexCss = path.join(projectRoot, 'src', 'index.css');
 
-	const rootFile = fs.existsSync(rootFileTsx) ? rootFileTsx : rootFileJsx;
+	const rootFile = await Bun.file(rootFileTsx).exists() ? rootFileTsx : rootFileJsx;
 
-	if (!fs.existsSync(rootFile)) {
+	if (!await Bun.file(rootFile).exists()) {
 		throw new Error('No Root file found');
 	}
 
-	const root = fs.readFileSync(rootFile, 'utf-8');
+	const root = await Bun.file(rootFile).text();
 
 	const newFile = `import "./index.css";\n${root}`;
-	fs.writeFileSync(rootFile, newFile);
+	await Bun.write(rootFile, newFile);
 
 	const css = `@import "tailwindcss";\n`;
-	fs.writeFileSync(indexCss, css);
+	await Bun.write(indexCss, css);
 };
 
 export const addTailwindToConfig = (projectRoot: string) => {
 	const configFileTs = path.join(projectRoot, 'remotion.config.ts');
 	const configFileJs = path.join(projectRoot, 'remotion.config.js');
 
-	const configFile = fs.existsSync(configFileTs) ? configFileTs : configFileJs;
+	const configFile = await Bun.file(configFileTs).exists() ? configFileTs : configFileJs;
 
-	if (!fs.existsSync(configFile)) {
+	if (!await Bun.file(configFile).exists()) {
 		throw new Error('No remotion.config.ts file found');
 	}
 
-	const config = fs.readFileSync(configFile, 'utf-8');
+	const config = await Bun.file(configFile).text();
 	const lines = config.trim().split('\n');
 	let lineNo = 0;
 	let lastImportLine = 0;
@@ -53,5 +53,5 @@ export const addTailwindToConfig = (projectRoot: string) => {
 		'Config.overrideBundlerConfig(enableTailwind);',
 	];
 
-	fs.writeFileSync(configFile, newLines.join('\n') + '\n');
+	await Bun.write(configFile, newLines.join('\n') + '\n');
 };

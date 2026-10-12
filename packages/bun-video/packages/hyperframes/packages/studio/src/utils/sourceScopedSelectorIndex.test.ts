@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { getSourceScopedSelectorIndex, withSelectorIndexPass } from "./sourceScopedSelectorIndex";
 
 // The per-element algorithm this helper used before it grew a per-pass index,

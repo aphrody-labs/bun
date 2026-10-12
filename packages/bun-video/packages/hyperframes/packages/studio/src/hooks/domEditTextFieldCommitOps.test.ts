@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import type { DomEditTextField } from "../components/editor/domEditing";
 import { buildTextFieldChildOperations } from "./domEditTextFieldCommitOps";
 

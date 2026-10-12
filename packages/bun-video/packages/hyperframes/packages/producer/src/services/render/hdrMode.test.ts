@@ -5,7 +5,7 @@
  * future cleanup.
  */
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import type { ExtractionResult, VideoColorSpace } from "@hyperframes/engine";
 import { findRenderHdrAutoPromotionTrigger, resolveEffectiveHdrMode } from "./hdrMode.js";
 

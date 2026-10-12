@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import pageHtml from "../index.html?raw";
-import { expect, it, vi } from "vitest";
+import { expect, it, vi } from "bun:test";
 
 // Keep initialization at the asynchronous persistence boundary while exercising
 // the real static UI and its registered message listener.

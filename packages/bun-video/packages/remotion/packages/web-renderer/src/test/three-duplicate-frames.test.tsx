@@ -3,7 +3,7 @@ import {ThreeCanvas} from '@remotion/three';
 import {ThreeWebGPUCanvas} from '@remotion/three/webgpu';
 import React from 'react';
 import {interpolate, useCurrentFrame, useVideoConfig} from 'remotion';
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {renderMediaOnWeb} from '../render-media-on-web';
 import '../symbol-dispose';
 

@@ -10,7 +10,7 @@
  * on every stalled render.
  */
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { withFrameDeadline } from "./frameCapture.js";
 
 describe("withFrameDeadline", () => {

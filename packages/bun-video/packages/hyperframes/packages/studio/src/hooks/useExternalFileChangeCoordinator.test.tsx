@@ -2,7 +2,7 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { StudioFileConflictError } from "../utils/studioSaveDiagnostics";
 import { markStudioWriteToken, resetStudioWriteTokens } from "../utils/studioFileVersion";
 import { markSelfWrite, resetSelfWriteRegistry } from "./sdkSelfWriteRegistry";

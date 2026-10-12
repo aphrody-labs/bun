@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import { execFileSync } from "node:child_process";
 import { createServer } from "node:net";
@@ -85,13 +85,13 @@ describe("file server checked reads", () => {
   ])("reads the checked %s .%s despite replacement", async (source, ext) => {
     const name = `asset.${ext}`;
     const file = join(source === "compiled" ? compiledDir : projectDir, name);
-    fs.writeFileSync(join(projectDir, name), "project bytes");
-    fs.writeFileSync(file, "checked bytes");
+    await Bun.write(join(projectDir, name), "project bytes");
+    await Bun.write(file, "checked bytes");
     hooks.checked = (path) => {
       if (path !== file) return;
       hooks.checked = () => {};
       fs.renameSync(file, join(root, "original"));
-      fs.writeFileSync(file, "replacement bytes");
+      await Bun.write(file, "replacement bytes");
     };
     server = await createFileServer({ projectDir, compiledDir });
     const response = await fetch(`${server.url}/${name}`);
@@ -104,10 +104,10 @@ describe("file server checked reads", () => {
     "falls back from a compiled %s",
     async (kind) => {
       fs.mkdirSync(join(projectDir, "assets"));
-      fs.writeFileSync(join(projectDir, "assets", "file.bin"), "project bytes");
+      await Bun.write(join(projectDir, "assets", "file.bin"), "project bytes");
       if (kind === "directory")
         fs.mkdirSync(join(compiledDir, "assets", "file.bin"), { recursive: true });
-      if (kind === "non-directory parent") fs.writeFileSync(join(compiledDir, "assets"), "blocker");
+      if (kind === "non-directory parent") await Bun.write(join(compiledDir, "assets"), "blocker");
       server = await createFileServer({ projectDir, compiledDir });
       const response = await fetch(`${server.url}/assets/file.bin`);
       expect(response.status).toBe(200);
@@ -117,7 +117,7 @@ describe("file server checked reads", () => {
   );
 
   it.skipIf(process.platform === "win32")("skips a compiled FIFO without blocking", async () => {
-    fs.writeFileSync(join(projectDir, "file.bin"), "project bytes");
+    await Bun.write(join(projectDir, "file.bin"), "project bytes");
     execFileSync("mkfifo", [join(compiledDir, "file.bin")]);
     server = await createFileServer({ projectDir, compiledDir });
     const response = await fetch(`${server.url}/file.bin`);
@@ -126,7 +126,7 @@ describe("file server checked reads", () => {
   });
 
   it.skipIf(process.platform === "win32")("falls back from a compiled Unix socket", async () => {
-    fs.writeFileSync(join(projectDir, "file.bin"), "project bytes");
+    await Bun.write(join(projectDir, "file.bin"), "project bytes");
     const socket = createServer();
     await new Promise<void>((resolve) => socket.listen(join(compiledDir, "file.bin"), resolve));
     try {
@@ -143,8 +143,8 @@ describe("file server checked reads", () => {
   });
 
   it("serves an empty compiled file instead of falling back", async () => {
-    fs.writeFileSync(join(projectDir, "file.bin"), "project bytes");
-    fs.writeFileSync(join(compiledDir, "file.bin"), "");
+    await Bun.write(join(projectDir, "file.bin"), "project bytes");
+    await Bun.write(join(compiledDir, "file.bin"), "");
     server = await createFileServer({ projectDir, compiledDir });
     const response = await fetch(`${server.url}/file.bin`);
     expect(response.status).toBe(200);
@@ -153,7 +153,7 @@ describe("file server checked reads", () => {
   });
 
   it("continues serving symlinked assets", async () => {
-    fs.writeFileSync(join(projectDir, "file.bin"), "project bytes");
+    await Bun.write(join(projectDir, "file.bin"), "project bytes");
     fs.symlinkSync(
       projectDir,
       join(compiledDir, "assets"),
@@ -178,9 +178,9 @@ describe("file server checked reads", () => {
 
   it("injects scripts only into the selected index HTML", async () => {
     const html = "<html><head></head><body>compiled</body></html>";
-    fs.writeFileSync(join(projectDir, "index.html"), "project");
-    fs.writeFileSync(join(compiledDir, "index.html"), html);
-    fs.writeFileSync(join(compiledDir, "other.html"), html);
+    await Bun.write(join(projectDir, "index.html"), "project");
+    await Bun.write(join(compiledDir, "index.html"), html);
+    await Bun.write(join(compiledDir, "other.html"), html);
     server = await createFileServer({
       projectDir,
       compiledDir,
@@ -198,7 +198,7 @@ describe("file server checked reads", () => {
   });
 
   it.each(["stat", "read"])("closes the selected file when %s fails", async (step) => {
-    fs.writeFileSync(join(projectDir, "file.bin"), "bytes");
+    await Bun.write(join(projectDir, "file.bin"), "bytes");
     const fail = () => {
       throw new Error("Injected failure");
     };

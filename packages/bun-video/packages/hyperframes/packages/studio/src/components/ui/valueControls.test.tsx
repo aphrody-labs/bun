@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import React, { act } from "react";
 import { compile } from "tailwindcss";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "bun:test";
 
 const trackStudioEvent = vi.fn();
 vi.mock("../../utils/studioTelemetry", () => ({

@@ -97,12 +97,12 @@ export async function runSequentialLayeredFrameLoop(input: SequentialLoopInput):
   const hasTransitions = transitionRanges.length > 0;
   const transitionBuffers: LayeredTransitionBuffers | null = hasTransitions
     ? {
-        bufferA: Buffer.alloc(bufSize),
-        bufferB: Buffer.alloc(bufSize),
-        output: Buffer.alloc(bufSize),
+        bufferA: new Uint8Array(bufSize),
+        bufferB: new Uint8Array(bufSize),
+        output: new Uint8Array(bufSize),
       }
     : null;
-  const normalCanvas = Buffer.alloc(bufSize);
+  const normalCanvas = new Uint8Array(bufSize);
 
   for (let i = 0; i < totalFrames; i++) {
     assertNotAborted();

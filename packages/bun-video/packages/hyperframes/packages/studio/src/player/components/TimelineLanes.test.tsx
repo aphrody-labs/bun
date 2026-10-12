@@ -3,7 +3,7 @@
 import React, { act, createRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { TimelineLanes } from "./TimelineLanes";
 import { getTrackStyle } from "./timelineIcons";
 import { defaultTimelineTheme } from "./timelineTheme";

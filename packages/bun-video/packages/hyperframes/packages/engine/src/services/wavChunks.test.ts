@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { riffChunks, wavFormatTag } from "./wavChunks.js";
 
 /**
@@ -8,14 +8,14 @@ import { riffChunks, wavFormatTag } from "./wavChunks.js";
  * (ordering, and the pad byte after an odd chunk) never came up in either suite.
  */
 function riff(chunks: { id: string; body: Buffer }[]): Buffer {
-  const parts: Buffer[] = [Buffer.from("RIFF"), Buffer.alloc(4), Buffer.from("WAVE")];
+  const parts: Buffer[] = [Buffer.from("RIFF"), new Uint8Array(4), Buffer.from("WAVE")];
   for (const { id, body } of chunks) {
-    const header = Buffer.alloc(8);
+    const header = new Uint8Array(8);
     header.write(id, 0, "ascii");
     header.writeUInt32LE(body.length, 4);
     parts.push(header, body);
     // Word alignment: an odd body is followed by a pad byte the size excludes.
-    if (body.length % 2) parts.push(Buffer.alloc(1));
+    if (body.length % 2) parts.push(new Uint8Array(1));
   }
   const buf = Buffer.concat(parts);
   buf.writeUInt32LE(buf.length - 8, 4);
@@ -41,8 +41,8 @@ describe("riffChunks", () => {
     // `data` before `fmt ` is legal and the reason the walk advances by declared
     // size rather than assuming a layout.
     const buf = riff([
-      { id: "data", body: Buffer.alloc(6) },
-      { id: "fmt ", body: Buffer.alloc(16) },
+      { id: "data", body: new Uint8Array(6) },
+      { id: "fmt ", body: new Uint8Array(16) },
     ]);
     expect([...riffChunks(buf)].map((c) => c.id)).toEqual(["data", "fmt "]);
   });
@@ -50,7 +50,7 @@ describe("riffChunks", () => {
   it("stops at a chunk header that runs past the end of the file", () => {
     // Truncated downloads and interrupted writes both land here; the walk must
     // end rather than read off the buffer.
-    const buf = Buffer.concat([riff([{ id: "data", body: Buffer.alloc(4) }]), Buffer.from("da")]);
+    const buf = Buffer.concat([riff([{ id: "data", body: new Uint8Array(4) }]), Buffer.from("da")]);
     expect([...riffChunks(buf)].map((c) => c.id)).toEqual(["data"]);
   });
 });

@@ -112,9 +112,9 @@ jobs:
             fi
           fi
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 24
+          bun-version: latest
           registry-url: "https://registry.npmjs.org"
       - run: corepack enable
       - run: corepack prepare pnpm@10.17.1 --activate
@@ -176,7 +176,7 @@ jobs:
               fs.writeFileSync(p, JSON.stringify(pkg, null, 2) + '\n');
             "
             echo "📦 Publishing hyperframes@${VERSION}..."
-            if (cd packages/cli && npm publish --access public --tag "$DIST_TAG"); then
+            if (cd packages/cli && bun publish --access public --tag "$DIST_TAG"); then
               echo "✅ hyperframes@${VERSION} published"
             else
               echo "❌ hyperframes@${VERSION} failed to publish"

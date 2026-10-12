@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "bun:test";
 import { Dock } from "./Dock";
 import { useDockLayoutStore } from "./dockLayoutStore";
 import { PANEL_IDS, type PanelId } from "./panelRegistry";

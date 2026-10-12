@@ -3,7 +3,7 @@
  * setPreviewVariables (preview adapter delegation).
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { openComposition } from "./session.js";
 import type { PreviewAdapter } from "./adapters/types.js";
 

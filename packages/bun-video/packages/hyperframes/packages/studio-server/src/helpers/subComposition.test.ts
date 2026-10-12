@@ -2,7 +2,7 @@
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, onTestFinished } from "vitest";
+import { describe, expect, it, onTestFinished } from "bun:test";
 import { gsapCdnDist } from "@hyperframes/core/gsap-cdn";
 import { parseHTML } from "linkedom";
 import { AFTER_FONTS_SCRIPT_TYPE } from "@hyperframes/core/compiler";

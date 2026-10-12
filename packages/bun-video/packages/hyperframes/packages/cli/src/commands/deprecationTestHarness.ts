@@ -10,7 +10,7 @@
 // here.
 import type { ArgsDef, CommandDef } from "citty";
 import { runCommand } from "citty";
-import { expect, vi } from "vitest";
+import { expect, vi } from "bun:test";
 import { CliRuntimeError } from "../utils/commandResult.js";
 
 const FAKE_PROJECT = {

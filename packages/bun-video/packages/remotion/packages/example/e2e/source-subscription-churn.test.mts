@@ -14,7 +14,7 @@ test('trimming a parent then its expression child saves with the latest instance
 }) => {
 	test.setTimeout(120_000);
 	const fixture = path.join(exampleDir, 'src', 'SourceSubscriptionChurn.tsx');
-	const original = fs.readFileSync(fixture, 'utf8');
+	const original = await Bun.file(fixture).text();
 
 	const trimRightEdge = async (
 		label: string,
@@ -63,9 +63,7 @@ test('trimming a parent then its expression child saves with the latest instance
 	try {
 		// The example is also editable in the main Studio. Give this test a known
 		// starting point and restore any manual edits afterwards.
-		fs.writeFileSync(
-			fixture,
-			original.replace(
+		await Bun.write(fixture, original.replace(
 				/(<Sequence name="Trim this parent" durationInFrames=\{)\d+(\})/,
 				(_, prefix: string, suffix: string) => `${prefix}300${suffix}`,
 			),
@@ -81,7 +79,7 @@ test('trimming a parent then its expression child saves with the latest instance
 
 		await trimRightEdge('Trim this parent', 300, 60);
 		await expect
-			.poll(() => fs.readFileSync(fixture, 'utf8'))
+			.poll(() => await Bun.file(fixture).text())
 			.toMatch(/name="Trim this parent"\s+durationInFrames=\{360\}/);
 		await expect(
 			page.getByText('Expression A: 180 frames', {exact: true}),
@@ -92,7 +90,7 @@ test('trimming a parent then its expression child saves with the latest instance
 
 		await trimRightEdge('Expression A', 180, 36);
 		await expect
-			.poll(() => fs.readFileSync(fixture, 'utf8'))
+			.poll(() => await Bun.file(fixture).text())
 			.toMatch(/durationInFrames=\{duration \* 0\.6\}/);
 		await expect(
 			page.getByText('Expression A: 216 frames', {exact: true}),
@@ -115,9 +113,7 @@ test('trimming a parent then its expression child saves with the latest instance
 
 		// Keep one real file-watcher update; expression combinations and
 		// subscription counts are covered by the React integration test.
-		fs.writeFileSync(
-			fixture,
-			fs
+		await Bun.write(fixture, fs
 				.readFileSync(fixture, 'utf8')
 				.replace('duration * 0.6', 'duration * 0.75'),
 		);
@@ -129,6 +125,6 @@ test('trimming a parent then its expression child saves with the latest instance
 		).toBeVisible();
 	} finally {
 		await stopStudio();
-		fs.writeFileSync(fixture, original);
+		await Bun.write(fixture, original);
 	}
 });

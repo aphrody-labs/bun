@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
 
 // The `studio_*` transport carries browser metadata built here, and this is its
 // only test. tab_id has a module test of its own, but nothing there fails if

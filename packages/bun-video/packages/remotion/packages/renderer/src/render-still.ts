@@ -210,7 +210,7 @@ const innerRenderStill = async ({
 	validateJpegQuality(jpegQuality);
 
 	if (output) {
-		if (fs.existsSync(output)) {
+		if (await Bun.file(output).exists()) {
 			if (!overwrite) {
 				throw new Error(
 					`Cannot render still - "overwrite" option was set to false, but the output destination ${output} already exists.`,

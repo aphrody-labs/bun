@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "bun:test";
 import { handleRuntimeMessage } from "../runtime-message-handler.js";
 import {
   childrenMayStillArrive,

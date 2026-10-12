@@ -2,7 +2,7 @@
 // `node:child_process` at the loader level and inspect the spawned
 // child's env.
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { EventEmitter } from "node:events";
 
 async function commandExitCode(): Promise<number> {

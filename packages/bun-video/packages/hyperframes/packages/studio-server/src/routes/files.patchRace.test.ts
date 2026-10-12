@@ -11,7 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Hono } from "hono";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { fileContentVersion, identifyFileWrite } from "../helpers/fileVersion";
 import { registerFileRoutes } from "./files";
 import { stubAdapter } from "./stubAdapter.test-helpers";

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { studioFrame, type FrameToolDeps, type StudioFrameResult } from "./frameTools";
 import { expectFailure, expectOk } from "../webmcpTestUtils";
 

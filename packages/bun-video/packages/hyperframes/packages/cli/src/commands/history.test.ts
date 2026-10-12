@@ -24,7 +24,7 @@ import {
 } from "@hyperframes/studio-server";
 import { runCommand } from "citty";
 import { Hono } from "hono";
-import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "bun:test";
 import { consumeCommandResult } from "../utils/commandResult.js";
 import { historyDeps, withOwner } from "../utils/historyOwner.js";
 import historyCommand from "./history.js";

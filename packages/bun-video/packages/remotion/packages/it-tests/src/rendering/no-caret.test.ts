@@ -15,11 +15,11 @@ test('Should not have carets in Remotion versions', async () => {
 		}
 
 		const packageJsonPath = path.join(packagesDir, pkg, 'package.json');
-		if (!fs.existsSync(packageJsonPath)) {
+		if (!await Bun.file(packageJsonPath).exists()) {
 			continue;
 		}
 
-		const packageJson = fs.readFileSync(packageJsonPath, 'utf-8');
+		const packageJson = await Bun.file(packageJsonPath).text();
 		const json = JSON.parse(packageJson);
 		if (!json.dependencies) {
 			continue;

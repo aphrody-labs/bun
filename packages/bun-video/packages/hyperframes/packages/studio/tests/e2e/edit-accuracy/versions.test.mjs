@@ -1,7 +1,7 @@
 import { mkdtempSync, renameSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { watchVersions } from "./sequences.mjs";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

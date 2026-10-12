@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -89,7 +89,7 @@ describe("bakeMediaProxies", () => {
 
     const fileContents = new Map<string, Buffer>([
       ["index.html", indexHtml(`<video src="clip.mp4" muted></video>`)],
-      ["clip.mp4", Buffer.from("ORIGINAL_HEVC_BYTES", "utf-8")],
+      ["clip.mp4", new TextEncoder().encode("ORIGINAL_HEVC_BYTES")],
     ]);
 
     const manifest = await bakeMediaProxies(PROJECT_DIR, fileContents);
@@ -129,7 +129,7 @@ describe("bakeMediaProxies", () => {
         "index.html",
         indexHtml(`<video src="clip.mp4" muted></video>`, `<audio src="clip.mp4"></audio>`),
       ],
-      ["clip.mp4", Buffer.from("ORIGINAL_HEVC_BYTES", "utf-8")],
+      ["clip.mp4", new TextEncoder().encode("ORIGINAL_HEVC_BYTES")],
     ]);
 
     await bakeMediaProxies(PROJECT_DIR, fileContents);
@@ -147,7 +147,7 @@ describe("bakeMediaProxies", () => {
     mocks.resolveProxy.mockRejectedValue(new FakeProxyTranscodeError("ffmpeg exited with code 1"));
     const fileContents = new Map<string, Buffer>([
       ["index.html", indexHtml(`<video src="clip.mp4" muted></video>`)],
-      ["clip.mp4", Buffer.from("ORIGINAL_HEVC_BYTES", "utf-8")],
+      ["clip.mp4", new TextEncoder().encode("ORIGINAL_HEVC_BYTES")],
     ]);
 
     await expect(bakeMediaProxies(PROJECT_DIR, fileContents)).rejects.toMatchObject({
@@ -179,7 +179,7 @@ describe("bakeMediaProxies", () => {
 
     const fileContents = new Map<string, Buffer>([
       ["index.html", indexHtml(`<video src="assets/my%20clip.mp4" muted></video>`)],
-      ["assets/my clip.mp4", Buffer.from("ORIGINAL_HEVC_BYTES", "utf-8")],
+      ["assets/my clip.mp4", new TextEncoder().encode("ORIGINAL_HEVC_BYTES")],
     ]);
 
     await bakeMediaProxies(PROJECT_DIR, fileContents);
@@ -209,7 +209,7 @@ describe("bakeMediaProxies", () => {
     mocks.resolveProxy.mockResolvedValue(proxyPath);
     const fileContents = new Map<string, Buffer>([
       ["index.html", indexHtml(`<video src="clip.mov" muted></video>`)],
-      ["clip.mov", Buffer.from("ORIGINAL_PRORES_4444_BYTES", "utf-8")],
+      ["clip.mov", new TextEncoder().encode("ORIGINAL_PRORES_4444_BYTES")],
     ]);
 
     const manifest = await bakeMediaProxies(PROJECT_DIR, fileContents);
@@ -256,7 +256,7 @@ describe("bakeMediaProxies", () => {
 
     const fileContents = new Map<string, Buffer>([
       ["index.html", indexHtml(`<video src="clip.mp4" muted></video>`)],
-      ["clip.mp4", Buffer.from("ORIGINAL_H264_BYTES", "utf-8")],
+      ["clip.mp4", new TextEncoder().encode("ORIGINAL_H264_BYTES")],
     ]);
 
     await bakeMediaProxies(PROJECT_DIR, fileContents);
@@ -267,7 +267,7 @@ describe("bakeMediaProxies", () => {
   });
 
   it("never scans (and is a no-op) when the archive has no HTML entries", async () => {
-    const fileContents = new Map<string, Buffer>([["clip.mp4", Buffer.from("BYTES", "utf-8")]]);
+    const fileContents = new Map<string, Buffer>([["clip.mp4", new TextEncoder().encode("BYTES")]]);
 
     await bakeMediaProxies(PROJECT_DIR, fileContents);
 

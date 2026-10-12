@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { Hono } from "hono";
 import { mkdtemp, rm, writeFile, symlink, open } from "node:fs/promises";
 import { tmpdir } from "node:os";

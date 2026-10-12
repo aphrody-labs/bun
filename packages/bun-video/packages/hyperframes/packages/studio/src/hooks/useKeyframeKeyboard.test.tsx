@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { act } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { useKeyframeKeyboard } from "./useKeyframeKeyboard";
 import { dispatchPlainKey, type HotkeyCallbacks } from "./appHotkeysDispatch";
 import { DEFAULT_SHORTCUT_SECTIONS } from "../player/components/studioShortcuts";

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { expect, it } from "vitest";
+import { expect, it } from "bun:test";
 import { elementTargets } from "./elementGsap";
 
 it("keeps only the targets GSAP styles: not a plain object, not an XML-namespace element", () => {

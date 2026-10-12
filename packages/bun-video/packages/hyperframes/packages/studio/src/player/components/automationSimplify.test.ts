@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { simplifyPoints } from "./automationSimplify";
 import { VOLUME_RANGE } from "@hyperframes/core/audio-automation";
 import { toUnit } from "./automationLaneGeometry";

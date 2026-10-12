@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import {
   COLOR_GRADING_ADJUST_KEYS,
   COLOR_GRADING_ADVANCED_LIMITS,

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { orientation, durationFromHtml } from "./info.js";
 
 describe("orientation", () => {

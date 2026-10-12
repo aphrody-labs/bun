@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { parseHTML } from "linkedom";
 import { checkSubCompositionUsability, type ParsableDocumentLike } from "./subCompositionValidity";
 

@@ -2,7 +2,7 @@
 // Reads the preview on screen the way a host app does: by package name.
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { expect, expectTypeOf, it } from "vitest";
+import { expect, expectTypeOf, it } from "bun:test";
 import { useLivePreviewIframe, type PreviewPromotion } from "@hyperframes/studio";
 import {
   makePreview,

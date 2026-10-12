@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { extractTranscript, buildCaptionModel, TranscriptWord } from "./parser";
 import { DEFAULT_STYLE, DEFAULT_CONTAINER, DEFAULT_ANIMATION_SET } from "./types";
 

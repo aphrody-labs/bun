@@ -28,7 +28,7 @@ async function generateThumbnail(path: string, signal: AbortSignal): Promise<Buf
   try {
     const info = await file.stat();
     if (!info.isFile() || info.size > MAX_SOURCE_BYTES) throw new Error("Unsupported image");
-    const source = Buffer.alloc(info.size);
+    const source = new Uint8Array(info.size);
     let offset = 0;
     while (offset < source.length) {
       signal.throwIfAborted();

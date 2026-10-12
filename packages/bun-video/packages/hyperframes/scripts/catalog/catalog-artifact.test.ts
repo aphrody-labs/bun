@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -258,8 +258,8 @@ describe("consumer parity", () => {
     // implementation fails here rather than producing an artifact the consumer
     // silently rejects at load time.
     const digest = payloadDigest(
-      Buffer.from("catalog-bytes", "utf-8"),
-      Buffer.from("vector-bytes", "utf-8"),
+      new TextEncoder().encode("catalog-bytes"),
+      new TextEncoder().encode("vector-bytes"),
     );
     expect(digest).toBe("291c30dddc35c705a681081d9c2e2a96314bcccf0d024b77a3692e412adbf103");
   });

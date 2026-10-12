@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { TimeoutError } from "puppeteer-core";
 import {
   PUPPETEER_DEFAULT_PROTOCOL_TIMEOUT_MS,

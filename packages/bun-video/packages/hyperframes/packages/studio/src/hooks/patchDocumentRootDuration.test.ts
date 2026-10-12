@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { patchDocumentRootDuration } from "./timelineEditingHelpers";
 
 // The regression these guard against: timing edits now soft-reload instead of

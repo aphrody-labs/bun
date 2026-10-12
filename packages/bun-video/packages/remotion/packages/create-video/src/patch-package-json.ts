@@ -18,9 +18,9 @@ export const patchPackageJson = (
 		addTailwind: boolean;
 	},
 	{
-		getPackageJson = (filename: string) => fs.readFileSync(filename, 'utf-8'),
+		getPackageJson = (filename: string) => await Bun.file(filename).text(),
 		setPackageJson = (filename: string, content: string) =>
-			fs.writeFileSync(filename, content),
+			await Bun.write(filename, content),
 	} = {},
 ) => {
 	const fileName = path.join(projectRoot, 'package.json');

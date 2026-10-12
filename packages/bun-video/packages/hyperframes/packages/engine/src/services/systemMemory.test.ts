@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication
-import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "bun:test";
 import {
   _resetCgroupLimitCacheForTests,
   isLowMemorySystem,

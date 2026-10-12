@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 
 vi.mock("../components/editor/manualEditingAvailability", () => ({
   STUDIO_SDK_CUTOVER_ENABLED: true,

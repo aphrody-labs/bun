@@ -8,7 +8,7 @@ export function resolveDocsRoot(argv2) {
 }
 
 export function readJson(p) {
-  return JSON.parse(fs.readFileSync(p, "utf8"));
+  return await Bun.file(p).json();
 }
 
 export function readCatalogGalleryData(docs) {

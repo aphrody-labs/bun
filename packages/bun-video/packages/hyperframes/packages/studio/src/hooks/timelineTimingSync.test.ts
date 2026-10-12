@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { usePlayerStore } from "../player/store/playerStore";
 import { jsonResponse, requestUrl } from "./fetchStubTestUtils";
 import type { TimelineElement } from "../player/store/playerStore";

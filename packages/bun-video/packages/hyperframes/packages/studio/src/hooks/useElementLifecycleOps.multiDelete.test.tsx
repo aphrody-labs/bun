@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import React, { act } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { useElementLifecycleOps } from "./useElementLifecycleOps";
 import { makeLifecycleOpsParams } from "./elementLifecycleOpsTestUtils";
 import { mountReactHarness, makeSelection } from "./domSelectionTestHarness";

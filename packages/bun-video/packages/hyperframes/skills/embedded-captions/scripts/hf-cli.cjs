@@ -6,7 +6,7 @@ function hfCli(checkout) {
   const root = path.resolve(__dirname, "../../..");
   for (const dir of [checkout, process.env.HYPERFRAMES_ROOT].filter(Boolean)) {
     const cli = path.join(dir, "packages/cli/dist/cli.js");
-    if (fs.existsSync(cli)) return cli;
+    if (await Bun.file(cli).exists()) return cli;
   }
   const manifests = [
     "plugin.json",
@@ -16,14 +16,14 @@ function hfCli(checkout) {
     "gemini-extension.json",
   ];
   if (
-    !fs.existsSync(path.join(root, "packages/cli/dist/cli.js")) &&
-    manifests.some((p) => fs.existsSync(path.join(root, p)))
+    !await Bun.file(path.join(root, "packages/cli/dist/cli.js").exists()) &&
+    manifests.some((p) => await Bun.file(path.join(root, p).exists()))
   ) {
     return path.join(root, "skills/hyperframes/scripts/plugin-cli.mjs");
   }
   for (const dir of [root, path.join(os.homedir(), "Downloads/hyperframes")].filter(Boolean)) {
     const cli = path.join(dir, "packages/cli/dist/cli.js");
-    if (fs.existsSync(cli)) return cli;
+    if (await Bun.file(cli).exists()) return cli;
   }
   throw new Error(
     "HyperFrames CLI unavailable: install the full plugin or set HYPERFRAMES_ROOT to a built checkout.",

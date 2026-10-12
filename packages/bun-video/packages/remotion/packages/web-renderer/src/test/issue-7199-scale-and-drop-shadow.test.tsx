@@ -1,4 +1,4 @@
-import {test} from 'vitest';
+import {test} from 'bun:test';
 import {renderStillOnWeb} from '../render-still-on-web';
 import '../symbol-dispose';
 import {issue7199ScaleAndDropShadow} from './fixtures/issue-7199-scale-and-drop-shadow';

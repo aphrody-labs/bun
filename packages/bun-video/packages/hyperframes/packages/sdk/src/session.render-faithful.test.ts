@@ -17,7 +17,7 @@
  * (WS-P / WS-R); this test pins only the SDK-side contract.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { openComposition } from "./session.js";
 
 // ─── Fixture ──────────────────────────────────────────────────────────────────

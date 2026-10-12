@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";
 import { commitWholePathOffset, type GsapDragCommitCallbacks } from "./gsapDragCommit";

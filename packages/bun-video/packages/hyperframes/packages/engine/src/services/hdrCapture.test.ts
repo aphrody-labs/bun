@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { float16ToPqRgb } from "./hdrCapture.js";
 
 // IEEE 754 half-precision (float16) bit patterns used to feed
@@ -18,7 +18,7 @@ function makeFloat16Frame(
 ): Buffer {
   // Row-padded layout matches WebGPU readback: bytesPerRow ≥ width * 8 (4
   // channels × 2 bytes), with garbage bytes after each row's pixel data.
-  const buf = Buffer.alloc(height * bytesPerRow);
+  const buf = new Uint8Array(height * bytesPerRow);
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const idx = y * bytesPerRow + x * 8;

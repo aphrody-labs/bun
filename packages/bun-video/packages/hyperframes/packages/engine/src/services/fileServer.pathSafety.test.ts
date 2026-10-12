@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { tmpdir } from "node:os";
@@ -24,9 +24,9 @@ describe("fileServer path containment", () => {
     root = fs.mkdtempSync(path.join(tmpdir(), "hf-fileserver-containment-"));
     projectDir = path.join(root, "project");
     fs.mkdirSync(projectDir);
-    fs.writeFileSync(path.join(projectDir, "index.html"), "<html></html>");
+    await Bun.write(path.join(projectDir, "index.html"), "<html></html>");
     outsideFile = path.join(root, "outside-secret.txt");
-    fs.writeFileSync(outsideFile, "OUTSIDE");
+    await Bun.write(outsideFile, "OUTSIDE");
     server = await createFileServer({
       headScripts: [],
       bodyScripts: [],

@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { findFFmpeg, findFFprobe, H264EncoderUnavailableError } from "./ffmpeg.js";
 
 // Only child_process is mocked: the H264 encoder probe shells out, while the

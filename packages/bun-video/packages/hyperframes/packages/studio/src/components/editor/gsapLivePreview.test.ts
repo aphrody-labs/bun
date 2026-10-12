@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "bun:test";
 import { createGsapLivePreview } from "./gsapLivePreview";
 import type { DomEditSelection } from "./domEditingTypes";
 import type { GsapAnimation } from "@hyperframes/parsers/gsap-parser";

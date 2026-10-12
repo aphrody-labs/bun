@@ -1,5 +1,5 @@
 import type {Dirent} from 'node:fs';
-import {createReadStream, promises as fs} from 'fs';
+import {createReadStream, promises as fs} from 'node:fs';
 import path from 'node:path';
 import type {Privacy} from '../defaults';
 import {makeStorageKey} from '../shared/make-storage-key';

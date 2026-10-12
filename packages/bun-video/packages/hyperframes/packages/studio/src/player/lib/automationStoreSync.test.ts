@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { syncStoredAutomationFromPreview, syncStoredElementAttribute } from "./automationStoreSync";
 import { usePlayerStore, type TimelineElement } from "../store/playerStore";
 

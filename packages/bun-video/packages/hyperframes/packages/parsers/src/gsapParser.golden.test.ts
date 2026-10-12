@@ -11,7 +11,7 @@
  *   moderate — 6 tl.to calls, multiple selectors (yt-lower-third)
  *   complex  — stagger, chained .from()/.to(), const/defaults (vpn-youtube-spot)
  */
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "bun:test";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseGsapScriptAcorn as parseGsapScript } from "./gsapParserAcorn.js";

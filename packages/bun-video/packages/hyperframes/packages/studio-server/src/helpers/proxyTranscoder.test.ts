@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { hdrToSdrToneMapFilter } from "@hyperframes/core";
 import { findFfBinary } from "@hyperframes/parsers/ff-binaries";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 
 const FFMPEG_PATH = "/usr/bin/ffmpeg";
 const realFfmpeg = findFfBinary("ffmpeg");

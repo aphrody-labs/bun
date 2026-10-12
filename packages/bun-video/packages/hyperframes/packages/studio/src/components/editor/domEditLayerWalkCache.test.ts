@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import {
   DOM_EDIT_LAYER_OBSERVER_INIT,
   type DomEditLayerWalkCache,

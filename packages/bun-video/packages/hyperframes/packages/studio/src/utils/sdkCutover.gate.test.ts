@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 
 // Kill-switch contract: with VITE_STUDIO_SDK_CUTOVER_ENABLED=false, EVERY cutover
 // persist chokepoint must explicitly decline so the caller takes the legacy server

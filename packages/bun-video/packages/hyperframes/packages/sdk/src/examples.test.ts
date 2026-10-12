@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { parseGsapScript } from "@hyperframes/parsers";
 import { addStaggeredEntrance } from "../examples/headless-agent.js";
 import { addBounceIn, updateEase } from "../examples/react-embed.js";

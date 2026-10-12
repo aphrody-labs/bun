@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { setupTempAuthEnv } from "./_test-utils.js";
 import { isAuthError } from "./errors.js";
 import {

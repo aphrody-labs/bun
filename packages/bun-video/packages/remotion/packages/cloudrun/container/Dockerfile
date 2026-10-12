@@ -1,4 +1,4 @@
-FROM node:22-bookworm-slim
+FROM oven/bun:22-bookworm-slim
 
 WORKDIR /usr/app
 
@@ -27,7 +27,7 @@ RUN apt install -y \
   libcups2
 
 RUN npm config set update-notifier false
-RUN npm i --no-fund --no-audit
+RUN bun install --no-fund --no-audit
 
 COPY dist ./dist
 

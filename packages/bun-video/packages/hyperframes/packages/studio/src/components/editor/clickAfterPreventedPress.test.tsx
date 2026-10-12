@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "bun:test";
 import { makeSelection } from "../../hooks/domSelectionTestHarness";
 import type { DomEditSelection } from "./domEditing";
 import "./domEditOverlayTestMocks";

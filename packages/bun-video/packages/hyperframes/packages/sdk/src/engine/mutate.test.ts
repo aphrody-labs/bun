@@ -6,7 +6,7 @@
  * and override-set key mapping.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { parseMutable, getElementStyles, setElementStyles } from "./model.js";
 import { applyOp, validateOp } from "./mutate.js";
 import { applyPatchesToDocument, applyOverrideSet } from "./apply-patches.js";

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import {
   DEFAULT_PREVIEW_ZOOM,
   MAX_PREVIEW_ZOOM_PERCENT,

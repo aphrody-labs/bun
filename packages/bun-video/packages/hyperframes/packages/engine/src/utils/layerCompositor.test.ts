@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { groupIntoLayers } from "./layerCompositor.js";
 import type { ElementStackingInfo } from "../services/videoFrameInjector.js";
 

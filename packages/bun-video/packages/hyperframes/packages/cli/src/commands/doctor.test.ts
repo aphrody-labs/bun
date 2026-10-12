@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync }
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { optionalPackageDir } from "../utils/optionalPackages.js";
 import {
   buildDoctorReport,

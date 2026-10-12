@@ -1,5 +1,5 @@
 import type {WrappedCanvas} from 'mediabunny';
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {createVideoIterator} from '../video/video-preview-iterator';
 
 const makeFrame = ({

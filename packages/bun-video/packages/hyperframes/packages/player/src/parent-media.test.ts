@@ -1,4 +1,4 @@
-import { afterEach, describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect } from "bun:test";
 import { ParentMediaManager, type ProxyEntry } from "./parent-media";
 
 // A fake media element whose paused state is driven by play()/pause() stubs.

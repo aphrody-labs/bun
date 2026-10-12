@@ -14,7 +14,7 @@ const getInstalledVersion = (
 ): string | null => {
 	try {
 		const pkgJsonPath = resolveFrom(remotionRoot, `${pkg}/package.json`);
-		const file = fs.readFileSync(pkgJsonPath, 'utf-8');
+		const file = await Bun.file(pkgJsonPath).text();
 		const packageJson = JSON.parse(file);
 		return packageJson.version;
 	} catch {

@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {convertAudioData} from '../convert-audiodata/convert-audiodata';
 import {generateSine, toInt16Array} from './sine';
 

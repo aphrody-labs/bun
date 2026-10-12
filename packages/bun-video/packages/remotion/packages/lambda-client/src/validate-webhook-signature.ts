@@ -37,7 +37,7 @@ export const validateWebhookSignature = ({
 	}
 
 	const matches =
-		Buffer.byteLength(signatureHeader) === Buffer.byteLength(signature) &&
+		new TextEncoder().encode(signatureHeader).length === new TextEncoder().encode(signature).length &&
 		Crypto.timingSafeEqual(
 			Buffer.from(signatureHeader),
 			Buffer.from(signature),

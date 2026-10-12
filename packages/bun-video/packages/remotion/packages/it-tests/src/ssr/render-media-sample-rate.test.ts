@@ -204,7 +204,7 @@ const makeConstantPcmWavDataUrl = () => {
 	const samplesPerChannel =
 		(STRESS_SAMPLE_RATE / STRESS_FPS) * sourceDurationInFrames;
 	const dataSize = samplesPerChannel * channels * 2;
-	const wav = Buffer.alloc(44 + dataSize);
+	const wav = new Uint8Array(44 + dataSize);
 	wav.write('RIFF', 0);
 	wav.writeUInt32LE(36 + dataSize, 4);
 	wav.write('WAVE', 8);

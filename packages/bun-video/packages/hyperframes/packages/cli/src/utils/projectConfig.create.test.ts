@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -33,14 +33,14 @@ describe("project config creation", () => {
     const dir = project();
     const path = projectConfigPath(dir);
     createProjectConfig(dir);
-    expect(fs.readFileSync(path, "utf-8")).toBe(
+    expect(await Bun.file(path).text()).toBe(
       JSON.stringify(DEFAULT_PROJECT_CONFIG, null, 2) + "\n",
     );
     const updated = { ...DEFAULT_PROJECT_CONFIG, authoringSkill: "slideshow" };
     createProjectConfig(dir, updated);
-    expect(JSON.parse(fs.readFileSync(path, "utf-8"))).toEqual(DEFAULT_PROJECT_CONFIG);
+    expect(await Bun.file(path).json()).toEqual(DEFAULT_PROJECT_CONFIG);
     writeProjectConfig(dir, updated);
-    expect(JSON.parse(fs.readFileSync(path, "utf-8"))).toEqual(updated);
+    expect(await Bun.file(path).json()).toEqual(updated);
   });
 
   it("preserves a config created after the skill seed reads ENOENT", () => {
@@ -48,11 +48,11 @@ describe("project config creation", () => {
     const path = projectConfigPath(dir);
     const winner = '{"registry":"https://custom.example","authoringSkill":"slideshow"}\n';
     vi.mocked(fs.readFileSync).mockImplementationOnce(() => {
-      fs.writeFileSync(path, winner);
+      await Bun.write(path, winner);
       throw Object.assign(new Error("missing before concurrent creation"), { code: "ENOENT" });
     });
     seedProjectAuthoringSkill(dir, "product-launch-video");
-    expect(fs.readFileSync(path, "utf-8")).toBe(winner);
+    expect(await Bun.file(path).text()).toBe(winner);
   });
 
   it("does not create a dangling symlink target when seeding an absent config", () => {
@@ -60,7 +60,7 @@ describe("project config creation", () => {
     const target = join(dir, "missing.json");
     fs.symlinkSync(target, projectConfigPath(dir));
     seedProjectAuthoringSkill(dir, "slideshow");
-    expect(fs.existsSync(target)).toBe(false);
+    expect(await Bun.file(target).exists()).toBe(false);
     expect(fs.lstatSync(projectConfigPath(dir)).isSymbolicLink()).toBe(true);
   });
 });

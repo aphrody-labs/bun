@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { getTimelinePlayheadTransform } from "./timelinePlayheadTransform";
 
 const x = (transform: string) => Number(/translateX\(([-\d.e]+)px\)/.exec(transform)?.[1]);

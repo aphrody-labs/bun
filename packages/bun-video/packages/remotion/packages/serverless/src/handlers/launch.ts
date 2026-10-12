@@ -334,7 +334,7 @@ const innerLaunchHandler = async <Provider extends CloudProvider>({
 		});
 		if (
 			!lastKey.endsWith(`.${params.imageFormat}`) ||
-			Buffer.byteLength(lastKey) > 1024
+			new TextEncoder().encode(lastKey).length > 1024
 		) {
 			throw new Error(
 				'imageSequencePattern must use the selected image format and produce storage keys of at most 1024 bytes',
@@ -903,13 +903,13 @@ const innerLaunchHandler = async <Provider extends CloudProvider>({
 			timeToDelete: cleanup.reduce((max, time) => Math.max(max, time), 0),
 			outputFile: {
 				url: renderMetadata.outputSequence.manifestUrl,
-				sizeInBytes: Buffer.byteLength(manifestBody),
+				sizeInBytes: new TextEncoder().encode(manifestBody).length,
 			},
 			timeToCombine: null,
 			overallProgress: progress,
 			timeToFinish: Date.now() - startTime,
 			outputSize:
-				progress.uploadedSizeInBytes + Buffer.byteLength(manifestBody),
+				progress.uploadedSizeInBytes + new TextEncoder().encode(manifestBody).length,
 			providerSpecifics,
 		});
 		await overallProgress.setPostRenderData(postRenderData);

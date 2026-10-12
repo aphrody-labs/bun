@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { gsap } from "gsap";
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
 import {

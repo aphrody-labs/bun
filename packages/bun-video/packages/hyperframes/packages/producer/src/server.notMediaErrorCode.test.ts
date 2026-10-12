@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { NotMediaPayloadError } from "@hyperframes/engine";
 import { extractSafeRenderErrorMetadata } from "./server.js";
 

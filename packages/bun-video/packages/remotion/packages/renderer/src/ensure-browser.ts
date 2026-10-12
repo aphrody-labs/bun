@@ -113,7 +113,7 @@ const getBrowserStatus = ({
 	version: string | null;
 }): BrowserStatus => {
 	if (browserExecutable) {
-		if (!fs.existsSync(browserExecutable)) {
+		if (!await Bun.file(browserExecutable).exists()) {
 			throw new Error(
 				`"browserExecutable" was specified as '${browserExecutable}' but the path doesn't exist. Pass "null" for "browserExecutable" to download a browser automatically.`,
 			);
@@ -123,7 +123,7 @@ const getBrowserStatus = ({
 	}
 
 	const revision = getRevisionInfo(chromeMode);
-	if (revision.local && fs.existsSync(revision.executablePath)) {
+	if (revision.local && await Bun.file(revision.executablePath).exists()) {
 		const actualVersion = readVersionFile(chromeMode);
 		if (
 			actualVersion ===

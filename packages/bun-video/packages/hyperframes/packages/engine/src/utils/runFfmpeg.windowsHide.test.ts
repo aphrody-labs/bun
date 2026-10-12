@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 
 // Hoisted so the mock factory below can reach it without a top-level variable.
 const { spawnMock } = vi.hoisted(() => ({ spawnMock: vi.fn() }));

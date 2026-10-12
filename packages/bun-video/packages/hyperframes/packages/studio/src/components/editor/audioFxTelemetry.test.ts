@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "bun:test";
 import type { HfAudioFxChain } from "@hyperframes/core/audio-fx";
 
 const trackStudioEvent = vi.fn();

@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { expect, it, vi } from "vitest";
+import { expect, it, vi } from "bun:test";
 import type { DomEditSelection } from "./domEditing";
 import "./domEditOverlayTestMocks";
 import { DomEditOverlay } from "./DomEditOverlay";

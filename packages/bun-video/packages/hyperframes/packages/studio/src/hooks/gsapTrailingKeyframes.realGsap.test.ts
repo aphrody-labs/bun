@@ -1,6 +1,6 @@
 import { trimTrailingKeyframeSpans } from "@hyperframes/parsers/gsap-writer-acorn";
 import { gsap } from "gsap";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 const timeline = `const tl = gsap.timeline({ paused: true });\n`;
 

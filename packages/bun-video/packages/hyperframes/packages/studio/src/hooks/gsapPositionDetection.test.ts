@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
 import { usePlayerStore } from "../player/store/playerStore";
 import { tween } from "./gsapParsedTween.test-helpers";

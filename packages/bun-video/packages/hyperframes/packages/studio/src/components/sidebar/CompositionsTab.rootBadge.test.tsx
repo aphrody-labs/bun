@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { resolveMasterCompositionPath } from "../../utils/studioUrlState";
 import { mountCompositionsTab } from "./compositionsTabTestUtils";
 

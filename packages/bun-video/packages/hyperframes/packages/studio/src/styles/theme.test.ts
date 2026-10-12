@@ -10,7 +10,7 @@ import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { Gear, IconContext } from "@phosphor-icons/react";
 import { compile } from "tailwindcss";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { readIconTokens } from "./iconTokens";
 import { loadStylesheet, STYLES_DIR, TAILWIND_DIR } from "./styleSources";
 

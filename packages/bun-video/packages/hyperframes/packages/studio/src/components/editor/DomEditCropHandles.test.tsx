@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import type { DomEditSelection } from "./domEditing";
 import type { OverlayRect } from "./domEditOverlayGeometry";
 import { DomEditCropHandles } from "./DomEditCropHandles";

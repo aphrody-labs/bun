@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, win32 } from "node:path";
 import { tmpdir } from "node:os";
@@ -238,7 +238,7 @@ describe("executeDiskCaptureWithAdaptiveRetry — zero-progress bail (integratio
     });
     vi.mocked(executeParallelCapture).mockRejectedValueOnce(error);
     vi.mocked(mergeWorkerFrames).mockImplementationOnce(async () => {
-      writeFileSync(join(framesDir, "frame_000000.jpg"), Buffer.alloc(100));
+      writeFileSync(join(framesDir, "frame_000000.jpg"), new Uint8Array(100));
     });
     try {
       await expect(

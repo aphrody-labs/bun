@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { lintHyperframeHtml } from "../hyperframeLinter.js";
 
 function compositionWithBodyPrefix(prefixContent: string, rootContent = ""): string {

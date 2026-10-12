@@ -249,12 +249,12 @@ export function middleware(context: DevMiddlewareContext) {
 					setHeaderForResponse(res, 'Content-Type', 'text/html; charset=utf-8');
 
 					const document = createHtmlDocument(416, `Error: ${message}`);
-					const _byteLength = Buffer.byteLength(document);
+					const _byteLength = new TextEncoder().encode(document).length;
 
 					setHeaderForResponse(
 						res,
 						'Content-Length',
-						Buffer.byteLength(document),
+						new TextEncoder().encode(document).length,
 					);
 
 					send(req, res, document, _byteLength);

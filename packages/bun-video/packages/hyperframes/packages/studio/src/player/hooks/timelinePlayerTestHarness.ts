@@ -2,7 +2,7 @@
 // whose window exposes a playback adapter.
 import React, { act, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { vi } from "vitest";
+import { vi } from "bun:test";
 import { useTimelinePlayer, type UseTimelinePlayerOptions } from "./useTimelinePlayer";
 import { usePlayerStore } from "../store/playerStore";
 import { setPreviewFrame } from "../store/previewFrameStore";

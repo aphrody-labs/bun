@@ -2,7 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { getFfmpegBinary, muxVideoWithAudio } from "@hyperframes/engine";
 import { padOrTrimAudioToVideoFrameCount } from "./audioPadTrim.js";
 

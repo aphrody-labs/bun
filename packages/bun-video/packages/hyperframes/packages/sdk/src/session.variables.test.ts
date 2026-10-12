@@ -5,7 +5,7 @@
  * merge; validation matches --strict-variables.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { openComposition } from "./session.js";
 
 const DECLS = [

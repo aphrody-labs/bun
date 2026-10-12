@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 
 const packageDir = resolve(import.meta.dirname, "..");
 const { subpaths } = JSON.parse(readFileSync(resolve(packageDir, "package-subpaths.json"), "utf8"));

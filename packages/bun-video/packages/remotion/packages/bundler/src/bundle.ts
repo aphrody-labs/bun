@@ -233,7 +233,7 @@ export const findClosestFolderWithItem = (
 	let possibleFile = '';
 	for (let i = 0; i < recursionLimit; i++) {
 		possibleFile = path.join(currentDir, file);
-		const exists = fs.existsSync(possibleFile);
+		const exists = await Bun.file(possibleFile).exists();
 		if (exists) {
 			return path.dirname(possibleFile);
 		}
@@ -368,7 +368,7 @@ export const internalBundle = async (
 	}
 
 	const bundleOutput = path.join(outDir, NoReactInternals.bundleName);
-	if (!fs.existsSync(bundleOutput)) {
+	if (!await Bun.file(bundleOutput).exists()) {
 		throw new Error(
 			`The bundler completed without emitting ${NoReactInternals.bundleName}.`,
 		);
@@ -401,7 +401,7 @@ export const internalBundle = async (
 		);
 	};
 
-	if (fs.existsSync(from)) {
+	if (await Bun.file(from).exists()) {
 		if (actualArgs.symlinkPublicDir && process.platform !== 'win32') {
 			await fs.promises.symlink(from, to);
 		} else {
@@ -478,7 +478,7 @@ export const internalBundle = async (
 		},
 	});
 
-	fs.writeFileSync(path.join(outDir, 'index.html'), html);
+	await Bun.write(path.join(outDir, 'index.html'), html);
 	fs.copyFileSync(
 		path.join(__dirname, '../favicon.ico'),
 		path.join(outDir, 'favicon.ico'),

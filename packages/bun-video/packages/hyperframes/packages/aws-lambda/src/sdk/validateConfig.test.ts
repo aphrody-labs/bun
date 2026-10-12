@@ -320,7 +320,7 @@ describe("validateStepFunctionsInputSize", () => {
       expect(msg).toMatch(/256/);
       // Names the actual byte count so users see how far over the cap they are.
       const serialized = JSON.stringify(input);
-      const expectedBytes = Buffer.byteLength(serialized, "utf8");
+      const expectedBytes = new TextEncoder().encode(serialized).length;
       expect(msg).toContain(String(expectedBytes));
       // Pointer to the docs section on URL'ing assets.
       expect(msg).toMatch(/templates-on-lambda/);

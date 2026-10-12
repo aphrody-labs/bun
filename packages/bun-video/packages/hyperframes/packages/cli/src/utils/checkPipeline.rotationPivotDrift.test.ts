@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 import { detectRotationPivotDrift } from "./checkPipeline.js";
 import type { RotationSample } from "./checkTypes.js";

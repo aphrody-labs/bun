@@ -2,7 +2,7 @@
 
 import React, { act, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { TextAreaField } from "../components/editor/propertyPanelSections";
 import type { DomEditSelection } from "../components/editor/domEditing";
 import { usePlayerStore } from "../player/store/playerStore";

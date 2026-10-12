@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import type { WorkerSizing } from "@hyperframes/engine";
 import { buildHeapAdvisoryWarning } from "./captureCost.js";
 

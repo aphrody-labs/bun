@@ -20,13 +20,13 @@ function hfResolve(pkg) {
     const cands = [path.join(root, "node_modules", pkg)];
     const bun = path.join(root, "node_modules", ".bun");
     try {
-      if (fs.existsSync(bun))
+      if (await Bun.file(bun).exists())
         for (const d of fs.readdirSync(bun))
           if (d.startsWith(pkg + "@")) cands.push(path.join(bun, d, "node_modules", pkg));
     } catch {}
     for (const c of cands) {
       try {
-        if (fs.existsSync(c)) return require(c);
+        if (await Bun.file(c).exists()) return require(c);
       } catch {}
     }
   }
@@ -40,17 +40,17 @@ const sharp = hfResolve("sharp");
 function ensureLayoutMeasured(project, force) {
   const lp = path.join(project, "_layout.json"),
     idx = path.join(project, "index.html");
-  let stale = force || !fs.existsSync(lp);
-  if (!stale && fs.existsSync(idx) && fs.statSync(idx).mtimeMs > fs.statSync(lp).mtimeMs)
+  let stale = force || !await Bun.file(lp).exists();
+  if (!stale && await Bun.file(idx).exists() && fs.statSync(idx).mtimeMs > fs.statSync(lp).mtimeMs)
     stale = true;
   if (stale)
     cp.execFileSync("node", [path.join(__dirname, "measure-layout.cjs"), project], {
       stdio: "inherit",
     });
-  return JSON.parse(fs.readFileSync(lp, "utf8"));
+  return await Bun.file(lp).json();
 }
 async function loadAlphaMask(png) {
-  if (!fs.existsSync(png)) return null;
+  if (!await Bun.file(png).exists()) return null;
   const { data, info } = await sharp(png)
     .ensureAlpha()
     .extractChannel(3)
@@ -93,12 +93,12 @@ async function main() {
     capFail = argf("--cap-fail", 0.5);
   const layout = ensureLayoutMeasured(project, process.argv.includes("--remeasure"));
   const framesDir = path.join(project, "frames_fg");
-  if (!fs.existsSync(framesDir)) {
+  if (!await Bun.file(framesDir).exists()) {
     console.error(`[v2] missing ${framesDir}`);
     process.exit(2);
   }
   const planPath = path.join(project, "plan.json");
-  const plan = fs.existsSync(planPath) ? JSON.parse(fs.readFileSync(planPath, "utf8")) : {};
+  const plan = await Bun.file(planPath).exists() ? await Bun.file(planPath).json() : {};
   const planLayer = plan.caption_layer || "bg";
   // Hero groups (the ONE big promoted word) are SUPPOSED to sit ON the subject — for them
   // occlusion is a TARGET (~30–55%), not "minimize". Collect their ids for the advisory below.

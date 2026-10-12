@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { act } from "react";
-import { expect, it } from "vitest";
+import { expect, it } from "bun:test";
 import { createHappyDomRootHarness } from "./testRootHarness";
 import { ThumbnailTiles } from "./ThumbnailTiles";
 

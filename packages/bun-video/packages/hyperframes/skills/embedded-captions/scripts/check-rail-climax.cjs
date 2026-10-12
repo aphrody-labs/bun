@@ -30,7 +30,7 @@ function findInBun(root, pkg, sub) {
   const cands = [path.join(root, "node_modules", pkg)];
   const bunDir = path.join(root, "node_modules", ".bun");
   try {
-    if (fs.existsSync(bunDir))
+    if (await Bun.file(bunDir).exists())
       for (const d of fs.readdirSync(bunDir))
         if (d.startsWith(pkg + "@")) cands.push(path.join(bunDir, d, "node_modules", pkg));
   } catch {
@@ -38,7 +38,7 @@ function findInBun(root, pkg, sub) {
   }
   for (const c of cands) {
     const p = sub ? path.join(c, sub) : c;
-    if (fs.existsSync(p)) return p;
+    if (await Bun.file(p).exists()) return p;
   }
   return null;
 }
@@ -56,7 +56,7 @@ for (const root of HF_ROOTS) {
   }
   if (!gsapSource) {
     const g = findInBun(root, "gsap", path.join("dist", "gsap.min.js"));
-    if (g) gsapSource = fs.readFileSync(g, "utf8");
+    if (g) gsapSource = await Bun.file(g).text();
   }
 }
 
@@ -153,7 +153,7 @@ async function main() {
   if (!process.argv[2]) ok("[rail-climax] usage: check-rail-climax.cjs <project-dir>");
   const indexPath = path.join(project, "index.html");
   const railPath = path.join(project, "rail.html");
-  if (!fs.existsSync(railPath) || !fs.existsSync(indexPath))
+  if (!await Bun.file(railPath).exists() || !await Bun.file(indexPath).exists())
     ok("[rail-climax] no rail.html+index.html — not Standard, skipping");
   if (!puppeteer)
     ok(
@@ -168,7 +168,7 @@ async function main() {
   try {
     browser = await puppeteer.launch({
       headless: "new",
-      executablePath: fs.existsSync(exe) ? exe : undefined,
+      executablePath: await Bun.file(exe).exists() ? exe : undefined,
       args: ["--disable-web-security", "--allow-file-access-from-files", "--disable-dev-shm-usage"],
     });
   } catch (e) {

@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, expect, it, vi, type Mock } from "vitest";
+import { afterEach, beforeEach, expect, it, vi, type Mock } from "bun:test";
 import {
   createStudioApi,
   openProjectHistory,

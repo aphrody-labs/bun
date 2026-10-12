@@ -18,7 +18,7 @@ test.describe('suppress webpack rebuild', () => {
 		const logCountBefore = readStudioLogs().length;
 
 		// 1. Update default props via the studio API
-		const currentContent = fs.readFileSync(rootFile, 'utf-8');
+		const currentContent = await Bun.file(rootFile).text();
 		const currentDelay = currentContent.match(/delay:\s*(\d+)/)?.[1];
 		const newDelay = currentDelay === '99' ? 98 : 99;
 
@@ -47,7 +47,7 @@ test.describe('suppress webpack rebuild', () => {
 		await expect
 			.poll(
 				() => {
-					const content = fs.readFileSync(rootFile, 'utf-8');
+					const content = await Bun.file(rootFile).text();
 					return content.includes(`delay: ${newDelay}`);
 				},
 				{
@@ -89,12 +89,12 @@ test.describe('suppress webpack rebuild', () => {
 
 		// 2. Now manually edit the file — this SHOULD trigger a rebuild
 		const logCountBeforeManualEdit = readStudioLogs().length;
-		const contentBeforeEdit = fs.readFileSync(rootFile, 'utf-8');
+		const contentBeforeEdit = await Bun.file(rootFile).text();
 		const editedContent = contentBeforeEdit.replace(
 			`delay: ${newDelay}`,
 			`delay: ${newDelay + 1}`,
 		);
-		fs.writeFileSync(rootFile, editedContent);
+		await Bun.write(rootFile, editedContent);
 
 		// Wait for webpack to rebuild
 		await expect
@@ -115,11 +115,11 @@ test.describe('suppress webpack rebuild', () => {
 		// 3. A config edit should be handled by the dedicated config watcher,
 		// without also triggering a bundler rebuild through Tailwind's scanner.
 		const configFile = path.join(exampleDir, 'remotion.config.ts');
-		const configBeforeEdit = fs.readFileSync(configFile, 'utf-8');
+		const configBeforeEdit = await Bun.file(configFile).text();
 		const logCountBeforeConfigEdit = readStudioLogs().length;
 
 		try {
-			fs.writeFileSync(configFile, `${configBeforeEdit}\n`);
+			await Bun.write(configFile, `${configBeforeEdit}\n`);
 
 			await expect
 				.poll(
@@ -147,7 +147,7 @@ test.describe('suppress webpack rebuild', () => {
 				),
 			).toBe(false);
 		} finally {
-			fs.writeFileSync(configFile, configBeforeEdit);
+			await Bun.write(configFile, configBeforeEdit);
 		}
 	});
 });

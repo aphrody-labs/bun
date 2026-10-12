@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import puppeteer, { type Browser } from "puppeteer-core";
 

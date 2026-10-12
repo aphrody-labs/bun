@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { membersForDelete } from "./useDomEditSession";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";
 

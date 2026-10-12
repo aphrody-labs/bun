@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { __resetForTests, acquireCanvasNudgeKeys, canvasNudgeKeysClaimed } from "./canvasNudgeGate";
 
 describe("canvasNudgeGate", () => {

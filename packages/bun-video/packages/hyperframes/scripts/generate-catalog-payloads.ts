@@ -341,7 +341,7 @@ export async function buildPayload(
       dropStalePayload();
       return "skipped";
     }
-    const bytes = Buffer.byteLength(withBase, "utf-8");
+    const bytes = new TextEncoder().encode(withBase).length;
     if (bytes > MAX_PAYLOAD_BYTES) {
       console.log(`  – ${item.name}: ${(bytes / 1e6).toFixed(1)} MB payload, over budget`);
       dropStalePayload();

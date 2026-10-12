@@ -52,8 +52,8 @@ const waitForEvent = async ({
 	event: string;
 }): Promise<void> => {
 	for (let attempts = 0; attempts < 500; attempts++) {
-		const events = fs.existsSync(eventsPath)
-			? fs.readFileSync(eventsPath, 'utf8')
+		const events = await Bun.file(eventsPath).exists()
+			? await Bun.file(eventsPath).text()
 			: '';
 		if (events.includes(event)) {
 			return;
@@ -94,15 +94,15 @@ test(
 			});
 			await waitForEvent({eventsPath, event: 'second:attempting'});
 
-			expect(fs.readFileSync(eventsPath, 'utf8')).not.toContain(
+			expect(await Bun.file(eventsPath).text()).not.toContain(
 				'second:acquired',
 			);
 
-			fs.writeFileSync(releaseSignal, '');
+			await Bun.write(releaseSignal, '');
 			await Promise.all([firstWorker, secondWorker]);
 
-			expect(fs.readFileSync(eventsPath, 'utf8')).toContain('second:released');
-			expect(fs.existsSync(lockPath)).toBe(false);
+			expect(await Bun.file(eventsPath).text()).toContain('second:released');
+			expect(await Bun.file(lockPath).exists()).toBe(false);
 		} finally {
 			fs.rmSync(temporaryDirectory, {recursive: true, force: true});
 		}

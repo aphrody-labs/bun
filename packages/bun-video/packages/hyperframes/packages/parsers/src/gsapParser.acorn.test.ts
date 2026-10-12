@@ -10,7 +10,7 @@
  * Also includes the targeted preservation test (comments, custom JS, postamble)
  * and a coverage check against the fromTo / chained-call patterns.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseGsapScriptAcorn } from "./gsapParserAcorn.js";

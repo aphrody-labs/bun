@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import type React from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import type { OffCanvasRect } from "./OffCanvasIndicators";
 import { recomputeOffCanvasIndicators } from "./offCanvasIndicatorGeometry";
 import { DOM_EDIT_LAYER_OBSERVER_INIT, createDomEditLayerWalkCache } from "./domEditLayerWalkCache";

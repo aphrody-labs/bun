@@ -1,5 +1,5 @@
 import type {NetworkInterfaceInfo} from 'node:os';
-import os from 'os';
+import os from 'node:os';
 import {truthy} from './truthy';
 
 type PortConfig = {

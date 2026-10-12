@@ -1,5 +1,5 @@
 import type { GsapAnimation, PropertyGroupName } from "@hyperframes/core/gsap-parser";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import type { TimelineElement } from "../store/playerStore";
 import {
   buildTimelineLogicalRows,

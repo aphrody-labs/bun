@@ -47,13 +47,13 @@ class ContentFS {
   saveDescriptor(descriptor: StoryMetadataWithDetails) {
     const dirPath = this.getDir();
     const filePath = path.join(dirPath, "descriptor.json");
-    fs.writeFileSync(filePath, JSON.stringify(descriptor, null, 2));
+    await Bun.write(filePath, JSON.stringify(descriptor, null, 2));
   }
 
   saveTimeline(timeline: Timeline) {
     const dirPath = this.getDir();
     const filePath = path.join(dirPath, "timeline.json");
-    fs.writeFileSync(filePath, JSON.stringify(timeline, null, 2));
+    await Bun.write(filePath, JSON.stringify(timeline, null, 2));
   }
 
   getDir(dir?: string): string {

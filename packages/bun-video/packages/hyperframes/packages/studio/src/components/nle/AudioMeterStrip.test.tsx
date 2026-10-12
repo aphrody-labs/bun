@@ -4,7 +4,7 @@
 import { act } from "react";
 import { MAX_AUDIO_GAIN } from "@hyperframes/core/audio-gain";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { usePlayerStore } from "../../player/store/playerStore";
 import type { TimelineElement } from "../../player/store/timelineElement";
 import { useAudioMetersVisible } from "../../utils/audioMeterVisibility";

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 
 const { execFileSyncMock } = vi.hoisted(() => ({ execFileSyncMock: vi.fn() }));
 
@@ -15,7 +15,7 @@ describe("Windows orphan-cleanup child-process options", () => {
   beforeEach(() => {
     Object.defineProperty(process, "platform", { value: "win32", configurable: true });
     execFileSyncMock.mockImplementation((command: string, args: string[]) => {
-      if (command === "taskkill") return Buffer.alloc(0);
+      if (command === "taskkill") return new Uint8Array(0);
       const script = args.at(-1) ?? "";
       if (script.includes("CreationDate")) return "123456\n";
       if (script.includes("ProcessId = 400")) return "300\n";

@@ -207,15 +207,15 @@ const generateOptionDocs = async () => {
 		}
 
 		if (
-			fs.existsSync(filePath) &&
-			fs.readFileSync(filePath, 'utf8') === formatted.code
+			await Bun.file(filePath).exists() &&
+			await Bun.file(filePath).text() === formatted.code
 		) {
 			continue;
 		}
 
 		outdated.push(file);
 		if (!check) {
-			fs.writeFileSync(filePath, formatted.code);
+			await Bun.write(filePath, formatted.code);
 		}
 	}
 

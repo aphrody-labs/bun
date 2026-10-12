@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -26,7 +26,7 @@ const HAS_FFMPEG = spawnSync(getFfmpegBinary(), ["-version"], { encoding: "utf-8
 function writeConstantWav(path: string, frames: number, value: number): void {
   const bytesPerSample = 2;
   const dataSize = frames * CHANNELS * bytesPerSample;
-  const buffer = Buffer.alloc(44 + dataSize);
+  const buffer = new Uint8Array(44 + dataSize);
   buffer.write("RIFF", 0, "ascii");
   buffer.writeUInt32LE(36 + dataSize, 4);
   buffer.write("WAVE", 8, "ascii");
@@ -187,7 +187,7 @@ describe("applyVolumeEnvelopeToWav", () => {
     const frames = 4;
     const dataSize = frames * CHANNELS * 2;
     // Lay the data chunk before fmt to exercise order-independent scanning.
-    const buffer = Buffer.alloc(12 + (8 + dataSize) + (8 + 16));
+    const buffer = new Uint8Array(12 + (8 + dataSize) + (8 + 16));
     buffer.write("RIFF", 0, "ascii");
     buffer.writeUInt32LE(buffer.length - 8, 4);
     buffer.write("WAVE", 8, "ascii");
@@ -211,7 +211,7 @@ describe("applyVolumeEnvelopeToWav", () => {
   it("rejects non-16-bit PCM so the caller can fall back", () => {
     const path = join(tmp(), "e.wav");
     // 24-bit PCM header (bitsPerSample = 24); body contents are irrelevant.
-    const buffer = Buffer.alloc(44);
+    const buffer = new Uint8Array(44);
     buffer.write("RIFF", 0, "ascii");
     buffer.write("WAVE", 8, "ascii");
     buffer.write("fmt ", 12, "ascii");
@@ -245,7 +245,7 @@ describe("applyVolumeEnvelopeToWav", () => {
     /** Stereo float32 WAV, every sample `value` — over 1.0 on purpose. */
     function writeConstantFloatWav(path: string, frames: number, value: number): void {
       const dataSize = frames * CHANNELS * 4;
-      const buffer = Buffer.alloc(44 + dataSize);
+      const buffer = new Uint8Array(44 + dataSize);
       buffer.write("RIFF", 0, "ascii");
       buffer.writeUInt32LE(36 + dataSize, 4);
       buffer.write("WAVE", 8, "ascii");

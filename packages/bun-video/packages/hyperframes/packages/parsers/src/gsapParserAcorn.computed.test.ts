@@ -3,7 +3,7 @@
  * read parser — true positions, motionPath arcs, and provenance — plus
  * regression coverage that literal-position compositions are unchanged.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { parseGsapScriptAcorn, editabilityForProvenance } from "./gsapParserAcorn.js";
 
 describe("editabilityForProvenance", () => {

@@ -2,7 +2,7 @@
 // @vitest-environment happy-dom
 
 import { patchRuntimeTweenInPlace } from "../hooks/gsapRuntimePatch";
-import { afterEach, describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "bun:test";
 import {
   readNestedFiles,
   applySoftReload,

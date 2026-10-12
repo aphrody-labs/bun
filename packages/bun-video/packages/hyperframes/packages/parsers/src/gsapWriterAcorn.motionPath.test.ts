@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import {
   addMotionPathPointInScript as addAcorn,
   addMotionPathToScript as addPathAcorn,

@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "bun:test";
 import { HINT_KEY_PATTERN } from "./agent_runtime.js";
 
 // agent_runtime.ts reads node:os via release/platform and node:fs for the

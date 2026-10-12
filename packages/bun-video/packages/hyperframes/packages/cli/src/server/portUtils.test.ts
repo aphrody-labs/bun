@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { createServer, type Server } from "node:net";
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";

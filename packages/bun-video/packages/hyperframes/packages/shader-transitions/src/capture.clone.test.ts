@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { captureScene, forceSceneVisibleInClone } from "./capture.js";
 
 describe("forceSceneVisibleInClone", () => {

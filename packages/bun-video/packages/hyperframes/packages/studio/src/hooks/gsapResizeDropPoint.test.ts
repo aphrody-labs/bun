@@ -15,7 +15,7 @@
  * inputs reproduce the drop rect, the post-commit rect and the rect width the
  * browser reported to three decimal places.
  */
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";
 import { usePlayerStore } from "../player/store/playerStore";

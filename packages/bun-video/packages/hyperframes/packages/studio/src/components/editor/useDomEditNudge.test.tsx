@@ -3,7 +3,7 @@ import { trackStudioEvent } from "../../utils/studioTelemetry";
 // @vitest-environment happy-dom
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { installReactActEnvironment, makeSelection } from "../../hooks/domSelectionTestHarness";
 import { useDomEditNudge, type UseDomEditNudgeParams } from "./useDomEditNudge";
 import { CANVAS_NUDGE_COMMIT_DEBOUNCE_MS, CANVAS_NUDGE_STEP_PX } from "./domEditNudge";

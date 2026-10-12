@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { decideMusic, decideVoice, KOKORO_PIP, MUSICGEN_PIP } from "./providers.js";
 
 describe("decideVoice — mirrors the skill's heygen → elevenlabs → kokoro order", () => {

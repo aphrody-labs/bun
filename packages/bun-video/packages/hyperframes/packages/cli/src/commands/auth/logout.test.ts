@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "bun:test";
 import { setupTempAuthEnv, type EnvFixture } from "../../auth/_test-utils.js";
 
 let envFixture: EnvFixture;

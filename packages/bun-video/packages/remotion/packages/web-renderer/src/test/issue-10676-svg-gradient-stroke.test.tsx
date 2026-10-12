@@ -1,4 +1,4 @@
-import {test} from 'vitest';
+import {test} from 'bun:test';
 import {page} from 'vitest/browser';
 import {renderMediaOnWeb} from '../render-media-on-web';
 import {renderStillOnWeb} from '../render-still-on-web';

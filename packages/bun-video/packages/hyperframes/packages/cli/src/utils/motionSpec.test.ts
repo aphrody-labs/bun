@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, onTestFinished } from "vitest";
+import { describe, expect, it, onTestFinished } from "bun:test";
 import { findMotionSpec, parseMotionSpec, readMotionSpec, type MotionSpec } from "./motionSpec.js";
 
 const RFC_SPEC = {

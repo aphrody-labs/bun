@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { expect, it } from "vitest";
+import { expect, it } from "bun:test";
 import { readBoundedRegistryFile } from "./boundedFile.js";
 it("reads regular files up to the bound and rejects oversized or non-file cache entries", () => {
   const dir = mkdtempSync(join(tmpdir(), "hf-cache-bound-"));

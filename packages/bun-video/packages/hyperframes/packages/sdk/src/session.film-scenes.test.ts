@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { openComposition } from "./session.js";
 
 const SOURCE = "const originalScene = (t) => ({ x: 200 * t });";

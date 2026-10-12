@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { DEFAULT_CONFIG, resolveConfig } from "@hyperframes/engine";
 import {
   createRenderRequest,

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { dispatchModifierKey, dispatchPlainKey, type HotkeyCallbacks } from "./appHotkeysDispatch";
 import { liveTime, usePlayerStore } from "../player/store/playerStore";
 import type { DomEditSelection } from "../components/editor/domEditing";

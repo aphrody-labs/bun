@@ -1,5 +1,5 @@
 import {ALL_FORMATS, BlobSource, Input} from 'mediabunny';
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import type {RenderMediaOnWebProgress} from '../render-media-on-web';
 import {renderMediaOnWeb} from '../render-media-on-web';
 import '../symbol-dispose';

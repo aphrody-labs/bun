@@ -36,7 +36,7 @@ test("returns the task's result even when the lock cannot be released", () => {
 test("refuses a lock left by a process that stopped, names it, and never removes it", () => {
   const { lock, cleanup } = lockIn();
   try {
-    fs.writeFileSync(lock, "dead");
+    await Bun.write(lock, "dead");
     const past = new Date(Date.now() - 60_000);
     fs.utimesSync(lock, past, past);
     const started = Date.now();
@@ -48,7 +48,7 @@ test("refuses a lock left by a process that stopped, names it, and never removes
     );
     assert.ok(Date.now() - started < 1000);
     assert.equal(ran, false);
-    assert.equal(fs.readFileSync(lock, "utf8"), "dead");
+    assert.equal(await Bun.file(lock).text(), "dead");
   } finally {
     cleanup();
   }
@@ -71,7 +71,7 @@ test("waits for a process that holds the lock, then takes it", async () => {
 
     const ranAt = withFileLock(lock, fs, () => Date.now());
 
-    assert.ok(ranAt >= Number(fs.readFileSync(`${lock}.released`, "utf8")));
+    assert.ok(ranAt >= Number(await Bun.file(`${lock}.released`).text()));
     await new Promise((exited) => other.once("exit", exited));
   } finally {
     cleanup();

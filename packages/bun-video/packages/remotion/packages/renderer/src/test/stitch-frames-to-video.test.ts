@@ -164,7 +164,7 @@ test('Fast Start finalization stays off the public output path', async () => {
 				muted: true,
 				onProgress: () => {
 					progressUpdates++;
-					expect(fs.existsSync(outputPath)).toBe(false);
+					expect(await Bun.file(outputPath).exists()).toBe(false);
 				},
 				outputLocation: outputPath,
 				width: 512,

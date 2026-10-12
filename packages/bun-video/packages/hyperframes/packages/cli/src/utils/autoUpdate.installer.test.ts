@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it } from "bun:test";
 import { installerScript } from "./autoUpdate.js";
 
 // Runs the real detached-installer script; the "install" only writes a marker file.

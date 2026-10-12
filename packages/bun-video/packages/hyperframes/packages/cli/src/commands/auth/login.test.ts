@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { readStore, writeStore } from "../../auth/store.js";
 import { setupTempAuthEnv, type EnvFixture } from "../../auth/_test-utils.js";
 import { CliRuntimeError } from "../../utils/commandResult.js";

@@ -42,7 +42,7 @@ test.describe('visual controls', () => {
 		await expect
 			.poll(
 				() => {
-					const content = fs.readFileSync(visualControlsFile, 'utf-8');
+					const content = await Bun.file(visualControlsFile).text();
 					return content.includes(`'rotation', ${newRotation}`);
 				},
 				{
@@ -62,7 +62,7 @@ test.describe('visual controls', () => {
 		await expect
 			.poll(
 				() => {
-					const content = fs.readFileSync(visualControlsFile, 'utf-8');
+					const content = await Bun.file(visualControlsFile).text();
 					return content.includes(newLabel);
 				},
 				{
@@ -84,7 +84,7 @@ test.describe('visual controls', () => {
 		await expect
 			.poll(
 				() => {
-					const content = fs.readFileSync(visualControlsFile, 'utf-8');
+					const content = await Bun.file(visualControlsFile).text();
 					return content.includes(newSubtitle);
 				},
 				{
@@ -103,7 +103,7 @@ test.describe('visual controls', () => {
 		await expect
 			.poll(
 				() => {
-					const content = fs.readFileSync(visualControlsFile, 'utf-8');
+					const content = await Bun.file(visualControlsFile).text();
 					return /'subtitle',\s*null/.test(content);
 				},
 				{
@@ -140,7 +140,7 @@ test.describe('visual controls', () => {
 		await expect
 			.poll(
 				() => {
-					const content = fs.readFileSync(visualControlsFile, 'utf-8');
+					const content = await Bun.file(visualControlsFile).text();
 					const match = content.match(/'extra-rotation',\s*(\d+)/);
 					return match?.[1] === newValue;
 				},
@@ -157,7 +157,7 @@ test.describe('visual controls', () => {
 		await expect
 			.poll(
 				() => {
-					const content = fs.readFileSync(visualControlsFile, 'utf-8');
+					const content = await Bun.file(visualControlsFile).text();
 					return /'extra-rotation',\s*undefined/.test(content);
 				},
 				{

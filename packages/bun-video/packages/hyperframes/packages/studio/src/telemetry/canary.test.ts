@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "bun:test";
 import { evaluateCanary } from "@hyperframes/core/canary";
 
 // Pin the registry: real entries move as rollouts ramp, and these tests are

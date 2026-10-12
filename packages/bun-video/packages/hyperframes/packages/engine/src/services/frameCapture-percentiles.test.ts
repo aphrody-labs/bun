@@ -15,7 +15,7 @@
  * emission for small sample sets and make cross-percentile reads confusing.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { percentileOf } from "./frameCapture.js";
 
 describe("percentileOf", () => {

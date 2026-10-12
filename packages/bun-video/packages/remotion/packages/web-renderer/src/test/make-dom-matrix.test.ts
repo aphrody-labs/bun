@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {makeDOMMatrix} from '../drawing/make-dom-matrix';
 
 test('Should make a matrix from a multi-component scale', () => {

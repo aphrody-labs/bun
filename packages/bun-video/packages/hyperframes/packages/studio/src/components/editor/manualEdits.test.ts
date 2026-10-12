@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { Window } from "happy-dom";
 import {
   STUDIO_OFFSET_X_PROP,

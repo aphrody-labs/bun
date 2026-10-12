@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { consumeCommandResult } from "../utils/commandResult.js";
 import { runIds } from "./a2Commands.js";
 

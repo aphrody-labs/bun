@@ -1,6 +1,6 @@
 import {ALL_FORMATS, BufferSource, Input} from 'mediabunny';
 import type {ScheduleAudioNodeResult} from 'remotion';
-import {expect, test, vi} from 'vitest';
+import {expect, test, vi} from 'bun:test';
 import {audioIteratorManager} from '../audio-iterator-manager';
 import {processNext} from '../audio/sort-by-priority';
 import {makeNonceManager} from '../nonce-manager';

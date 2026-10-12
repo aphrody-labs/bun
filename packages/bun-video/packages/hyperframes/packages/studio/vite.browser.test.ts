@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "bun:test";
 import { join } from "node:path";
 
 const browserMocks = vi.hoisted(() => {

@@ -1,4 +1,4 @@
-import {test} from 'vitest';
+import {test} from 'bun:test';
 import {renderStillOnWeb} from '../render-still-on-web';
 import '../symbol-dispose';
 import {issue7243SvgJapaneseText} from './fixtures/issue-7243-svg-japanese-text';

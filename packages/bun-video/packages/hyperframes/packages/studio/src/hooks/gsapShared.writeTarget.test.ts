@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { parseGsapScript } from "@hyperframes/core/gsap-parser";
 import { addAnimationWithKeyframesToScript } from "@hyperframes/parsers/gsap-writer-acorn";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";

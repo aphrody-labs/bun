@@ -3,7 +3,7 @@ import { trackStudioEvent } from "../../utils/studioTelemetry";
 
 import React, { act, useRef } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { useAppHotkeys } from "../../hooks/useAppHotkeys";
 import { usePlayerStore } from "../../player/store/playerStore";
 import type { DomEditSelection } from "./domEditing";

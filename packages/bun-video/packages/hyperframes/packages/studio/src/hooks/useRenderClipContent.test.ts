@@ -2,7 +2,7 @@
 
 import React, { act, isValidElement, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { CompositionThumbnail, VideoThumbnail } from "../player";
 import { AudioWaveform } from "../player/components/AudioWaveform";
 import { AudibleVideoClipContent } from "../player/components/AudibleVideoClipContent";

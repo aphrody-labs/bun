@@ -32,13 +32,13 @@ for (const root of HF_ROOTS) {
   const cands = [path.join(root, "node_modules", "sharp")];
   const bunDir = path.join(root, "node_modules", ".bun");
   try {
-    if (fs.existsSync(bunDir))
+    if (await Bun.file(bunDir).exists())
       for (const d of fs.readdirSync(bunDir))
         if (d.startsWith("sharp@")) cands.push(path.join(bunDir, d, "node_modules", "sharp"));
   } catch {}
   for (const c of cands) {
     try {
-      if (fs.existsSync(c)) {
+      if (await Bun.file(c).exists()) {
         sharp = require(c);
         break;
       }
@@ -519,10 +519,10 @@ function sceneLighting(lum, occCell, GW, GH) {
 // split the transcript into sentence windows (punctuation, or a > 0.7s gap)
 function sentenceWindows(project) {
   const tp = path.join(project, "transcript.json");
-  if (!fs.existsSync(tp)) return [];
+  if (!await Bun.file(tp).exists()) return [];
   let words;
   try {
-    words = (JSON.parse(fs.readFileSync(tp, "utf8")).words || []).filter((w) => w && "start" in w);
+    words = (await Bun.file(tp).json().words || []).filter((w) => w && "start" in w);
   } catch {
     return [];
   }
@@ -554,7 +554,7 @@ async function main() {
     process.exit(1);
   }
   const fgDir = path.join(project, "frames_fg");
-  if (!fs.existsSync(fgDir)) {
+  if (!await Bun.file(fgDir).exists()) {
     console.error(`[safe-zones] no ${fgDir} — run matte.cjs first`);
     process.exit(2);
   }
@@ -588,7 +588,7 @@ async function main() {
   } catch {}
 
   const bgDir = path.join(project, "frames_bg");
-  const hasBg = fs.existsSync(bgDir);
+  const hasBg = await Bun.file(bgDir).exists();
   // cache evenly-sampled frame grids once (each = per-cell avg subject alpha 0..1,
   // plus per-cell mean LUMINANCE from frames_bg — bright zones wash out cream/screen text)
   const sampleIdx = [
@@ -608,7 +608,7 @@ async function main() {
       g = new Float32Array(GW * GH);
     for (let c = 0; c < GW * GH; c++) g[c] = (ch >= 4 ? data[c * ch + 3] : 255) / 255;
     let lum = null;
-    if (hasBg && fs.existsSync(path.join(bgDir, frames[i]))) {
+    if (hasBg && await Bun.file(path.join(bgDir, frames[i]).exists())) {
       const { data: bd, info: bi } = await sharp(path.join(bgDir, frames[i]))
         .resize(GW, GH, { fit: "fill" })
         .greyscale()
@@ -706,7 +706,7 @@ async function main() {
     for (let c = 0; c < GW * GH; c++) occCellG[c] = globalOcc[c] >= THRESH ? 1 : 0;
     const midName = frames[Math.floor(frames.length / 2)];
     const midBg = path.join(bgDir, midName);
-    if (hasBg && fs.existsSync(midBg)) {
+    if (hasBg && await Bun.file(midBg).exists()) {
       palette = await scenePalette(midBg, occCellG, GW, GH);
       // subject bbox in px from the global occupancy grid
       let cx0 = GW,
@@ -756,7 +756,7 @@ async function main() {
     lighting,
     windows,
   };
-  fs.writeFileSync(path.join(project, "safe-zones.json"), JSON.stringify(out, null, 2));
+  await Bun.write(path.join(project, "safe-zones.json"), JSON.stringify(out, null, 2));
 
   const z = (n, zn) =>
     zn

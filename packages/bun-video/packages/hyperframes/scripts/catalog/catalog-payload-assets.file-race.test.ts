@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
@@ -87,9 +87,8 @@ vi.mock("node:fs", async (importOriginal) => {
       const beforeWrite = hooks.beforeWrite;
       hooks.beforeWrite = undefined;
       beforeWrite?.();
-      return fs.writeFileSync(...args);
-    },
-    closeSync: (fd: number) => {
+      return await Bun.write(...args);
+    }, closeSync: (fd: number) => {
       fs.closeSync(fd);
       hooks.fds.delete(fd);
     },
@@ -128,7 +127,7 @@ afterEach(() => {
 function file(name: string, bytes = "checked") {
   const path = join(project, name);
   fs.mkdirSync(dirname(path), { recursive: true });
-  fs.writeFileSync(path, bytes);
+  await Bun.write(path, bytes);
   return path;
 }
 function expectHosted() {
@@ -141,7 +140,7 @@ function arm(path: string) {
   hooks.target = path;
   hooks.swap = () => {
     fs.renameSync(path, join(root, "original"));
-    fs.writeFileSync(path, "unchecked");
+    await Bun.write(path, "unchecked");
   };
 }
 
@@ -177,11 +176,11 @@ describe("catalog source reads", () => {
     const path = file("asset.png", "x");
     hooks.beforeOpen = () => {
       fs.renameSync(path, join(root, "original"));
-      fs.writeFileSync(path, Buffer.alloc(MAX_HOSTED_DIRECTORY_BYTES + 1));
+      await Bun.write(path, Buffer.alloc(MAX_HOSTED_DIRECTORY_BYTES + 1));
     };
     expect(hostItemDirectory(project, out.dir, "/item/")).toEqual({ status: "over-budget" });
     expect(hooks.beforeOpen).toBeUndefined();
-    expect(fs.existsSync(out.dir)).toBe(false);
+    expect(await Bun.file(out.dir).exists()).toBe(false);
   });
   it("bounds a sparse oversized source to the remaining directory budget plus one byte", () => {
     file("a.png", "already counted");
@@ -190,7 +189,7 @@ describe("catalog source reads", () => {
     hooks.forbidUnbounded = true;
     expect(hostItemDirectory(project, out.dir, "/item/")).toEqual({ status: "over-budget" });
     expect(hooks.bytesRead).toBe(MAX_HOSTED_DIRECTORY_BYTES + 1);
-    expect(fs.existsSync(out.dir)).toBe(false);
+    expect(await Bun.file(out.dir).exists()).toBe(false);
   });
   it("bounds a file that grows after its descriptor stat", () => {
     const path = file("asset.webm", "x");
@@ -199,7 +198,7 @@ describe("catalog source reads", () => {
     expect(hostItemDirectory(project, out.dir, "/item/")).toEqual({ status: "over-budget" });
     expect(hooks.afterStat).toBeUndefined();
     expect(hooks.bytesRead).toBe(MAX_HOSTED_DIRECTORY_BYTES + 1);
-    expect(fs.existsSync(out.dir)).toBe(false);
+    expect(await Bun.file(out.dir).exists()).toBe(false);
   });
   it("handles short descriptor reads without truncating a directory asset", () => {
     file("font.woff2");
@@ -220,17 +219,17 @@ describe("catalog source reads", () => {
     file("a.png", "a");
     file("b.png", "b".repeat(MAX_HOSTED_DIRECTORY_BYTES));
     fs.mkdirSync(out.dir);
-    fs.writeFileSync(join(out.dir, "a.png"), "existing");
+    await Bun.write(join(out.dir, "a.png"), "existing");
     expect(hostItemDirectory(project, out.dir, "/item/")).toEqual({ status: "over-budget" });
     expect(fs.readdirSync(out.dir)).toEqual(["a.png"]);
     expect(fs.readFileSync(join(out.dir, "a.png"), "utf8")).toBe("existing");
   });
   it("reuses budgeted bytes for download mirrors after sources change during publication", () => {
     const path = file("_downloads/font.woff2", "x".repeat(MAX_HOSTED_DIRECTORY_BYTES));
-    hooks.beforeWrite = () => fs.writeFileSync(path, "unchecked");
+    hooks.beforeWrite = () => await Bun.write(path, "unchecked");
     expectHosted();
     expect(hooks.beforeWrite).toBeUndefined();
-    const original = Buffer.alloc(MAX_HOSTED_DIRECTORY_BYTES, "x");
+    const original = new Uint8Array(MAX_HOSTED_DIRECTORY_BYTES, "x");
     expect(fs.readFileSync(join(out.dir, "_downloads/font.woff2")).equals(original)).toBe(true);
     expect(fs.readFileSync(join(out.dir, "font.woff2")).equals(original)).toBe(true);
   });
@@ -244,7 +243,7 @@ describe("catalog source reads", () => {
     expectHosted();
     expect(fs.readFileSync(join(out.dir, "media/font.woff2"), "utf8")).toBe("checked");
     expect(fs.readFileSync(join(out.dir, "font.woff2"), "utf8")).toBe("checked");
-    expect(fs.existsSync(join(out.dir, "_downloads"))).toBe(false);
+    expect(await Bun.file(join(out.dir, "_downloads").exists())).toBe(false);
     expect(hooks.swap).toBeUndefined();
   });
   it("preserves download mirror precedence over a colliding root asset", () => {
@@ -255,7 +254,7 @@ describe("catalog source reads", () => {
   });
   it.each(["png", "glb", "html"])("does not publish an external .%s symlink target", (ext) => {
     const outside = join(root, `outside.${ext}`);
-    fs.writeFileSync(outside, "secret");
+    await Bun.write(outside, "secret");
     fs.symlinkSync(outside, join(project, `linked.${ext}`), "file");
     if (ext === "html") {
       const html = '<div data-composition-src="linked.html">';
@@ -265,19 +264,19 @@ describe("catalog source reads", () => {
       expect(result.unresolved).toEqual([`linked.${ext}`]);
       expect(result.hosted + result.inlined).toBe(0);
     }
-    expect(fs.existsSync(out.dir)).toBe(false);
+    expect(await Bun.file(out.dir).exists()).toBe(false);
   });
   it("does not mirror a downloads directory linked outside the project", () => {
     const outside = join(root, "outside");
     fs.mkdirSync(outside);
-    fs.writeFileSync(join(outside, "secret.png"), "secret");
+    await Bun.write(join(outside, "secret.png"), "secret");
     fs.symlinkSync(
       outside,
       join(project, "_downloads"),
       process.platform === "win32" ? "junction" : "dir",
     );
     expect(hostItemDirectory(project, out.dir, "/item/")).toEqual({ status: "not-needed" });
-    expect(fs.existsSync(out.dir)).toBe(false);
+    expect(await Bun.file(out.dir).exists()).toBe(false);
   });
   it("keeps internal file links and a symlinked project root working", () => {
     const target = file("asset.glb");
@@ -291,7 +290,7 @@ describe("catalog source reads", () => {
   it("rejects sibling-prefix mounted composition escapes", () => {
     const sibling = join(root, "project-other");
     fs.mkdirSync(sibling);
-    fs.writeFileSync(join(sibling, "clip.html"), "secret");
+    await Bun.write(join(sibling, "clip.html"), "secret");
     const html = '<div data-composition-src="../project-other/clip.html">';
     expect(inlineMountedComposition(html, project)).toBe(html);
   });

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "bun:test";
 
 // `shouldTrack()` reads module-level constants evaluated at module load time,
 // so changing env after import has no effect. Each test resets module cache.

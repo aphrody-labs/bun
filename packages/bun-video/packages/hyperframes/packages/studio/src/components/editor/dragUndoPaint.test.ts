@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "bun:test";
 import { savePlainRotation } from "../../hooks/plainRotation";
 import type { DomEditSelection } from "./domEditing";
 import type { GestureState } from "./domEditOverlayGestures";

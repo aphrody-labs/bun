@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import pageHtml from "../index.html?raw";
-import { expect, it, vi } from "vitest";
+import { expect, it, vi } from "bun:test";
 
 vi.mock("@hyperframes/sdk", () => ({ openComposition: vi.fn() }));
 vi.mock("@hyperframes/core/gsap-parser-acorn", () => ({ parseGsapScriptAcorn: vi.fn() }));

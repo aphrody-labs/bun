@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { act } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import type { DomEditSelection } from "./domEditingTypes";
 import type { DomEditGroupPathOffsetCommit } from "./domEditOverlayGestures";
 import { STUDIO_OFFSET_X_PROP, STUDIO_OFFSET_Y_PROP } from "./manualEdits";

@@ -14,7 +14,7 @@
  * the NEXT parse honest, and a live attribute patch never triggers one.
  */
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { usePlayerStore, type TimelineElement } from "../player";
 import { resolveGroupSourceFile, useSetAudioGroupAttribute } from "./timelineAudioGroupVolume";
 

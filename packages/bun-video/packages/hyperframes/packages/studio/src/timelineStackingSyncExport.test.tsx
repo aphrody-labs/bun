@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 // Mounts the timeline by package name with no Studio shell, as a host app does.
 import { act } from "react";
-import { expect, it, vi } from "vitest";
+import { expect, it, vi } from "bun:test";
 import { Timeline, usePlayerStore, type TimelineZIndexReorderCommit } from "@hyperframes/studio";
 import { installReactActEnvironment, mountReactHarness } from "./hooks/domSelectionTestHarness";
 

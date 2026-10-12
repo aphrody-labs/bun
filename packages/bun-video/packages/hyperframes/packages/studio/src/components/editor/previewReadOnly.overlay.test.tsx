@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { makeSelection } from "../../hooks/domSelectionTestHarness";
 import { CANVAS_NUDGE_COMMIT_DEBOUNCE_MS } from "./domEditNudge";
 import { __resetForTests } from "../../utils/canvasNudgeGate";

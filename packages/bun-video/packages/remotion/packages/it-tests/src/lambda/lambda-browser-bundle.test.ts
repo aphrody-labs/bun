@@ -35,7 +35,7 @@ describe('Should be able to bundle @remotion/lambda/client with ESBuild', () => 
 		expect(unexpectedWarnings.length).toBe(0);
 
 		// Should not include remotion or react
-		const contents = fs.readFileSync(outfile, 'utf-8');
+		const contents = await Bun.file(outfile).text();
 		expect(contents.includes('jsx-runtime')).toBe(false);
 	});
 
@@ -71,7 +71,7 @@ describe('Should be able to bundle @remotion/renderer/pure without React', () =>
 		expect(warnings.length).toBe(0);
 
 		// Should not include react
-		const contents = fs.readFileSync(outfile, 'utf-8');
+		const contents = await Bun.file(outfile).text();
 		expect(contents.includes('jsx-runtime')).toBe(false);
 	});
 });

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import type { ElementStackingInfo } from "@hyperframes/engine";
 import { selectDomLayerShowIds } from "./hdrCompositor.js";
 

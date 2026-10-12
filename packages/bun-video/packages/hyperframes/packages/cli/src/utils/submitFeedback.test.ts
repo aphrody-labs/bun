@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 
 const getPublishApiBaseUrlMock = vi.hoisted(() => vi.fn(() => "https://api.example.com"));
 

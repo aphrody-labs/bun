@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "bun:test";
 import { flushStudioPendingEdits } from "../utils/studioPendingEdits";
 import { DomEditProvider, useDomEditActionsContext } from "./DomEditContext";
 

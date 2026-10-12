@@ -27,7 +27,7 @@ test.describe('render output dragging', () => {
 		);
 		const contents = Buffer.from('render-output-drag-e2e');
 		fs.mkdirSync(path.dirname(absoluteOutput), {recursive: true});
-		fs.writeFileSync(absoluteOutput, contents);
+		await Bun.write(absoluteOutput, contents);
 		fs.rmSync(copiedAsset, {force: true});
 		const registeredIds: string[] = [];
 
@@ -178,7 +178,7 @@ test.describe('render output dragging', () => {
 			});
 			await expect
 				.poll(() => {
-					if (!fs.existsSync(copiedAsset)) {
+					if (!await Bun.file(copiedAsset).exists()) {
 						return false;
 					}
 

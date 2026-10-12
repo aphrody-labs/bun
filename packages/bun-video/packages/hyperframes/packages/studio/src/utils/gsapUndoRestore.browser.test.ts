@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Browser } from "puppeteer-core";
 import { build, type Plugin } from "esbuild";
-import { afterAll, beforeAll, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, expect, it, vi } from "bun:test";
 import { launchTestChrome, showWithRuntime } from "../../tests/chromeTestUtils";
 import { writeFixture } from "../../tests/e2e/edit-accuracy/grid.mjs";
 

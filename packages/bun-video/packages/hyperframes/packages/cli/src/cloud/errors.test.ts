@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
 
 // errorBox writes to the console; mock it so we can assert which title /
 // message / third line the cascade picked without matching ANSI output.

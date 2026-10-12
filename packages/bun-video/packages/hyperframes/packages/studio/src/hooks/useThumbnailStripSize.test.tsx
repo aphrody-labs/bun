@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { createHappyDomRootHarness } from "../player/components/testRootHarness";
 import { NearScreenIntersectionObserver } from "./intersectionObserverTestUtils";
 import { MockResizeObserver, reportResize } from "./resizeObserverTestUtils";

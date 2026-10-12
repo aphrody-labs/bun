@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { LINK_LABEL_COLORS, linkLabelColor } from "./linkLabelColor";
 
 describe("linkLabelColor", () => {

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -45,7 +45,7 @@ describe("caption image file reads", () => {
     dir = fs.mkdtempSync(join(tmpdir(), "hf-caption-read-"));
     fs.mkdirSync(join(dir, "assets"));
     file = join(dir, "assets", "hero.png");
-    fs.writeFileSync(file, "original image");
+    await Bun.write(file, "original image");
     hooks.afterStat = () => {};
     hooks.beforeRead = () => {};
     hooks.descriptor = -1;
@@ -72,7 +72,7 @@ describe("caption image file reads", () => {
   it("reads the checked image when its directory entry is replaced", async () => {
     hooks.afterStat = () => {
       fs.renameSync(file, join(dir, "original.png"));
-      fs.writeFileSync(file, "replacement image");
+      await Bun.write(file, "replacement image");
     };
     expect(await captionImagesWithGemini(dir, () => {}, [])).toEqual({ "hero.png": "A hero." });
     expect(sentBody).toContain(Buffer.from("original image").toString("base64"));
@@ -81,7 +81,7 @@ describe("caption image file reads", () => {
   });
 
   it.each([4_000_000, 4_000_001])("preserves the inline size limit for %i bytes", async (size) => {
-    fs.writeFileSync(file, Buffer.alloc(size));
+    await Bun.write(file, Buffer.alloc(size));
     const read = vi.fn();
     hooks.beforeRead = read;
     const captions = await captionImagesWithGemini(dir, () => {}, []);

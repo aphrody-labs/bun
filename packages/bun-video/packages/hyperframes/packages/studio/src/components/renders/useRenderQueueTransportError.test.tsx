@@ -5,7 +5,7 @@
 // what travels into the feedback report, so three field reports — one of them a
 // render that failed EVERY time — arrived with nothing to act on.
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { mountRenderQueue } from "./renderQueueTestHarness";
 
 vi.mock("./useFfmpegStatus", async (importOriginal) => ({

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { runCommand } from "citty";
 import { parseHTML } from "linkedom";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import {
   HF_COLOR_GRADING_ACTIVE_EFFECT_KEYS,
   getHfColorGradingCapabilities,

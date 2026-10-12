@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import React, { act } from "react";
-import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import { beforeEach, describe, expect, it, vi, type Mock } from "bun:test";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";
 import { mountReactHarness } from "./domSelectionTestHarness";
 import { GsapEditBlockedError } from "./gsapEditOutcome";

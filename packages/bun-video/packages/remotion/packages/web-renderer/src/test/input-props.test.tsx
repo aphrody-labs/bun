@@ -1,5 +1,5 @@
 import {getInputProps, useVideoConfig} from 'remotion';
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {makeInternalState} from '../internal-state';
 import {renderStillOnWeb} from '../render-still-on-web';
 import type {RenderStillOnWebResult} from '../render-still-screenshot-task';

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "bun:test";
 
 // The suppression half of the cross-process opt-out. `hyperframes preview` is
 // long-lived, and Studio has no poller for /api/telemetry-identity, so a

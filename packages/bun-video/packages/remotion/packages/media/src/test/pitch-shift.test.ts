@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {StreamingPitchShifter} from '../audio/streaming-pitch-shifter';
 
 const makeSine = ({

@@ -5,7 +5,7 @@
  * the resulting element snapshot — the same read the Design controls rely on to
  * show bound state.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { openComposition } from "@hyperframes/sdk";
 import { createMemoryAdapter } from "@hyperframes/sdk/adapters/memory";
 import { applyBind, type BindAction } from "../components/panels/VariablesBindElement";

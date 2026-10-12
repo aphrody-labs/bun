@@ -56,7 +56,7 @@ export const openaiStructuredCompletion = async <T>(
 
 function saveUint8ArrayToPng(uint8Array: Uint8Array, filePath: string) {
   const buffer = Buffer.from(uint8Array);
-  fs.writeFileSync(filePath, buffer as Uint8Array);
+  await Bun.write(filePath, buffer as Uint8Array);
 }
 
 export const generateAiImage = async ({
@@ -147,7 +147,7 @@ export const getGenerateImageDescriptionPrompt = (storyText: string) => {
 
 const saveBase64ToMp3 = (data: string, path: string) => {
   const buffer = Buffer.from(data, "base64");
-  fs.writeFileSync(path, buffer as Uint8Array);
+  await Bun.write(path, buffer as Uint8Array);
 };
 
 export const generateVoice = async (

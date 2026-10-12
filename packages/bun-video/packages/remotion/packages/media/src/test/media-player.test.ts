@@ -1,5 +1,5 @@
 import {AudioBufferSink} from 'mediabunny';
-import {expect, test, vi} from 'vitest';
+import {expect, test, vi} from 'bun:test';
 import {MediaPlayer} from '../media-player';
 import type {SharedAudioContextForMediaPlayer} from '../shared-audio-context-for-media-player';
 

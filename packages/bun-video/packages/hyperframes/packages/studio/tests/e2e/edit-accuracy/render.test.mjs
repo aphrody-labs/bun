@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { FIXTURE_CDN } from "./grid.mjs";
 
 const require = createRequire(import.meta.url);
@@ -32,7 +32,7 @@ vi.mock("../../../../producer/src/index.js", () => ({
   // Navigation: Chrome pauses the fixture's GSAP request here when it is intercepted.
   initializeSession: async () =>
     handlers["Fetch.requestPaused"]?.({ requestId: "1", request: { url: gsapUrl } }),
-  captureFrameToBuffer: async () => ({ buffer: Buffer.alloc(0) }),
+  captureFrameToBuffer: async () => ({ buffer: new Uint8Array(0) }),
   closeCaptureSession: async () => undefined,
 }));
 

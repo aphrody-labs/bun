@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import type { DomEditSelection } from "../components/editor/domEditing";
 import { DomEditSaveQueueOpenError } from "../utils/domEditSaveQueue";
 import { mountReactHarness } from "./domSelectionTestHarness";

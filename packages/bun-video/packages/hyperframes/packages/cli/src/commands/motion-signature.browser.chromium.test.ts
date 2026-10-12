@@ -6,7 +6,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Browser, Page } from "puppeteer-core";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { findSystemBrowser } from "../browser/manager.js";
 
 const __dirname = import.meta.dir;

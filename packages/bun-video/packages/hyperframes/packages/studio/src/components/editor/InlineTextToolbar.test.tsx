@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import React, { act } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { cleanupMounted, trackedRoot } from "../ui/mountHost.testHelpers";
 import { InlineTextToolbar, swatchBackground } from "./InlineTextToolbar";
 import type { InlineTextEditSession } from "../../hooks/useInlineTextEdit";

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { tmpdir } from "node:os";
@@ -84,11 +84,11 @@ describe("prebuilt runtime file reads", () => {
     "reads checked %s despite replacement",
     async (name) => {
       const file = path.join(hooks.dir, name);
-      fs.writeFileSync(file, "checked runtime");
+      await Bun.write(file, "checked runtime");
       hooks.checked = () => {
         hooks.checked = () => {};
         fs.renameSync(file, path.join(hooks.dir, "original"));
-        fs.writeFileSync(file, "replacement runtime");
+        await Bun.write(file, "replacement runtime");
       };
       expect(await loadRuntimeSource()).toBe("checked runtime");
       expectClosed();
@@ -96,8 +96,8 @@ describe("prebuilt runtime file reads", () => {
   );
 
   it("preserves source, inline and artifact priority", async () => {
-    fs.writeFileSync(path.join(hooks.dir, "hyperframe-runtime.js"), "first artifact");
-    fs.writeFileSync(path.join(hooks.dir, "hyperframe.runtime.iife.js"), "second artifact");
+    await Bun.write(path.join(hooks.dir, "hyperframe-runtime.js"), "first artifact");
+    await Bun.write(path.join(hooks.dir, "hyperframe.runtime.iife.js"), "second artifact");
     hooks.source = "source";
     hooks.inlined = "inline";
     expect(await loadRuntimeSource()).toBe("source");
@@ -110,8 +110,8 @@ describe("prebuilt runtime file reads", () => {
   });
 
   it("preserves an empty first artifact", async () => {
-    fs.writeFileSync(path.join(hooks.dir, "hyperframe-runtime.js"), "");
-    fs.writeFileSync(path.join(hooks.dir, "hyperframe.runtime.iife.js"), "second artifact");
+    await Bun.write(path.join(hooks.dir, "hyperframe-runtime.js"), "");
+    await Bun.write(path.join(hooks.dir, "hyperframe.runtime.iife.js"), "second artifact");
     expect(await loadRuntimeSource()).toBe("");
     expectClosed();
   });
@@ -122,7 +122,7 @@ describe("prebuilt runtime file reads", () => {
   });
 
   it.each(["stat", "read"])("closes an artifact after %s failure", async (step) => {
-    fs.writeFileSync(path.join(hooks.dir, "hyperframe-runtime.js"), "bytes");
+    await Bun.write(path.join(hooks.dir, "hyperframe-runtime.js"), "bytes");
     const fail = () => {
       throw new Error("Injected artifact failure");
     };

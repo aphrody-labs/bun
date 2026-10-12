@@ -4,7 +4,7 @@
 import React, { act, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { openComposition } from "@hyperframes/sdk";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { usePlayerStore, type TimelineElement } from "../player";
 import { jsonResponse, requestUrl } from "./fetchStubTestUtils";
 import { useElementLifecycleOps } from "./useElementLifecycleOps";

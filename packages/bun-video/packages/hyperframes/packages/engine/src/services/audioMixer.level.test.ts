@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { getFfmpegBinary } from "../utils/ffmpegBinaries.js";
 import { MIXED_AUDIO_FILENAME, processCompositionAudio } from "./audioMixer.js";
 

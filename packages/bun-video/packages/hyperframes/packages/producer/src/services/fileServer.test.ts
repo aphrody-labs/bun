@@ -511,7 +511,7 @@ describe("createFileServer", () => {
       // 5 MB of deterministic bytes — large enough to span many 64KB read
       // chunks, small enough to keep the test fast.
       const size = 5 * 1024 * 1024;
-      const buf = Buffer.alloc(size);
+      const buf = new Uint8Array(size);
       for (let i = 0; i < size; i++) buf[i] = i & 0xff;
       writeFileSync(join(projectDir, "big.bin"), buf);
 
@@ -560,7 +560,7 @@ describe("createFileServer", () => {
       // fast, large enough that suffix / partial responses exercise the
       // slicing math meaningfully.
       const size = 4096;
-      const buf = Buffer.alloc(size);
+      const buf = new Uint8Array(size);
       for (let i = 0; i < size; i++) buf[i] = i & 0xff;
       writeFileSync(join(projectDir, "asset.bin"), buf);
 

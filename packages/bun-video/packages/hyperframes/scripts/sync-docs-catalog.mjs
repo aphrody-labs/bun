@@ -33,7 +33,7 @@ function isHeavy(html) {
 function previewFor(dir, id, docsDir, man) {
   const recorded = man.preview?.video ? { mode: "video" } : { mode: "still" };
   const payloadPath = path.join(docsDir, "public/catalog", dir, `${id}.json`);
-  if (!fs.existsSync(payloadPath)) return recorded;
+  if (!await Bun.file(payloadPath).exists()) return recorded;
   const payload = readJson(payloadPath);
   if (payload.unsupported) {
     return recorded.mode === "video"
@@ -97,7 +97,7 @@ function walk(node, pathLabels) {
     if (!m) return; // catalog/index and anything else stays out of the gallery data
     const [, dir, id] = m;
     const manifestPath = path.join(root, "registry", dir, id, "registry-item.json");
-    if (!fs.existsSync(manifestPath)) {
+    if (!await Bun.file(manifestPath).exists()) {
       console.warn(`! ${node}: no registry-item.json, skipped`);
       return;
     }
@@ -144,8 +144,7 @@ const groups = groupsOrder
     return pa - pb;
   });
 const result = { source: "https://github.com/heygen-com/hyperframes", groups, items };
-fs.writeFileSync(
-  path.join(docs, "snippets/catalog-gallery-data.mdx"),
+await Bun.write(path.join(docs, "snippets/catalog-gallery-data.mdx"),
   `export const catalogGalleryData = ${JSON.stringify(result)};\n`,
 );
 console.log(`Synced ${items.length} catalog items in ${groups.length} groups.`);

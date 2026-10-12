@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import {
   DEFAULT_IMAGE_TIMELINE_DURATION_SECONDS,
   MAX_PLAYBACK_RATE,

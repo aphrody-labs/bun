@@ -6,7 +6,7 @@
  */
 
 import { isHtmlElement } from "@hyperframes/core/runtime/dom-realm";
-import { expect } from "vitest";
+import { expect } from "bun:test";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";
 import type { ToolFailure, ToolResult } from "./toolResult";
 import type { StudioLookSnapshot } from "./tools/lookTools";

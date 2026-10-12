@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { vi } from "bun:test";
 
 // Shared by every test that drives the real `cli.js` dispatch path
 // (dynamic import + process.argv) instead of source-text matching.

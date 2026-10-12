@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import type { ChildProcess } from "node:child_process";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { ManagedChildProcess } from "./managedChildProcess.js";
 
 function childProcess() {

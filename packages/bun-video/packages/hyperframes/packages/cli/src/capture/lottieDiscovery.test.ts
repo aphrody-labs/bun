@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { discoverLottieResponse, LottieDiscovery } from "./lottieDiscovery.js";
 
 describe("bounded Lottie discovery", () => {

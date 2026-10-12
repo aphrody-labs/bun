@@ -2,7 +2,7 @@
 
 import React, { act, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { parseSpringBounce } from "@hyperframes/core/spring-ease";
 import { parseWiggleEase } from "@hyperframes/core/wiggle-ease";
 import { EaseCurveSection, MiniCurveSvg } from "./EaseCurveSection";

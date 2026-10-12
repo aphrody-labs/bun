@@ -170,7 +170,7 @@ test('Transport stream', async () => {
 	const fs = await import('node:fs');
 	if (
 		process.platform === 'darwin' &&
-		fs.existsSync('/opt/homebrew/bin/ffmpeg')
+		await Bun.file('/opt/homebrew/bin/ffmpeg').exists()
 	) {
 		const ffmpegResult = Bun.spawnSync({
 			cmd: [

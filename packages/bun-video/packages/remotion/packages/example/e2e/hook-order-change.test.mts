@@ -16,7 +16,7 @@ test.describe('hook order refresh', () => {
 	test('reloads the Studio when a component gains a second hook', async ({
 		page,
 	}) => {
-		const originalContent = fs.readFileSync(hookOrderChangeE2eFile, 'utf-8');
+		const originalContent = await Bun.file(hookOrderChangeE2eFile).text();
 		expect(originalContent).toContain('one hook');
 		expect(originalContent).not.toContain('React.useState(false)');
 
@@ -31,7 +31,7 @@ test.describe('hook order refresh', () => {
 		await expect(page.getByText('one hook')).toBeVisible({timeout: 15_000});
 
 		const logCountBefore = readStudioLogs().length;
-		fs.writeFileSync(hookOrderChangeE2eFile, updatedContent);
+		await Bun.write(hookOrderChangeE2eFile, updatedContent);
 
 		await expect
 			.poll(

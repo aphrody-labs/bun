@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { reapplyPositionEditsAfterSeek } from "./manualEditsSeekReapply";
 import {
   STUDIO_OFFSET_X_PROP,

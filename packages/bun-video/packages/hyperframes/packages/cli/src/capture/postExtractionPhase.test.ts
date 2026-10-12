@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, onTestFinished } from "vitest";
+import { describe, expect, it, onTestFinished } from "bun:test";
 import { noDrops } from "./assetDownloader.js";
 import { createPartialCaptureState } from "./partialCapture.js";
 import { runPostExtraction } from "./postExtractionPhase.js";

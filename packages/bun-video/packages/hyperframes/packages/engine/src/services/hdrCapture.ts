@@ -199,7 +199,7 @@ export function float16ToPqRgb(
 ): Buffer {
   const data = new Uint16Array(rawBuffer.buffer, rawBuffer.byteOffset, rawBuffer.byteLength / 2);
   const channelsPerRow = bytesPerRow / 2;
-  const output = Buffer.alloc(width * height * 6);
+  const output = new Uint8Array(width * height * 6);
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {

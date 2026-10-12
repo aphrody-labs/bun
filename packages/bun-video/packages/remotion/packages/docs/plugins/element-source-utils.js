@@ -93,7 +93,7 @@ export const getRemotionElementSource = ({file, sourceFilePath}) => {
 	const absoluteSourcePath = path.resolve(path.dirname(sourceFilePath), file);
 
 	try {
-		return fs.readFileSync(absoluteSourcePath, 'utf8').trimEnd();
+		return await Bun.file(absoluteSourcePath).text().trimEnd();
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
 
@@ -142,7 +142,7 @@ export const getRemotionElementSourceMap = ({elementsRoot}) => {
 	const sourceCodeBySlug = {};
 
 	for (const sourceFilePath of indexFiles.sort()) {
-		const raw = fs.readFileSync(sourceFilePath, 'utf8');
+		const raw = await Bun.file(sourceFilePath).text();
 		const elementPages = Array.from(
 			raw.matchAll(/<ElementPage\b([\s\S]*?)\/>/g),
 		);

@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "bun:test";
 import { ensureWhisper, findWhisper, WhisperUnavailableError } from "./manager.js";
 const calls = vi.hoisted(() => ({ exec: vi.fn() }));
 vi.mock("node:child_process", () => ({ execFileSync: calls.exec }));

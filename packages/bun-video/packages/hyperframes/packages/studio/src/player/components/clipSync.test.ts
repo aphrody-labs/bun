@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { clipSyncState, syncPartnerOf } from "./clipSync";
 
 const clip = (id: string, tag: string, start: number, extra: Record<string, unknown> = {}) => ({

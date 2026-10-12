@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { act } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { createRoot } from "react-dom/client";
 import { useAutomationLanes, type AutomationLaneBinding } from "./useAutomationLanes";
 import type { TimelineElement } from "../store/playerStore";

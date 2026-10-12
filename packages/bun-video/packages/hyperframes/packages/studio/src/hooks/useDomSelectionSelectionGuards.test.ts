@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { installReactActEnvironment, makeSelection } from "./domSelectionTestHarness";
 import type { DomEditSelection } from "../components/editor/domEditing";
 import type { SelectElementOptions, TimelineElement } from "../player";

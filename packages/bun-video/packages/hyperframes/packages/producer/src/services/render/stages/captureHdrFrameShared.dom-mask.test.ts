@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
 import type { ElementStackingInfo } from "@hyperframes/engine";
 import {
   applyDomLayerMask,
@@ -17,7 +17,7 @@ vi.mock("@hyperframes/engine", async (importOriginal) => {
     ...actual,
     applyDomLayerMask: vi.fn(async () => undefined),
     captureAlphaPng: vi.fn(async () => Buffer.from("png")),
-    decodePng: vi.fn(() => ({ data: Buffer.alloc(4), width: 1, height: 1 })),
+    decodePng: vi.fn(() => ({ data: new Uint8Array(4), width: 1, height: 1 })),
     removeDomLayerMask: vi.fn(async () => undefined),
     blitRgba8OverRgb48le: vi.fn(),
   };
@@ -90,7 +90,7 @@ describe("captureSceneIntoBuffer", () => {
 
     await captureSceneIntoBuffer({
       session: { page, onBeforeCapture: null } as never,
-      sceneBuf: Buffer.alloc(6),
+      sceneBuf: new Uint8Array(6),
       sceneIds: new Set(["visible-overlay", "hidden-inner", "hidden-sdr-video"]),
       stackingInfo: [
         makeEl("visible-overlay"),

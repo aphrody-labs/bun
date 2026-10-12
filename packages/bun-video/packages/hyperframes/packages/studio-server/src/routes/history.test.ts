@@ -3,7 +3,7 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { createStudioApi } from "../createStudioApi";
 import { DELETED_VERSION, fileContentVersion, identifyFileWrite } from "../helpers/fileVersion";
 import { openProjectHistory, type ProjectHistory } from "../history/projectHistory";
@@ -408,7 +408,7 @@ describe("history routes", () => {
     let finishCopy = () => {};
     mediaCopy.held = new Promise<void>((resolve) => (finishCopy = resolve));
     const { projectDir, file, put, post, histories } = lazyHistoryProject();
-    writeFileSync(join(projectDir, "clip.mp4"), Buffer.alloc(4 * 1024 ** 2, 7));
+    writeFileSync(join(projectDir, "clip.mp4"), new Uint8Array(4 * 1024 ** 2, 7));
 
     // The copy stays held until finishCopy, so a save or claim that waited on it never returns.
     expect((await put("B")).status).toBe(200);
@@ -430,13 +430,13 @@ describe("history routes", () => {
     mediaCopy.held = new Promise<void>((resolve) => (finishCopy = resolve));
     const { projectDir, api, post } = lazyHistoryProject();
     const clip = join(projectDir, "clip.mp4");
-    const original = Buffer.alloc(4 * 1024 ** 2, 7);
+    const original = new Uint8Array(4 * 1024 ** 2, 7);
     writeFileSync(clip, original);
     await post("/claim", { label: "Nothing", paths: [] });
 
     const written = await api.request("/projects/demo/files/clip.mp4", {
       method: "PUT",
-      body: Buffer.alloc(4 * 1024 ** 2, 9),
+      body: new Uint8Array(4 * 1024 ** 2, 9),
       headers: { "If-Match": fileContentVersion(original) },
     });
     expect(written.status).toBe(200);

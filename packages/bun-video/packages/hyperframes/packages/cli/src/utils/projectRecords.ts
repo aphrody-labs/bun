@@ -39,7 +39,7 @@ export function readPlainFile(path: string, maxBytes: number): string {
     if (!stats.isFile() || !named.isFile() || named.ino !== stats.ino || named.dev !== stats.dev)
       return "";
     const length = Math.min(stats.size, maxBytes);
-    const buffer = Buffer.alloc(length);
+    const buffer = new Uint8Array(length);
     readSync(fd, buffer, 0, length, stats.size - length);
     return buffer.toString("utf8");
   } catch {

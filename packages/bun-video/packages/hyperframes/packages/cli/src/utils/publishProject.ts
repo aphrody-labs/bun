@@ -490,7 +490,7 @@ function localizeCssEntry(ctx: ExternalAssetContext, entryPath: string, content:
   if (!css.includes("url(")) return;
   const result = rewriteCssUrls(ctx, css, referrerAbsDir, entryPath);
   if (result.modified) {
-    ctx.fileContents.set(entryPath, Buffer.from(result.css, "utf-8"));
+    ctx.fileContents.set(entryPath, new TextEncoder().encode(result.css));
   }
 }
 

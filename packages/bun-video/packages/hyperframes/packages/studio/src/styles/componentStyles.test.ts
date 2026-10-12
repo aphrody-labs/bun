@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { compile } from "tailwindcss";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { loadStylesheet, STYLES_DIR } from "./styleSources";
 
 /** Class names in a stylesheet's selectors, at any nesting depth (inside @layer or @media too). */

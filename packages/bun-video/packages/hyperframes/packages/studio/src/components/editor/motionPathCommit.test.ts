@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "bun:test";
 import type { GsapAnimation } from "@hyperframes/parsers/gsap-parser";
 import { editableAnimationId } from "./motionPathSelection";
 import {

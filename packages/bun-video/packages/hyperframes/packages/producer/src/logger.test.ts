@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { createConsoleLogger, defaultLogger } from "./logger.js";
 import type { LogLevel, ProducerLogger } from "./logger.js";
 

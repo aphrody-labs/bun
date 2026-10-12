@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { ensureHfIds } from "./hfIds.js";
 import {
   parseHtml,

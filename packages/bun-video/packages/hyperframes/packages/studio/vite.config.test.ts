@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import config, { stableStylesCssPlugin } from "./vite.config";
 
 const packageJson = JSON.parse(readFileSync(resolve(__dirname, "package.json"), "utf8")) as {

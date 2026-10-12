@@ -37,7 +37,7 @@ export class ManagedChildProcess {
   private resolveOutcome!: (outcome: ManagedChildProcessOutcome) => void;
   private requestedReason: Exclude<ManagedProcessTerminationReason, "exit" | "spawn_error"> | null =
     null;
-  private stderrTail = Buffer.alloc(0);
+  private stderrTail = new Uint8Array(0);
   private spawned = false;
   private settled = false;
   private deadlineTimer: NodeJS.Timeout | null = null;

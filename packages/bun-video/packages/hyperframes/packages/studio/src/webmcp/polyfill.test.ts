@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import type { ModelContext } from "./types";
 
 // The real package defines `document.modelContext` as an import side effect.

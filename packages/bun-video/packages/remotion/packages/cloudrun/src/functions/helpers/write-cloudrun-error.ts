@@ -23,7 +23,7 @@ export const writeCloudrunError = async ({
 
 	const tempFilePath = '/tmp/errorInfo.txt';
 
-	fs.writeFileSync(tempFilePath, JSON.stringify(errorInfo));
+	await Bun.write(tempFilePath, JSON.stringify(errorInfo));
 
 	await storage.bucket(bucketName).upload(tempFilePath, {
 		destination: `renders/${renderId}/error.txt`,

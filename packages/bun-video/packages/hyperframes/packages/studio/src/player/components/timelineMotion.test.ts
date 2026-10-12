@@ -1,4 +1,4 @@
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "bun:test";
 import { markTimelineMotion, TIMELINE_REST_MS, whenTimelineIdle } from "./timelineMotion";
 
 afterEach(() => {

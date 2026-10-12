@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, it } from "vitest";
+import { expect, it } from "bun:test";
 
 const SRC = dirname(fileURLToPath(import.meta.url));
 const DOM_CTOR = String.raw`(?:HTML\w*Element|SVG\w*Element|Element|Node|Text|ShadowRoot|DocumentFragment)\b`;

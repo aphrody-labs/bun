@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act, createElement, useRef } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { useDomStyleCommit, type UseDomStyleCommitOptions } from "../index";
 import { makeSelection } from "./domSelectionTestHarness";
 

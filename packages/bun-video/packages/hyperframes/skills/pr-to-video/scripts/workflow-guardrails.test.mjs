@@ -98,7 +98,7 @@ test("#1092 packets contain selected excerpts but never the full diff", () => {
   assert.match(codePacket, /newCall\(\{ attested: true \}\)/);
   assert.doesNotMatch(codePacket, /unselected noise/);
   assert.doesNotMatch(codePacket, /code-scroll/);
-  assert.ok(Buffer.byteLength(codePacket) < 32_000);
+  assert.ok(new TextEncoder().encode(codePacket).length < 32_000);
   assert.ok(result.every((packet) => packet.path.endsWith(".md")));
 
   const role = readFileSync(join(project, ".hyperframes", "frame-packets", "_role.md"), "utf8");

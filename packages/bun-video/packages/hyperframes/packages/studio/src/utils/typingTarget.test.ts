@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { isTypingTarget, ownsPlainKeys } from "./typingTarget";
 import { isEditableTarget } from "./timelineDiscovery";
 

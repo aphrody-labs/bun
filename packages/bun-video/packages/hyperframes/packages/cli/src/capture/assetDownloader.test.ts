@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import {
   existsSync,
   mkdirSync,
@@ -475,7 +475,7 @@ async function testIco(): Promise<Buffer> {
   const png = await sharp({ create: { width: 16, height: 16, channels: 4, background: "red" } })
     .png()
     .toBuffer();
-  const header = Buffer.alloc(22);
+  const header = new Uint8Array(22);
   header.writeUInt16LE(1, 2);
   header.writeUInt16LE(1, 4);
   header[6] = 16;

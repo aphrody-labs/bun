@@ -20,13 +20,13 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
-	if (fs.existsSync(outputPath)) {
+	if (await Bun.file(outputPath).exists()) {
 		fs.unlinkSync(outputPath);
 	}
 });
 
 afterEach(() => {
-	if (fs.existsSync(outputPath)) {
+	if (await Bun.file(outputPath).exists()) {
 		fs.unlinkSync(outputPath);
 	}
 });
@@ -55,7 +55,7 @@ test(
 		);
 		task.stderr?.pipe(process.stderr);
 		const {stdout} = await task;
-		const exists = fs.existsSync(outputPath);
+		const exists = await Bun.file(outputPath).exists();
 		expect(exists).toBe(true);
 		// This command is selected from the first captured frame, so a successful
 		// video proves that FFmpeg consumed shared-memory frames, not just a probe.
@@ -210,7 +210,7 @@ test(
 		);
 		expect(task.exitCode).toBe(0);
 
-		const exists = fs.existsSync(out);
+		const exists = await Bun.file(out).exists();
 		expect(exists).toBe(true);
 
 		const info = await RenderInternals.callFf({
@@ -254,7 +254,7 @@ test(
 			},
 		);
 		expect(task.exitCode).toBe(0);
-		expect(fs.existsSync(outImg)).toBe(true);
+		expect(await Bun.file(outImg).exists()).toBe(true);
 
 		const info = await RenderInternals.callFf({
 			bin: 'ffprobe',
@@ -439,7 +439,7 @@ test(
 		);
 		task.stderr?.pipe(process.stderr);
 		await task;
-		const exists = fs.existsSync(out);
+		const exists = await Bun.file(out).exists();
 		expect(exists).toBe(true);
 
 		const info = await RenderInternals.callFf({
@@ -476,7 +476,7 @@ test(
 		);
 		task.stderr?.pipe(process.stderr);
 		await task;
-		const exists = fs.existsSync(out);
+		const exists = await Bun.file(out).exists();
 		expect(exists).toBe(true);
 
 		const info = await RenderInternals.callFf({
@@ -511,7 +511,7 @@ test(
 		);
 		task.stderr?.pipe(process.stderr);
 		await task;
-		const exists = fs.existsSync(out);
+		const exists = await Bun.file(out).exists();
 		expect(exists).toBe(true);
 
 		const info = await RenderInternals.callFf({
@@ -560,7 +560,7 @@ test(
 			},
 		);
 		expect(task.exitCode).toBe(0);
-		expect(fs.existsSync(outputPath)).toBe(true);
+		expect(await Bun.file(outputPath).exists()).toBe(true);
 
 		const info = await RenderInternals.callFf({
 			bin: 'ffprobe',
@@ -621,7 +621,7 @@ test(
 			},
 		);
 		expect(task.exitCode).toBe(0);
-		expect(fs.existsSync(out)).toBe(true);
+		expect(await Bun.file(out).exists()).toBe(true);
 
 		const info = await RenderInternals.callFf({
 			bin: 'ffprobe',
@@ -735,7 +735,7 @@ test(
 		);
 
 		expect(task.exitCode).toBe(0);
-		expect(fs.existsSync(outputPath)).toBe(true);
+		expect(await Bun.file(outputPath).exists()).toBe(true);
 
 		const info = await RenderInternals.callFf({
 			bin: 'ffprobe',
@@ -866,7 +866,7 @@ test(
 			},
 		);
 
-		const exists = fs.existsSync(outputPath);
+		const exists = await Bun.file(outputPath).exists();
 		expect(exists).toBe(true);
 	},
 	{

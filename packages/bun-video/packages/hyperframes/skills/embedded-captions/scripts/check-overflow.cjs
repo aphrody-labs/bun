@@ -28,7 +28,7 @@ for (const root of HF_ROOTS) {
   const cands = [path.join(root, "node_modules", "puppeteer")];
   const bunDir = path.join(root, "node_modules", ".bun");
   try {
-    if (fs.existsSync(bunDir)) {
+    if (await Bun.file(bunDir).exists()) {
       for (const d of fs.readdirSync(bunDir))
         if (d.startsWith("puppeteer@"))
           cands.push(path.join(bunDir, d, "node_modules", "puppeteer"));
@@ -38,7 +38,7 @@ for (const root of HF_ROOTS) {
   }
   for (const p of cands) {
     try {
-      if (fs.existsSync(p)) {
+      if (await Bun.file(p).exists()) {
         puppeteer = require(p);
         break;
       }
@@ -55,12 +55,12 @@ async function main() {
   const projectDir = process.argv[2];
   const htmlName = process.argv[3] || "index.html"; // Standard mode passes "rail.html" to gate the rail too
   const indexPath = path.resolve(projectDir, htmlName);
-  if (!fs.existsSync(indexPath)) {
+  if (!await Bun.file(indexPath).exists()) {
     console.error(`[overflow] missing ${indexPath}`);
     process.exit(2);
   }
 
-  const html = fs.readFileSync(indexPath, "utf8");
+  const html = await Bun.file(indexPath).text();
   const num = (re, d) => {
     const m = html.match(re);
     return m ? parseFloat(m[1]) : d;
@@ -75,7 +75,7 @@ async function main() {
       : "/usr/bin/google-chrome";
   const browser = await puppeteer.launch({
     headless: "new",
-    executablePath: fs.existsSync(exe) ? exe : undefined,
+    executablePath: await Bun.file(exe).exists() ? exe : undefined,
     args: [
       "--disable-web-security",
       "--allow-file-access-from-files",

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import React, { act, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { useGsapPropertyDebounce } from "./useGsapPropertyDebounce";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";
 

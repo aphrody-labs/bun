@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,7 +19,7 @@ vi.mock("node:fs", async (importOriginal) => {
 let project: string;
 beforeEach(() => {
   project = fs.mkdtempSync(join(tmpdir(), "hf-atomic-create-"));
-  fs.writeFileSync(join(project, "index.html"), "<html>index</html>");
+  await Bun.write(join(project, "index.html"), "<html>index</html>");
   vi.clearAllMocks();
 });
 afterEach(() => fs.rmSync(project, { recursive: true, force: true }));

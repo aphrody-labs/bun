@@ -1,7 +1,7 @@
 // A host that never registers a timeline costs the full wait once per render: later
 // sessions sharing the render's memo report the same timeout without waiting again.
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import type { Page } from "puppeteer-core";
 import {
   type CaptureSession,

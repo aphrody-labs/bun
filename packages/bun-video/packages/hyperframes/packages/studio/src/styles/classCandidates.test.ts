@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { extractClassCandidates } from "./classCandidates";
 
 function bases(source: string): string[] {

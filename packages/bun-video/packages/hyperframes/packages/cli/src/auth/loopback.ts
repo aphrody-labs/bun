@@ -169,8 +169,8 @@ function handleRequest(
  * and a `!==` here would be a gratuitous deviation in security review.
  */
 function stateMatches(actual: string, expected: string): boolean {
-  const a = Buffer.from(actual, "utf8");
-  const b = Buffer.from(expected, "utf8");
+  const a = new TextEncoder().encode(actual);
+  const b = new TextEncoder().encode(expected);
   if (a.length !== b.length) return false;
   return timingSafeEqual(a, b);
 }

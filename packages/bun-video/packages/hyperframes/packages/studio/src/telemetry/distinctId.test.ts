@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach } from "bun:test";
 import {
   resolveStudioDistinctId,
   getCliDistinctId,

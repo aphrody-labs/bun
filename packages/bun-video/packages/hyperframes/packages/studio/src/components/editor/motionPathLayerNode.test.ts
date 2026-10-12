@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { expect, it } from "vitest";
+import { expect, it } from "bun:test";
 import { controlForNode, controlUnder, pressControl } from "./motionPathLayerNode";
 
 // Keyframe nodes at x 60 and 120 (y 30); GSAP renders the layer at the first.

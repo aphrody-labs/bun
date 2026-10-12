@@ -26,7 +26,7 @@ export const isInCache = async (imageHash: string): Promise<boolean> => {
     return existsOnS3(imageHash);
   }
 
-  return fs.existsSync(await getFileFromHash(imageHash));
+  return await Bun.file(await getFileFromHash(imageHash).exists());
 };
 
 export const getFromCache = async (imageHash: string): Promise<Readable> => {

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import React, { act } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { usePlayerStore } from "../player";
 import {
   LAYER_REVEAL_PRIOR_POSITION_ATTR,

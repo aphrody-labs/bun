@@ -114,7 +114,7 @@ export function buildRolePayload({ corePath, deltaPath, outDir }) {
   mkdirSync(outDir, { recursive: true });
   const path = join(outDir, "_role.md");
   writeFileSync(path, role);
-  return { path, bytes: Buffer.byteLength(role) };
+  return { path, bytes: new TextEncoder().encode(role).length };
 }
 
 export function buildFramePackets({
@@ -142,7 +142,7 @@ export function buildFramePackets({
     const id = frameId(frame);
     if (validateFrame) validateFrame(frame, id);
     const packet = `# Frame packet: ${id}\n\n## Project inputs\n\n- Project: ${resolve(projectDir)}\n${designTruthLine(projectDir)}\n- RULES_DIR: ${join(animationDir, "rules")}\n\n## Assigned storyboard block\n\n${frame.block}\n${resourceSections(frame.block, { animationDir, ruleIds, frameId: id })}${extraSections ? extraSections(frame.block) : ""}`;
-    const bytes = Buffer.byteLength(packet);
+    const bytes = new TextEncoder().encode(packet).length;
     if (bytes > maxPacketBytes) {
       throw new Error(`${id}: frame packet is ${bytes} bytes (limit ${maxPacketBytes})`);
     }

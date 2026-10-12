@@ -396,7 +396,7 @@ async function probeBeginFrameSupport(
       deadline,
       "warm-up beginFrame",
     );
-    let bytes = Buffer.alloc(0);
+    let bytes = new Uint8Array(0);
     let isPng = false;
     let attempts = 0;
     for (attempts = 1; attempts <= BEGINFRAME_SCREENSHOT_PROBE_ATTEMPTS; attempts += 1) {
@@ -410,7 +410,7 @@ async function probeBeginFrameSupport(
         `screenshot beginFrame attempt ${attempts}`,
       );
       const screenshot = response.screenshotData ?? "";
-      bytes = screenshot ? Buffer.from(screenshot, "base64") : Buffer.alloc(0);
+      bytes = screenshot ? Buffer.from(screenshot, "base64") : new Uint8Array(0);
       isPng =
         bytes.length >= 8 &&
         bytes[0] === 0x89 &&

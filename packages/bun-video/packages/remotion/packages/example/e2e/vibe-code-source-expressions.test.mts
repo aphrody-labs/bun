@@ -16,15 +16,13 @@ test('SDK Canvas and vibe-code evaluate and save source expressions per instance
 		template,
 		'src/remotion/SourceSubscriptionChurn.tsx',
 	);
-	const originalRoot = fs.readFileSync(rootFile, 'utf8');
-	const originalFixture = fs.existsSync(fixture)
-		? fs.readFileSync(fixture, 'utf8')
+	const originalRoot = await Bun.file(rootFile).text();
+	const originalFixture = await Bun.file(fixture).exists()
+		? await Bun.file(fixture).text()
 		: null;
 	const errors: string[] = [];
 	page.on('pageerror', (error) => errors.push(error.message));
-	fs.writeFileSync(
-		fixture,
-		fs
+	await Bun.write(fixture, fs
 			.readFileSync(
 				path.join(exampleDir, 'src/SourceSubscriptionChurn.tsx'),
 				'utf8',
@@ -34,9 +32,7 @@ test('SDK Canvas and vibe-code evaluate and save source expressions per instance
 				(_, prefix: string, suffix: string) => `${prefix}300${suffix}`,
 			),
 	);
-	fs.writeFileSync(
-		rootFile,
-		`import {Composition} from 'remotion';
+	await Bun.write(rootFile, `import {Composition} from 'remotion';
 import {SourceSubscriptionChurn} from './SourceSubscriptionChurn';
 export const RemotionRoot = () => <Composition id="SourceSubscriptionChurn" component={SourceSubscriptionChurn} durationInFrames={600} fps={30} width={1280} height={720} />;`,
 	);
@@ -150,7 +146,7 @@ export const RemotionRoot = () => <Composition id="SourceSubscriptionChurn" comp
 			.getByRole('button', {name: 'Save to src/remotion', exact: true})
 			.click();
 		await expect
-			.poll(() => fs.readFileSync(fixture, 'utf8'))
+			.poll(() => await Bun.file(fixture).text())
 			.toMatch(/durationInFrames=\{duration \* 0\.6\}/);
 		expect(
 			errors.filter((error) => /maximum update depth/i.test(error)),
@@ -167,8 +163,8 @@ export const RemotionRoot = () => <Composition id="SourceSubscriptionChurn" comp
 			server.once('exit', () => resolve());
 			setTimeout(resolve, 5_000);
 		});
-		fs.writeFileSync(rootFile, originalRoot);
+		await Bun.write(rootFile, originalRoot);
 		if (originalFixture === null) fs.rmSync(fixture, {force: true});
-		else fs.writeFileSync(fixture, originalFixture);
+		else await Bun.write(fixture, originalFixture);
 	}
 });

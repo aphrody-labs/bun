@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { runInNewContext } from "node:vm";
 import { parseHTML } from "linkedom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 const htmlPath = join(
   import.meta.dirname,

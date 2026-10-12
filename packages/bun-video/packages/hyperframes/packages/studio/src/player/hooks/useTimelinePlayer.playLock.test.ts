@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import { act } from "react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "bun:test";
 import {
   makeAdapterWindow,
   makeFakeIframe,

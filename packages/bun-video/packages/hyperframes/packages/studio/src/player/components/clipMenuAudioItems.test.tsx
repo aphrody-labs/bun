@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { act } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
 import { createHappyDomRootHarness } from "./testRootHarness";
 import { ClipMenuAudioItems } from "./clipMenuAudioItems";
 import type { TimelineElement } from "../store/timelineElement";

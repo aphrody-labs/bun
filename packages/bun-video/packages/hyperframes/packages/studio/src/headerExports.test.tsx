@@ -2,7 +2,7 @@
 // Imports the header logo and button size classes the way a host app does: by package name.
 import { createRoot } from "react-dom/client";
 import { act } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { HyperframesLogo, buttonSizes } from "@hyperframes/studio";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });

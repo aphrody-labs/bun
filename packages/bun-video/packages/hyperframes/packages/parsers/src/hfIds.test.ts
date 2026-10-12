@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { ensureHfIds, mintHfId, walkCompositionDescendants } from "./hfIds.js";
 import { parseHTML } from "linkedom";
 import { assignHfIds } from "./hfIdAssignment.js";

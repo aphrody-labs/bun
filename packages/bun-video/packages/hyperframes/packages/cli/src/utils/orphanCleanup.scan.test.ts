@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
 
 const child = vi.hoisted(() => ({ execFileSync: vi.fn(), execSync: vi.fn() }));
 const tree = vi.hoisted(() => ({ terminateProcessTree: vi.fn(async (_pid: number) => undefined) }));

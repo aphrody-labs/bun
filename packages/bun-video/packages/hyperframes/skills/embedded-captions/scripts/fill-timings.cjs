@@ -70,13 +70,13 @@ function main() {
   const trPath = path.join(project, "transcript.json");
   let plan, trWordsRaw;
   try {
-    plan = JSON.parse(fs.readFileSync(planPath, "utf8"));
+    plan = await Bun.file(planPath).json();
   } catch {
     console.error(`[fill-timings] no plan.json (Cinematic only) — skipping`);
     process.exit(0);
   }
   try {
-    trWordsRaw = JSON.parse(fs.readFileSync(trPath, "utf8")).words || [];
+    trWordsRaw = await Bun.file(trPath).json().words || [];
   } catch {
     console.error(`[fill-timings] no transcript.json — skipping`);
     process.exit(0);
@@ -110,7 +110,7 @@ function main() {
       console.error(`[fill-timings] ⚠ crown_group: ${r.unmatched.join(" ")} not found`);
   }
 
-  fs.writeFileSync(planPath, JSON.stringify(plan, null, 2));
+  await Bun.write(planPath, JSON.stringify(plan, null, 2));
   console.log(
     `[fill-timings] filled ${totalMatched} word time(s) from transcript by sequence` +
       (totalUnmatched

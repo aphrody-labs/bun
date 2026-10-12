@@ -11,7 +11,7 @@
  * and hand them to the real core predicates.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { resolveAudioGroups } from "@hyperframes/core/audio-groups";
 import { parseTimelineFromDOM } from "./timelineDOM";
 import { runtimeAudioId } from "./timelineElementHelpers";

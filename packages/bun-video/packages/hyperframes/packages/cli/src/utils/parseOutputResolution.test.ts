@@ -11,7 +11,7 @@
  * per-entrypoint composition so the plumbing stays end-to-end covered.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { parseOutputResolutionFlag } from "./parseOutputResolution.js";
 
 const CLOUDRUN = { surfaceLabel: "[cloudrun render]" } as const;

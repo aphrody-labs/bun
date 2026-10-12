@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import type { SetStateAction } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { usePlayerStore, type TimelineElement } from "../store/playerStore";
 import { mountTimelineClipDragGestureLifecycle } from "./timelineClipDragGestureLifecycle";
 import type { DraggedClipState, ResizingClipState } from "./timelineClipDragTypes";

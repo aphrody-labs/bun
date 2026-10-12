@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { startLoopback, type LoopbackHandle } from "./loopback.js";
 
 describe("auth/loopback", () => {

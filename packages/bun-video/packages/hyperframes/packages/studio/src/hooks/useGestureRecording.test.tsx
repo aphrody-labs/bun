@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React, { act } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { mountReactHarness } from "./domSelectionTestHarness";
 import { useGestureRecording, type GestureSample } from "./useGestureRecording";
 

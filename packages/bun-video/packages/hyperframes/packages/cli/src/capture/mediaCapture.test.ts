@@ -12,7 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Browser, Page } from "puppeteer-core";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import {
   captureVideoManifest,
   remainingVideoDownloadTimeoutMs,
@@ -168,7 +168,7 @@ describe("video capture live budget", () => {
     const page = { evaluate, screenshot } as unknown as Page;
     const fetchMock = vi.fn(
       async () =>
-        new Response(Buffer.alloc(2048), {
+        new Response(new Uint8Array(2048), {
           status: 200,
           headers: { "content-type": "video/mp4" },
         }),

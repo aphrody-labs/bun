@@ -1,4 +1,4 @@
-import {test, expect} from 'vitest';
+import {test, expect} from 'bun:test';
 import {renderStillOnWeb} from '../render-still-on-web';
 import '../symbol-dispose';
 import {issue8650LottieControlChars} from './fixtures/issue-8650-lottie-control-chars';

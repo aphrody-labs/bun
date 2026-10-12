@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import * as acorn from "./gsapWriterAcorn.js";
 import * as recast from "./gsapParser.js";
 

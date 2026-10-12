@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { expect, it, vi } from "vitest";
+import { expect, it, vi } from "bun:test";
 import { MotionPathOverlay } from "./MotionPathOverlay";
 import { usePlayerStore } from "../../player/store/playerStore";
 import { usePreviewIframeStore } from "../../player/store/previewIframeStore";

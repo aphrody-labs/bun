@@ -53,17 +53,17 @@ describe("measurePlanDirBytes", () => {
   it("sums file sizes recursively", () => {
     const dir = mkdtempSync(join(runRoot, "fixture-"));
     mkdirSync(join(dir, "nested", "deeper"), { recursive: true });
-    writeFileSync(join(dir, "a.bin"), Buffer.alloc(100));
-    writeFileSync(join(dir, "nested", "b.bin"), Buffer.alloc(250));
-    writeFileSync(join(dir, "nested", "deeper", "c.bin"), Buffer.alloc(50));
+    writeFileSync(join(dir, "a.bin"), new Uint8Array(100));
+    writeFileSync(join(dir, "nested", "b.bin"), new Uint8Array(250));
+    writeFileSync(join(dir, "nested", "deeper", "c.bin"), new Uint8Array(50));
     expect(measurePlanDirBytes(dir)).toBe(400);
   });
 
   it("ignores file and directory symlinks instead of traversing outside the plan", () => {
     const dir = mkdtempSync(join(runRoot, "symlinks-"));
     const outsideDir = mkdtempSync(join(runRoot, "outside-"));
-    writeFileSync(join(dir, "real.bin"), Buffer.alloc(128));
-    writeFileSync(join(outsideDir, "large.bin"), Buffer.alloc(4_096));
+    writeFileSync(join(dir, "real.bin"), new Uint8Array(128));
+    writeFileSync(join(outsideDir, "large.bin"), new Uint8Array(4_096));
     try {
       symlinkSync(join(outsideDir, "large.bin"), join(dir, "file-link.bin"));
       symlinkSync(outsideDir, join(dir, "dir-link"), "dir");
@@ -81,16 +81,16 @@ describe("measurePlanSizeBreakdown", () => {
     mkdirSync(join(dir, "compiled", "assets"), { recursive: true });
     mkdirSync(join(dir, "video-frames", "customer-video-name"), { recursive: true });
     mkdirSync(join(dir, "meta"), { recursive: true });
-    writeFileSync(join(dir, "compiled", "index.html"), Buffer.alloc(100));
-    writeFileSync(join(dir, "compiled", "assets", "source.mp4"), Buffer.alloc(200));
+    writeFileSync(join(dir, "compiled", "index.html"), new Uint8Array(100));
+    writeFileSync(join(dir, "compiled", "assets", "source.mp4"), new Uint8Array(200));
     writeFileSync(
       join(dir, "video-frames", "customer-video-name", "frame_000001.jpg"),
-      Buffer.alloc(300),
+      new Uint8Array(300),
     );
-    writeFileSync(join(dir, "audio.m4a"), Buffer.alloc(40));
-    writeFileSync(join(dir, "meta", "encoder.json"), Buffer.alloc(20));
-    writeFileSync(join(dir, "plan.json"), Buffer.alloc(10));
-    writeFileSync(join(dir, "other.bin"), Buffer.alloc(5));
+    writeFileSync(join(dir, "audio.m4a"), new Uint8Array(40));
+    writeFileSync(join(dir, "meta", "encoder.json"), new Uint8Array(20));
+    writeFileSync(join(dir, "plan.json"), new Uint8Array(10));
+    writeFileSync(join(dir, "other.bin"), new Uint8Array(5));
 
     const result = measurePlanSizeBreakdown(dir);
 
@@ -120,7 +120,7 @@ describe("measurePlanSizeBreakdown path boundaries", () => {
     });
     writeFileSync(
       join(dir, "compiled", "assets", "video-frames", "customer", "source.mp4"),
-      Buffer.alloc(90),
+      new Uint8Array(90),
     );
 
     expect(measurePlanSizeBreakdown(dir)).toMatchObject({
@@ -134,10 +134,10 @@ describe("measurePlanSizeBreakdown path boundaries", () => {
   it("classifies staged extracted frames separately from compiled assets", () => {
     const dir = mkdtempSync(join(runRoot, "staged-breakdown-"));
     mkdirSync(join(dir, "__hyperframes_video_frames", "video-1"), { recursive: true });
-    writeFileSync(join(dir, "index.html"), Buffer.alloc(25));
+    writeFileSync(join(dir, "index.html"), new Uint8Array(25));
     writeFileSync(
       join(dir, "__hyperframes_video_frames", "video-1", "frame_000001.jpg"),
-      Buffer.alloc(75),
+      new Uint8Array(75),
     );
 
     expect(measurePlanSizeBreakdown(dir, "compiled")).toMatchObject({
@@ -289,7 +289,7 @@ describe("plan() early size budget", () => {
       );
       // Deliberately invalid media: reaching extraction would fail in ffprobe.
       // PLAN_TOO_LARGE at pre-extract proves that expensive stage was skipped.
-      writeFileSync(join(projectDir, "large-source.mp4"), Buffer.alloc(2_048));
+      writeFileSync(join(projectDir, "large-source.mp4"), new Uint8Array(2_048));
       const planDir = mkdtempSync(join(runRoot, "plandir-pre-extract-too-large-"));
 
       let caught: unknown;
@@ -327,7 +327,7 @@ describe("plan() reused directory size check", () => {
     const planDir = mkdtempSync(join(runRoot, "plandir-reused-work-dir-"));
     const staleCompiledDir = join(planDir, ".plan-work", "compiled");
     mkdirSync(staleCompiledDir, { recursive: true });
-    writeFileSync(join(staleCompiledDir, "stale-large-asset.bin"), Buffer.alloc(100_000));
+    writeFileSync(join(staleCompiledDir, "stale-large-asset.bin"), new Uint8Array(100_000));
 
     const result = await plan(
       projectDir,
@@ -351,8 +351,8 @@ describe("plan() reused directory size check", () => {
     writeFileSync(join(projectDir, "index.html"), FIXTURE_HTML, "utf-8");
     const planDir = mkdtempSync(join(runRoot, "plandir-reused-"));
     mkdirSync(join(planDir, "meta"), { recursive: true });
-    writeFileSync(join(planDir, "plan.json"), Buffer.alloc(100_000));
-    writeFileSync(join(planDir, "meta", "encoder.json"), Buffer.alloc(100_000));
+    writeFileSync(join(planDir, "plan.json"), new Uint8Array(100_000));
+    writeFileSync(join(planDir, "meta", "encoder.json"), new Uint8Array(100_000));
 
     const result = await plan(
       projectDir,

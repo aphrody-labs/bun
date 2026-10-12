@@ -2,7 +2,7 @@
 
 import React, { act, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { usePlayerStore, type TimelineElement } from "../store/playerStore";
 import { useTimelineGeometry } from "./useTimelineGeometry";
 

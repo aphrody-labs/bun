@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 import { countAngularBodies, detectOffPivotRotation } from "./checkPipeline.js";
 import type { OffPivotFrame, OffPivotRotationSample } from "./checkTypes.js";

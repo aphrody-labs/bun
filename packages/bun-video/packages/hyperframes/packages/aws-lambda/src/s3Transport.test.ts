@@ -152,7 +152,7 @@ describe("content-addressed v2 artifacts", () => {
     const uri = `s3://bucket/v2/artifacts/sha256/${digest.slice(0, 2)}/${digest}`;
     const s3 = new ContentAddressedFakeS3();
     s3.raceOnNextPut = {
-      bytes: Buffer.alloc(Buffer.byteLength("race-safe bytes"), "x"),
+      bytes: new Uint8Array(Buffer.byteLength("race-safe bytes"), "x"),
       sha256: "0".repeat(64),
     };
 

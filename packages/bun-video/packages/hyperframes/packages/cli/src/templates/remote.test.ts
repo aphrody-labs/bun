@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { MANIFEST_FILENAME, TEMPLATES_DIR } from "./remote.js";
 
 // These constants construct the GitHub URL that installed CLIs use to fetch

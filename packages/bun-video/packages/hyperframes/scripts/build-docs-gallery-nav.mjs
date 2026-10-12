@@ -39,7 +39,7 @@ export function buildNav(docs) {
     return { group: g.label, tag: String(items.length), expanded: false, pages };
   });
   tab.groups = [{ group: "Catalog", pages: ["catalog/index", ...groups] }];
-  fs.writeFileSync(path.join(docs, "docs.json"), JSON.stringify(config, null, 2) + "\n");
+  await Bun.write(path.join(docs, "docs.json"), JSON.stringify(config, null, 2) + "\n");
   console.log(`Rebuilt Catalog nav: ${groups.length} groups, ${data.items.length} items.`);
 }
 

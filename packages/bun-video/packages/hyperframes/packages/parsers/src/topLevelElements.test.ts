@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { topLevelElements, trackKindOf, type StructureNode } from "./topLevelElements.js";
 
 type N = StructureNode<N> & { id?: string };

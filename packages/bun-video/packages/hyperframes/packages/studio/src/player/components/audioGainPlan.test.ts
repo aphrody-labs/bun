@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { audioGainToDb, MAX_AUDIO_GAIN } from "@hyperframes/core/audio-gain";
 import { peakAmplitudeDb, planAudioGain, type AudioGainClip } from "./audioGainPlan";
 

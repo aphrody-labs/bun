@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { act } from "react";
-import { describe, expect, it, vi, type Mock } from "vitest";
+import { describe, expect, it, vi, type Mock } from "bun:test";
 import { createRoot } from "react-dom/client";
 import { TimelineAutomationLane } from "./TimelineAutomationLane";
 import { TimelineReadOnlyContext } from "./timelineReadOnly";

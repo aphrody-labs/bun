@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { act } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { createRoot, type Root } from "react-dom/client";
 import { usePlayerStore } from "../player/store/playerStore";
 import { useAutomationSelectionKeyboard } from "./useAutomationSelectionKeyboard";

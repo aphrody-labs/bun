@@ -26,22 +26,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@main
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
+          bun-version: latest
       - name: Install Fallback fonts (fonts)
         run: |
           sudo apt-get update -yqq
           sudo apt-get install -yq --no-install-recommends \
             fonts-noto-core fonts-noto-cjk fonts-noto-color-emoji fonts-noto-mono
       - name: Install dependencies (node modules)
-        run: npm i
+        run: bun install
       - name: Define input props
         run: echo $WORKFLOW_INPUT | tee input-props.json | jq -C '.' # Inject to file, inspect to logs
         env:
           WORKFLOW_INPUT: ${{ toJson(github.event.inputs) }}
       - name: Render video
-        run: npx remotion render --props="./input-props.json"
+        run: bunx remotion render --props="./input-props.json"
         env:
           REMOTION_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload video

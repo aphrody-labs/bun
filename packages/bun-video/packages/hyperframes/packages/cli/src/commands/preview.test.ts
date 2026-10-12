@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as clack from "@clack/prompts";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { runCommand } from "citty";
 import { PreviewServerPortMismatchError } from "../utils/studioSelectionClient.js";
 import { PreviewPortUnavailableError } from "./previewLifecycle.js";

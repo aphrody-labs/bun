@@ -2,7 +2,7 @@
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ensureHfIds } from "@hyperframes/parsers/hf-ids";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { useClipboard } from "./useClipboard";
 import { usePlayerStore, type TimelineElement } from "../player";
 import type { DomEditSelection } from "../components/editor/domEditing";

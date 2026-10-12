@@ -15,7 +15,7 @@ await $`bun run build`.cwd(templateDir).env({
 	STATIC_EXPORT_BASE_PATH: basePath,
 });
 
-if (!fs.existsSync(path.join(outDir, 'index.html'))) {
+if (!await Bun.file(path.join(outDir, 'index.html').exists())) {
 	throw new Error(`Expected the static export at ${outDir}`);
 }
 

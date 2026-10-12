@@ -10,7 +10,7 @@
  * We compare the *parsed keyframe arrays* (not byte-for-byte source) because the
  * two writers format differently (recast pretty-prints, acorn splices).
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { addKeyframeToScript as addAcorn } from "./gsapWriterAcorn.js";
 import { addKeyframeToScript as addRecast, parseGsapScript } from "./gsapParser.js";
 

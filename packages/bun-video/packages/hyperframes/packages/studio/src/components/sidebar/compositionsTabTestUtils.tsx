@@ -1,6 +1,6 @@
 import { act, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, vi } from "vitest";
+import { afterEach, vi } from "bun:test";
 import { thumbnailScheduler } from "../../player/lib/thumbnailScheduler";
 import { usePlayerStore } from "../../player/store/playerStore";
 import { CompositionsTab } from "./CompositionsTab";

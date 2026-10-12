@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import React, { act, createRef } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import type { DomEditSelection } from "./domEditing";
 import type { GestureState, GroupGestureState } from "./domEditOverlayGestures";
 import { DomEditGroupChrome, DomEditSelectionChrome } from "./DomEditSelectionChrome";

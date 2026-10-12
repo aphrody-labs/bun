@@ -36,9 +36,9 @@ test.describe('captions inspector', () => {
 	let missingCaptionsCallSiteSourceBefore: string;
 
 	test.beforeEach(async () => {
-		inlineSourceBefore = fs.readFileSync(inlineCaptionsFile, 'utf-8');
-		elementSourceBefore = fs.readFileSync(elementCaptionsFile, 'utf-8');
-		elementCallSiteSourceBefore = fs.readFileSync(elementCallSiteFile, 'utf-8');
+		inlineSourceBefore = await Bun.file(inlineCaptionsFile).text();
+		elementSourceBefore = await Bun.file(elementCaptionsFile).text();
+		elementCallSiteSourceBefore = await Bun.file(elementCallSiteFile).text();
 		missingCaptionsCallSiteSourceBefore = fs.readFileSync(
 			missingCaptionsCallSiteFile,
 			'utf-8',
@@ -48,13 +48,10 @@ test.describe('captions inspector', () => {
 
 	test.afterEach(async () => {
 		await stopStudio();
-		fs.writeFileSync(inlineCaptionsFile, inlineSourceBefore);
-		fs.writeFileSync(elementCaptionsFile, elementSourceBefore);
-		fs.writeFileSync(elementCallSiteFile, elementCallSiteSourceBefore);
-		fs.writeFileSync(
-			missingCaptionsCallSiteFile,
-			missingCaptionsCallSiteSourceBefore,
-		);
+		await Bun.write(inlineCaptionsFile, inlineSourceBefore);
+		await Bun.write(elementCaptionsFile, elementSourceBefore);
+		await Bun.write(elementCallSiteFile, elementCallSiteSourceBefore);
+		await Bun.write(missingCaptionsCallSiteFile, missingCaptionsCallSiteSourceBefore,);
 	});
 
 	test('persists caption edits at their inline definitions', async ({page}) => {
@@ -145,7 +142,7 @@ test.describe('captions inspector', () => {
 				/broken\.json:.*captions\[0\]\.startMs must be a finite, non-negative number/,
 			),
 		).toBeVisible();
-		expect(fs.readFileSync(elementCallSiteFile, 'utf-8')).toBe(
+		expect(await Bun.file(elementCallSiteFile).text()).toBe(
 			sourceBeforeFailedImport,
 		);
 
@@ -173,12 +170,12 @@ test.describe('captions inspector', () => {
 		});
 		await expect(defaultCaption).toHaveValue('Imported');
 		await expect
-			.poll(() => fs.readFileSync(elementCallSiteFile, 'utf-8'))
+			.poll(() => await Bun.file(elementCallSiteFile).text())
 			.toMatch(/text:\s*['"]Imported['"][\s\S]*startMs:\s*100/);
-		expect(fs.readFileSync(elementCaptionsFile, 'utf-8')).toBe(
+		expect(await Bun.file(elementCaptionsFile).text()).toBe(
 			elementSourceBefore,
 		);
-		expect(fs.readFileSync(elementCallSiteFile, 'utf-8')).not.toBe(
+		expect(await Bun.file(elementCallSiteFile).text()).not.toBe(
 			elementCallSiteSourceBefore,
 		);
 
@@ -187,11 +184,11 @@ test.describe('captions inspector', () => {
 		await expect
 			.poll(() => {
 				return /text:\s*['"]Edited imported caption['"]/.test(
-					fs.readFileSync(elementCallSiteFile, 'utf-8'),
+					await Bun.file(elementCallSiteFile).text(),
 				);
 			})
 			.toBe(true);
-		expect(fs.readFileSync(elementCaptionsFile, 'utf-8')).toBe(
+		expect(await Bun.file(elementCaptionsFile).text()).toBe(
 			elementSourceBefore,
 		);
 	});
@@ -240,7 +237,7 @@ test.describe('captions inspector', () => {
 			'Materialized',
 		);
 		await expect
-			.poll(() => fs.readFileSync(missingCaptionsCallSiteFile, 'utf-8'))
+			.poll(() => await Bun.file(missingCaptionsCallSiteFile).text())
 			.toMatch(/<MissingCaptions[\s\S]*captions=\{\[[\s\S]*Materialized/);
 	});
 });

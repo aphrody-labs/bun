@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {getBackgroundImageRect} from '../drawing/background-image-rect';
 
 test('positions an oversized percentage background image', () => {

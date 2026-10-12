@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { filterByUsage, countUsage, deriveUsedPaths } from "./AssetsTab";
 import { truncateMiddle, formatDuration } from "./assetHelpers";
 import { globalAssetRows } from "./GlobalAssetsView";

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import type { TimelineElement } from "../player/store/playerStore";
 import {
   SPLIT_BOUNDARY_EPSILON_S,

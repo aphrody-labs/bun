@@ -1,7 +1,7 @@
 // Boundary cases share an arrange/assert shape on purpose: each case states its
 // own window, drag, and expected remap so a failure reads without cross-referencing.
 // fallow-ignore-file code-duplication
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { resolveKeyframeRetime, type RetimeKeyframe } from "./keyframeRetime";
 
 // Tween window [2, 6] (start 2s, duration 4s). Keyframes at tween-% 0/50/100 →

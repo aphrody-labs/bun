@@ -6,12 +6,12 @@ import execa from 'execa';
 const outputPath = path.join(process.cwd(), 'packages/example/out-cancel.mp4');
 
 beforeEach(() => {
-	if (fs.existsSync(outputPath)) {
+	if (await Bun.file(outputPath).exists()) {
 		fs.unlinkSync(outputPath);
 	}
 });
 afterEach(() => {
-	if (fs.existsSync(outputPath)) {
+	if (await Bun.file(outputPath).exists()) {
 		fs.unlinkSync(outputPath);
 	}
 });

@@ -5,7 +5,7 @@
 // so a press with no move settled on the ref's initial 0 and clamped the
 // playhead to t=0 — silently discarding the correct pointerdown seek.
 import React, { act } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { mountReactHarness } from "../../hooks/domSelectionTestHarness";
 import { useTimelineRangeSelection } from "./useTimelineRangeSelection";
 import { getTimelineRowGeometry } from "./timelineLayout";

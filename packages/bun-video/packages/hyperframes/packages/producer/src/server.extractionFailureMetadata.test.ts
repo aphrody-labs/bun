@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
 
 const safeExtractionFailure = vi.hoisted(() => ({
   schemaVersion: 1,

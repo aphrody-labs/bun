@@ -2,7 +2,7 @@
 
 import { act, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { resetOverlayFrameLoopForTests } from "./overlayFrameLoop";
 import {
   usePreviewCompositionRect,

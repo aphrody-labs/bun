@@ -1,4 +1,4 @@
-import { afterEach, describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "bun:test";
 import { lintHyperframeHtml, lintMediaUrls } from "./hyperframeLinter.js";
 
 afterEach(() => vi.unstubAllGlobals());

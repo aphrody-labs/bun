@@ -14,7 +14,7 @@ export function emitWords(
   let chunk: Word[] = [];
   let bytes = empty;
   for (const word of words) {
-    const size = Buffer.byteLength(JSON.stringify(word)) + 1;
+    const size = new TextEncoder().encode(JSON.stringify(word).length) + 1;
     if (chunk.length > 0 && bytes + size > DESKTOP_MAX_LINE_BYTES) {
       onEvent({ type: "words", model, words: chunk, through: chunk.at(-1)!.end });
       chunk = [];

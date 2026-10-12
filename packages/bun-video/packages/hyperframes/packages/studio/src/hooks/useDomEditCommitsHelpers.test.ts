@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";
 import { jsonResponse, requestUrl } from "./fetchStubTestUtils";
 import { assignGsapTargetAutoIdIfNeeded } from "./useDomEditCommitsHelpers";

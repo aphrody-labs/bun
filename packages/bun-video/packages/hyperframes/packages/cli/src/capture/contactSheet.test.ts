@@ -10,7 +10,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import sharp from "sharp";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import {
   createContactSheet,
   createScrollContactSheet,

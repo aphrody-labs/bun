@@ -32,7 +32,7 @@ test.describe('visual mode', () => {
 		const currentJson = await textarea.inputValue();
 		const parsed = JSON.parse(currentJson);
 		const newTitle = 'json-editor-e2e-test';
-		const beforeContent = fs.readFileSync(rootFile, 'utf-8');
+		const beforeContent = await Bun.file(rootFile).text();
 		expect(beforeContent).not.toContain(newTitle);
 
 		parsed.title = newTitle;
@@ -42,7 +42,7 @@ test.describe('visual mode', () => {
 		await expect
 			.poll(
 				() => {
-					const content = fs.readFileSync(rootFile, 'utf-8');
+					const content = await Bun.file(rootFile).text();
 					return content.includes(newTitle);
 				},
 				{
@@ -52,7 +52,7 @@ test.describe('visual mode', () => {
 			)
 			.toBe(true);
 
-		const contentAfterValidEdit = fs.readFileSync(rootFile, 'utf-8');
+		const contentAfterValidEdit = await Bun.file(rootFile).text();
 		await textarea.fill('{invalid json');
 
 		const errorDiv = page.locator('[data-testid="json-props-error"]');
@@ -61,7 +61,7 @@ test.describe('visual mode', () => {
 
 		await expect
 			.poll(
-				() => fs.readFileSync(rootFile, 'utf-8') === contentAfterValidEdit,
+				() => await Bun.file(rootFile).text() === contentAfterValidEdit,
 				{
 					timeout: 2_000,
 				},
@@ -73,14 +73,14 @@ test.describe('visual mode', () => {
 			/title: '[^']*'/,
 			`title: '${updatedTitle}'`,
 		);
-		fs.writeFileSync(rootFile, updatedContent);
+		await Bun.write(rootFile, updatedContent);
 
 		await expect(textarea).toHaveValue(new RegExp(updatedTitle), {
 			timeout: 10_000,
 		});
 		await expect(errorDiv).toBeEmpty({timeout: 5_000});
 
-		fs.writeFileSync(rootFile, contentAfterValidEdit);
+		await Bun.write(rootFile, contentAfterValidEdit);
 
 		await expect(textarea).not.toHaveValue(new RegExp(updatedTitle), {
 			timeout: 10_000,
@@ -95,7 +95,7 @@ test.describe('visual mode', () => {
 
 		await expect
 			.poll(
-				() => fs.readFileSync(rootFile, 'utf-8') === contentAfterValidEdit,
+				() => await Bun.file(rootFile).text() === contentAfterValidEdit,
 				{
 					timeout: 2_000,
 				},

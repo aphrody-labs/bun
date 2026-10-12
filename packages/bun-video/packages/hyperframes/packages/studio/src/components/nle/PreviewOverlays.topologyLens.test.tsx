@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { getPreviewState, iframeRef } from "./PreviewOverlaysTestMocks";
 import { PreviewOverlays } from "./PreviewOverlays";
 

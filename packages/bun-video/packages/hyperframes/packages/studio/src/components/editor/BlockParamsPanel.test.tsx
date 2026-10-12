@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import type { BlockParam } from "@hyperframes/core/registry";
 import { FileManagerProvider } from "../../contexts/FileManagerContext";
 import type { useFileManager } from "../../hooks/useFileManager";

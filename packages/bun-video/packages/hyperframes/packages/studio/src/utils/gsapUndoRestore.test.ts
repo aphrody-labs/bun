@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi } from "bun:test";
 import { ensureHfIds } from "@hyperframes/parsers/hf-ids";
 
 const stamping = vi.hoisted(() => ({ calls: 0 }));

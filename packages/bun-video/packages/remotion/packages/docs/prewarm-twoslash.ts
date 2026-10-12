@@ -1,5 +1,5 @@
 import type {ChildProcessWithoutNullStreams} from 'node:child_process';
-import {spawn} from 'child_process';
+import {spawn} from 'node:child_process';
 import {existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {availableParallelism, cpus, totalmem} from 'node:os';

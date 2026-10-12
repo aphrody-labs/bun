@@ -366,7 +366,7 @@ export const convertFigmaClipboardToSvg = (html: string) => {
 		fail('clipboard HTML is empty');
 	}
 
-	if (Buffer.byteLength(html, 'utf8') > maxClipboardHtmlBytes) {
+	if (new TextEncoder().encode(html).length > maxClipboardHtmlBytes) {
 		fail('clipboard HTML is too large');
 	}
 

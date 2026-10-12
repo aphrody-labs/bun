@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { NLEProvider, useNLEContext, type NLEContextValue } from "../../components/nle/NLEContext";
 import { liveTime, usePlayerStore } from "../store/playerStore";
 import { makeAdapterWindow, makeFakeIframe } from "./timelinePlayerTestHarness";

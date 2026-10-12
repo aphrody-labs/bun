@@ -18,7 +18,7 @@ const getBrowserStatus = ({
 	chromeMode: ChromeMode;
 }): BrowserStatus => {
 	if (browserExecutablePath) {
-		if (!fs.existsSync(browserExecutablePath)) {
+		if (!await Bun.file(browserExecutablePath).exists()) {
 			Log.warn(
 				{indent, logLevel},
 				`Browser executable was specified as '${browserExecutablePath}' but the path doesn't exist.`,
@@ -29,7 +29,7 @@ const getBrowserStatus = ({
 	}
 
 	const revision = getRevisionInfo(chromeMode);
-	if (revision.local && fs.existsSync(revision.executablePath)) {
+	if (revision.local && await Bun.file(revision.executablePath).exists()) {
 		return {path: revision.executablePath, type: 'local-puppeteer-browser'};
 	}
 

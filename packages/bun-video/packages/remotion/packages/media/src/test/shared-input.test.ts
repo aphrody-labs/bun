@@ -1,6 +1,6 @@
 import {ALL_FORMATS, EncodedPacketSink, Input, UrlSource} from 'mediabunny';
 import {Internals} from 'remotion';
-import {expect, test, vi} from 'vitest';
+import {expect, test, vi} from 'bun:test';
 import {acquireSharedInput} from '../get-shared-input';
 
 test('shares a main-thread Input acquired outside @remotion/media', async () => {

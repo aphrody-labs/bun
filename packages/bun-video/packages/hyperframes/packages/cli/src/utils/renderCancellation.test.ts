@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { createRenderCancellationScope, stoppedByCancelSignal } from "./renderCancellation.js";
 
 const { setHostHandlesSigint } = vi.hoisted(() => ({ setHostHandlesSigint: vi.fn() }));

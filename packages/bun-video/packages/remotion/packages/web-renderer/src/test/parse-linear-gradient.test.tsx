@@ -1,4 +1,4 @@
-import {describe, expect, test} from 'vitest';
+import {describe, expect, test} from 'bun:test';
 import {parseLinearGradient} from '../drawing/parse-linear-gradient';
 import '../symbol-dispose';
 

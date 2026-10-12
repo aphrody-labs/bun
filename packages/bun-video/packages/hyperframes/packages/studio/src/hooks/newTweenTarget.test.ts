@@ -9,7 +9,7 @@
  * the real parser, resolve through the very function that feeds the keyframe
  * cache and the lanes.
  */
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { parseGsapScript } from "@hyperframes/core/gsap-parser";
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";

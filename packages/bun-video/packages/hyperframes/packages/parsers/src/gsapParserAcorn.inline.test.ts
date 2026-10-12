@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { parseGsapScriptAcorn } from "./gsapParserAcorn.js";
 
 // U1+U2: the editor must read timelines authored inline as

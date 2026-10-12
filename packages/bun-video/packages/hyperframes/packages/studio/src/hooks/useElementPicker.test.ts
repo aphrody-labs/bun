@@ -3,7 +3,7 @@ import React, { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ensureHfIds } from "@hyperframes/parsers/hf-ids";
 import { runtimeProtocolMetadata } from "@hyperframes/core/runtime/protocol";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { useElementPicker } from "./useElementPicker";
 
 // As the host leaves it on disk: hf-ids pinned, no element ids.

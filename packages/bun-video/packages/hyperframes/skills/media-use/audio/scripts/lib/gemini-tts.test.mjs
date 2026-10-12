@@ -17,7 +17,7 @@ function fixture(t) {
     process.env = saved;
     rmSync(dir, { recursive: true, force: true });
   });
-  const wav = Buffer.alloc(48);
+  const wav = new Uint8Array(48);
   wav.write("RIFF");
   wav.writeUInt32LE(40, 4);
   wav.write("WAVEfmt ", 8);

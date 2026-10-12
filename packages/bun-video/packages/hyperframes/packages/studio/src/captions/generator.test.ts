@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { Window } from "happy-dom";
 import { generateCaptionHtml } from "./generator";
 import { buildCaptionModel, TranscriptWord } from "./parser";

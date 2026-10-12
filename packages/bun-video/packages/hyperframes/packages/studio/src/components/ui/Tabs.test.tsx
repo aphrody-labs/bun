@@ -5,7 +5,7 @@
  * three of Studio's six hand-rolled strips don't.
  */
 import React, { act } from "react";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it } from "bun:test";
 import { cleanupMounted, mountHost } from "./mountHost.testHelpers";
 import { Tab, TabPanel, Tabs, TabsList } from "./Tabs";
 

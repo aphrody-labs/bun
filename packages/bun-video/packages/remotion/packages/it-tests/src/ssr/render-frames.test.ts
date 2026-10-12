@@ -54,7 +54,7 @@ test('Legacy SSR way of rendering videos should still work', async () => {
 			codec: 'h264',
 			metadata: {Author: 'Lunar'},
 		});
-		expect(fs.existsSync(outPath)).toBe(true);
+		expect(await Bun.file(outPath).exists()).toBe(true);
 		const probe = await RenderInternals.callFf({
 			bin: 'ffprobe',
 			args: [outPath],

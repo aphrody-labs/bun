@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach } from "bun:test";
 import { writeFileSync, readFileSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -752,7 +752,7 @@ describe("detectSpeechOnset", () => {
   ): string {
     const numSamples = Math.floor(sampleRate * durationSeconds);
     const dataSize = numSamples * 2;
-    const buf = Buffer.alloc(44 + dataSize);
+    const buf = new Uint8Array(44 + dataSize);
     // RIFF header
     buf.write("RIFF", 0);
     buf.writeUInt32LE(36 + dataSize, 4);

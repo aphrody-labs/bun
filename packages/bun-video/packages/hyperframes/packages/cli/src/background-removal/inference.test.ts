@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
 import { MEAN, STD, applyMask } from "./inference.js";
 
 // Regression: the u2net_human_seg model was trained with ImageNet

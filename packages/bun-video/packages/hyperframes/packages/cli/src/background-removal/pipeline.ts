@@ -212,7 +212,7 @@ async function* readFrames(
   stream: NodeJS.ReadableStream,
   frameBytes: number,
 ): AsyncGenerator<Buffer> {
-  let buffered: Buffer = Buffer.alloc(0);
+  let buffered: Buffer = new Uint8Array(0);
   for await (const chunk of stream) {
     buffered =
       buffered.length === 0 ? (chunk as Buffer) : Buffer.concat([buffered, chunk as Buffer]);

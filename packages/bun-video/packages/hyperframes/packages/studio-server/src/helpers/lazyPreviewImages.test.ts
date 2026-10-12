@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { lazyPreviewImages } from "./lazyPreviewImages.js";
 
 const doc = (body: string) => `<!DOCTYPE html><html><head></head><body>${body}</body></html>`;

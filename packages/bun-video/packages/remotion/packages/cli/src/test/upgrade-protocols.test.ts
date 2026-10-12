@@ -169,8 +169,7 @@ test('uses the Mediabunny version for extension packages', () => {
 });
 
 test('end-to-end: updates catalog in bun-style package.json and preserves catalog: references in sub-packages', () => {
-	fs.writeFileSync(
-		path.join(tmpDir, 'package.json'),
+	await Bun.write(path.join(tmpDir, 'package.json'),
 		JSON.stringify(
 			{
 				name: 'my-monorepo',
@@ -190,8 +189,7 @@ test('end-to-end: updates catalog in bun-style package.json and preserves catalo
 
 	const subPkgDir = path.join(tmpDir, 'packages', 'my-app');
 	fs.mkdirSync(subPkgDir, {recursive: true});
-	fs.writeFileSync(
-		path.join(subPkgDir, 'package.json'),
+	await Bun.write(path.join(subPkgDir, 'package.json'),
 		JSON.stringify({
 			name: 'my-app',
 			dependencies: {
@@ -234,12 +232,10 @@ test('end-to-end: updates catalog in bun-style package.json and preserves catalo
 });
 
 test('end-to-end: updates catalog in pnpm-workspace.yaml', () => {
-	fs.writeFileSync(
-		path.join(tmpDir, 'package.json'),
+	await Bun.write(path.join(tmpDir, 'package.json'),
 		JSON.stringify({name: 'my-monorepo'}),
 	);
-	fs.writeFileSync(
-		path.join(tmpDir, 'pnpm-workspace.yaml'),
+	await Bun.write(path.join(tmpDir, 'pnpm-workspace.yaml'),
 		[
 			'packages:',
 			'  - packages/*',

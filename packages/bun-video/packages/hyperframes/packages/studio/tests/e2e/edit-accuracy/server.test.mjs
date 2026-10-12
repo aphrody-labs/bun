@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { startServer, stopServer } from "./case.mjs";
 
 // Stands in for the CLI when the asked-for port is busy: it binds another port and announces that one.

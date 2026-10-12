@@ -2,7 +2,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { isPrivateProjectFile, walkDir } from "./safePath";
 
 const hooks = vi.hoisted(() => ({ unreadable: new Map<string, string>() }));

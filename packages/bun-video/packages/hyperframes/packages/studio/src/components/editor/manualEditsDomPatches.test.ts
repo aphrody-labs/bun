@@ -1,7 +1,7 @@
 // fallow-ignore-file code-duplication
 // @vitest-environment happy-dom
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import type { PatchOperation } from "../../utils/sourcePatcher";
 import {
   STUDIO_OFFSET_X_PROP,

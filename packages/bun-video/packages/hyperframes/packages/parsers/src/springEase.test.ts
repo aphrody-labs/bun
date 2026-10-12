@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { generateSpringEaseData, SPRING_PRESETS } from "./springEase";
 
 /** Parse an SVG-path CustomEase string into {x, y} pairs. */

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { act } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import type { TimelineContextValue } from "./TimelineProvider";
 import { TimelineContextProvider, useTimelineContext } from "./TimelineProvider";
 import { TimelineClipMenu, TimelineLanes, TimelinePlayhead, TimelineRuler } from "./TimelineParts";

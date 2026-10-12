@@ -24,9 +24,7 @@ test('client export includes inspector edits without reloading Studio', async ({
 	);
 	try {
 		fs.rmSync(output, {force: true});
-		fs.writeFileSync(
-			rootFile,
-			`
+		await Bun.write(rootFile, `
 import React from 'react';
 import {Composition, Solid} from 'remotion';
 const EditableSolid = () => <Solid name="Editable color" color="#ff0000" width={32} height={32} />;
@@ -66,7 +64,7 @@ export const E2eTestRoot = () => <Composition id="client-render-inspector" compo
 			.getByRole('textbox', {name: 'Output name', exact: true})
 			.fill('out/client-render-inspector-edits.png');
 		await page.getByRole('button', {name: /Render still/}).click();
-		await expect.poll(() => fs.existsSync(output)).toBe(true);
+		await expect.poll(() => await Bun.file(output).exists()).toBe(true);
 		const {data, info} = await sharp(output)
 			.ensureAlpha()
 			.raw()

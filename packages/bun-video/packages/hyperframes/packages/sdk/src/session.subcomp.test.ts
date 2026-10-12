@@ -10,7 +10,7 @@
  * and nested hosts (different dcf from parent → new host).
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { parseHTML } from "linkedom";
 import { ensureHfIds } from "@hyperframes/core/hf-ids";
 import { RUNTIME_BOOTSTRAP_ATTR } from "@hyperframes/core";

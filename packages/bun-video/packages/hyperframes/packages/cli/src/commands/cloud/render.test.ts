@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";

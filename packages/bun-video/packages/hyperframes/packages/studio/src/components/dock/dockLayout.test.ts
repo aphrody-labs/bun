@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import type { DockviewApi } from "dockview-react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
   applySideMinimums,
   buildEditLayout,

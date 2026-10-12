@@ -1,5 +1,5 @@
 import type {CanvasSink, WrappedCanvas} from 'mediabunny';
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {canvasesAheadOfTime, releaseStableFrame} from '../canvas-ahead-of-time';
 
 const makeCanvas = () => {

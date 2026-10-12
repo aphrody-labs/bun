@@ -2,7 +2,7 @@ import {Player, type PlayerRef} from '@remotion/player';
 import React from 'react';
 import {createRoot} from 'react-dom/client';
 import {Freeze, Internals, Sequence, useCurrentFrame} from 'remotion';
-import {assert, expect, test, vi} from 'vitest';
+import {assert, expect, test, vi} from 'bun:test';
 import {extractAudio} from '../audio-extraction/extract-audio';
 import {Audio} from '../audio/audio';
 import {getMaxVideoCacheSize, globalMediaCache} from '../caches';

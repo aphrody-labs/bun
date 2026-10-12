@@ -2,7 +2,7 @@
 
 import React, { act, useRef } from "react";
 import type { Root } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import type { DomEditSelection } from "../components/editor/domEditing";
 import { usePlayerStore } from "../player/store/playerStore";
 import { useAppHotkeys } from "./useAppHotkeys";

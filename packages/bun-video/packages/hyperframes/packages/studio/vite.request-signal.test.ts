@@ -1,5 +1,5 @@
 import { createServer, get } from "node:http";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { bindNodeRequestSignal } from "./vite.request-signal";
 
 // A real connection is required: completing a request body is not a disconnect.

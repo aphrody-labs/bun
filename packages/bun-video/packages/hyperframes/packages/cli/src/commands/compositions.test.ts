@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach } from "bun:test";
 import { ensureDOMParser } from "../utils/dom.js";
 import { parseCompositions, parseSubComposition } from "./compositions.js";
 

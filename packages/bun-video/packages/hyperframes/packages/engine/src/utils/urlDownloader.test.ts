@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import {
   existsSync,
   mkdirSync,
@@ -102,7 +102,7 @@ function temporaryDownloadEntries(dir: string): string[] {
 }
 
 function isoBmffMediaBytes(marker: string): Buffer {
-  const ftyp = Buffer.alloc(24);
+  const ftyp = new Uint8Array(24);
   ftyp.writeUInt32BE(24, 0);
   ftyp.write("ftyp", 4, 4, "ascii");
   ftyp.write("isom", 8, 4, "ascii");

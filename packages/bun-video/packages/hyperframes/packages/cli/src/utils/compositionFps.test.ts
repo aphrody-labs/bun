@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { readAllowedCompositionFpsFromDir, readCompositionFps } from "./compositionFps.js";
 
 const wrap = (body: string) => `<!DOCTYPE html><html><body>${body}</body></html>`;

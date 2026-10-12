@@ -38,7 +38,7 @@ function sourceDurationSec(project) {
   } catch {}
   for (const c of cands) {
     const p = path.isAbsolute(c) ? c : path.join(project, c);
-    if (!fs.existsSync(p)) continue;
+    if (!await Bun.file(p).exists()) continue;
     try {
       const out = cp
         .execFileSync(
@@ -81,10 +81,10 @@ const defaultTextFilter = (c) =>
 
 function findTemplate(name) {
   const p = path.join(TEMPLATES, name, "template.html");
-  if (fs.existsSync(p)) return p;
+  if (await Bun.file(p).exists()) return p;
   const avail = fs
     .readdirSync(TEMPLATES)
-    .filter((d) => fs.existsSync(path.join(TEMPLATES, d, "template.html")))
+    .filter((d) => await Bun.file(path.join(TEMPLATES, d, "template.html").exists()))
     .sort();
   console.error(`[compile] unknown template: ${name}. Available: ${avail.join(", ")}`);
   process.exit(1);
@@ -240,11 +240,11 @@ function main() {
     process.exit(1);
   }
   const planPath = path.join(project, "plan.json");
-  if (!fs.existsSync(planPath)) {
+  if (!await Bun.file(planPath).exists()) {
     console.error(`[compile] missing ${planPath}`);
     process.exit(1);
   }
-  const plan = JSON.parse(fs.readFileSync(planPath, "utf8"));
+  const plan = await Bun.file(planPath).json();
   if (plan.mode === "custom") {
     console.error("[compile] mode=custom — skip this script and hand-write index.html.");
     process.exit(1);
@@ -376,7 +376,7 @@ function main() {
   }
 
   for (const [k, v] of Object.entries(subs)) src = src.split(`{{${k}}}`).join(v);
-  fs.writeFileSync(path.join(project, "index.html"), src);
+  await Bun.write(path.join(project, "index.html"), src);
   console.log(
     `[compile] ${dna ? `dna=${dna.name} (engine)` : `template=${plan.template}`} → ${path.join(project, "index.html")}`,
   );
@@ -396,7 +396,7 @@ function main() {
     let fg = src.replace("<html ", '<html class="fg-only" ');
     fg = fg.replace("</head>", fgCss + "  </head>");
     fg = fg.replace('<div id="stage"', '<div id="fg-cover"></div>\n      <div id="stage"');
-    fs.writeFileSync(path.join(project, "index_fg.html"), fg);
+    await Bun.write(path.join(project, "index_fg.html"), fg);
     console.log(
       `[compile] ${fgGroups.length} fg group(s) → ${path.join(project, "index_fg.html")}`,
     );

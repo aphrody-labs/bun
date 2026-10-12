@@ -9,7 +9,7 @@
  * If it breaks, the SDK's public contract has changed.
  */
 
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "bun:test";
 import {
   openComposition,
   ORIGIN_APPLY_PATCHES,

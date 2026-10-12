@@ -175,7 +175,7 @@ export async function beginFrameCapture(
       });
       buffer = fallback.screenshotData
         ? Buffer.from(fallback.screenshotData, "base64")
-        : Buffer.alloc(0);
+        : new Uint8Array(0);
       if (buffer.length > 0) lastFrameCache.set(page, buffer);
     }
   }

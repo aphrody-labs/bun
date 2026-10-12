@@ -1,7 +1,7 @@
 import {Player} from '@remotion/player';
 import React from 'react';
 import {createRoot} from 'react-dom/client';
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {Video} from '../video/video';
 
 const waitFor = async (predicate: () => boolean) => {

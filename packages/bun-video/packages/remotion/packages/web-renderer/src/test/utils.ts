@@ -1,4 +1,4 @@
-import {expect, onTestFinished} from 'vitest';
+import {expect, onTestFinished} from 'bun:test';
 import {page} from 'vitest/browser';
 import {withResolvers} from '../with-resolvers';
 

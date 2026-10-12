@@ -93,7 +93,7 @@ function writeAscii(buffer: Buffer, offset: number, value: string): void {
 export function generateToneWav(config: Omit<GeneratedAudioConfig, "path">): Buffer {
   const sampleCount = Math.round(config.durationSeconds * config.sampleRate);
   const pcmBytes = sampleCount * 2;
-  const wav = Buffer.alloc(44 + pcmBytes);
+  const wav = new Uint8Array(44 + pcmBytes);
   writeAscii(wav, 0, "RIFF");
   wav.writeUInt32LE(36 + pcmBytes, 4);
   writeAscii(wav, 8, "WAVE");
@@ -117,7 +117,7 @@ export function generateToneWav(config: Omit<GeneratedAudioConfig, "path">): Buf
 
 /** Deterministic xorshift bytes that do not collapse into a tiny gzip. */
 export function generatePressureBytes(bytes: number, seed: number): Buffer {
-  const output = Buffer.alloc(bytes);
+  const output = new Uint8Array(bytes);
   let state = seed >>> 0;
   for (let index = 0; index < bytes; index += 1) {
     state ^= state << 13;

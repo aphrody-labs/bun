@@ -1,7 +1,7 @@
 import { chmodSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 
 // Stand-in binaries: ffprobe reports a stereo stream, ffmpeg writes samples and then fails.
 const fakeBin = vi.hoisted(() => ({ dir: "" }));

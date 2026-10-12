@@ -11,7 +11,7 @@
  *
  * Scope: id assignment and stability only. Round-trip fidelity is T1 territory.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { parseHtml } from "./htmlParser.js";
 import { serialize } from "./test-utils.js";
 

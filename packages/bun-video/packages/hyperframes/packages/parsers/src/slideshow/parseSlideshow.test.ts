@@ -1,5 +1,5 @@
 // packages/core/src/slideshow/parseSlideshow.test.ts
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { parseSlideshowManifest, resolveSlideshow } from "./parseSlideshow";
 
 const ISLAND = `<!doctype html><html><body>

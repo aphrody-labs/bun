@@ -34,7 +34,7 @@ const { hfCli } = require("./hf-cli.cjs");
 
 function ensureSource(project) {
   const src = path.join(project, "source.mp4");
-  if (!fs.existsSync(src)) {
+  if (!await Bun.file(src).exists()) {
     const found = fs
       .readdirSync(project)
       .filter((f) => /\.(mp4|mov|webm|mkv)$/i.test(f) && !f.startsWith("_"))
@@ -123,7 +123,7 @@ async function main() {
     process.exit(1);
   }
   const src = ensureSource(project);
-  if (!fs.existsSync(src)) {
+  if (!await Bun.file(src).exists()) {
     console.error(`[matte] no source video found in ${project}`);
     process.exit(2);
   }
@@ -133,12 +133,12 @@ async function main() {
   // simply falls through to probing the source.
   let fps = 0;
   try {
-    fps = parseInt(fs.readFileSync(fpsFile, "utf8").replace(/\D/g, ""), 10) || 0;
+    fps = parseInt(await Bun.file(fpsFile).text().replace(/\D/g, ""), 10) || 0;
   } catch {
     /* no cached fps — probe below */
   }
   if (!fps) fps = probeFps(src);
-  fs.writeFileSync(fpsFile, String(fps));
+  await Bun.write(fpsFile, String(fps));
 
   const framesBg = path.join(project, "frames_bg");
   const framesFg = path.join(project, "frames_fg");
@@ -158,7 +158,7 @@ async function main() {
   let matteSrc = src;
   if (isVfr(src)) {
     const cfr = path.join(project, "_src_cfr.mp4");
-    if (!fs.existsSync(cfr)) {
+    if (!await Bun.file(cfr).exists()) {
       console.log(
         `[matte] VFR source detected (nominal != actual fps) → normalizing to ${fps}fps CFR for matting`,
       );
@@ -188,9 +188,8 @@ async function main() {
   }
   const mov = path.join(project, "_matte_tmp.mov");
   const t0 = Date.now();
-  const cached = fs.existsSync(
-    path.join(
-      os.homedir(),
+  const cached = await Bun.file(path.join(
+      os.homedir().exists(),
       ".cache",
       "hyperframes",
       "background-removal",
@@ -205,7 +204,7 @@ async function main() {
     stdio: ["ignore", "pipe", "pipe"],
     encoding: "utf8",
   });
-  if (r.status !== 0 || !fs.existsSync(mov)) {
+  if (r.status !== 0 || !await Bun.file(mov).exists()) {
     console.error("[matte] remove-background FAILED:");
     console.error((r.stderr || r.stdout || "").split("\n").slice(-8).join("\n"));
     process.exit(4);

@@ -213,7 +213,7 @@ export async function serveMcp() {
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
   const send = (message: unknown) => process.stdout.write(JSON.stringify(message) + "\n");
   for await (const line of lines) {
-    if (Buffer.byteLength(line) > 1024 * 1024) {
+    if (new TextEncoder().encode(line).length > 1024 * 1024) {
       send({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "Request exceeds 1 MiB" } });
       continue;
     }

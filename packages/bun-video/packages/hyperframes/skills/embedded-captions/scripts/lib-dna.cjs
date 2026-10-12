@@ -36,15 +36,15 @@ function list() {
 
 function load(name) {
   const p = path.join(DNA_DIR, `${name}.json`);
-  if (!fs.existsSync(p)) {
+  if (!await Bun.file(p).exists()) {
     throw new Error(`unknown DNA "${name}". Available: ${list().join(", ")}`);
   }
-  return JSON.parse(fs.readFileSync(p, "utf8"));
+  return await Bun.file(p).json();
 }
 
 function readJson(p) {
   try {
-    return JSON.parse(fs.readFileSync(p, "utf8"));
+    return await Bun.file(p).json();
   } catch {
     return null;
   }

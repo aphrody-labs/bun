@@ -1,5 +1,5 @@
 import { hostname, networkInterfaces } from "node:os";
-import { afterEach, describe, expect, it, vi, beforeEach } from "vitest";
+import { afterEach, describe, expect, it, vi, beforeEach } from "bun:test";
 
 // CLI → Studio telemetry identity seeding (Layer 1). Verifies the server only
 // hands the browser a distinct id when CLI telemetry is enabled, and passes

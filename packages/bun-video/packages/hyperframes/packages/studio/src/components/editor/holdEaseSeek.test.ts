@@ -3,7 +3,7 @@
 // dependency. core's own customEase.test.ts covers the resolver in isolation.
 import { installStudioCustomEase } from "@hyperframes/core/runtime/custom-ease";
 import { gsap } from "gsap";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 describe("Studio hold ease", () => {
   it("holds the start value under seek until the destination time", () => {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { historyGroups } from "./sequences.mjs";
 
 const claim = (id, status = 200) => ({ claim: id, status, readable: true });

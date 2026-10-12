@@ -1,4 +1,4 @@
-FROM node:lts-bookworm
+FROM oven/bun:lts-bookworm
 
 
 # Install dependencies required for chromium
@@ -21,17 +21,17 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install
+RUN bun install
 
 COPY . .
 
 RUN mkdir -p renders
 
 # Install browser
-RUN npx remotion browser ensure
+RUN bunx remotion browser ensure
 
 # Bundle the Remotion composition
-RUN npx remotion bundle
+RUN bunx remotion bundle
 # By default, bundle command will create "build" directory with the bundle
 ENV REMOTION_SERVE_URL=build
 

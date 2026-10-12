@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 // Drives Studio's snapping and marquee by package name with a host's own iframe and overlay.
 import { act, type PointerEvent } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import {
   collectSnapContext,
   resolveSnapAdjustment,

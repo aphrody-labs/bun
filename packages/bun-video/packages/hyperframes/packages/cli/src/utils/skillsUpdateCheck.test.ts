@@ -3,7 +3,7 @@
 // include it — otherwise the background nudge undercounts what a plain
 // `skills update` would actually reconcile (the "misleading 2 vs 3" bug).
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 
 type FakeConfig = Record<string, unknown>;
 

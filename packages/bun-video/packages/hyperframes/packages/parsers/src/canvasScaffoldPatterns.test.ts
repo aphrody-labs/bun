@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import {
   HTML_BODY_CSS_HEIGHT_FIRST_RE,
   HTML_BODY_CSS_WIDTH_FIRST_RE,

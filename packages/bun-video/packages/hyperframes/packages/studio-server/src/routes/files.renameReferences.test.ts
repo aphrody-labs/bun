@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Hono } from "hono";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { referenceRewriter, registerFileRoutes } from "./files";
 import type { StudioApiAdapter } from "../types";
 

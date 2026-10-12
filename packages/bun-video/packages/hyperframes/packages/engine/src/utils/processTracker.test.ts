@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "bun:test";
 import { spawn } from "node:child_process";
 import { trackChildProcess, killTrackedProcesses } from "./processTracker.js";
 

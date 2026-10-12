@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import type { PatchOperation } from "./sourcePatcher";
 import { shouldUseSdkCutover, sdkCutoverIneligibleReason } from "./sdkCutoverEligibility";
 

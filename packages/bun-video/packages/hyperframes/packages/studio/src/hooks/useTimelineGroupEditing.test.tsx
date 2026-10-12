@@ -9,7 +9,7 @@ import {
   openProjectHistory,
   type StudioApiAdapter,
 } from "@hyperframes/studio-server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import type { Root } from "react-dom/client";
 import type { TimelineElement } from "../player";
 import { persistTimelineMoveEditsAtomically } from "./timelineMoveAdapter";

@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "bun:test";
 import { compositionsAffectedBy } from "@hyperframes/studio-server";
 import { createStudioServer, type StudioServer } from "./studioServer.js";
 import { cleanupStudioServerRoot, makeStudioServerRoot } from "./studioServerTestFixture.js";

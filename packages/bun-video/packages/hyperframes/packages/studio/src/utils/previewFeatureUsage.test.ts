@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
 import { trackPreviewEditResult } from "./previewFeatureUsage";
 import { trackStudioEvent } from "./studioTelemetry";
 vi.mock("./studioTelemetry", () => ({ trackStudioEvent: vi.fn() }));

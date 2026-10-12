@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import React, { act } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import type { TimelineElement } from "../store/playerStore";
 import { usePlayerStore } from "../store/playerStore";
 import { usePreviewFrameStore } from "../store/previewFrameStore";

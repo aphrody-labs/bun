@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import { act } from "react";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it } from "bun:test";
 import { mountThreeTrackTimeline } from "./timelineMountFixtures";
 import { installTimelineMountEnv } from "./timelineMountTestEnv";
 import { isTimelineMoving } from "./timelineMotion";

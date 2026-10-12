@@ -7,7 +7,7 @@
 // finish, so the refusal lives in startRender, which all of them route through
 // — including any fourth caller nobody has written yet.
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import type { FfmpegStatus } from "./useFfmpegStatus";
 import { mountRenderQueue, renderPosts, stubRenderFetch } from "./renderQueueTestHarness";
 

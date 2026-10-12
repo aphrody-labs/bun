@@ -1196,7 +1196,7 @@ describe("local font embedding", () => {
     const projectDir = mkdtempSync(join(tmpdir(), "hf-large-local-font-"));
     const assetsDir = join(projectDir, "assets");
     mkdirSync(assetsDir, { recursive: true });
-    writeFileSync(join(assetsDir, "large.ttc"), Buffer.alloc(6 * 1024 * 1024, 0x41));
+    writeFileSync(join(assetsDir, "large.ttc"), new Uint8Array(6 * 1024 * 1024, 0x41));
     writeFileSync(
       join(projectDir, "index.html"),
       `<!DOCTYPE html>
@@ -1239,7 +1239,7 @@ describe("local font embedding", () => {
     expect(compiled.html).toContain('url("./assets/large.ttc")');
     expect(compiled.html).toContain('url("assets/../assets/large.ttc")');
     expect(compiled.html).not.toContain("data:font/collection;base64,");
-    expect(Buffer.byteLength(compiled.html)).toBeLessThan(1024 * 1024);
+    expect(new TextEncoder().encode(compiled.html).length).toBeLessThan(1024 * 1024);
     expect(fileBackedMessages).toHaveLength(1);
   });
 });
@@ -3071,7 +3071,7 @@ describe("STUDIO-5433 — ffprobe failure includes src URL for attribution", () 
     // 0-byte mp4 — ffprobe reports "Invalid data found when processing input",
     // the same class as the STUDIO-5433 moov failure. Fail-fast semantics remain
     // (video branch throws, unlike audio's graceful-degrade to duration=0).
-    const projectDir = writeCorruptVideoProject("assets/clip.mp4", Buffer.alloc(0));
+    const projectDir = writeCorruptVideoProject("assets/clip.mp4", new Uint8Array(0));
 
     let thrown: unknown;
     try {

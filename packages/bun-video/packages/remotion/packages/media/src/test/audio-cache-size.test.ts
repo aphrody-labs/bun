@@ -1,5 +1,5 @@
 import type {AudioSample} from 'mediabunny';
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {makeAudioCache} from '../audio-extraction/audio-cache';
 
 type AudioSampleFormat = AudioSample['format'];

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { usePlayerStore, type TimelineElement } from "../player";
 import { resolveAudioGroups } from "@hyperframes/core/audio-groups";
 import { readTagSnippetByTarget } from "../utils/sourcePatcher";

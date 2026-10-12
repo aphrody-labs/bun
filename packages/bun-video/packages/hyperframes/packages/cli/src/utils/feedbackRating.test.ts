@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 import { FEEDBACK_RATING_SCALE, parseFeedbackRating } from "./feedbackRating.js";
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { smoothness } from "./case.mjs";
 
 const thread = { pid: 1, tid: 2 };

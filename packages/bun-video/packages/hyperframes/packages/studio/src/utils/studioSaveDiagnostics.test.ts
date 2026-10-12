@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 
 const trackStudioEvent = vi.hoisted(() => vi.fn());
 vi.mock("./studioTelemetry", () => ({ trackStudioEvent }));

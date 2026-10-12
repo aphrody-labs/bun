@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";

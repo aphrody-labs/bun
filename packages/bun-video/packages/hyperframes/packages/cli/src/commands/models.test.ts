@@ -1,5 +1,5 @@
 import { runCommand } from "citty";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { CliRuntimeError, consumeCommandResult } from "../utils/commandResult.js";
 
 const cachedRuntimePath =

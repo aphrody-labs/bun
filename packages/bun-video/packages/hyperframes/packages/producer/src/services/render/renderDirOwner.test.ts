@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { TRANSACTION_BACKUP, createOwnedRenderDir, createRenderWorkDir } from "./renderDirOwner.js";
 
 const JOB = "0f8c2b1e-5d3a-4c7b-9e21-6a4f0d8b3c19";

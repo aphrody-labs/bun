@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {MediaPlayer} from '../media-player';
 
 test('setTrimRange should atomically update trims when paused', async () => {

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { runFontLocalize, stampFontVersions, type FontLocalizeIo } from "./fontLocalize.js";
 
 function makeIo(input: string): {

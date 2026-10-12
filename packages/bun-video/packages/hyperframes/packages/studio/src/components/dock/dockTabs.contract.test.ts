@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 const dockCss = readFileSync(path.join(import.meta.dirname, "dock.css"), "utf8").replace(
   /@import[^;]*;/,

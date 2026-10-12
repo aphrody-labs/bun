@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { timelineElementsForDelete } from "./domEditDeleteMembers";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";
 import type { TimelineElement } from "../player";

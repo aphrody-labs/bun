@@ -4,7 +4,7 @@
  * depends on; both helpers are pure so the tests are cheap to maintain.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import {
   distributeLayeredHybridFrameRanges,
   partitionTransitionFrames,

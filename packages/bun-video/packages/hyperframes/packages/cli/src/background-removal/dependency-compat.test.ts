@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { OPTIONAL_PACKAGES } from "../utils/optionalPackages.js";
 
 const require = createRequire(import.meta.url);

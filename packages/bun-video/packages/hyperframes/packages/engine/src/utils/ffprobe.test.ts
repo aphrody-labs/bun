@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, resolve } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import {
   extractMediaMetadata,
   extractPngMetadataFromBuffer,
@@ -26,10 +26,10 @@ function crc32(buf: Buffer): number {
 
 function pngChunk(type: string, data: number[]): Buffer {
   const chunkData = Buffer.from(data);
-  const header = Buffer.alloc(8);
+  const header = new Uint8Array(8);
   header.writeUInt32BE(chunkData.length, 0);
   header.write(type, 4, 4, "ascii");
-  const crc = Buffer.alloc(4);
+  const crc = new Uint8Array(4);
   crc.writeUInt32BE(crc32(Buffer.concat([Buffer.from(type, "ascii"), chunkData])), 0);
   return Buffer.concat([header, chunkData, crc]);
 }
@@ -426,7 +426,7 @@ describe("probeMediaProfile", () => {
   it("classifies extensionless AVIF from its ISO-BMFF brand instead of the generic mov demuxer", async () => {
     const fixtureDir = mkdtempSync(resolve(tmpdir(), "hf-avif-profile-"));
     const fixturePath = resolve(fixtureDir, "asset");
-    const ftyp = Buffer.alloc(24);
+    const ftyp = new Uint8Array(24);
     ftyp.writeUInt32BE(24, 0);
     ftyp.write("ftyp", 4, 4, "ascii");
     ftyp.write("avif", 8, 4, "ascii");
@@ -1224,9 +1224,9 @@ describe("ffprobe missing-binary fallback", () => {
     const retainedPathFragment = "Client Preview.mp4";
     const diagnosticPrefix = `: ${diagnostic} `;
     const remainingBytes =
-      8 * 1024 - Buffer.byteLength(retainedPathFragment) - Buffer.byteLength(diagnosticPrefix);
-    const multibyteCount = Math.floor(remainingBytes / Buffer.byteLength("€"));
-    const trailingAscii = "x".repeat(remainingBytes - multibyteCount * Buffer.byteLength("€"));
+      8 * 1024 - new TextEncoder().encode(retainedPathFragment).length - new TextEncoder().encode(diagnosticPrefix).length;
+    const multibyteCount = Math.floor(remainingBytes / new TextEncoder().encode("€").length);
+    const trailingAscii = "x".repeat(remainingBytes - multibyteCount * new TextEncoder().encode("€").length);
     const stderr = `${inputPath}${diagnosticPrefix}${"€".repeat(multibyteCount)}${trailingAscii}`;
     const { spawn } = createSpawnSpy([{ kind: "exit", code: 1, stderr }]);
     vi.resetModules();

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import type { VideoColorSpace } from "@hyperframes/engine";
 import { resolveProjectRelativeSrc } from "@hyperframes/engine";
 import { inspectHdrAutoPromotion } from "./hdrPromotion.js";

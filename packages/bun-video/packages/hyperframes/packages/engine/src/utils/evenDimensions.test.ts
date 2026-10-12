@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { requiresEvenDimensions, withEvenDimensionPad } from "./evenDimensions.js";
 
 describe("requiresEvenDimensions", () => {

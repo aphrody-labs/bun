@@ -8,7 +8,7 @@
  * every edit produced a false element_not_found resolver divergence.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { openComposition } from "./session.js";
 
 const TEMPLATE_HTML = `

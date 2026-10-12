@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { gsap } from "gsap";
-import { expect, it } from "vitest";
+import { expect, it } from "bun:test";
 import { readRuntimeKeyframes } from "./gsapRuntimeKeyframes";
 
 /** The edit bench's `keys` layer: GSAP starts it at x 40, 260 wide, and plays it to 1 s. */

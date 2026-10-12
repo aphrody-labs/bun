@@ -9,7 +9,7 @@
  * (`LOCKED_WARMUP_TICKS = 60`) so the baseline becomes host-independent.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import {
   LOCKED_WARMUP_TICKS,
   deriveBeginFrameTimelineTicks,

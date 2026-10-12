@@ -2,7 +2,7 @@
 // @vitest-environment happy-dom
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
 import type { MutableRefObject } from "react";
 import type { DomEditSelection, DomEditTextField } from "../components/editor/domEditing";
 import type { ImportedFontAsset } from "../components/editor/fontAssets";

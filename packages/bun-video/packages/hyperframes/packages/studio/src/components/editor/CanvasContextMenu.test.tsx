@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { installReactActEnvironment, makeSelection } from "../../hooks/domSelectionTestHarness";
 import { resolveZIndexEntries } from "./useDomEditZOrder";
 import { useElementLifecycleOps } from "../../hooks/useElementLifecycleOps";

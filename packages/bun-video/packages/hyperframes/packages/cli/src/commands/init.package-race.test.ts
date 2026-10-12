@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -32,7 +32,7 @@ describe("init config creation", () => {
       if (path === packagePath && !injected) {
         injected = true;
         if (kind === "dangling symlink") fs.symlinkSync(target, packagePath);
-        else fs.writeFileSync(packagePath, '{"name":"preserve-me"}\n');
+        else await Bun.write(packagePath, '{"name":"preserve-me"}\n');
         return kind === "existing";
       }
       return original.existsSync(path);
@@ -46,11 +46,11 @@ describe("init config creation", () => {
       expect(injected).toBe(true);
       if (kind === "dangling symlink") {
         expect(fs.lstatSync(packagePath).isSymbolicLink()).toBe(true);
-        expect(fs.existsSync(target)).toBe(false);
+        expect(await Bun.file(target).exists()).toBe(false);
       } else {
-        expect(fs.readFileSync(packagePath, "utf-8")).toBe('{"name":"preserve-me"}\n');
+        expect(await Bun.file(packagePath).text()).toBe('{"name":"preserve-me"}\n');
       }
-      expect(fs.existsSync(join(project, "index.html"))).toBe(true);
+      expect(await Bun.file(join(project, "index.html").exists())).toBe(true);
       expect(log.mock.calls.flat().join("\n")).toContain("npm run dev");
       expect(fs.readdirSync(project).filter((name) => name.startsWith(".hf-create-"))).toEqual([]);
     } finally {

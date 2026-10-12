@@ -14,7 +14,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import {
   decodePng,
   getFfmpegBinary,

@@ -3,7 +3,7 @@
 
 import React, { act, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { usePlaybackKeyboard } from "./usePlaybackKeyboard";
 import { usePlayerStore } from "../store/playerStore";
 

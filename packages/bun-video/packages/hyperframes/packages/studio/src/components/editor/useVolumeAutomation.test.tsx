@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { act } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { createRoot } from "react-dom/client";
 import { useVolumeAutomation, type VolumeAutomationBinding } from "./useVolumeAutomation";
 import type { DomEditSelection } from "./domEditingTypes";

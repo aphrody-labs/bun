@@ -27,8 +27,7 @@ const fetchAllPromptSubmissions = async () => {
 };
 
 fetchAllPromptSubmissions().then((promptSubmissions) => {
-	fs.writeFileSync(
-		path.join(process.cwd(), 'static', '_raw', 'prompt-submissions.json'),
+	await Bun.write(path.join(process.cwd(), 'static', '_raw', 'prompt-submissions.json'),
 		JSON.stringify(promptSubmissions, null, '\t'),
 	);
 

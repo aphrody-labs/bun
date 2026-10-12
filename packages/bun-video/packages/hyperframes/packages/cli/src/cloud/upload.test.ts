@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi } from "bun:test";
 import { createHash } from "node:crypto";
 import { HyperframesApiError } from "./_gen/client.js";
 import type { HyperframesCloudClient } from "./_gen/client.js";

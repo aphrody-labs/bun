@@ -5,7 +5,7 @@
 // the field does not fail — it silently exports the wrong video (#3549). The
 // default therefore lives in startRender, which every control routes through.
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { startRenderAndReadBody, type MountedQueue } from "./renderQueueTestHarness";
 
 vi.mock("../../telemetry/policy", () => ({ browserTelemetryAllowed: () => false }));

@@ -88,7 +88,7 @@ const header =
   `   These are the template fonts NOT in hyperframes' auto-resolved set; inlining\n` +
   `   them makes every render deterministic regardless of installed system fonts. */\n`;
 
-fs.writeFileSync(OUT, header + "\n" + faces.join("\n\n") + "\n");
+await Bun.write(OUT, header + "\n" + faces.join("\n\n") + "\n");
 const outKb = Math.round(fs.statSync(OUT).size / 1024);
 console.log(`[fonts] wrote ${OUT}`);
 console.log(

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import type { TimelineElement } from "../player";
 import { clipSyncState } from "../player/components/clipSync";
 import { clipsToUnlink, planLinkEdit } from "./timelineLinkEditPlan";

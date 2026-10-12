@@ -23,9 +23,9 @@ async function fixture() {
   const source = join(item, "asset.png");
   const manifestPath = join(item, "registry-item.json");
   const bytes = Buffer.from("original asset bytes");
-  fs.writeFileSync(source, bytes);
+  await Bun.write(source, bytes);
   const manifest = JSON.stringify({ name: "test-item", files: [{ path: "asset.png" }] });
-  fs.writeFileSync(manifestPath, manifest);
+  await Bun.write(manifestPath, manifest);
   const { main } = await import(pathToFileURL(join(root, "scripts/host-registry-assets.ts")).href);
   return { root, source, manifestPath, manifest, bytes, main };
 }
@@ -34,13 +34,13 @@ test("staged bytes match their key, dry-run is unchanged, and no-upload preserve
   const f = await fixture();
   try {
     await f.main(["test-item", "--dry-run"]);
-    assert.equal(fs.readFileSync(f.manifestPath, "utf8"), f.manifest);
-    assert.equal(fs.existsSync(join(f.root, ".registry-assets-staging")), false);
+    assert.equal(await Bun.file(f.manifestPath).text(), f.manifest);
+    assert.equal(await Bun.file(join(f.root, ".registry-assets-staging").exists()), false);
     await f.main(["test-item", "--no-upload"]);
     const key = `${createHash("sha256").update(f.bytes).digest("hex").slice(0, 16)}.png`;
     assert.deepEqual(fs.readFileSync(join(f.root, ".registry-assets-staging", key)), f.bytes);
     assert.deepEqual(fs.readFileSync(f.source), f.bytes);
-    const manifest = JSON.parse(fs.readFileSync(f.manifestPath, "utf8"));
+    const manifest = await Bun.file(f.manifestPath).json();
     assert.equal(
       manifest.files[0].url,
       `https://static.heygen.ai/hyperframes-oss/registry-assets/${key}`,
@@ -54,14 +54,14 @@ test("source replacement between planning and staging aborts before manifest pub
   const f = await fixture();
   const copy = fs.copyFileSync;
   t.mock.method(fs, "copyFileSync", (...args: Parameters<typeof copy>) => {
-    if (args[0] === f.source) fs.writeFileSync(f.source, "replacement bytes");
+    if (args[0] === f.source) await Bun.write(f.source, "replacement bytes");
     return copy(...args);
   });
   syncBuiltinESMExports();
   try {
     await assert.rejects(f.main(["test-item", "--no-upload"]), /Asset changed while staging/);
-    assert.equal(fs.readFileSync(f.manifestPath, "utf8"), f.manifest);
-    assert.equal(fs.readFileSync(f.source, "utf8"), "replacement bytes");
+    assert.equal(await Bun.file(f.manifestPath).text(), f.manifest);
+    assert.equal(await Bun.file(f.source).text(), "replacement bytes");
     assert.deepEqual(fs.readdirSync(join(f.root, ".registry-assets-staging")), []);
   } finally {
     t.mock.restoreAll();

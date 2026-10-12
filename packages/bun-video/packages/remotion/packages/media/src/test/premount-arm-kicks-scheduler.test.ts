@@ -1,5 +1,5 @@
 import type {useBufferState} from 'remotion';
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {waitForTurn} from '../audio/sort-by-priority';
 import {MediaPlayer} from '../media-player';
 

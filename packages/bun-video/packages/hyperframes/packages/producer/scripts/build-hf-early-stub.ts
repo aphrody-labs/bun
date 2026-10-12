@@ -66,6 +66,6 @@ console.log(
     event: "hf_early_stub_generated",
     stubEntry,
     outPath,
-    bytes: Buffer.byteLength(iife, "utf8"),
+    bytes: new TextEncoder().encode(iife).length,
   }),
 );

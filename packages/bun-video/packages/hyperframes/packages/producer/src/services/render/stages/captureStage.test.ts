@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -195,7 +195,7 @@ describe("createDiskCaptureProjection", () => {
         join(workDir, "retry-1-batch-0-worker-0"),
       ]) {
         mkdirSync(dir, { recursive: true });
-        writeFileSync(join(dir, "frame_000001.jpg"), Buffer.alloc(1000));
+        writeFileSync(join(dir, "frame_000001.jpg"), new Uint8Array(1000));
       }
       expect(measureCaptureFrameBytes(workDir, framesDir)).toBe(3000);
     } finally {
@@ -216,7 +216,7 @@ describe("createDiskCaptureProjection", () => {
 
 describe("runCaptureStage measured disk projection (both branches)", () => {
   const roots: string[] = [];
-  const oneMb = Buffer.alloc(1_000_000);
+  const oneMb = new Uint8Array(1_000_000);
   const makeInput = (workerCount: number, workDir: string, framesDir: string) => ({
     fileServer: { url: "http://localhost:0" } as never,
     workDir,

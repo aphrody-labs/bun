@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { createStudioServer } from "./studioServer.js";
@@ -39,7 +39,7 @@ beforeEach(async () => {
   const fixture = makeStudioServerRoot("hf-studio-containment-");
   root = fixture.root;
   hooks.studioDir = fixture.studioDir;
-  fs.writeFileSync(path.join(root, "studio-marker.txt"), "STUDIO-MARKER");
+  await Bun.write(path.join(root, "studio-marker.txt"), "STUDIO-MARKER");
   writeStudioIndexHtml(hooks.studioDir);
   server = await createStudioServer({ projectDir: fixture.projectDir });
 });
@@ -65,7 +65,7 @@ describe("static file path containment", () => {
     expect(shell.status).toBe(200);
     expect(await shell.text()).toContain("Studio");
 
-    fs.writeFileSync(path.join(hooks.studioDir, "assets", "app.js"), "export {};");
+    await Bun.write(path.join(hooks.studioDir, "assets", "app.js"), "export {};");
     const asset = await server.app.request("/assets/app.js");
     expect(asset.status).toBe(200);
     expect(await asset.text()).toContain("export {};");

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { patchMediaPlaceholders } from "./initMedia.js";
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";

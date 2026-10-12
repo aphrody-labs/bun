@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
+import { describe, it, expect, afterEach, beforeEach, vi } from "bun:test";
 import { ChildProcess, execFile } from "node:child_process";
 import { mkdirSync, mkdtempSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
@@ -452,7 +452,7 @@ describe("hevc_preview_codec", () => {
       callback(
         null,
         Buffer.from(JSON.stringify({ streams: streamsByFile[filePath] ?? [] })),
-        Buffer.alloc(0),
+        new Uint8Array(0),
       );
       return new ChildProcess();
     });
@@ -557,7 +557,7 @@ describe("hevc_preview_codec", () => {
   it("silently skips the finding when ffprobe errors or times out", async () => {
     const { project } = makeVideoProject("clip.mp4");
     mockExecFile.mockImplementation((_file, _args, _options, callback) => {
-      callback(new Error("ffprobe timed out"), Buffer.alloc(0), Buffer.alloc(0));
+      callback(new Error("ffprobe timed out"), new Uint8Array(0), new Uint8Array(0));
       return new ChildProcess();
     });
 
@@ -621,7 +621,7 @@ describe("video_media_start_at_or_past_eof", () => {
             format: { duration: String(containerDuration) },
           }),
         ),
-        Buffer.alloc(0),
+        new Uint8Array(0),
       );
       return new ChildProcess();
     });

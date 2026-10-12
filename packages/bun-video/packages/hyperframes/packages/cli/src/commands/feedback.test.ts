@@ -1,4 +1,4 @@
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "bun:test";
 
 const mocks = vi.hoisted(() => ({
   // Never settles: waiting on it would hang the command.

@@ -4,7 +4,7 @@
  * document — this file needs happy-dom (the package's default vitest
  * environment is "node") because it exercises iframe.contentDocument.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { createIframePreviewAdapter } from "./iframe.js";
 import { openComposition } from "../session.js";
 

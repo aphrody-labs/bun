@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {PremountAwareDelayPlayback} from '../premount-aware-delay-playback';
 
 const makeBufferState = () => {

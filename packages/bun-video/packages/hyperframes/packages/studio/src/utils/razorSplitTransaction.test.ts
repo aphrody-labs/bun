@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import type { TimelineElement } from "../player";
 import { buildAtomicCutIntents, runAtomicCutTransaction } from "./razorSplitTransaction";
 import { consumeStudioWriteToken, resetStudioWriteTokens } from "./studioFileVersion";

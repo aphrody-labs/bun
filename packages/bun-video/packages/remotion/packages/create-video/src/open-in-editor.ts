@@ -509,7 +509,7 @@ export async function launchEditor({
 	editor: ProcessAndCommand;
 	vsCodeNewWindow: boolean;
 }): Promise<boolean> {
-	if (!fs.existsSync(fileName)) {
+	if (!await Bun.file(fileName).exists()) {
 		return false;
 	}
 

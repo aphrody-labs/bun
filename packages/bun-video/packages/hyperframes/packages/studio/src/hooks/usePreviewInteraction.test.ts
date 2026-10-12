@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
 import type { DomEditSelection } from "../components/editor/domEditing";
 import { usePlayerStore } from "../player";
 import { installReactActEnvironment, makeSelection } from "./domSelectionTestHarness";

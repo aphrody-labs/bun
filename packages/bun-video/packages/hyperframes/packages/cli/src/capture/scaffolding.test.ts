@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -41,7 +41,7 @@ describe("generateProjectScaffold metadata", () => {
   });
 
   afterEach(() => {
-    if (fs.existsSync(dir)) {
+    if (await Bun.file(dir).exists()) {
       expect(fs.readdirSync(dir).filter((name) => name.startsWith(".hf-create-"))).toEqual([]);
     }
     fs.rmSync(dir, { recursive: true, force: true });
@@ -66,31 +66,31 @@ describe("generateProjectScaffold metadata", () => {
     "creates metadata with title %j and agent instructions",
     async (title) => {
       await generate(undefined, title);
-      expect(fs.readFileSync(metaPath, "utf-8")).toBe(
+      expect(await Bun.file(metaPath).text()).toBe(
         JSON.stringify({ id: "example.com-video", name: title || "example.com" }, null, 2),
       );
       expect(fs.readFileSync(join(dir, "AGENTS.md"), "utf-8")).toBe(
         fs.readFileSync(join(dir, "CLAUDE.md"), "utf-8"),
       );
-      expect(fs.existsSync(join(dir, "index.html"))).toBe(false);
+      expect(await Bun.file(join(dir, "index.html").exists())).toBe(false);
       expect(progress).toHaveBeenCalledWith("agent", "AGENTS.md + CLAUDE.md generated");
       expect(warnings).toEqual([]);
     },
   );
 
   it("keeps existing metadata without parsing the unused URL", async () => {
-    fs.writeFileSync(metaPath, "user metadata");
+    await Bun.write(metaPath, "user metadata");
     await generate("not a URL");
-    expect(fs.readFileSync(metaPath, "utf-8")).toBe("user metadata");
+    expect(await Bun.file(metaPath).text()).toBe("user metadata");
   });
 
   it("preserves a file created after the existence check and continues scaffolding", async () => {
     vi.mocked(fs.existsSync).mockImplementationOnce(() => {
-      fs.writeFileSync(metaPath, "concurrent metadata");
+      await Bun.write(metaPath, "concurrent metadata");
       return false;
     });
     await generate();
-    expect(fs.readFileSync(metaPath, "utf-8")).toBe("concurrent metadata");
+    expect(await Bun.file(metaPath).text()).toBe("concurrent metadata");
     expect(progress).toHaveBeenCalledWith("agent", "AGENTS.md + CLAUDE.md generated");
     expect(warnings).toEqual([]);
   });
@@ -100,7 +100,7 @@ describe("generateProjectScaffold metadata", () => {
     fs.symlinkSync(target, metaPath);
     await generate();
     expect(fs.lstatSync(metaPath).isSymbolicLink()).toBe(true);
-    expect(fs.existsSync(target)).toBe(false);
+    expect(await Bun.file(target).exists()).toBe(false);
     expect(warnings).toEqual([]);
   });
 
@@ -118,7 +118,7 @@ describe("generateProjectScaffold metadata", () => {
         throw error;
       });
       await expect(generate()).rejects.toBe(error);
-      expect(fs.existsSync(metaPath)).toBe(false);
+      expect(await Bun.file(metaPath).exists()).toBe(false);
       expect(progress).not.toHaveBeenCalled();
     },
   );
@@ -138,8 +138,7 @@ describe("loadEnvFile", () => {
   });
 
   it("never takes the feedback email from a project file, in any letter case", () => {
-    fs.writeFileSync(
-      join(dir, ".env"),
+    await Bun.write(join(dir, ".env"),
       'hyperframes_feedback_email=a@example.com\nHyperFrames_Feedback_Email=b@example.com\nHF_SCAFFOLD_TEST_KEY="kept"\n',
     );
     loadEnvFile(join(dir, "out"));

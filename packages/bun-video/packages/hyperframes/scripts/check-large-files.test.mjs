@@ -28,7 +28,7 @@ function withFiles(files, run) {
   }
 }
 
-const bigBinary = Buffer.alloc(OVER_LIMIT_BYTES);
+const bigBinary = new Uint8Array(OVER_LIMIT_BYTES);
 const bigText = "the quick brown fox jumps over the lazy dog\n".repeat(50_000);
 
 describe("check-large-files", () => {
@@ -52,7 +52,7 @@ describe("check-large-files", () => {
   });
 
   it("accepts a binary under the limit", () => {
-    withFiles({ "small.bin": Buffer.alloc(1024) }, ({ "small.bin": path }) => {
+    withFiles({ "small.bin": new Uint8Array(1024) }, ({ "small.bin": path }) => {
       assert.equal(check(path).ok, true);
     });
   });

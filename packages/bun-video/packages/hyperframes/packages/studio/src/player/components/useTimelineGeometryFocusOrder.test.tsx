@@ -2,7 +2,7 @@
 
 import React, { act, useMemo, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { usePlayerStore } from "../store/playerStore";
 import { createTimelineRowGeometry } from "./timelineLayout";
 import type { TimelineLogicalRow } from "./timelineKeyboardNavigation";

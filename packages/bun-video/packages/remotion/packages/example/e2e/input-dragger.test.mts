@@ -32,7 +32,7 @@ test.describe('Input dragger', () => {
 		await heightInput.press('Escape');
 		await expect(widthButton).toBeVisible();
 
-		const originalSource = fs.readFileSync(rootFile, 'utf-8');
+		const originalSource = await Bun.file(rootFile).text();
 		const box = await widthButton.boundingBox();
 		if (!box) {
 			throw new Error('Width input dragger is not visible');
@@ -81,7 +81,7 @@ test.describe('Input dragger', () => {
 		await page.mouse.up();
 
 		await expect
-			.poll(() => fs.readFileSync(rootFile, 'utf-8'))
+			.poll(() => await Bun.file(rootFile).text())
 			.toBe(
 				originalSource.replace(
 					/(id="AnimatedBarChart"[\s\S]*?)width=\{1280\}/,

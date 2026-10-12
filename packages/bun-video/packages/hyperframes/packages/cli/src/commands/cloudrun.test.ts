@@ -7,7 +7,7 @@
  * we only re-check the entrypoint composition here.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import {
   buildRenderConfig,
   isMissingCloudRunAdapterError,

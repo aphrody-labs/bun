@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { expect, it } from "bun:test";
 import { CompositionBreadcrumb, useCompositionStack } from "@hyperframes/studio";
 
 it("exports the composition stack hook beside the breadcrumb it feeds", () => {

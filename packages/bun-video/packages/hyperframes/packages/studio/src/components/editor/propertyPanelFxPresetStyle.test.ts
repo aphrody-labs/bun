@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { HF_AUDIO_FX_PRESETS } from "@hyperframes/core/audio-fx-presets";
 import {
   FX_PRESET_STYLE,

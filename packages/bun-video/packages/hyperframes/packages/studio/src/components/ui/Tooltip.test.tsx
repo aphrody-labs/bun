@@ -5,7 +5,7 @@
  * dismisses it (WCAG 1.4.13), aria-describedby ties trigger to bubble (4.1.2).
  */
 import React, { act } from "react";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it } from "bun:test";
 import { cleanupMounted, mountHost } from "./mountHost.testHelpers";
 import { Tooltip } from "./Tooltip";
 

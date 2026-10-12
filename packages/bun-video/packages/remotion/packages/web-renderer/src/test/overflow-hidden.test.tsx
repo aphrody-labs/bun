@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {renderStillOnWeb} from '../render-still-on-web';
 import '../symbol-dispose';
 import {overflowHidden} from './fixtures/overflow-hidden';

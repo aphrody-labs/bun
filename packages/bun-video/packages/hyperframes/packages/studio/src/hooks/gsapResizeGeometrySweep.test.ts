@@ -22,7 +22,7 @@
  * box — so the two are only equal if the drafted size is in CSS-box terms all
  * the way through. A sweep across rotations is what tells us it is.
  */
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "bun:test";
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";
 import { usePlayerStore } from "../player/store/playerStore";

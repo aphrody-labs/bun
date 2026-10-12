@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { webmAlphaAdvisory } from "./webmAlphaCheck.js";
 
 describe("webmAlphaAdvisory", () => {
@@ -82,7 +82,7 @@ describe("sampledAlphaIsFullyOpaque", () => {
   });
 
   function opaqueBuffer(frameCount: number): Buffer {
-    return Buffer.alloc(BYTES_PER_FRAME * frameCount, 0xff);
+    return new Uint8Array(BYTES_PER_FRAME * frameCount, 0xff);
   }
 
   async function importWithMocks(
@@ -132,17 +132,17 @@ describe("sampledAlphaIsFullyOpaque", () => {
   });
 
   it("returns undefined for a malformed byte count that is not a whole-frame multiple", async () => {
-    const { sampledAlphaIsFullyOpaque } = await importWithMocks(() => Buffer.alloc(100, 0xff));
+    const { sampledAlphaIsFullyOpaque } = await importWithMocks(() => new Uint8Array(100, 0xff));
     expect(sampledAlphaIsFullyOpaque(FAKE_WEBM)).toBeUndefined();
   });
 
   it("returns undefined for a byte count exceeding 3 frames (over-decode / stray bytes)", async () => {
-    const { sampledAlphaIsFullyOpaque } = await importWithMocks(() => Buffer.alloc(1024, 0xff));
+    const { sampledAlphaIsFullyOpaque } = await importWithMocks(() => new Uint8Array(1024, 0xff));
     expect(sampledAlphaIsFullyOpaque(FAKE_WEBM)).toBeUndefined();
   });
 
   it("returns undefined for an empty decode buffer", async () => {
-    const { sampledAlphaIsFullyOpaque } = await importWithMocks(() => Buffer.alloc(0));
+    const { sampledAlphaIsFullyOpaque } = await importWithMocks(() => new Uint8Array(0));
     expect(sampledAlphaIsFullyOpaque(FAKE_WEBM)).toBeUndefined();
   });
 

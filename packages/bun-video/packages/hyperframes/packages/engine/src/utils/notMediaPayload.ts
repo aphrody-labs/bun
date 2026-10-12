@@ -87,7 +87,7 @@ function byteOrderMarkLength(head: Buffer): number {
 async function readHead(filePath: string): Promise<Buffer> {
   const fh = await openFile(filePath, "r");
   try {
-    const buf = Buffer.alloc(SNIFF_BYTES);
+    const buf = new Uint8Array(SNIFF_BYTES);
     let filled = 0;
     // Looped because a single read can come back short on NFS/FUSE and on
     // FIFOs, which would truncate the window mid-prefix.

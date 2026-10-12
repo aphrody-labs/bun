@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { isKnownInactiveTimelineWindow } from "./mediaTimelineWindow.js";
 
 const elementWith = (name: "data-duration" | "data-end", value: string) => ({

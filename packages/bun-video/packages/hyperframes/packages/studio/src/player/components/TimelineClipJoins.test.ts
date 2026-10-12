@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { deriveTimelineClipJoins } from "./TimelineClipJoins";
 import type { TimelineElement } from "../store/playerStore";
 

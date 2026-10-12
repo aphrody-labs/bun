@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {parseBorderRadius} from '../drawing/border-radius';
 import '../symbol-dispose';
 

@@ -2,7 +2,7 @@ import {Audio, Video} from '@remotion/media';
 import {Input} from 'mediabunny';
 import {useEffect} from 'react';
 import {staticFile} from 'remotion';
-import {expect, test, vi} from 'vitest';
+import {expect, test, vi} from 'bun:test';
 import {renderMediaOnWeb} from '../render-media-on-web';
 import {renderStillOnWeb} from '../render-still-on-web';
 import * as telemetry from '../send-telemetry-event';

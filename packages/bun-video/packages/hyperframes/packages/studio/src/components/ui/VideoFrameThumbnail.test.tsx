@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { VideoFrameThumbnail } from "./VideoFrameThumbnail";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });

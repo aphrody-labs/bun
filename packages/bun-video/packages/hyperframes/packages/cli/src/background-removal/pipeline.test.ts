@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { EventEmitter } from "node:events";
 import type { spawn } from "node:child_process";
 import {

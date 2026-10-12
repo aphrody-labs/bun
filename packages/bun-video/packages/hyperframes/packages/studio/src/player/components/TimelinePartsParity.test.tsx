@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { Timeline } from "./Timeline";
 import { usePlayerStore } from "../store/playerStore";
 import { useTimelineContext } from "./TimelineProvider";

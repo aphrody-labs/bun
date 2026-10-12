@@ -2,7 +2,7 @@
 
 import { createElement, act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "bun:test";
 import { Window } from "happy-dom";
 import { usePreviewIframeStore } from "../../player/store/previewIframeStore";
 import type { DomEditLayerItem } from "./domEditingTypes";

@@ -33,7 +33,7 @@ const waitForUrl = async (url: string, process: ChildProcess) => {
 const waitForFile = async (file: string) => {
 	const startedAt = Date.now();
 	while (Date.now() - startedAt < 20_000) {
-		if (fs.existsSync(file)) {
+		if (await Bun.file(file).exists()) {
 			return;
 		}
 
@@ -62,8 +62,7 @@ test('installs an Element from a website into a clean Studio project', async ({
 	fs.cpSync(path.join(packagesDirectory, 'template-blank'), temporaryProject, {
 		recursive: true,
 	});
-	fs.writeFileSync(
-		path.join(temporaryProject, 'src', 'Composition.tsx'),
+	await Bun.write(path.join(temporaryProject, 'src', 'Composition.tsx'),
 		`import {AbsoluteFill, Composition} from 'remotion';
 import {CloseupFolder} from './closeups/Closeup';
 
@@ -102,8 +101,7 @@ export const DirectCanvas = () => {
 	);
 	const closeupDirectory = path.join(temporaryProject, 'src', 'closeups');
 	fs.mkdirSync(closeupDirectory);
-	fs.writeFileSync(
-		path.join(closeupDirectory, 'Closeup.tsx'),
+	await Bun.write(path.join(closeupDirectory, 'Closeup.tsx'),
 		`import {AbsoluteFill, Composition, Folder} from 'remotion';
 
 export const CloseupFolder = () => {
@@ -406,7 +404,7 @@ const CloseupPlaceholder = () => {
 		await expect(dialog).toHaveCount(0);
 		await expect(elementsIframe).toBeVisible();
 		expect(externalLibraryRequests).toHaveLength(1);
-		expect(fs.existsSync(installedAsset)).toBe(false);
+		expect(await Bun.file(installedAsset).exists()).toBe(false);
 		await installInStudio.click();
 		await expect(dialog).toBeVisible();
 		const currentDestination = dialog.getByRole('button', {
@@ -471,7 +469,7 @@ const CloseupPlaceholder = () => {
 			'protocol-element.element.tsx',
 		);
 		await waitForFile(elementFile);
-		const installedElementSource = fs.readFileSync(elementFile, 'utf8');
+		const installedElementSource = await Bun.file(elementFile).text();
 		expect(installedElementSource).toBe(protocolElementSource);
 		const compositionSource = fs.readFileSync(
 			path.join(temporaryProject, 'src', 'Composition.tsx'),
@@ -483,15 +481,15 @@ const CloseupPlaceholder = () => {
 			/<Sequence\b(?=[^>]*\bfrom=\{45\})(?=[^>]*\bdurationInFrames=\{30\})[^>]*>\s*<ProtocolElement\s+assetSrc=\{staticFile\(["']protocol-element\/data\.bin["']\)\}\s*\/>\s*<\/Sequence>/,
 		);
 
-		const suppliedSource = fs.readFileSync(elementFile, 'utf8');
+		const suppliedSource = await Bun.file(elementFile).text();
 		const customizedSource = `${suppliedSource}\n// My customizations\n`;
-		fs.writeFileSync(elementFile, customizedSource);
+		await Bun.write(elementFile, customizedSource);
 		const existingCopies = [
 			'protocol-element-copy',
 			'protocol-element-copy-2',
 		].map((name) => path.join(temporaryProject, 'src', `${name}.element.tsx`));
 		for (const file of existingCopies) {
-			fs.writeFileSync(file, customizedSource);
+			await Bun.write(file, customizedSource);
 		}
 
 		await studioPage.bringToFront();
@@ -684,10 +682,10 @@ const CloseupPlaceholder = () => {
 		await newCompositionDialog.getByRole('button', {name: /^Install/}).click();
 		await expect(newCompositionDialog).toBeHidden();
 		await waitForFile(independentFile);
-		expect(fs.readFileSync(independentFile, 'utf8')).toBe(suppliedSource);
-		expect(fs.readFileSync(elementFile, 'utf8')).toBe(customizedSource);
+		expect(await Bun.file(independentFile).text()).toBe(suppliedSource);
+		expect(await Bun.file(elementFile).text()).toBe(customizedSource);
 		for (const file of existingCopies) {
-			expect(fs.readFileSync(file, 'utf8')).toBe(customizedSource);
+			expect(await Bun.file(file).text()).toBe(customizedSource);
 		}
 		expect(
 			fs.readFileSync(
@@ -701,14 +699,14 @@ const CloseupPlaceholder = () => {
 			.getByRole('radio', {name: 'Replace existing'})
 			.check();
 		const changedSinceConfirmation = `${customizedSource}// Another edit\n`;
-		fs.writeFileSync(elementFile, changedSinceConfirmation);
+		await Bun.write(elementFile, changedSinceConfirmation);
 		await newCompositionDialog
 			.getByRole('button', {name: /Replace and insert/})
 			.click();
 		await expect(
 			newCompositionDialog.getByRole('radio', {name: 'Create a copy'}),
 		).toBeChecked();
-		expect(fs.readFileSync(elementFile, 'utf8')).toBe(changedSinceConfirmation);
+		expect(await Bun.file(elementFile).text()).toBe(changedSinceConfirmation);
 		await newCompositionDialog
 			.getByRole('radio', {name: 'Replace existing'})
 			.check();
@@ -716,8 +714,8 @@ const CloseupPlaceholder = () => {
 			.getByRole('button', {name: /Replace and insert/})
 			.click();
 		await expect(newCompositionDialog).toBeHidden();
-		expect(fs.readFileSync(elementFile, 'utf8')).toBe(suppliedSource);
-		expect(fs.readFileSync(independentFile, 'utf8')).toBe(suppliedSource);
+		expect(await Bun.file(elementFile).text()).toBe(suppliedSource);
+		expect(await Bun.file(independentFile).text()).toBe(suppliedSource);
 
 		await senderPage.getByRole('button', {name: 'Install in Studio'}).click();
 		await newCompositionDialog
@@ -781,10 +779,10 @@ const CloseupPlaceholder = () => {
 		await waitForFile(newCompositionFile);
 		await waitForFile(newCompositionElementFile);
 		await expect
-			.poll(() => fs.readFileSync(newCompositionFile, 'utf8'))
+			.poll(() => await Bun.file(newCompositionFile).text())
 			.toContain('ProtocolElement');
-		const installedComposition = fs.readFileSync(newCompositionFile, 'utf8');
-		expect(fs.readFileSync(newCompositionElementFile, 'utf8')).toContain(
+		const installedComposition = await Bun.file(newCompositionFile).text();
+		expect(await Bun.file(newCompositionElementFile).text()).toContain(
 			'export const ProtocolElement',
 		);
 		const sourceWithNewComposition = fs.readFileSync(
@@ -827,8 +825,8 @@ const CloseupPlaceholder = () => {
 			timeout: 30_000,
 		});
 		await expect(studioPage).toHaveTitle(/MyComp/);
-		await expect.poll(() => fs.existsSync(newCompositionFile)).toBe(false);
-		expect(fs.existsSync(newCompositionElementFile)).toBe(false);
+		await expect.poll(() => await Bun.file(newCompositionFile).exists()).toBe(false);
+		expect(await Bun.file(newCompositionElementFile).exists()).toBe(false);
 		expect(
 			fs.readFileSync(path.join(closeupDirectory, 'Closeup.tsx'), 'utf8'),
 		).not.toContain('id="ProtocolElementScene"');
@@ -839,15 +837,15 @@ const CloseupPlaceholder = () => {
 			timeout: 30_000,
 		});
 		await expect(studioPage).toHaveTitle(/ProtocolElementScene/);
-		await expect.poll(() => fs.existsSync(newCompositionFile)).toBe(true);
-		expect(fs.existsSync(newCompositionElementFile)).toBe(true);
+		await expect.poll(() => await Bun.file(newCompositionFile).exists()).toBe(true);
+		expect(await Bun.file(newCompositionElementFile).exists()).toBe(true);
 		expect(
 			fs.readFileSync(path.join(closeupDirectory, 'Closeup.tsx'), 'utf8'),
 		).toBe(sourceWithNewComposition);
-		expect(fs.readFileSync(newCompositionFile, 'utf8')).toBe(
+		expect(await Bun.file(newCompositionFile).text()).toBe(
 			installedComposition,
 		);
-		expect(fs.readFileSync(newCompositionElementFile, 'utf8')).toContain(
+		expect(await Bun.file(newCompositionElementFile).text()).toContain(
 			'export const ProtocolElement',
 		);
 		expect(fs.readFileSync(installedAsset)).toEqual(Buffer.from([0, 1, 2]));
@@ -877,7 +875,7 @@ const CloseupPlaceholder = () => {
 		await senderPage.locator('#status').evaluate((element) => {
 			element.textContent = '';
 		});
-		const configBeforeLibraryConfirmation = fs.readFileSync(configFile, 'utf8');
+		const configBeforeLibraryConfirmation = await Bun.file(configFile).text();
 		await senderPage
 			.getByRole('button', {name: 'Add Element Library to Studio'})
 			.click();
@@ -902,14 +900,14 @@ const CloseupPlaceholder = () => {
 		await expect(decoyStudioPage.getByText('Add Element Library')).toHaveCount(
 			0,
 		);
-		expect(fs.readFileSync(configFile, 'utf8')).toBe(
+		expect(await Bun.file(configFile).text()).toBe(
 			configBeforeLibraryConfirmation,
 		);
 		await addLibraryDialog
 			.getByRole('button', {name: /^Add Element Library/})
 			.click();
 		await expect
-			.poll(() => fs.readFileSync(configFile, 'utf8'), {timeout: 30_000})
+			.poll(() => await Bun.file(configFile).text(), {timeout: 30_000})
 			.toContain(protocolLibraryUrl);
 		await expect(studioPage.getByLabel('Protocol Library library')).toBeVisible(
 			{timeout: 30_000},
@@ -942,7 +940,7 @@ const CloseupPlaceholder = () => {
 		await expect
 			.poll(
 				() =>
-					fs.readFileSync(configFile, 'utf8').split(protocolLibraryUrl).length -
+					await Bun.file(configFile).text().split(protocolLibraryUrl).length -
 					1,
 				{timeout: 30_000},
 			)

@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "bun:test";
 import type { RegistryItem } from "@hyperframes/core";
 
 // The installer fetches over the network; the point of these tests is what it

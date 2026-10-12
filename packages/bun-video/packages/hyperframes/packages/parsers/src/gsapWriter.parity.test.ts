@@ -9,7 +9,7 @@
  *
  * The server picks the writer from HYPERFRAMES_GSAP_WRITER; acorn is the default.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { parseHTML } from "linkedom";
 import {
   parseGsapScript,

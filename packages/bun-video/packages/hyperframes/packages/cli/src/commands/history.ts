@@ -144,7 +144,7 @@ async function textDiff(owner: Owner, entry: HistoryEntry): Promise<string> {
     const out: string[] = [];
     for (const file of entry.files) {
       const sides = await Promise.all(
-        [file.before, file.after].map((hash) => (hash ? owner.blob(hash) : Buffer.alloc(0))),
+        [file.before, file.after].map((hash) => (hash ? owner.blob(hash) : new Uint8Array(0))),
       );
       if (sides.some((bytes) => bytes.subarray(0, 8000).includes(0))) {
         out.push(`Binary ${file.path} changed`);

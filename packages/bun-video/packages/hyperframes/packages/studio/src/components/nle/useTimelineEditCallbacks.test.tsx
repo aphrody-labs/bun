@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import type { TimelineElement } from "../../player";
 import type { TimelineEditCallbacks } from "../../player/components/timelineCallbacks";
 import { usePlayerStore } from "../../player/store/playerStore";

@@ -4,7 +4,7 @@ import {ALL_FORMATS, AudioBufferSink, BlobSource, Input} from 'mediabunny';
 import {flushSync} from 'react-dom';
 import {createRoot} from 'react-dom/client';
 import {useCurrentFrame} from 'remotion';
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {renderMediaOnWeb} from '../render-media-on-web';
 import {makeToneWav, pitchShiftAudio} from './fixtures/pitch-shift-audio';
 import '../symbol-dispose';

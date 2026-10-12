@@ -7,12 +7,12 @@ import execa from 'execa';
 const outputPath = path.join(process.cwd(), 'packages/example/out.mp3');
 
 beforeEach(() => {
-	if (fs.existsSync(outputPath)) {
+	if (await Bun.file(outputPath).exists()) {
 		fs.unlinkSync(outputPath);
 	}
 });
 afterEach(() => {
-	if (fs.existsSync(outputPath)) {
+	if (await Bun.file(outputPath).exists()) {
 		fs.unlinkSync(outputPath);
 	}
 });
@@ -29,7 +29,7 @@ test(
 		);
 		task.stderr?.pipe(process.stderr);
 		await task;
-		const exists = fs.existsSync(outputPath);
+		const exists = await Bun.file(outputPath).exists();
 		expect(exists).toBe(true);
 
 		const info = await RenderInternals.callFf({

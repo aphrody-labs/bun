@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { expect, it, vi } from "vitest";
+import { expect, it, vi } from "bun:test";
 import { toVisibleOverlayRects } from "./domEditOverlayGeometry";
 
 it("does not fall back to per-element basis reads when the shared basis is unavailable", () => {

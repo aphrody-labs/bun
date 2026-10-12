@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 import { buildCompositionCensus, renderCompositionCensusBlock } from "./compositionCensus.js";
 

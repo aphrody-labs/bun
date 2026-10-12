@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import type { Page } from "puppeteer-core";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { extractDesignStyles } from "./designStyleExtractor.js";
 
 // Use the complete browser expression; happy-dom supplies CSS, and these

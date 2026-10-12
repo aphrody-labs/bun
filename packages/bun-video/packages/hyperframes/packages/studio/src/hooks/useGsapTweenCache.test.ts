@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
 import { getAnimationsForElement, resolveSelectorElementIds } from "./useGsapTweenCache";
 

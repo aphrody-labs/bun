@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { vi } from "bun:test";
 import { classifyTweenPropertyGroup } from "@hyperframes/core/gsap-parser";
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
 import { usePlayerStore } from "../player/store/playerStore";

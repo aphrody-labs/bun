@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { annotateGifAssetMetadata, type CatalogedAsset } from "./assetCataloger.js";
 
 function u16(value: number): number[] {

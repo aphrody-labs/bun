@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { FxParamRow } from "./propertyPanelFxControls";
 import type { HfAudioFxNumberParam } from "@hyperframes/core/audio-fx";
 

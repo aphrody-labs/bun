@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 
 describe("parseVariablesArg", () => {
   let parseVariablesArg: typeof import("./variables.js").parseVariablesArg;

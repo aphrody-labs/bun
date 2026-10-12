@@ -52,7 +52,7 @@ const GENERIC = new Set([
 function loadFontLibrary() {
   let css;
   try {
-    css = fs.readFileSync(FONTS_CSS, "utf8");
+    css = await Bun.file(FONTS_CSS).text();
   } catch {
     console.error(
       `[inject-fonts] missing ${FONTS_CSS} — run modes/standard/fonts/build-fonts-css.cjs`,
@@ -109,7 +109,7 @@ function declaredFamilies(html) {
 function injectInto(file, lib) {
   let html;
   try {
-    html = fs.readFileSync(file, "utf8");
+    html = await Bun.file(file).text();
   } catch {
     return null;
   }
@@ -128,7 +128,7 @@ function injectInto(file, lib) {
     inlined.push(fam);
   }
   if (!blocks.length) {
-    fs.writeFileSync(file, html);
+    await Bun.write(file, html);
     return { file: path.basename(file), inlined: [] };
   }
   const style = `<style id="${MARKER}">\n/* auto-embedded by inject-fonts.cjs — deterministic template fonts */\n${blocks.join("\n")}\n</style>`;
@@ -139,7 +139,7 @@ function injectInto(file, lib) {
     html = html.replace(/<html[^>]*>/i, (m0) => `${m0}\n${style}`);
   else html = style + "\n" + html;
 
-  fs.writeFileSync(file, html);
+  await Bun.write(file, html);
   return { file: path.basename(file), inlined };
 }
 

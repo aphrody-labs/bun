@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react';
 import {useCurrentFrame, useDelayRender} from 'remotion';
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {renderMediaOnWeb} from '../render-media-on-web';
 import {renderStillOnWeb} from '../render-still-on-web';
 import '../symbol-dispose';

@@ -6,7 +6,7 @@
 // tests lock that in: run() must NEVER call process.exit(), and must set the
 // right exitCode, for the success, error-findings, and thrown-error paths.
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { consumeCommandResult } from "../utils/commandResult.js";
 
 const lintProjectMock = vi.fn();

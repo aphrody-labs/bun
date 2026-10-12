@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { PassThrough } from "node:stream";
 import { get as httpsGet } from "node:https";
 import type { ClientRequest, IncomingMessage } from "node:http";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { downloadFile, REDIRECT_CODES, redirectTarget } from "./download.js";
 
 const { unlinkSyncMock } = vi.hoisted(() => ({

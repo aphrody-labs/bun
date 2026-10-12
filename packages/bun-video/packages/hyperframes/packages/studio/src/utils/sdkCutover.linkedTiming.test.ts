@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { openComposition } from "@hyperframes/sdk";
 import { cutoverCommittedOrThrow, sdkTimingBatchPersist } from "./sdkCutover";
 import { getStudioSaveErrorMessage } from "./studioSaveDiagnostics";

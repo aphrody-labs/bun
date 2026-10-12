@@ -1,5 +1,5 @@
-import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { MockInstance } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
+import type { MockInstance } from "bun:test";
 import { mkdtempSync, rmSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

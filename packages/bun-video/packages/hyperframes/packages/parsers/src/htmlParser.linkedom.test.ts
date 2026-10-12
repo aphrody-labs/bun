@@ -16,7 +16,7 @@
  * (`hyperframes info`, `hyperframes inspect`, Studio's edit endpoints, etc.)
  * this test suite reproduces and guards.
  */
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { DOMParser as LinkedomDOMParser } from "linkedom";
 import {
   CompositionHtmlParseError,

@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { vi } from "bun:test";
 
 const previewState = vi.hoisted(() => ({ captionEditMode: false, isPlaying: false }));
 export function getPreviewState() {

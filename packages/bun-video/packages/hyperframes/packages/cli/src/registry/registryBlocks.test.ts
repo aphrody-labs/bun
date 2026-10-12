@@ -3,7 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { bundleToSingleHtml } from "@hyperframes/core/compiler";
 import { parseHTML } from "linkedom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 const blocksDir = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../registry/blocks");
 

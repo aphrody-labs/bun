@@ -143,7 +143,7 @@ export function registerFontRoutes(api: Hono): void {
       if (stat.size > SYSTEM_FONT_SIZE_LIMIT) {
         return c.json({ error: "font file too large" }, 413);
       }
-      const buffer = Buffer.alloc(stat.size);
+      const buffer = new Uint8Array(stat.size);
       readSync(fd, buffer, 0, stat.size, 0);
       const mimeType =
         located.format === "otf"

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "bun:test";
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
 import { usePlayerStore, type KeyframeCacheEntry } from "../player/store/playerStore";
 import {

@@ -19,7 +19,7 @@
  * run.
  */
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { TRANSITIONS, crossfade } from "@hyperframes/engine";
@@ -33,7 +33,7 @@ const HEIGHT = 8;
 const BUF_SIZE = WIDTH * HEIGHT * 6;
 
 function fillSolid(width: number, height: number, r: number, g: number, b: number): Buffer {
-  const buf = Buffer.alloc(width * height * 6);
+  const buf = new Uint8Array(width * height * 6);
   for (let i = 0; i < width * height; i++) {
     const off = i * 6;
     buf.writeUInt16LE(r, off);
@@ -63,7 +63,7 @@ describe("ShaderTransitionWorkerPool", () => {
     const pool = await makePool(1);
     const from = fillSolid(WIDTH, HEIGHT, 0, 0, 0);
     const to = fillSolid(WIDTH, HEIGHT, 60000, 60000, 60000);
-    const output = Buffer.alloc(BUF_SIZE);
+    const output = new Uint8Array(BUF_SIZE);
 
     const result = await pool.run({
       shader: "crossfade",
@@ -78,7 +78,7 @@ describe("ShaderTransitionWorkerPool", () => {
     // Reference: run the same crossfade inline on independent buffers.
     const refFrom = fillSolid(WIDTH, HEIGHT, 0, 0, 0);
     const refTo = fillSolid(WIDTH, HEIGHT, 60000, 60000, 60000);
-    const refOut = Buffer.alloc(BUF_SIZE);
+    const refOut = new Uint8Array(BUF_SIZE);
     crossfade(refFrom, refTo, refOut, WIDTH, HEIGHT, 0.5);
 
     expect(result.output.length).toBe(BUF_SIZE);
@@ -91,7 +91,7 @@ describe("ShaderTransitionWorkerPool", () => {
     // texture content (warp, glitch, swirl) actually differ from the
     // trivial crossfade result.
     const buildGradient = (rOff: number, gOff: number, bOff: number): Buffer => {
-      const buf = Buffer.alloc(BUF_SIZE);
+      const buf = new Uint8Array(BUF_SIZE);
       for (let y = 0; y < HEIGHT; y++) {
         for (let x = 0; x < WIDTH; x++) {
           const i = (y * WIDTH + x) * 6;
@@ -106,7 +106,7 @@ describe("ShaderTransitionWorkerPool", () => {
     for (const shaderName of Object.keys(TRANSITIONS)) {
       const from = buildGradient(1000, 2000, 3000);
       const to = buildGradient(40000, 35000, 30000);
-      const out = Buffer.alloc(BUF_SIZE);
+      const out = new Uint8Array(BUF_SIZE);
 
       const result = await pool.run({
         shader: shaderName,
@@ -120,7 +120,7 @@ describe("ShaderTransitionWorkerPool", () => {
 
       const refFrom = buildGradient(1000, 2000, 3000);
       const refTo = buildGradient(40000, 35000, 30000);
-      const refOut = Buffer.alloc(BUF_SIZE);
+      const refOut = new Uint8Array(BUF_SIZE);
       const fn = TRANSITIONS[shaderName] ?? crossfade;
       fn(refFrom, refTo, refOut, WIDTH, HEIGHT, 0.37);
 
@@ -135,7 +135,7 @@ describe("ShaderTransitionWorkerPool", () => {
     const pool = await makePool(1);
     const from = fillSolid(WIDTH, HEIGHT, 1234, 5678, 9012);
     const to = fillSolid(WIDTH, HEIGHT, 30000, 31000, 32000);
-    const output = Buffer.alloc(BUF_SIZE);
+    const output = new Uint8Array(BUF_SIZE);
 
     // Capture identity before the call. After transfer, the underlying
     // ArrayBuffer is detached on the sender side; the Buffer's `.length`
@@ -168,7 +168,7 @@ describe("ShaderTransitionWorkerPool", () => {
     const pool = await makePool(1);
     const from = fillSolid(WIDTH, HEIGHT, 0, 0, 0);
     const to = fillSolid(WIDTH, HEIGHT, 65000, 65000, 65000);
-    const output = Buffer.alloc(BUF_SIZE);
+    const output = new Uint8Array(BUF_SIZE);
 
     const result = await pool.run({
       shader: "this-shader-does-not-exist",
@@ -182,7 +182,7 @@ describe("ShaderTransitionWorkerPool", () => {
 
     const refFrom = fillSolid(WIDTH, HEIGHT, 0, 0, 0);
     const refTo = fillSolid(WIDTH, HEIGHT, 65000, 65000, 65000);
-    const refOut = Buffer.alloc(BUF_SIZE);
+    const refOut = new Uint8Array(BUF_SIZE);
     crossfade(refFrom, refTo, refOut, WIDTH, HEIGHT, 0.5);
 
     expect(Buffer.compare(result.output, refOut)).toBe(0);
@@ -196,7 +196,7 @@ describe("ShaderTransitionWorkerPool", () => {
     const tasks = progresses.map((p) => {
       const from = fillSolid(WIDTH, HEIGHT, 0, 0, 0);
       const to = fillSolid(WIDTH, HEIGHT, 50000, 50000, 50000);
-      const out = Buffer.alloc(BUF_SIZE);
+      const out = new Uint8Array(BUF_SIZE);
       return pool.run({
         shader: "crossfade",
         bufferA: from,
@@ -212,7 +212,7 @@ describe("ShaderTransitionWorkerPool", () => {
     for (let i = 0; i < progresses.length; i++) {
       const refFrom = fillSolid(WIDTH, HEIGHT, 0, 0, 0);
       const refTo = fillSolid(WIDTH, HEIGHT, 50000, 50000, 50000);
-      const refOut = Buffer.alloc(BUF_SIZE);
+      const refOut = new Uint8Array(BUF_SIZE);
       const progress = progresses[i];
       const result = results[i];
       if (progress === undefined || !result) throw new Error("missing test data");
@@ -241,7 +241,7 @@ describe("ShaderTransitionWorkerPool", () => {
 
     const from = fillSolid(WIDTH, HEIGHT, 0, 0, 0);
     const to = fillSolid(WIDTH, HEIGHT, 60000, 60000, 60000);
-    const output = Buffer.alloc(BUF_SIZE);
+    const output = new Uint8Array(BUF_SIZE);
     const result = await pool.run({
       shader: "crossfade",
       bufferA: from,
@@ -256,7 +256,7 @@ describe("ShaderTransitionWorkerPool", () => {
     // ran real work (not just spawned and crashed silently).
     const refFrom = fillSolid(WIDTH, HEIGHT, 0, 0, 0);
     const refTo = fillSolid(WIDTH, HEIGHT, 60000, 60000, 60000);
-    const refOut = Buffer.alloc(BUF_SIZE);
+    const refOut = new Uint8Array(BUF_SIZE);
     crossfade(refFrom, refTo, refOut, WIDTH, HEIGHT, 0.5);
     expect(Buffer.compare(result.output, refOut)).toBe(0);
   });
@@ -267,7 +267,7 @@ describe("ShaderTransitionWorkerPool", () => {
     const pool = await makePool(1);
     const from = fillSolid(WIDTH, HEIGHT, 0, 0, 0);
     const to = fillSolid(WIDTH, HEIGHT, 60000, 60000, 60000);
-    const output = Buffer.alloc(BUF_SIZE);
+    const output = new Uint8Array(BUF_SIZE);
 
     const first = pool.run({
       shader: "crossfade",
@@ -282,7 +282,7 @@ describe("ShaderTransitionWorkerPool", () => {
     // the queue until the first completes.
     const queuedFrom = fillSolid(WIDTH, HEIGHT, 0, 0, 0);
     const queuedTo = fillSolid(WIDTH, HEIGHT, 60000, 60000, 60000);
-    const queuedOut = Buffer.alloc(BUF_SIZE);
+    const queuedOut = new Uint8Array(BUF_SIZE);
     const second = pool.run({
       shader: "crossfade",
       bufferA: queuedFrom,
@@ -335,7 +335,7 @@ describe("ShaderTransitionWorkerPool", () => {
         shader: "crossfade",
         bufferA: fillSolid(WIDTH, HEIGHT, 0, 0, 0),
         bufferB: fillSolid(WIDTH, HEIGHT, 1, 1, 1),
-        output: Buffer.alloc(BUF_SIZE),
+        output: new Uint8Array(BUF_SIZE),
         width: WIDTH,
         height: HEIGHT,
         progress: 0.5,

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { parseAudioFxChain, serializeAudioFxChain } from "@hyperframes/core/audio-fx";
 import { normalizeHfColorGrading } from "@hyperframes/core/color-grading";
 import {

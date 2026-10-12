@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 
 const trackStudioSaveFailure = vi.hoisted(() => vi.fn());
 vi.mock("../utils/studioSaveDiagnostics", async (importOriginal) => ({

@@ -2,7 +2,7 @@
 
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { renderClipChildren, resolveClipRenderContext } from "./timelineClipChildren";
 import { getTrackStyle } from "./timelineIcons";
 import type { TimelineElement } from "../store/playerStore";

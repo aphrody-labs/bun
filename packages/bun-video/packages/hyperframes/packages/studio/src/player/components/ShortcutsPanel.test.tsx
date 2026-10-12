@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import React, { act, Profiler } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { ShortcutsButton, ShortcutsPanel } from "./ShortcutsPanel";
 import { PlayerControls } from "./PlayerControls";
 import { DEFAULT_SHORTCUT_SECTIONS, type ShortcutSection } from "./studioShortcuts";

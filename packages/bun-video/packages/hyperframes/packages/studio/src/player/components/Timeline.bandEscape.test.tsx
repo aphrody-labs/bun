@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import type { Root } from "react-dom/client";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "bun:test";
 import { Timeline } from "./Timeline";
 import { usePlayerStore } from "../store/playerStore";
 import { installReactActEnvironment, mountReactHarness } from "../../hooks/domSelectionTestHarness";

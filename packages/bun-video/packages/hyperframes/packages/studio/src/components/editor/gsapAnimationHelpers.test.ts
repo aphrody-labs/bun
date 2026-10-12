@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { SUPPORTED_PROPS } from "@hyperframes/parsers/gsap-constants";
 import { buildTweenSummary } from "./gsapAnimationHelpers";
 import { PROP_LABELS } from "./gsapAnimationConstants";

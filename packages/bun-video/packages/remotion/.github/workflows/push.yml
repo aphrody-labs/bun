@@ -53,9 +53,9 @@ jobs:
     name: Lambda integration tests
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 25
+          bun-version: latest
       - uses: oven-sh/setup-bun@v2.1.2
         with:
           bun-version: 1.3.3
@@ -82,9 +82,9 @@ jobs:
     name: Next.js SSR build
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 25
+          bun-version: latest
       - uses: oven-sh/setup-bun@v2.1.2
         with:
           bun-version: 1.3.3
@@ -104,9 +104,9 @@ jobs:
     name: Browser tests
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 25
+          bun-version: latest
       - uses: oven-sh/setup-bun@v2.1.2
         with:
           bun-version: 1.3.3
@@ -135,9 +135,9 @@ jobs:
     name: Web renderer tests
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 26
+          bun-version: latest
       - uses: oven-sh/setup-bun@v2.1.2
         with:
           bun-version: 1.3.3
@@ -161,9 +161,9 @@ jobs:
     name: SSR tests
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 16
+          bun-version: latest
       - uses: oven-sh/setup-bun@v2.1.2
         with:
           bun-version: 1.3.3
@@ -184,9 +184,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - parallel:
-          - uses: actions/setup-node@v6
+          - uses: oven-sh/setup-bun@v2
             with:
-              node-version: 16
+              bun-version: latest
           - uses: oven-sh/setup-bun@v2.1.2
             with:
               bun-version: 1.3.3
@@ -235,9 +235,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - parallel:
-          - uses: actions/setup-node@v6
+          - uses: oven-sh/setup-bun@v2
             with:
-              node-version: 25
+              bun-version: latest
           - uses: oven-sh/setup-bun@v2.1.2
             with:
               bun-version: 1.3.3
@@ -271,9 +271,9 @@ jobs:
         with:
           fetch-depth: 0
           filter: blob:none
-      - uses: actions/setup-node@v6
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 25
+          bun-version: latest
       - uses: oven-sh/setup-bun@v2.1.2
         with:
           bun-version: 1.3.3
@@ -311,9 +311,9 @@ jobs:
           fetch-depth: 0
           filter: blob:none
       - parallel:
-          - uses: actions/setup-node@v6
+          - uses: oven-sh/setup-bun@v2
             with:
-              node-version: ${{ matrix.node_version }}
+              bun-version: latest
           - uses: oven-sh/setup-bun@v2.1.2
             with:
               bun-version: 1.3.3

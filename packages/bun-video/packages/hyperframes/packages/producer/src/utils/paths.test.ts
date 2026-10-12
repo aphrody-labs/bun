@@ -11,7 +11,7 @@
  * using `path.relative()` so it works regardless of the runtime OS.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { resolve, win32 } from "node:path";
 
 import {

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { openComposition } from "@hyperframes/sdk";

@@ -1,5 +1,5 @@
 import { runCommand } from "citty";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import {
   chmodSync,
   mkdirSync,

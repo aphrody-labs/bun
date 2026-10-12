@@ -1,6 +1,6 @@
 import { cpus, totalmem } from "node:os";
 import { getHeapStatistics } from "node:v8";
-import { afterEach, describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "bun:test";
 import {
   calculateOptimalWorkers,
   computeWorkerSizing,

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { get } from "node:http";
-import { expect, it } from "vitest";
+import { expect, it } from "bun:test";
 
 // scripts/run-test-lane.mjs imports scripts/no-network.mjs into the unit lane's vitest workers.
 it("refuses happy-dom's own fetch in the unit lane", async () => {

@@ -27,7 +27,7 @@ function findSource(project) {
       ),
   )) {
     const p = path.join(project, c);
-    if (fs.existsSync(p)) return p;
+    if (await Bun.file(p).exists()) return p;
   }
   return null;
 }
@@ -86,7 +86,7 @@ function main() {
     process.exit(2);
   }
   const rms = rmsDb.map((db) => +Math.pow(10, db / 20).toFixed(5)); // linear 0..1
-  fs.writeFileSync(path.join(project, "envelope.json"), JSON.stringify({ hop: HOP, rms }));
+  await Bun.write(path.join(project, "envelope.json"), JSON.stringify({ hop: HOP, rms }));
   const peakAt = rms.indexOf(Math.max(...rms)) * HOP;
   console.log(
     `[envelope] ${rms.length} windows @ ${HOP}s → envelope.json (loudest beat ~${peakAt.toFixed(2)}s)`,

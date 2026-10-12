@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { openComposition } from "@hyperframes/sdk";
 import { createMemoryAdapter } from "@hyperframes/sdk/adapters/memory";
 import { parseGsapScriptAcorn } from "@hyperframes/core/gsap-parser-acorn";

@@ -18,7 +18,7 @@
  * animation list is caught by the next mutation in the same run rather than by
  * a person noticing weeks later.
  */
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "bun:test";
 import { classifyTweenPropertyGroup } from "@hyperframes/core/gsap-parser";
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";

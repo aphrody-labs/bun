@@ -271,7 +271,7 @@ describe("runCaptureSegmentedStage", () => {
       };
     });
     const captureFrame = mock(async (_session: unknown, frameIndex: number) => {
-      const buffer = Buffer.alloc(4);
+      const buffer = new Uint8Array(4);
       buffer.writeUInt32BE(frameIndex, 0);
       return { buffer };
     });
@@ -330,7 +330,7 @@ describe("runCaptureSegmentedStage", () => {
     const captured: number[] = [];
     const captureFrame = mock(async (_s: unknown, i: number) => {
       captured.push(i);
-      return { buffer: Buffer.alloc(1) };
+      return { buffer: new Uint8Array(1) };
     });
     const concat = mock(async () => ({ success: true as const }));
     const completed: number[] = [];
@@ -435,7 +435,7 @@ describe("runCaptureSegmentedStage", () => {
       getExitStatus: () => "success" as const,
       getExitError: () => undefined,
     }));
-    const captureFrame = mock(async () => ({ buffer: Buffer.alloc(4) }));
+    const captureFrame = mock(async () => ({ buffer: new Uint8Array(4) }));
     await expect(
       runCaptureSegmentedStage({
         ...fakeStageInput({ totalFrames: 4 }),
@@ -456,7 +456,7 @@ describe("runCaptureSegmentedStage", () => {
         getExitError: () => undefined,
       };
     });
-    const captureFrame = mock(async () => ({ buffer: Buffer.alloc(4) }));
+    const captureFrame = mock(async () => ({ buffer: new Uint8Array(4) }));
     const concat = mock(async () => ({ success: true as const }));
     await expect(
       runCaptureSegmentedStage({
@@ -507,7 +507,7 @@ describe("runCaptureSegmentedStage", () => {
       browserRecycleEverySegments: 1,
       deps: {
         spawnEncoder: mock(async () => okEncoder()),
-        captureFrame: mock(async () => ({ buffer: Buffer.alloc(1) })),
+        captureFrame: mock(async () => ({ buffer: new Uint8Array(1) })),
         concat: mock(async () => ({ success: true as const })),
         closeSession: mock(async (s: { id: number }) => {
           closed.push(s.id);
@@ -541,7 +541,7 @@ describe("runCaptureSegmentedStage", () => {
       browserRecycleEverySegments: 0,
       deps: {
         spawnEncoder: mock(async () => okEncoder()),
-        captureFrame: mock(async () => ({ buffer: Buffer.alloc(1) })),
+        captureFrame: mock(async () => ({ buffer: new Uint8Array(1) })),
         concat: mock(async () => ({ success: true as const })),
         closeSession: mock(async () => {}),
         removeFile: () => {},
@@ -568,7 +568,7 @@ describe("runCaptureSegmentedStage", () => {
             throw new Error("Protocol error (Page.captureScreenshot): Target closed");
           }
           captured.push(i);
-          return { buffer: Buffer.alloc(1) };
+          return { buffer: new Uint8Array(1) };
         }),
         concat: mock(async () => ({ success: true as const })),
         closeSession: mock(async () => {}),
@@ -597,7 +597,7 @@ describe("runCaptureSegmentedStage", () => {
           spawnEncoder: mock(async () => okEncoder()),
           captureFrame: mock(async (_s: unknown, i: number) => {
             if (i === 2) throw new Error("media_start_out_of_range");
-            return { buffer: Buffer.alloc(1) };
+            return { buffer: new Uint8Array(1) };
           }),
           concat: mock(async () => ({ success: true as const })),
           closeSession: mock(async () => {}),
@@ -621,7 +621,7 @@ describe("runCaptureSegmentedStage", () => {
           spawnEncoder: mock(async () => okEncoder()),
           captureFrame: mock(async (_s: unknown, i: number) => {
             if (i === 2) throw new Error("Protocol error: Session closed.");
-            return { buffer: Buffer.alloc(1) };
+            return { buffer: new Uint8Array(1) };
           }),
           concat: mock(async () => ({ success: true as const })),
           closeSession: mock(async () => {}),
@@ -646,7 +646,7 @@ describe("runCaptureSegmentedStage", () => {
       captured.push(i);
       // Yield so the workers actually interleave rather than running serially.
       await new Promise((r) => setTimeout(r, 1));
-      return { buffer: Buffer.alloc(1) };
+      return { buffer: new Uint8Array(1) };
     });
     const concat = mock(async () => ({ success: true as const }));
     const stableDir = join(fixtureRoot, "workers");
@@ -690,7 +690,7 @@ describe("runCaptureSegmentedStage", () => {
       workerCount: 2,
       deps: {
         spawnEncoder: mock(async () => okEncoder()),
-        captureFrame: mock(async () => ({ buffer: Buffer.alloc(1) })),
+        captureFrame: mock(async () => ({ buffer: new Uint8Array(1) })),
         concat: mock(async () => ({ success: true as const })),
         closeSession: mock(async () => {}),
         removeFile: () => {},
@@ -759,7 +759,7 @@ describe("runCaptureSegmentedStage", () => {
         spawnEncoder: mock(async () => okEncoder()),
         captureFrame: mock(async (_s: unknown, i: number) => {
           if (i === 4) throw new Error("media_start_out_of_range");
-          return { buffer: Buffer.alloc(1) };
+          return { buffer: new Uint8Array(1) };
         }),
         concat: mock(async () => ({ success: true as const })),
         closeSession: mock(async (s: { id: number }) => {
@@ -792,7 +792,7 @@ describe("runCaptureSegmentedStage", () => {
             if (spawns++ === 0) throw new Error("ffmpeg missing");
             return okEncoder();
           }),
-          captureFrame: mock(async () => ({ buffer: Buffer.alloc(1) })),
+          captureFrame: mock(async () => ({ buffer: new Uint8Array(1) })),
           concat: mock(async () => ({ success: true as const })),
           closeSession: mock(async () => {}),
           removeFile: () => {},
@@ -816,7 +816,7 @@ describe("runCaptureSegmentedStage", () => {
           if (spawns++ === 0) throw new Error("ffmpeg missing");
           return okEncoder();
         }),
-        captureFrame: mock(async () => ({ buffer: Buffer.alloc(1) })),
+        captureFrame: mock(async () => ({ buffer: new Uint8Array(1) })),
         concat: mock(async () => ({ success: true as const })),
         closeSession: mock(async () => {}),
         removeFile: () => {},
@@ -848,7 +848,7 @@ describe("runCaptureSegmentedStage", () => {
             // mid-flight on slow frames when it does.
             if (i === 0) throw new Error("media_start_out_of_range");
             await new Promise((r) => setTimeout(r, 5));
-            return { buffer: Buffer.alloc(1) };
+            return { buffer: new Uint8Array(1) };
           }),
           concat: mock(async () => ({ success: true as const })),
           closeSession: mock(async () => {

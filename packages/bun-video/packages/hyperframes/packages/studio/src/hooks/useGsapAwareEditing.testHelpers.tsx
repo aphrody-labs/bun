@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { vi } from "bun:test";
 import { mountReactHarness } from "./domSelectionTestHarness";
 import { useGsapAwareEditing } from "./useGsapAwareEditing";
 import { useGsapInteractionFailureTelemetry } from "./useGsapInteractionFailureTelemetry";

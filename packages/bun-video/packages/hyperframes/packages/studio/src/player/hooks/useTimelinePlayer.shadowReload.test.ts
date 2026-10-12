@@ -3,7 +3,7 @@
 
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { SHADOW_READY_BUDGETS, SHADOW_READY_TIMEOUT_MS } from "./useShadowPreviewReload";
 import { usePlayerStore } from "../store/playerStore";
 import { isPreviewChanging } from "../previewReloading";

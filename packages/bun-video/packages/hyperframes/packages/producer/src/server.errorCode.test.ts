@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { extractSafeRenderErrorCode, extractSafeRenderErrorMetadata } from "./server.js";
 import { VideoExtractionStageError } from "./services/render/stages/extractVideosStage.js";
 import { AssetMediaTypeMismatchError } from "./services/assetMediaType.js";

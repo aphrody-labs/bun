@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { applyElementPositionOffset } from "./elementPositionOffset";
 
 // jsdom has no layout: offsets follow left/top unless the box is anchored elsewhere.

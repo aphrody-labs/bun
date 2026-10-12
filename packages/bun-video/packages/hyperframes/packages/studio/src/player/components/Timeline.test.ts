@@ -2,8 +2,8 @@
 
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach } from "vitest";
-import { describe, it, expect, vi } from "vitest";
+import { afterEach } from "bun:test";
+import { describe, it, expect, vi } from "bun:test";
 import {
   Timeline,
   formatTimelineTickLabel,

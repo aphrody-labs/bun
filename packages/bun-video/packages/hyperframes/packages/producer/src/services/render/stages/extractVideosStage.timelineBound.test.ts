@@ -4,7 +4,7 @@ import {
   type ExtractionResult,
   type VideoElement,
 } from "@hyperframes/engine";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import type { ProducerLogger } from "../../../logger.js";
 
 const extractionCalls = vi.hoisted(

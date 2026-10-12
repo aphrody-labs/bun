@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
 import { makeSelection } from "../../hooks/domSelectionTestHarness";
 import { GSAP_EDIT_BLOCK_COPY } from "../../hooks/gsapEditOutcome";

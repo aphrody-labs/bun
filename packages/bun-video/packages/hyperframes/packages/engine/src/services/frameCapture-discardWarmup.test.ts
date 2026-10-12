@@ -18,7 +18,7 @@
  * `innerCapture` for exactly this reason). We don't need a real Chrome.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { existsSync, readdirSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -67,7 +67,7 @@ describe("discardWarmupCapture", () => {
         calls++;
         receivedFrameIndex = fi;
         receivedTime = t;
-        return { buffer: Buffer.alloc(0), quantizedTime: t, captureTimeMs: 0 };
+        return { buffer: new Uint8Array(0), quantizedTime: t, captureTimeMs: 0 };
       });
       expect(calls).toBe(1);
       expect(receivedFrameIndex).toBe(0);
@@ -83,7 +83,7 @@ describe("discardWarmupCapture", () => {
       let received: { fi: number; t: number } | null = null;
       await discardWarmupCapture(session, 240, 8, async (_s, fi, t) => {
         received = { fi, t };
-        return { buffer: Buffer.alloc(0), quantizedTime: t, captureTimeMs: 0 };
+        return { buffer: new Uint8Array(0), quantizedTime: t, captureTimeMs: 0 };
       });
       expect(received).toEqual({ fi: 240, t: 8 });
     } finally {
@@ -103,7 +103,7 @@ describe("discardWarmupCapture", () => {
         s.capturePerf.screenshotMs += 33;
         s.capturePerf.totalMs += 50;
         s.capturePerf.frameMs.push(50);
-        return { buffer: Buffer.alloc(0), quantizedTime: 0, captureTimeMs: 50 };
+        return { buffer: new Uint8Array(0), quantizedTime: 0, captureTimeMs: 50 };
       });
       expect(session.capturePerf).toEqual(before);
       expect(getCapturePerfSummary(session)).toEqual(summaryBefore);
@@ -120,7 +120,7 @@ describe("discardWarmupCapture", () => {
       await discardWarmupCapture(session, 0, 0, async (s) => {
         s.beginFrameHasDamageCount += 10;
         s.beginFrameNoDamageCount += 1;
-        return { buffer: Buffer.alloc(0), quantizedTime: 0, captureTimeMs: 0 };
+        return { buffer: new Uint8Array(0), quantizedTime: 0, captureTimeMs: 0 };
       });
       expect(session.beginFrameHasDamageCount).toBe(hasBefore);
       expect(session.beginFrameNoDamageCount).toBe(noBefore);
@@ -167,7 +167,7 @@ describe("discardWarmupCapture", () => {
         const capture = discardWarmupCapture(session, 240, 8, async (s) => {
           s.capturePerf.frameMs.splice(0, s.capturePerf.frameMs.length, 9000);
           if (throws) throw failure;
-          return { buffer: Buffer.alloc(0), quantizedTime: 8, captureTimeMs: 0 };
+          return { buffer: new Uint8Array(0), quantizedTime: 8, captureTimeMs: 0 };
         });
         if (throws) await expect(capture).rejects.toBe(failure);
         else await capture;

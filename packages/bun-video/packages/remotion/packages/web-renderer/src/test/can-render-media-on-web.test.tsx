@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {canRenderMediaOnWeb} from '../can-render-media-on-web';
 import '../symbol-dispose';
 

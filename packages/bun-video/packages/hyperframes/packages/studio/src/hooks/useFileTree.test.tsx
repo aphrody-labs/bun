@@ -2,7 +2,7 @@
 
 import { act, useImperativeHandle, useRef, forwardRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { useFileTree } from "./useFileTree";
 
 vi.mock("../components/feedback/projectProvenance", () => ({

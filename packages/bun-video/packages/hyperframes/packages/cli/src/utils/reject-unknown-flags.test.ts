@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { runCommand } from "citty";
 import type { ArgsDef, CommandDef } from "citty";
 import { spawnSync } from "node:child_process";

@@ -277,7 +277,7 @@ function getArgumentsForLineNumber(
 		editor.endsWith('/Zed.app/Contents/MacOS/cli') ||
 		editor.endsWith('/Zed Preview.app/Contents/MacOS/cli');
 	const isFolder =
-		fs.existsSync(fileName) && fs.lstatSync(fileName).isDirectory();
+		await Bun.file(fileName).exists() && fs.lstatSync(fileName).isDirectory();
 	if (isZedEditor) {
 		return ['--existing', fileName + ':' + lineNumber + ':' + colNumber];
 	}
@@ -454,7 +454,7 @@ export async function launchEditor(
 	},
 	projectFolder: string | null = null,
 ): Promise<boolean> {
-	if (!fs.existsSync(fileName)) {
+	if (!await Bun.file(fileName).exists()) {
 		return false;
 	}
 
@@ -566,7 +566,7 @@ export async function launchEditor(
 		const applicationPath = editor.process.match(
 			/^(.*?\.app)\/Contents\//,
 		)?.[1];
-		if (applicationPath && fs.existsSync(applicationPath)) {
+		if (applicationPath && await Bun.file(applicationPath).exists()) {
 			// Match the CLI's native macOS launch without starting its Node.js wrapper.
 			// -n lets Electron receive the arguments and forward them to a running instance.
 			const opened = await new Promise<boolean>((resolve) => {

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { Hono } from "hono";
 import { parseHTML } from "linkedom";
 import { ensureHfIds } from "@hyperframes/parsers/hf-ids";
@@ -322,7 +322,7 @@ describe("registerFileRoutes", () => {
   it("answers 415 for a binary file", async () => {
     const projectDir = createProjectDir();
     const header = Buffer.from([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0xff, 0xfe]);
-    writeFileSync(join(projectDir, "clip.mp4"), Buffer.concat([header, Buffer.alloc(4096, 0xab)]));
+    writeFileSync(join(projectDir, "clip.mp4"), Buffer.concat([header, new Uint8Array(4096, 0xab)]));
     const app = new Hono();
     registerFileRoutes(app, createAdapter(projectDir));
 

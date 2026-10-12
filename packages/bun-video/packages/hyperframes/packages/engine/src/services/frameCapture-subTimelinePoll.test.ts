@@ -6,7 +6,7 @@
  * bucket over 30 days — ~1% of local renders).
  */
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import type { Page } from "puppeteer-core";
 import { pollSubCompositionTimelines } from "./frameCapture.js";
 

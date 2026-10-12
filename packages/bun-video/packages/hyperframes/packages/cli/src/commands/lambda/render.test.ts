@@ -9,7 +9,7 @@
  * `../render.test.ts` for the local-CLI preflight guardrails.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { buildLambdaRenderConfig, type RenderArgs } from "./render.js";
 
 const BASE_ARGS: RenderArgs = {

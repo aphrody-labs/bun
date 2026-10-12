@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -38,7 +38,7 @@ describe("synthesis script cache", () => {
     outputPath = join(paths.home, "speech.wav");
     fs.mkdirSync(cacheDir, { recursive: true });
     vi.mocked(execFileSync).mockImplementation(() => {
-      fs.writeFileSync(outputPath, "stub audio");
+      await Bun.write(outputPath, "stub audio");
       return JSON.stringify({
         outputPath,
         sampleRate: 24000,
@@ -54,18 +54,18 @@ describe("synthesis script cache", () => {
   });
 
   it("creates the script, removes only old script versions, and reuses the current cache", async () => {
-    fs.writeFileSync(join(cacheDir, "synth-v2.py"), "old script");
-    fs.writeFileSync(join(cacheDir, "notes.txt"), "keep");
+    await Bun.write(join(cacheDir, "synth-v2.py"), "old script");
+    await Bun.write(join(cacheDir, "notes.txt"), "keep");
     const { synthesize } = await import("./synthesize.js");
     await synthesize("Hello", outputPath);
-    const script = fs.readFileSync(scriptPath, "utf-8");
+    const script = await Bun.file(scriptPath).text();
     expect(script).toContain("import kokoro_onnx");
     expect(script).toContain('"durationSeconds": round(duration, 3)');
-    expect(fs.existsSync(join(cacheDir, "synth-v2.py"))).toBe(false);
+    expect(await Bun.file(join(cacheDir, "synth-v2.py").exists())).toBe(false);
     expect(fs.readFileSync(join(cacheDir, "notes.txt"), "utf-8")).toBe("keep");
-    fs.writeFileSync(scriptPath, "existing current script");
+    await Bun.write(scriptPath, "existing current script");
     await synthesize("Again", outputPath);
-    expect(fs.readFileSync(scriptPath, "utf-8")).toBe("existing current script");
+    expect(await Bun.file(scriptPath).text()).toBe("existing current script");
   });
 
   it.each(["concurrent file", "dangling symlink"])(
@@ -78,7 +78,7 @@ describe("synthesis script cache", () => {
         if (path === scriptPath && !injected) {
           injected = true;
           if (kind === "dangling symlink") fs.symlinkSync(target, scriptPath);
-          else fs.writeFileSync(scriptPath, "concurrent script");
+          else await Bun.write(scriptPath, "concurrent script");
           return false;
         }
         return original.existsSync(path);
@@ -89,9 +89,9 @@ describe("synthesis script cache", () => {
         expect(injected).toBe(true);
         if (kind === "dangling symlink") {
           expect(fs.lstatSync(scriptPath).isSymbolicLink()).toBe(true);
-          expect(fs.existsSync(target)).toBe(false);
+          expect(await Bun.file(target).exists()).toBe(false);
         } else {
-          expect(fs.readFileSync(scriptPath, "utf-8")).toBe("concurrent script");
+          expect(await Bun.file(scriptPath).text()).toBe("concurrent script");
         }
         expect(execFileSync).toHaveBeenCalledWith(
           "test-python",

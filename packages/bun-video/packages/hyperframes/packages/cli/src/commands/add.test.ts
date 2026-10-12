@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "bun:test";
 import { runCommand as runCittyCommand, type CommandDef } from "citty";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { hasNonHoldTweenForElement, readRuntimeKeyframes } from "./gsapRuntimeKeyframes";
 import { arcPathFromMotionPathValue } from "./gsapRuntimeMotionPath";
 import { tweensTargeting, withTweenIndex } from "./gsapRuntimeTweenIndex";

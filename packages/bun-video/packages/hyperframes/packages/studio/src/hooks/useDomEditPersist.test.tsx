@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import type { DomEditSelection } from "../components/editor/domEditing";
 import type { PatchOperation } from "../utils/sourcePatcher";
 import type { CutoverResult } from "../utils/sdkCutover";

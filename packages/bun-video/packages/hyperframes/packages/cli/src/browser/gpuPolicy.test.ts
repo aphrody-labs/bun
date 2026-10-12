@@ -1,5 +1,5 @@
 import { buildChromeArgs } from "@hyperframes/engine";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { resolveLocalBrowserGpuMode, resolveLocalWebGpu } from "./gpuPolicy.js";
 
 // compositionRequiresWebGpu and assertWebGpuAdapterAvailable are implemented

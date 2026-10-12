@@ -31,7 +31,7 @@ test.describe('error overlay dismissal', () => {
 		context,
 		page,
 	}) => {
-		const originalContent = fs.readFileSync(errorOverlayE2eFile, 'utf-8');
+		const originalContent = await Bun.file(errorOverlayE2eFile).text();
 		expect(originalContent).toContain('blur({radius: 24})');
 		// Make sure the marker only appears once so the swap is unambiguous.
 		expect(originalContent.split('blur({radius: 24})')).toHaveLength(2);
@@ -94,7 +94,7 @@ test.describe('error overlay dismissal', () => {
 			label: string,
 		): Promise<void> => {
 			const logCountBefore = readStudioLogs().length;
-			fs.writeFileSync(errorOverlayE2eFile, content);
+			await Bun.write(errorOverlayE2eFile, content);
 			await expect
 				.poll(
 					() => {

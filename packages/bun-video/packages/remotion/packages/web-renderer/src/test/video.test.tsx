@@ -1,7 +1,7 @@
 import {Video} from '@remotion/media';
 import {Input} from 'mediabunny';
 import {AbsoluteFill, staticFile} from 'remotion';
-import {expect, test, vi} from 'vitest';
+import {expect, test, vi} from 'bun:test';
 import {renderStillOnWeb} from '../render-still-on-web';
 import '../symbol-dispose';
 import {testImage} from './utils';

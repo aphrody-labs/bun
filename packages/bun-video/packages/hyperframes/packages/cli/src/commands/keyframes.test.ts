@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { beforeAll, describe, expect, it, onTestFinished } from "vitest";
+import { beforeAll, describe, expect, it, onTestFinished } from "bun:test";
 import type { ArgsDef } from "citty";
 import { ensureDOMParser } from "../utils/dom.js";
 import keyframesCommand from "./keyframes.js";

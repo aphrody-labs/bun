@@ -2,7 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { applyVolumeEnvelopeToWav } from "./audioVolumeEnvelope.js";
 import { defaultAudioFxParams, type HfAudioFxChain } from "@hyperframes/core/audio-fx";
 import { applyAudioFxChain, AudioFxRenderError, readWav, writeWav } from "./audioFxRender.js";

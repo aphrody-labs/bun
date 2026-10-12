@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -128,7 +128,7 @@ describe("serveStaticProjectHtml range support", () => {
   it("answers a Range request with 206 + the requested byte slice", async () => {
     // Chromium needs byte-range seekability or WAV `.duration` reports Infinity,
     // which makes `hyperframes validate` falsely warn it cannot read the duration.
-    const body = Buffer.from("0123456789", "utf-8");
+    const body = new TextEncoder().encode("0123456789");
     const { url } = await serveWith(body);
 
     const res = await fetch(`${url}tone.wav`, { headers: { Range: "bytes=2-5" } });
@@ -139,7 +139,7 @@ describe("serveStaticProjectHtml range support", () => {
   });
 
   it("advertises Accept-Ranges even on a full 200 response", async () => {
-    const { url } = await serveWith(Buffer.from("abcdef", "utf-8"));
+    const { url } = await serveWith(new TextEncoder().encode("abcdef"));
     const res = await fetch(`${url}tone.wav`);
     expect(res.status).toBe(200);
     expect(res.headers.get("accept-ranges")).toBe("bytes");
@@ -149,7 +149,7 @@ describe("serveStaticProjectHtml range support", () => {
   it.each([undefined, "invalid", "items=0-1"])(
     "serves an empty asset with Range %j and keeps serving the project",
     async (range) => {
-      const { url } = await serveWith(Buffer.alloc(0));
+      const { url } = await serveWith(new Uint8Array(0));
       const res = await fetch(`${url}tone.wav`, {
         headers: range === undefined ? {} : { Range: range },
         signal: AbortSignal.timeout(1500),
@@ -168,7 +168,7 @@ describe("serveStaticProjectHtml range support", () => {
   it.each(["bytes=0-", "bytes=0-0", "bytes=-1"])(
     "rejects the unsatisfiable range %s on an empty asset",
     async (range) => {
-      const { url } = await serveWith(Buffer.alloc(0));
+      const { url } = await serveWith(new Uint8Array(0));
       const res = await fetch(`${url}tone.wav`, { headers: { Range: range } });
       expect(res.status).toBe(416);
       expect(res.headers.get("content-range")).toBe("bytes */0");
@@ -180,7 +180,7 @@ describe("serveStaticProjectHtml range support", () => {
     // 8MB file, ask for 4 bytes deep inside it. The handler must createReadStream
     // the [start,end] window only, not readFileSync the whole 8MB and slice.
     const size = 8 * 1024 * 1024;
-    const big = Buffer.alloc(size, 0x61); // 'a' everywhere...
+    const big = new Uint8Array(size, 0x61); // 'a' everywhere...
     big.write("WXYZ", 5_000_000); // ...except a 4-byte marker
     const { url } = await serveWith(big);
 
@@ -192,7 +192,7 @@ describe("serveStaticProjectHtml range support", () => {
   });
 
   it("returns 416 for an unsatisfiable range", async () => {
-    const body = Buffer.from("abc", "utf-8");
+    const body = new TextEncoder().encode("abc");
     const { url } = await serveWith(body);
     const res = await fetch(`${url}tone.wav`, { headers: { Range: "bytes=99-200" } });
     expect(res.status).toBe(416);

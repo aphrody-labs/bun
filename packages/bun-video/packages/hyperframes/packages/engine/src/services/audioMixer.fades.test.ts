@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { buildFadeFilters, buildTrackInputFilter, parseAudioElements } from "./audioMixer.js";
 
 describe("parseAudioElements — clip-edge fades", () => {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { parseAudioElements, volumeLaneKeyframes } from "./audioMixer.js";
 import type { HfAutomationLane } from "@hyperframes/core/audio-automation";
 

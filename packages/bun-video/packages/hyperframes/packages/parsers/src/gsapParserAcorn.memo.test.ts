@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 
 const acornParse = vi.hoisted(() => ({ calls: 0 }));
 vi.mock("acorn", async (importOriginal) => {

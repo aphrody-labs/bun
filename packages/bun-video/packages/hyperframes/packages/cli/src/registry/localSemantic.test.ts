@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -228,13 +228,13 @@ describe("media-vector validation", () => {
   });
 
   const invalidPairs: Array<[string, Array<[string, Buffer]>]> = [
-    ["missing metadata", [["media-vectors.bin", Buffer.alloc(4)]]],
+    ["missing metadata", [["media-vectors.bin", new Uint8Array(4)]]],
     ["missing matrix", [["media-vectors.json", Buffer.from("{}")]]],
     [
       "invalid json",
       [
         ["media-vectors.json", Buffer.from("not json")],
-        ["media-vectors.bin", Buffer.alloc(4)],
+        ["media-vectors.bin", new Uint8Array(4)],
       ],
     ],
     [
@@ -246,7 +246,7 @@ describe("media-vector validation", () => {
             JSON.stringify({ names: ["click"], dimensions: 1, rows: [{ ...row, id: "other" }] }),
           ),
         ],
-        ["media-vectors.bin", Buffer.alloc(4)],
+        ["media-vectors.bin", new Uint8Array(4)],
       ],
     ],
   ];
@@ -265,7 +265,7 @@ describe("media-vector validation", () => {
       vectorPairAgrees(
         [
           ["media-vectors.json", Buffer.from(JSON.stringify(metadata))],
-          ["media-vectors.bin", Buffer.alloc(4 * LOCAL_MODEL_DIMENSIONS)],
+          ["media-vectors.bin", new Uint8Array(4 * LOCAL_MODEL_DIMENSIONS)],
         ],
         "media-vectors",
       ),

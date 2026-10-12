@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, vi, afterEach } from "bun:test";
 
 // The policy module decides whether this profile may be measured at all; the
 // trigger refuses to ask anyone it cannot hear, so every test here has to say

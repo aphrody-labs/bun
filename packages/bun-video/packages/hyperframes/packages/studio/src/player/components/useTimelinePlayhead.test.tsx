@@ -2,7 +2,7 @@
 
 import { act, useLayoutEffect, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { liveTime, usePlayerStore, type ZoomMode } from "../store/playerStore";
 import { useTimelinePlayhead } from "./useTimelinePlayhead";
 import { useTimelineScrollViewport } from "./useTimelineScrollViewport";

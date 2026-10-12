@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { accurate, bankable, comment, flipped, gate, QUARANTINED } from "./ratchet.mjs";
 import { entry, score } from "./report.mjs";
 import { scoreTeleport } from "./teleport.mjs";

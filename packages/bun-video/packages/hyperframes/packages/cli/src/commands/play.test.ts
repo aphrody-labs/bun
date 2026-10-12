@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -155,7 +155,7 @@ describe("registerCompositionRoute", () => {
   it("lets a browser revalidate the composition and its assets instead of refetching them", async () => {
     const project = tmpProject();
     writeFileSync(join(project.dir, "index.html"), "<html><head></head><body></body></html>");
-    writeFileSync(join(project.dir, "clip.mp4"), Buffer.from("0123456789", "utf-8"));
+    writeFileSync(join(project.dir, "clip.mp4"), new TextEncoder().encode("0123456789"));
     const app = await buildApp(project, false);
 
     const etags: Record<string, string> = {};
@@ -168,7 +168,7 @@ describe("registerCompositionRoute", () => {
       expect(again.status).toBe(304);
     }
 
-    writeFileSync(join(project.dir, "clip.mp4"), Buffer.from("0123456789abc", "utf-8"));
+    writeFileSync(join(project.dir, "clip.mp4"), new TextEncoder().encode("0123456789abc"));
     const edited = await app.request("/composition/clip.mp4", {
       headers: { "If-None-Match": etags["/composition/clip.mp4"] ?? "" },
     });
@@ -218,7 +218,7 @@ describe("registerCompositionRoute", () => {
 
   it("answers a Range request on a plain asset with 206 + the requested byte slice", async () => {
     const project = tmpProject();
-    writeFileSync(join(project.dir, "clip.mp4"), Buffer.from("0123456789", "utf-8"));
+    writeFileSync(join(project.dir, "clip.mp4"), new TextEncoder().encode("0123456789"));
     const app = await buildApp(project, true);
 
     const res = await app.request("/composition/clip.mp4", { headers: { Range: "bytes=2-5" } });

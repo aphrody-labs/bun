@@ -144,7 +144,7 @@ export const loadVariableFont = <T extends keyof VariableVariants>(
 
 		mkdirSync(OUTDIR, {recursive: true});
 		//  Save
-		const existed = fs.existsSync(tsFile);
+		const existed = await Bun.file(tsFile).exists();
 		await fs.promises.writeFile(tsFile, output);
 		if (!existed) {
 			console.log('Wrote', tsFile);
@@ -158,7 +158,7 @@ export const loadVariableFont = <T extends keyof VariableVariants>(
 const date = Date.now();
 
 // Prepare css cache dir
-if (!fs.existsSync(CSS_CACHE_DIR)) {
+if (!await Bun.file(CSS_CACHE_DIR).exists()) {
 	await fs.promises.mkdir(CSS_CACHE_DIR, {recursive: true});
 }
 

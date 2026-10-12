@@ -9,7 +9,7 @@
  * with a minimal DOM shim, so these tests pin the real scan logic, not a copy.
  */
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import type { Page } from "puppeteer-core";
 import { detectCssEffectRisk } from "./threeDProjection.js";
 

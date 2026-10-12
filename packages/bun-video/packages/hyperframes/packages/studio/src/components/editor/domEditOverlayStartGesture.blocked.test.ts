@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { expect, it, vi } from "vitest";
+import { expect, it, vi } from "bun:test";
 import type { DomEditSelection } from "./domEditing";
 import { readTranslatePx } from "./plainTranslate";
 import { createDomEditOverlayGestureHandlers } from "./useDomEditOverlayGestures";

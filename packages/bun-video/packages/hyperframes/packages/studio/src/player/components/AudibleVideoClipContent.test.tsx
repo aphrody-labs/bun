@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { act, type ReactNode } from "react";
 import { compile } from "tailwindcss";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { createHappyDomRootHarness } from "./testRootHarness";
 import { AudibleVideoClipContent } from "./AudibleVideoClipContent";
 

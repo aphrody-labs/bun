@@ -38,7 +38,7 @@ const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     });
     res.writeHead(200, {
       "Content-Type": "application/json",
-      "Content-Length": Buffer.byteLength(body),
+      "Content-Length": new TextEncoder().encode(body).length,
       "Cache-Control": "no-store",
     });
     res.end(body);

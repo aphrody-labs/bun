@@ -74,7 +74,7 @@ await Promise.all([
 ]);
 
 // Copy core runtime artifacts so the producer can find them at dist/
-import { copyFileSync, existsSync, readFileSync } from "fs";
+import { copyFileSync, existsSync, readFileSync } from "node:fs";
 const coreDistDir = resolve(scriptDir, "../core/dist");
 try {
   const manifestSrc = resolve(coreDistDir, "hyperframe.manifest.json");

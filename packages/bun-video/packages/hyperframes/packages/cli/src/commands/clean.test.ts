@@ -15,7 +15,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { runCommand } from "citty";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { createOwnedRenderDir } from "@hyperframes/producer";
 import { consumeCommandResult } from "../utils/commandResult.js";
 import cleanCommand, { cleanLeftovers } from "./clean.js";
@@ -47,7 +47,7 @@ describe("cleanLeftovers", () => {
   function plant(parent: string, name: string, owner?: number, stale = false): string {
     const dir = join(parent, name);
     mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, "frame_000001.jpg"), Buffer.alloc(1000));
+    writeFileSync(join(dir, "frame_000001.jpg"), new Uint8Array(1000));
     if (owner) writeFileSync(join(dir, "owner.json"), JSON.stringify({ ...stamp, pid: owner }));
     if (stale)
       for (const path of [join(dir, "frame_000001.jpg"), dir])

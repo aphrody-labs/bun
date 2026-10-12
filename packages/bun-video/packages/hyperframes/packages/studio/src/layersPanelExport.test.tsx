@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 // Mounts the Layers panel by package name with no Studio shell, as a host app does.
 import { act, type ReactNode } from "react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "bun:test";
 import {
   DomEditProvider,
   LayersPanel,

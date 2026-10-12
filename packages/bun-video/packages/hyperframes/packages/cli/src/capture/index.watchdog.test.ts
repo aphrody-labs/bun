@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { createPartialCaptureState } from "./partialCapture.js";
 import { CAPTURE_PHASE_SCHEMA } from "./types.js";
 import type { CaptureOptions, CaptureResult } from "./types.js";

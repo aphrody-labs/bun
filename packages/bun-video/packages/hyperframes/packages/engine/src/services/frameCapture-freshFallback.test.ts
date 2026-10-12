@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -112,7 +112,7 @@ describe("fresh screenshot fallback", () => {
     // The shared mock page fails its diagnostic screenshot; give this one a
     // working page so the bundle can actually land on disk.
     Object.assign(s.page, {
-      screenshot: async () => Buffer.alloc(0),
+      screenshot: async () => new Uint8Array(0),
       content: async () => "<html></html>",
     });
 
@@ -145,7 +145,7 @@ describe("fresh screenshot fallback", () => {
   );
 
   it("rejects a suspect tiny frame without substituting a stale screenshot", async () => {
-    vi.mocked(captureDrawElementFrame).mockResolvedValueOnce(Buffer.alloc(100));
+    vi.mocked(captureDrawElementFrame).mockResolvedValueOnce(new Uint8Array(100));
     await expect(captureFrameToBuffer(await session(), 7, 7 / 30)).rejects.toThrow(
       "suspect small frame",
     );
@@ -153,7 +153,7 @@ describe("fresh screenshot fallback", () => {
   });
 
   it("returns a normal drawElement frame unchanged", async () => {
-    const buffer = Buffer.alloc(30_000);
+    const buffer = new Uint8Array(30_000);
     vi.mocked(captureDrawElementFrame).mockResolvedValueOnce(buffer);
     expect((await captureFrameToBuffer(await session(), 7, 7 / 30)).buffer).toBe(buffer);
     expect(pageScreenshotCapture).not.toHaveBeenCalled();

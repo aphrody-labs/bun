@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "bun:test";
 import { DomEditOverlay } from "./DomEditOverlay";
 import { RECOMPUTE_INTERVAL_MS } from "./offCanvasIndicatorRefresh";
 import { usePlayerStore } from "../../player/store/playerStore";

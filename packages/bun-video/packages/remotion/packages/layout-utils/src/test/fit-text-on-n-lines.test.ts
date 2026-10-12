@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {fitTextOnNLines} from '../layouts/fit-text-on-n-lines';
 import {measureText} from '../layouts/measure-text';
 

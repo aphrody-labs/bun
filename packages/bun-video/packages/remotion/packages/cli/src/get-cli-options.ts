@@ -47,7 +47,7 @@ export const getAndValidateAbsoluteOutputFile = (
 		process.cwd(),
 		relativeOutputLocation,
 	);
-	if (fs.existsSync(absoluteOutputFile) && !overwrite) {
+	if (await Bun.file(absoluteOutputFile).exists() && !overwrite) {
 		Log.error(
 			{indent: false, logLevel},
 			`File at ${absoluteOutputFile} already exists. Use --overwrite to overwrite.`,

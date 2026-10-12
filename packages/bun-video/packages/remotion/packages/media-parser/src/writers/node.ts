@@ -13,9 +13,9 @@ const createContent = (filename: string): CreateContent => {
 
 		await remove();
 
-		if (!fs.existsSync(filename)) {
+		if (!await Bun.file(filename).exists()) {
 			Log.verbose(logLevel, 'Creating file', filename);
-			fs.writeFileSync(filename, '');
+			await Bun.write(filename, '');
 		}
 
 		const writeStream = fs.openSync(filename, 'w');

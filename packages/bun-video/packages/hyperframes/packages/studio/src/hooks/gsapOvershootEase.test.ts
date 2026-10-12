@@ -1,7 +1,7 @@
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
 import { parseGsapScriptAcorn } from "@hyperframes/parsers/gsap-parser-acorn";
 import { replaceTweenWithKeyframesInScript } from "@hyperframes/parsers/gsap-writer-acorn";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { resolveKeyframeRetime } from "../components/editor/keyframeRetime";
 import { absoluteToPercentageForAnimation } from "../utils/globalTimeCompiler";
 import { runEaseOf, timeAtProgress } from "../utils/gsapKeyframeEases";

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { parseGsapScriptAcorn } from "./gsapParserAcorn.js";
 import { trimTrailingKeyframeSpans } from "./gsapWriterAcorn.js";
 

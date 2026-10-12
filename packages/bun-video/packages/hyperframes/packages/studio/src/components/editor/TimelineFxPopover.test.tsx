@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { act } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { createRoot } from "react-dom/client";
 import type { HfAudioFxChain } from "@hyperframes/core/audio-fx";
 import { TimelineFxPopover } from "./TimelineFxPopover.js";

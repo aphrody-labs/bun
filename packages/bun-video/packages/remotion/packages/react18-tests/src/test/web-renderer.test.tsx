@@ -1,6 +1,6 @@
 import {renderStillOnWeb} from '@remotion/web-renderer';
 import React, {useEffect} from 'react';
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 
 test('should render still on web', async () => {
 	const Component: React.FC = () => {

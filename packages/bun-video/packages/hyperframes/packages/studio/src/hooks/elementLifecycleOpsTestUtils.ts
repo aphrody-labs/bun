@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { vi } from "bun:test";
 import type { useElementLifecycleOps } from "./useElementLifecycleOps";
 
 type LifecycleOpsParams = Parameters<typeof useElementLifecycleOps>[0];

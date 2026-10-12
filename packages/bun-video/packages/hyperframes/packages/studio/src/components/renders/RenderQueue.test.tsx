@@ -2,7 +2,7 @@
 
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "bun:test";
 import { RenderQueue, type StartRenderHandler } from "./RenderQueue";
 import { getPersistedRenderSettings } from "./renderSettings";
 import { buttonBase, buttonSizes, buttonVariants, cn } from "../ui";

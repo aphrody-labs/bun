@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { padEndVisible, stripAnsi, visibleLength } from "./ansi.js";
 
 describe("cloud/ansi", () => {

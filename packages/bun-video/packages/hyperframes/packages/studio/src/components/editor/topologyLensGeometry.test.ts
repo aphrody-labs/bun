@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { mintElementHandle } from "../../webmcp/handles";
 import { previewDoc } from "../../webmcp/webmcpTestUtils";
 import { resolveTopologyLensElements } from "./topologyLensGeometry";

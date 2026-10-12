@@ -21,7 +21,7 @@
  */
 
 import type { CapturePerfSummary } from "@hyperframes/engine";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { FALLBACK_PROFILE_ENV_VAR, emitFallbackCaptureProfile } from "./fallbackCaptureProfile.js";
 import { RenderObservabilityRecorder } from "./observability.js";
 

@@ -11,7 +11,7 @@
  * motionPath parity tests live in the Phase 3b commit (PR #1379) because that
  * commit adds the acorn motionPath parser itself.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { gsapScriptUsesMotionPath, parseGsapScriptAcorn } from "./gsapParserAcorn.js";
 import { serializeGsapAnimations } from "./gsapSerialize.js";
 import type { GsapAnimation, GsapPercentageKeyframe } from "./gsapSerialize.js";

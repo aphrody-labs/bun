@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { clipPeakRuns, clipSourcePeak } from "./clipPeakRuns";
 
 const map = (bins: number[]) => ({ binSeconds: 1, bins });

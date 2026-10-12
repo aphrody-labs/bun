@@ -3,7 +3,7 @@
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { parseWiggleEase } from "@hyperframes/core/wiggle-ease";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { EaseBezierField, SpringBounceField, WiggleField } from "./EaseParamFields";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;

@@ -12,14 +12,12 @@ for (const extension of ['ts', 'js']) {
 		const configFile = path.join(projectRoot, `remotion.config.${extension}`);
 
 		try {
-			fs.writeFileSync(
-				configFile,
-				`import { Config } from '@remotion/cli/config';\n\nConfig.setRspack(true);\n`,
+			await Bun.write(configFile, `import { Config } from '@remotion/cli/config';\n\nConfig.setRspack(true);\n`,
 			);
 
 			addTailwindToConfig(projectRoot);
 
-			const config = fs.readFileSync(configFile, 'utf-8');
+			const config = await Bun.file(configFile).text();
 			expect(config).toContain(
 				`import { enableTailwind } from '@remotion/tailwind-v4';`,
 			);

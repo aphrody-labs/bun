@@ -5,7 +5,7 @@
  * Verifies that each write op touches only the intended byte span and leaves
  * every other character identical to the original source.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import {
   addAnimationToScript,
   addKeyframeToScript,

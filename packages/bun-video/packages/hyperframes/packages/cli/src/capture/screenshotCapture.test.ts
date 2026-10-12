@@ -1,4 +1,4 @@
-import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "bun:test";
 import {
   existsSync,
   mkdirSync,
@@ -27,7 +27,7 @@ function tempDir(prefix: string): string {
 
 // A real 1920x800 PNG header, so the produced-height guard sees something valid.
 function pngBuffer(height: number, width = 1920): Buffer {
-  const buf = Buffer.alloc(24);
+  const buf = new Uint8Array(24);
   Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(buf, 0);
   buf.writeUInt32BE(13, 8);
   buf.write("IHDR", 12, "ascii");
@@ -395,7 +395,7 @@ describe("pngHeight", () => {
 
   it("returns null for anything that is not a PNG", () => {
     expect(pngHeight(Buffer.from("not a png at all, definitely not"))).toBeNull();
-    expect(pngHeight(Buffer.alloc(4))).toBeNull();
+    expect(pngHeight(new Uint8Array(4))).toBeNull();
   });
 });
 

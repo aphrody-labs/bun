@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { CROP_ASPECT_PRESETS, centredCropInsets } from "./cropPresets";
 
 describe("centredCropInsets", () => {

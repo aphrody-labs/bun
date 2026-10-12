@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import type { DomEditSelection } from "./domEditing";
 import type { GestureState } from "./domEditOverlayGestures";
 import { createDomEditOverlayGestureHandlers } from "./useDomEditOverlayGestures";

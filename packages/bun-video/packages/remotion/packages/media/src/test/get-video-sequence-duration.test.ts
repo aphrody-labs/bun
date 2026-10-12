@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {getVideoSequenceDuration} from '../video/get-video-sequence-duration';
 
 const getDuration = ({

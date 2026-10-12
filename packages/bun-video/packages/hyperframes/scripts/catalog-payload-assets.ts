@@ -170,7 +170,7 @@ function readWithinBudget(fd: number, maxBytes: number): Buffer<ArrayBuffer> {
   const chunks: Buffer<ArrayBuffer>[] = [];
   let remaining = maxBytes + 1;
   while (remaining > 0) {
-    const chunk = Buffer.alloc(Math.min(64 * 1024, remaining));
+    const chunk = new Uint8Array(Math.min(64 * 1024, remaining));
     const count = readSync(fd, chunk, 0, chunk.length, null);
     if (count === 0) break;
     chunks.push(chunk.subarray(0, count));

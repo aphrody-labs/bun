@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { fadeHandleBoxes } from "./timelineClipFadeGeometry";
 
 const flatClip = (width: number) => ({ width, height: 30, radius: 0, toolsLeft: null });

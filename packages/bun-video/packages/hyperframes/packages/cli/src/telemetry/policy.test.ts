@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 
 async function loadPolicy(options?: { devMode?: boolean; apiKey?: string }) {
   vi.resetModules();

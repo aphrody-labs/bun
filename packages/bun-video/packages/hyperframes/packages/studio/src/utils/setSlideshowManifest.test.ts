@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { buildSlideshowIslandHtml } from "./setSlideshowManifest";
 import { parseSlideshowManifest } from "@hyperframes/core/slideshow";
 import type { CutoverDeps } from "./sdkCutover";

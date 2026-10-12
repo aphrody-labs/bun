@@ -1,6 +1,6 @@
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { vi } from "vitest";
+import { vi } from "bun:test";
 
 export interface SplitBody {
   splitTime: number;

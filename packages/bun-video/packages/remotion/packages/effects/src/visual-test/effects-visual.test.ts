@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {blur} from '../blur.js';
 import {colorCorrection} from '../color-correction.js';
 import {contrast} from '../contrast.js';

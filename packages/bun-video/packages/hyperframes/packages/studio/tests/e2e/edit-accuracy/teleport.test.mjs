@@ -1,5 +1,5 @@
 import { runInNewContext } from "node:vm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { frameSamplerScript, quadOf, scoreTeleport } from "./teleport.mjs";
 import { entry, score } from "./report.mjs";
 

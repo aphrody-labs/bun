@@ -2,7 +2,7 @@
 
 import React, { act, createRef } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { useTimelinePlayer } from "../../player/hooks/useTimelinePlayer";
 import { NLEPreview, getPreviewPlayerKey, resolvePreviewStageSize } from "./NLEPreview";
 import { readPreviewComplexity } from "../../player/hooks/usePreviewFirstFrameTelemetry";

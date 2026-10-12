@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { tmpdir } from "node:os";
@@ -99,14 +99,13 @@ describe("Studio bundle file reads", () => {
     hooks.studioDir = path.join(root, "studio");
     hooks.runtimeDir = path.join(root, "runtime");
     fs.mkdirSync(hooks.runtimeDir);
-    fs.writeFileSync(path.join(hooks.runtimeDir, "hyperframe-runtime.js"), "checked runtime");
+    await Bun.write(path.join(hooks.runtimeDir, "hyperframe-runtime.js"), "checked runtime");
     const projectDir = path.join(root, "project");
     fs.mkdirSync(projectDir);
     fs.mkdirSync(hooks.studioDir);
     fs.mkdirSync(path.join(hooks.studioDir, "assets"));
     fs.mkdirSync(path.join(hooks.studioDir, "icons"));
-    fs.writeFileSync(
-      path.join(hooks.studioDir, "index.html"),
+    await Bun.write(path.join(hooks.studioDir, "index.html"),
       "<html><head></head><body>Studio</body></html>",
     );
     server = createStudioServer({ projectDir });
@@ -134,12 +133,12 @@ describe("Studio bundle file reads", () => {
     "reads the checked %s despite replacement",
     async (name) => {
       const file = path.join(hooks.studioDir, name);
-      fs.writeFileSync(file, "checked bytes");
+      await Bun.write(file, "checked bytes");
       hooks.checked = (checked) => {
         if (checked !== file) return;
         hooks.checked = () => {};
         fs.renameSync(file, path.join(root, "original"));
-        fs.writeFileSync(file, "replacement bytes");
+        await Bun.write(file, "replacement bytes");
       };
       const response = await server.app.request(name === "index.html" ? "/" : `/${name}`);
       expect(response.status).toBe(200);
@@ -156,7 +155,7 @@ describe("Studio bundle file reads", () => {
     ["icons/logo.svg", "image/svg+xml", "no-store"],
     ["favicon.svg", "image/svg+xml", "no-store"],
   ])("preserves %s MIME and cache headers", async (name, mime, cacheControl) => {
-    fs.writeFileSync(path.join(hooks.studioDir, name), "");
+    await Bun.write(path.join(hooks.studioDir, name), "");
     const response = await server.app.request(`/${name}`);
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain(mime);
@@ -173,7 +172,7 @@ describe("Studio bundle file reads", () => {
       if (checked !== file) return;
       hooks.checked = () => {};
       fs.renameSync(file, path.join(root, "original-index"));
-      fs.writeFileSync(file, "replacement index");
+      await Bun.write(file, "replacement index");
     };
     expect(await loadPreviewServerBuildSignature()).toBe(expected);
     expectClosed();
@@ -186,7 +185,7 @@ describe("Studio bundle file reads", () => {
       if (checked !== file) return;
       hooks.checked = () => {};
       fs.renameSync(file, path.join(root, "original-runtime"));
-      fs.writeFileSync(file, "replacement runtime");
+      await Bun.write(file, "replacement runtime");
     };
     const response = await server.app.request("/api/runtime.js");
     expect(response.status).toBe(200);
@@ -227,7 +226,7 @@ describe("Studio bundle file reads", () => {
   it("continues serving symlinked bundle assets", async () => {
     const shared = path.join(root, "shared");
     fs.mkdirSync(shared);
-    fs.writeFileSync(path.join(shared, "file.js"), "shared asset");
+    await Bun.write(path.join(shared, "file.js"), "shared asset");
     fs.symlinkSync(
       shared,
       path.join(hooks.studioDir, "assets", "shared"),
@@ -257,7 +256,7 @@ describe("Studio bundle file reads", () => {
   });
 
   it.each(["stat", "read"])("closes a file when %s fails", async (step) => {
-    fs.writeFileSync(path.join(hooks.studioDir, "assets", "file.js"), "bytes");
+    await Bun.write(path.join(hooks.studioDir, "assets", "file.js"), "bytes");
     const fail = () => {
       throw new Error("Injected file failure");
     };

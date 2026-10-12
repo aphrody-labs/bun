@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { createProgram } from "./webgl.js";
 
 const FRAGMENT_SRC = "precision mediump float;void main(){gl_FragColor=vec4(1.0);}";

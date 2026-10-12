@@ -14,7 +14,7 @@
  *     boot on the same port succeeds).
  */
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { request as httpRequest } from "node:http";

@@ -1,7 +1,6 @@
 # This is a dockerized version of a server that you can easily deploy somewhere.
 # If you don't want server rendering, you can safely delete this file.
-
-FROM node:22-bookworm-slim
+FROM oven/bun:22-bookworm-slim
 
 RUN apt install -y \
   libnss3 \
@@ -22,7 +21,7 @@ COPY . ./app
 
 WORKDIR /app
 
-RUN npm i
+RUN bun install
 
 # Run everything after as non-privileged user.
 USER pptruser

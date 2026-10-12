@@ -34,8 +34,8 @@ module.exports = function () {
 				__dirname,
 				'../static/_raw/prompt-submissions.json',
 			);
-			const promptSubmissions = fs.existsSync(promptSubmissionsPath)
-				? JSON.parse(fs.readFileSync(promptSubmissionsPath, 'utf-8'))
+			const promptSubmissions = await Bun.file(promptSubmissionsPath).exists()
+				? await Bun.file(promptSubmissionsPath).json()
 				: [];
 			const promptSlugs = promptSubmissions.map((p) => p.slug);
 			const promptPageCount = Math.ceil(promptSubmissions.length / 12);

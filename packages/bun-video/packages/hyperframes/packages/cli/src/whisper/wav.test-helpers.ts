@@ -1,10 +1,10 @@
 /** A 16-bit mono PCM WAV of `samples` (-1..1), as prepareWav writes one. */
 export function encodeWav(samples: ArrayLike<number>, sampleRate: number): Buffer {
-  const data = Buffer.alloc(samples.length * 2);
+  const data = new Uint8Array(samples.length * 2);
   for (let i = 0; i < samples.length; i++) {
     data.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(samples[i]! * 32768))), 2 * i);
   }
-  const head = Buffer.alloc(44);
+  const head = new Uint8Array(44);
   head.write("RIFF", 0, "ascii");
   head.writeUInt32LE(36 + data.length, 4);
   head.write("WAVEfmt ", 8, "ascii");

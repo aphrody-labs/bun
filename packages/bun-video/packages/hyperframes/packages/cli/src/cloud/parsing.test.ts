@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { parseEnumFlag, parseIntFlag, parseNumericFlag } from "./parsing.js";
 import { CliUsageError } from "../utils/commandResult.js";
 

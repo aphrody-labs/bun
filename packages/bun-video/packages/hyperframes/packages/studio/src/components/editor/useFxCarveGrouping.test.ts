@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { carveBedRoles, carverAgainst, collectCarveCandidates } from "./useFxCarveGrouping";
 
 function previewDoc(html: string): Document {

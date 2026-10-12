@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { createPartialCaptureState, writePartialCaptureBundle } from "./partialCapture.js";
 import { CAPTURE_PHASE_SCHEMA } from "./types.js";
 

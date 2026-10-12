@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "bun:test";
 import type { RenderJob, RenderPerfSummary } from "@hyperframes/producer";
 
 // Mock `../telemetry/events.js` so we can capture trackRenderComplete /

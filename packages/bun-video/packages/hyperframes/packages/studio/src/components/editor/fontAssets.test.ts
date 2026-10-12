@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { expect, it } from "vitest";
+import { expect, it } from "bun:test";
 import { importedFontFaceCssFor, injectPreviewImportedFont } from "../../utils/studioFontHelpers";
 import { importedFontFaceCss, type ImportedFontAsset } from "./fontAssets";
 

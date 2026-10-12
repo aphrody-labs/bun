@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
@@ -74,7 +74,7 @@ afterEach(() => {
 function writeEntry(name: string, html = "<html>checked</html>") {
   const path = join(projectDir, name);
   fs.mkdirSync(resolve(path, ".."), { recursive: true });
-  fs.writeFileSync(path, html);
+  await Bun.write(path, html);
   return path;
 }
 function prepare(entryFile?: string) {
@@ -91,7 +91,7 @@ describe("project entry reads", () => {
       hooks.target = writeEntry(entry);
       hooks.swap = () => {
         fs.renameSync(hooks.target, join(root, "original.html"));
-        fs.writeFileSync(hooks.target, "<html>unchecked</html>");
+        await Bun.write(hooks.target, "<html>unchecked</html>");
       };
       expect(prepare(entry === "preferred.html" ? entry : undefined)).toEqual(expected(entry));
       expect(hooks.swap).toBeUndefined();
@@ -124,7 +124,7 @@ describe("project entry reads", () => {
   });
   it("keeps project and entry symlinks working", () => {
     const target = join(root, "linked.html");
-    fs.writeFileSync(target, "linked");
+    await Bun.write(target, "linked");
     fs.symlinkSync(target, join(projectDir, "index.html"), "file");
     const linkedProject = join(root, "linked-project");
     fs.symlinkSync(projectDir, linkedProject, process.platform === "win32" ? "junction" : "dir");
@@ -135,7 +135,7 @@ describe("project entry reads", () => {
   it("rejects a sibling directory sharing the project name prefix", () => {
     const sibling = join(root, "project-other");
     fs.mkdirSync(sibling);
-    fs.writeFileSync(join(sibling, "index.html"), "outside");
+    await Bun.write(join(sibling, "index.html"), "outside");
     expect(prepare("../project-other/index.html")).toEqual({
       error: "Entry file must stay inside project directory: ../project-other/index.html",
     });

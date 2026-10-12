@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import {
   CANVAS_NUDGE_SHIFT_STEP_PX,
   CANVAS_NUDGE_STEP_PX,

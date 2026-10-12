@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import React, { act } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { MockResizeObserver, reportResize } from "../../hooks/resizeObserverTestUtils";
 import { thumbnailScheduler } from "../lib/thumbnailScheduler";
 import { decodeVideoThumbnail } from "../lib/thumbnailVideoDecoder";

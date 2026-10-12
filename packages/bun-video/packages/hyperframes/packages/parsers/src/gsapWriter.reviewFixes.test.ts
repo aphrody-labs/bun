@@ -7,7 +7,7 @@
  * both writers were identically wrong (so the recast-vs-acorn parity suite stayed
  * green); these tests pin the corrected behavior.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import {
   removeKeyframeFromScript,
   updateKeyframeInScript,

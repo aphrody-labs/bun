@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {makeSerializedQueue} from '../serialized-queue';
 
 test('a rejection does not poison later work on the same queue', async () => {

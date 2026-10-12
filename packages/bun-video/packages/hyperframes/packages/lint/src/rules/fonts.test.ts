@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { lintHyperframeHtml } from "../hyperframeLinter.js";
 
 async function findByCode(html: string, code: string, isSubComposition = true) {

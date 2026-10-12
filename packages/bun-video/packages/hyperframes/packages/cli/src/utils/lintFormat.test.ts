@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, onTestFinished } from "vitest";
+import { describe, expect, it, onTestFinished } from "bun:test";
 import type { HyperframeLintFinding } from "@hyperframes/core/lint";
 import { formatLintFindings, formatLintStartupMessage } from "./lintFormat.js";
 import { lintProject, type ProjectLintResult } from "./lintProject.js";

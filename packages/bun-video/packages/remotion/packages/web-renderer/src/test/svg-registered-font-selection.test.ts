@@ -1,5 +1,5 @@
 import {NoReactInternals} from 'remotion/no-react';
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {getEmbeddedFontStyleForSvg} from '../drawing/embed-registered-fonts-in-svg';
 import {turnSvgIntoDrawable} from '../drawing/turn-svg-into-drawable';
 

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";
-import { vi } from "vitest";
+import { vi } from "bun:test";
 import { readLiveSelectionBox, resizeSelectionFromAgent } from "./StudioAgentTools";
 
 function rect(width: number, height: number): DOMRect {

@@ -5,7 +5,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { listSourceFiles, REPO_ROOT, STYLES_DIR } from "./styleSources";
 
 const BASELINE_PATH = path.join(STYLES_DIR, "hex-baseline.json");

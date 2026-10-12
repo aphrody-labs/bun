@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import type { DomEditSelection, DomEditTextField } from "../components/editor/domEditing";
 import { mountReactHarness } from "./domSelectionTestHarness";
 import { useDomEditTextCommits, type UseDomEditTextCommitsParams } from "./useDomEditTextCommits";

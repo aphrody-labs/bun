@@ -6,7 +6,7 @@
  * the session wiring layer.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { openComposition } from "./session.js";
 import type { Composition, PatchEvent } from "./types.js";
 

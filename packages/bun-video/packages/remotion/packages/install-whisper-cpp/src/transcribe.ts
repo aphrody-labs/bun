@@ -154,7 +154,7 @@ const transcribeToTemporaryFile = async ({
 }> => {
 	const modelPath = getModelPath(modelFolder ?? whisperPath, model);
 
-	if (!fs.existsSync(modelPath)) {
+	if (!await Bun.file(modelPath).exists()) {
 		throw new Error(
 			`Error: Model ${model} does not exist at ${
 				modelFolder ? modelFolder : modelPath

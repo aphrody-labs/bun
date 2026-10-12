@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import type { GsapAnimation } from "@hyperframes/parsers/gsap-parser";
 import { studioInspect, type InspectToolDeps, type StudioInspectResult } from "./inspectTools";
 import {

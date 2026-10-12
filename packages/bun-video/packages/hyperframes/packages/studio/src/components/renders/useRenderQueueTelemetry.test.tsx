@@ -7,7 +7,7 @@
 // install id rather than the user's, which is worse than attributing it
 // correctly.
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { startRenderAndReadBody, type MountedQueue } from "./renderQueueTestHarness";
 
 const policyState = { allowed: true };

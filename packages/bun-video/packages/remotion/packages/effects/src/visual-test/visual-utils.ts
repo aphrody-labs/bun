@@ -3,7 +3,7 @@ import {
 	type EffectDefinitionAndStack,
 	type EffectDescriptor,
 } from 'remotion';
-import {expect, onTestFinished} from 'vitest';
+import {expect, onTestFinished} from 'bun:test';
 import {page} from 'vitest/browser';
 
 export const testImage = async ({

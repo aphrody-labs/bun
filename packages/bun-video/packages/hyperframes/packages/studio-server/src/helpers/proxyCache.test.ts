@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { cleanupProxyCache } from "./proxyCache.js";
 
 const tempDirs: string[] = [];
@@ -20,7 +20,7 @@ const proxy = (cache: string, label: string, extension = ".mp4") =>
   join(cache, `${createHash("sha256").update(label).digest("hex")}${extension}`);
 
 function writeEntry(path: string, bytes: number, modifiedAt: number): void {
-  writeFileSync(path, Buffer.alloc(bytes));
+  writeFileSync(path, new Uint8Array(bytes));
   const date = new Date(modifiedAt);
   utimesSync(path, date, date);
 }

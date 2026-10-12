@@ -3,7 +3,7 @@
 import React, { act, type ComponentProps } from "react";
 import type { DockviewApi } from "dockview-react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as dockLayout from "./dockLayout";
 import { Dock } from "./Dock";
 import { parseDockLayout } from "./dockLayoutSchema";

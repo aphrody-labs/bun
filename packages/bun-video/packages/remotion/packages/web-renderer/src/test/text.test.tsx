@@ -1,4 +1,4 @@
-import {onTestFinished, test} from 'vitest';
+import {onTestFinished, test} from 'bun:test';
 import {renderStillOnWeb} from '../render-still-on-web';
 import '../symbol-dispose';
 import {fontStretch} from './fixtures/text/font-stretch';

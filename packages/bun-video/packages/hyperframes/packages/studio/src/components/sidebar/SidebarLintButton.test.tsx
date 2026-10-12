@@ -2,7 +2,7 @@
 
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { SidebarLintButton } from "./SidebarLintButton";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });

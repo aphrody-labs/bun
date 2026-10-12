@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { act } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { cleanupMounted, mountHost } from "../components/ui/mountHost.testHelpers";
 import { savedStudioTheme, shownStudioTheme } from "./studioTheme";

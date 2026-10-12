@@ -1,7 +1,7 @@
 import {Player, type PlayerRef} from '@remotion/player';
 import React from 'react';
 import {createRoot} from 'react-dom/client';
-import {test} from 'vitest';
+import {test} from 'bun:test';
 import {Video} from '../video/video';
 import {
 	canvasToBlob,

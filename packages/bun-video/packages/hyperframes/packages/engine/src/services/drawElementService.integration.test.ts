@@ -37,7 +37,7 @@
  * A=255). Cannot run in Docker (SwiftShader-only); validated on a GPU host.
  */
 
-import { describe, it } from "vitest";
+import { describe, it } from "bun:test";
 
 describe.skip("drawElementService integration (browser/Docker — see validation record above)", () => {
   it.skip("T1+T2 validated against real SwiftShader (Docker)", () => {});

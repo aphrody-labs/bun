@@ -48,7 +48,7 @@ function dimension(value: unknown): value is number {
 
 /** Keep original valid animation JSON while bounding the data consumed by lottie-web. */
 export function validLottieJson(source: string): boolean {
-  if (Buffer.byteLength(source) > MAX_LOTTIE_BYTES) return false;
+  if (new TextEncoder().encode(source).length > MAX_LOTTIE_BYTES) return false;
   try {
     const value: unknown = JSON.parse(source);
     if (!record(value) || !dimension(value.w) || !dimension(value.h)) return false;

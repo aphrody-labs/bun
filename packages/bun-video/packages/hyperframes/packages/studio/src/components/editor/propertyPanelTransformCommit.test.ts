@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { useManualEditDisabledFlags } from "./previewReadOnlyContext";
 import type { DomEditSelection } from "./domEditingTypes";
 import { GsapEditBlockedError } from "../../hooks/gsapEditOutcome";

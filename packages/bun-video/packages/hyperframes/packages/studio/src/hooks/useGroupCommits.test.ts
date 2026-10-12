@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import type { TimelineElement } from "../player";
 import { computeGroupGeometry, resolveGroupChildTracks } from "./useGroupCommits";
 import { makeSelection } from "./domSelectionTestHarness";

@@ -13,7 +13,7 @@
  * the intercept sends that is not in the list it was last handed reproduces the
  * failure.
  */
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "bun:test";
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";
 import { usePlayerStore } from "../player/store/playerStore";

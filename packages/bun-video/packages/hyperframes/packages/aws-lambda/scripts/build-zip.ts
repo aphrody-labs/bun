@@ -379,7 +379,7 @@ function assertLinuxX86_64Elf(path: string, label: string): void {
 function readFileHead(path: string, byteCount: number, label: string): Buffer {
   const fd = openSync(path, "r");
   try {
-    const buf = Buffer.alloc(byteCount);
+    const buf = new Uint8Array(byteCount);
     const bytesRead = readSync(fd, buf, 0, byteCount, 0);
     if (bytesRead < byteCount) {
       throw new Error(

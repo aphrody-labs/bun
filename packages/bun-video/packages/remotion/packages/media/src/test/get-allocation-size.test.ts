@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {getAllocationSize} from '../video-extraction/get-allocation-size';
 import type {VideoSampleWithoutDuration} from '../video-extraction/keyframe-bank';
 

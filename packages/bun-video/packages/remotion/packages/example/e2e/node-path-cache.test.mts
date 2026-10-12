@@ -26,12 +26,12 @@ test.describe('node-path cache for stale source maps', () => {
 	let originalContent: string;
 
 	test.beforeEach(async () => {
-		originalContent = fs.readFileSync(newVideoFile, 'utf-8');
+		originalContent = await Bun.file(newVideoFile).text();
 		await startStudio();
 	});
 
 	test.afterEach(async () => {
-		fs.writeFileSync(newVideoFile, originalContent);
+		await Bun.write(newVideoFile, originalContent);
 		await stopStudio();
 	});
 
@@ -61,7 +61,7 @@ test.describe('node-path cache for stale source maps', () => {
 	// nodePath is reused (and verified against the current AST).
 
 	test('subscribe-to-sequence-props recovers from stale line numbers and node paths', async () => {
-		const content = fs.readFileSync(newVideoFile, 'utf-8');
+		const content = await Bun.file(newVideoFile).text();
 		const lines = content.split('\n');
 		const videoLineIndex = lines.findIndex((l) => l.includes('<Video'));
 		expect(videoLineIndex).toBeGreaterThan(-1);
@@ -92,7 +92,7 @@ test.describe('node-path cache for stale source maps', () => {
 			'return (\n\t\t<Video src={src} debugOverlay />\n\t);',
 		);
 		expect(editedContent).not.toBe(content);
-		fs.writeFileSync(newVideoFile, editedContent);
+		await Bun.write(newVideoFile, editedContent);
 
 		// Verify the tag actually moved
 		const editedLines = editedContent.split('\n');
@@ -124,9 +124,9 @@ test.describe('node-path cache for stale source maps', () => {
 		// The nodePath should be the same — both refer to the same <Video> element
 		expect(result2.nodePath).toEqual(result1.nodePath);
 
-		fs.writeFileSync(newVideoFile, originalContent);
+		await Bun.write(newVideoFile, originalContent);
 
-		const identityContent = fs.readFileSync(newVideoFile, 'utf-8');
+		const identityContent = await Bun.file(newVideoFile).text();
 		const identityLines = identityContent.split('\n');
 		const identityVideoLineIndex = identityLines.findIndex((l) =>
 			l.includes('<Video'),
@@ -161,7 +161,7 @@ test.describe('node-path cache for stale source maps', () => {
 			'return (\n\t\t<Sequence>\n\t\t\t<Video src={src} debugOverlay />\n\t\t</Sequence>\n\t);',
 		);
 		expect(wrappedInSequence).not.toBe(identityContent);
-		fs.writeFileSync(newVideoFile, wrappedInSequence);
+		await Bun.write(newVideoFile, wrappedInSequence);
 
 		const wrappedLines = wrappedInSequence.split('\n');
 		const wrappedVideoLineIndex = wrappedLines.findIndex((l) =>

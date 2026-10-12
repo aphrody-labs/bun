@@ -2,7 +2,7 @@
 
 import React, { act, createRef } from "react";
 import { createRoot } from "react-dom/client";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import type { DomEditSelection } from "./domEditing";
 import { DomEditGroupChrome, DomEditSelectionChrome } from "./DomEditSelectionChrome";
 import { RESIZE_HANDLE_HIT_PX } from "./domEditOverlayGeometry";

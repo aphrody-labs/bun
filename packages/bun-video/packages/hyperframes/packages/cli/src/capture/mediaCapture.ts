@@ -67,7 +67,7 @@ export async function saveLottieAnimations(
       if (lottieItem.data) {
         // Already have the JSON data from network interception
         jsonData = JSON.stringify(lottieItem.data);
-        const size = Buffer.byteLength(jsonData);
+        const size = new TextEncoder().encode(jsonData).length;
         if (size > MAX_LOTTIE_BYTES) continue;
         if (lottieItem.dataBudget !== byteBudget) {
           if (size > byteBudget.remainingBytes) continue;

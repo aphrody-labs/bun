@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { expect, it } from "vitest";
+import { expect, it } from "bun:test";
 import type { DomEditSelection } from "../components/editor/domEditing";
 import type { PatchOperation } from "../utils/sourcePatcher";
 import { commitDomStyles, type DomStyleCommitContext } from "./domStyleCommit";

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { Hono } from "hono";
 import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

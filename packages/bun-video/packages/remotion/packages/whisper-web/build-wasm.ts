@@ -29,7 +29,7 @@ const cmakeListsFile = path.join(
 	'CMakeLists.txt',
 );
 
-const file = fs.readFileSync(cmakeListsFile, 'utf8');
+const file = await Bun.file(cmakeListsFile).text();
 
 // Disable Node.JS target, compile with assertions to get stack trace
 const lines = file.split('\n').map((line) => {
@@ -45,9 +45,7 @@ const lines = file.split('\n').map((line) => {
 	return line;
 });
 
-fs.writeFileSync(
-	cmakeListsFile,
-	[
+await Bun.write(cmakeListsFile, [
 		...lines,
 		// Generate a .d.ts file
 		`set(CMAKE_CXX_FLAGS "$\{CMAKE_CXX_FLAGS\} -lembind --emit-tsd $\{CMAKE_CURRENT_BINARY_DIR\}/interface.d.ts")`,
@@ -61,8 +59,8 @@ const emscriptenFilePath = path.join(
 	'emscripten.cpp',
 );
 //now get our version
-const modifiedVersion = fs.readFileSync('./emscripten.cpp', 'utf8');
-fs.writeFileSync(emscriptenFilePath, modifiedVersion);
+const modifiedVersion = await Bun.file('./emscripten.cpp').text();
+await Bun.write(emscriptenFilePath, modifiedVersion);
 
 // brew install emscripten if necessary
 await $`emcmake cmake ..`.cwd(cwd);
@@ -75,7 +73,7 @@ let content = fs
 	.replace('libmain.js', './main.js');
 
 // Write the modified content directly to the destination
-fs.writeFileSync(path.join(__dirname, 'main.js'), content, 'utf8');
+await Bun.write(path.join(__dirname, 'main.js'), content, 'utf8');
 
 const dTsFile = path.join(
 	wasmDir,

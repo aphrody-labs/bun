@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, onTestFailed } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, onTestFailed } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { bundleToSingleHtml } from "@hyperframes/core/compiler";

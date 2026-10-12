@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import { act } from "react";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "bun:test";
 import { installReactActEnvironment, mountReactHarness } from "../../hooks/domSelectionTestHarness";
 import { KeyframeNavigation } from "./KeyframeNavigation";
 

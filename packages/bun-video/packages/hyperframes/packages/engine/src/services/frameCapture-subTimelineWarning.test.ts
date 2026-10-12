@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import type { Page } from "puppeteer-core";
 import type { CaptureSession } from "./frameCapture.js";
 import { pollSubCompositionTimelines, recordSubTimelineWarning } from "./frameCapture.js";

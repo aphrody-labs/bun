@@ -20,7 +20,7 @@
  * effect that the sibling suite's fake would otherwise have to fight.
  */
 import { act } from "react";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
 import { mountReactHarness } from "../hooks/domSelectionTestHarness";
 import { mintElementHandle } from "./handles";
 import { useStudioAgentTools, type StudioAgentToolsDeps } from "./useStudioAgentTools";

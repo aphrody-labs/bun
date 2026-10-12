@@ -2,7 +2,7 @@
  * The two things `cn` must do that a bare `clsx` cannot: drop a losing class
  * from the same group, and know the two class families `theme.css` invents.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { cn } from "./cn";
 
 describe("cn", () => {

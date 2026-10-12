@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { generateShape } from "./automationShapes";
 import { resolveAutomationRange, VOLUME_RANGE } from "@hyperframes/core/audio-automation";
 import type { HfAutomationLane } from "@hyperframes/core/audio-automation";

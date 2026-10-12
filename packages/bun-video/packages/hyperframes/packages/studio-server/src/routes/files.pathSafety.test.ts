@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi, type TestContext } from "vitest";
+import { afterEach, describe, expect, it, vi, type TestContext } from "bun:test";
 import { Hono } from "hono";
 import {
   chmodSync,

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isClipVisibleAt } from "@hyperframes/core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 const cliEntry = resolve(fileURLToPath(import.meta.url), "..", "..", "cli.ts");
 

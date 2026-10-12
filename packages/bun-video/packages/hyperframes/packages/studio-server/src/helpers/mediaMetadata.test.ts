@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { classifyMediaColor, pixelFormatHasAlpha, probeMediaMetadata } from "./mediaMetadata.js";
 
 afterEach(() => vi.unstubAllEnvs());

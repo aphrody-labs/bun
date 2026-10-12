@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
@@ -60,7 +60,7 @@ function stageExternalAsset(
 /** A single-entry files map for `localizeExternalAssets`, keyed on index.html. */
 function indexHtmlFiles(html: string): Map<string, Buffer> {
   const files = new Map<string, Buffer>();
-  files.set("index.html", Buffer.from(html, "utf-8"));
+  files.set("index.html", new TextEncoder().encode(html));
   return files;
 }
 
@@ -448,7 +448,7 @@ describe("localizeExternalAssets", () => {
       mkdirSync(join(projectDir, "assets"));
       writeFileSync(join(projectDir, "assets", "logo.svg"), "<svg/>", "utf-8");
       const files = indexHtmlFiles(`<html><body><img src="assets/logo.svg"></body></html>`);
-      files.set("assets/logo.svg", Buffer.from("<svg/>", "utf-8"));
+      files.set("assets/logo.svg", new TextEncoder().encode("<svg/>"));
 
       const rewrittenHtml = expectNoLocalization(projectDir, files);
 
@@ -511,7 +511,7 @@ describe("localizeExternalAssets", () => {
       mkdirSync(join(projectDir, "compositions"));
       files.set(
         "compositions/scene.html",
-        Buffer.from(`<html><body><img src="../${rel}"></body></html>`, "utf-8"),
+        new TextEncoder().encode(`<html><body><img src="../${rel}"></body></html>`),
       );
       return files;
     });
@@ -536,7 +536,7 @@ describe("localizeExternalAssets", () => {
       const files = indexHtmlFiles("<html></html>");
       files.set(
         "compositions/scene.html",
-        Buffer.from(`<html><body><img src="${relFromComps}"></body></html>`, "utf-8"),
+        new TextEncoder().encode(`<html><body><img src="${relFromComps}"></body></html>`),
       );
 
       const count = localizeExternalAssets(projectDir, files);

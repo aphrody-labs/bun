@@ -66,7 +66,7 @@ const navSections = hrefSections(tab);
 for (const item of data.items) {
   assert.ok(after.includes(item.href), `Gallery item missing from the sidebar: ${item.href}`);
   assert.ok(
-    fs.existsSync(path.join(docs, item.href.slice(1) + ".mdx")),
+    await Bun.file(path.join(docs, item.href.slice(1).exists() + ".mdx")),
     `Gallery item has no page on disk: ${item.href}`,
   );
   assert.match(
@@ -90,7 +90,7 @@ for (const item of data.items) {
   if (item.preview.mode === "video") {
     assert.ok(item.video, `Missing hover video for ${item.id}`);
     const file = path.join(docs, "public/catalog", `${item.kind}s`, `${item.id}.json`);
-    const payload = fs.existsSync(file) ? readJson(file) : {};
+    const payload = await Bun.file(file).exists() ? readJson(file) : {};
     assert.ok(
       payload.unsupported || previewGap(payload.html ?? "") === "webgpu",
       `${item.id} shows its recorded video although its payload plays live`,
@@ -98,7 +98,7 @@ for (const item of data.items) {
   }
   if (item.preview.mode === "player") {
     assert.ok(
-      fs.existsSync(path.join(docs, item.preview.source.slice(1))),
+      await Bun.file(path.join(docs, item.preview.source.slice(1).exists())),
       `Missing preview payload for ${item.id}: ${item.preview.source}`,
     );
   }
@@ -155,7 +155,7 @@ console.log(`PASS no .html/.js/.css under docs/public (Mintlify would drop it fr
 // top-level const/function in the same file silently vanishes from the deployed build
 // (ReferenceError at runtime, no build-time error). Catch it here instead of live.
 function assertNoBareTopLevelBindings(snippetPath) {
-  const source = fs.readFileSync(snippetPath, "utf-8");
+  const source = await Bun.file(snippetPath).text();
   const sourceFile = ts.createSourceFile(
     snippetPath,
     source,

@@ -1,7 +1,7 @@
 import { existsSync, realpathSync, rmSync } from "node:fs";
 import { homedir, tmpdir, userInfo } from "node:os";
 import { join, sep } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { fetchRegistryManifest } from "./registry/remote.js";
 
 afterEach(() => {

@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import {
   createRetryingModuleLoader,
   ensureProducerDist,

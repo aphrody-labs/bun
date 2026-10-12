@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
+import { afterEach, describe, expect, it, vi, type Mock } from "bun:test";
 import {
   HF_COLOR_GRADING_ACTIVE_EFFECT_KEYS,
   HF_COLOR_GRADING_EFFECT_APPLY_DEFAULTS,

@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { setupTempAuthEnv } from "./_test-utils.js";
 import { isAuthError } from "./errors.js";
 import { resolveCredential, tryResolveCredential } from "./resolver.js";

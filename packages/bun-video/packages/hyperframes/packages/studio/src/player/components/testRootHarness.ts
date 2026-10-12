@@ -1,6 +1,6 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach } from "vitest";
+import { afterEach } from "bun:test";
 
 export function createHappyDomRootHarness() {
   const roots: Root[] = [];

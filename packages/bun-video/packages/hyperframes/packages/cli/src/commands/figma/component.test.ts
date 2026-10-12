@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it, afterEach, beforeEach } from "vitest";
+import { describe, expect, it, afterEach, beforeEach } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

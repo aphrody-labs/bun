@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import type { DockviewApi } from "dockview-react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { mountBareDockview } from "./dockTestHarness";
 import { installDockAccessibility } from "./dockAccessibility";
 import { applySideMinimums, buildEditLayout } from "./dockLayout";

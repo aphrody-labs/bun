@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import type { CompositionVariable } from "@hyperframes/sdk";
 import type { BindAction } from "../components/panels/VariablesBindElement";
 import {

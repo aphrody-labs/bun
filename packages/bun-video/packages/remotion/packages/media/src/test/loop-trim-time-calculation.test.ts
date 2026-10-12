@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {getTimeInSeconds} from '../get-time-in-seconds';
 
 test('should inhibit the same behavior as <Html5Video> - no loop', () => {

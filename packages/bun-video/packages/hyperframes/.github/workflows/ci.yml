@@ -44,9 +44,9 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - name: Report base reachability
         if: github.event_name == 'pull_request'
         # HEAD is the PR merge ref; its first parent is the current base tip,
@@ -256,9 +256,9 @@ jobs:
         with:
           lfs: true
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - run: corepack enable
       - run: corepack prepare pnpm@10.17.1 --activate
       - uses: ./.github/actions/prepare-ffmpeg-bin
@@ -286,9 +286,9 @@ jobs:
           lfs: true
           fetch-depth: 0
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - uses: ./.github/actions/prepare-ffmpeg-bin
       - run: bash scripts/ci/install-workspace-dependencies.sh
       - run: bun scripts/generate-registry-items.ts
@@ -308,9 +308,9 @@ jobs:
         with:
           fetch-depth: 0
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - run: bash scripts/ci/install-workspace-dependencies.sh
       - run: bun run --filter '@hyperframes/{parsers,lint,studio-server}' build
       - run: bun run --cwd packages/core build
@@ -363,9 +363,9 @@ jobs:
           # base on stacked PRs, not just the shallow tip.
           fetch-depth: 0
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - uses: ./.github/actions/prepare-ffmpeg-bin
       - run: bash scripts/ci/install-workspace-dependencies.sh
       - name: Run fallow audit
@@ -419,9 +419,9 @@ jobs:
         with:
           lfs: true
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - uses: ./.github/actions/prepare-ffmpeg-bin
       - run: bash scripts/ci/install-workspace-dependencies.sh
       - run: bun run format:check
@@ -443,9 +443,9 @@ jobs:
         with:
           lfs: true
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - uses: ./.github/actions/prepare-ffmpeg-bin
       - run: bash scripts/ci/install-workspace-dependencies.sh
       - run: bun run build
@@ -464,9 +464,9 @@ jobs:
           lfs: true
           fetch-depth: 0
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - name: Install FFmpeg for catalog preview tests
         uses: ./.github/actions/install-ffmpeg-linux
       - uses: ./.github/actions/prepare-ffmpeg-bin
@@ -487,9 +487,9 @@ jobs:
         with:
           lfs: true
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - uses: ./.github/actions/install-ffmpeg-linux
       - uses: ./.github/actions/prepare-ffmpeg-bin
       - run: bash scripts/ci/install-workspace-dependencies.sh
@@ -510,9 +510,9 @@ jobs:
           lfs: true
           fetch-depth: 0
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - uses: ./.github/actions/install-ffmpeg-linux
       - uses: ./.github/actions/prepare-ffmpeg-bin
       - run: bash scripts/ci/install-workspace-dependencies.sh
@@ -577,9 +577,9 @@ jobs:
         with:
           lfs: true
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - name: Install FFmpeg for integration tests
         if: matrix.lane == 'integration'
         uses: ./.github/actions/install-ffmpeg-linux
@@ -606,9 +606,9 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - uses: ./.github/actions/install-ffmpeg-linux
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - name: Verify standalone skill imports
@@ -639,9 +639,9 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 24
+          bun-version: latest
       - name: Exercise npm-cli bootstrap command
         run: >-
           bun --test
@@ -709,9 +709,9 @@ jobs:
     timeout-minutes: 3
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - name: Test portable plugin packaging
         run: bun test scripts/package-agent-plugin.test.mjs
       - name: Build portable agent plugin
@@ -734,9 +734,9 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - name: Install dependencies
         if: runner.os != 'Windows'
         run: bash scripts/ci/install-workspace-dependencies.sh --ignore-scripts
@@ -778,9 +778,9 @@ jobs:
         with:
           lfs: true
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - uses: ./.github/actions/prepare-ffmpeg-bin
       - run: bash scripts/ci/install-workspace-dependencies.sh
       # Runtime coverage now imports core modules that consume workspace
@@ -799,9 +799,9 @@ jobs:
         with:
           lfs: true
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - uses: ./.github/actions/prepare-ffmpeg-bin
       - run: bash scripts/ci/install-workspace-dependencies.sh
       # Build workspace deps so the studio vite.config.ts (loaded by Node) can
@@ -843,9 +843,9 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - run: bash scripts/ci/install-workspace-dependencies.sh
       # Same reason as studio-load-smoke: vite.config.ts is loaded by Node and
       # resolves the workspace packages through their "node" export condition.
@@ -1087,9 +1087,9 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - uses: ./.github/actions/prepare-ffmpeg-bin
       - run: bash scripts/ci/install-workspace-dependencies.sh
       # The bench imports producer and engine source, which need core's generated runtime files.
@@ -1134,9 +1134,9 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - name: Read the base branch's edit accuracy baseline
         run: |
           bash scripts/ci/base-file.sh packages/studio/tests/e2e/edit-accuracy/baseline.json /tmp/base-edit-accuracy.json
@@ -1185,9 +1185,9 @@ jobs:
         with:
           lfs: true
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - uses: ./.github/actions/prepare-ffmpeg-bin
       - run: bash scripts/ci/install-workspace-dependencies.sh
       - run: bun run build
@@ -1257,9 +1257,9 @@ jobs:
         with:
           lfs: true
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - name: Install FFmpeg
         uses: ./.github/actions/install-ffmpeg-linux
       - uses: ./.github/actions/prepare-ffmpeg-bin
@@ -1456,9 +1456,9 @@ jobs:
           path: .semantic-pr-action
           persist-credentials: false
       - if: github.event_name == 'workflow_dispatch'
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: oven-sh/setup-bun@v2 # v4
         with:
-          node-version: 22
+          bun-version: latest
       - if: github.event_name == 'workflow_dispatch'
         name: Validate PR title
         run: GITHUB_EVENT_PATH="$PR_EVENT_PATH" bun .semantic-pr-action/dist/index.js

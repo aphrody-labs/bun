@@ -1,5 +1,5 @@
 import { promisify } from "node:util";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 
 interface ExecFileCall {
   file: string;

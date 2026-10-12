@@ -7,7 +7,7 @@
  * production code path leaves as a default.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import type { Page } from "puppeteer-core";
 import {
   BROWSER_GPU_NOT_SOFTWARE,

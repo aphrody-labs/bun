@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 const studioCss = readFileSync(new URL("../../styles/components.css", import.meta.url), "utf8");
 

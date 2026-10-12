@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { usePlayerStore, type TimelineElement } from "../store/playerStore";
 import { createClipGestureHandlers, type ClipGestureDeps } from "./timelineClipGestureHandlers";

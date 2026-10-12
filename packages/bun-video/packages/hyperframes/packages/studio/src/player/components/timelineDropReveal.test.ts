@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { usePlayerStore } from "../store/playerStore";
 import { timelineClipFocusId } from "./timelineNavigationIdentity";
 import { selectAndRevealTimelineElement } from "./timelineDropReveal";

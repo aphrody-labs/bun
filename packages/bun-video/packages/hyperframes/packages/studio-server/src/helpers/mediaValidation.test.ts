@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "bun:test";
 import { validateUploadedMedia, validateUploadedMediaBuffer } from "./mediaValidation.js";
 
 describe("validateUploadedMedia", () => {

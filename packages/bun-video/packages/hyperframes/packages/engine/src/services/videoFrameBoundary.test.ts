@@ -1,6 +1,6 @@
 // @vitest-environment node
 // fallow-ignore-file code-duplication
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { parseHTML } from "linkedom";
 import { type Page } from "puppeteer-core";
 import { createFrameLookupTable, type ExtractedFrames } from "./videoFrameExtractor.js";

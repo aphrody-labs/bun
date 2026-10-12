@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { projectAxes, projectCubeFaces, rotate, wrapDeg } from "./transform3dProjection";
 
 const OPTS = { cx: 50, cy: 50, r: 30, persp: 4 };

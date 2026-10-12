@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { AUDIO_EXT, IMAGE_EXT, isMediaFile, MEDIA_EXT, VIDEO_EXT } from "./mediaTypes";
 import { getTimelineAssetKind } from "./timelineAssetDrop";
 

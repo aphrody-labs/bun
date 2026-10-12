@@ -1,6 +1,6 @@
 import { Writable } from "node:stream";
 import { setImmediate } from "node:timers/promises";
-import { expect, it } from "vitest";
+import { expect, it } from "bun:test";
 import { createProgressWriter, emitWords } from "./progress.js";
 import type { TranscribeProgress } from "./transcribe.js";
 
@@ -15,7 +15,7 @@ it("splits a long run of words into lines under 16 KB and keeps every word in or
 
   expect(events.length).toBeGreaterThan(1);
   for (const event of events)
-    expect(Buffer.byteLength(`${JSON.stringify(event)}\n`)).toBeLessThan(16_384);
+    expect(new TextEncoder().encode(`${JSON.stringify(event).length}\n`)).toBeLessThan(16_384);
   expect(events.flatMap((e) => (e.type === "words" ? e.words : []))).toEqual(words);
   expect(events.at(-1)).toMatchObject({ through: 2100 });
 });

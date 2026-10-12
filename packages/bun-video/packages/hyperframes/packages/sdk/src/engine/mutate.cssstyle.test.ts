@@ -2,7 +2,7 @@
  * setClassStyle handler tests — flat CSS rule upsert via <style> element.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { parseMutable } from "./model.js";
 import { applyOp, validateOp } from "./mutate.js";
 import { applyPatchesToDocument } from "./apply-patches.js";

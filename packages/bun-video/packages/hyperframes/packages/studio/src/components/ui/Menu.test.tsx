@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import React, { act, useState } from "react";
 import { compile } from "tailwindcss";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { loadStylesheet, STYLES_DIR } from "../../styles/styleSources";
 import { ContextMenu, Menu, MenuItem, MenuRadioGroup, MenuRadioItem, MenuSeparator } from "./Menu";
 import { Popover } from "./Popover";

@@ -1,6 +1,6 @@
 // @vitest-environment node
 // fallow-ignore-file code-duplication
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi } from "bun:test";
 import { parseHTML } from "linkedom";
 import { type Page } from "puppeteer-core";
 import {

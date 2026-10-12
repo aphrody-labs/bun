@@ -2,7 +2,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { START, type HistoryWho } from "./historyLog";
 import { HistoryClosedError, openProjectHistory } from "./projectHistory";
 

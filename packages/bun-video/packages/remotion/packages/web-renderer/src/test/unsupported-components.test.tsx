@@ -1,5 +1,5 @@
 import {AbsoluteFill, Html5Audio, Html5Video, OffthreadVideo} from 'remotion';
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {renderStillOnWeb} from '../render-still-on-web';
 import '../symbol-dispose';
 

@@ -19,12 +19,12 @@
  *      byte offsets) — see `rgb48le row stride` test.
  *   2. Provide a reference safe-wrap pattern when alignment is not guaranteed.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 describe("Uint16 alignment audit", () => {
   describe("Buffer.read/writeUInt16LE — current API", () => {
     it("accepts odd byte offsets without throwing", () => {
-      const buf = Buffer.alloc(8);
+      const buf = new Uint8Array(8);
       buf.writeUInt16LE(0xabcd, 1);
       expect(buf.readUInt16LE(1)).toBe(0xabcd);
       buf.writeUInt16LE(0x1234, 3);
@@ -32,7 +32,7 @@ describe("Uint16 alignment audit", () => {
     });
 
     it("preserves values across non-aligned slice round-trips", () => {
-      const buf = Buffer.alloc(10);
+      const buf = new Uint8Array(10);
       buf.writeUInt16LE(0xdead, 1);
       buf.writeUInt16LE(0xbeef, 5);
       const sub = buf.subarray(1);
@@ -55,7 +55,7 @@ describe("Uint16 alignment audit", () => {
     });
 
     it("a Buffer sliced at an odd offset cannot back a Uint16Array view directly", () => {
-      const parent = Buffer.alloc(8);
+      const parent = new Uint8Array(8);
       const odd = parent.subarray(1);
       expect(odd.byteOffset % 2).toBe(1);
       expect(
@@ -64,7 +64,7 @@ describe("Uint16 alignment audit", () => {
     });
 
     it("safe-wrap pattern: copy to a fresh aligned Buffer when offset is odd", () => {
-      const parent = Buffer.alloc(8);
+      const parent = new Uint8Array(8);
       parent.writeUInt16LE(0xfeed, 1);
       const odd = parent.subarray(1, 3);
 
@@ -101,7 +101,7 @@ describe("Uint16 alignment audit", () => {
       // without any realignment copy.
       const width = 17; // odd width; stride = 102 (still even)
       const height = 4;
-      const canvas = Buffer.alloc(width * height * 6);
+      const canvas = new Uint8Array(width * height * 6);
       const stride = width * 6;
       for (let y = 0; y < height; y++) {
         const row = canvas.subarray(y * stride, (y + 1) * stride);
@@ -116,7 +116,7 @@ describe("Uint16 alignment audit", () => {
       // in an even-stride format (rgb48le ✓) or pay for a realignment copy.
       const width = 3;
       const height = 2;
-      const rgb24 = Buffer.alloc(width * height * 3); // stride = 9, odd!
+      const rgb24 = new Uint8Array(width * height * 3); // stride = 9, odd!
       const stride = width * 3;
       const row1 = rgb24.subarray(stride, stride * 2);
       expect(row1.byteOffset % 2).toBe(1);

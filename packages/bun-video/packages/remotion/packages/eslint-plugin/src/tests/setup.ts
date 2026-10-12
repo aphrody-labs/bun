@@ -1,4 +1,4 @@
-import {describe, it} from 'vitest';
+import {describe, it} from 'bun:test';
 
 // @ts-expect-error
 global.describe = describe;

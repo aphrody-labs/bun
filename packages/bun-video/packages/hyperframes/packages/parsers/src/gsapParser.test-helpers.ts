@@ -1,5 +1,5 @@
 // fallow-ignore-file dead-code
-import { expect } from "vitest";
+import { expect } from "bun:test";
 import {
   parseGsapScript,
   serializeGsapAnimations,

@@ -11,7 +11,7 @@ const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true';
 const lowMemoryBuild =
 	isVercel || process.env.REMOTION_DOCS_LOW_MEMORY_BUILD === '1';
 const prebuiltAssetsExist = [dir, brandDir, testbedDir].every((assetDir) =>
-	fs.existsSync(assetDir),
+	await Bun.file(assetDir).exists(),
 );
 
 if (isVercel && prebuiltAssetsExist) {
@@ -147,5 +147,5 @@ for (const page of extraPages) {
 	if (!fs.existsSync(path.dirname(out))) {
 		fs.mkdirSync(path.dirname(out), {recursive: true});
 	}
-	fs.writeFileSync(out, getContentWithTitle(pageTitle, description));
+	await Bun.write(out, getContentWithTitle(pageTitle, description));
 }

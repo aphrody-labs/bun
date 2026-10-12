@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 
 // The 401-retry decorator calls forceRefreshCredentials() and the factory
 // resolves base URL / auth headers from auth.js. Mock the module so the

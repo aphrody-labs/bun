@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { resolveUrlSelections } from "./useStudioUrlState";
 
 describe("restoring a selection from the URL", () => {

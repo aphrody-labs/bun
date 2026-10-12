@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import type { Browser, Page } from "puppeteer-core";
 import { createThumbnailPages } from "./thumbnailPages.js";
 

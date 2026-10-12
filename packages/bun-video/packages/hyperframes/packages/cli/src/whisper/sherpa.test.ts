@@ -12,7 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import type { DownloadOptions } from "../cloud/download.js";
 import {
   ensureParakeetModel,
@@ -29,7 +29,7 @@ import { encodeWav } from "./wav.test-helpers.js";
 
 const file = (name: string, content: string): ModelFile => ({
   name,
-  bytes: Buffer.byteLength(content),
+  bytes: new TextEncoder().encode(content).length,
   sha256: createHash("sha256").update(content).digest("hex"),
 });
 
@@ -40,8 +40,8 @@ function fakeDownload(served: Record<string, string>) {
     mkdirSync(dirname(dest), { recursive: true });
     writeFileSync(dest, content);
     opts?.signal?.throwIfAborted();
-    opts?.onProgress?.(Buffer.byteLength(content), undefined);
-    return { path: dest, bytes: Buffer.byteLength(content) };
+    opts?.onProgress?.(new TextEncoder().encode(content).length, undefined);
+    return { path: dest, bytes: new TextEncoder().encode(content).length };
   });
 }
 

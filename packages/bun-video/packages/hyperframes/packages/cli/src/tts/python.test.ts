@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 
 // Regression coverage for a silent HYPERFRAMES_PYTHON override rejection:
 // findPython() correctly resolves the env override first, but previously

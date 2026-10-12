@@ -117,13 +117,13 @@ export function runCancellableProcess(
 
     child.stdout?.on("data", (chunk: Buffer | string) => {
       stdout += chunk.toString();
-      if (Buffer.byteLength(stdout) + Buffer.byteLength(stderr) > maxBufferBytes) {
+      if (new TextEncoder().encode(stdout).length + new TextEncoder().encode(stderr).length > maxBufferBytes) {
         terminate(new Error(`Process output exceeded ${maxBufferBytes} bytes`), "ENOBUFS");
       }
     });
     child.stderr?.on("data", (chunk: Buffer | string) => {
       stderr += chunk.toString();
-      if (Buffer.byteLength(stdout) + Buffer.byteLength(stderr) > maxBufferBytes) {
+      if (new TextEncoder().encode(stdout).length + new TextEncoder().encode(stderr).length > maxBufferBytes) {
         terminate(new Error(`Process output exceeded ${maxBufferBytes} bytes`), "ENOBUFS");
       }
     });

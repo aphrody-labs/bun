@@ -11,7 +11,7 @@ test('retimed nested sequences preserve local frames when trimming, moving, and 
 }) => {
 	test.setTimeout(120_000);
 	const fixture = path.join(exampleDir, 'src', 'SequencePlaybackRateE2e.tsx');
-	const original = fs.readFileSync(fixture, 'utf-8');
+	const original = await Bun.file(fixture).text();
 	await startStudio();
 	try {
 		await page.goto(`${STUDIO_URL}/sequence-playback-rate`);
@@ -45,7 +45,7 @@ test('retimed nested sequences preserve local frames when trimming, moving, and 
 		);
 		await rotationRow.getByRole('button', {name: 'Add keyframe'}).click();
 		await expect
-			.poll(() => fs.readFileSync(fixture, 'utf-8'))
+			.poll(() => await Bun.file(fixture).text())
 			.toMatch(/interpolate\(\s*frame,\s*\[20,\s*40,\s*80\]/);
 
 		// The parent ends at frame 65, so the child is visible for 45 frames.
@@ -68,7 +68,7 @@ test('retimed nested sequences preserve local frames when trimming, moving, and 
 		await page.mouse.move(trimX + pixelsPerFrame * 5, trimY, {steps: 5});
 		await page.mouse.up();
 		await expect
-			.poll(() => fs.readFileSync(fixture, 'utf-8'))
+			.poll(() => await Bun.file(fixture).text())
 			.toMatch(
 				/from=\{30\}[\s\S]*durationInFrames=\{95\}[\s\S]*trimBefore=\{9\}/,
 			);
@@ -90,11 +90,11 @@ test('retimed nested sequences preserve local frames when trimming, moving, and 
 		);
 		await page.mouse.up();
 		await expect
-			.poll(() => fs.readFileSync(fixture, 'utf-8'))
+			.poll(() => await Bun.file(fixture).text())
 			.toMatch(/from=\{40\}/);
 		await expect(page.getByText('Local frame: 9', {exact: true})).toBeVisible();
 		await expect
-			.poll(() => fs.readFileSync(fixture, 'utf-8'))
+			.poll(() => await Bun.file(fixture).text())
 			.toMatch(/interpolate\(\s*frame,\s*\[30,\s*50,\s*90\]/);
 
 		const endBox = await duration.last().boundingBox();
@@ -106,10 +106,10 @@ test('retimed nested sequences preserve local frames when trimming, moving, and 
 		await page.mouse.move(endX - pixelsPerFrame * 5, endY, {steps: 5});
 		await page.mouse.up();
 		await expect
-			.poll(() => fs.readFileSync(fixture, 'utf-8'))
+			.poll(() => await Bun.file(fixture).text())
 			.toMatch(/durationInFrames=\{30\}/);
 	} finally {
 		await stopStudio();
-		fs.writeFileSync(fixture, original);
+		await Bun.write(fixture, original);
 	}
 });

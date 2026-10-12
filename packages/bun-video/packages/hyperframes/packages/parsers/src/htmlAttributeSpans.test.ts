@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { scanHtmlOpeningTags, decodeAuthoredAttribute } from "./htmlAttributeSpans.js";
 
 describe("HTML source attribute spans", () => {

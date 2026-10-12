@@ -49,13 +49,13 @@ function findInBun(root, pkg, sub) {
   const cands = [path.join(root, "node_modules", pkg)];
   const bunDir = path.join(root, "node_modules", ".bun");
   try {
-    if (fs.existsSync(bunDir))
+    if (await Bun.file(bunDir).exists())
       for (const d of fs.readdirSync(bunDir))
         if (d.startsWith(pkg + "@")) cands.push(path.join(bunDir, d, "node_modules", pkg));
   } catch {}
   for (const c of cands) {
     const p = sub ? path.join(c, sub) : c;
-    if (fs.existsSync(p)) return p;
+    if (await Bun.file(p).exists()) return p;
   }
   return null;
 }
@@ -100,8 +100,8 @@ async function shotAt(browser, file, W, H, t) {
     await page.setRequestInterception(true);
     const documentUrl = pathToFileURL(file).href;
     const documentHtml = gsapSource
-      ? withPreviewGsapSri(fs.readFileSync(file, "utf8"), gsapSource)
-      : fs.readFileSync(file, "utf8");
+      ? withPreviewGsapSri(await Bun.file(file).text(), gsapSource)
+      : await Bun.file(file).text();
     page.on("request", (req) => {
       const u = req.url();
       if (req.isNavigationRequest() && u === documentUrl) {
@@ -126,8 +126,8 @@ async function shotAt(browser, file, W, H, t) {
     // bundled @font-face → previews show the REAL faces (same set the renderer embeds)
     try {
       const fontsCss = path.join(__dirname, "..", "modes", "standard", "fonts", "fonts.css");
-      if (fs.existsSync(fontsCss))
-        await page.addStyleTag({ content: fs.readFileSync(fontsCss, "utf8") });
+      if (await Bun.file(fontsCss).exists())
+        await page.addStyleTag({ content: await Bun.file(fontsCss).text() });
     } catch {}
     await page.evaluate(async () => {
       try {
@@ -156,14 +156,14 @@ async function main() {
     process.exit(1);
   }
   const idx = path.join(project, "index.html");
-  if (!fs.existsSync(idx)) {
+  if (!await Bun.file(idx).exists()) {
     console.error("[preview] no index.html — compile first");
     process.exit(1);
   }
   const railP = path.join(project, "rail.html");
-  const hasRail = fs.existsSync(railP);
+  const hasRail = await Bun.file(railP).exists();
   const fgP = path.join(project, "index_fg.html");
-  const hasFg = fs.existsSync(fgP); // hybrid: fg caps render ABOVE the matte (like the real composite)
+  const hasFg = await Bun.file(fgP).exists(); // hybrid: fg caps render ABOVE the matte (like the real composite)
 
   let fps = 24;
   try {
@@ -200,7 +200,7 @@ async function main() {
     } catch {}
   }
   if (!times.length) {
-    const n = fs.existsSync(path.join(project, "frames_bg"))
+    const n = await Bun.file(path.join(project, "frames_bg").exists())
       ? fs.readdirSync(path.join(project, "frames_bg")).length
       : 0;
     const dur = n / fps || 10;
@@ -229,7 +229,7 @@ async function main() {
       : "/usr/bin/google-chrome";
   const browser = await puppeteer.launch({
     headless: "new",
-    executablePath: fs.existsSync(exe) ? exe : undefined,
+    executablePath: await Bun.file(exe).exists() ? exe : undefined,
     args: ["--disable-web-security", "--allow-file-access-from-files", "--disable-dev-shm-usage"],
   });
   const outs = [];
@@ -238,14 +238,14 @@ async function main() {
       const fi = Math.max(1, Math.round(t * fps));
       const bg = path.join(project, "frames_bg", `f_${String(fi).padStart(4, "0")}.png`);
       const fg = path.join(project, "frames_fg", `f_${String(fi).padStart(4, "0")}.png`);
-      if (!fs.existsSync(bg)) {
+      if (!await Bun.file(bg).exists()) {
         console.error(`[preview] no bg frame for t=${t}`);
         continue;
       }
       const layers = [{ input: await shotAt(browser, idx, W, H, t) }]; // embed captions
       // global caption_layer:"fg" → captions sit ON TOP of the subject; the matte
       // must NOT be stacked over them (the render skips the overlay too).
-      if (!globalFg && fs.existsSync(fg)) layers.push({ input: fg }); // subject occludes embed
+      if (!globalFg && await Bun.file(fg).exists()) layers.push({ input: fg }); // subject occludes embed
       if (hasFg) layers.push({ input: await shotAt(browser, fgP, W, H, t), blend: "screen" }); // hybrid fg caps in front (screen, like the real ffmpeg pass)
       if (hasRail) layers.push({ input: await shotAt(browser, railP, W, H, t) }); // rail in front
       const out = path.join(outDir, `t${String(t).replace(".", "_")}.png`);

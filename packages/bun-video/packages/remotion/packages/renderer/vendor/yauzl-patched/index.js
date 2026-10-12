@@ -5,8 +5,8 @@ var crc32 = require("./buffer-crc32");
 var util = require("node:util");
 var EventEmitter = require("node:events").EventEmitter;
 var Transform = require("node:stream").Transform;
-var PassThrough = require("stream").PassThrough;
-var Writable = require("stream").Writable;
+var PassThrough = require("node:stream").PassThrough;
+var Writable = require("node:stream").Writable;
 
 exports.open = open;
 exports.fromFd = fromFd;

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { StyleSections } from "./propertyPanelStyleSections";
 import { FlatStyleSection } from "./propertyPanelFlatStyleSections";
 import type { DomEditSelection } from "./domEditing";

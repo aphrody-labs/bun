@@ -3,7 +3,7 @@ import { EventEmitter } from "node:events";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterEach, describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "bun:test";
 import {
   ENCODER_PRESETS,
   appendLockedGopArgs,

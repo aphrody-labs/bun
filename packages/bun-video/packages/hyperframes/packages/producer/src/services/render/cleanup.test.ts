@@ -1,6 +1,6 @@
 /** Tests for render failure-detail construction. */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { buildRenderErrorDetails } from "./cleanup.js";
 
 describe("buildRenderErrorDetails", () => {

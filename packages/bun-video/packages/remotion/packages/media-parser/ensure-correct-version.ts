@@ -10,7 +10,7 @@ const src =
 export const VERSION = '${version}';
 `.trim() + '\n';
 
-fs.writeFileSync(path.resolve(process.cwd(), 'src/version.ts'), src);
+await Bun.write(path.resolve(process.cwd(), 'src/version.ts'), src);
 
 cp.execSync('bun run make');
 cp.execSync('bun x tsc -d');

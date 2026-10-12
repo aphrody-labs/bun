@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { scriptShape } from "./scriptShape";
 
 const same = (a: string, b: string, maskNumbers = false) =>

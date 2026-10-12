@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { compile } from "tailwindcss";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
 import { loadStylesheet, STYLES_DIR } from "../../styles/styleSources";
 import { cleanupMounted, trackedRoot } from "../../components/ui/mountHost.testHelpers";
 import { TimelineClip } from "./TimelineClip";

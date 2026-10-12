@@ -192,10 +192,10 @@ export function decodePng(buf: Buffer): { width: number; height: number; data: U
 const PNG_DEFLATE_LEVEL = 1;
 
 function pngChunk(type: string, body: Buffer): Buffer {
-  const header = Buffer.alloc(8);
+  const header = new Uint8Array(8);
   header.writeUInt32BE(body.length, 0);
   header.write(type, 4, "ascii");
-  const trailer = Buffer.alloc(4);
+  const trailer = new Uint8Array(4);
   trailer.writeUInt32BE(chunkCrc32(type, body), 0);
   return Buffer.concat([header, body, trailer]);
 }
@@ -214,12 +214,12 @@ export function encodePng(width: number, height: number, rgba: Uint8Array): Buff
     );
   }
   const stride = width * 4;
-  const filtered = Buffer.alloc((stride + 1) * height);
+  const filtered = new Uint8Array((stride + 1) * height);
   for (let y = 0; y < height; y++) {
     filtered[y * (stride + 1)] = 0;
     filtered.set(rgba.subarray(y * stride, (y + 1) * stride), y * (stride + 1) + 1);
   }
-  const ihdr = Buffer.alloc(13);
+  const ihdr = new Uint8Array(13);
   ihdr.writeUInt32BE(width, 0);
   ihdr.writeUInt32BE(height, 4);
   ihdr[8] = 8; // bit depth
@@ -228,7 +228,7 @@ export function encodePng(width: number, height: number, rgba: Uint8Array): Buff
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     pngChunk("IHDR", ihdr),
     pngChunk("IDAT", deflateSync(filtered, { level: PNG_DEFLATE_LEVEL })),
-    pngChunk("IEND", Buffer.alloc(0)),
+    pngChunk("IEND", new Uint8Array(0)),
   ]);
 }
 
@@ -850,7 +850,7 @@ export function resampleRgb48leObjectFit(
 
   const pos = parseObjectPosition(objectPosition);
   const rect = computeObjectFitRect(srcW, srcH, dstW, dstH, fit, pos);
-  const dst = Buffer.alloc(dstW * dstH * 6); // pre-zeroed → opaque black background
+  const dst = new Uint8Array(dstW * dstH * 6); // pre-zeroed → opaque black background
 
   const stride = dstW * 6;
   // For each destination pixel that lies inside the rendered rect, sample

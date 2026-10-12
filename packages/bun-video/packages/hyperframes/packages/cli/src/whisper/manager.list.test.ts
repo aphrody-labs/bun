@@ -1,6 +1,6 @@
 import { mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "bun:test";
 import { listWhisperModels } from "./manager.js";
 
 const home = vi.hoisted(() => `${process.env.TMPDIR ?? "/tmp"}/hf-whisper-list-${process.pid}`);

@@ -88,7 +88,7 @@ for (const page of pages) {
 		continue;
 	}
 
-	const opened = fs.readFileSync(page, 'utf8');
+	const opened = await Bun.file(page).text();
 	const frontmatter =
 		opened.match(/---\n((.|\n)*?)---\n/) ??
 		opened.match(/---\r\n((.|\r\n)*?)---\r\n/);
@@ -166,8 +166,7 @@ data.push(
 	},
 );
 
-fs.writeFileSync(
-	path.join(process.cwd(), 'src', 'data', 'articles.ts'),
+await Bun.write(path.join(process.cwd(), 'src', 'data', 'articles.ts'),
 	`export const articles = ` + JSON.stringify(data, null, 2),
 );
 
@@ -187,7 +186,7 @@ for (const composition of compositions.filter(
 	(c) => c.id.startsWith('expert') || c.id.startsWith('template'),
 )) {
 	const output = `static/generated/${composition.id}.png`;
-	if (fs.existsSync(output)) {
+	if (await Bun.file(output).exists()) {
 		console.log('Existed', composition.id);
 		continue;
 	} else {
@@ -209,7 +208,7 @@ for (const entry of data) {
 		continue;
 	}
 	const output = `static/generated/${composition.id}.png`;
-	if (fs.existsSync(output)) {
+	if (await Bun.file(output).exists()) {
 		continue;
 	}
 
@@ -228,7 +227,7 @@ for (const entry of data) {
 	}
 
 	const out = path.join(process.cwd(), entry.relativePath);
-	const fileContents = fs.readFileSync(out, 'utf-8');
+	const fileContents = await Bun.file(out).text();
 	const lines = fileContents
 		.split(os.EOL)
 		.filter((l) => !l.startsWith('image: '));
@@ -243,5 +242,5 @@ for (const entry of data) {
 		...lines.slice(frontmatterLine + 1),
 	].join(os.EOL);
 
-	fs.writeFileSync(out, newLines);
+	await Bun.write(out, newLines);
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { StudioFileConflictError } from "../utils/studioSaveDiagnostics";
 import { drainStudioSaveQueues } from "./usePreviewPersistence";
 

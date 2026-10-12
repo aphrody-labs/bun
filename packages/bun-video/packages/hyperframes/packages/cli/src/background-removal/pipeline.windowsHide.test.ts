@@ -12,11 +12,11 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 
 const { spawnMock, processFrameMock, closeSessionMock } = vi.hoisted(() => ({
   spawnMock: vi.fn(),
-  processFrameMock: vi.fn(async () => ({ fg: Buffer.alloc(4) })),
+  processFrameMock: vi.fn(async () => ({ fg: new Uint8Array(4) })),
   closeSessionMock: vi.fn(async () => undefined),
 }));
 
@@ -62,7 +62,7 @@ describe("background-removal FFmpeg child-process options", () => {
   it("hides every FFmpeg console window", async () => {
     const dir = mkdtempSync(join(tmpdir(), "hf-bg-removal-"));
     spawnMock
-      .mockImplementationOnce(() => fakeFfmpeg(Readable.from([Buffer.alloc(3)])))
+      .mockImplementationOnce(() => fakeFfmpeg(Readable.from([new Uint8Array(3)])))
       .mockImplementationOnce((_, args: string[]) => fakeFfmpeg(Readable.from([]), args.at(-1)));
 
     await render({ inputPath: "/tmp/input.mp4", outputPath: join(dir, "output.webm") });
@@ -84,7 +84,7 @@ describe("background-removal output", () => {
       const output = join(dir, "cutout.webm");
       writeFileSync(outside, "keep");
       spawnMock
-        .mockImplementationOnce(() => fakeFfmpeg(Readable.from([Buffer.alloc(3)])))
+        .mockImplementationOnce(() => fakeFfmpeg(Readable.from([new Uint8Array(3)])))
         .mockImplementationOnce((_, args: string[]) => {
           symlinkSync(outside, output);
           return fakeFfmpeg(Readable.from([]), args.at(-1));

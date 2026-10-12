@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { win32 } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { captureFontExtension, captureFontFilename } from "./captureFontValidation.js";
 
 const font = readFileSync(
@@ -43,7 +43,7 @@ describe("capture font publication", () => {
   });
 
   it("rejects arbitrary bytes, truncated fonts, and oversized expansion declarations", () => {
-    expect(captureFontExtension(Buffer.alloc(2048))).toBeNull();
+    expect(captureFontExtension(new Uint8Array(2048))).toBeNull();
     expect(captureFontExtension(font.subarray(0, 48))).toBeNull();
     const bomb = Buffer.from(font);
     bomb.writeUInt32BE(0xffffffff, 16);

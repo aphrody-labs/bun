@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "bun:test";
 
 // Mock client.trackEvent so we can assert event names and payloads without
 // firing network requests or relying on memoized shouldTrack() state.

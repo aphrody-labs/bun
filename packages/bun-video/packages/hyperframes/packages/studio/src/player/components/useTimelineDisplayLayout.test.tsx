@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { expect, it } from "vitest";
+import { expect, it } from "bun:test";
 import { useTimelineDisplayLayout } from "./useTimelineTrackLayout";
 import { createTimelineRowGeometry } from "./timelineLayout";
 import type { DraggedClipState } from "./timelineClipDragTypes";

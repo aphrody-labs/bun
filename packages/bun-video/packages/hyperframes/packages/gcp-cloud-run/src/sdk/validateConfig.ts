@@ -63,7 +63,7 @@ export function validateWorkflowsInputSize(input: unknown): void {
         "Check that all fields, including config.variables, are plain JSON values.",
     );
   }
-  const byteLength = Buffer.byteLength(serialized, "utf8");
+  const byteLength = new TextEncoder().encode(serialized).length;
   if (byteLength > MAX_WORKFLOWS_INPUT_BYTES) {
     throw new InvalidConfigError(
       "config",

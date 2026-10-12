@@ -3,7 +3,7 @@
 import { SUPPORTED_EASES } from "../../../../parsers/src/gsapConstants";
 import { parseSpringBounce } from "@hyperframes/core/spring-ease";
 import { parseWiggleEase } from "@hyperframes/core/wiggle-ease";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { EASE_PRESETS, easePresetLabel } from "./easePresetLibrary";
 import { resolveEaseCurveTuple } from "./gsapAnimationConstants";
 

@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {getCanvasFontStretch} from '../drawing/text/get-canvas-font-stretch';
 
 test('should convert computed CSS font stretch values to canvas keywords', () => {

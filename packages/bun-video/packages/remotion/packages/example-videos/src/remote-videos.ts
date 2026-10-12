@@ -42,7 +42,7 @@ export const getRemoteExampleVideo = async (
 	const name = new URL(url).pathname.split('/').pop() as string;
 	const location = path.join(cacheDir, name);
 
-	if (!fs.existsSync(location)) {
+	if (!await Bun.file(location).exists()) {
 		if (!fs.existsSync(cacheDir)) {
 			fs.mkdirSync(cacheDir);
 		}
@@ -65,7 +65,7 @@ export const getPrivateExampleVideo = async (
 
 	const location = path.join(cacheDir, privateExampleVideos[videoName]);
 
-	if (fs.existsSync(location)) {
+	if (await Bun.file(location).exists()) {
 		return location;
 	}
 

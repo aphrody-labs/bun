@@ -1,4 +1,4 @@
-import { afterAll, beforeAll } from "vitest";
+import { afterAll, beforeAll } from "bun:test";
 
 // Mounting a whole <Timeline> in happy-dom needs a width to lay out against and a size report.
 class MockResizeObserver {

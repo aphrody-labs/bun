@@ -71,10 +71,10 @@ function main() {
   if (!process.argv[2]) die("usage: make-cinematic.cjs <project-dir>");
   const cj = path.join(project, "cinematic.json");
   const tj = path.join(project, "transcript.json");
-  if (!fs.existsSync(cj)) die(`missing ${cj} — author it first (schema in this header)`);
-  if (!fs.existsSync(tj)) die(`missing ${tj} — run prepare.sh first`);
-  const C = JSON.parse(fs.readFileSync(cj, "utf8"));
-  const tr = (JSON.parse(fs.readFileSync(tj, "utf8")).words || []).filter(
+  if (!await Bun.file(cj).exists()) die(`missing ${cj} — author it first (schema in this header)`);
+  if (!await Bun.file(tj).exists()) die(`missing ${tj} — run prepare.sh first`);
+  const C = await Bun.file(cj).json();
+  const tr = (await Bun.file(tj).json().words || []).filter(
     (w) => w && "start" in w && "end" in w,
   );
   if (!tr.length) die("transcript has no word timings");
@@ -174,7 +174,7 @@ function main() {
       fs.readdirSync(project).filter((x) => /\.(mp4|mov|webm)$/i.test(x)),
     )) {
       const fp = path.join(project, f);
-      if (!fs.existsSync(fp)) continue;
+      if (!await Bun.file(fp).exists()) continue;
       const d = parseFloat(
         cp.execFileSync(
           "ffprobe",
@@ -706,7 +706,7 @@ function main() {
     planes: Object.fromEntries(Object.entries(planes).map(([k, v]) => [k, { css: v.css }])),
     groups,
   };
-  fs.writeFileSync(path.join(project, "plan.json"), JSON.stringify(plan, null, 2));
+  await Bun.write(path.join(project, "plan.json"), JSON.stringify(plan, null, 2));
   console.log(
     `[make-cinematic] ${blocks.length} block(s) → ${groups.length} group(s)` +
       `${heroRefs.length ? `, ${heroRefs.length} hero(es): ${heroRefs.map((h) => `"${h.ln.text || h.ln.words[0]}"`).join(" · ")} (each holds to its block end, lockup-composed)` : ""}` +
@@ -795,7 +795,7 @@ function main() {
           console.log(
             `[make-cinematic] re-slot: ${changes} line(s) re-stacked from MEASURED heights (wrapped lines accounted)`,
           );
-          fs.writeFileSync(path.join(project, "plan.json"), JSON.stringify(plan, null, 2));
+          await Bun.write(path.join(project, "plan.json"), JSON.stringify(plan, null, 2));
           cp2.spawnSync("node", [path.join(__dirname, "make-composition.cjs"), project], {
             stdio: "ignore",
           });
@@ -857,7 +857,7 @@ function main() {
         nwChanged = true;
       }
     if (nwChanged) {
-      fs.writeFileSync(path.join(project, "plan.json"), JSON.stringify(plan, null, 2));
+      await Bun.write(path.join(project, "plan.json"), JSON.stringify(plan, null, 2));
       require("child_process").spawnSync(
         "node",
         [path.join(__dirname, "make-composition.cjs"), project],
@@ -1144,7 +1144,7 @@ function main() {
         }
       }
       if (!changed) break;
-      fs.writeFileSync(path.join(project, "plan.json"), JSON.stringify(plan, null, 2));
+      await Bun.write(path.join(project, "plan.json"), JSON.stringify(plan, null, 2));
       r = cp2.spawnSync("node", [path.join(__dirname, "make-composition.cjs"), project], {
         stdio: "ignore",
       });
@@ -1195,7 +1195,7 @@ function main() {
       } catch {}
     }
     if (minorChanged) {
-      fs.writeFileSync(path.join(project, "plan.json"), JSON.stringify(plan, null, 2));
+      await Bun.write(path.join(project, "plan.json"), JSON.stringify(plan, null, 2));
       cp2.spawnSync("node", [path.join(__dirname, "make-composition.cjs"), project], {
         stdio: "ignore",
       });

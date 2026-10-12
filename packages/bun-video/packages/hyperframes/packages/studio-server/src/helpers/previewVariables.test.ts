@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { injectPreviewVariables } from "./previewVariables";
 
 const SCRIPT = '<script data-hf-preview-variables>window.__hfVariables={"a":1};</script>';

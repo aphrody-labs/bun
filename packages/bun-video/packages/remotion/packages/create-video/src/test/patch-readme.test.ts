@@ -16,8 +16,7 @@ test('Patches a template readme named readme.md', () => {
 	);
 
 	try {
-		fs.writeFileSync(
-			path.join(projectRoot, 'readme.md'),
+		await Bun.write(path.join(projectRoot, 'readme.md'),
 			'# Stargazer\n\nnpm install\n\nnpx remotion render\n',
 		);
 
@@ -38,7 +37,7 @@ test('Skips a template without a readme', () => {
 	);
 
 	try {
-		fs.writeFileSync(path.join(projectRoot, 'package.json'), '{}');
+		await Bun.write(path.join(projectRoot, 'package.json'), '{}');
 
 		patchReadmeMd(projectRoot, 'pnpm', stargazer);
 

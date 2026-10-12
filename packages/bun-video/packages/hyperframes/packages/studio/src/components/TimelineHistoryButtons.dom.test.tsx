@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import { act } from "react";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "bun:test";
 import { cleanupMounted, mountHost } from "./ui/mountHost.testHelpers";
 import { isTypingTarget } from "../utils/typingTarget";
 import { shouldIgnorePlaybackShortcutTarget } from "../player/lib/playbackShortcuts";

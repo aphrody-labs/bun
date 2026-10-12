@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import type { Page, Browser } from "puppeteer-core";
 import { runCoreExtraction } from "./coreExtractionPhase.js";
 import { createPartialCaptureState } from "./partialCapture.js";

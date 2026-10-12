@@ -14,7 +14,7 @@
  * manualEditsTypes.ts — they will be shared with the PreviewAdapter
  * implementation once the draft-marker module moves to core (Task 4).
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "bun:test";
 import { createPreviewAdapter } from "./previewAdapter.js";
 
 // ── DOM helpers ────────────────────────────────────────────────────────────

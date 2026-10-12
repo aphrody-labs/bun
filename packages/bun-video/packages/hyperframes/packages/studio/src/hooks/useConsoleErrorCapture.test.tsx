@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it } from "bun:test";
 import { STUDIO_PREVIEW_ERRORS } from "@hyperframes/core/studio-preview-mark";
 import { useConsoleErrorCapture } from "./useConsoleErrorCapture";
 

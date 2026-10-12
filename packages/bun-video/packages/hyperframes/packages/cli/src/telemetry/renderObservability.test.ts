@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import type { RenderObservabilitySummary } from "@hyperframes/producer";
 import { renderObservabilityTelemetryPayload } from "./renderObservability.js";
 

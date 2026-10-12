@@ -11,7 +11,7 @@ export interface BackupJournalResult {
 }
 
 function backupKeyForPath(path: string): string {
-  return Buffer.from(path, "utf-8").toString("base64url");
+  return new TextEncoder().encode(path).toString("base64url");
 }
 
 function timestampPrefix(): string {

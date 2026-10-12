@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { act } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { createHappyDomRootHarness } from "../../player/components/testRootHarness";
 import { usePlayerStore, type TimelineElement } from "../../player/store/playerStore";
 import type { CommitDomAttributeBatch } from "../../hooks/domEditCommitTypes";

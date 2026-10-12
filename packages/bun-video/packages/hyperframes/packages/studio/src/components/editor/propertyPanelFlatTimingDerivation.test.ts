@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { deriveElementTiming } from "./propertyPanelFlatTimingDerivation";
 import type { DomEditSelection } from "./domEditingTypes";
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";

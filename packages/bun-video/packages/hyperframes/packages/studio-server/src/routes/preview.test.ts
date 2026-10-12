@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { Hono } from "hono";
 import { parseHTML } from "linkedom";
 import {

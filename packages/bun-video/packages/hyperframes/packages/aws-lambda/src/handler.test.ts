@@ -63,7 +63,7 @@ class FakeS3Client {
     const cmdName = op.constructor?.name ?? "";
     const uri = `s3://${op.input.Bucket}/${op.input.Key}`;
     if (cmdName === "GetObjectCommand") {
-      const bytes = this.objects.get(uri) ?? Buffer.alloc(0);
+      const bytes = this.objects.get(uri) ?? new Uint8Array(0);
       this.ops.push({ kind: "download", uri, bytes: bytes.length });
       // Mock the AWS SDK stream contract just enough for pipeline() to
       // pump bytes into a write stream.

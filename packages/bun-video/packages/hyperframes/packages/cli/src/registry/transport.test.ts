@@ -1,4 +1,4 @@
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "bun:test";
 import { registryPathUrl, registryHttpsUrl, fetchRegistryHttps } from "./transport.js";
 
 afterEach(() => vi.unstubAllGlobals());

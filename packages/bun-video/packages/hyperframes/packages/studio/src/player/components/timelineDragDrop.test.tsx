@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
+import { afterEach, describe, expect, it, vi, type Mock } from "bun:test";
 import { TIMELINE_ASSET_MIME, TIMELINE_BLOCK_MIME } from "../../utils/timelineAssetDrop";
 import { usePlayerStore, type TimelineElement } from "../store/playerStore";
 import { createTimelineRowGeometry } from "./timelineLayout";

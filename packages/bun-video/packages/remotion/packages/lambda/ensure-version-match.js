@@ -6,9 +6,9 @@ const versions = [`remotionlambda-arm64.zip`];
 
 for (const version of versions) {
 	cp.execSync(`unzip -o ${version} -d extracted`);
-	const contents = fs.readFileSync('extracted/index.js', 'utf-8');
+	const contents = await Bun.file('extracted/index.js').text();
 	fs.rmSync('extracted', {recursive: true});
-	const inConstants = fs.readFileSync('../core/dist/cjs/version.js', 'utf-8');
+	const inConstants = await Bun.file('../core/dist/cjs/version.js').text();
 	const [, inPkg] = inConstants.match(/exports\.VERSION = '(.*)'/);
 
 	const inLambda = contents.includes(`="${VERSION}"`);

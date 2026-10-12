@@ -2,7 +2,7 @@
 // Imports the render queue the way a host app does: by package name, through the declared exports.
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import {
   RenderQueue,
   getPersistedRenderSettings,

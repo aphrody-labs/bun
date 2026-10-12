@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { createStudioServer, type StudioServer } from "./studioServer.js";
@@ -47,9 +47,9 @@ beforeEach(() => {
   root = fixture.root;
   hooks.studioDir = fixture.studioDir;
   fs.mkdirSync(path.join(hooks.studioDir, "icons"), { recursive: true });
-  fs.writeFileSync(path.join(hooks.studioDir, "assets", HASHED_BUNDLE), BUNDLE_BYTES);
-  fs.writeFileSync(path.join(hooks.studioDir, "icons", PUBLIC_ICON), "<svg/>");
-  fs.writeFileSync(path.join(hooks.studioDir, "favicon.svg"), "<svg/>");
+  await Bun.write(path.join(hooks.studioDir, "assets", HASHED_BUNDLE), BUNDLE_BYTES);
+  await Bun.write(path.join(hooks.studioDir, "icons", PUBLIC_ICON), "<svg/>");
+  await Bun.write(path.join(hooks.studioDir, "favicon.svg"), "<svg/>");
   writeStudioIndexHtml(hooks.studioDir);
   server = createStudioServer({ projectDir: fixture.projectDir });
 });

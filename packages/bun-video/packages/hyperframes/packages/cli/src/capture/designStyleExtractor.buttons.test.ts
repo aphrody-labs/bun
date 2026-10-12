@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { runInNewContext } from "node:vm";
 import { Window } from "happy-dom";
 import type { Page } from "puppeteer-core";

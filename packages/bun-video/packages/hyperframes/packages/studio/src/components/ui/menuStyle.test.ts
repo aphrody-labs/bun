@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { menuClasses } from "./menuStyle";
 
 const spacing = /(^| )-?(p|py|pt|pb|m|my|mt|mb)-\d/;

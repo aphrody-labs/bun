@@ -1,4 +1,4 @@
-import {assert, expect, test} from 'vitest';
+import {assert, expect, test} from 'bun:test';
 import {extractAudio} from '../audio-extraction/extract-audio';
 import {getMaxVideoCacheSize, globalMediaCache} from '../caches';
 import {resampleAudioData} from '../convert-audiodata/resample-audiodata';

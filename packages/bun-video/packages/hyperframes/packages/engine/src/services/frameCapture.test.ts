@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import type { Protocol } from "puppeteer-core";
 import { COMPOSITION_SOURCE_URL } from "@hyperframes/core";
 import type { CaptureSession } from "./frameCapture.js";

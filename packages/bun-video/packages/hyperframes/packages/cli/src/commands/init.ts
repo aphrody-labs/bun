@@ -261,7 +261,7 @@ export function nameTooLongMessage(
   const inBytes = platform === "linux";
   const unit = inBytes ? "bytes" : "characters";
   for (const folder of name.split(platform === "win32" ? /[\\/]/ : "/")) {
-    const length = inBytes ? Buffer.byteLength(folder) : folder.length;
+    const length = inBytes ? new TextEncoder().encode(folder).length : folder.length;
     if (length > MAX_FOLDER_NAME)
       return `That name is ${length} ${unit} long; a folder name can be at most ${MAX_FOLDER_NAME} ${unit}.`;
   }

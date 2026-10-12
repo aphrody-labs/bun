@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { runLaneZGesture, runZLaneGesture } from "./zLaneGesture";
 
 const durable = { durable: true, allMatched: true, changed: true };

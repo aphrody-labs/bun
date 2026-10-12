@@ -12,7 +12,7 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi } from "bun:test";
 import { createMemoryAdapter } from "./memory.js";
 import { createFsAdapter } from "./fs.js";
 import type { PersistAdapter } from "./types.js";

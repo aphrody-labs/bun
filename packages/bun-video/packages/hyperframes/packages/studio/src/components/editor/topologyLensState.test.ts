@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { reduceTopologyLens, type TopologyLensState } from "./topologyLensState";
 import type { StudioEditLifecycleState } from "../../webmcp/writeCoordinator";
 

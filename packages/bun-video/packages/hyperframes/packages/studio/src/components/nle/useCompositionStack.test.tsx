@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { installReactActEnvironment } from "../../hooks/domSelectionTestHarness";
 import { liveTime, usePlayerStore } from "../../player/store/playerStore";
 import { useCompositionStack } from "./useCompositionStack";

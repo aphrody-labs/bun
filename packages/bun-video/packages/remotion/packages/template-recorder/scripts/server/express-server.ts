@@ -21,7 +21,7 @@ import {
   handleVideoUpload,
 } from "./upload-video";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = import.meta.dir;
 
 export const startServer = async () => {
   const app = connect();

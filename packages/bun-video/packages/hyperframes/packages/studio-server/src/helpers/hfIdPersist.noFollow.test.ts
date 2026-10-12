@@ -1,7 +1,7 @@
 import { lstatSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "bun:test";
 
 const swap = vi.hoisted(() => ({ to: "" }));
 vi.mock("@hyperframes/core/atomic-file", async (importOriginal) => {

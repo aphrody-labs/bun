@@ -21,7 +21,7 @@
  * they need element boxes and computed style rather than a hit-test stack.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import {
   resolveNearestHfElement,
   computeDraftPosition,

@@ -2,7 +2,7 @@
 // Imports DOM editing the way a host app does: by package name, mounted outside EditorShell.
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { describe, expect, expectTypeOf, it, vi } from "vitest";
+import { describe, expect, expectTypeOf, it, vi } from "bun:test";
 import {
   ConnectedDomEditOverlay,
   DomEditProvider,

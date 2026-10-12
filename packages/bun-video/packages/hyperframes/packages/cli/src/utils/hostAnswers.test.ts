@@ -1,5 +1,5 @@
 import { createSocket, type Socket } from "node:dgram";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 
 // Point every Resolver hostAnswers creates at a local UDP server this test controls.
 const dnsServer = vi.hoisted(() => ({ address: "" }));
@@ -26,7 +26,7 @@ async function startServer(mode: "silent" | "answer" | "no-aaaa"): Promise<void>
     end += 5;
     const isA = msg.readUInt16BE(end - 4) === 1;
     if (mode === "no-aaaa" && !isA) return;
-    const header = Buffer.alloc(12);
+    const header = new Uint8Array(12);
     msg.copy(header, 0, 0, 2);
     header.writeUInt16BE(0x8180, 2);
     header.writeUInt16BE(1, 4);

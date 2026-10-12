@@ -41,7 +41,7 @@ export const stripAnsi = (s: string) =>
 	s.replace(/\x1b\[[0-9;]*m/g, '').replace(/\]8;;[^\x1b]*\x1b\\/g, '');
 
 export const readStudioLogs = (): string[] => {
-	if (!fs.existsSync(LOGS_FILE)) {
+	if (!await Bun.file(LOGS_FILE).exists()) {
 		return [];
 	}
 

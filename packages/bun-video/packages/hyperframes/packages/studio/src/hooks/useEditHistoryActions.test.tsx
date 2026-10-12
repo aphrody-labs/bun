@@ -2,7 +2,7 @@
 
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { STUDIO_MOTION_PATH } from "../components/editor/studioMotion";
 import { useEditHistoryActions, type EditHistoryHandle } from "./useEditHistoryActions";
 import {

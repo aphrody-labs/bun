@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, rmSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it } from "bun:test";
 import { registerRunningCli } from "./runningCli.js";
 
 let dir = "";

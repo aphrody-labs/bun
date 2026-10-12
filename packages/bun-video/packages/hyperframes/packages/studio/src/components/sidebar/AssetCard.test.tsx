@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { usePlayerStore, type TimelineElement } from "../../player/store/playerStore";
 import { useAssetPreviewStore } from "../../utils/assetPreviewStore";
 import { AssetCard } from "./AssetCard";

@@ -2,7 +2,7 @@
 
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { thumbnailScheduler } from "../../player/lib/thumbnailScheduler";
 import { TIMELINE_VIEWPORT_BUDGETS } from "../../player/lib/timelineViewportBudgets";
 import { CompositionThumbnail } from "../../player/components/CompositionThumbnail";

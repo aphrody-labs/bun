@@ -27,7 +27,7 @@ export const cachedExampleMediaPaths = Object.fromEntries(
 ) as {[K in CachedKey]: string};
 
 const downloadFile = async (url: string, location: string) => {
-	if (fs.existsSync(location)) {
+	if (await Bun.file(location).exists()) {
 		return;
 	}
 

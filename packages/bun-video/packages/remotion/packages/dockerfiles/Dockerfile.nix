@@ -13,7 +13,7 @@ RUN cd /usr/app
 RUN nix-env -iA nixpkgs.nodejs-18_x
 RUN nix-env -iA nixpkgs.ungoogled-chromium
 
-RUN npm i
+RUN bun install
 
 COPY remotion.nix .
 
@@ -21,4 +21,4 @@ RUN chmod +x /usr/app/node_modules/@remotion/compositor-linux-arm64-gnu/remotion
 RUN nix run nixpkgs#patchelf --extra-experimental-features nix-command --extra-experimental-features flakes -- --set-interpreter "$(nix eval nixpkgs#stdenv.cc.bintools.dynamicLinker --raw --extra-experimental-features nix-command --extra-experimental-features flakes)" /usr/app/node_modules/@remotion/compositor-linux-arm64-gnu/remotion
 RUN nix run nixpkgs#patchelf --extra-experimental-features nix-command --extra-experimental-features flakes -- --set-interpreter "$(nix eval nixpkgs#stdenv.cc.bintools.dynamicLinker --raw --extra-experimental-features nix-command --extra-experimental-features flakes)" /usr/app/node_modules/@remotion/compositor-linux-arm64-gnu/ffmpeg
 RUN nix run nixpkgs#patchelf --extra-experimental-features nix-command --extra-experimental-features flakes -- --set-interpreter "$(nix eval nixpkgs#stdenv.cc.bintools.dynamicLinker --raw --extra-experimental-features nix-command --extra-experimental-features flakes)" /usr/app/node_modules/@remotion/compositor-linux-arm64-gnu/ffprobe
-RUN npx remotion render HelloWorld --browser-executable=$(which chromium) 
+RUN bunx remotion render HelloWorld --browser-executable=$(which chromium) 

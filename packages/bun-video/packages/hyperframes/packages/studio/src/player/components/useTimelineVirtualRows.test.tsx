@@ -8,7 +8,7 @@ import {
   observeElementRect,
   Virtualizer,
 } from "@tanstack/react-virtual";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
 import { createTimelineRowGeometry, RULER_H, TRACKS_TOP_PAD } from "./timelineLayout";
 import { extractTimelineVirtualRowRange, useTimelineVirtualRows } from "./useTimelineVirtualRows";
 import type { TimelineScrollViewportSnapshot } from "./useTimelineScrollViewport";

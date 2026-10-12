@@ -3,7 +3,7 @@
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { usePlayerStore, type TimelineElement } from "../store/playerStore";
 import { LANE_H, TRACK_H } from "./timelineLayout";
 import { AUTOMATION_LANE_H } from "./automationLaneHeight";

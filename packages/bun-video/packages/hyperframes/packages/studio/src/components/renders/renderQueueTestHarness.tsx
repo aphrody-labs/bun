@@ -5,7 +5,7 @@
 
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { vi } from "vitest";
+import { vi } from "bun:test";
 import type { useRenderQueue } from "./useRenderQueue";
 
 export type RenderQueueApi = ReturnType<typeof useRenderQueue>;

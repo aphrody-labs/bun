@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import type { HyperframesPlayer } from "./hyperframes-player.js";
 import { RUNTIME_CDN_URL } from "./runtime-url.js";
 

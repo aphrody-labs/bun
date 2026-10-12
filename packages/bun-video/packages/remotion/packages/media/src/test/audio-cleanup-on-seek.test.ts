@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {makeAudioIterator} from '../audio/audio-preview-iterator';
 import type {AudioBufferSlice} from '../make-iterator-with-priming';
 

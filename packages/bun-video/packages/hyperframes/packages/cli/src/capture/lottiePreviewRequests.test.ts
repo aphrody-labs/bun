@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { allowedLottieRequest, LOTTIE_RUNTIME_URL } from "./lottiePreviewRequests.js";
 
 describe("Lottie preview request policy", () => {

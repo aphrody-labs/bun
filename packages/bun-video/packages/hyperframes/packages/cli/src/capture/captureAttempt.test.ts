@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "bun:test";
 import { captureWebsiteAttempt } from "./captureAttempt.js";
 import { CaptureDirRefusedError } from "./captureErrors.js";
 import type { CaptureWatchdog } from "./captureWatchdog.js";

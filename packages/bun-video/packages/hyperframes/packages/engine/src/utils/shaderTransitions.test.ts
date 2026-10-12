@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import {
   sampleRgb48le,
   mix16,
@@ -20,7 +20,7 @@ import {
 
 describe("sampleRgb48le", () => {
   it("samples center pixel of a uniform 1x1 buffer", () => {
-    const buf = Buffer.alloc(6);
+    const buf = new Uint8Array(6);
     buf.writeUInt16LE(10000, 0); // R
     buf.writeUInt16LE(20000, 2); // G
     buf.writeUInt16LE(30000, 4); // B
@@ -31,7 +31,7 @@ describe("sampleRgb48le", () => {
   });
 
   it("clamps out-of-bounds UV below 0 to first pixel", () => {
-    const buf = Buffer.alloc(6);
+    const buf = new Uint8Array(6);
     buf.writeUInt16LE(5000, 0);
     buf.writeUInt16LE(6000, 2);
     buf.writeUInt16LE(7000, 4);
@@ -42,7 +42,7 @@ describe("sampleRgb48le", () => {
   });
 
   it("clamps out-of-bounds UV above 1 to last pixel", () => {
-    const buf = Buffer.alloc(6);
+    const buf = new Uint8Array(6);
     buf.writeUInt16LE(5000, 0);
     buf.writeUInt16LE(6000, 2);
     buf.writeUInt16LE(7000, 4);
@@ -54,7 +54,7 @@ describe("sampleRgb48le", () => {
 
   it("bilinearly interpolates between two horizontally adjacent pixels", () => {
     // 2x1 buffer: pixel 0 = (0,0,0), pixel 1 = (65534,65534,65534)
-    const buf = Buffer.alloc(12);
+    const buf = new Uint8Array(12);
     buf.writeUInt16LE(0, 0);
     buf.writeUInt16LE(0, 2);
     buf.writeUInt16LE(0, 4);
@@ -69,7 +69,7 @@ describe("sampleRgb48le", () => {
   });
 
   it("samples from exact pixel 0 at u=0", () => {
-    const buf = Buffer.alloc(12);
+    const buf = new Uint8Array(12);
     buf.writeUInt16LE(1000, 0);
     buf.writeUInt16LE(2000, 2);
     buf.writeUInt16LE(3000, 4);
@@ -88,7 +88,7 @@ describe("sampleRgb48le", () => {
 
   it("bilinearly interpolates between two vertically adjacent pixels", () => {
     // 1x2 buffer: row 0 = (0,0,0), row 1 = (40000,40000,40000)
-    const buf = Buffer.alloc(12);
+    const buf = new Uint8Array(12);
     buf.writeUInt16LE(0, 0);
     buf.writeUInt16LE(0, 2);
     buf.writeUInt16LE(0, 4);
@@ -106,7 +106,7 @@ describe("sampleRgb48le", () => {
     //   (1000)  (5000)
     //   (3000)  (7000)
     // Centroid (u=v=0.5) → average of all four = 4000
-    const buf = Buffer.alloc(24);
+    const buf = new Uint8Array(24);
     const corners = [1000, 5000, 3000, 7000];
     for (let i = 0; i < 4; i++) {
       const off = i * 6;
@@ -124,7 +124,7 @@ describe("sampleRgb48le", () => {
     // 2x1 buffer with distinct per-channel gradients.
     //   pixel 0: R=1000 G=20000 B=50000
     //   pixel 1: R=9000 G=30000 B=60000
-    const buf = Buffer.alloc(12);
+    const buf = new Uint8Array(12);
     buf.writeUInt16LE(1000, 0);
     buf.writeUInt16LE(20000, 2);
     buf.writeUInt16LE(50000, 4);
@@ -141,7 +141,7 @@ describe("sampleRgb48le", () => {
     // 2x2 buffer where (1,1) corner has a unique value the first three pixels
     // do not. If sampleRgb48le tried to read off-edge, the result would mix in
     // out-of-bounds garbage.
-    const buf = Buffer.alloc(24);
+    const buf = new Uint8Array(24);
     const fill = [10, 20, 30, 65000];
     for (let i = 0; i < 4; i++) {
       const off = i * 6;
@@ -160,7 +160,7 @@ describe("sampleRgb48le", () => {
     // u=0.25 → x = 0.25 * (2 - 1) = 0.25
     // weight on pixel 0 = 0.75, weight on pixel 1 = 0.25
     // expected R = round(0 * 0.75 + 10000 * 0.25) = 2500
-    const buf = Buffer.alloc(12);
+    const buf = new Uint8Array(12);
     buf.writeUInt16LE(0, 0);
     buf.writeUInt16LE(0, 2);
     buf.writeUInt16LE(0, 4);
@@ -178,7 +178,7 @@ describe("sampleRgb48le", () => {
     // losing precision. A naïve 32-bit accumulator would still be fine here,
     // but a future packed-Uint16 implementation must be checked for overflow
     // in intermediate sums.
-    const buf = Buffer.alloc(24);
+    const buf = new Uint8Array(24);
     for (let i = 0; i < 4; i++) {
       const off = i * 6;
       buf.writeUInt16LE(65535, off);
@@ -196,7 +196,7 @@ describe("sampleRgb48le", () => {
     // indexing on a non-trivial stride.
     const w = 256;
     const h = 256;
-    const buf = Buffer.alloc(w * h * 6);
+    const buf = new Uint8Array(w * h * 6);
     // Diagonal gradient in R: pixel (x, y).R = x
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
@@ -212,7 +212,7 @@ describe("sampleRgb48le", () => {
   it("handles 1x1 source with arbitrary UV (no x1=x0 division by zero)", () => {
     // x0+1 gets clamped back to w-1=0, so x0 == x1. The weights still sum to 1
     // and the result must equal the single pixel value.
-    const buf = Buffer.alloc(6);
+    const buf = new Uint8Array(6);
     buf.writeUInt16LE(12345, 0);
     buf.writeUInt16LE(23456, 2);
     buf.writeUInt16LE(34567, 4);
@@ -395,7 +395,7 @@ describe("fbm", () => {
 // ── transition helpers ────────────────────────────────────────────────────────
 
 function makeBuffer(w: number, h: number, r: number, g: number, b: number): Buffer {
-  const buf = Buffer.alloc(w * h * 6);
+  const buf = new Uint8Array(w * h * 6);
   for (let i = 0; i < w * h; i++) {
     buf.writeUInt16LE(r, i * 6);
     buf.writeUInt16LE(g, i * 6 + 2);
@@ -418,7 +418,7 @@ function runTransition(
 ): Buffer {
   const from = makeBuffer(w, h, fR, fG, fB);
   const to = makeBuffer(w, h, tR, tG, tB);
-  const out = Buffer.alloc(w * h * 6);
+  const out = new Uint8Array(w * h * 6);
   fn(from, to, out, w, h, progress);
   return out;
 }
@@ -548,7 +548,7 @@ describe("all transitions smoke test", () => {
       it("at progress=0, center pixel ≈ from", () => {
         const from = makeBuffer(8, 8, 40000, 30000, 20000);
         const to = makeBuffer(8, 8, 10000, 10000, 10000);
-        const out = Buffer.alloc(8 * 8 * 6);
+        const out = new Uint8Array(8 * 8 * 6);
         const fn = TRANSITIONS[name];
         expect(fn).toBeDefined();
         fn?.(from, to, out, 8, 8, 0);
@@ -562,7 +562,7 @@ describe("all transitions smoke test", () => {
       it("at progress=1, center pixel ≈ to", () => {
         const from = makeBuffer(8, 8, 40000, 30000, 20000);
         const to = makeBuffer(8, 8, 10000, 10000, 10000);
-        const out = Buffer.alloc(8 * 8 * 6);
+        const out = new Uint8Array(8 * 8 * 6);
         const fn = TRANSITIONS[name];
         expect(fn).toBeDefined();
         fn?.(from, to, out, 8, 8, 1);
@@ -601,12 +601,12 @@ describe("all transitions: midpoint regressions (p=0.5)", () => {
       const h = 8;
       const from = makeBuffer(w, h, 40000, 30000, 20000);
       const to = makeBuffer(w, h, 10000, 10000, 10000);
-      const zeros = Buffer.alloc(w * h * 6);
+      const zeros = new Uint8Array(w * h * 6);
 
       it("output ≠ from (not a no-op at midpoint)", () => {
         const fn = TRANSITIONS[name];
         expect(fn).toBeDefined();
-        const out = Buffer.alloc(w * h * 6);
+        const out = new Uint8Array(w * h * 6);
         fn?.(from, to, out, w, h, 0.5);
         expect(out.equals(from)).toBe(false);
       });
@@ -614,7 +614,7 @@ describe("all transitions: midpoint regressions (p=0.5)", () => {
       it("output ≠ to (not premature completion at midpoint)", () => {
         const fn = TRANSITIONS[name];
         expect(fn).toBeDefined();
-        const out = Buffer.alloc(w * h * 6);
+        const out = new Uint8Array(w * h * 6);
         fn?.(from, to, out, w, h, 0.5);
         expect(out.equals(to)).toBe(false);
       });
@@ -622,7 +622,7 @@ describe("all transitions: midpoint regressions (p=0.5)", () => {
       it("output is non-zero (shader actually wrote pixels)", () => {
         const fn = TRANSITIONS[name];
         expect(fn).toBeDefined();
-        const out = Buffer.alloc(w * h * 6);
+        const out = new Uint8Array(w * h * 6);
         fn?.(from, to, out, w, h, 0.5);
         expect(out.equals(zeros)).toBe(false);
       });
@@ -630,8 +630,8 @@ describe("all transitions: midpoint regressions (p=0.5)", () => {
       it("output is deterministic across repeated calls", () => {
         const fn = TRANSITIONS[name];
         expect(fn).toBeDefined();
-        const out1 = Buffer.alloc(w * h * 6);
-        const out2 = Buffer.alloc(w * h * 6);
+        const out1 = new Uint8Array(w * h * 6);
+        const out2 = new Uint8Array(w * h * 6);
         fn?.(from, to, out1, w, h, 0.5);
         fn?.(from, to, out2, w, h, 0.5);
         expect(out2.equals(out1)).toBe(true);
@@ -651,7 +651,7 @@ describe("hdrToLinear / linearToHdr", () => {
         // HLG squares small inputs, similar effect. Test the mid-to-high
         // range where roundtrip error is bounded.
         const values = [16384, 32768, 50000, 65535];
-        const buf = Buffer.alloc(values.length * 2);
+        const buf = new Uint8Array(values.length * 2);
         for (let i = 0; i < values.length; i++) {
           buf.writeUInt16LE(values[i] ?? 0, i * 2);
         }
@@ -666,14 +666,14 @@ describe("hdrToLinear / linearToHdr", () => {
       });
 
       it("zero maps to zero", () => {
-        const buf = Buffer.alloc(2);
+        const buf = new Uint8Array(2);
         buf.writeUInt16LE(0, 0);
         hdrToLinear(buf, transfer);
         expect(buf.readUInt16LE(0)).toBe(0);
       });
 
       it("65535 maps to 65535", () => {
-        const buf = Buffer.alloc(2);
+        const buf = new Uint8Array(2);
         buf.writeUInt16LE(65535, 0);
         hdrToLinear(buf, transfer);
         linearToHdr(buf, transfer);
@@ -682,7 +682,7 @@ describe("hdrToLinear / linearToHdr", () => {
 
       it("hdrToLinear produces monotonically increasing output", () => {
         const steps = [0, 1000, 5000, 10000, 20000, 40000, 65535];
-        const buf = Buffer.alloc(steps.length * 2);
+        const buf = new Uint8Array(steps.length * 2);
         for (let i = 0; i < steps.length; i++) {
           buf.writeUInt16LE(steps[i] ?? 0, i * 2);
         }
@@ -702,7 +702,7 @@ describe("hdrToLinear / linearToHdr", () => {
 
 describe("convertTransfer", () => {
   it("no-op when from === to", () => {
-    const buf = Buffer.alloc(6);
+    const buf = new Uint8Array(6);
     buf.writeUInt16LE(32768, 0);
     buf.writeUInt16LE(16384, 2);
     buf.writeUInt16LE(8192, 4);
@@ -713,7 +713,7 @@ describe("convertTransfer", () => {
 
   it("hlg→pq→hlg roundtrip preserves mid-high values", () => {
     const values = [16384, 32768, 50000, 65535];
-    const buf = Buffer.alloc(values.length * 2);
+    const buf = new Uint8Array(values.length * 2);
     for (let i = 0; i < values.length; i++) {
       buf.writeUInt16LE(values[i] ?? 0, i * 2);
     }
@@ -729,7 +729,7 @@ describe("convertTransfer", () => {
   });
 
   it("hlg→pq produces different values", () => {
-    const buf = Buffer.alloc(2);
+    const buf = new Uint8Array(2);
     buf.writeUInt16LE(32768, 0);
     const before = buf.readUInt16LE(0);
     convertTransfer(buf, "hlg", "pq");

@@ -1,6 +1,6 @@
 import { runCommand } from "citty";
 import { readFileSync } from "node:fs";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 
 const trackCheckReport = vi.fn();
 vi.mock("../telemetry/events.js", () => ({

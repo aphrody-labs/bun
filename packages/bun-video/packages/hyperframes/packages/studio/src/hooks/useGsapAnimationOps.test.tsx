@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";
 import { patchElementInHtml } from "../../../studio-server/src/helpers/sourceMutation.js";
 import { jsonResponse } from "./fetchStubTestUtils";

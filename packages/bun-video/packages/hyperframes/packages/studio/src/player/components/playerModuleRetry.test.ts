@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 
 // The module-scope kick in Player.tsx consumes the first attempt at import time,
 // so this starts failing; the first test asserts that kick happened.

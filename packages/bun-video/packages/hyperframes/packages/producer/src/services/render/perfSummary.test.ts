@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { buildRenderPerfSummary, roundDb } from "./perfSummary.js";
 import type { RenderJob } from "../renderOrchestrator.js";
 

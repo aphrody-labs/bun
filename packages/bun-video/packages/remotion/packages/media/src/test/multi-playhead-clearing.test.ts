@@ -1,5 +1,5 @@
 import {VideoSample, type VideoSampleSink} from 'mediabunny';
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 // Importing `keyframe-manager` directly would hit the import cycle with
 // `caches.ts`, so use the singleton it exports.
 import {keyframeManager} from '../caches';

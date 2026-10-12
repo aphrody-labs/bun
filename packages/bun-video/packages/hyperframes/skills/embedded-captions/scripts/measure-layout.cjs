@@ -32,7 +32,7 @@ for (const root of HF_ROOTS) {
   const cands = [path.join(root, "node_modules", "puppeteer")];
   const bunDir = path.join(root, "node_modules", ".bun");
   try {
-    if (fs.existsSync(bunDir)) {
+    if (await Bun.file(bunDir).exists()) {
       for (const d of fs.readdirSync(bunDir)) {
         if (d.startsWith("puppeteer@"))
           cands.push(path.join(bunDir, d, "node_modules", "puppeteer"));
@@ -43,7 +43,7 @@ for (const root of HF_ROOTS) {
   }
   for (const p of cands) {
     try {
-      if (fs.existsSync(p)) {
+      if (await Bun.file(p).exists()) {
         puppeteer = require(p);
         break;
       }
@@ -72,7 +72,7 @@ for (const root of HF_ROOTS) {
   const cands = [path.join(root, "node_modules", "gsap", "dist", "gsap.min.js")];
   const bunDir = path.join(root, "node_modules", ".bun");
   try {
-    if (fs.existsSync(bunDir)) {
+    if (await Bun.file(bunDir).exists()) {
       for (const d of fs.readdirSync(bunDir)) {
         if (d.startsWith("gsap@"))
           cands.push(path.join(bunDir, d, "node_modules", "gsap", "dist", "gsap.min.js"));
@@ -83,8 +83,8 @@ for (const root of HF_ROOTS) {
   }
   for (const p of cands) {
     try {
-      if (fs.existsSync(p)) {
-        gsapSource = fs.readFileSync(p, "utf8");
+      if (await Bun.file(p).exists()) {
+        gsapSource = await Bun.file(p).text();
         break;
       }
     } catch {
@@ -101,7 +101,7 @@ async function main() {
     process.exit(1);
   }
   const indexPath = path.resolve(projectDir, "index.html");
-  if (!fs.existsSync(indexPath)) {
+  if (!await Bun.file(indexPath).exists()) {
     console.error(`[measure] missing ${indexPath} — run make-composition.cjs first`);
     process.exit(2);
   }
@@ -109,7 +109,7 @@ async function main() {
   // Load plan to get groups + sample times
   const planPath = path.join(projectDir, "plan.json");
   let plan = null;
-  if (fs.existsSync(planPath)) plan = JSON.parse(fs.readFileSync(planPath, "utf8"));
+  if (await Bun.file(planPath).exists()) plan = await Bun.file(planPath).json();
 
   // Determine sample times: per group, sample multiple points across [in, out]
   // (catches subject motion within block, multi-frame validation).
@@ -137,7 +137,7 @@ async function main() {
 
   const browser = await puppeteer.launch({
     headless: "new",
-    executablePath: fs.existsSync(exe) ? exe : undefined,
+    executablePath: await Bun.file(exe).exists() ? exe : undefined,
     args: [
       "--disable-web-security",
       "--allow-file-access-from-files",
@@ -185,8 +185,8 @@ async function main() {
     // counts differ → slot layout / occlusion verdicts are measured on the wrong text.
     try {
       const fontsCss = path.join(__dirname, "..", "modes", "standard", "fonts", "fonts.css");
-      if (fs.existsSync(fontsCss))
-        await page.addStyleTag({ content: fs.readFileSync(fontsCss, "utf8") });
+      if (await Bun.file(fontsCss).exists())
+        await page.addStyleTag({ content: await Bun.file(fontsCss).text() });
     } catch {
       /* best-effort — fonts.css missing just reverts to old behavior */
     }
@@ -272,7 +272,7 @@ async function main() {
 
     const layout = { width: W, height: H, fps: FPS, samples };
     const outPath = path.join(projectDir, "_layout.json");
-    fs.writeFileSync(outPath, JSON.stringify(layout, null, 2));
+    await Bun.write(outPath, JSON.stringify(layout, null, 2));
     console.log(
       `[measure] wrote ${outPath} (${sampleTimes.length} sample frames, ${samples.reduce((a, s) => a + s.caps.length, 0)} cap measurements)`,
     );

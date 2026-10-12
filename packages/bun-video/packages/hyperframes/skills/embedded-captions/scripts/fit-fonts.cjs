@@ -92,7 +92,7 @@ function main() {
   const planPath = path.join(project, "plan.json");
   let plan;
   try {
-    plan = JSON.parse(fs.readFileSync(planPath, "utf8"));
+    plan = await Bun.file(planPath).json();
   } catch {
     console.error("[fit-fonts] no plan.json (Cinematic only) — skipping");
     process.exit(0);
@@ -151,7 +151,7 @@ function main() {
     }
   }
   if (changed) {
-    fs.writeFileSync(planPath, JSON.stringify(plan, null, 2));
+    await Bun.write(planPath, JSON.stringify(plan, null, 2));
     console.log(`[fit-fonts] shrank ${changed} group(s) to fit; wrote plan.json`);
   } else console.log("[fit-fonts] all groups fit their box — no change");
 }

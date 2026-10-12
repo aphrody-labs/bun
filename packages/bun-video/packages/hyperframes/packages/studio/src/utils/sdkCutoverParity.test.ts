@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { openComposition } from "@hyperframes/sdk";
 import { patchElementInHtml } from "../../../studio-server/src/helpers/sourceMutation.js";
 import type { PatchOperation } from "./sourcePatcher";

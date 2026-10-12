@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 
 // Each control the browser telemetry policy enforces, asserted individually.
 // This is the SSOT that `telemetry/client.ts`, `utils/studioTelemetry.ts` and

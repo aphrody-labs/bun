@@ -14,7 +14,7 @@ const affineFrameClockFile = path.join(
 );
 
 const readRotationKeyframes = () => {
-	const source = fs.readFileSync(affineFrameClockFile, 'utf-8');
+	const source = await Bun.file(affineFrameClockFile).text();
 	const match = /rotate:\s*interpolate\(\s*captureFrame,\s*\[([^\]]*)\]/.exec(
 		source,
 	);
@@ -29,7 +29,7 @@ const readRotationKeyframes = () => {
 };
 
 const readTranslateKeyframes = () => {
-	const source = fs.readFileSync(affineFrameClockFile, 'utf-8');
+	const source = await Bun.file(affineFrameClockFile).text();
 	const match =
 		/translate:\s*interpolate\(\s*frame,\s*\[([^\]]*)\],\s*\[([^\]]*)\]/.exec(
 			source,
@@ -51,13 +51,13 @@ test.describe('affine frame clock keyframes', () => {
 	let sourceBefore: string;
 
 	test.beforeEach(async () => {
-		sourceBefore = fs.readFileSync(affineFrameClockFile, 'utf-8');
+		sourceBefore = await Bun.file(affineFrameClockFile).text();
 		await startStudio();
 	});
 
 	test.afterEach(async () => {
 		await stopStudio();
-		fs.writeFileSync(affineFrameClockFile, sourceBefore);
+		await Bun.write(affineFrameClockFile, sourceBefore);
 	});
 
 	test('edits a keyframe through a useCurrentFrame alias', async ({page}) => {

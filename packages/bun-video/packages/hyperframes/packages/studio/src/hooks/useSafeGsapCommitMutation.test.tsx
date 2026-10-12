@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi } from "bun:test";
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 

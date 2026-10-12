@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { MEDIA_DURATION_FIXTURES } from "@hyperframes/parsers/media-duration-fixtures";
 import { fileURLToPath } from "node:url";
-import { beforeAll, describe, expect, it, onTestFinished } from "vitest";
+import { beforeAll, describe, expect, it, onTestFinished } from "bun:test";
 import { ensureDOMParser } from "../utils/dom.js";
 import {
   createProbeGate,

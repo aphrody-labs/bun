@@ -1,4 +1,4 @@
-import {test} from 'vitest';
+import {test} from 'bun:test';
 import {renderStillOnWeb} from '../render-still-on-web';
 import '../symbol-dispose';
 import {backgroundClipText3dTransform} from './fixtures/text/background-clip-text-3d-transform';

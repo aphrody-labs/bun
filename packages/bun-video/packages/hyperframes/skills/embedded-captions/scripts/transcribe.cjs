@@ -15,7 +15,7 @@ const { hfCli } = require("./hf-cli.cjs");
 
 function ensureSource(project) {
   const src = path.join(project, "source.mp4");
-  if (fs.existsSync(src)) return src;
+  if (await Bun.file(src).exists()) return src;
   const EXCL = new Set(["final", "bg_plus_caps", "fg_caps", "audio"]);
   let cands = fs
     .readdirSync(project)
@@ -113,7 +113,7 @@ function main() {
   // (offsets-in-ms, nested tokens) that can carry a `words` key yet poison the
   // compilers. Only a word-level {text,start,end} array counts as normalized.
   try {
-    const d = JSON.parse(fs.readFileSync(out, "utf8"));
+    const d = await Bun.file(out).json();
     const wordShaped =
       d &&
       Array.isArray(d.words) &&
@@ -138,13 +138,13 @@ function main() {
   } catch {}
 
   const src = ensureSource(project);
-  if (!fs.existsSync(src)) {
+  if (!await Bun.file(src).exists()) {
     console.error(`[transcribe] no source in ${project}`);
     process.exit(2);
   }
   const audio = path.join(project, "audio.mp3");
   // A stray audio.mp3 in the project makes lint call the render silent; only remove one this run made.
-  const audioIsScratch = !fs.existsSync(audio);
+  const audioIsScratch = !await Bun.file(audio).exists();
   if (audioIsScratch)
     cp.execFileSync(
       "ffmpeg",
@@ -252,7 +252,7 @@ function main() {
       process.exit(1);
     }
     const flatPath = info.transcriptPath || out;
-    const flat = JSON.parse(fs.readFileSync(flatPath, "utf8"));
+    const flat = await Bun.file(flatPath).json();
     const arr = Array.isArray(flat) ? flat : flat.words || [];
     words = arr
       .filter((w) => (w.text ?? w.word) != null)
@@ -290,9 +290,7 @@ function main() {
     .join(" ")
     .replace(/\s+([,.!?;:])/g, "$1")
     .trim();
-  fs.writeFileSync(
-    out,
-    JSON.stringify(
+  await Bun.write(out, JSON.stringify(
       {
         text,
         language_code: language || "en",

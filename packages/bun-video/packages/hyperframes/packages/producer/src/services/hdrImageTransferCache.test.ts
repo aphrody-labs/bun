@@ -9,7 +9,7 @@ import { createHdrImageTransferCache } from "./hdrImageTransferCache.ts";
  * source.
  */
 function makeSourceBuffer(pixelCount: number, seed = 0): Buffer {
-  const buf = Buffer.alloc(pixelCount * 6);
+  const buf = new Uint8Array(pixelCount * 6);
   for (let i = 0; i < pixelCount; i++) {
     const off = i * 6;
     // Spread values across the 16-bit range so HLG↔PQ LUT lookups land on

@@ -2,7 +2,7 @@
 // payloads. Unit tests cover the streak arithmetic; this proves the wiring
 // and pins the event shape a dashboard will be built against.
 
-import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterAll } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

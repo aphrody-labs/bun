@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "bun:test";
 import {
   sdkResolverShadowCheck,
   runResolverShadow,

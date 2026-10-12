@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from "bun:test";
 import { formatTime, formatSpeed, SPEED_PRESETS } from "./controls.js";
 
 // Install a stubbed contentDocument getter on the given iframe element. The

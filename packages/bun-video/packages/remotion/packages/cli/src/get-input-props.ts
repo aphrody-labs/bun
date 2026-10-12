@@ -19,13 +19,13 @@ export const getInputProps = (
 
 	const jsonFile = path.resolve(process.cwd(), props);
 	try {
-		if (fs.existsSync(jsonFile)) {
-			const rawJsonData = fs.readFileSync(jsonFile, 'utf-8');
+		if (await Bun.file(jsonFile).exists()) {
+			const rawJsonData = await Bun.file(jsonFile).text();
 
 			if (onUpdate) {
 				fs.watchFile(jsonFile, {interval: 100}, () => {
 					try {
-						onUpdate(JSON.parse(fs.readFileSync(jsonFile, 'utf-8')));
+						onUpdate(await Bun.file(jsonFile).json());
 						Log.info(
 							{indent: false, logLevel},
 							`Updated input props from ${jsonFile}.`,

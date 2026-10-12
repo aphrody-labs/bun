@@ -2,7 +2,7 @@
 
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { Timeline } from "./Timeline";
 import { installTimelineMountEnv } from "./timelineMountTestEnv";
 import { liveTime, usePlayerStore } from "../store/playerStore";

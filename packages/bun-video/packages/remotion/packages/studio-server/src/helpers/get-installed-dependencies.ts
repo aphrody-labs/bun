@@ -12,7 +12,7 @@ export const getInstalledDependenciesWithVersions = (
 	remotionRoot: string,
 ): DepsWithVersions => {
 	const packageJsonFilePath = path.join(remotionRoot, 'package.json');
-	const packageJson = JSON.parse(fs.readFileSync(packageJsonFilePath, 'utf-8'));
+	const packageJson = await Bun.file(packageJsonFilePath).json();
 
 	return {
 		dependencies: packageJson.dependencies ?? {},

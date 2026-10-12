@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "bun:test";
 import { runtimeProtocolMetadata } from "@hyperframes/core/runtime/protocol";
 
 type Player = HTMLElement & {

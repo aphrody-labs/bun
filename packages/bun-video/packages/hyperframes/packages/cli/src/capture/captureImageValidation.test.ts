@@ -1,5 +1,5 @@
 import sharp from "sharp";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { captureImageExtension } from "./captureImageValidation.js";
 
 function svg(content: string): Buffer {
@@ -49,7 +49,7 @@ describe("captured image validation", () => {
       .toBuffer();
     expect(await captureImageExtension(bytes)).toBe(".png");
     expect(await captureImageExtension(bytes.subarray(0, 40))).toBeNull();
-    expect(await captureImageExtension(Buffer.alloc(6000, 65))).toBeNull();
+    expect(await captureImageExtension(new Uint8Array(6000, 65))).toBeNull();
   });
 
   it("preserves theme CSS, custom properties, and local gradient references", async () => {

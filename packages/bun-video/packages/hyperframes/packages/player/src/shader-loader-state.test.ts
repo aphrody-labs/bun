@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { createShaderLoader } from "./shader-loader-element.js";
 import { ShaderLoaderState } from "./shader-loader-state.js";
 

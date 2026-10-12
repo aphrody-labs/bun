@@ -31,7 +31,7 @@ describe('Should be able to bundle @remotion/cloudrun/client with ESBuild', () =
 		expect(warnings.length).toBe(0);
 
 		// Should not include remotion, but currently does react
-		const contents = fs.readFileSync(outfile, 'utf-8');
+		const contents = await Bun.file(outfile).text();
 		expect(contents.includes('getRemotionEnvironment')).toBe(false);
 	});
 

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 
 import { handleRuntimeMessage, type MessageHandlerCallbacks } from "./runtime-message-handler.js";
 import type { ParentMediaManager } from "./parent-media.js";

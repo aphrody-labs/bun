@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, useLayoutEffect } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
 import { trackStudioEvent } from "../utils/studioTelemetry";
 import { trackKeyframeCommit } from "../utils/keyframeUsage";

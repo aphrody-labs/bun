@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import type { Browser } from "puppeteer-core";
 import { BrowserLeasePool, type BrowserLaunchFingerprint } from "./browserLeasePool.js";
 

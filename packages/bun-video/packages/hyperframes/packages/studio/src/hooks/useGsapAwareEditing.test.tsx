@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import React, { act } from "react";
-import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
+import { afterEach, describe, expect, it, vi, type Mock } from "bun:test";
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";
 import type { RotationCommit } from "../components/editor/rotationDraft";

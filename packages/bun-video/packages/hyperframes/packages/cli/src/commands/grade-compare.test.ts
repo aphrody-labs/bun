@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { HF_COLOR_GRADING_ATTR, serializeHfColorGrading } from "@hyperframes/core";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import {
   buildGradeCompareHtml,
   buildGradeCompareSuccessPayload,

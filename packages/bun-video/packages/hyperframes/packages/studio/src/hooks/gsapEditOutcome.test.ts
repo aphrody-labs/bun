@@ -1,5 +1,5 @@
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { buildStudioSaveFailureProperties } from "../utils/studioSaveDiagnostics";
 import {
   GsapEditBlockedError,

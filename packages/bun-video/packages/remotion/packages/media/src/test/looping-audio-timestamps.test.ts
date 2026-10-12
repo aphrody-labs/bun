@@ -1,5 +1,5 @@
 import type {AudioBufferSink, WrappedAudioBuffer} from 'mediabunny';
-import {expect, test} from 'vitest';
+import {expect, test} from 'bun:test';
 import {
 	getDurationOfNode,
 	getTrimStartForAudioNode,

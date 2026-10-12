@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import reference from "./__fixtures__/motion-blur-ae-reference.json";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");

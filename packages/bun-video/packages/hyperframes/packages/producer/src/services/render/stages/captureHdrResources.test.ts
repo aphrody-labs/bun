@@ -18,7 +18,7 @@ import {
   type VideoElement,
   type VideoMetadata,
 } from "@hyperframes/engine";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
 import { createRenderJob } from "../../renderOrchestrator.js";
 import { resolveHdrVideoFrameIndex } from "../../hdrCompositor.js";
 import {
@@ -523,7 +523,7 @@ describe("extractHdrVideoFrames", () => {
           const rawPath = args.at(-1);
           if (!rawPath) throw new Error("mock FFmpeg output path missing");
           // The visible [0, 2] interval is two seconds at 2fps = 4 rgb48le 1x1 frames.
-          writeFileSync(rawPath, Buffer.alloc(4 * 6));
+          writeFileSync(rawPath, new Uint8Array(4 * 6));
           return ffmpegResult(true);
         },
       });
@@ -597,7 +597,7 @@ describe("extractHdrVideoFrames", () => {
           calls.push(args);
           const rawPath = args.at(-1);
           if (!rawPath) throw new Error("mock FFmpeg output path missing");
-          writeFileSync(rawPath, Buffer.alloc(expectedFrameCount * 6));
+          writeFileSync(rawPath, new Uint8Array(expectedFrameCount * 6));
           return ffmpegResult(true);
         },
       });
@@ -656,7 +656,7 @@ describe("extractHdrVideoFrames", () => {
             calls.push(args);
             const rawPath = args.at(-1);
             if (!rawPath) throw new Error("mock FFmpeg output path missing");
-            writeFileSync(rawPath, Buffer.alloc(6 * 6));
+            writeFileSync(rawPath, new Uint8Array(6 * 6));
             return ffmpegResult(true);
           },
         });
@@ -698,7 +698,7 @@ describe("extractHdrVideoFrames", () => {
             if (!rawPath) throw new Error("mock FFmpeg output path missing");
             createdRawPaths.push(rawPath);
             if (call === 2) return ffmpegResult(false);
-            writeFileSync(rawPath, Buffer.alloc(4 * 6));
+            writeFileSync(rawPath, new Uint8Array(4 * 6));
             return ffmpegResult(true);
           },
         }),
@@ -718,7 +718,7 @@ describe("cleanupHdrVideoFrameSource", () => {
   it("closes the raw descriptor and immediately removes its directory", () => {
     const dir = mkdtempSync(join(tmpdir(), "hf-hdr-cleanup-"));
     const rawPath = join(dir, "frames.rgb48le");
-    writeFileSync(rawPath, Buffer.alloc(12));
+    writeFileSync(rawPath, new Uint8Array(12));
     const fd = openSync(rawPath, constants.O_RDONLY);
 
     cleanupHdrVideoFrameSource({
@@ -729,7 +729,7 @@ describe("cleanupHdrVideoFrameSource", () => {
       height: 2,
       frameSize: 12,
       frameCount: 1,
-      scratch: Buffer.alloc(12),
+      scratch: new Uint8Array(12),
     });
 
     expect(existsSync(dir)).toBe(false);
@@ -740,7 +740,7 @@ describe("cleanupHdrVideoFrameSource", () => {
     vi.stubEnv("KEEP_TEMP", "1");
     const dir = mkdtempSync(join(tmpdir(), "hf-hdr-keep-temp-"));
     const rawPath = join(dir, "frames.rgb48le");
-    writeFileSync(rawPath, Buffer.alloc(12));
+    writeFileSync(rawPath, new Uint8Array(12));
     const fd = openSync(rawPath, constants.O_RDONLY);
 
     try {
@@ -752,7 +752,7 @@ describe("cleanupHdrVideoFrameSource", () => {
         height: 2,
         frameSize: 12,
         frameCount: 1,
-        scratch: Buffer.alloc(12),
+        scratch: new Uint8Array(12),
       });
 
       expect(existsSync(rawPath)).toBe(true);

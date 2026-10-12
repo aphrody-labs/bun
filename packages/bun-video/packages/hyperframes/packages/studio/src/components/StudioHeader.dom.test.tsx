@@ -6,7 +6,7 @@
  */
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "bun:test";
 import { buttonSizes, buttonVariants } from "./ui";
 import { isTypingTarget } from "../utils/typingTarget";
 import { shouldIgnorePlaybackShortcutTarget } from "../player/lib/playbackShortcuts";

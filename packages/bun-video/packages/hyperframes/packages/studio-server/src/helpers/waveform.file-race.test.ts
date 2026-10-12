@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -42,12 +42,11 @@ vi.mock("node:fs", async (importOriginal) => {
     writeFileSync: (...args: Parameters<typeof fs.writeFileSync>) => {
       hooks.writing?.();
       if (hooks.failWrite) {
-        fs.writeFileSync(args[0], "partial");
+        await Bun.write(args[0], "partial");
         throw new Error("cache write failed");
       }
-      return fs.writeFileSync(...args);
-    },
-    rmSync: (...args: Parameters<typeof fs.rmSync>) => {
+      return await Bun.write(...args);
+    }, rmSync: (...args: Parameters<typeof fs.rmSync>) => {
       if (hooks.failCleanup) throw new Error("cache cleanup failed");
       return fs.rmSync(...args);
     },
@@ -74,7 +73,7 @@ beforeEach(() => {
     failCleanup: false,
   });
   projectDir = fs.mkdtempSync(join(tmpdir(), "hf-waveform-test-"));
-  fs.writeFileSync(join(projectDir, "audio.wav"), "audio");
+  await Bun.write(join(projectDir, "audio.wav"), "audio");
   cacheDir = join(projectDir, ".waveform-cache");
   cachePath = join(
     cacheDir,
@@ -95,11 +94,11 @@ beforeEach(() => {
 afterEach(() => fs.rmSync(projectDir, { recursive: true, force: true }));
 
 function readPeaks() {
-  return JSON.parse(fs.readFileSync(cachePath, "utf8"));
+  return await Bun.file(cachePath).json();
 }
 function seedCache(content: string) {
   fs.mkdirSync(cacheDir, { recursive: true });
-  fs.writeFileSync(cachePath, content);
+  await Bun.write(cachePath, content);
 }
 function request() {
   return app.request("http://localhost/projects/demo/waveform/audio.wav");
@@ -118,14 +117,14 @@ for (const caller of ["helper", "route"]) {
       "does not write through a swapped cache symlink (target exists: %s)",
       async (exists) => {
         const target = join(projectDir, "outside.json");
-        if (exists) fs.writeFileSync(target, "untouched");
+        if (exists) await Bun.write(target, "untouched");
         hooks.decode = () => {
           fs.mkdirSync(cacheDir, { recursive: true });
           fs.symlinkSync(target, cachePath, "file");
         };
         await generate();
-        if (exists) expect(fs.readFileSync(target, "utf8")).toBe("untouched");
-        else expect(fs.existsSync(target)).toBe(false);
+        if (exists) expect(await Bun.file(target).text()).toBe("untouched");
+        else expect(await Bun.file(target).exists()).toBe(false);
         expect(fs.lstatSync(cachePath).isSymbolicLink()).toBe(false);
         expect(readPeaks()).toHaveLength(4000);
         expect(fs.readdirSync(cacheDir)).toEqual([
@@ -145,7 +144,7 @@ for (const caller of ["helper", "route"]) {
         );
         if (exists) {
           fs.mkdirSync(target);
-          fs.writeFileSync(outsideCache, "untouched");
+          await Bun.write(outsideCache, "untouched");
         }
         fs.symlinkSync(target, cacheDir, process.platform === "win32" ? "junction" : "dir");
         try {
@@ -157,9 +156,9 @@ for (const caller of ["helper", "route"]) {
             expect((await response.json()).peaks).toHaveLength(4000);
           }
           if (exists) {
-            expect(fs.readFileSync(outsideCache, "utf8")).toBe("untouched");
+            expect(await Bun.file(outsideCache).text()).toBe("untouched");
             expect(fs.readdirSync(target)).toHaveLength(1);
-          } else expect(fs.existsSync(target)).toBe(false);
+          } else expect(await Bun.file(target).exists()).toBe(false);
         } finally {
           fs.rmSync(outside, { recursive: true, force: true });
         }
@@ -188,7 +187,7 @@ for (const caller of ["helper", "route"]) {
     });
 
     it("publishes complete JSON and removes staging directories", async () => {
-      hooks.writing = () => expect(fs.existsSync(cachePath)).toBe(false);
+      hooks.writing = () => expect(await Bun.file(cachePath).exists()).toBe(false);
       await generate();
       expect(readPeaks()).toHaveLength(4000);
       expect(fs.readdirSync(cacheDir)).toHaveLength(1);
@@ -216,18 +215,18 @@ for (const caller of ["helper", "route"]) {
     );
 
     it("handles a cache-directory creation failure with the existing error contract", async () => {
-      fs.writeFileSync(cacheDir, "blocked");
+      await Bun.write(cacheDir, "blocked");
       if (caller === "helper")
         await expect(generateWaveformCache(projectDir, "audio.wav")).rejects.toThrow();
       else expect((await request()).status).toBe(200);
-      expect(fs.readFileSync(cacheDir, "utf8")).toBe("blocked");
+      expect(await Bun.file(cacheDir).text()).toBe("blocked");
     });
   });
 }
 
 it("regenerates a corrupt cache and reuses the replacement", async () => {
   seedCache("not JSON");
-  hooks.writing = () => expect(fs.readFileSync(cachePath, "utf8")).toBe("not JSON");
+  hooks.writing = () => expect(await Bun.file(cachePath).text()).toBe("not JSON");
   expect((await request()).status).toBe(200);
   expect(readPeaks()).toHaveLength(4000);
   expect((await request()).status).toBe(200);
@@ -252,7 +251,7 @@ it("keeps helper skipping, route 404s and decode failures unchanged", async () =
   fs.unlinkSync(join(projectDir, "audio.wav"));
   await expect(generateWaveformCache(projectDir, "audio.wav")).resolves.toBeUndefined();
   expect((await request()).status).toBe(404);
-  expect(fs.existsSync(cacheDir)).toBe(false);
+  expect(await Bun.file(cacheDir).exists()).toBe(false);
 });
 
 it("cleanup failure does not turn a successful publication into a helper error", async () => {
@@ -266,5 +265,5 @@ it("cleanup failure does not mask the original write error", async () => {
   await expect(generateWaveformCache(projectDir, "audio.wav")).rejects.toThrow(
     "cache write failed",
   );
-  expect(fs.existsSync(cachePath)).toBe(false);
+  expect(await Bun.file(cachePath).exists()).toBe(false);
 });

@@ -1,4 +1,4 @@
-import {test} from 'vitest';
+import {test} from 'bun:test';
 import {page} from 'vitest/browser';
 import {renderStillOnWeb} from '../render-still-on-web';
 import '../symbol-dispose';

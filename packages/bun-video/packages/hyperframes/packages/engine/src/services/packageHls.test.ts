@@ -3,7 +3,7 @@ import { EventEmitter } from "node:events";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { getFfmpegBinary, getFfprobeBinary } from "../utils/ffmpegBinaries.js";
 import {
   HLS_AUDIO_PLAYLIST,

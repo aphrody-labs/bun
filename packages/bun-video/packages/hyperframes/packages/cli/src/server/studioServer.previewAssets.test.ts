@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { createStudioServer, type StudioServer } from "./studioServer.js";
@@ -20,8 +20,8 @@ const SCENE = `<template id="scene-template">
   </div>
 </template>`;
 
-const PIC = Buffer.alloc(4096, 7);
-const PIC_2X = Buffer.alloc(8192, 9);
+const PIC = new Uint8Array(4096, 7);
+const PIC_2X = new Uint8Array(8192, 9);
 
 let root: string;
 let projectDir: string;
@@ -31,12 +31,12 @@ beforeEach(() => {
   ({ root, projectDir } = makeStudioServerRoot("hf-preview-assets-"));
   fs.mkdirSync(path.join(projectDir, "assets"));
   fs.mkdirSync(path.join(projectDir, "compositions"));
-  fs.writeFileSync(path.join(projectDir, "index.html"), COMPOSITION);
-  fs.writeFileSync(path.join(projectDir, "compositions", "scene.html"), SCENE);
-  fs.writeFileSync(path.join(projectDir, "assets", "pic.png"), PIC);
-  fs.writeFileSync(path.join(projectDir, "assets", "pic@2x.png"), PIC_2X);
-  fs.writeFileSync(path.join(projectDir, "assets", "brand.ttf"), Buffer.alloc(1024, 3));
-  fs.writeFileSync(path.join(projectDir, "assets", "clip.mp4"), Buffer.alloc(1024, 5));
+  await Bun.write(path.join(projectDir, "index.html"), COMPOSITION);
+  await Bun.write(path.join(projectDir, "compositions", "scene.html"), SCENE);
+  await Bun.write(path.join(projectDir, "assets", "pic.png"), PIC);
+  await Bun.write(path.join(projectDir, "assets", "pic@2x.png"), PIC_2X);
+  await Bun.write(path.join(projectDir, "assets", "brand.ttf"), new Uint8Array(1024, 3));
+  await Bun.write(path.join(projectDir, "assets", "clip.mp4"), new Uint8Array(1024, 5));
   server = createStudioServer({ projectDir, projectName: "film" });
 });
 
@@ -73,7 +73,7 @@ describe("studio preview document", () => {
 
   it("tags no asset a copy tool just rewrote with its old mtime", async () => {
     const clip = path.join(projectDir, "assets", "clip.mp4");
-    fs.writeFileSync(clip, Buffer.alloc(1024, 6));
+    await Bun.write(clip, Buffer.alloc(1024, 6));
     const copied = new Date("2026-01-01T00:00:00Z");
     fs.utimesSync(clip, copied, copied);
 

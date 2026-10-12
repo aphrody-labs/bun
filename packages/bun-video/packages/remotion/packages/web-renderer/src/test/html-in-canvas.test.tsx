@@ -1,7 +1,7 @@
 import {Player} from '@remotion/player';
 import {createRoot} from 'react-dom/client';
 import {HtmlInCanvas, Internals} from 'remotion';
-import {expect, test, vi} from 'vitest';
+import {expect, test, vi} from 'bun:test';
 import {createScaffold} from '../create-scaffold';
 import {supportsNativeHtmlInCanvas} from '../html-in-canvas';
 import {makeInternalState} from '../internal-state';

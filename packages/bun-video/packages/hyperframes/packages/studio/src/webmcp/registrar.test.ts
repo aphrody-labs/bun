@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { findToolDefinitionError, registerStudioTools } from "./registrar";
 import type { ModelContext, ModelContextTool } from "./types";
 

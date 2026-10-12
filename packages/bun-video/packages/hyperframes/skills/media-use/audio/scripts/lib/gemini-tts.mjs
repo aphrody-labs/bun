@@ -105,7 +105,7 @@ function pcmToWav(pcm, mime) {
   if (!Number.isInteger(rate) || rate < 8000 || rate > 96000 || !pcm.length || pcm.length % 2) {
     throw new Error("Gemini TTS returned invalid PCM audio or sample rate");
   }
-  const header = Buffer.alloc(44);
+  const header = new Uint8Array(44);
   header.write("RIFF");
   header.writeUInt32LE(36 + pcm.length, 4);
   header.write("WAVEfmt ", 8);

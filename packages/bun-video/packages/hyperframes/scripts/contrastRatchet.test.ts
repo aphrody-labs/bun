@@ -1,7 +1,7 @@
 // guards: packages/studio/src/styles/**, packages/studio/src/components/editor/FileTreeIcons.tsx
 import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import {
   composite,
   contrast,

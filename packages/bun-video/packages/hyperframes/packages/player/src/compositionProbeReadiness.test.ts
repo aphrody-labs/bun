@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { CompositionProbe } from "./composition-probe.js";
 
 function mount(markup: string, globals: Record<string, unknown> = {}) {

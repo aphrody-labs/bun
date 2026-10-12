@@ -49,8 +49,10 @@ export class MpvClient {
   command(...args: string[]): void {
     if (args.length === 0) throw new TypeError("mpv command requires at least one argument");
     const encoded = args.map(value => Buffer.from(`${value}\0`));
-    const argv = Buffer.alloc((encoded.length + 1) * 8);
-    for (let index = 0; index < encoded.length; index++) argv.writeBigUInt64LE(BigInt(ptr(encoded[index])), index * 8);
+    const argv = new Uint8Array((encoded.length + 1) * 8);
+    const pointers = new DataView(argv.buffer);
+    for (let index = 0; index < encoded.length; index++)
+      pointers.setBigUint64(index * 8, BigInt(ptr(encoded[index])), true);
     const status = this.#library.symbols.mpv_command(this.#handle, ptr(argv));
     if (status < 0) throw new Error(`mpv_command failed: ${status}`);
   }

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import { desktopDownloadUrl, type DesktopOpenResult } from "../utils/desktopApp.js";
 import { mountDesktopRoutes, sameOriginPost } from "./desktopRoutes.js";
 

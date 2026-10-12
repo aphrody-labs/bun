@@ -21,7 +21,7 @@
  * The harness (`runParity`, `modelOf`) is exported so the follow-up WS-3 op-PR
  * workflow can reuse it to gate each cut-over op.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import {
   updateAnimationInScript as updateAnimAcorn,
   addAnimationToScript as addAnimAcorn,

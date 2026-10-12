@@ -1,5 +1,5 @@
 import { Readable } from "node:stream";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { readNodeRequestBody } from "./vite.request-body.js";
 
 describe("readNodeRequestBody", () => {

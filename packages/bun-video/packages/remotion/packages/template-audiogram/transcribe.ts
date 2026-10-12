@@ -102,8 +102,7 @@ async function transcribeAudio(options: TranscriptionOptions) {
       : null,
   }));
 
-  fs.writeFileSync(
-    path.join(process.cwd(), "./public/captions.json"),
+  await Bun.write(path.join(process.cwd(), "./public/captions.json"),
     JSON.stringify(adjustedCaptions, null, 2),
   );
 

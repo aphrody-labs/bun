@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { trackStudioEvent } from "../../utils/studioTelemetry";
 vi.mock("../../utils/studioTelemetry", () => ({ trackStudioEvent: vi.fn() }));
 import { DomEditSaveQueueOpenError } from "../../utils/domEditSaveQueue";

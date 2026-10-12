@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { gsap } from "gsap";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
 import { findParsedTween, parsedImplicitEndValue } from "./gsapParsedTween";
 import { liveTween, previewWith, tween } from "./gsapParsedTween.test-helpers";
 

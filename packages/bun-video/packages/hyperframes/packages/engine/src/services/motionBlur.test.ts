@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import {
   ADAPTIVE_SAMPLE_STEPS,
   MAX_SAMPLES_PER_FRAME,
