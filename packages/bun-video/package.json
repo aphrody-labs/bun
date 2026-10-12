@@ -37,8 +37,8 @@
     "labs",
     "assets",
     "packages/mediabunny",
-    "vendor/yt-dlp",
-    "vendor/mpv",
+    "packages/yt-dlp",
+    "packages/mpv",
     "README.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
