@@ -4,7 +4,8 @@ import type { CrawlerCache } from "./cache";
 
 export interface StudioSubtitle { readonly src: string; readonly srclang: string; readonly label: string; readonly default?: boolean; }
 export interface StudioVariant { readonly label: string; readonly src: string; }
-export interface StudioAsset { readonly id: string; readonly title: string; readonly src: string; readonly type?: string; readonly subtitles?: readonly StudioSubtitle[]; readonly variants?: readonly StudioVariant[]; }
+export interface StudioChapter { readonly title: string; readonly start: number; }
+export interface StudioAsset { readonly id: string; readonly title: string; readonly src: string; readonly type?: string; readonly subtitles?: readonly StudioSubtitle[]; readonly variants?: readonly StudioVariant[]; readonly chapters?: readonly StudioChapter[]; }
 export interface VideoStudioProps { readonly assets: readonly StudioAsset[]; readonly initialAssetId?: string; readonly className?: string; readonly cache?: CrawlerCache; readonly storageKey?: string; readonly autoPlay?: boolean; readonly loop?: boolean; readonly muted?: boolean; readonly onAssetSelect?: (asset: StudioAsset) => void; readonly onPlayback?: (state: { currentTime: number; duration: number; paused: boolean }) => void; }
 
 /** Compact React studio surface for browsing assets and driving the Bun Video pipeline. */
@@ -106,6 +107,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
         ) : <p>Aucun média sélectionné.</p>}
         {selected && <p>{selected.title}{selected.type ? ` · ${selected.type}` : ""}</p>}
         {selected && <progress max={progress.duration || 1} value={progress.currentTime} aria-label="Progression" />}
+        {selected?.chapters && <nav aria-label="Chapitres">{selected.chapters.map(chapter => <button key={`${chapter.start}-${chapter.title}`} type="button" onClick={() => { if (videoRef.current) videoRef.current.currentTime = chapter.start; }}>{chapter.title}</button>)}</nav>}
         {selected && <nav aria-label="Contrôles de file"><button type="button" onClick={() => selectRelative(-1)}>Précédent</button><button type="button" onClick={() => selectRelative(1)}>Suivant</button></nav>}
         {selected && <nav aria-label="Affichage"><button type="button" onClick={fullscreen}>Plein écran</button><button type="button" onClick={pictureInPicture}>Picture-in-Picture</button></nav>}
         {selected && <label>Vitesse <select value={playbackRate} onChange={event => setPlaybackRate(Number(event.target.value))}><option value="0.5">0,5×</option><option value="0.75">0,75×</option><option value="1">1×</option><option value="1.25">1,25×</option><option value="1.5">1,5×</option><option value="2">2×</option></select></label>}
