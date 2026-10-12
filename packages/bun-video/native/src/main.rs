@@ -1,4 +1,6 @@
-use bun_video_native::{Backend, EncodeOptions, probe_backend, probe_media, spawn_decode_rgba};
+use bun_video_native::{Backend, EncodeOptions, probe_backend, probe_media};
+#[cfg(not(feature = "libav"))]
+use bun_video_native::spawn_decode_rgba;
 use std::ffi::OsStr;
 use std::io;
 use std::path::PathBuf;
@@ -35,10 +37,15 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             io::stdout().lock().write_all(&output.stdout)?;
         }
         Some("decode") if args.len() == 2 => {
+            #[cfg(feature = "libav")]
+            bun_video_native::libav::decode_rgba(&PathBuf::from(&args[1]), &mut io::stdout().lock())?;
+            #[cfg(not(feature = "libav"))]
+            {
             let mut child = spawn_decode_rgba(&ffmpeg, &PathBuf::from(&args[1]))?;
             let result = io::copy(&mut child.stdout.take().ok_or("decoder stdout unavailable")?, &mut io::stdout().lock());
             if let Err(error) = result { let _ = child.kill(); let _ = child.wait(); return Err(error.into()); }
             if !child.wait()?.success() { return Err("FFmpeg decode failed".into()); }
+            }
         }
         Some("encode") if args.len() == 6 || args.len() == 7 => {
             let allow_lossy = args.len() == 7 && args[6] == "--allow-lossy";

@@ -32,5 +32,8 @@ optional external codecs require their own dependencies.
 
 Qualification on the owner Windows host: the built DLLs opened a generated
 FFV1 Matroska fixture and yielded its three packets through Bun FFI. Native
-error -22 was decoded through av_strerror. End-to-end decode, encode, GPU
-texture sharing and Remotion/HyperFrames integration remain unqualified.
+error -22 was decoded through av_strerror. The native Rust libav decoder also
+produced three RGBA frames (49,152 bytes) identical to FFmpeg CLI output,
+SHA-256 f855642a83b0f29aea59326cbdc0729b340500df1236e0da45ac47be01c94bcf.
+Encode, GPU texture sharing and Remotion/HyperFrames integration remain
+unqualified.

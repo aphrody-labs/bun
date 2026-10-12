@@ -8,7 +8,7 @@ license = "MIT"
 [workspace]
 
 [features]
-default = ["gpu"]
+default = ["libav", "gpu"]
 gpu = ["dep:gpu-video"]
 libav = ["dep:ffmpeg-next"]
 

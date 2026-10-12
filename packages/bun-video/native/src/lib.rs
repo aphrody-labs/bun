@@ -1,6 +1,8 @@
 //! Typed streaming encoder commands; no shell, frame buffering, or automatic GPU fallback.
 #![cfg_attr(windows, feature(windows_process_extensions_raw_attribute))]
 pub mod owned_process;
+#[cfg(feature = "libav")]
+pub mod libav;
 use owned_process::{OwnedChild, spawn_owned};
 use std::ffi::{OsStr, OsString};
 use std::io;
