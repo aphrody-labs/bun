@@ -1,0 +1,105 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import Foundation
+@_exported import Logging
+import MullvadTypes
+
+private enum LoggerOutput {
+    case fileOutput(_ fileOutput: LogFileOutputStream)
+    case osLogOutput(_ subsystem: String)
+}
+
+public final class LoggerBuilder: @unchecked Sendable {
+    // Static lets are guaranteed by the compiler to be initialized only once in a thread safe way
+    public static let shared = LoggerBuilder()
+
+    private init() {
+        let pid = ProcessInfo.processInfo.processIdentifier
+        metadata = ["pid": .string(String(pid))]
+    }
+
+    private static let lock: NSLock = NSLock()
+
+    /// Makes the `install` function idempotent
+    static nonisolated(unsafe) private var initializedLoggingSystem = false
+
+    private var logRotationErrors: [Error] = []
+    private var outputs: [LoggerOutput] = []
+    private let metadata: Logger.Metadata
+    private var logLevel: Logger.Level = .debug
+
+    public func addFileOutput(fileURL: URL, header: String) {
+        Self.lock.withLock {
+            let logsDirectoryURL = fileURL.deletingLastPathComponent()
+
+            try? FileManager.default.createDirectory(
+                at: logsDirectoryURL,
+                withIntermediateDirectories: false,
+                attributes: nil
+            )
+
+            do {
+                try LogRotation.rotateLogs(
+                    logDirectory: logsDirectoryURL,
+                    options: LogRotation.Options(
+                        storageSizeLimit: 2_000_000,  // 2 MB
+                        oldestAllowedDate: Date(timeIntervalSinceNow: -Duration.days(7).timeInterval)
+                    ))
+            } catch {
+                logRotationErrors.append(error)
+            }
+
+            outputs.append(.fileOutput(LogFileOutputStream(fileURL: fileURL, header: header)))
+        }
+    }
+
+    public func addOSLogOutput(subsystem: String) {
+        Self.lock.withLock {
+            outputs.append(.osLogOutput(subsystem))
+        }
+    }
+
+    public func install(_ redactor: LogRedacting) {
+        Self.lock.withLock {
+            guard Self.initializedLoggingSystem == false else { return }
+            Self.initializedLoggingSystem = true
+
+            LoggingSystem.bootstrap { [self] label -> LogHandler in
+                let logHandlers: [LogHandler] = outputs.map { output in
+                    switch output {
+                    case let .fileOutput(stream):
+                        return CustomFormatLogHandler(label: label, streams: [stream], redactor: redactor)
+
+                    case let .osLogOutput(subsystem):
+                        return OSLogHandler(subsystem: subsystem, category: label)
+                    }
+                }
+
+                if logHandlers.isEmpty {
+                    return SwiftLogNoOpLogHandler()
+                } else {
+                    var multiplex = MultiplexLogHandler(logHandlers)
+                    multiplex.metadata = metadata
+                    multiplex.logLevel = logLevel
+                    return multiplex
+                }
+            }
+
+            if !logRotationErrors.isEmpty {
+                let rotationLogger = Logger(label: "LogRotation")
+
+                for error in logRotationErrors {
+                    rotationLogger.error(error: error, message: error.description)
+                }
+            }
+        }
+    }
+}

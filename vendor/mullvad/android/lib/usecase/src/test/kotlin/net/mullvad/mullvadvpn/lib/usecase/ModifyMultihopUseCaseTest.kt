@@ -1,0 +1,153 @@
+package net.mullvad.mullvadvpn.lib.usecase
+
+import arrow.core.right
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkStatic
+import kotlin.test.assertEquals
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.runTest
+import net.mullvad.mullvadvpn.lib.common.util.isDaitaEnabled
+import net.mullvad.mullvadvpn.lib.common.util.multihopMode
+import net.mullvad.mullvadvpn.lib.model.Constraint
+import net.mullvad.mullvadvpn.lib.model.GeoLocationId
+import net.mullvad.mullvadvpn.lib.model.MultihopMode
+import net.mullvad.mullvadvpn.lib.model.RelayItem
+import net.mullvad.mullvadvpn.lib.model.Settings
+import net.mullvad.mullvadvpn.lib.repository.CustomListsRepository
+import net.mullvad.mullvadvpn.lib.repository.RelayListRepository
+import net.mullvad.mullvadvpn.lib.repository.SettingsRepository
+import net.mullvad.mullvadvpn.lib.repository.WireguardConstraintsRepository
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertInstanceOf
+import org.junit.jupiter.api.assertNotNull
+
+class ModifyMultihopUseCaseTest {
+    private val mockRelayListRepository: RelayListRepository = mockk()
+    private val mockSettingsRepository: SettingsRepository = mockk()
+    private val mockCustomListRepository: CustomListsRepository = mockk(relaxed = true)
+    private val mockWireguardConstraintsRepository: WireguardConstraintsRepository = mockk()
+
+    private val settingsFlow = MutableStateFlow<Settings>(mockk())
+
+    private val modifyMultihopUseCase =
+        ModifyMultihopUseCase(
+            relayListRepository = mockRelayListRepository,
+            settingsRepository = mockSettingsRepository,
+            customListsRepository = mockCustomListRepository,
+            wireguardConstraintsRepository = mockWireguardConstraintsRepository,
+        )
+
+    @BeforeEach
+    fun setUp() {
+        mockkStatic(SETTINGS_UTIL)
+        every { any<Settings>().isDaitaEnabled() } returns false
+        every { mockSettingsRepository.settingsUpdates } returns settingsFlow
+    }
+
+    @Test
+    fun `when changing entry and exit is the same should throw error`() = runTest {
+        // Arrange
+        val mockRelayItemId: GeoLocationId.Hostname = mockk()
+        val mockRelayItem: RelayItem.Location.Relay = mockk()
+        val mockSettings: Settings = mockk()
+
+        every { mockRelayItem.id } returns mockRelayItemId
+        every { mockRelayItem.active } returns true
+        every { mockSettings.multihopMode() } returns MultihopMode.ALWAYS
+        every { mockSettings.relaySettings.relayConstraints.location } returns
+            Constraint.Only(mockRelayItemId)
+
+        val change = MultihopChange.Entry(Constraint.Only(mockRelayItem))
+
+        // Act
+        settingsFlow.value = mockSettings
+        val error = modifyMultihopUseCase(change = change).leftOrNull()
+
+        // Assert
+        assertInstanceOf<ModifyMultihopError.EntrySameAsExit>(error)
+        assertEquals(error.relayItem.id, mockRelayItemId)
+    }
+
+    @Test
+    fun `when changing exit and entry is the same should throw error`() = runTest {
+        // Arrange
+        val mockRelayItemId: GeoLocationId.Hostname = mockk()
+        val mockRelayItem: RelayItem.Location.Relay = mockk()
+        val mockSettings: Settings = mockk()
+
+        every { mockRelayItem.id } returns mockRelayItemId
+        every { mockRelayItem.active } returns true
+        every { mockSettings.multihopMode() } returns MultihopMode.ALWAYS
+        every {
+            mockSettings.relaySettings.relayConstraints.wireguardConstraints.entryLocation
+        } returns Constraint.Only(mockRelayItemId)
+
+        val change = MultihopChange.Exit(mockRelayItem)
+
+        // Act
+        settingsFlow.value = mockSettings
+        val error = modifyMultihopUseCase(change = change).leftOrNull()
+
+        // Assert
+        assertInstanceOf<ModifyMultihopError.EntrySameAsExit>(error)
+        assertEquals(error.relayItem.id, mockRelayItemId)
+    }
+
+    @Test
+    fun `when changing entry and exit is the same but when needed multihop enabled should not throw error`() =
+        runTest {
+            // Arrange
+            val mockRelayItemId: GeoLocationId.Hostname = mockk()
+            val mockRelayItem: RelayItem.Location.Relay = mockk()
+            val mockSettings: Settings = mockk()
+
+            every { mockRelayItem.id } returns mockRelayItemId
+            every { mockRelayItem.active } returns true
+            every { mockSettings.multihopMode() } returns MultihopMode.WHEN_NEEDED
+            every { mockSettings.relaySettings.relayConstraints.location } returns
+                Constraint.Only(mockRelayItemId)
+            coEvery {
+                mockWireguardConstraintsRepository.setEntryLocation(
+                    Constraint.Only(mockRelayItemId)
+                )
+            } returns Unit.right()
+            val change = MultihopChange.Entry(Constraint.Only(mockRelayItem))
+
+            // Act
+            settingsFlow.value = mockSettings
+            val result = modifyMultihopUseCase(change = change).getOrNull()
+
+            // Assert
+            coVerify {
+                mockWireguardConstraintsRepository.setEntryLocation(
+                    Constraint.Only(mockRelayItemId)
+                )
+            }
+            assertNotNull(result)
+        }
+
+    @Test
+    fun `when relay item is invalid should throw error`() = runTest {
+        // Arrange
+        val mockRelayItemId: GeoLocationId.Hostname = mockk()
+        val mockRelayItem: RelayItem.Location.Relay = mockk()
+        every { mockRelayItem.id } returns mockRelayItemId
+        every { mockRelayItem.active } returns false
+        val change = MultihopChange.Entry(Constraint.Only(mockRelayItem))
+
+        // Act
+        val error = modifyMultihopUseCase(change = change).leftOrNull()
+
+        // Assert
+        assertInstanceOf<ModifyMultihopError.RelayItemInactive>(error)
+        assertEquals(error.relayItem.id, mockRelayItemId)
+    }
+
+    companion object {
+        const val SETTINGS_UTIL = "net.mullvad.mullvadvpn.lib.common.util.SettingsKt"
+    }
+}

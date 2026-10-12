@@ -1,0 +1,169 @@
+package net.mullvad.mullvadvpn.feature.dns.impl
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import co.touchlab.kermit.Logger
+import java.net.Inet6Address
+import java.net.InetAddress
+import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.WhileSubscribed
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import net.mullvad.mullvadvpn.lib.common.Lc
+import net.mullvad.mullvadvpn.lib.common.constant.VIEW_MODEL_STOP_TIMEOUT
+import net.mullvad.mullvadvpn.lib.common.util.contentBlockersSettings
+import net.mullvad.mullvadvpn.lib.common.util.customDnsAddresses
+import net.mullvad.mullvadvpn.lib.common.util.isCustomDnsEnabled
+import net.mullvad.mullvadvpn.lib.model.DefaultDnsOptions
+import net.mullvad.mullvadvpn.lib.model.DnsState
+import net.mullvad.mullvadvpn.lib.repository.SettingsRepository
+import net.mullvad.mullvadvpn.lib.ui.component.EMPTY_STRING
+
+data class DnsSettingsUiState(
+    val isModal: Boolean,
+    val contentBlockersEnabled: Boolean,
+    val defaultDnsOptions: DefaultDnsOptions,
+    val customDnsEnabled: Boolean,
+    val customDnsEntries: List<CustomDnsEntry>,
+    val showUnreachableLocalDnsWarning: Boolean,
+    val showUnreachableIpv6DnsWarning: Boolean,
+)
+
+data class CustomDnsEntry(val address: String, val isLocal: Boolean, val isIpv6: Boolean)
+
+sealed interface DnsSettingsSideEffect {
+    data object NavigateToDnsDialog : DnsSettingsSideEffect
+
+    sealed interface ShowToast : DnsSettingsSideEffect {
+        data object GenericError : ShowToast
+    }
+}
+
+@Suppress("TooManyFunctions")
+class DnsSettingsViewModel(
+    isModal: Boolean,
+    private val settingsRepository: SettingsRepository,
+    private val dispatcher: CoroutineDispatcher,
+) : ViewModel() {
+    private val _uiSideEffect = Channel<DnsSettingsSideEffect>()
+    val uiSideEffect = _uiSideEffect.receiveAsFlow()
+
+    val uiState: StateFlow<Lc<Unit, DnsSettingsUiState>> =
+        settingsRepository.settingsUpdates
+            .filterNotNull()
+            .map { settings ->
+                Lc.Content(
+                    DnsSettingsUiState(
+                        isModal = isModal,
+                        contentBlockersEnabled = !settings.isCustomDnsEnabled(),
+                        defaultDnsOptions = settings.contentBlockersSettings(),
+                        customDnsEnabled = settings.isCustomDnsEnabled(),
+                        customDnsEntries = settings.customDnsAddresses().asStringAddressList(),
+                        showUnreachableLocalDnsWarning = !settings.allowLan,
+                        showUnreachableIpv6DnsWarning = !settings.tunnelOptions.enableIpv6,
+                    )
+                )
+            }
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(VIEW_MODEL_STOP_TIMEOUT),
+                Lc.Loading(Unit),
+            )
+
+    fun onToggleAllBlockers(isEnabled: Boolean) = updateContentBlockersAndNotify {
+        DefaultDnsOptions(
+            blockAds = isEnabled,
+            blockTrackers = isEnabled,
+            blockMalware = isEnabled,
+            blockAdultContent = isEnabled,
+            blockGambling = isEnabled,
+            blockSocialMedia = isEnabled,
+        )
+    }
+
+    fun onToggleBlockAds(isEnabled: Boolean) = updateContentBlockersAndNotify {
+        it.copy(blockAds = isEnabled)
+    }
+
+    fun onToggleBlockTrackers(isEnabled: Boolean) = updateContentBlockersAndNotify {
+        it.copy(blockTrackers = isEnabled)
+    }
+
+    fun onToggleBlockMalware(isEnabled: Boolean) = updateContentBlockersAndNotify {
+        it.copy(blockMalware = isEnabled)
+    }
+
+    fun onToggleBlockAdultContent(isEnabled: Boolean) = updateContentBlockersAndNotify {
+        it.copy(blockAdultContent = isEnabled)
+    }
+
+    fun onToggleBlockGambling(isEnabled: Boolean) = updateContentBlockersAndNotify {
+        it.copy(blockGambling = isEnabled)
+    }
+
+    fun onToggleBlockSocialMedia(isEnabled: Boolean) = updateContentBlockersAndNotify {
+        it.copy(blockSocialMedia = isEnabled)
+    }
+
+    fun onToggleCustomDns(enable: Boolean) = viewModelScope.launch {
+        val settings = settingsRepository.settingsUpdates.value
+        if (settings == null) {
+            showGenericErrorToast()
+            return@launch
+        }
+
+        val hasDnsEntries = settings.customDnsAddresses().isNotEmpty()
+
+        if (hasDnsEntries) {
+            settingsRepository
+                .setDnsState(if (enable) DnsState.Custom else DnsState.Default)
+                .onLeft { showGenericErrorToast() }
+        } else {
+            // If they enable custom DNS and has no current entries we show the dialog
+            // to add one.
+            viewModelScope.launch { _uiSideEffect.send(DnsSettingsSideEffect.NavigateToDnsDialog) }
+        }
+    }
+
+    fun showGenericErrorToast() = viewModelScope.launch {
+        _uiSideEffect.send(DnsSettingsSideEffect.ShowToast.GenericError)
+    }
+
+    fun onCustomDnsDialogSuccess() = viewModelScope.launch {
+        // This is to fix an ui issue where the switch gets stuck due to animations starting at the
+        // same time. This is likely to be fixed in the next stable version of material 3.
+        // Reverting this hack is tracked here: DROID-2734
+        delay(SHORT_DELAY)
+        settingsRepository.setDnsState(DnsState.Custom).onLeft { showGenericErrorToast() }
+    }
+
+    private fun updateContentBlockersAndNotify(update: (DefaultDnsOptions) -> DefaultDnsOptions) =
+        viewModelScope.launch(dispatcher) {
+            settingsRepository.updateContentBlockers(update).onLeft {
+                Logger.e("Failed to update content blockers")
+                _uiSideEffect.send(DnsSettingsSideEffect.ShowToast.GenericError)
+            }
+        }
+
+    private fun List<InetAddress>.asStringAddressList(): List<CustomDnsEntry> = map {
+        CustomDnsEntry(
+            address = it.hostAddress ?: EMPTY_STRING,
+            isLocal = it.isLocalAddress(),
+            isIpv6 = it is Inet6Address,
+        )
+    }
+
+    private fun InetAddress.isLocalAddress(): Boolean = isLinkLocalAddress || isSiteLocalAddress
+
+    companion object {
+        private val SHORT_DELAY = 5.milliseconds
+    }
+}

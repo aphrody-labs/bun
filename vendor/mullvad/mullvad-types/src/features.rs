@@ -1,0 +1,397 @@
+use std::{
+    collections::HashSet,
+    fmt::{Debug, Display},
+};
+
+use crate::relay_constraints::Multihop;
+use crate::settings::{DnsState, Settings};
+use serde::{Deserialize, Serialize};
+use talpid_types::net::{ObfuscationInfo, ObfuscationType, TunnelEndpoint};
+
+/// Feature indicators are active settings that should be shown to the user to make them aware of
+/// what is affecting their connection at any given time.
+///
+/// Note that the feature indicators are not ordered.
+#[derive(Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FeatureIndicators(HashSet<FeatureIndicator>);
+
+impl Debug for FeatureIndicators {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut indicators: Vec<&str> = self.0.iter().map(|feature| feature.to_str()).collect();
+        // Sort the features alphabetically (Just to have some order, arbitrarily chosen)
+        indicators.sort();
+        f.debug_tuple("FeatureIndicators")
+            .field(&indicators)
+            .finish()
+    }
+}
+
+impl FeatureIndicators {
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+impl Display for FeatureIndicators {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut indicators: Vec<&str> = self.0.iter().map(|feature| feature.to_str()).collect();
+        // Sort the features alphabetically (Just to have some order, arbitrarily chosen)
+        indicators.sort();
+
+        write!(f, "{}", indicators.join(", "))
+    }
+}
+
+impl IntoIterator for FeatureIndicators {
+    type Item = FeatureIndicator;
+    type IntoIter = std::collections::hash_set::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl FeatureIndicators {
+    pub fn active_features(&self) -> impl Iterator<Item = FeatureIndicator> {
+        self.0.clone().into_iter()
+    }
+}
+
+impl FromIterator<FeatureIndicator> for FeatureIndicators {
+    fn from_iter<T: IntoIterator<Item = FeatureIndicator>>(iter: T) -> Self {
+        Self(iter.into_iter().collect())
+    }
+}
+
+/// All possible feature indicators. These represent a subset of all VPN settings in a
+/// non-technical fashion.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum FeatureIndicator {
+    QuantumResistance,
+    /// Mutually exclusive with MultihopAuto
+    Multihop,
+    /// Mutually exclusive with Multihop
+    MultihopAuto,
+    SplitTunneling,
+    LockdownMode,
+    WireguardPort,
+    Udp2Tcp,
+    Shadowsocks,
+    Quic,
+    Lwo,
+    LanSharing,
+    DnsContentBlockers,
+    CustomDns,
+    ServerIpOverride,
+    CustomMtu,
+    Daita,
+}
+
+impl FeatureIndicator {
+    const fn to_str(&self) -> &'static str {
+        match self {
+            FeatureIndicator::QuantumResistance => "Quantum Resistance",
+            FeatureIndicator::Multihop => "Multihop",
+            FeatureIndicator::MultihopAuto => "Multihop (Automatic)",
+            FeatureIndicator::SplitTunneling => "Split Tunneling",
+            FeatureIndicator::LockdownMode => "Lockdown Mode",
+            FeatureIndicator::WireguardPort => "WireGuard Port",
+            FeatureIndicator::Udp2Tcp => "Udp2Tcp",
+            FeatureIndicator::Shadowsocks => "Shadowsocks",
+            FeatureIndicator::Quic => "Quic",
+            FeatureIndicator::Lwo => "LWO",
+            FeatureIndicator::LanSharing => "LAN Sharing",
+            FeatureIndicator::DnsContentBlockers => "Dns Content Blocker",
+            FeatureIndicator::CustomDns => "Custom Dns",
+            FeatureIndicator::ServerIpOverride => "Server Ip Override",
+            FeatureIndicator::CustomMtu => "Custom MTU",
+            FeatureIndicator::Daita => "DAITA",
+        }
+    }
+}
+
+impl std::fmt::Display for FeatureIndicator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let feature = self.to_str();
+        write!(f, "{feature}")
+    }
+}
+
+/// Calculate active [`FeatureIndicators`] from setting and endpoint information.
+///
+/// Note that [`FeatureIndicators`] are only applicable for the connected and connecting states, and
+/// this function should not be called with arguments from different tunnel states.
+///
+/// Server ip override cannot be determined from the settings and endpoint, and has to be fetched
+/// from the relay selector parameter generator.
+pub fn compute_feature_indicators(
+    settings: &Settings,
+    endpoint: &TunnelEndpoint,
+    server_ip_override: bool,
+) -> FeatureIndicators {
+    #[cfg(any(windows, target_os = "android", target_os = "macos"))]
+    let split_tunneling = settings.split_tunnel.enable_exclusions;
+    #[cfg(not(any(windows, target_os = "android", target_os = "macos")))]
+    let split_tunneling = false;
+
+    #[cfg(not(target_os = "android"))]
+    let lockdown_mode = settings.lockdown_mode;
+    let lan_sharing = settings.allow_lan;
+    let dns_content_blockers = settings
+        .tunnel_options
+        .dns_options
+        .default_options
+        .any_blockers_enabled();
+    let custom_dns = settings.tunnel_options.dns_options.state == DnsState::Custom;
+
+    let quantum_resistant = endpoint.quantum_resistant;
+
+    let has_obfuscation = |obfs| match &endpoint.obfuscation {
+        Some(ObfuscationInfo::Single(endpoint)) => endpoint.obfuscation_type == obfs,
+        Some(ObfuscationInfo::Multiplexer { obfuscators, .. }) => obfuscators
+            .iter()
+            .any(|single| single.obfuscation_type == obfs),
+        None => false,
+    };
+    let wireguard_port = matches!(
+        settings.obfuscation_settings.selected_obfuscation,
+        crate::relay_constraints::SelectedObfuscation::WireguardPort
+    );
+    let udp_tcp = has_obfuscation(ObfuscationType::Udp2Tcp);
+    let shadowsocks = has_obfuscation(ObfuscationType::Shadowsocks);
+    let quic = has_obfuscation(ObfuscationType::Quic);
+    let lwo = has_obfuscation(ObfuscationType::Lwo);
+
+    let mtu = settings.tunnel_options.wireguard.mtu.is_some();
+
+    let daita = endpoint.daita;
+
+    let (multihop, multihop_auto) = match &settings.relay_settings {
+        crate::relay_constraints::RelaySettings::Normal(constraints) => {
+            match constraints.wireguard_constraints.multihop {
+                Multihop::Always => (endpoint.entry_endpoint.is_some(), false),
+                Multihop::Never => (false, false),
+                // Detect whether we're using multihop, but it is not explicitly enabled.
+                Multihop::Auto => (false, endpoint.entry_endpoint.is_some()),
+            }
+        }
+        _ => (false, false),
+    };
+
+    let protocol_features = vec![
+        (split_tunneling, FeatureIndicator::SplitTunneling),
+        (lan_sharing, FeatureIndicator::LanSharing),
+        (dns_content_blockers, FeatureIndicator::DnsContentBlockers),
+        (custom_dns, FeatureIndicator::CustomDns),
+        (server_ip_override, FeatureIndicator::ServerIpOverride),
+        #[cfg(not(target_os = "android"))]
+        (lockdown_mode, FeatureIndicator::LockdownMode),
+        (quantum_resistant, FeatureIndicator::QuantumResistance),
+        (multihop, FeatureIndicator::Multihop),
+        (multihop_auto, FeatureIndicator::MultihopAuto),
+        (wireguard_port, FeatureIndicator::WireguardPort),
+        (udp_tcp, FeatureIndicator::Udp2Tcp),
+        (shadowsocks, FeatureIndicator::Shadowsocks),
+        (quic, FeatureIndicator::Quic),
+        (lwo, FeatureIndicator::Lwo),
+        (mtu, FeatureIndicator::CustomMtu),
+        (daita, FeatureIndicator::Daita),
+    ];
+
+    // use the booleans to filter into a list of only the active features
+    protocol_features
+        .into_iter()
+        .filter_map(|(active, feature)| active.then_some(feature))
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
+    use talpid_types::net::{Endpoint, ObfuscationEndpoint, TransportProtocol};
+
+    use crate::relay_constraints::{RelaySettings, SelectedObfuscation};
+
+    use super::*;
+
+    #[test]
+    fn test_one_indicator_at_a_time() {
+        let mut settings = Settings::default();
+        let mut endpoint = TunnelEndpoint {
+            endpoint: Endpoint {
+                address: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080),
+                protocol: TransportProtocol::Udp,
+            },
+            quantum_resistant: Default::default(),
+            obfuscation: Default::default(),
+            entry_endpoint: Default::default(),
+            tunnel_interface: Default::default(),
+            daita: Default::default(),
+        };
+
+        let mut expected_indicators: FeatureIndicators = [].into_iter().collect();
+
+        assert_eq!(
+            compute_feature_indicators(&settings, &endpoint, false),
+            expected_indicators,
+            "The default settings and TunnelEndpoint should not have any feature indicators. \
+            If this is not true anymore, please update this test."
+        );
+
+        settings.lockdown_mode = true;
+        expected_indicators.0.insert(FeatureIndicator::LockdownMode);
+
+        assert_eq!(
+            compute_feature_indicators(&settings, &endpoint, false),
+            expected_indicators
+        );
+
+        settings
+            .tunnel_options
+            .dns_options
+            .default_options
+            .block_ads = true;
+
+        expected_indicators
+            .0
+            .insert(FeatureIndicator::DnsContentBlockers);
+
+        assert_eq!(
+            compute_feature_indicators(&settings, &endpoint, false),
+            expected_indicators
+        );
+
+        settings.allow_lan = true;
+
+        expected_indicators.0.insert(FeatureIndicator::LanSharing);
+
+        assert_eq!(
+            compute_feature_indicators(&settings, &endpoint, false),
+            expected_indicators
+        );
+
+        endpoint.quantum_resistant = true;
+        expected_indicators
+            .0
+            .insert(FeatureIndicator::QuantumResistance);
+        assert_eq!(
+            compute_feature_indicators(&settings, &endpoint, false),
+            expected_indicators
+        );
+
+        endpoint.entry_endpoint = Some(Endpoint {
+            address: SocketAddr::from(([1, 2, 3, 4], 443)),
+            protocol: TransportProtocol::Tcp,
+        });
+        if let RelaySettings::Normal(constraints) = &mut settings.relay_settings {
+            constraints.wireguard_constraints.multihop = Multihop::Always;
+        };
+        expected_indicators.0.insert(FeatureIndicator::Multihop);
+        assert_eq!(
+            compute_feature_indicators(&settings, &endpoint, false),
+            expected_indicators
+        );
+
+        endpoint.obfuscation = Some(ObfuscationInfo::Single(ObfuscationEndpoint {
+            endpoint: Endpoint {
+                address: SocketAddr::from(([1, 2, 3, 4], 443)),
+                protocol: TransportProtocol::Tcp,
+            },
+            obfuscation_type: ObfuscationType::Udp2Tcp,
+        }));
+        expected_indicators.0.insert(FeatureIndicator::Udp2Tcp);
+        assert_eq!(
+            compute_feature_indicators(&settings, &endpoint, false),
+            expected_indicators
+        );
+        let Some(ObfuscationInfo::Single(ref mut obfs)) = endpoint.obfuscation else {
+            unreachable!()
+        };
+        obfs.obfuscation_type = ObfuscationType::Shadowsocks;
+        expected_indicators.0.remove(&FeatureIndicator::Udp2Tcp);
+        expected_indicators.0.insert(FeatureIndicator::Shadowsocks);
+        assert_eq!(
+            compute_feature_indicators(&settings, &endpoint, false),
+            expected_indicators
+        );
+        // Check that custom Port triggers a feature indicator.
+        {
+            // Stash the currently selected obfuscation method and reset it after checking for the
+            // feature indicator.
+            let prev = settings.obfuscation_settings.selected_obfuscation;
+            settings.obfuscation_settings.selected_obfuscation = SelectedObfuscation::WireguardPort;
+
+            expected_indicators
+                .0
+                .insert(FeatureIndicator::WireguardPort);
+            assert_eq!(
+                compute_feature_indicators(&settings, &endpoint, false),
+                expected_indicators
+            );
+
+            settings.obfuscation_settings.selected_obfuscation = prev;
+            expected_indicators
+                .0
+                .remove(&FeatureIndicator::WireguardPort);
+        }
+
+        settings.tunnel_options.wireguard.mtu = Some(1300);
+        expected_indicators.0.insert(FeatureIndicator::CustomMtu);
+        assert_eq!(
+            compute_feature_indicators(&settings, &endpoint, false),
+            expected_indicators
+        );
+
+        endpoint.daita = true;
+        expected_indicators.0.insert(FeatureIndicator::Daita);
+        assert_eq!(
+            compute_feature_indicators(&settings, &endpoint, false),
+            expected_indicators
+        );
+
+        // Here we mock that multihop was automatically enabled by necessity.
+        // We enable Multihop::Auto setting while keeping the entry relay.
+        // In this scenario, we should still get a Multihop indicator.
+        if let RelaySettings::Normal(constraints) = &mut settings.relay_settings {
+            constraints.wireguard_constraints.multihop = Multihop::Auto;
+            expected_indicators.0.insert(FeatureIndicator::MultihopAuto);
+            expected_indicators.0.remove(&FeatureIndicator::Multihop);
+        };
+        assert_eq!(
+            compute_feature_indicators(&settings, &endpoint, false),
+            expected_indicators,
+        );
+
+        // If we also remove the entry relay, we should not get a multihop indicator
+        endpoint.entry_endpoint = None;
+        expected_indicators
+            .0
+            .remove(&FeatureIndicator::MultihopAuto);
+        assert_eq!(
+            compute_feature_indicators(&settings, &endpoint, false),
+            expected_indicators,
+        );
+
+        // NOTE: If this match statement fails to compile, it means that a new feature indicator has
+        // been added. Please update this test to include the new feature indicator.
+        match FeatureIndicator::QuantumResistance {
+            FeatureIndicator::QuantumResistance => {}
+            FeatureIndicator::Multihop => {}
+            FeatureIndicator::MultihopAuto => {}
+            FeatureIndicator::SplitTunneling => {}
+            FeatureIndicator::LockdownMode => {}
+            FeatureIndicator::WireguardPort => {}
+            FeatureIndicator::Udp2Tcp => {}
+            FeatureIndicator::Shadowsocks => {}
+            FeatureIndicator::Quic => {}
+            FeatureIndicator::Lwo => {}
+            FeatureIndicator::LanSharing => {}
+            FeatureIndicator::DnsContentBlockers => {}
+            FeatureIndicator::CustomDns => {}
+            FeatureIndicator::ServerIpOverride => {}
+            FeatureIndicator::CustomMtu => {}
+            FeatureIndicator::Daita => {}
+        }
+    }
+}

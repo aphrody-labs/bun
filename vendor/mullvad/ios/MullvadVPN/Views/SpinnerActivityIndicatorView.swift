@@ -1,0 +1,151 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import UIKit
+
+@MainActor
+class SpinnerActivityIndicatorView: UIView {
+    private static let rotationAnimationKey = "rotation"
+    private static let animationDuration = 0.6
+
+    @MainActor
+    enum Style {
+        case small, medium, large, custom
+
+        var intrinsicSize: CGSize {
+            switch self {
+            case .small:
+                return CGSize(width: 16, height: 16)
+            case .medium:
+                return CGSize(width: 20, height: 20)
+            case .large:
+                return CGSize(width: 60, height: 60)
+            case .custom:
+                return CGSize(width: UIView.noIntrinsicMetric, height: UIView.noIntrinsicMetric)
+            }
+        }
+    }
+
+    private let imageView = UIImageView(image: .spinner)
+
+    private(set) var isAnimating = false
+    private(set) var style = Style.large
+
+    private var sceneActivationObserver: Any?
+
+    override var intrinsicContentSize: CGSize {
+        style.intrinsicSize
+    }
+
+    init(style: Style) {
+        self.style = style
+        super.init(frame: .zero)
+
+        backgroundColor = .clear
+        isHidden = true
+        imageView.contentMode = .scaleAspectFit
+
+        addSubview(imageView)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    deinit {
+        MainActor.assumeIsolated {
+            unregisterSceneActivationObserver()
+        }
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+
+        if window == nil {
+            unregisterSceneActivationObserver()
+        } else {
+            registerSceneActivationObserver()
+            restartAnimationIfNeeded()
+        }
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+
+        let size = style == .custom ? frame.size : style.intrinsicSize
+
+        imageView.bounds = CGRect(origin: .zero, size: size)
+        imageView.center = CGPoint(x: bounds.midX, y: bounds.midY)
+    }
+
+    func startAnimating() {
+        guard !isAnimating else { return }
+        isAnimating = true
+
+        isHidden = false
+        addAnimation()
+    }
+
+    func stopAnimating() {
+        guard isAnimating else { return }
+        isAnimating = false
+
+        isHidden = true
+        removeAnimation()
+    }
+
+    private func addAnimation() {
+        imageView.layer.add(createAnimation(), forKey: Self.rotationAnimationKey)
+    }
+
+    private func removeAnimation() {
+        imageView.layer.removeAnimation(forKey: Self.rotationAnimationKey)
+    }
+
+    private func registerSceneActivationObserver() {
+        unregisterSceneActivationObserver()
+
+        sceneActivationObserver = NotificationCenter.default.addObserver(
+            forName: UIScene.willEnterForegroundNotification,
+            object: window?.windowScene,
+            queue: .main,
+            using: { [weak self] _ in
+                MainActor.assumeIsolated {
+                    self?.restartAnimationIfNeeded()
+                }
+            }
+        )
+    }
+
+    private func unregisterSceneActivationObserver() {
+        if let sceneActivationObserver {
+            NotificationCenter.default.removeObserver(sceneActivationObserver)
+            self.sceneActivationObserver = nil
+        }
+    }
+
+    private func restartAnimationIfNeeded() {
+        let animation = layer.animation(forKey: Self.rotationAnimationKey)
+
+        if isAnimating, animation == nil {
+            removeAnimation()
+            addAnimation()
+        }
+    }
+
+    private func createAnimation() -> CABasicAnimation {
+        let animation = CABasicAnimation(keyPath: "transform.rotation")
+        animation.toValue = Double.pi * 2
+        animation.duration = Self.animationDuration
+        animation.repeatCount = .infinity
+        animation.timingFunction = CAMediaTimingFunction(name: .linear)
+        return animation
+    }
+}

@@ -1,0 +1,161 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import MullvadMockData
+import XCTest
+
+@testable import MullvadSettings
+@testable import MullvadTypes
+
+class CustomListsDataSourceTests: XCTestCase {
+    var allLocationNodes = [LocationNode]()
+    var dataSource: CustomListsDataSource!
+
+    override func setUp() async throws {
+        createAllLocationNodes()
+        setUpDataSource()
+    }
+
+    func testNodeTree() throws {
+        let nodes = dataSource.nodes
+
+        let netflixNode = try XCTUnwrap(nodes.first(where: { $0.name == "Netflix" }))
+        XCTAssertNotNil(netflixNode.descendantNode(for: ["Netflix", "es1-wireguard"]))
+        XCTAssertNotNil(netflixNode.descendantNode(for: ["Netflix", "se"]))
+        XCTAssertNotNil(netflixNode.descendantNode(for: ["Netflix", "us", "dal"]))
+
+        let youtubeNode = try XCTUnwrap(nodes.first(where: { $0.name == "Youtube" }))
+        XCTAssertNotNil(youtubeNode.descendantNode(for: ["Youtube", "se2-wireguard"]))
+        XCTAssertNotNil(youtubeNode.descendantNode(for: ["Youtube", "us", "dal"]))
+    }
+
+    func testParents() throws {
+        let listNode = try XCTUnwrap(dataSource.nodes.first(where: { $0.name == "Netflix" }))
+        let countryNode = try XCTUnwrap(listNode.descendantNode(for: ["Netflix", "se"]))
+        let cityNode = try XCTUnwrap(listNode.descendantNode(for: ["Netflix", "se", "got"]))
+        let hostNode = try XCTUnwrap(listNode.descendantNode(for: ["Netflix-se10-wireguard"]))
+
+        XCTAssertNil(listNode.parent)
+        XCTAssertEqual(countryNode.parent, listNode)
+        XCTAssertEqual(cityNode.parent, countryNode)
+        XCTAssertEqual(hostNode.parent, cityNode)
+    }
+
+    func testSearch() throws {
+        let result = dataSource.search(by: "got")
+        let rootNode = RootLocationNode(children: result)
+        XCTAssertNotNil(rootNode.descendantNode(for: ["Netflix", "se", "got"]))
+    }
+
+    func testSearchWithEmptyText() throws {
+        let result = dataSource.search(by: "")
+        XCTAssertEqual(result.count, dataSource.nodes.count)
+    }
+
+    func testSearchYieldsNoListNodes() throws {
+        let result = dataSource.search(by: "net")
+        result.forEachNode {
+            if $0.name == "Netflix" {
+                XCTAssertFalse($0.showsChildren)
+            }
+        }
+    }
+
+    func testNodeByLocations() throws {
+        let customListId = (dataSource.nodes.first! as! CustomListLocationNode).customList.id
+        let relays = UserSelectedRelays(
+            locations: [.hostname("es", "mad", "es1-wireguard")],
+            customListSelection: .init(listId: customListId, isList: false)
+        )
+
+        let nodeByLocations = dataSource.node(by: .only(relays))
+        let nodeByCode = dataSource.nodes.first?.descendantNode(for: ["Netflix", "es1-wireguard"])
+
+        XCTAssertEqual(nodeByLocations, nodeByCode)
+    }
+
+    func testSetSelection() throws {
+        let customListId = (dataSource.nodes.first! as! CustomListLocationNode).customList.id
+        let userSelectedRelays = UserSelectedRelays(
+            locations: [.country("se")],
+            customListSelection: .init(listId: customListId, isList: false)
+        )
+
+        dataSource
+            .setSelectedNode(
+                constraint: .only(userSelectedRelays)
+            )
+
+        dataSource.nodes.forEachNode { node in
+            if node.locations == [.country("se")] {
+                XCTAssertTrue(node.isSelected)
+            } else {
+                XCTAssertFalse(node.isSelected)
+            }
+        }
+
+        dataSource
+            .setSelectedNode(
+                constraint: .only(.init(locations: [.country("invalid")]))
+            )
+        dataSource.nodes.forEachNode { node in
+            XCTAssertFalse(node.isSelected)
+        }
+    }
+
+    func testDoNotSetSelectedLocation() throws {
+        let selectedRelays: UserSelectedRelays = .init(
+            locations: [
+                .country("se")
+            ]
+        )
+
+        dataSource.setSelectedNode(constraint: .only(selectedRelays))
+
+        dataSource.nodes.forEachNode { node in
+            XCTAssertFalse(node.isSelected)
+        }
+    }
+}
+
+extension CustomListsDataSourceTests {
+    private func setUpDataSource() {
+        dataSource = CustomListsDataSource(repository: CustomListsRepositoryStub(customLists: customLists))
+        dataSource.reload(allLocationNodes: allLocationNodes)
+    }
+
+    private func createAllLocationNodes() {
+        let response = ServerRelaysResponseStubs.sampleRelays
+        let relays = LocationRelays(relays: response.wireguard.relays, locations: response.locations)
+
+        let dataSource = AllLocationDataSource()
+        dataSource.reload(relays)
+
+        allLocationNodes = dataSource.nodes
+    }
+
+    var customLists: [CustomList] {
+        [
+            CustomList(
+                name: "Netflix",
+                locations: [
+                    .hostname("es", "mad", "es1-wireguard"),
+                    .country("se"),
+                    .city("us", "dal"),
+                ]),
+            CustomList(
+                name: "Youtube",
+                locations: [
+                    .hostname("se", "sto", "se2-wireguard"),
+                    .city("us", "dal"),
+                ]),
+        ]
+    }
+}

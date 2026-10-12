@@ -1,0 +1,114 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import UIKit
+
+class SettingsSwitchCell: SettingsCell {
+    private let switchContainer = CustomSwitchContainer()
+
+    var action: ((Bool) -> Void)?
+
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+
+        accessoryView = switchContainer
+
+        switchContainer.control.addTarget(
+            self,
+            action: #selector(switchValueDidChange),
+            for: .valueChanged
+        )
+
+        isAccessibilityElement = true
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func setSwitchEnabled(_ isEnabled: Bool) {
+        switchContainer.isEnabled = isEnabled
+    }
+
+    func setOn(_ isOn: Bool, animated: Bool) {
+        switchContainer.control.setOn(isOn, animated: animated)
+    }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+
+        setSwitchEnabled(true)
+    }
+
+    // MARK: - Actions
+
+    @objc private func switchValueDidChange() {
+        action?(switchContainer.control.isOn)
+    }
+
+    // MARK: - Accessibility
+
+    override var accessibilityTraits: UIAccessibilityTraits {
+        get {
+            // Use UISwitch traits to make the entire cell behave as "Switch button"
+            switchContainer.control.accessibilityTraits
+        }
+        set {
+            super.accessibilityTraits = newValue
+        }
+    }
+
+    override var accessibilityLabel: String? {
+        get {
+            titleLabel.text
+        }
+        set {
+            super.accessibilityLabel = newValue
+        }
+    }
+
+    override var accessibilityValue: String? {
+        get {
+            self.switchContainer.control.accessibilityValue
+        }
+        set {
+            super.accessibilityValue = newValue
+        }
+    }
+
+    override var accessibilityFrame: CGRect {
+        get {
+            UIAccessibility.convertToScreenCoordinates(self.bounds, in: self)
+        }
+        set {
+            super.accessibilityFrame = newValue
+        }
+    }
+
+    override var accessibilityPath: UIBezierPath? {
+        get {
+            UIBezierPath(roundedRect: accessibilityFrame, cornerRadius: 4)
+        }
+        set {
+            super.accessibilityPath = newValue
+        }
+    }
+
+    override func accessibilityActivate() -> Bool {
+        guard switchContainer.isEnabled else { return false }
+
+        let newValue = !switchContainer.control.isOn
+
+        setOn(newValue, animated: true)
+        action?(newValue)
+
+        return true
+    }
+}

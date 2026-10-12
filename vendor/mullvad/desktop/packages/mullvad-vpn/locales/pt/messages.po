@@ -1,0 +1,4129 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Crowdin-Project: mullvad-app\n"
+"X-Crowdin-Project-ID: 350815\n"
+"X-Crowdin-Language: pt-PT\n"
+"X-Crowdin-File: messages.pot\n"
+"X-Crowdin-File-ID: 12\n"
+"Project-Id-Version: mullvad-app\n"
+"Language-Team: Portuguese\n"
+"Language: pt_PT\n"
+"PO-Revision-Date: 2026-09-03 06:40\n"
+
+msgid "%(amount)d more..."
+msgstr "Mais %(amount)d..."
+
+msgid "%(duration)s was added, account paid until %(expiry)s."
+msgstr "foi adicionado %(duration)s, conta paga até %(expiry)s."
+
+#. The label for the WireGuard port option.
+#. Available placeholders:
+#. %(wireguard)s - will be replaced with WireGuard
+msgid "%(wireguard)s port"
+msgstr "Porta %(wireguard)s"
+
+msgid "1 day"
+msgid_plural "%d days"
+msgstr[0] "1 dia"
+msgstr[1] "%d dias"
+
+msgid "1 day left"
+msgid_plural "%d days left"
+msgstr[0] "1 dia restante"
+msgstr[1] "%d dias restantes"
+
+msgid "1 month"
+msgid_plural "%d months"
+msgstr[0] "1 mês"
+msgstr[1] "%d meses"
+
+msgid "1 month left"
+msgid_plural "%d months left"
+msgstr[0] "1 mês restante"
+msgstr[1] "%d meses restantes"
+
+msgid "1 year"
+msgid_plural "%d years"
+msgstr[0] "1 ano"
+msgstr[1] "%d anos"
+
+msgid "1 year left"
+msgid_plural "%d years left"
+msgstr[0] "1 ano restante"
+msgstr[1] "%d anos restantes"
+
+msgid "Account paid until %(expiry)s."
+msgstr "Conta paga até %(expiry)s."
+
+msgid "Account settings"
+msgstr "Definições de conta"
+
+msgid "Add"
+msgstr "Adicionar"
+
+msgid "Any"
+msgstr "Qualquer"
+
+msgid "Apply"
+msgstr "Aplicar"
+
+msgid "Automatic"
+msgstr "Automático"
+
+msgid "Back"
+msgstr "Retroceder"
+
+msgid "BLOCKED CONNECTION"
+msgstr "LIGAÇÃO BLOQUEADA"
+
+msgid "Blocking internet"
+msgstr "A bloquear a Internet"
+
+msgid "Buy credit"
+msgstr "Comprar crédito"
+
+msgid "Buy more credit"
+msgstr "Comprar mais crédito"
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "Cipher"
+msgstr "Cifra"
+
+msgid "Clear"
+msgstr "Limpar"
+
+msgid "Close"
+msgstr "Fechar"
+
+msgid "Connect"
+msgstr "Ligar"
+
+msgid "Connected"
+msgstr "Ligado"
+
+msgid "CONNECTED"
+msgstr "LIGADO"
+
+msgid "Connecting"
+msgstr "A ligar"
+
+msgid "CONNECTING..."
+msgstr "A LIGAR..."
+
+msgid "Create"
+msgstr "Criar"
+
+#. Creating a secure connection that isn't breakable by quantum computers.
+msgid "CREATING QUANTUM SECURE CONNECTION"
+msgstr "A CRIAR LIGAÇÃO COM SEGURANÇA QUÂNTICA"
+
+msgid "CREATING SECURE CONNECTION"
+msgstr "A CRIAR LIGAÇÃO SEGURA"
+
+msgid "Custom"
+msgstr "Personalizado"
+
+#. This refers to the Custom DNS setting in the VPN settings view. This is
+#. displayed when the feature is on.
+msgid "Custom DNS"
+msgstr "DNS personalizado"
+
+msgid "Default"
+msgstr "Padrão"
+
+msgid "Delete"
+msgstr "Eliminar"
+
+msgid "Delete list"
+msgstr "Eliminar lista"
+
+msgid "Disable"
+msgstr "Desativar"
+
+msgid "Disconnect"
+msgstr "Desligar"
+
+msgid "Disconnect & quit"
+msgstr "Desligar e sair"
+
+msgid "Disconnected"
+msgstr "Desligado"
+
+msgid "DISCONNECTED"
+msgstr "DESLIGADO"
+
+msgid "Disconnecting"
+msgstr "A desligar"
+
+msgid "DISCONNECTING..."
+msgstr "A DESLIGAR..."
+
+msgid "Edit"
+msgstr "Editar"
+
+msgid "Enable"
+msgstr "Ativar"
+
+msgid "Enable anyway"
+msgstr "Ativar mesmo assim"
+
+#. Error message shown trying to login but the app fails
+#. to fetch the list of registered devices.
+msgid "Failed to fetch list of devices"
+msgstr "Erro ao obter a lista de dispositivos"
+
+msgid "FAILED TO SECURE CONNECTION"
+msgstr "ERRO AO ESTABELECER LIGAÇÃO SEGURA"
+
+msgid "Filters"
+msgstr "Filtros"
+
+#. Button label for system settings.
+msgid "Go to System Settings"
+msgstr "Ir às definições do sistema"
+
+msgid "Got it!"
+msgstr "Entendido!"
+
+msgid "Guide"
+msgstr "Guia"
+
+msgid "Import"
+msgstr "Importar"
+
+msgid "IPv4"
+msgstr "IPv4"
+
+msgid "IPv6"
+msgstr "IPv6"
+
+msgid "Learn more"
+msgstr "Mais informações"
+
+msgid "less than a day"
+msgstr "menos de um dia"
+
+msgid "less than a day left"
+msgstr "menos de um dia restante"
+
+#. This refers to the multihop setting in the VPN settings view. This is
+#. displayed when the feature is on.
+msgid "Multihop"
+msgstr "Multihop"
+
+msgid "Name"
+msgstr "Nome"
+
+msgid "New list"
+msgstr "Nova lista"
+
+msgid "Next"
+msgstr "Seguinte"
+
+msgid "No matching servers found"
+msgstr "Nenhum servidor correspondente encontrado"
+
+msgid "No result for <b>%(searchTerm)s</b>."
+msgstr "Sem resultados para <b>%(searchTerm)s</b>."
+
+msgid "None"
+msgstr "Nenhum"
+
+msgid "Off"
+msgstr "Desligado"
+
+msgid "On"
+msgstr "Ligado"
+
+msgid "Open URL"
+msgstr "Abrir URL"
+
+msgid "Optional"
+msgstr "Opcional"
+
+msgid "Password"
+msgstr "Palavra-passe"
+
+msgid "Port"
+msgstr "Porta"
+
+#. This refers to the quantum resistance setting in the WireGuard settings view.
+#. This is displayed when the feature is on.
+msgid "Quantum resistance"
+msgstr "Resistência quântica"
+
+#. The connection is secure and isn't breakable by quantum computers.
+msgid "QUANTUM SECURE CONNECTION"
+msgstr "LIGAÇÃO COM SEGURANÇA QUÂNTICA"
+
+msgid "Quit"
+msgstr "Sair"
+
+msgid "Reconnect"
+msgstr "Religar"
+
+#. Button label in confirmation dialog that confirms a remove action.
+msgid "Remove"
+msgstr "Remover"
+
+msgid "Remove from list"
+msgstr "Remover da lista"
+
+msgid "Required"
+msgstr "Obrigatório"
+
+msgid "Save"
+msgstr "Guardar"
+
+msgid "Search for..."
+msgstr "Pesquisar por..."
+
+#. Placeholder text for search field in select location view
+msgid "Search locations or servers"
+msgstr "Pesquisar localizações ou servidores"
+
+msgid "SECURE CONNECTION"
+msgstr "LIGAÇÃO SEGURA"
+
+#. Text for button that sets a location as entry relay.
+msgid "Set as entry"
+msgstr "Definir como entrada"
+
+#. Text for button that sets a location as exit relay
+msgid "Set as exit"
+msgstr "Definir como saída"
+
+msgid "Settings"
+msgstr "Definições"
+
+msgid "System default"
+msgstr "Predefinição do sistema"
+
+msgid "Test"
+msgstr "Testar"
+
+msgid "Troubleshoot"
+msgstr "Resolução de problemas"
+
+msgid "Try a different search."
+msgstr "Experimente uma pesquisa diferente."
+
+msgid "Type"
+msgstr "Tipo"
+
+msgid "Unblock"
+msgstr "Desbloquear"
+
+msgid "UNSECURED CONNECTION"
+msgstr "LIGAÇÃO INSEGURA"
+
+msgid "Use"
+msgstr "Utilizar"
+
+msgid "Username"
+msgstr "Nome de utilizador"
+
+#. Text for screen readers to describe the LWO settings navigation button.
+#. Available placeholders:
+#. %(lwo)s - will be replaced with LWO
+msgctxt "accessibility"
+msgid "%(lwo)s settings"
+msgstr "Definições do %(lwo)s"
+
+msgctxt "accessibility"
+msgid "%(title)s, View loaded"
+msgstr "%(title)s, Vista carregada"
+
+#. Text for screen readers to describe the WireGuard port settings navigation button.
+#. Available placeholders:
+#. %(wireguard)s - will be replaced with WireGuard
+msgctxt "accessibility"
+msgid "%(wireguard)s port settings"
+msgstr "Definições da porta %(wireguard)s"
+
+#. This is an accessibility label for a button that adds a location to a custom list.
+#. Available placeholders:
+#. %(location)s - The name of the location being added to the list.
+#. %(listName)s - The name of the custom list the location will be added to.
+msgctxt "accessibility"
+msgid "Add %(location)s to %(listName)s"
+msgstr "Adicionar %(location)s a %(listName)s"
+
+#. Accessibility label for button to add a location to a custom list.
+#. The placeholder is replaced with the name of the location.
+msgctxt "accessibility"
+msgid "Add %(locationName)s to custom list"
+msgstr "Adicionar %(locationName)s à lista personalizada"
+
+#. This is an accessibility label for a button that opens a dialog to create a new custom list.
+msgctxt "accessibility"
+msgid "Add a new custom list"
+msgstr "Adicionar uma nova lista personalizada"
+
+#. Accessibility description for button clearing the ownership filter.
+msgctxt "accessibility"
+msgid "Clear ownership filter"
+msgstr "Limpar filtro de propriedade"
+
+msgctxt "accessibility"
+msgid "Close notification"
+msgstr "Fechar notificação"
+
+msgctxt "accessibility"
+msgid "Collapse %(location)s"
+msgstr "Comprimir %(location)s"
+
+#. Accessibility label for a button that connects to a location.
+#. Available placeholders:
+#. %(location)s - The name of the location that will be connected to when the button is clicked.
+msgctxt "accessibility"
+msgid "Connect to %(location)s"
+msgstr "Ligar a %(location)s"
+
+#. Provided to accessibility tools such as screenreaders to describe a button
+#. which copies the account number to the clipboard.
+msgctxt "accessibility"
+msgid "Copy account number"
+msgstr "Copiar número de conta"
+
+#. Accessibility label for a carousel that explains the DAITA feature to the user.
+msgctxt "accessibility"
+msgid "DAITA information carousel"
+msgstr "Carrossel de informações DAITA"
+
+#. Accessibility label for button to delete a custom list.
+#. The placeholder is replaced with the name of the custom list.
+msgctxt "accessibility"
+msgid "Delete custom list %(listName)s"
+msgstr "Eliminar a lista personalizada %(listName)s"
+
+#. Accessibility label for button to edit a custom list.
+#. The placeholder is replaced with the name of the custom list.
+msgctxt "accessibility"
+msgid "Edit custom list %(listName)s"
+msgstr "Editar a lista personalizada %(listName)s"
+
+msgctxt "accessibility"
+msgid "Expand %(location)s"
+msgstr "Expandir %(location)s"
+
+#. This is used by screenreaders to communicate the "x" button next to a saved account number.
+#. Available placeholders:
+#. %(accountNumber)s - the account number to the left of the button
+msgctxt "accessibility"
+msgid "Forget account number %(accountNumber)s"
+msgstr "Esquecer o número de conta %(accountNumber)s"
+
+#. Accessibility label for link to VPN settings where
+#. the user can change WireGuard port.
+#. Available placeholders:
+#. %(wireGuard)s - Will be replaced with WireGuard
+msgctxt "accessibility"
+msgid "Go to anti-censorship settings to change %(wireGuard)s port"
+msgstr "Vá às definições anti-censura para alterar a porta %(wireGuard)s"
+
+#. Accessibility label for link to app upgrade view.
+msgctxt "accessibility"
+msgid "Go to app update page"
+msgstr "Ir para a página de atualização da aplicação"
+
+#. Accessibility label for carousel indicators that allow navigation between slides.
+#. Available placeholders:
+#. %(index)s - Will be replaced with the slide index number.
+msgctxt "accessibility"
+msgid "Go to slide %(index)s"
+msgstr "Ir para o slide %(index)s"
+
+#. Provided to accessibility tools such as screenreaders to describe
+#. the button which obscures the account number.
+msgctxt "accessibility"
+msgid "Hide account number"
+msgstr "Ocultar número de conta"
+
+#. Alt text for an illustration showing VPN traffic with DAITA.
+msgctxt "accessibility"
+msgid "Illustration showing VPN traffic with DAITA enabled"
+msgstr "Ilustração do tráfego VPN com DAITA ativado"
+
+#. Alt text for an illustration showing VPN traffic without DAITA.
+msgctxt "accessibility"
+msgid "Illustration showing VPN traffic without DAITA"
+msgstr "Ilustração do tráfego VPN sem DAITA"
+
+#. This is used by screenreaders to communicate the login button.
+msgctxt "accessibility"
+msgid "Login"
+msgstr "Iniciar sessão"
+
+#. This is used by screenreaders to communicate logging in with a saved account number.
+#. Available placeholders:
+#. %(accountNumber)s - the saved account number
+msgctxt "accessibility"
+msgid "Login with account number %(accountNumber)s"
+msgstr "Iniciar sessão com o número de conta %(accountNumber)s"
+
+msgctxt "accessibility"
+msgid "More information"
+msgstr "Mais informações"
+
+#. Accessibility label for link to go to download page.
+msgctxt "accessibility"
+msgid "New version available, click here to go to download page, opens externally"
+msgstr "Está disponível uma nova versão, clique aqui para ir para a página de transferência, abre externamente"
+
+msgctxt "accessibility"
+msgid "New version available, click here to go to update view"
+msgstr "Está disponível uma nova versão, clique aqui para ir para a vista de atualização"
+
+msgctxt "accessibility"
+msgid "New version installed, click here to see the changelog"
+msgstr "Nova versão instalada, clique aqui para ver o registo de alterações"
+
+#. Accessibility label for a button that navigates to the next slide in a carousel.
+msgctxt "accessibility"
+msgid "Next slide"
+msgstr "Slide seguinte"
+
+#. Accessibility label for button to open a custom list menu.
+#. The placeholder is replaced with the name of the custom list.
+msgctxt "accessibility"
+msgid "Open menu for %(listName)s"
+msgstr "Abrir o menu para %(listName)s"
+
+#. Accessibility label for button to open a location menu.
+#. The placeholder is replaced with the name of the location.
+#. Accessibility label for button to edit a geographical location.
+#. The placeholder is replaced with the name of the geographical location.
+msgctxt "accessibility"
+msgid "Open menu for %(locationName)s"
+msgstr "Abrir o menu para %(locationName)s"
+
+#. Label for button opening select location menu.
+msgctxt "accessibility"
+msgid "Open select location menu"
+msgstr "Abrir o menu de seleção de localização"
+
+#. Accessibility label for the button that opens the browser to buy credit.
+msgctxt "accessibility"
+msgid "Opens externally"
+msgstr "Abre externamente"
+
+#. Accessibility label for a button that navigates to the previous slide in a carousel.
+msgctxt "accessibility"
+msgid "Previous slide"
+msgstr "Slide anterior"
+
+#. Accessibility label for button to remove a location from a custom list.
+#. The first placeholder is replaced with the name of the location.
+#. The second placeholder is replaced with the name of the custom list.
+msgctxt "accessibility"
+msgid "Remove %(location)s from %(customList)s"
+msgstr "Remover %(location)s de %(customList)s"
+
+#. Button action description provided to accessibility tools such as screen
+#. readers.
+#. Available placeholders:
+#. %(deviceName)s - The device name to remove.
+msgctxt "accessibility"
+msgid "Remove device named %(deviceName)s"
+msgstr "Remover dispositivo com o nome %(deviceName)s"
+
+msgctxt "accessibility"
+msgid "Remove item"
+msgstr "Remover item"
+
+msgctxt "accessibility"
+msgid "Select location. Current location is %(location)s"
+msgstr "Selecionar localização. A localização atual é %(location)s"
+
+msgctxt "accessibility"
+msgid "Shadowsocks settings"
+msgstr "Definições de Shadowsocks"
+
+#. Provided to accessibility tools such as screenreaders to describe
+#. the button which unobscures the account number.
+msgctxt "accessibility"
+msgid "Show account number"
+msgstr "Mostrar número de conta"
+
+msgctxt "accessibility"
+msgid "UDP-over-TCP settings"
+msgstr "Definições de UDP sobre TCP"
+
+msgctxt "accessibility"
+msgid "Use the right arrow key to focus the settings button."
+msgstr "Utilize a tecla de seta para a direita para focar o botão de definições."
+
+#. Title label in navigation bar
+msgctxt "account-view"
+msgid "Account"
+msgstr "Conta"
+
+msgctxt "account-view"
+msgid "Account number"
+msgstr "Número de conta"
+
+msgctxt "account-view"
+msgid "Currently unavailable"
+msgstr "Atualmente indisponível"
+
+#. Button label for logging out.
+msgctxt "account-view"
+msgid "Log out"
+msgstr "Terminar sessão"
+
+#. Link text in the account view to navigate to the manage devices view.
+msgctxt "account-view"
+msgid "Manage devices"
+msgstr "Gerir dispositivos"
+
+msgctxt "account-view"
+msgid "OUT OF TIME"
+msgstr "SEM TEMPO"
+
+msgctxt "account-view"
+msgid "Paid until"
+msgstr "Pago até"
+
+#. Page title for anti censorship settings view
+msgctxt "anti-censorship-view"
+msgid "Anti-censorship"
+msgstr "Anti-censura"
+
+#. The title for the obfuscation method selector.
+msgctxt "anti-censorship-view"
+msgid "Method"
+msgstr "Método"
+
+#. Second paragraph of description text in anti-censorship view
+msgctxt "anti-censorship-view"
+msgid "Please note that these methods do not improve performance, and may increase system utilization and battery consumption."
+msgstr "Tenha em atenção que estes métodos não melhoram o desempenho e podem aumentar a utilização do sistema e o consumo da bateria."
+
+#. First paragraph of description text in anti-censorship view
+msgctxt "anti-censorship-view"
+msgid "These methods may be useful in situations where you are blocked from reaching Mullvad. When \"Automatic\" is selected, the app will attempt all methods until one works."
+msgstr "Estes métodos podem ser úteis em situações em que esteja impedido de aceder à Mullvad. Quando está selecionado \"Automático\", a aplicação tentará todos os métodos até que um funcione."
+
+msgctxt "api-access-methods-view"
+msgid "Add method"
+msgstr "Adicionar método"
+
+msgctxt "api-access-methods-view"
+msgid "Adding a new API access method also tests it."
+msgstr "Adicionar um novo método de acesso à API também o testa."
+
+msgctxt "api-access-methods-view"
+msgid "API reachable"
+msgstr "API alcançável"
+
+msgctxt "api-access-methods-view"
+msgid "API reachable, adding method…"
+msgstr "API alcançável, a adicionar método…"
+
+msgctxt "api-access-methods-view"
+msgid "API reachable, saving method…"
+msgstr "API alcançável, a guardar método…"
+
+msgctxt "api-access-methods-view"
+msgid "API unreachable"
+msgstr "API inalcançável"
+
+msgctxt "api-access-methods-view"
+msgid "API unreachable, add anyway?"
+msgstr "API inalcançável, adicionar mesmo assim?"
+
+msgctxt "api-access-methods-view"
+msgid "API unreachable, save anyway?"
+msgstr "API inalcançável, guardar mesmo assim?"
+
+msgctxt "api-access-methods-view"
+msgid "Authentication"
+msgstr "Autenticação"
+
+#. %(save)s - Will be replaced with the translation for the word "Save".
+msgctxt "api-access-methods-view"
+msgid "Clicking “%(save)s” changes the in use method."
+msgstr "Clicar em \"%(save)s\" altera o método em uso."
+
+msgctxt "api-access-methods-view"
+msgid "Delete %(name)s?"
+msgstr "Eliminar %(name)s?"
+
+msgctxt "api-access-methods-view"
+msgid "Edit method"
+msgstr "Editar método"
+
+msgctxt "api-access-methods-view"
+msgid "Editing an API access method also tests it."
+msgstr "Editar um método de acesso à API também o testa."
+
+msgctxt "api-access-methods-view"
+msgid "Enter IP"
+msgstr "Introduzir IP"
+
+msgctxt "api-access-methods-view"
+msgid "Enter name"
+msgstr "Introduzir nome"
+
+msgctxt "api-access-methods-view"
+msgid "Enter port"
+msgstr "Introduzir porta"
+
+msgctxt "api-access-methods-view"
+msgid "If you are not connected to our VPN, then the Encrypted DNS proxy will use your own non-VPN IP when connecting. The DoH servers are hosted by one of the following providers: Quad9 or Cloudflare."
+msgstr "Se não estiver ligado à nossa VPN, o proxy DNS encriptado utiliza o seu próprio IP e não a VPN ao estabelecer a ligação. Os servidores DoH são alojados por um dos seguintes fornecedores: Quad9 ou Cloudflare."
+
+msgctxt "api-access-methods-view"
+msgid "In use"
+msgstr "Em uso"
+
+msgctxt "api-access-methods-view"
+msgid "Local SOCKS5 server"
+msgstr "Servidor SOCKS5 local"
+
+msgctxt "api-access-methods-view"
+msgid "Manage and add custom methods to access the Mullvad API."
+msgstr "Gerir e adicionar métodos personalizados para aceder à Mullvad API."
+
+msgctxt "api-access-methods-view"
+msgid "On some networks, where various types of censorship are being used, the API servers might not be directly reachable."
+msgstr "Em algumas redes, onde são utilizados vários tipos de censura, os servidores de API podem não ser diretamente alcançáveis."
+
+msgctxt "api-access-methods-view"
+msgid "Please enter a valid IPv4 or IPv6 address."
+msgstr "Introduza um endereço IPv4 ou IPv6 válido."
+
+msgctxt "api-access-methods-view"
+msgid "Please enter a valid localhost port."
+msgstr "Introduza uma porta localhost válida."
+
+msgctxt "api-access-methods-view"
+msgid "Please enter a valid remote server port."
+msgstr "Introduza uma porta de servidor remoto válida."
+
+msgctxt "api-access-methods-view"
+msgid "Please select a name for the access method not already in use."
+msgstr "Selecione um nome para o método de acesso que ainda não esteja em utilização."
+
+msgctxt "api-access-methods-view"
+msgid "Remote Server"
+msgstr "Servidor remoto"
+
+msgctxt "api-access-methods-view"
+msgid "Server"
+msgstr "Servidor"
+
+msgctxt "api-access-methods-view"
+msgid "Server details"
+msgstr "Detalhes do servidor"
+
+msgctxt "api-access-methods-view"
+msgid "SOCKS5 local"
+msgstr "SOCKS5 local"
+
+msgctxt "api-access-methods-view"
+msgid "SOCKS5 remote"
+msgstr "SOCKS5 remoto"
+
+msgctxt "api-access-methods-view"
+msgid "Testing method..."
+msgstr "A testar método..."
+
+msgctxt "api-access-methods-view"
+msgid "Testing..."
+msgstr "A testar..."
+
+msgctxt "api-access-methods-view"
+msgid "The API could not be reached using the %(name)s method."
+msgstr "Não foi possível alcançar a API utilizando o método %(name)s."
+
+msgctxt "api-access-methods-view"
+msgid "The app needs the remote server details, where your local SOCKS5 server will forward your traffic."
+msgstr "A aplicação precisa dos detalhes do servidor remoto, para onde o seu servidor SOCKS5 local encaminhará o seu tráfego."
+
+msgctxt "api-access-methods-view"
+msgid "The app needs to communicate with a Mullvad API server to log you in, fetch server lists, and other critical operations."
+msgstr "A app precisa de comunicar com um servidor da Mullvad API para iniciar a sua sessão, obter listas de servidores e outras operações críticas."
+
+msgctxt "api-access-methods-view"
+msgid "The in use API access method will change."
+msgstr "O método de acesso à API em uso será alterado."
+
+msgctxt "api-access-methods-view"
+msgid "The TCP port where your local SOCKS5 server is listening."
+msgstr "A porta TCP onde o seu servidor SOCKS5 local escuta."
+
+msgctxt "api-access-methods-view"
+msgid "This can be useful if the API is censored but Mullvad’s bridge servers are not."
+msgstr "Isto pode ser útil se a API estiver censurada, mas os servidores de ponte da Mullvad não."
+
+msgctxt "api-access-methods-view"
+msgid "This can be useful when you are not affected by censorship."
+msgstr "Isto pode ser útil quando não é afetado pela censura."
+
+msgctxt "api-access-methods-view"
+msgid "This feature allows you to circumvent that censorship by adding custom ways to access the API via proxies and similar methods."
+msgstr "Esta funcionalidade permite-lhe contornar essa censura, adicionando formas personalizadas de aceder à API através de proxies e métodos semelhantes."
+
+msgctxt "api-access-methods-view"
+msgid "This is needed so our app can allow that traffic in the firewall."
+msgstr "Isto é necessário para que a nossa app possa permitir esse tráfego na firewall."
+
+msgctxt "api-access-methods-view"
+msgid "Transport protocol"
+msgstr "Protocolo de transporte"
+
+msgctxt "api-access-methods-view"
+msgid "With the “Direct” method, the app communicates with a Mullvad API server directly without any intermediate proxies."
+msgstr "Com o método \"Direto\", a app comunica diretamente com um servidor da Mullvad API sem quaisquer proxies intermédios."
+
+msgctxt "api-access-methods-view"
+msgid "With the “Encrypted DNS proxy” method, the app will communicate with our Mullvad API through a proxy address. It does this by retrieving an address from a DNS over HTTPS (DoH) server and then using that to reach our API servers."
+msgstr "Com o método \"Proxy DNS encriptado\", a aplicação irá comunicar com a nossa API Mullvad através de um endereço proxy. Para tal, obtém um endereço de um servidor DNS sobre HTTPS (DoH) e utiliza-o para aceder aos nossos servidores de API."
+
+msgctxt "api-access-methods-view"
+msgid "With the “Mullvad bridges” method, the app communicates with a Mullvad API server via a Mullvad bridge server. It does this by sending the traffic obfuscated by Shadowsocks."
+msgstr "Com o método \"pontes da Mullvad\", a app comunica com um servidor da Mullvad API através de um servidor de ponte da Mullvad. Este método envia o tráfego ofuscado por Shadowsocks."
+
+#. Title of the app info view.
+msgctxt "app-info-view"
+msgid "App info"
+msgstr "Informação sobre a app"
+
+#. Description for version list item when app is out of sync.
+msgctxt "app-info-view"
+msgid "App is out of sync. Please quit and restart."
+msgstr "A app não está sincronizada. Saia e reinicie."
+
+#. Label for switch to toggle beta program.
+msgctxt "app-info-view"
+msgid "Beta program"
+msgstr "Programa beta"
+
+msgctxt "app-info-view"
+msgid "Enable to get notified when new beta versions of the app are released."
+msgstr "Ative para ser notificado quando forem lançadas novas versões beta da aplicação."
+
+msgctxt "app-info-view"
+msgid "This option is unavailable while using a beta version."
+msgstr "Esta opção não está disponível na versão beta."
+
+#. Label for update available list item.
+msgctxt "app-info-view"
+msgid "Update available"
+msgstr "Atualização disponível"
+
+#. Label for version list item.
+msgctxt "app-info-view"
+msgid "Version"
+msgstr "Versão"
+
+#. Label for changelog list item.
+msgctxt "app-info-view"
+msgid "What’s new"
+msgstr "Novidades"
+
+#. Status text displayed below a progress bar when the update is being downloaded
+#. with the estimated time of completion is within a few seconds.
+msgctxt "app-upgrade-view"
+msgid "A few seconds remaining..."
+msgstr "Faltam alguns segundos..."
+
+#. Status text displayed below a progress bar when the update is being downloaded
+#. with the estimated time of completion represented in minutes.
+#. Available placeholders:
+#. %(minutes)s - Will be replaced with remaining minutes until download is complete
+msgctxt "app-upgrade-view"
+msgid "About %(minutes)s minutes remaining..."
+msgstr "Faltam cerca de %(minutes)s minutos..."
+
+#. Status text displayed below a progress bar when the update is being downloaded
+#. with the estimated time of completion represented in seconds.
+#. Available placeholders:
+#. %(second)s - Will be replaced with remaining seconds until download is complete
+msgctxt "app-upgrade-view"
+msgid "About %(seconds)s seconds remaining..."
+msgstr "Faltam cerca de %(seconds)s segundos..."
+
+#. Label displayed when an error occurred due to the connection being blocked
+msgctxt "app-upgrade-view"
+msgid "Connection blocked. Try changing server or other settings."
+msgstr "Ligação bloqueada. Tente mudar de servidor ou alterar outras definições."
+
+#. Label displayed when an error occurred due to the installer failing to start
+#. and the suggested resolution is to download the update again.
+msgctxt "app-upgrade-view"
+msgid "Could not open installer, please try again or send a problem report."
+msgstr "Não foi possível abrir o instalador. Tente novamente ou envie um relatório do problema."
+
+#. Button text to download and install an update
+msgctxt "app-upgrade-view"
+msgid "Download & install"
+msgstr "Transferir e instalar"
+
+#. Status text displayed below a progress bar when the download of an update is complete
+msgctxt "app-upgrade-view"
+msgid "Download complete!"
+msgstr "Transferência concluída!"
+
+#. Status text displayed below a progress bar when the download of an update fails
+msgctxt "app-upgrade-view"
+msgid "Download failed"
+msgstr "Erro na transferência"
+
+#. Label displayed when an error occurred due to the download failing
+msgctxt "app-upgrade-view"
+msgid "Download failed, please check your connection/firewall and try again, or send a problem report."
+msgstr "Erro na transferência. Verifique a sua ligação/firewall e tente novamente, ou envie um relatório do problema."
+
+#. Status text displayed below a progress bar when the download of an update has been paused
+#. Label displayed above a progress bar when the update is verified successfully
+msgctxt "app-upgrade-view"
+msgid "Download paused"
+msgstr "Transferência em pausa"
+
+#. Label displayed above a progress bar informing the user which server
+#. the update is downloading from
+msgctxt "app-upgrade-view"
+msgid "Downloading from: %(server)s"
+msgstr "A transferir de: %(server)s"
+
+#. Label displayed above a progress bar when a download is in progress
+msgctxt "app-upgrade-view"
+msgid "Downloading..."
+msgstr "A transferir..."
+
+#. Link shown to optionally manually download the update
+#. due to repeated errors in the upgrade process.
+msgctxt "app-upgrade-view"
+msgid "Having problems? Try downloading the app from our website"
+msgstr "Está a ter problemas? Experimente transferir a aplicação a partir do nosso site"
+
+#. Button text to install an update
+msgctxt "app-upgrade-view"
+msgid "Install update"
+msgstr "Instalar atualização"
+
+#. Label displayed when an error occurred within the installer
+msgctxt "app-upgrade-view"
+msgid "Installer quit unexpectedly, please try again or send a problem report."
+msgstr "O instalador fechou inesperadamente. Tente novamente ou envie um relatório do problema."
+
+#. Info about which directory the app update will be downloaded to
+msgctxt "app-upgrade-view"
+msgid "Installer will be downloaded to <b>%(cacheDir)s</b>."
+msgstr "O instalador será transferido para <b>%(cacheDir)s</b>."
+
+msgctxt "app-upgrade-view"
+msgid "Latest version: %(version)s"
+msgstr "Versão mais recente: %(version)s"
+
+#. Text displayed when there are no updates for this platform in the next app version
+msgctxt "app-upgrade-view"
+msgid "No updates or changes were made in this release for this platform."
+msgstr "Não foram feitas atualizações ou alterações nesta versão para esta plataforma."
+
+#. Button text to pause the download of an update
+msgctxt "app-upgrade-view"
+msgid "Pause"
+msgstr "Pausar"
+
+#. Button text to report a problem
+msgctxt "app-upgrade-view"
+msgid "Report a problem"
+msgstr "Reportar um problema"
+
+#. Button text to resume updating
+msgctxt "app-upgrade-view"
+msgid "Resume"
+msgstr "Retomar"
+
+#. Button text to try again
+msgctxt "app-upgrade-view"
+msgid "Retry"
+msgstr "Tentar novamente"
+
+#. Button text to try download again
+msgctxt "app-upgrade-view"
+msgid "Retry download"
+msgstr "Tentar transferir novamente"
+
+#. Status text displayed below a progress bar when the download of an update is starting
+msgctxt "app-upgrade-view"
+msgid "Starting download..."
+msgstr "A iniciar a transferência..."
+
+#. Button text to when starting the installer for an update
+msgctxt "app-upgrade-view"
+msgid "Starting installer..."
+msgstr "A iniciar o instalador..."
+
+#. Label displayed when an unknown error occurred
+msgctxt "app-upgrade-view"
+msgid "Unknown error occurred. Please try again or send a problem report."
+msgstr "Ocorreu um erro desconhecido. Tente novamente ou envie um relatório do problema."
+
+#. Title in navigation bar
+#. Main title for the update available view
+msgctxt "app-upgrade-view"
+msgid "Update available"
+msgstr "Atualização disponível"
+
+#. Label displayed when an error occurred due to the installer failed verification
+msgctxt "app-upgrade-view"
+msgid "Verification failed, please try again or send a problem report."
+msgstr "Erro na verificação. Tente novamente ou envie um relatório do problema."
+
+#. Label displayed above a progress bar when the update is verified successfully
+msgctxt "app-upgrade-view"
+msgid "Verification successful!"
+msgstr "Verificação bem-sucedida!"
+
+#. Label displayed above a progress bar when the update is being verified
+msgctxt "app-upgrade-view"
+msgid "Verifying installer..."
+msgstr "A verificar o instalador..."
+
+#. Heading which shows the version of the app which can be upgraded to.
+#. Available placeholders:
+#. %(version)s - The new version of the app.
+msgctxt "app-upgrade-view"
+msgid "Version %(version)s"
+msgstr "Versão %(version)s"
+
+#. The user has the latest version of the app and does not need to be update
+msgctxt "app-upgrade-view"
+msgid "You are using the latest version"
+msgstr "Está a utilizar a versão mais recente"
+
+msgctxt "auth-failure"
+msgid "Blocking internet: account is out of time"
+msgstr "Bloqueio de Internet: a conta está sem tempo"
+
+msgctxt "auth-failure"
+msgid "Too many simultaneous connections on this account. Disconnect another device or try connecting again shortly."
+msgstr "Conta com demasiadas ligações simultâneas. Desligue outro dispositivo ou tente ligar-se novamente em breve."
+
+msgctxt "auth-failure"
+msgid "Unable to authenticate account. Please send a problem report."
+msgstr "Não foi possível autenticar a conta. Envie um relatório do problema."
+
+msgctxt "auth-failure"
+msgid "You are logged in with an invalid account number. Please log out and try another one."
+msgstr "Tem sessão iniciada com um número de conta inválido. Termine a sessão e tente com outro."
+
+#. Text displayed when there are no updates for this platform in the app version
+msgctxt "changelog-view"
+msgid "No updates or changes were made in this release for this platform."
+msgstr "Não foram feitas atualizações ou alterações nesta versão para esta plataforma."
+
+#. Heading for the view of the changes and updates in the
+#. current version compared to the old version.
+msgctxt "changelog-view"
+msgid "What’s new"
+msgstr "Novidades"
+
+#. The selected location label displayed on the main view, when a user selected a specific host to connect to.
+#. Example: Malmö (se-mma-001)
+#. Available placeholders:
+#. %(city)s - a city name
+#. %(hostname)s - a hostname
+msgctxt "connect-container"
+msgid "%(city)s (%(hostname)s)"
+msgstr "%(city)s (%(hostname)s)"
+
+msgctxt "connect-view"
+msgid "Active features"
+msgstr "Funcionalidades ativas"
+
+#. This is used as a feature indicator to show that multihop is used
+#. to enable the connection.
+msgctxt "connect-view"
+msgid "Automatic multihop"
+msgstr "Multihop automático"
+
+msgctxt "connect-view"
+msgid "Congrats!"
+msgstr "Parabéns!"
+
+msgctxt "connect-view"
+msgid "Connection details"
+msgstr "Detalhes da ligação"
+
+#. Button label for disconnecting from the VPN.
+msgctxt "connect-view"
+msgid "Disconnect"
+msgstr "Desligar"
+
+msgctxt "connect-view"
+msgid "Either buy credit on our website or redeem a voucher."
+msgstr "Compre crédito no nosso sítio da web ou reclame um voucher."
+
+msgctxt "connect-view"
+msgid "Enter voucher code"
+msgstr "Introduza o código do voucher"
+
+msgctxt "connect-view"
+msgid "Go ahead and start using the app to begin reclaiming your online privacy."
+msgstr "Comece a utilizar a aplicação para começar a reclamar a sua privacidade online."
+
+msgctxt "connect-view"
+msgid "Here’s your account number. Save it!"
+msgstr "Aqui tem o seu número de conta. Guarde-o!"
+
+#. Button label for opening privacy information link.
+msgctxt "connect-view"
+msgid "Learn about privacy"
+msgstr "Saiba mais sobre privacidade"
+
+msgctxt "connect-view"
+msgid "Out of time"
+msgstr "Sem tempo"
+
+#. Button label for navigating to the voucher redemption view.
+msgctxt "connect-view"
+msgid "Redeem voucher"
+msgstr "Reclamar voucher"
+
+msgctxt "connect-view"
+msgid "Remember, turning it off will allow network traffic while the VPN is disconnected until you turn it back on under Advanced settings."
+msgstr "Lembre-se, a desativação irá permitir tráfego de rede enquanto a VPN estiver desligada e até a voltar a ativar nas Definições avançadas."
+
+#. Button label for starting the app.
+msgctxt "connect-view"
+msgid "Start using the app"
+msgstr "Comece a usar a aplicação"
+
+msgctxt "connect-view"
+msgid "Time was successfully added"
+msgstr "Tempo adicionado com sucesso"
+
+msgctxt "connect-view"
+msgid "To add more, you will need to disconnect and access the Internet with an unsecure connection."
+msgstr "Além disso, tem de se desligar e aceder à Internet através de uma ligação não segura."
+
+msgctxt "connect-view"
+msgid "To continue your journey as a privacy ninja, visit our website to pick up other privacy-friendly habits and tools."
+msgstr "Para continuar a sua viagem como um ninja da privacidade, visite o nosso site para conhecer outros hábitos e ferramentas amigos da privacidade."
+
+msgctxt "connect-view"
+msgid "To start using the app, you first need to add time to your account."
+msgstr "Para começar a utilizar a aplicação, primeiro tem de adicionar tempo à sua conta."
+
+msgctxt "connect-view"
+msgid "Voucher was successfully redeemed"
+msgstr "O voucher foi reclamado com sucesso"
+
+msgctxt "connect-view"
+msgid "You have no more VPN time left on this account."
+msgstr "Não tem mais Tempo de VPN restante nesta conta."
+
+msgctxt "connect-view"
+msgid "You need to disable \"Lockdown mode\" in order to access the Internet to add time."
+msgstr "Tem de desativar a opção \"Modo de bloqueio\" para poder aceder à Internet e adicionar tempo."
+
+msgctxt "connect-view"
+msgid "You’re all set!"
+msgstr "Está pronto!"
+
+#. The hostname line displayed below the country on the main screen
+#. Available placeholders:
+#. %(relay)s - the relay hostname
+#. %(entry)s - the entry relay hostname
+msgctxt "connection-info"
+msgid "%(relay)s via %(entry)s"
+msgstr "%(relay)s via %(entry)s"
+
+msgctxt "connection-info"
+msgid "In"
+msgstr "Entrada"
+
+msgctxt "connection-info"
+msgid "Out"
+msgstr "Saída"
+
+#. Label for disabled menu option when a location has already been added to a custom list.
+#. Available placeholders:
+#. %(customList)s - The name of the custom list the location has been added to.
+msgctxt "custom-list-feature"
+msgid "%(customList)s (Added)"
+msgstr "%(customList)s (adicionado)"
+
+#. This is a label shown above a list of options related to custom lists.
+#. Available placeholder:
+#. %(locationName)s - The name of the location being added to the list.
+msgctxt "custom-list-feature"
+msgid "Add %(locationName)s to list"
+msgstr "Adicionar %(locationName)s à lista"
+
+#. Label for button to create a new custom list with a specific location.
+#. Available placeholder:
+#. %(locationName)s - The name of the location being added to the list.
+msgctxt "custom-list-feature"
+msgid "Add %(locationName)s to new list"
+msgstr "Adicionar %(locationName)s à nova lista"
+
+#. This is a label shown above a list of options.
+#. Available placeholder:
+#. %(locationType) - Could be either "Country", "City" and "Relay"
+msgctxt "custom-list-feature"
+msgid "Add %(locationType)s to list"
+msgstr "Adicionar %(locationType)s à lista"
+
+msgctxt "custom-list-feature"
+msgid "City"
+msgstr "Cidade"
+
+msgctxt "custom-list-feature"
+msgid "Country"
+msgstr "País"
+
+#. Label for the input where the user can enter the name of a new custom list.
+msgctxt "custom-list-feature"
+msgid "Create list"
+msgstr "Criar lista"
+
+#. Label for the option to delete a custom list in a menu.
+msgctxt "custom-list-feature"
+msgid "Delete"
+msgstr "Eliminar"
+
+#. Confirmation message shown when the user tries to delete a custom list.
+#. Asks the user if they are sure they want to delete the list.
+#. Available placeholder:
+#. %(list)s - The name of the custom list that is about to be deleted.
+msgctxt "custom-list-feature"
+msgid "Do you want to delete the list %(list)s?"
+msgstr "Pretende eliminar a lista %(list)s?"
+
+msgctxt "custom-list-feature"
+msgid "Edit list name"
+msgstr "Editar nome da lista"
+
+#. Label for the option to edit a custom list in a menu.
+msgctxt "custom-list-feature"
+msgid "Edit name"
+msgstr "Editar nome"
+
+msgctxt "custom-list-feature"
+msgid "Enter a name for the list"
+msgstr "Introduza um nome para a lista"
+
+msgctxt "custom-list-feature"
+msgid "Enter a new name for the list"
+msgstr "Introduza um novo nome para a lista"
+
+msgctxt "custom-list-feature"
+msgid "List names must be unique"
+msgstr "Os nomes de listas devem ser únicos"
+
+msgctxt "custom-list-feature"
+msgid "Relay"
+msgstr "Retransmissão"
+
+#. Button for continuing login process.
+msgctxt "device-management"
+msgid "Continue with login"
+msgstr "Continuar com a ligação"
+
+#. Label informing the user when a device was created.
+#. Available placeholders:
+#. %(createdDate)s - The creation date of the device.
+msgctxt "device-management"
+msgid "Created: %(createdDate)s"
+msgstr "Criado: %(createdDate)s"
+
+#. Label indicating that this device is the current device.
+msgctxt "device-management"
+msgid "Current device"
+msgstr "Dispositivo atual"
+
+msgctxt "device-management"
+msgid "Device is inactive"
+msgstr "O dispositivo está desativado"
+
+msgctxt "device-management"
+msgid "Device name"
+msgstr "Nome do dispositivo"
+
+#. A label that will display the newly created device name to inform the user
+#. about it.
+#. Available placeholders:
+#. %(deviceName)s - The name of the current device
+msgctxt "device-management"
+msgid "Device name: %(deviceName)s"
+msgstr "Nome do dispositivo: %(deviceName)s"
+
+msgctxt "device-management"
+msgid "Failed to remove device"
+msgstr "Erro ao remover dispositivo"
+
+#. Button label for navigating to login.
+msgctxt "device-management"
+msgid "Go to login"
+msgstr "Ir para a ligação"
+
+msgctxt "device-management"
+msgid "Going to login will unblock the Internet on this device."
+msgstr "Ir para a ligação irá desbloquear a Internet neste dispositivo."
+
+msgctxt "device-management"
+msgid "If you log out, the device and the device name is removed. When you log back in again, the device will get a new name."
+msgstr "Se terminar a sessão, o dispositivo e o nome do dispositivo são removidos. Quando voltar a iniciar sessão, o dispositivo recebe um novo nome."
+
+#. Title label in navigation bar for the manage devices view.
+#. Title text in the manage devices view
+msgctxt "device-management"
+msgid "Manage devices"
+msgstr "Gerir dispositivos"
+
+msgctxt "device-management"
+msgid "Please log out of at least one by removing it from the list below. You can find the corresponding device name under the device’s Account settings."
+msgstr "Desligue-se de pelo menos um dos dispositivos removendo-o da lista abaixo. Pode encontrar o nome do dispositivo correspondente nas definições de Conta do dispositivo."
+
+#. Button label for confirming removing a device.
+msgctxt "device-management"
+msgid "Remove"
+msgstr "Remover"
+
+#. Text displayed above button which logs out another device.
+#. The text enclosed in "<b></b>" will appear bold.
+#. Available placeholders:
+#. %(deviceName)s - The name of the device to log out.
+msgctxt "device-management"
+msgid "Remove <em>%(deviceName)s?</em>"
+msgstr "Remover <em>%(deviceName)s?</em>"
+
+#. Page title informing user that enough devices has been removed to continue
+#. login process.
+msgctxt "device-management"
+msgid "Super!"
+msgstr "Excelente!"
+
+msgctxt "device-management"
+msgid "The device will be removed from the list and logged out."
+msgstr "O dispositivo será removido da lista e terminará a sessão."
+
+msgctxt "device-management"
+msgid "This is the name assigned to the device. Each device logged in on a Mullvad account gets a unique name that helps you identify it when you manage your devices in the app or on the website."
+msgstr "Este é o nome atribuído ao dispositivo. Cada dispositivo com sessão iniciada numa conta Mullvad recebe um nome único que lhe ajuda a identificá-lo quando gere os seus dispositivos na app ou no site."
+
+msgctxt "device-management"
+msgid "Time left: %(timeLeft)s"
+msgstr "Tempo restante: %(timeLeft)s"
+
+#. Page title informing user that the login failed due to too many registered
+#. devices on account.
+msgctxt "device-management"
+msgid "Too many devices"
+msgstr "Demasiados dispositivos"
+
+#. Button text to retry fetching devices.
+msgctxt "device-management"
+msgid "Try again"
+msgstr "Tentar novamente"
+
+#. Subtitle text in the manage devices view, explaining
+#. devices and what they can do in the manage devices view.
+msgctxt "device-management"
+msgid "View and manage all your logged in devices. You can have up to 5 devices on one account at a time. Each device gets a name when logged in to help you tell them apart easily."
+msgstr "Veja e faça a gestão de todos os seus dispositivos com sessão iniciada. Pode ter até 5 dispositivos numa conta de cada vez. Cada dispositivo recebe um nome quando tem sessão iniciada para ajudar a distingui-los facilmente."
+
+msgctxt "device-management"
+msgid "You can have up to 5 devices logged in on one Mullvad account."
+msgstr "Pode ter até 5 dispositivos com sessão iniciada numa só conta Mullvad."
+
+msgctxt "device-management"
+msgid "You can now continue logging in on this device."
+msgstr "Agora pode continuar a ligação neste dispositivo."
+
+msgctxt "device-management"
+msgid "You have removed this device. To connect again, you will need to log back in."
+msgstr "Removeu este dispositivo. Para voltar a ligar o dispositivo, terá de voltar a iniciar a sessão."
+
+#. The message displayed to the user in case of critical error in the GUI
+#. Available placeholders:
+#. %(email)s - support email
+msgctxt "error-boundary-view"
+msgid "Something went wrong. Please contact us at %(email)s"
+msgstr "Ocorreu um erro. Contacte-nos através de %(email)s"
+
+#. Title label in navigation bar
+msgctxt "filter-nav"
+msgid "Filter"
+msgstr "Filtrar"
+
+msgctxt "filter-view"
+msgid "All providers"
+msgstr "Todos os fornecedores"
+
+msgctxt "filter-view"
+msgid "Mullvad owned only"
+msgstr "Apenas propriedade de Mullvad"
+
+msgctxt "filter-view"
+msgid "Owned"
+msgstr "Propriedade de"
+
+msgctxt "filter-view"
+msgid "Ownership"
+msgstr "Propriedade"
+
+msgctxt "filter-view"
+msgid "Providers"
+msgstr "Fornecedores"
+
+msgctxt "filter-view"
+msgid "Rented"
+msgstr "Alugado"
+
+msgctxt "filter-view"
+msgid "Rented only"
+msgstr "Apenas alugado"
+
+msgctxt "in-app-notifications"
+msgid "%(duration)s. Buy more credit."
+msgstr "%(duration)s. Comprar mais crédito."
+
+#. Notification subtitle when the app upgrade is ready to install.
+#. Available placeholders:
+#. - %(suggestedUpgradeVersion)s: Upgrade version to be installed.
+msgctxt "in-app-notifications"
+msgid "%(suggestedUpgradeVersion)s is ready to be installed."
+msgstr "%(suggestedUpgradeVersion)s está pronta para ser instalada."
+
+msgctxt "in-app-notifications"
+msgid "<a>%(lockdownModeSettingName)s</a> is enabled. Please click “Connect“ or disable “%(lockdownModeSettingName)s“ to unblock internet."
+msgstr "<a>%(lockdownModeSettingName)s</a> está ativado. Clique em \"Ligar\" ou desative “%(lockdownModeSettingName)s“ para desbloquear a Internet."
+
+msgctxt "in-app-notifications"
+msgid "ACCOUNT CREDIT EXPIRES SOON"
+msgstr "O CRÉDITO DA CONTA EXPIRA BREVEMENTE"
+
+msgctxt "in-app-notifications"
+msgid "APP IS OUT OF SYNC"
+msgstr "APLICAÇÃO NÃO SINCRONIZADA"
+
+msgctxt "in-app-notifications"
+msgid "BETA UPDATE AVAILABLE"
+msgstr "ESTÁ DISPONÍVEL UMA ATUALIZAÇÃO BETA"
+
+msgctxt "in-app-notifications"
+msgid "BLOCKING INTERNET"
+msgstr "BLOQUEAR A INTERNET"
+
+#. Notification subtitle when the app upgrade is ready to install.
+msgctxt "in-app-notifications"
+msgid "Click here to install update."
+msgstr "Clique aqui para instalar a atualização."
+
+#. Notification subtitle when the installer failed.
+msgctxt "in-app-notifications"
+msgid "Click here to retry"
+msgstr "Clique aqui para tentar novamente"
+
+#. Notification subtitle when the download of the installer failed
+#. and the user can try downloading again.
+msgctxt "in-app-notifications"
+msgid "Click here to retry download"
+msgstr "Clique aqui para tentar transferir novamente"
+
+msgctxt "in-app-notifications"
+msgid "Click here to see what’s new."
+msgstr "Clique aqui para ver as novidades."
+
+#. Link text to go to the app upgrade view
+msgctxt "in-app-notifications"
+msgid "Click here to update"
+msgstr "Clique aqui para atualizar"
+
+#. Notification subtitle when the installer download failed.
+msgctxt "in-app-notifications"
+msgid "Could not download installer."
+msgstr "Não foi possível transferir o instalador."
+
+#. Generic notification subtitle when the app upgrade failed.
+msgctxt "in-app-notifications"
+msgid "Could not upgrade the app."
+msgstr "Não foi possível atualizar a aplicação."
+
+#. Notification title when app upgrade is verifying the installer.
+msgctxt "in-app-notifications"
+msgid "DOWNLOAD COMPLETE! VERIFYING..."
+msgstr "TRANSFERÊNCIA CONCLUÍDA! A VERIFICAR..."
+
+#. Notification title when the installer download failed.
+msgctxt "in-app-notifications"
+msgid "DOWNLOAD FAILED"
+msgstr "ERRO NA TRANSFERÊNCIA"
+
+#. Generic notification title when app upgrade is downloading the installer.
+msgctxt "in-app-notifications"
+msgid "DOWNLOADING UPDATE..."
+msgstr "A TRANSFERIR A ATUALIZAÇÃO..."
+
+#. Notification title when the app upgrade is in progress.
+#. Available placeholders:
+#. - %(appUpgradeDownloadProgressValue)s: The download progress value.
+msgctxt "in-app-notifications"
+msgid "DOWNLOADING UPDATE... %(appUpgradeDownloadProgressValue)s%%"
+msgstr "A TRANSFERIR A ATUALIZAÇÃO... %(appUpgradeDownloadProgressValue)s%%"
+
+#. The in-app banner displayed to the user when the app update is available.
+msgctxt "in-app-notifications"
+msgid "Install the latest app version to stay up to date."
+msgstr "Instale a versão mais recente da aplicação para se manter atualizado."
+
+#. Notification title when the installer failed.
+msgctxt "in-app-notifications"
+msgid "INSTALLER FAILED"
+msgstr "ERRO NO INSTALADOR"
+
+msgctxt "in-app-notifications"
+msgid "NETWORK TRAFFIC MIGHT BE LEAKING"
+msgstr "PODE HAVER FUGAS DE TRÁFEGO DE REDE"
+
+msgctxt "in-app-notifications"
+msgid "NEW DEVICE CREATED"
+msgstr "NOVO DISPOSITIVO CRIADO"
+
+msgctxt "in-app-notifications"
+msgid "NEW VERSION INSTALLED"
+msgstr "NOVA VERSÃO INSTALADA"
+
+msgctxt "in-app-notifications"
+msgid "Please quit and restart the app."
+msgstr "Termine a sessão e reinicie a aplicação."
+
+#. Notification title when the app upgrade is ready to install.
+msgctxt "in-app-notifications"
+msgid "READY TO INSTALL UPDATE"
+msgstr "PRONTO PARA INSTALAR A ATUALIZAÇÃO"
+
+#. Accessibility label for the button to retry download of the installer.
+msgctxt "in-app-notifications"
+msgid "Retry download of the installer"
+msgstr "Tentar transferir novamente o instalador"
+
+#. Accessibility label for the button to retry the installation.
+msgctxt "in-app-notifications"
+msgid "Retry installation"
+msgstr "Tentar novamente a instalação"
+
+#. Button label to send a problem report.
+msgctxt "in-app-notifications"
+msgid "Send problem report"
+msgstr "Enviar relatório do problema"
+
+#. Notification subtitle when the installer verification failed.
+msgctxt "in-app-notifications"
+msgid "The installer could not be verified."
+msgstr "Não foi possível verificar o instalador."
+
+#. Notification subtitle when the installer failed.
+msgctxt "in-app-notifications"
+msgid "The installer did not complete successfully."
+msgstr "O instalador não concluiu com sucesso."
+
+#. Notification subtitle when the installer failed.
+msgctxt "in-app-notifications"
+msgid "The installer did not start successfully."
+msgstr "O instalador não iniciou com sucesso."
+
+#. Notification subtitle indicating the user is using an unsupported port for WireGuard.
+#. Available placeholders:
+#. %(wireGuard)s - Will be replaced with WireGuard
+msgctxt "in-app-notifications"
+msgid "The selected %(wireGuard)s port is not supported, please <a>change it under VPN settings.</a>"
+msgstr "A porta %(wireGuard)s selecionada não é suportada. <a>Altere-a em Definições de VPN.</a>"
+
+#. Notification text when a new device has been created.
+#. Available placeholders:
+#. - %(deviceName)s: Name of created device.
+msgctxt "in-app-notifications"
+msgid "This device is now named <em>%(deviceName)s</em>. See more under <a>Manage devices</a> in Account."
+msgstr "Este dispositivo passou a chamar-se <em>%(deviceName)s</em>. Veja mais em <a>Gerir dispositivos</a> na Conta."
+
+#. The in-app banner displayed to the user when the app beta update is
+#. available.
+#. Available placeholders:
+#. %(version)s - The version number of the new beta version.
+msgctxt "in-app-notifications"
+msgid "Try out the newest beta version (%(version)s)."
+msgstr "Experimente a nossa mais recente versão beta (%(version)s)."
+
+msgctxt "in-app-notifications"
+msgid "UNSUPPORTED VERSION"
+msgstr "VERSÃO NÃO SUPORTADA"
+
+msgctxt "in-app-notifications"
+msgid "UPDATE AVAILABLE"
+msgstr "ESTÁ DISPONÍVEL UMA ATUALIZAÇÃO"
+
+#. Generic notification title when the app upgrade failed.
+msgctxt "in-app-notifications"
+msgid "UPDATE FAILED"
+msgstr "ERRO NA ATUALIZAÇÃO"
+
+#. Notification title when app upgrade is ready for the user to launch the installer.
+msgctxt "in-app-notifications"
+msgid "VERIFICATION COMPLETE! INSTALLER READY!"
+msgstr "VERIFICAÇÃO CONCLUÍDA! INSTALADOR PRONTO!"
+
+#. Notification title when app upgrade is launching the installer.
+msgctxt "in-app-notifications"
+msgid "VERIFICATION COMPLETE! LAUNCHING INSTALLER..."
+msgstr "VERIFICAÇÃO CONCLUÍDA! A INICIAR O INSTALADOR..."
+
+#. Notification title when the installer verification failed.
+msgctxt "in-app-notifications"
+msgid "VERIFICATION FAILED"
+msgstr "ERRO NA VERIFICAÇÃO"
+
+#. Status text app is trying to connect to the system service.
+msgctxt "launch-view"
+msgid "Connecting to Mullvad system service..."
+msgstr "A ligar-se ao serviço de sistema Mulvad..."
+
+#. Button label for opening dialog with troubleshooting details.
+msgctxt "launch-view"
+msgid "Details"
+msgstr "Detalhes"
+
+#. List item in troubleshooting modal advising user disable third party antivirus.
+msgctxt "launch-view"
+msgid "Disabling third party antivirus software"
+msgstr "Desativar software antivírus de terceiros"
+
+#. Status text shown when app fails to start.
+msgctxt "launch-view"
+msgid "Failed to start the app, please try again or click “Details” for more info"
+msgstr "Erro ao iniciar a aplicação. Tente novamente ou clique em \"Detalhes\" para mais informações"
+
+#. Message in troubleshooting modal advising user to send a problem report if the steps do not work.
+msgctxt "launch-view"
+msgid "If these steps do not work please send a problem report."
+msgstr "Se estes passos não funcionarem, envie um relatório do problema."
+
+#. Message in launch view when the background process permissions have been revoked.
+msgctxt "launch-view"
+msgid "Permission for the Mullvad VPN service has been revoked. Please go to System Settings and allow Mullvad VPN under the “Allow in the Background” setting."
+msgstr "A permissão para o serviço Mullvad VPN foi revogada. Aceda às definições do sistema e permita a Mullvad VPN, abaixo da definição \"Permitir em segundo plano\"."
+
+#. List item in troubleshooting modal advising user to reinstall the app.
+msgctxt "launch-view"
+msgid "Reinstalling the app"
+msgstr "Reinstalar a aplicação"
+
+#. List item in troubleshooting modal advising user to restart background process.
+msgctxt "launch-view"
+msgid "Restarting the Mullvad background process"
+msgstr "Reiniciar o processo em segundo plano do Mullvad"
+
+#. List item in troubleshooting modal instructing user how to restart the background process.
+msgctxt "launch-view"
+msgid "Restarting the Mullvad background process by clicking \"Back\", then \"Try again\""
+msgstr "Reiniciar o processo em segundo plano do Mullvad clicando em \"Voltar\", e depois em \"Tentar novamente\""
+
+#. List item in troubleshooting modal advising user to restart their computer.
+msgctxt "launch-view"
+msgid "Restarting your computer"
+msgstr "Reiniciar o seu computador"
+
+#. Button label for sending a problem report.
+msgctxt "launch-view"
+msgid "Send problem report"
+msgstr "Enviar relatório do problema"
+
+#. Status text shown when app is starting.
+msgctxt "launch-view"
+msgid "Starting up...."
+msgstr "A iniciar..."
+
+#. Message in troubleshooting modal when the background process failed to start.
+msgctxt "launch-view"
+msgid "The Mullvad background process failed to start. The background process is responsible for the security, kill switch, and the VPN tunnel. Please try:"
+msgstr "Erro ao iniciar o processo em segundo plano do Mullvad. O processo em segundo plano é responsável pela segurança, pelo kill switch e pelo túnel VPN. Tente o seguinte:"
+
+#. Button label for trying to restart the daemon again.
+msgctxt "launch-view"
+msgid "Try again"
+msgstr "Tentar novamente"
+
+#. Message in launch view when the mullvad service cannot be contacted.
+msgctxt "launch-view"
+msgid "Unable to contact the Mullvad system service, your connection might be unsecure. Please troubleshoot or send a problem report by clicking the \"Learn more\" button."
+msgstr "Não foi possível contactar o serviço do sistema Mullvad, a sua ligação pode ser insegura. Tente resolver o problema ou envie um relatório do problema clicando no botão \"Mais informações\"."
+
+#. This is used for appending information about a location.
+#. E.g. "Gothenburg (Entry)" if Gothenburg has been selected as the entrypoint.
+#. Available placeholders:
+#. %(location)s - Translated location name
+#. %(info)s - Information about the location
+msgctxt "locations-feature"
+msgid "%(location)s (%(info)s)"
+msgstr "%(location)s (%(info)s)"
+
+msgctxt "locations-feature"
+msgid "Disabling recents will also clear history."
+msgstr "Desativar os recentes também limpará o histórico."
+
+msgctxt "locations-feature"
+msgid "Entry"
+msgstr "Entrada"
+
+msgctxt "locations-feature"
+msgid "Exit"
+msgstr "Saída"
+
+#. This is a warning message shown when the app is blocking the users
+#. internet connection while logged out.
+#. Available placeholder:
+#. %(lockdownModeSettingName)s - The translation of "Lockdown mode"
+msgctxt "login-view"
+msgid "<b>%(lockdownModeSettingName)s</b> is enabled. Disable it to unblock your connection."
+msgstr "<b>%(lockdownModeSettingName)s</b> está ativado. Desative para desbloquear a sua ligação."
+
+msgctxt "login-view"
+msgid "Account created"
+msgstr "Conta criada"
+
+msgctxt "login-view"
+msgid "Checking account number"
+msgstr "A verificar o número da conta"
+
+#. Text in button that allows user to create a new account.
+msgctxt "login-view"
+msgid "Create a new account"
+msgstr "Criar uma nova conta"
+
+#. Button which confirms the action to create a new account.
+msgctxt "login-view"
+msgid "Create new account"
+msgstr "Criar nova conta"
+
+msgctxt "login-view"
+msgid "Creating account..."
+msgstr "A criar conta..."
+
+#. Text that asks the user if they really want to create a new account.
+msgctxt "login-view"
+msgid "Do you want to create a new account?"
+msgstr "Quer criar uma nova conta?"
+
+#. Text that asks the user if they really want to remove the saved account.
+msgctxt "login-view"
+msgid "Do you want to remove the saved account number?"
+msgstr "Quer remover o número de conta guardado?"
+
+msgctxt "login-view"
+msgid "Enter your account number"
+msgstr "Introduza o seu número de conta"
+
+msgctxt "login-view"
+msgid "Error"
+msgstr "Erro"
+
+msgctxt "login-view"
+msgid "Failed to create account"
+msgstr "Não foi possível criar a conta"
+
+msgctxt "login-view"
+msgid "Finishing upgrade."
+msgstr "A concluir atualização."
+
+#. Error message shown above login input when trying to login with a
+#. non-existent account number.
+msgctxt "login-view"
+msgid "Invalid account number"
+msgstr "Número de conta inválido"
+
+msgctxt "login-view"
+msgid "Logged in"
+msgstr "Sessão iniciada"
+
+msgctxt "login-view"
+msgid "Logging in..."
+msgstr "A iniciar sessão..."
+
+#. Label for the login button.
+msgctxt "login-view"
+msgid "Login"
+msgstr "Iniciar sessão"
+
+msgctxt "login-view"
+msgid "Login failed"
+msgstr "Erro ao iniciar sessão"
+
+#. Text shown between two horizontal lines above the "create account" button.
+#. In this context it is used to separate the users alternative of logging in
+#. or creating a new account, "Login or Create a new account".
+msgctxt "login-view"
+msgid "Or"
+msgstr "Ou"
+
+#. This is a warning message shown when the app is blocking the users
+#. internet connection while logged out.
+msgctxt "login-view"
+msgid "Our kill switch is currently blocking your connection."
+msgstr "De momento, o nosso kill switch está a bloquear a sua ligação."
+
+msgctxt "login-view"
+msgid "Please wait"
+msgstr "Por favor, aguarde"
+
+#. Text that informs the user about the consequences of clearing the saved
+#. account number.
+msgctxt "login-view"
+msgid "Removing the saved account number from this device cannot be undone."
+msgstr "A remoção do número de conta guardado deste dispositivo não pode ser anulada."
+
+#. Error message shown above login input when trying to login to an account
+#. with too many registered devices.
+msgctxt "login-view"
+msgid "Too many devices"
+msgstr "Demasiados dispositivos"
+
+msgctxt "login-view"
+msgid "Unknown error"
+msgstr "Erro desconhecido"
+
+msgctxt "login-view"
+msgid "Upgrading..."
+msgstr "A atualizar..."
+
+msgctxt "login-view"
+msgid "Valid account number"
+msgstr "Número de conta válido"
+
+#. Text that informs the users about consequences of creating a new account.
+msgctxt "login-view"
+msgid "You already have a saved account number, by creating a new account the saved account number will be removed from this device. This cannot be undone."
+msgstr "Já tem um número de conta guardado. Ao criar uma nova conta, o número de conta guardado será removido deste dispositivo. Esta ação não pode ser anulada."
+
+#. The title for the LWO port selector.
+msgctxt "lwo-settings-view"
+msgid "Port"
+msgstr "Porta"
+
+#. Text showing currently selected port.
+#. Available placeholders:
+#. %(port)s - Can be either a number between 1 and 65535 or the text "Automatic".
+msgctxt "lwo-settings-view"
+msgid "Port: %(port)s"
+msgstr "Porta: %(port)s"
+
+msgctxt "lwo-settings-view"
+msgid "The automatic setting will randomly choose from the valid port ranges shown below."
+msgstr "A definição automática escolherá aleatoriamente a partir do intervalo de portas válido apresentado abaixo."
+
+msgctxt "lwo-settings-view"
+msgid "The custom port can be any value inside the valid ranges: %(portRanges)s."
+msgstr "A porta personalizada pode ser qualquer valor dentro dos intervalos válidos: %(portRanges)s."
+
+#. Text describing the valid port ranges for a port selector.
+#. Available placeholders:
+#. %(portRanges)s - will be replaced with a comma-separated list of port ranges
+msgctxt "lwo-settings-view"
+msgid "Valid ranges: %(portRanges)s"
+msgstr "Intervalos válidos: %(portRanges)s"
+
+#. Title label in navigation bar
+msgctxt "navigation-bar"
+msgid "API access"
+msgstr "Acesso à API"
+
+#. The system notification displayed to the user when the account credit is close to expiry.
+#. Available placeholder:
+#. %(duration)s - remaining time, e.g. "2 days"
+msgctxt "notifications"
+msgid "Account credit expires in %(duration)s. Buy more credit."
+msgstr "O crédito da conta expira em %(duration)s. Comprar mais crédito."
+
+msgctxt "notifications"
+msgid "Account is out of time"
+msgstr "A conta está sem tempo"
+
+msgctxt "notifications"
+msgid "App is out of sync. Please quit and restart."
+msgstr "A aplicação não está sincronizada. Termine a sessão e reinicie."
+
+#. The system notification that notifies the user when a beta update is
+#. available.
+#. Available placeholders:
+#. %(version)s - The version number of the new beta version.
+msgctxt "notifications"
+msgid "Beta update available. Try out the newest beta version (%(version)s)."
+msgstr "Atualização beta disponível. Experimente a nossa mais recente versão beta (%(version)s)."
+
+msgctxt "notifications"
+msgid "Buy more"
+msgstr "Comprar mais"
+
+msgctxt "notifications"
+msgid "Connected"
+msgstr "Ligado"
+
+#. The message showed when a server has been connected to.
+#. Available placeholder:
+#. %(location) - name of the server location we're connected to (e.g. "se-got-003")
+msgctxt "notifications"
+msgid "Connected to %(location)s"
+msgstr "Ligado a %(location)s"
+
+msgctxt "notifications"
+msgid "Connecting"
+msgstr "A ligar"
+
+#. The message showed when a server is being connected to.
+#. Available placeholder:
+#. %(location) - name of the server location we're connecting to (e.g. "se-got-003")
+msgctxt "notifications"
+msgid "Connecting to %(location)s"
+msgstr "A ligar a %(location)s"
+
+msgctxt "notifications"
+msgid "Connection might be unsecured. App lost contact with system service, please troubleshoot."
+msgstr "A ligação pode não ser insegura. A app perdeu o contacto com o serviço do sistema. Tente resolver o problema."
+
+msgctxt "notifications"
+msgid "Could not configure IPv6. Disable it in the app or enable it on your device."
+msgstr "Não foi possível configurar o IPv6. Desative-o ou ative-o no seu dispositivo."
+
+msgctxt "notifications"
+msgid "Disconnected and unsecure"
+msgstr "Desligado e não seguro"
+
+msgctxt "notifications"
+msgid "Failed to enable split tunneling."
+msgstr "Erro ao ativar a divisão do túnel."
+
+msgctxt "notifications"
+msgid "Failed to enable split tunneling. Please try reconnecting or disable split tunneling."
+msgstr "Erro ao ativar a divisão do túnel. Tente voltar a ligar ou desative a divisão do túnel."
+
+#. Label for the system notification when the app encountered an error
+#. and will block network traffic until the error is resolved.
+msgctxt "notifications"
+msgid "Failed to start %(splitTunneling)s. To unblock network traffic, disable %(splitTunneling)s."
+msgstr "Falha ao iniciar a %(splitTunneling)s. Para desbloquear o tráfego de rede, desative a %(splitTunneling)s."
+
+#. Label for notification when IPv4 is not available.
+msgctxt "notifications"
+msgid "IPv4 is not available, please try changing Device IP version setting."
+msgstr "O IPv4 não está disponível. Tente alterar a definição de versão do IP do Dispositivo."
+
+#. Label for notification when IPv6 is not available.
+msgctxt "notifications"
+msgid "IPv6 is not available, please try changing Device IP version setting."
+msgstr "O IPv6 não está disponível. Tente alterar a definição de versão do IP do Dispositivo."
+
+msgctxt "notifications"
+msgid "Lockdown mode active, connection blocked"
+msgstr "Modo de bloqueio ativo, ligação bloqueada"
+
+msgctxt "notifications"
+msgid "No servers match your settings, try changing server or other settings."
+msgstr "Nenhum servidor corresponde às suas definições. Tente alterar o servidor ou outras definições."
+
+#. A link in the in-app banner to encourage the user to update the app.
+#. The in-app banner is is displayed to the user when the running app becomes unsupported.
+msgctxt "notifications"
+msgid "Please click here to update now"
+msgstr "Clique aqui para atualizar agora"
+
+msgctxt "notifications"
+msgid "Reconnecting"
+msgstr "A religar"
+
+msgctxt "notifications"
+msgid "The apps excluded with %(splitTunneling)s might not work properly right now."
+msgstr "As aplicações excluídas com %(splitTunneling)s podem não funcionar adequadamente neste momento."
+
+msgctxt "notifications"
+msgid "Unable to apply firewall rules."
+msgstr "Não é possível aplicar as regras de firewall."
+
+msgctxt "notifications"
+msgid "Unable to apply firewall rules. Try temporarily disabling any third-party antivirus or security software."
+msgstr "Não é possível aplicar as regras de firewall. Tente desativar temporariamente quaisquer antivírus ou software de segurança de terceiros."
+
+msgctxt "notifications"
+msgid "Unable to apply firewall rules. Try updating your kernel."
+msgstr "Não é possível aplicar as regras de firewall. Experimente atualizar o seu kernel."
+
+msgctxt "notifications"
+msgid "Unable to block all network traffic. Please troubleshoot or send a problem report."
+msgstr "Não foi possível bloquear todo o tráfego de rede. Experimente a resolução de problemas ou envie um relatório do problema."
+
+msgctxt "notifications"
+msgid "Unable to block all network traffic. Try temporarily disabling any third-party antivirus or security software or send a problem report."
+msgstr "Não é possível bloquear todo o tráfego de rede. Tente desativar temporariamente quaisquer antivírus ou software de segurança de terceiros, ou enviar um relatório do problema."
+
+msgctxt "notifications"
+msgid "Unable to block all network traffic. Try updating your kernel or send a problem report."
+msgstr "Não foi possível bloquear todo o tráfego de rede. Experimente atualizar o seu kernel ou envie um relatório do problema."
+
+msgctxt "notifications"
+msgid "Unable to resolve host of custom tunnel. Try changing your settings."
+msgstr "Não foi possível resolver o anfitrião do túnel personalizado. Experimente alterar as suas definições."
+
+msgctxt "notifications"
+msgid "Unable to set system DNS server. Please send a problem report."
+msgstr "Não foi possível definir o servidor DNS do sistema. Envie um relatório do problema."
+
+msgctxt "notifications"
+msgid "Unable to start tunnel connection. Please send a problem report."
+msgstr "Não foi possível iniciar a ligação de túnel. Envie um relatório do problema."
+
+msgctxt "notifications"
+msgid "Unable to start tunnel connection. This could be because of conflicts with VMware, please troubleshoot."
+msgstr "Não foi possível iniciar a ligação por túnel. Isto pode dever-se a conflitos com o VMware. Tente resolver o problema."
+
+msgctxt "notifications"
+msgid "Update available. Install the latest app version to stay up to date"
+msgstr "Atualização disponível. Instale a versão mais recente da aplicação para se manter atualizado"
+
+msgctxt "notifications"
+msgid "Upgrade"
+msgstr "Atualizar"
+
+msgctxt "notifications"
+msgid "Your device is offline. The tunnel will automatically connect once your device is back online."
+msgstr "O seu dispositivo está offline. O túnel irá ligar-se automaticamente assim que o seu dispositivo estiver novamente online."
+
+#. The in-app banner which is displayed to the user when the running app becomes unsupported.
+msgctxt "notifications"
+msgid "Your privacy might be at risk with this unsupported app version."
+msgstr "A sua privacidade pode estar comprometida com uma versão não suportada da aplicação."
+
+#. The system notification which is displayed to the user when the running app becomes unsupported.
+msgctxt "notifications"
+msgid "Your privacy might be at risk with this unsupported app version. Please update now."
+msgstr "A sua privacidade pode estar comprometida com uma versão não suportada da aplicação. Por favor efetue a atualização agora."
+
+#. Cancel button label for voucher redemption.
+msgctxt "redeem-voucher-alert"
+msgid "Cancel"
+msgstr "Cancelar"
+
+#. Input field label for voucher code.
+msgctxt "redeem-voucher-alert"
+msgid "Enter voucher code"
+msgstr "Introduza o código do voucher"
+
+#. Button label for redeeming a voucher.
+msgctxt "redeem-voucher-alert"
+msgid "Redeem voucher"
+msgstr "Reclamar voucher"
+
+msgctxt "redeem-voucher-view"
+msgid "An error occurred."
+msgstr "Ocorreu um erro."
+
+msgctxt "redeem-voucher-view"
+msgid "It looks like you’ve entered an account number instead of a voucher code. If you would like to change the active account, please log out first."
+msgstr "Parece que introduziu um número de conta em vez de um código de voucher. Se pretender alterar a conta ativa, termine a sessão primeiro."
+
+#. Button label for voucher redemption.
+msgctxt "redeem-voucher-view"
+msgid "Redeem"
+msgstr "Reclamar"
+
+msgctxt "redeem-voucher-view"
+msgid "Verifying voucher..."
+msgstr "A verificar voucher..."
+
+msgctxt "redeem-voucher-view"
+msgid "Voucher code has already been used."
+msgstr "O código do voucher já foi utilizado."
+
+msgctxt "redeem-voucher-view"
+msgid "Voucher code is invalid."
+msgstr "Código do voucher inválido."
+
+msgctxt "redeem-voucher-view"
+msgid "Voucher was successfully redeemed."
+msgstr "O voucher foi reclamado com sucesso."
+
+#. Title label in navigation bar
+msgctxt "select-language-nav"
+msgid "Select language"
+msgstr "Selecionar idioma"
+
+#. Title label in navigation bar
+msgctxt "select-location-nav"
+msgid "Select location"
+msgstr "Selecionar localização"
+
+#. Message shown when the user has no custom lists.
+#. Instructs the user how to create a custom list.
+msgctxt "select-location-view"
+msgid "Add a custom list by clicking the “+” icon"
+msgstr "Adicione uma lista personalizada clicando no ícone \"+\""
+
+msgctxt "select-location-view"
+msgid "All locations"
+msgstr "Todas as localizações"
+
+#. Label for a menu option to change the Multihop mode setting
+#. option to "Always".
+msgctxt "select-location-view"
+msgid "Always"
+msgstr "Sempre"
+
+#. Message shown in the custom list section when the user has at least one custom list.
+#. Instructs the user how to add locations to the custom list.
+msgctxt "select-location-view"
+msgid "Click “+“ on a location to add it to a list"
+msgstr "Clique no \"+\" de uma localização para a adicionar a uma lista"
+
+msgctxt "select-location-view"
+msgid "Custom lists"
+msgstr "Listas personalizadas"
+
+msgctxt "select-location-view"
+msgid "Disable recents"
+msgstr "Desativar recentes"
+
+#. Label for custom lists that don't have any locations added to them yet.
+msgctxt "select-location-view"
+msgid "Empty"
+msgstr "Vazia"
+
+msgctxt "select-location-view"
+msgid "Enable recents"
+msgstr "Ativar recentes"
+
+msgctxt "select-location-view"
+msgid "Entry"
+msgstr "Entrada"
+
+msgctxt "select-location-view"
+msgid "Exit"
+msgstr "Saída"
+
+msgctxt "select-location-view"
+msgid "Filtered:"
+msgstr "Filtrado:"
+
+#. Title for a menu with items for the Multihop mode setting options.
+msgctxt "select-location-view"
+msgid "Multihop mode"
+msgstr "Modo multihop"
+
+#. Label for a menu option to change the Multihop mode setting
+#. option to "Never".
+msgctxt "select-location-view"
+msgid "Never"
+msgstr "Nunca"
+
+#. Message shown when the user has no recent locations.
+msgctxt "select-location-view"
+msgid "No recent selection history"
+msgstr "Sem histórico de seleção recente"
+
+#. Label for indicator that shows that obfuscation is being used as a filter.
+#. Available placeholders:
+#. %(obfuscation)s - type of obfuscation in use
+msgctxt "select-location-view"
+msgid "Obfuscation: %(obfuscation)s"
+msgstr "Ofuscação: %(obfuscation)s"
+
+msgctxt "select-location-view"
+msgid "Providers: %(numberOfProviders)d"
+msgstr "Fornecedores: %(numberOfProviders)d"
+
+#. Title for section showing recently used locations.
+msgctxt "select-location-view"
+msgid "Recents"
+msgstr "Recentes"
+
+msgctxt "select-location-view"
+msgid "Setting: %(settingName)s"
+msgstr "Definição: %(settingName)s"
+
+#. Text showing how many locations are currently shown out of the total number of locations, e.g. "Showing 5 of 250"
+#. Available placeholders:
+#. %(visibleRelays)s: The number of relays currently shown
+#. %(totalRelays)s: The total number of relays
+msgctxt "select-location-view"
+msgid "Showing %(visibleRelays)s of %(totalRelays)s"
+msgstr "A mostrar %(visibleRelays)s de %(totalRelays)s"
+
+#. Label for a menu option to change the Multihop mode setting
+#. option to "When needed".
+msgctxt "select-location-view"
+msgid "When needed"
+msgstr "Quando necessário"
+
+msgctxt "settings-import"
+msgid "Clear all overrides"
+msgstr "Limpar todas as substituições"
+
+msgctxt "settings-import"
+msgid "Clear all overrides?"
+msgstr "Limpar todas as substituições?"
+
+msgctxt "settings-import"
+msgid "Clearing the imported overrides changes the server IPs, in the Select location view, back to default."
+msgstr "Limpar as substituições importadas altera os IPs dos servidores, na vista Selecionar local, para as definições padrão."
+
+msgctxt "settings-import"
+msgid "If you are having issues connecting to VPN servers, please contact support."
+msgstr "Se estiver a ter problemas em ligar-se a servidores VPN, contacte o suporte."
+
+msgctxt "settings-import"
+msgid "Import file"
+msgstr "Importar ficheiro"
+
+msgctxt "settings-import"
+msgid "Import files or text with new IP addresses for the servers in the Select location view."
+msgstr "Importe ficheiros ou texto com novos endereços IP para os servidores na vista Selecionar local."
+
+msgctxt "settings-import"
+msgid "Import of file %(fileName)s was successful, overrides are now active."
+msgstr "A importação do ficheiro %(fileName)s foi bem-sucedida, as substituições estão agora ativas."
+
+msgctxt "settings-import"
+msgid "Import of file %(fileName)s was unsuccessful, please try again."
+msgstr "A importação do ficheiro %(fileName)s foi mal-sucedida. Tente novamente."
+
+msgctxt "settings-import"
+msgid "Import of text was successful, overrides are now active."
+msgstr "A importação do texto foi bem-sucedida, as substituições estão agora ativas."
+
+msgctxt "settings-import"
+msgid "Import of text was unsuccessful, please try again."
+msgstr "A importação do texto foi mal-sucedida. Tente novamente."
+
+msgctxt "settings-import"
+msgid "IMPORT SUCCESSFUL"
+msgstr "IMPORTAÇÃO BEM-SUCEDIDA"
+
+#. Title label in navigation bar
+msgctxt "settings-import"
+msgid "Import via text"
+msgstr "Importar através de texto"
+
+msgctxt "settings-import"
+msgid "NO OVERRIDES IMPORTED"
+msgstr "NENHUMA SUBSTITUIÇÃO IMPORTADA"
+
+msgctxt "settings-import"
+msgid "On some networks, where various types of censorship are being used, our server IP addresses are sometimes blocked."
+msgstr "Em algumas redes, onde são utilizados vários tipos de censura, os endereços IP dos nossos servidores são por vezes bloqueados."
+
+msgctxt "settings-import"
+msgid "OVERRIDES ACTIVE"
+msgstr "SUBSTITUIÇÕES ATIVAS"
+
+#. Title label in navigation bar. This is for a feature that lets
+#. users import server IP settings.
+msgctxt "settings-import"
+msgid "Server IP override"
+msgstr "Substituição de IP de servidor"
+
+msgctxt "settings-import"
+msgid "To circumvent this you can import a file or a text, provided by our support team, with new IP addresses that override the default addresses of the servers in the Select location view."
+msgstr "Para contornar esta situação, pode importar um ficheiro ou texto, fornecido pela nossa equipa de suporte, com novos endereços IP que substituem os endereços padrão dos servidores na vista Selecionar local."
+
+#. Display name of the currently selected option for the Multihop mode setting
+#. when the "Always" option is selected.
+msgctxt "settings-view"
+msgid "Always"
+msgstr "Sempre"
+
+#. Navigation button to the 'API access methods' view
+msgctxt "settings-view"
+msgid "API access"
+msgstr "Acesso à API"
+
+#. Navigation button to the 'App info' view
+msgctxt "settings-view"
+msgid "App info"
+msgstr "Informação sobre a app"
+
+msgctxt "settings-view"
+msgid "Multihop"
+msgstr "Multihop"
+
+#. Display name of the currently selected option for the Multihop mode setting
+#. when the "Never" option is selected.
+msgctxt "settings-view"
+msgid "Never"
+msgstr "Nunca"
+
+#. Title label in navigation bar
+msgctxt "settings-view"
+msgid "Settings"
+msgstr "Definições"
+
+#. Navigation button to the 'Support' view
+msgctxt "settings-view"
+msgid "Support"
+msgstr "Suporte"
+
+#. Label for the app info list item indicating that an update is available and can be downloaded
+msgctxt "settings-view"
+msgid "Update available"
+msgstr "Atualização disponível"
+
+#. Navigation button to the 'User interface settings' view
+msgctxt "settings-view"
+msgid "User interface settings"
+msgstr "Definições da interface de utilizador"
+
+#. Navigation button to the 'VPN settings' view
+msgctxt "settings-view"
+msgid "VPN settings"
+msgstr "Definições de VPN"
+
+#. Display name of the currently selected option for the Multihop mode setting
+#. when the "When needed" option is selected.
+msgctxt "settings-view"
+msgid "When needed"
+msgstr "Quando necessário"
+
+msgctxt "split-tunneling-view"
+msgid "%(applicationName)s is problematic and can’t be excluded from the VPN tunnel."
+msgstr "A %(applicationName)s é problemática e não pode ser executada através do túnel VPN."
+
+#. Information about split tunneling not being supported on the system.
+#. Available placeholders:
+#. %(splitTunneling)s - will be replaced with Split tunneling
+msgctxt "split-tunneling-view"
+msgid "%(splitTunneling)s is not supported by your system."
+msgstr "%(splitTunneling)s não é suportada pelo seu sistema."
+
+msgctxt "split-tunneling-view"
+msgid "Add"
+msgstr "Adicionar"
+
+msgctxt "split-tunneling-view"
+msgid "All apps"
+msgstr "Todas as aplicações"
+
+msgctxt "split-tunneling-view"
+msgid "Choose the apps you want to exclude from the VPN tunnel."
+msgstr "Escolha as aplicações que deseja excluir do túnel VPN."
+
+#. Link for learning more
+msgctxt "split-tunneling-view"
+msgid "Click here to learn more"
+msgstr "Clique aqui para saber mais"
+
+msgctxt "split-tunneling-view"
+msgid "Click on an app to launch it. Its traffic will bypass the VPN tunnel until you close it."
+msgstr "Clique numa aplicação para a lançar. O seu tráfego irá contornar o túnel VPN até que a feche."
+
+msgctxt "split-tunneling-view"
+msgid "Enabled \"Full disk access\" and still having issues?"
+msgstr "Ativou a opção \"Acesso completo ao disco\" e continua a ter problemas?"
+
+msgctxt "split-tunneling-view"
+msgid "Excluded apps"
+msgstr "Aplicações excluídas"
+
+#. Button label for browsing applications with split tunneling.
+msgctxt "split-tunneling-view"
+msgid "Find another app"
+msgstr "Encontrar outra aplicação"
+
+msgctxt "split-tunneling-view"
+msgid "If it’s already running, close %(applicationName)s before launching it from here. Otherwise it might not be excluded from the VPN tunnel."
+msgstr "Caso já esteja a ser executada, feche a %(applicationName)s antes de a lançar através daqui. Caso contrário esta poderá não ser executada através do túnel VPN."
+
+#. Button label for launching an application with split tunneling.
+msgctxt "split-tunneling-view"
+msgid "Launch"
+msgstr "Lançar"
+
+msgctxt "split-tunneling-view"
+msgid "Open System Settings"
+msgstr "Abrir definições do sistema"
+
+#. This error message is shown if the user tries to launch a Linux desktop
+#. entry file that doesn't contain the required 'Exec' value.
+msgctxt "split-tunneling-view"
+msgid "Please send a problem report."
+msgstr "Envie um relatório do problema."
+
+#. This error message is shown if the user tries to launch an app that
+#. doesn't exist.
+#. This error message is shown if an application fails during startup.
+msgctxt "split-tunneling-view"
+msgid "Please try again or send a problem report."
+msgstr "Tente novamente ou envie um relatório do problema."
+
+msgctxt "split-tunneling-view"
+msgid "Restart Mullvad Service"
+msgstr "Reiniciar o serviço Mullvad"
+
+#. Information about split tunneling being unavailable due to
+#. missing support in the user's operating system.
+#. Available placeholders:
+#. %(splitTunneling)s - will be replaced with Split tunneling
+msgctxt "split-tunneling-view"
+msgid "To use %(splitTunneling)s, please change to a Linux kernel version that supports cgroup v1."
+msgstr "Para usar %(splitTunneling)s, mude para uma versão do kernel Linux que suporte cgroup v1."
+
+msgctxt "split-tunneling-view"
+msgid "To use split tunneling please enable “Full disk access” for “Mullvad VPN” in the macOS system settings."
+msgstr "Para utilizar o túnel dividido, ative \"Acesso completo ao disco\" para \"Mullvad VPN\" nas definições do sistema macOS."
+
+#. Error message showed in a dialog when an application fails to launch.
+msgctxt "split-tunneling-view"
+msgid "Unable to launch selection. %(detailedErrorMessage)s"
+msgstr "Não foi possível lançar a seleção. %(detailedErrorMessage)s"
+
+#. Button label for continuing problem report submission with an outdated app version.
+msgctxt "support-view"
+msgid "Continue anyway"
+msgstr "Continuar mesmo assim"
+
+#. Button text to edit the message after a failed attempt to send the problem report.
+msgctxt "support-view"
+msgid "Edit message"
+msgstr "Editar mensagem"
+
+msgctxt "support-view"
+msgid "Failed to send"
+msgstr "Erro no envio"
+
+#. Link to the webpage
+msgctxt "support-view"
+msgid "FAQs & Guides"
+msgstr "Perguntas frequentes e guias"
+
+#. The message displayed to the user after submitting the problem report, given that the user left his or her email for us to reach back.
+#. Available placeholders:
+#. %(email)s
+msgctxt "support-view"
+msgid "If needed we will contact you at %(email)s"
+msgstr "Se necessário, iremos contactá-lo através de %(email)s"
+
+msgctxt "support-view"
+msgid "If you exit the form and try again later, the information you already entered will still be here."
+msgstr "Se sair do formulário e tentar novamente mais tarde, a informação que já tiver introduzido continuará aqui."
+
+#. Title label in navigation bar
+#. Navigation button to the 'Report a problem' help view
+msgctxt "support-view"
+msgid "Report a problem"
+msgstr "Reportar um problema"
+
+#. Button label for sending the problem report.
+msgctxt "support-view"
+msgid "Send"
+msgstr "Enviar"
+
+#. Button label for sending the problem report without an email address.
+msgctxt "support-view"
+msgid "Send anyway"
+msgstr "Enviar mesmo assim"
+
+msgctxt "support-view"
+msgid "Sending..."
+msgstr "A enviar..."
+
+msgctxt "support-view"
+msgid "Sent"
+msgstr "Enviado"
+
+#. Title label in navigation bar
+msgctxt "support-view"
+msgid "Support"
+msgstr "Suporte"
+
+msgctxt "support-view"
+msgid "Thanks!"
+msgstr "Obrigado!"
+
+msgctxt "support-view"
+msgid "To assist you better, please write in English or Swedish and include which country you are connecting from."
+msgstr "Para o ajudar melhor, escreva em inglês ou sueco e indique o país de onde está a efetuar a ligação."
+
+msgctxt "support-view"
+msgid "To help you more effectively, your app’s log file will be attached to this message. Your data will remain secure and private, as it is anonymised before being sent over an encrypted channel."
+msgstr "Para ajudarmos de forma mais eficaz, o ficheiro de registo da sua aplicação será anexado a esta mensagem. Os seus dados permanecerão seguros e privados, pois são tornados anónimos antes de serem enviados através de um canal encriptado."
+
+#. Button label for retrying problem report submission after a failure.
+msgctxt "support-view"
+msgid "Try again"
+msgstr "Tentar novamente"
+
+#. Button label for updating the app to the latest version.
+msgctxt "support-view"
+msgid "Update app"
+msgstr "Atualizar aplicação"
+
+#. Button label for opening app logs.
+msgctxt "support-view"
+msgid "View app logs"
+msgstr "Ver os registos da app"
+
+msgctxt "support-view"
+msgid "We will look into this."
+msgstr "Vamos analisar esta situação."
+
+msgctxt "support-view"
+msgid "You are about to send the problem report without a way for us to get back to you. If you want an answer to your report you will have to enter an email address."
+msgstr "Está prestes a enviar o relatório de problema sem que tenhamos uma forma de lhe responder. Se pretender uma resposta ao seu relatório, tem de introduzir um endereço de email."
+
+msgctxt "support-view"
+msgid "You are using an old version of the app. Please upgrade and see if the problem still exists before sending a report."
+msgstr "Está a utilizar uma versão antiga da aplicação. Atualize a aplicação e veja se o problema persiste antes de enviar um relatório."
+
+msgctxt "support-view"
+msgid "Your email (optional)"
+msgstr "O seu email (opcional)"
+
+msgctxt "tray-icon-context-menu"
+msgid "Disconnected from system service"
+msgstr "Desligado do serviço do sistema"
+
+msgctxt "tray-icon-context-menu"
+msgid "Open %(mullvadVpn)s"
+msgstr "Abrir %(mullvadVpn)s"
+
+msgctxt "tray-icon-tooltip"
+msgid "%(city)s, %(country)s"
+msgstr "%(city)s, %(country)s"
+
+msgctxt "tray-icon-tooltip"
+msgid "Connected. %(location)s"
+msgstr "Ligado. %(location)s"
+
+msgctxt "tray-icon-tooltip"
+msgid "Connecting. %(location)s"
+msgstr "A ligar. %(location)s"
+
+msgctxt "troubleshoot"
+msgid "Disable split tunneling"
+msgstr "Desativar split tunneling"
+
+msgctxt "troubleshoot"
+msgid "Enable “Full Disk Access” for “Mullvad VPN” in the macOS system settings."
+msgstr "Ative \"Acesso completo ao disco\" para \"Mullvad VPN\" nas definições de sistema do macOS."
+
+msgctxt "troubleshoot"
+msgid "Failed to enable split tunneling. This is because the app is missing system permissions. What you can do:"
+msgstr "Erro ao ativar a divisão do túnel, devido a falta de permissões de sistema da aplicação. Pode:"
+
+msgctxt "troubleshoot"
+msgid "If these steps do not work please send a problem report."
+msgstr "Se estes passos não funcionarem, envie um relatório do problema."
+
+msgctxt "troubleshoot"
+msgid "If you have installed another VPN then try to uninstall that."
+msgstr "Se tiver instalado outra VPN, tente desinstalá-la."
+
+msgctxt "troubleshoot"
+msgid "Make sure you have NF tables support."
+msgstr "Garanta que tem compatibilidade com Nftables."
+
+msgctxt "troubleshoot"
+msgid "Open system settings"
+msgstr "Abrir as definições de sistema"
+
+msgctxt "troubleshoot"
+msgid "This error can happen when something other than Mullvad is actively updating the DNS."
+msgstr "Este erro pode acontecer quando algo diferente do Mullvad está a atualizar ativamente o DNS."
+
+msgctxt "troubleshoot"
+msgid "This might be caused by an outdated kernel."
+msgstr "Isto pode ser causado por um kernel desatualizado."
+
+msgctxt "troubleshoot"
+msgid "Try restarting your device."
+msgstr "Tente reiniciar o seu dispositivo."
+
+msgctxt "troubleshoot"
+msgid "Try to reinstall VMware."
+msgstr "Tente reinstalar o VMware."
+
+msgctxt "troubleshoot"
+msgid "Try to turn Wi-Fi Calling off in the FaceTime app settings and restart the Mac."
+msgstr "Tente desligar as Chamadas por Wi-Fi nas definições de app do FaceTime e reiniciar o Mac."
+
+msgctxt "troubleshoot"
+msgid "Try to uninstall VMware."
+msgstr "Tente desinstalar o VMware."
+
+msgctxt "troubleshoot"
+msgid "Unable to communicate with the split tunnel driver."
+msgstr "Não foi possível comunicar com a driver do túnel dividido."
+
+msgctxt "troubleshoot"
+msgid "Unable to start tunnel connection because of a failure when creating the tunnel device. This is often caused by conflicts with the VMware Bridge Protocol."
+msgstr "Não foi possível iniciar a ligação por túnel devido a uma falha ao criar o dispositivo de túnel. Isto é geralmente causado por conflitos com o protocolo de ponte VMware."
+
+msgctxt "troubleshoot"
+msgid "Uninstall or disable other DNS, networking and ads/website blocking apps."
+msgstr "Desinstale ou desative outras apps de DNS, rede e bloqueio de anúncios/websites."
+
+msgctxt "troubleshoot"
+msgid "Update your kernel."
+msgstr "Atualize o seu kernel."
+
+msgctxt "tunnel-control"
+msgid "Connect"
+msgstr "Ligar"
+
+msgctxt "tunnel-control"
+msgid "Switch location"
+msgstr "Alterar local"
+
+msgctxt "user-interface-settings-view"
+msgid "Animate map"
+msgstr "Animar o mapa"
+
+msgctxt "user-interface-settings-view"
+msgid "Animate map movements."
+msgstr "Animar movimentos do mapa."
+
+msgctxt "user-interface-settings-view"
+msgid "Enable or disable system notifications. The critical notifications will always be displayed."
+msgstr "Habilitar ou desabilitar as notificações de sistema. As notificações críticas serão sempre exibidas."
+
+msgctxt "user-interface-settings-view"
+msgid "Enable to move the app around as a free-standing window."
+msgstr "Ative para movimentar a aplicação como janela independente."
+
+#. Navigation button to the 'Language' settings view
+msgctxt "user-interface-settings-view"
+msgid "Language"
+msgstr "Idioma"
+
+msgctxt "user-interface-settings-view"
+msgid "Monochromatic menu bar icon"
+msgstr "Ícone monocromático da barra de menus"
+
+msgctxt "user-interface-settings-view"
+msgid "Monochromatic tray icon"
+msgstr "Ícone monocromático de bandeja"
+
+msgctxt "user-interface-settings-view"
+msgid "Notifications"
+msgstr "Notificações"
+
+msgctxt "user-interface-settings-view"
+msgid "Show only the menu bar icon when the app starts."
+msgstr "Mostrar apenas o ícone da barra de menus ao iniciar a aplicação."
+
+msgctxt "user-interface-settings-view"
+msgid "Show only the tray icon when the app starts."
+msgstr "Mostrar apenas o ícone da bandeja ao iniciar a aplicação."
+
+msgctxt "user-interface-settings-view"
+msgid "Start minimized"
+msgstr "Iniciar minimizado"
+
+#. Label for a setting to unpin the app window from the macOS "menu bar"
+msgctxt "user-interface-settings-view"
+msgid "Unpin app from menu bar"
+msgstr "Remover a aplicação da barra de menus"
+
+#. Label for a setting to unpin the app window from the Windows "taskbar"
+msgctxt "user-interface-settings-view"
+msgid "Unpin app from taskbar"
+msgstr "Remover a aplicação da barra de tarefas"
+
+msgctxt "user-interface-settings-view"
+msgid "Use a monochromatic menu bar icon instead of a colored one."
+msgstr "Usar um ícone monocromático da barra de menus em vez de um colorido."
+
+msgctxt "user-interface-settings-view"
+msgid "Use a monochromatic tray icon instead of a colored one."
+msgstr "Usar um ícone monocromático de bandeja em vez de um colorido."
+
+#. Title label in navigation bar
+msgctxt "user-interface-settings-view"
+msgid "User interface settings"
+msgstr "Definições da interface de utilizador"
+
+msgctxt "vpn-settings-view"
+msgid "Add a server"
+msgstr "Adicionar um servidor"
+
+#. Button label to add a private IP DNS server despite warning.
+msgctxt "vpn-settings-view"
+msgid "Add anyway"
+msgstr "Adicionar mesmo assim"
+
+#. Label for settings that enables ad blocking.
+msgctxt "vpn-settings-view"
+msgid "Ads"
+msgstr "Anúncios"
+
+#. Label for settings that enables block of adult content.
+msgctxt "vpn-settings-view"
+msgid "Adult content"
+msgstr "Conteúdo para adultos"
+
+#. Label for list item that navigates to anti-censorship
+#. settings view.
+msgctxt "vpn-settings-view"
+msgid "Anti-censorship"
+msgstr "Anti-censura"
+
+msgctxt "vpn-settings-view"
+msgid "Attention: enabling this will always require a Mullvad VPN connection in order to reach the internet."
+msgstr "Atenção: ativar esta opção exige sempre uma ligação através de Mullvad VPN para aceder à Internet."
+
+msgctxt "vpn-settings-view"
+msgid "Attention: this setting cannot be used in combination with <b>%(customDnsFeatureName)s</b>"
+msgstr "Atenção: esta definição não pode ser usada em combinação com <b>%(customDnsFeatureName)s</b>"
+
+msgctxt "vpn-settings-view"
+msgid "Auto-connect"
+msgstr "Ligação automática"
+
+msgctxt "vpn-settings-view"
+msgid "Automatically connect to a server when the app launches."
+msgstr "Liga-se automaticamente a um servidor quando a app inicia."
+
+#. This is displayed when the custom DNS setting is turned on which makes the block
+#. ads/trackers settings disabled. The text enclosed in "<b></b>" will appear bold.
+#. Available placeholders:
+#. %(customDnsFeatureName)s - The name displayed next to the custom DNS toggle.
+msgctxt "vpn-settings-view"
+msgid "Disable \"%(customDnsFeatureName)s\" below to activate these settings."
+msgstr "Desative \"%(customDnsFeatureName)s\" abaixo para ativar estas definições."
+
+#. This is displayed when either or both of the block ads/trackers settings are
+#. turned on which makes the custom DNS setting disabled.
+#. Available placeholders:
+#. %(preferencesPageName)s - The page title showed on top in the preferences page.
+msgctxt "vpn-settings-view"
+msgid "Disable all <b>DNS content blockers</b> above to activate this setting."
+msgstr "Desative todos os <b>bloqueadores de conteúdo DNS</b> acima para ativar esta definição."
+
+msgctxt "vpn-settings-view"
+msgid "DNS content blockers"
+msgstr "Bloqueadores de conteúdo DNS"
+
+msgctxt "vpn-settings-view"
+msgid "Enable to add at least one DNS server."
+msgstr "Ativar para adicionar pelo menos um servidor DNS."
+
+#. Description of in-tunnel IPv6 setting.
+msgctxt "vpn-settings-view"
+msgid "Enable to allow IPv6 traffic through the tunnel."
+msgstr "Ative para permitir tráfego IPv6 através do túnel."
+
+msgctxt "vpn-settings-view"
+msgid "Enter IP"
+msgstr "Introduzir IP"
+
+#. Label for settings that enables block of gamling related websites.
+msgctxt "vpn-settings-view"
+msgid "Gambling"
+msgstr "Jogos de azar"
+
+msgctxt "vpn-settings-view"
+msgid "If you can’t connect you can try using the IP address instead of the host name. If you want to connect to a subnet or a private network address range, you can follow our guide to add a static route."
+msgstr "Se não conseguir estabelecer ligação, pode tentar utilizar o endereço IP em vez do nome do anfitrião. Se quer ligar a uma sub-rede ou a um intervalo de endereços de uma rede privada, pode seguir o nosso guia para adicionar uma rota estática."
+
+#. Title of in-tunnel IPv6 setting.
+msgctxt "vpn-settings-view"
+msgid "In-tunnel IPv6"
+msgstr "IPv6 em túnel"
+
+msgctxt "vpn-settings-view"
+msgid "IPv4 is always enabled and the majority of websites and applications use this protocol. We do not recommend enabling IPv6 unless you know you need it."
+msgstr "O IPv4 está sempre ativado e a maioria dos websites e aplicações utilizam este protocolo. Não recomendamos a ativação do IPv6, a menos que saiba que precisa dele."
+
+#. A complimentary description for the setting Device IP version,
+#. explaining why the user might want to configure the setting.
+msgctxt "vpn-settings-view"
+msgid "It can be useful when you are aware of problems caused by a certain IP version."
+msgstr "Pode ser útil ao ter conhecimento de problemas causados por uma determinada versão do IP."
+
+msgctxt "vpn-settings-view"
+msgid "It does this by allowing network communication outside the tunnel to local multicast and broadcast ranges as well as to and from these private IP ranges:"
+msgstr "Para tal, permite a comunicação de rede fora do túnel para intervalos locais de multicast e difusão, bem como de e para estes intervalos de IPs privados:"
+
+msgctxt "vpn-settings-view"
+msgid "Kill switch"
+msgstr "Kill switch"
+
+msgctxt "vpn-settings-view"
+msgid "Launch app on start-up"
+msgstr "Iniciar a app no arranque"
+
+msgctxt "vpn-settings-view"
+msgid "Local network sharing"
+msgstr "Partilha de rede local"
+
+msgctxt "vpn-settings-view"
+msgid "Lockdown mode"
+msgstr "Modo de bloqueio"
+
+#. Label for settings that enables malware blocking.
+msgctxt "vpn-settings-view"
+msgid "Malware"
+msgstr "Malware"
+
+msgctxt "vpn-settings-view"
+msgid "Server IP override"
+msgstr "Substituição de IP de servidor"
+
+#. Label for settings that enables block of social media.
+msgctxt "vpn-settings-view"
+msgid "Social media"
+msgstr "Redes sociais"
+
+msgctxt "vpn-settings-view"
+msgid "The app’s built-in kill switch is always on. This setting will additionally block the internet if clicking Disconnect or Quit."
+msgstr "O kill switch integrado da aplicação está sempre ligado. Esta definição bloqueará adicionalmente a Internet caso o utilizador se desligue ou saia da aplicação."
+
+msgctxt "vpn-settings-view"
+msgid "The difference between the Kill Switch and Lockdown Mode is that the Kill Switch will prevent any leaks from happening during automatic tunnel reconnects, software crashes and similar accidents."
+msgstr "A diferença entre o Kill Switch e o Modo de bloqueio é que o Kill Switch evitará quaisquer fugas durante os restabelecimentos de ligação automáticos do túnel, falhas de software e acidentes semelhantes."
+
+msgctxt "vpn-settings-view"
+msgid "The difference between the Kill Switch and Lockdown Mode is that the Kill Switch will prevent any leaks from happening during automatic tunnel reconnects, software crashes and similar accidents. With Lockdown Mode enabled, you must be connected to a Mullvad VPN server to be able to reach the internet. Manually disconnecting or quitting the app will block your connection."
+msgstr "A diferença entre o Kill Switch e o Modo de bloqueio é que o Kill Switch evitará quaisquer fugas durante os restabelecimentos de ligação automáticos do túnel, falhas de software e acidentes semelhantes. Com o Modo de bloqueio ativado, deve estar ligado a um servidor VPN Mullvad para poder aceder à Internet. Desligar manualmente ou sair da aplicação irá bloquear a sua ligação."
+
+msgctxt "vpn-settings-view"
+msgid "The DNS server you want to add is a private IP. You must ensure that your network interfaces are configured to use it."
+msgstr "O servidor DNS que deseja adicionar é um IP privado. Tem de garantir que os seus interfaces de rede estão configurados para utilizá-lo."
+
+msgctxt "vpn-settings-view"
+msgid "This built-in feature prevents your traffic from leaking outside of the VPN tunnel if your network suddenly stops working or if the tunnel fails, it does this by blocking your traffic until your connection is reestablished."
+msgstr "Esta funcionalidade integrada evita que o seu tráfego saia do túnel VPN se a sua rede parar subitamente de funcionar ou se o túnel falhar. Fá-lo ao bloquear o seu tráfego até que a sua ligação seja restabelecida."
+
+msgctxt "vpn-settings-view"
+msgid "This feature allows access to other devices on the local network, such as for sharing, printing, streaming, etc."
+msgstr "Esta funcionalidade permite o acesso a outros dispositivos na rede local, por exemplo, para partilha, impressão, streaming, etc."
+
+#. A description for the setting Device IP version,
+#. explaining how the user can configure the setting.
+msgctxt "vpn-settings-view"
+msgid "This feature allows you to choose whether to use only IPv4, only IPv6, or allow the app to automatically decide the best option when connecting to a server."
+msgstr "Esta funcionalidade permite escolher se pretende utilizar apenas IPv4, apenas IPv6, ou permitir que a aplicação decida automaticamente a melhor opção ao ligar a um servidor."
+
+msgctxt "vpn-settings-view"
+msgid "This might cause issues on certain websites, services, and apps."
+msgstr "Pode causar problemas em alguns sites, serviços e apps."
+
+#. Label for settings that enables tracker blocking.
+msgctxt "vpn-settings-view"
+msgid "Trackers"
+msgstr "Trackers"
+
+msgctxt "vpn-settings-view"
+msgid "Use custom DNS server"
+msgstr "Usar servidor DNS personalizado"
+
+#. Title label in navigation bar
+msgctxt "vpn-settings-view"
+msgid "VPN settings"
+msgstr "Definições de VPN"
+
+msgctxt "vpn-settings-view"
+msgid "Warning: The malware blocker is not an anti-virus and should not be treated as such, this is just an extra layer of protection."
+msgstr "Aviso: o bloqueador de malware não é um antivírus e não deve ser tratado como tal, é apenas uma camada extra de proteção."
+
+msgctxt "vpn-settings-view"
+msgid "When this feature is enabled it stops the device from contacting certain domains or websites known for distributing ads, malware, trackers and more."
+msgstr "Quando esta funcionalidade é ativada, impede que o dispositivo contacte certos domínios ou sites conhecidos por distribuir anúncios, malware, trackers e muito mais."
+
+msgctxt "vpn-settings-view"
+msgid "When this feature is enabled, IPv6 can be used alongside IPv4 in the VPN tunnel to communicate with internet services."
+msgstr "Quando esta funcionalidade está ativada, o IPv6 pode ser utilizado juntamente com o IPv4 no túnel VPN para comunicar com os serviços Internet."
+
+msgctxt "vpn-settings-view"
+msgid "With Lockdown Mode enabled, you must be connected to a Mullvad VPN server to be able to reach the internet. Manually disconnecting or quitting the app will block your connection."
+msgstr "Com o Modo de bloqueio ativado, deve estar ligado a um servidor VPN Mullvad para poder aceder à Internet. Desligar manualmente ou sair da aplicação irá bloquear a sua ligação."
+
+#. Title label in navigation bar
+msgctxt "wireguard-settings-nav"
+msgid "Shadowsocks"
+msgstr "Shadowsocks"
+
+#. Title label in navigation bar
+msgctxt "wireguard-settings-nav"
+msgid "UDP-over-TCP"
+msgstr "UDP sobre TCP"
+
+msgctxt "wireguard-settings-view"
+msgid "%(daita)s (%(daitaFull)s) hides patterns in your encrypted VPN traffic."
+msgstr "%(daita)s (%(daitaFull)s) oculta padrões no seu tráfego VPN encriptado."
+
+msgctxt "wireguard-settings-view"
+msgid "%(daita)s does this by carefully adding network noise and making all network packets the same size."
+msgstr "%(daita)s consegue-o ao adicionar cuidadosamente ruído de rede e ao tornar todos os pacotes de rede do mesmo tamanho."
+
+msgctxt "wireguard-settings-view"
+msgid "%(wireguard)s port"
+msgstr "Porta %(wireguard)s"
+
+#. Page title for WireGuard port view
+msgctxt "wireguard-settings-view"
+msgid "%(wireGuard)s port"
+msgstr "Porta %(wireGuard)s"
+
+#. Label for the Multihop mode setting's option to always use the multihop
+#. feature.
+msgctxt "wireguard-settings-view"
+msgid "Always"
+msgstr "Sempre"
+
+msgctxt "wireguard-settings-view"
+msgid "Attention: This increases network traffic and will also negatively affect speed, latency, and battery usage. Use with caution on limited plans."
+msgstr "Atenção: Isto aumenta o tráfego de rede e também afeta negativamente a velocidade, a latência e a utilização da bateria. Utilize com precaução em planos limitados."
+
+msgctxt "wireguard-settings-view"
+msgid "By using sophisticated AI it’s possible to analyze the traffic of data packets going in and out of your device (even if the traffic is encrypted)."
+msgstr "Utilizando uma IA sofisticada, é possível analisar o tráfego de pacotes de dados que entram e saem do seu dispositivo (mesmo que o tráfego esteja encriptado)."
+
+#. Title for device IP version setting.
+msgctxt "wireguard-settings-view"
+msgid "Device IP version"
+msgstr "Versão do IP do dispositivo"
+
+msgctxt "wireguard-settings-view"
+msgid "If an observer monitors these data packets, %(daita)s makes it significantly harder for them to identify which websites you are visiting or with whom you are communicating."
+msgstr "Se um observador monitorizar estes pacotes de dados, %(daita)s dificulta significativamente a identificação dos sites que visita ou com quem comunica."
+
+msgctxt "wireguard-settings-view"
+msgid "It does this by performing an extra key exchange using a quantum safe algorithm and mixing the result into WireGuard’s regular encryption."
+msgstr "Para isso, realiza uma troca de chaves adicional utilizando um algoritmo resistente à computação quântica, e misturando o resultado na encriptação regular do WireGuard."
+
+#. Title for Multihop mode setting.
+msgctxt "wireguard-settings-view"
+msgid "Mode"
+msgstr "Modo"
+
+#. The title for the WireGuard MTU setting. MTU stands for Maximum
+#. Transmission Unit and controls the maximum size of packets sent over
+#. the VPN tunnel.
+msgctxt "wireguard-settings-view"
+msgid "MTU"
+msgstr "MTU"
+
+msgctxt "wireguard-settings-view"
+msgid "Multihop"
+msgstr "Multihop"
+
+msgctxt "wireguard-settings-view"
+msgid "Multihop routes your traffic into one WireGuard server and out another, making it harder to trace. This results in increased latency but increases anonymity online."
+msgstr "Multihop encaminha o tráfego para entrar num servidor WireGuard e sair por outro, dificultando o seguimento. Isto resulta em maior latência, mas aumenta o anonimato online."
+
+#. Label for the Multihop mode setting's option to never use the multihop
+#. feature.
+msgctxt "wireguard-settings-view"
+msgid "Never"
+msgstr "Nunca"
+
+msgctxt "wireguard-settings-view"
+msgid "Not all our servers are %(daita)s-enabled. Therefore, we use multihop automatically to enable %(daita)s with any server."
+msgstr "Nem todos os servidores suportam %(daita)s. Por isso, utilizamos multihop automaticamente para ativar %(daita)s em qualquer servidor."
+
+#. The title for the WireGuard port selector.
+msgctxt "wireguard-settings-view"
+msgid "Port"
+msgstr "Porta"
+
+#. Text showing currently selected port.
+#. Available placeholders:
+#. %(port)s - Can be either a number between 1 and 65535 or the text "Automatic".
+msgctxt "wireguard-settings-view"
+msgid "Port: %(port)s"
+msgstr "Porta: %(port)s"
+
+#. The title for the WireGuard quantum resistance selector. This setting
+#. makes the cryptography resistant to the future abilities of quantum
+#. computers.
+msgctxt "wireguard-settings-view"
+msgid "Quantum-resistant tunnel"
+msgstr "Túnel com resistência quântica"
+
+#. The hint displayed below the WireGuard MTU input field.
+#. Available placeholders:
+#. %(wireguard)s - Will be replaced with the string "WireGuard"
+#. %(max)d - the maximum possible wireguard mtu value
+#. %(min)d - the minimum possible wireguard mtu value
+msgctxt "wireguard-settings-view"
+msgid "Set %(wireguard)s MTU value. Valid range: %(min)d - %(max)d."
+msgstr "Definir o valor MTU do %(wireguard)s. Intervalo válido: %(min)d — %(max)d."
+
+msgctxt "wireguard-settings-view"
+msgid "Shadowsocks"
+msgstr "Shadowsocks"
+
+msgctxt "wireguard-settings-view"
+msgid "The automatic setting will randomly choose from the valid port ranges shown below."
+msgstr "A definição automática escolherá aleatoriamente a partir do intervalo de portas válido apresentado abaixo."
+
+msgctxt "wireguard-settings-view"
+msgid "The custom port can be any value inside the valid ranges: %(portRanges)s."
+msgstr "A porta personalizada pode ser qualquer valor dentro dos intervalos válidos: %(portRanges)s."
+
+msgctxt "wireguard-settings-view"
+msgid "This feature makes the WireGuard tunnel resistant to potential attacks from quantum computers."
+msgstr "Esta funcionalidade torna o túnel do WireGuard resistente a potenciais ataques de computadores quânticos."
+
+msgctxt "wireguard-settings-view"
+msgid "UDP-over-TCP"
+msgstr "UDP sobre TCP"
+
+#. Text describing the valid port range for a port selector.
+msgctxt "wireguard-settings-view"
+msgid "Valid range: %(min)s - %(max)s"
+msgstr "Intervalo válido: %(min)s — %(max)s"
+
+#. Text describing the valid port ranges for a port selector.
+#. Available placeholders:
+#. %(portRanges)s - will be replaced with a comma-separated list of port ranges
+msgctxt "wireguard-settings-view"
+msgid "Valid ranges: %(portRanges)s"
+msgstr "Intervalos válidos: %(portRanges)s"
+
+#. Label for the Multihop mode setting's option to use the multihop
+#. feature when it is needed.
+msgctxt "wireguard-settings-view"
+msgid "When needed"
+msgstr "Quando necessário"
+
+msgctxt "wireguard-settings-view"
+msgid "Which TCP port the UDP-over-TCP obfuscation protocol should connect to on the VPN server."
+msgstr "A que porta TCP o protocolo de ofuscação UDP sobre TCP deve ligar-se no servidor VPN."
+
+msgid "%1$d out of %2$d"
+msgstr "%1$d de %2$d"
+
+msgid "%1$s Back"
+msgstr "%1$s Voltar"
+
+msgid "%1$s more..."
+msgstr "Mais %1$s..."
+
+msgid "%1$s was added to \"%2$s\""
+msgstr "%1$s foi adicionado a \"%2$s\""
+
+msgid "%1$s was removed from \"%2$s\""
+msgstr "%1$s foi removido de \"%2$s\""
+
+msgid "%1$s, %2$s, %3$s"
+msgstr "%1$s, %2$s, %3$s"
+
+msgid "%s (Entry)"
+msgstr "%s (Entrada)"
+
+msgid "%s (Exit)"
+msgstr "%s (Saída)"
+
+msgid "%s (added)"
+msgstr "%s (adicionado)"
+
+msgid "%s (removed)"
+msgstr "%s (removido)"
+
+msgid "%s is already selected as entry relay"
+msgstr "%s já está selecionado como retransmissor de entrada"
+
+msgid "%s is already selected as exit relay"
+msgstr "%s já está selecionado como retransmissor de saída"
+
+msgid "%s is unavailable"
+msgstr "%s não está disponível"
+
+msgid "%s settings."
+msgstr "Definições do %s."
+
+msgid "%s was added to your account."
+msgstr "%s adicionado(s) à sua conta."
+
+msgid "(%d)"
+msgstr "(%d)"
+
+msgid "1. After clicking on the \"Go to VPN settings\" button below, click on the cogwheel next to the \"Mullvad VPN\" name."
+msgstr "1. Após clicar no botão \"Ir para as definições de VPN\" abaixo, clique na roda dentada junto ao nome \"Mullvad VPN\"."
+
+msgid "2. To enable Auto-connect, click on the toggle next to \"Always-on VPN\"."
+msgstr "2. Para ativar a ligação automática, clique no botão de alternar junto a \"VPN sempre ligada\"."
+
+msgid "3. To enable Lockdown mode, click on the toggle next to \"Block connections without VPN\".<br /><br /><b>Warning: This setting blocks split apps and the Local Network Sharing feature.</b>"
+msgstr "3. Para ativar o modo de bloqueio, clique no botão de alternância junto a \"Bloquear ligações sem VPN\".<br /><br /><b>Aviso: esta definição bloqueia as aplicações divididas e a funcionalidade de Partilha de Rede Local.</b>"
+
+msgid "30 days was added to your account."
+msgstr "30 dias adicionados à sua conta."
+
+msgid "90 days was added to your account."
+msgstr "90 dias adicionados à sua conta."
+
+msgid "<b>Account recovery will not be possible.</b>"
+msgstr "<b>A recuperação da conta não será possível.</b>"
+
+msgid "<b>Attention: DNS settings might not go into effect immediately.</b>"
+msgstr "<b>Atenção: as definições de DNS podem não entrar em vigor imediatamente.</b>"
+
+msgid "<b>Attention:</b> Local network sharing is not compatible with “Block connections without VPN”."
+msgstr "<b>Atenção:</b> a partilha de rede local não é compatível com a opção \"Bloquear ligações sem VPN\"."
+
+msgid "<b>Attention:</b> Only some servers support the full port range."
+msgstr "<b>Atenção:</b> só alguns servidores suportam o intervalo completo de portas."
+
+msgid "<b>Attention:</b> The app will close automatically and needs to be manually opened again after selecting a new icon and title. This will not impact your VPN connection."
+msgstr "<b>Atenção:</b> a aplicação será encerrada automaticamente e terá de ser aberta manualmente novamente após selecionar um novo ícone e título. Isto não afetará a sua ligação VPN."
+
+msgid "<b>DNS content blockers</b>"
+msgstr "<b>Bloqueadores de conteúdo DNS</b>"
+
+msgid "<b>Please note that these methods do not improve performance, and may increase system utilization and battery consumption.</b>"
+msgstr "<b>Tenha em atenção que estes métodos não melhoram o desempenho e podem aumentar a utilização do sistema e o consumo da bateria.</b>"
+
+msgid "<b>Private IP ranges</b>"
+msgstr "<b>Intervalos de IP privados</b>"
+
+msgid "<b>This action cannot be undone.</b>"
+msgstr "<b>Esta ação não pode ser anulada.</b>"
+
+msgid "<b>This can impact your anonymity.</b> Avoid enabling this on public or untrusted networks, as your device may become visible to others."
+msgstr "<b>Pode afetar o seu anonimato.</b> Evite ativar em redes públicas ou não fidedignas, pois o seu dispositivo poderá ficar visível para outras pessoas."
+
+msgid "<b>Warning:</b>"
+msgstr "<b>Aviso:</b>"
+
+msgid "<b>You will lose access to this account on all devices.</b>"
+msgstr "<b>Irá perder o acesso a esta conta em todos os dispositivos.</b>"
+
+msgid "API reachable, adding method..."
+msgstr "API alcançável, a adicionar método..."
+
+msgid "API unreachable, save method anyway?"
+msgstr "API inalcançável, guardar o método mesmo assim?"
+
+msgid "Account credit expires in a few minutes"
+msgstr "O crédito da conta expira dentro de alguns minutos"
+
+msgid "Account deleted"
+msgstr "Conta eliminada"
+
+msgid "Account number must match"
+msgstr "O número da conta deve corresponder"
+
+msgid "Account recovery will not be possible."
+msgstr "A recuperação da conta não será possível."
+
+msgid "Account time reminders"
+msgstr "Lembretes de tempo da conta"
+
+msgid "Add 30 days time (%s)"
+msgstr "Adicionar 30 dias (%s)"
+
+msgid "Add 90 days time (%s)"
+msgstr "Adicionar 90 dias (%s)"
+
+msgid "Add DNS server"
+msgstr "Adicionar servidor DNS"
+
+msgid "Add locations"
+msgstr "Adicionar localizações"
+
+msgid "Add time"
+msgstr "Adicionar tempo"
+
+msgid "Add to list"
+msgstr "Adicionar à lista"
+
+msgid "Adding method..."
+msgstr "A adicionar método..."
+
+msgid "After updating a VPN app on Android 16, devices might end up in a state where VPN apps are no longer able to reach the internet."
+msgstr "Após atualizar uma aplicação de VPN no Android 16, os dispositivos podem ficar num estado em que as aplicações de VPN deixam de conseguir aceder à internet."
+
+msgid "Agree and continue"
+msgstr "Concordar e continuar"
+
+msgid "All"
+msgstr "Tudo"
+
+msgid "All applications"
+msgstr "Todas as aplicações"
+
+msgid "All overrides will be reset and servers IP addresses, in the Select location view, will go back to default."
+msgstr "Todas as substituições serão repostas e os endereços IP dos servidores, na vista Selecionar local, voltarão às predefinições."
+
+msgid "Always-on VPN assigned to %s"
+msgstr "VPN sempre ligada atribuída a %s"
+
+msgid "Always-on VPN assigned to other VPN"
+msgstr "VPN sempre ligada atribuída a outra VPN"
+
+msgid "An entry server is currently selected automatically when needed to ensure a working connection. To manually select an entry server, please switch multihop mode to “Always”."
+msgstr "De momento, é selecionado um servidor de entrada automaticamente quando necessário, para garantir uma ligação ativa. Para selecionar manualmente um servidor de entrada, altere o modo multihop para \"Sempre\"."
+
+msgid "Android 16 has a known issue. Please restart your device and try again. To learn more,"
+msgstr "O Android 16 tem um problema conhecido. Reinicie o seu dispositivo e tente novamente. Para saber mais,"
+
+msgid "Any remaining time will be null and void."
+msgstr "Qualquer tempo restante será considerado nulo e sem efeito."
+
+msgid "App icon"
+msgstr "Ícone da aplicação"
+
+msgid "Appearance"
+msgstr "Aparência"
+
+msgid "Applying changes..."
+msgstr "A aplicar alterações..."
+
+msgid "Are you sure you want to log <b>%s</b> out?"
+msgstr "Tem a certeza de que quer terminar a sessão de <b>%s</b>?"
+
+msgid "At least one method needs to be enabled"
+msgstr "É necessário ativar pelo menos um método"
+
+msgid "Attention: If \"Block connections without VPN\" is enabled, split apps will not have Internet. Always keep in mind that split tunneling is a privacy risk."
+msgstr "Atenção: se a opção \"Bloquear ligações sem VPN\" estiver ativada, as aplicações divididas não terão Internet. Tenha sempre em mente que o túnel dividido representa um risco para a privacidade."
+
+msgid "Attention: In this mode, filters are ignored for the additional server."
+msgstr "Atenção: neste modo, os filtros são ignorados para o servidor adicional."
+
+msgid "Attention: This will ignore filter settings for the server that is being used as an entry point."
+msgstr "Atenção: Isto irá ignorar as definições de filtro do servidor utilizado como ponto de entrada."
+
+msgid "Attention: With the “Automatic” location, filters are ignored for the entry server."
+msgstr "Atenção: Com a localização \"Automática\", os filtros são ignorados no servidor de entrada."
+
+msgid "Auto-connect & Lockdown mode"
+msgstr "Ligação automática e modo de bloqueio"
+
+msgid "Auto-connect is called Always-on VPN in the Android system settings and it makes sure you are constantly connected to the VPN tunnel and auto connects after restart."
+msgstr "A ligação automática é designada por VPN sempre ligada nas definições do sistema Android e assegura que está constantemente ligado ao túnel VPN e ligar-se-á automaticamente após o reinício."
+
+msgid "Automatic (%s)"
+msgstr "Automático (%s)"
+
+msgid "Automatically connect on device start-up."
+msgstr "Ligar automaticamente no arranque do dispositivo."
+
+msgid "Blocking internet (device offline)"
+msgstr "Bloqueio de Internet (dispositivo offline)"
+
+msgid "Blocking..."
+msgstr "A bloquear..."
+
+msgid "Browser"
+msgstr "Navegador"
+
+msgid "By attaching your account token it links this report to your account, which helps us resolve your issue quicker. All reports are automatically deleted after a period of time."
+msgstr "Ao anexar o token da sua conta, este relatório é associado à sua conta, o que nos ajuda a resolver o problema mais rapidamente. Todos os relatórios são automaticamente eliminados após um determinado período."
+
+msgid "By checking this box I agree to the risks involved with deleting my account"
+msgstr "Ao assinalar esta caixa, concordo com os riscos associados à eliminação da minha conta"
+
+msgid "Can’t connect?"
+msgstr "Não consegue ligar?"
+
+msgid "Change the title and icon of the Mullvad VPN app on your Android device. This will not change the icon for any Mullvad VPN related notifications."
+msgstr "Altere o título e o ícone da aplicação Mullvad VPN no seu dispositivo Android. Isto não irá alterar o ícone de nenhuma notificação relacionada com a Mullvad VPN."
+
+msgid "Change to “When needed”"
+msgstr "Alterar para \"Quando necessário\""
+
+msgid "Clear input"
+msgstr "Limpar entrada"
+
+msgid "Click here to read more"
+msgstr "Clique aqui para ler mais"
+
+msgid "Collapse"
+msgstr "Comprimir"
+
+msgid "Connect on device start-up"
+msgstr "Ligar no arranque do dispositivo"
+
+msgid "Connect to a different network"
+msgstr "Ligar a uma rede diferente"
+
+msgid "Connecting..."
+msgstr "A ligar..."
+
+msgid "Contact support"
+msgstr "Contactar o suporte"
+
+msgid "Continue"
+msgstr "Continuar"
+
+msgid "Copied Mullvad account number to clipboard"
+msgstr "Número de conta Mullvad copiado para a área de transferência"
+
+msgid "Copied logs to clipboard"
+msgstr "Registos copiados para a área de transferência"
+
+msgid "Copy"
+msgstr "Copiar"
+
+msgid "Could not display remaining days."
+msgstr "Não foi possível apresentar os dias restantes."
+
+msgid "Create new list"
+msgstr "Criar nova lista"
+
+msgid "Critical error (your attention is required)"
+msgstr "Erro crítico (é necessária a sua atenção)"
+
+msgid "Current: %s"
+msgstr "Atual: %s"
+
+msgid "Custom DNS server addresses %1$s are invalid"
+msgstr "Os endereços do servidor DNS personalizado %1$s são inválidos"
+
+msgid "DNS settings"
+msgstr "Definições de DNS"
+
+msgid "DNS settings might not go into effect immediately."
+msgstr "As definições de DNS podem não fazer efeito imediatamente."
+
+msgid "Delete \"%s\"?"
+msgstr "Eliminar \"%s\"?"
+
+msgid "Delete account"
+msgstr "Eliminar conta"
+
+msgid "Delete method"
+msgstr "Eliminar método"
+
+msgid "Delete method?"
+msgstr "Eliminar método?"
+
+msgid "Deleting your account cannot be undone."
+msgstr "A eliminação da sua conta não pode ser revertida."
+
+msgid "Deleting your account:"
+msgstr "Ao eliminar a sua conta:"
+
+msgid "Direct"
+msgstr "Direto"
+
+msgid "Disable all \"%s\" above to activate this setting."
+msgstr "Desative todos os \"%s\" acima para ativar esta definição."
+
+msgid "Disable multihop"
+msgstr "Desativar multihop"
+
+msgid "Discard"
+msgstr "Descartar"
+
+msgid "Discard changes?"
+msgstr "Descartar alterações?"
+
+msgid "Disconnected (No VPN permission)"
+msgstr "Desligado (sem permissão de VPN)"
+
+msgid "Disconnecting..."
+msgstr "A desligar..."
+
+msgid "Dismiss"
+msgstr "Dispensar"
+
+msgid "Edit custom lists"
+msgstr "Editar listas personalizadas"
+
+msgid "Edit list"
+msgstr "Editar lista"
+
+msgid "Edit lists"
+msgstr "Editar listas"
+
+msgid "Edit locations"
+msgstr "Editar localizações"
+
+msgid "Enable all & retry"
+msgstr "Ativar tudo e tentar novamente"
+
+msgid "Enable all access methods in the app"
+msgstr "Ativar todos os métodos de acesso na aplicação"
+
+msgid "Enable method"
+msgstr "Ativar método"
+
+msgid "Enable this for services such as file sharing, printing, media streaming, and device discovery to work while connected to the VPN."
+msgstr "Ative esta opção para que serviços como a partilha de ficheiros, a impressão, a transmissão de multimédia e a deteção de dispositivos funcionem enquanto estiver ligado à VPN."
+
+msgid "Enter MTU"
+msgstr "Introduzir MTU"
+
+msgid "Enter account number digits"
+msgstr "Introduza os dígitos do número da conta"
+
+msgid "Enter an account number"
+msgstr "Introduza um número de conta"
+
+msgid "Entry filter"
+msgstr "Filtro de entrada"
+
+msgid "Entry relay is the same as exit relay"
+msgstr "O retransmissor de entrada é o mesmo que o de saída"
+
+msgid "Excluded applications"
+msgstr "Aplicações excluídas"
+
+msgid "Exit filter"
+msgstr "Filtro de saída"
+
+msgid "Expand"
+msgstr "Expandir"
+
+msgid "External link"
+msgstr "Ligação externa"
+
+msgid "FAILED TO CONNECT"
+msgstr "FALHA NA LIGAÇÃO"
+
+msgid "Failed to apply patch"
+msgstr "Erro ao aplicar patch"
+
+msgid "Failed to delete account, please contact support"
+msgstr "Não foi possível eliminar a conta. Contacte a assistência"
+
+msgid "Failed to load products, please try again"
+msgstr "Erro ao carregar os produtos. Tente novamente"
+
+msgid "Failed to set to current - API not reachable"
+msgstr "Erro ao definir como atual — API não alcançável"
+
+msgid "Failed to set to current - Unknown reason"
+msgstr "Erro ao definir como atual — motivo desconhecido"
+
+msgid "File"
+msgstr "Ficheiro"
+
+msgid "Filters are overridden when using an automatic location"
+msgstr "Os filtros são substituídos ao utilizar uma localização automática"
+
+msgid "Filters can now be set separately for entry and exit locations."
+msgstr "Agora é possível definir filtros separadamente para as localizações de entrada e de saída."
+
+msgid "For details, please see our %s."
+msgstr "Para mais detalhes, consulte a nossa %s."
+
+msgid "For the VPN to connect automatically on device startup, the app must have VPN permissions. You can grant these by clicking “Connect” in the map view and selecting “OK” if prompted. Additionally, ensure the app is installed on the internal storage by checking the storage information in the app details in system settings."
+msgstr "Para que a VPN se ligue automaticamente no arranque do dispositivo, a aplicação deve ter permissões de VPN. Pode concedê-las clicando em \"Ligar\" na vista de mapa e selecionando \"OK\" se solicitado. Além disso, confirme se a aplicação está instalada no armazenamento interno, verificando as informações de armazenamento nos detalhes da aplicação, nas definições do sistema."
+
+msgid "Generating..."
+msgstr "A gerar..."
+
+msgid "Go to VPN settings"
+msgstr "Ir para as definições de VPN"
+
+msgid "Going to login will unblock the internet on this device."
+msgstr "Ir para a ligação irá desbloquear a Internet neste dispositivo."
+
+msgid "Google Play payment pending"
+msgstr "Pagamento Google Play pendente"
+
+msgid "Google Play payment pending, this might take some time"
+msgstr "Pagamento Google Play pendente. Isto pode demorar algum tempo"
+
+msgid "Google Play payment verification failed"
+msgstr "Erro na verificação de pagamento do Google Play"
+
+msgid "Google Play unavailable"
+msgstr "Google Play indisponível"
+
+msgid "How it works"
+msgstr "Como funciona"
+
+msgid "IPv4 is not available, please try changing \"Device IP version\" setting."
+msgstr "O IPv4 não está disponível. Tente alterar a definição \"Versão do IP do dispositivo\"."
+
+msgid "IPv6 is not available, please try changing \"Device IP version\" setting."
+msgstr "O IPv6 não está disponível. Tente alterar a definição \"Versão do IP do dispositivo\"."
+
+msgid "Icon and title"
+msgstr "Ícone e título"
+
+msgid "If the icon and title is still not changed after the app has closed, please try restarting the device."
+msgstr "Se o ícone e o título ainda não tiverem sido alterados após o encerramento da aplicação, tente reiniciar o dispositivo."
+
+msgid "If the split tunneling feature is used, then the app queries your system for a list of all installed applications. This list is only retrieved in the split tunneling view. The list of installed applications is never sent from the device."
+msgstr "Se for utilizada a funcionalidade de divisão do túnel, a app consulta o seu sistema para obter uma lista de todas as aplicações instaladas. Esta lista só é recuperada na vista de divisão do túnel. A lista de aplicações instaladas nunca é enviada pelo dispositivo."
+
+msgid "If these steps don’t work, please send an email to support using the button below. It will automatically attach the logs which have been anonymized."
+msgstr "Se estes passos não resultarem, envie um e-mail para o suporte através do botão abaixo. Anexará automaticamente os registos, que foram anonimizados."
+
+msgid "If you have any issues"
+msgstr "Se tiver algum problema"
+
+msgid "If your current location does not support your preferences, such as anti-censorship method, filters, and/or DAITA, multihop will be used automatically to connect to that location via a compatible server. This will be indicated by the %1$s symbol."
+msgstr "Se a localização atual não for compatível com as suas preferências, como método anti-censura, filtros e/ou DAITA, será utilizado automaticamente o modo multihop, para estabelecer ligação a essa localização através de um servidor compatível, indicado pelo símbolo %1$s."
+
+msgid "Import new overrides by"
+msgstr "Importar novas substituições através de"
+
+msgid "Import successful, overrides active"
+msgstr "Importação bem-sucedida: substituições ativas"
+
+msgid "Importing new overrides might replace some previously imported overrides."
+msgstr "A importação de novas substituições pode substituir algumas substituições importadas anteriormente."
+
+msgid "In-app products unavailable, please make sure you have the latest version of Google Play."
+msgstr "Produtos na app indisponíveis. Confirme se tem a versão mais recente do Google Play."
+
+msgid "Include my account token for faster help with payment or account related issues"
+msgstr "Incluir o token da minha conta para obter ajuda mais rápida com questões relacionadas com pagamentos ou contas"
+
+msgid "Info"
+msgstr "Informação"
+
+msgid "Internet"
+msgstr "Internet"
+
+msgid "Invalid IP address"
+msgstr "Endereço IP inválido"
+
+msgid "Invalid IPv6 config, please try to change the VPN settings."
+msgstr "Configuração IPv6 inválida. Tente alterar as definições de VPN."
+
+msgid "Invalid MTU value"
+msgstr "Valor MTU inválido"
+
+msgid "Invalid or missing value \"%1$s\""
+msgstr "Valor inválido ou em falta: \"%1$s\""
+
+msgid "It does this by performing an extra key exchange using a quantum safe algorithm and mixing the result into WireGuard’s regular encryption. This extra step uses approximately 500 kiB of traffic every time a new tunnel is established."
+msgstr "Para isso, realiza uma troca de chaves adicional utilizando um algoritmo resistente à computação quântica, e misturando o resultado na encriptação regular do WireGuard. Este passo adicional utiliza aproximadamente 500 kiB de tráfego sempre que um novo túnel é estabelecido."
+
+msgid "Less than a day left on this account"
+msgstr "Falta menos de um dia para esta conta expirar"
+
+msgid "Lets you select apps that should access the Internet directly without going through the VPN tunnel."
+msgstr "Permite-lhe selecionar aplicações que devem aceder diretamente à Internet sem passar pelo túnel VPN."
+
+msgid "List name"
+msgstr "Nome da lista"
+
+msgid "Loading products"
+msgstr "A carregar produtos"
+
+msgid "Locations"
+msgstr "Localizações"
+
+msgid "Locations were changed for \"%s\""
+msgstr "As localizações foram alteradas para \"%s\""
+
+msgid "Log in"
+msgstr "Iniciar sessão"
+
+msgid "Makes sure the device is always on the VPN tunnel."
+msgstr "Assegura que o dispositivo está sempre no túnel VPN."
+
+msgid "Migrated settings"
+msgstr "Definições migradas"
+
+msgid "More actions"
+msgstr "Mais ações"
+
+msgid "Mullvad services unavailable"
+msgstr "Serviços Mullvad indisponíveis"
+
+msgid "Multihop entry set to “Automatic”"
+msgstr "Entrada multihop definida como \"Automática\""
+
+msgid "Multihop is disabled"
+msgstr "Multihop está desativado"
+
+msgid "Multihop is disabled. Your selected location must support all active settings in order to establish a connection."
+msgstr "O multihop está desativado. A localização selecionada tem de suportar todas as definições ativas para estabelecer uma ligação."
+
+msgid "Multihop is enabled"
+msgstr "Multihop está ativado"
+
+msgid "Multihop is enabled. Your connection is routed through an entry server before exiting through the selected location."
+msgstr "O multihop está ativado. A sua ligação é encaminhada através de um servidor de entrada antes de sair pela localização selecionada."
+
+msgid "Multihop is now split into three modes: When needed, Always, and Never.\\nThis gives you more flexibility with your connection preferences."
+msgstr "O multihop está agora dividido em três modos: Quando necessário, Sempre e Nunca.\\nProporciona maior flexibilidade nas suas preferências de ligação."
+
+msgid "Multihop when needed"
+msgstr "Multihop quando necessário"
+
+msgid "Name is already taken."
+msgstr "O nome já está a ser utilizado."
+
+msgid "Name was changed to %s"
+msgstr "O nome foi alterado para %s"
+
+msgid "Navigate"
+msgstr "Navegar"
+
+msgid "New multihop modes"
+msgstr "Novos modos multihop"
+
+msgid "Next %1$s"
+msgstr "Seguinte %1$s"
+
+msgid "No Android app store installed, could not open link"
+msgstr "Nenhuma loja de aplicações Android instalada. Não foi possível abrir a ligação"
+
+msgid "No browser app installed, could not open link"
+msgstr "Nenhuma aplicação de navegador Android instalada. Não foi possível abrir a ligação"
+
+msgid "No changelog was added for this version"
+msgstr "Não foi adicionado nenhum registo de alterações a esta versão"
+
+msgid "No custom lists available"
+msgstr "Nenhuma lista personalizada disponível"
+
+msgid "No email app available on the device"
+msgstr "Nenhuma aplicação de e-mail disponível no dispositivo"
+
+msgid "No entry server match your settings, try changing server or other settings."
+msgstr "Nenhum servidor de entrada corresponde às suas definições. Tente alterar o servidor ou outras definições."
+
+msgid "No exit server match your settings, try changing server or other settings."
+msgstr "Nenhum servidor de saída corresponde às suas definições. Tente alterar o servidor ou outras definições."
+
+msgid "No internet connection"
+msgstr "Sem ligação à internet"
+
+msgid "No matching servers found."
+msgstr "Nenhum servidor correspondente encontrado."
+
+msgid "No result for \"%s\", please try a different search"
+msgstr "Sem resultados para \"%s\". Experimente uma pesquisa diferente"
+
+msgid "Not found"
+msgstr "Não encontrada"
+
+msgid "Notes"
+msgstr "Notas"
+
+msgid "Notification settings"
+msgstr "Definições de notificações"
+
+msgid "Open app details"
+msgstr "Abrir detalhes da aplicação"
+
+msgid "Overrides active"
+msgstr "Substituições ativas"
+
+msgid "Overrides cleared"
+msgstr "Substituições eliminadas"
+
+msgid "Overrides inactive"
+msgstr "Substituições inativas"
+
+msgid "Password (optional)"
+msgstr "Palavra-passe (opcional)"
+
+msgid "Paste or write overrides to be imported"
+msgstr "Cole ou introduza substituições a importar"
+
+msgid "Patch not matching specification"
+msgstr "O patch não corresponde à especificação"
+
+msgid "Picks a suitable location based on your exit location, this is based on a number of different factors such as distance, provider, and server load."
+msgstr "Escolhe uma localização adequada com base na sua localização de saída, tendo em conta vários fatores como distância, fornecedor e a carga do servidor."
+
+msgid "Please enter a message"
+msgstr "Introduza uma mensagem"
+
+msgid "Please enter a name"
+msgstr "Introduza um nome"
+
+msgid "Please enter a port"
+msgstr "Introduza uma porta"
+
+msgid "Please enter a valid IPv4 or IPv6 address"
+msgstr "Introduza um endereço IPv4 ou IPv6 válido"
+
+msgid "Please enter a valid remote server port"
+msgstr "Introduza uma porta de servidor remoto válida"
+
+msgid "Please enter a value"
+msgstr "Introduza um valor"
+
+msgid "Please enter an IP address"
+msgstr "Introduza um endereço IP"
+
+msgid "Please enter an IP override text"
+msgstr "Introduza um texto para substituir o IP"
+
+msgid "Please press connect to request VPN permission"
+msgstr "Prima \"ligar\" para solicitar a permissão de VPN"
+
+msgid "Please remove a device before continuing logging in"
+msgstr "Remova um dispositivo antes de prosseguir com o início de sessão"
+
+msgid "Please restart your device and try connecting again. If this does not work, please write an email to %s in Swedish or English."
+msgstr "Reinicie o seu dispositivo e tente estabelecer a ligação novamente. Se isto não funcionar, escreva um e-mail para %s em sueco ou inglês."
+
+msgid "Please try changing your filters."
+msgstr "Tente alterar os seus filtros."
+
+msgid "Port is out of range"
+msgstr "A porta está fora do intervalo"
+
+msgid "Prevents the device from contacting certain domains or websites known for distributing ads, malware, trackers and more."
+msgstr "Impede que o dispositivo aceda a determinados domínios ou sites conhecidos por distribuírem anúncios, malware, rastreadores e outros conteúdos semelhantes."
+
+msgid "Privacy"
+msgstr "Privacidade"
+
+msgid "Privacy policy"
+msgstr "Política de privacidade"
+
+msgid "Read more"
+msgstr "Mais informações"
+
+msgid "Recents disabled and history cleared"
+msgstr "Recentes desativados e histórico eliminado"
+
+msgid "Recursion limit"
+msgstr "Limite de recursão"
+
+msgid "Refunds will not be possible."
+msgstr "Não serão possíveis reembolsos."
+
+msgid "Remove %s?"
+msgstr "Remover %s?"
+
+msgid "Remove custom port"
+msgstr "Remover porta personalizada"
+
+msgid "Reset"
+msgstr "Repor"
+
+msgid "Reset all overrides"
+msgstr "Repor todas as substituições"
+
+msgid "Reset overrides"
+msgstr "Repor substituições"
+
+msgid "Reset to default"
+msgstr "Repor para as predefinições"
+
+msgid "Resolve connection issues"
+msgstr "Resolver problemas de ligação"
+
+msgid "Restart your device"
+msgstr "Reiniciar o seu dispositivo"
+
+msgid "Search"
+msgstr "Pesquisar"
+
+msgid "Send email"
+msgstr "Enviar e-mail"
+
+msgid "Separate filters"
+msgstr "Filtros separados"
+
+msgid "Set WireGuard MTU value. Valid range: %1$d - %2$d."
+msgstr "Definir o valor MTU do WireGuard. Intervalo válido: %1$d — %2$d."
+
+msgid "Set as multihop entry"
+msgstr "Definir como entrada multihop"
+
+msgid "Set as multihop entry (incompatible)"
+msgstr "Definir como entrada multihop (incompatível)"
+
+msgid "Set as multihop exit"
+msgstr "Definir como saída multihop"
+
+msgid "Set as multihop exit (incompatible)"
+msgstr "Definir como saída multihop (incompatível)"
+
+msgid "Set entry to “Automatic”"
+msgstr "Definir a opção como \"Automático\""
+
+msgid "Set multihop to “Always”"
+msgstr "Definir multihop como \"Sempre\""
+
+msgid "Set port"
+msgstr "Definir porta"
+
+msgid "Settings Migrated"
+msgstr "Definições migradas"
+
+msgid "Share…"
+msgstr "Partilhar…"
+
+msgid "Show location in notification"
+msgstr "Mostrar localização na notificação"
+
+msgid "Show system apps"
+msgstr "Mostrar aplicações do sistema"
+
+msgid "Shows current VPN tunnel status"
+msgstr "Indica o estado atual do túnel VPN"
+
+msgid "Shows reminders when the account time is about to expire"
+msgstr "Mostra lembretes quando o tempo da conta está prestes a expirar"
+
+msgid "Some of your settings have been migrated, please review the changes and resolve any issues."
+msgstr "Algumas das suas definições foram migradas. Reveja as alterações e resolva quaisquer problemas."
+
+msgid "Some of your settings have been migrated, please review the changes."
+msgstr "Algumas das suas definições foram migradas. Reveja as alterações."
+
+msgid "Something went wrong while verifying your purchase. Please contact support."
+msgstr "Ocorreu um erro ao verificar a sua compra. Contacte o suporte."
+
+msgid "Submit"
+msgstr "Enviar"
+
+msgid "Suggested action"
+msgstr "Ação sugerida"
+
+msgid "Suggested multihop entry"
+msgstr "Entrada multihop sugerida"
+
+msgid "System network settings"
+msgstr "Definições de rede do sistema"
+
+msgid "TCP"
+msgstr "TCP"
+
+msgid "Test method"
+msgstr "Testar método"
+
+msgid "Testing %s..."
+msgstr "A testar %s..."
+
+msgid "Text"
+msgstr "Texto"
+
+msgid "Thanks for being part of our community.\\nPrivacy is for the people!"
+msgstr "Obrigado por fazer parte da nossa comunidade.\\nA privacidade é para todos!"
+
+msgid "The Auto-connect and Lockdown mode settings can be found in the Android system settings, follow this guide to enable one or both."
+msgstr "As definições da ligação automática e do modo de bloqueio podem ser encontradas nas definições do sistema Android. Siga este guia para ativar uma ou ambas as funcionalidades."
+
+msgid "The DAITA sub-setting “Direct only” has been removed and simplified to avoid blocking connections. Instead, with DAITA enabled, you make this option with the multihop setting."
+msgstr "A subdefinição \"Apenas direto\" do DAITA foi removida e simplificada para evitar o bloqueio de ligações. Agora, com o DAITA ativado, esta opção passa a ser definida através da definição de multihop."
+
+msgid "The IPv6 DNS server will not work unless you enable \"IPv6\" under VPN settings."
+msgstr "O servidor DNS IPv6 não funcionará a menos que ative a \"IPv6\" nas definições de VPN."
+
+msgid "The Lockdown mode is called \"Block connections without VPN\" in the Android system settings. It helps minimize leaks, however it has some known limitations which you can read more about"
+msgstr "O modo de bloqueio é designado por \"Bloquear ligações sem VPN\" nas definições do sistema Android. Ajuda a minimizar fugas, mas tem algumas limitações conhecidas sobre as quais pode ler mais"
+
+msgid "The \"Current\" method represent which method the app is using to reach the API."
+msgstr "O método \"Atual\" representa o método que a aplicação está a utilizar para aceder à API."
+
+msgid "The app allows local multicast and broadcast network traffic, as well as traffic to and from private IP ranges, to bypass the VPN tunnel."
+msgstr "A aplicação permite que o tráfego local de rede multicast e broadcast, bem como o tráfego de e para intervalos de IP privados, contorne o túnel VPN."
+
+msgid "The app is blocking internet, please disconnect first"
+msgstr "A aplicação está a bloquear a Internet. Desligue primeiro"
+
+msgid "The app was unable to create an account due to not being able to reach the Mullvad API."
+msgstr "Não foi possível à aplicação criar uma conta devido a falta de acesso à API da Mullvad."
+
+msgid "The app was unable to login due to not being able to reach the Mullvad API."
+msgstr "Não foi possível à aplicação iniciar sessão devido a falta de acesso à API da Mullvad."
+
+msgid "The local DNS server will not work unless you enable \"Local Network Sharing\" under VPN settings."
+msgstr "O servidor DNS local não funcionará a menos que ative a \"Partilha de rede local\" nas definições de VPN."
+
+msgid "The multihop mode “Always” now features an “Automatic” location for the entry server selection."
+msgstr "O modo multihop \"Sempre\" inclui agora uma localização \"Automática\" para a seleção do servidor de entrada."
+
+msgid "The selected %s port is not supported, please change it under"
+msgstr "A porta %s selecionada não é suportada. Altere-a em"
+
+msgid "These methods may be useful in situations where you are blocked from reaching Mullvad. When “Automatic” is selected, the app will attempt all methods until one works."
+msgstr "Estes métodos podem ser úteis em situações em que esteja impedido de aceder à Mullvad. Quando está selecionado \"Automático\", a aplicação tentará todos os métodos até que um funcione."
+
+msgid "This address has already been entered."
+msgstr "Este endereço já foi introduzido."
+
+msgid "This field is required"
+msgstr "Este campo é obrigatório"
+
+msgid "This impacts your anonymity"
+msgstr "Esta ação afeta o seu anonimato"
+
+msgid "This is already set as current"
+msgstr "Este já está definido como o atual"
+
+msgid "This might be due to censorship or network issues. Please try to:"
+msgstr "Isto pode dever-se a censura ou a problemas de rede. Tente o seguinte:"
+
+msgid "This mode allows the app to automatically multihop through an additional server if needed to ensure your current settings work with your selected location."
+msgstr "Este modo permite que a aplicação utilize automaticamente um servidor adicional se necessário, para garantir que as suas definições atuais funcionam com a sua localização selecionada."
+
+msgid "Time added"
+msgstr "Tempo adicionado"
+
+msgid "To add locations to a list, press the pen or long press on a country, city, or server."
+msgstr "Para adicionar localizações a uma lista, prima a caneta ou mantenha premido um país, uma cidade ou um servidor."
+
+msgid "To avoid getting blocked, we recommend that you set your multihop mode to “When needed”."
+msgstr "Para evitar o bloqueio, recomendamos que defina o modo multihop para \"Quando necessário\"."
+
+msgid "To avoid having to change the entry server manually, we recommend you set the multihop entry server to “Automatic”."
+msgstr "Para evitar ter de alterar manualmente o servidor de entrada, recomendamos que defina o servidor de entrada multihop para \"Automático\"."
+
+msgid "To create a custom list press the \"+\""
+msgstr "Para criar uma lista personalizada prima o botão \"+\""
+
+msgid "To delete your Mullvad VPN account, please enter your account number below."
+msgstr "Para eliminar a sua conta Mullvad VPN, introduza o número da sua conta abaixo."
+
+msgid "To ensure your current settings work with your selected location, and to avoid blocking your connection, the app might automatically multihop via a different entry server.\\nThis will be indicated by the %1$s symbol."
+msgstr "Para garantir que as suas definições atuais funcionam com a localização selecionada, e para evitar o bloqueio da sua ligação, a aplicação poderá fazer multihop automaticamente em vários passos através de um servidor de entrada diferente.\\nIsto será indicado pelo símbolo %1$s."
+
+msgid "To make sure that you have the most secure version and to inform you of any issues with the current version that is running, the app performs version checks automatically. This sends the app version and Android system version to Mullvad servers. Mullvad keeps counters on number of used app versions and Android versions. The data is never stored or used in any way that can identify you."
+msgstr "Para se certificar de que tem a versão mais segura e para o informar de quaisquer problemas com a versão atual em execução, a app efetua verificações de versão automaticamente. Esta envia a versão da app e a versão do sistema Android para os servidores da Mullvad. A Mullvad mantém um registo do número de versões da app e de versões do Android utilizadas. Os dados nunca são armazenados ou utilizados de forma a identificar o utilizador."
+
+msgid "Toggle VPN"
+msgstr "Alternar VPN"
+
+msgid "Too many attempts, please try again later"
+msgstr "Demasiadas tentativas. Tente novamente mais tarde"
+
+msgid "Turn off Private DNS in %s as it might interfere with Mullvad’s DNS settings."
+msgstr "Desative o DNS privado em %s, pois pode interferir com as definições de DNS do Mullvad."
+
+msgid "UDP"
+msgstr "UDP"
+
+msgid "Unable to apply firewall rules. Please troubleshoot or send a problem report."
+msgstr "Não foi possível aplicar as regras de firewall. Experimente a resolução de problemas ou envie um relatório do problema."
+
+msgid "Unable to open the VPN permission dialog, please check your OS configuration"
+msgstr "Não foi possível abrir a caixa de diálogo de permissões da VPN. Verifique a configuração do seu sistema operativo"
+
+msgid "Unable to parse patch"
+msgstr "Não foi possível analisar a correção"
+
+msgid "Unable to reach API"
+msgstr "Não é possível aceder à API"
+
+msgid "Unable to reach API, %s"
+msgstr "Não é possível aceder à API, %s"
+
+msgid "Unable to start tunnel connection. Please disable Always-on VPN before using Mullvad VPN."
+msgstr "Não foi possível iniciar a ligação de túnel. Desative a opção \"VPN sempre ligada\" antes de utilizar a Mullvad VPN."
+
+msgid "Unable to start tunnel connection. Please disable Always-on VPN for <b>%s</b> before using Mullvad VPN."
+msgstr "Não foi possível iniciar a ligação de túnel. Desative a VPN sempre ligada para <b>%s</b> antes de utilizar a Mullvad VPN."
+
+msgid "Unable to verify account number, please contact support"
+msgstr "Não foi possível verificar o número da conta. Contacte a assistência"
+
+msgid "Unable to verify purchase"
+msgstr "Não foi possível verificar a compra"
+
+msgid "Unavailable"
+msgstr "Indisponível"
+
+msgid "Undo"
+msgstr "Anular"
+
+msgid "Unknown or prohibited key \"%1$s\""
+msgstr "Chave \"%1$s\" desconhecida ou proibida"
+
+msgid "Update DNS server"
+msgstr "Atualizar servidor DNS"
+
+msgid "Update list name"
+msgstr "Atualizar nome da lista"
+
+msgid "Update server list"
+msgstr "Atualizar lista de servidores"
+
+msgid "Updating server list in the background..."
+msgstr "A atualizar a lista de servidores em segundo plano..."
+
+msgid "Use method"
+msgstr "Utilizar método"
+
+msgid "VPN Settings not available on device"
+msgstr "Definições de VPN não disponíveis no dispositivo"
+
+msgid "VPN permission error"
+msgstr "Erro de permissão de VPN"
+
+msgid "VPN permission was denied"
+msgstr "A permissão de VPN foi negada"
+
+msgid "VPN permission was denied or another app has \"Always-on VPN\" enabled"
+msgstr "A permissão de VPN foi negada, ou outra aplicação tem a opção \"VPN sempre ligada\" ativada"
+
+msgid "VPN tunnel status"
+msgstr "Estado do túnel VPN"
+
+msgid "Valid range for all servers: %s"
+msgstr "Intervalo válido para todos os servidores: %s"
+
+msgid "Value: %s"
+msgstr "Valor: %s"
+
+msgid "Verifying API method..."
+msgstr "A verificar método de API..."
+
+msgid "Verifying purchase"
+msgstr "Verificação de compra"
+
+msgid "Verifying purchase..."
+msgstr "A verificar compra..."
+
+msgid "Verifying voucher…"
+msgstr "A verificar voucher…"
+
+msgid "Voucher code is too short"
+msgstr "O código do voucher é demasiado curto"
+
+msgid "Warning"
+msgstr "Aviso"
+
+msgid "We are still verifying your purchase, this might take some time. Your time will be added if the verification is successful."
+msgstr "Ainda estamos a verificar a sua compra, o que pode demorar algum tempo. O seu tempo será adicionado se a verificação for bem-sucedida."
+
+msgid "We couldn’t verify your latest purchase. Please check your internet connection and try again. If the issue persists, please contact support."
+msgstr "Não foi possível verificar a sua última compra. Verifique a sua ligação à Internet e tente novamente. Se o problema persistir, contacte o suporte."
+
+msgid "We couldn’t verify your purchase. Please check your internet connection and try again."
+msgstr "Não foi possível verificar a sua compra. Verifique a sua ligação à Internet e tente novamente."
+
+msgid "We were unable to start the payment process, please make sure you have the latest version of Google Play."
+msgstr "Não foi possível iniciar o processo de pagamento. Verifique se tem a versão mais recente do Google Play."
+
+msgid "We were unable to start the payment process, please try again later."
+msgstr "Não foi possível iniciar o processo de pagamento, tente novamente mais tarde."
+
+msgid "Weather"
+msgstr "Meteorologia"
+
+msgid "Welcome, this device is now called <b>%s</b>."
+msgstr "As boas-vindas, este dispositivo tem agora o nome <b>%s</b>."
+
+msgid "When multihop is set to “Always” or “Never” you must manually select a DAITA server."
+msgstr "Quando o multihop está definido como \"Sempre\" ou \"Nunca\", tem de selecionar manualmente um servidor DAITA."
+
+msgid "When multihop is set to “When needed” the app might use an additional server to make sure you connect to your selected location using DAITA."
+msgstr "Quando o multihop está definido como \"Quando necessário\", a aplicação pode utilizar um servidor adicional para garantir que se liga à localização selecionada utilizando o DAITA."
+
+msgid "When selected, the app automatically picks a random server, prioritizing those closer to the exit location for better performance."
+msgstr "Quando selecionada, a aplicação escolhe automaticamente um servidor aleatório, dando prioridade aos que se encontram mais próximos da localização de saída, para melhor desempenho."
+
+msgid "WireGuard port"
+msgstr "Porta WireGuard"
+
+msgid "Yes, log out device"
+msgstr "Sim, terminar sessão do dispositivo"
+
+msgid "You are about to delete your Mullvad VPN account."
+msgstr "Está prestes a eliminar a sua conta Mullvad VPN."
+
+msgid "You can add more time via the account view or website to continue using the VPN."
+msgstr "Pode adicionar mais tempo através da vista da conta ou do site para continuar a usar a VPN."
+
+msgid "You can add more time via the account view to continue using the VPN."
+msgstr "Pode adicionar mais tempo através da vista de conta para continuar a utilizar a VPN."
+
+msgid "You can either use our built-in content blockers or use a custom DNS server. This might cause issues on certain websites, services, and apps."
+msgstr "Pode utilizar os nossos bloqueadores de conteúdo integrados ou um servidor DNS personalizado. Isto poderá causar problemas em determinados sites, serviços e aplicações."
+
+msgid "You will lose access to this account on all devices."
+msgstr "Irá perder o acesso a esta conta em todos os dispositivos."
+
+msgid "You will lose your remaining"
+msgstr "Irá perder os restantes"
+
+msgid "Your current filters were applied to both entry and exit locations."
+msgstr "Os seus filtros atuais foram aplicados às localizações de entrada e de saída."
+
+msgid "Your device"
+msgstr "O seu dispositivo"
+
+msgid "Your device (%s)"
+msgstr "O seu dispositivo (%s)"
+
+msgid "Your latest purchase is still being verified. Logging in to another account will cause the verification to fail. Do you still want to log out?"
+msgstr "A sua última compra ainda está a ser verificada. Se iniciar sessão noutra conta, a verificação falhará. Ainda assim, pretende terminar a sessão?"
+
+msgid "Your multihop setting was migrated from “Off” to “Always”"
+msgstr "A sua definição de multihop foi migrada de \"Desativada\" para \"Sempre\"."
+
+msgid "Your multihop setting was migrated from “Off” to “Never”"
+msgstr "A sua definição de multihop foi migrada de \"Desativada\" para \"Nunca\"."
+
+msgid "Your multihop setting was migrated from “Off” to “When needed”"
+msgstr "A sua definição de multihop foi migrada de \"Desativada\" para \"Quando necessário\"."
+
+msgid "Your multihop setting was migrated from “On” to “Always”"
+msgstr "A sua definição de multihop foi migrada de \"Ativada\" para \"Sempre\"."
+
+msgid "\"%s\" was created"
+msgstr "\"%s\" foi criada"
+
+msgid "\"%s\" was deleted"
+msgstr "\"%s\" foi eliminada"
+
+msgid "click here"
+msgstr "clique aqui"
+
+msgid "here"
+msgstr "aqui"
+
+msgid "less than one day"
+msgstr "menos de um dia"
+
+msgid "privacy policy"
+msgstr "política de privacidade"
+
+msgid "read more here"
+msgstr "leia mais aqui"
+
+msgid "via %1$s, %2$s"
+msgstr "via %1$s, %2$s"
+
+msgid "“Direct Only” removed"
+msgstr "\"Apenas direto\" removido"
+
+msgid "%d day"
+msgid_plural "%d days"
+msgstr[0] "%d dia"
+msgstr[1] "%d dias"
+
+msgid "%d location"
+msgid_plural "%d locations"
+msgstr[0] "%d localização"
+msgstr[1] "%d localizações"
+
+msgid "%d month"
+msgid_plural "%d months"
+msgstr[0] "%d mês"
+msgstr[1] "%d meses"
+
+msgid "1 day left on this account"
+msgid_plural "%d days left on this account"
+msgstr[0] "Resta 1 dia nesta conta"
+msgstr[1] "Restam %d dias nesta conta"
+
+msgid "1 year left on this account"
+msgid_plural "%d years left on this account"
+msgstr[0] "Resta 1 ano nesta conta"
+msgstr[1] "Restam %d anos nesta conta"
+
+msgid "Account credit expires in a day"
+msgid_plural "Account credit expires in %d days"
+msgstr[0] "O crédito da conta expira dentro de um dia"
+msgstr[1] "O crédito da conta expira dentro de %d dias"
+
+msgid "Account credit expires in an hour"
+msgid_plural "Account credit expires in %d hours"
+msgstr[0] "O crédito da conta expira dentro de uma hora"
+msgstr[1] "O crédito da conta expira dentro de %d horas"
+
+msgid "You will lose your remaining day."
+msgid_plural "You will lose your remaining %d days."
+msgstr[0] "Irá perder o dia restante."
+msgstr[1] "Irá perder os %d dias restantes."
+

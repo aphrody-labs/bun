@@ -1,0 +1,4129 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Crowdin-Project: mullvad-app\n"
+"X-Crowdin-Project-ID: 350815\n"
+"X-Crowdin-Language: fi\n"
+"X-Crowdin-File: messages.pot\n"
+"X-Crowdin-File-ID: 12\n"
+"Project-Id-Version: mullvad-app\n"
+"Language-Team: Finnish\n"
+"Language: fi_FI\n"
+"PO-Revision-Date: 2026-09-03 06:40\n"
+
+msgid "%(amount)d more..."
+msgstr "%(amount)d lisää..."
+
+msgid "%(duration)s was added, account paid until %(expiry)s."
+msgstr "%(duration)s lisättiin: tilin käyttö maksettu %(expiry)s asti."
+
+#. The label for the WireGuard port option.
+#. Available placeholders:
+#. %(wireguard)s - will be replaced with WireGuard
+msgid "%(wireguard)s port"
+msgstr "%(wireguard)s-portti"
+
+msgid "1 day"
+msgid_plural "%d days"
+msgstr[0] "1 päivä"
+msgstr[1] "%d päivää"
+
+msgid "1 day left"
+msgid_plural "%d days left"
+msgstr[0] "1 päivä jäljellä"
+msgstr[1] "%d päivää jäljellä"
+
+msgid "1 month"
+msgid_plural "%d months"
+msgstr[0] "1 kuukausi"
+msgstr[1] "%d kuukautta"
+
+msgid "1 month left"
+msgid_plural "%d months left"
+msgstr[0] "1 kuukausi jäljellä"
+msgstr[1] "%d kuukautta jäljellä"
+
+msgid "1 year"
+msgid_plural "%d years"
+msgstr[0] "1 vuosi"
+msgstr[1] "%d vuotta"
+
+msgid "1 year left"
+msgid_plural "%d years left"
+msgstr[0] "1 vuosi jäljellä"
+msgstr[1] "%d vuotta jäljellä"
+
+msgid "Account paid until %(expiry)s."
+msgstr "Tilin käyttö maksettu %(expiry)s asti."
+
+msgid "Account settings"
+msgstr "Tiliasetukset"
+
+msgid "Add"
+msgstr "Lisää"
+
+msgid "Any"
+msgstr "Mikä tahansa"
+
+msgid "Apply"
+msgstr "Ota käyttöön"
+
+msgid "Automatic"
+msgstr "Automaattinen"
+
+msgid "Back"
+msgstr "Takaisin"
+
+msgid "BLOCKED CONNECTION"
+msgstr "ESTETTY YHTEYS"
+
+msgid "Blocking internet"
+msgstr "Verkkoyhteys estetään"
+
+msgid "Buy credit"
+msgstr "Osta käyttöaikaa"
+
+msgid "Buy more credit"
+msgstr "Uudista tilaus"
+
+msgid "Cancel"
+msgstr "Peruuta"
+
+msgid "Cipher"
+msgstr "Salaus"
+
+msgid "Clear"
+msgstr "Tyhjennä"
+
+msgid "Close"
+msgstr "Sulje"
+
+msgid "Connect"
+msgstr "Yhdistä"
+
+msgid "Connected"
+msgstr "Yhdistetty"
+
+msgid "CONNECTED"
+msgstr "YHDISTETTY"
+
+msgid "Connecting"
+msgstr "Yhdistetään"
+
+msgid "CONNECTING..."
+msgstr "YHDISTETÄÄN..."
+
+msgid "Create"
+msgstr "Luo"
+
+#. Creating a secure connection that isn't breakable by quantum computers.
+msgid "CREATING QUANTUM SECURE CONNECTION"
+msgstr "LUODAAN KVANTTISUOJATTU YHTEYS"
+
+msgid "CREATING SECURE CONNECTION"
+msgstr "LUODAAN SUOJATTU YHTEYS"
+
+msgid "Custom"
+msgstr "Mukautettu"
+
+#. This refers to the Custom DNS setting in the VPN settings view. This is
+#. displayed when the feature is on.
+msgid "Custom DNS"
+msgstr "Mukautettu DNS"
+
+msgid "Default"
+msgstr "Oletus"
+
+msgid "Delete"
+msgstr "Poista"
+
+msgid "Delete list"
+msgstr "Poista luettelo"
+
+msgid "Disable"
+msgstr "Poista käytöstä"
+
+msgid "Disconnect"
+msgstr "Katkaise yhteys"
+
+msgid "Disconnect & quit"
+msgstr "Katkaise yhteys ja sulje"
+
+msgid "Disconnected"
+msgstr "Yhteys katkaistu"
+
+msgid "DISCONNECTED"
+msgstr "YHTEYS KATKAISTU"
+
+msgid "Disconnecting"
+msgstr "Katkaistaan yhteyttä"
+
+msgid "DISCONNECTING..."
+msgstr "YHTEYTTÄ KATKAISTAAN..."
+
+msgid "Edit"
+msgstr "Muokkaa"
+
+msgid "Enable"
+msgstr "Ota käyttöön"
+
+msgid "Enable anyway"
+msgstr "Ota silti käyttöön"
+
+#. Error message shown trying to login but the app fails
+#. to fetch the list of registered devices.
+msgid "Failed to fetch list of devices"
+msgstr "Laiteluettelon nouto epäonnistui"
+
+msgid "FAILED TO SECURE CONNECTION"
+msgstr "YHTEYDEN SUOJAAMINEN EPÄONNISTUI"
+
+msgid "Filters"
+msgstr "Suodattimet"
+
+#. Button label for system settings.
+msgid "Go to System Settings"
+msgstr "Siirry järjestelmäasetuksiin"
+
+msgid "Got it!"
+msgstr "Selvä!"
+
+msgid "Guide"
+msgstr "Opas"
+
+msgid "Import"
+msgstr "Tuo"
+
+msgid "IPv4"
+msgstr "IPv4"
+
+msgid "IPv6"
+msgstr "IPv6"
+
+msgid "Learn more"
+msgstr "Lisätietoja"
+
+msgid "less than a day"
+msgstr "alle vuorokausi"
+
+msgid "less than a day left"
+msgstr "alle vuorokausi jäljellä"
+
+#. This refers to the multihop setting in the VPN settings view. This is
+#. displayed when the feature is on.
+msgid "Multihop"
+msgstr "Multihop"
+
+msgid "Name"
+msgstr "Nimi"
+
+msgid "New list"
+msgstr "Uusi luettelo"
+
+msgid "Next"
+msgstr "Seuraava"
+
+msgid "No matching servers found"
+msgstr "Vastaavia palvelimia ei löytynyt"
+
+msgid "No result for <b>%(searchTerm)s</b>."
+msgstr "Ei tuloksia haulle <b>%(searchTerm)s</b>."
+
+msgid "None"
+msgstr "Ei mitään"
+
+msgid "Off"
+msgstr "Pois"
+
+msgid "On"
+msgstr "Päällä"
+
+msgid "Open URL"
+msgstr "Avaa URL"
+
+msgid "Optional"
+msgstr "Valinnainen"
+
+msgid "Password"
+msgstr "Salasana"
+
+msgid "Port"
+msgstr "Portti"
+
+#. This refers to the quantum resistance setting in the WireGuard settings view.
+#. This is displayed when the feature is on.
+msgid "Quantum resistance"
+msgstr "Kvanttihyökkäysten esto"
+
+#. The connection is secure and isn't breakable by quantum computers.
+msgid "QUANTUM SECURE CONNECTION"
+msgstr "KVANTTISUOJATTU YHTEYS"
+
+msgid "Quit"
+msgstr "Sulje"
+
+msgid "Reconnect"
+msgstr "Yhdistä uudelleen"
+
+#. Button label in confirmation dialog that confirms a remove action.
+msgid "Remove"
+msgstr "Poista"
+
+msgid "Remove from list"
+msgstr "Poista luettelosta"
+
+msgid "Required"
+msgstr "Pakollinen"
+
+msgid "Save"
+msgstr "Tallenna"
+
+msgid "Search for..."
+msgstr "Hae..."
+
+#. Placeholder text for search field in select location view
+msgid "Search locations or servers"
+msgstr "Hae sijainteja tai palvelimia"
+
+msgid "SECURE CONNECTION"
+msgstr "SUOJATTU YHTEYS"
+
+#. Text for button that sets a location as entry relay.
+msgid "Set as entry"
+msgstr "Aseta tulosijainniksi"
+
+#. Text for button that sets a location as exit relay
+msgid "Set as exit"
+msgstr "Aseta lähtösijainniksi"
+
+msgid "Settings"
+msgstr "Asetukset"
+
+msgid "System default"
+msgstr "Järjestelmän oletusarvo"
+
+msgid "Test"
+msgstr "Testaa"
+
+msgid "Troubleshoot"
+msgstr "Vianetsintä"
+
+msgid "Try a different search."
+msgstr "Kokeile toista hakua."
+
+msgid "Type"
+msgstr "Tyyppi"
+
+msgid "Unblock"
+msgstr "Poista esto"
+
+msgid "UNSECURED CONNECTION"
+msgstr "SUOJAAMATON YHTEYS"
+
+msgid "Use"
+msgstr "Käytä"
+
+msgid "Username"
+msgstr "Käyttäjätunnus"
+
+#. Text for screen readers to describe the LWO settings navigation button.
+#. Available placeholders:
+#. %(lwo)s - will be replaced with LWO
+msgctxt "accessibility"
+msgid "%(lwo)s settings"
+msgstr "%(lwo)s-asetukset"
+
+msgctxt "accessibility"
+msgid "%(title)s, View loaded"
+msgstr "%(title)s, Näkymä ladattu"
+
+#. Text for screen readers to describe the WireGuard port settings navigation button.
+#. Available placeholders:
+#. %(wireguard)s - will be replaced with WireGuard
+msgctxt "accessibility"
+msgid "%(wireguard)s port settings"
+msgstr "%(wireguard)s-porttiasetukset"
+
+#. This is an accessibility label for a button that adds a location to a custom list.
+#. Available placeholders:
+#. %(location)s - The name of the location being added to the list.
+#. %(listName)s - The name of the custom list the location will be added to.
+msgctxt "accessibility"
+msgid "Add %(location)s to %(listName)s"
+msgstr "Lisää %(location)s luetteloon %(listName)s"
+
+#. Accessibility label for button to add a location to a custom list.
+#. The placeholder is replaced with the name of the location.
+msgctxt "accessibility"
+msgid "Add %(locationName)s to custom list"
+msgstr "Lisää %(locationName)s mukautettuun luetteloon"
+
+#. This is an accessibility label for a button that opens a dialog to create a new custom list.
+msgctxt "accessibility"
+msgid "Add a new custom list"
+msgstr "Lisää uusi mukautettu luettelo"
+
+#. Accessibility description for button clearing the ownership filter.
+msgctxt "accessibility"
+msgid "Clear ownership filter"
+msgstr "Tyhjennä omistajuussuodatin"
+
+msgctxt "accessibility"
+msgid "Close notification"
+msgstr "Sulje ilmoitus"
+
+msgctxt "accessibility"
+msgid "Collapse %(location)s"
+msgstr "Näytä vähemmän: %(location)s"
+
+#. Accessibility label for a button that connects to a location.
+#. Available placeholders:
+#. %(location)s - The name of the location that will be connected to when the button is clicked.
+msgctxt "accessibility"
+msgid "Connect to %(location)s"
+msgstr "Yhdistä sijaintiin %(location)s"
+
+#. Provided to accessibility tools such as screenreaders to describe a button
+#. which copies the account number to the clipboard.
+msgctxt "accessibility"
+msgid "Copy account number"
+msgstr "Kopioi tilin numero"
+
+#. Accessibility label for a carousel that explains the DAITA feature to the user.
+msgctxt "accessibility"
+msgid "DAITA information carousel"
+msgstr "DAITA-tietokaruselli"
+
+#. Accessibility label for button to delete a custom list.
+#. The placeholder is replaced with the name of the custom list.
+msgctxt "accessibility"
+msgid "Delete custom list %(listName)s"
+msgstr "Poista mukautettu luettelo %(listName)s"
+
+#. Accessibility label for button to edit a custom list.
+#. The placeholder is replaced with the name of the custom list.
+msgctxt "accessibility"
+msgid "Edit custom list %(listName)s"
+msgstr "Muokkaa mukautettua luetteloa %(listName)s"
+
+msgctxt "accessibility"
+msgid "Expand %(location)s"
+msgstr "Näytä enemmän: %(location)s"
+
+#. This is used by screenreaders to communicate the "x" button next to a saved account number.
+#. Available placeholders:
+#. %(accountNumber)s - the account number to the left of the button
+msgctxt "accessibility"
+msgid "Forget account number %(accountNumber)s"
+msgstr "Pyyhi tilin numero %(accountNumber)s"
+
+#. Accessibility label for link to VPN settings where
+#. the user can change WireGuard port.
+#. Available placeholders:
+#. %(wireGuard)s - Will be replaced with WireGuard
+msgctxt "accessibility"
+msgid "Go to anti-censorship settings to change %(wireGuard)s port"
+msgstr "Siirry sensuurinestoasetuksiin vaihtamaan %(wireGuard)s-portti"
+
+#. Accessibility label for link to app upgrade view.
+msgctxt "accessibility"
+msgid "Go to app update page"
+msgstr "Siirry sovelluksen päivityssivulle"
+
+#. Accessibility label for carousel indicators that allow navigation between slides.
+#. Available placeholders:
+#. %(index)s - Will be replaced with the slide index number.
+msgctxt "accessibility"
+msgid "Go to slide %(index)s"
+msgstr "Siirry diaan %(index)s"
+
+#. Provided to accessibility tools such as screenreaders to describe
+#. the button which obscures the account number.
+msgctxt "accessibility"
+msgid "Hide account number"
+msgstr "Piilota tilin numero"
+
+#. Alt text for an illustration showing VPN traffic with DAITA.
+msgctxt "accessibility"
+msgid "Illustration showing VPN traffic with DAITA enabled"
+msgstr "Havainnekuva esittää VPN-liikennettä, kun DAITA on käytössä"
+
+#. Alt text for an illustration showing VPN traffic without DAITA.
+msgctxt "accessibility"
+msgid "Illustration showing VPN traffic without DAITA"
+msgstr "Havainnekuva esittää VPN-liikennettä, kun DAITA ei ole käytössä"
+
+#. This is used by screenreaders to communicate the login button.
+msgctxt "accessibility"
+msgid "Login"
+msgstr "Kirjaudu sisään"
+
+#. This is used by screenreaders to communicate logging in with a saved account number.
+#. Available placeholders:
+#. %(accountNumber)s - the saved account number
+msgctxt "accessibility"
+msgid "Login with account number %(accountNumber)s"
+msgstr "Kirjaudu sisään tilille numero %(accountNumber)s"
+
+msgctxt "accessibility"
+msgid "More information"
+msgstr "Lisätietoja"
+
+#. Accessibility label for link to go to download page.
+msgctxt "accessibility"
+msgid "New version available, click here to go to download page, opens externally"
+msgstr "Uusi versio on saatavilla. Siirry lataussivulle napsauttamalla tätä (avautuu ulkoisesti)."
+
+msgctxt "accessibility"
+msgid "New version available, click here to go to update view"
+msgstr "Uusi versio on saatavilla. Siirry päivitysnäkymään napsauttamalla tätä."
+
+msgctxt "accessibility"
+msgid "New version installed, click here to see the changelog"
+msgstr "Uusi versio on asennettu. Voit tarkastella muutoslokia napsauttamalla tästä."
+
+#. Accessibility label for a button that navigates to the next slide in a carousel.
+msgctxt "accessibility"
+msgid "Next slide"
+msgstr "Seuraava dia"
+
+#. Accessibility label for button to open a custom list menu.
+#. The placeholder is replaced with the name of the custom list.
+msgctxt "accessibility"
+msgid "Open menu for %(listName)s"
+msgstr "Avaa luettelon %(listName)s valikko"
+
+#. Accessibility label for button to open a location menu.
+#. The placeholder is replaced with the name of the location.
+#. Accessibility label for button to edit a geographical location.
+#. The placeholder is replaced with the name of the geographical location.
+msgctxt "accessibility"
+msgid "Open menu for %(locationName)s"
+msgstr "Avaa luettelon %(locationName)s valikko"
+
+#. Label for button opening select location menu.
+msgctxt "accessibility"
+msgid "Open select location menu"
+msgstr "Avaa sijainninvalintavalikko"
+
+#. Accessibility label for the button that opens the browser to buy credit.
+msgctxt "accessibility"
+msgid "Opens externally"
+msgstr "Avautuu ulkoiseen selainikkunaan"
+
+#. Accessibility label for a button that navigates to the previous slide in a carousel.
+msgctxt "accessibility"
+msgid "Previous slide"
+msgstr "Edellinen dia"
+
+#. Accessibility label for button to remove a location from a custom list.
+#. The first placeholder is replaced with the name of the location.
+#. The second placeholder is replaced with the name of the custom list.
+msgctxt "accessibility"
+msgid "Remove %(location)s from %(customList)s"
+msgstr "Poista %(location)s luettelosta %(customList)s"
+
+#. Button action description provided to accessibility tools such as screen
+#. readers.
+#. Available placeholders:
+#. %(deviceName)s - The device name to remove.
+msgctxt "accessibility"
+msgid "Remove device named %(deviceName)s"
+msgstr "Poista laite: %(deviceName)s"
+
+msgctxt "accessibility"
+msgid "Remove item"
+msgstr "Poista kohde"
+
+msgctxt "accessibility"
+msgid "Select location. Current location is %(location)s"
+msgstr "Valitse sijainti. Nykyinen sijainti on %(location)s."
+
+msgctxt "accessibility"
+msgid "Shadowsocks settings"
+msgstr "Shadowsocks-asetukset"
+
+#. Provided to accessibility tools such as screenreaders to describe
+#. the button which unobscures the account number.
+msgctxt "accessibility"
+msgid "Show account number"
+msgstr "Näytä tilin numero"
+
+msgctxt "accessibility"
+msgid "UDP-over-TCP settings"
+msgstr "UDP TCP:n kautta -asetukset"
+
+msgctxt "accessibility"
+msgid "Use the right arrow key to focus the settings button."
+msgstr "Kohdista asetuspainike oikealla nuolinäppäimellä."
+
+#. Title label in navigation bar
+msgctxt "account-view"
+msgid "Account"
+msgstr "Tili"
+
+msgctxt "account-view"
+msgid "Account number"
+msgstr "Tilin numero"
+
+msgctxt "account-view"
+msgid "Currently unavailable"
+msgstr "Ei saatavilla"
+
+#. Button label for logging out.
+msgctxt "account-view"
+msgid "Log out"
+msgstr "Kirjaudu ulos"
+
+#. Link text in the account view to navigate to the manage devices view.
+msgctxt "account-view"
+msgid "Manage devices"
+msgstr "Hallitse laitteita"
+
+msgctxt "account-view"
+msgid "OUT OF TIME"
+msgstr "EI KÄYTTÖAIKAA"
+
+msgctxt "account-view"
+msgid "Paid until"
+msgstr "Maksu ennen"
+
+#. Page title for anti censorship settings view
+msgctxt "anti-censorship-view"
+msgid "Anti-censorship"
+msgstr "Sensuurinesto"
+
+#. The title for the obfuscation method selector.
+msgctxt "anti-censorship-view"
+msgid "Method"
+msgstr "Tapa"
+
+#. Second paragraph of description text in anti-censorship view
+msgctxt "anti-censorship-view"
+msgid "Please note that these methods do not improve performance, and may increase system utilization and battery consumption."
+msgstr "Huomioithan, että nämä tavat eivät paranna suorituskykyä ja saattavat lisätä järjestelmän ja akun käyttöä."
+
+#. First paragraph of description text in anti-censorship view
+msgctxt "anti-censorship-view"
+msgid "These methods may be useful in situations where you are blocked from reaching Mullvad. When \"Automatic\" is selected, the app will attempt all methods until one works."
+msgstr "Nämä tavat voivat olla hyödyllisiä tilanteissa, joissa sinua on estetty pääsemästä Mullvadiin. Kun \"automaattinen\" valitaan, sovellus kokeilee kaikkia tapoja, kunnes jokin niistä toimii."
+
+msgctxt "api-access-methods-view"
+msgid "Add method"
+msgstr "Lisää menetelmä"
+
+msgctxt "api-access-methods-view"
+msgid "Adding a new API access method also tests it."
+msgstr "Uuden ohjelmointirajapinnan käyttötavan lisääminen testaa sitä myös."
+
+msgctxt "api-access-methods-view"
+msgid "API reachable"
+msgstr "Ohjelmointirajapinta saavutettavissa"
+
+msgctxt "api-access-methods-view"
+msgid "API reachable, adding method…"
+msgstr "Ohjelmointirajapinta saavutettavissa, menetelmää lisätään…"
+
+msgctxt "api-access-methods-view"
+msgid "API reachable, saving method…"
+msgstr "Ohjelmointirajapinta saavutettavissa, menetelmää tallennetaan…"
+
+msgctxt "api-access-methods-view"
+msgid "API unreachable"
+msgstr "Ohjelmointirajapinta ei ole saavutettavissa"
+
+msgctxt "api-access-methods-view"
+msgid "API unreachable, add anyway?"
+msgstr "Ohjelmointirajapinta ei ole saavutettavissa. Lisätäänkö se silti?"
+
+msgctxt "api-access-methods-view"
+msgid "API unreachable, save anyway?"
+msgstr "Ohjelmointirajapinta ei ole saavutettavissa. Tallennetaanko se silti?"
+
+msgctxt "api-access-methods-view"
+msgid "Authentication"
+msgstr "Todennus"
+
+#. %(save)s - Will be replaced with the translation for the word "Save".
+msgctxt "api-access-methods-view"
+msgid "Clicking “%(save)s” changes the in use method."
+msgstr "Jos napsautat \"%(save)s\", käytössä oleva menetelmä vaihtuu."
+
+msgctxt "api-access-methods-view"
+msgid "Delete %(name)s?"
+msgstr "Poistetaanko %(name)s?"
+
+msgctxt "api-access-methods-view"
+msgid "Edit method"
+msgstr "Muokkaa menetelmää"
+
+msgctxt "api-access-methods-view"
+msgid "Editing an API access method also tests it."
+msgstr "Ohjelmointirajapinnan käyttötavan muokkaaminen testaa sitä myös."
+
+msgctxt "api-access-methods-view"
+msgid "Enter IP"
+msgstr "Anna IP-osoite"
+
+msgctxt "api-access-methods-view"
+msgid "Enter name"
+msgstr "Anna nimi"
+
+msgctxt "api-access-methods-view"
+msgid "Enter port"
+msgstr "Anna portti"
+
+msgctxt "api-access-methods-view"
+msgid "If you are not connected to our VPN, then the Encrypted DNS proxy will use your own non-VPN IP when connecting. The DoH servers are hosted by one of the following providers: Quad9 or Cloudflare."
+msgstr "Jos et ole yhteydessä VPN-verkkoomme, salattu DNS-välityspalvelin käyttää yhdistämiseen omaa osoitettasi, joka ei ole VPN-pohjainen. DoH-palvelimia isännöi joko Quad9 tai Cloudflare."
+
+msgctxt "api-access-methods-view"
+msgid "In use"
+msgstr "Käytössä"
+
+msgctxt "api-access-methods-view"
+msgid "Local SOCKS5 server"
+msgstr "Paikallinen SOCKS5-palvelin"
+
+msgctxt "api-access-methods-view"
+msgid "Manage and add custom methods to access the Mullvad API."
+msgstr "Hallitse ja lisää mukautettuja menetelmiä Mullvadin ohjelmointirajapinnan käyttämiseksi."
+
+msgctxt "api-access-methods-view"
+msgid "On some networks, where various types of censorship are being used, the API servers might not be directly reachable."
+msgstr "Ohjelmointirajapinnan palvelimet eivät välttämättä ole suoraan tavoitettavissa joissakin useita erityyppisiä sensurointimenetelmiä käyttävissä verkoissa."
+
+msgctxt "api-access-methods-view"
+msgid "Please enter a valid IPv4 or IPv6 address."
+msgstr "Anna kelvollinen IPv4- tai IPv6-osoite."
+
+msgctxt "api-access-methods-view"
+msgid "Please enter a valid localhost port."
+msgstr "Anna kelvollinen localhost-portti."
+
+msgctxt "api-access-methods-view"
+msgid "Please enter a valid remote server port."
+msgstr "Anna kelvollinen etäpalvelimen portti."
+
+msgctxt "api-access-methods-view"
+msgid "Please select a name for the access method not already in use."
+msgstr "Valitse käyttötavalle nimi, joka ei ole käytössä."
+
+msgctxt "api-access-methods-view"
+msgid "Remote Server"
+msgstr "Etäpalvelin"
+
+msgctxt "api-access-methods-view"
+msgid "Server"
+msgstr "Palvelin"
+
+msgctxt "api-access-methods-view"
+msgid "Server details"
+msgstr "Palvelimen tiedot"
+
+msgctxt "api-access-methods-view"
+msgid "SOCKS5 local"
+msgstr "Paikallinen SOCKS5"
+
+msgctxt "api-access-methods-view"
+msgid "SOCKS5 remote"
+msgstr "Etä-SOCKS5"
+
+msgctxt "api-access-methods-view"
+msgid "Testing method..."
+msgstr "Menetelmää testataan..."
+
+msgctxt "api-access-methods-view"
+msgid "Testing..."
+msgstr "Testataan..."
+
+msgctxt "api-access-methods-view"
+msgid "The API could not be reached using the %(name)s method."
+msgstr "Ohjelmointirajapintaan ei saatu yhteyttä menetelmällä %(name)s."
+
+msgctxt "api-access-methods-view"
+msgid "The app needs the remote server details, where your local SOCKS5 server will forward your traffic."
+msgstr "Sovellus tarvitsee sen etäpalvelimen tiedot, jonne paikallinen SOCKS5-palvelin välittää liikennettäsi."
+
+msgctxt "api-access-methods-view"
+msgid "The app needs to communicate with a Mullvad API server to log you in, fetch server lists, and other critical operations."
+msgstr "Sovelluksen on kommunikoitava Mullvadin ohjelmointirajapinnan palvelimen kanssa, jotta sinut voidaan kirjata sisään, palvelinluetteloiden hakemiseksi sekä muiden tärkeiden toimintojen suorittamiseksi."
+
+msgctxt "api-access-methods-view"
+msgid "The in use API access method will change."
+msgstr "Käytössä oleva ohjelmointirajapinnan käyttötapa muuttuu."
+
+msgctxt "api-access-methods-view"
+msgid "The TCP port where your local SOCKS5 server is listening."
+msgstr "TCP-portti, jota paikallinen SOCKS5-palvelin kuuntelee."
+
+msgctxt "api-access-methods-view"
+msgid "This can be useful if the API is censored but Mullvad’s bridge servers are not."
+msgstr "Tästä voi olla hyötyä, jos ohjelmointirajapinta on sensuroitu, mutta Mullvadin siltauspalvelimet eivät."
+
+msgctxt "api-access-methods-view"
+msgid "This can be useful when you are not affected by censorship."
+msgstr "Tästä voi olla hyötyä, kun sensuurilla ei ole vaikutusta toimintaasi."
+
+msgctxt "api-access-methods-view"
+msgid "This feature allows you to circumvent that censorship by adding custom ways to access the API via proxies and similar methods."
+msgstr "Tämän ominaisuuden avulla voit kiertää sensuurin lisäämällä välityspalvelinten ja vastaavien menetelmien kautta toimivia, mukautettuja ohjelmointirajapinnan käyttötapoja."
+
+msgctxt "api-access-methods-view"
+msgid "This is needed so our app can allow that traffic in the firewall."
+msgstr "Tätä tarvitaan, jotta sovelluksemme pystyy sallimaan liikenteen palomuurin sisällä."
+
+msgctxt "api-access-methods-view"
+msgid "Transport protocol"
+msgstr "Siirtoprotokolla"
+
+msgctxt "api-access-methods-view"
+msgid "With the “Direct” method, the app communicates with a Mullvad API server directly without any intermediate proxies."
+msgstr "Nk. suora menetelmä sallii sovelluksen kommunikoida Mullvadin ohjelmointirajapinnan palvelimen kanssa suoraan ilman välityspalvelimia."
+
+msgctxt "api-access-methods-view"
+msgid "With the “Encrypted DNS proxy” method, the app will communicate with our Mullvad API through a proxy address. It does this by retrieving an address from a DNS over HTTPS (DoH) server and then using that to reach our API servers."
+msgstr "Sovellus kommunikoi Mullvad API:n kanssa välityspalvelinosoitteen kautta \"Salattu DNS-välityspalvelin\" -menetelmällä, joka toimii niin, että sovellus hakee osoitteen DNS over HTTPS (DoH) -palvelimelta ja käyttää sitä API-palvelimillemme pääsemiseen."
+
+msgctxt "api-access-methods-view"
+msgid "With the “Mullvad bridges” method, the app communicates with a Mullvad API server via a Mullvad bridge server. It does this by sending the traffic obfuscated by Shadowsocks."
+msgstr "Kun käytössä on Mullvadin siltausmenetelmä, sovellus kommunikoi Mullvadin ohjelmointirajapinnan palvelimen kanssa Mullvadin siltauspalvelimen kautta. Se tekee tämän lähettämällä liikenteen Shadowsocksin peittämänä."
+
+#. Title of the app info view.
+msgctxt "app-info-view"
+msgid "App info"
+msgstr "Sovelluksen tiedot"
+
+#. Description for version list item when app is out of sync.
+msgctxt "app-info-view"
+msgid "App is out of sync. Please quit and restart."
+msgstr "Sovellusta ei ole synkronoitu. Sulje sovellus ja käynnistä se uudelleen."
+
+#. Label for switch to toggle beta program.
+msgctxt "app-info-view"
+msgid "Beta program"
+msgstr "Beetaohjelma"
+
+msgctxt "app-info-view"
+msgid "Enable to get notified when new beta versions of the app are released."
+msgstr "Ota käyttöön, niin saat ilmoituksen uusista sovelluksen beetaversioista."
+
+msgctxt "app-info-view"
+msgid "This option is unavailable while using a beta version."
+msgstr "Tämä toiminto ei ole käytössä beetaversiossa."
+
+#. Label for update available list item.
+msgctxt "app-info-view"
+msgid "Update available"
+msgstr "Päivitys saatavilla"
+
+#. Label for version list item.
+msgctxt "app-info-view"
+msgid "Version"
+msgstr "Versio"
+
+#. Label for changelog list item.
+msgctxt "app-info-view"
+msgid "What’s new"
+msgstr "Uutta"
+
+#. Status text displayed below a progress bar when the update is being downloaded
+#. with the estimated time of completion is within a few seconds.
+msgctxt "app-upgrade-view"
+msgid "A few seconds remaining..."
+msgstr "Muutama sekunti jäljellä..."
+
+#. Status text displayed below a progress bar when the update is being downloaded
+#. with the estimated time of completion represented in minutes.
+#. Available placeholders:
+#. %(minutes)s - Will be replaced with remaining minutes until download is complete
+msgctxt "app-upgrade-view"
+msgid "About %(minutes)s minutes remaining..."
+msgstr "Noin %(minutes)s minuuttia jäljellä..."
+
+#. Status text displayed below a progress bar when the update is being downloaded
+#. with the estimated time of completion represented in seconds.
+#. Available placeholders:
+#. %(second)s - Will be replaced with remaining seconds until download is complete
+msgctxt "app-upgrade-view"
+msgid "About %(seconds)s seconds remaining..."
+msgstr "Noin %(seconds)s sekuntia jäljellä..."
+
+#. Label displayed when an error occurred due to the connection being blocked
+msgctxt "app-upgrade-view"
+msgid "Connection blocked. Try changing server or other settings."
+msgstr "Yhteys estetty. Kokeile vaihtaa palvelinta tai muuttaa muita asetuksia."
+
+#. Label displayed when an error occurred due to the installer failing to start
+#. and the suggested resolution is to download the update again.
+msgctxt "app-upgrade-view"
+msgid "Could not open installer, please try again or send a problem report."
+msgstr "Asennusohjelman avaaminen ei onnistunut. Yritä uudelleen tai lähetä ongelmaraportti."
+
+#. Button text to download and install an update
+msgctxt "app-upgrade-view"
+msgid "Download & install"
+msgstr "Lataa ja asenna"
+
+#. Status text displayed below a progress bar when the download of an update is complete
+msgctxt "app-upgrade-view"
+msgid "Download complete!"
+msgstr "Lataus valmis!"
+
+#. Status text displayed below a progress bar when the download of an update fails
+msgctxt "app-upgrade-view"
+msgid "Download failed"
+msgstr "Lataus epäonnistui"
+
+#. Label displayed when an error occurred due to the download failing
+msgctxt "app-upgrade-view"
+msgid "Download failed, please check your connection/firewall and try again, or send a problem report."
+msgstr "Lataus epäonnistui. Tarkista yhteys tai palomuuri ja yritä uudelleen tai lähetä ongelmaraportti."
+
+#. Status text displayed below a progress bar when the download of an update has been paused
+#. Label displayed above a progress bar when the update is verified successfully
+msgctxt "app-upgrade-view"
+msgid "Download paused"
+msgstr "Lataus keskeytetty"
+
+#. Label displayed above a progress bar informing the user which server
+#. the update is downloading from
+msgctxt "app-upgrade-view"
+msgid "Downloading from: %(server)s"
+msgstr "Ladataan palvelimelta: %(server)s"
+
+#. Label displayed above a progress bar when a download is in progress
+msgctxt "app-upgrade-view"
+msgid "Downloading..."
+msgstr "Ladataan..."
+
+#. Link shown to optionally manually download the update
+#. due to repeated errors in the upgrade process.
+msgctxt "app-upgrade-view"
+msgid "Having problems? Try downloading the app from our website"
+msgstr "Kohtasitko ongelmia? Kokeile ladata sovellus verkkosivustoltamme"
+
+#. Button text to install an update
+msgctxt "app-upgrade-view"
+msgid "Install update"
+msgstr "Asenna päivitys"
+
+#. Label displayed when an error occurred within the installer
+msgctxt "app-upgrade-view"
+msgid "Installer quit unexpectedly, please try again or send a problem report."
+msgstr "Asennusohjelma sulkeutui odottamattomasti. Yritä uudelleen tai lähetä ongelmaraportti."
+
+#. Info about which directory the app update will be downloaded to
+msgctxt "app-upgrade-view"
+msgid "Installer will be downloaded to <b>%(cacheDir)s</b>."
+msgstr "Asennusohjelma ladataan kansioon <b>%(cacheDir)s</b>."
+
+msgctxt "app-upgrade-view"
+msgid "Latest version: %(version)s"
+msgstr "Uusin versio: %(version)s"
+
+#. Text displayed when there are no updates for this platform in the next app version
+msgctxt "app-upgrade-view"
+msgid "No updates or changes were made in this release for this platform."
+msgstr "Versioon ei sisälly alustan ​​päivityksiä tai muutoksia."
+
+#. Button text to pause the download of an update
+msgctxt "app-upgrade-view"
+msgid "Pause"
+msgstr "Keskeytä"
+
+#. Button text to report a problem
+msgctxt "app-upgrade-view"
+msgid "Report a problem"
+msgstr "Ilmoita ongelmasta"
+
+#. Button text to resume updating
+msgctxt "app-upgrade-view"
+msgid "Resume"
+msgstr "Jatka"
+
+#. Button text to try again
+msgctxt "app-upgrade-view"
+msgid "Retry"
+msgstr "Yritä uudelleen"
+
+#. Button text to try download again
+msgctxt "app-upgrade-view"
+msgid "Retry download"
+msgstr "Yritä latausta uudelleen"
+
+#. Status text displayed below a progress bar when the download of an update is starting
+msgctxt "app-upgrade-view"
+msgid "Starting download..."
+msgstr "Latausta aloitetaan..."
+
+#. Button text to when starting the installer for an update
+msgctxt "app-upgrade-view"
+msgid "Starting installer..."
+msgstr "Käynnistetään asennusohjelmaa..."
+
+#. Label displayed when an unknown error occurred
+msgctxt "app-upgrade-view"
+msgid "Unknown error occurred. Please try again or send a problem report."
+msgstr "Tapahtui tuntematon virhe. Yritä uudelleen tai lähetä ongelmaraportti."
+
+#. Title in navigation bar
+#. Main title for the update available view
+msgctxt "app-upgrade-view"
+msgid "Update available"
+msgstr "Päivitys saatavilla"
+
+#. Label displayed when an error occurred due to the installer failed verification
+msgctxt "app-upgrade-view"
+msgid "Verification failed, please try again or send a problem report."
+msgstr "Vahvistus epäonnistui. Yritä uudelleen tai lähetä ongelmaraportti."
+
+#. Label displayed above a progress bar when the update is verified successfully
+msgctxt "app-upgrade-view"
+msgid "Verification successful!"
+msgstr "Vahvistus onnistui!"
+
+#. Label displayed above a progress bar when the update is being verified
+msgctxt "app-upgrade-view"
+msgid "Verifying installer..."
+msgstr "Vahvistetaan asennusohjelmaa..."
+
+#. Heading which shows the version of the app which can be upgraded to.
+#. Available placeholders:
+#. %(version)s - The new version of the app.
+msgctxt "app-upgrade-view"
+msgid "Version %(version)s"
+msgstr "Versio %(version)s"
+
+#. The user has the latest version of the app and does not need to be update
+msgctxt "app-upgrade-view"
+msgid "You are using the latest version"
+msgstr "Käytät uusinta versiota"
+
+msgctxt "auth-failure"
+msgid "Blocking internet: account is out of time"
+msgstr "Verkkoliikenne estetty: tilin käyttöaika on kulunut loppuun"
+
+msgctxt "auth-failure"
+msgid "Too many simultaneous connections on this account. Disconnect another device or try connecting again shortly."
+msgstr "Tällä tilillä on liian monta samanaikaista yhteyttä. Katkaise toisen laitteen yhteys tai yritä hetken kuluttua uudelleen."
+
+msgctxt "auth-failure"
+msgid "Unable to authenticate account. Please send a problem report."
+msgstr "Tilin todentaminen ei onnistu. Lähetä ongelmaraportti."
+
+msgctxt "auth-failure"
+msgid "You are logged in with an invalid account number. Please log out and try another one."
+msgstr "Olet kirjautunut sisään virheellisellä tilinumerolla. Kirjaudu ulos ja kokeile toista."
+
+#. Text displayed when there are no updates for this platform in the app version
+msgctxt "changelog-view"
+msgid "No updates or changes were made in this release for this platform."
+msgstr "Versioon ei sisälly alustan ​​päivityksiä tai muutoksia."
+
+#. Heading for the view of the changes and updates in the
+#. current version compared to the old version.
+msgctxt "changelog-view"
+msgid "What’s new"
+msgstr "Uutta"
+
+#. The selected location label displayed on the main view, when a user selected a specific host to connect to.
+#. Example: Malmö (se-mma-001)
+#. Available placeholders:
+#. %(city)s - a city name
+#. %(hostname)s - a hostname
+msgctxt "connect-container"
+msgid "%(city)s (%(hostname)s)"
+msgstr "%(city)s (%(hostname)s)"
+
+msgctxt "connect-view"
+msgid "Active features"
+msgstr "Käytössä olevat ominaisuudet"
+
+#. This is used as a feature indicator to show that multihop is used
+#. to enable the connection.
+msgctxt "connect-view"
+msgid "Automatic multihop"
+msgstr "Automaattinen multihop"
+
+msgctxt "connect-view"
+msgid "Congrats!"
+msgstr "Onnittelut!"
+
+msgctxt "connect-view"
+msgid "Connection details"
+msgstr "Yhteyden tiedot"
+
+#. Button label for disconnecting from the VPN.
+msgctxt "connect-view"
+msgid "Disconnect"
+msgstr "Katkaise yhteys"
+
+msgctxt "connect-view"
+msgid "Either buy credit on our website or redeem a voucher."
+msgstr "Osta käyttöaikaa verkkosivustoltamme tai lunasta kuponki."
+
+msgctxt "connect-view"
+msgid "Enter voucher code"
+msgstr "Syötä kuponkikoodi"
+
+msgctxt "connect-view"
+msgid "Go ahead and start using the app to begin reclaiming your online privacy."
+msgstr "Aloita sovelluksen käyttäminen online-yksityisyytesi palauttamiseksi."
+
+msgctxt "connect-view"
+msgid "Here’s your account number. Save it!"
+msgstr "Tässä tulee tilisi numero. Laita se talteen!"
+
+#. Button label for opening privacy information link.
+msgctxt "connect-view"
+msgid "Learn about privacy"
+msgstr "Lisätietoja yksityisyydestä"
+
+msgctxt "connect-view"
+msgid "Out of time"
+msgstr "Ei käyttöaikaa"
+
+#. Button label for navigating to the voucher redemption view.
+msgctxt "connect-view"
+msgid "Redeem voucher"
+msgstr "Lunasta kuponki"
+
+msgctxt "connect-view"
+msgid "Remember, turning it off will allow network traffic while the VPN is disconnected until you turn it back on under Advanced settings."
+msgstr "Muista, että asetuksen poistaminen käytöstä sallii verkkoliikenteen ilman VPN-yhteyttä, kunnes otat sen takaisin käyttöön lisäasetuksista."
+
+#. Button label for starting the app.
+msgctxt "connect-view"
+msgid "Start using the app"
+msgstr "Aloita sovelluksen käyttö"
+
+msgctxt "connect-view"
+msgid "Time was successfully added"
+msgstr "Aika lisättiin onnistuneesti"
+
+msgctxt "connect-view"
+msgid "To add more, you will need to disconnect and access the Internet with an unsecure connection."
+msgstr "Sinun on katkaistava yhteys ja käytettävä internetiä suojaamattoman yhteyden kautta, jotta voit lisätä lisää."
+
+msgctxt "connect-view"
+msgid "To continue your journey as a privacy ninja, visit our website to pick up other privacy-friendly habits and tools."
+msgstr "Vieraile verkkosivustollamme ja poimi mukaasi muita yksityisyyttä suojelevia tapoja ja työkaluja jatkaaksesi taipaleellasi yksityisyyttä suojelevana ninjana."
+
+msgctxt "connect-view"
+msgid "To start using the app, you first need to add time to your account."
+msgstr "Voit aloittaa sovelluksen käyttämisen lisäämällä ensin aikaa tilillesi."
+
+msgctxt "connect-view"
+msgid "Voucher was successfully redeemed"
+msgstr "Kupongin lunastus onnistui"
+
+msgctxt "connect-view"
+msgid "You have no more VPN time left on this account."
+msgstr "Sinulla ei ole enempää VPN-aikaa jäljellä tällä tilillä."
+
+msgctxt "connect-view"
+msgid "You need to disable \"Lockdown mode\" in order to access the Internet to add time."
+msgstr "Jotta pääset internetiin lisäämään aikaa, sinun on poistettava lukitustila käytöstä."
+
+msgctxt "connect-view"
+msgid "You’re all set!"
+msgstr "Olet valmis!"
+
+#. The hostname line displayed below the country on the main screen
+#. Available placeholders:
+#. %(relay)s - the relay hostname
+#. %(entry)s - the entry relay hostname
+msgctxt "connection-info"
+msgid "%(relay)s via %(entry)s"
+msgstr "%(relay)s, yhteys: %(entry)s"
+
+msgctxt "connection-info"
+msgid "In"
+msgstr "Saapuva"
+
+msgctxt "connection-info"
+msgid "Out"
+msgstr "Lähtevä"
+
+#. Label for disabled menu option when a location has already been added to a custom list.
+#. Available placeholders:
+#. %(customList)s - The name of the custom list the location has been added to.
+msgctxt "custom-list-feature"
+msgid "%(customList)s (Added)"
+msgstr "%(customList)s (lisätty)"
+
+#. This is a label shown above a list of options related to custom lists.
+#. Available placeholder:
+#. %(locationName)s - The name of the location being added to the list.
+msgctxt "custom-list-feature"
+msgid "Add %(locationName)s to list"
+msgstr "Lisää %(locationName)s luetteloon"
+
+#. Label for button to create a new custom list with a specific location.
+#. Available placeholder:
+#. %(locationName)s - The name of the location being added to the list.
+msgctxt "custom-list-feature"
+msgid "Add %(locationName)s to new list"
+msgstr "Lisää %(locationName)s uuteen luetteloon"
+
+#. This is a label shown above a list of options.
+#. Available placeholder:
+#. %(locationType) - Could be either "Country", "City" and "Relay"
+msgctxt "custom-list-feature"
+msgid "Add %(locationType)s to list"
+msgstr "Lisää %(locationType)s luetteloon"
+
+msgctxt "custom-list-feature"
+msgid "City"
+msgstr "Kaupunki"
+
+msgctxt "custom-list-feature"
+msgid "Country"
+msgstr "Maa"
+
+#. Label for the input where the user can enter the name of a new custom list.
+msgctxt "custom-list-feature"
+msgid "Create list"
+msgstr "Luo luettelo"
+
+#. Label for the option to delete a custom list in a menu.
+msgctxt "custom-list-feature"
+msgid "Delete"
+msgstr "Poista"
+
+#. Confirmation message shown when the user tries to delete a custom list.
+#. Asks the user if they are sure they want to delete the list.
+#. Available placeholder:
+#. %(list)s - The name of the custom list that is about to be deleted.
+msgctxt "custom-list-feature"
+msgid "Do you want to delete the list %(list)s?"
+msgstr "Haluatko poistaa luettelon %(list)s?"
+
+msgctxt "custom-list-feature"
+msgid "Edit list name"
+msgstr "Muokkaa luettelon nimeä"
+
+#. Label for the option to edit a custom list in a menu.
+msgctxt "custom-list-feature"
+msgid "Edit name"
+msgstr "Muokkaa nimeä"
+
+msgctxt "custom-list-feature"
+msgid "Enter a name for the list"
+msgstr "Anna luettelon nimi"
+
+msgctxt "custom-list-feature"
+msgid "Enter a new name for the list"
+msgstr "Anna luettelolle uusi nimi"
+
+msgctxt "custom-list-feature"
+msgid "List names must be unique"
+msgstr "Luettelon nimen tulee olla ainutlaatuinen"
+
+msgctxt "custom-list-feature"
+msgid "Relay"
+msgstr "Välitys"
+
+#. Button for continuing login process.
+msgctxt "device-management"
+msgid "Continue with login"
+msgstr "Jatka kirjautumista"
+
+#. Label informing the user when a device was created.
+#. Available placeholders:
+#. %(createdDate)s - The creation date of the device.
+msgctxt "device-management"
+msgid "Created: %(createdDate)s"
+msgstr "Luotu: %(createdDate)s"
+
+#. Label indicating that this device is the current device.
+msgctxt "device-management"
+msgid "Current device"
+msgstr "Nykyinen laite"
+
+msgctxt "device-management"
+msgid "Device is inactive"
+msgstr "Laite ei ole aktiivinen"
+
+msgctxt "device-management"
+msgid "Device name"
+msgstr "Laitteen nimi"
+
+#. A label that will display the newly created device name to inform the user
+#. about it.
+#. Available placeholders:
+#. %(deviceName)s - The name of the current device
+msgctxt "device-management"
+msgid "Device name: %(deviceName)s"
+msgstr "Laitteen nimi: %(deviceName)s"
+
+msgctxt "device-management"
+msgid "Failed to remove device"
+msgstr "Laitteen poistaminen epäonnistui"
+
+#. Button label for navigating to login.
+msgctxt "device-management"
+msgid "Go to login"
+msgstr "Siirry kirjautumiseen"
+
+msgctxt "device-management"
+msgid "Going to login will unblock the Internet on this device."
+msgstr "Kirjautumiseen siirtyminen poistaa Internetin käytön eston tältä laitteelta."
+
+msgctxt "device-management"
+msgid "If you log out, the device and the device name is removed. When you log back in again, the device will get a new name."
+msgstr "Jos kirjaudut ulos, laite ja laitteen nimi poistetaan. Kun kirjaudut sisään uudelleen, laitteelle annetaan uusi nimi."
+
+#. Title label in navigation bar for the manage devices view.
+#. Title text in the manage devices view
+msgctxt "device-management"
+msgid "Manage devices"
+msgstr "Hallitse laitteita"
+
+msgctxt "device-management"
+msgid "Please log out of at least one by removing it from the list below. You can find the corresponding device name under the device’s Account settings."
+msgstr "Kirjaudu ulos vähintään yhdestä luettelon laitteesta poistamalla se. Löydät vastaavan laitteen nimen laitteen tiliasetuksista."
+
+#. Button label for confirming removing a device.
+msgctxt "device-management"
+msgid "Remove"
+msgstr "Poista"
+
+#. Text displayed above button which logs out another device.
+#. The text enclosed in "<b></b>" will appear bold.
+#. Available placeholders:
+#. %(deviceName)s - The name of the device to log out.
+msgctxt "device-management"
+msgid "Remove <em>%(deviceName)s?</em>"
+msgstr "Poistetaanko <em>%(deviceName)s?</em>"
+
+#. Page title informing user that enough devices has been removed to continue
+#. login process.
+msgctxt "device-management"
+msgid "Super!"
+msgstr "Mahtavaa!"
+
+msgctxt "device-management"
+msgid "The device will be removed from the list and logged out."
+msgstr "Laite poistetaan luettelosta ja kirjataan ulos."
+
+msgctxt "device-management"
+msgid "This is the name assigned to the device. Each device logged in on a Mullvad account gets a unique name that helps you identify it when you manage your devices in the app or on the website."
+msgstr "Tämä on laitteelle annettu nimi. Jokainen Mullvad-tilille kirjautunut laite saa yksilöllisen nimen, jonka avulla sen voi tunnistaa laitteiden hallinnassa sovelluksessa tai verkkosivustolla."
+
+msgctxt "device-management"
+msgid "Time left: %(timeLeft)s"
+msgstr "Aikaa jäljellä: %(timeLeft)s"
+
+#. Page title informing user that the login failed due to too many registered
+#. devices on account.
+msgctxt "device-management"
+msgid "Too many devices"
+msgstr "Liikaa laitteita"
+
+#. Button text to retry fetching devices.
+msgctxt "device-management"
+msgid "Try again"
+msgstr "Yritä uudelleen"
+
+#. Subtitle text in the manage devices view, explaining
+#. devices and what they can do in the manage devices view.
+msgctxt "device-management"
+msgid "View and manage all your logged in devices. You can have up to 5 devices on one account at a time. Each device gets a name when logged in to help you tell them apart easily."
+msgstr "Tarkastele ja hallitse kaikkia kirjautuneita laitteitasi. Sinulla voi olla enintään viisi laitetta yhdellä tilillä samaan aikaan. Jokainen laite saa nimen, kun se kirjataan sisään, jotta erotat ne helposti."
+
+msgctxt "device-management"
+msgid "You can have up to 5 devices logged in on one Mullvad account."
+msgstr "Yhdelle Mullvad-tilille voi olla kirjautuneena enintään viisi laitetta."
+
+msgctxt "device-management"
+msgid "You can now continue logging in on this device."
+msgstr "Voit nyt jatkaa kirjautumista tällä laitteella."
+
+msgctxt "device-management"
+msgid "You have removed this device. To connect again, you will need to log back in."
+msgstr "Olet poistanut tämän laitteen. Jos haluat muodostaa yhteyden uudelleen, sinun täytyy kirjautua takaisin sisään."
+
+#. The message displayed to the user in case of critical error in the GUI
+#. Available placeholders:
+#. %(email)s - support email
+msgctxt "error-boundary-view"
+msgid "Something went wrong. Please contact us at %(email)s"
+msgstr "Jokin meni vikaan. Ota meihin yhteyttä osoitteeseen %(email)s"
+
+#. Title label in navigation bar
+msgctxt "filter-nav"
+msgid "Filter"
+msgstr "Suodata"
+
+msgctxt "filter-view"
+msgid "All providers"
+msgstr "Kaikki palveluntarjoajat"
+
+msgctxt "filter-view"
+msgid "Mullvad owned only"
+msgstr "Vain Mullvadin omistamat"
+
+msgctxt "filter-view"
+msgid "Owned"
+msgstr "Omistettu"
+
+msgctxt "filter-view"
+msgid "Ownership"
+msgstr "Omistajuus"
+
+msgctxt "filter-view"
+msgid "Providers"
+msgstr "Tarjoajat"
+
+msgctxt "filter-view"
+msgid "Rented"
+msgstr "Vuokrattu"
+
+msgctxt "filter-view"
+msgid "Rented only"
+msgstr "Vain vuokratut"
+
+msgctxt "in-app-notifications"
+msgid "%(duration)s. Buy more credit."
+msgstr "%(duration)s. Osta lisää käyttöaikaa."
+
+#. Notification subtitle when the app upgrade is ready to install.
+#. Available placeholders:
+#. - %(suggestedUpgradeVersion)s: Upgrade version to be installed.
+msgctxt "in-app-notifications"
+msgid "%(suggestedUpgradeVersion)s is ready to be installed."
+msgstr "%(suggestedUpgradeVersion)s on valmis asennettavaksi."
+
+msgctxt "in-app-notifications"
+msgid "<a>%(lockdownModeSettingName)s</a> is enabled. Please click “Connect“ or disable “%(lockdownModeSettingName)s“ to unblock internet."
+msgstr "<a>%(lockdownModeSettingName)s</a> on käytössä. Poista internetin esto napsauttamalla Yhdistä tai poistamalla %(lockdownModeSettingName)s käytöstä."
+
+msgctxt "in-app-notifications"
+msgid "ACCOUNT CREDIT EXPIRES SOON"
+msgstr "TILIN KÄYTTÖAIKA PÄÄTTYY PIAN"
+
+msgctxt "in-app-notifications"
+msgid "APP IS OUT OF SYNC"
+msgstr "SOVELLUS EI OLE SYNKRONOITU"
+
+msgctxt "in-app-notifications"
+msgid "BETA UPDATE AVAILABLE"
+msgstr "BEETAPÄIVITYS SAATAVILLA"
+
+msgctxt "in-app-notifications"
+msgid "BLOCKING INTERNET"
+msgstr "VERKKOYHTEYS ESTETTY"
+
+#. Notification subtitle when the app upgrade is ready to install.
+msgctxt "in-app-notifications"
+msgid "Click here to install update."
+msgstr "Asenna päivitys napsauttamalla tätä."
+
+#. Notification subtitle when the installer failed.
+msgctxt "in-app-notifications"
+msgid "Click here to retry"
+msgstr "Yritä uudelleen napsauttamalla tätä"
+
+#. Notification subtitle when the download of the installer failed
+#. and the user can try downloading again.
+msgctxt "in-app-notifications"
+msgid "Click here to retry download"
+msgstr "Yritä latausta uudelleen napsauttamalla tätä"
+
+msgctxt "in-app-notifications"
+msgid "Click here to see what’s new."
+msgstr "Katso uudet ominaisuudet napsauttamalla tästä."
+
+#. Link text to go to the app upgrade view
+msgctxt "in-app-notifications"
+msgid "Click here to update"
+msgstr "Päivitä napsauttamalla tätä"
+
+#. Notification subtitle when the installer download failed.
+msgctxt "in-app-notifications"
+msgid "Could not download installer."
+msgstr "Asennusohjelman lataaminen ei onnistunut."
+
+#. Generic notification subtitle when the app upgrade failed.
+msgctxt "in-app-notifications"
+msgid "Could not upgrade the app."
+msgstr "Sovelluksen päivittäminen ei onnistunut."
+
+#. Notification title when app upgrade is verifying the installer.
+msgctxt "in-app-notifications"
+msgid "DOWNLOAD COMPLETE! VERIFYING..."
+msgstr "LATAUS ON VALMIS! VAHVISTETAAN..."
+
+#. Notification title when the installer download failed.
+msgctxt "in-app-notifications"
+msgid "DOWNLOAD FAILED"
+msgstr "LATAUS EPÄONNISTUI"
+
+#. Generic notification title when app upgrade is downloading the installer.
+msgctxt "in-app-notifications"
+msgid "DOWNLOADING UPDATE..."
+msgstr "LADATAAN PÄIVITYSTÄ..."
+
+#. Notification title when the app upgrade is in progress.
+#. Available placeholders:
+#. - %(appUpgradeDownloadProgressValue)s: The download progress value.
+msgctxt "in-app-notifications"
+msgid "DOWNLOADING UPDATE... %(appUpgradeDownloadProgressValue)s%%"
+msgstr "LADATAAN PÄIVITYSTÄ... %(appUpgradeDownloadProgressValue)s %%"
+
+#. The in-app banner displayed to the user when the app update is available.
+msgctxt "in-app-notifications"
+msgid "Install the latest app version to stay up to date."
+msgstr "Pysy ajan tasalla asentamalla sovelluksen uusin versio."
+
+#. Notification title when the installer failed.
+msgctxt "in-app-notifications"
+msgid "INSTALLER FAILED"
+msgstr "ASENNUSOHJELMA EPÄONNISTUI"
+
+msgctxt "in-app-notifications"
+msgid "NETWORK TRAFFIC MIGHT BE LEAKING"
+msgstr "VERKKOLIIKENNE SAATTAA VUOTAA"
+
+msgctxt "in-app-notifications"
+msgid "NEW DEVICE CREATED"
+msgstr "UUSI LAITE LUOTIIN"
+
+msgctxt "in-app-notifications"
+msgid "NEW VERSION INSTALLED"
+msgstr "UUSI VERSIO ASENNETTIIN"
+
+msgctxt "in-app-notifications"
+msgid "Please quit and restart the app."
+msgstr "Sammuta sovellus ja käynnistä se uudelleen."
+
+#. Notification title when the app upgrade is ready to install.
+msgctxt "in-app-notifications"
+msgid "READY TO INSTALL UPDATE"
+msgstr "VALMIS PÄIVITYKSEN ASENNUKSEEN"
+
+#. Accessibility label for the button to retry download of the installer.
+msgctxt "in-app-notifications"
+msgid "Retry download of the installer"
+msgstr "Yritä asennusohjelman latausta uudelleen"
+
+#. Accessibility label for the button to retry the installation.
+msgctxt "in-app-notifications"
+msgid "Retry installation"
+msgstr "Yritä asennusta uudelleen"
+
+#. Button label to send a problem report.
+msgctxt "in-app-notifications"
+msgid "Send problem report"
+msgstr "Lähetä ongelmaraportti"
+
+#. Notification subtitle when the installer verification failed.
+msgctxt "in-app-notifications"
+msgid "The installer could not be verified."
+msgstr "Asennusohjelmaa ei voitu vahvistaa."
+
+#. Notification subtitle when the installer failed.
+msgctxt "in-app-notifications"
+msgid "The installer did not complete successfully."
+msgstr "Asennusohjelmaa ei suoritettu onnistuneesti."
+
+#. Notification subtitle when the installer failed.
+msgctxt "in-app-notifications"
+msgid "The installer did not start successfully."
+msgstr "Asennusohjelman käynnistys ei onnistunut."
+
+#. Notification subtitle indicating the user is using an unsupported port for WireGuard.
+#. Available placeholders:
+#. %(wireGuard)s - Will be replaced with WireGuard
+msgctxt "in-app-notifications"
+msgid "The selected %(wireGuard)s port is not supported, please <a>change it under VPN settings.</a>"
+msgstr "Valittua %(wireGuard)s-porttia ei tueta. <a>Vaihda se VPN-asetuksissa</a>."
+
+#. Notification text when a new device has been created.
+#. Available placeholders:
+#. - %(deviceName)s: Name of created device.
+msgctxt "in-app-notifications"
+msgid "This device is now named <em>%(deviceName)s</em>. See more under <a>Manage devices</a> in Account."
+msgstr "Tämän laitteen nimi on nyt <em>%(deviceName)s</em>. Katso lisää tililtä kohdasta <a>Hallitse laitteita</a>."
+
+#. The in-app banner displayed to the user when the app beta update is
+#. available.
+#. Available placeholders:
+#. %(version)s - The version number of the new beta version.
+msgctxt "in-app-notifications"
+msgid "Try out the newest beta version (%(version)s)."
+msgstr "Kokeile uusinta beetaversiota (%(version)s)."
+
+msgctxt "in-app-notifications"
+msgid "UNSUPPORTED VERSION"
+msgstr "EI-TUETTU VERSIO"
+
+msgctxt "in-app-notifications"
+msgid "UPDATE AVAILABLE"
+msgstr "PÄIVITYS SAATAVILLA"
+
+#. Generic notification title when the app upgrade failed.
+msgctxt "in-app-notifications"
+msgid "UPDATE FAILED"
+msgstr "PÄIVITYS EPÄONNISTUI"
+
+#. Notification title when app upgrade is ready for the user to launch the installer.
+msgctxt "in-app-notifications"
+msgid "VERIFICATION COMPLETE! INSTALLER READY!"
+msgstr "VAHVISTUS ON SUORITETTU! ASENNUSOHJELMA ON VALMIS."
+
+#. Notification title when app upgrade is launching the installer.
+msgctxt "in-app-notifications"
+msgid "VERIFICATION COMPLETE! LAUNCHING INSTALLER..."
+msgstr "VAHVISTUS ON SUORITETTU! KÄYNNISTETÄÄN ASENNUSOHJELMAA..."
+
+#. Notification title when the installer verification failed.
+msgctxt "in-app-notifications"
+msgid "VERIFICATION FAILED"
+msgstr "VAHVISTUS EPÄONNISTUI"
+
+#. Status text app is trying to connect to the system service.
+msgctxt "launch-view"
+msgid "Connecting to Mullvad system service..."
+msgstr "Yhdistetään Mullvad-järjestelmäpalveluun..."
+
+#. Button label for opening dialog with troubleshooting details.
+msgctxt "launch-view"
+msgid "Details"
+msgstr "Tiedot"
+
+#. List item in troubleshooting modal advising user disable third party antivirus.
+msgctxt "launch-view"
+msgid "Disabling third party antivirus software"
+msgstr "Poistaa kolmannen osapuolen virustorjuntaohjelmiston käytöstä"
+
+#. Status text shown when app fails to start.
+msgctxt "launch-view"
+msgid "Failed to start the app, please try again or click “Details” for more info"
+msgstr "Sovelluksen käynnistäminen epäonnistui. Yritä uudelleen tai katso lisätietoja napsauttamalla Tiedot-painiketta."
+
+#. Message in troubleshooting modal advising user to send a problem report if the steps do not work.
+msgctxt "launch-view"
+msgid "If these steps do not work please send a problem report."
+msgstr "Jos ongelma ei ratkea näillä ohjeilla, lähetä siitä raportti."
+
+#. Message in launch view when the background process permissions have been revoked.
+msgctxt "launch-view"
+msgid "Permission for the Mullvad VPN service has been revoked. Please go to System Settings and allow Mullvad VPN under the “Allow in the Background” setting."
+msgstr "Mullvad VPN -palvelun käyttöoikeus on peruutettu. Siirry järjestelmäasetuksiin sallimaan Mullvad VPN \"Salli taustalla\" -asetuksen kautta."
+
+#. List item in troubleshooting modal advising user to reinstall the app.
+msgctxt "launch-view"
+msgid "Reinstalling the app"
+msgstr "Asentaa sovellus uudelleen"
+
+#. List item in troubleshooting modal advising user to restart background process.
+msgctxt "launch-view"
+msgid "Restarting the Mullvad background process"
+msgstr "Käynnistää Mullvadin taustaprosessi uudelleen"
+
+#. List item in troubleshooting modal instructing user how to restart the background process.
+msgctxt "launch-view"
+msgid "Restarting the Mullvad background process by clicking \"Back\", then \"Try again\""
+msgstr "Käynnistää Mullvadin taustaprosessi uudelleen napsauttamalla Takaisin ja sen jälkeen Yritä uudelleen"
+
+#. List item in troubleshooting modal advising user to restart their computer.
+msgctxt "launch-view"
+msgid "Restarting your computer"
+msgstr "Käynnistää tietokoneesi uudelleen"
+
+#. Button label for sending a problem report.
+msgctxt "launch-view"
+msgid "Send problem report"
+msgstr "Lähetä ongelmaraportti"
+
+#. Status text shown when app is starting.
+msgctxt "launch-view"
+msgid "Starting up...."
+msgstr "Käynnistetään...."
+
+#. Message in troubleshooting modal when the background process failed to start.
+msgctxt "launch-view"
+msgid "The Mullvad background process failed to start. The background process is responsible for the security, kill switch, and the VPN tunnel. Please try:"
+msgstr "Mullvadin taustaprosessin käynnistäminen epäonnistui. Taustaprosessi vastaa turvallisuudesta, tappokytkimestä ja VPN-tunnelista. Kokeile:"
+
+#. Button label for trying to restart the daemon again.
+msgctxt "launch-view"
+msgid "Try again"
+msgstr "Yritä uudelleen"
+
+#. Message in launch view when the mullvad service cannot be contacted.
+msgctxt "launch-view"
+msgid "Unable to contact the Mullvad system service, your connection might be unsecure. Please troubleshoot or send a problem report by clicking the \"Learn more\" button."
+msgstr "Mullvad-järjestelmäpalveluun ei saada yhteyttä, eikä yhteytesi välttämättä ole turvallinen. Suorita vianetsintä tai lähetä ongelmaraportti napsauttamalla lisätietojen painiketta."
+
+#. This is used for appending information about a location.
+#. E.g. "Gothenburg (Entry)" if Gothenburg has been selected as the entrypoint.
+#. Available placeholders:
+#. %(location)s - Translated location name
+#. %(info)s - Information about the location
+msgctxt "locations-feature"
+msgid "%(location)s (%(info)s)"
+msgstr "%(location)s (%(info)s)"
+
+msgctxt "locations-feature"
+msgid "Disabling recents will also clear history."
+msgstr "Viimeisimpien poistaminen käytöstä tyhjentää myös historian."
+
+msgctxt "locations-feature"
+msgid "Entry"
+msgstr "Tulo"
+
+msgctxt "locations-feature"
+msgid "Exit"
+msgstr "Lähtö"
+
+#. This is a warning message shown when the app is blocking the users
+#. internet connection while logged out.
+#. Available placeholder:
+#. %(lockdownModeSettingName)s - The translation of "Lockdown mode"
+msgctxt "login-view"
+msgid "<b>%(lockdownModeSettingName)s</b> is enabled. Disable it to unblock your connection."
+msgstr "<b>%(lockdownModeSettingName)s</b> on käytössä. Pura verkkoyhteyden esto poistamalla se käytöstä."
+
+msgctxt "login-view"
+msgid "Account created"
+msgstr "Tili luotu"
+
+msgctxt "login-view"
+msgid "Checking account number"
+msgstr "Tarkistetaan tilin numeroa"
+
+#. Text in button that allows user to create a new account.
+msgctxt "login-view"
+msgid "Create a new account"
+msgstr "Luo uusi tili"
+
+#. Button which confirms the action to create a new account.
+msgctxt "login-view"
+msgid "Create new account"
+msgstr "Luo uusi tili"
+
+msgctxt "login-view"
+msgid "Creating account..."
+msgstr "Luodaan tiliä..."
+
+#. Text that asks the user if they really want to create a new account.
+msgctxt "login-view"
+msgid "Do you want to create a new account?"
+msgstr "Haluatko luoda uuden tilin?"
+
+#. Text that asks the user if they really want to remove the saved account.
+msgctxt "login-view"
+msgid "Do you want to remove the saved account number?"
+msgstr "Haluatko poistaa tallennetun tilin numeron?"
+
+msgctxt "login-view"
+msgid "Enter your account number"
+msgstr "Syötä tilisi numero"
+
+msgctxt "login-view"
+msgid "Error"
+msgstr "Virhe"
+
+msgctxt "login-view"
+msgid "Failed to create account"
+msgstr "Tilin luonti epäonnistui"
+
+msgctxt "login-view"
+msgid "Finishing upgrade."
+msgstr "Päivitystä viimeistellään."
+
+#. Error message shown above login input when trying to login with a
+#. non-existent account number.
+msgctxt "login-view"
+msgid "Invalid account number"
+msgstr "Virheellinen tilin numero"
+
+msgctxt "login-view"
+msgid "Logged in"
+msgstr "Kirjautuneena sisään"
+
+msgctxt "login-view"
+msgid "Logging in..."
+msgstr "Kirjaudutaan sisään..."
+
+#. Label for the login button.
+msgctxt "login-view"
+msgid "Login"
+msgstr "Kirjaudu sisään"
+
+msgctxt "login-view"
+msgid "Login failed"
+msgstr "Sisäänkirjautuminen epäonnistui"
+
+#. Text shown between two horizontal lines above the "create account" button.
+#. In this context it is used to separate the users alternative of logging in
+#. or creating a new account, "Login or Create a new account".
+msgctxt "login-view"
+msgid "Or"
+msgstr "tai"
+
+#. This is a warning message shown when the app is blocking the users
+#. internet connection while logged out.
+msgctxt "login-view"
+msgid "Our kill switch is currently blocking your connection."
+msgstr "Tappokytkin estää tällä hetkellä yhteytesi."
+
+msgctxt "login-view"
+msgid "Please wait"
+msgstr "Odota"
+
+#. Text that informs the user about the consequences of clearing the saved
+#. account number.
+msgctxt "login-view"
+msgid "Removing the saved account number from this device cannot be undone."
+msgstr "Tallennetun tilin numeron poistamista tältä laitteelta ei voi kumota."
+
+#. Error message shown above login input when trying to login to an account
+#. with too many registered devices.
+msgctxt "login-view"
+msgid "Too many devices"
+msgstr "Liikaa laitteita"
+
+msgctxt "login-view"
+msgid "Unknown error"
+msgstr "Tuntematon virhe"
+
+msgctxt "login-view"
+msgid "Upgrading..."
+msgstr "Päivitetään..."
+
+msgctxt "login-view"
+msgid "Valid account number"
+msgstr "Oikea tilin numero"
+
+#. Text that informs the users about consequences of creating a new account.
+msgctxt "login-view"
+msgid "You already have a saved account number, by creating a new account the saved account number will be removed from this device. This cannot be undone."
+msgstr "Sinulla on jo tallennettu tilin numero. Kun luot uuden tilin, tallennettu tilin numero poistetaan tältä laitteelta. Toimintoa ei voi kumota."
+
+#. The title for the LWO port selector.
+msgctxt "lwo-settings-view"
+msgid "Port"
+msgstr "Portti"
+
+#. Text showing currently selected port.
+#. Available placeholders:
+#. %(port)s - Can be either a number between 1 and 65535 or the text "Automatic".
+msgctxt "lwo-settings-view"
+msgid "Port: %(port)s"
+msgstr "Portti: %(port)s"
+
+msgctxt "lwo-settings-view"
+msgid "The automatic setting will randomly choose from the valid port ranges shown below."
+msgstr "Automaattinen asetus valitsee satunnaisesti käytettävissä olevista, alla luetelluista porteista."
+
+msgctxt "lwo-settings-view"
+msgid "The custom port can be any value inside the valid ranges: %(portRanges)s."
+msgstr "Mukautettu portti voi olla mikä tahansa sallittu arvo: %(portRanges)s."
+
+#. Text describing the valid port ranges for a port selector.
+#. Available placeholders:
+#. %(portRanges)s - will be replaced with a comma-separated list of port ranges
+msgctxt "lwo-settings-view"
+msgid "Valid ranges: %(portRanges)s"
+msgstr "Kelvolliset portit: %(portRanges)s"
+
+#. Title label in navigation bar
+msgctxt "navigation-bar"
+msgid "API access"
+msgstr "Ohjelmointirajapinnan käyttö"
+
+#. The system notification displayed to the user when the account credit is close to expiry.
+#. Available placeholder:
+#. %(duration)s - remaining time, e.g. "2 days"
+msgctxt "notifications"
+msgid "Account credit expires in %(duration)s. Buy more credit."
+msgstr "Tilin käyttöaikaa on jäljellä %(duration)s. Osta lisää käyttöaikaa."
+
+msgctxt "notifications"
+msgid "Account is out of time"
+msgstr "Tilin käyttöaika on kulunut loppuun"
+
+msgctxt "notifications"
+msgid "App is out of sync. Please quit and restart."
+msgstr "Sovellus ei ole synkronoitu. Sulje se ja käynnistä uudelleen."
+
+#. The system notification that notifies the user when a beta update is
+#. available.
+#. Available placeholders:
+#. %(version)s - The version number of the new beta version.
+msgctxt "notifications"
+msgid "Beta update available. Try out the newest beta version (%(version)s)."
+msgstr "Beetapäivitys saatavilla. Kokeile uusinta beetaversiota (%(version)s)."
+
+msgctxt "notifications"
+msgid "Buy more"
+msgstr "Osta lisää"
+
+msgctxt "notifications"
+msgid "Connected"
+msgstr "Yhdistetty"
+
+#. The message showed when a server has been connected to.
+#. Available placeholder:
+#. %(location) - name of the server location we're connected to (e.g. "se-got-003")
+msgctxt "notifications"
+msgid "Connected to %(location)s"
+msgstr "Yhdistetty sijaintiin %(location)s"
+
+msgctxt "notifications"
+msgid "Connecting"
+msgstr "Yhdistetään"
+
+#. The message showed when a server is being connected to.
+#. Available placeholder:
+#. %(location) - name of the server location we're connecting to (e.g. "se-got-003")
+msgctxt "notifications"
+msgid "Connecting to %(location)s"
+msgstr "Yhdistetään sijaintiin %(location)s"
+
+msgctxt "notifications"
+msgid "Connection might be unsecured. App lost contact with system service, please troubleshoot."
+msgstr "Yhteys saattaa olla suojaamaton; sovelluksen yhteys järjestelmäpalveluun katkesi. Suorita vianetsintä."
+
+msgctxt "notifications"
+msgid "Could not configure IPv6. Disable it in the app or enable it on your device."
+msgstr "IPv6:n määritys ei onnistunut. Poista se käytöstä sovelluksessa tai ota käyttöön laitteellasi."
+
+msgctxt "notifications"
+msgid "Disconnected and unsecure"
+msgstr "Yhteys katkaistu ja suojaamaton"
+
+msgctxt "notifications"
+msgid "Failed to enable split tunneling."
+msgstr "Sovelluskohtaisen yhdistämisen käyttöönotto epäonnistui."
+
+msgctxt "notifications"
+msgid "Failed to enable split tunneling. Please try reconnecting or disable split tunneling."
+msgstr "Sovelluskohtaisen yhdistämisen käyttöönotto epäonnistui. Yritä muodostaa yhteys uudelleen tai poista sovelluskohtainen yhdistäminen käytöstä."
+
+#. Label for the system notification when the app encountered an error
+#. and will block network traffic until the error is resolved.
+msgctxt "notifications"
+msgid "Failed to start %(splitTunneling)s. To unblock network traffic, disable %(splitTunneling)s."
+msgstr "%(splitTunneling)s ei onnistunut käynnistymään. Poista %(splitTunneling)s käytöstä, jotta voit poistaa verkkoliikenteen eston."
+
+#. Label for notification when IPv4 is not available.
+msgctxt "notifications"
+msgid "IPv4 is not available, please try changing Device IP version setting."
+msgstr "IPv4 ei ole käytettävissä. Kokeile vaihtaa *Laitteen IP-versio* -asetus."
+
+#. Label for notification when IPv6 is not available.
+msgctxt "notifications"
+msgid "IPv6 is not available, please try changing Device IP version setting."
+msgstr "IPv6 ei ole käytettävissä. Kokeile vaihtaa *Laitteen IP-versio* -asetus."
+
+msgctxt "notifications"
+msgid "Lockdown mode active, connection blocked"
+msgstr "Lukitustila on käytössä ja yhteys estetty"
+
+msgctxt "notifications"
+msgid "No servers match your settings, try changing server or other settings."
+msgstr "Mikään palvelin ei vastaa asetuksiasi. Kokeile vaihtaa palvelinta tai muuttaa muita asetuksia."
+
+#. A link in the in-app banner to encourage the user to update the app.
+#. The in-app banner is is displayed to the user when the running app becomes unsupported.
+msgctxt "notifications"
+msgid "Please click here to update now"
+msgstr "Päivitä nyt napsauttamalla tätä"
+
+msgctxt "notifications"
+msgid "Reconnecting"
+msgstr "Yhdistetään uudelleen"
+
+msgctxt "notifications"
+msgid "The apps excluded with %(splitTunneling)s might not work properly right now."
+msgstr "Toiminnon \"%(splitTunneling)s\" kautta poissuljetut sovellukset eivät ehkä toimi oikein tällä hetkellä."
+
+msgctxt "notifications"
+msgid "Unable to apply firewall rules."
+msgstr "Palomuurisääntöjä ei voida soveltaa."
+
+msgctxt "notifications"
+msgid "Unable to apply firewall rules. Try temporarily disabling any third-party antivirus or security software."
+msgstr "Palomuurisääntöjä ei voida soveltaa. Yritä poistaa kaikki kolmannen osapuolen virustorjunta- tai tietoturvaohjelmistot käytöstä väliaikaisesti."
+
+msgctxt "notifications"
+msgid "Unable to apply firewall rules. Try updating your kernel."
+msgstr "Palomuurisääntöjä ei voida soveltaa. Kokeile ytimesi päivittämistä."
+
+msgctxt "notifications"
+msgid "Unable to block all network traffic. Please troubleshoot or send a problem report."
+msgstr "Kaiken verkkoliikenteen estäminen ei onnistu. Käytä vianetsintää tai lähetä ongelmaraportti."
+
+msgctxt "notifications"
+msgid "Unable to block all network traffic. Try temporarily disabling any third-party antivirus or security software or send a problem report."
+msgstr "Kaiken verkkoliikenteen estäminen ei onnistu. Yritä poistaa kaikki kolmannen osapuolen virustorjunta- tai tietoturvaohjelmistot käytöstä väliaikaisesti tai lähetä ongelmaraportti."
+
+msgctxt "notifications"
+msgid "Unable to block all network traffic. Try updating your kernel or send a problem report."
+msgstr "Kaiken verkkoliikenteen estäminen ei onnistu. Kokeile ytimesi päivittämistä tai lähetä ongelmaraportti."
+
+msgctxt "notifications"
+msgid "Unable to resolve host of custom tunnel. Try changing your settings."
+msgstr "Muokatun tunnelin isännän selvittäminen ei onnistu. Kokeile muuttaa asetuksiasi."
+
+msgctxt "notifications"
+msgid "Unable to set system DNS server. Please send a problem report."
+msgstr "Järjestelmän DNS-palvelimen asettaminen ei onnistu. Lähetä ongelmaraportti."
+
+msgctxt "notifications"
+msgid "Unable to start tunnel connection. Please send a problem report."
+msgstr "Tunneliyhteyden muodostaminen ei onnistu. Lähetä ongelmaraportti."
+
+msgctxt "notifications"
+msgid "Unable to start tunnel connection. This could be because of conflicts with VMware, please troubleshoot."
+msgstr "Tunneliyhteyttä ei voida muodostaa; tämä saattaa johtua ristiriidoista VMwaren kanssa. Suorita vianetsintä."
+
+msgctxt "notifications"
+msgid "Update available. Install the latest app version to stay up to date"
+msgstr "Päivitys saatavilla. Pysy ajan tasalla asentamalla sovelluksen uusin versio."
+
+msgctxt "notifications"
+msgid "Upgrade"
+msgstr "Päivitä"
+
+msgctxt "notifications"
+msgid "Your device is offline. The tunnel will automatically connect once your device is back online."
+msgstr "Laitteesi on offline-tilassa. Kun laitteesi on taas online-tilassa, tunneli muodostaa yhteyden automaattisesti."
+
+#. The in-app banner which is displayed to the user when the running app becomes unsupported.
+msgctxt "notifications"
+msgid "Your privacy might be at risk with this unsupported app version."
+msgstr "Yksityisyytesi saattaa olla vaarassa, koska tätä sovellusversiota ei tueta."
+
+#. The system notification which is displayed to the user when the running app becomes unsupported.
+msgctxt "notifications"
+msgid "Your privacy might be at risk with this unsupported app version. Please update now."
+msgstr "Yksityisyytesi saattaa olla vaarassa tämän sovellusversion, jota ei tueta, vuoksi. Päivitä versio heti."
+
+#. Cancel button label for voucher redemption.
+msgctxt "redeem-voucher-alert"
+msgid "Cancel"
+msgstr "Peruuta"
+
+#. Input field label for voucher code.
+msgctxt "redeem-voucher-alert"
+msgid "Enter voucher code"
+msgstr "Syötä kuponkikoodi"
+
+#. Button label for redeeming a voucher.
+msgctxt "redeem-voucher-alert"
+msgid "Redeem voucher"
+msgstr "Lunasta kuponki"
+
+msgctxt "redeem-voucher-view"
+msgid "An error occurred."
+msgstr "Ilmeni virhe."
+
+msgctxt "redeem-voucher-view"
+msgid "It looks like you’ve entered an account number instead of a voucher code. If you would like to change the active account, please log out first."
+msgstr "Näytät syöttäneen tilin numeron etusetelin koodin sijaan. Jos haluat vaihtaa tiliä, kirjaudu ensin ulos nykyiseltä tililtä."
+
+#. Button label for voucher redemption.
+msgctxt "redeem-voucher-view"
+msgid "Redeem"
+msgstr "Lunasta"
+
+msgctxt "redeem-voucher-view"
+msgid "Verifying voucher..."
+msgstr "Kuponkia vahvistetaan..."
+
+msgctxt "redeem-voucher-view"
+msgid "Voucher code has already been used."
+msgstr "Kuponkikoodi on jo käytetty."
+
+msgctxt "redeem-voucher-view"
+msgid "Voucher code is invalid."
+msgstr "Kuponkikoodi ei kelpaa."
+
+msgctxt "redeem-voucher-view"
+msgid "Voucher was successfully redeemed."
+msgstr "Kupongin lunastus onnistui."
+
+#. Title label in navigation bar
+msgctxt "select-language-nav"
+msgid "Select language"
+msgstr "Valitse kieli"
+
+#. Title label in navigation bar
+msgctxt "select-location-nav"
+msgid "Select location"
+msgstr "Valitse sijainti"
+
+#. Message shown when the user has no custom lists.
+#. Instructs the user how to create a custom list.
+msgctxt "select-location-view"
+msgid "Add a custom list by clicking the “+” icon"
+msgstr "Lisää mukautettu luettelo napsauttamalla +-kuvaketta"
+
+msgctxt "select-location-view"
+msgid "All locations"
+msgstr "Kaikki sijainnit"
+
+#. Label for a menu option to change the Multihop mode setting
+#. option to "Always".
+msgctxt "select-location-view"
+msgid "Always"
+msgstr "Aina"
+
+#. Message shown in the custom list section when the user has at least one custom list.
+#. Instructs the user how to add locations to the custom list.
+msgctxt "select-location-view"
+msgid "Click “+“ on a location to add it to a list"
+msgstr "Lisää sijainti luetteloon napsauttamalla sen +-kuvaketta"
+
+msgctxt "select-location-view"
+msgid "Custom lists"
+msgstr "Mukautetut luettelot"
+
+msgctxt "select-location-view"
+msgid "Disable recents"
+msgstr "Poista viimeisimmät käytöstä"
+
+#. Label for custom lists that don't have any locations added to them yet.
+msgctxt "select-location-view"
+msgid "Empty"
+msgstr "Tyhjä"
+
+msgctxt "select-location-view"
+msgid "Enable recents"
+msgstr "Ota viimeisimmät käyttöön"
+
+msgctxt "select-location-view"
+msgid "Entry"
+msgstr "Tulo"
+
+msgctxt "select-location-view"
+msgid "Exit"
+msgstr "Lähtö"
+
+msgctxt "select-location-view"
+msgid "Filtered:"
+msgstr "Suodatettu:"
+
+#. Title for a menu with items for the Multihop mode setting options.
+msgctxt "select-location-view"
+msgid "Multihop mode"
+msgstr "Multihop-tila"
+
+#. Label for a menu option to change the Multihop mode setting
+#. option to "Never".
+msgctxt "select-location-view"
+msgid "Never"
+msgstr "Ei koskaan"
+
+#. Message shown when the user has no recent locations.
+msgctxt "select-location-view"
+msgid "No recent selection history"
+msgstr "Ei viimeisimpien valintojen historiaa"
+
+#. Label for indicator that shows that obfuscation is being used as a filter.
+#. Available placeholders:
+#. %(obfuscation)s - type of obfuscation in use
+msgctxt "select-location-view"
+msgid "Obfuscation: %(obfuscation)s"
+msgstr "Hämäys: %(obfuscation)s"
+
+msgctxt "select-location-view"
+msgid "Providers: %(numberOfProviders)d"
+msgstr "Palveluntarjoajat: %(numberOfProviders)d"
+
+#. Title for section showing recently used locations.
+msgctxt "select-location-view"
+msgid "Recents"
+msgstr "Viimeisimmät"
+
+msgctxt "select-location-view"
+msgid "Setting: %(settingName)s"
+msgstr "Asetus: %(settingName)s"
+
+#. Text showing how many locations are currently shown out of the total number of locations, e.g. "Showing 5 of 250"
+#. Available placeholders:
+#. %(visibleRelays)s: The number of relays currently shown
+#. %(totalRelays)s: The total number of relays
+msgctxt "select-location-view"
+msgid "Showing %(visibleRelays)s of %(totalRelays)s"
+msgstr "Näytetään %(visibleRelays)s/%(totalRelays)s"
+
+#. Label for a menu option to change the Multihop mode setting
+#. option to "When needed".
+msgctxt "select-location-view"
+msgid "When needed"
+msgstr "Tarvittaessa"
+
+msgctxt "settings-import"
+msgid "Clear all overrides"
+msgstr "Poista kaikki ohitukset"
+
+msgctxt "settings-import"
+msgid "Clear all overrides?"
+msgstr "Poistetaanko kaikki ohitukset?"
+
+msgctxt "settings-import"
+msgid "Clearing the imported overrides changes the server IPs, in the Select location view, back to default."
+msgstr "Tuotujen ohitusten poistaminen vaihtaa palvelimien IP-osoitteet takaisin oletusarvoisiksi sijainnin valintanäkymässä."
+
+msgctxt "settings-import"
+msgid "If you are having issues connecting to VPN servers, please contact support."
+msgstr "Jos sinulla on ongelmia yhteyden muodostamisessa VPN-palvelimiin, ota yhteyttä tukeen."
+
+msgctxt "settings-import"
+msgid "Import file"
+msgstr "Tuo tiedosto"
+
+msgctxt "settings-import"
+msgid "Import files or text with new IP addresses for the servers in the Select location view."
+msgstr "Tuo tiedostoja tai tekstiä palvelimien uusin IP-osoittein sijainnin valintanäkymässä."
+
+msgctxt "settings-import"
+msgid "Import of file %(fileName)s was successful, overrides are now active."
+msgstr "Tiedoston %(fileName)s tuonti onnistui. Ohitukset ovat nyt voimassa."
+
+msgctxt "settings-import"
+msgid "Import of file %(fileName)s was unsuccessful, please try again."
+msgstr "Tiedoston %(fileName)s tuonti epäonnistui. Yritä uudelleen."
+
+msgctxt "settings-import"
+msgid "Import of text was successful, overrides are now active."
+msgstr "Tekstin tuonti onnistui. Ohitukset ovat nyt voimassa."
+
+msgctxt "settings-import"
+msgid "Import of text was unsuccessful, please try again."
+msgstr "Tekstin tuonti epäonnistui. Yritä uudelleen."
+
+msgctxt "settings-import"
+msgid "IMPORT SUCCESSFUL"
+msgstr "TUONTI ONNISTUI"
+
+#. Title label in navigation bar
+msgctxt "settings-import"
+msgid "Import via text"
+msgstr "Tuo tekstinä"
+
+msgctxt "settings-import"
+msgid "NO OVERRIDES IMPORTED"
+msgstr "OHITUKSIA EI TUOTU"
+
+msgctxt "settings-import"
+msgid "On some networks, where various types of censorship are being used, our server IP addresses are sometimes blocked."
+msgstr "Palvelimiemme IP-osoitteet estetään toisinaan joissakin useita erityyppistä sensurointimenetelmiä käyttävissä verkoissa."
+
+msgctxt "settings-import"
+msgid "OVERRIDES ACTIVE"
+msgstr "OHITUKSIA KÄYTÖSSÄ"
+
+#. Title label in navigation bar. This is for a feature that lets
+#. users import server IP settings.
+msgctxt "settings-import"
+msgid "Server IP override"
+msgstr "Palvelimen IP-osoitteen ohitus"
+
+msgctxt "settings-import"
+msgid "To circumvent this you can import a file or a text, provided by our support team, with new IP addresses that override the default addresses of the servers in the Select location view."
+msgstr "Voit kiertää estot tuomalla tukitiimimme toimittaman tiedoston tai tekstin, josta löytyy uusia, palvelimien oletusosoitteet sijainnin valintanäkymässä ohittavia IP-osoitteita."
+
+#. Display name of the currently selected option for the Multihop mode setting
+#. when the "Always" option is selected.
+msgctxt "settings-view"
+msgid "Always"
+msgstr "Aina"
+
+#. Navigation button to the 'API access methods' view
+msgctxt "settings-view"
+msgid "API access"
+msgstr "Ohjelmointirajapinnan käyttö"
+
+#. Navigation button to the 'App info' view
+msgctxt "settings-view"
+msgid "App info"
+msgstr "Sovelluksen tiedot"
+
+msgctxt "settings-view"
+msgid "Multihop"
+msgstr "Multihop"
+
+#. Display name of the currently selected option for the Multihop mode setting
+#. when the "Never" option is selected.
+msgctxt "settings-view"
+msgid "Never"
+msgstr "Ei koskaan"
+
+#. Title label in navigation bar
+msgctxt "settings-view"
+msgid "Settings"
+msgstr "Asetukset"
+
+#. Navigation button to the 'Support' view
+msgctxt "settings-view"
+msgid "Support"
+msgstr "Tuki"
+
+#. Label for the app info list item indicating that an update is available and can be downloaded
+msgctxt "settings-view"
+msgid "Update available"
+msgstr "Päivitys saatavilla"
+
+#. Navigation button to the 'User interface settings' view
+msgctxt "settings-view"
+msgid "User interface settings"
+msgstr "Käyttöliittymän asetukset"
+
+#. Navigation button to the 'VPN settings' view
+msgctxt "settings-view"
+msgid "VPN settings"
+msgstr "VPN-asetukset"
+
+#. Display name of the currently selected option for the Multihop mode setting
+#. when the "When needed" option is selected.
+msgctxt "settings-view"
+msgid "When needed"
+msgstr "Tarvittaessa"
+
+msgctxt "split-tunneling-view"
+msgid "%(applicationName)s is problematic and can’t be excluded from the VPN tunnel."
+msgstr "%(applicationName)s on ongelmallinen, eikä sitä voida sulkea pois VPN-tunnelista."
+
+#. Information about split tunneling not being supported on the system.
+#. Available placeholders:
+#. %(splitTunneling)s - will be replaced with Split tunneling
+msgctxt "split-tunneling-view"
+msgid "%(splitTunneling)s is not supported by your system."
+msgstr "%(splitTunneling)s ei ole tuettu järjestelmässäsi."
+
+msgctxt "split-tunneling-view"
+msgid "Add"
+msgstr "Lisää"
+
+msgctxt "split-tunneling-view"
+msgid "All apps"
+msgstr "Kaikki sovellukset"
+
+msgctxt "split-tunneling-view"
+msgid "Choose the apps you want to exclude from the VPN tunnel."
+msgstr "Valitse sovellukset, jotka haluat sulkea pois VPN-tunnelista."
+
+#. Link for learning more
+msgctxt "split-tunneling-view"
+msgid "Click here to learn more"
+msgstr "Lue lisää napsauttamalla tätä"
+
+msgctxt "split-tunneling-view"
+msgid "Click on an app to launch it. Its traffic will bypass the VPN tunnel until you close it."
+msgstr "Napsauta sovellusta käynnistääksesi sen. Sen liikenne ohittaa VPN-tunnelin, kunnes suljet sen."
+
+msgctxt "split-tunneling-view"
+msgid "Enabled \"Full disk access\" and still having issues?"
+msgstr "Oletko sallinut koko levyn käytön, mutta kohtaat edelleen ongelmia?"
+
+msgctxt "split-tunneling-view"
+msgid "Excluded apps"
+msgstr "Poissuljetut sovellukset"
+
+#. Button label for browsing applications with split tunneling.
+msgctxt "split-tunneling-view"
+msgid "Find another app"
+msgstr "Etsi jokin muu sovellus"
+
+msgctxt "split-tunneling-view"
+msgid "If it’s already running, close %(applicationName)s before launching it from here. Otherwise it might not be excluded from the VPN tunnel."
+msgstr "Jos sovellus on jo käynnissä, sulje %(applicationName)s ennen sen käynnistämistä täältä. Muuten sitä ei välttämättä suljeta ulos VPN-tunnelista."
+
+#. Button label for launching an application with split tunneling.
+msgctxt "split-tunneling-view"
+msgid "Launch"
+msgstr "Käynnistä"
+
+msgctxt "split-tunneling-view"
+msgid "Open System Settings"
+msgstr "Avaa järjestelmäasetukset"
+
+#. This error message is shown if the user tries to launch a Linux desktop
+#. entry file that doesn't contain the required 'Exec' value.
+msgctxt "split-tunneling-view"
+msgid "Please send a problem report."
+msgstr "Lähetä ongelmaraportti."
+
+#. This error message is shown if the user tries to launch an app that
+#. doesn't exist.
+#. This error message is shown if an application fails during startup.
+msgctxt "split-tunneling-view"
+msgid "Please try again or send a problem report."
+msgstr "Yritä uudelleen tai lähetä ongelmaraportti."
+
+msgctxt "split-tunneling-view"
+msgid "Restart Mullvad Service"
+msgstr "Käynnistä Mullvad Service uudelleen"
+
+#. Information about split tunneling being unavailable due to
+#. missing support in the user's operating system.
+#. Available placeholders:
+#. %(splitTunneling)s - will be replaced with Split tunneling
+msgctxt "split-tunneling-view"
+msgid "To use %(splitTunneling)s, please change to a Linux kernel version that supports cgroup v1."
+msgstr "Vaihda Linuxin ydinversioon, joka tukee cgroup v1:tä, jotta %(splitTunneling)s on käytettävissä."
+
+msgctxt "split-tunneling-view"
+msgid "To use split tunneling please enable “Full disk access” for “Mullvad VPN” in the macOS system settings."
+msgstr "Jos haluat käyttää sovelluskohtaista yhdistämistä, salli koko levyn käyttö \"Mullvad VPN\" -kohdassa macOS-järjestelmäasetuksissa."
+
+#. Error message showed in a dialog when an application fails to launch.
+msgctxt "split-tunneling-view"
+msgid "Unable to launch selection. %(detailedErrorMessage)s"
+msgstr "Valinnan käynnistäminen ei onnistu. %(detailedErrorMessage)s"
+
+#. Button label for continuing problem report submission with an outdated app version.
+msgctxt "support-view"
+msgid "Continue anyway"
+msgstr "Jatka silti"
+
+#. Button text to edit the message after a failed attempt to send the problem report.
+msgctxt "support-view"
+msgid "Edit message"
+msgstr "Muokkaa viestiä"
+
+msgctxt "support-view"
+msgid "Failed to send"
+msgstr "Lähetys epäonnistui"
+
+#. Link to the webpage
+msgctxt "support-view"
+msgid "FAQs & Guides"
+msgstr "Usein kysytyt kysymykset ja oppaat"
+
+#. The message displayed to the user after submitting the problem report, given that the user left his or her email for us to reach back.
+#. Available placeholders:
+#. %(email)s
+msgctxt "support-view"
+msgid "If needed we will contact you at %(email)s"
+msgstr "Tarvittaessa otamme sinuun yhteyttä osoitteeseen %(email)s"
+
+msgctxt "support-view"
+msgid "If you exit the form and try again later, the information you already entered will still be here."
+msgstr "Jos poistut lomakkeelta ja yrität myöhemmin uudelleen, jo syöttämäsi tiedot säilyvät lomakkeella."
+
+#. Title label in navigation bar
+#. Navigation button to the 'Report a problem' help view
+msgctxt "support-view"
+msgid "Report a problem"
+msgstr "Raportoi ongelma"
+
+#. Button label for sending the problem report.
+msgctxt "support-view"
+msgid "Send"
+msgstr "Lähetä"
+
+#. Button label for sending the problem report without an email address.
+msgctxt "support-view"
+msgid "Send anyway"
+msgstr "Lähetä silti"
+
+msgctxt "support-view"
+msgid "Sending..."
+msgstr "Lähetetään..."
+
+msgctxt "support-view"
+msgid "Sent"
+msgstr "Lähetetty"
+
+#. Title label in navigation bar
+msgctxt "support-view"
+msgid "Support"
+msgstr "Tuki"
+
+msgctxt "support-view"
+msgid "Thanks!"
+msgstr "Kiitos!"
+
+msgctxt "support-view"
+msgid "To assist you better, please write in English or Swedish and include which country you are connecting from."
+msgstr "Jotta voisimme avustaa sinua paremmin, kirjoita englanniksi tai ruotsiksi ja mainitse, mistä maasta muodostat yhteyden."
+
+msgctxt "support-view"
+msgid "To help you more effectively, your app’s log file will be attached to this message. Your data will remain secure and private, as it is anonymised before being sent over an encrypted channel."
+msgstr "Jotta voimme olla avuksi parhaamme mukaan, sovelluksesi lokitiedosto liitetään tähän viestiin. Tietosi pysyvät suojattuina ja yksityisinä, ja ne anonymisoidaan salatun kanavan kautta ennen lähetystä."
+
+#. Button label for retrying problem report submission after a failure.
+msgctxt "support-view"
+msgid "Try again"
+msgstr "Yritä uudelleen"
+
+#. Button label for updating the app to the latest version.
+msgctxt "support-view"
+msgid "Update app"
+msgstr "Päivitä sovellus"
+
+#. Button label for opening app logs.
+msgctxt "support-view"
+msgid "View app logs"
+msgstr "Tarkastele sovelluslokeja"
+
+msgctxt "support-view"
+msgid "We will look into this."
+msgstr "Tutkimme asiaa."
+
+msgctxt "support-view"
+msgid "You are about to send the problem report without a way for us to get back to you. If you want an answer to your report you will have to enter an email address."
+msgstr "Olet aikeissa lähettää ongelmaraportin ilman yhteystietojasi. Mikäli haluat vastauksen raporttiisi, anna sähköpostosoite."
+
+msgctxt "support-view"
+msgid "You are using an old version of the app. Please upgrade and see if the problem still exists before sending a report."
+msgstr "Käytät sovelluksen vanhaa versiota. Ennen raportin lähettämistä päivitä uudempaan ja tarkista, vieläkö ongelma ilmenee."
+
+msgctxt "support-view"
+msgid "Your email (optional)"
+msgstr "Sähköpostisi (valinnainen)"
+
+msgctxt "tray-icon-context-menu"
+msgid "Disconnected from system service"
+msgstr "Yhteys järjestelmäpalveluun katkaistu"
+
+msgctxt "tray-icon-context-menu"
+msgid "Open %(mullvadVpn)s"
+msgstr "Avaa %(mullvadVpn)s"
+
+msgctxt "tray-icon-tooltip"
+msgid "%(city)s, %(country)s"
+msgstr "%(city)s, %(country)s"
+
+msgctxt "tray-icon-tooltip"
+msgid "Connected. %(location)s"
+msgstr "Yhdistetty. %(location)s"
+
+msgctxt "tray-icon-tooltip"
+msgid "Connecting. %(location)s"
+msgstr "Yhdistetään. %(location)s"
+
+msgctxt "troubleshoot"
+msgid "Disable split tunneling"
+msgstr "Poista split tunneling käytöstä"
+
+msgctxt "troubleshoot"
+msgid "Enable “Full Disk Access” for “Mullvad VPN” in the macOS system settings."
+msgstr "Ota käyttöön \"Täysi levyn käyttöoikeus\" Mullvad VPN:lle macOS:n järjestelmäasetuksista."
+
+msgctxt "troubleshoot"
+msgid "Failed to enable split tunneling. This is because the app is missing system permissions. What you can do:"
+msgstr "Sovelluskohtaisen yhdistämisen käyttöönotto epäonnistui. Tämä johtuu siitä, että sovellukselta puuttuvat järjestelmän käyttöoikeudet. Mitä voit tehdä:"
+
+msgctxt "troubleshoot"
+msgid "If these steps do not work please send a problem report."
+msgstr "Jos ongelma ei ratkea näillä ohjeilla, lähetä siitä raportti."
+
+msgctxt "troubleshoot"
+msgid "If you have installed another VPN then try to uninstall that."
+msgstr "Jos olet asentanut toisen VPN:n, kokeile poistaa se."
+
+msgctxt "troubleshoot"
+msgid "Make sure you have NF tables support."
+msgstr "Varmista, että käytössäsi on Nftables-tuki."
+
+msgctxt "troubleshoot"
+msgid "Open system settings"
+msgstr "Avaa järjestelmäasetukset"
+
+msgctxt "troubleshoot"
+msgid "This error can happen when something other than Mullvad is actively updating the DNS."
+msgstr "Tämä virhe voi tapahtua, kun DNS:ää päivittää aktiivisesti jokin muu instanssi kuin Mullvad."
+
+msgctxt "troubleshoot"
+msgid "This might be caused by an outdated kernel."
+msgstr "Ongelma saattaa johtua vanhentuneesta ytimestä."
+
+msgctxt "troubleshoot"
+msgid "Try restarting your device."
+msgstr "Kokeile käynnistää laitteesi uudelleen."
+
+msgctxt "troubleshoot"
+msgid "Try to reinstall VMware."
+msgstr "Yritä asentaa VMware uudelleen."
+
+msgctxt "troubleshoot"
+msgid "Try to turn Wi-Fi Calling off in the FaceTime app settings and restart the Mac."
+msgstr "Yritä poistaa Wi-Fi-puhelut käytöstä FaceTime-sovelluksen asetuksista ja käynnistä Mac uudelleen."
+
+msgctxt "troubleshoot"
+msgid "Try to uninstall VMware."
+msgstr "Yritä poistaa VMwaren asennus."
+
+msgctxt "troubleshoot"
+msgid "Unable to communicate with the split tunnel driver."
+msgstr "Viestintä sovelluskohtaisen yhdistämisen ohjaimen kanssa ei onnistu."
+
+msgctxt "troubleshoot"
+msgid "Unable to start tunnel connection because of a failure when creating the tunnel device. This is often caused by conflicts with the VMware Bridge Protocol."
+msgstr "Tunneliyhteyttä ei voida käynnistää, koska tunnelilaitteen luomisen aikana tapahtui virhe. Tämä johtuu usein ristiriidoista VMwaren siltausprotokollan kanssa."
+
+msgctxt "troubleshoot"
+msgid "Uninstall or disable other DNS, networking and ads/website blocking apps."
+msgstr "Poista muut DNS:t ja verkot ja mainosten ja verkkosivustojen estosovellukset käytöstä tai poista niiden asennus."
+
+msgctxt "troubleshoot"
+msgid "Update your kernel."
+msgstr "Päivitä ydin."
+
+msgctxt "tunnel-control"
+msgid "Connect"
+msgstr "Yhdistä"
+
+msgctxt "tunnel-control"
+msgid "Switch location"
+msgstr "Vaihda sijaintia"
+
+msgctxt "user-interface-settings-view"
+msgid "Animate map"
+msgstr "Animoitu kartta"
+
+msgctxt "user-interface-settings-view"
+msgid "Animate map movements."
+msgstr "Luo animaatioita kartalla näkyvästä liikkeestä."
+
+msgctxt "user-interface-settings-view"
+msgid "Enable or disable system notifications. The critical notifications will always be displayed."
+msgstr "Salli tai estä järjestelmän ilmoitukset. Tärkeät ilmoitukset näytetään aina."
+
+msgctxt "user-interface-settings-view"
+msgid "Enable to move the app around as a free-standing window."
+msgstr "Salli sovelluksen siirtäminen itsenäisenä ikkunana."
+
+#. Navigation button to the 'Language' settings view
+msgctxt "user-interface-settings-view"
+msgid "Language"
+msgstr "Kieli"
+
+msgctxt "user-interface-settings-view"
+msgid "Monochromatic menu bar icon"
+msgstr "Yksivärinen valikkopalkin kuvake"
+
+msgctxt "user-interface-settings-view"
+msgid "Monochromatic tray icon"
+msgstr "Yksivärinen ilmaisinalueen kuvake"
+
+msgctxt "user-interface-settings-view"
+msgid "Notifications"
+msgstr "Ilmoitukset"
+
+msgctxt "user-interface-settings-view"
+msgid "Show only the menu bar icon when the app starts."
+msgstr "Näytä vain valikkopalkin kuvake, kun sovellus käynnistyy."
+
+msgctxt "user-interface-settings-view"
+msgid "Show only the tray icon when the app starts."
+msgstr "Näytä vain ilmaisinalueen kuvake, kun sovellus käynnistyy."
+
+msgctxt "user-interface-settings-view"
+msgid "Start minimized"
+msgstr "Käynnistä pienennettynä"
+
+#. Label for a setting to unpin the app window from the macOS "menu bar"
+msgctxt "user-interface-settings-view"
+msgid "Unpin app from menu bar"
+msgstr "Poista sovelluksen kiinnitys valikkopalkista"
+
+#. Label for a setting to unpin the app window from the Windows "taskbar"
+msgctxt "user-interface-settings-view"
+msgid "Unpin app from taskbar"
+msgstr "Poista sovelluksen kiinnitys tehtäväpalkista"
+
+msgctxt "user-interface-settings-view"
+msgid "Use a monochromatic menu bar icon instead of a colored one."
+msgstr "Käytä yksiväristä valikkopalkin kuvaketta värikkään asemesta."
+
+msgctxt "user-interface-settings-view"
+msgid "Use a monochromatic tray icon instead of a colored one."
+msgstr "Käytä yksiväristä ilmaisinalueen kuvaketta värillisen asemesta."
+
+#. Title label in navigation bar
+msgctxt "user-interface-settings-view"
+msgid "User interface settings"
+msgstr "Käyttöliittymän asetukset"
+
+msgctxt "vpn-settings-view"
+msgid "Add a server"
+msgstr "Lisää palvelin"
+
+#. Button label to add a private IP DNS server despite warning.
+msgctxt "vpn-settings-view"
+msgid "Add anyway"
+msgstr "Lisää silti"
+
+#. Label for settings that enables ad blocking.
+msgctxt "vpn-settings-view"
+msgid "Ads"
+msgstr "Mainokset"
+
+#. Label for settings that enables block of adult content.
+msgctxt "vpn-settings-view"
+msgid "Adult content"
+msgstr "Aikuisille suunnattu sisältö"
+
+#. Label for list item that navigates to anti-censorship
+#. settings view.
+msgctxt "vpn-settings-view"
+msgid "Anti-censorship"
+msgstr "Sensuurinesto"
+
+msgctxt "vpn-settings-view"
+msgid "Attention: enabling this will always require a Mullvad VPN connection in order to reach the internet."
+msgstr "Huomio: jos tämä otetaan käyttöön, verkkoon yhdistäminen vaatii aina Mullvad VPN -yhteyden."
+
+msgctxt "vpn-settings-view"
+msgid "Attention: this setting cannot be used in combination with <b>%(customDnsFeatureName)s</b>"
+msgstr "Huomio: <b>%(customDnsFeatureName)s</b> ja tämä asetus eivät voi olla käytössä samanaikaisesti."
+
+msgctxt "vpn-settings-view"
+msgid "Auto-connect"
+msgstr "Automaattinen yhteys"
+
+msgctxt "vpn-settings-view"
+msgid "Automatically connect to a server when the app launches."
+msgstr "Muodosta yhteys palvelimeen automaattisesti, kun sovellus avataan."
+
+#. This is displayed when the custom DNS setting is turned on which makes the block
+#. ads/trackers settings disabled. The text enclosed in "<b></b>" will appear bold.
+#. Available placeholders:
+#. %(customDnsFeatureName)s - The name displayed next to the custom DNS toggle.
+msgctxt "vpn-settings-view"
+msgid "Disable \"%(customDnsFeatureName)s\" below to activate these settings."
+msgstr "Poista \"%(customDnsFeatureName)s\" käytöstä alla näiden asetusten aktivoimiseksi."
+
+#. This is displayed when either or both of the block ads/trackers settings are
+#. turned on which makes the custom DNS setting disabled.
+#. Available placeholders:
+#. %(preferencesPageName)s - The page title showed on top in the preferences page.
+msgctxt "vpn-settings-view"
+msgid "Disable all <b>DNS content blockers</b> above to activate this setting."
+msgstr "Voit ottaa asetuksen käyttöön poistamalla ensin kaikki <b>DNS-sisällönestotoiminnot</b> käytöstä yltä."
+
+msgctxt "vpn-settings-view"
+msgid "DNS content blockers"
+msgstr "DNS-sisällönestotoiminnot"
+
+msgctxt "vpn-settings-view"
+msgid "Enable to add at least one DNS server."
+msgstr "Ota käyttöön lisätäksesi vähintään yhden DNS-palvelimen."
+
+#. Description of in-tunnel IPv6 setting.
+msgctxt "vpn-settings-view"
+msgid "Enable to allow IPv6 traffic through the tunnel."
+msgstr "Kun tämä on käytössä, IPv6-liikenne sallitaan tunnelin kautta."
+
+msgctxt "vpn-settings-view"
+msgid "Enter IP"
+msgstr "Anna IP-osoite"
+
+#. Label for settings that enables block of gamling related websites.
+msgctxt "vpn-settings-view"
+msgid "Gambling"
+msgstr "Uhkapelaaminen"
+
+msgctxt "vpn-settings-view"
+msgid "If you can’t connect you can try using the IP address instead of the host name. If you want to connect to a subnet or a private network address range, you can follow our guide to add a static route."
+msgstr "Jos et saa yhteyttä muodostettua, voit kokeilla IP-osoitetta isäntänimen sijaan. Jos haluat muodostaa yhteyden aliverkkoon tai yksityisen verkon osoitealueeseen, seuraa oppaamme ohjeita staattisen reitin lisäämisestä."
+
+#. Title of in-tunnel IPv6 setting.
+msgctxt "vpn-settings-view"
+msgid "In-tunnel IPv6"
+msgstr "Tunnelin IPv6"
+
+msgctxt "vpn-settings-view"
+msgid "IPv4 is always enabled and the majority of websites and applications use this protocol. We do not recommend enabling IPv6 unless you know you need it."
+msgstr "IPv4 on aina käytössä, ja suurin osa verkkosivustoista ja sovelluksista käyttää kyseistä protokollaa. Emme suosittele IPv6:n käyttöönottoa, ellet varta vasten tarvitse sitä."
+
+#. A complimentary description for the setting Device IP version,
+#. explaining why the user might want to configure the setting.
+msgctxt "vpn-settings-view"
+msgid "It can be useful when you are aware of problems caused by a certain IP version."
+msgstr "Se voi olla hyödyllistä, kun olet tietoinen tietyn IP-version aiheuttamista ongelmista."
+
+msgctxt "vpn-settings-view"
+msgid "It does this by allowing network communication outside the tunnel to local multicast and broadcast ranges as well as to and from these private IP ranges:"
+msgstr "Ominaisuus siis sallii verkkoviestinnän tunnelin ulkopuolella paikallisille lähetys- ja monilähetysalueille sekä näillä yksityisillä IP-alueilla kumpaankin suuntaan:"
+
+msgctxt "vpn-settings-view"
+msgid "Kill switch"
+msgstr "Tappokytkin"
+
+msgctxt "vpn-settings-view"
+msgid "Launch app on start-up"
+msgstr "Käynnistä sovellus, kun järjestelmä käynnistyy"
+
+msgctxt "vpn-settings-view"
+msgid "Local network sharing"
+msgstr "Paikallisen verkon jakaminen"
+
+msgctxt "vpn-settings-view"
+msgid "Lockdown mode"
+msgstr "Lukitustila"
+
+#. Label for settings that enables malware blocking.
+msgctxt "vpn-settings-view"
+msgid "Malware"
+msgstr "Haittaohjelmat"
+
+msgctxt "vpn-settings-view"
+msgid "Server IP override"
+msgstr "Palvelimen IP-osoitteen ohitus"
+
+#. Label for settings that enables block of social media.
+msgctxt "vpn-settings-view"
+msgid "Social media"
+msgstr "Sosiaalinen media"
+
+msgctxt "vpn-settings-view"
+msgid "The app’s built-in kill switch is always on. This setting will additionally block the internet if clicking Disconnect or Quit."
+msgstr "Sovelluksen sisäänrakennettu tappokytkin on aina käytössä. Tämä asetus estää lisäksi verkkoyhteyden, jos katkaiset sovellusyhteyden tai suljet sovelluksen."
+
+msgctxt "vpn-settings-view"
+msgid "The difference between the Kill Switch and Lockdown Mode is that the Kill Switch will prevent any leaks from happening during automatic tunnel reconnects, software crashes and similar accidents."
+msgstr "Tappokytkin eroaa lukitustilasta siten, että se estää vuotoja tapahtumasta automaattisten tunnelin uudelleenyhdistysten, ohjelmistojen kaatumisen ja vastaavien tapahtumien aikana."
+
+msgctxt "vpn-settings-view"
+msgid "The difference between the Kill Switch and Lockdown Mode is that the Kill Switch will prevent any leaks from happening during automatic tunnel reconnects, software crashes and similar accidents. With Lockdown Mode enabled, you must be connected to a Mullvad VPN server to be able to reach the internet. Manually disconnecting or quitting the app will block your connection."
+msgstr "Tappokytkin eroaa lukitustilasta siten, että se estää vuotoja tapahtumasta automaattisten tunnelin uudelleenyhdistysten, ohjelmistojen kaatumisen ja vastaavien tapahtumien aikana. Kun lukitustila puolestaan on käytössä, voit muodostaa yhteyden internetiin ainoastaan Mullvadin VPN-palvelimen kautta. Sovelluksen yhteyden manuaalinen katkaiseminen tai sovelluksen sulkeminen estävät verkkoyhteyden muodostamisen."
+
+msgctxt "vpn-settings-view"
+msgid "The DNS server you want to add is a private IP. You must ensure that your network interfaces are configured to use it."
+msgstr "DNS-palvelin, jonka haluat lisätä, on yksityinen IP-osoite. Varmista, että verkkoliittymäsi määritykset mahdollistavat palvelimen käytön."
+
+msgctxt "vpn-settings-view"
+msgid "This built-in feature prevents your traffic from leaking outside of the VPN tunnel if your network suddenly stops working or if the tunnel fails, it does this by blocking your traffic until your connection is reestablished."
+msgstr "Tämä sisäänrakennettu ominaisuus estää liikennettäsi vuotamasta VPN-tunnelin ulkopuolelle, jos verkkosi yhtäkkiä lakkaa toimimasta tai jos tunneli epäonnistuu yhteyden muodostamisessa. Se estää liikenteen, kunnes yhteys on muodostettu uudelleen."
+
+msgctxt "vpn-settings-view"
+msgid "This feature allows access to other devices on the local network, such as for sharing, printing, streaming, etc."
+msgstr "Tämä ominaisuus mahdollistaa pääsyn muihin paikallisverkon laitteisiin esimerkiksi jakamisen, tulostamisen, suoratoiston jne. tarpeisiin."
+
+#. A description for the setting Device IP version,
+#. explaining how the user can configure the setting.
+msgctxt "vpn-settings-view"
+msgid "This feature allows you to choose whether to use only IPv4, only IPv6, or allow the app to automatically decide the best option when connecting to a server."
+msgstr "Tämä ominaisuus antaa sinun valita, käytetäänkö vain IPv4:ää, vain IPv6:ta vai annetaanko sovelluksen päättää paras vaihtoehto automaattisesti, kun se muodostaa yhteyttä palvelimeen."
+
+msgctxt "vpn-settings-view"
+msgid "This might cause issues on certain websites, services, and apps."
+msgstr "Tämä voi aiheuttaa ongelmia tietyillä verkkosivustoilla, palveluissa ja sovelluksissa."
+
+#. Label for settings that enables tracker blocking.
+msgctxt "vpn-settings-view"
+msgid "Trackers"
+msgstr "Seurantapalvelimet"
+
+msgctxt "vpn-settings-view"
+msgid "Use custom DNS server"
+msgstr "Käytä mukautettua DNS-palvelinta"
+
+#. Title label in navigation bar
+msgctxt "vpn-settings-view"
+msgid "VPN settings"
+msgstr "VPN-asetukset"
+
+msgctxt "vpn-settings-view"
+msgid "Warning: The malware blocker is not an anti-virus and should not be treated as such, this is just an extra layer of protection."
+msgstr "Varoitus: haittaohjelmien estotoiminto ei ole virustorjuntaohjelma, eikä sitä pidä käyttää sellaisena – kyseessä on vain ylimääräinen suojauskerros."
+
+msgctxt "vpn-settings-view"
+msgid "When this feature is enabled it stops the device from contacting certain domains or websites known for distributing ads, malware, trackers and more."
+msgstr "Kun tämä ominaisuus on käytössä, se estää laitetta ottamasta yhteyttä tiettyihin verkkotunnuksiin tai -sivustoihin, jotka tunnetaan mainosten, haittaohjelmien, seurantaohjelmien tai muiden vastaavien jakelijoina."
+
+msgctxt "vpn-settings-view"
+msgid "When this feature is enabled, IPv6 can be used alongside IPv4 in the VPN tunnel to communicate with internet services."
+msgstr "Kun tämä ominaisuus on käytössä, IPv6:ta voidaan käyttää IPv4:n rinnalla VPN-tunnelissa yhteydenpidossa internetpalveluiden kanssa."
+
+msgctxt "vpn-settings-view"
+msgid "With Lockdown Mode enabled, you must be connected to a Mullvad VPN server to be able to reach the internet. Manually disconnecting or quitting the app will block your connection."
+msgstr "Kun lukitustila on käytössä, voit muodostaa yhteyden internetiin ainoastaan Mullvadin VPN-palvelimen kautta. Sovelluksen yhteyden manuaalinen katkaiseminen tai sovelluksen sulkeminen estävät verkkoyhteyden muodostamisen."
+
+#. Title label in navigation bar
+msgctxt "wireguard-settings-nav"
+msgid "Shadowsocks"
+msgstr "Shadowsocks"
+
+#. Title label in navigation bar
+msgctxt "wireguard-settings-nav"
+msgid "UDP-over-TCP"
+msgstr "UDP TCP:n kautta"
+
+msgctxt "wireguard-settings-view"
+msgid "%(daita)s (%(daitaFull)s) hides patterns in your encrypted VPN traffic."
+msgstr "%(daita)s (%(daitaFull)s) piilottaa kuviot salatusta VPN-liikenteestäsi."
+
+msgctxt "wireguard-settings-view"
+msgid "%(daita)s does this by carefully adding network noise and making all network packets the same size."
+msgstr "%(daita)s tekee tämän lisäämällä varovasti verkkokohinaa ja tekemällä kaikista paketeista saman kokoisia."
+
+msgctxt "wireguard-settings-view"
+msgid "%(wireguard)s port"
+msgstr "%(wireguard)s-portti"
+
+#. Page title for WireGuard port view
+msgctxt "wireguard-settings-view"
+msgid "%(wireGuard)s port"
+msgstr "%(wireGuard)s-portti"
+
+#. Label for the Multihop mode setting's option to always use the multihop
+#. feature.
+msgctxt "wireguard-settings-view"
+msgid "Always"
+msgstr "Aina"
+
+msgctxt "wireguard-settings-view"
+msgid "Attention: This increases network traffic and will also negatively affect speed, latency, and battery usage. Use with caution on limited plans."
+msgstr "Huomio: Toiminto kasvattaa verkkoliikennettä ja vaikuttaa sen vuoksi negatiivisesti sekä nopeuteen, viiveeseen että akun kulumiseen. Käytä harkiten, kun datasopimuksesi on rajoitettu."
+
+msgctxt "wireguard-settings-view"
+msgid "By using sophisticated AI it’s possible to analyze the traffic of data packets going in and out of your device (even if the traffic is encrypted)."
+msgstr "Käyttämällä edistynyttä tekoälyä on mahdollista analysoida laitteestasi lähtevä ja siihen tuleva datapakettiliikenne (vaikka liikenne olisi salattu)."
+
+#. Title for device IP version setting.
+msgctxt "wireguard-settings-view"
+msgid "Device IP version"
+msgstr "Laitteen IP-versio"
+
+msgctxt "wireguard-settings-view"
+msgid "If an observer monitors these data packets, %(daita)s makes it significantly harder for them to identify which websites you are visiting or with whom you are communicating."
+msgstr "Jos havaitsija valvoo näitä datapaketteja, %(daita)s tekee hänelle huomattavasti hankalammaksi tunnistaa, millä verkkosivuilla käyt tai kenen kanssa viestit."
+
+msgctxt "wireguard-settings-view"
+msgid "It does this by performing an extra key exchange using a quantum safe algorithm and mixing the result into WireGuard’s regular encryption."
+msgstr "Se tekee tämän tekemällä ylimääräisen avaimen vaihdon käyttämällä kvanttisuojattua algoritmia ja sekoittamalla tuloksen WireGuardin tavalliseen salaukseen."
+
+#. Title for Multihop mode setting.
+msgctxt "wireguard-settings-view"
+msgid "Mode"
+msgstr "Tila"
+
+#. The title for the WireGuard MTU setting. MTU stands for Maximum
+#. Transmission Unit and controls the maximum size of packets sent over
+#. the VPN tunnel.
+msgctxt "wireguard-settings-view"
+msgid "MTU"
+msgstr "MTU"
+
+msgctxt "wireguard-settings-view"
+msgid "Multihop"
+msgstr "Multihop"
+
+msgctxt "wireguard-settings-view"
+msgid "Multihop routes your traffic into one WireGuard server and out another, making it harder to trace. This results in increased latency but increases anonymity online."
+msgstr "Multihop reitittää liikenteesi yhteen WireGuard-palvelimeen ja ulos toisesta palvelimesta, mikä tekee siitä hankalampaa jäljittää. Tuloksena on suurempi viive, mutta se parantaa nimettömyyttä verkossa."
+
+#. Label for the Multihop mode setting's option to never use the multihop
+#. feature.
+msgctxt "wireguard-settings-view"
+msgid "Never"
+msgstr "Ei koskaan"
+
+msgctxt "wireguard-settings-view"
+msgid "Not all our servers are %(daita)s-enabled. Therefore, we use multihop automatically to enable %(daita)s with any server."
+msgstr "Kaikissa palvelimissamme ei ole %(daita)s-tukea. Siksi käytämme multihopia automaattisesti mahdollistaaksemme %(daita)s:n millä tahansa palvelimella."
+
+#. The title for the WireGuard port selector.
+msgctxt "wireguard-settings-view"
+msgid "Port"
+msgstr "Portti"
+
+#. Text showing currently selected port.
+#. Available placeholders:
+#. %(port)s - Can be either a number between 1 and 65535 or the text "Automatic".
+msgctxt "wireguard-settings-view"
+msgid "Port: %(port)s"
+msgstr "Portti: %(port)s"
+
+#. The title for the WireGuard quantum resistance selector. This setting
+#. makes the cryptography resistant to the future abilities of quantum
+#. computers.
+msgctxt "wireguard-settings-view"
+msgid "Quantum-resistant tunnel"
+msgstr "Kvanttihyökkäyksiä kestävä tunneli"
+
+#. The hint displayed below the WireGuard MTU input field.
+#. Available placeholders:
+#. %(wireguard)s - Will be replaced with the string "WireGuard"
+#. %(max)d - the maximum possible wireguard mtu value
+#. %(min)d - the minimum possible wireguard mtu value
+msgctxt "wireguard-settings-view"
+msgid "Set %(wireguard)s MTU value. Valid range: %(min)d - %(max)d."
+msgstr "Aseta %(wireguard)s MTU -arvo välillä %(min)d–%(max)d."
+
+msgctxt "wireguard-settings-view"
+msgid "Shadowsocks"
+msgstr "Shadowsocks"
+
+msgctxt "wireguard-settings-view"
+msgid "The automatic setting will randomly choose from the valid port ranges shown below."
+msgstr "Automaattinen asetus valitsee satunnaisesti käytettävissä olevista, alla luetelluista porteista."
+
+msgctxt "wireguard-settings-view"
+msgid "The custom port can be any value inside the valid ranges: %(portRanges)s."
+msgstr "Mukautettu portti voi olla mikä tahansa sallittu arvo: %(portRanges)s."
+
+msgctxt "wireguard-settings-view"
+msgid "This feature makes the WireGuard tunnel resistant to potential attacks from quantum computers."
+msgstr "Tämä ominaisuus tekee WireGuard-tunnelista kestävän kvanttitietokoneiden mahdollisia hyökkäyksiä vastaan."
+
+msgctxt "wireguard-settings-view"
+msgid "UDP-over-TCP"
+msgstr "UDP TCP:n kautta"
+
+#. Text describing the valid port range for a port selector.
+msgctxt "wireguard-settings-view"
+msgid "Valid range: %(min)s - %(max)s"
+msgstr "Kelvolliset portit: %(min)s–%(max)s"
+
+#. Text describing the valid port ranges for a port selector.
+#. Available placeholders:
+#. %(portRanges)s - will be replaced with a comma-separated list of port ranges
+msgctxt "wireguard-settings-view"
+msgid "Valid ranges: %(portRanges)s"
+msgstr "Kelvolliset portit: %(portRanges)s"
+
+#. Label for the Multihop mode setting's option to use the multihop
+#. feature when it is needed.
+msgctxt "wireguard-settings-view"
+msgid "When needed"
+msgstr "Tarvittaessa"
+
+msgctxt "wireguard-settings-view"
+msgid "Which TCP port the UDP-over-TCP obfuscation protocol should connect to on the VPN server."
+msgstr "Määrittää, mihin VPN-palvelimen TCP-porttiin \"UDP TCP:n kautta\" -hämäysteknologia-protokollan tulee muodostaa yhteys."
+
+msgid "%1$d out of %2$d"
+msgstr "%1$d/%2$d"
+
+msgid "%1$s Back"
+msgstr "%1$s Takaisin"
+
+msgid "%1$s more..."
+msgstr "%1$s lisää..."
+
+msgid "%1$s was added to \"%2$s\""
+msgstr "%1$s lisättiin luetteloon \"%2$s\""
+
+msgid "%1$s was removed from \"%2$s\""
+msgstr "%1$s poistettiin luettelosta \"%2$s\""
+
+msgid "%1$s, %2$s, %3$s"
+msgstr "%1$s, %2$s, %3$s"
+
+msgid "%s (Entry)"
+msgstr "%s (tulo)"
+
+msgid "%s (Exit)"
+msgstr "%s (lähtö)"
+
+msgid "%s (added)"
+msgstr "%s (lisätty)"
+
+msgid "%s (removed)"
+msgstr "%s (poistettu)"
+
+msgid "%s is already selected as entry relay"
+msgstr "%s on jo valittu tulovälityspalvelimeksi"
+
+msgid "%s is already selected as exit relay"
+msgstr "%s on jo valittu lähtövälityspalvelimeksi"
+
+msgid "%s is unavailable"
+msgstr "%s ei ole käytettävissä"
+
+msgid "%s settings."
+msgstr "%s-asetukset."
+
+msgid "%s was added to your account."
+msgstr "%s lisättiin tilillesi."
+
+msgid "(%d)"
+msgstr "(%d)"
+
+msgid "1. After clicking on the \"Go to VPN settings\" button below, click on the cogwheel next to the \"Mullvad VPN\" name."
+msgstr "1. Napsautettuasi alla olevaa \"Siirry VPN-asetuksiin\" -painiketta napsauta Mullvad VPN:n nimen vierestä löytyvää hammaspyöräkuvaketta."
+
+msgid "2. To enable Auto-connect, click on the toggle next to \"Always-on VPN\"."
+msgstr "2. Ota automaattinen yhteyden muodostus käyttöön napsauttamalla \"Aina päällä oleva VPN\" -kohdan vieressä olevaa valintapainiketta."
+
+msgid "3. To enable Lockdown mode, click on the toggle next to \"Block connections without VPN\".<br /><br /><b>Warning: This setting blocks split apps and the Local Network Sharing feature.</b>"
+msgstr "3. Ota lukitustila käyttöön napsauttamalla kohdan \"Estä yhteydet ilman VPN:ää\" vieressä olevaa kytkintä.<br /><br /><b>Varoitus: Tämä asetus estää jaetut sovellukset ja paikallisen verkon jakamisominaisuuden.</b>"
+
+msgid "30 days was added to your account."
+msgstr "Tilillesi lisättiin 30 päivää käyttöaikaa."
+
+msgid "90 days was added to your account."
+msgstr "Tilillesi lisättiin 90 päivää käyttöaikaa."
+
+msgid "<b>Account recovery will not be possible.</b>"
+msgstr "<b>Tilin palauttaminen ei ole mahdollista.</b>"
+
+msgid "<b>Attention: DNS settings might not go into effect immediately.</b>"
+msgstr "<b>Huomio: uudet DNS-asetukset eivät välttämättä astu voimaan välittömästi.</b>"
+
+msgid "<b>Attention:</b> Local network sharing is not compatible with “Block connections without VPN”."
+msgstr "<b>Huomio:</b> paikallisen verkon jakaminen ei sovi yhteen Estä yhteydet ilman VPN:ää -asetuksen kanssa."
+
+msgid "<b>Attention:</b> Only some servers support the full port range."
+msgstr "<b>Huomio:</b> vain tietyt palvelimet tukevat koko porttiväliä."
+
+msgid "<b>Attention:</b> The app will close automatically and needs to be manually opened again after selecting a new icon and title. This will not impact your VPN connection."
+msgstr "<b>Huomio:</b> Sovellus sulkeutuu automaattisesti uuden kuvakkeen ja otsikon valitsemisen jälkeen, ja se täytyy avata uudelleen manuaalisesti. Tämä ei vaikuta VPN-yhteyteesi."
+
+msgid "<b>DNS content blockers</b>"
+msgstr "<b>DNS-sisällönestotoiminnot</b>"
+
+msgid "<b>Please note that these methods do not improve performance, and may increase system utilization and battery consumption.</b>"
+msgstr "<b>Huomioithan, että nämä tavat eivät paranna suorituskykyä ja voivat lisätä järjestelmän käyttöastetta ja akun käyttöä.</b>"
+
+msgid "<b>Private IP ranges</b>"
+msgstr "<b>Yksityiset IP-alueet</b>"
+
+msgid "<b>This action cannot be undone.</b>"
+msgstr "<b>Tätä toimintoa ei voi kumota.</b>"
+
+msgid "<b>This can impact your anonymity.</b> Avoid enabling this on public or untrusted networks, as your device may become visible to others."
+msgstr "<b>Tämä saattaa vaikuttaa anonymiteettiisi.</b> Vältä asetuksen käyttämistä julkisissa tai epäluotettavissa verkoissa, sillä laitteesi saattaa näkyä muille."
+
+msgid "<b>Warning:</b>"
+msgstr "<b>Varoitus:</b>"
+
+msgid "<b>You will lose access to this account on all devices.</b>"
+msgstr "<b>Menetät pääsyn tälle tilille kaikilla laitteilla.</b>"
+
+msgid "API reachable, adding method..."
+msgstr "API tavoitettavissa, menetelmää lisätään..."
+
+msgid "API unreachable, save method anyway?"
+msgstr "API ei ole tavoitettavissa. Tallennetaanko menetelmä silti?"
+
+msgid "Account credit expires in a few minutes"
+msgstr "Tilin käyttöaika päättyy muutaman minuutin kuluttua"
+
+msgid "Account deleted"
+msgstr "Tili poistettiin"
+
+msgid "Account number must match"
+msgstr "Tilin numeron täytyy täsmätä"
+
+msgid "Account recovery will not be possible."
+msgstr "Tilin palauttaminen ei ole mahdollista."
+
+msgid "Account time reminders"
+msgstr "Muistutukset tilin käyttöajasta"
+
+msgid "Add 30 days time (%s)"
+msgstr "Lisää 30 päivää käyttöaikaa (%s)"
+
+msgid "Add 90 days time (%s)"
+msgstr "Lisää 90 päivää käyttöaikaa (%s)"
+
+msgid "Add DNS server"
+msgstr "Lisää DNS-palvelin"
+
+msgid "Add locations"
+msgstr "Lisää sijainteja"
+
+msgid "Add time"
+msgstr "Lisää käyttöaikaa"
+
+msgid "Add to list"
+msgstr "Lisää luetteloon"
+
+msgid "Adding method..."
+msgstr "Lisätään menetelmää..."
+
+msgid "After updating a VPN app on Android 16, devices might end up in a state where VPN apps are no longer able to reach the internet."
+msgstr "Kun VPN-sovellus päivitetään Android 16:ssa, laitteen saattavat päätyä tilaan, jossa VPN-sovellukset eivät voi enää muodostaa yhteyttä internetiin."
+
+msgid "Agree and continue"
+msgstr "Hyväksy ja jatka"
+
+msgid "All"
+msgstr "Kaikki"
+
+msgid "All applications"
+msgstr "Kaikki sovellukset"
+
+msgid "All overrides will be reset and servers IP addresses, in the Select location view, will go back to default."
+msgstr "Kaikki ohitukset nollataan ja palvelinten IP-osoitteet palautuvat oletusarvoihin sijainnin valintanäkymässä."
+
+msgid "Always-on VPN assigned to %s"
+msgstr "%s on määritetty aina päällä olevan VPN:n asetukseksi"
+
+msgid "Always-on VPN assigned to other VPN"
+msgstr "Aina päällä oleva VPN on määritetty toiselle VPN:lle"
+
+msgid "An entry server is currently selected automatically when needed to ensure a working connection. To manually select an entry server, please switch multihop mode to “Always”."
+msgstr "Toimivan yhteyden varmistamiseksi tulopalvelin valitaan tällä hetkellä automaattisesti ja tarvittaessa. Jos haluat valita tulopalvelimen manuaalisesti, vaihda multihop-tilaksi \"aina\"."
+
+msgid "Android 16 has a known issue. Please restart your device and try again. To learn more,"
+msgstr "Android 16:ssa on tunnettu ongelma. Käynnistä laitteesi uudelleen ja yritä uudelleen. Saat lisätietoja"
+
+msgid "Any remaining time will be null and void."
+msgstr "Jäljellä oleva käyttöaika mitätöityy."
+
+msgid "App icon"
+msgstr "Sovelluksen kuvake"
+
+msgid "Appearance"
+msgstr "Ulkoasu"
+
+msgid "Applying changes..."
+msgstr "Muutoksia otetaan käyttöön..."
+
+msgid "Are you sure you want to log <b>%s</b> out?"
+msgstr "Haluatko varmasti kirjata laitteen <b>%s</b> ulos?"
+
+msgid "At least one method needs to be enabled"
+msgstr "Vähintään yhden menetelmän on oltava käytössä"
+
+msgid "Attention: If \"Block connections without VPN\" is enabled, split apps will not have Internet. Always keep in mind that split tunneling is a privacy risk."
+msgstr "Huomio: Jos \"Estä yhteydet ilman VPN:ää\" -vaihtoehto on käytössä, sovelluskohtaisesti yhdistettävillä sovelluksilla ei ole pääsyä internetiin. Muista aina, että sovelluskohtainen yhdistäminen on tietosuojariski."
+
+msgid "Attention: In this mode, filters are ignored for the additional server."
+msgstr "Huomio: tässä tilassa suodattimia ei huomioida lisäpalvelimelle."
+
+msgid "Attention: This will ignore filter settings for the server that is being used as an entry point."
+msgstr "Huomio: tämä ohittaa suodatinasetukset sisääntuloreittinä käytettävän tulopalvelimen osalta."
+
+msgid "Attention: With the “Automatic” location, filters are ignored for the entry server."
+msgstr "Huomio: kun sijainti on \"automaattinen\", suodattimia ei huomioida tulopalvelimelle."
+
+msgid "Auto-connect & Lockdown mode"
+msgstr "Automaattinen yhdistäminen ja lukitustila"
+
+msgid "Auto-connect is called Always-on VPN in the Android system settings and it makes sure you are constantly connected to the VPN tunnel and auto connects after restart."
+msgstr "Automaattista yhdistämistä kutsutaan aina päällä olevaksi VPN-yhteydeksi Androidin järjestelmäasetuksissa. Se varmistaa, että olet jatkuvasti yhteydessä VPN-tunneliin, sekä muodostaa yhteyden automaattisesti aina uudelleenkäynnistyksen jälkeen."
+
+msgid "Automatic (%s)"
+msgstr "Automaattinen (%s)"
+
+msgid "Automatically connect on device start-up."
+msgstr "Muodosta yhteys automaattisesti, kun laite käynnistetään."
+
+msgid "Blocking internet (device offline)"
+msgstr "Internetyhteys on estetty (laite on offline-tilassa)"
+
+msgid "Blocking..."
+msgstr "Estetään..."
+
+msgid "Browser"
+msgstr "Selain"
+
+msgid "By attaching your account token it links this report to your account, which helps us resolve your issue quicker. All reports are automatically deleted after a period of time."
+msgstr "Tilin tunnisteen liittäminen yhdistää tämän raportin tiliisi, mikä auttaa meitä ratkaisemaan ongelmasi nopeammin. Kaikki raportit poistetaan automaattisesti tietyn ajan kuluttua."
+
+msgid "By checking this box I agree to the risks involved with deleting my account"
+msgstr "Valitsemalla tämän ruudun hyväksyn tilini poistamiseen liittyvät riskit"
+
+msgid "Can’t connect?"
+msgstr "Eikö yhteyden muodostaminen onnistu?"
+
+msgid "Change the title and icon of the Mullvad VPN app on your Android device. This will not change the icon for any Mullvad VPN related notifications."
+msgstr "Vaihda Mullvad VPN -sovelluksen otsikko ja kuvake Android-laitteellasi. Mullvad VPN:ään liittyvien ilmoitusten kuvake ei muutu."
+
+msgid "Change to “When needed”"
+msgstr "Vaihda asetukseksi \"tarvittaessa\""
+
+msgid "Clear input"
+msgstr "Tyhjennä syöte"
+
+msgid "Click here to read more"
+msgstr "Lue lisää napsauttamalla tästä"
+
+msgid "Collapse"
+msgstr "Näytä vähemmän"
+
+msgid "Connect on device start-up"
+msgstr "Luo yhteys, kun laite käynnistyy"
+
+msgid "Connect to a different network"
+msgstr "Muodosta yhteys toiseen verkkoon"
+
+msgid "Connecting..."
+msgstr "Yhdistetään..."
+
+msgid "Contact support"
+msgstr "Ota yhteyttä tukeen"
+
+msgid "Continue"
+msgstr "Jatka"
+
+msgid "Copied Mullvad account number to clipboard"
+msgstr "Mullvad-tilin numero kopioitu leikepöydälle"
+
+msgid "Copied logs to clipboard"
+msgstr "Lokit kopioitu leikepöydälle"
+
+msgid "Copy"
+msgstr "Kopioi"
+
+msgid "Could not display remaining days."
+msgstr "Jäljellä olevia päiviä ei voida näyttää."
+
+msgid "Create new list"
+msgstr "Luo uusi luettelo"
+
+msgid "Critical error (your attention is required)"
+msgstr "Vakava virhe (vaatii huomiotasi)"
+
+msgid "Current: %s"
+msgstr "Nykyinen: %s"
+
+msgid "Custom DNS server addresses %1$s are invalid"
+msgstr "Mukautetut DNS-palvelimen osoitteet %1$s ovat virheellisiä"
+
+msgid "DNS settings"
+msgstr "DNS-asetukset"
+
+msgid "DNS settings might not go into effect immediately."
+msgstr "Uudet DNS-asetukset eivät välttämättä astu voimaan välittömästi."
+
+msgid "Delete \"%s\"?"
+msgstr "Poistetaanko \"%s\"?"
+
+msgid "Delete account"
+msgstr "Poista tili"
+
+msgid "Delete method"
+msgstr "Poista menetelmä"
+
+msgid "Delete method?"
+msgstr "Poista menetelmä?"
+
+msgid "Deleting your account cannot be undone."
+msgstr "Tilisi poistamista ei voi kumota."
+
+msgid "Deleting your account:"
+msgstr "Kun poistat tilisi:"
+
+msgid "Direct"
+msgstr "Suora"
+
+msgid "Disable all \"%s\" above to activate this setting."
+msgstr "Ota tämä asetus käyttöön poistamalla kaikki %s käytöstä yllä."
+
+msgid "Disable multihop"
+msgstr "Poista multihop käytöstä"
+
+msgid "Discard"
+msgstr "Hylkää"
+
+msgid "Discard changes?"
+msgstr "Hylätäänkö muokkaukset?"
+
+msgid "Disconnected (No VPN permission)"
+msgstr "Yhteys katkaistu (ei VPN-käyttöoikeutta)"
+
+msgid "Disconnecting..."
+msgstr "Katkaistaan yhteyttä..."
+
+msgid "Dismiss"
+msgstr "Jätä huomiotta"
+
+msgid "Edit custom lists"
+msgstr "Muokkaa mukautettuja luetteloita"
+
+msgid "Edit list"
+msgstr "Muokkaa luetteloa"
+
+msgid "Edit lists"
+msgstr "Muokkaa luetteloita"
+
+msgid "Edit locations"
+msgstr "Muokkaa sijainteja"
+
+msgid "Enable all & retry"
+msgstr "Ota kaikki käyttöön ja yritä uudelleen"
+
+msgid "Enable all access methods in the app"
+msgstr "Ota kaikki käyttötavat käyttöön sovelluksessa"
+
+msgid "Enable method"
+msgstr "Ota menetelmä käyttöön"
+
+msgid "Enable this for services such as file sharing, printing, media streaming, and device discovery to work while connected to the VPN."
+msgstr "Tätä asetusta käyttämällä palvelut, kuten tiedostojen jakaminen, tulostaminen, median suoratoisto ja laitteiden havaitseminen toimivat, kun olet yhteydessä VPN:ään."
+
+msgid "Enter MTU"
+msgstr "Syötä MTU"
+
+msgid "Enter account number digits"
+msgstr "Anna tilin numero"
+
+msgid "Enter an account number"
+msgstr "Syötä tilin numero"
+
+msgid "Entry filter"
+msgstr "Tulosuodatin"
+
+msgid "Entry relay is the same as exit relay"
+msgstr "Tulovälityspalvelin on sama kuin lähtövälityspalvelin"
+
+msgid "Excluded applications"
+msgstr "Poissuljetut sovellukset"
+
+msgid "Exit filter"
+msgstr "Poistumissuodatin"
+
+msgid "Expand"
+msgstr "Näytä enemmän"
+
+msgid "External link"
+msgstr "Ulkoinen linkki"
+
+msgid "FAILED TO CONNECT"
+msgstr "YHDISTÄMINEN EPÄONNISTUI"
+
+msgid "Failed to apply patch"
+msgstr "Muutostiedoston käyttöönotto ei onnistunut"
+
+msgid "Failed to delete account, please contact support"
+msgstr "Tilin poistaminen epäonnistui. Ota yhteyttä tukeen."
+
+msgid "Failed to load products, please try again"
+msgstr "Tuotteiden lataaminen epäonnistui, yritä uudelleen"
+
+msgid "Failed to set to current - API not reachable"
+msgstr "Nykyisen asetus epäonnistui – APIa ei tavoiteta"
+
+msgid "Failed to set to current - Unknown reason"
+msgstr "Nykyisen asetus epäonnistui – Tuntematon syy"
+
+msgid "File"
+msgstr "Tiedosto"
+
+msgid "Filters are overridden when using an automatic location"
+msgstr "Suodattimet ohitetaan automaattista sijaintia käytettäessä"
+
+msgid "Filters can now be set separately for entry and exit locations."
+msgstr "Suodattimia voi asettaa nyt erikseen tulo- ja poistumissijainneille."
+
+msgid "For details, please see our %s."
+msgstr "Lisätietoja antaa %s."
+
+msgid "For the VPN to connect automatically on device startup, the app must have VPN permissions. You can grant these by clicking “Connect” in the map view and selecting “OK” if prompted. Additionally, ensure the app is installed on the internal storage by checking the storage information in the app details in system settings."
+msgstr "Jotta VPN voi muodostaa yhteyden automaattisesti kun laite käynnistetään, sovelluksella täytyy olla VPN-oikeudet. Voit antaa ne napsauttamalla \"Yhdistä\" karttanäkymässä ja valitsemalla OK kysyttäessä. Varmista lisäksi, että sovellus on asennettu sisäiseen tallennustilaan, tarkistamalla tallennustilatiedot sovelluksen tiedoista järjestelmäasetuksista."
+
+msgid "Generating..."
+msgstr "Luodaan..."
+
+msgid "Go to VPN settings"
+msgstr "Siirry VPN-asetuksiin"
+
+msgid "Going to login will unblock the internet on this device."
+msgstr "Kirjautumiseen siirtyminen purkaa internetin käytön eston tältä laitteelta."
+
+msgid "Google Play payment pending"
+msgstr "Google Play -maksu odottaa"
+
+msgid "Google Play payment pending, this might take some time"
+msgstr "Google Play -maksu odottaa. Tässä voi kestää jonkin aikaa."
+
+msgid "Google Play payment verification failed"
+msgstr "Google Playn maksun vahvistus epäonnistui"
+
+msgid "Google Play unavailable"
+msgstr "Google Play ei ole käytettävissä"
+
+msgid "How it works"
+msgstr "Näin se toimii"
+
+msgid "IPv4 is not available, please try changing \"Device IP version\" setting."
+msgstr "IPv4 ei ole käytettävissä. Kokeile vaihtaa Laitteen IP-versio -asetus."
+
+msgid "IPv6 is not available, please try changing \"Device IP version\" setting."
+msgstr "IPv6 ei ole käytettävissä. Kokeile vaihtaa Laitteen IP-versio -asetus."
+
+msgid "Icon and title"
+msgstr "Kuvake ja otsikko"
+
+msgid "If the icon and title is still not changed after the app has closed, please try restarting the device."
+msgstr "Jos kuvake ja otsikko eivät vaihdu sovelluksen sulkemisen jälkeenkään, kokeile käynnistää laite uudelleen."
+
+msgid "If the split tunneling feature is used, then the app queries your system for a list of all installed applications. This list is only retrieved in the split tunneling view. The list of installed applications is never sent from the device."
+msgstr "Jos käytetään sovelluskohtaista yhdistämistä, sovellus pyytää järjestelmältäsi luettelon kaikista siihen asennetuista sovelluksista. Luettelo noudetaan vain sovelluskohtaisen yhdistämisen näkymässä. Asennettujen sovellusten luetteloa ei koskaan lähetetä laitteelta."
+
+msgid "If these steps don’t work, please send an email to support using the button below. It will automatically attach the logs which have been anonymized."
+msgstr "Jos nämä vaiheet eivät toimi, lähetä sähköpostiviesti tuelle käyttämällä alla olevaa painiketta. Se liittää automaattisesti anonymisoidut lokit."
+
+msgid "If you have any issues"
+msgstr "Jos kohtaat ongelmia"
+
+msgid "If your current location does not support your preferences, such as anti-censorship method, filters, and/or DAITA, multihop will be used automatically to connect to that location via a compatible server. This will be indicated by the %1$s symbol."
+msgstr "Jos nykyinen sijaintisi ei tue asetuksiasi, kuten sensuurin vastaista menetelmää, suodattimia tai DAITAa, multihopia käytetään automaattisesti yhteyden muodostamiseen kyseiseen sijaintiin yhteensopivan palvelimen kautta. Tämä ilmaistaan ​​symbolilla %1$s."
+
+msgid "Import new overrides by"
+msgstr "Uusien ohitusten tuontitapa"
+
+msgid "Import successful, overrides active"
+msgstr "Tuonti onnistui ja ohituksia on käytössä"
+
+msgid "Importing new overrides might replace some previously imported overrides."
+msgstr "Uusien ohitusten tuonti saattaa korvata joitain aiemmin tuotuja ohituksia."
+
+msgid "In-app products unavailable, please make sure you have the latest version of Google Play."
+msgstr "Sovelluksen sisäiset tuotteet eivät ole käytettävissä. Varmista, että sinulla on Google Playn uusin versio."
+
+msgid "Include my account token for faster help with payment or account related issues"
+msgstr "Lisää tilitunnukseni, jotta saan nopeampaa apua maksuihin tai tiliin liittyvissä ongelmissa"
+
+msgid "Info"
+msgstr "Tietoa"
+
+msgid "Internet"
+msgstr "Internet"
+
+msgid "Invalid IP address"
+msgstr "Virheellinen IP-osoite"
+
+msgid "Invalid IPv6 config, please try to change the VPN settings."
+msgstr "Virheellinen IPv6-määritys, kokeile muuttaa VPN-asetuksia."
+
+msgid "Invalid MTU value"
+msgstr "Virheellinen MTU-arvo"
+
+msgid "Invalid or missing value \"%1$s\""
+msgstr "Arvo \"%1$s\" puuttuu tai on virheellinen"
+
+msgid "It does this by performing an extra key exchange using a quantum safe algorithm and mixing the result into WireGuard’s regular encryption. This extra step uses approximately 500 kiB of traffic every time a new tunnel is established."
+msgstr "Tunneli torjuu hyökkäykset suorittamalla ylimääräisen avaimenvaihdon käyttämällä ensin kvanttiturvallista algoritmia, jonka tuloksen se sekoittaa WireGuardin tavalliseen salaukseen. Tämä ylimääräinen vaihe käyttää noin 500 kiB liikennettä joka kerta, kun uusi tunneli luodaan."
+
+msgid "Less than a day left on this account"
+msgstr "Tilin käyttöaikaa on jäljellä alle päivä"
+
+msgid "Lets you select apps that should access the Internet directly without going through the VPN tunnel."
+msgstr "Voit valita sovelluksia, joiden pitäisi muodostaa yhteys Internetiin suoraan kulkematta VPN-tunnelin läpi."
+
+msgid "List name"
+msgstr "Luettelon nimi"
+
+msgid "Loading products"
+msgstr "Ladataan tuotteita"
+
+msgid "Locations"
+msgstr "Sijainnit"
+
+msgid "Locations were changed for \"%s\""
+msgstr "Kohteen \"%s\" sijainteja vaihdettiin"
+
+msgid "Log in"
+msgstr "Kirjaudu sisään"
+
+msgid "Makes sure the device is always on the VPN tunnel."
+msgstr "Varmistaa, että laite on aina yhteydessä VPN-tunnelin kautta."
+
+msgid "Migrated settings"
+msgstr "Siirretyt asetukset"
+
+msgid "More actions"
+msgstr "Lisää toimintoja"
+
+msgid "Mullvad services unavailable"
+msgstr "Mullvad-palvelut eivät ole käytettävissä"
+
+msgid "Multihop entry set to “Automatic”"
+msgstr "Multihop-tuloksi asetettiin \"automaattinen\""
+
+msgid "Multihop is disabled"
+msgstr "Multihop ei ole käytössä"
+
+msgid "Multihop is disabled. Your selected location must support all active settings in order to establish a connection."
+msgstr "Multihop ei ole käytössä. Valitun sijainnin täytyy tukea kaikkia aktiivisia asetuksia, jotta voit muodostaa yhteyden."
+
+msgid "Multihop is enabled"
+msgstr "Multihop on käytössä"
+
+msgid "Multihop is enabled. Your connection is routed through an entry server before exiting through the selected location."
+msgstr "Multihop on käytössä. Yhteytesi ohjataan tulopalvelimen kautta ennen poistumista valitun sijainnin kautta."
+
+msgid "Multihop is now split into three modes: When needed, Always, and Never.\\nThis gives you more flexibility with your connection preferences."
+msgstr "Multihop on nyt jaettu kolmeen tilaan: tarvittaessa, aina ja ei koskaan.\\nTämä tarjoaa enemmän joustavuutta yhteysasetuksiisi."
+
+msgid "Multihop when needed"
+msgstr "Multihop tarvittaessa"
+
+msgid "Name is already taken."
+msgstr "Nimi on jo olemassa."
+
+msgid "Name was changed to %s"
+msgstr "Nimeksi vaihdettiin \"%s\""
+
+msgid "Navigate"
+msgstr "Siirry"
+
+msgid "New multihop modes"
+msgstr "Uudet multihop-tilat"
+
+msgid "Next %1$s"
+msgstr "Seuraava %1$s"
+
+msgid "No Android app store installed, could not open link"
+msgstr "Androidin sovelluskauppaa ei ole asennettu, joten linkin avaaminen ei onnistu"
+
+msgid "No browser app installed, could not open link"
+msgstr "Selainsovellusta ei ole asennettu, joten linkin avaaminen ei onnistu"
+
+msgid "No changelog was added for this version"
+msgstr "Tälle versiolle ei lisätty muutoslokia"
+
+msgid "No custom lists available"
+msgstr "Mukautettuja luetteloita ei löytynyt"
+
+msgid "No email app available on the device"
+msgstr "Laitteella ei ole saatavilla sähköpostisovellusta"
+
+msgid "No entry server match your settings, try changing server or other settings."
+msgstr "Mikään tulopalvelin ei vastaa asetuksiasi. Kokeile vaihtaa palvelinta tai muuttaa muita asetuksia."
+
+msgid "No exit server match your settings, try changing server or other settings."
+msgstr "Mikään poistumispalvelin ei vastaa asetuksiasi. Kokeile vaihtaa palvelinta tai muuttaa muita asetuksia."
+
+msgid "No internet connection"
+msgstr "Ei verkkoyhteyttä"
+
+msgid "No matching servers found."
+msgstr "Vastaavia palvelimia ei löytynyt."
+
+msgid "No result for \"%s\", please try a different search"
+msgstr "Haulle \"%s\" ei löytynyt tuloksia. Kokeile toista hakua."
+
+msgid "Not found"
+msgstr "Ei löydy"
+
+msgid "Notes"
+msgstr "Huomautukset"
+
+msgid "Notification settings"
+msgstr "Ilmoitusasetukset"
+
+msgid "Open app details"
+msgstr "Avaa sovelluksen tiedot"
+
+msgid "Overrides active"
+msgstr "Ohituksia on käytössä"
+
+msgid "Overrides cleared"
+msgstr "Ohitukset on poistettu"
+
+msgid "Overrides inactive"
+msgstr "Ohituksia ei ole käytössä"
+
+msgid "Password (optional)"
+msgstr "Salasana (valinnainen)"
+
+msgid "Paste or write overrides to be imported"
+msgstr "Liitä tai kirjoita ohitukset, jotka haluat tuoda"
+
+msgid "Patch not matching specification"
+msgstr "Muutostiedosto ei vastaa määritelmää"
+
+msgid "Picks a suitable location based on your exit location, this is based on a number of different factors such as distance, provider, and server load."
+msgstr "Valitsee sopivan sijainnin poistumissijaintisi perusteella. Tämä perustuu useisiin eri tekijöihin, kuten etäisyyteen, palveluntarjoajaan ja palvelimen kuormitukseen."
+
+msgid "Please enter a message"
+msgstr "Syötä viesti"
+
+msgid "Please enter a name"
+msgstr "Syötä nimi"
+
+msgid "Please enter a port"
+msgstr "Syötä portti"
+
+msgid "Please enter a valid IPv4 or IPv6 address"
+msgstr "Anna kelvollinen IPv4- tai IPv6-osoite"
+
+msgid "Please enter a valid remote server port"
+msgstr "Anna kelvollinen etäpalvelimen portti"
+
+msgid "Please enter a value"
+msgstr "Syötä arvo"
+
+msgid "Please enter an IP address"
+msgstr "Syötä IP-osoite"
+
+msgid "Please enter an IP override text"
+msgstr "Syötä IP:n korvausteksti"
+
+msgid "Please press connect to request VPN permission"
+msgstr "Pyydä VPN:n käyttölupa yhteydenluontipainiketta painamalla"
+
+msgid "Please remove a device before continuing logging in"
+msgstr "Poista laite ennen kuin jatkat sisäänkirjautumista"
+
+msgid "Please restart your device and try connecting again. If this does not work, please write an email to %s in Swedish or English."
+msgstr "Käynnistä laitteesi uudelleen ja yritä muodostaa yhteys uudelleen. Jos tämä ei toimi, lähetä sähköpostiviesti osoitteeseen %s ruotsiksi tai englanniksi."
+
+msgid "Please try changing your filters."
+msgstr "Kokeile muuttaa suodattimiasi."
+
+msgid "Port is out of range"
+msgstr "Portti on alueen ulkopuolella"
+
+msgid "Prevents the device from contacting certain domains or websites known for distributing ads, malware, trackers and more."
+msgstr "Estää laitetta ottamasta yhteyttä tiettyihin verkkotunnuksiin ja sivustoihin, jotka tunnetaan mainosten, haittaohjelmien, seurantaohjelmien tai muiden vastaavien jakelijoina."
+
+msgid "Privacy"
+msgstr "Tietosuoja"
+
+msgid "Privacy policy"
+msgstr "Tietosuojakäytäntö"
+
+msgid "Read more"
+msgstr "Lue lisää"
+
+msgid "Recents disabled and history cleared"
+msgstr "Viimeisimmät on poistettu käytöstä ja historia on tyhjennetty"
+
+msgid "Recursion limit"
+msgstr "Toistorajoitus"
+
+msgid "Refunds will not be possible."
+msgstr "Hyvitykset eivät ole mahdollisia."
+
+msgid "Remove %s?"
+msgstr "Poistetaanko %s?"
+
+msgid "Remove custom port"
+msgstr "Poista mukautettu portti"
+
+msgid "Reset"
+msgstr "Nollaa"
+
+msgid "Reset all overrides"
+msgstr "Nollaa kaikki ohitukset"
+
+msgid "Reset overrides"
+msgstr "Nollaa ohitukset"
+
+msgid "Reset to default"
+msgstr "Palauta oletusarvo"
+
+msgid "Resolve connection issues"
+msgstr "Ratkaise yhteysongelmat"
+
+msgid "Restart your device"
+msgstr "Käynnistä laitteesi uudelleen"
+
+msgid "Search"
+msgstr "Haku"
+
+msgid "Send email"
+msgstr "Lähetä sähköpostia"
+
+msgid "Separate filters"
+msgstr "Erilliset suodattimet"
+
+msgid "Set WireGuard MTU value. Valid range: %1$d - %2$d."
+msgstr "Aseta WireGuardin MTU-arvo väliltä %1$d–%2$d."
+
+msgid "Set as multihop entry"
+msgstr "Aseta multihopin tulopaikaksi"
+
+msgid "Set as multihop entry (incompatible)"
+msgstr "Aseta multihopin tulopaikaksi (epäyhteensopiva)"
+
+msgid "Set as multihop exit"
+msgstr "Aseta multihopin lähtöpaikaksi"
+
+msgid "Set as multihop exit (incompatible)"
+msgstr "Aseta multihopin lähtöpaikaksi (epäyhteensopiva)"
+
+msgid "Set entry to “Automatic”"
+msgstr "Aseta tulopalvelimeksi \"automaattinen\""
+
+msgid "Set multihop to “Always”"
+msgstr "Aseta multihop-tilaksi \"aina\""
+
+msgid "Set port"
+msgstr "Määritä portti"
+
+msgid "Settings Migrated"
+msgstr "Asetukset siirretty"
+
+msgid "Share…"
+msgstr "Jaa…"
+
+msgid "Show location in notification"
+msgstr "Näytä sijainti ilmoituksessa"
+
+msgid "Show system apps"
+msgstr "Näytä järjestelmäsovellukset"
+
+msgid "Shows current VPN tunnel status"
+msgstr "Näyttää VPN-tunnelin nykyisen tilan"
+
+msgid "Shows reminders when the account time is about to expire"
+msgstr "Näyttää muistutuksia, kun tilin käyttöaika on umpeutumassa"
+
+msgid "Some of your settings have been migrated, please review the changes and resolve any issues."
+msgstr "Jotkin asetuksistasi on siirretty. Tarkista muutokset ja ratkaise ongelmat."
+
+msgid "Some of your settings have been migrated, please review the changes."
+msgstr "Jotkin asetuksistasi on siirretty, tarkista muutokset."
+
+msgid "Something went wrong while verifying your purchase. Please contact support."
+msgstr "Jokin meni vikaan ostostasi vahvistettaessa. Ota yhteyttä tukeen."
+
+msgid "Submit"
+msgstr "Lähetä"
+
+msgid "Suggested action"
+msgstr "Ehdotettu toimi"
+
+msgid "Suggested multihop entry"
+msgstr "Ehdotettu multihopin tulopaikka"
+
+msgid "System network settings"
+msgstr "järjestelmän verkkoasetuksissa"
+
+msgid "TCP"
+msgstr "TCP"
+
+msgid "Test method"
+msgstr "Testaa menetelmä"
+
+msgid "Testing %s..."
+msgstr "Testataan menetelmää %s..."
+
+msgid "Text"
+msgstr "Teksti"
+
+msgid "Thanks for being part of our community.\\nPrivacy is for the people!"
+msgstr "Kiitos, kun olit osa yhteisöämme.\\nYksityisyys on ihmisiä varten!"
+
+msgid "The Auto-connect and Lockdown mode settings can be found in the Android system settings, follow this guide to enable one or both."
+msgstr "Automaattisen yhdistämisen ja lukitustilan asetukset löytyvät Androidin järjestelmäasetuksista. Voit ottaa jommankumman tai molemmat käyttöön tämän oppaan ohjeilla."
+
+msgid "The DAITA sub-setting “Direct only” has been removed and simplified to avoid blocking connections. Instead, with DAITA enabled, you make this option with the multihop setting."
+msgstr "DAITAn aliasetus \"vain suora\" on poistettu käytöstä, ja sitä on yksinkertaistettu yhteyksien estämisen välttämiseksi. Kun DAITA on käytössä, tämä valinta tehdään sen sijaan multihop-asetuksella."
+
+msgid "The IPv6 DNS server will not work unless you enable \"IPv6\" under VPN settings."
+msgstr "IPv6-DNS-palvelin ei toimi, ellet ota IPv6:ta käyttöön VPN-asetuksista."
+
+msgid "The Lockdown mode is called \"Block connections without VPN\" in the Android system settings. It helps minimize leaks, however it has some known limitations which you can read more about"
+msgstr "Lukitustila löytyy Android-järjestelmäasetuksista nimellä \"Estä yhteydet ilman VPN:ää\". Lukitustila auttaa minimoimaan vuodot, mutta siihen liittyy myös muutamia tunnettuja rajoituksia. Voit lukea niistä lisää"
+
+msgid "The \"Current\" method represent which method the app is using to reach the API."
+msgstr "\"Nykyinen\" menetelmä edustaa sitä, mitä menetelmää sovellus käyttää APIn tavoittamiseen."
+
+msgid "The app allows local multicast and broadcast network traffic, as well as traffic to and from private IP ranges, to bypass the VPN tunnel."
+msgstr "Sovellus sallii VPN-tunnelin ohittamisen paikalliselle lähetys- ja monilähetysverkkoliikenteelle sekä liikenteelle yksityisille IP-alueille ja yksityisiltä IP-alueilta."
+
+msgid "The app is blocking internet, please disconnect first"
+msgstr "Sovellus estää internetyhteyden, katkaise sen yhteys ensin"
+
+msgid "The app was unable to create an account due to not being able to reach the Mullvad API."
+msgstr "Sovellus ei voinut luoda tiliä, koska se ei saanut yhteyttä Mullvad API:hin."
+
+msgid "The app was unable to login due to not being able to reach the Mullvad API."
+msgstr "Sovellus ei voinut kirjautua, koska se ei saanut yhteyttä Mullvad API:hin."
+
+msgid "The local DNS server will not work unless you enable \"Local Network Sharing\" under VPN settings."
+msgstr "Paikallinen DNS-palvelin ei toimi, ellet ota paikallisen verkon jakamista käyttöön VPN-asetuksista."
+
+msgid "The multihop mode “Always” now features an “Automatic” location for the entry server selection."
+msgstr "Multihop-tilassa asetus \"aina\" käsittää nyt \"automaattisen\" sijainnin tulopalvelimen valintana."
+
+msgid "The selected %s port is not supported, please change it under"
+msgstr "Valittua %s-porttia ei tueta. Vaihda portti"
+
+msgid "These methods may be useful in situations where you are blocked from reaching Mullvad. When “Automatic” is selected, the app will attempt all methods until one works."
+msgstr "Nämä tavat voivat olla hyödyllisiä tilanteissa, joissa sinua on estetty pääsemästä Mullvadiin. Kun \"automaattinen\" valitaan, sovellus kokeilee kaikkia tapoja, kunnes jokin niistä toimii."
+
+msgid "This address has already been entered."
+msgstr "Tämä osoite on annettu jo."
+
+msgid "This field is required"
+msgstr "Tämä kenttä on pakollinen"
+
+msgid "This impacts your anonymity"
+msgstr "Tämä vaikuttaa anonymiteettiisi"
+
+msgid "This is already set as current"
+msgstr "Tämä on jo asetettu nykyiseksi"
+
+msgid "This might be due to censorship or network issues. Please try to:"
+msgstr "Tämä voi johtua sensuurista tai verkko-ongelmista. Kokeile seuraavia:"
+
+msgid "This mode allows the app to automatically multihop through an additional server if needed to ensure your current settings work with your selected location."
+msgstr "Tämä tila sallii sovellukselle multihopin toteuttamisen automaattisesti lisäpalvelimen kautta tarvittaessa, jotta nykyiset asetuksesi toimisivat valitun sijainnin kanssa."
+
+msgid "Time added"
+msgstr "Käyttöaikaa lisätty"
+
+msgid "To add locations to a list, press the pen or long press on a country, city, or server."
+msgstr "Jos haluat lisätä luetteloon sijainteja, paina kynää tai paina pitkään maata, kaupunkia tai palvelinta."
+
+msgid "To avoid getting blocked, we recommend that you set your multihop mode to “When needed”."
+msgstr "Suosittelemme asettamaan multihop-tilaksi \"tarvittaessa\", jottei yhteyttäsi estettäisi."
+
+msgid "To avoid having to change the entry server manually, we recommend you set the multihop entry server to “Automatic”."
+msgstr "Suosittelemme asettamaan multihop-tulopalvelimeksi \"automaattinen\", jottei sinun tarvitse vaihtaa tulopalvelinta manuaalisesti."
+
+msgid "To create a custom list press the \"+\""
+msgstr "Voit luoda mukautetun luettelon painamalla \"+\""
+
+msgid "To delete your Mullvad VPN account, please enter your account number below."
+msgstr "Poista Mullvad VPN -tilisi antamalla tilinumerosi alla."
+
+msgid "To ensure your current settings work with your selected location, and to avoid blocking your connection, the app might automatically multihop via a different entry server.\\nThis will be indicated by the %1$s symbol."
+msgstr "Jotta nykyiset asetuksesi toimisivat valitun sijainnin kanssa eikä yhteyttä estettäisi, sovellus saattaa käyttää multihopia automaattisesti eri tulopalvelimen kautta.\\nTämä ilmaistaan ​​symbolilla %1$s."
+
+msgid "To make sure that you have the most secure version and to inform you of any issues with the current version that is running, the app performs version checks automatically. This sends the app version and Android system version to Mullvad servers. Mullvad keeps counters on number of used app versions and Android versions. The data is never stored or used in any way that can identify you."
+msgstr "Sovellus suorittaa versiotarkistuksia automaattisesti varmistaakseen, että käytät kaikkein turvallisinta versiota, ja ilmoittaakseen sinulle kaikista parhaillaan käynnissä olevan version ongelmista. Se lähettää Mullvadin palvelimille tiedot sovellusversiosta ja Android-järjestelmäversiosta. Mullvad pitää lukua käytettyjen sovellusversioiden ja Android-versioiden määristä. Tietoja ei koskaan tallenneta tai käytetä tavalla, joka voisi mahdollistaa tunnistamisesi."
+
+msgid "Toggle VPN"
+msgstr "Vaihda VPN:ää"
+
+msgid "Too many attempts, please try again later"
+msgstr "Liian monta yritystä. Yritä myöhemmin uudelleen."
+
+msgid "Turn off Private DNS in %s as it might interfere with Mullvad’s DNS settings."
+msgstr "Poista yksityinen DNS käytöstä %s, sillä se saattaa häiritä Mullvadin DNS-asetuksia."
+
+msgid "UDP"
+msgstr "UDP"
+
+msgid "Unable to apply firewall rules. Please troubleshoot or send a problem report."
+msgstr "Palomuurisääntöjä ei voida käyttää. Suorita vianetsintä tai lähetä ongelmaraportti."
+
+msgid "Unable to open the VPN permission dialog, please check your OS configuration"
+msgstr "VPN-käyttöoikeusvalintaikkunan avaaminen ei onnistu, tarkista käyttöjärjestelmäsi määritys"
+
+msgid "Unable to parse patch"
+msgstr "Muutostiedoston jäsentäminen ei onnistu"
+
+msgid "Unable to reach API"
+msgstr "Yhteyden muodostaminen API:hin ei onnistu"
+
+msgid "Unable to reach API, %s"
+msgstr "Yhteyden muodostaminen API:hin ei onnistu. %s."
+
+msgid "Unable to start tunnel connection. Please disable Always-on VPN before using Mullvad VPN."
+msgstr "Tunneliyhteyden käynnistäminen ei onnistu. Poista aina päällä oleva VPN käytöstä ennen Mullvad VPN:n käyttämistä."
+
+msgid "Unable to start tunnel connection. Please disable Always-on VPN for <b>%s</b> before using Mullvad VPN."
+msgstr "Tunneliyhteyden käynnistäminen ei onnistu. Poista aina päällä oleva VPN käytöstä sovellukselle <b>%s</b> ennen Mullvad VPN:n käyttämistä."
+
+msgid "Unable to verify account number, please contact support"
+msgstr "Tilin numeron vahvistaminen ei onnistu. Ota yhteyttä tukeen."
+
+msgid "Unable to verify purchase"
+msgstr "Oston vahvistaminen ei onnistunut"
+
+msgid "Unavailable"
+msgstr "Ei saatavilla"
+
+msgid "Undo"
+msgstr "Kumoa"
+
+msgid "Unknown or prohibited key \"%1$s\""
+msgstr "Tuntematon tai kielletty avain \"%1$s\""
+
+msgid "Update DNS server"
+msgstr "Päivitä DNS-palvelin"
+
+msgid "Update list name"
+msgstr "Päivitä luettelon nimi"
+
+msgid "Update server list"
+msgstr "Päivitä palvelinluettelo"
+
+msgid "Updating server list in the background..."
+msgstr "Palvelinluetteloa päivitetään taustalla..."
+
+msgid "Use method"
+msgstr "Käytä menetelmä"
+
+msgid "VPN Settings not available on device"
+msgstr "VPN-asetukset eivät olet käytettävissä laitteella"
+
+msgid "VPN permission error"
+msgstr "VPN-lupavirhe"
+
+msgid "VPN permission was denied"
+msgstr "VPN:n käyttöoikeus evättiin"
+
+msgid "VPN permission was denied or another app has \"Always-on VPN\" enabled"
+msgstr "VPN:n käyttöoikeus evättiin tai toisella sovelluksella on aina päällä oleva VPN käytössä"
+
+msgid "VPN tunnel status"
+msgstr "VPN-tunnelin tila"
+
+msgid "Valid range for all servers: %s"
+msgstr "Kelvollinen väli kaikille palvelimille: %s"
+
+msgid "Value: %s"
+msgstr "Arvo: %s"
+
+msgid "Verifying API method..."
+msgstr "Vahvistetaan API-menetelmää..."
+
+msgid "Verifying purchase"
+msgstr "Ostoksen vahvistaminen"
+
+msgid "Verifying purchase..."
+msgstr "Ostosta vahvistetaan..."
+
+msgid "Verifying voucher…"
+msgstr "Kuponkia vahvistetaan…"
+
+msgid "Voucher code is too short"
+msgstr "Kuponkikoodi on liian lyhyt"
+
+msgid "Warning"
+msgstr "Varoitus"
+
+msgid "We are still verifying your purchase, this might take some time. Your time will be added if the verification is successful."
+msgstr "Vahvistamme vielä ostostasi. Siinä saattaa vierähtää jonkin aikaa. Tilillesi lisätään käyttöaikaa, kunhan ostoksen vahvistus onnistuu."
+
+msgid "We couldn’t verify your latest purchase. Please check your internet connection and try again. If the issue persists, please contact support."
+msgstr "Viimeisimmän ostosi vahvistaminen ei onnistunut. Tarkista internetyhteytesi ja yritä uudelleen. Jos ongelma jatkuu, ota yhteyttä tukeen."
+
+msgid "We couldn’t verify your purchase. Please check your internet connection and try again."
+msgstr "Ostosi vahvistaminen ei onnistunut. Tarkista internetyhteytesi ja yritä uudelleen."
+
+msgid "We were unable to start the payment process, please make sure you have the latest version of Google Play."
+msgstr "Emme pystyneet aloittamaan maksun käsittelyä. Varmista, että käytät Google Playn uusinta versiota."
+
+msgid "We were unable to start the payment process, please try again later."
+msgstr "Emme pystyneet aloittamaan maksun käsittelyä. Yritä myöhemmin uudelleen."
+
+msgid "Weather"
+msgstr "Sää"
+
+msgid "Welcome, this device is now called <b>%s</b>."
+msgstr "Tervetuloa! Tämän laitteen nimi on nyt <b>%s</b>."
+
+msgid "When multihop is set to “Always” or “Never” you must manually select a DAITA server."
+msgstr "Kun multihop-asetuksena on \"aina\" tai \"ei koskaan\", DAITA-palvelin on valittava manuaalisesti."
+
+msgid "When multihop is set to “When needed” the app might use an additional server to make sure you connect to your selected location using DAITA."
+msgstr "Kun multihop-asetuksena on \"tarvittaessa\", sovellus voi käyttää lisäpalvelinta varmistaakseen, että muodostat yhteyden valittuun sijaintiin DAITAa käyttämällä."
+
+msgid "When selected, the app automatically picks a random server, prioritizing those closer to the exit location for better performance."
+msgstr "Kun tämä valitaan, sovellus valitsee automaattisesti satunnaisen palvelimen priorisoiden poistumissijaintia lähimpänä olevat palvelimet suorituskyvyn parantamiseksi."
+
+msgid "WireGuard port"
+msgstr "WireGuard-portti"
+
+msgid "Yes, log out device"
+msgstr "Kyllä, kirjaa laite ulos"
+
+msgid "You are about to delete your Mullvad VPN account."
+msgstr "Olet poistamassa Mullvad VPN -tiliäsi."
+
+msgid "You can add more time via the account view or website to continue using the VPN."
+msgstr "Voit lisätä aikaa tilinäkymän tai verkkosivuston kautta, jotta voit jatkaa VPN:n käyttöä."
+
+msgid "You can add more time via the account view to continue using the VPN."
+msgstr "Voit jatkaa VPN:n käyttöä lisäämällä aikaa tilinäkymän kautta."
+
+msgid "You can either use our built-in content blockers or use a custom DNS server. This might cause issues on certain websites, services, and apps."
+msgstr "Voit käyttää sisäänrakennettuja sisällönestotoimintojamme tai mukautettua DNS-palvelinta. Tämä saattaa aiheuttaa ongelmia tietyillä verkkosivustoilla sekä tietyissä palveluissa ja sovelluksissa."
+
+msgid "You will lose access to this account on all devices."
+msgstr "Menetät pääsyn tälle tilille kaikilla laitteilla."
+
+msgid "You will lose your remaining"
+msgstr "Menetät jäljellä olevat"
+
+msgid "Your current filters were applied to both entry and exit locations."
+msgstr "Nykyiset suodattimet otettiin käyttöön sekä tulo- että poistumissijainneille."
+
+msgid "Your device"
+msgstr "Laitteesi"
+
+msgid "Your device (%s)"
+msgstr "Laitteesi (%s)"
+
+msgid "Your latest purchase is still being verified. Logging in to another account will cause the verification to fail. Do you still want to log out?"
+msgstr "Viimeisintä ostostasi vahvistetaan edelleen. Kirjautuminen toiselle tilille johtaa vahvistuksen epäonnistumiseen. Haluatko silti kirjautua ulos?"
+
+msgid "Your multihop setting was migrated from “Off” to “Always”"
+msgstr "Multihop-asetuksesi siirrettiin \"pois päältä\" -tilasta \"aina\"-tilaan"
+
+msgid "Your multihop setting was migrated from “Off” to “Never”"
+msgstr "Multihop-asetuksesi siirrettiin \"pois päältä\" -tilasta \"ei koskaan\" -tilaan"
+
+msgid "Your multihop setting was migrated from “Off” to “When needed”"
+msgstr "Multihop-asetuksesi siirrettiin \"pois päältä\" -tilasta \"tarvittaessa\"-tilaan"
+
+msgid "Your multihop setting was migrated from “On” to “Always”"
+msgstr "Multihop-asetuksesi siirrettiin \"päällä\" -tilasta \"aina\"-tilaan"
+
+msgid "\"%s\" was created"
+msgstr "\"%s\" luotiin"
+
+msgid "\"%s\" was deleted"
+msgstr "\"%s\" poistettiin"
+
+msgid "click here"
+msgstr "painamalla tästä"
+
+msgid "here"
+msgstr "täältä"
+
+msgid "less than one day"
+msgstr "alle vuorokausi"
+
+msgid "privacy policy"
+msgstr "tietosuojakäytäntö"
+
+msgid "read more here"
+msgstr "lue lisää täällä"
+
+msgid "via %1$s, %2$s"
+msgstr "kauttakulku: %1$s, %2$s"
+
+msgid "“Direct Only” removed"
+msgstr "\"Vain suora\" poistettu"
+
+msgid "%d day"
+msgid_plural "%d days"
+msgstr[0] "%d päivä"
+msgstr[1] "%d päivää"
+
+msgid "%d location"
+msgid_plural "%d locations"
+msgstr[0] "%d sijainti"
+msgstr[1] "%d sijaintia"
+
+msgid "%d month"
+msgid_plural "%d months"
+msgstr[0] "%d kuukausi"
+msgstr[1] "%d kuukautta"
+
+msgid "1 day left on this account"
+msgid_plural "%d days left on this account"
+msgstr[0] "1 päivä jäljellä tällä tilillä"
+msgstr[1] "%d päivää jäljellä tällä tilillä"
+
+msgid "1 year left on this account"
+msgid_plural "%d years left on this account"
+msgstr[0] "1 vuosi jäljellä tällä tilillä"
+msgstr[1] "%d vuotta jäljellä tällä tilillä"
+
+msgid "Account credit expires in a day"
+msgid_plural "Account credit expires in %d days"
+msgstr[0] "Tilin käyttöaika päättyy vuorokauden kuluttua"
+msgstr[1] "Tilin käyttöaika päättyy %d vuorokauden kuluttua"
+
+msgid "Account credit expires in an hour"
+msgid_plural "Account credit expires in %d hours"
+msgstr[0] "Tilin käyttöaika päättyy tunnin kuluttua"
+msgstr[1] "Tilin käyttöaika päättyy %d tunnin kuluttua"
+
+msgid "You will lose your remaining day."
+msgid_plural "You will lose your remaining %d days."
+msgstr[0] "Menetät jäljellä olevan päivän."
+msgstr[1] "Menetät jäljellä olevat %d päivää."
+

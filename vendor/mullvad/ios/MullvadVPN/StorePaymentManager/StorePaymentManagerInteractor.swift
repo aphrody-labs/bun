@@ -1,0 +1,79 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import MullvadREST
+import MullvadSettings
+import MullvadTypes
+
+final actor StorePaymentManagerInteractor {
+    private let tunnelManager: TunnelManager
+    private(set) var apiProxy: APIQuerying
+    private(set) var accountProxy: RESTAccountHandling
+
+    var accountNumber: String? {
+        tunnelManager.deviceState.accountData?.number
+    }
+
+    init(tunnelManager: TunnelManager, apiProxy: APIQuerying, accountProxy: RESTAccountHandling) {
+        self.tunnelManager = tunnelManager
+        self.apiProxy = apiProxy
+        self.accountProxy = accountProxy
+    }
+
+    // MARK: Tunnel manager
+
+    func updateAccountData(for account: Account) {
+        guard case .loggedIn(var storedAccountData, let deviceData) = tunnelManager.deviceState else {
+            return
+        }
+
+        storedAccountData.expiry = account.expiry
+        let newDeviceState = DeviceState.loggedIn(storedAccountData, deviceData)
+
+        tunnelManager.setDeviceState(newDeviceState, persist: true)
+    }
+
+    // MARK: API proxy
+
+    func initPayment() async -> Result<UUID, Error> {
+        guard let accountNumber = accountNumber else {
+            return .failure(NSError(domain: "User is not logged in", code: 0))
+        }
+
+        return await withCheckedContinuation { continuation in
+            _ = apiProxy.initStoreKitPayment(
+                accountNumber: accountNumber,
+                retryStrategy: .noRetry,
+            ) { result in
+                continuation.resume(returning: result)
+            }
+        }
+    }
+
+    func checkPayment(jwsRepresentation: String) async -> Result<Void, Error> {
+        await withCheckedContinuation { continuation in
+            _ = apiProxy.checkStoreKitPayment(
+                transaction: StoreKitTransaction(transaction: jwsRepresentation),
+                retryStrategy: .purchaseReceiptUpload,
+            ) { result in
+                continuation.resume(returning: result)
+            }
+        }
+    }
+
+    // MARK: Account proxy
+
+    func getAccountData(accountNumber: String) async -> Result<Account, Error> {
+        await accountProxy.getAccountData(
+            accountNumber: accountNumber,
+            retryStrategy: .default
+        )
+    }
+}

@@ -1,0 +1,272 @@
+use anyhow::Result;
+use clap::Parser;
+#[cfg(all(unix, not(target_os = "android")))]
+use clap::ValueEnum;
+
+mod cmds;
+mod format;
+use cmds::*;
+
+use crate::cmds::{reset::SettingsKey, split_tunnel::shared::SplitTunnel};
+
+pub const BIN_NAME: &str = env!("CARGO_BIN_NAME");
+
+/// Shell with auto-generated completion script available.
+///
+/// NOTE: this enum as a copy of [`clap_complete::Shell`],
+/// with Nushell added.
+#[cfg(all(unix, not(target_os = "android")))]
+#[derive(Clone, ValueEnum, Debug)]
+enum CompletionShell {
+    /// Bourne Again `SHell` (bash)
+    Bash,
+    /// Elvish shell
+    Elvish,
+    /// Friendly Interactive `SHell` (fish)
+    Fish,
+    /// `PowerShell`
+    #[value(name = "powershell")]
+    PowerShell,
+    /// Z `SHell` (zsh)
+    Zsh,
+    /// Nushell
+    Nushell,
+}
+
+#[cfg(all(unix, not(target_os = "android")))]
+impl CompletionShell {
+    fn generate_to(self, dir: &std::path::Path) -> std::io::Result<std::path::PathBuf> {
+        use clap::CommandFactory;
+        use clap_complete::Shell;
+
+        let mut command = Cli::command();
+        match self {
+            Self::Bash => clap_complete::generate_to(Shell::Bash, &mut command, BIN_NAME, dir),
+            Self::Elvish => clap_complete::generate_to(Shell::Elvish, &mut command, BIN_NAME, dir),
+            Self::Fish => clap_complete::generate_to(Shell::Fish, &mut command, BIN_NAME, dir),
+            Self::Nushell => clap_complete::generate_to(
+                clap_complete_nushell::Nushell,
+                &mut command,
+                BIN_NAME,
+                dir,
+            ),
+            Self::PowerShell => {
+                clap_complete::generate_to(Shell::PowerShell, &mut command, BIN_NAME, dir)
+            }
+            Self::Zsh => clap_complete::generate_to(Shell::Zsh, &mut command, BIN_NAME, dir),
+        }
+    }
+}
+
+#[derive(Debug, Parser)]
+#[command(version = mullvad_version::VERSION, about, long_about = None)]
+#[command(propagate_version = true)]
+enum Cli {
+    /// Control and display information about your Mullvad account
+    #[clap(subcommand)]
+    Account(account::Account),
+
+    /// Control the daemon auto-connect setting
+    #[clap(subcommand)]
+    AutoConnect(auto_connect::AutoConnect),
+
+    /// Receive notifications about beta updates
+    #[clap(subcommand)]
+    BetaProgram(beta_program::BetaProgram),
+
+    /// Control whether to block network access when disconnected from VPN
+    #[clap(subcommand)]
+    LockdownMode(lockdown::LockdownMode),
+
+    /// Debug commands used for internal testing of the app.
+    ///
+    /// These commands will likely set the app in an invalid state, which is
+    /// used to test security under various edge cases.
+    #[clap(subcommand, hide = true)]
+    Debug(debug::DebugCommands),
+
+    /// Configure DNS servers to use when connected
+    #[clap(subcommand)]
+    Dns(dns::Dns),
+
+    /// Control the allow local network sharing setting
+    #[clap(subcommand)]
+    Lan(lan::Lan),
+
+    /// Connect to a VPN relay
+    Connect {
+        /// Wait until connected before exiting
+        #[arg(long, short = 'w')]
+        wait: bool,
+    },
+
+    /// Disconnect from the VPN
+    Disconnect {
+        /// Wait until disconnected before exiting
+        #[arg(long, short = 'w')]
+        wait: bool,
+    },
+
+    /// Reconnect to any matching VPN relay
+    Reconnect {
+        /// Wait until connected before exiting
+        #[arg(long, short = 'w')]
+        wait: bool,
+    },
+
+    /// Manage relay and tunnel constraints
+    #[clap(subcommand)]
+    Relay(relay::Relay),
+    /// Manage Mullvad API access methods.
+    ///
+    /// Access methods are used to connect to the Mullvad API via one of
+    /// Mullvad's bridge servers or a custom proxy (SOCKS5 & Shadowsocks) when
+    /// and where establishing a direct connection does not work.
+    ///
+    /// If the Mullvad daemon is unable to connect to the Mullvad API, it will
+    /// automatically try to use any other configured access method and re-try
+    /// the API call. If it succeeds, all subsequent API calls are made using
+    /// the new access method. Otherwise it will re-try using yet another access
+    /// method.
+    ///
+    /// The Mullvad API is used for logging in, accessing the relay list,
+    /// rotating Wireguard keys and more.
+    #[clap(subcommand)]
+    ApiAccess(api_access::ApiAccess),
+
+    /// Manage use of anti censorship methods for WireGuard.
+    /// Can make WireGuard traffic look like something else on the network.
+    /// Helps circumvent censorship and to establish a tunnel when on restricted networks
+    #[clap(subcommand)]
+    AntiCensorship(anti_censorship::AntiCensorship),
+
+    #[clap(subcommand)]
+    SplitTunnel(SplitTunnel),
+
+    /// Return the state of the VPN tunnel
+    Status {
+        #[clap(subcommand)]
+        cmd: Option<status::Status>,
+
+        #[clap(flatten)]
+        args: status::StatusArgs,
+    },
+
+    /// Manage tunnel options
+    #[clap(subcommand)]
+    Tunnel(tunnel::Tunnel),
+
+    /// Show information about the current Mullvad version
+    /// and available versions
+    Version,
+
+    /// Generate completion scripts for the specified shell
+    #[cfg(all(unix, not(target_os = "android")))]
+    #[command(hide = true)]
+    ShellCompletions {
+        /// The shell to generate the script for
+        shell: CompletionShell,
+
+        /// Output directory where the shell completions are written
+        #[arg(default_value = "./")]
+        dir: std::path::PathBuf,
+    },
+
+    /// Reset settings, caches, and logs
+    FactoryReset {
+        #[clap(long, short = 'y', default_value_t = false)]
+        assume_yes: bool,
+    },
+
+    /// Reset settings only, but remain logged in and keep logs and caches
+    ResetSettings {
+        #[clap(long, short = 'y', default_value_t = false)]
+        assume_yes: bool,
+
+        #[arg(long, short = 'p', num_args = 0..)]
+        preserve: Vec<SettingsKey>,
+    },
+
+    /// Manage custom lists
+    #[clap(subcommand)]
+    CustomList(custom_list::CustomList),
+
+    /// Apply a JSON patch generated by 'export-settings'
+    #[clap(arg_required_else_help = true)]
+    ImportSettings {
+        /// File to read from. If this is "-", read from standard input
+        file: String,
+    },
+
+    /// Export a JSON patch based on the current settings
+    #[clap(arg_required_else_help = true)]
+    ExportSettings {
+        /// File to write to. If this is "-", write to standard output
+        file: String,
+    },
+
+    /// Manage logs and tracing
+    #[clap(subcommand)]
+    Log(log::Log),
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // Handle SIGPIPE
+    // https://stackoverflow.com/questions/65755853/simple-word-count-rust-program-outputs-valid-stdout-but-panicks-when-piped-to-he/65760807
+    // https://github.com/typst/typst/pull/5444
+    #[cfg(unix)]
+    handle_sigpipe().unwrap();
+
+    match Cli::parse() {
+        Cli::Account(cmd) => cmd.handle().await,
+        Cli::Connect { wait } => tunnel_state::connect(wait).await,
+        Cli::Reconnect { wait } => tunnel_state::reconnect(wait).await,
+        Cli::Debug(cmd) => cmd.handle().await,
+        Cli::Disconnect { wait } => tunnel_state::disconnect(wait).await,
+        Cli::AutoConnect(cmd) => cmd.handle().await,
+        Cli::BetaProgram(cmd) => cmd.handle().await,
+        Cli::LockdownMode(cmd) => cmd.handle().await,
+        Cli::Dns(cmd) => cmd.handle().await,
+        Cli::Lan(cmd) => cmd.handle().await,
+        Cli::AntiCensorship(cmd) => cmd.handle().await,
+        Cli::ApiAccess(cmd) => cmd.handle().await,
+        Cli::Version => version::print().await,
+        Cli::FactoryReset { assume_yes } => reset::handle_factory_reset(assume_yes).await,
+        Cli::ResetSettings {
+            assume_yes,
+            preserve,
+        } => reset::handle_settings_reset(assume_yes, preserve).await,
+        Cli::Relay(cmd) => cmd.handle().await,
+        Cli::Tunnel(cmd) => cmd.handle().await,
+        Cli::SplitTunnel(cmd) => cmd.handle().await,
+        Cli::Status { cmd, args } => status::handle(cmd, args).await,
+        Cli::CustomList(cmd) => cmd.handle().await,
+        Cli::ImportSettings { file } => patch::import(file).await,
+        Cli::ExportSettings { file } => patch::export(file).await,
+        Cli::Log(cmd) => cmd.handle().await,
+
+        #[cfg(all(unix, not(target_os = "android")))]
+        Cli::ShellCompletions { shell, dir } => {
+            use anyhow::Context;
+            // FIXME: The shell completions include hidden commands (including "shell-completions")
+            println!("Generating shell completions to {}", dir.display());
+            shell
+                .generate_to(&dir)
+                .context("Failed to generate shell completions")?;
+            Ok(())
+        }
+    }
+}
+
+/// Install the default signal handler for `SIGPIPE`.
+///
+/// By default, Rust replaces it with an empty handler because reasons: <https://github.com/rust-lang/rust/issues/119980>
+#[cfg(unix)]
+fn handle_sigpipe() -> Result<(), nix::errno::Errno> {
+    use nix::sys::signal::{SigHandler, Signal, signal};
+    // SAFETY: We do not use the previous signal handler, which could cause UB if done carelessly:
+    // https://pubs.opengroup.org/onlinepubs/9699919799/functions/signal.html
+    unsafe { signal(Signal::SIGPIPE, SigHandler::SigDfl) }?;
+    Ok(())
+}

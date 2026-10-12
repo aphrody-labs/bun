@@ -1,0 +1,274 @@
+package net.mullvad.mullvadvpn.feature.home.impl.outoftime
+
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.dropUnlessResumed
+import net.mullvad.mullvadvpn.core.Navigator
+import net.mullvad.mullvadvpn.feature.account.api.AccountNavKey
+import net.mullvad.mullvadvpn.feature.addtime.api.AddTimeNavKey
+import net.mullvad.mullvadvpn.feature.addtime.api.VerificationPendingNavKey
+import net.mullvad.mullvadvpn.feature.home.api.ConnectNavKey
+import net.mullvad.mullvadvpn.feature.home.api.DeviceRevokedNavKey
+import net.mullvad.mullvadvpn.feature.settings.api.SettingsNavKey
+import net.mullvad.mullvadvpn.lib.common.Lc
+import net.mullvad.mullvadvpn.lib.common.compose.CollectSideEffectWithLifecycle
+import net.mullvad.mullvadvpn.lib.common.compose.createOpenAccountPageHook
+import net.mullvad.mullvadvpn.lib.common.compose.dropUnlessResumed
+import net.mullvad.mullvadvpn.lib.common.compose.showSnackbarImmediately
+import net.mullvad.mullvadvpn.lib.payment.model.PaymentStatus
+import net.mullvad.mullvadvpn.lib.ui.component.ScaffoldWithTopBarAndDeviceName
+import net.mullvad.mullvadvpn.lib.ui.component.drawVerticalScrollbar
+import net.mullvad.mullvadvpn.lib.ui.designsystem.MullvadCircularProgressIndicatorLarge
+import net.mullvad.mullvadvpn.lib.ui.designsystem.NegativeButton
+import net.mullvad.mullvadvpn.lib.ui.designsystem.VariantButton
+import net.mullvad.mullvadvpn.lib.ui.resource.R
+import net.mullvad.mullvadvpn.lib.ui.tag.OUT_OF_TIME_SCREEN_TITLE_TEST_TAG
+import net.mullvad.mullvadvpn.lib.ui.tag.PLAY_PAYMENT_INFO_ICON_TEST_TAG
+import net.mullvad.mullvadvpn.lib.ui.theme.AppTheme
+import net.mullvad.mullvadvpn.lib.ui.theme.Dimens
+import net.mullvad.mullvadvpn.lib.ui.theme.color.AlphaScrollbar
+import net.mullvad.mullvadvpn.lib.ui.theme.color.positive
+import org.koin.androidx.compose.koinViewModel
+import org.koin.core.parameter.parametersOf
+
+@Preview("Disconnected|Connecting|Error|Loading")
+@Composable
+private fun PreviewOutOfTimeScreen(
+    @PreviewParameter(OutOfTimeScreenPreviewParameterProvider::class)
+    state: Lc<Unit, OutOfTimeUiState>
+) {
+    AppTheme {
+        OutOfTimeScreen(
+            state = state,
+            snackbarHostState = SnackbarHostState(),
+            onDisconnectClick = {},
+            onSettingsClick = {},
+            onAccountClick = {},
+            onAddMoreTimeClick = {},
+            onPlayPaymentInfoClick = {},
+        )
+    }
+}
+
+@Composable
+fun OutOfTime(navigator: Navigator) {
+    val activity = LocalActivity.current as ComponentActivity
+    val vm = koinViewModel<OutOfTimeViewModel> { parametersOf(activity.lifecycle) }
+    val state by vm.uiState.collectAsStateWithLifecycle()
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val resources = LocalResources.current
+    val openAccountPage = LocalUriHandler.current.createOpenAccountPageHook()
+    CollectSideEffectWithLifecycle(vm.uiSideEffect, Lifecycle.State.RESUMED) { uiSideEffect ->
+        when (uiSideEffect) {
+            is OutOfTimeViewModel.UiSideEffect.OpenAccountView ->
+                openAccountPage(uiSideEffect.token)
+            OutOfTimeViewModel.UiSideEffect.OpenConnectScreen ->
+                navigator.navigate(ConnectNavKey, clearBackStack = true)
+            OutOfTimeViewModel.UiSideEffect.GenericError ->
+                snackbarHostState.showSnackbarImmediately(
+                    message = resources.getString(R.string.error_occurred)
+                )
+            OutOfTimeViewModel.UiSideEffect.DeviceRevoked ->
+                navigator.navigate(DeviceRevokedNavKey, clearBackStack = true)
+        }
+    }
+
+    OutOfTimeScreen(
+        state = state,
+        snackbarHostState = snackbarHostState,
+        onSettingsClick = dropUnlessResumed { navigator.navigate(SettingsNavKey) },
+        onAccountClick = dropUnlessResumed { navigator.navigate(AccountNavKey) },
+        onAddMoreTimeClick = dropUnlessResumed { navigator.navigate(AddTimeNavKey) },
+        onPlayPaymentInfoClick =
+            dropUnlessResumed { paymentStatus ->
+                navigator.navigate(VerificationPendingNavKey(paymentStatus))
+            },
+        onDisconnectClick = vm::onDisconnectClick,
+    )
+}
+
+@Composable
+fun OutOfTimeScreen(
+    state: Lc<Unit, OutOfTimeUiState>,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onDisconnectClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onAccountClick: () -> Unit,
+    onAddMoreTimeClick: () -> Unit,
+    onPlayPaymentInfoClick: (PaymentStatus) -> Unit,
+) {
+    val scrollState = rememberScrollState()
+    ScaffoldWithTopBarAndDeviceName(
+        snackbarHostState = snackbarHostState,
+        topBarColor =
+            if (state.contentOrNull()?.tunnelState?.isSecured() == true) {
+                MaterialTheme.colorScheme.positive
+            } else {
+                MaterialTheme.colorScheme.error
+            },
+        iconTintColor =
+            if (state.contentOrNull()?.tunnelState?.isSecured() == true) {
+                MaterialTheme.colorScheme.onTertiary
+            } else {
+                MaterialTheme.colorScheme.onError
+            },
+        onSettingsClicked = onSettingsClick,
+        onAccountClicked = onAccountClick,
+        deviceName = state.contentOrNull()?.deviceName,
+        timeLeft = null,
+    ) {
+        Column(
+            modifier =
+                Modifier.fillMaxSize()
+                    .padding(it)
+                    .padding(
+                        top = Dimens.screenTopMargin,
+                        start = Dimens.sideMargin,
+                        end = Dimens.sideMargin,
+                        bottom = Dimens.screenBottomMargin,
+                    )
+                    .verticalScroll(scrollState)
+                    .drawVerticalScrollbar(
+                        state = scrollState,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = AlphaScrollbar),
+                    )
+                    .background(color = MaterialTheme.colorScheme.surface)
+        ) {
+            when (state) {
+                is Lc.Content -> {
+                    Content(showSitePayment = state.value.showSitePayment)
+                    Spacer(
+                        modifier =
+                            Modifier.weight(1f).defaultMinSize(minHeight = Dimens.verticalSpace)
+                    )
+                    // Button area
+                    ButtonPanel(
+                        state = state.value,
+                        onDisconnectClick = onDisconnectClick,
+                        onAddMoreTimeClick = onAddMoreTimeClick,
+                        onInfoClick = onPlayPaymentInfoClick,
+                    )
+                }
+                is Lc.Loading -> {
+                    Loading()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ColumnScope.Content(showSitePayment: Boolean) {
+    Image(
+        painter = painterResource(id = R.drawable.icon_fail),
+        contentDescription = null,
+        modifier =
+            Modifier.align(Alignment.CenterHorizontally).padding(bottom = Dimens.mediumSpacer),
+    )
+    Text(
+        text = stringResource(id = R.string.out_of_time),
+        style = MaterialTheme.typography.headlineSmall,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.testTag(OUT_OF_TIME_SCREEN_TITLE_TEST_TAG),
+    )
+    Text(
+        text =
+            buildString {
+                append(stringResource(R.string.account_credit_has_expired))
+                if (showSitePayment) {
+                    append(" ")
+                    append(stringResource(R.string.add_time_to_account))
+                }
+            },
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(top = Dimens.mediumPadding),
+    )
+}
+
+@Composable
+private fun ButtonPanel(
+    state: OutOfTimeUiState,
+    onDisconnectClick: () -> Unit,
+    onAddMoreTimeClick: () -> Unit,
+    onInfoClick: (PaymentStatus) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(Dimens.buttonSpacing)) {
+        if (state.tunnelState.isSecured()) {
+            NegativeButton(
+                onClick = onDisconnectClick,
+                text = stringResource(id = R.string.disconnect),
+            )
+        }
+        if (state.paymentStatus != null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = { onInfoClick(state.paymentStatus) },
+                    modifier = Modifier.testTag(PLAY_PAYMENT_INFO_ICON_TEST_TAG),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                Text(
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    text =
+                        stringResource(
+                            id =
+                                when (state.paymentStatus) {
+                                    PaymentStatus.PENDING -> R.string.payment_status_pending_short
+                                    PaymentStatus.PURCHASED_UNVERIFIED ->
+                                        R.string.payment_status_verification_failed
+                                }
+                        ),
+                )
+            }
+        }
+        VariantButton(onClick = onAddMoreTimeClick, text = stringResource(id = R.string.add_time))
+    }
+}
+
+@Composable
+private fun ColumnScope.Loading() {
+    MullvadCircularProgressIndicatorLarge(
+        modifier =
+            Modifier.align(Alignment.CenterHorizontally).padding(vertical = Dimens.smallPadding)
+    )
+}

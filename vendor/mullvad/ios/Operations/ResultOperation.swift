@@ -1,0 +1,136 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import Foundation
+
+/// Base class for operations producing result.
+open class ResultOperation<Success: Sendable>: AsyncOperation, OutputOperation, @unchecked Sendable {
+    public typealias CompletionHandler = (sending Result<Success, Error>) -> Void
+
+    private let nslock = NSLock()
+    private var _output: Success?
+    private var _completionQueue: DispatchQueue?
+    private var _completionHandler: CompletionHandler?
+    private var pendingFinish = false
+
+    public var result: Result<Success, Error>? {
+        nslock.withLock {
+            _output.map { .success($0) } ?? error.map { .failure($0) }
+        }
+    }
+
+    public var output: Success? {
+        nslock.withLock {
+            _output
+        }
+    }
+
+    public var completionQueue: DispatchQueue? {
+        get {
+            nslock.withLock { _completionQueue }
+        }
+        set {
+            nslock.withLock {
+                _completionQueue = newValue
+            }
+        }
+    }
+
+    public var completionHandler: CompletionHandler? {
+        get {
+            nslock.withLock {
+                return _completionHandler
+            }
+        }
+        set {
+            nslock.withLock {
+                if !pendingFinish {
+                    _completionHandler = newValue
+                }
+            }
+        }
+    }
+
+    override public init(dispatchQueue: DispatchQueue?) {
+        super.init(dispatchQueue: dispatchQueue)
+    }
+
+    public init(
+        dispatchQueue: DispatchQueue?,
+        completionQueue: DispatchQueue?,
+        completionHandler: CompletionHandler?
+    ) {
+        _completionQueue = completionQueue
+        _completionHandler = completionHandler
+
+        super.init(dispatchQueue: dispatchQueue)
+    }
+
+    @available(*, unavailable)
+    override public func finish() {
+        _finish(result: .failure(OperationError.cancelled))
+    }
+
+    @available(*, unavailable)
+    override public func finish(error: Error?) {
+        _finish(result: .failure(error ?? OperationError.cancelled))
+    }
+
+    open func finish(result: Result<Success, Error>) {
+        _finish(result: result)
+    }
+
+    private func _finish(result: Result<Success, Error>) {
+        nslock.lock()
+        // Bail if operation is already finishing.
+        guard !pendingFinish else {
+            nslock.unlock()
+            return
+        }
+
+        // Mark that operation is pending finish.
+        pendingFinish = true
+
+        // Copy completion handler.
+        nonisolated(unsafe) let completionHandler = _completionHandler
+
+        // Unset completion handler.
+        _completionHandler = nil
+
+        // Copy completion value.
+        if case let .success(output) = result {
+            _output = output
+        }
+
+        // Copy completion queue.
+        let completionQueue = _completionQueue
+        nslock.unlock()
+
+        dispatchAsyncOn(completionQueue) {
+            completionHandler?(result)
+
+            var error: Error?
+            if case let .failure(failure) = result {
+                error = failure
+            }
+
+            // Finish operation.
+            super.finish(error: error)
+        }
+    }
+
+    private func dispatchAsyncOn(_ queue: DispatchQueue?, _ block: @escaping @Sendable () -> Void) {
+        guard let queue else {
+            block()
+            return
+        }
+        queue.async(execute: block)
+    }
+}

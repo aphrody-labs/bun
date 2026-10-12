@@ -1,0 +1,213 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+import Foundation
+import MullvadSettings
+import SwiftUI
+
+struct MultihopActionDescriptor: SettingsMigrationPresentable {
+    let action: SuggestedAction<MultihopSuggestedAction>
+
+    var title: String {
+        switch action.kind {
+        case .multihopWhenNeeded:
+            return NSLocalizedString(
+                "Suggested action",
+                comment: ""
+            )
+
+        case .automaticEntry:
+            return NSLocalizedString(
+                "Suggested multihop entry",
+                comment: ""
+            )
+        }
+    }
+
+    var banner: Image? {
+        return nil
+    }
+
+    var description: [MullvadNoticeView.TextItem] {
+        switch action.kind {
+        case .multihopWhenNeeded:
+            return [
+                MullvadNoticeView.TextItem(
+                    text: String(
+                        format: NSLocalizedString(
+                            """
+                            To avoid getting blocked, we recommend that you set your multihop mode to “%@”.
+                            """,
+                            comment: ""
+                        ), MultihopStateV2.whenNeeded.description),
+                    style: .secondary()
+                ),
+
+                MullvadNoticeView.TextItem(
+                    text: NSLocalizedString(
+                        """
+                        This mode allows the app to automatically multihop through an additional server if needed to ensure your current settings work with your selected location.
+                        """,
+                        comment: ""
+                    ),
+                    style: .secondary()
+                ),
+
+                MullvadNoticeView.TextItem(
+                    text: NSLocalizedString(
+                        """
+                        Attention: In this mode, filters are ignored for the additional server.
+                        """,
+                        comment: ""
+                    ),
+                    style: .secondary(.bold)
+                ),
+            ]
+
+        case .automaticEntry:
+            return [
+                MullvadNoticeView.TextItem(
+                    text: String(
+                        format: NSLocalizedString(
+                            """
+                            To avoid having to change the entry server manually, we recommend you set the multihop entry server to “%@”.
+                            """,
+                            comment: ""
+                        ), NSLocalizedString("Automatic", comment: "")),
+                    style: .secondary()
+                ),
+
+                MullvadNoticeView.TextItem(
+                    text: NSLocalizedString(
+                        """
+                        When selected, the app automatically picks a random server, prioritizing those closer to the exit location for better performance.
+                        """,
+                        comment: ""
+                    ),
+                    style: .secondary()
+                ),
+
+                MullvadNoticeView.TextItem(
+                    text: String(
+                        format: NSLocalizedString(
+                            """
+                            Attention: With the “%@” location, filters are ignored for the entry server.
+                            """,
+                            comment: ""
+                        ), NSLocalizedString("Automatic", comment: "")),
+                    style: .secondary(.bold)
+                ),
+            ]
+        }
+    }
+
+    func makeState(for kind: MullvadNoticeView.ActionState.Kind) -> MullvadNoticeView.ActionState {
+        switch kind {
+        case .idle:
+            idle
+        case .loading:
+            loading
+        case .success:
+            success
+        case .failure:
+            failure
+        }
+    }
+
+    private var idle: MullvadNoticeView.ActionState {
+        switch action.kind {
+        case .multihopWhenNeeded:
+            MullvadNoticeView.ActionState(
+                kind: .idle,
+                message: String(
+                    format: NSLocalizedString(
+                        "Change to “%@”",
+                        comment: ""
+                    ),
+                    arguments: [MultihopStateV2.whenNeeded.description]
+                ))
+
+        case .automaticEntry:
+            MullvadNoticeView.ActionState(
+                kind: .idle,
+                message: String(
+                    format: NSLocalizedString(
+                        "Set entry to “%@”",
+                        comment: ""
+                    ),
+                    arguments: [
+                        NSLocalizedString(
+                            "Automatic",
+                            comment: ""
+                        )
+                    ]
+                ))
+        }
+    }
+
+    private var loading: MullvadNoticeView.ActionState {
+        switch action.kind {
+        case .multihopWhenNeeded:
+            MullvadNoticeView.ActionState(
+                kind: .loading,
+                message: NSLocalizedString(
+                    "Changing mode...",
+                    comment: ""
+                ))
+
+        case .automaticEntry:
+            MullvadNoticeView.ActionState(
+                kind: .loading,
+                message: NSLocalizedString(
+                    "Setting entry...",
+                    comment: ""
+                ))
+        }
+    }
+
+    private var success: MullvadNoticeView.ActionState {
+        switch action.kind {
+        case .multihopWhenNeeded:
+            MullvadNoticeView.ActionState(
+                kind: .success,
+                message: NSLocalizedString(
+                    "Multihop mode changed",
+                    comment: ""
+                ))
+
+        case .automaticEntry:
+            MullvadNoticeView.ActionState(
+                kind: .success,
+                message: String(
+                    format: NSLocalizedString(
+                        "Entry set to “%@”",
+                        comment: ""), NSLocalizedString("Automatic", comment: "")))
+        }
+    }
+
+    private var failure: MullvadNoticeView.ActionState {
+        switch action.kind {
+        case .multihopWhenNeeded:
+            MullvadNoticeView.ActionState(
+                kind: .success,
+                message: NSLocalizedString(
+                    "Failed to change mode",
+                    comment: ""
+                ))
+
+        case .automaticEntry:
+            MullvadNoticeView.ActionState(
+                kind: .success,
+                message: String(
+                    format: NSLocalizedString(
+                        "Failed to set the Entry to “%@”",
+                        comment: ""), NSLocalizedString("Automatic", comment: "")))
+        }
+    }
+}

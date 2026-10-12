@@ -1,0 +1,89 @@
+import { useCallback, useMemo } from 'react';
+
+import { IpVersion, wrapConstraint } from '../../../../../../shared/daemon-rpc-types';
+import { messages } from '../../../../../../shared/gettext';
+import log from '../../../../../../shared/logging';
+import { ListboxProps } from '../../../../../lib/components/listbox';
+import { useRelaySettingsUpdater } from '../../../../../lib/constraint-updater';
+import { useSelector } from '../../../../../redux/store';
+import { Info } from '../../../../info';
+import { SettingsListbox } from '../../../../settings-listbox';
+
+export type IpVersionSettingProps = Omit<ListboxProps<IpVersion | null>, 'children'>;
+
+export function IpVersionSetting(props: IpVersionSettingProps) {
+  const relaySettingsUpdater = useRelaySettingsUpdater();
+  const relaySettings = useSelector((state) => state.settings.relaySettings);
+  const ipVersion = useMemo(() => {
+    const ipVersion = 'normal' in relaySettings ? relaySettings.normal.wireguard.ipVersion : 'any';
+    return ipVersion === 'any' ? null : ipVersion;
+  }, [relaySettings]);
+
+  const setIpVersion = useCallback(
+    async (ipVersion: IpVersion | null) => {
+      try {
+        await relaySettingsUpdater((settings) => {
+          settings.wireguardConstraints.ipVersion = wrapConstraint(ipVersion);
+          return settings;
+        });
+      } catch (e) {
+        const error = e as Error;
+        log.error('Failed to update relay settings', error.message);
+      }
+    },
+    [relaySettingsUpdater],
+  );
+
+  return (
+    <SettingsListbox value={ipVersion} onValueChange={setIpVersion} {...props}>
+      <SettingsListbox.Header>
+        <SettingsListbox.Header.Item>
+          <SettingsListbox.Header.Item.Label>
+            {
+              // TRANSLATORS: Title for device IP version setting.
+              messages.pgettext('wireguard-settings-view', 'Device IP version')
+            }
+          </SettingsListbox.Header.Item.Label>
+          <SettingsListbox.Header.Item.ActionGroup>
+            <Info>
+              <Info.Button />
+              <Info.Dialog>
+                <Info.Dialog.Text>
+                  {
+                    // TRANSLATORS: A description for the setting Device IP version,
+                    // TRANSLATORS: explaining how the user can configure the setting.
+                    messages.pgettext(
+                      'vpn-settings-view',
+                      'This feature allows you to choose whether to use only IPv4, only IPv6, or allow the app to automatically decide the best option when connecting to a server.',
+                    )
+                  }
+                </Info.Dialog.Text>
+                <Info.Dialog.Text>
+                  {
+                    // TRANSLATORS: A complimentary description for the setting Device IP version,
+                    // TRANSLATORS: explaining why the user might want to configure the setting.
+                    messages.pgettext(
+                      'vpn-settings-view',
+                      'It can be useful when you are aware of problems caused by a certain IP version.',
+                    )
+                  }
+                </Info.Dialog.Text>
+              </Info.Dialog>
+            </Info>
+          </SettingsListbox.Header.Item.ActionGroup>
+        </SettingsListbox.Header.Item>
+      </SettingsListbox.Header>
+      <SettingsListbox.Options>
+        <SettingsListbox.Options.BaseOption value={null}>
+          {messages.gettext('Automatic')}
+        </SettingsListbox.Options.BaseOption>
+        <SettingsListbox.Options.BaseOption value={'ipv4'}>
+          {messages.gettext('IPv4')}
+        </SettingsListbox.Options.BaseOption>
+        <SettingsListbox.Options.BaseOption value={'ipv6'}>
+          {messages.gettext('IPv6')}
+        </SettingsListbox.Options.BaseOption>
+      </SettingsListbox.Options>
+    </SettingsListbox>
+  );
+}

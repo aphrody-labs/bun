@@ -1,0 +1,43 @@
+package net.mullvad.mullvadvpn.lib.common.util
+
+import net.mullvad.mullvadvpn.lib.model.DnsState
+import net.mullvad.mullvadvpn.lib.model.MultihopMode
+import net.mullvad.mullvadvpn.lib.model.ObfuscationMode
+import net.mullvad.mullvadvpn.lib.model.Settings
+
+fun Settings.quantumResistant() = tunnelOptions.quantumResistant
+
+fun Settings.isCustomDnsEnabled() = tunnelOptions.dnsOptions.state == DnsState.Custom
+
+fun Settings.wireguardConstraints() = relaySettings.relayConstraints.wireguardConstraints
+
+fun Settings.customDnsAddresses() = tunnelOptions.dnsOptions.customOptions.addresses
+
+fun Settings.contentBlockersSettings() = tunnelOptions.dnsOptions.defaultOptions
+
+fun Settings.selectedObfuscationMode() = obfuscationSettings.selectedObfuscationMode
+
+fun Settings.wireguardPort() = obfuscationSettings.wireguardPort
+
+fun Settings.deviceIpVersion() = relaySettings.relayConstraints.wireguardConstraints.ipVersion
+
+fun Settings.isWhenNeededMultihop() = wireguardConstraints().multihop == MultihopMode.WHEN_NEEDED
+
+fun Settings.isQuicEnabled() = obfuscationSettings.selectedObfuscationMode == ObfuscationMode.Quic
+
+fun Settings.isLwoEnabled() = obfuscationSettings.selectedObfuscationMode == ObfuscationMode.Lwo
+
+fun Settings.isShadowsocksEnabled() =
+    obfuscationSettings.selectedObfuscationMode == ObfuscationMode.Shadowsocks
+
+fun Settings.ipVersionConstraint() = relaySettings.relayConstraints.wireguardConstraints.ipVersion
+
+fun Settings.isDaitaEnabled() = daitaSettings().enabled
+
+fun Settings.shadowSocksPort() = obfuscationSettings.shadowsocks.port
+
+fun Settings.multihopMode() = relaySettings.relayConstraints.wireguardConstraints.multihop
+
+fun Settings.location() = relaySettings.relayConstraints.location
+
+private fun Settings.daitaSettings() = tunnelOptions.daitaSettings

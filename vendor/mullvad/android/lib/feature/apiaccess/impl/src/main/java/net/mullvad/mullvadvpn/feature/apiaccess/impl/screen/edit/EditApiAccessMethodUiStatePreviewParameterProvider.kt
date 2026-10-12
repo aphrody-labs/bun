@@ -1,0 +1,81 @@
+package net.mullvad.mullvadvpn.feature.apiaccess.impl.screen.edit
+
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+import arrow.core.nonEmptyListOf
+import net.mullvad.mullvadvpn.feature.apiaccess.impl.shadowsocks
+import net.mullvad.mullvadvpn.feature.apiaccess.impl.socks5Remote
+import net.mullvad.mullvadvpn.lib.model.ApiAccessMethod
+import net.mullvad.mullvadvpn.lib.model.InvalidDataError
+
+class EditApiAccessMethodUiStatePreviewParameterProvider :
+    PreviewParameterProvider<EditApiAccessMethodUiState> {
+    override val values =
+        sequenceOf(
+            EditApiAccessMethodUiState.Loading(editMode = true),
+            // Empty default state
+            EditApiAccessMethodUiState.Content(
+                editMode = false,
+                formData = EditApiAccessFormData.empty(),
+                hasChanges = false,
+                isTestingApiAccessMethod = false,
+                shadowSocksCiphers = emptyList(),
+            ),
+            // Shadowsocks, no errors
+            EditApiAccessMethodUiState.Content(
+                editMode = true,
+                hasChanges = false,
+                formData =
+                    shadowsocks.let {
+                        val data = (it.apiAccessMethod as ApiAccessMethod.CustomProxy.Shadowsocks)
+                        EditApiAccessFormData(
+                            name = it.name.value,
+                            serverIp = data.ip,
+                            port = data.port.toString(),
+                            password = data.password.orEmpty(),
+                            cipher = data.cipher,
+                            username = "",
+                        )
+                    },
+                isTestingApiAccessMethod = false,
+                shadowSocksCiphers = emptyList(),
+            ),
+            // Socks5 Remote, no errors, testing method
+            EditApiAccessMethodUiState.Content(
+                editMode = true,
+                hasChanges = false,
+                formData =
+                    socks5Remote.let {
+                        val data = (it.apiAccessMethod as ApiAccessMethod.CustomProxy.Socks5Remote)
+                        EditApiAccessFormData(
+                            name = it.name.value,
+                            serverIp = data.ip,
+                            port = data.port.toString(),
+                            enableAuthentication = data.auth != null,
+                            username = data.auth?.username.orEmpty(),
+                            password = data.auth?.password.orEmpty(),
+                        )
+                    },
+                isTestingApiAccessMethod = true,
+                shadowSocksCiphers = emptyList(),
+            ),
+            // Socks 5 remote, required errors
+            EditApiAccessMethodUiState.Content(
+                editMode = true,
+                hasChanges = false,
+                formData =
+                    EditApiAccessFormData.empty()
+                        .copy(enableAuthentication = true)
+                        .updateWithErrors(
+                            nonEmptyListOf(
+                                InvalidDataError.NameError.Required,
+                                InvalidDataError.PortError.Required,
+                                InvalidDataError.ServerIpError.Required,
+                                InvalidDataError.UserNameError.Required,
+                                InvalidDataError.PasswordError.Required,
+                            )
+                        ),
+                isTestingApiAccessMethod = false,
+                shadowSocksCiphers = emptyList(),
+            ),
+        )
+}

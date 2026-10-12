@@ -1,0 +1,127 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import MullvadTypes
+import Network
+import XCTest
+
+@testable import MullvadMockData
+@testable import PacketTunnelCore
+
+final class TunnelMonitorTests: XCTestCase {
+    let networkCounters = NetworkCounters()
+
+    func testShouldDetermineConnectionEstablished() async throws {
+        let connectedExpectation = expectation(description: "Should report connected.")
+        let connectionLostExpectation = expectation(description: "Should not report connection loss")
+        connectionLostExpectation.isInverted = true
+
+        let pinger = PingerMock(networkStatsReporting: networkCounters) { _, _ in
+            return .sendReply()
+        }
+
+        let tunnelMonitor = createTunnelMonitor(pinger: pinger, timings: TunnelMonitorTimings())
+
+        tunnelMonitor.onEvent = { event in
+            switch event {
+            case .connectionEstablished:
+                connectedExpectation.fulfill()
+
+            case .connectionLost:
+                connectionLostExpectation.fulfill()
+            }
+        }
+
+        tunnelMonitor.start(probeAddress: .loopback)
+
+        await fulfillment(of: [connectedExpectation, connectionLostExpectation], timeout: .UnitTest.invertedTimeout)
+    }
+
+    func testInitialConnectionTimings() async throws {
+        // Setup pinger so that it never receives any replies.
+        let pinger = PingerMock(networkStatsReporting: networkCounters) { _, _ in .ignore }
+
+        let timings = TunnelMonitorTimings(
+            pingTimeout: .milliseconds(300),
+            initialEstablishTimeout: .milliseconds(100),
+            connectivityCheckInterval: .milliseconds(100)
+        )
+
+        let tunnelMonitor = createTunnelMonitor(pinger: pinger, timings: timings)
+
+        var expectedTimings = [
+            timings.initialEstablishTimeout.milliseconds,
+            timings.initialEstablishTimeout.milliseconds * 2,
+            timings.pingTimeout.milliseconds,
+            timings.pingTimeout.milliseconds,
+        ]
+
+        // Calculate the amount of time necessary to perform the test.
+        var timeout = expectedTimings.reduce(0, +)
+        // Add leeway into the total amount of expected wait time.
+        timeout += timeout / 2
+
+        let expectation = expectation(description: "Should respect all timings.")
+        expectation.expectedFulfillmentCount = expectedTimings.count
+
+        // This date will be used to measure the amount of time elapsed between `.connectionLost` events.
+        var startDate = Date()
+
+        tunnelMonitor.onEvent = { [weak tunnelMonitor] event in
+            guard case .connectionLost = event else { return }
+
+            switch event {
+            case .connectionLost:
+                XCTAssertFalse(expectedTimings.isEmpty)
+
+                let expectedDuration = expectedTimings.removeFirst()
+                let leeway = expectedDuration / 2
+
+                // Compute amount of time elapsed between `.connectionLost` events.
+                let timeElapsed = Int(Date().timeIntervalSince(startDate) * 1000)
+
+                XCTAssertEqual(
+                    timeElapsed,
+                    expectedDuration,
+                    accuracy: leeway,
+                    "Expected to report connection loss after \(expectedDuration)-\(expectedDuration + leeway) ms, instead reported it after \(timeElapsed) ms."
+                )
+
+                expectation.fulfill()
+
+                if !expectedTimings.isEmpty {
+                    startDate = Date()
+
+                    // Continue monitoring by calling start() again.
+                    tunnelMonitor?.start(probeAddress: .loopback)
+                }
+
+            case .connectionEstablished:
+                XCTFail("Connection should fail.")
+            }
+        }
+
+        // Start monitoring.
+        tunnelMonitor.start(probeAddress: .loopback)
+
+        await fulfillment(of: [expectation], timeout: TimeInterval(timeout) / 1000)
+    }
+}
+
+extension TunnelMonitorTests {
+    private func createTunnelMonitor(pinger: PingerProtocol, timings: TunnelMonitorTimings) -> TunnelMonitor {
+        return TunnelMonitor(
+            eventQueue: .main,
+            pinger: pinger,
+            tunnelDeviceInfo: TunnelDeviceInfoStub(networkStatsProviding: networkCounters),
+            timings: timings
+        )
+    }
+}

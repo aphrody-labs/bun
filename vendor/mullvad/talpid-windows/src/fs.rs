@@ -1,0 +1,78 @@
+use std::ffi::c_void;
+use std::io;
+use std::os::windows::io::AsRawHandle;
+use std::ptr;
+
+use windows_sys::Win32::{
+    Foundation::{ERROR_SUCCESS, LocalFree},
+    Security::{
+        Authorization::{GetSecurityInfo, SE_FILE_OBJECT},
+        IsWellKnownSid, OWNER_SECURITY_INFORMATION, SECURITY_DESCRIPTOR, SID,
+        WinBuiltinAdministratorsSid, WinLocalSystemSid,
+    },
+};
+
+/// Return whether a file handle is owned by either SYSTEM or the built-in administrators account
+pub fn is_admin_owned<T: AsRawHandle>(handle: T) -> io::Result<bool> {
+    let mut security_descriptor: *mut SECURITY_DESCRIPTOR = ptr::null_mut();
+    let mut owner: *mut SID = ptr::null_mut();
+
+    // SAFETY: `handle` is a valid handle
+    let result = unsafe {
+        GetSecurityInfo(
+            handle.as_raw_handle(),
+            SE_FILE_OBJECT,
+            OWNER_SECURITY_INFORMATION,
+            (&raw mut owner).cast(),
+            ptr::null_mut(),
+            ptr::null_mut(),
+            ptr::null_mut(),
+            (&raw mut security_descriptor).cast(),
+        )
+    };
+
+    if result != ERROR_SUCCESS {
+        return Err(io::Error::from_raw_os_error(result as i32));
+    }
+
+    // SAFETY: `owner` is valid since `security_descriptor` still is, and the well-known type is a valid argument
+    let is_system_owned = unsafe { IsWellKnownSid(owner.cast::<c_void>(), WinLocalSystemSid) != 0 };
+    // SAFETY: `owner` is valid since `security_descriptor` still is, and the well-known type is a valid argument
+    let is_admin_owned =
+        unsafe { IsWellKnownSid(owner.cast::<c_void>(), WinBuiltinAdministratorsSid) != 0 };
+
+    // SAFETY: Since we no longer need the descriptor (or owner), it may be freed
+    unsafe { LocalFree(security_descriptor.cast()) };
+
+    Ok(is_system_owned || is_admin_owned)
+}
+
+#[cfg(test)]
+mod test {
+    use std::assert_matches;
+    use std::os::windows::fs::OpenOptionsExt;
+    use windows_sys::Win32::Storage::FileSystem::FILE_FLAG_BACKUP_SEMANTICS;
+
+    use super::is_admin_owned;
+
+    #[test]
+    pub fn test_is_admin_owned() {
+        // The kernel image is owned by "TrustedInstaller", so we expect the function to return 'false'
+        let path = std::fs::File::open(r"C:\Windows\System32\ntoskrnl.exe").unwrap();
+        let result = is_admin_owned(path);
+        assert_matches!(
+            result,
+            Ok(false),
+            "expected ntoskrnl.exe to be owned by TrustedInstaller"
+        );
+
+        // The Windows system temp directory is owned by SYSTEM, so we expect 'true'
+        let path = std::fs::File::options()
+            .read(true)
+            .custom_flags(FILE_FLAG_BACKUP_SEMANTICS)
+            .open(r"C:\Windows\Temp")
+            .unwrap();
+        let result = is_admin_owned(path);
+        assert_matches!(result, Ok(true), "expected TEMP to be owned by SYSTEM");
+    }
+}

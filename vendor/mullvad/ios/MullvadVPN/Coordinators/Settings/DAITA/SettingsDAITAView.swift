@@ -1,0 +1,114 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import MullvadSettings
+import SwiftUI
+
+struct SettingsDAITAView<ViewModel>: View where ViewModel: TunnelSettingsObservable<DAITASettings> {
+    @StateObject var tunnelViewModel: ViewModel
+    private let itemFactory = SegmentedListItemFactory()
+
+    var body: some View {
+        SettingsInfoContainerView {
+            VStack(alignment: .leading, spacing: 8) {
+                SettingsInfoView {
+                    let daitafullTitle = "Defense against AI-guided Traffic Analysis"
+                    let daitaTitle = NSLocalizedString("DAITA", comment: "")
+                    SettingsInfoPageView(
+                        text: [
+                            NSLocalizedString(
+                                "**Attention: This increases network traffic and will also negatively affect "
+                                    + "speed, latency, and battery usage. Use with caution on limited plans.**",
+                                comment: ""
+                            ),
+                            String(
+                                format: NSLocalizedString(
+                                    "%@ (%@) hides patterns in your encrypted VPN traffic.",
+                                    comment: ""
+                                ),
+                                daitaTitle,
+                                daitafullTitle
+                            ),
+                            NSLocalizedString(
+                                "By using sophisticated AI it’s possible to analyze "
+                                    + "the traffic of data packets going in and out of your "
+                                    + "device (even if the traffic is encrypted).",
+                                comment: ""
+                            ),
+                        ].joinedParagraphs(),
+                        image: .daitaOffIllustration
+                    )
+                    SettingsInfoPageView(
+                        text: [
+                            String(
+                                format: NSLocalizedString(
+                                    "If an observer monitors these data packets, %@ makes it "
+                                        + "significantly harder for them to identify which websites "
+                                        + "you are visiting or with whom you are communicating.",
+                                    comment: ""
+                                ), daitaTitle),
+                            String(
+                                format: NSLocalizedString(
+                                    "%@ does this by carefully adding network noise and making "
+                                        + "all network packets the same size.",
+                                    comment: ""
+                                ), daitaTitle),
+                            String(
+                                format: NSLocalizedString(
+                                    "Not all our servers are %@-enabled. Therefore, we use multihop "
+                                        + "automatically to enable %@ with any server.",
+                                    comment: ""
+                                ), daitaTitle, daitaTitle),
+                        ].joinedParagraphs(),
+                        image: .daitaOnIllustration
+                    )
+                }
+
+                SegmentedListItem(
+                    userInteraction: .enabledWithoutHighlight,
+                    accessibilityIdentifier: .daitaSwitch,
+                    leading: {
+                        itemFactory.leading(for: .generic(title: NSLocalizedString("Enable", comment: "")))
+                    },
+                    trailing: {
+                        itemFactory.trailing(for: .toggle(isOn: daitaIsEnabled, isDisabled: false))
+                    }
+                )
+                .padding(.leading, UIMetrics.contentInsets.left)
+                .padding(.trailing, UIMetrics.contentInsets.right)
+            }
+        }
+    }
+}
+
+#Preview {
+    SettingsDAITAView(tunnelViewModel: MockDAITATunnelSettingsViewModel())
+}
+
+extension SettingsDAITAView {
+    var daitaIsEnabled: Binding<Bool> {
+        Binding<Bool>(
+            get: {
+                tunnelViewModel.value.isEnabled
+            },
+            set: { enabled in
+                var settings = tunnelViewModel.value
+                settings.isEnabled = enabled
+
+                tunnelViewModel.evaluate(setting: settings)
+            }
+        )
+    }
+
+    var isAutomaticRoutingActive: Bool {
+        let viewModel = tunnelViewModel as? DAITATunnelSettingsViewModel
+        return viewModel?.isAutomaticRoutingActive ?? false
+    }
+}

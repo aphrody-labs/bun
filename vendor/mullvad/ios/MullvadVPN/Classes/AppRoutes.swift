@@ -1,0 +1,180 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import Routing
+import UIKit
+
+/**
+ Enum type describing groups of routes.
+ */
+enum AppRouteGroup: AppRouteGroupProtocol {
+    /**
+     Primary horizontal navigation group.
+     */
+    case primary
+
+    /**
+     Select location group.
+     */
+    case selectLocation
+
+    /**
+     Account group.
+     */
+    case account
+
+    /**
+     Settings group.
+     */
+    case settings
+
+    /**
+     Changelog group.
+     */
+    case changelog
+
+    /**
+     Alert group. Alert id should match the id of the alert being contained.
+     */
+    case alert(_ alertId: String)
+
+    var isModal: Bool {
+        switch self {
+        case .primary:
+            return false
+
+        case .selectLocation, .account, .settings, .changelog, .alert:
+            return true
+        }
+    }
+
+    var modalLevel: Int {
+        switch self {
+        case .primary:
+            return 0
+        case .account, .selectLocation, .changelog:
+            return 1
+        case .settings:
+            return 2
+        case .alert:
+            // Alerts should always be topmost.
+            return .max
+        }
+    }
+}
+
+/**
+ Enum type describing primary application routes.
+ */
+enum AppRoute: AppRouteProtocol {
+    /**
+     Account route.
+     */
+    case account
+
+    /**
+     Settings route. Contains sub-route to display.
+     */
+    case settings(SettingsNavigationRoute?)
+
+    /**
+     Settings route. Contains sub-route to display.
+     */
+    case vpnSettings(VPNSettingsSection)
+
+    /**
+     Multihop standalone route (not subsetting).
+     */
+    case multihop
+
+    /**
+     DNS settings standalone route (not subsetting).
+     */
+    case dnsSettings
+
+    /**
+     Ip overrides standalone route (not subsetting).
+     */
+    case ipOverrides
+
+    /**
+     DAITA standalone route (not subsetting).
+     */
+    case daita
+
+    /**
+     IAN standalone route (not subsetting).
+     */
+    case includeAllNetworks
+
+    /**
+     Select location route.
+     */
+    case selectLocation
+
+    /**
+     Changelog standalone route (not subsetting).
+     */
+    case changelog
+
+    /**
+     SettingsMigrationWizard standalone route (not subsetting).
+     */
+    case settingsMigrationWizard
+
+    /**
+     API access methods standalone route (not subsetting).
+     */
+    case apiAccess
+
+    /**
+     Alert route. Alert id must be a unique string in order to produce a unique route
+     that distinguishes between different kinds of alerts.
+     */
+    case alert(_ alertId: String)
+
+    /**
+     Routes that are part of primary horizontal navigation group.
+     */
+    case tos, login, main, revoked, outOfTime, welcome
+
+    var isExclusive: Bool {
+        switch self {
+        case .account, .settings, .alert:
+            return true
+        default:
+            return false
+        }
+    }
+
+    var supportsSubNavigation: Bool {
+        if case .settings = self {
+            return true
+        } else {
+            return false
+        }
+    }
+
+    var routeGroup: AppRouteGroup {
+        switch self {
+        case .tos, .login, .main, .revoked, .outOfTime, .welcome:
+            return .primary
+        case .selectLocation:
+            return .selectLocation
+        case .account:
+            return .account
+        case .settings, .daita, .changelog, .vpnSettings, .multihop, .dnsSettings, .ipOverrides,
+            .includeAllNetworks, .apiAccess, .settingsMigrationWizard:
+            return .settings
+        case let .alert(id):
+            return .alert(id)
+        }
+    }
+}

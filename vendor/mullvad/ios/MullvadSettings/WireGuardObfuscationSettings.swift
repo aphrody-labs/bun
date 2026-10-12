@@ -1,0 +1,307 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import Foundation
+import MullvadTypes
+
+/// Whether obfuscation is enabled and which method is used.
+///
+/// `.automatic` means an algorithm will decide whether to use obfuscation or not.
+public enum WireGuardObfuscationState: Codable, Sendable, CustomStringConvertible {
+    @available(*, deprecated, renamed: "udpOverTcp")
+    case on
+
+    case automatic
+    case udpOverTcp
+    case shadowsocks
+    case quic
+    case lwo
+    case off
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        var allKeys = ArraySlice(container.allKeys)
+        guard let key = allKeys.popFirst(), allKeys.isEmpty else {
+            throw DecodingError.typeMismatch(
+                WireGuardObfuscationState.self,
+                DecodingError.Context(
+                    codingPath: container.codingPath,
+                    debugDescription: "Invalid number of keys found, expected one.",
+                    underlyingError: nil
+                )
+            )
+        }
+
+        switch key {
+        case .automatic:
+            self = .automatic
+        case .on, .udpOverTcp:
+            self = .udpOverTcp
+        case .shadowsocks:
+            self = .shadowsocks
+        case .quic:
+            self = .quic
+        case .lwo:
+            self = .lwo
+        case .off:
+            self = .off
+        }
+    }
+
+    public var isEnabled: Bool {
+        [.udpOverTcp, .shadowsocks, .quic, .lwo].contains(self)
+    }
+
+    public var description: String {
+        switch self {
+        case .automatic:
+            NSLocalizedString("Automatic", comment: "")
+        case .on, .udpOverTcp:
+            NSLocalizedString("UDP over TCP", comment: "")
+        case .shadowsocks:
+            NSLocalizedString("Shadowsocks", comment: "")
+        case .quic:
+            NSLocalizedString("QUIC", comment: "")
+        case .lwo:
+            NSLocalizedString("LWO", comment: "")
+        case .off:
+            NSLocalizedString("None", comment: "")
+        }
+    }
+}
+
+public enum WireGuardObfuscationUdpOverTcpPort: Codable, Equatable, CustomStringConvertible, Sendable {
+    case automatic
+    case port80
+    case port443
+    case port5001
+
+    public var portValue: UInt16? {
+        switch self {
+        case .automatic:
+            nil
+        case .port80:
+            80
+        case .port443:
+            443
+        case .port5001:
+            5001
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .automatic:
+            NSLocalizedString("Automatic", comment: "")
+        case .port80:
+            "80"
+        case .port443:
+            "443"
+        case .port5001:
+            "5001"
+        }
+    }
+}
+
+public enum WireGuardObfuscationShadowsocksPort: Codable, Equatable, CustomStringConvertible, Sendable {
+    case automatic
+    case custom(UInt16)
+
+    public var portValue: UInt16? {
+        switch self {
+        case .automatic:
+            nil
+        case let .custom(port):
+            port
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .automatic:
+            NSLocalizedString("Automatic", comment: "")
+        case let .custom(port):
+            String(port)
+        }
+    }
+}
+
+public enum WireGuardPort: Codable, Equatable, CustomStringConvertible, Sendable {
+    case automatic
+    case port51820
+    case port53
+    case custom(UInt16)
+
+    public var portValue: UInt16? {
+        switch self {
+        case .automatic:
+            nil
+        case .port51820:
+            51820
+        case .port53:
+            53
+        case let .custom(port):
+            port
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .automatic:
+            NSLocalizedString("Automatic", comment: "")
+        case .port51820:
+            String("51820")
+        case .port53:
+            String("53")
+        case let .custom(port):
+            String(port)
+        }
+    }
+
+    public init(constraint: RelayConstraint<UInt16>) {
+        self =
+            switch constraint {
+            case .any:
+                .automatic
+            case let .only(port):
+                if port == 53 {
+                    .port53
+                } else if port == 51820 {
+                    .port51820
+                } else {
+                    .custom(port)
+                }
+            }
+    }
+}
+
+public extension RelayConstraint<UInt16> {
+    init(_ port: WireGuardPort) {
+        self =
+            switch port {
+            case .automatic: .any
+            case let .custom(port):
+                .only(port)
+            case .port51820:
+                .only(51820)
+            case .port53:
+                .only(53)
+            }
+    }
+}
+
+public enum WireGuardObfuscationLwoPort: Codable, Equatable, CustomStringConvertible, Sendable {
+    case automatic
+    case custom(UInt16)
+
+    public var portValue: UInt16? {
+        switch self {
+        case .automatic:
+            nil
+        case let .custom(port):
+            port
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .automatic:
+            NSLocalizedString("Automatic", comment: "")
+        case let .custom(port):
+            String(port)
+        }
+    }
+}
+
+// Can't deprecate the whole type since it'll yield a lint warning when decoding
+// port in `WireGuardObfuscationSettings`.
+private enum WireGuardObfuscationPort: UInt16, Codable, Sendable {
+    @available(*, deprecated, message: "Use `udpOverTcpPort` instead")
+    case automatic = 0
+    @available(*, deprecated, message: "Use `udpOverTcpPort` instead")
+    case port80 = 80
+    @available(*, deprecated, message: "Use `udpOverTcpPort` instead")
+    case port5001 = 5001
+}
+
+public struct WireGuardObfuscationSettings: Codable, Equatable, Sendable, CustomDebugStringConvertible {
+    @available(*, deprecated, message: "Use `udpOverTcpPort` instead")
+    private var port: WireGuardObfuscationPort = .automatic
+
+    public var state: WireGuardObfuscationState
+    public var udpOverTcpPort: WireGuardObfuscationUdpOverTcpPort
+    public var shadowsocksPort: WireGuardObfuscationShadowsocksPort
+    public var lwoPort: WireGuardObfuscationLwoPort
+
+    public var debugDescription: String {
+        switch state {
+        case .automatic:
+            return "automatic"
+        case .udpOverTcp:
+            return "udp-over-tcp:\(udpOverTcpPort)"
+        case .shadowsocks:
+            return "shadowsocks:\(shadowsocksPort)"
+        case .quic:
+            return "quic"
+        case .lwo:
+            return "lwo:\(lwoPort)"
+        case .off:
+            return "off"
+        case .on:
+            return "on (deprecated)"
+        }
+    }
+
+    public init(
+        state: WireGuardObfuscationState = .automatic,
+        udpOverTcpPort: WireGuardObfuscationUdpOverTcpPort = .automatic,
+        shadowsocksPort: WireGuardObfuscationShadowsocksPort = .automatic,
+        lwoPort: WireGuardObfuscationLwoPort = .automatic
+    ) {
+        self.state = state
+        self.udpOverTcpPort = udpOverTcpPort
+        self.shadowsocksPort = shadowsocksPort
+        self.lwoPort = lwoPort
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        state = try container.decode(WireGuardObfuscationState.self, forKey: .state)
+
+        lwoPort =
+            try container.decodeIfPresent(
+                WireGuardObfuscationLwoPort.self,
+                forKey: .lwoPort
+            ) ?? .automatic
+
+        shadowsocksPort =
+            try container.decodeIfPresent(
+                WireGuardObfuscationShadowsocksPort.self,
+                forKey: .shadowsocksPort
+            ) ?? .automatic
+
+        if let port = try? container.decodeIfPresent(WireGuardObfuscationUdpOverTcpPort.self, forKey: .udpOverTcpPort) {
+            udpOverTcpPort = port
+        } else if let port = try? container.decodeIfPresent(WireGuardObfuscationPort.self, forKey: .port) {
+            switch port {
+            case .automatic:
+                udpOverTcpPort = .automatic
+            case .port80:
+                udpOverTcpPort = .port80
+            case .port5001:
+                udpOverTcpPort = .port5001
+            }
+        } else {
+            udpOverTcpPort = .automatic
+        }
+    }
+}

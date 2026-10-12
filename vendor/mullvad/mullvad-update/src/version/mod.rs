@@ -1,0 +1,16 @@
+//! This module is used to extract the latest versions out of a raw [`Response`] using a query
+//! [`VersionParameters`]. It also contains additional logic for filtering and validating the raw
+//! deserialized response.
+//!
+//! The main input here is [`VersionParameters`], and the main output is [`VersionInfo`].
+mod info;
+mod parameters;
+pub mod rollout;
+
+pub use info::{MIN_VERIFY_METADATA_VERSION, Metadata, VersionInfo, is_version_supported};
+pub use parameters::VersionParameters;
+
+pub use crate::format::Architecture;
+pub use crate::format::installer::Installer;
+pub use crate::format::release::Release;
+pub use crate::format::response::Response;

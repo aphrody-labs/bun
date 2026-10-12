@@ -1,0 +1,370 @@
+import { getDefaultApiAccessMethods } from '../../../main/default-settings';
+import { ISplitTunnelingApplication } from '../../../shared/application-types';
+import {
+  AccessMethodSetting,
+  ApiAccessMethodSettings,
+  CustomLists,
+  IDnsOptions,
+  IpVersion,
+  IWireguardEndpointData,
+  LiftedConstraint,
+  MultihopMode,
+  ObfuscationSettings,
+  ObfuscationType,
+  Ownership,
+  Quic,
+  type Recents,
+  RelayLocation,
+  RelayOverride,
+  RelayProtocol,
+  type SettingsMigration,
+  type ShadowsocksCipher,
+} from '../../../shared/daemon-rpc-types';
+import { IGuiSettingsState } from '../../../shared/gui-settings-state';
+import { RelaySelectorPartitions } from '../../../shared/relay-selector-rpc-types';
+import { ReduxAction } from '../store';
+
+export type NormalRelaySettingsRedux = {
+  location: LiftedConstraint<RelayLocation>;
+  providers: string[];
+  ownership: Ownership;
+  wireguard: {
+    ipVersion: LiftedConstraint<IpVersion>;
+    multihop: MultihopMode;
+    entryLocation: LiftedConstraint<RelayLocation>;
+  };
+};
+
+export type RelaySettingsRedux =
+  | {
+      normal: NormalRelaySettingsRedux;
+    }
+  | {
+      customTunnelEndpoint: {
+        host: string;
+        port: number;
+        protocol: RelayProtocol;
+      };
+    };
+
+export interface IRelayLocationRelayRedux {
+  hostname: string;
+  provider: string;
+  ipv4AddrIn: string;
+  includeInCountry: boolean;
+  active: boolean;
+  owned: boolean;
+  weight: number;
+  daita: boolean;
+  quic?: Quic;
+  lwo: boolean;
+}
+
+export interface IRelayLocationCityRedux {
+  name: string;
+  code: string;
+  latitude: number;
+  longitude: number;
+  relays: IRelayLocationRelayRedux[];
+}
+
+export interface IRelayLocationCountryRedux {
+  name: string;
+  code: string;
+  cities: IRelayLocationCityRedux[];
+}
+
+export type RelayLocationsFilterContext = 'entry' | 'exit';
+
+export type RelayLocationsFiltered = {
+  [key in RelayLocationsFilterContext]: RelaySelectorPartitions & {
+    key: string;
+  };
+};
+
+export interface ISettingsReduxState {
+  autoStart: boolean;
+  guiSettings: IGuiSettingsState;
+  relaySettings: RelaySettingsRedux;
+  relayLocations: IRelayLocationCountryRedux[];
+  relayLocationsFiltered: RelayLocationsFiltered;
+  wireguardEndpointData: IWireguardEndpointData;
+  allowLan: boolean;
+  enableIpv6: boolean;
+  lockdownMode: boolean;
+  showBetaReleases: boolean;
+  wireguard: {
+    mtu?: number;
+    quantumResistant: boolean;
+    daita: boolean;
+  };
+  dns: IDnsOptions;
+  splitTunneling: boolean;
+  splitTunnelingApplications: ISplitTunnelingApplication[];
+  splitTunnelingSupported: boolean;
+  obfuscationSettings: ObfuscationSettings;
+  customLists: CustomLists;
+  recents?: Recents;
+  migrations: SettingsMigration[];
+  apiAccessMethods: ApiAccessMethodSettings;
+  currentApiAccessMethod?: AccessMethodSetting;
+  relayOverrides: Array<RelayOverride>;
+  shadowsocksCiphers: ShadowsocksCipher[];
+}
+
+const initialState: ISettingsReduxState = {
+  autoStart: false,
+  guiSettings: {
+    preferredLocale: 'system',
+    enableSystemNotifications: true,
+    autoConnect: true,
+    monochromaticIcon: false,
+    startMinimized: false,
+    unpinnedWindow: window.env.platform !== 'win32' && window.env.platform !== 'darwin',
+    browsedForSplitTunnelingApplications: [],
+    changelogDisplayedForVersion: '',
+    updateDismissedForVersion: '',
+    animateMap: true,
+  },
+  relaySettings: {
+    normal: {
+      location: 'any',
+      providers: [],
+      ownership: Ownership.any,
+      wireguard: {
+        ipVersion: 'any',
+        multihop: 'when-needed',
+        entryLocation: 'any',
+      },
+    },
+  },
+  relayLocations: [],
+  relayLocationsFiltered: {
+    entry: {
+      key: '',
+      matches: [],
+      discards: [],
+    },
+    exit: {
+      key: '',
+      matches: [],
+      discards: [],
+    },
+  },
+  wireguardEndpointData: { portRanges: [], udp2tcpPorts: [] },
+  allowLan: false,
+  enableIpv6: true,
+  lockdownMode: false,
+  showBetaReleases: false,
+  wireguard: {
+    quantumResistant: true,
+    daita: false,
+  },
+  dns: {
+    state: 'default',
+    defaultOptions: {
+      blockAds: false,
+      blockTrackers: false,
+      blockMalware: false,
+      blockAdultContent: false,
+      blockGambling: false,
+      blockSocialMedia: false,
+    },
+    customOptions: {
+      addresses: [],
+    },
+  },
+  splitTunneling: false,
+  splitTunnelingApplications: [],
+  splitTunnelingSupported: false,
+  obfuscationSettings: {
+    selectedObfuscation: ObfuscationType.auto,
+    udp2tcpSettings: {
+      port: 'any',
+    },
+    shadowsocksSettings: {
+      port: 'any',
+    },
+    wireGuardPortSettings: {
+      port: 'any',
+    },
+    lwoSettings: {
+      port: 'any',
+    },
+  },
+  customLists: [],
+  recents: undefined,
+  migrations: [],
+  apiAccessMethods: getDefaultApiAccessMethods(),
+  currentApiAccessMethod: undefined,
+  relayOverrides: [],
+  shadowsocksCiphers: [],
+};
+
+export default function (
+  state: ISettingsReduxState = initialState,
+  action: ReduxAction,
+): ISettingsReduxState {
+  switch (action.type) {
+    case 'UPDATE_GUI_SETTINGS':
+      return {
+        ...state,
+        guiSettings: action.guiSettings,
+      };
+
+    case 'UPDATE_RELAY':
+      return {
+        ...state,
+        relaySettings: action.relay,
+      };
+
+    case 'UPDATE_RELAY_LOCATIONS':
+      return {
+        ...state,
+        relayLocations: action.relayLocations,
+      };
+
+    case 'UPDATE_RELAY_LOCATIONS_FILTERED':
+      return {
+        ...state,
+        relayLocationsFiltered: action.relayLocationsFiltered,
+      };
+
+    case 'UPDATE_WIREGUARD_ENDPOINT_DATA':
+      return {
+        ...state,
+        wireguardEndpointData: action.wireguardEndpointData,
+      };
+
+    case 'UPDATE_ALLOW_LAN':
+      return {
+        ...state,
+        allowLan: action.allowLan,
+      };
+
+    case 'UPDATE_ENABLE_IPV6':
+      return {
+        ...state,
+        enableIpv6: action.enableIpv6,
+      };
+
+    case 'UPDATE_LOCKDOWN_MODE':
+      return {
+        ...state,
+        lockdownMode: action.lockdownMode,
+      };
+
+    case 'UPDATE_SHOW_BETA_NOTIFICATIONS':
+      return {
+        ...state,
+        showBetaReleases: action.showBetaReleases,
+      };
+
+    case 'UPDATE_WIREGUARD_MTU':
+      return {
+        ...state,
+        wireguard: {
+          ...state.wireguard,
+          mtu: action.mtu,
+        },
+      };
+
+    case 'UPDATE_WIREGUARD_QUANTUM_RESISTANT':
+      return {
+        ...state,
+        wireguard: {
+          ...state.wireguard,
+          quantumResistant: action.quantumResistant,
+        },
+      };
+    case 'UPDATE_WIREGUARD_DAITA':
+      return {
+        ...state,
+        wireguard: {
+          ...state.wireguard,
+          daita: action.daita,
+        },
+      };
+
+    case 'UPDATE_AUTO_START':
+      return {
+        ...state,
+        autoStart: action.autoStart,
+      };
+
+    case 'UPDATE_DNS_OPTIONS':
+      return {
+        ...state,
+        dns: action.dns,
+      };
+
+    case 'UPDATE_SPLIT_TUNNELING_STATE':
+      return {
+        ...state,
+        splitTunneling: action.enabled,
+      };
+
+    case 'SET_SPLIT_TUNNELING_APPLICATIONS':
+      return {
+        ...state,
+        splitTunnelingApplications: action.applications,
+      };
+
+    case 'SET_SPLIT_TUNNELING_SUPPORTED':
+      return {
+        ...state,
+        splitTunnelingSupported: action.supported,
+      };
+
+    case 'SET_OBFUSCATION_SETTINGS':
+      return {
+        ...state,
+        obfuscationSettings: action.obfuscationSettings,
+      };
+
+    case 'SET_CUSTOM_LISTS':
+      return {
+        ...state,
+        customLists: action.customLists,
+      };
+
+    case 'SET_RECENTS':
+      return {
+        ...state,
+        recents: action.recents,
+      };
+
+    case 'SET_MIGRATIONS':
+      return {
+        ...state,
+        migrations: action.migrations,
+      };
+
+    case 'SET_API_ACCESS_METHODS':
+      return {
+        ...state,
+        apiAccessMethods: action.accessMethods,
+      };
+
+    case 'SET_CURRENT_API_ACCESS_METHOD':
+      return {
+        ...state,
+        currentApiAccessMethod: action.accessMethod,
+      };
+
+    case 'SET_RELAY_OVERRIDES':
+      return {
+        ...state,
+        relayOverrides: action.relayOverrides,
+      };
+
+    case 'SET_SHADOWSOCKS_CIPHERS':
+      return {
+        ...state,
+        shadowsocksCiphers: action.ciphers ?? [],
+      };
+
+    default:
+      return state;
+  }
+}

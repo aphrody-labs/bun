@@ -1,0 +1,599 @@
+package net.mullvad.mullvadvpn.feature.addtime.impl
+
+import androidx.activity.compose.LocalActivity
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Sell
+import androidx.compose.material.icons.rounded.Redeem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SheetState
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.dropUnlessResumed
+import net.mullvad.mullvadvpn.core.Navigator
+import net.mullvad.mullvadvpn.feature.addtime.api.VerificationPendingNavKey
+import net.mullvad.mullvadvpn.feature.problemreport.api.ProblemReportNavKey
+import net.mullvad.mullvadvpn.feature.redeemvoucher.api.RedeemVoucherNavKey
+import net.mullvad.mullvadvpn.lib.common.Lc
+import net.mullvad.mullvadvpn.lib.common.compose.CollectSideEffectWithLifecycle
+import net.mullvad.mullvadvpn.lib.common.compose.createOpenAccountPageHook
+import net.mullvad.mullvadvpn.lib.common.compose.dropUnlessResumed
+import net.mullvad.mullvadvpn.lib.common.compose.goBack
+import net.mullvad.mullvadvpn.lib.common.compose.navigateReplaceTop
+import net.mullvad.mullvadvpn.lib.payment.ProductIds.OneMonth
+import net.mullvad.mullvadvpn.lib.payment.ProductIds.ThreeMonths
+import net.mullvad.mullvadvpn.lib.payment.model.PaymentStatus
+import net.mullvad.mullvadvpn.lib.payment.model.ProductId
+import net.mullvad.mullvadvpn.lib.ui.component.MullvadModalBottomSheet
+import net.mullvad.mullvadvpn.lib.ui.component.listitem.BottomSheetListItem
+import net.mullvad.mullvadvpn.lib.ui.component.listitem.ExternalLinkListItem
+import net.mullvad.mullvadvpn.lib.ui.component.listitem.IconListItem
+import net.mullvad.mullvadvpn.lib.ui.designsystem.ListItemDefaults
+import net.mullvad.mullvadvpn.lib.ui.designsystem.MullvadCircularProgressIndicatorLarge
+import net.mullvad.mullvadvpn.lib.ui.designsystem.MullvadLinearProgressIndicator
+import net.mullvad.mullvadvpn.lib.ui.designsystem.Position
+import net.mullvad.mullvadvpn.lib.ui.designsystem.SmallPrimaryButton
+import net.mullvad.mullvadvpn.lib.ui.tag.ADD_TIME_BOTTOM_SHEET_TITLE_TEST_TAG
+import net.mullvad.mullvadvpn.lib.ui.theme.AppTheme
+import net.mullvad.mullvadvpn.lib.ui.theme.Dimens
+import org.koin.androidx.compose.koinViewModel
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(
+    "Loading|oss|LoadingSitePayment|" +
+        "PaymentLoading|NoPayment|NoProductsFound|PaymentAvailable|PaymentPending|PaymentError"
+)
+@Composable
+private fun PreviewAddTimeBottomSheet(
+    @PreviewParameter(AddTimeUiStatePreviewParameterProvider::class) state: Lc<Unit, AddTimeUiState>
+) {
+    AppTheme {
+        AddTimeBottomSheetContent(
+            state = state,
+            sheetState =
+                SheetState(
+                    skipPartiallyExpanded = true,
+                    positionalThreshold = { 0f },
+                    velocityThreshold = { 0f },
+                    initialValue = SheetValue.Expanded,
+                ),
+            onPurchaseBillingProductClick = {},
+            onPlayPaymentInfoClick = {},
+            onSitePaymentClick = {},
+            onRedeemVoucherClick = {},
+            closeBottomSheet = {},
+            onRetryFetchProducts = {},
+            resetPurchaseState = {},
+            closeSheetAndResetPurchaseState = {},
+            onRetryVerification = {},
+            navigateToProblemReport = {},
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddTimeBottomSheet(navigator: Navigator) {
+    val viewModel: AddTimeViewModel = koinViewModel<AddTimeViewModel>()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+
+    val openAccountPage = LocalUriHandler.current.createOpenAccountPageHook()
+    CollectSideEffectWithLifecycle(viewModel.uiSideEffect) { sideEffect ->
+        when (sideEffect) {
+            is AddMoreTimeSideEffect.OpenAccountManagementPageInBrowser -> {
+                openAccountPage(sideEffect.token)
+                navigator.goBack(sheetState, scope)
+            }
+        }
+    }
+
+    @Suppress("UnsafeCallOnNullableType") val activity = LocalActivity.current!!
+    AddTimeBottomSheetContent(
+        state = uiState,
+        sheetState = sheetState,
+        onPurchaseBillingProductClick = {
+            viewModel.startBillingPayment(productId = it, activityProvider = { activity })
+        },
+        onSitePaymentClick = viewModel::onManageAccountClick,
+        onRetryFetchProducts = viewModel::fetchPaymentAvailability,
+        onPlayPaymentInfoClick =
+            dropUnlessResumed { paymentStatus ->
+                navigator.navigateReplaceTop(
+                    sheetState,
+                    scope,
+                    VerificationPendingNavKey(paymentStatus),
+                )
+            },
+        onRedeemVoucherClick =
+            dropUnlessResumed {
+                navigator.navigateReplaceTop(sheetState, scope, RedeemVoucherNavKey)
+            },
+        resetPurchaseState = { viewModel.resetPurchaseResult() },
+        onRetryVerification = { viewModel.retryVerifyPurchase() },
+        navigateToProblemReport =
+            dropUnlessResumed {
+                navigator.navigateReplaceTop(sheetState, scope, ProblemReportNavKey)
+            },
+        closeSheetAndResetPurchaseState = {
+            viewModel.resetPurchaseResult()
+            navigator.goBack(sheetState, scope)
+        },
+        closeBottomSheet = { animate ->
+            if (animate) {
+                navigator.goBack(sheetState, scope)
+            } else {
+                navigator.goBack()
+            }
+        },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddTimeBottomSheetContent(
+    state: Lc<Unit, AddTimeUiState>,
+    sheetState: SheetState,
+    onPurchaseBillingProductClick: (ProductId) -> Unit = {},
+    onPlayPaymentInfoClick: (PaymentStatus) -> Unit,
+    onSitePaymentClick: () -> Unit,
+    onRedeemVoucherClick: () -> Unit,
+    onRetryFetchProducts: () -> Unit,
+    resetPurchaseState: () -> Unit,
+    closeSheetAndResetPurchaseState: (Boolean) -> Unit,
+    closeBottomSheet: (animate: Boolean) -> Unit,
+    onRetryVerification: () -> Unit,
+    navigateToProblemReport: () -> Unit,
+) {
+    val backgroundColor = MaterialTheme.colorScheme.surfaceContainer
+    val onBackgroundColor = MaterialTheme.colorScheme.onSurface
+    MullvadModalBottomSheet(
+        sheetState = sheetState,
+        backgroundColor = backgroundColor,
+        onBackgroundColor = onBackgroundColor,
+        onDismissRequest = {
+            resetPurchaseState()
+            closeBottomSheet(false)
+        },
+        shouldDismissOnClickOutside =
+            state is Lc.Content && state.value.purchaseState != PurchaseState.VerificationStarted,
+    ) {
+        when (state) {
+            is Lc.Loading ->
+                Loading(backgroundColor = backgroundColor, onBackgroundColor = onBackgroundColor)
+
+            is Lc.Content ->
+                Content(
+                    state = state.value,
+                    internetBlocked = state.value.tunnelStateBlocked,
+                    backgroundColor = backgroundColor,
+                    onBackgroundColor = onBackgroundColor,
+                    onPurchaseBillingProductClick = onPurchaseBillingProductClick,
+                    onPlayPaymentInfoClick = onPlayPaymentInfoClick,
+                    onSitePaymentClick = onSitePaymentClick,
+                    onRedeemVoucherClick = onRedeemVoucherClick,
+                    onRetryFetchProducts = onRetryFetchProducts,
+                    resetPurchaseState = resetPurchaseState,
+                    closeSheetAndResetPurchaseState = closeSheetAndResetPurchaseState,
+                    onRetryVerification = onRetryVerification,
+                    navigateToProblemReport = navigateToProblemReport,
+                )
+        }
+    }
+}
+
+@Composable
+private fun Content(
+    state: AddTimeUiState,
+    internetBlocked: Boolean,
+    backgroundColor: Color,
+    onBackgroundColor: Color,
+    onPurchaseBillingProductClick: (ProductId) -> Unit,
+    onPlayPaymentInfoClick: (PaymentStatus) -> Unit,
+    onSitePaymentClick: () -> Unit,
+    onRedeemVoucherClick: () -> Unit,
+    onRetryFetchProducts: () -> Unit,
+    onRetryVerification: () -> Unit,
+    resetPurchaseState: () -> Unit,
+    closeSheetAndResetPurchaseState: (Boolean) -> Unit,
+    navigateToProblemReport: () -> Unit,
+) {
+    AnimatedContent(targetState = state) { targetState ->
+        Column {
+            if (targetState.purchaseState != null) {
+                PurchaseState(
+                    backgroundColor = backgroundColor,
+                    onBackgroundColor = onBackgroundColor,
+                    purchaseState = targetState.purchaseState,
+                    resetPurchaseState = resetPurchaseState,
+                    closeSheetAndResetPurchaseState = closeSheetAndResetPurchaseState,
+                    onRetryVerification = onRetryVerification,
+                    navigateToProblemReport = navigateToProblemReport,
+                )
+            } else {
+                Products(
+                    billingPaymentState = targetState.billingPaymentState,
+                    showSitePayment = targetState.showSitePayment,
+                    internetBlocked = internetBlocked,
+                    backgroundColor = backgroundColor,
+                    onBackgroundColor = onBackgroundColor,
+                    onPurchaseBillingProductClick = onPurchaseBillingProductClick,
+                    onPlayPaymentInfoClick = onPlayPaymentInfoClick,
+                    onSitePaymentClick = onSitePaymentClick,
+                    onRedeemVoucherClick = onRedeemVoucherClick,
+                    onRetryFetchProducts = onRetryFetchProducts,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ColumnScope.PurchaseState(
+    backgroundColor: Color,
+    onBackgroundColor: Color,
+    purchaseState: PurchaseState,
+    resetPurchaseState: () -> Unit,
+    closeSheetAndResetPurchaseState: (Boolean) -> Unit,
+    onRetryVerification: () -> Unit,
+    navigateToProblemReport: () -> Unit,
+) {
+    when (purchaseState) {
+        // Fetching products and obfuscated id loading state
+        PurchaseState.Connecting -> {
+            PurchaseStateLoading(title = stringResource(R.string.connecting))
+        }
+
+        PurchaseState.VerificationStarted -> {
+            PurchaseStateLoading(title = stringResource(R.string.loading_verifying))
+        }
+        // Pending state
+        PurchaseState.VerifyingPurchase -> {
+            PurchaseStateVerification(
+                backgroundColor = backgroundColor,
+                onBackgroundColor = onBackgroundColor,
+                closeSheet = closeSheetAndResetPurchaseState,
+            )
+        }
+        // Success state
+        is PurchaseState.Success -> {
+            PurchaseStateSuccess(
+                backgroundColor = backgroundColor,
+                onBackgroundColor = onBackgroundColor,
+                productId = purchaseState.productId,
+                onSuccessfulPurchase = closeSheetAndResetPurchaseState,
+            )
+        }
+        // Error states
+        is PurchaseState.Error.TransactionIdError -> {
+            PurchaseStateError(
+                backgroundColor = backgroundColor,
+                onBackgroundColor = onBackgroundColor,
+                title = stringResource(R.string.payment_obfuscation_id_error_dialog_title),
+                message = stringResource(R.string.payment_obfuscation_id_error_dialog_message),
+                resetPurchaseState = resetPurchaseState,
+            )
+        }
+
+        is PurchaseState.Error.OtherError -> {
+            PurchaseStateError(
+                backgroundColor = backgroundColor,
+                onBackgroundColor = onBackgroundColor,
+                title = stringResource(R.string.payment_billing_error_dialog_title),
+                message = stringResource(R.string.payment_billing_error_dialog_message),
+                resetPurchaseState = resetPurchaseState,
+            )
+        }
+
+        PurchaseState.Error.VerificationError.Unrecoverable -> {
+            PurchaseStateVerificationError(
+                backgroundColor = backgroundColor,
+                onBackgroundColor = onBackgroundColor,
+                message = stringResource(R.string.verifying_purchase_unrecoverable_error),
+                isRecoverable = false,
+                close = { closeSheetAndResetPurchaseState(false) },
+                tryAgain = {},
+                contactSupport = navigateToProblemReport,
+            )
+        }
+
+        PurchaseState.Error.VerificationError.Recoverable -> {
+            PurchaseStateVerificationError(
+                backgroundColor = backgroundColor,
+                onBackgroundColor = onBackgroundColor,
+                message = stringResource(R.string.verifying_purchase_recoverable_error),
+                isRecoverable = true,
+                close = { closeSheetAndResetPurchaseState(false) },
+                tryAgain = onRetryVerification,
+                contactSupport = navigateToProblemReport,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PurchaseStateVerification(
+    onBackgroundColor: Color,
+    backgroundColor: Color,
+    closeSheet: (Boolean) -> Unit,
+) {
+    SheetTitle(
+        title = stringResource(id = R.string.verifying_purchase),
+        onBackgroundColor = onBackgroundColor,
+        backgroundColor = backgroundColor,
+    )
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(horizontal = Dimens.sideMargin, vertical = Dimens.screenTopMargin),
+    ) {
+        Text(
+            text = stringResource(id = R.string.payment_pending_dialog_message),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        SmallPrimaryButton(
+            text = stringResource(R.string.close),
+            onClick = { closeSheet(false) },
+            modifier = Modifier.padding(top = Dimens.mediumPadding),
+        )
+    }
+}
+
+@Composable
+private fun PurchaseStateLoading(title: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.fillMaxWidth().padding(all = Dimens.sideMargin),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(modifier = Modifier.height(Dimens.mediumPadding))
+        MullvadLinearProgressIndicator()
+    }
+}
+
+@Composable
+private fun PurchaseStateSuccess(
+    onBackgroundColor: Color,
+    backgroundColor: Color,
+    productId: ProductId,
+    onSuccessfulPurchase: (Boolean) -> Unit,
+) {
+    SheetTitle(
+        title = stringResource(id = R.string.time_added),
+        onBackgroundColor = onBackgroundColor,
+        backgroundColor = backgroundColor,
+    )
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(horizontal = Dimens.sideMargin, vertical = Dimens.screenTopMargin),
+    ) {
+        Text(
+            text =
+                when (productId.value) {
+                    OneMonth -> stringResource(R.string.days_were_added_30)
+                    ThreeMonths -> stringResource(R.string.days_were_added_90)
+                    else -> {
+                        error("Unknown product: $productId")
+                    }
+                },
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        SmallPrimaryButton(
+            text = stringResource(R.string.close),
+            onClick = { onSuccessfulPurchase(true) },
+            modifier = Modifier.padding(top = Dimens.mediumPadding),
+        )
+    }
+}
+
+@Composable
+private fun ColumnScope.PurchaseStateError(
+    onBackgroundColor: Color,
+    backgroundColor: Color,
+    title: String,
+    message: String,
+    resetPurchaseState: () -> Unit,
+) {
+    SheetTitle(
+        title = title,
+        onBackgroundColor = onBackgroundColor,
+        backgroundColor = backgroundColor,
+    )
+    Spacer(modifier = Modifier.height(Dimens.cellVerticalSpacing))
+    Text(
+        text = message,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(horizontal = Dimens.sideMargin),
+    )
+    SmallPrimaryButton(
+        text = stringResource(android.R.string.ok),
+        onClick = resetPurchaseState,
+        modifier = Modifier.padding(top = Dimens.mediumPadding).align(Alignment.CenterHorizontally),
+    )
+}
+
+@Composable
+private fun ColumnScope.PurchaseStateVerificationError(
+    onBackgroundColor: Color,
+    backgroundColor: Color,
+    message: String,
+    isRecoverable: Boolean,
+    close: () -> Unit,
+    tryAgain: () -> Unit,
+    contactSupport: () -> Unit,
+) {
+    SheetTitle(
+        title = stringResource(id = R.string.verifying_purchase_error),
+        onBackgroundColor = onBackgroundColor,
+        backgroundColor = backgroundColor,
+    )
+    Spacer(modifier = Modifier.height(Dimens.cellVerticalSpacing))
+    Text(
+        text = message,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(horizontal = Dimens.sideMargin),
+    )
+    Row(
+        modifier = Modifier.padding(top = Dimens.mediumPadding).align(Alignment.CenterHorizontally)
+    ) {
+        SmallPrimaryButton(text = stringResource(android.R.string.ok), onClick = close)
+        if (isRecoverable) {
+            SmallPrimaryButton(
+                text = stringResource(R.string.try_again),
+                onClick = tryAgain,
+                modifier = Modifier.padding(start = Dimens.mediumPadding),
+            )
+        } else {
+            SmallPrimaryButton(
+                text = stringResource(R.string.contact_support),
+                onClick = contactSupport,
+                modifier = Modifier.padding(start = Dimens.mediumPadding),
+            )
+        }
+    }
+}
+
+@Composable
+private fun Products(
+    billingPaymentState: PaymentState?,
+    internetBlocked: Boolean,
+    showSitePayment: Boolean,
+    backgroundColor: Color,
+    onBackgroundColor: Color,
+    onPurchaseBillingProductClick: (ProductId) -> Unit,
+    onPlayPaymentInfoClick: (PaymentStatus) -> Unit,
+    onSitePaymentClick: () -> Unit,
+    onRedeemVoucherClick: () -> Unit,
+    onRetryFetchProducts: () -> Unit,
+) {
+    SheetTitle(
+        title = stringResource(id = R.string.add_time),
+        onBackgroundColor = onBackgroundColor,
+        backgroundColor = backgroundColor,
+    )
+    billingPaymentState?.let {
+        PlayPayment(
+            modifier = Modifier.fillMaxWidth(),
+            billingPaymentState = billingPaymentState,
+            onBackgroundColor = onBackgroundColor,
+            onPurchaseBillingProductClick = onPurchaseBillingProductClick,
+            onInfoClick = onPlayPaymentInfoClick,
+            onRetryFetchProducts = onRetryFetchProducts,
+        )
+    }
+    if (showSitePayment) {
+        if (internetBlocked) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier =
+                    Modifier.padding(
+                        start = Dimens.cellStartPadding,
+                        end = Dimens.cellStartPadding,
+                    ),
+            ) {
+                Icon(
+                    modifier = Modifier.size(Dimens.smallIconSize),
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    text = stringResource(R.string.app_is_blocking_internet),
+                    modifier = Modifier.padding(start = Dimens.miniPadding),
+                )
+            }
+        }
+        ExternalLinkListItem(
+            leadingIcon = Icons.Outlined.Sell,
+            title = stringResource(id = R.string.buy_credit),
+            colors =
+                ListItemDefaults.colors(
+                    headlineColor = onBackgroundColor,
+                    containerColorParent = backgroundColor,
+                ),
+            onClick = { onSitePaymentClick() },
+            position = Position.Middle,
+            isRowEnabled = !internetBlocked,
+        )
+        HorizontalDivider(
+            modifier = Modifier.height(Dimens.thinBorderWidth),
+            color = onBackgroundColor,
+        )
+    }
+    IconListItem(
+        leadingIcon = Icons.Rounded.Redeem,
+        title = stringResource(id = R.string.redeem_voucher),
+        colors =
+            ListItemDefaults.colors(
+                headlineColor = onBackgroundColor,
+                containerColorParent = backgroundColor,
+            ),
+        position = Position.Middle,
+        onClick = onRedeemVoucherClick,
+    )
+}
+
+@Composable
+private fun ColumnScope.Loading(onBackgroundColor: Color, backgroundColor: Color) {
+    SheetTitle(
+        title = stringResource(id = R.string.add_time),
+        onBackgroundColor = onBackgroundColor,
+        backgroundColor = backgroundColor,
+    )
+    MullvadCircularProgressIndicatorLarge(modifier = Modifier.align(Alignment.CenterHorizontally))
+}
+
+@Composable
+private fun SheetTitle(title: String, onBackgroundColor: Color, backgroundColor: Color) {
+    BottomSheetListItem(
+        title = title,
+        backgroundColor = backgroundColor,
+        onBackgroundColor = onBackgroundColor,
+        modifier = Modifier.testTag(ADD_TIME_BOTTOM_SHEET_TITLE_TEST_TAG),
+    )
+    HorizontalDivider(
+        color = onBackgroundColor,
+        modifier = Modifier.padding(horizontal = Dimens.mediumPadding),
+    )
+    Spacer(modifier = Modifier.height(Dimens.cellVerticalSpacing))
+}

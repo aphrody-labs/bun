@@ -1,0 +1,27 @@
+plugins {
+    alias(libs.plugins.mullvad.android.library)
+    alias(libs.plugins.compose)
+}
+
+android {
+    namespace = "net.mullvad.mullvadvpn.lib.tv"
+
+    buildFeatures { compose = true }
+}
+
+dependencies {
+    implementation(libs.kotlin.stdlib)
+    implementation(libs.androidx.tv)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.compose.material3)
+    implementation(libs.compose.ui)
+    implementation(projects.lib.model)
+    implementation(projects.lib.ui.resource)
+    implementation(projects.lib.repository)
+    implementation(projects.lib.ui.component)
+    implementation(projects.lib.ui.theme)
+
+    // UI tooling
+    implementation(libs.compose.ui.tooling.preview)
+    debugImplementation(libs.compose.ui.tooling)
+}

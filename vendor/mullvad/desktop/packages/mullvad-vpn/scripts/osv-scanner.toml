@@ -1,0 +1,4 @@
+# See repository root `osv-scanner.toml` for instructions and rules for this file.
+
+# All issues found here are ignored for 6 months at a time, instead of three,
+# since it is only used on trusted input and is scheduled for removal completely anyway.

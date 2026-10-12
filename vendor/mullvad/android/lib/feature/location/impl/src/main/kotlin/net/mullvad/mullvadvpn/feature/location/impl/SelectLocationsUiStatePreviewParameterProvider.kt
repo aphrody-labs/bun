@@ -1,0 +1,92 @@
+package net.mullvad.mullvadvpn.feature.location.impl
+
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+import net.mullvad.mullvadvpn.lib.common.Lc
+import net.mullvad.mullvadvpn.lib.common.toLc
+import net.mullvad.mullvadvpn.lib.model.HopSelection
+import net.mullvad.mullvadvpn.lib.model.MultihopMode
+import net.mullvad.mullvadvpn.lib.model.RelayHopType
+import net.mullvad.mullvadvpn.lib.usecase.FilterChip
+import net.mullvad.mullvadvpn.lib.usecase.ModelOwnership
+
+class SelectLocationsUiStatePreviewParameterProvider :
+    PreviewParameterProvider<Lc<Unit, SelectLocationUiState>> {
+    override val values =
+        sequenceOf(
+            Lc.Loading(Unit),
+            SelectLocationUiState(
+                    filterChips = emptyList(),
+                    multihopListSelection = RelayHopType.EXIT,
+                    activeMultihopMode = MultihopMode.ALWAYS,
+                    isSearchButtonEnabled = true,
+                    isEntryFilterButtonEnabled = true,
+                    isRecentsEnabled = true,
+                    hopSelection = HopSelection.Single(null),
+                    tunnelErrorStateCause = null,
+                    hasAnyEntryFilter = true,
+                    hasAnyExitFilter = true,
+                    isEntryFilteringEnabled = true,
+                    lastKnownLocation = null,
+                    entryCountry = null,
+                )
+                .toLc(),
+            SelectLocationUiState(
+                    filterChips =
+                        listOf(
+                            FilterChip.Ownership(ownership = ModelOwnership.Rented),
+                            FilterChip.Provider(PROVIDER_COUNT),
+                        ),
+                    multihopListSelection = RelayHopType.EXIT,
+                    activeMultihopMode = MultihopMode.ALWAYS,
+                    isSearchButtonEnabled = true,
+                    isEntryFilterButtonEnabled = true,
+                    isRecentsEnabled = true,
+                    hopSelection = HopSelection.Single(null),
+                    tunnelErrorStateCause = null,
+                    hasAnyEntryFilter = true,
+                    hasAnyExitFilter = true,
+                    isEntryFilteringEnabled = true,
+                    lastKnownLocation = null,
+                    entryCountry = null,
+                )
+                .toLc(),
+            SelectLocationUiState(
+                    filterChips = emptyList(),
+                    multihopListSelection = RelayHopType.ENTRY,
+                    activeMultihopMode = MultihopMode.ALWAYS,
+                    isSearchButtonEnabled = true,
+                    isEntryFilterButtonEnabled = true,
+                    isRecentsEnabled = true,
+                    hopSelection = HopSelection.Multi(null, null),
+                    tunnelErrorStateCause = null,
+                    hasAnyEntryFilter = true,
+                    hasAnyExitFilter = true,
+                    isEntryFilteringEnabled = true,
+                    lastKnownLocation = null,
+                    entryCountry = null,
+                )
+                .toLc(),
+            SelectLocationUiState(
+                    filterChips =
+                        listOf(
+                            FilterChip.Ownership(ownership = ModelOwnership.MullvadOwned),
+                            FilterChip.Provider(PROVIDER_COUNT),
+                        ),
+                    multihopListSelection = RelayHopType.ENTRY,
+                    activeMultihopMode = MultihopMode.ALWAYS,
+                    isSearchButtonEnabled = true,
+                    isEntryFilterButtonEnabled = true,
+                    isRecentsEnabled = true,
+                    hopSelection = HopSelection.Multi(null, null),
+                    tunnelErrorStateCause = null,
+                    hasAnyEntryFilter = true,
+                    hasAnyExitFilter = true,
+                    isEntryFilteringEnabled = true,
+                    lastKnownLocation = null,
+                    entryCountry = null,
+                )
+                .toLc(),
+        )
+}
+
+private const val PROVIDER_COUNT = 3

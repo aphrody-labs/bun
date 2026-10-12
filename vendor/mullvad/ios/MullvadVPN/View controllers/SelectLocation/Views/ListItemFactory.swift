@@ -1,0 +1,96 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import MullvadTypes
+import SwiftUI
+
+struct ListItemFactory {
+    enum Label {
+        case location(node: LocationNode, context: MultihopContext, level: Int)
+        case recent(node: LocationNode, context: MultihopContext)
+        case setting(title: String, subtitle: String? = nil, level: Int = 0, selected: Bool = false)
+    }
+
+    enum Segment {
+        case expand(isExpanded: Bool, onSelect: (() -> Void)?)
+        case info(onSelect: (() -> Void)?)
+    }
+
+    enum StatusIndicator {
+        enum DotStyle {
+            case issue, offline, online
+        }
+
+        case dot(DotStyle)
+        case tick
+    }
+
+    @MainActor @ViewBuilder func label(for label: Label) -> some View {
+        switch label {
+        case .location(let node, let context, let level):
+            LocationItemView(node: node, multihopContext: context, level: level)
+        case .recent(let node, let context):
+            RecentItemView(node: node, multihopContext: context)
+        case .setting(let title, let subtitle, let level, let selected):
+            ListItem(
+                title: title,
+                subtitle: subtitle,
+                level: level,
+                selected: selected,
+                statusIndicator: {
+                    if selected {
+                        statusIndicator(for: .tick)
+                    }
+                }
+            )
+        }
+    }
+
+    @MainActor @ViewBuilder func segment(for segment: Segment) -> some View {
+        switch segment {
+        case .expand(let isExpanded, let onSelect):
+            Button {
+                onSelect?()
+            } label: {
+                Image.mullvadIconChevron
+                    .rotationEffect(.degrees(isExpanded ? -90 : 90))
+                    .accessibilityLabel(
+                        isExpanded ? Text("Collapse") : Text("Expand")
+                    )
+                    .accessibilityIdentifier(.expandButton)
+            }
+        case .info(let onSelect):
+            Button {
+                onSelect?()
+            } label: {
+                Image.mullvadIconInfo
+                    .accessibilityLabel(Text("Information"))
+                    .accessibilityIdentifier(.infoButton)
+            }
+        }
+    }
+
+    @MainActor @ViewBuilder func statusIndicator(for indicator: StatusIndicator) -> some View {
+        switch indicator {
+        case .dot(let style):
+            switch style {
+            case .issue:
+                Image.mullvadIconStateIssue
+            case .offline:
+                Image.mullvadIconStateOffline
+            case .online:
+                Image.mullvadIconStateOnline
+            }
+        case .tick:
+            Image.mullvadIconTick
+                .foregroundStyle(Color.mullvadSuccessColor)
+        }
+    }
+}

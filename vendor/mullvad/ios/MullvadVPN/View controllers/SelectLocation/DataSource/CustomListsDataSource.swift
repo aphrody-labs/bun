@@ -1,0 +1,69 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import Foundation
+import MullvadREST
+import MullvadSettings
+import MullvadTypes
+
+class CustomListsDataSource: SearchableLocationDataSource {
+    private(set) var nodes = [LocationNode]()
+    private(set) var repository: CustomListRepositoryProtocol
+    var selectedNode: LocationNode?
+
+    init(repository: CustomListRepositoryProtocol) {
+        self.repository = repository
+    }
+
+    /// Constructs a collection of node trees by copying each matching counterpart
+    /// from the complete list of nodes created in ``AllLocationDataSource``.
+    func reload(allLocationNodes: [LocationNode]) {
+        let expandedCodes = collectExpandedCodes()
+        nodes = repository.fetchAll().sorted { $0.name < $1.name }.map { list in
+            let customListWrapper = CustomListLocationNodeBuilder(customList: list, allLocations: allLocationNodes)
+            let listNode = customListWrapper.customListLocationNode
+            listNode.showsChildren = expandedCodes.contains(listNode.code)
+
+            listNode.forEachDescendant { node in
+                // Each item in a section in a diffable data source needs to be unique.
+                // Since LocationCellViewModel partly depends on LocationNode.code for
+                // equality, each node code needs to be prefixed with the code of its
+                // parent custom list to uphold this.
+                node.code = LocationNode.combineNodeCodes([listNode.code, node.code])
+                node.showsChildren = expandedCodes.contains(node.code)
+            }
+
+            return listNode
+        }
+    }
+
+    func node(by selectedConstraint: RelayConstraint<UserSelectedRelays>) -> LocationNode? {
+        let selectedRelays = selectedConstraint.value
+        let rootNode = RootLocationNode(children: nodes)
+
+        guard
+            let selection = selectedRelays?.customListSelection,
+            let selectedNode = rootNode.children.first(where: {
+                $0.asCustomListNode?.customList.id == selection.listId
+            })
+        else { return nil }
+
+        if selection.isList {
+            return selectedNode
+        }
+
+        if let location = selectedRelays?.locations.first {
+            return rootNode.descendantNode(for: [selectedNode.code, location.stringRepresentation])
+        }
+
+        return nil
+    }
+
+}

@@ -8,9 +8,7 @@ import { verifyFactoryArtifacts, verifyFactoryRelease, type FactoryQualification
 const sourceResult = Bun.spawnSync(["git", "rev-parse", "HEAD"], { stdout: "pipe", stderr: "pipe" });
 if (sourceResult.exitCode !== 0) throw new Error("Unable to resolve the current Bun source commit");
 const source = sourceResult.stdout.toString().trim();
-const mullvadLink = Bun.spawnSync(["git", "ls-tree", source, "vendor/mullvad"], { stdout: "pipe", stderr: "pipe" });
-const mullvadSource = mullvadLink.stdout.toString().match(/^160000 commit ([a-f0-9]{40})\s+vendor\/mullvad$/m)?.[1];
-if (!mullvadSource) throw new Error("Unable to resolve the pinned Mullvad source commit");
+const mullvadSource = source;
 async function fixture(run: (directory: string, receipt: FactoryQualification) => Promise<void>) {
   const directory = mkdtempSync(join(tmpdir(), "factory-release-test-"));
   try {
@@ -108,7 +106,7 @@ test("Linux VPS release requires its pinned, native Mullvad sidecar receipt", as
     receipt.mullvad!.mullvadSource = "c".repeat(40);
     await Bun.write(join(directory, "factory-qualification.json"), JSON.stringify(receipt));
     await expect(verifyFactoryRelease(directory, source, "1.4.4", "candidate", ["linux-x64"])).rejects.toThrow(
-      "Mullvad sidecar source does not match the Bun source gitlink",
+      "Mullvad sidecar source does not match the embedded Bun source",
     );
   });
 });

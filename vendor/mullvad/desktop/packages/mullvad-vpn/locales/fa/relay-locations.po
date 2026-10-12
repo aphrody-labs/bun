@@ -1,0 +1,698 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Crowdin-Project: mullvad-app\n"
+"X-Crowdin-Project-ID: 350815\n"
+"X-Crowdin-Language: fa\n"
+"X-Crowdin-File: relay-locations.pot\n"
+"X-Crowdin-File-ID: 14\n"
+"Project-Id-Version: mullvad-app\n"
+"Language-Team: Persian\n"
+"Language: fa_IR\n"
+"PO-Revision-Date: 2026-09-03 06:40\n"
+
+#. AU ADL
+msgid "Adelaide"
+msgstr "آدلاید"
+
+#. AL
+msgid "Albania"
+msgstr "آلبانی"
+
+#. NL AMS
+msgid "Amsterdam"
+msgstr "آمستردام"
+
+#. AR
+msgid "Argentina"
+msgstr "آرژانتین"
+
+#. US QAS
+msgid "Ashburn, VA"
+msgstr "اشبرن، ویرجینیا"
+
+#. GR ATH
+msgid "Athens"
+msgstr "آتن"
+
+#. US ATL
+msgid "Atlanta, GA"
+msgstr "آتلانتا، جورجیا"
+
+#. NZ AKL
+msgid "Auckland"
+msgstr "اوکلند"
+
+#. AU
+msgid "Australia"
+msgstr "استرالیا"
+
+#. AT
+msgid "Austria"
+msgstr "اتریش"
+
+#. TH BKK
+msgid "Bangkok"
+msgstr "بانکوک"
+
+#. ES BCN
+msgid "Barcelona"
+msgstr "بارسلون"
+
+#. BE
+msgid "Belgium"
+msgstr "بلژیک"
+
+#. RS BEG
+msgid "Belgrade"
+msgstr "بلگراد"
+
+#. DE BER
+msgid "Berlin"
+msgstr "برلین"
+
+#. CO BOG
+msgid "Bogota"
+msgstr "بوگوتا"
+
+#. FR BOD
+msgid "Bordeaux"
+msgstr "بوردو"
+
+#. US BOS
+msgid "Boston, MA"
+msgstr "بوستون، ماساچوست"
+
+#. SK BTS
+msgid "Bratislava"
+msgstr "براتیسلاوا"
+
+#. BR
+msgid "Brazil"
+msgstr "برزیل"
+
+#. AU BNE
+msgid "Brisbane"
+msgstr "بریزبن"
+
+#. BE BRU
+msgid "Brussels"
+msgstr "بروکسل"
+
+#. RO BUH
+msgid "Bucharest"
+msgstr "بخارست"
+
+#. HU BUD
+msgid "Budapest"
+msgstr "بوداپست"
+
+#. AR BUE
+msgid "Buenos Aires"
+msgstr "بوئنوس آیرس"
+
+#. BG
+msgid "Bulgaria"
+msgstr "بلغارستان"
+
+#. CA YYC
+msgid "Calgary"
+msgstr "کلگری"
+
+#. CA
+msgid "Canada"
+msgstr "کانادا"
+
+#. AU CBR
+msgid "Canberra"
+msgstr "کانبرا"
+
+#. US CLT
+msgid "Charlotte, NC"
+msgstr "شارلوت، کارولینای شمالی"
+
+#. US CHI
+msgid "Chicago, IL"
+msgstr "شیکاگو، ایلینوی"
+
+#. CL
+msgid "Chile"
+msgstr "شیلی"
+
+#. MD KIV
+msgid "Chisinau"
+msgstr "کیشیناو"
+
+#. US CLE
+msgid "Cleveland, OH"
+msgstr "کلیولند، اوهایو"
+
+#. CO
+msgid "Colombia"
+msgstr "کلمبیا"
+
+#. DK CPH
+msgid "Copenhagen"
+msgstr "کپنهاگ"
+
+#. HR
+msgid "Croatia"
+msgstr "کرواسی"
+
+#. CY
+msgid "Cyprus"
+msgstr "قبرس"
+
+#. CZ
+msgid "Czech Republic"
+msgstr "جمهوری چک"
+
+#. US DAL
+msgid "Dallas, TX"
+msgstr "دالاس، تگزاس"
+
+#. DK
+msgid "Denmark"
+msgstr "دانمارک"
+
+#. US DEN
+msgid "Denver, CO"
+msgstr "دنور، کلرادو"
+
+#. US DET
+msgid "Detroit, MI"
+msgstr "دیترویت، میشیگان"
+
+#. AE DXB
+msgid "Dubai"
+msgstr "دبی"
+
+#. IE DUB
+msgid "Dublin"
+msgstr "دوبلین"
+
+#. DE DUS
+msgid "Dusseldorf"
+msgstr "دوسلدورف"
+
+#. EE
+msgid "Estonia"
+msgstr "استونی"
+
+#. FI
+msgid "Finland"
+msgstr "فنلاند"
+
+#. BR FOR
+msgid "Fortaleza"
+msgstr "فورتالزا"
+
+#. FR
+msgid "France"
+msgstr "فرانسه"
+
+#. DE FRA
+msgid "Frankfurt"
+msgstr "فرانکفورت"
+
+#. DE
+msgid "Germany"
+msgstr "آلمان"
+
+#. GB GLW
+msgid "Glasgow"
+msgstr "گلاسگو"
+
+#. SE GOT
+msgid "Gothenburg"
+msgstr "گوتنبرگ"
+
+#. GR
+msgid "Greece"
+msgstr "یونان"
+
+#. SE HEL
+msgid "Helsingborg"
+msgstr "هلسینگبورگ"
+
+#. FI HEL
+msgid "Helsinki"
+msgstr "هلسینکی"
+
+#. HK HKG
+msgid "Hong Kong"
+msgstr "هنگ‌کنگ"
+
+#. US HNL
+msgid "Honolulu, HI"
+msgstr "هونولولو، هاوایی"
+
+#. US HOU
+msgid "Houston, TX"
+msgstr "هیوستون، تگزاس"
+
+#. HU
+msgid "Hungary"
+msgstr "مجارستان"
+
+#. IN
+msgid "India"
+msgstr "هند"
+
+#. ID
+msgid "Indonesia"
+msgstr "اندونزی"
+
+#. IE
+msgid "Ireland"
+msgstr "ایرلند"
+
+#. IL
+msgid "Israel"
+msgstr "اسرائیل"
+
+#. TR IST
+msgid "Istanbul"
+msgstr "استانبول"
+
+#. IT
+msgid "Italy"
+msgstr "ایتالیا"
+
+#. US JAN
+msgid "Jackson, MS"
+msgstr "جکسون، میسیسیپی"
+
+#. ID JPU
+msgid "Jakarta"
+msgstr "جاکارتا"
+
+#. JP
+msgid "Japan"
+msgstr "ژاپن"
+
+#. ZA JNB
+msgid "Johannesburg"
+msgstr "ژوهانسبورگ"
+
+#. US MKC
+msgid "Kansas City, MO"
+msgstr "کانزاس‌سیتی، میزوری"
+
+#. UA IEV
+msgid "Kiev"
+msgstr "کی‌یف"
+
+#. MY KUL
+msgid "Kuala Lumpur"
+msgstr "کوالالامپور"
+
+#. UA IEV
+msgid "Kyiv"
+msgstr "کی‌یف"
+
+#. NG LOS
+msgid "Lagos"
+msgstr "لاگوس"
+
+#. LV
+msgid "Latvia"
+msgstr "لتونی"
+
+#. PE LIM
+msgid "Lima"
+msgstr "لیما"
+
+#. PT LIS
+msgid "Lisbon"
+msgstr "لیسبون"
+
+#. SI LJU
+msgid "Ljubljana"
+msgstr "لیوبلیانا"
+
+#. GB LON
+msgid "London"
+msgstr "لندن"
+
+#. US LAX
+msgid "Los Angeles, CA"
+msgstr "لس‌آنجلس، کالیفرنیا"
+
+#. US LUI
+msgid "Louisville, KY"
+msgstr "لوئیزویل، کنتاکی"
+
+#. LU LUX
+msgid "Luxembourg"
+msgstr "لوکزامبورگ"
+
+#. ES MAD
+msgid "Madrid"
+msgstr "مادرید"
+
+#. MY
+msgid "Malaysia"
+msgstr "مالزی"
+
+#. SE MMA
+msgid "Malmö"
+msgstr "مالمو"
+
+#. GB MNC
+msgid "Manchester"
+msgstr "منچستر"
+
+#. PH MNL
+msgid "Manila"
+msgstr "مانیل"
+
+#. FR MRS
+msgid "Marseille"
+msgstr "مارسی"
+
+#. US TXC
+msgid "McAllen, TX"
+msgstr "مک‌آلن، تگزاس"
+
+#. AU MEL
+msgid "Melbourne"
+msgstr "ملبورن"
+
+#. MX
+msgid "Mexico"
+msgstr "مکزیک"
+
+#. US MIA
+msgid "Miami, FL"
+msgstr "میامی، فلوریدا"
+
+#. IT MIL
+msgid "Milan"
+msgstr "میلان"
+
+#. US MKE
+msgid "Milwaukee, WI"
+msgstr "میلواکی، ویسکانسین"
+
+#. US MSP
+msgid "Minneapolis/St. Paul Apt, MN"
+msgstr "مینیاپولیس/سن‌پاول، مینه‌سوتا"
+
+#. MD
+msgid "Moldova"
+msgstr "مولداوی"
+
+#. CA MTR
+msgid "Montreal"
+msgstr "مونترال"
+
+#. NL
+msgid "Netherlands"
+msgstr "هلند"
+
+#. US NYC
+msgid "New York, NY"
+msgstr "نیویورک، ایالت نیویورک"
+
+#. NZ
+msgid "New Zealand"
+msgstr "نیوزیلند"
+
+#. CY NIC
+msgid "Nicosia"
+msgstr "نیکوزیا"
+
+#. NG
+msgid "Nigeria"
+msgstr "نیجریه"
+
+#. RS INI
+msgid "Nis"
+msgstr "نیس"
+
+#. MK
+msgid "North Macedonia"
+msgstr "مقدونیهٔ شمالی"
+
+#. NO
+msgid "Norway"
+msgstr "نروژ"
+
+#. US OKC
+msgid "Oklahoma City, OK"
+msgstr "اوکلاهما سیتی، اوکلاهما"
+
+#. JP OSA
+msgid "Osaka"
+msgstr "اوساکا"
+
+#. NO OSL
+msgid "Oslo"
+msgstr "اسلو"
+
+#. IT PMO
+msgid "Palermo"
+msgstr "پالرمو"
+
+#. FR PAR
+msgid "Paris"
+msgstr "پاریس"
+
+#. AU PER
+msgid "Perth"
+msgstr "پرث"
+
+#. PE
+msgid "Peru"
+msgstr "پرو"
+
+#. US PHL
+msgid "Philadelphia, PA"
+msgstr "فیلادلفیا، پنسیلوانیا"
+
+#. PH
+msgid "Philippines"
+msgstr "فیلیپین"
+
+#. US PHX
+msgid "Phoenix, AZ"
+msgstr "فینیکس، آریزونا"
+
+#. US PIL
+msgid "Piscataway, NJ"
+msgstr "پیسکتاوای، نیوجرسی"
+
+#. PL
+msgid "Poland"
+msgstr "لهستان"
+
+#. US PDX
+msgid "Portland, OR"
+msgstr "پورتلند، اورِگُن"
+
+#. PT
+msgid "Portugal"
+msgstr "پرتغال"
+
+#. CZ PRG
+msgid "Prague"
+msgstr "پراگ"
+
+#. IN PNQ
+msgid "Pune"
+msgstr "پونه"
+
+#. MX QRO
+msgid "Queretaro"
+msgstr "کرتارو"
+
+#. US RAG
+msgid "Raleigh, NC"
+msgstr "رالی، کارولینای شمالی"
+
+#. US RIC
+msgid "Richmond, VA"
+msgstr "ریچموند، ویرجینیا"
+
+#. LV RIX
+msgid "Riga"
+msgstr "ریگا"
+
+#. RO
+msgid "Romania"
+msgstr "رومانی"
+
+#. IT ROM
+msgid "Rome"
+msgstr "رم"
+
+#. US SLC
+msgid "Salt Lake City, UT"
+msgstr "سالت‌لیک‌سیتی، یوتا"
+
+#. US SFO
+msgid "San Francisco, CA"
+msgstr "سان‌فرانسیسکو، کالیفرنیا"
+
+#. US SJC
+msgid "San Jose, CA"
+msgstr "سن‌خوزه، کالیفرنیا"
+
+#. CL SCL
+msgid "Santiago"
+msgstr "سانتیاگو"
+
+#. BR SAO
+msgid "Sao Paulo"
+msgstr "سائو پائولو"
+
+#. US SEA
+msgid "Seattle, WA"
+msgstr "سیاتل، واشنگتن"
+
+#. US UYK
+msgid "Secaucus, NJ"
+msgstr "سکاوکس، نیوجرسی"
+
+#. RS
+msgid "Serbia"
+msgstr "صربستان"
+
+#. SG SIN
+msgid "Singapore"
+msgstr "سنگاپور"
+
+#. US FSD
+msgid "Sioux Falls, SD"
+msgstr "سو فالز، داکوتای جنوبی"
+
+#. MK SKP
+msgid "Skopje"
+msgstr "اسکوپیه"
+
+#. SK
+msgid "Slovakia"
+msgstr "اسلواکی"
+
+#. SI
+msgid "Slovenia"
+msgstr "اسلوونی"
+
+#. BG SOF
+msgid "Sofia"
+msgstr "صوفیه"
+
+#. ZA
+msgid "South Africa"
+msgstr "آفریقای جنوبی"
+
+#. ES
+msgid "Spain"
+msgstr "اسپانیا"
+
+#. US STL
+msgid "St. Louis, MO"
+msgstr "سنت‌لوئیس، میزوری"
+
+#. US XLX
+msgid "Stamford, CT"
+msgstr "استمفورد، کنتیکت"
+
+#. NO SVG
+msgid "Stavanger"
+msgstr "استاوانگر"
+
+#. SE STO
+msgid "Stockholm"
+msgstr "استکهلم"
+
+#. SE
+msgid "Sweden"
+msgstr "سوئد"
+
+#. CH
+msgid "Switzerland"
+msgstr "سوئیس"
+
+#. AU SYD
+msgid "Sydney"
+msgstr "سیدنی"
+
+#. EE TLL
+msgid "Tallinn"
+msgstr "تالین"
+
+#. IL TLV
+msgid "Tel Aviv"
+msgstr "تل‌آویو"
+
+#. TH
+msgid "Thailand"
+msgstr "تایلند"
+
+#. AL TIA
+msgid "Tirana"
+msgstr "تیرانا"
+
+#. JP TYO
+msgid "Tokyo"
+msgstr "توکیو"
+
+#. CA TOR
+msgid "Toronto"
+msgstr "تورنتو"
+
+#. TR
+msgid "Turkey"
+msgstr "ترکیه"
+
+#. GB
+msgid "UK"
+msgstr "بریتانیا"
+
+#. US
+msgid "USA"
+msgstr "ایالات متحدهٔ آمریکا"
+
+#. UA
+msgid "Ukraine"
+msgstr "اوکراین"
+
+#. AE
+msgid "United Arab Emirates"
+msgstr "امارات متحدهٔ عربی"
+
+#. ES VLC
+msgid "Valencia"
+msgstr "والنسیا"
+
+#. CA VAN
+msgid "Vancouver"
+msgstr "ونکوور"
+
+#. AT VIE
+msgid "Vienna"
+msgstr "وین"
+
+#. PL WAW
+msgid "Warsaw"
+msgstr "ورشو"
+
+#. US WAS
+msgid "Washington DC"
+msgstr "واشینگتن دی‌سی"
+
+#. AT VIE
+msgid "Wien"
+msgstr "وین"
+
+#. HR ZAG
+msgid "Zagreb"
+msgstr "زاگرب"
+
+#. CH ZRH
+msgid "Zurich"
+msgstr "زوریخ"
+

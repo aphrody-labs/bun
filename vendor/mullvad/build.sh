@@ -1,0 +1,537 @@
+#!/usr/bin/env bash
+
+# This script is used to build, and optionally sign the app.
+# See `README.md` for further instructions.
+
+set -eu
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR"
+
+source scripts/utils/host
+source scripts/utils/log
+
+################################################################################
+# Analyze environment and parse arguments
+################################################################################
+
+RUSTC_VERSION=$(rustc --version)
+CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-"target"}
+
+echo "Computing build version..."
+PRODUCT_VERSION=$(cargo run -q --bin mullvad-version)
+log_header "Building Mullvad VPN $PRODUCT_VERSION"
+
+# If compiler optimization and artifact compression should be turned on or not
+OPTIMIZE="false"
+# If the produced binaries should be signed (Windows + macOS only)
+SIGN="false"
+# If the produced app and pkg should be notarized by apple (macOS only)
+NOTARIZE="false"
+# If a macOS or Windows build should create an installer artifact working on both
+# x86 and arm64
+UNIVERSAL="false"
+# If only the daemon should be built and packaged separately (.deb and .rpm).
+DAEMON_ONLY="false"
+
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --optimize) OPTIMIZE="true";;
+        --sign)     SIGN="true";;
+        --notarize) NOTARIZE="true";;
+        --universal)
+            if [[ "$(uname -s)" != "Darwin" && "$(uname -s)" != "MINGW"* ]]; then
+                log_error "--universal only works on macOS and Windows"
+                exit 1
+            fi
+            UNIVERSAL="true"
+            ;;
+        --daemon-only) DAEMON_ONLY="true";;
+        *)
+            log_error "Unknown parameter: $1"
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+# Check if we are a building a release. Meaning we are configured to build with optimizations,
+# sign the artifacts, AND we are currently building on a release git tag.
+# Everything that is not a release build is called a "dev build" and has "-dev-{commit hash}"
+# appended to the version name.
+IS_RELEASE="false"
+if [[ "$SIGN" == "true" && "$OPTIMIZE" == "true" && "$PRODUCT_VERSION" != *"-dev-"* ]]; then
+    IS_RELEASE="true"
+fi
+
+################################################################################
+# Configure build
+################################################################################
+
+# The timestamp the build system derives its embedded timestamps from
+# (https://reproducible-builds.org/docs/source-date-epoch/). Everyone building the same source
+# must arrive at the same value, or the output is not reproducible. Comes from the environment if
+# set there, otherwise from $source_date_epoch_path, which the release scripts write.
+#
+# Not using `export VAR=${VAR:-$(cmd)}`, since that swallow any error in the command substitution.
+source_date_epoch_path="dist-assets/desktop-source-date-epoch.txt"
+if [[ -z ${SOURCE_DATE_EPOCH:-} && -f "$source_date_epoch_path" ]]; then
+    SOURCE_DATE_EPOCH=$(tr -d '[:space:]' < "$source_date_epoch_path")
+fi
+if [[ ! ${SOURCE_DATE_EPOCH:-} =~ ^[0-9]+$ ]]; then
+    log_error "Unable to determine SOURCE_DATE_EPOCH. Expected a unix timestamp integer"
+    exit 1
+fi
+export SOURCE_DATE_EPOCH
+
+CARGO_ARGS=()
+NPM_PACK_ARGS=()
+
+if [[ -n ${TARGETS:-""} ]]; then
+    NPM_PACK_ARGS+=(--targets "${TARGETS[*]}")
+fi
+
+NPM_PACK_ARGS+=(--host-target-triple "$HOST")
+
+
+if [[ "$UNIVERSAL" == "true" ]]; then
+    if [[ -n ${TARGETS:-""} ]]; then
+        log_error "'TARGETS' and '--universal' cannot be specified simultaneously."
+        exit 1
+    else
+        log_info "Building universal distribution"
+    fi
+
+    # Universal builds package targets for both aarch64 and x86_64. We leave the target
+    # corresponding to the host machine empty to avoid rebuilding multiple times.
+    # When the --target flag is provided to cargo it always puts the build in the target/$ENV_TARGET
+    # folder even when it matches you local machine, as opposed to just the target folder.
+    # This causes the cached build not to get used when later running e.g.
+    # 'cargo run --bin mullvad --shell-completions'.
+    case $HOST in
+        x86_64-apple-darwin) TARGETS=("" aarch64-apple-darwin);;
+        aarch64-apple-darwin) TARGETS=("" x86_64-apple-darwin);;
+        x86_64-pc-windows-msvc) TARGETS=("" aarch64-pc-windows-msvc);;
+        aarch64-pc-windows-msvc) TARGETS=("" x86_64-pc-windows-msvc);;
+    esac
+
+    NPM_PACK_ARGS+=(--universal)
+fi
+
+if [[ "$OPTIMIZE" == "true" ]]; then
+    CARGO_ARGS+=(--release)
+    RUST_BUILD_MODE="release"
+    NPM_PACK_ARGS+=(--release)
+else
+    RUST_BUILD_MODE="debug"
+    NPM_PACK_ARGS+=(--no-compression)
+fi
+# The cargo builds that are part of the C++ builds only enforce `--locked` when built
+# in release mode. And we must enforce `--locked` for all signed builds. So we enable
+# release mode if either optimizations or signing is enabled.
+if [[ "$OPTIMIZE" == "true" || "$SIGN" == "true" ]]; then
+    CPP_BUILD_MODE="Release"
+else
+    CPP_BUILD_MODE="Debug"
+fi
+
+function assert_clean_working_directory {
+    if [[ -n "$(git status --porcelain)" ]]; then
+        log_error "Dirty working directory!"
+        log_error "Release builds are not allowed on dirty working directories!"
+        exit 1
+    fi
+}
+
+if [[ "$SIGN" == "true" ]]; then
+    # Refuse to build signed builds on dirty working directories. Prevents release builds
+    # from being built from potentially modified code/assets.
+    assert_clean_working_directory
+
+    # Will not allow an outdated lockfile when building with signatures
+    # (The build servers should never build without --locked for
+    # reproducibility and supply chain security)
+    CARGO_ARGS+=(--locked)
+
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+        log_info "Configuring environment for signing of binaries"
+        if [[ -z ${CSC_LINK-} ]]; then
+            log_error "The variable CSC_LINK is not set. It needs to point to a file containing the"
+            log_error "private key used for signing of binaries."
+            exit 1
+        fi
+        if [[ -z ${CSC_KEY_PASSWORD-} ]]; then
+            read -rsp "CSC_KEY_PASSWORD = " CSC_KEY_PASSWORD
+            echo ""
+            export CSC_KEY_PASSWORD
+        fi
+        # macOS: This needs to be set to 'true' to activate signing, even when CSC_LINK is set.
+        export CSC_IDENTITY_AUTO_DISCOVERY=true
+    elif [[ "$(uname -s)" == "MINGW"* ]]; then
+        if [[ -z ${CERT_HASH-} ]]; then
+            log_error "The variable CERT_HASH is not set. It needs to be set to the thumbprint of"
+            log_error "the signing certificate."
+            exit 1
+        fi
+
+        NPM_PACK_ARGS+=(--sign)
+
+        unset CSC_LINK CSC_KEY_PASSWORD
+        export CSC_IDENTITY_AUTO_DISCOVERY=false
+    else
+        unset CSC_LINK CSC_KEY_PASSWORD
+        export CSC_IDENTITY_AUTO_DISCOVERY=false
+    fi
+else
+    log_info "!! Unsigned build. Not for general distribution !!"
+    unset CSC_LINK CSC_KEY_PASSWORD
+    export CSC_IDENTITY_AUTO_DISCOVERY=false
+fi
+
+if [[ "$NOTARIZE" == "true" ]]; then
+    NPM_PACK_ARGS+=(--notarize)
+fi
+
+if [[ "$IS_RELEASE" == "true" ]]; then
+    log_info "Removing old Rust build artifacts..."
+    cargo clean
+else
+    # Allow dev builds to override which API server to use at runtime.
+    CARGO_ARGS+=(--features api-override)
+fi
+
+# Make Windows builds include a manifest in the daemon binary declaring it must
+# be run as admin.
+if [[ "$(uname -s)" == "MINGW"* ]]; then
+    export MULLVAD_ADD_MANIFEST="1"
+fi
+
+################################################################################
+# Compile and build
+################################################################################
+
+# Sign all binaries passed as arguments to this function
+function sign_win {
+    "$SCRIPT_DIR/scripts/sign-windows.sh" "$@"
+}
+
+# Build the daemon and other Rust/C++ binaries, optionally
+# sign them, and copy to `dist-assets/`.
+function build {
+    local specified_target=${1:-""}
+    local current_target=${specified_target:-"$HOST"}
+    local for_target_string
+    if [[ -n $specified_target ]]; then
+        for_target_string=" for $current_target"
+    else
+        for_target_string=" for local target $HOST"
+    fi
+
+    ################################################################################
+    # Compile and link all binaries.
+    ################################################################################
+
+    log_header "Building Rust code in $RUST_BUILD_MODE mode using $RUSTC_VERSION$for_target_string"
+
+    local cargo_target_arg=()
+    if [[ -n $specified_target ]]; then
+        cargo_target_arg+=(--target="$specified_target")
+    fi
+
+    local cargo_features=()
+    local cargo_env=()
+
+    local cargo_crates_to_build=(
+        -p mullvad-daemon --bin mullvad-daemon
+        -p mullvad-cli --bin mullvad
+        -p mullvad-setup --bin mullvad-setup
+        -p mullvad-problem-report --bin mullvad-problem-report
+    )
+    if [[ ("$(uname -s)" == "Linux") ]]; then
+        cargo_crates_to_build+=(-p mullvad-exclude --bin mullvad-exclude)
+    fi
+
+    if [[ ("$(uname -s)" == "Linux") ]]; then
+        # Check for vendored C-libraries.
+        local clib_dir="${SCRIPT_DIR}/dist-assets/binaries/${current_target}"
+        local libmnl_file="${clib_dir}/libmnl.a"
+        local libnftnl_file="${clib_dir}/libnftnl.a"
+        if [ ! -f "${libmnl_file}" ] || [ ! -f "${libnftnl_file}" ]; then
+             log_warn "Libraries not found at ${clib_dir}/*"
+             log_warn "Check \"dist-assets/binaries\" for build details!"
+        fi
+
+        # Tell jemalloc to use 64KiB page size on ARM Linux.
+        #
+        # Jemalloc needs to be compiled with a page size that is >= to the page size of the
+        # system it's running on. Page size is 4KiB, except on ARM where it's configurable.
+        # 64KiB seems like a good upper limit.
+        case $current_target in
+            aarch64-unknown-linux-gnu) cargo_env+=(JEMALLOC_SYS_WITH_LG_PAGE="16");; # 2^16 == 64KiB
+        esac
+
+    fi
+
+    env "${cargo_env[@]}" cargo build "${cargo_target_arg[@]}" "${cargo_features[@]}" "${CARGO_ARGS[@]}" "${cargo_crates_to_build[@]}"
+
+    ################################################################################
+    # Move binaries to correct locations in dist-assets
+    ################################################################################
+
+    # All the binaries produced by cargo that we want to include in the app
+    if [[ ("$(uname -s)" == "Darwin") ]]; then
+        BINARIES=(
+            mullvad-daemon
+            mullvad
+            mullvad-problem-report
+            mullvad-setup
+        )
+    elif [[ ("$(uname -s)" == "Linux") ]]; then
+        BINARIES=(
+            mullvad-daemon
+            mullvad
+            mullvad-problem-report
+            mullvad-setup
+            mullvad-exclude
+        )
+    elif [[ ("$(uname -s)" == "MINGW"*) ]]; then
+        BINARIES=(
+            mullvad-daemon.exe
+            mullvad.exe
+            mullvad-problem-report.exe
+            mullvad-setup.exe
+        )
+    fi
+
+    if [[ -n $specified_target ]]; then
+        local cargo_output_dir="$CARGO_TARGET_DIR/$specified_target/$RUST_BUILD_MODE"
+        # To make it easier to package multiple targets, the binaries are
+        # located in a directory with the name of the target triple.
+        local destination_dir="dist-assets/$specified_target"
+        mkdir -p "$destination_dir"
+    else
+        local cargo_output_dir="$CARGO_TARGET_DIR/$RUST_BUILD_MODE"
+        local destination_dir="dist-assets"
+    fi
+
+    for binary in "${BINARIES[@]}"; do
+        local source="$cargo_output_dir/$binary"
+        local destination="$destination_dir/$binary"
+
+        log_info "Copying $source => $destination"
+        cp "$source" "$destination"
+
+        if [[ "$SIGN" == "true" && "$(uname -s)" == "MINGW"* ]]; then
+            # electron-builder appears to not sign "extraResources"
+            sign_win "$destination"
+        fi
+    done
+}
+
+if [[ "$(uname -s)" == "MINGW"* ]]; then
+    if [[ "$IS_RELEASE" == "true" ]]; then
+        ./build-windows-modules.sh clean
+    else
+        echo "Will NOT clean intermediate files in ./windows/**/bin/ in dev builds"
+    fi
+
+    for t in "${TARGETS[@]:-"$HOST"}"; do
+        case "${t:-"$HOST"}" in
+            x86_64-pc-windows-msvc) CPP_BUILD_TARGET=x64;;
+            aarch64-pc-windows-msvc) CPP_BUILD_TARGET=ARM64;;
+            *)
+                log_error "Unknown Windows target: $t"
+                exit 1
+                ;;
+        esac
+
+        log_header "Building C++ code in $CPP_BUILD_MODE mode for $CPP_BUILD_TARGET"
+        CPP_BUILD_MODES=$CPP_BUILD_MODE CPP_BUILD_TARGETS=$CPP_BUILD_TARGET ./build-windows-modules.sh
+
+        if [[ "$SIGN" == "true" ]]; then
+            CPP_BINARIES=(
+                "windows/winfw/bin/$CPP_BUILD_TARGET-$CPP_BUILD_MODE/winfw.dll"
+                # The nsis plugins are always built in 32 bit release mode
+                target/i686-pc-windows-msvc/release/*.dll
+            )
+            sign_win "${CPP_BINARIES[@]}"
+        fi
+    done
+fi
+
+for t in "${TARGETS[@]:-""}"; do
+    build "$t"
+done
+
+
+################################################################################
+# Package app.
+################################################################################
+
+log_header "Preparing for packaging Mullvad VPN $PRODUCT_VERSION"
+
+if [[ "$(uname -s)" == "Darwin" || "$(uname -s)" == "Linux" ]]; then
+    mkdir -p "build/shell-completions"
+    for sh in bash zsh fish nushell; do
+        log_info "Generating shell completion script for $sh..."
+        cargo run --bin mullvad "${CARGO_ARGS[@]}" -- shell-completions "$sh" \
+            "build/shell-completions/"
+    done
+else
+    mkdir -p "build"
+fi
+
+# Everything that goes into the installers and packages is in place by now, so give it all one
+# deterministic modification time. The packaging tools record these timestamps, and they would
+# otherwise be whenever this machine happened to compile a binary or check out a file, which
+# differs between builds of the same commit. This is needed for reproducible builds.
+# Some of the packaging tools respect SOURCE_DATE_EPOCH and don't need this. But some don't,
+# and setting the mtime on all artifacts we are going to pack does not hurt.
+log_info "Normalizing modification times of everything to be packaged..."
+# An ISO 8601 timestamp, since that is the only form of `touch` argument both GNU and macOS take
+TZ=UTC printf -v source_date_iso '%(%Y-%m-%dT%H:%M:%SZ)T' "$SOURCE_DATE_EPOCH"
+find dist-assets build -exec touch -h -d "$source_date_iso" {} +
+
+RELAY_LIST_PATH="dist-assets/relays/relays.json"
+if [[ "$IS_RELEASE" == "true" && ! -s "$RELAY_LIST_PATH" ]]; then
+    log_error "Release build requires a non-empty $RELAY_LIST_PATH."
+    log_error "Typically done by running desktop/scripts/release/1-prepare-release."
+    exit 1
+fi
+
+function build_daemon_packages {
+    local pkg_success=0
+
+    for specified_target in "${TARGETS[@]:-""}"; do
+        local current_target=${specified_target:-"$HOST"}
+        local arch="${current_target%%-*}"
+
+        local pkg_args=(-p mullvad-daemon)
+        if [[ -n "$specified_target" ]]; then
+            pkg_args+=(--target "$specified_target")
+        fi
+
+        local deb_arch="${arch}"
+        local rpm_arch="${arch}"
+
+        case $arch in
+            x86_64) deb_arch="amd64";;
+            aarch64) deb_arch="arm64";;
+            riscv64gc)
+                deb_arch="riscv64"
+                rpm_arch="riscv64"
+                ;;
+        esac
+
+        local deb_name="mullvad-vpn-daemon_${PRODUCT_VERSION}_${deb_arch}.deb"
+        local rpm_name="mullvad-vpn-daemon_${PRODUCT_VERSION}_${rpm_arch}.rpm"
+        local deb_file="dist/${deb_name}"
+        local rpm_file="dist/${rpm_name}"
+
+        if cargo deb --help &> /dev/null ; then
+            log_info "Packaging Debian (*.deb) package for ${arch}..."
+            if cargo deb "${pkg_args[@]}" \
+                     --deb-version "${PRODUCT_VERSION}" --no-build \
+                     -o "${deb_file}" > /dev/null ; then
+                log_info "Packaged $deb_file"
+                pkg_success=1
+            fi
+        else
+            log_error "Unable to package Debian package."
+            log_error "Please run \"cargo install cargo-deb\" to complete."
+        fi
+
+        if cargo generate-rpm --help &> /dev/null ; then
+            log_info "Packaging Fedora (*.rpm) package for ${arch}..."
+            if cargo generate-rpm "${pkg_args[@]}" \
+                     -s "version = \"${PRODUCT_VERSION}\"" \
+                     -o "${rpm_file}" ; then
+                log_info "Packaged $rpm_file"
+                pkg_success=1
+            fi
+        else
+            log_error "Unable to package Fedora package."
+            log_error "Please run \"cargo install cargo-generate-rpm\" to complete."
+        fi
+    done
+
+    if [ $pkg_success -eq 0 ]; then
+        return 1
+    fi
+
+    return 0
+}
+
+if [[ "$DAEMON_ONLY" == "false" ]]; then
+
+    log_header "Installing JavaScript dependencies"
+
+    pushd desktop
+    npm run ci
+
+    pushd packages/mullvad-vpn
+
+    log_header "Packing Mullvad VPN $PRODUCT_VERSION artifact(s)"
+
+    case "$(uname -s)" in
+        Linux*)     npm run pack:linux -- "${NPM_PACK_ARGS[@]}";;
+        Darwin*)    npm run pack:mac -- "${NPM_PACK_ARGS[@]}";;
+        MINGW*)     npm run pack:win -- "${NPM_PACK_ARGS[@]}";;
+    esac
+    popd
+    popd
+else
+    log_header "Packing Mullvad VPN daemon-only packages $PRODUCT_VERSION"
+
+    build_daemon_packages
+fi
+
+# When signing is enabled, we check that the working directory is clean before building,
+# further up. Now verify that this is still true. The build process should never make the
+# working directory dirty.
+# This could for example happen if lockfiles are outdated, and the build process updates them.
+if [[ "$SIGN" == "true" ]]; then
+    assert_clean_working_directory
+fi
+
+# pack universal installer on Windows
+if [[ "$UNIVERSAL" == "true" && "$(uname -s)" == "MINGW"* ]]; then
+    WIN_PACK_ARGS=()
+    if [[ "$OPTIMIZE" == "true" ]]; then
+        WIN_PACK_ARGS+=(--optimize)
+    fi
+    ./desktop/scripts/pack-universal-win.sh \
+        --x64-installer "$SCRIPT_DIR/dist/"*"$PRODUCT_VERSION"_x64.exe \
+        --arm64-installer "$SCRIPT_DIR/dist/"*"$PRODUCT_VERSION"_arm64.exe \
+        "${WIN_PACK_ARGS[@]}"
+    if [[ "$SIGN" == "true" ]]; then
+        assert_clean_working_directory
+        # Unlike the per-architecture installers, which electron-builder signs, this one is
+        # packed by us and has to be signed here.
+        sign_win "dist/MullvadVPN-${PRODUCT_VERSION}.exe"
+    fi
+fi
+
+# notarize installer on macOS
+if [[ "$NOTARIZE" == "true" && "$(uname -s)" == "Darwin" ]]; then
+    for pkg in dist/*"$PRODUCT_VERSION"*.pkg; do
+        log_info "Notarizing $pkg"
+
+        xcrun notarytool submit "$pkg" \
+            --keychain "$NOTARIZE_KEYCHAIN" \
+            --keychain-profile "$NOTARIZE_KEYCHAIN_PROFILE" \
+            --wait
+
+        log_info "Stapling $pkg"
+        xcrun stapler staple "$pkg"
+    done
+fi
+
+log_success "**********************************"
+log_success ""
+log_success " The build finished successfully! "
+log_success " You have built:"
+log_success ""
+log_success " $PRODUCT_VERSION"
+log_success ""
+log_success "**********************************"

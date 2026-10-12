@@ -1,0 +1,83 @@
+import { useCallback, useMemo } from 'react';
+
+import {
+  liftConstraint,
+  LiftedConstraint,
+  wrapConstraint,
+} from '../../../../../../shared/daemon-rpc-types';
+import { messages } from '../../../../../../shared/gettext';
+import { useAppContext } from '../../../../../context';
+import { useSelector } from '../../../../../redux/store';
+import { SelectorItem } from '../../../../cell/Selector';
+import { Info } from '../../../../info';
+import { SettingsListbox } from '../../../../settings-listbox';
+
+const UDP2TCP_PORTS = [80, 443, 5001];
+
+function mapPortToSelectorItem(value: number): SelectorItem<number> {
+  return { label: value.toString(), value };
+}
+
+export function UdpOverTcpPortSetting() {
+  const { setObfuscationSettings } = useAppContext();
+  const obfuscationSettings = useSelector((state) => state.settings.obfuscationSettings);
+
+  const port = liftConstraint(obfuscationSettings.udp2tcpSettings.port);
+  const portItems: SelectorItem<number>[] = useMemo(
+    () => UDP2TCP_PORTS.map(mapPortToSelectorItem),
+    [],
+  );
+
+  const selectPort = useCallback(
+    async (port: LiftedConstraint<number>) => {
+      await setObfuscationSettings({
+        ...obfuscationSettings,
+        udp2tcpSettings: {
+          ...obfuscationSettings.udp2tcpSettings,
+          port: wrapConstraint(port),
+        },
+      });
+    },
+    [setObfuscationSettings, obfuscationSettings],
+  );
+
+  return (
+    <SettingsListbox value={port} onValueChange={selectPort}>
+      <SettingsListbox.Header>
+        <SettingsListbox.Header.Item>
+          <SettingsListbox.Header.Item.Label>
+            {
+              // TRANSLATORS: The title for the WireGuard port selector.
+              messages.pgettext('wireguard-settings-view', 'Port')
+            }
+          </SettingsListbox.Header.Item.Label>
+          <SettingsListbox.Header.Item.ActionGroup>
+            <Info>
+              <Info.Button />
+              <Info.Dialog>
+                <Info.Dialog.Text>
+                  {messages.pgettext(
+                    'wireguard-settings-view',
+                    'Which TCP port the UDP-over-TCP obfuscation protocol should connect to on the VPN server.',
+                  )}
+                </Info.Dialog.Text>
+              </Info.Dialog>
+            </Info>
+          </SettingsListbox.Header.Item.ActionGroup>
+        </SettingsListbox.Header.Item>
+      </SettingsListbox.Header>
+      <SettingsListbox.Options>
+        <SettingsListbox.Options.BaseOption value={'any'}>
+          {messages.gettext('Automatic')}
+        </SettingsListbox.Options.BaseOption>
+        {portItems.map((item) => {
+          return (
+            <SettingsListbox.Options.BaseOption key={item.value} value={item.value}>
+              {item.label}
+            </SettingsListbox.Options.BaseOption>
+          );
+        })}
+      </SettingsListbox.Options>
+    </SettingsListbox>
+  );
+}

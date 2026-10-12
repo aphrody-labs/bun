@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+
+set -eu
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+iOS_LOCALIZATION_DIR="$(cd "$SCRIPT_DIR/../ios/translation" && pwd)"
+cd "$SCRIPT_DIR"
+
+# shellcheck disable=SC1091
+source utils/log
+
+# shellcheck disable=SC1091
+source utils/localization_utils
+
+function main {
+  case ${1:-""} in
+    upload) upload_to_crowdin "${2:-}" ;;
+    download) download_from_crowdin "${2:-}" ;;
+    "")
+      echo "Available subcommands: \"upload [branch]\" and \"download [branch]\""
+      echo "If on a release branch, supplying no branch name defaults to current branch."
+      ;;
+    *)
+      echo "Unknown parameter: $1"
+      exit 1
+      ;;
+  esac
+}
+
+function upload_to_crowdin {
+  local branch_args
+  branch_args=$(get_branch_args "${1:-}")
+
+  ensure_crowdin_api_key
+  prepare_localization_strings
+  pushd "$iOS_LOCALIZATION_DIR"
+
+  if [ -n "$branch_args" ]; then
+    log_header "Uploading iOS translations to Crowdin, branch: ${branch_args#-b }"
+    crowdin upload sources "$branch_args"
+    crowdin upload translations "$branch_args"
+  else
+    log_header "Uploading iOS translations to Crowdin"
+    crowdin upload sources
+    crowdin upload translations
+  fi
+
+  popd
+}
+
+function download_from_crowdin {
+  local branch_args
+  branch_args=$(get_branch_args "${1:-}")
+
+  ensure_crowdin_api_key
+  pushd "$iOS_LOCALIZATION_DIR"
+
+  if [ -n "$branch_args" ]; then
+    log_header "Downloading iOS translations from Crowdin, branch: ${branch_args#-b }"
+    crowdin download translations "$branch_args"
+  else
+    log_header "Downloading iOS translations from Crowdin"
+    crowdin download translations
+  fi
+
+  popd
+  update_ios_strings import
+  commit_changes "Import iOS translations"
+}
+
+function update_ios_strings {
+  if [ $# -ne 1 ] || { [ "$1" != "export" ] && [ "$1" != "import" ]; }; then
+    echo "Usage: update_ios_strings [export|import]" >&2
+    return 2
+  fi
+  if [ "$1" = "export" ]; then
+    log_header "Extracting strings from iOS source code"
+  else
+    log_header "Updating strings into iOS source code with new translations"
+  fi
+  pushd "$iOS_LOCALIZATION_DIR"
+  ./scripts/localizations.sh "$1"
+  popd
+}
+
+function update_relay_locations {
+  log_header "Retrieving relay locations from server list and updating RelayLocationList.Swift"
+  pushd "$iOS_LOCALIZATION_DIR"
+  ./scripts/fetch-relay-locations.sh
+  ./scripts/relays-localization.sh
+  popd
+}
+
+function prepare_localization_strings {
+  update_relay_locations
+  update_ios_strings export
+  commit_changes "Export iOS strings"
+}
+
+function get_branch_args {
+  local branch_override="${1:-}"
+  local branch_args=""
+
+  if [ -n "$branch_override" ]; then
+    branch_args="-b $branch_override"
+  else
+    local current_branch
+    current_branch="$(git branch --show-current)"
+
+    if echo "$current_branch" | grep -Eq '^ios-release-20[0-9]{2}'; then
+      branch_args="-b $current_branch"
+    fi
+  fi
+
+  echo "$branch_args"
+}
+
+main "$@"

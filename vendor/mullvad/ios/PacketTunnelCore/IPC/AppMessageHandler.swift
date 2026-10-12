@@ -1,0 +1,100 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import Foundation
+import MullvadLogging
+import MullvadREST
+
+/**
+ Actor handling packet tunnel IPC (app) messages and patching them through to the right facility.
+ */
+public final class AppMessageHandler {
+    private let logger = Logger(label: "AppMessageHandler")
+    private let packetTunnelActor: PacketTunnelActorProtocol
+    private let apiRequestProxy: APIRequestProxyProtocol
+    private var lastGetTunnelStatusTimestamp: Date?
+
+    public init(
+        packetTunnelActor: PacketTunnelActorProtocol,
+        apiRequestProxy: APIRequestProxyProtocol
+    ) {
+        self.packetTunnelActor = packetTunnelActor
+        self.apiRequestProxy = apiRequestProxy
+    }
+
+    /**
+     Handle app message received via packet tunnel IPC.
+     - Message data is expected to be a serialized `TunnelProviderMessage`.
+     - Reply is expected to be wrapped in `TunnelProviderReply`.
+     - Return `nil` in the event of error or when the call site does not expect any reply.
+     Calls to reconnect and notify actor when private key is changed are meant to run in parallel because those tasks are serialized in `TunnelManager` and await
+     the acknowledgment from IPC before starting next operation, hence it's critical to return as soon as possible.
+     (See `TunnelManager.reconnectTunnel()`, `SendTunnelProviderMessageOperation`)
+     */
+    public func handleAppMessage(_ messageData: Data) async -> Data? {
+        guard let message = decodeMessage(messageData) else { return nil }
+
+        switch message {
+        case .getTunnelStatus:
+            lastGetTunnelStatusTimestamp = Date()
+            return encodeReply(await packetTunnelActor.observedState)
+
+        case let .sendAPIRequest(request):
+            logMessageWithLastGetTunnelStatus(message)
+            return await encodeReply(apiRequestProxy.sendRequest(request))
+
+        case let .cancelAPIRequest(id):
+            logMessageWithLastGetTunnelStatus(message)
+            apiRequestProxy.cancelRequest(identifier: id)
+            return nil
+
+        case .privateKeyRotation:
+            logMessageWithLastGetTunnelStatus(message)
+            await packetTunnelActor.notifyKeyRotation(date: Date())
+            return nil
+
+        case let .reconnectTunnel(nextRelay):
+            logMessageWithLastGetTunnelStatus(message)
+            await packetTunnelActor.reconnect(to: nextRelay, reconnectReason: ActorReconnectReason.userInitiated)
+            // Instead of waiting for the UI process to send another `getTunnelStatus` message, reply immediately that the PacketTunnel is reconnecting
+            guard let observedState = await packetTunnelActor.observedState.connectionState else { return nil }
+            let reconnectingState = ObservedState.reconnecting(observedState)
+            return encodeReply(reconnectingState)
+        }
+    }
+
+    private func logMessageWithLastGetTunnelStatus(_ message: TunnelProviderMessage) {
+        if let lastTimestamp = lastGetTunnelStatusTimestamp {
+            logger.debug("Received app message: \(message). Last getTunnelStatus: \(lastTimestamp)")
+        } else {
+            logger.debug("Received app message: \(message)")
+        }
+    }
+
+    /// Deserialize `TunnelProviderMessage` or return `nil` on error. Errors are logged but ignored.
+    private func decodeMessage(_ data: Data) -> TunnelProviderMessage? {
+        do {
+            return try TunnelProviderMessage(messageData: data)
+        } catch {
+            logger.error(error: error, message: "Failed to decode the app message.")
+            return nil
+        }
+    }
+
+    /// Encode `TunnelProviderReply` or return `nil` on error. Errors are logged but ignored.
+    private func encodeReply<T: Codable>(_ reply: T) -> Data? {
+        do {
+            return try TunnelProviderReply(reply).encode()
+        } catch {
+            logger.error(error: error, message: "Failed to encode the app message reply.")
+            return nil
+        }
+    }
+}

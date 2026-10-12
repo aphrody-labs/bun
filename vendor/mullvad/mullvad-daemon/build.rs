@@ -1,0 +1,63 @@
+use std::env;
+
+#[cfg(windows)]
+fn make_lang_id(p: u16, s: u16) -> u16 {
+    (s << 10) | p
+}
+
+fn main() {
+    #[cfg(windows)]
+    {
+        let mut res = winresource::WindowsResource::new();
+        res.set("ProductVersion", mullvad_version::VERSION);
+        res.set_icon("../dist-assets/icon.ico");
+        res.set_language(make_lang_id(
+            windows_sys::Win32::System::SystemServices::LANG_ENGLISH as u16,
+            windows_sys::Win32::System::SystemServices::SUBLANG_ENGLISH_US as u16,
+        ));
+        println!("cargo::rerun-if-env-changed=MULLVAD_ADD_MANIFEST");
+        if env::var("MULLVAD_ADD_MANIFEST")
+            .map(|s| s != "0")
+            .unwrap_or(false)
+        {
+            res.set_manifest_file("mullvad-daemon.manifest");
+        } else {
+            println!("cargo::warning=Skipping mullvad-daemon manifest");
+        }
+        res.compile().expect("Unable to generate windows resources");
+    }
+
+    // Enable in-app upgrades on macOS and Windows
+    println!("cargo::rustc-check-cfg=cfg(in_app_upgrade)");
+    if matches!(target_os(), Os::Windows | Os::Macos) {
+        println!(r#"cargo::rustc-cfg=in_app_upgrade"#);
+    }
+
+    if matches!(target_os(), Os::Macos) {
+        // Set the minimum version of macOS on which mullvad-daemon can run.
+        cfg_select! {
+            target_arch = "x86_64"  => { println!("cargo:rustc-env=MACOSX_DEPLOYMENT_TARGET=10.12"); }
+            target_arch = "aarch64" => { println!("cargo:rustc-env=MACOSX_DEPLOYMENT_TARGET=11.0"); }
+            _ => {}
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy)]
+enum Os {
+    Windows,
+    Macos,
+    Linux,
+    Android,
+}
+
+fn target_os() -> Os {
+    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
+    match target_os.as_str() {
+        "windows" => Os::Windows,
+        "macos" => Os::Macos,
+        "linux" => Os::Linux,
+        "android" => Os::Android,
+        _ => panic!("Unsupported target os: {target_os}"),
+    }
+}

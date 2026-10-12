@@ -1,0 +1,59 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import SwiftUI
+
+/// Custom (default) toggle style used for switches.
+struct CustomToggleStyle: ToggleStyle {
+    private let width: CGFloat = 48
+    private let height: CGFloat = 30
+    private let circleRadius: CGFloat = 23
+
+    var disabled = false
+    let accessibilityId: AccessibilityIdentifier?
+    var infoButtonAction: (() -> Void)?
+
+    func makeBody(configuration: Configuration) -> some View {
+        ZStack(alignment: configuration.isOn ? .trailing : .leading) {
+            Capsule(style: .circular)
+                .frame(width: width, height: height)
+                .foregroundColor(.clear)
+                .overlay(
+                    RoundedRectangle(cornerRadius: circleRadius)
+                        .stroke(
+                            Color(.white.withAlphaComponent(0.8)),
+                            lineWidth: 2
+                        )
+                )
+                .opacity(disabled ? 0.2 : 1)
+
+            Circle()
+                .frame(width: circleRadius, height: circleRadius)
+                .padding(3)
+                .foregroundColor(
+                    configuration.isOn
+                        ? Color(uiColor: UIColor.Switch.onThumbColor)
+                        : Color(uiColor: UIColor.Switch.offThumbColor)
+                )
+                .opacity(disabled ? 0.4 : 1)
+        }
+        .onTapGesture {
+            toggle(configuration)
+        }
+        .adjustingTapAreaSize()
+        .accessibilityIdentifier(accessibilityId?.asString ?? "")
+    }
+
+    private func toggle(_ configuration: Configuration) {
+        withAnimation(.easeInOut(duration: 0.25)) {
+            configuration.isOn.toggle()
+        }
+    }
+}

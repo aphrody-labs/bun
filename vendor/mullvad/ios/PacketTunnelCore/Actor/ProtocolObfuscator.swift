@@ -1,0 +1,107 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import Foundation
+import MullvadREST
+import MullvadRustRuntime
+import MullvadSettings
+import MullvadTypes
+
+public struct ProtocolObfuscationResult {
+    public let endpoint: SelectedEndpoint
+}
+
+public protocol ProtocolObfuscation {
+    func obfuscate(_ endpoint: SelectedEndpoint, clientPublicKey: WireGuard.PublicKey) -> ProtocolObfuscationResult
+    var transportLayer: TransportLayer? { get }
+    var remotePort: UInt16 { get }
+}
+
+public class ProtocolObfuscator<Obfuscator: TunnelObfuscation>: ProtocolObfuscation {
+    var tunnelObfuscator: TunnelObfuscation?
+
+    public init() {}
+
+    public var transportLayer: TransportLayer? {
+        return tunnelObfuscator?.transportLayer
+    }
+
+    private(set) public var remotePort: UInt16 = 0
+
+    /// Obfuscates a selected endpoint if obfuscation is enabled.
+    ///
+    /// - Parameters:
+    ///   - endpoint: The endpoint to obfuscate. Contains socket address and obfuscation method.
+    ///   - clientPublicKey: The client public key. Can be device key or - if post quantum is enabled - the
+    ///   ephemeral key.
+    /// - Returns: The endpoint (possibly modified) with obfuscation applied.
+    ///
+    /// Note: LWO obfuscation only supports IPv4 for its local proxy, so the loopback
+    /// endpoint always uses IPv4 localhost when LWO is active.
+    public func obfuscate(_ endpoint: SelectedEndpoint, clientPublicKey: WireGuard.PublicKey)
+        -> ProtocolObfuscationResult
+    {
+        remotePort = endpoint.socketAddress.port
+
+        // Extract obfuscation protocol from the bundled obfuscation method
+        let obfuscationProtocol: TunnelObfuscationProtocol? =
+            switch endpoint.obfuscation {
+            case .off:
+                nil
+            case .udpOverTcp:
+                .udpOverTcp
+            case .shadowsocks:
+                .shadowsocks
+            case let .quic(hostname, token):
+                .quic(hostname: hostname, token: token)
+            case .lwo:
+                if let key = WireGuard.PublicKey(rawValue: endpoint.publicKey) {
+                    .lwo(serverPublicKey: key, clientPublicKey: clientPublicKey)
+                } else {
+                    nil
+                }
+            }
+
+        // If obfuscation is disabled, return endpoint as-is
+        guard let obfuscationProtocol else {
+            tunnelObfuscator = nil
+            return .init(endpoint: endpoint)
+        }
+
+        let obfuscator = Obfuscator(
+            remoteAddress: endpoint.socketAddress.ip,
+            remotePort: remotePort,
+            obfuscationProtocol: obfuscationProtocol
+        )
+
+        obfuscator.start()
+        tunnelObfuscator = obfuscator
+
+        // LWO always binds its local proxy to IPv4 localhost, so always use IPv4 loopback for it.
+        let localAddress: AnyIPEndpoint =
+            switch (endpoint.socketAddress, obfuscationProtocol) {
+            case (.ipv6, _) where !obfuscationProtocol.isLwo:
+                .ipv6(IPv6Endpoint(ip: .loopback, port: obfuscator.localUdpPort))
+            default:
+                .ipv4(IPv4Endpoint(ip: .loopback, port: obfuscator.localUdpPort))
+            }
+
+        // Return endpoint with loopback address pointing to local obfuscation proxy
+        let obfuscatedEndpoint = SelectedEndpoint(
+            socketAddress: localAddress,
+            ipv4Gateway: endpoint.ipv4Gateway,
+            ipv6Gateway: endpoint.ipv6Gateway,
+            publicKey: endpoint.publicKey,
+            obfuscation: endpoint.obfuscation
+        )
+
+        return .init(endpoint: obfuscatedEndpoint)
+    }
+}

@@ -1,0 +1,136 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import XCTest
+
+@MainActor
+class PaymentPage: Page {
+    enum PaymentFlow {
+        case confirmAccountSheet
+        case renewSubscriptionAlert
+    }
+
+    let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+
+    // MARK: App functions
+
+    @discardableResult func tapAddTimeButton() -> Self {
+        app.buttons[.purchaseButton].tapWhenHittable()
+        return self
+    }
+
+    @discardableResult func tapAdd30DaysTimeSheetButton() -> Self {
+        // Adding accessibility identifier to the button inside the product sheet would to duplicate
+        // button entries, which in turn led to tapping here not working reliably. Using the title
+        // as a workaround.
+        app.buttons.element(matching: NSPredicate(format: "label BEGINSWITH 'Add 30 days time'")).tapWhenHittable()
+
+        return self
+    }
+
+    @discardableResult func dismissThankYouAlert() -> Self {
+        app.staticTexts.element(matching: NSPredicate(format: "label ENDSWITH 'days have been added to your account.'"))
+            .wait(timeout: .long)
+        app.buttons["Got it!"].tap()
+
+        return self
+    }
+
+    @discardableResult func dismissFailedPurchaseAlert() -> Self {
+        app.staticTexts["Cannot complete the purchase"].wait(timeout: .long)
+        app.buttons["Got it!"].tap()
+
+        return self
+    }
+
+    @discardableResult func dismissRestoredPurchasesAlert() -> Self {
+        app.staticTexts["Your previous purchases have been added to your account."]
+            .wait(timeout: .longerThanMullvadAPITimeout)
+        app.buttons["Got it!"].tap()
+
+        return self
+    }
+
+    @discardableResult func dismissAlreadyRestoredPurchasesAlert() -> Self {
+        app.staticTexts["Your previous purchases have already been added to this account."]
+            .wait(timeout: .long)
+        app.buttons["Got it!"].tap()
+
+        return self
+    }
+
+    @discardableResult func dismissFoundPreviousPurchasesAlert() -> Self {
+        app.staticTexts["Your previous purchases have already been added to this account."]
+            .wait(timeout: .long)
+        app.buttons["Got it!"].tap()
+
+        return self
+    }
+
+    // MARK: Springboard functions
+
+    @discardableResult func submitSubscribeSheet() -> Self {
+        springboard.buttons["Subscribe"].tapWhenHittable(timeout: .veryLong)
+
+        return self
+    }
+
+    @discardableResult func typeCredentialsInAccountSheet(
+        username: String,
+        password: String
+    ) -> Self {
+        let usernameTextField = springboard.textFields.firstMatch
+        let passwordTextField = springboard.secureTextFields.firstMatch
+        if usernameTextField.existsAfterWait(), usernameTextField.isEnabled {
+            usernameTextField.tap()
+            usernameTextField.typeText(username)
+        }
+
+        passwordTextField.tapWhenHittable()
+        passwordTextField.typeText(password)
+
+        return self
+    }
+
+    @discardableResult func submitConfirmAccountSheet() -> Self {
+        let signInButton = springboard.buttons["Sign In"]
+        let confirmButton = springboard.buttons["Confirm"]
+        if signInButton.exists && signInButton.isHittable {
+            signInButton.tap()
+            return self
+        } else if confirmButton.exists && confirmButton.isHittable {
+            confirmButton.tap()
+            return self
+        }
+        return self
+    }
+
+    @discardableResult func submitRenewSubscriptionSheet() -> Self {
+        springboard.buttons["Buy"].tapWhenHittable(timeout: .extremelyLong)
+
+        return self
+    }
+
+    @discardableResult func submitPurchaseFinishedAlert() -> Self {
+        springboard.buttons["OK"].tapWhenHittable(timeout: .extremelyLong)
+
+        return self
+    }
+
+    @discardableResult func determinePaymentFlow() -> PaymentFlow {
+        let renewSubscriptionAlert = springboard.alerts["You have subscribed to this in the past"]
+
+        return if renewSubscriptionAlert.existsAfterWait() {
+            .renewSubscriptionAlert
+        } else {
+            .confirmAccountSheet
+        }
+    }
+}

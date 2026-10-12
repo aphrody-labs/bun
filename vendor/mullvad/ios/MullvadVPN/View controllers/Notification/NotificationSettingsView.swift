@@ -1,0 +1,104 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import MullvadSettings
+import SwiftUI
+
+struct NotificationSettingsView<ViewModel>: View where ViewModel: NotificationSettingsViewModelProtocol {
+    @ObservedObject var viewModel: ViewModel
+    var didUpdateNotificationSettings: ((NotificationSettings) -> Void)?
+
+    var body: some View {
+        GeometryReader { geo in
+            SettingsInfoContainerView {
+                VStack(alignment: .leading) {
+                    GroupedRowView {
+                        ForEach(NotificationKeys.allCases, id: \.self) { key in
+                            SwitchRowView(
+                                isOn: viewModel.binding(for: key),
+                                disabled: !viewModel.isNotificationsAllowed,
+                                text: NSLocalizedString(key.title, comment: ""),
+                                accessibilityId: key.identifier
+                            )
+                            RowSeparator()
+                        }
+                    }
+
+                    Spacer()
+
+                    Text(
+                        "Notifications for Mullvad VPN are disabled on this device. Please change your system settings for Mullvad VPN if you wish to enable them again."
+                    )
+                    .font(.mullvadSmall)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.white.opacity(0.6))
+                    .padding(.bottom, 16)
+                    .showIf(viewModel.isNotificationsDisabled)
+
+                    // Show the button if notifications are allowed or disabled
+                    MullvadButton(
+                        text: "Open system settings",
+                        style: .primary,
+                        action: {
+                            viewModel.openAppSettings()
+                        }
+                    )
+                    .showIf(viewModel.isNotificationsDisabled || viewModel.isNotificationsAllowed)
+
+                    // Show the button if notifications are not set
+                    MullvadButton(
+                        text: "Enable notifications",
+                        style: .primary,
+                        action: {
+                            viewModel.enableNotifications()
+                        }
+                    )
+                    .showIf(!viewModel.isNotificationsAllowed && !viewModel.isNotificationsDisabled)
+
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 24)
+                .frame(minHeight: geo.size.height)
+
+            }
+        }
+        .onAppear {
+            viewModel.checkNotificationPermission()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+            viewModel.checkNotificationPermission()
+        }
+        .onChange(
+            of: viewModel.settings,
+            {
+                didUpdateNotificationSettings?(viewModel.settings)
+            })
+    }
+}
+
+#Preview {
+    NotificationSettingsView(viewModel: NotificationSettingsViewModel(settings: NotificationSettings()))
+}
+
+private extension NotificationKeys {
+    var title: String {
+        switch self {
+        case .account:
+            NSLocalizedString("Account time reminders", comment: "")
+        }
+    }
+
+    var identifier: AccessibilityIdentifier {
+        switch self {
+        case .account:
+            .accountNotificationSwitch
+        }
+    }
+}

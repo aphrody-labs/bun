@@ -172,7 +172,7 @@ export function packageMullvadSidecar(options: {
     copyFileSync(join(mullvad, "THIRD_PARTY.md"), join(docs, "THIRD_PARTY.md"));
     writeFileSync(
       join(docs, "SOURCE.md"),
-      `Mullvad VPN corresponding source\n\nRepository: https://github.com/aphrody-labs/mullvadvpn-app\nCommit: ${options.mullvadSource}\n\nFetch the exact source with:\n  git clone https://github.com/aphrody-labs/mullvadvpn-app.git mullvadvpn-app\n  git -C mullvadvpn-app checkout --detach ${options.mullvadSource}\n  git -C mullvadvpn-app submodule update --init --recursive\n\nThe pinned source and its build instructions are distributed under GPL-3.0-or-later.\n`,
+      `Mullvad VPN source embedded in Bun\n\nBun source commit: ${options.mullvadSource}\nPath: vendor/mullvad\n\nThe embedded source and its build instructions are distributed under GPL-3.0-or-later.\n`,
     );
     const buildInfo = {
       ...plan,

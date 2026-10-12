@@ -1,0 +1,78 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import Foundation
+import MullvadTypes
+
+// Note:
+// Existing keys in `TunnelSettingsUpdate` must not be removed.
+// They are required for backward compatibility.
+// If a key is no longer used, mark it as deprecated instead of deleting it.
+// Version upgrades should be handled in `upgradeToNextVersion()`.
+public enum TunnelSettingsUpdate: Sendable {
+    case reset
+    case all(LatestTunnelSettings)
+    case dnsSettings(DNSSettings)
+    case obfuscation(WireGuardObfuscationSettings)
+    case relayConstraints(RelayConstraints)
+    case quantumResistance(TunnelQuantumResistance)
+    case multihop(MultihopState)
+    case daita(DAITASettings)
+    case includeAllNetworks(IncludeAllNetworksSettings)
+    case ipVersion(IPVersion)
+}
+
+extension TunnelSettingsUpdate {
+    public func apply(to settings: inout LatestTunnelSettings) {
+        switch self {
+        case .all(let latestTunnelSettings):
+            settings = latestTunnelSettings
+        case .reset:
+            settings = .default
+        case let .dnsSettings(newDNSSettings):
+            settings.dnsSettings = newDNSSettings
+        case let .obfuscation(newObfuscationSettings):
+            settings.wireGuardObfuscation = newObfuscationSettings
+        case let .relayConstraints(newRelayConstraints):
+            settings.relayConstraints = newRelayConstraints
+        case let .quantumResistance(newQuantumResistance):
+            settings.tunnelQuantumResistance = newQuantumResistance
+        case let .multihop(newState):
+            settings.tunnelMultihopState = newState
+        case let .daita(newDAITASettings):
+            settings.daita = newDAITASettings
+        case let .includeAllNetworks(newIncludeAllNetworksSettings):
+            settings.includeAllNetworks = newIncludeAllNetworksSettings
+        case let .ipVersion(newIPVersion):
+            settings.ipVersion = newIPVersion
+        }
+    }
+
+    public var subjectName: String {
+        switch self {
+        case .all: "all settings"
+        case .reset: "reset settings"
+        case .dnsSettings: "DNS settings"
+        case .obfuscation: "obfuscation settings"
+        case .relayConstraints: "relay constraints"
+        case .quantumResistance: "quantum resistance"
+        case .multihop: "multihop"
+        case .daita: "daita"
+        case .includeAllNetworks: "include all networks"
+        case .ipVersion: "IP version"
+        }
+    }
+}
+
+extension LatestTunnelSettings {
+    static var `default`: LatestTunnelSettings {
+        LatestTunnelSettings()
+    }
+}

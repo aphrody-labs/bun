@@ -1,0 +1,116 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import Combine
+import Foundation
+import MullvadSettings
+import SwiftUI
+
+protocol SettingsMigrationWizardViewModelProtocol: ObservableObject {
+    var items: [NoticeViewModel] { get }
+}
+
+final class SettingsMigrationWizardViewModel: SettingsMigrationWizardViewModelProtocol {
+    var items: [NoticeViewModel] = []
+
+    private var tunnelManager: TunnelManager
+    private var settings: LatestTunnelSettings
+    private var actionItem: MullvadNoticeView.ActionItem
+
+    private var actionDescriptor: MultihopActionDescriptor?
+    private var tunnelObserver: TunnelBlockObserver?
+
+    private var isVpnConnectionActive: Bool {
+        switch tunnelManager.tunnelStatus.state {
+        case .connected, .connecting, .reconnecting, .negotiatingEphemeralPeer:
+            return true
+        default:
+            return false
+        }
+    }
+
+    init(
+        tunnelManager: TunnelManager,
+        output: MigrationResult<MultihopStateV2, MultihopSuggestedAction>
+    ) {
+        self.tunnelManager = tunnelManager
+        self.settings = tunnelManager.settings
+        self.actionItem = MullvadNoticeView.ActionItem(style: .primary, state: .init(kind: .idle, message: ""))
+
+        let changeItems = output.changes.map { change in
+            let descriptor = SettingsUpdateDescriptor(
+                change: change
+            )
+
+            return NoticeViewModel(
+                style: .info,
+                title: MullvadNoticeView.TextItem(
+                    text: descriptor.title,
+                    style: .headline()
+                ),
+                banner: descriptor.banner,
+                details: descriptor.description
+            )
+        }
+
+        let actionItems: [NoticeViewModel] =
+            output.action.map { suggestedAction in
+                let descriptor = MultihopActionDescriptor(action: suggestedAction)
+                self.actionDescriptor = descriptor
+
+                let oldSettings = settings
+                suggestedAction.action?(&settings)
+                self.actionItem.state =
+                    oldSettings == settings ? descriptor.makeState(for: .success) : descriptor.makeState(for: .idle)
+
+                actionItem.onTap = {
+                    [weak self] in
+                    guard let self else { return }
+                    tunnelManager.updateSettings([
+                        .multihop(settings.tunnelMultihopState),
+                        .relayConstraints(settings.relayConstraints),
+                    ])
+                    guard isVpnConnectionActive else {
+                        actionItem.state = descriptor.makeState(for: .success)
+                        return
+                    }
+                    actionItem.state = descriptor.makeState(for: .loading)
+                }
+
+                return [
+                    NoticeViewModel(
+                        style: .info,
+                        title: MullvadNoticeView.TextItem(
+                            text: descriptor.title,
+                            style: .headline()
+                        ),
+                        banner: descriptor.banner,
+                        details: descriptor.description,
+                        actions: [actionItem]
+                    )
+                ]
+            } ?? []
+
+        self.items = changeItems + actionItems
+
+        let tunnelObserver = TunnelBlockObserver(
+            didUpdateTunnelStatus: { [weak self] _, tunnelStatus in
+                guard let self, let actionDescriptor = self.actionDescriptor else { return }
+                if case .connected = tunnelStatus.state {
+                    actionItem.state = actionDescriptor.makeState(for: .success)
+                }
+            }
+        )
+
+        self.tunnelObserver = tunnelObserver
+
+        tunnelManager.addObserver(tunnelObserver)
+    }
+}

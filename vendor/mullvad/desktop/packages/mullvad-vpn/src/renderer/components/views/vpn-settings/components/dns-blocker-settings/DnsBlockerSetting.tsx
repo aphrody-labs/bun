@@ -1,0 +1,95 @@
+import { sprintf } from 'sprintf-js';
+import styled from 'styled-components';
+
+import { messages } from '../../../../../../shared/gettext';
+import {
+  BlockAdsSetting,
+  BlockAdultContentSetting,
+  BlockGamblingSetting,
+  BlockMalwareSetting,
+  BlockSocialMediaSetting,
+  BlockTrackersSetting,
+} from '../../../../../features/dns/components';
+import { useDns } from '../../../../../features/dns/hooks';
+import { AccordionProps } from '../../../../../lib/components/accordion';
+import { ListItemProps } from '../../../../../lib/components/list-item';
+import { formatHtml } from '../../../../../lib/html-formatter';
+import { Info } from '../../../../info';
+import { SettingsAccordion } from '../../../../settings-accordion';
+import { CustomDnsEnabledFooter } from './components';
+
+export type DnsBlockerSettingsProps = Omit<AccordionProps, 'children'> &
+  Pick<ListItemProps, 'position'>;
+
+const StyledAccordionTrigger = styled(SettingsAccordion.Header.AccordionTrigger)`
+  display: grid;
+  place-items: center;
+`;
+
+export function DnsBlockerSettings({ position, ...props }: DnsBlockerSettingsProps) {
+  const { dns } = useDns();
+  const customDnsFeatureName = messages.pgettext('vpn-settings-view', 'Use custom DNS server');
+
+  return (
+    <>
+      <SettingsAccordion
+        accordionId="dns-blocker-setting"
+        anchorId="dns-blocker-setting"
+        aria-label={messages.pgettext('vpn-settings-view', 'DNS content blockers')}
+        disabled={dns.state === 'custom'}
+        {...props}>
+        <SettingsAccordion.Container>
+          <SettingsAccordion.Header position={position}>
+            <SettingsAccordion.Header.Item>
+              <SettingsAccordion.Header.Item.Title variant="bodySmallSemibold">
+                {messages.pgettext('vpn-settings-view', 'DNS content blockers')}
+              </SettingsAccordion.Header.Item.Title>
+              <SettingsAccordion.Header.Item.ActionGroup>
+                <Info>
+                  <Info.Button />
+                  <Info.Dialog>
+                    <Info.Dialog.Text>
+                      {messages.pgettext(
+                        'vpn-settings-view',
+                        'When this feature is enabled it stops the device from contacting certain domains or websites known for distributing ads, malware, trackers and more.',
+                      )}
+                    </Info.Dialog.Text>
+                    <Info.Dialog.Text>
+                      {messages.pgettext(
+                        'vpn-settings-view',
+                        'This might cause issues on certain websites, services, and apps.',
+                      )}
+                    </Info.Dialog.Text>
+                    <Info.Dialog.Text>
+                      {formatHtml(
+                        sprintf(
+                          messages.pgettext(
+                            'vpn-settings-view',
+                            'Attention: this setting cannot be used in combination with <b>%(customDnsFeatureName)s</b>',
+                          ),
+                          { customDnsFeatureName },
+                        ),
+                      )}
+                    </Info.Dialog.Text>
+                  </Info.Dialog>
+                </Info>
+                <StyledAccordionTrigger>
+                  <SettingsAccordion.Header.Item.Chevron />
+                </StyledAccordionTrigger>
+              </SettingsAccordion.Header.Item.ActionGroup>
+            </SettingsAccordion.Header.Item>
+          </SettingsAccordion.Header>
+          <SettingsAccordion.Content>
+            <BlockAdsSetting position="middle" />
+            <BlockTrackersSetting />
+            <BlockMalwareSetting />
+            <BlockGamblingSetting />
+            <BlockAdultContentSetting />
+            <BlockSocialMediaSetting />
+          </SettingsAccordion.Content>
+        </SettingsAccordion.Container>
+      </SettingsAccordion>
+      {dns.state === 'custom' && <CustomDnsEnabledFooter />}
+    </>
+  );
+}

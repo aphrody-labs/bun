@@ -1,0 +1,102 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import Network
+import XCTest
+
+@testable import MullvadSettings
+
+class CustomListRepositoryTests: XCTestCase {
+    private let store = InMemorySettingsStore<SettingNotFound>()
+    private lazy var repository = CustomListRepository(settingsStore: store)
+
+    override func tearDownWithError() throws {
+        repository.fetchAll().forEach {
+            repository.delete(id: $0.id)
+        }
+    }
+
+    func testFailedAddingDuplicateCustomList() throws {
+        let item1 = CustomList(name: "Netflix", locations: [])
+        let item2 = CustomList(name: "netflix", locations: [])
+        let item3 = CustomList(name: "Netflix", locations: [])
+
+        try XCTAssertNoThrow(repository.save(list: item1))
+        try XCTAssertNoThrow(repository.save(list: item2))
+
+        XCTAssertThrowsError(try repository.save(list: item3)) { error in
+            XCTAssertEqual(error as? CustomRelayListError, CustomRelayListError.duplicateName)
+        }
+    }
+
+    func testAddingCustomList() throws {
+        let item = CustomList(
+            name: "Netflix",
+            locations: [
+                .country("SE"),
+                .city("SE", "Gothenburg"),
+            ])
+        try repository.save(list: item)
+
+        let storedItem = repository.fetch(by: item.id)
+        XCTAssertEqual(storedItem, item)
+    }
+
+    func testUpdatingCustomList() throws {
+        var item = CustomList(
+            name: "Netflix",
+            locations: [
+                .country("SE"),
+                .city("SE", "Gothenburg"),
+            ])
+        try repository.save(list: item)
+
+        item.locations.append(.country("FR"))
+        try repository.save(list: item)
+
+        let storedItem = repository.fetch(by: item.id)
+        XCTAssertEqual(storedItem, item)
+    }
+
+    func testDeletingCustomList() throws {
+        let item = CustomList(
+            name: "Netflix",
+            locations: [
+                .country("SE"),
+                .city("SE", "Gothenburg"),
+            ])
+        try repository.save(list: item)
+
+        let storedItem = repository.fetch(by: item.id)
+        repository.delete(id: try XCTUnwrap(storedItem?.id))
+
+        XCTAssertNil(repository.fetch(by: item.id))
+    }
+
+    func testFetchingAllCustomList() throws {
+        try repository.save(
+            list: CustomList(
+                name: "Netflix",
+                locations: [
+                    .country("FR"),
+                    .city("SE", "Gothenburg"),
+                ]))
+
+        try repository.save(
+            list: CustomList(
+                name: "PS5",
+                locations: [
+                    .country("DE"),
+                    .city("SE", "Gothenburg"),
+                ]))
+
+        XCTAssertEqual(repository.fetchAll().count, 2)
+    }
+}

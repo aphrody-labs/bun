@@ -1,0 +1,74 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import Foundation
+import MullvadTypes
+
+public typealias MultihopState = MultihopStateV2
+
+public protocol MultihopStateMigrating {
+    func upgradeToNextVersion() -> any MultihopStateMigrating
+}
+
+/// In which circumstances Multihop is enabled
+public enum MultihopStateV2: CustomStringConvertible, CaseIterable, Codable, Sendable {
+    case whenNeeded
+    case always
+    case never
+
+    public var isWhenNeeded: Bool {
+        self == .whenNeeded
+    }
+
+    public var isAlways: Bool {
+        self == .always
+    }
+
+    public var isNever: Bool {
+        self == .never
+    }
+
+    public var description: String {
+        switch self {
+        case .always: NSLocalizedString("Always", comment: "")
+        case .whenNeeded: NSLocalizedString("When needed", comment: "")
+        case .never: NSLocalizedString("Never", comment: "")
+        }
+    }
+}
+
+extension MultihopStateV2: MultihopStateMigrating {
+    public func upgradeToNextVersion() -> any MultihopStateMigrating {
+        self
+    }
+}
+
+/// #MARK: versions of MultihopState used in previous versions of the settings
+
+public enum MultihopStateV1: Codable, Sendable, CustomStringConvertible {
+    case on
+    case off
+
+    public var description: String {
+        switch self {
+        case .on: NSLocalizedString("On", comment: "").localizedCapitalized
+        case .off: NSLocalizedString("Off", comment: "").localizedCapitalized
+        }
+    }
+}
+
+extension MultihopStateV1: MultihopStateMigrating {
+    public func upgradeToNextVersion() -> any MultihopStateMigrating {
+        switch self {
+        case .on: MultihopStateV2.always
+        case .off: MultihopStateV2.never
+        }
+    }
+}

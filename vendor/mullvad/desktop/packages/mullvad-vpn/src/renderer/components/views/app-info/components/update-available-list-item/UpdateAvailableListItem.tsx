@@ -1,0 +1,44 @@
+import styled from 'styled-components';
+
+import { messages } from '../../../../../../shared/gettext';
+import { Flex, Icon } from '../../../../../lib/components';
+import { Dot } from '../../../../../lib/components/dot';
+import { ListItem, ListItemProps } from '../../../../../lib/components/list-item';
+import { useVersionSuggestedUpgrade } from '../../../../../redux/hooks';
+import { isPlatform } from '../../../../../utils';
+import { useHandleClick } from './hooks';
+
+export type UpdateAvailableListItemProps = Omit<ListItemProps, 'children'>;
+
+const StyledText = styled(ListItem.Item.Text)`
+  margin-top: -4px;
+`;
+
+export function UpdateAvailableListItem(props: UpdateAvailableListItemProps) {
+  const { suggestedUpgrade } = useVersionSuggestedUpgrade();
+
+  const isLinux = isPlatform('linux');
+  const handleClick = useHandleClick();
+
+  return (
+    <ListItem {...props}>
+      <ListItem.Trigger onClick={handleClick}>
+        <ListItem.Item>
+          <Flex flexDirection="column">
+            <ListItem.Item.Label>
+              {
+                // TRANSLATORS: Label for update available list item.
+                messages.pgettext('app-info-view', 'Update available')
+              }
+            </ListItem.Item.Label>
+            <StyledText variant="footnoteMini">{suggestedUpgrade?.version}</StyledText>
+          </Flex>
+          <ListItem.Item.ActionGroup>
+            <Dot variant="warning" size="small" />
+            <Icon icon={isLinux ? 'external' : 'chevron-right'} />
+          </ListItem.Item.ActionGroup>
+        </ListItem.Item>
+      </ListItem.Trigger>
+    </ListItem>
+  );
+}

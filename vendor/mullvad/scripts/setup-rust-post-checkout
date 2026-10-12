@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+#
+# To install the hook copy this file to `.git/hooks/post-checkout` or run
+# scripts/setup-rust install_hook
+
+set -u
+
+MULLVAD_SETUP_PLATFORM="${MULLVAD_SETUP_PLATFORM:-}"
+
+SETUP_RUST_SCRIPT="scripts/setup-rust"
+
+if [[ ! -f "$SETUP_RUST_SCRIPT" ]]; then
+    exit 0
+fi
+
+if [[ -z "$MULLVAD_SETUP_PLATFORM" ]]; then
+    case "$(uname -s)" in
+        Linux) MULLVAD_SETUP_PLATFORM="linux" ;;
+        Darwin) MULLVAD_SETUP_PLATFORM="macos" ;;
+        MINGW*|CYGWIN*|MSYS*) MULLVAD_SETUP_PLATFORM="windows" ;;
+        *)
+            echo "Unable to detect current platform, MULLVAD_SETUP_PLATFORM must be set to one of: " >&2
+            echo "\`android\`, \`ios\`, \`windows\`, \`linux\`, \`macos\`" >&2
+            exit 1
+            ;;
+    esac
+fi
+
+git diff-tree --exit-code "$1".."$2" --quiet -- rust-toolchain.toml
+
+# Exit code 1 means there was a change, 0 means no change.
+if [[ $? -eq 1 ]]; then
+    $SETUP_RUST_SCRIPT "$MULLVAD_SETUP_PLATFORM"
+fi

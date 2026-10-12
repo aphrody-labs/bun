@@ -1,0 +1,201 @@
+use std::{
+    ffi::{OsStr, OsString},
+    io,
+    path::Path,
+    time::Duration,
+};
+use windows_service::{
+    service::{
+        Service, ServiceAccess, ServiceErrorControl, ServiceInfo, ServiceStartType, ServiceState,
+        ServiceType,
+    },
+    service_manager::{ServiceManager, ServiceManagerAccess},
+};
+use windows_sys::Win32::Foundation::{ERROR_SERVICE_ALREADY_RUNNING, ERROR_SERVICE_DOES_NOT_EXIST};
+
+const SPLIT_TUNNEL_SERVICE: &str = "mullvad-split-tunnel";
+const SPLIT_TUNNEL_DISPLAY_NAME: &str = "Mullvad Split Tunnel Service";
+const DRIVER_FILENAME: &str = "mullvad-split-tunnel.sys";
+
+// TODO: Starting 'mullvad-split-tunnel' can take some time during boot. So we need a very
+// generous timeout here. It might make sense to redesign split tunneling to not block the rest
+// of the tunnel state machine from starting up, especially if split tunneling is disabled.
+pub const WAIT_STATUS_TIMEOUT: Duration = Duration::from_mins(2);
+
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    /// Failed to open service control manager
+    #[error("Failed to connect to service control manager")]
+    OpenServiceControlManager(#[source] windows_service::Error),
+
+    /// Failed to create a service handle
+    #[error("Failed to open service")]
+    OpenServiceHandle(#[source] windows_service::Error),
+
+    /// Failed to start split tunnel service
+    #[error("Failed to start split tunnel device driver service")]
+    StartService(#[source] windows_service::Error),
+
+    /// Failed to check service status
+    #[error("Failed to query service status")]
+    QueryServiceStatus(#[source] windows_service::Error),
+
+    /// Failed to install ST service
+    #[error("Failed to install split tunnel driver")]
+    InstallService(#[source] windows_service::Error),
+
+    /// Failed to update service configuration
+    #[error("Failed to update service configuration")]
+    UpdateServiceConfig(#[source] windows_service::Error),
+
+    /// Failed to start ST service
+    #[error("Timed out waiting on service to start")]
+    StartTimeout,
+
+    /// Failed to connect to existing driver
+    #[error("Failed to open service handle")]
+    OpenHandle(#[source] super::driver::DeviceHandleError),
+
+    /// Failed to reset existing driver
+    #[error("Failed to reset driver state")]
+    ResetDriver(#[source] io::Error),
+}
+
+pub fn install_driver_if_required(resource_dir: &Path) -> Result<(), Error> {
+    let scm = ServiceManager::local_computer(
+        None::<OsString>,
+        ServiceManagerAccess::CONNECT | ServiceManagerAccess::CREATE_SERVICE,
+    )
+    .map_err(Error::OpenServiceControlManager)?;
+
+    let expected_syspath = resource_dir.join(DRIVER_FILENAME);
+
+    let service = match scm.open_service(SPLIT_TUNNEL_SERVICE, ServiceAccess::all()) {
+        Ok(service) => service,
+        Err(error) => {
+            return match error {
+                windows_service::Error::Winapi(io_error)
+                    if io_error.raw_os_error() == Some(ERROR_SERVICE_DOES_NOT_EXIST as i32) =>
+                {
+                    // TODO: could be marked for deletion
+                    install_driver(&scm, &expected_syspath)
+                }
+                error => Err(Error::OpenServiceHandle(error)),
+            };
+        }
+    };
+
+    // Ensure the service is configured correctly and points to the correct driver.
+    // This is a best effort. If the service is already running, things may fail later.
+    // We cannot restart it since old versions risk BSODing.
+    service
+        .change_config(&driver_service_info(&expected_syspath))
+        .map_err(Error::UpdateServiceConfig)?;
+
+    start_and_wait_for_service(&service)
+}
+
+/// Stop the split tunnel driver service if it is running.
+///
+/// # Safety
+///
+/// The driver must be reset before calling this function. Failing to do so prevents
+/// the driver from freeing resources and unregistering its callbacks.
+// TODO: This is due to a bug in the driver. `unsafe` may be removed when this is fixed.
+pub unsafe fn stop_driver_service() -> Result<(), Error> {
+    let scm = ServiceManager::local_computer(None::<OsString>, ServiceManagerAccess::CONNECT)
+        .map_err(Error::OpenServiceControlManager)?;
+
+    let service = match scm.open_service(SPLIT_TUNNEL_SERVICE, ServiceAccess::all()) {
+        Ok(service) => service,
+        Err(error) => {
+            return match error {
+                windows_service::Error::Winapi(io_error)
+                    if io_error.raw_os_error() == Some(ERROR_SERVICE_DOES_NOT_EXIST as i32) =>
+                {
+                    Ok(())
+                }
+                error => Err(Error::OpenServiceHandle(error)),
+            };
+        }
+    };
+
+    stop_service(&service)
+}
+
+fn stop_service(service: &Service) -> Result<(), Error> {
+    let _ = service.stop();
+    wait_for_status(service, ServiceState::Stopped)
+}
+
+fn driver_service_info(syspath: &Path) -> ServiceInfo {
+    ServiceInfo {
+        name: SPLIT_TUNNEL_SERVICE.into(),
+        display_name: SPLIT_TUNNEL_DISPLAY_NAME.into(),
+        service_type: ServiceType::KERNEL_DRIVER,
+        start_type: ServiceStartType::OnDemand,
+        error_control: ServiceErrorControl::Normal,
+        executable_path: syspath.to_path_buf(),
+        launch_arguments: vec![],
+        dependencies: vec![],
+        account_name: None,
+        account_password: None,
+    }
+}
+
+fn install_driver(scm: &ServiceManager, syspath: &Path) -> Result<(), Error> {
+    log::debug!("Installing split tunnel driver");
+
+    let service = scm
+        .create_service(
+            &driver_service_info(syspath),
+            ServiceAccess::START | ServiceAccess::QUERY_STATUS,
+        )
+        .map_err(Error::InstallService)?;
+
+    start_and_wait_for_service(&service)
+}
+
+fn start_and_wait_for_service(service: &Service) -> Result<(), Error> {
+    log::debug!("Starting split tunnel service");
+
+    match service.start::<&OsStr>(&[]) {
+        Ok(()) => {
+            log::debug!("Split tunnel service start pending");
+        }
+        Err(error)
+            if let windows_service::Error::Winapi(error) = &error
+                && error.raw_os_error() == Some(ERROR_SERVICE_ALREADY_RUNNING as i32) =>
+        {
+            // Service started, but we don't know if its state is yet "running"
+            // (never mind what the error is called).
+            log::debug!("Split tunnel service already started. Checking state");
+        }
+        Err(error) => return Err(Error::StartService(error)),
+    }
+
+    wait_for_status(service, ServiceState::Running)?;
+
+    log::debug!("Split tunnel service started");
+
+    Ok(())
+}
+
+fn wait_for_status(service: &Service, target_state: ServiceState) -> Result<(), Error> {
+    let initial_time = std::time::Instant::now();
+    loop {
+        let status = service.query_status().map_err(Error::QueryServiceStatus)?;
+
+        if status.current_state == target_state {
+            break;
+        }
+
+        if initial_time.elapsed() >= WAIT_STATUS_TIMEOUT {
+            return Err(Error::StartTimeout);
+        }
+
+        std::thread::sleep(std::time::Duration::from_millis(250));
+    }
+
+    Ok(())
+}

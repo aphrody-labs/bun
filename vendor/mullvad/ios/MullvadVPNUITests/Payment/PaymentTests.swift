@@ -1,0 +1,216 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import XCTest
+
+@available(iOS 26.0, *)
+class PaymentTests: LoggedOutUITestCase {
+    func testMakeInAppPurchaseOnAccountScreen() async throws {
+        let accountNumberWithTime = await getAccountWithTime()
+        let accountExpiry = try mullvadAPIWrapper.getAccountExpiry(accountNumberWithTime)
+
+        addTeardownBlock {
+            await self.deleteTemporaryAccountWithTime(accountNumber: accountNumberWithTime)
+        }
+
+        login(accountNumber: accountNumberWithTime)
+
+        HeaderBar(app)
+            .tapAccountButton()
+
+        let accountPage = AccountPage(app)
+
+        accountPage
+            .verifyPaidUntil(accountExpiry)
+            .tapAddTimeButton()
+            .tapAdd30DaysTimeSheetButton()
+
+        try runPaymentFlow(paymentPage: accountPage)
+
+        accountPage
+            .dismissThankYouAlert()
+
+        try verifyAccountUpdated(accountNumber: accountNumberWithTime, accountExpiry: accountExpiry)
+    }
+
+    func testMakeInAppPurchaseOnWelcomeScreen() async throws {
+        let accountNumber = createAndLogInToNewAccount()
+
+        addTeardownBlock {
+            await self.deleteTemporaryAccountWithTime(accountNumber: accountNumber)
+        }
+
+        HeaderBar(app)
+            .tapAccountButton()
+
+        AccountPage(app)
+            .swipeDownToDismissModal()
+
+        let welcomePage = WelcomePage(app)
+
+        welcomePage
+            .tapAddTimeButton()
+            .tapAdd30DaysTimeSheetButton()
+
+        try runPaymentFlow(paymentPage: welcomePage)
+
+        // Wait for page to be shown.
+        SetUpAccountCompletedPage(app)
+    }
+
+    func testMakeInAppPurchaseOnOutOfTimeScreen() async throws {
+        let accountNumber = createAndLogInToNewAccount()
+
+        addTeardownBlock {
+            await self.deleteTemporaryAccountWithTime(accountNumber: accountNumber)
+        }
+
+        // Relaunch to get to out-of-time view.
+        try app.relaunch()
+
+        HeaderBar(app)
+            .tapAccountButton()
+
+        AccountPage(app)
+            .swipeDownToDismissModal()
+
+        let outOfTimePage = OutOfTimePage(app)
+
+        outOfTimePage
+            .tapAddTimeButton()
+            .tapAdd30DaysTimeSheetButton()
+
+        try runPaymentFlow(paymentPage: outOfTimePage)
+
+        HeaderBar(app)
+            .verifyDeviceLabelShown()
+    }
+
+    func testInAppPurchaseWithRestoreOnFailedReceiptUpload() async throws {
+        try XCTSkipIf(true, "This test is too unreliable to run in CI for now")
+        let firewallAPIClient = FirewallClient()
+        firewallAPIClient.removeRules()
+
+        let accountNumberWithTime = await getAccountWithTime()
+        let accountExpiry = try mullvadAPIWrapper.getAccountExpiry(accountNumberWithTime)
+
+        addTeardownBlock {
+            await self.deleteTemporaryAccountWithTime(accountNumber: accountNumberWithTime)
+            firewallAPIClient.removeRules()
+        }
+
+        disableBridgesAccessMethod()
+
+        login(accountNumber: accountNumberWithTime)
+
+        HeaderBar(app)
+            .tapAccountButton()
+
+        let accountPage = AccountPage(app)
+
+        accountPage
+            .verifyPaidUntil(accountExpiry)
+            .tapRestorePurchasesButton()
+            .dismissAlreadyRestoredPurchasesAlert()
+            .verifyPaidUntil(accountExpiry)
+            .tapAddTimeButton()
+            .tapAdd30DaysTimeSheetButton()
+
+        firewallAPIClient.createRule(
+            try FirewallRule.makeBlockAllTrafficRule(toIPAddress: try MullvadAPIWrapper.getAPIIPAddress())
+        )
+
+        try runPaymentFlow(paymentPage: accountPage)
+
+        accountPage
+            .dismissFailedPurchaseAlert()
+            .verifyPaidUntil(accountExpiry)
+
+        firewallAPIClient.removeRules()
+
+        accountPage
+            .tapRestorePurchasesButton()
+            .dismissRestoredPurchasesAlert()
+
+        try verifyAccountUpdated(accountNumber: accountNumberWithTime, accountExpiry: accountExpiry)
+    }
+}
+
+@available(iOS 26.0, *)
+extension PaymentTests {
+
+    private func createAndLogInToNewAccount() -> String {
+        LoginPage(app)
+            .tapCreateAccountButton()
+            .tryConfirmAccountCreation()
+
+        let welcomePage = WelcomePage(app)
+        let accountNumber = welcomePage.getAccountNumber()
+
+        return accountNumber
+    }
+
+    private func verifyAccountUpdated(accountNumber: String, accountExpiry: Date) throws {
+        let newAccountExpiry = try mullvadAPIWrapper.getAccountExpiry(accountNumber)
+        XCTAssertTrue(newAccountExpiry > accountExpiry)
+
+        AccountPage(app)
+            .waitForPaidUntil(newAccountExpiry)
+    }
+
+    private func runPaymentFlow(paymentPage: PaymentPage) throws {
+        paymentPage
+            .submitSubscribeSheet()
+
+        let flow = paymentPage.determinePaymentFlow()
+
+        switch flow {
+        case .confirmAccountSheet:
+            print("testMakeInAppPurchase: account flow")
+
+            paymentPage
+                .typeCredentialsInAccountSheet(
+                    username: try inAppPurchaseUsername,
+                    password: try inAppPurchasePassword
+                )
+                .submitConfirmAccountSheet()
+                .submitRenewSubscriptionSheet()
+                .submitPurchaseFinishedAlert()
+
+        case .renewSubscriptionAlert:
+            print("testMakeInAppPurchase: subscription flow")
+
+            paymentPage
+                .submitRenewSubscriptionSheet()
+                .submitPurchaseFinishedAlert()
+        }
+    }
+}
+
+@available(iOS 26.0, *)
+extension PaymentTests {
+    var inAppPurchaseUsername: String {
+        get throws {
+            try XCTUnwrap(
+                Bundle(for: Self.self).infoDictionary?["IOSInAppPurchaseUsername"] as? String,
+                "Read in-app purchase username from info.plist"
+            )
+        }
+    }
+
+    var inAppPurchasePassword: String {
+        get throws {
+            try XCTUnwrap(
+                Bundle(for: Self.self).infoDictionary?["IOSInAppPurchasePassword"] as? String,
+                "Read in-app purchase password from info.plist"
+            )
+        }
+    }
+}

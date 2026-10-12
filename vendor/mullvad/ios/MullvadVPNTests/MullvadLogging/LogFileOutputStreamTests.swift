@@ -1,0 +1,128 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+@preconcurrency import Foundation
+import Testing
+
+@testable import MullvadLogging
+
+@Suite("LogFileOutputStream Tests")
+actor LogFileOutputStreamTests {
+    var directoryPath: URL!
+
+    init() async throws {
+        directoryPath = FileManager.default.temporaryDirectory.appendingPathComponent(
+            UUID().uuidString,
+            isDirectory: true
+        )
+
+        try FileManager.default.createDirectory(
+            at: directoryPath,
+            withIntermediateDirectories: true
+        )
+    }
+
+    deinit {
+        try? FileManager.default.removeItem(at: directoryPath)
+    }
+
+    @Test func logFileOutputStreamWritesHeader() throws {
+        let headerText = "This is a header"
+        let logMessage = "And this is a log message\n"
+        let fileURL = directoryPath.appendingPathComponent(UUID().uuidString)
+        let stream = LogFileOutputStream(fileURL: fileURL, header: headerText)
+        stream.write(logMessage)
+        stream.synchronize()
+
+        let contents = try String(contentsOf: fileURL, encoding: .utf8)
+        let expectedContents = "\(headerText)\n\(logMessage)"
+        #expect(contents == expectedContents)
+    }
+
+    @Test func logHeaderGetsWrittenAtFileStartAfterTruncation() async throws {
+        let header = "header"
+        let message = """
+            old
+
+            """
+        let fileSizeLimit: UInt64 = 20
+        let fileURL = directoryPath.appendingPathComponent(UUID().uuidString)
+        let stream = LogFileOutputStream(
+            fileURL: fileURL,
+            header: header,
+            fileSizeLimit: fileSizeLimit,
+            newLineChunkReadSize: 3
+        )
+        // Fill the file with the word "old" to force truncation in half
+        for _ in 0..<3 {
+            stream.write(message)
+        }
+        /* At this point, the file contains the following string (of length 19)
+         "header\nold\nold\nold"
+                    ^
+                    Half point of the file
+
+         Writing the word "new" goes over the file size limit (20),
+         so the file will get truncated to its half point.
+         In order to keep a nice UX for reading log, the stream will move the internal file cursor to after the next "\n"
+         character, and read the last half of the file in order to paste it at the beginning
+         after truncation.
+         In this example, the string "old\nold\n" will be buffered, which will then
+         get prepended with "header\n"
+          */
+        stream.synchronize()
+        stream.write("new")
+        stream.synchronize()
+
+        let fileContents = try String(contentsOf: fileURL, encoding: .utf8)
+        let expectedContents = """
+            header
+            old
+            old
+            new
+            """
+
+        #expect(fileContents == expectedContents)
+    }
+
+    @Test func fileSizeCounterGetsResetAfterTruncation() async throws {
+        let header = "header"
+        let message = """
+            old
+
+            """
+        let fileSizeLimit: UInt64 = 20
+        let fileURL = directoryPath.appendingPathComponent(UUID().uuidString)
+        let stream = LogFileOutputStream(
+            fileURL: fileURL,
+            header: header,
+            fileSizeLimit: fileSizeLimit
+        )
+        // Fill the file with the word "old" to force truncation in half
+        for _ in 0..<3 {
+            stream.write(message)
+        }
+        // File gets truncated in half here
+        stream.write("new")
+        stream.write("a")
+        stream.synchronize()
+
+        /// If the `partialFileSizeCounter` didn't get reset after truncating,
+        /// a new write will truncate the file again instead of just appending
+        let expectedContents = """
+            header
+            d
+            old
+            newa
+            """
+        let fileContents = try String(contentsOf: fileURL, encoding: .utf8)
+        #expect(fileContents == expectedContents)
+    }
+}

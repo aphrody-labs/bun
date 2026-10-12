@@ -1,0 +1,25 @@
+import { messages } from '../../../../../shared/gettext';
+import { ListItem, ListItemProps } from '../../../../lib/components/list-item';
+import { BlockGamblingSwitch } from '../block-gambling-switch';
+
+export type BlockGamblingSettingProps = Omit<ListItemProps, 'children'>;
+
+export function BlockGamblingSetting(props: BlockGamblingSettingProps) {
+  return (
+    <ListItem level={1} {...props}>
+      <ListItem.Item>
+        <BlockGamblingSwitch>
+          <BlockGamblingSwitch.Label variant="bodySmall">
+            {
+              // TRANSLATORS: Label for settings that enables block of gamling related websites.
+              messages.pgettext('vpn-settings-view', 'Gambling')
+            }
+          </BlockGamblingSwitch.Label>
+          <ListItem.Item.ActionGroup>
+            <BlockGamblingSwitch.Input />
+          </ListItem.Item.ActionGroup>
+        </BlockGamblingSwitch>
+      </ListItem.Item>
+    </ListItem>
+  );
+}

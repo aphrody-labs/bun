@@ -1,0 +1,135 @@
+// This Source Code Form is subject to the terms of the GPLv3 License.
+// You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//   Copyright (c) Mullvad VPN AB. All rights reserved.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+import Foundation
+import MullvadREST
+import MullvadTypes
+
+class AllLocationDataSource: SearchableLocationDataSource {
+    private(set) var nodes = [LocationNode]()
+
+    /// Constructs a collection of node trees from relays fetched from the API.
+    /// ``RelayLocation.city`` is of special import since we use it to get country
+    /// and city names.
+    func reload(_ relays: LocationRelays) {
+        let rootNode = RootLocationNode()
+        let expandedCodes = collectExpandedCodes()
+
+        // Use dictionaries for O(1) lookups during tree construction
+        var countryNodesByCode: [String: LocationNode] = [:]
+        var cityNodesByCode: [String: LocationNode] = [:]
+
+        for relay in relays.relays {
+            guard let serverLocation = relays.locations[relay.location.rawValue] else { continue }
+
+            let countryCode = String(relay.location.country)
+            let cityCode = String(relay.location.city)
+            let countryCityCode = LocationNode.combineNodeCodes([countryCode, cityCode])
+
+            // Get or create country node
+            let countryNode: LocationNode
+            if let existingCountry = countryNodesByCode[countryCode] {
+                countryNode = existingCountry
+            } else {
+                let countryLocation = RelayLocation.country(countryCode)
+                countryNode = LocationNode(
+                    name: NSLocalizedString(serverLocation.country, comment: ""),
+                    code: countryCode,
+                    locations: [countryLocation],
+                    isActive: true,
+                    showsChildren: expandedCodes.contains(countryCode),
+                    isOverridden: relay.isIPOverridden ?? false
+                )
+                countryNodesByCode[countryCode] = countryNode
+                rootNode.children.append(countryNode)
+            }
+
+            // Get or create city node
+            let cityNode: LocationNode
+            if let existingCity = cityNodesByCode[countryCityCode] {
+                cityNode = existingCity
+            } else {
+                let cityLocation = RelayLocation.city(countryCode, cityCode)
+                cityNode = LocationNode(
+                    name: NSLocalizedString(serverLocation.city, comment: ""),
+                    code: countryCityCode,
+                    locations: [cityLocation],
+                    isActive: true,
+                    parent: countryNode,
+                    showsChildren: expandedCodes.contains(countryCityCode),
+                    isOverridden: relay.isIPOverridden ?? false
+                )
+                cityNodesByCode[countryCityCode] = cityNode
+                countryNode.children.append(cityNode)
+            }
+
+            // Create host node
+            let hostLocation = RelayLocation.hostname(countryCode, cityCode, relay.hostname)
+            let hostNode = LocationNode(
+                name: relay.hostname,
+                code: relay.hostname,
+                locations: [hostLocation],
+                isActive: relay.active,
+                parent: cityNode,
+                showsChildren: expandedCodes.contains(relay.hostname),
+                isOverridden: relay.isIPOverridden ?? false
+            )
+            cityNode.children.append(hostNode)
+
+            // Update active states
+            if relay.active {
+                cityNode.isActive = true
+                countryNode.isActive = true
+            }
+        }
+
+        // Update isActive for cities and countries that have no active relays
+        for countryNode in rootNode.children {
+            var countryHasActiveCity = false
+            for cityNode in countryNode.children {
+                let cityHasActiveHost = cityNode.children.contains { $0.isActive }
+                cityNode.isActive = cityHasActiveHost
+                if cityHasActiveHost {
+                    countryHasActiveCity = true
+                    continue
+                }
+            }
+            countryNode.isActive = countryHasActiveCity
+        }
+
+        // Single sort pass at the end
+        rootNode.children.sort()
+        for countryNode in rootNode.children {
+            countryNode.children.sort()
+            for cityNode in countryNode.children {
+                cityNode.children.sort()
+            }
+        }
+
+        nodes = rootNode.children
+    }
+
+    func node(by selectedConstraint: RelayConstraint<UserSelectedRelays>) -> LocationNode? {
+        switch selectedConstraint {
+        case .any:
+            return nodes.first { $0 is AutomaticLocationNode }
+        case .only(let relays):
+            let rootNode = RootLocationNode(children: nodes)
+            guard let location = relays.locations.first else {
+                return nil
+            }
+            return rootNode.descendantNode(for: [location.stringRepresentation])
+        }
+    }
+
+    func addAutomaticLocationNode() {
+        nodes.insert(AutomaticLocationNode(), at: 0)
+    }
+}

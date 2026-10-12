@@ -98,17 +98,7 @@ export function vpsRuntimeReleasePlan(revision: string, targets: string[] = [], 
   const mullvad = needsMullvad
     ? createMullvadBuildPlan(
         revision,
-        mullvadSource ??
-          (() => {
-            const result = Bun.spawnSync(["git", "ls-tree", revision, "vendor/mullvad"], {
-              stdout: "pipe",
-              stderr: "pipe",
-            });
-            const match = result.stdout.toString().match(/^160000 commit ([a-f0-9]{40})\s+vendor\/mullvad$/m);
-            if (result.exitCode !== 0 || !match)
-              throw new Error(`Cannot resolve vendor/mullvad gitlink at ${revision}`);
-            return match[1]!;
-          })(),
+          mullvadSource ?? revision,
       )
     : undefined;
   return {

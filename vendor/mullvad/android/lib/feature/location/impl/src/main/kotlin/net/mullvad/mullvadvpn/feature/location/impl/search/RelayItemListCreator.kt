@@ -1,0 +1,591 @@
+@file:Suppress("LongParameterList")
+
+package net.mullvad.mullvadvpn.feature.location.impl.search
+
+import net.mullvad.mullvadvpn.lib.common.util.relaylist.RelayMetadataMap
+import net.mullvad.mullvadvpn.lib.model.CustomListId
+import net.mullvad.mullvadvpn.lib.model.GeoLocationId
+import net.mullvad.mullvadvpn.lib.model.RecentItem
+import net.mullvad.mullvadvpn.lib.model.RelayHopType
+import net.mullvad.mullvadvpn.lib.model.RelayItem
+import net.mullvad.mullvadvpn.lib.model.RelayItemId
+import net.mullvad.mullvadvpn.lib.model.RelayItemSelection
+import net.mullvad.mullvadvpn.lib.model.RelayListType
+import net.mullvad.mullvadvpn.lib.model.isMultihopEntry
+import net.mullvad.mullvadvpn.lib.ui.component.relaylist.RelayListItem
+import net.mullvad.mullvadvpn.lib.ui.component.relaylist.RelayListItemState
+import net.mullvad.mullvadvpn.lib.ui.designsystem.Hierarchy
+import net.mullvad.mullvadvpn.lib.ui.designsystem.Position
+import net.mullvad.mullvadvpn.lib.ui.designsystem.nextDown
+
+const val RECENTS_MAX_VISIBLE: Int = 3
+
+// Creates a relay list to be displayed by RelayListContent
+internal fun relayListItems(
+    relayListType: RelayListType,
+    relayMetadata: RelayMetadataMap,
+    relayCountries: List<RelayItem.Location.Country>,
+    customLists: List<RelayItem.CustomList>,
+    recents: List<RecentItem>?,
+    selectedItem: RelayItemSelection,
+    selectedByThisEntryExitList: RelayItemId?,
+    selectedByOtherEntryExitList: RelayItemId?,
+    expandedItems: Set<String>,
+): List<RelayListItem> {
+    return createRelayListItems(
+        relayListType = relayListType,
+        relayMetadata = relayMetadata,
+        selectedItem = selectedItem,
+        selectedByThisEntryExitList = selectedByThisEntryExitList,
+        selectedByOtherEntryExitList = selectedByOtherEntryExitList,
+        customLists = customLists,
+        recents = recents,
+        countries = relayCountries,
+        isExpanded = { it in expandedItems },
+    )
+}
+
+internal fun relayListItemsSearching(
+    searchTerm: String = "",
+    relayListType: RelayListType,
+    relayMetadata: RelayMetadataMap,
+    relayCountries: List<RelayItem.Location.Country>,
+    customLists: List<RelayItem.CustomList>,
+    selectedByThisEntryExitList: RelayItemId?,
+    selectedByOtherEntryExitList: RelayItemId?,
+    expandedItems: Set<String>,
+): List<RelayListItem> {
+
+    return createRelayListItemsSearching(
+            relayListType = relayListType,
+            relayMetadata = relayMetadata,
+            selectedByThisEntryExitList = selectedByThisEntryExitList,
+            selectedByOtherEntryExitList = selectedByOtherEntryExitList,
+            customLists = customLists,
+            countries = relayCountries,
+        ) {
+            it in expandedItems
+        }
+        .ifEmpty { listOf(RelayListItem.LocationsEmptyText(searchTerm)) }
+}
+
+internal fun emptyLocationsRelayListItems(
+    relayListType: RelayListType,
+    relayMetadata: RelayMetadataMap,
+    customLists: List<RelayItem.CustomList>,
+    selectedByThisEntryExitList: RelayItemId?,
+    selectedByOtherEntryExitList: RelayItemId?,
+    expandedItems: Set<String>,
+) =
+    createCustomListSection(
+        relayListType = relayListType,
+        relayMetadata = relayMetadata,
+        selectedByThisEntryExitList = selectedByThisEntryExitList,
+        selectedByOtherEntryExitList = selectedByOtherEntryExitList,
+        customLists = customLists,
+    ) {
+        it in expandedItems
+    } + RelayListItem.LocationHeader + RelayListItem.EmptyRelayList
+
+private fun createRelayListItems(
+    relayListType: RelayListType,
+    relayMetadata: RelayMetadataMap,
+    selectedItem: RelayItemSelection,
+    selectedByThisEntryExitList: RelayItemId?,
+    selectedByOtherEntryExitList: RelayItemId?,
+    customLists: List<RelayItem.CustomList>,
+    recents: List<RecentItem>?,
+    countries: List<RelayItem.Location.Country>,
+    isExpanded: (String) -> Boolean,
+): List<RelayListItem> = buildList {
+    if (recents != null) {
+        addAll(
+            createRecentsSection(
+                recents = recents,
+                itemSelection = selectedItem,
+                relayListType = relayListType,
+            )
+        )
+    }
+    addAll(
+        createCustomListSection(
+            relayListType = relayListType,
+            relayMetadata = relayMetadata,
+            selectedByThisEntryExitList = selectedByThisEntryExitList,
+            selectedByOtherEntryExitList = selectedByOtherEntryExitList,
+            customLists = customLists,
+            isExpanded = isExpanded,
+        )
+    )
+    addAll(
+        createLocationSection(
+            relayListType = relayListType,
+            relayMetadata = relayMetadata,
+            selectedItem = selectedItem,
+            selectedByThisEntryExitList = selectedByThisEntryExitList,
+            selectedByOtherEntryExitList = selectedByOtherEntryExitList,
+            countries = countries,
+            isExpanded = isExpanded,
+        )
+    )
+}
+
+private fun createRecentsSection(
+    recents: List<RecentItem>,
+    itemSelection: RelayItemSelection,
+    relayListType: RelayListType,
+): List<RelayListItem> = buildList {
+    add(RelayListItem.RecentsListHeader)
+
+    val shown =
+        recents
+            .map { recent ->
+                when (recent) {
+                    is RecentItem.Relay -> {
+                        val isSelected = recent.item.matches(itemSelection, relayListType)
+                        RelayListItem.RecentListItem(item = recent.item, isSelected = isSelected)
+                    }
+                    RecentItem.Automatic ->
+                        RelayListItem.AutomaticEntryItem.Recent(
+                            isSelected = itemSelection.isEntryLocationAutomatic()
+                        )
+                }
+            }
+            .distinct()
+            .take(RECENTS_MAX_VISIBLE)
+
+    addAll(shown)
+    if (shown.isEmpty()) {
+        add(RelayListItem.RecentsListFooter)
+    } else {
+        add(RelayListItem.SectionDivider())
+    }
+}
+
+private fun RelayItem.matches(
+    itemSelection: RelayItemSelection,
+    relayListType: RelayListType,
+): Boolean {
+    return when (itemSelection) {
+        is RelayItemSelection.Single -> id == itemSelection.exitLocation.getOrNull()
+        is RelayItemSelection.Multiple if relayListType is RelayListType.Multihop ->
+            itemSelection.getBy(relayListType).getOrNull() == id
+        else -> false
+    }
+}
+
+private fun RelayItemSelection.Multiple.getBy(relayListType: RelayListType.Multihop) =
+    if (relayListType.hopType == RelayHopType.ENTRY) entryLocation else exitLocation
+
+private fun createRelayListItemsSearching(
+    relayListType: RelayListType,
+    relayMetadata: RelayMetadataMap,
+    selectedByThisEntryExitList: RelayItemId?,
+    selectedByOtherEntryExitList: RelayItemId?,
+    customLists: List<RelayItem.CustomList>,
+    countries: List<RelayItem.Location.Country>,
+    isExpanded: (String) -> Boolean,
+): List<RelayListItem> =
+    createCustomListSectionSearching(
+        relayListType = relayListType,
+        relayMetadata = relayMetadata,
+        selectedByThisEntryExitList = selectedByThisEntryExitList,
+        selectedByOtherEntryExitList = selectedByOtherEntryExitList,
+        customLists = customLists,
+        isExpanded = isExpanded,
+    ) +
+        createLocationSectionSearching(
+            relayListType = relayListType,
+            relayMetadata = relayMetadata,
+            selectedByThisEntryExitList = selectedByThisEntryExitList,
+            selectedByOtherEntryExitList = selectedByOtherEntryExitList,
+            countries = countries,
+            isExpanded = isExpanded,
+        )
+
+private fun createCustomListSection(
+    relayListType: RelayListType,
+    relayMetadata: RelayMetadataMap,
+    selectedByThisEntryExitList: RelayItemId?,
+    selectedByOtherEntryExitList: RelayItemId?,
+    customLists: List<RelayItem.CustomList>,
+    isExpanded: (String) -> Boolean,
+): List<RelayListItem> = buildList {
+    add(RelayListItem.CustomListHeader(canEdit = customLists.isNotEmpty()))
+    val customListItems =
+        createCustomListRelayItems(
+            customLists = customLists,
+            relayListType = relayListType,
+            relayMetadata = relayMetadata,
+            selectedByThisEntryExitList = selectedByThisEntryExitList,
+            selectedByOtherEntryExitList = selectedByOtherEntryExitList,
+            isExpanded = isExpanded,
+        )
+    addAll(customListItems)
+    add(RelayListItem.CustomListFooter(customListItems.isNotEmpty()))
+}
+
+private fun createCustomListSectionSearching(
+    relayListType: RelayListType,
+    relayMetadata: RelayMetadataMap,
+    selectedByThisEntryExitList: RelayItemId?,
+    selectedByOtherEntryExitList: RelayItemId?,
+    customLists: List<RelayItem.CustomList>,
+    isExpanded: (String) -> Boolean,
+): List<RelayListItem> = buildList {
+    if (customLists.isNotEmpty()) {
+        add(RelayListItem.CustomListHeader(false))
+        val customListItems =
+            createCustomListRelayItems(
+                customLists = customLists,
+                relayListType = relayListType,
+                relayMetadata = relayMetadata,
+                selectedByThisEntryExitList = selectedByThisEntryExitList,
+                selectedByOtherEntryExitList = selectedByOtherEntryExitList,
+                isExpanded = isExpanded,
+            )
+        addAll(customListItems)
+    }
+}
+
+private fun createCustomListRelayItems(
+    customLists: List<RelayItem.CustomList>,
+    relayListType: RelayListType,
+    relayMetadata: RelayMetadataMap,
+    selectedByThisEntryExitList: RelayItemId?,
+    selectedByOtherEntryExitList: RelayItemId?,
+    isExpanded: (String) -> Boolean,
+): List<RelayListItem> = customLists.flatMap { customList ->
+    // It is possible for a custom list to be expanded without children if the children were
+    // removed after the item was expanded. In those cases we should treat the item as
+    // collapsed.
+    val expanded = isExpanded(customList.id.expandKey()) && customList.hasChildren
+    buildList {
+        add(
+            RelayListItem.CustomListItem(
+                item = customList,
+                isSelected = selectedByThisEntryExitList == customList.id,
+                state =
+                    customList.createState(
+                        relayListType = relayListType,
+                        selectedByOtherId = selectedByOtherEntryExitList,
+                    ),
+                expanded = expanded,
+                highlights = relayMetadata[customList.id]?.titleHighlights,
+                itemPosition =
+                    if (expanded) {
+                        Position.Top
+                    } else {
+                        Position.Single
+                    },
+            )
+        )
+
+        if (expanded) {
+            addAll(
+                customList.locations.flatMapIndexed { index, item ->
+                    createCustomListEntry(
+                        parent = customList,
+                        item = item,
+                        relayListType = relayListType,
+                        relayMetadata = relayMetadata,
+                        selectedByOtherEntryExitList = selectedByOtherEntryExitList,
+                        hierarchy = Hierarchy.Child1,
+                        isExpanded = isExpanded,
+                        isLast = index == customList.locations.lastIndex,
+                    )
+                }
+            )
+        }
+    }
+}
+
+private fun createLocationSection(
+    selectedItem: RelayItemSelection,
+    selectedByThisEntryExitList: RelayItemId?,
+    relayListType: RelayListType,
+    relayMetadata: RelayMetadataMap,
+    selectedByOtherEntryExitList: RelayItemId?,
+    countries: List<RelayItem.Location.Country>,
+    isExpanded: (String) -> Boolean,
+): List<RelayListItem> = buildList {
+    add(RelayListItem.LocationHeader)
+    if (relayListType.isMultihopEntry) {
+        add(
+            RelayListItem.AutomaticEntryItem.RelayList(
+                isSelected = selectedItem.isEntryLocationAutomatic()
+            )
+        )
+    }
+    addAll(
+        countries.flatMap { country ->
+            createGeoLocationEntry(
+                item = country,
+                selectedByThisEntryExitList = selectedByThisEntryExitList,
+                relayListType = relayListType,
+                relayMetadata = relayMetadata,
+                selectedByOtherEntryExitList = selectedByOtherEntryExitList,
+                isExpanded = isExpanded,
+                isLast = true,
+            )
+        }
+    )
+}
+
+private fun createLocationSectionSearching(
+    selectedByThisEntryExitList: RelayItemId?,
+    relayListType: RelayListType,
+    selectedByOtherEntryExitList: RelayItemId?,
+    countries: List<RelayItem.Location.Country>,
+    relayMetadata: RelayMetadataMap,
+    isExpanded: (String) -> Boolean,
+): List<RelayListItem> = buildList {
+    if (countries.isNotEmpty()) {
+        add(RelayListItem.LocationHeader)
+        addAll(
+            countries.flatMap { country ->
+                createGeoLocationEntry(
+                    item = country,
+                    relayListType = relayListType,
+                    relayMetadata = relayMetadata,
+                    selectedByThisEntryExitList = selectedByThisEntryExitList,
+                    selectedByOtherEntryExitList = selectedByOtherEntryExitList,
+                    isExpanded = isExpanded,
+                    isLast = true,
+                )
+            }
+        )
+    }
+}
+
+private fun createCustomListEntry(
+    parent: RelayItem.CustomList,
+    item: RelayItem.Location,
+    relayListType: RelayListType,
+    relayMetadata: RelayMetadataMap,
+    selectedByOtherEntryExitList: RelayItemId?,
+    hierarchy: Hierarchy = Hierarchy.Child1,
+    isExpanded: (String) -> Boolean,
+    isLast: Boolean,
+): List<RelayListItem.CustomListEntryItem> = buildList {
+    val expanded = isExpanded(item.id.expandKey(parent.id))
+    add(
+        RelayListItem.CustomListEntryItem(
+            parentId = parent.id,
+            parentName = parent.customList.name,
+            item = item,
+            state =
+                item.createState(
+                    relayListType = relayListType,
+                    selectedByOtherId = selectedByOtherEntryExitList,
+                ),
+            expanded = expanded,
+            hierarchy = hierarchy,
+            itemPosition =
+                if (!expanded && isLast) {
+                    Position.Bottom
+                } else {
+                    Position.Middle
+                },
+            needsOtherEntry = relayMetadata[item.id]?.needsOtherEntry ?: false,
+        )
+    )
+
+    if (expanded) {
+        when (item) {
+            is RelayItem.Location.City ->
+                addAll(
+                    item.relays.flatMapIndexed { index, relay ->
+                        createCustomListEntry(
+                            parent = parent,
+                            item = relay,
+                            relayListType = relayListType,
+                            relayMetadata = relayMetadata,
+                            selectedByOtherEntryExitList = selectedByOtherEntryExitList,
+                            hierarchy = hierarchy.nextDown(),
+                            isExpanded = isExpanded,
+                            isLast = isLast && index == item.relays.lastIndex,
+                        )
+                    }
+                )
+            is RelayItem.Location.Country ->
+                addAll(
+                    item.cities.flatMapIndexed { index, city ->
+                        createCustomListEntry(
+                            parent = parent,
+                            item = city,
+                            relayListType = relayListType,
+                            relayMetadata = relayMetadata,
+                            selectedByOtherEntryExitList = selectedByOtherEntryExitList,
+                            hierarchy = hierarchy.nextDown(),
+                            isExpanded = isExpanded,
+                            isLast = isLast && index == item.cities.lastIndex,
+                        )
+                    }
+                )
+            is RelayItem.Location.Relay -> {} // No children to add
+        }
+    }
+}
+
+private fun createGeoLocationEntry(
+    item: RelayItem.Location,
+    relayListType: RelayListType,
+    relayMetadata: RelayMetadataMap,
+    selectedByThisEntryExitList: RelayItemId?,
+    selectedByOtherEntryExitList: RelayItemId?,
+    hierarchy: Hierarchy = Hierarchy.Parent,
+    isExpanded: (String) -> Boolean,
+    isLast: Boolean,
+): List<RelayListItem.GeoLocationItem> = buildList {
+    val expanded = isExpanded(item.id.expandKey())
+
+    add(
+        RelayListItem.GeoLocationItem(
+            item = item,
+            isSelected = selectedByThisEntryExitList == item.id,
+            state =
+                item.createState(
+                    relayListType = relayListType,
+                    selectedByOtherId = selectedByOtherEntryExitList,
+                ),
+            hierarchy = hierarchy,
+            expanded = expanded,
+            highlights = relayMetadata[item.id]?.titleHighlights,
+            itemPosition =
+                when (item) {
+                    is RelayItem.Location.Country -> {
+                        if (expanded) {
+                            Position.Top
+                        } else {
+                            Position.Single
+                        }
+                    }
+
+                    else -> {
+                        if (isLast && !expanded) {
+                            Position.Bottom
+                        } else {
+                            Position.Middle
+                        }
+                    }
+                },
+            needsOtherEntry = relayMetadata[item.id]?.needsOtherEntry ?: false,
+        )
+    )
+
+    if (expanded) {
+        when (item) {
+            is RelayItem.Location.City ->
+                addAll(
+                    item.relays.flatMapIndexed { index, relay ->
+                        createGeoLocationEntry(
+                            item = relay,
+                            relayListType = relayListType,
+                            relayMetadata = relayMetadata,
+                            selectedByThisEntryExitList = selectedByThisEntryExitList,
+                            selectedByOtherEntryExitList = selectedByOtherEntryExitList,
+                            hierarchy = hierarchy.nextDown(),
+                            isExpanded = isExpanded,
+                            isLast = isLast && index == item.relays.lastIndex,
+                        )
+                    }
+                )
+            is RelayItem.Location.Country ->
+                addAll(
+                    item.cities.flatMapIndexed { index, city ->
+                        createGeoLocationEntry(
+                            item = city,
+                            relayListType = relayListType,
+                            relayMetadata = relayMetadata,
+                            selectedByThisEntryExitList = selectedByThisEntryExitList,
+                            selectedByOtherEntryExitList = selectedByOtherEntryExitList,
+                            hierarchy = hierarchy.nextDown(),
+                            isExpanded = isExpanded,
+                            isLast = isLast && index == item.cities.lastIndex,
+                        )
+                    }
+                )
+            is RelayItem.Location.Relay -> {} // Do nothing
+        }
+    }
+}
+
+internal fun RelayItemId.expandKey(parent: CustomListId? = null) =
+    (parent?.value.orEmpty()) +
+        when (this) {
+            is CustomListId -> value
+            is GeoLocationId -> code
+        }
+
+internal fun RelayItemSelection.selectedByThisEntryExitList(relayListType: RelayListType) =
+    when (this) {
+        is RelayItemSelection.Multiple ->
+            when ((relayListType as? RelayListType.Multihop)?.hopType) {
+                RelayHopType.ENTRY -> entryLocation.getOrNull()
+                RelayHopType.EXIT -> exitLocation.getOrNull()
+                else -> null
+            }
+        is RelayItemSelection.Single -> exitLocation.getOrNull()
+    }
+
+internal fun RelayItemSelection.selectedByOtherEntryExitList(
+    relayListType: RelayListType,
+    customLists: List<RelayItem.CustomList>,
+) =
+    when (this) {
+        is RelayItemSelection.Multiple -> {
+            val location =
+                when ((relayListType as? RelayListType.Multihop)?.hopType) {
+                    RelayHopType.ENTRY -> exitLocation
+                    RelayHopType.EXIT -> entryLocation
+                    else -> null
+                }?.getOrNull()
+            location.singleRelayId(customLists)
+        }
+        is RelayItemSelection.Single -> null
+    }
+
+// We only want to block selecting the same entry as exit if it is a relay. For country and
+// city it is fine to have same entry and exit
+// For custom lists we will block if the custom lists only contains one relay and
+// nothing else
+private fun RelayItemId?.singleRelayId(customLists: List<RelayItem.CustomList>): RelayItemId? =
+    when (this) {
+        is GeoLocationId.City,
+        is GeoLocationId.Country -> null
+        is GeoLocationId.Hostname -> this
+        is CustomListId ->
+            customLists
+                .firstOrNull { customList -> customList.id == this }
+                ?.locations
+                ?.singleOrNull()
+                ?.id as? GeoLocationId.Hostname
+        else -> null
+    }
+
+private fun RelayItem.createState(
+    relayListType: RelayListType,
+    selectedByOtherId: RelayItemId?,
+): RelayListItemState? {
+    val isSelectedByOther =
+        when (this) {
+            is RelayItem.CustomList -> {
+                selectedByOtherId == customList.id ||
+                    (customList.locations.isNotEmpty() &&
+                        customList.locations.all { it == selectedByOtherId })
+            }
+            is RelayItem.Location.City -> selectedByOtherId == id
+            is RelayItem.Location.Country -> selectedByOtherId == id
+            is RelayItem.Location.Relay -> selectedByOtherId == id
+        }
+    return if (isSelectedByOther) {
+        when ((relayListType as? RelayListType.Multihop)?.hopType) {
+            RelayHopType.ENTRY -> RelayListItemState.USED_AS_EXIT
+            RelayHopType.EXIT -> RelayListItemState.USED_AS_ENTRY
+            else -> null
+        }
+    } else {
+        null
+    }
+}

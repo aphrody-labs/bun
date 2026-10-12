@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+function commit_changes {
+  if [[ $(git status --porcelain) ]]; then
+    git commit -a -S -m "$1"
+  fi
+}
+
+function ensure_crowdin_api_key {
+  test ! -z "$CROWDIN_API_KEY"
+}

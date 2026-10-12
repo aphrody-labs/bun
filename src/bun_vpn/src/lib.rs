@@ -4,6 +4,7 @@
 
 pub use mullvad_management_interface::Error;
 pub use mullvad_types::states::TunnelState;
+pub type EmbeddedDaemon = mullvad_daemon::Daemon;
 
 /// Controls the installed Mullvad daemon through its native management IPC.
 #[cfg(not(target_os = "android"))]

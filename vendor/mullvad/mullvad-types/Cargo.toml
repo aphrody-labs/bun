@@ -1,0 +1,24 @@
+[package]
+name = "mullvad-types"
+edition.workspace = true
+rust-version.workspace = true
+description = "Common base data structures for Mullvad VPN client"
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+chrono = { workspace = true, features = ["clock", "serde"] }
+clap = { workspace = true, optional = true }
+either = "1.11"
+intersection-derive = { path = "intersection-derive" }
+ipnetwork = { workspace = true }
+log = { workspace = true }
+mullvad-version = { path = "../mullvad-version", features = ["serde"] }
+serde = { workspace = true, features = ["derive"] }
+talpid-types = { path = "../talpid-types" }
+thiserror = { workspace = true }
+uuid = { version = "1.4.1", features = ["serde", "v4"] }
+vec1 = { workspace = true }
+
+[lints]
+workspace = true

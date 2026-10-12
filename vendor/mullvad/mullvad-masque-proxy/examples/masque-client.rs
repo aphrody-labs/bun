@@ -1,0 +1,109 @@
+use anyhow::Context;
+use clap::Parser;
+use mullvad_masque_proxy::client::{ClientConfig, Error};
+use tokio::net::UdpSocket;
+use tracing_subscriber::{EnvFilter, filter::LevelFilter};
+
+use std::{
+    net::{Ipv4Addr, SocketAddr},
+    sync::Arc,
+    time::Duration,
+};
+
+#[derive(Parser, Debug)]
+pub struct ClientArgs {
+    /// Destination to forward to
+    #[arg(long, short = 't')]
+    target_addr: SocketAddr,
+
+    /// Server address
+    #[arg(long, short = 's')]
+    server_addr: SocketAddr,
+
+    /// Server hostname/authority
+    #[arg(long, short = 'H')]
+    server_hostname: String,
+
+    /// Bind address
+    #[arg(long, short = 'b', default_value = "127.0.0.1:0")]
+    bind_addr: SocketAddr,
+
+    /// Maximum packet size
+    #[arg(long, short = 'S', default_value = "1280")]
+    mtu: u16,
+
+    /// Maximum duration of inactivity (in seconds) until the tunnel times out.
+    /// Inactivity happens when no data is sent over the proxy.
+    #[arg(long, short = 'i', value_parser = duration_from_seconds)]
+    idle_timeout: Option<Duration>,
+
+    /// Authorization header value to set
+    #[arg(long, default_value = "Bearer test")]
+    auth: Option<String>,
+}
+
+/// Parse a duration from a decimal number of seconds
+fn duration_from_seconds(s: &str) -> anyhow::Result<Duration> {
+    let seconds: f64 = s.parse().context("Expected a decimal number, e.g. 1.0")?;
+    Ok(Duration::from_secs_f64(seconds))
+}
+
+#[tokio::main]
+async fn main() {
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env().add_directive(LevelFilter::INFO.into()))
+        .init();
+
+    let ClientArgs {
+        server_addr,
+        target_addr,
+        server_hostname,
+        bind_addr,
+        mtu,
+        idle_timeout,
+        auth,
+    } = ClientArgs::parse();
+
+    let mut tls_config = mullvad_masque_proxy::client::default_tls_config();
+    // Writes this connection's TLS secrets to the file named by SSLKEYLOGFILE,
+    // so that a packet capture of it can be decrypted. Does nothing if unset.
+    Arc::make_mut(&mut tls_config).key_log = Arc::new(rustls::KeyLogFile::new());
+
+    let local_socket = UdpSocket::bind(bind_addr)
+        .await
+        .expect("Failed to bind address");
+    let local_addr = local_socket.local_addr().unwrap();
+
+    log::info!("Listening on {local_addr}");
+
+    let endpoint_socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).await.unwrap();
+
+    let config = ClientConfig::builder()
+        .quinn_socket(endpoint_socket)
+        .server_addr(server_addr)
+        .server_host(server_hostname)
+        .target_addr(target_addr)
+        .mtu(mtu)
+        .tls_config(tls_config)
+        .idle_timeout(idle_timeout)
+        .auth_header(auth);
+
+    let client = mullvad_masque_proxy::client::Client::connect(config.build()).await;
+    if let Err(err) = &client {
+        log::error!("ERROR: {:?}", err);
+        if let Error::Connection(err) = err {
+            log::error!("ERROR: {}", err);
+        }
+    }
+
+    let client = client
+        .expect("Failed to connect client")
+        .proxy_socket(local_socket);
+    let result = client.until_closed().await;
+
+    if let Err(e) = result {
+        log::error!("QUIC client exited with error: {e}");
+    } else {
+        log::debug!("QUIC client closed");
+    }
+}

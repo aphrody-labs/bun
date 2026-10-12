@@ -1,0 +1,19 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+                     tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+                     tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
+    <!-- Permission for 30 and below -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+                     tools:ignore="ScopedStorage" />
+    <application android:icon="@mipmap/ic_launcher"
+                 android:roundIcon="@mipmap/ic_launcher"
+                 android:theme="@style/Theme.App.Starting"
+                 android:requestLegacyExternalStorage="true"
+                 android:allowBackup="false"
+                 android:banner="@mipmap/ic_banner"
+                 android:name=".app.MullvadApplication"
+                 tools:ignore="DataExtractionRules,GoogleAppIndexingWarning"/>
+</manifest>

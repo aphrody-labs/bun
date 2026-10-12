@@ -81,13 +81,12 @@ export async function verifyFactoryArtifacts(
       sidecar.asset !== "bun-vpn-linux-x86_64.tar.gz"
     )
       throw new Error("Native Mullvad VPS sidecar qualification missing");
-    const link = Bun.spawnSync(["git", "ls-tree", source, "vendor/mullvad"], { stdout: "pipe", stderr: "pipe" });
-    const linkedSource =
-      link.exitCode === 0
-        ? link.stdout.toString().match(/^160000 commit ([a-f0-9]{40})\s+vendor\/mullvad$/m)?.[1]
-        : undefined;
-    if (!linkedSource || sidecar.mullvadSource !== linkedSource)
-      throw new Error("Mullvad sidecar source does not match the Bun source gitlink");
+    const embeddedSource = Bun.spawnSync(["git", "cat-file", "-e", `${source}:vendor/mullvad/Cargo.toml`], {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    if (embeddedSource.exitCode !== 0 || sidecar.mullvadSource !== source)
+      throw new Error("Mullvad sidecar source does not match the embedded Bun source");
     assertAsset(sidecar.asset);
     assertAsset(sidecar.log);
   }

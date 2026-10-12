@@ -1,0 +1,30 @@
+mod arch;
+#[cfg(target_os = "linux")]
+#[path = "linux.rs"]
+mod imp;
+
+#[cfg(target_os = "macos")]
+#[path = "macos.rs"]
+mod imp;
+
+#[cfg(windows)]
+#[path = "windows.rs"]
+mod imp;
+
+#[cfg(target_os = "android")]
+#[path = "android.rs"]
+mod imp;
+
+#[cfg(target_os = "macos")]
+pub use self::imp::MacosVersion;
+#[cfg(windows)]
+pub use self::imp::WindowsVersion;
+#[cfg(target_os = "android")]
+pub use self::imp::set_extra_metadata;
+pub use self::imp::{extra_metadata, short_version, version};
+
+pub use arch::Architecture;
+pub use arch::get_native_arch;
+
+#[cfg(not(target_os = "windows"))]
+mod command;
