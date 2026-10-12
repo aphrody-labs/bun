@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Installs the aphrody-labs/bun runtime from its GitHub releases.
+# Installs the aphrody-labs/bun runtime from its releases, mirrored on https://dist.aphrody.app (Cloudflare R2), else GitHub.
 #
 #   curl -fsSL https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install.sh | bash
 #   ... | bash -s 1.4.4                       # exact stable release
 #   ... | bash -s aphrody-v1.4.3-aphrody.1    # exact release tag
 #
-# BUN_INSTALL (default ~/.bun) receives bin/bun and bin/bunx. APHRODY_BUN_REPO overrides the repository,
+# BUN_INSTALL (default ~/.bun) receives bin/bun and bin/bunx. APHRODY_BUN_DIST overrides the mirror (empty: GitHub
+# only), APHRODY_BUN_REPO the repository,
 # GITHUB_TOKEN (or GH_TOKEN) enables authenticated downloads through an installed GitHub CLI.
 set -euo pipefail
 
@@ -14,6 +15,7 @@ die() { echo "error: $*" >&2; exit 1; }
 version=${1:-latest}
 variant=${2:-${APHRODY_BUN_FLAVOR:-perf}}
 repo=${APHRODY_BUN_REPO:-aphrody-labs/bun}
+dist=${APHRODY_BUN_DIST-https://dist.aphrody.app/bun}
 install_dir=${BUN_INSTALL:-$HOME/.bun}
 token=${GITHUB_TOKEN:-${GH_TOKEN:-}}
 
@@ -64,7 +66,8 @@ download() {
 case "$version" in
   # The repository also publishes other releases (tools, n2b): the newest runtime release, not GitHub's "latest".
   latest)
-    tag=$(api 'releases?per_page=100' | grep -oE '"tag_name": *"(bun-v[0-9]+\.[0-9]+\.[0-9]+|aphrody-v[0-9]+\.[0-9]+\.[0-9]+-aphrody\.[0-9]+)"' |
+    [[ -z $dist ]] || tag=$(curl -fsSL --retry 2 "$dist/latest.json" 2>/dev/null | grep -oE '"tag": *"[^"]+"' | head -1 | cut -d'"' -f4 || true)
+    [[ -n ${tag:-} ]] || tag=$(api 'releases?per_page=100' | grep -oE '"tag_name": *"(bun-v[0-9]+\.[0-9]+\.[0-9]+|aphrody-v[0-9]+\.[0-9]+\.[0-9]+-aphrody\.[0-9]+)"' |
       head -1 | cut -d'"' -f4 || true) ;;
   aphrody-v*) tag=$version ;;
   bun-v*) tag=$version ;;
@@ -83,8 +86,12 @@ esac
 base="https://github.com/$repo/releases/download/$tag"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-download "$tmp/bun.zip" "$base/bun-$target.zip" || die "download failed: $base/bun-$target.zip"
-download "$tmp/SHA256SUMS.txt" "$base/SHA256SUMS.txt" || die "release checksums are required"
+# The mirror holds the same bytes as the release; SHA256SUMS.txt below verifies whichever source answered.
+if [[ -z $dist ]] || ! curl -fsSL --retry 2 -o "$tmp/bun.zip" "$dist/$tag/bun-$target.zip" 2>/dev/null ||
+  ! curl -fsSL --retry 2 -o "$tmp/SHA256SUMS.txt" "$dist/$tag/SHA256SUMS.txt" 2>/dev/null; then
+  download "$tmp/bun.zip" "$base/bun-$target.zip" || die "download failed: $base/bun-$target.zip"
+  download "$tmp/SHA256SUMS.txt" "$base/SHA256SUMS.txt" || die "release checksums are required"
+fi
 want=$(awk -v asset="bun-$target.zip" '$2 == asset { print $1 }' "$tmp/SHA256SUMS.txt")
 [[ $want =~ ^[[:xdigit:]]{64}$ ]] || die "release checksum must name the archive exactly once"
 want=$(printf "%s" "$want" | tr '[:upper:]' '[:lower:]')

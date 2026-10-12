@@ -48,9 +48,13 @@ const step = (message: string) => console.log(`• ${message}`);
 
 export const site = "aphrody.app";
 export const zones = ["aphrody.app", "aphrody.com", "dragonballfr.com", "rosegriffon.fr"];
-export const cdn = [
+// Objects are cached 30 days at the edge; on hosts with `channels`, versioned paths a year and the channel files
+// (latest.json, manifest.json, rewritten in place by scripts/aphrody/release-r2.ts) a minute. r2.dev stays off.
+export const cdn: { bucket: string; domain: string; channels?: boolean }[] = [
   { bucket: "aphrody", domain: "cdn.aphrody.app" },
   { bucket: "dragonballfr", domain: "dragonballfr.aphrody.app" },
+  { bucket: "aphrody-assets", domain: "assets.aphrody.app" },
+  { bucket: "aphrody-dist", domain: "dist.aphrody.app", channels: true },
 ];
 export const corsOrigins = [
   "https://aphrody.app",
@@ -211,6 +215,9 @@ async function entrypoint(zone: { id: string; name: string }, phase: string, rul
   step(`${zone.name}: ${phase} (${rules.map((r) => r.ref).join(", ")})`);
 }
 
+const hosts = (list: { domain: string }[]) =>
+  `(http.host in {${list.map((c) => `"${c.domain}"`).join(" ")}})`;
+
 async function siteRules(zone: { id: string; name: string }) {
   await entrypoint(zone, "http_request_dynamic_redirect", [
     {
@@ -231,13 +238,36 @@ async function siteRules(zone: { id: string; name: string }) {
     {
       ref: "aphrody-r2-cdn",
       description: "R2 CDN hosts: cache everything for 30 days at the edge",
-      expression: `(http.host in {${cdn.map((c) => `"${c.domain}"`).join(" ")}})`,
+      expression: hosts(cdn.filter((c) => !c.channels)),
       action: "set_cache_settings",
       action_parameters: {
         cache: true,
         edge_ttl: { mode: "override_origin", default: 2592000 },
         browser_ttl: { mode: "respect_origin" },
         serve_stale: { disable_stale_while_updating: false },
+      },
+    },
+    {
+      ref: "aphrody-r2-versioned",
+      description: "R2 release hosts: versioned objects for a year",
+      expression: hosts(cdn.filter((c) => c.channels)),
+      action: "set_cache_settings",
+      action_parameters: {
+        cache: true,
+        edge_ttl: { mode: "override_origin", default: 31536000 },
+        browser_ttl: { mode: "override_origin", default: 31536000 },
+        serve_stale: { disable_stale_while_updating: false },
+      },
+    },
+    {
+      ref: "aphrody-r2-channels",
+      description: "R2 release channels: a minute",
+      expression: `${hosts(cdn.filter((c) => c.channels))} and (ends_with(http.request.uri.path, "/latest.json") or ends_with(http.request.uri.path, "/manifest.json"))`,
+      action: "set_cache_settings",
+      action_parameters: {
+        cache: true,
+        edge_ttl: { mode: "override_origin", default: 60 },
+        browser_ttl: { mode: "override_origin", default: 60 },
       },
     },
   ]);
@@ -269,6 +299,16 @@ async function r2(zoneId: string) {
         minTLS: "1.2",
       });
       step(`R2 ${bucket}: custom domain https://${domain}`);
+    }
+    const managed = await cf<{ enabled: boolean }>(
+      "GET",
+      `/accounts/${account}/r2/buckets/${bucket}/domains/managed`,
+    );
+    if (managed.enabled) {
+      await cf("PUT", `/accounts/${account}/r2/buckets/${bucket}/domains/managed`, {
+        enabled: false,
+      });
+      step(`R2 ${bucket}: r2.dev disabled`);
     }
     await cf("PUT", `/accounts/${account}/r2/buckets/${bucket}/cors`, {
       rules: [

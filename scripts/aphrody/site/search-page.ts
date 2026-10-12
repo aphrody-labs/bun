@@ -33,7 +33,7 @@ export async function searchPage(request: Request, api: (request: Request) => Pr
         "x-content-type-options": "nosniff",
         "referrer-policy": "no-referrer",
         "content-security-policy":
-          "default-src 'none'; style-src 'self'; font-src 'self' https://pub-0b56d0e2b2134c988df85460fe516cd2.r2.dev; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+          "default-src 'none'; style-src 'self'; font-src 'self' https://assets.aphrody.app; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
       },
     },
   );

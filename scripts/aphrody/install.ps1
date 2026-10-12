@@ -1,4 +1,4 @@
-# Installs the aphrody-labs/bun runtime from its GitHub releases.
+# Installs the aphrody-labs/bun runtime from its releases, mirrored on https://dist.aphrody.app (Cloudflare R2), else GitHub.
 #
 #   irm https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install.ps1 | iex
 #   & ([scriptblock]::Create((irm .../install.ps1))) -Version 1.4.4   # exact stable release
@@ -6,7 +6,7 @@
 #
 # BUN_INSTALL (default ~\.bun) keeps user state. -BinDir or APHRODY_BUN_BIN_DIR overrides the executable directory.
 # System32 requires an administrator token. -NoPathUpdate skips the user PATH.
-# APHRODY_BUN_REPO selects the repository; GITHUB_TOKEN (or GH_TOKEN) authenticates metadata and assets.
+# APHRODY_BUN_DIST overrides the mirror (empty: GitHub only), APHRODY_BUN_REPO selects the repository; GITHUB_TOKEN (or GH_TOKEN) authenticates metadata and assets.
 param(
   [String]$Version = "latest",
   [String]$BinDir = "",
@@ -19,6 +19,7 @@ $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
 $Repo = if ($env:APHRODY_BUN_REPO) { $env:APHRODY_BUN_REPO } else { "aphrody-labs/bun" }
+$Dist = if ($null -ne $env:APHRODY_BUN_DIST) { $env:APHRODY_BUN_DIST } else { "https://dist.aphrody.app/bun" }
 $Token = if ($env:GITHUB_TOKEN) { $env:GITHUB_TOKEN } else { $env:GH_TOKEN }
 $Headers = @{ Accept = "application/vnd.github+json" }
 if ($Token) { $Headers.Authorization = "Bearer $Token" }
@@ -37,6 +38,8 @@ $Exe = if ($DebugInfo) { "bun-profile.exe" } else { "bun.exe" }
 $Tag = switch -Regex ($Version) {
   # The repository also publishes other releases (tools, n2b): the newest runtime release, not GitHub's "latest".
   "^latest$" {
+    $Mirrored = if ($Dist) { try { (Invoke-RestMethod "$Dist/latest.json").tag } catch { $null } }
+    if ($Mirrored) { $Mirrored; break }
     (Invoke-RestMethod -Headers $Headers "https://api.github.com/repos/$Repo/releases?per_page=100") |
       Where-Object { -not $_.draft -and -not $_.prerelease -and $_.tag_name -match '^(bun-v\d+\.\d+\.\d+|aphrody-v\d+\.\d+\.\d+-aphrody\.\d+)$' } |
       Select-Object -First 1 -ExpandProperty tag_name
@@ -74,6 +77,10 @@ function Get-ReleaseArchive {
     $AssetHeaders = @{ Accept = "application/octet-stream"; Authorization = "Bearer $Token" }
     Invoke-WebRequest $AssetUrl -Headers $AssetHeaders -OutFile $Destination
   } else {
+    # The mirror holds the same bytes as the release; SHA256SUMS.txt verifies whichever source answered.
+    if ($Dist) {
+      try { Invoke-WebRequest "$Dist/$Tag/$Name" -OutFile $Destination; return } catch {}
+    }
     Invoke-WebRequest "$BaseUrl/$Name" -OutFile $Destination
   }
 }
