@@ -1,6 +1,22 @@
 // SPDX-License-Identifier: MIT
 // API migration of crunchyroll.js 1.1.1, Copyright (c) 2022 Mssjim.
 // Original MIT license reproduced in ../docs/crunchyroll-migration.md.
+import { createChromiumPasswordConnection, type ChromiumPasswordProvider } from "../../bun-chromium/src/passwords";
+
+export function parseCrunchyrollWatchUrl(value: string | URL) {
+  const url = new URL(value);
+  if (
+    url.protocol !== "https:" ||
+    !["www.crunchyroll.com", "crunchyroll.com"].includes(url.hostname) ||
+    url.port ||
+    url.username ||
+    url.password
+  )
+    throw new CrunchyrollError("Invalid official Crunchyroll watch URL");
+  const match = url.pathname.match(/^\/(?:([a-z]{2}(?:-[A-Za-z]{2})?)\/)?watch\/([A-Z0-9]{9,32})(?:\/([^/]+))?\/?$/);
+  if (!match) throw new CrunchyrollError("Invalid Crunchyroll watch path");
+  return { url: url.href, locale: match[1] ?? null, contentId: match[2]!, slug: match[3] ?? null };
+}
 
 export interface CrunchyrollOptions {
   baseURL?: string;
@@ -39,6 +55,15 @@ export class CrunchyrollError extends Error {
 
 /** Native fetch implementation of every public crunchyroll.js 1.1.1 operation. */
 export class CrunchyrollClient {
+  async loginWithBrowserPassword(provider: ChromiumPasswordProvider, username?: string): Promise<LoginResult> {
+    let result: LoginResult | undefined;
+    const passwords = createChromiumPasswordConnection(provider);
+    await passwords.withCredential({ url: "https://www.crunchyroll.com", username }, async credential => {
+      result = await this.login(credential.username, credential.password);
+    });
+    if (!result) throw new CrunchyrollError("Private password provider did not supply a credential");
+    return result;
+  }
   readonly #base: URL;
   readonly #options: CrunchyrollOptions;
   #token?: string;

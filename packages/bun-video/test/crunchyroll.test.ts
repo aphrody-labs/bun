@@ -1,5 +1,5 @@
 import { describe, expect, spyOn, test } from "bun:test";
-import { createCrunchyrollClient, CrunchyrollError } from "../src/crunchyroll";
+import { createCrunchyrollClient, CrunchyrollError, parseCrunchyrollWatchUrl } from "../src/crunchyroll";
 
 const cms = {
   bucket: "/FR/M3",
@@ -47,6 +47,46 @@ async function withAPI(
 }
 
 describe("native Crunchyroll migration", () => {
+  test("owner-selected French episode preserves its official content ID", () => {
+    const watch = parseCrunchyrollWatchUrl("https://www.crunchyroll.com/fr/watch/GE00389313JAJP/the-god-who-destroys");
+    expect(watch).toEqual({
+      url: "https://www.crunchyroll.com/fr/watch/GE00389313JAJP/the-god-who-destroys",
+      locale: "fr",
+      contentId: "GE00389313JAJP",
+      slug: "the-god-who-destroys",
+    });
+    expect(() => parseCrunchyrollWatchUrl("https://crunchyroll.com.example.test/fr/watch/GE00389313JAJP")).toThrow();
+    expect(() =>
+      parseCrunchyrollWatchUrl("https://user:password@www.crunchyroll.com/fr/watch/GE00389313JAJP"),
+    ).toThrow();
+  });
+
+  test("shared Chromium password provider supplies credentials only to the explicit login", async () => {
+    await withAPI(async baseURL => {
+      const api = createCrunchyrollClient({ baseURL, basicAuthorization: "Basic local-app", locale: "fr-FR" });
+      const provider = {
+        audit: () => ({ records: 1, supportedWebOrigins: 1, credentialsWithPassword: 1, unsupportedRecords: 0 }),
+        async withCredential(
+          selector: { url: string; username?: string },
+          consume: (credential: {
+            name: string;
+            url: string;
+            username: string;
+            password: string;
+          }) => void | Promise<void>,
+        ) {
+          expect(selector.url).toBe("https://www.crunchyroll.com");
+          await consume({
+            name: "fixture",
+            url: selector.url,
+            username: "local@example.test",
+            password: "local-password",
+          });
+        },
+      };
+      expect((await api.loginWithBrowserPassword(provider)).client.locale).toBe("fr-FR");
+    });
+  });
   test("configured French locale survives default password login, search and paginated catalog calls", async () => {
     await withAPI(async (baseURL, calls) => {
       const api = createCrunchyrollClient({
