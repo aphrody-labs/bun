@@ -22,6 +22,7 @@ export { capabilities } from "./capabilities";
 export * from "./webgpu";
 export * from "./ytdlp";
 export * from "./mpv";
+export * from "./ffmpeg";
 export * from "./pipeline";
 export * from "./image";
 export * from "./formats";
