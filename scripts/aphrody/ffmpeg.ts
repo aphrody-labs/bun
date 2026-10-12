@@ -24,7 +24,7 @@ if (action === "plan") {
   const commands =
     action === "configure"
       ? [configure]
-      : [configure, [make, "-j", String(Math.min(16, navigator.hardwareConcurrency))], [make, "install"]];
+      : [configure, [make, "-j", String(Math.min(16, navigator.hardwareConcurrency))], [make, "install", "V=1"]];
   for (const args of commands) {
     const nativeArgs =
       process.platform === "win32" && args !== configure
@@ -50,6 +50,11 @@ if (action === "plan") {
           content.replace(/\/([a-z])\//g, (_, drive: string) => `${drive.toUpperCase()}:/`),
         );
       }
+    }
+  }
+  if (action === "build" && process.platform === "win32") {
+    for await (const name of new Bun.Glob("*.lib").scan(join(prefix, "bin"))) {
+      await Bun.write(join(prefix, "lib", name), Bun.file(join(prefix, "bin", name)));
     }
   }
 } else throw new Error("usage: bun run ffmpeg plan|configure|build");
