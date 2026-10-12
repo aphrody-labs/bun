@@ -44,6 +44,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
       ["play", () => void video.play()], ["pause", () => video.pause()],
       ["seekbackward", () => { video.currentTime = Math.max(0, video.currentTime - 10); }],
       ["seekforward", () => { video.currentTime += 10; }],
+      ["seekto", details => { if (details.seekTime !== undefined) video.currentTime = details.seekTime; }],
     ];
     for (const [action, handler] of actions) try { mediaSession.setActionHandler(action, handler); } catch { /* browser may not implement every action */ }
     if (selected) mediaSession.metadata = new MediaMetadata({ title: selected.title, artwork: selected.poster ? [{ src: selected.poster }] : undefined });
