@@ -24,6 +24,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
   const [loadingMetadata, setLoadingMetadata] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(muted);
   const [variantSrc, setVariantSrc] = useState<string | undefined>();
   const [progress, setProgress] = useState({ currentTime: 0, duration: 0 });
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -101,6 +102,8 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
       event.preventDefault(); video.currentTime = Math.max(0, video.currentTime + (event.key === "ArrowRight" ? 10 : -10));
     } else if (event.key === " ") {
       event.preventDefault(); void (video.paused ? video.play() : video.pause());
+    } else if (event.key.toLowerCase() === "m") {
+      event.preventDefault(); setIsMuted(current => !current);
     }
   };
   const reportPlayback = () => { const video = videoRef.current; if (!video) return; const state = { currentTime: video.currentTime, duration: Number.isFinite(video.duration) ? video.duration : 0, paused: video.paused }; setProgress(state); if (storageKey && selected) localStorage.setItem(`${storageKey}:position:${selected.id}`, String(state.currentTime)); onPlayback?.(state); };
@@ -125,7 +128,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
       </aside>
       <main>
         {selected ? (
-          <video ref={videoRef} key={`${selected.id}-${variantSrc ?? selected.src}`} controls playsInline preload="metadata" autoPlay={autoPlay} loop={loop} muted={muted} crossOrigin={selected.crossOrigin} poster={selected.poster} aria-label={selected.alt ?? selected.title} src={variantSrc ?? selected.src} onLoadedMetadata={restorePosition} onTimeUpdate={reportPlayback} onPlay={reportPlayback} onPause={reportPlayback} onEnded={() => selectRelative(1)} onError={() => setError(`Lecture impossible : ${selected.title}`)}>
+          <video ref={videoRef} key={`${selected.id}-${variantSrc ?? selected.src}`} controls playsInline preload="metadata" autoPlay={autoPlay} loop={loop} muted={isMuted} crossOrigin={selected.crossOrigin} poster={selected.poster} aria-label={selected.alt ?? selected.title} src={variantSrc ?? selected.src} onLoadedMetadata={restorePosition} onTimeUpdate={reportPlayback} onPlay={reportPlayback} onPause={reportPlayback} onEnded={() => selectRelative(1)} onError={() => setError(`Lecture impossible : ${selected.title}`)}>
             {selected.subtitles?.map(track => <track key={`${track.srclang}-${track.src}`} kind="subtitles" src={track.src} srcLang={track.srclang} label={track.label} default={track.default} />)}
           </video>
         ) : <p>Aucun média sélectionné.</p>}
@@ -136,6 +139,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
         {selected && <nav aria-label="Affichage"><button type="button" onClick={fullscreen}>Plein écran</button><button type="button" onClick={pictureInPicture}>Picture-in-Picture</button></nav>}
         {selected && <label>Vitesse <select value={playbackRate} onChange={event => setPlaybackRate(Number(event.target.value))}><option value="0.5">0,5×</option><option value="0.75">0,75×</option><option value="1">1×</option><option value="1.25">1,25×</option><option value="1.5">1,5×</option><option value="2">2×</option></select></label>}
         {selected && <label>Volume <input type="range" min="0" max="1" step="0.05" value={volume} onChange={event => setVolume(Number(event.target.value))} /></label>}
+        {selected && <button type="button" aria-pressed={isMuted} onClick={() => setIsMuted(current => !current)}>{isMuted ? "Activer le son" : "Couper le son"}</button>}
         {selected?.variants && <label>Qualité <select value={variantSrc ?? selected.src} onChange={event => setVariantSrc(event.target.value === selected.src ? undefined : event.target.value)}><option value={selected.src}>Auto</option>{selected.variants.map(variant => <option key={variant.src} value={variant.src}>{variant.label}</option>)}</select></label>}
         {selected && isHttpSource(selected.src) && <button type="button" onClick={() => void inspectSelected()} disabled={loadingMetadata}>{loadingMetadata ? "Analyse…" : "Analyser avec yt-dlp"}</button>}
         {metadata && <pre>{JSON.stringify({ title: metadata.title, id: metadata.id, formats: metadata.formats?.length ?? 0 }, null, 2)}</pre>}
