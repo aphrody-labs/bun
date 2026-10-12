@@ -1,12 +1,15 @@
 {
   "compilerOptions": {
-    "lib": ["ESNext"],
+    "lib": ["ESNext", "DOM"],
     "module": "ESNext",
     "target": "ESNext",
-    "moduleResolution": "node",
-    "types": ["bun-types"],
+    "moduleResolution": "bundler",
+    "types": [],
+    "typeRoots": ["../bun-types/node_modules/@types"],
     "esModuleInterop": true,
     "allowJs": true,
     "strict": true
-  }
+  },
+  "include": ["**/*.ts", "../bun-types/index.d.ts"],
+  "exclude": ["node_modules"]
 }

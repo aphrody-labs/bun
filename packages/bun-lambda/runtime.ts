@@ -1,14 +1,20 @@
 import { AwsClient } from "aws4fetch";
-import type { Server, ServerWebSocket } from "bun";
+import type { BufferSource, ServerWebSocket, WebSocketReadyState } from "bun";
 
 type Lambda = {
-  fetch: (request: Request, server: Server) => Promise<Response | undefined>;
+  fetch: (request: Request, server: LambdaServer) => Promise<Response | undefined>;
   error?: (error: unknown) => Promise<Response>;
   websocket?: {
-    open?: (ws: ServerWebSocket) => Promise<void>;
-    message?: (ws: ServerWebSocket, message: string) => Promise<void>;
-    close?: (ws: ServerWebSocket, code: number, reason: string) => Promise<void>;
+    open?: (ws: ServerWebSocket<unknown>) => Promise<void>;
+    message?: (ws: ServerWebSocket<unknown>, message: string) => Promise<void>;
+    close?: (ws: ServerWebSocket<unknown>, code: number, reason: string) => Promise<void>;
   };
+};
+
+type LambdaReloadOptions = Partial<Lambda> & {
+  port?: number | string;
+  hostname?: string;
+  development?: boolean;
 };
 
 let requestId: string | undefined;
@@ -477,9 +483,9 @@ function formatRequest(input: LambdaRequest): Request | undefined {
   return request;
 }
 
-class LambdaServer implements Server {
+class LambdaServer {
   #lambda: Lambda;
-  #webSockets: Map<string, LambdaWebSocket>;
+  #webSockets: Map<string, LambdaWebSocket<unknown>>;
   #upgrade: Response | null;
   pendingRequests: number;
   pendingWebSockets: number;
@@ -583,7 +589,7 @@ class LambdaServer implements Server {
     exit("Runtime exited because Server.stop() was called");
   }
 
-  reload(options: any): void {
+  reload(options: LambdaReloadOptions): void {
     this.#lambda = {
       fetch: options.fetch ?? this.#lambda.fetch,
       error: options.error ?? this.#lambda.error,
@@ -648,7 +654,7 @@ class LambdaServer implements Server {
     return false;
   }
 
-  publish(topic: string, data: string | ArrayBuffer | ArrayBufferView, compress?: boolean): number {
+  publish(topic: string, data: string | BufferSource | Blob, compress?: boolean): number {
     let count = 0;
     for (const webSocket of this.#webSockets.values()) {
       count += webSocket.publish(topic, data, compress) ? 1 : 0;
@@ -657,17 +663,17 @@ class LambdaServer implements Server {
   }
 }
 
-class LambdaWebSocket implements ServerWebSocket {
+class LambdaWebSocket<T = undefined> implements ServerWebSocket<T> {
   #connectionId: string;
   #url: string;
   #invokeArn: string;
   #topics: Set<string> | null;
   remoteAddress: string;
-  readyState: 0 | 2 | 1 | -1 | 3;
+  readyState: WebSocketReadyState;
   binaryType?: "arraybuffer" | "uint8array";
-  data: any;
+  data: T;
 
-  constructor(event: WebSocketEvent, data?: any) {
+  constructor(event: WebSocketEvent, data: T) {
     const request = event.requestContext;
     this.#connectionId = `${request.connectionId}`;
     this.#url = `https://${request.domainName}/${request.stage}/@connections/${this.#connectionId}`;
@@ -679,15 +685,11 @@ class LambdaWebSocket implements ServerWebSocket {
     this.data = data;
   }
 
-  send(data: string | ArrayBuffer | ArrayBufferView, compress?: boolean): number {
+  send(data: string | BufferSource | Blob, compress?: boolean): number {
     if (typeof data === "string") {
       return this.sendText(data, compress);
     }
-    if (data instanceof ArrayBuffer) {
-      return this.sendBinary(new Uint8Array(data), compress);
-    }
-    const buffer = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-    return this.sendBinary(buffer, compress);
+    return this.sendBinary(data, compress);
   }
 
   sendText(data: string, _compress?: boolean): number {
@@ -721,16 +723,45 @@ class LambdaWebSocket implements ServerWebSocket {
     return data.length;
   }
 
-  sendBinary(data: Uint8Array, compress?: boolean): number {
+  sendBinary(data: BufferSource | Blob, compress?: boolean): number {
     warnOnce(
       "Lambda does not support binary WebSocket messages",
       "https://docs.aws.amazon.com/apigateway/latest/developerguide/websocket-api-develop-binary-media-types.html",
     );
-    const base64 = Buffer.from(data).toString("base64");
-    return this.sendText(base64, compress);
+    if (data instanceof Blob) {
+      data
+        .bytes()
+        .then(bytes => this.sendText(Buffer.from(bytes).toString("base64"), compress))
+        .catch(error => {
+          warnOnce("Failed to send WebSocket message", error);
+        });
+      return data.size;
+    }
+    const bytes = ArrayBuffer.isView(data)
+      ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+      : new Uint8Array(data);
+    return this.sendText(Buffer.from(bytes).toString("base64"), compress);
   }
 
-  publish(topic: string, data: string | ArrayBuffer | ArrayBufferView, compress?: boolean): number {
+  ping(_data?: string | BufferSource | Blob): number {
+    warnOnce("Lambda does not support WebSocket ping frames");
+    return 0;
+  }
+
+  pong(_data?: string | BufferSource | Blob): number {
+    warnOnce("Lambda does not support WebSocket pong frames");
+    return 0;
+  }
+
+  getBufferedAmount(): number {
+    return 0;
+  }
+
+  get subscriptions(): string[] {
+    return this.#topics === null ? [] : [...this.#topics];
+  }
+
+  publish(topic: string, data: string | BufferSource | Blob, compress?: boolean): number {
     if (this.isSubscribed(topic)) {
       return this.send(data, compress);
     }
@@ -744,7 +775,7 @@ class LambdaWebSocket implements ServerWebSocket {
     return -1;
   }
 
-  publishBinary(topic: string, data: Uint8Array, compress?: boolean): number {
+  publishBinary(topic: string, data: BufferSource | Blob, compress?: boolean): number {
     if (this.isSubscribed(topic)) {
       return this.sendBinary(data, compress);
     }
@@ -782,6 +813,10 @@ class LambdaWebSocket implements ServerWebSocket {
     this.readyState = 3; // WebSocket.CLOSED;
   }
 
+  terminate(): void {
+    this.close();
+  }
+
   subscribe(topic: string): boolean {
     if (this.readyState === 3) {
       return false;
@@ -804,9 +839,9 @@ class LambdaWebSocket implements ServerWebSocket {
     return this.readyState !== 3 && this.#topics !== null && this.#topics.has(topic);
   }
 
-  cork(callback: (ws: ServerWebSocket<undefined>) => any): void | Promise<void> {
+  cork<R = unknown>(callback: (ws: ServerWebSocket<R>) => R): R {
     // Lambda does not support sending multiple messages at a time.
-    return callback(this);
+    return callback(this as ServerWebSocket<unknown> as ServerWebSocket<R>);
   }
 }
 
