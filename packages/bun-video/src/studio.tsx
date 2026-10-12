@@ -21,6 +21,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
   const [metadata, setMetadata] = useState<YtDlpResult | null>(null);
   const [loadingMetadata, setLoadingMetadata] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [volume, setVolume] = useState(1);
   const [variantSrc, setVariantSrc] = useState<string | undefined>();
   const [progress, setProgress] = useState({ currentTime: 0, duration: 0 });
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -32,6 +33,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
   }, [localAssets, storageKey]);
   useEffect(() => { setVariantSrc(undefined); }, [selectedId]);
   useEffect(() => { if (videoRef.current) videoRef.current.playbackRate = playbackRate; }, [selectedId, playbackRate, variantSrc]);
+  useEffect(() => { if (videoRef.current) videoRef.current.volume = volume; }, [selectedId, volume, variantSrc]);
   useEffect(() => {
     const mediaSession = typeof navigator !== "undefined" ? navigator.mediaSession : undefined;
     const video = videoRef.current;
@@ -128,6 +130,7 @@ export function VideoStudio({ assets, initialAssetId, className, cache, storageK
         {selected && <nav aria-label="Contrôles de file"><button type="button" onClick={() => selectRelative(-1)}>Précédent</button><button type="button" onClick={() => selectRelative(1)}>Suivant</button></nav>}
         {selected && <nav aria-label="Affichage"><button type="button" onClick={fullscreen}>Plein écran</button><button type="button" onClick={pictureInPicture}>Picture-in-Picture</button></nav>}
         {selected && <label>Vitesse <select value={playbackRate} onChange={event => setPlaybackRate(Number(event.target.value))}><option value="0.5">0,5×</option><option value="0.75">0,75×</option><option value="1">1×</option><option value="1.25">1,25×</option><option value="1.5">1,5×</option><option value="2">2×</option></select></label>}
+        {selected && <label>Volume <input type="range" min="0" max="1" step="0.05" value={volume} onChange={event => setVolume(Number(event.target.value))} /></label>}
         {selected?.variants && <label>Qualité <select value={variantSrc ?? selected.src} onChange={event => setVariantSrc(event.target.value === selected.src ? undefined : event.target.value)}><option value={selected.src}>Auto</option>{selected.variants.map(variant => <option key={variant.src} value={variant.src}>{variant.label}</option>)}</select></label>}
         {selected && /^https?:$/.test(new URL(selected.src).protocol) && <button type="button" onClick={() => void inspectSelected()} disabled={loadingMetadata}>{loadingMetadata ? "Analyse…" : "Analyser avec yt-dlp"}</button>}
         {metadata && <pre>{JSON.stringify({ title: metadata.title, id: metadata.id, formats: metadata.formats?.length ?? 0 }, null, 2)}</pre>}
