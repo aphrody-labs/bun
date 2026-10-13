@@ -23,7 +23,7 @@ import { FFIExplorer } from "../ffi/FFIExplorer";
 import { useReadyOnMount } from "./ready";
 import { PetCompanion } from "./components/PetCompanion";
 import { QuickAskBar } from "./components/QuickAskBar";
-import { applyM3Theme } from "../core/theme";
+import { applyDynamicColor } from "@aphrody/m3-tokens/dynamic-color";
 import { formatBytes, formatDuration, UNAVAILABLE, useSystemSnapshot } from "./system-client";
 import type { AppId, WindowState } from "./types";
 
@@ -92,7 +92,7 @@ export const DesktopOS: React.FC = () => {
   );
 
   useEffect(() => {
-    applyM3Theme(seedColor);
+    applyDynamicColor(seedColor, { dark: true });
   }, [seedColor]);
 
   useEffect(() => {

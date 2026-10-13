@@ -3851,16 +3851,21 @@ pub fn argv() -> Argv {
 /// subcommands dispatched before the runtime that parse their own arguments. `std::env::args_os()` is empty
 /// on musl ([`init_argv`]).
 pub fn os_args() -> Vec<std::ffi::OsString> {
-    #[cfg(not(unix))]
+    #[cfg(windows)]
     return std::env::args_os().collect();
-    #[cfg(unix)]
+    #[cfg(any(unix, target_os = "wasi"))]
     {
+        #[cfg(unix)]
         use std::os::unix::ffi::OsStrExt;
+        #[cfg(target_os = "wasi")]
+        use std::os::wasi::ffi::OsStrExt;
         argv_storage()
             .iter()
             .map(|arg| std::ffi::OsStr::from_bytes(arg.as_bytes()).to_owned())
             .collect()
     }
+    #[cfg(not(any(windows, unix, target_os = "wasi")))]
+    Vec::new()
 }
 
 // ─── BUN_OPTIONS argv injection ──────────────────────────────────────────────

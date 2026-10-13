@@ -525,6 +525,8 @@ export function binaryExpectations(cfg: Config): BinaryExpectations {
         neededLibs: {
           names: [
             "ADVAPI32.dll",
+            "bcrypt.dll",
+            "cfgmgr32.dll",
             "CRYPT32.dll",
             "IPHLPAPI.DLL",
             "KERNEL32.dll",
@@ -539,13 +541,13 @@ export function binaryExpectations(cfg: Config): BinaryExpectations {
             "dbghelp.dll",
             "ntdll.dll",
             "ole32.dll",
+            "secur32.dll",
           ],
           exact: true,
-          // bcrypt.dll: libarchive's archive_random.c / archive_digest.c call
-          // BCryptOpenAlgorithmProvider and BCryptGenRandom. A release link
-          // drops them as unreferenced (/OPT:REF); a debug link keeps every
-          // section, and the import with them. Never in a shipped binary.
-          allowed: [...sanitizerLibs, ...(cfg.debug ? ["bcrypt.dll"] : [])],
+          // bcrypt.dll: AWS-LC uses BCryptGenRandom as a Windows entropy source.
+          // cfgmgr32.dll: embedded uv-torch enumerates Windows device IDs.
+          // secur32.dll: Pageant's Windows named-pipe owner resolves the UPN.
+          allowed: sanitizerLibs,
         },
         minOSVersion: "6.0",
         forbiddenImports: forbiddenImports(cfg),

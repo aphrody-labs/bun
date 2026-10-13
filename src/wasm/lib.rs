@@ -9,6 +9,74 @@ use core::cmp::Ordering;
 
 use bun_semver::{SlicedString, Version, query};
 
+// This WebAssembly surface is deliberately filesystem-free. `bun_core` keeps
+// its system I/O implementation in bun_sys, which is not a WASI dependency;
+// provide a safe failing sink for code paths that are not exported here.
+#[allow(dead_code)]
+#[repr(C)]
+struct WasmQuietWriterAdapter {
+    writer: bun_core::io::Writer,
+}
+
+// Keep this concrete WASM adapter within the opaque owner's storage and
+// alignment contract, just as bun_sys does for its native adapter.
+const _: () = {
+    assert!(
+        core::mem::size_of::<WasmQuietWriterAdapter>()
+            <= core::mem::size_of::<bun_core::output::QuietWriterAdapter>()
+    );
+    assert!(
+        core::mem::align_of::<WasmQuietWriterAdapter>()
+            <= core::mem::align_of::<bun_core::output::QuietWriterAdapter>()
+    );
+    assert!(core::mem::offset_of!(WasmQuietWriterAdapter, writer) == 0);
+};
+
+unsafe fn wasm_writer_write_all(
+    _writer: *mut bun_core::io::Writer,
+    _bytes: &[u8],
+) -> Result<(), bun_core::Error> {
+    Err(bun_core::Error::Unexpected)
+}
+
+unsafe fn wasm_writer_flush(
+    _writer: *mut bun_core::io::Writer,
+) -> Result<(), bun_core::Error> {
+    Err(bun_core::Error::Unexpected)
+}
+
+bun_core::link_impl_OutputSink! {
+    Sys for extern () => |_this| {
+        stderr() => bun_core::output::File(bun_core::Fd::stderr()),
+        make_path(_cwd, _dir) => Err(bun_core::Error::Unexpected),
+        create_file(_cwd, _path) => Err(bun_core::Error::Unexpected),
+        quiet_writer_from_fd(_fd) => bun_core::output::QuietWriter::ZEROED,
+        quiet_writer_adapt(_qw, _buf, _len) => {
+            let adapter = WasmQuietWriterAdapter {
+                writer: bun_core::io::Writer {
+                    write_all: wasm_writer_write_all,
+                    flush: wasm_writer_flush,
+                },
+            };
+            let mut out = bun_core::output::QuietWriterAdapter::uninit();
+            // SAFETY: the opaque adapter reserves 64 bytes, and this repr(C)
+            // implementation contains only the two function pointers.
+            unsafe {
+                core::ptr::write(
+                    (&raw mut out).cast::<WasmQuietWriterAdapter>(),
+                    adapter,
+                );
+            }
+            out
+        },
+        quiet_writer_write_all(_qw, _bytes) => false,
+        quiet_writer_fd(_qw) => bun_core::Fd::INVALID,
+        tty_winsize(_fd) => None,
+        is_terminal(_fd) => false,
+        read(_fd, _buf) => Err(bun_core::Error::Unexpected),
+    }
+}
+
 const STATUS_OK: u8 = 0;
 const STATUS_ERR: u8 = 1;
 

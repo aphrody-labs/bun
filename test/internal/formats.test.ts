@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { tempDir } from "harness";
 import { join } from "node:path";
+import { symlink, unlink } from "node:fs/promises";
 import {
   capabilities,
   comparison,
@@ -210,18 +211,16 @@ test("native source index preserves domain snapshots, file hashes and unresolved
     surface: "src",
   });
   const rows = registry.db
-    .query<
-      { file: string; provenance: string; metadata: string },
-      [string, string]
-    >("SELECT file,provenance,metadata FROM nodes WHERE repository_id=? AND id GLOB ? AND kind='file' ORDER BY file")
+    .query<{ file: string; provenance: string; metadata: string }, [string, string]>(
+      "SELECT file,provenance,metadata FROM nodes WHERE repository_id=? AND id GLOB ? AND kind='file' ORDER BY file",
+    )
     .all(runtime.repository, `${runtime.snapshot}:*`);
   expect(rows).toHaveLength(5);
   expect(
     registry.db
-      .query<
-        { count: number },
-        [string, string]
-      >("SELECT COUNT(*) AS count FROM nodes WHERE repository_id=? AND file=? AND kind='file'")
+      .query<{ count: number }, [string, string]>(
+        "SELECT COUNT(*) AS count FROM nodes WHERE repository_id=? AND file=? AND kind='file'",
+      )
       .get(runtime.repository, "ΣΟΣ.rs")!.count,
   ).toBe(1);
   const file = rows.find(row => row.file === "lib.rs")!;
@@ -312,4 +311,108 @@ test("native source index rejects ambiguous scope, excessive workers and pre-abo
   expect(registry.db.query<{ count: number }, []>("SELECT COUNT(*) AS count FROM graph_snapshots").get()!.count).toBe(
     0,
   );
+});
+
+test("native source index isolates namespaces and indexes selected surfaces with explicit exclusions", async () => {
+  const { BunPython } = await import("bun:graph");
+  const { indexCodebase } = await import("bun:graph-index");
+  using directory = tempDir("native-source-index-namespaces", {
+    "owners/alpha/index.ts": "export function answer() { return 42; }\n",
+    "owners/excluded/index.ts": "export const omitted = true;\n",
+    "src/default/index.ts": "export const outsideSelection = true;\n",
+  });
+  using registry = new BunPython(":memory:");
+  const options = {
+    profile: "bun" as const,
+    revision: "fixture",
+    concurrency: 1,
+    surfaces: ["owners"],
+    excludePaths: ["owners/excluded"],
+  };
+  const first = await indexCodebase(registry, String(directory), { ...options, namespace: "owner-a" });
+  const second = await indexCodebase(registry, String(directory), { ...options, namespace: "owner-b" });
+  expect(first).toMatchObject({ namespace: "owner-a", surfaces: ["owners"] });
+  expect(first.domains).toHaveLength(1);
+  expect(first.domains[0]).toMatchObject({
+    domain: "owners/alpha",
+    surface: "owners",
+    repository: "source:owner-a/owners/alpha",
+    source: "graph:owner-a:owners:alpha",
+    coverage: { files: 1, nativeFiles: 1 },
+  });
+  expect(second.domains[0]!.repository).toBe("source:owner-b/owners/alpha");
+  expect(second.domains[0]!.snapshot).not.toBe(first.domains[0]!.snapshot);
+  expect(second.domains[0]!.inputSHA256).not.toBe(first.domains[0]!.inputSHA256);
+  const snapshot = registry.getSnapshot(first.domains[0]!.repository, first.domains[0]!.snapshot)!;
+  expect(JSON.parse(snapshot.metadata).graph).toMatchObject({
+    dirtyScope: "selected-surfaces",
+    dirtySurfaces: ["owners"],
+  });
+  const again = await indexCodebase(registry, String(directory), { ...options, namespace: "owner-a" });
+  expect(again.domains[0]).toMatchObject({ cached: true, snapshot: first.domains[0]!.snapshot });
+});
+
+test("native source index keeps protected custom surface ancestors metadata-only", async () => {
+  const { BunPython } = await import("bun:graph");
+  const { indexCodebase } = await import("bun:graph-index");
+  using directory = tempDir("native-source-index-protected-surface", {
+    "owners/sessions/fixture/index.ts": "export const privateFixture = true;\n",
+  });
+  using registry = new BunPython(":memory:");
+  const result = await indexCodebase(registry, String(directory), {
+    profile: "bun",
+    revision: "fixture",
+    namespace: "owner",
+    surfaces: ["owners/sessions"],
+    concurrency: 1,
+  });
+  expect(result.domains[0]).toMatchObject({
+    surface: "owners/sessions",
+    coverage: { files: 1, nativeFiles: 0, metadataOnlyFiles: 1, hashedSourceBytes: 0 },
+  });
+  const row = registry.db.query<{ metadata: string }, []>("SELECT metadata FROM nodes WHERE kind='file'").get()!;
+  expect(JSON.parse(row.metadata)).toMatchObject({ sha256: null, unresolvedReason: "protected-metadata-only" });
+});
+
+test("native source index rejects artifact junctions and accepts explicitly excluded output directories", async () => {
+  const { BunPython } = await import("bun:graph");
+  const { indexCodebase } = await import("bun:graph-index");
+  using directory = tempDir("native-source-index-artifact-alias", {
+    "src/fixture/index.ts": "export const value = 42;\n",
+  });
+  const root = String(directory);
+  const alias = join(root, "output-alias");
+  await symlink(join(root, "src"), alias, process.platform === "win32" ? "junction" : "dir");
+  using registry = new BunPython(":memory:");
+  try {
+    await expect(
+      indexCodebase(registry, root, {
+        profile: "bun",
+        revision: "fixture",
+        artifactDirectory: join(alias, "future", "graphs"),
+      }),
+    ).rejects.toThrow("inside indexed");
+    expect(registry.db.query<{ count: number }, []>("SELECT COUNT(*) AS count FROM graph_snapshots").get()!.count).toBe(
+      0,
+    );
+    await expect(
+      indexCodebase(registry, root, {
+        profile: "bun",
+        revision: "fixture",
+        surfaces: ["output-alias"],
+      }),
+    ).rejects.toThrow("real directory");
+    const artifactDirectory = join(root, "src", "generated");
+    const result = await indexCodebase(registry, root, {
+      profile: "bun",
+      revision: "fixture",
+      artifactDirectory,
+      excludePaths: ["src/generated"],
+      concurrency: 1,
+    });
+    expect(result.domains.map(domain => domain.domain)).toEqual(["src/fixture"]);
+    expect(result.domains[0]!.artifact).toStartWith(artifactDirectory);
+  } finally {
+    await unlink(alias);
+  }
 });
