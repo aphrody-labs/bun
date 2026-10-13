@@ -167,15 +167,16 @@ unsafe extern "C" fn configure(
 
 #[repr(C)]
 struct DelayedRequest {
-    // ngx_event_ident reads the connection-compatible identifier during timer debug logging.
-    #[allow(dead_code)] // Read by NGINX's C debug logger through ngx_event_ident.
-    ident: [usize; 4],
+    // ngx_event_ident casts event.data to the configured C connection ABI.
+    #[allow(dead_code)] // Only the C debug logger reads this pool-owned prefix.
+    connection: ngx_connection_t,
     event: ngx_event_t,
     request: *mut ngx_http_request_t,
     delay_ms: u16,
     main: *const MainConfig,
     pending: bool,
 }
+const _: () = assert!(core::mem::offset_of!(DelayedRequest, connection) == 0);
 impl Drop for DelayedRequest {
     fn drop(&mut self) {
         // SAFETY: cleanup and callbacks both execute on the NGINX worker loop.
@@ -302,7 +303,11 @@ impl HttpRequestHandler for Content {
                 pool_value(
                     (*raw).pool,
                     DelayedRequest {
-                        ident: [0, 0, 0, 0x42554e],
+                        connection: {
+                            let mut identity: ngx_connection_t = core::mem::zeroed();
+                            identity.fd = (*(*raw).connection).fd;
+                            identity
+                        },
                         event: core::mem::zeroed(),
                         request: raw,
                         delay_ms: delay,

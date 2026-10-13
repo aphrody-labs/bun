@@ -11,12 +11,40 @@ export interface NativeModuleEngineOptions {
   mismatchLibrary: string;
   mismatchLibrarySha256: string;
 }
+async function captureOutput(stream: ReadableStream<Uint8Array>) {
+  const maximum = 64 << 20,
+    retained = 64 << 10,
+    hash = new Bun.CryptoHasher("sha256"),
+    reader = stream.getReader();
+  let bytes = 0,
+    tail: Uint8Array = new Uint8Array(0);
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > maximum) throw new Error("NGINX diagnostic stream exceeds its qualification bound");
+      hash.update(value);
+      if (value.byteLength >= retained) tail = value.slice(-retained);
+      else {
+        const combined = new Uint8Array(Math.min(retained, tail.byteLength + value.byteLength));
+        const previous = Math.min(tail.byteLength, retained - value.byteLength);
+        combined.set(tail.subarray(tail.byteLength - previous));
+        combined.set(value, previous);
+        tail = combined;
+      }
+    }
+  } finally {
+    await reader.cancel();
+  }
+  return { text: new TextDecoder().decode(tail), bytes, sha256: hash.digest("hex"), truncated: bytes > retained };
+}
 export async function qualifyEngine(binary: string, receiptPath: string, module?: NativeModuleEngineOptions) {
   if (!isAbsolute(binary) || !isAbsolute(receiptPath)) throw new Error("Engine and receipt paths must be absolute");
   if (
     module &&
     (!isAbsolute(module.mismatchLibrary) ||
-      /[\"\0\r\n]/.test(module.mismatchLibrary) ||
+      ['"', "\0", "\r", "\n"].some(character => module.mismatchLibrary.includes(character)) ||
       !/^[a-f0-9]{64}$/.test(module.mismatchLibrarySha256) ||
       module.mismatchLibrarySha256 !== (await hashSDKFile(module.mismatchLibrary)))
   )
@@ -40,6 +68,10 @@ export async function qualifyEngine(binary: string, receiptPath: string, module?
   } else throw new Error("This engine gate accepts PE and ELF providers");
   const store = resolve(dirname(receiptPath)),
     prefix = await mkdtemp(join(store, "engine-gate-"));
+  const target = resolve(prefix),
+    scoped = relative(store, target);
+  if (!scoped || scoped.startsWith("..") || isAbsolute(scoped))
+    throw new Error("Unsafe engine qualification cleanup path");
   const config = join(prefix, "nginx.conf"),
     pidFile = join(prefix, "bun-nginx.pid"),
     forward = (path: string) => path.replaceAll("\\", "/");
@@ -47,7 +79,7 @@ export async function qualifyEngine(binary: string, receiptPath: string, module?
   const port = reservation.port;
   reservation.stop(true);
   const configuration = (text: string) =>
-    `worker_processes 1; error_log stderr; lock_file "${forward(join(prefix, "nginx.lock"))}"; events { worker_connections 32; } http { access_log off; ${["client_body", "proxy", "fastcgi", "uwsgi", "scgi"].map(name => `${name}_temp_path "${forward(join(prefix, name + "-temp"))}";`).join(" ")} server { listen 127.0.0.1:${port}; location = /version { return 200 "${text}"; } location = /payload { alias "${forward(join(prefix, "payload.txt"))}"; } ${module ? "location = /info { bun_nginx; } location = /delay { bun_nginx_delay 500; }" : ""} } }`;
+    `worker_processes 1; error_log stderr${module ? " debug" : ""}; lock_file "${forward(join(prefix, "nginx.lock"))}"; events { worker_connections 32; } http { access_log off; ${["client_body", "proxy", "fastcgi", "uwsgi", "scgi"].map(name => `${name}_temp_path "${forward(join(prefix, name + "-temp"))}";`).join(" ")} server { listen 127.0.0.1:${port}; location = /version { return 200 "${text}"; } location = /payload { alias "${forward(join(prefix, "payload.txt"))}"; } ${module ? "location = /info { bun_nginx; } location = /delay { bun_nginx_delay 500; }" : ""} } }`;
   const args = [
     "-p",
     forward(prefix),
@@ -67,16 +99,25 @@ export async function qualifyEngine(binary: string, receiptPath: string, module?
       timeout: 3000,
     });
     const [stdout, stderr, exitCode] = await Promise.all([
-      Bun.readableStreamToText(child.stdout),
-      Bun.readableStreamToText(child.stderr),
+      captureOutput(child.stdout),
+      captureOutput(child.stderr),
       child.exited,
     ]);
-    const result = { flags, stdout, stderr, exitCode };
+    const { text: stdoutText, ...stdoutEvidence } = stdout,
+      { text: stderrText, ...stderrEvidence } = stderr;
+    const result = {
+      flags,
+      stdout: stdoutText,
+      stderr: stderrText,
+      output: { stdout: stdoutEvidence, stderr: stderrEvidence },
+      exitCode,
+    };
     commands.push(result);
-    if (exitCode !== expected) throw new Error(stderr || `Unexpected NGINX tool exit ${exitCode}`);
+    if (exitCode !== expected) throw new Error(stderr.text || `Unexpected NGINX tool exit ${exitCode}`);
     return result;
   }
-  let child: Bun.Subprocess<"pipe", "pipe", "ignore"> | undefined, output: Promise<string[]> | undefined;
+  let child: Bun.Subprocess<"ignore", "pipe", "pipe"> | undefined,
+    output: Promise<Awaited<ReturnType<typeof captureOutput>>[]> | undefined;
   const started = performance.now();
   try {
     const information = await command(["-V"], 0, false);
@@ -103,7 +144,7 @@ export async function qualifyEngine(binary: string, receiptPath: string, module?
     await Bun.write(config, configuration("first"));
     await command(["-t"]);
     child = Bun.spawn([binary, ...args], { stdout: "pipe", stderr: "pipe", stdin: "ignore", timeout: 15_000 });
-    output = Promise.all([Bun.readableStreamToText(child.stdout), Bun.readableStreamToText(child.stderr)]);
+    output = Promise.all([captureOutput(child.stdout), captureOutput(child.stderr)]);
     const http = await response("first"),
       masterPID = Number((await Bun.file(pidFile).text()).trim());
     if (masterPID !== child.pid) throw new Error("NGINX pid does not match the owned child");
@@ -157,6 +198,9 @@ export async function qualifyEngine(binary: string, receiptPath: string, module?
       const delayed = await delay,
         elapsedMilliseconds = performance.now() - begin;
       if (
+        typeof delayed !== "object" ||
+        delayed === null ||
+        !("delayMilliseconds" in delayed) ||
         delayed.delayMilliseconds !== 500 ||
         elapsedMilliseconds < 450 ||
         instantMilliseconds >= elapsedMilliseconds - 100
@@ -207,6 +251,8 @@ export async function qualifyEngine(binary: string, receiptPath: string, module?
     const exitCode = await child.exited;
     if (exitCode !== 0) throw new Error("NGINX graceful quit failed");
     const [stdout, stderr] = await output;
+    const { text: stdoutText, ...stdoutEvidence } = stdout,
+      { text: stderrText, ...stderrEvidence } = stderr;
     const receipt = {
       schema: 1,
       kind: "nginx-native-engine-qualification",
@@ -228,8 +274,9 @@ export async function qualifyEngine(binary: string, receiptPath: string, module?
         exitCode,
       },
       commands,
-      stdout,
-      stderr,
+      stdout: stdoutText,
+      stderr: stderrText,
+      diagnosticOutput: { stdout: stdoutEvidence, stderr: stderrEvidence },
       elapsedMilliseconds: performance.now() - started,
     };
     await Bun.write(receiptPath, JSON.stringify(receipt, null, 2) + "\n");
@@ -246,10 +293,6 @@ export async function qualifyEngine(binary: string, receiptPath: string, module?
       }
     }
     if (output) await output;
-    const target = resolve(prefix),
-      scoped = relative(store, target);
-    if (!scoped || scoped.startsWith("..") || isAbsolute(scoped))
-      throw new Error("Unsafe engine qualification cleanup path");
     await rm(target, { recursive: true, force: true });
   }
 }

@@ -41,6 +41,10 @@ ownership and the PID of the spawned master. Unix masters have an owned process
 group; Windows masters have a job object with kill-on-close. Operations cannot
 adopt, reload or terminate an unrelated NGINX service.
 
+Validation has its own exclusive temporary PID file. Real NGINX creates an empty
+PID file during `-t`, so validation never receives the live master's PID path.
+Startup waits for the master's complete PID before verifying its identity.
+
 `validate()`, `start()`, `reload()`, `quit()`, `status()` and `close()` return
 promises. Each operation accepts `timeoutMs` and `signal`. Deadlines are integer
 milliseconds between 1 and 30000. Diagnostic output has a separate bound for
@@ -84,9 +88,9 @@ format, architecture and the executing Bun revision. It always records
 `nativeBunController: false`: this engine gate does not exercise the builtin.
 
 On 2026-10-13 these engine gates passed for the signed upstream Windows 1.31.6
-provider (PE x86, executed on Windows x64) and the existing VPS Ubuntu 1.28.3
-provider (ELF x64). They do not attest a portable provider for all Bun release
-targets, TLS/HTTP3 behavior or Rust controller execution.
+provider (PE x86, executed on Windows x64). The portable source-built Linux
+provider has the additional module and ABI gates below. Neither engine receipt
+attests all Bun release targets, TLS/HTTP3 behavior or Rust controller execution.
 
 The changed-binary controller gate is separate:
 
@@ -149,6 +153,9 @@ removes pending timers; a request reference keeps the pool alive through the
 callback. A cycle-owned counter makes pending timers observable without
 crossing worker threads. C callbacks contain Rust panics. The module creates
 no Tokio runtime and transfers no NGINX pointer or signal into JavaScriptCore.
+The timer context starts with the exact configured `ngx_connection_t` binding,
+checked at offset zero, so NGINX's C debug logger reads the correct connection
+identifier. The Linux module gate enables that logger while testing timers.
 
 ```nginx
 events { worker_connections 32; }
@@ -185,7 +192,7 @@ separate gates; a plan keeps them explicit. It does not restart a system
 NGINX service or modify production configuration.
 
 ```sh
-bun packages/bun-nginx/scripts/build-provider.ts build /absolute/checkout/factory/artifacts/nginx-sdk/linux-x64-source
+bun packages/bun-nginx/scripts/build-provider.ts plan /absolute/checkout/factory/artifacts/nginx-sdk/linux-x64-portable /absolute/sdk-receipt.json
 bun packages/bun-nginx/scripts/qualify-engine.ts --module-build /absolute/build-receipt.json /absolute/module-engine-qualification.json
 ```
 
@@ -206,17 +213,58 @@ Source preparation and planning do not qualify module execution or all Bun
 release targets. Shared libraries, libc baseline, TLS/HTTP3 behavior, target
 architecture and module ABI require their own native proofs.
 
+## Portable GNU x64 build
+
+`packages/bun-nginx/scripts/build-portable-gnu-x64.sh` builds in the existing
+checkout with LLVM 23, the focal GNU sysroot and the shared heavy lock. It
+limits native compilation to two jobs. The recipe selects the existing
+canonical BoringSSL and zlib sources, and extracts the exact PCRE2 development
+package from signed Ubuntu archive metadata into its private SDK prefix.
+Headers and libraries from the build host cannot enter through inherited
+compiler or linker search paths.
+
+```sh
+timeout 3600 bash packages/bun-nginx/scripts/build-portable-gnu-x64.sh
+bun packages/bun-nginx/scripts/qualify-portable.ts /absolute/build-receipt.json /absolute/module-engine-qualification.json /absolute/portable-qualification.json
+```
+
+The SDK receipt records source pins, signed metadata, file hashes and the
+canonical Bun compatibility object. The module uses the optimized
+`ngx-release` profile while NGINX retains `--with-debug` for its actual C
+logger gate. The executable has a relative `$ORIGIN/../lib` search path.
+The incompatible shared fixture has a separate private unwinder and its
+notice, both excluded from release artifacts. Its dependency graph is checked
+alongside the engine's graph.
+
+`qualify-portable.ts` reuses `scripts/aphrody/media-sdk-abi.ts` to reject wrong
+architecture, loader, search paths, private libc symbols, unresolved
+dependencies and required GLIBC versions above 2.17. Diagnostic streams have
+a 64 MiB hard bound, retain at most 64 KiB of text, and record the complete
+stream's byte count and SHA256. Build logs are truncated before each command.
+
 On 2026-10-13, the source-built Linux x64 NGINX 1.31.6 executable passed HTTP,
 HEAD, Range, reload, invalid Rust configuration, graceful quit and the real
 loader's incompatible-module rejection. A 500 ms native timer allowed a
 concurrent metadata response, and an aborted request's pending timer returned
 to zero. The executable SHA256 is
-`f230e531b0670d3b01827d046a0fc49efa129e1dff51459e098ca6f830ee2d21`.
+`7c4b83794387538549a46b91c71bbd01980c87b685b6636adcd91bb39438823a`.
 That receipt records `nativeRustModuleQualified: true` and
 `nativeBunController: false`; the selected Bun binary predates this builtin.
 Windows Rust-module execution and the changed-binary bridge remain unqualified.
-The measured ELF dependency closure requires GLIBC 2.43, so this executable is
-a native behavior proof and does not qualify Bun's portable Linux release baseline.
+The engine and fixture require at most GLIBC 2.17; the fixture's private
+unwinder requires GLIBC 2.14. These are measured ELF requirements, with native
+execution on the VPS; execution on an actual GLIBC 2.17 host remains unqualified.
+The receipt keeps `portableReleaseQualified` and `allReleasePlatformsQualified`
+false until the remaining runtime and protocol gates pass.
+
+`test/integration/glibc-compat/run.sh` qualifies the canonical compatibility
+owner against the GNU x64/arm64 and musl x64/arm64 sysroots. GNU probes cover
+entropy bounds, interruption, the ENOSYS device fallback and its errors,
+descriptor closure, fortified erasure and glob64 callback/layout behavior.
+Both GNU probe binaries meet GLIBC 2.17; musl binaries have no GNU libc imports.
+The ARM64 runs use QEMU user emulation, and the musl probe covers the shared
+gettid wrapper rather than GNU adapters. A real old kernel or early boot entropy
+environment is not attested by these probes.
 
 References: [NGINX development guide](https://nginx.org/en/docs/dev/development_guide.html),
 [official ngx-rust](https://github.com/nginx/ngx-rust),
