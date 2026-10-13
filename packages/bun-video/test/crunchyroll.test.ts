@@ -1,5 +1,8 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import { createCrunchyrollClient, CrunchyrollError, parseCrunchyrollWatchUrl } from "../src/crunchyroll";
+import { createCrunchyrollApi } from "../src/crunchyroll-api";
+import { parseCrunchyrollCli } from "../src/crunchyroll-cli";
+import { join } from "node:path";
 
 const cms = {
   bucket: "/FR/M3",
@@ -8,6 +11,154 @@ const cms = {
   expires: 12345,
   key_pair_id: "local-key",
 };
+
+test("Crunchyroll CLI help runs without reading private configuration", async () => {
+  await using child = Bun.spawn([process.execPath, join(import.meta.dir, "../src/crunchyroll-cli.ts"), "--help"], {
+    env: { ...process.env, BUN_BE_BUN: "1", BUN_DEBUG_QUIET_LOGS: "1" },
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+  expect(stdout).toContain("serve defaults to 127.0.0.1");
+  expect(stderr).toBe("");
+  expect(code).toBe(0);
+});
+
+test("serverless Crunchyroll public routes do not construct an upstream client", async () => {
+  let called = false;
+  const handler = createCrunchyrollApi({
+    clientFactory() {
+      called = true;
+      throw new Error("private fixture");
+    },
+  });
+  const health = await handler(new Request("https://local.test/health"));
+  expect(health.headers.get("cache-control")).toBe("no-store");
+  expect((await health.json()).status).toBe("ok");
+  const watch = await handler(
+    new Request(
+      "https://local.test/v1/watch?url=" +
+        encodeURIComponent("https://www.crunchyroll.com/fr/watch/G4VUQ9QWX/fixture?private=not-exported"),
+    ),
+  );
+  expect(await watch.json()).toMatchObject({
+    contentId: "G4VUQ9QWX",
+    locale: "fr",
+    url: "https://www.crunchyroll.com/fr/watch/G4VUQ9QWX/fixture",
+  });
+  expect(called).toBe(false);
+  expect((await handler(new Request("https://local.test/v1/search?q=fixture"))).status).toBe(401);
+});
+
+test("serverless metadata requires separate bearer authorization and delegates only allowed operations", async () => {
+  const calls: string[] = [];
+  const handler = createCrunchyrollApi({
+    apiToken: "fixture-api-token",
+    clientFactory(signal) {
+      expect(signal.aborted).toBe(false);
+      return {
+        async getAnime(id) {
+          calls.push("anime:" + id);
+          return { title: "Fixture" };
+        },
+        async getSeasons(id) {
+          calls.push("seasons:" + id);
+          return { items: [] };
+        },
+        async getEpisodes(id) {
+          calls.push("episodes:" + id);
+          return { items: [] };
+        },
+        async search(query) {
+          calls.push("search:" + query);
+          return { items: [] };
+        },
+      };
+    },
+  });
+  const unauthorized = await handler(
+    new Request("https://local.test/v1/anime/G4VUQ9QWX", { headers: { authorization: "Bearer wrong" } }),
+  );
+  expect(unauthorized.status).toBe(401);
+  expect(calls).toEqual([]);
+  const authorized = await handler(
+    new Request("https://local.test/v1/anime/G4VUQ9QWX", { headers: { authorization: "Bearer fixture-api-token" } }),
+  );
+  expect(await authorized.json()).toEqual({ title: "Fixture" });
+  expect(calls).toEqual(["anime:G4VUQ9QWX"]);
+  expect(
+    (
+      await createCrunchyrollApi({ apiToken: "fixture-api-token" })(
+        new Request("https://local.test/v1/anime/G4VUQ9QWX", {
+          headers: { authorization: "Bearer fixture-api-token" },
+        }),
+      )
+    ).status,
+  ).toBe(503);
+});
+
+test("serverless cancellation interrupts a pending client factory without invoking metadata", async () => {
+  const entered = Promise.withResolvers<AbortSignal>();
+  const cancelled = Promise.withResolvers<void>();
+  const controller = new AbortController();
+  const handler = createCrunchyrollApi({
+    apiToken: "fixture",
+    clientFactory(signal) {
+      entered.resolve(signal);
+      return new Promise((_, reject) => {
+        signal.addEventListener(
+          "abort",
+          () => {
+            cancelled.resolve();
+            reject(signal.reason);
+          },
+          { once: true },
+        );
+      });
+    },
+  });
+  const pending = handler(
+    new Request("https://local.test/v1/search?q=fixture", {
+      headers: { authorization: "Bearer fixture" },
+      signal: controller.signal,
+    }),
+  );
+  const signal = await entered.promise;
+  controller.abort(new Error("private fixture cancellation"));
+  await cancelled.promise;
+  expect(signal.aborted).toBe(true);
+  const response = await pending;
+  expect(response.status).toBe(408);
+  expect(await response.json()).toEqual({ error: "request_aborted" });
+});
+
+test("serverless failures omit upstream bodies and honor request aborts", async () => {
+  const handler = createCrunchyrollApi({
+    apiToken: "fixture",
+    clientFactory() {
+      throw new CrunchyrollError("do not expose fixture credentials", 403);
+    },
+  });
+  const response = await handler(
+    new Request("https://local.test/v1/search?q=test", { headers: { authorization: "Bearer fixture" } }),
+  );
+  expect(response.status).toBe(502);
+  expect(await response.json()).toEqual({ error: "upstream_failed", upstreamStatus: 403 });
+  const controller = new AbortController();
+  controller.abort();
+  expect(
+    (
+      await handler(
+        new Request("https://local.test/v1/search?q=test", {
+          headers: { authorization: "Bearer fixture" },
+          signal: controller.signal,
+        }),
+      )
+    ).status,
+  ).toBe(408);
+  expect(parseCrunchyrollCli(["serve", "--port", "0"])).toEqual({ command: "serve", hostname: "127.0.0.1", port: 0 });
+  expect(() => parseCrunchyrollCli(["serve", "--port", "65536"])).toThrow("port must be");
+});
 
 async function withAPI(
   run: (
