@@ -8,11 +8,11 @@
  * prebuilt artifact.
  */
 import { dlopen, FFIType, ptr, read, suffix, toArrayBuffer, type Pointer } from "bun:ffi";
-import { embeddedNativeLibraryPath } from "./ffi.ts";
+import { embeddedNativeLibraryPath } from "./ffi";
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { runtimeHome } from "./paths.ts";
-import { hostTarget } from "./target.ts";
+import { runtimeHome } from "./paths";
+import { hostTarget } from "./target";
 
 /** ABI major this SDK was written for. A library with another major is refused before any call. */
 export const EXPECTED_ABI_MAJOR = 1;

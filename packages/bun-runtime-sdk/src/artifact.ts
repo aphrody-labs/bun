@@ -18,7 +18,7 @@ import {
   type BuildInfo,
 } from "./index";
 import { SUPPORTED_TARGETS, hostTarget, type RuntimeTarget, type LinuxABIInfo } from "./target";
-import { runtimeHome } from "./paths.ts";
+import { runtimeHome } from "./paths";
 
 export { SUPPORTED_TARGETS, hostTarget, runtimeHome };
 export { targetFor, hostTargetInfo, type RuntimeTarget, type LinuxABI, type HostTargetInfo } from "./target";
