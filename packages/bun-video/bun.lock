@@ -5,7 +5,7 @@
     "": {
       "name": "@aphrody/bun-video",
       "dependencies": {
-        "@aphrody/bun-runtime-sdk": "1.4.4",
+        "@aphrody/bun-runtime-sdk": "1.4.5",
         "bitmovin-player": "8.279.0",
         "dashjs": "5.2.1",
         "fast-xml-parser": "5.11.2",
@@ -20,7 +20,7 @@
     },
   },
   "packages": {
-    "@aphrody/bun-runtime-sdk": ["@aphrody/bun-runtime-sdk@1.4.4", "", {}, "sha512-9Lb6HmdM3o255d4HTvpG9B7AkagHmTBhIpF914riIsQKEvkFG67ayLXtSKFrquBw07LOry1p1iPAGETwba98ag=="],
+    "@aphrody/bun-runtime-sdk": ["@aphrody/bun-runtime-sdk@1.4.5", "", {}, "sha512-NLl1O48SIwnkP3RHzT2aOTjiQkqpfKhBh5WBl7JRsnvO09Hbiw0I7wGnx33EEaOWKEErDxIzIKPHnXgULDmeEA=="],
 
     "@nodable/entities": ["@nodable/entities@3.1.0", "", {}, "sha512-LsS/DjHr+uDM647Gru/cA8+J3a3HfhttwCKLyuoyN7yXTFCxKBtSgMQBvrW9yNPa2/zDRUNuGPaH5QUFoa4arQ=="],
 
@@ -95,3 +95,4 @@
     "xml-naming": ["xml-naming@0.3.0", "", {}, "sha512-ghig2TBE/H11aOVgmahA3MhimvkBr6JIYknH/Dhdk10nXwdbIqBJsbfMxpvFPG8bAw77gN29aQWvKpmVoPlvPQ=="],
   }
 }
+

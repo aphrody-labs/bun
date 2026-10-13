@@ -50,6 +50,7 @@ export type { EncodeVideoOptions } from "./encode";
 export { runBrowserTask } from "./computer";
 export type { BrowserTask } from "./computer";
 export * from "./hls";
+export * from "./playback";
 export * from "./dash";
 export * from "./har";
 export * from "./bitmovin";

@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-video",
-  "version": "1.4.4",
+  "version": "1.4.4-video.1",
   "description": "Bun video protocols, native capture adapters, and official Remotion and HyperFrames integrations",
   "license": "SEE LICENSE IN LICENSE",
   "bin": {
@@ -58,6 +58,7 @@
     "./mcp": "./src/mcp.ts",
     "./capabilities": "./src/capabilities.ts",
     "./hls": "./src/hls.ts",
+    "./playback": "./src/playback.ts",
     "./dash": "./src/dash.ts",
     "./mpd": "./src/dash.ts",
     "./har": "./src/har.ts",
@@ -124,7 +125,7 @@
     }
   },
   "dependencies": {
-    "@aphrody/bun-runtime-sdk": "1.4.4",
+    "@aphrody/bun-runtime-sdk": "1.4.5",
     "bitmovin-player": "8.279.0",
     "dashjs": "5.2.1",
     "fast-xml-parser": "5.11.2",
