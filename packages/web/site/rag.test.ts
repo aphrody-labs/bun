@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { TypeSafeClient } from "@typesafe-ai/sdk";
+import { TypeSafeClient } from "@aphrody/typesafe-sdk";
 import { buildBunRag } from "./rag";
 import { RAG_POLICY } from "./rag-policy";
 import type { SiteDocumentHit, SiteQuery } from "./site-neon";

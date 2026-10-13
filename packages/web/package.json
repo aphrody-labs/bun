@@ -10,6 +10,6 @@
   "type": "module",
   "dependencies": {
     "@aphrody/bun-plugin-neon": "workspace:*",
-    "@typesafe-ai/sdk": "0.6.0"
+    "@aphrody/typesafe-sdk": "0.6.2"
   }
 }

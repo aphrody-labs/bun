@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { lstatSync } from "node:fs";
-import { noul, TypeSafeClient } from "@typesafe-ai/sdk";
+import { noul, TypeSafeClient } from "@aphrody/typesafe-sdk";
 import { parseArgs } from "node:util";
 
 const { values } = parseArgs({

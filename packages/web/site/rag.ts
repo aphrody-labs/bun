@@ -1,4 +1,4 @@
-import { noul, TypeSafeClient } from "@typesafe-ai/sdk";
+import { noul, TypeSafeClient } from "@aphrody/typesafe-sdk";
 import { getPublicSiteGraph, searchPublicSiteDocs, type SiteDocumentHit, type SiteQuery } from "./site-neon";
 import { GROUNDED_ANSWER_INSTRUCTIONS, RAG_POLICY } from "./rag-policy";
 

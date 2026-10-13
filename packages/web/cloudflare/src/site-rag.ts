@@ -1,4 +1,4 @@
-import { TypeSafeClient } from "@typesafe-ai/sdk";
+import { TypeSafeClient } from "@aphrody/typesafe-sdk";
 import type { RagGenerationInput, RagOptions } from "../../site/rag";
 
 type SiteRagEnv = Pick<Env, "TYPESAFE_API_KEY" | "AI" | "AI_MODEL" | "AI_GATEWAY">;

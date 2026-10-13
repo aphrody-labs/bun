@@ -1,7 +1,7 @@
 import { lstatSync } from "node:fs";
 import { isAbsolute } from "node:path";
 import { parseArgs } from "node:util";
-import { TypeSafeClient } from "@typesafe-ai/sdk";
+import { TypeSafeClient } from "@aphrody/typesafe-sdk";
 import { createNeonHTTPClient } from "@aphrody/bun-plugin-neon/http";
 import { buildBunRag } from "./rag";
 
