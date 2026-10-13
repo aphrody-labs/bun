@@ -31,7 +31,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
-import { generate } from "../../packages/bun-agent-plugin/src/generate.ts";
+import { generate, inputFiles } from "../../packages/bun-agent-plugin/src/generate.ts";
 import { isAphrodyBun } from "../../packages/bun-agent-plugin/src/hooks/common.ts";
 import { SCOPE } from "./scope.ts";
 
@@ -183,6 +183,8 @@ export interface PackageSpec {
   /** Preparation invokes a build; excluded from no-build publication. */
   requiresBuild?: boolean;
   buildOutputs?: string[];
+  /** Sources read by preparation outside the exported package. */
+  sourceInputs?: (root: string) => string[];
   /** Read-only projections qualified by importing them on native Windows. */
   platform?: "win32";
   /** Fork packages imported by the published sources but not listed in the manifest. */
@@ -205,12 +207,31 @@ function run(cmd: string[], cwd: string, env: Record<string, string> = {}) {
   return proc.stdout.toString();
 }
 
+export function assertPublicationSources(root: string, revision: string, paths: string[]): void {
+  if (!/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(revision) || !paths.length)
+    throw new Error("Expected pinned publication sources");
+  const scoped = [
+    ...new Set(
+      paths.map(path => {
+        const local = relative(root, resolve(root, path));
+        if (!local || isAbsolute(local) || local === ".." || local.startsWith("..\\") || local.startsWith("../"))
+          throw new Error("Publication source must remain inside the checkout");
+        return local.replaceAll("\\", "/");
+      }),
+    ),
+  ];
+  const changed = run(["git", "diff", "--name-only", revision, "--", ...scoped], root).trim();
+  const untracked = run(["git", "ls-files", "--others", "--exclude-standard", "--", ...scoped], root).trim();
+  if (changed || untracked) throw new Error("Publication sources differ from the pinned commit");
+}
+
 export const PACKAGES: PackageSpec[] = [
   {
     dir: "bun-types",
     buildOutputs: ["package.json", "CLAUDE.md", "docs/"],
     bunVersion: true,
     requiresBuild: true,
+    sourceInputs: root => [join(root, "docs"), join(root, "src/cli/init/rule.md")],
     fields: {
       description: "Type definitions and documentation for Bun (Aphrody runtime, based on Bun)",
     },
@@ -222,6 +243,7 @@ export const PACKAGES: PackageSpec[] = [
   },
   {
     dir: "bun-inspector-protocol",
+    sourceInputs: root => [join(root, "packages/bun-debug-adapter-protocol/src/debugger/node-socket-framer.ts")],
     buildOutputs: ["src/inspector/node-socket-framer.ts", "src/inspector/node-socket.ts", "index.js"],
     requiresBuild: true,
     fields: {
@@ -318,11 +340,13 @@ export const PACKAGES: PackageSpec[] = [
   { dir: "bun-plugin-neon" },
   { dir: "bun-plugin-supabase" },
   { dir: "bun-runtime-sdk" },
+  { dir: "bun-nginx", bunVersion: true },
   // REST services and explicit credential adapters over the qualified bun:google builtin.
   { dir: "bun-google", bunVersion: true },
   { dir: "bun-chromium", bunVersion: true },
   {
     dir: "bun-agent-plugin",
+    sourceInputs: root => inputFiles(root),
     buildOutputs: ["plugins/"],
     bunVersion: true,
     fields: { files: ["bin", "src", "memory", "plugins", "README.md"] },
@@ -636,18 +660,17 @@ export async function publishAll(opts: {
   );
   const out = validateOutputDirectory(opts.out ?? join(tmpdir(), "aphrody-npm"));
   mkdirSync(out, { recursive: true });
-  const bunVersion: string = (await Bun.file(join(ROOT, "package.json")).json()).version;
   const sourceRevision = run(["git", "rev-parse", "HEAD"], ROOT).trim();
+  const sourceManifest = (path: string) => JSON.parse(run(["git", "show", `${sourceRevision}:${path}`], ROOT));
+  const bunVersion: string = sourceManifest("package.json").version;
   if (!opts.dryRun) {
     if (!isAphrodyBun() || Bun.version.split("-")[0] !== bunVersion)
       throw new Error(`Publication requires the qualified Aphrody runtime ${bunVersion}`);
-    if (run(["git", "status", "--porcelain"], ROOT).trim())
-      throw new Error("Publication requires a clean source-pinned checkout");
   }
   const selectedSpecs = PACKAGES.filter(spec => !opts.only?.length || opts.only.includes(spec.dir));
   const needed = new Set(selectedSpecs.map(spec => spec.dir));
   const visit = (spec: PackageSpec) => {
-    const manifest = JSON.parse(readFileSync(join(ROOT, "packages", spec.dir, "package.json"), "utf8"));
+    const manifest = sourceManifest(`packages/${spec.dir}/package.json`);
     if (manifest.private === true) throw new Error(`${spec.dir}: private packages cannot be published`);
     for (const name of [
       ...DEP_FIELDS.flatMap(field => Object.keys(manifest[field] ?? {})),
@@ -661,6 +684,19 @@ export async function publishAll(opts: {
     }
   };
   for (const spec of selectedSpecs) visit(spec);
+  const sourcePaths = [
+    "package.json",
+    "bun.lock",
+    "LICENSE.md",
+    "scripts/aphrody/publish-npm.ts",
+    "scripts/aphrody/scope.ts",
+    "packages/bun-agent-plugin/src",
+    ...PACKAGES.filter(spec => needed.has(spec.dir)).flatMap(spec => [
+      `packages/${spec.dir}`,
+      ...(spec.sourceInputs?.(ROOT) ?? []),
+    ]),
+  ];
+  if (!opts.dryRun) assertPublicationSources(ROOT, sourceRevision, sourcePaths);
   const resolved = new Map<string, string>();
   const results: Result[] = [];
 
@@ -676,7 +712,7 @@ export async function publishAll(opts: {
       continue;
     }
 
-    const srcPkg = await Bun.file(join(ROOT, "packages", spec.dir, "package.json")).json();
+    const srcPkg = sourceManifest(`packages/${spec.dir}/package.json`);
     if (spec.platform && process.platform !== spec.platform)
       throw new Error(`${name}: qualification requires native ${spec.platform}`);
     if (spec.platform) require(join(ROOT, "packages", spec.dir, srcPkg.main));
@@ -690,6 +726,7 @@ export async function publishAll(opts: {
     const manifest = publishManifest(srcPkg, spec, next, resolved);
     await Bun.write(join(staging, "package.json"), JSON.stringify(manifest, null, 2) + "\n");
     const tgz = pack(staging, join(out, "tarballs", spec.dir), opts.noBuild);
+    if (!opts.dryRun) assertPublicationSources(ROOT, sourceRevision, sourcePaths);
     const files = await tarballFiles(await Bun.file(tgz).bytes());
 
     const packed = JSON.parse(new TextDecoder().decode(files.get("package/package.json")!));

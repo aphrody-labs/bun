@@ -11,6 +11,7 @@ import {
   validateOutputDirectory,
   exportTrackedPackage,
   verifyPreparedPackage,
+  assertPublicationSources,
 } from "../../scripts/aphrody/publish-npm.ts";
 import { tempDir } from "harness";
 import { join } from "node:path";
@@ -31,30 +32,31 @@ test("publication exports immutable tracked blobs and excludes ignored protected
   };
   git("init", "--quiet");
   git("add", ".");
-  git(
-    "-c",
-    "user.name=Fixture",
-    "-c",
-    "user.email=fixture@example.invalid",
-    "commit",
-    "--quiet",
-    "-m",
-    "fixture",
-  );
+  git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--quiet", "-m", "fixture");
   const revision = git("rev-parse", "HEAD");
+  await Bun.write(join(root, "unrelated-work.ts"), "parallel work\n");
+  expect(() => assertPublicationSources(root, revision, ["packages/fixture"])).not.toThrow();
+  await Bun.write(join(root, "packages/fixture/index.ts"), "dirty working copy");
+  expect(() => assertPublicationSources(root, revision, ["packages/fixture"])).toThrow("pinned commit");
+  git("add", "packages/fixture/index.ts");
+  expect(() => assertPublicationSources(root, revision, ["packages/fixture"])).toThrow("pinned commit");
+  await Bun.write(join(root, "packages/fixture/index.ts"), "export const value = 1;\n");
+  git("add", "packages/fixture/index.ts");
+  await Bun.write(join(root, "packages/fixture/new.ts"), "untracked build input\n");
+  expect(() => assertPublicationSources(root, revision, ["packages/fixture"])).toThrow("pinned commit");
+  expect(() => assertPublicationSources(root, revision, ["../outside"])).toThrow("inside the checkout");
+  expect(() => assertPublicationSources(root, revision, ["packages/fixture/new.ts"])).toThrow("pinned commit");
   await Bun.write(join(root, "packages/fixture/index.ts"), "dirty working copy");
   const output = join(root, "tmp", "export");
   const receipt = await exportTrackedPackage(root, revision, "packages/fixture", output);
   expect(await Bun.file(join(output, "index.ts")).text()).toBe("export const value = 1;\n");
   expect(await Bun.file(join(output, ".env")).exists()).toBe(false);
   expect(await Bun.file(join(output, "cache.bin")).exists()).toBe(false);
-  expect(receipt.files.map((file) => file.path).sort()).toEqual(["index.ts", "package.json"]);
+  expect(receipt.files.map(file => file.path).sort()).toEqual(["index.ts", "package.json"]);
   await Bun.write(join(output, "unexpected.js"), "generated");
   await expect(verifyPreparedPackage(output, receipt.files, [])).rejects.toThrow("Undeclared");
   expect(await verifyPreparedPackage(output, receipt.files, ["unexpected.js"])).toHaveLength(1);
-  await expect(exportTrackedPackage(root, revision, "packages/fixture", output)).rejects.toThrow(
-    "must not exist",
-  );
+  await expect(exportTrackedPackage(root, revision, "packages/fixture", output)).rejects.toThrow("must not exist");
   const hashed = Bun.spawnSync(["git", "hash-object", "-w", "--stdin"], {
     cwd: root,
     stdin: new TextEncoder().encode("../../outside"),
@@ -62,12 +64,7 @@ test("publication exports immutable tracked blobs and excludes ignored protected
     stderr: "pipe",
   });
   expect(hashed.exitCode).toBe(0);
-  git(
-    "update-index",
-    "--add",
-    "--cacheinfo",
-    `120000,${hashed.stdout.toString().trim()},packages/fixture/escape`,
-  );
+  git("update-index", "--add", "--cacheinfo", `120000,${hashed.stdout.toString().trim()},packages/fixture/escape`);
   git(
     "-c",
     "user.name=Fixture",
@@ -79,12 +76,7 @@ test("publication exports immutable tracked blobs and excludes ignored protected
     "escaping symlink",
   );
   await expect(
-    exportTrackedPackage(
-      root,
-      git("rev-parse", "HEAD"),
-      "packages/fixture",
-      join(root, "tmp", "rejected"),
-    ),
+    exportTrackedPackage(root, git("rev-parse", "HEAD"), "packages/fixture", join(root, "tmp", "rejected")),
   ).rejects.toThrow("Escaping");
 }, 10000);
 
@@ -97,26 +89,17 @@ test("publication staging rejects checkout roots, ancestors and tracked source d
   const temporary = join(String(directory), "temporary");
   for (const target of [root, String(directory), join(root, "packages", "bun-types")])
     expect(() => validateOutputDirectory(target, root, temporary)).toThrow("checkout");
-  expect(validateOutputDirectory(join(root, "tmp", "packages"), root, temporary)).toBe(
-    join(root, "tmp", "packages"),
-  );
-  expect(validateOutputDirectory(join(temporary, "packages"), root, temporary)).toBe(
-    join(temporary, "packages"),
-  );
+  expect(validateOutputDirectory(join(root, "tmp", "packages"), root, temporary)).toBe(join(root, "tmp", "packages"));
+  expect(validateOutputDirectory(join(temporary, "packages"), root, temporary)).toBe(join(temporary, "packages"));
 });
 
-const spec = (dir: string) => PACKAGES.find((p) => p.dir === dir)!;
+const spec = (dir: string) => PACKAGES.find(p => p.dir === dir)!;
 
 test("publication requires matching public package, version and uploaded archive integrity", async () => {
   const expected = { name: "@aphrody/fixture", version: "1.2.3", integrity: "sha512-qualified" };
-  await expect(publicationStatus(new Response(null, { status: 404 }), expected)).resolves.toBe(
-    "pending",
-  );
+  await expect(publicationStatus(new Response(null, { status: 404 }), expected)).resolves.toBe("pending");
   await expect(
-    publicationStatus(
-      Response.json({ ...expected, dist: { integrity: expected.integrity } }),
-      expected,
-    ),
+    publicationStatus(Response.json({ ...expected, dist: { integrity: expected.integrity } }), expected),
   ).resolves.toBe("published");
   await expect(
     publicationStatus(
@@ -125,22 +108,18 @@ test("publication requires matching public package, version and uploaded archive
     ),
   ).rejects.toThrow("different package or version");
   await expect(
-    publicationStatus(
-      Response.json({ ...expected, dist: { integrity: "sha512-other" } }),
-      expected,
-    ),
+    publicationStatus(Response.json({ ...expected, dist: { integrity: "sha512-other" } }), expected),
   ).rejects.toThrow("integrity differs");
-  await expect(publicationStatus(new Response(null, { status: 503 }), expected)).rejects.toThrow(
-    "HTTP 503",
-  );
+  await expect(publicationStatus(new Response(null, { status: 503 }), expected)).rejects.toThrow("HTTP 503");
 });
 
 describe("nextVersion", () => {
   test("Google and Chromium source SDKs retain runtime coupling without a separate Chrome package", () => {
     expect(spec("bun-google").bunVersion).toBe(true);
+    expect(spec("bun-nginx").bunVersion).toBe(true);
     expect(spec("bun-google").requiresBuild).toBeUndefined();
     expect(npmName(spec("bun-google"))).toBe("@aphrody/bun-google");
-    expect(PACKAGES.some((candidate) => candidate.dir === "bun-chrome")).toBe(false);
+    expect(PACKAGES.some(candidate => candidate.dir === "bun-chrome")).toBe(false);
     expect(spec("bun-chromium").bunVersion).toBe(true);
     expect(spec("bun-chromium").requiresBuild).toBeUndefined();
   });
@@ -166,13 +145,7 @@ describe("nextVersion", () => {
   });
 
   test("increments the highest number for the same base only", () => {
-    const published = [
-      "1.4.3-aphrody.1",
-      "1.4.3-aphrody.10",
-      "1.4.3-aphrody.2",
-      "1.4.2-aphrody.40",
-      "1.4.3",
-    ];
+    const published = ["1.4.3-aphrody.1", "1.4.3-aphrody.10", "1.4.3-aphrody.2", "1.4.2-aphrody.40", "1.4.3"];
     expect(nextVersion("1.4.3", published)).toEqual({
       next: "1.4.3-aphrody.11",
       previous: "1.4.3-aphrody.10",
@@ -210,8 +183,8 @@ describe("publishManifest", () => {
       new Map([["bun-windows-win32", "1.4.4"]]),
     );
     expect(out.dependencies).toEqual({ "@aphrody/bun-windows-win32": "1.4.4" });
-    expect(PACKAGES.some((candidate) => candidate.dir === "bun-dotnet")).toBe(false);
-    expect(PACKAGES.some((candidate) => candidate.dir === "bun-vscode")).toBe(false);
+    expect(PACKAGES.some(candidate => candidate.dir === "bun-dotnet")).toBe(false);
+    expect(PACKAGES.some(candidate => candidate.dir === "bun-vscode")).toBe(false);
   });
   const resolved = new Map([
     ["bun-types", "1.4.3-aphrody.2"],
@@ -246,9 +219,7 @@ describe("publishManifest", () => {
       url: "git+https://github.com/aphrody-labs/bun.git",
       directory: "packages/bun-plugin-svelte",
     });
-    expect(out.homepage).toBe(
-      "https://github.com/aphrody-labs/bun/tree/main/packages/bun-plugin-svelte#readme",
-    );
+    expect(out.homepage).toBe("https://github.com/aphrody-labs/bun/tree/main/packages/bun-plugin-svelte#readme");
     expect(out.bugs).toEqual({ url: "https://github.com/aphrody-labs/bun/issues" });
     expect(out.license).toBe("MIT");
     expect(out.description).toContain("Aphrody runtime, based on Bun");
@@ -272,9 +243,7 @@ describe("publishManifest", () => {
       new Map([["bun-next", "1.4.4"]]),
     );
     expect(out.dependencies).toEqual({ "@aphrody/next-bun": "1.4.4" });
-    expect(rewriteSiblingImports('import "../bun-next/index.ts";')).toBe(
-      'import "@aphrody/next-bun";',
-    );
+    expect(rewriteSiblingImports('import "../bun-next/index.ts";')).toBe('import "@aphrody/next-bun";');
   });
 
   test("debug adapter gains a pinned dependency on the inspector protocol", () => {
@@ -384,9 +353,7 @@ describe("contentHash", () => {
   });
 
   test("changes with the content", () => {
-    expect(contentHash(files("1.0.0-aphrody.1"))).not.toBe(
-      contentHash(files("1.0.0-aphrody.1", "export {};")),
-    );
+    expect(contentHash(files("1.0.0-aphrody.1"))).not.toBe(contentHash(files("1.0.0-aphrody.1", "export {};")));
   });
 
   test("does not depend on entry order", () => {

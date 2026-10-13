@@ -37,6 +37,8 @@ with its own `bun-nginx.pid`. An exclusive `.bun-nginx-owner` prevents another
 controller from adopting that prefix. Reload and quit verify the live child PID
 against this file before invoking NGINX. No operation adopts or signals a global
 NGINX instance.
+Validation uses a distinct exclusive temporary PID path because real `nginx -t`
+creates an empty PID file. It never truncates the running master's PID file.
 
 Each operation has a deadline of 1–30000 ms. AbortSignal cancels an operation.
 Failed or cancelled startup terminates the owned child tree. `quit()` waits for a
@@ -74,7 +76,14 @@ preparation and the static NGINX module recipe reuse the pinned canonical
 `vendor/nginx` and `vendor/ngx-rust`; the nested `nginx-src` downloader stays
 disabled. Module HTTP/timer/ABI gates and Bun controller gates remain separate.
 
+The GNU x64 recipe selects the existing focal sysroot, pinned native sources
+and signed PCRE2 SDK. Its optimized Rust module passed native HTTP, timer,
+client abort, reload/quit and incompatible-module gates on 2026-10-13. The
+engine's ELF requirements meet GLIBC 2.17; a GLIBC 2.17 host, the fresh Bun
+controller bridge and the remaining release platforms still need their own
+gates. The recipe and full evidence contract are in the canonical NGINX page.
+
 ## Read next
 
 - `docs/runtime/nginx.mdx`: **NGINX**. Own a native NGINX process and its Rust module with Bun, with explicit source and ABI qualification.
-  Sections: Provider and engine gates; Rust module and source ownership; Native module gates.
+  Sections: Provider and engine gates; Rust module and source ownership; Native module gates; Portable GNU x64 build.
