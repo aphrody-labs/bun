@@ -35,6 +35,7 @@ const owners = {
   computer: () => import("./computer"),
   ffmpeg: () => import("./ffmpeg"),
   mpv: () => import("./mpv"),
+  sdk: () => import("./sdk"),
   remotion: () => import("../packages/remotion/packages/core/src/index"),
   "remotion-renderer": () => import("../packages/remotion/packages/renderer/src/index"),
   hyperframes: () => import("../packages/hyperframes/packages/core/src/index"),
@@ -93,6 +94,7 @@ const definitions: readonly [VideoAPIFamily, string, VideoAPIDescriptor["scope"]
   ["computer", "Browser automation tasks", "service"],
   ["ffmpeg", "Native FFmpeg media owner", "native"],
   ["mpv", "Native libmpv playback owner", "native"],
+  ["sdk", "Pinned optional media SDK acquisition owner", "native"],
   ["remotion", "Absorbed Remotion React core", "render"],
   ["remotion-renderer", "Official Remotion renderer", "render"],
   ["hyperframes", "Absorbed HyperFrames composition core", "render"],
@@ -112,6 +114,7 @@ export const VIDEO_APIS: readonly VideoAPIDescriptor[] = Object.freeze(
     Object.freeze({
       id,
       module: [
+        "sdk",
         "render-runtime",
         "render-frame",
         "parallel-capture",
