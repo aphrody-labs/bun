@@ -1,5 +1,6 @@
 import { BunPython } from "bun:graph";
-import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import type { Database } from "bun:sqlite";
 import { delimiter, dirname, extname, join, posix } from "node:path";
 import { createHash } from "node:crypto";
 import { GitTree } from "../../packages/web/site/collect.ts";
@@ -75,51 +76,132 @@ export async function indexDetachedRelease(registry: BunPython, snapshot: string
   return result;
 }
 
-export async function buildReleaseGraph(tree: GitTree, snapshot: string, out: string) {
-  const dbPath = join(out, "monorepo.sqlite");
-  using registry = new BunPython(dbPath);
-  const db = registry.db;
-  db.exec(`CREATE TABLE release_files(path TEXT PRIMARY KEY, blob TEXT NOT NULL, domain TEXT NOT NULL, sha256 TEXT, content TEXT) STRICT;
-    CREATE TABLE release_domains(name TEXT PRIMARY KEY, files INTEGER NOT NULL) STRICT;
-    CREATE TABLE release_links(source TEXT NOT NULL, target TEXT NOT NULL, kind TEXT NOT NULL, PRIMARY KEY(source,target,kind)) STRICT;
-    CREATE INDEX release_files_domain ON release_files(domain);`);
-  const insert = db.prepare("INSERT INTO release_files VALUES(?,?,?,?,?)");
+export async function verifyReleaseCatalog(db: Database, tree: GitTree, snapshot: string) {
   const paths = [...tree.files.keys()].sort();
+  const count = db.query<{ count: number }, []>("SELECT count(*) AS count FROM release_files").get()!.count;
+  if (count !== paths.length) throw new Error("Incomplete release catalog cannot resume");
+  const row = db.query<{ blob: string; domain: string; sha256: string | null; content: string | null }, [string]>(
+    "SELECT blob,domain,sha256,content FROM release_files WHERE path=?",
+  );
   let readable = 0;
   let excludedInvalidUtf8Files = 0;
+  const restoredBoms: { path: string; bytes: Uint8Array }[] = [];
   for (let start = 0; start < paths.length; start += 128) {
     const batch = paths.slice(start, start + 128);
     const blobs = tree.readBytes(batch.filter(sourceReadable));
+    for (const path of batch) {
+      const actual = row.get(path);
+      const bytes = blobs.get(path);
+      const content = bytes === undefined ? null : decodeSourceText(bytes);
+      const hash = bytes === undefined ? null : createHash("sha256").update(bytes).digest("hex");
+      if (
+        !actual ||
+        actual.blob !== tree.files.get(path) ||
+        actual.domain !== sourceDomain(path) ||
+        actual.sha256 !== hash ||
+        (actual.content !== content && !(content?.startsWith("\uFEFF") && actual.content === content.slice(1)))
+      )
+        throw new Error("Release catalog differs from immutable Git source: " + path);
+      if (actual.content !== content) restoredBoms.push({ path, bytes: bytes! });
+      if (bytes !== undefined && content === null) excludedInvalidUtf8Files++;
+      if (content !== null) {
+        const destination = join(snapshot, path);
+        if (
+          lstatSync(destination).isSymbolicLink() ||
+          createHash("sha256").update(readFileSync(destination)).digest("hex") !== hash
+        )
+          throw new Error("Detached source differs from immutable Git source: " + path);
+        readable++;
+      }
+    }
+    await Bun.sleep(0);
+  }
+  for (const file of new Bun.Glob("**/*").scanSync({ cwd: snapshot, onlyFiles: true, dot: true })) {
+    const path = file.replaceAll("\\", "/");
+    if (!tree.has(path) || lstatSync(join(snapshot, file)).isSymbolicLink())
+      throw new Error("Unexpected file in detached release export: " + path);
+  }
+  // Older Bun SQLite bindings consumed UTF-16 BOMs. Restore only verified Git bytes via UTF-8.
+  const repair = db.prepare("UPDATE release_files SET content=CAST(? AS TEXT) WHERE path=?");
+  db.transaction(() => {
+    for (const { path, bytes } of restoredBoms) repair.run(bytes, path);
+  })();
+  return { readable, excludedInvalidUtf8Files };
+}
+
+export function writeRelativeReferences(db: Database, available: Set<string>) {
+  const select = db.query<{ path: string; content: string }, [string]>(
+    "SELECT path,content FROM release_files WHERE content IS NOT NULL AND path>? ORDER BY path LIMIT 128",
+  );
+  const link = db.prepare("INSERT OR IGNORE INTO release_links VALUES(?,?,?)");
+  let after = "";
+  for (;;) {
+    // Close the read cursor before committing writes so WAL checkpoints can advance.
+    const rows = select.all(after);
+    if (!rows.length) break;
     db.transaction(() => {
-      for (const path of batch) {
-        const bytes = blobs.get(path);
-        const content = bytes === undefined ? null : decodeSourceText(bytes);
-        const sha256 = bytes === undefined ? null : createHash("sha256").update(bytes).digest("hex");
-        if (bytes !== undefined && content === null) excludedInvalidUtf8Files++;
-        if (bytes !== undefined && content !== null) {
-          const destination = join(snapshot, path);
-          mkdirSync(dirname(destination), { recursive: true });
-          writeFileSync(destination, bytes);
+      for (const { path, content } of rows) {
+        if (!/\.[cm]?[jt]sx?$/.test(path)) continue;
+        for (const match of content.matchAll(
+          /(?:\bfrom\s*|\bimport\s*\(|\brequire\s*\()?["'](\.{1,2}\/[^"'\n]+)["']/g,
+        )) {
+          const target = resolvedImport(path, match[1]!, available);
+          if (target) link.run(path, target, "relative-reference");
         }
-        insert.run(path, tree.files.get(path)!, sourceDomain(path), sha256, content);
-        if (content !== null) readable++;
       }
     })();
-    await Bun.sleep(0);
+    after = rows.at(-1)!.path;
+    db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+  }
+}
+
+export async function buildReleaseGraph(tree: GitTree, snapshot: string, out: string, resume = false) {
+  const dbPath = join(out, "monorepo.sqlite");
+  using registry = new BunPython(dbPath);
+  const db = registry.db;
+  const hasCatalog = db
+    .query<{ present: number }, []>(
+      "SELECT 1 AS present FROM sqlite_master WHERE type='table' AND name='release_files'",
+    )
+    .get();
+  if (hasCatalog && !resume) throw new Error("Existing catalog requires explicit verified resume");
+  if (!hasCatalog)
+    db.exec(`CREATE TABLE release_files(path TEXT PRIMARY KEY, blob TEXT NOT NULL, domain TEXT NOT NULL, sha256 TEXT, content TEXT) STRICT;
+    CREATE TABLE release_domains(name TEXT PRIMARY KEY, files INTEGER NOT NULL) STRICT;
+    CREATE TABLE release_links(source TEXT NOT NULL, target TEXT NOT NULL, kind TEXT NOT NULL, PRIMARY KEY(source,target,kind)) STRICT;
+    CREATE INDEX release_files_domain ON release_files(domain);`);
+  const insert = db.prepare("INSERT INTO release_files VALUES(?,?,?,?,CAST(? AS TEXT))");
+  const paths = [...tree.files.keys()].sort();
+  let readable = 0;
+  let excludedInvalidUtf8Files = 0;
+  if (hasCatalog) {
+    ({ readable, excludedInvalidUtf8Files } = await verifyReleaseCatalog(db, tree, snapshot));
+    db.transaction(() => db.exec("DELETE FROM release_domains; DELETE FROM release_links"))();
+  } else {
+    for (let start = 0; start < paths.length; start += 128) {
+      const batch = paths.slice(start, start + 128);
+      const blobs = tree.readBytes(batch.filter(sourceReadable));
+      db.transaction(() => {
+        for (const path of batch) {
+          const bytes = blobs.get(path);
+          const content = bytes === undefined ? null : decodeSourceText(bytes);
+          const sha256 = bytes === undefined ? null : createHash("sha256").update(bytes).digest("hex");
+          if (bytes !== undefined && content === null) excludedInvalidUtf8Files++;
+          if (bytes !== undefined && content !== null) {
+            const destination = join(snapshot, path);
+            mkdirSync(dirname(destination), { recursive: true });
+            writeFileSync(destination, bytes);
+          }
+          insert.run(path, tree.files.get(path)!, sourceDomain(path), sha256, content === null ? null : bytes!);
+          if (content !== null) readable++;
+        }
+      })();
+      await Bun.sleep(0);
+    }
   }
   db.exec("INSERT INTO release_domains SELECT domain,count(*) FROM release_files GROUP BY domain");
   const available = new Set(paths);
-  const link = db.prepare("INSERT OR IGNORE INTO release_links VALUES(?,?,?)");
-  for (const { path, content } of db
-    .query<{ path: string; content: string }, []>("SELECT path,content FROM release_files WHERE content IS NOT NULL")
-    .iterate()) {
-    if (/\.[cm]?[jt]sx?$/.test(path)) {
-      for (const match of content.matchAll(/(?:\bfrom\s*|\bimport\s*\(|\brequire\s*\()?["'](\.{1,2}\/[^"'\n]+)["']/g)) {
-        const target = resolvedImport(path, match[1]!, available);
-        if (target) link.run(path, target, "relative-reference");
-      }
-    }
-  }
+  writeRelativeReferences(db, available);
   const native = await indexDetachedRelease(registry, snapshot, tree.sha, out);
   const documents: { domain: string; directory: string }[] = [];
   for (const domain of native.domains) {

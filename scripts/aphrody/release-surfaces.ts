@@ -176,7 +176,14 @@ export function refreshManifest(out: string) {
   return updated;
 }
 
-export async function regenerate(root: string, ref: string, out: string, repo: string, offline: boolean) {
+export async function regenerate(
+  root: string,
+  ref: string,
+  out: string,
+  repo: string,
+  offline: boolean,
+  resume = false,
+) {
   const tree = new GitTree(root, ref);
   if (existsSync(join(out, "manifest.json")))
     throw new Error("Choose a new output directory; existing artifacts are preserved");
@@ -188,7 +195,7 @@ export async function regenerate(root: string, ref: string, out: string, repo: s
     if (result.exitCode) throw new Error(`${cmd[0]}: ${result.stderr.toString()}`);
     return result.stdout.toString();
   };
-  const graph = await buildReleaseGraph(tree, snapshot, out);
+  const graph = await buildReleaseGraph(tree, snapshot, out, resume);
   const archive = join(out, "source.tar");
   const paths = ["docs/logo", "src/bun.ico"].filter(
     path => tree.has(path) || [...tree.files.keys()].some(file => file.startsWith(`${path}/`)),
@@ -315,6 +322,7 @@ if (import.meta.main) {
       out,
       option("--repo", "aphrody-labs/bun"),
       args.includes("--offline"),
+      args.includes("--resume"),
     );
     if (args.includes("--apply")) {
       writeFileSync(join(root, "README.md"), result.readme);

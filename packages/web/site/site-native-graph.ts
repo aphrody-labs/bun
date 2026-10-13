@@ -125,13 +125,13 @@ export function readPublicNativeGraph(db: Database, source: string, index: Nativ
     for (const node of db
       .query<
         { id: string; kind: string; label: string; path: string; line: number | null; file_sha256: string },
-        [string, string, string, number]
+        [string, string, string, string, number]
       >(
-        `SELECT n.id,n.kind,substr(n.label,1,4096) AS label,n.file AS path,n.line,f.sha256 AS file_sha256
-       FROM nodes n JOIN release_files f ON f.path=n.file WHERE n.repository_id=? AND n.id>=? AND n.id<?
+        `SELECT n.id,n.kind,substr(n.label,1,4096) AS label,f.path AS path,n.line,f.sha256 AS file_sha256
+       FROM nodes n JOIN release_files f ON f.path=?||'/'||n.file WHERE n.repository_id=? AND n.id>=? AND n.id<?
        AND n.provenance='EXTRACTED' AND f.sha256 IS NOT NULL ORDER BY n.id LIMIT ?`,
       )
-      .iterate(scope.repository, scope.namespace, scope.end, remaining)) {
+      .iterate(selected.domain, scope.repository, scope.namespace, scope.end, remaining)) {
       if (!publicSourcePath(node.path) || !/^[a-f0-9]{64}$/.test(node.file_sha256)) continue;
       const id = sha(node.id);
       ids.set(node.id, id);

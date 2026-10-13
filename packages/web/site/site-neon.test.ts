@@ -107,6 +107,34 @@ test("Neon HTTP adapter fails closed for the destination and does not expose dri
   ).toThrow("expected destination");
 });
 
+test("French retrieval retries bounded literal terms only after the exact query is empty", async () => {
+  const snapshot = { id: "a".repeat(64), source: "b".repeat(40), repository: "aphrody-labs/bun" };
+  const calls: { text: string; parameters: readonly unknown[] }[] = [];
+  const sql: SiteQuery = {
+    async query<T>(text: string, parameters: readonly unknown[] = []): Promise<T[]> {
+      calls.push({ text, parameters });
+      return (
+        calls.length === 1
+          ? [snapshot]
+          : calls.length === 2
+            ? []
+            : [
+                {
+                  path: "docs/runtime/video.mdx",
+                  chunks: [],
+                  score: 1,
+                },
+              ]
+      ) as T[];
+    },
+  };
+  const result = await searchPublicSiteDocs(sql, { query: "Comment utiliser Bun.Video avec Linux ?", limit: 2 });
+  expect(calls[1].parameters).toEqual([snapshot.id, "Comment utiliser Bun.Video avec Linux ?", 2]);
+  expect(calls[2].parameters).toEqual([snapshot.id, '"Bun.Video"', 2]);
+  expect(calls[2].text).toBe(calls[1].text);
+  expect(result.documents[0].url).toContain(`/blob/${snapshot.source}/`);
+});
+
 test("publication rejects stale or altered chunks before advancing the current pointer", async () => {
   const input = await fixture();
   try {
@@ -166,9 +194,9 @@ test("native graph export verifies profile, revision, namespace and public extra
     );
     db.prepare("INSERT INTO release_files VALUES(?,?)").run("src/runtime/video.rs", "d".repeat(64));
     const node = db.prepare("INSERT INTO nodes VALUES(?,?,?,?,?,?,?)");
-    node.run(namespace + "frame", repository, "code", "BunVideo.frame", "src/runtime/video.rs", 12, "EXTRACTED");
-    node.run(namespace + "resize", repository, "code", "resize", "src/runtime/video.rs", 21, "EXTRACTED");
-    node.run(namespace + "unknown", repository, "unresolved", "unknown", "src/runtime/video.rs", null, "UNRESOLVED");
+    node.run(namespace + "frame", repository, "code", "BunVideo.frame", "video.rs", 12, "EXTRACTED");
+    node.run(namespace + "resize", repository, "code", "resize", "video.rs", 21, "EXTRACTED");
+    node.run(namespace + "unknown", repository, "unresolved", "unknown", "video.rs", null, "UNRESOLVED");
     const edge = db.prepare("INSERT INTO edges VALUES(?,?,?,?,?,?,?)");
     edge.run(namespace + "edge:1", repository, namespace + "frame", namespace + "resize", "calls", "EXTRACTED", 1);
     edge.run(namespace + "edge:2", repository, namespace + "frame", namespace + "unknown", "calls", "UNRESOLVED", 0);
@@ -181,6 +209,7 @@ test("native graph export verifies profile, revision, namespace and public extra
     };
     const result = readPublicNativeGraph(db, revision, index);
     expect(result.nodes.map(node => node.label)).toEqual(["BunVideo.frame", "resize"]);
+    expect(result.nodes.map(node => node.path)).toEqual(["src/runtime/video.rs", "src/runtime/video.rs"]);
     expect(result.edges).toHaveLength(1);
     expect(result.edges[0].provenance).toBe("EXTRACTED");
     expect(result.coverage.truncated).toBe(true);

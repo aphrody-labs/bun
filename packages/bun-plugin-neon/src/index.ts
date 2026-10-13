@@ -1,4 +1,4 @@
-/// <reference path="../../bun-types/index.d.ts" />
+/// <reference types="@aphrody/bun-types" />
 
 import { resolveNeonConnection, type NeonDestination } from "./connection";
 import { applyMigrations, type MigrationOptions, type MigrationReport } from "./migrations";
