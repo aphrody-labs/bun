@@ -32,6 +32,7 @@ runs:
         BUN_VERSION: ${{ inputs.bun-version }}
         BUN_BASELINE: ${{ inputs.baseline }}
         APHRODY_BUN_REPO: ${{ inputs.repo }}
+        APHRODY_BUN_PROVENANCE: ${{ github.action_path }}/../../../packages/bun-agent-plugin/src/hooks/common.ts
         GH_TOKEN: ${{ inputs.token }}
       run: |
         set -euo pipefail
@@ -103,9 +104,9 @@ runs:
           ln -fs "$RUNNER_TEMP/.bun/bin/bun" "$RUNNER_TEMP/.bun/bin/bunx"
         fi
         revision=$("$RUNNER_TEMP/.bun/bin/bun" --revision)
-        case "$revision" in
-          *aphrody*) ;;
-          *) echo "::error::bootstrap runtime is not the Aphrody fork"; exit 1;;
-        esac
+        "$RUNNER_TEMP/.bun/bin/bun" -e '
+          const { isAphrodyBun } = await import(process.argv[1]);
+          if (!isAphrodyBun()) throw new Error("Bootstrap runtime provenance is not the Aphrody fork");
+        ' "$APHRODY_BUN_PROVENANCE"
         echo "$RUNNER_TEMP/.bun/bin" >> "$GITHUB_PATH"
         echo "Installed $repo $tag ($target): $revision"

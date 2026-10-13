@@ -4,16 +4,12 @@ import { FFmpeg, ffmpegABI, ffmpegLibraryPath } from "../src/ffmpeg";
 import { openVideoPipeline } from "../src/pipeline";
 import { materializeVideoSource, resolveVideoSource } from "../src/source";
 import { mediaSDKLibraryDirectory, mediaSDKPlan, mediaSDKPrefix, validateSDKAsset } from "../src/sdk";
+import { mediaSDKHostTarget } from "../src/sdk-platform";
 import { dirname, join } from "node:path";
 
 describe("media SDK identities", () => {
   test("installed SDK paths share Bun's home and preserve explicit library directories", () => {
-    const target = `${process.platform === "win32" ? "windows" : process.platform}-${process.arch}`;
-    if (!["windows-x64", "linux-x64"].includes(target)) {
-      expect(() => mediaSDKPrefix("ffmpeg")).toThrow("Unsupported media SDK target");
-      expect(mediaSDKLibraryDirectory("ffmpeg", dirname(process.execPath))).toBe(dirname(process.execPath));
-      return;
-    }
+    const target = mediaSDKHostTarget();
     expect(mediaSDKPrefix("ffmpeg")).toBe(join(dirname(process.execPath), "lib/media", "ffmpeg", target));
     expect(mediaSDKPrefix("mpv")).toBe(join(dirname(process.execPath), "lib/media", "mpv", target));
     expect(mediaSDKLibraryDirectory("ffmpeg", dirname(process.execPath))).toBe(dirname(process.execPath));
@@ -38,7 +34,12 @@ describe("media SDK identities", () => {
   });
   test("SDK sources reject credentials, mutable digests and oversized assets", () => {
     const asset = mediaSDKPlan("ffmpeg", "windows-x64").upstreamAssets![0];
-    for (const patch of [{ url: "https://user:secret@example.test/a.zip" }, { sha256: "latest" }, { bytes: 536870913 }, { format: "exe" }])
+    for (const patch of [
+      { url: "https://user:secret@example.test/a.zip" },
+      { sha256: "latest" },
+      { bytes: 536870913 },
+      { format: "exe" },
+    ])
       expect(() => validateSDKAsset({ ...asset, ...patch })).toThrow();
   });
 });
@@ -215,7 +216,6 @@ describe.skipIf(!process.env.BUN_VIDEO_MEDIA_DIR)("native FFmpeg ownership", () 
   });
 
   test("loads every declared symbol and owns frames and packets until disposal", () => {
-    const { openVideoPipeline } = require("../src/pipeline");
     const ffmpeg = FFmpeg.open(process.env.BUN_VIDEO_MEDIA_DIR);
     try {
       for (const component of Object.keys(ffmpegABI) as Array<keyof typeof ffmpegABI>) {

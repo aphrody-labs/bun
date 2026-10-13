@@ -9727,7 +9727,7 @@ declare module "bun" {
     static readonly decoder: "filmcraft";
     /** Backend shared with Bun.Image for extracted-frame transformations and encoding. */
     static backend: typeof Image.backend;
-    constructor(input: string | ArrayBuffer | ArrayBufferView | Blob, options?: { maxPixels?: number; autoOrient?: boolean });
+    constructor(input: string | ArrayBuffer | ArrayBufferView | Blob, options?: Video.ConstructorOptions);
     /** Select a frame in seconds. Repeated calls overwrite the previous selection. Defaults to zero. */
     frame(seconds: number): this;
     /** Apply the existing Bun.Image geometry pipeline to the extracted frame. */
@@ -9758,18 +9758,65 @@ declare module "bun" {
     write(destination: Parameters<typeof Bun.write>[0]): Promise<number>;
     metadata(): Promise<Video.Metadata>;
     /** One worker-owned decode session; source-resolution PNGs, at most 64 frames and 64 MiB per batch. */
-    frames(options: { start?: number; end: number; step?: number; maxFrames?: number }): Promise<{ time: number; bytes: Uint8Array }[]>;
+    frames(options: Video.FramesOptions): Promise<Video.Frame[]>;
     /** PCM WAV from a native audio stream, at most 30 seconds and 64 MiB. */
-    audio(options: { start?: number; duration: number; stream?: number; sampleRate?: number }): Promise<Uint8Array>;
+    audio(options: Video.AudioOptions): Promise<Uint8Array>;
     /** Preserve encoded audio/video access units in a new MP4 file; refuses overwriting. */
     remux(destination: string): Promise<number>;
     /** Palette GIF; at most 5 seconds, 120 frames, 640×360 and 32 MiB. */
-    gif(options: { start?: number; duration: number; fps?: number; width?: number }): Promise<Uint8Array>;
+    gif(options: Video.GifOptions): Promise<Uint8Array>;
     readonly width: number;
     readonly height: number;
   }
 
   namespace Video {
+    interface ConstructorOptions {
+      /** Maximum decoded pixel count; shared with Bun.Image. */
+      maxPixels?: number;
+      /** Honor source orientation before the frame geometry pipeline. Default: true. */
+      autoOrient?: boolean;
+    }
+    interface FramesOptions {
+      /** Non-negative presentation time in seconds. Default: 0. */
+      start?: number;
+      /** Exclusive end time, strictly after start. Default: start + 1. */
+      end?: number;
+      /** Positive interval in seconds. Default: 1. */
+      step?: number;
+      /** Maximum 64 frames and 64 MiB encoded output per batch. Default: 64. */
+      maxFrames?: number;
+    }
+    interface Frame {
+      /** Requested presentation time in seconds. */
+      time: number;
+      /** Source-resolution PNG bytes owned by the caller. */
+      bytes: Uint8Array;
+    }
+    interface AudioOptions {
+      /** Non-negative presentation time in seconds. Default: 0. */
+      start?: number;
+      /** At most 30 seconds; output is bounded to 64 MiB PCM16 WAV. Default: 1. */
+      duration?: number;
+      /** Zero-based audio stream index, at most 63. Default: 0. */
+      stream?: number;
+      /** Positive integer output sample rate, at most 192000 Hz. Default: 16000. */
+      sampleRate?: number;
+    }
+    interface GifOptions {
+      /** Non-negative presentation time in seconds. Default: 0. */
+      start?: number;
+      /** At most five seconds; output is bounded to 120 frames and 32 MiB. Default: 1. */
+      duration?: number;
+      /** Positive integer frame rate, at most 24. Default: 12. */
+      fps?: number;
+      /** Maximum 640 pixels wide, within 640×360. Default: 320. */
+      width?: number;
+    }
+    interface AudioStreamMetadata {
+      sampleRate: number;
+      channels: number;
+      codec: string;
+    }
     interface Metadata {
       width: number;
       height: number;
@@ -9780,7 +9827,7 @@ declare module "bun" {
       fpsDenominator: number;
       frameCount: number;
       fileBytes: number;
-      audioStreams: { sampleRate: number; channels: number; codec: string }[];
+      audioStreams: AudioStreamMetadata[];
     }
   }
 

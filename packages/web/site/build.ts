@@ -804,10 +804,19 @@ export function renderRuntimeHero(d: SiteData, o: BuildOptions): string {
 <p class="eyebrow">Aphrody Labs</p>
 <h1>Bun OS</h1>
 <p class="lead">The Bun runtime of Aphrody. JavaScript and TypeScript runtime, package manager, test runner and bundler in one executable, with Aphrody's native system integrations.</p>
+<p>Meet <a href="/docs/runtime/video"><code>Bun.Video</code></a>: native video processing with the <code>Bun.Image</code> transformation pipeline.</p>
 <p>${link(rt.repo, `https://github.com/${rt.repo}`)} builds on ${link(rt.upstream.name, rt.upstream.url)} ${escapeHtml(rt.upstream.version)}. Source version and published executables are tracked separately${latest ? `; published release: ${link(latest.tag, latest.url)}` : "; see downloads for available published executables"}.</p>
 <p>Install a published runtime:</p>
 <div class="cmds">${commands.join("")}</div>
 <div class="btns"><a class="btn" href="/docs">Documentation</a><a class="btn tonal" href="/downloads">Downloads</a><a class="btn outlined" href="https://github.com/${escapeHtml(rt.repo)}">GitHub</a></div>
+</section>
+<section aria-labelledby="bun-video"><h2 id="bun-video">Bun.Video</h2>
+<p>Read media metadata, extract frames and create thumbnails directly in TypeScript. Native Rust decoding feeds the same resize, crop and image encoders as <code>Bun.Image</code>.</p>
+<pre tabindex="0"><code class="language-typescript">const video = new Bun.Video("clip.mp4");
+const metadata = await video.metadata();
+await video.frame(1).resize(320, 180).webp().write("preview.webp");</code></pre>
+<p>Bounded frame batches, WAV audio, GIF export and MP4 remux use native worker jobs. Check the documented codec and platform support for your runtime.</p>
+<div class="btns"><a class="btn" href="/docs/runtime/video">Explore Bun.Video</a><a class="btn tonal" href="/docs/runtime/image">Image transforms</a></div>
 </section>
 <section aria-labelledby="runtime-toolkit"><h2 id="runtime-toolkit">One executable for your workflow</h2>
 <p>Use the tools individually in an existing project, or build your application around Bun.</p>

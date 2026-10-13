@@ -62,6 +62,7 @@ export async function normalizeMediaSDK(
   target: MediaSDKTarget,
   archive: string,
   workspace: string,
+  options: { reuseExtracted?: boolean } = {},
 ) {
   if (process.platform !== "linux") throw new Error("SDK normalization belongs to the qualified Linux factory");
   if (!isAbsolute(archive) || !isAbsolute(workspace)) throw new TypeError("Factory paths must be absolute");
@@ -70,11 +71,13 @@ export async function normalizeMediaSDK(
   const asset = plan.upstreamAssets?.find(asset => asset.sha256 === sha256);
   if (!asset || (await stat(archive)).size !== asset.bytes)
     throw new Error("Factory input does not match its upstream pin");
-  await mkdir(workspace, { recursive: false, mode: 0o700 });
   const extracted = join(workspace, "extracted");
-  await mkdir(extracted, { mode: 0o700 });
-  if (asset.format === "zip") await extractMediaSDKArchive(archive, extracted);
-  else {
+  if (!options.reuseExtracted) {
+    await mkdir(workspace, { recursive: false, mode: 0o700 });
+    await mkdir(extracted, { mode: 0o700 });
+  }
+  if (!options.reuseExtracted && asset.format === "zip") await extractMediaSDKArchive(archive, extracted);
+  else if (!options.reuseExtracted) {
     const tool = Bun.which("bsdtar") ?? Bun.which("tar");
     if (!tool) throw new Error("SDK factory needs installed bsdtar or tar to normalize upstream XZ");
     const names = (await nativeTool([tool, "-tf", archive], workspace)).split(/\r?\n/).filter(Boolean);
@@ -90,6 +93,17 @@ export async function normalizeMediaSDK(
   const roots = await readdir(extracted, { withFileTypes: true });
   const prefix = roots.length === 1 && roots[0].isDirectory() ? join(extracted, roots[0].name) : extracted;
   const canonicalPrefix = await realpath(prefix);
+  if (options.reuseExtracted) {
+    const previous = await Bun.file(join(workspace, "distribution.json")).json();
+    if (previous.sourceRevision !== plan.sourceRevision || previous.upstream?.sha256 !== asset.sha256)
+      throw new Error("Existing SDK extraction differs from its pinned source");
+    for (const [name, expected] of Object.entries(previous.files as Record<string, string>)) {
+      const path = await realpath(join(prefix, name));
+      const member = relative(canonicalPrefix, path);
+      if (member.startsWith("..") || isAbsolute(member) || (await hashSDKFile(path)) !== expected)
+        throw new Error("Existing SDK extraction changed since its previous receipt");
+    }
+  }
   for await (const name of new Bun.Glob("lib/pkgconfig/*.pc").scan({ cwd: prefix, onlyFiles: true })) {
     const path = await realpath(join(prefix, name));
     const member = relative(canonicalPrefix, path);
@@ -104,6 +118,36 @@ export async function normalizeMediaSDK(
       .replace(/^libdir=.*$/m, "libdir=${prefix}/lib")
       .replace(/^includedir=.*$/m, "includedir=${prefix}/include");
     await Bun.write(path, content);
+  }
+  let binaryNormalization: { tool: string; version: string; libraries: string; executables: string } | undefined;
+  if (target.startsWith("linux")) {
+    const patcher = Bun.which("patchelf");
+    if (!patcher) throw new Error("Linux SDK normalization needs patchelf for relocatable shared libraries");
+    const libraries = new Set<string>();
+    for await (const name of new Bun.Glob("lib/*.so*").scan({ cwd: prefix, onlyFiles: true, followSymlinks: true })) {
+      const path = await realpath(join(prefix, name));
+      const member = relative(canonicalPrefix, path);
+      if (member.startsWith("..") || isAbsolute(member)) throw new Error("SDK library escaped its prefix");
+      libraries.add(path);
+    }
+    for (const path of libraries) {
+      if ((await nativeTool([patcher, "--print-rpath", path], workspace)).trim() !== "$ORIGIN")
+        await nativeTool([patcher, "--set-rpath", "$ORIGIN", path], workspace);
+    }
+    const executables = component === "ffmpeg" ? ["ffmpeg", "ffprobe"] : ["mpv"];
+    for (const executable of executables) {
+      const path = await realpath(join(prefix, "bin", executable));
+      const member = relative(canonicalPrefix, path);
+      if (member.startsWith("..") || isAbsolute(member)) throw new Error("SDK executable escaped its prefix");
+      if ((await nativeTool([patcher, "--print-rpath", path], workspace)).trim() !== "$ORIGIN/../lib")
+        await nativeTool([patcher, "--set-rpath", "$ORIGIN/../lib", path], workspace);
+    }
+    binaryNormalization = {
+      tool: "patchelf",
+      version: (await nativeTool([patcher, "--version"], workspace)).trim(),
+      libraries: "$ORIGIN",
+      executables: "$ORIGIN/../lib",
+    };
   }
   const layout = await verifyMediaSDKLayout(component, target, prefix);
   const entries: Record<string, Bun.ArchiveEntry> = {};
@@ -142,6 +186,7 @@ export async function normalizeMediaSDK(
     licenses: layout.licenses,
     files: fileHashes,
     symlinks: "materialized-contained-files",
+    binaryNormalization,
     nativeRuntimeABI: "not-yet-qualified",
   };
   entries["bun-sdk-receipt.json"] = { data: JSON.stringify(receipt, null, 2), mode: 0o644, mtime: 0 };

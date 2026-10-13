@@ -1,11 +1,12 @@
 ---
-title: Video
-description: Probe media, extract frames and reuse the native Image pipeline
+title: Bun.Video
+description: Native video metadata, thumbnails, frame batches, audio, GIF and MP4 remux in TypeScript
 ---
 
-`Bun.Video` uses the native Rust FilmCraft provider for media input and the
-[`Bun.Image`](/runtime/image) worker for frame transformations and encoding.
-It does not launch an external media executable.
+`Bun.Video` is Bun's native video API. The Rust FilmCraft provider reads media
+and decodes frames. The [`Bun.Image`](/runtime/image) worker transforms and
+encodes those frames. These operations run inside Bun without launching an
+external media executable.
 
 ```ts
 if (!Bun.Video.available) throw new Error("This runtime has no native video provider");
@@ -14,10 +15,35 @@ const metadata = await video.metadata();
 await video.frame(480).resize(640, 360).webp({ lossless: true }).write("frame.webp");
 ```
 
+Use the global `Bun.Video` class. Importing `bun:video` or installing
+`@aphrody/bun-video` is unnecessary for this native API. The package supplies
+composition engines, HLS/DASH, browser capture and optional FFmpeg/mpv adapters.
+
 The provider is selected at build time (`--video-native=on`); `available` reports
 its inclusion, not support for every codec. MP4 with H264 video and AAC audio
 is the qualified input. Other containers, profiles and targets need separate
 qualification. Still-image import is owned by `Bun.Image`.
+
+## Command line
+
+`bun video` exposes the same native owner. Inspect the provider and extract a
+thumbnail from a local file:
+
+```sh
+bun video info --json
+bun video metadata clip.mp4 --json
+bun video frame clip.mp4 preview.webp --time 1 --width 320 --height 180 --format webp
+bun video frames clip.mp4 frames --start 0 --end 1 --step 0.25 --max-frames 4
+bun video audio clip.mp4 audio.wav --start 0 --duration 1 --sample-rate 16000
+bun video gif clip.mp4 preview.gif --duration 1 --fps 8 --width 64
+bun video remux clip.mp4 remux.mp4
+```
+
+Output files must be new. The batch command requires a new directory. Use
+`bun video --help` for the options and `--json` for machine-readable results.
+Native commands use `Bun.Video` directly. Composition and downloader commands
+such as `bun video remotion` require the checksum-verified Bun Video executable
+and its release receipt beside Bun.
 
 ## Sources and metadata
 
@@ -30,6 +56,10 @@ as filesystem access and validate them before accepting untrusted input.
 `fpsNumerator`, `fpsDenominator`, `frameCount`, `fileBytes` and `audioStreams`.
 Each audio stream reports its sample rate, channels and codec. The source frame
 rate remains rational; do not round 24000/1001 to 24 when selecting frames.
+
+The constructor captures a source and settings without decoding it. `width`
+and `height` begin at zero and report the last transformed frame after a frame
+terminal completes. Use `metadata()` for the source dimensions.
 
 ## Frame transformations and raw pixels
 

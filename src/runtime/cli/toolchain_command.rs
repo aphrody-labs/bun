@@ -14,6 +14,9 @@ pub(crate) struct ToolchainCommand;
 impl ToolchainCommand {
     #[cold]
     pub(crate) fn exec(ctx: Command::Context) -> crate::Result<()> {
+        if ctx.positionals.first().is_some_and(|arg| &**arg == b"video") {
+            return super::video_command::exec(ctx);
+        }
         if !bun_core::argv()
             .into_iter()
             .any(|arg| arg == b"--external-backend")

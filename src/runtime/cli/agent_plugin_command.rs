@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 
 use bun_core::{Global, ZBox};
 use bun_spawn::process::sync as spawn_sync;
-use bun_sys::{Dir, Fd, File, O};
+use bun_sys::{Dir, O};
 
 const MAGIC: &[u8; 8] = b"BUNAGPL1";
 const INSTALLER: &str = "package/bin/bun-agent-plugin.ts";
@@ -31,6 +31,7 @@ impl Invocation {
 
 fn archive() -> &'static [u8] {
     bun_zstd::embed_compressed!(("codegen/", "agent-plugin.bin"), {
+        use bun_sys::{Fd, File};
         static COPY: std::sync::OnceLock<Vec<u8>> = std::sync::OnceLock::new();
         COPY.get_or_init(|| {
             let codegen =

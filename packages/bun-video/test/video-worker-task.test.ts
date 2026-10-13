@@ -23,10 +23,14 @@ const task = (root: string): VideoRenderTask => ({
 
 describe("video task contract", () => {
   test("orders renderer PNG frames and rejects missing or duplicate frames", () => {
-    expect(validatePNGSequence(["frame_000002.png", "frame_000000.png", "frame_000001.png"], 3))
-      .toEqual({ pattern: "frame_%06d.png", startNumber: 0 });
-    expect(validatePNGSequence(["element-01.png", "element-02.png"], 2))
-      .toEqual({ pattern: "element-%02d.png", startNumber: 1 });
+    expect(validatePNGSequence(["frame_000002.png", "frame_000000.png", "frame_000001.png"], 3)).toEqual({
+      pattern: "frame_%06d.png",
+      startNumber: 0,
+    });
+    expect(validatePNGSequence(["element-01.png", "element-02.png"], 2)).toEqual({
+      pattern: "element-%02d.png",
+      startNumber: 1,
+    });
     expect(() => validatePNGSequence(["frame_000001.png", "frame_000003.png"], 2)).toThrow("consecutive");
     expect(() => validatePNGSequence(["frame_000001.png", "frame_000001.png"], 2)).toThrow("consecutive");
     expect(() => validatePNGSequence(["../frame_000001.png"], 1)).toThrow("safe numeric");

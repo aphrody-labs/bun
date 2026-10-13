@@ -4,6 +4,21 @@ description: Bun is an all-in-one toolkit for developing modern JavaScript/TypeS
 mode: center
 ---
 
+## Bun.Video
+
+Process video directly in TypeScript with Bun's native Rust decoder and the
+`Bun.Image` transformation pipeline. Read metadata, make thumbnails, extract
+bounded frame batches, export WAV audio and GIFs, or remux MP4 files.
+
+```ts
+const video = new Bun.Video("clip.mp4");
+const metadata = await video.metadata();
+await video.frame(1).resize(320, 180).webp().write("preview.webp");
+```
+
+[Explore Bun.Video](/runtime/video) and [Bun.Image transforms](/runtime/image).
+The reference lists codec support, resource limits and platform requirements.
+
 <CardGroup>
   <Card
     icon="cog"

@@ -381,6 +381,18 @@ const token = await Bun.secrets.get({ service: "my-app", name: "token" });
 console.log(token !== null);`,
   },
   {
+    task: "Native video metadata and transformed still frames",
+    instead: ["ffprobe-static", "video-thumbnail", "fluent-ffmpeg"],
+    use: "Bun.Video for native metadata, transformed frames, bounded audio and MP4 remux; composition encoding uses the Bun Video package",
+    before: `import ffmpeg from "fluent-ffmpeg";
+ffmpeg("input.mp4").screenshots({ timestamps: [1], filename: "preview.png" });`,
+    after: `if (!Bun.Video.available) throw new Error("Native video provider unavailable");
+const video = new Bun.Video("input.mp4");
+const metadata = await video.metadata();
+await video.frame(1).resize(640).png().write("preview.png");
+console.log(metadata.width, metadata.height, metadata.codec);`,
+  },
+  {
     task: "Package scripts and CLI",
     instead: ["npm install", "npx", "yarn", "pnpm", "npm run"],
     use: "bun install / bunx / bun run",
@@ -404,6 +416,7 @@ export const RULES = [
   "Databases: bun:sqlite (Database), Bun.sql/Bun.SQL (Postgres, MySQL), Bun.redis; never better-sqlite3, pg, ioredis.",
   "Processes: Bun.$`cmd` (Bun Shell) or Bun.spawn/Bun.spawnSync, not child_process or execa.",
   "Tests: bun:test (test, expect, mock, spyOn) run by `bun test`, never jest/vitest/mocha.",
+  "Native media: Bun.Video probes, decodes and remuxes; Bun.Image transforms and encodes extracted frames. Use the bun-video skill for bounds and composition/browser/FFmpeg requirements.",
   "Also built in: fetch, Bun.s3, Bun.password, Bun.hash, Bun.CryptoHasher, Bun.Glob, Bun.build, Bun.YAML/TOML/JSONC, Bun.semver, HTMLRewriter, bun:ffi, Worker; .env is loaded without dotenv; TypeScript runs without ts-node/tsx.",
   "Unsure of an API? examples_search / docs_search (bun mcp), the bun-native skill, or " + SEARCH_URL + "<words>.",
 ];

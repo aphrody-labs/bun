@@ -213,6 +213,8 @@ pub(crate) mod add_completions;
 pub(crate) mod colon_list_type;
 #[path = "discord_command.rs"]
 pub(crate) mod discord_command;
+#[path = "video_command.rs"]
+pub(crate) mod video_command;
 #[path = "shell_completions.rs"]
 pub(crate) mod shell_completions;
 #[path = "which_npm_client.rs"]
@@ -689,6 +691,7 @@ pub(crate) mod help_command {
   <b><magenta>fmt<r>                            Format with oxfmt
   <b><magenta>rename<r>    <d>--from a --to b<r>      Rename identifiers and paths across a git repository
   <b><magenta>docs<r>      <d>[query]<r>              Search the Bun documentation
+  <b><magenta>video<r>     <d>metadata | frame<r>     Native video metadata, frames, audio, GIF and remux
   <b><magenta>n2b<r>       <d>scan | fix | migrate<r> Migrate a Node.js project to Bun
   <b><magenta>x<r>         <d>{:<16}<r>     Execute a package binary (CLI), installing if needed <d>(bunx)<r>
   <b><magenta>repl<r>                           Start a REPL session with Bun
@@ -1142,6 +1145,12 @@ pub(crate) mod command {
         }
         if x == RootCommandMatcher::case(b"lint") || x == RootCommandMatcher::case(b"fmt") {
             return Tag::ToolchainCommand;
+        }
+        if x == RootCommandMatcher::case(b"video") {
+            return match super::devtools_command::is_project_entry(first_arg_name) {
+                true => Tag::AutoCommand,
+                false => Tag::ToolchainCommand,
+            };
         }
         if x == RootCommandMatcher::case(b"n2b")
             || x == RootCommandMatcher::case(b"migrate")
@@ -1915,7 +1924,7 @@ pub(crate) mod command {
 
     const DEFAULT_COMPLETIONS_LIST: &[&[u8]] = &[
         b"build", b"install", b"add", b"run", b"update", b"link", b"unlink", b"remove", b"create",
-        b"bun", b"upgrade", b"discord", b"test", b"pm", b"x", b"repl", b"info",
+        b"bun", b"upgrade", b"discord", b"test", b"pm", b"x", b"repl", b"info", b"video",
     ];
 
     // DEFAULT_COMPLETIONS_LIST ++ extras; hand-rolled join (small, fixed).
@@ -1932,6 +1941,7 @@ pub(crate) mod command {
         b"bun",
         b"upgrade",
         b"discord",
+        b"video",
         b"test",
         b"pm",
         b"x",

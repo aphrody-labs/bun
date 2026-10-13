@@ -38,10 +38,11 @@ qualified provider and explicitly authorized URLs. Native encoding requires
 an explicit media executable. The MCP media tool additionally expects the
 runtime-provided `bun-video:media-runtime` module.
 
-The package ships seven Bun CLI entry points: `bun-video-hls`, `bun-video-dash`,
-`bun-video-har`, `bun-video-keychain`, `bun-video-chrome`, `bun-video-shortcuts`,
-and `bun-video-webgpu`. Their sources and local browser assets are in labs
-and assets. Use each CLI's `--help` for its configuration. Session cookies,
+The package ships eleven Bun CLI entry points: `bun-video-hls`, `bun-video-dash`,
+`bun-video-har`, `bun-video-keychain`, `bun-video-chrome`, `bun-video-crunchyroll`,
+`bun-video-shortcuts`, `bun-video-webgpu`, `bun-video-engine`, `bun-video-workers`,
+and `bun-video-network`. Their sources and local browser assets are in labs,
+src, umbrella-src and assets. Use each CLI's `--help` for its configuration. Session cookies,
 HAR recordings, signed media URLs and OAuth client secrets are local inputs;
 they are not shipped in the npm artifact.
 
@@ -68,9 +69,19 @@ Picture-in-Picture, plein écran, Media Session et inspection yt-dlp :
 import { VideoStudio } from "@aphrody/bun-video/studio";
 
 export function Player() {
-  return <VideoStudio storageKey="catalogue" assets={[
-    { id: "episode-1", title: "Episode 1", src: "https://cdn.example/video.mp4", poster: "/poster.jpg" },
-  ]} />;
+  return (
+    <VideoStudio
+      storageKey="catalogue"
+      assets={[
+        {
+          id: "episode-1",
+          title: "Episode 1",
+          src: "https://cdn.example/video.mp4",
+          poster: "/poster.jpg",
+        },
+      ]}
+    />
+  );
 }
 ```
 

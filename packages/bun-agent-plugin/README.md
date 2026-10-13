@@ -17,6 +17,7 @@ Use `gemini` only for Gemini CLI. `agy` uses Antigravity's plugin schema and nat
 
 - [Adapter contracts and official schemas](docs/agent-adapters.md).
 - [Rust/Bun policy](skills/bun-rust-first/SKILL.md).
+- [Native Bun.Video and media workflows](skills/bun-video/SKILL.md).
 - [Shared project memory](memory/bun-agent-shared-memory.md).
 - [Current skill router](memory/bun-skills-catalog.md).
 

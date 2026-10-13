@@ -1,9 +1,10 @@
 import { mkdir, realpath, rename, stat, unlink } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import manifest from "./sdk-manifest.json";
+import { mediaSDKHostTarget, type MediaSDKTarget } from "./sdk-platform";
 
 export type MediaSDKComponent = "ffmpeg" | "mpv";
-export type MediaSDKTarget = keyof typeof manifest.targets;
+export type { MediaSDKTarget } from "./sdk-platform";
 export interface MediaSDKAsset {
   url: string;
   sha256: string;
@@ -24,7 +25,7 @@ export interface MediaSDKDescriptor {
 
 export function mediaSDKPrefix(component: MediaSDKComponent, executable = process.execPath): string {
   if (!isAbsolute(executable)) throw new TypeError("Bun executable path must be absolute");
-  const target = `${process.platform === "win32" ? "windows" : process.platform}-${process.arch}` as MediaSDKTarget;
+  const target = mediaSDKHostTarget();
   mediaSDKPlan(component, target);
   return join(dirname(executable), "lib/media", component, target);
 }
@@ -42,7 +43,10 @@ export function mediaSDKPlan(component: MediaSDKComponent, target: MediaSDKTarge
   if (!Object.hasOwn(manifest.targets, target) || !["ffmpeg", "mpv"].includes(component))
     throw new TypeError("Unsupported media SDK target or component");
   const plan = structuredClone(manifest.targets[target][component]);
-  if ("libraryName" in plan && (typeof plan.libraryName !== "string" || !/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(plan.libraryName)))
+  if (
+    "libraryName" in plan &&
+    (typeof plan.libraryName !== "string" || !/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(plan.libraryName))
+  )
     throw new TypeError("SDK library name must be a file basename");
   return plan;
 }
@@ -129,8 +133,7 @@ export async function downloadMediaSDK(
 export async function runMediaSDKCommand(component: MediaSDKComponent, root: string): Promise<boolean> {
   const action = process.argv[2] ?? "sdk-plan";
   if (!action?.startsWith("sdk-")) return false;
-  const target = (Bun.env.BUN_MEDIA_TARGET ??
-    `${process.platform === "win32" ? "windows" : process.platform}-${process.arch}`) as MediaSDKTarget;
+  const target = (Bun.env.BUN_MEDIA_TARGET ?? mediaSDKHostTarget()) as MediaSDKTarget;
   const plan = mediaSDKPlan(component, target);
   if (action === "sdk-plan") console.log(JSON.stringify({ target, component, ...plan }, null, 2));
   else if (action === "sdk-download" || action === "sdk-upstream-download") {
@@ -198,7 +201,9 @@ export async function verifyMediaSDKLayout(component: MediaSDKComponent, target:
       files.push(header);
       const libraryFile = target.startsWith("windows")
         ? join(prefix, "bin", `${library}-${major}.dll`)
-        : join(prefix, "lib", `lib${library}.so.${major}`);
+        : target.startsWith("darwin")
+          ? join(prefix, "lib", `lib${library}.${major}.dylib`)
+          : join(prefix, "lib", `lib${library}.so.${major}`);
       files.push(await confinedFile(prefix, libraryFile));
       if (target.startsWith("windows")) {
         const imports = [join(prefix, "lib", `${library}.lib`), join(prefix, "lib", `lib${library}.dll.a`)];
@@ -220,7 +225,14 @@ export async function verifyMediaSDKLayout(component: MediaSDKComponent, target:
       throw new Error("mpv client SDK header ABI mismatch");
     files.push(header);
     files.push(
-      await confinedFile(prefix, join(prefix, target.startsWith("windows") ? "bin" : "lib", plan.libraryName ?? (target.startsWith("windows") ? "libmpv-2.dll" : "libmpv.so.2"))),
+      await confinedFile(
+        prefix,
+        join(
+          prefix,
+          target.startsWith("windows") ? "bin" : "lib",
+          plan.libraryName ?? (target.startsWith("windows") ? "libmpv-2.dll" : "libmpv.so.2"),
+        ),
+      ),
     );
     files.push(await confinedFile(prefix, join(prefix, target.startsWith("windows") ? "bin/mpv.exe" : "bin/mpv")));
     if (target.startsWith("windows")) {

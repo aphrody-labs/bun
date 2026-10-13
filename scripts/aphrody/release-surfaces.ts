@@ -43,6 +43,18 @@ bun build ./app.tsx --outdir dist
 
 The fork adds native system, Python, .NET, graph and desktop integration surfaces. Their source and platform contracts are listed in the [runtime reference](https://aphrody.app/runtime). Node.js and Bun compatibility remain governed by the documented APIs and scoped tests.
 
+## Bun.Video
+
+The flagship native media API reads metadata, extracts frames and applies the \`Bun.Image\` pipeline directly in TypeScript. Frame batches, WAV audio, GIF output and MP4 remux use native Rust workers.
+
+\`\`\`ts
+const video = new Bun.Video("clip.mp4");
+const metadata = await video.metadata();
+await video.frame(1).resize(320, 180).webp().write("preview.webp");
+\`\`\`
+
+Read the [Bun.Video reference](https://aphrody.app/docs/runtime/video) for codec support, resource limits and platform requirements. The optional [Bun Video package](packages/bun-video/README.md) adds composition engines, HLS/DASH and FFmpeg/mpv adapters.
+
 Source version: **${version}**. Immutable release source: [${sha}](${source}). A source version does not establish availability of a published executable. The Bun OS stable release remains pending native factory build and test qualification.
 
 ## Install

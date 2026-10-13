@@ -32,10 +32,6 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Native type, lint and format checks
         run: bun run check
-      - name: Build release library
-        env:
-          BUN_VIDEO_COMPOSITOR_DIR: ${{ github.workspace }}/packages/bun-video/remotion/packages/compositor-linux-x64-gnu
-        run: bun run build:library
       - name: Pack release artifact
         run: bun run pack
       - name: Publish npm next

@@ -13,9 +13,9 @@ export async function createVideo(
   options.signal?.throwIfAborted();
   if (typeof Bun.Video !== "function") throw new Error("This runtime does not expose the native Bun.Video owner");
   const constructorOptions = options.maxPixels === undefined ? undefined : { maxPixels: options.maxPixels };
-  if (source instanceof Blob || source instanceof ArrayBuffer)
-    return new Bun.Video(source, constructorOptions);
-  if(ArrayBuffer.isView(source))return new Bun.Video(new Uint8Array(source.buffer,source.byteOffset,source.byteLength),constructorOptions);
+  if (source instanceof Blob || source instanceof ArrayBuffer) return new Bun.Video(source, constructorOptions);
+  if (ArrayBuffer.isView(source))
+    return new Bun.Video(new Uint8Array(source.buffer, source.byteOffset, source.byteLength), constructorOptions);
   if (typeof source === "string" || source instanceof URL) {
     const resolved = resolveVideoSource(source);
     if (resolved.kind === "file") return new Bun.Video(resolved.path, constructorOptions);
