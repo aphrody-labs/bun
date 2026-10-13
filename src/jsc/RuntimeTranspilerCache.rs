@@ -65,7 +65,8 @@ bun_core::declare_scope!(cache, visible);
 /// the cache-HIT path reinstates #33904 for them.
 /// Version 34: An import that a plugin `onResolve` answers is printed as it is written.
 /// Version 35: Raw template literals retain UTF-8 and the output encoding reflects it.
-const EXPECTED_VERSION: u32 = 35;
+/// Version 36: New builtin modules invalidate cached imports with old namespace resolution.
+const EXPECTED_VERSION: u32 = 36;
 
 /// Source files smaller than this are not written to / read from the on-disk
 /// transpiler cache. Originally 50 KiB, which excluded almost every file in a

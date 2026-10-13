@@ -2,7 +2,6 @@
 /** Private stdio adapter. All question, answer and primitive validation belongs to bun:yolo. */
 const PROTOCOL = "bun.yolo/1";
 const MAX_BYTES = 1024 * 1024;
-const RUNTIME_MODULE = "bun:yolo";
 type YoloAPI = Pick<
   typeof import("bun:yolo"),
   "inspect" | "decide" | "value" | "jev" | "code" | "confidenceThreshold" | "selections"
@@ -22,7 +21,7 @@ export async function applyYoloEnvelope(input: unknown, api?: YoloAPI) {
   const envelope = input as Envelope;
   if (!envelope || envelope.protocol !== PROTOCOL || !["inspect", "decide", "value"].includes(envelope.operation))
     throw new Error("Invalid Yolo bridge operation");
-  const owner: YoloAPI = api ?? (await import(RUNTIME_MODULE));
+  const owner: YoloAPI = api ?? (await import("bun:yolo"));
   const minimumConfidence =
     envelope.minimumConfidence === undefined ? undefined : owner.confidenceThreshold(envelope.minimumConfidence);
   if (minimumConfidence !== undefined && envelope.operation !== "inspect")

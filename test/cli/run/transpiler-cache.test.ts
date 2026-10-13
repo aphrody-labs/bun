@@ -46,7 +46,7 @@ function removeCache() {
   prev_cache_count = 0;
   try {
     rmSync(cache_dir, { recursive: true, force: true });
-  } catch (error) {
+  } catch {
     chmodSync(cache_dir, 0o777);
     readdirSync(cache_dir).forEach(item => {
       chmodSync(join(cache_dir, item), 0o777);
@@ -69,6 +69,56 @@ beforeEach(() => {
 });
 
 describe("transpiler cache", () => {
+  test("rejects version 35 imports resolved before bun:yolo became a builtin", async () => {
+    const source = `const yolo = await import("bun:yolo");
+console.log(yolo.confidenceThreshold(0.875));\n//${"x".repeat(5 * 1024)}`;
+    const entry = join(temp_dir, "yolo.ts");
+    writeFileSync(entry, source);
+    const barePackage = join(temp_dir, "node_modules", "yolo");
+    mkdirSync(barePackage, { recursive: true });
+    writeFileSync(join(barePackage, "package.json"), JSON.stringify({ type: "module", main: "index.js" }));
+    writeFileSync(join(barePackage, "index.js"), 'export const confidenceThreshold = () => "stale-bare-package";');
+    const run = () => bunRun(["--no-install", entry], env);
+
+    expect(await run()).toSpawn("0.875");
+    expect(newCacheCount()).toBe(1);
+    const cacheFile = join(cache_dir, readdirSync(cache_dir)[0]);
+    const current = readFileSync(cacheFile);
+    const outputOffset = Number(current.readBigUInt64LE(30));
+    const outputLength = Number(current.readBigUInt64LE(38));
+    const output = current.subarray(outputOffset, outputOffset + outputLength);
+    expect(current.readBigUInt64LE(22)).toBe(Bun.hash.wyhash(Buffer.from(source), 42n));
+    expect(current.readBigUInt64LE(46)).toBe(Bun.hash.wyhash(output, 42n));
+
+    // Keep the input/features and a valid payload hash, but reproduce the bare
+    // package request stored before bun:yolo had a builtin namespace.
+    const oldOutput = Buffer.from(output.toString().replace('"bun:yolo"', '"yolo"'));
+    expect(oldOutput.length).toBe(outputLength - 4);
+    const stale = Buffer.concat([
+      current.subarray(0, outputOffset),
+      oldOutput,
+      current.subarray(outputOffset + outputLength),
+    ]);
+    stale.writeUInt32LE(35, 0);
+    stale.writeBigUInt64LE(BigInt(oldOutput.length), 38);
+    stale.writeBigUInt64LE(Bun.hash.wyhash(oldOutput, 42n), 46);
+    stale.writeBigUInt64LE(current.readBigUInt64LE(54) - 4n, 54);
+    stale.writeBigUInt64LE(current.readBigUInt64LE(78) - 4n, 78);
+    writeFileSync(cacheFile, stale);
+
+    // Reject the old entry and regenerate it from the literal builtin import.
+    expect(await run()).toSpawn("0.875");
+    expect(newCacheCount()).toBe(0);
+    const regenerated = readFileSync(cacheFile);
+    expect(regenerated.readUInt32LE(0)).toBeGreaterThan(35);
+    expect(regenerated.equals(current)).toBeTrue();
+
+    // The regenerated entry must also resolve the builtin on a warm cache hit.
+    expect(await run()).toSpawn("0.875");
+    expect(newCacheCount()).toBe(0);
+    expect(readFileSync(cacheFile).equals(regenerated)).toBeTrue();
+  });
+
   for (const [name, source, entry] of [
     ["ESM", "console.log(String.raw`café🐍`);", "module.mjs"],
     ["CommonJS", "console.log(String.raw`café🐍`); module.exports = 42;", "require.cjs"],
@@ -179,7 +229,7 @@ describe("transpiler cache", () => {
           cmd: [bunExe(), i % 2 == 0 ? "a.js" : "b.js"],
           env,
           cwd: temp_dir,
-          onExit(subprocess, exitCode, signalCode, error) {
+          onExit(_subprocess, exitCode) {
             if (exitCode != 0 && !killing) {
               killing = true;
               processes.forEach(x => x.kill(9));
@@ -269,7 +319,10 @@ describe("transpiler cache", () => {
     writeFileSync(join(temp_dir, "a.js"), dummyFile((50 * 1024 * 1.5) | 0, "fifo", "intact"));
     expect(await bunRun(join(temp_dir, "a.js"), env)).toSpawn("intact");
     expect(newCacheCount()).toBe(1);
-    const entry = join(cache_dir, readdirSync(cache_dir).find(f => f.endsWith(".pile"))!);
+    const entry = join(
+      cache_dir,
+      readdirSync(cache_dir).find(f => f.endsWith(".pile"))!,
+    );
     const good = readFileSync(entry);
     unlinkSync(entry);
     mkfifo(entry);
