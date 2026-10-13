@@ -1,0 +1,34 @@
+[package]
+name = "bun-nginx-module"
+version = "1.4.4"
+edition = "2024"
+rust-version = "1.97"
+license = "MIT AND Apache-2.0"
+publish = false
+build = "build.rs"
+
+# The engine's ABI belongs to NGINX, so this crate is outside Bun's JSC workspace.
+[workspace]
+
+[lib]
+name = "ngx_http_bun_module"
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+ngx = { path = "../../../vendor/ngx-rust", default-features = false, features = ["std"] }
+nginx-sys = { path = "../../../vendor/ngx-rust/nginx-sys", default-features = false, features = ["http"] }
+
+[features]
+default = ["export-modules"]
+export-modules = []
+# Negative gate only: NGINX must reject this deliberately incompatible fixture.
+abi-mismatch-fixture = []
+
+[profile.release]
+panic = "unwind"
+lto = "thin"
+codegen-units = 1
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+

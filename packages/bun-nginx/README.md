@@ -55,6 +55,12 @@ Existing release-site configuration transformations live in
 without copying that policy.
 
 Explicit provider preparation and separate engine gates are documented in
-[`docs/project/bun-nginx.md`](../../docs/project/bun-nginx.md). Their receipts
+[`docs/runtime/nginx.mdx`](../../docs/runtime/nginx.mdx). Their receipts
 qualify the selected executable independently of the changed-binary controller
 tests.
+
+The optional `readModuleInfo()` SDK helper reads the actual Rust module's bounded
+loopback response and checks the master PID and an optional build digest. Source
+preparation and the static NGINX module recipe reuse the pinned canonical
+`vendor/nginx` and `vendor/ngx-rust`; the nested `nginx-src` downloader stays
+disabled. Module HTTP/timer/ABI gates and Bun controller gates remain separate.

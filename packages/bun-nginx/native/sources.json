@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "nginx": {
+    "repository": "https://github.com/nginx/nginx.git",
+    "revision": "0a5db852e18d1c22c62a5ede1412ac3f416111a0",
+    "release": "1.31.6",
+    "path": "vendor/nginx",
+    "license": "BSD-2-Clause",
+    "licensePath": "vendor/nginx/LICENSE"
+  },
+  "ngxRust": {
+    "repository": "https://github.com/nginx/ngx-rust.git",
+    "revision": "cf58b5270dc5e9b855dab765e9f13ba2a12c7709",
+    "package": "ngx",
+    "version": "0.5.0",
+    "path": "vendor/ngx-rust",
+    "license": "Apache-2.0",
+    "licensePath": "vendor/ngx-rust/LICENSE",
+    "vendoredFeature": false,
+    "initializeNestedNginxSubmodule": false
+  },
+  "integration": {
+    "module": "ngx_http_bun_module",
+    "crate": "packages/bun-nginx/native",
+    "owner": "nginx-worker-event-loop",
+    "requestAllocation": "NGINX pool with registered cleanup",
+    "bunBridge": "existing native Bun NGINX process controller",
+    "nginxInJSCProcess": false
+  }
+}

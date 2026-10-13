@@ -1,0 +1,24 @@
+#!/bin/sh
+# Use the single canonical upstream source; never ngx's optional nginx-src downloader.
+if [ -z "$BUN_NGX_RUST_SOURCE_DIR" ] || [ ! -f "$BUN_NGX_RUST_SOURCE_DIR/examples/auto/rust" ]; then
+    echo "error: BUN_NGX_RUST_SOURCE_DIR must select configured vendor/ngx-rust" >&2
+    exit 1
+fi
+. "$BUN_NGX_RUST_SOURCE_DIR/examples/auto/rust"
+ngx_addon_name=ngx_bun_runtime
+if [ "$HTTP" = YES ]; then
+    ngx_module_type=HTTP
+    ngx_module_name=ngx_http_bun_module
+    ngx_module_incs=
+    ngx_module_deps=
+    ngx_module_order=
+    ngx_module_libs=
+    ngx_rust_target_type=LIB
+    ngx_rust_target_name=ngx_http_bun_module
+    # NGINX's generated C table owns exports when integrated with its buildsystem.
+    ngx_rust_target_features=
+    ngx_rust_module
+else
+    echo "error: bun-nginx module requires HTTP" >&2
+    exit 1
+fi
