@@ -104,8 +104,8 @@ test.skipIf(!process.env.BUN_YOLO_NATIVE_GATE)(
           probabilities: { "0": 0.1, "1": 0.55, "2": 0.35 },
         },
       },
-    usage: null,
-  } as const;
+      usage: null,
+    } as const;
     const envelope = { protocol, operation: "decide", request, provider: { kind: "code", response } };
     expect(await applyYoloEnvelope(envelope)).toEqual({ flag: false, route: "docs", amount: 1.25 });
     expect(await applyYoloEnvelope({ ...envelope, operation: "inspect" })).toEqual(response);
