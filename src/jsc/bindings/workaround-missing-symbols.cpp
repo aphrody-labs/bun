@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <uv.h>
 #include <fcntl.h>
+#include <cstddef>
 #include <windows.h>
 #include <string.h>
 #include <cstdlib>
@@ -62,6 +63,15 @@ std::atomic<int> wtfStringCopyCount;
 // if linux
 #if defined(__linux__)
 #include <features.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+
+// The C ABI owner is shared by Bun and standalone native modules.
+extern "C" pid_t __wrap_gettid()
+{
+    return static_cast<pid_t>(syscall(SYS_gettid));
+}
+
 #ifdef __GNU_LIBRARY__
 
 #ifndef _GNU_SOURCE
@@ -69,10 +79,13 @@ std::atomic<int> wtfStringCopyCount;
 #endif
 
 #include <fcntl.h>
+#include <glob.h>
+#include <linux/random.h>
 #include <dlfcn.h>
 #include <stdarg.h>
 #include <errno.h>
 #include <math.h>
+#include <atomic>
 #include <mutex>
 #include <pthread.h>
 #include <semaphore.h>
@@ -80,6 +93,8 @@ std::atomic<int> wtfStringCopyCount;
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/random.h>
+#include <sys/stat.h>
+#include <sys/sysmacros.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 #include <dlfcn.h>
@@ -106,6 +121,7 @@ std::atomic<int> wtfStringCopyCount;
 
 BUN_SYMVER(exp, BUN_GLIBC_BASE);
 BUN_SYMVER(exp2, BUN_GLIBC_BASE);
+BUN_SYMVER(exp2f, BUN_GLIBC_BASE);
 BUN_SYMVER(expf, BUN_GLIBC_BASE);
 BUN_SYMVER(log, BUN_GLIBC_BASE);
 BUN_SYMVER(log2, BUN_GLIBC_BASE);
@@ -124,6 +140,7 @@ extern "C" {
 
 double BUN_WRAP_GLIBC_SYMBOL(exp)(double);
 double BUN_WRAP_GLIBC_SYMBOL(exp2)(double);
+float BUN_WRAP_GLIBC_SYMBOL(exp2f)(float);
 float BUN_WRAP_GLIBC_SYMBOL(expf)(float);
 float BUN_WRAP_GLIBC_SYMBOL(log2f)(float);
 float BUN_WRAP_GLIBC_SYMBOL(logf)(float);
@@ -140,6 +157,7 @@ float __wrap_logf(float x) { return logf(x); }
 float __wrap_log2f(float x) { return log2f(x); }
 double __wrap_exp(double x) { return exp(x); }
 double __wrap_exp2(double x) { return exp2(x); }
+float __wrap_exp2f(float x) { return exp2f(x); }
 double __wrap_pow(double x, double y) { return pow(x, y); }
 double __wrap_log(double x) { return log(x); }
 double __wrap_log2(double x) { return log2(x); }
@@ -171,6 +189,123 @@ ssize_t __wrap_getrandom(void* buf, size_t buflen, unsigned int flags)
         return real(buf, buflen, flags);
     }
     return syscall(SYS_getrandom, buf, buflen, flags);
+}
+
+static int bun_open_random_device(const char* path, unsigned minor_number)
+{
+    int fd;
+    do {
+        fd = static_cast<int>(syscall(SYS_openat, AT_FDCWD, path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW, 0));
+    } while (fd < 0 && errno == EINTR);
+    if (fd < 0) return -1;
+    struct stat st {};
+    int metadata = fstat(fd, &st);
+    if (metadata < 0 || !S_ISCHR(st.st_mode) || st.st_rdev != makedev(1, minor_number)) {
+        int failure = metadata < 0 ? errno : EIO;
+        syscall(SYS_close, fd);
+        errno = failure;
+        return -1;
+    }
+    return fd;
+}
+
+static std::atomic<bool> bun_entropy_ready { false };
+
+static int bun_wait_for_entropy()
+{
+    if (bun_entropy_ready.load(std::memory_order_acquire)) return 0;
+    // On kernels without getrandom, don't accept early-boot urandom output.
+    int fd = bun_open_random_device("/dev/random", 8);
+    if (fd < 0) return -1;
+    int bits = 0;
+    int result;
+    do {
+        result = static_cast<int>(syscall(SYS_ioctl, fd, RNDGETENTCNT, &bits));
+    } while (result < 0 && errno == EINTR);
+    int failure = 0;
+    if (result < 0) {
+        failure = errno;
+    } else if (bits < 256) {
+        unsigned char seed[32];
+        size_t done = 0;
+        while (done < sizeof(seed)) {
+            ssize_t count = syscall(SYS_read, fd, seed + done, sizeof(seed) - done);
+            if (count < 0 && errno == EINTR) continue;
+            if (count <= 0) {
+                failure = count < 0 ? errno : EIO;
+                break;
+            }
+            done += static_cast<size_t>(count);
+        }
+        volatile unsigned char* bytes = seed;
+        for (size_t i = 0; i < sizeof(seed); i++)
+            bytes[i] = 0;
+    }
+    syscall(SYS_close, fd);
+    if (failure) {
+        errno = failure;
+        return -1;
+    }
+    bun_entropy_ready.store(true, std::memory_order_release);
+    return 0;
+}
+
+int __wrap_getentropy(void* buffer, size_t length)
+{
+    if (length > 256) {
+        errno = EIO;
+        return -1;
+    }
+    if (!length) return 0;
+    if (!buffer) {
+        errno = EFAULT;
+        return -1;
+    }
+    auto* bytes = static_cast<unsigned char*>(buffer);
+    size_t done = 0;
+    while (done < length) {
+        // Raw syscalls keep getentropy from becoming a pthread cancellation point.
+        ssize_t count = syscall(SYS_getrandom, bytes + done, length - done, 0);
+        if (count < 0 && errno == EINTR) continue;
+        if (count < 0 && errno == ENOSYS) break;
+        if (count <= 0) {
+            if (!count) errno = EIO;
+            return -1;
+        }
+        done += static_cast<size_t>(count);
+    }
+    if (done == length) return 0;
+    int fd = bun_open_random_device("/dev/urandom", 9);
+    if (fd < 0) return -1;
+    if (bun_wait_for_entropy() < 0) {
+        int failure = errno;
+        syscall(SYS_close, fd);
+        errno = failure;
+        return -1;
+    }
+    while (done < length) {
+        ssize_t count = syscall(SYS_read, fd, bytes + done, length - done);
+        if (count < 0 && errno == EINTR) continue;
+        if (count <= 0) {
+            int failure = count < 0 ? errno : EIO;
+            syscall(SYS_close, fd);
+            errno = failure;
+            return -1;
+        }
+        done += static_cast<size_t>(count);
+    }
+    syscall(SYS_close, fd);
+    return 0;
+}
+
+[[noreturn]] void __chk_fail();
+void __wrap___explicit_bzero_chk(void* buffer, size_t length, size_t capacity)
+{
+    if (length > capacity) __chk_fail();
+    volatile unsigned char* bytes = static_cast<volatile unsigned char*>(buffer);
+    for (size_t i = 0; i < length; i++)
+        bytes[i] = 0;
+    __asm__ volatile("" ::: "memory");
 }
 
 } // extern "C"
@@ -366,6 +501,25 @@ extern "C" __attribute__((used)) char __libc_single_threaded = 0;
 
 #include <sys/stat.h>
 #include <spawn.h>
+
+// The pre-2.27 glob64 ABI has identical native 64-bit callback layouts.
+// Its ALTDIRFUNC implementation predates gl_lstat, as it did on a 2.17 host.
+static_assert(sizeof(off_t) == 8 && sizeof(struct stat) == sizeof(struct stat64));
+static_assert(sizeof(glob_t) == sizeof(glob64_t));
+static_assert(offsetof(struct stat, st_ino) == offsetof(struct stat64, st_ino));
+static_assert(offsetof(struct stat, st_mode) == offsetof(struct stat64, st_mode));
+static_assert(offsetof(struct stat, st_size) == offsetof(struct stat64, st_size));
+static_assert(offsetof(glob_t, gl_stat) == offsetof(glob64_t, gl_stat));
+static_assert(offsetof(glob_t, gl_lstat) == offsetof(glob64_t, gl_lstat));
+extern "C" int bun_glob64_compat(const char*, int, int (*)(const char*, int), glob64_t*);
+__asm__(".symver bun_glob64_compat,glob64@" BUN_GLIBC_BASE);
+extern "C" int __wrap_glob64(const char* pattern, int flags, int (*error)(const char*, int), glob64_t* result)
+{
+    using glob_fn = int (*)(const char*, int, int (*)(const char*, int), glob64_t*);
+    static glob_fn real = reinterpret_cast<glob_fn>(dlsym(RTLD_NEXT, "glob64"));
+    if (real) return real(pattern, flags, error, result);
+    return bun_glob64_compat(pattern, flags, error, result);
+}
 
 // Group A: libpthread/libdl symbols moved into libc.so in 2.34. The 2.2.5
 // (x86_64) / 2.17 (aarch64) versions are ABI-identical aliases of the 2.34

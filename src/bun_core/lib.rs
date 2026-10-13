@@ -2893,17 +2893,6 @@ pub mod asan {
     }
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// glibc-compat / link wraps.
-// build.ninja links with `-Wl,--wrap=gettid` so libc/std references land here.
-// ────────────────────────────────────────────────────────────────────────────
-#[cfg(target_os = "linux")]
-#[unsafe(no_mangle)]
-extern "C" fn __wrap_gettid() -> libc::pid_t {
-    // SAFETY: SYS_gettid takes no arguments and never fails.
-    unsafe { libc::syscall(libc::SYS_gettid) as libc::pid_t }
-}
-
 /// `bun.getTotalMemorySize()` — process-wide RAM budget,
 /// Linux cgroup capacity budget; other targets use the linked WTF RAM estimate.
 /// Backed by the linked C++ `Bun__ramSize()`
