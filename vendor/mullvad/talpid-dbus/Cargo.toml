@@ -6,7 +6,8 @@ repository.workspace = true
 license.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
-dbus = { version = "0.9", optional = true }
+# Bun ships the client library statically, without a host libdbus/libsystemd dependency.
+dbus = { version = "0.9", optional = true, features = ["vendored"] }
 libc = "0.2"
 log = { workspace = true }
 resolv-conf = "0.7.6"

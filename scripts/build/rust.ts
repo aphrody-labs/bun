@@ -154,10 +154,7 @@ function rustCpuTargetFlags(cfg: Config): string[] {
   const rustflags: string[] = [];
   for (const clangFlag of computeCpuTargetFlags(cfg)) {
     const parsed = /^(?:\/clang:)?-m(cpu|tune|arch)=(.+)$/.exec(clangFlag);
-    assert(
-      parsed !== null,
-      `rustCpuTargetFlags() can't translate cpuTargetFlags entry '${clangFlag}'`,
-    );
+    assert(parsed !== null, `rustCpuTargetFlags() can't translate cpuTargetFlags entry '${clangFlag}'`);
     const kind = parsed[1]!;
     const value = parsed[2]!;
     if (kind === "tune") {
@@ -166,13 +163,9 @@ function rustCpuTargetFlags(cfg: Config): string[] {
       rustflags.push(`-Ctarget-cpu=${value}`);
     } else {
       const [level, ...extensions] = value.split("+");
-      assert(
-        level === "armv8-a",
-        `rustCpuTargetFlags() only knows how to spell -march=armv8-a, not -march=${value}`,
-      );
+      assert(level === "armv8-a", `rustCpuTargetFlags() only knows how to spell -march=armv8-a, not -march=${value}`);
       rustflags.push("-Ctarget-cpu=generic");
-      if (extensions.length > 0)
-        rustflags.push(`-Ctarget-feature=${extensions.map((ext) => `+${ext}`).join(",")}`);
+      if (extensions.length > 0) rustflags.push(`-Ctarget-feature=${extensions.map(ext => `+${ext}`).join(",")}`);
     }
   }
   return rustflags;
@@ -580,18 +573,35 @@ export function cargoBuildInvocation(cfg: Config): CargoInvocation {
   if (cfg.rustc !== undefined) unitEnv.RUSTC = cfg.rustc;
   // liblzma-sys (uv's archive codecs) links a host liblzma.so found by pkg-config; build the bundled xz instead.
   unitEnv.LZMA_API_STATIC = "1";
+  if (cfg.linux && cfg.abi !== "android") {
+    // Mullvad's netfilter dependencies are part of Bun, not host runtime requirements.
+    unitEnv.LIBMNL_STATIC = "1";
+    unitEnv.LIBNFTNL_STATIC = "1";
+    if (cfg.sysroot !== undefined && cfg.crossTarget !== undefined) {
+      // cc-rs otherwise compiles against the host libc even when Bun's own C++ uses a pinned sysroot.
+      const flags = `--target=${cfg.crossTarget} --sysroot=${quote(cfg.sysroot, false)}`;
+      unitEnv.CC_SHELL_ESCAPED_FLAGS = "1";
+      unitEnv[`CFLAGS_${nativeToolTriple}`] = flags;
+      unitEnv[`CXXFLAGS_${nativeToolTriple}`] = flags;
+      // Target-specific variables keep proc-macro host probes separate on cross-arch builds.
+      unitEnv[`PKG_CONFIG_SYSROOT_DIR_${nativeToolTriple}`] = cfg.sysroot;
+      unitEnv[`PKG_CONFIG_LIBDIR_${nativeToolTriple}`] = [
+        join(cfg.sysroot, "usr", "lib", cfg.crossTarget, "pkgconfig"),
+        join(cfg.sysroot, "lib", cfg.crossTarget, "pkgconfig"),
+        join(cfg.sysroot, "usr", "lib", "pkgconfig"),
+        join(cfg.sysroot, "usr", "share", "pkgconfig"),
+      ].join(cfg.host.os === "windows" ? ";" : ":");
+      unitEnv[`PKG_CONFIG_PATH_${nativeToolTriple}`] = "";
+      unitEnv[`PKG_CONFIG_ALLOW_CROSS_${nativeToolTriple}`] = "1";
+    }
+  }
   // Darwin cross-compile from a non-darwin host: point anything in the dep graph that cares about the Apple SDK at
   // the extracted sysroot. rustc itself doesn't need it for a staticlib, but cc-rs (build scripts compiling target C)
   // honours CFLAGS_<triple>/SDKROOT, and MACOSX_DEPLOYMENT_TARGET keeps the LC_BUILD_VERSION minos rustc stamps into
   // its objects consistent with the C++ side's -mmacosx-version-min.
   if (cfg.darwin && cfg.host.os !== "darwin") {
-    if (cfg.osxDeploymentTarget !== undefined)
-      unitEnv.MACOSX_DEPLOYMENT_TARGET = cfg.osxDeploymentTarget;
-    if (
-      cfg.osxSysroot !== undefined &&
-      cfg.crossTarget !== undefined &&
-      cfg.osxDeploymentTarget !== undefined
-    ) {
+    if (cfg.osxDeploymentTarget !== undefined) unitEnv.MACOSX_DEPLOYMENT_TARGET = cfg.osxDeploymentTarget;
+    if (cfg.osxSysroot !== undefined && cfg.crossTarget !== undefined && cfg.osxDeploymentTarget !== undefined) {
       unitEnv.SDKROOT = cfg.osxSysroot;
       const sdkFlags = `--target=${cfg.crossTarget} -isysroot ${cfg.osxSysroot} -mmacosx-version-min=${cfg.osxDeploymentTarget}`;
       const tripleEnv = triple.replace(/-/g, "_");
@@ -722,18 +732,10 @@ function shimCargoInvocation(
  * every library it depends on, std's included, and Linux build-script native link inputs. No crate is a final Rust
  * artifact; the link is bun's own.
  */
-export function emitRust(
-  n: Ninja,
-  cfg: Config,
-  inputs: RustBuildInputs,
-): { rlibs: string[]; nativeLink?: string } {
-  assert(
-    cfg.cargo !== undefined,
-    "building bun's Rust crates requires cargo but no rust toolchain was found",
-    {
-      hint: "Install rust: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh",
-    },
-  );
+export function emitRust(n: Ninja, cfg: Config, inputs: RustBuildInputs): { rlibs: string[]; nativeLink?: string } {
+  assert(cfg.cargo !== undefined, "building bun's Rust crates requires cargo but no rust toolchain was found", {
+    hint: "Install rust: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh",
+  });
   assert(
     cfg.rustc !== undefined && cfg.rustSysroot !== undefined && cfg.rustHostTriple !== undefined,
     "could not ask rustc for its sysroot and host triple",
@@ -747,10 +749,7 @@ export function emitRust(
   // cargo runs rustc through RUSTC_WRAPPER (sccache, …). These edges run rustc directly and rely on its JSON
   // artifact notifications, which a wrapper need not forward, so it is not used. Say so once.
   const wrapper = process.env.RUSTC_WRAPPER || process.env.CARGO_BUILD_RUSTC_WRAPPER;
-  if (wrapper)
-    process.stderr.write(
-      `note: RUSTC_WRAPPER (${wrapper}) is not used: the build runs rustc directly\n`,
-    );
+  if (wrapper) process.stderr.write(`note: RUSTC_WRAPPER (${wrapper}) is not used: the build runs rustc directly\n`);
 
   n.comment("─── Rust ───");
   n.blank();
@@ -763,25 +762,14 @@ export function emitRust(
   // fetch stamp — those manifests live under vendor/, outside the glob) changes, or when what is asked for does
   // (plan.input.json). The vendored crates also have to be on disk: cargo refuses to load the workspace manifest if
   // any path dependency's `Cargo.toml` is missing.
-  const manifests = inputs.rustSources.filter(
-    (p) => p.endsWith("Cargo.toml") || p.endsWith("Cargo.lock"),
-  );
-  const manifestDirs = new Set(manifests.map((p) => dirname(p)));
+  const manifests = inputs.rustSources.filter(p => p.endsWith("Cargo.toml") || p.endsWith("Cargo.lock"));
+  const manifestDirs = new Set(manifests.map(p => dirname(p)));
   const buildScripts = inputs.rustSources
-    .filter((p) => basename(p) === "build.rs" && manifestDirs.has(dirname(p)))
-    .map((p) => relative(cfg.cwd, p))
+    .filter(p => basename(p) === "build.rs" && manifestDirs.has(dirname(p)))
+    .map(p => relative(cfg.cwd, p))
     .sort();
-  const planEdgeInputs = [
-    cargo,
-    rustc,
-    ...manifests,
-    resolve(cfg.cwd, "rust-toolchain.toml"),
-    ...inputs.vendorStamps,
-  ];
-  const planned = (
-    dir: string,
-    what: { args: string[]; env: Record<string, string>; rustflags: string[] },
-  ) => {
+  const planEdgeInputs = [cargo, rustc, ...manifests, resolve(cfg.cwd, "rust-toolchain.toml"), ...inputs.vendorStamps];
+  const planned = (dir: string, what: { args: string[]; env: Record<string, string>; rustflags: string[] }) => {
     const input: PlanInput = {
       cwd: cfg.cwd,
       cargo,
@@ -869,7 +857,7 @@ export function emitRust(
       rootValidations: [],
     },
   );
-  const rlibs = linkedRlibs(graph).map((unit) => unit.output);
+  const rlibs = linkedRlibs(graph).map(unit => unit.output);
   const nativeLink = emitRustNativeLink(n, cfg, graph);
   n.phony("bun-rust", rlibs);
   n.blank();

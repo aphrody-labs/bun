@@ -131,6 +131,11 @@ export const pins = {
     ubuntu: { release: "20.04", codename: "focal" },
     gccDebsUrl: "https://github.com/oven-sh/WebKit/releases/download/gcc-13-focal-debs",
   },
+  // Published hashes: https://www.netfilter.org/projects/{libmnl,libnftnl}/downloads.html
+  vpnLibraries: {
+    libmnl: { version: "1.0.5", sha256: "274b9b919ef3152bfb3da3a13c950dd60d6e2bcd54230ffeca298d03b40d0525" },
+    libnftnl: { version: "1.2.0", sha256: "90b01fddfe9be8c3245c3ba5ff5a4424a8df708828f92b2b361976b658c074f5" },
+  },
   muslSysroot: { alpineRelease },
   windowsSysroot: { xwin: "0.9.0", sdk: "10.0.26100", crt: "14.44.17.14" },
   macosSdk: { sdk: "26.5", commandLineTools: "26.5" },
@@ -272,43 +277,106 @@ export const images: readonly BakedImage[] = [
  */
 const aptPackages = [
   // Tools the other steps and CI itself run.
-  ...["apt-transport-https", "bash", "ca-certificates", "curl", "git", "gnupg", "htop", "unzip", "wget", "xz-utils"],
+  "apt-transport-https",
+  "bash",
+  "ca-certificates",
+  "curl",
+  "git",
+  "gnupg",
+  "htop",
+  "unzip",
+  "wget",
+  "xz-utils",
   // lsb-release: apt.llvm.org's installer asks it for the release's name.
   // libatomic1: nodejs.org's binary links it. libc6-dbg: symbols for core dumps.
-  ...["lsb-release", "libatomic1", "libc6-dbg"],
+  "lsb-release",
+  "libatomic1",
+  "libc6-dbg",
   // Building Bun and its dependencies.
-  ...[
-    "build-essential",
-    "ccache",
-    "golang",
-    "libtool",
-    "libmnl-dev",
-    "make",
-    "nasm",
-    "ninja-build",
-    "perl",
-    "pkg-config",
-    "python3",
-    "ruby",
-  ],
+
+  "build-essential",
+  "ccache",
+  "golang",
+  "libtool",
+  "libmnl-dev",
+  "make",
+  "nasm",
+  "ninja-build",
+  "perl",
+  "pkg-config",
+  "python3",
+  "ruby",
   // Tests: `ab`, and FUSE mounts from Python.
-  ...["apache2-utils", "python3-fuse"],
+  "apache2-utils",
+  "python3-fuse",
   // What a headless Chrome links against.
-  ...["fonts-liberation", "libasound2t64", "libatk-bridge2.0-0", "libatk1.0-0", "libc6", "libcairo2", "libcups2"],
-  ...["libdbus-1-3", "libexpat1", "libfontconfig1", "libgbm1", "libgcc1", "libglib2.0-0", "libgtk-3-0", "libnspr4"],
-  ...["libnss3", "libpango-1.0-0", "libpangocairo-1.0-0", "libstdc++6", "libx11-6", "libx11-xcb1", "libxcb1"],
-  ...["libxcomposite1", "libxcursor1", "libxdamage1", "libxext6", "libxfixes3", "libxi6", "libxrandr2", "libxrender1"],
-  ...["libxss1", "libxtst6", "xdg-utils"],
+  "fonts-liberation",
+  "libasound2t64",
+  "libatk-bridge2.0-0",
+  "libatk1.0-0",
+  "libc6",
+  "libcairo2",
+  "libcups2",
+  "libdbus-1-3",
+  "libexpat1",
+  "libfontconfig1",
+  "libgbm1",
+  "libgcc1",
+  "libglib2.0-0",
+  "libgtk-3-0",
+  "libnspr4",
+  "libnss3",
+  "libpango-1.0-0",
+  "libpangocairo-1.0-0",
+  "libstdc++6",
+  "libx11-6",
+  "libx11-xcb1",
+  "libxcb1",
+  "libxcomposite1",
+  "libxcursor1",
+  "libxdamage1",
+  "libxext6",
+  "libxfixes3",
+  "libxi6",
+  "libxrandr2",
+  "libxrender1",
+  "libxss1",
+  "libxtst6",
+  "xdg-utils",
 ];
 
 const apkPackages = [
-  ...["bash", "ca-certificates", "curl", "git", "gnupg", "htop", "tar", "unzip", "wget", "xz"],
+  "bash",
+  "ca-certificates",
+  "curl",
+  "git",
+  "gnupg",
+  "htop",
+  "tar",
+  "unzip",
+  "wget",
+  "xz",
   // Bun's own binary links these.
-  ...["libgcc", "libstdc++"],
-  ...["build-base", "ccache", "go", "libtool", "linux-headers", "make", "nasm", "ninja", "perl", "python3", "ruby"],
-  ...["apache2-utils"],
+  "libgcc",
+  "libstdc++",
+  "build-base",
+  "ccache",
+  "go",
+  "libtool",
+  "linux-headers",
+  "make",
+  "nasm",
+  "ninja",
+  "perl",
+  "python3",
+  "ruby",
+  "apache2-utils",
   // The browser tests use the distro's Chromium.
-  ...["chromium", "freetype", "harfbuzz", "nss", "ttf-freefont"],
+  "chromium",
+  "freetype",
+  "harfbuzz",
+  "nss",
+  "ttf-freefont",
 ];
 
 /**
@@ -362,18 +430,33 @@ export const windowsBake = {
   galleryVersion: "1.0.0",
   /** Where a published image is replicated, besides the gallery's own region: every region CI launches Windows machines in. */
   galleryRegions: [
-    ...["australiaeast", "brazilsouth", "canadacentral", "canadaeast", "centralindia", "centralus", "francecentral"],
-    ...[
-      "germanywestcentral",
-      "italynorth",
-      "japaneast",
-      "japanwest",
-      "koreacentral",
-      "mexicocentral",
-      "northcentralus",
-    ],
-    ...["northeurope", "southcentralus", "southeastasia", "spaincentral", "swedencentral", "switzerlandnorth"],
-    ...["uaenorth", "ukwest", "westeurope", "westus", "westus2", "westus3"],
+    "australiaeast",
+    "brazilsouth",
+    "canadacentral",
+    "canadaeast",
+    "centralindia",
+    "centralus",
+    "francecentral",
+
+    "germanywestcentral",
+    "italynorth",
+    "japaneast",
+    "japanwest",
+    "koreacentral",
+    "mexicocentral",
+    "northcentralus",
+    "northeurope",
+    "southcentralus",
+    "southeastasia",
+    "spaincentral",
+    "swedencentral",
+    "switzerlandnorth",
+    "uaenorth",
+    "ukwest",
+    "westeurope",
+    "westus",
+    "westus2",
+    "westus3",
   ],
 } as const;
 
@@ -948,6 +1031,7 @@ function glibcSysroot(): Tool {
           forEachFile("deb", text`${scratch(`gcc-${deb}`)}/${glob("*.deb")}`, [
             run("dpkg-deb", "-x", variable("deb"), sysroot),
           ]),
+          ...staticVpnLibraries(sysroot, arch, "gnu"),
         ];
       }),
     ],
@@ -977,24 +1061,68 @@ function muslSysroot(image: LinuxImage): Tool {
         directory(locations.muslSysroot[arch]),
         run(
           scratch("sbin/apk.static"),
-          ...["--arch", cpuName[arch], "--root", locations.muslSysroot[arch], "--repository", repository],
-          ...[
-            "--allow-untrusted",
-            "--no-cache",
-            "--initdb",
-            "add",
-            "musl-dev",
-            "libc-dev",
-            "linux-headers",
-            "g++",
-            "libstdc++-dev",
-          ],
+          "--arch",
+          cpuName[arch],
+          "--root",
+          locations.muslSysroot[arch],
+          "--repository",
+          repository,
+
+          "--allow-untrusted",
+          "--no-cache",
+          "--initdb",
+          "add",
+          "musl-dev",
+          "libc-dev",
+          "linux-headers",
+          "g++",
+          "libstdc++-dev",
         ),
         comment("apk's log has the time of the install in it: with it, no two bakes observe the same sysroot."),
         remove(`${locations.muslSysroot[arch]}/var/log/apk.log`),
+        ...staticVpnLibraries(locations.muslSysroot[arch], arch, "musl"),
       ]),
     ],
   };
+}
+
+/** Mullvad's native clients use static netfilter libraries built against the same libc as Bun. */
+function staticVpnLibraries(sysroot: string, arch: Arch, abi: "gnu" | "musl"): Step[] {
+  const triple = `${cpuName[arch]}-${abi === "musl" ? "alpine-linux-musl" : "linux-gnu"}`;
+  const pc = `${sysroot}/usr/lib/pkgconfig`;
+  return Object.entries(pins.vpnLibraries).flatMap(([name, pin]): Step[] => {
+    const archive = scratch(`${name}-${pin.version}.tar.bz2`);
+    const source = scratch(`${name}-${pin.version}-${arch}-${abi}`);
+    return [
+      comment(`${name} ${pin.version}: static ${triple}; no host shared libraries.`),
+      download(`https://www.netfilter.org/projects/${name}/files/${name}-${pin.version}.tar.bz2`, archive),
+      checksum(archive, pin.sha256),
+      directory(source),
+      run("tar", "-xjf", archive, "-C", source, "--strip-components=1"),
+      inDirectory(source, [
+        run(
+          "env",
+          "CC=clang",
+          "AR=llvm-ar",
+          "RANLIB=llvm-ranlib",
+          `CFLAGS=--target=${triple} --sysroot=${sysroot} -O2 -fPIC`,
+          "LDFLAGS=-fuse-ld=lld",
+          `PKG_CONFIG_SYSROOT_DIR=${sysroot}`,
+          `PKG_CONFIG_LIBDIR=${pc}`,
+          "PKG_CONFIG_PATH=",
+          "./configure",
+          `--host=${triple}`,
+          "--prefix=/usr",
+          "--disable-shared",
+          "--enable-static",
+        ),
+        run("make", "-j2"),
+        run("make", `DESTDIR=${sysroot}`, "install"),
+      ]),
+      directory(`${sysroot}/usr/share/licenses/${name}`),
+      copy(text`${source}/COPYING`, `${sysroot}/usr/share/licenses/${name}/COPYING`),
+    ];
+  });
 }
 
 /** The MSVC CRT and the Windows SDK, which xwin downloads from Microsoft. */
@@ -1019,24 +1147,22 @@ function windowsSysroot(image: LinuxImage): Tool {
       discardOutput(
         run(
           scratch("xwin/xwin"),
-          ...[
-            "--accept-license",
-            "--arch",
-            "x86_64,aarch64",
-            "--sdk-version",
-            sdk,
-            "--crt-version",
-            crt,
-          ],
-          ...[
-            "--cache-dir",
-            `${sysroot}.cache`,
-            "splat",
-            "--use-winsysroot-style",
-            "--preserve-ms-arch-notation",
-            "--include-debug-libs",
-          ],
-          ...["--output", sysroot],
+          "--accept-license",
+          "--arch",
+          "x86_64,aarch64",
+          "--sdk-version",
+          sdk,
+          "--crt-version",
+          crt,
+
+          "--cache-dir",
+          `${sysroot}.cache`,
+          "splat",
+          "--use-winsysroot-style",
+          "--preserve-ms-arch-notation",
+          "--include-debug-libs",
+          "--output",
+          sysroot,
         ),
       ),
       remove(`${sysroot}.cache`),
@@ -1058,8 +1184,17 @@ function macosSdk(): Tool {
         run(
           "bun",
           bakeFile("xmac.mjs"),
-          ...["splat", "--accept-license", "--sdk-only", "--release", commandLineTools, "--sdk", sdk],
-          ...["--output", scratch("sdk"), "--cache-dir", scratch("sdk-cache")],
+          "splat",
+          "--accept-license",
+          "--sdk-only",
+          "--release",
+          commandLineTools,
+          "--sdk",
+          sdk,
+          "--output",
+          scratch("sdk"),
+          "--cache-dir",
+          scratch("sdk-cache"),
         ),
       ),
       directory(locations.macosSdk),
@@ -1746,7 +1881,6 @@ const pinned = (value: string): Identity => ({ kind: "pinned", value });
 const observed = (step: Step): Identity => ({ kind: "observed", step });
 const packageDatabase: Identity = { kind: "packageDatabase" };
 const configuration: Identity = { kind: "configuration" };
-const notRecorded = (reason: string): Identity => ({ kind: "notRecorded", reason });
 
 export type Tool = { name: string; identity: Identity; steps: readonly Step[] };
 
@@ -1889,9 +2023,13 @@ function renderValue(value: Value, c: Context, asExpression = false): string {
     else if ("environment" in part) quoted += name(part.environment);
     else if ("scratch" in part) quoted += scratchPath(part.scratch, "/");
     else if ("output" in part) quoted += `$(${oneLine(part.output, c)})`;
-    else if ("glob" in part) (flush(), (out += part.glob));
-    else if ("expression" in part) (flush(), (out += part.expression));
-    else throw new Error("sh has no (command).Property");
+    else if ("glob" in part) {
+      flush();
+      out += part.glob;
+    } else if ("expression" in part) {
+      flush();
+      out += part.expression;
+    } else throw new Error("sh has no (command).Property");
   });
   flush();
   return out;
@@ -2193,7 +2331,15 @@ const download =
   c =>
     run(
       isPowerShell(c) ? "curl.exe" : "curl",
-      ...["--fail", "--silent", "--show-error", "--location", "--retry", 3, "--output", file, url],
+      "--fail",
+      "--silent",
+      "--show-error",
+      "--location",
+      "--retry",
+      3,
+      "--output",
+      file,
+      url,
     )(c);
 
 /** Only where the publisher provides the sum. */
@@ -2534,10 +2680,18 @@ const fetchSshKeysProgram = [
 
 /** Every variable the template needs; scripts/ci-image.ts passes them all. */
 export const packerVariables = [
-  ...["client_id", "client_secret", "subscription_id", "tenant_id"],
+  "client_id",
+  "client_secret",
+  "subscription_id",
+  "tenant_id",
   // The resource group the bake's VM is created in, and the gallery's.
-  ...["resource_group", "gallery_resource_group", "gallery_name", "location"],
-  ...["image_name", "bake_directory", "repo_commit"],
+  "resource_group",
+  "gallery_resource_group",
+  "gallery_name",
+  "location",
+  "image_name",
+  "bake_directory",
+  "repo_commit",
 ] as const;
 
 /** Sysprep generalizes the disk so every VM created from it gets its own identity. It must be the last thing that runs. */
@@ -2680,7 +2834,11 @@ function renderBootstrap(image: Image): string {
   switch (image.os) {
     case "linux":
       return [
-        ...["#!/bin/sh", generated, "# Runs as root. A failed command ends the bake.", "set -eu", ""],
+        "#!/bin/sh",
+        generated,
+        "# Runs as root. A failed command ends the bake.",
+        "set -eu",
+        "",
         `[ $# -eq 2 ] || { echo "usage: bootstrap.sh <commit> <image name>" >&2; exit 1; }`,
         `BAKE_DIR=$(cd "$(dirname "$0")" && pwd)`,
         `REPO_COMMIT=$1`,

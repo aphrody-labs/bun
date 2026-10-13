@@ -130,6 +130,24 @@ test.each(["x64", "aarch64"] as const)("Windows %s C build scripts use the confi
   expect(unitEnv[`AR_${triple}`]).toBe(cfg.ar);
 });
 
+test.each(["x64", "aarch64"] as const)("Linux %s C build scripts and pkg-config stay in the release sysroot", arch => {
+  const cfg = resolve({ os: "linux", arch, abi: "gnu", linuxSysroot: "/fake Linux SDK" });
+  const { unitEnv } = cargoBuildInvocation(cfg);
+  const triple = rustTriple("linux", arch, "gnu").replaceAll("-", "_");
+  expect(unitEnv[`CFLAGS_${triple}`]).toBe(`--target=${cfg.crossTarget} --sysroot='${cfg.sysroot}'`);
+  expect(unitEnv[`CXXFLAGS_${triple}`]).toBe(unitEnv[`CFLAGS_${triple}`]);
+  expect(unitEnv.CC_SHELL_ESCAPED_FLAGS).toBe("1");
+  expect(unitEnv[`PKG_CONFIG_SYSROOT_DIR_${triple}`]).toBe(cfg.sysroot);
+  expect(unitEnv[`PKG_CONFIG_LIBDIR_${triple}`]).toContain(
+    join(cfg.sysroot!, "usr", "lib", cfg.crossTarget!, "pkgconfig"),
+  );
+  expect(unitEnv[`PKG_CONFIG_PATH_${triple}`]).toBe("");
+  expect(unitEnv[`PKG_CONFIG_ALLOW_CROSS_${triple}`]).toBe("1");
+  expect(unitEnv.PKG_CONFIG_LIBDIR).toBeUndefined();
+  expect(unitEnv.LIBMNL_STATIC).toBe("1");
+  expect(unitEnv.LIBNFTNL_STATIC).toBe("1");
+});
+
 describe("allRustTargets", () => {
   test("is exactly the set of triples .buildkite/ci.ts builds", () => {
     const ciScript = readFileSync(join(repoRoot, ".buildkite", "ci.ts"), "utf8");
