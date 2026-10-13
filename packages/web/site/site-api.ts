@@ -6,8 +6,13 @@ import {
   searchPublicSiteDocs,
   type SiteQuery,
 } from "./site-neon";
+import { buildBunRag, type RagOptions } from "./rag";
 
-export async function publicSiteAPI(request: Request, sql: SiteQuery): Promise<Response> {
+export async function publicSiteAPI(
+  request: Request,
+  sql: SiteQuery,
+  options: { rag?: Pick<RagOptions, "client" | "generate"> } = {},
+): Promise<Response> {
   const url = new URL(request.url),
     query = url.searchParams;
   const head = request.method === "HEAD";
@@ -23,6 +28,17 @@ export async function publicSiteAPI(request: Request, sql: SiteQuery): Promise<R
   let value: unknown;
   try {
     switch (url.pathname) {
+      case "/api/site/rag":
+        value = await buildBunRag(
+          sql,
+          {
+            ...options.rag,
+            query: query.get("q") ?? "",
+            limit: query.has("limit") ? Number(query.get("limit")) : undefined,
+          },
+          request.signal,
+        );
+        break;
       case "/api/site/snapshot":
         value = await getPublicSiteSnapshot(sql, snapshotId);
         break;
@@ -52,5 +68,7 @@ export async function publicSiteAPI(request: Request, sql: SiteQuery): Promise<R
     if (error instanceof TypeError) return json({ error: error.message }, 400);
     return json({ error: "Public site data unavailable" }, 503);
   }
+  if (value === null || (typeof value === "object" && value !== null && "snapshot" in value && value.snapshot === null))
+    return json({ error: "Public site snapshot unavailable" }, 503);
   return json(value);
 }

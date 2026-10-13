@@ -19,6 +19,12 @@ export type SiteDocumentHit = {
   url: string;
   chunks: { ordinal: number; body: string; sha256: string }[];
 };
+export type SiteGraphResult = {
+  snapshot: SiteSnapshotInfo | null;
+  domains: Record<string, unknown>[];
+  links: Record<string, unknown>[];
+  qualification?: string;
+};
 export async function getPublicSiteSnapshot(sql: SiteQuery, id?: string): Promise<SiteSnapshotInfo | null> {
   if (id !== undefined && !/^[a-f0-9]{64}$/.test(id)) throw new TypeError("Invalid public snapshot identifier");
   const rows = await sql.query<SiteSnapshotInfo & Record<string, unknown>>(
@@ -88,7 +94,7 @@ export async function getPublicSiteDocument(sql: SiteQuery, path: string, snapsh
 export async function getPublicSiteGraph(
   sql: SiteQuery,
   options: { domain?: string; limit?: number; snapshotId?: string } = {},
-) {
+): Promise<SiteGraphResult> {
   const limit = options.limit ?? 100;
   if (
     !Number.isInteger(limit) ||
@@ -98,7 +104,8 @@ export async function getPublicSiteGraph(
   )
     throw new TypeError("Invalid public graph query");
   const snapshot = await getPublicSiteSnapshot(sql, options.snapshotId);
-  if (!snapshot) return { snapshot, domains: [], links: [] };
+  const qualification = "Source domain counts and resolved relative references; no measured runtime call graph";
+  if (!snapshot) return { snapshot, domains: [], links: [], qualification };
   const domains = await sql.query(
     `SELECT name,files FROM aphrody_site.graph_domains WHERE snapshot_id=$1 AND ($2::text IS NULL OR name=$2) ORDER BY name LIMIT $3`,
     [snapshot.id, options.domain ?? null, limit],
@@ -107,7 +114,7 @@ export async function getPublicSiteGraph(
     `SELECT source,target,references_count FROM aphrody_site.graph_links WHERE snapshot_id=$1 AND ($2::text IS NULL OR source=$2 OR target=$2) ORDER BY references_count DESC,source,target LIMIT $3`,
     [snapshot.id, options.domain ?? null, limit],
   );
-  return { snapshot, domains, links };
+  return { snapshot, domains, links, qualification };
 }
 export async function getPublicSiteReleases(sql: SiteQuery, snapshotId?: string) {
   const snapshot = await getPublicSiteSnapshot(sql, snapshotId);
