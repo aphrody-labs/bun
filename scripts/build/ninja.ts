@@ -68,6 +68,7 @@ const ruleVars = {
   dep_codegen: ["name", "cwd", "tool", "args"],
   dep_configure: ["name", "srcdir", "builddir", "args"],
   dep_fetch: ["name", "repo", "commit", "dest", "cache", "patches"],
+  dep_fetch_native_sdk: ["name", "descriptor", "dest"],
   dep_fetch_prebuilt: ["name", "url", "dest", "identity", "rm_paths"],
   dep_host_cc: ["flags"],
   dep_prebuild: ["name", "cwd", "cmd"],
