@@ -32,7 +32,7 @@ class Generator<Elem> {
     const stage2: number[] = [];
     const stage3: Elem[] = [];
 
-    let block = new Array(Generator.BLOCK_SIZE).fill(0);
+    let block = Array.from({ length: Generator.BLOCK_SIZE }, () => 0);
     let blockLen = 0;
 
     // Maximum Unicode codepoint is 0x10FFFF
@@ -83,7 +83,7 @@ class Generator<Elem> {
       stage1.push(stage2Idx);
 
       // Reset block
-      block = new Array(Generator.BLOCK_SIZE).fill(0);
+      block = Array.from({ length: Generator.BLOCK_SIZE }, () => 0);
       blockLen = 0;
     }
 
@@ -114,25 +114,6 @@ class Generator<Elem> {
     output += "    };\n}\n";
     return output;
   }
-}
-
-// Example usage:
-async function example() {
-  // Example context that maps codepoints to their category
-  const ctx: Context<string> = {
-    get: async (cp: number) => {
-      // This would normally look up the actual Unicode category
-      return "Lu";
-    },
-    eql: (a: string, b: string) => a === b,
-  };
-
-  const generator = new Generator(ctx);
-  const tables = await generator.generate();
-
-  // Generate Zig code
-  const zigCode = Generator.writeZig(tables, (elem: string) => `"${elem}"`);
-  console.log(zigCode);
 }
 
 export { Generator, type Context, type Tables };

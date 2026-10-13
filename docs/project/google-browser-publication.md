@@ -25,7 +25,7 @@ separate Chromium engines.
 | `bun_browser_ssrf`, `bun_browser_dom`                                 | `src/browser/crates/{ssrf,dom}`      | Canonical light Rust owners; dry-run packaging passed                                                           |
 | `aphrody-boq`                                                         | `packages/bun-google/crates/boq`     | Independent Google codec; dry-run packaging passed                                                              |
 | `aphrody-antigravity`, `aphrody-gemini-web`, `aphrody-gemini-runtime` | `packages/bun-google/aphrody/crates` | Source tests and registry dependency qualification are separate; locked publication preparation currently fails |
-| `obscura-dom`, `obscura-ssrf`                                         | `packages/bun-aphrody-web/crates`    | Compatibility facades depend on the canonical browser crates                                                    |
+| `obscura-dom`, `obscura-ssrf`                                         | `packages/web/rust/crates`    | Compatibility facades depend on the canonical browser crates                                                    |
 | `obscura-browser`, `obscura-cdp`, `aphrody-obscura`, `aphrody-google` | Transferred Rust workspaces          | Full dependency graph and engine qualification required before publication                                      |
 
 The subsequent SDK batch adds `@aphrody/bun-chromium` as a real source facade:

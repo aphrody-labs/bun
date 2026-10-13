@@ -104,7 +104,7 @@ upstream passes unchanged, emits `bun_ast` from `codegen.rs` (no Babel AST). Who
 diagnostics/ ssa/ inference/ typeinference/ optimization/ validation/ reactive_scopes/ utils/`; AST-boundary
 ports: `lowering/`, `codegen.rs`, `pipeline.rs`, `program.rs`, `imports.rs`, `compile_result.rs`. Design doc
 `src/react_compiler/DESIGN.md`; upstream pin `UPSTREAM_PORTED` (sha); re-sync procedure
-`.claude/skills/sync-react-compiler.md` + `scripts/sync-react-compiler.sh`. Enabled by `--react-compiler`
+`.claude/skills/sync-react-compiler/SKILL.md` + `scripts/sync-react-compiler.sh`. Enabled by `--react-compiler`
 (Arguments.rs), `Bun.build({ reactCompiler: true })`, `reactCompilerParseTestPragmas`; mode enum
 `bun_ast::runtime::ReactCompilerMode { Disabled, Client, Ssr }`. Runtime helpers `__MEMO_CACHE_SENTINEL`
 `__EARLY_RETURN_SENTINEL` in `src/runtime.js`. Tests: `test/bundler/transpiler/react-compiler{,-fixtures}.test.ts`.

@@ -75,7 +75,7 @@ bun-build-mdx-rs (+ its npm/* platform pkgs), @aphrody/bun-debug-adapter-protoco
 - `bun-cli.json` (v"1.1.0", 4.5k lines): machine-readable spec of commands run, test, x, repl, exec, install, add, remove, update, audit, dedupe, prune, outdated
   link, unlink, publish, patch, pm, info, build, init, create, upgrade - each with flags, positionalArgs (completionType), examples, usage, documentationUrl
   dynamicCompletions (scripts/files/binaries).
-- `bun add` package-name completions are separate: `src/runtime/cli/add_completions.{txt,rs}` regenerated with `bun misctools/generate-add-completions.ts`.
+- `bun add` package-name completions are separate: `src/runtime/cli/add_completions.{txt,rs}` regenerated with `bun tools/dev/generate-add-completions.ts`.
 
 Upstream-unchanged packages keep plain names: `bun-error`, `bun-lambda`, `bun-release-action`, `bun-vscode`.
 No `package.json` in `bun-usockets`, `bun-uws`, `h3blast`, `bun-native-bundler-plugin-api` (C sources only); `bun-native-plugin-rs` is a Cargo crate.

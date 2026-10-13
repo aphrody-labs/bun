@@ -236,7 +236,7 @@ function parseUsage(usage: string): {
       let completionType: string | undefined;
 
       // Clean up the argument name
-      name = name.replace(/[\[\]<>]/g, "");
+      name = name.replace(/[[\]<>]/g, "");
 
       if (part.startsWith("<")) {
         required = true;
@@ -684,7 +684,7 @@ async function generateCompletions(): Promise<void> {
   const completionsDir = join(process.cwd(), "completions");
   try {
     mkdirSync(completionsDir, { recursive: true });
-  } catch (error) {
+  } catch {
     // Directory might already exist
   }
 

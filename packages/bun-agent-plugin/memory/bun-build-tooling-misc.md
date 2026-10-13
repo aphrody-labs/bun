@@ -1,6 +1,6 @@
 ---
 name: bun-build-tooling-misc
-description: "Bun auxiliary tooling — misctools (lldb printers, completions, unicode tables), bench/, packages/, tools/hawk, and the scripts/ helpers (orderfile, verify-baseline, binary-size, debug-coredump, gamble, trace, sync-*, update-*)"
+description: "Bun auxiliary tooling — tools/dev (lldb printers, completions, unicode tables), bench/, packages/, tools/hawk, and the scripts/ helpers (orderfile, verify-baseline, binary-size, debug-coredump, gamble, trace, sync-*, update-*)"
 metadata:
   type: reference
 ---
@@ -9,9 +9,9 @@ metadata:
 
 Main build: `bun-build-commands`, `bun-build-system-internals`. CI wiring of these scripts: `bun-build-ci`. Lint tooling (hawk, mordant, jsc-exception-lint): `bun-build-lint-format`.
 
-## misctools/ (own package.json: @unicode/unicode-{3.0.0,13.0.0,15.1.0}, semver — `bun install` inside misctools/ first)
+## tools/dev/ (own package.json: @unicode/unicode-{3.0.0,13.0.0,15.1.0}, semver — `bun install` inside tools/dev/ first)
 
-- `lldb/`: `init.lldb` (ignores SIGPWR/SIGUSR1/SIGUSR2 used by JSC GC/signals, imports `lldb_webkit.py` + `bun_pretty_printer.py`). The printers cover bun.String, WTFStringImpl, ZigString (tagged pointer UTF8/Latin1/UTF16), BabyList, and WebKit types. Load with `lldb -s misctools/lldb/init.lldb` or `command source` (see the README).
+- `lldb/`: `init.lldb` (ignores SIGPWR/SIGUSR1/SIGUSR2 used by JSC GC/signals, imports `lldb_webkit.py` + `bun_pretty_printer.py`). The printers cover bun.String, WTFStringImpl, ZigString (tagged pointer UTF8/Latin1/UTF16), BabyList, and WebKit types. Load with `lldb -s tools/dev/lldb/init.lldb` or `command source` (see the README).
 - `generate-cli-completions.ts`: runs `--help` for every bun command (subcommands, aliases) → `completions/bun-cli.json`. `completions/bun.{bash,zsh,fish}` are hand-maintained and embedded compressed (codegen step `emitCompressedEmbeds`, see `bun-build-codegen`).
 - `generate-add-completions.ts`: package-name letter-group table for `bun add` completion.
 - `gen-unicode-table.ts`, `unicode-generator.ts`: identifier start/continue tables (ES5 / ESNext) for the lexer, a port of the Zig-era generator.

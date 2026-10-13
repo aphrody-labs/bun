@@ -6,8 +6,8 @@ Pure-Rust SDK for the **Gemini web app** (`gemini.google.com/app`) — the
 consumer Gemini product, driven by the signed-in Google session cookies (no API
 key). Mirrors the `notebooklm` crate's Boq `batchexecute` transport.
 
-Full protocol reference: [Aphrody OS protocol reference](../../../aphrody-web/docs/web/gemini-web-protocol.md).
-Feature matrix: [Aphrody OS feature matrix](../../../aphrody-web/docs/web/gemini-web-feature-matrix.md).
+Full protocol reference: [Aphrody OS protocol reference](../../../../../docs/aphrody-source/apis/web/web/gemini-web-protocol.md).
+Feature matrix: [Aphrody OS feature matrix](../../../../../docs/aphrody-source/reference/web/web/gemini-web-feature-matrix.md).
 
 ## Auth
 

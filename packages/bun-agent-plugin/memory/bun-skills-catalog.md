@@ -19,7 +19,7 @@ Verified 2026-10-08 against <bun> @ fe43d1d685a. Deep content lives in other fic
 | Bundler/transpiler test                                   | `writing-bundler-tests` + `bun-toolchain-bundler-tests`                                                       |
 | Dev server / HMR test (test/bake)                         | `writing-dev-server-tests` + `bun-toolchain-bake`                                                             |
 | Slow CI tests report                                      | `slowest-tests` + `bun-tests-runner-ci`                                                                       |
-| React Compiler resync                                     | read `.claude/skills/sync-react-compiler.md` manually (NOT a loadable skill: flat file, no `<dir>/SKILL.md`)  |
+| React Compiler resync                                     | `sync-react-compiler` (`.claude/skills/sync-react-compiler/SKILL.md`)  |
 | Bump WebKit / BoringSSL / reported Node version           | slash cmds `/upgrade-webkit`, `/upgrade-boringssl`, `/upgrade-nodejs` + `bun-build-deps-vendor`               |
 | Issue/PR triage on GitHub                                 | `/dedupe`, `/find-duplicate-prs`, `/find-issues`                                                              |
 | Review blockers before a PR                               | REVIEW.md + `.claude/docs/landing-prs.md` -> `bun-review-rules`                                               |
@@ -63,7 +63,7 @@ Verified 2026-10-08 against <bun> @ fe43d1d685a. Deep content lives in other fic
 
 **`writing-dev-server-tests`** - `devTest/prodTest/devAndProductionTest` from `test/bake/bake-harness.ts`; mutate only via `dev.write/patch/delete` (they wait for HMR), `dev.client`, `c.expectMessage`, `c.expectReload`, `errors:[...]`.
 
-**`sync-react-compiler.md`** (manual) - `scripts/sync-react-compiler.sh [sha]` -> apply whole-crate diffs mechanically, re-port AST-boundary files via `src/react_compiler/DESIGN.md`, `cargo check -p bun_react_compiler`, `bun bd test test/bundler/transpiler/react-compiler.test.ts`, then write `src/react_compiler/UPSTREAM_PORTED`.
+**`sync-react-compiler`** - `scripts/sync-react-compiler.sh [sha]` -> apply whole-crate diffs mechanically, re-port AST-boundary files via `src/react_compiler/DESIGN.md`, `cargo check -p bun_react_compiler`, `bun bd test test/bundler/transpiler/react-compiler.test.ts`, then write `src/react_compiler/UPSTREAM_PORTED`.
 
 ## 2. Repo slash commands (`.claude/commands/`, listed as skills)
 
@@ -122,7 +122,6 @@ Repo:
 - `.claude/skills/javascriptcore-garbage-collector/SKILL.md:23,98,196...` cite `vendor/WebKit/Source/...` (and `Heap.cpp:2970`); vendor/WebKit only exists in local-WebKit mode. Prebuilt headers: `~\.bun\build-cache\webkit-<hash>-debug\include\JavaScriptCore\`. Read full sources via `aphrody:upstreams` (oven-sh/WebKit).
 - `.claude/skills/verify/SKILL.md:36` "prefix every `bun bd` with `PATH=$HOME/.cargo/bin:$PATH`" is a macOS-Homebrew workaround; irrelevant on Windows (see `bun-build-windows`).
 - `.claude/skills/writing-dev-server-tests/SKILL.md:15` `test/bake/dev-and-prod.ts` -> real file `test/bake/dev-and-prod.test.ts`.
-- `.claude/skills/sync-react-compiler.md` not in a `<name>/SKILL.md` dir -> never auto-discovered.
 - `src/jsc/bindings/v8/CLAUDE.md:140,147` symbol extraction from `build/CMakeFiles/bun-debug.dir/...V8NewClass.cpp.o`; no CMake build anymore: objects are unity-built at `build/debug/obj/unified/UnifiedSource-src_jsc_bindings_v8-N.cpp.obj`.
 - `test/CLAUDE.md:120` "Do not set a timeout on tests" vs root `CLAUDE.md:105` (per-test timeout allowed for rare outliers). Root wins (newer, nuanced).
 - Root `CLAUDE.md:150` lists vendored `WebKit` and `nodejs`; `vendor/` is gitignored (`.gitignore:148`) and on this machine has neither (WebKit prebuilt, nodejs headers fetched), while it does contain unlisted libjpeg-turbo/libspng/libwebp (deps exist in `scripts/build/deps/`).

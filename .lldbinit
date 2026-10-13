@@ -1,1 +1,1 @@
-command source -C -s true -e true misctools/lldb/init.lldb
+command source -C -s true -e true tools/dev/lldb/init.lldb

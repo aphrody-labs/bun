@@ -1807,7 +1807,7 @@ pub mod lexer {
 
     /// TypeScript's `IsIdentifierPart`. Its table has U+30FB and U+FF65, which are ID_Continue
     /// since Unicode 15.1 and which `is_identifier_part` leaves out on purpose
-    /// (`ID_Continue_mistake` in misctools/gen-unicode-table.ts).
+    /// (`ID_Continue_mistake` in tools/dev/gen-unicode-table.ts).
     #[inline]
     pub fn is_type_script_identifier_part(c: CodePoint) -> bool {
         is_identifier_part(c as u32) || matches!(c, 0x30FB | 0xFF65)

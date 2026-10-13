@@ -1,4 +1,5 @@
 ---
+name: sync-react-compiler
 description: Re-sync src/react_compiler/ against upstream facebook/react. Use when bumping the React Compiler, when upstream lands a fix we need, or when src/react_compiler/UPSTREAM_PORTED is stale.
 ---
 

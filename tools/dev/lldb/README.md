@@ -40,18 +40,18 @@ The pretty printers show string content directly, with additional metadata:
 ### Option 1: Manual Loading
 In your LLDB session:
 ```lldb
-command script import /path/to/bun/misctools/lldb/bun_pretty_printer.py
+command script import /path/to/bun/tools/dev/lldb/bun_pretty_printer.py
 ```
 
 ### Option 2: Add to ~/.lldbinit
 Add the following line to your `~/.lldbinit` file to load automatically:
 ```lldb
-command script import /path/to/bun/misctools/lldb/bun_pretty_printer.py
+command script import /path/to/bun/tools/dev/lldb/bun_pretty_printer.py
 ```
 
 ### Option 3: Use init.lldb
 ```lldb
-command source /path/to/bun/misctools/lldb/init.lldb
+command source /path/to/bun/tools/dev/lldb/init.lldb
 ```
 
 ## Testing
@@ -68,7 +68,7 @@ bun bd
 3. Debug with LLDB:
 ```bash
 lldb ./build/debug/bun-debug
-(lldb) command script import misctools/lldb/bun_pretty_printer.py
+(lldb) command script import tools/dev/lldb/bun_pretty_printer.py
 (lldb) breakpoint set --file your_file.rs --line <line_number>
 (lldb) run your_test.ts
 (lldb) frame variable

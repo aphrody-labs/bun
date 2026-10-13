@@ -9,7 +9,7 @@ metadata:
 
 Always run with `bun bd test <file>` (debug build). Verify that the test fails with `USE_SYSTEM_BUN=1 bun test`.
 Skills in the repo: `.claude/skills/writing-bundler-tests/SKILL.md` and `.claude/skills/writing-dev-server-tests/SKILL.md`.
-`.claude/skills/sync-react-compiler.md` covers syncing the React Compiler port.
+`.claude/skills/sync-react-compiler/SKILL.md` covers syncing the React Compiler port.
 
 ## `test/bundler/expectBundled.ts` (~2.1k lines; doc `expectBundled.md`)
 

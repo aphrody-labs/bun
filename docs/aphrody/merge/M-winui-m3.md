@@ -173,7 +173,7 @@ Source unique : `winuiResources` de [`packages/bun-fluent`](../../../packages/bu
 
 ### WinUI 3 natif depuis Bun
 
-`bun:winui` (`src/js/bun/winui.ts`, doc `docs/runtime/winui.mdx`) charge le Windows App Runtime installé et crée de vraies fenêtres XAML sur le thread JS. Les 11 contrôles marqués absents auparavant (TextBox, RichEditBox, PasswordBox, AutoSuggestBox, ComboBox, Pivot, MenuFlyout, CommandBar, CalendarDatePicker, TextBlock, CalendarView) sont chargés par `XamlReader.Load` dans `test/js/bun/winui/winui-window.fixture.ts`, qui vérifie l'arbre XAML, des propriétés et des événements. Exemple : [`packages/bun-webos/examples/winui-app`](../../../packages/bun-webos/examples/winui-app).
+`bun:winui` (`src/js/bun/winui.ts`, doc `docs/runtime/winui.mdx`) charge le Windows App Runtime installé et crée de vraies fenêtres XAML sur le thread JS. Les 11 contrôles marqués absents auparavant (TextBox, RichEditBox, PasswordBox, AutoSuggestBox, ComboBox, Pivot, MenuFlyout, CommandBar, CalendarDatePicker, TextBlock, CalendarView) sont chargés par `XamlReader.Load` dans `test/js/bun/winui/winui-window.fixture.ts`, qui vérifie l'arbre XAML, des propriétés et des événements. Exemple : [`apps/desktop/examples/winui-app`](../../../apps/desktop/examples/winui-app).
 
 ### Fenêtre et matériaux Windows
 
@@ -189,7 +189,7 @@ Le thème clair/sombre du système choisit le mode M3 (`m3-theme mode="auto"`). 
 
 ### Exemple Bun
 
-[`packages/bun-webos/examples/m3-native-app`](../../../packages/bun-webos/examples/m3-native-app) montre une app lancée par Bun : Bun démarre une fenêtre `Bun.WebView` avec backend Chrome, sert l’interface M3 depuis une origine locale, et lit/écrit un fichier fixe via `Bun.file` et `Bun.write`. Sous Windows, elle tente aussi l’import de `bun:windows`; ailleurs l’interface indique que l’API n’est pas disponible. Elle ne contient ni XAML ni WinUI.
+[`apps/desktop/examples/m3-native-app`](../../../apps/desktop/examples/m3-native-app) montre une app lancée par Bun : Bun démarre une fenêtre `Bun.WebView` avec backend Chrome, sert l’interface M3 depuis une origine locale, et lit/écrit un fichier fixe via `Bun.file` et `Bun.write`. Sous Windows, elle tente aussi l’import de `bun:windows`; ailleurs l’interface indique que l’API n’est pas disponible. Elle ne contient ni XAML ni WinUI.
 
 La WebView repose sur l’implémentation partagée `packages/bun-webview-core`. Aucun code de cette couche n’est dupliqué ici.
 
