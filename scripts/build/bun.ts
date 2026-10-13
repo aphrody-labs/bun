@@ -211,7 +211,13 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
       ...windowsToolchainRustSources(cfg),
       ...dotnetHostRustSources(cfg),
     ],
-    vendorStamps: [...lolhtmlDep.outputs, ...rustArgon2Dep.outputs, ...uutilsDep.outputs, ...uvDep.outputs, ...oxcDep.outputs],
+    vendorStamps: [
+      ...lolhtmlDep.outputs,
+      ...rustArgon2Dep.outputs,
+      ...uutilsDep.outputs,
+      ...uvDep.outputs,
+      ...oxcDep.outputs,
+    ],
     shimValidations: emitShimVerify(n, cfg),
   });
 
@@ -780,12 +786,14 @@ function emitStrip(n: Ninja, cfg: Config, inputExe: string, stripflags: string[]
   const out = resolve(cfg.buildDir, "bun" + cfg.exeSuffix);
 
   // Windows: strip equivalent is handled at link time (/OPT:REF etc), no
-  // separate strip binary. The "stripped" bun is just a copy. Copy command
-  // follows the HOST shell (cmd natively, cp when cross-compiling).
+  // separate strip binary. Unlock at copy time: processes may start while linking.
   if (cfg.windows) {
     // Copy as-is. /OPT:REF already applied at link.
     n.rule("copy_exe", {
-      command: cfg.host.os === "windows" ? `cmd /c "copy /Y $in $out"` : `cp $in $out`,
+      command:
+        cfg.host.os === "windows"
+          ? `${quote(cfg.jsRuntime, true)} ${quote(resolve(cfg.cwd, "scripts/build/copy-executable.ts"), true)} $in $out`
+          : `cp $in $out`,
       description: "copy $out (windows: no strip)",
     });
   } else {
@@ -799,7 +807,12 @@ function emitStrip(n: Ninja, cfg: Config, inputExe: string, stripflags: string[]
     });
   }
 
-  const postlinkInputs = machoPostlinkImplicitInputs(cfg);
+  const postlinkInputs = [
+    ...machoPostlinkImplicitInputs(cfg),
+    ...(cfg.windows && cfg.host.os === "windows"
+      ? [resolve(cfg.cwd, "scripts/build/copy-executable.ts"), resolve(cfg.cwd, "scripts/build/lock.ts")]
+      : []),
+  ];
   const node = {
     outputs: [out],
     inputs: [inputExe],

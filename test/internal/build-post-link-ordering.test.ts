@@ -17,12 +17,7 @@ import { join, resolve } from "node:path";
 
 import { binaryChecksWarnOnly, emitPostLink } from "../../scripts/build/bun.ts";
 import { shimExpectations } from "../../scripts/build/binary-expectations.ts";
-import {
-  resolveConfig,
-  type Config,
-  type PartialConfig,
-  type Toolchain,
-} from "../../scripts/build/config.ts";
+import { resolveConfig, type Config, type PartialConfig, type Toolchain } from "../../scripts/build/config.ts";
 import { Ninja } from "../../scripts/build/ninja.ts";
 
 test("Windows launcher console detection keeps the freestanding binary contract", () => {
@@ -93,7 +88,7 @@ function hostConfig(partial: PartialConfig, buildDir: string): Config {
  */
 function buildEdge(ninja: string, rule: string): string {
   const flat = ninja.replace(/ \$\n +/g, " ");
-  const line = flat.split("\n").find((l) => l.startsWith("build ") && l.includes(`: ${rule} `));
+  const line = flat.split("\n").find(l => l.startsWith("build ") && l.includes(`: ${rule} `));
   if (line === undefined) throw new Error(`no '${rule}' edge in ninja output:\n${ninja}`);
   return line.replace(new RegExp(` \\| \\S+(?=: ${rule} )`), "");
 }
@@ -119,7 +114,7 @@ describe("emitPostLink ninja ordering", () => {
     );
     // A Windows target has nothing to strip: its `bun` is a copy.
     const strip = cfg.windows ? "copy_exe" : "strip";
-    expect(buildEdge(out, strip)).toBe(
+    expect(buildEdge(out, strip).split(" | ")[0]).toBe(
       `build bun${cfg.exeSuffix}: ${strip} bun-profile${cfg.exeSuffix}`,
     );
   });
@@ -131,43 +126,35 @@ describe("emitPostLink ninja ordering", () => {
     ["CI Release with assertions", { ci: true, buildType: "Release", assertions: true }, false],
     // asan: false, because a Debug build defaults to ASan on some hosts and
     // this row is the one that depends on `debug` alone.
-    [
-      "CI Debug without ASan",
-      { ci: true, buildType: "Debug", assertions: true, asan: false },
-      true,
-    ],
+    ["CI Debug without ASan", { ci: true, buildType: "Debug", assertions: true, asan: false }, true],
     ["CI ASan", { ci: true, buildType: "Release", asan: true, assertions: true }, true],
     ["local Release", { buildType: "Release" }, true],
     ["local Release with assertions", { buildType: "Release", assertions: true }, true],
     ["local Debug", { buildType: "Debug", assertions: true }, true],
     ["local ASan", { buildType: "Release", asan: true, assertions: true }, true],
-  ] as [string, PartialConfig, boolean][])(
-    "the static scans of a %s build",
-    (_name, partial, warnOnly) => {
-      test(warnOnly ? "only warn" : "fail the build", () => {
-        using dir = tempDir("build-post-link", {});
-        const buildDir = String(dir);
-        const cfg = hostConfig(partial, buildDir);
-        const n = new Ninja({ buildDir });
-        const exe = resolve(buildDir, `bun-profile${cfg.exeSuffix}`);
-        emitPostLink(n, cfg, exe, "bun-profile", [], [exe + ".o"]);
-        const out = n.toString().replace(/ \$\n +/g, " ");
-        const command = (rule: string) =>
-          new RegExp(`^rule ${rule}\\n  command = (.*)$`, "m").exec(out)![1]!;
-        const verify = command("binary_verify");
-        const duplicates = command("duplicate_symbols");
+  ] as [string, PartialConfig, boolean][])("the static scans of a %s build", (_name, partial, warnOnly) => {
+    test(warnOnly ? "only warn" : "fail the build", () => {
+      using dir = tempDir("build-post-link", {});
+      const buildDir = String(dir);
+      const cfg = hostConfig(partial, buildDir);
+      const n = new Ninja({ buildDir });
+      const exe = resolve(buildDir, `bun-profile${cfg.exeSuffix}`);
+      emitPostLink(n, cfg, exe, "bun-profile", [], [exe + ".o"]);
+      const out = n.toString().replace(/ \$\n +/g, " ");
+      const command = (rule: string) => new RegExp(`^rule ${rule}\\n  command = (.*)$`, "m").exec(out)![1]!;
+      const verify = command("binary_verify");
+      const duplicates = command("duplicate_symbols");
 
-        expect(binaryChecksWarnOnly(cfg)).toBe(warnOnly);
-        if (warnOnly) {
-          expect(verify).toContain("verify-binary.ts --warn-only binary ");
-          expect(duplicates).toContain("verify-binary.ts --warn-only duplicates ");
-        } else {
-          expect(verify).not.toContain("--warn-only");
-          expect(duplicates).not.toContain("--warn-only");
-        }
-      });
-    },
-  );
+      expect(binaryChecksWarnOnly(cfg)).toBe(warnOnly);
+      if (warnOnly) {
+        expect(verify).toContain("verify-binary.ts --warn-only binary ");
+        expect(duplicates).toContain("verify-binary.ts --warn-only duplicates ");
+      } else {
+        expect(verify).not.toContain("--warn-only");
+        expect(duplicates).not.toContain("--warn-only");
+      }
+    });
+  });
 
   test("debug smoke_test has no strip dep (nothing to order against)", () => {
     using dir = tempDir("build-post-link", {});
@@ -192,10 +179,7 @@ describe("emitPostLink ninja ordering", () => {
   test.skipIf(isMacOS)("darwin release dsymutil is ordered after strip", () => {
     using dir = tempDir("build-post-link", {});
     const buildDir = String(dir);
-    const cfg = resolveConfig(
-      { os: "darwin", arch: "aarch64", buildType: "Release", buildDir },
-      mockToolchain(),
-    );
+    const cfg = resolveConfig({ os: "darwin", arch: "aarch64", buildType: "Release", buildDir }, mockToolchain());
     expect(cfg.canRunOnHost).toBe(false);
 
     const n = new Ninja({ buildDir });

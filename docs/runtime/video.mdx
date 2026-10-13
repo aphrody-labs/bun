@@ -58,7 +58,7 @@ Each audio stream reports its sample rate, channels and codec. The source frame
 rate remains rational; do not round 24000/1001 to 24 when selecting frames.
 
 The constructor captures a source and settings without decoding it. `width`
-and `height` begin at zero and report the last transformed frame after a frame
+and `height` begin at `-1` and report the last transformed frame after a frame
 terminal completes. Use `metadata()` for the source dimensions.
 
 ## Frame transformations and raw pixels

@@ -83,8 +83,8 @@ test("native Video facade ingests a Response and delegates fluent state without 
   const video = await createVideo(new Response(source), { maxPixels: 4 });
   expect(video).toBeInstanceOf(Bun.Video);
   expect(video.frame(0).resize(2, 2).png()).toBe(video);
-  expect(video.width).toBe(0);
-  expect(video.height).toBe(0);
+  expect(video.width).toBe(-1);
+  expect(video.height).toBe(-1);
   const controller = new AbortController();
   controller.abort(new Error("stop video ingestion"));
   await expect(createVideo(new Response(source), { signal: controller.signal })).rejects.toThrow(
