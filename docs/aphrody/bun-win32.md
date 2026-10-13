@@ -8,7 +8,7 @@
 Version       1.4.4
 Révision      2ae8fc65fba1d05c423a2433b1195835109942b6
 Source        https://github.com/aphrody-labs/bun/releases/download/bun-v1.4.4/bun-windows-x64-full.zip
-Binaire       C:\bun\build\release\bun.exe
+Binaire       $APHRODY_BUN_CHECKOUT\build\release\bun.exe
 ```
 
 Le runtime installé est bien le fork Aphrody, pas un Bun upstream générique.
@@ -112,8 +112,8 @@ Preuves dans le fork :
 
 - `packages/bun-tools/src/indexing/*`
 - `packages/bun-webos/*`
-- `C:\bun\.coord\omar-index-map.json`
-- `C:\bun\.coord\omar-webos-map.json`
+- `$APHRODY_BUN_CHECKOUT\.coord\omar-index-map.json`
+- `$APHRODY_BUN_CHECKOUT\.coord\omar-webos-map.json`
 - commits `614b3dde802` — migration des capacités Omar vers les packages Bun
 - commit `68c7d86dd53` — graph, WebOS et gates Windows
 
